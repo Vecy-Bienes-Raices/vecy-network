@@ -322,6 +322,40 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.24 — Septiembre 2026
+
+#### 📌 BLINDAJE ANTI-AUTO-RESPUESTA EN GRUPO 2, ERRADICACIÓN DE CÓDIGO MUERTO DE EMOJIS, TRANSCODIFICACIÓN FFMPEG OGG OPUS, RESTAURACIÓN DE CANALES Y DEDUPLICACIÓN DE PARRILLA DIARIA
+
+**Problemas identificados:**
+1. **Auto-Respuesta en Bucle a Sí Misma en Grupo 2**:
+   - En el Grupo 2 (Soporte Legal, Avalúos y Marketing), JanIA publica un tip programado. Al recibir el evento de mensaje entrante de Baileys, la ausencia de validación `fromMe` en el bloque grupal provocaba que JanIA interpretara su propio texto como un mensaje de Eduardo, procediendo a auto-responderse: *"¡Excelente aporte, Eduardo!..."*. Esto saturaba el chat y consumía cuota innecesaria de Gemini.
+2. **Duplicación de Publicaciones y Repetición de Imágenes Temáticas**:
+   - El miércoles se dispararon concurrentemente el ticker de guardia minutera (11:17 AM) y `node-cron` (11:30 AM), seleccionando ambos `jania_marketing.jpg` sin registro de memoria para evitar duplicados.
+3. **Silenciamiento de Notas de Voz / Audios (TTS)**:
+   - Google Cloud TTS devolvió error HTTP 403 `BILLING_DISABLED`. Aunque el sistema conmutaba al fallback MsEdgeTTS (Dalia), el buffer devuelto era formato MP3. WhatsApp PTT (`push-to-talk`) rechaza notas de voz que no estén codificadas en un contenedor OGG con códec Opus (`audio/ogg; codecs=opus`), provocando que los audios no se enviaran o no pudieran reproducirse.
+4. **Fallo Silencioso en Publicaciones del Canal Oficial de WhatsApp ("Vecy Bienes Raíces")**:
+   - En `queuedSend`, una mutación errónea `additionalAttributes = { type: 'media', mediatype: 'image' }` alteraba el nodo XMPP estándar de Baileys para newsletters (`attrs.type: 'text'`), haciendo que los servidores de WhatsApp descartaran silenciosamente los mensajes al canal.
+5. **Incertidumbre por Comentarios y Funciones Residuales de Emojis Antiguos**:
+   - Comentarios desactualizados en el código (`(✔️ a 💖)`) y una función no referenciada (`parseAndSaveSilently`) que usaba `👌` para enlaces causaban confusión sobre posibles órdenes contradictorias o riesgos de ban.
+
+**Solución aplicada:**
+- **Escudo Anti-Auto-Respuesta (`server/_core/whatsapp-match.ts`)**:
+  - Guardia incondicional que omite cualquier mensaje si `fromMe || senderId === botJid || senderId.startsWith(botPhone) || senderId.startsWith('573192919978')`.
+- **Transcodificación Nativa FFmpeg OGG Opus (`server/_core/whatsapp-utils.ts`)**:
+  - Implementación de `convertAudioToOggOpus` usando el binario nativo `/usr/bin/ffmpeg` del VPS (`-c:a libopus -b:a 32k -vbr on -compression_level 10 -vn`). Los audios de contingencia (MsEdgeTTS / Dalia) se convierten a OGG Opus puro en ~100ms, sonando como notas de voz nativas de WhatsApp.
+- **Restauración de Envíos al Canal de WhatsApp (`server/_core/whatsapp-match.ts`)**:
+  - Retirado el override indebido de atributos XMPP en newsletters y forzado `ptt = false` en canales.
+- **Consolidación de Parrilla Diaria y Deduplicación (`server/_core/cronService.ts`)**:
+  - Centralizado `DAILY_TIPS_CONFIG` con las 7 ilustraciones temáticas oficiales (`client/public/assets/jania/`).
+  - Implementada memoria diaria `markRunExecuted` para que ni cron ni ticker repitan publicaciones en un mismo día.
+  - Erradicadas funciones muertas que apuntaban al Grupo 1 (`sendVideoPromo`, `generateDynamicOpeningMessage`, `generateDynamicClosingMessage`).
+- **Certificación de la Matriz Doctrinal de 6 Emojis (v23.0)**:
+  - `👍` Inmueble Venta | `👌` Inmueble Arriendo | `🔀` Inmueble Permuta
+  - `📝` Demanda Venta | `✏️` Demanda Arriendo | `🔄` Demanda Permuta
+  - `🚫` Rechazo Administrativo | `❓` Solicitud de Aclaración
+
+---
+
 ### 🔖 v31.23 — Septiembre 2026
 
 #### 📌 CASACADA RESILIENTE GEMINI 3.5 FLASH LITE PARA FLYERS, FAST-PATH VISION Y DEDUPLICACIÓN DE REACCIONES EN BAILEYS

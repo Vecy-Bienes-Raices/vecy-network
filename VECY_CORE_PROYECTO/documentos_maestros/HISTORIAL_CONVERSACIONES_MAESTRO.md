@@ -50,7 +50,61 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.23 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.24 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 10 de Septiembre de 2026 — 12:00 a 12:30 (Hora Colombia UTC-5)
+**Versión**: `v31.24` | **Ambiente**: Producción VPS (`13.140.149.144`) + Baileys WhatsApp Engine (`whatsapp-match.ts`) + Motor de Audio FFmpeg OGG Opus (`whatsapp-utils.ts`) + Scheduler Cron/Failsafe (`cronService.ts`) + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+1. Explicar el rol, la configuración y el estado de salud de `server/_core/whatsapp-match.ts` en lenguaje accesible, aclarando si existen órdenes contradictorias, código obsoleto con emojis antiguos o riesgos de baneo/gasto fantasma de cuota de API.
+2. Diagnosticar y solucionar por qué JanIA se responde a sí misma en el Grupo 2 ("VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING") citando su propio mensaje como si fuera un aporte de Eduardo ("¡Excelente aporte, Eduardo!...").
+3. Diagnosticar y solucionar por qué JanIA publica con la misma imagen repetida en lugar de rotar las ilustraciones temáticas de `client/public/assets/jania/`.
+4. Diagnosticar y solucionar por qué JanIA dejó de emitir notas de voz / audios (TTS) en sus publicaciones programadas.
+5. Diagnosticar y solucionar por qué JanIA no publica en el Canal Oficial de WhatsApp ("Vecy Bienes Raíces") desde el lunes.
+6. Detallar las órdenes y horarios exactos de JanIA para el Grupo 2 y el Canal oficial.
+
+#### 🔍 Diagnóstico Técnico y Evidencia Empírica de Causa Raíz:
+1. **Auto-Respuesta a Sí Misma en Grupo 2**:
+   - *Causa Raíz*: Al publicar un tip programado matutino en el Grupo 2 (configurado como conversacional para resolver consultas legales), Baileys emite un evento `messages.upsert` con el mensaje saliente. En `whatsapp-match.ts`, el bloque de grupo no verificaba `fromMe` antes de delegar a `handleDirectGroupQuestion`. JanIA interpretaba el mensaje proveniente de su propia línea (+573192919978) como si Eduardo le estuviera haciendo un comentario y procedía a responderle amablemente citando su propio texto, consumiendo cuota innecesaria de Gemini y saturando el chat.
+2. **Publicaciones con Imagen Repetida**:
+   - *Causa Raíz*: El miércoles a las 11:17 AM se disparó el ticker minutero de failsafe y a las 11:30 AM el programador `node-cron`, ambos seleccionando `jania_marketing.jpg`. Al no existir sincronización con memoria en memoria (`markRunExecuted`), la misma ilustración se despachó dos veces consecutivas, agravado por la auto-respuesta que volvió a citar el contenido.
+3. **Fallo en Audios / Notas de Voz (TTS)**:
+   - *Causa Raíz*: Google Cloud Text-to-Speech rechazó las peticiones con HTTP 403 `BILLING_DISABLED` en el proyecto #553012000304. Aunque el sistema cuenta con motor de contingencia mediante MsEdgeTTS (voz Dalia) y gTTS, estos motores retornaban audio en formato contenedor MP3. WhatsApp PTT (`push-to-talk`) rechaza notas de voz que no estén empaquetadas en un contenedor OGG con códec Opus nativo (`audio/ogg; codecs=opus`), silenciando el audio en los mensajes.
+4. **Fallo en el Canal Oficial de WhatsApp ("Vecy Bienes Raíces")**:
+   - *Causa Raíz*: En `queuedSend`, una mutación de bajo nivel `sendOptions.additionalAttributes = { type: 'media', mediatype: 'image' }` sobreescribía el atributo XMPP nativo `attrs.type: 'text'` con el que Baileys codifica de forma estándar los mensajes hacia newsletters (`@newsletter`). Al recibir un nodo XMPP adulterado con `type: 'media'`, los servidores de WhatsApp descartaban silenciosamente los paquetes.
+5. **Auditoría de Emojis y Código Antiguo en `whatsapp-match.ts`**:
+   - La inquietud sobre emojis antiguos provenía de comentarios históricos en el código fuente que mencionaban `(✔️ a 💖)` y de una función huérfana no utilizada (`parseAndSaveSilently`) que conservaba un emoji `👌` asociado a enlaces en versiones arcaicas. El flujo de producción real ya operaba con la Matriz Doctrinal de 6 Emojis (v23.0), pero dichos comentarios y funciones muertas generaban confusión y sospecha legítima.
+
+#### 🛠️ Acciones de Ingeniería Ejecutadas:
+1. **Escudo Anti-Auto-Respuesta en Baileys (`server/_core/whatsapp-match.ts`)**:
+   - Se añadió una guardia estricta e incondicional al inicio del bucle de mensajes de grupo:
+     ```typescript
+     if (fromMe || (botJid && senderId === botJid) || senderId.startsWith(botPhone) || senderId.startsWith('573192919978')) {
+       continue;
+     }
+     ```
+   - Impide de forma hermética que JanIA procese, responda o gaste un solo token en mensajes originados por su propia cuenta.
+2. **Erradicación de Código Muerto y Depuración de Emojis (`server/_core/whatsapp-match.ts`)**:
+   - Eliminada la función muerta `parseAndSaveSilently`.
+   - Se actualizó la documentación del código fuente certificando la **Matriz Doctrinal de 6 Emojis**:
+     - Oferta: `👍` Venta | `👌` Arriendo | `🔀` Permuta.
+     - Demanda: `📝` Venta | `✏️` Arriendo | `🔄` Permuta.
+     - Moderación Administrativa: `🚫` Rechazo | `❓` Solicitud de Aclaración.
+3. **Restauración de Stanzas para Newsletter (`server/_core/whatsapp-match.ts`)**:
+   - Eliminado el override perjudicial `additionalAttributes = { type: 'media' }`.
+   - Forzado `ptt = false` en envíos a `@newsletter` para garantizar estricta compatibilidad con las especificaciones de canales de WhatsApp.
+4. **Transcodificación Nativa OGG Opus con FFmpeg (`server/_core/whatsapp-utils.ts`)**:
+   - Implementada la función `convertAudioToOggOpus(mp3Buffer)` utilizando el binario nativo `/usr/bin/ffmpeg` disponible en el VPS.
+   - Parámetros acústicos optimizados: `-c:a libopus -b:a 32k -vbr on -compression_level 10 -vn`.
+   - Cuando MsEdgeTTS (Dalia) genera el MP3, FFmpeg lo transcodifica en ~100ms a OGG Opus nativo de WhatsApp, garantizando reproducción impecable de notas de voz sin depender de facturación externa.
+5. **Consolidación de Parrilla Diaria y Deduplicación (`server/_core/cronService.ts`)**:
+   - Estructurada la matriz `DAILY_TIPS_CONFIG` con guiones, audios e imágenes temáticas específicas para cada día de la semana (`matches`, `juridico`, `marketing`, `tributario`, `avaluos`, `cafe`, `soporte`).
+   - Implementado registro en memoria `executedRunsToday` con función `markRunExecuted(key)` evitando duplicación entre `node-cron` y el ticker minutero de guardia.
+   - Depuradas funciones huérfanas residuales que hacían referencia a publicaciones de texto en Grupo 1.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.23 — Septiembre 2026
 
 ### 🗓️ Sesión: Jueves 10 de Septiembre de 2026 — 10:30 a 11:00 (Hora Colombia UTC-5)
 **Versión**: `v31.23` | **Ambiente**: Producción VPS (`13.140.149.144`) + Motor de Visión Artificial Flyer Gemini (`janIA.ts`, `llm.ts`, `whatsapp-match.ts`) + Supabase PostgreSQL + GitHub (`main`)

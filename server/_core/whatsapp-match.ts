@@ -452,6 +452,13 @@ export class JaniaMatchBot {
         try {
           // --- FLUJO 1: MENSAJES DE GRUPO ---
           if (isGroup) {
+            // 🛡️ BLINDAJE ANTI-AUTORESPUESTA: JanIA jamás procesa ni responde a mensajes emitidos por su propia cuenta
+            const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : '';
+            const botPhone = botJid ? botJid.split('@')[0] : '573192919978';
+            if (fromMe || (botJid && senderId === botJid) || senderId.startsWith(botPhone) || senderId.startsWith('573192919978')) {
+              continue;
+            }
+
             // 🚫 BLINDAJE DE LISTA NEGRA: Grupos de seguridad, policía, cuadrantes y comunitarios no inmobiliarios
             const meta = await this.getCachedGroupMetadata(chatId);
             const groupSubject = meta?.subject || "";
@@ -599,8 +606,6 @@ export class JaniaMatchBot {
             }
 
             const textLower = body.toLowerCase();
-            const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : '';
-            const botPhone = botJid ? botJid.split('@')[0] : '';
             const mentionsBot = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid: string) => cleanJid(jid) === botJid);
             const hasDirectMention = textLower.includes("jania") || 
                                      (botPhone && textLower.includes(botPhone)) || 
@@ -635,7 +640,9 @@ export class JaniaMatchBot {
             }
 
             // Grupos externos: JanIA capta todo sin discriminar por longitud.
-            // La calificación de completitud (✔️ a 💖) refleja la calidad del dato.
+            // Clasificación y reacción con la Matriz Doctrinal de 6 Emojis (v23.0):
+            // Oferta: 👍 Venta | 👌 Arriendo | 🔀 Permuta
+            // Demanda: 📝 Venta | ✏️ Arriendo | 🔄 Permuta
 
 
             // Si es una publicación comercial, procesar con el buffer extractor (Modo Silencioso)
@@ -1850,114 +1857,6 @@ export class JaniaMatchBot {
     }
   }
 
-  private async parseAndSaveSilently(msg: proto.IWebMessageInfo, senderId: string, rawPhone: string, bodyText: string) {
-    try {
-      let imageBuffer: string | undefined;
-      let pdfBuffer: string | undefined;
-      let pdfMimeType: string | undefined;
-
-      // Extraer el número INDIVIDUAL del remitente real en el grupo (msg.key.participant)
-      let participantJid = msg.key.participant || (msg as any).participant || senderId || "";
-      if (participantJid.endsWith('@lid') && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
-        try {
-          const mappedPn = await this.sock.signalRepository.lidMapping.getPNForLID(participantJid);
-          if (mappedPn) {
-            participantJid = mappedPn;
-            console.log(`[JanIA-LID] Resuelto LID ${msg.key.participant} -> PN Real ${participantJid}`);
-          }
-        } catch (err) {}
-      }
-
-      const individualPhone = participantJid ? participantJid.split('@')[0].split(':')[0].replace(/\D/g, '') : rawPhone;
-      const effectiveSenderPhone = (individualPhone && !individualPhone.startsWith("1203")) ? individualPhone : rawPhone;
-
-      if (msg.message?.imageMessage) {
-        try {
-          const mediaBuffer = await downloadMediaMessage(msg as any, 'buffer', {});
-          imageBuffer = mediaBuffer.toString('base64');
-        } catch (e) {
-          console.error('[JanIA-DM-Vision-Silent] Error descargando imagen:', e);
-        }
-      } else if (msg.message?.documentMessage) {
-        try {
-          const mediaBuffer = await downloadMediaMessage(msg as any, 'buffer', {});
-          pdfBuffer = mediaBuffer.toString('base64');
-          pdfMimeType = msg.message.documentMessage.mimetype || 'application/pdf';
-        } catch (e) {
-          console.error('[JanIA-DM-Document-Silent] Error descargando documento:', e);
-        }
-      }
-
-      const realName = msg.pushName || `Asesor +${effectiveSenderPhone}`;
-      const { processWhatsAppMessage } = await import('./janIA');
-
-      let groupName = "VECY INMUEBLES NETWORK";
-      try {
-        const metadata = await this.getCachedGroupMetadata(senderId);
-        if (metadata && metadata.subject) {
-          groupName = metadata.subject;
-        }
-      } catch (e) {}
-
-      const result = await processWhatsAppMessage(
-        bodyText,
-        effectiveSenderPhone,
-        realName,
-        !!imageBuffer || !!pdfBuffer,
-        [],
-        undefined,
-        imageBuffer,
-        true, // isGroup = true (forces parsing)
-        pdfBuffer,
-        pdfMimeType,
-        senderId,
-        groupName
-      );
-
-      if (result) {
-        let reaction = "";
-        if (result.classification === "INMUEBLE") {
-          reaction = '👍';
-        } else if (result.classification === "REQUERIMIENTO") {
-          reaction = '📝';
-        } else if (result.classification === "VIOLACION_DE_NORMAS") {
-          reaction = '🚫';
-        } else if (bodyText.includes("http://") || bodyText.includes("https://")) {
-          reaction = '👌';
-        }
-
-        if (reaction) {
-          const sendReaction = async () => {
-            try {
-              await this.sock.sendMessage(senderId, { react: { text: reaction, key: msg.key } });
-            } catch (_) {}
-          };
-
-          if (result.inserted && (reaction === '👍' || reaction === '📝')) {
-            const delayMs = Math.floor(Math.random() * (12000 - 4000 + 1)) + 4000;
-            console.log(`[JANIA-MATCH] Inserción confirmada en parseAndSaveSilently. Retrasando reacción ${reaction} por ${delayMs}ms (Protocolo Anti-Ban)...`);
-            setTimeout(sendReaction, delayMs);
-          } else {
-            await sendReaction();
-          }
-        }
-
-        if (result.response && result.response.trim() !== "" && result.classification !== "DATOS_INCOMPLETOS" && result.classification !== "VIOLACION_DE_NORMAS") {
-          const isMatch = result.response.includes("MATCH COMERCIAL DETECTADO") ||
-                          result.response.includes("MATCH DETECTADO") ||
-                          result.response.includes("MATCH INTELIGENTE DETECTADO") ||
-                          result.response.includes("COINCIDENCIA DE NEGOCIO DETECTADA");
-          if (isMatch) {
-            const { sendAdminNotification } = await import('./whatsapp-utils');
-            await sendAdminNotification(`🎯 *[MATCH DETECTADO POR DM]*\n\n${result.response}`);
-          }
-        }
-      }
-    } catch (err) {
-      console.error("[JANIA-MATCH] Fallo en parseAndSaveSilently:", err);
-    }
-  }
-
   private async handlePrivateDmConversation(msg: proto.IWebMessageInfo, senderId: string, rawPhone: string, bodyText: string) {
     try {
       const realName = msg.pushName || `Asesor +${rawPhone}`;
@@ -2208,21 +2107,15 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
         const isNewsletter = targetJid.endsWith('@newsletter');
         const sendOptions: any = {};
-        if (options.quoted) {
+        if (options.quoted && !isNewsletter) {
           sendOptions.quoted = options.quoted;
         }
 
-        // ── ATRIBUTOS DE STANZA PARA CANALES / NEWSLETTERS DE WHATSAPP ──
-        if (isNewsletter) {
-          if (messagePayload.image) {
-            sendOptions.additionalAttributes = { type: 'media', mediatype: 'image' };
-          } else if (messagePayload.video) {
-            sendOptions.additionalAttributes = { type: 'media', mediatype: 'video' };
-          } else if (messagePayload.audio) {
-            sendOptions.additionalAttributes = { type: 'media', mediatype: 'audio' };
-          } else if (messagePayload.document) {
-            sendOptions.additionalAttributes = { type: 'media', mediatype: 'document' };
-          }
+        // ── CANALES / NEWSLETTERS DE WHATSAPP ──
+        // Baileys maneja nativamente los headers multimedia para newsletters.
+        // Los canales NO admiten ptt: true (notas de voz PTT), se despachan como audio estándar.
+        if (isNewsletter && messagePayload.audio) {
+          messagePayload.ptt = false;
         }
 
         // ── ESCUDO DE SIMULACIÓN HUMANA (Human-Like Delay & Presence Updates) ──
@@ -2398,9 +2291,9 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           await this.queuedSend(this.channelNewsletterId, {
             audio: audioBuffer,
             mimetype: audioMimetype,
-            ptt: true
+            ptt: false
           });
-          console.log(`[JANIA-MATCH] ✓ Nota de voz enviada al Canal de WhatsApp (${this.channelNewsletterId}).`);
+          console.log(`[JANIA-MATCH] ✓ Audio enviado al Canal de WhatsApp (${this.channelNewsletterId}).`);
         } else if (!imagePath) {
           await this.queuedSend(this.channelNewsletterId, cleaned);
         }

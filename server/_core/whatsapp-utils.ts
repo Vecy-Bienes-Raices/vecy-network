@@ -1,5 +1,7 @@
 import path from "path";
 import fs from "fs";
+import os from "os";
+import { execSync } from "child_process";
 import { createSign } from "crypto";
 
 // ── Lista de nombres colombianos comunes para extractFirstName ──
@@ -431,6 +433,33 @@ async function getVertexAIAccessToken(): Promise<string | null> {
 }
 
 /**
+ * Convierte un buffer de audio (MP3 o WebM) a formato nativo WhatsApp OGG Opus usando FFmpeg.
+ */
+function convertAudioToOggOpus(inputBuffer: Buffer): Buffer {
+  try {
+    const tmpDir = os.tmpdir();
+    const uniqueId = `tts_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const tmpIn = path.join(tmpDir, `${uniqueId}_in.mp3`);
+    const tmpOut = path.join(tmpDir, `${uniqueId}_out.ogg`);
+
+    fs.writeFileSync(tmpIn, inputBuffer);
+    execSync(`ffmpeg -y -i "${tmpIn}" -c:a libopus -b:a 32k -vbr on -compression_level 10 -vn "${tmpOut}"`, { stdio: 'ignore' });
+    
+    if (fs.existsSync(tmpOut)) {
+      const oggBuf = fs.readFileSync(tmpOut);
+      try { fs.unlinkSync(tmpIn); } catch (_) {}
+      try { fs.unlinkSync(tmpOut); } catch (_) {}
+      if (oggBuf && oggBuf.length > 0) {
+        return oggBuf;
+      }
+    }
+  } catch (err: any) {
+    console.warn('[TTS-FFmpeg] No se pudo convertir a OGG Opus, usando audio original:', err?.message || err);
+  }
+  return inputBuffer;
+}
+
+/**
  * Genera un buffer de audio sintetizado con voz humana ultra-realista, fluida y con cadencia colombiana.
  */
 export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3" = "OGG_OPUS"): Promise<any> {
@@ -490,7 +519,7 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
     process.env.GOOGLE_API_KEY,
     process.env.GEMINI_API_KEY,
     process.env.GEMINI_BACKUP_KEY
-  ].filter(k => k && k.startsWith('AIzaSy')) as string[];
+  ].filter(k => k && (k.startsWith('AIzaSy') || k.startsWith('AQ.'))) as string[];
 
   // 2. Respaldo Google Cloud: Chirp3-HD Erinome (es-US)
   try {
@@ -615,16 +644,17 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
     console.warn("[TTS-Media] Google Cloud Neural2-A no disponible:", err?.message || err);
   }
 
-  // 4. Respaldo Neuronal Humano: Dalia (es-MX) / Salomé (es-CO) con prosodia viva
+  // 4. Respaldo Neuronal Humano: Dalia (es-MX) / Salomé (es-CO) con prosodia viva y transcodificación OGG Opus
   try {
     console.log(`[TTS-Media] 🎙️ Sintetizando con voz neuronal humana (Dalia es-MX +8%) — ${cleaned.length} caracteres...`);
     const daliaBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-MX-DaliaNeural", "+8%");
     if (daliaBuffer && daliaBuffer.length > 0) {
       console.log(`[TTS-Media] ✓ Audio generado con voz humana de Dalia (${daliaBuffer.length} bytes).`);
+      const finalBuffer = format === "OGG_OPUS" ? convertAudioToOggOpus(daliaBuffer) : daliaBuffer;
       return {
-        mimetype: "audio/mp3",
-        data: daliaBuffer.toString("base64"),
-        buffer: daliaBuffer
+        mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+        data: finalBuffer.toString("base64"),
+        buffer: finalBuffer
       };
     }
   } catch (err: any) {
@@ -635,10 +665,11 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
   console.log("[TTS-Media] Sintetizando audio usando contingencia Google Translate TTS (es-CO)...");
   const gttsBuffer = await fetchGttsAudioBuffer(cleaned);
   if (gttsBuffer && gttsBuffer.length > 0) {
+    const finalBuffer = format === "OGG_OPUS" ? convertAudioToOggOpus(gttsBuffer) : gttsBuffer;
     return {
-      mimetype: "audio/mp3",
-      data: gttsBuffer.toString("base64"),
-      buffer: gttsBuffer
+      mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+      data: finalBuffer.toString("base64"),
+      buffer: finalBuffer
     };
   }
 

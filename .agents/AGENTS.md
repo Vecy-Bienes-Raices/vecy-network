@@ -163,7 +163,30 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.23 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.24 — Septiembre 2026
+
+### Novedades v31.24 (Blindaje Anti-Auto-Respuesta en Grupo 2, Erradicación de Código Muerto de Emojis, Transcodificación FFmpeg OGG Opus Nativa de WhatsApp, Restauración de Publicación en Canales y Deduplicación Estricta de Parrilla Diaria):
+- **Diagnóstico Integral y Explicación Arquitectónica de `server/_core/whatsapp-match.ts`**:
+  1) **Seguridad y Erradicación de Código Muerto**:
+     - Se auditó todo el archivo para garantizar absoluta tranquilidad sobre la seguridad operativa, eliminación de gastos de cuota fantasma y prevención de baneos de WhatsApp.
+     - Se eliminó la función muerta `parseAndSaveSilently` (que conservaba el emoji obsoleto `👌` para enlaces) y se documentó formalmente la **Matriz Doctrinal de 6 Emojis Oficiales (v23.0)** (`👍`, `👌`, `🔀`, `📝`, `✏️`, `🔄`) erradicando cualquier residuo obsoleto.
+  2) **Blindaje Anti-Auto-Respuesta en Grupo 2 (Caso de Respuesta a Sí Misma)**:
+     - *Causa Raíz*: Cuando JanIA publicaba un tip matutino en el Grupo 2 (configurado como conversacional), Baileys emitía el evento de mensaje entrante; al no filtrar `fromMe`, JanIA interpretaba el mensaje como un aporte de Eduardo y se auto-respondía citando su propio texto (*"¡Excelente aporte, Eduardo!..."*).
+     - *Solución*: Guardia estricta al inicio del procesamiento de grupos (`if (fromMe || senderId === botJid || senderId.startsWith(botPhone) || senderId.startsWith('573192919978')) continue;`), erradicando de raíz cualquier auto-respuesta o bucle de procesamiento.
+  3) **Restauración de Publicación al Canal Oficial de WhatsApp ("Vecy Bienes Raíces")**:
+     - *Causa Raíz*: En `queuedSend`, una mutación de `additionalAttributes = { type: 'media', mediatype: 'image' }` alteraba el nodo XMPP nativo de Baileys para newsletters (`attrs.type: 'text'`), provocando que los servidores de WhatsApp descartaran silenciosamente las publicaciones dirigidas a `@newsletter`.
+     - *Solución*: Removido el override indebido y configurado `ptt: false` en los despachos a newsletters, restaurando la entrega de publicaciones e imágenes en el Canal oficial.
+  4) **Transcodificación Nativa OGG Opus con FFmpeg para Notas de Voz (TTS)**:
+     - *Causa Raíz*: Google Cloud TTS desactivó el proyecto por facturación (error HTTP 403 `BILLING_DISABLED`). Al activarse el fallback de MsEdgeTTS (Dalia), este generaba audio en formato MP3, el cual WhatsApp PTT rechaza como nota de voz sin contenedor OGG con codec Opus.
+     - *Solución*: Se implementó `convertAudioToOggOpus` en `whatsapp-utils.ts` empleando `/usr/bin/ffmpeg` nativo del VPS (`-c:a libopus -b:a 32k -vbr on -compression_level 10 -vn`). Los audios generados se convierten a OGG Opus puro en ~100ms, reproduciéndose impecablemente como notas de voz en WhatsApp.
+  5) **Deduplicación y Consolidación de la Parrilla Diaria (`DAILY_TIPS_CONFIG`)**:
+     - Se consolidó la configuración centralizada de los 7 días de la semana con sus imágenes temáticas específicas (`jania_matches.jpg`, `jania_juridico.jpg`, `jania_marketing.jpg`, `jania_tributario.jpg`, `jania_avaluos.jpg`, `jania_podcast.jpg`, `jania_soporte.jpg`).
+     - Sistema de deduplicación con memoria diaria (`markRunExecuted`) entre el programador `node-cron` y el ticker de guardia minutera (`setInterval`), impidiendo doble publicación o imágenes repetidas por desfases de minutos.
+     - Limpieza de funciones huérfanas obsoletas que apuntaban al Grupo 1.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.23 — Septiembre 2026
 
 ### Novedades v31.23 (Solución Definitiva a Extracción de Flyers: Cascada Gemini 3.5 Flash Lite, Fast-Path Vision y Deduplicación WhatsApp):
 - **Diagnóstico y Corrección de Fallo de Extracción en Flyers sin Pie de Foto (Caso Juan Pablo Tobo)**:

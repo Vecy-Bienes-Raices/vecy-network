@@ -12582,6 +12582,8 @@ __export(whatsapp_utils_exports, {
 });
 import path6 from "path";
 import fs6 from "fs";
+import os from "os";
+import { execSync } from "child_process";
 import { createSign } from "crypto";
 function extractFirstName2(fullName) {
   if (!fullName) return "";
@@ -12790,6 +12792,33 @@ async function getVertexAIAccessToken() {
   }
   return null;
 }
+function convertAudioToOggOpus(inputBuffer) {
+  try {
+    const tmpDir = os.tmpdir();
+    const uniqueId = `tts_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const tmpIn = path6.join(tmpDir, `${uniqueId}_in.mp3`);
+    const tmpOut = path6.join(tmpDir, `${uniqueId}_out.ogg`);
+    fs6.writeFileSync(tmpIn, inputBuffer);
+    execSync(`ffmpeg -y -i "${tmpIn}" -c:a libopus -b:a 32k -vbr on -compression_level 10 -vn "${tmpOut}"`, { stdio: "ignore" });
+    if (fs6.existsSync(tmpOut)) {
+      const oggBuf = fs6.readFileSync(tmpOut);
+      try {
+        fs6.unlinkSync(tmpIn);
+      } catch (_) {
+      }
+      try {
+        fs6.unlinkSync(tmpOut);
+      } catch (_) {
+      }
+      if (oggBuf && oggBuf.length > 0) {
+        return oggBuf;
+      }
+    }
+  } catch (err) {
+    console.warn("[TTS-FFmpeg] No se pudo convertir a OGG Opus, usando audio original:", err?.message || err);
+  }
+  return inputBuffer;
+}
 async function textToSpeechMedia(text2, format = "OGG_OPUS") {
   const cleaned = cleanVoiceText(text2);
   if (!cleaned) return null;
@@ -12843,7 +12872,7 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
     process.env.GOOGLE_API_KEY,
     process.env.GEMINI_API_KEY,
     process.env.GEMINI_BACKUP_KEY
-  ].filter((k) => k && k.startsWith("AIzaSy"));
+  ].filter((k) => k && (k.startsWith("AIzaSy") || k.startsWith("AQ.")));
   try {
     for (const googleApiKey of candidateKeys) {
       try {
@@ -12960,10 +12989,11 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
     const daliaBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-MX-DaliaNeural", "+8%");
     if (daliaBuffer && daliaBuffer.length > 0) {
       console.log(`[TTS-Media] \u2713 Audio generado con voz humana de Dalia (${daliaBuffer.length} bytes).`);
+      const finalBuffer = format === "OGG_OPUS" ? convertAudioToOggOpus(daliaBuffer) : daliaBuffer;
       return {
-        mimetype: "audio/mp3",
-        data: daliaBuffer.toString("base64"),
-        buffer: daliaBuffer
+        mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+        data: finalBuffer.toString("base64"),
+        buffer: finalBuffer
       };
     }
   } catch (err) {
@@ -12972,10 +13002,11 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
   console.log("[TTS-Media] Sintetizando audio usando contingencia Google Translate TTS (es-CO)...");
   const gttsBuffer = await fetchGttsAudioBuffer(cleaned);
   if (gttsBuffer && gttsBuffer.length > 0) {
+    const finalBuffer = format === "OGG_OPUS" ? convertAudioToOggOpus(gttsBuffer) : gttsBuffer;
     return {
-      mimetype: "audio/mp3",
-      data: gttsBuffer.toString("base64"),
-      buffer: gttsBuffer
+      mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+      data: finalBuffer.toString("base64"),
+      buffer: finalBuffer
     };
   }
   return null;
@@ -13471,6 +13502,11 @@ var init_whatsapp_match = __esm({
             }
             try {
               if (isGroup) {
+                const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
+                const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
+                if (fromMe || botJid && senderId === botJid || senderId.startsWith(botPhone) || senderId.startsWith("573192919978")) {
+                  continue;
+                }
                 const meta = await this.getCachedGroupMetadata(chatId);
                 const groupSubject = meta?.subject || "";
                 if (isBlacklistedGroup(groupSubject, chatId)) {
@@ -13600,8 +13636,6 @@ ${quotedNote}` : quotedNote;
                   body = qm.conversation || qm.extendedTextMessage?.text || qm.imageMessage?.caption || "";
                 }
                 const textLower = body.toLowerCase();
-                const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
-                const botPhone = botJid ? botJid.split("@")[0] : "";
                 const mentionsBot = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid(jid) === botJid);
                 const hasDirectMention = textLower.includes("jania") || botPhone && textLower.includes(botPhone) || textLower.includes("573192919978") || !!mentionsBot;
                 const isMainGroup = chatId === this.targetGroupId;
@@ -14528,105 +14562,6 @@ ${result.response}`);
           console.error("[JANIA-MATCH] Error al registrar logs en BD:", e);
         }
       }
-      async parseAndSaveSilently(msg, senderId, rawPhone, bodyText) {
-        try {
-          let imageBuffer;
-          let pdfBuffer;
-          let pdfMimeType;
-          let participantJid = msg.key.participant || msg.participant || senderId || "";
-          if (participantJid.endsWith("@lid") && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
-            try {
-              const mappedPn = await this.sock.signalRepository.lidMapping.getPNForLID(participantJid);
-              if (mappedPn) {
-                participantJid = mappedPn;
-                console.log(`[JanIA-LID] Resuelto LID ${msg.key.participant} -> PN Real ${participantJid}`);
-              }
-            } catch (err) {
-            }
-          }
-          const individualPhone = participantJid ? participantJid.split("@")[0].split(":")[0].replace(/\D/g, "") : rawPhone;
-          const effectiveSenderPhone = individualPhone && !individualPhone.startsWith("1203") ? individualPhone : rawPhone;
-          if (msg.message?.imageMessage) {
-            try {
-              const mediaBuffer = await downloadMediaMessage(msg, "buffer", {});
-              imageBuffer = mediaBuffer.toString("base64");
-            } catch (e) {
-              console.error("[JanIA-DM-Vision-Silent] Error descargando imagen:", e);
-            }
-          } else if (msg.message?.documentMessage) {
-            try {
-              const mediaBuffer = await downloadMediaMessage(msg, "buffer", {});
-              pdfBuffer = mediaBuffer.toString("base64");
-              pdfMimeType = msg.message.documentMessage.mimetype || "application/pdf";
-            } catch (e) {
-              console.error("[JanIA-DM-Document-Silent] Error descargando documento:", e);
-            }
-          }
-          const realName = msg.pushName || `Asesor +${effectiveSenderPhone}`;
-          const { processWhatsAppMessage: processWhatsAppMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-          let groupName = "VECY INMUEBLES NETWORK";
-          try {
-            const metadata = await this.getCachedGroupMetadata(senderId);
-            if (metadata && metadata.subject) {
-              groupName = metadata.subject;
-            }
-          } catch (e) {
-          }
-          const result = await processWhatsAppMessage2(
-            bodyText,
-            effectiveSenderPhone,
-            realName,
-            !!imageBuffer || !!pdfBuffer,
-            [],
-            void 0,
-            imageBuffer,
-            true,
-            // isGroup = true (forces parsing)
-            pdfBuffer,
-            pdfMimeType,
-            senderId,
-            groupName
-          );
-          if (result) {
-            let reaction = "";
-            if (result.classification === "INMUEBLE") {
-              reaction = "\u{1F44D}";
-            } else if (result.classification === "REQUERIMIENTO") {
-              reaction = "\u{1F4DD}";
-            } else if (result.classification === "VIOLACION_DE_NORMAS") {
-              reaction = "\u{1F6AB}";
-            } else if (bodyText.includes("http://") || bodyText.includes("https://")) {
-              reaction = "\u{1F44C}";
-            }
-            if (reaction) {
-              const sendReaction = async () => {
-                try {
-                  await this.sock.sendMessage(senderId, { react: { text: reaction, key: msg.key } });
-                } catch (_) {
-                }
-              };
-              if (result.inserted && (reaction === "\u{1F44D}" || reaction === "\u{1F4DD}")) {
-                const delayMs = Math.floor(Math.random() * (12e3 - 4e3 + 1)) + 4e3;
-                console.log(`[JANIA-MATCH] Inserci\xF3n confirmada en parseAndSaveSilently. Retrasando reacci\xF3n ${reaction} por ${delayMs}ms (Protocolo Anti-Ban)...`);
-                setTimeout(sendReaction, delayMs);
-              } else {
-                await sendReaction();
-              }
-            }
-            if (result.response && result.response.trim() !== "" && result.classification !== "DATOS_INCOMPLETOS" && result.classification !== "VIOLACION_DE_NORMAS") {
-              const isMatch = result.response.includes("MATCH COMERCIAL DETECTADO") || result.response.includes("MATCH DETECTADO") || result.response.includes("MATCH INTELIGENTE DETECTADO") || result.response.includes("COINCIDENCIA DE NEGOCIO DETECTADA");
-              if (isMatch) {
-                const { sendAdminNotification: sendAdminNotification2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-                await sendAdminNotification2(`\u{1F3AF} *[MATCH DETECTADO POR DM]*
-
-${result.response}`);
-              }
-            }
-          }
-        } catch (err) {
-          console.error("[JANIA-MATCH] Fallo en parseAndSaveSilently:", err);
-        }
-      }
       async handlePrivateDmConversation(msg, senderId, rawPhone, bodyText) {
         try {
           const realName = msg.pushName || `Asesor +${rawPhone}`;
@@ -14827,19 +14762,11 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             }
             const isNewsletter = targetJid.endsWith("@newsletter");
             const sendOptions = {};
-            if (options.quoted) {
+            if (options.quoted && !isNewsletter) {
               sendOptions.quoted = options.quoted;
             }
-            if (isNewsletter) {
-              if (messagePayload.image) {
-                sendOptions.additionalAttributes = { type: "media", mediatype: "image" };
-              } else if (messagePayload.video) {
-                sendOptions.additionalAttributes = { type: "media", mediatype: "video" };
-              } else if (messagePayload.audio) {
-                sendOptions.additionalAttributes = { type: "media", mediatype: "audio" };
-              } else if (messagePayload.document) {
-                sendOptions.additionalAttributes = { type: "media", mediatype: "document" };
-              }
+            if (isNewsletter && messagePayload.audio) {
+              messagePayload.ptt = false;
             }
             if (!isNewsletter) {
               if (messagePayload.text && typeof messagePayload.text === "string") {
@@ -14996,9 +14923,9 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
               await this.queuedSend(this.channelNewsletterId, {
                 audio: audioBuffer,
                 mimetype: audioMimetype,
-                ptt: true
+                ptt: false
               });
-              console.log(`[JANIA-MATCH] \u2713 Nota de voz enviada al Canal de WhatsApp (${this.channelNewsletterId}).`);
+              console.log(`[JANIA-MATCH] \u2713 Audio enviado al Canal de WhatsApp (${this.channelNewsletterId}).`);
             } else if (!imagePath) {
               await this.queuedSend(this.channelNewsletterId, cleaned);
             }
@@ -15460,8 +15387,11 @@ var init_nightlyRematch = __esm({
 // server/_core/cronService.ts
 var cronService_exports = {};
 __export(cronService_exports, {
+  DAILY_TIPS_CONFIG: () => DAILY_TIPS_CONFIG,
   getLiveMarketStats: () => getLiveMarketStats,
   initCronScheduler: () => initCronScheduler,
+  markRunExecuted: () => markRunExecuted,
+  publishDailyTipForDay: () => publishDailyTipForDay,
   publishTodayTipNow: () => publishTodayTipNow,
   publishWeeklyReportNow: () => publishWeeklyReportNow
 });
@@ -15498,178 +15428,48 @@ function getThemedImagePath(tipo) {
   }
   return void 0;
 }
+function markRunExecuted(key) {
+  if (executedRunsToday.has(key)) return false;
+  executedRunsToday.add(key);
+  if (executedRunsToday.size > 200) {
+    executedRunsToday.clear();
+    executedRunsToday.add(key);
+  }
+  return true;
+}
 function initCronScheduler() {
-  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.3 (Parrilla Semanal de Audios, Ilustraciones 3D, Captions y Re-matching)...");
+  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.4 (Parrilla Semanal de Audios, Ilustraciones 3D, Captions y Re-matching)...");
   cron.schedule("0 8 * * 1", async () => {
-    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Lunes para SOPORTE LEGAL, MARKETING Y CANAL...");
-    const fallbackVoice = `\xA1Buenos d\xEDas a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio y nuestro canal oficial son su consultorio permanente: aqu\xED pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, c\xF3mo liquidar la ganancia ocasional ante la DIAN, aval\xFAos de mercado o c\xF3mo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. Los invito a invitar a m\xE1s colegas a unirse a este maravilloso proyecto y a interactuar conmigo para probar nuestro sistema de consultas. \xA1Que tengan una semana extraordinaria y productiva!`;
-    const fallbackCaption = `\u{1F680} *ARRANQUE SEMANAL & CONSULTORIO INMOBILIARIO \u2014 VECY NETWORK* \u{1F1E8}\u{1F1F4}
-
-\xA1Buenos d\xEDas a todos mis queridos colegas!
-
-Iniciamos una semana llena de oportunidades comerciales y cierres de negocios. Recuerden que este espacio y nuestro canal oficial son su consultorio permanente 24/7:
-
-\u2696\uFE0F *Soporte Legal y Contratos:* Dudas sobre promesas, arras y Ley 820.
-\u{1F4B0} *Tributario DIAN:* Ganancia ocasional, retenci\xF3n en la fuente y exenciones.
-\u{1F4D0} *Aval\xFAos & SINUPOT:* Usos de suelo, valor de m2 y fichas normativas.
-\u{1F4E2} *Marketing Digital:* Estructura de 7 pilares y copys de alto impacto.
-
-\u{1F31F} *Construyamos juntos el futuro inmobiliario:* Invita a tus colegas corredores a sumarse a VECY Network y prueba interactuar con JanIA en nuestra web oficial:
-\u{1F4F2} *Chatea con JanIA:* https://vecy-network.vercel.app/jania`;
-    const content = await generateDailyContent("lunes_arranque", fallbackVoice, fallbackCaption);
-    try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("matches"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Lunes 8 AM:", e.message);
-    }
+    console.log("[CRON-SERVICE] Disparando cron de Lunes 8 AM...");
+    await publishDailyTipForDay("lunes_arranque", false);
   }, { timezone: "America/Bogota" });
   cron.schedule("0 19 * * 1", async () => {
-    console.log("[CRON-SERVICE] Generando Reporte Semanal de Lunes 7:00 PM (Pulso de la Bolsa Inmobiliaria & Coaching)...");
-    try {
-      await publishWeeklyReportNow();
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando Reporte Semanal de Lunes 7:00 PM:", e.message);
-    }
+    console.log("[CRON-SERVICE] Disparando Reporte Semanal de Lunes 7:00 PM...");
+    await publishWeeklyReportNow(false);
   }, { timezone: "America/Bogota" });
   cron.schedule("0 11 * * 2", async () => {
-    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Martes Jur\xEDdico...");
-    try {
-      const fallbackVoice = `Hola, queridos colegas. Soy JanIA con su tip jur\xEDdico del d\xEDa. \xBFSab\xEDan que un simple correo electr\xF3nico con la hoja de presentaci\xF3n del cliente o el acuerdo de puntas compartidas tiene plena validez probatoria bajo la Ley 527 de 1999? Nunca muestren un inmueble sin dejar registro escrito. Los invito a formar parte activa de VECY Network, a invitar a m\xE1s colegas y a consultar cualquier duda jur\xEDdica o revisar minutas en PDF directamente conmigo. \xA1Juntos cerramos m\xE1s blindados!`;
-      const fallbackCaption = `\u2696\uFE0F *MARTES JUR\xCDDICO & BLINDAJE NOTARIAL \u2014 VECY NETWORK* \u{1F3DB}\uFE0F
-
-\xA1Hola, queridos colegas corredores e inmobiliarios!
-
-\u{1F4CC} *Tip Jur\xEDdico del D\xEDa:* Validez de Acuerdos Comerciales y Registro Escrito.
-Bajo la *Ley 527 de 1999*, los mensajes de datos, correos electr\xF3nicos y hojas de visita tienen plena validez probatoria. Nunca muestres un predio sin pactar previamente las condiciones comerciales.
-
-\u{1F4A1} *\xBFTienes dudas contractuales?*
-Puedes enviarme tus minutas, promesas de compraventa o consultas de arrendamiento (texto, voz o PDF) y las analizamos al instante.
-
-\u{1F91D} *\xDAnete a la Red:* Invita a tus colegas a formar parte de VECY Network para elevar el est\xE1ndar profesional del corretaje en Colombia.
-\u{1F4F2} *Consultas Jur\xEDdicas JanIA:* https://vecy-network.vercel.app/jania`;
-      const content = await generateDailyContent("martes_juridico", fallbackVoice, fallbackCaption);
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("juridico"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Martes:", e.message || e);
-    }
+    console.log("[CRON-SERVICE] Disparando cron de Martes 11 AM...");
+    await publishDailyTipForDay("martes_juridico", false);
   }, { timezone: "America/Bogota" });
   cron.schedule("30 11 * * 3", async () => {
-    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Mi\xE9rcoles de Marketing...");
-    const fallbackVoice = `\xA1Buenas tardes, queridos colegas! Soy JanIA con su tip de Marketing Inmobiliario. El ochenta por ciento de los clientes y colegas descartan una publicaci\xF3n si no tiene el precio claro, el barrio exacto o el metraje. Si quieren que sus ofertas y requerimientos se cierren en tiempo r\xE9cord, incluyan siempre los siete pilares fundamentales. Les cuento que ya estoy detectando decenas de coincidencias en segundo plano y muy pronto nuestros asesores de cierre de VECY Network los estar\xE1n contactando para conectar las puntas. Inviten a m\xE1s colegas a unirse a la red y prueben redactar sus anuncios conmigo hoy mismo.`;
-    const fallbackCaption = `\u{1F4E2} *MI\xC9RCOLES DE MARKETING INMOBILIARIO & 7 PILARES \u2014 VECY NETWORK* \u{1F680}
-
-\xA1Buenas tardes, queridos colegas!
-
-\u{1F3AF} *La Regla de Oro:* M\xE1s del 80% de los negocios se pierden por publicaciones incompletas o ambiguas. Para que tus ofertas y solicitudes se muevan en tiempo r\xE9cord, incluye siempre los *7 Pilares*:
-
-1\uFE0F\u20E3 Tipo de Inmueble (Apto, Casa, Bodega, etc.)
-2\uFE0F\u20E3 Ciudad y Barrio Exacto
-3\uFE0F\u20E3 Precio / Canon y Cuota de Administraci\xF3n
-4\uFE0F\u20E3 \xC1rea Total Construida en m\xB2
-5\uFE0F\u20E3 Habitaciones y Ba\xF1os
-6\uFE0F\u20E3 Parqueaderos (Independientes o en l\xEDnea)
-7\uFE0F\u20E3 Enlace directo de contacto de WhatsApp
-
-\u2728 *Primicia:* \xA1JanIA ya est\xE1 encontrando matches en la red! Muy pronto nuestro equipo de asesores de cierre los contactar\xE1 para coordinar los cierres comerciales.
-
-\u{1F91D} *Invita a m\xE1s colegas y prueba el sistema:* https://vecy-network.vercel.app/jania`;
-    const content = await generateDailyContent("miercoles_marketing", fallbackVoice, fallbackCaption);
-    try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("marketing"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Mi\xE9rcoles:", e.message);
-    }
+    console.log("[CRON-SERVICE] Disparando cron de Mi\xE9rcoles 11:30 AM...");
+    await publishDailyTipForDay("miercoles_marketing", false);
   }, { timezone: "America/Bogota" });
   cron.schedule("0 11 * * 4", async () => {
-    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Jueves Tributario...");
-    const fallbackVoice = `Hola a todos y a todas mis queridos colegas. Soy JanIA con un consejo financiero clave para sus clientes vendedores ante la DIAN. Al vender vivienda de habitaci\xF3n, pueden deducir hasta cinco mil UVT exentas del impuesto de ganancia ocasional si los fondos se destinan a la compra de otra vivienda o abono a cr\xE9dito hipotecario. Si quieren saber exactamente cu\xE1nto debe pagar su cliente en retenci\xF3n en la fuente o ganancia ocasional antes de firmar escrituras, cons\xFAltenme directamente. Los invito a invitar a m\xE1s colegas a unirse a VECY Network para que disfruten de este soporte gratuito permanente. \xA1A vender informados!`;
-    const fallbackCaption = `\u{1F4B0} *JUEVES TRIBUTARIO & AHORRO FISCAL DIAN \u2014 VECY NETWORK* \u{1F4CB}
-
-\xA1Hola a todos mis queridos colegas inmobiliarios!
-
-\u{1F4A1} *Tip Tributario del D\xEDa:* Exenci\xF3n de 5.000 UVT en Ganancia Ocasional.
-Al vender vivienda de habitaci\xF3n propia, tus clientes pueden acogerse a la exenci\xF3n del art\xEDculo 311-1 del Estatuto Tributario (hasta 5.000 UVT) si el dinero de la venta se destina a la adquisici\xF3n de otra vivienda o abono a cr\xE9dito hipotecario.
-
-\u{1F4CA} *Liquidaciones Tributarias R\xE1pidas:*
-Escr\xEDbeme o env\xEDame los valores de costo fiscal y venta, y te liquido la retenci\xF3n en la fuente y ganancia estimada en segundos.
-
-\u{1F91D} *Comparte con tus colegas:* Inv\xEDtalos a sumarse a VECY Network para acceder a consultor\xEDas tributarias especializadas.
-\u{1F4F2} *Consultas DIAN con JanIA:* https://vecy-network.vercel.app/jania`;
-    const content = await generateDailyContent("jueves_tributario", fallbackVoice, fallbackCaption);
-    try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("tributario"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Jueves:", e.message);
-    }
+    console.log("[CRON-SERVICE] Disparando cron de Jueves 11 AM...");
+    await publishDailyTipForDay("jueves_tributario", false);
   }, { timezone: "America/Bogota" });
   cron.schedule("30 11 * * 5", async () => {
-    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Viernes de Aval\xFAos...");
-    const fallbackVoice = `\xA1Excelente viernes, queridos colegas! Soy JanIA. \xBFTienen un lote o casa para desarrollo y no saben qu\xE9 altura o uso permite el POT? No se queden con la duda: descarguen la ficha catastral del SINUPOT en PDF y env\xEDenmela por WhatsApp; yo les hago el estudio normativo de uso de suelo al instante. Inviten a sus colegas de confianza a formar parte de VECY Network y a consultar precios de mercado y normativas urban\xEDsticas con nuestro sistema. \xA1Que tengan un fin de semana lleno de cierres!`;
-    const fallbackCaption = `\u{1F4D0} *VIERNES DE AVAL\xDAOS COMERCIALES & SINUPOT \u2014 VECY NETWORK* \u{1F3D9}\uFE0F
-
-\xA1Excelente viernes para todos los colegas de la red!
-
-\u{1F5FA}\uFE0F *Estudios Urban\xEDsticos y de Suelo al Instante:*
-\xBFVas a captar un lote o inmueble con potencial constructor? Descarga la ficha del SINUPOT en PDF y comp\xE1rtemela: extraigo el tratamiento urban\xEDstico, usos permitidos y edificabilidad en segundos.
-
-\u{1F4B5} *Estudios de Mercado y Valor del M\xB2:*
-Cons\xFAltame valores promedio de metro cuadrado por zona y estrato para fijar precios competitivos con tus propietarios.
-
-\u{1F91D} *Suma a tu equipo:* Invita a m\xE1s colegas a VECY Network para multiplicar las opciones de negocio en todo el pa\xEDs.
-\u{1F4F2} *Estudios de Suelo y Aval\xFAos JanIA:* https://vecy-network.vercel.app/jania`;
-    const content = await generateDailyContent("viernes_avaluos", fallbackVoice, fallbackCaption);
-    try {
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("avaluos"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Viernes:", e.message);
-    }
+    console.log("[CRON-SERVICE] Disparando cron de Viernes 11:30 AM...");
+    await publishDailyTipForDay("viernes_avaluos", false);
   }, { timezone: "America/Bogota" });
   cron.schedule("0 10 * * 6", async () => {
-    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de S\xE1bado Caf\xE9 Inmobiliario...");
-    try {
-      const fallbackVoice = `Buenos d\xEDas, queridos aliados de la red. Cerramos una semana de gran actividad comercial y colaborativa. Recuerden que para casos jur\xEDdicos de alta complejidad, sucesiones litigiosas, saneamientos o aval\xFAos certificados por perito de Lonja con R.A.A., pueden comunicarse directamente a trav\xE9s de nuestro canal oficial y plataforma web para coordinar una Consultor\xEDa Personalizada con nuestro br\xF3ker en VECY BIENES RA\xCDCES. Inviten a m\xE1s colegas a unirse a este maravilloso proyecto y a interactuar con nosotros. \xA1Disfruten de su fin de semana y a recargar energ\xEDas!`;
-      const fallbackCaption = `\u2615 *S\xC1BADO DE CAF\xC9 INMOBILIARIO & CONSULTOR\xCDA \u2014 VECY NETWORK* \u{1F91D}
-
-\xA1Buenos d\xEDas a todos los aliados y colegas de VECY Network!
-
-Culminamos una semana muy productiva. Para casos de alta complejidad jur\xEDdica, sucesiones, saneamiento de t\xEDtulos o aval\xFAos periciales oficiales con registro R.A.A. de Lonja:
-
-\u{1F4DE} *L\xEDnea de Consultor\xEDa Directa:* Canal Oficial Vecy Network
-Coordinaci\xF3n directa con la direcci\xF3n de corretaje de *VECY BIENES RA\xCDCES*.
-
-\u{1F31F} *Sigamos creciendo juntos:* Invita a m\xE1s colegas a sumarse a esta red colaborativa nacional.
-\u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania`;
-      const content = await generateDailyContent("sabado_cafe", fallbackVoice, fallbackCaption);
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("cafe"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de S\xE1bado:", e.message || e);
-    }
+    console.log("[CRON-SERVICE] Disparando cron de S\xE1bado 10 AM...");
+    await publishDailyTipForDay("sabado_cafe", false);
   }, { timezone: "America/Bogota" });
   cron.schedule("30 10 * * 0", async () => {
-    console.log("[CRON-SERVICE] Generando contenido din\xE1mico de Domingo de Soporte y Consultor\xEDa...");
-    try {
-      const fallbackVoice = `\xA1Feliz domingo a todos y a todas mis queridos colegas! Soy JanIA. Hoy quiero recordarles que nuestro equipo de VECY Network y yo estamos a su entera disposici\xF3n los siete d\xEDas de la semana. Ya sea que necesiten estructurar una promesa de compraventa, liquidar la ganancia ocasional ante la DIAN, realizar un estudio de uso de suelo en el SINUPOT, dise\xF1ar una campa\xF1a de marketing inmobiliario con inteligencia artificial o solicitar un aval\xFAo comercial certificado por perito con registro RAA de Lonja, aqu\xED estamos para respaldarlos. Los invito a invitar a m\xE1s colegas a unirse a VECY Network y a consultar cualquier tema directamente conmigo en la web o por WhatsApp. \xA1Que disfruten un domingo reparador en familia!`;
-      const fallbackCaption = `\u{1F6CE}\uFE0F *DOMINGO DE SOPORTE JANIA, CONSULTOR\xCDA & SERVICIOS \u2014 VECY NETWORK* \u{1F31F}
-
-\xA1Feliz y bendecido domingo para todos los aliados y colegas de VECY Network!
-
-Hoy queremos recordarles que en VECY Network cuentan con un respaldo integral 24/7 para potenciar y blindar sus operaciones inmobiliarias en toda Colombia:
-
-\u2696\uFE0F *Consultor\xEDa Jur\xEDdica y Notarial:* Revisi\xF3n de minutas, promesas, contratos y saneamiento de t\xEDtulos.
-\u{1F4B0} *Asesor\xEDa Tributaria DIAN:* Liquidaci\xF3n de retenciones, ganancia ocasional y optimizaci\xF3n fiscal.
-\u{1F4D0} *Aval\xFAos Comerciales y SINUPOT:* Fichas normativas POT y aval\xFAos certificados por perito R.A.A. de Lonja.
-\u{1F4E2} *Marketing Inmobiliario & IA:* Estrategias de captaci\xF3n, 7 pilares y herramientas de inteligencia artificial.
-\u{1F91D} *Cierres Comerciales en Red:* Bolsa inmobiliaria colaborativa con comisiones transparentes (35/35/15/15).
-
-\u{1F4AC} *\xBFTienes consultas o requieres acompa\xF1amiento?*
-Escr\xEDbenos en el grupo o interact\xFAa directamente con JanIA en nuestra consola web:
-\u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania
-\u{1F4DE} *Consultor\xEDa Personalizada:* Plataforma Oficial Vecy Network`;
-      const content = await generateDailyContent("domingo_soporte", fallbackVoice, fallbackCaption);
-      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("soporte"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando publicaci\xF3n de Domingo:", e.message || e);
-    }
+    console.log("[CRON-SERVICE] Disparando cron de Domingo 10:30 AM...");
+    await publishDailyTipForDay("domingo_soporte", false);
   }, { timezone: "America/Bogota" });
   cron.schedule("0 12 * * 3,6", async () => {
     console.log("[CRON-SERVICE] Generando audio din\xE1mico para PROYECTO VECY NETWORK...");
@@ -15713,12 +15513,12 @@ Este grupo es el coraz\xF3n del proyecto VECY Network. Aqu\xED debatimos, aporta
       if (isTipTime) {
         lastPublishedKey = currentRunKey;
         console.log(`[CRON-FAILSAFE-TICKER] \u23F0 Activando publicaci\xF3n programada para d\xEDa ${day} a las ${hour}:${min} (Bogot\xE1)...`);
-        await publishTodayTipNow();
+        await publishTodayTipNow(false);
       }
       if (day === 1 && hour === 19 && min === 0) {
         lastPublishedKey = currentRunKey;
         console.log(`[CRON-FAILSAFE-TICKER] \u23F0 Activando Reporte Semanal de Lunes 7:00 PM (Bogot\xE1)...`);
-        await publishWeeklyReportNow();
+        await publishWeeklyReportNow(false);
       }
     } catch (err) {
       console.error("[CRON-FAILSAFE-TICKER] Error en chequeo minutero:", err?.message || err);
@@ -15756,54 +15556,42 @@ async function getLiveMarketStats() {
     };
   }
 }
-async function publishTodayTipNow() {
-  console.log("[CRON-SERVICE] \u{1F680} Disparando publicaci\xF3n manual de tip para hoy al Canal y Grupo 2...");
-  const now = /* @__PURE__ */ new Date();
-  const dayOfWeek = now.getDay();
-  let tipo = "martes_juridico";
-  let theme = "juridico";
-  if (dayOfWeek === 1) {
-    tipo = "lunes_arranque";
-    theme = "matches";
-  } else if (dayOfWeek === 2) {
-    tipo = "martes_juridico";
-    theme = "juridico";
-  } else if (dayOfWeek === 3) {
-    tipo = "miercoles_marketing";
-    theme = "marketing";
-  } else if (dayOfWeek === 4) {
-    tipo = "jueves_tributario";
-    theme = "tributario";
-  } else if (dayOfWeek === 5) {
-    tipo = "viernes_avaluos";
-    theme = "avaluos";
-  } else if (dayOfWeek === 6) {
-    tipo = "sabado_cafe";
-    theme = "cafe";
-  } else if (dayOfWeek === 0) {
-    tipo = "domingo_soporte";
-    theme = "soporte";
-  } else {
-    tipo = "lunes_arranque";
-    theme = "matches";
+async function publishDailyTipForDay(tipoKey, force = false) {
+  const dateKey = (/* @__PURE__ */ new Date()).toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+  const runKey = `tip_${tipoKey}_${dateKey}`;
+  if (!force && !markRunExecuted(runKey)) {
+    console.log(`[CRON-SERVICE] \u23ED\uFE0F Tip ${tipoKey} ya fue despachado hoy (${runKey}), omitiendo despacho duplicado.`);
+    return { skipped: true, runKey };
   }
-  const fallbackVoice = `Hola, queridos colegas. Soy JanIA con su asesor\xEDa del d\xEDa en VECY Network. Recuerden que este espacio y nuestro canal oficial est\xE1n dise\xF1ados para resolver todas sus consultas legales, tributarias de la DIAN, aval\xFAos y marketing inmobiliario. Los invito a invitar a m\xE1s colegas a unirse a esta maravillosa red colaborativa y a probar nuestro sistema de consultas en la web o por WhatsApp. \xA1Juntos cerramos m\xE1s negocios!`;
-  const fallbackCaption = `\u{1F31F} *JANIA ASESOR\xCDA INMOBILIARIA \u2014 VECY NETWORK* \u{1F1E8}\u{1F1F4}
-
-\xA1Hola, queridos colegas!
-
-Recuerden que este espacio y nuestro canal oficial est\xE1n dise\xF1ados para resolver todas sus consultas legales, tributarias de la DIAN, aval\xFAos y marketing inmobiliario.
-
-\u{1F680} *\xDAnete y participa:*
-Los invito a invitar a m\xE1s colegas a unirse a esta maravillosa red colaborativa y a probar nuestro sistema de consultas en la web o por WhatsApp.
-
-\u{1F4F2} *Prueba las consultas con JanIA:* https://vecy-network.vercel.app/jania
-\xA1Juntos cerramos m\xE1s negocios! \u{1F3E0}\u{1F91D}`;
-  const content = await generateDailyContent(tipo, fallbackVoice, fallbackCaption);
-  await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath(theme), content.captionText);
-  return { success: true, tipo, content };
+  const tipConfig = DAILY_TIPS_CONFIG[tipoKey] || DAILY_TIPS_CONFIG["lunes_arranque"];
+  console.log(`[CRON-SERVICE] \u{1F680} Publicando tip para ${tipoKey} (Tema: ${tipConfig.theme})...`);
+  const content = await generateDailyContent(tipoKey, tipConfig.voice, tipConfig.caption);
+  const imagePath = getThemedImagePath(tipConfig.theme);
+  console.log(`[CRON-SERVICE] \u{1F5BC}\uFE0F Imagen tem\xE1tica para ${tipoKey}: ${imagePath || "Sin imagen"}`);
+  await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
+  return { success: true, tipo: tipoKey, theme: tipConfig.theme, imagePath, content };
 }
-async function publishWeeklyReportNow() {
+async function publishTodayTipNow(force = true) {
+  console.log("[CRON-SERVICE] \u{1F680} Disparando publicaci\xF3n de tip para hoy al Canal y Grupo 2...");
+  const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
+  const dayOfWeek = nowBogota.getDay();
+  let tipoKey = "lunes_arranque";
+  if (dayOfWeek === 1) tipoKey = "lunes_arranque";
+  else if (dayOfWeek === 2) tipoKey = "martes_juridico";
+  else if (dayOfWeek === 3) tipoKey = "miercoles_marketing";
+  else if (dayOfWeek === 4) tipoKey = "jueves_tributario";
+  else if (dayOfWeek === 5) tipoKey = "viernes_avaluos";
+  else if (dayOfWeek === 6) tipoKey = "sabado_cafe";
+  else if (dayOfWeek === 0) tipoKey = "domingo_soporte";
+  return await publishDailyTipForDay(tipoKey, force);
+}
+async function publishWeeklyReportNow(force = true) {
+  const dateKey = (/* @__PURE__ */ new Date()).toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+  const runKey = `reporte_semanal_${dateKey}`;
+  if (!force && !markRunExecuted(runKey)) {
+    console.log(`[CRON-SERVICE] \u23ED\uFE0F Reporte semanal ya fue despachado hoy (${runKey}), omitiendo despacho duplicado.`);
+    return { skipped: true, runKey };
+  }
   console.log("[CRON-SERVICE] \u{1F4CA} Disparando Reporte Semanal de la Bolsa Inmobiliaria con estad\xEDsticas en vivo...");
   const stats = await getLiveMarketStats();
   const fallbackVoice = `\xA1Buenas noches, estimados colegas inmobiliarios de Colombia! Les saluda JanIA con el Reporte Semanal de la Bolsa Inmobiliaria de VECY Network. Hoy cerramos la jornada con una reflexi\xF3n urgente: durante los \xFAltimos siete d\xEDas, nuestro motor evalu\xF3 m\xE1s de setecientas setenta mil combinaciones entre todas las propiedades y requerimientos captados a nivel nacional. Sin embargo, m\xE1s de treinta y cinco mil cruces se cayeron por una sola raz\xF3n: demandas incompletas que llamamos demandas fantasma, textos que solo dicen busco apartamento en arriendo en Bogot\xE1 o compro casa pasen opciones. Colegas, si para un sistema de Inteligencia Artificial es imposible adivinar qu\xE9 busca ese cliente sin un barrio, sin un presupuesto y sin metraje, \xBFc\xF3mo pretendemos que otro colega humano lo adivine? El corretaje inmobiliario es una profesi\xF3n de alta responsabilidad. Si especificamos con rigor el barrio, el presupuesto real, el metraje y las habitaciones, la tecnolog\xEDa de VECY Network conecta la oferta con la demanda al instante para cerrar negocios y compartir comisi\xF3n. Los invito a publicar con excelencia y a consultar sus coincidencias en nuestra plataforma. \xA1Feliz noche para todos!`;
@@ -15845,8 +15633,9 @@ Cuando publicas con datos completos, VECY Network te conecta en segundos con la 
 
 #VecyNetwork #InteligenciaInmobiliaria #BolsaColaborativa #CorretajeProfesional`;
   const content = await generateDailyContent("lunes_reporte_semanal", fallbackVoice, fallbackCaption);
-  await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, getThemedImagePath("reporte_semanal"), content.captionText);
-  return { success: true, tipo: "lunes_reporte_semanal", content, stats };
+  const imagePath = getThemedImagePath("reporte_semanal");
+  await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
+  return { success: true, tipo: "lunes_reporte_semanal", content, stats, imagePath };
 }
 async function generateDailyContent(tipo, fallbackVoice, fallbackCaption) {
   const now = /* @__PURE__ */ new Date();
@@ -15941,7 +15730,7 @@ ${promptEspecifico}` }
     captionText: fallbackCaption
   };
 }
-var __filename, __dirname;
+var __filename, __dirname, executedRunsToday, DAILY_TIPS_CONFIG;
 var init_cronService = __esm({
   "server/_core/cronService.ts"() {
     "use strict";
@@ -15952,6 +15741,130 @@ var init_cronService = __esm({
     init_llm();
     __filename = fileURLToPath(import.meta.url);
     __dirname = path8.dirname(__filename);
+    executedRunsToday = /* @__PURE__ */ new Set();
+    DAILY_TIPS_CONFIG = {
+      lunes_arranque: {
+        theme: "matches",
+        voice: `\xA1Buenos d\xEDas a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio y nuestro canal oficial son su consultorio permanente: aqu\xED pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, c\xF3mo liquidar la ganancia ocasional ante la DIAN, aval\xFAos de mercado o c\xF3mo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. Los invito a invitar a m\xE1s colegas a unirse a este maravilloso proyecto y a interactuar conmigo para probar nuestro sistema de consultas. \xA1Que tengan una semana extraordinaria y productiva!`,
+        caption: `\u{1F680} *ARRANQUE SEMANAL & CONSULTORIO INMOBILIARIO \u2014 VECY NETWORK* \u{1F1E8}\u{1F1F4}
+
+\xA1Buenos d\xEDas a todos mis queridos colegas!
+
+Iniciamos una semana llena de oportunidades comerciales y cierres de negocios. Recuerden que este espacio y nuestro canal oficial son su consultorio permanente 24/7:
+
+\u2696\uFE0F *Soporte Legal y Contratos:* Dudas sobre promesas, arras y Ley 820.
+\u{1F4B0} *Tributario DIAN:* Ganancia ocasional, retenci\xF3n en la fuente y exenciones.
+\u{1F4D0} *Aval\xFAos & SINUPOT:* Usos de suelo, valor de m2 y fichas normativas.
+\u{1F4E2} *Marketing Digital:* Estructura de 7 pilares y copys de alto impacto.
+
+\u{1F31F} *Construyamos juntos el futuro inmobiliario:* Invita a tus colegas corredores a sumarse a VECY Network y prueba interactuar con JanIA en nuestra web oficial:
+\u{1F4F2} *Chatea con JanIA:* https://vecy-network.vercel.app/jania`
+      },
+      martes_juridico: {
+        theme: "juridico",
+        voice: `Hola, queridos colegas. Soy JanIA con su tip jur\xEDdico del d\xEDa. \xBFSab\xEDan que un simple correo electr\xF3nico con la hoja de presentaci\xF3n del cliente o el acuerdo de puntas compartidas tiene plena validez probatoria bajo la Ley 527 de 1999? Nunca muestren un inmueble sin dejar registro escrito. Los invito a formar parte activa de VECY Network, a invitar a m\xE1s colegas y a consultar cualquier duda jur\xEDdica o revisar minutas en PDF directamente conmigo. \xA1Juntos cerramos m\xE1s blindados!`,
+        caption: `\u2696\uFE0F *MARTES JUR\xCDDICO & BLINDAJE NOTARIAL \u2014 VECY NETWORK* \u{1F3DB}\uFE0F
+
+\xA1Hola, queridos colegas corredores e inmobiliarios!
+
+\u{1F4CC} *Tip Jur\xEDdico del D\xEDa:* Validez de Acuerdos Comerciales y Registro Escrito.
+Bajo la *Ley 527 de 1999*, los mensajes de datos, correos electr\xF3nicos y hojas de visita tienen plena validez probatoria. Nunca muestres un predio sin pactar previamente las condiciones comerciales.
+
+\u{1F4A1} *\xBFTienes dudas contractuales?*
+Puedes enviarme tus minutas, promesas de compraventa o consultas de arrendamiento (texto, voz o PDF) y las analizamos al instante.
+
+\u{1F91D} *\xDAnete a la Red:* Invita a tus colegas a formar parte de VECY Network para elevar el est\xE1ndar profesional del corretaje en Colombia.
+\u{1F4F2} *Consultas Jur\xEDdicas JanIA:* https://vecy-network.vercel.app/jania`
+      },
+      miercoles_marketing: {
+        theme: "marketing",
+        voice: `\xA1Buenas tardes, queridos colegas! Soy JanIA con su tip de Marketing Inmobiliario. El ochenta por ciento de los clientes y colegas descartan una publicaci\xF3n si no tiene el precio claro, el barrio exacto o el metraje. Si quieren que sus ofertas y requerimientos se cierren en tiempo r\xE9cord, incluyan siempre los siete pilares fundamentales. Les cuento que ya estoy detectando decenas de coincidencias en segundo plano y muy pronto nuestros asesores de cierre de VECY Network los estar\xE1n contactando para conectar las puntas. Inviten a m\xE1s colegas a unirse a la red y prueben redactar sus anuncios conmigo hoy mismo.`,
+        caption: `\u{1F4E2} *MI\xC9RCOLES DE MARKETING INMOBILIARIO & 7 PILARES \u2014 VECY NETWORK* \u{1F680}
+
+\xA1Buenas tardes, queridos colegas!
+
+\u{1F3AF} *La Regla de Oro:* M\xE1s del 80% de los negocios se pierden por publicaciones incompletas o ambiguas. Para que tus ofertas y solicitudes se muevan en tiempo r\xE9cord, incluye siempre los *7 Pilares*:
+
+1\uFE0F\u20E3 Tipo de Inmueble (Apto, Casa, Bodega, etc.)
+2\uFE0F\u20E3 Ciudad y Barrio Exacto
+3\uFE0F\u20E3 Precio / Canon y Cuota de Administraci\xF3n
+4\uFE0F\u20E3 \xC1rea Total Construida en m\xB2
+5\uFE0F\u20E3 Habitaciones y Ba\xF1os
+6\uFE0F\u20E3 Parqueaderos (Independientes o en l\xEDnea)
+7\uFE0F\u20E3 Enlace directo de contacto de WhatsApp
+
+\u2728 *Primicia:* \xA1JanIA ya est\xE1 encontrando matches en la red! Muy pronto nuestro equipo de asesores de cierre los contactar\xE1 para coordinar los cierres comerciales.
+
+\u{1F91D} *Invita a m\xE1s colegas y prueba el sistema:* https://vecy-network.vercel.app/jania`
+      },
+      jueves_tributario: {
+        theme: "tributario",
+        voice: `Hola a todos y a todas mis queridos colegas. Soy JanIA con un consejo financiero clave para sus clientes vendedores ante la DIAN. Al vender vivienda de habitaci\xF3n, pueden deducir hasta cinco mil UVT exentas del impuesto de ganancia ocasional si los fondos se destinan a la compra de otra vivienda o abono a cr\xE9dito hipotecario. Si quieren saber exactamente cu\xE1nto debe pagar su cliente en retenci\xF3n en la fuente o ganancia ocasional antes de firmar escrituras, cons\xFAltenme directamente. Los invito a invitar a m\xE1s colegas a unirse a VECY Network para que disfruten de este soporte gratuito permanente. \xA1A vender informados!`,
+        caption: `\u{1F4B0} *JUEVES TRIBUTARIO & AHORRO FISCAL DIAN \u2014 VECY NETWORK* \u{1F4CB}
+
+\xA1Hola a todos mis queridos colegas inmobiliarios!
+
+\u{1F4A1} *Tip Tributario del D\xEDa:* Exenci\xF3n de 5.000 UVT en Ganancia Ocasional.
+Al vender vivienda de habitaci\xF3n propia, tus clientes pueden acogerse a la exenci\xF3n del art\xEDculo 311-1 del Estatuto Tributario (hasta 5.000 UVT) si el dinero de la venta se destina a la adquisici\xF3n de otra vivienda o abono a cr\xE9dito hipotecario.
+
+\u{1F4CA} *Liquidaciones Tributarias R\xE1pidas:*
+Escr\xEDbeme o env\xEDame los valores de costo fiscal y venta, y te liquido la retenci\xF3n en la fuente y ganancia estimada en segundos.
+
+\u{1F91D} *Comparte con tus colegas:* Inv\xEDtalos a sumarse a VECY Network para acceder a consultor\xEDas tributarias especializadas.
+\u{1F4F2} *Consultas DIAN con JanIA:* https://vecy-network.vercel.app/jania`
+      },
+      viernes_avaluos: {
+        theme: "avaluos",
+        voice: `\xA1Excelente viernes, queridos colegas! Soy JanIA. \xBFTienen un lote o casa para desarrollo y no saben qu\xE9 altura o uso permite el POT? No se queden con la duda: descarguen la ficha catastral del SINUPOT en PDF y env\xEDenmela por WhatsApp; yo les hago el estudio normativo de uso de suelo al instante. Inviten a sus colegas de confianza a formar parte de VECY Network y a consultar precios de mercado y normativas urban\xEDsticas con nuestro sistema. \xA1Que tengan un fin de semana lleno de cierres!`,
+        caption: `\u{1F4D0} *VIERNES DE AVAL\xDAOS COMERCIALES & SINUPOT \u2014 VECY NETWORK* \u{1F3D9}\uFE0F
+
+\xA1Excelente viernes para todos los colegas de la red!
+
+\u{1F5FA}\uFE0F *Estudios Urban\xEDsticos y de Suelo al Instante:*
+\xBFVas a captar un lote o inmueble con potencial constructor? Descarga la ficha del SINUPOT en PDF y comp\xE1rtemela: extraigo el tratamiento urban\xEDstico, usos permitidos y edificabilidad en segundos.
+
+\u{1F4B5} *Estudios de Mercado y Valor del M\xB2:*
+Cons\xFAltame valores promedio de metro cuadrado por zona y estrato para fijar precios competitivos con tus propietarios.
+
+\u{1F91D} *Suma a tu equipo:* Invita a m\xE1s colegas a VECY Network para multiplicar las opciones de negocio en todo el pa\xEDs.
+\u{1F4F2} *Estudios de Suelo y Aval\xFAos JanIA:* https://vecy-network.vercel.app/jania`
+      },
+      sabado_cafe: {
+        theme: "cafe",
+        voice: `Buenos d\xEDas, queridos aliados de la red. Cerramos una semana de gran actividad comercial y colaborativa. Recuerden que para casos jur\xEDdicos de alta complejidad, sucesiones litigiosas, saneamientos o aval\xFAos certificados por perito de Lonja con R.A.A., pueden comunicarse directamente a trav\xE9s de nuestro canal oficial y plataforma web para coordinar una Consultor\xEDa Personalizada con nuestro br\xF3ker en VECY BIENES RA\xCDCES. Inviten a m\xE1s colegas a unirse a este maravilloso proyecto y a interactuar con nosotros. \xA1Disfruten de su fin de semana y a recargar energ\xEDas!`,
+        caption: `\u2615 *S\xC1BADO DE CAF\xC9 INMOBILIARIO & CONSULTOR\xCDA \u2014 VECY NETWORK* \u{1F91D}
+
+\xA1Buenos d\xEDas a todos los aliados y colegas de VECY Network!
+
+Culminamos una semana muy productiva. Para casos de alta complejidad jur\xEDdica, sucesiones, saneamiento de t\xEDtulos o aval\xFAos periciales oficiales con registro R.A.A. de Lonja:
+
+\u{1F4DE} *L\xEDnea de Consultor\xEDa Directa:* Canal Oficial Vecy Network
+Coordinaci\xF3n directa con la direcci\xF3n de corretaje de *VECY BIENES RA\xCDCES*.
+
+\u{1F31F} *Sigamos creciendo juntos:* Invita a m\xE1s colegas a sumarse a esta red colaborativa nacional.
+\u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania`
+      },
+      domingo_soporte: {
+        theme: "soporte",
+        voice: `\xA1Feliz domingo a todos y a todas mis queridos colegas! Soy JanIA. Hoy quiero recordarles que nuestro equipo de VECY Network y yo estamos a su entera disposici\xF3n los siete d\xEDas de la semana. Ya sea que necesiten estructurar una promesa de compraventa, liquidar la ganancia ocasional ante la DIAN, realizar un estudio de uso de suelo en el SINUPOT, dise\xF1ar una campa\xF1a de marketing inmobiliario con inteligencia artificial o solicitar un aval\xFAo comercial certificado por perito con registro RAA de Lonja, aqu\xED estamos para respaldarlos. Los invito a invitar a m\xE1s colegas a unirse a VECY Network y a consultar cualquier tema directamente conmigo en la web o por WhatsApp. \xA1Que disfruten un domingo reparador en familia!`,
+        caption: `\u{1F6CE}\uFE0F *DOMINGO DE SOPORTE JANIA, CONSULTOR\xCDA & SERVICIOS \u2014 VECY NETWORK* \u{1F31F}
+
+\xA1Feliz y bendecido domingo para todos los aliados y colegas de VECY Network!
+
+Hoy queremos recordarles que en VECY Network cuentan con un respaldo integral 24/7 para potenciar y blindar sus operaciones inmobiliarias en toda Colombia:
+
+\u2696\uFE0F *Consultor\xEDa Jur\xEDdica y Notarial:* Revisi\xF3n de minutas, promesas, contratos y saneamiento de t\xEDtulos.
+\u{1F4B0} *Asesor\xEDa Tributaria DIAN:* Liquidaci\xF3n de retenciones, ganancia ocasional y optimizaci\xF3n fiscal.
+\u{1F4D0} *Aval\xFAos Comerciales y SINUPOT:* Fichas normativas POT y aval\xFAos certificados por perito R.A.A. de Lonja.
+\u{1F4E2} *Marketing Inmobiliario & IA:* Estrategias de captaci\xF3n, 7 pilares y herramientas de inteligencia artificial.
+\u{1F91D} *Cierres Comerciales en Red:* Bolsa inmobiliaria colaborativa con comisiones transparentes (35/35/15/15).
+
+\u{1F4AC} *\xBFTienes consultas o requieres acompa\xF1amiento?*
+Escr\xEDbenos en el grupo o interact\xFAa directamente con JanIA en nuestra consola web:
+\u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania
+\u{1F4DE} *Consultor\xEDa Personalizada:* Plataforma Oficial Vecy Network`
+      }
+    };
   }
 });
 
@@ -15968,7 +15881,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.23";
+var VECY_VERSION = "v31.24";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

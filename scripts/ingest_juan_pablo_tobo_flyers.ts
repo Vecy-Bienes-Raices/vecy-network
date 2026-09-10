@@ -8,6 +8,10 @@ import { findMatchesForRequirement } from "../server/_core/matching";
 
 async function main() {
   const db = await getDb();
+  if (!db) {
+    console.error("No DB connection");
+    process.exit(1);
+  }
   console.log("🚀 Iniciando ingesta forense de los flyers de Juan Pablo Tobo...");
 
   const phone = "573112911829";
@@ -26,10 +30,10 @@ async function main() {
     console.log(`✅ Usuario encontrado: ID ${userId} - ${user.name} (${user.phone})`);
   } else {
     const [newUser] = await db.insert(users).values({
+      openId: `wa_${phone}`,
       name: `${name} (${agency})`,
       phone: phone,
       role: "agent",
-      agencyName: agency,
     }).returning();
     userId = newUser.id;
     console.log(`✅ Usuario creado: ID ${userId} - ${newUser.name}`);
