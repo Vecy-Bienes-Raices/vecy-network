@@ -171,6 +171,9 @@ export class JaniaMatchBot {
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
   private reactedMessageIds: Map<string, { emoji: string; time: number }> = new Map();
+  private reactionQueue: Promise<void> = Promise.resolve();
+  private lastReactionTimestamp: number = 0;
+  private readonly MIN_REACTION_INTERVAL_MS = 1200;
 
   private async getCachedGroupMetadata(chatId: string) {
     const cached = this.groupMetadataCache.get(chatId);
@@ -452,10 +455,10 @@ export class JaniaMatchBot {
         try {
           // --- FLUJO 1: MENSAJES DE GRUPO ---
           if (isGroup) {
-            // 🛡️ BLINDAJE ANTI-AUTORESPUESTA: JanIA jamás procesa ni responde a mensajes emitidos por su propia cuenta
-            const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : '';
-            const botPhone = botJid ? botJid.split('@')[0] : '573192919978';
-            if (fromMe || (botJid && senderId === botJid) || senderId.startsWith(botPhone) || senderId.startsWith('573192919978')) {
+            // 🛡️ BLINDAJE DE MENSAJES PROPIOS PROGRAMADOS:
+            // Omitir únicamente mensajes emitidos programáticamente por JanIA en esta sesión (tips automáticos, difusiones, etc.)
+            const msgId = msg.key?.id || '';
+            if (this.botSentMessageIds.has(msgId)) {
               continue;
             }
 
@@ -605,6 +608,8 @@ export class JaniaMatchBot {
               body = qm.conversation || qm.extendedTextMessage?.text || qm.imageMessage?.caption || '';
             }
 
+            const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : '';
+            const botPhone = botJid ? botJid.split('@')[0] : '573192919978';
             const textLower = body.toLowerCase();
             const mentionsBot = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid: string) => cleanJid(jid) === botJid);
             const hasDirectMention = textLower.includes("jania") || 
@@ -981,6 +986,23 @@ export class JaniaMatchBot {
         return;
       }
 
+      // 🛡️ BLINDAJE ANTI-AUTORESPUESTA EN GRUPOS CONVERSACIONALES (Grupo 2 y 3):
+      // Si el mensaje proviene de la propia cuenta de WhatsApp y NO contiene mención directa explícita ("JanIA"),
+      // se ignora para evitar que JanIA se responda a sí misma ante tips matutinos, difusiones o mensajes propios.
+      const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : '';
+      const botPhone = botJid ? botJid.split('@')[0] : '573192919978';
+      const isFromBotAccount = msg.key?.fromMe || (botJid && senderId === botJid) || senderId.startsWith(botPhone) || senderId.startsWith('573192919978');
+      const textLower = bodyText.toLowerCase();
+      const hasDirectMention = textLower.includes("jania") || 
+                               (botPhone && textLower.includes(botPhone)) || 
+                               textLower.includes("573192919978") ||
+                               !!msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid: string) => cleanJid(jid) === botJid);
+
+      if (isFromBotAccount && !hasDirectMention) {
+        console.log(`[JANIA-SILENT-SHIELD] 🛡️ Mensaje de la propia cuenta en grupo conversacional ${chatId} omitido para auto-respuesta (sin mención explícita).`);
+        return;
+      }
+
       let resolvedSenderId = senderId;
       if (senderId.endsWith('@lid') && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
         try {
@@ -994,7 +1016,6 @@ export class JaniaMatchBot {
       }
 
       const realName = msg.pushName || `Asesor +${resolvedSenderId.split('@')[0]}`;
-      const textLower = bodyText.toLowerCase();
 
       const { detectaVoz, textToSpeechMedia } = await import('./whatsapp-utils');
       const { processWhatsAppMessage, processConsultingMessage, processCirculoMessage } = await import('./janIA');
@@ -1287,7 +1308,8 @@ export class JaniaMatchBot {
 
     // --- REACCIÓN INSTANTÁNEA (< 200ms) PARA TEXTO, ENLACES Y DOCUMENTOS ---
     let flyerVisionData: any = null;
-    if (!msg.key.fromMe) {
+    // Permitir reacción instantánea tanto para publicaciones de terceros como para las enviadas por Eduardo
+    if (!this.botSentMessageIds.has(msg.key?.id || '')) {
       let cleanLower = (bodyText || '').toLowerCase();
 
       // Enriquecer cleanLower con las palabras clave embebidas en enlaces (slugs de portales inmobiliarios)
@@ -1436,41 +1458,62 @@ export class JaniaMatchBot {
   }
 
   private async safeReact(chatId: string, msgKey: proto.IMessageKey, emoji: string, reason: string = 'REACT') {
-    if (!msgKey || !msgKey.id || msgKey.fromMe || !emoji || !this.sock) return;
+    if (!msgKey || !msgKey.id || !emoji || !this.sock) return;
+
+    const msgId = msgKey.id;
 
     // Deduplicación estricta: evitar disparar reacciones idénticas al mismo mensaje en menos de 60 segundos
-    const existing = this.reactedMessageIds.get(msgKey.id);
+    const existing = this.reactedMessageIds.get(msgId);
     if (existing && existing.emoji === emoji && (Date.now() - existing.time < 60000)) {
-      console.log(`[JANIA-${reason}] ℹ️ Reacción ${emoji} ya entregada a Msg ID ${msgKey.id}. Omitiendo duplicado.`);
+      console.log(`[JANIA-${reason}] ℹ️ Reacción ${emoji} ya entregada o en cola para Msg ID ${msgId}. Omitiendo duplicado.`);
       return;
     }
 
-    try {
-      console.log(`[JANIA-${reason}] 🎯 Despachando reacción ${emoji} a ${chatId} (Msg ID: ${msgKey.id})...`);
-      await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
-      this.reactedMessageIds.set(msgKey.id, { emoji, time: Date.now() });
-      console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
+    // Registrar inmediatamente en memoria para evitar colisiones entre FAST-REACT y BUFFER-REACT
+    this.reactedMessageIds.set(msgId, { emoji, time: Date.now() });
 
-      if (this.reactedMessageIds.size > 1500) {
-        const threshold = Date.now() - 120000;
-        for (const [k, v] of this.reactedMessageIds.entries()) {
-          if (v.time < threshold) this.reactedMessageIds.delete(k);
+    // Encolar de forma estrictamente secuencial con pacing seguro para blindar contra 'rate-overlimit' y desconexiones 408
+    this.reactionQueue = this.reactionQueue.then(async () => {
+      try {
+        if (!this.sock || !this.isReady) {
+          console.warn(`[JANIA-${reason}] ⚠️ Socket no disponible o reconectando. Omitiendo reacción ${emoji} a ${chatId}`);
+          return;
         }
-      }
-    } catch (err: any) {
-      console.warn(`[JANIA-${reason}] ⚠️ Primer intento de reacción ${emoji} falló (${err?.message || err}). Reintentando en 3.5s...`);
-      setTimeout(async () => {
+
+        // Pacing seguro: garantizar mínimo 1200ms entre reacciones sucesivas de WhatsApp
+        const now = Date.now();
+        const elapsed = now - this.lastReactionTimestamp;
+        if (elapsed < this.MIN_REACTION_INTERVAL_MS) {
+          await new Promise(r => setTimeout(r, this.MIN_REACTION_INTERVAL_MS - elapsed));
+        }
+
+        console.log(`[JANIA-${reason}] 🎯 Despachando reacción ${emoji} a ${chatId} (Msg ID: ${msgId})...`);
+        await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
+        this.lastReactionTimestamp = Date.now();
+        console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
+
+        if (this.reactedMessageIds.size > 1500) {
+          const threshold = Date.now() - 120000;
+          for (const [k, v] of this.reactedMessageIds.entries()) {
+            if (v.time < threshold) this.reactedMessageIds.delete(k);
+          }
+        }
+      } catch (err: any) {
+        console.warn(`[JANIA-${reason}] ⚠️ Primer intento de reacción ${emoji} falló (${err?.message || err}). Reintentando tras pausa segura...`);
+        await new Promise(r => setTimeout(r, 2500));
         try {
-          if (this.sock) {
+          if (this.sock && this.isReady) {
             await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
-            this.reactedMessageIds.set(msgKey.id!, { emoji, time: Date.now() });
-            console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA en reintento`);
+            this.lastReactionTimestamp = Date.now();
+            console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA en reintento secuencial`);
           }
         } catch (retryErr: any) {
           console.warn(`[JANIA-${reason}] ❌ Reintento de reacción ${emoji} no pudo completarse:`, retryErr?.message || retryErr);
         }
-      }, 3500);
-    }
+      }
+    });
+
+    return this.reactionQueue;
   }
 
   private getReactionEmoji(result: any, isOfficialGroup: boolean = false): string | null {
@@ -1647,7 +1690,7 @@ export class JaniaMatchBot {
           const isOfficialGroupSingle = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
           if (result) {
             const emoji = this.getReactionEmoji(result, isOfficialGroupSingle);
-            if (emoji && bufferedMsg.originalMsg?.key && bufferedMsg.originalMsg.key.id && !bufferedMsg.originalMsg.key.fromMe) {
+            if (emoji && bufferedMsg.originalMsg?.key && bufferedMsg.originalMsg.key.id) {
               this.safeReact(chatId, bufferedMsg.originalMsg.key, emoji, 'MULTI-REACT');
             }
           }
@@ -1745,7 +1788,7 @@ export class JaniaMatchBot {
         const emoji = this.getReactionEmoji(result, isOfficialGroup);
         if (emoji) {
           const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
-          if (lastMsg && lastMsg.key && lastMsg.key.id && !lastMsg.key.fromMe) {
+          if (lastMsg && lastMsg.key && lastMsg.key.id) {
             this.safeReact(chatId, lastMsg.key, emoji, 'BUFFER-REACT');
           }
         }

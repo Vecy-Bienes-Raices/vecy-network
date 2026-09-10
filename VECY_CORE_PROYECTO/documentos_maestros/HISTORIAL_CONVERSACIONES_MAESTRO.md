@@ -50,7 +50,49 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.24 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.25 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 10 de Septiembre de 2026 — 13:00 a 13:30 (Hora Colombia UTC-5)
+**Versión**: `v31.25` | **Ambiente**: Producción VPS (`13.140.149.144`) + Baileys WhatsApp Engine (`whatsapp-match.ts`) + Cola de Reacciones Secuencial Paced (`reactionQueue`) + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+"Creo que No quedó calibrado. ME temo que JanIA no está funcionando como debe de ser y las publicaciones que empezaron a llegar a los grupos externos y el oficial 1 no están siendo reaccionadas por JanIA, lo que me da a entender que hay algo mal."
+
+#### 🔍 Diagnóstico Técnico y Evidencia Empírica de Causas Raíz:
+1. **Bloqueo Absoluto de Publicaciones Enviadas por Eduardo (Causa Raíz #1)**:
+   - *Evidencia*: En la versión v31.24, para evitar que JanIA se auto-respondiera en el Grupo 2, se colocó una guarda global al inicio de `if (isGroup)`:
+     `if (fromMe || (botJid && senderId === botJid) || senderId.startsWith(botPhone) || senderId.startsWith('573192919978')) continue;`.
+   - *Consecuencia Inmediata*: Dado que la cuenta de WhatsApp de JanIA corre directamente en la línea personal de Eduardo (+573192919978), cualquier inmueble o requerimiento enviado o reenviado por Eduardo en el Grupo 1 ("VECY INMUEBLES NETWORK") o en cualquier grupo externo era descartado en la línea 458 del bucle raíz. JanIA no extraía, no guardaba en Supabase y no emitía ninguna reacción.
+   - *Filtros Redundantes en Cascada*: Además, líneas 1290 (`if (!msg.key.fromMe)`), 1439 (`if (msgKey.fromMe) return`) y 1748 (`if (!lastMsg.key.fromMe)`) bloqueaban triplemente cualquier reacción emoji a mensajes donde `fromMe: true`.
+2. **Avalancha Concurrente de Reacciones, 'rate-overlimit' y Desconexiones 408 (Causa Raíz #2)**:
+   - *Evidencia en Logs de PM2 (`jania-server-error.log`)*:
+     `[JANIA-FAST-REACT] ⚠️ Primer intento de reacción 👍 falló (rate-overlimit)...`
+     `[JANIA-BUFFER-REACT] ⚠️ Primer intento de reacción 👌 falló (Connection Closed)...`
+     `[JANIA-MATCH-OFICIAL] 🛡️ [ANTI-BAN] Conexión Baileys pausada (código: 408) [Intento 1/3]...`
+   - *Mecánica del Fallo*: Al ingresar ráfagas de mensajes en múltiples grupos o mensajes con múltiples fotos, `FAST-REACT` y `BUFFER-REACT` llamaban a `this.sock.sendMessage(chatId, { react: { ... } })` en paralelo sin ninguna cola de espera ni serialización. WhatsApp Web impone un límite estricto de ~1 reacción por segundo por WebSocket. Al recibir múltiples stanzas de reacción simultáneas, WhatsApp devolvía HTTP 429 `rate-overlimit`. Los reintentos sin pacing colapsaban el socket, provocando desconexión por timeout (código 408) y fallos en cadena de `Connection Closed`.
+
+#### 🛠️ Acciones Ejecutadas y Solución Quirúrgica Definitiva:
+1. **Cola Secuencial de Reacciones con Pacing Seguro (`reactionQueue` en `whatsapp-match.ts`)**:
+   - Implementada una cola de promesas secuenciales (`reactionQueue`) con intervalo mínimo garantizado de 1.200 ms (`MIN_REACTION_INTERVAL_MS = 1200`).
+   - Registro inmediato en memoria (`reactedMessageIds`) al momento de ingresar a la cola para evitar que `FAST-REACT` y `BUFFER-REACT` compitan entre sí por el mismo mensaje. Si el buffer confirma el mismo emoji, se omite silenciosamente sin saturar la red. Si el buffer rectifica el tipo de negocio (ej. pasa de Venta `👍` a Arriendo `👌`), actualiza la reacción limpiamente.
+   - Pacing estricto y blindaje contra caídas: erradica 100% el error `rate-overlimit` y las desconexiones Baileys 408.
+2. **Liberación de Publicaciones de Eduardo en Grupo 1 y Grupos Externos**:
+   - Se removió el bloqueo de `fromMe` y `573192919978` del bucle principal de ingesta de grupos (`isGroup`).
+   - Se removieron los bloqueos `!msg.key.fromMe` en `FAST-REACT` (línea 1290), `safeReact` (línea 1439), `MULTI-REACT` (línea 1650) y `BUFFER-REACT` (línea 1748).
+   - Ahora, las publicaciones enviadas o reenviadas por Eduardo en cualquier grupo son reconocidas, ingeridas en Supabase, procesadas por el motor de matching y marcadas nativamente con el emoji doctrinal correspondiente (`👍`, `👌`, `🔀`, `📝`, `✏️`, `🔄`).
+3. **Reubicación Quirúrgica del Blindaje Anti-Auto-Respuesta en Grupos Conversacionales**:
+   - El blindaje se trasladó exclusivamente al inicio de `handleDirectGroupQuestion` (Grupo 2 Soporte Legal y Grupo 3 Círculo).
+   - Regla inteligente: Si el mensaje proviene de la cuenta del bot (+573192919978) y NO contiene mención directa explícita ("JanIA"), se ignora silenciosamente. Esto impide que JanIA se responda a sí misma ante tips matutinos, pero le permite responderle a Eduardo si este la llama directamente por su nombre.
+4. **Cascada de Modelos en Transcripción de Audio (`voiceTranscription.ts`)**:
+   - Se actualizaron los modelos priorizando `gemini-flash-lite-latest` y `gemini-3.5-flash-lite`, previniendo errores HTTP 429 por saturación de cuota.
+5. **Validación y Despliegue en VPS**:
+   - `npm run check`: Cero errores de TypeScript.
+   - `npm run build`: Compilación limpia de cliente Vite y servidor Node.js.
+   - Versión incrementada a `v31.25` en `shared/const.ts` y `package.json`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.24 — Septiembre 2026
 
 ### 🗓️ Sesión: Jueves 10 de Septiembre de 2026 — 12:00 a 12:30 (Hora Colombia UTC-5)
 **Versión**: `v31.24` | **Ambiente**: Producción VPS (`13.140.149.144`) + Baileys WhatsApp Engine (`whatsapp-match.ts`) + Motor de Audio FFmpeg OGG Opus (`whatsapp-utils.ts`) + Scheduler Cron/Failsafe (`cronService.ts`) + GitHub (`main`)

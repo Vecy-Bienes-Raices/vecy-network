@@ -6729,7 +6729,13 @@ async function transcribeAudioWithGemini(audioBuffer, mimeType) {
   if (uniqueKeys.length === 0) {
     throw new Error("No hay ninguna GEMINI_API_KEY configurada para la transcripci\xF3n de voz.");
   }
-  const models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-flash-lite-latest"];
+  const models = [
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-flash-latest",
+    "gemini-2.5-flash"
+  ];
   let cleanMime = mimeType.split(";")[0].trim().toLowerCase();
   let bufferToUse = audioBuffer;
   if (cleanMime.includes("webm") || cleanMime.includes("octet-stream")) {
@@ -13261,6 +13267,9 @@ var init_whatsapp_match = __esm({
       reconnectAttempts = 0;
       maxReconnectAttempts = 5;
       reactedMessageIds = /* @__PURE__ */ new Map();
+      reactionQueue = Promise.resolve();
+      lastReactionTimestamp = 0;
+      MIN_REACTION_INTERVAL_MS = 1200;
       async getCachedGroupMetadata(chatId) {
         const cached = this.groupMetadataCache.get(chatId);
         if (cached && Date.now() - cached.time < 10 * 60 * 1e3) {
@@ -13502,9 +13511,8 @@ var init_whatsapp_match = __esm({
             }
             try {
               if (isGroup) {
-                const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
-                const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
-                if (fromMe || botJid && senderId === botJid || senderId.startsWith(botPhone) || senderId.startsWith("573192919978")) {
+                const msgId = msg.key?.id || "";
+                if (this.botSentMessageIds.has(msgId)) {
                   continue;
                 }
                 const meta = await this.getCachedGroupMetadata(chatId);
@@ -13635,6 +13643,8 @@ ${quotedNote}` : quotedNote;
                   const qm = msg.message.extendedTextMessage.contextInfo.quotedMessage;
                   body = qm.conversation || qm.extendedTextMessage?.text || qm.imageMessage?.caption || "";
                 }
+                const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
+                const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
                 const textLower = body.toLowerCase();
                 const mentionsBot = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid(jid) === botJid);
                 const hasDirectMention = textLower.includes("jania") || botPhone && textLower.includes(botPhone) || textLower.includes("573192919978") || !!mentionsBot;
@@ -13849,6 +13859,15 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
             console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Mensaje directo en grupo externo ${chatId} ignorado para respuestas textuales. Silencio 100% preservado.`);
             return;
           }
+          const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
+          const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
+          const isFromBotAccount = msg.key?.fromMe || botJid && senderId === botJid || senderId.startsWith(botPhone) || senderId.startsWith("573192919978");
+          const textLower = bodyText.toLowerCase();
+          const hasDirectMention = textLower.includes("jania") || botPhone && textLower.includes(botPhone) || textLower.includes("573192919978") || !!msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid(jid) === botJid);
+          if (isFromBotAccount && !hasDirectMention) {
+            console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Mensaje de la propia cuenta en grupo conversacional ${chatId} omitido para auto-respuesta (sin menci\xF3n expl\xEDcita).`);
+            return;
+          }
           let resolvedSenderId = senderId;
           if (senderId.endsWith("@lid") && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
             try {
@@ -13862,7 +13881,6 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
             }
           }
           const realName = msg.pushName || `Asesor +${resolvedSenderId.split("@")[0]}`;
-          const textLower = bodyText.toLowerCase();
           const { detectaVoz: detectaVoz2, textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
           const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
           const isAudioPTT = !!msg.message?.audioMessage;
@@ -14090,7 +14108,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           return;
         }
         let flyerVisionData = null;
-        if (!msg.key.fromMe) {
+        if (!this.botSentMessageIds.has(msg.key?.id || "")) {
           let cleanLower = (bodyText || "").toLowerCase();
           const detectedUrls = cleanLower.match(/https?:\/\/[^\s]+/g) || [];
           for (const u of detectedUrls) {
@@ -14208,37 +14226,50 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
         }
       }
       async safeReact(chatId, msgKey, emoji, reason = "REACT") {
-        if (!msgKey || !msgKey.id || msgKey.fromMe || !emoji || !this.sock) return;
-        const existing = this.reactedMessageIds.get(msgKey.id);
+        if (!msgKey || !msgKey.id || !emoji || !this.sock) return;
+        const msgId = msgKey.id;
+        const existing = this.reactedMessageIds.get(msgId);
         if (existing && existing.emoji === emoji && Date.now() - existing.time < 6e4) {
-          console.log(`[JANIA-${reason}] \u2139\uFE0F Reacci\xF3n ${emoji} ya entregada a Msg ID ${msgKey.id}. Omitiendo duplicado.`);
+          console.log(`[JANIA-${reason}] \u2139\uFE0F Reacci\xF3n ${emoji} ya entregada o en cola para Msg ID ${msgId}. Omitiendo duplicado.`);
           return;
         }
-        try {
-          console.log(`[JANIA-${reason}] \u{1F3AF} Despachando reacci\xF3n ${emoji} a ${chatId} (Msg ID: ${msgKey.id})...`);
-          await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
-          this.reactedMessageIds.set(msgKey.id, { emoji, time: Date.now() });
-          console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
-          if (this.reactedMessageIds.size > 1500) {
-            const threshold = Date.now() - 12e4;
-            for (const [k, v] of this.reactedMessageIds.entries()) {
-              if (v.time < threshold) this.reactedMessageIds.delete(k);
+        this.reactedMessageIds.set(msgId, { emoji, time: Date.now() });
+        this.reactionQueue = this.reactionQueue.then(async () => {
+          try {
+            if (!this.sock || !this.isReady) {
+              console.warn(`[JANIA-${reason}] \u26A0\uFE0F Socket no disponible o reconectando. Omitiendo reacci\xF3n ${emoji} a ${chatId}`);
+              return;
             }
-          }
-        } catch (err) {
-          console.warn(`[JANIA-${reason}] \u26A0\uFE0F Primer intento de reacci\xF3n ${emoji} fall\xF3 (${err?.message || err}). Reintentando en 3.5s...`);
-          setTimeout(async () => {
+            const now = Date.now();
+            const elapsed = now - this.lastReactionTimestamp;
+            if (elapsed < this.MIN_REACTION_INTERVAL_MS) {
+              await new Promise((r) => setTimeout(r, this.MIN_REACTION_INTERVAL_MS - elapsed));
+            }
+            console.log(`[JANIA-${reason}] \u{1F3AF} Despachando reacci\xF3n ${emoji} a ${chatId} (Msg ID: ${msgId})...`);
+            await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
+            this.lastReactionTimestamp = Date.now();
+            console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
+            if (this.reactedMessageIds.size > 1500) {
+              const threshold = Date.now() - 12e4;
+              for (const [k, v] of this.reactedMessageIds.entries()) {
+                if (v.time < threshold) this.reactedMessageIds.delete(k);
+              }
+            }
+          } catch (err) {
+            console.warn(`[JANIA-${reason}] \u26A0\uFE0F Primer intento de reacci\xF3n ${emoji} fall\xF3 (${err?.message || err}). Reintentando tras pausa segura...`);
+            await new Promise((r) => setTimeout(r, 2500));
             try {
-              if (this.sock) {
+              if (this.sock && this.isReady) {
                 await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
-                this.reactedMessageIds.set(msgKey.id, { emoji, time: Date.now() });
-                console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA en reintento`);
+                this.lastReactionTimestamp = Date.now();
+                console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA en reintento secuencial`);
               }
             } catch (retryErr) {
               console.warn(`[JANIA-${reason}] \u274C Reintento de reacci\xF3n ${emoji} no pudo completarse:`, retryErr?.message || retryErr);
             }
-          }, 3500);
-        }
+          }
+        });
+        return this.reactionQueue;
       }
       getReactionEmoji(result, isOfficialGroup = false) {
         if (!result) return null;
@@ -14382,7 +14413,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
               const isOfficialGroupSingle = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
               if (result2) {
                 const emoji = this.getReactionEmoji(result2, isOfficialGroupSingle);
-                if (emoji && bufferedMsg.originalMsg?.key && bufferedMsg.originalMsg.key.id && !bufferedMsg.originalMsg.key.fromMe) {
+                if (emoji && bufferedMsg.originalMsg?.key && bufferedMsg.originalMsg.key.id) {
                   this.safeReact(chatId, bufferedMsg.originalMsg.key, emoji, "MULTI-REACT");
                 }
               }
@@ -14467,7 +14498,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             const emoji = this.getReactionEmoji(result, isOfficialGroup);
             if (emoji) {
               const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
-              if (lastMsg && lastMsg.key && lastMsg.key.id && !lastMsg.key.fromMe) {
+              if (lastMsg && lastMsg.key && lastMsg.key.id) {
                 this.safeReact(chatId, lastMsg.key, emoji, "BUFFER-REACT");
               }
             }
@@ -15881,7 +15912,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.24";
+var VECY_VERSION = "v31.25";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

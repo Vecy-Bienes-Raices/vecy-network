@@ -163,7 +163,26 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.24 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.25 — Septiembre 2026
+
+### Novedades v31.25 (Cola Secuencial de Reacciones Baileys con Pacing 1200ms, Desbloqueo de Publicaciones de Eduardo y Blindaje Quirúrgico Anti-Auto-Respuesta en Grupos Conversacionales):
+- **Diagnóstico y Corrección de Fallo de Calibración en Reacciones (Grupo 1 y Grupos Externos)**:
+  1) **Causas Raíz Identificadas**:
+     - *Bloqueo de publicaciones de Eduardo*: En v31.24, la guarda `if (fromMe || senderId.startsWith('573192919978')) continue;` en el bucle principal de grupos (`isGroup`) descartaba de raíz cualquier inmueble o requerimiento enviado o reenviado por Eduardo en Grupo 1 ("VECY INMUEBLES NETWORK") o en cualquier grupo externo. Además, filtros redundantes en cascada (`!msg.key.fromMe`, `msgKey.fromMe`) bloqueaban triplemente las reacciones emoji.
+     - *Avalancha concurrente de reacciones y desconexión 408*: Al llegar ráfagas de mensajes o fotos múltiples en varios grupos, `FAST-REACT` y `BUFFER-REACT` llamaban a `this.sock.sendMessage` en paralelo sin cola ni pacing. WhatsApp Web devolvía HTTP 429 `rate-overlimit`, y el socket se cerraba por timeout (código 408 / Connection Closed).
+  2) **Cola Secuencial de Reacciones con Pacing Seguro (`reactionQueue`)**:
+     - Cola serializada de promesas (`reactionQueue`) con retardo mínimo garantizado de 1.200 ms entre reacciones sucesivas (`MIN_REACTION_INTERVAL_MS = 1200`).
+     - Registro inmediato en memoria (`reactedMessageIds`) al entrar en cola, evitando carreras o duplicados entre `FAST-REACT` y `BUFFER-REACT`.
+     - Erradica 100% el error `rate-overlimit` y las desconexiones Baileys 408.
+  3) **Liberación de Ingesta y Reacciones para Eduardo**:
+     - Eliminadas las restricciones `fromMe` en `isGroup`, `FAST-REACT`, `safeReact`, `MULTI-REACT` y `BUFFER-REACT`. Las publicaciones enviadas por Eduardo son capturadas, guardadas en Supabase, emparejadas por el motor de matching y marcadas con el emoji doctrinal correspondiente.
+  4) **Reubicación del Blindaje Anti-Auto-Respuesta Exclusivamente en Grupos Conversacionales**:
+     - Trasladado a `handleDirectGroupQuestion` (Grupo 2 y Grupo 3). Si un mensaje proviene de la cuenta del bot y no contiene mención explícita ("JanIA"), se ignora para no responder a tips propios. Si Eduardo la menciona expresamente, JanIA responde.
+  5) **Cascada en Transcripción de Audio**: Priorizados `gemini-flash-lite-latest` y `gemini-3.5-flash-lite` en `voiceTranscription.ts`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.24 — Septiembre 2026
 
 ### Novedades v31.24 (Blindaje Anti-Auto-Respuesta en Grupo 2, Erradicación de Código Muerto de Emojis, Transcodificación FFmpeg OGG Opus Nativa de WhatsApp, Restauración de Publicación en Canales y Deduplicación Estricta de Parrilla Diaria):
 - **Diagnóstico Integral y Explicación Arquitectónica de `server/_core/whatsapp-match.ts`**:

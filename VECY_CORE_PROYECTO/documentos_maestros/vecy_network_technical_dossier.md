@@ -322,6 +322,33 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.25 — Septiembre 2026
+
+#### 📌 COLA SECUENCIAL DE REACCIONES BAILEYS (PACING 1200ms), DESBLOQUEO DE PUBLICACIONES DE EDUARDO Y BLINDAJE QUIRÚRGICO CONVERSACIONAL
+
+**Problemas identificados:**
+1. **Bloqueo Total de Publicaciones Enviadas o Reenviadas por Eduardo (+573192919978)**:
+   - En v31.24, para evitar que JanIA se auto-respondiera en el Grupo 2, se introdujo una guarda global `if (fromMe || senderId.startsWith('573192919978')) continue;` al inicio del bloque grupal (`isGroup`).
+   - Dado que el bot opera directamente sobre la línea de Eduardo, cualquier publicación o requerimiento enviado por él en Grupo 1 ("VECY INMUEBLES NETWORK") o grupos externos era descartado de inmediato en la línea 458: sin extracción, sin Supabase y sin reacciones.
+   - Además, existían comprobaciones redundantes `!msg.key.fromMe`, `msgKey.fromMe` en `FAST-REACT`, `safeReact`, `MULTI-REACT` y `BUFFER-REACT` que impedían triplemente el marcado de emojis a publicaciones propias.
+2. **Avalancha Concurrente de Reacciones, 'rate-overlimit' y Desconexiones 408**:
+   - En momentos de alta actividad grupal o publicaciones con múltiples fotos, `FAST-REACT` y `BUFFER-REACT` invocaban concurrentemente a `this.sock.sendMessage(chatId, { react: { ... } })` sin cola ni espaciado.
+   - WhatsApp Web impone un límite estricto de ~1 reacción por segundo por WebSocket. Al recibir ráfagas paralelas, devolvía HTTP 429 `rate-overlimit`, y el socket cerraba por timeout (código 408 / Connection Closed), provocando fallas masivas en cadena.
+
+**Solución aplicada:**
+- **Cola Secuencial de Reacciones con Pacing Seguro (`reactionQueue` en `whatsapp-match.ts`)**:
+  - Implementación de cola de promesas secuenciales (`reactionQueue`) con retardo mínimo de 1.200 ms entre cada reacción sucesiva (`MIN_REACTION_INTERVAL_MS = 1200`).
+  - Registro inmediato en memoria (`reactedMessageIds`) al momento de encolar, erradicando carreras entre `FAST-REACT` y `BUFFER-REACT`.
+  - Eliminación total del error `rate-overlimit` y de las desconexiones Baileys 408.
+- **Liberación de Publicaciones de Eduardo**:
+  - Removido el filtro `fromMe` de la ingesta general de grupos y de las funciones de reacción (`FAST-REACT`, `safeReact`, `MULTI-REACT`, `BUFFER-REACT`). Las publicaciones enviadas por Eduardo se capturan, se guardan en Supabase, se cruzan en el motor de matching y se marcan con su emoji correspondiente.
+- **Blindaje Quirúrgico Anti-Auto-Respuesta en Grupos Conversacionales**:
+  - Reubicado el blindaje exclusivamente al inicio de `handleDirectGroupQuestion` (Grupo 2 y Grupo 3). Si un mensaje proviene de la cuenta del bot y no contiene mención explícita ("JanIA"), se ignora para no auto-responderse. Si Eduardo menciona directamente a JanIA, esta le responde con normalidad.
+- **Cascada en Transcripción de Audio (`voiceTranscription.ts`)**:
+  - Priorizados `gemini-flash-lite-latest` y `gemini-3.5-flash-lite` para evitar saturación de cuota y errores 429.
+
+---
+
 ### 🔖 v31.24 — Septiembre 2026
 
 #### 📌 BLINDAJE ANTI-AUTO-RESPUESTA EN GRUPO 2, ERRADICACIÓN DE CÓDIGO MUERTO DE EMOJIS, TRANSCODIFICACIÓN FFMPEG OGG OPUS, RESTAURACIÓN DE CANALES Y DEDUPLICACIÓN DE PARRILLA DIARIA

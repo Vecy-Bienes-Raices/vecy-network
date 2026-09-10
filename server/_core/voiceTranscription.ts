@@ -131,7 +131,13 @@ async function transcribeAudioWithGemini(audioBuffer: Buffer, mimeType: string):
     throw new Error("No hay ninguna GEMINI_API_KEY configurada para la transcripción de voz.");
   }
 
-  const models = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-flash-lite-latest"];
+  const models = [
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-flash-latest",
+    "gemini-2.5-flash"
+  ];
 
   let cleanMime = mimeType.split(';')[0].trim().toLowerCase();
   let bufferToUse = audioBuffer;
