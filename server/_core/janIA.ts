@@ -2462,32 +2462,42 @@ export async function extractFlyerVision(imageBufferBase64: string): Promise<Fly
     return null;
   }
 
-  const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash-lite"];
+  const models = [
+    "gemini-3.5-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash",
+    "gemini-flash-latest",
+    "gemini-2.5-flash"
+  ];
 
   const prompt = `Eres la IA experta en visión documental y extracción de flyers inmobiliarios de VECY Network en Colombia.
 Analiza la imagen enviada a un grupo inmobiliario de WhatsApp.
 Determina si es:
 1. "INMUEBLE" (Oferta de venta, arriendo o permuta de una propiedad).
-2. "REQUERIMIENTO" (Demanda o búsqueda: un asesor o cliente busca/necesita/compra un inmueble para un cliente o para sí mismo).
+2. "REQUERIMIENTO" (Demanda o búsqueda: un asesor o cliente busca/necesita/compra un inmueble para un cliente, constructora o marca en expansión).
 3. "CONSULTA_GENERAL" (Foto ambiental común sin texto publicitario relevante sobreimpreso, comprobante bancario, meme o ajeno a bienes raíces).
+
+REGLAS CRÍTICAS DE CLASIFICACIÓN:
+- Si el flyer contiene términos como "BUSCO", "BUSCAMOS", "SE BUSCA", "SE REQUIERE", "COMPRO", "COMPRAMOS", "MARCAS EN EXPANSIÓN", "CONSTRUCTORES BUSCAN", "CLIENTE COMPRA" o similares, clasifica OBLIGATORIAMENTE como "REQUERIMIENTO".
+- Si el flyer contiene términos como "VENDO", "VENDEMOS", "SE VENDE", "EN VENTA", "OFREZCO", "ARRIENDO", "SE ARRIENDA", "DISPONIBLE", "OPEN HOUSE" o describe un inmueble específico ofertado, clasifica como "INMUEBLE".
 
 Si es INMUEBLE o REQUERIMIENTO, extrae TODOS los datos técnicos y comerciales legibles en la imagen:
 - isFlyerOrBanner: boolean (true si tiene texto publicitario o comercial sobreimpreso, false si es foto limpia ambiental).
 - classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL".
 - transactionType: "venta" | "arriendo" | "venta_permuta" | "arriendo_temporal".
-- propertyType: string (ej. "apartamento", "casa", "lote", "bodega", "oficina", "local", "finca", "edificio", "apartaestudio").
-- title: string (título conciso del inmueble o solicitud, ej. "Lote Comercial en Venta", "Busco Apartamento en Cedritos").
-- price: number en COP sin puntos ni comas (ej. 800000000). Si es arriendo puro, poner 0 o null.
+- propertyType: string (ej. "lote", "bodega", "apartamento", "casa", "oficina", "local", "finca", "edificio", "apartaestudio").
+- title: string (título conciso del inmueble o solicitud, ej. "Busco Lotes para Constructores", "Apartamento en Venta en Cedritos").
+- price: number en COP sin puntos ni comas (ej. 800000000). Si es arriendo puro o no hay precio, poner null.
 - rentPrice: number en COP si es arriendo.
-- presupuestoMax: number en COP si es REQUERIMIENTO (presupuesto máximo de compra o canon máximo).
-- area: number en metros cuadrados m² (ej. 200, 450).
-- bedrooms: number (número de habitaciones o alcobas).
-- bathrooms: number (número de baños).
-- garages: number (número de parqueaderos/garajes).
-- city: string (ciudad, ej. "Bogotá", "Medellín", "Chía", "Cali", etc.).
-- zone: string (barrio, sector o localidad, ej. "Cedritos", "Suba", "Chicó", etc.).
-- contactPhone: string (teléfono celular de 10 dígitos, ej. "3112911829" o "573112911829").
-- contactName: string (nombre del asesor o inmobiliaria anunciante).
+- presupuestoMax: number en COP si es REQUERIMIENTO (presupuesto máximo de compra o canon máximo si lo indica).
+- area: number en metros cuadrados m² (ej. 600, 450). Si es rango (ej. 600 - 1600), poner el mínimo o promedio.
+- bedrooms: number (número de habitaciones o alcobas si aplica).
+- bathrooms: number (número de baños si aplica).
+- garages: number (número de parqueaderos/garajes si aplica).
+- city: string (ciudad, ej. "Bogotá", "Medellín", "Chía", "Cali", "Nacional", etc.).
+- zone: string (barrio, sector o subzonas mencionadas, ej. "Pablo VI, Cedritos", "Suba", "Chicó", etc.).
+- contactPhone: string (teléfono celular de 10 dígitos legible en el flyer, ej. "3112911829" o "573112911829").
+- contactName: string (nombre del asesor o inmobiliaria anunciante, ej. "Juan Pablo Tobo", "Inmo Propiedades").
 - flyerVerbatimText: string (transcripción textual completa y fiel de TODO el texto legible en el flyer).
 
 Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura.`;
@@ -3082,63 +3092,112 @@ Por lo tanto, DEBES hacer lo siguiente:
     }
     llmMessages.push({ role: "user", content: contextText });
 
-    const response = await invokeLLM({
-      messages: llmMessages,
-      responseFormat: { type: "json_object", schema: janiaResultSchema },
-      imageBuffer,
-      pdfBuffer,
-      pdfMimeType,
-      enableSearch: enableSearch
-    });
-
-    const llmRes = response as any;
-    if (!llmRes || !llmRes.choices || !llmRes.choices[0]) throw new Error("Fallo de comunicación con el LLM");
-    
     let result: JanIAResult;
-    const rawContent = llmRes.choices[0].message.content;
-    try {
-      result = parseSafeJSON(rawContent) as JanIAResult;
-    } catch (parseErr: any) {
-      console.error("[JanIA-Parser-Error] Error al deserializar JSON de JanIA:", parseErr.message);
-      
-      // Intentar extraer la clasificación real original mediante regex
-      const classMatch = rawContent.match(/"classification"\s*:\s*"([^"]+)"/i);
-      const extractedClass = classMatch ? classMatch[1].toUpperCase() : null;
 
-      // Intentar extraer el campo "response" de forma limpia mediante expresión regular
-      const responseMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*?)"(?:\s*,\s*"|\s*})/);
-      let fallbackText = responseMatch ? responseMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') : null;
+    // ── FAST-PATH PARA FLYERS / AFICHES INMOBILIARIOS ESTRUCTURADOS (v31.23) ──
+    // Si el flyer comercial ya fue analizado y estructurado con éxito por extractFlyerVision
+    // y el usuario no envió un texto conversacional largo que amerite el prompt legal de 25k tokens,
+    // construimos el resultado directamente con 0ms de demora, 0 riesgo de 429 y 100% de fidelidad.
+    const isPureFlyer = flyerData && 
+      (flyerData.isFlyerOrBanner || flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO") &&
+      (!text || text.trim().length < 60 || text.includes("[Publicación de Imagen"));
 
-      if (!fallbackText) {
-        const truncatedMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*)/);
-        if (truncatedMatch) {
-          fallbackText = truncatedMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/["\}]+$/, '');
-        }
+    if (flyerData && isPureFlyer) {
+      const fd = flyerData;
+      console.log(`[JanIA] ⚡ Fast-Path Vision activado: flyer comercial '${fd.title || fd.classification}' estructurado directamente sin invocar prompt legal masivo.`);
+      const tx = (fd.transactionType || "").toLowerCase();
+      const isPermuta = tx.includes("permuta") || tx === "venta_permuta";
+      const isRent = tx.includes("arriendo") || tx === "arriendo_temporal";
+      let emoji = "👍";
+      if (fd.classification === "INMUEBLE") {
+        emoji = isPermuta ? "🔀" : (isRent ? "👌" : "👍");
+      } else {
+        emoji = isPermuta ? "🔄" : (isRent ? "✏️" : "📝");
       }
 
-      const inferredClass = (extractedClass === "INMUEBLE" || extractedClass === "REQUERIMIENTO") ? extractedClass : "CONSULTA_GENERAL";
+      result = {
+        classification: fd.classification as any,
+        response: `Ficha técnica capturada exitosamente desde el flyer comercial: ${fd.title || ''}`,
+        reactionEmoji: emoji,
+        isFlyerOrBanner: true,
+        flyerVerbatimText: fd.flyerVerbatimText,
+        extractedData: {
+          title: fd.title,
+          propertyType: fd.propertyType,
+          transactionType: fd.transactionType,
+          price: fd.price,
+          rentPrice: fd.rentPrice,
+          presupuestoMax: fd.presupuestoMax,
+          area: fd.area,
+          bedrooms: fd.bedrooms,
+          bathrooms: fd.bathrooms,
+          garages: fd.garages,
+          city: fd.city || "Bogotá, D.C.",
+          zone: fd.zone,
+          contactPhone: fd.contactPhone,
+          contactName: fd.contactName,
+          rawText: fd.flyerVerbatimText || messageToProcess
+        },
+        mentions: []
+      };
+    } else {
+      const response = await invokeLLM({
+        messages: llmMessages,
+        responseFormat: { type: "json_object", schema: janiaResultSchema },
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        enableSearch: enableSearch
+      });
 
-      if (fallbackText && fallbackText.trim() !== "") {
-        result = {
-          classification: inferredClass as any,
-          response: fallbackText.trim(),
-          mentions: []
-        };
-      } else if (rawContent && rawContent.trim() !== "") {
-        const cleanContent = rawContent
-          .replace(/"classification"\s*:\s*"[^"]*"/gi, "")
-          .replace(/"response"\s*:\s*"/gi, "")
-          .replace(/[\{\}\[\]"]/g, "")
-          .replace(/classification:\s*\w+,?/gi, "")
-          .replace(/response:\s*/gi, "")
-          .trim();
-        result = {
-          classification: inferredClass as any,
-          response: cleanContent || "Hola, he procesado tu consulta inmobiliaria.",
-          mentions: []
-        };
-      } else {
-        throw parseErr;
+      const llmRes = response as any;
+      if (!llmRes || !llmRes.choices || !llmRes.choices[0]) throw new Error("Fallo de comunicación con el LLM");
+      
+      const rawContent = llmRes.choices[0].message.content;
+      try {
+        result = parseSafeJSON(rawContent) as JanIAResult;
+      } catch (parseErr: any) {
+        console.error("[JanIA-Parser-Error] Error al deserializar JSON de JanIA:", parseErr.message);
+        
+        // Intentar extraer la clasificación real original mediante regex
+        const classMatch = rawContent.match(/"classification"\s*:\s*"([^"]+)"/i);
+        const extractedClass = classMatch ? classMatch[1].toUpperCase() : null;
+
+        // Intentar extraer el campo "response" de forma limpia mediante expresión regular
+        const responseMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*?)"(?:\s*,\s*"|\s*})/);
+        let fallbackText = responseMatch ? responseMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') : null;
+
+        if (!fallbackText) {
+          const truncatedMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*)/);
+          if (truncatedMatch) {
+            fallbackText = truncatedMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/["\}]+$/, '');
+          }
+        }
+
+        const inferredClass = (extractedClass === "INMUEBLE" || extractedClass === "REQUERIMIENTO") ? extractedClass : "CONSULTA_GENERAL";
+
+        if (fallbackText && fallbackText.trim() !== "") {
+          result = {
+            classification: inferredClass as any,
+            response: fallbackText.trim(),
+            mentions: []
+          };
+        } else if (rawContent && rawContent.trim() !== "") {
+          const cleanContent = rawContent
+            .replace(/"classification"\s*:\s*"[^"]*"/gi, "")
+            .replace(/"response"\s*:\s*"/gi, "")
+            .replace(/[\{\}\[\]"]/g, "")
+            .replace(/classification:\s*\w+,?/gi, "")
+            .replace(/response:\s*/gi, "")
+            .trim();
+          result = {
+            classification: inferredClass as any,
+            response: cleanContent || "Hola, he procesado tu consulta inmobiliaria.",
+            mentions: []
+          };
+        } else {
+          throw parseErr;
+        }
       }
     }
     

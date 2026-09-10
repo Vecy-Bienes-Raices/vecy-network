@@ -170,6 +170,7 @@ export class JaniaMatchBot {
   private groupMetadataCache: Map<string, { data: any; time: number }> = new Map();
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
+  private reactedMessageIds: Map<string, { emoji: string; time: number }> = new Map();
 
   private async getCachedGroupMetadata(chatId: string) {
     const cached = this.groupMetadataCache.get(chatId);
@@ -1429,22 +1430,39 @@ export class JaniaMatchBot {
 
   private async safeReact(chatId: string, msgKey: proto.IMessageKey, emoji: string, reason: string = 'REACT') {
     if (!msgKey || !msgKey.id || msgKey.fromMe || !emoji || !this.sock) return;
+
+    // Deduplicación estricta: evitar disparar reacciones idénticas al mismo mensaje en menos de 60 segundos
+    const existing = this.reactedMessageIds.get(msgKey.id);
+    if (existing && existing.emoji === emoji && (Date.now() - existing.time < 60000)) {
+      console.log(`[JANIA-${reason}] ℹ️ Reacción ${emoji} ya entregada a Msg ID ${msgKey.id}. Omitiendo duplicado.`);
+      return;
+    }
+
     try {
       console.log(`[JANIA-${reason}] 🎯 Despachando reacción ${emoji} a ${chatId} (Msg ID: ${msgKey.id})...`);
       await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
+      this.reactedMessageIds.set(msgKey.id, { emoji, time: Date.now() });
       console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
+
+      if (this.reactedMessageIds.size > 1500) {
+        const threshold = Date.now() - 120000;
+        for (const [k, v] of this.reactedMessageIds.entries()) {
+          if (v.time < threshold) this.reactedMessageIds.delete(k);
+        }
+      }
     } catch (err: any) {
-      console.warn(`[JANIA-${reason}] ⚠️ Primer intento de reacción ${emoji} falló (${err?.message || err}). Reintentando en 2.5s...`);
+      console.warn(`[JANIA-${reason}] ⚠️ Primer intento de reacción ${emoji} falló (${err?.message || err}). Reintentando en 3.5s...`);
       setTimeout(async () => {
         try {
           if (this.sock) {
             await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
+            this.reactedMessageIds.set(msgKey.id!, { emoji, time: Date.now() });
             console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA en reintento`);
           }
         } catch (retryErr: any) {
           console.warn(`[JANIA-${reason}] ❌ Reintento de reacción ${emoji} no pudo completarse:`, retryErr?.message || retryErr);
         }
-      }, 2500);
+      }, 3500);
     }
   }
 

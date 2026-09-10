@@ -53,9 +53,11 @@ function markKeyCooldown(key: string, seconds: number = 30) {
 
 // Modelos ordenados por prioridad de fallback (validados y activos en Google API)
 const FALLBACK_MODELS = [
-  "gemini-2.5-flash",
+  "gemini-flash-lite-latest",
+  "gemini-3.5-flash-lite",
+  "gemini-3.5-flash",
   "gemini-flash-latest",
-  "gemini-flash-lite-latest"
+  "gemini-2.5-flash"
 ];
 
 // Semáforo de concurrencia y pacing para no disparar llamadas simultáneas

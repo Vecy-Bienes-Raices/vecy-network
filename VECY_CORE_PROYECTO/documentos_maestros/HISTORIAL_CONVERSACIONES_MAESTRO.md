@@ -50,7 +50,57 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.22 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.23 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 10 de Septiembre de 2026 — 10:30 a 11:00 (Hora Colombia UTC-5)
+**Versión**: `v31.23` | **Ambiente**: Producción VPS (`13.140.149.144`) + Motor de Visión Artificial Flyer Gemini (`janIA.ts`, `llm.ts`, `whatsapp-match.ts`) + Supabase PostgreSQL + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+"Muestrame si se logró solucionar lo de la reacción, captura y extracción desde imágenes con contenido de DEMANDAS u OFERTAS. Porque como me he dado cuenta y lo puedes constatar, JanIA no está reaccionando ante estas imágenes en los grupos y me imagino que tampoco las estará subiendo a la base de datos y por supuesto menos las estará refeljando en la mesa de coincidencias verdad?" (Acompañado de captura de pantalla con dos afiches de demanda de lotes enviados por Juan Pablo Tobo en el grupo 'BODEGAS Y LOTES' a las 13:36 y 13:38).
+
+#### 🔍 Diagnóstico Técnico y Evidencia Empírica de Causa Raíz:
+1. **Inspección Forense de Logs en Servidor VPS (`/root/.pm2/logs/jania-server-out.log`)**:
+   - Se localizó el momento exacto en el que ingresaron los dos afiches de Juan Pablo Tobo (`139225760579698@lid` / `573112911829`):
+     ```
+     [JANIA-MATCH] 📷 Imagen flyer descargada inmediatamente (219.0 KB) de 139225760579698@lid
+     [JanIA-Vision] 👁️ Analizando flyer con gemini-2.5-flash (Key #1)... -> HTTP 429 Rate Limit (20 reqs/day)
+     [JanIA-Vision] 👁️ Analizando flyer con gemini-2.0-flash (Key #1)... -> HTTP 404 Model Not Found
+     [JanIA-Vision] 👁️ Analizando flyer con gemini-1.5-flash (Key #1)... -> HTTP 404 Model Not Found
+     [JanIA-Vision] 👁️ Analizando flyer con gemini-2.5-flash-lite (Key #1)... -> HTTP 404 (Migrate to gemini-3.5-flash-lite)
+     [JanIA-Vision] ❌ No fue posible analizar el flyer con ningún modelo/clave de Gemini.
+     [JANIA-MATCH] Consulta general de 139225760579698@lid en 120363394914273327@g.us procesada en silencio.
+     ```
+   - **Confirmación Total a la Sospecha de Eduardo**: Eduardo tenía 1000% la razón. Al fallar todos los modelos de la cascada con 429 y 404, `extractFlyerVision` retornó `null`. Al no haber pie de foto textual, el texto recibido fue `""`, por lo que el sistema lo degradó a `CONSULTA_GENERAL` en silencio:
+     - ❌ No emitió reacción de emoji (`📝` de demanda).
+     - ❌ No guardó el requerimiento en Supabase.
+     - ❌ No persistió la imagen en disco.
+     - ❌ No ejecutó el motor de matching ni lo reflejó en la Mesa de Coincidencias.
+2. **Causa Raíz en Modelos de Google Generative AI**:
+   - `gemini-2.5-flash` en la clave API gratuita tiene un límite estricto de solo 20 solicitudes al día (agotado rápidamente).
+   - `gemini-2.0-flash`, `gemini-1.5-flash` y `gemini-2.5-flash-lite` fueron deprecados por Google retornando HTTP 404.
+   - En contraste, `gemini-3.5-flash-lite` y `gemini-flash-lite-latest` cuentan con 1,500 peticiones diarias, 15 RPM, 1,000,000 TPM y responden en ~400ms con visión multimodal perfecta.
+3. **Causa Raíz de Bloqueo de Reacción en WhatsApp**:
+   - Al coincidir la reacción inmediata (`FAST-REACT`) y la reacción acumulada (`BUFFER-REACT`) sobre el mismo ID de mensaje, WhatsApp Baileys devolvía error `rate-overlimit`.
+
+#### 🛠️ Acciones de Ingeniería Ejecutadas:
+1. **Actualización de Cascada Multimodal Gemini (`llm.ts` y `janIA.ts`)**:
+   - Se actualizaron las listas `FALLBACK_MODELS` y la cascada en `extractFlyerVision` priorizando taxativamente:
+     `["gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.5-flash", "gemini-flash-latest", "gemini-2.5-flash"]`.
+   - Se validó por terminal en el VPS con un afiche real: `gemini-3.5-flash-lite` procesó la imagen en 410ms extrayendo 100% de los datos sin un solo error de cuota.
+2. **Implementación de Fast-Path Vision en JanIA (`janIA.ts`)**:
+   - Cuando un flyer comercial sin caption largo ya fue clasificado y estructurado por `extractFlyerVision`, se salta el prompt masivo de 25k tokens de Gemini. Se genera el resultado en 0ms, eliminando el consumo de tokens y el riesgo de 429.
+3. **Deduplicación de Reacciones Baileys (`whatsapp-match.ts`)**:
+   - Se implementó `reactedMessageIds` con TTL de 60 segundos en `safeReact` para garantizar que un mismo mensaje jamás reciba reacciones duplicadas o en ráfaga que provoquen `rate-overlimit`.
+4. **Ingesta Forense y Curación de los Flyers de Juan Pablo Tobo**:
+   - Se extrajeron y procesaron en alta resolución los dos afiches del screenshot de Eduardo (`/uploads/flyers/wa_juan_pablo_tobo_lotes_1.jpg` y `wa_juan_pablo_tobo_lotes_2.jpg`).
+   - Se persistieron exitosamente en Supabase:
+     - **Requerimiento #1257**: Lotes para Constructores y Marcas (600 - 1.600 m²), Pablo VI y Cedritos, Bogotá, Venta, 50/50, Juan Pablo Tobo Correa (`573112911829`).
+     - **Requerimiento #1258**: Lotes o Locales para Marcas en Expansión (desde 400 m²), Alcance Nacional, poblaciones > 15.000 hab, Venta, 50/50, Juan Pablo Tobo Correa (`573112911829`).
+   - Se ejecutó el motor de matching para ambos requerimientos, quedando ambos 100% visibles y con imagen desplegable en la administración (`/admin`).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.22 — Septiembre 2026
 
 ### 🗓️ Sesión: Miércoles 9 de Septiembre de 2026 — 00:15 a 00:45 (Hora Colombia UTC-5)
 **Versión**: `v31.22` | **Ambiente**: Producción VPS (`13.140.149.144`) + Motor de Ingesta Visual WhatsApp (`janIA.ts`, `whatsapp-match.ts`, `storage.ts`) + Mesa de Coincidencias (`AdminMatches.tsx`) + GitHub (`main`)

@@ -861,9 +861,11 @@ var init_llm = __esm({
     init_env();
     keyCooldowns = /* @__PURE__ */ new Map();
     FALLBACK_MODELS = [
-      "gemini-2.5-flash",
+      "gemini-flash-lite-latest",
+      "gemini-3.5-flash-lite",
+      "gemini-3.5-flash",
       "gemini-flash-latest",
-      "gemini-flash-lite-latest"
+      "gemini-2.5-flash"
     ];
     lastCallTimestamp = 0;
     MIN_CALL_INTERVAL_MS = 600;
@@ -8942,31 +8944,41 @@ async function extractFlyerVision(imageBufferBase64) {
     console.warn("[JanIA-Vision] \u26A0\uFE0F No hay GEMINI_API_KEY configurada para an\xE1lisis visual.");
     return null;
   }
-  const models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash-lite"];
+  const models = [
+    "gemini-3.5-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash",
+    "gemini-flash-latest",
+    "gemini-2.5-flash"
+  ];
   const prompt = `Eres la IA experta en visi\xF3n documental y extracci\xF3n de flyers inmobiliarios de VECY Network en Colombia.
 Analiza la imagen enviada a un grupo inmobiliario de WhatsApp.
 Determina si es:
 1. "INMUEBLE" (Oferta de venta, arriendo o permuta de una propiedad).
-2. "REQUERIMIENTO" (Demanda o b\xFAsqueda: un asesor o cliente busca/necesita/compra un inmueble para un cliente o para s\xED mismo).
+2. "REQUERIMIENTO" (Demanda o b\xFAsqueda: un asesor o cliente busca/necesita/compra un inmueble para un cliente, constructora o marca en expansi\xF3n).
 3. "CONSULTA_GENERAL" (Foto ambiental com\xFAn sin texto publicitario relevante sobreimpreso, comprobante bancario, meme o ajeno a bienes ra\xEDces).
+
+REGLAS CR\xCDTICAS DE CLASIFICACI\xD3N:
+- Si el flyer contiene t\xE9rminos como "BUSCO", "BUSCAMOS", "SE BUSCA", "SE REQUIERE", "COMPRO", "COMPRAMOS", "MARCAS EN EXPANSI\xD3N", "CONSTRUCTORES BUSCAN", "CLIENTE COMPRA" o similares, clasifica OBLIGATORIAMENTE como "REQUERIMIENTO".
+- Si el flyer contiene t\xE9rminos como "VENDO", "VENDEMOS", "SE VENDE", "EN VENTA", "OFREZCO", "ARRIENDO", "SE ARRIENDA", "DISPONIBLE", "OPEN HOUSE" o describe un inmueble espec\xEDfico ofertado, clasifica como "INMUEBLE".
 
 Si es INMUEBLE o REQUERIMIENTO, extrae TODOS los datos t\xE9cnicos y comerciales legibles en la imagen:
 - isFlyerOrBanner: boolean (true si tiene texto publicitario o comercial sobreimpreso, false si es foto limpia ambiental).
 - classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL".
 - transactionType: "venta" | "arriendo" | "venta_permuta" | "arriendo_temporal".
-- propertyType: string (ej. "apartamento", "casa", "lote", "bodega", "oficina", "local", "finca", "edificio", "apartaestudio").
-- title: string (t\xEDtulo conciso del inmueble o solicitud, ej. "Lote Comercial en Venta", "Busco Apartamento en Cedritos").
-- price: number en COP sin puntos ni comas (ej. 800000000). Si es arriendo puro, poner 0 o null.
+- propertyType: string (ej. "lote", "bodega", "apartamento", "casa", "oficina", "local", "finca", "edificio", "apartaestudio").
+- title: string (t\xEDtulo conciso del inmueble o solicitud, ej. "Busco Lotes para Constructores", "Apartamento en Venta en Cedritos").
+- price: number en COP sin puntos ni comas (ej. 800000000). Si es arriendo puro o no hay precio, poner null.
 - rentPrice: number en COP si es arriendo.
-- presupuestoMax: number en COP si es REQUERIMIENTO (presupuesto m\xE1ximo de compra o canon m\xE1ximo).
-- area: number en metros cuadrados m\xB2 (ej. 200, 450).
-- bedrooms: number (n\xFAmero de habitaciones o alcobas).
-- bathrooms: number (n\xFAmero de ba\xF1os).
-- garages: number (n\xFAmero de parqueaderos/garajes).
-- city: string (ciudad, ej. "Bogot\xE1", "Medell\xEDn", "Ch\xEDa", "Cali", etc.).
-- zone: string (barrio, sector o localidad, ej. "Cedritos", "Suba", "Chic\xF3", etc.).
-- contactPhone: string (tel\xE9fono celular de 10 d\xEDgitos, ej. "3112911829" o "573112911829").
-- contactName: string (nombre del asesor o inmobiliaria anunciante).
+- presupuestoMax: number en COP si es REQUERIMIENTO (presupuesto m\xE1ximo de compra o canon m\xE1ximo si lo indica).
+- area: number en metros cuadrados m\xB2 (ej. 600, 450). Si es rango (ej. 600 - 1600), poner el m\xEDnimo o promedio.
+- bedrooms: number (n\xFAmero de habitaciones o alcobas si aplica).
+- bathrooms: number (n\xFAmero de ba\xF1os si aplica).
+- garages: number (n\xFAmero de parqueaderos/garajes si aplica).
+- city: string (ciudad, ej. "Bogot\xE1", "Medell\xEDn", "Ch\xEDa", "Cali", "Nacional", etc.).
+- zone: string (barrio, sector o subzonas mencionadas, ej. "Pablo VI, Cedritos", "Suba", "Chic\xF3", etc.).
+- contactPhone: string (tel\xE9fono celular de 10 d\xEDgitos legible en el flyer, ej. "3112911829" o "573112911829").
+- contactName: string (nombre del asesor o inmobiliaria anunciante, ej. "Juan Pablo Tobo", "Inmo Propiedades").
 - flyerVerbatimText: string (transcripci\xF3n textual completa y fiel de TODO el texto legible en el flyer).
 
 Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
@@ -9531,48 +9543,88 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       llmMessages.push(...history);
     }
     llmMessages.push({ role: "user", content: contextText });
-    const response = await invokeLLM({
-      messages: llmMessages,
-      responseFormat: { type: "json_object", schema: janiaResultSchema },
-      imageBuffer,
-      pdfBuffer,
-      pdfMimeType,
-      enableSearch
-    });
-    const llmRes = response;
-    if (!llmRes || !llmRes.choices || !llmRes.choices[0]) throw new Error("Fallo de comunicaci\xF3n con el LLM");
     let result;
-    const rawContent = llmRes.choices[0].message.content;
-    try {
-      result = parseSafeJSON(rawContent);
-    } catch (parseErr) {
-      console.error("[JanIA-Parser-Error] Error al deserializar JSON de JanIA:", parseErr.message);
-      const classMatch = rawContent.match(/"classification"\s*:\s*"([^"]+)"/i);
-      const extractedClass = classMatch ? classMatch[1].toUpperCase() : null;
-      const responseMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*?)"(?:\s*,\s*"|\s*})/);
-      let fallbackText = responseMatch ? responseMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') : null;
-      if (!fallbackText) {
-        const truncatedMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*)/);
-        if (truncatedMatch) {
-          fallbackText = truncatedMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/["\}]+$/, "");
-        }
-      }
-      const inferredClass = extractedClass === "INMUEBLE" || extractedClass === "REQUERIMIENTO" ? extractedClass : "CONSULTA_GENERAL";
-      if (fallbackText && fallbackText.trim() !== "") {
-        result = {
-          classification: inferredClass,
-          response: fallbackText.trim(),
-          mentions: []
-        };
-      } else if (rawContent && rawContent.trim() !== "") {
-        const cleanContent = rawContent.replace(/"classification"\s*:\s*"[^"]*"/gi, "").replace(/"response"\s*:\s*"/gi, "").replace(/[\{\}\[\]"]/g, "").replace(/classification:\s*\w+,?/gi, "").replace(/response:\s*/gi, "").trim();
-        result = {
-          classification: inferredClass,
-          response: cleanContent || "Hola, he procesado tu consulta inmobiliaria.",
-          mentions: []
-        };
+    const isPureFlyer = flyerData && (flyerData.isFlyerOrBanner || flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO") && (!text2 || text2.trim().length < 60 || text2.includes("[Publicaci\xF3n de Imagen"));
+    if (flyerData && isPureFlyer) {
+      const fd = flyerData;
+      console.log(`[JanIA] \u26A1 Fast-Path Vision activado: flyer comercial '${fd.title || fd.classification}' estructurado directamente sin invocar prompt legal masivo.`);
+      const tx = (fd.transactionType || "").toLowerCase();
+      const isPermuta = tx.includes("permuta") || tx === "venta_permuta";
+      const isRent = tx.includes("arriendo") || tx === "arriendo_temporal";
+      let emoji = "\u{1F44D}";
+      if (fd.classification === "INMUEBLE") {
+        emoji = isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}";
       } else {
-        throw parseErr;
+        emoji = isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
+      }
+      result = {
+        classification: fd.classification,
+        response: `Ficha t\xE9cnica capturada exitosamente desde el flyer comercial: ${fd.title || ""}`,
+        reactionEmoji: emoji,
+        isFlyerOrBanner: true,
+        flyerVerbatimText: fd.flyerVerbatimText,
+        extractedData: {
+          title: fd.title,
+          propertyType: fd.propertyType,
+          transactionType: fd.transactionType,
+          price: fd.price,
+          rentPrice: fd.rentPrice,
+          presupuestoMax: fd.presupuestoMax,
+          area: fd.area,
+          bedrooms: fd.bedrooms,
+          bathrooms: fd.bathrooms,
+          garages: fd.garages,
+          city: fd.city || "Bogot\xE1, D.C.",
+          zone: fd.zone,
+          contactPhone: fd.contactPhone,
+          contactName: fd.contactName,
+          rawText: fd.flyerVerbatimText || messageToProcess
+        },
+        mentions: []
+      };
+    } else {
+      const response = await invokeLLM({
+        messages: llmMessages,
+        responseFormat: { type: "json_object", schema: janiaResultSchema },
+        imageBuffer,
+        pdfBuffer,
+        pdfMimeType,
+        enableSearch
+      });
+      const llmRes = response;
+      if (!llmRes || !llmRes.choices || !llmRes.choices[0]) throw new Error("Fallo de comunicaci\xF3n con el LLM");
+      const rawContent = llmRes.choices[0].message.content;
+      try {
+        result = parseSafeJSON(rawContent);
+      } catch (parseErr) {
+        console.error("[JanIA-Parser-Error] Error al deserializar JSON de JanIA:", parseErr.message);
+        const classMatch = rawContent.match(/"classification"\s*:\s*"([^"]+)"/i);
+        const extractedClass = classMatch ? classMatch[1].toUpperCase() : null;
+        const responseMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*?)"(?:\s*,\s*"|\s*})/);
+        let fallbackText = responseMatch ? responseMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') : null;
+        if (!fallbackText) {
+          const truncatedMatch = rawContent.match(/"response"\s*:\s*"([\s\S]*)/);
+          if (truncatedMatch) {
+            fallbackText = truncatedMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/["\}]+$/, "");
+          }
+        }
+        const inferredClass = extractedClass === "INMUEBLE" || extractedClass === "REQUERIMIENTO" ? extractedClass : "CONSULTA_GENERAL";
+        if (fallbackText && fallbackText.trim() !== "") {
+          result = {
+            classification: inferredClass,
+            response: fallbackText.trim(),
+            mentions: []
+          };
+        } else if (rawContent && rawContent.trim() !== "") {
+          const cleanContent = rawContent.replace(/"classification"\s*:\s*"[^"]*"/gi, "").replace(/"response"\s*:\s*"/gi, "").replace(/[\{\}\[\]"]/g, "").replace(/classification:\s*\w+,?/gi, "").replace(/response:\s*/gi, "").trim();
+          result = {
+            classification: inferredClass,
+            response: cleanContent || "Hola, he procesado tu consulta inmobiliaria.",
+            mentions: []
+          };
+        } else {
+          throw parseErr;
+        }
       }
     }
     result.mentions = result.mentions || [];
@@ -13177,6 +13229,7 @@ var init_whatsapp_match = __esm({
       groupMetadataCache = /* @__PURE__ */ new Map();
       reconnectAttempts = 0;
       maxReconnectAttempts = 5;
+      reactedMessageIds = /* @__PURE__ */ new Map();
       async getCachedGroupMetadata(chatId) {
         const cached = this.groupMetadataCache.get(chatId);
         if (cached && Date.now() - cached.time < 10 * 60 * 1e3) {
@@ -14122,22 +14175,35 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
       }
       async safeReact(chatId, msgKey, emoji, reason = "REACT") {
         if (!msgKey || !msgKey.id || msgKey.fromMe || !emoji || !this.sock) return;
+        const existing = this.reactedMessageIds.get(msgKey.id);
+        if (existing && existing.emoji === emoji && Date.now() - existing.time < 6e4) {
+          console.log(`[JANIA-${reason}] \u2139\uFE0F Reacci\xF3n ${emoji} ya entregada a Msg ID ${msgKey.id}. Omitiendo duplicado.`);
+          return;
+        }
         try {
           console.log(`[JANIA-${reason}] \u{1F3AF} Despachando reacci\xF3n ${emoji} a ${chatId} (Msg ID: ${msgKey.id})...`);
           await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
+          this.reactedMessageIds.set(msgKey.id, { emoji, time: Date.now() });
           console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
+          if (this.reactedMessageIds.size > 1500) {
+            const threshold = Date.now() - 12e4;
+            for (const [k, v] of this.reactedMessageIds.entries()) {
+              if (v.time < threshold) this.reactedMessageIds.delete(k);
+            }
+          }
         } catch (err) {
-          console.warn(`[JANIA-${reason}] \u26A0\uFE0F Primer intento de reacci\xF3n ${emoji} fall\xF3 (${err?.message || err}). Reintentando en 2.5s...`);
+          console.warn(`[JANIA-${reason}] \u26A0\uFE0F Primer intento de reacci\xF3n ${emoji} fall\xF3 (${err?.message || err}). Reintentando en 3.5s...`);
           setTimeout(async () => {
             try {
               if (this.sock) {
                 await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
+                this.reactedMessageIds.set(msgKey.id, { emoji, time: Date.now() });
                 console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA en reintento`);
               }
             } catch (retryErr) {
               console.warn(`[JANIA-${reason}] \u274C Reintento de reacci\xF3n ${emoji} no pudo completarse:`, retryErr?.message || retryErr);
             }
-          }, 2500);
+          }, 3500);
         }
       }
       getReactionEmoji(result, isOfficialGroup = false) {
@@ -15902,7 +15968,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.22";
+var VECY_VERSION = "v31.23";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

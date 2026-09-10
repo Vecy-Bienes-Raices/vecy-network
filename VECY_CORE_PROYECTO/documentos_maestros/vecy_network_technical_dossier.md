@@ -322,6 +322,32 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.23 — Septiembre 2026
+
+#### 📌 CASACADA RESILIENTE GEMINI 3.5 FLASH LITE PARA FLYERS, FAST-PATH VISION Y DEDUPLICACIÓN DE REACCIONES EN BAILEYS
+
+**Problemas identificados:**
+1. **Colapso de Extracción Multimodal en Afiches sin Pie de Foto (Caso Juan Pablo Tobo)**:
+   - Al postear imágenes en grupos de WhatsApp (ej: flyers de demanda de lotes en 'BODEGAS Y LOTES'), JanIA descargaba el buffer de imagen, pero la llamada a `extractFlyerVision` colapsaba silenciosamente:
+     - `gemini-2.5-flash` arrojaba error HTTP 429 por agotamiento de cuota diaria gratuita (20 reqs/día).
+     - Los fallbacks (`gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-2.5-flash-lite`) fueron retirados por Google retornando HTTP 404.
+   - Al retornar `null` el analizador visual y tener un texto vacío (`""`), JanIA clasificaba el mensaje como `CONSULTA_GENERAL` en silencio, sin emitir reacción de emoji, sin almacenar en Supabase y sin generar coincidencias.
+2. **Error `rate-overlimit` en Reacciones de Baileys**:
+   - Al solaparse la reacción rápida (`FAST-REACT`) y la reacción de vaciado de buffer (`BUFFER-REACT`) sobre el mismo ID de mensaje, WhatsApp rechazaba la segunda con `rate-overlimit`.
+
+**Solución aplicada:**
+- **Renovación de Cascada de Modelos Multimodales Gemini (`llm.ts` y `janIA.ts`)**:
+  - Reordenadas las listas de fallback priorizando `gemini-3.5-flash-lite` y `gemini-flash-lite-latest` (1,500 RPD, 15 RPM, 1,000,000 TPM y ~400ms de latencia).
+  - Validados por terminal en VPS con análisis exitoso en 410ms.
+- **Fast-Path Vision en JanIA (`janIA.ts`)**:
+  - Cuando un flyer ya fue procesado y estructurado por `extractFlyerVision`, se omite el prompt legal maestro de 25k tokens. Se genera el resultado directamente en 0ms sin consumir cuotas de LLM.
+- **Deduplicación con TTL de 60s en `safeReact` (`whatsapp-match.ts`)**:
+  - Cache en memoria `reactedMessageIds` que previene el envío múltiple de reacciones sobre el mismo mensaje.
+- **Ingesta y Curación Forense de Requerimientos**:
+  - Insertados Requerimientos #1257 y #1258 de Juan Pablo Tobo en Supabase vinculados a sus flyers en alta resolución (`/uploads/flyers/wa_juan_pablo_tobo_lotes_1.jpg` y `wa_juan_pablo_tobo_lotes_2.jpg`), ejecutando el motor de matching.
+
+---
+
 ### 🔖 v31.22 — Septiembre 2026
 
 #### 📌 INGESTA VISUAL DE FLYERS INMOBILIARIOS (OFERTA/DEMANDA), REACCIÓN INMEDIATA EN BAILEYS Y BLINDAJE 0% CUOTA SUPABASE

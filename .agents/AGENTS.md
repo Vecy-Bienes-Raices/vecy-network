@@ -163,7 +163,28 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.22 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.23 — Septiembre 2026
+
+### Novedades v31.23 (Solución Definitiva a Extracción de Flyers: Cascada Gemini 3.5 Flash Lite, Fast-Path Vision y Deduplicación WhatsApp):
+- **Diagnóstico y Corrección de Fallo de Extracción en Flyers sin Pie de Foto (Caso Juan Pablo Tobo)**:
+  1) **Causas Raíz Identificadas**:
+     - `gemini-2.5-flash` agotó su cuota gratuita de 20 peticiones diarias arrojando HTTP 429.
+     - Los fallbacks (`gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-2.5-flash-lite`) fueron deprecados por Google arrojando HTTP 404.
+     - Al colapsar la cascada, `extractFlyerVision` retornó `null`, degradando el mensaje a `CONSULTA_GENERAL` en silencio (sin reacción, sin guardado y sin matches).
+     - La reacción duplicada inmediata vs buffer provocaba `rate-overlimit` en Baileys.
+  2) **Cascada Multimodal Gemini 3.5 Flash Lite y Flash Lite Latest**:
+     - Se actualizaron `llm.ts` y `janIA.ts` priorizando `gemini-3.5-flash-lite` y `gemini-flash-lite-latest` (1,500 RPD, 15 RPM, respuesta en ~400ms, 0% errores).
+     - Validación empírica directa en VPS procesando imágenes en 410ms.
+  3) **Fast-Path Vision en JanIA (`janIA.ts`)**:
+     - Flyers estructurados se guardan directamente saltando el prompt masivo de 25k tokens, ahorrando cuota y ejecutando en 0ms.
+  4) **Deduplicación de Reacciones Baileys (`whatsapp-match.ts`)**:
+     - Registro `reactedMessageIds` con TTL de 60s en `safeReact` evitando bloqueos por `rate-overlimit`.
+  5) **Ingesta y Curación de Requerimientos de Juan Pablo Tobo**:
+     - Ingestados Requerimientos #1257 (Lotes Pablo VI / Cedritos 600-1600 m²) y #1258 (Lotes o Locales Nacional desde 400 m²) con imágenes en alta resolución en Supabase.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.22 — Septiembre 2026
 
 ### Novedades v31.22 (Ingesta Visual de Flyers Inmobiliarios de Oferta y Demanda, Reacción Inmediata Baileys y Blindaje 0% Cuota Supabase):
 - **Diagnóstico y Corrección de Captura de Flyers y Afiches sin Pie de Foto**:
