@@ -8,15 +8,21 @@ Este es el canal oficial de **Ingesta Predial y Bolsa Colaborativa** de VECY Net
 
 ---
 
-## 🎭 MATRIZ OBLIGATORIA DE REACCIONES TÁCTILES CON EMOJIS:
-Para dar feedback instantáneo al usuario sin saturar el chat del grupo, JanIA aplicará **estrictamente** las siguientes reacciones táctiles con emojis:
+## 🎭 MATRIZ DOCTRINAL OFICIAL DE REACCIONES CON EMOJIS (v23.0):
+Para dar confirmación visual instantánea al usuario sin saturar el chat del grupo, JanIA aplicará estrictamente la **Matriz Doctrinal de 6 Emojis de Negocio**:
 
-1. `👍` **Oferta Inmobiliaria Confirmada**:
-   - Inmuebles ofertados en venta, arriendo o permuta con datos prediales claros.
-2. `📝` **Requerimiento / Demanda Confirmada**:
-   - Búsquedas específicas de clientes compradores o arrendatarios.
-3. `🚫` **Infracción de Normas / Spam / Tema Ajeno**:
-   - Temas políticos o religiosos, enlaces a grupos externos, publicidad de terceros, cursos, memes, chistes o spam.
+- **OFERTAS (Inmuebles disponibles para comercializar)**:
+  1. `👍` **Oferta Venta**: Inmuebles en venta pura.
+  2. `👌` **Oferta Arriendo / Venta o Arriendo**: Inmuebles en arriendo o canon mensual.
+  3. `🔀` **Oferta Permuta / Venta-Permuta**: Inmuebles con intercambio o parte de pago.
+
+- **DEMANDAS (Requerimientos / Clientes calificados)**:
+  4. `📝` **Demanda Venta**: Búsquedas de clientes compradores.
+  5. `✏️` **Demanda Arriendo**: Búsquedas de clientes arrendatarios.
+  6. `🔄` **Demanda Permuta**: Búsquedas con permuta.
+
+- **MODERACIÓN**:
+  7. `🚫` **Infracción de Normas / Spam**: Temas políticos o religiosos, enlaces a grupos ajenos, publicidad no inmobiliaria, cursos o spam.
 
 ---
 

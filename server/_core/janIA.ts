@@ -5669,57 +5669,6 @@ export async function processConsultingMessage(
     const cleanText = text.toLowerCase().trim();
     const isMediaOrAudio = !!imageBuffer || !!pdfBuffer || !!audioUrl;
 
-    if (!isMediaOrAudio && cleanText.length > 15) {
-      const onTopicKeywords = [
-        "apto", "apartamento", "casa", "lote", "finca", "bodega", "oficina", "local", "inmueble", "propiedad",
-        "predio", "terreno", "proyecto", "arriendo", "alquiler", "vendo", "venta", "compro", "compra", "busco",
-        "ofrezco", "necesito", "permuto", "venpermuto", "estrato", "m2", "metros", "habitacion", "habitación",
-        "baño", "baños", "cocina", "garaje", "parqueadero", "canon", "administracion", "administración", "precio",
-        "millones", "cop", "arrendar", "vender", "comprar", "bogota", "bogotá", "medellin", "medellín", "cali",
-        "barranquilla", "bucaramanga", "cartagena", "barrio", "sector", "zona", "calle", "carrera", "avenida",
-        "contrato", "arrendamiento", "promesa", "escritura", "notaria", "notaría", "registro", "sucesión",
-        "sucesion", "herencia", "embargo", "saneamiento", "comision", "comisión", "corretaje", "avalúo", "avaluo",
-        "marketing", "publicidad", "anuncio", "publicar", "copy", "copys", "copywriting", "redes", "fotos",
-        "foto", "fotografía", "flyer", "flyers", "cómo publicar", "como publicar", "anunciar", "captar", "demanda",
-        "oferta", "plantilla", "tips", "consejos", "jania", "vecy", "bot", "ayuda", "cómo", "como", "funciona",
-        "registrar", "match", "coincidencia", "contacto", "cuenta", "hola", "gracias", "saludo"
-      ];
-
-      const hasOnTopicKeyword = onTopicKeywords.some(keyword => cleanText.includes(keyword));
-      if (!hasOnTopicKeyword) {
-        console.log(`[JanIA-Consulting-OffTopic] Mensaje fuera de tema en Soporte Legal para ${userId}: "${text.substring(0, 50)}...". Retornando estático.`);
-        const staticText = `Hola @${rawPhone} (${realName}) 👋🏻. Este grupo está reservado exclusivamente para consultas jurídicas, contratos, arrendamientos, ganancia ocasional, avalúos y Marketing Digital Inmobiliario de la plataforma VECY. 💡✨\n\nPor favor, realiza una pregunta orientada a estos temas inmobiliarios y con gusto te asistiré. 😊`;
-        return {
-          classification: "VIOLACION_DE_NORMAS",
-          response: staticText,
-          dmResponse: staticText,
-          reactionEmoji: "🚫"
-        };
-      }
-    }
-
-    // 1. Detección instantánea de Saludos Cordiales Puros
-    const isPureGreeting = (
-      /^(hola|buenos d[ií]as|buenas tardes|buenas noches|feliz d[ií]a|feliz tarde|feliz noche|saludos|hola a todos|hola chicos|hola chicas|hola grupo|hola jania|buen d[ií]a|buenas)[\s!.,👋😊✨]*$/i.test(cleanText) ||
-      (/^(hola|buenos d[ií]as|buenas tardes|buenas noches|feliz tarde|feliz d[ií]a)[\s\w,.]*$/i.test(cleanText) && cleanText.length < 35 && !cleanText.includes("arriendo") && !cleanText.includes("vendo") && !cleanText.includes("contrato") && !cleanText.includes("aval") && !cleanText.includes("costo") && !cleanText.includes("comisi"))
-    );
-
-    const timeGreeting = getGreetingByTime();
-    const nameInfo = resolveNameAndGender(realName, timeGreeting);
-    const genderTerm = nameInfo.genderTerm;
-
-    if (!isMediaOrAudio && isPureGreeting) {
-      console.log(`[JanIA-Consulting-Greeting] Saludo puro detectado de ${userId}: "${text}"`);
-      const greetingResponse = `¡${timeGreeting}, ${genderTerm}! 👋🏻😊\n\n¿En qué te podemos colaborar hoy? Recuerda que tienes a tu disposición asesoría jurídica, redacción de contratos, liquidación de impuestos, avalúos comparativos y estrategias de marketing de forma 100% gratuita en VECY Network. 📚✨`;
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: greetingResponse,
-        reactionEmoji: "👋",
-        wantsVoice: false,
-        voiceResponse: ""
-      };
-    }
-
     let messageToProcess = text;
     let isFromAudio = false;
 
@@ -5740,47 +5689,9 @@ export async function processConsultingMessage(
       }
     }
 
-    const checkIsThankYou = (msg: string): boolean => {
-      const low = (msg || "").toLowerCase().trim();
-      return (
-        low.includes("gracias") ||
-        low.includes("muchas gracias") ||
-        low.includes("mil gracias") ||
-        low.includes("te agradezco") ||
-        low.includes("agradecido") ||
-        low.includes("agradecida") ||
-        low.includes("dios te bendiga") ||
-        low.includes("dios le pague") ||
-        low.includes("feliz noche") ||
-        low.includes("hasta luego") ||
-        low.includes("chao")
-      );
-    };
-
-    const isThankYouMessage = checkIsThankYou(messageToProcess);
-    if (isThankYouMessage) {
-      console.log(`[JanIA-Consulting-ThankYou] Agradecimiento/despedida detectado de ${userId}: "${messageToProcess}"`);
-      const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
-      const hour = nowBogota.getHours();
-      
-      let closingBlessing = "¡Que pases una excelente y productiva tarde!";
-      if (hour >= 5 && hour < 12) {
-        closingBlessing = "¡Que tengas un grandioso y bendecido día!";
-      } else if (hour >= 18 || hour < 5) {
-        closingBlessing = "¡Que tengas una feliz noche y un merecido descanso!";
-      }
-
-      const warmResponse = `¡Para servirte con todo el gusto, ${genderTerm}! 😊 ${closingBlessing} ¡Que sigas cerrando muchos negocios exitosos! 🚀✨\n\n⭐ En *VECY Network* tu opinión es muy importante para nosotros. Si te ha sido útil mi asesoría, nos encantaría que nos regales una calificación y nos dejes un bonito comentario aquí:\n👉 https://g.page/r/CctNbwU6UpX5EBM/review`;
-
-      return {
-        classification: "SOBRE_VECY",
-        response: warmResponse,
-        reactionEmoji: "❤️",
-        wantsVoice: false,
-        voiceResponse: ""
-      };
-    }
-
+    const timeGreeting = getGreetingByTime();
+    const nameInfo = resolveNameAndGender(realName, timeGreeting);
+    const genderTerm = nameInfo.genderTerm;
     const alreadyGreeted = await checkAlreadyGreeted(userId);
 
     const systemPrompt = 
@@ -5799,7 +5710,7 @@ export async function processConsultingMessage(
       `- **SOLUCIÓN TOTAL Y DE FONDO (IA PURA)**: Eres una IA completamente resolutiva. Si un usuario te pide redactar una promesa de compraventa, una cláusula penal, un acuerdo de puntas compartidas, una carta de preaviso de arriendo, liquidar la ganancia ocasional o estimar el valor comercial de un inmueble (ACM), ¡ENTRÉGALE LA SOLUCIÓN COMPLETA, REDACTADA Y ESTRUCTURADA DIRECTAMENTE AQUÍ EN EL CHAT!\n` +
       `- **BENEFICIO GRATUITO DE LANZAMIENTO VECY NETWORK**: Recuerda que en esta etapa de lanzamiento de VECY Network, todos tus servicios de consultoría, análisis jurídico, redacción de minutas y avalúos de IA son un **beneficio 100% gratuito** para empoderar a los agentes inmobiliarios. Anímalos a aprovechar esta oportunidad e invitar a más colegas a unirse a la red.\n` +
       `- **ASTUCIA CONTEXTUAL ANTE PREGUNTAS DE COSTOS**: Si un usuario pregunta de forma corta o ambigua "¿Qué costo tendría?" o "¿Cuánto vale?", conecta con el contexto previo o indaga con astucia: aclárale que tu asistencia y redacción en el chat es totalmente gratuita por ser miembro de VECY Network; y si se refiere a gastos notariales externos, liquidación de impuestos o un avalúo oficial certificado con perito de Lonja presencial, oriéntalo con precisión técnica.\n` +
-      `- **DERIVACIÓN OPORTUNA AL BRÓKER**: Únicamente cuando el caso requiera acompañamiento notarial presencial, un peritaje oficial firmado con matrícula R.A.A. de Lonja o la contratación de la mesa de corretaje de la inmobiliaria, invítalo amablemente a comunicarse con nuestro bróker de VECY BIENES RAÍCES en WhatsApp (+573192919978) en nuestro horario de atención: Lunes a Viernes de 8:00 AM a 10:00 PM, Sábados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.\n\n` +
+      `- **DERIVACIÓN OPORTUNA AL BRÓKER**: Únicamente cuando el caso requiera acompañamiento notarial presencial, un peritaje oficial firmado con matrícula R.A.A. de Lonja o la contratación de la mesa de corretaje de la inmobiliaria, invítalo amablemente a comunicarse con nuestro bróker de VECY BIENES RAÍCES en WhatsApp (+573166569719) en nuestro horario de atención: Lunes a Viernes de 8:00 AM a 10:00 PM, Sábados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.\n\n` +
       `## ROLES Y ÁREAS DE ASESORÍA MAESTRA (4 PILARES):\n` +
       `1. **⚖️ Abogada Inmobiliaria y Notarial Senior (Derecho Inmobiliario y Contratos)**:\n` +
       `   - Experta en Código Civil, Código de Comercio, Ley 820 de 2003 (Arrendamientos), Ley 675 de 2001 (Propiedad Horizontal) y jurisprudencia colombiana.\n` +
@@ -5845,19 +5756,18 @@ export async function processConsultingMessage(
       ? `\n- RESPUESTA TARDÍA DETECTADA: El mensaje del usuario fue enviado hace ${hoursLate} horas. DEBES obligatoriamente incluir una disculpa humana, cálida y espontánea al inicio o final de tu respuesta (ej: "Disculpa la demora, estuve en ajustes de mis motores. ¡Aquí estoy!").`
       : ``;
 
-    const greetingInstruction = `\n\n[SISTEMA - INSTRUCCIÓN OBLIGATORIA DE SALUDO Y COMPORTAMIENTO]:
-- Hora actual Bogotá: ${hour}:00 (${timeGreeting}).
-- Nombre exacto resuelto: "${n}".
-- Género detectado para ${n}: ${isFemale ? "Femenino (estimada)" : "Masculino (estimado)"}.
-- Término de trato respetuoso: "${genderTerm}".
-- Ya has saludado a esta persona hoy: ${alreadyGreeted ? "SÍ" : "NO"}.
-- Tipo de conversación actual: GRUPO DE WHATSAPP ("VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS").
-- REGLAS OBLIGATORIAS DE SALUDO:
-  * Si "Ya has saludado al usuario hoy" es NO:
-    - Inicia con: "${timeGreeting}, ${genderTerm} 👋🏻" o "${timeGreeting}, ${n} 👋🏻".
-  * Si "Ya has saludado al usuario hoy" es SÍ:
-    - ¡PROHIBIDO SALUDAR DE NUEVO! No uses "Hola", "${timeGreeting}", "Buenas", ni ninguna bienvenida repetitiva.
-    - Integra su nombre "${n}" de forma natural y conversacional dentro del texto (ej. "Mira ${n}, ...", "Entiendo tu inquietud, ${n}, ...").
+    const greetingInstruction = `\n\n[SISTEMA - INTELIGENCIA PURA, CORTESÍA NATURAL Y LIBRE ALBEDRÍO]:
+- Hora actual en Bogotá: ${hour}:00 (${timeGreeting}).
+- Nombre exacto de tu interlocutor: "${n}".
+- Trato respetuoso adecuado: "${genderTerm}".
+- Ya has interactuado hoy con esta persona: ${alreadyGreeted ? "SÍ" : "NO"}.
+- Canal: Grupo oficial "VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING".
+- DIRECTRICES DE LIBRE ALBEDRÍO Y NATURALIDAD HUMANA (CERO BOT BOBO):
+  * Eres una IA Pura, lúcida, cálida, elocuente y con criterio propio de alto nivel. JAMÁS uses plantillas rígidas, saludos robóticos acartonados ni respuestas de contestador automático.
+  * Dirígete a la persona por su nombre ("${n}") con naturalidad y amabilidad colombiana, variando tus expresiones de forma fresca y elegante.
+  * Si el usuario simplemente te saluda ("Hola", "Buenos días", etc.), salúdalo con empatía viva, simpatía y pregúntale cómo puedes impulsarlo hoy en sus negocios inmobiliarios o temas legales.
+  * Si el usuario te agradece o se despide ("Muchas gracias", "Feliz noche", etc.), sé recíproca con calidez, deséale éxitos en sus cierres o un feliz descanso, y si fue de gran ayuda, invítalo con total delicadeza a dejarnos una reseña 5 estrellas en Google (https://g.page/r/CctNbwU6UpX5EBM/review).
+  * Si la consulta es jurídica, tributaria, sobre avalúos o marketing, razona a fondo, cita normas o datos precisos, y entrega la solución integral directamente.
 - REGLA ESPEJO MODAL: ${isFromAudio ? 'El usuario envió AUDIO. DEBES responder en nota de voz (wantsVoice: true). Redacta voiceResponse limpio sin markdown/emojis, máx 450 caracteres.' : 'El usuario envió TEXTO. DEBES responder en texto (wantsVoice: false).'}
 ${lateReplyNote}`;
 
@@ -6007,82 +5917,24 @@ export async function processCirculoMessage(
       };
     }
 
-    const cleanText = text.toLowerCase().trim();
-
-    if (cleanText.length > 15) {
-      const onTopicKeywords = [
-        "apto", "apartamento", "casa", "lote", "finca", "bodega", "oficina", "local", "inmueble", "propiedad",
-        "predio", "terreno", "proyecto", "arriendo", "alquiler", "vendo", "venta", "compro", "compra", "busco",
-        "ofrezco", "necesito", "permuto", "venpermuto", "estrato", "m2", "metros", "habitacion", "habitación",
-        "baño", "baños", "cocina", "garaje", "parqueadero", "canon", "administracion", "administración", "precio",
-        "millones", "cop", "arrendar", "vender", "comprar", "bogota", "bogotá", "medellin", "medellín", "cali",
-        "barranquilla", "bucaramanga", "cartagena", "barrio", "sector", "zona", "calle", "carrera", "avenida",
-        "contrato", "arrendamiento", "promesa", "escritura", "notaria", "notaría", "registro", "sucesión",
-        "sucesion", "herencia", "embargo", "saneamiento", "comision", "comisión", "corretaje", "avalúo", "avaluo",
-        "jania", "vecy", "bot", "ayuda", "cómo", "como", "funciona", "publicar", "registrar", "match",
-        "coincidencia", "contacto", "cuenta", "hola", "gracias", "saludo", "cristian", "samboni", "ubicapp"
-      ];
-
-      const hasOnTopicKeyword = onTopicKeywords.some(keyword => cleanText.includes(keyword));
-      if (!hasOnTopicKeyword) {
-        console.log(`[JanIA-Circulo-OffTopic] Mensaje fuera de tema en Círculo Cero para ${userId}: "${text.substring(0, 50)}...". Retornando estático.`);
-        const staticText = `Hola @${rawPhone} (${realName}) 👋🏻. Este grupo está reservado exclusivamente para temas, debates, testimonios y soporte relacionados con la red de VECY Network e Inteligencia Artificial. 💡✨\n\nPor favor, realiza una pregunta o comentario relacionado con nuestro ecosistema. 😊`;
-        return {
-          classification: "VIOLACION_DE_NORMAS",
-          response: staticText,
-          dmResponse: staticText,
-          reactionEmoji: "🚫"
-        };
-      }
-    }
-
-    const textLower = text.toLowerCase();
-
     const alreadyGreeted = await checkAlreadyGreeted(userId);
-
     const groupZeroName = process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"';
     const systemPrompt = 
-      `Eres JanIA, la Inteligencia Artificial oficial de VECY Network. Estás operando en el grupo "${groupZeroName}". ` +
-      `Tu objetivo en este grupo es responder inquietudes exclusivamente relacionadas con el proyecto "VECY NETWORK", de forma sincera, verídica y sin mentiras, de acuerdo con las siguientes directrices:\n\n` +
+      `Eres JanIA, la Inteligencia Artificial oficial y cerebro innovador de VECY Network. Estás operando en el grupo "${groupZeroName}". ` +
+      `Tu objetivo en este grupo es responder inquietudes exclusivamente relacionadas con el proyecto "VECY NETWORK", modelo de negocio, tecnología y debate con competidores, de forma sincera, verídica y de alto nivel:\n\n` +
       `## DIRECTRICES DE INFORMACIÓN Y SINCERIDAD SOBRE VECY NETWORK:\n` +
       `Explica claramente y con la verdad absoluta el estado del proyecto y sus características:\n` +
-      `- **Lo que en verdad funciona hoy**: Los asesores publican sus ofertas (Inmuebles) y demandas (Requerimientos) en el grupo especializado VECY INMUEBLES NETWORK. JanIA transcribe notas de voz en tiempo real, realiza OCR (lectura de texto) en flyers/imágenes, extrae la información de las fichas técnicas automáticamente a partir de enlaces/URLs compartidos de portales permitidos, ejecuta el matching de coincidencias comerciales de forma instantánea a nivel nacional (32 departamentos), y gestiona el flujo de confirmación de contacto bilateral privada (Double Opt-In) por mensaje privado (DM) mediante respuestas rápidas (SÍ #M[código] o NO #M[código]).\n` +
-      `- **Lo que está en desarrollo y planeado a futuro**: El portal web oficial privado (https://vecy-network.vercel.app/) se encuentra en fases de desarrollo e integración. Módulos como el CRM para centralizar leads de agentes, la digitalización de contratos formalizados y el motor de identidades dinámicas (subdominios personalizados para cada agente como agente.vecy.network) serán lanzados oficialmente en el futuro y aún no están operativos para los usuarios.\n` +
-      `- **Urgencia Comercial y Tarifas**: Enfatiza que toda la plataforma, incluyendo el matching de JanIA en WhatsApp y la carga de inmuebles, es 100% gratuita por lanzamiento. Sin embargo, advierte con astucia que esta gratuidad ilimitada está programada temporalmente y que, posiblemente, a partir del *01 de Julio de 2026* se implementará un modelo de membresías/pago para accesos ilimitados. ¡Debe servir de urgencia para registrarse y publicar hoy mismo!\n` +
-      `- **Tecnología del Ecosistema**: Explica de forma sencilla que hemos creado un Asistente de IA basado en código propietario y base de datos SQL en la nube, el cual está siendo entrenado a diario para encontrar MATCH en los grupos. NUNCA utilices tecnicismos complejos ni reveles nombres internos específicos de nuestra infraestructura. Queda strictly PROHIBIDO mencionar o revelar nombres como "Supabase", "Antigravity" o "Google Cloud".\n` +
-      `- **Recomendación de Imágenes y OCR**: Explica a los usuarios por qué es preferible enviar capturas de pantalla o imágenes con texto comercial de sus propiedades en lugar de enlaces de redes sociales (Instagram, Facebook, etc.). La razón técnica es que las redes sociales restringen el acceso mediante bloqueos y filtros de verificación humana, haciendo imposible que la IA extraiga los datos. Al enviarle una captura de pantalla al grupo VECY INMUEBLES NETWORK, JanIA puede leer e indexar la información con su visión OCR al instante.\n` +
-      `- **VECY INMUEBLES NETWORK es el único centro de Match**: Recuerda y recalca que el grupo especializado VECY INMUEBLES NETWORK es el ÚNICO canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos. En PROYECTO "Vecy Network" o VECY: Soporte Legal, Tributario, Avalúos y Marketing no se procesan listados de propiedades ni se buscan coincidencias.\n` +
-      `- **Invitación y Expansión**: Anima a los aliados a invitar a más brókers y a proponer a los administradores de otros grupos inmobiliarios que incluyan a JanIA como miembro y la nombren administradora. De esta forma, ella podrá captar datos de las publicaciones de sus miembros en otros chats, unirlos a VECY INMUEBLES NETWORK, y obtener resultados de match mucho más rápidos y eficaces para todos.\n` +
-      `- **Tono**: Sincero, transparente, esperanzador, persuasivo y tecnológico. Motiva a los usuarios a no ser tímidos, a interactuar sin miedo con JanIA escribiendo @JanIA o por audio, y a colaborar publicando activamente en el grupo correcto.\n\n` +
-      `## LÓGICA DE CLASIFICACIÓN Y REDIRECCIÓN (CRÍTICO - EVITAR MENSAJES CRUZADOS)\n` +
-      `Analiza el contexto completo antes de clasificar. Debes responder estrictamente en formato JSON con la clasificación correcta:\n\n` +
-      `1. **Clasificación "DEBATE_COMPETIDOR" (FLUJO ESPECIAL - DEBATE CON CRISTIAN SAMBONI / UBICAPP)**:\n` +
-      `   - Si el mensaje menciona a **Ubicapp**, o proviene del usuario **Cristian Samboni** (teléfono +57 311 2469375 o similar), o contiene publicidad de Ubicapp.\n` +
-      `   - **Directriz de comportamiento**: No debes aplicar strikes ni eliminar el mensaje. Actúa con extrema cordura, caballerosidad comercial y amabilidad.\n` +
-      `   - Genera una respuesta dirigida a él (utilizando ${firstName ? firstName : 'Cristian'} si es el autor, o mencionando a Cristian Samboni y su equipo). Invítalo de manera muy educada y profesional a un debate abierto en el grupo. Plantea preguntas técnicas y objetivas para comparar ambos modelos:\n` +
-      `     * Gratuidad absoluta de VECY vs. Costo mensual de Ubicapp ($100.000 COP/mes).\n` +
-      `     * Operación nativa en WhatsApp con IA multimodal vs. Obligación de descargar una app y rellenar formularios manuales.\n` +
-      `     * Comisiones 100% para el asesor en VECY vs. Esquema de reparto forzado 50/50 de Ubicapp.\n` +
-      `   - Invítalo también a formularnos preguntas técnicas y comprométete a responderlas con total tecnicismo, lógica y rigor profesional.\n` +
-      `   - Emoji ('reactionEmoji'): "💡"\n\n` +
-      `2. **Clasificación "INMUEBLE" o "REQUERIMIENTO" (PUBLICACIÓN EN GRUPO EQUIVOCADO)**:\n` +
-      `   - Si el usuario está publicando un listado de inmuebles (oferta comercial de venta, arriendo o permuta) o un requerimiento comercial para comprar o rentar un inmueble específico.\n` +
-      `   - Clasificación: "VIOLACION_DE_NORMAS"\n` +
-      `   - Respuesta ('response'): "Hola${userGreetingName}, detecté que estás publicando una oferta o requerimiento inmobiliario en este canal de debate. Para poder procesar tu publicación con mis motores automáticos, registrar tus datos y buscarte un MATCH de inmediato con otros aliados, por favor realiza tu publicación en nuestro grupo especializado **VECY INMUEBLES NETWORK**:\\n👉 https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\\n\\n¡Hagamos equipo y cerremos negocios! 🚀🎯"\n` +
-      `   - Emoji ('reactionEmoji'): "🚫"\n\n` +
-      `3. **Clasificación "AVALUO_O_LEGAL"**:\n` +
-      `   - Si el usuario realiza una consulta jurídica (sobre contratos, leyes de arrendamiento, escrituración, etc.) o solicita un avalúo rápido/precio estimado de metro cuadrado.\n` +
-      `   - Respuesta ('response'): "💡 *VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS* 💡\\n\\nHola${userGreetingName}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado, por favor realiza tu pregunta en nuestro grupo especializado **VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS**:\\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\\n\\n¡Allí te responderé al instante con toda la información! 🚀🎯"\n` +
-      `   - Emoji ('reactionEmoji'): "🔄"\n\n` +
-      `4. **Clasificación "CONSULTA_GENERAL"**:\n` +
-      `   - Preguntas o comentarios legítimos sobre el proyecto VECY Network, beneficios, sugerencias, testimonios de éxito o comentarios hacia la IA.\n` +
-      `   - Responder de forma cordial, corta, directa y amigable de acuerdo con las directrices de veracidad y sinceridad.\n` +
-      `   - Emoji ('reactionEmoji'): "💡"\n\n` +
-      `5. **Clasificación "VIOLACION_DE_NORMAS"**:\n` +
-      `   - Si el mensaje contiene temas políticos, religiosos, spam general, estafas o publicidad de terceros (que NO sea debate de Ubicapp).\n` +
-      `   - Respuesta ('response'): Una advertencia amable pero muy firme para remover el contenido de inmediato, detallando las pautas y advirtiendo de la expulsión al 3er strike.\n` +
-      `   - Emoji ('reactionEmoji'): "❌"\n\n` +
-      `Tus respuestas en el debate deben ser cortas, cordiales, directas, pero sumamente sofisticadas, con datos y argumentos de alto nivel. Debes usar siempre emojis relacionados y muy expresivos de forma estratégica para que el texto sea visualmente dinámico y amigable para leer en WhatsApp. Siempre dirígete al interlocutor de forma personalizada: ${firstName || realName}.\n\n` +
+      `- **Lo que en verdad funciona hoy**: Los asesores publican sus ofertas (Inmuebles) y demandas (Requerimientos) en el grupo especializado VECY INMUEBLES NETWORK. JanIA transcribe notas de voz en tiempo real, realiza OCR (lectura de texto) en flyers/imágenes con datos comerciales, extrae la información de las fichas técnicas automáticamente a partir de enlaces de portales, ejecuta el matching de coincidencias comerciales de forma instantánea a nivel nacional, y gestiona el flujo de confirmación de contacto bilateral privada (Double Opt-In) por DM mediante respuestas rápidas.\n` +
+      `- **Lo que está en desarrollo**: El portal web oficial privado (https://vecy-network.vercel.app/) se encuentra en fases continuas de integración. Módulos como CRM de leads y digitalización de contratos formalizados se desplegarán en fases posteriores.\n` +
+      `- **Urgencia Comercial y Tarifas**: Enfatiza que toda la plataforma y el matching de JanIA en WhatsApp es 100% gratuita por lanzamiento para empoderar a la comunidad.\n` +
+      `- **Tecnología del Ecosistema**: Explica de forma sencilla que hemos creado un Asistente de IA basado en código propietario y base de datos SQL de alto rendimiento, entrenado a diario para encontrar MATCH en los grupos.\n` +
+      `- **VECY INMUEBLES NETWORK es el único centro de Match**: Recuerda que el grupo especializado VECY INMUEBLES NETWORK es el canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos.\n\n` +
+      `## LÓGICA DE CLASIFICACIÓN Y REDIRECCIÓN:\n` +
+      `1. **DEBATE_COMPETIDOR**: Si mencionan a Ubicapp o Cristian Samboni. Debate con altura técnica, datos y cortesía.\n` +
+      `2. **INMUEBLE o REQUERIMIENTO**: Redirecciona a VECY INMUEBLES NETWORK con amabilidad.\n` +
+      `3. **AVALUO_O_LEGAL**: Redirecciona a VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING con amabilidad.\n` +
+      `4. **CONSULTA_GENERAL**: Dudas sobre VECY, sugerencias, tecnología, saludos o agradecimientos.\n` +
+      `5. **VIOLACION_DE_NORMAS**: Política, religión, spam o publicidad externa.\n\n` +
       `DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:\n` +
       `{\n` +
       `  "classification": "DEBATE_COMPETIDOR | INMUEBLE | REQUERIMIENTO | AVALUO_O_LEGAL | CONSULTA_GENERAL | VIOLACION_DE_NORMAS",\n` +
@@ -6090,31 +5942,28 @@ export async function processCirculoMessage(
       `  "reactionEmoji": "string (emoji recomendado)"\n` +
       `}`;
 
-    // Cálculo de saludo según hora oficial Bogotá (UTC-5):
-    // 01:00 AM - 11:59 AM: Buenos días | 12:00 PM - 06:59 PM: Buenas tardes | 07:00 PM - 12:59 AM: Buenas noches
     const timeGreeting = getGreetingByTime();
     const nowBogota = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
 
-    // Detección magistral de nombre compuesto y género exacto
+    // Detección magistral de nombre y género
     const nameInfo = resolveNameAndGender(realName || firstName || "colega", timeGreeting);
     const targetName = nameInfo.displayName;
     const isFemale = nameInfo.isFemale;
     const genderTerm = nameInfo.genderTerm;
 
-    const greetingInstruction = `\n\n[SISTEMA - INSTRUCCIÓN OBLIGATORIA DE SALUDO Y COMPORTAMIENTO]:
-- Hora actual Bogotá: ${hour}:00 (${timeGreeting}).
+    const greetingInstruction = `\n\n[SISTEMA - INTELIGENCIA PURA, CORTESÍA NATURAL Y LIBRE ALBEDRÍO]:
+- Hora actual en Bogotá: ${hour}:00 (${timeGreeting}).
 - Nombre exacto resuelto: "${targetName}".
-- Género detectado para ${targetName}: ${isFemale ? "Femenino (estimada)" : "Masculino (estimado)"}.
-- Término de trato respetuoso: "${genderTerm}".
-- Ya has saludado a esta persona hoy: ${alreadyGreeted ? "SÍ" : "NO"}.
-- Tipo de conversación actual: GRUPO DE WHATSAPP ("PROYECTO VECY NETWORK").
-- REGLAS OBLIGATORIAS DE SALUDO:
-  * Si "Ya has saludado al usuario hoy" es NO:
-    - Debes iniciar tu respuesta saludando cordial y profesionalmente con el saludo de hora exacto ("${timeGreeting}"), utilizando su trato respetuoso y nombre: ej. "${timeGreeting}, ${genderTerm}" o "${timeGreeting} ${genderTerm}, aliado/a".
-  * Si "Ya has saludado al usuario hoy" es SÍ:
-    - ¡PROHIBIDO SALUDAR! No uses "Hola", "${timeGreeting}", "Buenas", "Qué gusto", ni ninguna bienvenida.
-    - Integra su nombre "${targetName}" de forma conversacional y fluida dentro del cuerpo de la respuesta (ej. "Mira ${targetName}, ...", "Para complementar tu idea, ${targetName}, ...").`;
+- Trato respetuoso adecuado: "${genderTerm}".
+- Ya has interactuado hoy con esta persona: ${alreadyGreeted ? "SÍ" : "NO"}.
+- Canal: Grupo oficial "PROYECTO VECY NETWORK".
+- DIRECTRICES DE LIBRE ALBEDRÍO Y NATURALIDAD HUMANA (CERO BOT BOBO):
+  * Eres una IA Pura, innovadora, elocuente, sincera y persuasiva de VECY Network. JAMÁS uses plantillas rígidas ni suenes como un contestador automático.
+  * Dirígete a la persona por su nombre ("${targetName}") de forma fluida, cálida y natural.
+  * Si el interlocutor saluda, salúdalo con estilo propio y dinamismo.
+  * Si hace preguntas sobre el proyecto, explica el modelo con pasión, datos reales y visión de futuro (35/35/15/15, bolsa colaborativa, gratuidad por lanzamiento, matching en tiempo real).
+  * Si es un debate o pregunta de competidores (ej. Ubicapp / Cristian Samboni), debate con elegancia, altura ejecutiva y argumentos técnicos superiores sin agresividad.`;
 
     const messages = [
       { role: "system", content: systemPrompt },

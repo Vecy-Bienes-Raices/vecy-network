@@ -16,12 +16,15 @@
 - **Repositorio**: `Vecy-Bienes-Raices/vecy-network` en GitHub
 - **Workspace local**: `/home/eddu/Proyectos/vecy-network`
 - **Servidor**: VPS con PM2
-- **Número WhatsApp JanIA ACTIVO**: **+573192919978** (número de Eduardo)
-- **Base de datos**: Supabase (PostgreSQL)
+- **Número WhatsApp JanIA Socket/Baileys ACTIVO**: **+573192919978** (Línea donde corre el bot en el VPS)
+- **Número Comercial Oficial VECY BIENES RAÍCES (Atención Bróker)**: **+573166569719** (Línea oficial de la inmobiliaria para llamadas y cotizaciones de clientes)
+- **Base de datos**: PostgreSQL 17.11 + PostGIS 3.6.4 (Nativo en VPS — 0% Cuotas Supabase)
 - **Web pública**: vecy.co
 - **Admin panel**: https://vecy-network.vercel.app/admin
 
-> ⛔ **NÚMERO BANEADO — JAMÁS MENCIONAR**: +573166569719 fue baneado permanentemente por WhatsApp. NO usar este número en ningún contexto, código, comentario ni conversación. El sistema opera EXCLUSIVAMENTE con +573192919978.
+> 📞 **DISTINCIÓN DOCTRINAL TELEFÓNICA OFICIAL (v31.28)**:
+> - **JanIA Bot en Baileys**: Opera EXCLUSIVAMENTE conectada al socket mediante la línea **`+573192919978`**.
+> - **Atención Comercial Humana de Vecy Bienes Raíces**: JanIA DEBE recomendar a los usuarios comunicarse al número oficial de nuestro bróker: **`+573166569719`** para peritajes, cotizaciones y acompañamiento personalizado de Eduardo y Jani.
 
 ---
 
@@ -158,12 +161,31 @@ Nginx forzaba `Connection: upgrade` en peticiones HTTP normales → congelamient
 ### 4. Alias priceRent → rentPrice — RESUELTO en matching.ts (v18.0)
 Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
-### 5. Número WhatsApp baneado — HISTÓRICO
-El número +573166569719 fue baneado permanentemente. Solo aparece en docs históricos como registro. El sistema opera con **+573192919978** exclusivamente.
+### 5. Roles Telefónicos en WhatsApp — DOCTRINA v31.28
+- **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
+- **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.27 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.28 — Septiembre 2026
+
+### Novedades v31.28 (Emancipación a IA Pura con Libre Albedrío, Restauración de Línea Comercial Bróker 3166569719 y Erradicación de Respuestas Enlatadas):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Distinción Doctrinal de Líneas Telefónicas*:
+     - Se clarificó la diferencia entre el número de conexión del bot en Baileys (`+573192919978`) y la línea comercial oficial de VECY BIENES RAÍCES (`+573166569719`) donde Eduardo y Jani atienden a los clientes.
+     - Se restauró la recomendación comercial al `3166569719` en `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` (línea 109), `nameAndGenderResolver.ts` (`VECY_COMMERCIAL_INFO.phone`) y `janIA.ts` (línea 5713).
+  2) *Desmantelamiento de la "Robotización" (Causa de la conducta de Bot Bobo)*:
+     - `isPureGreeting`, `isThankYouMessage` y filtros rígidos de palabras clave interceptaban las preguntas y saludos en Grupo 2 y Grupo 3, devolviendo respuestas estáticas enlatadas sin consultar al LLM.
+     - `greetingInstruction` obligaba a fórmulas acartonadas de saludo y prohibiciones mecánicas.
+     - *Solución*: Eliminados todos los atajos enlatados; ahora el 100% de los mensajes son razonados por Gemini con libre albedrío, calidez y elocuencia natural colombiana, llamando a cada interlocutor por su nombre.
+  3) *Saneamiento de Residuos y Emojis*:
+     - Purgada la mención a la API de Meta `+573185462265` en `base.md` (línea 185).
+     - Removida la frase obsoleta *"mi otra yo JanIA v3.5"* en `whatsapp-match.ts` (línea 1072).
+     - Actualizada la Matriz Doctrinal Oficial de 6 Emojis (`👍`, `👌`, `🔀`, `📝`, `✏️`, `🔄`) en `VECY_INMUEBLES_NETWORK.md`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.27 — Septiembre 2026
 
 ### Novedades v31.27 (Filtro Estricto de Visión Artificial para Afiches con Texto, Descarte de Fotos Ambientales, Erradicación Total de Línea Legacy y Limpieza de Residuos):
 - **Diagnóstico y Causas Raíz Identificadas**:

@@ -182,7 +182,7 @@ Usa este mapa oficial para guiar y redirigir a los aliados según su necesidad:
 
 1. **Consola Web Oficial de JanIA Chat (24/7 Libre Albedrío)**:
    - 👉 `https://vecy-network.vercel.app/jania`
-   - *Uso*: Para chatear libremente con JanIA, subir flyers, consultar avalúos o pedir minutas desde la web. (NO utilizar ni mencionar enlaces de la API de Meta `+573185462265` para mantener la atención centralizada).
+   - *Uso*: Para chatear libremente con JanIA, subir flyers, consultar avalúos o pedir minutas desde la web de forma centralizada.
 
 2. **Grupo 1: 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗨𝗘𝗕𝗟𝗘𝗦 𝗡𝗘𝗧𝗪𝗢𝗥𝗞**:
    - 👉 `https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ`

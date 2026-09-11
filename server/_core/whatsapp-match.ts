@@ -1069,7 +1069,7 @@ export class JaniaMatchBot {
           const redirectMsg =
             `Hola ${realName} 👋🏻, veo que tu consulta es sobre ${isOffTopicLegal ? 'temas jurídicos, tributarios, avalúos o marketing inmobiliario' : 'el funcionamiento de VECY Network y JanIA'}. ¡Perfecto! 🎯\n\n` +
             `Ese tipo de preguntas las atiendo con más profundidad en el grupo *${groupName}* de nuestra comunidad de WhatsApp. 🏠\n\n` +
-            `También puedes consultarme directamente en mi chat privado con mi otra yo *JanIA v3.5* 📲: https://wa.me/573192919978\n\n` +
+            `También puedes consultarme directamente en mi chat privado de JanIA 📲: https://wa.me/573192919978\n\n` +
             `¡Allí te atiendo con todo el detalle que mereces! 😊`;
           await this.queuedSend(chatId, redirectMsg, { mentions: [senderId], quoted: msg });
           await this.sock.sendPresenceUpdate('paused', chatId);

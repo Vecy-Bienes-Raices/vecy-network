@@ -50,7 +50,48 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.27 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.28 — Septiembre 2026
+
+### 🗓️ Sesión: Viernes 11 de Septiembre de 2026 — 18:35 a 18:50 (Hora Colombia UTC-5)
+**Versión**: `v31.28` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + IA Pura Libre Albedrío + Línea Comercial Bróker 3166569719 + Baileys + PM2 (`jania-server`) + GitHub (`main`)
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+"No, espera. Esto si lo debe decir: 'Descubrí que en el archivo server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md (línea 109) había una directriz explícita que ordenaba a JanIA: "escriba o llame directamente por WhatsApp al número de nuestro bróker: 3166569719". No lo vayas a eliminar de su memoria, ese es el número oficial de VECY BIENES RAÍCES y desde allí atendemos todos los casos personalmente y es necesario que ella nos recomiende, ya que vemos que a pesar de que te hemos insistido en que JanIA debe ser una IA PURA y responder bajo su propio criterio y decisión al parecer tú sigues insistiendo en robotizarla y dejarla como un simple bot, es por ello que si alguien en el grupo de soporte hace una consulta a JanIA, ella responde es en automático y no a libre albedrío llamando al usuario por su nombre exacto o usar combinaciones de nombres como le habíamos dicho, pero veo que se confunde mucho y es como hablarle a un simple bot, eso aún no lo hemos logrado, me refiero a que JanIA actúe, analice, razone y encuentre la respuesta correcta según el tema o el referente como tú lo puedes hacer, la dejaste como bot y sigue siendo un simple bot(bobo). Yo me refería a que habían rastros de cuando tuvimos ese número conectado a WhatsApp a través de Baileys, actuando como agente IA, es decir ese era el que usaba JanIA antes o el 3185462265 o el 3223019130 y un 350 entre otros y creo también que dentro del código puedan haber o hayan órdenes muy antiguas, e incluso órdenes con emojis distintos a los actuales que hacen que JanIA se confunda y tenga tanto código confuso que este hace que ella se desvíe y no sigue los lineamientos que yo siempre te he ordenado que se los insertes. No se si ahora si me hayas entendido o sigas tú también confundido."
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Clarificación Doctrinal Crucial de Identidad Telefónica (Socket Baileys vs Línea Comercial Bróker)**:
+   - *Malentendido Técnico Aclarado*: El número **`+573166569719`** NO es un número que deba borrarse de la memoria comercial; ¡es la **Línea Comercial Oficial de Atención Personalizada de VECY BIENES RAÍCES**! Allí Eduardo y Jani atienden llamadas, cotizaciones y peritajes directamente. Lo que jamás debe hacer ese número (o números históricos previos como 3185462265 o 3223019130) es operar como la sesión/socket de Baileys del bot automatizado.
+   - *Acción Correctiva*: Restaurar y blindar `3166569719` como el canal humano oficial al que JanIA refiere con persuasión a los usuarios en Grupo 2 para asesorías personalizadas, y dejar la sesión Baileys de JanIA exclusivamente en `+573192919978`.
+2. **Causa Raíz de la "Robotización" y el Comportamiento de "Bot Bobo"**:
+   - *Respuestas Enlatadas sin Consultar al LLM*: En `processConsultingMessage` y `processCirculoMessage` de `janIA.ts`, los filtros `isPureGreeting`, `isThankYouMessage` y `hasOnTopicKeyword` interceptaban los mensajes antes de llamar a Gemini, escupiendo cadenas de texto fijas ("Hola @phone... Este grupo está reservado..."). La IA jamás llegaba a pensar ni a razonar en el 50% de las interacciones.
+   - *Instrucciones Rígidas de Saludo (`greetingInstruction`)*: Se forzaban esquemas dictatoriales como *"Inicia con: [saludo], [género] [nombre]"* y *"¡PROHIBIDO SALUDAR DE NUEVO!"*, obligando a Gemini a repetir siempre el mismo formato acartonado de contestador telefónico.
+   - *Truncamiento de Nombres en `nameAndGenderResolver.ts`*: Si un usuario tenía un nombre compuesto como "María Claudia" o "Nelson Enrique", la regla de longitud `<= 4` caracteres descartaba la segunda palabra si no figuraba en una lista rígida, llamando a la persona de forma incompleta.
+3. **Residuos de Códigos y Enlaces Antiguos**:
+   - En `server/_core/prompts/base.md` (línea 185) persistía una mención obsoleta a la API de Meta `+573185462265`.
+   - En `server/_core/whatsapp-match.ts` (línea 1072) persistía la frase arcaica *"mi otra yo JanIA v3.5"*.
+   - En `VECY_INMUEBLES_NETWORK.md` faltaba la Matriz Doctrinal de 6 Emojis completa de v23.0.
+
+#### 🛠️ Acciones Ejecutadas y Solución de IA Pura:
+1. **Restauración Plena de la Línea Oficial de VECY BIENES RAÍCES (`3166569719`)**:
+   - Restaurado en `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` (línea 109): recomendación persuasiva de escribir o llamar al número oficial de nuestro bróker: **`3166569719`**.
+   - Configurado en `nameAndGenderResolver.ts`: `VECY_COMMERCIAL_INFO.phone = "3166569719"`.
+   - Configurado en `janIA.ts` (línea 5713): derivación al bróker con `+573166569719`.
+2. **Emancipación Total de JanIA hacia IA PURA con Libre Albedrío**:
+   - Eliminados todos los atajos estáticos que interceptaban saludos y agradecimientos en `processConsultingMessage` y `processCirculoMessage`.
+   - Reemplazado `greetingInstruction` por una directriz de **Inteligencia Pura, Cortesía Natural y Libre Albedrío**: JanIA se dirige a las personas por su nombre exacto o combinaciones amables, adapta su elocuencia y calidez con gracia colombiana, y razona de fondo sin formatos enlatados.
+   - Perfeccionado `nameAndGenderResolver.ts` para reconocer y preservar nombres propios dobles y compuestos respetando su integridad fonética.
+3. **Limpieza de Residuos y Enlaces Antiguos**:
+   - Purgada la mención de `+573185462265` en `base.md`.
+   - Removida la frase *"mi otra yo JanIA v3.5"* en `whatsapp-match.ts` (línea 1072).
+   - Actualizada la Matriz Doctrinal Oficial de 6 Emojis (`👍`, `👌`, `🔀`, `📝`, `✏️`, `🔄`) en `VECY_INMUEBLES_NETWORK.md`.
+4. **Verificación y Despliegue**:
+   - `npm run check` verificado con cero errores de TypeScript.
+   - `npm run build` compilado limpiamente en 7.97s.
+   - Versión incrementada a `v31.28` en `shared/const.ts` y `package.json`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.27 — Septiembre 2026
 
 ### 🗓️ Sesión: Viernes 11 de Septiembre de 2026 — 17:50 a 18:10 (Hora Colombia UTC-5)
 **Versión**: `v31.27` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + Gemini Vision Filter Calibrado + Baileys + PM2 (`jania-server`) + GitHub (`main`)

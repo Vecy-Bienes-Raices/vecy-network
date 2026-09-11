@@ -322,6 +322,39 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.28 — Septiembre 2026
+
+#### 📌 EMANCIPACIÓN A IA PURA CON LIBRE ALBEDRÍO, RESTAURACIÓN DE LÍNEA COMERCIAL BRÓKER 3166569719 Y ERRADICACIÓN DE RESPUESTAS ENLATADAS
+
+**Problemas identificados:**
+1. **Clarificación y Restauración de la Línea Telefónica Comercial (`3166569719`)**:
+   - Se requería distinguir nítidamente el rol del socket/sesión de Baileys del bot (`+573192919978`) de la línea comercial oficial de VECY BIENES RAÍCES (`+573166569719`).
+   - El número `3166569719` es la línea oficial de atención donde Eduardo y Jani atienden llamadas, cotizaciones y peritajes de forma personalizada. JanIA debe recomendar activamente esta línea para asesorías a la medida.
+2. **Robotización Forzada y Conducta de "Bot Bobo" en Grupos Conversacionales**:
+   - `isPureGreeting`, `isThankYouMessage` e interceptores de palabras clave en `janIA.ts` capturaban las consultas antes de llamar a Gemini, escupiendo textos fijos cableados sin razonamiento de IA.
+   - `greetingInstruction` obligaba a fórmulas rígidas de saludo ("Inicia con: [saludo], [género] [nombre]") y prohibiciones mecánicas ("¡PROHIBIDO SALUDAR DE NUEVO!"), obligando a Gemini a repetir siempre el mismo guión acartonado.
+   - En `nameAndGenderResolver.ts`, nombres compuestos con palabras de más de 4 letras que no figuraban en una lista estática eran truncados indebidamente (ej: "María Claudia" -> "María").
+3. **Residuos de Códigos y Enlaces Antiguos**:
+   - Mención a la API de Meta `+573185462265` en `base.md` (línea 185).
+   - Frase obsoleta *"mi otra yo JanIA v3.5"* en `whatsapp-match.ts` (línea 1072).
+   - Matriz de emojis incompleta en `VECY_INMUEBLES_NETWORK.md`.
+
+**Solución aplicada:**
+- **Restauración Plena de la Línea Comercial de VECY BIENES RAÍCES (`3166569719`)**:
+  - `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` (línea 109): recomendación persuasiva de contactar al número del bróker `3166569719`.
+  - `nameAndGenderResolver.ts`: `VECY_COMMERCIAL_INFO.phone = "3166569719"`.
+  - `janIA.ts`: derivación al bróker con `+573166569719`.
+- **Emancipación Total de JanIA hacia IA PURA con Libre Albedrío**:
+  - Eliminados los atajos estáticos de saludos y agradecimientos; ahora el 100% de los mensajes son razonados y redactados por Gemini con criterio propio, calidez, soltura y elocuencia colombiana.
+  - Reemplazado `greetingInstruction` por una directriz de cortesía natural y libre albedrío, dirigiéndose a los usuarios por su nombre propio exacto o combinaciones amables.
+  - Enriquecido `nameAndGenderResolver.ts` preservando nombres compuestos dobles.
+- **Saneamiento de Textos y Enlaces**:
+  - Removido `+573185462265` en `base.md`.
+  - Removida la frase *"mi otra yo JanIA v3.5"* en `whatsapp-match.ts`.
+  - Actualizada la Matriz Doctrinal Oficial de 6 Emojis (`👍`, `👌`, `🔀`, `📝`, `✏️`, `🔄`) en `VECY_INMUEBLES_NETWORK.md`.
+
+---
+
 ### 🔖 v31.27 — Septiembre 2026
 
 #### 📌 FILTRO ESTRICTO DE VISIÓN ARTIFICIAL PARA AFICHES CON TEXTO, DESCARTE DE FOTOS AMBIENTALES, ERRADICACIÓN TOTAL DE LÍNEA LEGACY Y PURGA DE RESIDUOS

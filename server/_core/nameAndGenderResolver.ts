@@ -170,13 +170,22 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
     }
   }
 
-  // Si no es compuesto clásico, tomar las primeras dos palabras si son cortas o la primera
+  // Si no es compuesto clásico de la lista estática, analizar si son dos nombres propios
   if (!resolvedDisplayName) {
     const parts = cleaned.split(/\s+/).filter(Boolean);
-    if (parts.length >= 2 && (parts[0].length <= 4 || ["de", "del", "la", "san", "santa"].includes(parts[0].toLowerCase()))) {
-      resolvedDisplayName = `${parts[0]} ${parts[1]}`;
+    const genericPrefixes = ["inmobiliaria", "inmobiliario", "bienes", "raices", "raíces", "asesor", "asesora", "grupo", "propiedades", "finca", "ventas", "arriendos", "construcciones", "constructora", "consultores"];
+    const isGenericBusiness = parts.length > 0 && genericPrefixes.includes(parts[0].toLowerCase());
+
+    if (isGenericBusiness) {
+      resolvedDisplayName = cleaned;
+    } else if (parts.length >= 2 && (parts[0].length <= 5 || ["de", "del", "la", "san", "santa"].includes(parts[0].toLowerCase()))) {
+      // Casos como "Maria Claudia", "Ana Maria", "Luz Dary", "Juan Diego", "Luis Fer"
+      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1)} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1)}`;
+    } else if (parts.length >= 2 && parts[0].length >= 3 && parts[1].length >= 3 && !parts[1].toLowerCase().includes("inmob") && !parts[1].toLowerCase().includes("prop")) {
+      // Si tiene dos nombres personales claros (ej. Nelson Enrique, Gustavo Adolfo)
+      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
     } else if (parts.length > 0) {
-      resolvedDisplayName = parts[0];
+      resolvedDisplayName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
     } else {
       resolvedDisplayName = "colega";
     }
@@ -234,13 +243,13 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
 }
 
 /**
- * Horario Comercial Oficial de Vecy Bienes Raíces
+ * Horario Comercial Oficial de Vecy Bienes Raíces (Atención Bróker)
  */
 export const VECY_COMMERCIAL_INFO = {
   name: "Vecy Bienes Raíces",
   type: "Bróker inmobiliario 100% digital 🌍✨",
   services: "Avalúos online ⚡ | Compra/venta 🏡 | Marketing con IA 🤖 | Contratos digitales 📄 | Préstamos hipotecarios",
-  phone: "3192919978",
+  phone: "3166569719",
   schedule: {
     weekdays: "Lunes a Viernes de 8:00 AM a 10:00 PM (08:00 - 22:00)",
     saturday: "Sábados de 8:00 AM a 8:00 PM (08:00 - 20:00)",
