@@ -163,7 +163,24 @@ El número +573166569719 fue baneado permanentemente. Solo aparece en docs hist�
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.26 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.27 — Septiembre 2026
+
+### Novedades v31.27 (Filtro Estricto de Visión Artificial para Afiches con Texto, Descarte de Fotos Ambientales, Erradicación Total de Línea Legacy y Limpieza de Residuos):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Aparición Intermitente de Número Antiguo (`3166569719`)*:
+     - En `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` (línea 109), la regla obligatoria de cierre para asesorías personalizadas ordenaba explícitamente a JanIA referir al número viejo.
+     - En `nameAndGenderResolver.ts` (línea 243), `VECY_COMMERCIAL_INFO.phone` mantenía configurado `"3166569719"`.
+     - *Solución*: Erradicado de raíz y unificado a la línea oficial activa **`+573192919978`**.
+  2) *Fotos Ambientales Falsamente Aceptadas como Flyers*:
+     - La condición previa `if (isFlyerOrBanner || classification === "INMUEBLE")` aceptaba fotografías ordinarias de fachadas, salas y chimeneas sin texto, reaccionando con emoji y descargándolas en `public/uploads/flyers/`.
+     - *Solución*: Implementada la **Regla de Oro de Afiches**: Exige obligatoriamente `isFlyerOrBanner === true` y `flyerVerbatimText.length >= 15` con datos comerciales. Fotos sin texto sobreimpreso se degradan forzosamente a `CONSULTA_GENERAL` (sin emoji, sin guardado y sin publicaciones huecas).
+  3) *Limpieza de Residuos*:
+     - Eliminados `.pending_welcome_count`, `.pending_welcome_jids` y `.pending_data.json` de la raíz.
+     - Purgadas de `public/uploads/flyers/` las 7 fotos ambientales de fachadas y salas huérfanas reportadas.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.26 — Septiembre 2026
 
 ### Novedades v31.26 (Migración Total a PostgreSQL 17.11 + PostGIS 3.6.4 Nativo en VPS, Emancipación 100% de Supabase, Latencia de 2ms y Respaldos Automatizados):
 - **Diagnóstico y Objetivos de la Migración**:

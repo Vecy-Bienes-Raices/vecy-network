@@ -240,7 +240,7 @@ export const VECY_COMMERCIAL_INFO = {
   name: "Vecy Bienes Raíces",
   type: "Bróker inmobiliario 100% digital 🌍✨",
   services: "Avalúos online ⚡ | Compra/venta 🏡 | Marketing con IA 🤖 | Contratos digitales 📄 | Préstamos hipotecarios",
-  phone: "3166569719",
+  phone: "3192919978",
   schedule: {
     weekdays: "Lunes a Viernes de 8:00 AM a 10:00 PM (08:00 - 22:00)",
     saturday: "Sábados de 8:00 AM a 8:00 PM (08:00 - 20:00)",

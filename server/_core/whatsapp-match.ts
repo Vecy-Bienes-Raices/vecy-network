@@ -1375,9 +1375,9 @@ export class JaniaMatchBot {
         try {
           const { extractFlyerVision } = await import('./janIA');
           flyerVisionData = await extractFlyerVision(imageBufferImmediate);
-          if (flyerVisionData && (flyerVisionData.isFlyerOrBanner || flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO")) {
+          if (flyerVisionData && flyerVisionData.isFlyerOrBanner && (flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO") && flyerVisionData.flyerVerbatimText && flyerVisionData.flyerVerbatimText.trim().length >= 15) {
             fastEmoji = flyerVisionData.reactionEmoji || (flyerVisionData.classification === "REQUERIMIENTO" ? "📝" : "👍");
-            console.log(`[JANIA-FAST-REACT] 🎯 Flyer detectado visualmente (${flyerVisionData.classification}). Reacción rápida: ${fastEmoji}`);
+            console.log(`[JANIA-FAST-REACT] 🎯 Flyer comercial con texto detectado visualmente (${flyerVisionData.classification}). Reacción rápida: ${fastEmoji}`);
           }
         } catch (visErr: any) {
           console.warn('[JANIA-FAST-REACT] Error en análisis visual de flyer:', visErr?.message || visErr);

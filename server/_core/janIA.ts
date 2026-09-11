@@ -2473,16 +2473,17 @@ export async function extractFlyerVision(imageBufferBase64: string): Promise<Fly
   const prompt = `Eres la IA experta en visión documental y extracción de flyers inmobiliarios de VECY Network en Colombia.
 Analiza la imagen enviada a un grupo inmobiliario de WhatsApp.
 Determina si es:
-1. "INMUEBLE" (Oferta de venta, arriendo o permuta de una propiedad).
-2. "REQUERIMIENTO" (Demanda o búsqueda: un asesor o cliente busca/necesita/compra un inmueble para un cliente, constructora o marca en expansión).
-3. "CONSULTA_GENERAL" (Foto ambiental común sin texto publicitario relevante sobreimpreso, comprobante bancario, meme o ajeno a bienes raíces).
+1. "INMUEBLE" (Oferta de venta, arriendo o permuta de una propiedad CON TEXTO PUBLICITARIO IMPRESO).
+2. "REQUERIMIENTO" (Demanda o búsqueda: un asesor o cliente busca/necesita/compra un inmueble para un cliente, constructora o marca en expansión CON TEXTO PUBLICITARIO IMPRESO).
+3. "CONSULTA_GENERAL" (Fotografía ambiental común sin texto publicitario sobreimpreso —fachadas, salas, comedores, cocinas, baños, piscinas, jardines, planos mudos—, comprobante bancario, meme o ajeno a bienes raíces).
 
 REGLAS CRÍTICAS DE CLASIFICACIÓN:
-- Si el flyer contiene términos como "BUSCO", "BUSCAMOS", "SE BUSCA", "SE REQUIERE", "COMPRO", "COMPRAMOS", "MARCAS EN EXPANSIÓN", "CONSTRUCTORES BUSCAN", "CLIENTE COMPRA" o similares, clasifica OBLIGATORIAMENTE como "REQUERIMIENTO".
-- Si el flyer contiene términos como "VENDO", "VENDEMOS", "SE VENDE", "EN VENTA", "OFREZCO", "ARRIENDO", "SE ARRIENDA", "DISPONIBLE", "OPEN HOUSE" o describe un inmueble específico ofertado, clasifica como "INMUEBLE".
+- REGLA DE ORO DE AFICHES/FLYERS: Si la imagen es una simple FOTO FOTOGRÁFICA AMBIENTAL (la foto de una casa, un edificio, una sala, una chimenea) SIN texto publicitario tipográfico impreso con especificaciones comerciales (precios, metros, contacto), DEBES clasificarla OBLIGATORIAMENTE como "CONSULTA_GENERAL" con isFlyerOrBanner: false y flyerVerbatimText: "".
+- Si el flyer contiene texto tipográfico con términos como "BUSCO", "BUSCAMOS", "SE BUSCA", "SE REQUIERE", "COMPRO", "COMPRAMOS", "MARCAS EN EXPANSIÓN", "CONSTRUCTORES BUSCAN", "CLIENTE COMPRA" o similares, clasifica OBLIGATORIAMENTE como "REQUERIMIENTO" (isFlyerOrBanner: true).
+- Si el flyer contiene texto tipográfico con términos como "VENDO", "VENDEMOS", "SE VENDE", "EN VENTA", "OFREZCO", "ARRIENDO", "SE ARRIENDA", "DISPONIBLE", "OPEN HOUSE" o describe un inmueble específico ofertado con especificaciones, clasifica como "INMUEBLE" (isFlyerOrBanner: true).
 
-Si es INMUEBLE o REQUERIMIENTO, extrae TODOS los datos técnicos y comerciales legibles en la imagen:
-- isFlyerOrBanner: boolean (true si tiene texto publicitario o comercial sobreimpreso, false si es foto limpia ambiental).
+Si es INMUEBLE o REQUERIMIENTO (exclusivamente si tiene texto sobreimpreso):
+- isFlyerOrBanner: boolean (true ÚNICAMENTE si tiene texto publicitario o comercial sobreimpreso con datos, false si es foto limpia ambiental).
 - classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL".
 - transactionType: "venta" | "arriendo" | "venta_permuta" | "arriendo_temporal".
 - propertyType: string (ej. "lote", "bodega", "apartamento", "casa", "oficina", "local", "finca", "edificio", "apartaestudio").
@@ -2528,7 +2529,10 @@ Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura.`;
         const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (textCandidate && typeof textCandidate === "string") {
           const parsed = JSON.parse(textCandidate) as FlyerVisionResult;
-          if (parsed && (parsed.isFlyerOrBanner || parsed.classification === "INMUEBLE" || parsed.classification === "REQUERIMIENTO")) {
+          const hasCommercialText = !!(parsed.flyerVerbatimText && parsed.flyerVerbatimText.trim().length >= 15);
+          const isGenuineFlyer = !!(parsed.isFlyerOrBanner && hasCommercialText && (parsed.classification === "INMUEBLE" || parsed.classification === "REQUERIMIENTO"));
+
+          if (parsed && isGenuineFlyer) {
             // Asignar el emoji doctrinal (Matriz v23.0)
             const tx = (parsed.transactionType || "").toLowerCase();
             const isPermuta = tx.includes("permuta") || tx === "venta_permuta";
@@ -2541,7 +2545,12 @@ Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura.`;
             console.log(`[JanIA-Vision] ✅ Flyer clasificado exitosamente como ${parsed.classification} (${parsed.reactionEmoji}) con ${model}: "${parsed.title || ''}"`);
             return parsed;
           } else {
-            console.log(`[JanIA-Vision] ℹ️ Imagen analizada: No es flyer comercial (${parsed?.classification || 'CONSULTA_GENERAL'}).`);
+            console.log(`[JanIA-Vision] ℹ️ Imagen descartada: Es foto ambiental o sin texto comercial sobreimpreso (${parsed?.classification || 'CONSULTA_GENERAL'}, isFlyer: ${parsed?.isFlyerOrBanner}, texto: ${parsed?.flyerVerbatimText?.length || 0} chars).`);
+            if (parsed) {
+              parsed.isFlyerOrBanner = false;
+              parsed.classification = "CONSULTA_GENERAL";
+              parsed.reactionEmoji = undefined;
+            }
             return parsed;
           }
         }
@@ -2941,7 +2950,9 @@ export async function processWhatsAppMessage(
       }
     }
 
-    if (flyerData && (flyerData.isFlyerOrBanner || flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO")) {
+    const isGenuineFlyerData = !!(flyerData && flyerData.isFlyerOrBanner && (flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO") && flyerData.flyerVerbatimText && flyerData.flyerVerbatimText.trim().length >= 15);
+
+    if (isGenuineFlyerData && flyerData) {
       const verbatim = flyerData.flyerVerbatimText || "";
       if (verbatim) {
         messageToProcess = (messageToProcess && messageToProcess.trim() !== "" && !messageToProcess.includes("[Publicación de Imagen"))
@@ -2949,7 +2960,7 @@ export async function processWhatsAppMessage(
           : verbatim;
       }
     } else if ((!messageToProcess || messageToProcess.trim() === "") && imageBuffer) {
-      messageToProcess = "[Publicación de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]";
+      messageToProcess = "[Fotografía ambiental sin texto publicitario]";
     }
 
     // 2. Preparación de Contexto LLM Multimodal
@@ -3098,9 +3109,8 @@ Por lo tanto, DEBES hacer lo siguiente:
     // Si el flyer comercial ya fue analizado y estructurado con éxito por extractFlyerVision
     // y el usuario no envió un texto conversacional largo que amerite el prompt legal de 25k tokens,
     // construimos el resultado directamente con 0ms de demora, 0 riesgo de 429 y 100% de fidelidad.
-    const isPureFlyer = flyerData && 
-      (flyerData.isFlyerOrBanner || flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO") &&
-      (!text || text.trim().length < 60 || text.includes("[Publicación de Imagen"));
+    const isPureFlyer = isGenuineFlyerData && flyerData &&
+      (!text || text.trim().length < 60 || text.includes("[Publicación de Imagen") || text.includes("[Fotografía ambiental"));
 
     if (flyerData && isPureFlyer) {
       const fd = flyerData;
@@ -3635,8 +3645,9 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
 
       // Filtro de Seguridad Final de Calidad Comercial: Rechazar publicaciones huecas, frases sueltas o sin ficha técnica
+      const isFlyerWithText = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
       const hollowCheckProp = isHollowListing(cleanCheckText, propertyTitle, (urls && urls.length > 0 ? urls[0] : undefined));
-      if (hollowCheckProp.isHollow && !imageBuffer && !result.isFlyerOrBanner) {
+      if (hollowCheckProp.isHollow && !isFlyerWithText) {
         console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado de propiedad en BD (${hollowCheckProp.reason}): "${cleanCheckText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
@@ -3750,8 +3761,9 @@ Por lo tanto, DEBES hacer lo siguiente:
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || 'inmueble'} en ${extracted.zonaDeseada || extracted.zone || 'Bogotá'} para ${extracted.transactionType || 'venta'}`;
 
       // Filtro de Seguridad Final de Calidad Comercial: Rechazar requerimientos huecos, saludos o frases sueltas
+      const isFlyerWithTextReq = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
       const hollowCheckReq = isHollowListing(cleanCheckReqText, reqTitle, (urls && urls.length > 0 ? urls[0] : undefined));
-      if (hollowCheckReq.isHollow && !imageBuffer && !result.isFlyerOrBanner) {
+      if (hollowCheckReq.isHollow && !isFlyerWithTextReq) {
         console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado de requerimiento en BD (${hollowCheckReq.reason}): "${cleanCheckReqText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
@@ -5092,7 +5104,8 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     }
   }
 
-  if (imageBuffer) {
+  const isRequirementFlyer = !!(data.isFlyerOrBanner || (data.flyerVerbatimText && data.flyerVerbatimText.trim().length >= 15));
+  if (imageBuffer && isRequirementFlyer) {
     try {
       const buffer = Buffer.from(imageBuffer, 'base64');
       const filename = `flyers/req_wa_${Date.now()}_${rawPhone}.jpg`;

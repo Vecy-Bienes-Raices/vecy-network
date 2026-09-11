@@ -7263,7 +7263,7 @@ var init_nameAndGenderResolver = __esm({
       name: "Vecy Bienes Ra\xEDces",
       type: "Br\xF3ker inmobiliario 100% digital \u{1F30D}\u2728",
       services: "Aval\xFAos online \u26A1 | Compra/venta \u{1F3E1} | Marketing con IA \u{1F916} | Contratos digitales \u{1F4C4} | Pr\xE9stamos hipotecarios",
-      phone: "3166569719",
+      phone: "3192919978",
       schedule: {
         weekdays: "Lunes a Viernes de 8:00 AM a 10:00 PM (08:00 - 22:00)",
         saturday: "S\xE1bados de 8:00 AM a 8:00 PM (08:00 - 20:00)",
@@ -8960,16 +8960,17 @@ async function extractFlyerVision(imageBufferBase64) {
   const prompt = `Eres la IA experta en visi\xF3n documental y extracci\xF3n de flyers inmobiliarios de VECY Network en Colombia.
 Analiza la imagen enviada a un grupo inmobiliario de WhatsApp.
 Determina si es:
-1. "INMUEBLE" (Oferta de venta, arriendo o permuta de una propiedad).
-2. "REQUERIMIENTO" (Demanda o b\xFAsqueda: un asesor o cliente busca/necesita/compra un inmueble para un cliente, constructora o marca en expansi\xF3n).
-3. "CONSULTA_GENERAL" (Foto ambiental com\xFAn sin texto publicitario relevante sobreimpreso, comprobante bancario, meme o ajeno a bienes ra\xEDces).
+1. "INMUEBLE" (Oferta de venta, arriendo o permuta de una propiedad CON TEXTO PUBLICITARIO IMPRESO).
+2. "REQUERIMIENTO" (Demanda o b\xFAsqueda: un asesor o cliente busca/necesita/compra un inmueble para un cliente, constructora o marca en expansi\xF3n CON TEXTO PUBLICITARIO IMPRESO).
+3. "CONSULTA_GENERAL" (Fotograf\xEDa ambiental com\xFAn sin texto publicitario sobreimpreso \u2014fachadas, salas, comedores, cocinas, ba\xF1os, piscinas, jardines, planos mudos\u2014, comprobante bancario, meme o ajeno a bienes ra\xEDces).
 
 REGLAS CR\xCDTICAS DE CLASIFICACI\xD3N:
-- Si el flyer contiene t\xE9rminos como "BUSCO", "BUSCAMOS", "SE BUSCA", "SE REQUIERE", "COMPRO", "COMPRAMOS", "MARCAS EN EXPANSI\xD3N", "CONSTRUCTORES BUSCAN", "CLIENTE COMPRA" o similares, clasifica OBLIGATORIAMENTE como "REQUERIMIENTO".
-- Si el flyer contiene t\xE9rminos como "VENDO", "VENDEMOS", "SE VENDE", "EN VENTA", "OFREZCO", "ARRIENDO", "SE ARRIENDA", "DISPONIBLE", "OPEN HOUSE" o describe un inmueble espec\xEDfico ofertado, clasifica como "INMUEBLE".
+- REGLA DE ORO DE AFICHES/FLYERS: Si la imagen es una simple FOTO FOTOGR\xC1FICA AMBIENTAL (la foto de una casa, un edificio, una sala, una chimenea) SIN texto publicitario tipogr\xE1fico impreso con especificaciones comerciales (precios, metros, contacto), DEBES clasificarla OBLIGATORIAMENTE como "CONSULTA_GENERAL" con isFlyerOrBanner: false y flyerVerbatimText: "".
+- Si el flyer contiene texto tipogr\xE1fico con t\xE9rminos como "BUSCO", "BUSCAMOS", "SE BUSCA", "SE REQUIERE", "COMPRO", "COMPRAMOS", "MARCAS EN EXPANSI\xD3N", "CONSTRUCTORES BUSCAN", "CLIENTE COMPRA" o similares, clasifica OBLIGATORIAMENTE como "REQUERIMIENTO" (isFlyerOrBanner: true).
+- Si el flyer contiene texto tipogr\xE1fico con t\xE9rminos como "VENDO", "VENDEMOS", "SE VENDE", "EN VENTA", "OFREZCO", "ARRIENDO", "SE ARRIENDA", "DISPONIBLE", "OPEN HOUSE" o describe un inmueble espec\xEDfico ofertado con especificaciones, clasifica como "INMUEBLE" (isFlyerOrBanner: true).
 
-Si es INMUEBLE o REQUERIMIENTO, extrae TODOS los datos t\xE9cnicos y comerciales legibles en la imagen:
-- isFlyerOrBanner: boolean (true si tiene texto publicitario o comercial sobreimpreso, false si es foto limpia ambiental).
+Si es INMUEBLE o REQUERIMIENTO (exclusivamente si tiene texto sobreimpreso):
+- isFlyerOrBanner: boolean (true \xDANICAMENTE si tiene texto publicitario o comercial sobreimpreso con datos, false si es foto limpia ambiental).
 - classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL".
 - transactionType: "venta" | "arriendo" | "venta_permuta" | "arriendo_temporal".
 - propertyType: string (ej. "lote", "bodega", "apartamento", "casa", "oficina", "local", "finca", "edificio", "apartaestudio").
@@ -9012,7 +9013,9 @@ Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
         const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (textCandidate && typeof textCandidate === "string") {
           const parsed = JSON.parse(textCandidate);
-          if (parsed && (parsed.isFlyerOrBanner || parsed.classification === "INMUEBLE" || parsed.classification === "REQUERIMIENTO")) {
+          const hasCommercialText = !!(parsed.flyerVerbatimText && parsed.flyerVerbatimText.trim().length >= 15);
+          const isGenuineFlyer = !!(parsed.isFlyerOrBanner && hasCommercialText && (parsed.classification === "INMUEBLE" || parsed.classification === "REQUERIMIENTO"));
+          if (parsed && isGenuineFlyer) {
             const tx = (parsed.transactionType || "").toLowerCase();
             const isPermuta = tx.includes("permuta") || tx === "venta_permuta";
             const isRent = tx.includes("arriendo") || tx === "arriendo_temporal";
@@ -9024,7 +9027,12 @@ Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
             console.log(`[JanIA-Vision] \u2705 Flyer clasificado exitosamente como ${parsed.classification} (${parsed.reactionEmoji}) con ${model}: "${parsed.title || ""}"`);
             return parsed;
           } else {
-            console.log(`[JanIA-Vision] \u2139\uFE0F Imagen analizada: No es flyer comercial (${parsed?.classification || "CONSULTA_GENERAL"}).`);
+            console.log(`[JanIA-Vision] \u2139\uFE0F Imagen descartada: Es foto ambiental o sin texto comercial sobreimpreso (${parsed?.classification || "CONSULTA_GENERAL"}, isFlyer: ${parsed?.isFlyerOrBanner}, texto: ${parsed?.flyerVerbatimText?.length || 0} chars).`);
+            if (parsed) {
+              parsed.isFlyerOrBanner = false;
+              parsed.classification = "CONSULTA_GENERAL";
+              parsed.reactionEmoji = void 0;
+            }
             return parsed;
           }
         }
@@ -9440,7 +9448,8 @@ Por favor, hazme una consulta que est\xE9 relacionada con estos temas. \xA1Con g
         console.warn(`[JanIA] \u26A0\uFE0F Error en extractFlyerVision:`, errVision?.message || errVision);
       }
     }
-    if (flyerData && (flyerData.isFlyerOrBanner || flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO")) {
+    const isGenuineFlyerData = !!(flyerData && flyerData.isFlyerOrBanner && (flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO") && flyerData.flyerVerbatimText && flyerData.flyerVerbatimText.trim().length >= 15);
+    if (isGenuineFlyerData && flyerData) {
       const verbatim = flyerData.flyerVerbatimText || "";
       if (verbatim) {
         messageToProcess = messageToProcess && messageToProcess.trim() !== "" && !messageToProcess.includes("[Publicaci\xF3n de Imagen") ? `${messageToProcess}
@@ -9449,7 +9458,7 @@ Por favor, hazme una consulta que est\xE9 relacionada con estos temas. \xA1Con g
 ${verbatim}` : verbatim;
       }
     } else if ((!messageToProcess || messageToProcess.trim() === "") && imageBuffer) {
-      messageToProcess = "[Publicaci\xF3n de Imagen / Flyer Comercial Inmobiliario sin texto en pie de foto]";
+      messageToProcess = "[Fotograf\xEDa ambiental sin texto publicitario]";
     }
     let contextText = `Mensaje de ${userName || userId}: ${messageToProcess}`;
     if (isFromAudio) {
@@ -9550,7 +9559,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
     }
     llmMessages.push({ role: "user", content: contextText });
     let result;
-    const isPureFlyer = flyerData && (flyerData.isFlyerOrBanner || flyerData.classification === "INMUEBLE" || flyerData.classification === "REQUERIMIENTO") && (!text2 || text2.trim().length < 60 || text2.includes("[Publicaci\xF3n de Imagen"));
+    const isPureFlyer = isGenuineFlyerData && flyerData && (!text2 || text2.trim().length < 60 || text2.includes("[Publicaci\xF3n de Imagen") || text2.includes("[Fotograf\xEDa ambiental"));
     if (flyerData && isPureFlyer) {
       const fd = flyerData;
       console.log(`[JanIA] \u26A1 Fast-Path Vision activado: flyer comercial '${fd.title || fd.classification}' estructurado directamente sin invocar prompt legal masivo.`);
@@ -9931,8 +9940,9 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.reactionEmoji = "\u{1F6AB}";
         return result;
       }
+      const isFlyerWithText = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
       const hollowCheckProp = isHollowListing(cleanCheckText, propertyTitle, urls && urls.length > 0 ? urls[0] : void 0);
-      if (hollowCheckProp.isHollow && !imageBuffer && !result.isFlyerOrBanner) {
+      if (hollowCheckProp.isHollow && !isFlyerWithText) {
         console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de propiedad en BD (${hollowCheckProp.reason}): "${cleanCheckText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
@@ -10018,8 +10028,9 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         return result;
       }
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || "inmueble"} en ${extracted.zonaDeseada || extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
+      const isFlyerWithTextReq = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
       const hollowCheckReq = isHollowListing(cleanCheckReqText, reqTitle, urls && urls.length > 0 ? urls[0] : void 0);
-      if (hollowCheckReq.isHollow && !imageBuffer && !result.isFlyerOrBanner) {
+      if (hollowCheckReq.isHollow && !isFlyerWithTextReq) {
         console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de requerimiento en BD (${hollowCheckReq.reason}): "${cleanCheckReqText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
@@ -11044,7 +11055,8 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
       console.error("[JanIA-SaveRequirement] Error subiendo PDF:", err);
     }
   }
-  if (imageBuffer) {
+  const isRequirementFlyer = !!(data.isFlyerOrBanner || data.flyerVerbatimText && data.flyerVerbatimText.trim().length >= 15);
+  if (imageBuffer && isRequirementFlyer) {
     try {
       const buffer = Buffer.from(imageBuffer, "base64");
       const filename = `flyers/req_wa_${Date.now()}_${rawPhone}.jpg`;
@@ -14154,9 +14166,9 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             try {
               const { extractFlyerVision: extractFlyerVision2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
               flyerVisionData = await extractFlyerVision2(imageBufferImmediate);
-              if (flyerVisionData && (flyerVisionData.isFlyerOrBanner || flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO")) {
+              if (flyerVisionData && flyerVisionData.isFlyerOrBanner && (flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO") && flyerVisionData.flyerVerbatimText && flyerVisionData.flyerVerbatimText.trim().length >= 15) {
                 fastEmoji = flyerVisionData.reactionEmoji || (flyerVisionData.classification === "REQUERIMIENTO" ? "\u{1F4DD}" : "\u{1F44D}");
-                console.log(`[JANIA-FAST-REACT] \u{1F3AF} Flyer detectado visualmente (${flyerVisionData.classification}). Reacci\xF3n r\xE1pida: ${fastEmoji}`);
+                console.log(`[JANIA-FAST-REACT] \u{1F3AF} Flyer comercial con texto detectado visualmente (${flyerVisionData.classification}). Reacci\xF3n r\xE1pida: ${fastEmoji}`);
               }
             } catch (visErr) {
               console.warn("[JANIA-FAST-REACT] Error en an\xE1lisis visual de flyer:", visErr?.message || visErr);
@@ -15912,7 +15924,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.26";
+var VECY_VERSION = "v31.27";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

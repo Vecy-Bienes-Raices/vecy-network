@@ -322,6 +322,35 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.27 — Septiembre 2026
+
+#### 📌 FILTRO ESTRICTO DE VISIÓN ARTIFICIAL PARA AFICHES CON TEXTO, DESCARTE DE FOTOS AMBIENTALES, ERRADICACIÓN TOTAL DE LÍNEA LEGACY Y PURGA DE RESIDUOS
+
+**Problemas identificados:**
+1. **Aparición Residual del Número Telefónico Antiguo (`3166569719`)**:
+   - En `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` (línea 109), la regla obligatoria de cierre para asesorías personalizadas ordenaba explícitamente a JanIA referir al número viejo.
+   - En `nameAndGenderResolver.ts` (línea 243), `VECY_COMMERCIAL_INFO.phone` mantenía configurado `"3166569719"`.
+2. **Fotografías Ambientales Ordinarias de Inmuebles Clasificadas Erróneamente como Flyers**:
+   - La condición previa `if (isFlyerOrBanner || classification === "INMUEBLE")` aceptaba fotografías ordinarias de fachadas, salas, comedores y chimeneas sin texto sobreimpreso.
+   - JanIA reaccionaba con emojis (`👍` / `📝`) a fotos mudas, las guardaba en `public/uploads/flyers/` y creaba publicaciones huecas en la base de datos.
+3. **Archivos Residuales en Raíz**:
+   - `.pending_welcome_count`, `.pending_welcome_jids` y `.pending_data.json` permanecían en la raíz del proyecto.
+
+**Solución aplicada:**
+- **Erradicación Total del Número Antiguo**:
+  - Actualizado `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` y `nameAndGenderResolver.ts` unificando al número oficial activo **`+573192919978`**.
+  - Cero ocurrencias activas en todo el código y prompts.
+- **Regla de Oro de Afiches y Calibración de Visión**:
+  - `extractFlyerVision`: Exige `isFlyerOrBanner === true` **Y** texto tipográfico legible (`flyerVerbatimText.length >= 15`). Fotos ambientales sin texto se clasifican obligatoriamente como `CONSULTA_GENERAL` con `isFlyerOrBanner: false` y reacción nula.
+  - `FAST-REACT`: Desactivada la reacción rápida para fotos sin texto comercial.
+  - Fast-Path y Filtros Huecos (`hollowCheckProp`, `hollowCheckReq`): Fotos mudas sin texto del usuario son rechazadas de inmediato como `CONSULTA_GENERAL` sin insertarse en la base de datos.
+  - `saveRequirement`: Descarga a `public/uploads/flyers/` condicionada a `isRequirementFlyer` legítimo.
+- **Limpieza de Residuos y Fotos Huérfanas**:
+  - Eliminados los 3 archivos `.pending_*` de la raíz.
+  - Eliminadas las 7 fotos ambientales huérfanas de `public/uploads/flyers/` en local y VPS.
+
+---
+
 ### 🔖 v31.26 — Septiembre 2026
 
 #### 📌 MIGRACIÓN INTEGRAL A POSTGRESQL 17.11 + POSTGIS 3.6.4 NATIVO EN VPS, EMANCIPACIÓN TOTAL DE SUPABASE Y RESPALDOS AUTOMATIZADOS

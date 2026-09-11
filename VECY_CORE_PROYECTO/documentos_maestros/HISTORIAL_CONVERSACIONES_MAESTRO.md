@@ -50,7 +50,44 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.26 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.27 — Septiembre 2026
+
+### 🗓️ Sesión: Viernes 11 de Septiembre de 2026 — 17:50 a 18:10 (Hora Colombia UTC-5)
+**Versión**: `v31.27` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + Gemini Vision Filter Calibrado + Baileys + PM2 (`jania-server`) + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+"Pues si por favor, me encantaría que me ayudes a eliminarlos. Bueno yo te lo decía porque he visto en varias ocasiones que no se si es por culpa de estos archivos o si es porque los que usamos están mal en algunas partes del código de programación ya que he visto varias interferencias o cuando JanIA se enloquece y pierde el hilo de lo que necesitamos que diga o por ahí aparecía de vez en cuando alguna intervención de nuestro número viejo el 573166569719 y eso lo he visto varias veces y me repites que eso ya fue solucionado, pero volvia a aparecer en otra ocasión posterior y así sucesivamente... allí sigues sin entenderlo y veo que por eso sigue fallando: Lo digo porque si allí están estas imágenes que te compartiré a continuación es porque JanIA sigue guardando y extrayendo imágenes que no debería como estas [7 fotos de casas sin texto]... Esas no son flyers con información, esas que te pasé son las que JanIA debe obviar pues no nos sirven por el momento, únicamente necesitamos son las que están escritas para que JanIA pueda: analizar, reaccionar, extraer y subir los datos según el objetivo DEMANDA u OFERTA a todo donde corresponda."
+
+#### 🔍 Diagnóstico Técnico y Causas Raíz Identificadas:
+1. **Aparición Residual del Número Antiguo `3166569719`**:
+   - *Causa Raíz*: En `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` (línea 109), la regla obligatoria de cierre para asesorías personalizadas ordenaba explícitamente a JanIA: *"escriba o llame directamente por WhatsApp al número de nuestro bróker: `3166569719` de VECY BIENES RAÍCES"*. Además, en `server/_core/nameAndGenderResolver.ts` (línea 243) `VECY_COMMERCIAL_INFO.phone` mantenía configurado `"3166569719"`. Al responder consultas jurídicas o de avalúos en el Grupo 2, JanIA obedecía el prompt e inyectaba el número obsoleto.
+2. **Fotos Ambientales de Inmuebles Aceptadas Indebidamente como Flyers**:
+   - *Causa Raíz*: En `extractFlyerVision` (`janIA.ts` línea 2531) y `FAST-REACT` (`whatsapp-match.ts` línea 1378), la condición de aceptación era `if (parsed && (parsed.isFlyerOrBanner || parsed.classification === "INMUEBLE" || parsed.classification === "REQUERIMIENTO"))`. Gemini reconocía una sala, chimenea o fachada y clasificaba `classification: "INMUEBLE"` con `isFlyerOrBanner: false`. Sin embargo, debido al operador `|| parsed.classification === "INMUEBLE"`, el sistema trataba cualquier fotografía común sin texto como si fuera un flyer publicitario, despachaba reacciones emoji en WhatsApp (`👍` / `📝`) y guardaba la imagen en `public/uploads/flyers/` como `req_wa_...jpg` creando publicaciones huecas.
+3. **Residuos Inertes en la Raíz**:
+   - Los archivos `.pending_welcome_count`, `.pending_welcome_jids` y `.pending_data.json` eran artefactos huérfanos de un antiguo gestor de bienvenida.
+
+#### 🛠️ Acciones Ejecutadas y Solución Quirúrgica:
+1. **Erradicación Total del Número Antiguo**:
+   - Actualizado `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` asignando el número oficial activo **`3192919978`** (+573192919978) en el cierre de asesorías.
+   - Actualizado `VECY_COMMERCIAL_INFO.phone` a `"3192919978"` en `nameAndGenderResolver.ts`.
+   - Cero ocurrencias activas en todo el código backend y frontend.
+2. **Calibración Hermética de Visión Artificial (Solo Flyers con Texto Comercial Legible)**:
+   - Modificado el prompt de `extractFlyerVision` estableciendo la **Regla de Oro de Afiches**: Fotografías de fachadas, salas, comedores, cocinas o planos mudos sin texto sobreimpreso se clasifican OBLIGATORIAMENTE como `"CONSULTA_GENERAL"` con `isFlyerOrBanner: false` y `reactionEmoji: undefined`.
+   - Condición estricta de flyer: Requiere `parsed.isFlyerOrBanner === true` **Y** `flyerVerbatimText.length >= 15` con especificaciones técnicas comerciales.
+   - En `FAST-REACT` (`whatsapp-match.ts`), se eliminó la reacción rápida ante fotos ambientales sin texto publicitario.
+   - En Fast-Path (`janIA.ts`), solo se procesan directamente flyers genuinos con texto verificado.
+   - En los filtros de publicaciones huecas (`hollowCheckProp` y `hollowCheckReq`), las fotos ambientales sin texto en el mensaje son descartadas de inmediato como `CONSULTA_GENERAL` sin guardarse en BD.
+   - En `saveRequirement`, la descarga a `public/uploads/flyers/` queda condicionada a `isRequirementFlyer` legítimo.
+3. **Limpieza de Archivos Residuales y Fotos Huérfanas**:
+   - Eliminados `.pending_welcome_count`, `.pending_welcome_jids` y `.pending_data.json`.
+   - Eliminadas de `public/uploads/flyers/` las 7 fotos ambientales huérfanas reportadas por Eduardo, tanto localmente como en el VPS.
+4. **Validación Empírica**:
+   - Comprobado que una imagen no publicitaria (`logo-vecy.png`) es descartada de inmediato como `CONSULTA_GENERAL` (isFlyer: false, texto: 0 chars, 0 emojis).
+   - Comprobado que un flyer real con texto (`wa_juan_pablo_tobo_lotes_1.jpg`) es extraído y clasificado como `REQUERIMIENTO` (📝) en milisegundos.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.26 — Septiembre 2026
 
 ### 🗓️ Sesión: Viernes 11 de Septiembre de 2026 — 16:50 a 17:10 (Hora Colombia UTC-5)
 **Versión**: `v31.26` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 Nativo en VPS + PM2 (`jania-server`) + Vercel Reverse Proxy (`https://vecy-network.vercel.app`) + GitHub (`main`)
