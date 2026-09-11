@@ -322,6 +322,37 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.26 — Septiembre 2026
+
+#### 📌 MIGRACIÓN INTEGRAL A POSTGRESQL 17.11 + POSTGIS 3.6.4 NATIVO EN VPS, EMANCIPACIÓN TOTAL DE SUPABASE Y RESPALDOS AUTOMATIZADOS
+
+**Problemas identificados:**
+1. **Límites de Cuota y Egress en Supabase Free Tier**:
+   - Supabase operaba bajo restricciones severas: 500 MB máximos de disco, límites de transferencia de red (egress) y conexiones restringidas por pgBouncer pooler que arrojaba timeouts y bloqueos de heartbeat en `pendingSessions`.
+   - El VPS Contabo cuenta con recursos de infraestructura subutilizados: **7.8 GB RAM** (6.9 GB libres) y **145 GB SSD NVMe** (135 GB libres, 93% libre).
+2. **Discrepancia de Versión en Herramientas de Volcado (`pg_dump`)**:
+   - El motor de Supabase corría en PostgreSQL 17.6, lo que causaba error de version mismatch con el cliente PostgreSQL 16 del sistema operativo.
+   - Decisión de arquitectura: Instalar el clúster oficial **PostgreSQL 17.11** y **PostGIS 3.6.4** desde el repositorio oficial PGDG en el VPS para asegurar paridad 1:1 absoluta.
+
+**Solución aplicada:**
+- **Aprovisionamiento Oficial de PostgreSQL 17 + PostGIS en VPS**:
+  - Instalados `postgresql-17`, `postgresql-client-17`, `postgresql-17-postgis-3` en el VPS.
+  - Base de datos `vecy_network` y rol `vecy_admin` con extensiones espaciales `postgis` (3.6.4), `uuid-ossp` (1.1) y `pgcrypto` (1.3).
+- **Volcado y Restauración sin Pérdida de Datos (Zero Data Loss)**:
+  - Extracción mediante `pg_dump` de schemas `public` y `drizzle` en 37 segundos (11 MB).
+  - Restauración vía `pg_restore` en 1 segundo.
+  - Auditoría de paridad del 100% contra el censo previo: 19.024 mensajes, 1.896 propiedades, 1.036 requerimientos, 1.904 conversaciones, 949 usuarios, 573 matches, 1.230 geometrías PostGIS de barrios (`ST_MultiPolygon`, SRID 4326), 8.500 registros espaciales, etc.
+- **Rendimiento Ultrarrápido (>50x Aceleración)**:
+  - Latencia de consulta local reducida a **1.8 ms - 3.4 ms** (vs 200ms+ mediante túnel TLS por internet hacia Supabase).
+- **Conmutación sin Interrupciones (Zero Downtime)**:
+  - Actualizado `.env` en VPS con `DATABASE_URL` apuntando a `localhost:5432/vecy_network`.
+  - Recargado el servicio `jania-server` en PM2; heartbeat del bot activo y actualizándose en la tabla `pendingSessions`.
+  - El frontend continúa sirviéndose a través de `https://vecy-network.vercel.app` mediante el proxy inverso de `vercel.json` sin cambios para usuarios ni brókers.
+- **Sistema de Respaldos Diarios Nocturnos**:
+  - Script automatizado `/var/backups/vecy/backup_nightly.sh` con retención de 30 días programado en crontab a las 03:00 AM hora Bogotá.
+
+---
+
 ### 🔖 v31.25 — Septiembre 2026
 
 #### 📌 COLA SECUENCIAL DE REACCIONES BAILEYS (PACING 1200ms), DESBLOQUEO DE PUBLICACIONES DE EDUARDO Y BLINDAJE QUIRÚRGICO CONVERSACIONAL

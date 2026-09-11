@@ -50,7 +50,65 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.25 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.26 — Septiembre 2026
+
+### 🗓️ Sesión: Viernes 11 de Septiembre de 2026 — 16:50 a 17:10 (Hora Colombia UTC-5)
+**Versión**: `v31.26` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 Nativo en VPS + PM2 (`jania-server`) + Vercel Reverse Proxy (`https://vecy-network.vercel.app`) + GitHub (`main`)
+
+#### 🎯 Solicitud de Eduardo A. Rivera:
+"Sí me encantaría que iniciaramos la migración. Quieres que te pegue aquí nuestra conversación de ese día por si perdiste el hilo o no hay necesidad??"
+
+#### 🔍 Diagnóstico Técnico y Objetivos de la Migración:
+1. **Emancipación Total de Supabase (0% Límites de Cuota / 0% Egress)**:
+   - Supabase operaba bajo límites de plan gratuito (500 MB DB, límites de egress, pooler pgBouncer restrictivo con timeouts).
+   - El VPS Contabo cuenta con especificaciones de alta gama: **7.8 GB RAM** (6.9 GB disponibles), **145 GB SSD NVMe** (135 GB libres, 93% disponible), Ubuntu 24.04 LTS.
+   - Decisión de arquitectura: Migrar el 100% de la base de datos relacional y geográfica (PostGIS) directamente al PostgreSQL local del VPS, manteniendo el frontend servido por Vercel con reverse proxy sin alterar la experiencia de usuario.
+2. **Detección de Versión de Motor Supabase (PostgreSQL 17.6)**:
+   - El volcado inicial con cliente PostgreSQL 16 arrojó `server version: 17.6; pg_dump version: 16.15`.
+   - Para garantizar paridad 1:1 absoluta y compatibilidad nativa sin degradación, se aprovisionó el clúster oficial **PostgreSQL 17.11** junto con **PostGIS 3.6.4** a través del repositorio oficial de PostgreSQL PGDG.
+
+#### 🛠️ Acciones Ejecutadas y Verificación Empírica:
+1. **Aprovisionamiento de PostgreSQL 17 + PostGIS en VPS**:
+   - Instalados `postgresql-17`, `postgresql-client-17`, `postgresql-17-postgis-3` desde `apt.postgresql.org`.
+   - Creado usuario superadministrador `vecy_admin` y base de datos `vecy_network`.
+   - Activadas extensiones esenciales: `postgis` (3.6.4), `uuid-ossp` (1.1), `pgcrypto` (1.3).
+2. **Volcado y Restauración Integral sin Pérdida de Datos**:
+   - `pg_dump` ejecutado contra Supabase con schemas `public` y `drizzle` hacia `/var/backups/vecy/supabase_backup_20260911_235655.dump` (11 MB) en 37 segundos.
+   - `pg_restore` ejecutado hacia la base de datos local `vecy_network` en 1 segundo.
+3. **Auditoría Exhaustiva de Paridad de Datos (100% Coincidencia Exacta con Censo Previo)**:
+   - `messages`: 19.024 filas ✅
+   - `spatial_ref_sys`: 8.500 filas ✅
+   - `property_publication_history`: 3.946 filas ✅
+   - `conversations`: 1.904 filas ✅
+   - `properties`: 1.896 filas ✅
+   - `barrios_bogota_geojson`: 1.230 filas con geometrías PostGIS (`ST_MultiPolygon`, SRID 4326) e índices GIST ✅
+   - `colombia_geography`: 1.122 filas ✅
+   - `requirements`: 1.036 filas ✅
+   - `users`: 949 filas ✅
+   - `propertyMatches`: 573 filas ✅
+   - `notificationLogs`: 460 filas ✅
+   - `pendingSessions`: 111 filas ✅
+   - `propertyImages`: 52 filas ✅
+   - `inmobiliario_lexicon`: 21 filas ✅
+   - `zone_aliases`: 8 filas ✅
+   - `solicitudes`: 6 filas ✅
+   - `profiles`: 4 filas ✅
+   - `counters`: 1 fila ✅
+   - `drizzle.__drizzle_migrations`: 4 filas ✅
+4. **Optimización de Rendimiento y RLS**:
+   - Permisos y secuencias concedidos a `vecy_admin`. RLS desactivado internamente para acceso directo del backend.
+   - Latencia de consulta local reducida de 200ms+ (vía internet) a **1.8 ms - 3.4 ms** (mejora de velocidad >50x).
+5. **Conmutación de Entorno y Recarga en Caliente (Zero Downtime)**:
+   - Actualizado `/var/www/vecy-network/.env` con `DATABASE_URL` y `DIRECT_URL` apuntando a `localhost:5432/vecy_network`.
+   - Reiniciado `jania-server` en PM2. Heartbeat de bot verificado actualizándose en tiempo real en la tabla `pendingSessions`.
+   - Verificada la API tRPC sirviendo consultas en vivo (`properties.list`) a través del dominio público `https://vecy-network.vercel.app/api/trpc/...`.
+6. **Sistema de Respaldos Nocturnos Automatizados**:
+   - Creado `/var/backups/vecy/backup_nightly.sh` con rotación automática de copias (retención de 30 días).
+   - Programado en el crontab del root a las 03:00 AM hora Bogotá (10:00 AM hora CEST del servidor).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.25 — Septiembre 2026
 
 ### 🗓️ Sesión: Jueves 10 de Septiembre de 2026 — 13:00 a 13:30 (Hora Colombia UTC-5)
 **Versión**: `v31.25` | **Ambiente**: Producción VPS (`13.140.149.144`) + Baileys WhatsApp Engine (`whatsapp-match.ts`) + Cola de Reacciones Secuencial Paced (`reactionQueue`) + GitHub (`main`)
