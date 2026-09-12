@@ -26,16 +26,19 @@ async function runMigration() {
   `;
   console.log('✅ Secuencia solicitudes_id_seq configurada correctamente.');
 
-  // 3. Conectar a Supabase origen (Vecy Agenda Pro) en modo SOLO LECTURA
-  const sourceSupabase = createClient(SOURCE_SUPABASE_URL, SOURCE_SERVICE_ROLE_KEY);
-  const { data: sourceRows, error: fetchError } = await sourceSupabase
-    .from('solicitudes')
-    .select('*')
-    .order('id', { ascending: true });
+  // 3. Conectar a Supabase origen (Vecy Agenda Pro) en modo SOLO LECTURA vía REST
+  const resp = await fetch(`${SOURCE_SUPABASE_URL}/rest/v1/solicitudes?select=*&order=id.asc`, {
+    headers: {
+      apikey: SOURCE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SOURCE_SERVICE_ROLE_KEY}`,
+    },
+  });
 
-  if (fetchError || !sourceRows) {
-    throw new Error(`❌ Error leyendo solicitudes de Vecy Agenda: ${fetchError?.message}`);
+  if (!resp.ok) {
+    throw new Error(`❌ Error leyendo solicitudes de Vecy Agenda: ${resp.status} ${await resp.text()}`);
   }
+
+  const sourceRows: any[] = await resp.json();
 
   console.log(`📦 Solicitudes leídas del origen: ${sourceRows.length}`);
 
