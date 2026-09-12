@@ -322,6 +322,46 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.32 — Septiembre 2026
+
+#### 📌 PROTOCOLO ANTI-ASFIXIA EN GRUPOS, PERSISTENCIA DE CRON EN DISCO, LIBRE ALBEDRÍO 2 O 3 + CANAL, ROTACIÓN ESTRICTA DE 9 IMÁGENES 3D Y BLINDAJE DE IDENTIDAD JANIA
+
+**Problemas identificados:**
+1. **Doble Publicación por Volatilidad de Deduplicación en Memoria RAM**:
+   - `executedRunsToday` en `cronService.ts` era un `Set<string>` en memoria volátil de Node.js. Al reiniciar PM2 (por despliegues o reinicios), el set se vaciaba. El ticker minutero detectaba que la franja horaria ya había pasado y no estaba en memoria, disparando dos publicaciones con 8 minutos de diferencia.
+2. **Confusión Crítica de Identidad / Suplantación de Jani Alves por el LLM**:
+   - En el prompt de `proyecto_vecy`, la frase *"Quiénes somos: Eduardo A. Rivera y Jani Alves"* causó que Gemini 2.5 Flash redactara en primera persona: *"¡Hola, familia VECY Network! Te saluda Jani Alves, cofundadora junto a Eduardo A. Rivera..."*.
+   - JanIA es una IA y SIEMPRE debe hablar en su propio nombre como JanIA, refiriéndose a Eduardo y Jani en tercera persona como sus fundadores humanos reales.
+3. **Repetición Consecutiva de Ilustración 3D**:
+   - `getThemedImagePath` no contaba con memoria de rotación de activos gráficos, enviando `jania_soporte.jpg` dos veces seguidas.
+4. **Carencia de Límite Diario Estricto y Espaciado Horario**:
+   - No existía un tope máximo de publicaciones por día ni una guarda de intervalo mínimo entre envíos sucesivos.
+
+**Solución aplicada:**
+- **Persistencia de Estado Cron en Disco (`.cron_daily_runs.json`)**:
+  - Implementadas `loadCronState()` y `saveCronState()`. Guarda `date`, `dailyCount`, `lastRunTimestamp`, `lastTargetGroup`, `runs` e historial `recentImages`. Sobrevive a cualquier reinicio de PM2 o del servidor.
+  - Inicializado con `dailyCount: 2` para el 12 de septiembre de 2026, garantizando silencio absoluto durante lo que resta del día.
+- **Protocolo Anti-Asfixia Inquebrantable (`canPublishNow`)**:
+  - Máximo 2 publicaciones al día en todo el sistema (`dailyCount < 2`).
+  - Separación mínima obligatoria de 5 horas entre despachos sucesivos (`>= 5 * 3600 * 1000 ms`).
+  - Prohibición de duplicar el mismo grupo en el mismo día: Si en la mañana publicó en Grupo 2, en la tarde va a Grupo 3.
+- **Horarios de Audiencia en Colombia y Libre Albedrío de Destinos**:
+  - JanIA elige con libre albedrío si publica en Grupo 2 o Grupo 3, y SIEMPRE en el Canal Oficial ("Vecy Bienes Raíces 🏘️").
+  - Mañana (10:00 AM Bogotá): Tip diario (Grupo 2 + Canal Oficial).
+  - Tarde (04:30 PM / 16:30 Bogotá): Proyecto Vecy Network (Grupo 3 + Canal Oficial) los miércoles y sábados.
+  - Noche (07:00 PM / 19:00 Bogotá): Reporte Semanal los lunes (Grupo 2 + Canal Oficial).
+- **Rotación Estricta de 9 Ilustraciones 3D (Cero Repetición)**:
+  - Memoria rotativa `recentImages` de las últimas 3 ilustraciones usadas en disco sobre el catálogo de 9 imágenes en `client/public/assets/jania/`. Excluye activamente las últimas 3 utilizadas, garantizando variedad visual.
+- **Blindaje Doctrinal de Identidad JanIA y Sanitizador Regex**:
+  - Inyectada la regla inquebrantable en `systemPrompt` (JanIA es siempre JanIA, nunca Jani Alves ni Eduardo Rivera).
+  - Implementada la función failsafe `enforceJanIAIdentity(text)` que detecta y corrige automáticamente cualquier desliz del LLM.
+- **Integración Textual de Normas Oficiales**:
+  - Actualizados `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` y `PROYECTO_Vecy Network.md` con las descripciones y normas oficiales completas de convivencia y consultas.
+- **Preservación Absoluta de `whatsapp-match.ts`**:
+  - Mantenido 100% intocado y en su estado original, preservando la extracción y reacciones de grupos externos sin ninguna alteración.
+
+---
+
 ### 🔖 v31.31 — Septiembre 2026
 
 #### 📌 PRESENTACIÓN E IDENTIDAD AUTÓNOMA DE JANIA, ERRADICACIÓN TOTAL DE PAPELEOS EN SONDEOS Y GUÍA INTERACTIVA EN CHAT

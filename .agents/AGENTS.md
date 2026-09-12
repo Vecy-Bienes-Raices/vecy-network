@@ -167,7 +167,26 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.31 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.32 — Septiembre 2026
+
+### Novedades v31.32 (Protocolo Anti-Asfixia en Grupos, Persistencia de Cron en Disco, Libre Albedrío 2 o 3 + Canal, Rotación Estricta de 9 Imágenes 3D y Blindaje de Identidad JanIA):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Doble Publicación por Volatilidad de Deduplicación en RAM*: `executedRunsToday` era un `Set<string>` en memoria volátil de Node.js. Al reiniciar PM2 por despliegue o mantenimiento, la memoria se limpiaba y el ticker minutero disparaba publicaciones dos veces consecutivas con minutos de diferencia.
+  2) *Confusión Crítica de Identidad / Suplantación de Jani Alves*: En el prompt de `proyecto_vecy`, la frase *"Quiénes somos: Eduardo A. Rivera y Jani Alves"* indujo al LLM a hablar en primera persona como "Jani Alves". JanIA es una Inteligencia Artificial y SIEMPRE debe hablar en su propio nombre como JanIA, refiriéndose a Eduardo y Jani en tercera persona como sus creadores humanos.
+  3) *Repetición Consecutiva de Ilustración 3D*: `getThemedImagePath` no tenía memoria de rotación, usando la misma imagen dos veces seguidas.
+  4) *Carencia de Límite Diario Estricto y Espaciado Horario*: No existía un tope máximo de publicaciones por día ni una guarda de intervalo mínimo entre envíos sucesivos.
+- **Acciones Ejecutadas**:
+  1) *Persistencia de Cron en Disco (`.cron_daily_runs.json`)*: `loadCronState()` y `saveCronState()` guardan la fecha, contador diario, último timestamp y grupo. Sobrevive a cualquier reinicio de PM2.
+  2) *Protocolo Anti-Asfixia Inquebrantable (`canPublishNow`)*: Máximo 2 publicaciones al día en todo el sistema, mínimo 5 horas de separación entre despachos y prohibición de duplicar el mismo grupo en el mismo día.
+  3) *Libre Albedrío de Destinos*: JanIA publica en (Grupo 2 o Grupo 3) + SIEMPRE el Canal Oficial ("Vecy Bienes Raíces 🏘️"). Mañana 10:00 AM (Grupo 2 + Canal), Tarde 16:30 PM (Grupo 3 + Canal miércoles/sábados) y Noche 19:00 PM (Reporte lunes).
+  4) *Rotación Estricta de 9 Ilustraciones 3D*: Memoria rotativa de las últimas 3 imágenes usadas en disco excluyéndolas del catálogo de 9 imágenes, asegurando cero repetición.
+  5) *Blindaje Doctrinal de Identidad y Sanitizador Regex*: Inyectada la regla inquebrantable en `systemPrompt` y filtro failsafe `enforceJanIAIdentity(text)` que neutraliza cualquier intento de presentarse como Jani Alves o Eduardo Rivera.
+  6) *Integración Textual de Normas Oficiales*: Actualizados `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` y `PROYECTO_Vecy Network.md` con las normas de comunidad oficiales.
+  7) *Preservación Absoluta de `whatsapp-match.ts`*: Archivo 100% intocado y original, preservando la extracción y reacciones de grupos externos sin ninguna modificación.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.31 — Septiembre 2026
 
 ### Novedades v31.31 (Presentación e Identidad Autónoma de JanIA, Erradicación Total de Papeleos en Sondeos y Guía Interactiva en Chat):
 - **Diagnóstico y Causas Raíz Identificadas**:

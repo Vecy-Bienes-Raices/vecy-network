@@ -1,0 +1,14 @@
+{
+  "date": "2026-09-12",
+  "dailyCount": 2,
+  "lastRunTimestamp": 1789233840000,
+  "lastTargetGroup": "grupo3",
+  "runs": {
+    "tip_sabado_cafe_2026-09-12": 1789233360000,
+    "grupo3_proyecto_2026-09-12": 1789233840000
+  },
+  "recentImages": [
+    "jania_soporte.jpg",
+    "jania_podcast.jpg"
+  ]
+}

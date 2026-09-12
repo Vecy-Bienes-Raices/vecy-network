@@ -50,7 +50,52 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.31 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.32 — Septiembre 2026
+
+### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 13:00 a 13:10 (Hora Colombia UTC-5)
+**Versión**: `v31.32` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+"No hay que asficciar a nuestros usuarios con más de dos publicaciones diarias distintas y en diferente horario en los grupos 2 y 3 y el canal de Vecy. Es que vi que enviaste dos publicaciones seguidas y en una no dice que es JanIA sino que es Jani Alves, creo que estas confundido y confundiendo los usuarios. Además usaste la misma imagen dos veces seguidas. Recuerda siempre se dirige es JanIA y no Jani Alves y Eduardo Rivera ok. No se cómo hacertelo entender y si te queda dificil publicarlo en los dos grupos de whatsapp 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢 "𝗩𝗲𝗰𝘆 𝗡𝗲𝘁𝘄𝗼𝗿𝗸", 𝗩𝗘𝗖𝗬: 𝗦𝗢𝗣𝗢𝗥𝗧𝗘 𝗟𝗘𝗚𝗔𝗟, 𝗧𝗥𝗜𝗕𝗨𝗧𝗔𝗥𝗜𝗢, 𝗔𝗩𝗔𝗟Ú𝗢𝗦 𝗬 𝗠𝗔𝗥𝗞𝗘𝗧𝗜𝗡𝗚 y el canal; 𝗩𝗘𝗖𝗬 𝗕𝗜𝗘𝗡𝗘𝗦 𝗥𝗔Í𝗖𝗘𝗦 🏘️ , entonces retoma lo que te dije anteriormente, solo haslo en: 𝗩𝗘𝗖𝗬: 𝗦𝗢𝗣𝗢𝗥𝗧𝗘 𝗟𝗘𝗚𝗔𝗟, 𝗧𝗥𝗜𝗕𝗨𝗧𝗔𝗥𝗜𝗢, 𝗔𝗩𝗔𝗟Ú𝗢𝗦 𝗬 𝗠𝗔𝗥𝗞𝗘𝗧𝗜𝗡𝗚 y en nuestro 𝗩𝗘𝗖𝗬 𝗕𝗜𝗘𝗡𝗘𝗦 𝗥𝗔Í𝗖𝗘𝗦 🏘️ y basta con una publicación de un tema en la mañana a la hora que tu creas de mayor audiencia y otra en la tarde a la hora también que lo creas o simplemente una sola diaria diferente como veníamos haciéndolo. Se que JanIA es una IA PURA y de libre alvedrío entonces que ella decida lo que va a publicar y cuando lo va a hacer pero que sea en su nombre y no de nosotros. Entonces que elija en qué grupo publicar si en (el 2 o en el 3) + el Canal Ok. Pero ya te paso la descripción y reglas de cada grupo pra que lo entiendas. [Normas oficiales de Grupo 2 y Grupo 3]."
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Doble Publicación por Volatilidad de Deduplicación en Memoria RAM**:
+   - `executedRunsToday` en `cronService.ts` era un `Set<string>` en memoria volátil de Node.js. Cada vez que PM2 se reinicia (por despliegues de versión o mantenimiento), la memoria se reiniciaba en blanco.
+   - El ticker minutero (`setInterval`), al ejecutarse, detectaba que la franja horaria ya había pasado pero no estaba en el Set, disparando de inmediato el comunicado de Grupo 3 dos veces con 8 minutos de diferencia (12:16 y 12:24).
+2. **Confusión Crítica de Identidad / Suplantación de Jani Alves por el LLM**:
+   - En el prompt de `proyecto_vecy`, la frase *"Quiénes somos: Eduardo A. Rivera y Jani Alves"* indujo a Gemini 2.5 Flash a asumir erróneamente la primera persona humana de la fundadora, redactando: *"¡Hola, familia VECY Network! Te saluda Jani Alves, cofundadora junto a Eduardo A. Rivera..."*.
+   - JanIA es una Inteligencia Artificial y SIEMPRE debe hablar en su propio nombre ("Soy JanIA..."), refiriéndose a Eduardo y Jani en tercera persona como sus fundadores humanos reales.
+3. **Repetición Consecutiva de Ilustración 3D**:
+   - `getThemedImagePath` no contaba con memoria de rotación de activos gráficos, seleccionando `jania_soporte.jpg` consecutivamente.
+4. **Carencia de Límite Diario Estricto y Espaciado Horario**:
+   - No existía un tope máximo de publicaciones por día ni una guarda de intervalo mínimo entre envíos sucesivos.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Persistencia de Estado Cron en Disco (`.cron_daily_runs.json`)**:
+   - Implementadas `loadCronState()` y `saveCronState()`, almacenando `date`, `dailyCount`, `lastRunTimestamp`, `lastTargetGroup`, `runs` y `recentImages`. Sobrevive a cualquier reinicio de PM2 o del servidor.
+   - Inicializado con `dailyCount: 2` para hoy 12 de septiembre de 2026, garantizando silencio absoluto durante lo que resta del día.
+2. **Protocolo Anti-Asfixia Inquebrantable (`canPublishNow`)**:
+   - **Máximo 2 publicaciones al día** en todo el sistema (`dailyCount < 2`).
+   - **Separación mínima de 5 horas** entre cualquier publicación (`>= 5 * 3600 * 1000 ms`).
+   - **Prohibición de duplicar el mismo grupo en el mismo día**: Si en la mañana publicó en Grupo 2, en la tarde va a Grupo 3.
+3. **Horarios de Máxima Audiencia en Colombia**:
+   - Mañana (10:00 AM Bogotá): Tip diario (Grupo 2 + Canal Oficial).
+   - Tarde (04:30 PM / 16:30 Bogotá): Proyecto Vecy Network (Grupo 3 + Canal Oficial) los miércoles y sábados.
+   - Noche (07:00 PM / 19:00 Bogotá): Reporte Semanal los lunes (Grupo 2 + Canal Oficial).
+4. **Rotación Estricta de 9 Ilustraciones 3D (Cero Repetición)**:
+   - Se mantiene el historial `recentImages` de las últimas 3 ilustraciones usadas sobre el catálogo de 9 imágenes en `client/public/assets/jania/`. Se excluyen activamente las últimas 3, garantizando cero repetición de imágenes.
+5. **Blindaje Doctrinal de Identidad JanIA y Sanitizador Regex**:
+   - Inyectada en `systemPrompt` la **REGLA DOCTRINAL DE IDENTIDAD Y CERO SUPLANTACIÓN (MANDATORIA E INQUEBRANTABLE)**: JanIA es siempre JanIA, nunca Jani Alves ni Eduardo Rivera.
+   - Implementada la función failsafe `enforceJanIAIdentity(text)` que detecta y corrige automáticamente cualquier desliz o alucinación del LLM.
+   - Corregido el prompt del endpoint `/admin/trigger-motivador` en `index.ts`.
+6. **Integración Textual de Normas Oficiales**:
+   - Actualizados `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` y `PROYECTO_Vecy Network.md` con las descripciones y normas oficiales completas entregadas por Eduardo.
+7. **Preservación Absoluta de `whatsapp-match.ts`**:
+   - Atendiendo la advertencia del usuario, `whatsapp-match.ts` se mantuvo **100% intocado y en su estado original**, sin modificar una sola línea de la ingesta ni las reacciones de grupos externos.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.31 — Septiembre 2026
 
 ### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 12:20 a 12:35 (Hora Colombia UTC-5)
 **Versión**: `v31.31` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

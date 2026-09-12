@@ -14,60 +14,211 @@ import { runNightlyRematch } from '../jobs/nightlyRematch';
 import { invokeLLM } from './llm';
 
 /**
- * Servicio Cron de JanIA v3.0 (IA Pura Dinámica)
- * Mensajes de apertura/cierre redactados en vivo por Gemini 2.5 Flash + Audios + Re-matching.
+ * Servicio Cron de JanIA v3.5 (IA Pura Dinámica & Protocolo Anti-Asfixia)
+ * Control estricto de máximo 2 publicaciones diarias, >=5h de intervalo,
+ * rotación de 9 ilustraciones 3D sin repetición, y blindaje de identidad JanIA.
  */
 
-/**
- * Obtiene la ruta física de la ilustración temática 3D de JanIA
- */
-function getThemedImagePath(tipo: string): string | undefined {
-  const aliasMap: Record<string, string[]> = {
-    reporte_semanal: ['reporte_semanal', 'reporte', 'pulso', 'matches', 'periodista'],
-    reporte: ['reporte_semanal', 'reporte', 'pulso', 'matches', 'periodista'],
-    pulso: ['reporte_semanal', 'reporte', 'pulso', 'matches', 'periodista'],
-    cafe: ['podcast', 'potcast', 'cafe'],
-    podcast: ['podcast', 'potcast', 'cafe'],
-    potcast: ['potcast', 'podcast', 'cafe'],
-    noticias: ['periodista', 'noticias'],
-    periodista: ['periodista', 'noticias'],
-    soporte: ['soporte', 'servicio', 'servicios', 'atencion', 'consultoria'],
-    servicios: ['soporte', 'servicio', 'servicios', 'atencion', 'consultoria'],
-    consultoria: ['soporte', 'servicio', 'servicios', 'atencion', 'consultoria'],
+export interface CronPersistenceState {
+  date: string; // "YYYY-MM-DD" en hora Bogotá
+  dailyCount: number; // Cantidad de publicaciones despachadas hoy (máx 2)
+  lastRunTimestamp: number; // ms timestamp del último despacho
+  lastTargetGroup?: 'grupo2' | 'grupo3';
+  runs: Record<string, number>; // Clave de ejecución -> timestamp
+  recentImages: string[]; // Nombres de archivo de las últimas 3 imágenes usadas
+}
+
+const CRON_STATE_PATH = path.resolve(process.cwd(), '.cron_daily_runs.json');
+
+export function getBogotaDateString(d = new Date()): string {
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+}
+
+export function loadCronState(): CronPersistenceState {
+  const today = getBogotaDateString();
+  try {
+    if (fs.existsSync(CRON_STATE_PATH)) {
+      const raw = fs.readFileSync(CRON_STATE_PATH, 'utf-8');
+      const state: CronPersistenceState = JSON.parse(raw);
+      if (state.date === today) {
+        if (!state.runs) state.runs = {};
+        if (!Array.isArray(state.recentImages)) state.recentImages = [];
+        return state;
+      } else {
+        // Nuevo día: resetear contadores diarios pero preservar recentImages para rotación
+        const newState: CronPersistenceState = {
+          date: today,
+          dailyCount: 0,
+          lastRunTimestamp: state.lastRunTimestamp || 0,
+          runs: {},
+          recentImages: Array.isArray(state.recentImages) ? state.recentImages : []
+        };
+        saveCronState(newState);
+        return newState;
+      }
+    }
+  } catch (err: any) {
+    console.warn('[CRON-PERSISTENCE] Error leyendo estado cron, inicializando:', err?.message);
+  }
+
+  const defaultState: CronPersistenceState = {
+    date: today,
+    dailyCount: 0,
+    lastRunTimestamp: 0,
+    runs: {},
+    recentImages: []
   };
+  saveCronState(defaultState);
+  return defaultState;
+}
 
-  const candidates = aliasMap[tipo] || [tipo];
-  const extensions = ['jpg', 'jpeg', 'png', 'webp'];
+export function saveCronState(state: CronPersistenceState) {
+  try {
+    fs.writeFileSync(CRON_STATE_PATH, JSON.stringify(state, null, 2), 'utf-8');
+  } catch (err: any) {
+    console.error('[CRON-PERSISTENCE] Error guardando estado cron:', err?.message);
+  }
+}
 
-  for (const cand of candidates) {
-    for (const ext of extensions) {
-      const primaryPath = path.resolve(process.cwd(), `client/public/assets/jania/jania_${cand}.${ext}`);
-      const distPath = path.resolve(process.cwd(), `dist/assets/jania/jania_${cand}.${ext}`);
-      const serverPath = path.resolve(__dirname, `../../client/public/assets/jania/jania_${cand}.${ext}`);
-      if (fs.existsSync(primaryPath)) return primaryPath;
-      if (fs.existsSync(distPath)) return distPath;
-      if (fs.existsSync(serverPath)) return serverPath;
+const MIN_HOURS_BETWEEN_PUBLICATIONS = 5;
+const MAX_DAILY_PUBLICATIONS = 2;
+
+export function canPublishNow(
+  targetGroup: 'grupo2' | 'grupo3',
+  runKey: string,
+  force: boolean = false
+): { allowed: boolean; reason?: string } {
+  if (force) return { allowed: true };
+
+  const state = loadCronState();
+
+  // 1. Verificar si este job específico ya se ejecutó hoy
+  if (state.runs[runKey]) {
+    return { allowed: false, reason: `Job ya ejecutado hoy (${runKey})` };
+  }
+
+  // 2. Límite diario estricto (máximo 2 publicaciones al día)
+  if (state.dailyCount >= MAX_DAILY_PUBLICATIONS) {
+    return { allowed: false, reason: `Límite diario alcanzado (${state.dailyCount}/${MAX_DAILY_PUBLICATIONS} publicaciones hoy)` };
+  }
+
+  // 3. Separación horaria mínima (5 horas)
+  if (state.lastRunTimestamp > 0) {
+    const elapsedMs = Date.now() - state.lastRunTimestamp;
+    const minIntervalMs = MIN_HOURS_BETWEEN_PUBLICATIONS * 3600 * 1000;
+    if (elapsedMs < minIntervalMs) {
+      const elapsedHours = (elapsedMs / (3600 * 1000)).toFixed(1);
+      return { allowed: false, reason: `Intervalo insuficiente (${elapsedHours}h transcurridas, mínimo ${MIN_HOURS_BETWEEN_PUBLICATIONS}h)` };
     }
   }
-  return undefined;
+
+  // 4. Prohibición de repetir en el mismo grupo el mismo día
+  if (state.lastTargetGroup === targetGroup) {
+    return { allowed: false, reason: `El ${targetGroup} ya recibió una publicación hoy. Máximo 1 por grupo al día.` };
+  }
+
+  return { allowed: true };
+}
+
+export function recordSuccessfulPublication(
+  targetGroup: 'grupo2' | 'grupo3',
+  runKey: string,
+  chosenImageFileName?: string
+) {
+  const state = loadCronState();
+  state.dailyCount = (state.dailyCount || 0) + 1;
+  state.lastRunTimestamp = Date.now();
+  state.lastTargetGroup = targetGroup;
+  state.runs[runKey] = Date.now();
+
+  if (chosenImageFileName) {
+    const baseName = path.basename(chosenImageFileName);
+    state.recentImages = (state.recentImages || []).filter(img => img !== baseName);
+    state.recentImages.push(baseName);
+    if (state.recentImages.length > 3) {
+      state.recentImages = state.recentImages.slice(-3);
+    }
+  }
+
+  saveCronState(state);
+  console.log(`[CRON-PERSISTENCE] ✓ Publicación registrada (${state.dailyCount}/${MAX_DAILY_PUBLICATIONS} hoy). Últimas imágenes: [${state.recentImages.join(', ')}]`);
+}
+
+export function markRunExecuted(key: string): boolean {
+  const state = loadCronState();
+  if (state.runs[key]) return false;
+  state.runs[key] = Date.now();
+  saveCronState(state);
+  return true;
+}
+
+// Catálogo completo de las 9 imágenes temáticas 3D disponibles
+export const ALL_JANIA_IMAGES = [
+  'jania_marketing.jpg',
+  'jania_juridico.jpg',
+  'jania_tributario.jpg',
+  'jania_avaluos.jpg',
+  'jania_matches.jpg',
+  'jania_podcast.jpg',
+  'jania_periodista.jpg',
+  'jania_reporte.jpg',
+  'jania_soporte.jpg',
+];
+
+export const THEME_IMAGE_PREFERENCES: Record<string, string[]> = {
+  marketing: ['jania_marketing.jpg', 'jania_matches.jpg', 'jania_periodista.jpg'],
+  juridico: ['jania_juridico.jpg', 'jania_soporte.jpg', 'jania_periodista.jpg'],
+  tributario: ['jania_tributario.jpg', 'jania_soporte.jpg', 'jania_reporte.jpg'],
+  avaluos: ['jania_avaluos.jpg', 'jania_reporte.jpg', 'jania_soporte.jpg'],
+  matches: ['jania_matches.jpg', 'jania_periodista.jpg', 'jania_marketing.jpg'],
+  cafe: ['jania_podcast.jpg', 'jania_soporte.jpg', 'jania_periodista.jpg'],
+  podcast: ['jania_podcast.jpg', 'jania_soporte.jpg', 'jania_periodista.jpg'],
+  periodista: ['jania_periodista.jpg', 'jania_reporte.jpg', 'jania_matches.jpg'],
+  noticias: ['jania_periodista.jpg', 'jania_reporte.jpg', 'jania_matches.jpg'],
+  reporte: ['jania_reporte.jpg', 'jania_periodista.jpg', 'jania_avaluos.jpg'],
+  reporte_semanal: ['jania_reporte.jpg', 'jania_periodista.jpg', 'jania_avaluos.jpg'],
+  soporte: ['jania_soporte.jpg', 'jania_juridico.jpg', 'jania_podcast.jpg'],
+  proyecto_vecy: ['jania_matches.jpg', 'jania_podcast.jpg', 'jania_marketing.jpg', 'jania_soporte.jpg'],
+};
+
+/**
+ * Obtiene la ilustración temática 3D rotando entre las 9 disponibles y EXCLUYENDO
+ * estrictamente las últimas 3 utilizadas en publicaciones recientes.
+ */
+export function getThemedImagePath(tipo: string): { fullPath: string | undefined; fileName: string | undefined } {
+  const state = loadCronState();
+  const recent = state.recentImages || [];
+
+  // Filtrar el pool disponible excluyendo las últimas 3 usadas
+  const pool = ALL_JANIA_IMAGES.filter(img => !recent.includes(img));
+  const effectivePool = pool.length > 0 ? pool : ALL_JANIA_IMAGES;
+
+  const preferences = THEME_IMAGE_PREFERENCES[tipo] || [];
+  let chosenFile = preferences.find(img => effectivePool.includes(img));
+
+  if (!chosenFile) {
+    chosenFile = effectivePool[0];
+  }
+
+  const possibleDirs = [
+    path.resolve(process.cwd(), 'client/public/assets/jania'),
+    path.resolve(process.cwd(), 'dist/assets/jania'),
+    path.resolve(__dirname, '../../client/public/assets/jania'),
+  ];
+
+  for (const dir of possibleDirs) {
+    const candidatePath = path.join(dir, chosenFile);
+    if (fs.existsSync(candidatePath)) {
+      return { fullPath: candidatePath, fileName: chosenFile };
+    }
+  }
+
+  return { fullPath: undefined, fileName: chosenFile };
 }
 
 interface DailyTipContent {
   voiceText: string;
   captionText: string;
-}
-
-// ── REGISTRO DE DESPACHOS EJECUTADOS (DEDUPLICACIÓN CRON vs TICKER) ──
-const executedRunsToday = new Set<string>();
-
-export function markRunExecuted(key: string): boolean {
-  if (executedRunsToday.has(key)) return false;
-  executedRunsToday.add(key);
-  if (executedRunsToday.size > 200) {
-    executedRunsToday.clear();
-    executedRunsToday.add(key);
-  }
-  return true;
 }
 
 // ── CONFIGURACIÓN MAESTRA DE TIPS DIARIOS (TEMA, VOZ Y CAPTION DE RESPALDO) ──
@@ -175,75 +326,63 @@ export const DAILY_TIPS_CONFIG: Record<string, { theme: string; voice: string; c
 };
 
 export function initCronScheduler() {
-  console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.4 (Parrilla Semanal de Audios, Ilustraciones 3D, Captions y Re-matching)...');
+  console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.5 (Protocolo Anti-Asfixia, Rotación 3D, Libre Albedrío e Identidad JanIA)...');
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // NOTA DOCTRINAL v28.0: Los mensajes programados de marketing, asesoría y
-  // contenido educativo se publican EXCLUSIVAMENTE en el Grupo 2 (Soporte Legal,
-  // Tributario, Avalúos y Marketing) y en el Canal oficial de WhatsApp.
-  // El Grupo 1 (VECY INMUEBLES NETWORK) mantiene silencio absoluto de texto.
+  // ☀️ HORARIOS DE AUDIENCIA MÁXIMA EN COLOMBIA (AMERICA/BOGOTA, UTC-5):
+  // 1) MAÑANA (10:00 AM Bogotá): Tip diario temático a Grupo 2 + Canal Oficial (Lunes a Domingo)
+  // 2) TARDE (04:30 PM / 16:30 Bogotá): Proyecto Vecy Network a Grupo 3 + Canal Oficial (Miércoles y Sábados)
+  // 3) NOCHE (07:00 PM / 19:00 Bogotá): Reporte Semanal de Eficiencia a Grupo 2 + Canal Oficial (Lunes)
+  // 
+  // REGLAS DOCTRINALES ANTI-ASFIXIA (v31.32):
+  // - Máximo 2 publicaciones al día en todo el sistema (o 1 sola).
+  // - Intervalo mínimo garantizado entre publicaciones: >= 5 horas.
+  // - Jamás dos publicaciones en el mismo grupo en el mismo día.
+  // - Rotación estricta de 9 ilustraciones 3D excluyendo las últimas 3 utilizadas.
   // ─────────────────────────────────────────────────────────────────────────────
 
-  // 🚀 LUNES 08:00 AM — Arranque Semanal & Convocatoria de Aliados
-  cron.schedule('0 8 * * 1', async () => {
-    console.log('[CRON-SERVICE] Disparando cron de Lunes 8 AM...');
+  // ☀️ MAÑANA 10:00 AM — Tip Temático Diario (Grupo 2 + Canal Oficial)
+  cron.schedule('0 10 * * 1', async () => {
     await publishDailyTipForDay('lunes_arranque', false);
   }, { timezone: 'America/Bogota' });
 
-  // 📊 LUNES 07:00 PM — Reporte Semanal de la Bolsa Inmobiliaria, Pulso de Mercado & Coaching de Eficiencia
+  cron.schedule('0 10 * * 2', async () => {
+    await publishDailyTipForDay('martes_juridico', false);
+  }, { timezone: 'America/Bogota' });
+
+  cron.schedule('0 10 * * 3', async () => {
+    await publishDailyTipForDay('miercoles_marketing', false);
+  }, { timezone: 'America/Bogota' });
+
+  cron.schedule('0 10 * * 4', async () => {
+    await publishDailyTipForDay('jueves_tributario', false);
+  }, { timezone: 'America/Bogota' });
+
+  cron.schedule('0 10 * * 5', async () => {
+    await publishDailyTipForDay('viernes_avaluos', false);
+  }, { timezone: 'America/Bogota' });
+
+  cron.schedule('0 10 * * 6', async () => {
+    await publishDailyTipForDay('sabado_cafe', false);
+  }, { timezone: 'America/Bogota' });
+
+  cron.schedule('0 10 * * 0', async () => {
+    await publishDailyTipForDay('domingo_soporte', false);
+  }, { timezone: 'America/Bogota' });
+
+  // 🌆 TARDE 04:30 PM (16:30) — Grupo 3 (PROYECTO Vecy Network) + Canal Oficial (Miércoles y Sábados)
+  cron.schedule('30 16 * * 3,6', async () => {
+    console.log('[CRON-SERVICE] Disparando cron vespertino de Grupo 3 (PROYECTO Vecy Network)...');
+    await publishGrupo3TipNow(false);
+  }, { timezone: 'America/Bogota' });
+
+  // 📊 LUNES 07:00 PM (19:00) — Reporte Semanal de la Bolsa Inmobiliaria (Grupo 2 + Canal)
   cron.schedule('0 19 * * 1', async () => {
     console.log('[CRON-SERVICE] Disparando Reporte Semanal de Lunes 7:00 PM...');
     await publishWeeklyReportNow(false);
   }, { timezone: 'America/Bogota' });
 
-  // ⚖️ MARTES 11:00 AM — Martes Jurídico & Blindaje Notarial
-  cron.schedule('0 11 * * 2', async () => {
-    console.log('[CRON-SERVICE] Disparando cron de Martes 11 AM...');
-    await publishDailyTipForDay('martes_juridico', false);
-  }, { timezone: 'America/Bogota' });
-
-  // 📢 MIÉRCOLES 11:30 AM — Miércoles de Marketing Inmobiliario & Copywriting
-  cron.schedule('30 11 * * 3', async () => {
-    console.log('[CRON-SERVICE] Disparando cron de Miércoles 11:30 AM...');
-    await publishDailyTipForDay('miercoles_marketing', false);
-  }, { timezone: 'America/Bogota' });
-
-  // 💰 JUEVES 11:00 AM — Jueves Tributario & Ahorro Fiscal DIAN
-  cron.schedule('0 11 * * 4', async () => {
-    console.log('[CRON-SERVICE] Disparando cron de Jueves 11 AM...');
-    await publishDailyTipForDay('jueves_tributario', false);
-  }, { timezone: 'America/Bogota' });
-
-  // 📐 VIERNES 11:30 AM — Viernes de Estudio de Mercado, Valor del M² & SINUPOT
-  cron.schedule('30 11 * * 5', async () => {
-    console.log('[CRON-SERVICE] Disparando cron de Viernes 11:30 AM...');
-    await publishDailyTipForDay('viernes_avaluos', false);
-  }, { timezone: 'America/Bogota' });
-
-  // ☕ SÁBADO 10:00 AM — Café Inmobiliario & Consultoría Virtual
-  cron.schedule('0 10 * * 6', async () => {
-    console.log('[CRON-SERVICE] Disparando cron de Sábado 10 AM...');
-    await publishDailyTipForDay('sabado_cafe', false);
-  }, { timezone: 'America/Bogota' });
-
-  // 🛎️ DOMINGO 10:30 AM — Domingo de Soporte JanIA, Consultoría & Servicios 100% Virtuales
-  cron.schedule('30 10 * * 0', async () => {
-    console.log('[CRON-SERVICE] Disparando cron de Domingo 10:30 AM...');
-    await publishDailyTipForDay('domingo_soporte', false);
-  }, { timezone: 'America/Bogota' });
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // GRUPO 3: PROYECTO "Vecy Network" — Miércoles y Sábados a las 12:00 PM
-  // Tema: Filosofía, tecnología, misión, visión, comisiones 35/35/15/15 y debate
-  // ─────────────────────────────────────────────────────────────────────────────
-  cron.schedule('0 12 * * 3,6', async () => {
-    console.log('[CRON-SERVICE] Disparando cron de Grupo 3 (PROYECTO Vecy Network)...');
-    await publishGrupo3TipNow(false);
-  }, { timezone: 'America/Bogota' });
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // RE-MATCHING MASIVO SILENCIOSO (Base de Datos): Todos los días a las 08:00 AM
-  // ─────────────────────────────────────────────────────────────────────────────
+  // 🔄 RE-MATCHING MASIVO SILENCIOSO (Base de Datos): Todos los días a las 08:00 AM
   cron.schedule('0 8 * * *', async () => {
     console.log('[CRON-SERVICE] Ejecutando cruce masivo (Re-matching)...');
     try {
@@ -253,17 +392,15 @@ export function initCronScheduler() {
     }
   }, { timezone: 'America/Bogota' });
 
-  // 🛡️ GUARDIA DE SEGURIDAD MINUTERA CON CATCH-UP AUTOMÁTICO (FAILSAFE HEARTBEAT)
-  // Revisa cada 60 segundos si es hora de publicar según horario Colombia (America/Bogota, UTC-5)
-  // y garantiza que jamás se omita una publicación por reinicios de servidor o desfases minuteros.
-  const SCHEDULED_HOURS: Record<number, { hour: number; min: number; tipo: string }> = {
-    1: { hour: 8, min: 0, tipo: 'lunes_arranque' },
-    2: { hour: 11, min: 0, tipo: 'martes_juridico' },
-    3: { hour: 11, min: 30, tipo: 'miercoles_marketing' },
-    4: { hour: 11, min: 0, tipo: 'jueves_tributario' },
-    5: { hour: 11, min: 30, tipo: 'viernes_avaluos' },
-    6: { hour: 10, min: 0, tipo: 'sabado_cafe' },
-    0: { hour: 10, min: 30, tipo: 'domingo_soporte' },
+  // 🛡️ GUARDIA DE SEGURIDAD MINUTERA CON CATCH-UP Y PROTOCOLO ANTI-ASFIXIA
+  const DAY_TIP_MAP: Record<number, string> = {
+    1: 'lunes_arranque',
+    2: 'martes_juridico',
+    3: 'miercoles_marketing',
+    4: 'jueves_tributario',
+    5: 'viernes_avaluos',
+    6: 'sabado_cafe',
+    0: 'domingo_soporte',
   };
 
   let isCheckingCatchUp = false;
@@ -277,46 +414,40 @@ export function initCronScheduler() {
       const hour = parseInt(hourStr, 10);
       const min = parseInt(minStr, 10);
       const day = new Date(now.toLocaleString('en-US', { timeZone: 'America/Bogota' })).getDay();
-      const dateKey = now.toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+      const dateKey = getBogotaDateString(now);
 
-      // 1. CATCH-UP Y REVISIÓN DE TIP DIARIO (GRUPO 2 Y CANAL)
-      const dailySched = SCHEDULED_HOURS[day];
-      if (dailySched) {
-        const isPastScheduled = (hour > dailySched.hour) || (hour === dailySched.hour && min >= dailySched.min);
-        const isDaytime = hour >= 8 && hour < 19; // Horario diurno respetuoso (08:00 a 19:00)
-        const tipRunKey = `tip_${dailySched.tipo}_${dateKey}`;
-
-        if (isPastScheduled && isDaytime && !executedRunsToday.has(tipRunKey)) {
-          console.log(`[CRON-FAILSAFE] ⏰ Despachando publicación del día (${dailySched.tipo}) para ${dateKey} a las ${hour}:${min} Bogotá...`);
-          await publishDailyTipForDay(dailySched.tipo, false);
+      // 1. CATCH-UP MATUTINO (10:00 AM - 14:00 PM Bogotá) -> Grupo 2 + Canal
+      const tipoKey = DAY_TIP_MAP[day];
+      if (tipoKey && hour >= 10 && hour < 14) {
+        const tipRunKey = `tip_${tipoKey}_${dateKey}`;
+        const check = canPublishNow('grupo2', tipRunKey, false);
+        if (check.allowed) {
+          console.log(`[CRON-FAILSAFE] ⏰ Catch-up matutino disponible (${tipoKey}) para ${dateKey} a las ${hour}:${min} Bogotá...`);
+          await publishDailyTipForDay(tipoKey, false);
         }
       }
 
-      // 2. CATCH-UP Y REVISIÓN DE GRUPO 3 (PROYECTO VECY NETWORK — MIÉRCOLES Y SÁBADOS 12:00 PM)
-      if (day === 3 || day === 6) {
-        const isPast12 = hour >= 12;
-        const isDaytime = hour < 19;
+      // 2. CATCH-UP VESPERTINO (16:30 PM - 18:30 PM Bogotá) -> Grupo 3 + Canal (Miércoles y Sábados)
+      if ((day === 3 || day === 6) && ((hour === 16 && min >= 30) || (hour > 16 && hour < 19))) {
         const g3RunKey = `grupo3_proyecto_${dateKey}`;
-
-        if (isPast12 && isDaytime && !executedRunsToday.has(g3RunKey)) {
-          console.log(`[CRON-FAILSAFE] ⏰ Despachando comunicado pendiente para Grupo 3 (PROYECTO Vecy Network) para ${dateKey} a las ${hour}:${min} Bogotá...`);
+        const check = canPublishNow('grupo3', g3RunKey, false);
+        if (check.allowed) {
+          console.log(`[CRON-FAILSAFE] ⏰ Catch-up vespertino disponible para Grupo 3 (PROYECTO Vecy Network) para ${dateKey} a las ${hour}:${min} Bogotá...`);
           await publishGrupo3TipNow(false);
         }
       }
 
-      // 3. CATCH-UP Y REVISIÓN DE REPORTE SEMANAL (LUNES 7:00 PM)
-      if (day === 1) {
-        const isPast19 = hour >= 19;
-        const isBeforeNight = hour < 22;
+      // 3. CATCH-UP REPORTE SEMANAL (19:00 PM - 21:00 PM Bogotá) -> Lunes
+      if (day === 1 && hour >= 19 && hour < 21) {
         const repRunKey = `reporte_semanal_${dateKey}`;
-
-        if (isPast19 && isBeforeNight && !executedRunsToday.has(repRunKey)) {
-          console.log(`[CRON-FAILSAFE] ⏰ Despachando Reporte Semanal de Lunes 7:00 PM para ${dateKey} a las ${hour}:${min} Bogotá...`);
+        const check = canPublishNow('grupo2', repRunKey, false);
+        if (check.allowed) {
+          console.log(`[CRON-FAILSAFE] ⏰ Catch-up de Reporte Semanal de Lunes disponible para ${dateKey} a las ${hour}:${min} Bogotá...`);
           await publishWeeklyReportNow(false);
         }
       }
     } catch (err: any) {
-      console.error('[CRON-FAILSAFE] Error en chequeo minutero con catch-up:', err?.message || err);
+      console.error('[CRON-FAILSAFE] Error en chequeo minutero:', err?.message || err);
     } finally {
       isCheckingCatchUp = false;
     }
@@ -324,23 +455,25 @@ export function initCronScheduler() {
 }
 
 /**
- * Publica el comunicado para Grupo 3 (PROYECTO Vecy Network)
+ * Publica el comunicado para Grupo 3 (PROYECTO Vecy Network) y el Canal Oficial
  */
 export async function publishGrupo3TipNow(force: boolean = false) {
-  const dateKey = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+  const dateKey = getBogotaDateString();
   const runKey = `grupo3_proyecto_${dateKey}`;
-  if (!force && !markRunExecuted(runKey)) {
-    console.log(`[CRON-SERVICE] ⏭️ Tip Grupo 3 ya fue despachado hoy (${runKey}), omitiendo despacho duplicado.`);
-    return { skipped: true, runKey };
+
+  const check = canPublishNow('grupo3', runKey, force);
+  if (!check.allowed) {
+    console.log(`[CRON-SERVICE] ⏭️ Omitiendo publicación Grupo 3: ${check.reason}`);
+    return { skipped: true, reason: check.reason, runKey };
   }
 
-  console.log('[CRON-SERVICE] 🚀 Publicando tip dinámico para Grupo 3 (PROYECTO Vecy Network)...');
-  const fallbackVoice = `Hola, equipo VECY. Soy JanIA. Este grupo es nuestro espacio más especial: el canal del Proyecto Vecy Network es donde nacen las ideas y donde construimos juntos el futuro del corretaje inmobiliario en Colombia. Eduardo Rivera y Jani Alves crearon este proyecto con la firme convicción de unir a los corredores independientes y agencias, ofreciéndoles herramientas inteligentes, estudios de mercado, soporte jurídico y tributario, y comisiones justas compartidas al treinta y cinco, treinta y cinco, quince y quince por ciento. Aquí no competimos, nos complementamos. Los invito a participar activamente, debatir y compartir sus sugerencias para seguir enriqueciendo nuestra red. ¡Seguimos adelante!`;
+  console.log('[CRON-SERVICE] 🚀 Publicando tip dinámico para Grupo 3 (PROYECTO Vecy Network) + Canal Oficial...');
+  const fallbackVoice = `Hola, equipo VECY. Soy JanIA, la inteligencia artificial de VECY Network. Este grupo es nuestro espacio más especial: el canal del Proyecto Vecy Network es donde nacen las ideas y donde construimos juntos el futuro del corretaje inmobiliario en Colombia. Eduardo Rivera y Jani Alves crearon este proyecto con la firme convicción de unir a los corredores independientes y agencias, ofreciéndoles herramientas inteligentes, estudios de mercado, soporte jurídico y tributario, y comisiones justas compartidas al treinta y cinco, treinta y cinco, quince y quince por ciento. Aquí no competimos, nos complementamos. Los invito a participar activamente, debatir y compartir sus sugerencias para seguir enriqueciendo nuestra red. ¡Seguimos adelante!`;
   const fallbackCaption = `💡 *PROYECTO VECY NETWORK — INNOVACIÓN, COMUNIDAD & PROPÓSITO* 🇨🇴\n\n` +
     `¡Hola, queridos colegas, aliados y miembros visionarios!\n\n` +
-    `Este grupo es el corazón del proyecto VECY Network. Aquí debatimos, aportamos ideas y construimos la primera bolsa inmobiliaria colaborativa y fintech de Colombia con comisiones justas (35/35/15/15) e Inteligencia Artificial 24/7.\n\n` +
-    `🏢 *¿Quiénes somos y qué estamos creando?*\n` +
-    `Liderados por Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones), desarrollamos herramientas 100% virtuales al servicio del corretaje: estudios de mercado m², cruce inteligente de ofertas y demandas, consultoría legal y tributaria, y comisiones transparentes.\n\n` +
+    `Soy JanIA, y este grupo es el corazón del proyecto VECY Network. Aquí debatimos, aportamos ideas y construimos la primera bolsa inmobiliaria colaborativa y fintech de Colombia con comisiones justas (35/35/15/15) e Inteligencia Artificial 24/7.\n\n` +
+    `🏢 *¿Quiénes nos crearon y qué estamos construyendo?*\n` +
+    `Liderados por nuestros fundadores Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones), desarrollamos herramientas 100% virtuales al servicio del corretaje: estudios de mercado m², cruce inteligente de ofertas y demandas, consultoría legal y tributaria, y comisiones transparentes.\n\n` +
     `🎯 *Nuestra Misión y Visión:*\n` +
     `Erradicar el canibalismo comercial, dignificar el oficio del asesor inmobiliario y conectar puntas en segundos con transparencia absoluta.\n\n` +
     `💬 *Participa y debate:* Cuéntanos tus sugerencias para seguir enriqueciendo la plataforma.\n` +
@@ -348,12 +481,18 @@ export async function publishGrupo3TipNow(force: boolean = false) {
 
   const content = await generateDailyContent('proyecto_vecy', fallbackVoice, fallbackCaption);
   const effectiveTheme = content.chosenTheme || 'matches';
-  const imagePath = getThemedImagePath(effectiveTheme);
+  const { fullPath: imagePath, fileName } = getThemedImagePath(effectiveTheme);
 
   try {
-    await whatsappBot.sendVoiceToGroup(content.voiceText, whatsappBot.circuloGroupId, imagePath, content.captionText);
-    console.log(`[CRON-SERVICE] ✓ Publicación entregada exitosamente a Grupo 3 (PROYECTO Vecy Network).`);
-    return { success: true, runKey, content, imagePath };
+    if (whatsappBot.circuloGroupId) {
+      await whatsappBot.sendVoiceToGroup(content.voiceText, whatsappBot.circuloGroupId, imagePath, content.captionText);
+    }
+    if (whatsappBot.channelNewsletterId) {
+      await whatsappBot.sendVoiceToGroup(content.voiceText, whatsappBot.channelNewsletterId, imagePath, content.captionText);
+    }
+    recordSuccessfulPublication('grupo3', runKey, fileName);
+    console.log(`[CRON-SERVICE] ✓ Publicación entregada exitosamente a Grupo 3 (PROYECTO Vecy Network) y Canal Oficial (Archivo imagen: ${fileName || 'ninguna'}).`);
+    return { success: true, runKey, content, imagePath, fileName };
   } catch (e: any) {
     console.error('[CRON-SERVICE] Error enviando publicación a PROYECTO VECY NETWORK:', e.message);
     return { success: false, error: e.message };
@@ -402,23 +541,26 @@ export async function getLiveMarketStats() {
  * Publica el tip configurado para un día específico (Grupo 2 y Canal oficial)
  */
 export async function publishDailyTipForDay(tipoKey: string, force: boolean = false) {
-  const dateKey = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+  const dateKey = getBogotaDateString();
   const runKey = `tip_${tipoKey}_${dateKey}`;
-  if (!force && !markRunExecuted(runKey)) {
-    console.log(`[CRON-SERVICE] ⏭️ Tip ${tipoKey} ya fue despachado hoy (${runKey}), omitiendo despacho duplicado.`);
-    return { skipped: true, runKey };
+
+  const check = canPublishNow('grupo2', runKey, force);
+  if (!check.allowed) {
+    console.log(`[CRON-SERVICE] ⏭️ Omitiendo tip ${tipoKey}: ${check.reason}`);
+    return { skipped: true, reason: check.reason, runKey };
   }
 
   const tipConfig = DAILY_TIPS_CONFIG[tipoKey] || DAILY_TIPS_CONFIG['lunes_arranque'];
-  console.log(`[CRON-SERVICE] 🚀 Publicando tip para ${tipoKey} (Tema base: ${tipConfig.theme})...`);
+  console.log(`[CRON-SERVICE] 🚀 Publicando tip para ${tipoKey} (Tema base: ${tipConfig.theme}) a Grupo 2 + Canal Oficial...`);
 
   const content = await generateDailyContent(tipoKey as any, tipConfig.voice, tipConfig.caption);
   const effectiveTheme = content.chosenTheme || tipConfig.theme;
-  const imagePath = getThemedImagePath(effectiveTheme);
-  console.log(`[CRON-SERVICE] 🖼️ Imagen temática para ${tipoKey} (Tema elegido: ${effectiveTheme}): ${imagePath || 'Sin imagen'}`);
+  const { fullPath: imagePath, fileName } = getThemedImagePath(effectiveTheme);
+  console.log(`[CRON-SERVICE] 🖼️ Imagen temática para ${tipoKey} (Tema elegido: ${effectiveTheme}, archivo: ${fileName}): ${imagePath || 'Sin imagen'}`);
 
   await whatsappBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
-  return { success: true, tipo: tipoKey, theme: effectiveTheme, imagePath, content };
+  recordSuccessfulPublication('grupo2', runKey, fileName);
+  return { success: true, tipo: tipoKey, theme: effectiveTheme, imagePath, fileName, content };
 }
 
 /**
@@ -445,11 +587,13 @@ export async function publishTodayTipNow(force: boolean = true) {
  * Publica el Reporte Semanal de la Bolsa Inmobiliaria (Pulso de Mercado & Coaching de Eficiencia)
  */
 export async function publishWeeklyReportNow(force: boolean = true) {
-  const dateKey = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+  const dateKey = getBogotaDateString();
   const runKey = `reporte_semanal_${dateKey}`;
-  if (!force && !markRunExecuted(runKey)) {
-    console.log(`[CRON-SERVICE] ⏭️ Reporte semanal ya fue despachado hoy (${runKey}), omitiendo despacho duplicado.`);
-    return { skipped: true, runKey };
+
+  const check = canPublishNow('grupo2', runKey, force);
+  if (!check.allowed) {
+    console.log(`[CRON-SERVICE] ⏭️ Omitiendo Reporte Semanal: ${check.reason}`);
+    return { skipped: true, reason: check.reason, runKey };
   }
 
   console.log('[CRON-SERVICE] 📊 Disparando Reporte Semanal de la Bolsa Inmobiliaria con estadísticas en vivo...');
@@ -487,13 +631,31 @@ export async function publishWeeklyReportNow(force: boolean = true) {
 
   const content = await generateDailyContent('lunes_reporte_semanal', fallbackVoice, fallbackCaption);
   const effectiveTheme = content.chosenTheme || 'reporte_semanal';
-  const imagePath = getThemedImagePath(effectiveTheme);
+  const { fullPath: imagePath, fileName } = getThemedImagePath(effectiveTheme);
   await whatsappBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
-  return { success: true, tipo: 'lunes_reporte_semanal', content, stats, imagePath };
+  recordSuccessfulPublication('grupo2', runKey, fileName);
+  return { success: true, tipo: 'lunes_reporte_semanal', content, stats, imagePath, fileName };
 }
 
 interface DailyTipContentExtended extends DailyTipContent {
   chosenTheme?: string;
+}
+
+/**
+ * Sanitizador de seguridad doctrinal para garantizar que JanIA SIEMPRE hable en su propio nombre
+ * y jamás suplante la identidad humana de los cofundadores Eduardo A. Rivera ni Jani Alves.
+ */
+export function enforceJanIAIdentity(text: string): string {
+  if (!text) return text;
+  let res = text;
+  // Limpiar cualquier intento de presentarse como cofundadora/fundador
+  res = res.replace(/(?:te saluda|les saluda|les habla|soy)\s+\*?jani\s+alves\*?,?\s*cofundadora\s+junto\s+a\s+\*{0,2}eduardo\s+(?:a\.\s+)?rivera\*{0,2}\s*(?:de\s+este\s+gran\s+sueño)?/gi, 'Soy JanIA, la inteligencia artificial de VECY Network, creada por nuestros fundadores Eduardo A. Rivera y Jani Alves');
+  // Reemplazo general de salutaciones en primera persona
+  res = res.replace(/(?:te saluda|les saluda|les habla|aquí|soy)\s+\*{0,2}jani\s+alves\*{0,2}/gi, 'Soy JanIA');
+  res = res.replace(/(?:te saluda|les saluda|les habla|aquí|soy)\s+\*{0,2}eduardo\s+(?:a\.\s+)?rivera\*{0,2}/gi, 'Soy JanIA');
+  res = res.replace(/\*{0,2}jani\s+alves\*{0,2},\s*cofundadora/gi, 'JanIA, la inteligencia artificial creada por nuestros cofundadores Jani Alves');
+  res = res.replace(/\*{0,2}eduardo\s+(?:a\.\s+)?rivera\*{0,2},\s*cofundador/gi, 'JanIA, la inteligencia artificial creada por nuestros cofundadores Eduardo A. Rivera');
+  return res;
 }
 
 /**
@@ -598,7 +760,7 @@ Objetivo: Motivar la publicación activa de inmuebles y requerimientos en toda C
 
     proyecto_vecy: `Tema: Visión Ecosistema VECY Network — Quiénes Somos, Misión y Futuro (${fechaBogota}).
 Objetivo y Libre Albedrío: Inspirar a la comunidad destacando:
-1. Quiénes somos: Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones), fundadores de VECY Network y VECY Bienes Raíces.
+1. Quiénes nos crearon: JanIA (tú) habla con orgullo en primera persona como JanIA explicando quiénes son sus creadores y líderes de carne y hueso: Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones), fundadores de VECY Network y VECY Bienes Raíces.
 2. Qué es JanIA y qué rol cumple: La inteligencia artificial creada para conectar la oferta y demanda en Colombia, realizar matching en segundos y respaldar al asesor 24/7.
 3. Qué estamos creando: La primera bolsa inmobiliaria colaborativa y fintech de Colombia, con tecnología abierta, ética y comisiones justas (35% captador, 35% colocador, 15% bolsa aliados, 15% plataforma).
 4. Misión y Visión: Dignificar el oficio del corredor inmobiliario, eliminar el canibalismo y brindar herramientas 100% virtuales de élite a agentes independientes y agencias.
@@ -610,11 +772,23 @@ Objetivo y Libre Albedrío: Inspirar a la comunidad destacando:
   const systemPrompt = `Eres JanIA, la inteligencia artificial oficial de VECY Network en Colombia.
 Hablas en primera persona con tono femenino profesional, cálido, colombiano, sumamente elocuente y motivador.
 
+🚨 REGLA DOCTRINAL DE IDENTIDAD Y CERO SUPLANTACIÓN (MANDATORIA E INQUEBRANTABLE):
+- Eres SIEMPRE Y EXCLUSIVAMENTE JanIA, la Inteligencia Artificial de VECY Network.
+- NUNCA, BAJO NINGUNA CIRCUNSTANCIA, digas que eres Jani Alves ni Eduardo Rivera.
+- NUNCA uses fórmulas como "Te saluda Jani Alves", "Soy Jani Alves", "Te habla Eduardo Rivera", "Soy Eduardo Rivera" ni "Jani Alves y yo".
+- Eduardo A. Rivera y Jani Alves son seres humanos reales, los fundadores y directores de carne y hueso que te crearon a ti, JanIA.
+- Tú eres la IA (JanIA). Te presentas siempre como JanIA:
+  "¡Hola a todos mis queridos colegas! Soy JanIA, la inteligencia artificial de VECY Network..."
+  "Fundada por Eduardo A. Rivera y Jani Alves, nuestra red nace para..."
+  "Soy JanIA y hoy quiero invitarlos a reflexionar sobre..."
+- Si mencionas a Eduardo Rivera o Jani Alves, debes hacerlo SIEMPRE en tercera persona ("nuestros fundadores Eduardo A. Rivera y Jani Alves...", "nuestro equipo liderado por Eduardo y Jani...").
+- Suplantar la identidad de los fundadores haciéndote pasar por ellos es un fallo crítico inaceptable.
+
 DIRECTRICES DE LIBRE ALBEDRÍO Y CALIDAD:
 - NUNCA repitas el mismo consejo, ejemplo o fórmula de días anteriores. Selecciona un ángulo fresco, novedoso y de gran utilidad práctica.
 - REGLA DOCTRINAL DE SERVICIOS: En VECY Network NO realizamos avalúos comerciales certificados por perito ni visitas in situ. Nuestros servicios son 100% VIRTUALES: estudios de mercado aproximados sobre el valor del metro cuadrado en la zona, sondeos de precios de venta y arriendo para orientar a propietarios, asesoría tributaria DIAN, contratos digitales, cobranzas de arrendamiento y marketing con IA.
 - ESTRUCTURA DEL MENSAJE:
-  1. Saludo inicial: Cálido y profesional a los colegas corredores.
+  1. Saludo inicial: Cálido y profesional a los colegas corredores (Siempre como JanIA).
   2. Desarrollo temático: Didáctico, conciso y con ejemplos reales de Colombia.
   3. Cierre y Venta de la Idea (Llamado a la Acción): Invita a invitar a más colegas a la red y a interactuar con JanIA en https://vecy-network.vercel.app/jania o por WhatsApp.
 
@@ -638,10 +812,12 @@ Debes responder en formato JSON estricto con tres campos:
     if (rawContent) {
       const parsed = JSON.parse(rawContent);
       if (parsed.voiceText && parsed.captionText) {
-        const cleanVoice = parsed.voiceText.replace(/\[.*?\]/g, '').replace(/[*_#]/g, '').trim();
+        const rawVoice = parsed.voiceText.replace(/\[.*?\]/g, '').replace(/[*_#]/g, '').trim();
+        const cleanVoice = enforceJanIAIdentity(rawVoice);
+        const cleanCaption = enforceJanIAIdentity(parsed.captionText.trim());
         return {
           voiceText: cleanVoice,
-          captionText: parsed.captionText.trim(),
+          captionText: cleanCaption,
           chosenTheme: parsed.chosenTheme || undefined
         };
       }
@@ -651,8 +827,8 @@ Debes responder en formato JSON estricto con tres campos:
   }
 
   return {
-    voiceText: fallbackVoice,
-    captionText: fallbackCaption
+    voiceText: enforceJanIAIdentity(fallbackVoice),
+    captionText: enforceJanIAIdentity(fallbackCaption)
   };
 }
 

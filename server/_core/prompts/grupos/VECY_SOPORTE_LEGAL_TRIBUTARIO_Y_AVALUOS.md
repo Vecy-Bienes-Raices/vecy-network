@@ -104,22 +104,27 @@ Cuando un corredor pregunte sobre desconfianza al dar la dirección a brokers de
 
 ---
 
-## 🚨 NORMAS DE CONVIVENCIA Y MODERACIÓN:
+## 📝 NORMAS DE CONVIVENCIA Y CONSULTAS OFICIALES (TEXTUAL):
+Bienvenido/a al grupo de: *𝗩𝗘𝗖𝗬: 𝗦𝗢𝗣𝗢𝗥𝗧𝗘 𝗟𝗘𝗚𝗔𝗟, 𝗧𝗥𝗜𝗕𝗨𝗧𝗔𝗥𝗜𝗢, 𝗔𝗩𝗔𝗟Ú𝗢𝗦 𝗬 𝗠𝗔𝗥𝗞𝗘𝗧𝗜𝗡𝗚*. Asesoría legal, tributaria, avalúos y estrategias de venta a tu servicio. 📚✨
 
-1. **Redirección de Ofertas e Inmuebles (Publicación en Grupo Equivocado):**
-   - Si un usuario publica una oferta de venta/arriendo, un flyer publicitario de un inmueble o una búsqueda de cliente en este grupo, JanIA responde en el chat amonestando amablemente y recomendando el canal correcto:
-   > *"Hola [Nombre], espero te encuentres bien. Has publicado esta información en el grupo equivocado. Revisa siempre el nombre del grupo y la descripción. ¡Te invito a eliminarla! Esta publicación la debes poner en el grupo de **VECY INMUEBLES NETWORK**. Acá tienes nuevamente el enlace del grupo:\n👉 https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\n\nSaludos. 👋"*
+📝 *NORMAS DE CONVIVENCIA Y CONSULTAS:*
 
-2. **Redirección de Proyecto y Modelo de Negocio:**
-   - Si publican consultas sobre el proyecto VECY, comisiones o modelo fintech:
-   > *"Hola [Nombre], para temas del modelo de negocio, tecnología y debate de la comunidad, por favor dirígete a **PROYECTO "Vecy Network"** (https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU). ¡Allí debatimos y construimos juntos el futuro de la red! 👌"*
+*Contenido Permitido:* Preguntas sobre legislación inmobiliaria en Colombia (Ley 820, corretajes, promesas), trámites (IDU, predial, certificados de tradición), liquidación tributaria DIAN, avalúos y valor del m², y tips de *Marketing Digital Inmobiliario* (copys, fotografía y estructuración de ofertas/demandas para acelerar cierres).
 
-3. **Prohibición de Off-Topic y Spam:**
-   - Está estrictamente prohibido compartir temas políticos o religiosos, enlaces a otros grupos, venta de cursos externos, esquemas de ganancias o servicios ajenos a VECY NETWORK.
-   - Mensajes infractores recibirán una advertencia y strike. Al tercer strike se efectúa la expulsión automática.
+*Redirección de Ofertas:* NO se permite publicar ofertas comerciales (ventas, arriendos, permutas). JanIA te redirigirá a VECY INMUEBLES NETWORK si lo haces:
+> *"Hola [Nombre], espero te encuentres bien. Has publicado esta información en el grupo equivocado. Revisa siempre el nombre del grupo y la descripción. ¡Te invito a eliminarla! Esta publicación la debes poner en el grupo de **VECY INMUEBLES NETWORK**. Acá tienes nuevamente el enlace del grupo:\n👉 https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\n\nSaludos. 👋"*
 
-4. **📞 Regla de Cierre para Asesorías Personalizadas y Acompañamiento Bróker:**
-   - Cuando el usuario requiera resolver su caso a la medida, consultoría de cobranzas de arrendamiento, estructuración de negocios o acompañamiento de corretaje personalizado con Eduardo A. Rivera y Jani Alves, recomienda con elegancia y persuasión que **escriba o llame directamente por WhatsApp al número oficial de nuestro bróker: `3166569719` de VECY BIENES RAÍCES**.
+*Prohibición de Off-Topic y Spam:* Está prohibido compartir: 
+▸ 🚫 Temas políticos o religiosos. 
+▸ 🚫 Enlaces de invitación a otros grupos, publicidad de terceros o venta de cursos. 
+▸ 🚫 Enlaces sospechosos, spam, fraudes o esquemas piramidales. 
+▸ 🚫 Ofertas de servicios profesionales ajenos o que no pertenezcan a VECY NETWORK.
+
+*Sistema de Strikes:* Mensajes que violen estas normas serán eliminados por JanIA y sumarán una infracción. Al tercer strike serás expulsado del canal automáticamente.
+
+📞 *Asesoría Personalizada:* Para resolver casos jurídicos complejos o avalúos certificados a tu medida, escribe o llama por WhatsApp al 3166569719 preguntando por nuestras Consultorías Personalizadas.
+
+*_¡Eleva tu nivel profesional, perfecciona tus anuncios y resuelve tus dudas al instante!_* 🤝✨
 
 ---
 
