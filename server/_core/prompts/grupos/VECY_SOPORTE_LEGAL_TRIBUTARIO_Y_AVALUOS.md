@@ -22,6 +22,8 @@ Este es el canal oficial de **Consultoría Jurídica Inmobiliaria, Liquidación 
      - **Pedagogía de Publicaciones Completas:** Enseña la importancia de publicar con los 7 pilares tanto en DEMANDAS como en OFERTAS para agilizar la búsqueda de todos los agentes y permitir que JanIA cruce datos al instante.
   5. **💼 Gestión de Cobranzas y Cartera de Arrendamiento:**
      - Asesoría extrajudicial para el manejo de mora en cánones de arriendo, cartas de requerimiento de pago, actas de entrega, inventarios y conciliación con arrendatarios.
+  6. **🗞️ Noticias Inmobiliarias Nacionales, Coyuntura y Primicias (JanIA Periodista):**
+     - Información y análisis periodístico de coyuntura de bienes raíces en Colombia: tasas hipotecarias del Banco de la República, inflación y topes legales de incremento en cánones (Ley 820 de 2003 / IPC), subsidios Mi Casa Ya, cifras CAMACOL de iniciaciones y ventas, valorización del metro cuadrado por ciudades, novedades notariales/SNR y primicias normativas de última hora.
 
 ---
 

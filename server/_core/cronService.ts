@@ -152,7 +152,49 @@ export function markRunExecuted(key: string): boolean {
   return true;
 }
 
-// Catálogo completo de las 9 imágenes temáticas 3D disponibles
+export function getBogotaTimeInfo(d = new Date()) {
+  const bogotaTimeStr = d.toLocaleTimeString('en-US', { timeZone: 'America/Bogota', hour12: false });
+  const [hourStr, minStr] = bogotaTimeStr.split(':');
+  const hour = parseInt(hourStr, 10);
+  const min = parseInt(minStr, 10);
+
+  let period: 'mañana' | 'tarde' | 'noche' = 'mañana';
+  let greeting = '¡Buenos días!';
+
+  if (hour >= 5 && hour < 12) {
+    period = 'mañana';
+    greeting = '¡Buenos días!';
+  } else if (hour >= 12 && hour < 19) {
+    period = 'tarde';
+    greeting = '¡Buenas tardes!';
+  } else {
+    period = 'noche';
+    greeting = '¡Buenas noches!';
+  }
+
+  return { hour, min, period, greeting, timeStr: bogotaTimeStr };
+}
+
+/**
+ * Failsafe para asegurar que el saludo concuerde exactamente con el momento del día en Colombia
+ */
+export function enforceGreetingAccuracy(text: string, period: 'mañana' | 'tarde' | 'noche'): string {
+  if (!text) return text;
+  let res = text;
+  if (period === 'tarde') {
+    res = res.replace(/¡?buenos\s+días!?/gi, '¡Buenas tardes!');
+    res = res.replace(/buen\s+día/gi, 'buena tarde');
+  } else if (period === 'noche') {
+    res = res.replace(/¡?(?:buenos\s+días|buenas\s+tardes)!?/gi, '¡Buenas noches!');
+    res = res.replace(/(?:buen\s+día|buena\s+tarde)/gi, 'buena noche');
+  } else if (period === 'mañana') {
+    res = res.replace(/¡?(?:buenas\s+tardes|buenas\s+noches)!?/gi, '¡Buenos días!');
+    res = res.replace(/(?:buena\s+tarde|buena\s+noche)/gi, 'buen día');
+  }
+  return res;
+}
+
+// Catálogo completo de imágenes temáticas 3D disponibles
 export const ALL_JANIA_IMAGES = [
   'jania_marketing.jpg',
   'jania_juridico.jpg',
@@ -161,6 +203,7 @@ export const ALL_JANIA_IMAGES = [
   'jania_matches.jpg',
   'jania_podcast.jpg',
   'jania_periodista.jpg',
+  'jania_noticias.jpg',
   'jania_reporte.jpg',
   'jania_soporte.jpg',
 ];
@@ -173,8 +216,10 @@ export const THEME_IMAGE_PREFERENCES: Record<string, string[]> = {
   matches: ['jania_matches.jpg', 'jania_periodista.jpg', 'jania_marketing.jpg'],
   cafe: ['jania_podcast.jpg', 'jania_soporte.jpg', 'jania_periodista.jpg'],
   podcast: ['jania_podcast.jpg', 'jania_soporte.jpg', 'jania_periodista.jpg'],
-  periodista: ['jania_periodista.jpg', 'jania_reporte.jpg', 'jania_matches.jpg'],
-  noticias: ['jania_periodista.jpg', 'jania_reporte.jpg', 'jania_matches.jpg'],
+  periodista: ['jania_periodista.jpg', 'jania_noticias.jpg', 'jania_matches.jpg'],
+  noticias: ['jania_noticias.jpg', 'jania_periodista.jpg', 'jania_matches.jpg'],
+  primicia: ['jania_primicia.mp4', 'jania_primicia.jpg', 'jania_ultimahora.mp4', 'jania_ultimahora.jpg', 'jania_noticias.jpg', 'jania_periodista.jpg'],
+  ultima_hora: ['jania_ultimahora.mp4', 'jania_ultimahora.jpg', 'jania_primicia.mp4', 'jania_primicia.jpg', 'jania_noticias.jpg', 'jania_periodista.jpg'],
   reporte: ['jania_reporte.jpg', 'jania_periodista.jpg', 'jania_avaluos.jpg'],
   reporte_semanal: ['jania_reporte.jpg', 'jania_periodista.jpg', 'jania_avaluos.jpg'],
   soporte: ['jania_soporte.jpg', 'jania_juridico.jpg', 'jania_podcast.jpg'],
@@ -182,29 +227,43 @@ export const THEME_IMAGE_PREFERENCES: Record<string, string[]> = {
 };
 
 /**
- * Obtiene la ilustración temática 3D rotando entre las 9 disponibles y EXCLUYENDO
+ * Obtiene la ilustración o video temático rotando entre los disponibles y EXCLUYENDO
  * estrictamente las últimas 3 utilizadas en publicaciones recientes.
+ * Si existe un archivo de video (.mp4/.mov) o imagen para primicias, lo prioriza.
  */
 export function getThemedImagePath(tipo: string): { fullPath: string | undefined; fileName: string | undefined } {
   const state = loadCronState();
   const recent = state.recentImages || [];
-
-  // Filtrar el pool disponible excluyendo las últimas 3 usadas
-  const pool = ALL_JANIA_IMAGES.filter(img => !recent.includes(img));
-  const effectivePool = pool.length > 0 ? pool : ALL_JANIA_IMAGES;
-
-  const preferences = THEME_IMAGE_PREFERENCES[tipo] || [];
-  let chosenFile = preferences.find(img => effectivePool.includes(img));
-
-  if (!chosenFile) {
-    chosenFile = effectivePool[0];
-  }
 
   const possibleDirs = [
     path.resolve(process.cwd(), 'client/public/assets/jania'),
     path.resolve(process.cwd(), 'dist/assets/jania'),
     path.resolve(__dirname, '../../client/public/assets/jania'),
   ];
+
+  const preferences = THEME_IMAGE_PREFERENCES[tipo] || [];
+
+  // 1. Revisar si hay un video (.mp4/.mov) o primicia especial cargado en disco
+  for (const pref of preferences) {
+    if (pref.endsWith('.mp4') || pref.endsWith('.mov')) {
+      for (const dir of possibleDirs) {
+        const candidate = path.join(dir, pref);
+        if (fs.existsSync(candidate)) {
+          return { fullPath: candidate, fileName: pref };
+        }
+      }
+    }
+  }
+
+  // 2. Filtrar el pool disponible excluyendo las últimas 3 usadas
+  const pool = ALL_JANIA_IMAGES.filter(img => !recent.includes(img));
+  const effectivePool = pool.length > 0 ? pool : ALL_JANIA_IMAGES;
+
+  let chosenFile = preferences.find(img => effectivePool.includes(img) && !img.endsWith('.mp4') && !img.endsWith('.mov'));
+
+  if (!chosenFile) {
+    chosenFile = effectivePool[0];
+  }
 
   for (const dir of possibleDirs) {
     const candidatePath = path.join(dir, chosenFile);
@@ -224,18 +283,20 @@ interface DailyTipContent {
 // ── CONFIGURACIÓN MAESTRA DE TIPS DIARIOS (TEMA, VOZ Y CAPTION DE RESPALDO) ──
 export const DAILY_TIPS_CONFIG: Record<string, { theme: string; voice: string; caption: string }> = {
   lunes_arranque: {
-    theme: 'matches',
-    voice: `¡Buenos días a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio y nuestro canal oficial son su consultorio permanente: aquí pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, cómo liquidar la ganancia ocasional ante la DIAN, estudios de mercado sobre el valor del metro cuadrado en la zona o cómo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. Los invito a invitar a más colegas a unirse a este maravilloso proyecto y a interactuar conmigo para probar nuestro sistema de consultas. ¡Que tengan una semana extraordinaria y productiva!`,
-    caption: `🚀 *ARRANQUE SEMANAL & CONSULTORIO INMOBILIARIO — VECY NETWORK* 🇨🇴\n\n` +
-      `¡Buenos días a todos mis queridos colegas!\n\n` +
-      `Iniciamos una semana llena de oportunidades comerciales y cierres de negocios. Recuerden que este espacio y nuestro canal oficial son su consultorio permanente 24/7:\n\n` +
-      `⚖️ *Soporte Legal y Contratos:* Dudas sobre promesas, arras y Ley 820.\n` +
-      `💰 *Tributario DIAN:* Ganancia ocasional, retención en la fuente y exenciones.\n` +
-      `📊 *Estudios de Mercado & M²:* Sondeos de precios de venta y arriendo para asesorar a tus propietarios.\n` +
-      `📐 *SINUPOT & Suelo:* Fichas normativas, usos permitidos y edificabilidad.\n` +
-      `📢 *Marketing Digital:* Estructura de 7 pilares, fotografía móvil y copys de alto impacto.\n\n` +
-      `🌟 *Construyamos juntos el futuro inmobiliario:* Invita a tus colegas corredores a sumarse a VECY Network y prueba interactuar con JanIA en nuestra web oficial:\n` +
-      `📲 *Chatea con JanIA:* https://vecy-network.vercel.app/jania`
+    theme: 'noticias',
+    voice: `¡Buenos días a todos mis queridos colegas! Soy JanIA con las Noticias Inmobiliarias Nacionales y la apertura de mercado de esta semana. Iniciamos con un panorama clave para sus cierres: el seguimiento a las tasas de interés de colocación hipotecaria en Colombia, los cupos del programa Mi Casa Ya y el tope legal de incremento de cánones de arrendamiento fijado por el IPC bajo la Ley 820 de 2003. Mantenerse informados con cifras reales de metro cuadrado y coyuntura económica es lo que marca la diferencia ante sus clientes propietarios y compradores. Los invito a consultar cualquier inquietud de mercado conmigo y a invitar a más colegas a sumarse a VECY Network. ¡Que tengamos una semana llena de negocios y cierres extraordinarios!`,
+    caption: `🎙️ *NOTICIAS INMOBILIARIAS DE COLOMBIA & APERTURA DE MERCADO — VECY NETWORK* 🇨🇴\n` +
+      `📰 *Por: JanIA Periodista — Inteligencia Artificial Inmobiliaria*\n\n` +
+      `¡Buenos días a todos los aliados, agentes e inmobiliarias de Colombia!\n\n` +
+      `Arrancamos la semana con las noticias y variables de coyuntura más relevantes del sector para asesorar con autoridad a propietarios e inversionistas:\n\n` +
+      `🏦 *Tasas Hipotecarias y Crédito de Vivienda:* Monitoreo a las decisiones de la Junta Directiva del Banco de la República y la oferta crediticia de la banca nacional.\n` +
+      `📋 *Arrendamientos & IPC (Ley 820 de 2003):* Control estricto al tope de incremento en cánones y auge de vivienda turística con Registro Nacional de Turismo (RNT).\n` +
+      `📊 *Demanda & Valor del M²:* Comportamiento de precios en Bogotá, Medellín, Cali, Barranquilla y Sabana Norte.\n` +
+      `🏗️ *Cifras del Sector Constructor (CAMACOL):* Dinámica de lanzamientos, subsidios concurrentes y reactivación de iniciaciones de obra.\n` +
+      `⚖️ *Seguridad Notarial y SNR:* Ventanilla Única de Registro (VUR) y escrituración digital sin fraudes.\n\n` +
+      `💡 *Asesora con rigor técnico:* Si necesitas un estudio de mercado ágil del valor del metro cuadrado o sondeo de cánones sugeridos, pregúntame en cualquier momento.\n\n` +
+      `📲 *Consultorio Inmobiliario JanIA:* https://vecy-network.vercel.app/jania\n` +
+      `#VecyNetwork #NoticiasInmobiliarias #JanIAPeriodista #ColombiaRealEstate`
   },
   martes_juridico: {
     theme: 'juridico',
@@ -331,14 +392,21 @@ export function initCronScheduler() {
   // ─────────────────────────────────────────────────────────────────────────────
   // ☀️ HORARIOS DE AUDIENCIA MÁXIMA EN COLOMBIA (AMERICA/BOGOTA, UTC-5):
   // 1) MAÑANA (10:00 AM Bogotá): Tip diario temático a Grupo 2 + Canal Oficial (Lunes a Domingo)
+  //    * Lunes: Noticias Inmobiliarias Nacionales & Apertura de Mercado (JanIA Periodista)
+  //    * Martes: Blindaje Jurídico Notarial
+  //    * Miércoles: Marketing Digital Inmobiliario
+  //    * Jueves: Tributario DIAN & Ahorro Fiscal
+  //    * Viernes: Estudios de Mercado M² y Arriendos
+  //    * Sábado: Café Inmobiliario & Podcast
+  //    * Domingo: Soporte Integral 100% Virtual
   // 2) TARDE (04:30 PM / 16:30 Bogotá): Proyecto Vecy Network a Grupo 3 + Canal Oficial (Miércoles y Sábados)
-  // 3) NOCHE (07:00 PM / 19:00 Bogotá): Reporte Semanal de Eficiencia a Grupo 2 + Canal Oficial (Lunes)
   // 
-  // REGLAS DOCTRINALES ANTI-ASFIXIA (v31.32):
+  // REGLAS DOCTRINALES ANTI-ASFIXIA (v31.33):
   // - Máximo 2 publicaciones al día en todo el sistema (o 1 sola).
   // - Intervalo mínimo garantizado entre publicaciones: >= 5 horas.
   // - Jamás dos publicaciones en el mismo grupo en el mismo día.
-  // - Rotación estricta de 9 ilustraciones 3D excluyendo las últimas 3 utilizadas.
+  // - Rotación estricta de ilustraciones 3D excluyendo las últimas 3 utilizadas.
+  // - Erradicado el reporte estadístico aburrido de las 7pm: solo contenido de alto interés.
   // ─────────────────────────────────────────────────────────────────────────────
 
   // ☀️ MAÑANA 10:00 AM — Tip Temático Diario (Grupo 2 + Canal Oficial)
@@ -374,12 +442,6 @@ export function initCronScheduler() {
   cron.schedule('30 16 * * 3,6', async () => {
     console.log('[CRON-SERVICE] Disparando cron vespertino de Grupo 3 (PROYECTO Vecy Network)...');
     await publishGrupo3TipNow(false);
-  }, { timezone: 'America/Bogota' });
-
-  // 📊 LUNES 07:00 PM (19:00) — Reporte Semanal de la Bolsa Inmobiliaria (Grupo 2 + Canal)
-  cron.schedule('0 19 * * 1', async () => {
-    console.log('[CRON-SERVICE] Disparando Reporte Semanal de Lunes 7:00 PM...');
-    await publishWeeklyReportNow(false);
   }, { timezone: 'America/Bogota' });
 
   // 🔄 RE-MATCHING MASIVO SILENCIOSO (Base de Datos): Todos los días a las 08:00 AM
@@ -434,16 +496,6 @@ export function initCronScheduler() {
         if (check.allowed) {
           console.log(`[CRON-FAILSAFE] ⏰ Catch-up vespertino disponible para Grupo 3 (PROYECTO Vecy Network) para ${dateKey} a las ${hour}:${min} Bogotá...`);
           await publishGrupo3TipNow(false);
-        }
-      }
-
-      // 3. CATCH-UP REPORTE SEMANAL (19:00 PM - 21:00 PM Bogotá) -> Lunes
-      if (day === 1 && hour >= 19 && hour < 21) {
-        const repRunKey = `reporte_semanal_${dateKey}`;
-        const check = canPublishNow('grupo2', repRunKey, false);
-        if (check.allowed) {
-          console.log(`[CRON-FAILSAFE] ⏰ Catch-up de Reporte Semanal de Lunes disponible para ${dateKey} a las ${hour}:${min} Bogotá...`);
-          await publishWeeklyReportNow(false);
         }
       }
     } catch (err: any) {
@@ -637,6 +689,67 @@ export async function publishWeeklyReportNow(force: boolean = true) {
   return { success: true, tipo: 'lunes_reporte_semanal', content, stats, imagePath, fileName };
 }
 
+/**
+ * Publica una noticia nacional inmobiliaria o primicia de última hora
+ */
+export async function publishNoticiaNacionalNow(opts?: {
+  headline?: string;
+  details?: string;
+  isUrgent?: boolean;
+  targetGroup?: 'grupo2' | 'grupo3';
+  force?: boolean;
+}) {
+  const force = opts?.force ?? (opts?.isUrgent ?? false);
+  const targetGroup = opts?.targetGroup || 'grupo2';
+  const dateKey = getBogotaDateString();
+  const runKey = `noticia_${dateKey}_${Date.now()}`;
+
+  const check = canPublishNow(targetGroup, runKey, force);
+  if (!check.allowed) {
+    console.log(`[CRON-NOTICIAS] ⏭️ Omitiendo noticia nacional: ${check.reason}`);
+    return { skipped: true, reason: check.reason, runKey };
+  }
+
+  const timeInfo = getBogotaTimeInfo();
+  console.log(`[CRON-NOTICIAS] 🎙️ Generando y publicando Noticia Inmobiliaria Nacional (${timeInfo.period} en Bogotá)...`);
+
+  const themeType = opts?.isUrgent ? 'primicia' : 'noticias';
+  const fallbackVoice = `${timeInfo.greeting} queridos colegas inmobiliarios. Les habla JanIA con una noticia destacada del sector bienes raíces en Colombia: ${opts?.headline || 'seguimiento al comportamiento del mercado de vivienda y tasas de interés'}. Estar al tanto de las variables macroeconómicas y normativas de nuestro país nos permite asesorar con ventaja y autoridad a nuestros clientes. Los invito a consultar análisis de mercado y normatividad conmigo en cualquier momento. ¡Éxitos en sus gestiones!`;
+
+  const fallbackCaption = `🎙️ *NOTICIAS INMOBILIARIAS DE COLOMBIA — JANIA PERIODISTA* 🇨🇴\n` +
+    `📰 *${opts?.isUrgent ? '🚨 PRIMICIA DE ÚLTIMA HORA' : 'PANORAMA Y COYUNTURA DEL SECTOR'}*\n\n` +
+    `${timeInfo.greeting} estimados colegas corredores e inmobiliarios:\n\n` +
+    `📌 *Titular:* ${opts?.headline || 'Dinámica del Mercado Inmobiliario y Proyecciones en Colombia'}\n\n` +
+    `${opts?.details || 'El mercado inmobiliario en Colombia continúa mostrando movimientos estratégicos en colocación de créditos, valorización de metro cuadrado y demanda de arrendamientos urbanos y turísticos.'}\n\n` +
+    `💡 *Impacto Comercial:* Recuerda que un corredor informado cierra más y mejor. Utiliza esta información para orientar a tus propietarios compradores y arrendatarios con bases sólidas.\n\n` +
+    `📲 *Consultas con JanIA:* https://vecy-network.vercel.app/jania`;
+
+  const content = await generateDailyContent(
+    'noticias_nacionales' as any,
+    fallbackVoice,
+    fallbackCaption,
+    opts?.headline ? `Noticia específica a cubrir: ${opts.headline}. Detalles: ${opts.details || ''}. Es primicia urgente: ${opts.isUrgent ? 'Sí' : 'No'}.` : undefined
+  );
+
+  const effectiveTheme = content.chosenTheme || themeType;
+  const { fullPath: imagePath, fileName } = getThemedImagePath(effectiveTheme);
+
+  if (targetGroup === 'grupo2') {
+    await whatsappBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
+  } else if (targetGroup === 'grupo3') {
+    if (whatsappBot.circuloGroupId) {
+      await whatsappBot.sendVoiceToGroup(content.voiceText, whatsappBot.circuloGroupId, imagePath, content.captionText);
+    }
+    if (whatsappBot.channelNewsletterId) {
+      await whatsappBot.sendVoiceToGroup(content.voiceText, whatsappBot.channelNewsletterId, imagePath, content.captionText);
+    }
+  }
+
+  recordSuccessfulPublication(targetGroup, runKey, fileName);
+  console.log(`[CRON-NOTICIAS] ✓ Noticia despachada a ${targetGroup} + Canal. Imagen/Video: ${fileName}`);
+  return { success: true, theme: effectiveTheme, imagePath, fileName, content };
+}
+
 interface DailyTipContentExtended extends DailyTipContent {
   chosenTheme?: string;
 }
@@ -663,9 +776,10 @@ export function enforceJanIAIdentity(text: string): string {
  * Diseñado bajo la doctrina de IA PURA Y LIBRE ALBEDRÍO INMOBILIARIO (Cero repetición de plantillas)
  */
 async function generateDailyContent(
-  tipo: 'lunes_arranque' | 'lunes_reporte_semanal' | 'martes_juridico' | 'miercoles_marketing' | 'jueves_tributario' | 'viernes_avaluos' | 'sabado_cafe' | 'domingo_soporte' | 'inmuebles_network' | 'proyecto_vecy',
+  tipo: 'lunes_arranque' | 'lunes_reporte_semanal' | 'martes_juridico' | 'miercoles_marketing' | 'jueves_tributario' | 'viernes_avaluos' | 'sabado_cafe' | 'domingo_soporte' | 'inmuebles_network' | 'proyecto_vecy' | 'noticias_nacionales',
   fallbackVoice: string,
-  fallbackCaption: string
+  fallbackCaption: string,
+  extraInstructions?: string
 ): Promise<DailyTipContentExtended> {
   const now = new Date();
   const fechaBogota = now.toLocaleDateString('es-CO', { 
@@ -675,15 +789,31 @@ async function generateDailyContent(
     timeZone: 'America/Bogota' 
   });
 
+  const timeInfo = getBogotaTimeInfo(now);
   const stats = tipo === 'lunes_reporte_semanal' ? await getLiveMarketStats() : null;
 
   const promptsMap: Record<string, string> = {
-    lunes_arranque: `Tema: Arranque Semanal, Noticias Frescas del Sector & Convocatoria de Aliados Inmobiliarios en Colombia (${fechaBogota}).
-Objetivo y Libre Albedrío: Saludo matutino lleno de energía y visión estratégica. Selecciona libremente un ángulo fresco entre:
-1. Dinamismo del mercado: tasas de interés del Banco de la República, tendencia de colocación de créditos hipotecarios o subsidios vigentes.
-2. Mentalidad comercial: prospección activa, cómo estructurar la semana para duplicar contactos y alianzas con colegas.
-3. Consultorio permanente VECY 24/7: recordar que pueden consultar sobre leyes, tributario DIAN, estudios de mercado de valor de m² y marketing digital.
-4. Convocatoria gremial: motivar a invitar a más colegas corredores a sumarse a VECY Network para multiplicar la bolsa de negocios.`,
+    lunes_arranque: `Tema: Noticias Inmobiliarias de Colombia, Apertura de Mercado & Tendencias (${fechaBogota}).
+Rol: JanIA Periodista Inmobiliaria Senior de VECY Network.
+Objetivo y Libre Albedrío: Saludo según el horario (${timeInfo.greeting}) con visión analítica y de coyuntura. Selecciona libremente entre:
+1. Tasas de Interés y Crédito Hipotecario: Decisiones del Banco de la República, UVR vs tasa fija en pesos y facilidades bancarias para créditos de vivienda.
+2. Subsidios y Política Habitacional: Asignación de Mi Casa Ya, subsidio concurrente con cajas de compensación y cobertura a la tasa.
+3. Arrendamientos & IPC: Límite legal de reajuste en cánones bajo Ley 820 de 2003 (Art. 20) y auge de viviendas turísticas con RNT.
+4. Mercado y Construcción: Indicadores de ventas y lanzamientos según CAMACOL / Galería Inmobiliaria.
+5. Valorización del M²: Comportamiento de precios en Bogotá, Medellín, Cali, Barranquilla o Sabana Norte.
+6. Notarías y Registro: Digitalización VUR y escrituración sin fraudes.`,
+
+    noticias_nacionales: `Tema: Noticias Inmobiliarias Nacionales de Colombia, Primicias & Coyuntura Económica (${fechaBogota}).
+Rol: JanIA Periodista Inmobiliaria Senior de VECY Network.
+${extraInstructions ? `Instrucción Periodística Específica: ${extraInstructions}` : ''}
+Objetivo y Libre Albedrío: Analizar con profundidad periodística, agilidad y rigor un tema de actualidad inmobiliaria nacional colombiana. Elige libremente entre:
+1. Tasas de Interés y Financiación: Política monetaria del Banco de la República, tasas hipotecarias efectivas anuales (UVR vs pesos), guerra de tasas en la banca y opciones de compra de cartera.
+2. Subsidios y Vivienda (VIS / No VIS): Estado de asignaciones del programa Mi Casa Ya, subsidio concurrente con cajas de compensación familiar (Compensar, Colsubsidio, Cafam) y cobertura a la tasa Frech.
+3. Mercado de Arrendamientos & Ley 820 de 2003: Comportamiento de la demanda de arriendo, inflación de cánones (límite del IPC del Art. 20), y la regulación de viviendas turísticas de corta estancia (Airbnb, Booking) bajo Ley 2068 y Registro Nacional de Turismo (RNT).
+4. Datos e Indicadores de CAMACOL y Galería Inmobiliaria: Desistimientos, ventas de vivienda nueva, absorción de inventario y perspectivas de los constructores.
+5. Dinámica de Valorización del M² por Regiones: Bogotá (Chicó, Rosales, Santa Bárbara, Cedritos, Chapinero), Medellín (El Poblado, Laureles, Envigado), Cali, Barranquilla y Sabana Norte (Chía, Cajicá).
+6. Modernización Notarial, Registral y Catastral: Ventanilla Única de Registro (VUR), escrituras electrónicas, biometría en notarías para frenar suplantaciones, y avances del Catastro Multipropósito (IGAC / IDECA).
+7. Primicias y Noticias de Última Hora: Novedades normativas, decretos presidenciales o fallos de las altas cortes que impacten el régimen de propiedad horizontal o el corretaje.`,
 
     lunes_reporte_semanal: `Tema: Reporte Semanal de la Bolsa Inmobiliaria, Pulso del Mercado & Regaño Pedagógico sobre Demandas Incompletas (${fechaBogota}).
 Estadísticas Reales en Vivo de VECY Network:
@@ -761,7 +891,7 @@ Objetivo: Motivar la publicación activa de inmuebles y requerimientos en toda C
     proyecto_vecy: `Tema: Visión Ecosistema VECY Network — Quiénes Somos, Misión y Futuro (${fechaBogota}).
 Objetivo y Libre Albedrío: Inspirar a la comunidad destacando:
 1. Quiénes nos crearon: JanIA (tú) habla con orgullo en primera persona como JanIA explicando quiénes son sus creadores y líderes de carne y hueso: Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones), fundadores de VECY Network y VECY Bienes Raíces.
-2. Qué es JanIA y qué rol cumple: La inteligencia artificial creada para conectar la oferta y demanda en Colombia, realizar matching en segundos y respaldar al asesor 24/7.
+2. Qué es JanIA y qué rol cumple: La inteligencia artificial creada para conectar la oferta y demanda en Colombia, realizar matching en segundos, cubrir noticias del sector y respaldar al asesor 24/7.
 3. Qué estamos creando: La primera bolsa inmobiliaria colaborativa y fintech de Colombia, con tecnología abierta, ética y comisiones justas (35% captador, 35% colocador, 15% bolsa aliados, 15% plataforma).
 4. Misión y Visión: Dignificar el oficio del corredor inmobiliario, eliminar el canibalismo y brindar herramientas 100% virtuales de élite a agentes independientes y agencias.
 5. Debate abierto: invitar a debatir qué herramientas necesitan y cómo podemos seguir mejorando la plataforma juntos.`
@@ -769,8 +899,13 @@ Objetivo y Libre Albedrío: Inspirar a la comunidad destacando:
 
   const promptEspecifico = promptsMap[tipo] || promptsMap.lunes_arranque;
 
-  const systemPrompt = `Eres JanIA, la inteligencia artificial oficial de VECY Network en Colombia.
+  const systemPrompt = `Eres JanIA, la inteligencia artificial oficial y periodista inmobiliaria de VECY Network en Colombia.
 Hablas en primera persona con tono femenino profesional, cálido, colombiano, sumamente elocuente y motivador.
+
+🚨 SALUDO SEGÚN EL HORARIO EN COLOMBIA (OBLIGATORIO):
+- En este momento en Colombia es por la ${timeInfo.period} (${timeInfo.hour}:${timeInfo.min} hora Bogotá).
+- Tu saludo DEBE INICIAR OBLIGATORIAMENTE con "${timeInfo.greeting}".
+- Está TERMINANTEMENTE PROHIBIDO saludar con "Buenos días" en la tarde o noche, o con "Buenas noches" en la mañana.
 
 🚨 REGLA DOCTRINAL DE IDENTIDAD Y CERO SUPLANTACIÓN (MANDATORIA E INQUEBRANTABLE):
 - Eres SIEMPRE Y EXCLUSIVAMENTE JanIA, la Inteligencia Artificial de VECY Network.
@@ -778,17 +913,18 @@ Hablas en primera persona con tono femenino profesional, cálido, colombiano, su
 - NUNCA uses fórmulas como "Te saluda Jani Alves", "Soy Jani Alves", "Te habla Eduardo Rivera", "Soy Eduardo Rivera" ni "Jani Alves y yo".
 - Eduardo A. Rivera y Jani Alves son seres humanos reales, los fundadores y directores de carne y hueso que te crearon a ti, JanIA.
 - Tú eres la IA (JanIA). Te presentas siempre como JanIA:
-  "¡Hola a todos mis queridos colegas! Soy JanIA, la inteligencia artificial de VECY Network..."
+  "${timeInfo.greeting} mis queridos colegas. Soy JanIA, la inteligencia artificial de VECY Network..."
   "Fundada por Eduardo A. Rivera y Jani Alves, nuestra red nace para..."
-  "Soy JanIA y hoy quiero invitarlos a reflexionar sobre..."
+  "Soy JanIA y hoy les traigo las noticias más relevantes..."
 - Si mencionas a Eduardo Rivera o Jani Alves, debes hacerlo SIEMPRE en tercera persona ("nuestros fundadores Eduardo A. Rivera y Jani Alves...", "nuestro equipo liderado por Eduardo y Jani...").
 - Suplantar la identidad de los fundadores haciéndote pasar por ellos es un fallo crítico inaceptable.
 
-DIRECTRICES DE LIBRE ALBEDRÍO Y CALIDAD:
-- NUNCA repitas el mismo consejo, ejemplo o fórmula de días anteriores. Selecciona un ángulo fresco, novedoso y de gran utilidad práctica.
+DIRECTRICES DE LIBRE ALBEDRÍO Y PERIODISMO INMOBILIARIO:
+- Si el tema es de noticias, periodista o primicia, actúa como la periodista inmobiliaria senior de la red: entrega cifras concretas de Colombia, análisis de tasas, normatividad y proyecciones de mercado.
+- NUNCA repitas el mismo consejo, noticia o ejemplo de días anteriores. Selecciona un ángulo fresco, novedoso y de gran utilidad práctica.
 - REGLA DOCTRINAL DE SERVICIOS: En VECY Network NO realizamos avalúos comerciales certificados por perito ni visitas in situ. Nuestros servicios son 100% VIRTUALES: estudios de mercado aproximados sobre el valor del metro cuadrado en la zona, sondeos de precios de venta y arriendo para orientar a propietarios, asesoría tributaria DIAN, contratos digitales, cobranzas de arrendamiento y marketing con IA.
 - ESTRUCTURA DEL MENSAJE:
-  1. Saludo inicial: Cálido y profesional a los colegas corredores (Siempre como JanIA).
+  1. Saludo inicial: Iniciando con "${timeInfo.greeting}" y presentándote siempre como JanIA.
   2. Desarrollo temático: Didáctico, conciso y con ejemplos reales de Colombia.
   3. Cierre y Venta de la Idea (Llamado a la Acción): Invita a invitar a más colegas a la red y a interactuar con JanIA en https://vecy-network.vercel.app/jania o por WhatsApp.
 
@@ -796,14 +932,14 @@ Debes responder en formato JSON estricto con tres campos:
 {
   "voiceText": "Texto continuo optimizado para locución de voz TTS (sin markdown, sin viñetas, sin emojis, números escritos en palabras, 70-100 palabras)",
   "captionText": "Texto formateado para WhatsApp con emojis, negritas en títulos, viñetas estructuradas, llamado a la acción y enlace web al final",
-  "chosenTheme": "juridico | tributario | avaluos | marketing | matches | podcast | periodista | soporte"
+  "chosenTheme": "juridico | tributario | avaluos | marketing | matches | podcast | periodista | noticias | soporte | primicia"
 }`;
 
   try {
     const response = await invokeLLM({
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Genera el contenido del día de hoy (${fechaBogota}):\n${promptEspecifico}` }
+        { role: "user", content: `Genera el contenido para hoy (${fechaBogota}, ${timeInfo.period}):\n${promptEspecifico}` }
       ],
       responseFormat: { type: "json_object" },
       temperature: 0.8
@@ -813,8 +949,8 @@ Debes responder en formato JSON estricto con tres campos:
       const parsed = JSON.parse(rawContent);
       if (parsed.voiceText && parsed.captionText) {
         const rawVoice = parsed.voiceText.replace(/\[.*?\]/g, '').replace(/[*_#]/g, '').trim();
-        const cleanVoice = enforceJanIAIdentity(rawVoice);
-        const cleanCaption = enforceJanIAIdentity(parsed.captionText.trim());
+        const cleanVoice = enforceGreetingAccuracy(enforceJanIAIdentity(rawVoice), timeInfo.period);
+        const cleanCaption = enforceGreetingAccuracy(enforceJanIAIdentity(parsed.captionText.trim()), timeInfo.period);
         return {
           voiceText: cleanVoice,
           captionText: cleanCaption,
@@ -827,8 +963,8 @@ Debes responder en formato JSON estricto con tres campos:
   }
 
   return {
-    voiceText: enforceJanIAIdentity(fallbackVoice),
-    captionText: enforceJanIAIdentity(fallbackCaption)
+    voiceText: enforceGreetingAccuracy(enforceJanIAIdentity(fallbackVoice), timeInfo.period),
+    captionText: enforceGreetingAccuracy(enforceJanIAIdentity(fallbackCaption), timeInfo.period)
   };
 }
 

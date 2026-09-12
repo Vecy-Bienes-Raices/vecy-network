@@ -749,6 +749,29 @@ Dirección obligatoria:
     }
   });
 
+  // Admin endpoint: disparar Noticia Inmobiliaria Nacional o Primicia de Última Hora
+  // Uso: POST /admin/trigger-noticia { token, headline, details, isUrgent, targetGroup, force }
+  app.post('/admin/trigger-noticia', async (req: any, res: any) => {
+    const { token, headline, details, isUrgent, targetGroup, force } = req.body;
+    if (token !== 'vecy2025admin') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    try {
+      const { publishNoticiaNacionalNow } = await import('./cronService');
+      const result = await publishNoticiaNacionalNow({
+        headline,
+        details,
+        isUrgent: isUrgent ?? false,
+        targetGroup: targetGroup || 'grupo2',
+        force: force ?? true
+      });
+      res.json(result);
+    } catch (err: any) {
+      console.error('[ADMIN-TRIGGER-NOTICIA] Error:', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // tRPC API
   app.use("/api/trpc", (req, res, next) => {
     console.log(`[TRPC-ROUTER] ${req.method} ${req.url}`);

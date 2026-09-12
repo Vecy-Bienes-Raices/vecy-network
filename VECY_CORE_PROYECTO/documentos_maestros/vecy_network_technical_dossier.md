@@ -322,6 +322,32 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.33 — Septiembre 2026
+
+#### 📌 JANIA PERIODISTA — NOTICIAS INMOBILIARIAS NACIONALES & PRIMICIAS, SALUDOS DINÁMICOS SEGÚN HORARIO Y ERRADICACIÓN DEL REPORTE ESTADÍSTICO DE LUNES
+
+**Problemas identificados:**
+1. **Omisión del Eje Periodístico en la Parrilla Diaria**:
+   - Pese a contar con la ilustración `jania_periodista.jpg` y activos de noticias, el lunes estaba monopolizado por un reporte estadístico de combinaciones evaluadas en base de datos que resultaba monótono, reiterativo y de escaso provecho práctico para los corredores.
+2. **Desincronización de Saludos Horarios**:
+   - Los fallbacks y mensajes emitidos por el modelo LLM a menudo saludaban con "Buenos días" en horarios vespertinos o nocturnos, restando naturalidad.
+3. **Carencia de Flujo Autónomo para Primicias de Última Hora y Contenido Audiovisual**:
+   - No existía un canal directo para emitir primicias del sector ni soporte preparado para consumir videos (`.mp4`, `.mov`) o artes de última hora generados por la dirección.
+
+**Solución aplicada:**
+- **JanIA Periodista — Noticias Inmobiliarias de Colombia**:
+  - `lunes_arranque` transformado en **Noticias Inmobiliarias de Colombia & Apertura de Mercado**: análisis de tasas de interés del Banco de la República, créditos hipotecarios, cupos Mi Casa Ya, Ley de Arrendamientos 820 / IPC, cifras CAMACOL, valor del m² y escrituración digital SNR, vinculado a `jania_noticias.jpg` y `jania_periodista.jpg`.
+- **Erradicación del Reporte Estadístico Aburrido de Lunes**:
+  - Eliminada la emisión automática de las 7:00 PM de estadísticas de la BD, reduciendo fatiga y enfocando el contenido en aprendizaje y negocios.
+- **Saludos Dinámicos Calibrados (`getBogotaTimeInfo` & `enforceGreetingAccuracy`)**:
+  - Evaluación en tiempo real de la hora en Bogotá (Mañana 05:00-11:59 `¡Buenos días!`, Tarde 12:00-18:59 `¡Buenas tardes!`, Noche 19:00-22:00 `¡Buenas noches!`) con inyección en system prompt y filtro regex.
+- **Soporte para Primicias, Noticias de Última Hora y Videos**:
+  - Preparado `getThemedImagePath` para detectar y consumir prioritariamente videos (`.mp4`, `.mov`) e imágenes de primicias (`jania_primicia.*`, `jania_ultimahora.*`), e implementado el método `publishNoticiaNacionalNow()` y endpoint `POST /admin/trigger-noticia`.
+- **Preservación Absoluta de `whatsapp-match.ts`**:
+  - Archivo 100% original e intacto.
+
+---
+
 ### 🔖 v31.32 — Septiembre 2026
 
 #### 📌 PROTOCOLO ANTI-ASFIXIA EN GRUPOS, PERSISTENCIA DE CRON EN DISCO, LIBRE ALBEDRÍO 2 O 3 + CANAL, ROTACIÓN ESTRICTA DE 9 IMÁGENES 3D Y BLINDAJE DE IDENTIDAD JANIA

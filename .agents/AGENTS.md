@@ -167,7 +167,23 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.32 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.33 — Septiembre 2026
+
+### Novedades v31.33 (JanIA Periodista — Noticias Inmobiliarias Nacionales & Primicias, Saludos Dinámicos según Horario y Erradicación del Reporte Estadístico de Lunes):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Omisión del Eje Periodístico*: Existía la ilustración `jania_periodista.jpg` y el activo de noticias, pero en la parrilla semanal el lunes estaba monopolizado por un reporte estadístico de la base de datos interno (conteo de pares evaluados) que resultaba monótono e irrelevante para los agentes.
+  2) *Desincronización de Saludos*: Los guiones generados por el LLM a veces saludaban con "Buenos días" en la tarde o noche, restando profesionalismo.
+  3) *Carencia de Flujo Autónomo para Primicias de Última Hora y Video*: No existía un canal específico para emitir noticias urgentes del sector ni preparación para artes de primicia o videos (`.mp4`, `.mov`).
+- **Acciones Ejecutadas**:
+  1) *JanIA Periodista — Noticias Inmobiliarias Nacionales*: `lunes_arranque` transformado en la apertura informativa del mercado de Colombia (tasas de interés del Banco de la República, créditos hipotecarios, cupos Mi Casa Ya, Ley de Arrendamientos 820 / IPC, cifras CAMACOL, valor del m² y escrituración digital SNR), vinculado a `jania_noticias.jpg` y `jania_periodista.jpg`.
+  2) *Erradicación del Reporte Estadístico Aburrido de Lunes*: Eliminada la emisión automática de las 7:00 PM de estadísticas de la BD, reduciendo fatiga y enfocando el contenido en aprendizaje y negocios.
+  3) *Saludos Dinámicos Calibrados (`getBogotaTimeInfo` & `enforceGreetingAccuracy`)*: Evaluación en tiempo real de la hora en Bogotá (Mañana 05:00-11:59 `¡Buenos días!`, Tarde 12:00-18:59 `¡Buenas tardes!`, Noche 19:00-22:00 `¡Buenas noches!`) con inyección en system prompt y filtro regex.
+  4) *Soporte para Primicias, Noticias de Última Hora y Videos*: Preparado `getThemedImagePath` para detectar y consumir prioritariamente videos (`.mp4`, `.mov`) e imágenes de primicias (`jania_primicia.*`, `jania_ultimahora.*`), e implementado el método `publishNoticiaNacionalNow()` y endpoint `POST /admin/trigger-noticia`.
+  5) *Preservación Absoluta de `whatsapp-match.ts`*: Archivo 100% original e intacto.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.32 — Septiembre 2026
 
 ### Novedades v31.32 (Protocolo Anti-Asfixia en Grupos, Persistencia de Cron en Disco, Libre Albedrío 2 o 3 + Canal, Rotación Estricta de 9 Imágenes 3D y Blindaje de Identidad JanIA):
 - **Diagnóstico y Causas Raíz Identificadas**:

@@ -50,9 +50,42 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.32 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.33 — Septiembre 2026
 
-### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 13:00 a 13:10 (Hora Colombia UTC-5)
+### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 13:20 a 13:30 (Hora Colombia UTC-5)
+**Versión**: `v31.33` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+"Qué pasó con el tema de Noticias sobre bienes raíces a nivel Nacional. No lo vi y tenemos una imagen relcionada en public/assets/jania. No se esto ya lo habíamos resuelto hace mucho tiempo, debe estar en el historial de convesacionas como julio o agosto no lo recuerdo bien y JanIA tambien era de libre alvedrío, totalmente autónoma pero sabía saludar según el horario, si tu ves que hay más temas que días entonces no importa, si ella JanIA ve que en internet surgen noticias a diario distintas e importantes pues debe decirlas, así sea en horario distinto, eso ya depende de la importancia de la información a bindar como noticia importante o definir si es un tema periodistico leve o es una primicia, para la primicia o noticia de última hora ya te creo una imagen o video y lo subo a la carpeta, pero ve preparando todo y dejemos el informe de nuestros datos de inmuebles como para los sábados o domingos en vez del lunes ya que se me hace un tema aburridísimo que más que todo nos interesa es a nosotros o quizas si tu no lo ves tan interesante como para el público entonces obvialo o elimínalo y cámbialo por algo que veas que realmente le interese a los agentes para enterarsen o aprender . Ok"
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Pilar Periodístico / Noticias Inmobiliarias Omitido de la Parrilla**:
+   - En agosto se incorporó el arte `jania_periodista.jpg` y el tema periodístico, pero en la parrilla semanal el lunes estaba ocupado por un reporte estadístico interno de combinaciones evaluadas y números de base de datos que resultaba monótono y de poco valor práctico para los corredores.
+2. **Saludos Rígidos Desincronizados del Horario Real**:
+   - Los fallbacks y mensajes a veces emitían saludos matutinos ("Buenos días") en publicaciones que salían por la tarde o noche, o viceversa, restando naturalidad.
+3. **Carencia de Flujo Autónomo para Primicias de Última Hora y Contenido Audiovisual**:
+   - No existía un canal específico para emitir primicias urgentes de última hora del sector ni preparación para consumir videos (`.mp4`, `.mov`) o artes gráficos de primicia subidos por Eduardo.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Incorporación del Pilar Periodístico "JanIA Periodista — Noticias Inmobiliarias de Colombia"**:
+   - `lunes_arranque` transformado en **Noticias Inmobiliarias de Colombia & Apertura de Mercado**: análisis de tasas de interés del Banco de la República, inflación y topes legales de cánones (Ley 820 de 2003 / IPC), asignaciones del programa Mi Casa Ya, cifras CAMACOL de ventas e iniciaciones, valorización del metro cuadrado en las principales ciudades, y modernización notarial/VUR.
+   - Vinculado al activo visual `jania_noticias.jpg` y `jania_periodista.jpg`.
+2. **Erradicación del Reporte Estadístico Aburrido de los Lunes**:
+   - Atendiendo la orden de Eduardo, se eliminó del cron programado la emisión automática del lunes en la noche (7:00 PM) de estadísticas internas de la base de datos (dejándolo disponible solo bajo demanda interna si se requiere), reduciendo la fatiga de mensajes y enfocando el 100% de las publicaciones en contenido de alto interés para aprender y cerrar negocios.
+3. **Calibración Estricta de Saludos por Horario en Colombia (`getBogotaTimeInfo` y `enforceGreetingAccuracy`)**:
+   - Cálculo dinámico de la franja horaria de Bogotá (Mañana: 05:00-11:59 `¡Buenos días!`, Tarde: 12:00-18:59 `¡Buenas tardes!`, Noche: 19:00-22:00 `¡Buenas noches!`).
+   - Inyección en el system prompt de Gemini y sanitizador regex protector `enforceGreetingAccuracy` que garantiza concordancia absoluta con la hora de envío.
+4. **Infraestructura Preparada para Primicias y Videos (`.mp4`, `.mov`)**:
+   - Mapeadas las preferencias para `primicia` y `ultima_hora` buscando prioritariamente `jania_primicia.mp4`, `jania_primicia.jpg`, `jania_ultimahora.mp4`, `jania_ultimahora.jpg` con fallback fluido a `jania_noticias.jpg` / `jania_periodista.jpg`.
+   - Implementado el método `publishNoticiaNacionalNow({ headline, details, isUrgent, targetGroup, force })` y el endpoint `POST /admin/trigger-noticia`.
+5. **Preservación Absoluta de `whatsapp-match.ts`**:
+   - Se mantiene 100% intocado y original, garantizando cero impacto en la ingesta y reacciones de grupos externos.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.32 — Septiembre 2026
+
+### 🗓️ Sesión Previa: Sábado 12 de Septiembre de 2026 — 13:00 a 13:10 (Hora Colombia UTC-5)
 **Versión**: `v31.32` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
 
 #### 🎯 Solicitud Exacta de Eduardo A. Rivera:
