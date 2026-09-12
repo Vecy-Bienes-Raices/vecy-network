@@ -322,6 +322,35 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.34 — Septiembre 2026
+
+#### 📌 INTEGRACIÓN OFICIAL DE VECY AGENDA EN VECY NETWORK ("TODO EN UNO"), MÓDULO DE CITAS Y AGENDA ADMINISTRATIVO, PARIDAD DUAL POSTGRESQL/SUPABASE Y HOJA DE RUTA FICHAS GOLD EDITION
+
+**Problemas identificados:**
+1. **Integración de VECY AGENDA en Código sin Registro Persistente en Documentos Maestros**:
+   - Se completó la unificación del proyecto `vecy-agenda-pro` dentro de `vecy-network`, pero el cambio no se encontraba registrado en la Triple Bitácora oficial (`HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y `vecy_network_technical_dossier.md`).
+2. **Disparidad Crítica de Datos (PostgreSQL 17 Nativo vs. Supabase)**:
+   - La migración histórica de las 68 solicitudes (#1041 a #1141) se corrió apuntando a Supabase (`knzmpoprlmbonejshfys`, totalizando 74 registros), mientras que en el PostgreSQL 17 nativo del VPS (`vecy_network`) solo existían 6 registros.
+3. **Inmuebles Exclusivos y Estandarización de Fichas Digitales**:
+   - La base de datos general mantiene 1.954 propiedades de WhatsApp. Sin embargo, las captaciones exclusivas de la inmobiliaria (San Patricio, Cedritos, etc.) requieren ser unificadas bajo una misma arquitectura y diseño de alta gama como `https://apto-san-patricio-bog.netlify.app/`.
+
+**Solución aplicada:**
+- **Auditoría y Validación de Componentes de Agenda Pro**:
+  - `SignaturePad.jsx` con firma táctil oro `#bf953f` en pantalla y conversión a negro `#000000` de alta definición para PDF.
+  - `validations.js` con algoritmo oficial DIAN Módulo 11 para NIT y validación estricta de documentos.
+  - `FormInput.jsx` con soporte para hints sutiles y `AgendaForm.jsx` con limpieza reactiva de errores y notas de seguridad.
+- **Backend tRPC y Módulo Administrativo**:
+  - Implementado router `agendaRouter` en `server/routers/agenda.ts` con procedimientos `getStats` y `getAll`, registrado en `server/routers.ts`.
+  - Creado `AdminAgenda.tsx` integrado en `Admin.tsx` con métricas KPI en vivo, barra de búsqueda reactiva, enlaces directos de verificación oficial (Policía, Verifíquese, DIAN, RUES) y modal de detalles con visualización de acompañantes y firma auditada.
+- **Sincronización de Paridad en PostgreSQL 17 Nativo en VPS**:
+  - Migrados y sincronizados los 74 registros históricos y la secuencia `solicitudes_id_seq` en la base de datos nativa `vecy_network` del VPS, garantizando el consecutivo #1141 para que la próxima cita sea la #1142.
+- **Hoja de Ruta para Estandarización de Fichas Inmobiliarias (Gold Edition)**:
+  - Confirmada la total viabilidad técnica para unificar los inmuebles propios de Vecy bajo la arquitectura de `https://apto-san-patricio-bog.netlify.app/` (`property-config.js` desacoplado + Schema.org + Carrusel/Video + VECY AGENDA nativa).
+- **Preservación Absoluta de `whatsapp-match.ts`**:
+  - Archivo 100% original e intacto.
+
+---
+
 ### 🔖 v31.33 — Septiembre 2026
 
 #### 📌 JANIA PERIODISTA — NOTICIAS INMOBILIARIAS NACIONALES & PRIMICIAS, SALUDOS DINÁMICOS SEGÚN HORARIO Y ERRADICACIÓN DEL REPORTE ESTADÍSTICO DE LUNES

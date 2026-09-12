@@ -7,6 +7,7 @@ import { imagesRouter } from "./routers/images";
 import { agentRouter } from "./routers/agent";
 import { leadsRouter } from "./routers/leads";
 import { propertiesRouter } from "./routers/properties";
+import { agendaRouter } from "./routers/agenda";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { upsertUser, getUserByOpenId } from "./db";
@@ -19,6 +20,7 @@ export const appRouter = router({
   agent: agentRouter,
   leads: leadsRouter,
   properties: propertiesRouter,
+  agenda: agendaRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

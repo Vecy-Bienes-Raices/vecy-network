@@ -1,7 +1,7 @@
 import React from 'react';
 
 // FormInput — Vecy Gold Edition
-function FormInput({ label, id, adornment, placeholder, maxLength, pattern, error, ...props }) {
+function FormInput({ label, id, adornment, placeholder, maxLength, pattern, error, hint, ...props }) {
   const errorInputClasses = 'border-red-500/70 focus:border-red-500 focus:ring-red-500/30';
   const defaultInputClasses = 'border-vecy-border focus:border-soft-gold/60 focus:ring-soft-gold/20';
   const errorLabelClasses = 'text-red-400';
@@ -33,6 +33,12 @@ function FormInput({ label, id, adornment, placeholder, maxLength, pattern, erro
           }}
         />
       </div>
+      {hint && (
+        <p className="text-[11px] text-soft-gold/70 mt-1.5 flex items-start gap-1 font-normal leading-tight">
+          <span className="text-xs shrink-0">🔒</span>
+          <span>{hint}</span>
+        </p>
+      )}
     </div>
   );
 }

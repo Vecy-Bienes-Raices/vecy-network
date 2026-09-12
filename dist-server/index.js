@@ -18855,15 +18855,108 @@ Texto: ${input.text}`;
   })
 });
 
+// server/routers/agenda.ts
+import { z as z8 } from "zod";
+init_db();
+init_schema();
+import { desc as desc5, ilike as ilike2, or as or3, sql as sql8, eq as eq14 } from "drizzle-orm";
+import { TRPCError as TRPCError6 } from "@trpc/server";
+var agendaRouter = router({
+  getAll: publicProcedure.input(
+    z8.object({
+      search: z8.string().optional(),
+      perfil: z8.string().optional(),
+      limit: z8.number().min(1).max(200).default(50),
+      offset: z8.number().min(0).default(0)
+    }).optional()
+  ).query(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+    const search = input?.search?.trim();
+    const perfilFilter = input?.perfil?.trim();
+    const limit = input?.limit ?? 50;
+    const offset = input?.offset ?? 0;
+    const whereConditions = [];
+    if (search) {
+      const searchPattern = `%${search}%`;
+      const numSearch = Number(search);
+      const searchConditions = [
+        ilike2(solicitudes.solicitanteNombre, searchPattern),
+        ilike2(solicitudes.solicitanteNumeroDocumento, searchPattern),
+        ilike2(solicitudes.solicitanteCelular, searchPattern),
+        ilike2(solicitudes.solicitanteEmail, searchPattern),
+        ilike2(solicitudes.nombreInmueble, searchPattern),
+        ilike2(solicitudes.codigoInmueble, searchPattern),
+        ilike2(solicitudes.interesadoNombre, searchPattern)
+      ];
+      if (!isNaN(numSearch)) {
+        searchConditions.push(eq14(solicitudes.solicitudId, numSearch));
+      }
+      whereConditions.push(or3(...searchConditions));
+    }
+    if (perfilFilter && perfilFilter !== "all") {
+      if (perfilFilter === "agente") {
+        whereConditions.push(
+          or3(
+            ilike2(solicitudes.solicitantePerfil, "%agente%"),
+            ilike2(solicitudes.solicitantePerfil, "%inmobiliaria%"),
+            ilike2(solicitudes.solicitantePerfil, "%broker%"),
+            ilike2(solicitudes.solicitantePerfil, "%br\xF3ker%")
+          )
+        );
+      } else if (perfilFilter === "directo") {
+        whereConditions.push(
+          or3(
+            ilike2(solicitudes.solicitantePerfil, "%directo%"),
+            ilike2(solicitudes.solicitantePerfil, "%cliente%")
+          )
+        );
+      }
+    }
+    const finalWhere = whereConditions.length > 0 ? sql8.join(whereConditions, sql8` AND `) : void 0;
+    const items = await db.select().from(solicitudes).where(finalWhere).orderBy(desc5(solicitudes.solicitudId), desc5(solicitudes.id)).limit(limit).offset(offset);
+    const totalRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(finalWhere);
+    return {
+      items,
+      total: Number(totalRes[0]?.count || 0)
+    };
+  }),
+  getStats: publicProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+    const totalRes = await db.select({ count: sql8`count(*)` }).from(solicitudes);
+    const total = Number(totalRes[0]?.count || 0);
+    const agentesRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(
+      or3(
+        ilike2(solicitudes.solicitantePerfil, "%agente%"),
+        ilike2(solicitudes.solicitantePerfil, "%inmobiliaria%"),
+        ilike2(solicitudes.solicitantePerfil, "%broker%"),
+        ilike2(solicitudes.solicitantePerfil, "%br\xF3ker%")
+      )
+    );
+    const agentes = Number(agentesRes[0]?.count || 0);
+    const conFirmaRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(sql8`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
+    const conFirma = Number(conFirmaRes[0]?.count || 0);
+    const directos = Math.max(0, total - agentes);
+    return {
+      total,
+      agentes,
+      directos,
+      conFirma
+    };
+  })
+});
+
 // server/routers.ts
 init_db();
-import { z as z8 } from "zod";
+import { z as z9 } from "zod";
 var ONE_YEAR_MS2 = 365 * 24 * 60 * 60 * 1e3;
 var appRouter = router({
   system: systemRouter,
   agent: agentRouter,
   leads: leadsRouter,
   properties: propertiesRouter,
+  agenda: agendaRouter,
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -18873,7 +18966,7 @@ var appRouter = router({
         success: true
       };
     }),
-    loginWithSupabaseToken: publicProcedure.input(z8.object({ accessToken: z8.string() })).mutation(async ({ input, ctx }) => {
+    loginWithSupabaseToken: publicProcedure.input(z9.object({ accessToken: z9.string() })).mutation(async ({ input, ctx }) => {
       try {
         const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "https://knzmpoprlmbonejshfys.supabase.co";
         const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtuem1wb3BybG1ib25lanNoZnlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjYyMjQsImV4cCI6MjA5MTYwMjIyNH0.yZ3AV1Rt2rmDuP61CA2rJRILpw__vwAJWp3xJUNj_FY";
@@ -18959,10 +19052,10 @@ async function createContext(opts) {
         try {
           const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
           const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-          const { eq: eq14 } = await import("drizzle-orm");
+          const { eq: eq15 } = await import("drizzle-orm");
           const db = await getDb2();
           if (db) {
-            await db.update(users2).set({ role: "admin" }).where(eq14(users2.id, user.id));
+            await db.update(users2).set({ role: "admin" }).where(eq15(users2.id, user.id));
             user = { ...user, role: "admin" };
             console.log(`[Auth] \u2705 Admin auto-promocionado: ${user.email}`);
           }
@@ -18976,10 +19069,10 @@ async function createContext(opts) {
       try {
         const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
         const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        const { eq: eq14 } = await import("drizzle-orm");
+        const { eq: eq15 } = await import("drizzle-orm");
         const db = await getDb2();
         if (db) {
-          const existingUser = await db.select().from(users2).where(eq14(users2.openId, "mock-local-user")).limit(1);
+          const existingUser = await db.select().from(users2).where(eq15(users2.openId, "mock-local-user")).limit(1);
           if (existingUser.length > 0) {
             user = existingUser[0];
           } else {
@@ -19595,7 +19688,7 @@ Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro
     try {
       const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
       const { propertyMatches: propertyMatches3, requirements: requirements2, properties: properties2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq14, gte: gte4 } = await import("drizzle-orm");
+      const { eq: eq15, gte: gte4 } = await import("drizzle-orm");
       const { handleDetectedMatches: handleDetectedMatches2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
       const db = await getDb2();
       if (!db) return res.status(500).send("No DB connection");
@@ -19617,8 +19710,8 @@ Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro
         let count = 0;
         for (const match of uniqueMatches) {
           try {
-            const [reqRec] = await db.select().from(requirements2).where(eq14(requirements2.id, match.requirementId)).limit(1);
-            const [propRec] = await db.select().from(properties2).where(eq14(properties2.id, match.propertyId)).limit(1);
+            const [reqRec] = await db.select().from(requirements2).where(eq15(requirements2.id, match.requirementId)).limit(1);
+            const [propRec] = await db.select().from(properties2).where(eq15(properties2.id, match.propertyId)).limit(1);
             if (reqRec && propRec) {
               const score = Number(match.matchScore);
               const matchedItem = {

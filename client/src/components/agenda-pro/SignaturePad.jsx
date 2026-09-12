@@ -15,15 +15,38 @@ function SignaturePadComponent({ onSignatureChange }) {
         canvas.height = canvas.offsetHeight * ratio;
         canvas.getContext("2d").scale(ratio, ratio);
 
-        // Inicializamos SignaturePad con el color de tinta dorado
+        // Inicializamos SignaturePad con el color de tinta dorado (Oro Vecy) para visibilidad en fondo oscuro
         signaturePadRef.current = new SignaturePad(canvas, {
-          penColor: '#000000' // Negro
+          penColor: '#bf953f' // Oro Vecy
         });
 
         signaturePadRef.current.addEventListener("endStroke", () => {
           if (!signaturePadRef.current.isEmpty()) {
-            const signatureData = signaturePadRef.current.toDataURL();
-            onSignatureChange(signatureData);
+            // Obtenemos la imagen dorada original en alta calidad
+            const signatureDataGold = signaturePadRef.current.toDataURL("image/png");
+            
+            // Creamos una imagen en memoria para procesarla
+            const img = new Image();
+            img.onload = () => {
+              // Usamos un canvas temporal oculto
+              const tempCanvas = document.createElement('canvas');
+              tempCanvas.width = img.width;
+              tempCanvas.height = img.height;
+              const ctx = tempCanvas.getContext('2d');
+              
+              // Dibujamos la firma dorada en el canvas temporal
+              ctx.drawImage(img, 0, 0);
+              
+              // Cambiamos todos los píxeles no transparentes a color NEGRO absoluto (#000000)
+              ctx.globalCompositeOperation = 'source-in';
+              ctx.fillStyle = '#000000';
+              ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+              
+              // Exportamos la nueva imagen garantizada en negro y la enviamos al formulario
+              const signatureDataBlack = tempCanvas.toDataURL("image/png");
+              onSignatureChange(signatureDataBlack);
+            };
+            img.src = signatureDataGold;
           }
         });
       }

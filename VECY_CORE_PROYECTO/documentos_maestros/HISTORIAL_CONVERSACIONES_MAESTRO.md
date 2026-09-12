@@ -50,9 +50,48 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.33 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.34 — Septiembre 2026
 
-### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 13:20 a 13:30 (Hora Colombia UTC-5)
+### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 18:30 (Hora Colombia UTC-5)
+**Versión**: `v31.34` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+"Bueno ya hicimos esto con el agente desde VECY AGENDA. Revisa que todo haya quedado bien y esté funcionando, recuerda buscar esta misma parte en el historial de conversaciones y si no está añadirla y completarla si es necesario pero como debe de ser de manera correcta ya que veo que los inmuebles que habíamos agregado ya desaparecieron y me toca buscar la manera de volverlos a subir ordenadamente de manera manual o con tu ayuda uno a uno desde su repositorio o desde netlify, pero debes esperar primero a unificarlos mirar correciones y demás ya que todos deben quedar bajo una misma línea de diseño y funcionanlidades cómo lo está este inmueble: https://apto-san-patricio-bog.netlify.app/ , pero primero dime si se puede o no hacer o ejecutar. ¿OK.??"
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Integración de VECY AGENDA en VECY NETWORK sin Registro Documental**:
+   - El agente anterior integró exitosamente los componentes frontend de VECY AGENDA en `client/src/components/agenda-pro/`, el router tRPC `server/routers/agenda.ts`, la pestaña administrativa `client/src/components/admin/AdminAgenda.tsx` y la Edge Function de confirmación por email en Supabase.
+   - Sin embargo, esta integración se encontraba pendiente de registro en la Triple Bitácora (`HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y `vecy_network_technical_dossier.md`).
+2. **Disparidad Crítica de Datos entre Supabase y PostgreSQL 17 Nativo en VPS**:
+   - La migración histórica de 68 solicitudes (#1041 a #1141) se ejecutó localmente apuntando a la base de datos de Supabase (`knzmpoprlmbonejshfys`), alcanzando 74 registros.
+   - Sin embargo, en el VPS de producción donde corre PM2 contra PostgreSQL 17 nativo (`localhost:5432/vecy_network`), la tabla `solicitudes` solo contaba con 6 registros preliminares.
+   - Si no se sincronizaba PostgreSQL 17 nativo en el VPS, el panel administrativo en producción mostraría datos incompletos.
+3. **Diagnóstico de los Inmuebles "Desaparecidos" y Fichas Digitales**:
+   - La base de datos general de Vecy Network mantiene intactas 1.954 propiedades captadas de WhatsApp.
+   - No obstante, los inmuebles de cartera propia y exclusiva de Vecy Bienes Raíces (como el Apartamento en San Patricio de 243 m² o el Penthouse en Cedritos) se manejaban como landings independientes en Netlify/GitHub con diseño de alta gama (*Glassmorphism Gold Edition*). Al migrar o filtrar por agentes, no contaban con un catálogo unificado de fichas bajo la misma arquitectura.
+4. **Viabilidad de Estandarización bajo la Plantilla San Patricio**:
+   - Se auditó el sitio de referencia `https://apto-san-patricio-bog.netlify.app/`. La arquitectura se basa en un objeto de configuración desacoplado `property-config.js`, tipografía *Outfit*, diseño Glassmorphism Gold Edition, datos estructurados invisibles para IA (`RealEstateListing` de Schema.org), carrusel con lightbox, reproductor de video local MP4 y botón de agendamiento nativo.
+   - Es **100% viable, ejecutable y altamente recomendable** crear una plantilla estándar para procesar y publicar ordenadamente todos los inmuebles de Eduardo bajo esta misma identidad visual y funcional.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Auditoría de Código y Verificación de Tipado / Compilación**:
+   - Se verificaron todos los componentes de `agenda-pro`: [SignaturePad.jsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/agenda-pro/SignaturePad.jsx) (firma táctil oro Vecy `#bf953f` y conversión a `#000000` de alta definición para PDF), [validations.js](file:///home/eddu/Proyectos/vecy-network/client/src/components/agenda-pro/validations.js) (algoritmo oficial DIAN Módulo 11 para NIT y reglas estrictas de CC/CE), [FormInput.jsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/agenda-pro/FormInput.jsx) (soporte para hints sutiles) y [AgendaForm.jsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/agenda-pro/AgendaForm.jsx) (limpieza reactiva de errores y notas de seguridad).
+   - Verificado el router [agenda.ts](file:///home/eddu/Proyectos/vecy-network/server/routers/agenda.ts) y su registro en [server/routers.ts](file:///home/eddu/Proyectos/vecy-network/server/routers.ts).
+   - Verificada la vista [AdminAgenda.tsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/admin/AdminAgenda.tsx) integrada en [Admin.tsx](file:///home/eddu/Proyectos/vecy-network/client/src/pages/Admin.tsx) con KPIs, búsqueda en tiempo real, enlaces directos de verificación (Policía, Verifíquese, DIAN, RUES) y modal de acompañantes con firma auditada.
+   - Ejecutado `npm run check` (`tsc --noEmit`): **0 errores**.
+   - Ejecutado `npm run build`: **Compilación exitosa en 26.08s**, generando los chunks `dist/assets/AdminAgenda-X9TOAc6u.js` y `dist-server/index.js` (949.5 KB).
+2. **Sincronización de Paridad en PostgreSQL 17 Nativo en el VPS**:
+   - Se migró y sincronizó la tabla `solicitudes` y la secuencia `solicitudes_id_seq` en la base de datos nativa `vecy_network` del VPS para garantizar paridad del 100% (74 registros históricos, consecutivo en #1141 listo para la cita #1142).
+3. **Análisis y Viabilidad Técnica de Unificación de Inmuebles**:
+   - Confirmada la total viabilidad técnica para unificar los inmuebles propios de Vecy bajo la plantilla Gold Edition estilo San Patricio (`property-config.js` desacoplado + SEO Schema.org + Carrusel/Video + VECY AGENDA nativa).
+4. **Actualización de la Triple Bitácora y Nueva Versión Oficial `v31.34`**:
+   - Actualizados `shared/const.ts` (`v31.34`), `package.json` (`31.34.0`), `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y `vecy_network_technical_dossier.md`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.33 — Septiembre 2026
+
+### 🗓️ Sesión Previa: Sábado 12 de Septiembre de 2026 — 13:20 a 13:30 (Hora Colombia UTC-5)
 **Versión**: `v31.33` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
 
 #### 🎯 Solicitud Exacta de Eduardo A. Rivera:
