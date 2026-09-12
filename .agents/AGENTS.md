@@ -184,7 +184,9 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
      - `FormInput.jsx` con hints sutiles y `AgendaForm.jsx` con limpieza reactiva de errores y notas de seguridad.
   2) *Backend y Frontend Administrativo en VECY NETWORK*:
      - Router tRPC `agenda.getStats` y `agenda.getAll` con búsqueda reactiva y filtro por perfil.
-     - Componente `AdminAgenda.tsx` integrado en `Admin.tsx` con KPIs ejecutivos, enlaces directos a Policía, Verifíquese, DIAN, RUES y modal de detalles con trazo de firma auditada.
+     - Componente `AdminAgenda.tsx` integrado en `Admin.tsx` con KPIs ejecutivos, enlaces directos a Policía, Verifíquese, DIAN, RUES.
+     - Modal de detalles montado vía `createPortal(..., document.body)` con z-index `[99999]`, inmune a conflictos de apilamiento CSS por `transform/animation`.
+     - Ficha estructurada idéntica a la notificación por correo oficial (Imagen 1): tabla dorada de 2 columnas con los 22 atributos de la solicitud, sub-tabla de acompañantes, panel de firma electrónica forense, enlace al contrato PDF en Supabase Storage y copiado de resumen para WhatsApp.
   3) *Sincronización de Paridad en PostgreSQL 17 Nativo en VPS*:
      - Base de datos nativa `vecy_network` en el VPS sincronizada con los 74 registros históricos y consecutivo en #1141.
   4) *Alineación Doctrinal para Unificación de Inmuebles*:

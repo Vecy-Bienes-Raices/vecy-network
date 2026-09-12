@@ -66,9 +66,10 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
    - La migración histórica de 68 solicitudes (#1041 a #1141) se ejecutó localmente apuntando a la base de datos de Supabase (`knzmpoprlmbonejshfys`), alcanzando 74 registros.
    - Sin embargo, en el VPS de producción donde corre PM2 contra PostgreSQL 17 nativo (`localhost:5432/vecy_network`), la tabla `solicitudes` solo contaba con 6 registros preliminares.
    - Si no se sincronizaba PostgreSQL 17 nativo en el VPS, el panel administrativo en producción mostraría datos incompletos.
-3. **Diagnóstico de los Inmuebles "Desaparecidos" y Fichas Digitales**:
-   - La base de datos general de Vecy Network mantiene intactas 1.954 propiedades captadas de WhatsApp.
-   - No obstante, los inmuebles de cartera propia y exclusiva de Vecy Bienes Raíces (como el Apartamento en San Patricio de 243 m² o el Penthouse en Cedritos) se manejaban como landings independientes en Netlify/GitHub con diseño de alta gama (*Glassmorphism Gold Edition*). Al migrar o filtrar por agentes, no contaban con un catálogo unificado de fichas bajo la misma arquitectura.
+3. **Diagnóstico del Modal 'Ver Ficha' en Dashboard (Imágenes 2, 3 y 4) y Ficha Idéntica al Correo (Imagen 1)**:
+   - Al pulsar "Ver Ficha", la pantalla aplicaba el backdrop oscuro pero el modal no se visualizaba o quedaba bloqueado fuera de la ventana gráfica.
+   - *Causa raíz*: El modal estaba anidado dentro del contenedor `<div className="space-y-6 pt-4 animate-fade-in font-sans">`. Según la especificación CSS, la propiedad `animation: fade-in` aplica `transform: translateY()`, creando un nuevo contexto de apilamiento (*stacking context*) que desancla `position: fixed` del viewport general. Sumado al `overflow-y-auto` del contenedor principal `<main>` de `Admin.tsx`, el modal quedaba atrapado y oculto bajo el scroll.
+   - Adicionalmente, el diseño anterior no reflejaba la claridad ejecutiva de la **Imagen 1** del correo electrónico de notificación que recibe Eduardo.
 4. **Viabilidad de Estandarización bajo la Plantilla San Patricio**:
    - Se auditó el sitio de referencia `https://apto-san-patricio-bog.netlify.app/`. La arquitectura se basa en un objeto de configuración desacoplado `property-config.js`, tipografía *Outfit*, diseño Glassmorphism Gold Edition, datos estructurados invisibles para IA (`RealEstateListing` de Schema.org), carrusel con lightbox, reproductor de video local MP4 y botón de agendamiento nativo.
    - Es **100% viable, ejecutable y altamente recomendable** crear una plantilla estándar para procesar y publicar ordenadamente todos los inmuebles de Eduardo bajo esta misma identidad visual y funcional.
@@ -77,9 +78,13 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 1. **Auditoría de Código y Verificación de Tipado / Compilación**:
    - Se verificaron todos los componentes de `agenda-pro`: [SignaturePad.jsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/agenda-pro/SignaturePad.jsx) (firma táctil oro Vecy `#bf953f` y conversión a `#000000` de alta definición para PDF), [validations.js](file:///home/eddu/Proyectos/vecy-network/client/src/components/agenda-pro/validations.js) (algoritmo oficial DIAN Módulo 11 para NIT y reglas estrictas de CC/CE), [FormInput.jsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/agenda-pro/FormInput.jsx) (soporte para hints sutiles) y [AgendaForm.jsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/agenda-pro/AgendaForm.jsx) (limpieza reactiva de errores y notas de seguridad).
    - Verificado el router [agenda.ts](file:///home/eddu/Proyectos/vecy-network/server/routers/agenda.ts) y su registro en [server/routers.ts](file:///home/eddu/Proyectos/vecy-network/server/routers.ts).
-   - Verificada la vista [AdminAgenda.tsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/admin/AdminAgenda.tsx) integrada en [Admin.tsx](file:///home/eddu/Proyectos/vecy-network/client/src/pages/Admin.tsx) con KPIs, búsqueda en tiempo real, enlaces directos de verificación (Policía, Verifíquese, DIAN, RUES) y modal de acompañantes con firma auditada.
+   - **Rediseño Maestro de [AdminAgenda.tsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/admin/AdminAgenda.tsx)**:
+     - Implementado `createPortal(..., document.body)` para renderizar el modal en el nodo raíz absoluto del DOM, con `z-[99999]`, bloqueo de scroll de fondo y cierre reactivo con tecla `Escape`.
+     - Ficha estructurada idéntica y superior a la Imagen 1 del correo: Encabezado institucional con logo Vecy, insignia de solicitud y tabla completa de datos de dos columnas (`Campo` / `Valor`) con los 22 atributos de la solicitud (solicitante, perfil, email con mailto, celular con WhatsApp, documento con verificación en 1 clic Policía/DIAN/RUES, inmueble, código, cliente referido, auditoría de firma, fechas y horarios).
+     - Sub-tabla de acompañantes autorizados y panel de firma electrónica nítida con sello forense.
+     - Botón de descarga directa del contrato PDF oficial en Supabase Storage (`Contrato_Puntas_{id}_{nombre}.pdf`) y botón de copiado de resumen completo para reenviar por chat.
    - Ejecutado `npm run check` (`tsc --noEmit`): **0 errores**.
-   - Ejecutado `npm run build`: **Compilación exitosa en 26.08s**, generando los chunks `dist/assets/AdminAgenda-X9TOAc6u.js` y `dist-server/index.js` (949.5 KB).
+   - Ejecutado `npm run build`: **Compilación exitosa**, generando el bundle `dist/assets/AdminAgenda-dqZapO_r.js` (32.52 KB) y `dist-server/index.js` (949.5 KB).
 2. **Sincronización de Paridad en PostgreSQL 17 Nativo en el VPS**:
    - Se migró y sincronizó la tabla `solicitudes` y la secuencia `solicitudes_id_seq` en la base de datos nativa `vecy_network` del VPS para garantizar paridad del 100% (74 registros históricos, consecutivo en #1141 listo para la cita #1142).
 3. **Análisis y Viabilidad Técnica de Unificación de Inmuebles**:

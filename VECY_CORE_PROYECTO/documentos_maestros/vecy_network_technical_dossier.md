@@ -341,7 +341,9 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
   - `FormInput.jsx` con soporte para hints sutiles y `AgendaForm.jsx` con limpieza reactiva de errores y notas de seguridad.
 - **Backend tRPC y Módulo Administrativo**:
   - Implementado router `agendaRouter` en `server/routers/agenda.ts` con procedimientos `getStats` y `getAll`, registrado en `server/routers.ts`.
-  - Creado `AdminAgenda.tsx` integrado en `Admin.tsx` con métricas KPI en vivo, barra de búsqueda reactiva, enlaces directos de verificación oficial (Policía, Verifíquese, DIAN, RUES) y modal de detalles con visualización de acompañantes y firma auditada.
+  - Creado `AdminAgenda.tsx` integrado en `Admin.tsx` con métricas KPI en vivo, barra de búsqueda reactiva y enlaces directos de verificación oficial (Policía, Verifíquese, DIAN, RUES).
+  - Modal de detalles montado vía `createPortal(..., document.body)` con z-index `[99999]`, eliminando el bloqueo visual por stacking context de animaciones CSS (`fade-in` con transform).
+  - Ficha organizada idéntica y superior a la notificación por correo electrónico (Imagen 1): tabla dorada de 2 columnas con los 22 campos del formulario, lista de acompañantes, panel de firma electrónica con sello forense, botón directo al PDF del contrato en Supabase Storage y copiado de resumen para WhatsApp.
 - **Sincronización de Paridad en PostgreSQL 17 Nativo en VPS**:
   - Migrados y sincronizados los 74 registros históricos y la secuencia `solicitudes_id_seq` en la base de datos nativa `vecy_network` del VPS, garantizando el consecutivo #1141 para que la próxima cita sea la #1142.
 - **Hoja de Ruta para Estandarización de Fichas Inmobiliarias (Gold Edition)**:

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { trpc } from '@/lib/trpc';
 import {
   CalendarCheck, Search, ShieldCheck, ExternalLink, Copy, Check,
   MessageSquare, Eye, Users, FileText, RefreshCw, X, Clock,
-  MapPin, Building2, Phone, Mail, ShieldAlert
+  MapPin, Building2, Phone, Mail, ShieldAlert, Download, Share2
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -21,6 +22,23 @@ export default function AdminAgenda() {
     limit: 100,
   });
 
+  // Cerrar modal con tecla Escape y bloquear scroll de body
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedSolicitud(null);
+    };
+    if (selectedSolicitud) {
+      document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', handleKeyDown);
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedSolicitud]);
+
   const handleRefresh = () => {
     refetchStats();
     refetchAgenda();
@@ -29,11 +47,37 @@ export default function AdminAgenda() {
 
   const copyToClipboard = (text: string, label: string = 'Documento') => {
     if (!text) return;
-    const cleanText = text.replace(/[^0-9a-zA-Z]/g, '');
+    const cleanText = text.toString().replace(/[^0-9a-zA-Z]/g, '');
     navigator.clipboard.writeText(cleanText);
     setCopiedDoc(text);
     toast.success(`${label} copiado al portapapeles: ${cleanText}`);
     setTimeout(() => setCopiedDoc(null), 2500);
+  };
+
+  const copyFullSummaryToClipboard = (sol: any) => {
+    if (!sol) return;
+    const solNum = sol.solicitudId || sol.id;
+    const cleanPhone = (sol.solicitanteCelular || '').replace(/\D/g, '');
+    const summaryText = `*📋 RESUMEN OFICIAL DE SOLICITUD VECY #${solNum}*
+────────────────────────
+👤 *Solicitante:* ${sol.solicitanteNombre || 'N/A'}
+💼 *Perfil:* ${sol.solicitantePerfil || 'Cliente'} (${sol.solicitanteTipoPersona || 'Persona Natural'})
+🆔 *Documento:* ${sol.solicitanteTipoDocumento || 'Doc'}: ${sol.solicitanteNumeroDocumento || 'N/A'}
+📱 *Celular:* ${sol.solicitanteCelular || 'N/A'}
+✉️ *Email:* ${sol.solicitanteEmail || 'N/A'}
+${sol.solicitanteRepresentanteLegal ? `🏛️ *Rep. Legal:* ${sol.solicitanteRepresentanteLegal}\n` : ''}
+🏠 *Inmueble:* ${sol.nombreInmueble || 'N/A'}
+🏷️ *Código:* ${sol.codigoInmueble || 'N/A'}
+🔑 *Operación:* ${sol.opcionNegocio || 'Venta'}
+📌 *Servicio:* ${sol.servicioSolicitado || 'Visitar inmueble'}
+🗓️ *Fecha Cita:* ${sol.fechaCitaTexto || 'Por coordinar'}
+⏰ *Hora Cita:* ${sol.horaCita || 'Pendiente'}
+${sol.interesadoNombre ? `\n🤝 *Cliente Referido:* ${sol.interesadoNombre} (${sol.interesadoTipoDocumento || 'Doc'}: ${sol.interesadoDocumento || 'N/A'})\n` : ''}
+${sol.firmaFechahoraAudit ? `✍️ *Firma Auditada:* ${new Date(sol.firmaFechahoraAudit).toLocaleString('es-CO', { timeZone: 'America/Bogota' })}\n` : ''}
+Sistema: Vecy Network — Bolsa Inmobiliaria Colaborativa`;
+
+    navigator.clipboard.writeText(summaryText);
+    toast.success(`Resumen completo de la solicitud #${solNum} copiado`);
   };
 
   const items = agendaData?.items || [];
@@ -175,7 +219,6 @@ export default function AdminAgenda() {
                   const perfilLower = (item.solicitantePerfil || '').toLowerCase();
                   const isAgent = perfilLower.includes('agente') || perfilLower.includes('inmobiliaria') || perfilLower.includes('broker') || perfilLower.includes('bróker');
                   const docNum = item.solicitanteNumeroDocumento || '';
-                  const cleanDoc = docNum.replace(/[^0-9a-zA-Z]/g, '');
                   const cleanPhone = (item.solicitanteCelular || '').replace(/\D/g, '');
                   const formattedPhone = cleanPhone.startsWith('57') ? cleanPhone : `57${cleanPhone}`;
                   const waMessage = encodeURIComponent(
@@ -342,7 +385,7 @@ export default function AdminAgenda() {
                       <td className="py-4 px-4 text-right whitespace-nowrap">
                         <button
                           onClick={() => setSelectedSolicitud(item)}
-                          className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-primary/20 hover:text-primary border border-white/10 text-foreground transition-all text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                          className="px-3.5 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/25 border border-primary/30 text-primary hover:text-white transition-all text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-[0_0_10px_rgba(191,149,63,0.15)]"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>Ver Ficha</span>
@@ -357,182 +400,431 @@ export default function AdminAgenda() {
         )}
       </div>
 
-      {/* ===== MODAL DE DETALLE COMPLETO DE LA CITA ===== */}
-      {selectedSolicitud && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-[#121212] border border-primary/30 rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl relative">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-white/10 pb-4">
-              <div>
-                <span className="px-2.5 py-1 rounded-md bg-primary/10 border border-primary/30 text-primary font-mono text-xs font-bold">
-                  SOLICITUD #{selectedSolicitud.solicitudId || selectedSolicitud.id}
-                </span>
-                <h3 className="text-xl font-black text-foreground mt-2">
-                  Ficha Completa de Cita y Verificación
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Registrada el {new Date(selectedSolicitud.createdAt || selectedSolicitud.created_at).toLocaleString('es-CO', { timeZone: 'America/Bogota' })}
-                </p>
+      {/* ===== MODAL DE DETALLE COMPLETO (PORTAL DIRECTO A BODY PARA EVITAR BLOQUEO DE SCROLL/TRANSFORMS) ===== */}
+      {selectedSolicitud && typeof document !== 'undefined' && createPortal(
+        <div
+          className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedSolicitud(null);
+          }}
+        >
+          <div
+            className="bg-[#121212] border border-[#bf953f]/40 rounded-2xl sm:rounded-3xl max-w-3xl w-full p-4 sm:p-7 space-y-5 shadow-[0_0_50px_rgba(0,0,0,0.9)] relative animate-fade-in my-auto max-h-[92vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header Estilo Correo Vecy Oficial */}
+            <div className="flex items-start justify-between border-b border-white/10 pb-4 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-black border border-[#bf953f]/40 flex items-center justify-center p-2 shadow-[0_0_15px_rgba(191,149,63,0.2)] shrink-0">
+                  <img
+                    src="/logo-vecy.png"
+                    alt="Vecy Logo"
+                    className="w-full h-full object-contain filter drop-shadow-[0_0_6px_rgba(191,149,63,0.5)]"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-black text-xs sm:text-sm text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-wider uppercase">
+                      NUEVA SOLICITUD RECIBIDA #{selectedSolicitud.solicitudId || selectedSolicitud.id}
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/30 uppercase">
+                      {selectedSolicitud.solicitantePerfil || 'Cliente'}
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-foreground mt-0.5">
+                    Solicitante: <span className="text-white">{selectedSolicitud.solicitanteNombre || 'Sin nombre'}</span>
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    A continuación, el resumen de los datos ingresados en el formulario oficial de Vecy Agenda:
+                  </p>
+                </div>
               </div>
+
               <button
                 onClick={() => setSelectedSolicitud(null)}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer shrink-0 ml-2"
+                title="Cerrar (Esc)"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2 scrollbar-thin">
-              {/* Bloque 1: Solicitante */}
-              <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-2.5">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
-                  👤 Datos del Solicitante
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <span className="text-muted-foreground block">Nombre Completo:</span>
-                    <strong className="text-foreground text-sm">{selectedSolicitud.solicitanteNombre || 'N/A'}</strong>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">Perfil / Tipo:</span>
-                    <span className="text-zinc-300">{selectedSolicitud.solicitantePerfil || 'Cliente'} ({selectedSolicitud.solicitanteTipoPersona || 'Persona Natural'})</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">Documento de Identidad:</span>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-primary font-bold">{selectedSolicitud.solicitanteTipoDocumento}: {selectedSolicitud.solicitanteNumeroDocumento}</span>
-                      <button
-                        onClick={() => copyToClipboard(selectedSolicitud.solicitanteNumeroDocumento, 'Documento')}
-                        className="text-muted-foreground hover:text-primary p-0.5"
-                        title="Copiar"
-                      >
-                        <Copy className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">Celular:</span>
-                    <span className="text-zinc-300 font-mono">{selectedSolicitud.solicitanteCelular || 'N/A'}</span>
-                  </div>
-                  {selectedSolicitud.solicitanteRepresentanteLegal && (
-                    <div className="sm:col-span-2">
-                      <span className="text-muted-foreground block">Representante Legal:</span>
-                      <strong className="text-foreground">{selectedSolicitud.solicitanteRepresentanteLegal}</strong>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Bloque 2: Cita e Inmueble */}
-              <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-2.5">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
-                  🏠 Inmueble y Cita Programada
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <span className="text-muted-foreground block">Inmueble Solicitado:</span>
-                    <strong className="text-foreground">{selectedSolicitud.nombreInmueble || 'N/A'}</strong>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">Código Referencia:</span>
-                    <span className="font-mono text-primary font-bold">{selectedSolicitud.codigoInmueble || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">Fecha de Visita:</span>
-                    <span className="text-foreground font-semibold">{selectedSolicitud.fechaCitaTexto || 'Por coordinar'}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">Hora de la Cita:</span>
-                    <span className="text-foreground font-semibold">{selectedSolicitud.horaCita || 'Pendiente'}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">Servicio Solicitado:</span>
-                    <span className="text-zinc-300">{selectedSolicitud.servicioSolicitado || 'Visitar inmueble'}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">Operación:</span>
-                    <span className="text-zinc-300">{selectedSolicitud.opcionNegocio || 'Venta'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bloque 3: Cliente Referido (Si aplica) */}
-              {selectedSolicitud.interesadoNombre && (
-                <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-2.5">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-amber-400 flex items-center gap-2">
-                    🤝 Cliente Presentado por el Colega
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <span className="text-muted-foreground block">Nombre del Cliente:</span>
-                      <strong className="text-foreground">{selectedSolicitud.interesadoNombre}</strong>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground block">Documento del Cliente:</span>
-                      <span className="font-mono text-amber-400 font-bold">
-                        {selectedSolicitud.interesadoTipoDocumento || 'Doc'}: {selectedSolicitud.interesadoDocumento || 'N/A'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Bloque 4: Acompañantes */}
-              {selectedSolicitud.acompanantes && Array.isArray(selectedSolicitud.acompanantes) && selectedSolicitud.acompanantes.length > 0 && (
-                <div className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-2.5">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
-                    👥 Acompañantes Autorizados ({selectedSolicitud.acompanantes.length})
-                  </h4>
-                  <div className="space-y-2">
-                    {selectedSolicitud.acompanantes.map((acomp: any, idx: number) => (
-                      <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 text-xs">
-                        <div>
-                          <strong className="text-foreground">{acomp.nombre}</strong>
-                          <span className="text-muted-foreground ml-2 font-mono">({acomp.documento})</span>
-                        </div>
-                        <span className="text-primary font-semibold text-[11px] px-2 py-0.5 rounded bg-primary/10">
-                          {acomp.parentesco === 'Otro' ? acomp.parentescoOtro : acomp.parentesco || 'Acompañante'}
+            {/* Cuerpo con Scroll Suave */}
+            <div className="flex-1 overflow-y-auto pr-1 sm:pr-2 space-y-4 scrollbar-thin">
+              {/* TABLA ORGANIZADA ESTILO CORREO OFICIAL (IMAGEN 1) */}
+              <div className="rounded-xl border border-[#bf953f]/30 overflow-hidden bg-black/50 shadow-inner">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-[#bf953f]/25 via-[#bf953f]/15 to-transparent border-b border-[#bf953f]/40 text-[#fcf6ba]">
+                      <th className="py-2.5 px-4 font-bold text-[11px] uppercase tracking-wider w-2/5 sm:w-1/3">
+                        Campo
+                      </th>
+                      <th className="py-2.5 px-4 font-bold text-[11px] uppercase tracking-wider w-3/5 sm:w-2/3">
+                        Valor
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 font-mono">
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante nombre</td>
+                      <td className="py-2 px-4 text-foreground font-sans font-bold text-sm">
+                        {selectedSolicitud.solicitanteNombre || 'N/A'}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante tipo persona</td>
+                      <td className="py-2 px-4 text-zinc-200 font-sans">
+                        {selectedSolicitud.solicitanteTipoPersona || 'Persona Natural'}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante perfil</td>
+                      <td className="py-2 px-4 text-zinc-200 font-sans">
+                        <span className="px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-xs font-semibold">
+                          {selectedSolicitud.solicitantePerfil || 'Cliente'}
                         </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante email</td>
+                      <td className="py-2 px-4 text-primary">
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`mailto:${selectedSolicitud.solicitanteEmail}`}
+                            className="hover:underline truncate"
+                          >
+                            {selectedSolicitud.solicitanteEmail || 'N/A'}
+                          </a>
+                          {selectedSolicitud.solicitanteEmail && (
+                            <button
+                              onClick={() => copyToClipboard(selectedSolicitud.solicitanteEmail, 'Correo')}
+                              className="text-zinc-500 hover:text-primary p-0.5 cursor-pointer"
+                              title="Copiar correo"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante celular</td>
+                      <td className="py-2 px-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-zinc-200 font-bold">{selectedSolicitud.solicitanteCelular || 'N/A'}</span>
+                          {selectedSolicitud.solicitanteCelular && (
+                            <a
+                              href={`https://wa.me/${(selectedSolicitud.solicitanteCelular || '').replace(/\D/g, '').startsWith('57') ? (selectedSolicitud.solicitanteCelular || '').replace(/\D/g, '') : `57${(selectedSolicitud.solicitanteCelular || '').replace(/\D/g, '')}`}?text=${encodeURIComponent(`Hola ${selectedSolicitud.solicitanteNombre || ''}, te saludamos de VECY BIENES RAÍCES respecto a tu solicitud de agenda #${selectedSolicitud.solicitudId || selectedSolicitud.id} para ${selectedSolicitud.nombreInmueble || selectedSolicitud.codigoInmueble || 'el inmueble'}.`)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1 hover:bg-emerald-500/25 transition-all"
+                              title="Abrir WhatsApp"
+                            >
+                              <MessageSquare className="w-2.5 h-2.5" />
+                              WhatsApp
+                            </a>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante tipo documento</td>
+                      <td className="py-2 px-4 text-zinc-200 font-sans">
+                        {selectedSolicitud.solicitanteTipoDocumento || 'Cédula de ciudadanía'}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante numero documento</td>
+                      <td className="py-2 px-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <strong className="text-foreground text-sm">{selectedSolicitud.solicitanteNumeroDocumento || 'N/A'}</strong>
+                          {selectedSolicitud.solicitanteNumeroDocumento && (
+                            <>
+                              <button
+                                onClick={() => copyToClipboard(selectedSolicitud.solicitanteNumeroDocumento, 'Documento')}
+                                className="text-zinc-500 hover:text-primary p-0.5 cursor-pointer"
+                                title="Copiar documento"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                              <div className="flex items-center gap-1 ml-2">
+                                <a
+                                  href="https://antecedentes.policia.gov.co:7005/WebJudicial/"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={() => copyToClipboard(selectedSolicitud.solicitanteNumeroDocumento, 'Cédula Policía')}
+                                  className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10"
+                                  title="Antecedentes Policía"
+                                >
+                                  👮 Policía
+                                </a>
+                                <a
+                                  href="https://verifiquese.com/"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={() => copyToClipboard(selectedSolicitud.solicitanteNumeroDocumento, 'Cédula Verifíquese')}
+                                  className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10"
+                                  title="Verifíquese"
+                                >
+                                  🔍 Verifíquese
+                                </a>
+                                <a
+                                  href="https://muisca.dian.gov.co/WebRutMuisca/DefConsultaEstadoRUT.faces"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={() => copyToClipboard(selectedSolicitud.solicitanteNumeroDocumento, 'NIT DIAN')}
+                                  className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10"
+                                  title="DIAN RUT"
+                                >
+                                  🏛️ DIAN
+                                </a>
+                                <a
+                                  href="https://www.rues.org.co/"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={() => copyToClipboard(selectedSolicitud.solicitanteNumeroDocumento, 'ID RUES')}
+                                  className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10"
+                                  title="RUES Cámaras"
+                                >
+                                  🏢 RUES
+                                </a>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {selectedSolicitud.solicitanteRepresentanteLegal && (
+                      <tr className="hover:bg-white/[0.02]">
+                        <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante representante legal</td>
+                        <td className="py-2 px-4 text-zinc-200 font-sans font-bold">
+                          {selectedSolicitud.solicitanteRepresentanteLegal}
+                        </td>
+                      </tr>
+                    )}
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">servicio solicitado</td>
+                      <td className="py-2 px-4 text-zinc-200 font-sans font-semibold">
+                        {selectedSolicitud.servicioSolicitado || 'Visitar inmueble'}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">opcion negocio</td>
+                      <td className="py-2 px-4 text-amber-400 font-sans font-bold">
+                        {selectedSolicitud.opcionNegocio || 'Venta'}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">nombre inmueble</td>
+                      <td className="py-2 px-4 text-foreground font-sans font-bold">
+                        {selectedSolicitud.nombreInmueble || 'N/A'}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">codigo inmueble</td>
+                      <td className="py-2 px-4 text-primary font-bold">
+                        <span className="px-2 py-0.5 rounded bg-primary/10 border border-primary/30">
+                          {selectedSolicitud.codigoInmueble || 'N/A'}
+                        </span>
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">cantidad personas</td>
+                      <td className="py-2 px-4 text-zinc-200">
+                        {selectedSolicitud.cantidadPersonas ? `${selectedSolicitud.cantidadPersonas} persona(s)` : 'Vacío'}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">tipo cliente</td>
+                      <td className="py-2 px-4 text-zinc-200 font-sans">
+                        {selectedSolicitud.tipoCliente || 'Persona'}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">interesado nombre</td>
+                      <td className="py-2 px-4 text-zinc-200 font-sans">
+                        {selectedSolicitud.interesadoNombre || 'No registra'}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">interesado tipo documento</td>
+                      <td className="py-2 px-4 text-zinc-200 font-sans">
+                        {selectedSolicitud.interesadoTipoDocumento || 'Cédula de ciudadanía'}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">interesado documento</td>
+                      <td className="py-2 px-4 text-zinc-200">
+                        {selectedSolicitud.interesadoDocumento || 'No registra'}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">firma fechahora audit</td>
+                      <td className="py-2 px-4 text-emerald-400 font-mono text-[11px]">
+                        {selectedSolicitud.firmaFechahoraAudit
+                          ? new Date(selectedSolicitud.firmaFechahoraAudit).toISOString()
+                          : 'Pendiente de firma'}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">fecha cita texto</td>
+                      <td className="py-2 px-4 text-foreground font-sans font-bold">
+                        {selectedSolicitud.fechaCitaTexto || 'Por coordinar'}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">hora cita</td>
+                      <td className="py-2 px-4 text-foreground font-bold">
+                        {selectedSolicitud.horaCita || 'Pendiente'}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitud id</td>
+                      <td className="py-2 px-4 text-primary font-bold">
+                        {selectedSolicitud.solicitudId || selectedSolicitud.id}
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-white/[0.02]">
+                      <td className="py-2 px-4 text-zinc-400 font-sans font-medium">id</td>
+                      <td className="py-2 px-4 text-zinc-400">
+                        {selectedSolicitud.id}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
 
-              {/* Bloque 5: Firma Virtual */}
+              {/* ACOMPAÑANTES SI LOS HAY */}
+              {(() => {
+                let acompList = selectedSolicitud.acompanantes;
+                if (typeof acompList === 'string') {
+                  try { acompList = JSON.parse(acompList); } catch (_) { acompList = []; }
+                }
+                if (!Array.isArray(acompList) || acompList.length === 0) return null;
+
+                return (
+                  <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2">
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-[#fcf6ba] flex items-center gap-2">
+                      👥 Acompañantes Autorizados ({acompList.length})
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {acompList.map((ac: any, i: number) => (
+                        <div key={i} className="p-2 rounded-lg bg-white/5 border border-white/5 text-xs flex items-center justify-between">
+                          <div>
+                            <p className="font-bold text-foreground">{ac.nombre || 'Acompañante'}</p>
+                            <p className="text-[10px] text-muted-foreground font-mono">Doc: {ac.documento || 'N/A'}</p>
+                          </div>
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary font-semibold">
+                            {ac.parentesco === 'Otro' ? ac.parentescoOtro : ac.parentesco || 'Acompañante'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* FIRMA ELECTRÓNICA VIRTUAL AUDITADA */}
               {selectedSolicitud.firmaVirtualBase64 && (
-                <div className="p-4 rounded-2xl bg-black/40 border border-emerald-500/20 space-y-2.5">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-2">
-                    ✍️ Firma Electrónica Registrada
-                  </h4>
-                  <div className="p-4 rounded-xl bg-white flex items-center justify-center max-w-sm mx-auto shadow-inner">
+                <div className="p-4 rounded-xl bg-black/40 border border-emerald-500/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-2">
+                      ✍️ Firma Electrónica Registrada (Auditoría Forense)
+                    </h4>
+                    <span className="text-[10px] font-mono text-emerald-400/80">
+                      Válida Legalmente
+                    </span>
+                  </div>
+                  <div className="p-4 rounded-xl bg-white flex items-center justify-center max-w-sm mx-auto shadow-md">
                     <img
                       src={selectedSolicitud.firmaVirtualBase64}
                       alt="Firma Virtual"
-                      className="max-h-24 object-contain filter"
+                      className="max-h-24 object-contain"
                     />
                   </div>
                   {selectedSolicitud.firmaFechahoraAudit && (
-                    <p className="text-[11px] text-zinc-500 text-center font-mono mt-1">
-                      Auditoría digital: {new Date(selectedSolicitud.firmaFechahoraAudit).toLocaleString('es-CO', { timeZone: 'America/Bogota' })}
+                    <p className="text-[10px] text-zinc-400 text-center font-mono">
+                      Timestamp auditado: {new Date(selectedSolicitud.firmaFechahoraAudit).toLocaleString('es-CO', { timeZone: 'America/Bogota' })}
                     </p>
                   )}
                 </div>
               )}
+
+              {/* CONTRATO ADJUNTO EN STORAGE (SI ES AGENTE / CONTRATO GENERADO) */}
+              {(() => {
+                const solPerfil = (selectedSolicitud.solicitantePerfil || '').toLowerCase();
+                const isAgent = solPerfil.includes('agente') || solPerfil.includes('inmobiliaria') || solPerfil.includes('broker') || solPerfil.includes('bróker');
+                const solNum = selectedSolicitud.solicitudId || selectedSolicitud.id;
+                const safeName = (selectedSolicitud.solicitanteNombre || '').replace(/\s+/g, '_');
+                const pdfFileName = `Contrato_Puntas_${solNum}_${safeName}.pdf`;
+                const storageUrl = `https://knzmpoprlmbonejshfys.supabase.co/storage/v1/object/public/contratos/${pdfFileName}`;
+
+                if (!isAgent && !selectedSolicitud.firmaVirtualBase64) return null;
+
+                return (
+                  <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-[#bf953f]/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-foreground">
+                          {pdfFileName}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          Contrato de Puntas Compartidas (50/50) con firma digital y cláusula de no elusión
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href={storageUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 rounded-xl bg-[#bf953f]/20 hover:bg-[#bf953f]/30 text-[#fcf6ba] border border-[#bf953f]/40 text-xs font-bold inline-flex items-center gap-2 transition-all shrink-0 cursor-pointer shadow-[0_0_12px_rgba(191,149,63,0.2)]"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Ver Contrato PDF</span>
+                    </a>
+                  </div>
+                );
+              })()}
             </div>
 
-            {/* Modal Footer */}
-            <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-3">
+            {/* Footer de Acciones del Modal */}
+            <div className="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => copyFullSummaryToClipboard(selectedSolicitud)}
+                  className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 text-xs font-semibold inline-flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Copiar resumen en texto plano"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-primary" />
+                  <span>Copiar Resumen</span>
+                </button>
+
+                {selectedSolicitud.solicitanteCelular && (
+                  <a
+                    href={`https://wa.me/${(selectedSolicitud.solicitanteCelular || '').replace(/\D/g, '').startsWith('57') ? (selectedSolicitud.solicitanteCelular || '').replace(/\D/g, '') : `57${(selectedSolicitud.solicitanteCelular || '').replace(/\D/g, '')}`}?text=${encodeURIComponent(`Hola ${selectedSolicitud.solicitanteNombre || ''}, te saludamos de VECY BIENES RAÍCES respecto a tu solicitud de agenda #${selectedSolicitud.solicitudId || selectedSolicitud.id} para el inmueble ${selectedSolicitud.nombreInmueble || selectedSolicitud.codigoInmueble || ''}.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>WhatsApp</span>
+                  </a>
+                )}
+              </div>
+
               <button
                 onClick={() => setSelectedSolicitud(null)}
-                className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-foreground transition-all cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-foreground transition-all cursor-pointer"
               >
-                Cerrar
+                Cerrar Ficha
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
