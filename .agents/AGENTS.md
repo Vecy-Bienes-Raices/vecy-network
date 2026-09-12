@@ -167,7 +167,28 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.28 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.29 — Septiembre 2026
+
+### Novedades v31.29 (Optimización Integral de Coincidencias /admin, Silenciamiento de Logs Sincrónicos, 9 Índices PostgreSQL Nativo y Micro-caché):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Inundación Masiva de Logs Sincrónicos en `matchesGeography` (`matching.ts`)*:
+     - PM2 acumuló más de 909 MB de logs en `/root/.pm2/logs/` (7.4M de líneas). Cada WhatsApp entrante disparaba comparaciones contra >1.000 requerimientos y emitía `console.log([Matching-Guard] ...)`.
+     - En Node.js monohilo, el Event Loop se bloqueaba al 100% de CPU, dejando peticiones HTTP (`getAllMatches`, `getBotStatus`, `auth.me`) sin responder hasta provocar 504 Gateway Timeout de Nginx y ciclos infinitos en celulares.
+  2) *Carencia de Índices en PostgreSQL Nativo*:
+     - `propertyMatches` no tenía índices en `propertyId`, `requirementId`, `matchScore`, `status`, `createdAt`.
+     - `property_publication_history` no tenía índice en `propertyId`.
+     - `properties` y `requirements` sin índices en `available` ni `status`.
+  3) *Re-evaluación Redundante en `getAllMatches`*:
+     - Re-evaluaba en JS `explicarMatch` 150 veces en cada GET en vez de usar `matchExplanation` ya persistido en la BD.
+- **Acciones Ejecutadas**:
+  1) *Silenciamiento Total*: Retiradas 17 emisiones de `console.log([Matching-Guard] ...)` en `matching.ts`.
+  2) *9 Índices B-Tree*: Creados en PostgreSQL 17 nativo y documentados en `drizzle/schema.ts`.
+  3) *Respuesta Instantánea en `getAllMatches`*: Reutiliza `m.matchExplanation` de BD (0 ms de CPU), proyecta historial ligero y micro-cachea en memoria.
+  4) *Purga y Rotación en VPS*: Purgados 909 MB de logs viejos; activado `pm2-logrotate` (10 MB máx, gzip, 5 rotaciones).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.28 — Septiembre 2026
 
 ### Novedades v31.28 (Emancipación a IA Pura con Libre Albedrío, Restauración de Línea Comercial Bróker 3166569719 y Erradicación de Respuestas Enlatadas):
 - **Diagnóstico y Causas Raíz Identificadas**:

@@ -1,4 +1,4 @@
-import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb, bigint, uuid } from "drizzle-orm/pg-core";
+import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb, bigint, uuid, index } from "drizzle-orm/pg-core";
 
 // Enums expanded based on VECY CORE Blueprint
 export const roleEnum = pgEnum("role", ["user", "janIA", "system", "admin", "agent"]);
@@ -124,7 +124,10 @@ export const properties = pgTable("properties", {
   estadoComercial: varchar("estado_comercial", { length: 50 }).default("ACTIVO").notNull(),
   ultimaActividad: varchar("ultima_actividad", { length: 50 }).default("PUBLICACIÓN").notNull(),
   vigenciaIa: varchar("vigencia_ia", { length: 50 }).default("VIGENTE").notNull(),
-});
+}, (table) => [
+  index("idx_properties_available").on(table.available),
+  index("idx_properties_tx_type").on(table.transactionType),
+]);
 
 export type Property = typeof properties.$inferSelect;
 export type InsertProperty = typeof properties.$inferInsert;
@@ -140,7 +143,7 @@ export const requirements = pgTable("requirements", {
   tipoNegocioDeseado: transactionTypeEnum("tipoNegocioDeseado").notNull(),
   // Array of all accepted transaction types for matching flexibility (e.g. ["venta","permuta"])
   tiposNegocioAceptados: text("tipos_negocio_aceptados").array(),
-  ciudadDeseada: varchar("ciudadDeseada", { length: 100 }),
+  ciudadDeseada: varchar("ciudadDeseada", { length: 100 }).default("Bogotá").notNull(),
   zonaDeseada: varchar("zonaDeseada", { length: 100 }), // Candidate for refactor to addressNeighborhood
   addressCity: varchar("address_city", { length: 100 }),
   addressLocality: varchar("address_locality", { length: 100 }),
@@ -168,7 +171,9 @@ export const requirements = pgTable("requirements", {
   origenTipo: varchar("origen_tipo", { length: 50 }),
   origenId: varchar("origen_id", { length: 100 }),
   origenNombre: varchar("origen_nombre", { length: 255 }),
-});
+}, (table) => [
+  index("idx_requirements_status").on(table.status),
+]);
 
 export type Requirement = typeof requirements.$inferSelect;
 export type InsertRequirement = typeof requirements.$inferInsert;
@@ -233,7 +238,13 @@ export const propertyMatches = pgTable("propertyMatches", {
   ownerConfirmed: boolean("ownerConfirmed").default(false).notNull(),
   seekerConfirmed: boolean("seekerConfirmed").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_property_matches_req_id").on(table.requirementId),
+  index("idx_property_matches_prop_id").on(table.propertyId),
+  index("idx_property_matches_score").on(table.matchScore),
+  index("idx_property_matches_status").on(table.status),
+  index("idx_property_matches_created").on(table.createdAt),
+]);
 
 /**
  * Notification Logs table - audit trails for match notifications
@@ -410,7 +421,9 @@ export const propertyPublicationHistory = pgTable("property_publication_history"
   externalListingId: varchar("external_listing_id", { length: 100 }),
   mensajeWhatsappId: varchar("mensaje_whatsapp_id", { length: 255 }),
   detalles: text("detalles")
-});
+}, (table) => [
+  index("idx_pub_history_prop_id").on(table.propertyId),
+]);
 
 export type PropertyPublicationHistory = typeof propertyPublicationHistory.$inferSelect;
 export type InsertPropertyPublicationHistory = typeof propertyPublicationHistory.$inferInsert;

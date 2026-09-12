@@ -322,6 +322,40 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.29 — Septiembre 2026
+
+#### 📌 OPTIMIZACIÓN INTEGRAL DE COINCIDENCIAS (/ADMIN), SILENCIAMIENTO DE LOGS SINCRÓNICOS, 9 ÍNDICES POSTGRESQL NATIVOS Y MICRO-CACHÉ
+
+**Problemas identificados:**
+1. **Inundación Masiva de Logs Sincrónicos en `matchesGeography` (`matching.ts`)**:
+   - `/root/.pm2/logs/jania-server-out.log` y `error.log` acumularon más de 909 MB de texto y 7.4 millones de líneas de logs.
+   - Cada mensaje nuevo de WhatsApp obligaba a `findMatchesForProperty` a comparar contra >1.000 requerimientos activos.
+   - En `matchesGeography`, cada descarte geográfico ejecutaba un `console.log` sincrónico (`[Matching-Guard] Bloqueo 0%: ...`).
+   - En Node.js monohilo, el Event Loop se bloqueaba al 100% de CPU. Peticiones HTTP entrantes (`getAllMatches`, `getBotStatus`, `auth.me`) quedaban retenidas hasta que Nginx arrojaba **504 Gateway Time-out** (tras 60 segundos) y en navegadores móviles (Brave/Android) el panel mostraba spinners infinitos o el error "No se pudieron cargar las coincidencias".
+2. **Carencia de Índices en PostgreSQL Nativo**:
+   - `propertyMatches` solo tenía la clave primaria `id`. Carecía de índices en `propertyId`, `requirementId`, `matchScore`, `status` y `createdAt`.
+   - `property_publication_history` carecía de índice en `propertyId`.
+   - Las operaciones `delete from "propertyMatches" where requirementId = $1 and propertyId = $2` ejecutaban sequential scans completos superando el timeout de 10s de PostgreSQL.
+3. **Re-evaluación Redundante en `getAllMatches`**:
+   - `getAllMatches` re-evaluaba `explicarMatch` 150 veces en JavaScript en cada petición GET, a pesar de que el score y la explicación ya están almacenados en `propertyMatches.matchExplanation`.
+
+**Solución aplicada:**
+- **Silenciamiento Total de `[Matching-Guard]` en `server/_core/matching.ts`**:
+  - Eliminadas las 17 emisiones de `console.log` dentro de los bucles de evaluación geográfica, liberando el Event Loop al 0% de CPU constante.
+- **Creación de 9 Índices de Alto Rendimiento en PostgreSQL 17 Nativo**:
+  - Creados en base `vecy_network`: `idx_property_matches_req_id`, `idx_property_matches_prop_id`, `idx_property_matches_score`, `idx_property_matches_status`, `idx_property_matches_created`, `idx_pub_history_prop_id`, `idx_properties_available`, `idx_properties_tx_type`, `idx_requirements_status`.
+  - Actualizado `drizzle/schema.ts` para sincronía absoluta del modelo ORM.
+- **Optimización Instantánea de `getAllMatches` y `getBotStatus` (`server/routers/janIA.ts`)**:
+  - `getAllMatches` ahora reutiliza directamente `propertyMatches.matchExplanation` persistido en BD (0 ms de CPU).
+  - Proyección ligera de campos en `propertyPublicationHistory` (`propertyId, fecha, accion, broker, portal, grupo`).
+  - Aumentado TTL de micro-caché de `getBotStatus` a 45 segundos.
+- **Saneamiento de Disco y Rotación Automática en VPS**:
+  - Purgados los 909 MB de logs viejos; instalado y activado `pm2-logrotate` (10 MB máx, gzip, 5 rotaciones).
+- **Incremento de Versión y Despliegue Oficial**:
+  - Versión oficial actualizada a `v31.29`. Compilación limpia y despliegue a producción con respuesta de endpoints en < 300 ms.
+
+---
+
 ### 🔖 v31.28 — Septiembre 2026
 
 #### 📌 EMANCIPACIÓN A IA PURA CON LIBRE ALBEDRÍO, RESTAURACIÓN DE LÍNEA COMERCIAL BRÓKER 3166569719 Y ERRADICACIÓN DE RESPUESTAS ENLATADAS

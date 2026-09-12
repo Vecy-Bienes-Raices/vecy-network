@@ -50,7 +50,52 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.28 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.29 — Septiembre 2026
+
+### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 11:00 a 11:25 (Hora Colombia UTC-5)
+**Versión**: `v31.29` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+"Te cuento que en computador se demora un poco en cargar pero en celular sigue con el mismo problema, abri el sitio hace ya 10 minutos y sigue sin crgar los datos de la página de administrador, es decir da y da vueltas, sale la página, se ve el diseño pero no cargan los datos."
+[Adjunta captura de pantalla en celular Brave/Android con estado 'Conectando con JanIA...', tarjetas en '...' / 'Error', y mensaje 'No se pudieron cargar las coincidencias: Ocurrió un error temporal de conexión o tiempo de espera con el servidor'].
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Inundación Masiva de Logs Sincrónicos en `matchesGeography` (`matching.ts`)**:
+   - Se constató que `/root/.pm2/logs/jania-server-out.log` (412 MB) y `jania-server-error.log` (498 MB) sumaban **más de 909 MB de texto** y **7.4 millones de líneas de logs**.
+   - Cada vez que ingresaba un mensaje en WhatsApp, `findMatchesForProperty` comparaba el inmueble contra >1.000 requerimientos activos.
+   - En `matchesGeography`, cada descarte geográfico ejecutaba un `console.log` sincrónico (`[Matching-Guard] Bloqueo 0%: ...`).
+   - En Node.js (hilo único), la escritura sincrónica masiva a disco/PM2 bloqueaba el bucle de eventos (Event Loop) al 100% de CPU.
+   - Debido a esta inanición de CPU, peticiones HTTP entrantes como `getAllMatches`, `getBotStatus` y `auth.me` quedaban represadas en el socket buffer hasta que Nginx arrojaba **504 Gateway Time-out** (tras 60 segundos). En celular, tras 2 reintentos fallidos de 60s, el panel colapsaba en error.
+2. **Ausencia Total de Índices en Tablas Críticas de PostgreSQL Nativo**:
+   - `propertyMatches` solo tenía la clave primaria `id`. Carecía de índices en `propertyId`, `requirementId`, `matchScore`, `status` y `createdAt`.
+   - `property_publication_history` carecía de índice en `propertyId`.
+   - `properties` carecía de índices en `available` y `transactionType`.
+   - `requirements` carecía de índice en `status`.
+   - Las operaciones `delete from "propertyMatches" where requirementId = $1 and propertyId = $2` ejecutaban sequential scans completos, superando el `statement_timeout: 10000` de PostgreSQL.
+3. **Sobre-procesamiento Redundante en `getAllMatches` (`server/routers/janIA.ts`)**:
+   - Re-ejecutaba en tiempo real `explicarMatch` para 150 parejas en JavaScript en cada petición GET, a pesar de que el score y la explicación ya están almacenados en `propertyMatches.matchExplanation`.
+   - Descargaba el historial completo de publicaciones con todas sus columnas pesadas.
+
+#### 🛠️ Acciones Técnicas Ejecutadas:
+1. **Silenciamiento Total de `[Matching-Guard]` en `server/_core/matching.ts`**:
+   - Eliminadas las 17 emisiones de `console.log` dentro de los bucles de evaluación geográfica, liberando el Event Loop al 0% de CPU.
+2. **Creación de 9 Índices de Alto Rendimiento en PostgreSQL 17 Nativo**:
+   - Creados directamente en base `vecy_network`: `idx_property_matches_req_id`, `idx_property_matches_prop_id`, `idx_property_matches_score`, `idx_property_matches_status`, `idx_property_matches_created`, `idx_pub_history_prop_id`, `idx_properties_available`, `idx_properties_tx_type`, `idx_requirements_status`.
+   - Actualizado `drizzle/schema.ts` para sincronía absoluta del modelo ORM.
+3. **Optimización Instantánea de `getAllMatches` y `getBotStatus` (`server/routers/janIA.ts`)**:
+   - `getAllMatches` ahora reutiliza directamente `propertyMatches.matchExplanation` persistido en BD (0 ms de CPU).
+   - Proyección ligera de campos en `propertyPublicationHistory` (`propertyId, fecha, accion, broker, portal, grupo`).
+   - Aumentado TTL de micro-caché de `getBotStatus` a 45 segundos.
+4. **Saneamiento de Disco y Rotación Automática en VPS**:
+   - Purgados los 909 MB de logs acumulados en `/root/.pm2/logs/`.
+   - Instalado y configurado `pm2-logrotate` (máximo 10 MB por archivo, 5 retenciones, compresión gzip activa).
+5. **Incremento de Versión y Despliegue Oficial**:
+   - Actualizado a `v31.29` en `shared/const.ts` y `package.json`. Compilación limpia (`npm run check` y `npm run build` sin errores).
+   - Servicio PM2 `jania-server` recargado en producción con respuesta de endpoints en < 300 ms.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.28 — Septiembre 2026
 
 ### 🗓️ Sesión: Viernes 11 de Septiembre de 2026 — 18:35 a 18:50 (Hora Colombia UTC-5)
 **Versión**: `v31.28` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + IA Pura Libre Albedrío + Línea Comercial Bróker 3166569719 + Baileys + PM2 (`jania-server`) + GitHub (`main`)

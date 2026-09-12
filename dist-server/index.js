@@ -52,7 +52,7 @@ __export(schema_exports, {
   users: () => users,
   zoneAliases: () => zoneAliases
 });
-import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb, bigint, uuid } from "drizzle-orm/pg-core";
+import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb, bigint, uuid, index } from "drizzle-orm/pg-core";
 var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, notificationLogs, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes, propertyPublicationHistory, userBehavioralFingerprints, userPatterns, zoneAliases, inmobiliarioLexicon, matchFeedback;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
@@ -191,7 +191,10 @@ var init_schema = __esm({
       estadoComercial: varchar("estado_comercial", { length: 50 }).default("ACTIVO").notNull(),
       ultimaActividad: varchar("ultima_actividad", { length: 50 }).default("PUBLICACI\xD3N").notNull(),
       vigenciaIa: varchar("vigencia_ia", { length: 50 }).default("VIGENTE").notNull()
-    });
+    }, (table) => [
+      index("idx_properties_available").on(table.available),
+      index("idx_properties_tx_type").on(table.transactionType)
+    ]);
     requirements = pgTable("requirements", {
       id: serial("id").primaryKey(),
       userId: integer("userId").references(() => users.id),
@@ -200,7 +203,7 @@ var init_schema = __esm({
       tipoNegocioDeseado: transactionTypeEnum("tipoNegocioDeseado").notNull(),
       // Array of all accepted transaction types for matching flexibility (e.g. ["venta","permuta"])
       tiposNegocioAceptados: text("tipos_negocio_aceptados").array(),
-      ciudadDeseada: varchar("ciudadDeseada", { length: 100 }),
+      ciudadDeseada: varchar("ciudadDeseada", { length: 100 }).default("Bogot\xE1").notNull(),
       zonaDeseada: varchar("zonaDeseada", { length: 100 }),
       // Candidate for refactor to addressNeighborhood
       addressCity: varchar("address_city", { length: 100 }),
@@ -231,7 +234,9 @@ var init_schema = __esm({
       origenTipo: varchar("origen_tipo", { length: 50 }),
       origenId: varchar("origen_id", { length: 100 }),
       origenNombre: varchar("origen_nombre", { length: 255 })
-    });
+    }, (table) => [
+      index("idx_requirements_status").on(table.status)
+    ]);
     leads = pgTable("leads", {
       id: serial("id").primaryKey(),
       name: varchar("name", { length: 255 }).notNull(),
@@ -280,7 +285,13 @@ var init_schema = __esm({
       ownerConfirmed: boolean("ownerConfirmed").default(false).notNull(),
       seekerConfirmed: boolean("seekerConfirmed").default(false).notNull(),
       createdAt: timestamp("createdAt").defaultNow().notNull()
-    });
+    }, (table) => [
+      index("idx_property_matches_req_id").on(table.requirementId),
+      index("idx_property_matches_prop_id").on(table.propertyId),
+      index("idx_property_matches_score").on(table.matchScore),
+      index("idx_property_matches_status").on(table.status),
+      index("idx_property_matches_created").on(table.createdAt)
+    ]);
     notificationLogs = pgTable("notificationLogs", {
       id: serial("id").primaryKey(),
       matchId: integer("matchId").references(() => propertyMatches.id),
@@ -421,7 +432,9 @@ var init_schema = __esm({
       externalListingId: varchar("external_listing_id", { length: 100 }),
       mensajeWhatsappId: varchar("mensaje_whatsapp_id", { length: 255 }),
       detalles: text("detalles")
-    });
+    }, (table) => [
+      index("idx_pub_history_prop_id").on(table.propertyId)
+    ]);
     userBehavioralFingerprints = pgTable("user_behavioral_fingerprints", {
       id: serial("id").primaryKey(),
       userId: integer("userId").references(() => users.id),
@@ -3868,15 +3881,12 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
     for (const [barrioKey, bounds] of Object.entries(BOGOTA_BARRIO_STREET_BOUNDS)) {
       if (propCleanNorm.includes(barrioKey)) {
         if (bounds.maxStreet < reqBoundaries.minStreet || bounds.minStreet > reqBoundaries.maxStreet) {
-          console.log(`[Matching-Guard] Bloqueo 0%: Barrio de oferta '${barrioKey}' (Calles ${bounds.minStreet}-${bounds.maxStreet}) fuera del per\xEDmetro exigido (Calles ${reqBoundaries.minStreet}-${reqBoundaries.maxStreet})`);
           return { matches: false, score: 0 };
         }
         if (reqBoundaries.maxCarrera && bounds.minCra && bounds.minCra > reqBoundaries.maxCarrera) {
-          console.log(`[Matching-Guard] Bloqueo 0%: Barrio de oferta '${barrioKey}' (Cra ${bounds.minCra}+) supera carrera m\xE1xima exigida (${reqBoundaries.maxCarrera})`);
           return { matches: false, score: 0 };
         }
         if (reqBoundaries.minCarrera && bounds.maxCra && bounds.maxCra < reqBoundaries.minCarrera) {
-          console.log(`[Matching-Guard] Bloqueo 0%: Barrio de oferta '${barrioKey}' (Cra <=${bounds.maxCra}) por debajo de carrera m\xEDnima exigida (${reqBoundaries.minCarrera})`);
           return { matches: false, score: 0 };
         }
         break;
@@ -3926,7 +3936,6 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   ];
   const propIsUrbanBogota = bogotaUrbanSectors.some((sec) => propFullNorm.includes(sec));
   if (reqAskaSabana && propIsUrbanBogota) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento busca Sabana Norte (${reqZoneRaw}) pero inmueble est\xE1 en Bogot\xE1 Urbano (${propZoneRaw})`);
     return { matches: false, score: 0 };
   }
   const isSantaBarbaraProp = propFullNorm.includes("santa barbara");
@@ -3935,7 +3944,6 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   const isVirreyProp = propFullNorm.includes("virrey") || propFullNorm.includes("rincon del chico");
   if (isSantaBarbaraProp && isVirreyReq || isSantaBarbaraReq && isVirreyProp) {
     if (!hasAledanos(reqZoneRaw) && !hasAledanos(propZoneRaw)) {
-      console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad geogr\xE1fica entre Santa B\xE1rbara y Virrey / Rinc\xF3n del Chic\xF3 ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
       return { matches: false, score: 0 };
     }
   }
@@ -3950,7 +3958,6 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   const isChicoTradicionalReq = (reqFullNorm.includes("chico") || reqFullNorm.includes("chic\xF3")) && !isChicoNavarraReq;
   const isChicoTradicionalProp = (propFullNorm.includes("chico") || propFullNorm.includes("chic\xF3")) && !isChicoNavarraProp;
   if (isChicoNavarraReq && isChicoTradicionalProp || isChicoTradicionalReq && isChicoNavarraProp) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Chic\xF3 Usaqu\xE9n (Navarra / Rinc\xF3n del Chic\xF3 Cll >= 100) vs Chic\xF3 Chapinero ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
   const isRosalesAltoReq = reqFullNorm.includes("rosales alto") || reqFullNorm.includes("rosales parte alta") || reqFullNorm.includes("rosales arriba");
@@ -3958,7 +3965,6 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   const isRosalesAltoProp = propFullNorm.includes("rosales alto") || propFullNorm.includes("rosales parte alta") || propFullNorm.includes("rosales arriba");
   const isRosalesBajoProp = propFullNorm.includes("rosales bajo") || propFullNorm.includes("rosales parte baja") || propFullNorm.includes("rosales abajo") || propFullNorm.includes("rosales plano");
   if (isRosalesBajoReq && isRosalesAltoProp || isRosalesAltoReq && isRosalesBajoProp) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Rosales Alto vs Rosales Bajo ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
   const isCjNorteReq = reqFullNorm.includes("ciudad jardin norte") || reqFullNorm.includes("ciudad jardin (norte)");
@@ -3966,7 +3972,6 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   const isCjNorteProp = propFullNorm.includes("ciudad jardin norte") || propFullNorm.includes("ciudad jardin (norte)");
   const isCjSurProp = propFullNorm.includes("ciudad jardin sur") || propFullNorm.includes("ciudad jardin (sur)");
   if (isCjNorteReq && isCjSurProp || isCjSurReq && isCjNorteProp) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Ciudad Jard\xEDn Norte vs Ciudad Jard\xEDn Sur ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
   const isAlamosNorteReq = reqFullNorm.includes("alamos norte") || reqFullNorm.includes("\xE1lamos norte");
@@ -3974,7 +3979,6 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   const isAlamosNorteProp = propFullNorm.includes("alamos norte") || propFullNorm.includes("\xE1lamos norte");
   const isAlamosSurProp = propFullNorm.includes("alamos sur") || propFullNorm.includes("\xE1lamos sur");
   if (isAlamosNorteReq && isAlamosSurProp || isAlamosSurReq && isAlamosNorteProp) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad \xC1lamos Norte vs \xC1lamos Sur ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
   const isCandelariaCentroReq = reqFullNorm.includes("candelaria centro") || reqFullNorm.includes("candelaria") && !reqFullNorm.includes("nueva") && !reqFullNorm.includes("sur");
@@ -3982,7 +3986,6 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   const isCandelariaCentroProp = propFullNorm.includes("candelaria centro") || propFullNorm.includes("candelaria") && !propFullNorm.includes("nueva") && !propFullNorm.includes("sur");
   const isCandelariaSurProp = propFullNorm.includes("candelaria la nueva") || propFullNorm.includes("candelaria sur");
   if (isCandelariaCentroReq && isCandelariaSurProp || isCandelariaSurReq && isCandelariaCentroProp) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad La Candelaria Centro vs Candelaria Sur/La Nueva ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
   const isCallejaAltaReq = reqFullNorm.includes("calleja alta") || reqFullNorm.includes("la calleja alta");
@@ -3990,7 +3993,6 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   const isCallejaAltaProp = propFullNorm.includes("calleja alta") || propFullNorm.includes("la calleja alta");
   const isCallejaBajaProp = propFullNorm.includes("calleja baja") || propFullNorm.includes("la calleja baja");
   if (isCallejaAltaReq && isCallejaBajaProp || isCallejaBajaReq && isCallejaAltaProp) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Calleja Alta vs Calleja Baja ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
   const isVirreySpecificReq = (reqFullNorm.includes("virrey") || reqFullNorm.includes("parque el virrey")) && !reqFullNorm.includes("nogal") && !reqFullNorm.includes("rincon del chico") && !reqFullNorm.includes("rinc\xF3n del chic\xF3");
@@ -3999,7 +4001,6 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   const isPoloProp = propFullNorm.includes("polo club") || propFullNorm.includes("polo");
   if (isVirreySpecificReq && (isNogalProp || isRinconProp || isPoloProp)) {
     if (!hasAledanos(reqZoneRaw)) {
-      console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento pide El Virrey pero oferta es incompatible ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
       return { matches: false, score: 0 };
     }
   }
@@ -4008,26 +4009,22 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   const isRinconReq = (reqFullNorm.includes("rincon del chico") || reqFullNorm.includes("rinc\xF3n del chic\xF3")) && !reqFullNorm.includes("virrey");
   if (isVirreyPropSpecific && (isNogalReq || isRinconReq)) {
     if (!hasAledanos(reqZoneRaw)) {
-      console.log(`[Matching-Guard] Bloqueo 0%: Oferta en El Virrey incompatible con demanda ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
       return { matches: false, score: 0 };
     }
   }
   const isRosalesReqOnly = (reqFullNorm.includes("rosales") || reqFullNorm.includes("los rosales")) && !reqFullNorm.includes("chico") && !reqFullNorm.includes("chic\xF3") && !hasAledanos(reqZoneRaw);
   const isChicoPropOnly = (propFullNorm.includes("chico") || propFullNorm.includes("chic\xF3")) && !propFullNorm.includes("chico navarra") && !propFullNorm.includes("rosales");
   if (isRosalesReqOnly && isChicoPropOnly) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento exclusivo en Rosales incompatible con oferta en Chic\xF3 ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
   const isChicoReqOnly = (reqFullNorm.includes("chico") || reqFullNorm.includes("chic\xF3")) && !reqFullNorm.includes("chico navarra") && !reqFullNorm.includes("rosales") && !hasAledanos(reqZoneRaw);
   const isRosalesPropOnly = (propFullNorm.includes("rosales") || propFullNorm.includes("los rosales")) && !propFullNorm.includes("chico") && !propFullNorm.includes("chic\xF3");
   if (isChicoReqOnly && isRosalesPropOnly) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento exclusivo en Chic\xF3 incompatible con oferta en Rosales ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
   const isNogalReqOnly = (reqFullNorm.includes("el nogal") || reqFullNorm.includes("nogal")) && !reqFullNorm.includes("chico") && !reqFullNorm.includes("chic\xF3") && !hasAledanos(reqZoneRaw);
   const isChicoNortePropOnly = (propFullNorm.includes("chico norte") || propFullNorm.includes("chico reservado")) && !propFullNorm.includes("nogal");
   if (isNogalReqOnly && isChicoNortePropOnly) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento exclusivo en El Nogal incompatible con oferta en Chic\xF3 Norte/Reservado ('${reqZoneRaw}' \u2194 '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
   const GENERIC_CARDINAL_TERMS = /* @__PURE__ */ new Set([
@@ -4067,7 +4064,6 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
   if (isReqGeneric || isPropGeneric) {
     const hasStreetBoundaryMatch = propNumbers.street && reqBoundaries.minStreet !== void 0 && reqBoundaries.maxStreet !== void 0 && propNumbers.street >= reqBoundaries.minStreet && propNumbers.street <= reqBoundaries.maxStreet || propNumbers.carrera && reqBoundaries.minCarrera !== void 0 && reqBoundaries.maxCarrera !== void 0 && propNumbers.carrera >= reqBoundaries.minCarrera && propNumbers.carrera <= reqBoundaries.maxCarrera;
     if (!hasStreetBoundaryMatch) {
-      console.log(`[Matching-Guard] Bloqueo 0%: Ubicaci\xF3n gen\xE9rica o no especificada en barrio/vereda real ('${reqZoneRaw}' \u2194 '${propZoneRaw}').`);
       return { matches: false, score: 0 };
     }
   }
@@ -15615,7 +15611,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.28";
+var VECY_VERSION = "v31.29";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -16634,6 +16630,8 @@ ${liveStats}${userContextInstruction}
         id: propertyMatches.id,
         matchScore: propertyMatches.matchScore,
         matchReason: propertyMatches.matchReason,
+        matchExplanation: propertyMatches.matchExplanation,
+        ipc: propertyMatches.ipc,
         status: propertyMatches.status,
         ownerConfirmed: propertyMatches.ownerConfirmed,
         seekerConfirmed: propertyMatches.seekerConfirmed,
@@ -16728,11 +16726,14 @@ ${liveStats}${userContextInstruction}
         const key = `${m.property.id}-${m.requirement.id}`;
         if (seenPairs.has(key)) continue;
         if (rejectedPairs.has(`${m.property.id}_${m.requirement.id}`)) continue;
-        const evaluation = explicarMatch(m.requirement, m.property);
-        if (evaluation.score < 75 || evaluation.blockers.length > 0) {
+        let evaluation = m.matchExplanation && m.matchExplanation.score !== void 0 ? m.matchExplanation : null;
+        if (!evaluation) {
+          evaluation = explicarMatch(m.requirement, m.property);
+        }
+        if (evaluation.score < 75 || evaluation.blockers && evaluation.blockers.length > 0) {
           continue;
         }
-        const finalScore = evaluation.score;
+        const finalScore = Number(evaluation.score || m.matchScore || 0);
         seenPairs.add(key);
         validEvaluatedMatches.push({
           ...m,
@@ -16747,7 +16748,15 @@ ${liveStats}${userContextInstruction}
       let finalMatches = validEvaluatedMatches;
       const propertyIds = validEvaluatedMatches.map((m) => m.property.id).filter(Boolean);
       if (propertyIds.length > 0) {
-        const histories = await db.select().from(propertyPublicationHistory).where(inArray(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc2(propertyPublicationHistory.fecha));
+        const histories = await db.select({
+          id: propertyPublicationHistory.id,
+          propertyId: propertyPublicationHistory.propertyId,
+          fecha: propertyPublicationHistory.fecha,
+          accion: propertyPublicationHistory.accion,
+          broker: propertyPublicationHistory.broker,
+          portal: propertyPublicationHistory.portal,
+          grupo: propertyPublicationHistory.grupo
+        }).from(propertyPublicationHistory).where(inArray(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc2(propertyPublicationHistory.fecha));
         finalMatches = validEvaluatedMatches.map((m) => {
           const propertyHistory = histories.filter((h) => h.propertyId === m.property.id);
           return {
@@ -17357,7 +17366,7 @@ ${liveStats}${userContextInstruction}
   // Get current WhatsApp bot connection status and ingestion stats
   getBotStatus: publicProcedure.query(async () => {
     const now = Date.now();
-    if (cachedBotStatusData && now - cachedBotStatusTime < 15e3) {
+    if (cachedBotStatusData && now - cachedBotStatusTime < 45e3) {
       return cachedBotStatusData;
     }
     try {

@@ -602,15 +602,12 @@ export function matchesGeography(
       if (propCleanNorm.includes(barrioKey)) {
         // Validar si el rango de calles del barrio ofertado tiene solapamiento con el perímetro exigido
         if (bounds.maxStreet < reqBoundaries.minStreet || bounds.minStreet > reqBoundaries.maxStreet) {
-          console.log(`[Matching-Guard] Bloqueo 0%: Barrio de oferta '${barrioKey}' (Calles ${bounds.minStreet}-${bounds.maxStreet}) fuera del perímetro exigido (Calles ${reqBoundaries.minStreet}-${reqBoundaries.maxStreet})`);
           return { matches: false, score: 0 };
         }
         if (reqBoundaries.maxCarrera && bounds.minCra && bounds.minCra > reqBoundaries.maxCarrera) {
-          console.log(`[Matching-Guard] Bloqueo 0%: Barrio de oferta '${barrioKey}' (Cra ${bounds.minCra}+) supera carrera máxima exigida (${reqBoundaries.maxCarrera})`);
           return { matches: false, score: 0 };
         }
         if (reqBoundaries.minCarrera && bounds.maxCra && bounds.maxCra < reqBoundaries.minCarrera) {
-          console.log(`[Matching-Guard] Bloqueo 0%: Barrio de oferta '${barrioKey}' (Cra <=${bounds.maxCra}) por debajo de carrera mínima exigida (${reqBoundaries.minCarrera})`);
           return { matches: false, score: 0 };
         }
         break;
@@ -640,7 +637,6 @@ export function matchesGeography(
   const propIsUrbanBogota = bogotaUrbanSectors.some(sec => propFullNorm.includes(sec));
 
   if (reqAskaSabana && propIsUrbanBogota) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento busca Sabana Norte (${reqZoneRaw}) pero inmueble está en Bogotá Urbano (${propZoneRaw})`);
     return { matches: false, score: 0 };
   }
 
@@ -651,7 +647,6 @@ export function matchesGeography(
   const isVirreyProp = propFullNorm.includes("virrey") || propFullNorm.includes("rincon del chico");
   if ((isSantaBarbaraProp && isVirreyReq) || (isSantaBarbaraReq && isVirreyProp)) {
     if (!hasAledanos(reqZoneRaw) && !hasAledanos(propZoneRaw)) {
-      console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad geográfica entre Santa Bárbara y Virrey / Rincón del Chicó ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
       return { matches: false, score: 0 };
     }
   }
@@ -677,7 +672,6 @@ export function matchesGeography(
   const isChicoTradicionalProp = (propFullNorm.includes("chico") || propFullNorm.includes("chicó")) && !isChicoNavarraProp;
 
   if ((isChicoNavarraReq && isChicoTradicionalProp) || (isChicoTradicionalReq && isChicoNavarraProp)) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Chicó Usaquén (Navarra / Rincón del Chicó Cll >= 100) vs Chicó Chapinero ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
 
@@ -691,7 +685,6 @@ export function matchesGeography(
   const isRosalesBajoProp = propFullNorm.includes("rosales bajo") || propFullNorm.includes("rosales parte baja") || propFullNorm.includes("rosales abajo") || propFullNorm.includes("rosales plano");
 
   if ((isRosalesBajoReq && isRosalesAltoProp) || (isRosalesAltoReq && isRosalesBajoProp)) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Rosales Alto vs Rosales Bajo ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
 
@@ -701,7 +694,6 @@ export function matchesGeography(
   const isCjNorteProp = propFullNorm.includes("ciudad jardin norte") || propFullNorm.includes("ciudad jardin (norte)");
   const isCjSurProp = propFullNorm.includes("ciudad jardin sur") || propFullNorm.includes("ciudad jardin (sur)");
   if ((isCjNorteReq && isCjSurProp) || (isCjSurReq && isCjNorteProp)) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Ciudad Jardín Norte vs Ciudad Jardín Sur ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
 
@@ -710,7 +702,6 @@ export function matchesGeography(
   const isAlamosNorteProp = propFullNorm.includes("alamos norte") || propFullNorm.includes("álamos norte");
   const isAlamosSurProp = propFullNorm.includes("alamos sur") || propFullNorm.includes("álamos sur");
   if ((isAlamosNorteReq && isAlamosSurProp) || (isAlamosSurReq && isAlamosNorteProp)) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Álamos Norte vs Álamos Sur ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
 
@@ -719,7 +710,6 @@ export function matchesGeography(
   const isCandelariaCentroProp = propFullNorm.includes("candelaria centro") || (propFullNorm.includes("candelaria") && !propFullNorm.includes("nueva") && !propFullNorm.includes("sur"));
   const isCandelariaSurProp = propFullNorm.includes("candelaria la nueva") || propFullNorm.includes("candelaria sur");
   if ((isCandelariaCentroReq && isCandelariaSurProp) || (isCandelariaSurReq && isCandelariaCentroProp)) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad La Candelaria Centro vs Candelaria Sur/La Nueva ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
 
@@ -728,7 +718,6 @@ export function matchesGeography(
   const isCallejaAltaProp = propFullNorm.includes("calleja alta") || propFullNorm.includes("la calleja alta");
   const isCallejaBajaProp = propFullNorm.includes("calleja baja") || propFullNorm.includes("la calleja baja");
   if ((isCallejaAltaReq && isCallejaBajaProp) || (isCallejaBajaReq && isCallejaAltaProp)) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Incompatibilidad Calleja Alta vs Calleja Baja ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
 
@@ -742,7 +731,6 @@ export function matchesGeography(
 
   if (isVirreySpecificReq && (isNogalProp || isRinconProp || isPoloProp)) {
     if (!hasAledanos(reqZoneRaw)) {
-      console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento pide El Virrey pero oferta es incompatible ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
       return { matches: false, score: 0 };
     }
   }
@@ -753,7 +741,6 @@ export function matchesGeography(
   const isRinconReq = (reqFullNorm.includes("rincon del chico") || reqFullNorm.includes("rincón del chicó")) && !reqFullNorm.includes("virrey");
   if (isVirreyPropSpecific && (isNogalReq || isRinconReq)) {
     if (!hasAledanos(reqZoneRaw)) {
-      console.log(`[Matching-Guard] Bloqueo 0%: Oferta en El Virrey incompatible con demanda ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
       return { matches: false, score: 0 };
     }
   }
@@ -764,14 +751,12 @@ export function matchesGeography(
   const isRosalesReqOnly = (reqFullNorm.includes("rosales") || reqFullNorm.includes("los rosales")) && !reqFullNorm.includes("chico") && !reqFullNorm.includes("chicó") && !hasAledanos(reqZoneRaw);
   const isChicoPropOnly = (propFullNorm.includes("chico") || propFullNorm.includes("chicó")) && !propFullNorm.includes("chico navarra") && !propFullNorm.includes("rosales");
   if (isRosalesReqOnly && isChicoPropOnly) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento exclusivo en Rosales incompatible con oferta en Chicó ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
 
   const isChicoReqOnly = (reqFullNorm.includes("chico") || reqFullNorm.includes("chicó")) && !reqFullNorm.includes("chico navarra") && !reqFullNorm.includes("rosales") && !hasAledanos(reqZoneRaw);
   const isRosalesPropOnly = (propFullNorm.includes("rosales") || propFullNorm.includes("los rosales")) && !propFullNorm.includes("chico") && !propFullNorm.includes("chicó");
   if (isChicoReqOnly && isRosalesPropOnly) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento exclusivo en Chicó incompatible con oferta en Rosales ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
 
@@ -780,7 +765,6 @@ export function matchesGeography(
   const isNogalReqOnly = (reqFullNorm.includes("el nogal") || reqFullNorm.includes("nogal")) && !reqFullNorm.includes("chico") && !reqFullNorm.includes("chicó") && !hasAledanos(reqZoneRaw);
   const isChicoNortePropOnly = (propFullNorm.includes("chico norte") || propFullNorm.includes("chico reservado")) && !propFullNorm.includes("nogal");
   if (isNogalReqOnly && isChicoNortePropOnly) {
-    console.log(`[Matching-Guard] Bloqueo 0%: Requerimiento exclusivo en El Nogal incompatible con oferta en Chicó Norte/Reservado ('${reqZoneRaw}' ↔ '${propZoneRaw}')`);
     return { matches: false, score: 0 };
   }
 
@@ -802,7 +786,6 @@ export function matchesGeography(
     const hasStreetBoundaryMatch = (propNumbers.street && reqBoundaries.minStreet !== undefined && reqBoundaries.maxStreet !== undefined && propNumbers.street >= reqBoundaries.minStreet && propNumbers.street <= reqBoundaries.maxStreet)
       || (propNumbers.carrera && reqBoundaries.minCarrera !== undefined && reqBoundaries.maxCarrera !== undefined && propNumbers.carrera >= reqBoundaries.minCarrera && propNumbers.carrera <= reqBoundaries.maxCarrera);
     if (!hasStreetBoundaryMatch) {
-      console.log(`[Matching-Guard] Bloqueo 0%: Ubicación genérica o no especificada en barrio/vereda real ('${reqZoneRaw}' ↔ '${propZoneRaw}').`);
       return { matches: false, score: 0 };
     }
   }

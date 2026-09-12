@@ -493,6 +493,8 @@ export const janIARouter = router({
             id: propertyMatches.id,
             matchScore: propertyMatches.matchScore,
             matchReason: propertyMatches.matchReason,
+            matchExplanation: propertyMatches.matchExplanation,
+            ipc: propertyMatches.ipc,
             status: propertyMatches.status,
             ownerConfirmed: propertyMatches.ownerConfirmed,
             seekerConfirmed: propertyMatches.seekerConfirmed,
@@ -599,16 +601,21 @@ export const janIARouter = router({
           if (seenPairs.has(key)) continue; // Eliminar duplicados
           if (rejectedPairs.has(`${m.property.id}_${m.requirement.id}`)) continue; // Veto Doctrinal Humano (v31.4)
 
-          // Re-evaluar en tiempo real con el motor de guillotinas estrictas (explicarMatch)
-          const evaluation = explicarMatch(m.requirement, m.property);
+          // Reutilizar explicación precalculada persistida en BD para 0ms de CPU; fallback a motor si falta
+          let evaluation = (m.matchExplanation && (m.matchExplanation as any).score !== undefined)
+            ? (m.matchExplanation as any)
+            : null;
 
-          // Si el score recalculado en tiempo real es menor a 75% o falla cualquier filtro duro -> Descartar
-          if (evaluation.score < 75 || evaluation.blockers.length > 0) {
+          if (!evaluation) {
+            evaluation = explicarMatch(m.requirement, m.property);
+          }
+
+          // Si el score es menor a 75% o falla cualquier filtro duro -> Descartar
+          if (evaluation.score < 75 || (evaluation.blockers && evaluation.blockers.length > 0)) {
             continue;
           }
 
-          const finalScore = evaluation.score;
-
+          const finalScore = Number(evaluation.score || m.matchScore || 0);
 
           seenPairs.add(key);
           validEvaluatedMatches.push({
@@ -626,7 +633,15 @@ export const janIARouter = router({
         const propertyIds = validEvaluatedMatches.map(m => m.property.id).filter(Boolean);
         if (propertyIds.length > 0) {
           const histories = await db
-            .select()
+            .select({
+              id: propertyPublicationHistory.id,
+              propertyId: propertyPublicationHistory.propertyId,
+              fecha: propertyPublicationHistory.fecha,
+              accion: propertyPublicationHistory.accion,
+              broker: propertyPublicationHistory.broker,
+              portal: propertyPublicationHistory.portal,
+              grupo: propertyPublicationHistory.grupo,
+            })
             .from(propertyPublicationHistory)
             .where(inArray(propertyPublicationHistory.propertyId, propertyIds))
             .orderBy(desc(propertyPublicationHistory.fecha));
@@ -1354,7 +1369,7 @@ export const janIARouter = router({
   // Get current WhatsApp bot connection status and ingestion stats
   getBotStatus: publicProcedure.query(async () => {
     const now = Date.now();
-    if (cachedBotStatusData && (now - cachedBotStatusTime) < 15000) {
+    if (cachedBotStatusData && (now - cachedBotStatusTime) < 45000) {
       return cachedBotStatusData;
     }
 
