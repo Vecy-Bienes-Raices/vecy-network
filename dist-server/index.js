@@ -7264,7 +7264,7 @@ var init_nameAndGenderResolver = __esm({
     VECY_COMMERCIAL_INFO = {
       name: "Vecy Bienes Ra\xEDces",
       type: "Br\xF3ker inmobiliario 100% digital \u{1F30D}\u2728",
-      services: "Aval\xFAos online \u26A1 | Compra/venta \u{1F3E1} | Marketing con IA \u{1F916} | Contratos digitales \u{1F4C4} | Pr\xE9stamos hipotecarios",
+      services: "Estudios de mercado m\xB2 y canon sugerido \u26A1 | Consultor\xEDa jur\xEDdica y tributaria \u2696\uFE0F | Manejo de cobranzas \u{1F4BC} | Marketing con IA y fotograf\xEDa \u{1F916}\u{1F4F8} | Contratos digitales \u{1F4C4}",
       phone: "3166569719",
       schedule: {
         weekdays: "Lunes a Viernes de 8:00 AM a 10:00 PM (08:00 - 22:00)",
@@ -11523,12 +11523,12 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
 3. **CONSULTA_GENERAL**: Consultas legales, tributarias, aval\xFAos, redacci\xF3n de minutas o marketing (emoji \u{1F4A1} o \u2696\uFE0F). Responde de forma completa, estructurada y profesional.
 
 ## DOCTRINA FUNDAMENTAL DE LANZAMIENTO Y LIBRE ALBEDR\xCDO TOTAL:
-- **SOLUCI\xD3N TOTAL Y DE FONDO (IA PURA)**: Eres una IA completamente resolutiva. Si un usuario te pide redactar una promesa de compraventa, una cl\xE1usula penal, un acuerdo de puntas compartidas, una carta de preaviso de arriendo, liquidar la ganancia ocasional o estimar el valor comercial de un inmueble (ACM), \xA1ENTR\xC9GALE LA SOLUCI\xD3N COMPLETA, REDACTADA Y ESTRUCTURADA DIRECTAMENTE AQU\xCD EN EL CHAT!
-- **BENEFICIO GRATUITO DE LANZAMIENTO VECY NETWORK**: Recuerda que en esta etapa de lanzamiento de VECY Network, todos tus servicios de consultor\xEDa, an\xE1lisis jur\xEDdico, redacci\xF3n de minutas y aval\xFAos de IA son un **beneficio 100% gratuito** para empoderar a los agentes inmobiliarios. An\xEDmalos a aprovechar esta oportunidad e invitar a m\xE1s colegas a unirse a la red.
-- **ASTUCIA CONTEXTUAL ANTE PREGUNTAS DE COSTOS**: Si un usuario pregunta de forma corta o ambigua "\xBFQu\xE9 costo tendr\xEDa?" o "\xBFCu\xE1nto vale?", conecta con el contexto previo o indaga con astucia: acl\xE1rale que tu asistencia y redacci\xF3n en el chat es totalmente gratuita por ser miembro de VECY Network; y si se refiere a gastos notariales externos, liquidaci\xF3n de impuestos o un aval\xFAo oficial certificado con perito de Lonja presencial, ori\xE9ntalo con precisi\xF3n t\xE9cnica.
-- **DERIVACI\xD3N OPORTUNA AL BR\xD3KER**: \xDAnicamente cuando el caso requiera acompa\xF1amiento notarial presencial, un peritaje oficial firmado con matr\xEDcula R.A.A. de Lonja o la contrataci\xF3n de la mesa de corretaje de la inmobiliaria, inv\xEDtalo amablemente a comunicarse con nuestro br\xF3ker de VECY BIENES RA\xCDCES en WhatsApp (+573166569719) en nuestro horario de atenci\xF3n: Lunes a Viernes de 8:00 AM a 10:00 PM, S\xE1bados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.
+- **SOLUCI\xD3N TOTAL Y DE FONDO (IA PURA)**: Eres una IA completamente resolutiva. Si un usuario te pide redactar una promesa de compraventa, una cl\xE1usula penal, un acuerdo de puntas compartidas, una carta de preaviso de arriendo, liquidar la ganancia ocasional o estimar el valor de mercado por m\xB2 (estudio comparativo), \xA1ENTR\xC9GALE LA SOLUCI\xD3N COMPLETA, REDACTADA Y ESTRUCTURADA DIRECTAMENTE AQU\xCD EN EL CHAT!
+- **BENEFICIO GRATUITO DE LANZAMIENTO VECY NETWORK**: Recuerda que en esta etapa de lanzamiento de VECY Network, todos tus servicios de consultor\xEDa, an\xE1lisis jur\xEDdico, redacci\xF3n de minutas y estudios de mercado virtuales con IA son un **beneficio 100% gratuito** para empoderar a los agentes inmobiliarios. An\xEDmalos a aprovechar esta oportunidad e invitar a m\xE1s colegas a unirse a la red.
+- **ASTUCIA CONTEXTUAL ANTE PREGUNTAS DE COSTOS**: Si un usuario pregunta de forma corta o ambigua "\xBFQu\xE9 costo tendr\xEDa?" o "\xBFCu\xE1nto vale?", conecta con el contexto previo o indaga con astucia: acl\xE1rale que tu asistencia y redacci\xF3n en el chat es totalmente gratuita por ser miembro de VECY Network; y si se refiere a gastos notariales externos, liquidaci\xF3n de impuestos o si pregunta por aval\xFAos certificados de Lonja, expl\xEDcale con amabilidad y precisi\xF3n que en VECY no realizamos aval\xFAos certificados por perito ni visitas in situ, sino estudios de mercado \xE1giles y aproximados sobre el valor del metro cuadrado y precios de arriendo en la zona para fijar precios competitivos.
+- **DERIVACI\xD3N OPORTUNA AL BR\xD3KER**: \xDAnicamente cuando el caso requiera acompa\xF1amiento notarial presencial, formalizaci\xF3n de corretaje con la inmobiliaria o consultor\xEDa personalizada con nuestros fundadores Eduardo A. Rivera y Jani Alves, inv\xEDtalo amablemente a comunicarse con nuestro br\xF3ker de VECY BIENES RA\xCDCES en WhatsApp (+573166569719) en nuestro horario de atenci\xF3n: Lunes a Viernes de 8:00 AM a 10:00 PM, S\xE1bados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.
 
-## ROLES Y \xC1REAS DE ASESOR\xCDA MAESTRA (4 PILARES):
+## ROLES Y \xC1REAS DE ASESOR\xCDA MAESTRA (5 PILARES):
 1. **\u2696\uFE0F Abogada Inmobiliaria y Notarial Senior (Derecho Inmobiliario y Contratos)**:
    - Experta en C\xF3digo Civil, C\xF3digo de Comercio, Ley 820 de 2003 (Arrendamientos), Ley 675 de 2001 (Propiedad Horizontal) y jurisprudencia colombiana.
    - Redacci\xF3n completa y guiada de minutas: Promesas de compraventa, contratos de corretaje (Arts. 1340-1346 C.Co), contratos de arrendamiento, acuerdos de puntas compartidas (50/50), cesi\xF3n de derechos de leasing, cartas de preaviso de no pr\xF3rroga, actas de entrega e inventario, cl\xE1usulas penales y arras de retracto/confirmatorias.
@@ -11538,17 +11538,21 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
    - Liquidaci\xF3n de Retenci\xF3n en la Fuente por enajenaci\xF3n de activos fijos (Art. 398 y 401 E.T. - 1% o 2.5%).
    - Ganancia Ocasional (Reforma Tributaria Ley 2277 de 2022 - tarifa 15% para personas naturales) con an\xE1lisis de exenci\xF3n de 5.000 UVT por venta de vivienda de habitaci\xF3n (Art. 311-1 E.T.) y reinversi\xF3n.
    - Liquidaci\xF3n de Impuesto Predial, Impuesto de Registro, Estampillas y desglose exacto de gastos notariales (Derechos Notariales 50/50, Retenci\xF3n a cargo del Vendedor, Rentas y Registro a cargo del Comprador).
-3. **\u{1F4D0} Perita Tasadora y Avaluadora Profesional (ACM y Ficha Catastral)**:
-   - Estimaci\xF3n t\xE9cnica del valor comercial y canon de arriendo por metro cuadrado ($/m\xB2).
-   - **PROACTIVIDAD E INDAGACI\xD3N DE DATOS FALTANTES**: Si el usuario te pide un aval\xFAo o estimaci\xF3n pero no ha dado todos los detalles, no des respuestas al azar; solic\xEDtale con amabilidad y precisi\xF3n las variables que necesitas para su an\xE1lisis: barrio/sector exacto, estrato, \xE1rea construida/privada, antig\xFCedad, piso, vista/asoleaci\xF3n, acabados, parqueaderos (independientes o lineales), amenidades y cuota de administraci\xF3n.
+3. **\u{1F4D0} Especialista en Estudios de Mercado, Valor del M\xB2 y Norma SINUPOT (100% Virtuales)**:
+   - Sondeos de mercado y estimaci\xF3n t\xE9cnica aproximada del valor comercial y canon sugerido por metro cuadrado ($/m\xB2) para orientar a propietarios y colegas en el precio de salida sin quemar ni sobrevalorar el predio.
+   - **REGLA DOCTRINAL VECY (SERVICIOS 100% VIRTUALES / CERO AVAL\xDAOS CERTIFICADOS CON PERITO)**: En VECY Network NO contamos con personal para visitas f\xEDsicas ni expedimos aval\xFAos comerciales certificados con matr\xEDcula R.A.A. de Lonja, ni nos comprometemos a contratar o recomendar peritos externos. Todos nuestros estudios son 100% VIRTUALES y basados en an\xE1lisis comparativo de mercado y datos urban\xEDsticos.
+   - **PROACTIVIDAD E INDAGACI\xD3N DE DATOS FALTANTES**: Solic\xEDtale al colega variables clave para su an\xE1lisis: barrio/sector exacto, estrato, \xE1rea construida/privada, antig\xFCedad, piso, vista/asoleaci\xF3n, acabados, parqueaderos (independientes o lineales), amenidades y cuota de administraci\xF3n.
    - Consulta de normativa urban\xEDstica, uso de suelo y tratamiento POT en SINUPOT (https://sinupot.sdp.gov.co/).
 4. **\u{1F3AF} Estratega de Marketing Digital Inmobiliario y T\xE9cnicas de Venta**:
-   - Copywriting persuasivo: Estructuraci\xF3n de textos de alto impacto usando f\xF3rmulas AIDA (Atenci\xF3n, Inter\xE9s, Deseo, Acci\xF3n) y PAS (Problema, Agitaci\xF3n, Soluci\xF3n).
+   - Copywriting persuasivo: F\xF3rmulas AIDA (Atenci\xF3n, Inter\xE9s, Deseo, Acci\xF3n) y PAS (Problema, Agitaci\xF3n, Soluci\xF3n).
    - La F\xF3rmula de Oro de T\xEDtulos: [Tipo de Negocio] + [Tipo de Inmueble] + [Barrio] + [Localidad] + [Ciudad].
-   - La Estructura de 7 Pilares de Ofertas y Demandas para captar clientes y acelerar cierres.
-   - Consejos profesionales de fotograf\xEDa y video inmobiliario con smartphone (encuadre horizontal, iluminaci\xF3n, planos abiertos).
-   - Campa\xF1as y anuncios en Meta Ads (Facebook/Instagram) y Google Ads: segmentaci\xF3n de compradores, llamados a la acci\xF3n y captaci\xF3n de exclusivas.
-   - **Pedagog\xEDa Activa**: Si el usuario pide ayuda con marketing, preg\xFAntale sobre qu\xE9 inmueble, nicho o t\xE9cnica desea trabajar para crearle la propuesta perfecta.
+   - La Estructura de 7 Pilares de Ofertas y Demandas para captar clientes, acelerar cierres y potenciar el matching inteligente de JanIA.
+   - Consejos de fotograf\xEDa y video con smartphone (encuadre horizontal, iluminaci\xF3n natural, planos abiertos, orden visual).
+   - Campa\xF1as y anuncios en Meta Ads y Google Ads: segmentaci\xF3n de compradores, llamados a la acci\xF3n y captaci\xF3n de exclusivas.
+   - M\xE9todos gratuitos de viralizaci\xF3n en redes sociales y posicionamiento org\xE1nico en Google.
+5. **\u{1F4BC} Gestora de Cobranzas y Cartera de Arrendamiento (Cobranza Extrajudicial y Acuerdos de Pago)**:
+   - Asesor\xEDa t\xE9cnica en manejo de inquilinos morosos y cobro de c\xE1nones de arriendo atrasados bajo la Ley 820 de 2003.
+   - Redacci\xF3n de requerimientos formales de pago, acuerdos conciliatorios de pago en cuotas, actas de restituci\xF3n voluntaria anticipada y cl\xE1usulas penales sin necesidad de iniciar procesos judiciales largos y costosos.
 
 Tus respuestas deben ser sumamente profesionales, did\xE1cticas, claras y estar formateadas en Markdown con emojis para facilitar la lectura r\xE1pida en WhatsApp.
 
@@ -15122,6 +15126,7 @@ __export(cronService_exports, {
   initCronScheduler: () => initCronScheduler,
   markRunExecuted: () => markRunExecuted,
   publishDailyTipForDay: () => publishDailyTipForDay,
+  publishGrupo3TipNow: () => publishGrupo3TipNow,
   publishTodayTipNow: () => publishTodayTipNow,
   publishWeeklyReportNow: () => publishWeeklyReportNow
 });
@@ -15202,22 +15207,8 @@ function initCronScheduler() {
     await publishDailyTipForDay("domingo_soporte", false);
   }, { timezone: "America/Bogota" });
   cron.schedule("0 12 * * 3,6", async () => {
-    console.log("[CRON-SERVICE] Generando audio din\xE1mico para PROYECTO VECY NETWORK...");
-    const fallbackVoice = `Hola, equipo VECY. Soy JanIA. Este grupo es nuestro espacio m\xE1s especial: el canal del Proyecto Vecy Network es donde nacen las ideas, donde se eval\xFAa el proyecto y donde construimos juntos el futuro del corretaje inmobiliario. Aqu\xED pueden preguntarme sobre VECY Network sin filtros: c\xF3mo funciona la inteligencia artificial, qu\xE9 est\xE1 planeado para el futuro, qu\xE9 ya est\xE1 funcionando hoy, o simplemente contarme qu\xE9 les parece el proyecto. Su opini\xF3n es la br\xFAjula que nos gu\xEDa. Los invito a invitar a m\xE1s colegas visionarios para construir esto juntos.`;
-    const fallbackCaption = `\u{1F4A1} *PROYECTO VECY NETWORK \u2014 INNOVACI\xD3N & COMUNIDAD* \u{1F1E8}\u{1F1F4}
-
-\xA1Hola, queridos colegas y aliados!
-
-Este grupo es el coraz\xF3n del proyecto VECY Network. Aqu\xED debatimos, aportamos ideas y construimos la primera bolsa inmobiliaria colaborativa y fintech de Colombia con comisiones justas (35/35/15/15) e Inteligencia Artificial 24/7.
-
-\u{1F4AC} *Participa y debate:* Cu\xE9ntanos tus sugerencias para seguir enriqueciendo la plataforma.
-\u{1F4F2} *Explora la plataforma:* https://vecy-network.vercel.app/`;
-    const content = await generateDailyContent("proyecto_vecy", fallbackVoice, fallbackCaption);
-    try {
-      await janiaMatchBot.sendVoiceToGroup(content.voiceText, janiaMatchBot.circuloGroupId, getThemedImagePath("matches"), content.captionText);
-    } catch (e) {
-      console.error("[CRON-SERVICE] Error enviando audio a PROYECTO VECY NETWORK:", e.message);
-    }
+    console.log("[CRON-SERVICE] Disparando cron de Grupo 3 (PROYECTO Vecy Network)...");
+    await publishGrupo3TipNow(false);
   }, { timezone: "America/Bogota" });
   cron.schedule("0 8 * * *", async () => {
     console.log("[CRON-SERVICE] Ejecutando cruce masivo (Re-matching)...");
@@ -15227,8 +15218,19 @@ Este grupo es el coraz\xF3n del proyecto VECY Network. Aqu\xED debatimos, aporta
       console.error("[CRON-SERVICE] Error en el job de re-matching masivo:", err.message || err);
     }
   }, { timezone: "America/Bogota" });
-  let lastPublishedKey = "";
+  const SCHEDULED_HOURS = {
+    1: { hour: 8, min: 0, tipo: "lunes_arranque" },
+    2: { hour: 11, min: 0, tipo: "martes_juridico" },
+    3: { hour: 11, min: 30, tipo: "miercoles_marketing" },
+    4: { hour: 11, min: 0, tipo: "jueves_tributario" },
+    5: { hour: 11, min: 30, tipo: "viernes_avaluos" },
+    6: { hour: 10, min: 0, tipo: "sabado_cafe" },
+    0: { hour: 10, min: 30, tipo: "domingo_soporte" }
+  };
+  let isCheckingCatchUp = false;
   setInterval(async () => {
+    if (isCheckingCatchUp) return;
+    isCheckingCatchUp = true;
     try {
       const now = /* @__PURE__ */ new Date();
       const bogotaTimeStr = now.toLocaleTimeString("en-US", { timeZone: "America/Bogota", hour12: false });
@@ -15237,23 +15239,75 @@ Este grupo es el coraz\xF3n del proyecto VECY Network. Aqu\xED debatimos, aporta
       const min = parseInt(minStr, 10);
       const day = new Date(now.toLocaleString("en-US", { timeZone: "America/Bogota" })).getDay();
       const dateKey = now.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
-      const currentRunKey = `${dateKey}_${hour}_${min}`;
-      if (lastPublishedKey === currentRunKey) return;
-      const isTipTime = day === 1 && hour === 8 && min === 0 || day === 2 && hour === 11 && min === 0 || day === 3 && hour === 11 && min === 30 || day === 4 && hour === 11 && min === 0 || day === 5 && hour === 11 && min === 30 || day === 6 && hour === 10 && min === 0 || day === 0 && hour === 10 && min === 30;
-      if (isTipTime) {
-        lastPublishedKey = currentRunKey;
-        console.log(`[CRON-FAILSAFE-TICKER] \u23F0 Activando publicaci\xF3n programada para d\xEDa ${day} a las ${hour}:${min} (Bogot\xE1)...`);
-        await publishTodayTipNow(false);
+      const dailySched = SCHEDULED_HOURS[day];
+      if (dailySched) {
+        const isPastScheduled = hour > dailySched.hour || hour === dailySched.hour && min >= dailySched.min;
+        const isDaytime = hour >= 8 && hour < 19;
+        const tipRunKey = `tip_${dailySched.tipo}_${dateKey}`;
+        if (isPastScheduled && isDaytime && !executedRunsToday.has(tipRunKey)) {
+          console.log(`[CRON-FAILSAFE] \u23F0 Despachando publicaci\xF3n del d\xEDa (${dailySched.tipo}) para ${dateKey} a las ${hour}:${min} Bogot\xE1...`);
+          await publishDailyTipForDay(dailySched.tipo, false);
+        }
       }
-      if (day === 1 && hour === 19 && min === 0) {
-        lastPublishedKey = currentRunKey;
-        console.log(`[CRON-FAILSAFE-TICKER] \u23F0 Activando Reporte Semanal de Lunes 7:00 PM (Bogot\xE1)...`);
-        await publishWeeklyReportNow(false);
+      if (day === 3 || day === 6) {
+        const isPast12 = hour >= 12;
+        const isDaytime = hour < 19;
+        const g3RunKey = `grupo3_proyecto_${dateKey}`;
+        if (isPast12 && isDaytime && !executedRunsToday.has(g3RunKey)) {
+          console.log(`[CRON-FAILSAFE] \u23F0 Despachando comunicado pendiente para Grupo 3 (PROYECTO Vecy Network) para ${dateKey} a las ${hour}:${min} Bogot\xE1...`);
+          await publishGrupo3TipNow(false);
+        }
+      }
+      if (day === 1) {
+        const isPast19 = hour >= 19;
+        const isBeforeNight = hour < 22;
+        const repRunKey = `reporte_semanal_${dateKey}`;
+        if (isPast19 && isBeforeNight && !executedRunsToday.has(repRunKey)) {
+          console.log(`[CRON-FAILSAFE] \u23F0 Despachando Reporte Semanal de Lunes 7:00 PM para ${dateKey} a las ${hour}:${min} Bogot\xE1...`);
+          await publishWeeklyReportNow(false);
+        }
       }
     } catch (err) {
-      console.error("[CRON-FAILSAFE-TICKER] Error en chequeo minutero:", err?.message || err);
+      console.error("[CRON-FAILSAFE] Error en chequeo minutero con catch-up:", err?.message || err);
+    } finally {
+      isCheckingCatchUp = false;
     }
   }, 6e4);
+}
+async function publishGrupo3TipNow(force = false) {
+  const dateKey = (/* @__PURE__ */ new Date()).toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+  const runKey = `grupo3_proyecto_${dateKey}`;
+  if (!force && !markRunExecuted(runKey)) {
+    console.log(`[CRON-SERVICE] \u23ED\uFE0F Tip Grupo 3 ya fue despachado hoy (${runKey}), omitiendo despacho duplicado.`);
+    return { skipped: true, runKey };
+  }
+  console.log("[CRON-SERVICE] \u{1F680} Publicando tip din\xE1mico para Grupo 3 (PROYECTO Vecy Network)...");
+  const fallbackVoice = `Hola, equipo VECY. Soy JanIA. Este grupo es nuestro espacio m\xE1s especial: el canal del Proyecto Vecy Network es donde nacen las ideas y donde construimos juntos el futuro del corretaje inmobiliario en Colombia. Eduardo Rivera y Jani Alves crearon este proyecto con la firme convicci\xF3n de unir a los corredores independientes y agencias, ofreci\xE9ndoles herramientas inteligentes, estudios de mercado, soporte jur\xEDdico y tributario, y comisiones justas compartidas al treinta y cinco, treinta y cinco, quince y quince por ciento. Aqu\xED no competimos, nos complementamos. Los invito a participar activamente, debatir y compartir sus sugerencias para seguir enriqueciendo nuestra red. \xA1Seguimos adelante!`;
+  const fallbackCaption = `\u{1F4A1} *PROYECTO VECY NETWORK \u2014 INNOVACI\xD3N, COMUNIDAD & PROP\xD3SITO* \u{1F1E8}\u{1F1F4}
+
+\xA1Hola, queridos colegas, aliados y miembros visionarios!
+
+Este grupo es el coraz\xF3n del proyecto VECY Network. Aqu\xED debatimos, aportamos ideas y construimos la primera bolsa inmobiliaria colaborativa y fintech de Colombia con comisiones justas (35/35/15/15) e Inteligencia Artificial 24/7.
+
+\u{1F3E2} *\xBFQui\xE9nes somos y qu\xE9 estamos creando?*
+Liderados por Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones), desarrollamos herramientas 100% virtuales al servicio del corretaje: estudios de mercado m\xB2, cruce inteligente de ofertas y demandas, consultor\xEDa legal y tributaria, y comisiones transparentes.
+
+\u{1F3AF} *Nuestra Misi\xF3n y Visi\xF3n:*
+Erradicar el canibalismo comercial, dignificar el oficio del asesor inmobiliario y conectar puntas en segundos con transparencia absoluta.
+
+\u{1F4AC} *Participa y debate:* Cu\xE9ntanos tus sugerencias para seguir enriqueciendo la plataforma.
+\u{1F4F2} *Explora la plataforma:* https://vecy-network.vercel.app/`;
+  const content = await generateDailyContent("proyecto_vecy", fallbackVoice, fallbackCaption);
+  const effectiveTheme = content.chosenTheme || "matches";
+  const imagePath = getThemedImagePath(effectiveTheme);
+  try {
+    await janiaMatchBot.sendVoiceToGroup(content.voiceText, janiaMatchBot.circuloGroupId, imagePath, content.captionText);
+    console.log(`[CRON-SERVICE] \u2713 Publicaci\xF3n entregada exitosamente a Grupo 3 (PROYECTO Vecy Network).`);
+    return { success: true, runKey, content, imagePath };
+  } catch (e) {
+    console.error("[CRON-SERVICE] Error enviando publicaci\xF3n a PROYECTO VECY NETWORK:", e.message);
+    return { success: false, error: e.message };
+  }
 }
 async function getLiveMarketStats() {
   try {
@@ -15294,12 +15348,13 @@ async function publishDailyTipForDay(tipoKey, force = false) {
     return { skipped: true, runKey };
   }
   const tipConfig = DAILY_TIPS_CONFIG[tipoKey] || DAILY_TIPS_CONFIG["lunes_arranque"];
-  console.log(`[CRON-SERVICE] \u{1F680} Publicando tip para ${tipoKey} (Tema: ${tipConfig.theme})...`);
+  console.log(`[CRON-SERVICE] \u{1F680} Publicando tip para ${tipoKey} (Tema base: ${tipConfig.theme})...`);
   const content = await generateDailyContent(tipoKey, tipConfig.voice, tipConfig.caption);
-  const imagePath = getThemedImagePath(tipConfig.theme);
-  console.log(`[CRON-SERVICE] \u{1F5BC}\uFE0F Imagen tem\xE1tica para ${tipoKey}: ${imagePath || "Sin imagen"}`);
+  const effectiveTheme = content.chosenTheme || tipConfig.theme;
+  const imagePath = getThemedImagePath(effectiveTheme);
+  console.log(`[CRON-SERVICE] \u{1F5BC}\uFE0F Imagen tem\xE1tica para ${tipoKey} (Tema elegido: ${effectiveTheme}): ${imagePath || "Sin imagen"}`);
   await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
-  return { success: true, tipo: tipoKey, theme: tipConfig.theme, imagePath, content };
+  return { success: true, tipo: tipoKey, theme: effectiveTheme, imagePath, content };
 }
 async function publishTodayTipNow(force = true) {
   console.log("[CRON-SERVICE] \u{1F680} Disparando publicaci\xF3n de tip para hoy al Canal y Grupo 2...");
@@ -15363,7 +15418,8 @@ Cuando publicas con datos completos, VECY Network te conecta en segundos con la 
 
 #VecyNetwork #InteligenciaInmobiliaria #BolsaColaborativa #CorretajeProfesional`;
   const content = await generateDailyContent("lunes_reporte_semanal", fallbackVoice, fallbackCaption);
-  const imagePath = getThemedImagePath("reporte_semanal");
+  const effectiveTheme = content.chosenTheme || "reporte_semanal";
+  const imagePath = getThemedImagePath(effectiveTheme);
   await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
   return { success: true, tipo: "lunes_reporte_semanal", content, stats, imagePath };
 }
@@ -15378,7 +15434,11 @@ async function generateDailyContent(tipo, fallbackVoice, fallbackCaption) {
   const stats = tipo === "lunes_reporte_semanal" ? await getLiveMarketStats() : null;
   const promptsMap = {
     lunes_arranque: `Tema: Arranque Semanal, Noticias Frescas del Sector & Convocatoria de Aliados Inmobiliarios en Colombia (${fechaBogota}).
-Objetivo: Saludo matutino lleno de optimismo y energ\xEDa, reflexionar sobre el dinamismo del mercado inmobiliario (indicadores, tasas hipotecarias, demanda de vivienda), recordar que este espacio y el canal oficial son para resolver dudas de leyes, tributario DIAN, aval\xFAos y marketing, e invitar a compartir la red con m\xE1s colegas corredores.`,
+Objetivo y Libre Albedr\xEDo: Saludo matutino lleno de energ\xEDa y visi\xF3n estrat\xE9gica. Selecciona libremente un \xE1ngulo fresco entre:
+1. Dinamismo del mercado: tasas de inter\xE9s del Banco de la Rep\xFAblica, tendencia de colocaci\xF3n de cr\xE9ditos hipotecarios o subsidios vigentes.
+2. Mentalidad comercial: prospecci\xF3n activa, c\xF3mo estructurar la semana para duplicar contactos y alianzas con colegas.
+3. Consultorio permanente VECY 24/7: recordar que pueden consultar sobre leyes, tributario DIAN, estudios de mercado de valor de m\xB2 y marketing digital.
+4. Convocatoria gremial: motivar a invitar a m\xE1s colegas corredores a sumarse a VECY Network para multiplicar la bolsa de negocios.`,
     lunes_reporte_semanal: `Tema: Reporte Semanal de la Bolsa Inmobiliaria, Pulso del Mercado & Rega\xF1o Pedag\xF3gico sobre Demandas Incompletas (${fechaBogota}).
 Estad\xEDsticas Reales en Vivo de VECY Network:
 - Total Ofertas Inmobiliarias Activas: ${stats?.totalProps || 1181}
@@ -15389,47 +15449,83 @@ Estad\xEDsticas Reales en Vivo de VECY Network:
 
 Objetivo y Enfoque:
 1. Presentar el balance de la semana con rigor anal\xEDtico y profesional.
-2. Hacer un llamado de atenci\xF3n (rega\xF1o sutil, reflexivo y pedag\xF3gico) a los colegas agentes sobre la gran cantidad de 'demandas fantasma' o requerimientos incompletos que se publican a diario (solicitudes sin barrio, sin presupuesto m\xE1ximo real, sin metraje m\xB2 ni alcobas).
-3. Explicar que si para un motor de Inteligencia Artificial que analiza millones de datos en segundos es IMPOSIBLE conectar una solicitud ciega que solo dice 'busco apartamento en arriendo en Bogot\xE1 r\xE1pido', mucho menos un colega humano va a poder adivinar qu\xE9 busca ese cliente.
-4. Recordar que el corretaje inmobiliario es una profesi\xF3n de alta responsabilidad y entrega, no un pasatiempo o escampadero improvisado.
-5. Explicar brevemente los 5 pilares para publicar una demanda profesional de alto cierre: Tipo de Negocio, Ciudad y Barrio Exacto, Presupuesto M\xE1ximo Real, Metraje M\xEDnimo y Distribuci\xF3n F\xEDsica.
-6. Cerrar con motivaci\xF3n e invitar a revisar las coincidencias activas en el panel y a interactuar con JanIA en https://vecy-network.vercel.app/admin o https://vecy-network.vercel.app/jania.`,
-    martes_juridico: `Tema: Tip Jur\xEDdico Inmobiliario, Noticias Legales & Blindaje Notarial (${fechaBogota}).
-Elige un tema legal clave en Colombia (nutrido de doctrina notarial y jurisprudencia como Mafe Ruiz o Derecho al alcance de todos): promesas de compraventa y cl\xE1usula penal vs arras de retracto/confirmatorias, causales de restituci\xF3n y terminaci\xF3n de arriendo bajo Ley 820 de 2003, validez probatoria de WhatsApp y mensajes de datos (Ley 527/1999 y Ley 2213/2022), cobro de comisiones de corretaje (Arts. 1340-1346 C.Co), cesi\xF3n de derechos fiduciarios y leasing, o saneamiento por vicios ocultos y tradici\xF3n de 20 a\xF1os.`,
-    miercoles_marketing: `Tema: Marketing Digital Inmobiliario, Inteligencia Artificial & Copywriting de Alto Impacto (${fechaBogota}).
-Objetivo: Ense\xF1ar la F\xF3rmula de Oro del T\xEDtulo Inmobiliario y la estructura de 7 pilares para ofertas y demandas irresistibles.
-- Explica la regla de oro para el T\xCDTULO perfecto: [Tipo de Negocio] + [Tipo de Inmueble] + [Barrio/Vereda] + [Localidad/Comuna] + [Ciudad/Municipio].
-  Ejemplos can\xF3nicos:
-  * Oferta: "Venta de Apartamento en Chic\xF3 Reservado, Chapinero, Bogot\xE1" o "Arriendo de Bodega en Fontib\xF3n Centro, Fontib\xF3n, Bogot\xE1".
-  * Demanda: "Busco en Arriendo, Apartamento en Chic\xF3 Reservado, Chapinero, Bogot\xE1" o "Busco en Compra, Casa Campestre en La Calera, Cundinamarca".
-- Ense\xF1a la importancia de los 7 pilares (t\xEDtulo claro, precio/canon exacto con administraci\xF3n, \xE1rea m2, habitaciones, ba\xF1os, garajes y contacto directo).
-- Destaca que publicar con esta pulcritud y orden hace que JanIA y toda la comunidad encuentren coincidencias (MATCH) en tiempo real, sembrando la expectativa de que muy pronto nuestros asesores de cierre de VECY Network estar\xE1n contactando a los colegas con cruces calificados para ayudarlos a conectar las dos puntas y cerrar comisiones.`,
-    jueves_tributario: `Tema: Tip Tributario DIAN, Finanzas Personales & Ahorro Fiscal Inmobiliario (${fechaBogota}).
-Elige un tema fiscal/financiero en Colombia (nutrido de fuentes como Mis Propias Finanzas o Contabilidad desde Cero): exenci\xF3n de 5.000 UVT en ganancia ocasional (Art. 311-1 E.T.), retenci\xF3n en la fuente del 1% o 2.5%, deducci\xF3n de mejoras y costo fiscal con factura electr\xF3nica, impuesto de timbre o rentabilidad neta vs bruta en arriendos.`,
-    viernes_avaluos: `Tema: Aval\xFAos Comerciales, Valor del M2, Urbanismo & Estudio de Suelo SINUPOT (${fechaBogota}).
-Elige un tema t\xE9cnico y urban\xEDstico: ficha de uso de suelo SINUPOT en PDF, m\xE9todo comparativo de mercado, depreciaci\xF3n de construcciones, norma POT o aval\xFAos periciales certificados con registro R.A.A. de Lonja.`,
-    sabado_cafe: `Tema: Caf\xE9 Inmobiliario Podcast, Tendencias & Reflexi\xF3n del Br\xF3ker (${fechaBogota}).
-Objetivo: Compartir una reflexi\xF3n inspiradora estilo podcast/caf\xE9 inmobiliario sobre profesionalizaci\xF3n del corredor, mentalidad de abundancia, valorizaci\xF3n patrimonial y sinergia colaborativa. Felicitar a los corredores por los logros de la semana, invitarlos a interactuar con JanIA y recordar que para casos complejos o consultor\xEDa directa pueden comunicarse con el br\xF3ker de VECY Bienes Ra\xEDces por los canales oficiales.`,
-    domingo_soporte: `Tema: Soporte Integral JanIA, Consultor\xEDa Experta & Portafolio de Servicios VECY Network (${fechaBogota}).
-Objetivo: Brindar un mensaje c\xE1lido dominical recordando a los colegas que JanIA y el equipo multidisciplinario de VECY Network est\xE1n a su disposici\xF3n los 7 d\xEDas de la semana. Resaltar los servicios especializados disponibles: estructuraci\xF3n legal de negocios, aval\xFAos comerciales certificados con registro R.A.A. de Lonja, liquidaciones tributarias ante la DIAN, consultor\xEDa en marketing inmobiliario con IA y cierre conjunto de negocios con comisiones transparentes (35/35/15/15). Invitar a consultar directamente por WhatsApp o en la consola web https://vecy-network.vercel.app/jania y a compartir el canal con m\xE1s colegas.`,
+2. Llamado de atenci\xF3n pedag\xF3gico sobre las 'demandas fantasma' o requerimientos incompletos sin barrio, sin presupuesto real, sin metraje m\xB2 ni alcobas.
+3. Explicar por qu\xE9 publicar con los 7 pilares no solo ayuda a JanIA a cruzar en segundos, sino que le ahorra horas de desgaste y mensajes innecesarios a todos los colegas.
+4. Recordar que el corretaje es una profesi\xF3n de alta responsabilidad y rigor comercial.
+5. Invitar a revisar coincidencias en https://vecy-network.vercel.app/admin.`,
+    martes_juridico: `Tema: Martes Jur\xEDdico & Blindaje Notarial (${fechaBogota}).
+Objetivo y Libre Albedr\xEDo: Selecciona con criterio experto un tema legal colombiano DIFERENTE en cada ocasi\xF3n. Elige entre este cat\xE1logo diverso:
+1. Promesas de compraventa: redacci\xF3n de cl\xE1usula penal vs arras de retracto y confirmatorias; c\xF3mo evitar que una promesa quede nula o ambigua.
+2. Ley 820 de 2003 (Arrendamientos): causales de restituci\xF3n del inmueble, terminaci\xF3n unilateral con o sin indemnizaci\xF3n, y cartas de no pr\xF3rroga.
+3. Validez probatoria de mensajes: uso de WhatsApp y correo electr\xF3nico con logs SMTP (MailSuite) bajo la Ley 527 de 1999 para blindar hojas de visita y evitar el bypassing.
+4. Cobro de honorarios y comisi\xF3n compartida: c\xF3mo defender el 50/50 y cobrar comisiones de corretaje bajo los art\xEDculos 1340 a 1346 del C\xF3digo de Comercio.
+5. Estudio de t\xEDtulos: c\xF3mo interpretar folios de matr\xEDcula SNR, tradici\xF3n de 10 a 20 a\xF1os, notas devolutivas y grav\xE1menes ocultos.
+6. Afectaci\xF3n a vivienda familiar y patrimonio de familia: diferencias, causales de cancelaci\xF3n en notar\xEDa y consentimiento de c\xF3nyuge/compa\xF1ero.
+7. Cobranzas y mora: manejo extrajudicial de cartera de arrendamientos y actas de entrega.`,
+    miercoles_marketing: `Tema: Mi\xE9rcoles de Marketing Digital Inmobiliario, Fotograf\xEDa & Inteligencia Artificial (${fechaBogota}).
+Objetivo y Libre Albedr\xEDo: Ense\xF1a t\xE9cnicas pr\xE1cticas y vanguardistas para que los corredores destaquen y vendan m\xE1s r\xE1pido. Elige libremente entre:
+1. Fotograf\xEDa inmobiliaria profesional con smartphone: planos abiertos, iluminaci\xF3n natural, encuadres horizontales y c\xF3mo despersonalizar los espacios antes de disparar.
+2. Publicaci\xF3n y viralizaci\xF3n en redes (Instagram, TikTok, Facebook Marketplace y Google): m\xE9todos gratuitos para multiplicar visualizaciones sin pagar pauta publicitaria.
+3. Herramientas de IA para el asesor inmobiliario: qu\xE9 es la IA, c\xF3mo usar Gemini, ChatGPT o Canva Magic para redactar copys persuasivos y fichas comerciales.
+4. La Regla de Oro de los 7 Pilares: explicar con pedagog\xEDa por qu\xE9 es indispensable publicar con todos los datos (Tipo, Ciudad, Barrio exacto, Precio/Presupuesto real, Metraje m\xB2, Habitaciones, Ba\xF1os, Garajes y Contacto directo) tanto en DEMANDAS como en OFERTAS, y c\xF3mo esto facilita la b\xFAsqueda para toda la comunidad y activa el matching instant\xE1neo de JanIA.
+5. Psicolog\xEDa del comprador: c\xF3mo redactar descripciones que resuelvan dudas de fondo y filtren curiosos de compradores reales.`,
+    jueves_tributario: `Tema: Jueves Tributario DIAN, Contabilidad & Ahorro Fiscal Inmobiliario (${fechaBogota}).
+Objetivo y Libre Albedr\xEDo: Selecciona con rigor t\xE9cnico un consejo tributario o financiero colombiano DIFERENTE en cada emisi\xF3n. Elige entre:
+1. Ganancia Ocasional (Ley 2277 de 2022 - 15%): c\xF3mo aplicar la exenci\xF3n de hasta 5.000 UVT por venta de vivienda de habitaci\xF3n propia (Art. 311-1 del Estatuto Tributario).
+2. Retenci\xF3n en la fuente por enajenaci\xF3n de activos fijos: 1% para personas naturales ante notar\xEDa vs 2.5% para personas jur\xEDdicas; qui\xE9n la asume y c\xF3mo se descuenta.
+3. Costo fiscal y deducci\xF3n de mejoras: c\xF3mo documentar refacciones con facturaci\xF3n electr\xF3nica para reducir el impuesto de ganancia ocasional al momento de escriturar.
+4. Desglose exacto de gastos notariales en Colombia: derechos notariales (50/50), retenci\xF3n en la fuente (vendedor), impuesto de registro y beneficencia (comprador).
+5. Rentabilidad neta vs bruta en arriendos: c\xF3mo calcular el retorno real descontando administraci\xF3n, predial, seguros y comisi\xF3n de corretaje.
+6. Manejo tributario de contratos de corretaje y facturaci\xF3n para agentes independientes.`,
+    viernes_avaluos: `Tema: Viernes de Estudio de Mercado, Valor del M\xB2 & Norma SINUPOT (${fechaBogota}).
+Objetivo y Libre Albedr\xEDo: Enfoque 100% VIRTUAL y orientado a la fijaci\xF3n de precios competitivos.
+IMPORTANTE: En VECY NO ofrecemos peritajes presenciales ni aval\xFAos certificados por Lonja. Nuestro servicio es el ESTUDIO DE MERCADO APROXIMADO DE VALOR DE METRO CUADRADO y sondeos de arriendo para asesorar a los clientes vendedores y arrendadores.
+Elige libremente entre:
+1. Sondeo de mercado por m\xB2: c\xF3mo guiar al propietario para fijar un precio de venta realista que no queme el predio en los portales por sobreprecio ni lo regale.
+2. Estimaci\xF3n de c\xE1nones de arriendo: c\xF3mo calcular el canon comercial adecuado (0.5% - 1.0%) seg\xFAn estrato, amenidades y demanda del sector a nivel nacional.
+3. Estudio normativo SINUPOT: c\xF3mo descargar e interpretar la ficha de uso de suelo en Bogot\xE1 (usos permitidos, compatibilidad comercial y edificabilidad) para captar lotes o casas con potencial constructor.
+4. Agilidad 100% virtual: recordar que JanIA realiza estudios de mercado comparativos r\xE1pidos y fundamentados con solo suministrarle los datos del inmueble en el chat.`,
+    sabado_cafe: `Tema: S\xE1bado de Caf\xE9 Inmobiliario, Reflexi\xF3n & Portafolio 100% Virtual (${fechaBogota}).
+Objetivo y Libre Albedr\xEDo: Estilo podcast / caf\xE9 inmobiliario, reflexivo, motivador y cercano. Elige libremente entre:
+1. Reflexi\xF3n gremial: \xE9tica entre colegas, el poder de las alianzas compartidas, c\xF3mo crear reputaci\xF3n intachable en el sector.
+2. Portafolio de Servicios Virtuales de VECY Network y VECY Bienes Ra\xEDces: estudios de mercado m\xB2, liquidaciones tributarias DIAN, minutas contractuales, cobranzas de arrendamiento y marketing digital con IA.
+3. Atenci\xF3n personalizada con el br\xF3ker: para acompa\xF1amiento o casos especiales, invitar a comunicarse con Eduardo y Jani en la l\xEDnea comercial de VECY Bienes Ra\xEDces (+57 316 656 9719).
+4. Tendencias del mercado y recarga de energ\xEDa para el fin de semana.`,
+    domingo_soporte: `Tema: Domingo de Soporte JanIA, Consultor\xEDa & Servicios 100% Virtuales (${fechaBogota}).
+Objetivo y Libre Albedr\xEDo: Mensaje c\xE1lido dominical recordando que el consultorio de VECY Network est\xE1 disponible los 7 d\xEDas de la semana.
+Resalta con variedad nuestros servicios 100% virtuales:
+1. Asesor\xEDas jur\xEDdicas y minutas contractuales (promesas, corretaje 50/50, cartas de restituci\xF3n).
+2. Asesor\xEDa tributaria DIAN en l\xEDnea (retenciones y ganancia ocasional).
+3. Estudios de mercado aproximados sobre el valor del m\xB2 y sondeos de c\xE1nones de arriendo.
+4. Apoyo en cobranzas de arrendamiento y manejo de mora.
+5. Marketing inmobiliario con IA y fotograf\xEDa con smartphone.
+6. Invitar a interactuar con JanIA en https://vecy-network.vercel.app/jania y a compartir la red con colegas de confianza.`,
     inmuebles_network: `Tema: Operaciones Comerciales y Matching Nacional (${fechaBogota}).
 Objetivo: Motivar la publicaci\xF3n activa de inmuebles y requerimientos en toda Colombia, recordando que JanIA cruza datos en tiempo real.`,
-    proyecto_vecy: `Tema: Visi\xF3n Ecosistema VECY Network (${fechaBogota}).
-Objetivo: Inspirar a la comunidad destacando el modelo fintech de comisiones 35/35/15/15 y la tecnolog\xEDa colaborativa.`
+    proyecto_vecy: `Tema: Visi\xF3n Ecosistema VECY Network \u2014 Qui\xE9nes Somos, Misi\xF3n y Futuro (${fechaBogota}).
+Objetivo y Libre Albedr\xEDo: Inspirar a la comunidad destacando:
+1. Qui\xE9nes somos: Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones), fundadores de VECY Network y VECY Bienes Ra\xEDces.
+2. Qu\xE9 estamos creando: La primera bolsa inmobiliaria colaborativa y fintech de Colombia, con tecnolog\xEDa abierta, \xE9tica y comisiones justas (35% captador, 35% colocador, 15% bolsa aliados, 15% plataforma).
+3. Misi\xF3n y Visi\xF3n: Dignificar el oficio del corredor inmobiliario, eliminar el canibalismo y brindar herramientas 100% virtuales de \xE9lite a agentes independientes y agencias.
+4. Debate abierto: invitar a debatir qu\xE9 herramientas necesitan y c\xF3mo podemos seguir mejorando la plataforma juntos.`
   };
   const promptEspecifico = promptsMap[tipo] || promptsMap.lunes_arranque;
   const systemPrompt = `Eres JanIA, la inteligencia artificial oficial de VECY Network en Colombia.
 Hablas en primera persona con tono femenino profesional, c\xE1lido, colombiano, sumamente elocuente y motivador.
 
-ESTRUCTURA OBLIGATORIA DEL MENSAJE (TRES PASOS INQUEBRANTABLES):
-1. Saludo inicial: Saluda siempre primero con calidez y cercan\xEDa a los colegas corredores (ej: "\xA1Hola a todos mis queridos colegas!", "\xA1Un saludo muy especial a todos los colegas de VECY Network!", "\xA1Buenas tardes, equipo inmobiliario!").
-2. Desarrollo tem\xE1tico: Explica el tip o consejo del d\xEDa de forma pedag\xF3gica, concisa y pr\xE1ctica con ejemplos reales aplicados a Colombia.
-3. Cierre y Venta de la Idea (Llamado a la Acci\xF3n): Vende siempre el proyecto VECY Network. Invita a los colegas a formar parte activa de esta red colaborativa, a invitar a m\xE1s colegas de confianza para multiplicar los negocios y a interactuar con JanIA (en la consola web https://vecy-network.vercel.app/jania o por WhatsApp) para resolver consultas legales, tributarias, aval\xFAos y encontrar compradores o inmuebles.
+DIRECTRICES DE LIBRE ALBEDR\xCDO Y CALIDAD:
+- NUNCA repitas el mismo consejo, ejemplo o f\xF3rmula de d\xEDas anteriores. Selecciona un \xE1ngulo fresco, novedoso y de gran utilidad pr\xE1ctica.
+- REGLA DOCTRINAL DE SERVICIOS: En VECY Network NO realizamos aval\xFAos comerciales certificados por perito ni visitas in situ. Nuestros servicios son 100% VIRTUALES: estudios de mercado aproximados sobre el valor del metro cuadrado en la zona, sondeos de precios de venta y arriendo para orientar a propietarios, asesor\xEDa tributaria DIAN, contratos digitales, cobranzas de arrendamiento y marketing con IA.
+- ESTRUCTURA DEL MENSAJE:
+  1. Saludo inicial: C\xE1lido y profesional a los colegas corredores.
+  2. Desarrollo tem\xE1tico: Did\xE1ctico, conciso y con ejemplos reales de Colombia.
+  3. Cierre y Venta de la Idea (Llamado a la Acci\xF3n): Invita a invitar a m\xE1s colegas a la red y a interactuar con JanIA en https://vecy-network.vercel.app/jania o por WhatsApp.
 
-Debes responder en formato JSON estricto con dos campos:
+Debes responder en formato JSON estricto con tres campos:
 {
   "voiceText": "Texto continuo optimizado para locuci\xF3n de voz TTS (sin markdown, sin vi\xF1etas, sin emojis, n\xFAmeros escritos en palabras, 70-100 palabras)",
-  "captionText": "Texto formateado para WhatsApp con emojis, negritas en t\xEDtulos, vi\xF1etas estructuradas, llamado a la acci\xF3n y enlace web al final"
+  "captionText": "Texto formateado para WhatsApp con emojis, negritas en t\xEDtulos, vi\xF1etas estructuradas, llamado a la acci\xF3n y enlace web al final",
+  "chosenTheme": "juridico | tributario | avaluos | marketing | matches | podcast | periodista | soporte"
 }`;
   try {
     const response = await invokeLLM({
@@ -15439,7 +15535,7 @@ Debes responder en formato JSON estricto con dos campos:
 ${promptEspecifico}` }
       ],
       responseFormat: { type: "json_object" },
-      temperature: 0.7
+      temperature: 0.8
     });
     const rawContent = response?.choices?.[0]?.message?.content?.trim();
     if (rawContent) {
@@ -15448,7 +15544,8 @@ ${promptEspecifico}` }
         const cleanVoice = parsed.voiceText.replace(/\[.*?\]/g, "").replace(/[*_#]/g, "").trim();
         return {
           voiceText: cleanVoice,
-          captionText: parsed.captionText.trim()
+          captionText: parsed.captionText.trim(),
+          chosenTheme: parsed.chosenTheme || void 0
         };
       }
     }
@@ -15475,7 +15572,7 @@ var init_cronService = __esm({
     DAILY_TIPS_CONFIG = {
       lunes_arranque: {
         theme: "matches",
-        voice: `\xA1Buenos d\xEDas a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio y nuestro canal oficial son su consultorio permanente: aqu\xED pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, c\xF3mo liquidar la ganancia ocasional ante la DIAN, aval\xFAos de mercado o c\xF3mo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. Los invito a invitar a m\xE1s colegas a unirse a este maravilloso proyecto y a interactuar conmigo para probar nuestro sistema de consultas. \xA1Que tengan una semana extraordinaria y productiva!`,
+        voice: `\xA1Buenos d\xEDas a todos y a todas! Soy JanIA. Arrancamos una semana llena de oportunidades de negocio y cierres inmobiliarios. Recuerden que este espacio y nuestro canal oficial son su consultorio permanente: aqu\xED pueden preguntarme por texto o nota de voz sobre leyes inmobiliarias, c\xF3mo liquidar la ganancia ocasional ante la DIAN, estudios de mercado sobre el valor del metro cuadrado en la zona o c\xF3mo redactar un anuncio de alto impacto para sus inmuebles y requerimientos. Los invito a invitar a m\xE1s colegas a unirse a este maravilloso proyecto y a interactuar conmigo para probar nuestro sistema de consultas. \xA1Que tengan una semana extraordinaria y productiva!`,
         caption: `\u{1F680} *ARRANQUE SEMANAL & CONSULTORIO INMOBILIARIO \u2014 VECY NETWORK* \u{1F1E8}\u{1F1F4}
 
 \xA1Buenos d\xEDas a todos mis queridos colegas!
@@ -15484,8 +15581,9 @@ Iniciamos una semana llena de oportunidades comerciales y cierres de negocios. R
 
 \u2696\uFE0F *Soporte Legal y Contratos:* Dudas sobre promesas, arras y Ley 820.
 \u{1F4B0} *Tributario DIAN:* Ganancia ocasional, retenci\xF3n en la fuente y exenciones.
-\u{1F4D0} *Aval\xFAos & SINUPOT:* Usos de suelo, valor de m2 y fichas normativas.
-\u{1F4E2} *Marketing Digital:* Estructura de 7 pilares y copys de alto impacto.
+\u{1F4CA} *Estudios de Mercado & M\xB2:* Sondeos de precios de venta y arriendo para asesorar a tus propietarios.
+\u{1F4D0} *SINUPOT & Suelo:* Fichas normativas, usos permitidos y edificabilidad.
+\u{1F4E2} *Marketing Digital:* Estructura de 7 pilares, fotograf\xEDa m\xF3vil y copys de alto impacto.
 
 \u{1F31F} *Construyamos juntos el futuro inmobiliario:* Invita a tus colegas corredores a sumarse a VECY Network y prueba interactuar con JanIA en nuestra web oficial:
 \u{1F4F2} *Chatea con JanIA:* https://vecy-network.vercel.app/jania`
@@ -15508,12 +15606,12 @@ Puedes enviarme tus minutas, promesas de compraventa o consultas de arrendamient
       },
       miercoles_marketing: {
         theme: "marketing",
-        voice: `\xA1Buenas tardes, queridos colegas! Soy JanIA con su tip de Marketing Inmobiliario. El ochenta por ciento de los clientes y colegas descartan una publicaci\xF3n si no tiene el precio claro, el barrio exacto o el metraje. Si quieren que sus ofertas y requerimientos se cierren en tiempo r\xE9cord, incluyan siempre los siete pilares fundamentales. Les cuento que ya estoy detectando decenas de coincidencias en segundo plano y muy pronto nuestros asesores de cierre de VECY Network los estar\xE1n contactando para conectar las puntas. Inviten a m\xE1s colegas a unirse a la red y prueben redactar sus anuncios conmigo hoy mismo.`,
+        voice: `\xA1Buenas tardes, queridos colegas! Soy JanIA con su tip de Marketing Inmobiliario. El ochenta por ciento de los clientes y colegas descartan una publicaci\xF3n si no tiene el precio claro, el barrio exacto o el metraje. Si quieren que sus ofertas y requerimientos se cierren en tiempo r\xE9cord, incluyan siempre los siete pilares fundamentales: tipo de inmueble, ciudad y barrio exacto, precio y administraci\xF3n, \xE1rea en metros cuadrados, habitaciones, ba\xF1os y parqueaderos. Publicar con todos los datos posibles le facilita la b\xFAsqueda a todos los colegas y me permite a m\xED cruzar ofertas y demandas al instante. Inviten a m\xE1s colegas a unirse a la red y prueben redactar sus anuncios conmigo hoy mismo.`,
         caption: `\u{1F4E2} *MI\xC9RCOLES DE MARKETING INMOBILIARIO & 7 PILARES \u2014 VECY NETWORK* \u{1F680}
 
 \xA1Buenas tardes, queridos colegas!
 
-\u{1F3AF} *La Regla de Oro:* M\xE1s del 80% de los negocios se pierden por publicaciones incompletas o ambiguas. Para que tus ofertas y solicitudes se muevan en tiempo r\xE9cord, incluye siempre los *7 Pilares*:
+\u{1F3AF} *La Regla de Oro:* M\xE1s del 80% de los negocios se pierden por publicaciones incompletas o ambiguas. Para que tus ofertas y solicitudes se muevan en tiempo r\xE9cord, incluye siempre los *7 Pilares* tanto en DEMANDAS como en OFERTAS:
 
 1\uFE0F\u20E3 Tipo de Inmueble (Apto, Casa, Bodega, etc.)
 2\uFE0F\u20E3 Ciudad y Barrio Exacto
@@ -15522,6 +15620,8 @@ Puedes enviarme tus minutas, promesas de compraventa o consultas de arrendamient
 5\uFE0F\u20E3 Habitaciones y Ba\xF1os
 6\uFE0F\u20E3 Parqueaderos (Independientes o en l\xEDnea)
 7\uFE0F\u20E3 Enlace directo de contacto de WhatsApp
+
+\u{1F4A1} *\xBFPor qu\xE9 publicar completo?* No solo le facilita la gesti\xF3n a JanIA para encontrar coincidencias autom\xE1ticas en segundos, sino que agiliza la b\xFAsqueda y el filtro para todos los agentes de la red, ahorrando tiempo valioso.
 
 \u2728 *Primicia:* \xA1JanIA ya est\xE1 encontrando matches en la red! Muy pronto nuestro equipo de asesores de cierre los contactar\xE1 para coordinar los cierres comerciales.
 
@@ -15545,39 +15645,43 @@ Escr\xEDbeme o env\xEDame los valores de costo fiscal y venta, y te liquido la r
       },
       viernes_avaluos: {
         theme: "avaluos",
-        voice: `\xA1Excelente viernes, queridos colegas! Soy JanIA. \xBFTienen un lote o casa para desarrollo y no saben qu\xE9 altura o uso permite el POT? No se queden con la duda: descarguen la ficha catastral del SINUPOT en PDF y env\xEDenmela por WhatsApp; yo les hago el estudio normativo de uso de suelo al instante. Inviten a sus colegas de confianza a formar parte de VECY Network y a consultar precios de mercado y normativas urban\xEDsticas con nuestro sistema. \xA1Que tengan un fin de semana lleno de cierres!`,
-        caption: `\u{1F4D0} *VIERNES DE AVAL\xDAOS COMERCIALES & SINUPOT \u2014 VECY NETWORK* \u{1F3D9}\uFE0F
+        voice: `\xA1Excelente viernes, queridos colegas! Soy JanIA. Para captar con \xE9xito y no quemar los inmuebles en los portales, es fundamental fijar precios realistas con los propietarios. Recuerden que en VECY Network realizamos estudios de mercado aproximados sobre el valor del metro cuadrado en la zona y c\xE1nones de arriendo sugeridos, adem\xE1s de analizar las fichas del SINUPOT para conocer los usos de suelo y edificabilidad permitidos. Todos nuestros estudios y asesor\xEDas son cien por ciento virtuales, \xE1giles y al servicio de su gesti\xF3n comercial. Inviten a sus colegas a sumarse a VECY Network y a consultar precios de mercado con nosotros. \xA1Que tengan un fin de semana lleno de cierres!`,
+        caption: `\u{1F4D0} *VIERNES DE ESTUDIO DE MERCADO, VALOR DEL M\xB2 & SINUPOT \u2014 VECY NETWORK* \u{1F3D9}\uFE0F
 
 \xA1Excelente viernes para todos los colegas de la red!
 
-\u{1F5FA}\uFE0F *Estudios Urban\xEDsticos y de Suelo al Instante:*
-\xBFVas a captar un lote o inmueble con potencial constructor? Descarga la ficha del SINUPOT en PDF y comp\xE1rtemela: extraigo el tratamiento urban\xEDstico, usos permitidos y edificabilidad en segundos.
+\u{1F4CA} *Estudios de Mercado y Sondeos de Valor del M\xB2 (100% Virtuales):*
+\xBFVas a captar un inmueble y necesitas orientar al propietario sobre el precio adecuado? Cons\xFAltame valores promedio de venta y c\xE1nones de arriendo por zona, estrato y tipolog\xEDa para fijar precios competitivos sin quemar el predio.
 
-\u{1F4B5} *Estudios de Mercado y Valor del M\xB2:*
-Cons\xFAltame valores promedio de metro cuadrado por zona y estrato para fijar precios competitivos con tus propietarios.
+\u{1F5FA}\uFE0F *Estudios de Suelo y Fichas SINUPOT al Instante:*
+Descarga la ficha del SINUPOT en PDF y comp\xE1rtemela: extraigo el tratamiento urban\xEDstico, usos compatibles y edificabilidad en segundos.
 
 \u{1F91D} *Suma a tu equipo:* Invita a m\xE1s colegas a VECY Network para multiplicar las opciones de negocio en todo el pa\xEDs.
-\u{1F4F2} *Estudios de Suelo y Aval\xFAos JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Estudios de Suelo y Mercado JanIA:* https://vecy-network.vercel.app/jania`
       },
       sabado_cafe: {
         theme: "cafe",
-        voice: `Buenos d\xEDas, queridos aliados de la red. Cerramos una semana de gran actividad comercial y colaborativa. Recuerden que para casos jur\xEDdicos de alta complejidad, sucesiones litigiosas, saneamientos o aval\xFAos certificados por perito de Lonja con R.A.A., pueden comunicarse directamente a trav\xE9s de nuestro canal oficial y plataforma web para coordinar una Consultor\xEDa Personalizada con nuestro br\xF3ker en VECY BIENES RA\xCDCES. Inviten a m\xE1s colegas a unirse a este maravilloso proyecto y a interactuar con nosotros. \xA1Disfruten de su fin de semana y a recargar energ\xEDas!`,
-        caption: `\u2615 *S\xC1BADO DE CAF\xC9 INMOBILIARIO & CONSULTOR\xCDA \u2014 VECY NETWORK* \u{1F91D}
+        voice: `Buenos d\xEDas, queridos aliados de la red. Cerramos una semana de gran actividad comercial y colaborativa. Recuerden que en VECY Network y VECY Bienes Ra\xEDces ofrecemos servicios preferentemente cien por ciento virtuales: estudios de mercado del valor del metro cuadrado, c\xE1nones de arriendo sugeridos, asesor\xEDas tributarias en l\xEDnea, redacci\xF3n de contratos, apoyo en casos de cobranza y marketing digital con inteligencia artificial. Y para casos personalizados o acompa\xF1amiento con nuestro br\xF3ker, pueden comunicarse directamente con Eduardo y Jani en nuestra l\xEDnea comercial. Inviten a m\xE1s colegas a unirse a este maravilloso proyecto y a interactuar con nosotros. \xA1Disfruten de su fin de semana y a recargar energ\xEDas!`,
+        caption: `\u2615 *S\xC1BADO DE CAF\xC9 INMOBILIARIO, SERVICIOS VIRTUALES & CONSULTOR\xCDA \u2014 VECY NETWORK* \u{1F91D}
 
 \xA1Buenos d\xEDas a todos los aliados y colegas de VECY Network!
 
-Culminamos una semana muy productiva. Para casos de alta complejidad jur\xEDdica, sucesiones, saneamiento de t\xEDtulos o aval\xFAos periciales oficiales con registro R.A.A. de Lonja:
+Culminamos una semana muy productiva. Recuerden nuestro portafolio de servicios especializados 100% virtuales:
 
-\u{1F4DE} *L\xEDnea de Consultor\xEDa Directa:* Canal Oficial Vecy Network
-Coordinaci\xF3n directa con la direcci\xF3n de corretaje de *VECY BIENES RA\xCDCES*.
+\u{1F4CA} *Estudios de Mercado & Valor del M\xB2:* Fijaci\xF3n de precios sugeridos de venta y arriendo para asesorar a tus propietarios.
+\u{1F4B0} *Asesor\xEDas Tributarias DIAN:* Liquidaci\xF3n de ganancia ocasional, retenciones y optimizaci\xF3n fiscal.
+\u2696\uFE0F *Contratos y Minutas Digitales:* Promesas, corretaje 50/50 y blindaje con Ley 527 de 1999.
+\u{1F4BC} *Cobranzas y Cartera:* Manejo prejudicial de mora y gesti\xF3n de c\xE1nones de arriendo.
+\u{1F916} *Marketing con IA:* Fotograf\xEDa con m\xF3vil y publicaciones de alto impacto.
 
+\u{1F4DE} *Atenci\xF3n Personalizada Br\xF3ker (Eduardo y Jani):* WhatsApp +57 316 656 9719
 \u{1F31F} *Sigamos creciendo juntos:* Invita a m\xE1s colegas a sumarse a esta red colaborativa nacional.
 \u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania`
       },
       domingo_soporte: {
         theme: "soporte",
-        voice: `\xA1Feliz domingo a todos y a todas mis queridos colegas! Soy JanIA. Hoy quiero recordarles que nuestro equipo de VECY Network y yo estamos a su entera disposici\xF3n los siete d\xEDas de la semana. Ya sea que necesiten estructurar una promesa de compraventa, liquidar la ganancia ocasional ante la DIAN, realizar un estudio de uso de suelo en el SINUPOT, dise\xF1ar una campa\xF1a de marketing inmobiliario con inteligencia artificial o solicitar un aval\xFAo comercial certificado por perito con registro RAA de Lonja, aqu\xED estamos para respaldarlos. Los invito a invitar a m\xE1s colegas a unirse a VECY Network y a consultar cualquier tema directamente conmigo en la web o por WhatsApp. \xA1Que disfruten un domingo reparador en familia!`,
-        caption: `\u{1F6CE}\uFE0F *DOMINGO DE SOPORTE JANIA, CONSULTOR\xCDA & SERVICIOS \u2014 VECY NETWORK* \u{1F31F}
+        voice: `\xA1Feliz domingo a todos y a todas mis queridos colegas! Soy JanIA. Hoy quiero recordarles que nuestro equipo de VECY Network y yo estamos a su entera disposici\xF3n los siete d\xEDas de la semana. Ya sea que necesiten estructurar una promesa de compraventa, liquidar la ganancia ocasional ante la DIAN, realizar un estudio de mercado del valor del metro cuadrado, analizar el uso de suelo en el SINUPOT, dise\xF1ar una campa\xF1a de marketing inmobiliario con inteligencia artificial o gestionar cobranzas de arrendamiento, aqu\xED estamos para respaldarlos con servicios cien por ciento virtuales y \xE1giles. Los invito a invitar a m\xE1s colegas a unirse a VECY Network y a consultar cualquier tema directamente conmigo en la web o por WhatsApp. \xA1Que disfruten un domingo reparador en familia!`,
+        caption: `\u{1F6CE}\uFE0F *DOMINGO DE SOPORTE JANIA, CONSULTOR\xCDA & SERVICIOS 100% VIRTUALES \u2014 VECY NETWORK* \u{1F31F}
 
 \xA1Feliz y bendecido domingo para todos los aliados y colegas de VECY Network!
 
@@ -15585,14 +15689,16 @@ Hoy queremos recordarles que en VECY Network cuentan con un respaldo integral 24
 
 \u2696\uFE0F *Consultor\xEDa Jur\xEDdica y Notarial:* Revisi\xF3n de minutas, promesas, contratos y saneamiento de t\xEDtulos.
 \u{1F4B0} *Asesor\xEDa Tributaria DIAN:* Liquidaci\xF3n de retenciones, ganancia ocasional y optimizaci\xF3n fiscal.
-\u{1F4D0} *Aval\xFAos Comerciales y SINUPOT:* Fichas normativas POT y aval\xFAos certificados por perito R.A.A. de Lonja.
-\u{1F4E2} *Marketing Inmobiliario & IA:* Estrategias de captaci\xF3n, 7 pilares y herramientas de inteligencia artificial.
+\u{1F4CA} *Estudios de Mercado y M\xB2:* Precios competitivos de venta y arriendo para orientar a propietarios.
+\u{1F4D0} *Estudios de Suelo SINUPOT:* Fichas normativas POT, alturas y usos permitidos al instante.
+\u{1F4E2} *Marketing Inmobiliario & IA:* T\xE9cnicas de fotograf\xEDa con smartphone, viralizaci\xF3n sin pauta y estructura de 7 pilares.
+\u{1F4BC} *Cobranzas de Arrendamiento:* Gesti\xF3n oportuna de cartera y mora.
 \u{1F91D} *Cierres Comerciales en Red:* Bolsa inmobiliaria colaborativa con comisiones transparentes (35/35/15/15).
 
 \u{1F4AC} *\xBFTienes consultas o requieres acompa\xF1amiento?*
 Escr\xEDbenos en el grupo o interact\xFAa directamente con JanIA en nuestra consola web:
 \u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania
-\u{1F4DE} *Consultor\xEDa Personalizada:* Plataforma Oficial Vecy Network`
+\u{1F4DE} *Atenci\xF3n Br\xF3ker Oficial:* WhatsApp +57 316 656 9719`
       }
     };
   }
@@ -15611,7 +15717,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.29";
+var VECY_VERSION = "v31.30";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

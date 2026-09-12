@@ -167,7 +167,25 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.29 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.30 — Septiembre 2026
+
+### Novedades v31.30 (Motor de Recuperación Catch-Up de Publicaciones, Emancipación Temática con Imágenes Dinámicas y Erradicación Total de Avalúos Certificados):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Omisión de Publicaciones Diarias*:
+     - Tras reinicios de PM2 o demoras en el Event Loop de Node.js, las horas exactas de publicación (10:00 AM tips y 12:00 PM Grupo 3) quedaban atrás en el tiempo sin dispararse. `node-cron` evaluaba estrictamente el segundo cero (`second === 0`), perdiéndose el día si Node.js estaba ocupado en ese milisegundo.
+  2) *Repetición de Consejos y Selección Estática de Imágenes*:
+     - JanIA utilizaba una sola imagen fija por día y temas estáticos sin libre albedrío temático.
+  3) *Doctrina Incompatible de Avalúos*:
+     - Existían referencias obsoletas a peritos de Lonja presenciales y avalúos certificados, cuando el servicio de VECY es 100% Virtual.
+- **Acciones Ejecutadas**:
+  1) *Motor de Recuperación Catch-Up*: El ticker de guardia minutera (`setInterval`) audita de 08:00 a 19:00 Bogotá si algún tip diario (Grupo 2 + Canal) o del Grupo 3 quedó pendiente y lo dispara de inmediato.
+  2) *IA Pura con Temas e Imágenes Dinámicas*: `generateDailyContent` retorna `chosenTheme`. JanIA (Gemini) elige autónomamente entre 8 pilares temáticos (`juridico`, `tributario`, `avaluos`, `marketing`, `matches`, `podcast`, `periodista`, `soporte`) e inyecta la imagen 3D correspondiente desde `client/public/assets/jania/`.
+  3) *Servicios 100% Virtuales*: Erradicados avalúos de perito e incorporados estudios ágiles de valor de m² y cánones de arriendo sugeridos para orientar precios sin quemar inmuebles, sumando el Pilar 5 de Cobranzas de Arrendamiento bajo Ley 820 de 2003.
+  4) *Educación e Identidad*: Pedagogía de los 7 Pilares de Ofertas y Demandas, fundadores Eduardo A. Rivera y Jani Alves, y comisiones transparentes 35/35/15/15.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.29 — Septiembre 2026
 
 ### Novedades v31.29 (Optimización Integral de Coincidencias /admin, Silenciamiento de Logs Sincrónicos, 9 Índices PostgreSQL Nativo y Micro-caché):
 - **Diagnóstico y Causas Raíz Identificadas**:

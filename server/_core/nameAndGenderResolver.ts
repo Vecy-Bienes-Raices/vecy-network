@@ -248,7 +248,7 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
 export const VECY_COMMERCIAL_INFO = {
   name: "Vecy Bienes Raíces",
   type: "Bróker inmobiliario 100% digital 🌍✨",
-  services: "Avalúos online ⚡ | Compra/venta 🏡 | Marketing con IA 🤖 | Contratos digitales 📄 | Préstamos hipotecarios",
+  services: "Estudios de mercado m² y canon sugerido ⚡ | Consultoría jurídica y tributaria ⚖️ | Manejo de cobranzas 💼 | Marketing con IA y fotografía 🤖📸 | Contratos digitales 📄",
   phone: "3166569719",
   schedule: {
     weekdays: "Lunes a Viernes de 8:00 AM a 10:00 PM (08:00 - 22:00)",

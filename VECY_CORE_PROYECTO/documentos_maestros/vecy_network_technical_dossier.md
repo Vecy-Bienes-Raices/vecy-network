@@ -322,6 +322,38 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.30 — Septiembre 2026
+
+#### 📌 MOTOR DE RECUPERACIÓN CATCH-UP DE PUBLICACIONES, EMANCIPACIÓN TEMÁTICA CON IMÁGENES DINÁMICAS Y ERRADICACIÓN TOTAL DE AVALÚOS CERTIFICADOS
+
+**Problemas identificados:**
+1. **Omisión de Publicaciones Diarias (Fallo del Sábado)**:
+   - Reinicios de PM2 o sobrecarga en el Event Loop de Node.js causaban que las horas fijas de disparo (10:00 AM para tips diarios y 12:00 PM para Grupo 3) transcurrieran sin ejecutarse. `node-cron` evalúa de forma estricta el segundo 0; si Node.js no estaba libre en ese segundo exacto, la ejecución no se disparaba y se perdía todo el día.
+   - El ticker minutero no contaba con un mecanismo de recuperación (*Catch-Up*) ante caídas o reinicios.
+2. **Monotonía Temática y Selección Estática de Imágenes**:
+   - `generateDailyContent` asignaba un tema rígido por día y una única imagen predeterminada (`jania_avaluos.jpg`, etc.). JanIA carecía de libre albedrío temático inmobiliario y de capacidad para elegir dinámicamente la imagen idónea para acompañar su mensaje.
+3. **Doctrina Desfasada de Avalúos Comerciales Certificados**:
+   - Existían textos prometiendo peritos presenciales de Lonja y avalúos comerciales certificados con registro R.A.A. En la realidad operativa de VECY Network, el servicio es **100% Virtual**: estudios ágiles de mercado sobre el valor del m² y canon sugerido para evitar quemar inmuebles, consulta SINUPOT, cobranzas de arrendamiento, asesoría tributaria DIAN, contratos digitales y marketing con IA.
+
+**Solución aplicada:**
+- **Motor de Recuperación Catch-Up (*Catch-Up Failsafe Engine*) en `server/_core/cronService.ts`**:
+  - El ticker de guardia minutera (`setInterval`) inspecciona la ventana diurna (08:00 a 19:00 Bogotá). Si el tip diario (Grupo 2 + Canal Oficial), el tip del Grupo 3 (Miércoles y Sábados) o el Reporte Semanal de Lunes no se ha ejecutado hoy, lo dispara de forma automática e inmediata con transcodificación de voz TTS, imagen temática y pie de foto.
+  - Implementada y exportada la función `publishGrupo3TipNow(force)`.
+- **Emancipación a IA Pura con Selección Dinámica de Temas e Imágenes**:
+  - `generateDailyContent` ahora devuelve `DailyTipContentExtended` con `chosenTheme`. JanIA (Gemini) tiene plena libertad creativa orientada a bienes raíces para elegir entre 8 pilares temáticos (`juridico`, `tributario`, `avaluos`, `marketing`, `matches`, `podcast`, `periodista`, `soporte`).
+  - El sistema asocia automáticamente la imagen visual 3D desde `client/public/assets/jania/` según el tema elegido por la IA (`jania_juridico.jpg`, `jania_tributario.jpg`, `jania_avaluos.jpg`, `jania_marketing.jpg`, `jania_matches.jpg`, `jania_podcast.jpg`, `jania_soporte.jpg`).
+  - Enriquecido el banco de prompts con más de 30 subtemas variados de alto impacto para corredores inmobiliarios colombianos.
+- **Erradicación Doctrinal de Avalúos Certificados y Consolidación de Servicios 100% Virtuales**:
+  - Reemplazados todos los textos de avalúos certificados y peritos por **"Estudios de mercado aproximados sobre el valor del metro cuadrado en la zona y cánones de arriendo sugeridos (100% Virtuales)"**.
+  - Incorporado el **Pilar 5: Gestión de Cobranzas y Cartera de Arrendamiento** (cobro persuasivo bajo Ley 820 de 2003, acuerdos de pago y restitución voluntaria).
+  - Actualizados `cronService.ts`, `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`, `PROYECTO_Vecy Network.md`, `janIA.ts` y `nameAndGenderResolver.ts`.
+- **Educación e Identidad Institucional**:
+  - Pedagogía sobre los **7 Pilares de Ofertas y Demandas** (beneficio colectivo y aceleración del matching).
+  - Identidad institucional: fundadores **Eduardo A. Rivera** (Director de Tecnología) y **Jani Alves** (Directora de Operaciones), Misión, Visión y comisiones transparentes 35/35/15/15.
+  - Preservada la derivación a la línea comercial oficial de VECY BIENES RAÍCES (**+573166569719**) para consultoría personalizada.
+
+---
+
 ### 🔖 v31.29 — Septiembre 2026
 
 #### 📌 OPTIMIZACIÓN INTEGRAL DE COINCIDENCIAS (/ADMIN), SILENCIAMIENTO DE LOGS SINCRÓNICOS, 9 ÍNDICES POSTGRESQL NATIVOS Y MICRO-CACHÉ

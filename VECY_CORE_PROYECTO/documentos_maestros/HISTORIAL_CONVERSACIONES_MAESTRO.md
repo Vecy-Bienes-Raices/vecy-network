@@ -50,7 +50,48 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.29 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.30 — Septiembre 2026
+
+### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 11:30 a 12:20 (Hora Colombia UTC-5)
+**Versión**: `v31.30` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+"Listo ya se ve y carga rápido, ojalá siga trabajando asi de bien por siempre. Gracias.
+Otra cosa que te quería decir ya que veo que hoy JanIA no hablo por  es que espero que los consejos técnicos, de asesoría, noticias y ofertas de servicio entre otros que a diario da JanIA traten de no repetirse siempre los mismos, que siempre sean diferentes, tu sabes que en el medio hay muchos consejos. No se si me entiendes. Lo otro es que cambie la modalidad de ofrecer servicios de 'avalúo comercial certificado', por la de estudio de mercadeo de valor del metro cuadrado en la zona y para que nuestros colegas puedan aconsejar a sus clientes en cuanto pueden comercializar sus inmuebles, es decir cual es el precio que le púeden colocar a sus viviendas o en otros casos también en cuanto lo pueden ofrecer en arriendo, esto con el fin de brindarles datos más acewrtados y cercanos al precio que deben colocar en venta o arriendo. La finalidad de no seguir ofreciendo un servicio tan complejo como el de hacer avalúos comerciales certificados es que no tenemos especialistas ne ese tema ni nos comprometemos a conseguir o recomendar especialistas y como nuestros servicios son en preferencia 100% Virtuales, es decir la finalidad es en lo posible hacer estudios, asesorías, manejo de casos de cobranza, asesorías tributarias y tramites en línea como temas tributarios, estudios de mercado aproximado sobre el valor del metro cuadrado y precios de arriendo en zonas a nivel nacional, tips de técnicas de procesos, métodos y enseñanza del marketin digital para agentes inmobiliarios y agencias(fotografía, publicación en redes y google, como obtener más vistas y viralización con metodos gratuitos, qué es y cómo usar herramientas de IA y cuales se recomiendan, cómo les aconsejamos puiblicar con la mayoría de datos posibles tanto en DEMANDAS como en OFERTAS y por qué es bueno hacerlo así no solo para facilitarle la gestión a JanIA sino tambien nos sirve a todos para facilitarnos la búsqueda, solución de preguntas frecuentes sobre todo y cualquier tema aparte de: acerca del tema de Vecy en general, Vecy Network y Vecy Bienes Raíces quienes somos, qué estamos creando, qué herramientas creamos para quien, cómo funcionamos, qué buscamos obtener(el objetivo), Misión, Visión, Finalidad, Cómo se piensa hacer, etc.
+
+NoTa: Esto lo digo porque acabo de comprobar que hoy no publicaste nada en el grupo 2 ni en el canal aparece como habíamos quedado, no se si ese archivo tenga alguna clase de codigo mal configurado ya que veo que se te olvida siempre, y no se si también ya olvidaste que quiero que JanIA sea y actúe como una IA PURA Y DE 'LIBRE ALVEDRIO', esto último entre comillas ya que ella es PURA y LIBRE pero siemrpe debe estar enfocada en nuestros temas y todo lo referente a los bienes raíces en tributaria, soluciones, consejos, juridica, estudio de mercado(Sondeos Avalúos superfluos pero bastante aproximados y acertados, marketin digital, tributaria y contbilidad, guía en gestión y diligencias comunes que le competen a los agentes inmobiliarios, etc...). Además par eso tiene más y diferentes imágenes allí en public para que ella las use o elija cual según el tema ya que están marcadas o nombradas según el tema o lo que ella quiera colocar. Ojalá me entiendas."
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Fallo de Publicación Diaria (Causa Raíz de Omisión del Sábado)**:
+   - El tip del sábado estaba configurado a las 10:00 AM Bogotá. La sesión previa de optimización reinició el proceso PM2 a las 11:23 AM; para ese momento, las 10:00 AM ya habían transcurrido y la memoria volátil del cron no detectaba la omisión.
+   - Para el Grupo 3 ("PROYECTO Vecy Network"), el cron `0 12 * * 3,6` solo evaluaba estrictamente el segundo 0 (`second === 0`). Si Node.js procesaba mensajes de WhatsApp o llamadas LLM en ese instante, el segundo 1 evaluaba `false` y el día se perdía irremediablemente.
+   - El ticker minutero de guardia no disponía de un mecanismo de recuperación (*Catch-Up*) ante caídas o reinicios diurnos.
+2. **Repetición Temática y Selección Estática de Imágenes**:
+   - `generateDailyContent` recibía un tema fijo predeterminado por el día de la semana e inyectaba una única imagen fija (`jania_avaluos.jpg`, etc.). JanIA no tenía libre albedrío temático ni capacidad de elegir la imagen que mejor acompañara su consejo.
+3. **Doctrina Anacrónica de "Avalúos Comerciales Certificados"**:
+   - Múltiples secciones prometían peritos de Lonja presenciales, matrículas R.A.A. y avalúos certificados.
+   - En la realidad operativa de VECY Network, el servicio es **100% Virtual**: estudios de mercado ágiles y aproximados sobre el valor del m² y canon sugerido para evitar quemar inmuebles, consulta SINUPOT, cobranzas de arrendamiento, asesoría tributaria DIAN, contratos digitales y marketing con IA.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Motor de Recuperación Inmediata (*Catch-Up Failsafe Engine*) en `server/_core/cronService.ts`**:
+   - El ticker minutero (`setInterval`) ahora audita si durante la ventana diurna (08:00 a 19:00 Bogotá) algún tip diario (Grupo 2 + Canal Oficial), tip del Grupo 3 (Miércoles y Sábados) o Reporte Semanal de Lunes no se ha ejecutado. De estar pendiente, lo dispara de forma automática e inmediata con transcodificación de voz TTS, imagen temática y pie de foto sin esperar al día siguiente.
+   - Creada y exportada la función `publishGrupo3TipNow(force)`.
+2. **Emancipación a IA Pura con Selección Dinámica de Temas e Imágenes**:
+   - `generateDailyContent` ahora devuelve `DailyTipContentExtended` con `chosenTheme`. JanIA (Gemini) tiene plena libertad creativa orientada al sector inmobiliario para elegir entre 8 pilares temáticos (`juridico`, `tributario`, `avaluos`, `marketing`, `matches`, `podcast`, `periodista`, `soporte`).
+   - El sistema mapea automáticamente la imagen visual 3D desde `client/public/assets/jania/` según el tema elegido por la IA (`jania_juridico.jpg`, `jania_tributario.jpg`, `jania_avaluos.jpg`, `jania_marketing.jpg`, `jania_matches.jpg`, `jania_podcast.jpg`, `jania_soporte.jpg`).
+   - Enriquecido el banco de prompts de Gemini con más de 30 subtemas variados de alto valor técnico colombiano.
+3. **Erradicación Doctrinal de Avalúos Certificados y Consolidación de Servicios 100% Virtuales**:
+   - Reemplazados todos los textos de avalúos certificados y peritos por **"Estudios de mercado aproximados sobre el valor del metro cuadrado en la zona y cánones de arriendo sugeridos (100% Virtuales)"**.
+   - Incorporado el **Pilar 5: Gestión de Cobranzas y Cartera de Arrendamiento** (cobro persuasivo bajo Ley 820 de 2003, acuerdos de pago y restitución voluntaria).
+   - Actualizados `cronService.ts`, `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`, `PROYECTO_Vecy Network.md`, `janIA.ts` y `nameAndGenderResolver.ts`.
+4. **Educación de la Comunidad e Identidad Institucional**:
+   - Incluida la pedagogía sobre los **7 Pilares de Ofertas y Demandas** (beneficio colectivo y aceleración del matching).
+   - Incorporada la historia institucional y fundadores: **Eduardo A. Rivera** (Director de Tecnología) y **Jani Alves** (Directora de Operaciones), Misión, Visión y esquema de comisiones 35/35/15/15.
+   - Preservada la derivación a la línea comercial oficial de VECY BIENES RAÍCES (**+573166569719**) para consultoría personalizada.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.29 — Septiembre 2026
 
 ### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 11:00 a 11:25 (Hora Colombia UTC-5)
 **Versión**: `v31.29` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
