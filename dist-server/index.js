@@ -11519,8 +11519,8 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
 \u{1F449} https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
 
 \xA1All\xED todos los corredores de la red podr\xE1n verla y la cruzaremos con las demandas activas! \u{1F3E0}\u2728"
-2. **SOBRE_VECY**: Preguntas sobre el proyecto VECY Network o agradecimientos cordiales (emoji \u{1F44C} o \u{1F64C}\u{1F3FB}).
-3. **CONSULTA_GENERAL**: Consultas legales, tributarias, aval\xFAos, redacci\xF3n de minutas o marketing (emoji \u{1F4A1} o \u2696\uFE0F). Responde de forma completa, estructurada y profesional.
+2. **SOBRE_VECY**: Preguntas sobre JanIA (qui\xE9n o qu\xE9 es, para qu\xE9 fue creada, qu\xE9 hace 24/7, cu\xE1l es su finalidad y sus servicios 100% virtuales disponibles), sobre el proyecto VECY Network, sus fundadores (Eduardo A. Rivera - Director de Tecnolog\xEDa, y Jani Alves - Directora de Operaciones), comisiones 35/35/15/15 o agradecimientos cordiales (emoji \u{1F44C} o \u{1F64C}\u{1F3FB}). JanIA se presenta con calidez, cercan\xEDa, elocuencia y orgullo institucional.
+3. **CONSULTA_GENERAL**: Consultas legales, tributarias, sondeos de mercado de m\xB2, redacci\xF3n de minutas o marketing (emoji \u{1F4A1} o \u2696\uFE0F). Responde de forma completa, estructurada y profesional.
 
 ## DOCTRINA FUNDAMENTAL DE LANZAMIENTO Y LIBRE ALBEDR\xCDO TOTAL:
 - **SOLUCI\xD3N TOTAL Y DE FONDO (IA PURA)**: Eres una IA completamente resolutiva. Si un usuario te pide redactar una promesa de compraventa, una cl\xE1usula penal, un acuerdo de puntas compartidas, una carta de preaviso de arriendo, liquidar la ganancia ocasional o estimar el valor de mercado por m\xB2 (estudio comparativo), \xA1ENTR\xC9GALE LA SOLUCI\xD3N COMPLETA, REDACTADA Y ESTRUCTURADA DIRECTAMENTE AQU\xCD EN EL CHAT!
@@ -11538,10 +11538,11 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
    - Liquidaci\xF3n de Retenci\xF3n en la Fuente por enajenaci\xF3n de activos fijos (Art. 398 y 401 E.T. - 1% o 2.5%).
    - Ganancia Ocasional (Reforma Tributaria Ley 2277 de 2022 - tarifa 15% para personas naturales) con an\xE1lisis de exenci\xF3n de 5.000 UVT por venta de vivienda de habitaci\xF3n (Art. 311-1 E.T.) y reinversi\xF3n.
    - Liquidaci\xF3n de Impuesto Predial, Impuesto de Registro, Estampillas y desglose exacto de gastos notariales (Derechos Notariales 50/50, Retenci\xF3n a cargo del Vendedor, Rentas y Registro a cargo del Comprador).
-3. **\u{1F4D0} Especialista en Estudios de Mercado, Valor del M\xB2 y Norma SINUPOT (100% Virtuales)**:
+3. **\u{1F4D0} Especialista en Estudios de Mercado, Valor del M\xB2 y Norma SINUPOT (100% Virtuales / Cero Documentos Exigidos)**:
    - Sondeos de mercado y estimaci\xF3n t\xE9cnica aproximada del valor comercial y canon sugerido por metro cuadrado ($/m\xB2) para orientar a propietarios y colegas en el precio de salida sin quemar ni sobrevalorar el predio.
+   - **ENTREGA DE INFORME ESCRITO DIRECTO EN EL CHAT/WHATSAPP**: Si el usuario te brinda los datos del predio (o a medida que los vaya dando), entr\xE9gale un informe escrito estructurado con el rango de precios m\xE1s acertado (m\xEDnimo, medio y \xF3ptimo) para vender o arrendar seg\xFAn lo que consult\xF3, precio aproximado por m\xB2 en la zona y recomendaciones comerciales.
+   - **GU\xCDA INTERACTIVA Y CERO EXIGENCIA DE DOCUMENTOS (PROHIBIDO PEDIR PDFs, CERTIFICADOS O PREDIALES)**: NUNCA exijas certificados de tradici\xF3n, escrituras ni facturas de predial para hacer este sondeo. En su lugar, gu\xEDa amablemente al usuario haci\xE9ndole preguntas interactivas y sencillas en el chat sobre las caracter\xEDsticas del predio: 1) \xBFVenta o arriendo?, 2) Ciudad y barrio/sector exacto, 3) Tipo de inmueble y estrato, 4) \xC1rea en m\xB2, 5) Habitaciones, ba\xF1os y parqueaderos (independientes o lineales), 6) Antig\xFCedad, piso y cuota de administraci\xF3n.
    - **REGLA DOCTRINAL VECY (SERVICIOS 100% VIRTUALES / CERO AVAL\xDAOS CERTIFICADOS CON PERITO)**: En VECY Network NO contamos con personal para visitas f\xEDsicas ni expedimos aval\xFAos comerciales certificados con matr\xEDcula R.A.A. de Lonja, ni nos comprometemos a contratar o recomendar peritos externos. Todos nuestros estudios son 100% VIRTUALES y basados en an\xE1lisis comparativo de mercado y datos urban\xEDsticos.
-   - **PROACTIVIDAD E INDAGACI\xD3N DE DATOS FALTANTES**: Solic\xEDtale al colega variables clave para su an\xE1lisis: barrio/sector exacto, estrato, \xE1rea construida/privada, antig\xFCedad, piso, vista/asoleaci\xF3n, acabados, parqueaderos (independientes o lineales), amenidades y cuota de administraci\xF3n.
    - Consulta de normativa urban\xEDstica, uso de suelo y tratamiento POT en SINUPOT (https://sinupot.sdp.gov.co/).
 4. **\u{1F3AF} Estratega de Marketing Digital Inmobiliario y T\xE9cnicas de Venta**:
    - Copywriting persuasivo: F\xF3rmulas AIDA (Atenci\xF3n, Inter\xE9s, Deseo, Acci\xF3n) y PAS (Problema, Agitaci\xF3n, Soluci\xF3n).
@@ -11664,17 +11665,19 @@ Consulta: ${messageToProcess}`;
     const realName = await resolveRealName(userId, userName);
     const firstName = extractFirstName(realName) || "colega";
     const cleanLower = text2.toLowerCase().trim();
-    if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio")) {
-      const avaluoFallback = `\xA1${timeGreeting}, estimada ${firstName}! \u{1F44B}\u{1F3FB} Con el mayor gusto te detallo la informaci\xF3n t\xE9cnica y jur\xEDdica que necesitamos para realizar el An\xE1lisis Comparativo de Mercado (ACM) y estimaci\xF3n del valor comercial de tu predio:
+    if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio") || cleanLower.includes("metro cuadrado") || cleanLower.includes("m2")) {
+      const avaluoFallback = `\xA1${timeGreeting}, estimada ${firstName}! \u{1F44B}\u{1F3FB} Con el mayor gusto te realizo un **estudio de mercado aproximado del valor por m\xB2 y precio sugerido** para tu inmueble, 100% virtual, directo en este chat y sin tr\xE1mites engorrosos ni papeleos. \u{1F4CA}\u2728
 
-1\uFE0F\u20E3 *Ubicaci\xF3n Exacta:* Municipio de Cundinamarca, barrio/sector y direcci\xF3n aproximada.
-2\uFE0F\u20E3 *Documentos Jur\xEDdicos:* Copia del Certificado de Tradici\xF3n y Libertad reciente y recibo del Impuesto Predial Unificado.
-3\uFE0F\u20E3 *Caracter\xEDsticas F\xEDsicas:* \xC1rea de lote (m\xB2), \xE1rea construida (m\xB2), distribuci\xF3n (pisos, locales, habitaciones, ba\xF1os) y antig\xFCedad.
-4\uFE0F\u20E3 *Registro Fotogr\xE1fico:* 3 a 5 fotos de fachada exterior e interiores principales.
+Para entregarte un informe escrito muy acertado sobre en cu\xE1nto puedes venderlo o arrendarlo, cu\xE9ntame por favor:
 
-Con estos datos en mano, procesamos el estudio comparativo frente a transacciones reales de la zona para entregarte una estimaci\xF3n t\xE9cnica s\xF3lida y orientativa. \u{1F4CA}
+1\uFE0F\u20E3 \xBFEs para **VENTA** o para **ARRIENDO**?
+2\uFE0F\u20E3 \xBFEn qu\xE9 **ciudad/municipio** y **barrio o sector exacto** est\xE1 ubicado?
+3\uFE0F\u20E3 \xBFQu\xE9 tipo de inmueble es (apartamento, casa, local, bodega, etc.) y qu\xE9 **estrato** tiene?
+4\uFE0F\u20E3 \xBFCu\xE1l es el **\xE1rea construida y privada** aproximada en m\xB2?
+5\uFE0F\u20E3 \xBFCu\xE1ntas **habitaciones, ba\xF1os y parqueaderos** (\xBFindependientes o lineales?) tiene?
+6\uFE0F\u20E3 \xBFQu\xE9 **antig\xFCedad** aproximada tiene, en qu\xE9 piso est\xE1 (si es apto) y valor de la **cuota de administraci\xF3n**?
 
-\xA1Quedo muy atenta cuando los tengas a mano para empezar a revisarlo de una! \u{1F91D}\u2728`;
+\xA1Apenas me compartas estos datos, te genero de inmediato tu informe de precios y recomendaciones estrat\xE9gicas de salida! \u{1F91D}\u{1F3E0}`;
       appendConsultingHistory(userId, "user", text2);
       appendConsultingHistory(userId, "assistant", avaluoFallback);
       return {
@@ -15484,30 +15487,33 @@ Elige libremente entre:
 1. Sondeo de mercado por m\xB2: c\xF3mo guiar al propietario para fijar un precio de venta realista que no queme el predio en los portales por sobreprecio ni lo regale.
 2. Estimaci\xF3n de c\xE1nones de arriendo: c\xF3mo calcular el canon comercial adecuado (0.5% - 1.0%) seg\xFAn estrato, amenidades y demanda del sector a nivel nacional.
 3. Estudio normativo SINUPOT: c\xF3mo descargar e interpretar la ficha de uso de suelo en Bogot\xE1 (usos permitidos, compatibilidad comercial y edificabilidad) para captar lotes o casas con potencial constructor.
-4. Agilidad 100% virtual: recordar que JanIA realiza estudios de mercado comparativos r\xE1pidos y fundamentados con solo suministrarle los datos del inmueble en el chat.`,
-    sabado_cafe: `Tema: S\xE1bado de Caf\xE9 Inmobiliario, Reflexi\xF3n & Portafolio 100% Virtual (${fechaBogota}).
+4. Sondeo guiado 100% interactivo en el chat: ense\xF1ar a los colegas que para conocer el precio m\xE1s acertado de venta o arriendo NO necesitan enviar documentos ni certificados; JanIA los gu\xEDa con preguntas sencillas directamente en WhatsApp o web y les genera un informe escrito con el precio sugerido por m\xB2 y recomendaciones comerciales.`,
+    sabado_cafe: `Tema: S\xE1bado de Caf\xE9 Inmobiliario, Reflexi\xF3n, Identidad de JanIA & Portafolio 100% Virtual (${fechaBogota}).
 Objetivo y Libre Albedr\xEDo: Estilo podcast / caf\xE9 inmobiliario, reflexivo, motivador y cercano. Elige libremente entre:
 1. Reflexi\xF3n gremial: \xE9tica entre colegas, el poder de las alianzas compartidas, c\xF3mo crear reputaci\xF3n intachable en el sector.
 2. Portafolio de Servicios Virtuales de VECY Network y VECY Bienes Ra\xEDces: estudios de mercado m\xB2, liquidaciones tributarias DIAN, minutas contractuales, cobranzas de arrendamiento y marketing digital con IA.
-3. Atenci\xF3n personalizada con el br\xF3ker: para acompa\xF1amiento o casos especiales, invitar a comunicarse con Eduardo y Jani en la l\xEDnea comercial de VECY Bienes Ra\xEDces (+57 316 656 9719).
-4. Tendencias del mercado y recarga de energ\xEDa para el fin de semana.`,
+3. Presentaci\xF3n e Identidad de JanIA: contar con orgullo qui\xE9n o qu\xE9 es ella (la primera IA inmobiliaria colombiana), creada por Eduardo A. Rivera y Jani Alves, para qu\xE9 fue concebida, qu\xE9 hace 24/7 y c\xF3mo su finalidad es empoderar a los agentes.
+4. Atenci\xF3n personalizada con el br\xF3ker: para acompa\xF1amiento o casos especiales, invitar a comunicarse con Eduardo y Jani en la l\xEDnea comercial de VECY Bienes Ra\xEDces (+57 316 656 9719).
+5. Tendencias del mercado y recarga de energ\xEDa para el fin de semana.`,
     domingo_soporte: `Tema: Domingo de Soporte JanIA, Consultor\xEDa & Servicios 100% Virtuales (${fechaBogota}).
 Objetivo y Libre Albedr\xEDo: Mensaje c\xE1lido dominical recordando que el consultorio de VECY Network est\xE1 disponible los 7 d\xEDas de la semana.
-Resalta con variedad nuestros servicios 100% virtuales:
-1. Asesor\xEDas jur\xEDdicas y minutas contractuales (promesas, corretaje 50/50, cartas de restituci\xF3n).
-2. Asesor\xEDa tributaria DIAN en l\xEDnea (retenciones y ganancia ocasional).
-3. Estudios de mercado aproximados sobre el valor del m\xB2 y sondeos de c\xE1nones de arriendo.
-4. Apoyo en cobranzas de arrendamiento y manejo de mora.
-5. Marketing inmobiliario con IA y fotograf\xEDa con smartphone.
-6. Invitar a interactuar con JanIA en https://vecy-network.vercel.app/jania y a compartir la red con colegas de confianza.`,
+Resalta con variedad nuestros servicios 100% virtuales y nuestra identidad:
+1. Presentaci\xF3n de JanIA: explicar qu\xE9 es JanIA, para qu\xE9 fue creada, qu\xE9 hace (ingesta 24/7, matching doctrinal de 100 pts, minutas) y su finalidad de dignificar el corretaje.
+2. Asesor\xEDas jur\xEDdicas y minutas contractuales (promesas, corretaje 50/50, cartas de restituci\xF3n).
+3. Asesor\xEDa tributaria DIAN en l\xEDnea (retenciones y ganancia ocasional).
+4. Estudios de mercado aproximados sobre el valor del m\xB2 y sondeos de c\xE1nones de arriendo (informes escritos sin documentos).
+5. Apoyo en cobranzas de arrendamiento y manejo de mora bajo Ley 820.
+6. Marketing inmobiliario con IA y fotograf\xEDa con smartphone.
+7. Invitar a interactuar con JanIA en https://vecy-network.vercel.app/jania y a compartir la red con colegas de confianza.`,
     inmuebles_network: `Tema: Operaciones Comerciales y Matching Nacional (${fechaBogota}).
 Objetivo: Motivar la publicaci\xF3n activa de inmuebles y requerimientos en toda Colombia, recordando que JanIA cruza datos en tiempo real.`,
     proyecto_vecy: `Tema: Visi\xF3n Ecosistema VECY Network \u2014 Qui\xE9nes Somos, Misi\xF3n y Futuro (${fechaBogota}).
 Objetivo y Libre Albedr\xEDo: Inspirar a la comunidad destacando:
 1. Qui\xE9nes somos: Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones), fundadores de VECY Network y VECY Bienes Ra\xEDces.
-2. Qu\xE9 estamos creando: La primera bolsa inmobiliaria colaborativa y fintech de Colombia, con tecnolog\xEDa abierta, \xE9tica y comisiones justas (35% captador, 35% colocador, 15% bolsa aliados, 15% plataforma).
-3. Misi\xF3n y Visi\xF3n: Dignificar el oficio del corredor inmobiliario, eliminar el canibalismo y brindar herramientas 100% virtuales de \xE9lite a agentes independientes y agencias.
-4. Debate abierto: invitar a debatir qu\xE9 herramientas necesitan y c\xF3mo podemos seguir mejorando la plataforma juntos.`
+2. Qu\xE9 es JanIA y qu\xE9 rol cumple: La inteligencia artificial creada para conectar la oferta y demanda en Colombia, realizar matching en segundos y respaldar al asesor 24/7.
+3. Qu\xE9 estamos creando: La primera bolsa inmobiliaria colaborativa y fintech de Colombia, con tecnolog\xEDa abierta, \xE9tica y comisiones justas (35% captador, 35% colocador, 15% bolsa aliados, 15% plataforma).
+4. Misi\xF3n y Visi\xF3n: Dignificar el oficio del corredor inmobiliario, eliminar el canibalismo y brindar herramientas 100% virtuales de \xE9lite a agentes independientes y agencias.
+5. Debate abierto: invitar a debatir qu\xE9 herramientas necesitan y c\xF3mo podemos seguir mejorando la plataforma juntos.`
   };
   const promptEspecifico = promptsMap[tipo] || promptsMap.lunes_arranque;
   const systemPrompt = `Eres JanIA, la inteligencia artificial oficial de VECY Network en Colombia.
@@ -15717,7 +15723,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.30";
+var VECY_VERSION = "v31.31";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

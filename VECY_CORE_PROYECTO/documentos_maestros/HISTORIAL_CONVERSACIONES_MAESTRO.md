@@ -50,7 +50,35 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.30 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.31 — Septiembre 2026
+
+### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 12:20 a 12:35 (Hora Colombia UTC-5)
+**Versión**: `v31.31` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+"A los subtemas agrega: Que JanIA en alguno de los días o dentro de los temas rotativos o si alguien le pregunta, aprenda a presentarse y contar quién o qué es ella, para qué fue creada, que hace, cual es su finalidad, sus servicios por ahora, etc. etc..., y para los temas de valuación de mercado o sondeo de precios para venta o arriendo (valor aproximado que JanIA dará a un inmueble en un informe escrito por whatsapp o por su chat privado web y dirá al usuario que la contactó en cuanto valor aproximado pero el más acertado puede vender o arrendar su inmueble según lo que el usuario le haya preguntado si es para venta o arriendo, o JanIA lo podrá ir guiando haciendole preguntas, eso quiere decir que debes eliminar laa parte donde ella pide documentos para que se los envíen y analizarlo, porque no se si en verdad JanIA y tu estén diciendo la verdad o si es cierto que ella pueda leer esos PDFs o informes en caso de que se los envíen por Whatsapp o su chat web, entonces esa parte la dejo a tu decisión para que me digas si es viable o mejor quitarla."
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Fricción Operativa por Exigencia de Documentos (PDFs, Certificados, Prediales)**:
+   - En `server/_core/janIA.ts` (línea 5867), el fallback de avalúo (`avaluoFallback`) pedía copia del Certificado de Tradición y Libertad reciente y recibo del Impuesto Predial Unificado.
+   - Aunque Gemini 2.5 Flash tiene visión multimodal nativa para parsear PDFs en base64 (usado para fichas de inmuebles), exigir documentos oficiales a un usuario o corredor para un sondeo de precios genera fricción extrema, desconfianza y abandono de la consulta (el 90% no tiene los PDFs a mano).
+2. **Ausencia de Presentación Institucional Autónoma de JanIA**:
+   - JanIA no tenía incorporado en sus temas rotativos ni en su protocolo conversacional una presentación formal y estructurada sobre quién es, para qué fue concebida por Eduardo y Jani, qué hace 24/7 y cuáles son sus servicios vigentes.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Erradicación Total de Solicitud de Documentos en Sondeos de Mercado**:
+   - Reemplazado `avaluoFallback` y la directriz de Pilar 3 en `janIA.ts` y `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`.
+   - Prohibido terminantemente exigir certificados de tradición, prediales o escrituras.
+2. **Guía Interactiva con Entrega de Informe Escrito Inmediato**:
+   - JanIA guía al usuario en el chat haciéndole preguntas interactivas y sencillas: 1) Venta o arriendo, 2) Ciudad y barrio/sector exacto, 3) Tipo de predio y estrato, 4) Área m², 5) Alcobas, baños y parqueaderos (independientes/lineales), 6) Antigüedad, piso y cuota de administración.
+   - Con estos datos, JanIA genera de inmediato un **Informe de Sondeo de Mercado Escrito** con el rango de precios de salida más acertado (mínimo, medio y óptimo), valor aproximado por m² de la zona, canon sugerido y recomendaciones comerciales para no quemar el inmueble.
+3. **Presentación e Identidad Oficial de JanIA**:
+   - Incorporada en `promptsMap` (`sabado_cafe`, `domingo_soporte`, `proyecto_vecy`), `janIA.ts` (`SOBRE_VECY`) y `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`.
+   - JanIA se presenta con orgullo y cercanía explicando: Nombre, creadores (Eduardo A. Rivera y Jani Alves), qué hace 24/7 (ingesta, matching doctrinal de 100 pts, minutas, asesorías), finalidad (dignificar el corretaje y erradicar intermediaciones desleales con comisiones 35/35/15/15) y sus servicios 100% virtuales vigentes.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.30 — Septiembre 2026
 
 ### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 11:30 a 12:20 (Hora Colombia UTC-5)
 **Versión**: `v31.30` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

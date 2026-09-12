@@ -167,7 +167,19 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.30 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.31 — Septiembre 2026
+
+### Novedades v31.31 (Presentación e Identidad Autónoma de JanIA, Erradicación Total de Papeleos en Sondeos y Guía Interactiva en Chat):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Fricción por Solicitud de Documentos*: El fallback de sondeo pedía certificados de tradición y prediales, generando fricción con los usuarios cuando el proceso debe ser 100% conversacional, rápido y sin papeleos.
+  2) *Ausencia de Presentación Oficial*: JanIA no contaba con una plantilla institucional en sus temas rotativos para presentarse, explicar su misión, fundadores y servicios.
+- **Acciones Ejecutadas**:
+  1) *Presentación e Identidad de JanIA*: Integrada en `promptsMap` (`sabado_cafe`, `domingo_soporte`, `proyecto_vecy`), `janIA.ts` (`SOBRE_VECY`) y `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` (quién es, creadores Eduardo y Jani, qué hace 24/7, comisiones 35/35/15/15 y servicios 100% virtuales).
+  2) *Sondeos Guiados sin Documentos con Informe Escrito Inmediato*: Prohibido pedir PDFs o prediales. JanIA guía con 6 preguntas directas en el chat y entrega un informe de valor por m² y precio sugerido de venta/arriendo con recomendaciones comerciales.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.30 — Septiembre 2026
 
 ### Novedades v31.30 (Motor de Recuperación Catch-Up de Publicaciones, Emancipación Temática con Imágenes Dinámicas y Erradicación Total de Avalúos Certificados):
 - **Diagnóstico y Causas Raíz Identificadas**:

@@ -322,6 +322,28 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.31 — Septiembre 2026
+
+#### 📌 PRESENTACIÓN E IDENTIDAD AUTÓNOMA DE JANIA, ERRADICACIÓN TOTAL DE PAPELEOS EN SONDEOS Y GUÍA INTERACTIVA EN CHAT
+
+**Problemas identificados:**
+1. **Fricción Operativa por Petición de Documentos Oficiales en Sondeos de Precio**:
+   - El fallback de contingencia en `janIA.ts` pedía copia del Certificado de Tradición y Libertad reciente y recibo del Impuesto Predial Unificado para realizar estimaciones de valor.
+   - Aunque Gemini 2.5 Flash posee visión multimodal para leer PDFs, exigir documentos a los usuarios o colegas corredores para un sondeo ágil de precios genera una alta barrera de fricción, desconfianza y abandono de la consulta.
+2. **Ausencia de Presentación Institucional en la Parrilla y Conversación**:
+   - JanIA no disponía de un protocolo formal para presentarse de manera autónoma cuando se le pregunta quién es o dentro de los temas rotativos de la comunidad.
+
+**Solución aplicada:**
+- **Presentación e Identidad Oficial de JanIA**:
+  - Incorporada en `promptsMap` (`sabado_cafe`, `domingo_soporte`, `proyecto_vecy`), en la clasificación `SOBRE_VECY` de `janIA.ts` y en `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`.
+  - JanIA se presenta con calidez y orgullo institucional detallando: Quién es (primera IA inmobiliaria de Colombia), creadores (Eduardo A. Rivera y Jani Alves), qué hace 24/7 (ingesta de ofertas y requerimientos, matching doctrinal de 100 puntos, minutas, asesorías), finalidad (dignificar el corretaje y erradicar intermediaciones informales con comisiones 35/35/15/15) y sus servicios 100% virtuales.
+- **Sondeos Guiados sin Documentos con Entrega de Informe Escrito Inmediato**:
+  - Prohibido terminantemente solicitar certificados de tradición, prediales o escrituras.
+  - JanIA guía amablemente al usuario con preguntas sencillas e interactivas en el chat: 1) Venta o arriendo, 2) Ciudad y barrio exacto, 3) Tipo de predio y estrato, 4) Área m², 5) Habitaciones, baños y garajes (independientes/lineales), 6) Antigüedad, piso y cuota de administración.
+  - Generación inmediata de un **Informe de Sondeo de Mercado Escrito** con el rango de precios de salida más acertado (mínimo, medio y óptimo), valor por m² y recomendaciones comerciales para no quemar el predio.
+
+---
+
 ### 🔖 v31.30 — Septiembre 2026
 
 #### 📌 MOTOR DE RECUPERACIÓN CATCH-UP DE PUBLICACIONES, EMANCIPACIÓN TEMÁTICA CON IMÁGENES DINÁMICAS Y ERRADICACIÓN TOTAL DE AVALÚOS CERTIFICADOS

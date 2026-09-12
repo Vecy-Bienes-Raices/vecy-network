@@ -572,24 +572,26 @@ Elige libremente entre:
 1. Sondeo de mercado por m²: cómo guiar al propietario para fijar un precio de venta realista que no queme el predio en los portales por sobreprecio ni lo regale.
 2. Estimación de cánones de arriendo: cómo calcular el canon comercial adecuado (0.5% - 1.0%) según estrato, amenidades y demanda del sector a nivel nacional.
 3. Estudio normativo SINUPOT: cómo descargar e interpretar la ficha de uso de suelo en Bogotá (usos permitidos, compatibilidad comercial y edificabilidad) para captar lotes o casas con potencial constructor.
-4. Agilidad 100% virtual: recordar que JanIA realiza estudios de mercado comparativos rápidos y fundamentados con solo suministrarle los datos del inmueble en el chat.`,
+4. Sondeo guiado 100% interactivo en el chat: enseñar a los colegas que para conocer el precio más acertado de venta o arriendo NO necesitan enviar documentos ni certificados; JanIA los guía con preguntas sencillas directamente en WhatsApp o web y les genera un informe escrito con el precio sugerido por m² y recomendaciones comerciales.`,
 
-    sabado_cafe: `Tema: Sábado de Café Inmobiliario, Reflexión & Portafolio 100% Virtual (${fechaBogota}).
+    sabado_cafe: `Tema: Sábado de Café Inmobiliario, Reflexión, Identidad de JanIA & Portafolio 100% Virtual (${fechaBogota}).
 Objetivo y Libre Albedrío: Estilo podcast / café inmobiliario, reflexivo, motivador y cercano. Elige libremente entre:
 1. Reflexión gremial: ética entre colegas, el poder de las alianzas compartidas, cómo crear reputación intachable en el sector.
 2. Portafolio de Servicios Virtuales de VECY Network y VECY Bienes Raíces: estudios de mercado m², liquidaciones tributarias DIAN, minutas contractuales, cobranzas de arrendamiento y marketing digital con IA.
-3. Atención personalizada con el bróker: para acompañamiento o casos especiales, invitar a comunicarse con Eduardo y Jani en la línea comercial de VECY Bienes Raíces (+57 316 656 9719).
-4. Tendencias del mercado y recarga de energía para el fin de semana.`,
+3. Presentación e Identidad de JanIA: contar con orgullo quién o qué es ella (la primera IA inmobiliaria colombiana), creada por Eduardo A. Rivera y Jani Alves, para qué fue concebida, qué hace 24/7 y cómo su finalidad es empoderar a los agentes.
+4. Atención personalizada con el bróker: para acompañamiento o casos especiales, invitar a comunicarse con Eduardo y Jani en la línea comercial de VECY Bienes Raíces (+57 316 656 9719).
+5. Tendencias del mercado y recarga de energía para el fin de semana.`,
 
     domingo_soporte: `Tema: Domingo de Soporte JanIA, Consultoría & Servicios 100% Virtuales (${fechaBogota}).
 Objetivo y Libre Albedrío: Mensaje cálido dominical recordando que el consultorio de VECY Network está disponible los 7 días de la semana.
-Resalta con variedad nuestros servicios 100% virtuales:
-1. Asesorías jurídicas y minutas contractuales (promesas, corretaje 50/50, cartas de restitución).
-2. Asesoría tributaria DIAN en línea (retenciones y ganancia ocasional).
-3. Estudios de mercado aproximados sobre el valor del m² y sondeos de cánones de arriendo.
-4. Apoyo en cobranzas de arrendamiento y manejo de mora.
-5. Marketing inmobiliario con IA y fotografía con smartphone.
-6. Invitar a interactuar con JanIA en https://vecy-network.vercel.app/jania y a compartir la red con colegas de confianza.`,
+Resalta con variedad nuestros servicios 100% virtuales y nuestra identidad:
+1. Presentación de JanIA: explicar qué es JanIA, para qué fue creada, qué hace (ingesta 24/7, matching doctrinal de 100 pts, minutas) y su finalidad de dignificar el corretaje.
+2. Asesorías jurídicas y minutas contractuales (promesas, corretaje 50/50, cartas de restitución).
+3. Asesoría tributaria DIAN en línea (retenciones y ganancia ocasional).
+4. Estudios de mercado aproximados sobre el valor del m² y sondeos de cánones de arriendo (informes escritos sin documentos).
+5. Apoyo en cobranzas de arrendamiento y manejo de mora bajo Ley 820.
+6. Marketing inmobiliario con IA y fotografía con smartphone.
+7. Invitar a interactuar con JanIA en https://vecy-network.vercel.app/jania y a compartir la red con colegas de confianza.`,
 
     inmuebles_network: `Tema: Operaciones Comerciales y Matching Nacional (${fechaBogota}).
 Objetivo: Motivar la publicación activa de inmuebles y requerimientos en toda Colombia, recordando que JanIA cruza datos en tiempo real.`,
@@ -597,9 +599,10 @@ Objetivo: Motivar la publicación activa de inmuebles y requerimientos en toda C
     proyecto_vecy: `Tema: Visión Ecosistema VECY Network — Quiénes Somos, Misión y Futuro (${fechaBogota}).
 Objetivo y Libre Albedrío: Inspirar a la comunidad destacando:
 1. Quiénes somos: Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones), fundadores de VECY Network y VECY Bienes Raíces.
-2. Qué estamos creando: La primera bolsa inmobiliaria colaborativa y fintech de Colombia, con tecnología abierta, ética y comisiones justas (35% captador, 35% colocador, 15% bolsa aliados, 15% plataforma).
-3. Misión y Visión: Dignificar el oficio del corredor inmobiliario, eliminar el canibalismo y brindar herramientas 100% virtuales de élite a agentes independientes y agencias.
-4. Debate abierto: invitar a debatir qué herramientas necesitan y cómo podemos seguir mejorando la plataforma juntos.`
+2. Qué es JanIA y qué rol cumple: La inteligencia artificial creada para conectar la oferta y demanda en Colombia, realizar matching en segundos y respaldar al asesor 24/7.
+3. Qué estamos creando: La primera bolsa inmobiliaria colaborativa y fintech de Colombia, con tecnología abierta, ética y comisiones justas (35% captador, 35% colocador, 15% bolsa aliados, 15% plataforma).
+4. Misión y Visión: Dignificar el oficio del corredor inmobiliario, eliminar el canibalismo y brindar herramientas 100% virtuales de élite a agentes independientes y agencias.
+5. Debate abierto: invitar a debatir qué herramientas necesitan y cómo podemos seguir mejorando la plataforma juntos.`
   };
 
   const promptEspecifico = promptsMap[tipo] || promptsMap.lunes_arranque;
