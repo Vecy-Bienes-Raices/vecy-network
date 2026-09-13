@@ -322,6 +322,37 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.38 — Septiembre 2026
+
+#### 📌 FICHA DE INMUEBLES GOLD EDITION CON 4 SECCIONES COMPLETAS: SLIDER PORCENTUAL DE PERMUTA, 19 TIPOS DE INMUEBLE, USO COMERCIAL, COCINAS, GARAJES CARRO/MOTO, CAVA DE VINOS, CHIMENEAS (LEÑA/GAS/BIOETANOL), TERRAZAS BBQ, GEOLOCALIZACIÓN GRATUITA OPENSTREETMAP EN MAPA INTERACTIVO, PORTADA DINÁMICA PARA 30 FOTOS Y CHECKLISTS DE 70 CARACTERÍSTICAS
+
+**Problemas identificados:**
+1. **Falta de Tipología Exhaustiva y Subtipo Comercial**:
+   - Inmuebles como casas comerciales, sedes empresariales, fincas, villas, chalets u oficinas no contaban con un selector exhaustivo ni con switch de uso comercial para diferenciar su vocación de negocio.
+2. **Ausencia de Negocio de Permuta con Selector Porcentual**:
+   - Se requería poder elegir "Permuta" y deslizar un slider interactivo (10% a 90%) junto con 10 opciones de distribución porcentual predefinidas (ej. 50/50, 60/40, 70/30, etc.).
+3. **Carencia de Atributos Críticos de Distribución y Confort**:
+   - No se podían definir detalles de cuarto de servicio (con/sin baño), garajes independientes para motos y carros, chimeneas (convencionales a leña, gas o bioetanol), cava de vinos, terrazas con zona BBQ condicional, áreas construida vs. privada y años de antigüedad predial.
+4. **Falta de Localización Gratuita en Mapa ($0) y Gestión de Portada**:
+   - Se requería poder ubicar la dirección en un mapa incrustado sin incurrir en cuotas de pago de APIs externas y poder cargar hasta 30 fotos asignando libremente la portada principal.
+5. **Checklists de Características Prediales**:
+   - Falta de un banco interactivo de 25 características internas y 45 externas que se autoseleccionen con JanIA al pegar texto.
+
+**Solución aplicada:**
+- **Centro de Publicación de 4 Secciones en `UnifiedPublishModal.tsx`**:
+  - **Sección 1 (Negocio, Tipo & Precios)**: Selector de 19 tipos exactos de inmueble, switch de uso comercial, selector deslizable de permuta con 10 combinaciones porcentuales, inputs formateados en vivo a moneda COP con puntos (`$ 1.500.000.000`), áreas construida y privada, año de construcción y cocina (7 opciones).
+  - **Sección 2 (Espacios & Confort)**: Cuarto de servicio (No / Con baño / Sin baño), garajes de carro (0 a 10+), garajes de moto (0 a 10+), estrato (0 a 6), estado del inmueble, estar de TV, estudios, cava de vinos interactiva, chimeneas por tipo y depósitos.
+  - **Sección 3 (Terrazas, Piso & Geolocalización en Mapa)**: Balcones, terrazas condicionales con metraje y zona BBQ, nivel de piso, vista exterior/interior, dirección con geocodificación gratuita OpenStreetMap Nominatim ($0), mapa incrustado interactivo, barrio, localidad y ciudad Bogotá D.C. fija, descripción con contador visual de 500 caracteres.
+  - **Sección 4 (Galería Multimedia & Checklists)**: Carga de hasta 30 fotos con botón de 1-clic para definir la portada principal con badge dorado `PORTADA`, subida de video MP4 o URL, y checklists interactivos de 25 características internas y 45 externas.
+- **Enriquecimiento del Parser Determinista (`server/routers/properties.ts`)**:
+  - `parsePropertyDeterministically` actualizado para mapear automáticamente espacios, áreas, antigüedad y preseleccionar las características internas y externas detectadas en el texto copiado de WhatsApp.
+- **Persistencia en PostgreSQL 17**:
+  - Almacenamiento íntegro de los atributos en las columnas nativas de `properties` y en el campo `amenities` (JSONB).
+- **Preservación Absoluta de `whatsapp-match.ts`**:
+  - Archivo 100% original e intacto.
+
+---
+
 ### 🔖 v31.37 — Septiembre 2026
 
 #### 📌 EXTRACCIÓN INSTANTÁNEA DETERMINISTA EN 0MS PARA FICHAS DE OFERTA/DEMANDA, NORMALIZACIÓN UNICODE MATHEMATICAL, FALLBACK ANTE RATE LIMIT 429 DE GEMINI Y FORMULARIO 100% EDITABLE

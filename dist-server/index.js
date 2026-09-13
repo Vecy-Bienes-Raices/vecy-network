@@ -18966,7 +18966,7 @@ var propertyInputSchema = z7.object({
   price: z7.string().min(1),
   currency: z7.enum(["COP", "USD"]).default("COP"),
   city: z7.string().default("Bogot\xE1"),
-  location: z7.string().optional(),
+  location: z7.string().optional().nullable(),
   zone: z7.string().min(2),
   addressCity: z7.string().optional().nullable(),
   addressLocality: z7.string().optional().nullable(),
@@ -18991,6 +18991,9 @@ var propertyInputSchema = z7.object({
   featured: z7.boolean().optional().default(false),
   available: z7.boolean().optional().default(true),
   idUsuarioWhatsapp: z7.string().optional().nullable(),
+  amenities: z7.any().optional().nullable(),
+  latitude: z7.string().optional().nullable(),
+  longitude: z7.string().optional().nullable(),
   images: z7.array(z7.string()).optional().nullable()
 });
 var propertyFields = {
@@ -19028,24 +19031,68 @@ function parsePropertyDeterministically(text2) {
   const norm2 = text2.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
   const lower = norm2.toLowerCase();
   let propertyType = "apartment";
-  if (lower.includes("casa comercial") || lower.includes("sede empresarial") || lower.includes("local comercial")) {
+  let propertyTypeExact = "Casa";
+  let isSubtipoComercial = false;
+  if (lower.includes("casa comercial") || lower.includes("sede empresarial")) {
     propertyType = "commercial";
-  } else if (lower.includes("consultorio")) {
-    propertyType = "consultorio";
-  } else if (lower.includes("oficina")) {
+    propertyTypeExact = "Casa";
+    isSubtipoComercial = true;
+  } else if (lower.includes("local comercial") || lower.includes("local")) {
+    propertyType = "commercial";
+    propertyTypeExact = "Local";
+    isSubtipoComercial = true;
+  } else if (lower.includes("oficina") || lower.includes("consultorio")) {
     propertyType = "office";
+    propertyTypeExact = "Oficina";
+    isSubtipoComercial = true;
+  } else if (lower.includes("apartaestudio")) {
+    propertyType = "apartment";
+    propertyTypeExact = "Apartaestudio";
+  } else if (lower.includes("penthouse duplex") || lower.includes("pent house duplex")) {
+    propertyType = "apartment";
+    propertyTypeExact = "Pent House D\xFAplex";
+  } else if (lower.includes("penthouse") || lower.includes("pent house")) {
+    propertyType = "apartment";
+    propertyTypeExact = "Pent House";
+  } else if (lower.includes("apartamento duplex") || lower.includes("apto duplex")) {
+    propertyType = "apartment";
+    propertyTypeExact = "Apartamento D\xFAplex";
+  } else if (lower.includes("apartamento") || lower.includes("apto")) {
+    propertyType = "apartment";
+    propertyTypeExact = "Apartamento";
+  } else if (lower.includes("casa campestre")) {
+    propertyType = "house";
+    propertyTypeExact = "Casa Campestre";
+  } else if (lower.includes("casa quinta")) {
+    propertyType = "house";
+    propertyTypeExact = "Casa Quinta";
   } else if (lower.includes("casa") || lower.includes("chalet") || lower.includes("townhouse")) {
     propertyType = "house";
+    propertyTypeExact = "Casa";
   } else if (lower.includes("bodega")) {
     propertyType = "warehouse";
+    propertyTypeExact = "Bodega";
   } else if (lower.includes("edificio")) {
     propertyType = "building";
+    propertyTypeExact = "Edificio";
   } else if (lower.includes("lote") || lower.includes("terreno")) {
     propertyType = "land";
+    propertyTypeExact = "Lote / Terreno";
   } else if (lower.includes("finca")) {
     propertyType = "farm";
-  } else if (lower.includes("loft") || lower.includes("apartasol")) {
-    propertyType = "loft";
+    propertyTypeExact = "Finca";
+  } else if (lower.includes("caba\xF1a")) {
+    propertyType = "house";
+    propertyTypeExact = "Caba\xF1a";
+  } else if (lower.includes("hotel")) {
+    propertyType = "hotel";
+    propertyTypeExact = "Hotel";
+  } else if (lower.includes("hostal")) {
+    propertyType = "hotel";
+    propertyTypeExact = "Hostal";
+  } else if (lower.includes("villa")) {
+    propertyType = "house";
+    propertyTypeExact = "Villa";
   }
   let transactionType = "venta";
   if (lower.includes("arriendo") || lower.includes("alquiler") || lower.includes("renta")) {
@@ -19068,13 +19115,16 @@ function parsePropertyDeterministically(text2) {
       if (!isNaN(parsed) && parsed > 1e5) price = String(parsed);
     }
   }
-  let areaTotal = null;
-  const areaConstruida = norm2.match(/(?:area construida|area total|area)[\s\:\*]*([0-9]+(?:\.[0-9]+)?)\s*m/i);
-  if (areaConstruida) {
-    areaTotal = areaConstruida[1];
-  } else {
-    const generalArea = norm2.match(/([0-9]+(?:\.[0-9]+)?)\s*m[2²]/i);
-    if (generalArea) areaTotal = generalArea[1];
+  let areaConstruida = "";
+  const acM = norm2.match(/(?:area construida|area total|construida)[\s\:\*]*([0-9]+(?:\.[0-9]+)?)\s*m/i) || norm2.match(/([0-9]+(?:\.[0-9]+)?)\s*m[2²]/i);
+  if (acM) areaConstruida = acM[1];
+  let areaPrivada = "";
+  const apM = norm2.match(/(?:area privada|privada)[\s\:\*]*([0-9]+(?:\.[0-9]+)?)\s*m/i);
+  if (apM) areaPrivada = apM[1];
+  let yearBuilt = null;
+  const antM = norm2.match(/(?:antiguedad|edad|anos de construccion)[\s\:\*]*([0-9]+)/i);
+  if (antM) {
+    yearBuilt = 2026 - parseInt(antM[1], 10);
   }
   let bedrooms = null;
   const bedMatch = norm2.match(/(?:habitacion|habitaciones|alcoba|alcobas|oficinas|dormitorio)[\s\:\/\*]*([0-9]+)/i);
@@ -19091,11 +19141,28 @@ function parsePropertyDeterministically(text2) {
   if (garMatch) {
     garages = parseInt(garMatch[1], 10);
   }
-  let stratum = null;
-  const strMatch = norm2.match(/estrato[\s\:\*]*([1-6])/i);
+  let stratum = 4;
+  const strMatch = norm2.match(/estrato[\s\:\*]*([0-6])/i);
   if (strMatch) {
     stratum = parseInt(strMatch[1], 10);
   }
+  let cocina = "Integral";
+  if (lower.includes("abierta tipo isla")) cocina = "Abierta tipo isla";
+  else if (lower.includes("abierta")) cocina = "Abierta";
+  else if (lower.includes("cerrada remodelada")) cocina = "Cerrada remodelada";
+  else if (lower.includes("cerrada")) cocina = "Cerrada convencional";
+  else if (lower.includes("moderna")) cocina = "Moderna";
+  else if (lower.includes("integral")) cocina = "Integral";
+  else if (lower.includes("a remodelar")) cocina = "A remodelar";
+  let estudios = 0;
+  const estM = norm2.match(/(?:estudio|sala de juntas)[\s\:\/\*\D]*?([0-9]+)/i);
+  if (estM) estudios = parseInt(estM[1], 10);
+  let depositos = 0;
+  const depM = norm2.match(/(?:deposito|depositos)[\s\:\/\*\D]*?([0-9]+)/i);
+  if (depM) depositos = parseInt(depM[1], 10);
+  let piso = "";
+  const pisoM = norm2.match(/(?:plantas|pisos|piso)[\s\:\/\*\D]*?([0-9]+)/i);
+  if (pisoM) piso = pisoM[1];
   let addressNeighborhood = null;
   let zone = null;
   let city = "Bogot\xE1";
@@ -19120,10 +19187,6 @@ function parsePropertyDeterministically(text2) {
     else if (lower.includes("chapinero")) zone = "Chapinero";
     else if (lower.includes("teusaquillo")) zone = "Teusaquillo";
   }
-  if (/\bbogot[aá]\b/i.test(norm2)) city = "Bogot\xE1";
-  else if (/\bmedell[ií]n\b/i.test(norm2)) city = "Medell\xEDn";
-  else if (/\bcali\b/i.test(norm2)) city = "Cali";
-  else if (/\bbarranquilla\b/i.test(norm2)) city = "Barranquilla";
   let name = "";
   const lines = norm2.split("\n").map((l) => l.trim()).filter(Boolean);
   for (const line of lines) {
@@ -19139,20 +19202,55 @@ function parsePropertyDeterministically(text2) {
   if (addressNeighborhood && !name.toLowerCase().includes(addressNeighborhood.toLowerCase())) {
     name += ` - ${addressNeighborhood}`;
   }
+  const selectedInternas = [];
+  if (lower.includes("iluminacion natural") || lower.includes("luz natural")) selectedInternas.push("Iluminaci\xF3n natural");
+  if (lower.includes("closet") || lower.includes("closets") || lower.includes("archiveros")) selectedInternas.push("Cl\xF3sets");
+  if (lower.includes("comedor")) selectedInternas.push("Comedor auxiliar");
+  if (lower.includes("doble ventana")) selectedInternas.push("Doble Ventana");
+  if (lower.includes("gas")) selectedInternas.push("Gas domiciliario");
+  if (lower.includes("balcon")) selectedInternas.push("Balc\xF3n");
+  if (lower.includes("alarma") || lower.includes("seguridad")) selectedInternas.push("Alarma");
+  if (lower.includes("lavanderia") || lower.includes("zona de ropas")) selectedInternas.push("Zona de lavander\xEDa");
+  if (lower.includes("acabados modernos") || lower.includes("madera flotante")) selectedInternas.push("Acabados modernos");
+  if (lower.includes("patio")) selectedInternas.push("Patio");
+  const selectedExternas = [];
+  if (lower.includes("pavimentado") || lower.includes("acceso")) selectedExternas.push("Acceso pavimentado");
+  if (lower.includes("transporte") || lower.includes("transmilenio")) selectedExternas.push("Transporte p\xFAblico cercano");
+  if (lower.includes("via principal") || lower.includes("av.") || lower.includes("avenida")) selectedExternas.push("Sobre v\xEDa principal");
+  if (lower.includes("banco") || lower.includes("bancos")) selectedExternas.push("Bancos cercanos");
+  if (lower.includes("comercial") || lower.includes("centro comercial") || lower.includes("comercios")) selectedExternas.push("Centros Comerciales");
+  if (lower.includes("medico") || lower.includes("clinica") || lower.includes("hospital")) selectedExternas.push("Centros m\xE9dicos hospitalarios");
+  if (lower.includes("parque") || lower.includes("parques")) selectedExternas.push("Parques cercanos");
+  if (lower.includes("zonas verdes") || lower.includes("verde")) selectedExternas.push("Zonas verdes");
+  if (lower.includes("recepcion") || lower.includes("porteria")) selectedExternas.push("Porter\xEDa / Recepci\xF3n");
+  if (lower.includes("seguridad 24/7") || lower.includes("vigilancia")) selectedExternas.push("Seguridad privada 24/7");
   return {
     name: name || `Inmueble en ${addressNeighborhood || city}`,
     propertyType,
+    propertyTypeExact,
+    isSubtipoComercial,
     transactionType,
     price,
-    areaTotal: areaTotal || "",
+    areaTotal: areaConstruida || "",
+    areaConstruida: areaConstruida || "",
+    areaPrivada: areaPrivada || "",
+    yearBuilt,
     bedrooms,
     bathrooms,
     garages,
-    stratum: stratum || 4,
+    garajesCarro: garages,
+    garajesMoto: 0,
+    stratum,
+    cocina,
+    estudios,
+    depositos,
+    piso,
     city,
     zone: zone || addressNeighborhood || "Bogot\xE1",
     addressNeighborhood: addressNeighborhood || zone || "Bogot\xE1",
-    description: text2.trim().slice(0, 3500)
+    description: text2.trim().slice(0, 500),
+    selectedInternas,
+    selectedExternas
   };
 }
 var propertiesRouter = router({

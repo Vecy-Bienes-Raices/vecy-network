@@ -167,9 +167,29 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.37 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.38 — Septiembre 2026
 
-### Novedades v31.37 (Extracción Instantánea Determinista en 0ms para Fichas de Oferta/Demanda, Normalización Unicode Mathematical, Fallback Blindado ante Rate Limit 429 de Gemini y Formulario 100% Editable):
+### Novedades v31.38 (Ficha de Inmuebles Gold Edition con 4 Secciones Completas: Slider Porcentual de Permuta, 19 Tipos de Inmueble, Uso Comercial, Cocinas, Garajes Carro/Moto, Cava de Vinos, Chimeneas a Leña/Gas/Bioetanol, Terrazas BBQ, Geolocalización Gratuita OpenStreetMap en Mapa Interactivo, Portada Dinámica para 30 Fotos y Checklists de 70 Características Internas/Externas):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Falta de Tipología Exhaustiva y Subtipo Comercial*: Los inmuebles como casas comerciales u oficinas requerían especificar tanto el tipo de inmueble (19 categorías precisas) como el uso o subtipo comercial.
+  2) *Ausencia de Negocio de Permuta con Porcentajes*: El usuario requería poder seleccionar Permuta y deslizar un slider interactivo con los porcentajes exactos de Venta/Permuta (ej. 50/50, 60/40, 70/30, etc.).
+  3) *Campos Detallados de Distribución y Confort*: Se requerían campos de cuarto de servicio (con/sin baño), garajes independientes para moto y carro, chimeneas por tipo (convencional, gas, bioetanol), cava de vinos, terrazas con zona BBQ condicional, áreas construida vs. privada y años de antigüedad.
+  4) *Mapa Interactivo $0 y Portada en Galería*: Se requería autolocalización por dirección con OpenStreetMap gratuito (sin costos de API de Google Maps) y galería de hasta 30 fotos donde se pueda definir y marcar la portada principal con 1 clic.
+  5) *Listado de Características*: 25 características internas y 45 externas como chips de selección rápida, con autodetección instantánea al pegar texto.
+- **Acciones Ejecutadas**:
+  1) *Formulario Integral de 4 Secciones en `UnifiedPublishModal.tsx`*:
+     - **Sección 1 (Negocio, Tipo & Precios)**: Tipo de negocio, slider de permuta con 10 opciones, 19 tipos de inmuebles, switch de subtipo comercial, precio COP formateado en vivo (`$ 1.500.000.000`), administración COP, área construida, área privada, año de construcción, habitaciones, baños, tipo de cocina (7 opciones).
+     - **Sección 2 (Espacios & Confort)**: Cuarto de servicio (No / Con baño / Sin baño), garajes de carro (0 a 10+), garajes de moto (0 a 10+), estado del inmueble, estrato (0 a 6), estar de TV, estudios, cava de vinos interactiva, chimeneas por tipo (leña, gas, bioetanol) y depósitos.
+     - **Sección 3 (Terrazas, Piso & Geolocalización en Mapa)**: Balcones, terrazas condicionales con área y BBQ, piso, vista exterior/interior, dirección con geocodificación gratuita OpenStreetMap Nominatim, mapa incrustado interactivo, barrio, localidad y Bogotá D.C. fija, descripción adicional con contador de 500 caracteres.
+     - **Sección 4 (Galería Multimedia & Checklists)**: Hasta 30 fotos con selector de portada principal y badge dorado, video, checklist interactivo de 25 características internas y 45 características externas.
+  2) *Backend y Drizzle ORM (`properties.ts`)*:
+     - `parsePropertyDeterministically` enriquecido para autodetectar todas las características, espacios, cocina y antigüedad en 0ms.
+     - `properties.create` almacena todos los datos estructurados en las columnas nativas y en el campo `amenities` (JSONB) de PostgreSQL 17.
+  3) *Preservación Absoluta de `whatsapp-match.ts`*: Archivo 100% original e intacto.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.37 — Septiembre 2026
 - **Diagnóstico y Causas Raíz Identificadas**:
   1) *Congelamiento / Bloqueo en Bucle en "Estructurar con JanIA"*: Al presionar el botón con el texto copiado de WhatsApp, el backend llamaba a Google Gemini. En el servidor VPS, debido a la actividad concurrente del bot de WhatsApp o cuota RPM del tier gratuito, la API de Gemini respondió con código HTTP 429 (Rate Limit).
   2) *Latencia Acumulada de Reintentos (80 segundos)*: `invokeGemini` en `llm.ts` realizaba hasta 10 intentos durmiendo 8 segundos por cada fallo en los 5 modelos de la cascada, bloqueando la conexión HTTP y provocando que el frontend se quedara en un bucle infinito ("dando vueltas y vueltas").

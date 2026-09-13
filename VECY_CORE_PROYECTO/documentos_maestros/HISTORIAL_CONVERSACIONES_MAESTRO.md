@@ -50,7 +50,49 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.37 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.38 — Septiembre 2026
+
+### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 23:25 (Hora Colombia UTC-5)
+**Versión**: `v31.38` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"Aquí faltan campos ya que el inmueble es tipo Casa y subtipo Comercial:*
+   *A) Sección 1: Tipo de negocio: [Venta, Arriendo, Venta y Arriendo, permuta]. Si el usuario elige permuta, habilita un selector deslizable para que permita elegir el porcentaje: si elige por ejemplo 10%, quiere decir que Venta / Permuta... Tipo de inmueble: [19 tipos exactos: Apartaestudio, Apartamento, Apartamento Dúplex, Pent House, Pent House Dúplex, Bodega, Cabaña, Casa, Casa Campestre, Casa Quinta, Edificio, Finca, Hostal, Hotel, Aparta Hotel, Local, Lote / Terreno, Oficina, Villa]. Precio: [campo moneda COP], Precio Administración: [campo moneda COP], Área construida m², Área privada m², Año de construcción, Habitaciones [0-5+], Baños [0-5+], Cocina [Abierta, Abierta tipo isla, Cerrada convencional, Cerrada remodelada, Moderna, Integral, A remodelar].*
+   *B) Sección 2: Cuarto de servicio [No / Si con baño / Si sin baño], Garajes para carro [0-10+], Garajes para moto [0-10+], Estado del inmueble [Excelente, Bueno, Regular, Malo, Remodelado, A Remodelar], Estrato [0-6], Estar de TV [0-5+], Estudios [0-5+], Cava de vinos [Si, cuántas / No], Chimeneas [Si, cuántas y tipo: leña, gas, bioetanol / No], Depósitos [0-5+].*
+   *C) Sección 3: Balcones [0-5+], Terrazas [Si, cuántas o No tiene], Área terraza (m²) condicional y zona BBQ en terraza [Si/No], Piso en edificio/torre, Ubicación en piso [Exterior/Interior], Dirección del inmueble con visualización en mapa incrustado gratuito de OpenStreetMap ($0), Barrio, Localidad, Ciudad predeterminada fija {Bogotá D.C.}, Descripción adicional (máx 500 caracteres).*
+   *D) Sección 4: Subir hasta 30 fotos por inmueble donde la primera sea la portada principal al compartir, Video del inmueble, y Características internas (25 checklist) y externas (45 checklist)."*
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Falta de Profundidad en la Ficha Técnica de Oferta**:
+   - El formulario inicial solo capturaba datos básicos de venta residencial (área, habitaciones, baños). Para captaciones exclusivas, casas comerciales, oficinas, penthouses o fincas, se requería una ficha técnica de nivel inmobiliario profesional con 4 secciones bien delimitadas.
+2. **Carencia de Flujo para Negocios de Permuta**:
+   - En el mercado inmobiliario colombiano, la permuta es una figura recurrente. No existía la posibilidad de definir la proporción entre efectivo y bien en canje (ej. 50% venta / 50% permuta).
+3. **Mapeo Automático de Características Internas y Externas**:
+   - Cuando un asesor pega un anuncio de WhatsApp extenso, JanIA no estaba asociando automáticamente las amenidades (ej. "seguridad con rejas" -> Seguridad privada 24/7, "iluminación natural" -> Iluminación natural, "cocina integral" -> Cocina integral) a los campos nativos de la base de datos.
+4. **Geocodificación Gratuita y Portada de Fotos**:
+   - Para no incurrir en costes mensuales con APIs de Google Maps, era necesario integrar OpenStreetMap Nominatim ($0) e iframe interactivo, más un sistema de selección de portada con 1 clic para la galería de hasta 30 fotografías.
+
+#### 🛠️ Acciones Técnicas Ejecutadas en Código y Arquitectura:
+1. **Formulario Modular de 4 Secciones en [UnifiedPublishModal.tsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/publish/UnifiedPublishModal.tsx)**:
+   - **Sección 1**: Tipo de negocio, selector de 19 tipos de inmuebles, switch de uso comercial, selector deslizable de permuta (10% a 90%) con 10 opciones porcentuales, inputs formateados con moneda COP (`$ 1.500.000.000`), áreas construida y privada, selector de año de construcción (2026 hasta 1960) y tipo de cocina (7 opciones).
+   - **Sección 2**: Cuarto de servicio con/sin baño, garajes independientes para carros (0 a 10+) y motos (0 a 10+), estado del inmueble, estrato (0 a 6), estar de TV, estudios, cava de vinos interactiva, chimeneas con selección de combustible (leña, gas, bioetanol) y depósitos.
+   - **Sección 3**: Balcones, terrazas condicionales con metraje y zona BBQ, piso, orientación exterior/interior, dirección con botón de geocodificación gratuita OpenStreetMap Nominatim ($0), mapa incrustado interactivo, barrio, localidad y Bogotá D.C. fija, descripción con contador visual de 500 caracteres.
+   - **Sección 4**: Carga de hasta 30 fotos con badge dorado `PORTADA` en la primera imagen y botón `⭐ Portada` en cada foto para reordenarla a la portada con 1 clic; subida de video MP4 o URL; checklists interactivos de 25 características internas y 45 características externas con estados en chips visuales.
+2. **Motor de Extracción Determinista y Enriquecimiento de IA ([server/routers/properties.ts](file:///home/eddu/Proyectos/vecy-network/server/routers/properties.ts))**:
+   - `parsePropertyDeterministically` actualizado para mapear automáticamente áreas construida vs. privada, año de construcción según antigüedad, tipo de cocina, espacios (estudios, depósitos, plantas) y autoseleccionar todas las características internas y externas detectadas en el texto copiado de WhatsApp.
+3. **Persistencia en PostgreSQL 17**:
+   - `propertyInputSchema` y mutación `properties.create` actualizadas para almacenar todas las variables en columnas nativas (`areaTotal`, `areaPrivate`, `yearBuilt`, `location`, `latitude`, `longitude`, `coordinates`, `images`) y en el campo `amenities` (JSONB).
+4. **Preservación Absoluta de `whatsapp-match.ts`**:
+   - Archivo 100% original e intacto.
+5. **Incremento de Versión y Compilación Limpia**:
+   - `shared/const.ts`: `v31.38`.
+   - `package.json`: `31.38.0`.
+   - `npm run check`: 0 errores.
+   - `npm run build`: Compilación exitosa en 15.12s.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.37 — Septiembre 2026
 
 ### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 23:00 (Hora Colombia UTC-5)
 **Versión**: `v31.37` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
