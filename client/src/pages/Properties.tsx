@@ -9,9 +9,10 @@ import PropertyCard from '@/components/PropertyCard';
 import { useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
-import { Loader2 } from 'lucide-react';
+import { Loader2, PlusCircle, Sparkles } from 'lucide-react';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { useAuth } from '@/_core/hooks/useAuth';
+import UnifiedPublishModal from '@/components/publish/UnifiedPublishModal';
 
 // ─── Filtros ──────────────────────────────────────────────────────────────────
 type FilterType = 'all' | 'apartment' | 'house' | 'building' | 'hotel' | 'farm' | 'office' | 'warehouse' | 'land' | 'commercial';
@@ -34,9 +35,11 @@ export default function Properties() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc'>('default');
+  const [isPublishOpen, setIsPublishOpen] = useState(false);
+  const [publishTab, setPublishTab] = useState<'oferta' | 'demanda'>('oferta');
   const { user } = useAuth();
 
-  const { data: propertiesData, isLoading } = trpc.properties.list.useQuery();
+  const { data: propertiesData, isLoading, refetch } = trpc.properties.list.useQuery();
 
   const displayProperties = useMemo(() => {
     if (!propertiesData) return [];
@@ -96,16 +99,31 @@ export default function Properties() {
               </button>
             </div>
 
-            {user && ['admin', 'agent'].includes(user.role as string) && (
-              <div className="mt-6">
-                <button
-                  onClick={() => navigate('/admin')}
-                  className="btn-gold px-8 py-3 text-xs tracking-widest uppercase gap-2 inline-flex items-center"
-                >
-                  Ir al Panel de Administración
-                </button>
-              </div>
-            )}
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <button
+                onClick={() => {
+                  setPublishTab('oferta');
+                  setIsPublishOpen(true);
+                }}
+                className="btn-gold px-6 py-3 text-xs tracking-wider uppercase font-black gap-2 inline-flex items-center shadow-[0_0_25px_rgba(255,215,0,0.35)] cursor-pointer"
+                title="Publicar nuevo inmueble u oferta con asistencia de JanIA"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>+ Subir Inmueble (Oferta)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setPublishTab('demanda');
+                  setIsPublishOpen(true);
+                }}
+                className="px-6 py-3 rounded-full text-xs font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 text-white border border-white/20 inline-flex items-center gap-2 transition-all cursor-pointer shadow-sm"
+                title="Publicar requerimiento o demanda con texto o flyer OCR con JanIA Vision"
+              >
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>+ Subir Demanda (Requerimiento)</span>
+              </button>
+            </div>
           </ScrollReveal>
         </div>
       </section>
@@ -258,6 +276,14 @@ export default function Properties() {
           </p>
         </div>
       </footer>
+
+      {/* Centro Unificado de Publicación de Ofertas & Demandas con JanIA */}
+      <UnifiedPublishModal
+        isOpen={isPublishOpen}
+        onClose={() => setIsPublishOpen(false)}
+        defaultTab={publishTab}
+        onSuccess={() => refetch()}
+      />
     </div>
   );
 }

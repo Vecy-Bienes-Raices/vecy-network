@@ -94,11 +94,7 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
 
         {/* CTA Buttons */}
         <div className="hidden md:flex items-center gap-3">
-          {user && ['admin', 'agent'].includes(user.role as string) ? (
-            <button onClick={() => navigate('/admin')} className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-all">
-              ADMIN
-            </button>
-          ) : (
+          {!user && (
             <button onClick={() => navigate('/login')} className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all">
               ACCEDER
             </button>

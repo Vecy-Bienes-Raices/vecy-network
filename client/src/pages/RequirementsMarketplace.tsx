@@ -16,6 +16,8 @@ import NetworkBackground from '@/components/NetworkBackground';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { supabase } from '@/lib/supabase';
 import { useLocation } from 'wouter';
+import { Plus } from 'lucide-react';
+import UnifiedPublishModal from '@/components/publish/UnifiedPublishModal';
 
 // --- Tipos para los Requerimientos ---
 interface Requirement {
@@ -42,6 +44,7 @@ export default function RequirementsMarketplace() {
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const [isPublishOpen, setIsPublishOpen] = useState(false);
 
   useEffect(() => {
     fetchRequirements();
@@ -129,7 +132,15 @@ export default function RequirementsMarketplace() {
               />
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <button
+                onClick={() => setIsPublishOpen(true)}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-black font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 hover:scale-105 transition-all"
+              >
+                <Plus className="w-4 h-4 text-black" />
+                <span>+ Subir Demanda (Requerimiento)</span>
+              </button>
+
               <div className="flex items-center gap-2 text-gray-500 uppercase tracking-widest text-[10px] font-bold">
                 <Filter className="w-4 h-4" />
                 <span>Ordenar: Más Recientes</span>
@@ -250,7 +261,7 @@ export default function RequirementsMarketplace() {
               Publica tu requerimiento y deja que la red encuentre el inmueble perfecto por ti.
             </p>
             <button 
-              onClick={() => navigate('/contact')}
+              onClick={() => setIsPublishOpen(true)}
               className="btn-gold-outline px-12 py-5 text-lg tracking-widest uppercase hover:scale-105 transition-transform"
             >
               PUBLICAR MI REQUERIMIENTO
@@ -268,6 +279,14 @@ export default function RequirementsMarketplace() {
           </p>
         </div>
       </footer>
+
+      {/* MODAL DE PUBLICACIÓN UNIFICADO */}
+      <UnifiedPublishModal
+        isOpen={isPublishOpen}
+        onClose={() => setIsPublishOpen(false)}
+        defaultTab="demanda"
+        onSuccess={fetchRequirements}
+      />
     </div>
   );
 }

@@ -50,7 +50,56 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.35 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.36 — Septiembre 2026
+
+### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 22:45 (Hora Colombia UTC-5)
+**Versión**: `v31.36` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"Mira si te das cuenta has puesto tres botones que dirigen todos al mismo panel de administración, suguiero que solo dejes el del menú central y ese que pusiste allí abajo en propiedades conviertelo en un botón para poder subir inmuebles (Ofertas) o demandas(Requerimientos)."*
+2. *"Ok y que ese panel sea facil de manejar donde uno pueda pegar en inmuebles todos los datos o características del inmuebles y que tenga donde poder subir las fotos y el video y en requerimientos un panel donde se pueda copiar tal cual el requerimiento o que tenga los campos a llenar que requiere JanIA para poder cotejar mejor los datos ese si por lógica no lleva fotos ni video pero si algo, si se tiene un flyer con información y poderlo subir como imagen y que la IA allí mismo me lo trascriba a texto e introduzac los datos donde corresponde y si tiene faltantes me los marque como dato faltante, ¿ok?. ¿Qué te parece?. Bueno hagamosle hasta ahí a ver si me entendiste loq ue en verdad deseo obtener."*
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Dispersión y Redundancia de Accesos Administrativos**:
+   - Existían 3 botones redundantes apuntando a `/admin`: la pestaña horizontal en el Navbar, el botón de atajo dorado `ADMIN` en la esquina superior derecha, y el botón al pie de página en `/properties`. Esto generaba confusión en los flujos de navegación.
+2. **Ausencia de un Centro Rápido de Publicación Unificado para Ofertas y Demandas**:
+   - Los agentes y directores de Vecy no contaban con una ventana ágil para registrar captaciones propias o demandas de clientes de forma directa, sin tener que navegar por tablas complejas o depender exclusivamente de la ingesta pasiva de WhatsApp.
+3. **Pérdida de Requerimientos Circulados en Formato Gráfico (Flyers / Afiches)**:
+   - En el mercado inmobiliario colombiano, un alto porcentaje de las búsquedas de compradores se divulgan como afiches publicitarios o flyers en imágenes digitales. Se requería dotar a JanIA de capacidades de visión artificial (OCR Multimodal con Gemini 2.5 Flash) para transcribir el texto íntegro y convertir los datos gráficos en campos estándar de la base de datos PostgreSQL.
+4. **Falta de Detección Proactiva de Datos Faltantes para Matching Óptimo**:
+   - Al captar requerimientos incompletos (sin presupuesto máximo, barrio, estrato, área o habitaciones mínimas), el algoritmo de compatibilidad de JanIA (`matching.ts`) se ve imposibilitado de generar matches de alto puntaje. Era imperativo crear una auditoría visual inmediata que identifique y destaque los campos faltantes para que el operador los complete antes del guardado final.
+
+#### 🛠️ Acciones Técnicas Ejecutadas en Código y Arquitectura:
+1. **Depuración Ergonómica de Navbar y Vistas Públicas**:
+   - En [Navbar.tsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/Navbar.tsx): Removido el botón duplicado `ADMIN` en la esquina superior derecha. Se preserva con exclusividad la pestaña central `ADMINISTRACIÓN` para usuarios autenticados.
+   - En [Properties.tsx](file:///home/eddu/Proyectos/vecy-network/client/src/pages/Properties.tsx): Erradicado el botón inferior que conducía al admin y sustituido por dos botones de alta jerarquía visual: `+ Subir Inmueble (Oferta)` y `+ Subir Demanda (Requerimiento)`.
+   - En [RequirementsMarketplace.tsx](file:///home/eddu/Proyectos/vecy-network/client/src/pages/RequirementsMarketplace.tsx): Incorporado botón directo de publicación de demanda en la barra de filtros y en el botón de llamado a la acción (CTA) final.
+2. **Creación del Centro Unificado de Publicación ([UnifiedPublishModal.tsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/publish/UnifiedPublishModal.tsx))**:
+   - Modal dual montado vía `createPortal(..., document.body)` con z-index `99999` e inmunidad a colisiones CSS de apilamiento o animación.
+   - **Pestaña Inmuebles (Oferta)**:
+     - Área de texto para pegar libremente la descripción del inmueble + botón `Estructurar con JanIA` que procesa el texto y precarga los campos.
+     - Formulario de características físicas y comerciales totalmente editable.
+     - Gestor multimedia con selector múltiple de fotos (con miniaturas y eliminación individual) y carga de videos (archivo local MP4 enviado al endpoint `/api/janIA/upload` o enlace web directo). Conectado a la mutación `properties.create`.
+   - **Pestaña Demandas (Requerimiento)**:
+     - Selector de modo: `Pegar Texto Libre` o `Subir Flyer / Afiche`.
+     - **JanIA Vision OCR (Gemini 2.5 Flash)**: Transcribe todo el texto visible del flyer e infiere en formato estructurado JSON los parámetros clave de la búsqueda inmobiliaria.
+     - **Auditoría Interactiva de Datos Faltantes**: Panel destacado con alertas que señala qué parámetros indispensables no se encontraron (Presupuesto Máximo, Barrio o Sector, Área Mínima, Estrato, Habitaciones, etc.) para que el usuario los complete antes de registrar.
+     - Conectado a la nueva mutación `janIA.createRequirement` con persistencia en la tabla `requirements` de PostgreSQL e invalidación de caché.
+3. **Ampliación del Router tRPC ([server/routers/janIA.ts](file:///home/eddu/Proyectos/vecy-network/server/routers/janIA.ts))**:
+   - Mutación `parseRequirementText`: Analiza texto con Gemini y audita `missingFields`.
+   - Mutación `parseRequirementFlyer`: Sube imagen con `storagePut`, ejecuta Gemini Vision con base64 (`image/jpeg`), transcribe a texto plano, estructura JSON y audita `missingFields`.
+   - Mutación `createRequirement`: Inserta el registro en PostgreSQL mediante Drizzle ORM e invalida la caché de requerimientos con `invalidateRequirementsCache()`.
+4. **Preservación Absoluta de `whatsapp-match.ts`**:
+   - Archivo 100% original e intocado.
+5. **Incremento de Versión y Compilación Limpia**:
+   - `shared/const.ts`: `v31.36`.
+   - `package.json`: `31.36.0`.
+   - `npm run check` (`tsc --noEmit`): 0 errores.
+   - `npm run build`: Compilación limpia de Vite y esbuild en 9.32s.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.35 — Septiembre 2026
 
 ### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 22:15 (Hora Colombia UTC-5)
 **Versión**: `v31.35` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

@@ -167,7 +167,38 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.35 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.36 — Septiembre 2026
+
+### Novedades v31.36 (Centro Unificado de Publicación de Ofertas & Demandas, OCR JanIA Vision para Flyers Publicitarios, Auditoría Interactiva de Datos Faltantes y Depuración de Accesos Redundantes de Administración):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Accesos Redundantes al Panel de Administración*: Existían tres puntos de entrada simultáneos que conducían a `/admin`: la opción en el menú horizontal del Navbar, el botón flotante dorado `ADMIN` en la esquina superior derecha, y el botón inferior `Ir al Panel de Administración` en la vista pública de propiedades (`/properties`). Esto generaba dispersión visual e incongruencia en la experiencia del usuario.
+  2) *Falta de Mecanismo Ágil para Carga de Ofertas y Demandas*: Los asesores y directores no disponían de un centro de publicación amigable donde volcar información libremente, subir contenido multimedia (múltiples fotos y videos) o ingresar requerimientos con facilidad.
+  3) *Ingesta de Afiches y Volantes (Flyers)*: Gran parte de las demandas de clientes circulan en redes y grupos de WhatsApp como imágenes promocionales (flyers/afiches). No existía un canal multimodal que transcribiera y estructurara estos artes visuales a campos nativos de la base de datos para cotejo algorítmico de JanIA.
+  4) *Carencia de Auditoría de Datos Críticos de Cotejo*: Al ingresar una demanda incompleta (sin presupuesto máximo, barrio, estrato, área o habitaciones mínimas), el motor de matching pierde precisión. Se requería que la IA identificara y resaltara de inmediato los `datos faltantes` para que el usuario pudiera completarlos antes de guardar.
+- **Acciones Ejecutadas**:
+  1) *Depuración Ergonómica de Navbar y Vistas*:
+     - Removido el botón duplicado `ADMIN` en la esquina superior derecha del `Navbar.tsx`. El acceso de administración se preserva únicamente en el menú horizontal central para usuarios autorizados.
+     - En `Properties.tsx`, el botón redundante de administración fue erradicado y reemplazado por dos botones de alta jerarquía visual: `+ Subir Inmueble (Oferta)` y `+ Subir Demanda (Requerimiento)`.
+     - En `RequirementsMarketplace.tsx`, se integró igualmente el botón de publicación directa de demanda en la barra de filtros y en el llamado a la acción (CTA) final.
+  2) *Centro Unificado de Publicación (`UnifiedPublishModal.tsx`)*:
+     - Componente modal con diseño premium Gold Edition montado en el DOM con `createPortal(..., document.body)` y `z-index: 99999` para evitar cualquier atrapamiento visual o interferencia CSS.
+     - **Pestaña Inmuebles (Oferta)**:
+       - Caja de texto libre para pegar descripción completa del inmueble y botón `Estructurar con JanIA` para autocompletar campos clave.
+       - Formulario estructurado y editable (Título, Tipo de Inmueble, Negocio, Ciudad, Barrio, Dirección, Precio de Venta / Canon de Arriendo, Área m², Habitaciones, Baños, Parqueaderos, Estrato).
+       - Gestor multimedia: selector y subida múltiple de fotografías con previsualización en miniatura y botón de eliminación individual, más sección para vincular videos (archivo local MP4 subido al endpoint `/api/janIA/upload` o enlace directo a YouTube/Vimeo/Cloud).
+     - **Pestaña Demandas (Requerimiento)**:
+       - Modo dual de ingesta: Copiar/pegar texto libre del requerimiento O subir imagen de Flyer / Afiche publicitario.
+       - **Escáner JanIA Vision Multimodal (Gemini 2.5 Flash)**: Transcribe íntegramente el arte del flyer y extrae estructuradamente en JSON los parámetros de búsqueda.
+       - **Auditoría Interactiva de Datos Faltantes**: Panel destacado en color ámbar/dorado con chips de advertencia que lista los atributos no identificados (ej: `Presupuesto Máximo`, `Barrio o Sector de Interés`, `Área Mínima`, `Estrato Socioeconómico`, etc.), permitiendo al asesor completarlos en los campos inferiores antes de enviar.
+  3) *Backend tRPC Robusto y Persistencia en PostgreSQL (`server/routers/janIA.ts`)*:
+     - `parseRequirementText`: Procesa texto libre con LLM y genera diagnóstico de `missingFields`.
+     - `parseRequirementFlyer`: Almacena el flyer en almacenamiento persistente con `storagePut`, ejecuta Gemini Vision con buffer base64 (`image/jpeg`), retorna transcripción `rawText`, JSON estructurado y lista de `missingFields`.
+     - `createRequirement`: Inserta la demanda directamente en la tabla `requirements` con Drizzle ORM e invalida la caché de requerimientos con `invalidateRequirementsCache()`.
+  4) *Preservación Absoluta de `whatsapp-match.ts`*: Archivo 100% intacto y protegido.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.35 — Septiembre 2026
 
 ### Novedades v31.35 (Depuración Ficha Agenda Pro: Erradicación de Firma/Contrato en Pantalla, Copia Rápida Multicédula, Centro de Verificación 1-Clic y Modo de Edición Integral de Identidades/Roles con Persistencia en BD):
 - **Diagnóstico y Causas Raíz Identificadas**:

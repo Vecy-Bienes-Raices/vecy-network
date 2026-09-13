@@ -15972,7 +15972,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.35";
+var VECY_VERSION = "v31.36";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -16579,6 +16579,7 @@ var systemRouter = router({
 
 // server/routers/janIA.ts
 import { z as z2 } from "zod";
+init_llm();
 init_db();
 init_schema();
 init_scraper();
@@ -16638,6 +16639,7 @@ function liquidarImpuestosVenta(params) {
 // server/routers/janIA.ts
 init_matching();
 init_voiceTranscription();
+init_storage();
 import axios7 from "axios";
 import fs9 from "fs";
 import path9 from "path";
@@ -16650,6 +16652,10 @@ var cachedRequirementsTime = 0;
 function invalidateAdminMatchesCache() {
   cachedAllMatchesTime = 0;
   cachedAllMatchesData = null;
+  cachedRequirementsTime = 0;
+  cachedRequirementsData = null;
+}
+function invalidateRequirementsCache() {
   cachedRequirementsTime = 0;
   cachedRequirementsData = null;
 }
@@ -17897,6 +17903,229 @@ ${liveStats}${userContextInstruction}
   triggerWeeklyReport: publicProcedure.mutation(async () => {
     const { publishWeeklyReportNow: publishWeeklyReportNow2 } = await Promise.resolve().then(() => (init_cronService(), cronService_exports));
     return await publishWeeklyReportNow2();
+  }),
+  // Parser Inteligente de Requerimientos desde Texto Libre
+  parseRequirementText: publicProcedure.input(z2.object({ text: z2.string() })).mutation(async ({ input }) => {
+    try {
+      const prompt = `Act\xFAa como JanIA, el motor de inteligencia artificial de Vecy Network especializado en corretaje inmobiliario en Colombia.
+Analiza este texto de requerimiento o solicitud de cliente/agente y extrae los datos estructurados en formato JSON con los siguientes campos:
+- name: T\xEDtulo breve y claro de la b\xFAsqueda (ej: "Apto arriendo Chapinero 2 habs")
+- tipoInmuebleDeseado: "apartment" | "house" | "building" | "warehouse" | "farm" | "hotel" | "office" | "land" | "commercial" | "loft" | "consultorio"
+- tipoNegocioDeseado: "venta" | "arriendo" | "venta_o_arriendo" | "arriendo_temporal" | "arriendo_con_opcion_de_compra" | "permuta" | "venta_permuta" | "aporte"
+- ciudadDeseada: Nombre de la ciudad (por defecto "Bogot\xE1" si no especifica)
+- addressNeighborhood: Barrio espec\xEDfico o sectores mencionados (ej: "Chic\xF3, Rosales, Virrey")
+- zonaDeseada: Sector o zona general si aplica (ej: "Norte", "Chapinero")
+- presupuestoMin: valor num\xE9rico string sin puntos ni s\xEDmbolos o null
+- presupuestoMax: valor num\xE9rico string sin puntos ni s\xEDmbolos (ej: "450000000" para compra, o "3500000" para arriendo) o null
+- areaMin: metros cuadrados m\xEDnimos en n\xFAmero string (ej: "75") o null
+- habitacionesMin: n\xFAmero entero m\xEDnimo o null
+- banosMin: n\xFAmero entero m\xEDnimo o null
+- parqueaderosMin: n\xFAmero entero m\xEDnimo o null
+- adminFeeMax: cuota de administraci\xF3n m\xE1xima en n\xFAmero string o null
+- estratoDeseado: array de n\xFAmeros enteros (ej: [4, 5]) o null
+- amobladoDeseado: boolean o null
+- caracteristicasDeseadas: array de strings con comodidades clave (ej: ["balc\xF3n", "ascensor", "dep\xF3sito"])
+- rawText: Texto original analizado
+
+Si un campo no est\xE1 expl\xEDcito en el texto, coloca null (NO inventes informaci\xF3n).
+Devuelve \xDANICAMENTE el objeto JSON sin bloques de c\xF3digo ni explicaciones.
+
+Texto: ${input.text}`;
+      const response = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
+      const textContent = response.choices?.[0]?.message?.content;
+      const cleaned = typeof textContent === "string" ? textContent.replace(/```json\n?|\n?```/g, "").trim() : "{}";
+      const parsed = JSON.parse(cleaned);
+      const missingFields = [];
+      if (!parsed.presupuestoMax || String(parsed.presupuestoMax).trim() === "" || Number(parsed.presupuestoMax) === 0) {
+        missingFields.push("Presupuesto M\xE1ximo");
+      }
+      if (!parsed.addressNeighborhood && !parsed.zonaDeseada) {
+        missingFields.push("Barrio o Sector de Inter\xE9s");
+      }
+      if (!parsed.tipoInmuebleDeseado) {
+        missingFields.push("Tipo de Inmueble");
+      }
+      if (!parsed.tipoNegocioDeseado) {
+        missingFields.push("Tipo de Negocio (Venta/Arriendo)");
+      }
+      if (!parsed.areaMin || String(parsed.areaMin).trim() === "" || Number(parsed.areaMin) === 0) {
+        missingFields.push("\xC1rea M\xEDnima (m\xB2)");
+      }
+      if (!parsed.estratoDeseado || Array.isArray(parsed.estratoDeseado) && parsed.estratoDeseado.length === 0) {
+        missingFields.push("Estrato Socioecon\xF3mico");
+      }
+      if (parsed.habitacionesMin === void 0 || parsed.habitacionesMin === null) {
+        missingFields.push("M\xEDnimo de Habitaciones");
+      }
+      if (parsed.banosMin === void 0 || parsed.banosMin === null) {
+        missingFields.push("M\xEDnimo de Ba\xF1os");
+      }
+      if (parsed.parqueaderosMin === void 0 || parsed.parqueaderosMin === null) {
+        missingFields.push("Parqueaderos Requeridos");
+      }
+      return {
+        extracted: parsed,
+        missingFields,
+        rawText: input.text
+      };
+    } catch (err) {
+      throw new Error("Error al analizar requerimiento con IA: " + err.message);
+    }
+  }),
+  // Parser Inteligente de Requerimientos desde Flyer / Imagen con JanIA Vision (OCR Multimodal)
+  parseRequirementFlyer: publicProcedure.input(z2.object({
+    imageBase64: z2.string(),
+    mimeType: z2.string().default("image/jpeg")
+  })).mutation(async ({ input }) => {
+    try {
+      const cleanBase64 = input.imageBase64.includes(",") ? input.imageBase64.split(",")[1] : input.imageBase64;
+      const fileExt = input.mimeType.includes("png") ? "png" : "jpg";
+      const filename = `flyers/req_flyer_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      const uploadResult = await storagePut(filename, cleanBase64, input.mimeType);
+      const prompt = `Act\xFAa como JanIA, la Inteligencia Artificial de Vecy Network.
+Analiza detenidamente esta imagen (flyer, afiche publicitario o captura de WhatsApp de un requerimiento o demanda inmobiliaria).
+1. Transcribe \xEDntegramente todo el texto visible de la imagen en el campo "rawText".
+2. Extrae y estructura los siguientes datos clave en formato JSON:
+- name: T\xEDtulo breve y claro de la b\xFAsqueda (ej: "Apto arriendo Chic\xF3 2 habs")
+- tipoInmuebleDeseado: "apartment" | "house" | "building" | "warehouse" | "farm" | "hotel" | "office" | "land" | "commercial" | "loft" | "consultorio"
+- tipoNegocioDeseado: "venta" | "arriendo" | "venta_o_arriendo" | "arriendo_temporal" | "arriendo_con_opcion_de_compra" | "permuta" | "venta_permuta" | "aporte"
+- ciudadDeseada: Nombre de la ciudad (por defecto "Bogot\xE1" si no se especifica)
+- addressNeighborhood: Barrio espec\xEDfico o sectores mencionados
+- zonaDeseada: Sector o zona general
+- presupuestoMin: valor num\xE9rico string sin puntos ni s\xEDmbolos o null
+- presupuestoMax: valor num\xE9rico string sin puntos ni s\xEDmbolos (ej: "450000000" para compra, o "3500000" para arriendo) o null
+- areaMin: metros cuadrados m\xEDnimos en n\xFAmero string (ej: "80") o null
+- habitacionesMin: n\xFAmero entero m\xEDnimo o null
+- banosMin: n\xFAmero entero m\xEDnimo o null
+- parqueaderosMin: n\xFAmero entero m\xEDnimo o null
+- adminFeeMax: cuota de administraci\xF3n m\xE1xima en n\xFAmero string o null
+- estratoDeseado: array de n\xFAmeros enteros (ej: [4, 5]) o null
+- amobladoDeseado: boolean o null
+- caracteristicasDeseadas: array de strings con comodidades o condiciones clave
+- nombreUsuarioWhatsapp: Nombre del contacto/agente si aparece en el flyer
+- idUsuarioWhatsapp: Tel\xE9fono o WhatsApp de contacto si aparece en el flyer (solo n\xFAmeros)
+
+Si un dato no est\xE1 en el flyer, coloca null (NO inventes informaci\xF3n).
+Devuelve \xDANICAMENTE el objeto JSON sin bloques de c\xF3digo ni comentarios.`;
+      const response = await invokeLLM({
+        messages: [{ role: "user", content: prompt }],
+        imageBuffer: cleanBase64
+      });
+      const textContent = response.choices?.[0]?.message?.content;
+      const cleaned = typeof textContent === "string" ? textContent.replace(/```json\n?|\n?```/g, "").trim() : "{}";
+      const parsed = JSON.parse(cleaned);
+      const missingFields = [];
+      if (!parsed.presupuestoMax || String(parsed.presupuestoMax).trim() === "" || Number(parsed.presupuestoMax) === 0) {
+        missingFields.push("Presupuesto M\xE1ximo");
+      }
+      if (!parsed.addressNeighborhood && !parsed.zonaDeseada) {
+        missingFields.push("Barrio o Sector de Inter\xE9s");
+      }
+      if (!parsed.tipoInmuebleDeseado) {
+        missingFields.push("Tipo de Inmueble");
+      }
+      if (!parsed.tipoNegocioDeseado) {
+        missingFields.push("Tipo de Negocio (Venta/Arriendo)");
+      }
+      if (!parsed.areaMin || String(parsed.areaMin).trim() === "" || Number(parsed.areaMin) === 0) {
+        missingFields.push("\xC1rea M\xEDnima (m\xB2)");
+      }
+      if (!parsed.estratoDeseado || Array.isArray(parsed.estratoDeseado) && parsed.estratoDeseado.length === 0) {
+        missingFields.push("Estrato Socioecon\xF3mico");
+      }
+      if (parsed.habitacionesMin === void 0 || parsed.habitacionesMin === null) {
+        missingFields.push("M\xEDnimo de Habitaciones");
+      }
+      if (parsed.banosMin === void 0 || parsed.banosMin === null) {
+        missingFields.push("M\xEDnimo de Ba\xF1os");
+      }
+      if (parsed.parqueaderosMin === void 0 || parsed.parqueaderosMin === null) {
+        missingFields.push("Parqueaderos Requeridos");
+      }
+      return {
+        extracted: parsed,
+        missingFields,
+        rawTranscription: parsed.rawText || "",
+        flyerUrl: uploadResult.url
+      };
+    } catch (err) {
+      throw new Error("Error al transcribir y analizar flyer con JanIA Vision: " + err.message);
+    }
+  }),
+  // Crear Requerimiento (Demanda) directamente en Base de Datos
+  createRequirement: publicProcedure.input(z2.object({
+    name: z2.string().min(2),
+    tipoInmuebleDeseado: z2.enum([
+      "apartment",
+      "house",
+      "building",
+      "warehouse",
+      "farm",
+      "hotel",
+      "office",
+      "land",
+      "commercial",
+      "loft",
+      "consultorio"
+    ]).default("apartment"),
+    tipoNegocioDeseado: z2.enum([
+      "venta",
+      "arriendo",
+      "venta_o_arriendo",
+      "arriendo_temporal",
+      "arriendo_con_opcion_de_compra",
+      "permuta",
+      "venta_permuta",
+      "aporte"
+    ]).default("arriendo"),
+    ciudadDeseada: z2.string().default("Bogot\xE1"),
+    addressNeighborhood: z2.string().optional().nullable(),
+    zonaDeseada: z2.string().optional().nullable(),
+    presupuestoMin: z2.string().optional().nullable(),
+    presupuestoMax: z2.string().optional().nullable(),
+    areaMin: z2.string().optional().nullable(),
+    habitacionesMin: z2.number().optional().nullable(),
+    banosMin: z2.number().optional().nullable(),
+    parqueaderosMin: z2.number().optional().nullable(),
+    adminFeeMax: z2.string().optional().nullable(),
+    estratoDeseado: z2.any().optional().nullable(),
+    amobladoDeseado: z2.boolean().optional().nullable(),
+    caracteristicasDeseadas: z2.any().optional().nullable(),
+    rawText: z2.string().optional().nullable(),
+    enlaceOrigen: z2.string().optional().nullable(),
+    nombreUsuarioWhatsapp: z2.string().optional().nullable(),
+    idUsuarioWhatsapp: z2.string().optional().nullable()
+  })).mutation(async ({ ctx, input }) => {
+    const db = await getDb();
+    if (!db) throw new Error("Base de datos no disponible");
+    const inserted = await db.insert(requirements).values({
+      userId: ctx?.user?.id ?? 1,
+      name: input.name,
+      tipoInmuebleDeseado: input.tipoInmuebleDeseado,
+      tipoNegocioDeseado: input.tipoNegocioDeseado,
+      ciudadDeseada: input.ciudadDeseada,
+      addressNeighborhood: input.addressNeighborhood,
+      zonaDeseada: input.zonaDeseada || input.addressNeighborhood,
+      presupuestoMin: input.presupuestoMin ? String(input.presupuestoMin) : null,
+      presupuestoMax: input.presupuestoMax ? String(input.presupuestoMax) : null,
+      areaMin: input.areaMin ? String(input.areaMin) : null,
+      habitacionesMin: input.habitacionesMin,
+      banosMin: input.banosMin,
+      parqueaderosMin: input.parqueaderosMin,
+      adminFeeMax: input.adminFeeMax ? String(input.adminFeeMax) : null,
+      estratoDeseado: input.estratoDeseado,
+      amobladoDeseado: input.amobladoDeseado,
+      caracteristicasDeseadas: input.caracteristicasDeseadas,
+      rawText: input.rawText,
+      enlaceOrigen: input.enlaceOrigen,
+      nombreUsuarioWhatsapp: input.nombreUsuarioWhatsapp || ctx?.user?.name || "Asesor Vecy",
+      idUsuarioWhatsapp: input.idUsuarioWhatsapp || "573192919978",
+      origenTipo: "web_admin_unified",
+      origenNombre: "Centro de Publicaci\xF3n Vecy",
+      status: "active"
+    }).returning();
+    invalidateRequirementsCache();
+    return inserted[0];
   })
 });
 

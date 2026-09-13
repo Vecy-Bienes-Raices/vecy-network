@@ -322,6 +322,43 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.36 — Septiembre 2026
+
+#### 📌 CENTRO UNIFICADO DE PUBLICACIÓN DE OFERTAS & DEMANDAS, OCR JANIA VISION PARA FLYERS PUBLICITARIOS, AUDITORÍA INTERACTIVA DE DATOS FALTANTES Y DEPURACIÓN DE ACCESOS REDUNDANTES DE ADMINISTRACIÓN
+
+**Problemas identificados:**
+1. **Accesos Redundantes al Panel de Administración**:
+   - Existían tres botones simultáneos que dirigían al mismo destino (`/admin`): 1) Menú horizontal central del Navbar, 2) Botón flotante superior derecho `ADMIN` en el Navbar, y 3) Botón inferior en la página de propiedades (`/properties`). Esto generaba redundancia y dispersión innecesaria en la interfaz.
+2. **Ausencia de Canal Dinámico para Carga Directa de Inmuebles con Fotos y Video**:
+   - Para registrar ofertas propias o exclusivas, los administradores y agentes no contaban con un panel ágil donde pegar libremente la ficha técnica, estructurarla con IA, subir múltiples fotos y adjuntar videos (MP4 o enlaces web).
+3. **Ingesta de Requerimientos desde Flyers / Afiches Gráficos**:
+   - Gran parte de la demanda en el mercado inmobiliario colombiano se comparte como volantes o piezas gráficas en redes y WhatsApp. No existía un módulo multimodal que transcribiera y mapeara automáticamente los datos visuales de la imagen a campos estructurados de la base de datos.
+4. **Falta de Detección Inmediata de Parámetros Faltantes para Matching**:
+   - Al capturar un requerimiento que omitía datos esenciales (como presupuesto máximo, barrio, estrato, metraje o número de habitaciones), el motor de matching quedaba desprovisto de información crítica. Se requería una auditoría visual en tiempo real que alertara qué datos faltan para que el operador los complete antes de guardar.
+
+**Solución aplicada:**
+- **Depuración Ergonómica de Navbar y Vistas**:
+   - Eliminado el botón duplicado `ADMIN` en la esquina superior derecha de `Navbar.tsx`.
+   - Sustituido el botón redundante de propiedades por dos accesos de alta visibilidad: `+ Subir Inmueble (Oferta)` y `+ Subir Demanda (Requerimiento)`.
+   - Habilitado botón directo de publicación de requerimientos en `RequirementsMarketplace.tsx`.
+- **Centro Unificado de Publicación (`UnifiedPublishModal.tsx`)**:
+   - Modal dual montado vía `createPortal` en `document.body` con z-index `99999` y diseño Gold Edition.
+   - **Ofertas / Inmuebles**:
+     - Área para pegar texto libre + botón `Estructurar con JanIA`.
+     - Formulario de características físicas y comerciales editables.
+     - Gestor multimedia con selector múltiple de fotos (previsualización, miniaturas y eliminación individual) y carga de videos (archivo MP4 subido a `/api/janIA/upload` o enlace de video).
+   - **Demandas / Requerimientos**:
+     - Entrada dual: Pegar texto libre O subir imagen de Flyer / Afiche publicitario.
+     - **JanIA Vision OCR (Gemini 2.5 Flash)**: Transcribe todo el texto del volante publicitario y extrae en JSON estructurado los parámetros de búsqueda.
+     - **Auditoría Interactiva de Datos Faltantes**: Tarjeta de alerta dorada que enumera los atributos clave ausentes para que el usuario los diligencie antes de guardar.
+- **Backend tRPC y Persistencia PostgreSQL**:
+   - `parseRequirementText`, `parseRequirementFlyer` y `createRequirement` en `server/routers/janIA.ts`.
+   - Conexión a Drizzle ORM sobre `requirements` e invalidación reactiva de caché.
+- **Preservación Absoluta de `whatsapp-match.ts`**:
+   - Archivo 100% original e intacto.
+
+---
+
 ### 🔖 v31.35 — Septiembre 2026
 
 #### 📌 DEPURACIÓN FICHA AGENDA PRO: ERRADICACIÓN DE FIRMA/CONTRATO EN PANTALLA, COPIA RÁPIDA MULTICÉDULA, CENTRO DE VERIFICACIÓN 1-CLIC Y MODO DE EDICIÓN INTEGRAL DE IDENTIDADES/ROLES CON PERSISTENCIA EN BD
