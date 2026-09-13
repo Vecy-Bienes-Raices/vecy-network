@@ -16,17 +16,21 @@ import {
   Search,
   Zap,
   Award,
-  Globe
+  Globe,
+  Edit2
 } from 'lucide-react';
 import ShareModal from '@/components/ShareModal';
+import UnifiedPublishModal from '@/components/publish/UnifiedPublishModal';
 import { toast } from 'sonner';
 import { ScrollReveal } from '@/components/ScrollReveal';
 
 export default function PropertyDetail() {
   const [match, params] = useRoute('/property/:id');
   const [, navigate] = useLocation();
+  const trpcContext = trpc.useUtils();
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareModalConfig, setShareModalConfig] = useState({ text: "", url: "", modalTitle: "" });
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const propertyId = params?.id ? parseInt(params.id) : null;
   const isStealth = new URLSearchParams(window.location.search).get('mode') === 'stealth';
@@ -117,7 +121,14 @@ export default function PropertyDetail() {
             </div>
             
             {/* Botonera de Acción */}
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col md:flex-row flex-wrap gap-4">
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="py-4 px-8 bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#aa771c] hover:brightness-110 text-black rounded-xl transition-all flex items-center justify-center gap-3 font-black tracking-widest text-xs uppercase shadow-lg shadow-[#bf953f]/25 cursor-pointer"
+              >
+                <Edit2 className="w-5 h-5"/> EDITAR INMUEBLE & FOTOS
+              </button>
+
               <button
                  onClick={() => {
                    setShareModalConfig({
@@ -252,6 +263,19 @@ export default function PropertyDetail() {
         url={shareModalConfig.url}
         modalTitle={shareModalConfig.modalTitle}
       />
+
+      {property && (
+        <UnifiedPublishModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          defaultTab="oferta"
+          editProperty={property}
+          onSuccess={() => {
+            trpcContext.properties.getById.invalidate({ id: propertyId || 0 });
+            trpcContext.properties.list.invalidate();
+          }}
+        />
+      )}
 
       <footer className="bg-black border-t border-white/10 py-20 mt-20">
         <div className="container text-center">

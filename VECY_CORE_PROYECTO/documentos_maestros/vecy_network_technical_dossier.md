@@ -1948,5 +1948,24 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Sincronización Total en `handleOnlySave` y `handleRecalculateMatch`**:
   * Actualización optimista inmediata en memoria local (0ms lag) y persistencia en Supabase.
 
+---
 
+### Versión v31.41 — Septiembre 2026: Blindaje Defensivo en Ficha Técnica (Zero Whitescreen), Edición Integral de Inmuebles en Tienda y Actualización de 30 Fotos en Producción
 
+#### 1. BLINDAJE DEFENSIVO EN RENDERIZADO DE CARACTERÍSTICAS (`PropertyFeatures.tsx` y `PropertyGallery.tsx`)
+- **Problema de Pantalla en Blanco**: Al consultar inmuebles creados con la nueva estructura v31.40 (ej. Casa en Morato #2775), la desestructuración de `caracteristicasInternas` y `caracteristicasExternas` intentaba llamar directamente al método `.map()` sin validar si eran arrays (`Array.isArray()`), arrojando un error en tiempo de ejecución (`TypeError: caracteristicasInternas.map is not a function`) que rompía el árbol de React.
+- **Solución Implementada**:
+  * Implementado blindaje integral con `Array.isArray()` y optional chaining (`?.`) en `PropertyFeatures.tsx` para listas internas, externas, sub-objetos de `cavaVinos`, `chimeneas` y `terrazas`.
+  * Sanitización en `PropertyGallery.tsx` para filtrar URLs vacías o inválidas.
+  * La ficha de detalle carga de manera fluida y tolerante ante cualquier estructura de datos en PostgreSQL 17.
+
+#### 2. MODO EDICIÓN COMPLETO EN `UnifiedPublishModal.tsx`
+- Prop opcional `editProperty` agregada al modal.
+- Integrada la mutación `updatePropMutation` conectada a `trpc.properties.update.useMutation()`.
+- Efecto reactivo de hidratación que al abrir el modal puebla todos los campos (30 fotos, video, precios, áreas, cuartos, baños, garajes carro/moto, chimeneas, terrazas, cava de vinos, coordenadas y características personalizadas).
+- Botón de guardado contextual "Guardar Cambios del Inmueble".
+
+#### 3. BOTÓN DIRECTO "EDITAR INMUEBLE & FOTOS" EN `PropertyDetail.tsx`
+- En la ficha de detalle pública/privada de la propiedad, se integró el botón dorado de alta jerarquía "EDITAR INMUEBLE & FOTOS".
+- Al guardar los cambios, se invalidan reactivamente las consultas de tRPC (`trpcContext.properties.getById.invalidate` y `trpcContext.properties.list.invalidate`), actualizando la ficha en tiempo real sin recargar el navegador.
+- Preservación íntegra e inquebrantable de `server/_core/whatsapp-match.ts`.

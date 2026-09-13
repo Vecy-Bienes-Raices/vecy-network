@@ -7,13 +7,21 @@ interface PropertyGalleryProps {
 }
 
 export default function PropertyGallery({ images: rawImages, propertyName }: PropertyGalleryProps) {
-  const images = (rawImages || []).map(u => {
-    if (u && u.includes('/uploads/')) return u.substring(u.indexOf('/uploads/'));
-    return u;
-  });
+  const safeArray = Array.isArray(rawImages) ? rawImages.filter(Boolean) : (typeof rawImages === 'string' ? [rawImages] : []);
+  const images = (safeArray.length > 0 ? safeArray : ['https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&auto=format&fit=crop&q=80'])
+    .map(u => {
+      if (u && typeof u === 'string' && u.includes('/uploads/')) return u.substring(u.indexOf('/uploads/'));
+      return String(u);
+    });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (selectedIndex >= images.length) {
+      setSelectedIndex(0);
+    }
+  }, [images.length, selectedIndex]);
 
   useEffect(() => {
     if (scrollContainerRef.current) {

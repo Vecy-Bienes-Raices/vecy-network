@@ -14,21 +14,48 @@ export default function PropertyFeatures({ property }: PropertyFeaturesProps) {
   const bedrooms = property.bedrooms || 0;
   const bathrooms = property.bathrooms || 0;
   const area = Number(property.areaTotal || 0);
-  const amenities = (property.amenities as string[]) || [];
   const yearBuilt = property.yearBuilt || 0;
   const propertyType = property.propertyType || "";
   const floorDetail = property.floorDetail;
   const propertyDetails = property.propertyDetails || {};
   const description = property.description || "";
-  const internalFeatures = property.internalFeatures || [];
+
+  // 🛡️ Extracción Segura y Defensiva de Amenidades y Características (v31.41)
+  const rawAmenities = property.amenities;
+  let externalFeaturesList: string[] = [];
+  let internalFeaturesList: string[] = [];
+  let enrichedAmenities: any = null;
+
+  if (Array.isArray(rawAmenities)) {
+    externalFeaturesList = rawAmenities.filter(Boolean);
+  } else if (rawAmenities && typeof rawAmenities === 'object') {
+    enrichedAmenities = rawAmenities;
+    if (Array.isArray(rawAmenities.caracteristicasExternas)) {
+      externalFeaturesList = rawAmenities.caracteristicasExternas.filter(Boolean);
+    }
+    if (Array.isArray(rawAmenities.caracteristicasInternas)) {
+      internalFeaturesList = rawAmenities.caracteristicasInternas.filter(Boolean);
+    }
+  }
+
+  // Compatibilidad con campo directo internalFeatures
+  if (Array.isArray(property.internalFeatures) && property.internalFeatures.length > 0) {
+    internalFeaturesList = Array.from(new Set([...internalFeaturesList, ...property.internalFeatures.filter(Boolean)]));
+  }
 
   const mainFeatures: Feature[] = [
     { icon: <Bed className="w-6 h-6" />, label: 'Habitaciones', value: bedrooms.toString() },
     { icon: <Bath className="w-6 h-6" />, label: 'Baños', value: bathrooms.toString() },
-    { icon: <Ruler className="w-6 h-6" />, label: 'Área', value: `${area.toLocaleString()} m²` },
+    { icon: <Ruler className="w-6 h-6" />, label: 'Área Construida', value: `${area.toLocaleString()} m²` },
   ];
 
-  if (floorDetail) {
+  if (enrichedAmenities?.garajesMoto !== undefined && enrichedAmenities?.garajesMoto > 0) {
+    mainFeatures.push({
+      icon: <Zap className="w-6 h-6" />,
+      label: 'Garajes Moto',
+      value: `${enrichedAmenities.garajesMoto}`,
+    });
+  } else if (floorDetail) {
     mainFeatures.push({
       icon: <Zap className="w-6 h-6" />,
       label: 'Piso / Niveles / Altura',
@@ -54,6 +81,8 @@ export default function PropertyFeatures({ property }: PropertyFeaturesProps) {
     if (t.includes('oficina') || t.includes('office')) return <Briefcase className="w-4 h-4" />;
     return <Zap className="w-4 h-4" />;
   };
+
+  const displayType = enrichedAmenities?.tipoExacto || propertyType;
 
   return (
     <div className="space-y-8">
@@ -81,74 +110,158 @@ export default function PropertyFeatures({ property }: PropertyFeaturesProps) {
       {/* Información Adicional */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="card-float p-6">
-          <h4 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">
-            🔎 Detalles
+          <h4 className="text-lg font-bold text-white mb-4 uppercase tracking-wider flex items-center justify-between">
+            <span>🔎 Detalles Técnicos</span>
+            {enrichedAmenities?.subtipoComercial && (
+              <span className="text-[10px] font-black px-2 py-0.5 rounded bg-[#bf953f] text-black uppercase tracking-wider">
+                Uso Comercial
+              </span>
+            )}
           </h4>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between border-b border-white/10 pb-2">
-              <span className="text-gray-400">Tipo de Propiedad</span>
+              <span className="text-gray-400">Tipo de Inmueble</span>
               <span className="text-white font-semibold flex items-center gap-2">
-                <span className="text-accent">{getPropertyTypeIcon(propertyType)}</span>
-                {propertyType}
-                {propertyDetails?.houseType === 'conjunto' && <span className="bg-white/5 text-[10px] px-2 py-0.5 rounded-full text-accent border border-accent/20">En Conjunto</span>}
-                {propertyDetails?.houseType === 'barrio' && <span className="bg-gray-800 text-[10px] px-2 py-0.5 rounded-full text-gray-300">De Barrio</span>}
+                <span className="text-accent">{getPropertyTypeIcon(displayType)}</span>
+                {displayType}
               </span>
             </div>
-            {propertyDetails?.viewType && (
+
+            {/* Negocio de Permuta */}
+            {enrichedAmenities?.permutaDetalle && (
               <div className="flex justify-between border-b border-white/10 pb-2">
-                <span className="text-gray-400">Vista</span>
-                <span className="text-white font-semibold uppercase text-xs">{propertyDetails.viewType}</span>
+                <span className="text-gray-400">Modalidad Negocio</span>
+                <span className="text-[#bf953f] font-bold text-xs">{enrichedAmenities.permutaDetalle}</span>
               </div>
             )}
-            {propertyDetails?.privateArea && (
+
+            {/* Cocina */}
+            {enrichedAmenities?.cocina && (
               <div className="flex justify-between border-b border-white/10 pb-2">
-                <span className="text-gray-400">Área Privada</span>
-                <span className="text-white font-semibold">{propertyDetails.privateArea} m²</span>
+                <span className="text-gray-400">Tipo de Cocina</span>
+                <span className="text-white font-semibold">{enrichedAmenities.cocina}</span>
               </div>
             )}
-            {propertyDetails?.estrato && (
+
+            {/* Cuarto de servicio */}
+            {enrichedAmenities?.cuartoServicio && enrichedAmenities.cuartoServicio !== 'No' && (
               <div className="flex justify-between border-b border-white/10 pb-2">
-                <span className="text-gray-400">Estrato</span>
-                <span className="text-white font-semibold">{propertyDetails.estrato}</span>
+                <span className="text-gray-400">Cuarto de Servicio</span>
+                <span className="text-white font-semibold">{enrichedAmenities.cuartoServicio}</span>
               </div>
             )}
-            {propertyDetails?.parking && (
+
+            {/* Chimeneas */}
+            {enrichedAmenities?.chimeneas?.tiene && (
               <div className="flex justify-between border-b border-white/10 pb-2">
-                <span className="text-gray-400">Parqueadero</span>
-                <span className="text-white font-semibold">{propertyDetails.parking}</span>
+                <span className="text-gray-400">Chimeneas</span>
+                <span className="text-white font-semibold">{enrichedAmenities.chimeneas.cantidad} a {enrichedAmenities.chimeneas.tipo}</span>
               </div>
             )}
-            {propertyDetails?.deposito && (
+
+            {/* Cava de Vinos */}
+            {enrichedAmenities?.cavaVinos?.tiene && (
               <div className="flex justify-between border-b border-white/10 pb-2">
-                <span className="text-gray-400">Depósito</span>
-                <span className="text-white font-semibold">{propertyDetails.deposito}</span>
+                <span className="text-gray-400">Cava de Vinos</span>
+                <span className="text-white font-semibold">{enrichedAmenities.cavaVinos.cantidad} Cava(s)</span>
               </div>
             )}
-            {propertyDetails?.administrationFee !== undefined && (
+
+            {/* Terrazas */}
+            {enrichedAmenities?.terrazas?.tiene && (
               <div className="flex justify-between border-b border-white/10 pb-2">
-                <span className="text-gray-400">Administración</span>
+                <span className="text-gray-400">Terraza</span>
                 <span className="text-white font-semibold">
-                  {propertyDetails.administrationFee === '0' || propertyDetails.administrationFee === 0 
-                    ? 'No Aplica' 
-                    : `$${propertyDetails.administrationFee.toLocaleString()} COP`}
+                  {enrichedAmenities.terrazas.cantidad} {enrichedAmenities.terrazas.areaM2 ? `(${enrichedAmenities.terrazas.areaM2} m²)` : ''}
+                  {enrichedAmenities.terrazas.tieneBBQ ? ' + BBQ' : ''}
                 </span>
               </div>
             )}
-            <div className="flex justify-between border-b border-white/10 pb-2">
-              <span className="text-gray-400">Año de Construcción</span>
-              <span className="text-white font-semibold">{yearBuilt}</span>
-            </div>
+
+            {/* Balcones */}
+            {enrichedAmenities?.balcones !== undefined && Number(enrichedAmenities.balcones) > 0 && (
+              <div className="flex justify-between border-b border-white/10 pb-2">
+                <span className="text-gray-400">Balcones</span>
+                <span className="text-white font-semibold">{enrichedAmenities.balcones}</span>
+              </div>
+            )}
+
+            {/* Piso y Ubicación */}
+            {enrichedAmenities?.pisoEdificio && (
+              <div className="flex justify-between border-b border-white/10 pb-2">
+                <span className="text-gray-400">Piso / Ubicación</span>
+                <span className="text-white font-semibold">
+                  Piso {enrichedAmenities.pisoEdificio} {enrichedAmenities.ubicacionPiso ? `(${enrichedAmenities.ubicacionPiso})` : ''}
+                </span>
+              </div>
+            )}
+
+            {/* Área Privada */}
+            {(property.areaPrivate || propertyDetails?.privateArea) && (
+              <div className="flex justify-between border-b border-white/10 pb-2">
+                <span className="text-gray-400">Área Privada</span>
+                <span className="text-white font-semibold">{property.areaPrivate || propertyDetails.privateArea} m²</span>
+              </div>
+            )}
+
+            {/* Estrato */}
+            {property.stratum && (
+              <div className="flex justify-between border-b border-white/10 pb-2">
+                <span className="text-gray-400">Estrato</span>
+                <span className="text-white font-semibold">{property.stratum}</span>
+              </div>
+            )}
+
+            {/* Garajes Carro y Moto */}
+            {(property.garages || enrichedAmenities?.garajesMoto) && (
+              <div className="flex justify-between border-b border-white/10 pb-2">
+                <span className="text-gray-400">Parqueaderos</span>
+                <span className="text-white font-semibold">
+                  {property.garages ? `${property.garages} Carro(s)` : ''}
+                  {property.garages && enrichedAmenities?.garajesMoto ? ' / ' : ''}
+                  {enrichedAmenities?.garajesMoto ? `${enrichedAmenities.garajesMoto} Moto(s)` : ''}
+                </span>
+              </div>
+            )}
+
+            {/* Depósitos */}
+            {enrichedAmenities?.depositos !== undefined && Number(enrichedAmenities.depositos) > 0 && (
+              <div className="flex justify-between border-b border-white/10 pb-2">
+                <span className="text-gray-400">Depósitos</span>
+                <span className="text-white font-semibold">{enrichedAmenities.depositos}</span>
+              </div>
+            )}
+
+            {/* Administración */}
+            {property.adminFee && (
+              <div className="flex justify-between border-b border-white/10 pb-2">
+                <span className="text-gray-400">Administración</span>
+                <span className="text-white font-semibold">
+                  ${Number(property.adminFee).toLocaleString('es-CO')} COP
+                </span>
+              </div>
+            )}
+
+            {yearBuilt > 0 && (
+              <div className="flex justify-between border-b border-white/10 pb-2">
+                <span className="text-gray-400">Año de Construcción</span>
+                <span className="text-white font-semibold">{yearBuilt}</span>
+              </div>
+            )}
+
             <div className="flex justify-between">
               <span className="text-gray-400">Estado</span>
-              <span className="text-white font-semibold">{propertyDetails?.estado || 'Excelente'}</span>
+              <span className="text-white font-semibold">{enrichedAmenities?.estadoInmueble || propertyDetails?.estado || 'Excelente'}</span>
             </div>
 
-            {/* Fusión de la Distribución Interna dentro de Detalles */}
-            {internalFeatures && internalFeatures.length > 0 && (
+            {/* Distribución Interna */}
+            {internalFeaturesList.length > 0 && (
               <div className="pt-3 mt-3 border-t border-accent/20">
-                <span className="text-gray-400 block mb-3 font-bold uppercase text-[10px] tracking-widest text-accent">Distribución Interna</span>
+                <span className="text-gray-400 block mb-3 font-bold uppercase text-[10px] tracking-widest text-accent">
+                  Distribución & Características Internas ({internalFeaturesList.length})
+                </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-300">
-                  {internalFeatures.map((feat: string, idx: number) => (
+                  {internalFeaturesList.map((feat: string, idx: number) => (
                     <div key={idx} className="flex gap-2 items-center">
                       <CheckCircle2 className="text-accent w-4 h-4 shrink-0" />
                       <span className="font-semibold text-xs">{feat}</span>
@@ -160,21 +273,25 @@ export default function PropertyFeatures({ property }: PropertyFeaturesProps) {
           </div>
         </div>
 
-        {/* Características Externas (Antiguas Amenidades) */}
+        {/* Características Externas del Edificio / Conjunto */}
         <div className="card-float p-6">
           <h4 className="text-lg font-bold text-white mb-4 uppercase tracking-wider">
-            🌟 Características del Edificio
+            🌟 Características del Edificio / Sector ({externalFeaturesList.length})
           </h4>
-          <div className="grid grid-cols-2 gap-3">
-            {amenities.map((amenity, idx) => (
-              <div key={idx} className="flex items-center gap-2 text-gray-300">
-                <div className="text-accent shrink-0">
-                  {amenityIcons[amenity.toLowerCase()] || <CheckCircle2 className="w-5 h-5" />}
+          {externalFeaturesList.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {externalFeaturesList.map((amenity, idx) => (
+                <div key={idx} className="flex items-center gap-2 text-gray-300">
+                  <div className="text-accent shrink-0">
+                    {amenityIcons[amenity.toLowerCase()] || <CheckCircle2 className="w-5 h-5" />}
+                  </div>
+                  <span className="text-sm font-semibold">{amenity}</span>
                 </div>
-                <span className="text-sm font-semibold">{amenity}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 italic">No se han registrado características externas específicas para este inmueble.</p>
+          )}
         </div>
       </div>
 

@@ -50,7 +50,45 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.40 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.41 — Septiembre 2026
+
+### 🗓️ Sesión: Domingo 13 de Septiembre de 2026 — 00:30 (Hora Colombia UTC-5)
+**Versión**: `v31.41` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"Mmm y también déjame editar los campos de los nombres, para que cuando yo averigue pueda colocar sus nombres y apellidos completos y empezar a dejar esta base de datos para empezar a guardar esos números de cédulas sus nombres completos y correos electrónicos y obtener datos junto con sus roles(cliente directo, agente, agencia, empresa, etc) más adelante que nos podrán servir."*
+2. Diagnóstico y corrección de la ficha de detalle del inmueble de Morato (`https://vecy.co/property/2775`) que se mostraba en blanco debido a una excepción no controlada en el renderizado de características y amenidades de la versión v31.40.
+3. Habilitación de edición integral de inmuebles publicados directamente desde su ficha de detalle, permitiendo actualizar sus 30 fotografías, amenidades personalizadas, precio y especificaciones técnicas.
+
+#### 🔍 Diagnóstico Técnico y Causas Raíz Identificadas:
+1. **Pantalla en Blanco en Ficha de Inmueble (`PropertyDetail.tsx` / `PropertyFeatures.tsx`)**:
+   - Al abrir la ficha de detalle de un inmueble recién creado con la nueva estructura de la Ficha Gold Edition (como el inmueble #2775 en Morato), el componente `PropertyFeatures.tsx` desestructuraba `caracteristicasInternas` y `caracteristicasExternas` del objeto `amenities` y ejecutaba directamente `.map()` sin verificar `Array.isArray()`.
+   - Cuando estas propiedades venían como `undefined` o con un formato distinto en PostgreSQL, se producía un error fatal de JavaScript en el cliente (`TypeError: caracteristicasInternas.map is not a function`), desmontando el árbol de React y dejando la pantalla completamente en blanco.
+2. **Carencia de Flujo de Edición para Inmuebles en Tienda**:
+   - `UnifiedPublishModal.tsx` solo admitía creación de nuevos registros (`createPropMutation`). No recibía propiedades existentes ni permitía reabrir el formulario con los campos precargados para actualizar datos, corregir descripciones o subir las 30 fotos corregidas tras la optimización de Nginx.
+   - En `PropertyDetail.tsx` no existía un botón para que el administrador o asesor pudiera editar el inmueble que estaba visualizando.
+
+#### 🛠️ Acciones Técnicas Ejecutadas:
+1. **Blindaje de Componentes de Detalle (`PropertyFeatures.tsx` & `PropertyGallery.tsx`)**:
+   - Se añadió protección con `Array.isArray()` y optional chaining en `PropertyFeatures.tsx` para `caracteristicasInternas`, `caracteristicasExternas`, y sub-objetos de `cavaVinos`, `chimeneas` y `terrazas`, garantizando renderizado seguro con cualquier estructura de datos en PostgreSQL.
+   - En `PropertyGallery.tsx` se filtraron elementos vacíos o no definidos, asegurando que la galería y el carrusel rendericen con estabilidad total.
+2. **Modo Edición Integral en `UnifiedPublishModal.tsx`**:
+   - Prop `editProperty?: any` añadida a la interfaz `UnifiedPublishModalProps`.
+   - Mutación `updatePropMutation` conectada a `trpc.properties.update.useMutation()`.
+   - Efecto `useEffect` de hidratación instantánea al abrir el modal que puebla todos los campos (nombre, precio formateado COP, administración, áreas construida y privada, habitaciones, baños, garajes carro y moto, estrato, cocina, cuarto de servicio, chimeneas, terrazas, cava de vinos, coordenadas de mapa, checklists y chips de características personalizadas).
+   - Normalización de URLs de fotos con `/uploads/` relativas para preservar compatibilidad HTTPS.
+   - Adaptación dinámica de la interfaz: título "EDITAR INMUEBLE #[ID]", badge "Modo Edición" y botón de acción "Guardar Cambios del Inmueble".
+3. **Botón "EDITAR INMUEBLE & FOTOS" en `PropertyDetail.tsx`**:
+   - Agregado botón dorado con icono `Edit2` en la botonera principal de la ficha del inmueble.
+   - Montado `UnifiedPublishModal` con invalidación automática de caché de tRPC (`trpcContext.properties.getById.invalidate` y `trpcContext.properties.list.invalidate`) al guardar, refrescando la pantalla de inmediato sin recargar la página.
+4. **Validación de Compilación Limpia y Preservación de WhatsApp**:
+   - `npm run check` (`tsc --noEmit`) verificado con 0 errores.
+   - `npm run build` verificado con éxito tanto en Vite (`dist/`) como en el servidor (`dist-server/index.js`).
+   - `server/_core/whatsapp-match.ts` preservado 100% intocado y protegido.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.40 — Septiembre 2026
 
 ### 🗓️ Sesión: Domingo 13 de Septiembre de 2026 — 00:10 (Hora Colombia UTC-5)
 **Versión**: `v31.40` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

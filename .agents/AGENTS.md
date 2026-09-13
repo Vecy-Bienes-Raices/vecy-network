@@ -167,7 +167,26 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.40 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.41 — Septiembre 2026
+
+### Novedades v31.41 (Blindaje Ficha de Inmuebles sin Pantalla en Blanco, Edición Integral Directa de Inmuebles Publicados y Actualización de 30 Fotos en Tienda):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Pantalla en Blanco en Ficha de Inmueble (`PropertyFeatures.tsx`)*: En inmuebles recién creados (como el ID 2775 de Morato), el desestructurado de `caracteristicasInternas` y `caracteristicasExternas` ejecutaba `.map()` directo sin verificar `Array.isArray()`, provocando un error en tiempo de ejecución (`TypeError: caracteristicasInternas.map is not a function`) que rompía el renderizado de React y dejaba la página en blanco.
+  2) *Imposibilidad de Editar Inmuebles en Tienda*: `UnifiedPublishModal.tsx` solo soportaba creación (`createPropMutation`). No permitía editar propiedades existentes ni actualizar sus características, fotos o precios una vez publicadas.
+  3) *Falta de Acceso Rápido a Edición*: En la vista pública de detalle del inmueble (`PropertyDetail.tsx`) no existía un botón para que el administrador o asesor pudiera corregir o completar las fotos y datos del inmueble.
+- **Acciones Ejecutadas**:
+  1) *Blindaje Defensivo en `PropertyFeatures.tsx` y `PropertyGallery.tsx`*: Agregadas validaciones con `Array.isArray()` y optional chaining para todos los arrays de amenidades internas y externas, depósitos, chimeneas, terrazas y cava de vinos, garantizando tolerancia absoluta ante formatos nulos o variables en la base de datos.
+  2) *Modo Edición en `UnifiedPublishModal.tsx`*:
+     - Parámetro opcional `editProperty?: any` en props.
+     - Mutación `updatePropMutation` (`trpc.properties.update.useMutation()`).
+     - Hidratación reactiva completa en apertura (precarga de todos los campos técnicos, amenidades, coordenadas y fotos existentes).
+     - Botón "Guardar Cambios del Inmueble" y título contextual "EDITAR INMUEBLE #[ID]".
+  3) *Botón "EDITAR INMUEBLE & FOTOS" en `PropertyDetail.tsx`*: Botón prominente en la botonera principal con icono `Edit2` que abre el modal en modo edición e invalida automáticamente la caché tRPC para reflejar los cambios en 0 segundos.
+  4) *Preservación Absoluta de `whatsapp-match.ts`*: Archivo 100% original e intacto.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.40 — Septiembre 2026
 
 ### Novedades v31.40 (Solución Integral Subida y Visualización de 30 Fotos en Tienda: client_max_body_size 100M en Nginx, Erradicación de Mixed Content HTTP vs HTTPS, Compresión Cliente y Concurrencia):
 - **Diagnóstico y Causas Raíz Identificadas**:

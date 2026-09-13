@@ -15,6 +15,7 @@ interface UnifiedPublishModalProps {
   onClose: () => void;
   defaultTab?: 'oferta' | 'demanda';
   onSuccess?: () => void;
+  editProperty?: any;
 }
 
 // 19 Tipos de inmuebles exactos solicitados por Eduardo
@@ -177,6 +178,7 @@ export default function UnifiedPublishModal({
   onClose,
   defaultTab = 'oferta',
   onSuccess,
+  editProperty,
 }: UnifiedPublishModalProps) {
   const [activeTab, setActiveTab] = useState<'oferta' | 'demanda'>(defaultTab);
 
@@ -740,6 +742,109 @@ export default function UnifiedPublishModal({
     },
   });
 
+  // Mutación actualizar Inmueble (Oferta existente en modo edición)
+  const updatePropMutation = trpc.properties.update.useMutation({
+    onSuccess: () => {
+      toast.success('¡Inmueble y galería de 30 fotos actualizados exitosamente!');
+      onSuccess?.();
+      onClose();
+    },
+    onError: (err) => {
+      toast.error(`Error al actualizar inmueble: ${err.message}`);
+    },
+  });
+
+  // 🛡️ Hidratar estados en modo EDICIÓN cuando editProperty esté presente
+  useEffect(() => {
+    if (editProperty && isOpen) {
+      setActiveTab('oferta');
+      setPropName(editProperty.name || '');
+      setPropPrice(editProperty.price ? formatCOP(String(editProperty.price)) : '');
+      setPropAdminFee(editProperty.adminFee ? formatCOP(String(editProperty.adminFee)) : '');
+      setPropAreaConstruida(editProperty.areaTotal ? String(editProperty.areaTotal) : '');
+      setPropAreaPrivada(editProperty.areaPrivate ? String(editProperty.areaPrivate) : '');
+      setPropYearBuilt(editProperty.yearBuilt || '');
+      setPropBedrooms(editProperty.bedrooms !== null && editProperty.bedrooms !== undefined ? editProperty.bedrooms : '');
+      setPropBathrooms(editProperty.bathrooms !== null && editProperty.bathrooms !== undefined ? editProperty.bathrooms : '');
+      setPropStratum(editProperty.stratum || 4);
+      setPropAddress(editProperty.location || '');
+      setPropNeighborhood(editProperty.addressNeighborhood || editProperty.zone || '');
+      setPropZone(editProperty.zone || editProperty.addressNeighborhood || '');
+      setPropDescription(editProperty.description || editProperty.rawText || '');
+      setPropVideoUrl(editProperty.videoUrl || '');
+
+      if (editProperty.latitude && editProperty.longitude) {
+        setPropCoordinates({
+          lat: Number(editProperty.latitude),
+          lng: Number(editProperty.longitude)
+        });
+      }
+
+      if (Array.isArray(editProperty.images)) {
+        setPropImages(editProperty.images.map((u: string) => {
+          if (u && typeof u === 'string' && u.includes('/uploads/')) return u.substring(u.indexOf('/uploads/'));
+          return u;
+        }));
+      }
+
+      if (editProperty.transactionType) {
+        if (editProperty.transactionType === 'venta_permuta') {
+          setPropTxType('permuta');
+        } else {
+          setPropTxType(editProperty.transactionType);
+        }
+      }
+
+      const a = editProperty.amenities;
+      if (a && typeof a === 'object') {
+        if (a.tipoExacto) setPropTypeExact(a.tipoExacto);
+        if (a.subtipoComercial !== undefined) setPropIsSubtipoComercial(!!a.subtipoComercial);
+        if (a.permutaDetalle) setPropPermutaOption(a.permutaDetalle);
+        if (a.permutaPorcentaje) setPropPermutaPercent(Number(a.permutaPorcentaje));
+        if (a.cocina) setPropCocina(a.cocina);
+        if (a.cuartoServicio) setPropCuartoServicio(a.cuartoServicio);
+        if (a.garajesMoto !== undefined) setPropGarajesMoto(a.garajesMoto);
+        if (a.estadoInmueble) setPropEstadoInmueble(a.estadoInmueble);
+        if (a.estarTv !== undefined) setPropEstarTv(a.estarTv);
+        if (a.estudios !== undefined) setPropEstudios(a.estudios);
+        if (a.cavaVinos?.tiene) {
+          setPropHasCavaVinos(true);
+          setPropCavaVinosCant(a.cavaVinos.cantidad || 1);
+        }
+        if (a.chimeneas?.tiene) {
+          setPropHasChimenea(true);
+          setPropChimeneaCant(a.chimeneas.cantidad || 1);
+          setPropChimeneaTipo(a.chimeneas.tipo || 'Convencional a leña');
+        }
+        if (a.depositos !== undefined) setPropDepositos(a.depositos);
+        if (a.balcones !== undefined) setPropBalcones(a.balcones);
+        if (a.terrazas?.tiene) {
+          setPropHasTerrazas(true);
+          setPropTerrazasCant(a.terrazas.cantidad || 1);
+          setPropAreaTerraza(a.terrazas.areaM2 || '');
+          setPropTerrazaHasBBQ(!!a.terrazas.tieneBBQ);
+        }
+        if (a.pisoEdificio) setPropPiso(a.pisoEdificio);
+        if (a.ubicacionPiso) setPropUbicacionPiso(a.ubicacionPiso);
+        if (Array.isArray(a.caracteristicasInternas)) {
+          setSelectedInternas(a.caracteristicasInternas);
+          const standardInternas: readonly string[] = CARACTERISTICAS_INTERNAS;
+          const customs = a.caracteristicasInternas.filter((c: string) => !standardInternas.includes(c));
+          if (customs.length > 0) setCustomInternasList(customs);
+        }
+        if (Array.isArray(a.caracteristicasExternas)) {
+          setSelectedExternas(a.caracteristicasExternas);
+          const standardExternas: readonly string[] = CARACTERISTICAS_EXTERNAS;
+          const customs = a.caracteristicasExternas.filter((c: string) => !standardExternas.includes(c));
+          if (customs.length > 0) setCustomExternasList(customs);
+        }
+      }
+      if (editProperty.garages !== undefined && editProperty.garages !== null) {
+        setPropGarajesCarro(editProperty.garages);
+      }
+    }
+  }, [editProperty, isOpen]);
+
   const resetPropForm = () => {
     setPropRawText('');
     setPropName('');
@@ -963,7 +1068,7 @@ export default function UnifiedPublishModal({
     const finalNeighborhood = (propNeighborhood || propZone || 'Bogotá').trim();
     const dbPropertyType = mapExactTypeToDbEnum(propTypeExact);
 
-    createPropMutation.mutate({
+    const propertyPayload = {
       name: propName.trim(),
       description: (propDescription || propRawText || '').trim().slice(0, 500),
       propertyType: dbPropertyType as any,
@@ -1009,7 +1114,16 @@ export default function UnifiedPublishModal({
         caracteristicasInternas: selectedInternas,
         caracteristicasExternas: selectedExternas,
       }
-    });
+    };
+
+    if (editProperty?.id) {
+      updatePropMutation.mutate({
+        id: editProperty.id,
+        data: propertyPayload
+      });
+    } else {
+      createPropMutation.mutate(propertyPayload);
+    }
   };
 
   // ═══════════════════════════════════════════════════════════════
@@ -1180,44 +1294,48 @@ export default function UnifiedPublishModal({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-black tracking-tight text-white">
-                  CENTRO DE PUBLICACIÓN VECY
+                  {editProperty ? `EDITAR INMUEBLE #${editProperty.id}` : 'CENTRO DE PUBLICACIÓN VECY'}
                 </h2>
                 <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-widest rounded-full bg-[#bf953f]/20 text-[#fcf6ba] border border-[#bf953f]/40">
-                  Gold Edition
+                  {editProperty ? 'Modo Edición' : 'Gold Edition'}
                 </span>
               </div>
               <p className="text-xs text-zinc-400">
-                Sube inmuebles con ficha profesional o publica requerimientos de clientes
+                {editProperty 
+                  ? 'Modifica las características, precios, ubicación y gestiona las fotos del inmueble'
+                  : 'Sube inmuebles con ficha profesional o publica requerimientos de clientes'}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Pestañas Principales */}
-            <div className="flex p-1 rounded-xl bg-black/60 border border-white/10">
-              <button
-                type="button"
-                onClick={() => setActiveTab('oferta')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'oferta'
-                    ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black shadow'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                Inmueble (Oferta)
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('demanda')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'demanda'
-                    ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black shadow'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                Demanda (Requerimiento)
-              </button>
-            </div>
+            {/* Pestañas Principales (Solo visibles si no se está editando un inmueble puntual) */}
+            {!editProperty && (
+              <div className="flex p-1 rounded-xl bg-black/60 border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('oferta')}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'oferta'
+                      ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black shadow'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Inmueble (Oferta)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('demanda')}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === 'demanda'
+                      ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black shadow'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Demanda (Requerimiento)
+                </button>
+              </div>
+            )}
 
             <button
               onClick={onClose}
@@ -2363,16 +2481,16 @@ export default function UnifiedPublishModal({
                 </button>
                 <button
                   type="button"
-                  disabled={createPropMutation.isPending}
+                  disabled={createPropMutation.isPending || updatePropMutation.isPending}
                   onClick={handleSaveProperty}
                   className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#aa771c] hover:brightness-110 text-black font-black text-xs inline-flex items-center gap-2 shadow-lg shadow-[#bf953f]/30 transition-all cursor-pointer disabled:opacity-50"
                 >
-                  {createPropMutation.isPending ? (
+                  {(createPropMutation.isPending || updatePropMutation.isPending) ? (
                     <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     <CheckCircle2 className="w-4 h-4" />
                   )}
-                  <span>Publicar Inmueble (Oferta) en la Red</span>
+                  <span>{editProperty ? 'Guardar Cambios del Inmueble' : 'Publicar Inmueble (Oferta) en la Red'}</span>
                 </button>
               </div>
             </div>
