@@ -257,6 +257,7 @@ export default function UnifiedPublishModal({
   const [coverIndex, setCoverIndex] = useState<number>(0);
   const [propVideoUrl, setPropVideoUrl] = useState('');
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState('');
   const [selectedInternas, setSelectedInternas] = useState<string[]>([]);
   const [selectedExternas, setSelectedExternas] = useState<string[]>([]);
 
@@ -781,42 +782,128 @@ export default function UnifiedPublishModal({
     setCustomExternasList([]);
   };
 
-  const handleUploadImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  // Función de optimización y compresión ligera en cliente para fotos grandes (>800KB)
+  const compressImageForWeb = async (file: File): Promise<File | Blob> => {
+    if (!file.type.startsWith('image/') || file.size < 600 * 1024) {
+      return file;
+    }
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDimension = 1920;
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.round((height * maxDimension) / width);
+              width = maxDimension;
+            } else {
+              width = Math.round((width * maxDimension) / height);
+              height = maxDimension;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return resolve(file);
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => {
+              if (blob && blob.size < file.size) {
+                const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
+              } else {
+                resolve(file);
+              }
+            },
+            'image/jpeg',
+            0.82
+          );
+        };
+        img.onerror = () => resolve(file);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    });
+  };
 
+  const handleUploadImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawFiles = e.target.files;
+    if (!rawFiles || rawFiles.length === 0) return;
+
+    const files = Array.from(rawFiles);
     if (propImages.length + files.length > 30) {
-      toast.error('El límite máximo permitido es de 30 fotos por inmueble');
+      toast.error(`El límite máximo es 30 fotos. Actualmente tienes ${propImages.length} y seleccionaste ${files.length}.`);
       return;
     }
 
     setIsUploadingMedia(true);
+    setUploadProgressText(`Preparando ${files.length} foto(s)...`);
+
     const newUploaded: string[] = [];
+    const total = files.length;
+    let completedCount = 0;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const formData = new FormData();
-      formData.append('file', file);
+    // Subir en lotes de 3 concurrentes para máxima velocidad y estabilidad
+    const BATCH_SIZE = 3;
+    for (let i = 0; i < total; i += BATCH_SIZE) {
+      const batch = files.slice(i, i + BATCH_SIZE);
+      const batchPromises = batch.map(async (file) => {
+        try {
+          const optimized = await compressImageForWeb(file);
+          const formData = new FormData();
+          formData.append('file', optimized);
 
-      try {
-        const res = await fetch('/api/janIA/upload', {
-          method: 'POST',
-          body: formData,
-        });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.fileUrl) {
-            newUploaded.push(json.fileUrl);
+          const res = await fetch('/api/janIA/upload', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!res.ok) {
+            const errText = await res.text().catch(() => '');
+            console.error(`Error HTTP ${res.status} al subir ${file.name}:`, errText);
+            return null;
           }
+
+          const json = await res.json();
+          if (json && json.fileUrl) {
+            let u = String(json.fileUrl);
+            if (u.includes('/uploads/')) {
+              u = u.substring(u.indexOf('/uploads/'));
+            }
+            completedCount++;
+            setUploadProgressText(`Subidas ${completedCount} de ${total} fotos...`);
+            return u;
+          }
+        } catch (err) {
+          console.error(`Excepción al subir foto ${file.name}:`, err);
         }
-      } catch (err) {
-        console.error('Error subiendo imagen:', err);
+        return null;
+      });
+
+      const results = await Promise.all(batchPromises);
+      for (const res of results) {
+        if (res) newUploaded.push(res);
       }
     }
 
-    setPropImages(prev => [...prev, ...newUploaded]);
+    if (newUploaded.length > 0) {
+      setPropImages(prev => [...prev, ...newUploaded]);
+      toast.success(`¡${newUploaded.length} de ${total} foto(s) cargadas exitosamente!`);
+    } else {
+      toast.error('No se pudieron cargar las fotos. Por favor verifica tu conexión o el formato de las imágenes.');
+    }
+
     setIsUploadingMedia(false);
-    toast.success(`${newUploaded.length} foto(s) cargada(s) exitosamente`);
+    setUploadProgressText('');
+    e.target.value = '';
   };
 
   const handleSetCoverPhoto = (idx: number) => {
@@ -1927,8 +2014,8 @@ export default function UnifiedPublishModal({
                       onClick={() => fileInputRef.current?.click()}
                       className="px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition-all cursor-pointer inline-flex items-center gap-1.5 disabled:opacity-50"
                     >
-                      {isUploadingMedia ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-                      <span>Seleccionar Fotos ({propImages.length}/30)</span>
+                      {isUploadingMedia ? <RefreshCw className="w-3 h-3 animate-spin text-[#bf953f]" /> : <Plus className="w-3 h-3 text-[#bf953f]" />}
+                      <span>{isUploadingMedia ? (uploadProgressText || 'Subiendo fotos...') : `Seleccionar Fotos (${propImages.length}/30)`}</span>
                     </button>
                   </div>
 
@@ -1974,36 +2061,50 @@ export default function UnifiedPublishModal({
                       <span className="text-[10px] text-zinc-500">Haz clic en ⭐ Hacer Portada para reordenar</span>
                     </p>
                     <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
-                      {propImages.map((url, idx) => (
-                        <div key={idx} className="relative rounded-xl overflow-hidden border border-white/10 aspect-square group bg-black/60">
-                          <img src={url} alt={`Foto ${idx + 1}`} className="w-full h-full object-cover" />
-                          
-                          {/* Badge de portada */}
-                          {idx === 0 ? (
-                            <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md bg-[#bf953f] text-black text-[9px] font-black shadow flex items-center gap-0.5">
-                              <Star className="w-2.5 h-2.5 fill-black" /> PORTADA
-                            </span>
-                          ) : (
+                      {propImages.map((url, idx) => {
+                        const cleanUrl = url.includes('/uploads/') ? url.substring(url.indexOf('/uploads/')) : url;
+                        return (
+                          <div key={idx} className="relative rounded-xl overflow-hidden border border-white/10 aspect-square group bg-black/60">
+                            <img 
+                              src={cleanUrl} 
+                              alt={`Foto ${idx + 1}`} 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                if (!target.dataset.retried) {
+                                  target.dataset.retried = 'true';
+                                  setTimeout(() => { target.src = cleanUrl; }, 800);
+                                }
+                              }}
+                            />
+                            
+                            {/* Badge de portada */}
+                            {idx === 0 ? (
+                              <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md bg-[#bf953f] text-black text-[9px] font-black shadow flex items-center gap-0.5">
+                                <Star className="w-2.5 h-2.5 fill-black" /> PORTADA
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleSetCoverPhoto(idx)}
+                                className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md bg-black/80 hover:bg-[#bf953f] hover:text-black text-white text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                              >
+                                ⭐ Portada
+                              </button>
+                            )}
+
+                            {/* Botón eliminar */}
                             <button
                               type="button"
-                              onClick={() => handleSetCoverPhoto(idx)}
-                              className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md bg-black/80 hover:bg-[#bf953f] hover:text-black text-white text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                              onClick={() => handleRemovePhoto(idx)}
+                              className="absolute top-1 right-1 p-1 rounded-full bg-black/80 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                              title="Eliminar foto"
                             >
-                              ⭐ Portada
+                              <Trash2 className="w-3 h-3" />
                             </button>
-                          )}
-
-                          {/* Botón eliminar */}
-                          <button
-                            type="button"
-                            onClick={() => handleRemovePhoto(idx)}
-                            className="absolute top-1 right-1 p-1 rounded-full bg-black/80 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                            title="Eliminar foto"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

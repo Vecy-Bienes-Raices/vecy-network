@@ -15965,7 +15965,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.39";
+var VECY_VERSION = "v31.40";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -20107,9 +20107,9 @@ Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro
       if (!req.file) {
         return res.status(400).json({ error: "No se subi\xF3 ning\xFAn archivo" });
       }
-      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+      const fileUrl = `/uploads/${req.file.filename}`;
       console.log(`[UPLOAD-ROUTE] Archivo guardado localmente en: ${req.file.path} \u2794 URL: ${fileUrl}`);
-      res.json({ fileUrl });
+      res.json({ fileUrl, filename: req.file.filename });
     } catch (err) {
       console.error("[UPLOAD-ROUTE] Error al guardar archivo:", err);
       res.status(500).json({ error: err.message || "Error al subir el archivo" });

@@ -413,9 +413,10 @@ async function startServer() {
       if (!req.file) {
         return res.status(400).json({ error: "No se subió ningún archivo" });
       }
-      const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+      // Retornar ruta relativa para evitar bloqueo de contenido mixto (Mixed Content HTTP vs HTTPS en Vercel)
+      const fileUrl = `/uploads/${req.file.filename}`;
       console.log(`[UPLOAD-ROUTE] Archivo guardado localmente en: ${req.file.path} ➔ URL: ${fileUrl}`);
-      res.json({ fileUrl });
+      res.json({ fileUrl, filename: req.file.filename });
     } catch (err: any) {
       console.error("[UPLOAD-ROUTE] Error al guardar archivo:", err);
       res.status(500).json({ error: err.message || "Error al subir el archivo" });

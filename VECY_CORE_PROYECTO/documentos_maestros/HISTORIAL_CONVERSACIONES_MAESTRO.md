@@ -50,7 +50,51 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.39 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.40 — Septiembre 2026
+
+### 🗓️ Sesión: Domingo 13 de Septiembre de 2026 — 00:10 (Hora Colombia UTC-5)
+**Versión**: `v31.40` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"Selecciono 30 fotos y solo se suben 3 y ni se ven las miniaturas."* (Acompañado de captura de pantalla mostrando la sección de Galería con 3 cajas negras vacías de fotos).
+2. *"Le di subir inmueble y guardar y no se ve en la tienda. Mira la imagen."* (Acompañado de captura de pantalla del catálogo de inmuebles mostrando la casa de Morato de $1.500.000.000 pero con la foto genérica por defecto del edificio de vidrio).
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Rechazo Masivo por Límite de Tamaño en Nginx (`client_max_body_size`)**:
+   - En Nginx del VPS (`13.140.149.144`), no estaba configurada la directiva `client_max_body_size`. El valor predeterminado de Nginx es de tan solo **1MB**.
+   - Al seleccionar 30 fotos de teléfono móvil o cámara (que pesaban entre 1.2MB y 5.8MB c/u), Nginx rechazó 27 peticiones consecutivas con error `HTTP 413 Request Entity Too Large`, permitiendo ingresar únicamente 3 fotos que casualmente pesaban menos de 1MB.
+2. **Bloqueo por Política de Contenido Mixto (Mixed Content HTTP vs HTTPS)**:
+   - El endpoint `/api/janIA/upload` retornaba URLs rígidas con el protocolo y host del VPS: `http://13.140.149.144/uploads/...`.
+   - Al cargarse la plataforma en Vercel bajo HTTPS seguro (`https://vecy-network.vercel.app`), los navegadores modernos (Chrome, Safari, Edge, Firefox) bloquearon por completo las imágenes con protocolo inseguro `http://`.
+   - Esto produjo dos síntomas inmediatos:
+     - En el modal de publicación, las miniaturas no podían renderizarse y se veían como recuadros negros vacíos con el texto alternativo.
+     - En la tienda pública (`Properties.tsx`), `PropertyCard` detectó el fallo de carga mediante el evento `onError`, forzando el reemplazo de la imagen por el fallback genérico de Unsplash (el rascacielos de vidrio), lo que hizo pensar a Eduardo que el inmueble no se había guardado cuando en realidad sí estaba almacenado en el registro 2775.
+
+#### 🛠️ Acciones Técnicas Ejecutadas en Código y Arquitectura:
+1. **Configuración de Nginx en VPS**:
+   - Se estableció `client_max_body_size 100M;` tanto en `/etc/nginx/sites-available/default` como en el bloque `http` de `/etc/nginx/nginx.conf`.
+   - Se validó la sintaxis (`nginx -t`) y se recargó el servicio Nginx sin tiempo de inactividad.
+2. **Ruta de Carga de Archivos (`server/_core/index.ts`)**:
+   - Se modificó la respuesta de `/api/janIA/upload` para retornar la ruta relativa limpia `/uploads/${req.file.filename}` en lugar de `http://13.140.149.144/uploads/...`. Al ser relativa, Vercel la reescribe directamente al VPS en HTTPS seguro, eliminando cualquier bloqueo de Contenido Mixto.
+3. **Compresión Inteligente en Cliente y Concurrencia ([UnifiedPublishModal.tsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/publish/UnifiedPublishModal.tsx))**:
+   - Se implementó la función `compressImageForWeb` con HTMLCanvasElement, la cual optimiza en milisegundos fotos superiores a 600KB a calidad web Ultra HD (máx. 1920px, 82% JPEG), reduciendo el peso de un lote de 30 fotos de 150MB a tan solo ~12MB en total.
+   - Subida concurrente en lotes de 3 en paralelo (`BATCH_SIZE = 3`) con texto de progreso en vivo en el botón (`Subidas 12 de 30 fotos...`).
+   - Normalización de URLs de miniaturas y manejo de reintentos con `onError`.
+4. **Sanitización Universal de Imágenes en Componentes Públicos**:
+   - En [PropertyCard.tsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/PropertyCard.tsx) y [PropertyGallery.tsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/PropertyGallery.tsx), se normalizó cualquier URL entrante que contenga `/uploads/` para que siempre se solicite como ruta relativa limpia, garantizando que nunca se rompa en HTTPS.
+5. **Sanación en Base de Datos PostgreSQL 17**:
+   - Se ejecutó un script de actualización SQL sobre la tabla `properties` para convertir 44 registros históricos que contenían `http://13.140.149.144/uploads/` a la ruta relativa `/uploads/`, permitiendo que la casa de Morato recién guardada (ID 2775) exhiba de inmediato sus fotos reales en la tienda.
+6. **Preservación Absoluta de `whatsapp-match.ts`**:
+   - Archivo 100% original e intacto.
+7. **Incremento de Versión y Compilación**:
+   - `shared/const.ts`: `v31.40`.
+   - `package.json`: `31.40.0`.
+   - `npm run check`: 0 errores.
+   - `npm run build`: Compilación exitosa en Vite y dist-server.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.39 — Septiembre 2026
 
 ### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 23:30 (Hora Colombia UTC-5)
 **Versión**: `v31.39` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

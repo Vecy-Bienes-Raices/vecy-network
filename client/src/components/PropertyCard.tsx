@@ -104,8 +104,17 @@ export default function PropertyCard({
   const [copied, setCopied] = useState<'branded' | 'stealth' | null>(null);
   const [, navigate] = useLocation();
 
-  const images: string[] = gallery && gallery.length > 0 ? gallery : [image];
   const VECY_FALLBACK = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop';
+  
+  const formatImageUrl = (u: string | null | undefined): string => {
+    if (!u) return VECY_FALLBACK;
+    if (u.includes('/uploads/')) {
+      return u.substring(u.indexOf('/uploads/'));
+    }
+    return u;
+  };
+
+  const images: string[] = (gallery && gallery.length > 0 ? gallery : [image]).map(formatImageUrl);
   const displayImage = imgError ? VECY_FALLBACK : (images[currentImageIndex] || VECY_FALLBACK);
 
   const handleCopyLink = (type: 'branded' | 'stealth') => {

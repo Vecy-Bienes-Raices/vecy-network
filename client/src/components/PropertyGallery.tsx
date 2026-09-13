@@ -6,7 +6,11 @@ interface PropertyGalleryProps {
   propertyName: string;
 }
 
-export default function PropertyGallery({ images, propertyName }: PropertyGalleryProps) {
+export default function PropertyGallery({ images: rawImages, propertyName }: PropertyGalleryProps) {
+  const images = (rawImages || []).map(u => {
+    if (u && u.includes('/uploads/')) return u.substring(u.indexOf('/uploads/'));
+    return u;
+  });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
