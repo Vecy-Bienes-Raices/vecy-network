@@ -167,7 +167,23 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.38 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.39 — Septiembre 2026
+
+### Novedades v31.39 (Personalización Dinámica 'Otro' en Características Internas y Externas con Opción de Edición Directa, Adición y Eliminación):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Rigidez de Checklists Predefinidos*: A pesar de contar con 70 amenidades estándar (25 internas y 45 externas), propiedades exclusivas o especializadas cuentan con características únicas (ej. paneles solares, cortinas motorizadas, cava climatizada, huerta, etc.) que no figuraban en los listados fijos.
+  2) *Necesidad de Edición en Vivo*: El usuario requería poder registrar una característica adicional ("Otro") y contar con la capacidad de editar su texto en cualquier momento o eliminarla.
+- **Acciones Ejecutadas**:
+  1) *Campos Interactivos "Otro" en `UnifiedPublishModal.tsx`*:
+     - **En Características Internas**: Módulo con input de texto para ingresar amenidades no listadas, botón `+ Agregar`, y chips con badge `Otro` que disponen de botón de edición `✏️` (para modificar su nombre en vivo) y eliminación `❌`.
+     - **En Características Externas**: Módulo complementario en paleta esmeralda con input dinámico, botón `+ Agregar`, chips con badge `Otro`, edición `✏️` y eliminación `❌`.
+     - **Sincronización Total**: Las amenidades personalizadas se integran reactivamente a `selectedInternas` y `selectedExternas`, viajando al backend para ser persistidas en PostgreSQL 17 dentro del campo JSONB `amenities`.
+     - **Autodetección JanIA Inteligente**: Si el parser de IA o determinista extrae una característica que no coincide con las listas fijas, la transfiere automáticamente a la lista personalizada para que aparezca visible y editable.
+  2) *Preservación Absoluta de `whatsapp-match.ts`*: Archivo 100% original e intacto.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.38 — Septiembre 2026
 
 ### Novedades v31.38 (Ficha de Inmuebles Gold Edition con 4 Secciones Completas: Slider Porcentual de Permuta, 19 Tipos de Inmueble, Uso Comercial, Cocinas, Garajes Carro/Moto, Cava de Vinos, Chimeneas a Leña/Gas/Bioetanol, Terrazas BBQ, Geolocalización Gratuita OpenStreetMap en Mapa Interactivo, Portada Dinámica para 30 Fotos y Checklists de 70 Características Internas/Externas):
 - **Diagnóstico y Causas Raíz Identificadas**:

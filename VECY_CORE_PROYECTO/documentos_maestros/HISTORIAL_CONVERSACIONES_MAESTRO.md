@@ -50,7 +50,35 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.38 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.39 — Septiembre 2026
+
+### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 23:30 (Hora Colombia UTC-5)
+**Versión**: `v31.39` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+*"En esta parte sería bueno que existiera un campo extra que diga Otro y de la opción de editar."* (Acompañado de captura de pantalla de la sección de Características Internas y Externas en la Ficha de Inmuebles).
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Límites de las Listas Predefinidas**: A pesar de contar con 70 características estándar (25 internas y 45 externas), el mercado inmobiliario cuenta con especificidades arquitectónicas o dotaciones exclusivas (ej. paneles solares, cortinas motorizadas, huerta orgánica, cargador de carro eléctrico, cava climatizada, sistema hidroneumático, etc.) que no se encuentran en los listados fijos.
+2. **Necesidad de Edición en Vivo y Dinámica**: Se requería que el asesor pudiera agregar una característica personalizada bajo la etiqueta "Otro", visualizarla como chip activo, y disponer de un mecanismo ágil para modificar o corregir su redacción con un solo clic (`✏️`) o eliminarla (`❌`).
+
+#### 🛠️ Acciones Técnicas Ejecutadas en Código y Arquitectura:
+1. **Campos "Otro" Dinámicos y Editables en [UnifiedPublishModal.tsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/publish/UnifiedPublishModal.tsx)**:
+   - **En Características Internas**: Se implementó una barra estilizada con etiqueta `Otro / Característica adicional`, input de texto libre con captura de tecla Enter, botón `+ Agregar`, y renderizado de chips seleccionados con badge dorado `Otro`. Cada chip cuenta con botón de edición `✏️` (que precarga el texto en el input con botones `Guardar` y `Cancelar`) y botón de eliminación `❌`.
+   - **En Características Externas**: Se integró un bloque homólogo en paleta verde esmeralda con input dinámico, botón `+ Agregar`, chips con badge esmeralda `Otro`, edición en vivo `✏️` y eliminación `❌`.
+   - **Sincronización Total con BD**: Todas las características agregadas vía "Otro" se suman en tiempo real a `selectedInternas` y `selectedExternas`, viajando al backend para ser persistidas en PostgreSQL 17 en el campo JSONB `amenities`.
+   - **Doble Vía con JanIA**: Si el motor de extracción detecta en el texto original cualquier amenidad no comprendida en las listas estándar, la transfiere automáticamente a las listas personalizadas para que aparezca visible y editable.
+2. **Preservación Absoluta de `whatsapp-match.ts`**:
+   - Archivo 100% original e intacto.
+3. **Incremento de Versión y Compilación**:
+   - `shared/const.ts`: `v31.39`.
+   - `package.json`: `31.39.0`.
+   - `npm run check`: 0 errores.
+   - `npm run build`: Compilación exitosa en Vite y dist-server.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.38 — Septiembre 2026
 
 ### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 23:25 (Hora Colombia UTC-5)
 **Versión**: `v31.38` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

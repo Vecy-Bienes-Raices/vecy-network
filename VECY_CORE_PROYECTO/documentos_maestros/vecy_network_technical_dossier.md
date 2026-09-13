@@ -322,6 +322,24 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.39 — Septiembre 2026
+
+#### 📌 PERSONALIZACIÓN DINÁMICA 'OTRO' EN CARACTERÍSTICAS INTERNAS Y EXTERNAS CON EDICIÓN DIRECTA, ADICIÓN Y ELIMINACIÓN
+
+**Problemas identificados:**
+1. **Límites de las Listas Predefinidas**: A pesar de contar con 70 características estándar (25 internas y 45 externas), el mercado inmobiliario cuenta con especificidades arquitectónicas o dotaciones exclusivas (ej. paneles solares, cortinas motorizadas, huerta orgánica, cargador de carro eléctrico, cava climatizada, sistema hidroneumático, etc.) que no se encuentran en los listados fijos.
+2. **Necesidad de Edición en Vivo y Dinámica**: Se requería que el asesor pudiera agregar una característica personalizada bajo la etiqueta "Otro", visualizarla como chip activo, y disponer de un mecanismo ágil para modificar o corregir su redacción con un solo clic (`✏️`) o eliminarla (`❌`).
+
+**Solución aplicada:**
+- **Módulos 'Otro' Dinámicos y Editables en `UnifiedPublishModal.tsx`**:
+  - **En Características Internas**: Integrada barra estilizada con etiqueta `Otro / Característica adicional`, input de texto con atajo Enter, botón `+ Agregar`, y chips con badge dorado `Otro`. Cada chip cuenta con botón de edición `✏️` (que precarga el texto en el input con botones `Guardar` y `Cancelar`) y botón de eliminación `❌`.
+  - **En Características Externas**: Integrado bloque homólogo en paleta verde esmeralda con input dinámico, botón `+ Agregar`, chips con badge esmeralda `Otro`, edición en vivo `✏️` y eliminación `❌`.
+  - **Sincronización Total con BD**: Todas las características agregadas vía "Otro" se suman en tiempo real a `selectedInternas` y `selectedExternas`, viajando al backend para ser persistidas en PostgreSQL 17 en el campo JSONB `amenities`.
+  - **Doble Vía con JanIA**: Si el motor de extracción detecta en el texto original cualquier amenidad no comprendida en las listas estándar, la transfiere automáticamente a las listas personalizadas para que aparezca visible y editable.
+- **Preservación Absoluta de `whatsapp-match.ts`**: Archivo 100% intacto y protegido.
+
+---
+
 ### 🔖 v31.38 — Septiembre 2026
 
 #### 📌 FICHA DE INMUEBLES GOLD EDITION CON 4 SECCIONES COMPLETAS: SLIDER PORCENTUAL DE PERMUTA, 19 TIPOS DE INMUEBLE, USO COMERCIAL, COCINAS, GARAJES CARRO/MOTO, CAVA DE VINOS, CHIMENEAS (LEÑA/GAS/BIOETANOL), TERRAZAS BBQ, GEOLOCALIZACIÓN GRATUITA OPENSTREETMAP EN MAPA INTERACTIVO, PORTADA DINÁMICA PARA 30 FOTOS Y CHECKLISTS DE 70 CARACTERÍSTICAS

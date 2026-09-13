@@ -6,7 +6,7 @@ import {
   AlertTriangle, Plus, RefreshCw, Trash2, Building2, Home, DollarSign,
   MapPin, Bed, Bath, Car, Layers, Eye, CheckCircle2, FileUp, Star,
   ChevronDown, ChevronUp, Sliders, Compass, Shield, Flame, Wine, Tv,
-  BookOpen, Coffee, Sun, Trees, CheckSquare, Square
+  BookOpen, Coffee, Sun, Trees, CheckSquare, Square, Edit2, PlusCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -260,6 +260,15 @@ export default function UnifiedPublishModal({
   const [selectedInternas, setSelectedInternas] = useState<string[]>([]);
   const [selectedExternas, setSelectedExternas] = useState<string[]>([]);
 
+  // Estados para características adicionales / personalizadas "Otro"
+  const [customInternaInput, setCustomInternaInput] = useState('');
+  const [editingInternaIndex, setEditingInternaIndex] = useState<number | null>(null);
+  const [customInternasList, setCustomInternasList] = useState<string[]>([]);
+
+  const [customExternaInput, setCustomExternaInput] = useState('');
+  const [editingExternaIndex, setEditingExternaIndex] = useState<number | null>(null);
+  const [customExternasList, setCustomExternasList] = useState<string[]>([]);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const flyerInputRef = useRef<HTMLInputElement | null>(null);
@@ -288,11 +297,97 @@ export default function UnifiedPublishModal({
     );
   };
 
+  // Handlers para "Otro" en Características Internas
+  const handleAddCustomInterna = () => {
+    const trimmed = customInternaInput.trim();
+    if (!trimmed) return;
+    if (customInternasList.includes(trimmed) || CARACTERISTICAS_INTERNAS.includes(trimmed)) {
+      toast.info('Esta característica ya existe en la lista');
+      setCustomInternaInput('');
+      return;
+    }
+    setCustomInternasList(prev => [...prev, trimmed]);
+    setSelectedInternas(prev => prev.includes(trimmed) ? prev : [...prev, trimmed]);
+    setCustomInternaInput('');
+    toast.success(`Característica interna agregada: "${trimmed}"`);
+  };
+
+  const handleStartEditCustomInterna = (index: number) => {
+    setEditingInternaIndex(index);
+    setCustomInternaInput(customInternasList[index]);
+  };
+
+  const handleUpdateCustomInterna = () => {
+    if (editingInternaIndex === null) return;
+    const oldVal = customInternasList[editingInternaIndex];
+    const newVal = customInternaInput.trim();
+    if (!newVal) return;
+
+    setCustomInternasList(prev => prev.map((item, idx) => idx === editingInternaIndex ? newVal : item));
+    setSelectedInternas(prev => prev.map(item => item === oldVal ? newVal : item));
+    setEditingInternaIndex(null);
+    setCustomInternaInput('');
+    toast.success('Característica actualizada correctamente');
+  };
+
+  const handleRemoveCustomInterna = (index: number) => {
+    const val = customInternasList[index];
+    setCustomInternasList(prev => prev.filter((_, idx) => idx !== index));
+    setSelectedInternas(prev => prev.filter(i => i !== val));
+    if (editingInternaIndex === index) {
+      setEditingInternaIndex(null);
+      setCustomInternaInput('');
+    }
+  };
+
   // Toggle checklist de características externas
   const toggleExterna = (item: string) => {
     setSelectedExternas(prev => 
       prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]
     );
+  };
+
+  // Handlers para "Otro" en Características Externas
+  const handleAddCustomExterna = () => {
+    const trimmed = customExternaInput.trim();
+    if (!trimmed) return;
+    if (customExternasList.includes(trimmed) || CARACTERISTICAS_EXTERNAS.includes(trimmed)) {
+      toast.info('Esta característica ya existe en la lista');
+      setCustomExternaInput('');
+      return;
+    }
+    setCustomExternasList(prev => [...prev, trimmed]);
+    setSelectedExternas(prev => prev.includes(trimmed) ? prev : [...prev, trimmed]);
+    setCustomExternaInput('');
+    toast.success(`Característica externa agregada: "${trimmed}"`);
+  };
+
+  const handleStartEditCustomExterna = (index: number) => {
+    setEditingExternaIndex(index);
+    setCustomExternaInput(customExternasList[index]);
+  };
+
+  const handleUpdateCustomExterna = () => {
+    if (editingExternaIndex === null) return;
+    const oldVal = customExternasList[editingExternaIndex];
+    const newVal = customExternaInput.trim();
+    if (!newVal) return;
+
+    setCustomExternasList(prev => prev.map((item, idx) => idx === editingExternaIndex ? newVal : item));
+    setSelectedExternas(prev => prev.map(item => item === oldVal ? newVal : item));
+    setEditingExternaIndex(null);
+    setCustomExternaInput('');
+    toast.success('Característica actualizada correctamente');
+  };
+
+  const handleRemoveCustomExterna = (index: number) => {
+    const val = customExternasList[index];
+    setCustomExternasList(prev => prev.filter((_, idx) => idx !== index));
+    setSelectedExternas(prev => prev.filter(i => i !== val));
+    if (editingExternaIndex === index) {
+      setEditingExternaIndex(null);
+      setCustomExternaInput('');
+    }
   };
 
   // Geocodificación gratuita con OpenStreetMap Nominatim ($0)
@@ -363,8 +458,16 @@ export default function UnifiedPublishModal({
     if (data.terrazasCant !== undefined) setPropTerrazasCant(Number(data.terrazasCant));
     if (data.areaTerraza) setPropAreaTerraza(String(data.areaTerraza));
     if (data.terrazaHasBBQ !== undefined) setPropTerrazaHasBBQ(Boolean(data.terrazaHasBBQ));
-    if (data.selectedInternas && Array.isArray(data.selectedInternas)) setSelectedInternas(data.selectedInternas);
-    if (data.selectedExternas && Array.isArray(data.selectedExternas)) setSelectedExternas(data.selectedExternas);
+    if (data.selectedInternas && Array.isArray(data.selectedInternas)) {
+      setSelectedInternas(data.selectedInternas);
+      const customs = data.selectedInternas.filter((i: string) => !CARACTERISTICAS_INTERNAS.includes(i));
+      if (customs.length > 0) setCustomInternasList(customs);
+    }
+    if (data.selectedExternas && Array.isArray(data.selectedExternas)) {
+      setSelectedExternas(data.selectedExternas);
+      const customs = data.selectedExternas.filter((i: string) => !CARACTERISTICAS_EXTERNAS.includes(i));
+      if (customs.length > 0) setCustomExternasList(customs);
+    }
   };
 
   // Motor Determinista Local en 0ms (con normalización matemática unicode)
@@ -670,6 +773,12 @@ export default function UnifiedPublishModal({
     setPropVideoUrl('');
     setSelectedInternas([]);
     setSelectedExternas([]);
+    setCustomInternaInput('');
+    setEditingInternaIndex(null);
+    setCustomInternasList([]);
+    setCustomExternaInput('');
+    setEditingExternaIndex(null);
+    setCustomExternasList([]);
   };
 
   const handleUploadImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1899,7 +2008,7 @@ export default function UnifiedPublishModal({
                   </div>
                 )}
 
-                {/* CHECKLIST CARACTERÍSTICAS INTERNAS (25 ITEMS) */}
+                {/* CHECKLIST CARACTERÍSTICAS INTERNAS (25 ITEMS + OTRO PERSONALIZADO) */}
                 <div className="space-y-2 pt-2 border-t border-white/5">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-[#fcf6ba] uppercase tracking-wider flex items-center gap-1.5">
@@ -1932,9 +2041,95 @@ export default function UnifiedPublishModal({
                       );
                     })}
                   </div>
+
+                  {/* CAMPO EXTRA: OTRO (CON OPCIÓN DE EDITAR) */}
+                  <div className="p-2.5 rounded-xl bg-gradient-to-r from-black/60 to-black/30 border border-[#bf953f]/30 space-y-2 shadow-inner mt-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#fcf6ba] shrink-0">
+                        <PlusCircle className="w-4 h-4 text-[#bf953f]" />
+                        <span>Otro:</span>
+                      </div>
+                      <div className="flex-1 flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={customInternaInput}
+                          onChange={(e) => setCustomInternaInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (editingInternaIndex !== null) handleUpdateCustomInterna();
+                              else handleAddCustomInterna();
+                            }
+                          }}
+                          placeholder={editingInternaIndex !== null ? "Modifica el nombre de la característica..." : "Escribe otra característica interna..."}
+                          className="flex-1 bg-black/60 border border-white/15 focus:border-[#bf953f] rounded-lg px-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none transition-all"
+                        />
+                        {editingInternaIndex !== null ? (
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={handleUpdateCustomInterna}
+                              className="px-3 py-1.5 bg-[#bf953f] hover:bg-[#d4af37] text-black text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shadow-sm shadow-[#bf953f]/30"
+                            >
+                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              <span>Guardar</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setEditingInternaIndex(null); setCustomInternaInput(''); }}
+                              className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-zinc-400 hover:text-white text-xs rounded-lg transition-all cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleAddCustomInterna}
+                            className="px-3.5 py-1.5 bg-gradient-to-r from-[#bf953f] to-[#aa771c] hover:brightness-110 text-black text-xs font-black rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm shadow-[#bf953f]/30"
+                          >
+                            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                            <span>Agregar</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Chips de características adicionales agregadas */}
+                    {customInternasList.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-white/5">
+                        <span className="text-[10px] text-zinc-400 font-medium">Personalizadas agregadas:</span>
+                        {customInternasList.map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#bf953f]/20 border border-[#bf953f] text-[#fcf6ba] text-xs font-medium shadow-sm"
+                          >
+                            <span className="text-[9px] font-black uppercase tracking-wider bg-[#bf953f] text-black px-1 py-0.5 rounded">Otro</span>
+                            <span className="font-bold">{item}</span>
+                            <button
+                              type="button"
+                              title="Editar característica"
+                              onClick={() => handleStartEditCustomInterna(idx)}
+                              className="p-0.5 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Eliminar característica"
+                              onClick={() => handleRemoveCustomInterna(idx)}
+                              className="p-0.5 text-zinc-400 hover:text-red-400 transition-colors cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* CHECKLIST CARACTERÍSTICAS EXTERNAS (45 ITEMS) */}
+                {/* CHECKLIST CARACTERÍSTICAS EXTERNAS (45 ITEMS + OTRO PERSONALIZADO) */}
                 <div className="space-y-2 pt-2 border-t border-white/5">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold text-[#fcf6ba] uppercase tracking-wider flex items-center gap-1.5">
@@ -1966,6 +2161,92 @@ export default function UnifiedPublishModal({
                         </button>
                       );
                     })}
+                  </div>
+
+                  {/* CAMPO EXTRA: OTRO (CON OPCIÓN DE EDITAR) */}
+                  <div className="p-2.5 rounded-xl bg-gradient-to-r from-black/60 to-black/30 border border-emerald-500/30 space-y-2 shadow-inner mt-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-300 shrink-0">
+                        <PlusCircle className="w-4 h-4 text-emerald-400" />
+                        <span>Otro:</span>
+                      </div>
+                      <div className="flex-1 flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={customExternaInput}
+                          onChange={(e) => setCustomExternaInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (editingExternaIndex !== null) handleUpdateCustomExterna();
+                              else handleAddCustomExterna();
+                            }
+                          }}
+                          placeholder={editingExternaIndex !== null ? "Modifica el nombre de la característica..." : "Escribe otra característica externa..."}
+                          className="flex-1 bg-black/60 border border-white/15 focus:border-emerald-500 rounded-lg px-3 py-1.5 text-xs text-white placeholder-zinc-500 outline-none transition-all"
+                        />
+                        {editingExternaIndex !== null ? (
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={handleUpdateCustomExterna}
+                              className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer shadow-sm shadow-emerald-500/30"
+                            >
+                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              <span>Guardar</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setEditingExternaIndex(null); setCustomExternaInput(''); }}
+                              className="px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-zinc-400 hover:text-white text-xs rounded-lg transition-all cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleAddCustomExterna}
+                            className="px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-700 hover:brightness-110 text-black text-xs font-black rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm shadow-emerald-500/30"
+                          >
+                            <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                            <span>Agregar</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Chips de características adicionales agregadas */}
+                    {customExternasList.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-white/5">
+                        <span className="text-[10px] text-zinc-400 font-medium">Personalizadas agregadas:</span>
+                        {customExternasList.map((item, idx) => (
+                          <div
+                            key={idx}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500 text-emerald-200 text-xs font-medium shadow-sm"
+                          >
+                            <span className="text-[9px] font-black uppercase tracking-wider bg-emerald-400 text-black px-1 py-0.5 rounded">Otro</span>
+                            <span className="font-bold">{item}</span>
+                            <button
+                              type="button"
+                              title="Editar característica"
+                              onClick={() => handleStartEditCustomExterna(idx)}
+                              className="p-0.5 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Eliminar característica"
+                              onClick={() => handleRemoveCustomExterna(idx)}
+                              className="p-0.5 text-zinc-400 hover:text-red-400 transition-colors cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
