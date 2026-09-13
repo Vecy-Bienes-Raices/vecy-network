@@ -50,7 +50,48 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.36 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.37 — Septiembre 2026
+
+### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 23:00 (Hora Colombia UTC-5)
+**Versión**: `v31.37` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"No hace nada, se queda pensando o dando vueltas y vueltas y no se autollenan los campos con lo datos que le he pasado, le pegue este texto arriba y no hizo absolutamente nada, no se llenó la ficha ni se muestra en ningun lado, también suguiero que dicos datos de ese formulario o ficha del inmueble sean editables ya que tu sabes que el precio u otras cosas de la información pueden variar y se debe subir a la tienda listo ya voy a buscar las fotos parasubirlas allí de una vez. OK:"*
+2. *(Adjuntó texto de oferta de WhatsApp: Casa Comercial para Oficinas o Sede Empresarial en Morato, $1.500.000.000, 430 m², 5 oficinas/habitaciones, 6 baños, 4 garajes, estrato 4, Suba, Bogotá).*
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Bloqueo / Congelamiento en Bucle en "Estructurar con JanIA" por HTTP 429**:
+   - Al oprimir el botón, el backend invocaba a Google Gemini. En el servidor VPS, la clave API del tier gratuito se encontraba en Rate Limit (429) por actividad concurrente de Baileys / Cron minutero.
+   - En `server/_core/llm.ts`, la función de cascada intentaba hasta 5 modelos x 2 intentos durmiendo 8 segundos por cada fallo (hasta 80 segundos de latencia), lo que provocaba que la conexión HTTP quedara bloqueada y el frontend se mantuviera en un ciclo de carga infinito sin llenar los campos.
+2. **Fuentes Estilizadas Unicode Mathematical**:
+   - El texto copiado por Eduardo contenía tipografías estilizadas de WhatsApp (`💥 𝐒𝐔𝐏𝐄𝐑 𝐎𝐅𝐄𝐑𝐓𝐀 🏠`, `🔥 𝐀𝐇𝐎𝐑𝐀: 💲1.500.000.000`, `𝟒𝟑𝟎 𝐦²`, `𝟓`, `𝟔`, `𝟒`). Sin normalización `NFKD`, los algoritmos de extracción y expresiones regulares convencionales no reconocían estos números como dígitos ASCII estándar.
+3. **Ausencia de Motor de Extracción Determinista Fallback**:
+   - El sistema dependía 100% de la disponibilidad de la API externa de Google. Si Gemini tardaba o arrojaba 429, el parser fallaba sin llenar absolutamente ningún dato.
+
+#### 🛠️ Acciones Técnicas Ejecutadas en Código y Arquitectura:
+1. **Extracción Determinista Local en el Cliente (0 milisegundos)**:
+   - En [UnifiedPublishModal.tsx](file:///home/eddu/Proyectos/vecy-network/client/src/components/publish/UnifiedPublishModal.tsx): Implementada la función `extractPropertyLocally()` que normaliza el texto (`NFKD`), decodifica los caracteres matemáticos unicode a números estándar y puebla **EN 0 MILISEGUNDOS** todos los campos del formulario en pantalla (`propName`, `propType`, `propTxType`, `propPrice`, `propArea`, `propBedrooms`, `propBathrooms`, `propGarages`, `propStratum`, `propCity`, `propZone`, `propNeighborhood`, `propDescription`).
+   - El usuario hace clic en `Estructurar con JanIA` y **de inmediato ve todos los campos llenos frente a sus ojos**, mientras en background se invoca la IA para refinar sin bloquear la interfaz.
+2. **Backend Blindado con Timeout y Extracción Determinista**:
+   - En [server/routers/properties.ts](file:///home/eddu/Proyectos/vecy-network/server/routers/properties.ts) (`parseText`): Se integró `parsePropertyDeterministically()` como base garantizada, combinada con una carrera (`Promise.race`) contra la IA con un timeout estricto de 4.5 segundos. Si Gemini responde, perfecciona; si arroja 429 o tarda, retorna de inmediato la extracción determinista sin error 500.
+   - En [server/routers/janIA.ts](file:///home/eddu/Proyectos/vecy-network/server/routers/janIA.ts) (`parseRequirementText`): Aplicado el mismo patrón determinista y timeout para requerimientos.
+3. **Formulario 100% Editable y Saneamiento Automático de Precios**:
+   - Todos los campos (título, tipo de inmueble, tipo de negocio, precio, administración, ciudad, zona, barrio, área, habitaciones, baños, parqueaderos, estrato, fotos, video, descripción) son totalmente editables y modificables por el usuario.
+   - En `handleSaveProperty`, se limpian automáticamente puntos, signos de pesos y espacios (`String(propPrice).replace(/[^\d]/g, '')`), insertando números limpios en la base de datos PostgreSQL.
+4. **Optimización de Cascada LLM ([server/_core/llm.ts](file:///home/eddu/Proyectos/vecy-network/server/_core/llm.ts))**:
+   - Modelos reordenados priorizando los disponibles y estables (`gemini-2.5-flash`, `gemini-flash-latest`, `gemini-flash-lite-latest`, `gemini-3.5-flash-lite`).
+   - Erradicadas las pausas de 8 segundos acumuladas ante 429 para no congelar peticiones web.
+5. **Preservación Absoluta de `whatsapp-match.ts`**:
+   - Archivo 100% original e intacto.
+6. **Incremento de Versión y Compilación Limpia**:
+   - `shared/const.ts`: `v31.37`.
+   - `package.json`: `31.37.0`.
+   - `npm run check`: 0 errores.
+   - `npm run build`: Compilación exitosa en 21.34s.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.36 — Septiembre 2026
 
 ### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 22:45 (Hora Colombia UTC-5)
 **Versión**: `v31.36` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

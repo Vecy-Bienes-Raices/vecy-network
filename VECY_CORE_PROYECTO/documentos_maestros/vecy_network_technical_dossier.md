@@ -322,6 +322,32 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.37 — Septiembre 2026
+
+#### 📌 EXTRACCIÓN INSTANTÁNEA DETERMINISTA EN 0MS PARA FICHAS DE OFERTA/DEMANDA, NORMALIZACIÓN UNICODE MATHEMATICAL, FALLBACK ANTE RATE LIMIT 429 DE GEMINI Y FORMULARIO 100% EDITABLE
+
+**Problemas identificados:**
+1. **Congelamiento / Bloqueo en Bucle de "Estructurar con JanIA"**:
+   - Al pegar fichas técnicas de WhatsApp con caracteres especiales y oprimir el botón, la API de Gemini respondía con error HTTP 429 (Rate Limit por concurrencia en la clave del VPS).
+2. **Latencia Acumulada de Reintentos de 80 Segundos**:
+   - En `server/_core/llm.ts`, la función intentaba múltiples modelos esperando 8 segundos por cada intento en caso de 429, dejando al usuario colgado dando vueltas sin respuesta.
+3. **Caracteres Matemáticos Unicode en Negrita**:
+   - Textos de WhatsApp con tipografías estilizadas (`𝐒𝐔𝐏𝐄𝐑 𝐎𝐅𝐄𝐑𝐓𝐀`, `𝟒𝟑𝟎 𝐦²`, `𝟓`, `𝟔`, etc.) no eran interpretados eficientemente sin normalización `NFKD`.
+4. **Ausencia de Autollenado Fallback**:
+   - Si la IA externa fallaba, el sistema no llenaba los campos, impidiendo al usuario subir el inmueble con agilidad.
+
+**Solución aplicada:**
+- **Extracción Determinista Local en el Cliente (0 ms)**:
+  - En `UnifiedPublishModal.tsx`, al pulsar "Estructurar con JanIA", la función `extractPropertyLocally()` normaliza el texto y puebla en 0 milisegundos todos los campos técnicos (título, tipo, negocio, precio, área, habitaciones, baños, parqueaderos, estrato, ciudad, zona, barrio, descripción).
+- **Backend Blindado con Timeout y Extracción Determinista**:
+  - En `server/routers/properties.ts` (`parseText`) y `server/routers/janIA.ts` (`parseRequirementText`), se implementó extracción determinista instantánea como base, combinada con un intento de IA con timeout de 4.5 segundos. Si Gemini responde, refina; si arroja 429 o tarda, retorna de inmediato los datos estructurados sin error.
+- **Formulario Totalmente Editable y Saneamiento de Precios**:
+  - Todos los inputs son libres y editables. En `handleSaveProperty`, se limpian automáticamente puntos y símbolos de moneda (`$1.500.000.000` -> `1500000000`) para garantizar inserción limpia en PostgreSQL.
+- **Preservación Absoluta de `whatsapp-match.ts`**:
+  - Archivo 100% original e intacto.
+
+---
+
 ### 🔖 v31.36 — Septiembre 2026
 
 #### 📌 CENTRO UNIFICADO DE PUBLICACIÓN DE OFERTAS & DEMANDAS, OCR JANIA VISION PARA FLYERS PUBLICITARIOS, AUDITORÍA INTERACTIVA DE DATOS FALTANTES Y DEPURACIÓN DE ACCESOS REDUNDANTES DE ADMINISTRACIÓN

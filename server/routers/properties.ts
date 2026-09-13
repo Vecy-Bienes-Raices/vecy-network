@@ -108,6 +108,162 @@ export function invalidatePropertiesListCache() {
   cachedAdminMyListTime = 0;
 }
 
+export function parsePropertyDeterministically(text: string) {
+  const norm = text.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+  const lower = norm.toLowerCase();
+
+  // Tipo de inmueble
+  let propertyType = "apartment";
+  if (lower.includes("casa comercial") || lower.includes("sede empresarial") || lower.includes("local comercial")) {
+    propertyType = "commercial";
+  } else if (lower.includes("consultorio")) {
+    propertyType = "consultorio";
+  } else if (lower.includes("oficina")) {
+    propertyType = "office";
+  } else if (lower.includes("casa") || lower.includes("chalet") || lower.includes("townhouse")) {
+    propertyType = "house";
+  } else if (lower.includes("bodega")) {
+    propertyType = "warehouse";
+  } else if (lower.includes("edificio")) {
+    propertyType = "building";
+  } else if (lower.includes("lote") || lower.includes("terreno")) {
+    propertyType = "land";
+  } else if (lower.includes("finca")) {
+    propertyType = "farm";
+  } else if (lower.includes("loft") || lower.includes("apartasol")) {
+    propertyType = "loft";
+  }
+
+  // Tipo de negocio
+  let transactionType = "venta";
+  if (lower.includes("arriendo") || lower.includes("alquiler") || lower.includes("renta")) {
+    transactionType = "arriendo";
+  } else if (lower.includes("permuta")) {
+    transactionType = "venta_permuta";
+  }
+
+  // Precio
+  let price: string = "0";
+  const ahoraMatch = norm.match(/(?:ahora|hoy|precio|valor|venta)[\s\:\$💲🔥]*([0-9\.\,]+(?:\s*(?:millones|mil millones|mm))?)/i);
+  if (ahoraMatch) {
+    const cleanNum = ahoraMatch[1].replace(/\./g, "").replace(/\,/g, "").trim();
+    const parsed = parseInt(cleanNum, 10);
+    if (!isNaN(parsed) && parsed > 100000) price = String(parsed);
+  }
+  if (price === "0") {
+    const prices = Array.from(norm.matchAll(/\$\s*([0-9]{1,3}(?:\.[0-9]{3}){1,4})/g));
+    if (prices.length > 0) {
+      const last = prices[prices.length - 1][1].replace(/[^\d]/g, "");
+      const parsed = parseInt(last, 10);
+      if (!isNaN(parsed) && parsed > 100000) price = String(parsed);
+    }
+  }
+
+  // Área
+  let areaTotal: string | null = null;
+  const areaConstruida = norm.match(/(?:area construida|area total|area)[\s\:\*]*([0-9]+(?:\.[0-9]+)?)\s*m/i);
+  if (areaConstruida) {
+    areaTotal = areaConstruida[1];
+  } else {
+    const generalArea = norm.match(/([0-9]+(?:\.[0-9]+)?)\s*m[2²]/i);
+    if (generalArea) areaTotal = generalArea[1];
+  }
+
+  // Habitaciones
+  let bedrooms: number | null = null;
+  const bedMatch = norm.match(/(?:habitacion|habitaciones|alcoba|alcobas|oficinas|dormitorio)[\s\:\/\*]*([0-9]+)/i);
+  if (bedMatch) {
+    bedrooms = parseInt(bedMatch[1], 10);
+  }
+
+  // Baños
+  let bathrooms: number | null = null;
+  const bathMatch = norm.match(/(?:bano|banos)[\s\:\/\*]*([0-9]+)/i);
+  if (bathMatch) {
+    bathrooms = parseInt(bathMatch[1], 10);
+  }
+
+  // Garajes
+  let garages: number | null = null;
+  const garMatch = norm.match(/(?:garaje|garajes|parqueadero|parqueaderos)[\s\:\/\*]*([0-9]+)/i);
+  if (garMatch) {
+    garages = parseInt(garMatch[1], 10);
+  }
+
+  // Estrato
+  let stratum: number | null = null;
+  const strMatch = norm.match(/estrato[\s\:\*]*([1-6])/i);
+  if (strMatch) {
+    stratum = parseInt(strMatch[1], 10);
+  }
+
+  // Barrio, Localidad y Ciudad
+  let addressNeighborhood: string | null = null;
+  let zone: string | null = null;
+  let city = "Bogotá";
+
+  const barrioMatch = norm.match(/barrio[\s\:\*]*([a-zA-Z\s]+)/i);
+  if (barrioMatch) {
+    addressNeighborhood = barrioMatch[1].split("\n")[0].trim();
+  }
+  if (!addressNeighborhood) {
+    if (lower.includes("morato")) addressNeighborhood = "Morato";
+    else if (lower.includes("cedritos")) addressNeighborhood = "Cedritos";
+    else if (lower.includes("chico")) addressNeighborhood = "Chicó";
+    else if (lower.includes("rosales")) addressNeighborhood = "Rosales";
+    else if (lower.includes("santa barbara")) addressNeighborhood = "Santa Bárbara";
+  }
+
+  const locMatch = norm.match(/localidad[\s\:\*]*([a-zA-Z\s]+)/i);
+  if (locMatch) {
+    zone = locMatch[1].split("\n")[0].trim();
+  }
+  if (!zone) {
+    if (lower.includes("suba")) zone = "Suba";
+    else if (lower.includes("usaquen")) zone = "Usaquén";
+    else if (lower.includes("chapinero")) zone = "Chapinero";
+    else if (lower.includes("teusaquillo")) zone = "Teusaquillo";
+  }
+
+  if (/\bbogot[aá]\b/i.test(norm)) city = "Bogotá";
+  else if (/\bmedell[ií]n\b/i.test(norm)) city = "Medellín";
+  else if (/\bcali\b/i.test(norm)) city = "Cali";
+  else if (/\bbarranquilla\b/i.test(norm)) city = "Barranquilla";
+
+  // Título / Nombre
+  let name = "";
+  const lines = norm.split("\n").map(l => l.trim()).filter(Boolean);
+  for (const line of lines) {
+    const clean = line.replace(/super oferta/i, "").replace(/[^\w\s\u00C0-\u00FF]/g, "").trim();
+    if (clean.length > 8 && !clean.toLowerCase().includes("detalles")) {
+      name = clean.slice(0, 90);
+      break;
+    }
+  }
+  if (!name && lines.length > 0) {
+    name = lines[0].replace(/super oferta/i, "").replace(/[^\w\s\u00C0-\u00FF]/g, "").trim().slice(0, 90);
+  }
+  if (addressNeighborhood && !name.toLowerCase().includes(addressNeighborhood.toLowerCase())) {
+    name += ` - ${addressNeighborhood}`;
+  }
+
+  return {
+    name: name || `Inmueble en ${addressNeighborhood || city}`,
+    propertyType,
+    transactionType,
+    price,
+    areaTotal: areaTotal || "",
+    bedrooms,
+    bathrooms,
+    garages,
+    stratum: stratum || 4,
+    city,
+    zone: zone || addressNeighborhood || "Bogotá",
+    addressNeighborhood: addressNeighborhood || zone || "Bogotá",
+    description: text.trim().slice(0, 3500),
+  };
+}
+
 export const propertiesRouter = router({
   // --- PUBLIC ---
   list: publicProcedure
@@ -167,15 +323,42 @@ export const propertiesRouter = router({
   parseText: publicProcedure
     .input(z.object({ text: z.string() }))
     .mutation(async ({ input }) => {
+      // 1. Extracción determinista instantánea (0ms) con normalización Unicode
+      const deterministic = parsePropertyDeterministically(input.text);
+
       try {
         const { invokeLLM } = await import("../_core/llm");
-        const prompt = `Analiza este texto de inmueble y extrae los datos clave en formato JSON con los siguientes campos obligatorios: name (título breve descriptivo), propertyType (apartment, house, building, warehouse, farm, hotel, office, land, commercial, loft, consultorio), transactionType (venta, arriendo, venta_o_arriendo), price (valor numérico en COP), location (dirección o zona aproximada), zone (barrio o localidad), bedrooms (número entero o null), bathrooms (número entero o null), stratum (estrato 1-6 o null), garages (número entero o null), areaTotal (metros cuadrados en número string o null), adminFee (cuota administración COP o null), description (resumen claro de los aspectos más importantes). Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni explicaciones.\n\nTexto: ${input.text}`;
-        const response = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
-        const text = response.choices?.[0]?.message?.content;
+        const prompt = `Analiza este texto de inmueble y extrae los datos clave en formato JSON con los siguientes campos obligatorios: name (título breve descriptivo), propertyType (apartment, house, building, warehouse, farm, hotel, office, land, commercial, loft, consultorio), transactionType (venta, arriendo, venta_o_arriendo), price (valor numérico en COP sin puntos), location (dirección o zona aproximada), zone (barrio o localidad), addressNeighborhood (barrio específico), bedrooms (número entero o null), bathrooms (número entero o null), stratum (estrato 1-6 o null), garages (número entero o null), areaTotal (metros cuadrados en número string o null), adminFee (cuota administración COP o null), description (resumen claro de los aspectos más importantes). Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni explicaciones.\n\nTexto: ${input.text}`;
+
+        // Timeout estricto de 4.5s para no bloquear al usuario si Gemini está en rate limit 429
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 4500));
+        const aiPromise = invokeLLM({ messages: [{ role: "user", content: prompt }] });
+
+        const response: any = await Promise.race([aiPromise, timeoutPromise]);
+        const text = response?.choices?.[0]?.message?.content;
         const cleaned = typeof text === 'string' ? text.replace(/```json\n?|\n?```/g, '').trim() : "{}";
-        return JSON.parse(cleaned);
+        const parsed = JSON.parse(cleaned);
+
+        // Mezclar dando prioridad a campos bien estructurados
+        return {
+          ...deterministic,
+          ...parsed,
+          price: parsed.price ? String(parsed.price) : deterministic.price,
+          name: parsed.name || deterministic.name,
+          propertyType: parsed.propertyType || deterministic.propertyType,
+          transactionType: parsed.transactionType || deterministic.transactionType,
+          zone: parsed.zone || deterministic.zone,
+          addressNeighborhood: parsed.addressNeighborhood || parsed.zone || deterministic.addressNeighborhood,
+          areaTotal: parsed.areaTotal ? String(parsed.areaTotal) : deterministic.areaTotal,
+          bedrooms: parsed.bedrooms !== undefined && parsed.bedrooms !== null ? Number(parsed.bedrooms) : deterministic.bedrooms,
+          bathrooms: parsed.bathrooms !== undefined && parsed.bathrooms !== null ? Number(parsed.bathrooms) : deterministic.bathrooms,
+          garages: parsed.garages !== undefined && parsed.garages !== null ? Number(parsed.garages) : deterministic.garages,
+          stratum: parsed.stratum !== undefined && parsed.stratum !== null ? Number(parsed.stratum) : deterministic.stratum,
+          description: parsed.description || deterministic.description,
+        };
       } catch (err: any) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Error al interpretar el texto con IA: " + err.message });
+        console.warn("[parseText] Gemini no respondió a tiempo o arrojó 429. Usando extracción determinista instantánea:", err.message);
+        return deterministic;
       }
     }),
 

@@ -167,7 +167,29 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.36 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.37 — Septiembre 2026
+
+### Novedades v31.37 (Extracción Instantánea Determinista en 0ms para Fichas de Oferta/Demanda, Normalización Unicode Mathematical, Fallback Blindado ante Rate Limit 429 de Gemini y Formulario 100% Editable):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Congelamiento / Bloqueo en Bucle en "Estructurar con JanIA"*: Al presionar el botón con el texto copiado de WhatsApp, el backend llamaba a Google Gemini. En el servidor VPS, debido a la actividad concurrente del bot de WhatsApp o cuota RPM del tier gratuito, la API de Gemini respondió con código HTTP 429 (Rate Limit).
+  2) *Latencia Acumulada de Reintentos (80 segundos)*: `invokeGemini` en `llm.ts` realizaba hasta 10 intentos durmiendo 8 segundos por cada fallo en los 5 modelos de la cascada, bloqueando la conexión HTTP y provocando que el frontend se quedara en un bucle infinito ("dando vueltas y vueltas").
+  3) *Caracteres Especiales Unicode Mathematical*: El texto copiado por Eduardo contenía fuentes en negrita matemática unicode (`𝐒𝐔𝐏𝐄𝐑 𝐎𝐅𝐄𝐑𝐓𝐀`, `𝟒𝟑𝟎 𝐦²`, `𝟓`, `𝟔`, `💲1.500.000.000`), los cuales requieren normalización NFKD para ser decodificados correctamente por expresiones regulares o modelos de lenguaje.
+  4) *Dependencia 100% Frágil de la API*: Si la IA fallaba o tardaba, el parser retornaba un error 500 y no llenaba absolutamente ningún campo del formulario.
+- **Acciones Ejecutadas**:
+  1) *Doble Motor de Extracción Instantánea (0 milisegundos)*:
+     - **En el Cliente (`UnifiedPublishModal.tsx`)**: Al hacer clic en `Estructurar con JanIA`, la función `extractPropertyLocally()` procesa el texto en 0 milisegundos y puebla de inmediato todos los campos en pantalla (`propName`, `propType`, `propTxType`, `propPrice`, `propArea`, `propBedrooms`, `propBathrooms`, `propGarages`, `propStratum`, `propCity`, `propZone`, `propNeighborhood`, `propDescription`).
+     - **En el Backend (`properties.ts` & `janIA.ts`)**: `parsePropertyDeterministically()` normaliza caracteres matemáticos unicode (`NFKD`) y extrae con alta precisión cada dato técnico, combinando con un intento de IA con timeout estricto de 4.5 segundos. Si Gemini responde, perfecciona los datos; si arroja 429 o tarda, retorna de inmediato la extracción determinista.
+  2) *Formulario 100% Editable y Tolerante a Formato*:
+     - Todos los inputs y selects permiten edición libre (modificar precio, barrio, área, fotos, video, etc.).
+     - `handleSaveProperty` sanea automáticamente el precio eliminando puntos y símbolos (`$1.500.000.000` -> `1500000000`) y asigna zona o barrio de forma flexible.
+  3) *Optimización de `llm.ts`*:
+     - `FALLBACK_MODELS` reordenados priorizando los modelos estables (`gemini-2.5-flash`, `gemini-flash-latest`, `gemini-flash-lite-latest`, `gemini-3.5-flash-lite`).
+     - Erradicadas las pausas de 8 segundos ante 429 para llamadas web interactivas.
+  4) *Preservación Absoluta de `whatsapp-match.ts`*: Archivo 100% original e intacto.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.36 — Septiembre 2026
 
 ### Novedades v31.36 (Centro Unificado de Publicación de Ofertas & Demandas, OCR JanIA Vision para Flyers Publicitarios, Auditoría Interactiva de Datos Faltantes y Depuración de Accesos Redundantes de Administración):
 - **Diagnóstico y Causas Raíz Identificadas**:

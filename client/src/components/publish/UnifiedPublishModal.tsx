@@ -71,29 +71,205 @@ export default function UnifiedPublishModal({
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const flyerInputRef = useRef<HTMLInputElement | null>(null);
 
+  const applyPropData = (data: any) => {
+    if (!data) return;
+    if (data.name) setPropName(data.name);
+    if (data.description) setPropDescription(data.description);
+    if (data.propertyType) setPropType(data.propertyType);
+    if (data.transactionType) setPropTxType(data.transactionType);
+    if (data.price) setPropPrice(String(data.price));
+    if (data.adminFee) setPropAdminFee(String(data.adminFee));
+    if (data.city) setPropCity(data.city);
+    if (data.zone) setPropZone(data.zone);
+    if (data.addressNeighborhood) setPropNeighborhood(data.addressNeighborhood);
+    else if (data.zone) setPropNeighborhood(data.zone);
+    if (data.bedrooms !== undefined && data.bedrooms !== null) setPropBedrooms(Number(data.bedrooms));
+    if (data.bathrooms !== undefined && data.bathrooms !== null) setPropBathrooms(Number(data.bathrooms));
+    if (data.garages !== undefined && data.garages !== null) setPropGarages(Number(data.garages));
+    if (data.stratum !== undefined && data.stratum !== null) setPropStratum(Number(data.stratum));
+    if (data.areaTotal) setPropArea(String(data.areaTotal));
+  };
+
+  const extractPropertyLocally = (text: string) => {
+    const norm = text.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+    const lower = norm.toLowerCase();
+
+    // Tipo de inmueble
+    let propertyType = "apartment";
+    if (lower.includes("casa comercial") || lower.includes("sede empresarial") || lower.includes("local comercial")) {
+      propertyType = "commercial";
+    } else if (lower.includes("consultorio")) {
+      propertyType = "consultorio";
+    } else if (lower.includes("oficina")) {
+      propertyType = "office";
+    } else if (lower.includes("casa") || lower.includes("chalet") || lower.includes("townhouse")) {
+      propertyType = "house";
+    } else if (lower.includes("bodega")) {
+      propertyType = "warehouse";
+    } else if (lower.includes("edificio")) {
+      propertyType = "building";
+    } else if (lower.includes("lote") || lower.includes("terreno")) {
+      propertyType = "land";
+    } else if (lower.includes("finca")) {
+      propertyType = "farm";
+    } else if (lower.includes("loft") || lower.includes("apartasol")) {
+      propertyType = "loft";
+    }
+
+    // Tipo de negocio
+    let transactionType = "venta";
+    if (lower.includes("arriendo") || lower.includes("alquiler") || lower.includes("renta")) {
+      transactionType = "arriendo";
+    } else if (lower.includes("permuta")) {
+      transactionType = "venta_permuta";
+    }
+
+    // Precio (buscar el precio actual, no el "antes")
+    let price: string = "0";
+    const ahoraMatch = norm.match(/(?:ahora|hoy|precio|valor|venta)[\s\:\$💲🔥]*([0-9\.\,]+(?:\s*(?:millones|mil millones|mm))?)/i);
+    if (ahoraMatch) {
+      const cleanNum = ahoraMatch[1].replace(/\./g, "").replace(/\,/g, "").trim();
+      const parsed = parseInt(cleanNum, 10);
+      if (!isNaN(parsed) && parsed > 100000) price = String(parsed);
+    }
+    if (price === "0") {
+      const prices = Array.from(norm.matchAll(/\$\s*([0-9]{1,3}(?:\.[0-9]{3}){1,4})/g));
+      if (prices.length > 0) {
+        const last = prices[prices.length - 1][1].replace(/[^\d]/g, "");
+        const parsed = parseInt(last, 10);
+        if (!isNaN(parsed) && parsed > 100000) price = String(parsed);
+      }
+    }
+
+    // Área
+    let areaTotal: string | null = null;
+    const areaConstruida = norm.match(/(?:area construida|area total|area)[\s\:\*]*([0-9]+(?:\.[0-9]+)?)\s*m/i);
+    if (areaConstruida) {
+      areaTotal = areaConstruida[1];
+    } else {
+      const generalArea = norm.match(/([0-9]+(?:\.[0-9]+)?)\s*m[2²]/i);
+      if (generalArea) areaTotal = generalArea[1];
+    }
+
+    // Habitaciones
+    let bedrooms: number | null = null;
+    const bedMatch = norm.match(/(?:habitacion|habitaciones|alcoba|alcobas|oficinas|dormitorio)[\s\:\/\*]*([0-9]+)/i);
+    if (bedMatch) {
+      bedrooms = parseInt(bedMatch[1], 10);
+    }
+
+    // Baños
+    let bathrooms: number | null = null;
+    const bathMatch = norm.match(/(?:bano|banos)[\s\:\/\*]*([0-9]+)/i);
+    if (bathMatch) {
+      bathrooms = parseInt(bathMatch[1], 10);
+    }
+
+    // Garajes
+    let garages: number | null = null;
+    const garMatch = norm.match(/(?:garaje|garajes|parqueadero|parqueaderos)[\s\:\/\*]*([0-9]+)/i);
+    if (garMatch) {
+      garages = parseInt(garMatch[1], 10);
+    }
+
+    // Estrato
+    let stratum: number | null = null;
+    const strMatch = norm.match(/estrato[\s\:\*]*([1-6])/i);
+    if (strMatch) {
+      stratum = parseInt(strMatch[1], 10);
+    }
+
+    // Barrio y Localidad
+    let addressNeighborhood: string | null = null;
+    let zone: string | null = null;
+    let city = "Bogotá";
+
+    const barrioMatch = norm.match(/barrio[\s\:\*]*([a-zA-Z\s]+)/i);
+    if (barrioMatch) {
+      addressNeighborhood = barrioMatch[1].split("\n")[0].trim();
+    }
+    if (!addressNeighborhood) {
+      if (lower.includes("morato")) addressNeighborhood = "Morato";
+      else if (lower.includes("cedritos")) addressNeighborhood = "Cedritos";
+      else if (lower.includes("chico")) addressNeighborhood = "Chicó";
+      else if (lower.includes("rosales")) addressNeighborhood = "Rosales";
+      else if (lower.includes("santa barbara")) addressNeighborhood = "Santa Bárbara";
+    }
+
+    const locMatch = norm.match(/localidad[\s\:\*]*([a-zA-Z\s]+)/i);
+    if (locMatch) {
+      zone = locMatch[1].split("\n")[0].trim();
+    }
+    if (!zone) {
+      if (lower.includes("suba")) zone = "Suba";
+      else if (lower.includes("usaquen")) zone = "Usaquén";
+      else if (lower.includes("chapinero")) zone = "Chapinero";
+      else if (lower.includes("teusaquillo")) zone = "Teusaquillo";
+    }
+
+    if (/\bbogot[aá]\b/i.test(norm)) city = "Bogotá";
+    else if (/\bmedell[ií]n\b/i.test(norm)) city = "Medellín";
+    else if (/\bcali\b/i.test(norm)) city = "Cali";
+    else if (/\bbarranquilla\b/i.test(norm)) city = "Barranquilla";
+
+    // Título
+    let name = "";
+    const lines = norm.split("\n").map(l => l.trim()).filter(Boolean);
+    for (const line of lines) {
+      const clean = line.replace(/super oferta/i, "").replace(/[^\w\s\u00C0-\u00FF]/g, "").trim();
+      if (clean.length > 8 && !clean.toLowerCase().includes("detalles")) {
+        name = clean.slice(0, 90);
+        break;
+      }
+    }
+    if (!name && lines.length > 0) {
+      name = lines[0].replace(/super oferta/i, "").replace(/[^\w\s\u00C0-\u00FF]/g, "").trim().slice(0, 90);
+    }
+    if (addressNeighborhood && !name.toLowerCase().includes(addressNeighborhood.toLowerCase())) {
+      name += ` - ${addressNeighborhood}`;
+    }
+
+    return {
+      name: name || `Inmueble en ${addressNeighborhood || city}`,
+      propertyType,
+      transactionType,
+      price,
+      areaTotal: areaTotal || "",
+      bedrooms,
+      bathrooms,
+      garages,
+      stratum: stratum || 4,
+      city,
+      zone: zone || addressNeighborhood || "Bogotá",
+      addressNeighborhood: addressNeighborhood || zone || "Bogotá",
+      description: text.trim().slice(0, 3500),
+    };
+  };
+
+  const handleStructureProperty = () => {
+    if (!propRawText.trim()) return;
+
+    // 1. Extracción determinista instantánea en el cliente (0 ms)
+    const local = extractPropertyLocally(propRawText);
+    if (local) {
+      applyPropData(local);
+      toast.success('¡Datos del inmueble detectados y campos autollenados al instante!');
+    }
+
+    // 2. Invocar mutación en background para afinar detalles con IA si está disponible
+    parsePropMutation.mutate({ text: propRawText });
+  };
+
   // Mutación parseText para Inmuebles
   const parsePropMutation = trpc.properties.parseText.useMutation({
     onSuccess: (data) => {
       if (data) {
-        if (data.name) setPropName(data.name);
-        if (data.description) setPropDescription(data.description);
-        if (data.propertyType) setPropType(data.propertyType);
-        if (data.transactionType) setPropTxType(data.transactionType);
-        if (data.price) setPropPrice(String(data.price));
-        if (data.adminFee) setPropAdminFee(String(data.adminFee));
-        if (data.city) setPropCity(data.city);
-        if (data.zone) setPropZone(data.zone);
-        if (data.addressNeighborhood) setPropNeighborhood(data.addressNeighborhood);
-        if (data.bedrooms !== undefined && data.bedrooms !== null) setPropBedrooms(Number(data.bedrooms));
-        if (data.bathrooms !== undefined && data.bathrooms !== null) setPropBathrooms(Number(data.bathrooms));
-        if (data.garages !== undefined && data.garages !== null) setPropGarages(Number(data.garages));
-        if (data.stratum !== undefined && data.stratum !== null) setPropStratum(Number(data.stratum));
-        if (data.areaTotal) setPropArea(String(data.areaTotal));
-        toast.success('JanIA ha estructurado y llenado los campos del inmueble');
+        applyPropData(data);
       }
     },
     onError: (err) => {
-      toast.error(`Error al estructurar texto: ${err.message}`);
+      // Si falla la IA en backend, los datos ya están en pantalla gracias al extractor local
+      console.warn('Backend parseText notice:', err.message);
     },
   });
 
@@ -192,29 +368,37 @@ export default function UnifiedPublishModal({
   };
 
   const handleSaveProperty = () => {
-    if (!propName || !propPrice || !propZone) {
-      toast.error('Por favor completa al menos el título, precio y zona/barrio');
+    if (!propName.trim()) {
+      toast.error('Por favor escribe un título o nombre para el inmueble');
+      return;
+    }
+    const cleanPrice = String(propPrice).replace(/[^\d]/g, '');
+    if (!cleanPrice || cleanPrice === '0') {
+      toast.error('Por favor indica un precio válido para el inmueble');
       return;
     }
 
+    const finalZone = (propZone || propNeighborhood || propCity || 'Bogotá').trim();
+    const finalNeighborhood = (propNeighborhood || propZone || propCity || 'Bogotá').trim();
+
     createPropMutation.mutate({
-      name: propName,
-      description: propDescription,
+      name: propName.trim(),
+      description: (propDescription || propRawText || '').trim(),
       propertyType: propType as any,
       transactionType: propTxType as any,
-      price: propPrice,
-      city: propCity,
-      zone: propZone,
-      addressNeighborhood: propNeighborhood || propZone,
+      price: cleanPrice,
+      city: (propCity || 'Bogotá').trim(),
+      zone: finalZone,
+      addressNeighborhood: finalNeighborhood,
       bedrooms: propBedrooms !== '' ? Number(propBedrooms) : null,
       bathrooms: propBathrooms !== '' ? Number(propBathrooms) : null,
       garages: propGarages !== '' ? Number(propGarages) : null,
       stratum: propStratum !== '' ? Number(propStratum) : null,
-      areaTotal: propArea || null,
-      adminFee: propAdminFee || null,
+      areaTotal: propArea ? String(propArea).trim() : null,
+      adminFee: propAdminFee ? String(propAdminFee).replace(/[^\d]/g, '') : null,
       isAmoblado: propIsAmoblado,
       images: propImages,
-      videoUrl: propVideoUrl || null,
+      videoUrl: propVideoUrl ? propVideoUrl.trim() : null,
       rawText: propRawText || null,
     });
   };
@@ -463,7 +647,7 @@ export default function UnifiedPublishModal({
                   <button
                     type="button"
                     disabled={!propRawText.trim() || parsePropMutation.isPending}
-                    onClick={() => parsePropMutation.mutate({ text: propRawText })}
+                    onClick={handleStructureProperty}
                     className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#bf953f] to-[#aa771c] hover:brightness-110 text-black font-extrabold text-xs inline-flex items-center gap-1.5 transition-all cursor-pointer shadow disabled:opacity-50"
                   >
                     {parsePropMutation.isPending ? (

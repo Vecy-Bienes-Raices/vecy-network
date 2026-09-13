@@ -1598,10 +1598,63 @@ Analiza este texto de requerimiento o solicitud de cliente/agente y extrae los d
 Si un campo no está explícito en el texto, coloca null (NO inventes información).
 Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni explicaciones.\n\nTexto: ${input.text}`;
 
-        const response = await invokeLLM({ messages: [{ role: "user", content: prompt }] });
-        const textContent = response.choices?.[0]?.message?.content;
-        const cleaned = typeof textContent === 'string' ? textContent.replace(/```json\n?|\n?```/g, '').trim() : "{}";
-        const parsed = JSON.parse(cleaned);
+        const norm = input.text.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+        const lower = norm.toLowerCase();
+
+        // Extracción determinista de base para no bloquear si Gemini está en 429
+        let detType = "apartment";
+        if (lower.includes("casa")) detType = "house";
+        else if (lower.includes("oficina")) detType = "office";
+        else if (lower.includes("local") || lower.includes("comercial")) detType = "commercial";
+        else if (lower.includes("bodega")) detType = "warehouse";
+        else if (lower.includes("lote")) detType = "land";
+
+        let detTx = "arriendo";
+        if (lower.includes("compra") || lower.includes("comprar") || lower.includes("venta") || lower.includes("vendo")) detTx = "venta";
+
+        let detPresupuestoMax: string | null = null;
+        const presMatch = norm.match(/(?:hasta|presupuesto|maximo|max|tope)[\s\:\$💲]*([0-9\.\,]+(?:\s*(?:millones|mm))?)/i);
+        if (presMatch) {
+          const cleanP = presMatch[1].replace(/\./g, "").replace(/\,/g, "").trim();
+          const pVal = parseInt(cleanP, 10);
+          if (!isNaN(pVal) && pVal > 100000) detPresupuestoMax = String(pVal);
+        }
+
+        let detAreaMin: string | null = null;
+        const areaM = norm.match(/(?:desde|minimo|area)[\s\:\*]*([0-9]+(?:\.[0-9]+)?)\s*m/i) || norm.match(/([0-9]+(?:\.[0-9]+)?)\s*m[2²]/i);
+        if (areaM) detAreaMin = areaM[1];
+
+        let detBeds: number | null = null;
+        const bedsM = norm.match(/([0-9]+)\s*(?:hab|habitacion|habitaciones|alcoba|alcobas)/i);
+        if (bedsM) detBeds = parseInt(bedsM[1], 10);
+
+        let parsed: any = {
+          name: `Búsqueda de ${detType === 'house' ? 'Casa' : 'Apartamento'} en ${detTx}`,
+          tipoInmuebleDeseado: detType,
+          tipoNegocioDeseado: detTx,
+          ciudadDeseada: "Bogotá",
+          addressNeighborhood: null,
+          zonaDeseada: null,
+          presupuestoMax: detPresupuestoMax,
+          areaMin: detAreaMin,
+          habitacionesMin: detBeds,
+          banosMin: null,
+          parqueaderosMin: null,
+          estratoDeseado: null,
+        };
+
+        try {
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 4500));
+          const aiPromise = invokeLLM({ messages: [{ role: "user", content: prompt }] });
+          const response: any = await Promise.race([aiPromise, timeoutPromise]);
+
+          const textContent = response?.choices?.[0]?.message?.content;
+          const cleaned = typeof textContent === 'string' ? textContent.replace(/```json\n?|\n?```/g, '').trim() : "{}";
+          const aiParsed = JSON.parse(cleaned);
+          parsed = { ...parsed, ...aiParsed };
+        } catch (aiErr: any) {
+          console.warn("[parseRequirementText] Gemini en 429 o timeout, usando extracción determinista:", aiErr.message);
+        }
 
         // Auditoría de datos faltantes para cotejo
         const missingFields: string[] = [];
@@ -1639,7 +1692,7 @@ Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni explicaciones.\n\n
           rawText: input.text,
         };
       } catch (err: any) {
-        throw new Error("Error al analizar requerimiento con IA: " + err.message);
+        throw new Error("Error al analizar requerimiento: " + err.message);
       }
     }),
 
