@@ -4,7 +4,8 @@ import { trpc } from '@/lib/trpc';
 import {
   CalendarCheck, Search, ShieldCheck, ExternalLink, Copy, Check,
   MessageSquare, Eye, Users, FileText, RefreshCw, X, Clock,
-  MapPin, Building2, Phone, Mail, ShieldAlert, Download, Share2
+  MapPin, Building2, Phone, Mail, ShieldAlert, Download, Share2,
+  Edit3, Save, RotateCcw
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -14,6 +15,37 @@ export default function AdminAgenda() {
   const [copiedDoc, setCopiedDoc] = useState<string | null>(null);
   const [selectedSolicitud, setSelectedSolicitud] = useState<any | null>(null);
 
+  // Estado de edición de datos de la solicitud
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<{
+    solicitanteNombre?: string;
+    solicitanteNumeroDocumento?: string;
+    solicitanteTipoPersona?: string;
+    solicitanteEmail?: string;
+    solicitanteCelular?: string;
+    solicitantePerfil?: string;
+    solicitanteTipoDocumento?: string;
+    solicitanteRepresentanteLegal?: string;
+    interesadoNombre?: string;
+    interesadoDocumento?: string;
+    interesadoTipoDocumento?: string;
+    acompanantes?: any[];
+  }>({});
+
+  const parseAcompanantes = (raw: any): any[] => {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        return [];
+      }
+    }
+    return [];
+  };
+
   // Queries tRPC
   const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = trpc.agenda.getStats.useQuery();
   const { data: agendaData, isLoading: agendaLoading, refetch: refetchAgenda } = trpc.agenda.getAll.useQuery({
@@ -21,6 +53,101 @@ export default function AdminAgenda() {
     perfil: perfilFilter,
     limit: 100,
   });
+
+  // Mutación para guardar cambios en los datos de la solicitud
+  const updateSolicitudMutation = trpc.agenda.update.useMutation({
+    onSuccess: (res) => {
+      toast.success('Datos actualizados y guardados correctamente en la base de datos');
+      setIsEditing(false);
+      const updatedItem = res.item ? { ...selectedSolicitud, ...res.item } : { ...selectedSolicitud, ...editForm };
+      setSelectedSolicitud(updatedItem);
+      refetchAgenda();
+      refetchStats();
+    },
+    onError: (err) => {
+      toast.error(`Error al guardar cambios: ${err.message}`);
+    },
+  });
+
+  const handleOpenFicha = (item: any) => {
+    setSelectedSolicitud(item);
+    setIsEditing(false);
+    setEditForm({
+      solicitanteNombre: item.solicitanteNombre || '',
+      solicitanteNumeroDocumento: item.solicitanteNumeroDocumento || '',
+      solicitanteTipoPersona: item.solicitanteTipoPersona || 'Persona Natural',
+      solicitanteEmail: item.solicitanteEmail || '',
+      solicitanteCelular: item.solicitanteCelular || '',
+      solicitantePerfil: item.solicitantePerfil || 'Cliente directo',
+      solicitanteTipoDocumento: item.solicitanteTipoDocumento || 'Cédula de ciudadanía',
+      solicitanteRepresentanteLegal: item.solicitanteRepresentanteLegal || '',
+      interesadoNombre: item.interesadoNombre || '',
+      interesadoDocumento: item.interesadoDocumento || '',
+      interesadoTipoDocumento: item.interesadoTipoDocumento || 'Cédula de ciudadanía',
+      acompanantes: parseAcompanantes(item.acompanantes),
+    });
+  };
+
+  const handleStartEdit = () => {
+    if (!selectedSolicitud) return;
+    setEditForm({
+      solicitanteNombre: selectedSolicitud.solicitanteNombre || '',
+      solicitanteNumeroDocumento: selectedSolicitud.solicitanteNumeroDocumento || '',
+      solicitanteTipoPersona: selectedSolicitud.solicitanteTipoPersona || 'Persona Natural',
+      solicitanteEmail: selectedSolicitud.solicitanteEmail || '',
+      solicitanteCelular: selectedSolicitud.solicitanteCelular || '',
+      solicitantePerfil: selectedSolicitud.solicitantePerfil || 'Cliente directo',
+      solicitanteTipoDocumento: selectedSolicitud.solicitanteTipoDocumento || 'Cédula de ciudadanía',
+      solicitanteRepresentanteLegal: selectedSolicitud.solicitanteRepresentanteLegal || '',
+      interesadoNombre: selectedSolicitud.interesadoNombre || '',
+      interesadoDocumento: selectedSolicitud.interesadoDocumento || '',
+      interesadoTipoDocumento: selectedSolicitud.interesadoTipoDocumento || 'Cédula de ciudadanía',
+      acompanantes: parseAcompanantes(selectedSolicitud.acompanantes),
+    });
+    setIsEditing(true);
+  };
+
+  const handleUpdateAcompanante = (index: number, field: string, value: string) => {
+    setEditForm((prev) => {
+      const list = [...(prev.acompanantes || [])];
+      list[index] = { ...list[index], [field]: value };
+      return { ...prev, acompanantes: list };
+    });
+  };
+
+  const handleAddAcompanante = () => {
+    setEditForm((prev) => ({
+      ...prev,
+      acompanantes: [...(prev.acompanantes || []), { nombre: '', documento: '', parentesco: 'Acompañante' }]
+    }));
+  };
+
+  const handleRemoveAcompanante = (index: number) => {
+    setEditForm((prev) => {
+      const list = [...(prev.acompanantes || [])];
+      list.splice(index, 1);
+      return { ...prev, acompanantes: list };
+    });
+  };
+
+  const handleSaveEdit = () => {
+    if (!selectedSolicitud?.id) return;
+    updateSolicitudMutation.mutate({
+      id: Number(selectedSolicitud.id),
+      solicitanteNombre: editForm.solicitanteNombre,
+      solicitanteNumeroDocumento: editForm.solicitanteNumeroDocumento,
+      solicitanteTipoPersona: editForm.solicitanteTipoPersona,
+      solicitanteEmail: editForm.solicitanteEmail,
+      solicitanteCelular: editForm.solicitanteCelular,
+      solicitantePerfil: editForm.solicitantePerfil,
+      solicitanteTipoDocumento: editForm.solicitanteTipoDocumento,
+      solicitanteRepresentanteLegal: editForm.solicitanteRepresentanteLegal,
+      interesadoNombre: editForm.interesadoNombre,
+      interesadoDocumento: editForm.interesadoDocumento,
+      interesadoTipoDocumento: editForm.interesadoTipoDocumento,
+      acompanantes: editForm.acompanantes,
+    });
+  };
 
   // Cerrar modal con tecla Escape y bloquear scroll de body
   useEffect(() => {
@@ -52,6 +179,61 @@ export default function AdminAgenda() {
     setCopiedDoc(text);
     toast.success(`${label} copiado al portapapeles: ${cleanText}`);
     setTimeout(() => setCopiedDoc(null), 2500);
+  };
+
+  const renderVerificationButtons = (docNum: string, personName: string, label: string = '') => {
+    if (!docNum || docNum === 'N/A' || docNum === 'No registra') return null;
+    return (
+      <div className="flex flex-wrap items-center gap-1.5">
+        <a
+          href="https://antecedentes.policia.gov.co:7005/WebJudicial/"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => copyToClipboard(docNum, `Cédula Policía (${personName})`)}
+          className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10 text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:border-primary/40"
+          title="1-Clic: Copia cédula y abre antecedentes Policía Nacional"
+        >
+          <span>👮</span>
+          <span>Policía</span>
+        </a>
+
+        <a
+          href="https://verifiquese.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => copyToClipboard(docNum, `Cédula Verifíquese (${personName})`)}
+          className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10 text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:border-primary/40"
+          title="1-Clic: Copia cédula y abre Verifíquese Cédula"
+        >
+          <span>🔍</span>
+          <span>Verifíquese</span>
+        </a>
+
+        <a
+          href="https://muisca.dian.gov.co/WebRutMuisca/DefConsultaEstadoRUT.faces"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => copyToClipboard(docNum, `NIT / Cédula DIAN (${personName})`)}
+          className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10 text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:border-primary/40"
+          title="1-Clic: Copia número y abre Consulta RUT DIAN"
+        >
+          <span>🏛️</span>
+          <span>DIAN RUT</span>
+        </a>
+
+        <a
+          href="https://www.rues.org.co/"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => copyToClipboard(docNum, `Identificación RUES (${personName})`)}
+          className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10 text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:border-primary/40"
+          title="1-Clic: Copia número y abre RUES Cámaras de Comercio"
+        >
+          <span>🏢</span>
+          <span>RUES</span>
+        </a>
+      </div>
+    );
   };
 
   const copyFullSummaryToClipboard = (sol: any) => {
@@ -384,7 +566,7 @@ Sistema: Vecy Network — Bolsa Inmobiliaria Colaborativa`;
                       {/* Acciones */}
                       <td className="py-4 px-4 text-right whitespace-nowrap">
                         <button
-                          onClick={() => setSelectedSolicitud(item)}
+                          onClick={() => handleOpenFicha(item)}
                           className="px-3.5 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/25 border border-primary/30 text-primary hover:text-white transition-all text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-[0_0_10px_rgba(191,149,63,0.15)]"
                         >
                           <Eye className="w-3.5 h-3.5" />
@@ -440,17 +622,83 @@ Sistema: Vecy Network — Bolsa Inmobiliaria Colaborativa`;
                 </div>
               </div>
 
-              <button
-                onClick={() => setSelectedSolicitud(null)}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer shrink-0 ml-2"
-                title="Cerrar (Esc)"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2 shrink-0 ml-2">
+                {!isEditing ? (
+                  <button
+                    onClick={handleStartEdit}
+                    className="px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                    title="Editar nombres, cédulas, correos y roles"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Editar Ficha</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-300 text-xs font-medium transition-all cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleSaveEdit}
+                      disabled={updateSolicitudMutation.isPending}
+                      className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-extrabold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                    >
+                      {updateSolicitudMutation.isPending ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Save className="w-3.5 h-3.5" />
+                      )}
+                      <span>Guardar</span>
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    if (isEditing) setIsEditing(false);
+                    setSelectedSolicitud(null);
+                  }}
+                  className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  title="Cerrar (Esc)"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Cuerpo con Scroll Suave */}
             <div className="flex-1 overflow-y-auto pr-1 sm:pr-2 space-y-4 scrollbar-thin">
+              {/* BANNER INFORMATIVO EN MODO EDICIÓN */}
+              {isEditing && (
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-center justify-between gap-3 animate-fade-in">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 shrink-0">
+                      <Edit3 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="font-bold">Modo de Edición de Identidad y Roles Activado</p>
+                      <p className="text-[11px] text-amber-300/80">
+                        Edita los nombres y apellidos completos, cédulas, correos y roles (cliente directo, agente, agencia, empresa). Al finalizar, pulsa <strong>Guardar Cambios</strong>.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleSaveEdit}
+                    disabled={updateSolicitudMutation.isPending}
+                    className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs inline-flex items-center gap-1.5 shrink-0 transition-all shadow"
+                  >
+                    {updateSolicitudMutation.isPending ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5" />
+                    )}
+                    <span>Guardar</span>
+                  </button>
+                </div>
+              )}
+
               {/* TABLA ORGANIZADA ESTILO CORREO OFICIAL (IMAGEN 1) */}
               <div className="rounded-xl border border-[#bf953f]/30 overflow-hidden bg-black/50 shadow-inner">
                 <table className="w-full text-left text-xs border-collapse">
@@ -468,137 +716,203 @@ Sistema: Vecy Network — Bolsa Inmobiliaria Colaborativa`;
                     <tr className="hover:bg-white/[0.02]">
                       <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante nombre</td>
                       <td className="py-2 px-4 text-foreground font-sans font-bold text-sm">
-                        {selectedSolicitud.solicitanteNombre || 'N/A'}
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editForm.solicitanteNombre ?? ''}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, solicitanteNombre: e.target.value }))}
+                            placeholder="Nombres y apellidos completos"
+                            className="w-full bg-black/70 border border-amber-500/50 focus:border-amber-400 rounded-lg px-2.5 py-1 text-white text-xs font-bold outline-none ring-1 ring-amber-500/30"
+                          />
+                        ) : (
+                          selectedSolicitud.solicitanteNombre || 'N/A'
+                        )}
                       </td>
                     </tr>
                     <tr className="hover:bg-white/[0.02]">
                       <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante tipo persona</td>
                       <td className="py-2 px-4 text-zinc-200 font-sans">
-                        {selectedSolicitud.solicitanteTipoPersona || 'Persona Natural'}
+                        {isEditing ? (
+                          <select
+                            value={editForm.solicitanteTipoPersona ?? 'Persona Natural'}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, solicitanteTipoPersona: e.target.value }))}
+                            className="bg-black/70 border border-amber-500/50 focus:border-amber-400 rounded-lg px-2.5 py-1 text-white text-xs outline-none ring-1 ring-amber-500/30"
+                          >
+                            <option value="Persona Natural">Persona Natural</option>
+                            <option value="Persona Jurídica">Persona Jurídica</option>
+                          </select>
+                        ) : (
+                          selectedSolicitud.solicitanteTipoPersona || 'Persona Natural'
+                        )}
                       </td>
                     </tr>
                     <tr className="hover:bg-white/[0.02]">
                       <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante perfil</td>
                       <td className="py-2 px-4 text-zinc-200 font-sans">
-                        <span className="px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-xs font-semibold">
-                          {selectedSolicitud.solicitantePerfil || 'Cliente'}
-                        </span>
+                        {isEditing ? (
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <select
+                              value={['Cliente directo', 'Agente inmobiliario', 'Inmobiliaria / Agencia', 'Empresa / Constructora', 'Inversionista', 'Propietario'].includes(editForm.solicitantePerfil || '') ? editForm.solicitantePerfil : 'Otro'}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setEditForm((prev) => ({ ...prev, solicitantePerfil: val === 'Otro' ? '' : val }));
+                              }}
+                              className="bg-black/70 border border-amber-500/50 focus:border-amber-400 rounded-lg px-2.5 py-1 text-white text-xs font-semibold outline-none ring-1 ring-amber-500/30"
+                            >
+                              <option value="Cliente directo">Cliente directo</option>
+                              <option value="Agente inmobiliario">Agente inmobiliario</option>
+                              <option value="Inmobiliaria / Agencia">Inmobiliaria / Agencia</option>
+                              <option value="Empresa / Constructora">Empresa / Constructora</option>
+                              <option value="Inversionista">Inversionista</option>
+                              <option value="Propietario">Propietario</option>
+                              <option value="Otro">Otro (especificar...)</option>
+                            </select>
+                            {(!['Cliente directo', 'Agente inmobiliario', 'Inmobiliaria / Agencia', 'Empresa / Constructora', 'Inversionista', 'Propietario'].includes(editForm.solicitantePerfil || '')) && (
+                              <input
+                                type="text"
+                                value={editForm.solicitantePerfil ?? ''}
+                                placeholder="Escribe el rol (ej: Bróker, Asesor externo)"
+                                onChange={(e) => setEditForm((prev) => ({ ...prev, solicitantePerfil: e.target.value }))}
+                                className="bg-black/70 border border-amber-500/50 focus:border-amber-400 rounded-lg px-2.5 py-1 text-white text-xs flex-1 outline-none ring-1 ring-amber-500/30"
+                              />
+                            )}
+                          </div>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-xs font-semibold">
+                            {selectedSolicitud.solicitantePerfil || 'Cliente'}
+                          </span>
+                        )}
                       </td>
                     </tr>
                     <tr className="hover:bg-white/[0.02]">
                       <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante email</td>
                       <td className="py-2 px-4 text-primary">
-                        <div className="flex items-center gap-2">
-                          <a
-                            href={`mailto:${selectedSolicitud.solicitanteEmail}`}
-                            className="hover:underline truncate"
-                          >
-                            {selectedSolicitud.solicitanteEmail || 'N/A'}
-                          </a>
-                          {selectedSolicitud.solicitanteEmail && (
-                            <button
-                              onClick={() => copyToClipboard(selectedSolicitud.solicitanteEmail, 'Correo')}
-                              className="text-zinc-500 hover:text-primary p-0.5 cursor-pointer"
-                              title="Copiar correo"
+                        {isEditing ? (
+                          <input
+                            type="email"
+                            value={editForm.solicitanteEmail ?? ''}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, solicitanteEmail: e.target.value }))}
+                            placeholder="correo@ejemplo.com"
+                            className="w-full bg-black/70 border border-amber-500/50 focus:border-amber-400 rounded-lg px-2.5 py-1 text-white text-xs outline-none ring-1 ring-amber-500/30 font-sans"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={`mailto:${selectedSolicitud.solicitanteEmail}`}
+                              className="hover:underline truncate"
                             >
-                              <Copy className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
+                              {selectedSolicitud.solicitanteEmail || 'N/A'}
+                            </a>
+                            {selectedSolicitud.solicitanteEmail && (
+                              <button
+                                onClick={() => copyToClipboard(selectedSolicitud.solicitanteEmail, 'Correo')}
+                                className="text-zinc-500 hover:text-primary p-0.5 cursor-pointer"
+                                title="Copiar correo"
+                              >
+                                <Copy className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                     <tr className="hover:bg-white/[0.02]">
                       <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante celular</td>
                       <td className="py-2 px-4">
-                        <div className="flex items-center gap-3">
-                          <span className="text-zinc-200 font-bold">{selectedSolicitud.solicitanteCelular || 'N/A'}</span>
-                          {selectedSolicitud.solicitanteCelular && (
-                            <a
-                              href={`https://wa.me/${(selectedSolicitud.solicitanteCelular || '').replace(/\D/g, '').startsWith('57') ? (selectedSolicitud.solicitanteCelular || '').replace(/\D/g, '') : `57${(selectedSolicitud.solicitanteCelular || '').replace(/\D/g, '')}`}?text=${encodeURIComponent(`Hola ${selectedSolicitud.solicitanteNombre || ''}, te saludamos de VECY BIENES RAÍCES respecto a tu solicitud de agenda #${selectedSolicitud.solicitudId || selectedSolicitud.id} para ${selectedSolicitud.nombreInmueble || selectedSolicitud.codigoInmueble || 'el inmueble'}.`)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1 hover:bg-emerald-500/25 transition-all"
-                              title="Abrir WhatsApp"
-                            >
-                              <MessageSquare className="w-2.5 h-2.5" />
-                              WhatsApp
-                            </a>
-                          )}
-                        </div>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editForm.solicitanteCelular ?? ''}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, solicitanteCelular: e.target.value }))}
+                            placeholder="Celular / WhatsApp (ej: 3101234567)"
+                            className="w-full bg-black/70 border border-amber-500/50 focus:border-amber-400 rounded-lg px-2.5 py-1 text-white text-xs font-mono font-bold outline-none ring-1 ring-amber-500/30"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-3">
+                            <span className="text-zinc-200 font-bold">{selectedSolicitud.solicitanteCelular || 'N/A'}</span>
+                            {selectedSolicitud.solicitanteCelular && (
+                              <a
+                                href={`https://wa.me/${(selectedSolicitud.solicitanteCelular || '').replace(/\D/g, '').startsWith('57') ? (selectedSolicitud.solicitanteCelular || '').replace(/\D/g, '') : `57${(selectedSolicitud.solicitanteCelular || '').replace(/\D/g, '')}`}?text=${encodeURIComponent(`Hola ${selectedSolicitud.solicitanteNombre || ''}, te saludamos de VECY BIENES RAÍCES respecto a tu solicitud de agenda #${selectedSolicitud.solicitudId || selectedSolicitud.id} para ${selectedSolicitud.nombreInmueble || selectedSolicitud.codigoInmueble || 'el inmueble'}.`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold inline-flex items-center gap-1 hover:bg-emerald-500/25 transition-all"
+                                title="Abrir WhatsApp"
+                              >
+                                <MessageSquare className="w-2.5 h-2.5" />
+                                WhatsApp
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                     <tr className="hover:bg-white/[0.02]">
                       <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante tipo documento</td>
                       <td className="py-2 px-4 text-zinc-200 font-sans">
-                        {selectedSolicitud.solicitanteTipoDocumento || 'Cédula de ciudadanía'}
+                        {isEditing ? (
+                          <select
+                            value={editForm.solicitanteTipoDocumento ?? 'Cédula de ciudadanía'}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, solicitanteTipoDocumento: e.target.value }))}
+                            className="bg-black/70 border border-amber-500/50 focus:border-amber-400 rounded-lg px-2.5 py-1 text-white text-xs outline-none ring-1 ring-amber-500/30"
+                          >
+                            <option value="Cédula de ciudadanía">Cédula de ciudadanía</option>
+                            <option value="Cédula de extranjería">Cédula de extranjería</option>
+                            <option value="NIT">NIT</option>
+                            <option value="Pasaporte">Pasaporte</option>
+                            <option value="Tarjeta de identidad">Tarjeta de identidad</option>
+                          </select>
+                        ) : (
+                          selectedSolicitud.solicitanteTipoDocumento || 'Cédula de ciudadanía'
+                        )}
                       </td>
                     </tr>
                     <tr className="hover:bg-white/[0.02]">
                       <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante numero documento</td>
                       <td className="py-2 px-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <strong className="text-foreground text-sm">{selectedSolicitud.solicitanteNumeroDocumento || 'N/A'}</strong>
-                          {selectedSolicitud.solicitanteNumeroDocumento && (
-                            <>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editForm.solicitanteNumeroDocumento ?? ''}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, solicitanteNumeroDocumento: e.target.value }))}
+                            placeholder="Número de cédula / NIT sin puntos"
+                            className="w-full bg-black/70 border border-amber-500/50 focus:border-amber-400 rounded-lg px-2.5 py-1 text-white text-xs font-mono font-bold outline-none ring-1 ring-amber-500/30"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <strong className="text-foreground text-sm font-bold">{selectedSolicitud.solicitanteNumeroDocumento || 'N/A'}</strong>
+                            {selectedSolicitud.solicitanteNumeroDocumento && (
                               <button
-                                onClick={() => copyToClipboard(selectedSolicitud.solicitanteNumeroDocumento, 'Documento')}
-                                className="text-zinc-500 hover:text-primary p-0.5 cursor-pointer"
-                                title="Copiar documento"
+                                onClick={() => copyToClipboard(selectedSolicitud.solicitanteNumeroDocumento, 'Documento Solicitante')}
+                                className="px-2 py-0.5 rounded bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10 text-[11px] font-semibold inline-flex items-center gap-1 transition-all cursor-pointer"
+                                title="Copiar cédula/NIT del solicitante"
                               >
-                                <Copy className="w-3.5 h-3.5" />
+                                {copiedDoc === selectedSolicitud.solicitanteNumeroDocumento ? (
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
+                                <span>{copiedDoc === selectedSolicitud.solicitanteNumeroDocumento ? '¡Copiado!' : 'Copiar'}</span>
                               </button>
-                              <div className="flex items-center gap-1 ml-2">
-                                <a
-                                  href="https://antecedentes.policia.gov.co:7005/WebJudicial/"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={() => copyToClipboard(selectedSolicitud.solicitanteNumeroDocumento, 'Cédula Policía')}
-                                  className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10"
-                                  title="Antecedentes Policía"
-                                >
-                                  👮 Policía
-                                </a>
-                                <a
-                                  href="https://verifiquese.com/"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={() => copyToClipboard(selectedSolicitud.solicitanteNumeroDocumento, 'Cédula Verifíquese')}
-                                  className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10"
-                                  title="Verifíquese"
-                                >
-                                  🔍 Verifíquese
-                                </a>
-                                <a
-                                  href="https://muisca.dian.gov.co/WebRutMuisca/DefConsultaEstadoRUT.faces"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={() => copyToClipboard(selectedSolicitud.solicitanteNumeroDocumento, 'NIT DIAN')}
-                                  className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10"
-                                  title="DIAN RUT"
-                                >
-                                  🏛️ DIAN
-                                </a>
-                                <a
-                                  href="https://www.rues.org.co/"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={() => copyToClipboard(selectedSolicitud.solicitanteNumeroDocumento, 'ID RUES')}
-                                  className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10"
-                                  title="RUES Cámaras"
-                                >
-                                  🏢 RUES
-                                </a>
-                              </div>
-                            </>
-                          )}
-                        </div>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
-                    {selectedSolicitud.solicitanteRepresentanteLegal && (
+                    {(selectedSolicitud.solicitanteRepresentanteLegal || isEditing) && (
                       <tr className="hover:bg-white/[0.02]">
                         <td className="py-2 px-4 text-zinc-400 font-sans font-medium">solicitante representante legal</td>
                         <td className="py-2 px-4 text-zinc-200 font-sans font-bold">
-                          {selectedSolicitud.solicitanteRepresentanteLegal}
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editForm.solicitanteRepresentanteLegal ?? ''}
+                              onChange={(e) => setEditForm((prev) => ({ ...prev, solicitanteRepresentanteLegal: e.target.value }))}
+                              placeholder="Nombre del Representante Legal (si aplica)"
+                              className="w-full bg-black/70 border border-amber-500/50 focus:border-amber-400 rounded-lg px-2.5 py-1 text-white text-xs outline-none ring-1 ring-amber-500/30"
+                            />
+                          ) : (
+                            selectedSolicitud.solicitanteRepresentanteLegal || 'No registra'
+                          )}
                         </td>
                       </tr>
                     )}
@@ -643,19 +957,69 @@ Sistema: Vecy Network — Bolsa Inmobiliaria Colaborativa`;
                     <tr className="hover:bg-white/[0.02]">
                       <td className="py-2 px-4 text-zinc-400 font-sans font-medium">interesado nombre</td>
                       <td className="py-2 px-4 text-zinc-200 font-sans">
-                        {selectedSolicitud.interesadoNombre || 'No registra'}
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editForm.interesadoNombre ?? ''}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, interesadoNombre: e.target.value }))}
+                            placeholder="Nombre completo del cliente interesado"
+                            className="w-full bg-black/70 border border-amber-500/50 focus:border-amber-400 rounded-lg px-2.5 py-1 text-white text-xs font-bold outline-none ring-1 ring-amber-500/30"
+                          />
+                        ) : (
+                          selectedSolicitud.interesadoNombre || 'No registra'
+                        )}
                       </td>
                     </tr>
                     <tr className="hover:bg-white/[0.02]">
                       <td className="py-2 px-4 text-zinc-400 font-sans font-medium">interesado tipo documento</td>
                       <td className="py-2 px-4 text-zinc-200 font-sans">
-                        {selectedSolicitud.interesadoTipoDocumento || 'Cédula de ciudadanía'}
+                        {isEditing ? (
+                          <select
+                            value={editForm.interesadoTipoDocumento ?? 'Cédula de ciudadanía'}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, interesadoTipoDocumento: e.target.value }))}
+                            className="bg-black/70 border border-amber-500/50 focus:border-amber-400 rounded-lg px-2.5 py-1 text-white text-xs outline-none ring-1 ring-amber-500/30"
+                          >
+                            <option value="Cédula de ciudadanía">Cédula de ciudadanía</option>
+                            <option value="Cédula de extranjería">Cédula de extranjería</option>
+                            <option value="NIT">NIT</option>
+                            <option value="Pasaporte">Pasaporte</option>
+                            <option value="Tarjeta de identidad">Tarjeta de identidad</option>
+                          </select>
+                        ) : (
+                          selectedSolicitud.interesadoTipoDocumento || 'Cédula de ciudadanía'
+                        )}
                       </td>
                     </tr>
                     <tr className="hover:bg-white/[0.02]">
                       <td className="py-2 px-4 text-zinc-400 font-sans font-medium">interesado documento</td>
-                      <td className="py-2 px-4 text-zinc-200">
-                        {selectedSolicitud.interesadoDocumento || 'No registra'}
+                      <td className="py-2 px-4">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editForm.interesadoDocumento ?? ''}
+                            onChange={(e) => setEditForm((prev) => ({ ...prev, interesadoDocumento: e.target.value }))}
+                            placeholder="Cédula del cliente interesado sin puntos"
+                            className="w-full bg-black/70 border border-amber-500/50 focus:border-amber-400 rounded-lg px-2.5 py-1 text-white text-xs font-mono font-bold outline-none ring-1 ring-amber-500/30"
+                          />
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <strong className="text-foreground text-sm font-bold">{selectedSolicitud.interesadoDocumento || 'No registra'}</strong>
+                            {selectedSolicitud.interesadoDocumento && selectedSolicitud.interesadoDocumento !== 'No registra' && selectedSolicitud.interesadoDocumento !== 'N/A' && (
+                              <button
+                                onClick={() => copyToClipboard(selectedSolicitud.interesadoDocumento, 'Cédula Cliente Interesado')}
+                                className="px-2 py-0.5 rounded bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10 text-[11px] font-semibold inline-flex items-center gap-1 transition-all cursor-pointer"
+                                title="Copiar cédula del cliente interesado"
+                              >
+                                {copiedDoc === selectedSolicitud.interesadoDocumento ? (
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
+                                <span>{copiedDoc === selectedSolicitud.interesadoDocumento ? '¡Copiado!' : 'Copiar'}</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                     <tr className="hover:bg-white/[0.02]">
@@ -695,97 +1059,253 @@ Sistema: Vecy Network — Bolsa Inmobiliaria Colaborativa`;
               </div>
 
               {/* ACOMPAÑANTES SI LOS HAY */}
+              {/* ACOMPAÑANTES Y CENTRO DE VERIFICACIÓN DE IDENTIDAD */}
               {(() => {
                 let acompList = selectedSolicitud.acompanantes;
                 if (typeof acompList === 'string') {
                   try { acompList = JSON.parse(acompList); } catch (_) { acompList = []; }
                 }
-                if (!Array.isArray(acompList) || acompList.length === 0) return null;
+                if (!Array.isArray(acompList)) acompList = [];
 
                 return (
-                  <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-[#fcf6ba] flex items-center gap-2">
-                      👥 Acompañantes Autorizados ({acompList.length})
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {acompList.map((ac: any, i: number) => (
-                        <div key={i} className="p-2 rounded-lg bg-white/5 border border-white/5 text-xs flex items-center justify-between">
-                          <div>
-                            <p className="font-bold text-foreground">{ac.nombre || 'Acompañante'}</p>
-                            <p className="text-[10px] text-muted-foreground font-mono">Doc: {ac.documento || 'N/A'}</p>
-                          </div>
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary font-semibold">
-                            {ac.parentesco === 'Otro' ? ac.parentescoOtro : ac.parentesco || 'Acompañante'}
-                          </span>
+                  <>
+                    {/* ACOMPAÑANTES */}
+                    {isEditing ? (
+                      <div className="p-4 rounded-xl bg-black/60 border border-amber-500/30 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4 className="text-xs font-bold uppercase tracking-widest text-amber-300 flex items-center gap-2">
+                            👥 Acompañantes Autorizados ({editForm.acompanantes?.length || 0})
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={handleAddAcompanante}
+                            className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-bold inline-flex items-center gap-1 transition-all cursor-pointer"
+                          >
+                            <span>+ Agregar Acompañante</span>
+                          </button>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
 
-              {/* FIRMA ELECTRÓNICA VIRTUAL AUDITADA */}
-              {selectedSolicitud.firmaVirtualBase64 && (
-                <div className="p-4 rounded-xl bg-black/40 border border-emerald-500/20 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-2">
-                      ✍️ Firma Electrónica Registrada (Auditoría Forense)
-                    </h4>
-                    <span className="text-[10px] font-mono text-emerald-400/80">
-                      Válida Legalmente
-                    </span>
-                  </div>
-                  <div className="p-4 rounded-xl bg-white flex items-center justify-center max-w-sm mx-auto shadow-md">
-                    <img
-                      src={selectedSolicitud.firmaVirtualBase64}
-                      alt="Firma Virtual"
-                      className="max-h-24 object-contain"
-                    />
-                  </div>
-                  {selectedSolicitud.firmaFechahoraAudit && (
-                    <p className="text-[10px] text-zinc-400 text-center font-mono">
-                      Timestamp auditado: {new Date(selectedSolicitud.firmaFechahoraAudit).toLocaleString('es-CO', { timeZone: 'America/Bogota' })}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* CONTRATO ADJUNTO EN STORAGE (SI ES AGENTE / CONTRATO GENERADO) */}
-              {(() => {
-                const solPerfil = (selectedSolicitud.solicitantePerfil || '').toLowerCase();
-                const isAgent = solPerfil.includes('agente') || solPerfil.includes('inmobiliaria') || solPerfil.includes('broker') || solPerfil.includes('bróker');
-                const solNum = selectedSolicitud.solicitudId || selectedSolicitud.id;
-                const safeName = (selectedSolicitud.solicitanteNombre || '').replace(/\s+/g, '_');
-                const pdfFileName = `Contrato_Puntas_${solNum}_${safeName}.pdf`;
-                const storageUrl = `https://knzmpoprlmbonejshfys.supabase.co/storage/v1/object/public/contratos/${pdfFileName}`;
-
-                if (!isAgent && !selectedSolicitud.firmaVirtualBase64) return null;
-
-                return (
-                  <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-[#bf953f]/30 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
-                        <FileText className="w-5 h-5" />
+                        {(!editForm.acompanantes || editForm.acompanantes.length === 0) ? (
+                          <p className="text-[11px] text-zinc-500 italic">No hay acompañantes registrados en esta solicitud.</p>
+                        ) : (
+                          <div className="space-y-2.5">
+                            {editForm.acompanantes.map((ac: any, i: number) => (
+                              <div key={i} className="p-3 rounded-lg bg-white/5 border border-white/10 flex flex-col sm:flex-row items-start sm:items-center gap-2 text-xs">
+                                <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                  <input
+                                    type="text"
+                                    value={ac.nombre || ''}
+                                    onChange={(e) => handleUpdateAcompanante(i, 'nombre', e.target.value)}
+                                    placeholder="Nombre y Apellido"
+                                    className="bg-black/70 border border-amber-500/40 rounded px-2 py-1 text-white text-xs outline-none"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={ac.documento || ''}
+                                    onChange={(e) => handleUpdateAcompanante(i, 'documento', e.target.value)}
+                                    placeholder="Número de Documento"
+                                    className="bg-black/70 border border-amber-500/40 rounded px-2 py-1 text-white text-xs font-mono outline-none"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={ac.parentesco || ''}
+                                    onChange={(e) => handleUpdateAcompanante(i, 'parentesco', e.target.value)}
+                                    placeholder="Parentesco / Rol"
+                                    className="bg-black/70 border border-amber-500/40 rounded px-2 py-1 text-white text-xs outline-none"
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveAcompanante(i)}
+                                  className="p-1.5 rounded bg-red-500/10 hover:bg-red-500/25 text-red-400 border border-red-500/20 text-xs shrink-0 cursor-pointer transition-colors self-end sm:self-center"
+                                  title="Eliminar acompañante"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-foreground">
-                          {pdfFileName}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          Contrato de Puntas Compartidas (50/50) con firma digital y cláusula de no elusión
-                        </p>
+                    ) : (
+                      acompList.length > 0 && (
+                        <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2">
+                          <h4 className="text-xs font-bold uppercase tracking-widest text-[#fcf6ba] flex items-center gap-2">
+                            👥 Acompañantes Autorizados ({acompList.length})
+                          </h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {acompList.map((ac: any, i: number) => (
+                              <div key={i} className="p-2.5 rounded-lg bg-white/5 border border-white/5 text-xs flex items-center justify-between gap-2">
+                                <div>
+                                  <p className="font-bold text-foreground">{ac.nombre || 'Acompañante'}</p>
+                                  <div className="flex items-center gap-1.5 mt-1 font-mono text-[11px]">
+                                    <span className="text-zinc-400">Doc:</span>
+                                    <strong className="text-zinc-100">{ac.documento || 'N/A'}</strong>
+                                    {ac.documento && ac.documento !== 'N/A' && (
+                                      <button
+                                        onClick={() => copyToClipboard(ac.documento, `Cédula Acompañante (${ac.nombre || ''})`)}
+                                        className="p-1 rounded bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary cursor-pointer transition-colors"
+                                        title="Copiar documento acompañante"
+                                      >
+                                        {copiedDoc === ac.documento ? (
+                                          <Check className="w-3 h-3 text-emerald-400" />
+                                        ) : (
+                                          <Copy className="w-3 h-3" />
+                                        )}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                                <span className="text-[10px] px-2 py-0.5 rounded bg-primary/10 text-primary font-semibold shrink-0">
+                                  {ac.parentesco === 'Otro' ? ac.parentescoOtro : ac.parentesco || 'Acompañante'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    )}
+
+                    {/* CENTRO DE VERIFICACIÓN DE IDENTIDAD Y ANTECEDENTES (EN REEMPLAZO DE LA FIRMA Y CONTRATO) */}
+                    <div className="p-4 sm:p-5 rounded-2xl bg-black/50 border border-[#bf953f]/35 space-y-3.5 shadow-inner">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+                        <div>
+                          <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4 text-[#bf953f]" />
+                            Centro de Verificación de Identidad y Antecedentes (1-Clic)
+                          </h4>
+                          <p className="text-[11px] text-zinc-400 mt-0.5">
+                            Haz clic en cualquier entidad para copiar la identificación al portapapeles y abrir el portal oficial:
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 w-fit shrink-0">
+                          Policía · Verifíquese · DIAN · RUES
+                        </span>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        {/* 1. Solicitante */}
+                        {selectedSolicitud.solicitanteNumeroDocumento && (
+                          <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:border-white/10 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                                👤
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-white">
+                                    {selectedSolicitud.solicitanteNombre || 'Solicitante'}
+                                  </span>
+                                  <span className="text-[10px] px-2 py-0.5 rounded bg-primary/15 text-primary border border-primary/30 uppercase font-semibold">
+                                    {selectedSolicitud.solicitantePerfil || 'Solicitante'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[11px] text-zinc-400 font-mono mt-0.5">
+                                  <span>{selectedSolicitud.solicitanteTipoDocumento || 'Cédula'}: <strong className="text-white">{selectedSolicitud.solicitanteNumeroDocumento}</strong></span>
+                                  <button
+                                    onClick={() => copyToClipboard(selectedSolicitud.solicitanteNumeroDocumento, 'Cédula Solicitante')}
+                                    className="text-zinc-400 hover:text-primary p-0.5 cursor-pointer flex items-center gap-1 transition-colors"
+                                    title="Copiar cédula solicitante"
+                                  >
+                                    {copiedDoc === selectedSolicitud.solicitanteNumeroDocumento ? (
+                                      <Check className="w-3 h-3 text-emerald-400" />
+                                    ) : (
+                                      <Copy className="w-3 h-3" />
+                                    )}
+                                    <span className="text-[10px] text-zinc-400">Copiar</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="shrink-0">
+                              {renderVerificationButtons(selectedSolicitud.solicitanteNumeroDocumento, selectedSolicitud.solicitanteNombre || 'Solicitante', 'Solicitante')}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 2. Cliente Interesado (si existe documento) */}
+                        {selectedSolicitud.interesadoDocumento && selectedSolicitud.interesadoDocumento !== 'No registra' && selectedSolicitud.interesadoDocumento !== 'N/A' && (
+                          <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:border-white/10 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-sm shrink-0">
+                                🎯
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-bold text-white">
+                                    {selectedSolicitud.interesadoNombre || 'Cliente Interesado'}
+                                  </span>
+                                  <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 uppercase font-semibold">
+                                    Cliente Interesado
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[11px] text-zinc-400 font-mono mt-0.5">
+                                  <span>{selectedSolicitud.interesadoTipoDocumento || 'Cédula'}: <strong className="text-white">{selectedSolicitud.interesadoDocumento}</strong></span>
+                                  <button
+                                    onClick={() => copyToClipboard(selectedSolicitud.interesadoDocumento, 'Cédula Cliente Interesado')}
+                                    className="text-zinc-400 hover:text-primary p-0.5 cursor-pointer flex items-center gap-1 transition-colors"
+                                    title="Copiar cédula cliente interesado"
+                                  >
+                                    {copiedDoc === selectedSolicitud.interesadoDocumento ? (
+                                      <Check className="w-3 h-3 text-emerald-400" />
+                                    ) : (
+                                      <Copy className="w-3 h-3" />
+                                    )}
+                                    <span className="text-[10px] text-zinc-400">Copiar</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="shrink-0">
+                              {renderVerificationButtons(selectedSolicitud.interesadoDocumento, selectedSolicitud.interesadoNombre || 'Cliente Interesado', 'Cliente')}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 3. Acompañantes con Cédula */}
+                        {acompList.map((ac: any, i: number) => {
+                          if (!ac.documento || ac.documento === 'N/A' || ac.documento === 'No registra') return null;
+                          return (
+                            <div key={i} className="p-3 rounded-xl bg-white/[0.03] border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:border-white/10 transition-colors">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-sm shrink-0">
+                                  👥
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-white">
+                                      {ac.nombre || `Acompañante #${i + 1}`}
+                                    </span>
+                                    <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30 uppercase font-semibold">
+                                      {ac.parentesco === 'Otro' ? ac.parentescoOtro : ac.parentesco || 'Acompañante'}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-[11px] text-zinc-400 font-mono mt-0.5">
+                                    <span>Doc: <strong className="text-white">{ac.documento}</strong></span>
+                                    <button
+                                      onClick={() => copyToClipboard(ac.documento, `Cédula Acompañante (${ac.nombre || ''})`)}
+                                      className="text-zinc-400 hover:text-primary p-0.5 cursor-pointer flex items-center gap-1 transition-colors"
+                                      title="Copiar documento de acompañante"
+                                    >
+                                      {copiedDoc === ac.documento ? (
+                                        <Check className="w-3 h-3 text-emerald-400" />
+                                      ) : (
+                                        <Copy className="w-3 h-3" />
+                                      )}
+                                      <span className="text-[10px] text-zinc-400">Copiar</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="shrink-0">
+                                {renderVerificationButtons(ac.documento, ac.nombre || `Acompañante ${i + 1}`, 'Acompañante')}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                    <a
-                      href={storageUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 rounded-xl bg-[#bf953f]/20 hover:bg-[#bf953f]/30 text-[#fcf6ba] border border-[#bf953f]/40 text-xs font-bold inline-flex items-center gap-2 transition-all shrink-0 cursor-pointer shadow-[0_0_12px_rgba(191,149,63,0.2)]"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Ver Contrato PDF</span>
-                    </a>
-                  </div>
+                  </>
                 );
               })()}
             </div>
@@ -815,12 +1335,47 @@ Sistema: Vecy Network — Bolsa Inmobiliaria Colaborativa`;
                 )}
               </div>
 
-              <button
-                onClick={() => setSelectedSolicitud(null)}
-                className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-foreground transition-all cursor-pointer"
-              >
-                Cerrar Ficha
-              </button>
+              <div className="flex items-center gap-2">
+                {isEditing ? (
+                  <>
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-zinc-300 transition-all cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleSaveEdit}
+                      disabled={updateSolicitudMutation.isPending}
+                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-extrabold inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.35)]"
+                    >
+                      {updateSolicitudMutation.isPending ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Save className="w-3.5 h-3.5" />
+                      )}
+                      <span>Guardar Cambios</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleStartEdit}
+                      className="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer"
+                      title="Editar nombres, cédulas, correos y roles"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Editar Ficha</span>
+                    </button>
+                    <button
+                      onClick={() => setSelectedSolicitud(null)}
+                      className="px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-foreground transition-all cursor-pointer"
+                    >
+                      Cerrar Ficha
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>,

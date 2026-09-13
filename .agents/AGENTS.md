@@ -167,7 +167,28 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.34 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.35 — Septiembre 2026
+
+### Novedades v31.35 (Depuración Ficha Agenda Pro: Erradicación de Firma/Contrato en Pantalla, Copia Rápida Multicédula, Centro de Verificación 1-Clic y Modo de Edición Integral de Identidades/Roles con Persistencia en BD):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Sobrecarga Visual Innecesaria*: La visualización gráfica del trazo de la firma virtual y la tarjeta del contrato PDF generaban ruido visual y consumo de espacio en el modal de detalle sin utilidad operativa cotidiana. La auditoría legal de la firma ya se preserva de forma concisa en la fila `firma fechahora audit`.
+  2) *Fricción al Copiar Cédulas de Terceros*: Solo la cédula del solicitante disponía de botón de copia rápida; para el cliente interesado (`interesadoDocumento`) y acompañantes familiares (`acompanantes`) el bróker debía copiar manualmente seleccionando texto.
+  3) *Flujo Centralizado de Verificación*: Se requería que los botones directos a entidades oficiales (Policía Nacional, Verifíquese, DIAN RUT y RUES Cámaras) estuvieran consolidados en un panel inferior limpio y espacioso, con acceso a auditar a cada participante por separado.
+  4) *Necesidad Operativa de Editar Identidades y Roles*: Múltiples registros históricos o formularios rápidos carecen de nombres completos, números de cédula exactos o roles específicos. Eduardo requería poder editar directamente los nombres y apellidos completos, cédulas, correos y roles (`Cliente directo`, `Agente inmobiliario`, `Inmobiliaria / Agencia`, `Empresa / Constructora`, `Inversionista`, `Propietario`, etc.) y acompañantes para enriquecer la base de datos comercial.
+- **Acciones Ejecutadas**:
+  1) *Erradicación Total de Firma y Contrato*: Eliminados los bloques visuales de la firma virtual y del contrato adjunto en el modal de detalle de `AdminAgenda.tsx`.
+  2) *Copia Rápida Multicédula*: Incorporados botones de copiado con feedback visual instantáneo (`¡Copiado!` + toast) en la fila de `solicitante numero documento`, `interesado documento` y en cada ítem de la lista de acompañantes.
+  3) *Centro de Verificación de Identidad 1-Clic*: Implementado al final del formulario un panel dedicado con tarjetas individuales para Solicitante, Cliente Interesado y Acompañantes, cada uno con sus 4 botones de auditoría inmediata [👮 Policía] [🔍 Verifíquese] [🏛️ DIAN RUT] [🏢 RUES].
+  4) *Modo de Edición Integral y Persistencia en PostgreSQL*:
+     - Mutación `agenda.update` en `server/routers/agenda.ts` conectada a Drizzle ORM sobre `solicitudes` con Zod validation.
+     - Botones dobles de `Guardar Cambios` y `Cancelar` en el header y footer del modal.
+     - Inputs reactivos para nombres completos, documentos, correos, celulares, tipo de persona, roles y acompañantes.
+     - Gestión en vivo de acompañantes (editar datos, eliminar y añadir con `+ Agregar Acompañante`).
+  5) *Preservación Absoluta de `whatsapp-match.ts`*: Archivo 100% original e intacto.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.34 — Septiembre 2026
 
 ### Novedades v31.34 (Integración VECY AGENDA en VECY NETWORK "Todo en Uno", Módulo Citas y Agenda Administrativo, Paridad Dual PostgreSQL/Supabase y Hoja de Ruta Fichas Gold Edition):
 - **Diagnóstico y Causas Raíz Identificadas**:

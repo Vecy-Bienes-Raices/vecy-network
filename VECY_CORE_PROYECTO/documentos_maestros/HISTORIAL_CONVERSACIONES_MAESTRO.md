@@ -50,7 +50,59 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.34 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.35 — Septiembre 2026
+
+### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 22:15 (Hora Colombia UTC-5)
+**Versión**: `v31.35` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"Ver la firma no es tan importante como poder copiar esta otra cédula y también si hay acompañantes van a aparecer otras cédulas, entonces pueden tener los mismos botones en frente o me parece mejor simplemente deja los botones abajo del formulario en vez de la firma, esa no es tan importante, el contrato de puntas si déjalo."*
+2. *"Aunque pensándolo bien también elimina el contrato, solo deja el formulario y los botones, punto."*
+3. *"Mmm y también déjame editar los campos de los nombres, para que cuando yo averigue pueda colocar sus nombres y apellidos completos y empezar a dejar esta base de datos para empezar a guardar esos números de cédulas sus nombres completos y correos electrónicos y obtener datos junto con sus roles(cliente directo, agente, agencia, emnpresa, etc) más adelante que nos podrán servir."*
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Sobrecarga Visual Innecesaria (Firma en Pantalla y Tarjeta de Contrato)**:
+   - El dibujo rasterizado de la firma virtual ocupaba espacio vertical innecesario sin aportar valor operativo para la gestión diaria de las citas, y la tarjeta del contrato PDF resultaba redundante en el panel rápido de auditoría de visitas.
+   - La fecha y hora exacta de la firma ya queda auditada en la fila `firma fechahora audit` de la tabla de datos.
+2. **Carencia de Copiado Rápido en Cédulas de Cliente y Acompañantes**:
+   - En la versión previa, solo el solicitante principal contaba con botón de copiado.
+   - Cuando una solicitud era gestionada por un intermediario/agente con cliente interesado (`interesadoDocumento`), o con acompañantes familiares (`acompanantes`), el bróker debía seleccionar manualmente con el cursor el texto del documento para copiarlo, generando fricción.
+3. **Flujo Centralizado de Verificación de Identidad**:
+   - Consolidar un **Centro de Verificación de Identidad y Antecedentes (Policía, Verifíquese, DIAN, RUES)** ubicado en un panel limpio debajo del formulario (en el espacio que ocupaba la firma y el contrato), permitiendo auditar individualmente al solicitante, al cliente interesado y a cada acompañante con 1 solo clic.
+4. **Carencia de Modo de Edición Persistente para Identidad y Roles**:
+   - En el histórico de solicitudes, muchos registros ingresaron con nombres parciales, sin cédula completa o con roles genéricos. Eduardo necesitaba poder investigar y completar los nombres y apellidos completos, números de cédula, correos electrónicos, celulares, roles específicos (cliente directo, agente, agencia, empresa/constructora, inversionista, propietario, etc.) y acompañantes para enriquecer la base de datos inmobiliaria y comercial de Vecy.
+   - Faltaba una mutación tRPC `agenda.update` respaldada en Drizzle ORM contra la tabla `solicitudes` y un modo de edición dinámico con inputs de alta visibilidad en el modal administrativo.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Erradicación de Firma Virtual y Contrato en Pantalla**:
+   - Removido el bloque de visualización gráfica de la firma virtual.
+   - Removido el bloque de visualización del contrato adjunto según la instrucción terminante de Eduardo ("solo deja el formulario y los botones, punto").
+2. **Copiado Rápido Multicédula**:
+   - **Solicitante**: Botón interactivo de copia rápida con feedback visual (`¡Copiado!` y toast).
+   - **Cliente Interesado**: Añadido botón interactivo de copia rápida en la fila `interesado documento`.
+   - **Acompañantes**: Añadido botón interactivo de copia individual para el documento de cada acompañante registrado.
+3. **Centro de Verificación de Identidad y Antecedentes 1-Clic**:
+   - Diseñado un panel ejecutivo y limpio al final del formulario con tarjetas dedicadas para cada participante con documento:
+     - 👤 **Solicitante Principal** + Cédula + Copia + [👮 Policía] [🔍 Verifíquese] [🏛️ DIAN RUT] [🏢 RUES].
+     - 🎯 **Cliente Interesado** (si aplica) + Cédula + Copia + [👮 Policía] [🔍 Verifíquese] [🏛️ DIAN RUT] [🏢 RUES].
+     - 👥 **Acompañantes** (si registran documentos) + Cédula + Copia + [👮 Policía] [🔍 Verifíquese] [🏛️ DIAN RUT] [🏢 RUES].
+4. **Modo de Edición Dinámico y Persistencia en PostgreSQL**:
+   - **Backend tRPC (`server/routers/agenda.ts`)**: Creado el endpoint `agenda.update` validado con Zod, permitiendo actualizar `solicitanteNombre`, `solicitanteNumeroDocumento`, `solicitanteTipoPersona`, `solicitanteEmail`, `solicitanteCelular`, `solicitantePerfil`, `solicitanteTipoDocumento`, `solicitanteRepresentanteLegal`, `interesadoNombre`, `interesadoDocumento`, `interesadoTipoDocumento` y `acompanantes` (JSONB) con retorno inmediato `.returning()`.
+   - **Frontend Reactivo (`AdminAgenda.tsx`)**:
+     - Botón `Editar Ficha` en el encabezado y en el footer del modal.
+     - Conversión reactiva de celdas a inputs y selects (`Persona Natural / Jurídica`, selector de roles con opción abierta para roles personalizados).
+     - Edición en vivo de la lista de acompañantes (modificar nombre, documento, parentesco, eliminar o añadir nuevos acompañantes con botón `+ Agregar Acompañante`).
+     - Botones dobles de `Guardar Cambios` (con estado de carga / spinner) y `Cancelar` tanto en el header como en el footer inferior.
+     - Refresco automático de tablas y KPIs (`refetchAgenda()` y `refetchStats()`) al guardar.
+5. **Verificación y Compilación Exitosa**:
+   - `npm run check` (`tsc --noEmit`): 0 errores.
+   - `npm run build`: Compilación limpia en 21.06s, generando `dist/assets/AdminAgenda-C5EKAXag.js` (52.47 KB) y `dist-server/index.js` (950.6 KB).
+6. **Preservación Absoluta**:
+   - `server/_core/whatsapp-match.ts`: 100% original e intocado.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.34 — Septiembre 2026
 
 ### 🗓️ Sesión: Sábado 12 de Septiembre de 2026 — 18:30 (Hora Colombia UTC-5)
 **Versión**: `v31.34` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

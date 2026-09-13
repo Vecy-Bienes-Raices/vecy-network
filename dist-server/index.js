@@ -15972,7 +15972,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.34";
+var VECY_VERSION = "v31.35";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -18943,6 +18943,32 @@ var agendaRouter = router({
       agentes,
       directos,
       conFirma
+    };
+  }),
+  update: publicProcedure.input(
+    z8.object({
+      id: z8.number(),
+      solicitanteNombre: z8.string().optional(),
+      solicitanteNumeroDocumento: z8.string().optional(),
+      solicitanteTipoPersona: z8.string().optional(),
+      solicitanteEmail: z8.string().optional(),
+      solicitanteCelular: z8.string().optional(),
+      solicitantePerfil: z8.string().optional(),
+      solicitanteTipoDocumento: z8.string().optional(),
+      solicitanteRepresentanteLegal: z8.string().optional(),
+      interesadoNombre: z8.string().optional(),
+      interesadoDocumento: z8.string().optional(),
+      interesadoTipoDocumento: z8.string().optional(),
+      acompanantes: z8.any().optional()
+    })
+  ).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+    const { id, ...dataToUpdate } = input;
+    const updated = await db.update(solicitudes).set(dataToUpdate).where(eq14(solicitudes.id, id)).returning();
+    return {
+      success: true,
+      item: updated[0] || null
     };
   })
 });

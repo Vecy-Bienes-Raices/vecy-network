@@ -120,4 +120,40 @@ export const agendaRouter = router({
       conFirma,
     };
   }),
+
+  update: publicProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        solicitanteNombre: z.string().optional(),
+        solicitanteNumeroDocumento: z.string().optional(),
+        solicitanteTipoPersona: z.string().optional(),
+        solicitanteEmail: z.string().optional(),
+        solicitanteCelular: z.string().optional(),
+        solicitantePerfil: z.string().optional(),
+        solicitanteTipoDocumento: z.string().optional(),
+        solicitanteRepresentanteLegal: z.string().optional(),
+        interesadoNombre: z.string().optional(),
+        interesadoDocumento: z.string().optional(),
+        interesadoTipoDocumento: z.string().optional(),
+        acompanantes: z.any().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+
+      const { id, ...dataToUpdate } = input;
+
+      const updated = await db
+        .update(solicitudes)
+        .set(dataToUpdate)
+        .where(eq(solicitudes.id, id))
+        .returning();
+
+      return {
+        success: true,
+        item: updated[0] || null,
+      };
+    }),
 });
