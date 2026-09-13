@@ -50,7 +50,41 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.41 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.42 — Septiembre 2026
+
+### 🗓️ Sesión: Domingo 13 de Septiembre de 2026 — 00:45 (Hora Colombia UTC-5)
+**Versión**: `v31.42` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"No se suben en orden ya que de esas cincuenta y tantas voy a seleccionar las 30"*
+2. *"No serán consecutivos exactos porque voy a sacar algunas, pero se debe seguir un orden o no??"*
+3. Acompañado de capturas del modal de edición del Inmueble #2775 con 15 fotos cargadas y la carpeta `/home/eddu/INMUEBLES VECY/Casa Morato/fotos_morato/` con 52 archivos (`0.1.jpg` a `51.jpg`).
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Desorden por Falta de Orden Natural Numérico en `e.target.files`**: Al seleccionar archivos salteados con `Ctrl + Clic` en el diálogo del sistema operativo (Ubuntu Nautilus/GNOME), el navegador web recibe la lista de archivos (`rawFiles`) en el orden de clic o en orden arbitrario del filesystem. Sin un ordenamiento natural numérico explícito (`localeCompare(..., { numeric: true })`), un archivo como `10.jpg` o `25.jpg` se intercalaba o el orden dependía de la selección.
+2. **Desincronización en Cargas Paralelas Concurrentes**: Al procesar la subida en lotes asíncronos con `Promise.all` y agregar con `newUploaded.push(res)`, si una foto pesaba 5.8MB (como `25.jpg`) y otra 600KB, la respuesta más rápida se insertaba antes, alterando la secuencia de fotos de la oferta.
+3. **Bloqueo Rígido al Superar 30 Fotos en Inmuebles Existentes**: El inmueble #2775 ya tenía 15 fotos cargadas en base de datos. Si Eduardo seleccionaba 30 fotos nuevas, la validación `15 + 30 = 45 > 30` abortaba con error rojo sin ofrecer reemplazar la galería ni depurar las existentes, forzando a eliminar fotos una a una manualmente.
+4. **Ausencia de Herramientas de Reordenamiento y Organización Visual**: La interfaz del modal solo permitía marcar la portada o eliminar, sin flechas para mover a la izquierda/derecha ni Drag & Drop para reorganizar el recorrido de las fotos del inmueble.
+
+#### 🛠️ Acciones Técnicas Ejecutadas en el Código:
+1. **Orden Natural Numérico Ascendente Estricto (`UnifiedPublishModal.tsx`)**:
+   - `files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))`.
+   - Garantiza que aunque no sean números consecutivos exactos (ej. `0.1.jpg`, `1.jpg`, `3.jpg`, `7.jpg`, `10.jpg`, `25.jpg`), los archivos seleccionados por Eduardo se procesan estrictamente en orden numérico ascendente.
+2. **Ranurado Indexado Inquebrantable (`uploadedSlots[idx]`)**:
+   - Asignación de cada URL devuelta por `/api/janIA/upload` exactamente en su posición indexada original en el array. La velocidad o peso de las fotos ya no altera jamás la posición de cada imagen.
+3. **Manejo Ergonómico de Reemplazo y Cupo de 30 Fotos**:
+   - Si la selección sumada a las fotos existentes supera 30, el modal pregunta proactivamente si desea **REEMPLAZAR** la galería actual con el nuevo lote ordenado o conservarla.
+   - Si se seleccionan más de 30 fotos en el explorador, el sistema toma automáticamente las primeras 30 ordenadas numéricamente y notifica con un toast informativo.
+   - Añadido botón visible **"🗑️ Vaciar Galería"** en la cabecera para limpiar las fotos anteriores con un solo clic.
+4. **Sistema Avanzado de Reorganización y Drag & Drop**:
+   - **Drag & Drop nativo**: Se puede arrastrar cualquier foto con el mouse y soltarla exactamente donde se desee, con indicador visual y toast de posición actualizada.
+   - **Flechas de desplazamiento rápido `◀` y `▶`**: Para mover cualquier foto un puesto a la izquierda o a la derecha con un clic.
+   - **Numeración clara y permanente**: Cada miniatura muestra un badge `#1 PORTADA`, `#2`, `#3`, ..., `#30`.
+5. **Preservación Absoluta de `whatsapp-match.ts`**: Archivo 100% intocado y protegido.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.41 — Septiembre 2026
 
 ### 🗓️ Sesión: Domingo 13 de Septiembre de 2026 — 00:30 (Hora Colombia UTC-5)
 **Versión**: `v31.41` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

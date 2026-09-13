@@ -167,7 +167,30 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.41 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.42 — Septiembre 2026
+
+### Novedades v31.42 (Carga de Fotos en Orden Numérico Ascendente Estricto, Ranurado Indexado Concurrente, Drag & Drop de Galería, Reemplazo Inteligente y Vaciado de Fotos):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Desorden por Selección Libre en Explorador*: Al seleccionar 30 fotos de un lote grande (ej. 52 fotos en `/home/eddu/INMUEBLES VECY/Casa Morato/fotos_morato/`) con nombres numéricos (`0.1.jpg`, `1.jpg`, `10.jpg`, `25.jpg`), el navegador web las entregaba en el orden de clic o arbitrario sin orden natural numérico.
+  2) *Desincronización en Concurrencia Asíncrona*: En la subida concurrente de lotes, las imágenes que pesaban menos respondían antes y se insertaban desordenadas con respecto a la secuencia de fotos de la propiedad.
+  3) *Límite de 30 Fotos en Inmuebles Pre-existentes*: Al editar un inmueble con fotos existentes (como el ID 2775 con 15 fotos), intentar subir 30 fotos nuevas arrojaba error rojo por exceder el tope, sin permitir reemplazar la galería de forma limpia.
+  4) *Falta de Herramientas de Reorganización*: No existían controles visuales para mover imágenes a la izquierda/derecha ni Drag & Drop para reordenar la galería.
+- **Acciones Ejecutadas**:
+  1) *Orden Natural Numérico Ascendente*: Implementado `files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))` antes de procesar la subida, garantizando orden riguroso aunque se salten fotos intermedias.
+  2) *Ranurado Indexado en Subida Paralela*: Cada archivo se asigna a su índice exacto `uploadedSlots[idx]`, evitando cualquier alteración del orden por velocidad de red o compresión.
+  3) *Reemplazo Inteligente de Galería y Vaciado Rápido*:
+     - Modal interactivo que pregunta si desea REEMPLAZAR la galería si la suma supera 30.
+     - Botón "🗑️ Vaciar Galería" para limpiar las fotos previas en 1 clic.
+     - Si se seleccionan más de 30 fotos, toma automáticamente las primeras 30 ordenadas numéricamente.
+  4) *Sistema Visual de Drag & Drop y Flechas ◀ ▶*:
+     - Miniaturas arrastrables (`draggable`) para cambiar de posición al vuelo.
+     - Flechas `◀` y `▶` para mover imágenes un puesto adelante o atrás.
+     - Badge numérico en cada miniatura (`#1 PORTADA`, `#2`, `#3`, etc.).
+  5) *Preservación Absoluta de `whatsapp-match.ts`*: Archivo 100% original e intacto.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.41 — Septiembre 2026
 
 ### Novedades v31.41 (Blindaje Ficha de Inmuebles sin Pantalla en Blanco, Edición Integral Directa de Inmuebles Publicados y Actualización de 30 Fotos en Tienda):
 - **Diagnóstico y Causas Raíz Identificadas**:

@@ -6,7 +6,8 @@ import {
   AlertTriangle, Plus, RefreshCw, Trash2, Building2, Home, DollarSign,
   MapPin, Bed, Bath, Car, Layers, Eye, CheckCircle2, FileUp, Star,
   ChevronDown, ChevronUp, Sliders, Compass, Shield, Flame, Wine, Tv,
-  BookOpen, Coffee, Sun, Trees, CheckSquare, Square, Edit2, PlusCircle
+  BookOpen, Coffee, Sun, Trees, CheckSquare, Square, Edit2, PlusCircle,
+  ChevronLeft, ChevronRight, GripVertical
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -257,6 +258,7 @@ export default function UnifiedPublishModal({
   // SECCIÓN 4: GALERÍA MULTIMEDIA & CHECKLISTS
   const [propImages, setPropImages] = useState<string[]>([]);
   const [coverIndex, setCoverIndex] = useState<number>(0);
+  const [draggedPhotoIdx, setDraggedPhotoIdx] = useState<number | null>(null);
   const [propVideoUrl, setPropVideoUrl] = useState('');
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [uploadProgressText, setUploadProgressText] = useState('');
@@ -943,24 +945,51 @@ export default function UnifiedPublishModal({
     const rawFiles = e.target.files;
     if (!rawFiles || rawFiles.length === 0) return;
 
-    const files = Array.from(rawFiles);
-    if (propImages.length + files.length > 30) {
-      toast.error(`El límite máximo es 30 fotos. Actualmente tienes ${propImages.length} y seleccionaste ${files.length}.`);
-      return;
+    let files = Array.from(rawFiles);
+
+    // 1. ORDEN NUMÉRICO ASCENDENTE NATURAL (0.jpg, 1.jpg, 2.jpg, 3.jpg, 10.jpg, 25.jpg...)
+    // Aunque no sean consecutivos exactos (porque se extraigan fotos intermedias), se preserva el orden numérico exacto.
+    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
+    let isReplacing = false;
+
+    // Si ya existen fotos y el total sumado excede 30:
+    if (propImages.length > 0 && propImages.length + files.length > 30) {
+      const confirmReplace = window.confirm(
+        `Has seleccionado ${files.length} fotos nuevas y actualmente tienes ${propImages.length} cargadas (el límite máximo es 30 fotos).\n\n¿Deseas REEMPLAZAR la galería actual con estas nuevas fotos ordenadas numéricamente?\n\n• Clic en ACEPTAR: Reemplazar la galería actual con las nuevas fotos seleccionadas.\n• Clic en CANCELAR: Mantener las fotos actuales sin cambios.`
+      );
+      if (confirmReplace) {
+        isReplacing = true;
+      } else {
+        e.target.value = '';
+        return;
+      }
+    }
+
+    // Si seleccionó más de 30 fotos, tomar las primeras 30 ordenadas numéricamente
+    if (files.length > 30) {
+      files = files.slice(0, 30);
+      toast.info('Se tomaron las primeras 30 fotos en orden numérico (límite máximo permitido).');
     }
 
     setIsUploadingMedia(true);
-    setUploadProgressText(`Preparando ${files.length} foto(s)...`);
+    setUploadProgressText(`Preparando ${files.length} foto(s) en orden numérico...`);
 
-    const newUploaded: string[] = [];
     const total = files.length;
+    // Creamos ranuras fijas para asegurar que el orden numérico de las fotos sea 100% estricto
+    const uploadedSlots: (string | null)[] = new Array(total).fill(null);
     let completedCount = 0;
 
     // Subir en lotes de 3 concurrentes para máxima velocidad y estabilidad
     const BATCH_SIZE = 3;
     for (let i = 0; i < total; i += BATCH_SIZE) {
-      const batch = files.slice(i, i + BATCH_SIZE);
-      const batchPromises = batch.map(async (file) => {
+      const batchIndices: number[] = [];
+      for (let j = i; j < Math.min(i + BATCH_SIZE, total); j++) {
+        batchIndices.push(j);
+      }
+
+      const batchPromises = batchIndices.map(async (idx) => {
+        const file = files[idx];
         try {
           const optimized = await compressImageForWeb(file);
           const formData = new FormData();
@@ -974,7 +1003,7 @@ export default function UnifiedPublishModal({
           if (!res.ok) {
             const errText = await res.text().catch(() => '');
             console.error(`Error HTTP ${res.status} al subir ${file.name}:`, errText);
-            return null;
+            return;
           }
 
           const json = await res.json();
@@ -983,25 +1012,29 @@ export default function UnifiedPublishModal({
             if (u.includes('/uploads/')) {
               u = u.substring(u.indexOf('/uploads/'));
             }
+            uploadedSlots[idx] = u; // Se posiciona exactamente en su índice ordenado
             completedCount++;
-            setUploadProgressText(`Subidas ${completedCount} de ${total} fotos...`);
-            return u;
+            setUploadProgressText(`Subidas ${completedCount} de ${total} fotos (${file.name})...`);
           }
         } catch (err) {
           console.error(`Excepción al subir foto ${file.name}:`, err);
         }
-        return null;
       });
 
-      const results = await Promise.all(batchPromises);
-      for (const res of results) {
-        if (res) newUploaded.push(res);
-      }
+      await Promise.all(batchPromises);
     }
 
+    const newUploaded = uploadedSlots.filter((u): u is string => !!u);
+
     if (newUploaded.length > 0) {
-      setPropImages(prev => [...prev, ...newUploaded]);
-      toast.success(`¡${newUploaded.length} de ${total} foto(s) cargadas exitosamente!`);
+      if (isReplacing) {
+        setPropImages(newUploaded);
+        setCoverIndex(0);
+        toast.success(`¡Galería reemplazada exitosamente con ${newUploaded.length} fotos en orden numérico!`);
+      } else {
+        setPropImages(prev => [...prev, ...newUploaded]);
+        toast.success(`¡${newUploaded.length} foto(s) agregadas en estricto orden numérico!`);
+      }
     } else {
       toast.error('No se pudieron cargar las fotos. Por favor verifica tu conexión o el formato de las imágenes.');
     }
@@ -1018,11 +1051,55 @@ export default function UnifiedPublishModal({
     updated.unshift(selected);
     setPropImages(updated);
     setCoverIndex(0);
-    toast.success('¡Foto marcada como portada principal!');
+    toast.success('¡Foto marcada como portada principal (#1)!');
+  };
+
+  const handleMovePhotoLeft = (idx: number) => {
+    if (idx <= 0) return;
+    const updated = [...propImages];
+    const temp = updated[idx];
+    updated[idx] = updated[idx - 1];
+    updated[idx - 1] = temp;
+    setPropImages(updated);
+  };
+
+  const handleMovePhotoRight = (idx: number) => {
+    if (idx >= propImages.length - 1) return;
+    const updated = [...propImages];
+    const temp = updated[idx];
+    updated[idx] = updated[idx + 1];
+    updated[idx + 1] = temp;
+    setPropImages(updated);
   };
 
   const handleRemovePhoto = (idx: number) => {
     setPropImages(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleClearAllPhotos = () => {
+    if (window.confirm(`¿Seguro que deseas eliminar las ${propImages.length} fotos cargadas de la galería?`)) {
+      setPropImages([]);
+      setCoverIndex(0);
+      toast.info('Galería de fotos vaciada.');
+    }
+  };
+
+  const handlePhotoDragStart = (idx: number) => {
+    setDraggedPhotoIdx(idx);
+  };
+
+  const handlePhotoDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handlePhotoDrop = (targetIdx: number) => {
+    if (draggedPhotoIdx === null || draggedPhotoIdx === targetIdx) return;
+    const updated = [...propImages];
+    const [movedItem] = updated.splice(draggedPhotoIdx, 1);
+    updated.splice(targetIdx, 0, movedItem);
+    setPropImages(updated);
+    setDraggedPhotoIdx(null);
+    toast.success(`Foto movida a la posición #${targetIdx + 1}`);
   };
 
   const handleUploadVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2171,22 +2248,54 @@ export default function UnifiedPublishModal({
                   </div>
                 </div>
 
-                {/* Previsualización de Fotos con selección de portada */}
+                {/* Previsualización de Fotos con selección de portada y reordenamiento */}
                 {propImages.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-bold text-zinc-300 flex items-center justify-between">
-                      <span>Fotos Cargadas ({propImages.length}):</span>
-                      <span className="text-[10px] text-zinc-500">Haz clic en ⭐ Hacer Portada para reordenar</span>
-                    </p>
+                  <div className="space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2 bg-black/40 p-2.5 rounded-xl border border-white/10">
+                      <div>
+                        <p className="text-xs font-bold text-[#fcf6ba] flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4 text-[#bf953f]" />
+                          <span>Fotos Cargadas ({propImages.length}/30)</span>
+                        </p>
+                        <p className="text-[10px] text-zinc-400 mt-0.5">
+                          Ordenadas numéricamente · Arrastra o usa <span className="text-[#bf953f] font-bold">◀ ▶</span> para organizar el recorrido
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleClearAllPhotos}
+                          className="px-2.5 py-1 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-500/20 text-red-300 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+                          title="Eliminar todas las fotos"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Vaciar Galería</span>
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
                       {propImages.map((url, idx) => {
                         const cleanUrl = url.includes('/uploads/') ? url.substring(url.indexOf('/uploads/')) : url;
+                        const isFirst = idx === 0;
+                        const isLast = idx === propImages.length - 1;
+                        const isDragged = draggedPhotoIdx === idx;
+
                         return (
-                          <div key={idx} className="relative rounded-xl overflow-hidden border border-white/10 aspect-square group bg-black/60">
+                          <div 
+                            key={idx} 
+                            draggable
+                            onDragStart={() => handlePhotoDragStart(idx)}
+                            onDragOver={handlePhotoDragOver}
+                            onDrop={() => handlePhotoDrop(idx)}
+                            className={`relative rounded-xl overflow-hidden border aspect-square group bg-black/60 transition-all select-none cursor-grab active:cursor-grabbing ${
+                              isDragged ? 'border-[#bf953f] scale-95 opacity-50 shadow-lg ring-2 ring-[#bf953f]/50' : 'border-white/10 hover:border-[#bf953f]/50'
+                            }`}
+                          >
                             <img 
                               src={cleanUrl} 
                               alt={`Foto ${idx + 1}`} 
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover pointer-events-none"
                               onError={(e) => {
                                 const target = e.currentTarget;
                                 if (!target.dataset.retried) {
@@ -2195,17 +2304,27 @@ export default function UnifiedPublishModal({
                                 }
                               }}
                             />
-                            
-                            {/* Badge de portada */}
-                            {idx === 0 ? (
-                              <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md bg-[#bf953f] text-black text-[9px] font-black shadow flex items-center gap-0.5">
-                                <Star className="w-2.5 h-2.5 fill-black" /> PORTADA
-                              </span>
-                            ) : (
+
+                            {/* Badge de número / Portada */}
+                            <div className="absolute top-1 left-1 flex items-center gap-1 z-10">
+                              {isFirst ? (
+                                <span className="px-1.5 py-0.5 rounded-md bg-[#bf953f] text-black text-[9px] font-black shadow flex items-center gap-0.5">
+                                  <Star className="w-2.5 h-2.5 fill-black" /> #1 PORTADA
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded-md bg-black/80 text-white text-[9px] font-bold border border-white/20 shadow">
+                                  #{idx + 1}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Botón rápido ⭐ Portada (si no es la 1ra) */}
+                            {!isFirst && (
                               <button
                                 type="button"
                                 onClick={() => handleSetCoverPhoto(idx)}
-                                className="absolute top-1 left-1 px-1.5 py-0.5 rounded-md bg-black/80 hover:bg-[#bf953f] hover:text-black text-white text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                                className="absolute top-1 right-8 px-1.5 py-0.5 rounded-md bg-black/80 hover:bg-[#bf953f] hover:text-black text-white text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-all cursor-pointer z-10"
+                                title="Mover como foto #1 de portada"
                               >
                                 ⭐ Portada
                               </button>
@@ -2215,11 +2334,38 @@ export default function UnifiedPublishModal({
                             <button
                               type="button"
                               onClick={() => handleRemovePhoto(idx)}
-                              className="absolute top-1 right-1 p-1 rounded-full bg-black/80 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                              className="absolute top-1 right-1 p-1 rounded-full bg-black/80 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-all cursor-pointer z-10"
                               title="Eliminar foto"
                             >
                               <Trash2 className="w-3 h-3" />
                             </button>
+
+                            {/* Controles de reordenamiento inferior (Flechas ◀ ▶) */}
+                            <div className="absolute bottom-0 inset-x-0 p-1 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 transition-all z-10">
+                              <button
+                                type="button"
+                                disabled={isFirst}
+                                onClick={(e) => { e.stopPropagation(); handleMovePhotoLeft(idx); }}
+                                className="p-1 rounded bg-black/80 hover:bg-[#bf953f] hover:text-black text-white text-[10px] font-bold disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                                title="Mover a la izquierda (anterior)"
+                              >
+                                <ChevronLeft className="w-3.5 h-3.5" />
+                              </button>
+
+                              <span className="text-[9px] text-zinc-400 font-mono">
+                                {idx + 1}/{propImages.length}
+                              </span>
+
+                              <button
+                                type="button"
+                                disabled={isLast}
+                                onClick={(e) => { e.stopPropagation(); handleMovePhotoRight(idx); }}
+                                className="p-1 rounded bg-black/80 hover:bg-[#bf953f] hover:text-black text-white text-[10px] font-bold disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                                title="Mover a la derecha (siguiente)"
+                              >
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         );
                       })}

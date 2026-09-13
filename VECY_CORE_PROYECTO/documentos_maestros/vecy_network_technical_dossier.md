@@ -322,6 +322,42 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.42 — Septiembre 2026
+
+#### 📌 CARGA DE FOTOS EN ORDEN NUMÉRICO ASCENDENTE ESTRICTO, RANURADO INDEXADO CONCURRENTE, DRAG & DROP DE GALERÍA, REEMPLAZO INTELIGENTE Y VACIADO RÁPIDO
+
+**Problemas identificados:**
+1. **Desorden por Selección Libre en Explorador**: Al seleccionar 30 fotos de un lote grande (ej. 52 fotos en `/home/eddu/INMUEBLES VECY/Casa Morato/fotos_morato/`) con nombres numéricos (`0.1.jpg`, `1.jpg`, `10.jpg`, `25.jpg`), el navegador web las entregaba en el orden de clic o arbitrario sin orden natural numérico.
+2. **Desincronización en Concurrencia Asíncrona**: En la subida concurrente de lotes, las imágenes que pesaban menos respondían antes y se insertaban desordenadas con respecto a la secuencia de fotos de la propiedad.
+3. **Límite Rígido de 30 Fotos en Inmuebles Pre-existentes**: Al editar un inmueble con fotos existentes (como el ID 2775 con 15 fotos), intentar subir 30 fotos nuevas arrojaba error rojo por exceder el tope, sin permitir reemplazar la galería de forma limpia.
+4. **Falta de Herramientas de Reorganización Visual**: No existían controles visuales para mover imágenes a la izquierda/derecha ni Drag & Drop para reordenar la galería.
+
+**Solución aplicada:**
+- **Orden Natural Numérico Ascendente**: Implementado `files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))` antes de procesar la subida, garantizando orden riguroso aunque se salten fotos intermedias.
+- **Ranurado Indexado en Subida Paralela**: Cada archivo se asigna a su índice exacto `uploadedSlots[idx]`, evitando cualquier alteración del orden por velocidad de red o compresión.
+- **Reemplazo Inteligente de Galería y Vaciado Rápido**: Modal interactivo que pregunta si desea REEMPLAZAR la galería si la suma supera 30; botón "🗑️ Vaciar Galería" para limpiar fotos previas en 1 clic; si se seleccionan más de 30 fotos, toma automáticamente las primeras 30 ordenadas numéricamente.
+- **Sistema Visual de Drag & Drop y Flechas ◀ ▶**: Miniaturas arrastrables (`draggable`) para cambiar de posición al vuelo; flechas `◀` y `▶` para mover imágenes un puesto adelante o atrás; badge numérico en cada miniatura (`#1 PORTADA`, `#2`, `#3`, etc.).
+- **Preservación Absoluta de `whatsapp-match.ts`**: Archivo 100% original e intacto.
+
+---
+
+### 🔖 v31.41 — Septiembre 2026
+
+#### 📌 BLINDAJE FICHA DE INMUEBLES SIN PANTALLA EN BLANCO, EDICIÓN INTEGRAL DIRECTA DE INMUEBLES PUBLICADOS Y ACTUALIZACIÓN DE 30 FOTOS EN TIENDA
+
+**Problemas identificados:**
+1. **Pantalla en Blanco en Ficha de Inmueble (`PropertyFeatures.tsx`)**: En inmuebles recién creados (como el ID 2775 de Morato), el desestructurado de `caracteristicasInternas` y `caracteristicasExternas` ejecutaba `.map()` directo sin verificar `Array.isArray()`, provocando un error en tiempo de ejecución (`TypeError: caracteristicasInternas.map is not a function`) que rompía el renderizado de React y dejaba la página en blanco.
+2. **Imposibilidad de Editar Inmuebles en Tienda**: `UnifiedPublishModal.tsx` solo soportaba creación (`createPropMutation`). No permitía editar propiedades existentes ni actualizar sus características, fotos o precios una vez publicadas.
+3. **Falta de Acceso Rápido a Edición**: En la vista pública de detalle del inmueble (`PropertyDetail.tsx`) no existía un botón para que el administrador o asesor pudiera corregir o completar las fotos y datos del inmueble.
+
+**Solución aplicada:**
+- **Blindaje Defensivo en `PropertyFeatures.tsx` y `PropertyGallery.tsx`**: Agregadas validaciones con `Array.isArray()` y optional chaining para todos los arrays de amenidades internas y externas, depósitos, chimeneas, terrazas y cava de vinos, garantizando tolerancia absoluta ante formatos nulos o variables en la base de datos.
+- **Modo Edición en `UnifiedPublishModal.tsx`**: Parámetro opcional `editProperty?: any` en props; mutación `updatePropMutation` (`trpc.properties.update.useMutation()`); hidratación reactiva completa en apertura (precarga de todos los campos técnicos, amenidades, coordenadas y fotos existentes); botón "Guardar Cambios del Inmueble" y título contextual "EDITAR INMUEBLE #[ID]".
+- **Botón "EDITAR INMUEBLE & FOTOS" en `PropertyDetail.tsx`**: Botón prominente en la botonera principal con icono `Edit2` que abre el modal en modo edición e invalida automáticamente la caché tRPC para reflejar los cambios en 0 segundos.
+- **Preservación Absoluta de `whatsapp-match.ts`**: Archivo 100% original e intacto.
+
+---
+
 ### 🔖 v31.40 — Septiembre 2026
 
 #### 📌 SOLUCIÓN INTEGRAL SUBIDA Y VISUALIZACIÓN DE 30 FOTOS EN TIENDA PÚBLICA: CLIENT_MAX_BODY_SIZE 100M EN NGINX, ERRADICACIÓN DE MIXED CONTENT HTTP VS HTTPS, COMPRESIÓN CLIENTE Y CONCURRENCIA
