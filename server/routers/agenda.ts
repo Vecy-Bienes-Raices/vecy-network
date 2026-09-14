@@ -439,7 +439,7 @@ async function executeIdentityVerification(
           valid: true,
           match: false,
           officialName: officialFormatted,
-          error: `⚠️ Inconsistencia de identidad: La cédula ${clean} pertenece oficialmente ante la Policía Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevención de fraude, la solicitud queda bloqueada.`,
+          error: `⚠️ Inconsistencia de identidad: El número de documento ${clean} no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, por favor verifica el número de documento o corrige los nombres para que coincidan con la persona que asistirá.`,
         };
       }
     }
@@ -447,7 +447,7 @@ async function executeIdentityVerification(
       valid: true,
       match: true,
       officialName: officialFormatted,
-      message: `✓ Identidad confirmada ante la Policía Nacional de Colombia: ${officialFormatted}`,
+      message: `✓ Identidad verificada y autenticada con éxito: ${officialFormatted}`,
     };
   }
 
@@ -530,7 +530,7 @@ async function executeIdentityVerification(
           valid: true,
           match: false,
           officialName: officialFormatted,
-          error: `⚠️ Inconsistencia de identidad: La cédula ${clean} pertenece oficialmente ante la Policía Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevención de fraude, la solicitud queda bloqueada.`,
+          error: `⚠️ Inconsistencia de identidad: El número de documento ${clean} no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, por favor verifica el número de documento o corrige los nombres para que coincidan con la persona que asistirá.`,
         };
       }
     }
@@ -539,18 +539,18 @@ async function executeIdentityVerification(
       valid: true,
       match: true,
       officialName: officialFormatted,
-      message: `✓ Identidad confirmada ante la Policía Nacional de Colombia: ${officialFormatted}`,
+      message: `✓ Identidad verificada y autenticada con éxito: ${officialFormatted}`,
     };
   }
 
-  // 5. Para Cédula colombiana (CC): Si no se pudo obtener respuesta oficial de la Policía Nacional, NUNCA marcar match: true a ciegas
+  // 5. Para Cédula colombiana (CC): Si no se pudo obtener respuesta oficial, NUNCA marcar match: true a ciegas
   const tLower = (tipoDocumento || '').toLowerCase();
   const isCC = tLower.includes('ciudadan') || tLower === 'cc';
   if (isCC) {
     return {
       valid: false,
       match: false,
-      error: 'No fue posible verificar la cédula ante la Policía Nacional en este momento (tiempo de espera o servicio no disponible). Por favor reintente en unos segundos.',
+      error: 'No fue posible validar el documento en este momento. Por favor reintenta en unos segundos.',
     };
   }
 
@@ -721,7 +721,7 @@ export const agendaRouter = router({
                 valid: true,
                 match: false,
                 officialName: officialFormatted,
-                error: `⚠️ Inconsistencia de identidad: La cédula ${cleanDoc} pertenece oficialmente ante la Policía Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevención de fraude, la solicitud queda bloqueada.`,
+                error: `⚠️ Inconsistencia de identidad: El número de documento ${cleanDoc} no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, por favor verifica el número de documento o corrige los nombres para que coincidan con la persona que asistirá.`,
               },
             };
           }
@@ -733,7 +733,7 @@ export const agendaRouter = router({
             valid: true,
             match: true,
             officialName: officialFormatted,
-            message: `✓ Identidad confirmada ante la Policía Nacional de Colombia: ${officialFormatted}`,
+            message: `✓ Identidad verificada y autenticada con éxito: ${officialFormatted}`,
           },
         };
       }
@@ -766,7 +766,7 @@ export const agendaRouter = router({
             current.result = {
               valid: false,
               match: false,
-              error: err?.message || 'Error durante la verificación de identidad',
+              error: err?.message || 'Error durante la validación del documento',
             };
           }
         });
@@ -774,7 +774,7 @@ export const agendaRouter = router({
       return {
         status: 'processing' as const,
         jobId,
-        message: 'Consulta enviada a la Policía Nacional. Resolviendo captcha oficial...',
+        message: 'Verificando autenticidad del documento en tiempo real...',
       };
     }),
 
@@ -893,7 +893,7 @@ export const agendaRouter = router({
             if (!checkMatch(input.solicitante_nombre, res.officialName)) {
               throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: `⚠️ Inconsistencia de identidad: La cédula ${cleanDoc} del solicitante pertenece oficialmente ante la Policía Nacional a "${res.officialName}" y no a "${input.solicitante_nombre}". Por seguridad, la solicitud fue rechazada.`,
+                message: `⚠️ Inconsistencia de identidad: El número de documento ${cleanDoc} del solicitante no corresponde a los nombres y apellidos indicados. Por seguridad, la solicitud fue rechazada.`,
               });
             }
           }
@@ -909,7 +909,7 @@ export const agendaRouter = router({
             if (!checkMatch(input.interesado_nombre, res.officialName)) {
               throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: `⚠️ Inconsistencia de identidad: La cédula ${cleanDoc} del cliente presentado pertenece oficialmente ante la Policía Nacional a "${res.officialName}" y no a "${input.interesado_nombre}". Por seguridad, la solicitud fue rechazada.`,
+                message: `⚠️ Inconsistencia de identidad: El número de documento ${cleanDoc} del cliente presentado no corresponde al nombre indicado. Por seguridad, la solicitud fue rechazada.`,
               });
             }
           }
@@ -927,7 +927,7 @@ export const agendaRouter = router({
                 if (!checkMatch(String(acomp.nombre), res.officialName)) {
                   throw new TRPCError({
                     code: "BAD_REQUEST",
-                    message: `⚠️ Inconsistencia de identidad: La cédula ${cleanDoc} del acompañante "${acomp.nombre}" pertenece oficialmente ante la Policía Nacional a "${res.officialName}". Por seguridad, la solicitud fue rechazada.`,
+                    message: `⚠️ Inconsistencia de identidad: El número de documento ${cleanDoc} del acompañante "${acomp.nombre}" no corresponde con los registros de certificación. Por seguridad, la solicitud fue rechazada.`,
                   });
                 }
               }

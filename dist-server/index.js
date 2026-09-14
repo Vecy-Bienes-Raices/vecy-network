@@ -19633,7 +19633,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
           valid: true,
           match: false,
           officialName: officialFormatted,
-          error: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${clean} pertenece oficialmente ante la Polic\xEDa Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevenci\xF3n de fraude, la solicitud queda bloqueada.`
+          error: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${clean} no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, por favor verifica el n\xFAmero de documento o corrige los nombres para que coincidan con la persona que asistir\xE1.`
         };
       }
     }
@@ -19641,7 +19641,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       valid: true,
       match: true,
       officialName: officialFormatted,
-      message: `\u2713 Identidad confirmada ante la Polic\xEDa Nacional de Colombia: ${officialFormatted}`
+      message: `\u2713 Identidad verificada y autenticada con \xE9xito: ${officialFormatted}`
     };
   }
   try {
@@ -19707,7 +19707,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
           valid: true,
           match: false,
           officialName: officialFormatted,
-          error: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${clean} pertenece oficialmente ante la Polic\xEDa Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevenci\xF3n de fraude, la solicitud queda bloqueada.`
+          error: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${clean} no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, por favor verifica el n\xFAmero de documento o corrige los nombres para que coincidan con la persona que asistir\xE1.`
         };
       }
     }
@@ -19715,7 +19715,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       valid: true,
       match: true,
       officialName: officialFormatted,
-      message: `\u2713 Identidad confirmada ante la Polic\xEDa Nacional de Colombia: ${officialFormatted}`
+      message: `\u2713 Identidad verificada y autenticada con \xE9xito: ${officialFormatted}`
     };
   }
   const tLower = (tipoDocumento || "").toLowerCase();
@@ -19724,7 +19724,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
     return {
       valid: false,
       match: false,
-      error: "No fue posible verificar la c\xE9dula ante la Polic\xEDa Nacional en este momento (tiempo de espera o servicio no disponible). Por favor reintente en unos segundos."
+      error: "No fue posible validar el documento en este momento. Por favor reintenta en unos segundos."
     };
   }
   return {
@@ -19854,7 +19854,7 @@ var agendaRouter = router({
               valid: true,
               match: false,
               officialName: officialFormatted,
-              error: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${cleanDoc} pertenece oficialmente ante la Polic\xEDa Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevenci\xF3n de fraude, la solicitud queda bloqueada.`
+              error: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, por favor verifica el n\xFAmero de documento o corrige los nombres para que coincidan con la persona que asistir\xE1.`
             }
           };
         }
@@ -19865,7 +19865,7 @@ var agendaRouter = router({
           valid: true,
           match: true,
           officialName: officialFormatted,
-          message: `\u2713 Identidad confirmada ante la Polic\xEDa Nacional de Colombia: ${officialFormatted}`
+          message: `\u2713 Identidad verificada y autenticada con \xE9xito: ${officialFormatted}`
         }
       };
     }
@@ -19892,14 +19892,14 @@ var agendaRouter = router({
         current.result = {
           valid: false,
           match: false,
-          error: err?.message || "Error durante la verificaci\xF3n de identidad"
+          error: err?.message || "Error durante la validaci\xF3n del documento"
         };
       }
     });
     return {
       status: "processing",
       jobId,
-      message: "Consulta enviada a la Polic\xEDa Nacional. Resolviendo captcha oficial..."
+      message: "Verificando autenticidad del documento en tiempo real..."
     };
   }),
   checkVerifyIdentity: publicProcedure.input(z8.object({ jobId: z8.string() })).query(async ({ input }) => {
@@ -19995,7 +19995,7 @@ var agendaRouter = router({
           if (!checkMatch(input.solicitante_nombre, res.officialName)) {
             throw new TRPCError6({
               code: "BAD_REQUEST",
-              message: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${cleanDoc} del solicitante pertenece oficialmente ante la Polic\xEDa Nacional a "${res.officialName}" y no a "${input.solicitante_nombre}". Por seguridad, la solicitud fue rechazada.`
+              message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del solicitante no corresponde a los nombres y apellidos indicados. Por seguridad, la solicitud fue rechazada.`
             });
           }
         }
@@ -20009,7 +20009,7 @@ var agendaRouter = router({
           if (!checkMatch(input.interesado_nombre, res.officialName)) {
             throw new TRPCError6({
               code: "BAD_REQUEST",
-              message: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${cleanDoc} del cliente presentado pertenece oficialmente ante la Polic\xEDa Nacional a "${res.officialName}" y no a "${input.interesado_nombre}". Por seguridad, la solicitud fue rechazada.`
+              message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del cliente presentado no corresponde al nombre indicado. Por seguridad, la solicitud fue rechazada.`
             });
           }
         }
@@ -20025,7 +20025,7 @@ var agendaRouter = router({
               if (!checkMatch(String(acomp.nombre), res.officialName)) {
                 throw new TRPCError6({
                   code: "BAD_REQUEST",
-                  message: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${cleanDoc} del acompa\xF1ante "${acomp.nombre}" pertenece oficialmente ante la Polic\xEDa Nacional a "${res.officialName}". Por seguridad, la solicitud fue rechazada.`
+                  message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del acompa\xF1ante "${acomp.nombre}" no corresponde con los registros de certificaci\xF3n. Por seguridad, la solicitud fue rechazada.`
                 });
               }
             }

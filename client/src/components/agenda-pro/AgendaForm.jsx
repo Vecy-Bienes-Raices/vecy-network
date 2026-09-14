@@ -203,7 +203,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
 
       const jobId = initRes.jobId;
       if (setProgressFeedback) {
-        setProgressFeedback('⏳ Consultando antecedentes Policía Nacional y resolviendo captcha oficial...');
+        setProgressFeedback('⏳ Verificando autenticidad del documento en tiempo real...');
       }
 
       // Sondeo reactivo (máximo 70 segundos, cada 2.5s)
@@ -219,7 +219,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
             return {
               valid: false,
               match: false,
-              error: check.error || check.result?.error || 'No se pudo completar la verificación de identidad.',
+              error: check.error || check.result?.error || 'No se pudo completar la verificación del documento.',
             };
           }
         } catch (pollErr) {
@@ -230,7 +230,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
       return {
         valid: false,
         match: false,
-        error: 'La verificación ante la Policía Nacional tardó más de lo esperado. Por favor intente nuevamente.',
+        error: 'La verificación del documento tardó más de lo esperado. Por favor intente nuevamente.',
       };
     } catch (err) {
       console.error('Error en runVerificationJob:', err);
@@ -370,7 +370,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
       );
 
       if (!data || data.valid === false || data.match === false) {
-        const errMsg = data?.error || `⚠️ El número de cédula ${cleanDoc} del acompañante no corresponde al nombre indicado. Por motivos de seguridad legal, solo se permiten datos reales verificados.`;
+        const errMsg = data?.error || `⚠️ El número de documento ${cleanDoc} del acompañante no corresponde a los nombres y apellidos indicados. Por favor verifica el documento o corrige los nombres para que coincidan con la persona que asistirá.`;
         setAcompErrors(prev => ({ ...prev, [index]: errMsg }));
         setAcompVerified(prev => ({ ...prev, [index]: false }));
         setAcompSuccessMsg(prev => ({ ...prev, [index]: null }));
@@ -383,7 +383,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
           return updated;
         });
         setAcompVerified(prev => ({ ...prev, [index]: true }));
-        setAcompSuccessMsg(prev => ({ ...prev, [index]: data.message || '✓ Identidad confirmada ante Policía Nacional' }));
+        setAcompSuccessMsg(prev => ({ ...prev, [index]: data.message || '✓ Documento verificado con éxito' }));
         setFormErrors(prev => {
           const updated = { ...prev };
           delete updated[`acomp_${index}_documento`];
@@ -1097,7 +1097,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
                     </span>
                   ) : (isValidatingDoc || isValidatingClientDoc || validatingAcompIndex !== null) ? (
                     <span className="flex items-center justify-center">
-                      <Spinner /> Verificando identidad ante Policía Nacional (2Captcha)...
+                      <Spinner /> Validando autenticidad del documento en tiempo real...
                     </span>
                   ) : (identityError || (showAgentSections && clientIdentityError) || Object.values(acompErrors).some(Boolean)) ? (
                     '⚠️ Bloqueado: Inconsistencia de identidad detectada'
