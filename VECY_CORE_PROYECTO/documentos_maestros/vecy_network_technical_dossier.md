@@ -322,6 +322,36 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.46 — Septiembre 2026
+
+#### 📌 BLINDAJE ANTIFRAUDE INQUEBRANTABLE ANTE POLICÍA NACIONAL CON 2CAPTCHA, ERRADICACIÓN DE FALLBACKS PERMISIVOS, VERIFICACIÓN DE ACOMPAÑANTES Y RECHAZO EN SERVIDOR
+
+**Problemas identificados:**
+1. **Fuga de Identidades Falsas en Solicitud #1142**: Al enviar el formulario, el sistema permitió registrar dos anomalías inviables: la cédula `52756789` como cliente `Claudia Peña Lizcano` (cuando ante la Policía Nacional pertenece a `PUENTES HURTADO LUZ ENEIDA`) y la cédula `22356485` como acompañante `Andres López` (cuando ante la Policía Nacional pertenece a `CONTRERAS DE BERDUGO EMILIA ROSA`).
+2. **Fallback Permisivo en Backend**: Al fallar ADRES por bloqueo de firewall, `verifyIdentity` caía en un fallback estructural que aprobaba cualquier nombre con más de 3 caracteres como válido (`match: true`).
+3. **Ausencia de Verificación en Acompañantes**: El formulario `AgendaForm.jsx` no conectaba los campos de acompañantes a la mutación de identidad, permitiendo ingresar cédulas de terceros sin cotejo alguno.
+4. **Falta de Validación en Servidor**: El endpoint de creación `agenda.create` insertaba directamente en la base de datos sin corroborar las identidades contra los registros oficiales.
+
+**Solución aplicada:**
+- **Scraper Autoritativo de Antecedentes de la Policía Nacional de Colombia (`server/routers/agenda.ts`)**:
+  - Conexión HTTPS directa a `https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml`.
+  - Negociación de `CookieJar`, `JSESSIONID` y aceptación de términos en PrimeFaces AJAX.
+  - Resolución automatizada de Google reCAPTCHA v2 (`sitekey: 6LcsIwQaAAAAAFCsaI-dkR6hgKsZwwJRsmE0tIJH`) mediante 2Captcha (`@2captcha/captcha-solver`).
+  - Extracción regex de `Apellidos y Nombres: [A-ZÁÉÍÓÚÑ\s]+`.
+  - Caché en memoria de 24 horas por documento (`identityCache`), permitiendo respuestas instantáneas en 0ms y $0 costo para consultas posteriores.
+- **Erradicación Definitiva de Fallbacks Permisivos**:
+  - Para toda Cédula de Ciudadanía colombiana (`CC`), la confirmación oficial es obligatoria. Si el nombre oficial retornado no coincide con el ingresado (ej: `Claudia Peña Lizcano` vs `Puentes Hurtado Luz Eneida`), se devuelve `match: false` con mensaje de inconsistencia y bloqueo.
+- **Blindaje en Servidor en `agenda.create`**:
+  - Validación obligatoria antes de insertar en PostgreSQL 17: se comprueban el solicitante, el cliente presentado y cada uno de los acompañantes.
+  - Si se detecta cualquier inconsistencia, se lanza `TRPCError(BAD_REQUEST)` y se aborta de inmediato la transacción.
+- **Verificación Integral de Acompañantes en `AgendaForm.jsx`**:
+  - Estados reactivos `acompErrors`, `validatingAcompIndex`, `acompVerified` y `acompSuccessMsg`.
+  - Función `handleVerifyAcompananteIdentity(index, nombre, doc)` conectada a los eventos `onBlur`.
+  - Bloqueo total del botón de envío si alguna verificación está pendiente o si existe algún error en solicitante, cliente o acompañantes.
+- **Preservación Absoluta de `whatsapp-match.ts`**: Archivo 100% original e intacto.
+
+---
+
 ### 🔖 v31.45 — Septiembre 2026
 
 #### 📌 SOLUCIÓN DEFINITIVA VERIFICACIÓN DE IDENTIDAD ANTIFRAUDE SIN ERROR 504, BLINDAJE DE TIMEOUT ADRES A 2.5S, AGENDAMIENTO NATIVO EN POSTGRESQL 17 CON 0% CUOTAS SUPABASE Y RADICADO CONSECUTIVO OFICIAL

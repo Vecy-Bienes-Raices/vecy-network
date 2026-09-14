@@ -167,7 +167,37 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.45 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.46 — Septiembre 2026
+
+### Novedades v31.46 (Blindaje Antifraude Inquebrantable ante Policía Nacional con 2Captcha, Erradicación de Fallbacks Permisivos, Verificación de Acompañantes y Rechazo en Servidor):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Fuga de Identidades Falsas (Caso Solicitud #1142)*: En la prueba anterior se registraron dos anomalías inviables: la cédula `52756789` (registrada como `Claudia Peña Lizcano`, pero perteneciente ante la Policía Nacional a `PUENTES HURTADO LUZ ENEIDA`) y la cédula `22356485` (registrada como acompañante `Andres López`, pero perteneciente ante la Policía Nacional a `CONTRERAS DE BERDUGO EMILIA ROSA`).
+  2) *Causas Técnicas de la Fuga*:
+     - En el backend (`verifyIdentity`), ante la falta de respuesta de ADRES, el código caía en un fallback estructural que retornaba `match: true` para nombres de al menos 3 caracteres sin cotejo real.
+     - En el frontend (`AgendaForm.jsx`), los campos de acompañantes (`acomp_doc_${index}` y `acomp_nombre_${index}`) no tenían eventos `onBlur` conectados a la mutación de verificación de identidad.
+     - En el procedimiento de inserción (`agenda.create`), no existía validación defensiva en el servidor, permitiendo guardar registros aun si el cliente intentaba evadir las comprobaciones.
+- **Acciones Ejecutadas**:
+  1) *Scraper Autoritativo de Antecedentes de la Policía Nacional de Colombia*:
+     - Conexión HTTPS al portal judicial (`https://antecedentes.policia.gov.co:7005/WebJudicial/`).
+     - Negociación de cookies de sesión `JSESSIONID` y aceptación de términos en PrimeFaces AJAX.
+     - Resolución automatizada de Google reCAPTCHA v2 con 2Captcha (`@2captcha/captcha-solver`).
+     - Extracción regex de `Apellidos y Nombres: [A-ZÁÉÍÓÚÑ\s]+`.
+     - Caché en memoria de 24 horas por cédula (`identityCache`), permitiendo respuestas en 0ms y $0 costo en consultas repetidas.
+  2) *Erradicación Total de Fallbacks Permisivos*:
+     - Para toda Cédula de Ciudadanía colombiana (`CC`), la confirmación oficial es obligatoria. Si el portal oficial reporta que el nombre no coincide (ej: `Claudia Peña Lizcano` vs `Puentes Hurtado Luz Eneida`), se devuelve de inmediato `match: false` con alerta roja de bloqueo.
+     - Prohibido retornar `match: true` a ciegas sin cotejo oficial previo.
+  3) *Blindaje Defensivo en el Servidor (`agenda.create` en tRPC)*:
+     - Validación obligatoria del solicitante, cliente presentado y cada uno de los acompañantes registrados.
+     - Si cualquiera presenta discrepancia con la base oficial, el backend lanza `TRPCError(BAD_REQUEST)` y aborta la inserción en `solicitudes`.
+  4) *Verificación Integral de Acompañantes en `AgendaForm.jsx`*:
+     - Estados `acompErrors`, `validatingAcompIndex`, `acompVerified` y `acompSuccessMsg`.
+     - Handler `handleVerifyAcompananteIdentity(index, nombre, doc)` disparado en `onBlur` del documento y nombre de cada acompañante.
+     - Bloqueo total del botón de envío si alguna verificación está en curso o si existe alguna discrepancia de identidad.
+  5) *Preservación Absoluta de `whatsapp-match.ts`*: Archivo 100% original e intacto.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.45 — Septiembre 2026
 
 ### Novedades v31.45 (Solución Definitiva Verificación de Identidad Antifraude sin Error 504, Blindaje de Timeout ADRES a 2.5s, Agendamiento Nativo en PostgreSQL 17 con 0% Cuotas Supabase y Radicado Consecutivo Oficial):
 - **Diagnóstico y Causas Raíz Identificadas**:

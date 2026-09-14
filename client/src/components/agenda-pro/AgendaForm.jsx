@@ -70,6 +70,13 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
   const [clientIdentityError, setClientIdentityError] = useState(null);
   const [clientIdentityVerified, setClientIdentityVerified] = useState(false);
   const [clientIdentitySuccessMsg, setClientIdentitySuccessMsg] = useState(null);
+
+  // Estados de verificación para Acompañantes adicionales
+  const [validatingAcompIndex, setValidatingAcompIndex] = useState(null);
+  const [acompErrors, setAcompErrors] = useState({});
+  const [acompVerified, setAcompVerified] = useState({});
+  const [acompSuccessMsg, setAcompSuccessMsg] = useState({});
+
   const securityHint = "Validación de seguridad: Este número se coteja mediante herramientas de alta tecnología para su comprobación y verificación de datos veraces.";
 
   const handleShare = () => {
@@ -279,6 +286,57 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
     }
   };
 
+  const handleVerifyAcompananteIdentity = async (index, nombreIngresado, numeroDocumento) => {
+    const cleanDoc = (numeroDocumento || '').replace(/[^0-9a-zA-Z]/g, '');
+    if (!cleanDoc || cleanDoc.length < 5) return;
+
+    setValidatingAcompIndex(index);
+    try {
+      const data = await verifyIdentityMutation.mutateAsync({
+        tipoDocumento: 'Cédula de ciudadanía',
+        numeroDocumento: cleanDoc,
+        nombreIngresado: (nombreIngresado || '').trim(),
+      });
+
+      if (!data || data.valid === false || data.match === false) {
+        const errMsg = data?.error || `⚠️ El número de cédula ${cleanDoc} del acompañante no corresponde al nombre indicado. Por motivos de seguridad legal, solo se permiten datos reales verificados.`;
+        setAcompErrors(prev => ({ ...prev, [index]: errMsg }));
+        setAcompVerified(prev => ({ ...prev, [index]: false }));
+        setAcompSuccessMsg(prev => ({ ...prev, [index]: null }));
+        setFormErrors(prev => ({ ...prev, [`acomp_${index}_documento`]: true }));
+        toast.error(errMsg);
+      } else {
+        setAcompErrors(prev => {
+          const updated = { ...prev };
+          delete updated[index];
+          return updated;
+        });
+        setAcompVerified(prev => ({ ...prev, [index]: true }));
+        setAcompSuccessMsg(prev => ({ ...prev, [index]: data.message || '✓ Identidad confirmada ante Policía Nacional' }));
+        setFormErrors(prev => {
+          const updated = { ...prev };
+          delete updated[`acomp_${index}_documento`];
+          return updated;
+        });
+
+        if (data.officialName && data.officialName.toLowerCase() !== (nombreIngresado || '').trim().toLowerCase()) {
+          setFormData(prev => {
+            const updated = [...prev.acompanantes];
+            if (updated[index]) {
+              updated[index] = { ...updated[index], nombre: data.officialName };
+            }
+            return { ...prev, acompanantes: updated };
+          });
+          toast.success(`✓ Acompañante verificado: ${data.officialName}`);
+        }
+      }
+    } catch (err) {
+      console.warn('Error verificando acompañante:', err);
+    } finally {
+      setValidatingAcompIndex(null);
+    }
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -440,6 +498,13 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
       return;
     }
 
+    if (Object.values(acompErrors).some(Boolean)) {
+      const firstError = Object.values(acompErrors).find(Boolean);
+      toast.error(firstError);
+      setError(firstError);
+      return;
+    }
+
     const validationErrors = validateForm(formData);
     if (Object.keys(validationErrors).length > 0) {
       const fieldErrorFlags = Object.keys(validationErrors).reduce((acc, key) => ({ ...acc, [key]: true }), {});
@@ -582,6 +647,12 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
             <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border border-vecy-border rounded-lg bg-black/20">
               <FormInput 
                 onChange={(e) => handleAcompananteChange(index, 'nombre', e.target.value)} 
+                onBlur={() => {
+                  const a = formData.acompanantes[index];
+                  if (a && a.documento && a.documento.length >= 5) {
+                    handleVerifyAcompananteIdentity(index, a.nombre, a.documento);
+                  }
+                }}
                 value={acomp.nombre} 
                 label={ `Nombre Acompañante ${index + 1}` } 
                 id={ `acomp_nombre_${index}` } 
@@ -593,6 +664,12 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
               />
               <FormInput 
                 onChange={(e) => handleAcompananteChange(index, 'documento', e.target.value.replace(/\D/g, ''))} 
+                onBlur={() => {
+                  const a = formData.acompanantes[index];
+                  if (a && a.documento && a.documento.length >= 5) {
+                    handleVerifyAcompananteIdentity(index, a.nombre, a.documento);
+                  }
+                }}
                 value={acomp.documento} 
                 label={ `Documento Acompañante ${index + 1}` } 
                 id={ `acomp_doc_${index}` } 
@@ -601,7 +678,10 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
                 pattern="[0-9]*" 
                 placeholder="Número de C.C." 
                 required 
-                error={!!formErrors[`acomp_${index}_documento`]} 
+                error={!!formErrors[`acomp_${index}_documento`] || !!acompErrors[index]} 
+                errorAlert={acompErrors[index]}
+                successBadge={acompSuccessMsg[index]}
+                isValidating={validatingAcompIndex === index}
                 hint={securityHint}
               />
               <div>
@@ -933,9 +1013,9 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
               <div className="mt-8 text-center">
                 <button 
                   type="submit" 
-                  disabled={isSubmitting || !!identityError || (showAgentSections && !!clientIdentityError)}
+                  disabled={isSubmitting || isValidatingDoc || isValidatingClientDoc || validatingAcompIndex !== null || !!identityError || (showAgentSections && !!clientIdentityError) || Object.values(acompErrors).some(Boolean)}
                   className={`w-full sm:w-auto px-10 py-3.5 font-extrabold uppercase tracking-widest text-xs rounded-xl transition-all transform hover:-translate-y-0.5 disabled:cursor-not-allowed ${
-                    (identityError || (showAgentSections && clientIdentityError))
+                    (identityError || (showAgentSections && clientIdentityError) || Object.values(acompErrors).some(Boolean))
                       ? 'bg-red-950/80 border-2 border-red-500/70 text-red-300 shadow-[0_0_20px_rgba(239,68,68,0.3)]'
                       : 'bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-black shadow-[0_0_20px_rgba(191,149,63,0.3)] hover:shadow-[0_0_30px_rgba(191,149,63,0.5)] disabled:opacity-50'
                   }`}
@@ -944,8 +1024,12 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
                     <span className="flex items-center justify-center">
                       <Spinner /> Procesando Solicitud...
                     </span>
-                  ) : (identityError || (showAgentSections && clientIdentityError)) ? (
-                    '⚠️ Bloqueado: Corrige el documento para agendar'
+                  ) : (isValidatingDoc || isValidatingClientDoc || validatingAcompIndex !== null) ? (
+                    <span className="flex items-center justify-center">
+                      <Spinner /> Verificando identidad ante Policía Nacional (2Captcha)...
+                    </span>
+                  ) : (identityError || (showAgentSections && clientIdentityError) || Object.values(acompErrors).some(Boolean)) ? (
+                    '⚠️ Bloqueado: Inconsistencia de identidad detectada'
                   ) : (
                     'Confirmar y Agendar Visita'
                   )}

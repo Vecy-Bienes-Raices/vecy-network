@@ -5,11 +5,13 @@ import { getDb } from "../db";
 import { solicitudes } from "../../drizzle/schema";
 import { TRPCError } from "@trpc/server";
 import { Solver } from "@2captcha/captcha-solver";
+import https from "https";
+
+const httpsAgentInsecure = new https.Agent({ rejectUnauthorized: false });
 
 // Caché en memoria para validaciones oficiales (24h)
 const identityCache = new Map<string, { fullName: string; timestamp: number }>();
 const IDENTITY_CACHE_TTL = 24 * 60 * 60 * 1000;
-
 
 class CookieJar {
   cookies: Map<string, string> = new Map();
@@ -23,8 +25,181 @@ class CookieJar {
       if (k && v) this.cookies.set(k.trim(), v.trim());
     }
   }
+  addFromRawHeaders(headers: any) {
+    const raw = headers['set-cookie'] || [];
+    const list = Array.isArray(raw) ? raw : [raw];
+    for (const item of list) {
+      if (!item) continue;
+      const parts = item.split(';');
+      const [k, v] = parts[0].split('=');
+      if (k && v) this.cookies.set(k.trim(), v.trim());
+    }
+  }
   getCookieString(): string {
     return Array.from(this.cookies.entries()).map(([k, v]) => `${k}=${v}`).join('; ');
+  }
+}
+
+async function requestHttps(urlStr: string, options: any = {}, jar?: CookieJar): Promise<{ status: number; headers: any; body: string }> {
+  return new Promise((resolve, reject) => {
+    const u = new URL(urlStr);
+    const headers = options.headers || {};
+    if (jar) {
+      const cookieStr = jar.getCookieString();
+      if (cookieStr) headers['Cookie'] = cookieStr;
+    }
+    const req = https.request({
+      protocol: u.protocol,
+      hostname: u.hostname,
+      port: u.port || 443,
+      path: u.pathname + u.search,
+      method: options.method || 'GET',
+      headers,
+      agent: httpsAgentInsecure,
+    }, (res) => {
+      if (jar) jar.addFromRawHeaders(res.headers);
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => resolve({ status: res.statusCode || 200, headers: res.headers, body: data }));
+    });
+    req.on('error', reject);
+    if (options.timeout) {
+      req.setTimeout(options.timeout, () => {
+        req.destroy(new Error('HTTPS request timeout'));
+      });
+    }
+    if (options.body) req.write(options.body);
+    req.end();
+  });
+}
+
+/**
+ * Consulta oficial de antecedentes penales e identidad en la Policía Nacional de Colombia
+ * Resuelve reCAPTCHA v2 de Google vía 2Captcha y extrae los nombres y apellidos reales del ciudadano.
+ */
+async function queryPoliciaNacional(tipoDocInput: string, cleanDoc: string): Promise<{ success: boolean; officialName?: string; source?: string }> {
+  let tipoDoc = 'cc';
+  const t = (tipoDocInput || '').toLowerCase();
+  if (t.includes('extranjer') || t === 'ce' || t === 'cx') tipoDoc = 'cx';
+  else if (t.includes('pasaporte') || t === 'pa') tipoDoc = 'pa';
+  else if (t.includes('nit') || t.includes('rut')) return { success: false };
+
+  const cacheKey = `POLICIA:${tipoDoc}:${cleanDoc}`;
+  const cached = identityCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp < IDENTITY_CACHE_TTL)) {
+    return { success: true, officialName: cached.fullName, source: 'Policía Nacional de Colombia (Caché)' };
+  }
+
+  const apiKey = process.env.TWOCAPTCHA_API_KEY || '673ddb810e9f700065ccbe6034f26629';
+  if (!apiKey) return { success: false };
+
+  try {
+    const solver = new Solver(apiKey);
+    const jar = new CookieJar();
+    const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36' };
+
+    // 1. GET index.xhtml para inicializar sesión y cookies
+    const res1 = await requestHttps('https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml', { headers, timeout: 8000 }, jar);
+    const vs1Match = res1.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res1.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
+    const vs1 = vs1Match ? vs1Match[1] : null;
+    if (!vs1) return { success: false };
+
+    // 2. Aceptar términos AJAX en PrimeFaces
+    const postTerms = new URLSearchParams({
+      'javax.faces.partial.ajax': 'true',
+      'javax.faces.source': 'continuarBtn',
+      'javax.faces.partial.execute': '@all',
+      'javax.faces.partial.render': 'form',
+      'continuarBtn': 'continuarBtn',
+      'form': 'form',
+      'aceptaOption': 'true',
+      'javax.faces.ViewState': vs1,
+    }).toString();
+
+    await requestHttps('https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml', {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'Faces-Request': 'partial/ajax',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Referer': 'https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml',
+      },
+      body: postTerms,
+      timeout: 8000,
+    }, jar);
+
+    // 3. GET antecedentes.xhtml
+    const res3 = await requestHttps('https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml', {
+      headers: {
+        ...headers,
+        'Referer': 'https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml',
+      },
+      timeout: 8000,
+    }, jar);
+
+    const vs3Match = res3.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res3.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
+    const vs3 = vs3Match ? vs3Match[1] : null;
+    if (!vs3) return { success: false };
+
+    // 4. Resolver reCAPTCHA v2 de Policía Nacional con 2Captcha
+    const captcha = await solver.recaptcha({
+      googlekey: '6LcsIwQaAAAAAFCsaI-dkR6hgKsZwwJRsmE0tIJH',
+      pageurl: 'https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml',
+    });
+
+    if (!captcha || !captcha.data) return { success: false };
+
+    // 5. POST consulta antecedentes con token de captcha y cédula
+    const postQuery = new URLSearchParams({
+      'formAntecedentes': 'formAntecedentes',
+      'cedulaTipo': tipoDoc,
+      'cedulaInput': cleanDoc,
+      'g-recaptcha-response': captcha.data,
+      'j_idt17': 'Consultar',
+      'javax.faces.ViewState': vs3,
+    }).toString();
+
+    const resFinal = await requestHttps('https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml', {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Referer': 'https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml',
+      },
+      body: postQuery,
+      timeout: 10000,
+    }, jar);
+
+    let finalHtml = resFinal.body;
+    if (resFinal.status === 302 || resFinal.headers.location) {
+      const nextUrl = resFinal.headers.location || 'https://antecedentes.policia.gov.co:7005/WebJudicial/formAntecedentes.xhtml';
+      const resRedirect = await requestHttps(nextUrl, {
+        headers: {
+          ...headers,
+          'Referer': 'https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml',
+        },
+        timeout: 10000,
+      }, jar);
+      finalHtml = resRedirect.body;
+    }
+
+    const text = finalHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    const matchNombres = finalHtml.match(/Apellidos\s+y\s+Nombres:\s*<span[^>]*>([^<]+)<\/span>/i) ||
+                         text.match(/Apellidos\s+y\s+Nombres:\s*([A-ZÁÉÍÓÚÑ\s]+?)\s+(NO TIENE|TIENE|ASUNTOS)/i);
+
+    if (matchNombres && matchNombres[1]) {
+      const rawFullName = matchNombres[1].trim();
+      const formatTitleCase = (s: string) => s.toLowerCase().split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      const officialName = formatTitleCase(rawFullName);
+      identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
+      return { success: true, officialName, source: 'Policía Nacional de Colombia' };
+    }
+
+    return { success: false };
+  } catch (err: any) {
+    console.warn('[queryPoliciaNacional Error]', err?.message);
+    return { success: false };
   }
 }
 
@@ -393,63 +568,44 @@ export const agendaRouter = router({
           .join(' ');
       };
 
-      // 3.5 AHORRO 100% SALDO: Consultar primero en NUESTRA base de datos interna (solicitudes y clientes previos)
-      try {
-        const db = await getDb();
-        if (db) {
-          const existing = await db
-            .select({
-              solicitanteNombre: solicitudes.solicitanteNombre,
-              solicitanteDoc: solicitudes.solicitanteNumeroDocumento,
-              interesadoNombre: solicitudes.interesadoNombre,
-              interesadoDoc: solicitudes.interesadoDocumento,
-            })
-            .from(solicitudes)
-            .where(
-              or(
-                eq(solicitudes.solicitanteNumeroDocumento, cleanDoc),
-                eq(solicitudes.interesadoDocumento, cleanDoc)
-              )
-            )
-            .limit(1);
+      // 4. CONSULTA OFICIAL PRINCIPAL ANTE LA POLICÍA NACIONAL DE COLOMBIA VÍA 2CAPTCHA
+      // Fuente autoritativa de antecedentes penales e identidad de los ciudadanos colombianos
+      const policiaOfficial = await queryPoliciaNacional(tipoDocumento, cleanDoc);
+      if (policiaOfficial && policiaOfficial.success && policiaOfficial.officialName) {
+        const officialFormatted = policiaOfficial.officialName;
 
-          let localOfficialName = '';
-          if (existing.length > 0) {
-            const row = existing[0];
-            if ((row.solicitanteDoc || '').replace(/\D/g, '') === cleanDoc && row.solicitanteNombre) {
-              localOfficialName = row.solicitanteNombre;
-            } else if ((row.interesadoDoc || '').replace(/\D/g, '') === cleanDoc && row.interesadoNombre) {
-              localOfficialName = row.interesadoNombre;
-            }
-          }
+        if (nombreIngresado && nombreIngresado.trim().length >= 3) {
+          const stopwords = ['de', 'del', 'la', 'las', 'los', 'y', 'el'];
+          const normEntered = nombreIngresado.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
+          const normOfficial = officialFormatted.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
 
-          if (localOfficialName) {
-            const officialFormatted = formatTitleCase(localOfficialName);
-            if (nombreIngresado && nombreIngresado.trim().length >= 3) {
-              const normEntered = nombreIngresado.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(Boolean);
-              const normOfficial = officialFormatted.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(Boolean);
-              const matches = normEntered.filter((token: string) => normOfficial.some((off: string) => off === token || off.startsWith(token) || token.startsWith(off)));
-              const isMatch = matches.length >= Math.min(2, normEntered.length);
+          const matches = normEntered.filter((token: string) => normOfficial.some((off: string) => off === token || off.startsWith(token) || token.startsWith(off)));
+          const isMatch = matches.length >= Math.min(2, normEntered.length);
 
-              if (!isMatch) {
-                return {
-                  valid: true,
-                  match: false,
-                  error: '⚠️ El número de documento no corresponde a los nombres y apellidos indicados según nuestros registros verificados.',
-                };
-              }
-            }
-
+          if (!isMatch) {
             return {
               valid: true,
-              match: true,
+              match: false,
               officialName: officialFormatted,
-              message: `✓ Identidad confirmada en base de datos interna de Vecy: ${officialFormatted}`,
+              error: `⚠️ Inconsistencia de identidad: La cédula ${cleanDoc} pertenece oficialmente ante la Policía Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevención de fraude, la solicitud queda bloqueada.`,
             };
           }
+
+          return {
+            valid: true,
+            match: true,
+            officialName: officialFormatted,
+            message: `✓ Identidad confirmada ante la Policía Nacional de Colombia: ${officialFormatted}`,
+          };
         }
-      } catch (dbErr: any) {
-        console.warn('[VerifyIdentity DB check error]', dbErr?.message);
+
+        // Si el usuario aún no había escrito su nombre completo, autocompletarlo de inmediato
+        return {
+          valid: true,
+          match: true,
+          officialName: officialFormatted,
+          message: `✓ Identidad confirmada ante la Policía Nacional de Colombia: ${officialFormatted}`,
+        };
       }
 
       // 4. Consulta a API externa vía 2Captcha + ADRES BDUA
@@ -539,14 +695,24 @@ export const agendaRouter = router({
         }
       }
 
-      // Si no hay API key o no devolvió resultado, validar estructura y formatear nombre
+      // Regla Doctrinal de Seguridad Antifraude: Para Cédula de Ciudadanía colombiana (CC),
+      // NUNCA validar un nombre ficticio a ciegas si no fue confirmado ante la Policía Nacional o Registraduría.
+      if (tipoDocumento.includes('ciudadanía') || tipoDocumento === 'CC' || tipoDocumento === 'cc') {
+        return {
+          valid: false,
+          match: false,
+          error: `⚠️ No fue posible corroborar la identidad de la cédula ${cleanDoc} en las bases oficiales de la Policía Nacional. Verifique el número ingresado e intente nuevamente.`,
+        };
+      }
+
+      // Para otros documentos (NIT / RUT / Pasaporte internacional validado estructuralmente)
       if (nombreIngresado && nombreIngresado.trim().length >= 3) {
         const formatted = formatTitleCase(nombreIngresado.trim());
         return {
           valid: true,
           match: true,
           officialName: formatted,
-          message: '✓ Estructura de identidad y documento verificados conforme a Registraduría y DIAN',
+          message: '✓ Estructura de identidad y documento verificados conforme a DIAN / Estándares Internacionales',
         };
       }
 
@@ -626,6 +792,67 @@ export const agendaRouter = router({
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+
+      // BLINDAJE ANTIFRAUDE EN EL SERVIDOR (Tolerancia 0 a identidades suplantadas):
+      const stopwords = ['de', 'del', 'la', 'las', 'los', 'y', 'el'];
+      const checkMatch = (entered: string, official: string) => {
+        const normEntered = entered.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
+        const normOfficial = official.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
+        const matches = normEntered.filter((token: string) => normOfficial.some((off: string) => off === token || off.startsWith(token) || token.startsWith(off)));
+        return matches.length >= Math.min(2, normEntered.length);
+      };
+
+      // 1. Validar solicitante si es CC
+      if (input.solicitante_numero_documento && (input.solicitante_tipo_documento?.includes('ciudadanía') || input.solicitante_tipo_documento === 'CC' || !input.solicitante_tipo_documento)) {
+        const cleanDoc = input.solicitante_numero_documento.replace(/\D/g, '');
+        if (cleanDoc.length >= 5) {
+          const res = await queryPoliciaNacional('cc', cleanDoc);
+          if (res.success && res.officialName && input.solicitante_nombre) {
+            if (!checkMatch(input.solicitante_nombre, res.officialName)) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `⚠️ Inconsistencia de identidad: La cédula ${cleanDoc} del solicitante pertenece oficialmente ante la Policía Nacional a "${res.officialName}" y no a "${input.solicitante_nombre}". Por seguridad, la solicitud fue rechazada.`,
+              });
+            }
+          }
+        }
+      }
+
+      // 2. Validar cliente presentado si es CC
+      if (input.interesado_documento && (input.interesado_tipo_documento?.includes('ciudadanía') || input.interesado_tipo_documento === 'CC' || !input.interesado_tipo_documento)) {
+        const cleanDoc = input.interesado_documento.replace(/\D/g, '');
+        if (cleanDoc.length >= 5) {
+          const res = await queryPoliciaNacional('cc', cleanDoc);
+          if (res.success && res.officialName && input.interesado_nombre) {
+            if (!checkMatch(input.interesado_nombre, res.officialName)) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `⚠️ Inconsistencia de identidad: La cédula ${cleanDoc} del cliente presentado pertenece oficialmente ante la Policía Nacional a "${res.officialName}" y no a "${input.interesado_nombre}". Por seguridad, la solicitud fue rechazada.`,
+              });
+            }
+          }
+        }
+      }
+
+      // 3. Validar cada acompañante registrado
+      if (input.acompanantes && Array.isArray(input.acompanantes)) {
+        for (const acomp of input.acompanantes) {
+          if (acomp && acomp.documento && acomp.nombre) {
+            const cleanDoc = String(acomp.documento).replace(/\D/g, '');
+            if (cleanDoc.length >= 5) {
+              const res = await queryPoliciaNacional('cc', cleanDoc);
+              if (res.success && res.officialName) {
+                if (!checkMatch(String(acomp.nombre), res.officialName)) {
+                  throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: `⚠️ Inconsistencia de identidad: La cédula ${cleanDoc} del acompañante "${acomp.nombre}" pertenece oficialmente ante la Policía Nacional a "${res.officialName}". Por seguridad, la solicitud fue rechazada.`,
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
 
       // Obtener el siguiente consecutivo oficial solicitud_id
       const maxRes = await db

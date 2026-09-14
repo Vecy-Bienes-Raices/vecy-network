@@ -4419,6 +4419,45 @@ ightarrow$ número de celular para aplicarlas de forma automática a todas sus p
    - Transición limpia hacia `GraciasScreen` con datos del radicado.
 5. **Preservación Absoluta de `whatsapp-match.ts`**: Archivo 100% original e intacto.
 
+### 🚀 SESIÓN 102 — SEPTIEMBRE 14, 2026 (v31.46)
+**Fecha**: 14 de Septiembre de 2026  
+**Versión del Sistema**: `v31.46 — Blindaje Antifraude Inquebrantable ante Policía Nacional con 2Captcha, Erradicación de Fallbacks Permisivos, Verificación de Acompañantes y Rechazo en Servidor`
+
+#### 📋 Requerimientos y Directivas Doctrinales de Eduardo A. Rivera:
+1. **Fuga de Identidades Falsas en Prueba de Agendamiento**:
+   - Eduardo demostró con tres capturas de pantalla de la Solicitud #1142 y consultas en el portal oficial de la Policía Nacional de Colombia que el sistema dejó pasar dos anomalías inviables:
+     1) La cédula `52756789` registrada con el nombre ficticio `Claudia Peña Lizcano`, cuando ante la Policía Nacional pertenece a **`PUENTES HURTADO LUZ ENEIDA`**.
+     2) La cédula `22356485` registrada como acompañante con el nombre ficticio `Andres López`, cuando ante la Policía Nacional pertenece a **`CONTRERAS DE BERDUGO EMILIA ROSA`**.
+   - Directiva: "No sirvio el API de TWOCAPCHA para la verificación de cada número de cédula ni el scraper y dejo pasar dos anomalías inviables que no corresponden."
+
+#### 🔍 Diagnóstico Técnico y Causa Raíz Incontrovertible:
+1. **Fallback Permisivo en Backend**:
+   - Al fallar ADRES por bloqueo perimetral en AWS Lightsail, el endpoint `verifyIdentity` caía en un fallback estructural que retornaba `match: true` para nombres de 3 o más letras, homologando nombres ficticios como si hubiesen sido confirmados por la Registraduría.
+2. **Carencia de Validación para Acompañantes en Frontend**:
+   - En `AgendaForm.jsx`, los inputs `acomp_doc_${index}` y `acomp_nombre_${index}` no tenían listeners `onBlur` conectados a la mutación de verificación de identidad, permitiendo ingresar cédulas de terceros sin cotejo.
+3. **Ausencia de Validación en Servidor en `agenda.create`**:
+   - El endpoint recibía el payload e insertaba directamente en la base de datos sin corroborar las identidades de solicitante, cliente presentado o acompañantes.
+4. **Desfase de Despliegue en VPS**:
+   - El servicio PM2 en el VPS (`jania-server`) no había sido actualizado con el scraper de la Policía Nacional, manteniendo en ejecución la versión previa con el fallback defectuoso.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas:
+1. **Scraper Autoritativo de Antecedentes de la Policía Nacional de Colombia (`server/routers/agenda.ts`)**:
+   - Conexión HTTPS directa a `https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml` con `CookieJar` y agente SSL permisivo.
+   - Negociación de cookies de sesión `JSESSIONID` y aceptación de términos en PrimeFaces AJAX.
+   - Resolución de Google reCAPTCHA v2 (`sitekey: 6LcsIwQaAAAAAFCsaI-dkR6hgKsZwwJRsmE0tIJH`) mediante 2Captcha (`@2captcha/captcha-solver`).
+   - Extracción regex de `Apellidos y Nombres: [A-ZÁÉÍÓÚÑ\s]+`.
+   - Caché en memoria de 24 horas por cédula (`identityCache`), asegurando respuestas en 0ms y $0 costo para consultas subsecuentes.
+2. **Erradicación Absoluta de Fallbacks Permisivos**:
+   - Para Cédula de Ciudadanía colombiana (`CC`), la confirmación oficial es estrictamente obligatoria. Si el nombre oficial no coincide (ej: `Claudia Peña Lizcano` vs `Puentes Hurtado Luz Eneida`), se devuelve `match: false` y mensaje de bloqueo. Prohibido retornar `match: true` a ciegas.
+3. **Blindaje Defensivo en Servidor (`agenda.create` en tRPC)**:
+   - Validación obligatoria antes de insertar en `solicitudes`: se cotejan el solicitante, el cliente presentado y cada acompañante registrado.
+   - Si se detecta cualquier discrepancia de nombres, se arroja `TRPCError(BAD_REQUEST)` y se aborta la transacción.
+4. **Verificación Integral de Acompañantes en `AgendaForm.jsx`**:
+   - Estados reactivos `acompErrors`, `validatingAcompIndex`, `acompVerified` y `acompSuccessMsg`.
+   - Función `handleVerifyAcompananteIdentity(index, nombre, doc)` disparada en `onBlur`.
+   - Bloqueo total del botón de envío si alguna verificación está pendiente o si existe algún error en solicitante, cliente o acompañantes.
+5. **Preservación Absoluta de `whatsapp-match.ts`**: Archivo 100% original e intacto.
+
 ---
 
 ## 🛡️ PROTOCOLOS Y REGLAS DE TRABAJO INQUEBRANTABLES

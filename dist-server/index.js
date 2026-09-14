@@ -19395,6 +19395,8 @@ init_schema();
 import { desc as desc5, ilike as ilike2, or as or3, sql as sql8, eq as eq14 } from "drizzle-orm";
 import { TRPCError as TRPCError6 } from "@trpc/server";
 import { Solver } from "@2captcha/captcha-solver";
+import https from "https";
+var httpsAgentInsecure = new https.Agent({ rejectUnauthorized: false });
 var identityCache = /* @__PURE__ */ new Map();
 var IDENTITY_CACHE_TTL = 24 * 60 * 60 * 1e3;
 var CookieJar = class {
@@ -19408,10 +19410,155 @@ var CookieJar = class {
       if (k && v) this.cookies.set(k.trim(), v.trim());
     }
   }
+  addFromRawHeaders(headers) {
+    const raw = headers["set-cookie"] || [];
+    const list = Array.isArray(raw) ? raw : [raw];
+    for (const item of list) {
+      if (!item) continue;
+      const parts = item.split(";");
+      const [k, v] = parts[0].split("=");
+      if (k && v) this.cookies.set(k.trim(), v.trim());
+    }
+  }
   getCookieString() {
     return Array.from(this.cookies.entries()).map(([k, v]) => `${k}=${v}`).join("; ");
   }
 };
+async function requestHttps(urlStr, options = {}, jar) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(urlStr);
+    const headers = options.headers || {};
+    if (jar) {
+      const cookieStr = jar.getCookieString();
+      if (cookieStr) headers["Cookie"] = cookieStr;
+    }
+    const req = https.request({
+      protocol: u.protocol,
+      hostname: u.hostname,
+      port: u.port || 443,
+      path: u.pathname + u.search,
+      method: options.method || "GET",
+      headers,
+      agent: httpsAgentInsecure
+    }, (res) => {
+      if (jar) jar.addFromRawHeaders(res.headers);
+      let data = "";
+      res.on("data", (chunk) => data += chunk);
+      res.on("end", () => resolve({ status: res.statusCode || 200, headers: res.headers, body: data }));
+    });
+    req.on("error", reject);
+    if (options.timeout) {
+      req.setTimeout(options.timeout, () => {
+        req.destroy(new Error("HTTPS request timeout"));
+      });
+    }
+    if (options.body) req.write(options.body);
+    req.end();
+  });
+}
+async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
+  let tipoDoc = "cc";
+  const t2 = (tipoDocInput || "").toLowerCase();
+  if (t2.includes("extranjer") || t2 === "ce" || t2 === "cx") tipoDoc = "cx";
+  else if (t2.includes("pasaporte") || t2 === "pa") tipoDoc = "pa";
+  else if (t2.includes("nit") || t2.includes("rut")) return { success: false };
+  const cacheKey = `POLICIA:${tipoDoc}:${cleanDoc}`;
+  const cached = identityCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL) {
+    return { success: true, officialName: cached.fullName, source: "Polic\xEDa Nacional de Colombia (Cach\xE9)" };
+  }
+  const apiKey = process.env.TWOCAPTCHA_API_KEY || "673ddb810e9f700065ccbe6034f26629";
+  if (!apiKey) return { success: false };
+  try {
+    const solver = new Solver(apiKey);
+    const jar = new CookieJar();
+    const headers = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36" };
+    const res1 = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml", { headers, timeout: 8e3 }, jar);
+    const vs1Match = res1.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res1.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
+    const vs1 = vs1Match ? vs1Match[1] : null;
+    if (!vs1) return { success: false };
+    const postTerms = new URLSearchParams({
+      "javax.faces.partial.ajax": "true",
+      "javax.faces.source": "continuarBtn",
+      "javax.faces.partial.execute": "@all",
+      "javax.faces.partial.render": "form",
+      "continuarBtn": "continuarBtn",
+      "form": "form",
+      "aceptaOption": "true",
+      "javax.faces.ViewState": vs1
+    }).toString();
+    await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml", {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "Faces-Request": "partial/ajax",
+        "X-Requested-With": "XMLHttpRequest",
+        "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml"
+      },
+      body: postTerms,
+      timeout: 8e3
+    }, jar);
+    const res3 = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml", {
+      headers: {
+        ...headers,
+        "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml"
+      },
+      timeout: 8e3
+    }, jar);
+    const vs3Match = res3.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res3.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
+    const vs3 = vs3Match ? vs3Match[1] : null;
+    if (!vs3) return { success: false };
+    const captcha = await solver.recaptcha({
+      googlekey: "6LcsIwQaAAAAAFCsaI-dkR6hgKsZwwJRsmE0tIJH",
+      pageurl: "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
+    });
+    if (!captcha || !captcha.data) return { success: false };
+    const postQuery = new URLSearchParams({
+      "formAntecedentes": "formAntecedentes",
+      "cedulaTipo": tipoDoc,
+      "cedulaInput": cleanDoc,
+      "g-recaptcha-response": captcha.data,
+      "j_idt17": "Consultar",
+      "javax.faces.ViewState": vs3
+    }).toString();
+    const resFinal = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml", {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
+      },
+      body: postQuery,
+      timeout: 1e4
+    }, jar);
+    let finalHtml = resFinal.body;
+    if (resFinal.status === 302 || resFinal.headers.location) {
+      const nextUrl = resFinal.headers.location || "https://antecedentes.policia.gov.co:7005/WebJudicial/formAntecedentes.xhtml";
+      const resRedirect = await requestHttps(nextUrl, {
+        headers: {
+          ...headers,
+          "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
+        },
+        timeout: 1e4
+      }, jar);
+      finalHtml = resRedirect.body;
+    }
+    const text2 = finalHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    const matchNombres = finalHtml.match(/Apellidos\s+y\s+Nombres:\s*<span[^>]*>([^<]+)<\/span>/i) || text2.match(/Apellidos\s+y\s+Nombres:\s*([A-ZÁÉÍÓÚÑ\s]+?)\s+(NO TIENE|TIENE|ASUNTOS)/i);
+    if (matchNombres && matchNombres[1]) {
+      const rawFullName = matchNombres[1].trim();
+      const formatTitleCase = (s) => s.toLowerCase().split(/\s+/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+      const officialName = formatTitleCase(rawFullName);
+      identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
+      return { success: true, officialName, source: "Polic\xEDa Nacional de Colombia" };
+    }
+    return { success: false };
+  } catch (err) {
+    console.warn("[queryPoliciaNacional Error]", err?.message);
+    return { success: false };
+  }
+}
 async function queryOfficialAdres(tipoDocInput, cleanDoc) {
   let tipoDoc = "CC";
   const t2 = (tipoDocInput || "").toLowerCase();
@@ -19715,54 +19862,36 @@ var agendaRouter = router({
     const formatTitleCase = (str) => {
       return str.toLowerCase().split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
     };
-    try {
-      const db = await getDb();
-      if (db) {
-        const existing = await db.select({
-          solicitanteNombre: solicitudes.solicitanteNombre,
-          solicitanteDoc: solicitudes.solicitanteNumeroDocumento,
-          interesadoNombre: solicitudes.interesadoNombre,
-          interesadoDoc: solicitudes.interesadoDocumento
-        }).from(solicitudes).where(
-          or3(
-            eq14(solicitudes.solicitanteNumeroDocumento, cleanDoc),
-            eq14(solicitudes.interesadoDocumento, cleanDoc)
-          )
-        ).limit(1);
-        let localOfficialName = "";
-        if (existing.length > 0) {
-          const row = existing[0];
-          if ((row.solicitanteDoc || "").replace(/\D/g, "") === cleanDoc && row.solicitanteNombre) {
-            localOfficialName = row.solicitanteNombre;
-          } else if ((row.interesadoDoc || "").replace(/\D/g, "") === cleanDoc && row.interesadoNombre) {
-            localOfficialName = row.interesadoNombre;
-          }
-        }
-        if (localOfficialName) {
-          const officialFormatted = formatTitleCase(localOfficialName);
-          if (nombreIngresado && nombreIngresado.trim().length >= 3) {
-            const normEntered = nombreIngresado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter(Boolean);
-            const normOfficial = officialFormatted.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter(Boolean);
-            const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
-            const isMatch = matches.length >= Math.min(2, normEntered.length);
-            if (!isMatch) {
-              return {
-                valid: true,
-                match: false,
-                error: "\u26A0\uFE0F El n\xFAmero de documento no corresponde a los nombres y apellidos indicados seg\xFAn nuestros registros verificados."
-              };
-            }
-          }
+    const policiaOfficial = await queryPoliciaNacional(tipoDocumento, cleanDoc);
+    if (policiaOfficial && policiaOfficial.success && policiaOfficial.officialName) {
+      const officialFormatted = policiaOfficial.officialName;
+      if (nombreIngresado && nombreIngresado.trim().length >= 3) {
+        const stopwords = ["de", "del", "la", "las", "los", "y", "el"];
+        const normEntered = nombreIngresado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
+        const normOfficial = officialFormatted.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
+        const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
+        const isMatch = matches.length >= Math.min(2, normEntered.length);
+        if (!isMatch) {
           return {
             valid: true,
-            match: true,
+            match: false,
             officialName: officialFormatted,
-            message: `\u2713 Identidad confirmada en base de datos interna de Vecy: ${officialFormatted}`
+            error: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${cleanDoc} pertenece oficialmente ante la Polic\xEDa Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevenci\xF3n de fraude, la solicitud queda bloqueada.`
           };
         }
+        return {
+          valid: true,
+          match: true,
+          officialName: officialFormatted,
+          message: `\u2713 Identidad confirmada ante la Polic\xEDa Nacional de Colombia: ${officialFormatted}`
+        };
       }
-    } catch (dbErr) {
-      console.warn("[VerifyIdentity DB check error]", dbErr?.message);
+      return {
+        valid: true,
+        match: true,
+        officialName: officialFormatted,
+        message: `\u2713 Identidad confirmada ante la Polic\xEDa Nacional de Colombia: ${officialFormatted}`
+      };
     }
     const adresOfficial = await queryOfficialAdres(tipoDocumento, cleanDoc);
     if (adresOfficial && adresOfficial.success && adresOfficial.officialName) {
@@ -19835,13 +19964,20 @@ var agendaRouter = router({
         console.error("[VerifyIdentity API Error]", err?.message);
       }
     }
+    if (tipoDocumento.includes("ciudadan\xEDa") || tipoDocumento === "CC" || tipoDocumento === "cc") {
+      return {
+        valid: false,
+        match: false,
+        error: `\u26A0\uFE0F No fue posible corroborar la identidad de la c\xE9dula ${cleanDoc} en las bases oficiales de la Polic\xEDa Nacional. Verifique el n\xFAmero ingresado e intente nuevamente.`
+      };
+    }
     if (nombreIngresado && nombreIngresado.trim().length >= 3) {
       const formatted = formatTitleCase(nombreIngresado.trim());
       return {
         valid: true,
         match: true,
         officialName: formatted,
-        message: "\u2713 Estructura de identidad y documento verificados conforme a Registradur\xEDa y DIAN"
+        message: "\u2713 Estructura de identidad y documento verificados conforme a DIAN / Est\xE1ndares Internacionales"
       };
     }
     return {
@@ -19907,6 +20043,59 @@ var agendaRouter = router({
   ).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+    const stopwords = ["de", "del", "la", "las", "los", "y", "el"];
+    const checkMatch = (entered, official) => {
+      const normEntered = entered.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
+      const normOfficial = official.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
+      const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
+      return matches.length >= Math.min(2, normEntered.length);
+    };
+    if (input.solicitante_numero_documento && (input.solicitante_tipo_documento?.includes("ciudadan\xEDa") || input.solicitante_tipo_documento === "CC" || !input.solicitante_tipo_documento)) {
+      const cleanDoc = input.solicitante_numero_documento.replace(/\D/g, "");
+      if (cleanDoc.length >= 5) {
+        const res = await queryPoliciaNacional("cc", cleanDoc);
+        if (res.success && res.officialName && input.solicitante_nombre) {
+          if (!checkMatch(input.solicitante_nombre, res.officialName)) {
+            throw new TRPCError6({
+              code: "BAD_REQUEST",
+              message: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${cleanDoc} del solicitante pertenece oficialmente ante la Polic\xEDa Nacional a "${res.officialName}" y no a "${input.solicitante_nombre}". Por seguridad, la solicitud fue rechazada.`
+            });
+          }
+        }
+      }
+    }
+    if (input.interesado_documento && (input.interesado_tipo_documento?.includes("ciudadan\xEDa") || input.interesado_tipo_documento === "CC" || !input.interesado_tipo_documento)) {
+      const cleanDoc = input.interesado_documento.replace(/\D/g, "");
+      if (cleanDoc.length >= 5) {
+        const res = await queryPoliciaNacional("cc", cleanDoc);
+        if (res.success && res.officialName && input.interesado_nombre) {
+          if (!checkMatch(input.interesado_nombre, res.officialName)) {
+            throw new TRPCError6({
+              code: "BAD_REQUEST",
+              message: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${cleanDoc} del cliente presentado pertenece oficialmente ante la Polic\xEDa Nacional a "${res.officialName}" y no a "${input.interesado_nombre}". Por seguridad, la solicitud fue rechazada.`
+            });
+          }
+        }
+      }
+    }
+    if (input.acompanantes && Array.isArray(input.acompanantes)) {
+      for (const acomp of input.acompanantes) {
+        if (acomp && acomp.documento && acomp.nombre) {
+          const cleanDoc = String(acomp.documento).replace(/\D/g, "");
+          if (cleanDoc.length >= 5) {
+            const res = await queryPoliciaNacional("cc", cleanDoc);
+            if (res.success && res.officialName) {
+              if (!checkMatch(String(acomp.nombre), res.officialName)) {
+                throw new TRPCError6({
+                  code: "BAD_REQUEST",
+                  message: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${cleanDoc} del acompa\xF1ante "${acomp.nombre}" pertenece oficialmente ante la Polic\xEDa Nacional a "${res.officialName}". Por seguridad, la solicitud fue rechazada.`
+                });
+              }
+            }
+          }
+        }
+      }
+    }
     const maxRes = await db.select({ maxId: sql8`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
     const nextSolicitudId = Number(maxRes[0]?.maxId || 0) + 1;
     const inserted = await db.insert(solicitudes).values({
