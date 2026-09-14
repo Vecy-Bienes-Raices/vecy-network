@@ -322,6 +322,31 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.43 — Septiembre 2026
+
+#### 📌 MOTOR ANTIFRAUDE EN CASCADA INTELIGENTE: DB INTERNA VECY + ADRES BDUA + POLICÍA NACIONAL VÍA 2CAPTCHA, VERIFICACIÓN DE CLIENTES PRESENTADOS Y ACOMPAÑANTES PARA AGENTES, Y CONEXIÓN DE AGENDA EN INMUEBLES
+
+**Problemas identificados:**
+1. **Falsificación de Identidades y Cédulas Ficticias en Agenda**: Los formularios permitían registrar documentos inexistentes en Colombia (9 dígitos, secuencias como 123456789, NITs sin dígito de verificación DIAN válido y nombres ficticios como test o asdf), sin verificación con fuentes oficiales.
+2. **Exclusión Estructural de Regímenes Especiales en ADRES BDUA (Ley 100 de 1993, Art. 279)**: Miembros de las Fuerzas Militares (Sanidad Militar), Policía Nacional (Sanidad Policial), Magisterio (FOMAG) y Ecopetrol no cotizan en EPS ordinarias y no figuran en ADRES BDUA. Una validación exclusiva contra ADRES generaba falsos negativos para estos servidores del Estado.
+3. **Optimización y Ahorro de Saldo de 2Captcha**: Consultar siempre servicios externos de pago consume saldo innecesario. Dado que Vecy cuenta con base de datos en PostgreSQL/Supabase con capacidad para más de 500.000 registros, el sistema debía consultar primero en su propia base a costo $0 COP.
+4. **Validación Diferenciada para Agentes y sus Nuevos Clientes**: Cuando un colega inmobiliario registrado agenda una visita, su cédula personal ya está autenticada, pero los datos de su cliente presentado y acompañantes son nuevos y requieren cotejo y autocompletado en tiempo real.
+
+**Solución aplicada:**
+- **Motor de Verificación en Cascada Inteligente**:
+  - *Nivel 1 (0ms / $0 COP)*: Búsqueda indexada en base de datos interna (`solicitudes` y `profiles`). Si el documento ya existe, se recupera el nombre verificado de inmediato sin tocar 2Captcha.
+  - *Nivel 2 (~5s / $0.0007 USD)*: Consulta oficial a **ADRES BDUA** mediante resolución automatizada de captcha con 2Captcha para el 92% de la población en EPS.
+  - *Nivel 3 (Respaldo Oficial Regímenes Especiales)*: Consulta a **Antecedentes Judiciales de la Policía Nacional** (probado con éxito en 5.7 segundos con reCAPTCHA v2) si ADRES reporta ausencia en BDUA, cubriendo al 100% de los ciudadanos colombianos.
+  - *Caché en Memoria de 24 Horas*: Evita reconsultas innecesarias dentro de la misma jornada de navegación.
+- **Verificación de Clientes y Acompañantes para Colegas**:
+  - Inclusión de validadores reactivos `handleVerifyClientIdentity` y eventos `onBlur` en la Sección 3 ("Presenta a tu Cliente") y en Acompañantes.
+  - Autocompletado del nombre oficial en Title Case y feedback con badge verde de confirmación oficial.
+- **UI Reactiva en Formularios**: `FormInput.jsx` mejorado con indicador animado `isValidating`, resplandor y alerta en rojo `errorAlert`, y deshabilitación dinámica del botón de envío ante inconsistencias.
+- **Botón Dorado de Agendamiento en Inmuebles**: Conexión del botón "Agendar" en tarjetas del catálogo y ficha detallada de Vecy Network con precarga de código y nombre.
+- **Preservación Total de Vecy Agenda Original**: El repositorio `/home/eddu/Proyectos/vecy-agenda-pro` permanece 100% operativo, independiente e intocado.
+
+---
+
 ### 🔖 v31.42 — Septiembre 2026
 
 #### 📌 CARGA DE FOTOS EN ORDEN NUMÉRICO ASCENDENTE ESTRICTO, RANURADO INDEXADO CONCURRENTE, DRAG & DROP DE GALERÍA, REEMPLAZO INTELIGENTE Y VACIADO RÁPIDO

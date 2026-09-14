@@ -148,9 +148,9 @@ export default function PropertyDetail() {
                      const refCode = generateRefCode(property.zone || '', (property as any).zoneRank ?? 1);
                      navigate(`/agenda/${property.id}?nombre=${encodeURIComponent(property.name)}&codigo=${encodeURIComponent(refCode)}`);
                  }}
-                 className="py-4 px-8 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all duration-300 rounded-xl flex items-center justify-center gap-3 font-bold tracking-widest text-xs uppercase"
+                 className="btn-gold flex items-center justify-center gap-3 px-8 py-4 shadow-[0_0_25px_rgba(191,149,63,0.4)] hover:shadow-[0_0_35px_rgba(191,149,63,0.6)] hover:scale-[1.03] transition-all font-black tracking-widest text-xs uppercase text-black"
               >
-                <CalendarCheck className="w-5 h-5"/> AGENDAR VISITA
+                <CalendarCheck className="w-5 h-5 text-black animate-pulse"/> AGENDAR VISITA
               </button>
 
               {!isStealth && (

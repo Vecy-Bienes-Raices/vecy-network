@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@2captcha/captcha-solver':
+        specifier: ^1.3.9
+        version: 1.3.9
       '@aws-sdk/client-s3':
         specifier: ^3.693.0
         version: 3.1049.0
@@ -353,6 +356,9 @@ importers:
         version: 2.1.9(@types/node@24.12.4)(lightningcss@1.32.0)
 
 packages:
+
+  '@2captcha/captcha-solver@1.3.9':
+    resolution: {integrity: sha512-Yntd06InZP4uvAWk0upazuMy4BlPAa0T0oxOShKtRbYd9FX+E+9kav2ymLNCnM28qnmvgxE/UrlAqnl3xHSKTw==}
 
   '@antfu/install-pkg@1.1.0':
     resolution: {integrity: sha512-MGQsmw10ZyI+EJo45CdSER4zEb+p31LpDAFp2Z3gkSd1yqVZGi0Ebx++YTEMonJy4oChEMLsxZ64j8FH6sSqtQ==}
@@ -6196,6 +6202,12 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
+
+  '@2captcha/captcha-solver@1.3.9':
+    dependencies:
+      node-fetch: 2.7.0
+    transitivePeerDependencies:
+      - encoding
 
   '@antfu/install-pkg@1.1.0':
     dependencies:

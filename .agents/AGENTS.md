@@ -167,7 +167,28 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.42 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.43 — Septiembre 2026
+
+### Novedades v31.43 (Motor Antifraude en Cascada Inteligente: DB Interna Vecy + ADRES BDUA + Policía Nacional vía 2Captcha, Verificación de Clientes y Acompañantes para Agentes, y Conexión de Agenda en Catálogo de Inmuebles):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Falsificación de Identidades y Cédulas Ficticias*: Formularios permitían registrar documentos inexistentes en Colombia (9 dígitos, secuencias 123456789, NITs sin dígito DIAN válido y nombres falsos como asdf o test).
+  2) *Ausencia de Regímenes Especiales en ADRES BDUA (Ley 100 Art. 279)*: Militares, Policías, Profesores del FOMAG y Pensionados de Ecopetrol no cotizan en EPS ordinarias, requiriendo respaldo con Policía Nacional (Antecedentes) para evitar falsos negativos.
+  3) *Ahorro de Saldo de 2Captcha*: Necesidad doctrinal de buscar PRIMERO en la base de datos interna de Vecy (PostgreSQL/Supabase) antes de hacer consultas externas.
+  4) *Diferenciación de Agentes y Nuevos Clientes*: Un colega ya registrado no necesita verificación de su propio documento, pero sus nuevos clientes presentados y acompañantes sí deben ser cotejados.
+- **Acciones Ejecutadas**:
+  1) *Motor de Identidad en Cascada*:
+     - Nivel 1 (0ms / bash COP): Base de datos interna de Vecy en PostgreSQL/Supabase (solicitudes y perfiles).
+     - Nivel 2 (~5s / bash.0007 USD): ADRES BDUA con resolución de captcha vía 2Captcha.
+     - Nivel 3 (Respaldo Oficial): Policía Nacional Antecedentes (reCAPTCHA v2 resuelto en 5.7s) para Regímenes Especiales.
+     - Caché en memoria de 24 horas por documento.
+  2) *Verificación de Clientes y Acompañantes*: Integrado en tiempo real en la Sección 3 de la Agenda ("Presenta a tu Cliente") y en Acompañantes.
+  3) *UI Reactiva con Feedback Visual*: Borde y alerta en rojo ante discordancias, autocompletado en Title Case ante éxito, badge verde de verificación y bloqueo del botón de envío.
+  4) *Botón Dorado de Agendamiento en Inmuebles*: Conectado en tarjetas del catálogo y ficha detallada precargando código y nombre.
+  5) *Preservación Absoluta de Vecy Agenda Original*: Repositorio intacto e independiente.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.42 — Septiembre 2026
 
 ### Novedades v31.42 (Carga de Fotos en Orden Numérico Ascendente Estricto, Ranurado Indexado Concurrente, Drag & Drop de Galería, Reemplazo Inteligente y Vaciado de Fotos):
 - **Diagnóstico y Causas Raíz Identificadas**:

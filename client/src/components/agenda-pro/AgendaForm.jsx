@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import FormInput from './FormInput';
 import { Share2, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { trpc } from '@/lib/trpc';
 
 // Lazy load del componente de firma para no cargar la librería 'signature_pad' al inicio
 const SignaturePadComponent = React.lazy(() => import('./SignaturePad'));
@@ -57,6 +58,17 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
   const [session, setSession] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const verifyIdentityMutation = trpc.agenda.verifyIdentity.useMutation();
+  const [isValidatingDoc, setIsValidatingDoc] = useState(false);
+  const [identityError, setIdentityError] = useState(null);
+  const [identityVerified, setIdentityVerified] = useState(false);
+  const [identitySuccessMsg, setIdentitySuccessMsg] = useState(null);
+
+  // Estados de verificación para el Cliente Presentado por el Agente
+  const [isValidatingClientDoc, setIsValidatingClientDoc] = useState(false);
+  const [clientIdentityError, setClientIdentityError] = useState(null);
+  const [clientIdentityVerified, setClientIdentityVerified] = useState(false);
+  const [clientIdentitySuccessMsg, setClientIdentitySuccessMsg] = useState(null);
   const securityHint = "Validación de seguridad: Este número se coteja mediante herramientas de alta tecnología para su comprobación y verificación de datos veraces.";
 
   const handleShare = () => {
@@ -156,6 +168,115 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
       }));
     }
   }, [propertyName, propertyCode]);
+
+  const handleVerifyIdentity = async (nombreIngresado, numeroDocumento, tipoDocumento) => {
+    const cleanDoc = (numeroDocumento || '').replace(/[^0-9a-zA-Z]/g, '');
+    if (!cleanDoc || cleanDoc.length < 5 || !tipoDocumento) {
+      return;
+    }
+
+    setIsValidatingDoc(true);
+    try {
+      const data = await verifyIdentityMutation.mutateAsync({
+        tipoDocumento,
+        numeroDocumento: cleanDoc,
+        nombreIngresado: (nombreIngresado || '').trim(),
+      });
+
+      if (!data || data.valid === false || data.match === false) {
+        const errMsg = data?.error || '⚠️ El número de documento no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, solo se permiten datos reales verificados.';
+        setIdentityError(errMsg);
+        setIdentityVerified(false);
+        setIdentitySuccessMsg(null);
+        setFormErrors(prev => ({ ...prev, solicitante_numero_documento: true }));
+        toast.error(errMsg);
+      } else {
+        setIdentityError(null);
+        setIdentityVerified(true);
+        setIdentitySuccessMsg(data.message || '✓ Identidad confirmada ante Registraduría / DIAN');
+        setFormErrors(prev => {
+          const updated = { ...prev };
+          delete updated.solicitante_numero_documento;
+          return updated;
+        });
+
+        // Autocompletar el nombre oficial si la API de verificación lo devolvió
+        if (data.officialName && data.officialName.toLowerCase() !== (nombreIngresado || '').trim().toLowerCase()) {
+          setFormData(prev => ({ ...prev, solicitante_nombre: data.officialName }));
+          toast.success(`✓ Nombre verificado y autocompletado: ${data.officialName}`);
+        }
+      }
+    } catch (err) {
+      console.warn('Error verificando identidad:', err);
+    } finally {
+      setIsValidatingDoc(false);
+    }
+  };
+
+  const handleDocBlur = () => {
+    if (formData.solicitante_numero_documento && formData.solicitante_numero_documento.length >= 5) {
+      handleVerifyIdentity(formData.solicitante_nombre, formData.solicitante_numero_documento, formData.solicitante_tipo_documento);
+    }
+  };
+
+  const handleVerifyClientIdentity = async (nombreIngresado, numeroDocumento, tipoDocumento) => {
+    const cleanDoc = (numeroDocumento || '').replace(/[^0-9a-zA-Z]/g, '');
+    if (!cleanDoc || cleanDoc.length < 5) return;
+
+    setIsValidatingClientDoc(true);
+    try {
+      const data = await verifyIdentityMutation.mutateAsync({
+        tipoDocumento: tipoDocumento || 'Cédula de ciudadanía',
+        numeroDocumento: cleanDoc,
+        nombreIngresado: (nombreIngresado || '').trim(),
+      });
+
+      if (!data || data.valid === false || data.match === false) {
+        const errMsg = data?.error || '⚠️ El número de documento no corresponde al nombre del cliente presentado. Por motivos de seguridad, solo se permiten datos reales verificados.';
+        setClientIdentityError(errMsg);
+        setClientIdentityVerified(false);
+        setClientIdentitySuccessMsg(null);
+        setFormErrors(prev => ({ ...prev, interesado_documento: true }));
+        toast.error(errMsg);
+      } else {
+        setClientIdentityError(null);
+        setClientIdentityVerified(true);
+        setClientIdentitySuccessMsg(data.message || '✓ Identidad del cliente confirmada');
+        setFormErrors(prev => {
+          const updated = { ...prev };
+          delete updated.interesado_documento;
+          return updated;
+        });
+
+        if (data.officialName && data.officialName.toLowerCase() !== (nombreIngresado || '').trim().toLowerCase()) {
+          setFormData(prev => ({ ...prev, interesado_nombre: data.officialName }));
+          toast.success(`✓ Cliente verificado: ${data.officialName}`);
+        }
+      }
+    } catch (err) {
+      console.warn('Error verificando cliente presentado:', err);
+    } finally {
+      setIsValidatingClientDoc(false);
+    }
+  };
+
+  const handleClientDocBlur = () => {
+    if (formData.interesado_documento && formData.interesado_documento.length >= 5) {
+      handleVerifyClientIdentity(formData.interesado_nombre, formData.interesado_documento, formData.interesado_tipo_documento);
+    }
+  };
+
+  const handleClientNameBlur = () => {
+    if (formData.interesado_documento && formData.interesado_documento.length >= 5) {
+      handleVerifyClientIdentity(formData.interesado_nombre, formData.interesado_documento, formData.interesado_tipo_documento);
+    }
+  };
+
+  const handleNameBlur = () => {
+    if (formData.solicitante_numero_documento && formData.solicitante_numero_documento.length >= 5) {
+      handleVerifyIdentity(formData.solicitante_nombre, formData.solicitante_numero_documento, formData.solicitante_tipo_documento);
+    }
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -302,6 +423,14 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
     setError('');
     setFormErrors({});
 
+    if (identityError) {
+      toast.error(identityError);
+      setError(identityError);
+      const el = document.getElementById('solicitante_numero_documento');
+      if (el) el.focus();
+      return;
+    }
+
     const validationErrors = validateForm(formData);
     if (Object.keys(validationErrors).length > 0) {
       const fieldErrorFlags = Object.keys(validationErrors).reduce((acc, key) => ({ ...acc, [key]: true }), {});
@@ -409,10 +538,11 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
           <h4 className="text-md font-semibold text-soft-gold mb-4">Datos del Cliente Principal que Presentas</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <CustomSelect label="Tipo de Cliente" name="tipo_cliente" value={formData.tipo_cliente} onChange={handleChange} options={tipoClienteOptions} />
-            <FormInput onChange={handleChange} value={formData.interesado_nombre} label="Nombre del Cliente / Razón Social" id="interesado_nombre" name="interesado_nombre" type="text" placeholder="Ej: María Gómez" required error={!!formErrors.interesado_nombre} />
+            <FormInput onChange={handleChange} onBlur={handleClientNameBlur} value={formData.interesado_nombre} label="Nombre del Cliente / Razón Social" id="interesado_nombre" name="interesado_nombre" type="text" placeholder="Ej: María Gómez" required error={!!formErrors.interesado_nombre} />
             <CustomSelect label="Tipo de Documento del Cliente" name="interesado_tipo_documento" value={formData.interesado_tipo_documento} onChange={handleChange} options={tipoDocumentoClienteOptions} placeholder="Selecciona..." error={!!formErrors.interesado_tipo_documento} />
             <FormInput 
               onChange={handleChange} 
+              onBlur={handleClientDocBlur}
               value={formData.interesado_documento} 
               label="Número de Documento del Cliente" 
               id="interesado_documento" 
@@ -422,7 +552,10 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
               placeholder="Ej: 987654321" 
               required 
               maxLength="20" 
-              error={!!formErrors.interesado_documento} 
+              error={!!formErrors.interesado_documento || !!clientIdentityError} 
+              errorAlert={clientIdentityError}
+              successBadge={clientIdentitySuccessMsg}
+              isValidating={isValidatingClientDoc}
               hint={securityHint}
             />
           </div>
@@ -607,7 +740,18 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
           {consentGiven && (
             <>
               <fieldset className="border-t-2 border-soft-gold pt-6 mb-10"><legend className="text-xl font-semibold section-legend-gold px-2 -ml-2">1. Tus Datos</legend><div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                <FormInput onChange={handleChange} value={formData.solicitante_nombre} label="Nombre Completo o Razón Social" id="solicitante_nombre" name="solicitante_nombre" type="text" placeholder="Ej: Juan Pérez o Constructora XYZ" required error={!!formErrors.solicitante_nombre} />
+                <FormInput 
+                  onChange={handleChange} 
+                  onBlur={handleNameBlur}
+                  value={formData.solicitante_nombre} 
+                  label="Nombre Completo o Razón Social" 
+                  id="solicitante_nombre" 
+                  name="solicitante_nombre" 
+                  type="text" 
+                  placeholder="Ej: Juan Pérez o Constructora XYZ" 
+                  required 
+                  error={!!formErrors.solicitante_nombre} 
+                />
                 <CustomSelect label="Tipo de Persona" name="solicitante_tipo_persona" value={formData.solicitante_tipo_persona} onChange={handleChange} options={tipoPersonaOptions} placeholder="Selecciona..." error={!!formErrors.solicitante_tipo_persona} />
                 <CustomSelect label="Perfil" name="solicitante_perfil" value={formData.solicitante_perfil} onChange={handleChange} options={perfilOptions} placeholder="Selecciona tu perfil..." error={!!formErrors.solicitante_perfil} />
                 <FormInput onChange={handleChange} value={formData.solicitante_email} label="Correo Electrónico" id="solicitante_email" name="solicitante_email" type="email" placeholder="tucorreo@ejemplo.com" required error={!!formErrors.solicitante_email} />
@@ -615,6 +759,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
                 <CustomSelect label="Tipo de Documento" name="solicitante_tipo_documento" value={formData.solicitante_tipo_documento} onChange={handleChange} options={tipoDocumentoOptions} placeholder="Selecciona..." error={!!formErrors.solicitante_tipo_documento} />
                 <FormInput 
                   onChange={handleChange} 
+                  onBlur={handleDocBlur}
                   value={formData.solicitante_numero_documento} 
                   label={isCompanyDoc ? "Número de Identificación (NIT/RUT)" : "Número de Documento"} 
                   id="solicitante_numero_documento" 
@@ -624,7 +769,10 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
                   placeholder={isCompanyDoc ? "Ej: 900.123.456-7" : "Ej: 1234567890"} 
                   required 
                   maxLength="20" 
-                  error={!!formErrors.solicitante_numero_documento} 
+                  error={!!formErrors.solicitante_numero_documento || !!identityError} 
+                  errorAlert={identityError}
+                  successBadge={identitySuccessMsg}
+                  isValidating={isValidatingDoc}
                   hint={securityHint}
                 />
                 {formData.solicitante_tipo_persona === 'Persona Jurídica' && (
@@ -772,13 +920,19 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
               <div className="mt-8 text-center">
                 <button 
                   type="submit" 
-                  disabled={isSubmitting} 
-                  className="w-full sm:w-auto px-10 py-3.5 bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-black font-extrabold uppercase tracking-widest text-xs rounded-xl shadow-[0_0_20px_rgba(191,149,63,0.3)] hover:shadow-[0_0_30px_rgba(191,149,63,0.5)] transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSubmitting || !!identityError}
+                  className={`w-full sm:w-auto px-10 py-3.5 font-extrabold uppercase tracking-widest text-xs rounded-xl transition-all transform hover:-translate-y-0.5 disabled:cursor-not-allowed ${
+                    identityError
+                      ? 'bg-red-950/80 border-2 border-red-500/70 text-red-300 shadow-[0_0_20px_rgba(239,68,68,0.3)]'
+                      : 'bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-black shadow-[0_0_20px_rgba(191,149,63,0.3)] hover:shadow-[0_0_30px_rgba(191,149,63,0.5)] disabled:opacity-50'
+                  }`}
                 >
                   {isSubmitting ? (
                     <span className="flex items-center justify-center">
                       <Spinner /> Procesando Solicitud...
                     </span>
+                  ) : identityError ? (
+                    '⚠️ Bloqueado: Corrige el documento para agendar'
                   ) : (
                     'Confirmar y Agendar Visita'
                   )}

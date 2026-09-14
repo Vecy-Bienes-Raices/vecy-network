@@ -219,7 +219,24 @@ export default function PropertyCard({
           )}
         </div>
 
-        <button className="btn-gold-outline w-full text-[10px] py-3.5 tracking-[0.2em] font-black uppercase" onClick={() => navigate(`/property/${id}`)}>Ver Detalles Pro</button>
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          <button 
+            className="btn-gold text-[9px] py-3 tracking-widest font-black uppercase flex items-center justify-center gap-1.5 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform"
+            onClick={(e) => {
+              e.stopPropagation();
+              const code = `ID-BOG-${(zone || locality || 'VECY').slice(0, 3).toUpperCase()}-${id}`;
+              navigate(`/agenda/${id}?nombre=${encodeURIComponent(formattedTitle || name)}&codigo=${encodeURIComponent(code)}`);
+            }}
+          >
+            <Calendar size={13} className="text-black" /> Agendar
+          </button>
+          <button 
+            className="btn-gold-outline text-[9px] py-3 tracking-widest font-black uppercase flex items-center justify-center" 
+            onClick={() => navigate(`/property/${id}`)}
+          >
+            Ver Detalles
+          </button>
+        </div>
       </div>
     </div>
   );
