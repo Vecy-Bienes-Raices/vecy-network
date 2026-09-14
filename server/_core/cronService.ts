@@ -478,9 +478,9 @@ export function initCronScheduler() {
       const day = new Date(now.toLocaleString('en-US', { timeZone: 'America/Bogota' })).getDay();
       const dateKey = getBogotaDateString(now);
 
-      // 1. CATCH-UP MATUTINO (10:00 AM - 14:00 PM Bogotá) -> Grupo 2 + Canal
+      // 1. CATCH-UP MATUTINO (10:00 AM - 22:00 PM Bogotá) -> Grupo 2 + Canal
       const tipoKey = DAY_TIP_MAP[day];
-      if (tipoKey && hour >= 10 && hour < 14) {
+      if (tipoKey && hour >= 10 && hour < 22) {
         const tipRunKey = `tip_${tipoKey}_${dateKey}`;
         const check = canPublishNow('grupo2', tipRunKey, false);
         if (check.allowed) {
@@ -489,8 +489,8 @@ export function initCronScheduler() {
         }
       }
 
-      // 2. CATCH-UP VESPERTINO (16:30 PM - 18:30 PM Bogotá) -> Grupo 3 + Canal (Miércoles y Sábados)
-      if ((day === 3 || day === 6) && ((hour === 16 && min >= 30) || (hour > 16 && hour < 19))) {
+      // 2. CATCH-UP VESPERTINO (16:30 PM - 22:00 PM Bogotá) -> Grupo 3 + Canal (Miércoles y Sábados)
+      if ((day === 3 || day === 6) && ((hour === 16 && min >= 30) || (hour > 16 && hour < 22))) {
         const g3RunKey = `grupo3_proyecto_${dateKey}`;
         const check = canPublishNow('grupo3', g3RunKey, false);
         if (check.allowed) {

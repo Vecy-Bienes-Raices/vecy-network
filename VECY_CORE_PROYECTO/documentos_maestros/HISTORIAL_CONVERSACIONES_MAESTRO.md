@@ -50,10 +50,50 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.44 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.47 — Septiembre 2026
 
-### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 00:00 (Hora Colombia UTC-5)
-**Versión**: `v31.44` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 14:20 (Hora Colombia UTC-5)
+**Versión**: `v31.47` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel + Vecy Agenda Pro (`vecy-agenda-pro`)
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"Agente, tu me prometiste que si me registraba en TWOCAPTCHA podríamos acceder a la página de la policía o en su defecto a la de adres y poder verificar los números de cédula al momento de colocarlos en el formulario de VECY AGENDA allí directamente en ese proyecto y en el VECY AGENDA que tenemos instituido y construido como copia fiel del original en VECY NETWORK exactamente en el catálogo. Pero veo que eso no funciona. Por otra parte parece como que JANIA no ha seguido publicando en el grupo2 y canal de Whatsapp todos los días como quedamos. No se que pasa con lo mandado."*
+
+#### 🔍 Diagnóstico Técnico Profundo & Causas Raíz Identificadas:
+1. **Error 504 Gateway Timeout por resolución reCAPTCHA v2 de Policía Nacional con 2Captcha**:
+   - Resolver el reCAPTCHA v2 de la Policía Nacional con 2Captcha toma entre 18 y 30 segundos.
+   - Tanto Vercel Serverless Functions como los proxies de red cortan las conexiones síncronas a los 10 o 15 segundos con error `504 Gateway Timeout`. Esto rompía la verificación en el frontend y congelaba los formularios.
+2. **Desfase y Fallbacks Permisivos en Vecy Agenda Pro (`vecy-agenda-pro`)**:
+   - En `/home/eddu/Proyectos/vecy-agenda-pro/api/verify-identity.js`, el código intentaba conectarse a ADRES BDUA (`aplicaciones.adres.gov.co`), que tiene un firewall gubernamental bloqueando las IPs salientes.
+   - Al fallar ADRES, caía en un fallback que devolvía `match: true` para cualquier nombre de al menos 3 caracteres sin cotejo real ante las autoridades.
+   - En `vecy-agenda-pro/vercel.json`, la regla de rewrite `/(.*)` capturaba indebidamente las peticiones a `/api/` devolviendo el `index.html`.
+3. **Auditoría de JanIA en WhatsApp (Grupo 2 y Canal Oficial)**:
+   - Al inspeccionar los logs en el VPS (`13.140.149.144`), se confirmó que hoy a las 10:42 AM JanIA sí ejecutó y despachó exitosamente el tip matutino al Grupo 2 (`120363417740040773@g.us`) y al Canal oficial (`120363399889853806@newsletter`) con audio TTS e imagen 3D.
+   - Sin embargo, la ventana de reintento/failsafe minutero en `server/_core/cronService.ts` estaba restringida rígidamente a `hour >= 10 && hour < 14` (10:00 AM a 2:00 PM). Si por reinicios de VPS, despliegues o desconexión de Baileys el bot se recuperaba después de las 14:00, el catch-up se bloqueaba para todo el resto del día.
+
+#### 🛠️ Acciones Técnicas Ejecutadas:
+1. **Arquitectura Asíncrona Job + Polling en Backend (`server/routers/agenda.ts`)**:
+   - Creación de `agenda.startVerifyIdentity`: Responde en <100ms con `jobId` y `status: 'processing'`, delegando la resolución pesada de 2Captcha y el scraper de la Policía Nacional a un proceso en segundo plano (o en 0ms si la cédula ya está en caché).
+   - Creación de `agenda.checkVerifyIdentity`: Procedimiento ligero de sondeo (<10ms) que devuelve `{ status: 'processing' | 'completed' | 'error', result }`.
+   - Implementación de `identityJobs` en memoria con recolección automática de basura (TTL 10 min) y `identityCache` de 24 horas.
+2. **Integración Reactiva en `AgendaForm.jsx` (Vecy Network)**:
+   - Función `runVerificationJob` que inicia el job y realiza sondeo cada 2.5s con mensajes en tiempo real: `⏳ Consultando antecedentes Policía Nacional y resolviendo captcha oficial...`.
+   - Conexión del sondeo a los 3 niveles: Solicitante, Cliente Presentado por Agente y Acompañantes.
+   - Bloqueo defensivo total del botón de envío si se detecta cualquier discrepancia entre el documento y el nombre oficial devuelto por la Policía Nacional.
+3. **Sincronización Total en `vecy-agenda-pro`**:
+   - Corrección de `vercel.json` con rewrite defensivo `/((?!api/).*)` para evitar intercepción de la API.
+   - Reemplazo completo de `api/verify-identity.js` erradicando fallbacks permisivos y conectándolo al motor autoritativo del VPS con soporte Job + Polling.
+   - Actualización de `AgendaForm.jsx` con `runVerificationJob` y despliegue exitoso en GitHub (`Vecy-Bienes-Raices/vecy-agenda-pro`).
+4. **Blindaje de Publicaciones de JanIA (`server/_core/cronService.ts`)**:
+   - Ampliación de la ventana de catch-up matutino de `10:00 - 14:00` a `10:00 - 22:00` (10:00 PM Bogotá).
+   - Ampliación de la ventana vespertina de Grupo 3 (Miércoles y Sábados) de `16:30 - 18:30` a `16:30 - 22:00`.
+   - Garantía de que JanIA publicará su tip diario siempre, recuperándose de cualquier eventualidad o reinicio del VPS antes de la hora del silencio nocturno (10:30 PM).
+5. **Preservación Estricta de la Arquitectura**:
+   - Archivo `server/_core/whatsapp-match.ts` 100% intacto y sin tocar.
+   - Compilación limpia con `npm run check` (cero errores TypeScript) y `npm run build` (Rollup + Vite + Esbuild listos).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.46 — Septiembre 2026
 
 #### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
 1. *"Bueno creo que ya sabes qué estavamos haciendo con el otro agente, pero necesito que retomemos el tema que venimos desarrollando pues no veo el inmueble que subí ayer y el diseño de la tienda y las fichas técnicas está muy mal hecho, quisiera saber de diseño realmente. Por ejemplo si vess en la imagen los botones de la derecha pertenecen es a la página o pestaña de requerimientos o Demandas y no a la de Ofertas o Inmuebles. Y creo que así de manera más corta se deberían llamar estas secciones y los botones o pestañas del menú (OFERTAS / DEMANDAS). Bueno mira todo lo que hemos hecho desde VECY AGENDA, necesito verlo acá en VECY NETWORK y poderlo probar, por eso te comparto mi última conversación allí en la otra ventana de antigrávity en el proyecto VECY AGENDA:"*

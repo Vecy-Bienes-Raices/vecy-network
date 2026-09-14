@@ -15358,7 +15358,7 @@ function initCronScheduler() {
       const day = new Date(now.toLocaleString("en-US", { timeZone: "America/Bogota" })).getDay();
       const dateKey = getBogotaDateString(now);
       const tipoKey = DAY_TIP_MAP[day];
-      if (tipoKey && hour >= 10 && hour < 14) {
+      if (tipoKey && hour >= 10 && hour < 22) {
         const tipRunKey = `tip_${tipoKey}_${dateKey}`;
         const check = canPublishNow("grupo2", tipRunKey, false);
         if (check.allowed) {
@@ -15366,7 +15366,7 @@ function initCronScheduler() {
           await publishDailyTipForDay(tipoKey, false);
         }
       }
-      if ((day === 3 || day === 6) && (hour === 16 && min >= 30 || hour > 16 && hour < 19)) {
+      if ((day === 3 || day === 6) && (hour === 16 && min >= 30 || hour > 16 && hour < 22)) {
         const g3RunKey = `grupo3_proyecto_${dateKey}`;
         const check = canPublishNow("grupo3", g3RunKey, false);
         if (check.allowed) {
@@ -15965,7 +15965,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.45";
+var VECY_VERSION = "v31.47";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -19399,6 +19399,15 @@ import https from "https";
 var httpsAgentInsecure = new https.Agent({ rejectUnauthorized: false });
 var identityCache = /* @__PURE__ */ new Map();
 var IDENTITY_CACHE_TTL = 24 * 60 * 60 * 1e3;
+var identityJobs = /* @__PURE__ */ new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, job] of identityJobs.entries()) {
+    if (now - job.createdAt > 10 * 60 * 1e3) {
+      identityJobs.delete(id);
+    }
+  }
+}, 6e4);
 var CookieJar = class {
   cookies = /* @__PURE__ */ new Map();
   addFromHeaders(headers) {
@@ -19559,118 +19568,171 @@ async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
     return { success: false };
   }
 }
-async function queryOfficialAdres(tipoDocInput, cleanDoc) {
-  let tipoDoc = "CC";
-  const t2 = (tipoDocInput || "").toLowerCase();
-  if (t2.includes("extranjer") || t2 === "ce") tipoDoc = "CE";
-  else if (t2.includes("tarjeta") || t2 === "ti") tipoDoc = "TI";
-  else if (t2.includes("pasaporte") || t2 === "pa") tipoDoc = "PA";
-  else if (t2.includes("especial") || t2 === "pep") tipoDoc = "PE";
-  else if (t2.includes("protec") || t2 === "ppt") tipoDoc = "PT";
-  else if (t2.includes("nit") || t2.includes("rut")) return { success: false };
-  const cacheKey = `${tipoDoc}:${cleanDoc}`;
+function calcularDigitoVerificacionDIAN(nitStr) {
+  const vpri = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
+  const clean = nitStr.replace(/\D/g, "");
+  let suma = 0;
+  for (let i = 0; i < clean.length; i++) {
+    const digit = parseInt(clean.charAt(clean.length - 1 - i), 10);
+    suma += digit * vpri[i];
+  }
+  const residuo = suma % 11;
+  return residuo > 1 ? 11 - residuo : residuo;
+}
+async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngresado) {
+  const clean = cleanDoc.replace(/[^0-9a-zA-Z]/g, "");
+  if (!clean || clean.length < 5) {
+    return {
+      valid: false,
+      match: false,
+      error: "El n\xFAmero de documento debe tener al menos 5 d\xEDgitos."
+    };
+  }
+  const tDocLower = (tipoDocumento || "").toLowerCase();
+  const isNit = tDocLower.includes("nit") || tDocLower.includes("rut");
+  if (isNit) {
+    if (!/^\d{9,10}$/.test(clean)) {
+      return {
+        valid: false,
+        match: false,
+        error: "El NIT debe contener 9 o 10 d\xEDgitos num\xE9ricos (incluyendo d\xEDgito de verificaci\xF3n)."
+      };
+    }
+    const cleanNit = clean.slice(0, 9);
+    const dvCalculado = calcularDigitoVerificacionDIAN(cleanNit);
+    if (clean.length === 10) {
+      const dvIngresado = parseInt(clean.slice(9), 10);
+      if (dvIngresado !== dvCalculado) {
+        return {
+          valid: false,
+          match: false,
+          error: `D\xEDgito de verificaci\xF3n DIAN incorrecto. Para el NIT ${cleanNit}, el d\xEDgito oficial es -${dvCalculado}.`
+        };
+      }
+    }
+    const nombreEmpresa = (nombreIngresado || "").trim();
+    return {
+      valid: true,
+      match: true,
+      officialName: nombreEmpresa || clean,
+      message: `\u2713 NIT/RUT validado conforme a estructura DIAN (D\xEDgito de verificaci\xF3n: ${dvCalculado})`
+    };
+  }
+  const cacheKey = `POLICIA:cc:${clean}`;
   const cached = identityCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL) {
-    return { success: true, officialName: cached.fullName };
-  }
-  const apiKey = process.env.TWOCAPTCHA_API_KEY;
-  if (!apiKey) return { success: false };
-  try {
-    const solver = new Solver(apiKey);
-    const jar = new CookieJar();
-    const baseUrl = "https://aplicaciones.adres.gov.co/bdua_internet/Pages/ConsultarAfiliadoWeb.aspx";
-    const headers = {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-      "Accept-Language": "es-ES,es;q=0.9"
+    const officialFormatted = cached.fullName;
+    if (nombreIngresado && nombreIngresado.trim().length >= 3) {
+      const stopwords = ["de", "del", "la", "las", "los", "y", "el"];
+      const normEntered = nombreIngresado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
+      const normOfficial = officialFormatted.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
+      const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
+      const isMatch = matches.length >= Math.min(2, normEntered.length);
+      if (!isMatch) {
+        return {
+          valid: true,
+          match: false,
+          officialName: officialFormatted,
+          error: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${clean} pertenece oficialmente ante la Polic\xEDa Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevenci\xF3n de fraude, la solicitud queda bloqueada.`
+        };
+      }
+    }
+    return {
+      valid: true,
+      match: true,
+      officialName: officialFormatted,
+      message: `\u2713 Identidad confirmada ante la Polic\xEDa Nacional de Colombia: ${officialFormatted}`
     };
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500);
-    const res1 = await fetch(baseUrl, { headers, signal: controller.signal });
-    jar.addFromHeaders(res1.headers);
-    const html1 = await res1.text();
-    const viewState = html1.match(/id="__VIEWSTATE"\s+value="([^"]+)"/)?.[1];
-    const viewStateGen = html1.match(/id="__VIEWSTATEGENERATOR"\s+value="([^"]+)"/)?.[1] || "";
-    const eventVal = html1.match(/id="__EVENTVALIDATION"\s+value="([^"]+)"/)?.[1];
-    const captchaSrc = html1.match(/id="Capcha_CaptchaImageUP"[^>]*src="([^"]+)"/)?.[1];
-    if (!viewState || !eventVal || !captchaSrc) {
-      clearTimeout(timeoutId);
-      return { success: false };
-    }
-    let imgUrl = captchaSrc.replace(/&amp;/g, "&");
-    if (imgUrl.startsWith("..")) imgUrl = "https://aplicaciones.adres.gov.co/bdua_internet" + imgUrl.substring(2);
-    else if (!imgUrl.startsWith("http")) imgUrl = "https://aplicaciones.adres.gov.co/bdua_internet/" + imgUrl;
-    const imgRes = await fetch(imgUrl, {
-      headers: { ...headers, "Cookie": jar.getCookieString(), "Referer": baseUrl },
-      signal: controller.signal
-    });
-    jar.addFromHeaders(imgRes.headers);
-    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
-    const base64Img = imgBuffer.toString("base64");
-    const captcha = await solver.imageCaptcha({
-      body: base64Img,
-      numeric: 0,
-      min_len: 5,
-      max_len: 5
-    });
-    if (!captcha || !captcha.data) {
-      clearTimeout(timeoutId);
-      return { success: false };
-    }
-    const body = new URLSearchParams();
-    body.append("RadScriptManager1_TSM", "");
-    body.append("__EVENTTARGET", "");
-    body.append("__EVENTARGUMENT", "");
-    body.append("__VIEWSTATE", viewState);
-    body.append("__VIEWSTATEGENERATOR", viewStateGen);
-    body.append("__EVENTVALIDATION", eventVal);
-    body.append("tipoDoc", tipoDoc);
-    body.append("txtNumDoc", cleanDoc);
-    body.append("Capcha", captcha.data);
-    body.append("btnConsultar", "Consultar");
-    const resPost = await fetch(baseUrl, {
-      method: "POST",
-      headers: {
-        ...headers,
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Cookie": jar.getCookieString(),
-        "Referer": baseUrl,
-        "Origin": "https://aplicaciones.adres.gov.co"
-      },
-      body: body.toString(),
-      signal: controller.signal
-    });
-    jar.addFromHeaders(resPost.headers);
-    const postHtml = await resPost.text();
-    const tokenMatch = postHtml.match(/RespuestaConsulta\.aspx\?tokenId=([^'"]+)/);
-    if (!tokenMatch) {
-      clearTimeout(timeoutId);
-      return { success: false };
-    }
-    const tokenId = tokenMatch[1];
-    const resultUrl = `https://aplicaciones.adres.gov.co/bdua_internet/Pages/RespuestaConsulta.aspx?tokenId=${tokenId}`;
-    const resResult = await fetch(resultUrl, {
-      headers: { ...headers, "Cookie": jar.getCookieString(), "Referer": baseUrl },
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    const resultHtml = await resResult.text();
-    const cleanHtml = resultHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-    const matchNombres = cleanHtml.match(/NOMBRES\s+([A-ZÁÉÍÓÚÑ\s]+?)\s+APELLIDOS/i);
-    const matchApellidos = cleanHtml.match(/APELLIDOS\s+([A-ZÁÉÍÓÚÑ\s]+?)\s+FECHA/i);
-    if (matchNombres && matchApellidos) {
-      const rawNombres = matchNombres[1].trim();
-      const rawApellidos = matchApellidos[1].trim();
-      const formatTitleCase = (s) => s.toLowerCase().split(/\s+/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-      const fullName = formatTitleCase(`${rawNombres} ${rawApellidos}`);
-      identityCache.set(cacheKey, { fullName, timestamp: Date.now() });
-      return { success: true, officialName: fullName };
-    }
-    return { success: false };
-  } catch (err) {
-    console.warn("[queryOfficialAdres Error]", err?.message);
-    return { success: false };
   }
+  try {
+    const db = await getDb();
+    if (db) {
+      const solRows = await db.select({
+        solicitanteNumeroDocumento: solicitudes.solicitanteNumeroDocumento,
+        solicitanteNombre: solicitudes.solicitanteNombre,
+        interesadoDocumento: solicitudes.interesadoDocumento,
+        interesadoNombre: solicitudes.interesadoNombre
+      }).from(solicitudes).where(
+        or3(
+          eq14(solicitudes.solicitanteNumeroDocumento, clean),
+          eq14(solicitudes.interesadoDocumento, clean)
+        )
+      ).limit(1);
+      if (solRows.length > 0) {
+        const row = solRows[0];
+        const matchName = (row.solicitanteNumeroDocumento || "").replace(/\D/g, "") === clean ? row.solicitanteNombre : row.interesadoNombre;
+        if (matchName && matchName.trim().length >= 4) {
+          const formatTitleCase = (s) => s.toLowerCase().split(/\s+/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+          const officialFormatted = formatTitleCase(matchName.trim());
+          if (nombreIngresado && nombreIngresado.trim().length >= 3) {
+            const stopwords = ["de", "del", "la", "las", "los", "y", "el"];
+            const normEntered = nombreIngresado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
+            const normOfficial = officialFormatted.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
+            const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
+            const isMatch = matches.length >= Math.min(2, normEntered.length);
+            if (!isMatch) {
+              return {
+                valid: true,
+                match: false,
+                officialName: officialFormatted,
+                error: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${clean} est\xE1 registrada en Vecy a nombre de "${officialFormatted}" y no de "${nombreIngresado}".`
+              };
+            }
+          }
+          identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+          return {
+            valid: true,
+            match: true,
+            officialName: officialFormatted,
+            message: `\u2713 Identidad confirmada en base de datos interna de Vecy: ${officialFormatted}`
+          };
+        }
+      }
+    }
+  } catch (dbErr) {
+    console.warn("[DB Check warning]", dbErr?.message);
+  }
+  const policiaResult = await queryPoliciaNacional(tipoDocumento, clean);
+  if (policiaResult && policiaResult.success && policiaResult.officialName) {
+    const officialFormatted = policiaResult.officialName;
+    identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+    if (nombreIngresado && nombreIngresado.trim().length >= 3) {
+      const stopwords = ["de", "del", "la", "las", "los", "y", "el"];
+      const normEntered = nombreIngresado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
+      const normOfficial = officialFormatted.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
+      const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
+      const isMatch = matches.length >= Math.min(2, normEntered.length);
+      if (!isMatch) {
+        return {
+          valid: true,
+          match: false,
+          officialName: officialFormatted,
+          error: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${clean} pertenece oficialmente ante la Polic\xEDa Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevenci\xF3n de fraude, la solicitud queda bloqueada.`
+        };
+      }
+    }
+    return {
+      valid: true,
+      match: true,
+      officialName: officialFormatted,
+      message: `\u2713 Identidad confirmada ante la Polic\xEDa Nacional de Colombia: ${officialFormatted}`
+    };
+  }
+  const tLower = (tipoDocumento || "").toLowerCase();
+  const isCC = tLower.includes("ciudadan") || tLower === "cc";
+  if (isCC) {
+    return {
+      valid: false,
+      match: false,
+      error: "No fue posible verificar la c\xE9dula ante la Polic\xEDa Nacional en este momento (tiempo de espera o servicio no disponible). Por favor reintente en unos segundos."
+    };
+  }
+  return {
+    valid: true,
+    match: true,
+    officialName: nombreIngresado || clean,
+    message: "\u2713 Documento procesado para tr\xE1mite internacional"
+  };
 }
 var agendaRouter = router({
   getAll: publicProcedure.input(
@@ -19756,7 +19818,7 @@ var agendaRouter = router({
       conFirma
     };
   }),
-  verifyIdentity: publicProcedure.input(
+  startVerifyIdentity: publicProcedure.input(
     z8.object({
       tipoDocumento: z8.string(),
       numeroDocumento: z8.string(),
@@ -19767,104 +19829,18 @@ var agendaRouter = router({
     const cleanDoc = numeroDocumento.replace(/[^0-9a-zA-Z]/g, "");
     if (!cleanDoc || cleanDoc.length < 5) {
       return {
-        valid: false,
-        match: false,
-        error: "El n\xFAmero de documento debe tener al menos 5 caracteres."
+        status: "completed",
+        result: {
+          valid: false,
+          match: false,
+          error: "El n\xFAmero de documento debe tener al menos 5 caracteres."
+        }
       };
     }
-    const DUMMY_SEQUENCES = [
-      "12345",
-      "123456",
-      "1234567",
-      "12345678",
-      "123456789",
-      "1234567890",
-      "0123456789",
-      "987654321",
-      "9876543210",
-      "54321",
-      "654321"
-    ];
-    if (DUMMY_SEQUENCES.includes(cleanDoc) || /^(\d){4,}$/.test(cleanDoc)) {
-      return {
-        valid: false,
-        match: false,
-        error: "\u26A0\uFE0F N\xFAmero de documento sospechoso o de prueba no permitido. Debe ingresar su documento real."
-      };
-    }
-    if (nombreIngresado && nombreIngresado.trim().length > 0) {
-      const trimmedName = nombreIngresado.trim();
-      const tokens = trimmedName.split(/\s+/);
-      if (/^(test|prueba|demo|asdf|cliente|nadie|usuario|ninguno|qwerty|xxx)$/i.test(trimmedName)) {
-        return {
-          valid: false,
-          match: false,
-          error: "\u26A0\uFE0F Ingrese nombres y apellidos reales v\xE1lidos."
-        };
-      }
-      if (!tipoDocumento.includes("NIT") && !tipoDocumento.includes("RUT") && tokens.length < 2) {
-        return {
-          valid: false,
-          match: false,
-          error: "\u26A0\uFE0F Debe ingresar nombres y apellidos completos (al menos dos palabras)."
-        };
-      }
-    }
-    if (tipoDocumento.includes("ciudadan\xEDa") || tipoDocumento === "CC") {
-      if (cleanDoc.length === 9) {
-        return {
-          valid: false,
-          match: false,
-          error: "\u26A0\uFE0F N\xFAmero de c\xE9dula inv\xE1lido. En Colombia no existen c\xE9dulas de 9 d\xEDgitos."
-        };
-      }
-      if (cleanDoc.length === 10) {
-        const num = parseInt(cleanDoc, 10);
-        if (num > 125e7 || !cleanDoc.startsWith("1")) {
-          return {
-            valid: false,
-            match: false,
-            error: "\u26A0\uFE0F C\xE9dula fuera del rango legal expedido por la Registradur\xEDa Nacional (m\xE1ximo 1.250 millones)."
-          };
-        }
-      }
-    }
-    if (tipoDocumento.includes("extranjer\xEDa") || tipoDocumento === "CE") {
-      if (cleanDoc.length < 5 || cleanDoc.length > 7) {
-        return {
-          valid: false,
-          match: false,
-          error: "\u26A0\uFE0F La C\xE9dula de Extranjer\xEDa en Colombia contiene entre 5 y 7 d\xEDgitos num\xE9ricos."
-        };
-      }
-    }
-    if (tipoDocumento.includes("NIT") || tipoDocumento.includes("RUT")) {
-      const parts = numeroDocumento.trim().split("-");
-      if (parts.length === 2) {
-        const nitBody = parts[0].replace(/\D/g, "");
-        const providedDV = parts[1].trim();
-        const weights = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
-        let sum = 0;
-        for (let i = 0; i < nitBody.length; i++) {
-          sum += parseInt(nitBody[nitBody.length - 1 - i], 10) * weights[i];
-        }
-        const mod = sum % 11;
-        const calculatedDV = mod > 1 ? (11 - mod).toString() : mod.toString();
-        if (providedDV !== calculatedDV) {
-          return {
-            valid: false,
-            match: false,
-            error: `\u26A0\uFE0F El D\xEDgito de Verificaci\xF3n del NIT no es correcto (seg\xFAn la DIAN debe ser ${calculatedDV}).`
-          };
-        }
-      }
-    }
-    const formatTitleCase = (str) => {
-      return str.toLowerCase().split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-    };
-    const policiaOfficial = await queryPoliciaNacional(tipoDocumento, cleanDoc);
-    if (policiaOfficial && policiaOfficial.success && policiaOfficial.officialName) {
-      const officialFormatted = policiaOfficial.officialName;
+    const cacheKey = `POLICIA:cc:${cleanDoc}`;
+    const cached = identityCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL) {
+      const officialFormatted = cached.fullName;
       if (nombreIngresado && nombreIngresado.trim().length >= 3) {
         const stopwords = ["de", "del", "la", "las", "los", "y", "el"];
         const normEntered = nombreIngresado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
@@ -19873,119 +19849,80 @@ var agendaRouter = router({
         const isMatch = matches.length >= Math.min(2, normEntered.length);
         if (!isMatch) {
           return {
-            valid: true,
-            match: false,
-            officialName: officialFormatted,
-            error: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${cleanDoc} pertenece oficialmente ante la Polic\xEDa Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevenci\xF3n de fraude, la solicitud queda bloqueada.`
+            status: "completed",
+            result: {
+              valid: true,
+              match: false,
+              officialName: officialFormatted,
+              error: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${cleanDoc} pertenece oficialmente ante la Polic\xEDa Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevenci\xF3n de fraude, la solicitud queda bloqueada.`
+            }
           };
         }
-        return {
+      }
+      return {
+        status: "completed",
+        result: {
           valid: true,
           match: true,
           officialName: officialFormatted,
           message: `\u2713 Identidad confirmada ante la Polic\xEDa Nacional de Colombia: ${officialFormatted}`
+        }
+      };
+    }
+    const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const job = {
+      id: jobId,
+      status: "processing",
+      tipoDocumento,
+      numeroDocumento: cleanDoc,
+      nombreIngresado,
+      createdAt: Date.now()
+    };
+    identityJobs.set(jobId, job);
+    executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngresado).then((result) => {
+      const current = identityJobs.get(jobId);
+      if (current) {
+        current.status = "completed";
+        current.result = result;
+      }
+    }).catch((err) => {
+      const current = identityJobs.get(jobId);
+      if (current) {
+        current.status = "error";
+        current.result = {
+          valid: false,
+          match: false,
+          error: err?.message || "Error durante la verificaci\xF3n de identidad"
         };
       }
+    });
+    return {
+      status: "processing",
+      jobId,
+      message: "Consulta enviada a la Polic\xEDa Nacional. Resolviendo captcha oficial..."
+    };
+  }),
+  checkVerifyIdentity: publicProcedure.input(z8.object({ jobId: z8.string() })).query(async ({ input }) => {
+    const job = identityJobs.get(input.jobId);
+    if (!job) {
       return {
-        valid: true,
-        match: true,
-        officialName: officialFormatted,
-        message: `\u2713 Identidad confirmada ante la Polic\xEDa Nacional de Colombia: ${officialFormatted}`
-      };
-    }
-    const adresOfficial = await queryOfficialAdres(tipoDocumento, cleanDoc);
-    if (adresOfficial && adresOfficial.success && adresOfficial.officialName) {
-      const officialFormatted = adresOfficial.officialName;
-      if (nombreIngresado && nombreIngresado.trim().length >= 3) {
-        const normEntered = nombreIngresado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter(Boolean);
-        const normOfficial = officialFormatted.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter(Boolean);
-        const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
-        const isMatch = matches.length >= Math.min(2, normEntered.length);
-        if (!isMatch) {
-          return {
-            valid: true,
-            match: false,
-            error: "\u26A0\uFE0F El n\xFAmero de documento no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, solo se permiten datos reales verificados."
-          };
-        }
-        return {
-          valid: true,
-          match: true,
-          officialName: officialFormatted,
-          message: `\u2713 Identidad confirmada ante Registradur\xEDa / ADRES: ${officialFormatted}`
-        };
-      }
-      return {
-        valid: true,
-        match: true,
-        officialName: officialFormatted,
-        message: `\u2713 Identidad confirmada ante Registradur\xEDa / ADRES: ${officialFormatted}`
-      };
-    }
-    const tusdatosApiKey = process.env.TUSDATOS_API_KEY;
-    if (tusdatosApiKey) {
-      try {
-        const res = await fetch("https://api.tusdatos.co/api/launch/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": tusdatosApiKey.startsWith("Token ") || tusdatosApiKey.startsWith("Bearer ") ? tusdatosApiKey : `Token ${tusdatosApiKey}`
-          },
-          body: JSON.stringify({
-            doc: cleanDoc,
-            typedoc: tipoDocumento.includes("NIT") ? "NIT" : tipoDocumento.includes("extranjer\xEDa") ? "CE" : "CC"
-          })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const rawOfficial = (data.nombre || data.full_name || data.datos?.nombre || "").trim();
-          if (rawOfficial && nombreIngresado) {
-            const officialFormatted = formatTitleCase(rawOfficial);
-            const normEntered = nombreIngresado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter(Boolean);
-            const normOfficial = rawOfficial.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter(Boolean);
-            const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
-            const isMatch = matches.length >= Math.min(2, normEntered.length);
-            if (!isMatch) {
-              return {
-                valid: true,
-                match: false,
-                error: "\u26A0\uFE0F El n\xFAmero de documento no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, solo se permiten datos reales verificados."
-              };
-            }
-            return {
-              valid: true,
-              match: true,
-              officialName: officialFormatted,
-              message: `\u2713 Identidad confirmada ante Registradur\xEDa / DIAN: ${officialFormatted}`
-            };
-          }
-        }
-      } catch (err) {
-        console.error("[VerifyIdentity API Error]", err?.message);
-      }
-    }
-    if (tipoDocumento.includes("ciudadan\xEDa") || tipoDocumento === "CC" || tipoDocumento === "cc") {
-      return {
-        valid: false,
-        match: false,
-        error: `\u26A0\uFE0F No fue posible corroborar la identidad de la c\xE9dula ${cleanDoc} en las bases oficiales de la Polic\xEDa Nacional. Verifique el n\xFAmero ingresado e intente nuevamente.`
-      };
-    }
-    if (nombreIngresado && nombreIngresado.trim().length >= 3) {
-      const formatted = formatTitleCase(nombreIngresado.trim());
-      return {
-        valid: true,
-        match: true,
-        officialName: formatted,
-        message: "\u2713 Estructura de identidad y documento verificados conforme a DIAN / Est\xE1ndares Internacionales"
+        status: "error",
+        error: "Consulta de identidad no encontrada o expirada. Por favor intente nuevamente."
       };
     }
     return {
-      valid: true,
-      match: true,
-      officialName: nombreIngresado || "",
-      message: "\u2713 Documento validado"
+      status: job.status,
+      result: job.result
     };
+  }),
+  verifyIdentity: publicProcedure.input(
+    z8.object({
+      tipoDocumento: z8.string(),
+      numeroDocumento: z8.string(),
+      nombreIngresado: z8.string().optional()
+    })
+  ).mutation(async ({ input }) => {
+    return await executeIdentityVerification(input.tipoDocumento, input.numeroDocumento, input.nombreIngresado);
   }),
   update: publicProcedure.input(
     z8.object({

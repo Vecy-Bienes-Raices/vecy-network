@@ -59,6 +59,8 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const verifyIdentityMutation = trpc.agenda.verifyIdentity.useMutation();
+  const startVerifyIdentityMutation = trpc.agenda.startVerifyIdentity.useMutation();
+  const trpcUtils = trpc.useUtils();
   const createSolicitudMutation = trpc.agenda.create.useMutation();
   const [isValidatingDoc, setIsValidatingDoc] = useState(false);
   const [identityError, setIdentityError] = useState(null);
@@ -177,6 +179,69 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
     }
   }, [propertyName, propertyCode]);
 
+  // Función auxiliar robusta: ejecuta el Job en el servidor y sondea el resultado cada 2.5s
+  const runVerificationJob = async (tipoDocumento, cleanDoc, nombreIngresado, setProgressFeedback) => {
+    try {
+      const initRes = await startVerifyIdentityMutation.mutateAsync({
+        tipoDocumento,
+        numeroDocumento: cleanDoc,
+        nombreIngresado: (nombreIngresado || '').trim(),
+      });
+
+      // Si ya estaba en caché o la validación básica falló, retorna de inmediato (0ms)
+      if (initRes.status === 'completed') {
+        return initRes.result;
+      }
+
+      if (initRes.status === 'error') {
+        return {
+          valid: false,
+          match: false,
+          error: initRes.error || 'Error al iniciar la verificación de identidad',
+        };
+      }
+
+      const jobId = initRes.jobId;
+      if (setProgressFeedback) {
+        setProgressFeedback('⏳ Consultando antecedentes Policía Nacional y resolviendo captcha oficial...');
+      }
+
+      // Sondeo reactivo (máximo 70 segundos, cada 2.5s)
+      const startTime = Date.now();
+      while (Date.now() - startTime < 70000) {
+        await new Promise(resolve => setTimeout(resolve, 2500));
+        try {
+          const check = await trpcUtils.agenda.checkVerifyIdentity.fetch({ jobId }, { staleTime: 0 });
+          if (check.status === 'completed') {
+            return check.result;
+          }
+          if (check.status === 'error') {
+            return {
+              valid: false,
+              match: false,
+              error: check.error || check.result?.error || 'No se pudo completar la verificación de identidad.',
+            };
+          }
+        } catch (pollErr) {
+          console.warn('Sondeo de verificación en curso...', pollErr?.message);
+        }
+      }
+
+      return {
+        valid: false,
+        match: false,
+        error: 'La verificación ante la Policía Nacional tardó más de lo esperado. Por favor intente nuevamente.',
+      };
+    } catch (err) {
+      console.error('Error en runVerificationJob:', err);
+      return {
+        valid: false,
+        match: false,
+        error: 'No se pudo contactar el servicio de verificación. Intente de nuevo.',
+      };
+    }
+  };
+
   const handleVerifyIdentity = async (nombreIngresado, numeroDocumento, tipoDocumento) => {
     const cleanDoc = (numeroDocumento || '').replace(/[^0-9a-zA-Z]/g, '');
     if (!cleanDoc || cleanDoc.length < 5 || !tipoDocumento) {
@@ -184,12 +249,14 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
     }
 
     setIsValidatingDoc(true);
+    setIdentityError(null);
     try {
-      const data = await verifyIdentityMutation.mutateAsync({
+      const data = await runVerificationJob(
         tipoDocumento,
-        numeroDocumento: cleanDoc,
-        nombreIngresado: (nombreIngresado || '').trim(),
-      });
+        cleanDoc,
+        nombreIngresado,
+        (msg) => setIdentitySuccessMsg(msg)
+      );
 
       if (!data || data.valid === false || data.match === false) {
         const errMsg = data?.error || '⚠️ El número de documento no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, solo se permiten datos reales verificados.';
@@ -232,12 +299,14 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
     if (!cleanDoc || cleanDoc.length < 5) return;
 
     setIsValidatingClientDoc(true);
+    setClientIdentityError(null);
     try {
-      const data = await verifyIdentityMutation.mutateAsync({
-        tipoDocumento: tipoDocumento || 'Cédula de ciudadanía',
-        numeroDocumento: cleanDoc,
-        nombreIngresado: (nombreIngresado || '').trim(),
-      });
+      const data = await runVerificationJob(
+        tipoDocumento || 'Cédula de ciudadanía',
+        cleanDoc,
+        nombreIngresado,
+        (msg) => setClientIdentitySuccessMsg(msg)
+      );
 
       if (!data || data.valid === false || data.match === false) {
         const errMsg = data?.error || '⚠️ El número de documento no corresponde al nombre del cliente presentado. Por motivos de seguridad, solo se permiten datos reales verificados.';
@@ -291,12 +360,14 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
     if (!cleanDoc || cleanDoc.length < 5) return;
 
     setValidatingAcompIndex(index);
+    setAcompErrors(prev => ({ ...prev, [index]: null }));
     try {
-      const data = await verifyIdentityMutation.mutateAsync({
-        tipoDocumento: 'Cédula de ciudadanía',
-        numeroDocumento: cleanDoc,
-        nombreIngresado: (nombreIngresado || '').trim(),
-      });
+      const data = await runVerificationJob(
+        'Cédula de ciudadanía',
+        cleanDoc,
+        nombreIngresado,
+        (msg) => setAcompSuccessMsg(prev => ({ ...prev, [index]: msg }))
+      );
 
       if (!data || data.valid === false || data.match === false) {
         const errMsg = data?.error || `⚠️ El número de cédula ${cleanDoc} del acompañante no corresponde al nombre indicado. Por motivos de seguridad legal, solo se permiten datos reales verificados.`;

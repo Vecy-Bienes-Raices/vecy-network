@@ -322,6 +322,37 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.47 — Septiembre 2026
+
+#### 📌 ARQUITECTURA ASÍNCRONA JOB + POLLING 0% ERROR 504 ANTE POLICÍA NACIONAL CON 2CAPTCHA, SINCRONIZACIÓN UNIVERSAL DE VECY AGENDA PRO Y BLINDAJE INFALIBLE DE JANIA EN WHATSAPP
+
+**Problemas identificados:**
+1. **Error 504 Gateway Timeout en Verificación de Identidad**: La resolución de reCAPTCHA v2 de la Policía Nacional con 2Captcha toma entre 18 y 30 segundos. Los proxies de Vercel y clientes HTTP cortan peticiones síncronas a los 15 segundos devolviendo error HTTP 504 Gateway Timeout, arruinando la verificación de cédula en caliente en el formulario web.
+2. **Desfase y Fallback Permisivo en Vecy Agenda Pro (`vecy-agenda-pro`)**: El proyecto satélite mantenía un endpoint que consultaba a ADRES (bloqueado por firewall gubernamental) y caía en un fallback permisivo que aprobaba cualquier nombre sin cotejo. Además, en `vercel.json` la regla `/(.*)` capturaba `/api/` devolviendo `index.html`.
+3. **Auditoría de Publicaciones de JanIA en WhatsApp**: Si bien JanIA publicó exitosamente hoy a las 10:42 AM el tip de arranque en Grupo 2 y Canal oficial, la ventana de reintento/catch-up matutina en `cronService.ts` expiraba a las 14:00 PM (2 PM Bogotá). Si el bot se reiniciaba o reconectaba después de esa hora, JanIA omitía el despacho de ese día.
+
+**Solución aplicada:**
+- **Arquitectura Asíncrona Job + Polling en Backend (`server/routers/agenda.ts`)**:
+  - `agenda.startVerifyIdentity`: Inicia la verificación oficial de Policía Nacional y 2Captcha respondiendo en <100ms con `jobId` y `status: 'processing'` (o en 0ms si la cédula ya está en caché).
+  - `agenda.checkVerifyIdentity`: Query ligero (<10ms) para sondeo del resultado sin bloquear el hilo ni disparar timeouts de red.
+  - Almacén de `identityJobs` en memoria con recolección automática de basura (TTL 10 min) y `identityCache` de 24 horas.
+- **Integración Reactiva en `AgendaForm.jsx` (Vecy Network)**:
+  - Función `runVerificationJob` con sondeo cada 2.5s y mensaje dinámico: `⏳ Consultando antecedentes Policía Nacional y resolviendo captcha oficial...`.
+  - Bloqueo inquebrantable del botón de envío ante discrepancias de identidad en solicitante, cliente presentado o acompañantes.
+- **Sincronización Total en `vecy-agenda-pro`**:
+  - Corrección de `vercel.json` con rewrite defensivo `/((?!api/).*)` para garantizar el enrutamiento a la API.
+  - Actualización de `api/verify-identity.js` conectado al motor autoritativo del VPS con soporte Job + Polling y erradicación de fallbacks permisivos.
+  - Actualización de `AgendaForm.jsx` con sondeo asíncrono y despliegue exitoso en GitHub (`main`).
+- **Blindaje de Publicaciones de JanIA (`server/_core/cronService.ts`)**:
+  - Ventana de catch-up matutina ampliada de `10:00 - 14:00` a `10:00 - 22:00` (10 PM Bogotá).
+  - Ventana de catch-up vespertina de Grupo 3 ampliada a `16:30 - 22:00`.
+  - Garantía de que JanIA publicará su tip diario siempre, incluso tras caídas temporales de red o reinicios tardíos en el VPS.
+- **Preservación Estricta de la Arquitectura**:
+  - Archivo `server/_core/whatsapp-match.ts` 100% original e intacto.
+  - Compilación limpia con `npm run check` y `npm run build`.
+
+---
+
 ### 🔖 v31.46 — Septiembre 2026
 
 #### 📌 BLINDAJE ANTIFRAUDE INQUEBRANTABLE ANTE POLICÍA NACIONAL CON 2CAPTCHA, ERRADICACIÓN DE FALLBACKS PERMISIVOS, VERIFICACIÓN DE ACOMPAÑANTES Y RECHAZO EN SERVIDOR

@@ -13,6 +13,35 @@ const httpsAgentInsecure = new https.Agent({ rejectUnauthorized: false });
 const identityCache = new Map<string, { fullName: string; timestamp: number }>();
 const IDENTITY_CACHE_TTL = 24 * 60 * 60 * 1000;
 
+interface IdentityJob {
+  id: string;
+  status: 'processing' | 'completed' | 'error';
+  tipoDocumento: string;
+  numeroDocumento: string;
+  nombreIngresado?: string;
+  result?: {
+    valid: boolean;
+    match: boolean;
+    officialName?: string;
+    message?: string;
+    error?: string;
+  };
+  createdAt: number;
+}
+
+const identityJobs = new Map<string, IdentityJob>();
+
+// Limpieza de jobs mayores a 10 minutos
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, job] of identityJobs.entries()) {
+    if (now - job.createdAt > 10 * 60 * 1000) {
+      identityJobs.delete(id);
+    }
+  }
+}, 60000);
+
+
 class CookieJar {
   cookies: Map<string, string> = new Map();
   addFromHeaders(headers: Headers) {
@@ -335,6 +364,205 @@ async function queryOfficialAdres(tipoDocInput: string, cleanDoc: string): Promi
   }
 }
 
+function calcularDigitoVerificacionDIAN(nitStr: string): number {
+  const vpri = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
+  const clean = nitStr.replace(/\D/g, '');
+  let suma = 0;
+  for (let i = 0; i < clean.length; i++) {
+    const digit = parseInt(clean.charAt(clean.length - 1 - i), 10);
+    suma += digit * vpri[i];
+  }
+  const residuo = suma % 11;
+  return residuo > 1 ? 11 - residuo : residuo;
+}
+
+async function executeIdentityVerification(
+  tipoDocumento: string,
+  cleanDoc: string,
+  nombreIngresado?: string
+): Promise<{ valid: boolean; match: boolean; officialName?: string; message?: string; error?: string }> {
+  const clean = cleanDoc.replace(/[^0-9a-zA-Z]/g, '');
+  if (!clean || clean.length < 5) {
+    return {
+      valid: false,
+      match: false,
+      error: 'El número de documento debe tener al menos 5 dígitos.',
+    };
+  }
+
+  // 1. Verificar si es NIT o RUT
+  const tDocLower = (tipoDocumento || '').toLowerCase();
+  const isNit = tDocLower.includes('nit') || tDocLower.includes('rut');
+  if (isNit) {
+    if (!/^\d{9,10}$/.test(clean)) {
+      return {
+        valid: false,
+        match: false,
+        error: 'El NIT debe contener 9 o 10 dígitos numéricos (incluyendo dígito de verificación).',
+      };
+    }
+    const cleanNit = clean.slice(0, 9);
+    const dvCalculado = calcularDigitoVerificacionDIAN(cleanNit);
+    if (clean.length === 10) {
+      const dvIngresado = parseInt(clean.slice(9), 10);
+      if (dvIngresado !== dvCalculado) {
+        return {
+          valid: false,
+          match: false,
+          error: `Dígito de verificación DIAN incorrecto. Para el NIT ${cleanNit}, el dígito oficial es -${dvCalculado}.`,
+        };
+      }
+    }
+    const nombreEmpresa = (nombreIngresado || '').trim();
+    return {
+      valid: true,
+      match: true,
+      officialName: nombreEmpresa || clean,
+      message: `✓ NIT/RUT validado conforme a estructura DIAN (Dígito de verificación: ${dvCalculado})`,
+    };
+  }
+
+  // 2. Caché en memoria (0ms)
+  const cacheKey = `POLICIA:cc:${clean}`;
+  const cached = identityCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp < IDENTITY_CACHE_TTL)) {
+    const officialFormatted = cached.fullName;
+    if (nombreIngresado && nombreIngresado.trim().length >= 3) {
+      const stopwords = ['de', 'del', 'la', 'las', 'los', 'y', 'el'];
+      const normEntered = nombreIngresado.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
+      const normOfficial = officialFormatted.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
+      const matches = normEntered.filter((token: string) => normOfficial.some((off: string) => off === token || off.startsWith(token) || token.startsWith(off)));
+      const isMatch = matches.length >= Math.min(2, normEntered.length);
+
+      if (!isMatch) {
+        return {
+          valid: true,
+          match: false,
+          officialName: officialFormatted,
+          error: `⚠️ Inconsistencia de identidad: La cédula ${clean} pertenece oficialmente ante la Policía Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevención de fraude, la solicitud queda bloqueada.`,
+        };
+      }
+    }
+    return {
+      valid: true,
+      match: true,
+      officialName: officialFormatted,
+      message: `✓ Identidad confirmada ante la Policía Nacional de Colombia: ${officialFormatted}`,
+    };
+  }
+
+  // 3. Consulta a base de datos interna de Vecy (0ms)
+  try {
+    const db = await getDb();
+    if (db) {
+      const solRows = await db
+        .select({
+          solicitanteNumeroDocumento: solicitudes.solicitanteNumeroDocumento,
+          solicitanteNombre: solicitudes.solicitanteNombre,
+          interesadoDocumento: solicitudes.interesadoDocumento,
+          interesadoNombre: solicitudes.interesadoNombre,
+        })
+        .from(solicitudes)
+        .where(
+          or(
+            eq(solicitudes.solicitanteNumeroDocumento, clean),
+            eq(solicitudes.interesadoDocumento, clean)
+          )
+        )
+        .limit(1);
+
+      if (solRows.length > 0) {
+        const row = solRows[0];
+        const matchName = (row.solicitanteNumeroDocumento || '').replace(/\D/g, '') === clean
+          ? row.solicitanteNombre
+          : row.interesadoNombre;
+
+        if (matchName && matchName.trim().length >= 4) {
+          const formatTitleCase = (s: string) => s.toLowerCase().split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          const officialFormatted = formatTitleCase(matchName.trim());
+
+          if (nombreIngresado && nombreIngresado.trim().length >= 3) {
+            const stopwords = ['de', 'del', 'la', 'las', 'los', 'y', 'el'];
+            const normEntered = nombreIngresado.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
+            const normOfficial = officialFormatted.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
+            const matches = normEntered.filter((token: string) => normOfficial.some((off: string) => off === token || off.startsWith(token) || token.startsWith(off)));
+            const isMatch = matches.length >= Math.min(2, normEntered.length);
+
+            if (!isMatch) {
+              return {
+                valid: true,
+                match: false,
+                officialName: officialFormatted,
+                error: `⚠️ Inconsistencia de identidad: La cédula ${clean} está registrada en Vecy a nombre de "${officialFormatted}" y no de "${nombreIngresado}".`,
+              };
+            }
+          }
+
+          identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+          return {
+            valid: true,
+            match: true,
+            officialName: officialFormatted,
+            message: `✓ Identidad confirmada en base de datos interna de Vecy: ${officialFormatted}`,
+          };
+        }
+      }
+    }
+  } catch (dbErr: any) {
+    console.warn('[DB Check warning]', dbErr?.message);
+  }
+
+  // 4. Scraper autoritativo de Policía Nacional con 2Captcha reCAPTCHA v2
+  const policiaResult = await queryPoliciaNacional(tipoDocumento, clean);
+  if (policiaResult && policiaResult.success && policiaResult.officialName) {
+    const officialFormatted = policiaResult.officialName;
+    identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+
+    if (nombreIngresado && nombreIngresado.trim().length >= 3) {
+      const stopwords = ['de', 'del', 'la', 'las', 'los', 'y', 'el'];
+      const normEntered = nombreIngresado.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
+      const normOfficial = officialFormatted.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
+      const matches = normEntered.filter((token: string) => normOfficial.some((off: string) => off === token || off.startsWith(token) || token.startsWith(off)));
+      const isMatch = matches.length >= Math.min(2, normEntered.length);
+
+      if (!isMatch) {
+        return {
+          valid: true,
+          match: false,
+          officialName: officialFormatted,
+          error: `⚠️ Inconsistencia de identidad: La cédula ${clean} pertenece oficialmente ante la Policía Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevención de fraude, la solicitud queda bloqueada.`,
+        };
+      }
+    }
+
+    return {
+      valid: true,
+      match: true,
+      officialName: officialFormatted,
+      message: `✓ Identidad confirmada ante la Policía Nacional de Colombia: ${officialFormatted}`,
+    };
+  }
+
+  // 5. Para Cédula colombiana (CC): Si no se pudo obtener respuesta oficial de la Policía Nacional, NUNCA marcar match: true a ciegas
+  const tLower = (tipoDocumento || '').toLowerCase();
+  const isCC = tLower.includes('ciudadan') || tLower === 'cc';
+  if (isCC) {
+    return {
+      valid: false,
+      match: false,
+      error: 'No fue posible verificar la cédula ante la Policía Nacional en este momento (tiempo de espera o servicio no disponible). Por favor reintente en unos segundos.',
+    };
+  }
+
+  // Para otros documentos extranjeros o pasaportes:
+  return {
+    valid: true,
+    match: true,
+    officialName: nombreIngresado || clean,
+    message: '✓ Documento procesado para trámite internacional',
+  };
+}
+
 export const agendaRouter = router({
   getAll: publicProcedure
     .input(
@@ -451,7 +679,7 @@ export const agendaRouter = router({
     };
   }),
 
-  verifyIdentity: publicProcedure
+  startVerifyIdentity: publicProcedure
     .input(
       z.object({
         tipoDocumento: z.string(),
@@ -465,263 +693,117 @@ export const agendaRouter = router({
 
       if (!cleanDoc || cleanDoc.length < 5) {
         return {
-          valid: false,
-          match: false,
-          error: 'El número de documento debe tener al menos 5 caracteres.',
+          status: 'completed' as const,
+          result: {
+            valid: false,
+            match: false,
+            error: 'El número de documento debe tener al menos 5 caracteres.',
+          },
         };
       }
 
-      // Detección de secuencias o dígitos repetitivos ficticios
-      const DUMMY_SEQUENCES = [
-        '12345', '123456', '1234567', '12345678', '123456789', '1234567890',
-        '0123456789', '987654321', '9876543210', '54321', '654321'
-      ];
-      if (DUMMY_SEQUENCES.includes(cleanDoc) || /^(\d){4,}$/.test(cleanDoc)) {
-        return {
-          valid: false,
-          match: false,
-          error: '⚠️ Número de documento sospechoso o de prueba no permitido. Debe ingresar su documento real.',
-        };
-      }
-
-      // Detección de nombres ficticios o incompletos
-      if (nombreIngresado && nombreIngresado.trim().length > 0) {
-        const trimmedName = nombreIngresado.trim();
-        const tokens = trimmedName.split(/\s+/);
-        if (/^(test|prueba|demo|asdf|cliente|nadie|usuario|ninguno|qwerty|xxx)$/i.test(trimmedName)) {
-          return {
-            valid: false,
-            match: false,
-            error: '⚠️ Ingrese nombres y apellidos reales válidos.',
-          };
-        }
-        if (!tipoDocumento.includes('NIT') && !tipoDocumento.includes('RUT') && tokens.length < 2) {
-          return {
-            valid: false,
-            match: false,
-            error: '⚠️ Debe ingresar nombres y apellidos completos (al menos dos palabras).',
-          };
-        }
-      }
-
-      // 1. Reglas antifraude para Cédula Colombiana (C.C.)
-      if (tipoDocumento.includes('ciudadanía') || tipoDocumento === 'CC') {
-        if (cleanDoc.length === 9) {
-          return {
-            valid: false,
-            match: false,
-            error: '⚠️ Número de cédula inválido. En Colombia no existen cédulas de 9 dígitos.',
-          };
-        }
-        if (cleanDoc.length === 10) {
-          const num = parseInt(cleanDoc, 10);
-          if (num > 1250000000 || !cleanDoc.startsWith('1')) {
-            return {
-              valid: false,
-              match: false,
-              error: '⚠️ Cédula fuera del rango legal expedido por la Registraduría Nacional (máximo 1.250 millones).',
-            };
-          }
-        }
-      }
-
-      // 2. Reglas antifraude para Cédula de Extranjería (C.E.)
-      if (tipoDocumento.includes('extranjería') || tipoDocumento === 'CE') {
-        if (cleanDoc.length < 5 || cleanDoc.length > 7) {
-          return {
-            valid: false,
-            match: false,
-            error: '⚠️ La Cédula de Extranjería en Colombia contiene entre 5 y 7 dígitos numéricos.',
-          };
-        }
-      }
-
-      // 3. Reglas para NIT con Módulo 11 oficial de la DIAN
-      if (tipoDocumento.includes('NIT') || tipoDocumento.includes('RUT')) {
-        const parts = numeroDocumento.trim().split('-');
-        if (parts.length === 2) {
-          const nitBody = parts[0].replace(/\D/g, '');
-          const providedDV = parts[1].trim();
-          const weights = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
-          let sum = 0;
-          for (let i = 0; i < nitBody.length; i++) {
-            sum += parseInt(nitBody[nitBody.length - 1 - i], 10) * weights[i];
-          }
-          const mod = sum % 11;
-          const calculatedDV = mod > 1 ? (11 - mod).toString() : mod.toString();
-          if (providedDV !== calculatedDV) {
-            return {
-              valid: false,
-              match: false,
-              error: `⚠️ El Dígito de Verificación del NIT no es correcto (según la DIAN debe ser ${calculatedDV}).`,
-            };
-          }
-        }
-      }
-
-      // Función auxiliar para formatear nombres en mayúscula inicial
-      const formatTitleCase = (str: string) => {
-        return str
-          .toLowerCase()
-          .split(' ')
-          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ');
-      };
-
-      // 4. CONSULTA OFICIAL PRINCIPAL ANTE LA POLICÍA NACIONAL DE COLOMBIA VÍA 2CAPTCHA
-      // Fuente autoritativa de antecedentes penales e identidad de los ciudadanos colombianos
-      const policiaOfficial = await queryPoliciaNacional(tipoDocumento, cleanDoc);
-      if (policiaOfficial && policiaOfficial.success && policiaOfficial.officialName) {
-        const officialFormatted = policiaOfficial.officialName;
-
+      // Consulta instantánea si ya está en caché en memoria (0 ms)
+      const cacheKey = `POLICIA:cc:${cleanDoc}`;
+      const cached = identityCache.get(cacheKey);
+      if (cached && (Date.now() - cached.timestamp < IDENTITY_CACHE_TTL)) {
+        const officialFormatted = cached.fullName;
         if (nombreIngresado && nombreIngresado.trim().length >= 3) {
           const stopwords = ['de', 'del', 'la', 'las', 'los', 'y', 'el'];
           const normEntered = nombreIngresado.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
           const normOfficial = officialFormatted.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
-
           const matches = normEntered.filter((token: string) => normOfficial.some((off: string) => off === token || off.startsWith(token) || token.startsWith(off)));
           const isMatch = matches.length >= Math.min(2, normEntered.length);
 
           if (!isMatch) {
             return {
-              valid: true,
-              match: false,
-              officialName: officialFormatted,
-              error: `⚠️ Inconsistencia de identidad: La cédula ${cleanDoc} pertenece oficialmente ante la Policía Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevención de fraude, la solicitud queda bloqueada.`,
+              status: 'completed' as const,
+              result: {
+                valid: true,
+                match: false,
+                officialName: officialFormatted,
+                error: `⚠️ Inconsistencia de identidad: La cédula ${cleanDoc} pertenece oficialmente ante la Policía Nacional a "${officialFormatted}" y no a "${nombreIngresado}". Por motivos de seguridad y prevención de fraude, la solicitud queda bloqueada.`,
+              },
             };
           }
+        }
 
-          return {
+        return {
+          status: 'completed' as const,
+          result: {
             valid: true,
             match: true,
             officialName: officialFormatted,
             message: `✓ Identidad confirmada ante la Policía Nacional de Colombia: ${officialFormatted}`,
-          };
-        }
-
-        // Si el usuario aún no había escrito su nombre completo, autocompletarlo de inmediato
-        return {
-          valid: true,
-          match: true,
-          officialName: officialFormatted,
-          message: `✓ Identidad confirmada ante la Policía Nacional de Colombia: ${officialFormatted}`,
+          },
         };
       }
 
-      // 4. Consulta a API externa vía 2Captcha + ADRES BDUA
-      const adresOfficial = await queryOfficialAdres(tipoDocumento, cleanDoc);
-      if (adresOfficial && adresOfficial.success && adresOfficial.officialName) {
-        const officialFormatted = adresOfficial.officialName;
-        if (nombreIngresado && nombreIngresado.trim().length >= 3) {
-          const normEntered = nombreIngresado.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(Boolean);
-          const normOfficial = officialFormatted.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(Boolean);
+      // Crear Job asíncrono para evitar HTTP 504 en Vercel
+      const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const job: IdentityJob = {
+        id: jobId,
+        status: 'processing',
+        tipoDocumento,
+        numeroDocumento: cleanDoc,
+        nombreIngresado,
+        createdAt: Date.now(),
+      };
+      identityJobs.set(jobId, job);
 
-          const matches = normEntered.filter((token: string) => normOfficial.some((off: string) => off === token || off.startsWith(token) || token.startsWith(off)));
-          const isMatch = matches.length >= Math.min(2, normEntered.length);
-
-          if (!isMatch) {
-            return {
-              valid: true,
+      // Disparar la verificación en background (sin await para responder en <100ms)
+      executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngresado)
+        .then((result: any) => {
+          const current = identityJobs.get(jobId);
+          if (current) {
+            current.status = 'completed';
+            current.result = result;
+          }
+        })
+        .catch((err: any) => {
+          const current = identityJobs.get(jobId);
+          if (current) {
+            current.status = 'error';
+            current.result = {
+              valid: false,
               match: false,
-              error: '⚠️ El número de documento no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, solo se permiten datos reales verificados.',
+              error: err?.message || 'Error durante la verificación de identidad',
             };
           }
-
-          return {
-            valid: true,
-            match: true,
-            officialName: officialFormatted,
-            message: `✓ Identidad confirmada ante Registraduría / ADRES: ${officialFormatted}`,
-          };
-        }
-
-        return {
-          valid: true,
-          match: true,
-          officialName: officialFormatted,
-          message: `✓ Identidad confirmada ante Registraduría / ADRES: ${officialFormatted}`,
-        };
-      }
-
-      // 4.1 Consulta de respaldo TusDatos si estuviera configurada
-      const tusdatosApiKey = process.env.TUSDATOS_API_KEY;
-
-      if (tusdatosApiKey) {
-        try {
-          const res = await fetch('https://api.tusdatos.co/api/launch/', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': tusdatosApiKey.startsWith('Token ') || tusdatosApiKey.startsWith('Bearer ') 
-                ? tusdatosApiKey 
-                : `Token ${tusdatosApiKey}`,
-            },
-            body: JSON.stringify({
-              doc: cleanDoc,
-              typedoc: tipoDocumento.includes('NIT') ? 'NIT' : (tipoDocumento.includes('extranjería') ? 'CE' : 'CC'),
-            }),
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            const rawOfficial = (data.nombre || data.full_name || data.datos?.nombre || '').trim();
-
-            if (rawOfficial && nombreIngresado) {
-              const officialFormatted = formatTitleCase(rawOfficial);
-              const normEntered = nombreIngresado.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(Boolean);
-              const normOfficial = rawOfficial.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(Boolean);
-
-              const matches = normEntered.filter((token: string) => normOfficial.some((off: string) => off === token || off.startsWith(token) || token.startsWith(off)));
-              const isMatch = matches.length >= Math.min(2, normEntered.length);
-
-              if (!isMatch) {
-                return {
-                  valid: true,
-                  match: false,
-                  error: '⚠️ El número de documento no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, solo se permiten datos reales verificados.',
-                };
-              }
-
-              return {
-                valid: true,
-                match: true,
-                officialName: officialFormatted,
-                message: `✓ Identidad confirmada ante Registraduría / DIAN: ${officialFormatted}`,
-              };
-            }
-          }
-        } catch (err: any) {
-          console.error('[VerifyIdentity API Error]', err?.message);
-        }
-      }
-
-      // Regla Doctrinal de Seguridad Antifraude: Para Cédula de Ciudadanía colombiana (CC),
-      // NUNCA validar un nombre ficticio a ciegas si no fue confirmado ante la Policía Nacional o Registraduría.
-      if (tipoDocumento.includes('ciudadanía') || tipoDocumento === 'CC' || tipoDocumento === 'cc') {
-        return {
-          valid: false,
-          match: false,
-          error: `⚠️ No fue posible corroborar la identidad de la cédula ${cleanDoc} en las bases oficiales de la Policía Nacional. Verifique el número ingresado e intente nuevamente.`,
-        };
-      }
-
-      // Para otros documentos (NIT / RUT / Pasaporte internacional validado estructuralmente)
-      if (nombreIngresado && nombreIngresado.trim().length >= 3) {
-        const formatted = formatTitleCase(nombreIngresado.trim());
-        return {
-          valid: true,
-          match: true,
-          officialName: formatted,
-          message: '✓ Estructura de identidad y documento verificados conforme a DIAN / Estándares Internacionales',
-        };
-      }
+        });
 
       return {
-        valid: true,
-        match: true,
-        officialName: nombreIngresado || '',
-        message: '✓ Documento validado',
+        status: 'processing' as const,
+        jobId,
+        message: 'Consulta enviada a la Policía Nacional. Resolviendo captcha oficial...',
       };
+    }),
+
+  checkVerifyIdentity: publicProcedure
+    .input(z.object({ jobId: z.string() }))
+    .query(async ({ input }) => {
+      const job = identityJobs.get(input.jobId);
+      if (!job) {
+        return {
+          status: 'error' as const,
+          error: 'Consulta de identidad no encontrada o expirada. Por favor intente nuevamente.',
+        };
+      }
+      return {
+        status: job.status,
+        result: job.result,
+      };
+    }),
+
+  verifyIdentity: publicProcedure
+    .input(
+      z.object({
+        tipoDocumento: z.string(),
+        numeroDocumento: z.string(),
+        nombreIngresado: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return await executeIdentityVerification(input.tipoDocumento, input.numeroDocumento, input.nombreIngresado);
     }),
 
   update: publicProcedure
