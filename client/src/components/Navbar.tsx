@@ -35,8 +35,8 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
   const navItems = [
     { label: 'INICIO', href: '/' },
     { label: 'HISTORIA', href: '/historia' },
-    { label: 'PROPIEDADES', href: '/properties' },
-    { label: 'REQUERIMIENTOS', href: '/requerimientos' },
+    { label: 'OFERTAS', href: '/ofertas' },
+    { label: 'DEMANDAS', href: '/demandas' },
     { label: 'RED GANA-GANA', href: '/red-colaboracion' },
     { label: 'SERVICIOS', href: '/services' },
     { label: 'AGENTES', href: '/agent-dashboard' },

@@ -322,6 +322,30 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.44 — Septiembre 2026
+
+#### 📌 REDISEÑO DOCTRINAL DE TIENDA DE OFERTAS & DEMANDAS, SWITCHER LUXURY DE CATÁLOGO, SOLUCIÓN AL LÍMITE DE 20 INMUEBLES, FICHAS TÉCNICAS ENRIQUECIDAS Y ACCESO UNIVERSAL A VECY AGENDA
+
+**Problemas identificados:**
+1. **Inmuebles Recientes No Visibles (Caso Casa Morato ID 2775)**: El procedimiento `properties.list` en `server/routers/properties.ts` imponía un `limit: 20` por defecto sin filtrar del lado del servidor. Al ingresar más de 68 propiedades nuevas por WhatsApp (Baileys/JanIA), los inmuebles previos quedaron más allá del registro #20. Al filtrar en memoria de React por tipo ("Casas"), la tienda arrojaba 0 propiedades disponibles.
+2. **Sobrecarga y Mezcla Visual en la Tienda**: La cabecera de la tienda presentaba 4 botones que mezclaban acciones de Ofertas y Demandas ("Subir Demanda" dentro del catálogo de Ofertas). Además, los nombres en el menú ("PROPIEDADES" y "REQUERIMIENTOS") no se alineaban con la nomenclatura comercial corta y directa solicitada: **OFERTAS** y **DEMANDAS**.
+3. **Restricción de Acceso a Vecy Agenda**: `client/src/pages/Agenda.tsx` arrojaba error "Inmueble no encontrado" si no recibía un `propertyId` numérico, impidiendo el uso directo de la agenda para pruebas o citas generales.
+
+**Solución aplicada:**
+- **Optimización de Backend tRPC (`server/routers/properties.ts`)**: Procedimiento `properties.list` enriquecido para filtrar directamente en PostgreSQL por `type`, `transactionType` y búsqueda textual multinivel (`name`, `zone`, `addressNeighborhood`, `city`, `description`), elevando el límite a 150 registros y ordenando por `featured DESC, id DESC`.
+- **Rediseño de Tienda de Ofertas (`Properties.tsx`)**:
+  - Switcher de Catálogo segmentado de alta gama (Dark Luxury Gold): `[ 🏠 OFERTAS (INMUEBLES) ]` ↔ `[ 📋 DEMANDAS (REQUERIMIENTOS) ]`.
+  - Botón de acción único contextual: `[ + PUBLICAR OFERTA ]`.
+  - Buscador reactivo por micro-barrio con accesos directos (Morato, Chicó, Rosales, Cedritos, Santa Bárbara) y selector de negocio (Venta, Arriendo, Permuta).
+  - Contador dinámico de ofertas auditadas.
+- **Rediseño de Tienda de Demandas (`RequirementsMarketplace.tsx`)**: Switcher doctrinal integrado y botón único `[ + PUBLICAR DEMANDA ]`.
+- **Rediseño de Tarjetas (`PropertyCard.tsx`)**: Cuadrícula de 4 especificaciones clave (Área, Habitaciones, Baños, Garajes), indicador `#1 / N` en carrusel y botón dorado prominente `[ 📅 Agendar ]`.
+- **Ficha Técnica (`PropertyDetail.tsx`)**: Navegación a `/ofertas`, botón estelar `AGENDAR VISITA OFICIAL` y botón de edición directa.
+- **Acceso Universal a Vecy Agenda (`Agenda.tsx` y `App.tsx`)**: Rutas `/ofertas`, `/demandas`, `/agenda` y `/agendar` habilitadas con conexión al motor antifraude de 2Captcha.
+- **Preservación Total**: `whatsapp-match.ts` 100% original e intacto.
+
+---
+
 ### 🔖 v31.43 — Septiembre 2026
 
 #### 📌 MOTOR ANTIFRAUDE EN CASCADA INTELIGENTE: DB INTERNA VECY + ADRES BDUA + POLICÍA NACIONAL VÍA 2CAPTCHA, VERIFICACIÓN DE CLIENTES PRESENTADOS Y ACOMPAÑANTES PARA AGENTES, Y CONEXIÓN DE AGENDA EN INMUEBLES

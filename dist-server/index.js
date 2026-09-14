@@ -18935,7 +18935,7 @@ var leadsRouter = router({
 import { z as z7 } from "zod";
 init_db();
 init_schema();
-import { eq as eq13, desc as desc4, ilike, and as and8 } from "drizzle-orm";
+import { eq as eq13, desc as desc4, ilike, or as or2, and as and8 } from "drizzle-orm";
 import { TRPCError as TRPCError5 } from "@trpc/server";
 var propertyInputSchema = z7.object({
   name: z7.string().min(2),
@@ -19260,16 +19260,34 @@ var propertiesRouter = router({
     zone: z7.string().optional(),
     type: z7.string().optional(),
     transactionType: z7.string().optional(),
-    limit: z7.number().default(20),
+    limit: z7.number().min(1).max(200).default(100),
     offset: z7.number().default(0)
   }).optional()).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
     const filters = [eq13(properties.available, true)];
-    if (input?.transactionType) filters.push(eq13(properties.transactionType, input.transactionType));
-    if (input?.type) filters.push(eq13(properties.propertyType, input.type));
-    if (input?.zone) filters.push(ilike(properties.zone, `%${input.zone}%`));
-    return await db.select().from(properties).where(and8(...filters)).orderBy(desc4(properties.featured), desc4(properties.createdAt)).limit(input?.limit ?? 20).offset(input?.offset ?? 0);
+    if (input?.transactionType && input.transactionType !== "all") {
+      filters.push(eq13(properties.transactionType, input.transactionType));
+    }
+    if (input?.type && input.type !== "all") {
+      filters.push(eq13(properties.propertyType, input.type));
+    }
+    const searchTerm = input?.search?.trim() || input?.zone?.trim();
+    if (searchTerm) {
+      const pattern = `%${searchTerm}%`;
+      filters.push(
+        or2(
+          ilike(properties.name, pattern),
+          ilike(properties.zone, pattern),
+          ilike(properties.addressNeighborhood, pattern),
+          ilike(properties.city, pattern),
+          ilike(properties.addressCity, pattern),
+          ilike(properties.addressLocality, pattern),
+          ilike(properties.description, pattern)
+        )
+      );
+    }
+    return await db.select().from(properties).where(and8(...filters)).orderBy(desc4(properties.featured), desc4(properties.id)).limit(input?.limit ?? 100).offset(input?.offset ?? 0);
   }),
   getById: publicProcedure.input(z7.object({ id: z7.number() })).query(async ({ input }) => {
     const db = await getDb();

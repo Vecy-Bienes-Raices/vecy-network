@@ -10,13 +10,16 @@ import {
   MessageCircle, 
   Zap,
   Filter,
-  Loader2
+  Loader2,
+  Plus,
+  Home,
+  Briefcase,
+  Sparkles
 } from 'lucide-react';
 import NetworkBackground from '@/components/NetworkBackground';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { supabase } from '@/lib/supabase';
 import { useLocation } from 'wouter';
-import { Plus } from 'lucide-react';
 import UnifiedPublishModal from '@/components/publish/UnifiedPublishModal';
 
 // --- Tipos para los Requerimientos ---
@@ -98,52 +101,80 @@ export default function RequirementsMarketplace() {
       <Navbar />
 
       {/* HERO SECTION */}
-      <section className="relative pt-40 pb-20 overflow-hidden border-b border-white/5">
+      <section className="relative pt-36 pb-16 overflow-hidden border-b border-white/5 bg-gradient-to-b from-black via-zinc-950 to-background">
         <NetworkBackground />
         <div className="container relative z-10 text-center">
-          <ScrollReveal delay={0.2}>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
-              <Search className="w-4 h-4 text-primary animate-pulse" />
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Marketplace de Demandas</span>
+          <ScrollReveal delay={0.1}>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-5 backdrop-blur-md">
+              <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
+              <span className="text-[11px] font-black uppercase tracking-[0.25em] text-primary">Marketplace de Demandas Calificadas</span>
             </div>
-            <h1 className="vecy-title-hero">
-              TIENDA DE <span className="text-gradient-gold">REQUERIMIENTOS</span>
+            <h1 className="vecy-title-hero uppercase tracking-tight">
+              CATÁLOGO DE <span className="text-gradient-gold">DEMANDAS</span>
             </h1>
-            <p className="vecy-subtitle max-w-3xl mx-auto">
-              Conecta con asesores que ya tienen el comprador calificado. 
-              Si tienes el inventario, <span className="font-bold text-white">tienes el cierre asegurado</span>.
+            <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-zinc-400">
+              Conecta con asesores que ya tienen el comprador verificado. 
+              Si tienes el inventario que coincide con el requerimiento, <span className="font-bold text-white">tienes el cierre asegurado</span>.
             </p>
+
+            {/* ── Switcher Doctrinal de Catálogo (OFERTAS / DEMANDAS) ── */}
+            <div className="mt-8 flex justify-center">
+              <div className="inline-flex p-1.5 rounded-2xl bg-zinc-900/90 border border-white/10 shadow-2xl backdrop-blur-xl gap-2">
+                <button
+                  onClick={() => navigate('/ofertas')}
+                  className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer flex items-center gap-2"
+                  title="Ir al Catálogo de Ofertas de Inmuebles"
+                >
+                  <Home className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>OFERTAS (INMUEBLES)</span>
+                </button>
+
+                <button
+                  className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#aa771c] text-black shadow-lg shadow-[#bf953f]/30 transition-all cursor-default flex items-center gap-2"
+                >
+                  <Briefcase className="w-3.5 h-3.5 text-black" />
+                  <span>DEMANDAS (REQUERIMIENTOS)</span>
+                  <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] bg-black/20 text-black font-black">
+                    {requirements.length}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* ── Acción Principal Única: PUBLICAR DEMANDA ── */}
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => setIsPublishOpen(true)}
+                className="btn-gold px-8 py-3.5 text-xs tracking-widest uppercase font-black gap-2.5 inline-flex items-center shadow-[0_0_30px_rgba(212,175,55,0.4)] hover:scale-105 transition-all cursor-pointer"
+                title="Publicar requerimiento o demanda de compra/arriendo con asistencia de JanIA"
+              >
+                <Plus className="w-4 h-4 text-black" />
+                <span>+ PUBLICAR DEMANDA</span>
+              </button>
+            </div>
           </ScrollReveal>
         </div>
       </section>
 
       {/* FILTROS */}
-      <section className="py-8 bg-black/50 backdrop-blur-xl border-b border-white/10 sticky top-20 z-30">
+      <section className="py-6 bg-background/90 backdrop-blur-2xl border-b border-white/10 sticky top-20 z-30">
         <div className="container">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="relative w-full md:w-96">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
               <input 
                 type="text" 
-                placeholder="Filtrar por barrio o tipo..."
-                className="input-vecy w-full pl-12 py-3 rounded-full text-sm"
+                placeholder="Filtrar por barrio, zona o tipo de inmueble..."
+                className="w-full bg-zinc-900/90 border border-white/10 rounded-xl pl-11 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-primary/60"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
               />
             </div>
             
             <div className="flex items-center gap-4 flex-wrap">
-              <button
-                onClick={() => setIsPublishOpen(true)}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-black font-extrabold text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 hover:scale-105 transition-all"
-              >
-                <Plus className="w-4 h-4 text-black" />
-                <span>+ Subir Demanda (Requerimiento)</span>
-              </button>
-
-              <div className="flex items-center gap-2 text-gray-500 uppercase tracking-widest text-[10px] font-bold">
-                <Filter className="w-4 h-4" />
-                <span>Ordenar: Más Recientes</span>
+              <div className="flex items-center gap-2 text-zinc-400 uppercase tracking-widest text-[10px] font-bold">
+                <Filter className="w-4 h-4 text-primary" />
+                <span>Demandas Activas en Vivo</span>
               </div>
             </div>
           </div>

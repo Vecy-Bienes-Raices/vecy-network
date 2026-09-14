@@ -383,7 +383,7 @@ export const propertiesRouter = router({
       zone: z.string().optional(),
       type: z.string().optional(),
       transactionType: z.string().optional(),
-      limit: z.number().default(20),
+      limit: z.number().min(1).max(200).default(100),
       offset: z.number().default(0),
     }).optional())
     .query(async ({ input }) => {
@@ -391,14 +391,34 @@ export const propertiesRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
 
       const filters = [eq(properties.available, true)];
-      if (input?.transactionType) filters.push(eq(properties.transactionType, input.transactionType as any));
-      if (input?.type) filters.push(eq(properties.propertyType, input.type as any));
-      if (input?.zone) filters.push(ilike(properties.zone, `%${input.zone}%`));
+      
+      if (input?.transactionType && input.transactionType !== 'all') {
+        filters.push(eq(properties.transactionType, input.transactionType as any));
+      }
+      if (input?.type && input.type !== 'all') {
+        filters.push(eq(properties.propertyType, input.type as any));
+      }
+      
+      const searchTerm = input?.search?.trim() || input?.zone?.trim();
+      if (searchTerm) {
+        const pattern = `%${searchTerm}%`;
+        filters.push(
+          or(
+            ilike(properties.name, pattern),
+            ilike(properties.zone, pattern),
+            ilike(properties.addressNeighborhood, pattern),
+            ilike(properties.city, pattern),
+            ilike(properties.addressCity, pattern),
+            ilike(properties.addressLocality, pattern),
+            ilike(properties.description, pattern)
+          )!
+        );
+      }
       
       return await db.select().from(properties)
         .where(and(...filters))
-        .orderBy(desc(properties.featured), desc(properties.createdAt))
-        .limit(input?.limit ?? 20)
+        .orderBy(desc(properties.featured), desc(properties.id))
+        .limit(input?.limit ?? 100)
         .offset(input?.offset ?? 0);
     }),
 

@@ -45,7 +45,10 @@ function Router() {
     <Suspense fallback={<PageLoadingFallback />}>
       <Switch>
         <Route path={"/"} component={Home} />
+        <Route path={"/ofertas"} component={Properties} />
         <Route path={"/properties"} component={Properties} />
+        <Route path={"/demandas"} component={RequirementsMarketplace} />
+        <Route path={"/requerimientos"} component={RequirementsMarketplace} />
         <Route path={"/property/:id"} component={PropertyDetail} />
         <Route path={"/blog"} component={Blog} />
         <Route path={"/investors"} component={Investors} />
@@ -56,9 +59,10 @@ function Router() {
         <Route path={"/agent-dashboard"} component={AgentDashboard} />
         <Route path={"/p/:token"} component={StealthPropertyView} />
         <Route path={"/ficha/:id"} component={UnbrandedFicha} />
+        <Route path={"/agenda"} component={Agenda} />
+        <Route path={"/agendar"} component={Agenda} />
         <Route path={"/agenda/:propertyId"} component={Agenda} />
         <Route path={"/red-colaboracion"} component={RedColaboracion} />
-        <Route path={"/requerimientos"} component={RequirementsMarketplace} />
         <Route path={"/historia"} component={NuestraHistoria} />
         <Route path={"/jania"} component={JanIAConsole} />
         <Route path={"/404"} component={NotFound} />

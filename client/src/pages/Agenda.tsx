@@ -105,7 +105,8 @@ export default function Agenda() {
     );
   }
 
-  if (!property) {
+  // Si se pasó un ID numérico específico pero no existe en la BD y tampoco viene nombre por URL
+  if (propertyId && !property && !search.get('nombre')) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col" style={customStyles}>
         <Navbar 
@@ -113,10 +114,11 @@ export default function Agenda() {
           brandName={agent?.name?.split(' ')[0] || "VECY"}
           brandSubtitle="AGENDA PRO"
         />
-        <div className="flex-1 flex flex-col justify-center items-center">
+        <div className="flex-1 flex flex-col justify-center items-center p-8 text-center">
           <h2 className="text-2xl font-bold text-white mb-4">Inmueble no encontrado</h2>
-          <Button variant="outline" className="btn-gold" onClick={() => navigate('/properties')}>
-            Volver al Catálogo
+          <p className="text-zinc-400 text-sm mb-6 max-w-md">El activo solicitado no se encuentra disponible o fue despublicado.</p>
+          <Button variant="outline" className="btn-gold" onClick={() => navigate('/ofertas')}>
+            Volver al Catálogo de Ofertas
           </Button>
         </div>
       </div>
@@ -134,13 +136,16 @@ export default function Agenda() {
         <div className="flex-1 flex flex-col justify-center items-center text-center p-8">
           <GraciasScreen 
             formData={submittedData} 
-            propertyName={property.name} 
-            onBackToCatalog={() => navigate('/properties')} 
+            propertyName={property?.name || search.get('nombre') || 'Inmueble Seleccionado'} 
+            onBackToCatalog={() => navigate('/ofertas')} 
           />
         </div>
       </div>
     );
   }
+
+  const propName = property?.name || search.get('nombre') || '';
+  const propCode = property ? generateRefCode(property.zone || '', (property as any).zoneRank ?? 1) : search.get('codigo') || '';
 
   return (
     <div className="min-h-screen bg-background text-foreground" style={customStyles}>
@@ -153,9 +158,9 @@ export default function Agenda() {
       <section className="pt-32 pb-20">
         <div className="container max-w-4xl">
           <AgendaForm 
-            propertyName={property.name} 
-            propertyCode={generateRefCode(property.zone || '', (property as any).zoneRank ?? 1)} 
-            isLocked={true} 
+            propertyName={propName} 
+            propertyCode={propCode} 
+            isLocked={!!property || !!search.get('nombre')} 
             agentId={agent?.id}
             customLogo={agent?.customLogoUrl}
             onSuccess={(data) => {

@@ -188,50 +188,83 @@ export default function PropertyCard({
 
         {images.length > 1 && (
           <>
-            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImgError(false); setCurrentImageIndex(prev => prev === 0 ? images.length - 1 : prev - 1); }} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-accent text-white p-1.5 rounded-full transition-all z-10 opacity-0 group-hover:opacity-100"><ChevronLeft size={16} /></button>
-            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImgError(false); setCurrentImageIndex(prev => prev === images.length - 1 ? 0 : prev + 1); }} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-accent text-white p-1.5 rounded-full transition-all z-10 opacity-0 group-hover:opacity-100"><ChevronRight size={16} /></button>
+            <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded-full text-[9px] font-black text-zinc-300 border border-white/10 z-10">
+              {currentImageIndex + 1} / {images.length}
+            </div>
+            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImgError(false); setCurrentImageIndex(prev => prev === 0 ? images.length - 1 : prev - 1); }} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-accent text-white p-1.5 rounded-full transition-all z-10 opacity-0 group-hover:opacity-100 cursor-pointer"><ChevronLeft size={16} /></button>
+            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImgError(false); setCurrentImageIndex(prev => prev === images.length - 1 ? 0 : prev + 1); }} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-accent text-white p-1.5 rounded-full transition-all z-10 opacity-0 group-hover:opacity-100 cursor-pointer"><ChevronRight size={16} /></button>
           </>
         )}
       </div>
 
       {/* ── Contenido ── */}
-      <div className="p-6 flex-1 flex flex-col">
-        <h3 className="text-sm font-black text-white mb-2 uppercase tracking-tight line-clamp-2 leading-tight h-10">{formattedTitle}</h3>
-        <div className="flex items-center gap-1.5 text-gray-500 mb-4 uppercase tracking-widest text-[9px] font-bold">
-          <MapPin size={12} className="text-primary flex-shrink-0" />
-          <span className="truncate">{displayLocation}</span>
-        </div>
-
-        <div className="mb-4 pb-4 border-b border-white/5">
-          <p className="text-2xl font-black text-primary leading-tight">{formatPrice(price)}</p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-6 flex-1">
-          <div className="flex items-center gap-2">
-            <Square size={14} className="text-primary/50" />
-            <div><p className="text-[8px] text-gray-500 font-bold uppercase">Área</p><p className="text-xs font-black text-white">{area} m²</p></div>
+      <div className="p-6 flex-1 flex flex-col justify-between">
+        <div>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 px-2.5 py-0.5 rounded-full border border-primary/20">
+              {propertyLabel}
+            </span>
+            {yearBuilt && (
+              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
+                {age !== null ? `${age} años` : `${yearBuilt}`}
+              </span>
+            )}
           </div>
-          {(bedrooms ?? 0) > 0 && (
-            <div className="flex items-center gap-2">
-              <Bed size={14} className="text-primary/50" />
-              <div><p className="text-[8px] text-gray-500 font-bold uppercase">Hab</p><p className="text-xs font-black text-white">{bedrooms}</p></div>
+
+          <h3 className="text-sm font-black text-white mb-2 uppercase tracking-tight line-clamp-2 leading-tight h-10 hover:text-primary transition-colors cursor-pointer" onClick={() => navigate(`/property/${id}`)}>
+            {formattedTitle}
+          </h3>
+
+          <div className="flex items-center gap-1.5 text-zinc-400 mb-4 uppercase tracking-widest text-[9px] font-bold">
+            <MapPin size={12} className="text-primary flex-shrink-0" />
+            <span className="truncate">{displayLocation}</span>
+          </div>
+
+          <div className="mb-4 pb-4 border-b border-white/5 flex items-baseline justify-between">
+            <p className="text-2xl font-black text-primary leading-tight">{formatPrice(price)}</p>
+            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">COP</span>
+          </div>
+
+          {/* Grilla de 4 Especificaciones Clave */}
+          <div className="grid grid-cols-4 gap-2 mb-6 bg-white/[0.02] p-2.5 rounded-xl border border-white/5">
+            <div className="flex flex-col items-center justify-center text-center">
+              <Square size={13} className="text-primary/70 mb-1" />
+              <p className="text-[7px] text-zinc-500 font-black uppercase">Área</p>
+              <p className="text-[11px] font-black text-white">{area} m²</p>
             </div>
-          )}
+            <div className="flex flex-col items-center justify-center text-center">
+              <Bed size={13} className="text-primary/70 mb-1" />
+              <p className="text-[7px] text-zinc-500 font-black uppercase">Hab</p>
+              <p className="text-[11px] font-black text-white">{bedrooms || '-'}</p>
+            </div>
+            <div className="flex flex-col items-center justify-center text-center">
+              <Bath size={13} className="text-primary/70 mb-1" />
+              <p className="text-[7px] text-zinc-500 font-black uppercase">Baños</p>
+              <p className="text-[11px] font-black text-white">{bathrooms || '-'}</p>
+            </div>
+            <div className="flex flex-col items-center justify-center text-center">
+              <Car size={13} className="text-primary/70 mb-1" />
+              <p className="text-[7px] text-zinc-500 font-black uppercase">Gar</p>
+              <p className="text-[11px] font-black text-white">{parking || '-'}</p>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 mt-2">
+        {/* Botonera de Tarjeta */}
+        <div className="grid grid-cols-2 gap-2 mt-auto">
           <button 
-            className="btn-gold text-[9px] py-3 tracking-widest font-black uppercase flex items-center justify-center gap-1.5 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform"
+            className="btn-gold text-[10px] py-3 tracking-widest font-black uppercase flex items-center justify-center gap-1.5 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
               const code = `ID-BOG-${(zone || locality || 'VECY').slice(0, 3).toUpperCase()}-${id}`;
               navigate(`/agenda/${id}?nombre=${encodeURIComponent(formattedTitle || name)}&codigo=${encodeURIComponent(code)}`);
             }}
+            title="Agendar visita oficial para este inmueble"
           >
             <Calendar size={13} className="text-black" /> Agendar
           </button>
           <button 
-            className="btn-gold-outline text-[9px] py-3 tracking-widest font-black uppercase flex items-center justify-center" 
+            className="btn-gold-outline text-[10px] py-3 tracking-widest font-black uppercase flex items-center justify-center cursor-pointer hover:bg-white/10" 
             onClick={() => navigate(`/property/${id}`)}
           >
             Ver Detalles

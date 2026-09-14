@@ -73,7 +73,7 @@ export default function Home() {
                 
                 <div className="flex flex-col sm:flex-row gap-5 justify-center">
                   <button 
-                    onClick={() => navigate('/properties')}
+                    onClick={() => navigate('/ofertas')}
                     className="btn-gold px-10 py-5 text-lg tracking-[0.2em] font-bold group"
                   >
                     EXPLORAR ACTIVOS

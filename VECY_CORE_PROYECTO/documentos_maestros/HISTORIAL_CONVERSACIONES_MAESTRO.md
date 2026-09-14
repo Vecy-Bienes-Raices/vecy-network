@@ -50,7 +50,54 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.43 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.44 — Septiembre 2026
+
+### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 00:00 (Hora Colombia UTC-5)
+**Versión**: `v31.44` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"Bueno creo que ya sabes qué estavamos haciendo con el otro agente, pero necesito que retomemos el tema que venimos desarrollando pues no veo el inmueble que subí ayer y el diseño de la tienda y las fichas técnicas está muy mal hecho, quisiera saber de diseño realmente. Por ejemplo si vess en la imagen los botones de la derecha pertenecen es a la página o pestaña de requerimientos o Demandas y no a la de Ofertas o Inmuebles. Y creo que así de manera más corta se deberían llamar estas secciones y los botones o pestañas del menú (OFERTAS / DEMANDAS). Bueno mira todo lo que hemos hecho desde VECY AGENDA, necesito verlo acá en VECY NETWORK y poderlo probar, por eso te comparto mi última conversación allí en la otra ventana de antigrávity en el proyecto VECY AGENDA:"*
+2. Compartió contexto de la integración de 2Captcha (`VITE_TWOCAPTCHA_API_KEY`), motor antifraude de cédulas y verificación en cascada.
+
+#### 🔍 Diagnóstico Técnico Profundo & Causas Raíz:
+1. **Inmuebles Recientes No Visibles (Caso Casa Morato ID 2775)**:
+   - En `server/routers/properties.ts`, el procedimiento `properties.list` tenía un `limit: 20` por defecto sin aplicar filtros en la base de datos.
+   - En el transcurso de las últimas 24 horas ingresaron más de 68 propiedades automáticas por WhatsApp (Baileys/JanIA), desplazando a la Casa Morato y propiedades previas fuera de las primeras 20.
+   - El frontend realizaba la consulta sin parámetros (`list.useQuery()`) y luego filtraba en memoria de React: `displayProperties = list.filter(p => p.propertyType === 'house')`. Al haber menos de 1 casa en los últimos 20 registros, arrojaba "0 Propiedades Disponibles".
+2. **Confusión y Sobrecarga Visual en la Tienda**:
+   - En la cabecera de la tienda se encontraban 4 botones amontonados que mezclaban Ofertas y Demandas (incluyendo un botón de "+ Subir Demanda" dentro del catálogo de Ofertas).
+   - Los nombres en el menú eran largos ("PROPIEDADES" y "REQUERIMIENTOS") cuando la doctrina de Vecy exige nombres directos: **OFERTAS** y **DEMANDAS**.
+3. **Restricción en la Agenda Directa**:
+   - `client/src/pages/Agenda.tsx` bloqueaba con "Inmueble no encontrado" si no recibía un `propertyId` numérico, imposibilitando abrir la agenda libremente o probar el motor antifraude sin un inmueble precargado.
+
+#### 🚀 Acciones Ejecutadas en Código y Arquitectura:
+1. **Backend & tRPC (`server/routers/properties.ts`)**:
+   - `properties.list` enriquecido con filtrado en PostgreSQL nativo por `type`, `transactionType` y búsqueda textual con `or(ilike(name), ilike(zone), ilike(addressNeighborhood), ilike(city), ilike(description))`.
+   - Límite elevado a 150 registros y ordenamiento por `featured DESC, id DESC` para garantizar que los inmuebles auditados aparezcan siempre.
+2. **Navegación & Menú (`client/src/components/Navbar.tsx` y `client/src/App.tsx`)**:
+   - Renombrados los botones del menú a **OFERTAS** (ruta `/ofertas`) y **DEMANDAS** (ruta `/demandas`).
+   - Soportadas rutas directas `/ofertas`, `/demandas`, `/agenda` y `/agendar` manteniendo retrocompatibilidad total.
+3. **Rediseño Integral de la Tienda de Ofertas (`client/src/pages/Properties.tsx`)**:
+   - Switcher de Catálogo segmentado Dark Luxury Gold: `[ 🏠 OFERTAS (INMUEBLES) ]` ↔ `[ 📋 DEMANDAS (REQUERIMIENTOS) ]`.
+   - Botón de acción único contextual: `[ + PUBLICAR OFERTA ]`.
+   - Buscador de micro-barrios en tiempo real con accesos directos (Morato, Chicó, Rosales, Cedritos, Santa Bárbara) y selector de negocio (Venta, Arriendo, Permuta).
+   - Contador dinámico de ofertas auditadas.
+4. **Rediseño Integral de la Tienda de Demandas (`client/src/pages/RequirementsMarketplace.tsx`)**:
+   - Switcher doctrinal complementario y botón único `[ + PUBLICAR DEMANDA ]`.
+5. **Rediseño de Tarjetas de Inmueble (`client/src/components/PropertyCard.tsx`)**:
+   - Cuadrícula de 4 especificaciones técnicas clave (Área m², Habitaciones, Baños, Garajes).
+   - Indicador dinámico de fotos `#1 / N` y botón dorado prominente `[ 📅 Agendar ]`.
+6. **Ficha Técnica (`client/src/pages/PropertyDetail.tsx`)**:
+   - Navegación hacia `/ofertas`, botón estelar `AGENDAR VISITA OFICIAL` y botón directo `EDITAR INMUEBLE & FOTOS`.
+7. **Acceso y Prueba de Vecy Agenda (`client/src/pages/Agenda.tsx`)**:
+   - Acceso universal tanto con inmueble precargado como agendamiento general sin error 404, conectado con el motor antifraude de 2Captcha.
+8. **Compilación y Preservación**:
+   - `npm run check` con 0 errores de TypeScript y `npm run build` completado limpiamente.
+   - `whatsapp-match.ts` preservado 100% intacto.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.43 — Septiembre 2026
 
 ### 🗓️ Sesión: Domingo 13 de Septiembre de 2026 — 23:15 (Hora Colombia UTC-5)
 **Versión**: `v31.43` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

@@ -94,12 +94,13 @@ export default function PropertyDetail() {
           <div className="mb-12 mt-14">
             <div className="flex items-center gap-2 mb-4">
               <button 
-                onClick={() => navigate('/properties')}
-                className="p-2 hover:bg-white/10 rounded-full transition-colors group"
+                onClick={() => navigate('/ofertas')}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors group cursor-pointer"
+                title="Volver al Catálogo de Ofertas"
               >
                 <ArrowLeft className="w-5 h-5 text-primary group-hover:-translate-x-1 transition-transform" />
               </button>
-              <span className="vecy-accent-tag mb-0">Detalle de Activo Gold</span>
+              <span className="vecy-accent-tag mb-0">Oferta Inmobiliaria Auditada</span>
             </div>
             <h1 className="vecy-title-hero text-left mb-4 uppercase">
               {property.name}

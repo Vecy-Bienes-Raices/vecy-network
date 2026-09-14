@@ -167,7 +167,30 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.43 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.44 — Septiembre 2026
+
+### Novedades v31.44 (Rediseño Doctrinal de Tienda de Ofertas & Demandas, Switcher Luxury de Catálogo, Solución al Límite de 20 Inmuebles, Fichas Técnicas Enriquecidas y Acceso Universal a Vecy Agenda):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Inmuebles Recientes No Visibles (Caso Casa Morato ID 2775)*: El procedimiento `properties.list` en `server/routers/properties.ts` imponía un `limit: 20` estricto sin filtrar del lado del servidor. Tras el ingreso de más de 68 propiedades vía WhatsApp (Baileys/JanIA), los inmuebles previos quedaron más allá del registro #20. Al filtrar en memoria del cliente (`displayProperties = list.filter(p => p.propertyType === 'house')`), la vista de Casas arrojaba 0 propiedades disponibles.
+  2) *Sobrecarga y Mezcla Visual en la Tienda*: La cabecera mostraba 4 botones amontonados mezclando acciones de Ofertas y Demandas ("Subir Demanda" dentro del catálogo de Ofertas), generando confusión visual.
+  3) *Nomenclatura de Secciones y Menú*: Necesidad doctrinal de simplificar la navegación a **OFERTAS** (en vez de "PROPIEDADES") y **DEMANDAS** (en vez de "REQUERIMIENTOS").
+  4) *Restricción de Acceso a Vecy Agenda*: La pantalla `/agenda` arrojaba error "Inmueble no encontrado" si se intentaba ingresar sin un `propertyId` numérico, impidiendo el uso y prueba directa del formulario con el motor antifraude de 2Captcha.
+- **Acciones Ejecutadas**:
+  1) *Optimización de `properties.list`*: Soporte de filtros nativos en PostgreSQL por `type`, `transactionType` y búsqueda textual multinivel (`name`, `zone`, `addressNeighborhood`, `city`, `description`), elevando el límite a 150 registros y ordenando por `featured DESC, id DESC`.
+  2) *Rediseño de Tienda de Ofertas (`Properties.tsx`)*:
+     - Switcher de Catálogo segmentado de alta gama (Dark Luxury Gold): `[ 🏠 OFERTAS (INMUEBLES) ]` ↔ `[ 📋 DEMANDAS (REQUERIMIENTOS) ]`.
+     - Botón de acción único contextual: `[ + PUBLICAR OFERTA ]`.
+     - Buscador reactivo por micro-barrio con accesos rápidos (Morato, Chicó, Rosales, Cedritos, Santa Bárbara) y selector de negocio (Venta, Arriendo, Permuta).
+     - Contador dinámico de ofertas auditadas.
+  3) *Rediseño de Tienda de Demandas (`RequirementsMarketplace.tsx`)*: Switcher doctrinal integrado y botón único `[ + PUBLICAR DEMANDA ]`.
+  4) *Rediseño de Tarjetas (`PropertyCard.tsx`)*: Cuadrícula de 4 especificaciones (Área, Habitaciones, Baños, Garajes), carrusel con indicador `#1 / N` y botón dorado prominente `[ 📅 Agendar ]`.
+  5) *Ficha Técnica (`PropertyDetail.tsx`)*: Título y navegación refinada a `/ofertas`, botón estelar `AGENDAR VISITA OFICIAL` y botón de edición directa.
+  6) *Acceso Universal a Vecy Agenda (`Agenda.tsx` y `App.tsx`)*: Rutas `/ofertas`, `/demandas`, `/agenda` y `/agendar` habilitadas.
+  7) *Preservación Absoluta de `whatsapp-match.ts`*: Archivo 100% original e intacto.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.43 — Septiembre 2026
 
 ### Novedades v31.43 (Motor Antifraude en Cascada Inteligente: DB Interna Vecy + ADRES BDUA + Policía Nacional vía 2Captcha, Verificación de Clientes y Acompañantes para Agentes, y Conexión de Agenda en Catálogo de Inmuebles):
 - **Diagnóstico y Causas Raíz Identificadas**:
