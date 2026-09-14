@@ -15965,7 +15965,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.43";
+var VECY_VERSION = "v31.45";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -19438,7 +19438,7 @@ async function queryOfficialAdres(tipoDocInput, cleanDoc) {
       "Accept-Language": "es-ES,es;q=0.9"
     };
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 16e3);
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
     const res1 = await fetch(baseUrl, { headers, signal: controller.signal });
     jar.addFromHeaders(res1.headers);
     const html1 = await res1.text();
@@ -19875,6 +19875,76 @@ var agendaRouter = router({
     return {
       success: true,
       item: updated[0] || null
+    };
+  }),
+  create: publicProcedure.input(
+    z8.object({
+      solicitante_nombre: z8.string().min(1),
+      solicitante_tipo_persona: z8.string().optional(),
+      solicitante_perfil: z8.string().optional(),
+      solicitante_email: z8.string().optional(),
+      solicitante_celular: z8.string().optional(),
+      solicitante_tipo_documento: z8.string().optional(),
+      solicitante_numero_documento: z8.string().optional(),
+      servicio_solicitado: z8.string().optional(),
+      nombre_inmueble: z8.string().optional(),
+      codigo_inmueble: z8.string().optional(),
+      opcion_negocio: z8.string().optional(),
+      fecha_cita_texto: z8.string().nullable().optional(),
+      hora_cita: z8.string().nullable().optional(),
+      cantidad_personas: z8.number().nullable().optional(),
+      interesado_nombre: z8.string().optional(),
+      interesado_tipo_documento: z8.string().optional(),
+      interesado_documento: z8.string().optional(),
+      tipo_cliente: z8.string().optional(),
+      acompanantes: z8.any().optional(),
+      firma_virtual_base64: z8.string().nullable().optional(),
+      firma_fechahora_audit: z8.string().nullable().optional(),
+      solicitante_representante_legal: z8.string().optional(),
+      autorizacion: z8.boolean().optional(),
+      agent_id: z8.string().optional()
+    })
+  ).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+    const maxRes = await db.select({ maxId: sql8`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
+    const nextSolicitudId = Number(maxRes[0]?.maxId || 0) + 1;
+    const inserted = await db.insert(solicitudes).values({
+      id: sql8`nextval('solicitudes_id_seq')`,
+      solicitudId: nextSolicitudId,
+      solicitanteNombre: input.solicitante_nombre,
+      solicitanteTipoPersona: input.solicitante_tipo_persona || "Persona Natural",
+      solicitantePerfil: input.solicitante_perfil || "Cliente directo",
+      solicitanteEmail: input.solicitante_email || null,
+      solicitanteCelular: input.solicitante_celular || null,
+      solicitanteTipoDocumento: input.solicitante_tipo_documento || "C\xE9dula de ciudadan\xEDa",
+      solicitanteNumeroDocumento: input.solicitante_numero_documento || null,
+      servicioSolicitado: input.servicio_solicitado || "Visitar inmueble",
+      nombreInmueble: input.nombre_inmueble || null,
+      codigoInmueble: input.codigo_inmueble || null,
+      opcionNegocio: input.opcion_negocio || null,
+      fechaCitaTexto: input.fecha_cita_texto || null,
+      horaCita: input.hora_cita || null,
+      cantidadPersonas: input.cantidad_personas ?? null,
+      interesadoNombre: input.interesado_nombre || null,
+      interesadoTipoDocumento: input.interesado_tipo_documento || null,
+      interesadoDocumento: input.interesado_documento || null,
+      tipoCliente: input.tipo_cliente || null,
+      acompanantes: input.acompanantes || null,
+      firmaVirtualBase64: input.firma_virtual_base64 || null,
+      firmaFechahoraAudit: input.firma_fechahora_audit ? new Date(input.firma_fechahora_audit) : /* @__PURE__ */ new Date(),
+      createdAt: /* @__PURE__ */ new Date(),
+      solicitanteRepresentanteLegal: input.solicitante_representante_legal || null,
+      autorizacion: input.autorizacion ?? true,
+      agentId: input.agent_id || null
+    }).returning();
+    const newRow = inserted[0];
+    return {
+      success: true,
+      id: newRow?.id,
+      solicitudId: nextSolicitudId,
+      data: newRow,
+      message: `\u2713 Solicitud de agenda #${nextSolicitudId} registrada con \xE9xito.`
     };
   })
 });

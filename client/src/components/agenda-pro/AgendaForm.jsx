@@ -59,6 +59,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const verifyIdentityMutation = trpc.agenda.verifyIdentity.useMutation();
+  const createSolicitudMutation = trpc.agenda.create.useMutation();
   const [isValidatingDoc, setIsValidatingDoc] = useState(false);
   const [identityError, setIdentityError] = useState(null);
   const [identityVerified, setIdentityVerified] = useState(false);
@@ -431,6 +432,14 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
       return;
     }
 
+    if (showAgentSections && clientIdentityError) {
+      toast.error(clientIdentityError);
+      setError(clientIdentityError);
+      const el = document.getElementById('interesado_documento');
+      if (el) el.focus();
+      return;
+    }
+
     const validationErrors = validateForm(formData);
     if (Object.keys(validationErrors).length > 0) {
       const fieldErrorFlags = Object.keys(validationErrors).reduce((acc, key) => ({ ...acc, [key]: true }), {});
@@ -467,17 +476,21 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
       if (payload.solicitante_celular) payload.solicitante_celular = payload.solicitante_celular.replace('+', '');
       Object.keys(payload).forEach(key => { if (typeof payload[key] === 'string') payload[key] = payload[key].trim(); });
 
-      const response = await submitSolicitud(payload, session);
+      // Inserción nativa en PostgreSQL 17 nativo de Vecy Network vía tRPC (0% cuotas Supabase)
+      const response = await createSolicitudMutation.mutateAsync(payload);
 
       if (onSuccess) {
-        onSuccess(response?.data?.[0] || payload);
+        onSuccess(response?.data || payload);
       } else {
-        navigate('/properties');
+        toast.success(response?.message || '¡Solicitud registrada con éxito!');
+        navigate('/ofertas');
       }
 
     } catch (error) {
       console.error('Error al enviar la solicitud:', error);
-      setError(error.message || 'No se pudo completar la solicitud. Revisa tu conexión o inténtalo más tarde.');
+      const msg = error?.message || 'No se pudo completar la solicitud. Revisa tu conexión o inténtalo más tarde.';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -920,9 +933,9 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
               <div className="mt-8 text-center">
                 <button 
                   type="submit" 
-                  disabled={isSubmitting || !!identityError}
+                  disabled={isSubmitting || !!identityError || (showAgentSections && !!clientIdentityError)}
                   className={`w-full sm:w-auto px-10 py-3.5 font-extrabold uppercase tracking-widest text-xs rounded-xl transition-all transform hover:-translate-y-0.5 disabled:cursor-not-allowed ${
-                    identityError
+                    (identityError || (showAgentSections && clientIdentityError))
                       ? 'bg-red-950/80 border-2 border-red-500/70 text-red-300 shadow-[0_0_20px_rgba(239,68,68,0.3)]'
                       : 'bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-black shadow-[0_0_20px_rgba(191,149,63,0.3)] hover:shadow-[0_0_30px_rgba(191,149,63,0.5)] disabled:opacity-50'
                   }`}
@@ -931,7 +944,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
                     <span className="flex items-center justify-center">
                       <Spinner /> Procesando Solicitud...
                     </span>
-                  ) : identityError ? (
+                  ) : (identityError || (showAgentSections && clientIdentityError)) ? (
                     '⚠️ Bloqueado: Corrige el documento para agendar'
                   ) : (
                     'Confirmar y Agendar Visita'

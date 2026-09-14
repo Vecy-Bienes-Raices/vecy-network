@@ -58,7 +58,7 @@ async function queryOfficialAdres(tipoDocInput: string, cleanDoc: string): Promi
     };
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 16000);
+    const timeoutId = setTimeout(() => controller.abort(), 2500); // Timeout estricto de 2.5s para evitar 504
 
     const res1 = await fetch(baseUrl, { headers, signal: controller.signal });
     jar.addFromHeaders(res1.headers);
@@ -593,4 +593,88 @@ export const agendaRouter = router({
         item: updated[0] || null,
       };
     }),
+
+  create: publicProcedure
+    .input(
+      z.object({
+        solicitante_nombre: z.string().min(1),
+        solicitante_tipo_persona: z.string().optional(),
+        solicitante_perfil: z.string().optional(),
+        solicitante_email: z.string().optional(),
+        solicitante_celular: z.string().optional(),
+        solicitante_tipo_documento: z.string().optional(),
+        solicitante_numero_documento: z.string().optional(),
+        servicio_solicitado: z.string().optional(),
+        nombre_inmueble: z.string().optional(),
+        codigo_inmueble: z.string().optional(),
+        opcion_negocio: z.string().optional(),
+        fecha_cita_texto: z.string().nullable().optional(),
+        hora_cita: z.string().nullable().optional(),
+        cantidad_personas: z.number().nullable().optional(),
+        interesado_nombre: z.string().optional(),
+        interesado_tipo_documento: z.string().optional(),
+        interesado_documento: z.string().optional(),
+        tipo_cliente: z.string().optional(),
+        acompanantes: z.any().optional(),
+        firma_virtual_base64: z.string().nullable().optional(),
+        firma_fechahora_audit: z.string().nullable().optional(),
+        solicitante_representante_legal: z.string().optional(),
+        autorizacion: z.boolean().optional(),
+        agent_id: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+
+      // Obtener el siguiente consecutivo oficial solicitud_id
+      const maxRes = await db
+        .select({ maxId: sql<number>`COALESCE(MAX(solicitud_id), 0)` })
+        .from(solicitudes);
+      const nextSolicitudId = Number(maxRes[0]?.maxId || 0) + 1;
+
+      const inserted = await db
+        .insert(solicitudes)
+        .values({
+          id: sql`nextval('solicitudes_id_seq')`,
+          solicitudId: nextSolicitudId,
+          solicitanteNombre: input.solicitante_nombre,
+          solicitanteTipoPersona: input.solicitante_tipo_persona || 'Persona Natural',
+          solicitantePerfil: input.solicitante_perfil || 'Cliente directo',
+          solicitanteEmail: input.solicitante_email || null,
+          solicitanteCelular: input.solicitante_celular || null,
+          solicitanteTipoDocumento: input.solicitante_tipo_documento || 'Cédula de ciudadanía',
+          solicitanteNumeroDocumento: input.solicitante_numero_documento || null,
+          servicioSolicitado: input.servicio_solicitado || 'Visitar inmueble',
+          nombreInmueble: input.nombre_inmueble || null,
+          codigoInmueble: input.codigo_inmueble || null,
+          opcionNegocio: input.opcion_negocio || null,
+          fechaCitaTexto: input.fecha_cita_texto || null,
+          horaCita: input.hora_cita || null,
+          cantidadPersonas: input.cantidad_personas ?? null,
+          interesadoNombre: input.interesado_nombre || null,
+          interesadoTipoDocumento: input.interesado_tipo_documento || null,
+          interesadoDocumento: input.interesado_documento || null,
+          tipoCliente: input.tipo_cliente || null,
+          acompanantes: input.acompanantes || null,
+          firmaVirtualBase64: input.firma_virtual_base64 || null,
+          firmaFechahoraAudit: input.firma_fechahora_audit ? new Date(input.firma_fechahora_audit) : new Date(),
+          createdAt: new Date(),
+          solicitanteRepresentanteLegal: input.solicitante_representante_legal || null,
+          autorizacion: input.autorizacion ?? true,
+          agentId: input.agent_id || null,
+        })
+        .returning();
+
+      const newRow = inserted[0];
+
+      return {
+        success: true,
+        id: newRow?.id,
+        solicitudId: nextSolicitudId,
+        data: newRow,
+        message: `✓ Solicitud de agenda #${nextSolicitudId} registrada con éxito.`,
+      };
+    }),
 });
+
