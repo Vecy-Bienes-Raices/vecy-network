@@ -322,6 +322,20 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.55 — Septiembre 2026
+
+#### 📌 RESTAURACIÓN DOCTRINAL DE NETWORKBACKGROUND EN TIENDA OFERTAS CON PARTÍCULAS DINÁMICAS Y POINTER EVENTS SHIELD
+
+**Problemas identificados:**
+1. **Ausencia de Fondo Animado en Tienda Ofertas**: `Properties.tsx` sólo contaba con un contenedor de luz estático (`blur-[120px]`), mientras que `RequirementsMarketplace.tsx` (Tienda Demandas) y `Home.tsx` sí tenían activo el canvas de la red animada de puntos y siluetas de edificios.
+
+**Solución aplicada:**
+- **`client/src/pages/Properties.tsx`**: Integración del canvas interactivo `<NetworkBackground />` dentro de la sección Hero de "TIENDA OFERTAS", sincronizando la estética y experiencia visual idéntica entre Ofertas y Demandas.
+- **`client/src/components/NetworkBackground.tsx`**: Adición de `pointer-events-none` al canvas para garantizar que los clicks e interacciones sobre los botones y selectores no sean interferidos.
+- **Compilación y Despliegue**: `npm run check` (0 errores) y `npm run build` (0 errores).
+
+---
+
 ### 🔖 v31.54 — Septiembre 2026
 
 #### 📌 CALIBRACIÓN ÓPTICA EXACTA Y PARIDAD VISUAL DEFINITIVA ENTRE FLECHA VOLVER ARRIBA Y JANIA AVATAR

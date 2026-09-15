@@ -50,7 +50,33 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.54 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.55 — Septiembre 2026
+
+### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 23:55 (Hora Colombia UTC-5)
+**Versión**: `v31.55` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"¿Y qué pasó con el fondo animado de los puntos luminosos en movimiento?. ¿Porqué no aparecen en la pestaña o subpágina de TIENDA OFERTAS??"*
+
+#### 🔍 Diagnóstico Técnico Profundo & Causas Raíz Identificadas:
+1. **Omisión de `NetworkBackground` en el Hero de Tienda Ofertas (`Properties.tsx`)**:
+   - Al inspeccionar `client/src/pages/Properties.tsx` vs `client/src/pages/RequirementsMarketplace.tsx` (Tienda Demandas), se constató que `RequirementsMarketplace.tsx` sí tenía importado e instanciado `<NetworkBackground />` dentro de su hero section.
+   - En contraste, `Properties.tsx` únicamente contaba con un `<div>` estático con degradado `bg-primary/10 rounded-full blur-[120px]`, careciendo totalmente de la importación y renderizado del componente canvas interactivo insignia de la red de nodos animados (`NetworkBackground`).
+
+#### 🛠️ Acciones Técnicas Ejecutadas:
+1. **Integración de `NetworkBackground` en `Properties.tsx`**:
+   - Se importó `import NetworkBackground from '@/components/NetworkBackground';`.
+   - Se insertó `<NetworkBackground />` dentro de la sección Hero (`relative pt-36 pb-16 overflow-hidden ...`), restaurando la animación de nodos dorados dinámicos, destellos y siluetas de edificios en movimiento detrás del título "TIENDA OFERTAS", en perfecta paridad con "TIENDA DEMANDAS" y la página de Inicio.
+2. **Blindaje de Interactividad en `NetworkBackground.tsx`**:
+   - Se aplicó `pointer-events-none` al elemento `<canvas>` para garantizar que las partículas interactivas nunca intercepten ni bloqueen los clicks en los botones de acción del catálogo (`+ PUBLICAR OFERTA`, filtros o tarjetas).
+3. **Compilación y Control de Versión**:
+   - `npm run check` (0 errores) y `npm run build` (0 errores).
+   - Incremento de versión oficial a `v31.55` en `shared/const.ts` y `package.json`.
+   - Preservación 100% intacta de `server/_core/whatsapp-match.ts`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.54 — Septiembre 2026
 
 ### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 23:45 (Hora Colombia UTC-5)
 **Versión**: `v31.54` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

@@ -10,6 +10,7 @@
  */
 
 import Navbar from '@/components/Navbar';
+import NetworkBackground from '@/components/NetworkBackground';
 import PropertyCard from '@/components/PropertyCard';
 import { useMemo, useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
@@ -117,6 +118,7 @@ export default function Properties() {
 
       {/* ── HERO SECTION GOLD LUXURY ── */}
       <section className="relative pt-36 pb-16 overflow-hidden border-b border-white/5 bg-gradient-to-b from-black via-zinc-950 to-background">
+        <NetworkBackground />
         {/* Glow de fondo */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[650px] h-[320px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
 

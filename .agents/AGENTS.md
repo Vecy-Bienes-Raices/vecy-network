@@ -167,7 +167,19 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.54 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.55 — Septiembre 2026
+
+### Novedades v31.55 (Restauración Doctrinal de NetworkBackground en Tienda Ofertas con Partículas Dinámicas, Siluetas de Edificios y Pointer Events Shield):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Ausencia de Fondo Animado en Tienda Ofertas*: Mientras que `RequirementsMarketplace.tsx` (Tienda Demandas) y `Home.tsx` contaban con `<NetworkBackground />` dentro de sus secciones Hero, `Properties.tsx` (Tienda Ofertas) carecía de la importación y renderizado de dicho canvas, mostrando un fondo estático negro vacío.
+- **Acciones Ejecutadas**:
+  1) *`Properties.tsx`*: Integración de `import NetworkBackground from '@/components/NetworkBackground';` e inserción del componente dentro del hero de "TIENDA OFERTAS" para paridad visual 100% idéntica a "TIENDA DEMANDAS".
+  2) *`NetworkBackground.tsx`*: Aplicación de `pointer-events-none` al elemento `<canvas>` para garantizar cero interferencias con clicks en botones y filtros.
+  3) *Compilación y Despliegue*: `npm run check` (0 errores) y `npm run build` (0 errores).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.54 — Septiembre 2026
 
 ### Novedades v31.54 (Calibración Óptica Exacta y Paridad Visual Definitiva entre Flecha Volver Arriba y JanIA Avatar):
 - **Diagnóstico y Causas Raíz Identificadas**:
