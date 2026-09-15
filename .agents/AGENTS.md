@@ -167,7 +167,29 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.56 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.57 — Septiembre 2026
+
+### Novedades v31.57 (Desplegables Numéricos 0-10+ Gold Luxury, Erradicación de Zombies en VPS, Restauración de Coincidencias y Estabilidad JanIA):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Rechazo de Botoneras Horizontales y Steppers*: Las filas de pills horizontales y steppers `[-] [0] [+]` en `UnifiedPublishModal.tsx` generaban barras de scroll horizontal incómodas y desorden visual. El requerimiento exacto era un menú desplegable (`<select>`) limpio con opciones claras hasta **10+** (y desglose extendido para edificios, hoteles y fincas).
+  2) *Bloqueo de Página de Coincidencias (Admin Matches)*: La página quedaba congelada con el spinner infinito (*"solo da vueltas y vueltas"*). El diagnóstico en VPS (`13.140.149.144`) reveló que no era un bug de frontend sino saturación severa de PostgreSQL (localhost:5432) provocada por un proceso zombie `node -e` (PID 1097794) consumiendo el 101% de CPU desde el 12 de septiembre, causando `write CONNECT_TIMEOUT`.
+  3) *Intermitencia e Inactividad de JanIA*: El socket de Baileys perdía sincronización porque al persistir `pendingSessions` o logs de conversaciones en PostgreSQL, la base de datos no respondía por el bloqueo del pool de conexiones.
+- **Acciones Ejecutadas**:
+  1) *`UnifiedPublishModal.tsx`*:
+     - Sustitución completa de las pills y steppers por el nuevo control `NumericField` basado en `<select>` Gold Luxury con flecha dorada `ChevronDown`.
+     - Opciones estándar: `0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10+`.
+     - `<optgroup label="Más de 10 (Edificios / Hoteles / Fincas)">` con rangos de 11 a 50 para activos corporativos y comerciales.
+     - Reestructuración de la grilla de Habitaciones, Baños, Garajes Carro/Moto, Estar de TV, Estudios, Depósitos, Cavas, Chimeneas, Balcones y Terrazas a celdas simétricas sin desbordes.
+  2) *Saneamiento de VPS y PostgreSQL*:
+     - Terminación forzosa de procesos zombies (PIDs 1097794, 1014936, 1017868, 1099994). CPU del VPS liberada al 0%.
+     - Reinicio limpio de `jania-server` con PM2.
+     - Verificación de latencia: `janIA.getAllMatches` respondió en **1.05s** (HTTP 200), eliminando el cuelgue en Coincidencias.
+     - Socket Baileys verificado activo (`isReady=true`, número `+573192919978`) procesando mensajes en tiempo real.
+  3) *Compilación y Despliegue*: `npm run check` (0 errores) y `npm run build` (0 errores).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.56 — Septiembre 2026
 
 ### Novedades v31.56 (Controles Numéricos Flexibles hasta 50+, Subtipos Exhaustivos, Dropzone de Ficha Técnica PDF con Gemini Multimodal y Estación de Trabajo JanIA):
 - **Diagnóstico y Causas Raíz Identificadas**:

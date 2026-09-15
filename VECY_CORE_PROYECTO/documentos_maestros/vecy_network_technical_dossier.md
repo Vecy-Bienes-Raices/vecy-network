@@ -322,6 +322,29 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.57 — Septiembre 2026
+
+#### 📌 DESPLEGABLES NUMÉRICOS 0-10+ GOLD LUXURY, ERRADICACIÓN DE ZOMBIES EN VPS, RESTAURACIÓN DE COINCIDENCIAS Y ESTABILIDAD JANIA
+
+**Problemas identificados:**
+1. **Rechazo de Pills Horizontales y Steppers**: La combinación previa de pills con steppers generaba barras de desplazamiento horizontal y sobrecarga visual. El requerimiento de diseño exacto era un menú desplegable (`<select>`) limpio con opciones del 0 al 10+ (y opciones extendidas hasta 50 para edificios/hoteles).
+2. **Página de Coincidencias Congelada en Spinner Infinito**: La vista `/admin/matches` quedaba bloqueada cargando. El análisis en el VPS (`13.140.149.144`) reveló que un proceso zombie `node -e` (PID 1097794) consumía el 101% de CPU desde el 12 de septiembre, saturando el pool de conexiones de PostgreSQL local (`localhost:5432`) y arrojando `write CONNECT_TIMEOUT`.
+3. **Inestabilidad de JanIA en WhatsApp**: Al fallar los intentos de persistencia en PostgreSQL por el bloqueo de conexiones, Baileys sufría caídas intermitentes.
+
+**Solución aplicada:**
+- **`client/src/components/publish/UnifiedPublishModal.tsx`**:
+  - Sustitución de botoneras por el componente `NumericField` basado en `<select>` Gold Luxury con flecha `ChevronDown`.
+  - Opciones de 0 a 10+ y grupo desplegable `<optgroup label="Más de 10 (Edificios / Hoteles / Fincas)">` con valores hasta 50.
+  - Normalización de celdas de cuadrícula para Habitaciones, Baños, Garajes Carro/Moto, Estar de TV, Estudios, Depósitos, Cavas, Chimeneas, Balcones y Terrazas.
+- **Saneamiento de Servidor VPS (`13.140.149.144`)**:
+  - Terminación forzosa con `kill -9` de procesos zombies pegados al 101% de CPU (PIDs 1097794, 1014936, 1017868, 1099994).
+  - CPU liberada al 0%. Reinicio limpio de `jania-server` con PM2.
+  - Verificación de consulta `janIA.getAllMatches`: responde en **1.05 segundos** (HTTP 200).
+  - Socket Baileys verificado en vivo (`isReady=true`, línea `+573192919978`).
+- **Compilación y Despliegue**: `npx tsc --noEmit` (0 errores) y `npm run build` (0 errores).
+
+---
+
 ### 🔖 v31.56 — Septiembre 2026
 
 #### 📌 CONTROLES NUMÉRICOS FLEXIBLES HASTA 50+, SUBTIPOS DE INMUEBLE, DROPZONE PDF MULTIMODAL GEMINI Y WORKSPACE ESPACIOSO DE JANIA

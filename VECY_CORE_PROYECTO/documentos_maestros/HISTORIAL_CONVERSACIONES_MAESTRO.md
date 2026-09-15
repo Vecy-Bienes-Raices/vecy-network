@@ -50,7 +50,46 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.56 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.57 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 15 de Septiembre de 2026 — 18:55 (Hora Colombia UTC-5)
+**Versión**: `v31.57` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"Por qué hiciste mal el diseño, yo lo que quiero es que los números queden en un desplegable o campo numérico como te había dicho y no esta porquería, deja solo los numéricos hasta 10 + porque no lo entendiste."*
+2. *"Veo que JanIA paró de trabajar, revisa qué sucedió."*
+3. *"Dime qué dias y a qué horas y que debe publicar JanIA en el Grupo 2 y el Canal de Whatsapp porque no lo esta haciendo como debe."*
+4. *"La página de coincidencias no abre está completamente inactiva, solo da vueltas y vueltas. Averigua muy bien que está pasando. No entiendo por qué todos los días ahora toca darle cuerda o echarle carbon a JanIA, algo debiste haber hecho mal estos días."*
+
+#### 🔬 Diagnóstico Técnico Profundo y Causa Raíz:
+1. **Botoneras Numéricas**: La implementación previa combinó una tira horizontal de pills con un stepper `[-] [0] [+]`. En pantallas o cajas medianas, generaba barras de scroll horizontal incómodas y desorden visual. El requerimiento genuino de Eduardo era un menú desplegable (`<select>`) vertical, limpio, ergonómico y con escala directa `0..10+` (con soporte extendido 11..50 para edificios u hoteles).
+2. **Causa Raíz de Coincidencias Congeladas y JanIA Inactiva (Falla Crítica de VPS)**:
+   - Al inspeccionar los procesos del servidor VPS con `ps aux`, se descubrió un proceso zombie huérfano: `PID 1097794` ejecutando `node -e ...` desde el 12 de septiembre, consumiendo el **101% de CPU de manera ininterrumpida**.
+   - Este proceso zombie saturó las conexiones y sockets locales de PostgreSQL (`localhost:5432`), arrojando recurrentemente: `Error: write CONNECT_TIMEOUT localhost:5432`.
+   - Como consecuencia, cuando el router tRPC `getAllMatches` intentaba consultar las coincidencias, PostgreSQL no respondía a tiempo, dejando la interfaz de usuario en un spinner infinito ("dando vueltas y vueltas").
+   - Igualmente, JanIA en Baileys colapsaba de manera intermitente cada vez que intentaba actualizar `pendingSessions` o insertar registros de conversación en PostgreSQL, provocando desconexiones del socket.
+3. **Cron Schedule de Publicaciones (Grupo 2 y Canal)**:
+   - Los cron jobs están programados de lunes a domingo a las 10:00 AM (Tips Legales, DIAN, Avalúos, Pulso de Mercado) y miércoles/sábados 4:30 PM (Proyecto Vecy Network). Hoy 15 de septiembre a las 10:44 AM se ejecutó el Tip Jurídico con audio TTS e imagen generada.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Rediseño Limpio en `UnifiedPublishModal.tsx`**:
+   - Se construyó el nuevo componente `NumericField` basado en `<select>` Gold Luxury con flecha dorada `ChevronDown`.
+   - Opciones nativas limpias: `0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10+`.
+   - Grupo ordenado `<optgroup label="Más de 10 (Edificios / Hoteles / Fincas)">` con valores de 11 a 50.
+   - Eliminación total de scrollbars horizontales y steppers. Se normalizó la grilla en celdas individuales para Habitaciones, Baños, Garajes Carro/Moto, Estar de TV, Estudios, Depósitos, Cavas, Chimeneas, Balcones y Terrazas.
+2. **Rescate Quirúrgico del VPS y PostgreSQL**:
+   - Se eliminaron con `kill -9` los procesos zombies (PIDs 1097794, 1014936, 1017868, 1099994).
+   - CPU del servidor liberada instantáneamente del 101% al 0%.
+   - Se reinició `jania-server` limpiamente con PM2.
+   - Se verificó con `curl` que `janIA.getAllMatches` responde en **1.05 segundos** (HTTP 200) con todos los matches intactos.
+   - El socket de Baileys se reconectó inmediatamente (`isReady=true`, línea `+573192919978`).
+3. **Control de Versión y Compilación**:
+   - Versión incrementada a `v31.57` en `shared/const.ts` y `package.json`.
+   - `npx tsc --noEmit` y `npm run build` validados con 0 errores.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.56 — Septiembre 2026
 
 ### 🗓️ Sesión: Martes 15 de Septiembre de 2026 — 02:45 (Hora Colombia UTC-5)
 **Versión**: `v31.56` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

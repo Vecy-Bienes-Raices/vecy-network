@@ -113,7 +113,7 @@ export const PROPERTY_SUBTYPES: Record<string, string[]> = {
   ]
 };
 
-// Componente Numérico Híbrido Gold Luxury: Quick Pills (0-10) + Stepper & Input Directo (0 a 50+)
+// Componente Desplegable Numérico Limpio (0 a 10+) con selector elegante
 export interface NumericFieldProps {
   label: string;
   sublabel?: string;
@@ -131,99 +131,47 @@ export function NumericField({
   value,
   onChange,
   min = 0,
-  max = 50,
-  pills = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
   className = ""
 }: NumericFieldProps) {
-  const numVal = value === '' ? 0 : Number(value);
+  const options: number[] = [];
+  for (let i = min; i <= 10; i++) {
+    options.push(i);
+  }
 
-  const handleDecrement = () => {
-    const next = Math.max(min, numVal - 1);
-    onChange(next);
-  };
-
-  const handleIncrement = () => {
-    const next = Math.min(max, numVal + 1);
-    onChange(next);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.trim();
-    if (raw === '') {
-      onChange('');
-      return;
-    }
-    const parsed = parseInt(raw, 10);
-    if (!isNaN(parsed)) {
-      onChange(Math.max(min, Math.min(max, parsed)));
-    }
-  };
+  // Opciones extendidas para casas comerciales, fincas, edificios y hoteles
+  const extendedOptions = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 25, 30, 35, 40, 45, 50];
 
   return (
-    <div className={`space-y-1.5 ${className}`}>
+    <div className={`space-y-1 ${className}`}>
       <div className="flex items-center justify-between">
-        <label className="text-[11px] font-semibold text-zinc-300 flex items-center gap-1.5">
-          <span>{label}</span>
-          {numVal > 0 && (
-            <span className="px-1.5 py-0.5 rounded-md bg-[#bf953f]/25 text-[#fcf6ba] text-[10px] font-black border border-[#bf953f]/50">
-              {numVal}
-            </span>
-          )}
-        </label>
+        <label className="text-[11px] font-semibold text-zinc-300 block">{label}</label>
         {sublabel && <span className="text-[10px] text-zinc-500">{sublabel}</span>}
       </div>
-
-      <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5">
-        {/* Pills rápidos */}
-        <div className="flex gap-1 flex-1 overflow-x-auto pb-0.5 scrollbar-thin">
-          {pills.map((val) => {
-            const isSelected = value !== '' && Number(value) === val;
-            return (
-              <button
-                key={val}
-                type="button"
-                onClick={() => onChange(val)}
-                className={`min-w-[28px] sm:min-w-[30px] flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none text-center ${
-                  isSelected
-                    ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black font-black shadow-[0_0_10px_rgba(191,149,63,0.5)] scale-105 z-10'
-                    : 'bg-black/60 border border-white/10 text-zinc-300 hover:text-white hover:border-white/20'
-                }`}
-              >
-                {val}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Stepper + Input Libre (soporta hasta 50 o más) */}
-        <div className="flex items-center bg-black/80 border border-[#bf953f]/40 rounded-lg p-0.5 shadow-inner">
-          <button
-            type="button"
-            onClick={handleDecrement}
-            disabled={numVal <= min}
-            title="Disminuir"
-            className="w-7 h-7 rounded-md bg-white/5 hover:bg-[#bf953f]/20 text-zinc-300 hover:text-amber-300 flex items-center justify-center font-bold text-xs disabled:opacity-30 disabled:pointer-events-none transition-colors"
-          >
-            -
-          </button>
-          <input
-            type="number"
-            min={min}
-            max={max}
-            value={value}
-            onChange={handleInputChange}
-            placeholder="0"
-            className="w-11 text-center bg-transparent text-xs font-black text-amber-200 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          />
-          <button
-            type="button"
-            onClick={handleIncrement}
-            disabled={numVal >= max}
-            title="Aumentar (hasta 50+)"
-            className="w-7 h-7 rounded-md bg-white/5 hover:bg-[#bf953f]/20 text-zinc-300 hover:text-amber-300 flex items-center justify-center font-bold text-xs disabled:opacity-30 disabled:pointer-events-none transition-colors"
-          >
-            +
-          </button>
+      <div className="relative">
+        <select
+          value={value === '' ? '' : value}
+          onChange={(e) => {
+            const v = e.target.value;
+            onChange(v === '' ? '' : Number(v));
+          }}
+          className="w-full bg-black/60 border border-white/10 hover:border-[#bf953f]/50 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none transition-colors cursor-pointer appearance-none pr-8"
+        >
+          <option value="" className="bg-zinc-900 text-zinc-400">Seleccionar...</option>
+          {options.map((num) => (
+            <option key={num} value={num} className="bg-zinc-900 text-white">
+              {num === 10 ? '10+' : num}
+            </option>
+          ))}
+          <optgroup label="Más de 10 (Edificios / Hoteles / Fincas)" className="bg-zinc-950 text-amber-300 font-bold">
+            {extendedOptions.map((num) => (
+              <option key={num} value={num} className="bg-zinc-900 text-white font-normal">
+                {num}
+              </option>
+            ))}
+          </optgroup>
+        </select>
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-zinc-400">
+          <ChevronDown className="w-3.5 h-3.5 text-[#bf953f]" />
         </div>
       </div>
     </div>
@@ -2183,27 +2131,23 @@ export default function UnifiedPublishModal({
                     </select>
                   </div>
 
-                  {/* Habitaciones / Oficinas [0 al 50+] */}
-                  <div className="sm:col-span-2 lg:col-span-1">
+                  {/* Habitaciones / Oficinas */}
+                  <div>
                     <NumericField
                       label="Habitaciones / Oficinas"
-                      sublabel={propIsSubtipoComercial ? "Oficinas / Despachos" : undefined}
+                      sublabel={propIsSubtipoComercial ? "Oficinas" : undefined}
                       value={propBedrooms}
                       onChange={setPropBedrooms}
-                      max={50}
-                      pills={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
                     />
                   </div>
 
-                  {/* Baños [0 al 50+] */}
-                  <div className="sm:col-span-2 lg:col-span-2">
+                  {/* Baños */}
+                  <div>
                     <NumericField
                       label="Baños"
-                      sublabel="Baterías / Privados / Auxiliares"
+                      sublabel="Baterías / Privados"
                       value={propBathrooms}
                       onChange={setPropBathrooms}
-                      max={50}
-                      pills={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
                     />
                   </div>
                 </div>
@@ -2274,27 +2218,23 @@ export default function UnifiedPublishModal({
                     </div>
                   </div>
 
-                  {/* Garajes Carro [0 al 50+] */}
-                  <div className="sm:col-span-2 lg:col-span-3">
+                  {/* Garajes Carro */}
+                  <div>
                     <NumericField
                       label="Garajes para Carro"
-                      sublabel="Cubiertos o descubiertos (hasta 50+)"
+                      sublabel="Cubiertos / descubiertos"
                       value={propGarajesCarro}
                       onChange={setPropGarajesCarro}
-                      max={50}
-                      pills={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
                     />
                   </div>
 
-                  {/* Garajes Moto [0 al 50+] */}
-                  <div className="sm:col-span-2 lg:col-span-3">
+                  {/* Garajes Moto */}
+                  <div>
                     <NumericField
                       label="Garajes para Moto"
-                      sublabel="Parqueaderos de motocicleta (hasta 50+)"
+                      sublabel="Motos"
                       value={propGarajesMoto}
                       onChange={setPropGarajesMoto}
-                      max={50}
-                      pills={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
                     />
                   </div>
 
@@ -2304,8 +2244,6 @@ export default function UnifiedPublishModal({
                       label="Estar de TV / Sala de Espera"
                       value={propEstarTv}
                       onChange={setPropEstarTv}
-                      max={20}
-                      pills={[0, 1, 2, 3, 4, 5]}
                     />
                   </div>
 
@@ -2315,8 +2253,6 @@ export default function UnifiedPublishModal({
                       label="Estudios / Sala de Juntas"
                       value={propEstudios}
                       onChange={setPropEstudios}
-                      max={20}
-                      pills={[0, 1, 2, 3, 4, 5]}
                     />
                   </div>
 
@@ -2326,8 +2262,6 @@ export default function UnifiedPublishModal({
                       label="Depósitos / Bodegas"
                       value={propDepositos}
                       onChange={setPropDepositos}
-                      max={50}
-                      pills={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
                     />
                   </div>
 
@@ -2355,8 +2289,6 @@ export default function UnifiedPublishModal({
                           value={propCavaVinosCant}
                           onChange={(val) => setPropCavaVinosCant(val === '' ? 1 : Number(val))}
                           min={1}
-                          max={10}
-                          pills={[1, 2, 3, 4, 5]}
                         />
                       </div>
                     )}
@@ -2386,8 +2318,6 @@ export default function UnifiedPublishModal({
                           value={propChimeneaCant}
                           onChange={(val) => setPropChimeneaCant(val === '' ? 1 : Number(val))}
                           min={1}
-                          max={10}
-                          pills={[1, 2, 3, 4, 5]}
                         />
                         <div>
                           <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Tipo de Chimenea</label>
@@ -2427,8 +2357,6 @@ export default function UnifiedPublishModal({
                       value={propBalcones}
                       onChange={setPropBalcones}
                       min={0}
-                      max={20}
-                      pills={[0, 1, 2, 3, 4, 5]}
                     />
                   </div>
 
@@ -2491,8 +2419,6 @@ export default function UnifiedPublishModal({
                             value={propTerrazasCant}
                             onChange={(val) => setPropTerrazasCant(val === '' ? 1 : Number(val))}
                             min={1}
-                            max={20}
-                            pills={[1, 2, 3, 4, 5]}
                           />
                         </div>
 
