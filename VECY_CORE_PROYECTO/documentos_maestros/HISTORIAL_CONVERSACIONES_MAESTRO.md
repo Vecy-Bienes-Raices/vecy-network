@@ -50,7 +50,55 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.48 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.49 — Septiembre 2026
+
+### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 20:25 (Hora Colombia UTC-5)
+**Versión**: `v31.49` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"Pero si ves cómo tenía yo las cards iniciales allí organizadas (imagen 1):*
+   *🏢 (Tipo de inmueble)*
+   *🗺️ (Barrio)*
+   *🌇 (Localidad, Ciudad)*
+   *Y en cuanto a los colores te propongo unos avisos que jueguen con el diseño pero en estos colores así:*
+   *🟥 Venta*
+   *🟩 Arriendo*
+   *🟦 Venta | Permuta / Permuta*
+   *🟪 Arriendo Temporal / Opción Compra"*
+2. *"No viendolo bien si estaba mejor como tu lo propusiste ya que debajo está despues del simbolo de ubicación la localidad y la ciudad. Entonces si me encanta mejor que quede así como dijiste, pero mejor así:*
+   *[TIPO DE INMUEBLE] EN [BARRIO]*
+   *(SIMBOLO DORADO DE UBICACIÓN) [Localidad], [Ciudad ]"*
+
+#### 🔍 Diagnóstico Técnico Profundo & Causas Raíz Identificadas:
+1. **Jerarquía Visual y Armonización en Tarjetas de Inmueble**:
+   - En la versión original de Wix de Eduardo, los activos se presentaban con un formato intuitivo: precio destacado, tipo de activo, barrio, localidad/ciudad y una grilla técnica de 4 atributos.
+   - Eduardo analizó la propuesta de emojis y determinó que la estructura más potente, elegante y limpia consiste en un título destacado en mayúsculas `[TIPO DE INMUEBLE] EN [BARRIO]` seguido de una línea de micro-ubicación precedida por el símbolo dorado de ubicación (`📍 [Localidad], [Ciudad]`), manteniendo la claridad y evitando redundancias.
+2. **Definición Doctrinal de Colores de Negocio**:
+   - Para que los usuarios distingan inmediatamente la modalidad del inmueble sobre la fotografía, Eduardo definió una paleta cuádruple inconfundible:
+     - 🟥 **Venta**: Rojo / Carmesí.
+     - 🟩 **Arriendo**: Verde esmeralda.
+     - 🟦 **Venta | Permuta / Permuta**: Azul vibrante.
+     - 🟪 **Arriendo Temporal / Opción Compra**: Púrpura.
+
+#### 🛠️ Acciones Técnicas Ejecutadas:
+1. **`client/src/components/PropertyCard.tsx`**:
+   - Función `getTransactionBadge`: Asignación exacta de los 4 degradados y bordes doctrinales (Rojo, Verde, Azul, Púrpura) con posición `top-0 right-0 rounded-bl-2xl`.
+   - Extracción de ubicación en cascada (`derivedNeighborhood`, `derivedLocality`, `derivedCity`): Soporte robusto ante registros con cadenas combinadas o campos normalizados.
+   - Título estandarizado: `<h3 className="... uppercase">` renderizando `[TIPO DE INMUEBLE] EN [BARRIO]`.
+   - Micro-ubicación con símbolo dorado: `<MapPin size={13} className="text-primary" />` seguido de `[Localidad], [Ciudad]`.
+   - Precio destacado: Símbolo `$` en verde esmeralda (`text-emerald-400 font-black`) y cifra numérica en color terracota/naranja cálido (`text-orange-500 font-black`).
+   - Grilla técnica de 4 especificaciones: `Alcobas`, `Baños`, `Piso` (o `Garajes`), `Área` (en m²).
+   - Botonera dual optimizada: `[ 📅 AGENDAR ]` (abre Vecy Agenda para el inmueble) y `[ VER DETALLES ]` (navega a `/property/:id`).
+2. **`client/src/pages/Properties.tsx`**:
+   - Extracción de `piso` (`floorDetail` o `amenities.pisoEdificio`) y paso como prop a `PropertyCard`.
+3. **Control de Versión y Despliegue**:
+   - Incremento a `v31.49` en `shared/const.ts` y `package.json`.
+   - Verificación de tipos `npm run check` con 0 errores y compilación `npm run build` con 0 errores.
+   - Preservación 100% intacta de `server/_core/whatsapp-match.ts`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.48 — Septiembre 2026
 
 ### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 19:50 (Hora Colombia UTC-5)
 **Versión**: `v31.48` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

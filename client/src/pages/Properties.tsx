@@ -349,6 +349,7 @@ export default function Properties() {
               {displayProperties.map((prop, idx) => {
                 const images = prop.images as string[] | null;
                 const area = prop.areaTotal ? Number(prop.areaTotal) : 0;
+                const piso = (prop as any).floorDetail || (prop.amenities as any)?.pisoEdificio || undefined;
 
                 return (
                   <ScrollReveal key={prop.id} delay={(idx % 3) * 0.08} direction="up">
@@ -367,6 +368,7 @@ export default function Properties() {
                       bathrooms={prop.bathrooms || 0}
                       area={area}
                       parking={prop.garages || 0}
+                      piso={piso}
                       yearBuilt={prop.yearBuilt || undefined}
                       image={images?.[0] || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop'}
                       gallery={images || []}

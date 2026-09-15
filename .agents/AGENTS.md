@@ -167,7 +167,39 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.48 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.49 — Septiembre 2026
+
+### Novedades v31.49 (Diseño Doctrinal de Tarjetas en Tienda Ofertas con Título [Tipo] en [Barrio], Ubicación Dorada [Localidad, Ciudad] y Paleta Cuádruple de Avisos 🟥 🟩 🟦 🟪):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Organización Visual de Tarjetas de Inmueble*: A solicitud de Eduardo, se requería estructurar las cards de la Tienda de Ofertas con una jerarquía limpia y elegante:
+     - Título estandarizado: `[TIPO DE INMUEBLE] EN [BARRIO]` (ej: *Apartamento en Santa Bárbara Occ.* o *Casa en Morato*).
+     - Línea de micro-ubicación: `(Símbolo dorado de ubicación) [Localidad], [Ciudad]` (ej: `📍 Usaquén, Bogotá`).
+  2) *Paleta de Negocio Doctrinal Exacta en Avisos sobre la Fotografía*:
+     - 🟥 **Venta**: Rojo / Carmesí (`from-red-600 to-rose-700`).
+     - 🟩 **Arriendo**: Verde esmeralda (`from-emerald-600 to-green-700`).
+     - 🟦 **Venta | Permuta / Permuta**: Azul vibrante (`from-blue-600 to-indigo-700`).
+     - 🟪 **Arriendo Temporal / Opción Compra**: Púrpura / Morado (`from-purple-600 to-fuchsia-700`).
+  3) *Armonización de Precio y Atributos Técnicos*:
+     - Precio prominente con `$` en verde esmeralda (`text-emerald-400`) y número en color cálido terracota/naranja (`text-orange-500`).
+     - Grilla técnica de 4 especificaciones: `Alcobas`, `Baños`, `Piso` (o `Garajes`), `Área`.
+     - Botonera dual funcional: `[ 📅 AGENDAR ]` conectado a Vecy Agenda y `[ VER DETALLES ]` a la ficha completa.
+- **Acciones Ejecutadas**:
+  1) *`client/src/components/PropertyCard.tsx`*:
+     - Implementación de `getTransactionBadge` con los 4 colores exactos (Rojo, Verde, Azul, Púrpura) y posicionamiento `rounded-bl-2xl` en la esquina superior derecha de la foto.
+     - Extracción inteligente y defensiva de `displayNeighborhood`, `displayLocality` y `displayCity`.
+     - Título en `uppercase`: `[TIPO DE INMUEBLE] EN [BARRIO]`.
+     - Símbolo dorado de ubicación con `MapPin` de color `text-primary`: `[Localidad], [Ciudad]`.
+     - Grilla de 4 especificaciones (Alcobas, Baños, Piso, Área) y botonera dual `[ Agendar ]` + `[ Ver Detalles ]`.
+  2) *`client/src/pages/Properties.tsx`*:
+     - Paso de prop `piso` (`floorDetail` o `amenities.pisoEdificio`) a `PropertyCard`.
+  3) *Incremento de Versión y Compilación Limpia*:
+     - Incremento oficial a `v31.49` en `shared/const.ts` y `package.json`.
+     - Validación con `npm run check` (0 errores) y `npm run build` (0 errores).
+  4) *Preservación Absoluta de `whatsapp-match.ts`*: Archivo 100% original e intacto.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.48 — Septiembre 2026
 
 ### Novedades v31.48 (Rediseño Doctrinal "Tienda Ofertas", "Tienda Demandas", Estandarización Concisa de Títulos en JanIA, Insignias de Negocio sobre Fotos y Ficha Técnica Inspirada en Wix):
 - **Diagnóstico y Causas Raíz Identificadas**:

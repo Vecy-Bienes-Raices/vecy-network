@@ -322,6 +322,38 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.49 — Septiembre 2026
+
+#### 📌 DISEÑO DOCTRINAL DE TARJETAS EN TIENDA OFERTAS CON TÍTULO [TIPO] EN [BARRIO], UBICACIÓN DORADA [LOCALIDAD, CIUDAD] Y PALETA CUÁDRUPLE DE AVISOS 🟥 🟩 🟦 🟪
+
+**Problemas identificados:**
+1. **Estructura y Jerarquía de Tarjetas de Inmuebles**: Las tarjetas de inmuebles requerían alinearse con la organización limpia y comercial solicitada por Eduardo:
+   - Título directo: `[TIPO DE INMUEBLE] EN [BARRIO]` (ej: *Apartamento en Santa Bárbara Occ.*).
+   - Micro-ubicación clara: `(Símbolo dorado de ubicación) [Localidad], [Ciudad]` (ej: `📍 Usaquén, Bogotá`).
+2. **Definición de Colores para Avisos de Negocio sobre Fotografía**:
+   - Eduardo estandarizó los colores de los avisos para máxima legibilidad e identificación de negocio:
+     - 🟥 **Venta**: Rojo / Carmesí.
+     - 🟩 **Arriendo**: Verde esmeralda.
+     - 🟦 **Venta | Permuta / Permuta**: Azul.
+     - 🟪 **Arriendo Temporal / Opción Compra**: Púrpura.
+
+**Solución aplicada:**
+- **Reorganización Estructural de `PropertyCard.tsx`**:
+  - Función `getTransactionBadge` con los 4 degradados exactos solicitados por Eduardo, montados con clase `rounded-bl-2xl top-0 right-0` en la esquina superior de la foto.
+  - Título conciso en mayúsculas `[TIPO DE INMUEBLE] EN [BARRIO]`.
+  - Icono dorado `MapPin` de color `text-primary` junto a `[Localidad], [Ciudad]` con resolución en cascada ante registros heterogéneos.
+  - Precio destacado con signo `$` en verde esmeralda y valor numérico en color terracota/naranja.
+  - Grilla técnica de 4 especificaciones (`Alcobas`, `Baños`, `Piso` o `Garajes`, `Área` en m²).
+  - Botonera dual conectada con `[ 📅 AGENDAR ]` para agendamiento directo en Vecy Agenda y `[ VER DETALLES ]` hacia la ficha técnica del activo.
+- **Sincronización en `Properties.tsx`**:
+  - Paso del atributo `piso` extraído de la propiedad para poblar la columna correspondiente.
+- **Incremento y Compilación**:
+  - Incremento oficial a `v31.49` en `shared/const.ts` y `package.json`.
+  - Compilación limpia con `npm run check` (0 errores) y `npm run build` (0 errores).
+  - Preservación 100% intacta de `whatsapp-match.ts`.
+
+---
+
 ### 🔖 v31.48 — Septiembre 2026
 
 #### 📌 REDISEÑO DOCTRINAL "TIENDA OFERTAS", "TIENDA DEMANDAS", ESTANDARIZACIÓN CONCISA DE TÍTULOS EN JANIA, INSIGNIAS DE NEGOCIO SOBRE FOTOS Y REORGANIZACIÓN DE FICHA TÉCNICA INSPIRADA EN WIX

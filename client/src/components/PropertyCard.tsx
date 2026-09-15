@@ -55,6 +55,7 @@ interface PropertyCardProps {
   bathrooms?: number;
   area?: string | number;
   parking?: number;
+  piso?: string | number;
   yearBuilt?: number;
   image: string;
   gallery?: string[];
@@ -65,24 +66,34 @@ interface PropertyCardProps {
 }
 
 const getTransactionBadge = (type?: string) => {
-  if (!type) return { label: 'Venta', className: 'bg-gradient-to-r from-amber-600 to-amber-700 text-white border border-amber-400/30' };
+  if (!type) return { label: 'Venta', className: 'bg-gradient-to-r from-red-600 to-rose-700 text-white border border-red-500/40 shadow-lg' };
   const low = type.toLowerCase();
-  if (low.includes('arriendo_con_opcion') || low.includes('opcion_de_compra')) {
-    return { label: 'Arriendo con Opción', className: 'bg-gradient-to-r from-sky-600 to-blue-700 text-white border border-sky-400/30' };
+  // 🟪 Arriendo Temporal / Opción Compra
+  if (low.includes('arriendo_con_opcion') || low.includes('opcion_de_compra') || low.includes('arriendo_temporal') || low.includes('temporal')) {
+    return { 
+      label: low.includes('temporal') ? 'Arriendo Temporal' : 'Opción Compra', 
+      className: 'bg-gradient-to-r from-purple-600 to-fuchsia-700 text-white border border-purple-500/40 shadow-lg' 
+    };
   }
-  if (low.includes('arriendo_temporal') || low.includes('temporal')) {
-    return { label: 'Arriendo Temporal', className: 'bg-gradient-to-r from-cyan-600 to-teal-700 text-white border border-cyan-400/30' };
+  // 🟦 Venta | Permuta / Permuta
+  if (low.includes('venta_permuta') || low.includes('permuta') || low.includes('venta_o_arriendo')) {
+    return { 
+      label: low.includes('venta_permuta') ? 'Venta | Permuta' : (low.includes('permuta') ? 'Permuta' : 'Venta | Arriendo'), 
+      className: 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white border border-blue-500/40 shadow-lg' 
+    };
   }
-  if (low.includes('venta_o_arriendo') || (low.includes('venta') && low.includes('arriendo'))) {
-    return { label: 'Venta | Arriendo', className: 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white border border-blue-400/30' };
-  }
-  if (low.includes('venta_permuta') || low.includes('permuta')) {
-    return { label: 'Venta | Permuta', className: 'bg-gradient-to-r from-purple-600 to-indigo-700 text-white border border-purple-400/30' };
-  }
+  // 🟩 Arriendo
   if (low.includes('arriendo') || low.includes('rent')) {
-    return { label: 'Arriendo', className: 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white border border-emerald-400/30' };
+    return { 
+      label: 'Arriendo', 
+      className: 'bg-gradient-to-r from-emerald-600 to-green-700 text-white border border-emerald-500/40 shadow-lg' 
+    };
   }
-  return { label: 'Venta', className: 'bg-gradient-to-r from-amber-600 to-amber-700 text-white border border-amber-400/30' };
+  // 🟥 Venta
+  return { 
+    label: 'Venta', 
+    className: 'bg-gradient-to-r from-red-600 to-rose-700 text-white border border-red-500/40 shadow-lg' 
+  };
 };
 
 const PROPERTY_TYPE_LABELS: Record<PropertyType | string, string> = {
@@ -114,6 +125,7 @@ export default function PropertyCard({
   bathrooms = 0,
   area = 0,
   parking = 0,
+  piso,
   yearBuilt,
   image,
   gallery = [],
@@ -154,11 +166,27 @@ export default function PropertyCard({
   };
 
   const propertyLabel = PROPERTY_TYPE_LABELS[propertyType as PropertyType] || 'Inmueble';
-  const displayNeighborhood = neighborhood || zone || null;
-  const displayCity = city || 'Bogotá';
+
+  let derivedNeighborhood = neighborhood || zone || null;
+  let derivedLocality = locality || null;
+  let derivedCity = city || 'Bogotá';
+
+  if (!derivedNeighborhood && location) {
+    const parts = location.split(',').map(s => s.trim());
+    if (parts.length > 0 && parts[0] && !parts[0].toLowerCase().includes('bogot')) {
+      derivedNeighborhood = parts[0];
+    }
+    if (parts.length > 1 && !derivedLocality && !parts[1].toLowerCase().includes('bogot')) {
+      derivedLocality = parts[1];
+    }
+  }
+
+  const displayNeighborhood = derivedNeighborhood;
+  const displayLocality = derivedLocality;
+  const displayCity = derivedCity;
   const badge = getTransactionBadge(transactionType);
 
-  // Estandarización de título corto y limpio: [Tipo] en [Barrio]
+  // Formato conciso
   const formattedTitle = displayNeighborhood 
     ? `${propertyLabel} en ${displayNeighborhood}`
     : name
@@ -171,25 +199,20 @@ export default function PropertyCard({
         .replace(/\s+/g, ' ')
         .trim() || `${propertyLabel} en Bogotá`;
 
-  const displayLocation = displayNeighborhood ? `${displayNeighborhood}, ${displayCity}` : location;
-  const age = yearBuilt ? new Date().getFullYear() - yearBuilt : null;
-
-  const formatPrice = (p: string | number) => {
-    if (typeof p === 'string') return p;
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 0,
-    }).format(p);
+  const formatPriceNumber = (p: string | number) => {
+    const num = Number(p || 0);
+    return num.toLocaleString('es-CO');
   };
 
   return (
-    <div className="vecy-card-apple group overflow-hidden hover:glow-gold transition-all duration-500 p-0 flex flex-col h-full">
+    <div className="vecy-card-apple group overflow-hidden hover:glow-gold transition-all duration-500 p-0 flex flex-col h-full bg-zinc-950/90 border border-white/10 shadow-2xl">
       {/* ── Imagen / Carousel con Ribbon Doctrinal ── */}
       <div className="relative h-64 overflow-hidden bg-white/5">
         <img src={displayImage} alt={formattedTitle} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onError={() => setImgError(true)} />
         
-        {/* 🏷️ Etiqueta de Negocio sobre la Foto (Venta / Arriendo / Permuta) */}
-        <div className="absolute top-3 right-3 z-10 pointer-events-none">
-          <span className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider shadow-lg ${badge.className}`}>
+        {/* 🏷️ Etiqueta de Negocio sobre la Foto (Estilo Wix Eduardo) */}
+        <div className="absolute top-0 right-0 z-10 pointer-events-none">
+          <span className={`px-4 py-1.5 rounded-bl-2xl text-[11px] font-black uppercase tracking-wider ${badge.className}`}>
             {badge.label}
           </span>
         </div>
@@ -225,7 +248,7 @@ export default function PropertyCard({
         )}
 
         <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
-          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsFavorite(!isFavorite); }} className="bg-black/70 backdrop-blur p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-all">
+          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsFavorite(!isFavorite); }} className="bg-black/70 backdrop-blur p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-all cursor-pointer">
             <Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />
           </button>
         </div>
@@ -241,61 +264,63 @@ export default function PropertyCard({
         )}
       </div>
 
-      {/* ── Contenido ── */}
-      <div className="p-6 flex-1 flex flex-col justify-between">
+      {/* ── Contenido Estructurado Fiel a Wix Eduardo ── */}
+      <div className="p-5 flex-1 flex flex-col justify-between">
         <div>
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 px-2.5 py-0.5 rounded-full border border-primary/20">
-              {propertyLabel}
+          {/* Precio Prominente ($ en Verde + Número en Naranja) */}
+          <div className="flex items-baseline gap-1 mb-2">
+            <span className="text-2xl sm:text-3xl font-black text-emerald-400">$</span>
+            <span className="text-2xl sm:text-3xl font-black text-orange-500 tracking-tight">
+              {formatPriceNumber(price)}
             </span>
-            {yearBuilt && (
-              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
-                {age !== null ? `${age} años` : `${yearBuilt}`}
-              </span>
-            )}
           </div>
 
-          <h3 className="text-sm font-black text-white mb-2 uppercase tracking-tight line-clamp-2 leading-tight h-10 hover:text-primary transition-colors cursor-pointer" onClick={() => navigate(`/property/${id}`)}>
+          <div className="border-b border-white/10 mb-3" />
+
+          {/* Título Concreto: [TIPO DE INMUEBLE] EN [BARRIO] */}
+          <h3 
+            className="text-sm sm:text-base font-black text-white uppercase tracking-tight line-clamp-1 hover:text-primary transition-colors cursor-pointer mb-1.5"
+            onClick={() => navigate(`/property/${id}`)}
+            title={formattedTitle}
+          >
             {formattedTitle}
           </h3>
 
-          <div className="flex items-center gap-1.5 text-zinc-400 mb-4 uppercase tracking-widest text-[9px] font-bold">
-            <MapPin size={12} className="text-primary flex-shrink-0" />
-            <span className="truncate">{displayLocation}</span>
+          {/* Símbolo Dorado de Ubicación: [Localidad], [Ciudad] */}
+          <div className="flex items-center gap-1.5 text-zinc-300 text-xs font-semibold uppercase tracking-wider mb-2">
+            <MapPin size={13} className="text-primary shrink-0" />
+            <span className="truncate">
+              {displayLocality ? `${displayLocality}, ` : ''}{displayCity}
+            </span>
           </div>
 
-          <div className="mb-4 pb-4 border-b border-white/5 flex items-baseline justify-between">
-            <p className="text-2xl font-black text-primary leading-tight">{formatPrice(price)}</p>
-            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">COP</span>
-          </div>
+          <div className="border-b border-white/10 my-3" />
 
-          {/* Grilla de 4 Especificaciones Clave */}
-          <div className="grid grid-cols-4 gap-2 mb-6 bg-white/[0.02] p-2.5 rounded-xl border border-white/5">
-            <div className="flex flex-col items-center justify-center text-center">
-              <Square size={13} className="text-primary/70 mb-1" />
-              <p className="text-[7px] text-zinc-500 font-black uppercase">Área</p>
-              <p className="text-[11px] font-black text-white">{area} m²</p>
+          {/* Grilla de 4 Especificaciones (Alcobas, Baños, Piso, Área) */}
+          <div className="grid grid-cols-4 gap-2 text-center pt-1 pb-3">
+            <div>
+              <p className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">Alcobas</p>
+              <p className="text-sm font-black text-white mt-0.5">{bedrooms || '-'}</p>
             </div>
-            <div className="flex flex-col items-center justify-center text-center">
-              <Bed size={13} className="text-primary/70 mb-1" />
-              <p className="text-[7px] text-zinc-500 font-black uppercase">Hab</p>
-              <p className="text-[11px] font-black text-white">{bedrooms || '-'}</p>
+            <div>
+              <p className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">Baños</p>
+              <p className="text-sm font-black text-white mt-0.5">{bathrooms || '-'}</p>
             </div>
-            <div className="flex flex-col items-center justify-center text-center">
-              <Bath size={13} className="text-primary/70 mb-1" />
-              <p className="text-[7px] text-zinc-500 font-black uppercase">Baños</p>
-              <p className="text-[11px] font-black text-white">{bathrooms || '-'}</p>
+            <div>
+              <p className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">
+                {piso ? 'Piso' : 'Garajes'}
+              </p>
+              <p className="text-sm font-black text-white mt-0.5">{piso || parking || '-'}</p>
             </div>
-            <div className="flex flex-col items-center justify-center text-center">
-              <Car size={13} className="text-primary/70 mb-1" />
-              <p className="text-[7px] text-zinc-500 font-black uppercase">Gar</p>
-              <p className="text-[11px] font-black text-white">{parking || '-'}</p>
+            <div>
+              <p className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">Área</p>
+              <p className="text-sm font-black text-white mt-0.5">{area} m²</p>
             </div>
           </div>
         </div>
 
         {/* Botonera de Tarjeta */}
-        <div className="grid grid-cols-2 gap-2 mt-auto">
+        <div className="grid grid-cols-2 gap-2 mt-auto pt-3 border-t border-white/5">
           <button 
             className="btn-gold text-[10px] py-3 tracking-widest font-black uppercase flex items-center justify-center gap-1.5 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform cursor-pointer"
             onClick={(e) => {
