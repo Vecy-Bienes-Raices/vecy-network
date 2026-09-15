@@ -322,7 +322,30 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
-### 🔖 v31.50 — Septiembre 2026
+### 🔖 v31.51 — Septiembre 2026
+
+#### 📌 EXPERIENCIA MÓVIL DE ALTO CONFORT, SWIPE TÁCTIL EN FOTOS DE INMUEBLES, DOTS INTERACTIVOS, OPTIMIZACIÓN RETINA EN NETWORKBACKGROUND Y ERGONOMÍA APPLE/GOOGLE
+
+**Problemas identificados:**
+1. **Fricción de Interacción en Celulares**: Más del 80% de los usuarios de Vecy acceden desde enlaces de WhatsApp en smartphones. En pantallas táctiles no existe el evento `hover`, por lo que las flechas de cambio de foto quedaban ocultas y el usuario no disponía de deslizamiento gestual (*swipe*).
+2. **Consumo de Pantalla por Filtros Verticales**: En pantallas móviles de 600–800px de altura, barras de filtros extensas empujaban el inventario fuera del viewport inicial.
+3. **Preservación Inquebrantable del Fondo Estrella**: El fondo de ciudad con silueta de edificios y nodos de red (`NetworkBackground.tsx`) debía mantenerse 100% idéntico e intacto, pero requería optimización para pantallas Retina/OLED de alta densidad y ahorro de batería en segundo plano.
+
+**Solución aplicada:**
+- **Gestos Táctiles y Dots en `PropertyCard.tsx`**:
+  - Detección táctil nativa (`onTouchStart`, `onTouchMove`, `onTouchEnd`) con umbral de 40px para swipe suave de fotos hacia la izquierda y derecha con el pulgar.
+  - Puntos indicadores (*dots*) interactivos y contador en la base de la imagen para cambiar de foto con un simple toque.
+  - Botonera ergonómica para celulares con altura mínima de 44px (`min-h-[44px]`), directiva `touch-manipulation` y micro-feedback háptico `active:scale-95`.
+- **Soporte HiDPI/Retina en `NetworkBackground.tsx`**:
+  - Renderizado con `window.devicePixelRatio` para nitidez vectorial cristalina de las siluetas de edificios y ventanas doradas en pantallas móviles.
+  - Pausa automática con `visibilitychange` para 0% consumo de CPU/batería cuando la pestaña no está visible en el celular.
+  - Redimensión reactiva de siluetas de edificios preservando coordenadas originales.
+- **Filtros Ergonómicos en `Properties.tsx` & `RequirementsMarketplace.tsx`**:
+  - Barra de filtros con inercia elástica táctil (`touch-pan-x overscroll-x-contain`).
+  - Padding vertical compacto en móviles (`py-4 sm:py-6`) para maximizar el área visible de inmuebles.
+- **Compilación Limpia y Despliegue**:
+  - `npm run check` (0 errores) y `npm run build` (0 errores).
+  - Preservación 100% intacta de `server/_core/whatsapp-match.ts`.
 
 #### 📌 POOL TRIPARTITO DE CLAVES GEMINI MULTI-PROYECTO, BALANCEO ROUND-ROBIN, PRIORIZACIÓN DE MODELOS LITE/3.6 Y ERRADICACIÓN DE ERRORES 429 EN WHATSAPP
 

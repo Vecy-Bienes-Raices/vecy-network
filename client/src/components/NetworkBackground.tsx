@@ -38,12 +38,40 @@ export default function NetworkBackground() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    let W = canvas.width = window.innerWidth;
-    let H = canvas.height = window.innerHeight;
+    let W = window.innerWidth;
+    let H = window.innerHeight;
+
+    // Helper para posiciones de edificios relativas
+    const getBuildings = (w: number, h: number) => [
+      { x: w * 0.02, w: 50, h: h * 0.2 },
+      { x: w * 0.12, w: 70, h: h * 0.3 },
+      { x: w * 0.22, w: 40, h: h * 0.18 },
+      { x: w * 0.35, w: 60, h: h * 0.25 },
+      { x: w * 0.62, w: 55, h: h * 0.22 },
+      { x: w * 0.75, w: 80, h: h * 0.32 },
+      { x: w * 0.85, w: 45, h: h * 0.19 },
+      { x: w * 0.92, w: 65, h: h * 0.27 },
+    ];
+
+    let buildings = getBuildings(W, H);
+
+    // Ajuste de resolución Retina/HiDPI para máxima nitidez en celulares
+    const updateDimensions = () => {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.floor(W * dpr);
+      canvas.height = Math.floor(H * dpr);
+      canvas.style.width = `${W}px`;
+      canvas.style.height = `${H}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildings = getBuildings(W, H);
+    };
+
+    updateDimensions();
 
     const handleResize = () => {
-      W = canvas.width = window.innerWidth;
-      H = canvas.height = window.innerHeight;
+      updateDimensions();
     };
     window.addEventListener('resize', handleResize);
 
@@ -134,18 +162,6 @@ export default function NetworkBackground() {
 
       ctx.restore();
     };
-
-    // Fixed building positions
-    const buildings = [
-      { x: W * 0.02, w: 50, h: H * 0.2 },
-      { x: W * 0.12, w: 70, h: H * 0.3 },
-      { x: W * 0.22, w: 40, h: H * 0.18 },
-      { x: W * 0.35, w: 60, h: H * 0.25 },
-      { x: W * 0.62, w: 55, h: H * 0.22 },
-      { x: W * 0.75, w: 80, h: H * 0.32 },
-      { x: W * 0.85, w: 45, h: H * 0.19 },
-      { x: W * 0.92, w: 65, h: H * 0.27 },
-    ];
 
     // ---- MAIN ANIMATION LOOP ----
     const CONNECT_DIST = 180;
@@ -368,10 +384,21 @@ export default function NetworkBackground() {
 
     draw();
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(animFrameRef.current);
+      } else {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = requestAnimationFrame(draw);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       cancelAnimationFrame(animFrameRef.current);
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 

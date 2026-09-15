@@ -167,7 +167,34 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.50 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.51 — Septiembre 2026
+
+### Novedades v31.51 (Experiencia Móvil de Alto Confort, Swipe Táctil en Fotos de Inmuebles, Dots Interactivos, Optimización Retina en NetworkBackground y Ergonomía Apple/Google):
+- **Diagnóstico y Análisis Previo**:
+  1) *Análisis de Interactive Studio y Necesidades de Celulares*: Eduardo presentó el análisis de Interactive Studio (Wix Studio) con foco en diseño galardonado, movimiento sutil y experiencia en celulares.
+  2) *Preservación Inquebrantable del Fondo Estrella*: Eduardo instruyó expresamente nunca alterar el fondo insignia con la silueta de edificios y nodos dinámicos de red (`NetworkBackground.tsx`).
+  3) *Dolor de Navegación en Celulares*: El 80% del corretaje se consulta desde WhatsApp en móviles. Las tarjetas dependían de `hover` de mouse para ver flechas de fotos, carecían de gestos táctiles directos (`swipe`) y los botones de acción requerían dimensiones de contacto ergonómicas (mínimo 44px).
+- **Acciones Ejecutadas**:
+  1) *`client/src/components/PropertyCard.tsx`*:
+     - Implementación de gestos táctiles nativos (`onTouchStart`, `onTouchMove`, `onTouchEnd`) con umbral suave de 40px para deslizar fotos a la izquierda o derecha fluidamente con el pulgar.
+     - Indicador visual de puntos (*dots*) interactivos y contador en la base de la imagen para saltar de foto con un toque.
+     - Botonera ergonómica móvil: `min-h-[44px]`, `touch-manipulation` y micro-feedback háptico `active:scale-95`.
+  2) *`client/src/components/NetworkBackground.tsx`*:
+     - Soporte HiDPI/Retina con `window.devicePixelRatio` para nitidez vectorial de edificios y ventanas en pantallas OLED de celulares.
+     - Pausa automática de renderizado con `visibilitychange` para 0% consumo de batería cuando la pestaña pasa a segundo plano.
+     - Redimensión reactiva de siluetas de edificios sin alterar coordenadas ni nodos originales.
+  3) *`client/src/pages/Properties.tsx` & `RequirementsMarketplace.tsx`*:
+     - Barra de filtros con inercia elástica táctil (`touch-pan-x overscroll-x-contain`).
+     - Padding vertical compacto en móviles (`py-4 sm:py-6`) para maximizar el área visible de inmuebles.
+     - Ergonomía táctil en selectores y botón "Tengo el Inmueble Match".
+  4) *Incremento de Versión y Compilación*:
+     - Versión oficial actualizada a `v31.51` en `shared/const.ts` y `package.json`.
+     - `npm run check` (0 errores) y `npm run build` (0 errores).
+  5) *Preservación Absoluta de `whatsapp-match.ts`*: Archivo 100% original e intacto.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.50 — Septiembre 2026
 
 ### Novedades v31.50 (Pool Tripartito de Claves Gemini Multi-Proyecto, Round-Robin Balanceado, Priorización de Modelos Lite/3.6 y Erradicación Total de Rate Limits 429 en WhatsApp):
 - **Diagnóstico y Causas Raíz Identificadas**:

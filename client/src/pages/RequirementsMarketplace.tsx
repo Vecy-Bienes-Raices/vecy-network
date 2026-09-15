@@ -143,9 +143,9 @@ export default function RequirementsMarketplace() {
       </section>
 
       {/* FILTROS */}
-      <section className="py-6 bg-background/90 backdrop-blur-2xl border-b border-white/10 sticky top-20 z-30">
+      <section className="py-4 sm:py-6 bg-background/90 backdrop-blur-2xl border-b border-white/10 sticky top-20 z-30">
         <div className="container">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-6">
             <div className="relative w-full md:w-96">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
               <input 
@@ -251,13 +251,13 @@ export default function RequirementsMarketplace() {
                       </div>
                     </div>
 
-                    {/* Botón de Match */}
+                    {/* Botón de Match Ergonómico Táctil */}
                     <button 
                       onClick={() => req.user?.phone && handleWhatsAppClick(req.user.phone, req)}
                       disabled={!req.user?.phone}
-                      className="btn-gold w-full py-4 text-[10px] tracking-[0.2em] font-black group-hover:glow-gold-sm disabled:opacity-50"
+                      className="btn-gold w-full min-h-[44px] py-3.5 text-[10px] tracking-[0.2em] font-black group-hover:glow-gold-sm disabled:opacity-50 active:scale-95 touch-manipulation transition-all cursor-pointer"
                     >
-                      <Zap className="w-3 h-3 mr-2" />
+                      <Zap className="w-3.5 h-3.5 mr-2 inline-block" />
                       TENGO EL INMUEBLE MATCH
                     </button>
                   </div>

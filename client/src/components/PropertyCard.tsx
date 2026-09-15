@@ -8,7 +8,7 @@
  * - Viralización Pro: Botones de compartir con/sin marca
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { 
   MapPin, 
   Bed, 
@@ -139,6 +139,38 @@ export default function PropertyCard({
   const [copied, setCopied] = useState<'branded' | 'stealth' | null>(null);
   const [, navigate] = useLocation();
 
+  // 📱 Referencias para Detección de Gestos Táctiles (Swipe en Celulares)
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchEndX.current === null) return;
+    const diff = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 40; // Umbral táctil cómodo en píxeles
+
+    if (diff > minSwipeDistance) {
+      // Deslizó hacia la izquierda -> Siguiente foto
+      e.stopPropagation();
+      setImgError(false);
+      setCurrentImageIndex(prev => prev === images.length - 1 ? 0 : prev + 1);
+    } else if (diff < -minSwipeDistance) {
+      // Deslizó hacia la derecha -> Foto anterior
+      e.stopPropagation();
+      setImgError(false);
+      setCurrentImageIndex(prev => prev === 0 ? images.length - 1 : prev - 1);
+    }
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
+
   const VECY_FALLBACK = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop';
   
   const formatImageUrl = (u: string | null | undefined): string => {
@@ -205,10 +237,20 @@ export default function PropertyCard({
   };
 
   return (
-    <div className="vecy-card-apple group overflow-hidden hover:glow-gold transition-all duration-500 p-0 flex flex-col h-full bg-zinc-950/90 border border-white/10 shadow-2xl">
-      {/* ── Imagen / Carousel con Ribbon Doctrinal ── */}
-      <div className="relative h-64 overflow-hidden bg-white/5">
-        <img src={displayImage} alt={formattedTitle} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onError={() => setImgError(true)} />
+    <div className="vecy-card-apple group overflow-hidden hover:glow-gold transition-all duration-500 p-0 flex flex-col h-full bg-zinc-950/90 border border-white/10 shadow-2xl hover:border-primary/40">
+      {/* ── Imagen / Carousel Táctil con Ribbon Doctrinal ── */}
+      <div 
+        className="relative h-64 overflow-hidden bg-white/5 select-none touch-pan-y"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <img 
+          src={displayImage} 
+          alt={formattedTitle} 
+          className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" 
+          onError={() => setImgError(true)} 
+        />
         
         {/* 🏷️ Etiqueta de Negocio sobre la Foto (Estilo Wix Eduardo) */}
         <div className="absolute top-0 right-0 z-10 pointer-events-none">
@@ -218,21 +260,21 @@ export default function PropertyCard({
         </div>
 
         {/* Overlays de Viralización Pro */}
-        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-6 text-center z-20">
+        <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-6 text-center z-20">
           <div className="space-y-3 w-full">
             <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] mb-4 flex items-center justify-center gap-2">
               <Zap className="w-3 h-3 animate-pulse" /> Viralización Pro
             </p>
             <button 
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopyLink('branded'); }}
-              className="w-full py-2.5 bg-primary text-black rounded-xl font-bold text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 transition-transform"
+              className="w-full py-2.5 bg-primary text-black rounded-xl font-bold text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all"
             >
               {copied === 'branded' ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
               {copied === 'branded' ? 'Copiado' : 'Link con Mi Marca'}
             </button>
             <button 
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopyLink('stealth'); }}
-              className="w-full py-2.5 bg-white/10 border border-white/20 text-white rounded-xl font-bold text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/20 transition-all"
+              className="w-full py-2.5 bg-white/10 border border-white/20 text-white rounded-xl font-bold text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/20 active:scale-95 transition-all"
             >
               {copied === 'stealth' ? <Check className="w-3 h-3" /> : <Users className="w-3 h-3" />}
               {copied === 'stealth' ? 'Copiado' : 'Red de Apoyo (Limpio)'}
@@ -255,11 +297,48 @@ export default function PropertyCard({
 
         {images.length > 1 && (
           <>
-            <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded-full text-[9px] font-black text-zinc-300 border border-white/10 z-10">
+            {/* Contador Compacto */}
+            <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] font-black text-zinc-300 border border-white/10 z-10">
               {currentImageIndex + 1} / {images.length}
             </div>
-            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImgError(false); setCurrentImageIndex(prev => prev === 0 ? images.length - 1 : prev - 1); }} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-accent text-white p-1.5 rounded-full transition-all z-10 opacity-0 group-hover:opacity-100 cursor-pointer"><ChevronLeft size={16} /></button>
-            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImgError(false); setCurrentImageIndex(prev => prev === images.length - 1 ? 0 : prev + 1); }} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-accent text-white p-1.5 rounded-full transition-all z-10 opacity-0 group-hover:opacity-100 cursor-pointer"><ChevronRight size={16} /></button>
+
+            {/* 📱 Indicadores de Fotos Táctiles (Dots Táctiles Estilo Móvil) */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-10 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 pointer-events-auto">
+              {images.slice(0, 5).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setImgError(false);
+                    setCurrentImageIndex(i);
+                  }}
+                  className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                    currentImageIndex === i ? 'w-4 bg-primary' : 'w-1.5 bg-white/40 hover:bg-white/70'
+                  }`}
+                  aria-label={`Ver foto ${i + 1}`}
+                />
+              ))}
+              {images.length > 5 && (
+                <span className="text-[8px] font-black text-zinc-400 pl-0.5">+{images.length - 5}</span>
+              )}
+            </div>
+
+            {/* Flechas de Navegación (Visibles en hover desktop y táctiles) */}
+            <button 
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImgError(false); setCurrentImageIndex(prev => prev === 0 ? images.length - 1 : prev - 1); }} 
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-accent text-white p-2 rounded-full transition-all z-10 opacity-0 group-hover:opacity-100 active:scale-90 cursor-pointer"
+              aria-label="Foto anterior"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button 
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImgError(false); setCurrentImageIndex(prev => prev === images.length - 1 ? 0 : prev + 1); }} 
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-accent text-white p-2 rounded-full transition-all z-10 opacity-0 group-hover:opacity-100 active:scale-90 cursor-pointer"
+              aria-label="Siguiente foto"
+            >
+              <ChevronRight size={16} />
+            </button>
           </>
         )}
       </div>
@@ -319,10 +398,10 @@ export default function PropertyCard({
           </div>
         </div>
 
-        {/* Botonera de Tarjeta */}
-        <div className="grid grid-cols-2 gap-2 mt-auto pt-3 border-t border-white/5">
+        {/* Botonera de Tarjeta Ergonómica Táctil */}
+        <div className="grid grid-cols-2 gap-2.5 mt-auto pt-3 border-t border-white/5">
           <button 
-            className="btn-gold text-[10px] py-3 tracking-widest font-black uppercase flex items-center justify-center gap-1.5 shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform cursor-pointer"
+            className="btn-gold text-[10px] min-h-[44px] py-2.5 tracking-widest font-black uppercase flex items-center justify-center gap-1.5 shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 touch-manipulation transition-all cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
               const code = `ID-BOG-${(zone || locality || 'VECY').slice(0, 3).toUpperCase()}-${id}`;
@@ -330,10 +409,10 @@ export default function PropertyCard({
             }}
             title="Agendar visita oficial para este inmueble"
           >
-            <Calendar size={13} className="text-black" /> Agendar
+            <Calendar size={14} className="text-black shrink-0" /> Agendar
           </button>
           <button 
-            className="btn-gold-outline text-[10px] py-3 tracking-widest font-black uppercase flex items-center justify-center cursor-pointer hover:bg-white/10" 
+            className="btn-gold-outline text-[10px] min-h-[44px] py-2.5 tracking-widest font-black uppercase flex items-center justify-center hover:bg-white/10 active:scale-95 touch-manipulation transition-all cursor-pointer" 
             onClick={() => navigate(`/property/${id}`)}
           >
             Ver Detalles

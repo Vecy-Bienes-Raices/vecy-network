@@ -167,17 +167,17 @@ export default function Properties() {
       </section>
 
       {/* ── BARRA DE FILTROS, BÚSQUEDA Y CONTROL ── */}
-      <section className="py-6 bg-background/90 backdrop-blur-2xl border-b border-white/10 sticky top-20 z-30 transition-all">
-        <div className="container space-y-4">
-          {/* Fila 1: Filtros de Tipología en Chips */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+      <section className="py-4 sm:py-6 bg-background/90 backdrop-blur-2xl border-b border-white/10 sticky top-20 z-30 transition-all">
+        <div className="container space-y-3 sm:space-y-4">
+          {/* Fila 1: Filtros de Tipología en Chips con Desplazamiento Táctil Elástico */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none touch-pan-x overscroll-x-contain select-none">
             {FILTER_CONFIG.map((f) => {
               const isSelected = activeFilter === f.id;
               return (
                 <button
                   key={f.id}
                   onClick={() => setActiveFilter(f.id)}
-                  className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 cursor-pointer ${
+                  className={`px-3.5 sm:px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider whitespace-nowrap transition-all duration-300 flex items-center gap-1.5 touch-manipulation cursor-pointer ${
                     isSelected
                       ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black shadow-[0_0_20px_rgba(191,149,63,0.35)] scale-105 font-black'
                       : 'bg-zinc-900/80 text-zinc-400 hover:text-white hover:bg-zinc-800 border border-white/5'
@@ -190,7 +190,7 @@ export default function Properties() {
           </div>
 
           {/* Fila 2: Buscador inteligente, selector de transacción y ordenamiento */}
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-3 sm:gap-4">
             {/* Buscador de Micro-barrio o Código */}
             <div className="relative w-full lg:w-96">
               <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3 pointer-events-none" />
@@ -232,10 +232,10 @@ export default function Properties() {
               ))}
             </div>
 
-            {/* Controles de Transacción y Ordenamiento */}
-            <div className="flex items-center gap-3 w-full lg:w-auto justify-end">
+            {/* Controles de Transacción y Ordenamiento Ergonómicos en Celulares */}
+            <div className="flex items-center gap-2 sm:gap-3 w-full lg:w-auto justify-between sm:justify-end">
               {/* Filtro de Negocio */}
-              <div className="flex items-center gap-2 bg-zinc-900/90 px-3 py-2 rounded-xl border border-white/10">
+              <div className="flex-1 sm:flex-initial flex items-center justify-between sm:justify-start gap-2 bg-zinc-900/90 px-3 py-2 rounded-xl border border-white/10">
                 <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">Negocio:</span>
                 <select
                   value={transactionFilter}
@@ -251,8 +251,8 @@ export default function Properties() {
               </div>
 
               {/* Ordenar */}
-              <div className="flex items-center gap-2 bg-zinc-900/90 px-3 py-2 rounded-xl border border-white/10">
-                <ArrowUpDown className="w-3.5 h-3.5 text-primary" />
+              <div className="flex-1 sm:flex-initial flex items-center justify-between sm:justify-start gap-2 bg-zinc-900/90 px-3 py-2 rounded-xl border border-white/10">
+                <ArrowUpDown className="w-3.5 h-3.5 text-primary shrink-0" />
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
@@ -268,7 +268,7 @@ export default function Properties() {
               {/* Botón Refrescar */}
               <button
                 onClick={() => refetch()}
-                className={`p-2.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white hover:border-primary/40 transition-all cursor-pointer ${
+                className={`p-2.5 rounded-xl bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white hover:border-primary/40 active:scale-95 touch-manipulation transition-all cursor-pointer shrink-0 ${
                   isFetching ? 'animate-spin text-primary' : ''
                 }`}
                 title="Actualizar catálogo"
