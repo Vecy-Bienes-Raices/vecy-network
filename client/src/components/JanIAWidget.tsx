@@ -310,7 +310,7 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.92 }}
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-16 h-16 md:w-24 md:h-24 rounded-full p-0 flex items-center justify-center z-40 glow-gold pulse-glow overflow-hidden bg-black border-2 border-primary/50 shadow-2xl"
+          className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-14 h-14 sm:w-16 sm:h-16 rounded-full p-0 flex items-center justify-center z-40 glow-gold pulse-glow overflow-hidden bg-black border-2 border-primary/50 shadow-2xl cursor-pointer"
           title="Chat con JanIA"
         >
           <img 

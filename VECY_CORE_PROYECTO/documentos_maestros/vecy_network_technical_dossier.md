@@ -322,6 +322,22 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.53 — Septiembre 2026
+
+#### 📌 PARIDAD SIMÉTRICA DE WIDGETS FLOTANTES: FLECHA GLOBAL VOLVER ARRIBA A LA IZQUIERDA Y JANIA A LA DERECHA CON TAMAÑO IDÉNTICO 1:1
+
+**Problemas identificados:**
+1. **Disparidad de Escala en Pantalla**: El botón flotante de JanIA medía 96px (`w-24 h-24`), ocupando excesivo espacio en escritorio, mientras que el botón de volver arriba medía 48–56px, generando desbalance visual.
+2. **Ubicación y Cobertura**: La flecha de volver arriba sólo existía en la vista administrativa de matches y estaba aglomerada a la derecha junto a JanIA. Se requería una flecha global en el lado izquierdo de la web y simétrica a JanIA.
+
+**Solución aplicada:**
+- **`client/src/components/FloatingScrollToTop.tsx`**: Componente global montado en `App.tsx`, ubicado a la izquierda (`fixed bottom-6 left-6 md:bottom-8 md:left-8 z-40`), con dimensiones `w-14 h-14 sm:w-16 sm:h-16 rounded-full` (56px en móvil, 64px en desktop), resplandor dorado y detección inteligente de scroll en `window` y `main`.
+- **`client/src/components/JanIAFloatingButton.tsx` & `JanIAWidget.tsx`**: Rediseñado a `w-14 h-14 sm:w-16 sm:h-16 rounded-full` para paridad simétrica 1:1 exacta, preservando su posición fija en la esquina inferior derecha (`bottom-6 right-6 md:bottom-8 md:right-8`).
+- **Limpieza**: Remoción del portal local en `AdminMatches.tsx`.
+- **Compilación y Despliegue**: `npm run check` (0 errores) y `npm run build` (0 errores).
+
+---
+
 ### 🔖 v31.52 — Septiembre 2026
 
 #### 📌 SOLUCIÓN AL FALLO DE BOTÓN EN AGENDA, REMOCIÓN DE LOGO COLISIONADO, MAPA DE LÍMITES DE BARRIO CON LEAFLET, BADGES NARANJAS, FORMATO FOTOGRÁFICO 4:3 Y CALIBRACIÓN TIPOGRÁFICA A TÉRMINO MEDIO

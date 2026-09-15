@@ -50,7 +50,44 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.52 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.53 — Septiembre 2026
+
+### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 23:25 (Hora Colombia UTC-5)
+**Versión**: `v31.53` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"Podrías hacer el widget de Jania en la web un poco más pequeño y la flecha de volver arriba un poco más grande hasta dejarlos iguales, pero deja el de la flecha al lado izquierdo de la web y JanIA donde está."*
+
+#### 🔍 Diagnóstico Técnico Profundo & Causas Raíz Identificadas:
+1. **Disparidad de Escala Visual entre FABs Flotantes**:
+   - JanIA flotante (`JanIAFloatingButton.tsx` y `JanIAWidget.tsx`) tenía dimensiones de `w-16 h-16 md:w-24 md:h-24` (96px en escritorio, 64px en móvil), acaparando excesivo espacio visual en la esquina inferior derecha.
+   - El botón de volver arriba en cambio medía `w-12 h-12 md:w-14 md:h-14` (48px a 56px), sintiéndose pequeño y desproporcionado frente a JanIA.
+2. **Ausencia de Flecha Global y Traslado Doctrinal al Lado Izquierdo**:
+   - La flecha de volver arriba sólo existía localmente en `AdminMatches.tsx` y estaba ubicada a la derecha cerca de JanIA (`right-26 sm:right-28 md:right-36 lg:right-40`).
+   - Eduardo ordenó expresamente ubicar la flecha en el lado **izquierdo** de la web (`bottom-6 left-6 md:bottom-8 md:left-8`) y mantener a JanIA en el lado **derecho** (`bottom-6 right-6 md:bottom-8 md:right-8`), con exactamente **el mismo tamaño simétrico**.
+
+#### 🛠️ Acciones Técnicas Ejecutadas:
+1. **Nuevo Componente Global `client/src/components/FloatingScrollToTop.tsx`**:
+   - Botón flotante universal renderizado en `App.tsx` para toda la web pública y administrativa.
+   - Posicionamiento estricto a la izquierda: `fixed bottom-6 left-6 md:bottom-8 md:left-8 z-40`.
+   - Dimensiones idénticas a JanIA: `w-14 h-14 sm:w-16 sm:h-16 rounded-full` (56px en móvil, 64px en desktop).
+   - Acabado Gold Luxury metálico con resplandor dorado (`bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-black shadow-[0_0_20px_rgba(191,149,63,0.6)] hover:shadow-[0_0_30px_rgba(191,149,63,0.9)]`).
+   - Detección inteligente de scroll en `window` y en contenedor `main` (> 250px).
+   - Tooltip elegante: *"Volver Arriba"*.
+2. **Calibración Simétrica de JanIA (`JanIAFloatingButton.tsx` y `JanIAWidget.tsx`)**:
+   - Reducido de 96px a `w-14 h-14 sm:w-16 sm:h-16 rounded-full` (56px en móvil, 64px en desktop), logrando paridad milimétrica exacta 1:1 con el botón de volver arriba.
+   - Mantenido en la esquina inferior derecha: `bottom-6 right-6 md:bottom-8 md:right-8`.
+3. **Limpieza en `AdminMatches.tsx`**:
+   - Remoción del portal local redundante en la derecha, unificando la experiencia en el nuevo componente global a la izquierda.
+4. **Compilación Limpia y Despliegue**:
+   - `npm run check` (0 errores).
+   - `npm run build` (0 errores).
+   - Incremento oficial a `v31.53` en `shared/const.ts` y `package.json`.
+   - Preservación 100% intacta de `server/_core/whatsapp-match.ts`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.52 — Septiembre 2026
 
 ### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 22:35 (Hora Colombia UTC-5)
 **Versión**: `v31.52` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

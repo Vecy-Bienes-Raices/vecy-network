@@ -167,7 +167,31 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.52 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.53 — Septiembre 2026
+
+### Novedades v31.53 (Paridad Simétrica de Widgets: Flecha Flotante Global a la Izquierda y JanIA a la Derecha con Idéntico Tamaño 1:1):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Disparidad Visual*: El widget de JanIA medía 96px (`w-24 h-24`), resultando excesivamente dominante en la esquina inferior derecha, mientras que la flecha de volver arriba medía 48–56px, generando desproporción.
+  2) *Ubicación de la Flecha*: La flecha de volver arriba estaba ubicada a la derecha de la pantalla y sólo existía de forma local en `AdminMatches.tsx`.
+- **Acciones Ejecutadas**:
+  1) *Nuevo Componente Global `client/src/components/FloatingScrollToTop.tsx`*:
+     - Renderizado universalmente en `App.tsx` para toda la web.
+     - Ubicado estrictamente en la esquina inferior **izquierda** (`bottom-6 left-6 md:bottom-8 md:left-8 z-40`).
+     - Tamaño calibrado a **`w-14 h-14 sm:w-16 sm:h-16 rounded-full`** (56px en móvil, 64px en desktop).
+     - Diseño Gold Luxury metálico con resplandor dorado y tooltip *"Volver Arriba"*.
+     - Detección reactiva de scroll (> 250px) en `window` y en contenedor `main`.
+  2) *Calibración de JanIA (`JanIAFloatingButton.tsx` y `JanIAWidget.tsx`)*:
+     - Rediseñado a exactamente **`w-14 h-14 sm:w-16 sm:h-16 rounded-full`** (56px en móvil, 64px en desktop), logrando paridad simétrica perfecta 1:1 con el botón de volver arriba.
+     - Mantenido en la esquina inferior **derecha** (`bottom-6 right-6 md:bottom-8 md:right-8`).
+  3) *Limpieza en `AdminMatches.tsx`*:
+     - Remoción del portal local redundante en la derecha.
+  4) *Compilación y Despliegue*:
+     - `npm run check` (0 errores) y `npm run build` (0 errores).
+     - Versión oficial actualizada a `v31.53`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.52 — Septiembre 2026
 
 ### Novedades v31.52 (Solución a Fallo de Botón en Agenda, Remoción de Logo Colisionado, Mapa de Límites de Barrio con Leaflet, Badges Naranjas, Formato 4:3 y Calibración Tipográfica a Término Medio):
 - **Diagnóstico y Causas Raíz Identificadas**:

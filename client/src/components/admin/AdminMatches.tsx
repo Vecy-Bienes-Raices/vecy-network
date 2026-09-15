@@ -2250,24 +2250,6 @@ export default function AdminMatches() {
   const [saveStatusMap, setSaveStatusMap] = React.useState<Record<number, 'saved' | 'recalculated'>>({});
   const [customAttributesByMatch, setCustomAttributesByMatch] = React.useState<Record<number, { key: string; label: string }[]>>({});
   const [localUpdateTick, setLocalUpdateTick] = React.useState(0);
-  const [showScrollTop, setShowScrollTop] = React.useState(false);
-
-  React.useEffect(() => {
-    const mainEl = document.querySelector('main');
-    const handleScroll = () => {
-      const mainTop = mainEl ? mainEl.scrollTop : 0;
-      const winTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
-      setShowScrollTop(mainTop > 180 || winTop > 180);
-    };
-    mainEl?.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    document.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      mainEl?.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('scroll', handleScroll);
-      document.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
 
   const scrollToTop = () => {
     const mainEl = document.querySelector('main');
@@ -6197,27 +6179,6 @@ export default function AdminMatches() {
         <div className="text-[#bf953f] font-bold">{VECY_VERSION_LABEL}</div>
       </div>
 
-      {/* Botón Flotante Volver Arriba (Ubicado a la izquierda del avatar de JanIA para no taparlo jamás) */}
-      {typeof document !== 'undefined' && showScrollTop && createPortal(
-        <AnimatePresence>
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={scrollToTop}
-            className="fixed bottom-6 right-26 sm:right-28 md:bottom-8 md:right-36 lg:right-40 z-[99999] w-12 h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-black shadow-[0_6px_25px_rgba(191,149,63,0.7)] hover:shadow-[0_8px_35px_rgba(191,149,63,0.95)] border-2 border-black/40 flex items-center justify-center cursor-pointer transition-all group"
-            title="Volver al inicio de la página"
-          >
-            <ArrowUp className="w-5 h-5 md:w-6 md:h-6 text-black stroke-[3] group-hover:-translate-y-0.5 transition-transform" />
-            <span className="absolute -top-9 left-1/2 -translate-x-1/2 bg-black/90 text-[#bf953f] border border-[#bf953f]/40 text-[10px] font-black px-2.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl">
-              Volver Arriba
-            </span>
-          </motion.button>
-        </AnimatePresence>,
-        document.body
-      )}
     </div>
   );
 }

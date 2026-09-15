@@ -7,6 +7,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ScrollToTop from "./components/ScrollToTop";
+import FloatingScrollToTop from "./components/FloatingScrollToTop";
 import JanIAFloatingButton from "./components/JanIAFloatingButton";
 
 // Rutas críticas cargadas de forma prioritaria
@@ -110,6 +111,7 @@ function App() {
           <OAuthRedirectRestorer />
           <ScrollToTop />
           <Router />
+          <FloatingScrollToTop />
           <JanIAFloatingButton />
         </TooltipProvider>
       </ThemeProvider>
