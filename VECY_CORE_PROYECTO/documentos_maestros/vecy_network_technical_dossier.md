@@ -322,6 +322,48 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.48 — Septiembre 2026
+
+#### 📌 REDISEÑO DOCTRINAL "TIENDA OFERTAS", "TIENDA DEMANDAS", ESTANDARIZACIÓN CONCISA DE TÍTULOS EN JANIA, INSIGNIAS DE NEGOCIO SOBRE FOTOS Y REORGANIZACIÓN DE FICHA TÉCNICA INSPIRADA EN WIX
+
+**Problemas identificados:**
+1. **Contaminación Cruzada de Navegación y Botones**: Las páginas de Ofertas y Demandas incluían switchers con accesos cruzados que confundían al usuario e inducían a errores de navegación. La barra superior ya provee los enlaces directos a `OFERTAS` y `DEMANDAS`.
+2. **Nomenclatura Inadecuada**: La palabra "Catálogo" resultaba impersonal y extensa; se requería adoptar la denominación directa y comercial **"TIENDA OFERTAS"** y **"TIENDA DEMANDAS"** (sin la preposición "DE").
+3. **Escala Tipográfica Desmesurada**: La clase `.vecy-title-hero` en `index.css` utilizaba `text-6xl md:text-9xl` (128px), devorando el espacio visual en monitores grandes y obligando a un scroll innecesario para ver los activos.
+4. **Títulos Desestandarizados y Kilométricos**: Al usar el Asistente JanIA en modo texto libre, se generaban títulos excesivamente largos y redundantes (ej: *"Casa en venta en Morato Bogotá Precio..."*).
+5. **Ausencia de Etiqueta de Negocio en Tarjetas**: Las tarjetas del catálogo carecían de un distintivo visual superior sobre la fotografía para identificar la modalidad (Venta, Arriendo, Permuta).
+6. **Desorganización de la Ficha Técnica**: La página `PropertyDetail.tsx` concentraba las especificaciones en una columna angosta lateral en lugar de desplegarlas en bloques jerárquicos y legibles como en la web original de Wix.
+
+**Solución aplicada:**
+- **Separación Estricta de Páginas**:
+  - `client/src/pages/Properties.tsx`: Renombrado a **"TIENDA OFERTAS"**, eliminación de switchers hacia Demandas, botón contextual único `[ + PUBLICAR OFERTA ]`, contador de ofertas y paso de `transactionType` a `PropertyCard`.
+  - `client/src/pages/RequirementsMarketplace.tsx`: Renombrado a **"TIENDA DEMANDAS"**, eliminación de switchers hacia Ofertas, botón contextual único `[ + PUBLICAR DEMANDA ]` y contador de demandas.
+- **Armonización Tipográfica (`client/src/index.css`)**:
+  - `.vecy-title-hero` reducido de 9xl a escala armónica `text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-4 leading-tight`.
+  - `.vecy-title-section` y `.vecy-subtitle` equilibrados para evitar desplazamientos forzados del viewport.
+- **Insignias de Negocio sobre Fotografías (`client/src/components/PropertyCard.tsx`)**:
+  - Badge distintivo flotante sobre la foto con código de color semántico:
+    - 🟧 **Venta**: Ámbar dorado / Naranja (`from-amber-600 to-amber-700`).
+    - 🟩 **Arriendo**: Verde esmeralda (`from-emerald-600 to-teal-700`).
+    - 🟪 **Venta | Permuta** / **Permuta**: Violeta / Púrpura (`from-purple-600 to-indigo-700`).
+    - 🟦 **Arriendo Temporal / Opción de Compra**: Cyan / Azul (`from-sky-600 to-blue-700`).
+  - Título filtrado y estandarizado con longitud controlada.
+- **Estandarización Concisa de Títulos en JanIA**:
+  - En `UnifiedPublishModal.tsx` (`extractPropertyLocally`) y `server/routers/properties.ts` (`parsePropertyDeterministically` + prompt Gemini):
+    JanIA genera títulos automáticos en formato conciso: `[Tipo de Inmueble] en [Barrio / Sector]` (ej: *"Casa en Morato"*, *"Apartamento en Santa Bárbara Occ."*).
+- **Reorganización Doctrinal de Ficha Técnica (`client/src/pages/PropertyDetail.tsx`) Inspirada en Wix**:
+  - Cabecera limpia con título conciso, micro-ubicación y bloque destacado de Negocio (Modalidad, Precio en COP, Administración, Permuta SÍ/NO, Arriendo SÍ/NO).
+  - Botonera superior: `[ 📅 AGENDAR VISITA OFICIAL ]`, `[ ✏️ EDITAR INMUEBLE ]`, `[ 🔗 COMPARTIR ]`, `[ 📄 FICHA TÉCNICA ]`.
+  - Galería fotográfica con carrusel y miniaturas.
+  - Tabla / Grid estructurado de **Detalles del Inmueble** (16 atributos técnicos clave).
+  - Dos bloques temáticos paralelos: 🏠 **Características Internas** vs 🏢 **Características Externas**.
+  - Descripción completa del activo, mapa de ubicación y tarjeta estelar de **Vecy Agenda**.
+- **Preservación Estricta de la Arquitectura**:
+  - Archivo `server/_core/whatsapp-match.ts` 100% original e intacto.
+  - Validación impecable con `npm run check` y `npm run build` (0 errores).
+
+---
+
 ### 🔖 v31.47 — Septiembre 2026
 
 #### 📌 ARQUITECTURA ASÍNCRONA JOB + POLLING 0% ERROR 504 ANTE POLICÍA NACIONAL CON 2CAPTCHA, SINCRONIZACIÓN UNIVERSAL DE VECY AGENDA PRO Y BLINDAJE INFALIBLE DE JANIA EN WHATSAPP

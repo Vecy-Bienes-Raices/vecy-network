@@ -15965,7 +15965,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.47";
+var VECY_VERSION = "v31.48";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -19187,21 +19187,9 @@ function parsePropertyDeterministically(text2) {
     else if (lower.includes("chapinero")) zone = "Chapinero";
     else if (lower.includes("teusaquillo")) zone = "Teusaquillo";
   }
-  let name = "";
-  const lines = norm2.split("\n").map((l) => l.trim()).filter(Boolean);
-  for (const line of lines) {
-    const clean = line.replace(/super oferta/i, "").replace(/[^\w\s\u00C0-\u00FF]/g, "").trim();
-    if (clean.length > 8 && !clean.toLowerCase().includes("detalles")) {
-      name = clean.slice(0, 90);
-      break;
-    }
-  }
-  if (!name && lines.length > 0) {
-    name = lines[0].replace(/super oferta/i, "").replace(/[^\w\s\u00C0-\u00FF]/g, "").trim().slice(0, 90);
-  }
-  if (addressNeighborhood && !name.toLowerCase().includes(addressNeighborhood.toLowerCase())) {
-    name += ` - ${addressNeighborhood}`;
-  }
+  const sectorDisplay = addressNeighborhood || zone || city || "Bogot\xE1";
+  const tipoDisplay = isSubtipoComercial && !propertyTypeExact.toLowerCase().includes("comercial") ? `${propertyTypeExact} Comercial` : propertyTypeExact;
+  const name = `${tipoDisplay} en ${sectorDisplay}`;
   const selectedInternas = [];
   if (lower.includes("iluminacion natural") || lower.includes("luz natural")) selectedInternas.push("Iluminaci\xF3n natural");
   if (lower.includes("closet") || lower.includes("closets") || lower.includes("archiveros")) selectedInternas.push("Cl\xF3sets");
@@ -19312,7 +19300,7 @@ var propertiesRouter = router({
     const deterministic = parsePropertyDeterministically(input.text);
     try {
       const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
-      const prompt = `Analiza este texto de inmueble y extrae los datos clave en formato JSON con los siguientes campos obligatorios: name (t\xEDtulo breve descriptivo), propertyType (apartment, house, building, warehouse, farm, hotel, office, land, commercial, loft, consultorio), transactionType (venta, arriendo, venta_o_arriendo), price (valor num\xE9rico en COP sin puntos), location (direcci\xF3n o zona aproximada), zone (barrio o localidad), addressNeighborhood (barrio espec\xEDfico), bedrooms (n\xFAmero entero o null), bathrooms (n\xFAmero entero o null), stratum (estrato 1-6 o null), garages (n\xFAmero entero o null), areaTotal (metros cuadrados en n\xFAmero string o null), adminFee (cuota administraci\xF3n COP o null), description (resumen claro de los aspectos m\xE1s importantes). Devuelve \xDANICAMENTE el objeto JSON sin bloques de c\xF3digo ni explicaciones.
+      const prompt = `Analiza este texto de inmueble y extrae los datos clave en formato JSON con los siguientes campos obligatorios: name (t\xEDtulo corto y estandarizado en formato "[Tipo] en [Barrio]", ej: "Casa en Morato", "Apartamento en Santa B\xE1rbara Occ.", sin palabras redundantes de negocio como venta o arriendo ni precios), propertyType (apartment, house, building, warehouse, farm, hotel, office, land, commercial, loft, consultorio), transactionType (venta, arriendo, venta_o_arriendo), price (valor num\xE9rico en COP sin puntos), location (direcci\xF3n o zona aproximada), zone (barrio o localidad), addressNeighborhood (barrio espec\xEDfico), bedrooms (n\xFAmero entero o null), bathrooms (n\xFAmero entero o null), stratum (estrato 1-6 o null), garages (n\xFAmero entero o null), areaTotal (metros cuadrados en n\xFAmero string o null), adminFee (cuota administraci\xF3n COP o null), description (resumen claro de los aspectos m\xE1s importantes). Devuelve \xDANICAMENTE el objeto JSON sin bloques de c\xF3digo ni explicaciones.
 
 Texto: ${input.text}`;
       const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 4500));
@@ -19325,7 +19313,7 @@ Texto: ${input.text}`;
         ...deterministic,
         ...parsed,
         price: parsed.price ? String(parsed.price) : deterministic.price,
-        name: parsed.name || deterministic.name,
+        name: deterministic.name || parsed.name,
         propertyType: parsed.propertyType || deterministic.propertyType,
         transactionType: parsed.transactionType || deterministic.transactionType,
         zone: parsed.zone || deterministic.zone,

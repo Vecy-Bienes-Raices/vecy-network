@@ -130,7 +130,7 @@ export default function Properties() {
             </div>
 
             <h1 className="vecy-title-hero uppercase tracking-tight">
-              CATÁLOGO DE <span className="text-gradient-gold">OFERTAS</span>
+              TIENDA <span className="text-gradient-gold">OFERTAS</span>
             </h1>
 
             <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-zinc-400">
@@ -138,32 +138,18 @@ export default function Properties() {
               Contacta captadores oficiales, coordina visitas y cierra negocios con respaldo legal.
             </p>
 
-            {/* ── Switcher Doctrinal de Catálogo (OFERTAS / DEMANDAS) ── */}
-            <div className="mt-8 flex justify-center">
-              <div className="inline-flex p-1.5 rounded-2xl bg-zinc-900/90 border border-white/10 shadow-2xl backdrop-blur-xl gap-2">
-                <button
-                  className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#aa771c] text-black shadow-lg shadow-[#bf953f]/30 transition-all cursor-default flex items-center gap-2"
-                >
-                  <Home className="w-3.5 h-3.5 text-black" />
-                  <span>OFERTAS (INMUEBLES)</span>
-                  <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] bg-black/20 text-black font-black">
-                    {propertiesData?.length || 0}
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => navigate('/demandas')}
-                  className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer flex items-center gap-2"
-                  title="Ir a la Tienda de Requerimientos y Demandas de Compradores"
-                >
-                  <Briefcase className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>DEMANDAS (REQUERIMIENTOS)</span>
-                </button>
+            {/* ── Contador de Ofertas Auditadas y Acción Principal Contextual Única ── */}
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-900/90 border border-white/10 shadow-lg backdrop-blur-md">
+                <Home className="w-4 h-4 text-primary" />
+                <span className="text-xs font-black uppercase tracking-widest text-zinc-300">
+                  Ofertas Activas:
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-xs bg-primary/20 text-primary font-black">
+                  {propertiesData?.length || 0}
+                </span>
               </div>
-            </div>
 
-            {/* ── Acción Principal Única Contextual: PUBLICAR OFERTA ── */}
-            <div className="mt-6 flex justify-center">
               <button
                 onClick={() => {
                   setPublishTab('oferta');
@@ -370,6 +356,7 @@ export default function Properties() {
                       id={prop.id}
                       name={prop.name}
                       propertyType={prop.propertyType as any}
+                      transactionType={prop.transactionType || undefined}
                       price={Number(prop.price)}
                       location={prop.location || ''}
                       zone={prop.zone}

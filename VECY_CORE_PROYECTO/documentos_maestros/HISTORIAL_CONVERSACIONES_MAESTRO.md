@@ -50,7 +50,61 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.47 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.48 — Septiembre 2026
+
+### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 19:50 (Hora Colombia UTC-5)
+**Versión**: `v31.48` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"No se si tu sepas más de diseño que yo, pero a mi criterio, que cada subpágina debería tener sus botones correspondientes y no mezclar lo de demandas en la sección ofertas y en la de ofertas en la sección demandas, no crees que es justo."*
+2. *"Por otra parte quiero cambiar la palabra catálogo en ambas por la de 'Tienda', entonces quedaría 'TIENDA OFERTAS' y en la otra sección aparte 'TIENDA DEMANDAS' o no se si deban llevar 'DE' en medio 'TIENDA DE OFERTAS' Y 'TIENDA DE DEMANDAS', a mi me gusta más sin la 'DE', pero si tu sabes más de marketing y diseño quedará como lo decidas."*
+3. *"Por otra parte o no se si es por que mi pantalla es muy gigante pero pienso que el tamaño de los títulos esta muy grande el tipo de letra en ellos o no se si es que me parece. Debes tratar de estandarizar todo..."*
+4. *"y en un inmueble así yo le pase un título gigante a JanIA en la parte de Asistente JanIA: 'Pegar Texto Libre de WhatsApp o Ficha Técnica' basta con que ella analice y estandarice los títulos en algo más corto como en vez de colocar este por ejemplo: 'Casa en venta en Morato Bogotá' o no se cómo lo tengas organizado tu pero si sugiero que entre más corto mejor, depronto el aviso de venta, arriendo o permuta debe ir en una etiqueta de color según el tipo de negocio sobre la foto..."*
+5. *"voy a ver si encuentro mi antigua página hecha con wix y te muestro aunque sea una imagen de la tienda, aunque no busco que lo dejes igual, no, busco que me entiendas la organización de la ficha. https://vecybienesraices.wixsite.com/brokervirtual / https://vecybienesraices.wixsite.com/brokervirtual/apartamentos / https://vecybienesraices.wixsite.com/brokervirtual/apartamento/santabarbaraocc.usaquen.bogota"*
+
+#### 🔍 Diagnóstico Técnico Profundo & Causas Raíz Identificadas:
+1. **Contaminación Cruzada de Navegación**:
+   - En `Properties.tsx` se renderizaba un switcher con botón activo de Ofertas y botón inactivo de Demandas que navegaba a `/demandas`. Similarmente en `RequirementsMarketplace.tsx` hacia `/ofertas`.
+   - La barra de navegación superior (Navbar) ya provee acceso directo e inequívoco a `OFERTAS` y `DEMANDAS`. Colocar botones de Demandas dentro de Ofertas y viceversa generaba redundancia y dispersión cognitiva.
+2. **Escala Tipográfica Desmesurada en Pantallas Grandes**:
+   - La clase `.vecy-title-hero` en `index.css` utilizaba `@apply text-6xl md:text-9xl` (hasta 128px de altura de fuente). En pantallas ultra-wide o monitores grandes, este H1 devoraba el viewport inicial empujando hacia abajo los filtros y las tarjetas de inventario.
+3. **Falta de Estandarización de Títulos en Inmuebles**:
+   - Al usar el Asistente JanIA en modo texto libre, tanto `extractPropertyLocally` como `parsePropertyDeterministically` tomaban líneas enteras con redundancias como *"Casa en venta en Morato Bogotá Precio..."*.
+   - Se requería estandarizar a la fórmula concisa: `[Tipo de Inmueble] en [Barrio / Sector]` (ej: *"Casa en Morato"*, *"Apartamento en Santa Bárbara Occ."*).
+4. **Ausencia de Distintivo Visual de Negocio sobre la Fotografía**:
+   - Las tarjetas de inmuebles no contaban con ribbon/badge superior sobre la fotografía para identificar rápidamente la modalidad comercial (Venta, Arriendo, Permuta).
+5. **Desarticulación en la Ficha Técnica**:
+   - La página `PropertyDetail.tsx` confinaba las características y amenidades a una columna angosta de un tercio (`lg:col-span-1`), desaprovechando el espacio y dificultando la lectura ordenada de especificaciones técnicas, características internas y características externas.
+
+#### 🛠️ Acciones Técnicas Ejecutadas:
+1. **Separación Estricta sin Contaminación Cruzada**:
+   - `client/src/pages/Properties.tsx`: Renombrado a **"TIENDA OFERTAS"** (sin la preposición "DE"). Se retiró el switcher cruzado de demandas, dejando exclusivamente el contador de ofertas activas y el botón contextual único `[ + PUBLICAR OFERTA ]`.
+   - `client/src/pages/RequirementsMarketplace.tsx`: Renombrado a **"TIENDA DEMANDAS"**. Se retiró el switcher cruzado de ofertas, dejando el contador de requerimientos y el botón contextual único `[ + PUBLICAR DEMANDA ]`.
+2. **Armonización Tipográfica en `client/src/index.css`**:
+   - `.vecy-title-hero` reducido de 9xl a `text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-4 leading-tight`.
+   - `.vecy-title-section` ajustado a `text-2xl sm:text-3xl md:text-4xl` y `.vecy-subtitle` estilizado para una lectura óptima.
+3. **Insignia / Badge de Negocio sobre la Fotografía en `PropertyCard.tsx`**:
+   - Inclusión de `transactionType` en props y cálculo de badge flotante (`top-3 right-3 z-10`):
+     - 🟧 **Venta**: Ámbar dorado / Naranja (`from-amber-600 to-amber-700`).
+     - 🟩 **Arriendo**: Verde esmeralda (`from-emerald-600 to-teal-700`).
+     - 🟪 **Venta | Permuta** / **Permuta**: Violeta / Púrpura (`from-purple-600 to-indigo-700`).
+     - 🟦 **Arriendo Temporal / Opción de Compra**: Cyan / Azul (`from-sky-600 to-blue-700`).
+   - Título de la tarjeta filtrado y estandarizado con formato conciso.
+4. **Estandarización Concisa de Títulos en Asistente JanIA**:
+   - `UnifiedPublishModal.tsx` (`extractPropertyLocally`): Ensamblaje automático `${tipoDisplay} en ${sectorDisplay}`.
+   - `server/routers/properties.ts` (`parsePropertyDeterministically` + prompt Gemini): Estandarización de `name` a formato corto `[Tipo] en [Barrio]`.
+5. **Reorganización Doctrinal de Ficha Técnica (`PropertyDetail.tsx`) Inspirada en Wix**:
+   - Cabecera limpia con título conciso, micro-ubicación y bloque destacado de Negocio (Modalidad, Precio en COP, Administración, Permuta SÍ/NO, Arriendo SÍ/NO).
+   - Botonera superior: `[ 📅 AGENDAR VISITA OFICIAL ]`, `[ ✏️ EDITAR INMUEBLE ]`, `[ 🔗 COMPARTIR ]`, `[ 📄 FICHA TÉCNICA ]`.
+   - Galería fotográfica con carrusel y miniaturas.
+   - Tabla / Grid estructurado de **Detalles del Inmueble** con 16 especificaciones clave.
+   - Dos columnas claramente delimitadas: 🏠 **Características Internas** vs 🏢 **Características Externas**.
+   - Descripción completa del activo, mapa de ubicación geográfica y tarjeta estelar de **Vecy Agenda**.
+6. **Preservación Absoluta de `whatsapp-match.ts`**: Archivo 100% original e intacto.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.47 — Septiembre 2026
 
 ### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 14:20 (Hora Colombia UTC-5)
 **Versión**: `v31.47` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel + Vecy Agenda Pro (`vecy-agenda-pro`)

@@ -110,39 +110,25 @@ export default function RequirementsMarketplace() {
               <span className="text-[11px] font-black uppercase tracking-[0.25em] text-primary">Marketplace de Demandas Calificadas</span>
             </div>
             <h1 className="vecy-title-hero uppercase tracking-tight">
-              CATÁLOGO DE <span className="text-gradient-gold">DEMANDAS</span>
+              TIENDA <span className="text-gradient-gold">DEMANDAS</span>
             </h1>
             <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-zinc-400">
               Conecta con asesores que ya tienen el comprador verificado. 
               Si tienes el inventario que coincide con el requerimiento, <span className="font-bold text-white">tienes el cierre asegurado</span>.
             </p>
 
-            {/* ── Switcher Doctrinal de Catálogo (OFERTAS / DEMANDAS) ── */}
-            <div className="mt-8 flex justify-center">
-              <div className="inline-flex p-1.5 rounded-2xl bg-zinc-900/90 border border-white/10 shadow-2xl backdrop-blur-xl gap-2">
-                <button
-                  onClick={() => navigate('/ofertas')}
-                  className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer flex items-center gap-2"
-                  title="Ir al Catálogo de Ofertas de Inmuebles"
-                >
-                  <Home className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>OFERTAS (INMUEBLES)</span>
-                </button>
-
-                <button
-                  className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#aa771c] text-black shadow-lg shadow-[#bf953f]/30 transition-all cursor-default flex items-center gap-2"
-                >
-                  <Briefcase className="w-3.5 h-3.5 text-black" />
-                  <span>DEMANDAS (REQUERIMIENTOS)</span>
-                  <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] bg-black/20 text-black font-black">
-                    {requirements.length}
-                  </span>
-                </button>
+            {/* ── Contador de Demandas Calificadas y Acción Principal Contextual Única ── */}
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-900/90 border border-white/10 shadow-lg backdrop-blur-md">
+                <Briefcase className="w-4 h-4 text-primary" />
+                <span className="text-xs font-black uppercase tracking-widest text-zinc-300">
+                  Demandas Activas:
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-xs bg-primary/20 text-primary font-black">
+                  {requirements.length}
+                </span>
               </div>
-            </div>
 
-            {/* ── Acción Principal Única: PUBLICAR DEMANDA ── */}
-            <div className="mt-6 flex justify-center">
               <button
                 onClick={() => setIsPublishOpen(true)}
                 className="btn-gold px-8 py-3.5 text-xs tracking-widest uppercase font-black gap-2.5 inline-flex items-center shadow-[0_0_30px_rgba(212,175,55,0.4)] hover:scale-105 transition-all cursor-pointer"

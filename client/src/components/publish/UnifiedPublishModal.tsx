@@ -633,22 +633,13 @@ export default function UnifiedPublishModal({
       else if (lower.includes('teusaquillo')) zone = 'Teusaquillo';
     }
 
-    // 10. Título
-    let name = '';
-    const lines = norm.split('\n').map(l => l.trim()).filter(Boolean);
-    for (const line of lines) {
-      const clean = line.replace(/super oferta/i, '').replace(/[^\w\s\u00C0-\u00FF]/g, '').trim();
-      if (clean.length > 8 && !clean.toLowerCase().includes('detalles')) {
-        name = clean.slice(0, 90);
-        break;
-      }
-    }
-    if (!name && lines.length > 0) {
-      name = lines[0].replace(/super oferta/i, '').replace(/[^\w\s\u00C0-\u00FF]/g, '').trim().slice(0, 90);
-    }
-    if (addressNeighborhood && !name.toLowerCase().includes(addressNeighborhood.toLowerCase())) {
-      name += ` - ${addressNeighborhood}`;
-    }
+    // 10. Título Estandarizado Doctrinal: [Tipo de Inmueble] en [Barrio / Sector]
+    // Regla de concisión v31.48: Título corto y limpio sin palabras de negocio redundantes
+    const sectorDisplay = addressNeighborhood || zone || 'Bogotá';
+    const tipoDisplay = isSubtipoComercial && !propertyTypeExact.toLowerCase().includes('comercial')
+      ? `${propertyTypeExact} Comercial`
+      : propertyTypeExact;
+    const name = `${tipoDisplay} en ${sectorDisplay}`;
 
     // 11. Autodetección de características internas
     const internasDetectadas: string[] = [];

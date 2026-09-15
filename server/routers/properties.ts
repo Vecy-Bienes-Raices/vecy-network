@@ -302,22 +302,13 @@ export function parsePropertyDeterministically(text: string) {
     else if (lower.includes("teusaquillo")) zone = "Teusaquillo";
   }
 
-  // Título / Nombre
-  let name = "";
-  const lines = norm.split("\n").map(l => l.trim()).filter(Boolean);
-  for (const line of lines) {
-    const clean = line.replace(/super oferta/i, "").replace(/[^\w\s\u00C0-\u00FF]/g, "").trim();
-    if (clean.length > 8 && !clean.toLowerCase().includes("detalles")) {
-      name = clean.slice(0, 90);
-      break;
-    }
-  }
-  if (!name && lines.length > 0) {
-    name = lines[0].replace(/super oferta/i, "").replace(/[^\w\s\u00C0-\u00FF]/g, "").trim().slice(0, 90);
-  }
-  if (addressNeighborhood && !name.toLowerCase().includes(addressNeighborhood.toLowerCase())) {
-    name += ` - ${addressNeighborhood}`;
-  }
+  // Título / Nombre Estandarizado Doctrinal: [Tipo de Inmueble] en [Barrio / Sector]
+  // Regla de concisión v31.48: Título corto y limpio sin palabras de negocio redundantes
+  const sectorDisplay = addressNeighborhood || zone || city || "Bogotá";
+  const tipoDisplay = isSubtipoComercial && !propertyTypeExact.toLowerCase().includes("comercial")
+    ? `${propertyTypeExact} Comercial`
+    : propertyTypeExact;
+  const name = `${tipoDisplay} en ${sectorDisplay}`;
 
   // Autodetección de características internas
   const selectedInternas: string[] = [];
@@ -459,7 +450,7 @@ export const propertiesRouter = router({
 
       try {
         const { invokeLLM } = await import("../_core/llm");
-        const prompt = `Analiza este texto de inmueble y extrae los datos clave en formato JSON con los siguientes campos obligatorios: name (título breve descriptivo), propertyType (apartment, house, building, warehouse, farm, hotel, office, land, commercial, loft, consultorio), transactionType (venta, arriendo, venta_o_arriendo), price (valor numérico en COP sin puntos), location (dirección o zona aproximada), zone (barrio o localidad), addressNeighborhood (barrio específico), bedrooms (número entero o null), bathrooms (número entero o null), stratum (estrato 1-6 o null), garages (número entero o null), areaTotal (metros cuadrados en número string o null), adminFee (cuota administración COP o null), description (resumen claro de los aspectos más importantes). Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni explicaciones.\n\nTexto: ${input.text}`;
+        const prompt = `Analiza este texto de inmueble y extrae los datos clave en formato JSON con los siguientes campos obligatorios: name (título corto y estandarizado en formato "[Tipo] en [Barrio]", ej: "Casa en Morato", "Apartamento en Santa Bárbara Occ.", sin palabras redundantes de negocio como venta o arriendo ni precios), propertyType (apartment, house, building, warehouse, farm, hotel, office, land, commercial, loft, consultorio), transactionType (venta, arriendo, venta_o_arriendo), price (valor numérico en COP sin puntos), location (dirección o zona aproximada), zone (barrio o localidad), addressNeighborhood (barrio específico), bedrooms (número entero o null), bathrooms (número entero o null), stratum (estrato 1-6 o null), garages (número entero o null), areaTotal (metros cuadrados en número string o null), adminFee (cuota administración COP o null), description (resumen claro de los aspectos más importantes). Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni explicaciones.\n\nTexto: ${input.text}`;
 
         // Timeout estricto de 4.5s para no bloquear al usuario si Gemini está en rate limit 429
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 4500));
@@ -475,7 +466,7 @@ export const propertiesRouter = router({
           ...deterministic,
           ...parsed,
           price: parsed.price ? String(parsed.price) : deterministic.price,
-          name: parsed.name || deterministic.name,
+          name: deterministic.name || parsed.name,
           propertyType: parsed.propertyType || deterministic.propertyType,
           transactionType: parsed.transactionType || deterministic.transactionType,
           zone: parsed.zone || deterministic.zone,

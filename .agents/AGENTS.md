@@ -167,7 +167,44 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.47 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.48 — Septiembre 2026
+
+### Novedades v31.48 (Rediseño Doctrinal "Tienda Ofertas", "Tienda Demandas", Estandarización Concisa de Títulos en JanIA, Insignias de Negocio sobre Fotos y Ficha Técnica Inspirada en Wix):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Contaminación Cruzada de Secciones*: La página de Ofertas presentaba un botón hacia Demandas y la de Demandas un botón hacia Ofertas, generando desorden visual y falta de claridad contextual según las directrices de Eduardo.
+  2) *Nomenclatura Inapropiada*: La denominación "Catálogo de Ofertas" y "Catálogo de Demandas" resultaba impersonal y extensa; se requería adoptar **"TIENDA OFERTAS"** y **"TIENDA DEMANDAS"** sin preposiciones.
+  3) *Desproporción Tipográfica en Monitores Grandes*: La clase `.vecy-title-hero` alcanzaba `text-6xl md:text-9xl` (128px), devorando el viewport en pantallas ultra-wide y empujando el inventario hacia abajo.
+  4) *Títulos Kilométricos en Inmuebles*: Al ingresar texto libre en JanIA ("Pegar Texto Libre de WhatsApp o Ficha Técnica"), se autollenaban frases largas y redundantes como *"Casa en venta en Morato Bogotá Precio..."*, en lugar de títulos cortos y estandarizados.
+  5) *Ausencia de Etiqueta Visual de Negocio en Tarjetas*: El tipo de negocio (Venta, Arriendo, Permuta) no destacaba visualmente sobre la fotografía como en la web original de Wix.
+- **Acciones Ejecutadas**:
+  1) *Separación Estricta sin Contaminación Cruzada*:
+     - `client/src/pages/Properties.tsx`: Renombrado a **"TIENDA OFERTAS"**, eliminación de switchers hacia Demandas, botón contextual único `[ + PUBLICAR OFERTA ]`, contador de ofertas auditadas y paso de `transactionType` a `PropertyCard`.
+     - `client/src/pages/RequirementsMarketplace.tsx`: Renombrado a **"TIENDA DEMANDAS"**, eliminación de switchers hacia Ofertas, botón contextual único `[ + PUBLICAR DEMANDA ]` y contador de requerimientos activos.
+  2) *Armonización Tipográfica en `index.css`*:
+     - `.vecy-title-hero` reducido de 9xl a `text-3xl sm:text-4xl md:text-5xl lg:text-6xl` con márgenes equilibrados.
+     - `.vecy-title-section` ajustado a `text-2xl sm:text-3xl md:text-4xl` y `.vecy-subtitle` estilizado para evitar desplazamientos forzados.
+  3) *Etiqueta / Badge de Color según Negocio sobre la Fotografía (`PropertyCard.tsx`)*:
+     - Badge flotante en la esquina superior de la foto con color semántico:
+       - 🟧 **Venta**: Ámbar dorado / Naranja (`from-amber-600 to-amber-700`).
+       - 🟩 **Arriendo**: Verde esmeralda (`from-emerald-600 to-teal-700`).
+       - 🟪 **Venta | Permuta** / **Permuta**: Púrpura / Violeta (`from-purple-600 to-indigo-700`).
+       - 🟦 **Arriendo Temporal / Opción de Compra**: Cyan / Azul (`from-sky-600 to-blue-700`).
+     - Título corto y limpio estandarizado en la tarjeta sin redundancias.
+  4) *Estandarización Concisa de Títulos en Asistente JanIA*:
+     - En `UnifiedPublishModal.tsx` (`extractPropertyLocally`) y en `properties.ts` (`parsePropertyDeterministically` + prompt Gemini):
+       JanIA genera títulos automáticos en formato estricto: `[Tipo de Inmueble] en [Barrio / Sector]` (ej: *"Casa en Morato"*, *"Apartamento en Santa Bárbara Occ."*, *"Oficina en Chicó Norte"*).
+  5) *Reorganización de Ficha Técnica (`PropertyDetail.tsx`) Inspirada en Wix*:
+     - Cabecera limpia con título conciso, micro-ubicación y bloque destacado de Negocio (Modalidad, Precio en COP, Administración, Permuta SÍ/NO, Arriendo SÍ/NO).
+     - Botonera rápida: `[ 📅 AGENDAR VISITA OFICIAL ]`, `[ ✏️ EDITAR INMUEBLE ]`, `[ 🔗 COMPARTIR ]`, `[ 📄 FICHA TÉCNICA ]`.
+     - Galería de activo con fotos en alta definición y carrusel.
+     - Tabla / Grid de **Detalles del Inmueble** (16 atributos técnicos clave).
+     - Dos bloques paralelos: 🏠 **Características Internas** vs 🏢 **Características Externas**.
+     - Descripción textual completa, mapa de geolocalización y tarjeta estelar de **Vecy Agenda**.
+  6) *Preservación Absoluta de `whatsapp-match.ts`*: Archivo 100% original e intacto.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.47 — Septiembre 2026
 
 ### Novedades v31.47 (Arquitectura Asíncrona Job + Polling 0% Error 504 ante Policía Nacional con 2Captcha, Sincronización Universal de Vecy Agenda Pro y Blindaje Infalible de JanIA en Grupo 2 y Canal):
 - **Diagnóstico y Causas Raíz Identificadas**:

@@ -43,6 +43,7 @@ interface PropertyCardProps {
   id: string | number;
   name: string;
   propertyType?: PropertyType;
+  transactionType?: string;
   price: string | number;
   priceOffer?: string | number;
   location: string;
@@ -63,6 +64,27 @@ interface PropertyCardProps {
   onViewDetails?: () => void;
 }
 
+const getTransactionBadge = (type?: string) => {
+  if (!type) return { label: 'Venta', className: 'bg-gradient-to-r from-amber-600 to-amber-700 text-white border border-amber-400/30' };
+  const low = type.toLowerCase();
+  if (low.includes('arriendo_con_opcion') || low.includes('opcion_de_compra')) {
+    return { label: 'Arriendo con Opción', className: 'bg-gradient-to-r from-sky-600 to-blue-700 text-white border border-sky-400/30' };
+  }
+  if (low.includes('arriendo_temporal') || low.includes('temporal')) {
+    return { label: 'Arriendo Temporal', className: 'bg-gradient-to-r from-cyan-600 to-teal-700 text-white border border-cyan-400/30' };
+  }
+  if (low.includes('venta_o_arriendo') || (low.includes('venta') && low.includes('arriendo'))) {
+    return { label: 'Venta | Arriendo', className: 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white border border-blue-400/30' };
+  }
+  if (low.includes('venta_permuta') || low.includes('permuta')) {
+    return { label: 'Venta | Permuta', className: 'bg-gradient-to-r from-purple-600 to-indigo-700 text-white border border-purple-400/30' };
+  }
+  if (low.includes('arriendo') || low.includes('rent')) {
+    return { label: 'Arriendo', className: 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white border border-emerald-400/30' };
+  }
+  return { label: 'Venta', className: 'bg-gradient-to-r from-amber-600 to-amber-700 text-white border border-amber-400/30' };
+};
+
 const PROPERTY_TYPE_LABELS: Record<PropertyType | string, string> = {
   apartment: 'Apartamento',
   house: 'Casa',
@@ -80,6 +102,7 @@ export default function PropertyCard({
   id,
   name,
   propertyType = 'apartment',
+  transactionType,
   price,
   priceOffer,
   location,
@@ -133,10 +156,20 @@ export default function PropertyCard({
   const propertyLabel = PROPERTY_TYPE_LABELS[propertyType as PropertyType] || 'Inmueble';
   const displayNeighborhood = neighborhood || zone || null;
   const displayCity = city || 'Bogotá';
+  const badge = getTransactionBadge(transactionType);
 
+  // Estandarización de título corto y limpio: [Tipo] en [Barrio]
   const formattedTitle = displayNeighborhood 
-    ? `${propertyLabel} en ${displayNeighborhood}${locality ? `, ${locality}` : ''}`
-    : name;
+    ? `${propertyLabel} en ${displayNeighborhood}`
+    : name
+        .replace(/super oferta/gi, '')
+        .replace(/en venta/gi, '')
+        .replace(/en arriendo/gi, '')
+        .replace(/para venta/gi, '')
+        .replace(/para arriendo/gi, '')
+        .replace(/\b(bogot[aá]|colombia)\b/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim() || `${propertyLabel} en Bogotá`;
 
   const displayLocation = displayNeighborhood ? `${displayNeighborhood}, ${displayCity}` : location;
   const age = yearBuilt ? new Date().getFullYear() - yearBuilt : null;
@@ -150,10 +183,17 @@ export default function PropertyCard({
 
   return (
     <div className="vecy-card-apple group overflow-hidden hover:glow-gold transition-all duration-500 p-0 flex flex-col h-full">
-      {/* ── Imagen / Carousel ── */}
+      {/* ── Imagen / Carousel con Ribbon Doctrinal ── */}
       <div className="relative h-64 overflow-hidden bg-white/5">
         <img src={displayImage} alt={formattedTitle} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onError={() => setImgError(true)} />
         
+        {/* 🏷️ Etiqueta de Negocio sobre la Foto (Venta / Arriendo / Permuta) */}
+        <div className="absolute top-3 right-3 z-10 pointer-events-none">
+          <span className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider shadow-lg ${badge.className}`}>
+            {badge.label}
+          </span>
+        </div>
+
         {/* Overlays de Viralización Pro */}
         <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-6 text-center z-20">
           <div className="space-y-3 w-full">
@@ -178,10 +218,14 @@ export default function PropertyCard({
           </div>
         </div>
 
-        {featured && <div className="absolute top-4 right-4 bg-accent text-accent-foreground px-3 py-1 rounded-md font-bold text-[10px] uppercase tracking-widest z-10">Destacado</div>}
+        {featured && (
+          <div className="absolute top-3 left-3 bg-accent text-accent-foreground px-2.5 py-1 rounded-md font-bold text-[9px] uppercase tracking-widest z-10 shadow-md">
+            Destacado
+          </div>
+        )}
 
-        <div className="absolute top-4 left-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
-          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsFavorite(!isFavorite); }} className="bg-black/60 backdrop-blur p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-all">
+        <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsFavorite(!isFavorite); }} className="bg-black/70 backdrop-blur p-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-all">
             <Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />
           </button>
         </div>
