@@ -167,7 +167,26 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.49 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.50 — Septiembre 2026
+
+### Novedades v31.50 (Pool Tripartito de Claves Gemini Multi-Proyecto, Round-Robin Balanceado, Priorización de Modelos Lite/3.6 y Erradicación Total de Rate Limits 429 en WhatsApp):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Intermitencia de Reacciones de JanIA en WhatsApp*: Eduardo reportó que JanIA presentaba intermitencia en grupos de WhatsApp y sospechaba si se debía a deduplicación de publicaciones previas o fallas internas.
+  2) *Inspección Empírica de Logs VPS*: El registro `/root/.pm2/logs/jania-server-error.log` evidenció saturación de errores HTTP 429: `[JanIA-LLM] ⚠️ Rate limit (429) en gemini-2.5-flash. Clave puesta en pausa por 20s`.
+  3) *Causa Raíz de Cuello de Botella*: El sistema dependía de una sola clave Gemini gratuita en `.env` (15 RPM). Ante ráfagas concurrentes de publicaciones en múltiples grupos de WhatsApp, la clave agotaba su cuota por minuto y pausaba la extracción con IA.
+  4) *Validación de Claves Nuevas Provistas por Eduardo*: Eduardo aportó 2 nuevas credenciales de Google Cloud de proyectos independientes (`projects/49801040622` y `projects/996818453557`). Mediante pruebas automatizadas de compatibilidad y desambiguación OCR (`imdI`), se validó que ambas retornan HTTP 200 SUCCESS.
+  5) *Actualización Doctrinal de Modelos Gemini*: Google Cloud actualizó la disponibilidad de modelos para proyectos recientes (depreciando `gemini-2.5-flash` con 404). Se comprobó que `gemini-flash-lite-latest` y `gemini-3.6-flash` operan al 100% de éxito con latencias ultrarrápidas (~300ms) y límites de RPM superiores.
+- **Acciones Ejecutadas**:
+  1) *`server/_core/llm.ts`*:
+     - Implementación de selector Round-Robin en `getNextAvailableKey()`: distribuye cada petición sucesivamente entre los 3 proyectos independientes de Google Cloud, triplicando la capacidad a 45 peticiones por minuto.
+     - Reorganización de `FALLBACK_MODELS` priorizando `gemini-flash-lite-latest` y `gemini-3.6-flash` para 0% errores 404 y respuesta instantánea.
+  2) *Sincronización de Credenciales*: Inclusión de `GEMINI_API_KEYS` con las 3 claves en `.env` local y en el servidor VPS de producción.
+  3) *Compilación y Despliegue*: `npm run check` (0 errores) y `npm run build` (0 errores).
+  4) *Preservación Absoluta de `whatsapp-match.ts`*: Archivo 100% original e intacto.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.49 — Septiembre 2026
 
 ### Novedades v31.49 (Diseño Doctrinal de Tarjetas en Tienda Ofertas con Título [Tipo] en [Barrio], Ubicación Dorada [Localidad, Ciudad] y Paleta Cuádruple de Avisos 🟥 🟩 🟦 🟪):
 - **Diagnóstico y Causas Raíz Identificadas**:

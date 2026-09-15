@@ -50,7 +50,43 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.49 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.50 — Septiembre 2026
+
+### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 20:45 (Hora Colombia UTC-5)
+**Versión**: `v31.50` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"Revisa a ver por qué JanIA no está trabajando en Whatsapp hoy. Qué rompiste?"*
+2. *"Está muy intermitente, dime que sucede o por qué no veo casi reacciones, será que esas publicaciones en las que no reaccionó ya estaban o habían sido recopiladas anteriormente y la obvió o qué sería??"*
+3. *"Pues no pero las puedo sacar si quieres. Mira a ver si esas te sirven."* [Eduardo adjunta capturas de dos nuevas claves API de Gemini generadas en Google Cloud].
+
+#### 🔍 Diagnóstico Técnico Profundo & Causas Raíz Identificadas:
+1. **Auditoría de Logs e Ingesta Real en PostgreSQL**:
+   - Se verificó que `server/_core/whatsapp-match.ts` no había sido modificado ni roto. La base de datos confirmó actividad continua (decenas de requerimientos `📝` y ofertas `👍`/`👌` registradas).
+   - El descarte de publicaciones correspondía en parte a la regla doctrinal v31.27 (descarte de fotos ambientales de salas/baños sin texto comercial) y al control de deduplicación de 60 segundos (`reactedMessageIds`).
+2. **Cuello de Botella Crítico: Rate Limit (HTTP 429) en Google Gemini**:
+   - La inspección de `/root/.pm2/logs/jania-server-error.log` reveló una inundación de errores 429: `[JanIA-LLM] ⚠️ Rate limit (429) en gemini-2.5-flash. Clave puesta en pausa por 20s`.
+   - El sistema dependía de una única clave en el plan gratuito de Google (15 RPM). Ráfagas de 4 o 5 publicaciones en varios grupos simultáneos saturaban la cuota por minuto, dejando en pausa la extracción de texto complejo por IA.
+3. **Validación y Desambiguación de las Nuevas Claves de Eduardo**:
+   - Clave 1 (`projects/49801040622`): `AQ.Ab8RN6JiLQ...xEDQ` -> Validada con éxito (HTTP 200).
+   - Clave 2 (`projects/996818453557`): Se detectó ambigüedad visual en OCR (`imdl` vs `imdI`). Mediante permutación automatizada de caracteres contra el endpoint oficial de Google, se descubrió la cadena exacta: `AQ.Ab8RN6LojO...93Q`, respondiendo con HTTP 200 SUCCESS.
+4. **Actualización de Modelos Google Cloud**:
+   - Para cuentas y proyectos nuevos, Google descontinuó `gemini-2.5-flash` con error 404. Se validó que `gemini-flash-lite-latest` y `gemini-3.6-flash` responden al 100% en todas las cuentas con latencias inferiores a 400ms.
+
+#### 🛠️ Acciones Técnicas Ejecutadas:
+1. **`server/_core/llm.ts`**:
+   - Implementación de balanceador Round-Robin activo en `getNextAvailableKey()`: alterna de forma rotativa y equitativa entre los 3 proyectos independientes de Google Cloud, elevando la capacidad a 45 peticiones por minuto.
+   - Reordenamiento de `FALLBACK_MODELS` priorizando `gemini-flash-lite-latest` y `gemini-3.6-flash`.
+2. **Sincronización de Variables de Entorno (`.env`)**:
+   - Configuración de `GEMINI_API_KEYS` conteniendo las 3 credenciales validadas tanto en el entorno local como en el VPS de producción.
+3. **Incremento de Versión, Compilación y Despliegue**:
+   - Incremento a `v31.50` en `shared/const.ts` y `package.json`.
+   - Compilación exitosa con `npm run check` (0 errores) y `npm run build` (0 errores).
+   - Despliegue a GitHub (`main`) y recarga del proceso PM2 `jania-server` en el VPS.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.49 — Septiembre 2026
 
 ### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 20:25 (Hora Colombia UTC-5)
 **Versión**: `v31.49` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

@@ -718,15 +718,27 @@ function getNextAvailableKey() {
     throw new Error("No hay ninguna GEMINI_API_KEY configurada en el entorno.");
   }
   const now = Date.now();
-  for (const key of allKeys) {
+  for (let i = 0; i < allKeys.length; i++) {
+    const idx = (currentKeyIndex + i) % allKeys.length;
+    const key = allKeys[idx];
     const cooldownUntil = keyCooldowns.get(key) || 0;
     if (now > cooldownUntil) {
+      currentKeyIndex = (idx + 1) % allKeys.length;
       return key;
     }
   }
-  return allKeys[0];
+  let bestKey = allKeys[0];
+  let minCooldown = keyCooldowns.get(bestKey) || Infinity;
+  for (const k of allKeys) {
+    const cd = keyCooldowns.get(k) || Infinity;
+    if (cd < minCooldown) {
+      minCooldown = cd;
+      bestKey = k;
+    }
+  }
+  return bestKey;
 }
-function markKeyCooldown(key, seconds = 30) {
+function markKeyCooldown(key, seconds = 20) {
   keyCooldowns.set(key, Date.now() + seconds * 1e3);
   console.warn(`[JanIA-LLM] Clave Gemini puesta en pausa por ${seconds}s debido a Rate Limit (429).`);
 }
@@ -861,17 +873,18 @@ async function invokeClaude(messages2, responseFormat) {
   console.log("[JanIA-LLM] Intentando procesar con Claude (Anthropic)...");
   throw new Error("El proveedor Anthropic est\xE1 preparado en c\xF3digo pero requiere API KEY y activaci\xF3n financiera.");
 }
-var keyCooldowns, FALLBACK_MODELS, lastCallTimestamp, MIN_CALL_INTERVAL_MS;
+var keyCooldowns, currentKeyIndex, FALLBACK_MODELS, lastCallTimestamp, MIN_CALL_INTERVAL_MS;
 var init_llm = __esm({
   "server/_core/llm.ts"() {
     "use strict";
     init_env();
     keyCooldowns = /* @__PURE__ */ new Map();
+    currentKeyIndex = 0;
     FALLBACK_MODELS = [
-      "gemini-2.5-flash",
-      "gemini-flash-latest",
       "gemini-flash-lite-latest",
-      "gemini-3.5-flash-lite"
+      "gemini-3.6-flash",
+      "gemini-flash-latest",
+      "gemini-2.5-flash"
     ];
     lastCallTimestamp = 0;
     MIN_CALL_INTERVAL_MS = 600;

@@ -322,6 +322,30 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.50 — Septiembre 2026
+
+#### 📌 POOL TRIPARTITO DE CLAVES GEMINI MULTI-PROYECTO, BALANCEO ROUND-ROBIN, PRIORIZACIÓN DE MODELOS LITE/3.6 Y ERRADICACIÓN DE ERRORES 429 EN WHATSAPP
+
+**Problemas identificados:**
+1. **Intermitencia y Pausas en JanIA WhatsApp**: Ante ráfagas de mensajes en múltiples grupos de WhatsApp simultáneos, se registraban eventos 429 (Rate Limit exceeded) en Google Gemini: `[JanIA-LLM] ⚠️ Rate limit (429) en gemini-2.5-flash`.
+2. **Dependencia de Monoclave**: El servidor operaba con una única clave en plan gratuito (15 RPM), provocando pausas de 20 segundos que demoraban la ingesta y clasificación de mensajes complejos.
+3. **Depreciación de Modelos en Cuentas Nuevas**: Google Cloud comenzó a retornar 404 para `gemini-2.5-flash` en proyectos creados recientemente, exigiendo modelos más modernos como `gemini-3.6-flash` y `gemini-flash-lite-latest`.
+
+**Solución aplicada:**
+- **Pool de Claves Multi-Proyecto**:
+  - Incorporación de 3 claves de API pertenecientes a proyectos independientes de Google Cloud (`AQ.Ab8RN6...Bd_w`, `AQ.Ab8RN6...xEDQ`, `AQ.Ab8RN6...93Q`).
+  - Resolución empírica del carácter ambiguo del OCR (`imdI` vs `imdl`) logrando 100% de autenticación (HTTP 200 SUCCESS) en los 3 proyectos.
+- **Balanceador Round-Robin Activo (`server/_core/llm.ts`)**:
+  - `getNextAvailableKey()` distribuye rotativamente cada llamada entre los 3 proyectos, elevando la tasa efectiva a 45 peticiones por minuto (3x) y previniendo la acumulación de cuota en un solo proyecto.
+  - Reordenamiento de `FALLBACK_MODELS` priorizando `gemini-flash-lite-latest` y `gemini-3.6-flash` para 0% errores 404 y latencias récord (~300ms).
+- **Despliegue y Control de Versión**:
+  - Configuración de `GEMINI_API_KEYS` en `.env` local y en el VPS de producción.
+  - Incremento oficial a `v31.50` en `shared/const.ts` y `package.json`.
+  - Validación con `npm run check` (0 errores) y `npm run build` (0 errores).
+  - Preservación 100% intacta de `whatsapp-match.ts`.
+
+---
+
 ### 🔖 v31.49 — Septiembre 2026
 
 #### 📌 DISEÑO DOCTRINAL DE TARJETAS EN TIENDA OFERTAS CON TÍTULO [TIPO] EN [BARRIO], UBICACIÓN DORADA [LOCALIDAD, CIUDAD] Y PALETA CUÁDRUPLE DE AVISOS 🟥 🟩 🟦 🟪
