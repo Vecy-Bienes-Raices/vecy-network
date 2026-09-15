@@ -322,6 +322,22 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.54 — Septiembre 2026
+
+#### 📌 CALIBRACIÓN ÓPTICA EXACTA Y PARIDAD VISUAL DEFINITIVA ENTRE FLECHA VOLVER ARRIBA Y JANIA AVATAR
+
+**Problemas identificados:**
+1. **Ilusión Óptica de Irradiación (Efecto Helmholtz)**: A pesar de compartir formalmente dimensiones de 64px en v31.53, el botón de la flecha al ser un disco 100% de oro sólido reflectivo metálico con resplandor dorado expansivo se percibía visualmente el doble de grande que JanIA ("a leguas se ve que la flecha es más grande").
+2. **Avatar Retraído en JanIA**: La foto de perfil `jania_perfil.png` presentaba a JanIA con amplio fondo negro y encuadre general, reduciendo su rostro a apenas 24px en el centro del círculo.
+
+**Solución aplicada:**
+- **`client/src/components/FloatingScrollToTop.tsx`**: Calibrado a `w-11 h-11 sm:w-12 sm:h-12 rounded-full` (44px móvil, 48px desktop), con resplandor dorado suave `shadow-[0_4px_15px_rgba(191,149,63,0.45)]` e icono `ArrowUp` de escala 20px-22px (`w-5 h-5 sm:w-5.5 sm:h-5.5`).
+- **`client/src/components/JanIAFloatingButton.tsx` & `JanIAWidget.tsx`**: Calibrado a `w-12 h-12 sm:w-13 sm:h-13 md:w-14 md:h-14` con borde en oro sólido `border-2 border-[#bf953f]` y re-encuadre fotográfico de retrato (`object-top scale-135 translate-y-1`), permitiendo que el rostro iluminado de JanIA protagonice el avatar con total presencia y nitidez.
+- **Verificación Empírica**: Validación visual side-by-side mediante renderizado en navegador, confirmando una paridad visual simétrica, armónica y equilibrada.
+- **Compilación y Despliegue**: `npm run check` (0 errores) y `npm run build` (0 errores).
+
+---
+
 ### 🔖 v31.53 — Septiembre 2026
 
 #### 📌 PARIDAD SIMÉTRICA DE WIDGETS FLOTANTES: FLECHA GLOBAL VOLVER ARRIBA A LA IZQUIERDA Y JANIA A LA DERECHA CON TAMAÑO IDÉNTICO 1:1

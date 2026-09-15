@@ -18,13 +18,13 @@ export default function JanIAFloatingButton() {
       whileHover={{ scale: 1.08 }}
       whileTap={{ scale: 0.92 }}
       onClick={() => navigate('/jania')}
-      className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-14 h-14 sm:w-16 sm:h-16 rounded-full p-0 flex items-center justify-center z-40 glow-gold pulse-glow overflow-hidden shadow-2xl bg-black border-2 border-primary/50 group cursor-pointer"
+      className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-12 h-12 sm:w-13 sm:h-13 md:w-14 md:h-14 rounded-full p-0 flex items-center justify-center z-40 glow-gold pulse-glow overflow-hidden shadow-2xl bg-black border-2 border-[#bf953f] group cursor-pointer"
       title="Abrir JanIA Console"
     >
       <img 
         src="/jania_perfil.png" 
         alt="JanIA"
-        className="w-full h-full object-cover object-center" 
+        className="w-full h-full object-cover object-top scale-135 translate-y-1" 
         loading="eager"
         decoding="async"
       />

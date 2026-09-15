@@ -58,10 +58,10 @@ export default function FloatingScrollToTop() {
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.92 }}
           onClick={scrollToTop}
-          className="fixed bottom-6 left-6 md:bottom-8 md:left-8 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center z-40 bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-black border-2 border-black/40 shadow-[0_0_20px_rgba(191,149,63,0.6)] hover:shadow-[0_0_30px_rgba(191,149,63,0.9)] cursor-pointer group transition-all"
+          className="fixed bottom-6 left-6 md:bottom-8 md:left-8 w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center z-40 bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-black border border-black/30 shadow-[0_4px_15px_rgba(191,149,63,0.45)] hover:shadow-[0_6px_22px_rgba(191,149,63,0.7)] cursor-pointer group transition-all"
           title="Volver arriba"
         >
-          <ArrowUp className="w-6 h-6 sm:w-7 sm:h-7 text-black stroke-[3] group-hover:-translate-y-1 transition-transform" />
+          <ArrowUp className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-black stroke-[3] group-hover:-translate-y-0.5 transition-transform" />
           
           {/* Tooltip elegante */}
           <div className="absolute -top-10 left-0 bg-black/85 backdrop-blur-md border border-primary/30 px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl">

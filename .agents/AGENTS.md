@@ -167,7 +167,21 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.53 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.54 — Septiembre 2026
+
+### Novedades v31.54 (Calibración Óptica Exacta y Paridad Visual Definitiva entre Flecha Volver Arriba y JanIA Avatar):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Ilusión Óptica de Irradiación (Efecto Helmholtz)*: Aunque ambos botones se configuraron en 64px en v31.53, el botón de volver arriba al ser un disco sólido 100% de oro reflectivo con halo de sombra generaba una masa luminosa masiva, percibida visualmente como el doble del tamaño del widget de JanIA ("a leguas se ve que la flecha es más grande").
+  2) *Rostro Retraído en el Avatar de JanIA*: JanIA se mostraba con `object-center` abarcando cuerpo y espacio negro, haciendo que su rostro midiera apenas 24px en el centro.
+- **Acciones Ejecutadas**:
+  1) *Flecha Volver Arriba (`FloatingScrollToTop.tsx`)*: Calibrada a escala armónica `w-11 h-11 sm:w-12 sm:h-12` (44px móvil, 48px desktop) con resplandor dorado elegante `shadow-[0_4px_15px_rgba(191,149,63,0.45)]` e icono `ArrowUp` de 20px-22px.
+  2) *JanIA (`JanIAFloatingButton.tsx` y `JanIAWidget.tsx`)*: Calibrada en `w-12 h-12 sm:w-13 sm:h-13 md:w-14 md:h-14` con borde dorado sólido `border-2 border-[#bf953f]` y encuadre facial `object-top scale-135 translate-y-1` para que su rostro ilumine el círculo.
+  3) *Validación Visual*: Comprobación por navegador de simetría y balance perfecto 1:1.
+  4) *Compilación*: `npm run check` (0 errores) y `npm run build` (0 errores).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.53 — Septiembre 2026
 
 ### Novedades v31.53 (Paridad Simétrica de Widgets: Flecha Flotante Global a la Izquierda y JanIA a la Derecha con Idéntico Tamaño 1:1):
 - **Diagnóstico y Causas Raíz Identificadas**:

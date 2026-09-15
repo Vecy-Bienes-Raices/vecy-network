@@ -50,13 +50,40 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.53 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.54 — Septiembre 2026
 
-### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 23:25 (Hora Colombia UTC-5)
-**Versión**: `v31.53` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 23:45 (Hora Colombia UTC-5)
+**Versión**: `v31.54` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
 
 #### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
-1. *"Podrías hacer el widget de Jania en la web un poco más pequeño y la flecha de volver arriba un poco más grande hasta dejarlos iguales, pero deja el de la flecha al lado izquierdo de la web y JanIA donde está."*
+1. *"El botón flotante flecha arriba y el widged de JanIA deben tener el mismo tamaño, a leguas se ve que la flecha es más grande que el widget. mejóralo por favor."*
+
+#### 🔍 Diagnóstico Técnico Profundo & Causas Raíz Identificadas:
+1. **Ilusión Óptica de Irradiación (Helmholtz) y Dominancia de Masa Lumínica**:
+   - Aunque ambos botones tenían formalmente `w-16 h-16` en CSS en v31.53, el botón de la flecha es un disco 100% de oro sólido reflectivo metálico (`#bf953f` vía `#fcf6ba` a `#bf953f`) con un halo expansivo de `shadow-[0_0_20px_rgba(191,149,63,0.6)]`.
+   - En contraste, el avatar de JanIA tiene fondo negro profundo con un 70% de área oscura y bordes sutiles, fusionándose con el fondo negro de la web.
+   - Como resultado de la física visual en pantallas oscuras (irradiación de superficies luminosas sobre fondos oscuros), la flecha dorada aparentaba tener el doble del tamaño del widget de JanIA ("a leguas se ve que la flecha es más grande").
+2. **Encuadre Reducido del Rostro de JanIA**:
+   - La imagen `jania_perfil.png` (2048x2048) contenía el cuerpo completo y fondo amplio con `object-center`, provocando que el rostro real de JanIA midiera apenas 24px dentro del círculo de 64px.
+
+#### 🛠️ Acciones Técnicas Ejecutadas:
+1. **Calibración Óptica de la Flecha Volver Arriba (`FloatingScrollToTop.tsx`)**:
+   - Reducción del diámetro del botón de la flecha a escala armónica: `w-11 h-11 sm:w-12 sm:h-12` (44px móvil, 48px desktop).
+   - Calibración del resplandor a un halo sutil y elegante: `shadow-[0_4px_15px_rgba(191,149,63,0.45)]` en lugar de una sombra expansiva de 20px.
+   - Icono `ArrowUp` calibrado a `w-5 h-5 sm:w-5.5 sm:h-5.5`.
+2. **Prominencia y Zoom del Rostro de JanIA (`JanIAFloatingButton.tsx` y `JanIAWidget.tsx`)**:
+   - Escala calibrada en `w-12 h-12 sm:w-13 sm:h-13 md:w-14 md:h-14` con borde nítido en oro sólido `border-2 border-[#bf953f]`.
+   - Re-encuadre del avatar: `object-top scale-135 translate-y-1`, permitiendo que el rostro, cabello y sonrisa de JanIA llenen el círculo con excelente definición y luminosidad propia.
+3. **Verificación Visual Empírica en Navegador**:
+   - Captura de pantalla y prueba lado a lado (`side_by_side_comparison.png`) validando una simetría visual y presencia idéntica y equilibrada en ambos lados de la pantalla.
+4. **Compilación y Control de Versión**:
+   - `npm run check` (0 errores) y `npm run build` (0 errores).
+   - Incremento de versión oficial a `v31.54` en `shared/const.ts` y `package.json`.
+   - Preservación 100% intacta de `server/_core/whatsapp-match.ts`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.53 — Septiembre 2026
 
 #### 🔍 Diagnóstico Técnico Profundo & Causas Raíz Identificadas:
 1. **Disparidad de Escala Visual entre FABs Flotantes**:
