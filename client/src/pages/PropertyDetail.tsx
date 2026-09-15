@@ -26,7 +26,8 @@ import {
   Sparkles,
   Calendar,
   Warehouse,
-  Briefcase
+  Briefcase,
+  FileDown
 } from 'lucide-react';
 import ShareModal from '@/components/ShareModal';
 import UnifiedPublishModal from '@/components/publish/UnifiedPublishModal';
@@ -123,6 +124,8 @@ export default function PropertyDetail() {
   const displayType = enrichedAmenities?.tipoExacto || property.propertyType || 'Inmueble';
   const age = property.yearBuilt ? new Date().getFullYear() - property.yearBuilt : null;
   const refCode = generateRefCode(property.zone || '', (property as any).zoneRank ?? 1);
+  const pdfUrl = enrichedAmenities?.fichaTecnicaPdfUrl || 
+    (anyProp.externalUrl && typeof anyProp.externalUrl === 'string' && anyProp.externalUrl.toLowerCase().includes('.pdf') ? anyProp.externalUrl : null);
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
@@ -274,6 +277,19 @@ export default function PropertyDetail() {
                 <Share2 className="w-4 h-4 text-zinc-300" />
                 <span>COMPARTIR</span>
               </button>
+
+              {pdfUrl && (
+                <a
+                  href={pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-3.5 px-6 bg-gradient-to-r from-red-950/60 via-zinc-900 to-black hover:from-red-900/80 hover:to-zinc-900 border border-red-500/40 hover:border-red-400 text-red-300 hover:text-white rounded-xl transition-all inline-flex items-center gap-2 font-black tracking-widest text-xs uppercase shadow-[0_0_20px_rgba(239,68,68,0.25)]"
+                  title="Ver o descargar Ficha Técnica Oficial en PDF"
+                >
+                  <FileDown className="w-4 h-4 text-red-400 animate-pulse" />
+                  <span>FICHA TÉCNICA PDF</span>
+                </a>
+              )}
 
               {!isStealth && (
                 <a
@@ -576,6 +592,18 @@ export default function PropertyDetail() {
                     <CalendarCheck className="w-4 h-4 text-black" />
                     <span>SOLICITAR VISITA AHORA</span>
                   </button>
+
+                  {pdfUrl && (
+                    <a
+                      href={pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-3 px-4 bg-red-950/40 hover:bg-red-950/70 border border-red-500/40 hover:border-red-400 text-red-300 hover:text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-[0_0_15px_rgba(239,68,68,0.2)]"
+                    >
+                      <FileDown className="w-4 h-4 text-red-400" />
+                      <span>DESCARGAR FICHA PDF</span>
+                    </a>
+                  )}
 
                   <p className="text-[9px] text-zinc-500 text-center uppercase tracking-wider font-semibold">
                     Respaldo legal & peritaje inmobiliario certificado

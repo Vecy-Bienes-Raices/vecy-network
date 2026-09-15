@@ -322,6 +322,31 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.56 — Septiembre 2026
+
+#### 📌 CONTROLES NUMÉRICOS FLEXIBLES HASTA 50+, SUBTIPOS DE INMUEBLE, DROPZONE PDF MULTIMODAL GEMINI Y WORKSPACE ESPACIOSO DE JANIA
+
+**Problemas identificados:**
+1. **Límites Rígidos en Botoneras Numéricas (`'5+'` y `'10+'`)**: `UnifiedPublishModal.tsx` limitaba características esenciales con pills hasta `'5+'` y forzaba el guardado a 5, impidiendo registrar inmuebles con 6 baños, 6 oficinas/habitaciones o 5 garajes (como la Casa Comercial en Morato) o edificios y hoteles con decenas de unidades.
+2. **Ausencia de Selector de Subtipos**: Edificios, Hoteles, Casas Comerciales y Fincas no contaban con selección de subtipos especializados requeridos para peritaje y corretaje profesional.
+3. **Textarea Reducido y Falta de Ingesta PDF**: El asistente de JanIA contaba con un cuadro de texto estrecho de 3 filas y carecía de una zona de arrastre para adjuntar folletos PDF de fichas técnicas para análisis multimodal.
+
+**Solución aplicada:**
+- **`client/src/components/publish/UnifiedPublishModal.tsx`**:
+  - Componente universal `NumericField`: selección rápida con pills 0..10 y stepper numérico libre de 0 a 50+ (o 100).
+  - Selector dinámico de subtipos `propSubtype` (`PROPERTY_SUBTYPES`) para Edificios, Hoteles, Casas Comerciales, Fincas, etc.
+  - Estación de trabajo dual-tab: Pestaña 1 (Textarea amplio `min-h-[160px]` con botón *"Pegar Portapapeles"* y métricas de texto) + Pestaña 2 (Dropzone interactivo PDF de hasta 25MB con previsualizador y remoción).
+  - Persistencia íntegra de números exactos en `bedrooms`, `bathrooms`, `garages`, `subtipo` y `fichaTecnicaPdfUrl`.
+- **`server/routers/properties.ts`**:
+  - Mutación `parseText` adaptada para recibir `{ text, pdfBase64, pdfMimeType, fileName }`.
+  - Almacenamiento local del PDF en VPS (`storagePut`) en `/uploads/documents/` (0% impacto en Supabase).
+  - Extracción multimodal con Gemini pasando el documento PDF y texto complementario.
+- **`client/src/pages/PropertyDetail.tsx`**:
+  - Integración del botón con resplandor carmesí animado *"FICHA TÉCNICA PDF"* en la botonera principal y en la tarjeta de contacto lateral.
+- **Compilación y Despliegue**: `npx tsc --noEmit` (0 errores) y `npm run build` (0 errores).
+
+---
+
 ### 🔖 v31.55 — Septiembre 2026
 
 #### 📌 RESTAURACIÓN DOCTRINAL DE NETWORKBACKGROUND EN TIENDA OFERTAS CON PARTÍCULAS DINÁMICAS Y POINTER EVENTS SHIELD

@@ -7,7 +7,8 @@ import {
   MapPin, Bed, Bath, Car, Layers, Eye, CheckCircle2, FileUp, Star,
   ChevronDown, ChevronUp, Sliders, Compass, Shield, Flame, Wine, Tv,
   BookOpen, Coffee, Sun, Trees, CheckSquare, Square, Edit2, PlusCircle,
-  ChevronLeft, ChevronRight, GripVertical
+  ChevronLeft, ChevronRight, GripVertical, Clipboard, ClipboardCheck,
+  FileDown, Paperclip
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -41,6 +42,193 @@ export const PROPERTY_TYPES_EXACT = [
   'Oficina',
   'Villa'
 ] as const;
+
+// Subtipos especializados de inmuebles (v31.56)
+export const PROPERTY_SUBTYPES: Record<string, string[]> = {
+  'Edificio': [
+    'Edificio Residencial',
+    'Edificio de Oficinas',
+    'Edificio de Locales / Comercial',
+    'Edificio Mixto (Oficinas / Locales / Vivienda)',
+    'Edificio Institucional / Educativo / Salud'
+  ],
+  'Hotel': [
+    'Aparta-hotel',
+    'Aparta-Suites',
+    'Hospedaje',
+    'Hostal',
+    'Motel',
+    'Residencia',
+    'Hotel Boutique / Turístico'
+  ],
+  'Hostal': [
+    'Hostal Turístico',
+    'Hospedaje / Posada',
+    'Aparta-Suites'
+  ],
+  'Aparta Hotel': [
+    'Aparta-hotel',
+    'Aparta-Suites',
+    'Residencias con Servicios'
+  ],
+  'Casa': [
+    'Casa Comercial / Oficinas / Sede',
+    'Oficina en Casa',
+    'Sede Empresarial / Institucional',
+    'Casa Familiar Unifamiliar',
+    'Casa Multifamiliar (Con Renta)',
+    'Casa con Locales'
+  ],
+  'Casa Campestre': [
+    'Casa Campestre Residencial',
+    'Casa Campestre para Eventos',
+    'Chalet / Cabaña Campestre'
+  ],
+  'Casa Quinta': [
+    'Casa Quinta Recreacional',
+    'Casa Quinta con Renta Turística'
+  ],
+  'Finca': [
+    'Finca de Recreo / Vacacional',
+    'Finca Productiva / Agropecuaria',
+    'Finca Agroturística / Hotel Campestre'
+  ],
+  'Local': [
+    'Local Comercial a la Calle',
+    'Local en Centro Comercial',
+    'Local en Plazoleta de Comidas',
+    'Isla / Stand Comercial'
+  ],
+  'Oficina': [
+    'Oficina Corporativa / Edificio Empresarial',
+    'Oficina en Casa Comercial',
+    'Consultorio Médico / Salud',
+    'Piso Completo de Oficinas'
+  ],
+  'Bodega': [
+    'Bodega de Almacenamiento',
+    'Bodega Industrial / Producción',
+    'Bodega con Oficinas / Showroom',
+    'Minibodega'
+  ]
+};
+
+// Componente Numérico Híbrido Gold Luxury: Quick Pills (0-10) + Stepper & Input Directo (0 a 50+)
+export interface NumericFieldProps {
+  label: string;
+  sublabel?: string;
+  value: number | '';
+  onChange: (val: number | '') => void;
+  min?: number;
+  max?: number;
+  pills?: number[];
+  className?: string;
+}
+
+export function NumericField({
+  label,
+  sublabel,
+  value,
+  onChange,
+  min = 0,
+  max = 50,
+  pills = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  className = ""
+}: NumericFieldProps) {
+  const numVal = value === '' ? 0 : Number(value);
+
+  const handleDecrement = () => {
+    const next = Math.max(min, numVal - 1);
+    onChange(next);
+  };
+
+  const handleIncrement = () => {
+    const next = Math.min(max, numVal + 1);
+    onChange(next);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.trim();
+    if (raw === '') {
+      onChange('');
+      return;
+    }
+    const parsed = parseInt(raw, 10);
+    if (!isNaN(parsed)) {
+      onChange(Math.max(min, Math.min(max, parsed)));
+    }
+  };
+
+  return (
+    <div className={`space-y-1.5 ${className}`}>
+      <div className="flex items-center justify-between">
+        <label className="text-[11px] font-semibold text-zinc-300 flex items-center gap-1.5">
+          <span>{label}</span>
+          {numVal > 0 && (
+            <span className="px-1.5 py-0.5 rounded-md bg-[#bf953f]/25 text-[#fcf6ba] text-[10px] font-black border border-[#bf953f]/50">
+              {numVal}
+            </span>
+          )}
+        </label>
+        {sublabel && <span className="text-[10px] text-zinc-500">{sublabel}</span>}
+      </div>
+
+      <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5">
+        {/* Pills rápidos */}
+        <div className="flex gap-1 flex-1 overflow-x-auto pb-0.5 scrollbar-thin">
+          {pills.map((val) => {
+            const isSelected = value !== '' && Number(value) === val;
+            return (
+              <button
+                key={val}
+                type="button"
+                onClick={() => onChange(val)}
+                className={`min-w-[28px] sm:min-w-[30px] flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none text-center ${
+                  isSelected
+                    ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black font-black shadow-[0_0_10px_rgba(191,149,63,0.5)] scale-105 z-10'
+                    : 'bg-black/60 border border-white/10 text-zinc-300 hover:text-white hover:border-white/20'
+                }`}
+              >
+                {val}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Stepper + Input Libre (soporta hasta 50 o más) */}
+        <div className="flex items-center bg-black/80 border border-[#bf953f]/40 rounded-lg p-0.5 shadow-inner">
+          <button
+            type="button"
+            onClick={handleDecrement}
+            disabled={numVal <= min}
+            title="Disminuir"
+            className="w-7 h-7 rounded-md bg-white/5 hover:bg-[#bf953f]/20 text-zinc-300 hover:text-amber-300 flex items-center justify-center font-bold text-xs disabled:opacity-30 disabled:pointer-events-none transition-colors"
+          >
+            -
+          </button>
+          <input
+            type="number"
+            min={min}
+            max={max}
+            value={value}
+            onChange={handleInputChange}
+            placeholder="0"
+            className="w-11 text-center bg-transparent text-xs font-black text-amber-200 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+          <button
+            type="button"
+            onClick={handleIncrement}
+            disabled={numVal >= max}
+            title="Aumentar (hasta 50+)"
+            className="w-7 h-7 rounded-md bg-white/5 hover:bg-[#bf953f]/20 text-zinc-300 hover:text-amber-300 flex items-center justify-center font-bold text-xs disabled:opacity-30 disabled:pointer-events-none transition-colors"
+          >
+            +
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Mapeo al enum de base de datos
 export function mapExactTypeToDbEnum(exact: string): string {
@@ -215,35 +403,46 @@ export default function UnifiedPublishModal({
   const [propPermutaPercent, setPropPermutaPercent] = useState<number>(50);
   const [propTypeExact, setPropTypeExact] = useState<string>('Casa');
   const [propIsSubtipoComercial, setPropIsSubtipoComercial] = useState(false);
+  const [propSubtype, setPropSubtype] = useState<string>('');
   const [propName, setPropName] = useState('');
   const [propPrice, setPropPrice] = useState('');
   const [propAdminFee, setPropAdminFee] = useState('');
   const [propAreaConstruida, setPropAreaConstruida] = useState('');
   const [propAreaPrivada, setPropAreaPrivada] = useState('');
   const [propYearBuilt, setPropYearBuilt] = useState<number | ''>('');
-  const [propBedrooms, setPropBedrooms] = useState<number | '5+' | ''>('');
-  const [propBathrooms, setPropBathrooms] = useState<number | '5+' | ''>('');
+  const [propBedrooms, setPropBedrooms] = useState<number | ''>('');
+  const [propBathrooms, setPropBathrooms] = useState<number | ''>('');
   const [propCocina, setPropCocina] = useState<string>('Integral');
+
+  // ASISTENTE JANIA WORKSPACE: TEXTO & FICHA TÉCNICA PDF (v31.56)
+  const [janiaAssistantTab, setJaniaAssistantTab] = useState<'text' | 'pdf'>('text');
+  const [propPdfFile, setPropPdfFile] = useState<File | null>(null);
+  const [propPdfFileName, setPropPdfFileName] = useState<string>('');
+  const [propPdfBase64, setPropPdfBase64] = useState<string>('');
+  const [propPdfUrl, setPropPdfUrl] = useState<string | null>(null);
+  const [isParsingPdf, setIsParsingPdf] = useState(false);
+  const [isDraggingPdf, setIsDraggingPdf] = useState(false);
+  const [isCopiedClipboard, setIsCopiedClipboard] = useState(false);
 
   // SECCIÓN 2: ESPACIOS & CONFORT
   const [propCuartoServicio, setPropCuartoServicio] = useState<string>('No');
-  const [propGarajesCarro, setPropGarajesCarro] = useState<number | '10+' | ''>(0);
-  const [propGarajesMoto, setPropGarajesMoto] = useState<number | '10+' | ''>(0);
+  const [propGarajesCarro, setPropGarajesCarro] = useState<number | ''>(0);
+  const [propGarajesMoto, setPropGarajesMoto] = useState<number | ''>(0);
   const [propEstadoInmueble, setPropEstadoInmueble] = useState<string>('Excelente');
   const [propStratum, setPropStratum] = useState<number>(4);
-  const [propEstarTv, setPropEstarTv] = useState<number | '5+' | ''>(0);
-  const [propEstudios, setPropEstudios] = useState<number | '5+' | ''>(0);
+  const [propEstarTv, setPropEstarTv] = useState<number | ''>(0);
+  const [propEstudios, setPropEstudios] = useState<number | ''>(0);
   const [propHasCavaVinos, setPropHasCavaVinos] = useState(false);
-  const [propCavaVinosCant, setPropCavaVinosCant] = useState<number | '5+'>(1);
+  const [propCavaVinosCant, setPropCavaVinosCant] = useState<number | ''>(1);
   const [propHasChimenea, setPropHasChimenea] = useState(false);
-  const [propChimeneaCant, setPropChimeneaCant] = useState<number | '5+'>(1);
+  const [propChimeneaCant, setPropChimeneaCant] = useState<number | ''>(1);
   const [propChimeneaTipo, setPropChimeneaTipo] = useState<string>('Convencional a leña');
-  const [propDepositos, setPropDepositos] = useState<number | '5+' | ''>(0);
+  const [propDepositos, setPropDepositos] = useState<number | ''>(0);
 
   // SECCIÓN 3: TERRAZAS, NIVELES & UBICACIÓN GEOGRÁFICA
-  const [propBalcones, setPropBalcones] = useState<number | '5+' | ''>(0);
+  const [propBalcones, setPropBalcones] = useState<number | ''>(0);
   const [propHasTerrazas, setPropHasTerrazas] = useState(false);
-  const [propTerrazasCant, setPropTerrazasCant] = useState<number | '5+'>(1);
+  const [propTerrazasCant, setPropTerrazasCant] = useState<number | ''>(1);
   const [propAreaTerraza, setPropAreaTerraza] = useState('');
   const [propTerrazaHasBBQ, setPropTerrazaHasBBQ] = useState(false);
   const [propPiso, setPropPiso] = useState('');
@@ -436,6 +635,8 @@ export default function UnifiedPublishModal({
     if (data.name) setPropName(data.name);
     if (data.description) setPropDescription(data.description);
     if (data.propertyTypeExact) setPropTypeExact(data.propertyTypeExact);
+    if (data.subtype) setPropSubtype(data.subtype);
+    if (data.pdfUrl) setPropPdfUrl(data.pdfUrl);
     if (data.isSubtipoComercial !== undefined) setPropIsSubtipoComercial(Boolean(data.isSubtipoComercial));
     if (data.transactionType) setPropTxType(data.transactionType);
     if (data.price) setPropPrice(formatCOP(data.price));
@@ -446,21 +647,22 @@ export default function UnifiedPublishModal({
     if (data.areaConstruida || data.areaTotal) setPropAreaConstruida(String(data.areaConstruida || data.areaTotal));
     if (data.areaPrivada || data.areaPrivate) setPropAreaPrivada(String(data.areaPrivada || data.areaPrivate));
     if (data.yearBuilt) setPropYearBuilt(Number(data.yearBuilt));
-    if (data.bedrooms !== undefined && data.bedrooms !== null) setPropBedrooms(Number(data.bedrooms));
-    if (data.bathrooms !== undefined && data.bathrooms !== null) setPropBathrooms(Number(data.bathrooms));
+    if (data.bedrooms !== undefined && data.bedrooms !== null) setPropBedrooms(data.bedrooms === '' ? '' : Number(data.bedrooms));
+    if (data.bathrooms !== undefined && data.bathrooms !== null) setPropBathrooms(data.bathrooms === '' ? '' : Number(data.bathrooms));
     if (data.garages !== undefined && data.garages !== null) setPropGarajesCarro(Number(data.garages));
-    if (data.garajesCarro !== undefined) setPropGarajesCarro(Number(data.garajesCarro));
-    if (data.garajesMoto !== undefined) setPropGarajesMoto(Number(data.garajesMoto));
+    if (data.garajesCarro !== undefined) setPropGarajesCarro(data.garajesCarro === '' ? '' : Number(data.garajesCarro));
+    if (data.garajesMoto !== undefined) setPropGarajesMoto(data.garajesMoto === '' ? '' : Number(data.garajesMoto));
     if (data.stratum !== undefined && data.stratum !== null) setPropStratum(Number(data.stratum));
     if (data.cocina) setPropCocina(data.cocina);
     if (data.cuartoServicio) setPropCuartoServicio(data.cuartoServicio);
     if (data.estadoInmueble) setPropEstadoInmueble(data.estadoInmueble);
-    if (data.estudios !== undefined) setPropEstudios(Number(data.estudios));
-    if (data.depositos !== undefined) setPropDepositos(Number(data.depositos));
+    if (data.estudios !== undefined) setPropEstudios(data.estudios === '' ? '' : Number(data.estudios));
+    if (data.depositos !== undefined) setPropDepositos(data.depositos === '' ? '' : Number(data.depositos));
+    if (data.estarTv !== undefined) setPropEstarTv(data.estarTv === '' ? '' : Number(data.estarTv));
     if (data.piso) setPropPiso(String(data.piso));
-    if (data.balcones !== undefined) setPropBalcones(Number(data.balcones));
+    if (data.balcones !== undefined) setPropBalcones(data.balcones === '' ? '' : Number(data.balcones));
     if (data.hasTerrazas !== undefined) setPropHasTerrazas(Boolean(data.hasTerrazas));
-    if (data.terrazasCant !== undefined) setPropTerrazasCant(Number(data.terrazasCant));
+    if (data.terrazasCant !== undefined) setPropTerrazasCant(data.terrazasCant === '' ? '' : Number(data.terrazasCant));
     if (data.areaTerraza) setPropAreaTerraza(String(data.areaTerraza));
     if (data.terrazaHasBBQ !== undefined) setPropTerrazaHasBBQ(Boolean(data.terrazaHasBBQ));
     if (data.selectedInternas && Array.isArray(data.selectedInternas)) {
@@ -483,16 +685,22 @@ export default function UnifiedPublishModal({
     // 1. Tipo exacto de inmueble y subtipo comercial
     let propertyTypeExact = "Casa";
     let isSubtipoComercial = false;
+    let subtype: string | null = null;
 
-    if (lower.includes("casa comercial") || lower.includes("sede empresarial")) {
+    if (lower.includes("casa comercial") || lower.includes("sede empresarial") || lower.includes("oficina en casa")) {
       propertyTypeExact = "Casa";
       isSubtipoComercial = true;
+      subtype = lower.includes("sede") 
+        ? "Sede Empresarial / Institucional" 
+        : (lower.includes("oficina") ? "Oficina en Casa" : "Casa Comercial / Oficinas / Sede");
     } else if (lower.includes("local comercial") || lower.includes("local")) {
       propertyTypeExact = "Local";
       isSubtipoComercial = true;
+      subtype = lower.includes("centro comercial") ? "Local en Centro Comercial" : "Local Comercial a la Calle";
     } else if (lower.includes("oficina") || lower.includes("consultorio")) {
       propertyTypeExact = "Oficina";
       isSubtipoComercial = true;
+      subtype = lower.includes("consultorio") ? "Consultorio / Salud" : "Oficina Corporativa / Edificio Empresarial";
     } else if (lower.includes("apartaestudio")) {
       propertyTypeExact = "Apartaestudio";
     } else if (lower.includes("penthouse duplex") || lower.includes("pent house duplex")) {
@@ -505,24 +713,52 @@ export default function UnifiedPublishModal({
       propertyTypeExact = "Apartamento";
     } else if (lower.includes("casa campestre")) {
       propertyTypeExact = "Casa Campestre";
+      subtype = "Casa Campestre Residencial";
     } else if (lower.includes("casa quinta")) {
       propertyTypeExact = "Casa Quinta";
+      subtype = "Casa Quinta Recreacional";
     } else if (lower.includes("casa")) {
       propertyTypeExact = "Casa";
+      subtype = "Casa Familiar Unifamiliar";
     } else if (lower.includes("bodega")) {
       propertyTypeExact = "Bodega";
+      subtype = lower.includes("industrial") ? "Bodega Industrial / Producción" : "Bodega de Almacenamiento";
     } else if (lower.includes("edificio")) {
       propertyTypeExact = "Edificio";
+      if (lower.includes("oficina")) subtype = "Edificio de Oficinas";
+      else if (lower.includes("local")) subtype = "Edificio de Locales / Comercial";
+      else if (lower.includes("residencial")) subtype = "Edificio Residencial";
+      else subtype = "Edificio Mixto (Oficinas / Locales / Vivienda)";
     } else if (lower.includes("finca")) {
       propertyTypeExact = "Finca";
+      if (lower.includes("productiva") || lower.includes("agro")) subtype = "Finca Productiva / Agropecuaria";
+      else if (lower.includes("hotel") || lower.includes("turis")) subtype = "Finca Agroturística / Hotel Campestre";
+      else subtype = "Finca de Recreo / Vacacional";
     } else if (lower.includes("lote") || lower.includes("terreno")) {
       propertyTypeExact = "Lote / Terreno";
     } else if (lower.includes("cabaña")) {
       propertyTypeExact = "Cabaña";
-    } else if (lower.includes("hotel")) {
+    } else if (lower.includes("aparta-hotel") || lower.includes("aparta hotel")) {
+      propertyTypeExact = "Aparta Hotel";
+      subtype = "Aparta-hotel";
+    } else if (lower.includes("aparta-suites") || lower.includes("aparta suites")) {
       propertyTypeExact = "Hotel";
+      subtype = "Aparta-Suites";
     } else if (lower.includes("hostal")) {
       propertyTypeExact = "Hostal";
+      subtype = "Hostal";
+    } else if (lower.includes("motel")) {
+      propertyTypeExact = "Hotel";
+      subtype = "Motel";
+    } else if (lower.includes("residencia")) {
+      propertyTypeExact = "Hotel";
+      subtype = "Residencia";
+    } else if (lower.includes("hospedaje")) {
+      propertyTypeExact = "Hotel";
+      subtype = "Hospedaje";
+    } else if (lower.includes("hotel")) {
+      propertyTypeExact = "Hotel";
+      subtype = "Hotel Boutique / Turístico";
     } else if (lower.includes("villa")) {
       propertyTypeExact = "Villa";
     }
@@ -571,7 +807,7 @@ export default function UnifiedPublishModal({
       if (yearM) yearBuilt = parseInt(yearM[1], 10);
     }
 
-    // 6. Habitaciones, Baños, Garajes, Estrato
+    // 6. Habitaciones, Baños, Garajes, Estrato (soporta enteros hasta 50+)
     let bedrooms: number | '' = '';
     const bedM = norm.match(/(?:habitacion|habitaciones|alcoba|alcobas|oficinas|dormitorio)[\s\:\/\*]*([0-9]+)/i);
     if (bedM) bedrooms = parseInt(bedM[1], 10);
@@ -634,7 +870,6 @@ export default function UnifiedPublishModal({
     }
 
     // 10. Título Estandarizado Doctrinal: [Tipo de Inmueble] en [Barrio / Sector]
-    // Regla de concisión v31.48: Título corto y limpio sin palabras de negocio redundantes
     const sectorDisplay = addressNeighborhood || zone || 'Bogotá';
     const tipoDisplay = isSubtipoComercial && !propertyTypeExact.toLowerCase().includes('comercial')
       ? `${propertyTypeExact} Comercial`
@@ -670,6 +905,7 @@ export default function UnifiedPublishModal({
     return {
       name: name || `${propertyTypeExact} en ${addressNeighborhood || 'Bogotá'}`,
       propertyTypeExact,
+      subtype,
       isSubtipoComercial,
       transactionType,
       price,
@@ -693,32 +929,92 @@ export default function UnifiedPublishModal({
     };
   };
 
-  const handleStructureProperty = () => {
-    if (!propRawText.trim()) {
-      toast.error('Pega primero el texto o ficha técnica en la caja superior');
+  // Carga y procesamiento local de PDF
+  const handlePdfUpload = (file: File) => {
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      toast.error('Por favor selecciona un archivo en formato PDF');
+      return;
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error('El archivo supera el límite de 25 MB');
       return;
     }
 
-    // 1. Extracción determinista en 0 ms
-    const local = extractPropertyLocally(propRawText);
-    if (local) {
-      applyPropData(local);
-      toast.success('¡Datos del inmueble detectados y campos autollenados al instante!');
+    setPropPdfFile(file);
+    setPropPdfFileName(file.name);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = (reader.result as string) || '';
+      setPropPdfBase64(base64);
+      toast.success(`Ficha técnica "${file.name}" cargada correctamente`);
+    };
+    reader.onerror = () => {
+      toast.error('Error al leer el archivo PDF local');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Pegar instantáneo de texto desde el portapapeles
+  const handlePasteFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && text.trim()) {
+        setPropRawText(text);
+        setIsCopiedClipboard(true);
+        setTimeout(() => setIsCopiedClipboard(false), 2000);
+        toast.success('¡Texto pegado desde el portapapeles!');
+      } else {
+        toast.error('El portapapeles está vacío o no contiene texto');
+      }
+    } catch (e) {
+      toast.error('Usa Ctrl+V directamente sobre el campo de texto');
+    }
+  };
+
+  const handleStructureProperty = () => {
+    if (!propRawText.trim() && !propPdfBase64) {
+      toast.error('Pega el texto del inmueble o sube una Ficha Técnica en PDF para estructurar');
+      return;
     }
 
-    // 2. Disparo en background a la IA para refinar si está disponible
-    parsePropMutation.mutate({ text: propRawText });
+    // 1. Extracción determinista en 0 ms si hay texto
+    if (propRawText.trim()) {
+      const local = extractPropertyLocally(propRawText);
+      if (local) {
+        applyPropData(local);
+        toast.success('¡Datos del inmueble detectados y campos autollenados al instante!');
+      }
+    }
+
+    // 2. Disparo a JanIA con texto y/o PDF
+    setIsParsingPdf(!!propPdfBase64);
+    parsePropMutation.mutate({
+      text: propRawText.trim() || undefined,
+      pdfBase64: propPdfBase64 || undefined,
+      pdfMimeType: 'application/pdf',
+      fileName: propPdfFileName || undefined,
+    });
   };
 
   // Mutación parseText
   const parsePropMutation = trpc.properties.parseText.useMutation({
     onSuccess: (data) => {
+      setIsParsingPdf(false);
       if (data) {
         applyPropData(data);
+        if (data.pdfUrl) {
+          setPropPdfUrl(data.pdfUrl);
+          toast.success('¡Ficha Técnica PDF analizada, vinculada y estructurada por JanIA!');
+        } else {
+          toast.success('¡Estructurado con JanIA completado con éxito!');
+        }
       }
     },
     onError: (err) => {
+      setIsParsingPdf(false);
       console.warn('Notice parseText:', err.message);
+      toast.error(`Aviso JanIA: ${err.message}`);
     }
   });
 
@@ -790,6 +1086,11 @@ export default function UnifiedPublishModal({
 
       const a = editProperty.amenities;
       if (a && typeof a === 'object') {
+        if (a.subtipo) setPropSubtype(a.subtipo);
+        if (a.fichaTecnicaPdfUrl) {
+          setPropPdfUrl(a.fichaTecnicaPdfUrl);
+          setPropPdfFileName(a.fichaTecnicaPdfUrl.split('/').pop() || 'Ficha_Tecnica.pdf');
+        }
         if (a.tipoExacto) setPropTypeExact(a.tipoExacto);
         if (a.subtipoComercial !== undefined) setPropIsSubtipoComercial(!!a.subtipoComercial);
         if (a.permutaDetalle) setPropPermutaOption(a.permutaDetalle);
@@ -832,6 +1133,10 @@ export default function UnifiedPublishModal({
           if (customs.length > 0) setCustomExternasList(customs);
         }
       }
+      if (editProperty.externalUrl && !propPdfUrl && editProperty.externalUrl.toLowerCase().includes('.pdf')) {
+        setPropPdfUrl(editProperty.externalUrl);
+        setPropPdfFileName(editProperty.externalUrl.split('/').pop() || 'Ficha_Tecnica.pdf');
+      }
       if (editProperty.garages !== undefined && editProperty.garages !== null) {
         setPropGarajesCarro(editProperty.garages);
       }
@@ -848,6 +1153,11 @@ export default function UnifiedPublishModal({
     setPropYearBuilt('');
     setPropBedrooms('');
     setPropBathrooms('');
+    setPropSubtype('');
+    setPropPdfFile(null);
+    setPropPdfFileName('');
+    setPropPdfBase64('');
+    setPropPdfUrl('');
     setPropCocina('Integral');
     setPropCuartoServicio('No');
     setPropGarajesCarro(0);
@@ -1149,9 +1459,9 @@ export default function UnifiedPublishModal({
       latitude: propCoordinates.lat ? String(propCoordinates.lat) : null,
       longitude: propCoordinates.lng ? String(propCoordinates.lng) : null,
       coordinates: propCoordinates,
-      bedrooms: propBedrooms !== '' ? (propBedrooms === '5+' ? 5 : Number(propBedrooms)) : null,
-      bathrooms: propBathrooms !== '' ? (propBathrooms === '5+' ? 5 : Number(propBathrooms)) : null,
-      garages: propGarajesCarro !== '' ? (propGarajesCarro === '10+' ? 10 : Number(propGarajesCarro)) : null,
+      bedrooms: propBedrooms !== '' ? Number(propBedrooms) : null,
+      bathrooms: propBathrooms !== '' ? Number(propBathrooms) : null,
+      garages: propGarajesCarro !== '' ? Number(propGarajesCarro) : null,
       stratum: propStratum !== null ? Number(propStratum) : 4,
       areaTotal: propAreaConstruida ? propAreaConstruida.trim() : null,
       areaPrivate: propAreaPrivada ? propAreaPrivada.trim() : null,
@@ -1160,10 +1470,13 @@ export default function UnifiedPublishModal({
       isAmoblado: selectedInternas.includes('Amoblado'),
       images: propImages,
       videoUrl: propVideoUrl ? propVideoUrl.trim() : null,
+      externalUrl: propPdfUrl ? propPdfUrl.trim() : null,
       rawText: propRawText || null,
       amenities: {
         tipoExacto: propTypeExact,
+        subtipo: propSubtype || null,
         subtipoComercial: propIsSubtipoComercial,
+        fichaTecnicaPdfUrl: propPdfUrl || null,
         permutaDetalle: propTxType === 'permuta' ? propPermutaOption : null,
         permutaPorcentaje: propTxType === 'permuta' ? propPermutaPercent : null,
         cocina: propCocina,
@@ -1423,37 +1736,231 @@ export default function UnifiedPublishModal({
           {activeTab === 'oferta' && (
             <div className="space-y-6 animate-fade-in">
               
-              {/* ASISTENTE JANIA: PEGAR TEXTO LIBRE */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-black/40 to-amber-500/5 border border-amber-500/30 space-y-2.5 shadow-inner">
-                <div className="flex items-center justify-between gap-2">
+              {/* ASISTENTE JANIA WORKSPACE: DUAL TAB TEXTO & FICHA TÉCNICA PDF (v31.56) */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-black/60 to-amber-500/5 border border-[#bf953f]/40 space-y-4 shadow-[0_4px_25px_rgba(191,149,63,0.15)]">
+                {/* Header con pestañas y status */}
+                <div className="flex items-center justify-between flex-wrap gap-2.5 border-b border-white/10 pb-3">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-[#bf953f] animate-pulse" />
-                    <span className="text-xs font-bold uppercase tracking-wider text-[#fcf6ba]">
-                      Asistente JanIA: Pegar Texto Libre de WhatsApp o Ficha Técnica
+                    <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#bf953f] to-[#aa771c] p-0.5 flex items-center justify-center shadow-md shadow-amber-500/20">
+                      <Sparkles className="w-4 h-4 text-black animate-pulse" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-black uppercase tracking-wider text-[#fcf6ba] block">
+                        Asistente JanIA: Estructuración Inteligente con IA
+                      </span>
+                      <span className="text-[10px] text-zinc-400">
+                        Pega la descripción completa o adjunta la Ficha Técnica en PDF
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Switcher de Pestaña: Texto vs PDF */}
+                  <div className="flex items-center p-1 bg-black/80 rounded-xl border border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setJaniaAssistantTab('text')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        janiaAssistantTab === 'text'
+                          ? 'bg-[#bf953f] text-black shadow font-black'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Texto Libre / WhatsApp</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setJaniaAssistantTab('pdf')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        janiaAssistantTab === 'pdf'
+                          ? 'bg-[#bf953f] text-black shadow font-black'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      <FileUp className="w-3.5 h-3.5" />
+                      <span>Ficha Técnica PDF</span>
+                      {propPdfFile && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* CONTENIDO TAB 1: TEXTO LIBRE */}
+                {janiaAssistantTab === 'text' && (
+                  <div className="space-y-2.5 animate-fade-in">
+                    {/* Barra de herramientas de texto */}
+                    <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handlePasteFromClipboard}
+                          className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-amber-200 border border-white/10 hover:border-amber-400/40 inline-flex items-center gap-1 transition-colors cursor-pointer text-[11px] font-semibold"
+                          title="Pegar directamente desde tu portapapeles"
+                        >
+                          {isCopiedClipboard ? <ClipboardCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Clipboard className="w-3.5 h-3.5 text-[#bf953f]" />}
+                          <span>Pegar de Portapapeles</span>
+                        </button>
+                        {propRawText && (
+                          <button
+                            type="button"
+                            onClick={() => setPropRawText('')}
+                            className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-red-500/10 text-zinc-400 hover:text-rose-300 border border-white/5 hover:border-rose-500/20 inline-flex items-center gap-1 transition-colors cursor-pointer text-[11px]"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Limpiar</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="text-[10px] text-zinc-500 font-mono">
+                        {propRawText.split('\n').filter(Boolean).length} líneas · {propRawText.length} caracteres
+                      </div>
+                    </div>
+
+                    {/* Textarea amplio y expansible */}
+                    <textarea
+                      rows={6}
+                      value={propRawText}
+                      onChange={(e) => setPropRawText(e.target.value)}
+                      placeholder="Pega aquí la descripción completa del inmueble, ficha técnica, mensaje de WhatsApp o notas comerciales.&#10;&#10;Ejemplo:&#10;Casa Comercial en Morato, Suba, Bogotá. Precio $1.600.000.000 negociables. Área construida 430 m², área privada 387 m², antigüedad 35 años. 5 habitaciones/oficinas, 6 baños, 5 garajes, 1 depósito, estudio y bodega. Estrato 4. POT 555 con tratamiento de renovación urbana hasta 7 pisos..."
+                      className="w-full bg-black/70 border border-white/15 focus:border-[#bf953f] rounded-xl p-3.5 text-xs text-zinc-100 placeholder:text-zinc-600 outline-none resize-y min-h-[160px] max-h-[420px] font-sans leading-relaxed shadow-inner"
+                    />
+                  </div>
+                )}
+
+                {/* CONTENIDO TAB 2: SUBIR PDF */}
+                {janiaAssistantTab === 'pdf' && (
+                  <div className="space-y-3 animate-fade-in">
+                    {!propPdfFile ? (
+                      <label
+                        onDragOver={(e) => { e.preventDefault(); setIsDraggingPdf(true); }}
+                        onDragLeave={() => setIsDraggingPdf(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDraggingPdf(false);
+                          const f = e.dataTransfer.files?.[0];
+                          if (f) handlePdfUpload(f);
+                        }}
+                        className={`border-2 border-dashed rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+                          isDraggingPdf
+                            ? 'border-[#bf953f] bg-[#bf953f]/10 scale-[1.01]'
+                            : 'border-white/15 hover:border-[#bf953f]/60 bg-black/40 hover:bg-black/60'
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          accept=".pdf,application/pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handlePdfUpload(f);
+                          }}
+                        />
+                        <div className="w-12 h-12 rounded-2xl bg-[#bf953f]/10 border border-[#bf953f]/30 flex items-center justify-center text-[#bf953f] mb-3 shadow-lg">
+                          <FileText className="w-6 h-6" />
+                        </div>
+                        <span className="text-xs sm:text-sm font-bold text-white block mb-1">
+                          Arrastra tu Ficha Técnica o Brochure en PDF aquí
+                        </span>
+                        <span className="text-[11px] text-zinc-400 block mb-2">
+                          o haz clic para explorar tu equipo (hasta 25 MB)
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-300 text-[10px] font-semibold border border-amber-500/20">
+                          <Sparkles className="w-3 h-3 text-[#bf953f]" />
+                          JanIA Vision extraerá tablas, POT 555, áreas, habitaciones, baños y precios
+                        </span>
+                      </label>
+                    ) : (
+                      <div className="p-4 rounded-xl bg-black/80 border border-[#bf953f]/40 flex items-center justify-between flex-wrap gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center justify-center">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-white block truncate max-w-[240px] sm:max-w-md">
+                                {propPdfFileName}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-black bg-rose-500/20 text-rose-300 border border-rose-500/30 uppercase">
+                                PDF
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-zinc-400">
+                              {(propPdfFile.size / 1024 / 1024).toFixed(2)} MB · {propPdfUrl ? 'Adjuntado y guardado en servidor' : 'Listo para procesar'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {propPdfUrl && (
+                            <a
+                              href={propPdfUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-amber-300 border border-white/10 hover:border-amber-400/40 inline-flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Ver PDF</span>
+                            </a>
+                          )}
+                          <label className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10 inline-flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer">
+                            <input
+                              type="file"
+                              accept=".pdf,application/pdf"
+                              className="hidden"
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) handlePdfUpload(f);
+                              }}
+                            />
+                            <span>Cambiar</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPropPdfFile(null);
+                              setPropPdfFileName('');
+                              setPropPdfBase64('');
+                              setPropPdfUrl(null);
+                            }}
+                            className="p-1.5 rounded-lg bg-red-500/10 text-rose-400 hover:bg-red-500/20 border border-red-500/20 transition-colors cursor-pointer"
+                            title="Remover PDF"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Footer de acción de estructurar */}
+                <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-white/5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-amber-300/80 font-semibold flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-[#bf953f]" />
+                      Motor Híbrido: Autollenado local 0ms + Red Neuronal Multimodal Gemini
                     </span>
                   </div>
-                  <span className="text-[10px] text-amber-300/80 font-semibold">⚡ Autollenado Instantáneo en 0ms</span>
-                </div>
-                <textarea
-                  rows={3}
-                  value={propRawText}
-                  onChange={(e) => setPropRawText(e.target.value)}
-                  placeholder="Ej: 💥 SUPER OFERTA 🏠 Casa Comercial para Oficinas en Morato, Suba. Precio $1.500.000.000, 430 m², 5 oficinas, 6 baños, 4 garajes, estrato 4..."
-                  className="w-full bg-black/60 border border-white/10 focus:border-amber-400 rounded-xl p-3 text-xs text-white placeholder:text-zinc-500 outline-none resize-none font-sans"
-                />
-                <div className="flex justify-end">
+
                   <button
                     type="button"
-                    disabled={!propRawText.trim() || parsePropMutation.isPending}
+                    disabled={(!propRawText.trim() && !propPdfBase64) || parsePropMutation.isPending}
                     onClick={handleStructureProperty}
-                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#bf953f] to-[#aa771c] hover:brightness-110 text-black font-black text-xs inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-[#bf953f]/20 disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#bf953f] via-[#d4af37] to-[#aa771c] hover:brightness-110 text-black font-black text-xs inline-flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-[#bf953f]/30 disabled:opacity-50 active:scale-98"
                   >
                     {parsePropMutation.isPending ? (
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin text-black" />
+                        <span>JanIA analizando {isParsingPdf ? 'documento PDF y tablas' : 'texto'}...</span>
+                      </>
                     ) : (
-                      <Sparkles className="w-3.5 h-3.5" />
+                      <>
+                        <Sparkles className="w-4 h-4 text-black" />
+                        <span>Estructurar con JanIA</span>
+                      </>
                     )}
-                    <span>Estructurar con JanIA</span>
                   </button>
                 </div>
               </div>
@@ -1491,7 +1998,15 @@ export default function UnifiedPublishModal({
                     <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Tipo de Inmueble *</label>
                     <select
                       value={propTypeExact}
-                      onChange={(e) => setPropTypeExact(e.target.value)}
+                      onChange={(e) => {
+                        const newType = e.target.value;
+                        setPropTypeExact(newType);
+                        if (PROPERTY_SUBTYPES[newType]?.length) {
+                          setPropSubtype(PROPERTY_SUBTYPES[newType][0]);
+                        } else {
+                          setPropSubtype('');
+                        }
+                      }}
                       className="w-full bg-black/60 border border-white/10 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-white outline-none font-bold"
                     >
                       {PROPERTY_TYPES_EXACT.map(type => (
@@ -1500,13 +2015,39 @@ export default function UnifiedPublishModal({
                     </select>
                   </div>
 
+                  {/* Subtipo de Inmueble (Edificio, Hotel, Casa Comercial, Finca, etc.) */}
+                  {(PROPERTY_SUBTYPES[propTypeExact] || propIsSubtipoComercial) && (
+                    <div>
+                      <label className="text-[11px] font-semibold text-zinc-300 block mb-1 flex items-center justify-between">
+                        <span>Subtipo Especializado</span>
+                        <span className="text-[9px] text-[#bf953f] font-black uppercase tracking-wider">Doctrinal</span>
+                      </label>
+                      <select
+                        value={propSubtype}
+                        onChange={(e) => setPropSubtype(e.target.value)}
+                        className="w-full bg-black/60 border border-[#bf953f]/40 focus:border-[#bf953f] rounded-xl px-3 py-2 text-xs text-amber-200 outline-none font-bold"
+                      >
+                        <option value="">Seleccionar Subtipo...</option>
+                        {(PROPERTY_SUBTYPES[propTypeExact] || PROPERTY_SUBTYPES['Casa'] || []).map(st => (
+                          <option key={st} value={st}>{st}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   {/* Switch Subtipo Comercial */}
                   <div className="flex flex-col justify-end">
                     <label className="flex items-center gap-2 p-2.5 rounded-xl bg-black/40 border border-white/10 cursor-pointer hover:border-white/20 transition-colors">
                       <input
                         type="checkbox"
                         checked={propIsSubtipoComercial}
-                        onChange={(e) => setPropIsSubtipoComercial(e.target.checked)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setPropIsSubtipoComercial(checked);
+                          if (checked && !propSubtype) {
+                            setPropSubtype('Casa Comercial / Oficinas / Sede');
+                          }
+                        }}
                         className="w-4 h-4 rounded text-[#bf953f] accent-[#bf953f]"
                       />
                       <div className="text-[11px] text-zinc-200">
@@ -1642,46 +2183,28 @@ export default function UnifiedPublishModal({
                     </select>
                   </div>
 
-                  {/* Habitaciones [0, 1, 2, 3, 4, 5+] */}
+                  {/* Habitaciones / Oficinas [0 al 50+] */}
                   <div className="sm:col-span-2 lg:col-span-1">
-                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Habitaciones / Oficinas</label>
-                    <div className="flex gap-1">
-                      {[0, 1, 2, 3, 4, '5+'].map(val => (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => setPropBedrooms(val as any)}
-                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                            propBedrooms === val 
-                              ? 'bg-[#bf953f] text-black shadow' 
-                              : 'bg-black/60 border border-white/10 text-zinc-300 hover:text-white'
-                          }`}
-                        >
-                          {val}
-                        </button>
-                      ))}
-                    </div>
+                    <NumericField
+                      label="Habitaciones / Oficinas"
+                      sublabel={propIsSubtipoComercial ? "Oficinas / Despachos" : undefined}
+                      value={propBedrooms}
+                      onChange={setPropBedrooms}
+                      max={50}
+                      pills={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+                    />
                   </div>
 
-                  {/* Baños [0, 1, 2, 3, 4, 5+] */}
+                  {/* Baños [0 al 50+] */}
                   <div className="sm:col-span-2 lg:col-span-2">
-                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Baños</label>
-                    <div className="flex gap-1">
-                      {[0, 1, 2, 3, 4, '5+'].map(val => (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => setPropBathrooms(val as any)}
-                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                            propBathrooms === val 
-                              ? 'bg-[#bf953f] text-black shadow' 
-                              : 'bg-black/60 border border-white/10 text-zinc-300 hover:text-white'
-                          }`}
-                        >
-                          {val}
-                        </button>
-                      ))}
-                    </div>
+                    <NumericField
+                      label="Baños"
+                      sublabel="Baterías / Privados / Auxiliares"
+                      value={propBathrooms}
+                      onChange={setPropBathrooms}
+                      max={50}
+                      pills={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+                    />
                   </div>
                 </div>
               </div>
@@ -1751,109 +2274,61 @@ export default function UnifiedPublishModal({
                     </div>
                   </div>
 
-                  {/* Garajes Carro [0 a 10+] */}
+                  {/* Garajes Carro [0 al 50+] */}
                   <div className="sm:col-span-2 lg:col-span-3">
-                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Garajes para Carro</label>
-                    <div className="flex gap-1 flex-wrap">
-                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, '10+'].map(val => (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => setPropGarajesCarro(val as any)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                            propGarajesCarro === val 
-                              ? 'bg-[#bf953f] text-black shadow' 
-                              : 'bg-black/60 border border-white/10 text-zinc-300 hover:text-white'
-                          }`}
-                        >
-                          {val}
-                        </button>
-                      ))}
-                    </div>
+                    <NumericField
+                      label="Garajes para Carro"
+                      sublabel="Cubiertos o descubiertos (hasta 50+)"
+                      value={propGarajesCarro}
+                      onChange={setPropGarajesCarro}
+                      max={50}
+                      pills={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+                    />
                   </div>
 
-                  {/* Garajes Moto [0 a 10+] */}
+                  {/* Garajes Moto [0 al 50+] */}
                   <div className="sm:col-span-2 lg:col-span-3">
-                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Garajes para Moto</label>
-                    <div className="flex gap-1 flex-wrap">
-                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, '10+'].map(val => (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => setPropGarajesMoto(val as any)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                            propGarajesMoto === val 
-                              ? 'bg-[#bf953f] text-black shadow' 
-                              : 'bg-black/60 border border-white/10 text-zinc-300 hover:text-white'
-                          }`}
-                        >
-                          {val}
-                        </button>
-                      ))}
-                    </div>
+                    <NumericField
+                      label="Garajes para Moto"
+                      sublabel="Parqueaderos de motocicleta (hasta 50+)"
+                      value={propGarajesMoto}
+                      onChange={setPropGarajesMoto}
+                      max={50}
+                      pills={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+                    />
                   </div>
 
-                  {/* Estar de TV [0 a 5+] */}
+                  {/* Estar de TV */}
                   <div>
-                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Estar de TV</label>
-                    <div className="flex gap-1">
-                      {[0, 1, 2, 3, 4, '5+'].map(val => (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => setPropEstarTv(val as any)}
-                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                            propEstarTv === val 
-                              ? 'bg-[#bf953f] text-black shadow' 
-                              : 'bg-black/60 border border-white/10 text-zinc-300 hover:text-white'
-                          }`}
-                        >
-                          {val}
-                        </button>
-                      ))}
-                    </div>
+                    <NumericField
+                      label="Estar de TV / Sala de Espera"
+                      value={propEstarTv}
+                      onChange={setPropEstarTv}
+                      max={20}
+                      pills={[0, 1, 2, 3, 4, 5]}
+                    />
                   </div>
 
-                  {/* Estudios [0 a 5+] */}
+                  {/* Estudios */}
                   <div>
-                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Estudios / Sala de Juntas</label>
-                    <div className="flex gap-1">
-                      {[0, 1, 2, 3, 4, '5+'].map(val => (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => setPropEstudios(val as any)}
-                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                            propEstudios === val 
-                              ? 'bg-[#bf953f] text-black shadow' 
-                              : 'bg-black/60 border border-white/10 text-zinc-300 hover:text-white'
-                          }`}
-                        >
-                          {val}
-                        </button>
-                      ))}
-                    </div>
+                    <NumericField
+                      label="Estudios / Sala de Juntas"
+                      value={propEstudios}
+                      onChange={setPropEstudios}
+                      max={20}
+                      pills={[0, 1, 2, 3, 4, 5]}
+                    />
                   </div>
 
-                  {/* Depósitos [0 a 5+] */}
+                  {/* Depósitos / Bodegas */}
                   <div>
-                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Depósitos / Bodegas</label>
-                    <div className="flex gap-1">
-                      {[0, 1, 2, 3, 4, '5+'].map(val => (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => setPropDepositos(val as any)}
-                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                            propDepositos === val 
-                              ? 'bg-[#bf953f] text-black shadow' 
-                              : 'bg-black/60 border border-white/10 text-zinc-300 hover:text-white'
-                          }`}
-                        >
-                          {val}
-                        </button>
-                      ))}
-                    </div>
+                    <NumericField
+                      label="Depósitos / Bodegas"
+                      value={propDepositos}
+                      onChange={setPropDepositos}
+                      max={50}
+                      pills={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+                    />
                   </div>
 
                   {/* Cava de vinos */}
@@ -1874,19 +2349,15 @@ export default function UnifiedPublishModal({
                       </button>
                     </div>
                     {propHasCavaVinos && (
-                      <div className="flex gap-1 pt-1 animate-fade-in">
-                        {[1, 2, 3, 4, '5+'].map(val => (
-                          <button
-                            key={val}
-                            type="button"
-                            onClick={() => setPropCavaVinosCant(val as any)}
-                            className={`flex-1 py-1 rounded text-xs font-bold ${
-                              propCavaVinosCant === val ? 'bg-[#bf953f] text-black' : 'bg-black/60 text-zinc-300'
-                            }`}
-                          >
-                            {val}
-                          </button>
-                        ))}
+                      <div className="pt-1 animate-fade-in">
+                        <NumericField
+                          label="Cavas de Vinos"
+                          value={propCavaVinosCant}
+                          onChange={(val) => setPropCavaVinosCant(val === '' ? 1 : Number(val))}
+                          min={1}
+                          max={10}
+                          pills={[1, 2, 3, 4, 5]}
+                        />
                       </div>
                     )}
                   </div>
@@ -1909,30 +2380,27 @@ export default function UnifiedPublishModal({
                       </button>
                     </div>
                     {propHasChimenea && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 animate-fade-in">
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4, '5+'].map(val => (
-                            <button
-                              key={val}
-                              type="button"
-                              onClick={() => setPropChimeneaCant(val as any)}
-                              className={`flex-1 py-1 rounded text-xs font-bold ${
-                                propChimeneaCant === val ? 'bg-[#bf953f] text-black' : 'bg-black/60 text-zinc-300'
-                              }`}
-                            >
-                              {val}
-                            </button>
-                          ))}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 animate-fade-in items-end">
+                        <NumericField
+                          label="Número de Chimeneas"
+                          value={propChimeneaCant}
+                          onChange={(val) => setPropChimeneaCant(val === '' ? 1 : Number(val))}
+                          min={1}
+                          max={10}
+                          pills={[1, 2, 3, 4, 5]}
+                        />
+                        <div>
+                          <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Tipo de Chimenea</label>
+                          <select
+                            value={propChimeneaTipo}
+                            onChange={(e) => setPropChimeneaTipo(e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-lg px-2 py-2 text-xs text-white outline-none"
+                          >
+                            <option value="Convencional a leña">Convencional a leña</option>
+                            <option value="Gas">Chimenea de gas</option>
+                            <option value="Bioetanol">Chimenea de bioetanol</option>
+                          </select>
                         </div>
-                        <select
-                          value={propChimeneaTipo}
-                          onChange={(e) => setPropChimeneaTipo(e.target.value)}
-                          className="bg-black/60 border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none"
-                        >
-                          <option value="Convencional a leña">Convencional a leña</option>
-                          <option value="Gas">Chimenea de gas</option>
-                          <option value="Bioetanol">Chimenea de bioetanol</option>
-                        </select>
                       </div>
                     )}
                   </div>
@@ -1952,25 +2420,16 @@ export default function UnifiedPublishModal({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                  {/* Balcones [0 a 5+] */}
+                  {/* Balcones */}
                   <div>
-                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">Balcones</label>
-                    <div className="flex gap-1">
-                      {[0, 1, 2, 3, 4, '5+'].map(val => (
-                        <button
-                          key={val}
-                          type="button"
-                          onClick={() => setPropBalcones(val as any)}
-                          className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                            propBalcones === val 
-                              ? 'bg-[#bf953f] text-black shadow' 
-                              : 'bg-black/60 border border-white/10 text-zinc-300 hover:text-white'
-                          }`}
-                        >
-                          {val}
-                        </button>
-                      ))}
-                    </div>
+                    <NumericField
+                      label="Balcones"
+                      value={propBalcones}
+                      onChange={setPropBalcones}
+                      min={0}
+                      max={20}
+                      pills={[0, 1, 2, 3, 4, 5]}
+                    />
                   </div>
 
                   {/* Piso en edificio o torre */}
@@ -2025,23 +2484,16 @@ export default function UnifiedPublishModal({
                     </div>
 
                     {propHasTerrazas && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-white/5 animate-fade-in">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-white/5 animate-fade-in items-end">
                         <div>
-                          <label className="text-[11px] text-zinc-300 block mb-1">Cuántas Terrazas</label>
-                          <div className="flex gap-1">
-                            {[1, 2, 3, 4, '5+'].map(val => (
-                              <button
-                                key={val}
-                                type="button"
-                                onClick={() => setPropTerrazasCant(val as any)}
-                                className={`flex-1 py-1 rounded text-xs font-bold ${
-                                  propTerrazasCant === val ? 'bg-[#bf953f] text-black' : 'bg-black/60 text-zinc-300'
-                                }`}
-                              >
-                                {val}
-                              </button>
-                            ))}
-                          </div>
+                          <NumericField
+                            label="Cuántas Terrazas"
+                            value={propTerrazasCant}
+                            onChange={(val) => setPropTerrazasCant(val === '' ? 1 : Number(val))}
+                            min={1}
+                            max={20}
+                            pills={[1, 2, 3, 4, 5]}
+                          />
                         </div>
 
                         <div>

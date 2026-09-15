@@ -167,7 +167,24 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.55 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.56 — Septiembre 2026
+
+### Novedades v31.56 (Controles Numéricos Flexibles hasta 50+, Subtipos Exhaustivos, Dropzone de Ficha Técnica PDF con Gemini Multimodal y Estación de Trabajo JanIA):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Tope Artificial en Botoneras Numéricas*: `UnifiedPublishModal.tsx` limitaba habitaciones, baños y garajes con pills fijas hasta `'5+'` y forzaba valores a 5, destruyendo las cifras reales de casas comerciales (ej. Morato con 6 baños y 6 oficinas/habitaciones), fincas, hoteles y edificios.
+  2) *Falta de Subtipos de Inmuebles*: Ausencia de clasificación para Edificios (Residencial, Oficinas, Locales), Hoteles (Aparta-hotel, Hostal, Motel, etc.) y Casas Comerciales.
+  3) *Textarea Reducido y Carencia de Carga PDF*: Área de texto de 3 filas incómoda para fichas extensas y ausencia de dropzone para adjuntar folletos PDF con extracción multimodal.
+- **Acciones Ejecutadas**:
+  1) *`NumericField`*: Control híbrido Luxury Gold con pills 0..10 y stepper libre hasta 50+ en Habitaciones, Baños, Garajes, Depósitos, Cavas, Chimeneas, Balcones y Terrazas. Erradicación total de `'5+'`.
+  2) *Subtipos de Inmuebles*: Selector dinámico `propSubtype` integrado a la ingesta determinista, extracción por IA y base de datos.
+  3) *Estación de Trabajo Dual-Tab*: Pestaña 1 (Textarea amplio con botón *"Pegar Portapapeles"* y métricas de texto) + Pestaña 2 (Dropzone interactivo PDF de hasta 25MB).
+  4) *Extracción Multimodal y Almacenamiento VPS*: `parseText` almacena el PDF en VPS (`storagePut`), envía el archivo a Gemini Multimodal y guarda la URL en `externalUrl` y `amenities.fichaTecnicaPdfUrl`.
+  5) *Botón Ficha Técnica PDF*: Integrado en `PropertyDetail.tsx` en cabecera y tarjeta lateral con halo rojo elegante.
+  6) *Compilación*: `npm run check` (0 errores) y `npm run build` (0 errores).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.55 — Septiembre 2026
 
 ### Novedades v31.55 (Restauración Doctrinal de NetworkBackground en Tienda Ofertas con Partículas Dinámicas, Siluetas de Edificios y Pointer Events Shield):
 - **Diagnóstico y Causas Raíz Identificadas**:

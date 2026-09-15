@@ -50,7 +50,52 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.55 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.56 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 15 de Septiembre de 2026 — 02:45 (Hora Colombia UTC-5)
+**Versión**: `v31.56` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"En las características que tiene número como habitaciones, baños, garajes, depósitos, etc, puenso que son mejores campos numéricos del 1 al 10 para casi todos los inmuebles y hasta 50 en inmuebles como casas, fincas, edificios - Subtipo (Residenciales, de Oficinas, de Locales) y hoteles-subtipos(Aparta-hotel, Aparta-Suits, Hospedaje, Hostal, Motel, Residencia). Es que en el caso de morato son 6 baños y 6 Habitaciones u oficinas, donde dejan una como bodega en el primer piso..."*
+2. *"y también dejar como mas asequible y amplio el lugar donde uno pega esta descripción en caso de no tener el enlace de una ficha técnica..."*
+3. *"creo que también hace falta un lugar donde subir el PDF en caso de tener la ficha en un PDF, no estas pensando en todo amiguito, te falta vivesa y astucia, también mucho ingenio en el diseño y eso que dijiste que le ganabas a los de wix, pero me estas defraudando."*
+
+#### 🔍 Diagnóstico Técnico Profundo & Causas Raíz Identificadas:
+1. **Límites Rígidos en Botoneras Numéricas (`'5+'` y `'10+'`)**:
+   - `UnifiedPublishModal.tsx` empleaba pills fijas con tope artificial en `'5+'` (`[0, 1, 2, 3, 4, '5+']`). Al guardar en BD, cualquier valor superior a 4 se forzaba a `5` mediante `propBedrooms === '5+' ? 5 : Number(propBedrooms)`, destruyendo los valores reales de inmuebles de alto metraje (ej. la Casa Comercial en Morato con 6 baños, 5-6 oficinas/habitaciones, 5 garajes y 1 depósito).
+2. **Ausencia de Selector de Subtipos de Inmuebles**:
+   - Las categorías macro (`building`, `hotel`, `house`, `commercial`, `farm`) carecían de un selector contextual de subtipos específicos de la industria: Edificios (Residencial, De Oficinas, De Locales, Mixto), Hoteles (Aparta-hotel, Aparta-Suites, Hospedaje, Hostal, Motel, Residencia), Casas Comerciales / Sedes Empresariales, Fincas (Recreo, Productiva, Agroindustrial), etc.
+3. **Área de Texto Reducida del Asistente JanIA**:
+   - El textarea original para pegar fichas técnicas medía sólo 3 filas fijas con scroll interno diminuto, resultando incómodo y restrictivo para pegar fichas descriptivas densas con inventarios y especificaciones extensas.
+4. **Carencia de Dropzone de Ficha Técnica PDF y Extracción Multimodal**:
+   - No existía la posibilidad de arrastrar o adjuntar un folleto o ficha técnica en PDF. JanIA no recibía el archivo binario para análisis multimodal con Gemini, ni se persistía el documento PDF en el almacenamiento del VPS.
+
+#### 🛠️ Acciones Técnicas Ejecutadas:
+1. **Nuevo Componente Universal `NumericField` en `UnifiedPublishModal.tsx`**:
+   - Control híbrido Luxury Gold: incluye pills de selección rápida de 0 a 10 (o 1 a 10) + stepper metálico integrado `[-] [input libre numérico] [+]` con capacidad de ingresar números exactos hasta 50+ (o 100).
+   - Aplicado a todas las características numéricas: Habitaciones (hasta 50), Baños (hasta 50), Garajes Carro (hasta 50), Garajes Moto (hasta 50), Estar de TV, Estudios, Depósitos, Cavas de Vinos, Chimeneas, Balcones y Terrazas.
+   - Erradicación total de la coerción a `'5+'` en el estado, interfaz y payload de persistencia en PostgreSQL (`bedrooms`, `bathrooms`, `garages`).
+2. **Selector Dinámico y Doctrinal de Subtipos de Inmueble (`propSubtype`)**:
+   - Mapeo `PROPERTY_SUBTYPES` con clasificaciones exhaustivas para Edificios, Hoteles, Aparta-hoteles, Hostales, Casas, Fincas, Locales, Oficinas y Bodegas.
+   - Sincronizado en la ingesta determinista (`parsePropertyDeterministically`), extracción por IA (`parseText`), almacenamiento en `amenities.subtipo` y rehidratación en modo edición.
+3. **Estación de Trabajo IA de JanIA (Dual-Tab Workspace)**:
+   - Pestaña 1 (**Texto / Ficha Técnica**): Textarea espacioso con `min-h-[160px]`, `resize-y`, botón ergonómico *"Pegar Portapapeles"*, contador de líneas y caracteres en tiempo real.
+   - Pestaña 2 (**Subir Ficha PDF**): Dropzone interactivo con soporte drag-and-drop para PDFs de hasta 25MB, visualizador del archivo cargado, botón de remoción y previsualización.
+4. **Almacenamiento VPS y Análisis Multimodal de PDFs en `server/routers/properties.ts`**:
+   - La mutación `parseText` ahora admite `{ text, pdfBase64, pdfMimeType, fileName }`.
+   - Si se adjunta un PDF, se almacena en el VPS mediante `storagePut` (`/uploads/documents/ficha_[timestamp]_[nombre].pdf`) con 0% impacto en cuotas externas.
+   - Gemini Multimodal procesa el archivo PDF directamente extrayendo subtipo, áreas construida/privada, 6 baños, habitaciones/oficinas, garajes y amenidades.
+   - La URL del PDF generado se asigna a `externalUrl` y `amenities.fichaTecnicaPdfUrl`.
+5. **Botón Doctrinal de Ficha Técnica PDF en `PropertyDetail.tsx`**:
+   - Si el inmueble cuenta con `fichaTecnicaPdfUrl` o `externalUrl` en formato PDF, se renderiza un botón de acción rápida con halo rojo elegante y animado *"FICHA TÉCNICA PDF"* tanto en la cabecera como en la tarjeta lateral de contacto.
+6. **Incremento de Versión y Compilación Limpia**:
+   - Versión incrementada a `v31.56` en `shared/const.ts` y `package.json`.
+   - `npx tsc --noEmit` validado al 100% con 0 errores.
+   - `npm run build` completado exitosamente en 27.2s con bundle `dist/` y `dist-server/`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.55 — Septiembre 2026
 
 ### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 23:55 (Hora Colombia UTC-5)
 **Versión**: `v31.55` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

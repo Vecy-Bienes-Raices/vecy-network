@@ -6902,6 +6902,11 @@ var init_voiceTranscription = __esm({
 });
 
 // server/storage.ts
+var storage_exports = {};
+__export(storage_exports, {
+  storageGet: () => storageGet,
+  storagePut: () => storagePut
+});
 import fs4 from "fs";
 import path4 from "path";
 function normalizeKey(relKey) {
@@ -6923,6 +6928,13 @@ async function storagePut(relKey, data, contentType = "application/octet-stream"
   const publicUrl = buildAbsoluteLocalUrl(key);
   console.log(`[Storage] \u{1F4C1} Archivo guardado localmente en VPS ${targetFilePath} -> URL: ${publicUrl}`);
   return { key, url: `/uploads/${key}` };
+}
+async function storageGet(relKey) {
+  const key = normalizeKey(relKey);
+  return {
+    key,
+    url: `/uploads/${key}`
+  };
 }
 var uploadsDir;
 var init_storage = __esm({
@@ -15978,7 +15990,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.55";
+var VECY_VERSION = "v31.56";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -19014,8 +19026,11 @@ var propertyFields = {
   name: properties.name,
   price: properties.price,
   rentPrice: properties.rentPrice,
+  city: properties.city,
   location: properties.location,
   zone: properties.zone,
+  addressCity: properties.addressCity,
+  addressLocality: properties.addressLocality,
   addressNeighborhood: properties.addressNeighborhood,
   propertyType: properties.propertyType,
   transactionType: properties.transactionType,
@@ -19031,6 +19046,7 @@ var propertyFields = {
   matriculaInmobiliaria: properties.matriculaInmobiliaria,
   featured: properties.featured,
   available: properties.available,
+  amenities: properties.amenities,
   images: properties.images,
   createdAt: properties.createdAt
 };
@@ -19046,18 +19062,22 @@ function parsePropertyDeterministically(text2) {
   let propertyType = "apartment";
   let propertyTypeExact = "Casa";
   let isSubtipoComercial = false;
-  if (lower.includes("casa comercial") || lower.includes("sede empresarial")) {
+  let subtype = null;
+  if (lower.includes("casa comercial") || lower.includes("sede empresarial") || lower.includes("oficina en casa")) {
     propertyType = "commercial";
     propertyTypeExact = "Casa";
     isSubtipoComercial = true;
+    subtype = lower.includes("sede") ? "Sede Empresarial / Institucional" : lower.includes("oficina") ? "Oficina en Casa" : "Casa Comercial / Oficinas / Sede";
   } else if (lower.includes("local comercial") || lower.includes("local")) {
     propertyType = "commercial";
     propertyTypeExact = "Local";
     isSubtipoComercial = true;
+    subtype = lower.includes("centro comercial") ? "Local en Centro Comercial" : "Local Comercial a la Calle";
   } else if (lower.includes("oficina") || lower.includes("consultorio")) {
     propertyType = "office";
     propertyTypeExact = "Oficina";
     isSubtipoComercial = true;
+    subtype = lower.includes("consultorio") ? "Consultorio / Salud" : "Oficina Corporativa / Edificio Empresarial";
   } else if (lower.includes("apartaestudio")) {
     propertyType = "apartment";
     propertyTypeExact = "Apartaestudio";
@@ -19076,33 +19096,66 @@ function parsePropertyDeterministically(text2) {
   } else if (lower.includes("casa campestre")) {
     propertyType = "house";
     propertyTypeExact = "Casa Campestre";
+    subtype = "Casa Campestre";
   } else if (lower.includes("casa quinta")) {
     propertyType = "house";
     propertyTypeExact = "Casa Quinta";
+    subtype = "Casa Quinta";
   } else if (lower.includes("casa") || lower.includes("chalet") || lower.includes("townhouse")) {
     propertyType = "house";
     propertyTypeExact = "Casa";
+    subtype = "Casa Familiar Unifamiliar";
   } else if (lower.includes("bodega")) {
     propertyType = "warehouse";
     propertyTypeExact = "Bodega";
+    subtype = lower.includes("industrial") ? "Bodega Industrial / Producci\xF3n" : "Bodega de Almacenamiento";
   } else if (lower.includes("edificio")) {
     propertyType = "building";
     propertyTypeExact = "Edificio";
+    if (lower.includes("oficina")) subtype = "Edificio de Oficinas";
+    else if (lower.includes("local")) subtype = "Edificio de Locales / Comercial";
+    else if (lower.includes("residencial")) subtype = "Edificio Residencial";
+    else subtype = "Edificio Mixto (Oficinas / Locales / Vivienda)";
   } else if (lower.includes("lote") || lower.includes("terreno")) {
     propertyType = "land";
     propertyTypeExact = "Lote / Terreno";
   } else if (lower.includes("finca")) {
     propertyType = "farm";
     propertyTypeExact = "Finca";
+    if (lower.includes("productiva") || lower.includes("agro")) subtype = "Finca Productiva / Agropecuaria";
+    else if (lower.includes("hotel") || lower.includes("turis")) subtype = "Finca Agrotur\xEDstica / Hotel Campestre";
+    else subtype = "Finca de Recreo / Vacacional";
   } else if (lower.includes("caba\xF1a")) {
     propertyType = "house";
     propertyTypeExact = "Caba\xF1a";
-  } else if (lower.includes("hotel")) {
+  } else if (lower.includes("aparta-hotel") || lower.includes("aparta hotel")) {
+    propertyType = "hotel";
+    propertyTypeExact = "Aparta Hotel";
+    subtype = "Aparta-hotel";
+  } else if (lower.includes("aparta-suites") || lower.includes("aparta suites")) {
     propertyType = "hotel";
     propertyTypeExact = "Hotel";
+    subtype = "Aparta-Suites";
   } else if (lower.includes("hostal")) {
     propertyType = "hotel";
     propertyTypeExact = "Hostal";
+    subtype = "Hostal";
+  } else if (lower.includes("motel")) {
+    propertyType = "hotel";
+    propertyTypeExact = "Hotel";
+    subtype = "Motel";
+  } else if (lower.includes("residencia")) {
+    propertyType = "hotel";
+    propertyTypeExact = "Hotel";
+    subtype = "Residencia";
+  } else if (lower.includes("hospedaje")) {
+    propertyType = "hotel";
+    propertyTypeExact = "Hotel";
+    subtype = "Hospedaje";
+  } else if (lower.includes("hotel")) {
+    propertyType = "hotel";
+    propertyTypeExact = "Hotel";
+    subtype = "Hotel Boutique / Tur\xEDstico";
   } else if (lower.includes("villa")) {
     propertyType = "house";
     propertyTypeExact = "Villa";
@@ -19229,6 +19282,7 @@ function parsePropertyDeterministically(text2) {
     name: name || `Inmueble en ${addressNeighborhood || city}`,
     propertyType,
     propertyTypeExact,
+    subtype,
     isSubtipoComercial,
     transactionType,
     price,
@@ -19244,6 +19298,7 @@ function parsePropertyDeterministically(text2) {
     stratum,
     cocina,
     estudios,
+    estarTv: 0,
     depositos,
     piso,
     city,
@@ -19251,7 +19306,8 @@ function parsePropertyDeterministically(text2) {
     addressNeighborhood: addressNeighborhood || zone || "Bogot\xE1",
     description: text2.trim().slice(0, 500),
     selectedInternas,
-    selectedExternas
+    selectedExternas,
+    pdfUrl: void 0
   };
 }
 var propertiesRouter = router({
@@ -19266,39 +19322,50 @@ var propertiesRouter = router({
   }).optional()).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const filters = [eq13(properties.available, true)];
-    if (input?.transactionType && input.transactionType !== "all") {
-      filters.push(eq13(properties.transactionType, input.transactionType));
-    }
-    if (input?.type && input.type !== "all") {
-      filters.push(eq13(properties.propertyType, input.type));
-    }
-    const searchTerm = input?.search?.trim() || input?.zone?.trim();
-    if (searchTerm) {
-      const pattern = `%${searchTerm}%`;
-      filters.push(
+    const whereConditions = [];
+    if (input?.search) {
+      whereConditions.push(
         or2(
-          ilike(properties.name, pattern),
-          ilike(properties.zone, pattern),
-          ilike(properties.addressNeighborhood, pattern),
-          ilike(properties.city, pattern),
-          ilike(properties.addressCity, pattern),
-          ilike(properties.addressLocality, pattern),
-          ilike(properties.description, pattern)
+          ilike(properties.name, `%${input.search}%`),
+          ilike(properties.description, `%${input.search}%`),
+          ilike(properties.zone, `%${input.search}%`),
+          ilike(properties.addressNeighborhood, `%${input.search}%`),
+          ilike(properties.city, `%${input.search}%`)
         )
       );
     }
-    return await db.select().from(properties).where(and8(...filters)).orderBy(desc4(properties.featured), desc4(properties.id)).limit(input?.limit ?? 100).offset(input?.offset ?? 0);
+    if (input?.zone) {
+      whereConditions.push(
+        or2(
+          ilike(properties.zone, `%${input.zone}%`),
+          ilike(properties.addressNeighborhood, `%${input.zone}%`),
+          ilike(properties.addressLocality, `%${input.zone}%`)
+        )
+      );
+    }
+    if (input?.type) {
+      whereConditions.push(eq13(properties.propertyType, input.type));
+    }
+    if (input?.transactionType) {
+      whereConditions.push(eq13(properties.transactionType, input.transactionType));
+    }
+    whereConditions.push(eq13(properties.available, true));
+    const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and8(...whereConditions) : void 0).orderBy(desc4(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
+    const items = await query;
+    return items;
   }),
   getById: publicProcedure.input(z7.object({ id: z7.number() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const result = await db.select().from(properties).where(eq13(properties.id, input.id)).limit(1);
-    if (result.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Propiedad no encontrada" });
-    const property = result[0];
-    return property;
+    const item = await db.select().from(properties).where(eq13(properties.id, input.id)).limit(1);
+    if (item.length === 0) throw new TRPCError5({ code: "NOT_FOUND" });
+    const images = await db.select().from(propertyImages).where(eq13(propertyImages.propertyId, input.id)).orderBy(propertyImages.displayOrder);
+    return {
+      ...item[0],
+      imagesList: images
+    };
   }),
-  // --- MANAGEMENT (Admin / Agent) ---
+  // --- MUTATIONS (CREAR / EDITAR) ---
   create: publicProcedure.input(propertyInputSchema).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
@@ -19309,15 +19376,71 @@ var propertiesRouter = router({
     invalidatePropertiesListCache();
     return newProperty[0];
   }),
-  parseText: publicProcedure.input(z7.object({ text: z7.string() })).mutation(async ({ input }) => {
-    const deterministic = parsePropertyDeterministically(input.text);
+  parseText: publicProcedure.input(z7.object({
+    text: z7.string().optional().default(""),
+    pdfBase64: z7.string().optional(),
+    pdfMimeType: z7.string().optional(),
+    fileName: z7.string().optional()
+  })).mutation(async ({ input }) => {
+    const deterministic = parsePropertyDeterministically(input.text || "");
+    let pdfUrl = void 0;
+    if (input.pdfBase64) {
+      try {
+        const cleanBase64 = input.pdfBase64.replace(/^data:[^;]+;base64,/, "");
+        const safeName = (input.fileName || "ficha_tecnica.pdf").replace(/[^\w\d_\-\.]/g, "_");
+        const { storagePut: storagePut2 } = await Promise.resolve().then(() => (init_storage(), storage_exports));
+        const stored = await storagePut2(`documents/ficha_${Date.now()}_${safeName}`, cleanBase64, input.pdfMimeType || "application/pdf");
+        pdfUrl = stored.url;
+      } catch (storageErr) {
+        console.warn("[parseText] No se pudo guardar el archivo PDF:", storageErr.message);
+      }
+    }
     try {
       const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
-      const prompt = `Analiza este texto de inmueble y extrae los datos clave en formato JSON con los siguientes campos obligatorios: name (t\xEDtulo corto y estandarizado en formato "[Tipo] en [Barrio]", ej: "Casa en Morato", "Apartamento en Santa B\xE1rbara Occ.", sin palabras redundantes de negocio como venta o arriendo ni precios), propertyType (apartment, house, building, warehouse, farm, hotel, office, land, commercial, loft, consultorio), transactionType (venta, arriendo, venta_o_arriendo), price (valor num\xE9rico en COP sin puntos), location (direcci\xF3n o zona aproximada), zone (barrio o localidad), addressNeighborhood (barrio espec\xEDfico), bedrooms (n\xFAmero entero o null), bathrooms (n\xFAmero entero o null), stratum (estrato 1-6 o null), garages (n\xFAmero entero o null), areaTotal (metros cuadrados en n\xFAmero string o null), adminFee (cuota administraci\xF3n COP o null), description (resumen claro de los aspectos m\xE1s importantes). Devuelve \xDANICAMENTE el objeto JSON sin bloques de c\xF3digo ni explicaciones.
+      const prompt = `Eres JanIA, arquitecta e ingeniera inmobiliaria senior de Vecy Network Colombia.
+Analiza minuciosamente este texto y/o documento PDF adjunto de un inmueble.
+Extrae de forma exhaustiva y precisa los datos clave en formato JSON con la siguiente estructura estricta:
+{
+  "name": "T\xEDtulo estandarizado corto en formato '[Tipo de Inmueble] en [Barrio]', ej: 'Casa en Morato', 'Edificio de Oficinas en Chic\xF3', 'Apartamento en Rosales'",
+  "propertyType": "apartment | house | building | warehouse | farm | hotel | office | land | commercial | loft | consultorio",
+  "propertyTypeExact": "Casa | Edificio | Hotel | Hostal | Aparta Hotel | Local | Bodega | Finca | Oficina | Apartamento | Pent House | etc.",
+  "subtype": "Subtipo espec\xEDfico (ej: 'Casa Comercial / Oficinas / Sede', 'Edificio de Oficinas', 'Edificio Residencial', 'Edificio de Locales', 'Aparta-hotel', 'Aparta-Suites', 'Hospedaje', 'Hostal', 'Motel', 'Residencia', 'Finca de Recreo', 'Finca Productiva')",
+  "isSubtipoComercial": true o false,
+  "transactionType": "venta | arriendo | venta_o_arriendo | permuta",
+  "price": "precio de venta o canon en COP num\xE9rico sin puntos",
+  "adminFee": "cuota administraci\xF3n mensual en COP num\xE9rico o null",
+  "areaConstruida": "\xE1rea construida total en m2 en n\xFAmero string o null",
+  "areaPrivada": "\xE1rea privada en m2 en n\xFAmero string o null",
+  "yearBuilt": a\xF1o num\xE9rico de construcci\xF3n o null,
+  "bedrooms": n\xFAmero entero de habitaciones u oficinas (puede ser de 1 a 50+),
+  "bathrooms": n\xFAmero entero de ba\xF1os (puede ser de 1 a 50+),
+  "garages": n\xFAmero entero de parqueaderos (puede ser de 1 a 50+),
+  "garajesCarro": n\xFAmero entero de garajes para carro,
+  "garajesMoto": n\xFAmero entero de garajes para moto,
+  "depositos": n\xFAmero entero de dep\xF3sitos o bodegas,
+  "estudios": n\xFAmero entero de estudios o salas de juntas,
+  "estarTv": n\xFAmero entero de salas de estar o espera,
+  "stratum": estrato socioecon\xF3mico 0 a 6,
+  "cocina": "Integral | Abierta | Abierta tipo isla | Cerrada convencional | Cerrada remodelada | Moderna | A remodelar",
+  "city": "Bogot\xE1 u otra ciudad",
+  "zone": "Localidad o zona principal (ej: Suba, Usaqu\xE9n)",
+  "addressNeighborhood": "Barrio espec\xEDfico (ej: Morato, Cedritos, Santa B\xE1rbara)",
+  "description": "Descripci\xF3n profesional atractiva destacando potencial urban\xEDstico (POT 555, valoraci\xF3n, usos permitidos, etc.)",
+  "potUrbanistico": "Informaci\xF3n normativa de POT o tratamiento si se menciona (ej: POT 555, Tratamiento Renovaci\xF3n Urbana, Altura hasta 7 pisos, Valor Catastral)",
+  "selectedInternas": ["lista de caracter\xEDsticas internas encontradas"],
+  "selectedExternas": ["lista de caracter\xEDsticas externas encontradas"]
+}
+Devuelve \xDANICAMENTE el objeto JSON sin texto introductorio ni bloques de c\xF3digo extra.
 
-Texto: ${input.text}`;
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 4500));
-      const aiPromise = invokeLLM2({ messages: [{ role: "user", content: prompt }] });
+Texto del inmueble:
+${input.text || "Ver documento PDF adjunto"}`;
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 8500));
+      const cleanBase64 = input.pdfBase64 ? input.pdfBase64.replace(/^data:[^;]+;base64,/, "") : void 0;
+      const aiPromise = invokeLLM2({
+        messages: [{ role: "user", content: prompt }],
+        pdfBuffer: cleanBase64,
+        pdfMimeType: input.pdfMimeType || "application/pdf"
+      });
       const response = await Promise.race([aiPromise, timeoutPromise]);
       const text2 = response?.choices?.[0]?.message?.content;
       const cleaned = typeof text2 === "string" ? text2.replace(/```json\n?|\n?```/g, "").trim() : "{}";
@@ -19328,19 +19451,33 @@ Texto: ${input.text}`;
         price: parsed.price ? String(parsed.price) : deterministic.price,
         name: deterministic.name || parsed.name,
         propertyType: parsed.propertyType || deterministic.propertyType,
+        propertyTypeExact: parsed.propertyTypeExact || deterministic.propertyTypeExact,
+        subtype: parsed.subtype || deterministic.subtype,
+        isSubtipoComercial: parsed.isSubtipoComercial !== void 0 ? parsed.isSubtipoComercial : deterministic.isSubtipoComercial,
         transactionType: parsed.transactionType || deterministic.transactionType,
         zone: parsed.zone || deterministic.zone,
         addressNeighborhood: parsed.addressNeighborhood || parsed.zone || deterministic.addressNeighborhood,
-        areaTotal: parsed.areaTotal ? String(parsed.areaTotal) : deterministic.areaTotal,
+        areaTotal: parsed.areaConstruida ? String(parsed.areaConstruida) : parsed.areaTotal ? String(parsed.areaTotal) : deterministic.areaTotal,
+        areaConstruida: parsed.areaConstruida ? String(parsed.areaConstruida) : deterministic.areaConstruida,
+        areaPrivada: parsed.areaPrivada ? String(parsed.areaPrivada) : deterministic.areaPrivada,
         bedrooms: parsed.bedrooms !== void 0 && parsed.bedrooms !== null ? Number(parsed.bedrooms) : deterministic.bedrooms,
         bathrooms: parsed.bathrooms !== void 0 && parsed.bathrooms !== null ? Number(parsed.bathrooms) : deterministic.bathrooms,
         garages: parsed.garages !== void 0 && parsed.garages !== null ? Number(parsed.garages) : deterministic.garages,
+        garajesCarro: parsed.garajesCarro !== void 0 && parsed.garajesCarro !== null ? Number(parsed.garajesCarro) : deterministic.garajesCarro,
+        garajesMoto: parsed.garajesMoto !== void 0 && parsed.garajesMoto !== null ? Number(parsed.garajesMoto) : deterministic.garajesMoto,
+        depositos: parsed.depositos !== void 0 && parsed.depositos !== null ? Number(parsed.depositos) : deterministic.depositos,
+        estudios: parsed.estudios !== void 0 && parsed.estudios !== null ? Number(parsed.estudios) : deterministic.estudios,
+        estarTv: parsed.estarTv !== void 0 && parsed.estarTv !== null ? Number(parsed.estarTv) : deterministic.estarTv,
         stratum: parsed.stratum !== void 0 && parsed.stratum !== null ? Number(parsed.stratum) : deterministic.stratum,
-        description: parsed.description || deterministic.description
+        description: parsed.description || deterministic.description,
+        pdfUrl: pdfUrl || deterministic.pdfUrl
       };
     } catch (err) {
-      console.warn("[parseText] Gemini no respondi\xF3 a tiempo o arroj\xF3 429. Usando extracci\xF3n determinista instant\xE1nea:", err.message);
-      return deterministic;
+      console.warn("[parseText] Gemini no respondi\xF3 a tiempo o error. Usando extracci\xF3n determinista:", err.message);
+      return {
+        ...deterministic,
+        pdfUrl
+      };
     }
   }),
   update: publicProcedure.input(z7.object({
