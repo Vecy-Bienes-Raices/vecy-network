@@ -66,33 +66,33 @@ interface PropertyCardProps {
 }
 
 const getTransactionBadge = (type?: string) => {
-  if (!type) return { label: 'Venta', className: 'bg-gradient-to-r from-red-600 to-rose-700 text-white border border-red-500/40 shadow-lg' };
+  if (!type) return { label: 'Venta', className: 'bg-gradient-to-r from-amber-600 to-amber-700 text-white border border-amber-500/40 shadow-lg shadow-amber-950/40' };
   const low = type.toLowerCase();
   // 🟪 Arriendo Temporal / Opción Compra
   if (low.includes('arriendo_con_opcion') || low.includes('opcion_de_compra') || low.includes('arriendo_temporal') || low.includes('temporal')) {
     return { 
       label: low.includes('temporal') ? 'Arriendo Temporal' : 'Opción Compra', 
-      className: 'bg-gradient-to-r from-purple-600 to-fuchsia-700 text-white border border-purple-500/40 shadow-lg' 
+      className: 'bg-gradient-to-r from-sky-600 to-blue-700 text-white border border-sky-500/40 shadow-lg shadow-sky-950/40' 
     };
   }
   // 🟦 Venta | Permuta / Permuta
   if (low.includes('venta_permuta') || low.includes('permuta') || low.includes('venta_o_arriendo')) {
     return { 
       label: low.includes('venta_permuta') ? 'Venta | Permuta' : (low.includes('permuta') ? 'Permuta' : 'Venta | Arriendo'), 
-      className: 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white border border-blue-500/40 shadow-lg' 
+      className: 'bg-gradient-to-r from-purple-600 to-indigo-700 text-white border border-purple-500/40 shadow-lg shadow-purple-950/40' 
     };
   }
   // 🟩 Arriendo
   if (low.includes('arriendo') || low.includes('rent')) {
     return { 
       label: 'Arriendo', 
-      className: 'bg-gradient-to-r from-emerald-600 to-green-700 text-white border border-emerald-500/40 shadow-lg' 
+      className: 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white border border-emerald-500/40 shadow-lg shadow-emerald-950/40' 
     };
   }
-  // 🟥 Venta
+  // 🟧 Venta (Naranja / Ámbar Vibrante Original Aprobado por Eduardo)
   return { 
     label: 'Venta', 
-    className: 'bg-gradient-to-r from-red-600 to-rose-700 text-white border border-red-500/40 shadow-lg' 
+    className: 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border border-amber-400/40 shadow-lg shadow-orange-950/40 font-black' 
   };
 };
 
@@ -197,39 +197,58 @@ export default function PropertyCard({
     });
   };
 
+  // ─── Desambiguación Doctrinal de Barrio, Localidad y Ciudad ───────────────────
   const propertyLabel = PROPERTY_TYPE_LABELS[propertyType as PropertyType] || 'Inmueble';
 
-  let derivedNeighborhood = neighborhood || zone || null;
-  let derivedLocality = locality || null;
-  let derivedCity = city || 'Bogotá';
+  // Limpiar texto de barrio evitando frases de scraping largas (ej: "Santa Paula Venta y Arriendo...")
+  const cleanNeighborhood = (text?: string | null): string | null => {
+    if (!text) return null;
+    let clean = text.split(',')[0].split(';')[0].trim();
+    clean = clean.replace(/\b(venta|arriendo|varios barrios|bogot[aá]|colombia|urbano)\b/gi, '').trim();
+    return clean.length > 1 && clean.length < 35 ? clean : null;
+  };
 
-  if (!derivedNeighborhood && location) {
-    const parts = location.split(',').map(s => s.trim());
-    if (parts.length > 0 && parts[0] && !parts[0].toLowerCase().includes('bogot')) {
-      derivedNeighborhood = parts[0];
-    }
-    if (parts.length > 1 && !derivedLocality && !parts[1].toLowerCase().includes('bogot')) {
-      derivedLocality = parts[1];
+  let rawNeighborhood = cleanNeighborhood(neighborhood) || cleanNeighborhood(zone) || null;
+  let rawLocality = locality?.trim() || null;
+  let rawCity = city?.trim() || 'Bogotá';
+
+  // Si la localidad dice "Cali Urbano" o similar y la ciudad es Bogotá, sanearla
+  if (rawLocality && rawLocality.toLowerCase().includes('cali') && rawCity.toLowerCase().includes('bogot')) {
+    rawLocality = null;
+  }
+
+  // Si el barrio no está definido, intentar extraerlo del name (ej: "Apartamento en Santa Paula", "Casa en Morato")
+  if (!rawNeighborhood && name) {
+    const matchBarrio = name.match(/en\s+([A-Za-zÁÉÍÓÚáéíóúñÑ\s]+?)(?:\s+(?:para|de|con|bogot|colombia|$))/i);
+    if (matchBarrio && matchBarrio[1]) {
+      const extracted = cleanNeighborhood(matchBarrio[1]);
+      if (extracted && extracted.toLowerCase() !== 'bogota' && extracted.toLowerCase() !== 'bogotá') {
+        rawNeighborhood = extracted;
+      }
     }
   }
 
-  const displayNeighborhood = derivedNeighborhood;
-  const displayLocality = derivedLocality;
-  const displayCity = derivedCity;
-  const badge = getTransactionBadge(transactionType);
+  // Regla Anti-Redundancia: Si barrio y localidad son idénticos (ej. ambos "Usaquén")
+  let displayNeighborhood = rawNeighborhood;
+  let displayLocality = rawLocality;
 
-  // Formato conciso
+  if (displayNeighborhood && displayLocality && displayNeighborhood.toLowerCase() === displayLocality.toLowerCase()) {
+    displayLocality = null;
+  }
+
+  // Título oficial estricto: [TIPO DE INMUEBLE] EN [BARRIO]
   const formattedTitle = displayNeighborhood 
     ? `${propertyLabel} en ${displayNeighborhood}`
-    : name
-        .replace(/super oferta/gi, '')
-        .replace(/en venta/gi, '')
-        .replace(/en arriendo/gi, '')
-        .replace(/para venta/gi, '')
-        .replace(/para arriendo/gi, '')
-        .replace(/\b(bogot[aá]|colombia)\b/gi, '')
-        .replace(/\s+/g, ' ')
-        .trim() || `${propertyLabel} en Bogotá`;
+    : (displayLocality 
+        ? `${propertyLabel} en ${displayLocality}`
+        : `${propertyLabel} en ${rawCity}`);
+
+  // Ubicación oficial: [Localidad], [Ciudad]
+  const locationText = displayLocality 
+    ? `${displayLocality}, ${rawCity}`
+    : rawCity;
+
+  const badge = getTransactionBadge(transactionType);
 
   const formatPriceNumber = (p: string | number) => {
     const num = Number(p || 0);
@@ -238,9 +257,9 @@ export default function PropertyCard({
 
   return (
     <div className="vecy-card-apple group overflow-hidden hover:glow-gold transition-all duration-500 p-0 flex flex-col h-full bg-zinc-950/90 border border-white/10 shadow-2xl hover:border-primary/40">
-      {/* ── Imagen / Carousel Táctil con Ribbon Doctrinal ── */}
+      {/* ── Imagen / Carousel Táctil en Formato 4:3 Natural (No Panorámico) ── */}
       <div 
-        className="relative h-64 overflow-hidden bg-white/5 select-none touch-pan-y"
+        className="relative aspect-[4/3] w-full overflow-hidden bg-white/5 select-none touch-pan-y"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -248,7 +267,7 @@ export default function PropertyCard({
         <img 
           src={displayImage} 
           alt={formattedTitle} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" 
+          className="w-full h-full object-cover object-center group-hover:scale-105 transition-all duration-500" 
           onError={() => setImgError(true)} 
         />
         
@@ -346,12 +365,21 @@ export default function PropertyCard({
       {/* ── Contenido Estructurado Fiel a Wix Eduardo ── */}
       <div className="p-5 flex-1 flex flex-col justify-between">
         <div>
-          {/* Precio Prominente ($ en Verde + Número en Naranja) */}
-          <div className="flex items-baseline gap-1 mb-2">
-            <span className="text-2xl sm:text-3xl font-black text-emerald-400">$</span>
-            <span className="text-2xl sm:text-3xl font-black text-orange-500 tracking-tight">
-              {formatPriceNumber(price)}
-            </span>
+          {/* Precio Gold Luxury Sobrio y Distinguido */}
+          <div className="flex items-baseline gap-1.5 mb-2">
+            {Number(price) > 0 ? (
+              <>
+                <span className="text-2xl sm:text-3xl font-black text-primary">$</span>
+                <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                  {formatPriceNumber(price)}
+                </span>
+                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider ml-1">COP</span>
+              </>
+            ) : (
+              <span className="text-lg sm:text-xl font-black text-primary uppercase tracking-wider">
+                Consultar Precio
+              </span>
+            )}
           </div>
 
           <div className="border-b border-white/10 mb-3" />
@@ -369,7 +397,7 @@ export default function PropertyCard({
           <div className="flex items-center gap-1.5 text-zinc-300 text-xs font-semibold uppercase tracking-wider mb-2">
             <MapPin size={13} className="text-primary shrink-0" />
             <span className="truncate">
-              {displayLocality ? `${displayLocality}, ` : ''}{displayCity}
+              {locationText}
             </span>
           </div>
 

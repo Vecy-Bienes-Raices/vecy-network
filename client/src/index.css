@@ -54,6 +54,7 @@
 
   /* Vecy Agenda Pro Compatibility Colors */
   --color-soft-gold: #d4af37;
+  --color-dark-gold: #b8860b;
   --color-gold-bright: #fcf6ba;
   --color-volcanic-black: #0a0a0a;
   --color-off-white: #f0f0f0;
@@ -567,13 +568,33 @@
   /* ── VECY GLOBAL TYPOGRAPHY UTILITIES ───────────────────────────────────────── */
   
   .vecy-title-hero {
-    @apply text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-white mb-4 leading-tight;
+    @apply text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white mb-4 leading-tight;
     font-family: "Playfair Display", serif;
   }
 
   .vecy-title-section {
-    @apply text-2xl sm:text-3xl md:text-4xl font-bold tracking-normal text-white mb-3;
+    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-normal text-white mb-3;
     font-family: "Playfair Display", serif;
+  }
+
+  /* Título con degradé dorado — horizontal, de crema pálido a dorado Vecy */
+  .title-gold-gradient {
+    background: linear-gradient(to right, #fce4a0 0%, #d4af37 50%, #bf953f 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: inline-block;
+    padding-bottom: 0.12em;
+    line-height: 1.25;
+  }
+
+  /* Sección título con línea dorada */
+  .section-legend-gold {
+    background: linear-gradient(135deg, #d4af37 0%, #bf953f 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
   }
 
   .vecy-subtitle {

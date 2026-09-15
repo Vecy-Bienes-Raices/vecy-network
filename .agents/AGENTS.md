@@ -167,7 +167,42 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.51 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.52 — Septiembre 2026
+
+### Novedades v31.52 (Solución a Fallo de Botón en Agenda, Remoción de Logo Colisionado, Mapa de Límites de Barrio con Leaflet, Badges Naranjas, Formato 4:3 y Calibración Tipográfica a Término Medio):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Botón "Iniciar Sesión / Registrarme" Cortado por la Mitad ("A medias y como si le faltara un pedazo")*: En `AgendaForm.jsx` el botón usaba `bg-gradient-to-r from-soft-gold to-dark-gold`. En Tailwind CSS v4, el token `--color-dark-gold` no existía, por lo que el degradado se fue a negro puro transparente, fundiendo la mitad derecha del botón con el fondo oscuro y ocultando la palabra *"Registrarme"*.
+  2) *Logo Circular Cortado por el Navbar*: `AgendaForm.jsx` tenía un `<img src={logoToDisplay} ... />` heredado del repo standalone `vecy-agenda-pro`. Al integrarlo en `vecy-network` con su Navbar fijo (80px), al cargar o scrollear el logo quedaba rebanado por la mitad horizontal sobre el título *"Verificación de Identidad"*.
+  3) *Mapa Fallido en la Ficha del Inmueble*: El componente previo dependía de un proxy caído (`forge.butterfly-effect.dev`). Además, la doctrina de seguridad y confidencialidad prohíbe revelar la ubicación exacta del inmueble captado.
+  4) *Avisos de Venta y Tipografía*: Eduardo solicitó restaurar el badge de Venta en tono naranja/ámbar vibrante y calibrar los títulos a una escala de término medio armónico (ni 128px ni minúsculos).
+  5) *Formato Fotográfico Panorámico y Precios*: Altura fija `h-64` recortaba fachadas 4:3 y precios en colorines desentonaban.
+- **Acciones Ejecutadas**:
+  1) *`client/src/components/agenda-pro/AgendaForm.jsx` & `index.css`*:
+     - Botón de identificación corregido con el degradado dorado metálico oficial de Vecy (`from-[#bf953f] via-[#d4af37] to-[#bf953f] text-black font-extrabold shadow-[0_0_20px_rgba(191,149,63,0.3)] hover:shadow-[0_0_30px_rgba(191,149,63,0.5)]`), 100% visible, nítido y con alto contraste.
+     - Registro del token `--color-dark-gold: #b8860b;` y clases `.title-gold-gradient` y `.section-legend-gold`.
+     - Retiro del logo circular duplicado que chocaba con el Navbar, dejando el título *"Verificación de Identidad"* despejado y centrado.
+  2) *Nuevo Componente `client/src/components/NeighborhoodMap.tsx`*:
+     - Mapa interactivo con Leaflet y mosaicos oscuros de lujo (**CartoDB Dark Matter**).
+     - Centrado en el cuadrante del barrio mediante micro-desplazamiento determinístico sin exponer la dirección exacta.
+     - Trazado de límites perimetrales dorados (`L.circle` de radio ~500m, `color: #d4af37`, `dashArray: '8, 8'`, `fillColor: #bf953f`) con leyenda de zona referencial protegida.
+     - Integración inmediata en `client/src/pages/PropertyDetail.tsx`.
+  3) *`client/src/components/PropertyCard.tsx` & `PropertyDetail.tsx`*:
+     - Badge de Venta en naranja/ámbar vibrante: `bg-gradient-to-r from-amber-500 to-orange-600 text-white border border-amber-400/40 shadow-lg shadow-orange-950/40 font-black`.
+     - Formato fotográfico natural `aspect-[4/3] w-full` con swipe táctil en celulares.
+     - Precios Gold Luxury: signo `$` en oro (`text-primary`), dígitos en blanco puro (`text-white font-black`) y `Consultar Precio` para activos sin precio fijo.
+     - Desambiguación doctrinal estricta: `[TIPO DE INMUEBLE] EN [BARRIO]` y `📍 [Localidad], [Ciudad]`.
+  4) *`client/src/index.css` (Calibración Tipográfica a Término Medio)*:
+     - `.vecy-title-hero`: `text-4xl sm:text-5xl md:text-6xl lg:text-7xl` (máx 72px en pantallas grandes, 48px en móvil).
+     - `.vecy-title-section`: `text-2xl sm:text-3xl md:text-4xl lg:text-5xl`.
+  5) *Saneamiento de Base de Datos*:
+     - Corrección en PostgreSQL de propiedades de Bogotá con `addressLocality = 'Cali Urbano'`.
+  6) *Compilación y Despliegue*:
+     - `npm run check` (0 errores) y `npm run build` (0 errores).
+     - Preservación 100% intacta de `whatsapp-match.ts`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.51 — Septiembre 2026
 
 ### Novedades v31.51 (Experiencia Móvil de Alto Confort, Swipe Táctil en Fotos de Inmuebles, Dots Interactivos, Optimización Retina en NetworkBackground y Ergonomía Apple/Google):
 - **Diagnóstico y Análisis Previo**:

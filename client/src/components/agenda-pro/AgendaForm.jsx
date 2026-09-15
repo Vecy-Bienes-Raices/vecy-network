@@ -792,7 +792,6 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
     <>
       <form noValidate onSubmit={handleSubmit}>
         <div className="text-center mb-8">
-          <img src={logoToDisplay} alt="Logo oficial" className="mx-auto h-20 w-20 mb-4 logo-glow-pulse object-contain" />
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mt-1 block">
             <span className="title-gold-gradient">Verificación de Identidad</span>
           </h2>
@@ -878,7 +877,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
               <button
                 type="button"
                 onClick={() => setShowAuthModal(true)}
-                className="bg-gradient-to-r from-soft-gold to-dark-gold text-volcanic-black font-bold py-2.5 px-6 rounded-lg hover:opacity-90 transition-opacity shadow-md"
+                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#bf953f] via-[#d4af37] to-[#bf953f] text-black font-extrabold py-3 px-8 rounded-xl shadow-[0_0_20px_rgba(191,149,63,0.3)] hover:shadow-[0_0_30px_rgba(191,149,63,0.5)] hover:scale-[1.02] active:scale-95 transition-all text-sm tracking-wide cursor-pointer"
               >
                 Iniciar Sesión / Registrarme
               </button>

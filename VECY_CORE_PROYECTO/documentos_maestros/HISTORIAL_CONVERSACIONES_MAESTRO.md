@@ -50,7 +50,59 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.51 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.52 — Septiembre 2026
+
+### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 22:35 (Hora Colombia UTC-5)
+**Versión**: `v31.52` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"Creo que los colores de los avisos de Negocio sobre la fotografía estaban mejor cómo tu los propusuiste al principio. puedes cambiarlos y no se si eso del precio tan encendido en colorines verde y naranja quede bien y aparte en esas cards no configuraste bien los títulos como te dije observa todo en la imagen 2. Lo puedes corregir y hacer que funcione todo el diseño en toda la página y que seasn acordes cada una de las secciones, páginas o subpáginas?? [TIPO DE INMUEBLE] EN [BARRIO] (SIMBOLO DORADO DE UBICACIÓN) [Localidad], [Ciudad]"*
+2. *"Quiero que las fotos se puedan ver en un formato menos panorámico ni tan alargado, la mayoría de mis fotos son de este formato(imagen1)"* [Eduardo adjunta fotografía real de fachada de casa en formato 4:3].
+3. *"Fíjate en el botón de venta en color naranja, me gustaba más ese estilo que pusiste al principio sobre las fotos de las cards para el tipo de negocio. Es lo que ya te dije anteriormente, regresar a lo que pusiste primero, pero lograrlo tanto en la card inicil como adentro al desplegar la ficha del inmueble. Esta ficha se ve genial, solamente faltó que saliera el mapa pero con los límites del barrio y sin mostrar la ubicación exacta, solo el barrio y sus límites dibujados. Ha y creo que ahora los títulos de todas las páginas y secciones están ya como muy pequeñitos, tu exageras demasiado, ahora no es que los vuelvas a colocar tan gigantes como antes, los quiero témino medio, fue por eso que te hable de wix, para ver si te guías mejor..."*
+4. *"TAmbién observa este error, por qué sale a medias y como si le faltara un pedazo, que mal."* [Eduardo adjunta captura de pantalla de la sección Identificación en Verificación de Identidad con el botón 'Iniciar Sesión / Registrarme' desvanecido a negro en su mitad derecha y el logo circular cortado por el Navbar].
+
+#### 🔍 Diagnóstico Técnico Profundo & Causas Raíz Identificadas:
+1. **Botón "Iniciar Sesión / Registrarme" Cortado por la Mitad ("A medias y como si le faltara un pedazo")**:
+   - En `client/src/components/agenda-pro/AgendaForm.jsx` (línea 881), el botón tenía `className="bg-gradient-to-r from-soft-gold to-dark-gold text-volcanic-black font-bold..."`.
+   - En Tailwind CSS v4, el token `--color-dark-gold` **no estaba registrado** en `client/src/index.css`. Al compilar, el navegador interpretó `to-dark-gold` como negro transparente (`rgba(0,0,0,1)`). Como el contenedor de la tarjeta (`bg-vecy-card`) y el texto son negros, la mitad derecha del botón se fundió por completo con el fondo oscuro, haciendo desaparecer la palabra *"Registrarme"* y dando la apariencia de un corte o mordisco visual.
+2. **Logo Circular Cortado Horizontalmente sobre el Título**:
+   - `AgendaForm.jsx` (línea 795) incluía una etiqueta `<img src={logoToDisplay} ... />` heredada del repositorio satélite `vecy-agenda-pro`, donde no existía un menú superior. Al integrarse en `vecy-network`, `Agenda.tsx` ya cuenta con el `Navbar` superior fijo de 80px (`h-20`). Al cargar o realizar un leve scroll, el logo circular secundario se deslizaba por debajo del Navbar, quedando rebanado por la mitad horizontal sobre *"Verificación de Identidad"*.
+3. **Falla del Mapa en la Ficha del Inmueble**:
+   - El componente `Map.tsx` intentaba conectarse a la API de Google Maps a través de un proxy externo inaccesible (`forge.butterfly-effect.dev`), dejando el contenedor completamente negro.
+   - Además, la directriz doctrinal de seguridad y confidencialidad prohíbe terminantemente mostrar marcadores puntuales sobre la dirección exacta del inmueble captado.
+4. **Formato Panorámico que Mutilaba Fachadas**:
+   - `PropertyCard` forzaba una altura fija de `h-64` (256px), lo que en pantallas anchas generaba un aspecto panorámico 16:9 alargado, recortando las fachadas reales en formato 4:3.
+5. **Estridencia Cromática en Precios ("Colorines")**:
+   - El precio combinaba verde fosforescente con dígitos naranja fuerte, rompiendo la estética editorial Gold Luxury y mostrando `$ 0` en activos por cotizar.
+
+#### 🛠️ Acciones Técnicas Ejecutadas:
+1. **`client/src/components/agenda-pro/AgendaForm.jsx`**:
+   - Reemplazo del botón de identificación por el degradado dorado metálico oficial de Vecy (`from-[#bf953f] via-[#d4af37] to-[#bf953f] text-black font-extrabold shadow-[0_0_20px_rgba(191,149,63,0.3)] hover:shadow-[0_0_30px_rgba(191,149,63,0.5)]`), con texto negro nítido de alto contraste visible al 100% de punta a punta, sin desvanecimientos a negro.
+   - Retiro del logo circular duplicado que colisionaba con el Navbar, dejando el título *"Verificación de Identidad"* despejado, centrado y con espaciado ergonómico.
+2. **`client/src/index.css`**:
+   - Registro formal del token de color `--color-dark-gold: #b8860b;` en `@theme inline`.
+   - Adición de las clases de utilidad `.title-gold-gradient` y `.section-legend-gold` para los encabezados de formularios.
+   - Calibración de la escala tipográfica a **término medio** (estilo Wix Studio / Awwwards):
+     - `.vecy-title-hero`: `text-4xl sm:text-5xl md:text-6xl lg:text-7xl` (máx 72px en monitor grande, 48px en móvil; ni gigante como los 128px previos ni minúsculo).
+     - `.vecy-title-section`: `text-2xl sm:text-3xl md:text-4xl lg:text-5xl`.
+3. **Nuevo Componente `client/src/components/NeighborhoodMap.tsx`**:
+   - Integración con Leaflet y capa de mosaicos oscuros de alta elegancia (**CartoDB Dark Matter**).
+   - **Doctrina de Privacidad Estricta**: No sitúa pines ni marcadores sobre la vivienda. Aplica un micro-desplazamiento determinístico para ubicar el centroide del sector.
+   - **Límites Perimetrales Dibujados**: Dibuja un perímetro circular con resplandor dorado (`L.circle`, radio ~500m, `color: #d4af37`, `dashArray: '8, 8'`, `fillColor: #bf953f`) delimitando el barrio con el mensaje *"📍 Límites perimetrales aproximados • Ubicación exacta reservada por seguridad y confidencialidad"*.
+   - Conexión fluida en `client/src/pages/PropertyDetail.tsx`.
+4. **`client/src/components/PropertyCard.tsx` & `PropertyDetail.tsx`**:
+   - Restauración del badge de Venta en tono naranja/ámbar vibrante:
+     `bg-gradient-to-r from-amber-500 to-orange-600 text-white border border-amber-400/40 shadow-lg shadow-orange-950/40 font-black`.
+   - Formato fotográfico natural: sustitución de `h-64` por **`aspect-[4/3] w-full`** con `object-cover object-center` y navegación táctil swipe.
+   - Precios Gold Luxury: signo `$` en oro (`text-primary`), dígitos en blanco puro (`text-white font-black`) y etiqueta `Consultar Precio` para activos por cotizar.
+5. **Compilación Limpia y Despliegue**:
+   - `npm run check` (0 errores).
+   - `npm run build` (0 errores).
+   - Preservación 100% intacta de `server/_core/whatsapp-match.ts`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.51 — Septiembre 2026
 
 ### 🗓️ Sesión: Lunes 14 de Septiembre de 2026 — 21:55 (Hora Colombia UTC-5)
 **Versión**: `v31.51` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

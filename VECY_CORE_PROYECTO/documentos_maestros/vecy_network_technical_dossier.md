@@ -322,6 +322,41 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.52 — Septiembre 2026
+
+#### 📌 SOLUCIÓN AL FALLO DE BOTÓN EN AGENDA, REMOCIÓN DE LOGO COLISIONADO, MAPA DE LÍMITES DE BARRIO CON LEAFLET, BADGES NARANJAS, FORMATO FOTOGRÁFICO 4:3 Y CALIBRACIÓN TIPOGRÁFICA A TÉRMINO MEDIO
+
+**Problemas identificados:**
+1. **Botón "Iniciar Sesión / Registrarme" Cortado por la Mitad ("A medias y como si le faltara un pedazo")**: En `AgendaForm.jsx`, el botón de autenticación empleaba `bg-gradient-to-r from-soft-gold to-dark-gold`. En Tailwind CSS v4, el token `--color-dark-gold` no existía en `index.css`. El compilador resolvió el extremo derecho como negro transparente (`rgba(0,0,0,1)`), fundiendo la mitad derecha del botón con el fondo negro de la tarjeta y haciendo desaparecer la palabra *"Registrarme"*.
+2. **Logo Circular Cortado Horizontalmente por el Navbar**: `AgendaForm.jsx` incluía una etiqueta `<img>` heredada del repositorio satélite `vecy-agenda-pro`. Al integrarse en `vecy-network` con su Navbar fijo de 80px (`h-20`), al cargar o realizar un leve scroll, el logo se deslizaba bajo el menú y quedaba seccionado por la mitad sobre *"Verificación de Identidad"*.
+3. **Falla del Mapa en la Ficha del Inmueble**: El componente previo dependía de un proxy caído (`forge.butterfly-effect.dev`). Además, la directriz doctrinal de seguridad y confidencialidad prohíbe revelar la ubicación exacta del inmueble captado.
+4. **Preferencia de Badges de Venta y Escala Tipográfica**: Eduardo solicitó restaurar el badge de Venta en color naranja/ámbar vibrante y calibrar los encabezados a un término medio armónico (evitando tanto los 128px de 9xl previos como escalas reducidas).
+5. **Formato Panorámico y Precios**: Contenedor `h-64` recortaba fachadas 4:3 y combinación de precios en verde y naranja rompía la sobriedad editorial.
+
+**Solución aplicada:**
+- **`AgendaForm.jsx` & `index.css`**:
+  - Reemplazo del botón por el degradado dorado metálico oficial de Vecy (`from-[#bf953f] via-[#d4af37] to-[#bf953f] text-black font-extrabold shadow-[0_0_20px_rgba(191,149,63,0.3)] hover:shadow-[0_0_30px_rgba(191,149,63,0.5)]`), con texto negro nítido de alto contraste visible al 100% de punta a punta.
+  - Registro de `--color-dark-gold: #b8860b;` y clases `.title-gold-gradient` y `.section-legend-gold`.
+  - Retiro de la imagen circular redundante que colisionaba con el Navbar, dejando el título *"Verificación de Identidad"* despejado y centrado.
+- **Nuevo Componente `NeighborhoodMap.tsx`**:
+  - Mapa interactivo con Leaflet y capa oscura **CartoDB Dark Matter**.
+  - Centrado en el cuadrante del barrio mediante micro-desplazamiento determinístico sin exponer la dirección exacta.
+  - Trazado de límites perimetrales dorados (`L.circle` de radio ~500m, `color: #d4af37`, `dashArray: '8, 8'`, `fillColor: #bf953f`) con leyenda de zona referencial protegida.
+  - Conexión fluida en `client/src/pages/PropertyDetail.tsx`.
+- **`PropertyCard.tsx` & `PropertyDetail.tsx`**:
+  - Badge de Venta en naranja vibrante: `bg-gradient-to-r from-amber-500 to-orange-600 text-white border border-amber-400/40 shadow-lg shadow-orange-950/40 font-black`.
+  - Formato fotográfico natural `aspect-[4/3] w-full` con swipe táctil en celulares.
+  - Precios Gold Luxury: signo `$` en oro (`text-primary`), cifras en blanco puro (`text-white font-black`) y `Consultar Precio` para activos por cotizar.
+  - Desambiguación estricta de título y ubicación: `[TIPO DE INMUEBLE] EN [BARRIO]` y `📍 [Localidad], [Ciudad]`.
+- **`index.css` (Calibración Tipográfica a Término Medio)**:
+  - `.vecy-title-hero`: `text-4xl sm:text-5xl md:text-6xl lg:text-7xl` (máx 72px en pantallas grandes, 48px en móvil).
+  - `.vecy-title-section`: `text-2xl sm:text-3xl md:text-4xl lg:text-5xl`.
+- **Compilación Limpia y Despliegue**:
+  - `npm run check` (0 errores) y `npm run build` (0 errores).
+  - Preservación 100% intacta de `server/_core/whatsapp-match.ts`.
+
+---
+
 ### 🔖 v31.51 — Septiembre 2026
 
 #### 📌 EXPERIENCIA MÓVIL DE ALTO CONFORT, SWIPE TÁCTIL EN FOTOS DE INMUEBLES, DOTS INTERACTIVOS, OPTIMIZACIÓN RETINA EN NETWORKBACKGROUND Y ERGONOMÍA APPLE/GOOGLE

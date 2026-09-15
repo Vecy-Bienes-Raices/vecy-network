@@ -143,7 +143,7 @@ export default function RequirementsMarketplace() {
       </section>
 
       {/* FILTROS */}
-      <section className="py-4 sm:py-6 bg-background/90 backdrop-blur-2xl border-b border-white/10 sticky top-20 z-30">
+      <section className="py-4 sm:py-6 bg-zinc-950 border-b border-white/10 sticky top-20 z-30 shadow-2xl">
         <div className="container">
           <div className="flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-6">
             <div className="relative w-full md:w-96">

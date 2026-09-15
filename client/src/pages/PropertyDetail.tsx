@@ -3,7 +3,7 @@ import { useRoute, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import Navbar from '@/components/Navbar';
 import PropertyGallery from '@/components/PropertyGallery';
-import { MapView as Map } from '@/components/Map';
+import NeighborhoodMap from '@/components/NeighborhoodMap';
 import { 
   Loader2, 
   MapPin, 
@@ -116,7 +116,7 @@ export default function PropertyDetail() {
     if (t.includes('arriendo')) {
       return { label: 'Arriendo', isPermuta: false, isArriendo: true, className: 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white' };
     }
-    return { label: 'Venta', isPermuta: !!enrichedAmenities?.permutaDetalle, isArriendo: false, className: 'bg-gradient-to-r from-amber-600 to-amber-700 text-white' };
+    return { label: 'Venta', isPermuta: !!enrichedAmenities?.permutaDetalle, isArriendo: false, className: 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border border-amber-400/40 shadow-lg shadow-orange-950/40 font-black' };
   };
 
   const transactionInfo = getTransactionInfo(property.transactionType);
@@ -536,12 +536,14 @@ export default function PropertyDetail() {
                   Zona geográfica verificada por el captador oficial de Vecy Network.
                 </p>
                 <div className="h-80 rounded-2xl overflow-hidden border border-white/10">
-                  <Map 
-                    initialCenter={{
-                      lat: Number(property.latitude) || 4.6097,
-                      lng: Number(property.longitude) || -74.0817
-                    }} 
-                    initialZoom={15}
+                  <NeighborhoodMap 
+                    lat={Number(property.latitude) || 4.6980} 
+                    lng={Number(property.longitude) || -74.0540} 
+                    neighborhood={property.addressNeighborhood || property.zone || undefined}
+                    locality={property.addressLocality || undefined}
+                    city={property.addressCity || property.city || 'Bogotá D.C.'}
+                    radius={500}
+                    className="h-80 w-full"
                   />
                 </div>
               </div>

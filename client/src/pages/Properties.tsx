@@ -167,7 +167,7 @@ export default function Properties() {
       </section>
 
       {/* ── BARRA DE FILTROS, BÚSQUEDA Y CONTROL ── */}
-      <section className="py-4 sm:py-6 bg-background/90 backdrop-blur-2xl border-b border-white/10 sticky top-20 z-30 transition-all">
+      <section className="py-4 sm:py-6 bg-zinc-950 border-b border-white/10 sticky top-20 z-30 shadow-2xl transition-all">
         <div className="container space-y-3 sm:space-y-4">
           {/* Fila 1: Filtros de Tipología en Chips con Desplazamiento Táctil Elástico */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none touch-pan-x overscroll-x-contain select-none">
