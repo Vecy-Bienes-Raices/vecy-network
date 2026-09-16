@@ -167,7 +167,35 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.59 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.60 — Septiembre 2026
+
+### Novedades v31.60 (Autocompletado de Nombres y Apellidos Completos Oficiales, Soporte Doctrinal Daniel Rivera, Vecy Persona Jurídica NIT 41057506-1, Solución a Errores 504 en VPS y Verificación Universal 2Captcha):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Autocompletado de Nombres y Apellidos Completos*: En los formularios de agenda (`vecy-network` y `vecy-agenda-pro`), al validar la cédula o NIT de cualquier persona, el sistema debe autocompletar automáticamente el nombre con sus dos nombres y dos apellidos oficiales verificados.
+  2) *Doctrina Familiar y Corporativa VECY*:
+     - **VECY como Persona Jurídica**: NIT `41057506-1` (o base `41057506` con NIT o nombre Vecy) $\to$ Nombre oficial: **Vecy Bienes Raíces**, Persona Jurídica, Tipo Documento: NIT.
+     - **Daniel Rivera**: Cédula `1233903423` $\to$ Si se ingresa "Daniel Rivera", el sistema autocompleta con sus dos nombres y dos apellidos: **Daniel Eduardo Rivera Noguera**. Si por razones históricas se ingresa Vecy Bienes Raíces, se acepta válidamente.
+     - **Eduardo Rivera**: Cédula `11189781` $\to$ **Eduardo Arturo Rivera Martínez**.
+     - **Natalia Rivera**: Cédula `1193130766` $\to$ **Natalia Rivera Noguera** (apellidos oficiales confirmados mediante consulta 2Captcha en Policía Nacional: *RIVERA NOGUERA NATALIA*).
+     - **Jani Alves**: Cédula `41057506` $\to$ **Jani Alves Souza**.
+  3) *Causa Raíz de los Errores 504 en `/ofertas`*: En PostgreSQL 17.11 nativo del VPS (`13.140.149.144`), `statement_timeout` y `idle_in_transaction_session_timeout` estaban en 0 (infinito). Conexiones previas quedaron retenidas en `ClientRead` esperando sockets, agotando el pool de conexiones de Node.js / `postgres-js` y haciendo que Nginx abortara con error 504 Gateway Time-out tras 60 segundos de espera.
+  4) *Verificación Universal con API de 2Captcha*: Se verificó la integración activa y funcional con 2Captcha para resolver el reCAPTCHA v2 de la Policía Nacional de Colombia y ADRES BDUA, extrayendo los nombres y apellidos de cualquier cédula de ciudadanía en 12 segundos con saldo activo de $2.95 USD.
+- **Acciones Ejecutadas**:
+  1) *Saneamiento y Optimización de PostgreSQL en VPS*:
+     - Configurados `statement_timeout = '15s'`, `idle_in_transaction_session_timeout = '20s'` e `idle_session_timeout = '60s'`.
+     - Reiniciado `jania-server` con PM2. Comprobado: `properties.list` responde en **0.05 segundos** (HTTP 200).
+  2) *Backend y Fast-Path (`agenda.ts` e `index.ts`)*: Sincronizados los nombres completos y la doctrina de Daniel Rivera y Vecy Bienes Raíces (NIT `41057506-1`).
+  3) *Formularios Frontend (`AgendaForm.jsx` en ambos repositorios)*:
+     - Autocompletado forzoso con los nombres y apellidos oficiales devueltos por la verificación.
+     - Si es Vecy Bienes Raíces, autoselección de Persona Jurídica y NIT.
+     - En `vecy-agenda-pro`, `handleVerifyClientIdentity` conectado a `runVerificationJob` con sondeo asíncrono para clientes verificados con 2Captcha.
+  4) *Compilación y Despliegue*:
+     - `vecy-agenda-pro` compilado y enviado a GitHub (`main`, commit `5cb6c1a`).
+     - `vecy-network` compilado con 0 errores (`npm run check` y `npm run build`), versión incrementada a `v31.60`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.59 — Septiembre 2026
 
 ### Novedades v31.59 (Validación Estricta de Cédulas Colombianas sin 9 Dígitos, Verificación Completa de Acompañantes y Fast-Path 0ms para Familia VECY):
 - **Diagnóstico y Causas Raíz Identificadas**:

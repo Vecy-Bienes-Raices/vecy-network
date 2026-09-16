@@ -15990,7 +15990,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.59";
+var VECY_VERSION = "v31.60";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -19730,29 +19730,39 @@ function checkIdentityTokens(nombreIngresado, officialName) {
   return matches.length >= 1;
 }
 var AUTHORITATIVE_FAMILY_IDENTITIES = {
-  // 1. Cédula Daniel Eduardo Rivera Noguera / Vecy Bienes Raíces (Matrícula mercantil y RUT comercial de VECY)
+  // 1. Cédula Daniel Eduardo Rivera Noguera (CC: 1233903423)
   "1233903423": {
-    canonicalName: "Vecy Bienes Ra\xEDces / Daniel Eduardo Rivera Noguera",
-    allowedKeywords: ["vecy", "bienes", "raices", "ra\xEDces", "daniel", "eduardo", "rivera", "noguera"],
-    isCompany: true,
-    message: "\u2713 Identidad corporativa verificada y autorizada: Vecy Bienes Ra\xEDces"
+    canonicalName: "Daniel Eduardo Rivera Noguera",
+    allowedKeywords: ["daniel", "eduardo", "rivera", "noguera", "vecy", "bienes", "raices", "ra\xEDces"],
+    isCompany: false,
+    message: "\u2713 Identidad verificada y autenticada con \xE9xito: Daniel Eduardo Rivera Noguera"
   },
   // 2. Cédula Eduardo Arturo Rivera Martínez (Fundador y Director de Tecnología)
   "11189781": {
     canonicalName: "Eduardo Arturo Rivera Mart\xEDnez",
     allowedKeywords: ["eduardo", "rivera", "arturo", "martinez", "mart\xEDnez", "eddu", "eddua"],
+    isCompany: false,
     message: "\u2713 Identidad verificada y autenticada con \xE9xito: Eduardo Arturo Rivera Mart\xEDnez"
   },
-  // 3. Cédula Natalia Rivera (Hija de Eduardo)
+  // 3. Cédula Natalia Rivera Noguera (Hija de Eduardo)
   "1193130766": {
-    canonicalName: "Natalia Rivera",
-    allowedKeywords: ["natalia", "rivera"],
-    message: "\u2713 Identidad verificada y autenticada con \xE9xito: Natalia Rivera"
+    canonicalName: "Natalia Rivera Noguera",
+    allowedKeywords: ["natalia", "rivera", "noguera"],
+    isCompany: false,
+    message: "\u2713 Identidad verificada y autenticada con \xE9xito: Natalia Rivera Noguera"
   },
-  // 4. Cédula Jani Alves Souza (Fundadora y Directora de Operaciones)
+  // 4. NIT Vecy Bienes Raíces (Persona Jurídica - NIT: 41057506-1)
+  "410575061": {
+    canonicalName: "Vecy Bienes Ra\xEDces",
+    allowedKeywords: ["vecy", "bienes", "raices", "ra\xEDces", "jani", "alves", "souza"],
+    isCompany: true,
+    message: "\u2713 Identidad corporativa verificada y autorizada: Vecy Bienes Ra\xEDces (NIT: 41057506-1)"
+  },
+  // 5. Cédula Jani Alves Souza (Fundadora y Directora de Operaciones) / NIT Base Vecy
   "41057506": {
     canonicalName: "Jani Alves Souza",
-    allowedKeywords: ["jani", "alves", "souza"],
+    allowedKeywords: ["jani", "alves", "souza", "vecy", "bienes", "raices", "ra\xEDces"],
+    isCompany: false,
     message: "\u2713 Identidad verificada y autenticada con \xE9xito: Jani Alves Souza"
   }
 };
@@ -19828,12 +19838,20 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
   }
   const normName = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (normName.length >= 4) {
-    const isNatalia = normName.includes("natalia") && (normName.includes("rivera") || normName.trim() === "natalia");
+    const isDaniel = normName.includes("daniel") && (normName.includes("rivera") || normName.includes("noguera") || normName.trim() === "daniel");
+    if (isDaniel && clean !== "1233903423") {
+      return {
+        valid: false,
+        match: false,
+        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Daniel Eduardo Rivera Noguera (su c\xE9dula oficial registrada es 1233903423). Corrige el n\xFAmero para continuar.`
+      };
+    }
+    const isNatalia = normName.includes("natalia") && (normName.includes("rivera") || normName.includes("noguera") || normName.trim() === "natalia");
     if (isNatalia && clean !== "1193130766") {
       return {
         valid: false,
         match: false,
-        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Natalia Rivera (el documento oficial registrado es 1193130766). Corrige el n\xFAmero para continuar.`
+        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Natalia Rivera Noguera (el documento oficial registrado es 1193130766). Corrige el n\xFAmero para continuar.`
       };
     }
     const isEduardo = normName.includes("eduardo") && (normName.includes("rivera") || normName.includes("arturo"));
@@ -19841,15 +19859,15 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       return {
         valid: false,
         match: false,
-        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Eduardo Rivera (su c\xE9dula oficial registrada es 11189781). Corrige el n\xFAmero para continuar.`
+        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Eduardo Arturo Rivera Mart\xEDnez (su c\xE9dula oficial registrada es 11189781). Corrige el n\xFAmero para continuar.`
       };
     }
     const isVecy = normName.includes("vecy");
-    if (isVecy && clean !== "1233903423") {
+    if (isVecy && clean !== "410575061" && clean !== "41057506" && clean !== "1233903423") {
       return {
         valid: false,
         match: false,
-        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Vecy Bienes Ra\xEDces (el documento oficial registrado es 1233903423). Corrige el n\xFAmero para continuar.`
+        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Vecy Bienes Ra\xEDces (NIT oficial: 41057506-1). Corrige el n\xFAmero para continuar.`
       };
     }
     const isJani = normName.includes("jani") && normName.includes("alves");
@@ -19868,18 +19886,27 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
     const matchesKeyword = tokens.length === 0 || tokens.some((t2) => authEntry.allowedKeywords.some((kw) => kw === t2 || t2.startsWith(kw) || kw.startsWith(t2)));
     if (matchesKeyword) {
       let displayName = authEntry.canonicalName;
-      if (authEntry.isCompany) {
+      let msg = authEntry.message;
+      if (clean === "1233903423") {
         if (norm2.includes("vecy")) {
           displayName = "Vecy Bienes Ra\xEDces";
-        } else if (norm2.includes("daniel")) {
+          msg = "\u2713 Identidad corporativa verificada y autorizada: Vecy Bienes Ra\xEDces";
+        } else {
           displayName = "Daniel Eduardo Rivera Noguera";
+          msg = "\u2713 Identidad verificada y autenticada con \xE9xito: Daniel Eduardo Rivera Noguera";
         }
+      } else if (clean === "410575061" || clean === "41057506" && (isNit || norm2.includes("vecy"))) {
+        displayName = "Vecy Bienes Ra\xEDces";
+        msg = "\u2713 Identidad corporativa verificada y autorizada: Vecy Bienes Ra\xEDces (NIT: 41057506-1)";
+      } else if (clean === "41057506") {
+        displayName = "Jani Alves Souza";
+        msg = "\u2713 Identidad verificada y autenticada con \xE9xito: Jani Alves Souza";
       }
       return {
         valid: true,
         match: true,
         officialName: displayName,
-        message: authEntry.message
+        message: msg
       };
     } else {
       return {
@@ -20646,7 +20673,7 @@ async function startServer() {
       const isNit = tDocLower.includes("nit") || tDocLower.includes("rut");
       const isCedula = !isNit && (tDocLower.includes("c\xE9dula") || tDocLower.includes("cedula") || tDocLower === "" || tDocLower.includes("ciudadan"));
       const normName = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const isKnownFamilyName = normName.length >= 4 && (normName.includes("natalia") && (normName.includes("rivera") || normName.trim() === "natalia") || normName.includes("eduardo") && (normName.includes("rivera") || normName.includes("arturo")) || normName.includes("vecy") || normName.includes("jani") && normName.includes("alves"));
+      const isKnownFamilyName = normName.length >= 4 && (normName.includes("daniel") && (normName.includes("rivera") || normName.includes("noguera") || normName.trim() === "daniel") || normName.includes("natalia") && (normName.includes("rivera") || normName.includes("noguera") || normName.trim() === "natalia") || normName.includes("eduardo") && (normName.includes("rivera") || normName.includes("arturo")) || normName.includes("vecy") || normName.includes("jani") && normName.includes("alves"));
       if (isNit || isCedula && (cleanDoc.length === 9 || cleanDoc.length < 6 || cleanDoc.length > 10 || cleanDoc.length === 10 && !cleanDoc.startsWith("1")) || AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc] || isKnownFamilyName) {
         const quick = await executeIdentityVerification(tipoDocumento || "C\xE9dula de ciudadan\xEDa", cleanDoc, nombreIngresado);
         return res.status(200).json(quick);

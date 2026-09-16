@@ -98,7 +98,8 @@ async function startServer() {
       const isCedula = !isNit && (tDocLower.includes("cédula") || tDocLower.includes("cedula") || tDocLower === "" || tDocLower.includes("ciudadan"));
       const normName = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const isKnownFamilyName = normName.length >= 4 && (
-        (normName.includes("natalia") && (normName.includes("rivera") || normName.trim() === "natalia")) ||
+        (normName.includes("daniel") && (normName.includes("rivera") || normName.includes("noguera") || normName.trim() === "daniel")) ||
+        (normName.includes("natalia") && (normName.includes("rivera") || normName.includes("noguera") || normName.trim() === "natalia")) ||
         (normName.includes("eduardo") && (normName.includes("rivera") || normName.includes("arturo"))) ||
         normName.includes("vecy") ||
         (normName.includes("jani") && normName.includes("alves"))

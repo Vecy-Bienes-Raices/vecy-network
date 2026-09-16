@@ -50,7 +50,55 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.59 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.60 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 15 de Septiembre de 2026 — 23:30 (Hora Colombia UTC-5)
+**Versión**: `v31.60` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + 2Captcha reCAPTCHA v2 (Policía Nacional / ADRES) + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel (`vecy-network` y `vecy-agenda-pro`)
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+*"Excelente pero me encantaría que para todos los campos nombre se colocara el ombre y apellidos completos una vez verificado el número. Ok, excepto claro está en el caso de VECY, pero si llegase a ingresar Daniel Rivera en realidad ahí si debería hacerlo, o déjalo de una vez establecido así y así yo ponga Vecy Bienes Raíces pero mejor es dejar vecy como persona jurídica pero con este número de NIT 41057506-1 Y por favor revisa por qué estamos teniendo tantos errores, si será porque no tenemos ahora una aplicación donde mirar o revisar la base de datos o que pueda ser. Anda y deja todo correctamente organizado y funcionando por favor. No olvides que debemos ser capaces de verificar cualquier tipo de cédula a traves del API de TWOCAPTCHA. Ok."*
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Autocompletado de Nombres y Apellidos Completos Oficiales**:
+   - Anteriormente, la condición `if (data.officialName && data.officialName.toLowerCase() !== ...)` podía omitir la sustitución si había variaciones o si el input ya contenía texto similar. Eduardo requirió que siempre se autocompleten de forma inmediata los nombres y apellidos completos oficiales en todos los campos (solicitante, cliente e interesados, y acompañantes).
+   - *Doctrina de Identidades Familiares y Corporativas*:
+     - **VECY como Persona Jurídica**: NIT `41057506-1` (o base `41057506` con NIT o nombre Vecy) $\to$ Nombre oficial: **Vecy Bienes Raíces**, Persona Jurídica, Tipo Documento: NIT.
+     - **Daniel Rivera**: Cédula `1233903423` $\to$ Al ingresar Daniel Rivera, el sistema autocompleta con sus dos nombres y dos apellidos: **Daniel Eduardo Rivera Noguera**. Si por razones históricas se ingresa Vecy Bienes Raíces, se acepta válidamente.
+     - **Eduardo Rivera**: Cédula `11189781` $\to$ **Eduardo Arturo Rivera Martínez**.
+     - **Natalia Rivera**: Cédula `1193130766` $\to$ **Natalia Rivera Noguera** (apellidos oficiales confirmados mediante consulta 2Captcha en Policía Nacional: *RIVERA NOGUERA NATALIA*).
+     - **Jani Alves**: Cédula `41057506` $\to$ **Jani Alves Souza**.
+2. **Causa Raíz de los Errores 504 Gateway Time-out en Tienda Ofertas**:
+   - En la captura de pantalla (`vecy-network.vercel.app/ofertas`), las peticiones tRPC `auth.me`, `properties.list` y `properties.getById` fallaban con `status of 504 ()` y `TRPCClientError: Unexpected token '<', "<html>"... is not valid JSON`, mostrando *"0 OFERTAS DISPONIBLES"*.
+   - El diagnóstico en el VPS (`13.140.149.144`) reveló que PostgreSQL 17.11 nativo tenía `statement_timeout = 0` y `idle_in_transaction_session_timeout = 0` (infinito). Conexiones previas concurrentes de transacciones de sockets quedaron retenidas en estado `ClientRead` esperando datos de sockets caídos, copando el pool de 30 conexiones de `postgres-js`. Al agotarse las conexiones, Nginx esperaba 60 segundos y abortaba la conexión HTTP hacia Vercel con la página HTML de error 504.
+   - Eduardo preguntó si la causa era no tener una aplicación visual para inspeccionar la base de datos tras la migración desde Supabase. Se aclaró que no se debía a la falta de app, sino a la falta de timeouts en el motor PostgreSQL.
+3. **Verificación Universal con API de 2Captcha**:
+   - Se comprobó y validó que el bot del VPS cuenta con la integración activa a 2Captcha para resolver el reCAPTCHA v2 de la Policía Nacional de Colombia (`https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml`) y el fallback de ADRES BDUA, permitiendo verificar y extraer los nombres oficiales completos de cualquier cédula de ciudadanía colombiana en aproximadamente 12 segundos, con saldo activo disponible ($2.95 USD).
+
+#### 🛠️ Acciones Ejecutadas y Archivos Modificados:
+1. **Configuración de Resiliencia en PostgreSQL del VPS**:
+   - Ejecutado en PostgreSQL:
+     ```sql
+     ALTER SYSTEM SET statement_timeout = '15s';
+     ALTER SYSTEM SET idle_in_transaction_session_timeout = '20s';
+     ALTER SYSTEM SET idle_session_timeout = '60s';
+     SELECT pg_reload_conf();
+     ```
+   - Reiniciado `jania-server` con PM2 (`pm2 restart jania-server --update-env`).
+   - Verificado `properties.list`: responde en **0.05 segundos** (HTTP 200) con todas las ofertas de la base de datos, erradicando los errores 504.
+2. **Backend de Identidad (`agenda.ts` e `index.ts` en `vecy-network`)**:
+   - Sincronizado `AUTHORITATIVE_FAMILY_IDENTITIES` con los nombres completos con ambos apellidos: `Daniel Eduardo Rivera Noguera`, `Eduardo Arturo Rivera Martínez`, `Natalia Rivera Noguera`, `Jani Alves Souza`, y `Vecy Bienes Raíces (NIT: 41057506-1)`.
+   - Ajustadas las verificaciones inversas y el fast-path (0ms) para que Daniel Rivera reciba el nombre completo y la cédula `1233903423`.
+3. **Frontend React (`AgendaForm.jsx` en `vecy-network` y `vecy-agenda-pro`)**:
+   - Actualizado el flujo de validación para que al verificar con éxito cualquier documento, siempre se asigne `data.officialName` en el estado de `solicitante_nombre`, `interesado_nombre` y `acompanantes[index].nombre`.
+   - Si se detecta `Vecy Bienes Raíces` o `data.isCompany`, se autoselecciona automáticamente `solicitante_tipo_persona: 'Persona Jurídica'` y `solicitante_tipo_documento: 'NIT'`.
+   - En `vecy-agenda-pro`, `handleVerifyClientIdentity` ahora utiliza `runVerificationJob` con sondeo asíncrono para que clientes externos verificados con 2Captcha no generen falsos errores.
+4. **Despliegue y Sincronización**:
+   - `vecy-agenda-pro`: Compilado con 0 errores (`✓ built in 7.27s`), confirmado y enviado a GitHub (`main` commit `5cb6c1a`) para deploy automático en Vercel.
+   - `vecy-network`: Compilado con 0 errores (`npm run check` y `npm run build`), versión incrementada a `v31.60`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.59 — Septiembre 2026
 
 ### 🗓️ Sesión: Martes 15 de Septiembre de 2026 — 20:50 (Hora Colombia UTC-5)
 **Versión**: `v31.59` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel (`vecy-network` y `vecy-agenda-pro`)

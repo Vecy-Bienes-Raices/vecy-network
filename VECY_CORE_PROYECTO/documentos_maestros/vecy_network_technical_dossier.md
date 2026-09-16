@@ -322,6 +322,36 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.60 — Septiembre 2026
+
+#### 📌 AUTOCOMPLETADO DE NOMBRES Y APELLIDOS COMPLETOS OFICIALES, SOPORTE DOCTRINAL DANIEL RIVERA, VECY PERSONA JURÍDICA NIT 41057506-1, SOLUCIÓN A TIMEOUTS 504 EN VPS Y VERIFICACIÓN UNIVERSAL 2CAPTCHA
+
+**Problemas identificados:**
+1. **Autocompletado de Nombres y Apellidos Completos Oficiales**: En los formularios de agenda (`vecy-network` y `vecy-agenda-pro`), los nombres verificados debían autocompletar de forma inmediata y certera los dos nombres y dos apellidos oficiales de la persona en todos los campos (solicitante, clientes presentados y acompañantes).
+2. **Doctrina Familiar y Corporativa VECY**:
+   - **VECY como Persona Jurídica**: NIT `41057506-1` (o base `41057506` con NIT o nombre Vecy) $\to$ Nombre oficial: **Vecy Bienes Raíces**, Persona Jurídica, Tipo de Documento: NIT.
+   - **Daniel Rivera**: Cédula `1233903423` $\to$ Al ingresar "Daniel Rivera", el sistema autocompleta con sus dos nombres y dos apellidos: **Daniel Eduardo Rivera Noguera**. Si por razones históricas se ingresa "Vecy Bienes Raíces", es aceptado como válido.
+   - **Eduardo Rivera**: Cédula `11189781` $\to$ **Eduardo Arturo Rivera Martínez**.
+   - **Natalia Rivera**: Cédula `1193130766` $\to$ **Natalia Rivera Noguera** (apellidos oficiales confirmados mediante consulta 2Captcha en Policía Nacional: *RIVERA NOGUERA NATALIA*).
+   - **Jani Alves**: Cédula `41057506` $\to$ **Jani Alves Souza**.
+3. **Causa Raíz de los Errores 504 Gateway Time-out en Tienda Ofertas**: En PostgreSQL 17.11 nativo del VPS (`13.140.149.144`), `statement_timeout` y `idle_in_transaction_session_timeout` estaban configurados en 0 (infinito). Conexiones previas quedaron retenidas en transacciones esperando datos de sockets caídos (`ClientRead`), agotando el pool de conexiones de Node.js / `postgres-js`. Al llegar nuevas peticiones a `/ofertas`, Nginx esperaba 60s y respondía con error HTML 504, generando en el frontend `TRPCClientError: Unexpected token '<', "<html>"... is not valid JSON` y *"0 OFERTAS DISPONIBLES"*.
+4. **Verificación Universal con API de 2Captcha**: Se comprobó y validó que el bot del VPS cuenta con la integración activa a 2Captcha para resolver el reCAPTCHA v2 de la Policía Nacional de Colombia y ADRES BDUA, permitiendo verificar y extraer los nombres oficiales completos de cualquier cédula de ciudadanía en aproximadamente 12 segundos, con saldo activo disponible ($2.95 USD).
+
+**Solución aplicada:**
+- **PostgreSQL en VPS**:
+  - Configurados `statement_timeout = '15s'`, `idle_in_transaction_session_timeout = '20s'` e `idle_session_timeout = '60s'`.
+  - Recargada la configuración en caliente y reiniciado `jania-server` con PM2. Tiempo de respuesta de `properties.list` reducido a **0.05 segundos** (HTTP 200).
+- **`server/routers/agenda.ts` e `index.ts` (`vecy-network`) & `api/verify-identity.js` (`vecy-agenda-pro`)**:
+  - Sincronizados los nombres completos y la doctrina de Daniel Eduardo Rivera Noguera y Vecy Bienes Raíces (NIT `41057506-1`).
+  - Actualizado el fast-path (0ms) y la verificación inversa.
+- **`AgendaForm.jsx` (ambos repositorios)**:
+  - Autocompletado forzoso con los nombres y apellidos oficiales completos al verificar.
+  - Si se verifica Vecy Bienes Raíces, autoselección de Persona Jurídica y NIT.
+  - En `vecy-agenda-pro`, `handleVerifyClientIdentity` conectado a `runVerificationJob` con sondeo asíncrono para clientes verificados con 2Captcha.
+- **Despliegue**: Commit `5cb6c1a` enviado a GitHub (`main`) de `vecy-agenda-pro` para Vercel. `vecy-network` compilado con 0 errores y desplegado en VPS con PM2.
+
+---
+
 ### 🔖 v31.59 — Septiembre 2026
 
 #### 📌 VALIDACIÓN ESTRICTA DE CÉDULAS COLOMBIANAS (ERRADICACIÓN DE 9 DÍGITOS), VERIFICACIÓN DE ACOMPAÑANTES Y FAST-PATH 0MS PARA FAMILIA VECY

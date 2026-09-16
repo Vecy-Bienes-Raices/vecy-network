@@ -275,9 +275,17 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
           return updated;
         });
 
-        // Autocompletar el nombre oficial si la API de verificación lo devolvió
-        if (data.officialName && data.officialName.toLowerCase() !== (nombreIngresado || '').trim().toLowerCase()) {
-          setFormData(prev => ({ ...prev, solicitante_nombre: data.officialName }));
+        // Autocompletar siempre con los nombres y apellidos completos oficiales verificados
+        if (data.officialName) {
+          const isVecyCompany = data.officialName === 'Vecy Bienes Raíces' || data.isCompany;
+          setFormData(prev => ({
+            ...prev,
+            solicitante_nombre: data.officialName,
+            ...(isVecyCompany ? {
+              solicitante_tipo_persona: 'Persona Jurídica',
+              solicitante_tipo_documento: 'NIT'
+            } : {})
+          }));
           toast.success(`✓ Nombre verificado y autocompletado: ${data.officialName}`);
         }
       }
@@ -325,7 +333,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
           return updated;
         });
 
-        if (data.officialName && data.officialName.toLowerCase() !== (nombreIngresado || '').trim().toLowerCase()) {
+        if (data.officialName) {
           setFormData(prev => ({ ...prev, interesado_nombre: data.officialName }));
           toast.success(`✓ Cliente verificado: ${data.officialName}`);
         }
@@ -390,7 +398,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
           return updated;
         });
 
-        if (data.officialName && data.officialName.toLowerCase() !== (nombreIngresado || '').trim().toLowerCase()) {
+        if (data.officialName) {
           setFormData(prev => {
             const updated = [...prev.acompanantes];
             if (updated[index]) {
