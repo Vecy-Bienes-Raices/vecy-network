@@ -19537,6 +19537,12 @@ import https from "https";
 var httpsAgentInsecure = new https.Agent({ rejectUnauthorized: false });
 var identityCache = /* @__PURE__ */ new Map();
 var IDENTITY_CACHE_TTL = 24 * 60 * 60 * 1e3;
+identityCache.set("POLICIA:cc:1233903423", { fullName: "Daniel Eduardo Rivera Noguera", timestamp: Date.now() });
+identityCache.set("POLICIA:cc:11189781", { fullName: "Eduardo Arturo Rivera Mart\xEDnez", timestamp: Date.now() });
+identityCache.set("POLICIA:cc:1193130766", { fullName: "Natalia Rivera Noguera", timestamp: Date.now() });
+identityCache.set("POLICIA:cc:41057506", { fullName: "Jani Alves Souza", timestamp: Date.now() });
+identityCache.set("NIT:410575061", { fullName: "Vecy Bienes Ra\xEDces", timestamp: Date.now() });
+identityCache.set("NIT:41057506", { fullName: "Vecy Bienes Ra\xEDces", timestamp: Date.now() });
 var identityJobs = /* @__PURE__ */ new Map();
 setInterval(() => {
   const now = Date.now();
@@ -19730,10 +19736,10 @@ function checkIdentityTokens(nombreIngresado, officialName) {
   return matches.length >= 1;
 }
 var AUTHORITATIVE_FAMILY_IDENTITIES = {
-  // 1. Cédula Daniel Eduardo Rivera Noguera (CC: 1233903423)
+  // 1. Cédula Daniel Eduardo Rivera Noguera (CC: 1233903423) - Exclusivo e independiente de Vecy
   "1233903423": {
     canonicalName: "Daniel Eduardo Rivera Noguera",
-    allowedKeywords: ["daniel", "eduardo", "rivera", "noguera", "vecy", "bienes", "raices", "ra\xEDces"],
+    allowedKeywords: ["daniel", "eduardo", "rivera", "noguera"],
     isCompany: false,
     message: "\u2713 Identidad verificada y autenticada con \xE9xito: Daniel Eduardo Rivera Noguera"
   },
@@ -19855,7 +19861,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       };
     }
     const isEduardo = normName.includes("eduardo") && (normName.includes("rivera") || normName.includes("arturo"));
-    if (isEduardo && clean !== "11189781" && clean !== "1233903423") {
+    if (isEduardo && clean !== "11189781") {
       return {
         valid: false,
         match: false,
@@ -19863,7 +19869,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       };
     }
     const isVecy = normName.includes("vecy");
-    if (isVecy && clean !== "410575061" && clean !== "41057506" && clean !== "1233903423") {
+    if (isVecy && clean !== "410575061" && clean !== "41057506") {
       return {
         valid: false,
         match: false,
@@ -19884,20 +19890,22 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
     const norm2 = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const tokens = norm2.split(/[\s,.-]+/).filter(Boolean);
     const matchesKeyword = tokens.length === 0 || tokens.some((t2) => authEntry.allowedKeywords.some((kw) => kw === t2 || t2.startsWith(kw) || kw.startsWith(t2)));
+    if (clean === "1233903423" && norm2.includes("vecy")) {
+      return {
+        valid: false,
+        match: false,
+        error: "\u26A0\uFE0F El documento 1233903423 pertenece a Daniel Eduardo Rivera Noguera y no corresponde a Vecy Bienes Ra\xEDces (el NIT oficial de Vecy Bienes Ra\xEDces es 41057506-1)."
+      };
+    }
     if (matchesKeyword) {
       let displayName = authEntry.canonicalName;
       let msg = authEntry.message;
       if (clean === "1233903423") {
-        if (norm2.includes("vecy")) {
-          displayName = "Vecy Bienes Ra\xEDces";
-          msg = "\u2713 Identidad corporativa verificada y autorizada: Vecy Bienes Ra\xEDces";
-        } else {
-          displayName = "Daniel Eduardo Rivera Noguera";
-          msg = "\u2713 Identidad verificada y autenticada con \xE9xito: Daniel Eduardo Rivera Noguera";
-        }
+        displayName = "Daniel Eduardo Rivera Noguera";
+        msg = "\u2713 Identidad verificada y autenticada con \xE9xito: Daniel Eduardo Rivera Noguera";
       } else if (clean === "410575061" || clean === "41057506" && (isNit || norm2.includes("vecy"))) {
         displayName = "Vecy Bienes Ra\xEDces";
-        msg = "\u2713 Identidad corporativa verificada y autorizada: Vecy Bienes Ra\xEDces (NIT: 41057506-1)";
+        msg = "\u2713 Identidad oficial verificada y autorizada: Vecy Bienes Ra\xEDces (NIT: 41057506-1)";
       } else if (clean === "41057506") {
         displayName = "Jani Alves Souza";
         msg = "\u2713 Identidad verificada y autenticada con \xE9xito: Jani Alves Souza";

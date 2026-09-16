@@ -172,9 +172,10 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 ### Novedades v31.60 (Autocompletado de Nombres y Apellidos Completos Oficiales, Soporte Doctrinal Daniel Rivera, Vecy Persona Jurídica NIT 41057506-1, Solución a Errores 504 en VPS y Verificación Universal 2Captcha):
 - **Diagnóstico y Causas Raíz Identificadas**:
   1) *Autocompletado de Nombres y Apellidos Completos*: En los formularios de agenda (`vecy-network` y `vecy-agenda-pro`), al validar la cédula o NIT de cualquier persona, el sistema debe autocompletar automáticamente el nombre con sus dos nombres y dos apellidos oficiales verificados.
-  2) *Doctrina Familiar y Corporativa VECY*:
-     - **VECY como Persona Jurídica**: NIT `41057506-1` (o base `41057506` con NIT o nombre Vecy) $\to$ Nombre oficial: **Vecy Bienes Raíces**, Persona Jurídica, Tipo Documento: NIT.
-     - **Daniel Rivera**: Cédula `1233903423` $\to$ Si se ingresa "Daniel Rivera", el sistema autocompleta con sus dos nombres y dos apellidos: **Daniel Eduardo Rivera Noguera**. Si por razones históricas se ingresa Vecy Bienes Raíces, se acepta válidamente.
+  2) *Doctrina Familiar y Corporativa VECY (Separación Inmutable Daniel Rivera vs. Vecy Bienes Raíces)*:
+     - **VECY como Persona Jurídica / Establecimiento Comercial**: NIT `41057506-1` (Registrado en el RUT oficial DIAN Hoja 6 bajo la titular Jani Alves Souza con actividad 6820 y teléfono oficial de bróker `3166569719`). Al validar, autocompleta el nombre como **Vecy Bienes Raíces**, Persona Jurídica y tipo de documento NIT (`41057506-1`).
+     - **Daniel Rivera (`1233903423`)**: Totalmente independiente y desvinculado de Vecy. Al ingresar la cédula con "Daniel Rivera", el sistema autocompleta con sus dos nombres y dos apellidos: **Daniel Eduardo Rivera Noguera**. Se eliminó cualquier compatibilidad histórica; si se ingresa con "Vecy Bienes Raíces", es rechazado de inmediato.
+     - **Saneamiento en PostgreSQL**: Se limpiaron 8 filas de la tabla `solicitudes` donde `1233903423` estaba erróneamente asociado a Vecy, y se insertó la fila maestra de Vecy Bienes Raíces con NIT `410575061`.
      - **Eduardo Rivera**: Cédula `11189781` $\to$ **Eduardo Arturo Rivera Martínez**.
      - **Natalia Rivera**: Cédula `1193130766` $\to$ **Natalia Rivera Noguera** (apellidos oficiales confirmados mediante consulta 2Captcha en Policía Nacional: *RIVERA NOGUERA NATALIA*).
      - **Jani Alves**: Cédula `41057506` $\to$ **Jani Alves Souza**.

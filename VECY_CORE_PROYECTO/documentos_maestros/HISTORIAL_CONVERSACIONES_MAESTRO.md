@@ -55,46 +55,45 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 ### 🗓️ Sesión: Martes 15 de Septiembre de 2026 — 23:30 (Hora Colombia UTC-5)
 **Versión**: `v31.60` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + 2Captcha reCAPTCHA v2 (Policía Nacional / ADRES) + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel (`vecy-network` y `vecy-agenda-pro`)
 
-#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera (Parte 1 y 2):
 *"Excelente pero me encantaría que para todos los campos nombre se colocara el ombre y apellidos completos una vez verificado el número. Ok, excepto claro está en el caso de VECY, pero si llegase a ingresar Daniel Rivera en realidad ahí si debería hacerlo, o déjalo de una vez establecido así y así yo ponga Vecy Bienes Raíces pero mejor es dejar vecy como persona jurídica pero con este número de NIT 41057506-1 Y por favor revisa por qué estamos teniendo tantos errores, si será porque no tenemos ahora una aplicación donde mirar o revisar la base de datos o que pueda ser. Anda y deja todo correctamente organizado y funcionando por favor. No olvides que debemos ser capaces de verificar cualquier tipo de cédula a traves del API de TWOCAPTCHA. Ok."*
 
+*Aclaración Doctrinal Inmutable:*
+*"En esta parte te lo quiero dejar en claro:
+1. Vecy Bienes Raíces (Persona Jurídica): Documento oficial: NIT 41057506-1 (o base 41057506 con NIT o nombre Vecy). Al validar, autocompleta el nombre como Vecy Bienes Raíces y selecciona automáticamente Persona Jurídica y tipo de documento NIT.
+2. Daniel Rivera (1233903423): Es muy independiente y aparte de Vecy Bienes Raíces. Al ingresar la cédula con 'Daniel Rivera', el sistema ahora autocompleta con sus dos nombres y dos apellidos completos: Daniel Eduardo Rivera Noguera. Ya no habrá más compatibilidad histórica si se ingresa 'Vecy Bienes Raíces', No se acepta como válido.
+Nota: Hemos decidido que Vecy es Vecy y Dani es Dani. No se que hacer para que los nuevos datos de Vecy Bienes Raíces queden grabados en la caché con su número de NIT y como persona Natural. Es que quiero darte a entender cómo tenemos a VECY BIENES RAÍCES ya que por ahora está así dentro del RUT de su propietaria y Gerente Comercial así: (Observa las imágenes a ver si me entiendes)"*
+
 #### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
-1. **Autocompletado de Nombres y Apellidos Completos Oficiales**:
-   - Anteriormente, la condición `if (data.officialName && data.officialName.toLowerCase() !== ...)` podía omitir la sustitución si había variaciones o si el input ya contenía texto similar. Eduardo requirió que siempre se autocompleten de forma inmediata los nombres y apellidos completos oficiales en todos los campos (solicitante, cliente e interesados, y acompañantes).
-   - *Doctrina de Identidades Familiares y Corporativas*:
-     - **VECY como Persona Jurídica**: NIT `41057506-1` (o base `41057506` con NIT o nombre Vecy) $\to$ Nombre oficial: **Vecy Bienes Raíces**, Persona Jurídica, Tipo Documento: NIT.
-     - **Daniel Rivera**: Cédula `1233903423` $\to$ Al ingresar Daniel Rivera, el sistema autocompleta con sus dos nombres y dos apellidos: **Daniel Eduardo Rivera Noguera**. Si por razones históricas se ingresa Vecy Bienes Raíces, se acepta válidamente.
-     - **Eduardo Rivera**: Cédula `11189781` $\to$ **Eduardo Arturo Rivera Martínez**.
-     - **Natalia Rivera**: Cédula `1193130766` $\to$ **Natalia Rivera Noguera** (apellidos oficiales confirmados mediante consulta 2Captcha en Policía Nacional: *RIVERA NOGUERA NATALIA*).
-     - **Jani Alves**: Cédula `41057506` $\to$ **Jani Alves Souza**.
-2. **Causa Raíz de los Errores 504 Gateway Time-out en Tienda Ofertas**:
-   - En la captura de pantalla (`vecy-network.vercel.app/ofertas`), las peticiones tRPC `auth.me`, `properties.list` y `properties.getById` fallaban con `status of 504 ()` y `TRPCClientError: Unexpected token '<', "<html>"... is not valid JSON`, mostrando *"0 OFERTAS DISPONIBLES"*.
-   - El diagnóstico en el VPS (`13.140.149.144`) reveló que PostgreSQL 17.11 nativo tenía `statement_timeout = 0` y `idle_in_transaction_session_timeout = 0` (infinito). Conexiones previas concurrentes de transacciones de sockets quedaron retenidas en estado `ClientRead` esperando datos de sockets caídos, copando el pool de 30 conexiones de `postgres-js`. Al agotarse las conexiones, Nginx esperaba 60 segundos y abortaba la conexión HTTP hacia Vercel con la página HTML de error 504.
-   - Eduardo preguntó si la causa era no tener una aplicación visual para inspeccionar la base de datos tras la migración desde Supabase. Se aclaró que no se debía a la falta de app, sino a la falta de timeouts en el motor PostgreSQL.
-3. **Verificación Universal con API de 2Captcha**:
-   - Se comprobó y validó que el bot del VPS cuenta con la integración activa a 2Captcha para resolver el reCAPTCHA v2 de la Policía Nacional de Colombia (`https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml`) y el fallback de ADRES BDUA, permitiendo verificar y extraer los nombres oficiales completos de cualquier cédula de ciudadanía colombiana en aproximadamente 12 segundos, con saldo activo disponible ($2.95 USD).
+1. **Separación Doctrinal Total Daniel Rivera vs. Vecy Bienes Raíces**:
+   - En la base de datos de PostgreSQL nativa del VPS, consultas a la tabla `solicitudes` revelaron que 8 registros históricos antiguos tenían asignado el documento `1233903423` al nombre *"Vecy Bienes Raíces"* / *"Vecy Bienes Raices"*. Por ende, la búsqueda en base de datos devolvía esa asociación obsoleta.
+   - Eduardo adjuntó el RUT oficial de la DIAN donde consta:
+     - Formulario 001: Contribuyente **JANI ALVES SOUZA**, Cédula de Ciudadanía `41057506`, NIT `41057506-1`.
+     - Hoja 6 (Establecimientos de comercio): Nombre del establecimiento: **VECY BIENES RAÍCES**, Actividad 6820, Teléfono oficial: **3166569719** (el número oficial de bróker de la inmobiliaria).
+   - Por lo tanto, Daniel Rivera (`1233903423`) es 100% independiente de Vecy Bienes Raíces. Toda compatibilidad histórica quedó erradicada. Si se ingresa `1233903423` con "Vecy Bienes Raíces", el sistema lo rechaza de inmediato con error descriptivo.
+2. **Autocompletado de Nombres y Apellidos Completos Oficiales**:
+   - Para `solicitante_nombre`, `interesado_nombre` y acompañantes, una vez validado el documento, se sustituye obligatoriamente el texto con los nombres y apellidos completos oficiales devueltos por la verificación.
+   - Cuando se valida Vecy Bienes Raíces (`41057506-1`), el sistema autoselecciona Persona Jurídica, tipo de documento NIT y formatea el documento a `41057506-1`.
+3. **Causa Raíz de los Errores 504 Gateway Time-out en Tienda Ofertas**:
+   - PostgreSQL 17.11 nativo en VPS tenía timeouts infinitos (`statement_timeout = 0`, `idle_in_transaction_session_timeout = 0`).
+   - Conexiones de sockets viejos colgaron el pool de 30 conexiones de Node.js / `postgres-js`. Al llegar peticiones a `/ofertas`, Nginx esperaba 60s y abortaba con 504.
+4. **Verificación Universal con API de 2Captcha**:
+   - Verificado el scraping de reCAPTCHA v2 en la Policía Nacional de Colombia y ADRES con saldo de $2.95 USD activo, permitiendo cotejar cualquier cédula colombiana.
 
 #### 🛠️ Acciones Ejecutadas y Archivos Modificados:
-1. **Configuración de Resiliencia en PostgreSQL del VPS**:
-   - Ejecutado en PostgreSQL:
-     ```sql
-     ALTER SYSTEM SET statement_timeout = '15s';
-     ALTER SYSTEM SET idle_in_transaction_session_timeout = '20s';
-     ALTER SYSTEM SET idle_session_timeout = '60s';
-     SELECT pg_reload_conf();
-     ```
-   - Reiniciado `jania-server` con PM2 (`pm2 restart jania-server --update-env`).
-   - Verificado `properties.list`: responde en **0.05 segundos** (HTTP 200) con todas las ofertas de la base de datos, erradicando los errores 504.
-2. **Backend de Identidad (`agenda.ts` e `index.ts` en `vecy-network`)**:
-   - Sincronizado `AUTHORITATIVE_FAMILY_IDENTITIES` con los nombres completos con ambos apellidos: `Daniel Eduardo Rivera Noguera`, `Eduardo Arturo Rivera Martínez`, `Natalia Rivera Noguera`, `Jani Alves Souza`, y `Vecy Bienes Raíces (NIT: 41057506-1)`.
-   - Ajustadas las verificaciones inversas y el fast-path (0ms) para que Daniel Rivera reciba el nombre completo y la cédula `1233903423`.
-3. **Frontend React (`AgendaForm.jsx` en `vecy-network` y `vecy-agenda-pro`)**:
-   - Actualizado el flujo de validación para que al verificar con éxito cualquier documento, siempre se asigne `data.officialName` en el estado de `solicitante_nombre`, `interesado_nombre` y `acompanantes[index].nombre`.
-   - Si se detecta `Vecy Bienes Raíces` o `data.isCompany`, se autoselecciona automáticamente `solicitante_tipo_persona: 'Persona Jurídica'` y `solicitante_tipo_documento: 'NIT'`.
-   - En `vecy-agenda-pro`, `handleVerifyClientIdentity` ahora utiliza `runVerificationJob` con sondeo asíncrono para que clientes externos verificados con 2Captcha no generen falsos errores.
-4. **Despliegue y Sincronización**:
-   - `vecy-agenda-pro`: Compilado con 0 errores (`✓ built in 7.27s`), confirmado y enviado a GitHub (`main` commit `5cb6c1a`) para deploy automático en Vercel.
-   - `vecy-network`: Compilado con 0 errores (`npm run check` y `npm run build`), versión incrementada a `v31.60`.
+1. **Saneamiento Profundo en Base de Datos PostgreSQL del VPS**:
+   - Actualizadas las 8 filas históricas de la tabla `solicitudes` donde `1233903423` tenía el nombre corrupto "Vecy Bienes Raices", reasignándolas a `Daniel Eduardo Rivera Noguera`.
+   - Insertado registro maestro y autoritativo en `solicitudes` para `Vecy Bienes Raíces` con NIT `410575061`, Persona Jurídica, Inmobiliaria y representante legal Jani Alves Souza.
+2. **Backend de Identidad (`agenda.ts` e `index.ts` en `vecy-network`) & (`verify-identity.js` en `vecy-agenda-pro`)**:
+   - Eliminadas las palabras clave `vecy`, `bienes`, `raices` de `1233903423`.
+   - Si se ingresa `1233903423` con Vecy, rechazo inmediato: `⚠️ El documento 1233903423 pertenece a Daniel Eduardo Rivera Noguera y no corresponde a Vecy Bienes Raíces (el NIT oficial de Vecy Bienes Raíces es 41057506-1).`
+   - Si se ingresa "Vecy Bienes Raíces" con cualquier documento que no sea `410575061` o `41057506`, rechazo inmediato en 0ms.
+   - Precargadas las identidades inmutables en `identityCache`.
+3. **Frontend React (`AgendaForm.jsx` en ambos repositorios)**:
+   - Al validar `41057506` o `410575061` como Vecy Bienes Raíces, autoselecciona Persona Jurídica, tipo NIT y formatea el input a `41057506-1`.
+   - Al validar `1233903423`, autocompleta como `Daniel Eduardo Rivera Noguera`.
+4. **Compilación, Despliegue y Pruebas**:
+   - Ambos proyectos compilados con 0 errores y desplegados en GitHub (`main`) y servidor VPS (PM2 `jania-server`).
 
 ---
 

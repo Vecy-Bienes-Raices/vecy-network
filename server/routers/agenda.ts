@@ -13,6 +13,14 @@ const httpsAgentInsecure = new https.Agent({ rejectUnauthorized: false });
 const identityCache = new Map<string, { fullName: string; timestamp: number }>();
 const IDENTITY_CACHE_TTL = 24 * 60 * 60 * 1000;
 
+// Inicialización de caché con identidades doctrinales inmutables
+identityCache.set('POLICIA:cc:1233903423', { fullName: 'Daniel Eduardo Rivera Noguera', timestamp: Date.now() });
+identityCache.set('POLICIA:cc:11189781', { fullName: 'Eduardo Arturo Rivera Martínez', timestamp: Date.now() });
+identityCache.set('POLICIA:cc:1193130766', { fullName: 'Natalia Rivera Noguera', timestamp: Date.now() });
+identityCache.set('POLICIA:cc:41057506', { fullName: 'Jani Alves Souza', timestamp: Date.now() });
+identityCache.set('NIT:410575061', { fullName: 'Vecy Bienes Raíces', timestamp: Date.now() });
+identityCache.set('NIT:41057506', { fullName: 'Vecy Bienes Raíces', timestamp: Date.now() });
+
 interface IdentityJob {
   id: string;
   status: 'processing' | 'completed' | 'error';
@@ -411,10 +419,10 @@ export const AUTHORITATIVE_FAMILY_IDENTITIES: Record<string, {
   isCompany?: boolean;
   message: string;
 }> = {
-  // 1. Cédula Daniel Eduardo Rivera Noguera (CC: 1233903423)
+  // 1. Cédula Daniel Eduardo Rivera Noguera (CC: 1233903423) - Exclusivo e independiente de Vecy
   '1233903423': {
     canonicalName: 'Daniel Eduardo Rivera Noguera',
-    allowedKeywords: ['daniel', 'eduardo', 'rivera', 'noguera', 'vecy', 'bienes', 'raices', 'raíces'],
+    allowedKeywords: ['daniel', 'eduardo', 'rivera', 'noguera'],
     isCompany: false,
     message: '✓ Identidad verificada y autenticada con éxito: Daniel Eduardo Rivera Noguera',
   },
@@ -549,7 +557,7 @@ export async function executeIdentityVerification(
     }
 
     const isEduardo = normName.includes('eduardo') && (normName.includes('rivera') || normName.includes('arturo'));
-    if (isEduardo && clean !== '11189781' && clean !== '1233903423') {
+    if (isEduardo && clean !== '11189781') {
       return {
         valid: false,
         match: false,
@@ -558,7 +566,7 @@ export async function executeIdentityVerification(
     }
 
     const isVecy = normName.includes('vecy');
-    if (isVecy && clean !== '410575061' && clean !== '41057506' && clean !== '1233903423') {
+    if (isVecy && clean !== '410575061' && clean !== '41057506') {
       return {
         valid: false,
         match: false,
@@ -583,21 +591,24 @@ export async function executeIdentityVerification(
     const tokens = norm.split(/[\s,.-]+/).filter(Boolean);
     const matchesKeyword = tokens.length === 0 || tokens.some(t => authEntry.allowedKeywords.some(kw => kw === t || t.startsWith(kw) || kw.startsWith(t)));
 
+    if (clean === '1233903423' && norm.includes('vecy')) {
+      return {
+        valid: false,
+        match: false,
+        error: '⚠️ El documento 1233903423 pertenece a Daniel Eduardo Rivera Noguera y no corresponde a Vecy Bienes Raíces (el NIT oficial de Vecy Bienes Raíces es 41057506-1).',
+      };
+    }
+
     if (matchesKeyword) {
       let displayName = authEntry.canonicalName;
       let msg = authEntry.message;
 
       if (clean === '1233903423') {
-        if (norm.includes('vecy')) {
-          displayName = 'Vecy Bienes Raíces';
-          msg = '✓ Identidad corporativa verificada y autorizada: Vecy Bienes Raíces';
-        } else {
-          displayName = 'Daniel Eduardo Rivera Noguera';
-          msg = '✓ Identidad verificada y autenticada con éxito: Daniel Eduardo Rivera Noguera';
-        }
+        displayName = 'Daniel Eduardo Rivera Noguera';
+        msg = '✓ Identidad verificada y autenticada con éxito: Daniel Eduardo Rivera Noguera';
       } else if (clean === '410575061' || (clean === '41057506' && (isNit || norm.includes('vecy')))) {
         displayName = 'Vecy Bienes Raíces';
-        msg = '✓ Identidad corporativa verificada y autorizada: Vecy Bienes Raíces (NIT: 41057506-1)';
+        msg = '✓ Identidad oficial verificada y autorizada: Vecy Bienes Raíces (NIT: 41057506-1)';
       } else if (clean === '41057506') {
         displayName = 'Jani Alves Souza';
         msg = '✓ Identidad verificada y autenticada con éxito: Jani Alves Souza';
