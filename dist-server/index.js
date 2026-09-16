@@ -872,7 +872,7 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
           const status = error.response?.status;
           const errorMsg = error.response?.data?.error?.message || error.message;
           if (status === 429) {
-            markKeyCooldown(activeKey, 900, "Cuota diaria agotada (429)");
+            markKeyCooldown(activeKey, 60, "Rate Limit 15 RPM / Cuota (429)");
             break;
           }
           if (status === 503) {

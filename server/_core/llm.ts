@@ -258,9 +258,9 @@ async function invokeGemini(
           const status = error.response?.status;
           const errorMsg = error.response?.data?.error?.message || error.message;
 
-          // 429: Rate Limit / Cuota diaria agotada en esta clave -> Pausar esta clave por 15 min y pasar a la siguiente
+          // 429: Rate Limit (15 RPM) o Cuota en esta clave -> Pausar esta clave solo por 60s (ventana por minuto) y pasar a la siguiente
           if (status === 429) {
-            markKeyCooldown(activeKey, 900, "Cuota diaria agotada (429)");
+            markKeyCooldown(activeKey, 60, "Rate Limit 15 RPM / Cuota (429)");
             break; // Saltar a la siguiente clave del Failover
           }
 
