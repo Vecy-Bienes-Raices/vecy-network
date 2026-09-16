@@ -322,7 +322,42 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
-### 🔖 v31.57 — Septiembre 2026
+### 🔖 v31.59 — Septiembre 2026
+
+#### 📌 VALIDACIÓN ESTRICTA DE CÉDULAS COLOMBIANAS (ERRADICACIÓN DE 9 DÍGITOS), VERIFICACIÓN DE ACOMPAÑANTES Y FAST-PATH 0MS PARA FAMILIA VECY
+
+**Problemas identificados:**
+1. **Omisión de Verificación de Acompañantes en `vecy-agenda-pro`**: Al editar el documento de un acompañante (por ejemplo, quitando el último dígito del documento de Natalia `1193130766` -> `119313076`), el formulario no ejecutaba ninguna validación porque `acomp.documento` carecía de `onBlur`, de la función `handleVerifyAcompananteIdentity` y de las props visuales de alerta en `FormInput`.
+2. **Cédulas Colombianas de 9 Dígitos**: En Colombia no existen cédulas de 9 dígitos. En el backend no se bloqueaba esta longitud y el fallback 6 la aceptaba como válida al ser numérica.
+3. **Verificación Inversa Inmediata**: Al ingresar un nombre familiar conocido ("Natalia Rivera", "Eduardo Rivera", "Vecy Bienes Raíces", "Jani Alves") con un documento errado, se encolaba un Job asíncrono en vez de alertar de inmediato la discrepancia en 0ms.
+
+**Solución aplicada:**
+- **`server/routers/agenda.ts` e `index.ts` (`vecy-network`) & `api/verify-identity.js` (`vecy-agenda-pro`)**:
+  - Filtro duro estructural: Si la cédula tiene 9 dígitos, se rechaza inmediatamente: `⚠️ En Colombia no existen Cédulas de Ciudadanía de 9 dígitos. Verifica si omitiste o agregaste algún número.`
+  - Cédulas de 10 dígitos deben iniciar por 1.
+  - Verificación inversa: Si el nombre contiene a los fundadores o la empresa y el documento no coincide, se rechaza en 0ms.
+  - Fast-path de respuesta inmediata (0ms) sin encolar jobs cuando se detecta un error estructural o un miembro de la familia.
+- **`vecy-agenda-pro/src/components/AgendaForm.jsx`**:
+  - Implementación completa de `handleVerifyAcompananteIdentity` con `onBlur`, badges de éxito, alertas rojas y bloqueo reactivo del botón de agendamiento.
+- **Despliegue**: Commit `1cfedca` enviado a GitHub (`main`) de `vecy-agenda-pro` para Vercel. `vecy-network` compilado con 0 errores.
+
+---
+
+### 🔖 v31.58 — Septiembre 2026
+
+#### 📌 REPARTO DE COMISIONES 45/45/10, RECONOCIMIENTO FAMILIAR DOCTRINAL VECY Y ENDPOINT REST DIRECTO
+
+**Problemas identificados:**
+1. Ajuste al reparto transparente de comisiones de 35/35/15/15 al nuevo esquema oficial 45/45/10.
+2. Identidad de Vecy Bienes Raíces y Daniel Rivera con CC `1233903423`, Eduardo Rivera (`11189781`) y Natalia Rivera (`1193130766`).
+3. Requerimiento de endpoint REST directo sin sobrecarga SuperJSON para clientes externos.
+
+**Solución aplicada:**
+- Actualización de prompts y crons con el reparto 45% captador, 45% colocador y 10% VECY.
+- Incorporación del diccionario autoritativo `AUTHORITATIVE_FAMILY_IDENTITIES` en `agenda.ts`.
+- Endpoint REST `/api/verify-identity` directo para consultas de identidad.
+
+---
 
 #### 📌 DESPLEGABLES NUMÉRICOS 0-10+ GOLD LUXURY, ERRADICACIÓN DE ZOMBIES EN VPS, RESTAURACIÓN DE COINCIDENCIAS Y ESTABILIDAD JANIA
 

@@ -167,7 +167,22 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.58 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.59 — Septiembre 2026
+
+### Novedades v31.59 (Validación Estricta de Cédulas Colombianas sin 9 Dígitos, Verificación Completa de Acompañantes y Fast-Path 0ms para Familia VECY):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Omisión de Verificación de Acompañantes en `vecy-agenda-pro`*: El input de acompañantes en `AgendaForm.jsx` carecía de `onBlur`, de la función `handleVerifyAcompananteIdentity`, y no pasaba `errorAlert`, `successBadge` ni `isValidating` a `FormInput`. Al quitar el último dígito del documento de Natalia (`1193130766` -> `119313076`), el formulario no ejecutaba ninguna validación.
+  2) *Cédulas Colombianas de 9 Dígitos*: En Colombia no existen cédulas de 9 dígitos. El backend y el fallback 6 carecían del filtro de 9 dígitos, permitiendo que cédulas incompletas pasaran si el scraping no respondía.
+  3) *Verificación Inversa Inmediata*: Si se ingresa "Natalia Rivera", "Eduardo Rivera", "Vecy Bienes Raíces" o "Jani Alves" pero con un documento no concordante, el sistema ahora rechaza inmediatamente en 0ms señalando el documento oficial correspondiente.
+  4) *Despliegue Vercel Standalone*: `vecy-agenda-pro` tenía los cambios en estado no confirmado/pushed, por lo cual Vercel seguía sirviendo el bundle previo que devolvía 400 Bad Request.
+- **Acciones Ejecutadas**:
+  1) *Backend (`agenda.ts` e `index.ts`)*: Regla de 9 dígitos rechazada inmediatamente; 10 dígitos deben empezar por 1; validación inversa en 0ms sin encolar jobs asíncronos.
+  2) *`vecy-agenda-pro`*: Implementada verificación completa de acompañantes con sondeo asíncrono, feedback en tiempo real, bloqueo de botón de envío ante errores y limpieza reactiva.
+  3) *Despliegue*: Commit `1cfedca` enviado a GitHub (`main`) de `vecy-agenda-pro` para deploy inmediato en Vercel. `vecy-network` compilado con 0 errores.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.58 — Septiembre 2026
 
 ### Novedades v31.58 (Reparto de Comisiones 45/45/10, Validación Doctrinal de Identidad Familiar Vecy y Desbloqueo Dinámico en Vecy Agenda Pro / Network):
 - **Diagnóstico y Causas Raíz Identificadas**:

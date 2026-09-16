@@ -484,6 +484,79 @@ export async function executeIdentityVerification(
     };
   }
 
+  // Validación estricta de Cédula de Ciudadanía colombiana
+  const isCedula = !isNit && (tDocLower.includes('cédula') || tDocLower.includes('cedula') || tDocLower === '' || tDocLower.includes('ciudadan'));
+  if (isCedula) {
+    if (!/^\d+$/.test(clean)) {
+      return {
+        valid: false,
+        match: false,
+        error: 'La Cédula de Ciudadanía solo debe contener caracteres numéricos.',
+      };
+    }
+    if (clean.length === 9) {
+      return {
+        valid: false,
+        match: false,
+        error: '⚠️ En Colombia no existen Cédulas de Ciudadanía de 9 dígitos. Verifica si omitiste o agregaste algún número.',
+      };
+    }
+    if (clean.length < 6 || clean.length > 10) {
+      return {
+        valid: false,
+        match: false,
+        error: '⚠️ La Cédula de Ciudadanía en Colombia debe contener entre 6 y 8 dígitos (antiguas) o 10 dígitos (nuevas).',
+      };
+    }
+    if (clean.length === 10 && !clean.startsWith('1')) {
+      return {
+        valid: false,
+        match: false,
+        error: '⚠️ Las Cédulas de Ciudadanía de 10 dígitos en Colombia deben iniciar por 1. Verifica el número digitado.',
+      };
+    }
+  }
+
+  // Verificación inversa para nombres autoritativos familiares/corporativos conocidos
+  const normName = (nombreIngresado || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (normName.length >= 4) {
+    const isNatalia = normName.includes('natalia') && (normName.includes('rivera') || normName.trim() === 'natalia');
+    if (isNatalia && clean !== '1193130766') {
+      return {
+        valid: false,
+        match: false,
+        error: `⚠️ El documento ${clean} no corresponde a Natalia Rivera (el documento oficial registrado es 1193130766). Corrige el número para continuar.`,
+      };
+    }
+
+    const isEduardo = normName.includes('eduardo') && (normName.includes('rivera') || normName.includes('arturo'));
+    if (isEduardo && clean !== '11189781' && clean !== '1233903423') {
+      return {
+        valid: false,
+        match: false,
+        error: `⚠️ El documento ${clean} no corresponde a Eduardo Rivera (su cédula oficial registrada es 11189781). Corrige el número para continuar.`,
+      };
+    }
+
+    const isVecy = normName.includes('vecy');
+    if (isVecy && clean !== '1233903423') {
+      return {
+        valid: false,
+        match: false,
+        error: `⚠️ El documento ${clean} no corresponde a Vecy Bienes Raíces (el documento oficial registrado es 1233903423). Corrige el número para continuar.`,
+      };
+    }
+
+    const isJani = normName.includes('jani') && normName.includes('alves');
+    if (isJani && clean !== '41057506') {
+      return {
+        valid: false,
+        match: false,
+        error: `⚠️ El documento ${clean} no corresponde a Jani Alves Souza (su cédula oficial registrada es 41057506). Corrige el número para continuar.`,
+      };
+    }
+  }
+
   // 2. Registro Autoritativo Doctrinal de Fundadores y Vecy Bienes Raíces (0ms instantáneo)
   const authEntry = AUTHORITATIVE_FAMILY_IDENTITIES[clean];
   if (authEntry) {
@@ -609,8 +682,15 @@ export async function executeIdentityVerification(
   }
 
   // 6. Fallback resiliente para fallos de red o tiempos de espera gubernamentales
-  const isNumericDoc = /^\d{6,10}$/.test(clean);
+  const isNumericDoc = /^\d{6,10}$/.test(clean) && clean.length !== 9;
   if (isNumericDoc) {
+    if (clean.length === 10 && !clean.startsWith('1')) {
+      return {
+        valid: false,
+        match: false,
+        error: '⚠️ Las Cédulas de Ciudadanía de 10 dígitos en Colombia deben iniciar por 1.',
+      };
+    }
     return {
       valid: true,
       match: true,
@@ -765,9 +845,26 @@ export const agendaRouter = router({
         };
       }
 
-      // Fast-path instantáneo si es identidad autoritativa de Vecy o está en caché (0 ms)
+      const tDocLower = (tipoDocumento || '').toLowerCase();
+      const isNit = tDocLower.includes('nit') || tDocLower.includes('rut');
+      const isCedula = !isNit && (tDocLower.includes('cédula') || tDocLower.includes('cedula') || tDocLower === '' || tDocLower.includes('ciudadan'));
+      const normName = (nombreIngresado || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const isKnownFamilyName = normName.length >= 4 && (
+        (normName.includes('natalia') && (normName.includes('rivera') || normName.trim() === 'natalia')) ||
+        (normName.includes('eduardo') && (normName.includes('rivera') || normName.includes('arturo'))) ||
+        normName.includes('vecy') ||
+        (normName.includes('jani') && normName.includes('alves'))
+      );
+
+      // Fast-path instantáneo si es identidad autoritativa de Vecy, error estructural (ej. 9 dígitos), reverse check o está en caché (0 ms)
       const cacheKey = `POLICIA:cc:${cleanDoc}`;
-      if (AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc] || identityCache.has(cacheKey)) {
+      if (
+        isNit ||
+        (isCedula && (cleanDoc.length === 9 || cleanDoc.length < 6 || cleanDoc.length > 10 || (cleanDoc.length === 10 && !cleanDoc.startsWith('1')))) ||
+        AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc] ||
+        isKnownFamilyName ||
+        identityCache.has(cacheKey)
+      ) {
         const quickRes = await executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngresado);
         return {
           status: 'completed' as const,

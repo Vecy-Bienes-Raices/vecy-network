@@ -15990,7 +15990,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.58";
+var VECY_VERSION = "v31.59";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -19795,6 +19795,72 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       message: `\u2713 NIT/RUT validado conforme a estructura DIAN (D\xEDgito de verificaci\xF3n: ${dvCalculado})`
     };
   }
+  const isCedula = !isNit && (tDocLower.includes("c\xE9dula") || tDocLower.includes("cedula") || tDocLower === "" || tDocLower.includes("ciudadan"));
+  if (isCedula) {
+    if (!/^\d+$/.test(clean)) {
+      return {
+        valid: false,
+        match: false,
+        error: "La C\xE9dula de Ciudadan\xEDa solo debe contener caracteres num\xE9ricos."
+      };
+    }
+    if (clean.length === 9) {
+      return {
+        valid: false,
+        match: false,
+        error: "\u26A0\uFE0F En Colombia no existen C\xE9dulas de Ciudadan\xEDa de 9 d\xEDgitos. Verifica si omitiste o agregaste alg\xFAn n\xFAmero."
+      };
+    }
+    if (clean.length < 6 || clean.length > 10) {
+      return {
+        valid: false,
+        match: false,
+        error: "\u26A0\uFE0F La C\xE9dula de Ciudadan\xEDa en Colombia debe contener entre 6 y 8 d\xEDgitos (antiguas) o 10 d\xEDgitos (nuevas)."
+      };
+    }
+    if (clean.length === 10 && !clean.startsWith("1")) {
+      return {
+        valid: false,
+        match: false,
+        error: "\u26A0\uFE0F Las C\xE9dulas de Ciudadan\xEDa de 10 d\xEDgitos en Colombia deben iniciar por 1. Verifica el n\xFAmero digitado."
+      };
+    }
+  }
+  const normName = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (normName.length >= 4) {
+    const isNatalia = normName.includes("natalia") && (normName.includes("rivera") || normName.trim() === "natalia");
+    if (isNatalia && clean !== "1193130766") {
+      return {
+        valid: false,
+        match: false,
+        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Natalia Rivera (el documento oficial registrado es 1193130766). Corrige el n\xFAmero para continuar.`
+      };
+    }
+    const isEduardo = normName.includes("eduardo") && (normName.includes("rivera") || normName.includes("arturo"));
+    if (isEduardo && clean !== "11189781" && clean !== "1233903423") {
+      return {
+        valid: false,
+        match: false,
+        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Eduardo Rivera (su c\xE9dula oficial registrada es 11189781). Corrige el n\xFAmero para continuar.`
+      };
+    }
+    const isVecy = normName.includes("vecy");
+    if (isVecy && clean !== "1233903423") {
+      return {
+        valid: false,
+        match: false,
+        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Vecy Bienes Ra\xEDces (el documento oficial registrado es 1233903423). Corrige el n\xFAmero para continuar.`
+      };
+    }
+    const isJani = normName.includes("jani") && normName.includes("alves");
+    if (isJani && clean !== "41057506") {
+      return {
+        valid: false,
+        match: false,
+        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Jani Alves Souza (su c\xE9dula oficial registrada es 41057506). Corrige el n\xFAmero para continuar.`
+      };
+    }
+  }
   const authEntry = AUTHORITATIVE_FAMILY_IDENTITIES[clean];
   if (authEntry) {
     const norm2 = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -19898,8 +19964,15 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       message: `\u2713 Identidad verificada y autenticada con \xE9xito: ${officialFormatted}`
     };
   }
-  const isNumericDoc = /^\d{6,10}$/.test(clean);
+  const isNumericDoc = /^\d{6,10}$/.test(clean) && clean.length !== 9;
   if (isNumericDoc) {
+    if (clean.length === 10 && !clean.startsWith("1")) {
+      return {
+        valid: false,
+        match: false,
+        error: "\u26A0\uFE0F Las C\xE9dulas de Ciudadan\xEDa de 10 d\xEDgitos en Colombia deben iniciar por 1."
+      };
+    }
     return {
       valid: true,
       match: true,
@@ -20016,8 +20089,13 @@ var agendaRouter = router({
         }
       };
     }
+    const tDocLower = (tipoDocumento || "").toLowerCase();
+    const isNit = tDocLower.includes("nit") || tDocLower.includes("rut");
+    const isCedula = !isNit && (tDocLower.includes("c\xE9dula") || tDocLower.includes("cedula") || tDocLower === "" || tDocLower.includes("ciudadan"));
+    const normName = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const isKnownFamilyName = normName.length >= 4 && (normName.includes("natalia") && (normName.includes("rivera") || normName.trim() === "natalia") || normName.includes("eduardo") && (normName.includes("rivera") || normName.includes("arturo")) || normName.includes("vecy") || normName.includes("jani") && normName.includes("alves"));
     const cacheKey = `POLICIA:cc:${cleanDoc}`;
-    if (AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc] || identityCache.has(cacheKey)) {
+    if (isNit || isCedula && (cleanDoc.length === 9 || cleanDoc.length < 6 || cleanDoc.length > 10 || cleanDoc.length === 10 && !cleanDoc.startsWith("1")) || AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc] || isKnownFamilyName || identityCache.has(cacheKey)) {
       const quickRes = await executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngresado);
       return {
         status: "completed",
@@ -20564,7 +20642,12 @@ async function startServer() {
           error: "El n\xFAmero de documento debe tener al menos 5 d\xEDgitos."
         });
       }
-      if (AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc]) {
+      const tDocLower = (tipoDocumento || "").toLowerCase();
+      const isNit = tDocLower.includes("nit") || tDocLower.includes("rut");
+      const isCedula = !isNit && (tDocLower.includes("c\xE9dula") || tDocLower.includes("cedula") || tDocLower === "" || tDocLower.includes("ciudadan"));
+      const normName = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const isKnownFamilyName = normName.length >= 4 && (normName.includes("natalia") && (normName.includes("rivera") || normName.trim() === "natalia") || normName.includes("eduardo") && (normName.includes("rivera") || normName.includes("arturo")) || normName.includes("vecy") || normName.includes("jani") && normName.includes("alves"));
+      if (isNit || isCedula && (cleanDoc.length === 9 || cleanDoc.length < 6 || cleanDoc.length > 10 || cleanDoc.length === 10 && !cleanDoc.startsWith("1")) || AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc] || isKnownFamilyName) {
         const quick = await executeIdentityVerification(tipoDocumento || "C\xE9dula de ciudadan\xEDa", cleanDoc, nombreIngresado);
         return res.status(200).json(quick);
       }

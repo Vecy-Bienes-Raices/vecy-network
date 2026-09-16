@@ -93,8 +93,24 @@ async function startServer() {
         });
       }
 
-      // Fast-path para fundadores, Vecy Bienes Raíces o cédulas familiares (0ms)
-      if (AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc]) {
+      const tDocLower = (tipoDocumento || "").toLowerCase();
+      const isNit = tDocLower.includes("nit") || tDocLower.includes("rut");
+      const isCedula = !isNit && (tDocLower.includes("cédula") || tDocLower.includes("cedula") || tDocLower === "" || tDocLower.includes("ciudadan"));
+      const normName = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const isKnownFamilyName = normName.length >= 4 && (
+        (normName.includes("natalia") && (normName.includes("rivera") || normName.trim() === "natalia")) ||
+        (normName.includes("eduardo") && (normName.includes("rivera") || normName.includes("arturo"))) ||
+        normName.includes("vecy") ||
+        (normName.includes("jani") && normName.includes("alves"))
+      );
+
+      // Fast-path (0ms): familia VECY, errores estructurales colombianos (ej. 9 dígitos), reverse checks o NIT
+      if (
+        isNit ||
+        (isCedula && (cleanDoc.length === 9 || cleanDoc.length < 6 || cleanDoc.length > 10 || (cleanDoc.length === 10 && !cleanDoc.startsWith("1")))) ||
+        AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc] ||
+        isKnownFamilyName
+      ) {
         const quick = await executeIdentityVerification(tipoDocumento || "Cédula de ciudadanía", cleanDoc, nombreIngresado);
         return res.status(200).json(quick);
       }
