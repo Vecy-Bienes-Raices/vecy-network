@@ -5711,7 +5711,8 @@ function explicarMatch(requirement, property) {
       if (propRent <= 0 && price > 0 && price < 1e8) {
         propRent = price;
       }
-      const adminVal = pAdminFee > 0 ? pAdminFee : 0;
+      const isPropAdminIncluded = (property.rawText || "").toLowerCase().includes("incluida la administraci") || (property.rawText || "").toLowerCase().includes("incluida administraci") || (property.rawText || "").toLowerCase().includes("admon incluida") || (property.rawText || "").toLowerCase().includes("administracion incluida") || (property.rawText || "").toLowerCase().includes("con admon") || (property.rawText || "").toLowerCase().includes("con administraci\xF3n");
+      const adminVal = !isPropAdminIncluded && pAdminFee > 0 ? pAdminFee : 0;
       const totalRent = propRent + adminVal;
       if (propRent <= 0 && price > 1e8) {
         blockers.push(`Guillotina Financiera (Tolerancia Cero): La oferta no especifica canon de arriendo y su precio de venta ($${price.toLocaleString()}) no aplica para una b\xFAsqueda de arriendo de $${budgetMax.toLocaleString()}`);
@@ -14942,10 +14943,16 @@ __export(nightlyRematch_exports, {
 });
 import { and as and4, eq as eq6 } from "drizzle-orm";
 async function runNightlyRematch() {
-  console.log("[NIGHTLY-REMATCH v28.0] Iniciando cruce masivo doctrinal...");
+  if (isRematchRunning) {
+    console.log("[NIGHTLY-REMATCH] Ya hay una ejecuci\xF3n en curso, saltando...");
+    return;
+  }
+  isRematchRunning = true;
+  console.log("[NIGHTLY-REMATCH v31.63] Iniciando cruce masivo doctrinal no bloqueante...");
   const db = await getDb();
   if (!db) {
     console.error("[NIGHTLY-REMATCH] No se pudo conectar a la base de datos.");
+    isRematchRunning = false;
     return;
   }
   try {
@@ -15096,6 +15103,7 @@ async function runNightlyRematch() {
       console.log(
         `[NIGHTLY-REMATCH ${pct}%] Procesados ${i + chunk.length}/${enrichedReqs.length} reqs | Nuevos: ${insertedCount} | Actualizados: ${updatedCount}`
       );
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
     console.log(
       `[NIGHTLY-REMATCH] \u2705 Finalizado. Nuevos: ${insertedCount} | Actualizados: ${updatedCount} | Descartados: ${skippedCount}`
@@ -15105,6 +15113,8 @@ async function runNightlyRematch() {
       "[NIGHTLY-REMATCH] Error durante el cruce masivo nocturno:",
       error.message || error
     );
+  } finally {
+    isRematchRunning = false;
   }
 }
 async function recalculateAndCleanupMatches() {
@@ -15164,6 +15174,7 @@ async function recalculateAndCleanupMatches() {
     console.error("[MATCH-CLEANUP] Error durante la limpieza:", error.message || error);
   }
 }
+var isRematchRunning;
 var init_nightlyRematch = __esm({
   "server/jobs/nightlyRematch.ts"() {
     "use strict";
@@ -15171,6 +15182,7 @@ var init_nightlyRematch = __esm({
     init_schema();
     init_matching();
     init_janIA();
+    isRematchRunning = false;
   }
 });
 
@@ -15388,8 +15400,8 @@ function initCronScheduler() {
     console.log("[CRON-SERVICE] Disparando cron vespertino de Grupo 3 (PROYECTO Vecy Network)...");
     await publishGrupo3TipNow(false);
   }, { timezone: "America/Bogota" });
-  cron.schedule("0 8 * * *", async () => {
-    console.log("[CRON-SERVICE] Ejecutando cruce masivo (Re-matching)...");
+  cron.schedule("45 3 * * *", async () => {
+    console.log("[CRON-SERVICE] Ejecutando cruce masivo nocturno (Re-matching 03:45 AM)...");
     try {
       await runNightlyRematch();
     } catch (err) {
@@ -16025,7 +16037,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.62";
+var VECY_VERSION = "v31.63";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

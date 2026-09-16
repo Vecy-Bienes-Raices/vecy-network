@@ -444,9 +444,9 @@ export function initCronScheduler() {
     await publishGrupo3TipNow(false);
   }, { timezone: 'America/Bogota' });
 
-  // 🔄 RE-MATCHING MASIVO SILENCIOSO (Base de Datos): Todos los días a las 08:00 AM
-  cron.schedule('0 8 * * *', async () => {
-    console.log('[CRON-SERVICE] Ejecutando cruce masivo (Re-matching)...');
+  // 🔄 RE-MATCHING MASIVO SILENCIOSO (Base de Datos): Madrugada profunda a las 03:45 AM (Ventana Inactiva)
+  cron.schedule('45 3 * * *', async () => {
+    console.log('[CRON-SERVICE] Ejecutando cruce masivo nocturno (Re-matching 03:45 AM)...');
     try {
       await runNightlyRematch();
     } catch (err: any) {

@@ -2369,7 +2369,13 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
         propRent = price;
       }
 
-      const adminVal = pAdminFee > 0 ? pAdminFee : 0;
+      const isPropAdminIncluded = (property.rawText || "").toLowerCase().includes("incluida la administraci") ||
+                                  (property.rawText || "").toLowerCase().includes("incluida administraci") ||
+                                  (property.rawText || "").toLowerCase().includes("admon incluida") ||
+                                  (property.rawText || "").toLowerCase().includes("administracion incluida") ||
+                                  (property.rawText || "").toLowerCase().includes("con admon") ||
+                                  (property.rawText || "").toLowerCase().includes("con administración");
+      const adminVal = (!isPropAdminIncluded && pAdminFee > 0) ? pAdminFee : 0;
       const totalRent = propRent + adminVal;
 
       if (propRent <= 0 && price > 100000000) {

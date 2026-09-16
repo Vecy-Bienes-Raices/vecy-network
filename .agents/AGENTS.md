@@ -167,7 +167,28 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.62 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.63 — Septiembre 2026
+
+### Novedades v31.63 (Resolución de Congelamiento Matutino de la Web, Re-matching Masivo No Bloqueante a las 03:45 AM, Prioridad Autoritativa de Base de Datos en Tabla de Cotejo y Validación Anti-Duplicación de Cuota de Administración):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Página Web Congelada en Bucle de Carga Diariamente al Amanecer*: A las 08:00 AM todos los días (`0 8 * * *`), el cron `runNightlyRematch()` se disparaba de forma síncrona en Node.js para evaluar todos los requerimientos activos contra todas las propiedades disponibles (~4.5M combinaciones). Al hacer miles de consultas a Postgres sin ceder el Event Loop, la CPU del servidor subía al 100%, congelando Node.js e impidiendo responder a las peticiones HTTP que ingresaban en la mañana. Nginx arrojaba `110: Connection timed out` y la web quedaba cargando indefinidamente.
+  2) *Confusión de Valores en la Tabla de Cotejo (`AdminMatches.tsx`)*: En `scoreRows()`, las heurísticas de regex sobre el texto crudo (`propTextLower` y `reqTextLower`) tenían precedencia sobre los campos guardados en la BD (`price`, `rentPrice`, `adminFee`, `presupuestoMax`, `adminFeeMax`). Al haber textos con "arriendo $3.5M, admon $600K", el regex confundía la cuota de administración con el canon. Al darle "Editar", los campos leían los valores de BD (que estaban correctos), pero al guardar y re-renderizar, `scoreRows` volvía a ignorar la BD y sobreescribía con el regex defectuoso, simulando que "no dejaba guardar".
+  3) *Estrategia Doctrinal de Costo $0 en APIs de Google*: Eduardo reiteró su preferencia por usar múltiples APIs gratuitas de Google y aprovechar la inactividad nocturna (10:30 PM a 05:00 AM) para la recarga de cuotas sin facturación obligatoria.
+- **Acciones Ejecutadas**:
+  1) *Reprogramación y Yield Asíncrono en `nightlyRematch.ts` y `cronService.ts`*:
+     - Cron reprogramado a las **03:45 AM** (`45 3 * * *`), ventana de silencio total y 0 tráfico de usuarios.
+     - Implementada pausa no bloqueante de 50ms (`setTimeout(50)`) entre chunks de requerimientos para garantizar que el Event Loop de Express/tRPC nunca se monopolice.
+     - Añadida guardia `isRematchRunning` para evitar ejecuciones concurrentes.
+  2) *Prioridad Absoluta a la Base de Datos en la Tabla de Cotejo (`AdminMatches.tsx`)*:
+     - Los campos autoritativos guardados en base de datos (`prop.price`, `prop.rentPrice`, `prop.adminFee`, `req.presupuestoMax`, `req.adminFeeMax`) son ahora la Fuente de Verdad #1 estricta. El regex solo opera si el campo en la BD está vacío (`0` o `null`).
+     - Añadido filtro cruzado que anula la administración si coincide con el canon o precio de venta.
+     - En `server/_core/matching.ts`, añadido chequeo `isPropAdminIncluded` para evitar duplicar la administración si ya está incluida en el canon.
+  3) *Compilación y Despliegue*:
+     - `npm run check` (0 errores) y `npm run build` (0 errores). Versión `v31.63`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.62 — Septiembre 2026
 
 ### Novedades v31.62 (Failover Secuencial de Claves Gemini, Erradicación del Efecto Dominó en Baileys, Desactivación de Idle Timeout en PostgreSQL y Timeout Seguro 12s):
 - **Diagnóstico y Causas Raíz Identificadas**:

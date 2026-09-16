@@ -322,6 +322,35 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.63 — Septiembre 2026
+
+#### 📌 RESOLUCIÓN DE CONGELAMIENTO MATUTINO DE LA WEB, RE-MATCHING MASIVO NO BLOQUEANTE A LAS 03:45 AM, PRIORIDAD AUTORITATIVA DE BASE DE DATOS EN TABLA DE COTEJO Y VALIDACIÓN ANTI-DUPLICACIÓN DE CUOTA DE ADMINISTRACIÓN
+
+**Problemas identificados:**
+1. **Página Web Congelada en Bucle de Carga Diariamente al Amanecer**:
+   - En `server/_core/cronService.ts`, todos los días a las **08:00 AM** se ejecutaba el cron de `runNightlyRematch()`. Evaluaba síncronamente todos los requerimientos activos contra todas las propiedades (~4.5 millones de pares) sin ceder el Event Loop de Node.js, saturando la CPU al 100% y colapsando el pool de conexiones de PostgreSQL. Nginx arrojaba error 504 / 110 Gateway Time-out justo a la hora de mayor afluencia matutina.
+2. **Confusión de Valores en la Tabla de Cotejo (`AdminMatches.tsx`)**:
+   - En `scoreRows()`, las expresiones regulares sobre el texto crudo tenían prioridad sobre los datos de la base de datos. Si una publicación mencionaba arriendo y administración, el regex capturaba erróneamente la administración como canon de arriendo. Al entrar al modo edición, los inputs mostraban los datos de la BD (correctos), pero al pulsar Guardar, `scoreRows` re-parseaba el texto crudo y sobreescribía los valores con el regex defectuoso, simulando que no guardaba o que era un error de interfaz.
+3. **Estrategia Doctrinal de Costo $0 en APIs de Google**:
+   - Eduardo ratificó la necesidad de operar con múltiples claves gratuitas en Failover Secuencial y aprovechar el intervalo de inactividad nocturna (10:30 PM a 05:00 AM) para la recarga automática de cuotas de Google a $0 COP.
+
+**Solución aplicada:**
+- **`server/_core/cronService.ts`**:
+  - Reprogramado el cron de re-matching masivo de las 08:00 AM a las **03:45 AM** (`45 3 * * *` hora Bogotá), ejecutándose en la madrugada profunda en plena ventana de silencio e inactividad.
+- **`server/jobs/nightlyRematch.ts`**:
+  - Implementada guardia de ejecución única `isRematchRunning` para prevenir ejecuciones concurrentes.
+  - Añadida pausa asíncrona de 50ms (`await new Promise(r => setTimeout(r, 50))`) entre cada lote de 50 requerimientos, cediendo el Event Loop por completo a Express y tRPC para mantener la web 100% fluida en todo momento.
+- **`client/src/components/admin/AdminMatches.tsx`**:
+  - Invertida la jerarquía de extracción en `scoreRows()`: los campos guardados en base de datos (`price`, `rentPrice`, `adminFee`, `presupuestoMax`, `adminFeeMax`) son ahora la **Fuente de Verdad #1 Absoluta**.
+  - El regex sobre el texto crudo solo opera como fallback si el campo en base de datos está vacío (`0` o `null`).
+  - Validación cruzada anti-duplicación: si la cuota de administración coincide con el canon o precio de venta, se anula para evitar duplicaciones accidentales.
+- **`server/_core/matching.ts`**:
+  - Incorporada la comprobación `isPropAdminIncluded` para evitar sumar la cuota de administración al canon si en la publicación ya figura como incluida.
+- **Compilación Limpia**:
+  - `npm run check` (0 errores) y `npm run build` (0 errores). Versión `v31.63`.
+
+---
+
 ### 🔖 v31.62 — Septiembre 2026
 
 #### 📌 FAILOVER SECUENCIAL EN CASCADA DE CLAVES GEMINI, SANITIZACIÓN UNIVERSAL DE CREDENCIALES, DESACTIVACIÓN DE IDLE TIMEOUT EN POSTGRESQL Y TIMEOUT SEGURO DE 12S

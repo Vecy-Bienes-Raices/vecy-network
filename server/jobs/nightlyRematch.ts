@@ -17,11 +17,19 @@ import { extractFallbackDataFromText } from "../_core/janIA";
  * Estrategia: UPSERT (inserta o actualiza — NUNCA borra matches existentes).
  * NOTA DOCTRINAL: Sin notificaciones a WhatsApp. Los matches se gestionan en /admin.
  */
+let isRematchRunning = false;
+
 export async function runNightlyRematch() {
-  console.log("[NIGHTLY-REMATCH v28.0] Iniciando cruce masivo doctrinal...");
+  if (isRematchRunning) {
+    console.log("[NIGHTLY-REMATCH] Ya hay una ejecución en curso, saltando...");
+    return;
+  }
+  isRematchRunning = true;
+  console.log("[NIGHTLY-REMATCH v31.63] Iniciando cruce masivo doctrinal no bloqueante...");
   const db = await getDb();
   if (!db) {
     console.error("[NIGHTLY-REMATCH] No se pudo conectar a la base de datos.");
+    isRematchRunning = false;
     return;
   }
 
@@ -209,6 +217,8 @@ export async function runNightlyRematch() {
       console.log(
         `[NIGHTLY-REMATCH ${pct}%] Procesados ${i + chunk.length}/${enrichedReqs.length} reqs | Nuevos: ${insertedCount} | Actualizados: ${updatedCount}`
       );
+      // 🛡️ Pausa no bloqueante de 50ms para ceder el Event Loop a Express / tRPC y evitar congelamientos de la web
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
 
     console.log(
@@ -219,6 +229,8 @@ export async function runNightlyRematch() {
       "[NIGHTLY-REMATCH] Error durante el cruce masivo nocturno:",
       error.message || error
     );
+  } finally {
+    isRematchRunning = false;
   }
 }
 

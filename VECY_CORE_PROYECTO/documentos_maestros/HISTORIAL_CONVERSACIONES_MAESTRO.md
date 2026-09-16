@@ -50,7 +50,47 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.62 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.63 — Septiembre 2026
+
+### 🗓️ Sesión: Miércoles 16 de Septiembre de 2026 — 12:20 (Hora Colombia UTC-5)
+**Versión**: `v31.63` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + Re-matching No Bloqueante (03:45 AM) + Prioridad Estricta BD en Tabla de Cotejo (`AdminMatches.tsx`) + Failover Secuencial de Claves Gemini + PM2 (`jania-server`) + GitHub (`main`)
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+1. *"Ha y se me olvidaba decirte que mi pagina web tambien amanece muerta y se queda cargando y cargando todos los días."*
+2. *"Además también vi que ha vuelto a cometer errores del pasado y ha vuelto a confundir valores en la tabla de cotejo, pues está colocando valores o precios de Administración mensual en el campo Precio de Arriendo o precio de Venta y viceversa y diciendo que es viable cuando no lo es, lo curioso es que el Match si es viable en sus valores reales pero al momento de intentar corregir la tabla de cotejo, no lo permite y cuando le doy editar aparentemente los valores allí están ya bien colocados pero no se visualizan bien, y al momento de guardar no deja hacerlo, sigue igual y de nada vale corregir, es como si fuera un problema de interfaz o algo así. No lo entiendo tampoco."*
+3. *"Todo eso ya debería estar funcionando a la perfección y cómo se venía trabajando todo el mes pasado hasta la semana pasada, pero algo cambió y tuvo que haber sido que debo en google cloud un saldo, pero como te digo, tengo varios perfiles de Google cloud, si quieres saco una API gratuita en cada perfil y como en la noche y hasta la madrugada hay un intervalo como de unas 4 o 5 horas en que JanIA no trabaja en Whatsapp y está quieta por inactividad de los usuarios porque tienen que dormir, pues aprovechamos para que las APIs se recarguen, no te parece o dime cómo lo solucionamos.? NECESITO QUE TODO QUEDE FUNCIONANDO PERFECTAMENTE Y EN LAS MEJORES CONDICIONES."*
+
+#### 🔬 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Causa Raíz de la Página Web "Muerta" en las Mañanas**:
+   - En `server/_core/cronService.ts`, todos los días a las **08:00 AM** (`0 8 * * *`) se ejecutaba el cron de `runNightlyRematch()`.
+   - Dicho proceso evaluaba de manera síncrona y continua todos los requerimientos activos contra todas las propiedades disponibles en la base de datos (~4.5 millones de pares potenciales), monopolizando el Event Loop de Node.js al 100% de CPU y saturando el pool de conexiones de Postgres.
+   - Justo a la hora en que los usuarios e inmobiliarias ingresan a la plataforma por la mañana (08:00 AM), Nginx arrojaba `upstream timed out (110: Connection timed out)` y las peticiones web (`properties.list`, `auth.me`) quedaban en bucle de carga indefinido.
+   - Adicionalmente, el anterior `idle_session_timeout = '60s'` de PostgreSQL mataba conexiones durante la noche, dejando sockets cerrados al amanecer.
+2. **Causa Raíz de la Confusión de Valores en la Tabla de Cotejo (`AdminMatches.tsx`)**:
+   - En la función `scoreRows()` de `AdminMatches.tsx`, la lógica de visualización priorizaba heurísticas de expresiones regulares sobre el texto libre crudo (`propTextLower` y `reqTextLower`) ANTES de consultar los campos autoritativos de la base de datos (`prop.price`, `prop.rentPrice`, `prop.adminFee`, `req.presupuestoMax`, `req.adminFeeMax`).
+   - Si una publicación contenía frases como *"arriendo $3.500.000, admon $600.000"*, el regex de arriendo en ocasiones capturaba los `$600.000` y el de administración los `$3.500.000`.
+   - Al abrir el modo edición (`isEditingThisCard`), los inputs leían correctamente los valores de la base de datos (donde el canon sí era $3.500.000). Sin embargo, al pulsar **Guardar**, el frontend guardaba en la base de datos y recalculaba la vista volviendo a llamar a `scoreRows()`, el cual volvía a ejecutar el regex del texto crudo y sobreescribía los valores corregidos, dando la sensación de que "no dejaba guardar" o "era un fallo de interfaz".
+3. **Estrategia Doctrinal de Costo $0 en APIs de Google**:
+   - La arquitectura de Failover Secuencial implementada en `v31.62` opera exactamente bajo la premisa de Eduardo: utiliza prioritariamente la Clave #1. Si se agota la cuota gratuita (429), conmuta automáticamente a la Clave #2, y de ella a la #3.
+   - Durante la ventana de silencio nocturno (10:30 PM a 05:00 AM hora Bogotá), JanIA no realiza llamadas salientes de WhatsApp y el tráfico cae a cero, permitiendo que Google reinicie las cuotas diarias gratuitas sin generar costos de facturación.
+
+#### 🛠️ Acciones Técnicas Ejecutadas (Solución Definitiva v31.63):
+1. **Reubicación y Optimización No Bloqueante del Re-matching Masivo**:
+   - En `server/_core/cronService.ts`, se reprogramó el cron de re-matching de las 08:00 AM a las **03:45 AM** (`45 3 * * *` hora Bogotá), ejecutándose en la madrugada profunda en plena ventana de inactividad de usuarios.
+   - En `server/jobs/nightlyRematch.ts`, se implementó una guardia de ejecución única `isRematchRunning` y una pausa asíncrona de 50ms (`await new Promise(r => setTimeout(r, 50))`) entre cada lote de 50 requerimientos, cediendo el Event Loop para que Express y tRPC atiendan peticiones web instantáneamente sin latencia ni cuelgues.
+2. **Prioridad Autoritativa Absoluta a la Base de Datos en la Tabla de Cotejo (`AdminMatches.tsx`)**:
+   - Se invirtió la jerarquía en `scoreRows()`: los campos guardados en base de datos (`prop.price`, `prop.rentPrice`, `prop.adminFee`, `req.presupuestoMax`, `req.adminFeeMax`) son ahora la **Fuente de Verdad #1 Inviolable**.
+   - El parsing por expresiones regulares sobre el texto libre solo actúa como fallback secundario si y solo si el campo de la base de datos está vacío (`0` o `null`).
+   - Se incorporó validación cruzada: si `propAdminFee === propRentPrice` o `propAdminFee === propSalePrice`, se anula para erradicar cualquier duplicación accidental.
+   - En `server/_core/matching.ts`, se añadió la verificación `isPropAdminIncluded` para evitar sumar la cuota de administración al canon si en la publicación ya figura como incluida.
+3. **Validación y Compilación**:
+   - `npm run check`: 0 errores de TypeScript.
+   - `npm run build`: Vite bundle y esbuild del servidor completados en 24.5s con 0 advertencias.
+   - Versión oficial incrementada a `v31.63` en `shared/const.ts` y `package.json`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.62 — Septiembre 2026
 
 ### 🗓️ Sesión: Miércoles 16 de Septiembre de 2026 — 11:35 (Hora Colombia UTC-5)
 **Versión**: `v31.62` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + Failover Secuencial de Claves Gemini (Clave 1 -> Clave 2 -> Clave 3) + Baileys WhatsApp Engine + PM2 (`jania-server`) + GitHub (`main`)
