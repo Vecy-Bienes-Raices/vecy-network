@@ -470,72 +470,7 @@ export async function executeIdentityVerification(
     };
   }
 
-  // 1. Verificar si es NIT o RUT
-  const tDocLower = (tipoDocumento || '').toLowerCase();
-  const isNit = tDocLower.includes('nit') || tDocLower.includes('rut');
-  if (isNit) {
-    if (!/^\d{9,10}$/.test(clean)) {
-      return {
-        valid: false,
-        match: false,
-        error: 'El NIT debe contener 9 o 10 dígitos numéricos (incluyendo dígito de verificación).',
-      };
-    }
-    const cleanNit = clean.slice(0, 9);
-    const dvCalculado = calcularDigitoVerificacionDIAN(cleanNit);
-    if (clean.length === 10) {
-      const dvIngresado = parseInt(clean.slice(9), 10);
-      if (dvIngresado !== dvCalculado) {
-        return {
-          valid: false,
-          match: false,
-          error: `Dígito de verificación DIAN incorrecto. Para el NIT ${cleanNit}, el dígito oficial es -${dvCalculado}.`,
-        };
-      }
-    }
-    const nombreEmpresa = (nombreIngresado || '').trim();
-    return {
-      valid: true,
-      match: true,
-      officialName: nombreEmpresa || clean,
-      message: `✓ NIT/RUT validado conforme a estructura DIAN (Dígito de verificación: ${dvCalculado})`,
-    };
-  }
-
-  // Validación estricta de Cédula de Ciudadanía colombiana
-  const isCedula = !isNit && (tDocLower.includes('cédula') || tDocLower.includes('cedula') || tDocLower === '' || tDocLower.includes('ciudadan'));
-  if (isCedula) {
-    if (!/^\d+$/.test(clean)) {
-      return {
-        valid: false,
-        match: false,
-        error: 'La Cédula de Ciudadanía solo debe contener caracteres numéricos.',
-      };
-    }
-    if (clean.length === 9) {
-      return {
-        valid: false,
-        match: false,
-        error: '⚠️ En Colombia no existen Cédulas de Ciudadanía de 9 dígitos. Verifica si omitiste o agregaste algún número.',
-      };
-    }
-    if (clean.length < 6 || clean.length > 10) {
-      return {
-        valid: false,
-        match: false,
-        error: '⚠️ La Cédula de Ciudadanía en Colombia debe contener entre 6 y 8 dígitos (antiguas) o 10 dígitos (nuevas).',
-      };
-    }
-    if (clean.length === 10 && !clean.startsWith('1')) {
-      return {
-        valid: false,
-        match: false,
-        error: '⚠️ Las Cédulas de Ciudadanía de 10 dígitos en Colombia deben iniciar por 1. Verifica el número digitado.',
-      };
-    }
-  }
-
-  // Verificación inversa para nombres autoritativos familiares/corporativos conocidos
+  // 1. Verificación inversa para nombres autoritativos familiares/corporativos conocidos (0ms)
   const normName = (nombreIngresado || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   if (normName.length >= 4) {
     const isDaniel = normName.includes('daniel') && (normName.includes('rivera') || normName.includes('noguera') || normName.trim() === 'daniel');
@@ -584,6 +519,9 @@ export async function executeIdentityVerification(
     }
   }
 
+  const tDocLower = (tipoDocumento || '').toLowerCase();
+  const isNit = tDocLower.includes('nit') || tDocLower.includes('rut');
+
   // 2. Registro Autoritativo Doctrinal de Fundadores y Vecy Bienes Raíces (0ms instantáneo)
   const authEntry = AUTHORITATIVE_FAMILY_IDENTITIES[clean];
   if (authEntry) {
@@ -626,6 +564,69 @@ export async function executeIdentityVerification(
         match: false,
         officialName: authEntry.canonicalName,
         error: `⚠️ El número de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un número mal o corrígelo para continuar.`,
+      };
+    }
+  }
+
+  // 3. Validación de NIT/RUT de terceros
+  if (isNit) {
+    if (!/^\d{8,11}$/.test(clean)) {
+      return {
+        valid: false,
+        match: false,
+        error: 'El NIT debe contener entre 8 y 10 dígitos numéricos (incluyendo dígito de verificación).',
+      };
+    }
+    const baseNit = clean.length === 10 ? clean.slice(0, 9) : (clean.length === 9 ? clean.slice(0, 8) : clean);
+    const dvCalculado = calcularDigitoVerificacionDIAN(baseNit);
+    if (clean.length >= 9) {
+      const dvIngresado = parseInt(clean.slice(-1), 10);
+      if (dvIngresado !== dvCalculado) {
+        return {
+          valid: false,
+          match: false,
+          error: `Dígito de verificación DIAN incorrecto. Para el NIT ${baseNit}, el dígito oficial es -${dvCalculado}.`,
+        };
+      }
+    }
+    const nombreEmpresa = (nombreIngresado || '').trim();
+    return {
+      valid: true,
+      match: true,
+      officialName: nombreEmpresa || clean,
+      message: `✓ NIT/RUT validado conforme a estructura DIAN (Dígito de verificación: ${dvCalculado})`,
+    };
+  }
+
+  // 4. Validación estricta de Cédula de Ciudadanía colombiana
+  const isCedula = !isNit && (tDocLower.includes('cédula') || tDocLower.includes('cedula') || tDocLower === '' || tDocLower.includes('ciudadan'));
+  if (isCedula) {
+    if (!/^\d+$/.test(clean)) {
+      return {
+        valid: false,
+        match: false,
+        error: 'La Cédula de Ciudadanía solo debe contener caracteres numéricos.',
+      };
+    }
+    if (clean.length === 9) {
+      return {
+        valid: false,
+        match: false,
+        error: '⚠️ En Colombia no existen Cédulas de Ciudadanía de 9 dígitos. Verifica si omitiste o agregaste algún número.',
+      };
+    }
+    if (clean.length < 6 || clean.length > 10) {
+      return {
+        valid: false,
+        match: false,
+        error: '⚠️ La Cédula de Ciudadanía en Colombia debe contener entre 6 y 8 dígitos (antiguas) o 10 dígitos (nuevas).',
+      };
+    }
+    if (clean.length === 10 && !clean.startsWith('1')) {
+      return {
+        valid: false,
+        match: false,
+        error: '⚠️ Las Cédulas de Ciudadanía de 10 dígitos en Colombia deben iniciar por 1. Verifica el número digitado.',
       };
     }
   }
