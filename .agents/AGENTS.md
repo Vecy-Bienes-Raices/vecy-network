@@ -167,7 +167,23 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.61 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.62 — Septiembre 2026
+
+### Novedades v31.62 (Failover Secuencial de Claves Gemini, Erradicación del Efecto Dominó en Baileys, Desactivación de Idle Timeout en PostgreSQL y Timeout Seguro 12s):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Caída Diaria del Socket de WhatsApp (Error 408: Request Timeout)*: En el archivo `.env` del VPS, la variable `GEMINI_API_KEYS` contenía comillas dobles que contaminaban la primera clave con `"` al inicio y la tercera con `"` al final. Al ejecutarse un Round-Robin ciego por cada mensaje, el 66% de las peticiones a Google iban con claves corruptas, cayendo en timeouts de 45 segundos que congelaban el Event Loop de Node.js e impedían responder a tiempo el ping de Keep-Alive de WhatsApp.
+  2) *Homicidio de Conexiones por PostgreSQL*: En la versión previa se fijó `idle_session_timeout = '60s'` en PostgreSQL. Transcurrido 1 minuto de inactividad, Postgres mataba las conexiones del pool de Node.js, provocando errores masivos de `write CONNECTION_CLOSED localhost:5432` en JanIA al intentar registrar inmuebles, matches o heartbeats.
+  3) *Doctrina de Failover Secuencial (Eduardo A. Rivera)*: El bot no debe rotar claves en cada mensaje desgastando todas a la vez; debe usar SIEMPRE la Clave #1 (Primaria). Si y solo si la #1 se agota por cuota (429) o satura (503), conmuta automáticamente a la Clave #2, y de ella a la #3.
+- **Acciones Ejecutadas**:
+  1) *Failover Secuencial en `llm.ts`*: Implementada la función `getActiveFailoverKey()` que prioriza estrictamente la Clave 1 y conmuta a la 2 o 3 únicamente ante errores 429 (pausa de 15 min) o 503 (pausa de 45s).
+  2) *Sanitización Universal de Claves*: Función `sanitizeKey` con `.replace(/^["']|["']$/g, '').trim()` implementada en `llm.ts`, `janIA.ts` y `voiceTranscription.ts`. Limpiado el archivo `.env` en el servidor VPS.
+  3) *Timeout Seguro de 12s*: Reducido el timeout de Axios de 45s a 12s. Si Google no responde en 12s, no congela el servidor ni desconecta WhatsApp: conmuta de inmediato a la siguiente clave.
+  4) *Limpieza Determinista de Sockets Baileys (`whatsapp-match.ts`)*: Remoción de listeners anteriores y cierre explícito de WebSocket antes de reinicializar para prevenir fugas de memoria y duplicaciones.
+  5) *Saneamiento de PostgreSQL en VPS*: Restablecidos `idle_session_timeout = '0'`, `idle_in_transaction_session_timeout = '60s'` y `statement_timeout = '60s'`, erradicando los cierres intempestivos de conexión.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.61 — Septiembre 2026
 
 ### Novedades v31.61 (Cuadrito de Dígito de Verificación DV para NIT, Depuración 1-Clic del Centro de Verificación, Saneamiento de Profiles de Vecy y Corrección Error 400 agent_id):
 - **Diagnóstico y Causas Raíz Identificadas**:

@@ -118,15 +118,15 @@ async function transcodeWebmToWav(inputBuffer: Buffer): Promise<Buffer> {
 async function transcribeAudioWithGemini(audioBuffer: Buffer, mimeType: string): Promise<string> {
   const allKeys = (process.env.GEMINI_API_KEYS || "")
     .split(",")
-    .map(k => k.trim())
+    .map(k => k.replace(/^["']|["']$/g, "").trim())
     .filter(Boolean);
   
-  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.trim());
-  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.trim());
-  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.trim());
-  if (ENV.forgeApiKey) allKeys.push(ENV.forgeApiKey.trim());
+  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.replace(/^["']|["']$/g, "").trim());
+  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.replace(/^["']|["']$/g, "").trim());
+  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.replace(/^["']|["']$/g, "").trim());
+  if (ENV.forgeApiKey) allKeys.push(ENV.forgeApiKey.replace(/^["']|["']$/g, "").trim());
 
-  const uniqueKeys = Array.from(new Set(allKeys));
+  const uniqueKeys = Array.from(new Set(allKeys.filter(Boolean)));
   if (uniqueKeys.length === 0) {
     throw new Error("No hay ninguna GEMINI_API_KEY configurada para la transcripción de voz.");
   }

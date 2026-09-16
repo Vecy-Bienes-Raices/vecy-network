@@ -12,57 +12,80 @@ export type LLMProvider = "google" | "anthropic";
 
 const keyCooldowns = new Map<string, number>();
 
+function sanitizeKey(k: string): string {
+  if (!k) return "";
+  return k.replace(/^["']|["']$/g, "").trim();
+}
+
 function getGeminiKeys(): string[] {
   const keysSet = new Set<string>();
   
   // Claves múltiples separadas por coma
-  const multiKeys = (process.env.GEMINI_API_KEYS || "").split(",").map(k => k.trim()).filter(Boolean);
+  const multiKeys = (process.env.GEMINI_API_KEYS || "").split(",").map(sanitizeKey).filter(Boolean);
   multiKeys.forEach(k => keysSet.add(k));
 
-  if (process.env.GEMINI_API_KEY) keysSet.add(process.env.GEMINI_API_KEY.trim());
-  if (process.env.GOOGLE_API_KEY) keysSet.add(process.env.GOOGLE_API_KEY.trim());
-  if (process.env.GEMINI_BACKUP_KEY) keysSet.add(process.env.GEMINI_BACKUP_KEY.trim());
-  if (ENV.forgeApiKey) keysSet.add(ENV.forgeApiKey.trim());
+  if (process.env.GEMINI_API_KEY) {
+    const k = sanitizeKey(process.env.GEMINI_API_KEY);
+    if (k) keysSet.add(k);
+  }
+  if (process.env.GOOGLE_API_KEY) {
+    const k = sanitizeKey(process.env.GOOGLE_API_KEY);
+    if (k) keysSet.add(k);
+  }
+  if (process.env.GEMINI_BACKUP_KEY) {
+    const k = sanitizeKey(process.env.GEMINI_BACKUP_KEY);
+    if (k) keysSet.add(k);
+  }
+  if (ENV.forgeApiKey) {
+    const k = sanitizeKey(ENV.forgeApiKey);
+    if (k) keysSet.add(k);
+  }
 
   return Array.from(keysSet);
 }
 
-let currentKeyIndex = 0;
-
-function getNextAvailableKey(): string {
+/**
+ * FAILOVER SECUENCIAL DOCTRINAL (v31.62):
+ * - Usa SIEMPRE la Clave #1 (Primaria) mientras esté disponible y con cuota.
+ * - Si la Clave #1 se agota (429) o satura (503), pasa a la Clave #2.
+ * - Si la #2 se agota, pasa a la Clave #3, y así sucesivamente.
+ * - Cero Round-Robin: no desgasta todas las claves a la vez ni salta innecesariamente.
+ */
+function getActiveFailoverKey(): { key: string; index: number } {
   const allKeys = getGeminiKeys();
   if (allKeys.length === 0) {
     throw new Error("No hay ninguna GEMINI_API_KEY configurada en el entorno.");
   }
 
   const now = Date.now();
-  // Round-robin activo para distribuir carga equitativamente entre las claves/proyectos disponibles
+  // Buscar en orden de prioridad estricta la primera clave que NO esté en cooldown
   for (let i = 0; i < allKeys.length; i++) {
-    const idx = (currentKeyIndex + i) % allKeys.length;
-    const key = allKeys[idx];
+    const key = allKeys[i];
     const cooldownUntil = keyCooldowns.get(key) || 0;
     if (now > cooldownUntil) {
-      currentKeyIndex = (idx + 1) % allKeys.length;
-      return key;
+      return { key, index: i + 1 };
     }
   }
 
-  // Si todas están en cooldown temporal, usar la que tenga el cooldown más cercano a expirar
+  // Si todas las claves están en cooldown, seleccionar la que más pronto se descongele
   let bestKey = allKeys[0];
   let minCooldown = keyCooldowns.get(bestKey) || Infinity;
-  for (const k of allKeys) {
+  let bestIdx = 1;
+  for (let i = 0; i < allKeys.length; i++) {
+    const k = allKeys[i];
     const cd = keyCooldowns.get(k) || Infinity;
     if (cd < minCooldown) {
       minCooldown = cd;
       bestKey = k;
+      bestIdx = i + 1;
     }
   }
-  return bestKey;
+  return { key: bestKey, index: bestIdx };
 }
 
-function markKeyCooldown(key: string, seconds: number = 20) {
+function markKeyCooldown(key: string, seconds: number = 60, reason: string = "Rate Limit (429)") {
   keyCooldowns.set(key, Date.now() + seconds * 1000);
-  console.warn(`[JanIA-LLM] Clave Gemini puesta en pausa por ${seconds}s debido a Rate Limit (429).`);
+  console.warn(`[JanIA-LLM] 🛡️ Clave Gemini (...${key.slice(-6)}) en pausa por ${seconds}s debido a ${reason}. Saltando a siguiente clave.`);
 }
 
 // Modelos ordenados por prioridad de fallback (100% compatibles y activos en Google API)
@@ -189,16 +212,18 @@ async function invokeGemini(
   let lastError: any = null;
 
   for (const currentModel of modelsToTry) {
+    // Intentar a través de las claves disponibles en cascada secuencial
     for (let keyAttempt = 0; keyAttempt < Math.max(allKeys.length, 1); keyAttempt++) {
-      const activeKey = getNextAvailableKey();
+      const { key: activeKey, index: keyNum } = getActiveFailoverKey();
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${activeKey}`;
 
       for (let attempt = 1; attempt <= 2; attempt++) {
         try {
           await paceRequest();
-          console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (Clave: ...${activeKey.slice(-6)}, Intento ${attempt})...`);
+          console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (Clave #${keyNum}: ...${activeKey.slice(-6)}, Intento ${attempt})...`);
           
-          const response = await axios.post(apiUrl, payload, { timeout: 45000 });
+          // Timeout seguro de 12 segundos: previene que peticiones colgadas de Google desconecten el socket de WhatsApp
+          const response = await axios.post(apiUrl, payload, { timeout: 12000 });
 
           if (response.data.candidates && response.data.candidates[0]) {
             const firstPart = response.data.candidates[0].content?.parts?.[0];
@@ -221,27 +246,40 @@ async function invokeGemini(
           }
 
           console.warn(`[JanIA-LLM] Respuesta vacía de ${currentModel}. Reintentando...`);
-          await new Promise(r => setTimeout(r, 1500));
+          await new Promise(r => setTimeout(r, 1000));
 
         } catch (error: any) {
           lastError = error;
           const status = error.response?.status;
           const errorMsg = error.response?.data?.error?.message || error.message;
 
+          // 429: Rate Limit / Cuota diaria agotada en esta clave -> Pausar esta clave por 15 min y pasar a la siguiente
           if (status === 429) {
-            markKeyCooldown(activeKey, 20);
-            console.warn(`[JanIA-LLM] ⚠️ Rate limit (429) en ${currentModel}. Probando siguiente modelo o clave...`);
-            break; // Pasar de inmediato a la siguiente clave/modelo
+            markKeyCooldown(activeKey, 900, "Cuota diaria agotada (429)");
+            break; // Saltar a la siguiente clave del Failover
           }
 
-          if (status === 503 || status === 500) {
-            console.warn(`[JanIA-LLM] Error ${status} de servidor Google. Reintentando en 2s...`);
-            await new Promise(r => setTimeout(r, 2000));
+          // 503: Servidor saturado en Google -> Pausar esta clave por 45s y pasar a la siguiente
+          if (status === 503) {
+            markKeyCooldown(activeKey, 45, "Google Server Saturation (503 UNAVAILABLE)");
+            break; // Saltar a la siguiente clave del Failover
+          }
+
+          // Timeout de Axios (>12s) -> Pausar esta clave por 60s para no retrasar los sockets de WhatsApp
+          if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+            markKeyCooldown(activeKey, 60, "Timeout > 12s");
+            console.warn(`[JanIA-LLM] ⏱️ Timeout de 12s excedido en Clave #${keyNum}. Conmutando a siguiente clave de inmediato.`);
+            break;
+          }
+
+          if (status === 500 || status === 502) {
+            console.warn(`[JanIA-LLM] Error ${status} de Google. Reintentando en 1s...`);
+            await new Promise(r => setTimeout(r, 1000));
             continue;
           }
 
-          console.error(`[JanIA-LLM] Error en ${currentModel}:`, errorMsg);
-          break; // Error no recuperable con esta clave/modelo, probar siguiente
+          console.error(`[JanIA-LLM] Error en ${currentModel} (Clave #${keyNum}):`, errorMsg);
+          break; // Error no recuperable con esta clave, saltar a la siguiente
         }
       }
     }

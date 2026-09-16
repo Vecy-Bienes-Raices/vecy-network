@@ -702,45 +702,62 @@ __export(llm_exports, {
   invokeLLM: () => invokeLLM
 });
 import axios2 from "axios";
+function sanitizeKey(k) {
+  if (!k) return "";
+  return k.replace(/^["']|["']$/g, "").trim();
+}
 function getGeminiKeys() {
   const keysSet = /* @__PURE__ */ new Set();
-  const multiKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.trim()).filter(Boolean);
+  const multiKeys = (process.env.GEMINI_API_KEYS || "").split(",").map(sanitizeKey).filter(Boolean);
   multiKeys.forEach((k) => keysSet.add(k));
-  if (process.env.GEMINI_API_KEY) keysSet.add(process.env.GEMINI_API_KEY.trim());
-  if (process.env.GOOGLE_API_KEY) keysSet.add(process.env.GOOGLE_API_KEY.trim());
-  if (process.env.GEMINI_BACKUP_KEY) keysSet.add(process.env.GEMINI_BACKUP_KEY.trim());
-  if (ENV.forgeApiKey) keysSet.add(ENV.forgeApiKey.trim());
+  if (process.env.GEMINI_API_KEY) {
+    const k = sanitizeKey(process.env.GEMINI_API_KEY);
+    if (k) keysSet.add(k);
+  }
+  if (process.env.GOOGLE_API_KEY) {
+    const k = sanitizeKey(process.env.GOOGLE_API_KEY);
+    if (k) keysSet.add(k);
+  }
+  if (process.env.GEMINI_BACKUP_KEY) {
+    const k = sanitizeKey(process.env.GEMINI_BACKUP_KEY);
+    if (k) keysSet.add(k);
+  }
+  if (ENV.forgeApiKey) {
+    const k = sanitizeKey(ENV.forgeApiKey);
+    if (k) keysSet.add(k);
+  }
   return Array.from(keysSet);
 }
-function getNextAvailableKey() {
+function getActiveFailoverKey() {
   const allKeys = getGeminiKeys();
   if (allKeys.length === 0) {
     throw new Error("No hay ninguna GEMINI_API_KEY configurada en el entorno.");
   }
   const now = Date.now();
   for (let i = 0; i < allKeys.length; i++) {
-    const idx = (currentKeyIndex + i) % allKeys.length;
-    const key = allKeys[idx];
+    const key = allKeys[i];
     const cooldownUntil = keyCooldowns.get(key) || 0;
     if (now > cooldownUntil) {
-      currentKeyIndex = (idx + 1) % allKeys.length;
-      return key;
+      return { key, index: i + 1 };
     }
   }
   let bestKey = allKeys[0];
   let minCooldown = keyCooldowns.get(bestKey) || Infinity;
-  for (const k of allKeys) {
+  let bestIdx = 1;
+  for (let i = 0; i < allKeys.length; i++) {
+    const k = allKeys[i];
     const cd = keyCooldowns.get(k) || Infinity;
     if (cd < minCooldown) {
       minCooldown = cd;
       bestKey = k;
+      bestIdx = i + 1;
     }
   }
-  return bestKey;
+  return { key: bestKey, index: bestIdx };
 }
-function markKeyCooldown(key, seconds = 20) {
+function markKeyCooldown(key, seconds = 60, reason = "Rate Limit (429)") {
   keyCooldowns.set(key, Date.now() + seconds * 1e3);
-  console.warn(`[JanIA-LLM] Clave Gemini puesta en pausa por ${seconds}s debido a Rate Limit (429).`);
+  console.warn(`[JanIA-LLM] \u{1F6E1}\uFE0F Clave Gemini (...${key.slice(-6)}) en pausa por ${seconds}s debido a ${reason}. Saltando a siguiente clave.`);
 }
 async function paceRequest() {
   const now = Date.now();
@@ -818,13 +835,13 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
   let lastError = null;
   for (const currentModel of modelsToTry) {
     for (let keyAttempt = 0; keyAttempt < Math.max(allKeys.length, 1); keyAttempt++) {
-      const activeKey = getNextAvailableKey();
+      const { key: activeKey, index: keyNum } = getActiveFailoverKey();
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${activeKey}`;
       for (let attempt = 1; attempt <= 2; attempt++) {
         try {
           await paceRequest();
-          console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (Clave: ...${activeKey.slice(-6)}, Intento ${attempt})...`);
-          const response = await axios2.post(apiUrl, payload, { timeout: 45e3 });
+          console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (Clave #${keyNum}: ...${activeKey.slice(-6)}, Intento ${attempt})...`);
+          const response = await axios2.post(apiUrl, payload, { timeout: 12e3 });
           if (response.data.candidates && response.data.candidates[0]) {
             const firstPart = response.data.candidates[0].content?.parts?.[0];
             if (firstPart) {
@@ -845,22 +862,30 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
             }
           }
           console.warn(`[JanIA-LLM] Respuesta vac\xEDa de ${currentModel}. Reintentando...`);
-          await new Promise((r) => setTimeout(r, 1500));
+          await new Promise((r) => setTimeout(r, 1e3));
         } catch (error) {
           lastError = error;
           const status = error.response?.status;
           const errorMsg = error.response?.data?.error?.message || error.message;
           if (status === 429) {
-            markKeyCooldown(activeKey, 20);
-            console.warn(`[JanIA-LLM] \u26A0\uFE0F Rate limit (429) en ${currentModel}. Probando siguiente modelo o clave...`);
+            markKeyCooldown(activeKey, 900, "Cuota diaria agotada (429)");
             break;
           }
-          if (status === 503 || status === 500) {
-            console.warn(`[JanIA-LLM] Error ${status} de servidor Google. Reintentando en 2s...`);
-            await new Promise((r) => setTimeout(r, 2e3));
+          if (status === 503) {
+            markKeyCooldown(activeKey, 45, "Google Server Saturation (503 UNAVAILABLE)");
+            break;
+          }
+          if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
+            markKeyCooldown(activeKey, 60, "Timeout > 12s");
+            console.warn(`[JanIA-LLM] \u23F1\uFE0F Timeout de 12s excedido en Clave #${keyNum}. Conmutando a siguiente clave de inmediato.`);
+            break;
+          }
+          if (status === 500 || status === 502) {
+            console.warn(`[JanIA-LLM] Error ${status} de Google. Reintentando en 1s...`);
+            await new Promise((r) => setTimeout(r, 1e3));
             continue;
           }
-          console.error(`[JanIA-LLM] Error en ${currentModel}:`, errorMsg);
+          console.error(`[JanIA-LLM] Error en ${currentModel} (Clave #${keyNum}):`, errorMsg);
           break;
         }
       }
@@ -873,13 +898,12 @@ async function invokeClaude(messages2, responseFormat) {
   console.log("[JanIA-LLM] Intentando procesar con Claude (Anthropic)...");
   throw new Error("El proveedor Anthropic est\xE1 preparado en c\xF3digo pero requiere API KEY y activaci\xF3n financiera.");
 }
-var keyCooldowns, currentKeyIndex, FALLBACK_MODELS, lastCallTimestamp, MIN_CALL_INTERVAL_MS;
+var keyCooldowns, FALLBACK_MODELS, lastCallTimestamp, MIN_CALL_INTERVAL_MS;
 var init_llm = __esm({
   "server/_core/llm.ts"() {
     "use strict";
     init_env();
     keyCooldowns = /* @__PURE__ */ new Map();
-    currentKeyIndex = 0;
     FALLBACK_MODELS = [
       "gemini-flash-lite-latest",
       "gemini-3.6-flash",
@@ -6722,12 +6746,12 @@ async function transcodeWebmToWav(inputBuffer) {
   });
 }
 async function transcribeAudioWithGemini(audioBuffer, mimeType) {
-  const allKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.trim()).filter(Boolean);
-  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.trim());
-  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.trim());
-  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.trim());
-  if (ENV.forgeApiKey) allKeys.push(ENV.forgeApiKey.trim());
-  const uniqueKeys = Array.from(new Set(allKeys));
+  const allKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.replace(/^["']|["']$/g, "").trim()).filter(Boolean);
+  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.replace(/^["']|["']$/g, "").trim());
+  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.replace(/^["']|["']$/g, "").trim());
+  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.replace(/^["']|["']$/g, "").trim());
+  if (ENV.forgeApiKey) allKeys.push(ENV.forgeApiKey.replace(/^["']|["']$/g, "").trim());
+  const uniqueKeys = Array.from(new Set(allKeys.filter(Boolean)));
   if (uniqueKeys.length === 0) {
     throw new Error("No hay ninguna GEMINI_API_KEY configurada para la transcripci\xF3n de voz.");
   }
@@ -8961,11 +8985,11 @@ ${cleanP}` : cleanP;
 }
 async function extractFlyerVision(imageBufferBase64) {
   if (!imageBufferBase64 || imageBufferBase64.trim() === "") return null;
-  const allKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.trim()).filter(Boolean);
-  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.trim());
-  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.trim());
-  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.trim());
-  const uniqueKeys = Array.from(new Set(allKeys));
+  const allKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.replace(/^["']|["']$/g, "").trim()).filter(Boolean);
+  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.replace(/^["']|["']$/g, "").trim());
+  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.replace(/^["']|["']$/g, "").trim());
+  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.replace(/^["']|["']$/g, "").trim());
+  const uniqueKeys = Array.from(new Set(allKeys.filter(Boolean)));
   if (uniqueKeys.length === 0) {
     console.warn("[JanIA-Vision] \u26A0\uFE0F No hay GEMINI_API_KEY configurada para an\xE1lisis visual.");
     return null;
@@ -13090,6 +13114,17 @@ var init_whatsapp_match = __esm({
       }
       async initialize() {
         try {
+          if (this.sock) {
+            try {
+              this.sock.ev.removeAllListeners("connection.update");
+              this.sock.ev.removeAllListeners("creds.update");
+              this.sock.ev.removeAllListeners("messages.upsert");
+              if (this.sock.ws && typeof this.sock.ws.close === "function") {
+                this.sock.ws.close();
+              }
+            } catch (cleanupErr) {
+            }
+          }
           const sessionDir = path7.join(process.cwd(), this.sessionFolderName);
           if (!fs7.existsSync(sessionDir)) {
             fs7.mkdirSync(sessionDir, { recursive: true });
@@ -15990,7 +16025,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.61";
+var VECY_VERSION = "v31.62";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

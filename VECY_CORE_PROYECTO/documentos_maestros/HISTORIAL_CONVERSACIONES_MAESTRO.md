@@ -50,7 +50,39 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.61 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.62 — Septiembre 2026
+
+### 🗓️ Sesión: Miércoles 16 de Septiembre de 2026 — 11:35 (Hora Colombia UTC-5)
+**Versión**: `v31.62` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + Failover Secuencial de Claves Gemini (Clave 1 -> Clave 2 -> Clave 3) + Baileys WhatsApp Engine + PM2 (`jania-server`) + GitHub (`main`)
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+1. *"Por qué tu optimizas y dejas trabajando a JanIA todos los días y JanIA se cae o se frena al siguiente día y a diario y deja de trabajar, esto viene sucediendo como desde el domingo o el lunes creo, pero no lo entiendo. ¿Qué está sucediendo?, ¿Tiene Solución?, ¿Será por lo que las APIS de la IA JanIA son gratuitas?, ¿Mi VPS está fallando?, ¿Qué es lo que pasa y cómo lo solucionas?"*
+2. *"Pero si veníamos trabajando así y con una sola API y no se caía el servicio y ahora que tu mehiciste sacar dos APIs más entonces se cae. No lo entiendo la verdad, debería usar una, cuando se caiga pasar a la otra y cuando esta se caiga a la tercera y así sucesivamente mientras se recargan o no se puede, tengo varios perfiles de Google Cloud si quieres saco una en cada una, ya tuve facturación y gasta mucho dinero por lo que son demasiados grupos y labores que tiene que hacer JanIA."*
+
+#### 🔬 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Comillas Dobles Corruptas en `.env`**: En el VPS, `GEMINI_API_KEYS` estaba envuelto entre comillas dobles (`"key1,key2,key3"`). Al hacer `.split(',')`, la Clave 1 cargaba con una comilla al inicio (`"AQ...`) y la Clave 3 con una al final (`...3Q"`).
+2. **Round-Robin Indiscriminado**: El código anterior alternaba de clave en cada mensaje. Como 2 de las 3 claves estaban corruptas, el 66% de las llamadas a Google fallaban o caían en timeout.
+3. **Efecto Dominó en Baileys (Error 408 Timeout)**: El timeout de Axios estaba fijado en 45 segundos. Cuando varias llamadas quedaban colgadas, se congelaba el Event Loop de Node.js, perdiendo el ping de Keep-Alive de WhatsApp y desconectando el bot (`408: Request Timeout`).
+4. **Homicidio de Conexiones por PostgreSQL**: En la sesión previa se fijó `idle_session_timeout = '60s'` en PostgreSQL. A los 60 segundos de inactividad, Postgres mataba las conexiones del pool de Node.js, provocando errores masivos de `write CONNECTION_CLOSED localhost:5432`.
+
+#### 🛠️ Acciones Técnicas Ejecutadas (Solución Definitiva v31.62):
+1. **Arquitectura de Failover Secuencial en Cascada**:
+   - Se reemplazó el Round-Robin por Failover Secuencial estricto: JanIA usa SIEMPRE la **Clave #1 (Primaria)**.
+   - Si y solo si la Clave #1 arroja error 429 (límite de cuota) o 503 (servidor saturado), el sistema conmuta automáticamente a la **Clave #2**, y de ella a la **#3**.
+   - Cooldowns diferenciados: 15 minutos para cuota agotada (429) y 45 segundos para saturación momentánea (503).
+2. **Sanitización Estricta de Claves en Código**:
+   - Implementada función `sanitizeKey` con `.replace(/^["']|["']$/g, '').trim()` en `llm.ts`, `janIA.ts` y `voiceTranscription.ts`.
+   - Limpieza directa del archivo `/var/www/vecy-network/.env` en el servidor VPS, eliminando comillas dobles perimetrales.
+3. **Reducción de Timeout a 12s para Blindaje de WhatsApp**:
+   - Timeout de llamadas a Google reducido de 45s a **12 segundos**. Si Google no responde en 12s, no se bloquea Node.js ni se desconecta WhatsApp; conmuta a la siguiente clave de inmediato.
+4. **Limpieza Determinista del Socket Baileys**:
+   - En `whatsapp-match.ts`, se agregó remoción de listeners previos y cierre de socket antes de invocar `initialize()`, erradicando duplicaciones y fugas de memoria.
+5. **Ajuste de PostgreSQL en el VPS**:
+   - Se restableció `idle_session_timeout = '0'`, `idle_in_transaction_session_timeout = '60s'` y `statement_timeout = '60s'`. PostgreSQL ya no cierra abruptamente las conexiones del pool.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.61 — Septiembre 2026
 
 ### 🗓️ Sesión: Miércoles 16 de Septiembre de 2026 — 02:20 (Hora Colombia UTC-5)
 **Versión**: `v31.61` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel (`vecy-network` y `vecy-agenda-pro`)

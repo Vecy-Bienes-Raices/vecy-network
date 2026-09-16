@@ -289,6 +289,20 @@ export class JaniaMatchBot {
 
   public async initialize() {
     try {
+      // 🛡️ Limpieza determinista del socket y listeners anteriores antes de crear uno nuevo
+      if (this.sock) {
+        try {
+          this.sock.ev.removeAllListeners('connection.update');
+          this.sock.ev.removeAllListeners('creds.update');
+          this.sock.ev.removeAllListeners('messages.upsert');
+          if (this.sock.ws && typeof this.sock.ws.close === 'function') {
+            this.sock.ws.close();
+          }
+        } catch (cleanupErr) {
+          // Silencioso
+        }
+      }
+
       const sessionDir = path.join(process.cwd(), this.sessionFolderName);
       if (!fs.existsSync(sessionDir)) {
         fs.mkdirSync(sessionDir, { recursive: true });

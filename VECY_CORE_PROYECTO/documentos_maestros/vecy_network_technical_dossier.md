@@ -322,6 +322,35 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.62 — Septiembre 2026
+
+#### 📌 FAILOVER SECUENCIAL EN CASCADA DE CLAVES GEMINI, SANITIZACIÓN UNIVERSAL DE CREDENCIALES, DESACTIVACIÓN DE IDLE TIMEOUT EN POSTGRESQL Y TIMEOUT SEGURO DE 12S
+
+**Problemas identificados:**
+1. **Desconexión Diaria de JanIA en WhatsApp (Error 408 Timeout)**:
+   - En `.env` del VPS, `GEMINI_API_KEYS` contenía comillas dobles que contaminaban la Clave 1 y la Clave 3 con comillas en los extremos. El balanceador anterior ejecutaba Round-Robin en cada mensaje, provocando que 2 de cada 3 peticiones fueran enviadas con claves corruptas a Google, cayendo en timeouts de 45s que congelaban el Event Loop de Node.js y desconectaban el socket de Baileys por falta de ping Keep-Alive.
+2. **Homicidio de Conexiones en PostgreSQL VPS**:
+   - `idle_session_timeout = '60s'` en PostgreSQL cerraba abruptamente las conexiones del pool de Node.js a los 60s, produciendo `Error: write CONNECTION_CLOSED localhost:5432` al intentar guardar propiedades, matches o heartbeats.
+3. **Petición Doctrinal de Eduardo A. Rivera**:
+   - Eliminar el Round-Robin simultáneo que desgastaba todas las claves a la vez. En su lugar, usar siempre la Clave 1, y si se agota o satura, conmutar en caliente a la Clave 2, luego a la 3.
+
+**Solución aplicada:**
+- **`server/_core/llm.ts`**:
+  - Implementado Failover Secuencial estricto con `getActiveFailoverKey()`: uso exclusivo de la Clave 1 mientras tenga cuota.
+  - Conmutación automática a Clave 2 o 3 solo ante errores 429 (pausa de 15 min) o 503 (pausa de 45s).
+  - Reducción del timeout de llamada de 45s a **12 segundos**: previene congelamiento del Event Loop y mantiene WhatsApp 100% activo.
+  - Sanitización universal de comillas con `sanitizeKey()`.
+- **`server/_core/janIA.ts` & `server/_core/voiceTranscription.ts`**:
+  - Sanitización universal de comillas y caracteres extraños en arrays de credenciales.
+- **`server/_core/whatsapp-match.ts`**:
+  - Limpieza determinista de listeners previos y cierre de socket antes de invocar `initialize()`.
+- **PostgreSQL VPS (`13.140.149.144`)**:
+  - Restablecido `idle_session_timeout = '0'`, `idle_in_transaction_session_timeout = '60s'` y `statement_timeout = '60s'`.
+- **Saneamiento `.env` VPS**:
+  - Eliminadas las comillas dobles de `GEMINI_API_KEYS`.
+
+---
+
 ### 🔖 v31.61 — Septiembre 2026
 
 #### 📌 CUADRITO DE DÍGITO DE VERIFICACIÓN (DV) PARA NIT, MODERNIZACIÓN 1-CLIC DEL CENTRO DE VERIFICACIÓN, SANEAMIENTO DE PROFILES DE VECY Y RESOLUCIÓN ERROR 400 EN AGENT_ID
