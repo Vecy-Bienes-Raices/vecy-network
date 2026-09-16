@@ -115,6 +115,16 @@ export function invalidatePropertiesListCache() {
   cachedAdminMyListTime = 0;
 }
 
+const propertyGetByIdCache = new Map<number, { data: any; expiresAt: number }>();
+
+export function invalidatePropertyGetByIdCache(id?: number) {
+  if (id) {
+    propertyGetByIdCache.delete(id);
+  } else {
+    propertyGetByIdCache.clear();
+  }
+}
+
 export function parsePropertyDeterministically(text: string) {
   const norm = text.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
   const lower = norm.toLowerCase();
@@ -473,10 +483,15 @@ export const propertiesRouter = router({
       const items = await query;
       return items;
     }),
-
   getById: publicProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
+      const now = Date.now();
+      const cached = propertyGetByIdCache.get(input.id);
+      if (cached && cached.expiresAt > now) {
+        return cached.data;
+      }
+
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
 
@@ -489,10 +504,13 @@ export const propertiesRouter = router({
         .where(eq(propertyImages.propertyId, input.id))
         .orderBy(propertyImages.displayOrder);
 
-      return {
+      const result = {
         ...item[0],
         imagesList: images,
       };
+
+      propertyGetByIdCache.set(input.id, { data: result, expiresAt: now + 60000 });
+      return result;
     }),
 
   // --- MUTATIONS (CREAR / EDITAR) ---

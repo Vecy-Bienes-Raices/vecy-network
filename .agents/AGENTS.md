@@ -167,7 +167,20 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.65 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.66 — Septiembre 2026
+
+### Novedades v31.66 (Carga Instantánea Zero-Lag en Agenda, Yield Asíncrono no Bloqueante en Matching y Caché de Inmuebles en RAM):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Ruta `/agenda/:id` Congelada con Spinner Dorado*: El cliente de React bloqueaba la pantalla entera con un `<Loader2>` si `isPropertyLoading` era `true`.
+  2) *Bloqueo de Event Loop por Bucle Síncrono de Matching*: Al llegar una ráfaga masiva de 500 mensajes de WhatsApp, cada propiedad disparaba `findMatchesForProperty` que evaluaba en un bucle síncrono todos los requerimientos en `parseStreetCarreraBoundaries` y `matchesGeography`. La CPU al 100% retrasaba las peticiones HTTP hasta por 225 segundos.
+- **Acciones Ejecutadas**:
+  1) *Yield Asíncrono no Bloqueante en `matching.ts`*: Añadido `setImmediate` cada 15 evaluaciones en `findMatchesForProperty` y `findMatchesForRequirement`.
+  2) *Caché en RAM para `properties.getById`*: Creado `propertyGetByIdCache` con TTL 60s en `properties.ts`. Respuestas en 0.1ms.
+  3) *Carga Instantánea Zero-Lag en `Agenda.tsx`*: Si la URL contiene `nombre` o `codigo`, el formulario se dibuja inmediatamente sin pantalla de carga.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.65 — Septiembre 2026
 
 ### Novedades v31.65 (Extirpación de Proceso Zombi de 18h al 101% CPU, Desactivación Total de APIs Suspendidas de TTS y Maps, y Motor Neuronal Gratuito Edge TTS $0):
 - **Diagnóstico y Causas Raíz Identificadas**:

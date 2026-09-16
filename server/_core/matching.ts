@@ -3171,7 +3171,13 @@ export async function findMatchesForProperty(propertyId: number) {
       .where(eq(propertyMatches.propertyId, propertyId));
     const existingMatchesMap = new Map<number, number>(existingMatches.map(m => [m.requirementId, m.id]));
 
+    let compCounter = 0;
     for (const req of activeRequirements) {
+      compCounter++;
+      if (compCounter % 15 === 0) {
+        await new Promise(r => setImmediate(r));
+      }
+
       if (rejectedSet.has(`${propertyId}_${req.id}`)) {
         if (existingMatchesMap.has(req.id)) {
           await db.delete(propertyMatches).where(eq(propertyMatches.id, existingMatchesMap.get(req.id)!));
@@ -3263,7 +3269,13 @@ export async function findMatchesForRequirement(requirementId: number) {
       .where(eq(propertyMatches.requirementId, requirementId));
     const existingMatchesMap = new Map<number, number>(existingMatches.map(m => [m.propertyId, m.id]));
 
+    let propCompCounter = 0;
     for (const prop of availableProperties) {
+      propCompCounter++;
+      if (propCompCounter % 15 === 0) {
+        await new Promise(r => setImmediate(r));
+      }
+
       if (rejectedSet.has(`${prop.id}_${requirementId}`)) {
         if (existingMatchesMap.has(prop.id)) {
           await db.delete(propertyMatches).where(eq(propertyMatches.id, existingMatchesMap.get(prop.id)!));

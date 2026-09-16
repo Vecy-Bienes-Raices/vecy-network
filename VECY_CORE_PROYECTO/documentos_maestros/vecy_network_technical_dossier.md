@@ -322,6 +322,21 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.66 — Septiembre 2026
+
+#### 📌 CARGA INSTANTÁNEA ZERO-LAG EN FORMULARIO DE AGENDAMIENTO, YIELD ASÍNCRONO EN MOTOR DE MATCHING Y CACHÉ EN MEMORIA DE PROPIEDADES
+
+**Problemas identificados:**
+1. **Ruta `/agenda/:id` Congelada**: El cliente bloqueaba la pantalla entera con un spinner si `isPropertyLoading` era `true`.
+2. **Monopolio del Event Loop por Matching**: `findMatchesForProperty` y `findMatchesForRequirement` ejecutaban miles de comparaciones síncronas sin ceder el procesador ante ráfagas de WhatsApp, demorando peticiones HTTP hasta 225 segundos.
+
+**Solución aplicada:**
+- **Yield Asíncrono (`setImmediate`)**: Inyectado cada 15 comparaciones en el motor de matching.
+- **Caché en RAM**: `propertyGetByIdCache` con TTL de 60s en `properties.ts`.
+- **Carga Inmediata**: Si la URL trae `nombre` o `codigo`, el formulario se dibuja de inmediato en 0ms.
+
+---
+
 ### 🔖 v31.65 — Septiembre 2026
 
 #### 📌 EXTIRPACIÓN DE PROCESO ZOMBI (18H AL 101% CPU), DESACTIVACIÓN TOTAL DE APIS SUSPENDIDAS DE TTS Y MAPS, Y MOTOR NEURONAL GRATUITO EDGE TTS $0

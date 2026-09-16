@@ -6232,7 +6232,12 @@ async function findMatchesForProperty(propertyId) {
     const validMatches = [];
     const existingMatches = await db.select({ id: propertyMatches.id, requirementId: propertyMatches.requirementId }).from(propertyMatches).where(eq3(propertyMatches.propertyId, propertyId));
     const existingMatchesMap = new Map(existingMatches.map((m) => [m.requirementId, m.id]));
+    let compCounter = 0;
     for (const req of activeRequirements) {
+      compCounter++;
+      if (compCounter % 15 === 0) {
+        await new Promise((r) => setImmediate(r));
+      }
       if (rejectedSet.has(`${propertyId}_${req.id}`)) {
         if (existingMatchesMap.has(req.id)) {
           await db.delete(propertyMatches).where(eq3(propertyMatches.id, existingMatchesMap.get(req.id)));
@@ -6303,7 +6308,12 @@ async function findMatchesForRequirement(requirementId) {
     const validMatches = [];
     const existingMatches = await db.select({ id: propertyMatches.id, propertyId: propertyMatches.propertyId }).from(propertyMatches).where(eq3(propertyMatches.requirementId, requirementId));
     const existingMatchesMap = new Map(existingMatches.map((m) => [m.propertyId, m.id]));
+    let propCompCounter = 0;
     for (const prop of availableProperties) {
+      propCompCounter++;
+      if (propCompCounter % 15 === 0) {
+        await new Promise((r) => setImmediate(r));
+      }
       if (rejectedSet.has(`${prop.id}_${requirementId}`)) {
         if (existingMatchesMap.has(prop.id)) {
           await db.delete(propertyMatches).where(eq3(propertyMatches.id, existingMatchesMap.get(prop.id)));
@@ -16033,7 +16043,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.65";
+var VECY_VERSION = "v31.66";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -19099,6 +19109,7 @@ function invalidatePropertiesListCache() {
   cachedAdminMyList = null;
   cachedAdminMyListTime = 0;
 }
+var propertyGetByIdCache = /* @__PURE__ */ new Map();
 function parsePropertyDeterministically(text2) {
   const norm2 = text2.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
   const lower = norm2.toLowerCase();
@@ -19398,15 +19409,22 @@ var propertiesRouter = router({
     return items;
   }),
   getById: publicProcedure.input(z7.object({ id: z7.number() })).query(async ({ input }) => {
+    const now = Date.now();
+    const cached = propertyGetByIdCache.get(input.id);
+    if (cached && cached.expiresAt > now) {
+      return cached.data;
+    }
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
     const item = await db.select().from(properties).where(eq13(properties.id, input.id)).limit(1);
     if (item.length === 0) throw new TRPCError5({ code: "NOT_FOUND" });
     const images = await db.select().from(propertyImages).where(eq13(propertyImages.propertyId, input.id)).orderBy(propertyImages.displayOrder);
-    return {
+    const result = {
       ...item[0],
       imagesList: images
     };
+    propertyGetByIdCache.set(input.id, { data: result, expiresAt: now + 6e4 });
+    return result;
   }),
   // --- MUTATIONS (CREAR / EDITAR) ---
   create: publicProcedure.input(propertyInputSchema).mutation(async ({ ctx, input }) => {

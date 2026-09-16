@@ -90,7 +90,9 @@ export default function Agenda() {
     '--accent': (agent.themeConfig as any).accentColor || '#bf953f',
   } as React.CSSProperties : {};
 
-  if (isPropertyLoading) {
+  const hasFallbackUrlData = !!search.get('nombre') || !!search.get('codigo');
+
+  if (isPropertyLoading && !hasFallbackUrlData) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col" style={customStyles}>
         <Navbar 
