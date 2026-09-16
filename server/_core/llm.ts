@@ -24,6 +24,12 @@ function getGeminiKeys(): string[] {
   const multiKeys = (process.env.GEMINI_API_KEYS || "").split(",").map(sanitizeKey).filter(Boolean);
   multiKeys.forEach(k => keysSet.add(k));
 
+  // Claves individuales numeradas (GEMINI_API_KEY_1, GEMINI_API_KEY_2, ...)
+  for (let i = 1; i <= 10; i++) {
+    const k = sanitizeKey(process.env[`GEMINI_API_KEY_${i}`] || "");
+    if (k) keysSet.add(k);
+  }
+
   if (process.env.GEMINI_API_KEY) {
     const k = sanitizeKey(process.env.GEMINI_API_KEY);
     if (k) keysSet.add(k);

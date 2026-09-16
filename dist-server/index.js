@@ -710,6 +710,10 @@ function getGeminiKeys() {
   const keysSet = /* @__PURE__ */ new Set();
   const multiKeys = (process.env.GEMINI_API_KEYS || "").split(",").map(sanitizeKey).filter(Boolean);
   multiKeys.forEach((k) => keysSet.add(k));
+  for (let i = 1; i <= 10; i++) {
+    const k = sanitizeKey(process.env[`GEMINI_API_KEY_${i}`] || "");
+    if (k) keysSet.add(k);
+  }
   if (process.env.GEMINI_API_KEY) {
     const k = sanitizeKey(process.env.GEMINI_API_KEY);
     if (k) keysSet.add(k);
@@ -6748,6 +6752,10 @@ async function transcodeWebmToWav(inputBuffer) {
 }
 async function transcribeAudioWithGemini(audioBuffer, mimeType) {
   const allKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.replace(/^["']|["']$/g, "").trim()).filter(Boolean);
+  for (let idx = 1; idx <= 10; idx++) {
+    const k = (process.env[`GEMINI_API_KEY_${idx}`] || "").replace(/^["']|["']$/g, "").trim();
+    if (k) allKeys.push(k);
+  }
   if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.replace(/^["']|["']$/g, "").trim());
   if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.replace(/^["']|["']$/g, "").trim());
   if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.replace(/^["']|["']$/g, "").trim());
@@ -8987,6 +8995,10 @@ ${cleanP}` : cleanP;
 async function extractFlyerVision(imageBufferBase64) {
   if (!imageBufferBase64 || imageBufferBase64.trim() === "") return null;
   const allKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.replace(/^["']|["']$/g, "").trim()).filter(Boolean);
+  for (let idx = 1; idx <= 10; idx++) {
+    const k = (process.env[`GEMINI_API_KEY_${idx}`] || "").replace(/^["']|["']$/g, "").trim();
+    if (k) allKeys.push(k);
+  }
   if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.replace(/^["']|["']$/g, "").trim());
   if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.replace(/^["']|["']$/g, "").trim());
   if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.replace(/^["']|["']$/g, "").trim());
