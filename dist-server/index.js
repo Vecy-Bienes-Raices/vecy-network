@@ -845,7 +845,7 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
         try {
           await paceRequest();
           console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (Clave #${keyNum}: ...${activeKey.slice(-6)}, Intento ${attempt})...`);
-          const response = await axios2.post(apiUrl, payload, { timeout: 12e3 });
+          const response = await axios2.post(apiUrl, payload, { timeout: 25e3 });
           if (response.data.candidates && response.data.candidates[0]) {
             const firstPart = response.data.candidates[0].content?.parts?.[0];
             if (firstPart) {
@@ -880,8 +880,8 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
             break;
           }
           if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
-            markKeyCooldown(activeKey, 60, "Timeout > 12s");
-            console.warn(`[JanIA-LLM] \u23F1\uFE0F Timeout de 12s excedido en Clave #${keyNum}. Conmutando a siguiente clave de inmediato.`);
+            markKeyCooldown(activeKey, 60, "Timeout > 25s");
+            console.warn(`[JanIA-LLM] \u23F1\uFE0F Timeout de 25s excedido en Clave #${keyNum}. Conmutando a siguiente clave de inmediato.`);
             break;
           }
           if (status === 500 || status === 502) {
@@ -909,10 +909,9 @@ var init_llm = __esm({
     init_env();
     keyCooldowns = /* @__PURE__ */ new Map();
     FALLBACK_MODELS = [
-      "gemini-flash-lite-latest",
       "gemini-3.6-flash",
       "gemini-flash-latest",
-      "gemini-2.5-flash"
+      "gemini-flash-lite-latest"
     ];
     lastCallTimestamp = 0;
     MIN_CALL_INTERVAL_MS = 600;
@@ -1802,18 +1801,9 @@ async function geocodeAddress(address) {
       isApiError: true
     };
   }
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY;
-  if (!apiKey || apiKey.trim() === "") {
-    return {
-      isValid: false,
-      city: "",
-      zone: "",
-      locality: "",
-      latitude: "",
-      longitude: "",
-      formattedAddress: "",
-      isApiError: true
-    };
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey || apiKey.trim() === "" || apiKey.startsWith("#") || apiKey.includes("AIzaSyC8N1wSr705lEO1AcUtJk")) {
+    return null;
   }
   try {
     const url = `https://maps.googleapis.com/maps/api/geocode/json`;
@@ -12520,7 +12510,7 @@ async function getVertexAIAccessToken() {
       return null;
     }
     const sa = JSON.parse(fs6.readFileSync(credPath, "utf8"));
-    if (!sa.client_email || !sa.private_key) {
+    if (!sa.client_email || !sa.private_key || sa.project_id === "jania-evaluadora-pro") {
       return null;
     }
     const header = { alg: "RS256", typ: "JWT" };
@@ -12632,11 +12622,8 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
     console.warn("[TTS-Media] Gemini 3.1 Flash TTS no disponible:", err?.message || err);
   }
   const candidateKeys = [
-    process.env.GOOGLE_TTS_API_KEY,
-    process.env.GOOGLE_API_KEY,
-    process.env.GEMINI_API_KEY,
-    process.env.GEMINI_BACKUP_KEY
-  ].filter((k) => k && (k.startsWith("AIzaSy") || k.startsWith("AQ.")));
+    process.env.GOOGLE_TTS_API_KEY
+  ].filter((k) => k && k.startsWith("AIzaSy") && !k.includes("AIzaSyCGQ0rQMn0c8DN4XX6Qyp0U6EzDCKEjOq0"));
   try {
     for (const googleApiKey of candidateKeys) {
       try {
@@ -16046,7 +16033,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.64";
+var VECY_VERSION = "v31.65";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

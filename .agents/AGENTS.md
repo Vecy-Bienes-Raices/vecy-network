@@ -167,9 +167,23 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.64 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.65 — Septiembre 2026
 
-### Novedades v31.64 (Integración de Claves Gemini Limpias sin Saldo Pendiente, Actualización a Modelo Oficial gemini-3.6-flash, Protección Timeout 6s en Visión y Blindaje de Servidor):
+### Novedades v31.65 (Extirpación de Proceso Zombi de 18h al 101% CPU, Desactivación Total de APIs Suspendidas de TTS y Maps, y Motor Neuronal Gratuito Edge TTS $0):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Doble Instancia de Baileys y Proceso Zombi de 18 Horas (PID 1198387)*: Un proceso huérfano ejecutando `import('./dist-server/index.js')` corría de fondo desde hacía 18 horas consumiendo el 101% de CPU. Al competir dos procesos por el socket de Baileys (`+573192919978`), WhatsApp cerraba la conexión con código 408 (Request Timeout).
+  2) *APIs Suspendidas de Google Cloud*: `GOOGLE_TTS_API_KEY` y `google-service-account.json` pertenecían al proyecto suspendido `jania-evaluadora-pro` (#553012000304), arrojando 403 `BILLING_DISABLED`.
+  3) *Timeout Insuficiente de Axios (12s)*: Prompts grandes de 25k tokens en Tier gratuito tardan ~14-18s; al abortar a los 12s se ponían en cooldown las claves sanas.
+- **Acciones Ejecutadas**:
+  1) *Aniquilación del Zombi*: `kill -9 1198387`. CPU restablecida al 0%.
+  2) *Desactivación Total de Claves Suspendidas*: `GOOGLE_TTS_API_KEY` comentada; `google-service-account.json` puenteada para ignorar `jania-evaluadora-pro`; llamadas de voz dirigidas al 100% a **Edge TTS Neuronal (Dalia/Salomé, $0 COP)**.
+  3) *Blindaje Geográfico*: `geocoding.ts` omite llamadas externas si no hay clave de Maps válida y acude en 0ms al diccionario nativo `geography.ts` (1.040 municipios, 33.434 veredas).
+  4) *Ajuste de Timeout*: Axios elevado a 25 segundos para prompts complejos.
+  5) *Variables Individuales*: Soporte para `GEMINI_API_KEY_1..4` en líneas separadas.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.64 — Septiembre 2026
 - **Diagnóstico y Causas Raíz Identificadas**:
   1) *Bloqueo de Facturación de Google Cloud en Cuenta Principal*: Banner amarillo en Google AI Studio exigía cambio a prepago por facturación pendiente. Google rechazaba llamadas con 503 / 404.
   2) *Efecto Dominó en la Web (Error 504 Gateway Time-out)*: Bucle de llamadas fallidas en imágenes de WhatsApp bloqueaba Node.js y retenía conexiones a PostgreSQL durante 8 minutos, provocando que Nginx arrojara 504 en `/agenda/3028` y `/ofertas`.

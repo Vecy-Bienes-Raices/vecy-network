@@ -322,6 +322,27 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.65 — Septiembre 2026
+
+#### 📌 EXTIRPACIÓN DE PROCESO ZOMBI (18H AL 101% CPU), DESACTIVACIÓN TOTAL DE APIS SUSPENDIDAS DE TTS Y MAPS, Y MOTOR NEURONAL GRATUITO EDGE TTS $0
+
+**Problemas identificados:**
+1. **Doble Instancia de Baileys y Proceso Zombi de 18 Horas (PID 1198387)**:
+   - Un proceso huérfano ejecutando `import('./dist-server/index.js')` corría en segundo plano consumiendo el 101% de CPU y compitiendo por la misma sesión de WhatsApp, provocando desconexiones con código 408.
+2. **APIs Suspendidas de Google Cloud**:
+   - `GOOGLE_TTS_API_KEY` y `google-service-account.json` pertenecían al proyecto `jania-evaluadora-pro` (#553012000304), que arrojaba 403 `BILLING_DISABLED`.
+3. **Timeout Insuficiente de Axios (12s)**:
+   - Prompts de 25k tokens abortaban prematuramente a los 12 segundos.
+
+**Solución aplicada:**
+- **Aniquilación del Zombi**: Proceso `1198387` eliminado con `kill -9`. CPU restablecida al 0%.
+- **Desactivación Total de Claves Suspendidas**: Desactivada `GOOGLE_TTS_API_KEY`; omitida la cuenta de servicio `jania-evaluadora-pro`; llamadas de voz canalizadas directamente a **Edge TTS Neuronal (Dalia / Salomé)** a costo $0 COP.
+- **Geocodificación 100% Local**: `geocoding.ts` omite llamadas de red si no hay clave de Maps válida, usando el diccionario nativo `geography.ts` (1.040 municipios, 33.434 veredas).
+- **Ajuste de Timeout**: Elevado a 25 segundos en `llm.ts`.
+- **Variables Individuales**: Soporte para `GEMINI_API_KEY_1..4` en líneas independientes.
+
+---
+
 ### 🔖 v31.64 — Septiembre 2026
 
 #### 📌 INTEGRACIÓN DE CLAVES GEMINI LIMPIAS SIN SALDO PENDIENTE, ACTUALIZACIÓN A MODELO OFICIAL GEMINI-3.6-FLASH, PROTECCIÓN TIMEOUT 6S EN VISIÓN Y BLINDAJE DE SERVIDOR

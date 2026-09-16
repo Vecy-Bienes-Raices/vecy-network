@@ -52,6 +52,42 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.64 — Septiembre 2026
 
+### 🗓️ Sesión: Miércoles 16 de Septiembre de 2026 — 18:05 (Hora Colombia UTC-5)
+**Versión**: `v31.65` | **Ambiente**: Producción VPS (`13.140.149.144`) + Extirpación de Proceso Zombi (18h al 101% CPU) + Desactivación Total de APIs Suspendidas (TTS y Maps) + Edge TTS Gratuito $0 + Timeout 25s en LLM + PM2 (`jania-server`) + GitHub (`main`)
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+1. *"Ves. Otra vez se mamó JanIA. Algo estas haciendo pésimamente mal o no entiendes como hacerlo de manera correcta y que funcione siempre sin desconexión."* (Adjuntada captura de WhatsApp con grupos saturados de mensajes: 430, 97, 32...).
+2. *"Ahora que nombraste esa de Google Maps creo que esa también fue creada en el proyecto que está suspendido por facturación y no se si esa necesite pago, igual que la de voz, dime qué hacemos??"*
+3. *"Te toca revisar todo el proyecto muy detalladamente, archivo por archivo y mirar donde usabamos las anteriores APIs y reemplazarlas por las nuevas e importar todo nuevamente muy bien compilado, porque si no nunca lo vamos a lograr si sigues simplemente trabajando de manera superficial."*
+4. *"Esta API ya creo que no va a funcionar, ya que tambien es del proyecto de google cloud suspendido por falta de pago: GOOGLE_TTS_API_KEY=AIzaSyCGQ0rQMn0c8DN4XX6Qyp0U6EzDCKEjOq0"*
+
+#### 🔬 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Doble Instancia de Baileys y Proceso Zombi de 18 Horas (PID 1198387)**:
+   - Al inspeccionar los procesos en el VPS (`ps aux | grep node`), se descubrió un proceso huérfano (`PID 1198387`) ejecutando un `import('./dist-server/index.js')` desde el 16 de septiembre a las 00:00. Llevaba **1.134 minutos (casi 19 horas)** consumiendo el **101% de CPU**.
+   - Al haber dos instancias simultáneas de Node.js inicializando Baileys contra la misma sesión `.baileys_auth`, ambas competían por el socket de WhatsApp (`+573192919978`). WhatsApp cerraba la conexión con código `408 (Request Timeout)` y la CPU saturada impedía responder al ping de WebSocket.
+2. **Dependencia Residual de APIs de Google Cloud Suspendidas**:
+   - `GOOGLE_TTS_API_KEY=AIzaSyCGQ0...` y `google-service-account.json` pertenecían al proyecto `jania-evaluadora-pro` (#553012000304), el cual estaba bloqueado por Google con error 403 `BILLING_DISABLED`.
+   - Cada llamada de voz intentaba conectarse a Google TTS de pago, arrojando errores y perdiendo segundos de procesamiento.
+   - En Google Maps, `geocoding.ts` intentaba usar claves genéricas si estaban presentes, disparando fallbacks repetitivos.
+3. **Timeout Insuficiente de Axios (12s vs Prompts de 25k Tokens)**:
+   - En el Tier gratuito de Google, un prompt con 25.000 tokens y esquema JSON puede demorar entre 14 y 18 segundos. Al tener `timeout: 12000`, Axios abortaba la petición justo antes de recibir la respuesta, poniendo en cooldown las claves sanas.
+
+#### 🛠️ Acciones Técnicas Ejecutadas (Solución Definitiva v31.65):
+1. **Aniquilación del Proceso Zombi**:
+   - Ejecutado `kill -9 1198387`. La CPU del VPS descendió de inmediato del 200% a niveles normales.
+2. **Extirpación Total de APIs Suspendidas**:
+   - `GOOGLE_TTS_API_KEY` desactivada y comentada en `.env` (local y VPS).
+   - `google-service-account.json` puenteada: si pertenece al proyecto suspendido `jania-evaluadora-pro`, se omite en 0ms.
+   - Motor de TTS reconfigurado para ir directamente a **Edge TTS Neuronal (Dalia / Salomé)**: 100% GRATUITO ($0 COP), voz ultra-realista y sin credenciales de pago.
+   - `geocoding.ts` blindado: si no hay clave de Maps válida, retorna `null` en 0ms y utiliza exclusivamente el diccionario local `geography.ts` (DIVIPOLA, 1.040 municipios, 33.434 veredas).
+3. **Optimización de LLM**:
+   - Timeout de Axios elevado a **25 segundos** (25000ms).
+   - `FALLBACK_MODELS` reordenado: `gemini-3.6-flash`, `gemini-flash-latest`, `gemini-flash-lite-latest`.
+4. **Reinicio y Reconexión**:
+   - `pm2 restart jania-server`. Baileys reconectado de inmediato (`isReady=true`).
+
+---
+
 ### 🗓️ Sesión: Miércoles 16 de Septiembre de 2026 — 17:25 (Hora Colombia UTC-5)
 **Versión**: `v31.64` | **Ambiente**: Producción VPS (`13.140.149.144`) + Integración de Claves Gemini Limpias sin Saldo Pendiente + Modelo `gemini-3.6-flash` Oficial + Failover Secuencial Blindado + PM2 (`jania-server`) + GitHub (`main`)
 

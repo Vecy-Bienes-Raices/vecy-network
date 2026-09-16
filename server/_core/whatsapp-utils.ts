@@ -389,7 +389,7 @@ async function getVertexAIAccessToken(): Promise<string | null> {
     }
 
     const sa = JSON.parse(fs.readFileSync(credPath, "utf8"));
-    if (!sa.client_email || !sa.private_key) {
+    if (!sa.client_email || !sa.private_key || sa.project_id === "jania-evaluadora-pro") {
       return null;
     }
 
@@ -516,10 +516,7 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
 
   const candidateKeys = [
     process.env.GOOGLE_TTS_API_KEY,
-    process.env.GOOGLE_API_KEY,
-    process.env.GEMINI_API_KEY,
-    process.env.GEMINI_BACKUP_KEY
-  ].filter(k => k && (k.startsWith('AIzaSy') || k.startsWith('AQ.'))) as string[];
+  ].filter(k => k && k.startsWith('AIzaSy') && !k.includes('AIzaSyCGQ0rQMn0c8DN4XX6Qyp0U6EzDCKEjOq0')) as string[];
 
   // 2. Respaldo Google Cloud: Chirp3-HD Erinome (es-US)
   try {

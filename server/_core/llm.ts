@@ -96,10 +96,9 @@ function markKeyCooldown(key: string, seconds: number = 60, reason: string = "Ra
 
 // Modelos ordenados por prioridad de fallback (100% compatibles y activos en Google API)
 const FALLBACK_MODELS = [
-  "gemini-flash-lite-latest",
   "gemini-3.6-flash",
   "gemini-flash-latest",
-  "gemini-2.5-flash"
+  "gemini-flash-lite-latest",
 ];
 
 // Semáforo de concurrencia y pacing para no disparar llamadas simultáneas
@@ -228,8 +227,8 @@ async function invokeGemini(
           await paceRequest();
           console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (Clave #${keyNum}: ...${activeKey.slice(-6)}, Intento ${attempt})...`);
           
-          // Timeout seguro de 12 segundos: previene que peticiones colgadas de Google desconecten el socket de WhatsApp
-          const response = await axios.post(apiUrl, payload, { timeout: 12000 });
+          // Timeout seguro de 25 segundos: permite procesar prompts complejos de 25k tokens sin abortar prematuramente
+          const response = await axios.post(apiUrl, payload, { timeout: 25000 });
 
           if (response.data.candidates && response.data.candidates[0]) {
             const firstPart = response.data.candidates[0].content?.parts?.[0];
@@ -271,10 +270,10 @@ async function invokeGemini(
             break; // Saltar a la siguiente clave del Failover
           }
 
-          // Timeout de Axios (>12s) -> Pausar esta clave por 60s para no retrasar los sockets de WhatsApp
+          // Timeout de Axios (>25s) -> Pausar esta clave por 60s para no retrasar los sockets de WhatsApp
           if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-            markKeyCooldown(activeKey, 60, "Timeout > 12s");
-            console.warn(`[JanIA-LLM] ⏱️ Timeout de 12s excedido en Clave #${keyNum}. Conmutando a siguiente clave de inmediato.`);
+            markKeyCooldown(activeKey, 60, "Timeout > 25s");
+            console.warn(`[JanIA-LLM] ⏱️ Timeout de 25s excedido en Clave #${keyNum}. Conmutando a siguiente clave de inmediato.`);
             break;
           }
 

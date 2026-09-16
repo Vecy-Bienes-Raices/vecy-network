@@ -37,18 +37,9 @@ export async function geocodeAddress(address: string): Promise<GeocodedAddress |
     };
   }
 
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_API_KEY;
-  if (!apiKey || apiKey.trim() === "") {
-    return {
-      isValid: false,
-      city: "",
-      zone: "",
-      locality: "",
-      latitude: "",
-      longitude: "",
-      formattedAddress: "",
-      isApiError: true
-    };
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey || apiKey.trim() === "" || apiKey.startsWith("#") || apiKey.includes("AIzaSyC8N1wSr705lEO1AcUtJk")) {
+    return null;
   }
 
   try {
