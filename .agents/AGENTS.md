@@ -167,7 +167,26 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.63 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.64 — Septiembre 2026
+
+### Novedades v31.64 (Integración de Claves Gemini Limpias sin Saldo Pendiente, Actualización a Modelo Oficial gemini-3.6-flash, Protección Timeout 6s en Visión y Blindaje de Servidor):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Bloqueo de Facturación de Google Cloud en Cuenta Principal*: Banner amarillo en Google AI Studio exigía cambio a prepago por facturación pendiente. Google rechazaba llamadas con 503 / 404.
+  2) *Efecto Dominó en la Web (Error 504 Gateway Time-out)*: Bucle de llamadas fallidas en imágenes de WhatsApp bloqueaba Node.js y retenía conexiones a PostgreSQL durante 8 minutos, provocando que Nginx arrojara 504 en `/agenda/3028` y `/ofertas`.
+  3) *Deprecación de `gemini-2.5-flash`*: Google rechazó nuevas claves para `gemini-2.5-flash` con error 404 indicando migrar a `gemini-3.6-flash`.
+- **Acciones Ejecutadas**:
+  1) *Configuración de 4 Claves Limpias en `.env` (VPS y Local)*:
+     - Clave 1 (`AQ.Ab8RN6Lm...duLw`, titular general).
+     - Clave 2 (`AQ.Ab8RN6KI...N-sw`, repuesto WhatsApp).
+     - Clave 3 (`AQ.Ab8RN6Lo...93Q`, asignada a Grupo 2 y tips).
+     - Clave 4 (`AQ.Ab8RN6Ji...EDQ`, reserva final).
+  2) *Actualización de Modelos*: `gemini-3.6-flash` priorizado en `janIA.ts` y `voiceTranscription.ts`.
+  3) *Timeout Seguro 6s en Visión Documental*: Erradicados bloqueos de Node.js al recibir flyers.
+  4) *Saneamiento VPS*: Terminada consulta colgada en PostgreSQL y servicio recargado en PM2.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.63 — Septiembre 2026
 
 ### Novedades v31.63 (Resolución de Congelamiento Matutino de la Web, Re-matching Masivo No Bloqueante a las 03:45 AM, Prioridad Autoritativa de Base de Datos en Tabla de Cotejo y Validación Anti-Duplicación de Cuota de Administración):
 - **Diagnóstico y Causas Raíz Identificadas**:

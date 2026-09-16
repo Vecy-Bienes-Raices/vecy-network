@@ -2463,11 +2463,11 @@ export async function extractFlyerVision(imageBufferBase64: string): Promise<Fly
   }
 
   const models = [
-    "gemini-3.5-flash-lite",
     "gemini-flash-lite-latest",
-    "gemini-3.5-flash",
+    "gemini-3.6-flash",
     "gemini-flash-latest",
-    "gemini-2.5-flash"
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash"
   ];
 
   const prompt = `Eres la IA experta en visión documental y extracción de flyers inmobiliarios de VECY Network en Colombia.
@@ -2525,7 +2525,7 @@ Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura.`;
 
       try {
         console.log(`[JanIA-Vision] 👁️ Analizando flyer con ${model} (Key #${i + 1})...`);
-        const response = await axios.post(apiUrl, payload, { timeout: 15000 });
+        const response = await axios.post(apiUrl, payload, { timeout: 6000 });
         const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (textCandidate && typeof textCandidate === "string") {
           const parsed = JSON.parse(textCandidate) as FlyerVisionResult;
@@ -2556,11 +2556,9 @@ Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura.`;
         }
       } catch (err: any) {
         const status = err.response?.status;
-        console.warn(`[JanIA-Vision] ⚠️ Intento con ${model} (Key #${i + 1}) falló (${status || err.message}). Probando siguiente...`);
-        if (status === 429 || status === 503) {
-          await new Promise(r => setTimeout(r, 400));
-          continue;
-        }
+        console.warn(`[JanIA-Vision] ⚠️ Intento con ${model} (Key #${i + 1}) falló (${status || err.message}).`);
+        // Si la clave falló por cuota, pago o timeout, pasar a la siguiente clave sin bloquear
+        continue;
       }
     }
   }

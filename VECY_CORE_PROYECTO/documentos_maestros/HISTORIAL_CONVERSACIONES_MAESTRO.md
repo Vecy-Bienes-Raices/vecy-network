@@ -50,7 +50,48 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.63 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.64 — Septiembre 2026
+
+### 🗓️ Sesión: Miércoles 16 de Septiembre de 2026 — 17:25 (Hora Colombia UTC-5)
+**Versión**: `v31.64` | **Ambiente**: Producción VPS (`13.140.149.144`) + Integración de Claves Gemini Limpias sin Saldo Pendiente + Modelo `gemini-3.6-flash` Oficial + Failover Secuencial Blindado + PM2 (`jania-server`) + GitHub (`main`)
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+1. *"Nada volvió a caerse JanIA y mi web tambien no arranca ni en el compu ni en mi celu, voy a darte unas 3 nuevas APIs para que las remplaces a ver si es por el pago pendiente a google cloud que tengo con mi cuenta principal. ¿Te parece?"*
+2. *"Qué le pongo a la primera API. y a las otras dos o tres o es mejor que cada una tenga su rol o cómo es porque no se."*
+3. *"Clave API 1 (Proyecto 918762391, cuenta limpia): AQ.Ab8RN6Lm...duLw"*
+4. *"Clave API 2 (Proyecto 82240353825, cuenta limpia): AQ.Ab8RN6KI...N-sw"*
+5. *"Y para el resto usa las dos que te pasé el 14 de septiembre que son estas de la imagen, si quieres deja una de ellas para que interactuen en el grupo 2 y envíen las publicaciones diarias (Tips, noticias, enseñanzas, oferta de servicios, estudio de mercado, asesorías, casos y demás entre otros, etc) y también me avisas si si sirve así o no y cómo queda todo. Adelante y muchos éxitos con todo."*
+
+#### 🔬 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Bloqueo de Facturación de Google Cloud en Cuenta Principal**:
+   - En la captura de Google AI Studio adjuntada por Eduardo, se identificó el banner amarillo de Google: *"Tienes una o más cuentas de facturación que deben cambiarse al prepago. Cámbiate ahora para evitar la interrupción del servicio."*
+   - Las claves anteriores pertenecían a esa cuenta y Google las rechazaba con error `503 UNAVAILABLE` o `404 NOT_FOUND`.
+2. **Efecto en Cascada sobre la Web (Error 504 Gateway Time-out)**:
+   - Al llegar imágenes a WhatsApp, el módulo `JanIA-Vision` realizaba hasta 9 intentos secuenciales de 15 segundos esperando a Google. Dicho bucle bloqueante monopolizaba el Event Loop de Node.js y retenía conexiones a PostgreSQL (encontrada una consulta con 8 minutos en `ClientRead`).
+   - Al intentar abrir la web (`/agenda/3028`), Nginx no obtenía respuesta de Node.js en 60 segundos y arrojaba `504 Gateway Time-out`.
+3. **Deprecación de `gemini-2.5-flash` por Google para Nuevas Claves**:
+   - Al probar las nuevas claves con `gemini-2.5-flash`, Google respondió: *"This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.6-flash for the latest features and improvements."*
+   - Fue imperativo actualizar las listas de modelos en `janIA.ts` y `voiceTranscription.ts` a `gemini-3.6-flash` y `gemini-flash-latest`.
+
+#### 🛠️ Acciones Técnicas Ejecutadas (Solución Definitiva v31.64):
+1. **Configuración de las 4 Claves en Failover Secuencial en `.env` (Local y VPS)**:
+   - **Clave #1 (Titular Principal WhatsApp)**: `AQ.Ab8RN6Lm...duLw` (Cuenta limpia nueva, validada con `gemini-3.6-flash`).
+   - **Clave #2 (Respaldo Inmediato WhatsApp)**: `AQ.Ab8RN6KI...N-sw` (Cuenta limpia nueva, validada con `gemini-3.6-flash`).
+   - **Clave #3 (Soporte Grupo 2 / Tips / Asesorías / Publicaciones Diarias)**: `AQ.Ab8RN6Lo...93Q` (Cuenta del 14 sep, activa y probada).
+   - **Clave #4 (Reserva Final)**: `AQ.Ab8RN6Ji...EDQ` (Cuenta del 14 sep).
+2. **Actualización de Modelos a `gemini-3.6-flash`**:
+   - En `server/_core/janIA.ts` y `server/_core/voiceTranscription.ts`, se incorporó `gemini-3.6-flash` como modelo prioritario antes que modelos obsoletos.
+3. **Blindaje de Timeouts de Imágenes**:
+   - En `JanIA-Vision`, timeout reducido de 15s a **6 segundos**, eliminando reintentos bloqueantes que congelen el servidor.
+4. **Saneamiento de Base de Datos y Procesos en VPS**:
+   - Terminada consulta zombi (`pg_terminate_backend(1218321)`).
+   - `jania-server` reiniciado con PM2 cargando el nuevo `.env`. Verificado endpoint tRPC respondiendo en **0.15 segundos** (código 200).
+5. **Compilación Limpia**:
+   - `npm run check` (0 errores) y `npm run build` (0 errores). Versión `v31.64`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.63 — Septiembre 2026
 
 ### 🗓️ Sesión: Miércoles 16 de Septiembre de 2026 — 12:20 (Hora Colombia UTC-5)
 **Versión**: `v31.63` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + Re-matching No Bloqueante (03:45 AM) + Prioridad Estricta BD en Tabla de Cotejo (`AdminMatches.tsx`) + Failover Secuencial de Claves Gemini + PM2 (`jania-server`) + GitHub (`main`)

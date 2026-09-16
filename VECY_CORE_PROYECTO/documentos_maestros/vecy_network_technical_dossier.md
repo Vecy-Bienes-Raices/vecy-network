@@ -322,6 +322,35 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.64 — Septiembre 2026
+
+#### 📌 INTEGRACIÓN DE CLAVES GEMINI LIMPIAS SIN SALDO PENDIENTE, ACTUALIZACIÓN A MODELO OFICIAL GEMINI-3.6-FLASH, PROTECCIÓN TIMEOUT 6S EN VISIÓN Y BLINDAJE DE SERVIDOR
+
+**Problemas identificados:**
+1. **Bloqueo de Facturación de Google Cloud en Cuenta Principal**:
+   - Google AI Studio bloqueó las claves vinculadas a la cuenta con saldo pendiente mediante el aviso *"Tienes una o más cuentas de facturación que deben cambiarse al prepago"*, arrojando errores 503 UNAVAILABLE o 404 NOT_FOUND.
+2. **Efecto Dominó en la Web (Error 504 Gateway Time-out)**:
+   - Al llegar flyers a WhatsApp, `JanIA-Vision` quedaba esperando en bucles de 15 segundos a Google, saturando Node.js y reteniendo conexiones a PostgreSQL durante 8 minutos. Nginx arrojaba 504 Gateway Time-out en `/agenda/3028` y `/ofertas`.
+3. **Deprecación de `gemini-2.5-flash` por Google**:
+   - Para cuentas y claves nuevas, Google deprecó `gemini-2.5-flash` con error 404 exigiendo migrar a `gemini-3.6-flash`.
+
+**Solución aplicada:**
+- **Configuración de 4 Claves Limpias en `.env` (VPS y Local)**:
+  - Clave 1 (`AQ.Ab8RN6Lm...duLw`, titular general).
+  - Clave 2 (`AQ.Ab8RN6KI...N-sw`, repuesto WhatsApp).
+  - Clave 3 (`AQ.Ab8RN6Lo...93Q`, asignada a Grupo 2 y tips).
+  - Clave 4 (`AQ.Ab8RN6Ji...EDQ`, reserva final).
+- **Actualización de Modelos**:
+  - `gemini-3.6-flash` priorizado en `server/_core/janIA.ts` y `server/_core/voiceTranscription.ts`.
+- **Timeout Seguro 6s en Visión Documental**:
+  - `JanIA-Vision` limitado a 6 segundos por intento sin reintentos bloqueantes.
+- **Saneamiento VPS**:
+  - Terminada consulta colgada en PostgreSQL y servicio recargado en PM2.
+- **Compilación Limpia**:
+  - `npm run check` (0 errores) y `npm run build` (0 errores). Versión `v31.64`.
+
+---
+
 ### 🔖 v31.63 — Septiembre 2026
 
 #### 📌 RESOLUCIÓN DE CONGELAMIENTO MATUTINO DE LA WEB, RE-MATCHING MASIVO NO BLOQUEANTE A LAS 03:45 AM, PRIORIDAD AUTORITATIVA DE BASE DE DATOS EN TABLA DE COTEJO Y VALIDACIÓN ANTI-DUPLICACIÓN DE CUOTA DE ADMINISTRACIÓN

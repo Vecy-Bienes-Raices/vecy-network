@@ -6758,10 +6758,10 @@ async function transcribeAudioWithGemini(audioBuffer, mimeType) {
   }
   const models = [
     "gemini-flash-lite-latest",
-    "gemini-3.5-flash-lite",
-    "gemini-3.5-flash",
+    "gemini-3.6-flash",
     "gemini-flash-latest",
-    "gemini-2.5-flash"
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash"
   ];
   let cleanMime = mimeType.split(";")[0].trim().toLowerCase();
   let bufferToUse = audioBuffer;
@@ -8996,11 +8996,11 @@ async function extractFlyerVision(imageBufferBase64) {
     return null;
   }
   const models = [
-    "gemini-3.5-flash-lite",
     "gemini-flash-lite-latest",
-    "gemini-3.5-flash",
+    "gemini-3.6-flash",
     "gemini-flash-latest",
-    "gemini-2.5-flash"
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash"
   ];
   const prompt = `Eres la IA experta en visi\xF3n documental y extracci\xF3n de flyers inmobiliarios de VECY Network en Colombia.
 Analiza la imagen enviada a un grupo inmobiliario de WhatsApp.
@@ -9054,7 +9054,7 @@ Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       try {
         console.log(`[JanIA-Vision] \u{1F441}\uFE0F Analizando flyer con ${model} (Key #${i + 1})...`);
-        const response = await axios6.post(apiUrl, payload, { timeout: 15e3 });
+        const response = await axios6.post(apiUrl, payload, { timeout: 6e3 });
         const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (textCandidate && typeof textCandidate === "string") {
           const parsed = JSON.parse(textCandidate);
@@ -9083,11 +9083,8 @@ Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
         }
       } catch (err) {
         const status = err.response?.status;
-        console.warn(`[JanIA-Vision] \u26A0\uFE0F Intento con ${model} (Key #${i + 1}) fall\xF3 (${status || err.message}). Probando siguiente...`);
-        if (status === 429 || status === 503) {
-          await new Promise((r) => setTimeout(r, 400));
-          continue;
-        }
+        console.warn(`[JanIA-Vision] \u26A0\uFE0F Intento con ${model} (Key #${i + 1}) fall\xF3 (${status || err.message}).`);
+        continue;
       }
     }
   }
@@ -16037,7 +16034,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.63";
+var VECY_VERSION = "v31.64";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
