@@ -167,7 +167,28 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.60 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.61 — Septiembre 2026
+
+### Novedades v31.61 (Cuadrito de Dígito de Verificación DV para NIT, Depuración 1-Clic del Centro de Verificación, Saneamiento de Profiles de Vecy y Corrección Error 400 agent_id):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Cuadrito de Dígito de Verificación (DV) para NIT / Personas Jurídicas*: Solicitud expresa de Eduardo para disponer de un cuadrito adjunto compacto donde vaya el dígito de verificación en NIT. Se implementó un control flex Gold Luxury con campo base, separador guion `-` y cuadrito DV (`w-16`, monospace, centrado, oro `#d4af37`), con cálculo automático según el algoritmo oficial DIAN módulo 11 y soporte para pegado con guion.
+  2) *Depuración del Centro de Verificación en Admin (`AdminAgenda.tsx`)*: Eliminados los 4 botones externos redundantes (`Policía`, `Verifíquese`, `DIAN`, `RUES`), reemplazándolos por botones limpios de 1 solo clic: `[ Copiar Nombre ]` y `[ Copiar Doc ]` junto con el badge `✓ Verificado`, facilitando la auditoría sin salir de la plataforma.
+  3) *Reaparición del Documento de Daniel Rivera en Sesión de Vecy*: En la tabla `profiles` de PostgreSQL VPS, el ID `31a51e04-7090-41dc-92a1-2d1ecc7d4d8b` (Vecy Bienes Raíces) tenía guardado `numero_documento = '1233903423'`. Al iniciar sesión con `vecybienesraices@gmail.com`, `loadProfile` inyectaba automáticamente dicho documento. Se actualizó la fila en la BD a NIT `41057506-1`, Persona Jurídica, Inmobiliaria y Jani Alves Souza, y se blindó `loadProfile` en el frontend para forzar siempre NIT `41057506-1` (DV `1`).
+  4) *Error 400 en `agenda.create` (`TRPCClientError: expected string, received null`)*: El schema de Zod en `agenda.ts` tenía `agent_id: z.string().optional()`, el cual rechazaba `null` cuando el formulario se enviaba sin agente. Se actualizó a `.nullable().optional()` en todos los campos opcionales del procedimiento.
+- **Acciones Ejecutadas**:
+  1) *Base de Datos VPS*: Actualizado el perfil de Vecy Bienes Raíces en `profiles` con NIT `41057506-1`.
+  2) *Backend (`agenda.ts`)*: Campos opcionales de `agenda.create` cambiados a `.nullable().optional()`.
+  3) *Componentes Frontend*:
+     - `FormInput.jsx` enriquecido con `isNitWithDv`, `dvValue`, `onDvChange`, `onDvBlur` en ambos proyectos.
+     - `AgendaForm.jsx` actualizado con cálculo oficial DIAN módulo 11 de DV, handlers dinámicos y blindaje doctrinal inmutable.
+     - `AdminAgenda.tsx` modernizado con botones directos para copiar nombre y copiar documento.
+  4) *Compilación y Despliegue*:
+     - `vecy-network`: 0 errores en `npm run check` y `npm run build`, versión `v31.61`.
+     - `vecy-agenda-pro`: 0 errores en `npm run build`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.60 — Septiembre 2026
 
 ### Novedades v31.60 (Autocompletado de Nombres y Apellidos Completos Oficiales, Soporte Doctrinal Daniel Rivera, Vecy Persona Jurídica NIT 41057506-1, Solución a Errores 504 en VPS y Verificación Universal 2Captcha):
 - **Diagnóstico y Causas Raíz Identificadas**:

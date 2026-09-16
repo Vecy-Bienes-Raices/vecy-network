@@ -50,7 +50,58 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.60 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.61 — Septiembre 2026
+
+### 🗓️ Sesión: Miércoles 16 de Septiembre de 2026 — 02:20 (Hora Colombia UTC-5)
+**Versión**: `v31.61` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel (`vecy-network` y `vecy-agenda-pro`)
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+1. *"Creo que si ya tenemos bien establecida la verificación para qué este diseño con tantos botones que dirijen a sitios como la policía, DIAN, etc, etc, o si se necesitan?, yo creo que ya no y simplemente dejar solo el de poder copiar los números de cédula y también agregar para copiar los nombres completos una vez verificados. ¿Te parece?"*
+2. *"Hice la prueba desde VECY NETWORK y sale este error al momento de enviar y veo que en la verificación de VECY BIENES RAÍCES sigue poniendo el número de Daniel Rivera, cuando debe quedar es el NIT 41057506-1 deberías aprovechar y crear un cuadrito adjunto donde vaya el dígito de verificación para las demás empresas o personas jurídicas que lo requieran. De resto me encantó la verificación y todo va de maravilla excepto por ese último error. Quisiera que fueras perfecto agente pero veo que simpre tienes alguna falla o tal vez no melogras entender completamente lo que te quiero decir o cómo busco que funcione cada cosa. espero esta vez quede perfecto y funcionando a la perfección."*
+
+#### 🔍 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Depuración y Modernización del Centro de Verificación (Requerimiento 1)**:
+   - En el modal de detalle de solicitudes (`AdminAgenda.tsx`), la sección *"Centro de Verificación de Identidad y Antecedentes"* mostraba 4 botones externos redundantes (`[👮 Policía]`, `[🔍 Verifíquese]`, `[🏛️ DIAN RUT]`, `[🏢 RUES]`).
+   - Dado que el sistema ahora valida automáticamente en tiempo real con 2Captcha / Policía / ADRES, dichos botones saturaban la vista e inducían a navegación externa innecesaria.
+   - Diagnóstico: Se requería sustituir esos botones por acciones limpias de 1 solo clic: `[ Copiar Nombre ]`, `[ Copiar Doc ]` y el badge de verificación oficial `✓ Verificado`.
+2. **Causa Raíz del Error al Enviar Solicitud (`TRPCClientError` / Error 400)**:
+   - En la consola de DevTools adjunta por Eduardo, el fallo exacto fue:
+     `[ { "expected": "string", "code": "invalid_type", "path": [ "agent_id" ], "message": "Invalid input: expected string, received null" } ]`.
+   - Causa raíz: En `server/routers/agenda.ts`, el schema de Zod de `agenda.create` tenía `agent_id: z.string().optional()`. Al enviar el formulario desde `/agenda/297/?nombre=...` (sin parámetro de agente en URL), el frontend enviaba `{ agent_id: null }`. En Zod, `.optional()` solo acepta `undefined`; si recibe `null`, arroja `invalid_type`.
+3. **Causa Raíz de la Reaparición del Número de Daniel Rivera (`1233903423`) con Vecy Bienes Raíces**:
+   - Una inspección forense en la tabla `profiles` de PostgreSQL nativo del VPS reveló el registro con ID `31a51e04-7090-41dc-92a1-2d1ecc7d4d8b`:
+     `full_name: 'Vecy Bienes Raíces'`, `tipo_documento: 'Cédula de ciudadanía'`, `numero_documento: '1233903423'`.
+   - Cuando Eduardo abría el formulario con la sesión activa de `vecybienesraices@gmail.com`, la función `loadProfile` leía dicho registro de la base de datos e inyectaba automáticamente la cédula de Daniel en el input del formulario.
+4. **Implementación de Cuadrito Adjunto para Dígito de Verificación (DV) de NIT (Requerimiento 2)**:
+   - En Colombia, las empresas y personas jurídicas identificadas con NIT requieren separar la base numérica de su Dígito de Verificación (DV, módulo 11).
+   - Se requería diseñar un control estético Gold Luxury con un campo principal para el NIT base (flexible y amplio), un separador guion `-` dorado, y un cuadrito adjunto (`w-16`, centrado, monospace, color oro `#d4af37`) para el DV.
+   - Debe soportar tanto el pegado completo (ej: `41057506-1` se autosepara en base y DV) como el cálculo matemático automático mediante el algoritmo oficial DIAN módulo 11.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Saneamiento Definitivo en PostgreSQL Nativo del VPS**:
+   - Actualizado el registro de `profiles` para Vecy Bienes Raíces (`31a51e04-7090-41dc-92a1-2d1ecc7d4d8b`) con: `tipo_documento = 'NIT'`, `numero_documento = '41057506-1'`, `tipo_cliente = 'Persona Jurídica'`, `perfil = 'Inmobiliaria'`, `celular = '3166569719'`.
+   - Corregidas filas antiguas en la tabla `solicitudes` donde Vecy tenía `1233903423` asignado.
+2. **Corrección de Schema en Backend (`server/routers/agenda.ts`)**:
+   - Actualizado el mutation `create` de tRPC para aceptar `.nullable().optional()` en `agent_id` y en todos los campos opcionales, erradicando para siempre el error de validación 400.
+3. **Componente `FormInput.jsx` con Cuadrito Adjunto para Dígito de Verificación (DV)**:
+   - Actualizado `FormInput.jsx` en `vecy-network` y `vecy-agenda-pro` con props `isNitWithDv`, `dvValue`, `onDvChange`, `onDvBlur`.
+   - Renderiza el contenedor flex con campo base, guion dorado `-` y cuadrito adjunto DV estilizado en Gold Luxury.
+4. **Formularios Frontend (`AgendaForm.jsx` en ambos proyectos)**:
+   - Implementada la función matemática `calcularDV(nit)` con el algoritmo oficial DIAN módulo 11 (pesos `[3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71]`).
+   - Integrados los estados `solicitanteDv` e `interesadoDv`.
+   - `loadProfile`: si la sesión o perfil contiene `vecy`, autocompleta inmediatamente con `solicitante_nombre: 'Vecy Bienes Raíces'`, `solicitante_tipo_persona: 'Persona Jurídica'`, `solicitante_tipo_documento: 'NIT'`, `solicitante_numero_documento: '41057506-1'`, `solicitante_representante_legal: 'Jani Alves Souza'`, `solicitante_celular: '+573166569719'` y `solicitanteDv = '1'`.
+   - Handlers inteligentes `handleSolicitanteDocChange` y `handleInteresadoDocChange` que detectan pegado con guion o calculan el DV al vuelo.
+   - Blindaje inmutable: Si se intenta asociar `1233903423` a Vecy, se rechaza de inmediato. Si se valida con Daniel Rivera, autocompleta `Daniel Eduardo Rivera Noguera` con cédula de ciudadanía.
+5. **Modernización del Centro de Verificación (`AdminAgenda.tsx`)**:
+   - Eliminados los 4 botones externos obsoletos (`Policía`, `Verifíquese`, `DIAN`, `RUES`).
+   - Agregados botones elegantes de 1 clic: `[ Copiar Nombre ]` y `[ Copiar Doc ]` junto al badge de verificación `✓ Verificado`.
+6. **Compilación y Despliegue**:
+   - `vecy-network`: 0 errores en `npm run check` y `npm run build`.
+   - `vecy-agenda-pro`: 0 errores en `npm run build`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.60 — Septiembre 2026
 
 ### 🗓️ Sesión: Martes 15 de Septiembre de 2026 — 23:30 (Hora Colombia UTC-5)
 **Versión**: `v31.60` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + 2Captcha reCAPTCHA v2 (Policía Nacional / ADRES) + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel (`vecy-network` y `vecy-agenda-pro`)

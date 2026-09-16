@@ -15990,7 +15990,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.60";
+var VECY_VERSION = "v31.61";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -20221,29 +20221,29 @@ var agendaRouter = router({
   create: publicProcedure.input(
     z8.object({
       solicitante_nombre: z8.string().min(1),
-      solicitante_tipo_persona: z8.string().optional(),
-      solicitante_perfil: z8.string().optional(),
-      solicitante_email: z8.string().optional(),
-      solicitante_celular: z8.string().optional(),
-      solicitante_tipo_documento: z8.string().optional(),
-      solicitante_numero_documento: z8.string().optional(),
-      servicio_solicitado: z8.string().optional(),
-      nombre_inmueble: z8.string().optional(),
-      codigo_inmueble: z8.string().optional(),
-      opcion_negocio: z8.string().optional(),
+      solicitante_tipo_persona: z8.string().nullable().optional(),
+      solicitante_perfil: z8.string().nullable().optional(),
+      solicitante_email: z8.string().nullable().optional(),
+      solicitante_celular: z8.string().nullable().optional(),
+      solicitante_tipo_documento: z8.string().nullable().optional(),
+      solicitante_numero_documento: z8.string().nullable().optional(),
+      servicio_solicitado: z8.string().nullable().optional(),
+      nombre_inmueble: z8.string().nullable().optional(),
+      codigo_inmueble: z8.string().nullable().optional(),
+      opcion_negocio: z8.string().nullable().optional(),
       fecha_cita_texto: z8.string().nullable().optional(),
       hora_cita: z8.string().nullable().optional(),
       cantidad_personas: z8.number().nullable().optional(),
-      interesado_nombre: z8.string().optional(),
-      interesado_tipo_documento: z8.string().optional(),
-      interesado_documento: z8.string().optional(),
-      tipo_cliente: z8.string().optional(),
+      interesado_nombre: z8.string().nullable().optional(),
+      interesado_tipo_documento: z8.string().nullable().optional(),
+      interesado_documento: z8.string().nullable().optional(),
+      tipo_cliente: z8.string().nullable().optional(),
       acompanantes: z8.any().optional(),
       firma_virtual_base64: z8.string().nullable().optional(),
       firma_fechahora_audit: z8.string().nullable().optional(),
-      solicitante_representante_legal: z8.string().optional(),
-      autorizacion: z8.boolean().optional(),
-      agent_id: z8.string().optional()
+      solicitante_representante_legal: z8.string().nullable().optional(),
+      autorizacion: z8.boolean().nullable().optional(),
+      agent_id: z8.string().nullable().optional()
     })
   ).mutation(async ({ input }) => {
     const db = await getDb();

@@ -17,6 +17,22 @@ import { fetchProfile, updateProfile, submitSolicitud } from '../../services/api
 
 const logoUrl = '/logo-vecy.png';
 
+// Algoritmo Oficial DIAN Módulo 11 para Dígito de Verificación de NIT
+function calcularDV(nit) {
+  if (!nit) return '';
+  const cleanNit = nit.toString().replace(/\D/g, '');
+  if (!cleanNit || cleanNit.length === 0) return '';
+  const vpri = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
+  const len = cleanNit.length;
+  let total = 0;
+  for (let i = 0; i < len; i++) {
+    total += parseInt(cleanNit.charAt(len - 1 - i), 10) * vpri[i];
+  }
+  const resto = total % 11;
+  if (resto === 0 || resto === 1) return resto.toString();
+  return (11 - resto).toString();
+}
+
 function Spinner() {
   return (
     <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-volcanic-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -79,6 +95,10 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
   const [acompVerified, setAcompVerified] = useState({});
   const [acompSuccessMsg, setAcompSuccessMsg] = useState({});
 
+  // Estados del Dígito de Verificación (DV) para Personas Jurídicas / NIT
+  const [solicitanteDv, setSolicitanteDv] = useState('1');
+  const [interesadoDv, setInteresadoDv] = useState('');
+
   const securityHint = "Validación de seguridad: Este número se coteja mediante herramientas de alta tecnología para su comprobación y verificación de datos veraces.";
 
   const handleShare = () => {
@@ -101,16 +121,41 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
 
   const loadProfile = async (currentSession) => {
     const { data } = await fetchProfile(currentSession);
+    const email = (currentSession?.user?.email || '').toLowerCase();
+    const isVecySession = email.includes('vecy') || (data?.full_name && data.full_name.toLowerCase().includes('vecy'));
+
+    if (isVecySession) {
+      setFormData(prev => ({
+        ...prev,
+        solicitante_email: currentSession?.user?.email || 'vecybienesraices@gmail.com',
+        solicitante_nombre: 'Vecy Bienes Raíces',
+        solicitante_tipo_persona: 'Persona Jurídica',
+        solicitante_perfil: 'Agencia / Inmobiliaria',
+        solicitante_celular: '+573166569719',
+        solicitante_tipo_documento: 'NIT',
+        solicitante_numero_documento: '41057506-1',
+        solicitante_representante_legal: 'Jani Alves Souza',
+      }));
+      setSolicitanteDv('1');
+      return;
+    }
+
     if (data) {
+      const doc = data.numero_documento || '';
       setFormData(prev => ({
         ...prev,
         solicitante_email: currentSession.user.email || prev.solicitante_email,
         solicitante_nombre: data.full_name || prev.solicitante_nombre,
         solicitante_celular: normalizeCelular(data.celular || prev.solicitante_celular),
         solicitante_tipo_documento: data.tipo_documento || prev.solicitante_tipo_documento,
-        solicitante_numero_documento: data.numero_documento || prev.solicitante_numero_documento,
+        solicitante_numero_documento: doc || prev.solicitante_numero_documento,
         solicitante_perfil: data.perfil || prev.solicitante_perfil,
       }));
+      if (doc.includes('-')) {
+        setSolicitanteDv(doc.split('-')[1]);
+      } else if (data.tipo_documento === 'NIT') {
+        setSolicitanteDv(calcularDV(doc));
+      }
     } else {
       setFormData(prev => ({
         ...prev,
@@ -248,6 +293,27 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
       return;
     }
 
+    // Regla doctrinal inmutable: Separación Daniel Rivera vs Vecy Bienes Raíces
+    if (cleanDoc === '1233903423' && (nombreIngresado || '').toLowerCase().includes('vecy')) {
+      const errMsg = '⚠️ El documento 1233903423 pertenece a Daniel Eduardo Rivera Noguera y no corresponde a Vecy Bienes Raíces (el NIT oficial de Vecy Bienes Raíces es 41057506-1).';
+      setIdentityError(errMsg);
+      setIdentityVerified(false);
+      setIdentitySuccessMsg(null);
+      setFormErrors(prev => ({ ...prev, solicitante_numero_documento: true }));
+      toast.error(errMsg);
+      return;
+    }
+
+    if ((nombreIngresado || '').toLowerCase().includes('vecy') && !cleanDoc.startsWith('41057506')) {
+      const errMsg = '⚠️ El documento ingresado no corresponde a Vecy Bienes Raíces (el NIT oficial es 41057506-1).';
+      setIdentityError(errMsg);
+      setIdentityVerified(false);
+      setIdentitySuccessMsg(null);
+      setFormErrors(prev => ({ ...prev, solicitante_numero_documento: true }));
+      toast.error(errMsg);
+      return;
+    }
+
     setIsValidatingDoc(true);
     setIdentityError(null);
     try {
@@ -277,15 +343,39 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
 
         // Autocompletar siempre con los nombres y apellidos completos oficiales verificados
         if (data.officialName) {
-          const isVecyCompany = data.officialName === 'Vecy Bienes Raíces' || data.isCompany;
+          const isVecyCompany = data.officialName === 'Vecy Bienes Raíces' || data.isCompany || cleanDoc.startsWith('41057506');
+          if (isVecyCompany) {
+            setFormData(prev => ({
+              ...prev,
+              solicitante_nombre: 'Vecy Bienes Raíces',
+              solicitante_tipo_persona: 'Persona Jurídica',
+              solicitante_tipo_documento: 'NIT',
+              solicitante_numero_documento: '41057506-1',
+              solicitante_representante_legal: 'Jani Alves Souza',
+              solicitante_celular: prev.solicitante_celular || '+573166569719',
+            }));
+            setSolicitanteDv('1');
+            toast.success('✓ Vecy Bienes Raíces verificada: NIT 41057506-1');
+            return;
+          }
+
+          const isDaniel = cleanDoc === '1233903423';
+          if (isDaniel) {
+            setFormData(prev => ({
+              ...prev,
+              solicitante_nombre: 'Daniel Eduardo Rivera Noguera',
+              solicitante_tipo_persona: 'Persona Natural',
+              solicitante_tipo_documento: 'Cédula de ciudadanía',
+              solicitante_numero_documento: '1233903423',
+            }));
+            setSolicitanteDv('');
+            toast.success('✓ Daniel Eduardo Rivera Noguera verificado con éxito');
+            return;
+          }
+
           setFormData(prev => ({
             ...prev,
             solicitante_nombre: data.officialName,
-            ...(isVecyCompany ? {
-              solicitante_tipo_persona: 'Persona Jurídica',
-              solicitante_tipo_documento: 'NIT',
-              solicitante_numero_documento: prev.solicitante_numero_documento.includes('-') ? prev.solicitante_numero_documento : (prev.solicitante_numero_documento === '41057506' || prev.solicitante_numero_documento === '410575061' ? '41057506-1' : prev.solicitante_numero_documento)
-            } : {})
           }));
           toast.success(`✓ Nombre verificado y autocompletado: ${data.officialName}`);
         }
@@ -306,6 +396,16 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
   const handleVerifyClientIdentity = async (nombreIngresado, numeroDocumento, tipoDocumento) => {
     const cleanDoc = (numeroDocumento || '').replace(/[^0-9a-zA-Z]/g, '');
     if (!cleanDoc || cleanDoc.length < 5) return;
+
+    if (cleanDoc === '1233903423' && (nombreIngresado || '').toLowerCase().includes('vecy')) {
+      const errMsg = '⚠️ El documento 1233903423 pertenece a Daniel Eduardo Rivera Noguera y no corresponde a Vecy Bienes Raíces.';
+      setClientIdentityError(errMsg);
+      setClientIdentityVerified(false);
+      setClientIdentitySuccessMsg(null);
+      setFormErrors(prev => ({ ...prev, interesado_documento: true }));
+      toast.error(errMsg);
+      return;
+    }
 
     setIsValidatingClientDoc(true);
     setClientIdentityError(null);
@@ -334,13 +434,45 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
           return updated;
         });
 
+        // Autocompletar siempre con los nombres y apellidos completos oficiales verificados
         if (data.officialName) {
-          setFormData(prev => ({ ...prev, interesado_nombre: data.officialName }));
-          toast.success(`✓ Cliente verificado: ${data.officialName}`);
+          const isVecyCompany = data.officialName === 'Vecy Bienes Raíces' || data.isCompany || cleanDoc.startsWith('41057506');
+          if (isVecyCompany) {
+            setFormData(prev => ({
+              ...prev,
+              interesado_nombre: 'Vecy Bienes Raíces',
+              tipo_cliente: 'Empresa',
+              interesado_tipo_documento: 'NIT',
+              interesado_documento: '41057506-1',
+            }));
+            setInteresadoDv('1');
+            toast.success('✓ Vecy Bienes Raíces verificada: NIT 41057506-1');
+            return;
+          }
+
+          const isDaniel = cleanDoc === '1233903423';
+          if (isDaniel) {
+            setFormData(prev => ({
+              ...prev,
+              interesado_nombre: 'Daniel Eduardo Rivera Noguera',
+              tipo_cliente: 'Persona',
+              interesado_tipo_documento: 'Cédula de ciudadanía',
+              interesado_documento: '1233903423',
+            }));
+            setInteresadoDv('');
+            toast.success('✓ Daniel Eduardo Rivera Noguera verificado con éxito');
+            return;
+          }
+
+          setFormData(prev => ({
+            ...prev,
+            interesado_nombre: data.officialName,
+          }));
+          toast.success(`✓ Nombre del cliente verificado y autocompletado: ${data.officialName}`);
         }
       }
     } catch (err) {
-      console.warn('Error verificando cliente presentado:', err);
+      console.warn('Error verificando identidad de cliente:', err);
     } finally {
       setIsValidatingClientDoc(false);
     }
@@ -626,6 +758,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
 
       const payload = {
         ...formData,
+        agent_id: formData.agent_id ? String(formData.agent_id) : null,
         fecha_cita_texto,
         hora_cita,
         cantidad_personas: parseInt(formData.cantidad_personas, 10) || null,
@@ -657,8 +790,78 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
   };
 
   const isPassport = formData.solicitante_tipo_documento === 'Pasaporte';
-  const isCompanyDoc = formData.solicitante_tipo_persona === 'Persona Jurídica';
+  const isCompanyDoc = formData.solicitante_tipo_persona === 'Persona Jurídica' || formData.solicitante_tipo_documento === 'NIT' || formData.solicitante_tipo_documento === 'RUT';
   const isClientPassport = formData.interesado_tipo_documento === 'Pasaporte';
+  const isClientCompanyDoc = formData.tipo_cliente === 'Empresa' || formData.interesado_tipo_documento === 'NIT' || formData.interesado_tipo_documento === 'RUT';
+
+  const solicitanteNitBase = isCompanyDoc
+    ? (formData.solicitante_numero_documento || '').split('-')[0].replace(/\D/g, '')
+    : formData.solicitante_numero_documento;
+
+  const handleSolicitanteDocChange = (e) => {
+    const val = e.target.value;
+    if (identityError) setIdentityError(null);
+    if (identitySuccessMsg) setIdentitySuccessMsg(null);
+
+    if (isCompanyDoc) {
+      if (val.includes('-')) {
+        const parts = val.split('-');
+        const base = parts[0].replace(/\D/g, '');
+        const dv = parts[1] ? parts[1].replace(/\D/g, '').slice(0, 1) : calcularDV(base);
+        setSolicitanteDv(dv);
+        setFormData(prev => ({ ...prev, solicitante_numero_documento: base ? `${base}-${dv}` : '' }));
+      } else {
+        const base = val.replace(/\D/g, '');
+        const dv = solicitanteDv || calcularDV(base);
+        setSolicitanteDv(dv);
+        setFormData(prev => ({ ...prev, solicitante_numero_documento: base ? `${base}-${dv}` : '' }));
+      }
+    } else {
+      handleChange(e);
+    }
+  };
+
+  const handleSolicitanteDvChange = (e) => {
+    const dv = e.target.value.replace(/\D/g, '').slice(0, 1);
+    setSolicitanteDv(dv);
+    const base = (formData.solicitante_numero_documento || '').split('-')[0].replace(/\D/g, '');
+    setFormData(prev => ({ ...prev, solicitante_numero_documento: base ? `${base}-${dv}` : '' }));
+  };
+
+  const interesadoNitBase = isClientCompanyDoc
+    ? (formData.interesado_documento || '').split('-')[0].replace(/\D/g, '')
+    : formData.interesado_documento;
+
+  const handleInteresadoDocChange = (e) => {
+    const val = e.target.value;
+    if (clientIdentityError) setClientIdentityError(null);
+    if (clientIdentitySuccessMsg) setClientIdentitySuccessMsg(null);
+
+    if (isClientCompanyDoc) {
+      if (val.includes('-')) {
+        const parts = val.split('-');
+        const base = parts[0].replace(/\D/g, '');
+        const dv = parts[1] ? parts[1].replace(/\D/g, '').slice(0, 1) : calcularDV(base);
+        setInteresadoDv(dv);
+        setFormData(prev => ({ ...prev, interesado_documento: base ? `${base}-${dv}` : '' }));
+      } else {
+        const base = val.replace(/\D/g, '');
+        const dv = interesadoDv || calcularDV(base);
+        setInteresadoDv(dv);
+        setFormData(prev => ({ ...prev, interesado_documento: base ? `${base}-${dv}` : '' }));
+      }
+    } else {
+      handleChange(e);
+    }
+  };
+
+  const handleInteresadoDvChange = (e) => {
+    const dv = e.target.value.replace(/\D/g, '').slice(0, 1);
+    setInteresadoDv(dv);
+    const base = (formData.interesado_documento || '').split('-')[0].replace(/\D/g, '');
+    setFormData(prev => ({ ...prev, interesado_documento: base ? `${base}-${dv}` : '' }));
+  };
+
   const showVisitDetails = formData.servicio_solicitado === 'Visitar inmueble';
   const showBusinessOption = formData.servicio_solicitado === 'Visitar inmueble' || formData.servicio_solicitado === 'Avalúo comercial';
   const showAgentSections = formData.solicitante_perfil === 'Agente' || formData.solicitante_perfil === 'Agencia / Inmobiliaria' || formData.solicitante_perfil === 'Bróker / Empresa';
@@ -714,22 +917,26 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
             <FormInput onChange={handleChange} onBlur={handleClientNameBlur} value={formData.interesado_nombre} label="Nombre del Cliente / Razón Social" id="interesado_nombre" name="interesado_nombre" type="text" placeholder="Ej: María Gómez" required error={!!formErrors.interesado_nombre} />
             <CustomSelect label="Tipo de Documento del Cliente" name="interesado_tipo_documento" value={formData.interesado_tipo_documento} onChange={handleChange} options={tipoDocumentoClienteOptions} placeholder="Selecciona..." error={!!formErrors.interesado_tipo_documento} />
             <FormInput 
-              onChange={handleChange} 
+              onChange={handleInteresadoDocChange} 
               onBlur={handleClientDocBlur}
-              value={formData.interesado_documento} 
-              label="Número de Documento del Cliente" 
+              value={isClientCompanyDoc ? interesadoNitBase : formData.interesado_documento} 
+              label={isClientCompanyDoc ? "Número de Identificación del Cliente (NIT/RUT)" : "Número de Documento del Cliente"} 
               id="interesado_documento" 
               name="interesado_documento" 
               type={isClientPassport ? "text" : "tel"} 
               pattern={isClientPassport ? ".*" : "[0-9]*"} 
-              placeholder="Ej: 987654321" 
+              placeholder={isClientCompanyDoc ? "Ej: 901234567" : "Ej: 987654321"} 
               required 
-              maxLength="20" 
+              maxLength={isClientCompanyDoc ? 15 : 20} 
               error={!!formErrors.interesado_documento || !!clientIdentityError} 
               errorAlert={clientIdentityError}
               successBadge={clientIdentitySuccessMsg}
               isValidating={isValidatingClientDoc}
               hint={securityHint}
+              isNitWithDv={isClientCompanyDoc}
+              dvValue={interesadoDv}
+              onDvChange={handleInteresadoDvChange}
+              onDvBlur={handleClientDocBlur}
             />
           </div>
         </div>
@@ -945,22 +1152,26 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
                 <FormInput onChange={handleChange} value={formData.solicitante_celular.replace(/^\+?57/, '').slice(0, 10)} label="Celular" id="solicitante_celular" name="solicitante_celular" type="tel" placeholder="3001234567" required adornment="+57" maxLength="10" pattern="[0-9]*" error={!!formErrors.solicitante_celular} />
                 <CustomSelect label="Tipo de Documento" name="solicitante_tipo_documento" value={formData.solicitante_tipo_documento} onChange={handleChange} options={tipoDocumentoOptions} placeholder="Selecciona..." error={!!formErrors.solicitante_tipo_documento} />
                 <FormInput 
-                  onChange={handleChange} 
+                  onChange={handleSolicitanteDocChange} 
                   onBlur={handleDocBlur}
-                  value={formData.solicitante_numero_documento} 
+                  value={isCompanyDoc ? solicitanteNitBase : formData.solicitante_numero_documento} 
                   label={isCompanyDoc ? "Número de Identificación (NIT/RUT)" : "Número de Documento"} 
                   id="solicitante_numero_documento" 
                   name="solicitante_numero_documento" 
-                  type={isPassport || isCompanyDoc ? "text" : "tel"} 
-                  pattern={isPassport || isCompanyDoc ? ".*" : "[0-9]*"} 
-                  placeholder={isCompanyDoc ? "Ej: 900.123.456-7" : "Ej: 1234567890"} 
+                  type={isPassport ? "text" : "tel"} 
+                  pattern={isPassport ? ".*" : "[0-9]*"} 
+                  placeholder={isCompanyDoc ? "Ej: 41057506 o 901234567" : "Ej: 1234567890"} 
                   required 
-                  maxLength="20" 
+                  maxLength={isCompanyDoc ? 15 : 20} 
                   error={!!formErrors.solicitante_numero_documento || !!identityError} 
                   errorAlert={identityError}
                   successBadge={identitySuccessMsg}
                   isValidating={isValidatingDoc}
                   hint={securityHint}
+                  isNitWithDv={isCompanyDoc}
+                  dvValue={solicitanteDv}
+                  onDvChange={handleSolicitanteDvChange}
+                  onDvBlur={handleDocBlur}
                 />
                 {formData.solicitante_tipo_persona === 'Persona Jurídica' && (
                   <FormInput 

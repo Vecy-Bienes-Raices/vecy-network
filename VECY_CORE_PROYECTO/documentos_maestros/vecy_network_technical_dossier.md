@@ -322,6 +322,36 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.61 — Septiembre 2026
+
+#### 📌 CUADRITO DE DÍGITO DE VERIFICACIÓN (DV) PARA NIT, MODERNIZACIÓN 1-CLIC DEL CENTRO DE VERIFICACIÓN, SANEAMIENTO DE PROFILES DE VECY Y RESOLUCIÓN ERROR 400 EN AGENT_ID
+
+**Problemas identificados:**
+1. **Cuadrito Adjunto para Dígito de Verificación (DV) de NIT**:
+   - Para personas jurídicas y empresas con NIT, era imperativo disponer de un cuadrito adjunto compacto donde vaya el Dígito de Verificación (DV), facilitando la digitación clara sin confundir los dígitos base del NIT con el dígito de control DIAN.
+2. **Depuración del Centro de Verificación en Admin (`AdminAgenda.tsx`)**:
+   - El panel mostraba 4 botones externos (`Policía`, `Verifíquese`, `DIAN`, `RUES`) que ya no se requerían dado que la plataforma realiza la verificación de forma autónoma con 2Captcha. Se solicitó sustituirlos por la opción de copiar el documento y copiar el nombre completo verificado con un solo clic.
+3. **Reaparición del Documento de Daniel Rivera (`1233903423`) al Iniciar Sesión con Vecy Bienes Raíces**:
+   - En la tabla `profiles` de PostgreSQL nativo del VPS, el registro del usuario con ID `31a51e04-7090-41dc-92a1-2d1ecc7d4d8b` (Vecy Bienes Raíces) tenía guardado `numero_documento = '1233903423'` y `tipo_documento = 'Cédula de ciudadanía'`. Al abrir el formulario con la sesión activa de `vecybienesraices@gmail.com`, `loadProfile` leía dicho registro inyectando la cédula de Daniel.
+4. **Error al Enviar Solicitud (`TRPCClientError: expected string, received null`)**:
+   - Al enviar la solicitud desde `/agenda/297/?nombre=...`, el formulario enviaba `agent_id: null`. En `server/routers/agenda.ts`, el schema Zod de `agenda.create` utilizaba `agent_id: z.string().optional()`. Al recibir `null`, Zod arrojaba un error 400 de validación.
+
+**Solución aplicada:**
+- **Control de Dígito de Verificación (DV)**:
+  - Diseñado en `FormInput.jsx` un contenedor flex Gold Luxury con campo base de NIT, guion `-` dorado, y un cuadrito adjunto (`w-16`, monospace, centrado, color oro `#d4af37`) para el Dígito de Verificación.
+  - Implementada la función matemática oficial DIAN `calcularDV(nit)` con algoritmo módulo 11 para autocalcular el DV automáticamente. Soporta pegado con guion (ej: `41057506-1` se autosepara en base y DV).
+- **Saneamiento en PostgreSQL nativo VPS**:
+  - Actualizada la fila `31a51e04-7090-41dc-92a1-2d1ecc7d4d8b` en la tabla `profiles` a `tipo_documento = 'NIT'`, `numero_documento = '41057506-1'`, `tipo_cliente = 'Persona Jurídica'`, `perfil = 'Inmobiliaria'`.
+  - Blindada la función `loadProfile` en `AgendaForm.jsx` para que toda sesión de `vecybienesraices@gmail.com` asigne inmutablemente NIT `41057506-1`, Persona Jurídica, NIT, DV `1` y representante legal Jani Alves Souza.
+- **Backend tRPC (`agenda.ts`)**:
+  - Schema de `agenda.create` actualizado para que `agent_id` y todos los campos opcionales acepten `.nullable().optional()`.
+- **Centro de Verificación de Identidad (`AdminAgenda.tsx`)**:
+  - Reemplazados los botones externos por botones de copiado directo `[ Copiar Nombre ]`, `[ Copiar Doc ]` y el badge de verificación `✓ Verificado`.
+- **Compilación y Despliegue**:
+  - Ambos repositorios (`vecy-network` y `vecy-agenda-pro`) compilados con 0 errores y sincronizados.
+
+---
+
 ### 🔖 v31.60 — Septiembre 2026
 
 #### 📌 AUTOCOMPLETADO DE NOMBRES Y APELLIDOS COMPLETOS OFICIALES, SOPORTE DOCTRINAL DANIEL RIVERA, VECY PERSONA JURÍDICA NIT 41057506-1, SOLUCIÓN A TIMEOUTS 504 EN VPS Y VERIFICACIÓN UNIVERSAL 2CAPTCHA

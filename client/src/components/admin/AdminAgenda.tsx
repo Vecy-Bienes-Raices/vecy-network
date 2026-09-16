@@ -185,53 +185,40 @@ export default function AdminAgenda() {
     if (!docNum || docNum === 'N/A' || docNum === 'No registra') return null;
     return (
       <div className="flex flex-wrap items-center gap-1.5">
-        <a
-          href="https://antecedentes.policia.gov.co:7005/WebJudicial/"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => copyToClipboard(docNum, `Cédula Policía (${personName})`)}
-          className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10 text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:border-primary/40"
-          title="1-Clic: Copia cédula y abre antecedentes Policía Nacional"
-        >
-          <span>👮</span>
-          <span>Policía</span>
-        </a>
+        {personName && personName !== 'No registra' && personName !== 'N/A' && (
+          <button
+            type="button"
+            onClick={() => copyToClipboard(personName, `Nombre ${label}`)}
+            className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10 text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:border-primary/40"
+            title={`Copiar nombre completo: ${personName}`}
+          >
+            {copiedDoc === personName ? (
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+            ) : (
+              <Copy className="w-3.5 h-3.5 text-[#bf953f]" />
+            )}
+            <span>Copiar Nombre</span>
+          </button>
+        )}
 
-        <a
-          href="https://verifiquese.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => copyToClipboard(docNum, `Cédula Verifíquese (${personName})`)}
+        <button
+          type="button"
+          onClick={() => copyToClipboard(docNum, `Documento ${label}`)}
           className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10 text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:border-primary/40"
-          title="1-Clic: Copia cédula y abre Verifíquese Cédula"
+          title={`Copiar documento: ${docNum}`}
         >
-          <span>🔍</span>
-          <span>Verifíquese</span>
-        </a>
+          {copiedDoc === docNum ? (
+            <Check className="w-3.5 h-3.5 text-emerald-400" />
+          ) : (
+            <Copy className="w-3.5 h-3.5 text-zinc-400" />
+          )}
+          <span>Copiar Doc</span>
+        </button>
 
-        <a
-          href="https://muisca.dian.gov.co/WebRutMuisca/DefConsultaEstadoRUT.faces"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => copyToClipboard(docNum, `NIT / Cédula DIAN (${personName})`)}
-          className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10 text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:border-primary/40"
-          title="1-Clic: Copia número y abre Consulta RUT DIAN"
-        >
-          <span>🏛️</span>
-          <span>DIAN RUT</span>
-        </a>
-
-        <a
-          href="https://www.rues.org.co/"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={() => copyToClipboard(docNum, `Identificación RUES (${personName})`)}
-          className="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-primary/20 text-zinc-300 hover:text-primary border border-white/10 text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm hover:border-primary/40"
-          title="1-Clic: Copia número y abre RUES Cámaras de Comercio"
-        >
-          <span>🏢</span>
-          <span>RUES</span>
-        </a>
+        <span className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
+          <ShieldCheck className="w-3 h-3 text-emerald-400" />
+          <span>Verificado</span>
+        </span>
       </div>
     );
   };
@@ -1166,20 +1153,20 @@ Sistema: Vecy Network — Bolsa Inmobiliaria Colaborativa`;
                       )
                     )}
 
-                    {/* CENTRO DE VERIFICACIÓN DE IDENTIDAD Y ANTECEDENTES (EN REEMPLAZO DE LA FIRMA Y CONTRATO) */}
+                    {/* CENTRO DE IDENTIDADES OFICIALES VERIFICADAS */}
                     <div className="p-4 sm:p-5 rounded-2xl bg-black/50 border border-[#bf953f]/35 space-y-3.5 shadow-inner">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
                         <div>
                           <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] flex items-center gap-2">
                             <ShieldCheck className="w-4 h-4 text-[#bf953f]" />
-                            Centro de Verificación de Identidad y Antecedentes (1-Clic)
+                            Centro de Identidades Oficiales Verificadas
                           </h4>
                           <p className="text-[11px] text-zinc-400 mt-0.5">
-                            Haz clic en cualquier entidad para copiar la identificación al portapapeles y abrir el portal oficial:
+                            Copia de un clic de los nombres y documentos verificados contra bases de datos oficiales:
                           </p>
                         </div>
-                        <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 w-fit shrink-0">
-                          Policía · Verifíquese · DIAN · RUES
+                        <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 w-fit shrink-0 flex items-center gap-1">
+                          <Check className="w-3 h-3 text-emerald-400" /> Verificación Universal Activa
                         </span>
                       </div>
 

@@ -1,7 +1,24 @@
 import React from 'react';
 
-// FormInput — Vecy Gold Edition
-function FormInput({ label, id, adornment, placeholder, maxLength, pattern, error, hint, errorAlert, successBadge, isValidating, ...props }) {
+// FormInput — Vecy Gold Edition con soporte nativo para Dígito de Verificación (DV)
+function FormInput({ 
+  label, 
+  id, 
+  adornment, 
+  placeholder, 
+  maxLength, 
+  pattern, 
+  error, 
+  hint, 
+  errorAlert, 
+  successBadge, 
+  isValidating,
+  isNitWithDv = false,
+  dvValue = '',
+  onDvChange,
+  onDvBlur,
+  ...props 
+}) {
   const isError = !!error || !!errorAlert;
   const isSuccess = !!successBadge && !isError;
 
@@ -34,27 +51,78 @@ function FormInput({ label, id, adornment, placeholder, maxLength, pattern, erro
       </div>
 
       <div className="relative">
-        {adornment && (
-          <span className={`absolute inset-y-0 left-0 flex items-center pl-3 text-sm transition-colors duration-300 ${adornmentClasses}`}>
-            {adornment}
-          </span>
-        )}
-        <input
-          id={id}
-          placeholder={placeholder || ''}
-          maxLength={maxLength}
-          pattern={pattern}
-          {...props}
-          className={`w-full p-3 rounded-lg border-2 focus:ring-2 focus:outline-none transition-colors duration-300 ${adornment ? 'pl-10' : ''} ${isValidating ? 'pr-10' : ''} ${inputClasses}`}
-          style={{
-            backgroundColor: isError ? 'rgba(35, 10, 10, 0.7)' : (isSuccess ? 'rgba(10, 30, 20, 0.7)' : '#0a0a0a'),
-            color: '#f0f0f0',
-          }}
-        />
-        {isValidating && (
-          <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <span className="w-4 h-4 rounded-full border-2 border-amber-400/30 border-t-amber-400 animate-spin" />
-          </span>
+        {isNitWithDv ? (
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
+              {adornment && (
+                <span className={`absolute inset-y-0 left-0 flex items-center pl-3 text-sm transition-colors duration-300 ${adornmentClasses}`}>
+                  {adornment}
+                </span>
+              )}
+              <input
+                id={id}
+                placeholder={placeholder || 'Número base NIT'}
+                maxLength={maxLength || 15}
+                pattern={pattern}
+                {...props}
+                className={`w-full p-3 rounded-lg border-2 focus:ring-2 focus:outline-none transition-colors duration-300 ${adornment ? 'pl-10' : ''} ${isValidating ? 'pr-10' : ''} ${inputClasses}`}
+                style={{
+                  backgroundColor: isError ? 'rgba(35, 10, 10, 0.7)' : (isSuccess ? 'rgba(10, 30, 20, 0.7)' : '#0a0a0a'),
+                  color: '#f0f0f0',
+                }}
+              />
+              {isValidating && (
+                <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <span className="w-4 h-4 rounded-full border-2 border-amber-400/30 border-t-amber-400 animate-spin" />
+                </span>
+              )}
+            </div>
+
+            <span className="text-soft-gold text-lg font-bold select-none px-0.5">-</span>
+
+            <div className="relative w-16 shrink-0" title="Dígito de Verificación (DV)">
+              <input
+                id={`${id}_dv`}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={dvValue ?? ''}
+                onChange={onDvChange}
+                onBlur={onDvBlur}
+                placeholder="DV"
+                className={`w-full p-3 text-center font-mono font-bold text-base rounded-lg border-2 focus:ring-2 focus:outline-none transition-colors duration-300 ${inputClasses}`}
+                style={{
+                  backgroundColor: isError ? 'rgba(35, 10, 10, 0.7)' : (isSuccess ? 'rgba(10, 30, 20, 0.7)' : '#0a0a0a'),
+                  color: '#d4af37',
+                }}
+              />
+            </div>
+          </div>
+        ) : (
+          <>
+            {adornment && (
+              <span className={`absolute inset-y-0 left-0 flex items-center pl-3 text-sm transition-colors duration-300 ${adornmentClasses}`}>
+                {adornment}
+              </span>
+            )}
+            <input
+              id={id}
+              placeholder={placeholder || ''}
+              maxLength={maxLength}
+              pattern={pattern}
+              {...props}
+              className={`w-full p-3 rounded-lg border-2 focus:ring-2 focus:outline-none transition-colors duration-300 ${adornment ? 'pl-10' : ''} ${isValidating ? 'pr-10' : ''} ${inputClasses}`}
+              style={{
+                backgroundColor: isError ? 'rgba(35, 10, 10, 0.7)' : (isSuccess ? 'rgba(10, 30, 20, 0.7)' : '#0a0a0a'),
+                color: '#f0f0f0',
+              }}
+            />
+            {isValidating && (
+              <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <span className="w-4 h-4 rounded-full border-2 border-amber-400/30 border-t-amber-400 animate-spin" />
+              </span>
+            )}
+          </>
         )}
       </div>
 
