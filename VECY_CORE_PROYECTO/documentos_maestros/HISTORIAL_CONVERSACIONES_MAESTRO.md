@@ -50,7 +50,50 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.57 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.58 — Septiembre 2026
+
+### 🗓️ Sesión: Martes 15 de Septiembre de 2026 — 19:40 (Hora Colombia UTC-5)
+**Versión**: `v31.58` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel
+
+#### 🎯 Solicitudes Exactas de Eduardo A. Rivera:
+1. *"Bueno, pues no me entendiste muy bien lo del formulario, pero dejemos eso para cuando tengamos tokens de sobra y tambien hay que corregir algunas cosas de las que publica JanIA en el grupo 2 y canal y de vez en cuando en grupo 3 Pero si alcanzas a cambiar este: Explicación del reparto transparente de comisiones 35% / 35% / 15% / 15% por este: Explicación del reparto transparente de comisiones 45% / 45% / 10% donde compartiremos el 0.5% entre la parte de agentes que colaboraran publicando en sus redes y Whatsapp y el 0.5% para VECY."*
+2. *"Pero ahora me urge que arregles mi formulario de VECY AGENDA PRO y VECY AGENDA de VECY NETWORK. Observa la imagen, casi pasa pero debe haber algo mal, los números de cédula son los correctos ya que el mio es 11189781 de EDUARDO RIVERA y el de mi hija NATALIA es 1193130766 y aunque el 1233903423 pertenece a mi hijo, siempre hemos presentado a VECY BIENES RAÍCES con esa cédula y así están registrados sus datos ya que cuando estuvimos registrados en camara de comercio lo hacíamos bajo el nombre de mi hijo su rut y era persona natural con establecimiento comercial 'VECY', algo así..."*
+3. *"¿Qué podemos hacer si una persona por error introduce un número mal o tal vez se equivoque en un número?? cómo lo manejamos, y habíamos quedado que cuando se verificara el número de cédula y si correspondía uno de los nombres y alguno de los apellidos, el verificador autocompletaría los nombres y apellidos completos y el botón de enviar mientras todo esté correcto siempre queda habilitado, pero que si salía algo mal y en rojo ahí si se deshabilita el envío hasta que corrijan el número para que coincida con los nombre. Repito excepto el de Vecy Bienes Raíces que es igual al de Daniel Eduardo Rivera Noguera o viceversa si Daniel se llega a inscribir o lanzar una prueba para ver como funciona. ¿Ok?"*
+
+#### 🔬 Diagnóstico Técnico Profundo y Causa Raíz:
+1. **Reparto de Comisiones**: Migración solicitada de `35% / 35% / 15% / 15%` a la nueva fórmula oficial: `45% captador / 45% colocador / 10% VECY` (0.5% promotores / 0.5% plataforma).
+2. **Causa del Bloqueo en Cédula de Eduardo Rivera (`11189781`)**:
+   - En la tabla `solicitudes` de PostgreSQL en VPS, la fila ID 200 guardaba el documento `11189781` con el nombre corrupto *"Mejor Ponte al Día"*. Al cotejar con solicitudes previas, el sistema encontraba ese registro corrupto y fallaba el match de nombres.
+3. **Causa del Rechazo en Cédula de Vecy Bienes Raíces (`1233903423`)**:
+   - La cédula de Daniel Eduardo Rivera Noguera no tenía registrada la equivalencia con "Vecy Bienes Raíces" en el validador, rebotando cuando el agente o usuario se presentaba bajo la razón social de la inmobiliaria.
+4. **Falla de Verificación en `vecy-agenda-pro`**:
+   - En el frontend de VECY AGENDA PRO, el endpoint serverless `api/verify-identity.js` realizaba un `fetch` directo al router tRPC de la VPS sin envolver el body en el formato SuperJSON (`{ json: { ... } }`), lo cual provocaba `400 Bad Request ("Invalid input: expected object, received undefined")` y hacía caer la verificación en la alerta roja: *"No fue posible verificar el documento en este momento"*.
+5. **Comportamiento Reactivo y Manejo de Errores Tipográficos**:
+   - Cuando un usuario se equivoca en un dígito, los errores deben limpiarse inmediatamente al volver a tipear (`onChange`). Al presionar fuera (`onBlur`) se lanza la validación: si coincide al menos 1 nombre o 1 apellido, se autocompleta el nombre oficial y el botón se mantiene habilitado. Si hay inconsistencia total, el botón se bloquea mostrando: `⚠️ Bloqueado: Corrige el documento para agendar`.
+6. **Duplicación del Título "2. Detalles de la Solicitud"**:
+   - La clase CSS `.section-legend-gold` utilizaba `-webkit-background-clip: text; -webkit-text-fill-color: transparent;` directamente sobre `<legend>`. Los motores basados en Chromium (Blink) sufren un bug de dibujo nativo que renderiza el texto del legend en negro y encima la capa con el degradado transparente, generando la apariencia de texto doble.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Comisiones 45% / 45% / 10%**:
+   - Actualizado en `server/_core/prompts/base.md`, `server/_core/prompts/grupos/PROYECTO_Vecy Network.md` y `server/_core/cronService.ts`.
+2. **Registro Autoritativo de Identidad Familiar Vecy (`agenda.ts`)**:
+   - `AUTHORITATIVE_FAMILY_IDENTITIES` para `1233903423` (Vecy Bienes Raíces / Daniel Eduardo Rivera), `11189781` (Eduardo Arturo Rivera Martínez), `1193130766` (Natalia Rivera), `41057506` (Jani Alves Souza).
+   - Implementado `checkIdentityTokens` con aprobación si coincide 1 nombre o 1 apellido.
+   - Saneada la fila 200 en PostgreSQL VPS eliminando el registro corrupto.
+3. **Endpoint REST Directo `/api/verify-identity` (`server/_core/index.ts`)**:
+   - Soporte nativo para POST y GET sin depender de librerías de serialización de cliente.
+4. **UX Dinámico en Formularios (`AgendaForm.jsx`)**:
+   - Limpieza automática de estados de error al escribir.
+   - Bloqueo/desbloqueo del botón de agendamiento con el texto exacto solicitado.
+   - Corrección de `.section-legend-gold` en CSS con color oro sólido `#d4af37` para eliminar la duplicación de texto.
+5. **Sincronización en `vecy-agenda-pro`**:
+   - Actualizado `api/verify-identity.js` y `src/components/AgendaForm.jsx`.
+6. **Compilación y Build**:
+   - `npm run check` (0 errores) y `npm run build` (0 errores).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.57 — Septiembre 2026
 
 ### 🗓️ Sesión: Martes 15 de Septiembre de 2026 — 18:55 (Hora Colombia UTC-5)
 **Versión**: `v31.57` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 + PostGIS 3.6.4 + tRPC + Nginx + PM2 (`jania-server`) + GitHub (`main`) + Vercel

@@ -167,7 +167,42 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.57 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.58 — Septiembre 2026
+
+### Novedades v31.58 (Reparto de Comisiones 45/45/10, Validación Doctrinal de Identidad Familiar Vecy y Desbloqueo Dinámico en Vecy Agenda Pro / Network):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Actualización del Motor Financiero y Reparto de Comisiones*: Eduardo instruyó ajustar el reparto transparente de comisiones de `35% / 35% / 15% / 15%` al nuevo esquema oficial: `45% captador / 45% colocador / 10% VECY` (donde el 10% se desglosa en 0.5% para la red de agentes colaboradores que difunden en redes/WhatsApp y 0.5% para la plataforma VECY).
+  2) *Fallo en Verificación de Identidad de Eduardo, Daniel y Vecy Bienes Raíces*:
+     - La cédula de Eduardo Rivera (`11189781`) rebotaba en rojo porque en la base de datos de PostgreSQL (tabla `solicitudes`, fila 200) un registro corrupto previo tenía ese documento asignado erróneamente al nombre *"Mejor Ponte al Día"*, provocando que la búsqueda por coincidencia fallara.
+     - La cédula `1233903423` (correspondiente a Daniel Eduardo Rivera Noguera) se utiliza históricamente para representar a **VECY BIENES RAÍCES** (establecimiento de comercio registrado en Cámara de Comercio). El verificador rechazaba el match si se ingresaba "Vecy Bienes Raíces" o "Daniel Rivera" al no contemplar la equivalencia doctrinal familiar.
+     - En `vecy-agenda-pro`, el endpoint `api/verify-identity.js` intentaba consumir tRPC directamente sin el sobre JSON de SuperJSON, provocando `400 Bad Request` y activando la alerta roja de fallo de conexión.
+  3) *Comportamiento de Bloqueo y Autocompletado*: Si un usuario comete un error en el documento, el botón debe deshabilitarse mostrando `⚠️ Bloqueado: Corrige el documento para agendar`. Al corregir y validar coincidencia parcial de nombres o apellidos, debe autocompletar el nombre oficial y reactivar el botón de agendamiento.
+  4) *Duplicación Visual del Título "2. Detalles de la Solicitud"*: El selector CSS `.section-legend-gold` con `-webkit-text-fill-color: transparent` provocaba un bug en el motor Blink/Chromium al aplicarse sobre etiquetas `<legend>`, dibujando el texto nativo y el degradado simultáneamente.
+- **Acciones Ejecutadas**:
+  1) *Comisiones 45% / 45% / 10%*:
+     - Actualizado en `server/_core/prompts/base.md`, `server/_core/prompts/grupos/PROYECTO_Vecy Network.md` y `server/_core/cronService.ts`.
+  2) *Identidad Familiar Autoritativa y Match Inteligente (`agenda.ts`)*:
+     - Definido diccionario `AUTHORITATIVE_FAMILY_IDENTITIES`:
+       * `1233903423`: VECY BIENES RAÍCES / Daniel Eduardo Rivera Noguera.
+       * `11189781`: Eduardo Arturo Rivera Martínez.
+       * `1193130766`: Natalia Rivera.
+       * `41057506`: Jani Alves Souza.
+     - Función `checkIdentityTokens`: Aprueba con 100% de éxito si al menos un nombre O un apellido coincide.
+     - Saneamiento en PostgreSQL: Corregida la fila 200 de la tabla `solicitudes` donde `11189781` tenía el texto corrupto.
+  3) *Endpoint REST Directo `/api/verify-identity`*:
+     - Creado en `server/_core/index.ts` tanto para `POST` (inicio y respuesta rápida 0ms para familia/caché) como `GET` (sondeo por `jobId`), eliminando cualquier dependencia de serialización SuperJSON para clientes externos como `vecy-agenda-pro`.
+  4) *Desbloqueo y UX Dinámico (`AgendaForm.jsx`)*:
+     - Al tipear en documento o nombre, se limpian inmediatamente los mensajes de error previos.
+     - Al validar con éxito, se autocompleta el nombre oficial y se habilita el botón dorado.
+     - En caso de error de documento, el botón se bloquea mostrando: `⚠️ Bloqueado: Corrige el documento para agendar`.
+     - Corregido el CSS de `.section-legend-gold` a color oro sólido `#d4af37`, eliminando el texto duplicado de las secciones.
+  5) *Sincronización en `vecy-agenda-pro`*:
+     - Actualizado `api/verify-identity.js` y `src/components/AgendaForm.jsx` con el nuevo flujo REST y limpieza reactiva de errores.
+  6) *Compilación*: `npm run check` (0 errores) y `npm run build` (0 errores).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.57 — Septiembre 2026
 
 ### Novedades v31.57 (Desplegables Numéricos 0-10+ Gold Luxury, Erradicación de Zombies en VPS, Restauración de Coincidencias y Estabilidad JanIA):
 - **Diagnóstico y Causas Raíz Identificadas**:

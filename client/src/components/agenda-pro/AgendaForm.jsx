@@ -445,6 +445,15 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
     });
     setError('');
 
+    if (name === 'solicitante_numero_documento' || name === 'solicitante_nombre') {
+      if (identityError) setIdentityError(null);
+      if (identitySuccessMsg) setIdentitySuccessMsg(null);
+    }
+    if (name === 'interesado_documento' || name === 'interesado_nombre') {
+      if (clientIdentityError) setClientIdentityError(null);
+      if (clientIdentitySuccessMsg) setClientIdentitySuccessMsg(null);
+    }
+
     setFormData(prev => {
       let val = rawValue;
       let newState = { ...prev, [name]: val };
@@ -504,6 +513,12 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
       delete updated[errorKey];
       return updated;
     });
+    if (acompErrors[index]) {
+      setAcompErrors(prev => ({ ...prev, [index]: null }));
+    }
+    if (acompSuccessMsg[index]) {
+      setAcompSuccessMsg(prev => ({ ...prev, [index]: null }));
+    }
     setError('');
 
     setFormData(prev => {
@@ -1099,7 +1114,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
                       <Spinner /> Validando autenticidad del documento en tiempo real...
                     </span>
                   ) : (identityError || (showAgentSections && clientIdentityError) || Object.values(acompErrors).some(Boolean)) ? (
-                    '⚠️ Bloqueado: Inconsistencia de identidad detectada'
+                    '⚠️ Bloqueado: Corrige el documento para agendar'
                   ) : (
                     'Confirmar y Agendar Visita'
                   )}

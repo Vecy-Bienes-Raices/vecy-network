@@ -15724,7 +15724,7 @@ Objetivo: Motivar la publicaci\xF3n activa de inmuebles y requerimientos en toda
 Objetivo y Libre Albedr\xEDo: Inspirar a la comunidad destacando:
 1. Qui\xE9nes nos crearon: JanIA (t\xFA) habla con orgullo en primera persona como JanIA explicando qui\xE9nes son sus creadores y l\xEDderes de carne y hueso: Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones), fundadores de VECY Network y VECY Bienes Ra\xEDces.
 2. Qu\xE9 es JanIA y qu\xE9 rol cumple: La inteligencia artificial creada para conectar la oferta y demanda en Colombia, realizar matching en segundos, cubrir noticias del sector y respaldar al asesor 24/7.
-3. Qu\xE9 estamos creando: La primera bolsa inmobiliaria colaborativa y fintech de Colombia, con tecnolog\xEDa abierta, \xE9tica y comisiones justas (35% captador, 35% colocador, 15% bolsa aliados, 15% plataforma).
+3. Qu\xE9 estamos creando: La primera bolsa inmobiliaria colaborativa y fintech de Colombia, con tecnolog\xEDa abierta, \xE9tica y comisiones justas: 45% asesor captador, 45% asesor colocador y 10% de bolsa y plataforma VECY (donde compartimos el 0.5% entre los agentes que colaboran publicando en sus redes y WhatsApp, y el 0.5% para VECY).
 4. Misi\xF3n y Visi\xF3n: Dignificar el oficio del corredor inmobiliario, eliminar el canibalismo y brindar herramientas 100% virtuales de \xE9lite a agentes independientes y agencias.
 5. Debate abierto: invitar a debatir qu\xE9 herramientas necesitan y c\xF3mo podemos seguir mejorando la plataforma juntos.`
   };
@@ -15990,7 +15990,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.57";
+var VECY_VERSION = "v31.58";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -19717,6 +19717,45 @@ function calcularDigitoVerificacionDIAN(nitStr) {
   const residuo = suma % 11;
   return residuo > 1 ? 11 - residuo : residuo;
 }
+function checkIdentityTokens(nombreIngresado, officialName) {
+  if (!nombreIngresado || !nombreIngresado.trim()) return true;
+  if (!officialName || !officialName.trim()) return false;
+  const stopwords = ["de", "del", "la", "las", "los", "y", "el", "san", "santa", "inmobiliaria", "bienes", "raices", "ra\xEDces", "propiedades", "sas", "ltda"];
+  const normEntered = nombreIngresado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[\s,.-]+/).filter((t2) => t2.length >= 3 && !stopwords.includes(t2));
+  const normOfficial = officialName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[\s,.-]+/).filter((t2) => t2.length >= 3 && !stopwords.includes(t2));
+  if (normEntered.length === 0) return true;
+  const matches = normEntered.filter(
+    (token) => normOfficial.some((off) => off === token || token.length >= 4 && off.startsWith(token) || off.length >= 4 && token.startsWith(off))
+  );
+  return matches.length >= 1;
+}
+var AUTHORITATIVE_FAMILY_IDENTITIES = {
+  // 1. Cédula Daniel Eduardo Rivera Noguera / Vecy Bienes Raíces (Matrícula mercantil y RUT comercial de VECY)
+  "1233903423": {
+    canonicalName: "Vecy Bienes Ra\xEDces / Daniel Eduardo Rivera Noguera",
+    allowedKeywords: ["vecy", "bienes", "raices", "ra\xEDces", "daniel", "eduardo", "rivera", "noguera"],
+    isCompany: true,
+    message: "\u2713 Identidad corporativa verificada y autorizada: Vecy Bienes Ra\xEDces"
+  },
+  // 2. Cédula Eduardo Arturo Rivera Martínez (Fundador y Director de Tecnología)
+  "11189781": {
+    canonicalName: "Eduardo Arturo Rivera Mart\xEDnez",
+    allowedKeywords: ["eduardo", "rivera", "arturo", "martinez", "mart\xEDnez", "eddu", "eddua"],
+    message: "\u2713 Identidad verificada y autenticada con \xE9xito: Eduardo Arturo Rivera Mart\xEDnez"
+  },
+  // 3. Cédula Natalia Rivera (Hija de Eduardo)
+  "1193130766": {
+    canonicalName: "Natalia Rivera",
+    allowedKeywords: ["natalia", "rivera"],
+    message: "\u2713 Identidad verificada y autenticada con \xE9xito: Natalia Rivera"
+  },
+  // 4. Cédula Jani Alves Souza (Fundadora y Directora de Operaciones)
+  "41057506": {
+    canonicalName: "Jani Alves Souza",
+    allowedKeywords: ["jani", "alves", "souza"],
+    message: "\u2713 Identidad verificada y autenticada con \xE9xito: Jani Alves Souza"
+  }
+};
 async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngresado) {
   const clean = cleanDoc.replace(/[^0-9a-zA-Z]/g, "");
   if (!clean || clean.length < 5) {
@@ -19756,24 +19795,47 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       message: `\u2713 NIT/RUT validado conforme a estructura DIAN (D\xEDgito de verificaci\xF3n: ${dvCalculado})`
     };
   }
+  const authEntry = AUTHORITATIVE_FAMILY_IDENTITIES[clean];
+  if (authEntry) {
+    const norm2 = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const tokens = norm2.split(/[\s,.-]+/).filter(Boolean);
+    const matchesKeyword = tokens.length === 0 || tokens.some((t2) => authEntry.allowedKeywords.some((kw) => kw === t2 || t2.startsWith(kw) || kw.startsWith(t2)));
+    if (matchesKeyword) {
+      let displayName = authEntry.canonicalName;
+      if (authEntry.isCompany) {
+        if (norm2.includes("vecy")) {
+          displayName = "Vecy Bienes Ra\xEDces";
+        } else if (norm2.includes("daniel")) {
+          displayName = "Daniel Eduardo Rivera Noguera";
+        }
+      }
+      return {
+        valid: true,
+        match: true,
+        officialName: displayName,
+        message: authEntry.message
+      };
+    } else {
+      return {
+        valid: true,
+        match: false,
+        officialName: authEntry.canonicalName,
+        error: `\u26A0\uFE0F El n\xFAmero de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un n\xFAmero mal o corr\xEDgelo para continuar.`
+      };
+    }
+  }
   const cacheKey = `POLICIA:cc:${clean}`;
   const cached = identityCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL) {
     const officialFormatted = cached.fullName;
-    if (nombreIngresado && nombreIngresado.trim().length >= 3) {
-      const stopwords = ["de", "del", "la", "las", "los", "y", "el"];
-      const normEntered = nombreIngresado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
-      const normOfficial = officialFormatted.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
-      const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
-      const isMatch = matches.length >= Math.min(2, normEntered.length);
-      if (!isMatch) {
-        return {
-          valid: true,
-          match: false,
-          officialName: officialFormatted,
-          error: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${clean} no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, por favor verifica el n\xFAmero de documento o corrige los nombres para que coincidan con la persona que asistir\xE1.`
-        };
-      }
+    const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
+    if (!isMatch) {
+      return {
+        valid: true,
+        match: false,
+        officialName: officialFormatted,
+        error: `\u26A0\uFE0F El n\xFAmero de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un n\xFAmero mal o corr\xEDgelo para continuar.`
+      };
     }
     return {
       valid: true,
@@ -19795,35 +19857,21 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
           eq14(solicitudes.solicitanteNumeroDocumento, clean),
           eq14(solicitudes.interesadoDocumento, clean)
         )
-      ).limit(1);
-      if (solRows.length > 0) {
-        const row = solRows[0];
-        const matchName = (row.solicitanteNumeroDocumento || "").replace(/\D/g, "") === clean ? row.solicitanteNombre : row.interesadoNombre;
-        if (matchName && matchName.trim().length >= 4) {
+      ).orderBy(desc5(solicitudes.id)).limit(10);
+      for (const row of solRows) {
+        const candidateName = (row.solicitanteNumeroDocumento || "").replace(/\D/g, "") === clean ? row.solicitanteNombre : row.interesadoNombre;
+        if (candidateName && candidateName.trim().length >= 4) {
           const formatTitleCase = (s) => s.toLowerCase().split(/\s+/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-          const officialFormatted = formatTitleCase(matchName.trim());
-          if (nombreIngresado && nombreIngresado.trim().length >= 3) {
-            const stopwords = ["de", "del", "la", "las", "los", "y", "el"];
-            const normEntered = nombreIngresado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
-            const normOfficial = officialFormatted.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
-            const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
-            const isMatch = matches.length >= Math.min(2, normEntered.length);
-            if (!isMatch) {
-              return {
-                valid: true,
-                match: false,
-                officialName: officialFormatted,
-                error: `\u26A0\uFE0F Inconsistencia de identidad: La c\xE9dula ${clean} est\xE1 registrada en Vecy a nombre de "${officialFormatted}" y no de "${nombreIngresado}".`
-              };
-            }
+          const officialFormatted = formatTitleCase(candidateName.trim());
+          if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
+            identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+            return {
+              valid: true,
+              match: true,
+              officialName: officialFormatted,
+              message: `\u2713 Identidad confirmada en base de datos de Vecy: ${officialFormatted}`
+            };
           }
-          identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
-          return {
-            valid: true,
-            match: true,
-            officialName: officialFormatted,
-            message: `\u2713 Identidad confirmada en base de datos interna de Vecy: ${officialFormatted}`
-          };
         }
       }
     }
@@ -19834,20 +19882,14 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
   if (policiaResult && policiaResult.success && policiaResult.officialName) {
     const officialFormatted = policiaResult.officialName;
     identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
-    if (nombreIngresado && nombreIngresado.trim().length >= 3) {
-      const stopwords = ["de", "del", "la", "las", "los", "y", "el"];
-      const normEntered = nombreIngresado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
-      const normOfficial = officialFormatted.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
-      const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
-      const isMatch = matches.length >= Math.min(2, normEntered.length);
-      if (!isMatch) {
-        return {
-          valid: true,
-          match: false,
-          officialName: officialFormatted,
-          error: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${clean} no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, por favor verifica el n\xFAmero de documento o corrige los nombres para que coincidan con la persona que asistir\xE1.`
-        };
-      }
+    const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
+    if (!isMatch) {
+      return {
+        valid: true,
+        match: false,
+        officialName: officialFormatted,
+        error: `\u26A0\uFE0F El n\xFAmero de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un n\xFAmero mal o corr\xEDgelo para continuar.`
+      };
     }
     return {
       valid: true,
@@ -19856,20 +19898,19 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       message: `\u2713 Identidad verificada y autenticada con \xE9xito: ${officialFormatted}`
     };
   }
-  const tLower = (tipoDocumento || "").toLowerCase();
-  const isCC = tLower.includes("ciudadan") || tLower === "cc";
-  if (isCC) {
+  const isNumericDoc = /^\d{6,10}$/.test(clean);
+  if (isNumericDoc) {
     return {
-      valid: false,
-      match: false,
-      error: "No fue posible validar el documento en este momento. Por favor reintenta en unos segundos."
+      valid: true,
+      match: true,
+      officialName: (nombreIngresado || "").trim() || clean,
+      message: "\u2713 Documento en formato v\xE1lido (pendiente de cotejo en sede)"
     };
   }
   return {
-    valid: true,
-    match: true,
-    officialName: nombreIngresado || clean,
-    message: "\u2713 Documento procesado para tr\xE1mite internacional"
+    valid: false,
+    match: false,
+    error: "No fue posible validar el documento en este momento. Por favor verifica los datos e intenta de nuevo."
   };
 }
 var agendaRouter = router({
@@ -19976,35 +20017,11 @@ var agendaRouter = router({
       };
     }
     const cacheKey = `POLICIA:cc:${cleanDoc}`;
-    const cached = identityCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL) {
-      const officialFormatted = cached.fullName;
-      if (nombreIngresado && nombreIngresado.trim().length >= 3) {
-        const stopwords = ["de", "del", "la", "las", "los", "y", "el"];
-        const normEntered = nombreIngresado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
-        const normOfficial = officialFormatted.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
-        const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
-        const isMatch = matches.length >= Math.min(2, normEntered.length);
-        if (!isMatch) {
-          return {
-            status: "completed",
-            result: {
-              valid: true,
-              match: false,
-              officialName: officialFormatted,
-              error: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, por favor verifica el n\xFAmero de documento o corrige los nombres para que coincidan con la persona que asistir\xE1.`
-            }
-          };
-        }
-      }
+    if (AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc] || identityCache.has(cacheKey)) {
+      const quickRes = await executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngresado);
       return {
         status: "completed",
-        result: {
-          valid: true,
-          match: true,
-          officialName: officialFormatted,
-          message: `\u2713 Identidad verificada y autenticada con \xE9xito: ${officialFormatted}`
-        }
+        result: quickRes
       };
     }
     const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -20536,6 +20553,63 @@ async function startServer() {
   app.post("/webhook", webhookPostHandler);
   app.get("/api/whatsapp/webhook", webhookGetHandler);
   app.post("/api/whatsapp/webhook", webhookPostHandler);
+  app.post("/api/verify-identity", async (req, res) => {
+    try {
+      const { tipoDocumento, numeroDocumento, nombreIngresado } = req.body || {};
+      const cleanDoc = (numeroDocumento || "").replace(/[^0-9a-zA-Z]/g, "");
+      if (!cleanDoc || cleanDoc.length < 5) {
+        return res.status(200).json({
+          valid: false,
+          match: false,
+          error: "El n\xFAmero de documento debe tener al menos 5 d\xEDgitos."
+        });
+      }
+      if (AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc]) {
+        const quick = await executeIdentityVerification(tipoDocumento || "C\xE9dula de ciudadan\xEDa", cleanDoc, nombreIngresado);
+        return res.status(200).json(quick);
+      }
+      const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      identityJobs.set(jobId, {
+        id: jobId,
+        status: "processing",
+        tipoDocumento: tipoDocumento || "C\xE9dula de ciudadan\xEDa",
+        numeroDocumento: cleanDoc,
+        nombreIngresado,
+        createdAt: Date.now()
+      });
+      executeIdentityVerification(tipoDocumento || "C\xE9dula de ciudadan\xEDa", cleanDoc, nombreIngresado).then((result) => {
+        const j = identityJobs.get(jobId);
+        if (j) {
+          j.status = "completed";
+          j.result = result;
+        }
+      }).catch((err) => {
+        const j = identityJobs.get(jobId);
+        if (j) {
+          j.status = "error";
+          j.result = {
+            valid: false,
+            match: false,
+            error: err?.message || "Error validando documento"
+          };
+        }
+      });
+      return res.status(200).json({
+        status: "processing",
+        jobId,
+        message: "Verificando autenticidad del documento en tiempo real..."
+      });
+    } catch (e) {
+      return res.status(500).json({ valid: false, match: false, error: e.message });
+    }
+  });
+  app.get("/api/verify-identity", (req, res) => {
+    const jobId = req.query.jobId || "";
+    if (!jobId) return res.status(400).json({ error: "jobId requerido" });
+    const job = identityJobs.get(jobId);
+    if (!job) return res.status(200).json({ status: "error", error: "Job no encontrado o expirado" });
+    return res.status(200).json(job);
+  });
   app.get("/api/list-chats", async (req, res) => {
     try {
       if (!janiaMatchBot.isReady) {

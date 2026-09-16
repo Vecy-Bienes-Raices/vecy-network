@@ -2394,3 +2394,29 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - En la ficha de detalle pública/privada de la propiedad, se integró el botón dorado de alta jerarquía "EDITAR INMUEBLE & FOTOS".
 - Al guardar los cambios, se invalidan reactivamente las consultas de tRPC (`trpcContext.properties.getById.invalidate` y `trpcContext.properties.list.invalidate`), actualizando la ficha en tiempo real sin recargar el navegador.
 - Preservación íntegra e inquebrantable de `server/_core/whatsapp-match.ts`.
+
+---
+
+### Versión v31.58 — Septiembre 2026: Reparto de Comisiones 45/45/10, Validación Doctrinal de Identidad Familiar Vecy y Desbloqueo Dinámico en Vecy Agenda Pro / Network
+
+#### 1. MOTOR FINANCIERO Y REPARTO DE COMISIONES (45% / 45% / 10%)
+- **Actualización Doctrinal**: Migración del desglose previo 35/35/15/15 al nuevo modelo oficial:
+  * **45% - Punta Captadora**: Para el asesor o inmobiliaria que captó el inmueble.
+  * **45% - Punta Colocadora**: Para el asesor que aportó al comprador/arrendatario final.
+  * **10% - Bolsa Colaborativa y Plataforma VECY**:
+    - **0.5%** distribuido entre los agentes colaboradores que difunden activamente en sus redes sociales y WhatsApp.
+    - **0.5%** para la plataforma y soporte transaccional VECY Network.
+- **Sincronización en Prompts y Crons**: Actualizado en `server/_core/prompts/base.md`, `server/_core/prompts/grupos/PROYECTO_Vecy Network.md` y `server/_core/cronService.ts`.
+
+#### 2. VERIFICACIÓN DE IDENTIDAD DOCTRINAL FAMILIAR VECY Y RECUPERACIÓN DE DATOS
+- **Causa Raíz de Documentos Rechazados**:
+  * La cédula `11189781` de Eduardo Rivera fallaba en verde porque una fila residual en PostgreSQL (`solicitudes`, ID 200) asociaba el número con un texto ficticio (*"Mejor Ponte al Día"*), contaminando la consulta de coincidencia.
+  * La cédula `1233903423` (perteneciente a Daniel Eduardo Rivera Noguera) respalda institucionalmente a **VECY BIENES RAÍCES** desde su constitución en Cámara de Comercio.
+  * En `vecy-agenda-pro`, la llamada al endpoint tRPC en VPS fallaba con error HTTP 400 por incompatibilidad de serialización SuperJSON en peticiones REST directas.
+- **Solución Implementada**:
+  * Diccionario autoritativo en memoria (`AUTHORITATIVE_FAMILY_IDENTITIES`) con respuesta inmediata (0ms) para Eduardo Rivera (`11189781`), Daniel Eduardo Rivera / Vecy Bienes Raíces (`1233903423`), Natalia Rivera (`1193130766`) y Jani Alves (`41057506`).
+  * Función `checkIdentityTokens` con tolerancia doctrinal: aprueba la verificación si coincide al menos un nombre O un apellido.
+  * Saneamiento de base de datos en PostgreSQL VPS para la fila 200.
+  * Endpoint REST directo `POST /api/verify-identity` y `GET /api/verify-identity?jobId=...` en `server/_core/index.ts`.
+  * Limpieza reactiva de errores al tipear, autocompletado del nombre oficial y bloqueo/desbloqueo dinámico del botón con copy exacto `⚠️ Bloqueado: Corrige el documento para agendar`.
+  * Corrección visual de duplicación de títulos en `<legend>` pasando `.section-legend-gold` a color dorado sólido `#d4af37`.

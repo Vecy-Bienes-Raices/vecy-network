@@ -17,6 +17,7 @@ import { invokeLLM } from "./llm";
 import { textToSpeechMedia } from "./whatsapp-utils";
 import { janiaMatchBot as whatsappBot, janiaMatchBot } from "./whatsapp-match";
 import "./notification";
+import { executeIdentityVerification, identityJobs, AUTHORITATIVE_FAMILY_IDENTITIES } from "../routers/agenda";
 
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -78,6 +79,73 @@ async function startServer() {
   app.post("/webhook", webhookPostHandler);
   app.get("/api/whatsapp/webhook", webhookGetHandler);
   app.post("/api/whatsapp/webhook", webhookPostHandler);
+
+  // 🛡️ Endpoint REST Directo de Verificación de Identidad (Vecy Agenda Pro + Integraciones)
+  app.post("/api/verify-identity", async (req, res) => {
+    try {
+      const { tipoDocumento, numeroDocumento, nombreIngresado } = req.body || {};
+      const cleanDoc = (numeroDocumento || "").replace(/[^0-9a-zA-Z]/g, "");
+      if (!cleanDoc || cleanDoc.length < 5) {
+        return res.status(200).json({
+          valid: false,
+          match: false,
+          error: "El número de documento debe tener al menos 5 dígitos.",
+        });
+      }
+
+      // Fast-path para fundadores, Vecy Bienes Raíces o cédulas familiares (0ms)
+      if (AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc]) {
+        const quick = await executeIdentityVerification(tipoDocumento || "Cédula de ciudadanía", cleanDoc, nombreIngresado);
+        return res.status(200).json(quick);
+      }
+
+      const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      identityJobs.set(jobId, {
+        id: jobId,
+        status: "processing",
+        tipoDocumento: tipoDocumento || "Cédula de ciudadanía",
+        numeroDocumento: cleanDoc,
+        nombreIngresado,
+        createdAt: Date.now(),
+      });
+
+      executeIdentityVerification(tipoDocumento || "Cédula de ciudadanía", cleanDoc, nombreIngresado)
+        .then((result) => {
+          const j = identityJobs.get(jobId);
+          if (j) {
+            j.status = "completed";
+            j.result = result;
+          }
+        })
+        .catch((err) => {
+          const j = identityJobs.get(jobId);
+          if (j) {
+            j.status = "error";
+            j.result = {
+              valid: false,
+              match: false,
+              error: err?.message || "Error validando documento",
+            };
+          }
+        });
+
+      return res.status(200).json({
+        status: "processing",
+        jobId,
+        message: "Verificando autenticidad del documento en tiempo real...",
+      });
+    } catch (e: any) {
+      return res.status(500).json({ valid: false, match: false, error: e.message });
+    }
+  });
+
+  app.get("/api/verify-identity", (req, res) => {
+    const jobId = (req.query.jobId as string) || "";
+    if (!jobId) return res.status(400).json({ error: "jobId requerido" });
+    const job = identityJobs.get(jobId);
+    if (!job) return res.status(200).json({ status: "error", error: "Job no encontrado o expirado" });
+    return res.status(200).json(job);
+  });
 
   app.get("/api/list-chats", async (req, res) => {
     try {

@@ -588,12 +588,9 @@
     line-height: 1.25;
   }
 
-  /* Sección título con línea dorada */
+  /* Sección título con línea dorada - Color sólido dorado para evitar duplicación de texto nativo en Blink <legend> */
   .section-legend-gold {
-    background: linear-gradient(135deg, #d4af37 0%, #bf953f 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #d4af37;
     font-weight: 700;
   }
 
