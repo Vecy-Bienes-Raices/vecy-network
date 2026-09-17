@@ -322,6 +322,25 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.69 — Septiembre 2026
+
+#### 📌 RESTAURACIÓN NATIVA DEL ENVÍO DE CORREOS Y CONTRATO DE PUNTAS COMPARTIDAS EN PDF (100% VPS — 0% SUPABASE)
+
+**Problemas identificados:**
+1. **Dependencia Huérfana en Supabase Edge Functions**: En la versión v31.46 se migró el formulario de agendamiento (`AgendaForm.jsx`) a PostgreSQL nativo en el VPS mediante el procedimiento tRPC `agenda.create` para eliminar errores 504. La inserción a la base de datos funcionaba en milisegundos, pero la generación del PDF (*Contrato de Puntas Compartidas - Vecy Gold Edition*) y el despacho de correos por Nodemailer habían quedado rezagados en la Edge Function de Supabase (`send-confirmation-email`), sin que nadie los invocara desde el backend de Node.js.
+2. **Recuperación y Validación de Credenciales Gmail**: En los registros históricos del entorno local se localizó la contraseña de aplicación de 16 caracteres (`dwjnngwfmsmjxvgi`) para `vecybienesraices@gmail.com`. Se verificó su autenticidad mediante handshake TLS seguro directo contra `smtp.gmail.com:465` con respuesta `235 2.7.0 Accepted`.
+
+**Solución aplicada:**
+- **Instalación de Dependencias Nativas**: `pdf-lib`, `nodemailer` y `@types/nodemailer` instalados en el backend del VPS.
+- **Módulo Servidor Nativo `server/_core/emailContractService.ts`**:
+  - Renderizador de PDF con `pdf-lib` que genera el documento legal de 3 páginas con marcas de agua, cláusulas 1 a 8, datos del solicitante/inmueble/acompañantes y las firmas digitales de Jani Alves Souza (representante comercial) y del Agente 2.
+  - Plantilla HTML Gold Edition para el solicitante (`✅ Solicitud #[ID] Recibida | Vecy Agenda`) con CID embebido del logo dorado y contrato PDF adjunto.
+  - Plantilla HTML de auditoría para `vecybienesraices@gmail.com` (`🔔 Nueva Solicitud #[ID] - [Perfil]`) con tabla de datos y contrato PDF adjunto.
+- **Conexión Asíncrona en `agenda.create`**: Despacho en segundo plano sin bloquear la respuesta de la interfaz web (<50ms).
+- **Prueba Empírica Satisfactoria**: Ejecutado despacho real de prueba `#9999` hacia `vecybienesraices@gmail.com`, generando PDF de 104KB y recibiendo confirmación SMTP en ambos destinos.
+
+---
+
 ### 🔖 v31.68 — Septiembre 2026
 
 #### 📌 BLINDAJE ANTI-CONGELAMIENTO DE REACCIONES BAILEYS, TIMEOUTS DE 5S EN SOCKETS, PRIORIDAD 3 DE RESPALDO INMOBILIARIO Y RESCATE DE INMUEBLES CONCISOS

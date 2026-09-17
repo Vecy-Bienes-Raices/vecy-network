@@ -6,6 +6,7 @@ import { solicitudes } from "../../drizzle/schema";
 import { TRPCError } from "@trpc/server";
 import { Solver } from "@2captcha/captcha-solver";
 import https from "https";
+import { sendContractAndConfirmationEmails } from "../_core/emailContractService";
 
 const httpsAgentInsecure = new https.Agent({ rejectUnauthorized: false });
 
@@ -1153,6 +1154,16 @@ export const agendaRouter = router({
 
       const newRow = inserted[0];
 
+      // Despacho asíncrono no bloqueante de correos y contrato PDF (100% VPS a $0 COP)
+      sendContractAndConfirmationEmails({
+        ...input,
+        solicitud_id: nextSolicitudId,
+        solicitudId: nextSolicitudId,
+        id: newRow?.id,
+      }).catch((emailErr) => {
+        console.error(`[AGENDA-CREATE] Error en despacho de correos para solicitud #${nextSolicitudId}:`, emailErr?.message);
+      });
+
       return {
         success: true,
         id: newRow?.id,
@@ -1162,6 +1173,7 @@ export const agendaRouter = router({
       };
     }),
 });
+
 
 export { identityJobs };
 
