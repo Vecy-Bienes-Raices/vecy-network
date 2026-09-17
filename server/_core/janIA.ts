@@ -5315,8 +5315,8 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
   const insertData = {
     ...data,
     name: safeSlice(data.name, 255) || null,
-    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city, 100) || null,
-    zonaDeseada: safeSlice(data.zonaDeseada || data.zone, 100) || null,
+    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city, 100) || "Bogotá",
+    zonaDeseada: safeSlice(data.zonaDeseada || data.zone || data.addressNeighborhood || data.addressLocality || data.ciudadDeseada || "Bogotá", 100) || "Bogotá",
     addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
     addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
