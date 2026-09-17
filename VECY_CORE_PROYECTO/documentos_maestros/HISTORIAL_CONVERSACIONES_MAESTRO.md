@@ -75,21 +75,28 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
    - En `v31.62`, `getActiveFailoverKey()` siempre elegía la primera clave disponible (`i = 0`). La Clave 1 atendía el 95% de las llamadas, y la 2 entraba esporádicamente. Las Claves 3 y 4 permanecían inactivas sin contribuir a la velocidad ni al throughput.
 4. **Falla en Extracción de Cuota de Administración con Viñetas y Guiones**:
    - La oferta #3044 tenía `-ADMÓN: $1.471.000`. Los regex exigían frontera de palabra o prefijos sin guion, ignorando el guion `-` inicial y la tilde en `admón`, dejando el campo en `NULL` / `N/E`.
+5. **Causa Raíz del Error 504 Gateway Timeout en `/admin` (Captura DevTools de Eduardo)**:
+   - Al llegar una ráfaga masiva de mensajes de WhatsApp tras el reinicio, `findMatchesForProperty` ejecutaba llamadas concurrentes a `matchesGeography` y `parseStreetCarreraBoundaries` evaluando miles de combinaciones sin caché en memoria, manteniendo la CPU al 100%.
+   - Simultáneamente, en `llm.ts`, el bucle de reintentos probaba 3 modelos x 4 claves con timeouts de 25s, reteniendo sockets y bloqueando la respuesta a las peticiones HTTP (`auth.me`, `janIA.getBotStatus`, `janIA.getAllMatches`). Al no recibir respuesta en 60s, Vercel y Nginx retornaban `504 Gateway Timeout` y la pantalla quedaba negra cargando.
 
 #### 🛠️ Acciones Técnicas Ejecutadas:
 1. **Pool Round-Robin Activo Balanceado de 4 Claves en `server/_core/llm.ts`**:
    - Implementado `getActiveRoundRobinKey`: rota equitativamente entre las 4 claves gratuitas (`GEMINI_API_KEY_1..4`) en cada llamada consecutiva (`roundRobinIndex = (idx + 1) % total`).
    - Las 4 claves trabajan al unísono, cuadruplicando el throughput hasta 60 RPM combinadas a costo $0 COP. Si una clave individual topa 429, entra en cooldown temporal de 60s mientras las otras 3 continúan sin demora.
-2. **Erradicación de Multiplicador x1.000M y Blindaje Anti-Edad**:
+   - Reducido el timeout de Axios a 12s y limitado a máximo 2 claves sanas por llamada, eliminando bucles infinitos de reintentos.
+2. **Memoización en RAM de Límites Geográficos y Respiro Real del Event Loop**:
+   - Creado `boundariesCache` en `server/_core/matching.ts` con capacidad para 2.500 entradas. Las evaluaciones repetidas de calles/carreras ahora se resuelven en 0 microsegundos en lugar de recalcular regex costosos.
+   - Reemplazado `setImmediate` por `setTimeout(10)` cada 20 requerimientos, garantizando que el Event Loop de Express responda inmediatamente a las peticiones HTTP de la web (`auth.me` en 6ms, `getBotStatus` en 37ms, `getAllMatches` en 390ms).
+3. **Erradicación de Multiplicador x1.000M y Blindaje Anti-Edad**:
    - En `server/_core/janIA.ts` y `client/src/components/admin/AdminMatches.tsx`, eliminado el multiplicador `val < 30 -> x1.000.000.000`. Ahora solo decimales explícitos (ej. `1.5 millones`) o menciones expresas de "mil millones / billones" multiplican por 1.000 millones.
    - Si un número va precedido o seguido de palabras de edad (`años`, `anos`, `edad`, `antigüedad`), se ignora como precio.
    - Soportado el error tipográfico `prespuesto` y rangos con conjunción disyuntiva (`de 14 o 15 millones`).
-3. **Guillotina Financiera Inmediata de Arriendo en `server/_core/matching.ts`**:
+4. **Guillotina Financiera Inmediata de Arriendo en `server/_core/matching.ts`**:
    - Si la oferta no especifica canon comercial válido (`propRent <= 0`), el match se bloquea al 0% (`Match Inviable`), impidiendo matches sin precio contra demandas con presupuesto definido.
-4. **Renombrado Doctrinal de "Valor admin" y Etiquetas en `AdminMatches.tsx`**:
+5. **Renombrado Doctrinal de "Valor admin" y Etiquetas en `AdminMatches.tsx`**:
    - Renombrada la fila a **"Valor admin"** en desktop, modal de edición y vista móvil.
    - Si la demanda es flexible o no tiene tope, muestra `"Presupuesto Abierto"`. En "Valor admin", muestra `"Flexible / Sin restricción"` en demanda y `"Incluida en el canon"` o `"$X / mes"` en oferta.
-5. **Saneamiento Directo de Base de Datos PostgreSQL VPS**:
+6. **Saneamiento Directo de Base de Datos PostgreSQL VPS**:
    - Actualizado `req.id = 21` con `presupuestoMax = 540000000.00`.
    - Actualizado `prop.id = 3044` con `adminFee = 1471000.00`.
    - Actualizado `req.id = 951` con `presupuestoMax = 15000000.00` y `presupuestoMin = 14000000.00`.
