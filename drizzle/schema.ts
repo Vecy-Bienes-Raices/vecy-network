@@ -512,3 +512,26 @@ export const matchFeedback = pgTable("match_feedback", {
 
 export type MatchFeedback = typeof matchFeedback.$inferSelect;
 export type InsertMatchFeedback = typeof matchFeedback.$inferInsert;
+
+/**
+ * Registro y Auditoría de Difusiones Diarias de JanIA (Cero Duplicados & Memoria Temática) - v31.71
+ */
+export const dailyBroadcasts = pgTable("daily_broadcasts", {
+  id: serial("id").primaryKey(),
+  dateBogota: varchar("date_bogota", { length: 12 }).notNull(), // 'YYYY-MM-DD'
+  targetGroup: varchar("target_group", { length: 50 }).notNull(), // 'grupo2' | 'grupo3'
+  tipCategory: varchar("tip_category", { length: 80 }).notNull(), // 'lunes_arranque', 'martes_juridico', etc.
+  topicTitle: text("topic_title").notNull(), // Título descriptivo único del tema tratado
+  themeKey: varchar("theme_key", { length: 50 }), // 'juridico', 'tributario', 'marketing', etc.
+  imageFileName: varchar("image_file_name", { length: 255 }),
+  voiceText: text("voice_text"),
+  captionText: text("caption_text"),
+  status: varchar("status", { length: 20 }).default("completed").notNull(), // 'in_progress' | 'completed' | 'failed'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("daily_broadcasts_date_idx").on(table.dateBogota),
+  index("daily_broadcasts_target_date_idx").on(table.targetGroup, table.dateBogota),
+]);
+
+export type DailyBroadcast = typeof dailyBroadcasts.$inferSelect;
+export type InsertDailyBroadcast = typeof dailyBroadcasts.$inferInsert;

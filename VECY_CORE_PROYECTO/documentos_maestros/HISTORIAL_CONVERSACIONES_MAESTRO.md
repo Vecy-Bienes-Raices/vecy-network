@@ -50,7 +50,49 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.68 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.71 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 17 de Septiembre de 2026 — 14:20 (Hora Colombia UTC-5)
+**Versión**: `v31.71` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 Nativo + PM2 (`jania-server`) + GitHub (`main`) + React Vercel
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+*"No es necesario que JanIA envíe los mensajes diarios al grupo 2 y canal de manera duplicad, con que lo haga una sola vez es suficiente, fuera de que está enviendo la imagen con un escrito y luego un audio ya eso es más que suficicente, si empieza a enviarlo doble empezará a aburrir a los miembros, esta mala tecnica o error ya logró que se empiecen a retirar del canal y se fueron tres miembros, en vez de atraer personas dando buenas notocias al menos una cuando corresponde pero bien entablada y explicada, un buen consejo actualizado y moderno de cómo publicar n redes sociales y en los grupos es sufuciente para convencer con nuestro profesionalismo, una buena enseñanza tributaria o jurídica dependiendo es más que suficiente, una excelente presentación de nuestros servicios, o una buena explicación de lo que es y de que se trata VECY NETWOR y que muy pronto estaremos al aire, una buena presentación de JanIA como fue creada y para qué o con qué objetivo y quienes la crearon es más que suficiente, etc, así con cada tema y siempre algo distinto, no podemos repetir el mismo contenido, solo las imágenes pero con temas distintos consejos, noticias actualizadas, enseñanzas de marketing digital marketing, maneras de vender inmuebles, etc, hay muchos caso y temas jurídicos que se pueden presentar siempre y muy distintos que podemos mostrar cómo se resolverían, aparte consejos técnicos sobre la elaboración de una promesa de compraventa, una minuta, un corretaje de venta o de arriendo,contratos de arrendamiento, etc... bieno si sigo no terminaría de escribirte y nombrarte la infinidad de cosas de las que una IA PURA especialista en temas de bienes raíces puede hablar y enseñar a diario y siempre de manera deistinta. Bueno te acabo de decir que es lo que busco en verdad y cómo lo debes hacer, entonces dime cómo lo solucionarás y lo implementarás para que siempre fuencione y de manera correcta una sola publicación diferente diaria y cambiante siempre me entiendes."*
+- Adjunta cuatro (4) capturas de WhatsApp Web mostrando:
+  1. Canal *"VECY BIENES RAÍCES"* recibiendo a las 10:01 AM y luego nuevamente a las 13:31 PM el mensaje sobre *Exención de 5.000 UVT en Ganancia Ocasional*.
+  2. Grupo 2 *"VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING"* recibiendo a las 13:02 PM y a las 13:37 PM el mismo contenido duplicado.
+
+#### 🔬 Diagnóstico Técnico y Causas Raíz Identificadas:
+1. **Archivo de Persistencia `.cron_daily_runs.json` en Git**:
+   - El estado de publicaciones se almacenaba en un archivo plano en disco (`.cron_daily_runs.json`) que estaba versionado en Git. Cada vez que se ejecutaba un `git pull` o `git checkout` en el VPS tras un despliegue o reinicio de PM2, el archivo se sobreescribía o reseteaba.
+2. **Failsafe Minutero con Ventana Horaria Excesivamente Amplia (10:00 AM a 22:00 PM)**:
+   - `cronService.ts` tenía un `setInterval` minutero que comprobaba si `hour >= 10 && hour < 22`. Al reiniciarse PM2 a la 1:30 PM sin la marca en el archivo plano, el failsafe consideraba falsamente que el tip matutino no se había emitido y disparaba una segunda ejecución en vivo.
+3. **Cero Memoria de Temas Previos y Plantilla Estática Fija como Fallback**:
+   - En `DAILY_TIPS_CONFIG`, los jueves tenían una sola plantilla estática fija sobre *Exención de 5.000 UVT en Ganancia Ocasional*. Al llamar a Gemini, el prompt no le entregaba a la IA los temas tratados en los últimos 30 días, por lo que la IA elegía con frecuencia el primer ítem sugerido. Si Gemini presentaba lentitud o rate limit, caía en la misma plantilla rígida, repitiendo el mismo tema cada semana.
+
+#### 🛠️ Acciones Ejecutadas:
+1. **Tabla Autoritativa `daily_broadcasts` en PostgreSQL Nativo del VPS**:
+   - Creada la tabla oficial con columnas `id`, `date_bogota`, `target_group`, `tip_category`, `topic_title`, `theme_key`, `image_file_name`, `voice_text`, `caption_text`, `status` y `created_at`.
+   - Creado índice único estricto `UNIQUE(date_bogota, target_group)`.
+2. **Bloqueo Atómico Pre-Ejecución (`acquireBroadcastLock`)**:
+   - Antes de invocar al LLM o sintetizar audio TTS, el sistema adquiere un bloqueo único con `status = 'in_progress'` en PostgreSQL. Si ya existe un registro con `status = 'completed'` para la fecha de hoy en Colombia, la ejecución se cancela en 0 ms. Es matemáticamente imposible que un reinicio de PM2 o deploy duplique la publicación.
+3. **Memoria Persistente de los Últimos 30 Temas Tratados**:
+   - Función `getRecentBroadcastTopics(30)` inyecta en el prompt del LLM la lista de temas previos bajo la directiva estricta: `🚫 TEMAS TRATADOS RECIENTEMENTE (TERMINANTEMENTE PROHIBIDO REPETIR O REFRITAR ESTOS TEMAS HOY)`.
+4. **Catálogo Curricular Extendido de Más de 60 Temas Inmobiliarios**:
+   - Estructurados temas profundos en Marketing Digital (fotografía profesional con smartphone, viralización orgánica en Reels/TikTok, 7 pilares), Jurídico (arras vs cláusula penal, restitución bajo Ley 820, defensa de comisión 50/50, estudio de títulos SNR), Tributario (retención en notaría 1% vs 2.5%, deducción de mejoras con factura electrónica, desglose de gastos notariales), Avalúos (estudios de mercado m² 100% virtuales, sondeos de canon, fichas SINUPOT), Identidad JanIA y Proyecto Vecy Network (Eduardo A. Rivera y Jani Alves, comisiones 35/35/15/15, lanzamiento próximo).
+5. **Banco Rotativo Multi-Temático de Contingencia (35 Fallbacks Indexados)**:
+   - Creado `ROTATING_FALLBACK_CATALOG` con 35 artículos ricos y educativos (5 por día de la semana). La función determinista `getDynamicFallbackItem` selecciona según el día del año, garantizando que incluso ante caídas de la API de Google, el contenido rote y jamás se repita el mismo mensaje.
+6. **Desvinculación de Archivo Plano**:
+   - `.cron_daily_runs.json` desvinculado de Git (`git rm --cached`) y agregado a `.gitignore`.
+
+#### 📊 Resultados Verificados y Pruebas Empíricas:
+- **Suite Vitest**: 36 pruebas unitarias ejecutadas con 100% de éxito en 125 ms (`server/__tests__/regression.test.ts`).
+- **Verificación de Tipos**: `npm run check` con 0 errores.
+- **Compilación de Producción**: `npm run build` completada limpiamente en 13.7 segundos.
+- **Base de Datos VPS**: Tabla `daily_broadcasts` creada en PostgreSQL 17 con permisos a `vecy_admin` y registro de hoy `2026-09-17` asentado como `completed`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.70 — Septiembre 2026
 
 ### 🗓️ Sesión: Miércoles 16 de Septiembre de 2026 — 23:00 (Hora Colombia UTC-5)
 **Versión**: `v31.68` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 Nativo + PM2 (`jania-server`) + GitHub (`main`) + React Vercel

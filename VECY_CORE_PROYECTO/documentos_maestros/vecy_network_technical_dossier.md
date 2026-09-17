@@ -322,6 +322,24 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.71 — Septiembre 2026
+
+#### 📌 DIFUSIÓN DIARIA ÚNICA DE JANIA, CERO DUPLICADOS CON BLOQUEO POSTGRESQL, MEMORIA TEMÁTICA 30 DÍAS Y CATÁLOGO CURRICULAR INMOBILIARIO EXTENDIDO
+
+**Problemas identificados:**
+1. **Duplicación por Persistencia Frágil en Disco (`.cron_daily_runs.json`)**: El control de ejecuciones residía en un archivo JSON plano rastreado por Git. Cada vez que se ejecutaba `git pull` o `git checkout` en el VPS tras un despliegue o reinicio de PM2, el archivo se reajustaba. El bucle minutero de seguridad (`hour >= 10 && hour < 22`) consideraba falsamente que la emisión matutina no se había despachado, disparando una segunda publicación al Grupo 2 y Canal a la 1:30 PM.
+2. **Repetición Monótona de Temas y Fallback Rígido**: En `DAILY_TIPS_CONFIG`, los jueves tenían cableado un único texto fijo sobre la exención de 5.000 UVT. Al no alimentar a la IA con los temas tratados recientemente, el LLM reincidía en el primer ítem, o caía en el texto estático ante cualquier demora de red.
+
+**Solución aplicada:**
+- **Tabla Autoritativa `daily_broadcasts` en PostgreSQL Nativo**: Registra cada difusión con `date_bogota`, `target_group`, `tip_category`, `topic_title`, `theme_key`, `image_file_name`, `voice_text`, `caption_text` y `status`.
+- **Bloqueo Atómico Pre-Ejecución (`acquireBroadcastLock`)**: Adquiere una reserva `in_progress` con restricción `UNIQUE(date_bogota, target_group)`. Si para la fecha de hoy ya existe un registro `completed`, se aborta en 0 ms, garantizando una sola emisión matutina (10:00 AM Bogotá) a prueba de reinicios de PM2.
+- **Memoria de 30 Días e Inyección Anti-Repetición en LLM**: `getRecentBroadcastTopics(30)` alimenta a Gemini con la lista de temas tratados recientemente para prohibir repeticiones o refritos.
+- **Catálogo Curricular Extendido (60+ Especialidades)**: Contenidos de alto impacto en Marketing Digital (fotografía móvil, viralización en Reels/TikTok, 7 pilares), Jurídico (arras vs penal, restitución Ley 820, defensa de comisión 50/50), Tributario (retención 1% vs 2.5%, deducción de mejoras, gastos notariales), Avalúos (estudios de mercado m² 100% virtuales, sondeos de canon, fichas SINUPOT), Identidad JanIA y Proyecto Vecy Network (Eduardo A. Rivera y Jani Alves, comisiones 35/35/15/15).
+- **Banco Rotativo Multi-Temático de Contingencia (35 Fallbacks Indexados)**: `ROTATING_FALLBACK_CATALOG` rota dinámicamente según el día del año, impidiendo la repetición del mismo contenido incluso en contingencias de red.
+- **Suite de Pruebas Vitest (36 pruebas)**: 4 nuevas pruebas unitarias automatizadas cubren la integridad del catálogo de 7 días, rotación determinista, corrección horaria de saludos e identidad inquebrantable de JanIA.
+
+---
+
 ### 🔖 v31.70 — Septiembre 2026
 
 #### 📌 AUTOCOMPLETADO DE NOMBRES REALES VERIFICADOS EN VECY AGENDA, EXTENSIÓN DE TIMEOUTS POLICIALES A 25S, DEBOUNCE AL DIGITAR Y BÚSQUEDA EN PROFILES

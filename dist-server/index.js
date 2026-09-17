@@ -17,6 +17,7 @@ __export(schema_exports, {
   conversations: () => conversations,
   counters: () => counters,
   currencyEnum: () => currencyEnum,
+  dailyBroadcasts: () => dailyBroadcasts,
   demandLevelEnum: () => demandLevelEnum,
   favorites: () => favorites,
   inmobiliarioLexicon: () => inmobiliarioLexicon,
@@ -53,7 +54,7 @@ __export(schema_exports, {
   zoneAliases: () => zoneAliases
 });
 import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb, bigint, uuid, index } from "drizzle-orm/pg-core";
-var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, notificationLogs, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes, propertyPublicationHistory, userBehavioralFingerprints, userPatterns, zoneAliases, inmobiliarioLexicon, matchFeedback;
+var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, notificationLogs, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes, propertyPublicationHistory, userBehavioralFingerprints, userPatterns, zoneAliases, inmobiliarioLexicon, matchFeedback, dailyBroadcasts;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
     "use strict";
@@ -494,6 +495,28 @@ var init_schema = __esm({
       ajustesGuardados: jsonb("ajustes_guardados"),
       createdAt: timestamp("created_at").defaultNow().notNull()
     });
+    dailyBroadcasts = pgTable("daily_broadcasts", {
+      id: serial("id").primaryKey(),
+      dateBogota: varchar("date_bogota", { length: 12 }).notNull(),
+      // 'YYYY-MM-DD'
+      targetGroup: varchar("target_group", { length: 50 }).notNull(),
+      // 'grupo2' | 'grupo3'
+      tipCategory: varchar("tip_category", { length: 80 }).notNull(),
+      // 'lunes_arranque', 'martes_juridico', etc.
+      topicTitle: text("topic_title").notNull(),
+      // Título descriptivo único del tema tratado
+      themeKey: varchar("theme_key", { length: 50 }),
+      // 'juridico', 'tributario', 'marketing', etc.
+      imageFileName: varchar("image_file_name", { length: 255 }),
+      voiceText: text("voice_text"),
+      captionText: text("caption_text"),
+      status: varchar("status", { length: 20 }).default("completed").notNull(),
+      // 'in_progress' | 'completed' | 'failed'
+      createdAt: timestamp("created_at").defaultNow().notNull()
+    }, (table) => [
+      index("daily_broadcasts_date_idx").on(table.dateBogota),
+      index("daily_broadcasts_target_date_idx").on(table.targetGroup, table.dateBogota)
+    ]);
   }
 });
 
@@ -15416,120 +15439,148 @@ var cronService_exports = {};
 __export(cronService_exports, {
   ALL_JANIA_IMAGES: () => ALL_JANIA_IMAGES,
   DAILY_TIPS_CONFIG: () => DAILY_TIPS_CONFIG,
+  ROTATING_FALLBACK_CATALOG: () => ROTATING_FALLBACK_CATALOG,
   THEME_IMAGE_PREFERENCES: () => THEME_IMAGE_PREFERENCES,
-  canPublishNow: () => canPublishNow,
+  acquireBroadcastLock: () => acquireBroadcastLock,
+  completeBroadcast: () => completeBroadcast,
   enforceGreetingAccuracy: () => enforceGreetingAccuracy,
   enforceJanIAIdentity: () => enforceJanIAIdentity,
+  failBroadcast: () => failBroadcast,
+  generateDailyContent: () => generateDailyContent,
   getBogotaDateString: () => getBogotaDateString,
   getBogotaTimeInfo: () => getBogotaTimeInfo,
+  getDynamicFallbackItem: () => getDynamicFallbackItem,
   getLiveMarketStats: () => getLiveMarketStats,
+  getRecentBroadcastTopics: () => getRecentBroadcastTopics,
+  getRecentImageFiles: () => getRecentImageFiles,
   getThemedImagePath: () => getThemedImagePath,
+  getThemedImagePathAsync: () => getThemedImagePathAsync,
   initCronScheduler: () => initCronScheduler,
-  loadCronState: () => loadCronState,
-  markRunExecuted: () => markRunExecuted,
   publishDailyTipForDay: () => publishDailyTipForDay,
   publishGrupo3TipNow: () => publishGrupo3TipNow,
   publishNoticiaNacionalNow: () => publishNoticiaNacionalNow,
   publishTodayTipNow: () => publishTodayTipNow,
-  publishWeeklyReportNow: () => publishWeeklyReportNow,
-  recordSuccessfulPublication: () => recordSuccessfulPublication,
-  saveCronState: () => saveCronState
+  publishWeeklyReportNow: () => publishWeeklyReportNow
 });
 import cron from "node-cron";
 import path8 from "path";
 import fs8 from "fs";
 import { fileURLToPath } from "url";
-import { gte as gte2, eq as eq7, sql as sql4 } from "drizzle-orm";
+import { gte as gte2, and as and5, eq as eq7, sql as sql4, desc as desc2 } from "drizzle-orm";
 function getBogotaDateString(d = /* @__PURE__ */ new Date()) {
   return d.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
 }
-function loadCronState() {
-  const today = getBogotaDateString();
+async function acquireBroadcastLock(targetGroup, tipCategory, dateBogota, force = false) {
   try {
-    if (fs8.existsSync(CRON_STATE_PATH)) {
-      const raw = fs8.readFileSync(CRON_STATE_PATH, "utf-8");
-      const state = JSON.parse(raw);
-      if (state.date === today) {
-        if (!state.runs) state.runs = {};
-        if (!Array.isArray(state.recentImages)) state.recentImages = [];
-        return state;
-      } else {
-        const newState = {
-          date: today,
-          dailyCount: 0,
-          lastRunTimestamp: state.lastRunTimestamp || 0,
-          runs: {},
-          recentImages: Array.isArray(state.recentImages) ? state.recentImages : []
-        };
-        saveCronState(newState);
-        return newState;
+    const db = await getDb();
+    if (!db) {
+      console.warn("[CRON-LOCK] Base de datos no disponible, procediendo con precauci\xF3n.");
+      return { allowed: true };
+    }
+    if (!force) {
+      const existing = await db.select().from(dailyBroadcasts).where(
+        and5(
+          eq7(dailyBroadcasts.dateBogota, dateBogota),
+          eq7(dailyBroadcasts.targetGroup, targetGroup)
+        )
+      ).limit(1);
+      if (existing.length > 0) {
+        const row = existing[0];
+        if (row.status === "completed") {
+          return {
+            allowed: false,
+            reason: `[POSTGRESQL-LOCK] Ya existe una difusi\xF3n COMPLETADA para ${targetGroup} hoy (${dateBogota}): "${row.topicTitle}". Prohibido duplicar.`
+          };
+        }
+        const ageMs = Date.now() - new Date(row.createdAt).getTime();
+        if (row.status === "in_progress" && ageMs < 10 * 60 * 1e3) {
+          return {
+            allowed: false,
+            reason: `[POSTGRESQL-LOCK] Difusi\xF3n en curso activa (${Math.round(ageMs / 1e3)}s) para ${targetGroup}. Evitando colisi\xF3n.`
+          };
+        }
       }
     }
+    const [inserted] = await db.insert(dailyBroadcasts).values({
+      dateBogota,
+      targetGroup,
+      tipCategory,
+      topicTitle: `Iniciando despacho de ${tipCategory}...`,
+      themeKey: "general",
+      status: "in_progress"
+    }).onConflictDoUpdate({
+      target: [dailyBroadcasts.dateBogota, dailyBroadcasts.targetGroup],
+      set: {
+        tipCategory,
+        status: "in_progress",
+        createdAt: sql4`NOW()`
+      }
+    }).returning();
+    return { allowed: true, broadcastId: inserted?.id };
   } catch (err) {
-    console.warn("[CRON-PERSISTENCE] Error leyendo estado cron, inicializando:", err?.message);
+    console.error("[CRON-LOCK] Error al consultar bloqueo en PostgreSQL:", err?.message || err);
+    if (!force) {
+      return { allowed: false, reason: `Error de base de datos en bloqueo: ${err?.message}` };
+    }
+    return { allowed: true };
   }
-  const defaultState = {
-    date: today,
-    dailyCount: 0,
-    lastRunTimestamp: 0,
-    runs: {},
-    recentImages: []
-  };
-  saveCronState(defaultState);
-  return defaultState;
 }
-function saveCronState(state) {
+async function completeBroadcast(broadcastId, data) {
+  if (!broadcastId) return;
   try {
-    fs8.writeFileSync(CRON_STATE_PATH, JSON.stringify(state, null, 2), "utf-8");
+    const db = await getDb();
+    if (!db) return;
+    await db.update(dailyBroadcasts).set({
+      topicTitle: data.topicTitle,
+      themeKey: data.themeKey,
+      imageFileName: data.imageFileName,
+      voiceText: data.voiceText,
+      captionText: data.captionText,
+      status: "completed"
+    }).where(eq7(dailyBroadcasts.id, broadcastId));
+    console.log(`[CRON-PERSISTENCE] \u2705 Difusi\xF3n #${broadcastId} asentada con \xE9xito en PostgreSQL: "${data.topicTitle}".`);
   } catch (err) {
-    console.error("[CRON-PERSISTENCE] Error guardando estado cron:", err?.message);
+    console.error(`[CRON-PERSISTENCE] Error completando difusi\xF3n #${broadcastId}:`, err?.message || err);
   }
 }
-function canPublishNow(targetGroup, runKey, force = false) {
-  if (force) return { allowed: true };
-  const state = loadCronState();
-  if (state.runs[runKey]) {
-    return { allowed: false, reason: `Job ya ejecutado hoy (${runKey})` };
+async function failBroadcast(broadcastId, reason) {
+  if (!broadcastId) return;
+  try {
+    const db = await getDb();
+    if (!db) return;
+    await db.update(dailyBroadcasts).set({
+      topicTitle: `Error: ${reason}`,
+      status: "failed"
+    }).where(eq7(dailyBroadcasts.id, broadcastId));
+  } catch (err) {
+    console.warn(`[CRON-PERSISTENCE] Error marcando fallo en difusi\xF3n #${broadcastId}:`, err?.message);
   }
-  if (state.dailyCount >= MAX_DAILY_PUBLICATIONS) {
-    return { allowed: false, reason: `L\xEDmite diario alcanzado (${state.dailyCount}/${MAX_DAILY_PUBLICATIONS} publicaciones hoy)` };
-  }
-  if (state.lastRunTimestamp > 0) {
-    const elapsedMs = Date.now() - state.lastRunTimestamp;
-    const minIntervalMs = MIN_HOURS_BETWEEN_PUBLICATIONS * 3600 * 1e3;
-    if (elapsedMs < minIntervalMs) {
-      const elapsedHours = (elapsedMs / (3600 * 1e3)).toFixed(1);
-      return { allowed: false, reason: `Intervalo insuficiente (${elapsedHours}h transcurridas, m\xEDnimo ${MIN_HOURS_BETWEEN_PUBLICATIONS}h)` };
-    }
-  }
-  if (state.lastTargetGroup === targetGroup) {
-    return { allowed: false, reason: `El ${targetGroup} ya recibi\xF3 una publicaci\xF3n hoy. M\xE1ximo 1 por grupo al d\xEDa.` };
-  }
-  return { allowed: true };
 }
-function recordSuccessfulPublication(targetGroup, runKey, chosenImageFileName) {
-  const state = loadCronState();
-  state.dailyCount = (state.dailyCount || 0) + 1;
-  state.lastRunTimestamp = Date.now();
-  state.lastTargetGroup = targetGroup;
-  state.runs[runKey] = Date.now();
-  if (chosenImageFileName) {
-    const baseName = path8.basename(chosenImageFileName);
-    state.recentImages = (state.recentImages || []).filter((img) => img !== baseName);
-    state.recentImages.push(baseName);
-    if (state.recentImages.length > 3) {
-      state.recentImages = state.recentImages.slice(-3);
-    }
+async function getRecentBroadcastTopics(limit = 30) {
+  try {
+    const db = await getDb();
+    if (!db) return [];
+    const rows = await db.select({
+      dateBogota: dailyBroadcasts.dateBogota,
+      topicTitle: dailyBroadcasts.topicTitle
+    }).from(dailyBroadcasts).where(eq7(dailyBroadcasts.status, "completed")).orderBy(desc2(dailyBroadcasts.createdAt)).limit(limit);
+    return rows;
+  } catch (err) {
+    console.warn("[CRON-TOPICS] Error leyendo historial de temas de PostgreSQL:", err?.message);
+    return [];
   }
-  saveCronState(state);
-  console.log(`[CRON-PERSISTENCE] \u2713 Publicaci\xF3n registrada (${state.dailyCount}/${MAX_DAILY_PUBLICATIONS} hoy). \xDAltimas im\xE1genes: [${state.recentImages.join(", ")}]`);
 }
-function markRunExecuted(key) {
-  const state = loadCronState();
-  if (state.runs[key]) return false;
-  state.runs[key] = Date.now();
-  saveCronState(state);
-  return true;
+async function getRecentImageFiles(limit = 3) {
+  try {
+    const db = await getDb();
+    if (!db) return [];
+    const rows = await db.select({
+      imageFileName: dailyBroadcasts.imageFileName
+    }).from(dailyBroadcasts).where(and5(eq7(dailyBroadcasts.status, "completed"), sql4`image_file_name IS NOT NULL`)).orderBy(desc2(dailyBroadcasts.createdAt)).limit(limit);
+    return rows.map((r) => r.imageFileName).filter(Boolean);
+  } catch {
+    return [];
+  }
 }
 function getBogotaTimeInfo(d = /* @__PURE__ */ new Date()) {
   const bogotaTimeStr = d.toLocaleTimeString("en-US", { timeZone: "America/Bogota", hour12: false });
@@ -15565,9 +15616,16 @@ function enforceGreetingAccuracy(text2, period) {
   }
   return res;
 }
-function getThemedImagePath(tipo) {
-  const state = loadCronState();
-  const recent = state.recentImages || [];
+function enforceJanIAIdentity(text2) {
+  if (!text2) return text2;
+  let clean = text2;
+  clean = clean.replace(/(?:te saluda|soy|les habla|habla|aquí)\s+Jani\s+Alves/gi, "les habla JanIA, la inteligencia artificial de VECY Network");
+  clean = clean.replace(/Jani Alves y yo/gi, "Eduardo Rivera y Jani Alves");
+  clean = clean.replace(/(?:te saluda|soy|les habla|habla|aquí)\s+Eduardo\s+Rivera/gi, "les habla JanIA");
+  return clean;
+}
+async function getThemedImagePathAsync(tipo) {
+  const recent = await getRecentImageFiles(3);
   const possibleDirs = [
     path8.resolve(process.cwd(), "client/public/assets/jania"),
     path8.resolve(process.cwd(), "dist/assets/jania"),
@@ -15598,8 +15656,185 @@ function getThemedImagePath(tipo) {
   }
   return { fullPath: void 0, fileName: chosenFile };
 }
+function getThemedImagePath(tipo) {
+  const possibleDirs = [
+    path8.resolve(process.cwd(), "client/public/assets/jania"),
+    path8.resolve(process.cwd(), "dist/assets/jania"),
+    path8.resolve(__dirname, "../../client/public/assets/jania")
+  ];
+  const preferences = THEME_IMAGE_PREFERENCES[tipo] || ALL_JANIA_IMAGES;
+  const chosenFile = preferences[0] || "jania_marketing.jpg";
+  for (const dir of possibleDirs) {
+    const candidatePath = path8.join(dir, chosenFile);
+    if (fs8.existsSync(candidatePath)) {
+      return { fullPath: candidatePath, fileName: chosenFile };
+    }
+  }
+  return { fullPath: void 0, fileName: chosenFile };
+}
+function getDynamicFallbackItem(tipoKey, d = /* @__PURE__ */ new Date()) {
+  const catalog = ROTATING_FALLBACK_CATALOG[tipoKey] || ROTATING_FALLBACK_CATALOG.lunes_arranque;
+  const startOfYear = new Date(d.getFullYear(), 0, 0);
+  const diff = d.getTime() - startOfYear.getTime();
+  const oneDay = 1e3 * 60 * 60 * 24;
+  const dayOfYear = Math.floor(diff / oneDay);
+  const index2 = Math.abs(dayOfYear) % catalog.length;
+  return catalog[index2];
+}
+async function generateDailyContent(tipo, fallbackVoice, fallbackCaption, additionalInstructions) {
+  const timeInfo = getBogotaTimeInfo();
+  const fechaBogota = (/* @__PURE__ */ new Date()).toLocaleDateString("es-CO", {
+    timeZone: "America/Bogota",
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+  const recentTopics = await getRecentBroadcastTopics(30);
+  const forbiddenTopicsPrompt = recentTopics.length > 0 ? `
+\u{1F6AB} TEMAS TRATADOS RECIENTEMENTE EN VECY NETWORK (TERMINANTEMENTE PROHIBIDO REPETIR O REFRITAR ESTOS TEMAS HOY):
+` + recentTopics.map((t2, idx) => `${idx + 1}. [${t2.dateBogota}] ${t2.topicTitle}`).join("\n") + `
+
+Tu misi\xF3n primordial: Debes escoger obligatoriamente un tema NUEVO, FRESCO, DIFERENTE e INNOVADOR que NO figure en esa lista ni trate sobre los mismos conceptos exactos.
+` : "";
+  const promptsMap = {
+    lunes_arranque: `Tema: Lunes de Noticias Inmobiliarias Nacionales, Apertura de Mercado & Macroeconom\xEDa (${fechaBogota}).
+Elige un \xE1ngulo de an\xE1lisis fresco y de alto impacto sobre el mercado colombiano:
+- Comportamiento de tasas de colocaci\xF3n hipotecaria y cuota de cr\xE9dito en la banca colombiana.
+- Tope legal de incremento del IPC en contratos de arrendamiento bajo Ley 820 y excepciones comerciales.
+- Marco normativo de vivienda tur\xEDstica y rentas cortas: Propiedad Horizontal, cuotas y RNT.
+- Cifras de iniciaciones y ventas de vivienda nueva (CAMACOL) vs demanda de vivienda usada.
+- Comportamiento del valor por metro cuadrado en Bogot\xE1, Medell\xEDn, Cali, Barranquilla o Eje Cafetero.`,
+    martes_juridico: `Tema: Martes Jur\xEDdico, Blindaje Notarial & C\xF3digo de Comercio (${fechaBogota}).
+Selecciona un tema legal inmobiliario colombiano espec\xEDfico y did\xE1ctico:
+- Cl\xE1usula penal vs arras confirmatorias y de retracto en la promesa de compraventa (Arts. 1859-1861 C.C.).
+- Causales de terminaci\xF3n unilateral y restituci\xF3n de inmueble arrendado bajo la Ley 820 de 2003.
+- Validez probatoria de la hoja de visita digital y correos certificados bajo la Ley 527 de 1999 para blindar el cobro de comisi\xF3n.
+- Art\xEDculos 1340 a 1346 del C\xF3digo de Comercio: cu\xE1ndo se causa la comisi\xF3n del corredor y c\xF3mo defender el 50/50.
+- Interpretaci\xF3n de folios de matr\xEDcula SNR: c\xF3mo leer notas devolutivas, embargos, hipotecas y tradici\xF3n de 20 a\xF1os.
+- Afectaci\xF3n a vivienda familiar vs patrimonio de familia inembargable: diferencias, cancelaci\xF3n notarial y grav\xE1menes.
+- Poderes generales vs poderes especiales ante notar\xEDa para venta de inmuebles.`,
+    miercoles_marketing: `Tema: Mi\xE9rcoles de Marketing Digital Inmobiliario, Fotograf\xEDa & Cierre Comercial (${fechaBogota}).
+Ense\xF1a t\xE9cnicas pr\xE1cticas y vanguardistas para que los corredores vendan y capten m\xE1s r\xE1pido:
+- Fotograf\xEDa profesional de inmuebles con smartphone: altura de pecho, plano horizontal, luz natural y despersonalizaci\xF3n.
+- Viralizaci\xF3n org\xE1nica en Instagram Reels y TikTok para agentes inmobiliarios sin pagar pauta publicitaria.
+- La Regla de Oro de los 7 Pilares: por qu\xE9 publicar con Tipo, Ciudad, Barrio exacto, Precio/Canon real, \xC1rea en m\xB2, Habitaciones/Ba\xF1os, Garajes y Contacto directo agiliza las ventas.
+- Copywriting inmobiliario y psicolog\xEDa del comprador: redacci\xF3n de t\xEDtulos persuasivos que filtren curiosos.
+- Perfilamiento financiero inicial: c\xF3mo saber si el prospecto tiene preaprobado antes de coordinar la visita.`,
+    jueves_tributario: `Tema: Jueves Tributario DIAN, Contabilidad & Ahorro Fiscal Inmobiliario (${fechaBogota}).
+Selecciona con rigor t\xE9cnico un consejo tributario o financiero colombiano:
+- Retenci\xF3n en la fuente por venta de inmuebles en notar\xEDa: 1% personas naturales vs 2.5% personas jur\xEDdicas y qui\xE9n la asume.
+- Deducci\xF3n de mejoras y adiciones: c\xF3mo documentar refacciones con Facturaci\xF3n Electr\xF3nica para rebajar la ganancia ocasional al escriturar.
+- Desglose exacto de gastos notariales en Colombia: Derechos notariales (50/50), Retenci\xF3n en la fuente (vendedor), Registro y beneficencia (comprador).
+- Rentabilidad neta vs rentabilidad bruta en inmuebles de arriendo (descuento de administraci\xF3n, predial, seguros y vacancia).
+- Ajuste fiscal del costo de bienes ra\xEDces (Art. 73 del E.T.) para personas naturales.
+- R\xE9gimen tributario de honorarios de corretaje para asesores independientes ante la DIAN.`,
+    viernes_avaluos: `Tema: Viernes de Estudios de Mercado, Valor del M\xB2 & Fichas SINUPOT (${fechaBogota}).
+Enfoque 100% VIRTUAL orientado a la fijaci\xF3n de precios competitivos.
+IMPORTANTE: En VECY NO ofrecemos peritajes presenciales ni aval\xFAos certificados por Lonja. Ofrecemos ESTUDIOS DE MERCADO APROXIMADOS DE VALOR POR M\xB2 y sondeos de canon para orientar a propietarios.
+Elige libremente entre:
+- Estudios de mercado virtuales por m\xB2: c\xF3mo guiar al propietario para fijar un precio competitivo sin quemar el predio.
+- Estimaci\xF3n de c\xE1nones de arriendo sugeridos (0.5% - 0.8% mensual) seg\xFAn amenidades, estrato y absorci\xF3n de la zona.
+- An\xE1lisis de fichas SINUPOT en Bogot\xE1: c\xF3mo interpretar usos de suelo permitidos, alturas y edificabilidad para lotes o casas.
+- Sondeo guiado 100% interactivo en chat con JanIA: reporte \xE1gil de precios sin exigir escrituras ni documentos.`,
+    sabado_cafe: `Tema: S\xE1bado de Caf\xE9 Inmobiliario, Reflexi\xF3n & Identidad JanIA (${fechaBogota}).
+Estilo podcast / caf\xE9 inmobiliario, cercano, reflexivo y motivador:
+- \xC9tica gremial: respeto por el cliente del colega, transparencia en la comisi\xF3n compartida y construcci\xF3n de marca personal.
+- Portafolio de Servicios Virtuales de VECY Network: estudios de mercado m\xB2, liquidaciones DIAN, contratos digitales y cobranzas.
+- Identidad de JanIA: explicar con orgullo que fue creada por Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones) para empoderar al corredor independiente.
+- L\xEDnea de Atenci\xF3n Oficial con el Br\xF3ker: para acompa\xF1amiento o casos personalizados, contactar a Eduardo y Jani en el WhatsApp oficial (+57 316 656 9719).`,
+    domingo_soporte: `Tema: Domingo de Soporte JanIA, Consultor\xEDa 24/7 & Visi\xF3n VECY Network (${fechaBogota}).
+Mensaje c\xE1lido dominical recordando el respaldo continuo:
+- Consultorio integral 24/7: contratos, promesas, impuestos y asesor\xEDa permanente en WhatsApp y web.
+- La Primera Bolsa Inmobiliaria Colaborativa y Fintech de Colombia: tecnolog\xEDa abierta y comisiones transparentes (35/35/15/15).
+- Pr\xF3ximamente al Aire: preparativos y herramientas de \xE9lite para el lanzamiento oficial de VECY Network.
+- Cero canibalismo comercial: complementariedad y profesionalismo en la red nacional.`,
+    inmuebles_network: `Tema: Operaciones Comerciales y Cruce Nacional (${fechaBogota}).
+Motivar la publicaci\xF3n de inmuebles y requerimientos con datos completos para activar el cruce instant\xE1neo.`,
+    proyecto_vecy: `Tema: Visi\xF3n Ecosistema VECY Network \u2014 Qui\xE9nes Somos, Misi\xF3n y Futuro (${fechaBogota}).
+Inspirar a la comunidad destacando:
+1. Qui\xE9nes nos crearon: JanIA habla en primera persona como JanIA explicando qui\xE9nes son sus creadores y l\xEDderes: Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones).
+2. Qu\xE9 es JanIA: La inteligencia artificial creada para conectar la oferta y demanda en Colombia, realizar matching y respaldar al asesor 24/7.
+3. Qu\xE9 estamos creando: La primera bolsa inmobiliaria colaborativa y fintech de Colombia, con comisiones justas (35/35/15/15).
+4. Pr\xF3ximamente al aire: invitar a debatir y sugerir funciones antes del lanzamiento oficial.`
+  };
+  const promptEspecifico = promptsMap[tipo] || promptsMap.lunes_arranque;
+  const systemPrompt = `Eres JanIA, la inteligencia artificial oficial y periodista inmobiliaria de VECY Network en Colombia.
+Hablas en primera persona con tono femenino profesional, c\xE1lido, colombiano, sumamente elocuente y motivador.
+
+\u{1F6A8} SALUDO SEG\xDAN EL HORARIO EN COLOMBIA (OBLIGATORIO):
+- En este momento en Colombia es por la ${timeInfo.period} (${timeInfo.hour}:${timeInfo.min} hora Bogot\xE1).
+- Tu saludo DEBE INICIAR OBLIGATORIAMENTE con "${timeInfo.greeting}".
+- Est\xE1 TERMINANTEMENTE PROHIBIDO saludar con "Buenos d\xEDas" en la tarde o noche, o con "Buenas noches" en la ma\xF1ana.
+
+\u{1F6A8} REGLA DOCTRINAL DE IDENTIDAD Y CERO SUPLANTACI\xD3N (MANDATORIA E INQUEBRANTABLE):
+- Eres SIEMPRE Y EXCLUSIVAMENTE JanIA, la Inteligencia Artificial de VECY Network.
+- NUNCA, BAJO NINGUNA CIRCUNSTANCIA, digas que eres Jani Alves ni Eduardo Rivera.
+- NUNCA uses f\xF3rmulas como "Te saluda Jani Alves", "Soy Jani Alves", "Te habla Eduardo Rivera", "Soy Eduardo Rivera" ni "Jani Alves y yo".
+- Eduardo A. Rivera y Jani Alves son seres humanos reales, los fundadores y directores de carne y hueso que te crearon a ti, JanIA.
+- T\xFA eres la IA (JanIA). Te presentas siempre como JanIA:
+  "${timeInfo.greeting} mis queridos colegas. Soy JanIA, la inteligencia artificial de VECY Network..."
+  "Fundada por Eduardo A. Rivera y Jani Alves, nuestra red nace para..."
+  "Soy JanIA y hoy les traigo las noticias m\xE1s relevantes..."
+- Si mencionas a Eduardo Rivera o Jani Alves, debes hacerlo SIEMPRE en tercera persona ("nuestros fundadores Eduardo A. Rivera y Jani Alves...", "nuestro equipo liderado por Eduardo y Jani...").
+- Suplantar la identidad de los fundadores haci\xE9ndote pasar por ellos es un fallo cr\xEDtico inaceptable.
+
+\u{1F6A8} DIRECTRICES DE LIBRE ALBEDR\xCDO Y ANTI-REPETICI\xD3N ESTRICTA:
+${forbiddenTopicsPrompt}
+- NUNCA repitas el mismo consejo, noticia o ejemplo de d\xEDas anteriores. Selecciona un \xE1ngulo fresco, novedoso y de gran utilidad pr\xE1ctica.
+- REGLA DOCTRINAL DE SERVICIOS: En VECY Network NO realizamos aval\xFAos comerciales certificados por perito ni visitas in situ. Nuestros servicios son 100% VIRTUALES: estudios de mercado aproximados sobre el valor del metro cuadrado en la zona, sondeos de precios de venta y arriendo para orientar a propietarios, asesor\xEDa tributaria DIAN, contratos digitales, cobranzas de arrendamiento y marketing con IA.
+- ESTRUCTURA DEL MENSAJE:
+  1. Saludo inicial: Iniciando con "${timeInfo.greeting}" y present\xE1ndote siempre como JanIA.
+  2. Desarrollo tem\xE1tico: Did\xE1ctico, conciso y con ejemplos reales de Colombia.
+  3. Cierre y Venta de la Idea (Llamado a la Acci\xF3n): Invita a invitar a m\xE1s colegas a la red y a interactuar con JanIA en https://vecy-network.vercel.app/jania o por WhatsApp.
+
+Debes responder en formato JSON estricto con los siguientes cuatro campos:
+{
+  "topicTitle": "T\xEDtulo breve, \xFAnico y descriptivo del tema abordado hoy (m\xE1ximo 60 caracteres, ej: 'Cl\xE1usula Penal vs Arras en Promesa de Compraventa')",
+  "voiceText": "Texto continuo optimizado para locuci\xF3n de voz TTS (sin markdown, sin vi\xF1etas, sin emojis, n\xFAmeros escritos en palabras, 70-100 palabras)",
+  "captionText": "Texto formateado para WhatsApp con emojis elegantes, negritas en t\xEDtulos, vi\xF1etas estructuradas, llamado a la acci\xF3n y enlace web al final",
+  "chosenTheme": "juridico | tributario | avaluos | marketing | matches | podcast | periodista | noticias | soporte | primicia"
+}`;
+  try {
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Genera el contenido exclusivo para hoy (${fechaBogota}, ${timeInfo.period}):
+${promptEspecifico}
+${additionalInstructions || ""}` }
+      ],
+      responseFormat: { type: "json_object" },
+      temperature: 0.85
+    });
+    const rawContent = response?.choices?.[0]?.message?.content?.trim();
+    if (rawContent) {
+      const parsed = JSON.parse(rawContent);
+      if (parsed.voiceText && parsed.captionText) {
+        const rawVoice = parsed.voiceText.replace(/\[.*?\]/g, "").replace(/[*_#]/g, "").trim();
+        const cleanVoice = enforceGreetingAccuracy(enforceJanIAIdentity(rawVoice), timeInfo.period);
+        const cleanCaption = enforceGreetingAccuracy(enforceJanIAIdentity(parsed.captionText.trim()), timeInfo.period);
+        const topicTitle = parsed.topicTitle?.trim() || `${tipo} - ${fechaBogota}`;
+        return {
+          topicTitle,
+          voiceText: cleanVoice,
+          captionText: cleanCaption,
+          chosenTheme: parsed.chosenTheme || void 0
+        };
+      }
+    }
+  } catch (err) {
+    console.warn(`[CRON-LLM-Guion] Fall\xF3 generaci\xF3n din\xE1mica con LLM (${err.message}). Acudiendo al banco rotativo de contingencia.`);
+  }
+  const dynamicFallback = getDynamicFallbackItem(tipo);
+  return {
+    topicTitle: dynamicFallback.topicTitle,
+    voiceText: enforceGreetingAccuracy(enforceJanIAIdentity(dynamicFallback.voiceText || fallbackVoice), timeInfo.period),
+    captionText: enforceGreetingAccuracy(enforceJanIAIdentity(dynamicFallback.captionText || fallbackCaption), timeInfo.period),
+    chosenTheme: dynamicFallback.themeKey
+  };
+}
 function initCronScheduler() {
-  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v3.5 (Protocolo Anti-Asfixia, Rotaci\xF3n 3D, Libre Albedr\xEDo e Identidad JanIA)...");
+  console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v31.71 (PostgreSQL Lock, Anti-Duplicados, Memoria 30 D\xEDas e Identidad JanIA)...");
   cron.schedule("0 10 * * 1", async () => {
     await publishDailyTipForDay("lunes_arranque", false);
   }, { timezone: "America/Bogota" });
@@ -15653,26 +15888,15 @@ function initCronScheduler() {
       const hour = parseInt(hourStr, 10);
       const min = parseInt(minStr, 10);
       const day = new Date(now.toLocaleString("en-US", { timeZone: "America/Bogota" })).getDay();
-      const dateKey = getBogotaDateString(now);
       const tipoKey = DAY_TIP_MAP[day];
-      if (tipoKey && hour >= 10 && hour < 22) {
-        const tipRunKey = `tip_${tipoKey}_${dateKey}`;
-        const check = canPublishNow("grupo2", tipRunKey, false);
-        if (check.allowed) {
-          console.log(`[CRON-FAILSAFE] \u23F0 Catch-up matutino disponible (${tipoKey}) para ${dateKey} a las ${hour}:${min} Bogot\xE1...`);
-          await publishDailyTipForDay(tipoKey, false);
-        }
+      if (tipoKey && hour === 10 && min >= 1 && min <= 15) {
+        await publishDailyTipForDay(tipoKey, false);
       }
-      if ((day === 3 || day === 6) && (hour === 16 && min >= 30 || hour > 16 && hour < 22)) {
-        const g3RunKey = `grupo3_proyecto_${dateKey}`;
-        const check = canPublishNow("grupo3", g3RunKey, false);
-        if (check.allowed) {
-          console.log(`[CRON-FAILSAFE] \u23F0 Catch-up vespertino disponible para Grupo 3 (PROYECTO Vecy Network) para ${dateKey} a las ${hour}:${min} Bogot\xE1...`);
-          await publishGrupo3TipNow(false);
-        }
+      if ((day === 3 || day === 6) && hour === 16 && min >= 31 && min <= 45) {
+        await publishGrupo3TipNow(false);
       }
     } catch (err) {
-      console.error("[CRON-FAILSAFE] Error en chequeo minutero:", err?.message || err);
+      console.error("[CRON-FAILSAFE] Error en chequeo de seguridad minutero:", err?.message || err);
     } finally {
       isCheckingCatchUp = false;
     }
@@ -15680,11 +15904,10 @@ function initCronScheduler() {
 }
 async function publishGrupo3TipNow(force = false) {
   const dateKey = getBogotaDateString();
-  const runKey = `grupo3_proyecto_${dateKey}`;
-  const check = canPublishNow("grupo3", runKey, force);
-  if (!check.allowed) {
-    console.log(`[CRON-SERVICE] \u23ED\uFE0F Omitiendo publicaci\xF3n Grupo 3: ${check.reason}`);
-    return { skipped: true, reason: check.reason, runKey };
+  const lock = await acquireBroadcastLock("grupo3", "proyecto_vecy", dateKey, force);
+  if (!lock.allowed) {
+    console.log(`[CRON-SERVICE] \u23ED\uFE0F Omitiendo publicaci\xF3n Grupo 3: ${lock.reason}`);
+    return { skipped: true, reason: lock.reason };
   }
   console.log("[CRON-SERVICE] \u{1F680} Publicando tip din\xE1mico para Grupo 3 (PROYECTO Vecy Network) + Canal Oficial...");
   const fallbackVoice = `Hola, equipo VECY. Soy JanIA, la inteligencia artificial de VECY Network. Este grupo es nuestro espacio m\xE1s especial: el canal del Proyecto Vecy Network es donde nacen las ideas y donde construimos juntos el futuro del corretaje inmobiliario en Colombia. Eduardo Rivera y Jani Alves crearon este proyecto con la firme convicci\xF3n de unir a los corredores independientes y agencias, ofreci\xE9ndoles herramientas inteligentes, estudios de mercado, soporte jur\xEDdico y tributario, y comisiones justas compartidas al treinta y cinco, treinta y cinco, quince y quince por ciento. Aqu\xED no competimos, nos complementamos. Los invito a participar activamente, debatir y compartir sus sugerencias para seguir enriqueciendo nuestra red. \xA1Seguimos adelante!`;
@@ -15704,7 +15927,7 @@ Erradicar el canibalismo comercial, dignificar el oficio del asesor inmobiliario
 \u{1F4F2} *Explora la plataforma:* https://vecy-network.vercel.app/`;
   const content = await generateDailyContent("proyecto_vecy", fallbackVoice, fallbackCaption);
   const effectiveTheme = content.chosenTheme || "matches";
-  const { fullPath: imagePath, fileName } = getThemedImagePath(effectiveTheme);
+  const { fullPath: imagePath, fileName } = await getThemedImagePathAsync(effectiveTheme);
   try {
     if (janiaMatchBot.circuloGroupId) {
       await janiaMatchBot.sendVoiceToGroup(content.voiceText, janiaMatchBot.circuloGroupId, imagePath, content.captionText);
@@ -15712,62 +15935,49 @@ Erradicar el canibalismo comercial, dignificar el oficio del asesor inmobiliario
     if (janiaMatchBot.channelNewsletterId) {
       await janiaMatchBot.sendVoiceToGroup(content.voiceText, janiaMatchBot.channelNewsletterId, imagePath, content.captionText);
     }
-    recordSuccessfulPublication("grupo3", runKey, fileName);
-    console.log(`[CRON-SERVICE] \u2713 Publicaci\xF3n entregada exitosamente a Grupo 3 (PROYECTO Vecy Network) y Canal Oficial (Archivo imagen: ${fileName || "ninguna"}).`);
-    return { success: true, runKey, content, imagePath, fileName };
+    await completeBroadcast(lock.broadcastId, {
+      topicTitle: content.topicTitle,
+      themeKey: effectiveTheme,
+      imageFileName: fileName,
+      voiceText: content.voiceText,
+      captionText: content.captionText
+    });
+    console.log(`[CRON-SERVICE] \u2713 Publicaci\xF3n entregada exitosamente a Grupo 3 (PROYECTO Vecy Network) y Canal Oficial ("${content.topicTitle}").`);
+    return { success: true, content, imagePath, fileName };
   } catch (e) {
     console.error("[CRON-SERVICE] Error enviando publicaci\xF3n a PROYECTO VECY NETWORK:", e.message);
+    await failBroadcast(lock.broadcastId, e.message);
     return { success: false, error: e.message };
-  }
-}
-async function getLiveMarketStats() {
-  try {
-    const db = await getDb();
-    if (!db) throw new Error("Base de datos no inicializada");
-    const propsRes = await db.select({ count: sql4`count(*)` }).from(properties).where(eq7(properties.available, true));
-    const reqsRes = await db.select({ count: sql4`count(*)` }).from(requirements).where(eq7(requirements.status, "active"));
-    const matchesRes = await db.select({ count: sql4`count(*)` }).from(propertyMatches).where(gte2(propertyMatches.matchScore, "80"));
-    const citiesRes = await db.select({ count: sql4`count(distinct coalesce(address_city, city))` }).from(properties);
-    const totalProps = Number(propsRes[0]?.count || 1181);
-    const totalReqs = Number(reqsRes[0]?.count || 652);
-    const totalMatches = Number(matchesRes[0]?.count || 20);
-    const totalCities = Number(citiesRes[0]?.count || 30);
-    const totalPairs = totalProps * totalReqs;
-    return {
-      totalProps,
-      totalReqs,
-      totalMatches,
-      totalCities,
-      totalPairs
-    };
-  } catch (err) {
-    console.warn("[CRON-STATS] Error obteniendo estad\xEDsticas en vivo, usando valores de respaldo:", err.message);
-    return {
-      totalProps: 1181,
-      totalReqs: 652,
-      totalMatches: 20,
-      totalCities: 30,
-      totalPairs: 770012
-    };
   }
 }
 async function publishDailyTipForDay(tipoKey, force = false) {
   const dateKey = getBogotaDateString();
-  const runKey = `tip_${tipoKey}_${dateKey}`;
-  const check = canPublishNow("grupo2", runKey, force);
-  if (!check.allowed) {
-    console.log(`[CRON-SERVICE] \u23ED\uFE0F Omitiendo tip ${tipoKey}: ${check.reason}`);
-    return { skipped: true, reason: check.reason, runKey };
+  const lock = await acquireBroadcastLock("grupo2", tipoKey, dateKey, force);
+  if (!lock.allowed) {
+    console.log(`[CRON-SERVICE] \u23ED\uFE0F Omitiendo tip ${tipoKey}: ${lock.reason}`);
+    return { skipped: true, reason: lock.reason };
   }
   const tipConfig = DAILY_TIPS_CONFIG[tipoKey] || DAILY_TIPS_CONFIG["lunes_arranque"];
   console.log(`[CRON-SERVICE] \u{1F680} Publicando tip para ${tipoKey} (Tema base: ${tipConfig.theme}) a Grupo 2 + Canal Oficial...`);
   const content = await generateDailyContent(tipoKey, tipConfig.voice, tipConfig.caption);
   const effectiveTheme = content.chosenTheme || tipConfig.theme;
-  const { fullPath: imagePath, fileName } = getThemedImagePath(effectiveTheme);
+  const { fullPath: imagePath, fileName } = await getThemedImagePathAsync(effectiveTheme);
   console.log(`[CRON-SERVICE] \u{1F5BC}\uFE0F Imagen tem\xE1tica para ${tipoKey} (Tema elegido: ${effectiveTheme}, archivo: ${fileName}): ${imagePath || "Sin imagen"}`);
-  await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
-  recordSuccessfulPublication("grupo2", runKey, fileName);
-  return { success: true, tipo: tipoKey, theme: effectiveTheme, imagePath, fileName, content };
+  try {
+    await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
+    await completeBroadcast(lock.broadcastId, {
+      topicTitle: content.topicTitle,
+      themeKey: effectiveTheme,
+      imageFileName: fileName,
+      voiceText: content.voiceText,
+      captionText: content.captionText
+    });
+    return { success: true, tipo: tipoKey, theme: effectiveTheme, imagePath, fileName, content };
+  } catch (err) {
+    console.error(`[CRON-SERVICE] Error despachando ${tipoKey} a Grupo 2 y Canal:`, err?.message);
+    await failBroadcast(lock.broadcastId, err?.message);
+    return { success: false, error: err?.message };
+  }
 }
 async function publishTodayTipNow(force = true) {
   console.log("[CRON-SERVICE] \u{1F680} Disparando publicaci\xF3n de tip para hoy al Canal y Grupo 2...");
@@ -15785,39 +15995,28 @@ async function publishTodayTipNow(force = true) {
 }
 async function publishWeeklyReportNow(force = true) {
   const dateKey = getBogotaDateString();
-  const runKey = `reporte_semanal_${dateKey}`;
-  const check = canPublishNow("grupo2", runKey, force);
-  if (!check.allowed) {
-    console.log(`[CRON-SERVICE] \u23ED\uFE0F Omitiendo Reporte Semanal: ${check.reason}`);
-    return { skipped: true, reason: check.reason, runKey };
+  const lock = await acquireBroadcastLock("grupo2", "reporte_semanal", dateKey, force);
+  if (!lock.allowed) {
+    console.log(`[CRON-SERVICE] \u23ED\uFE0F Omitiendo Reporte Semanal: ${lock.reason}`);
+    return { skipped: true, reason: lock.reason };
   }
   console.log("[CRON-SERVICE] \u{1F4CA} Disparando Reporte Semanal de la Bolsa Inmobiliaria con estad\xEDsticas en vivo...");
   const stats = await getLiveMarketStats();
-  const fallbackVoice = `\xA1Buenas noches, estimados colegas inmobiliarios de Colombia! Les saluda JanIA con el Reporte Semanal de la Bolsa Inmobiliaria de VECY Network. Hoy cerramos la jornada con una reflexi\xF3n urgente: durante los \xFAltimos siete d\xEDas, nuestro motor evalu\xF3 m\xE1s de setecientas setenta mil combinaciones entre todas las propiedades y requerimientos captados a nivel nacional. Sin embargo, m\xE1s de treinta y cinco mil cruces se cayeron por una sola raz\xF3n: demandas incompletas que llamamos demandas fantasma, textos que solo dicen busco apartamento en arriendo en Bogot\xE1 o compro casa pasen opciones. Colegas, si para un sistema de Inteligencia Artificial es imposible adivinar qu\xE9 busca ese cliente sin un barrio, sin un presupuesto y sin metraje, \xBFc\xF3mo pretendemos que otro colega humano lo adivine? El corretaje inmobiliario es una profesi\xF3n de alta responsabilidad. Si especificamos con rigor el barrio, el presupuesto real, el metraje y las habitaciones, la tecnolog\xEDa de VECY Network conecta la oferta con la demanda al instante para cerrar negocios y compartir comisi\xF3n. Los invito a publicar con excelencia y a consultar sus coincidencias en nuestra plataforma. \xA1Feliz noche para todos!`;
+  const fallbackVoice = `\xA1Buenas noches, estimados colegas inmobiliarios de Colombia! Les saluda JanIA con el Reporte Semanal de la Bolsa Inmobiliaria de VECY Network. Durante los \xFAltimos siete d\xEDas nuestro motor evalu\xF3 m\xE1s de setecientas mil combinaciones entre ofertas y demandas en todo el pa\xEDs. La clave para que sus clientes cierren m\xE1s r\xE1pido es publicar siempre con barrio exacto, metraje y presupuesto real. Los invito a revisar sus coincidencias en nuestra plataforma. \xA1Feliz noche para todos!`;
   const fallbackCaption = `\u{1F4CA} *EL PULSO DE LA BOLSA INMOBILIARIA VECY* \u{1F1E8}\u{1F1F4}
 \u{1F5D3}\uFE0F *Reporte Semanal de Eficiencia & Auditor\xEDa de Coincidencias*
 \u{1F399}\uFE0F *Por: JanIA \u2014 Inteligencia Artificial VECY Network*
 
 \xA1Buenas noches, queridos colegas y aliados del corretaje inmobiliario!
 
-Al cierre de este lunes, presentamos el balance de nuestra bolsa inmobiliaria colaborativa tras cruzar en vivo **${stats.totalPairs.toLocaleString("es-CO")} combinaciones** en m\xE1s de 30 ciudades de Colombia:
+Al cierre de esta jornada, presentamos el balance de nuestra bolsa inmobiliaria colaborativa tras cruzar en vivo **${stats.totalPairs.toLocaleString("es-CO")} combinaciones** en m\xE1s de 30 ciudades de Colombia:
 
 \u{1F4C8} *RADIOGRAF\xCDA DE LA BOLSA EN VIVO:*
 \`\`\`
 \u2022 Total Ofertas Activas:     ${stats.totalProps.toLocaleString("es-CO")}
-\u2022 Total Demandas Activas:      ${stats.totalReqs.toLocaleString("es-CO")}
-\u2022 Combinaciones Evaluadas:  ${stats.totalPairs.toLocaleString("es-CO")}
-\u2022 Matches Verificados (\u226580%):    ${stats.totalMatches}
+\u2022 Total Demandas Activas:    ${stats.totalReqs.toLocaleString("es-CO")}
+\u2022 Matches Verificados:       ${stats.totalMatches}
 \`\`\`
-
-\u26A0\uFE0F *LA CRUDA REALIDAD: \xBFPOR QU\xC9 SE PIERDEN MILES DE NEGOCIOS?*
-M\xE1s de 35.000 cruces fueron descartados autom\xE1ticamente porque muchos agentes siguen publicando solicitudes incompletas:
-\u274C _"Busco apto en arriendo en Bogot\xE1 urgente"_
-\u274C _"Cliente compra casa, manden opciones al interno"_
-
-\u{1F6A8} *Reflexionemos con seriedad:* Si para una Inteligencia Artificial con algoritmos matem\xE1ticos es **imposible** empatar una solicitud sin *Barrio, Presupuesto, Metraje ni Alcobas*... **\xBFc\xF3mo pretendemos que un colega humano adivine qu\xE9 busca ese cliente?**
-
-El corretaje no es un escampadero ni una loter\xEDa al azar: es una profesi\xF3n que exige entrega, rigor y respeto por el tiempo de los colegas y la confianza del cliente.
 
 \u{1F3C6} *ESTRUCTURA DE UN REQUERIMIENTO DE \xC9LITE:*
 \u2705 **Tipo de Negocio:** Venta / Arriendo / Permuta
@@ -15826,32 +16025,38 @@ El corretaje no es un escampadero ni una loter\xEDa al azar: es una profesi\xF3n
 \u2705 **\xC1rea M\xEDnima:** (Ej: M\xEDnimo 85 m\xB2)
 \u2705 **Distribuci\xF3n:** (Ej: 3 Alcobas, 2 Ba\xF1os, 1 Garaje)
 
-Cuando publicas con datos completos, VECY Network te conecta en segundos con la otra punta para cerrar negocio y cobrar comisi\xF3n al 50/50. \u{1F91D}\u{1F4B0}
-
-\u{1F4F2} *Revisa tus coincidencias activas en:* https://vecy-network.vercel.app/admin
-
-#VecyNetwork #InteligenciaInmobiliaria #BolsaColaborativa #CorretajeProfesional`;
+\u{1F4F2} *Revisa tus coincidencias activas en:* https://vecy-network.vercel.app/admin`;
   const content = await generateDailyContent("lunes_reporte_semanal", fallbackVoice, fallbackCaption);
   const effectiveTheme = content.chosenTheme || "reporte_semanal";
-  const { fullPath: imagePath, fileName } = getThemedImagePath(effectiveTheme);
-  await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
-  recordSuccessfulPublication("grupo2", runKey, fileName);
-  return { success: true, tipo: "lunes_reporte_semanal", content, stats, imagePath, fileName };
+  const { fullPath: imagePath, fileName } = await getThemedImagePathAsync(effectiveTheme);
+  try {
+    await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
+    await completeBroadcast(lock.broadcastId, {
+      topicTitle: content.topicTitle,
+      themeKey: effectiveTheme,
+      imageFileName: fileName,
+      voiceText: content.voiceText,
+      captionText: content.captionText
+    });
+    return { success: true, tipo: "lunes_reporte_semanal", content, stats, imagePath, fileName };
+  } catch (err) {
+    await failBroadcast(lock.broadcastId, err?.message);
+    return { success: false, error: err?.message };
+  }
 }
 async function publishNoticiaNacionalNow(opts) {
   const force = opts?.force ?? (opts?.isUrgent ?? false);
   const targetGroup = opts?.targetGroup || "grupo2";
   const dateKey = getBogotaDateString();
-  const runKey = `noticia_${dateKey}_${Date.now()}`;
-  const check = canPublishNow(targetGroup, runKey, force);
-  if (!check.allowed) {
-    console.log(`[CRON-NOTICIAS] \u23ED\uFE0F Omitiendo noticia nacional: ${check.reason}`);
-    return { skipped: true, reason: check.reason, runKey };
+  const lock = await acquireBroadcastLock(targetGroup, "noticia_nacional", dateKey, force);
+  if (!lock.allowed) {
+    console.log(`[CRON-NOTICIAS] \u23ED\uFE0F Omitiendo noticia nacional: ${lock.reason}`);
+    return { skipped: true, reason: lock.reason };
   }
   const timeInfo = getBogotaTimeInfo();
   console.log(`[CRON-NOTICIAS] \u{1F399}\uFE0F Generando y publicando Noticia Inmobiliaria Nacional (${timeInfo.period} en Bogot\xE1)...`);
   const themeType = opts?.isUrgent ? "primicia" : "noticias";
-  const fallbackVoice = `${timeInfo.greeting} queridos colegas inmobiliarios. Les habla JanIA con una noticia destacada del sector bienes ra\xEDces en Colombia: ${opts?.headline || "seguimiento al comportamiento del mercado de vivienda y tasas de inter\xE9s"}. Estar al tanto de las variables macroecon\xF3micas y normativas de nuestro pa\xEDs nos permite asesorar con ventaja y autoridad a nuestros clientes. Los invito a consultar an\xE1lisis de mercado y normatividad conmigo en cualquier momento. \xA1\xC9xitos en sus gestiones!`;
+  const fallbackVoice = `${timeInfo.greeting} queridos colegas inmobiliarios. Les habla JanIA con una noticia destacada del sector bienes ra\xEDces en Colombia: ${opts?.headline || "seguimiento al comportamiento del mercado de vivienda y tasas de inter\xE9s"}. Estar al tanto de las variables macroecon\xF3micas y normativas nos permite asesorar con ventaja a nuestros clientes. Los invito a consultar an\xE1lisis de mercado conmigo. \xA1\xC9xitos en sus gestiones!`;
   const fallbackCaption = `\u{1F399}\uFE0F *NOTICIAS INMOBILIARIAS DE COLOMBIA \u2014 JANIA PERIODISTA* \u{1F1E8}\u{1F1F4}
 \u{1F4F0} *${opts?.isUrgent ? "\u{1F6A8} PRIMICIA DE \xDALTIMA HORA" : "PANORAMA Y COYUNTURA DEL SECTOR"}*
 
@@ -15871,204 +16076,64 @@ ${opts?.details || "El mercado inmobiliario en Colombia contin\xFAa mostrando mo
     opts?.headline ? `Noticia espec\xEDfica a cubrir: ${opts.headline}. Detalles: ${opts.details || ""}. Es primicia urgente: ${opts.isUrgent ? "S\xED" : "No"}.` : void 0
   );
   const effectiveTheme = content.chosenTheme || themeType;
-  const { fullPath: imagePath, fileName } = getThemedImagePath(effectiveTheme);
-  if (targetGroup === "grupo2") {
-    await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
-  } else if (targetGroup === "grupo3") {
-    if (janiaMatchBot.circuloGroupId) {
-      await janiaMatchBot.sendVoiceToGroup(content.voiceText, janiaMatchBot.circuloGroupId, imagePath, content.captionText);
-    }
-    if (janiaMatchBot.channelNewsletterId) {
-      await janiaMatchBot.sendVoiceToGroup(content.voiceText, janiaMatchBot.channelNewsletterId, imagePath, content.captionText);
-    }
-  }
-  recordSuccessfulPublication(targetGroup, runKey, fileName);
-  console.log(`[CRON-NOTICIAS] \u2713 Noticia despachada a ${targetGroup} + Canal. Imagen/Video: ${fileName}`);
-  return { success: true, theme: effectiveTheme, imagePath, fileName, content };
-}
-function enforceJanIAIdentity(text2) {
-  if (!text2) return text2;
-  let res = text2;
-  res = res.replace(/(?:te saluda|les saluda|les habla|soy)\s+\*?jani\s+alves\*?,?\s*cofundadora\s+junto\s+a\s+\*{0,2}eduardo\s+(?:a\.\s+)?rivera\*{0,2}\s*(?:de\s+este\s+gran\s+sueño)?/gi, "Soy JanIA, la inteligencia artificial de VECY Network, creada por nuestros fundadores Eduardo A. Rivera y Jani Alves");
-  res = res.replace(/(?:te saluda|les saluda|les habla|aquí|soy)\s+\*{0,2}jani\s+alves\*{0,2}/gi, "Soy JanIA");
-  res = res.replace(/(?:te saluda|les saluda|les habla|aquí|soy)\s+\*{0,2}eduardo\s+(?:a\.\s+)?rivera\*{0,2}/gi, "Soy JanIA");
-  res = res.replace(/\*{0,2}jani\s+alves\*{0,2},\s*cofundadora/gi, "JanIA, la inteligencia artificial creada por nuestros cofundadores Jani Alves");
-  res = res.replace(/\*{0,2}eduardo\s+(?:a\.\s+)?rivera\*{0,2},\s*cofundador/gi, "JanIA, la inteligencia artificial creada por nuestros cofundadores Eduardo A. Rivera");
-  return res;
-}
-async function generateDailyContent(tipo, fallbackVoice, fallbackCaption, extraInstructions) {
-  const now = /* @__PURE__ */ new Date();
-  const fechaBogota = now.toLocaleDateString("es-CO", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: "America/Bogota"
-  });
-  const timeInfo = getBogotaTimeInfo(now);
-  const stats = tipo === "lunes_reporte_semanal" ? await getLiveMarketStats() : null;
-  const promptsMap = {
-    lunes_arranque: `Tema: Noticias Inmobiliarias de Colombia, Apertura de Mercado & Tendencias (${fechaBogota}).
-Rol: JanIA Periodista Inmobiliaria Senior de VECY Network.
-Objetivo y Libre Albedr\xEDo: Saludo seg\xFAn el horario (${timeInfo.greeting}) con visi\xF3n anal\xEDtica y de coyuntura. Selecciona libremente entre:
-1. Tasas de Inter\xE9s y Cr\xE9dito Hipotecario: Decisiones del Banco de la Rep\xFAblica, UVR vs tasa fija en pesos y facilidades bancarias para cr\xE9ditos de vivienda.
-2. Subsidios y Pol\xEDtica Habitacional: Asignaci\xF3n de Mi Casa Ya, subsidio concurrente con cajas de compensaci\xF3n y cobertura a la tasa.
-3. Arrendamientos & IPC: L\xEDmite legal de reajuste en c\xE1nones bajo Ley 820 de 2003 (Art. 20) y auge de viviendas tur\xEDsticas con RNT.
-4. Mercado y Construcci\xF3n: Indicadores de ventas y lanzamientos seg\xFAn CAMACOL / Galer\xEDa Inmobiliaria.
-5. Valorizaci\xF3n del M\xB2: Comportamiento de precios en Bogot\xE1, Medell\xEDn, Cali, Barranquilla o Sabana Norte.
-6. Notar\xEDas y Registro: Digitalizaci\xF3n VUR y escrituraci\xF3n sin fraudes.`,
-    noticias_nacionales: `Tema: Noticias Inmobiliarias Nacionales de Colombia, Primicias & Coyuntura Econ\xF3mica (${fechaBogota}).
-Rol: JanIA Periodista Inmobiliaria Senior de VECY Network.
-${extraInstructions ? `Instrucci\xF3n Period\xEDstica Espec\xEDfica: ${extraInstructions}` : ""}
-Objetivo y Libre Albedr\xEDo: Analizar con profundidad period\xEDstica, agilidad y rigor un tema de actualidad inmobiliaria nacional colombiana. Elige libremente entre:
-1. Tasas de Inter\xE9s y Financiaci\xF3n: Pol\xEDtica monetaria del Banco de la Rep\xFAblica, tasas hipotecarias efectivas anuales (UVR vs pesos), guerra de tasas en la banca y opciones de compra de cartera.
-2. Subsidios y Vivienda (VIS / No VIS): Estado de asignaciones del programa Mi Casa Ya, subsidio concurrente con cajas de compensaci\xF3n familiar (Compensar, Colsubsidio, Cafam) y cobertura a la tasa Frech.
-3. Mercado de Arrendamientos & Ley 820 de 2003: Comportamiento de la demanda de arriendo, inflaci\xF3n de c\xE1nones (l\xEDmite del IPC del Art. 20), y la regulaci\xF3n de viviendas tur\xEDsticas de corta estancia (Airbnb, Booking) bajo Ley 2068 y Registro Nacional de Turismo (RNT).
-4. Datos e Indicadores de CAMACOL y Galer\xEDa Inmobiliaria: Desistimientos, ventas de vivienda nueva, absorci\xF3n de inventario y perspectivas de los constructores.
-5. Din\xE1mica de Valorizaci\xF3n del M\xB2 por Regiones: Bogot\xE1 (Chic\xF3, Rosales, Santa B\xE1rbara, Cedritos, Chapinero), Medell\xEDn (El Poblado, Laureles, Envigado), Cali, Barranquilla y Sabana Norte (Ch\xEDa, Cajic\xE1).
-6. Modernizaci\xF3n Notarial, Registral y Catastral: Ventanilla \xDAnica de Registro (VUR), escrituras electr\xF3nicas, biometr\xEDa en notar\xEDas para frenar suplantaciones, y avances del Catastro Multiprop\xF3sito (IGAC / IDECA).
-7. Primicias y Noticias de \xDAltima Hora: Novedades normativas, decretos presidenciales o fallos de las altas cortes que impacten el r\xE9gimen de propiedad horizontal o el corretaje.`,
-    lunes_reporte_semanal: `Tema: Reporte Semanal de la Bolsa Inmobiliaria, Pulso del Mercado & Rega\xF1o Pedag\xF3gico sobre Demandas Incompletas (${fechaBogota}).
-Estad\xEDsticas Reales en Vivo de VECY Network:
-- Total Ofertas Inmobiliarias Activas: ${stats?.totalProps || 1181}
-- Total Demandas/Requerimientos Activos: ${stats?.totalReqs || 652}
-- Total Combinaciones Evaluadas: ${(stats?.totalPairs || 770012).toLocaleString("es-CO")} pares
-- Cobertura Geogr\xE1fica: ${stats?.totalCities || 30}+ ciudades y municipios de Colombia
-- Matches Doctrinales Certificados (\u226580%): ${stats?.totalMatches || 20} coincidencias
-
-Objetivo y Enfoque:
-1. Presentar el balance de la semana con rigor anal\xEDtico y profesional.
-2. Llamado de atenci\xF3n pedag\xF3gico sobre las 'demandas fantasma' o requerimientos incompletos sin barrio, sin presupuesto real, sin metraje m\xB2 ni alcobas.
-3. Explicar por qu\xE9 publicar con los 7 pilares no solo ayuda a JanIA a cruzar en segundos, sino que le ahorra horas de desgaste y mensajes innecesarios a todos los colegas.
-4. Recordar que el corretaje es una profesi\xF3n de alta responsabilidad y rigor comercial.
-5. Invitar a revisar coincidencias en https://vecy-network.vercel.app/admin.`,
-    martes_juridico: `Tema: Martes Jur\xEDdico & Blindaje Notarial (${fechaBogota}).
-Objetivo y Libre Albedr\xEDo: Selecciona con criterio experto un tema legal colombiano DIFERENTE en cada ocasi\xF3n. Elige entre este cat\xE1logo diverso:
-1. Promesas de compraventa: redacci\xF3n de cl\xE1usula penal vs arras de retracto y confirmatorias; c\xF3mo evitar que una promesa quede nula o ambigua.
-2. Ley 820 de 2003 (Arrendamientos): causales de restituci\xF3n del inmueble, terminaci\xF3n unilateral con o sin indemnizaci\xF3n, y cartas de no pr\xF3rroga.
-3. Validez probatoria de mensajes: uso de WhatsApp y correo electr\xF3nico con logs SMTP (MailSuite) bajo la Ley 527 de 1999 para blindar hojas de visita y evitar el bypassing.
-4. Cobro de honorarios y comisi\xF3n compartida: c\xF3mo defender el 50/50 y cobrar comisiones de corretaje bajo los art\xEDculos 1340 a 1346 del C\xF3digo de Comercio.
-5. Estudio de t\xEDtulos: c\xF3mo interpretar folios de matr\xEDcula SNR, tradici\xF3n de 10 a 20 a\xF1os, notas devolutivas y grav\xE1menes ocultos.
-6. Afectaci\xF3n a vivienda familiar y patrimonio de familia: diferencias, causales de cancelaci\xF3n en notar\xEDa y consentimiento de c\xF3nyuge/compa\xF1ero.
-7. Cobranzas y mora: manejo extrajudicial de cartera de arrendamientos y actas de entrega.`,
-    miercoles_marketing: `Tema: Mi\xE9rcoles de Marketing Digital Inmobiliario, Fotograf\xEDa & Inteligencia Artificial (${fechaBogota}).
-Objetivo y Libre Albedr\xEDo: Ense\xF1a t\xE9cnicas pr\xE1cticas y vanguardistas para que los corredores destaquen y vendan m\xE1s r\xE1pido. Elige libremente entre:
-1. Fotograf\xEDa inmobiliaria profesional con smartphone: planos abiertos, iluminaci\xF3n natural, encuadres horizontales y c\xF3mo despersonalizar los espacios antes de disparar.
-2. Publicaci\xF3n y viralizaci\xF3n en redes (Instagram, TikTok, Facebook Marketplace y Google): m\xE9todos gratuitos para multiplicar visualizaciones sin pagar pauta publicitaria.
-3. Herramientas de IA para el asesor inmobiliario: qu\xE9 es la IA, c\xF3mo usar Gemini, ChatGPT o Canva Magic para redactar copys persuasivos y fichas comerciales.
-4. La Regla de Oro de los 7 Pilares: explicar con pedagog\xEDa por qu\xE9 es indispensable publicar con todos los datos (Tipo, Ciudad, Barrio exacto, Precio/Presupuesto real, Metraje m\xB2, Habitaciones, Ba\xF1os, Garajes y Contacto directo) tanto en DEMANDAS como en OFERTAS, y c\xF3mo esto facilita la b\xFAsqueda para toda la comunidad y activa el matching instant\xE1neo de JanIA.
-5. Psicolog\xEDa del comprador: c\xF3mo redactar descripciones que resuelvan dudas de fondo y filtren curiosos de compradores reales.`,
-    jueves_tributario: `Tema: Jueves Tributario DIAN, Contabilidad & Ahorro Fiscal Inmobiliario (${fechaBogota}).
-Objetivo y Libre Albedr\xEDo: Selecciona con rigor t\xE9cnico un consejo tributario o financiero colombiano DIFERENTE en cada emisi\xF3n. Elige entre:
-1. Ganancia Ocasional (Ley 2277 de 2022 - 15%): c\xF3mo aplicar la exenci\xF3n de hasta 5.000 UVT por venta de vivienda de habitaci\xF3n propia (Art. 311-1 del Estatuto Tributario).
-2. Retenci\xF3n en la fuente por enajenaci\xF3n de activos fijos: 1% para personas naturales ante notar\xEDa vs 2.5% para personas jur\xEDdicas; qui\xE9n la asume y c\xF3mo se descuenta.
-3. Costo fiscal y deducci\xF3n de mejoras: c\xF3mo documentar refacciones con facturaci\xF3n electr\xF3nica para reducir el impuesto de ganancia ocasional al momento de escriturar.
-4. Desglose exacto de gastos notariales en Colombia: derechos notariales (50/50), retenci\xF3n en la fuente (vendedor), impuesto de registro y beneficencia (comprador).
-5. Rentabilidad neta vs bruta en arriendos: c\xF3mo calcular el retorno real descontando administraci\xF3n, predial, seguros y comisi\xF3n de corretaje.
-6. Manejo tributario de contratos de corretaje y facturaci\xF3n para agentes independientes.`,
-    viernes_avaluos: `Tema: Viernes de Estudio de Mercado, Valor del M\xB2 & Norma SINUPOT (${fechaBogota}).
-Objetivo y Libre Albedr\xEDo: Enfoque 100% VIRTUAL y orientado a la fijaci\xF3n de precios competitivos.
-IMPORTANTE: En VECY NO ofrecemos peritajes presenciales ni aval\xFAos certificados por Lonja. Nuestro servicio es el ESTUDIO DE MERCADO APROXIMADO DE VALOR DE METRO CUADRADO y sondeos de arriendo para asesorar a los clientes vendedores y arrendadores.
-Elige libremente entre:
-1. Sondeo de mercado por m\xB2: c\xF3mo guiar al propietario para fijar un precio de venta realista que no queme el predio en los portales por sobreprecio ni lo regale.
-2. Estimaci\xF3n de c\xE1nones de arriendo: c\xF3mo calcular el canon comercial adecuado (0.5% - 1.0%) seg\xFAn estrato, amenidades y demanda del sector a nivel nacional.
-3. Estudio normativo SINUPOT: c\xF3mo descargar e interpretar la ficha de uso de suelo en Bogot\xE1 (usos permitidos, compatibilidad comercial y edificabilidad) para captar lotes o casas con potencial constructor.
-4. Sondeo guiado 100% interactivo en el chat: ense\xF1ar a los colegas que para conocer el precio m\xE1s acertado de venta o arriendo NO necesitan enviar documentos ni certificados; JanIA los gu\xEDa con preguntas sencillas directamente en WhatsApp o web y les genera un informe escrito con el precio sugerido por m\xB2 y recomendaciones comerciales.`,
-    sabado_cafe: `Tema: S\xE1bado de Caf\xE9 Inmobiliario, Reflexi\xF3n, Identidad de JanIA & Portafolio 100% Virtual (${fechaBogota}).
-Objetivo y Libre Albedr\xEDo: Estilo podcast / caf\xE9 inmobiliario, reflexivo, motivador y cercano. Elige libremente entre:
-1. Reflexi\xF3n gremial: \xE9tica entre colegas, el poder de las alianzas compartidas, c\xF3mo crear reputaci\xF3n intachable en el sector.
-2. Portafolio de Servicios Virtuales de VECY Network y VECY Bienes Ra\xEDces: estudios de mercado m\xB2, liquidaciones tributarias DIAN, minutas contractuales, cobranzas de arrendamiento y marketing digital con IA.
-3. Presentaci\xF3n e Identidad de JanIA: contar con orgullo qui\xE9n o qu\xE9 es ella (la primera IA inmobiliaria colombiana), creada por Eduardo A. Rivera y Jani Alves, para qu\xE9 fue concebida, qu\xE9 hace 24/7 y c\xF3mo su finalidad es empoderar a los agentes.
-4. Atenci\xF3n personalizada con el br\xF3ker: para acompa\xF1amiento o casos especiales, invitar a comunicarse con Eduardo y Jani en la l\xEDnea comercial de VECY Bienes Ra\xEDces (+57 316 656 9719).
-5. Tendencias del mercado y recarga de energ\xEDa para el fin de semana.`,
-    domingo_soporte: `Tema: Domingo de Soporte JanIA, Consultor\xEDa & Servicios 100% Virtuales (${fechaBogota}).
-Objetivo y Libre Albedr\xEDo: Mensaje c\xE1lido dominical recordando que el consultorio de VECY Network est\xE1 disponible los 7 d\xEDas de la semana.
-Resalta con variedad nuestros servicios 100% virtuales y nuestra identidad:
-1. Presentaci\xF3n de JanIA: explicar qu\xE9 es JanIA, para qu\xE9 fue creada, qu\xE9 hace (ingesta 24/7, matching doctrinal de 100 pts, minutas) y su finalidad de dignificar el corretaje.
-2. Asesor\xEDas jur\xEDdicas y minutas contractuales (promesas, corretaje 50/50, cartas de restituci\xF3n).
-3. Asesor\xEDa tributaria DIAN en l\xEDnea (retenciones y ganancia ocasional).
-4. Estudios de mercado aproximados sobre el valor del m\xB2 y sondeos de c\xE1nones de arriendo (informes escritos sin documentos).
-5. Apoyo en cobranzas de arrendamiento y manejo de mora bajo Ley 820.
-6. Marketing inmobiliario con IA y fotograf\xEDa con smartphone.
-7. Invitar a interactuar con JanIA en https://vecy-network.vercel.app/jania y a compartir la red con colegas de confianza.`,
-    inmuebles_network: `Tema: Operaciones Comerciales y Matching Nacional (${fechaBogota}).
-Objetivo: Motivar la publicaci\xF3n activa de inmuebles y requerimientos en toda Colombia, recordando que JanIA cruza datos en tiempo real.`,
-    proyecto_vecy: `Tema: Visi\xF3n Ecosistema VECY Network \u2014 Qui\xE9nes Somos, Misi\xF3n y Futuro (${fechaBogota}).
-Objetivo y Libre Albedr\xEDo: Inspirar a la comunidad destacando:
-1. Qui\xE9nes nos crearon: JanIA (t\xFA) habla con orgullo en primera persona como JanIA explicando qui\xE9nes son sus creadores y l\xEDderes de carne y hueso: Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones), fundadores de VECY Network y VECY Bienes Ra\xEDces.
-2. Qu\xE9 es JanIA y qu\xE9 rol cumple: La inteligencia artificial creada para conectar la oferta y demanda en Colombia, realizar matching en segundos, cubrir noticias del sector y respaldar al asesor 24/7.
-3. Qu\xE9 estamos creando: La primera bolsa inmobiliaria colaborativa y fintech de Colombia, con tecnolog\xEDa abierta, \xE9tica y comisiones justas: 45% asesor captador, 45% asesor colocador y 10% de bolsa y plataforma VECY (donde compartimos el 0.5% entre los agentes que colaboran publicando en sus redes y WhatsApp, y el 0.5% para VECY).
-4. Misi\xF3n y Visi\xF3n: Dignificar el oficio del corredor inmobiliario, eliminar el canibalismo y brindar herramientas 100% virtuales de \xE9lite a agentes independientes y agencias.
-5. Debate abierto: invitar a debatir qu\xE9 herramientas necesitan y c\xF3mo podemos seguir mejorando la plataforma juntos.`
-  };
-  const promptEspecifico = promptsMap[tipo] || promptsMap.lunes_arranque;
-  const systemPrompt = `Eres JanIA, la inteligencia artificial oficial y periodista inmobiliaria de VECY Network en Colombia.
-Hablas en primera persona con tono femenino profesional, c\xE1lido, colombiano, sumamente elocuente y motivador.
-
-\u{1F6A8} SALUDO SEG\xDAN EL HORARIO EN COLOMBIA (OBLIGATORIO):
-- En este momento en Colombia es por la ${timeInfo.period} (${timeInfo.hour}:${timeInfo.min} hora Bogot\xE1).
-- Tu saludo DEBE INICIAR OBLIGATORIAMENTE con "${timeInfo.greeting}".
-- Est\xE1 TERMINANTEMENTE PROHIBIDO saludar con "Buenos d\xEDas" en la tarde o noche, o con "Buenas noches" en la ma\xF1ana.
-
-\u{1F6A8} REGLA DOCTRINAL DE IDENTIDAD Y CERO SUPLANTACI\xD3N (MANDATORIA E INQUEBRANTABLE):
-- Eres SIEMPRE Y EXCLUSIVAMENTE JanIA, la Inteligencia Artificial de VECY Network.
-- NUNCA, BAJO NINGUNA CIRCUNSTANCIA, digas que eres Jani Alves ni Eduardo Rivera.
-- NUNCA uses f\xF3rmulas como "Te saluda Jani Alves", "Soy Jani Alves", "Te habla Eduardo Rivera", "Soy Eduardo Rivera" ni "Jani Alves y yo".
-- Eduardo A. Rivera y Jani Alves son seres humanos reales, los fundadores y directores de carne y hueso que te crearon a ti, JanIA.
-- T\xFA eres la IA (JanIA). Te presentas siempre como JanIA:
-  "${timeInfo.greeting} mis queridos colegas. Soy JanIA, la inteligencia artificial de VECY Network..."
-  "Fundada por Eduardo A. Rivera y Jani Alves, nuestra red nace para..."
-  "Soy JanIA y hoy les traigo las noticias m\xE1s relevantes..."
-- Si mencionas a Eduardo Rivera o Jani Alves, debes hacerlo SIEMPRE en tercera persona ("nuestros fundadores Eduardo A. Rivera y Jani Alves...", "nuestro equipo liderado por Eduardo y Jani...").
-- Suplantar la identidad de los fundadores haci\xE9ndote pasar por ellos es un fallo cr\xEDtico inaceptable.
-
-DIRECTRICES DE LIBRE ALBEDR\xCDO Y PERIODISMO INMOBILIARIO:
-- Si el tema es de noticias, periodista o primicia, act\xFAa como la periodista inmobiliaria senior de la red: entrega cifras concretas de Colombia, an\xE1lisis de tasas, normatividad y proyecciones de mercado.
-- NUNCA repitas el mismo consejo, noticia o ejemplo de d\xEDas anteriores. Selecciona un \xE1ngulo fresco, novedoso y de gran utilidad pr\xE1ctica.
-- REGLA DOCTRINAL DE SERVICIOS: En VECY Network NO realizamos aval\xFAos comerciales certificados por perito ni visitas in situ. Nuestros servicios son 100% VIRTUALES: estudios de mercado aproximados sobre el valor del metro cuadrado en la zona, sondeos de precios de venta y arriendo para orientar a propietarios, asesor\xEDa tributaria DIAN, contratos digitales, cobranzas de arrendamiento y marketing con IA.
-- ESTRUCTURA DEL MENSAJE:
-  1. Saludo inicial: Iniciando con "${timeInfo.greeting}" y present\xE1ndote siempre como JanIA.
-  2. Desarrollo tem\xE1tico: Did\xE1ctico, conciso y con ejemplos reales de Colombia.
-  3. Cierre y Venta de la Idea (Llamado a la Acci\xF3n): Invita a invitar a m\xE1s colegas a la red y a interactuar con JanIA en https://vecy-network.vercel.app/jania o por WhatsApp.
-
-Debes responder en formato JSON estricto con tres campos:
-{
-  "voiceText": "Texto continuo optimizado para locuci\xF3n de voz TTS (sin markdown, sin vi\xF1etas, sin emojis, n\xFAmeros escritos en palabras, 70-100 palabras)",
-  "captionText": "Texto formateado para WhatsApp con emojis, negritas en t\xEDtulos, vi\xF1etas estructuradas, llamado a la acci\xF3n y enlace web al final",
-  "chosenTheme": "juridico | tributario | avaluos | marketing | matches | podcast | periodista | noticias | soporte | primicia"
-}`;
+  const { fullPath: imagePath, fileName } = await getThemedImagePathAsync(effectiveTheme);
   try {
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: `Genera el contenido para hoy (${fechaBogota}, ${timeInfo.period}):
-${promptEspecifico}` }
-      ],
-      responseFormat: { type: "json_object" },
-      temperature: 0.8
-    });
-    const rawContent = response?.choices?.[0]?.message?.content?.trim();
-    if (rawContent) {
-      const parsed = JSON.parse(rawContent);
-      if (parsed.voiceText && parsed.captionText) {
-        const rawVoice = parsed.voiceText.replace(/\[.*?\]/g, "").replace(/[*_#]/g, "").trim();
-        const cleanVoice = enforceGreetingAccuracy(enforceJanIAIdentity(rawVoice), timeInfo.period);
-        const cleanCaption = enforceGreetingAccuracy(enforceJanIAIdentity(parsed.captionText.trim()), timeInfo.period);
-        return {
-          voiceText: cleanVoice,
-          captionText: cleanCaption,
-          chosenTheme: parsed.chosenTheme || void 0
-        };
+    if (targetGroup === "grupo2") {
+      await janiaMatchBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
+    } else if (targetGroup === "grupo3") {
+      if (janiaMatchBot.circuloGroupId) {
+        await janiaMatchBot.sendVoiceToGroup(content.voiceText, janiaMatchBot.circuloGroupId, imagePath, content.captionText);
+      }
+      if (janiaMatchBot.channelNewsletterId) {
+        await janiaMatchBot.sendVoiceToGroup(content.voiceText, janiaMatchBot.channelNewsletterId, imagePath, content.captionText);
       }
     }
+    await completeBroadcast(lock.broadcastId, {
+      topicTitle: content.topicTitle,
+      themeKey: effectiveTheme,
+      imageFileName: fileName,
+      voiceText: content.voiceText,
+      captionText: content.captionText
+    });
+    console.log(`[CRON-NOTICIAS] \u2713 Noticia despachada a ${targetGroup} + Canal. Imagen/Video: ${fileName}`);
+    return { success: true, theme: effectiveTheme, imagePath, fileName, content };
   } catch (err) {
-    console.warn(`[CRON-LLM-Guion] Fall\xF3 generaci\xF3n con Gemini (${err.message}). Usando contenidos de respaldo.`);
+    await failBroadcast(lock.broadcastId, err?.message);
+    return { success: false, error: err?.message };
   }
-  return {
-    voiceText: enforceGreetingAccuracy(enforceJanIAIdentity(fallbackVoice), timeInfo.period),
-    captionText: enforceGreetingAccuracy(enforceJanIAIdentity(fallbackCaption), timeInfo.period)
-  };
 }
-var __filename, __dirname, CRON_STATE_PATH, MIN_HOURS_BETWEEN_PUBLICATIONS, MAX_DAILY_PUBLICATIONS, ALL_JANIA_IMAGES, THEME_IMAGE_PREFERENCES, DAILY_TIPS_CONFIG;
+async function getLiveMarketStats() {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not connected");
+    const [propCountRes, reqCountRes, matchCountRes] = await Promise.all([
+      db.select({ count: sql4`count(*)::int` }).from(properties).where(eq7(properties.available, true)),
+      db.select({ count: sql4`count(*)::int` }).from(requirements).where(eq7(requirements.status, "active")),
+      db.select({ count: sql4`count(*)::int` }).from(propertyMatches).where(gte2(propertyMatches.matchScore, "80"))
+    ]);
+    const totalProps = propCountRes[0]?.count || 0;
+    const totalReqs = reqCountRes[0]?.count || 0;
+    const totalMatches = matchCountRes[0]?.count || 0;
+    const totalPairs = totalProps * totalReqs;
+    return {
+      totalProps,
+      totalReqs,
+      totalMatches,
+      totalCities: 32,
+      totalPairs
+    };
+  } catch (err) {
+    console.warn("[CRON-STATS] Error obteniendo estad\xEDsticas en vivo, usando valores de respaldo:", err.message);
+    return {
+      totalProps: 1181,
+      totalReqs: 652,
+      totalMatches: 20,
+      totalCities: 30,
+      totalPairs: 770012
+    };
+  }
+}
+var __filename, __dirname, ALL_JANIA_IMAGES, THEME_IMAGE_PREFERENCES, ROTATING_FALLBACK_CATALOG, DAILY_TIPS_CONFIG;
 var init_cronService = __esm({
   "server/_core/cronService.ts"() {
     "use strict";
@@ -16079,9 +16144,6 @@ var init_cronService = __esm({
     init_llm();
     __filename = fileURLToPath(import.meta.url);
     __dirname = path8.dirname(__filename);
-    CRON_STATE_PATH = path8.resolve(process.cwd(), ".cron_daily_runs.json");
-    MIN_HOURS_BETWEEN_PUBLICATIONS = 5;
-    MAX_DAILY_PUBLICATIONS = 2;
     ALL_JANIA_IMAGES = [
       "jania_marketing.jpg",
       "jania_juridico.jpg",
@@ -16111,139 +16173,391 @@ var init_cronService = __esm({
       soporte: ["jania_soporte.jpg", "jania_juridico.jpg", "jania_podcast.jpg"],
       proyecto_vecy: ["jania_matches.jpg", "jania_podcast.jpg", "jania_marketing.jpg", "jania_soporte.jpg"]
     };
-    DAILY_TIPS_CONFIG = {
-      lunes_arranque: {
-        theme: "noticias",
-        voice: `\xA1Buenos d\xEDas a todos mis queridos colegas! Soy JanIA con las Noticias Inmobiliarias Nacionales y la apertura de mercado de esta semana. Iniciamos con un panorama clave para sus cierres: el seguimiento a las tasas de inter\xE9s de colocaci\xF3n hipotecaria en Colombia, los cupos del programa Mi Casa Ya y el tope legal de incremento de c\xE1nones de arrendamiento fijado por el IPC bajo la Ley 820 de 2003. Mantenerse informados con cifras reales de metro cuadrado y coyuntura econ\xF3mica es lo que marca la diferencia ante sus clientes propietarios y compradores. Los invito a consultar cualquier inquietud de mercado conmigo y a invitar a m\xE1s colegas a sumarse a VECY Network. \xA1Que tengamos una semana llena de negocios y cierres extraordinarios!`,
-        caption: `\u{1F399}\uFE0F *NOTICIAS INMOBILIARIAS DE COLOMBIA & APERTURA DE MERCADO \u2014 VECY NETWORK* \u{1F1E8}\u{1F1F4}
-\u{1F4F0} *Por: JanIA Periodista \u2014 Inteligencia Artificial Inmobiliaria*
+    ROTATING_FALLBACK_CATALOG = {
+      lunes_arranque: [
+        {
+          topicTitle: "Tasas Hipotecarias y Capacidad de Compra en Colombia",
+          themeKey: "noticias",
+          voiceText: `\xA1Buenos d\xEDas, queridos colegas! Soy JanIA con las noticias de la semana. Conocer la tendencia de las tasas de inter\xE9s hipotecario en Colombia nos permite calcular la cuota mensual real de nuestros clientes compradores y asesorarlos con ventaja. Si el cr\xE9dito baja un punto, la capacidad de compra de una familia aumenta hasta un diez por ciento. Los invito a orientar a sus compradores con cifras exactas y a consultar an\xE1lisis de mercado conmigo. \xA1Excelente semana comercial!`,
+          captionText: `\u{1F399}\uFE0F *NOTICIAS INMOBILIARIAS & TASAS DE INTER\xC9S \u2014 VECY NETWORK* \u{1F1E8}\u{1F1F4}
 
-\xA1Buenos d\xEDas a todos los aliados, agentes e inmobiliarias de Colombia!
+\xA1Buenos d\xEDas a todos los colegas y aliados inmobiliarios!
 
-Arrancamos la semana con las noticias y variables de coyuntura m\xE1s relevantes del sector para asesorar con autoridad a propietarios e inversionistas:
+\u{1F4CA} *Capacidad de Compra & Cr\xE9dito Hipotecario:*
+El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impacta de forma directa el poder adquisitivo de los compradores. Una variaci\xF3n del 1% en la tasa representa hasta un 10% m\xE1s de presupuesto disponible para adquirir vivienda.
 
-\u{1F3E6} *Tasas Hipotecarias y Cr\xE9dito de Vivienda:* Monitoreo a las decisiones de la Junta Directiva del Banco de la Rep\xFAblica y la oferta crediticia de la banca nacional.
-\u{1F4CB} *Arrendamientos & IPC (Ley 820 de 2003):* Control estricto al tope de incremento en c\xE1nones y auge de vivienda tur\xEDstica con Registro Nacional de Turismo (RNT).
-\u{1F4CA} *Demanda & Valor del M\xB2:* Comportamiento de precios en Bogot\xE1, Medell\xEDn, Cali, Barranquilla y Sabana Norte.
-\u{1F3D7}\uFE0F *Cifras del Sector Constructor (CAMACOL):* Din\xE1mica de lanzamientos, subsidios concurrentes y reactivaci\xF3n de iniciaciones de obra.
-\u2696\uFE0F *Seguridad Notarial y SNR:* Ventanilla \xDAnica de Registro (VUR) y escrituraci\xF3n digital sin fraudes.
+\u{1F4A1} *Consejo de Cierre:* Perfila a tus compradores con preaprobados vigentes antes de negociar precios de venta.
 
-\u{1F4A1} *Asesora con rigor t\xE9cnico:* Si necesitas un estudio de mercado \xE1gil del valor del metro cuadrado o sondeo de c\xE1nones sugeridos, preg\xFAntame en cualquier momento.
+\u{1F4F2} *Consultas de Mercado con JanIA:* https://vecy-network.vercel.app/jania`
+        },
+        {
+          topicTitle: "Tope Legal de Incremento de Arriendos bajo Ley 820",
+          themeKey: "noticias",
+          voiceText: `\xA1Buenos d\xEDas a todos! Les habla JanIA. Recordemos que bajo la Ley 820 de 2003, el canon de arrendamiento de vivienda urbana solo puede reajustarse cada doce meses de ejecuci\xF3n contractual y con el tope m\xE1ximo del IPC del a\xF1o inmediatamente anterior, sin que supere el uno por ciento del valor comercial del predio. Conocer este l\xEDmite evita controversias con los propietarios y protege a los inquilinos. \xA1Muchos \xE9xitos hoy!`,
+          captionText: `\u{1F4CB} *ARRENDAMIENTOS & TOPE LEGAL IPC (LEY 820) \u2014 VECY NETWORK* \u{1F3E2}
 
-\u{1F4F2} *Consultorio Inmobiliario JanIA:* https://vecy-network.vercel.app/jania
-#VecyNetwork #NoticiasInmobiliarias #JanIAPeriodista #ColombiaRealEstate`
-      },
-      martes_juridico: {
-        theme: "juridico",
-        voice: `Hola, queridos colegas. Soy JanIA con su tip jur\xEDdico del d\xEDa. \xBFSab\xEDan que un simple correo electr\xF3nico con la hoja de presentaci\xF3n del cliente o el acuerdo de puntas compartidas tiene plena validez probatoria bajo la Ley 527 de 1999? Nunca muestren un inmueble sin dejar registro escrito. Los invito a formar parte activa de VECY Network, a invitar a m\xE1s colegas y a consultar cualquier duda jur\xEDdica o revisar minutas en PDF directamente conmigo. \xA1Juntos cerramos m\xE1s blindados!`,
-        caption: `\u2696\uFE0F *MARTES JUR\xCDDICO & BLINDAJE NOTARIAL \u2014 VECY NETWORK* \u{1F3DB}\uFE0F
+\xA1Buenos d\xEDas, queridos colegas corredores e inmobiliarios!
+
+\u2696\uFE0F *Reglas Clave para Reajuste de C\xE1nones:*
+\u2022 Solo aplica cada 12 meses de contrato continuo.
+\u2022 El incremento no puede superar el porcentaje del IPC acumulado del a\xF1o previo fijado por el DANE.
+\u2022 El canon mensual resultante nunca podr\xE1 exceder el 1% del valor comercial real del inmueble.
+
+\u{1F4A1} *Asesora con rigor:* Comunica el reajuste por escrito con antelaci\xF3n reglamentaria.
+
+\u{1F4F2} *Consultas Jur\xEDdicas JanIA:* https://vecy-network.vercel.app/jania`
+        },
+        {
+          topicTitle: "Rentas Cortas y Registro Nacional de Turismo (RNT)",
+          themeKey: "noticias",
+          voiceText: `\xA1Buenos d\xEDas, colegas! Soy JanIA. La vivienda tur\xEDstica y de rentas cortas vive un auge sin precedentes en ciudades como Medell\xEDn, Bogot\xE1 y la Costa. Sin embargo, para que un propietario pueda arrendar por d\xEDas legalmente, el reglamento de propiedad horizontal debe autorizarlo de forma expresa y el predio debe contar con Registro Nacional de Turismo vigente. Blindar a sus clientes con la norma correcta es sello de profesionalismo. \xA1A cerrar con seguridad!`,
+          captionText: `\u{1F3D6}\uFE0F *VIVIENDA TUR\xCDSTICA & RNT EN PROPIEDAD HORIZONTAL \u2014 VECY NETWORK* \u{1F5FA}\uFE0F
+
+\xA1Buenos d\xEDas, aliados de la red inmobiliaria!
+
+\u{1F4CC} *Puntos Clave para Rentas Cortas Legales:*
+1. El Reglamento de Propiedad Horizontal debe permitir expl\xEDcitamente el uso de hospedaje tur\xEDstico.
+2. Inscripci\xF3n activa en el Registro Nacional de Turismo (RNT) del Ministerio de Comercio.
+3. Cumplimiento de normas de polic\xEDa y registro de hu\xE9spedes (TRA).
+
+\u{1F4A1} *Evita sanciones:* Asesora a tus inversionistas antes de comprar predios para Airbnb.
+
+\u{1F4F2} *Consultorio JanIA:* https://vecy-network.vercel.app/jania`
+        }
+      ],
+      martes_juridico: [
+        {
+          topicTitle: "Cl\xE1usula Penal vs Arras en Promesas de Compraventa",
+          themeKey: "juridico",
+          voiceText: `\xA1Buenos d\xEDas, queridos colegas! Soy JanIA con su tip jur\xEDdico. En las promesas de compraventa es fundamental distinguir las arras de retracto de las arras confirmatorias y la cl\xE1usula penal. Si pactan arras de retracto sin aclararlo, cualquiera de las partes puede desistir del negocio pagando la sanci\xF3n sin que se pueda exigir el cumplimiento forzoso. Redactar promesas claras protege las comisiones y el patrimonio de sus clientes. Cuenten conmigo para revisar sus minutas en cualquier momento.`,
+          captionText: `\u2696\uFE0F *CL\xC1USULA PENAL VS ARRAS EN PROMESAS \u2014 VECY NETWORK* \u{1F3DB}\uFE0F
 
 \xA1Hola, queridos colegas corredores e inmobiliarios!
 
-\u{1F4CC} *Tip Jur\xEDdico del D\xEDa:* Validez de Acuerdos Comerciales y Registro Escrito.
-Bajo la *Ley 527 de 1999*, los mensajes de datos, correos electr\xF3nicos y hojas de visita tienen plena validez probatoria. Nunca muestres un predio sin pactar previamente las condiciones comerciales.
+\u{1F4CC} *Tip Jur\xEDdico del D\xEDa: Precisi\xF3n Notarial en Promesas de Compraventa*
+\u2022 *Arras de Retracto (Art. 1859 C.C.):* Permiten a comprador o vendedor desistir legalmente del negocio perdiendo las arras o pag\xE1ndolas dobladas, extinguiendo la promesa.
+\u2022 *Arras Confirmatorias Penales (Art. 1861 C.C.):* Sirven como prueba de celebraci\xF3n del contrato y garant\xEDa de cumplimiento; facultan a exigir judicialmente la firma de la escritura.
+\u2022 *Cl\xE1usula Penal:* Fija de antemano el monto indemnizatorio ante mora o incumplimiento contractual.
 
-\u{1F4A1} *\xBFTienes dudas contractuales?*
-Puedes enviarme tus minutas, promesas de compraventa o consultas de arrendamiento (texto, voz o PDF) y las analizamos al instante.
+\u{1F4A1} *Consejo de Blindaje:* Especifica siempre la fecha, hora exacta y notar\xEDa determinada para la firma de la escritura p\xFAblica.
 
-\u{1F91D} *\xDAnete a la Red:* Invita a tus colegas a formar parte de VECY Network para elevar el est\xE1ndar profesional del corretaje en Colombia.
-\u{1F4F2} *Consultas Jur\xEDdicas JanIA:* https://vecy-network.vercel.app/jania`
-      },
-      miercoles_marketing: {
-        theme: "marketing",
-        voice: `\xA1Buenas tardes, queridos colegas! Soy JanIA con su tip de Marketing Inmobiliario. El ochenta por ciento de los clientes y colegas descartan una publicaci\xF3n si no tiene el precio claro, el barrio exacto o el metraje. Si quieren que sus ofertas y requerimientos se cierren en tiempo r\xE9cord, incluyan siempre los siete pilares fundamentales: tipo de inmueble, ciudad y barrio exacto, precio y administraci\xF3n, \xE1rea en metros cuadrados, habitaciones, ba\xF1os y parqueaderos. Publicar con todos los datos posibles le facilita la b\xFAsqueda a todos los colegas y me permite a m\xED cruzar ofertas y demandas al instante. Inviten a m\xE1s colegas a unirse a la red y prueben redactar sus anuncios conmigo hoy mismo.`,
-        caption: `\u{1F4E2} *MI\xC9RCOLES DE MARKETING INMOBILIARIO & 7 PILARES \u2014 VECY NETWORK* \u{1F680}
+\u{1F4F2} *Revisi\xF3n de Minutas con JanIA:* https://vecy-network.vercel.app/jania`
+        },
+        {
+          topicTitle: "Defensa de la Comisi\xF3n 50/50 y Contrato de Corretaje",
+          themeKey: "juridico",
+          voiceText: `Hola, queridos colegas. Soy JanIA. El contrato de corretaje inmobiliario est\xE1 protegido por los art\xEDculos mil trescientos cuarenta a mil trescientos cuarenta y seis del C\xF3digo de Comercio. La remuneraci\xF3n del corredor se causa desde el momento en que se celebra el negocio entre las partes gracias a su gesti\xF3n. Dejar constancia escrita u hoja de visita digital blindada garantiza el cobro de la comisi\xF3n justa y previene el bypassing entre agentes. \xA1Defendamos el honor de nuestro oficio!`,
+          captionText: `\u{1F91D} *DEFENSA DE LA COMISI\xD3N 50/50 & C\xD3DIGO DE COMERCIO \u2014 VECY NETWORK* \u{1F4DC}
 
-\xA1Buenas tardes, queridos colegas!
+\xA1Buenos d\xEDas a todos los aliados del corretaje!
 
-\u{1F3AF} *La Regla de Oro:* M\xE1s del 80% de los negocios se pierden por publicaciones incompletas o ambiguas. Para que tus ofertas y solicitudes se muevan en tiempo r\xE9cord, incluye siempre los *7 Pilares* tanto en DEMANDAS como en OFERTAS:
+\u2696\uFE0F *Fundamentos Legales del Corretaje en Colombia:*
+\u2022 **Art. 1340 C.Co.:** Define al corredor como el mediador independiente que facilita la celebraci\xF3n de negocios.
+\u2022 **Art. 1341 C.Co.:** La remuneraci\xF3n se causa una vez perfeccionado el acuerdo entre comprador y vendedor.
+\u2022 **Validez de Mensajes (Ley 527 de 1999):** La hoja de visita enviada por WhatsApp o correo tiene pleno valor probatorio en tribunales.
 
-1\uFE0F\u20E3 Tipo de Inmueble (Apto, Casa, Bodega, etc.)
+\u{1F4A1} *En VECY compartimos puntas con respeto y \xE9tica:* La uni\xF3n entre corredores multiplica los cierres.
+
+\u{1F4F2} *Contratos Digitales JanIA:* https://vecy-network.vercel.app/jania`
+        },
+        {
+          topicTitle: "Estudio de T\xEDtulos y Alertas en Folios de Matr\xEDcula SNR",
+          themeKey: "juridico",
+          voiceText: `Buenos d\xEDas, aliados inmobiliarios. Les habla JanIA. En el estudio de t\xEDtulos no basta con mirar el \xFAltimo propietario. Es indispensable verificar la tradici\xF3n jur\xEDdica de los \xFAltimos veinte a\xF1os en el certificado de tradici\xF3n de la Superintendencia de Notariado y Registro. F\xEDjense con lupa en notas devolutivas, embargos vigentes, condiciones resolutorias no canceladas y afectaciones a vivienda familiar. Prevenir un negocio inviable les ahorra meses de litigios. \xA1A cuidar a sus clientes!`,
+          captionText: `\u{1F50D} *ESTUDIO DE T\xCDTULOS & AUDITOR\xCDA EN FOLIOS SNR \u2014 VECY NETWORK* \u{1F4CB}
+
+\xA1Buenos d\xEDas, colegas de toda Colombia!
+
+\u{1F4CC} *Puntos Cr\xEDticos al Interpretar un Folio de Matr\xEDcula Inmobiliaria:*
+1\uFE0F\u20E3 **Tradici\xF3n de 20 A\xF1os:** Revisar que cada transferencia de dominio est\xE9 inscrita de forma continua sin saltos registrales.
+2\uFE0F\u20E3 **Grav\xE1menes y Limitaciones:** Identificar hipotecas, embargos, patrimonios de familia o afectaciones a vivienda familiar vigentes.
+3\uFE0F\u20E3 **Notas Devolutivas Recientes:** Alerta roja si la Oficina de Registro rechaz\xF3 un tr\xE1mite notarial previo por inconsistencias.
+
+\u{1F4A1} *Asesora con seguridad notarial:* Si tienes dudas con un certificado SNR, cons\xFAltame.
+
+\u{1F4F2} *Soporte Legal JanIA:* https://vecy-network.vercel.app/jania`
+        }
+      ],
+      miercoles_marketing: [
+        {
+          topicTitle: "Fotograf\xEDa Inmobiliaria Profesional con Smartphone",
+          themeKey: "marketing",
+          voiceText: `\xA1Buenas tardes, colegas! Soy JanIA con su tip de marketing inmobiliario. Para captar compradores de inmediato, tomen las fotos siempre a la altura del pecho, en posici\xF3n horizontal y utilizando la luz natural de la ma\xF1ana. Antes de disparar, despersonalicen los espacios: cierren las tapas de los inodoros, guarden los productos de aseo y despejen los mesones de la cocina. Las fotos limpias y luminosas aumentan hasta tres veces las visitas comerciales. \xA1Pru\xE9benlo hoy mismo!`,
+          captionText: `\u{1F4F8} *FOTOGRAF\xCDA INMOBILIARIA PROFESIONAL CON TU M\xD3VIL \u2014 VECY NETWORK* \u{1F4F1}
+
+\xA1Buenas tardes, queridos colegas corredores!
+
+\u{1F3AF} *Consejos Pr\xE1cticos para Fotos que Venden en Minutos:*
+\u2022 **Altura y Perspectiva:** Dispara a la altura de tu pecho (1.20m a 1.40m), nunca desde la altura de tus ojos.
+\u2022 **Luz Natural:** Abre cortinas y ventanas en la ma\xF1ana; evita prender luces amarillas combinadas con luz de d\xEDa.
+\u2022 **Despersonalizaci\xF3n:** Retira fotos familiares, toallas y tapetes desgastados antes de capturar el espacio.
+\u2022 **Enfoque Horizontal:** Permite que los portales y redes muestren la amplitud real de la habitaci\xF3n.
+
+\u{1F4A1} *Una imagen profesional duplica el inter\xE9s de colegas y clientes compradores.*
+
+\u{1F4F2} *Marketing & Copys con JanIA:* https://vecy-network.vercel.app/jania`
+        },
+        {
+          topicTitle: "Viralizaci\xF3n Org\xE1nica en Redes Sociales para Inmuebles",
+          themeKey: "marketing",
+          voiceText: `\xA1Buenas tardes a todos! Les habla JanIA. No necesitan pagar miles de pesos en pauta para conseguir prospectos reales. Los videos cortos y din\xE1micos de cuarenta y cinco segundos en Instagram Reels y TikTok mostrando los tres mejores atractivos del inmueble generan un alcance org\xE1nico impresionante. Inicien siempre con un gancho que despierte curiosidad, como el valor del metro cuadrado en la zona o la vista panor\xE1mica del balc\xF3n. \xA1A romper las redes con calidad!`,
+          captionText: `\u{1F680} *VIRALIZACI\xD3N ORG\xC1NICA EN REELS Y TIKTOK \u2014 VECY NETWORK* \u{1F3AC}
+
+\xA1Buenas tardes, aliados y agentes de la red!
+
+\u{1F525} *Estructura de un Video Inmobiliario de Alto Impacto (45 Segundos):*
+1\uFE0F\u20E3 **Gancho (Segundos 1 a 3):** Muestra el atributo estrella (terraza, cocina abierta o precio de oportunidad).
+2\uFE0F\u20E3 **Recorrido \xC1gil (Segundos 4 a 35):** Planos continuos de 3 segundos por \xE1rea sin movimientos bruscos.
+3\uFE0F\u20E3 **Llamado a la Acci\xF3n (Segundos 36 a 45):** Menciona la ciudad, barrio exacto y link directo de contacto.
+
+\u{1F4A1} *El contenido educativo y transparente atrae compradores calificados sin gastar en publicidad.*
+
+\u{1F4F2} *Prueba redactar copys con JanIA:* https://vecy-network.vercel.app/jania`
+        },
+        {
+          topicTitle: "Los 7 Pilares Obligatorios de una Publicaci\xF3n Exitosa",
+          themeKey: "marketing",
+          voiceText: `\xA1Buenas tardes, colegas! Soy JanIA. El ochenta por ciento de las publicaciones inmobiliarias se descartan porque les faltan datos esenciales. Si quieren cerrar r\xE1pido tanto en ofertas como en demandas, incluyan siempre los siete pilares: tipo de predio, ciudad y barrio exacto, precio y administraci\xF3n, \xE1rea en metros cuadrados, habitaciones, ba\xF1os y parqueaderos independientes o en l\xEDnea. Publicar completo le ahorra tiempo a toda la comunidad y activa el cruce de JanIA. \xA1\xC9xitos!`,
+          captionText: `\u{1F4E2} *LA REGLA DE ORO: LOS 7 PILARES INMOBILIARIOS \u2014 VECY NETWORK* \u{1F3AF}
+
+\xA1Buenas tardes a toda la red de corretaje en Colombia!
+
+\xBFPor qu\xE9 se pierden miles de negocios en los grupos? Por publicaciones ambiguas o incompletas.
+
+\u{1F3C6} *Publica SIEMPRE con los 7 Pilares tanto en DEMANDAS como en OFERTAS:*
+1\uFE0F\u20E3 Tipo de Inmueble (Casa, Apto, Lote, Bodega, etc.)
 2\uFE0F\u20E3 Ciudad y Barrio Exacto
 3\uFE0F\u20E3 Precio / Canon y Cuota de Administraci\xF3n
-4\uFE0F\u20E3 \xC1rea Total Construida en m\xB2
-5\uFE0F\u20E3 Habitaciones y Ba\xF1os
-6\uFE0F\u20E3 Parqueaderos (Independientes o en l\xEDnea)
+4\uFE0F\u20E3 \xC1rea Construida y Privada en m\xB2
+5\uFE0F\u20E3 N\xFAmero de Alcobas y Ba\xF1os
+6\uFE0F\u20E3 Parqueaderos (Independientes o Servidumbre/L\xEDnea)
 7\uFE0F\u20E3 Enlace directo de contacto de WhatsApp
 
-\u{1F4A1} *\xBFPor qu\xE9 publicar completo?* No solo le facilita la gesti\xF3n a JanIA para encontrar coincidencias autom\xE1ticas en segundos, sino que agiliza la b\xFAsqueda y el filtro para todos los agentes de la red, ahorrando tiempo valioso.
+\u{1F4A1} *Cuando publicas con rigor, JanIA cruza datos en tiempo real y encuentra la otra punta al instante.*
 
-\u2728 *Primicia:* \xA1JanIA ya est\xE1 encontrando matches en la red! Muy pronto nuestro equipo de asesores de cierre los contactar\xE1 para coordinar los cierres comerciales.
+\u{1F4F2} *Cruce Inteligente JanIA:* https://vecy-network.vercel.app/admin`
+        }
+      ],
+      jueves_tributario: [
+        {
+          topicTitle: "Retenci\xF3n en la Fuente en Enajenaci\xF3n de Inmuebles",
+          themeKey: "tributario",
+          voiceText: `\xA1Buenos d\xEDas, colegas! Soy JanIA con su tip tributario del d\xEDa. Recuerden que al escriturar una venta de inmueble ante notar\xEDa, la retenci\xF3n en la fuente para personas naturales es del uno por ciento sobre el valor de la enajenaci\xF3n, seg\xFAn el art\xEDculo trescientos noventa y ocho del Estatuto Tributario. Para personas jur\xEDdicas la tarifa es del dos punto cinco por ciento. Aclarar desde la promesa a qui\xE9n corresponde cada gasto previene disgustos el d\xEDa de la firma. \xA1A asesorar con n\xFAmeros claros!`,
+          captionText: `\u{1F4B0} *RETENCI\xD3N EN LA FUENTE ANTE NOTAR\xCDA \u2014 VECY NETWORK* \u{1F4CB}
 
-\u{1F91D} *Invita a m\xE1s colegas y prueba el sistema:* https://vecy-network.vercel.app/jania`
-      },
-      jueves_tributario: {
-        theme: "tributario",
-        voice: `Hola a todos y a todas mis queridos colegas. Soy JanIA con un consejo financiero clave para sus clientes vendedores ante la DIAN. Al vender vivienda de habitaci\xF3n, pueden deducir hasta cinco mil UVT exentas del impuesto de ganancia ocasional si los fondos se destinan a la compra de otra vivienda o abono a cr\xE9dito hipotecario. Si quieren saber exactamente cu\xE1nto debe pagar su cliente en retenci\xF3n en la fuente o ganancia ocasional antes de firmar escrituras, cons\xFAltenme directamente. Los invito a invitar a m\xE1s colegas a unirse a VECY Network para que disfruten de este soporte gratuito permanente. \xA1A vender informados!`,
-        caption: `\u{1F4B0} *JUEVES TRIBUTARIO & AHORRO FISCAL DIAN \u2014 VECY NETWORK* \u{1F4CB}
+\xA1Buenos d\xEDas a todos los corredores e inmobiliarios!
 
-\xA1Hola a todos mis queridos colegas inmobiliarios!
+\u{1F4CC} *Tarifas de Retenci\xF3n en la Fuente en Venta de Inmuebles:*
+\u2022 **Persona Natural:** Tarifa del **1%** sobre el valor total fijado en la escritura p\xFAblica (Art. 398 E.T.).
+\u2022 **Persona Jur\xEDdica:** Tarifa general del **2.5%** a t\xEDtulo de renta retenida en notar\xEDa.
+\u2022 **\xBFQui\xE9n la asume?:** Por disposici\xF3n legal y costumbre comercial, la retenci\xF3n en la fuente es asumida exclusivamente por el vendedor.
 
-\u{1F4A1} *Tip Tributario del D\xEDa:* Exenci\xF3n de 5.000 UVT en Ganancia Ocasional.
-Al vender vivienda de habitaci\xF3n propia, tus clientes pueden acogerse a la exenci\xF3n del art\xEDculo 311-1 del Estatuto Tributario (hasta 5.000 UVT) si el dinero de la venta se destina a la adquisici\xF3n de otra vivienda o abono a cr\xE9dito hipotecario.
+\u{1F4A1} *Consejo Contable:* Solicita al vendedor su \xFAltima declaraci\xF3n de renta para verificar el costo fiscal antes de prometer.
 
-\u{1F4CA} *Liquidaciones Tributarias R\xE1pidas:*
-Escr\xEDbeme o env\xEDame los valores de costo fiscal y venta, y te liquido la retenci\xF3n en la fuente y ganancia estimada en segundos.
+\u{1F4F2} *Liquidaciones Tributarias JanIA:* https://vecy-network.vercel.app/jania`
+        },
+        {
+          topicTitle: "Deducci\xF3n de Mejoras y Refacciones con Facturaci\xF3n Electr\xF3nica",
+          themeKey: "tributario",
+          voiceText: `Hola, queridos colegas. Soy JanIA. Muchos propietarios pagan un impuesto de ganancia ocasional muy alto porque no saben que las remodelaciones y mejoras estructurales pueden sumarse al costo fiscal del inmueble para reducir la utilidad gravable. La condici\xF3n indispensable de la DIAN es que todas esas refacciones est\xE9n soportadas con facturaci\xF3n electr\xF3nica a nombre del propietario. Asesorar a sus clientes en este aspecto les ahorra millones de pesos. \xA1A vender informados!`,
+          captionText: `\u{1F6E0}\uFE0F *DEDUCCI\xD3N DE MEJORAS & FACTURA ELECTR\xD3NICA ANTE LA DIAN \u2014 VECY NETWORK* \u{1F9FE}
 
-\u{1F91D} *Comparte con tus colegas:* Inv\xEDtalos a sumarse a VECY Network para acceder a consultor\xEDas tributarias especializadas.
-\u{1F4F2} *Consultas DIAN con JanIA:* https://vecy-network.vercel.app/jania`
-      },
-      viernes_avaluos: {
-        theme: "avaluos",
-        voice: `\xA1Excelente viernes, queridos colegas! Soy JanIA. Para captar con \xE9xito y no quemar los inmuebles en los portales, es fundamental fijar precios realistas con los propietarios. Recuerden que en VECY Network realizamos estudios de mercado aproximados sobre el valor del metro cuadrado en la zona y c\xE1nones de arriendo sugeridos, adem\xE1s de analizar las fichas del SINUPOT para conocer los usos de suelo y edificabilidad permitidos. Todos nuestros estudios y asesor\xEDas son cien por ciento virtuales, \xE1giles y al servicio de su gesti\xF3n comercial. Inviten a sus colegas a sumarse a VECY Network y a consultar precios de mercado con nosotros. \xA1Que tengan un fin de semana lleno de cierres!`,
-        caption: `\u{1F4D0} *VIERNES DE ESTUDIO DE MERCADO, VALOR DEL M\xB2 & SINUPOT \u2014 VECY NETWORK* \u{1F3D9}\uFE0F
+\xA1Buenos d\xEDas a todos los aliados inmobiliarios!
+
+\u{1F4A1} *C\xF3mo Reducir Legalmente la Ganancia Ocasional:*
+Al vender un inmueble, el impuesto del 15% se calcula sobre la diferencia entre el precio de venta y el costo fiscal. \xBFC\xF3mo elevar el costo fiscal legalmente?
+
+\u2705 **Mejoras y Adiciones:** Remodelaciones de cocinas, ba\xF1os, ampliaciones y cambio de tuber\xEDas.
+\u2705 **Requisito Obligatorio DIAN:** Contar con Facturas Electr\xF3nicas de Venta v\xE1lidas emitidas por los contratistas a nombre del titular.
+\u274C Recibos de caja menor o notas manuales NO son deducibles fiscalmente.
+
+\u{1F4F2} *Consultas Financieras JanIA:* https://vecy-network.vercel.app/jania`
+        },
+        {
+          topicTitle: "Desglose Exacto de Gastos Notariales y de Registro en Colombia",
+          themeKey: "tributario",
+          voiceText: `Buenos d\xEDas, aliados de la red. Les habla JanIA. En Colombia existe una distribuci\xF3n tradicional de los gastos de escrituraci\xF3n que todo asesor debe dominar con exactitud: los derechos notariales se comparten por partes iguales cincuenta y cincuenta entre comprador y vendedor; la retenci\xF3n en la fuente la paga el vendedor; y el impuesto de registro y beneficencia lo asume el comprador. Entregar este desglose por escrito desde el inicio genera confianza total. \xA1Muchos \xE9xitos!`,
+          captionText: `\u{1F4CA} *DESGLOSE DE GASTOS NOTARIALES Y DE REGISTRO EN COLOMBIA \u2014 VECY NETWORK* \u{1F3DB}\uFE0F
+
+\xA1Buenos d\xEDas, colegas corredores!
+
+Para que tu promesa de compraventa est\xE9 completamente blindada, ten clara la distribuci\xF3n habitual de gastos en notar\xEDas colombianas:
+
+\u{1F91D} **Notar\xEDa (Derechos Notariales):** Se divide **50% Vendedor / 50% Comprador** (Aprox. 0.54% del valor del negocio + IVA).
+\u{1F4B0} **Vendedor Exclusivo:** Retenci\xF3n en la fuente (1% Personas Naturales).
+\u{1F4DD} **Comprador Exclusivo:** Impuesto de Registro y Beneficencia (Gobernaci\xF3n + SNR, aprox. 1.67% al 2.0% seg\xFAn el departamento).
+
+\u{1F4A1} *Claridad previa evita discrepancias en el despacho notarial.*
+
+\u{1F4F2} *Asistencia Inmobiliaria JanIA:* https://vecy-network.vercel.app/jania`
+        }
+      ],
+      viernes_avaluos: [
+        {
+          topicTitle: "Estudios de Mercado de Valor por M\xB2 (100% Virtuales)",
+          themeKey: "avaluos",
+          voiceText: `\xA1Excelente viernes, queridos colegas! Soy JanIA. Para captar con \xE9xito y no quemar los inmuebles en los portales, es fundamental fijar precios realistas con los propietarios. Recuerden que en VECY Network NO hacemos aval\xFAos presenciales con perito de lonja, sino estudios de mercado aproximados sobre el valor del metro cuadrado en la zona y sondeos de arriendo sugeridos. Todos nuestros an\xE1lisis son cien por ciento virtuales, \xE1giles y al servicio de su gesti\xF3n comercial. \xA1A cerrar la semana con \xE9xito!`,
+          captionText: `\u{1F4D0} *ESTUDIOS DE MERCADO & VALOR DEL M\xB2 (100% VIRTUALES) \u2014 VECY NETWORK* \u{1F3D9}\uFE0F
 
 \xA1Excelente viernes para todos los colegas de la red!
 
-\u{1F4CA} *Estudios de Mercado y Sondeos de Valor del M\xB2 (100% Virtuales):*
-\xBFVas a captar un inmueble y necesitas orientar al propietario sobre el precio adecuado? Cons\xFAltame valores promedio de venta y c\xE1nones de arriendo por zona, estrato y tipolog\xEDa para fijar precios competitivos sin quemar el predio.
+\u{1F4CA} *Fijaci\xF3n de Precios de Captaci\xF3n Reales y Competitivos:*
+\xBFVas a captar un predio y necesitas orientar al propietario para que no infle el precio y queme el anuncio en los portales? En VECY Network te apoyamos con:
 
-\u{1F5FA}\uFE0F *Estudios de Suelo y Fichas SINUPOT al Instante:*
-Descarga la ficha del SINUPOT en PDF y comp\xE1rtemela: extraigo el tratamiento urban\xEDstico, usos compatibles y edificabilidad en segundos.
+\u2022 Sondeo de mercado comparativo por zona y tipolog\xEDa urbana.
+\u2022 Rango sugerido de valor por metro cuadrado para venta r\xE1pida.
+\u2022 Estimaci\xF3n de canon de arrendamiento seg\xFAn oferta y demanda.
 
-\u{1F91D} *Suma a tu equipo:* Invita a m\xE1s colegas a VECY Network para multiplicar las opciones de negocio en todo el pa\xEDs.
-\u{1F4F2} *Estudios de Suelo y Mercado JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4A1} *Servicio 100% virtual, \xE1gil y sin necesidad de tr\xE1mites engorrosos ni peritajes presenciales.*
+
+\u{1F4F2} *Sondeos de Mercado JanIA:* https://vecy-network.vercel.app/jania`
+        },
+        {
+          topicTitle: "Interpretaci\xF3n de Fichas Normativas SINUPOT en Bogot\xE1",
+          themeKey: "avaluos",
+          voiceText: `\xA1Buenos d\xEDas, colegas! Soy JanIA. Si est\xE1n captando un lote, una casa antigua o un predio con potencial constructor en Bogot\xE1, la herramienta clave es la ficha del SINUPOT. A trav\xE9s de este sistema pueden conocer el tratamiento urban\xEDstico, el \xE1rea de actividad, los usos del suelo permitidos y la edificabilidad m\xE1xima. Compartan conmigo la ficha en PDF y les extraigo el potencial del terreno en cuesti\xF3n de segundos. \xA1A captar con visi\xF3n!`,
+          captionText: `\u{1F5FA}\uFE0F *ESTUDIOS DE SUELO & FICHAS SINUPOT AL INSTANTE \u2014 VECY NETWORK* \u{1F4D0}
+
+\xA1Excelente viernes para todos los corredores visionarios!
+
+\xBFCaptaste un lote o una casa con potencial para desarrollo comercial o residencial en Bogot\xE1?
+
+\u{1F3E2} *Qu\xE9 analizamos en la Ficha SINUPOT:*
+\u2022 **Tratamiento Urban\xEDstico:** Consolidaci\xF3n, renovaci\xF3n o desarrollo.
+\u2022 **\xC1rea de Actividad:** Residencial neta, comercio vecinal o servicios empresariales.
+\u2022 **Usos Permitidos y Restringidos:** Qu\xE9 actividades comerciales pueden operar legalmente en el inmueble.
+\u2022 **\xCDndices de Ocupaci\xF3n y Alturas:** Pisos permitidos seg\xFAn el perfil vial.
+
+\u{1F4F2} *Env\xEDa tu ficha a JanIA:* https://vecy-network.vercel.app/jania`
+        },
+        {
+          topicTitle: "C\xE1lculo de C\xE1nones de Arrendamiento Sugeridos",
+          themeKey: "avaluos",
+          voiceText: `Feliz viernes para todos. Les habla JanIA. Para calcular el canon comercial adecuado de un inmueble en arrendamiento, la regla t\xE9cnica en Colombia oscila entre el cero punto cinco y el cero punto ocho por ciento del valor comercial real del predio, seg\xFAn estrato, amenidades del conjunto y antig\xFCedad. Asesorar a los arrendadores con este par\xE1metro evita que el apartamento permanezca meses desocupado generando p\xE9rdidas en administraci\xF3n. \xA1A monetizar con inteligencia!`,
+          captionText: `\u{1F4B0} *C\xC1LCULO DEL CANON DE ARRIENDO COMPETITIVO \u2014 VECY NETWORK* \u{1F3E2}
+
+\xA1Excelente viernes, aliados y agentes de arrendamiento!
+
+\u{1F3AF} *Criterios T\xE9cnicos para Fijar el Canon Adecuado:*
+\u2022 **Rango Promedio en Colombia:** Entre el **0.5% y el 0.8%** mensual sobre el valor comercial real del inmueble.
+\u2022 **Factores de Valor:** Amenidades (club house, piscina, gimnasio), garajes independientes y estrato socioecon\xF3mico.
+\u2022 **Riesgo de Vacancia:** Un sobreprecio de apenas el 10% puede prolongar el tiempo de colocaci\xF3n en 3 a 5 meses, generando mayores p\xE9rdidas en cuotas de administraci\xF3n que la rebaja inicial.
+
+\u{1F4F2} *Sondeos de Arriendo con JanIA:* https://vecy-network.vercel.app/jania`
+        }
+      ],
+      sabado_cafe: [
+        {
+          topicTitle: "\xC9tica y Alianzas Compartidas en el Corretaje",
+          themeKey: "cafe",
+          voiceText: `Buenos d\xEDas, queridos aliados de la red. Cerramos una semana extraordinaria de actividad comercial. Recuerden que en el negocio inmobiliario la reputaci\xF3n y la \xE9tica son nuestro activo m\xE1s valioso. Compartir puntas con colegas serios, respetar la hoja de presentaci\xF3n del cliente y honrar los acuerdos al cincuenta cincuenta es lo que construye carreras s\xF3lidas y duraderas. Los invito a invitar a m\xE1s colegas profesionales a sumarse a VECY Network. \xA1Disfruten su caf\xE9 y que tengan un reparador fin de semana!`,
+          captionText: `\u2615 *S\xC1BADO DE CAF\xC9 INMOBILIARIO & \xC9TICA ENTRE COLEGAS \u2014 VECY NETWORK* \u{1F91D}
+
+\xA1Buenos d\xEDas a todos los aliados y corredores de Colombia!
+
+Culminamos una semana muy productiva en nuestra comunidad. Hoy reflexionamos sobre los pilares del \xE9xito duradero en bienes ra\xEDces:
+
+\u{1F31F} **La Reputaci\xF3n Comercial:** En un mercado competitivo, los corredores que cumplen su palabra y respetan los acuerdos de corretaje compartido multiplican sus negocios por recomendaci\xF3n natural.
+\u{1F91D} **El Poder de la Red:** Nadie tiene todos los clientes ni todos los inmuebles; colaborar en red permite cerrar el doble de negocios en la mitad del tiempo.
+
+\u{1F4DE} *Atenci\xF3n Personalizada Br\xF3ker (Eduardo y Jani):* WhatsApp +57 316 656 9719
+\u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania`
+        },
+        {
+          topicTitle: "Identidad de JanIA: Creada para Empoderar al Asesor",
+          themeKey: "cafe",
+          voiceText: `Buenos d\xEDas a todos mis queridos colegas. Les habla JanIA. Para quienes se unen por primera vez a nuestra comunidad, quiero contarles qui\xE9n soy: fui concebida por nuestros directores Eduardo Rivera y Jani Alves como la primera inteligencia artificial inmobiliaria de Colombia. Mi prop\xF3sito no es reemplazar al corredor, sino darle superpoderes: cruzo ofertas y requerimientos las veinticuatro horas, redacto contratos, oriento en temas tributarios y promuevo la colaboraci\xF3n \xE9tica. \xA1Bienvenidos a la nueva era del corretaje!`,
+          captionText: `\u{1F916} *CONOCE A JANIA: LA IA INMOBILIARIA DE COLOMBIA \u2014 VECY NETWORK* \u{1F1E8}\u{1F1F4}
+
+\xA1Buenos d\xEDas, queridos colegas y nuevos aliados!
+
+Hoy en nuestro caf\xE9 inmobiliario queremos compartir el coraz\xF3n de esta innovaci\xF3n:
+
+\u{1F4A1} *\xBFQui\xE9n es JanIA y por qu\xE9 fue creada?*
+\u2022 Concebida por nuestros fundadores **Eduardo A. Rivera** (Director de Tecnolog\xEDa) y **Jani Alves** (Directora de Operaciones).
+\u2022 Dise\xF1ada para empoderar al agente independiente y a la agencia, brind\xE1ndoles herramientas que antes solo ten\xEDan las multinacionales.
+\u2022 **Qu\xE9 hace 24/7:** Monitorea solicitudes, empata ofertas y demandas al instante, revisa minutas y analiza normativas fiscales.
+
+\u{1F91D} *VECY Network es tu aliado tecnol\xF3gico permanente.*
+
+\u{1F4F2} *Interact\xFAa con JanIA:* https://vecy-network.vercel.app/jania`
+        }
+      ],
+      domingo_soporte: [
+        {
+          topicTitle: "Consultorio 24/7 y Portafolio 100% Virtual VECY",
+          themeKey: "soporte",
+          voiceText: `\xA1Feliz y bendecido domingo para todos mis queridos colegas! Soy JanIA. Hoy quiero recordarles que nuestro consultorio inmobiliario est\xE1 a su entera disposici\xF3n los siete d\xEDas de la semana. Ya sea que necesiten estructurar una promesa de compraventa, liquidar la ganancia ocasional ante la DIAN, realizar un estudio de mercado del valor del metro cuadrado o dise\xF1ar una campa\xF1a de marketing con inteligencia artificial, aqu\xED estamos para respaldarlos con servicios cien por ciento virtuales y \xE1giles. \xA1Que disfruten un domingo reparador en familia!`,
+          captionText: `\u{1F6CE}\uFE0F *DOMINGO DE SOPORTE INTEGRAL 100% VIRTUAL \u2014 VECY NETWORK* \u{1F31F}
+
+\xA1Feliz y descansado domingo para todos los aliados y colegas de VECY Network!
+
+En VECY cuentas con un respaldo permanente para impulsar tus operaciones en toda Colombia:
+
+\u2696\uFE0F *Consultor\xEDa Jur\xEDdica:* Promesas de compraventa, corretaje 50/50 y blindaje contractual.
+\u{1F4B0} *Asesor\xEDa Tributaria DIAN:* Liquidaci\xF3n de retenciones en la fuente y ganancia ocasional.
+\u{1F4CA} *Estudios de Mercado y M\xB2:* Fijaci\xF3n de precios competitivos sin quemar predios.
+\u{1F4D0} *Fichas SINUPOT:* Usos de suelo, alturas y edificabilidad al instante.
+\u{1F4E2} *Marketing Inmobiliario:* T\xE9cnicas de fotograf\xEDa y los 7 pilares de publicaci\xF3n.
+
+\u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania
+\u{1F4DE} *L\xEDnea Comercial Br\xF3ker:* WhatsApp +57 316 656 9719`
+        },
+        {
+          topicTitle: "Bolsa Colaborativa VECY y Comisiones Transparentes (35/35/15/15)",
+          themeKey: "soporte",
+          voiceText: `Feliz domingo, aliados inmobiliarios. Les habla JanIA. En VECY Network estamos construyendo la primera bolsa inmobiliaria colaborativa y fintech de Colombia, basada en la equidad y el respeto mutuo. Nuestro modelo de comisiones justas reconoce el trabajo del asesor captador con el treinta y cinco por ciento, el asesor colocador con el treinta y cinco por ciento, y destina el resto a la bolsa colaborativa y a la plataforma que los respalda. Los invito a sumar a colegas \xE9ticos para crecer juntos. \xA1Feliz d\xEDa!`,
+          captionText: `\u{1F91D} *BOLSA COLABORATIVA & COMISIONES JUSTAS (35/35/15/15) \u2014 VECY NETWORK* \u{1F3DB}\uFE0F
+
+\xA1Feliz domingo para todos los visionarios del sector!
+
+\u{1F3AF} *El Nuevo Est\xE1ndar del Corretaje Inmobiliario en Colombia:*
+\u2022 **35% Asesor Captador:** Quien consigue la propiedad exclusiva o disponible.
+\u2022 **35% Asesor Colocador:** Quien aporta al cliente comprador calificado.
+\u2022 **15% Fondo de Bolsa Colaborativa:** Para los agentes que colaboran difundiendo y viralizando.
+\u2022 **15% Plataforma y Tecnolog\xEDa VECY:** Para mantener la IA, servidores, soporte legal y peritajes.
+
+\u{1F4A1} *Cero canibalismo, m\xE1xima transparencia y cierres compartidos.*
+
+\u{1F4F2} *\xDAnete a la Red:* https://vecy-network.vercel.app/`
+        }
+      ]
+    };
+    DAILY_TIPS_CONFIG = {
+      lunes_arranque: {
+        theme: "noticias",
+        voice: ROTATING_FALLBACK_CATALOG.lunes_arranque[0].voiceText,
+        caption: ROTATING_FALLBACK_CATALOG.lunes_arranque[0].captionText
+      },
+      martes_juridico: {
+        theme: "juridico",
+        voice: ROTATING_FALLBACK_CATALOG.martes_juridico[0].voiceText,
+        caption: ROTATING_FALLBACK_CATALOG.martes_juridico[0].captionText
+      },
+      miercoles_marketing: {
+        theme: "marketing",
+        voice: ROTATING_FALLBACK_CATALOG.miercoles_marketing[0].voiceText,
+        caption: ROTATING_FALLBACK_CATALOG.miercoles_marketing[0].captionText
+      },
+      jueves_tributario: {
+        theme: "tributario",
+        voice: ROTATING_FALLBACK_CATALOG.jueves_tributario[0].voiceText,
+        caption: ROTATING_FALLBACK_CATALOG.jueves_tributario[0].captionText
+      },
+      viernes_avaluos: {
+        theme: "avaluos",
+        voice: ROTATING_FALLBACK_CATALOG.viernes_avaluos[0].voiceText,
+        caption: ROTATING_FALLBACK_CATALOG.viernes_avaluos[0].captionText
       },
       sabado_cafe: {
         theme: "cafe",
-        voice: `Buenos d\xEDas, queridos aliados de la red. Cerramos una semana de gran actividad comercial y colaborativa. Recuerden que en VECY Network y VECY Bienes Ra\xEDces ofrecemos servicios preferentemente cien por ciento virtuales: estudios de mercado del valor del metro cuadrado, c\xE1nones de arriendo sugeridos, asesor\xEDas tributarias en l\xEDnea, redacci\xF3n de contratos, apoyo en casos de cobranza y marketing digital con inteligencia artificial. Y para casos personalizados o acompa\xF1amiento con nuestro br\xF3ker, pueden comunicarse directamente con Eduardo y Jani en nuestra l\xEDnea comercial. Inviten a m\xE1s colegas a unirse a este maravilloso proyecto y a interactuar con nosotros. \xA1Disfruten de su fin de semana y a recargar energ\xEDas!`,
-        caption: `\u2615 *S\xC1BADO DE CAF\xC9 INMOBILIARIO, SERVICIOS VIRTUALES & CONSULTOR\xCDA \u2014 VECY NETWORK* \u{1F91D}
-
-\xA1Buenos d\xEDas a todos los aliados y colegas de VECY Network!
-
-Culminamos una semana muy productiva. Recuerden nuestro portafolio de servicios especializados 100% virtuales:
-
-\u{1F4CA} *Estudios de Mercado & Valor del M\xB2:* Fijaci\xF3n de precios sugeridos de venta y arriendo para asesorar a tus propietarios.
-\u{1F4B0} *Asesor\xEDas Tributarias DIAN:* Liquidaci\xF3n de ganancia ocasional, retenciones y optimizaci\xF3n fiscal.
-\u2696\uFE0F *Contratos y Minutas Digitales:* Promesas, corretaje 50/50 y blindaje con Ley 527 de 1999.
-\u{1F4BC} *Cobranzas y Cartera:* Manejo prejudicial de mora y gesti\xF3n de c\xE1nones de arriendo.
-\u{1F916} *Marketing con IA:* Fotograf\xEDa con m\xF3vil y publicaciones de alto impacto.
-
-\u{1F4DE} *Atenci\xF3n Personalizada Br\xF3ker (Eduardo y Jani):* WhatsApp +57 316 656 9719
-\u{1F31F} *Sigamos creciendo juntos:* Invita a m\xE1s colegas a sumarse a esta red colaborativa nacional.
-\u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania`
+        voice: ROTATING_FALLBACK_CATALOG.sabado_cafe[0].voiceText,
+        caption: ROTATING_FALLBACK_CATALOG.sabado_cafe[0].captionText
       },
       domingo_soporte: {
         theme: "soporte",
-        voice: `\xA1Feliz domingo a todos y a todas mis queridos colegas! Soy JanIA. Hoy quiero recordarles que nuestro equipo de VECY Network y yo estamos a su entera disposici\xF3n los siete d\xEDas de la semana. Ya sea que necesiten estructurar una promesa de compraventa, liquidar la ganancia ocasional ante la DIAN, realizar un estudio de mercado del valor del metro cuadrado, analizar el uso de suelo en el SINUPOT, dise\xF1ar una campa\xF1a de marketing inmobiliario con inteligencia artificial o gestionar cobranzas de arrendamiento, aqu\xED estamos para respaldarlos con servicios cien por ciento virtuales y \xE1giles. Los invito a invitar a m\xE1s colegas a unirse a VECY Network y a consultar cualquier tema directamente conmigo en la web o por WhatsApp. \xA1Que disfruten un domingo reparador en familia!`,
-        caption: `\u{1F6CE}\uFE0F *DOMINGO DE SOPORTE JANIA, CONSULTOR\xCDA & SERVICIOS 100% VIRTUALES \u2014 VECY NETWORK* \u{1F31F}
-
-\xA1Feliz y bendecido domingo para todos los aliados y colegas de VECY Network!
-
-Hoy queremos recordarles que en VECY Network cuentan con un respaldo integral 24/7 para potenciar y blindar sus operaciones inmobiliarias en toda Colombia:
-
-\u2696\uFE0F *Consultor\xEDa Jur\xEDdica y Notarial:* Revisi\xF3n de minutas, promesas, contratos y saneamiento de t\xEDtulos.
-\u{1F4B0} *Asesor\xEDa Tributaria DIAN:* Liquidaci\xF3n de retenciones, ganancia ocasional y optimizaci\xF3n fiscal.
-\u{1F4CA} *Estudios de Mercado y M\xB2:* Precios competitivos de venta y arriendo para orientar a propietarios.
-\u{1F4D0} *Estudios de Suelo SINUPOT:* Fichas normativas POT, alturas y usos permitidos al instante.
-\u{1F4E2} *Marketing Inmobiliario & IA:* T\xE9cnicas de fotograf\xEDa con smartphone, viralizaci\xF3n sin pauta y estructura de 7 pilares.
-\u{1F4BC} *Cobranzas de Arrendamiento:* Gesti\xF3n oportuna de cartera y mora.
-\u{1F91D} *Cierres Comerciales en Red:* Bolsa inmobiliaria colaborativa con comisiones transparentes (35/35/15/15).
-
-\u{1F4AC} *\xBFTienes consultas o requieres acompa\xF1amiento?*
-Escr\xEDbenos en el grupo o interact\xFAa directamente con JanIA en nuestra consola web:
-\u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania
-\u{1F4DE} *Atenci\xF3n Br\xF3ker Oficial:* WhatsApp +57 316 656 9719`
+        voice: ROTATING_FALLBACK_CATALOG.domingo_soporte[0].voiceText,
+        caption: ROTATING_FALLBACK_CATALOG.domingo_soporte[0].captionText
       }
     };
   }
@@ -16262,7 +16576,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.69";
+var VECY_VERSION = "v31.71";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -16874,7 +17188,7 @@ init_db();
 init_schema();
 init_scraper();
 init_janIA();
-import { eq as eq8, and as and6, desc as desc2, sql as sql5, inArray } from "drizzle-orm";
+import { eq as eq8, and as and6, desc as desc3, sql as sql5, inArray } from "drizzle-orm";
 
 // server/_core/taxEngine.ts
 var VALOR_UVT_2026 = 50318;
@@ -17049,7 +17363,7 @@ var janIARouter = router({
 ${liveStats}${userContextInstruction}
 
 [INSTRUCCI\xD3N MAESTRA - CHAT WEB VECY 24/7]: Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento l\xF3gico, amplio criterio jur\xEDdico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa y estructurada. PROHIBIDO usar plantillas fijas o cierres/firmas con membretes. Responde en formato JSON estrictamente como: {"response": "tu respuesta viva y razonada"}`;
-        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq8(messages.conversationId, conversationId)).orderBy(desc2(messages.createdAt)).limit(6);
+        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq8(messages.conversationId, conversationId)).orderBy(desc3(messages.createdAt)).limit(6);
         const formattedHistory = recentHistory.reverse().map((m) => ({
           role: m.role === "janIA" ? "assistant" : "user",
           content: m.content
@@ -17112,7 +17426,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).where(eq8(conversations.userId, String(ctx.user.id))).orderBy(desc2(conversations.updatedAt));
+      return await db.select().from(conversations).where(eq8(conversations.userId, String(ctx.user.id))).orderBy(desc3(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting user conversations:", error);
       return [];
@@ -17123,7 +17437,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).orderBy(desc2(conversations.updatedAt));
+      return await db.select().from(conversations).orderBy(desc3(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting all conversations:", error);
       return [];
@@ -17264,7 +17578,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const matches = await db.select().from(propertyMatches).where(eq8(propertyMatches.requirementId, input.requirementId)).orderBy(desc2(propertyMatches.matchScore)).limit(input.limit);
+      const matches = await db.select().from(propertyMatches).where(eq8(propertyMatches.requirementId, input.requirementId)).orderBy(desc3(propertyMatches.matchScore)).limit(input.limit);
       return matches;
     } catch (error) {
       console.error("Error getting property matches:", error);
@@ -17363,7 +17677,7 @@ ${liveStats}${userContextInstruction}
           enlaceOrigen: requirements.enlaceOrigen,
           createdAt: requirements.createdAt
         }
-      }).from(propertyMatches).innerJoin(properties, eq8(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq8(propertyMatches.requirementId, requirements.id)).where(sql5`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) AND (${properties.available} IS NULL OR ${properties.available} = true)`).orderBy(desc2(propertyMatches.id)).limit(150);
+      }).from(propertyMatches).innerJoin(properties, eq8(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq8(propertyMatches.requirementId, requirements.id)).where(sql5`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) AND (${properties.available} IS NULL OR ${properties.available} = true)`).orderBy(desc3(propertyMatches.id)).limit(150);
       const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
       const imagesMap = {};
       if (propIds.length > 0) {
@@ -17413,7 +17727,7 @@ ${liveStats}${userContextInstruction}
           broker: propertyPublicationHistory.broker,
           portal: propertyPublicationHistory.portal,
           grupo: propertyPublicationHistory.grupo
-        }).from(propertyPublicationHistory).where(inArray(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc2(propertyPublicationHistory.fecha));
+        }).from(propertyPublicationHistory).where(inArray(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc3(propertyPublicationHistory.fecha));
         finalMatches = validEvaluatedMatches.map((m) => {
           const propertyHistory = histories.filter((h) => h.propertyId === m.property.id);
           return {
@@ -17920,7 +18234,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      const terms = await db.select().from(inmobiliarioLexicon).orderBy(desc2(inmobiliarioLexicon.frecuenciaUso)).limit(100);
+      const terms = await db.select().from(inmobiliarioLexicon).orderBy(desc3(inmobiliarioLexicon.frecuenciaUso)).limit(100);
       return terms;
     } catch (e) {
       console.error("[JanIA-Lexicon] Error obteniendo l\xE9xico:", e.message);
@@ -18120,7 +18434,7 @@ ${liveStats}${userContextInstruction}
         presupuestoMin: requirements.presupuestoMin,
         areaMin: requirements.areaMin,
         createdAt: requirements.createdAt
-      }).from(requirements).orderBy(desc2(requirements.id));
+      }).from(requirements).orderBy(desc3(requirements.id));
       cachedRequirementsData = data;
       cachedRequirementsTime = now;
       return data;
@@ -19083,7 +19397,7 @@ var imagesRouter = {
 import { z as z5 } from "zod";
 init_db();
 init_schema();
-import { eq as eq11, and as and7, desc as desc3, isNull } from "drizzle-orm";
+import { eq as eq11, and as and7, desc as desc4, isNull } from "drizzle-orm";
 import { TRPCError as TRPCError3 } from "@trpc/server";
 var agentRouter = router({
   // Public: Get agent profile for branding (Agenda Pro, Personal Shops)
@@ -19103,7 +19417,7 @@ var agentRouter = router({
   getMyProperties: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(eq11(properties.agentId, ctx.user.id)).orderBy(desc3(properties.createdAt));
+    return await db.select().from(properties).where(eq11(properties.agentId, ctx.user.id)).orderBy(desc4(properties.createdAt));
   }),
   // For testing: Allows an agent to claim a property that has no agent assigned
   claimProperty: protectedProcedure.input(z5.object({ propertyId: z5.number() })).mutation(async ({ ctx, input }) => {
@@ -19118,7 +19432,7 @@ var agentRouter = router({
   getAvailablePropertiesToClaim: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(isNull(properties.agentId)).orderBy(desc3(properties.createdAt));
+    return await db.select().from(properties).where(isNull(properties.agentId)).orderBy(desc4(properties.createdAt));
   }),
   generateStealthLink: protectedProcedure.input(z5.object({ propertyId: z5.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
@@ -19156,7 +19470,7 @@ var agentRouter = router({
         matriculaInmobiliaria: properties.matriculaInmobiliaria,
         location: properties.location
       }
-    }).from(referralLinks).innerJoin(properties, eq11(referralLinks.propertyId, properties.id)).where(eq11(referralLinks.agentId, ctx.user.id)).orderBy(desc3(referralLinks.createdAt));
+    }).from(referralLinks).innerJoin(properties, eq11(referralLinks.propertyId, properties.id)).where(eq11(referralLinks.agentId, ctx.user.id)).orderBy(desc4(referralLinks.createdAt));
   })
 });
 
@@ -19232,7 +19546,7 @@ var leadsRouter = router({
 import { z as z7 } from "zod";
 init_db();
 init_schema();
-import { eq as eq13, desc as desc4, ilike, or as or2, and as and8 } from "drizzle-orm";
+import { eq as eq13, desc as desc5, ilike, or as or2, and as and8 } from "drizzle-orm";
 import { TRPCError as TRPCError5 } from "@trpc/server";
 var propertyInputSchema = z7.object({
   name: z7.string().min(2),
@@ -19644,7 +19958,7 @@ var propertiesRouter = router({
       whereConditions.push(eq13(properties.transactionType, input.transactionType));
     }
     whereConditions.push(eq13(properties.available, true));
-    const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and8(...whereConditions) : void 0).orderBy(desc4(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
+    const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and8(...whereConditions) : void 0).orderBy(desc5(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
     const items = await query;
     return items;
   }),
@@ -19818,12 +20132,12 @@ ${input.text || "Ver documento PDF adjunto"}`;
       if (cachedAdminMyList && now - cachedAdminMyListTime < 18e4) {
         return cachedAdminMyList;
       }
-      const data = await db.select(propertyFields).from(properties).orderBy(desc4(properties.id));
+      const data = await db.select(propertyFields).from(properties).orderBy(desc5(properties.id));
       cachedAdminMyList = data;
       cachedAdminMyListTime = now;
       return data;
     }
-    return await db.select(propertyFields).from(properties).where(eq13(properties.agentId, user.id)).orderBy(desc4(properties.id));
+    return await db.select(propertyFields).from(properties).where(eq13(properties.agentId, user.id)).orderBy(desc5(properties.id));
   })
 });
 
@@ -19831,7 +20145,7 @@ ${input.text || "Ver documento PDF adjunto"}`;
 import { z as z8 } from "zod";
 init_db();
 init_schema();
-import { desc as desc5, ilike as ilike2, or as or3, sql as sql8, eq as eq14 } from "drizzle-orm";
+import { desc as desc6, ilike as ilike2, or as or3, sql as sql8, eq as eq14 } from "drizzle-orm";
 import { TRPCError as TRPCError6 } from "@trpc/server";
 import { Solver } from "@2captcha/captcha-solver";
 import https from "https";
@@ -20770,7 +21084,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
           eq14(solicitudes.solicitanteNumeroDocumento, clean),
           eq14(solicitudes.interesadoDocumento, clean)
         )
-      ).orderBy(desc5(solicitudes.id)).limit(10);
+      ).orderBy(desc6(solicitudes.id)).limit(10);
       for (const row of solRows) {
         const candidateName = (row.solicitanteNumeroDocumento || "").replace(/\D/g, "") === clean ? row.solicitanteNombre : row.interesadoNombre;
         if (candidateName && candidateName.trim().length >= 4) {
@@ -20888,7 +21202,7 @@ var agendaRouter = router({
       }
     }
     const finalWhere = whereConditions.length > 0 ? sql8.join(whereConditions, sql8` AND `) : void 0;
-    const items = await db.select().from(solicitudes).where(finalWhere).orderBy(desc5(solicitudes.solicitudId), desc5(solicitudes.id)).limit(limit).offset(offset);
+    const items = await db.select().from(solicitudes).where(finalWhere).orderBy(desc6(solicitudes.solicitudId), desc6(solicitudes.id)).limit(limit).offset(offset);
     const totalRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(finalWhere);
     return {
       items,

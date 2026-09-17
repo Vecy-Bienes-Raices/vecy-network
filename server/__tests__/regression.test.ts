@@ -6,6 +6,12 @@ import {
   explicarMatch,
   isNonRealEstateText
 } from "../_core/matching";
+import {
+  getDynamicFallbackItem,
+  enforceGreetingAccuracy,
+  enforceJanIAIdentity,
+  ROTATING_FALLBACK_CATALOG
+} from "../_core/cronService";
 
 describe("VECY NETWORK — SUITE DE REGRESIÓN DOCTRINAL AUTOMATIZADA", () => {
   // ─────────────────────────────────────────────────────────────
@@ -305,6 +311,56 @@ describe("VECY NETWORK — SUITE DE REGRESIÓN DOCTRINAL AUTOMATIZADA", () => {
 
     it("debe reconocer José Orlando como nombre compuesto", () => {
       expect(extractFirstName("José Orlando Riveros")).toBe("José Orlando");
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // 7. DIFUSIÓN DIARIA ÚNICA Y MEMORIA TEMÁTICA DE JANIA (v31.71)
+  // ─────────────────────────────────────────────────────────────
+  describe("7. Difusión Diaria Única y Memoria Temática de JanIA (v31.71)", () => {
+    it("ROTATING_FALLBACK_CATALOG debe tener al menos 2 temas ricos por cada día de la semana", () => {
+      const days = [
+        "lunes_arranque",
+        "martes_juridico",
+        "miercoles_marketing",
+        "jueves_tributario",
+        "viernes_avaluos",
+        "sabado_cafe",
+        "domingo_soporte"
+      ];
+      for (const day of days) {
+        const items = ROTATING_FALLBACK_CATALOG[day];
+        expect(items).toBeDefined();
+        expect(items.length).toBeGreaterThanOrEqual(2);
+        for (const item of items) {
+          expect(item.topicTitle.length).toBeGreaterThan(10);
+          expect(item.voiceText.length).toBeGreaterThan(50);
+          expect(item.captionText.length).toBeGreaterThan(100);
+        }
+      }
+    });
+
+    it("getDynamicFallbackItem debe rotar temas según la fecha y no devolver siempre el mismo", () => {
+      const date1 = new Date(2026, 8, 17); // Día A
+      const date2 = new Date(2026, 8, 18); // Día B
+      const item1 = getDynamicFallbackItem("jueves_tributario", date1);
+      const item2 = getDynamicFallbackItem("jueves_tributario", date2);
+      expect(item1.topicTitle).toBeDefined();
+      expect(item2.topicTitle).toBeDefined();
+      expect(item1.topicTitle).not.toBe(item2.topicTitle);
+    });
+
+    it("enforceGreetingAccuracy debe ajustar saludos según periodo del día en Colombia", () => {
+      expect(enforceGreetingAccuracy("buenos días colegas", "tarde")).toContain("Buenas tardes");
+      expect(enforceGreetingAccuracy("buenas tardes colegas", "mañana")).toContain("Buenos días");
+      expect(enforceGreetingAccuracy("buenos días colegas", "noche")).toContain("Buenas noches");
+    });
+
+    it("enforceJanIAIdentity debe evitar que JanIA suplante a los fundadores", () => {
+      const text = "Hola, te saluda Jani Alves y les traigo novedades de corretaje";
+      const sanitized = enforceJanIAIdentity(text);
+      expect(sanitized).not.toContain("te saluda Jani Alves");
+      expect(sanitized).toContain("JanIA");
     });
   });
 });
