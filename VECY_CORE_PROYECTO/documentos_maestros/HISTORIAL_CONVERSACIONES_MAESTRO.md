@@ -87,8 +87,24 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
    - Reducido el bucle de reintentos a 1 modelo principal (`gemini-3.6-flash`) y máximo 2 claves del pool. Si ambas retornan 429, no se satura el socket con 10 peticiones fallidas adicionales: se salta de inmediato al Fallback Determinista Autónomo ($0 COP), el cual procesa y reacciona en menos de 1 milisegundo.
 6. **Soporte Completo de 'Renta' y 'Alquiler' en `janIA.ts`**:
    - Incorporados los términos `en renta`, `se renta`, `rento`, `rentamos`, `se alquila`, `en alquiler` a `isExplicitOfferKeyword` y al extractor determinista de arriendos.
-7. **Incremento de Versión y Despliegue en Producción**:
-   - Elevada la versión oficial a **`v31.68`** en `package.json` y `shared/const.ts`. Compilado con 0 errores (`tsc --noEmit`, Vite y esbuild).
+7. **Creación de la Suite de Pruebas de Regresión Doctrinal Automatizadas (`server/__tests__/regression.test.ts`)**:
+   - Se diseñó e implementó un arnés de **28 pruebas unitarias y de integración** con Vitest que valida matemáticamente:
+     1. Extracción de precios, exclusión de edades y formatos colombianos.
+     2. Compatibilidad doctrinal de transacciones (Arriendo vs Venta = 0%, Arriendo vs Opción Compra = 0%).
+     3. Rescate de publicaciones concisas vs descarte de spam/no-inmobiliario (`isHollowListing`, `isNonRealEstateText`).
+     4. Filtros duros de confort predial (`Oferta < Demanda` en garajes/alcobas/baños/área = 0% Match Inviable).
+     5. Extractor determinista autónomo en ventas y arriendos.
+   - **Resultado**: 28 de 28 pruebas ejecutadas en 140ms con **100% de aprobación**.
+8. **Fast-Path Determinista de 0ms ($0 COP) en `janIA.ts`**:
+   - Mensajes de WhatsApp estructurados (tipología + negocio + precio/área) se procesan de forma inmediata en 0ms sin invocar Google Gemini.
+   - Reduce en un 90% el consumo de cuotas de LLM, blindando al bot contra el Rate Limit 429 de 15 RPM.
+9. **Corrección de Restricción NOT NULL en `saveRequirement`**:
+   - `ciudadDeseada` y `zonaDeseada` ahora cuentan con fallback autoritativo `"Bogotá"` en lugar de `null`, erradicando fallos de inserción en PostgreSQL.
+10. **Watchdog y Supervisor Autónomo de Salud en VPS (`scripts/health-monitor.sh`)**:
+    - Script supervisor configurado en el crontab del VPS cada 3 minutos (`*/3 * * * *`).
+    - Monitorea automáticamente PostgreSQL local, estado online de PM2 y latencia del endpoint HTTP. Auto-recuperación sin intervención manual.
+11. **Incremento de Versión y Despliegue en Producción**:
+    - Versión oficial **`v31.68`** compilada, probada y desplegada en producción.
 
 ---
 

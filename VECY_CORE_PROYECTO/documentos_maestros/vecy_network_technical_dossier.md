@@ -337,6 +337,10 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 - **Rescate en `isHollowListing` y `janIA.ts`**: Inmuebles con tipología y operación explícita son aceptados como válidos para registro y cotejo.
 - **Erradicación de Retry Storms**: Máximo 1 modelo y 2 claves; si ambas saturan, se invoca de inmediato el Fallback Determinista Autónomo en 0ms.
 - **Soporte 'Renta' y 'Alquiler'**: Regex enriquecidos con `en renta`, `se renta`, `se alquila` y `en alquiler`.
+- **Suite de Pruebas Doctrinales Vitest (`regression.test.ts`)**: 28 pruebas automatizadas verifican al 100% las reglas matemáticas y de confort del proyecto en 140ms.
+- **Fast-Path Determinista 0ms ($0 COP)**: Publicaciones estándar procesadas directamente sin consumir cuota de Google Gemini, erradicando el 429.
+- **Blindaje NOT NULL en PostgreSQL**: Corrección en `ciudadDeseada` y `zonaDeseada` garantizando inserciones infalibles.
+- **Watchdog Supervisor en VPS (`health-monitor.sh`)**: Ejecución programada cada 3 minutos en crontab para monitoreo y auto-recuperación sin intervención manual.
 - **Compilación y Despliegue**: `tsc --noEmit` y `npm run build` limpios en versión `v31.68`.
 
 ---

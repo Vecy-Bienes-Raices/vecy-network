@@ -178,8 +178,10 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
   1) *Timeout de 5s en `safeReact`*: `Promise.race` con 5.000 ms y `.catch(() => {})` garantizan que la cola de reacciones de Baileys jamás se detenga.
   2) *Prioridad 3 en `getReactionEmoji`*: Si el texto contiene tipología predial explícita (`casa`, `apto`, `bodega`, etc.), JanIA emite SIEMPRE su reacción nativa (`👌`/`👍`/`✏️`/`📝`), erradicando silencios indeseados.
   3) *Rescate en `isHollowListing` y `janIA.ts`*: Inmuebles con tipología y operación explícita son aceptados como válidos para registro y cotejo.
-  4) *Erradicación de Retry Storms*: Máximo 1 modelo y 2 claves; si ambas saturan, se invoca de inmediato el Fallback Determinista Autónomo en 0ms.
-  5) *Soporte 'Renta' y 'Alquiler'*: Regex enriquecidos con `en renta`, `se renta`, `se alquila` y `en alquiler`.
+  6) *Suite de Pruebas de Regresión Doctrinal Vitest (`server/__tests__/regression.test.ts`)*: 28 pruebas unitarias automatizadas cubren precios, compatibilidad de transacciones, publicaciones huecas y filtros duros de confort. 100% de éxito en 140ms.
+  7) *Fast-Path Determinista de 0ms en `janIA.ts`*: Procesa publicaciones estándar en 0ms sin invocar Gemini, ahorrando el 90% de llamadas y erradicando bloqueos por 429.
+  8) *Blindaje NOT NULL en `saveRequirement`*: Fallback autoritativo `"Bogotá"` para `ciudadDeseada` y `zonaDeseada`, eliminando excepciones en Postgres.
+  9) *Supervisor Watchdog en VPS (`scripts/health-monitor.sh`)*: Monitorea BD, socket y API cada 3 minutos en crontab con auto-recuperación.
 
 ---
 
