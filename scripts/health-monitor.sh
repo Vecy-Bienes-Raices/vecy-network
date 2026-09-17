@@ -28,7 +28,7 @@ if ! pg_isready -h localhost -p 5432 -q; then
 fi
 
 # 2. Verificar estado en PM2
-PM2_STATUS=$(pm2 jlist 2>/dev/null | grep -o '"name":"jania-server"[^}]*"pm2_env":{"status":"[^"]*"' | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+PM2_STATUS=$(node -e 'try { const list = JSON.parse(require("child_process").execSync("pm2 jlist").toString()); const s = list.find(x => x.name === "jania-server"); console.log(s ? s.pm2_env.status : "not_found"); } catch(e) { console.log("error"); }')
 
 if [ "$PM2_STATUS" != "online" ]; then
     log "⚠️ jania-server no está online (estado: $PM2_STATUS). Reiniciando..."
