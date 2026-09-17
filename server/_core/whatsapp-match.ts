@@ -181,7 +181,10 @@ export class JaniaMatchBot {
       return cached.data;
     }
     try {
-      const data = await this.sock?.groupMetadata(chatId);
+      const data = await Promise.race([
+        this.sock?.groupMetadata(chatId),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500))
+      ]);
       if (data) {
         this.groupMetadataCache.set(chatId, { data, time: Date.now() });
       }
@@ -1502,7 +1505,10 @@ export class JaniaMatchBot {
         }
 
         console.log(`[JANIA-${reason}] 🎯 Despachando reacción ${emoji} a ${chatId} (Msg ID: ${msgId})...`);
-        await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
+        await Promise.race([
+          this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 5s reacción")), 5000))
+        ]);
         this.lastReactionTimestamp = Date.now();
         console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
 
@@ -1514,10 +1520,13 @@ export class JaniaMatchBot {
         }
       } catch (err: any) {
         console.warn(`[JANIA-${reason}] ⚠️ Primer intento de reacción ${emoji} falló (${err?.message || err}). Reintentando tras pausa segura...`);
-        await new Promise(r => setTimeout(r, 2500));
+        await new Promise(r => setTimeout(r, 2000));
         try {
           if (this.sock && this.isReady) {
-            await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
+            await Promise.race([
+              this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
+              new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 5s reintento")), 5000))
+            ]);
             this.lastReactionTimestamp = Date.now();
             console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA en reintento secuencial`);
           }
@@ -1525,7 +1534,7 @@ export class JaniaMatchBot {
           console.warn(`[JANIA-${reason}] ❌ Reintento de reacción ${emoji} no pudo completarse:`, retryErr?.message || retryErr);
         }
       }
-    });
+    }).catch(() => {});
 
     return this.reactionQueue;
   }
@@ -1552,7 +1561,7 @@ export class JaniaMatchBot {
     const txType = (data.transactionType || data.tipoNegocioDeseado || result.transactionType || '').toLowerCase();
 
     const isPermuta = txType.includes('permuta') || txType === 'venta_permuta' || txType === 'aporte';
-    const isRent = txType.includes('arriendo') || txType === 'arriendo_temporal' || txType === 'arriendo_con_opcion_de_compra';
+    const isRent = txType.includes('arriendo') || txType === 'arriendo_temporal' || txType === 'arriendo_con_opcion_de_compra' || txType.includes('renta') || txType.includes('alquiler');
 
     // ── REGLA DOCTRINAL v23.0: MATRIZ DE 6 EMOJIS DE NEGOCIO ──
     const isProperty = classification === 'INMUEBLE' || classification.includes('INMUEBLE') || classification.includes('OFERTA');
@@ -1568,6 +1577,20 @@ export class JaniaMatchBot {
         if (isPermuta) return '🔄'; // Demanda con Permuta
         if (isRent) return '✏️';    // Demanda Arriendo
         return '📝';                // Demanda Venta
+      }
+    }
+
+    // ── PRIORIDAD 3: Respaldo para publicaciones inmobiliarias concisas (incluso si classification fue CONSULTA_GENERAL) ──
+    const lowerRaw = textToCheck.toLowerCase();
+    const hasPropType = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(lowerRaw);
+    const hasRentSignal = /\b(?:renta|arriendo|alquilo|alquiler|canon)\b/i.test(lowerRaw);
+    const hasDemandSignal = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|cliente busca)\b/i.test(lowerRaw);
+
+    if (hasPropType) {
+      if (hasDemandSignal) {
+        return hasRentSignal ? '✏️' : '📝';
+      } else {
+        return hasRentSignal ? '👌' : '👍';
       }
     }
 

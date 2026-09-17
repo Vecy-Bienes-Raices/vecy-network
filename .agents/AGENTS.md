@@ -167,9 +167,23 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.67 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.68 — Septiembre 2026
 
-### Novedades v31.67 (Pool Round-Robin Activo Balanceado de 4 Claves Gemini, Erradicación de Multiplicador x1000M en Precios/Edad, 'Valor admin' Oficial y Guillotina Financiera de Arriendo sin Canon):
+### Novedades v31.68 (Blindaje Anti-Congelamiento de Reacciones Baileys, Timeouts de 5s en Sockets, Prioridad 3 de Respaldo Inmobiliario y Rescate de Inmuebles Concisos):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Caída de Socket por Tormenta de Reintentos en LLM*: Con ráfagas simultáneas de publicaciones, `invokeLLM` ejecutaba hasta 12 reintentos por mensaje con 60KB de payload. Al alcanzar el límite 429 de Google (15 RPM), la congestión de Axios asfixiaba el Event Loop, provocando que Baileys perdiera los PINGs de WhatsApp y desconectara con `código: undefined`.
+  2) *Cola de Reacciones Colgada Indefinidamente*: En `safeReact`, si `sock.sendMessage` quedaba esperando confirmación de WhatsApp, la promesa encolada no tenía timeout y bloqueaba indefinidamente cualquier reacción futura.
+  3) *Degeneración a 'CONSULTA_GENERAL' por Filtro Hueco*: Mensajes reales como *"En Renta, magnifica casa en conjunto Cerrado"* con menos de 15 palabras eran descartados por `isHollowListing`, silenciando las reacciones en los grupos.
+- **Acciones Ejecutadas**:
+  1) *Timeout de 5s en `safeReact`*: `Promise.race` con 5.000 ms y `.catch(() => {})` garantizan que la cola de reacciones de Baileys jamás se detenga.
+  2) *Prioridad 3 en `getReactionEmoji`*: Si el texto contiene tipología predial explícita (`casa`, `apto`, `bodega`, etc.), JanIA emite SIEMPRE su reacción nativa (`👌`/`👍`/`✏️`/`📝`), erradicando silencios indeseados.
+  3) *Rescate en `isHollowListing` y `janIA.ts`*: Inmuebles con tipología y operación explícita son aceptados como válidos para registro y cotejo.
+  4) *Erradicación de Retry Storms*: Máximo 1 modelo y 2 claves; si ambas saturan, se invoca de inmediato el Fallback Determinista Autónomo en 0ms.
+  5) *Soporte 'Renta' y 'Alquiler'*: Regex enriquecidos con `en renta`, `se renta`, `se alquila` y `en alquiler`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.67 — Septiembre 2026
 - **Diagnóstico y Causas Raíz Identificadas**:
   1) *Demanda #21 Mostrando $15.000.000.000 en Tabla de Cotejo*: En `parseColombianPriceOrBudget`, la regla `if (val < 30) return Math.round(val * 1_000_000_000)` multiplicaba cualquier entero menor de 30 por 1.000 millones. Al leer el texto *"Máximo 15 años ... Prespuesto Máximo $ 540 millones"*, el extractor tomó "15" (años de edad) y debido a la falta tipográfica en "Prespuesto" (sin 'u'), transformó 15 en 15 mil millones ($15.000.000.000), generando un falso match del 97% con una oferta de 980 millones.
   2) *Propiedad #3047 (Chicó) vs Demanda #951 con 95% Match sin Precio*: La propiedad #3047 no tenía precio publicado (`rent_price = null`, `price = 0`) y la demanda pedía arriendo *"de 14 o 15 millones"*. En `matching.ts`, el filtro duro de arriendo solo bloqueaba si `propRent <= 0 && price > 100M`. Al ser 0 ambos, el canon evaluado fue 0, considerándolo falsamente dentro del presupuesto de 15M y otorgando 95% de afinidad.

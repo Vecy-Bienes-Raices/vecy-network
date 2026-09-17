@@ -840,7 +840,7 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
     payload.tools = [{ googleSearch: {} }];
   }
   let lastError = null;
-  const targetModels = modelsToTry.slice(0, 2);
+  const targetModels = modelsToTry.slice(0, 1);
   for (const currentModel of targetModels) {
     for (let keyAttempt = 0; keyAttempt < Math.min(allKeys.length, 2); keyAttempt++) {
       const { key: activeKey, index: keyNum } = getActiveFailoverKey();
@@ -4814,6 +4814,11 @@ function isHollowListing(rawText, name, externalUrl) {
     const hasArea = /(?:\b(?:m2|mts|metros)\b)/i.test(clean);
     const hasRooms = /(?:\b(?:alcobas?|hab(?:itaciones)?|cuartos?|dormitorios?|baños?)\b)/i.test(clean);
     const hasLocation = /(?:\b(?:calle|carrera|cll|cra|diagonal|transversal|clle|cr|chico|rosales|cabrera|nogal|cedritos|santa barbara|usaquen|suba|chapinero|salitre)\b)/i.test(clean);
+    const hasPropertyType = /(?:\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b)/i.test(clean);
+    const hasOperation = /(?:\b(?:renta|arriendo|alquilo|alquiler|canon|venta|vendo|se vende|se arrienda|se renta|se alquila|compro|comprar|busco)\b)/i.test(clean);
+    if (hasPropertyType && hasOperation) {
+      return { isHollow: false, reason: "Oferta o requerimiento con tipolog\xEDa y operaci\xF3n expl\xEDcita" };
+    }
     let technicalSignals = 0;
     if (hasPrice) technicalSignals++;
     if (hasArea) technicalSignals++;
@@ -9765,7 +9770,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         return result;
       }
       const isExplicitDemandKeyword = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|requerimientos|necesito|necesitamos|solicito|solicitamos|solicitud|solicitudes|compro|comprando|comprador|compradores|comprar|en compra|para compra|negocio compra|para cliente|busca cliente|cliente busca|arrendatario|en búsqueda|en busqueda)\b/i.test(cleanText2);
-      const isExplicitOfferKeyword = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|para arriendo o venta|para venta o arriendo|en arriendo o venta|en venta o arriendo|arriendo o venta|venta o arriendo|vr renta|vr vta|canon arriendo|alquilo|alquiler directo|rento|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|arrendamos|pongo en arriendo|apto familiar|comisi[oó]n 50[-/]50|punta compartida)\b/i.test(cleanText2) || /photos\.app\.goo\.gl|drive\.google\.com\/(?:drive\/folders|file\/d)/i.test(cleanText2);
+      const isExplicitOfferKeyword = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|se renta|se alquila|en venta|en arriendo|en renta|en alquiler|para arriendo o venta|para venta o arriendo|en arriendo o venta|en venta o arriendo|arriendo o venta|venta o arriendo|vr renta|vr vta|canon arriendo|canon|alquilo|alquilamos|alquiler directo|rento|rentamos|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|arrendamos|pongo en arriendo|pongo en renta|apto familiar|comisi[oó]n 50[-/]50|punta compartida)\b/i.test(cleanText2) || /photos\.app\.goo\.gl|drive\.google\.com\/(?:drive\/folders|file\/d)/i.test(cleanText2);
       const isSearch = isExplicitDemandKeyword && !isExplicitOfferKeyword;
       const isOffer = isExplicitOfferKeyword && !isExplicitDemandKeyword;
       const hasRealEstateKeyword = hasRealEstateTextKeyword(cleanText2);
@@ -9805,7 +9810,8 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         result.classification = "CONSULTA_GENERAL";
       }
       const hollowEarlyCheck = isHollowListing(cleanText2, null, urls && urls.length > 0 ? urls[0] : null);
-      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && hollowEarlyCheck.isHollow && !imageBuffer && !result.isFlyerOrBanner) {
+      const hasRealPropertyCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanText2) && /\b(?:renta|arriendo|alquiler|alquilo|canon|venta|vendo|se vende|se arrienda|se renta|se alquila|compro|comprar|busco|buscamos|requiero|requerimiento)\b/i.test(cleanText2);
+      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && hollowEarlyCheck.isHollow && !imageBuffer && !result.isFlyerOrBanner && !hasRealPropertyCore) {
         console.log(`[JANIA-FILTER] \u26D4 Descartando publicaci\xF3n hueca o frase suelta (${hollowEarlyCheck.reason}): "${cleanText2.substring(0, 60)}...". Degenerado a CONSULTA_GENERAL.`);
         result.classification = "CONSULTA_GENERAL";
       }
@@ -10009,7 +10015,8 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       }
       const isFlyerWithText = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
       const hollowCheckProp = isHollowListing(cleanCheckText, propertyTitle, urls && urls.length > 0 ? urls[0] : void 0);
-      if (hollowCheckProp.isHollow && !isFlyerWithText) {
+      const hasRealPropertyCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanCheckText) && /\b(?:renta|arriendo|alquiler|alquilo|canon|venta|vendo|se vende|se arrienda|se renta|se alquila)\b/i.test(cleanCheckText);
+      if (hollowCheckProp.isHollow && !isFlyerWithText && !hasRealPropertyCore) {
         console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de propiedad en BD (${hollowCheckProp.reason}): "${cleanCheckText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
@@ -10097,7 +10104,8 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       const reqTitle = extracted.title || `Requerimiento de ${extracted.propertyType || "inmueble"} en ${extracted.zonaDeseada || extracted.zone || "Bogot\xE1"} para ${extracted.transactionType || "venta"}`;
       const isFlyerWithTextReq = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
       const hollowCheckReq = isHollowListing(cleanCheckReqText, reqTitle, urls && urls.length > 0 ? urls[0] : void 0);
-      if (hollowCheckReq.isHollow && !isFlyerWithTextReq) {
+      const hasRealReqCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanCheckReqText) && /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprar)\b/i.test(cleanCheckReqText);
+      if (hollowCheckReq.isHollow && !isFlyerWithTextReq && !hasRealReqCore) {
         console.log(`[JANIA-FILTER] \u26D4 Omitiendo guardado de requerimiento en BD (${hollowCheckReq.reason}): "${cleanCheckReqText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
@@ -10244,12 +10252,12 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
       }
       const fbData = extractFallbackDataFromText(rawMsg);
       const isExplicitDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
-      const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|vr renta|vr vta|canon|alquilo|alquiler|disponible|apto familiar|venta directa|arriendo directo)\b/i.test(cleanLower);
+      const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|se renta|se alquila|en venta|en arriendo|en renta|en alquiler|vr renta|vr vta|canon|alquilo|alquilamos|alquiler|disponible|apto familiar|venta directa|arriendo directo)\b/i.test(cleanLower);
       const origenTipo = isGroup || groupJid ? "grupo" : "contacto_directo";
       const origenId = isGroup || groupJid ? groupJid || userId : userId;
       const origenNombre = isGroup || groupJid ? groupName || "Grupo WhatsApp" : userName || realName || "Contacto Directo";
       if (isExplicitDemand) {
-        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon");
+        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
         const isPermuta = fbData.transactionType.includes("permuta");
         const emoji = isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
         const savedReq = await saveRequirement({
@@ -10283,8 +10291,8 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
           reactionEmoji: emoji,
           inserted: true
         };
-      } else if (isExplicitOffer || fbData.price > 0 || fbData.rentPrice > 0 || cleanLower.includes("arriendo") || cleanLower.includes("venta") || cleanLower.includes("apto") || cleanLower.includes("casa")) {
-        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon");
+      } else if (isExplicitOffer || fbData.price > 0 || fbData.rentPrice > 0 || cleanLower.includes("arriendo") || cleanLower.includes("renta") || cleanLower.includes("alquiler") || cleanLower.includes("venta") || cleanLower.includes("apto") || cleanLower.includes("casa")) {
+        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
         const isPermuta = fbData.transactionType.includes("permuta");
         const emoji = isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}";
         const savedProp = await saveProperty({
@@ -13132,7 +13140,10 @@ var init_whatsapp_match = __esm({
           return cached.data;
         }
         try {
-          const data = await this.sock?.groupMetadata(chatId);
+          const data = await Promise.race([
+            this.sock?.groupMetadata(chatId),
+            new Promise((resolve) => setTimeout(() => resolve(null), 2500))
+          ]);
           if (data) {
             this.groupMetadataCache.set(chatId, { data, time: Date.now() });
           }
@@ -14113,7 +14124,10 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
               await new Promise((r) => setTimeout(r, this.MIN_REACTION_INTERVAL_MS - elapsed));
             }
             console.log(`[JANIA-${reason}] \u{1F3AF} Despachando reacci\xF3n ${emoji} a ${chatId} (Msg ID: ${msgId})...`);
-            await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
+            await Promise.race([
+              this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
+              new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 5s reacci\xF3n")), 5e3))
+            ]);
             this.lastReactionTimestamp = Date.now();
             console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
             if (this.reactedMessageIds.size > 1500) {
@@ -14124,10 +14138,13 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             }
           } catch (err) {
             console.warn(`[JANIA-${reason}] \u26A0\uFE0F Primer intento de reacci\xF3n ${emoji} fall\xF3 (${err?.message || err}). Reintentando tras pausa segura...`);
-            await new Promise((r) => setTimeout(r, 2500));
+            await new Promise((r) => setTimeout(r, 2e3));
             try {
               if (this.sock && this.isReady) {
-                await this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } });
+                await Promise.race([
+                  this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
+                  new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 5s reintento")), 5e3))
+                ]);
                 this.lastReactionTimestamp = Date.now();
                 console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA en reintento secuencial`);
               }
@@ -14135,6 +14152,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
               console.warn(`[JANIA-${reason}] \u274C Reintento de reacci\xF3n ${emoji} no pudo completarse:`, retryErr?.message || retryErr);
             }
           }
+        }).catch(() => {
         });
         return this.reactionQueue;
       }
@@ -14152,7 +14170,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
         }
         const txType = (data.transactionType || data.tipoNegocioDeseado || result.transactionType || "").toLowerCase();
         const isPermuta = txType.includes("permuta") || txType === "venta_permuta" || txType === "aporte";
-        const isRent = txType.includes("arriendo") || txType === "arriendo_temporal" || txType === "arriendo_con_opcion_de_compra";
+        const isRent = txType.includes("arriendo") || txType === "arriendo_temporal" || txType === "arriendo_con_opcion_de_compra" || txType.includes("renta") || txType.includes("alquiler");
         const isProperty = classification === "INMUEBLE" || classification.includes("INMUEBLE") || classification.includes("OFERTA");
         const isRequirement = classification === "REQUERIMIENTO" || classification.includes("REQUERIMIENTO") || classification.includes("DEMANDA") || classification.includes("BUSQUEDA");
         if (isProperty || isRequirement) {
@@ -14165,6 +14183,17 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             if (isPermuta) return "\u{1F504}";
             if (isRent) return "\u270F\uFE0F";
             return "\u{1F4DD}";
+          }
+        }
+        const lowerRaw = textToCheck.toLowerCase();
+        const hasPropType = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(lowerRaw);
+        const hasRentSignal = /\b(?:renta|arriendo|alquilo|alquiler|canon)\b/i.test(lowerRaw);
+        const hasDemandSignal = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|cliente busca)\b/i.test(lowerRaw);
+        if (hasPropType) {
+          if (hasDemandSignal) {
+            return hasRentSignal ? "\u270F\uFE0F" : "\u{1F4DD}";
+          } else {
+            return hasRentSignal ? "\u{1F44C}" : "\u{1F44D}";
           }
         }
         if (isOfficialGroup) {
@@ -16144,7 +16173,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.67";
+var VECY_VERSION = "v31.68";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

@@ -1292,6 +1292,12 @@ export function isHollowListing(rawText: string | null | undefined, name?: strin
     const hasRooms = /(?:\b(?:alcobas?|hab(?:itaciones)?|cuartos?|dormitorios?|baños?)\b)/i.test(clean);
     const hasLocation = /(?:\b(?:calle|carrera|cll|cra|diagonal|transversal|clle|cr|chico|rosales|cabrera|nogal|cedritos|santa barbara|usaquen|suba|chapinero|salitre)\b)/i.test(clean);
 
+    const hasPropertyType = /(?:\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b)/i.test(clean);
+    const hasOperation = /(?:\b(?:renta|arriendo|alquilo|alquiler|canon|venta|vendo|se vende|se arrienda|se renta|se alquila|compro|comprar|busco)\b)/i.test(clean);
+    if (hasPropertyType && hasOperation) {
+      return { isHollow: false, reason: 'Oferta o requerimiento con tipología y operación explícita' };
+    }
+
     let technicalSignals = 0;
     if (hasPrice) technicalSignals++;
     if (hasArea) technicalSignals++;

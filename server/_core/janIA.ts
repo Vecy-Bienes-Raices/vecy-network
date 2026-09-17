@@ -3296,7 +3296,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
 
       const isExplicitDemandKeyword = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|requerimientos|necesito|necesitamos|solicito|solicitamos|solicitud|solicitudes|compro|comprando|comprador|compradores|comprar|en compra|para compra|negocio compra|para cliente|busca cliente|cliente busca|arrendatario|en búsqueda|en busqueda)\b/i.test(cleanText);
-      const isExplicitOfferKeyword = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|para arriendo o venta|para venta o arriendo|en arriendo o venta|en venta o arriendo|arriendo o venta|venta o arriendo|vr renta|vr vta|canon arriendo|alquilo|alquiler directo|rento|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|arrendamos|pongo en arriendo|apto familiar|comisi[oó]n 50[-/]50|punta compartida)\b/i.test(cleanText) || /photos\.app\.goo\.gl|drive\.google\.com\/(?:drive\/folders|file\/d)/i.test(cleanText);
+      const isExplicitOfferKeyword = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|se renta|se alquila|en venta|en arriendo|en renta|en alquiler|para arriendo o venta|para venta o arriendo|en arriendo o venta|en venta o arriendo|arriendo o venta|venta o arriendo|vr renta|vr vta|canon arriendo|canon|alquilo|alquilamos|alquiler directo|rento|rentamos|tengo para|disponible|nuevo inmueble|venta directa|arriendo directo|arrendamos|pongo en arriendo|pongo en renta|apto familiar|comisi[oó]n 50[-/]50|punta compartida)\b/i.test(cleanText) || /photos\.app\.goo\.gl|drive\.google\.com\/(?:drive\/folders|file\/d)/i.test(cleanText);
 
       const isSearch = isExplicitDemandKeyword && !isExplicitOfferKeyword;
       const isOffer = isExplicitOfferKeyword && !isExplicitDemandKeyword;
@@ -3394,7 +3394,10 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       // Doctrina v31.5: Descarte estricto de frases sueltas, teasers o saludos clasificados erróneamente
       const hollowEarlyCheck = isHollowListing(cleanText, null, (urls && urls.length > 0 ? urls[0] : null));
-      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && hollowEarlyCheck.isHollow && !imageBuffer && !result.isFlyerOrBanner) {
+      const hasRealPropertyCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanText) &&
+                                  /\b(?:renta|arriendo|alquiler|alquilo|canon|venta|vendo|se vende|se arrienda|se renta|se alquila|compro|comprar|busco|buscamos|requiero|requerimiento)\b/i.test(cleanText);
+
+      if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && hollowEarlyCheck.isHollow && !imageBuffer && !result.isFlyerOrBanner && !hasRealPropertyCore) {
         console.log(`[JANIA-FILTER] ⛔ Descartando publicación hueca o frase suelta (${hollowEarlyCheck.reason}): "${cleanText.substring(0, 60)}...". Degenerado a CONSULTA_GENERAL.`);
         result.classification = "CONSULTA_GENERAL";
       }
@@ -3650,7 +3653,9 @@ Por lo tanto, DEBES hacer lo siguiente:
       // Filtro de Seguridad Final de Calidad Comercial: Rechazar publicaciones huecas, frases sueltas o sin ficha técnica
       const isFlyerWithText = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
       const hollowCheckProp = isHollowListing(cleanCheckText, propertyTitle, (urls && urls.length > 0 ? urls[0] : undefined));
-      if (hollowCheckProp.isHollow && !isFlyerWithText) {
+      const hasRealPropertyCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanCheckText) &&
+                                  /\b(?:renta|arriendo|alquiler|alquilo|canon|venta|vendo|se vende|se arrienda|se renta|se alquila)\b/i.test(cleanCheckText);
+      if (hollowCheckProp.isHollow && !isFlyerWithText && !hasRealPropertyCore) {
         console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado de propiedad en BD (${hollowCheckProp.reason}): "${cleanCheckText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
@@ -3766,7 +3771,9 @@ Por lo tanto, DEBES hacer lo siguiente:
       // Filtro de Seguridad Final de Calidad Comercial: Rechazar requerimientos huecos, saludos o frases sueltas
       const isFlyerWithTextReq = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
       const hollowCheckReq = isHollowListing(cleanCheckReqText, reqTitle, (urls && urls.length > 0 ? urls[0] : undefined));
-      if (hollowCheckReq.isHollow && !isFlyerWithTextReq) {
+      const hasRealReqCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanCheckReqText) &&
+                             /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprar)\b/i.test(cleanCheckReqText);
+      if (hollowCheckReq.isHollow && !isFlyerWithTextReq && !hasRealReqCore) {
         console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado de requerimiento en BD (${hollowCheckReq.reason}): "${cleanCheckReqText.substring(0, 60)}..."`);
         result.inserted = false;
         result.classification = "CONSULTA_GENERAL";
@@ -3968,7 +3975,7 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       const fbData = extractFallbackDataFromText(rawMsg);
       const isExplicitDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
-      const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|vr renta|vr vta|canon|alquilo|alquiler|disponible|apto familiar|venta directa|arriendo directo)\b/i.test(cleanLower);
+      const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|se renta|se alquila|en venta|en arriendo|en renta|en alquiler|vr renta|vr vta|canon|alquilo|alquilamos|alquiler|disponible|apto familiar|venta directa|arriendo directo)\b/i.test(cleanLower);
 
       const origenTipo = (isGroup || groupJid) ? "grupo" : "contacto_directo";
       const origenId = (isGroup || groupJid) ? (groupJid || userId) : userId;
@@ -3976,7 +3983,7 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       if (isExplicitDemand) {
         // Fallback para DEMANDA (REQUERIMIENTO)
-        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon");
+        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
         const isPermuta = fbData.transactionType.includes("permuta");
         const emoji = isPermuta ? "🔄" : (isRent ? "✏️" : "📝");
 
@@ -4012,9 +4019,9 @@ Por lo tanto, DEBES hacer lo siguiente:
           reactionEmoji: emoji,
           inserted: true
         };
-      } else if (isExplicitOffer || fbData.price > 0 || fbData.rentPrice > 0 || cleanLower.includes("arriendo") || cleanLower.includes("venta") || cleanLower.includes("apto") || cleanLower.includes("casa")) {
+      } else if (isExplicitOffer || fbData.price > 0 || fbData.rentPrice > 0 || cleanLower.includes("arriendo") || cleanLower.includes("renta") || cleanLower.includes("alquiler") || cleanLower.includes("venta") || cleanLower.includes("apto") || cleanLower.includes("casa")) {
         // Fallback para OFERTA (INMUEBLE)
-        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon");
+        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
         const isPermuta = fbData.transactionType.includes("permuta");
         const emoji = isPermuta ? "🔀" : (isRent ? "👌" : "👍");
 

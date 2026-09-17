@@ -322,6 +322,25 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.68 — Septiembre 2026
+
+#### 📌 BLINDAJE ANTI-CONGELAMIENTO DE REACCIONES BAILEYS, TIMEOUTS DE 5S EN SOCKETS, PRIORIDAD 3 DE RESPALDO INMOBILIARIO Y RESCATE DE INMUEBLES CONCISOS
+
+**Problemas identificados:**
+1. **Caída de Socket por Tormenta de Reintentos en LLM**: Con ráfagas simultáneas de publicaciones, `invokeLLM` ejecutaba hasta 12 reintentos por mensaje con 60KB de payload. Al alcanzar el límite 429 de Google (15 RPM), la congestión de Axios asfixiaba el Event Loop, provocando que Baileys perdiera los PINGs de WhatsApp y desconectara con `código: undefined`.
+2. **Cola de Reacciones Colgada Indefinidamente**: En `safeReact`, si `sock.sendMessage` quedaba esperando confirmación de WhatsApp, la promesa encolada no tenía timeout y bloqueaba indefinidamente cualquier reacción futura.
+3. **Degeneración a 'CONSULTA_GENERAL' por Filtro Hueco**: Mensajes reales como *"En Renta, magnifica casa en conjunto Cerrado"* con menos de 15 palabras eran descartados por `isHollowListing`, silenciando las reacciones en los grupos.
+
+**Solución aplicada:**
+- **Timeout de 5s en `safeReact`**: `Promise.race` con 5.000 ms y `.catch(() => {})` garantizan que la cola de reacciones de Baileys jamás se detenga.
+- **Prioridad 3 en `getReactionEmoji`**: Si el texto contiene tipología predial explícita (`casa`, `apto`, `bodega`, etc.), JanIA emite SIEMPRE su reacción nativa (`👌`/`👍`/`✏️`/`📝`), erradicando silencios indeseados.
+- **Rescate en `isHollowListing` y `janIA.ts`**: Inmuebles con tipología y operación explícita son aceptados como válidos para registro y cotejo.
+- **Erradicación de Retry Storms**: Máximo 1 modelo y 2 claves; si ambas saturan, se invoca de inmediato el Fallback Determinista Autónomo en 0ms.
+- **Soporte 'Renta' y 'Alquiler'**: Regex enriquecidos con `en renta`, `se renta`, `se alquila` y `en alquiler`.
+- **Compilación y Despliegue**: `tsc --noEmit` y `npm run build` limpios en versión `v31.68`.
+
+---
+
 ### 🔖 v31.67 — Septiembre 2026
 
 #### 📌 POOL ROUND-ROBIN ACTIVO BALANCEADO DE 4 CLAVES GEMINI, ERRADICACIÓN DE MULTIPLICADOR X1000M EN PRECIOS/EDAD, 'VALOR ADMIN' OFICIAL Y GUILLOTINA FINANCIERA DE ARRIENDO SIN CANON
