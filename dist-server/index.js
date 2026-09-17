@@ -10233,7 +10233,95 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
     }
     return result;
   } catch (error) {
-    console.error("Error en JanIA v11.70:", error);
+    console.warn(`[JanIA-Fallback] \u{1F6E1}\uFE0F LLM no disponible o cuota 429 (${error?.message || error}). Activando Fallback Determinista Aut\xF3nomo $0 COP...`);
+    try {
+      const rawMsg = text2 || "";
+      const cleanLower = rawMsg.toLowerCase().trim();
+      const rawPhone = userId.split("@")[0];
+      const realName = await resolveRealName(userId, userName);
+      if (cleanLower.length < 15 && !cleanLower.includes("apto") && !cleanLower.includes("casa")) {
+        return { classification: "CONSULTA_GENERAL", response: "", mentions: [] };
+      }
+      const fbData = extractFallbackDataFromText(rawMsg);
+      const isExplicitDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
+      const isExplicitOffer = /\b(?:ofrezco|ofrecemos|vendo|se vende|se arrienda|en venta|en arriendo|vr renta|vr vta|canon|alquilo|alquiler|disponible|apto familiar|venta directa|arriendo directo)\b/i.test(cleanLower);
+      const origenTipo = isGroup || groupJid ? "grupo" : "contacto_directo";
+      const origenId = isGroup || groupJid ? groupJid || userId : userId;
+      const origenNombre = isGroup || groupJid ? groupName || "Grupo WhatsApp" : userName || realName || "Contacto Directo";
+      if (isExplicitDemand) {
+        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon");
+        const isPermuta = fbData.transactionType.includes("permuta");
+        const emoji = isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
+        const savedReq = await saveRequirement({
+          propertyType: fbData.propertyType || "apartment",
+          tipoInmuebleDeseado: fbData.propertyType || "apartment",
+          transactionType: isRent ? "arriendo" : isPermuta ? "permuta" : "venta",
+          tipoNegocioDeseado: isRent ? "arriendo" : isPermuta ? "permuta" : "venta",
+          name: `Requerimiento ${fbData.propertyType || "Inmueble"} en Bogot\xE1`,
+          presupuestoMax: String(fbData.presupuestoMax || 0),
+          presupuestoMin: String(fbData.presupuestoMin || 0),
+          adminFeeMax: fbData.adminFee ? String(fbData.adminFee) : void 0,
+          zonaDeseada: "Bogot\xE1",
+          idUsuarioWhatsapp: rawPhone,
+          rawText: rawMsg,
+          origenTipo,
+          origenId,
+          origenNombre,
+          fechaExtraccion: /* @__PURE__ */ new Date()
+        }, userId, realName);
+        if (savedReq) {
+          const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
+          setImmediate(() => {
+            executeMatchEngine2(null, savedReq.id).catch(() => {
+            });
+          });
+        }
+        console.log(`[JanIA-Fallback] \u2705 Requerimiento guardado determin\xEDsticamente con emoji ${emoji}`);
+        return {
+          classification: "REQUERIMIENTO",
+          response: "",
+          reactionEmoji: emoji,
+          inserted: true
+        };
+      } else if (isExplicitOffer || fbData.price > 0 || fbData.rentPrice > 0 || cleanLower.includes("arriendo") || cleanLower.includes("venta") || cleanLower.includes("apto") || cleanLower.includes("casa")) {
+        const isRent = fbData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon");
+        const isPermuta = fbData.transactionType.includes("permuta");
+        const emoji = isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}";
+        const savedProp = await saveProperty({
+          propertyType: fbData.propertyType || "apartment",
+          transactionType: isRent ? "arriendo" : isPermuta ? "permuta" : "venta",
+          name: `Inmueble en Bogot\xE1`,
+          price: String(fbData.price || 0),
+          rentPrice: fbData.rentPrice ? String(fbData.rentPrice) : void 0,
+          adminFee: fbData.adminFee ? String(fbData.adminFee) : void 0,
+          areaTotal: String(fbData.areaTotal || 0),
+          zone: "Bogot\xE1",
+          city: "Bogot\xE1, D.C.",
+          idUsuarioWhatsapp: rawPhone,
+          rawText: rawMsg,
+          origenTipo,
+          origenId,
+          origenNombre,
+          fechaExtraccion: /* @__PURE__ */ new Date()
+        }, userId, realName);
+        if (savedProp) {
+          const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
+          setImmediate(() => {
+            executeMatchEngine2(savedProp.id, null).catch(() => {
+            });
+          });
+        }
+        console.log(`[JanIA-Fallback] \u2705 Inmueble guardado determin\xEDsticamente con emoji ${emoji}`);
+        return {
+          classification: "INMUEBLE",
+          response: "",
+          reactionEmoji: emoji,
+          inserted: true
+        };
+      }
+    } catch (fbErr) {
+      console.error("[JanIA-Fallback-Error] Error en fallback determinista:", fbErr?.message || fbErr);
+    }
     return { classification: "CONSULTA_GENERAL", response: "", mentions: [] };
   }
 }
