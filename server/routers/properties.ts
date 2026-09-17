@@ -260,6 +260,29 @@ export function parsePropertyDeterministically(text: string) {
     }
   }
 
+  // Canon de Arriendo
+  let rentPrice: string = "0";
+  if (transactionType === "arriendo") {
+    const canonM = norm.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|vr\s*[\.\/]?\s*renta|renta|arriendo)\s*[:\/\-=\s]?\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+    if (canonM) {
+      const cleanNum = canonM[1].replace(/\./g, '').replace(/\,/g, '').trim();
+      const parsed = parseInt(cleanNum, 10);
+      if (!isNaN(parsed) && parsed >= 300_000 && parsed <= 100_000_000) {
+        rentPrice = String(parsed);
+      }
+    }
+  }
+
+  // Cuota de Administración (ej: "-ADMÓN: $1.471.000", "Admon: $800.000")
+  let adminFee: string = "0";
+  const admM = norm.match(/(?:^|[-•*#\s])(?:v\s*[\/\-]\s*)?(?:adm[oó]n|admon|administraci[oó]n|administ|admin|cta\s*adm[oó]n|cuota\s*adm[oó]n)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*[:\/\-=\s]?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
+  if (admM) {
+    const rawANum = parseFloat(admM[1].replace(/\./g, ''));
+    if (!isNaN(rawANum) && rawANum >= 10_000 && rawANum <= 30_000_000) {
+      adminFee = String(rawANum);
+    }
+  }
+
   // Áreas
   let areaConstruida: string = "";
   const acM = norm.match(/(?:area construida|area total|construida)[\s\:\*]*([0-9]+(?:\.[0-9]+)?)\s*m/i) || norm.match(/([0-9]+(?:\.[0-9]+)?)\s*m[2²]/i);
@@ -397,6 +420,8 @@ export function parsePropertyDeterministically(text: string) {
     isSubtipoComercial,
     transactionType,
     price,
+    rentPrice: rentPrice !== "0" ? rentPrice : undefined,
+    adminFee: adminFee !== "0" ? adminFee : undefined,
     areaTotal: areaConstruida || "",
     areaConstruida: areaConstruida || "",
     areaPrivada: areaPrivada || "",

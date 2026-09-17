@@ -510,24 +510,22 @@ export function parseColombianPriceOrBudget(numStr: string, unit: string, isSale
       }
       return Math.round(val);
     }
-    if (val < 100 && isSale && val > 0) {
-      if (val < 30) {
-        return Math.round(val * 1_000_000_000); // 2.1 millones -> 2.100.000.000
-      }
-      return Math.round(val * 10_000_000); // taquigrafía ej. 49mm -> 490M
+    // Venta: En Colombia si dicen "540 millones" o "980 m", se multiplica por 1_000_000.
+    // 🛡️ NUNCA multiplicar un entero < 30 por 1.000.000.000 (previene transformar 15 años o 15M en 15 mil millones)
+    if (val < 10 && val > 0 && cleanStr.includes(".")) {
+      // Solo decimales tipo 1.5, 2.3 millones en venta equivalen a 1.500M / 2.300M
+      return Math.round(val * 1_000_000_000);
+    }
+    if (val >= 10 && val < 100 && isSale) {
+      // Taquigrafía tipo 49mm -> 490M
+      return Math.round(val * 10_000_000);
     }
     return Math.round(val * 1_000_000);
   }
   
-  if (val <= 50 && isSale) {
-    return Math.round(val * 1_000_000_000);
-  }
-  if (val <= 50 && !isSale) {
-    return Math.round(val * 1_000_000); // 4 -> 4.000.000 COP arriendo
-  }
   if (val < 10000) {
     if (!isSale) return Math.round(val * 1_000);
-    return Math.round(val * 1_000_000);
+    if (val >= 100) return Math.round(val * 1_000_000);
   }
   if (isSale && val >= 300_000 && val <= 30_000_000) {
     return Math.round(val * 1_000);
@@ -597,9 +595,9 @@ export function extractFallbackDataFromText(text: string): any {
   let rentPrice = 0;
   let adminFee = 0;
 
-  // 1. Cuota de Administración (ej: "Administración: $1´425.000", "Adm $2.056.503", "Admon $825.000", "V/Administ/$1.260.000", "$ 575.000 admón")
-  // 1A. Prefijo: "Administración: $1.260.000", "Admi: $1.628.000", "V/Administ/$1.260.000"
-  const adminMatch = clean.match(/(?:v\s*[\/\-]\s*)?(?:adm|admon|administraci[oó]n|administ|admin|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*[:\/\-=\s]?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
+  // 1. Cuota de Administración (ej: "-ADMÓN: $1.471.000", "Administración: $1´425.000", "Adm $2.056.503", "Admon $825.000")
+  // 1A. Prefijo con soporte de viñetas y guiones (-admón:, -admon:, etc.)
+  const adminMatch = clean.match(/(?:^|[-•*#\s])(?:v\s*[\/\-]\s*)?(?:adm[oó]n|admon|administraci[oó]n|administ|admin|cta\s*adm[oó]n|cuota\s*adm[oó]n)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*[:\/\-=\s]?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
   if (adminMatch) {
     const rawANum = parseFloat(adminMatch[1].replace(/\./g, ''));
     if (!isNaN(rawANum) && rawANum >= 10_000 && rawANum <= 30_000_000 && !isPhoneNumberNotPrice(rawANum, text)) {
@@ -608,7 +606,7 @@ export function extractFallbackDataFromText(text: string): any {
   }
   // 1B. Sufijo: "$ 575.000 admón", "$1.175.000 administración"
   if (adminFee === 0) {
-    const adminSuffixMatch = clean.match(/\$?\s*([\d.]+)\s*(?:mil\b|\s*k\b)?\s*[:\/\-=\s]?\s*(?:adm|admon|administraci[oó]n|administ|admin)\b/i);
+    const adminSuffixMatch = clean.match(/\$?\s*([\d.]+)\s*(?:mil\b|\s*k\b)?\s*[:\/\-=\s]?\s*(?:adm|admon|admón|administraci[oó]n|administ|admin)\b/i);
     if (adminSuffixMatch) {
       const rawANum = parseFloat(adminSuffixMatch[1].replace(/\./g, ''));
       if (!isNaN(rawANum) && rawANum >= 10_000 && rawANum <= 30_000_000 && !isPhoneNumberNotPrice(rawANum, text)) {
@@ -617,7 +615,7 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
   if (adminFee === 0) {
-    const adminMilMatch = clean.match(/(?:admon|adm|admin|cuota)\s*[:\/\-=\s]?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:mil|k)\b/i);
+    const adminMilMatch = clean.match(/(?:^|[-•*#\s])(?:admon|adm[oó]n|adm|admin|cuota)\s*[:\/\-=\s]?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:mil|k)\b/i);
     if (adminMilMatch) {
       const numParsed = parseFloat(adminMilMatch[1].replace(',', '.'));
       if (!isNaN(numParsed) && numParsed >= 20 && numParsed <= 15000) {
@@ -650,10 +648,10 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // 4. Rango de Presupuesto en Demanda (ej: "Presupuesto 1.300 - 1.400", "entre 800 y 900 millones", "ppto 1200 a 1400", "800 a 1.200 millones")
+  // 4. Rango de Presupuesto en Demanda (ej: "Presupuesto 1.300 - 1.400", "de 14 o 15 millones", "entre 800 y 900 millones", "ppto 1200 a 1400", "800 a 1.200 millones")
   if (price === 0 && rentPrice === 0) {
-    const rangeMatch = clean.match(/(?:presupuesto|ppto|inversi[oó]n|compra)\s*:?\s*(?:entre\s+)?\$?\s*(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-|y)\s*\$?\s*(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i)
-                    || clean.match(/(?:entre\s+)\$?\s*(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-|y)\s*\$?\s*(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
+    const rangeMatch = clean.match(/(?:presupuesto|prespuesto|ppto|inversi[oó]n|compra)\s*:?\s*(?:entre\s+)?\$?\s*(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i)
+                    || clean.match(/(?:entre|de)\s+\$?\s*(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
     if (rangeMatch) {
       const isSale = transactionType !== "arriendo";
       presupuestoMin = parseColombianPriceOrBudget(rangeMatch[1], rangeMatch[3] || "", isSale);
@@ -665,19 +663,22 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // 5. Presupuesto Máximo con Prefijos (ej: "Presupuesto máximo de $800 mll", "Presupuesto: 1.500 millones máximo", "Hasta 4 millones", "Ppto max 12 MM", "Tope 6.5 millones")
+  // 5. Presupuesto Máximo con Prefijos (ej: "Prespuesto Máximo $ 540 millones", "Presupuesto máximo de $800 mll", "Presupuesto: 1.500 millones máximo", "Hasta 4 millones", "Ppto max 12 MM")
   if (price === 0 && rentPrice === 0) {
-    const ceilingMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|\bhasta\b|\btope\b|\btecho\b|\bl[ií]mite\b)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\$?\s*(\d+(?:[.,]\d+)*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+    const ceilingMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|prespuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|\btope\b|\btecho\b|\bl[ií]mite\b)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\$?\s*(\d+(?:[.,]\d+)*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
     if (ceilingMatch) {
-      const isSale = transactionType !== "arriendo";
-      const computed = parseColombianPriceOrBudget(ceilingMatch[1], ceilingMatch[2] || "", isSale);
-      if (computed > 0 && !isPhoneNumberNotPrice(computed, text)) {
-        if (transactionType === "arriendo" || computed <= 50_000_000) {
-          rentPrice = computed;
-        } else {
-          price = computed;
+      const afterText = clean.slice(clean.indexOf(ceilingMatch[0]) + ceilingMatch[0].length, clean.indexOf(ceilingMatch[0]) + ceilingMatch[0].length + 15);
+      if (!/años|anos|edad|antig/i.test(afterText)) {
+        const isSale = transactionType !== "arriendo";
+        const computed = parseColombianPriceOrBudget(ceilingMatch[1], ceilingMatch[2] || "", isSale);
+        if (computed > 0 && !isPhoneNumberNotPrice(computed, text)) {
+          if (transactionType === "arriendo" || computed <= 50_000_000) {
+            rentPrice = computed;
+          } else {
+            price = computed;
+          }
+          presupuestoMax = computed;
         }
-        presupuestoMax = computed;
       }
     }
   }

@@ -51,33 +51,38 @@ function getGeminiKeys(): string[] {
 }
 
 /**
- * FAILOVER SECUENCIAL DOCTRINAL (v31.62):
- * - Usa SIEMPRE la Clave #1 (Primaria) mientras esté disponible y con cuota.
- * - Si la Clave #1 se agota (429) o satura (503), pasa a la Clave #2.
- * - Si la #2 se agota, pasa a la Clave #3, y así sucesivamente.
- * - Cero Round-Robin: no desgasta todas las claves a la vez ni salta innecesariamente.
+ * POOL ROUND-ROBIN ACTIVO BALANCEADO (v31.67):
+ * - Rota equitativamente entre las 4 claves gratuitas disponibles (GEMINI_API_KEY_1..4).
+ * - Multiplica por 4 el rendimiento (hasta 60 RPM combinadas a $0 COP).
+ * - Si una clave topa cuota (429), entra en cooldown de 60s mientras las otras 3 siguen a máxima velocidad.
  */
-function getActiveFailoverKey(): { key: string; index: number } {
+let roundRobinIndex = 0;
+
+function getActiveRoundRobinKey(): { key: string; index: number } {
   const allKeys = getGeminiKeys();
   if (allKeys.length === 0) {
     throw new Error("No hay ninguna GEMINI_API_KEY configurada en el entorno.");
   }
 
   const now = Date.now();
-  // Buscar en orden de prioridad estricta la primera clave que NO esté en cooldown
-  for (let i = 0; i < allKeys.length; i++) {
-    const key = allKeys[i];
+  const total = allKeys.length;
+
+  // Buscar en ciclo Round-Robin la siguiente clave que NO esté en cooldown
+  for (let offset = 0; offset < total; offset++) {
+    const idx = (roundRobinIndex + offset) % total;
+    const key = allKeys[idx];
     const cooldownUntil = keyCooldowns.get(key) || 0;
     if (now > cooldownUntil) {
-      return { key, index: i + 1 };
+      roundRobinIndex = (idx + 1) % total; // Avanzar el puntero para la siguiente consulta
+      return { key, index: idx + 1 };
     }
   }
 
-  // Si todas las claves están en cooldown, seleccionar la que más pronto se descongele
+  // Si todas las claves están temporalmente en cooldown, seleccionar la que más pronto se descongele
   let bestKey = allKeys[0];
   let minCooldown = keyCooldowns.get(bestKey) || Infinity;
   let bestIdx = 1;
-  for (let i = 0; i < allKeys.length; i++) {
+  for (let i = 0; i < total; i++) {
     const k = allKeys[i];
     const cd = keyCooldowns.get(k) || Infinity;
     if (cd < minCooldown) {
@@ -88,6 +93,9 @@ function getActiveFailoverKey(): { key: string; index: number } {
   }
   return { key: bestKey, index: bestIdx };
 }
+
+// Alias para mantener compatibilidad
+const getActiveFailoverKey = getActiveRoundRobinKey;
 
 function markKeyCooldown(key: string, seconds: number = 60, reason: string = "Rate Limit (429)") {
   keyCooldowns.set(key, Date.now() + seconds * 1000);

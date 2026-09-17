@@ -167,7 +167,36 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.66 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.67 — Septiembre 2026
+
+### Novedades v31.67 (Pool Round-Robin Activo Balanceado de 4 Claves Gemini, Erradicación de Multiplicador x1000M en Precios/Edad, 'Valor admin' Oficial y Guillotina Financiera de Arriendo sin Canon):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Demanda #21 Mostrando $15.000.000.000 en Tabla de Cotejo*: En `parseColombianPriceOrBudget`, la regla `if (val < 30) return Math.round(val * 1_000_000_000)` multiplicaba cualquier entero menor de 30 por 1.000 millones. Al leer el texto *"Máximo 15 años ... Prespuesto Máximo $ 540 millones"*, el extractor tomó "15" (años de edad) y debido a la falta tipográfica en "Prespuesto" (sin 'u'), transformó 15 en 15 mil millones ($15.000.000.000), generando un falso match del 97% con una oferta de 980 millones.
+  2) *Propiedad #3047 (Chicó) vs Demanda #951 con 95% Match sin Precio*: La propiedad #3047 no tenía precio publicado (`rent_price = null`, `price = 0`) y la demanda pedía arriendo *"de 14 o 15 millones"*. En `matching.ts`, el filtro duro de arriendo solo bloqueaba si `propRent <= 0 && price > 100M`. Al ser 0 ambos, el canon evaluado fue 0, considerándolo falsamente dentro del presupuesto de 15M y otorgando 95% de afinidad.
+  3) *Claves 3 y 4 de Gemini Inactivas en Failover Pasivo*: En `v31.62` se implementó un failover secuencial donde la Clave 1 procesaba el 95% de las llamadas, dejando a las Claves 3 y 4 en desuso.
+  4) *Cuota de Administración en Oferta #3044 Mostrando 'N/E'*: El texto contenía `-ADMÓN: $1.471.000`. Los regex requerían prefijos de palabra sin soportar el guion inicial `-` ni la tilde en `admón`, omitiendo el valor al ingestar y en el cotejo.
+- **Acciones Ejecutadas**:
+  1) *Pool Round-Robin Activo Balanceado de 4 Claves en `llm.ts`*:
+     - Rota equitativamente entre las 4 claves gratuitas (`GEMINI_API_KEY_1..4`) en cada consulta sucesiva (`roundRobinIndex = (idx + 1) % total`).
+     - Cuadruplica el throughput hasta 60 RPM combinadas a $0 COP. Si alguna clave recibe 429, entra en cooldown individual de 60s mientras las otras 3 continúan sin pausas.
+  2) *Saneamiento Matemático de Precios y Blindaje Anti-Edad*:
+     - Erradicada la multiplicación por 1.000 millones para números enteros menores de 30 en `parseColombianPriceOrBudget` (`janIA.ts` y `AdminMatches.tsx`). Solo números acompañados explícitamente de "mil millones" o decimales como `1.5` se multiplican por mil millones.
+     - Añadido descarte de palabras de edad (`años`, `anos`, `edad`, `antigüedad`) para evitar capturar la edad del inmueble como presupuesto.
+     - Soporte para el error tipográfico `prespuesto` y rangos con `o` (`de 14 o 15 millones`).
+  3) *Guillotina Financiera Inmediata de Arriendo en `matching.ts`*:
+     - Si la oferta no tiene canon comercial válido (`propRent <= 0`), se bloquea inmediatamente al 0% (`Match Inviable`), idéntico a lo que rige para compras.
+  4) *Estandarización de 'Valor admin' y Etiquetas en `AdminMatches.tsx`*:
+     - Fila renombrada oficialmente a **"Valor admin"** (en desktop, modal de edición y móvil).
+     - Si la demanda no tiene tope de presupuesto, muestra `"Presupuesto Abierto"`. En "Valor admin", muestra `"Flexible / Sin restricción"` en demanda y `"Incluida en el canon"` o `"$X / mes"` en oferta.
+  5) *Saneamiento en Base de Datos VPS*:
+     - Corregido `req.id = 21` a `presupuestoMax = 540000000.00`.
+     - Corregido `prop.id = 3044` a `adminFee = 1471000.00`.
+     - Corregido `req.id = 951` a `presupuestoMax = 15000000.00`, `presupuestoMin = 14000000.00`.
+     - Purgados los matches espurios `13063` (prop 3044 vs req 21) y `13064/13065` (prop 3047 vs req 951).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.66 — Septiembre 2026
 
 ### Novedades v31.66 (Carga Instantánea Zero-Lag en Agenda, Yield Asíncrono no Bloqueante en Matching y Caché de Inmuebles en RAM):
 - **Diagnóstico y Causas Raíz Identificadas**:

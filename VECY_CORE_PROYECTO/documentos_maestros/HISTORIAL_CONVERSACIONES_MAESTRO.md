@@ -50,7 +50,54 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.64 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.67 — Septiembre 2026
+
+### 🗓️ Sesión: Miércoles 16 de Septiembre de 2026 — 20:45 (Hora Colombia UTC-5)
+**Versión**: `v31.67` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 Nativo + PM2 (`jania-server`) + GitHub (`main`) + React Vercel
+
+#### 🎯 Solicitud Exacta de Eduardo A. Rivera:
+1. *"Te pongo estas coincidencias como ejemplos, pero al parecer no lograste corregir el error o errores, en especial JanIA no está logrando poner los precios de VENTA o ARRIENDO según los que busca la DEMANDA y los que ofrece la OFETA. Seguimos con el mismo error. No se que hacer y aprovecha ver y analizar estos ejemplos a ver que otros errores retornaron y que ya habíamos corregido en el pasado pero que tu insistes en dejar que sigan prevaleciendo por la eternidad y que te niegas a erradicar."*
+2. *"Qué tal si a la lineas de OFERTA y DEMANDA que llamas 'Precio de Venta' o 'Precio de Arriendo' cada una introducida en la tabla de valores o de cotejo y su línea según corresponda si es OFERTA o DEMANDA y la de 'Administración' simplemente llámala 'Valor admin' y listo: Siempre si o si esos campos deben estar llenos y si la demanda dice 'Presupuesto Abierto' pues así tal cual lo colocas en el campo donde corresponda que por lo general es en la línea de Precio ... (Arriendo/Venta), lo mismo lo que diga la administración."*
+3. *"OJO!! Tu dices: Las claves de Gemini están respondiendo perfectamente: Clave #1 y Clave #2 ejecutando consultas en milisegundos. Yo pregunto y las claves 3 y 4 que hacen?? No trabajan o no son tenidas en cuanta para más velocidad, resultados exactos y ejecución en tiempos record ??"*
+4. Capturas adjuntas de la tabla de cotejo:
+   - Capturas 1 y 2: Oferta Bella Suiza ($980M) vs Demanda #21 (Presupuesto $540M) arrojando 97% Match y mostrando en Demanda `$15.000.000.000` (15 mil millones) y en Administración Oferta `N/E`.
+   - Capturas 3 y 4: Oferta Chicó #3047 (sin precio, 0) vs Demanda Virrey #951 (Arriendo 14-15M) arrojando 95% Match con `N/E` en ambos precios.
+
+#### 🔬 Diagnóstico Técnico Profundo y Causas Raíz Identificadas:
+1. **Error Matemático Crítico en `parseColombianPriceOrBudget` (Confusión de 15 Años con 15 Mil Millones)**:
+   - En `parseColombianPriceOrBudget`, existía la siguiente regla defectuosa: `if (val < 30) return Math.round(val * 1_000_000_000);`.
+   - En el Requerimiento #21, el texto decía: *"Máximo 15 años ... Prespuesto Máximo $ 540 millones"*.
+   - El texto contenía la errata "Prespuesto" (sin la letra 'u'). Al no coincidir con el regex estricto de `presupuesto`, el parser evaluó "15" (años de antigüedad). Al ser `val = 15 < 30`, ¡lo multiplicó por 1.000.000.000, asignando $15.000.000.000 (15 mil millones) a la demanda! Por ende, la oferta de 980M fue evaluada falsamente como "muy por debajo del presupuesto" y otorgó un 97% de afinidad espuria.
+2. **Falla en la Guillotina Financiera de Arriendos sin Canon en `matching.ts`**:
+   - Para ventas, si la oferta no tiene precio comercial, el match se bloquea al 0%.
+   - Sin embargo, para arriendos, la condición exigía `propRent <= 0 && price > 100M`. Cuando la propiedad #3047 tenía tanto `price = 0` como `rentPrice = null`, `totalRent` resultaba 0. Al comparar `totalRent (0) <= budgetMax (15M)`, el sistema consideró que cumplía el presupuesto y arrojó 95% Match ("Casi Perfecto").
+3. **Inactividad de Claves 3 y 4 de Gemini por Esquema de Failover Pasivo**:
+   - En `v31.62`, `getActiveFailoverKey()` siempre elegía la primera clave disponible (`i = 0`). La Clave 1 atendía el 95% de las llamadas, y la 2 entraba esporádicamente. Las Claves 3 y 4 permanecían inactivas sin contribuir a la velocidad ni al throughput.
+4. **Falla en Extracción de Cuota de Administración con Viñetas y Guiones**:
+   - La oferta #3044 tenía `-ADMÓN: $1.471.000`. Los regex exigían frontera de palabra o prefijos sin guion, ignorando el guion `-` inicial y la tilde en `admón`, dejando el campo en `NULL` / `N/E`.
+
+#### 🛠️ Acciones Técnicas Ejecutadas:
+1. **Pool Round-Robin Activo Balanceado de 4 Claves en `server/_core/llm.ts`**:
+   - Implementado `getActiveRoundRobinKey`: rota equitativamente entre las 4 claves gratuitas (`GEMINI_API_KEY_1..4`) en cada llamada consecutiva (`roundRobinIndex = (idx + 1) % total`).
+   - Las 4 claves trabajan al unísono, cuadruplicando el throughput hasta 60 RPM combinadas a costo $0 COP. Si una clave individual topa 429, entra en cooldown temporal de 60s mientras las otras 3 continúan sin demora.
+2. **Erradicación de Multiplicador x1.000M y Blindaje Anti-Edad**:
+   - En `server/_core/janIA.ts` y `client/src/components/admin/AdminMatches.tsx`, eliminado el multiplicador `val < 30 -> x1.000.000.000`. Ahora solo decimales explícitos (ej. `1.5 millones`) o menciones expresas de "mil millones / billones" multiplican por 1.000 millones.
+   - Si un número va precedido o seguido de palabras de edad (`años`, `anos`, `edad`, `antigüedad`), se ignora como precio.
+   - Soportado el error tipográfico `prespuesto` y rangos con conjunción disyuntiva (`de 14 o 15 millones`).
+3. **Guillotina Financiera Inmediata de Arriendo en `server/_core/matching.ts`**:
+   - Si la oferta no especifica canon comercial válido (`propRent <= 0`), el match se bloquea al 0% (`Match Inviable`), impidiendo matches sin precio contra demandas con presupuesto definido.
+4. **Renombrado Doctrinal de "Valor admin" y Etiquetas en `AdminMatches.tsx`**:
+   - Renombrada la fila a **"Valor admin"** en desktop, modal de edición y vista móvil.
+   - Si la demanda es flexible o no tiene tope, muestra `"Presupuesto Abierto"`. En "Valor admin", muestra `"Flexible / Sin restricción"` en demanda y `"Incluida en el canon"` o `"$X / mes"` en oferta.
+5. **Saneamiento Directo de Base de Datos PostgreSQL VPS**:
+   - Actualizado `req.id = 21` con `presupuestoMax = 540000000.00`.
+   - Actualizado `prop.id = 3044` con `adminFee = 1471000.00`.
+   - Actualizado `req.id = 951` con `presupuestoMax = 15000000.00` y `presupuestoMin = 14000000.00`.
+   - Purgados los registros de match espurios `13063` (prop 3044 vs req 21) y `13064/13065` (prop 3047 vs req 951).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.66 — Septiembre 2026
 
 ### 🗓️ Sesión: Miércoles 16 de Septiembre de 2026 — 18:45 (Hora Colombia UTC-5)
 **Versión**: `v31.66` | **Ambiente**: Producción VPS (`13.140.149.144`) + Carga Instantánea de Agenda (`Agenda.tsx`) + Yield Asíncrono no bloqueante en Matching (`matching.ts`) + Caché en Memoria de Propiedades (`properties.ts`) + PM2 (`jania-server`) + GitHub (`main`)

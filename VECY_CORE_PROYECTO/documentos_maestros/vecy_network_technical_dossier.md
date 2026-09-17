@@ -322,6 +322,29 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.67 — Septiembre 2026
+
+#### 📌 POOL ROUND-ROBIN ACTIVO BALANCEADO DE 4 CLAVES GEMINI, ERRADICACIÓN DE MULTIPLICADOR X1000M EN PRECIOS/EDAD, 'VALOR ADMIN' OFICIAL Y GUILLOTINA FINANCIERA DE ARRIENDO SIN CANON
+
+**Problemas identificados:**
+1. **Demanda #21 con $15.000.000.000 (15 Mil Millones) en Tabla de Cotejo**:
+   - `parseColombianPriceOrBudget` contenía la heurística `if (val < 30) return Math.round(val * 1_000_000_000)`. Al leer *"Máximo 15 años ... Prespuesto Máximo $ 540 millones"* con el typo "Prespuesto", tomó el 15 de los años y lo multiplicó por mil millones, generando un match falso del 97% contra una oferta de 980 millones.
+2. **Propiedad #3047 vs Demanda #951 con 95% Match sin Precio**:
+   - La propiedad no tenía precio (`price = 0`, `rent_price = null`). En `matching.ts`, la guillotina de arriendo no bloqueaba si `price` era 0, evaluando un canon de $0 como dentro del presupuesto de 15 millones.
+3. **Claves 3 y 4 de Gemini Inactivas**:
+   - El failover secuencial previo concentraba el tráfico en la Clave 1, desaprovechando las Claves 3 y 4.
+4. **Cuota de Administración Omitida con Guiones o Viñetas**:
+   - Textos como `-ADMÓN: $1.471.000` no eran capturados por los regex, resultando en `N/E`.
+
+**Solución aplicada:**
+- **Pool Round-Robin Activo Balanceado de 4 Claves**: `getActiveRoundRobinKey` rota equitativamente entre las 4 claves gratuitas (`GEMINI_API_KEY_1..4`), alcanzando hasta 60 RPM combinadas a costo $0 COP. Cooldown de 60s por clave individual ante error 429.
+- **Saneamiento Matemático de Precios**: Eliminado el multiplicador `val < 30 -> x1000M`. Soportado el typo `prespuesto`, rangos con `o` (`de 14 o 15 millones`) y descarte explícito de palabras de edad (`años`, `edad`).
+- **Guillotina Financiera Inmediata de Arriendo**: Bloqueo absoluto al 0% (`Match Inviable`) si la oferta no tiene canon comercial válido.
+- **Estandarización 'Valor admin'**: Renombrada la fila a "Valor admin" en la tabla de cotejo, modal de edición y móvil, con textos claros como "Presupuesto Abierto" y "Flexible / Sin restricción".
+- **Saneamiento de Base de Datos**: Corregidos `req.id = 21` ($540M), `prop.id = 3044` ($1.471.000 admin), `req.id = 951` ($15M canon) y eliminados matches espurios.
+
+---
+
 ### 🔖 v31.66 — Septiembre 2026
 
 #### 📌 CARGA INSTANTÁNEA ZERO-LAG EN FORMULARIO DE AGENDAMIENTO, YIELD ASÍNCRONO EN MOTOR DE MATCHING Y CACHÉ EN MEMORIA DE PROPIEDADES

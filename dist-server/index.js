@@ -732,23 +732,26 @@ function getGeminiKeys() {
   }
   return Array.from(keysSet);
 }
-function getActiveFailoverKey() {
+function getActiveRoundRobinKey() {
   const allKeys = getGeminiKeys();
   if (allKeys.length === 0) {
     throw new Error("No hay ninguna GEMINI_API_KEY configurada en el entorno.");
   }
   const now = Date.now();
-  for (let i = 0; i < allKeys.length; i++) {
-    const key = allKeys[i];
+  const total = allKeys.length;
+  for (let offset = 0; offset < total; offset++) {
+    const idx = (roundRobinIndex + offset) % total;
+    const key = allKeys[idx];
     const cooldownUntil = keyCooldowns.get(key) || 0;
     if (now > cooldownUntil) {
-      return { key, index: i + 1 };
+      roundRobinIndex = (idx + 1) % total;
+      return { key, index: idx + 1 };
     }
   }
   let bestKey = allKeys[0];
   let minCooldown = keyCooldowns.get(bestKey) || Infinity;
   let bestIdx = 1;
-  for (let i = 0; i < allKeys.length; i++) {
+  for (let i = 0; i < total; i++) {
     const k = allKeys[i];
     const cd = keyCooldowns.get(k) || Infinity;
     if (cd < minCooldown) {
@@ -902,12 +905,14 @@ async function invokeClaude(messages2, responseFormat) {
   console.log("[JanIA-LLM] Intentando procesar con Claude (Anthropic)...");
   throw new Error("El proveedor Anthropic est\xE1 preparado en c\xF3digo pero requiere API KEY y activaci\xF3n financiera.");
 }
-var keyCooldowns, FALLBACK_MODELS, lastCallTimestamp, MIN_CALL_INTERVAL_MS;
+var keyCooldowns, roundRobinIndex, getActiveFailoverKey, FALLBACK_MODELS, lastCallTimestamp, MIN_CALL_INTERVAL_MS;
 var init_llm = __esm({
   "server/_core/llm.ts"() {
     "use strict";
     init_env();
     keyCooldowns = /* @__PURE__ */ new Map();
+    roundRobinIndex = 0;
+    getActiveFailoverKey = getActiveRoundRobinKey;
     FALLBACK_MODELS = [
       "gemini-3.6-flash",
       "gemini-flash-latest",
@@ -5708,8 +5713,8 @@ function explicarMatch(requirement, property) {
       const isPropAdminIncluded = (property.rawText || "").toLowerCase().includes("incluida la administraci") || (property.rawText || "").toLowerCase().includes("incluida administraci") || (property.rawText || "").toLowerCase().includes("admon incluida") || (property.rawText || "").toLowerCase().includes("administracion incluida") || (property.rawText || "").toLowerCase().includes("con admon") || (property.rawText || "").toLowerCase().includes("con administraci\xF3n");
       const adminVal = !isPropAdminIncluded && pAdminFee > 0 ? pAdminFee : 0;
       const totalRent = propRent + adminVal;
-      if (propRent <= 0 && price > 1e8) {
-        blockers.push(`Guillotina Financiera (Tolerancia Cero): La oferta no especifica canon de arriendo y su precio de venta ($${price.toLocaleString()}) no aplica para una b\xFAsqueda de arriendo de $${budgetMax.toLocaleString()}`);
+      if (propRent <= 0) {
+        blockers.push(`Guillotina Financiera (Tolerancia Cero): La oferta no especifica canon de arriendo comercial v\xE1lido (N/E) para contrastar con el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}. Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
       const budgetMin2 = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
@@ -7654,23 +7659,17 @@ function parseColombianPriceOrBudget(numStr, unit, isSale) {
       }
       return Math.round(val);
     }
-    if (val < 100 && isSale && val > 0) {
-      if (val < 30) {
-        return Math.round(val * 1e9);
-      }
+    if (val < 10 && val > 0 && cleanStr.includes(".")) {
+      return Math.round(val * 1e9);
+    }
+    if (val >= 10 && val < 100 && isSale) {
       return Math.round(val * 1e7);
     }
     return Math.round(val * 1e6);
   }
-  if (val <= 50 && isSale) {
-    return Math.round(val * 1e9);
-  }
-  if (val <= 50 && !isSale) {
-    return Math.round(val * 1e6);
-  }
   if (val < 1e4) {
     if (!isSale) return Math.round(val * 1e3);
-    return Math.round(val * 1e6);
+    if (val >= 100) return Math.round(val * 1e6);
   }
   if (isSale && val >= 3e5 && val <= 3e7) {
     return Math.round(val * 1e3);
@@ -7723,7 +7722,7 @@ function extractFallbackDataFromText(text2) {
   let presupuestoMax = 0;
   let rentPrice = 0;
   let adminFee = 0;
-  const adminMatch = clean.match(/(?:v\s*[\/\-]\s*)?(?:adm|admon|administraci[oó]n|administ|admin|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*[:\/\-=\s]?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
+  const adminMatch = clean.match(/(?:^|[-•*#\s])(?:v\s*[\/\-]\s*)?(?:adm[oó]n|admon|administraci[oó]n|administ|admin|cta\s*adm[oó]n|cuota\s*adm[oó]n)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*[:\/\-=\s]?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
   if (adminMatch) {
     const rawANum = parseFloat(adminMatch[1].replace(/\./g, ""));
     if (!isNaN(rawANum) && rawANum >= 1e4 && rawANum <= 3e7 && !isPhoneNumberNotPrice(rawANum, text2)) {
@@ -7731,7 +7730,7 @@ function extractFallbackDataFromText(text2) {
     }
   }
   if (adminFee === 0) {
-    const adminSuffixMatch = clean.match(/\$?\s*([\d.]+)\s*(?:mil\b|\s*k\b)?\s*[:\/\-=\s]?\s*(?:adm|admon|administraci[oó]n|administ|admin)\b/i);
+    const adminSuffixMatch = clean.match(/\$?\s*([\d.]+)\s*(?:mil\b|\s*k\b)?\s*[:\/\-=\s]?\s*(?:adm|admon|admón|administraci[oó]n|administ|admin)\b/i);
     if (adminSuffixMatch) {
       const rawANum = parseFloat(adminSuffixMatch[1].replace(/\./g, ""));
       if (!isNaN(rawANum) && rawANum >= 1e4 && rawANum <= 3e7 && !isPhoneNumberNotPrice(rawANum, text2)) {
@@ -7740,7 +7739,7 @@ function extractFallbackDataFromText(text2) {
     }
   }
   if (adminFee === 0) {
-    const adminMilMatch = clean.match(/(?:admon|adm|admin|cuota)\s*[:\/\-=\s]?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:mil|k)\b/i);
+    const adminMilMatch = clean.match(/(?:^|[-•*#\s])(?:admon|adm[oó]n|adm|admin|cuota)\s*[:\/\-=\s]?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:mil|k)\b/i);
     if (adminMilMatch) {
       const numParsed = parseFloat(adminMilMatch[1].replace(",", "."));
       if (!isNaN(numParsed) && numParsed >= 20 && numParsed <= 15e3) {
@@ -7769,7 +7768,7 @@ function extractFallbackDataFromText(text2) {
     }
   }
   if (price === 0 && rentPrice === 0) {
-    const rangeMatch = clean.match(/(?:presupuesto|ppto|inversi[oó]n|compra)\s*:?\s*(?:entre\s+)?\$?\s*(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-|y)\s*\$?\s*(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i) || clean.match(/(?:entre\s+)\$?\s*(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-|y)\s*\$?\s*(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
+    const rangeMatch = clean.match(/(?:presupuesto|prespuesto|ppto|inversi[oó]n|compra)\s*:?\s*(?:entre\s+)?\$?\s*(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i) || clean.match(/(?:entre|de)\s+\$?\s*(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
     if (rangeMatch) {
       const isSale = transactionType !== "arriendo";
       presupuestoMin = parseColombianPriceOrBudget(rangeMatch[1], rangeMatch[3] || "", isSale);
@@ -7781,17 +7780,20 @@ function extractFallbackDataFromText(text2) {
     }
   }
   if (price === 0 && rentPrice === 0) {
-    const ceilingMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|\bhasta\b|\btope\b|\btecho\b|\bl[ií]mite\b)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\$?\s*(\d+(?:[.,]\d+)*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+    const ceilingMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|prespuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|\btope\b|\btecho\b|\bl[ií]mite\b)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\$?\s*(\d+(?:[.,]\d+)*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
     if (ceilingMatch) {
-      const isSale = transactionType !== "arriendo";
-      const computed = parseColombianPriceOrBudget(ceilingMatch[1], ceilingMatch[2] || "", isSale);
-      if (computed > 0 && !isPhoneNumberNotPrice(computed, text2)) {
-        if (transactionType === "arriendo" || computed <= 5e7) {
-          rentPrice = computed;
-        } else {
-          price = computed;
+      const afterText = clean.slice(clean.indexOf(ceilingMatch[0]) + ceilingMatch[0].length, clean.indexOf(ceilingMatch[0]) + ceilingMatch[0].length + 15);
+      if (!/años|anos|edad|antig/i.test(afterText)) {
+        const isSale = transactionType !== "arriendo";
+        const computed = parseColombianPriceOrBudget(ceilingMatch[1], ceilingMatch[2] || "", isSale);
+        if (computed > 0 && !isPhoneNumberNotPrice(computed, text2)) {
+          if (transactionType === "arriendo" || computed <= 5e7) {
+            rentPrice = computed;
+          } else {
+            price = computed;
+          }
+          presupuestoMax = computed;
         }
-        presupuestoMax = computed;
       }
     }
   }
@@ -16043,7 +16045,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.66";
+var VECY_VERSION = "v31.67";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -19235,6 +19237,25 @@ function parsePropertyDeterministically(text2) {
       if (!isNaN(parsed) && parsed > 1e5) price = String(parsed);
     }
   }
+  let rentPrice = "0";
+  if (transactionType === "arriendo") {
+    const canonM = norm2.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|vr\s*[\.\/]?\s*renta|renta|arriendo)\s*[:\/\-=\s]?\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+    if (canonM) {
+      const cleanNum = canonM[1].replace(/\./g, "").replace(/\,/g, "").trim();
+      const parsed = parseInt(cleanNum, 10);
+      if (!isNaN(parsed) && parsed >= 3e5 && parsed <= 1e8) {
+        rentPrice = String(parsed);
+      }
+    }
+  }
+  let adminFee = "0";
+  const admM = norm2.match(/(?:^|[-•*#\s])(?:v\s*[\/\-]\s*)?(?:adm[oó]n|admon|administraci[oó]n|administ|admin|cta\s*adm[oó]n|cuota\s*adm[oó]n)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*[:\/\-=\s]?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
+  if (admM) {
+    const rawANum = parseFloat(admM[1].replace(/\./g, ""));
+    if (!isNaN(rawANum) && rawANum >= 1e4 && rawANum <= 3e7) {
+      adminFee = String(rawANum);
+    }
+  }
   let areaConstruida = "";
   const acM = norm2.match(/(?:area construida|area total|construida)[\s\:\*]*([0-9]+(?:\.[0-9]+)?)\s*m/i) || norm2.match(/([0-9]+(?:\.[0-9]+)?)\s*m[2²]/i);
   if (acM) areaConstruida = acM[1];
@@ -19340,6 +19361,8 @@ function parsePropertyDeterministically(text2) {
     isSubtipoComercial,
     transactionType,
     price,
+    rentPrice: rentPrice !== "0" ? rentPrice : void 0,
+    adminFee: adminFee !== "0" ? adminFee : void 0,
     areaTotal: areaConstruida || "",
     areaConstruida: areaConstruida || "",
     areaPrivada: areaPrivada || "",

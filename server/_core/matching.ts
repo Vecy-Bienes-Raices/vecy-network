@@ -2378,8 +2378,8 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
       const adminVal = (!isPropAdminIncluded && pAdminFee > 0) ? pAdminFee : 0;
       const totalRent = propRent + adminVal;
 
-      if (propRent <= 0 && price > 100000000) {
-        blockers.push(`Guillotina Financiera (Tolerancia Cero): La oferta no especifica canon de arriendo y su precio de venta ($${price.toLocaleString()}) no aplica para una búsqueda de arriendo de $${budgetMax.toLocaleString()}`);
+      if (propRent <= 0) {
+        blockers.push(`Guillotina Financiera (Tolerancia Cero): La oferta no especifica canon de arriendo comercial válido (N/E) para contrastar con el presupuesto máximo de $${budgetMax.toLocaleString()}. Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
 
