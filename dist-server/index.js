@@ -9669,6 +9669,50 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         },
         mentions: []
       };
+    } else if (!isWebUser && !imageBuffer && !pdfBuffer && !isFromAudio && !isReplicationRequest && !isValuationQuery && !isLegalQuery && groupJid !== "120363388701980315@g.us" && groupJid !== "120363386903264426@g.us" && (() => {
+      const cleanLower = messageToProcess.toLowerCase();
+      const detData = extractFallbackDataFromText(messageToProcess);
+      const isDetDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
+      const hasDetPropType = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanLower);
+      const hasDetTx = /\b(?:arriendo|arrienda|renta|rento|rentamos|alquilo|alquiler|canon|vendo|venta|vende|permuta)\b/i.test(cleanLower);
+      const isHighConfidenceListing = hasDetPropType && hasDetTx && (detData.price > 0 || detData.rentPrice > 0 || detData.area > 0 || detData.bedrooms > 0);
+      const isHighConfidenceDemand = isDetDemand && (hasDetPropType || detData.presupuestoMax > 0);
+      return isHighConfidenceListing || isHighConfidenceDemand;
+    })()) {
+      const cleanLower = messageToProcess.toLowerCase();
+      const detData = extractFallbackDataFromText(messageToProcess);
+      const isDetDemand = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprador|comprar|para cliente|cliente busca|en búsqueda|en busqueda)\b/i.test(cleanLower);
+      const isRent = detData.transactionType === "arriendo" || cleanLower.includes("arriendo") || cleanLower.includes("canon") || cleanLower.includes("renta") || cleanLower.includes("alquiler");
+      const isPermuta = detData.transactionType.includes("permuta");
+      const classification = isDetDemand ? "REQUERIMIENTO" : "INMUEBLE";
+      const emoji = classification === "INMUEBLE" ? isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}" : isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
+      console.log(`[JanIA] \u26A1 Fast-Path Determinista Activado (0ms, $0 COP): Publicaci\xF3n '${classification}' estructurada directamente sin consumir cuota LLM.`);
+      result = {
+        classification,
+        response: "",
+        reactionEmoji: emoji,
+        extractedData: {
+          title: detData.name || (classification === "INMUEBLE" ? `Inmueble en ${detData.city || "Bogot\xE1"}` : `Requerimiento en ${detData.city || "Bogot\xE1"}`),
+          propertyType: detData.propertyType || "apartment",
+          transactionType: isRent ? "arriendo" : isPermuta ? "permuta" : "venta",
+          price: detData.price,
+          rentPrice: detData.rentPrice,
+          adminFee: detData.adminFee,
+          presupuestoMax: detData.presupuestoMax,
+          presupuestoMin: detData.presupuestoMin,
+          adminFeeMax: detData.adminFee,
+          area: detData.area,
+          bedrooms: detData.bedrooms,
+          bathrooms: detData.bathrooms,
+          garages: detData.garages,
+          stratum: detData.stratum,
+          city: detData.city || "Bogot\xE1, D.C.",
+          zone: detData.neighborhood || "Bogot\xE1",
+          contactPhone: rawPhone,
+          rawText: messageToProcess
+        },
+        mentions: []
+      };
     } else {
       const response = await invokeLLM({
         messages: llmMessages,
