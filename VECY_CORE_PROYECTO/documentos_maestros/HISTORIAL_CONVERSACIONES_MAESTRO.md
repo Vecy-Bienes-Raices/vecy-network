@@ -103,7 +103,12 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 10. **Watchdog y Supervisor Autónomo de Salud en VPS (`scripts/health-monitor.sh`)**:
     - Script supervisor configurado en el crontab del VPS cada 3 minutos (`*/3 * * * *`).
     - Monitorea automáticamente PostgreSQL local, estado online de PM2 y latencia del endpoint HTTP. Auto-recuperación sin intervención manual.
-11. **Incremento de Versión y Despliegue en Producción**:
+11. **Garantía Doctrinal de Emojis de Permuta en WhatsApp (`whatsapp-match.ts`)**:
+    - Se incorporaron las señales de permuta (`hasPermutaSignal`) en la Prioridad 3 de `getReactionEmoji` (`🔀` para Oferta con Permuta y `🔄` para Demanda con Permuta).
+12. **Homologación de Nombres Compuestos Colombianos (`extractFirstName` en `janIA.ts`)**:
+    - Se expandió `COMMON_FIRST_NAMES` incorporando nombres tradicionales (ej. Orlando, Guillermo, Enrique, etc.), permitiendo que "José Orlando", "Juan Pablo", "Maria Fernanda" y "Andrés Camilo" se traten con cortesía de doble nombre en la interlocución de JanIA.
+    - Se agregaron 4 nuevas pruebas a la suite de regresión, elevando la cobertura a **32/32 pruebas aprobadas al 100%**.
+13. **Incremento de Versión y Despliegue en Producción**:
     - Versión oficial **`v31.68`** compilada, probada y desplegada en producción.
 
 ---
