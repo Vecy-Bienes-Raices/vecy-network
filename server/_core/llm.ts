@@ -223,20 +223,21 @@ async function invokeGemini(
   }
 
   let lastError: any = null;
+  const targetModels = modelsToTry.slice(0, 2);
 
-  for (const currentModel of modelsToTry) {
-    // Intentar a través de las claves disponibles en cascada secuencial
-    for (let keyAttempt = 0; keyAttempt < Math.max(allKeys.length, 1); keyAttempt++) {
+  for (const currentModel of targetModels) {
+    // Intentar a través de máximo 2 claves sanas del Pool
+    for (let keyAttempt = 0; keyAttempt < Math.min(allKeys.length, 2); keyAttempt++) {
       const { key: activeKey, index: keyNum } = getActiveFailoverKey();
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${activeKey}`;
 
-      for (let attempt = 1; attempt <= 2; attempt++) {
+      for (let attempt = 1; attempt <= 1; attempt++) {
         try {
           await paceRequest();
-          console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (Clave #${keyNum}: ...${activeKey.slice(-6)}, Intento ${attempt})...`);
+          console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (Clave #${keyNum}: ...${activeKey.slice(-6)})...`);
           
-          // Timeout seguro de 25 segundos: permite procesar prompts complejos de 25k tokens sin abortar prematuramente
-          const response = await axios.post(apiUrl, payload, { timeout: 25000 });
+          // Timeout seguro de 12 segundos: si Google tarda, no bloquea el servidor ni causa 504 a la web
+          const response = await axios.post(apiUrl, payload, { timeout: 12000 });
 
           if (response.data.candidates && response.data.candidates[0]) {
             const firstPart = response.data.candidates[0].content?.parts?.[0];

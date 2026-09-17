@@ -840,15 +840,16 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
     payload.tools = [{ googleSearch: {} }];
   }
   let lastError = null;
-  for (const currentModel of modelsToTry) {
-    for (let keyAttempt = 0; keyAttempt < Math.max(allKeys.length, 1); keyAttempt++) {
+  const targetModels = modelsToTry.slice(0, 2);
+  for (const currentModel of targetModels) {
+    for (let keyAttempt = 0; keyAttempt < Math.min(allKeys.length, 2); keyAttempt++) {
       const { key: activeKey, index: keyNum } = getActiveFailoverKey();
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${activeKey}`;
-      for (let attempt = 1; attempt <= 2; attempt++) {
+      for (let attempt = 1; attempt <= 1; attempt++) {
         try {
           await paceRequest();
-          console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (Clave #${keyNum}: ...${activeKey.slice(-6)}, Intento ${attempt})...`);
-          const response = await axios2.post(apiUrl, payload, { timeout: 25e3 });
+          console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (Clave #${keyNum}: ...${activeKey.slice(-6)})...`);
+          const response = await axios2.post(apiUrl, payload, { timeout: 12e3 });
           if (response.data.candidates && response.data.candidates[0]) {
             const firstPart = response.data.candidates[0].content?.parts?.[0];
             if (firstPart) {
@@ -3772,6 +3773,9 @@ function esFormatoCuadrante(texto) {
 }
 function parseStreetCarreraBoundaries(text2) {
   const norm2 = String(text2 || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (!norm2 || norm2.length < 5) return {};
+  const cached = boundariesCache.get(norm2);
+  if (cached) return cached;
   const res = {};
   const explicitStreetRegex = /(?:entre|de)?\s*(?:la|las)?\s*(?:calle|calles|clle|cll|cna)\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(?:calle|calles|clle|cll|cna)?\s*(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano|alcoba|parqueadero))/i;
   let streetMatch = norm2.match(explicitStreetRegex);
@@ -3839,6 +3843,11 @@ function parseStreetCarreraBoundaries(text2) {
   } else if (norm2.includes("abajo de la septima") || norm2.includes("abajo de la 7")) {
     if (!res.minCarrera) res.minCarrera = 7;
   }
+  if (boundariesCache.size >= MAX_BOUNDARIES_CACHE) {
+    const firstKey = boundariesCache.keys().next().value;
+    if (firstKey) boundariesCache.delete(firstKey);
+  }
+  boundariesCache.set(norm2, res);
   return res;
 }
 function parsePropertyAddressNumbers(text2) {
@@ -6240,8 +6249,8 @@ async function findMatchesForProperty(propertyId) {
     let compCounter = 0;
     for (const req of activeRequirements) {
       compCounter++;
-      if (compCounter % 15 === 0) {
-        await new Promise((r) => setImmediate(r));
+      if (compCounter % 20 === 0) {
+        await new Promise((r) => setTimeout(r, 10));
       }
       if (rejectedSet.has(`${propertyId}_${req.id}`)) {
         if (existingMatchesMap.has(req.id)) {
@@ -6316,8 +6325,8 @@ async function findMatchesForRequirement(requirementId) {
     let propCompCounter = 0;
     for (const prop of availableProperties) {
       propCompCounter++;
-      if (propCompCounter % 15 === 0) {
-        await new Promise((r) => setImmediate(r));
+      if (propCompCounter % 20 === 0) {
+        await new Promise((r) => setTimeout(r, 10));
       }
       if (rejectedSet.has(`${prop.id}_${requirementId}`)) {
         if (existingMatchesMap.has(prop.id)) {
@@ -6436,7 +6445,7 @@ function buildBigTechAdminReport(prop, req, score) {
 
 \u{1F449} Ver en el panel web: https://vecy-network.vercel.app/admin`;
 }
-var cachedRejectedPairs, lastRejectedPairsFetch, REJECTED_PAIRS_TTL_MS, TRANSACTION_COMPATIBILITY_MATRIX, KNOWN_BARRIOS_CANONICAL, BOGOTA_BARRIO_STREET_BOUNDS;
+var cachedRejectedPairs, lastRejectedPairsFetch, REJECTED_PAIRS_TTL_MS, TRANSACTION_COMPATIBILITY_MATRIX, boundariesCache, MAX_BOUNDARIES_CACHE, KNOWN_BARRIOS_CANONICAL, BOGOTA_BARRIO_STREET_BOUNDS;
 var init_matching = __esm({
   "server/_core/matching.ts"() {
     "use strict";
@@ -6459,6 +6468,8 @@ var init_matching = __esm({
       venta_permuta: /* @__PURE__ */ new Set(["venta_permuta", "permuta"]),
       aporte: /* @__PURE__ */ new Set(["aporte"])
     };
+    boundariesCache = /* @__PURE__ */ new Map();
+    MAX_BOUNDARIES_CACHE = 2500;
     KNOWN_BARRIOS_CANONICAL = [
       "santa b\xE1rbara occidental",
       "santa barbara occidental",

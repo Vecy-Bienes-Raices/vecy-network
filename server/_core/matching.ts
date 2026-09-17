@@ -316,8 +316,16 @@ export function esFormatoCuadrante(texto: string): boolean {
   );
 }
 
+const boundariesCache = new Map<string, StreetCarreraBoundaries>();
+const MAX_BOUNDARIES_CACHE = 2500;
+
 export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundaries {
   const norm = String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (!norm || norm.length < 5) return {};
+
+  const cached = boundariesCache.get(norm);
+  if (cached) return cached;
+
   const res: StreetCarreraBoundaries = {};
 
   // 1. Rango de Calles:
@@ -404,6 +412,12 @@ export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundar
   } else if (norm.includes("abajo de la septima") || norm.includes("abajo de la 7")) {
     if (!res.minCarrera) res.minCarrera = 7;
   }
+
+  if (boundariesCache.size >= MAX_BOUNDARIES_CACHE) {
+    const firstKey = boundariesCache.keys().next().value;
+    if (firstKey) boundariesCache.delete(firstKey);
+  }
+  boundariesCache.set(norm, res);
 
   return res;
 }
@@ -3174,8 +3188,8 @@ export async function findMatchesForProperty(propertyId: number) {
     let compCounter = 0;
     for (const req of activeRequirements) {
       compCounter++;
-      if (compCounter % 15 === 0) {
-        await new Promise(r => setImmediate(r));
+      if (compCounter % 20 === 0) {
+        await new Promise(r => setTimeout(r, 10));
       }
 
       if (rejectedSet.has(`${propertyId}_${req.id}`)) {
@@ -3272,8 +3286,8 @@ export async function findMatchesForRequirement(requirementId: number) {
     let propCompCounter = 0;
     for (const prop of availableProperties) {
       propCompCounter++;
-      if (propCompCounter % 15 === 0) {
-        await new Promise(r => setImmediate(r));
+      if (propCompCounter % 20 === 0) {
+        await new Promise(r => setTimeout(r, 10));
       }
 
       if (rejectedSet.has(`${prop.id}_${requirementId}`)) {
