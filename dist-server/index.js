@@ -12269,7 +12269,49 @@ var init_janIA = __esm({
       "olga",
       "luz",
       "stella",
-      "estela"
+      "estela",
+      // Nombres compuestos tradicionales colombianos
+      "orlando",
+      "guillermo",
+      "enrique",
+      "antonio",
+      "ignacio",
+      "ramiro",
+      "gonzalo",
+      "rodrigo",
+      "armando",
+      "alfredo",
+      "eugenio",
+      "gabriel",
+      "dario",
+      "dar\xEDo",
+      "vicente",
+      "francisco",
+      "gerardo",
+      "leonardo",
+      "raul",
+      "ra\xFAl",
+      "rafael",
+      "alonso",
+      "alfonso",
+      "mercedes",
+      "eugenia",
+      "victoria",
+      "andrea",
+      "daniela",
+      "camila",
+      "valentina",
+      "gabriela",
+      "catalina",
+      "juliana",
+      "luciana",
+      "mariana",
+      "natalia",
+      "vanessa",
+      "lorena",
+      "viviana",
+      "ximena",
+      "jimena"
     ]);
     GREETED_TODAY = /* @__PURE__ */ new Map();
     REPUTATION_HOOK = "\u26A0\uFE0F *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnol\xF3gico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexi\xF3n privada de JanIA, ser\xEDa un verdadero honor para nosotros que nos compartieras tu testimonio y calificaci\xF3n de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
@@ -14231,12 +14273,15 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
         }
         const lowerRaw = textToCheck.toLowerCase();
         const hasPropType = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(lowerRaw);
+        const hasPermutaSignal = /\b(?:permuta|permuto|permutas|permutamos|se permuta|recibo menor|recibo vehiculo|recibo vehículo|recibe menor|pelo a pelo)\b/i.test(lowerRaw);
         const hasRentSignal = /\b(?:renta|arriendo|alquilo|alquiler|canon)\b/i.test(lowerRaw);
         const hasDemandSignal = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|cliente busca)\b/i.test(lowerRaw);
-        if (hasPropType) {
+        if (hasPropType || hasPermutaSignal) {
           if (hasDemandSignal) {
+            if (hasPermutaSignal) return "\u{1F504}";
             return hasRentSignal ? "\u270F\uFE0F" : "\u{1F4DD}";
           } else {
+            if (hasPermutaSignal) return "\u{1F500}";
             return hasRentSignal ? "\u{1F44C}" : "\u{1F44D}";
           }
         }

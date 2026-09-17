@@ -193,7 +193,14 @@ const COMMON_FIRST_NAMES = new Set([
   "mateo", "sebastian", "sebastián", "nicolas", "nicolás", "daniel", "cristian",
   "jhon", "john", "alexander", "gustavo", "hernando", "alvaro", "álvaro", "humberto",
   "jaime", "ricardo", "mauricio", "cesar", "césar", "nelson", "ruben", "rubén",
-  "ivan", "iván", "wilson", "olga", "luz", "stella", "estela"
+  "ivan", "iván", "wilson", "olga", "luz", "stella", "estela",
+  // Nombres compuestos tradicionales colombianos
+  "orlando", "guillermo", "enrique", "antonio", "ignacio", "ramiro", "gonzalo",
+  "rodrigo", "armando", "alfredo", "eugenio", "gabriel", "dario", "darío",
+  "vicente", "francisco", "gerardo", "leonardo", "raul", "raúl", "rafael",
+  "alonso", "alfonso", "mercedes", "eugenia", "victoria", "andrea", "daniela",
+  "camila", "valentina", "gabriela", "catalina", "juliana", "luciana", "mariana",
+  "natalia", "vanessa", "lorena", "viviana", "ximena", "jimena"
 ]);
 
 export function extractFirstName(fullName: string): string {

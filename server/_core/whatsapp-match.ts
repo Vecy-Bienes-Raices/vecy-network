@@ -1583,14 +1583,17 @@ export class JaniaMatchBot {
     // ── PRIORIDAD 3: Respaldo para publicaciones inmobiliarias concisas (incluso si classification fue CONSULTA_GENERAL) ──
     const lowerRaw = textToCheck.toLowerCase();
     const hasPropType = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(lowerRaw);
+    const hasPermutaSignal = /\b(?:permuta|permuto|permutas|permutamos|se permuta|recibo menor|recibo vehiculo|recibo vehículo|recibe menor|pelo a pelo)\b/i.test(lowerRaw);
     const hasRentSignal = /\b(?:renta|arriendo|alquilo|alquiler|canon)\b/i.test(lowerRaw);
     const hasDemandSignal = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|cliente busca)\b/i.test(lowerRaw);
 
-    if (hasPropType) {
+    if (hasPropType || hasPermutaSignal) {
       if (hasDemandSignal) {
-        return hasRentSignal ? '✏️' : '📝';
+        if (hasPermutaSignal) return '🔄'; // Demanda con Permuta
+        return hasRentSignal ? '✏️' : '📝'; // Demanda Arriendo / Venta
       } else {
-        return hasRentSignal ? '👌' : '👍';
+        if (hasPermutaSignal) return '🔀'; // Oferta con Permuta
+        return hasRentSignal ? '👌' : '👍'; // Oferta Arriendo / Venta
       }
     }
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseColombianPriceOrBudget, extractFallbackDataFromText } from "../_core/janIA";
+import { parseColombianPriceOrBudget, extractFallbackDataFromText, extractFirstName } from "../_core/janIA";
 import {
   checkTransactionCompatibility,
   isHollowListing,
@@ -286,4 +286,26 @@ describe("VECY NETWORK — SUITE DE REGRESIÓN DOCTRINAL AUTOMATIZADA", () => {
       expect(data.garages).toBe(3);
     });
   });
+
+  // ─────────────────────────────────────────────────────────────
+  // 6. NOMBRES COMPUESTOS COLOMBIANOS (extractFirstName)
+  // ─────────────────────────────────────────────────────────────
+  describe("6. Extracción de Nombres Compuestos Colombianos", () => {
+    it("debe reconocer Maria Fernanda como nombre compuesto", () => {
+      expect(extractFirstName("Maria Fernanda Gomez")).toBe("Maria Fernanda");
+    });
+
+    it("debe reconocer Juan Pablo como nombre compuesto", () => {
+      expect(extractFirstName("Juan Pablo Montoya")).toBe("Juan Pablo");
+    });
+
+    it("debe reconocer Andrés Camilo como nombre compuesto", () => {
+      expect(extractFirstName("Andrés Camilo Pérez")).toBe("Andrés Camilo");
+    });
+
+    it("debe reconocer José Orlando como nombre compuesto", () => {
+      expect(extractFirstName("José Orlando Riveros")).toBe("José Orlando");
+    });
+  });
 });
+
