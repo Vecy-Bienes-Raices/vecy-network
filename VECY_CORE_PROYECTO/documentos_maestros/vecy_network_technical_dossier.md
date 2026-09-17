@@ -322,6 +322,23 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.70 — Septiembre 2026
+
+#### 📌 AUTOCOMPLETADO DE NOMBRES REALES VERIFICADOS EN VECY AGENDA, EXTENSIÓN DE TIMEOUTS POLICIALES A 25S, DEBOUNCE AL DIGITAR Y BÚSQUEDA EN PROFILES
+
+**Problemas identificados:**
+1. **Timeouts Prematuros en Policía Nacional**: `queryPoliciaNacional` tenía timeouts de 8 segundos (`timeout: 8000`). Como los servidores de antecedentes de la Policía Nacional (`antecedentes.policia.gov.co:7005`) demoran 10-15s en responder, la petición arrojaba `HTTPS request timeout` y caía en el fallback de la línea 740.
+2. **Dígitos de Cédula como Nombre Oficial en Fallback**: En el fallback de `executeIdentityVerification`, la propiedad `officialName: (nombreIngresado || '').trim() || clean` devolvía los mismos dígitos de la cédula (`clean`) cuando `nombreIngresado` estaba vacío. En el frontend, `handleChange` sanitizaba el nombre para Persona Natural eliminando dígitos, dejando la casilla completamente vacía a pesar de que el badge se ponía verde con *"✓ Documento en formato válido (pendiente de cotejo en sede)"*.
+3. **Interacción con Google OAuth**: Cuando un usuario inicia sesión con Google, Supabase rellena inicialmente la casilla con su nombre de Google (`currentSession.user.user_metadata?.full_name`, ej: "Daniel Rivera"). Al ingresar la cédula oficial, se esperaba que el sistema completara su nombre legal completo (ej: "Daniel Eduardo Rivera Noguera").
+
+**Solución aplicada:**
+- **Elevación de Timeouts a 25s en Policía Nacional (`server/routers/agenda.ts`)**: Todas las fases de scraping pasaron de 8s/10s a 25s, permitiendo que la Policía Nacional resuelva el reCAPTCHA y devuelva el nombre completo oficial real sin fallar por red.
+- **Búsqueda Previa en Tabla `profiles` de PostgreSQL**: Añadida búsqueda en la tabla `profiles` por `numeroDocumento = clean` antes del scraper externo para resolver en 0ms.
+- **Blindaje Anti-Dígitos en Fallback**: Erradicada la asignación de dígitos de cédula a `officialName`.
+- **Verificación en Tiempo Real con Debounce (750ms) en `AgendaForm.jsx`**: Al terminar de digitar una cédula válida (6-10 dígitos), el sistema inicia la verificación automáticamente y autocompleta el nombre oficial legal sin obligar al usuario a hacer clic fuera de la casilla (`onBlur`).
+
+---
+
 ### 🔖 v31.69 — Septiembre 2026
 
 #### 📌 RESTAURACIÓN NATIVA DEL ENVÍO DE CORREOS Y CONTRATO DE PUNTAS COMPARTIDAS EN PDF (100% VPS — 0% SUPABASE)

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { desc, ilike, or, sql, eq } from "drizzle-orm";
 import { getDb } from "../db";
-import { solicitudes } from "../../drizzle/schema";
+import { solicitudes, profiles } from "../../drizzle/schema";
 import { TRPCError } from "@trpc/server";
 import { Solver } from "@2captcha/captcha-solver";
 import https from "https";
@@ -137,7 +137,7 @@ async function queryPoliciaNacional(tipoDocInput: string, cleanDoc: string): Pro
     const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36' };
 
     // 1. GET index.xhtml para inicializar sesión y cookies
-    const res1 = await requestHttps('https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml', { headers, timeout: 8000 }, jar);
+    const res1 = await requestHttps('https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml', { headers, timeout: 25000 }, jar);
     const vs1Match = res1.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res1.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
     const vs1 = vs1Match ? vs1Match[1] : null;
     if (!vs1) return { success: false };
@@ -164,7 +164,7 @@ async function queryPoliciaNacional(tipoDocInput: string, cleanDoc: string): Pro
         'Referer': 'https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml',
       },
       body: postTerms,
-      timeout: 8000,
+      timeout: 25000,
     }, jar);
 
     // 3. GET antecedentes.xhtml
@@ -173,7 +173,7 @@ async function queryPoliciaNacional(tipoDocInput: string, cleanDoc: string): Pro
         ...headers,
         'Referer': 'https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml',
       },
-      timeout: 8000,
+      timeout: 25000,
     }, jar);
 
     const vs3Match = res3.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res3.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
@@ -206,7 +206,7 @@ async function queryPoliciaNacional(tipoDocInput: string, cleanDoc: string): Pro
         'Referer': 'https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml',
       },
       body: postQuery,
-      timeout: 10000,
+      timeout: 25000,
     }, jar);
 
     let finalHtml = resFinal.body;
@@ -217,7 +217,7 @@ async function queryPoliciaNacional(tipoDocInput: string, cleanDoc: string): Pro
           ...headers,
           'Referer': 'https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml',
         },
-        timeout: 10000,
+        timeout: 25000,
       }, jar);
       finalHtml = resRedirect.body;
     }
@@ -654,10 +654,38 @@ export async function executeIdentityVerification(
     };
   }
 
-  // 4. Base de datos interna de Vecy (solicitudes previas)
+  // 4. Base de datos interna de Vecy (perfiles y solicitudes previas)
   try {
     const db = await getDb();
     if (db) {
+      // A. Búsqueda en tabla de perfiles registrados (profiles)
+      const profileRows = await db
+        .select({
+          fullName: profiles.fullName,
+          numeroDocumento: profiles.numeroDocumento,
+        })
+        .from(profiles)
+        .where(eq(profiles.numeroDocumento, clean))
+        .limit(5);
+
+      for (const row of profileRows) {
+        if (row.fullName && row.fullName.trim().length >= 4) {
+          const formatTitleCase = (s: string) => s.toLowerCase().split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+          const officialFormatted = formatTitleCase(row.fullName.trim());
+
+          if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
+            identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+            return {
+              valid: true,
+              match: true,
+              officialName: officialFormatted,
+              message: `✓ Identidad confirmada en el registro de Vecy: ${officialFormatted}`,
+            };
+          }
+        }
+      }
+
+      // B. Búsqueda en solicitudes históricas previas
       const solRows = await db
         .select({
           solicitanteNumeroDocumento: solicitudes.solicitanteNumeroDocumento,
@@ -734,10 +762,12 @@ export async function executeIdentityVerification(
         error: '⚠️ Las Cédulas de Ciudadanía de 10 dígitos en Colombia deben iniciar por 1.',
       };
     }
+    const cleanEntered = (nombreIngresado || '').trim();
+    const hasValidEnteredName = cleanEntered.length >= 3 && !/^\d+$/.test(cleanEntered.replace(/\s+/g, ''));
     return {
       valid: true,
       match: true,
-      officialName: (nombreIngresado || '').trim() || clean,
+      officialName: hasValidEnteredName ? cleanEntered : undefined,
       message: '✓ Documento en formato válido (pendiente de cotejo en sede)',
     };
   }

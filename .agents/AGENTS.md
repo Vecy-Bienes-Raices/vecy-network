@@ -167,7 +167,22 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.69 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.70 — Septiembre 2026
+
+### Novedades v31.70 (Autocompletado de Nombres Reales Verificados en Vecy Agenda, Aumento de Timeouts Policiales a 25s, Verificación con Debounce al Digitar y Búsqueda en Profiles):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Timeouts Prematuros en Policía Nacional*: `queryPoliciaNacional` tenía timeouts de 8 segundos (`timeout: 8000`). Como los servidores de antecedentes de la Policía Nacional (`antecedentes.policia.gov.co:7005`) demoran 10-15s en responder, la petición arrojaba `HTTPS request timeout` y caía en el fallback de la línea 740.
+  2) *Dígitos de Cédula como Nombre Oficial en Fallback*: En el fallback de `executeIdentityVerification`, la propiedad `officialName: (nombreIngresado || '').trim() || clean` devolvía los mismos dígitos de la cédula (`clean`) cuando `nombreIngresado` estaba vacío. En el frontend, `handleChange` sanitizaba el nombre para Persona Natural eliminando dígitos, dejando la casilla completamente vacía a pesar de que el badge se ponía verde con *"✓ Documento en formato válido (pendiente de cotejo en sede)"*.
+  3) *Interacción con Google OAuth*: Cuando un usuario inicia sesión con Google, Supabase rellena inicialmente la casilla con su nombre de Google (`currentSession.user.user_metadata?.full_name`, ej: "Daniel Rivera"). Al ingresar la cédula oficial, se esperaba que el sistema completara su nombre legal completo (ej: "Daniel Eduardo Rivera Noguera").
+- **Acciones Ejecutadas**:
+  1) *Elevación de Timeouts a 25s en Policía Nacional (`server/routers/agenda.ts`)*: Todas las fases de scraping (GET index, POST terms, GET antecedentes, POST query, GET redirect) pasaron de 8s/10s a 25s, permitiendo que la Policía Nacional resuelva el reCAPTCHA y devuelva el nombre completo oficial real sin fallar por red.
+  2) *Blindaje en Base de Datos VPS*: Añadida búsqueda en la tabla `profiles` por `numeroDocumento` antes de consultar `solicitudes` y scraper policial.
+  3) *Blindaje Anti-Dígitos en Fallback*: Si no se conoce el nombre, `officialName` no retorna los dígitos numéricos.
+  4) *Verificación en Tiempo Real con Debounce (750ms) en `AgendaForm.jsx`*: Al terminar de digitar una cédula válida (6-10 dígitos), el sistema inicia la verificación automáticamente y autocompleta el nombre oficial legal sin obligar al usuario a hacer clic fuera de la casilla (`onBlur`).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.69 — Septiembre 2026
 
 ### Novedades v31.69 (Restauración Nativa del Envío de Correos y Contrato PDF de 3 Páginas en Vecy Agenda, 100% VPS a $0 Cuotas Supabase):
 - **Diagnóstico y Causas Raíz Identificadas**:

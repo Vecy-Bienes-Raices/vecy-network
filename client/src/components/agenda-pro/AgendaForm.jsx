@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Link, useLocation, useSearch } from 'wouter';
 import { supabase } from '../../lib/supabase';
 import FormInput from './FormInput';
@@ -98,6 +98,16 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
   // Estados del Dígito de Verificación (DV) para Personas Jurídicas / NIT
   const [solicitanteDv, setSolicitanteDv] = useState('1');
   const [interesadoDv, setInteresadoDv] = useState('');
+
+  const solicitanteDocDebounceRef = useRef(null);
+  const clienteDocDebounceRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (solicitanteDocDebounceRef.current) clearTimeout(solicitanteDocDebounceRef.current);
+      if (clienteDocDebounceRef.current) clearTimeout(clienteDocDebounceRef.current);
+    };
+  }, []);
 
   const securityHint = "Validación de seguridad: Este número se coteja mediante herramientas de alta tecnología para su comprobación y verificación de datos veraces.";
 
@@ -373,11 +383,14 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
             return;
           }
 
-          setFormData(prev => ({
-            ...prev,
-            solicitante_nombre: data.officialName,
-          }));
-          toast.success(`✓ Nombre verificado y autocompletado: ${data.officialName}`);
+          const isValidOfficialName = data.officialName && !/^\d+$/.test(data.officialName.replace(/\s+/g, ''));
+          if (isValidOfficialName) {
+            setFormData(prev => ({
+              ...prev,
+              solicitante_nombre: data.officialName,
+            }));
+            toast.success(`✓ Nombre verificado y autocompletado: ${data.officialName}`);
+          }
         }
       }
     } catch (err) {
@@ -464,11 +477,14 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
             return;
           }
 
-          setFormData(prev => ({
-            ...prev,
-            interesado_nombre: data.officialName,
-          }));
-          toast.success(`✓ Nombre del cliente verificado y autocompletado: ${data.officialName}`);
+          const isValidOfficialName = data.officialName && !/^\d+$/.test(data.officialName.replace(/\s+/g, ''));
+          if (isValidOfficialName) {
+            setFormData(prev => ({
+              ...prev,
+              interesado_nombre: data.officialName,
+            }));
+            toast.success(`✓ Nombre del cliente verificado y autocompletado: ${data.officialName}`);
+          }
         }
       }
     } catch (err) {
@@ -531,7 +547,8 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
           return updated;
         });
 
-        if (data.officialName) {
+        const isValidOfficialName = data.officialName && !/^\d+$/.test(data.officialName.replace(/\s+/g, ''));
+        if (isValidOfficialName) {
           setFormData(prev => {
             const updated = [...prev.acompanantes];
             if (updated[index]) {
@@ -803,21 +820,34 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
     if (identityError) setIdentityError(null);
     if (identitySuccessMsg) setIdentitySuccessMsg(null);
 
+    let cleanVal = val;
     if (isCompanyDoc) {
       if (val.includes('-')) {
         const parts = val.split('-');
         const base = parts[0].replace(/\D/g, '');
         const dv = parts[1] ? parts[1].replace(/\D/g, '').slice(0, 1) : calcularDV(base);
         setSolicitanteDv(dv);
-        setFormData(prev => ({ ...prev, solicitante_numero_documento: base ? `${base}-${dv}` : '' }));
+        cleanVal = base ? `${base}-${dv}` : '';
+        setFormData(prev => ({ ...prev, solicitante_numero_documento: cleanVal }));
       } else {
         const base = val.replace(/\D/g, '');
         const dv = solicitanteDv || calcularDV(base);
         setSolicitanteDv(dv);
-        setFormData(prev => ({ ...prev, solicitante_numero_documento: base ? `${base}-${dv}` : '' }));
+        cleanVal = base ? `${base}-${dv}` : '';
+        setFormData(prev => ({ ...prev, solicitante_numero_documento: cleanVal }));
       }
     } else {
       handleChange(e);
+      cleanVal = val.replace(/\D/g, '');
+    }
+
+    // Verificación y autocompletado automático en tiempo real al digitar (debounce 750ms)
+    if (solicitanteDocDebounceRef.current) clearTimeout(solicitanteDocDebounceRef.current);
+    const cleanDocOnly = cleanVal.replace(/[^0-9a-zA-Z]/g, '');
+    if (cleanDocOnly.length >= 6 && cleanDocOnly.length <= 10 && !isCompanyDoc) {
+      solicitanteDocDebounceRef.current = setTimeout(() => {
+        handleVerifyIdentity(formData.solicitante_nombre, cleanDocOnly, formData.solicitante_tipo_documento || 'Cédula de ciudadanía');
+      }, 750);
     }
   };
 
@@ -837,21 +867,34 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
     if (clientIdentityError) setClientIdentityError(null);
     if (clientIdentitySuccessMsg) setClientIdentitySuccessMsg(null);
 
+    let cleanVal = val;
     if (isClientCompanyDoc) {
       if (val.includes('-')) {
         const parts = val.split('-');
         const base = parts[0].replace(/\D/g, '');
         const dv = parts[1] ? parts[1].replace(/\D/g, '').slice(0, 1) : calcularDV(base);
         setInteresadoDv(dv);
-        setFormData(prev => ({ ...prev, interesado_documento: base ? `${base}-${dv}` : '' }));
+        cleanVal = base ? `${base}-${dv}` : '';
+        setFormData(prev => ({ ...prev, interesado_documento: cleanVal }));
       } else {
         const base = val.replace(/\D/g, '');
         const dv = interesadoDv || calcularDV(base);
         setInteresadoDv(dv);
-        setFormData(prev => ({ ...prev, interesado_documento: base ? `${base}-${dv}` : '' }));
+        cleanVal = base ? `${base}-${dv}` : '';
+        setFormData(prev => ({ ...prev, interesado_documento: cleanVal }));
       }
     } else {
       handleChange(e);
+      cleanVal = val.replace(/\D/g, '');
+    }
+
+    // Verificación y autocompletado automático del cliente en tiempo real al digitar (debounce 750ms)
+    if (clienteDocDebounceRef.current) clearTimeout(clienteDocDebounceRef.current);
+    const cleanDocOnly = cleanVal.replace(/[^0-9a-zA-Z]/g, '');
+    if (cleanDocOnly.length >= 6 && cleanDocOnly.length <= 10 && !isClientCompanyDoc) {
+      clienteDocDebounceRef.current = setTimeout(() => {
+        handleVerifyClientIdentity(formData.interesado_nombre, cleanDocOnly, formData.interesado_tipo_documento || 'Cédula de ciudadanía');
+      }, 750);
     }
   };
 

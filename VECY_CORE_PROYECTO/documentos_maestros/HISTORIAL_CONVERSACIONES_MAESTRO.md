@@ -5412,7 +5412,44 @@ ightarrow$ número de celular para aplicarlas de forma automática a todas sus p
 6. **Compilación y Versión**:
    - `npm run check` (0 errores), `npm test` (32 tests pasando al 100%), `npm run build` (0 errores). Versión `v31.69`.
 
+### 📌 SESIÓN v31.70 — SEPTIEMBRE 2026: AUTOCOMPLETADO DE NOMBRES REALES VERIFICADOS EN VECY AGENDA, EXTENSIÓN DE TIMEOUTS POLICIALES A 25S, DEBOUNCE AL DIGITAR Y BÚSQUEDA EN PROFILES
+
+#### 👤 Solicitud y Preocupación de Eduardo A. Rivera:
+- *"Resulta que los usuarios se registran pero veo que cuando colocan su número de cédula o documentos sin importar el tipo de perfil agente o cliente directo, pero al momento en que colocan su número de cédula o documentos sea el tipo que sea, si parece que se verifica porque se coloca en verde, pero no se está completando o colocando su nombre completo en la casilla nombre. Podrías corregirlo pero teniendo cuidado de no ir a dañar lo que ya funciona. Gracias.*
+*O será que por lo que se registran con el correo o con google ya les sale de una vez el nombnre comopleto o cómo sería eso. Aclaramelo y resuelve por favor."*
+
+#### 🔍 Diagnóstico Técnico y Causas Raíz Incontrovertibles:
+1. **Doble Dinámica de Registro (Google OAuth vs Documento Oficial)**:
+   - *Con Google*: Al pulsar "Continuar con Google", Google OAuth inyecta el nombre configurado en la cuenta de Google del usuario (`currentSession.user.user_metadata?.full_name`, ej: "Daniel Rivera"). Ese nombre informal se precarga inicialmente en la casilla.
+   - *Con Cédula*: Al digitar la cédula oficial (`1233903423`), el sistema debía cotejarla y enriquecer el nombre con los nombres y apellidos legales oficiales ("Daniel Eduardo Rivera Noguera") para el contrato.
+2. **Timeouts Prematuros en el Scraper de la Policía Nacional**:
+   - `queryPoliciaNacional` utilizaba timeouts rígidos de 8 segundos (`timeout: 8000`).
+   - El portal oficial de antecedentes (`antecedentes.policia.gov.co:7005`) tarda comúnmente entre 10 y 15 segundos en procesar peticiones y resolver reCAPTCHA v2.
+   - Al cumplirse 8.0s, la conexión se abortaba con `[queryPoliciaNacional Error] HTTPS request timeout` en PM2, provocando que el scraper cayera en el bloque de fallback.
+3. **Degeneración de Nombres por Dígitos en Fallback**:
+   - En el fallback estructural de `executeIdentityVerification`, la propiedad `officialName` estaba definida como:
+     `officialName: (nombreIngresado || '').trim() || clean`.
+   - Si el usuario no había escrito su nombre (o esperaba que el sistema lo autocompletara), `officialName` tomaba `clean` (los mismos dígitos de la cédula, ej: "1018456789").
+   - El frontend recibía `valid: true, match: true` y colocaba el badge en verde (`✓ Documento en formato válido (pendiente de cotejo en sede)`), pero `handleChange` en el input para Persona Natural sanitizaba el valor eliminando todos los números, dejando la casilla de nombre completamente en blanco.
+4. **Verificación Exclusiva por Blur**:
+   - La verificación solo se ejecutaba en el evento `onBlur`. Si el usuario terminaba de digitar y no salía del campo, nunca se disparaba la comprobación.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas (v31.70):
+1. **Aumento de Timeouts a 25.000 ms en `queryPoliciaNacional` (`server/routers/agenda.ts`)**:
+   - Todas las llamadas HTTPS (inicialización `index.xhtml`, aceptación de términos `postTerms`, `antecedentes.xhtml`, consulta con reCAPTCHA `resFinal` y redirección `resRedirect`) se elevaron a 25s, garantizando que 2Captcha y el servidor policial respondan con el nombre real oficial del ciudadano sin abortos por timeout.
+2. **Búsqueda Previa en Tabla `profiles` de PostgreSQL**:
+   - Se añadió consulta a la tabla `profiles` por `numeroDocumento = clean` antes del scraper externo. Si el usuario ya está registrado en la base de datos de Vecy, el sistema devuelve su nombre completo oficial en 0ms.
+3. **Blindaje Anti-Dígitos en Fallback (`server/routers/agenda.ts`)**:
+   - Se erradicó la asignación de dígitos de cédula a `officialName`. Si no se conoce un nombre alfabético real, `officialName` queda como `undefined`, impidiendo que se inyecten números en la casilla de nombres.
+4. **Validación de Nombre Oficial en Frontend (`AgendaForm.jsx`)**:
+   - `handleVerifyIdentity`, `handleVerifyClientIdentity` y `handleVerifyAcompananteIdentity` validan que `data.officialName` no sea una cadena de números antes de actualizar el estado de React.
+5. **Verificación en Tiempo Real con Debounce (750ms)**:
+   - Al terminar de digitar una cédula válida (entre 6 y 10 dígitos), se dispara la verificación en tiempo real de forma automática sin exigir que el usuario haga clic fuera de la casilla (`onBlur`), autocompletando su nombre legal inmediatamente.
+6. **Compilación Limpia y Suite de Pruebas**:
+   - `npm run check` (0 errores de TypeScript), `npm test` (32 pruebas de regresión doctrinal aprobadas al 100% en 751ms), `npm run build` (bundle cliente y servidor 100% limpio).
+
 ---
+
 
 ## 🛡️ PROTOCOLOS Y REGLAS DE TRABAJO INQUEBRANTABLES
 1. **Adición Pura de Código**: NUNCA borrar, modificar ni romper funcionalidades o reglas previas ya validadas al agregar nuevo código.

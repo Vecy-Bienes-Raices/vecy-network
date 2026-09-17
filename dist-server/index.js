@@ -20419,7 +20419,7 @@ async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
     const solver = new Solver(apiKey);
     const jar = new CookieJar();
     const headers = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36" };
-    const res1 = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml", { headers, timeout: 8e3 }, jar);
+    const res1 = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml", { headers, timeout: 25e3 }, jar);
     const vs1Match = res1.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res1.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
     const vs1 = vs1Match ? vs1Match[1] : null;
     if (!vs1) return { success: false };
@@ -20443,14 +20443,14 @@ async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
         "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml"
       },
       body: postTerms,
-      timeout: 8e3
+      timeout: 25e3
     }, jar);
     const res3 = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml", {
       headers: {
         ...headers,
         "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml"
       },
-      timeout: 8e3
+      timeout: 25e3
     }, jar);
     const vs3Match = res3.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res3.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
     const vs3 = vs3Match ? vs3Match[1] : null;
@@ -20476,7 +20476,7 @@ async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
         "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
       },
       body: postQuery,
-      timeout: 1e4
+      timeout: 25e3
     }, jar);
     let finalHtml = resFinal.body;
     if (resFinal.status === 302 || resFinal.headers.location) {
@@ -20486,7 +20486,7 @@ async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
           ...headers,
           "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
         },
-        timeout: 1e4
+        timeout: 25e3
       }, jar);
       finalHtml = resRedirect.body;
     }
@@ -20741,6 +20741,25 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
   try {
     const db = await getDb();
     if (db) {
+      const profileRows = await db.select({
+        fullName: profiles.fullName,
+        numeroDocumento: profiles.numeroDocumento
+      }).from(profiles).where(eq14(profiles.numeroDocumento, clean)).limit(5);
+      for (const row of profileRows) {
+        if (row.fullName && row.fullName.trim().length >= 4) {
+          const formatTitleCase = (s) => s.toLowerCase().split(/\s+/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+          const officialFormatted = formatTitleCase(row.fullName.trim());
+          if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
+            identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+            return {
+              valid: true,
+              match: true,
+              officialName: officialFormatted,
+              message: `\u2713 Identidad confirmada en el registro de Vecy: ${officialFormatted}`
+            };
+          }
+        }
+      }
       const solRows = await db.select({
         solicitanteNumeroDocumento: solicitudes.solicitanteNumeroDocumento,
         solicitanteNombre: solicitudes.solicitanteNombre,
@@ -20801,10 +20820,12 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
         error: "\u26A0\uFE0F Las C\xE9dulas de Ciudadan\xEDa de 10 d\xEDgitos en Colombia deben iniciar por 1."
       };
     }
+    const cleanEntered = (nombreIngresado || "").trim();
+    const hasValidEnteredName = cleanEntered.length >= 3 && !/^\d+$/.test(cleanEntered.replace(/\s+/g, ""));
     return {
       valid: true,
       match: true,
-      officialName: (nombreIngresado || "").trim() || clean,
+      officialName: hasValidEnteredName ? cleanEntered : void 0,
       message: "\u2713 Documento en formato v\xE1lido (pendiente de cotejo en sede)"
     };
   }
