@@ -3509,8 +3509,12 @@ export default function AdminMatches() {
 
   const kpiStats = useMemo(() => {
     const rawList = processedMatches || [];
-    const total = rawList.length;
-    const perfect = rawList.filter((m: any) => m._precomputedScore >= 95).length;
+    const total = (botStatus as any)?.totalMatches && (botStatus as any).totalMatches > 0
+      ? (botStatus as any).totalMatches
+      : rawList.length;
+    const perfect = (botStatus as any)?.perfectMatches !== undefined && (botStatus as any).perfectMatches !== null
+      ? (botStatus as any).perfectMatches
+      : rawList.filter((m: any) => m._precomputedScore >= 95).length;
     const approx = rawList.filter((m: any) => {
       const s = m._precomputedScore;
       return s >= 85 && s < 95;

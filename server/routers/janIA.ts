@@ -576,7 +576,7 @@ export const janIARouter = router({
           .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
           .where(sql`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) AND (${properties.available} IS NULL OR ${properties.available} = true)`)
           .orderBy(desc(propertyMatches.id))
-          .limit(150);
+          .limit(350);
 
         // Obtener imágenes registradas para todas las propiedades resultantes
         const propIds = Array.from(new Set(matches.map(m => m.property.id)));
@@ -1381,6 +1381,8 @@ export const janIARouter = router({
       let totalReqs = 0;
       let todayProps = 0;
       let todayReqs = 0;
+      let totalMatches = 0;
+      let perfectMatches = 0;
 
       const rawSql = getRawSql();
       if (rawSql) {
@@ -1390,7 +1392,9 @@ export const janIARouter = router({
             (SELECT count(*)::int FROM properties) as total_props,
             (SELECT count(*)::int FROM requirements) as total_reqs,
             (SELECT count(*)::int FROM properties WHERE DATE("createdAt" AT TIME ZONE 'America/Bogota') = CURRENT_DATE) as prop_today,
-            (SELECT count(*)::int FROM requirements WHERE DATE("createdAt" AT TIME ZONE 'America/Bogota') = CURRENT_DATE) as req_today
+            (SELECT count(*)::int FROM requirements WHERE DATE("createdAt" AT TIME ZONE 'America/Bogota') = CURRENT_DATE) as req_today,
+            (SELECT count(DISTINCT ("propertyId", "requirementId"))::int FROM "propertyMatches" WHERE CAST("matchScore" AS NUMERIC) >= 80) as total_matches,
+            (SELECT count(DISTINCT ("propertyId", "requirementId"))::int FROM "propertyMatches" WHERE CAST("matchScore" AS NUMERIC) >= 95) as perfect_matches
         `;
         const row = res[0];
         if (row) {
@@ -1401,6 +1405,8 @@ export const janIARouter = router({
           totalReqs = row.total_reqs || 0;
           todayProps = row.prop_today || 0;
           todayReqs = row.req_today || 0;
+          totalMatches = row.total_matches || 0;
+          perfectMatches = row.perfect_matches || 0;
         }
       } else {
         const db = await getDb();
@@ -1414,8 +1420,12 @@ export const janIARouter = router({
           if (sessionData?.phone) phone = sessionData.phone;
           const [tp] = await db.select({ count: sql<number>`count(*)::int` }).from(properties);
           const [tr] = await db.select({ count: sql<number>`count(*)::int` }).from(requirements);
+          const [tm] = await db.select({ count: sql<number>`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql`CAST("matchScore" AS NUMERIC) >= 80`);
+          const [pm] = await db.select({ count: sql<number>`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql`CAST("matchScore" AS NUMERIC) >= 95`);
           totalProps = tp?.count || 0;
           totalReqs = tr?.count || 0;
+          totalMatches = tm?.count || 0;
+          perfectMatches = pm?.count || 0;
         }
       }
 
@@ -1425,7 +1435,9 @@ export const janIARouter = router({
         totalProperties: totalProps,
         totalRequirements: totalReqs,
         todayProperties: todayProps,
-        todayRequirements: todayReqs
+        todayRequirements: todayReqs,
+        totalMatches,
+        perfectMatches,
       };
 
       cachedBotStatusData = result;
