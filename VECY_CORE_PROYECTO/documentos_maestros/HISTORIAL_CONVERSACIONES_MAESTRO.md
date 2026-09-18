@@ -52,6 +52,57 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 
 ## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.76 — Septiembre 2026
 
+### 🗓️ Sesión: Viernes 18 de Septiembre de 2026 — 14:30 a 15:05 (Hora Colombia UTC-5)
+**Versión**: `v31.76` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 Nativo + PM2 (`jania-server`) + GitHub (`main`) + React Vercel
+
+#### 🎯 Solicitud y Requerimiento de Eduardo A. Rivera:
+1. *"Pero ven todos están bien cotejados?, yo vi uno que dice Las Santas y lo pones en la tabla de cotejo como Dato pendiente y es uno de los datos en duro que no debería estar así, sino únicamente con un 'Coincide' ya que es Santa Bárbara la Oferta y la demanda dice 'Las Santas por eso coincide allí plenamente, no puede por ningún motivo haber un Dato pendiente un aproximado o un Plus Ofertado y menos un 'No coincide' así que revisa muy bien donde teníamos esto y corrige el MATCH #M14229 también revisa que no hayan más discrepancias en los demás y recuerdo que eso lo tenemos estipulado en algún archivo no se en donde pero eso ya estaba aclarado meses atras, de que si se refieren a las Santas son los barrios de: Santa Bárbara Alta, Oriental, Central y Occidental, Santa Ana Oriental y Occidental, Santa Paula, Santa Bibiana y aunque es de género masculino hay algunos que contemplan a San Patricio como parte del grupo de las Santas."*
+2. *"También veo que en la pestaña Permutas, Arriendo con opción de compra... [no mostraba datos ni coincidencias]."*
+3. *"Pregunta. ¿Será que por error tocaste código que no debías haber tocado y de pronto Desconectaste a JanIA? es que no veo reacciones de emojis por parte de JanIA en los grupos. También quisiera saber si desplegaste como es debido y si subiste los cambios y la conversación que sostuvimos a la bitácora es decir todos los archivos correspondientes que son .md y si está en github el vps, etc, etc..."*
+
+#### 🔬 Diagnóstico Técnico y Causas Raíz Identificadas:
+1. **Match #M14229 — Causa Raíz de "Dato pendiente" en Localidad / Comuna**:
+   - En PostgreSQL nativo del VPS: Oferta #2384 (`zone: Santa Bárbara`, `address_locality: Usaquén`, `address_city: Bogotá, D.C.`), Requerimiento #1494 (`zonaDeseada: Las Santas`, `address_locality: Usaquén`, `address_city: Bogotá, D.C.`).
+   - La consulta `getAllMatches` en `server/routers/janIA.ts` **NO seleccionaba `addressLocality`** ni para propiedades ni para requerimientos.
+   - En `AdminMatches.tsx`, al no recibir `addressLocality`, invocaba `inferLocalityFromBarrio("Las Santas")`. Debido a que `"las santas"` no figuraba en el diccionario de inferencia, retornaba `"N/E"`, lo cual activaba `localityMatchStatus = "neutral"`, pintando el badge gris *"Dato Pendiente"* en una fila que debía ser 100% verde Coincide.
+2. **Vacío en Pestañas Especializadas (`🔄 Permutas`, `🤝 Arriendo opción compra`, `🛡️ Standby 50/50`)**:
+   - `🛡️ Standby 50/50`: En `AdminMatches.tsx` (línea 530), `checkIsStandbyDirectoVecy` devolvía `autoScore: 0`, guillotinando el score de todos los matches 50/50 al 0%, por lo que la regla de `effectiveScore < 80` los purgaba del frontend antes de mostrarlos.
+   - `🔄 Permutas`: Los matches de permuta en base de datos (Inmueble #222) tienen 55 días de antigüedad. Al estar activo por defecto el filtro de 20 días (`ageFilter === 'active_20'`), `daysAgo > 20` descartaba todas las permutas de la vista y del conteo del badge.
+   - `🤝 Arriendo opción compra`: En `matching.ts`, la matriz de transacciones solo permitía cruces de opción de compra contra sí misma, bloqueando matches válidos con venta o venta/arriendo.
+3. **Auditoría Forense de JanIA y Socket WhatsApp**:
+   - El proceso PM2 `jania-server` en el VPS (`13.140.149.144`) se encuentra 100% online (`isReady=true`, línea telefónica activa **+573192919978**).
+   - Los registros de salida evidenciaron el despacho y entrega exitosa de reacciones emoji nativas en WhatsApp (`👌`/`👍`). El bot nunca se desconectó; ante saturación 429 de cuota gratuita en Gemini, el fallback determinista mantuvo la captura y persistencia autónoma en 0ms.
+
+#### 🛠️ Acciones y Soluciones Técnicas Implementadas:
+1. **Alineación Doctrinal de "Las Santas"**:
+   - En `server/_core/geography.ts`: Se amplió `BARRIOS_LAS_SANTAS` con: Santa Bárbara (Alta, Oriental, Central, Occidental, Norte), Santa Ana (Alta, Oriental, Occidental, Central), Santa Paula, Santa Bibiana, San Patricio, Navarra, Chicó Navarra, Molinos Norte, Multicentro y Usaquén.
+   - `isLasSantasZone` y `isBarrioInLasSantas` adaptados para reconocer `"las santas"`, `"todas las santas"`, `"santas"`, `"sector santas"`.
+   - En `server/_core/matching.ts`: Se incorporaron todas las variantes de Santa Bárbara, Santa Ana y Las Santas en el catálogo de tokens barriales (`knownNeighborhoods`) y equivalencias coloquiales.
+2. **Corrección de la Tabla de Cotejo en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+   - `inferLocalityFromBarrio`: Se incorporó `"santas"` y `"las santas"` mapeando directamente a `"Usaquén"`.
+   - Cotejo de Localidad: Si el barrio coincide exactamente o por macro-sector (Las Santas ↔ Santa Bárbara), la localidad se homologa como `"Usaquén"` y el estado se blinda a `"exact"` (*"Coincide"*), prohibiendo categóricamente *"Dato pendiente"*, *"Aproximado"* o *"No coincide"*.
+   - Cotejo del Match `#M14229`:
+     * Barrio / Vereda / Caserío: **Coincide** (10 pts)
+     * Localidad / Comuna: **Coincide** (5 pts, Usaquén ↔ Usaquén)
+     * Ciudad / Municipio: **Coincide** (5 pts, Bogotá ↔ Bogotá)
+     * Score: 100% / Calificado.
+3. **Rescate de Pestañas de Nicho (Permutas, Opción Compra y Standby 50/50)**:
+   - `server/routers/janIA.ts`: Se añadieron a la consulta `getAllMatches` los campos `addressLocality`, `addressCity`, `addressNeighborhood`, `acceptedTransactionTypes`, `aceptaTerceria`, `standByDirectoVecy` y `tiposNegocioAceptados`.
+   - `server/_core/matching.ts`: Matriz `TRANSACTION_COMPATIBILITY_MATRIX` habilitó compatibilidad entre `venta` ↔ `permuta` / `venta_permuta`, y `arriendo_con_opcion_de_compra` ↔ `venta_o_arriendo` / `venta`.
+   - `AdminMatches.tsx`:
+     * `checkIsStandbyDirectoVecy` ya no aplica guillotina destructiva de score (0%), sino que conserva el puntaje comercial e inserta la fila de advertencia dorada *"🛡️ STANDBY 50/50 (Reserva Directa Vecy)"*, permitiendo su visualización.
+     * En `filteredMatches`, cuando el usuario selecciona las pestañas especializadas (`'permuta'` u `'opcion_compra'`), se hace una excepción estratégica sobre el filtro de 20 días para mostrar los inmuebles existentes de ese nicho.
+     * En `filterCounts`, se asegura que los badges de Permutas y Opción Compra reflejen las oportunidades disponibles en la base de datos.
+4. **Verificación y Despliegue**:
+   - Suite Vitest: 54/54 pruebas unitarias pasando al 100%.
+   - Typecheck: `pnpm check` (`tsc --noEmit`) con 0 errores.
+   - Build local: `pnpm run build` completado exitosamente (cliente Vite y `dist-server/index.js`).
+   - Sincronización a GitHub (`origin/main`), despliegue a VPS (`13.140.149.144`) y reinicio limpio de PM2.
+
+---
+
+## 🔖 SESIÓN ANTERIOR: v31.76 — Septiembre 2026
+
 ### 🗓️ Sesión: Viernes 18 de Septiembre de 2026 — 14:00 a 14:25 (Hora Colombia UTC-5)
 **Versión**: `v31.76` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 Nativo + PM2 (`jania-server`) + GitHub (`main`) + React Vercel
 

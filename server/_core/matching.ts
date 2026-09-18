@@ -141,13 +141,13 @@ export function extractRealPhone(item: any): string | null {
  * 8. Requerimiento "Arriendo con Opción de Compra" ↔ "Arriendo con Opción de Compra", "Venta o Arriendo" o "Venta" (100% Compatible)
  */
 const TRANSACTION_COMPATIBILITY_MATRIX: Record<string, Set<string>> = {
-  venta: new Set(["venta", "venta_o_arriendo", "venta_permuta"]),
+  venta: new Set(["venta", "venta_o_arriendo", "venta_permuta", "permuta"]),
   arriendo: new Set(["arriendo", "venta_o_arriendo", "arriendo_temporal"]),
-  venta_o_arriendo: new Set(["venta", "arriendo", "venta_o_arriendo", "venta_permuta", "arriendo_temporal"]),
+  venta_o_arriendo: new Set(["venta", "arriendo", "venta_o_arriendo", "venta_permuta", "arriendo_temporal", "permuta", "arriendo_con_opcion_de_compra"]),
   arriendo_temporal: new Set(["arriendo_temporal", "arriendo", "venta_o_arriendo"]),
-  arriendo_con_opcion_de_compra: new Set(["arriendo_con_opcion_de_compra"]),
-  permuta: new Set(["permuta", "venta_permuta"]),
-  venta_permuta: new Set(["venta_permuta", "permuta"]),
+  arriendo_con_opcion_de_compra: new Set(["arriendo_con_opcion_de_compra", "venta_o_arriendo", "venta"]),
+  permuta: new Set(["permuta", "venta_permuta", "venta"]),
+  venta_permuta: new Set(["venta_permuta", "permuta", "venta"]),
   aporte: new Set(["aporte"]),
 };
 
@@ -922,6 +922,10 @@ export function matchesGeography(
       "chico navarra",
       // Familia 1 Chicó: CHAPINERO Cls 88-100 (Rincón del Chicó = junto al Parque El Virrey, Chapinero)
       "rincon del chico", "chico",
+      // Macro-Sector Las Santas / Usaquén Cls 100-127
+      "las santas", "todas las santas", "sector de las santas", "sector santas", "zona santas", "santas",
+      "santa barbara alta", "santa barbara oriental", "santa barbara occidental", "santa barbara central", "santa barbara norte", "santa barbara",
+      "santa ana alta", "santa ana oriental", "santa ana occidental", "santa ana central", "santa ana",
       // Barrios Usaquén Cls 100-127 (oriente Autopista Norte)
       "cedritos", "los cedros", "santa paula", "santa bibiana", "santa teresa", "san patricio",
       "navarra", "molinos norte", "la calleja", "calleja baja", "calleja alta",

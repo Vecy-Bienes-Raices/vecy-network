@@ -169,6 +169,25 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ## 🔖 VERSIÓN ACTUAL: v31.76 — Septiembre 2026
 
+### Novedades v31.76 (Doctrina Canónica "Las Santas", Corrección 100% Coincide en Match #M14229 y Rescate Operativo de Permutas, Opción Compra y Standby 50/50):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Match #M14229 con "Dato pendiente"*: Oferta #2384 (Santa Bárbara, Usaquén, Bogotá) cruzada contra Requerimiento #1494 (Las Santas, Usaquén, Bogotá). La consulta `getAllMatches` en `server/routers/janIA.ts` no seleccionaba `addressLocality`, forzando al frontend a llamar a `inferLocalityFromBarrio("Las Santas")`. Al no estar catalogado `"las santas"`, devolvía `"N/E"`, marcando erróneamente la fila de Localidad/Comuna con badge gris *"Dato Pendiente"*.
+  2) *Pestañas Especializadas en 0 ("No hay datos")*:
+     - `🛡️ Standby 50/50`: En `AdminMatches.tsx`, la función de chequeo retornaba `autoScore: 0`, purgando todos los matches con cláusula de comisión 50/50 o sin tercería.
+     - `🔄 Permutas`: Los matches existentes de permuta (Inmueble #222) tienen 55 días de antigüedad. El filtro `ageFilter === 'active_20'` los bloqueaba tanto en el conteo del badge como en el filtrado de tarjetas.
+     - `🤝 Arriendo opción compra`: En `matching.ts`, la matriz de compatibilidad solo permitía cruces consigo misma, impidiendo cruces válidos contra venta o venta/arriendo.
+  3) *Auditoría de JanIA y Socket WhatsApp*: Verificado proceso PM2 `jania-server` en el VPS (`13.140.149.144`). JanIA opera al 100% online (`isReady=true`, teléfono **+573192919978**) entregando reacciones nativas (`👌`/`👍`) y respaldada por el fallback determinista $0 COP.
+- **Acciones Ejecutadas**:
+  1) *Doctrina Integral de "Las Santas" (`geography.ts`, `matching.ts`, `AdminMatches.tsx`)*:
+     - `BARRIOS_LAS_SANTAS` ampliado con: Santa Bárbara (Alta, Oriental, Central, Occidental, Norte), Santa Ana (Alta, Oriental, Occidental, Central), Santa Paula, Santa Bibiana, San Patricio, Navarra, Chicó Navarra, Molinos Norte, Multicentro y Usaquén.
+     - `inferLocalityFromBarrio` mapea "santas" y "las santas" directamente a "Usaquén".
+     - Blindaje en la tabla de cotejo: Si el barrio coincide exactamente o por macro-sector (Las Santas ↔ Santa Bárbara), la localidad se homologa como `"Usaquén"` con estado `"exact"` (*"Coincide"*), erradicando cualquier *"Dato pendiente"*, *"Aproximado"* o *"No coincide"*.
+  2) *Rescate y Visibilidad de Pestañas Especializadas*:
+     - `server/routers/janIA.ts`: `getAllMatches` selecciona `addressLocality`, `addressCity`, `addressNeighborhood`, `acceptedTransactionTypes`, `aceptaTerceria`, `standByDirectoVecy` y `tiposNegocioAceptados`.
+     - `server/_core/matching.ts`: `TRANSACTION_COMPATIBILITY_MATRIX` habilitó compatibilidad para cruces de permuta y opción de compra contra venta y venta/arriendo.
+     - `AdminMatches.tsx`: Standby 50/50 muestra advertencia dorada sin destruir el puntaje comercial; las pestañas de permuta y opción de compra muestran los inmuebles existentes de esos nichos independientemente del filtro de 20 días.
+  3) *Verificación Automatizada*: 54/54 tests Vitest pasando, `pnpm check` limpio (0 errores) y `pnpm run build` ejecutado exitosamente.
+
 ### Novedades v31.76 (Regla de Vigencia 20 Días, Clasificación Avanzada Permutas / Opción Compra y Marcadores Reactivos Duales):
 - **Diagnóstico y Contexto**:
   1) *Depuración de Antigüedad*: Para evitar perder tiempo en inmuebles obsoletos o ya colocados, se formalizó la regla de vigencia reduciendo el límite de 30 a 20 días para el descarte/advertencia de disponibilidad.

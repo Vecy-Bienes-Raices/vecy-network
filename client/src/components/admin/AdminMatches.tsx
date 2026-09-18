@@ -314,7 +314,7 @@ const DYNAMIC_AMENITIES: Array<{
   { name: "Zonas Deportivas", patterns: ["zonas deportivas", "polideportivo"], icon: <Trophy className="w-3.5 h-3.5" /> },
 ];
 
-export const NO_TERCERIA_REGEX = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios)\b/i;
+export const NO_TERCERIA_REGEX = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50|50[-/]50|solo\s*50[-/]50|no\s*intermediarios)\b/i;
 
 export function checkIsStandbyDirectoVecy(prop: any, req: any): boolean {
   if (!prop || !req) return false;
@@ -339,10 +339,14 @@ export function getPropertyEffectiveDaysAgo(property: any): number {
 export function checkIsPermutaMatch(prop: any, req: any): boolean {
   const propTx = String(prop?.transactionType || '').toLowerCase();
   const reqTx = String(req?.tipoNegocioDeseado || '').toLowerCase();
+  const propAcc = (prop?.acceptedTransactionTypes || []).map((x: string) => String(x).toLowerCase());
+  const reqAcc = (req?.tiposNegocioAceptados || []).map((x: string) => String(x).toLowerCase());
   const propRaw = String(prop?.rawText || prop?.description || prop?.name || '').toLowerCase();
   const reqRaw = String(req?.rawText || req?.name || '').toLowerCase();
 
   return propTx.includes('permuta') || reqTx.includes('permuta') ||
+    propAcc.includes('permuta') || propAcc.includes('venta_permuta') ||
+    reqAcc.includes('permuta') || reqAcc.includes('venta_permuta') ||
     /\b(?:permuta|permutas|permuto|recibe\s+(?:menor|mayor)\s+valor|recibe\s+(?:carro|vehiculo|inmueble)|parte\s+de\s+pago)\b/i.test(propRaw) ||
     /\b(?:permuta|permutas|permuto|entrego\s+(?:menor|mayor)\s+valor|entrego\s+(?:carro|vehiculo|inmueble)|parte\s+de\s+pago)\b/i.test(reqRaw);
 }
@@ -355,8 +359,8 @@ export function checkIsOpcionCompraMatch(prop: any, req: any): boolean {
 
   return propTx.includes('opcion') || reqTx.includes('opcion') ||
     propTx.includes('promesa') || reqTx.includes('promesa') ||
-    /\b(?:opci[oó]n\s+de?\s*compra|arriendo\s+con\s+opci[oó]n|rent\s+to\s+own|leasing\s+habitacional)\b/i.test(propRaw) ||
-    /\b(?:opci[oó]n\s+de?\s*compra|arriendo\s+con\s+opci[oó]n|rent\s+to\s+own|leasing\s+habitacional)\b/i.test(reqRaw);
+    /\b(?:opci[oó]n\s+de?\s*compra|arriendo\s+con\s+opci[oó]n|rent\s+to\s+own|leasing\s+habitacional|leasing)\b/i.test(propRaw) ||
+    /\b(?:opci[oó]n\s+de?\s*compra|arriendo\s+con\s+opci[oó]n|rent\s+to\s+own|leasing\s+habitacional|leasing)\b/i.test(reqRaw);
 }
 
 export function isNonRealEstateText(text: string | null | undefined): boolean {
@@ -526,10 +530,9 @@ function scoreRows(req: any, prop: any) {
     return { rows, autoScore: 0, pts: 0, max };
   }
 
-  // ── REGLA DOCTRINAL v31.72: REGLA DE ORO DE TERCERÍA Y STANDBY DIRECTO VECY (0% Match Imposible) ──
+  // ── REGLA DOCTRINAL v31.76: REGLA DE TERCERÍA Y STANDBY DIRECTO VECY (Visualización para Superadmin) ──
   if (checkIsStandbyDirectoVecy(prop, req)) {
-    add("Tercería / Cadena Inmobiliaria", "Demanda Externa / Intermediación", "NO TERCERÍA / STANDBY DIRECTO VECY", "missing", 100, <ShieldAlert className="w-3.5 h-3.5" />);
-    return { rows, autoScore: 0, pts: 0, max };
+    add("Tercería / Cadena Inmobiliaria", "Demanda Vecy / Directa", "🛡️ STANDBY 50/50 (Reserva Directa Vecy)", "warn", 5, <ShieldAlert className="w-3.5 h-3.5" />);
   }
 
   // 1. Tipo de Inmueble (REGLA DOCTRINAL ESTRICTA - Exactitud Total de Subtipo)
@@ -776,6 +779,7 @@ function scoreRows(req: any, prop: any) {
   }
 
   const KNOWN_BARRIOS_CANONICAL = [
+    "las santas", "todas las santas", "sector de las santas", "sector santas", "zona santas", "santas",
     "santa bárbara occidental", "santa barbara occidental", "santa bárbara oriental", "santa barbara oriental",
     "santa bárbara central", "santa barbara central", "santa bárbara alta", "santa barbara alta",
     "santa bárbara norte", "santa barbara norte", "santa bárbara", "santa barbara",
@@ -841,16 +845,22 @@ function scoreRows(req: any, prop: any) {
     if (!rn || !pn) return false;
     if (rn === pn) return true;
 
-    // Macro-Sector Doctrinal: "Las Santas" (Usaquén)
-    const isSantasReq = rn === "las santas" || rn === "santas" || rn === "sector de las santas" || rn === "zona santas" || rn === "santas de usaquen";
-    if (isSantasReq) {
-      const santasBarrios = [
-        "santa barbara", "santa barbara alta", "santa barbara oriental", "santa barbara central", "santa barbara occidental", "santa barbara norte",
-        "santa ana", "santa ana oriental", "santa ana occidental", "santa ana alta", "santa ana central",
-        "santa paula", "santa bibiana", "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
-      ];
-      return santasBarrios.some(sb => pn.includes(sb) || sb.includes(pn));
+    // Macro-Sector Doctrinal: "Las Santas" (Usaquén) — Coincidencia Plena y Bidireccional
+    const isSantasReq = rn.includes("santas") || rn.includes("las santas") || rn.includes("sector santas") || rn.includes("zona santas");
+    const isSantasProp = pn.includes("santas") || pn.includes("las santas") || pn.includes("sector santas") || pn.includes("zona santas");
+    const santasBarrios = [
+      "santa barbara", "santa barbara alta", "santa barbara oriental", "santa barbara central", "santa barbara occidental", "santa barbara norte",
+      "santa ana", "santa ana oriental", "santa ana occidental", "santa ana alta", "santa ana central",
+      "santa paula", "santa bibiana", "san patricio", "navarra", "chico navarra", "molinos norte", "usaquen", "multicentro"
+    ];
+
+    if (isSantasReq && !isSantasProp) {
+      if (santasBarrios.some(sb => pn.includes(sb) || sb.includes(pn))) return true;
     }
+    if (isSantasProp && !isSantasReq) {
+      if (santasBarrios.some(sb => rn.includes(sb) || sb.includes(rn))) return true;
+    }
+    if (isSantasReq && isSantasProp) return true;
 
     // REGLA DOCTRINAL v28.9: Todos los Chicó (Norte, Reservado, Rincón) = CHAPINERO.
     // La única excepción: Navarra / Chicó Navarra = USAQUÉN.
@@ -935,7 +945,8 @@ function scoreRows(req: any, prop: any) {
     // TODOS los demás Chicó tradicionales (Norte, Reservado, base) + clásicos Chapinero:
     if (norm.includes("rosales") || norm.includes("refugio") || norm.includes("chico") || norm.includes("nogal") || norm.includes("cabrera") || norm.includes("virrey") || norm.includes("quinta camacho") || norm.includes("chapinero")) return "Chapinero";
     // Barrios Usaquén (Calles 100-127 oriente Autopista Norte + norte de la ciudad):
-    if (norm.includes("alameda") || norm.includes("san antonio") || norm.includes("cedritos") ||
+    if (norm.includes("santas") || norm.includes("las santas") ||
+        norm.includes("alameda") || norm.includes("san antonio") || norm.includes("cedritos") ||
         norm.includes("santa barbara") || norm.includes("santa paula") || norm.includes("bella suiza") ||
         norm.includes("contador") || norm.includes("san patricio") || norm.includes("toberin") ||
         norm.includes("usaquen") || norm.includes("belmira") || norm.includes("portales del norte") ||
@@ -985,8 +996,26 @@ function scoreRows(req: any, prop: any) {
     ? matchedReqBarrio 
     : (reqTrueBarriosList.length > 0 ? (reqTrueBarriosList.length > 2 ? `${reqTrueBarriosList.slice(0, 2).join(", ")} (+${reqTrueBarriosList.length - 2})` : reqTrueBarriosList.join(", ")) : "Flexible / Bogotá");
 
-  const reqLocalityDisplay = (req.addressLocality && req.addressLocality !== "N/E") ? req.addressLocality : inferLocalityFromBarrio(matchedReqBarrio || reqBarriosInText[0] || req.zonaDeseada, req.rawText || req.name);
-  const propLocalityDisplay = (prop.addressLocality && prop.addressLocality !== "N/E") ? prop.addressLocality : inferLocalityFromBarrio(propTrueBarrio, prop.rawText || prop.description || prop.name);
+  let reqLocalityDisplay = (req.addressLocality && req.addressLocality !== "N/E") ? req.addressLocality : inferLocalityFromBarrio(matchedReqBarrio || reqBarriosInText[0] || req.zonaDeseada, req.rawText || req.name);
+  let propLocalityDisplay = (prop.addressLocality && prop.addressLocality !== "N/E") ? prop.addressLocality : inferLocalityFromBarrio(propTrueBarrio, prop.rawText || prop.description || prop.name);
+
+  const isSantasInvolved = (matchedReqBarrio || req.zonaDeseada || "").toLowerCase().includes("santas") ||
+    (propTrueBarrio || prop.zone || "").toLowerCase().includes("santas");
+
+  if (isSantasInvolved) {
+    if (reqLocalityDisplay === "N/E" || !reqLocalityDisplay) reqLocalityDisplay = "Usaquén";
+    if (propLocalityDisplay === "N/E" || !propLocalityDisplay) propLocalityDisplay = "Usaquén";
+  }
+
+  // REGLA DOCTRINAL v31.76: Si el barrio coincidió exactamente o por macro-sector (ej: Las Santas ↔ Santa Bárbara),
+  // la localidad y ciudad son plenamente coincidentes sin datos pendientes.
+  if (barrioMatchStatus === "exact") {
+    if ((reqLocalityDisplay === "N/E" || !reqLocalityDisplay) && propLocalityDisplay && propLocalityDisplay !== "N/E") {
+      reqLocalityDisplay = propLocalityDisplay;
+    } else if ((propLocalityDisplay === "N/E" || !propLocalityDisplay) && reqLocalityDisplay && reqLocalityDisplay !== "N/E") {
+      propLocalityDisplay = reqLocalityDisplay;
+    }
+  }
 
   const reqTrueCity = extractTrueCityFromText(req.rawText || req.name, req.addressCity || req.ciudadDeseada || "Bogotá");
   const propTrueCity = extractTrueCityFromText(prop.rawText || prop.name, prop.addressCity || prop.city || "Bogotá");
@@ -1002,6 +1031,8 @@ function scoreRows(req: any, prop: any) {
   let localityMatchStatus: MatchStatus = "neutral";
   if (isNonRealEstateReq || isNonRealEstateProp) {
     localityMatchStatus = "missing";
+  } else if (barrioMatchStatus === "exact" && (normalizeBarrio(reqLocalityDisplay) === normalizeBarrio(propLocalityDisplay) || reqLocalityDisplay === propLocalityDisplay || isSantasInvolved)) {
+    localityMatchStatus = "exact";
   } else if (reqLocalityDisplay === "N/E" || propLocalityDisplay === "N/E") {
     localityMatchStatus = "neutral";
   } else if (normalizeBarrio(reqLocalityDisplay) === normalizeBarrio(propLocalityDisplay)) {
@@ -3406,7 +3437,9 @@ export default function AdminMatches() {
       }
 
       // Filtro de Antigüedad / Vigencia: ≤ 20 días por defecto (Regla Doctrinal v31.76)
-      if (ageFilter === 'active_20') {
+      // Excepción estratégica: Si el usuario está filtrando específicamente por nichos especializados ('permuta', 'opcion_compra'),
+      // se muestran los matches existentes de ese nicho para asegurar visibilidad operativa de las oportunidades.
+      if (ageFilter === 'active_20' && transactionFilter !== 'permuta' && transactionFilter !== 'opcion_compra') {
         const daysAgo = getPropertyEffectiveDaysAgo(match._effectiveProp || match.property);
         if (daysAgo > 20) return false;
       }
@@ -3625,6 +3658,18 @@ export default function AdminMatches() {
       }
     }
 
+    // Para nichos comerciales (Permutas y Opción Compra), garantizamos visibilidad de oportunidades disponibles
+    let countPermutaRaw = 0;
+    let countOpcionCompraRaw = 0;
+    for (const m of rawList) {
+      const effProp = m._effectiveProp || m.property;
+      const effReq = m._effectiveReq || m.requirement;
+      if (checkIsPermutaMatch(effProp, effReq)) countPermutaRaw++;
+      if (checkIsOpcionCompraMatch(effProp, effReq)) countOpcionCompraRaw++;
+    }
+    const effectivePermuta = countPermuta > 0 ? countPermuta : countPermutaRaw;
+    const effectiveOpcionCompra = countOpcionCompra > 0 ? countOpcionCompra : countOpcionCompraRaw;
+
     // Si hay un término de búsqueda activo, mostramos los conteos específicos de esa búsqueda
     const isSearching = (searchTerm || '').trim().length > 0;
     const isAllAge = ageFilter === 'all';
@@ -3640,10 +3685,10 @@ export default function AdminMatches() {
       : countArriendo;
     const permuta = !isSearching && isAllAge && (botStatus as any)?.permutaMatches !== undefined && (botStatus as any).permutaMatches > 0
       ? (botStatus as any).permutaMatches
-      : countPermuta;
+      : effectivePermuta;
     const opcionCompra = !isSearching && isAllAge && (botStatus as any)?.opcionCompraMatches !== undefined && (botStatus as any).opcionCompraMatches > 0
       ? (botStatus as any).opcionCompraMatches
-      : countOpcionCompra;
+      : effectiveOpcionCompra;
 
     return {
       all,

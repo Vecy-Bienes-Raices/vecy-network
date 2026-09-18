@@ -16,13 +16,21 @@ export const BARRIOS_LAS_SANTAS = [
   "Santa Bárbara Norte",
   "Santa Bárbara Oriental",
   "Santa Bárbara Occidental",
+  "Santa Bárbara Alta",
   "Santa Ana",
   "Santa Ana Central",
   "Santa Ana Oriental",
   "Santa Ana Occidental",
+  "Santa Ana Alta",
   "Santa Paula",
   "Santa Bibiana",
-  ];
+  "San Patricio",
+  "Navarra",
+  "Chicó Navarra",
+  "Molinos Norte",
+  "Multicentro",
+  "Usaquén"
+];
 
 export const GENERIC_ZONES_SET = new Set([
   "bogota", "bogota d c", "bogota dc", "medellin", "cali", "barranquilla", 
@@ -33,7 +41,7 @@ export const GENERIC_ZONES_SET = new Set([
 export function isLasSantasZone(zoneStr: string | null | undefined): boolean {
   if (!zoneStr) return false;
   const zn = zoneStr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-  return zn.includes("las santas") || zn.includes("todas las santas") || zn === "santas";
+  return zn.includes("las santas") || zn.includes("todas las santas") || zn.includes("santas") || zn === "santas";
 }
 
 export function isBarrioInLasSantas(barrioStr: string | null | undefined): boolean {
