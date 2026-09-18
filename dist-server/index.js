@@ -191,7 +191,9 @@ var init_schema = __esm({
       republicacionesCount: integer("republicaciones_count").default(0).notNull(),
       estadoComercial: varchar("estado_comercial", { length: 50 }).default("ACTIVO").notNull(),
       ultimaActividad: varchar("ultima_actividad", { length: 50 }).default("PUBLICACI\xD3N").notNull(),
-      vigenciaIa: varchar("vigencia_ia", { length: 50 }).default("VIGENTE").notNull()
+      vigenciaIa: varchar("vigencia_ia", { length: 50 }).default("VIGENTE").notNull(),
+      aceptaTerceria: boolean("acepta_terceria").default(true),
+      standByDirectoVecy: boolean("stand_by_directo_vecy").default(false)
     }, (table) => [
       index("idx_properties_available").on(table.available),
       index("idx_properties_tx_type").on(table.transactionType)
@@ -234,7 +236,9 @@ var init_schema = __esm({
       fechaExtraccion: timestamp("fecha_extraccion").defaultNow(),
       origenTipo: varchar("origen_tipo", { length: 50 }),
       origenId: varchar("origen_id", { length: 100 }),
-      origenNombre: varchar("origen_nombre", { length: 255 })
+      origenNombre: varchar("origen_nombre", { length: 255 }),
+      aceptaTerceria: boolean("acepta_terceria").default(true),
+      standByDirectoVecy: boolean("stand_by_directo_vecy").default(false)
     }, (table) => [
       index("idx_requirements_status").on(table.status)
     ]);
@@ -5491,7 +5495,7 @@ function explicarMatch(requirement, property) {
     if (clean.includes("local comercial") || clean.includes("locales comerciales") || /\blocal\b/.test(clean) || /\blocales\b/.test(clean)) {
       return "commercial";
     }
-    if (clean.includes("oficina") || clean.includes("oficinas") || /\boffice\b/.test(clean)) {
+    if ((clean.includes("oficina") || clean.includes("oficinas") || /\boffice\b/.test(clean)) && !clean.includes("home office") && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
       return "office";
     }
     if (/\bvilla\b/.test(clean) && !clean.includes("villa magdala") && !clean.includes("villa santos") && !clean.includes("villavicencio")) {
@@ -5988,6 +5992,40 @@ function explicarMatch(requirement, property) {
   const propIsInterior = propRawTextLower.includes("es interior") || propRawTextLower.includes("vista interior") || propRawTextLower.includes("apartamento interior") || propRawTextLower.includes("apto interior");
   if (reqDemandsExterior && propIsInterior) {
     blockers.push("Choque de Orientaci\xF3n Visual: El cliente exige expresamente 'SOLO EXTERIOR' y el inmueble ofrecido es INTERIOR. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const propNoTerceria = property.aceptaTerceria === false || property.standByDirectoVecy === true || /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(propRawTextLower);
+  const reqIsThirdPartyBroker = requirement.origenTipo === "grupo_externo" && /\b(?:colega|inmobiliaria|asesor|br[oó]ker|punta|compartir|50[-/]50|comisi[oó]n)\b/i.test(reqRawTextLower);
+  if (propNoTerceria && reqIsThirdPartyBroker) {
+    blockers.push("Standby Directo Vecy (Regla Doctrinal 50/50 No Tercer\xEDa): La oferta estipula expresamente 'NO TERCER\xCDA / Solo 50-50 Directo'. La demanda proviene de un intermediario externo solicitando comisi\xF3n compartida, lo que fragmentar\xEDa la punta de Vecy. Match puesto en STANDBY para cierre directo por Vecy Bienes Ra\xEDces (0% Match P\xFAblico).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const reqRequiresStudyObligatory = /\b(?:con\s*estudio\s*obligatorio|estudio\s*obligatorio|exige\s*estudio|estudio\s*indispensable|estudio\s*ojal[aá]\s*cerrado)\b/i.test(reqRawTextLower) || requirement.caracteristicasDeseadas?.estudio === "obligatorio";
+  const propHasStudy = /\b(?:estudio|star\s*de\s*tv|estar\s*de\s*tv|sala\s*de\s*tv|estudio\s*independiente|zona\s*de\s*estudio|hall\s*de\s*alcobas)\b/i.test(propRawTextLower) || Boolean(property.caracteristicas?.estudio) || Boolean(property.hasStudy);
+  if (reqRequiresStudyObligatory && !propHasStudy) {
+    blockers.push("Choque de Distribuci\xF3n Arquitect\xF3nica: La demanda exige ESTUDIO OBLIGATORIO / Estar de TV indispensable y la oferta no cuenta con estudio ni sala de TV. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const reqMinFloorMatch = reqRawTextLower.match(/(?:unicamente\s*ven\s*opciones\s*del\s*piso|del\s*piso|piso|pisos)\s*(\d{1,2})\s*(?:hacia\s*arriba|en\s*adelante|o\s*superior|\+|\s*mas)\b/i);
+  const reqMinFloor = reqMinFloorMatch ? parseInt(reqMinFloorMatch[1], 10) : requirement.caracteristicasDeseadas?.pisoMinimo || null;
+  let propFloor = null;
+  if (property.floor !== void 0 && property.floor !== null && !isNaN(Number(property.floor))) {
+    propFloor = Number(property.floor);
+  } else {
+    const propFloorMatch = propRawTextLower.match(/\bpiso\s*(\d{1,2})\b/i);
+    if (propFloorMatch) {
+      propFloor = parseInt(propFloorMatch[1], 10);
+    } else if (/\b(?:primer\s*piso|piso\s*primero|1er\s*piso)\b/i.test(propRawTextLower)) {
+      propFloor = 1;
+    }
+  }
+  if (reqMinFloor && propFloor !== null && propFloor < reqMinFloor) {
+    blockers.push(`Choque de Nivel / Altura: La demanda exige estrictamente piso ${reqMinFloor} o superior y la oferta est\xE1 ubicada en piso ${propFloor}. Match Inviable (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const reqDemandsHighLight = /\b(?:muy\s*luminoso|muy\s*iluminado|exterior\s*muy\s*iluminado|vista\s*exterior\s*agradable|vista\s*panor[aá]mica)\b/i.test(reqRawTextLower);
+  if (reqDemandsHighLight && propIsInterior) {
+    blockers.push("Choque de Confort Lum\xEDnico: El cliente exige expresamente inmueble muy luminoso / con vista agradable exterior y la oferta es de tipolog\xEDa interior. Match Inviable (0%).");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   const propGarageType = (property.garageType || "").toLowerCase();
@@ -7733,7 +7771,7 @@ function extractFallbackDataFromText(text2) {
   let propertyType = "apartment";
   if (clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("m\xE9dic") || clean.includes("medic")) {
     propertyType = "consultorio";
-  } else if (clean.includes("oficina") || clean.includes("oficinas") || clean.includes("office")) {
+  } else if ((clean.includes("oficina") || clean.includes("oficinas") || clean.includes("office")) && !clean.includes("home office") && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
     propertyType = "office";
   } else if (clean.includes("local comercial") || clean.includes("locales comerciales") || clean.includes("local") || clean.includes("locales") || clean.includes("comercial") || clean.includes("commercial")) {
     propertyType = "commercial";
@@ -8290,6 +8328,17 @@ function extractFallbackDataFromText(text2) {
   else if (clean.includes("chapinero central")) zone = "Chapinero Central";
   else if (clean.includes("chapinero")) zone = "Chapinero";
   else if (clean.includes("usaquen") || clean.includes("usaqu\xE9n")) zone = "Usaqu\xE9n";
+  const noTerceriaMatch = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(clean);
+  const aceptaTerceria = !noTerceriaMatch;
+  const standByDirectoVecy = noTerceriaMatch;
+  const requiresObligatoryStudy = /\b(?:con\s*estudio\s*obligatorio|estudio\s*obligatorio|exige\s*estudio|estudio\s*indispensable|estudio\s*(?:ojal[aá]\s*)?cerrado)\b/i.test(clean);
+  const hasStudy = requiresObligatoryStudy || clean.includes("estudio") || clean.includes("star de tv") || clean.includes("estar de tv") || clean.includes("sala de tv") || clean.includes("home office");
+  const pisoMinMatch = clean.match(/(?:unicamente\s*ven\s*opciones\s*del\s*piso|del\s*piso|piso|pisos)\s*(\d{1,2})\s*(?:hacia\s*arriba|en\s*adelante|o\s*superior|\+|\s*mas)\b/i);
+  const pisoMinimo = pisoMinMatch ? parseInt(pisoMinMatch[1], 10) : null;
+  const requiresExterior = /\b(?:muy\s*luminoso|vista\s*agradable|vista\s*exterior|exterior\s*muy\s*iluminado|vista\s*panor[aá]mica|exterior|sin\s*interior)\b/i.test(clean);
+  const interiorExterior = requiresExterior ? "exterior" : clean.includes("interior") && !clean.includes("exterior") ? "interior" : null;
+  const adminFeeIncluded = /(?:admin(?:istraci[oó]n)?|admon)\s*(?:incluida|inc\b)|(?:con|\+|mas|más)\s*(?:admin(?:istraci[oó]n)?|admon)/i.test(clean);
+  const isAmoblado = /\b(?:amoblado|amoblada|con\s*muebles|completamente\s*amoblado|dotado)\b/i.test(clean);
   return {
     propertyType,
     transactionType,
@@ -8300,6 +8349,7 @@ function extractFallbackDataFromText(text2) {
     presupuestoMax: presupuestoMax > 0 ? presupuestoMax : price,
     rentPrice: rentPrice > 0 ? rentPrice : null,
     adminFee: adminFee > 0 ? adminFee : null,
+    adminFeeIncluded,
     area,
     areaMin: areaMin > 0 ? areaMin : area > 0 ? area : null,
     areaMax: areaMax > 0 ? areaMax : area > 0 ? area : null,
@@ -8324,7 +8374,21 @@ function extractFallbackDataFromText(text2) {
     city,
     ciudadDeseada: city,
     zone,
-    zonaDeseada: zone
+    zonaDeseada: zone,
+    aceptaTerceria,
+    standByDirectoVecy,
+    requiresObligatoryStudy,
+    hasStudy,
+    pisoMinimo,
+    interiorExterior,
+    isAmoblado,
+    caracteristicasDeseadas: {
+      estudio: requiresObligatoryStudy ? "obligatorio" : hasStudy ? "deseado" : null,
+      pisoMinimo,
+      interiorExterior,
+      adminFeeIncluded,
+      amoblado: isAmoblado ? true : null
+    }
   };
 }
 async function enrichLexiconFromText(rawText) {
@@ -11149,7 +11213,9 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
     republicacionesCount: 0,
     estadoComercial: "ACTIVO",
     ultimaActividad: "PUBLICACI\xD3N",
-    vigenciaIa: "VIGENTE"
+    vigenciaIa: "VIGENTE",
+    aceptaTerceria: data.aceptaTerceria !== void 0 ? Boolean(data.aceptaTerceria) : !/\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawTextContent),
+    standByDirectoVecy: data.standByDirectoVecy !== void 0 ? Boolean(data.standByDirectoVecy) : /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawTextContent)
   };
   let existing = [];
   if (canonicalExternalId) {
@@ -11297,17 +11363,30 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
       console.error("[JanIA-SaveRequirement] Error subiendo imagen:", err);
     }
   }
+  const rawLowerAll = `${rawTextContent} ${data.name || ""}`.toLowerCase();
+  const reqNoTerceriaMatch = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawLowerAll);
+  const reqRequiresObligatoryStudy = /\b(?:con\s*estudio\s*obligatorio|estudio\s*obligatorio|exige\s*estudio|estudio\s*indispensable|estudio\s*ojal[aá]\s*cerrado)\b/i.test(rawLowerAll);
+  const reqHasStudy = reqRequiresObligatoryStudy || rawLowerAll.includes("estudio") || rawLowerAll.includes("star de tv") || rawLowerAll.includes("estar de tv") || rawLowerAll.includes("sala de tv");
+  const reqPisoMinMatch = rawLowerAll.match(/(?:unicamente\s*ven\s*opciones\s*del\s*piso|del\s*piso|piso|pisos)\s*(\d{1,2})\s*(?:hacia\s*arriba|en\s*adelante|o\s*superior|\+|\s*mas)\b/i);
+  const reqPisoMin = reqPisoMinMatch ? parseInt(reqPisoMinMatch[1], 10) : null;
+  const reqRequiresExterior = /\b(?:muy\s*luminoso|vista\s*agradable|vista\s*exterior|exterior\s*muy\s*iluminado|vista\s*panor[aá]mica|exterior|sin\s*interior)\b/i.test(rawLowerAll);
+  const reqAdminFeeInc = /(?:admin(?:istraci[oó]n)?|admon)\s*(?:incluida|inc\b)|(?:con|\+|mas|más)\s*(?:admin(?:istraci[oó]n)?|admon)/i.test(rawLowerAll);
+  const reqIsAmoblado = /\b(?:amoblado|amoblada|con\s*muebles)\b/i.test(rawLowerAll);
   const characteristicsObj = {
     gives: data.gives || data.caracteristicasDeseadas?.gives,
     wants: data.wants || data.caracteristicasDeseadas?.wants,
-    interiorExterior: data.interiorExterior || data.caracteristicasDeseadas?.interiorExterior,
+    interiorExterior: data.interiorExterior || data.caracteristicasDeseadas?.interiorExterior || (reqRequiresExterior ? "exterior" : null),
     cuartoBanoServicio: data.cuartoBanoServicio || data.caracteristicasDeseadas?.cuartoBanoServicio,
     cocina: data.cocina || data.caracteristicasDeseadas?.cocina,
     lavanderiaIndependiente: data.lavanderiaIndependiente || data.caracteristicasDeseadas?.lavanderiaIndependiente,
     tipoPisos: data.tipoPisos || data.caracteristicasDeseadas?.tipoPisos,
     depositos: data.depositos || data.caracteristicasDeseadas?.depositos,
     comisiones: data.comisiones || data.caracteristicasDeseadas?.comisiones,
-    antiguedad: data.antiguedad || data.caracteristicasDeseadas?.antiguedad
+    antiguedad: data.antiguedad || data.caracteristicasDeseadas?.antiguedad,
+    estudio: reqRequiresObligatoryStudy ? "obligatorio" : reqHasStudy ? "deseado" : null,
+    pisoMinimo: reqPisoMin,
+    adminFeeIncluded: reqAdminFeeInc,
+    amoblado: reqIsAmoblado ? true : rawLowerAll.includes("sin amoblar") ? false : null
   };
   if (!data.zonaDeseada && (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogot\xE1" || data.zone.toLowerCase() === "colombia")) {
     const geoInferred = resolveIntersectionToBarrio(data.rawText || data.name);
@@ -11433,7 +11512,9 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
     origenTipo: data.origenTipo || null,
     origenId: data.origenId || null,
     origenNombre: data.origenNombre || null,
-    fechaExtraccion: data.fechaExtraccion || getColombiaNow()
+    fechaExtraccion: data.fechaExtraccion || getColombiaNow(),
+    aceptaTerceria: data.aceptaTerceria !== void 0 ? Boolean(data.aceptaTerceria) : !reqNoTerceriaMatch,
+    standByDirectoVecy: data.standByDirectoVecy !== void 0 ? Boolean(data.standByDirectoVecy) : reqNoTerceriaMatch
   };
   const rawZoneStr = (insertData.zonaDeseada || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
   const rawTextStr = (insertData.rawText || "").toLowerCase();
@@ -16576,7 +16657,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.71";
+var VECY_VERSION = "v31.72";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

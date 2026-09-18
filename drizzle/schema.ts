@@ -124,6 +124,8 @@ export const properties = pgTable("properties", {
   estadoComercial: varchar("estado_comercial", { length: 50 }).default("ACTIVO").notNull(),
   ultimaActividad: varchar("ultima_actividad", { length: 50 }).default("PUBLICACIÓN").notNull(),
   vigenciaIa: varchar("vigencia_ia", { length: 50 }).default("VIGENTE").notNull(),
+  aceptaTerceria: boolean("acepta_terceria").default(true),
+  standByDirectoVecy: boolean("stand_by_directo_vecy").default(false),
 }, (table) => [
   index("idx_properties_available").on(table.available),
   index("idx_properties_tx_type").on(table.transactionType),
@@ -171,6 +173,8 @@ export const requirements = pgTable("requirements", {
   origenTipo: varchar("origen_tipo", { length: 50 }),
   origenId: varchar("origen_id", { length: 100 }),
   origenNombre: varchar("origen_nombre", { length: 255 }),
+  aceptaTerceria: boolean("acepta_terceria").default(true),
+  standByDirectoVecy: boolean("stand_by_directo_vecy").default(false),
 }, (table) => [
   index("idx_requirements_status").on(table.status),
 ]);

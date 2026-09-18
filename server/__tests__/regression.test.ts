@@ -363,5 +363,158 @@ describe("VECY NETWORK — SUITE DE REGRESIÓN DOCTRINAL AUTOMATIZADA", () => {
       expect(sanitized).toContain("JanIA");
     });
   });
+
+  // ─────────────────────────────────────────────────────────────
+  // 8. TERCERÍA INMOBILIARIA 50/50 Y CHOQUES DOCTRINALES (v31.72)
+  // ─────────────────────────────────────────────────────────────
+  describe("8. Tercería Inmobiliaria 50/50 y Choques Doctrinales de Distribución (v31.72)", () => {
+    it("extractFallbackDataFromText debe detectar 'no tercería' y estudio obligatorio", () => {
+      const text = "Apto en venta Chicó 120m2, 3 hab, 2 baños, estudio cerrado, comisión 50-50 no tercería, piso 6";
+      const parsed = extractFallbackDataFromText(text);
+      expect(parsed.aceptaTerceria).toBe(false);
+      expect(parsed.standByDirectoVecy).toBe(true);
+      expect(parsed.caracteristicasDeseadas?.estudio).toBe("obligatorio");
+    });
+
+    it("Oferta con 'NO TERCERÍA' vs Demanda de Intermediario Colega debe quedar en STANDBY DIRECTO VECY (0%)", () => {
+      const prop = {
+        id: 501,
+        propertyType: "apartment",
+        transactionType: "venta",
+        addressCity: "Bogotá",
+        barrio: "Chicó",
+        price: 800_000_000,
+        areaTotal: 120,
+        bedrooms: 3,
+        bathrooms: 2,
+        garages: 2,
+        stratum: 5,
+        aceptaTerceria: false,
+        standByDirectoVecy: true,
+        rawText: "Excelente apartamento en venta en el barrio Chicó, área 120m2, consta de 3 habitaciones amplias, 2 baños completos, garaje doble cubierto, valor $800.000.000. Comisión 50/50 NO TERCERÍA."
+      };
+      const req = {
+        id: 901,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "venta",
+        ciudadDeseada: "Bogotá",
+        zonaDeseada: "Chicó",
+        presupuestoMax: 850_000_000,
+        areaMin: 100,
+        habitacionesMin: 3,
+        banosMin: 2,
+        parqueaderosMin: 1,
+        estratoDeseado: [5],
+        origenTipo: "grupo_externo",
+        rawText: "Colega inmobiliaria aliada busca apartamento en venta en Chicó para cliente calificado, presupuesto 850 millones, compartir comisión 50/50."
+      };
+      const result = explicarMatch(req, prop);
+      expect(result.score).toBe(0);
+      expect(result.blockers.some(b => b.includes("Standby Directo Vecy") || b.includes("NO TERCERÍA"))).toBe(true);
+    });
+
+    it("Demanda con 'ESTUDIO OBLIGATORIO' debe bloquear oferta sin estudio ni sala de TV (0%)", () => {
+      const prop = {
+        id: 502,
+        propertyType: "apartment",
+        transactionType: "venta",
+        addressCity: "Bogotá",
+        barrio: "Cedritos",
+        price: 450_000_000,
+        areaTotal: 90,
+        bedrooms: 3,
+        bathrooms: 2,
+        garages: 1,
+        stratum: 4,
+        rawText: "Apartamento en venta en Cedritos, área de 90m2, cuenta con 3 alcobas, 2 baños, sala comedor corrida, cocina integral, 1 garaje privado, valor $450.000.000."
+      };
+      const req = {
+        id: 902,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "venta",
+        ciudadDeseada: "Bogotá",
+        zonaDeseada: "Cedritos",
+        presupuestoMax: 480_000_000,
+        areaMin: 85,
+        habitacionesMin: 3,
+        banosMin: 2,
+        parqueaderosMin: 1,
+        estratoDeseado: [4],
+        rawText: "Busco apartamento en Cedritos, 3 alcobas, presupuesto 480 millones, indispensable con estudio obligatorio para home office."
+      };
+      const result = explicarMatch(req, prop);
+      expect(result.score).toBe(0);
+      expect(result.blockers.some(b => b.includes("ESTUDIO OBLIGATORIO"))).toBe(true);
+    });
+
+    it("Demanda con piso mínimo ('del piso 5 hacia arriba') debe bloquear oferta en piso inferior", () => {
+      const prop = {
+        id: 503,
+        propertyType: "apartment",
+        transactionType: "venta",
+        addressCity: "Bogotá",
+        barrio: "Santa Bárbara",
+        price: 600_000_000,
+        areaTotal: 100,
+        bedrooms: 3,
+        bathrooms: 2,
+        garages: 2,
+        stratum: 5,
+        floor: 2,
+        rawText: "Apartamento en Santa Bárbara piso 2, área 100m2, consta de 3 alcobas, 2 baños, 2 garajes independientes, precio $600.000.000."
+      };
+      const req = {
+        id: 903,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "venta",
+        ciudadDeseada: "Bogotá",
+        zonaDeseada: "Santa Bárbara",
+        presupuestoMax: 650_000_000,
+        areaMin: 95,
+        habitacionesMin: 3,
+        banosMin: 2,
+        parqueaderosMin: 2,
+        estratoDeseado: [5],
+        rawText: "Busco en Santa Bárbara 3 alcobas, presupuesto 650 millones, únicamente ven opciones del piso 5 hacia arriba con vista agradable."
+      };
+      const result = explicarMatch(req, prop);
+      expect(result.score).toBe(0);
+      expect(result.blockers.some(b => b.includes("Choque de Nivel / Altura") && b.includes("piso 5"))).toBe(true);
+    });
+
+    it("Demanda que exige inmueble muy luminoso debe bloquear oferta interior", () => {
+      const prop = {
+        id: 504,
+        propertyType: "apartment",
+        transactionType: "venta",
+        addressCity: "Bogotá",
+        barrio: "Rosales",
+        price: 900_000_000,
+        areaTotal: 110,
+        bedrooms: 2,
+        bathrooms: 2,
+        garages: 2,
+        stratum: 6,
+        rawText: "Apartamento en Rosales, 110m2, 2 habitaciones, 2 baños, garaje doble, apto interior tranquilo."
+      };
+      const req = {
+        id: 904,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "venta",
+        ciudadDeseada: "Bogotá",
+        zonaDeseada: "Rosales",
+        presupuestoMax: 950_000_000,
+        areaMin: 100,
+        habitacionesMin: 2,
+        banosMin: 2,
+        parqueaderosMin: 1,
+        estratoDeseado: [6],
+        rawText: "Busco en Rosales 2 habitaciones, exterior muy iluminado y muy luminoso."
+      };
+      const result = explicarMatch(req, prop);
+      expect(result.score).toBe(0);
+      expect(result.blockers.some(b => b.includes("Choque de Confort Lumínico") || b.includes("INTERIOR"))).toBe(true);
+    });
+  });
 });
 

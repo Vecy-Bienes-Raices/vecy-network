@@ -572,7 +572,7 @@ export function extractFallbackDataFromText(text: string): any {
   let propertyType = "apartment";
   if (clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("médic") || clean.includes("medic")) {
     propertyType = "consultorio";
-  } else if (clean.includes("oficina") || clean.includes("oficinas") || clean.includes("office")) {
+  } else if ((clean.includes("oficina") || clean.includes("oficinas") || clean.includes("office")) && !clean.includes("home office") && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
     propertyType = "office";
   } else if (clean.includes("local comercial") || clean.includes("locales comerciales") || clean.includes("local") || clean.includes("locales") || clean.includes("comercial") || clean.includes("commercial")) {
     propertyType = "commercial";
@@ -1122,6 +1122,23 @@ export function extractFallbackDataFromText(text: string): any {
   else if (clean.includes("chapinero")) zone = "Chapinero";
   else if (clean.includes("usaquen") || clean.includes("usaquén")) zone = "Usaquén";
 
+  // ── DETECCIONES DOCTRINALES ESTRUCTURADAS (v31.72) ──
+  const noTerceriaMatch = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(clean);
+  const aceptaTerceria = !noTerceriaMatch;
+  const standByDirectoVecy = noTerceriaMatch;
+
+  const requiresObligatoryStudy = /\b(?:con\s*estudio\s*obligatorio|estudio\s*obligatorio|exige\s*estudio|estudio\s*indispensable|estudio\s*(?:ojal[aá]\s*)?cerrado)\b/i.test(clean);
+  const hasStudy = requiresObligatoryStudy || clean.includes("estudio") || clean.includes("star de tv") || clean.includes("estar de tv") || clean.includes("sala de tv") || clean.includes("home office");
+
+  const pisoMinMatch = clean.match(/(?:unicamente\s*ven\s*opciones\s*del\s*piso|del\s*piso|piso|pisos)\s*(\d{1,2})\s*(?:hacia\s*arriba|en\s*adelante|o\s*superior|\+|\s*mas)\b/i);
+  const pisoMinimo = pisoMinMatch ? parseInt(pisoMinMatch[1], 10) : null;
+
+  const requiresExterior = /\b(?:muy\s*luminoso|vista\s*agradable|vista\s*exterior|exterior\s*muy\s*iluminado|vista\s*panor[aá]mica|exterior|sin\s*interior)\b/i.test(clean);
+  const interiorExterior = requiresExterior ? "exterior" : (clean.includes("interior") && !clean.includes("exterior") ? "interior" : null);
+
+  const adminFeeIncluded = /(?:admin(?:istraci[oó]n)?|admon)\s*(?:incluida|inc\b)|(?:con|\+|mas|más)\s*(?:admin(?:istraci[oó]n)?|admon)/i.test(clean);
+  const isAmoblado = /\b(?:amoblado|amoblada|con\s*muebles|completamente\s*amoblado|dotado)\b/i.test(clean);
+
   return {
     propertyType,
     transactionType,
@@ -1132,6 +1149,7 @@ export function extractFallbackDataFromText(text: string): any {
     presupuestoMax: presupuestoMax > 0 ? presupuestoMax : price,
     rentPrice: rentPrice > 0 ? rentPrice : null,
     adminFee: adminFee > 0 ? adminFee : null,
+    adminFeeIncluded,
     area,
     areaMin: areaMin > 0 ? areaMin : (area > 0 ? area : null),
     areaMax: areaMax > 0 ? areaMax : (area > 0 ? area : null),
@@ -1156,7 +1174,21 @@ export function extractFallbackDataFromText(text: string): any {
     city,
     ciudadDeseada: city,
     zone,
-    zonaDeseada: zone
+    zonaDeseada: zone,
+    aceptaTerceria,
+    standByDirectoVecy,
+    requiresObligatoryStudy,
+    hasStudy,
+    pisoMinimo,
+    interiorExterior,
+    isAmoblado,
+    caracteristicasDeseadas: {
+      estudio: requiresObligatoryStudy ? "obligatorio" : (hasStudy ? "deseado" : null),
+      pisoMinimo,
+      interiorExterior,
+      adminFeeIncluded,
+      amoblado: isAmoblado ? true : null
+    }
   };
 }
 
@@ -5092,7 +5124,9 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     republicacionesCount: 0,
     estadoComercial: "ACTIVO",
     ultimaActividad: "PUBLICACIÓN",
-    vigenciaIa: "VIGENTE"
+    vigenciaIa: "VIGENTE",
+    aceptaTerceria: data.aceptaTerceria !== undefined ? Boolean(data.aceptaTerceria) : !/\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawTextContent),
+    standByDirectoVecy: data.standByDirectoVecy !== undefined ? Boolean(data.standByDirectoVecy) : /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawTextContent)
   };
 
   // Búsqueda jerárquica de duplicados
@@ -5294,17 +5328,31 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     }
   }
 
+  const rawLowerAll = `${rawTextContent} ${(data.name || "")}`.toLowerCase();
+  const reqNoTerceriaMatch = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawLowerAll);
+  const reqRequiresObligatoryStudy = /\b(?:con\s*estudio\s*obligatorio|estudio\s*obligatorio|exige\s*estudio|estudio\s*indispensable|estudio\s*ojal[aá]\s*cerrado)\b/i.test(rawLowerAll);
+  const reqHasStudy = reqRequiresObligatoryStudy || rawLowerAll.includes("estudio") || rawLowerAll.includes("star de tv") || rawLowerAll.includes("estar de tv") || rawLowerAll.includes("sala de tv");
+  const reqPisoMinMatch = rawLowerAll.match(/(?:unicamente\s*ven\s*opciones\s*del\s*piso|del\s*piso|piso|pisos)\s*(\d{1,2})\s*(?:hacia\s*arriba|en\s*adelante|o\s*superior|\+|\s*mas)\b/i);
+  const reqPisoMin = reqPisoMinMatch ? parseInt(reqPisoMinMatch[1], 10) : null;
+  const reqRequiresExterior = /\b(?:muy\s*luminoso|vista\s*agradable|vista\s*exterior|exterior\s*muy\s*iluminado|vista\s*panor[aá]mica|exterior|sin\s*interior)\b/i.test(rawLowerAll);
+  const reqAdminFeeInc = /(?:admin(?:istraci[oó]n)?|admon)\s*(?:incluida|inc\b)|(?:con|\+|mas|más)\s*(?:admin(?:istraci[oó]n)?|admon)/i.test(rawLowerAll);
+  const reqIsAmoblado = /\b(?:amoblado|amoblada|con\s*muebles)\b/i.test(rawLowerAll);
+
   const characteristicsObj = {
     gives: data.gives || data.caracteristicasDeseadas?.gives,
     wants: data.wants || data.caracteristicasDeseadas?.wants,
-    interiorExterior: data.interiorExterior || data.caracteristicasDeseadas?.interiorExterior,
+    interiorExterior: data.interiorExterior || data.caracteristicasDeseadas?.interiorExterior || (reqRequiresExterior ? "exterior" : null),
     cuartoBanoServicio: data.cuartoBanoServicio || data.caracteristicasDeseadas?.cuartoBanoServicio,
     cocina: data.cocina || data.caracteristicasDeseadas?.cocina,
     lavanderiaIndependiente: data.lavanderiaIndependiente || data.caracteristicasDeseadas?.lavanderiaIndependiente,
     tipoPisos: data.tipoPisos || data.caracteristicasDeseadas?.tipoPisos,
     depositos: data.depositos || data.caracteristicasDeseadas?.depositos,
     comisiones: data.comisiones || data.caracteristicasDeseadas?.comisiones,
-    antiguedad: data.antiguedad || data.caracteristicasDeseadas?.antiguedad
+    antiguedad: data.antiguedad || data.caracteristicasDeseadas?.antiguedad,
+    estudio: reqRequiresObligatoryStudy ? "obligatorio" : (reqHasStudy ? "deseado" : null),
+    pisoMinimo: reqPisoMin,
+    adminFeeIncluded: reqAdminFeeInc,
+    amoblado: reqIsAmoblado ? true : (rawLowerAll.includes("sin amoblar") ? false : null)
   };
 
   // ── RESOLUCIÓN GEOGRÁFICA INTELIGENTE DE INTERSECCIONES Y CRUCES ──
@@ -5437,7 +5485,9 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     origenTipo: data.origenTipo || null,
     origenId: data.origenId || null,
     origenNombre: data.origenNombre || null,
-    fechaExtraccion: data.fechaExtraccion || getColombiaNow()
+    fechaExtraccion: data.fechaExtraccion || getColombiaNow(),
+    aceptaTerceria: data.aceptaTerceria !== undefined ? Boolean(data.aceptaTerceria) : !reqNoTerceriaMatch,
+    standByDirectoVecy: data.standByDirectoVecy !== undefined ? Boolean(data.standByDirectoVecy) : reqNoTerceriaMatch
   };
 
   // 🛡️ REGLA DOCTRINAL v22.10: Filtro de Calidad Estricto de Ingesta para Requerimientos.

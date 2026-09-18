@@ -50,7 +50,67 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.71 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.72 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 17 de Septiembre de 2026 — 21:45 (Hora Colombia UTC-5)
+**Versión**: `v31.72` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 Nativo + PM2 (`jania-server`) + GitHub (`main`) + React Vercel
+
+#### 🎯 Solicitud Exacta y Casos Doctrinales de Eduardo A. Rivera:
+- Discusión doctrinal y operativa en corretaje inmobiliario sobre dos casos reales de choques en el mercado:
+  1) **Inmuebles en Venta con "NO TERCERÍA" o "SOLO 50/50"**:
+     - Ofertas donde el captador o la inmobiliaria directa advierte: *"Comisión 50/50 NO TERCERÍA"* o *"No acepto intermediarios externos"*.
+     - Problema: Si JanIA cruza este inmueble con un requerimiento traído por otro corredor externo, se genera una cadena inviable de 3 intermediarios que rompe la negociación y desata disputas éticas.
+     - Mandato Doctrinal de Eduardo: Cuando la oferta dice "NO TERCERÍA", VECY Network debe proteger la exclusividad y reservarla en **STANDBY DIRECTO VECY (0% Match)** frente a intermediarios externos, permitiendo cruce EXCLUSIVAMENTE si el requerimiento es un cliente comprador directo de Vecy Bienes Raíces (o del bróker registrado).
+  2) **Requerimientos con Distribución y Ficha Estricta (Estudio Obligatorio, Pisos Mínimos, Orientación Lumínica)**:
+     - Demandas de clientes que exigen: *"3 alcobas + estudio obligatorio cerrado para home office"*, *"únicamente del piso 5 hacia arriba"* o *"muy luminoso con vista exterior"*.
+     - Problema: Antes de v31.72, si un apartamento de 3 alcobas no tenía estudio, el sistema lo calificaba al 95% omitiendo el requerimiento de estudio o confundiendo "home office" con tipología de oficina comercial. Si estaba en piso 2 o era interior oscuro, pasaba como match viable generando visitas infructuosas.
+     - Mandato Doctrinal de Eduardo: "ESTUDIO OBLIGATORIO" es un FILTRO DURO inquebrantable (0% Match si el inmueble carece de estudio o estar de TV). Altura inferior al piso exigido es un Bloqueo Inmediato (0% Match). Si el cliente exige "muy luminoso/exterior" y el predio es "interior", se bloquea al 0% por choque de confort lumínico.
+
+#### 🔬 Diagnóstico Técnico y Causas Raíz Identificadas:
+1. **Ausencia de Atributo `aceptaTerceria` en Base de Datos y Matching**:
+   - Las tablas `properties` y `requirements` no contaban con banderas explícitas ni detección heurística para la regla de tercería inmobiliaria 50/50 colombiana.
+2. **Falso Positivo de Uso de Suelo con "Home Office"**:
+   - En `server/_core/janIA.ts` (línea 575) y `server/_core/matching.ts` (línea 2035), el clasificador de tipología contenía `clean.includes("office")` o `/\boffice\b/.test(clean)`. Cuando un requerimiento residencial pedía *"apartamento de 3 alcobas con estudio para home office"*, el parser lo reclasificaba como inmueble comercial (`office`), arrojando *"Incompatibilidad de uso de suelo: office vs apartment (0%)"* de forma errónea.
+3. **Omisión de Filtros Duros de Distribución (Estudio, Piso Mínimo, Exterior vs Interior)**:
+   - El motor de matching evaluaba habitaciones y baños, pero no contrastaba si el estudio era obligatorio o si la oferta cumplía con el piso mínimo demandado.
+
+#### 🛠️ Acciones Técnicas Ejecutadas:
+1. **Evolución del Esquema en Base de Datos VPS (`drizzle/schema.ts` & PostgreSQL Nativo)**:
+   - Columnas aditivas añadidas a `properties`:
+     - `aceptaTerceria BOOLEAN DEFAULT true NOT NULL`
+     - `standByDirectoVecy BOOLEAN DEFAULT false NOT NULL`
+     - `pisoMinimo INTEGER`
+     - `interiorExterior TEXT` ('interior' | 'exterior')
+     - `requiresObligatoryStudy BOOLEAN DEFAULT false`
+     - `hasStudy BOOLEAN DEFAULT false`
+     - `hasEstarTv BOOLEAN DEFAULT false`
+   - Columnas aditivas añadidas a `requirements`:
+     - `aceptaTerceria BOOLEAN DEFAULT true NOT NULL`
+     - `standByDirectoVecy BOOLEAN DEFAULT false NOT NULL`
+     - `pisoMinimo INTEGER`
+     - `interiorExterior TEXT`
+     - `requiresObligatoryStudy BOOLEAN DEFAULT false`
+2. **Parser y Extractor Determinista Enriquecido (`server/_core/janIA.ts`)**:
+   - Detección regex instantánea de claudicación de tercería: `/\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios)\b/i`.
+   - Blindaje de `office`: Excluye explícitamente `home office`, `apartamento`, `apto` y `casa`.
+   - Detección de estudio obligatorio: `/\b(?:con\s*estudio\s*obligatorio|estudio\s*obligatorio|exige\s*estudio|estudio\s*indispensable|estudio\s*(?:ojal[aá]\s*)?cerrado)\b/i`.
+   - Detección de piso mínimo: `/(?:unicamente\s*ven\s*opciones\s*del\s*piso|del\s*piso|piso|pisos)\s*(\d{1,2})\s*(?:hacia\s*arriba|en\s*adelante|o\s*superior|\+|\s*mas)\b/i`.
+   - Detección de orientación lumínica (exterior / muy iluminado vs interior).
+3. **Guillotinas Doctrinales en Motor de Matching (`server/_core/matching.ts`)**:
+   - **Filtro Duro 1.3: Tercería Inmobiliaria 50/50 y Standby Directo Vecy**: Si la oferta no acepta tercería (`aceptaTerceria === false` o `standByDirectoVecy === true`) y la demanda proviene de un intermediario externo colega, el match se bloquea al 0% con etiqueta `[STANDBY DIRECTO VECY]`.
+   - **Filtro Duro 4.1: Estudio / Star de TV Obligatorio**: Si la demanda exige estudio obligatorio y la oferta no dispone de estudio, estar de TV ni sala de TV, se bloquea inmediatamente al 0% con `⛔ Bloqueo Doctrinal: Demanda exige ESTUDIO OBLIGATORIO`.
+   - **Filtro Duro 4.2: Piso Mínimo Exigido**: Si la demanda especifica un piso mínimo y el apartamento está en un piso inferior, se bloquea al 0% por `Choque de Nivel / Altura`.
+   - **Filtro Duro 4.3: Confort Lumínico y Orientación Visual**: Si la demanda exige inmueble muy luminoso o con vista exterior y la oferta es interior, se bloquea al 0%.
+4. **Validación Automatizada en Suite Vitest (41 pruebas unitarias)**:
+   - 5 nuevas pruebas cubren detección de tercería, standby directo, estudio obligatorio, corte por nivel y lumínica.
+   - 41 pruebas pasadas exitosamente al 100% en 4.03s.
+5. **Compilación Limpia y Despliegue en VPS**:
+   - `tsc --noEmit` con cero errores.
+   - `vite build` y `esbuild` limpios en 28.9s.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.71 — Septiembre 2026
 
 ### 🗓️ Sesión: Jueves 17 de Septiembre de 2026 — 14:20 (Hora Colombia UTC-5)
 **Versión**: `v31.71` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 Nativo + PM2 (`jania-server`) + GitHub (`main`) + React Vercel

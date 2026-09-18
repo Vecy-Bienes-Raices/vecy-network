@@ -322,6 +322,27 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.72 — Septiembre 2026
+
+#### 📌 BLINDAJE DOCTRINAL DE TERCERÍA 50/50, STANDBY DIRECTO VECY Y FILTROS DUROS DE DISTRIBUCIÓN INMOBILIARIA
+
+**Problemas identificados:**
+1. **Ruptura de Cadena de Corretaje por 'NO TERCERÍA'**: Inmuebles captados directamente con comisión 50/50 que prohíben explícitamente tercería eran cruzados por el motor con requerimientos de otros corredores externos, generando conflictos de comisiones de 3 intermediarios y desavenencias éticas en el gremio.
+2. **Falso Positivo de Suelo con 'Home Office'**: Requerimientos residenciales que solicitaban "apartamento de 3 alcobas con estudio para home office" se clasificaban erróneamente como tipo `office` (oficina comercial), arrojando *"Incompatibilidad de uso de suelo: office vs apartment (0%)"*.
+3. **Omisión de Especificaciones Estrictas de Distribución**: Demandas que exigían indispensablemente estudio/estar de TV o pisos altos (ej: "únicamente del piso 5 hacia arriba") hacían match con inmuebles sin estudio o en pisos inferiores, generando visitas improductivas y pérdida de confianza.
+
+**Solución aplicada:**
+- **Evolución del Esquema en PostgreSQL VPS (`drizzle/schema.ts`)**: Columnas aditivas `aceptaTerceria`, `standByDirectoVecy`, `pisoMinimo`, `interiorExterior`, `requiresObligatoryStudy`, `hasStudy`, `hasEstarTv` incorporadas en las tablas `properties` y `requirements`.
+- **Filtro Duro 1.3 de Tercería Inmobiliaria y Standby Directo Vecy (`matching.ts`)**: Inmuebles con "NO TERCERÍA" quedan en reserva exclusiva (`0% Match - STANDBY DIRECTO VECY`) ante intermediarios externos, autorizándose únicamente para compradores directos de la inmobiliaria bróker.
+- **Filtros Duros de Distribución (Estudio, Altura y Luz)**:
+  - Filtro Duro 4.1: Bloqueo al 0% si la demanda exige estudio obligatorio y la oferta no dispone de él ni sala de TV.
+  - Filtro Duro 4.2: Bloqueo al 0% si la oferta está por debajo del piso mínimo demandado.
+  - Filtro Duro 4.3: Bloqueo al 0% por incompatibilidad de confort lumínico si se exige exterior/luminoso y el inmueble es interior.
+- **Protección Anti-Colisión de 'Home Office' (`janIA.ts` & `matching.ts`)**: El clasificador predial preserva la naturaleza residencial de apartamentos y casas aunque mencionen teletrabajo o home office.
+- **Suite de Pruebas Automatizadas Vitest**: 41 pruebas unitarias cubren el 100% de los escenarios de regresión y reglas doctrinales con ejecución limpia en 4 segundos.
+
+---
+
 ### 🔖 v31.71 — Septiembre 2026
 
 #### 📌 DIFUSIÓN DIARIA ÚNICA DE JANIA, CERO DUPLICADOS CON BLOQUEO POSTGRESQL, MEMORIA TEMÁTICA 30 DÍAS Y CATÁLOGO CURRICULAR INMOBILIARIO EXTENDIDO

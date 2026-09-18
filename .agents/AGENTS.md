@@ -167,7 +167,23 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.71 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.72 — Septiembre 2026
+
+### Novedades v31.72 (Blindaje Doctrinal de Tercería 50/50, Standby Directo Vecy y Filtros Duros de Distribución Inmobiliaria):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Ruptura de Cadena de Corretaje por 'NO TERCERÍA'*: Inmuebles captados directamente con comisión 50/50 que prohíben explícitamente tercería eran cruzados por el motor con requerimientos de otros corredores externos, generando conflictos de comisiones de 3 intermediarios.
+  2) *Falso Positivo de Suelo con 'Home Office'*: Requerimientos residenciales que pedían "apartamento con estudio para home office" se clasificaban erróneamente como tipo `office` (oficina comercial), arrojando incompatibilidad de uso de suelo al 0%.
+  3) *Omisión de Especificaciones Estrictas de Distribución*: Demandas que exigían indispensablemente estudio/estar de TV o pisos altos (ej: "piso 5 hacia arriba") hacían match con inmuebles sin estudio o en pisos bajos, generando desgaste comercial innecesario.
+- **Acciones Ejecutadas**:
+  1) *Evolución de Esquema en BD PostgreSQL VPS*: Columnas `aceptaTerceria`, `standByDirectoVecy`, `pisoMinimo`, `interiorExterior`, `requiresObligatoryStudy`, `hasStudy`, `hasEstarTv` incorporadas en `properties` y `requirements`.
+  2) *Filtro Duro 1.3 de Tercería Inmobiliaria y Standby Directo Vecy*: Inmuebles con "NO TERCERÍA" quedan en reserva exclusiva (`0% Match - STANDBY DIRECTO VECY`) ante intermediarios externos, autorizándose únicamente para compradores directos de la inmobiliaria bróker.
+  3) *Filtros Duros de Distribución (Estudio, Altura y Luz)*: Bloqueo al 0% si la demanda exige estudio obligatorio y la oferta no dispone de él; bloqueo al 0% si la oferta está por debajo del piso mínimo demandado; y bloqueo al 0% por incompatibilidad de confort lumínico si se exige exterior/luminoso y el inmueble es interior.
+  4) *Protección Anti-Colisión de 'Home Office'*: El clasificador predial preserva la naturaleza residencial de apartamentos y casas aunque mencionen teletrabajo o home office.
+  5) *Suite de Pruebas Automatizadas Vitest*: 41 pruebas unitarias cubren el 100% de los escenarios de regresión y reglas doctrinales con ejecución limpia en 4 segundos.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.71 — Septiembre 2026
 
 ### Novedades v31.71 (Difusión Diaria Única de JanIA, Cero Duplicados con Bloqueo PostgreSQL, Memoria Temática 30 Días y Catálogo Curricular Inmobiliario Extendido):
 - **Diagnóstico y Causas Raíz Identificadas**:

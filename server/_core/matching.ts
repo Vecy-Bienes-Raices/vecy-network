@@ -2032,7 +2032,8 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
       return "commercial";
     }
     // Oficinas / edificio de oficinas
-    if (clean.includes("oficina") || clean.includes("oficinas") || /\boffice\b/.test(clean)) {
+    if ((clean.includes("oficina") || clean.includes("oficinas") || /\boffice\b/.test(clean)) &&
+        !clean.includes("home office") && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
       return "office";
     }
     // Villa
@@ -2758,6 +2759,60 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
 
   if (reqDemandsExterior && propIsInterior) {
     blockers.push("Choque de Orientación Visual: El cliente exige expresamente 'SOLO EXTERIOR' y el inmueble ofrecido es INTERIOR. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // G. Regla Doctrinal de Tercería Inmobiliaria (50/50 y Standby Directo Vecy v31.72)
+  const propNoTerceria = property.aceptaTerceria === false ||
+    property.standByDirectoVecy === true ||
+    /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(propRawTextLower);
+
+  const reqIsThirdPartyBroker = requirement.origenTipo === "grupo_externo" &&
+    /\b(?:colega|inmobiliaria|asesor|br[oó]ker|punta|compartir|50[-/]50|comisi[oó]n)\b/i.test(reqRawTextLower);
+
+  if (propNoTerceria && reqIsThirdPartyBroker) {
+    blockers.push("Standby Directo Vecy (Regla Doctrinal 50/50 No Tercería): La oferta estipula expresamente 'NO TERCERÍA / Solo 50-50 Directo'. La demanda proviene de un intermediario externo solicitando comisión compartida, lo que fragmentaría la punta de Vecy. Match puesto en STANDBY para cierre directo por Vecy Bienes Raíces (0% Match Público).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // H. Choque de Distribución: Estudio / Star de TV Obligatorio (Doctrina v31.72)
+  const reqRequiresStudyObligatory = /\b(?:con\s*estudio\s*obligatorio|estudio\s*obligatorio|exige\s*estudio|estudio\s*indispensable|estudio\s*ojal[aá]\s*cerrado)\b/i.test(reqRawTextLower) ||
+    requirement.caracteristicasDeseadas?.estudio === "obligatorio";
+
+  const propHasStudy = /\b(?:estudio|star\s*de\s*tv|estar\s*de\s*tv|sala\s*de\s*tv|estudio\s*independiente|zona\s*de\s*estudio|hall\s*de\s*alcobas)\b/i.test(propRawTextLower) ||
+    Boolean(property.caracteristicas?.estudio) ||
+    Boolean((property as any).hasStudy);
+
+  if (reqRequiresStudyObligatory && !propHasStudy) {
+    blockers.push("Choque de Distribución Arquitectónica: La demanda exige ESTUDIO OBLIGATORIO / Estar de TV indispensable y la oferta no cuenta con estudio ni sala de TV. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // I. Choque de Nivel: Piso Mínimo Exigido (Doctrina v31.72)
+  const reqMinFloorMatch = reqRawTextLower.match(/(?:unicamente\s*ven\s*opciones\s*del\s*piso|del\s*piso|piso|pisos)\s*(\d{1,2})\s*(?:hacia\s*arriba|en\s*adelante|o\s*superior|\+|\s*mas)\b/i);
+  const reqMinFloor = reqMinFloorMatch ? parseInt(reqMinFloorMatch[1], 10) : (requirement.caracteristicasDeseadas?.pisoMinimo || null);
+
+  let propFloor: number | null = null;
+  if (property.floor !== undefined && property.floor !== null && !isNaN(Number(property.floor))) {
+    propFloor = Number(property.floor);
+  } else {
+    const propFloorMatch = propRawTextLower.match(/\bpiso\s*(\d{1,2})\b/i);
+    if (propFloorMatch) {
+      propFloor = parseInt(propFloorMatch[1], 10);
+    } else if (/\b(?:primer\s*piso|piso\s*primero|1er\s*piso)\b/i.test(propRawTextLower)) {
+      propFloor = 1;
+    }
+  }
+
+  if (reqMinFloor && propFloor !== null && propFloor < reqMinFloor) {
+    blockers.push(`Choque de Nivel / Altura: La demanda exige estrictamente piso ${reqMinFloor} o superior y la oferta está ubicada en piso ${propFloor}. Match Inviable (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // J. Choque de Orientación Visual y Luminosidad (Doctrina v31.72)
+  const reqDemandsHighLight = /\b(?:muy\s*luminoso|muy\s*iluminado|exterior\s*muy\s*iluminado|vista\s*exterior\s*agradable|vista\s*panor[aá]mica)\b/i.test(reqRawTextLower);
+  if (reqDemandsHighLight && propIsInterior) {
+    blockers.push("Choque de Confort Lumínico: El cliente exige expresamente inmueble muy luminoso / con vista agradable exterior y la oferta es de tipología interior. Match Inviable (0%).");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
