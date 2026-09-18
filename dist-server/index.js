@@ -7781,13 +7781,14 @@ function buildFlyerBreakdownText(extracted, fallbackText) {
   return fallbackText || "[Publicaci\xF3n Comercial Inmobiliaria desde Imagen / Flyer]";
 }
 function parseColombianPriceOrBudget(numStr, unit, isSale) {
-  const cleanStr = (numStr || "").trim().replace(/[\*\s\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "");
+  if (!numStr) return 0;
+  const cleanStr = (numStr || "").trim().replace(/['´`’‘\u00B4\u2019\u2018*\s\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "");
   const cleanUnit = (unit || "").toLowerCase();
   if (cleanUnit.includes("mil millon")) {
     const v = parseFloat(cleanStr.replace(",", "."));
     return Math.round(v * 1e9);
   }
-  if (/^\d{1,3}(?:\.\d{3}){2,4}$/.test(cleanStr)) {
+  if (/^\d{1,4}(?:\.\d{3}){2,4}$/.test(cleanStr)) {
     const parsed = parseInt(cleanStr.replace(/\./g, ""), 10);
     if (isSale && parsed >= 3e5 && parsed <= 3e7) {
       return parsed * 1e3;
@@ -7904,7 +7905,7 @@ function extractFallbackDataFromText(text2) {
       }
     }
   }
-  const canonMatch = clean.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|vr\s*[\.\/]?\s*renta|renta)\s*[:\/\-=\s]?\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+  const canonMatch = clean.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|vr\s*[\.\/]?\s*renta|renta)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
   if (canonMatch) {
     const isSale = false;
     const computed = parseColombianPriceOrBudget(canonMatch[1], canonMatch[2] || "", isSale);
@@ -7912,7 +7913,7 @@ function extractFallbackDataFromText(text2) {
       rentPrice = computed;
     }
   }
-  const saleMatch = clean.match(/(?:precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|vr\s*[\.\/]?\s*venta|venta\s*(?:de\s*apartamento|de\s*apto|de\s*casa)?|valor\s*un\s*poco\s*negociable|valor\s*negociable|precio\s*negociable)\s*[:\/\-=\s]\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+  const saleMatch = clean.match(/(?:precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|vr\s*[\.\/]?\s*venta|venta\s*(?:de\s*apartamento|de\s*apto|de\s*casa)?|valor\s*un\s*poco\s*negociable|valor\s*negociable|precio\s*negociable)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
   if (saleMatch) {
     const isSale = true;
     const computed = parseColombianPriceOrBudget(saleMatch[1], saleMatch[2] || "", isSale);
@@ -7922,7 +7923,7 @@ function extractFallbackDataFromText(text2) {
     }
   }
   if (price === 0 && rentPrice === 0) {
-    const rangeMatch = clean.match(/(?:presupuesto|prespuesto|ppto|inversi[oó]n|compra)\s*:?\s*(?:entre\s+)?\$?\s*(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i) || clean.match(/(?:entre|de)\s+\$?\s*(\d+(?:[.,]\d+)?)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*(\d+(?:[.,]\d+)?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
+    const rangeMatch = clean.match(/(?:presupuesto|prespuesto|ppto|inversi[oó]n|compra)\s*:?\s*(?:entre\s+)?\$?\s*([\d][\d.\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i) || clean.match(/(?:entre|de)\s+\$?\s*([\d][\d.\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
     if (rangeMatch) {
       const isSale = transactionType !== "arriendo";
       presupuestoMin = parseColombianPriceOrBudget(rangeMatch[1], rangeMatch[3] || "", isSale);
@@ -7934,7 +7935,7 @@ function extractFallbackDataFromText(text2) {
     }
   }
   if (price === 0 && rentPrice === 0) {
-    const ceilingMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|prespuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|\btope\b|\btecho\b|\bl[ií]mite\b)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\$?\s*(\d+(?:[.,]\d+)*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+    const ceilingMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|prespuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|\btope\b|\btecho\b|\bl[ií]mite\b)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\$?\s*([\d][\d.\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
     if (ceilingMatch) {
       const afterText = clean.slice(clean.indexOf(ceilingMatch[0]) + ceilingMatch[0].length, clean.indexOf(ceilingMatch[0]) + ceilingMatch[0].length + 15);
       if (!/años|anos|edad|antig/i.test(afterText)) {
@@ -7952,7 +7953,7 @@ function extractFallbackDataFromText(text2) {
     }
   }
   if (price === 0 && rentPrice === 0) {
-    const simplePriceMatch = clean.match(/(?:precio|valor)\s*[:\/\-=\s]\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+    const simplePriceMatch = clean.match(/(?:precio|valor)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
     if (simplePriceMatch) {
       const isSale = transactionType !== "arriendo";
       const computed = parseColombianPriceOrBudget(simplePriceMatch[1], simplePriceMatch[2] || "", isSale);
@@ -7969,9 +7970,9 @@ function extractFallbackDataFromText(text2) {
   if (price === 0 && rentPrice === 0) {
     const isSaleContext = transactionType !== "arriendo" || clean.includes("venta") || clean.includes("vendo");
     if (isSaleContext) {
-      const allColMatches = [...clean.matchAll(/\$\s*(\d{1,3}(?:\.\d{3}){1,4})/g)];
+      const allColMatches = [...clean.matchAll(/\$\s*(\d{1,4}(?:[.\s']\d{3}){1,4})/g)];
       for (const m of allColMatches) {
-        const parsed = parseFloat(m[1].replace(/\./g, ""));
+        const parsed = parseColombianPriceOrBudget(m[1], "", true);
         if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text2) && parsed !== adminFee && parsed >= 3e7) {
           if (parsed > price) {
             price = parsed;
@@ -7980,7 +7981,7 @@ function extractFallbackDataFromText(text2) {
         }
       }
       if (price === 0) {
-        const mmMatches = [...clean.matchAll(/(?:precio|valor|venta)?\s*[:\/\-=\s]?\s*\$?\s*([\d.,]+)\s*(?:mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/gi)];
+        const mmMatches = [...clean.matchAll(/(?:precio|valor|venta)?\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.\s']*)\s*(?:mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/gi)];
         for (const m of mmMatches) {
           const computed = parseColombianPriceOrBudget(m[1], "millones", true);
           if (computed >= 3e7 && computed !== adminFee && !isPhoneNumberNotPrice(computed, text2)) {
@@ -7992,14 +7993,12 @@ function extractFallbackDataFromText(text2) {
         }
       }
     } else {
-      const colMatch = clean.match(/\$\s*(\d{1,3}(?:\.\d{3}){1,4})/);
+      const colMatch = clean.match(/\$\s*(\d{1,4}(?:[.\s']\d{3}){1,4})/);
       if (colMatch) {
-        const parsed = parseFloat(colMatch[1].replace(/\./g, ""));
-        if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text2) && parsed !== adminFee) {
-          if (parsed <= 5e7 && parsed >= 3e5) {
-            rentPrice = parsed;
-            presupuestoMax = parsed;
-          }
+        const parsed = parseColombianPriceOrBudget(colMatch[1], "", false);
+        if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text2) && parsed !== adminFee && parsed <= 1e8) {
+          rentPrice = parsed;
+          presupuestoMax = parsed;
         }
       }
     }
