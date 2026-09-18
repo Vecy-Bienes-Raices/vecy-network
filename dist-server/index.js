@@ -7016,6 +7016,83 @@ var init_voiceTranscription = __esm({
   }
 });
 
+// shared/colombianRealEstateParser.ts
+function parseColombianListing(rawText) {
+  if (!rawText) {
+    return {
+      adminIncluded: false,
+      adminNeedsInquiry: false,
+      hasCBS: false,
+      demandsCBSMandatory: false,
+      hasStudio: false,
+      demandsStudioMandatory: false,
+      demandsBalconyOrTerrace: false,
+      isThirdPartyCommission: false,
+      prohibitsThirdPartyCommission: false
+    };
+  }
+  const text2 = rawText.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[*_~]/g, "");
+  const result = {
+    adminIncluded: false,
+    adminNeedsInquiry: false,
+    hasCBS: false,
+    demandsCBSMandatory: false,
+    hasStudio: false,
+    demandsStudioMandatory: false,
+    demandsBalconyOrTerrace: false,
+    isThirdPartyCommission: false,
+    prohibitsThirdPartyCommission: false
+  };
+  const saleMatch = text2.match(/(?:presupuesto\s*(?:para\s*)?compra|precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|para\s*compra)[^$\d\n]*(?:\n[^$\d\n]*)?(?:max|hasta|tope)?\s*\$?\s*(\d{1,4}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i) || text2.match(/(?:venta|comprar|compra)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
+  if (saleMatch) {
+    const cleanNum = saleMatch[1].replace(/[\s.'’]/g, "");
+    result.salePriceCOP = parseInt(cleanNum, 10) * 1e6;
+  }
+  const rentMatch = text2.match(/(?:presupuesto\s*(?:para\s*)?(?:alquiler|arriendo)|canon|para\s*(?:alquiler|arriendo))[^\d\n]*(?:\n[^\d\n]*)?(?:max|hasta|tope)?\s*[:\s\-]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i) || text2.match(/(?:arriendo|arrendamiento|alquiler)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
+  if (rentMatch) {
+    const cleanNum = rentMatch[1].replace(/[\s.'’]/g, "");
+    result.rentPriceCOP = parseInt(cleanNum, 10) * 1e6;
+  }
+  if (/\b(?:con|incluida|incluye)\s+(?:la\s+)?admi?n/i.test(text2)) {
+    result.adminIncluded = true;
+  } else if (/\+\s*adm|\bmas\s+admi?n/i.test(text2)) {
+    result.adminNeedsInquiry = true;
+  }
+  const adminValMatch = text2.match(/(?:admin(?:istraci[oó]n)?|admon)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m|mil|k\b)?/i);
+  if (adminValMatch) {
+    const cleanNum = parseInt(adminValMatch[1].replace(/[\s.'’]/g, ""), 10);
+    const multiplier = /mill|m\b/i.test(adminValMatch[0]) ? 1e6 : /mil|k\b/i.test(adminValMatch[0]) ? 1e3 : 1;
+    result.adminFeeCOP = cleanNum * multiplier;
+  }
+  const areaMatch = text2.match(/(?:m[ií]nimo|[\u00e1a]rea)[^\d\n]*(\d{2,4})\s*(?:m2|mts2|metros|m\b|mt|mts|m²)/i) || text2.match(/(?:^|[\s▪︎•\-])(\d{2,4})\s*(?:m2|mts2|m²|mt2|mts|metros)/i);
+  if (areaMatch) {
+    result.areaM2 = parseInt(areaMatch[1], 10);
+  }
+  const ageMatch = text2.match(/(?:m[aá]ximo\s+)?(\d{1,2})\s*a[ñn]os(?:\s+de\s+antig[uü]edad)?/i);
+  if (ageMatch) {
+    result.maxAgeYears = parseInt(ageMatch[1], 10);
+  }
+  const bedMatch = text2.match(/(\d+)\s*(?:habitaciones|alcobas|habs)/i);
+  if (bedMatch) result.bedrooms = parseInt(bedMatch[1], 10);
+  result.hasCBS = /\bcbs\b|cuarto\s+(?:de\s+)?servicio/i.test(text2);
+  result.demandsCBSMandatory = /cbs[^\n]*(?:imprescindible|obligatorio|si\s+o\s+si)/i.test(text2);
+  result.hasStudio = /\bestudio\b|star\s+de\s+tv|estar\s+tv/i.test(text2);
+  result.demandsStudioMandatory = /(?:estudio|star)[^\n]*(?:obligatorio|imprescindible|excluyente)/i.test(text2);
+  result.demandsBalconyOrTerrace = /balc[oó]n|terraza/i.test(text2);
+  const minFloorMatch = text2.match(/piso\s+(\d+)\s+(?:hacia\s+arriba|en\s+adelante)/i);
+  if (minFloorMatch) result.minFloorRequired = parseInt(minFloorMatch[1], 10);
+  const exactFloorMatch = text2.match(/piso[:\s]+(\d+)/i);
+  if (exactFloorMatch) result.floor = parseInt(exactFloorMatch[1], 10);
+  result.prohibitsThirdPartyCommission = /no\s+tercer[ií]a|sin\s+terceros/i.test(text2);
+  result.isThirdPartyCommission = /en\s+tercer[ií]a|\btercer[ií]a\b/i.test(text2);
+  return result;
+}
+var init_colombianRealEstateParser = __esm({
+  "shared/colombianRealEstateParser.ts"() {
+    "use strict";
+  }
+});
+
 // server/storage.ts
 var storage_exports = {};
 __export(storage_exports, {
@@ -7950,12 +8027,20 @@ function extractFallbackDataFromText(text2) {
       areaMax = parseFloat(areaRangeMatch[2].replace(",", "."));
       area = areaMin;
     } else {
-      const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
+      const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)/i);
       if (areaMatch) {
         area = parseFloat(areaMatch[1].replace(",", "."));
         areaMin = area;
         areaMax = area;
       }
+    }
+  }
+  if (area === 0) {
+    const pl = parseColombianListing(text2);
+    if (pl.areaM2 && pl.areaM2 > 0) {
+      area = pl.areaM2;
+      areaMin = pl.areaM2;
+      areaMax = pl.areaM2;
     }
   }
   let bedrooms = 0;
@@ -12136,6 +12221,7 @@ var init_janIA = __esm({
     init_divipola();
     init_matching();
     init_voiceTranscription();
+    init_colombianRealEstateParser();
     init_storage();
     init_scraper();
     init_nameAndGenderResolver();
@@ -16657,7 +16743,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.74";
+var VECY_VERSION = "v31.75";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

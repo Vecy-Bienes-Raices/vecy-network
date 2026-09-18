@@ -167,9 +167,9 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.74 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.75 — Septiembre 2026
 
-### Novedades v31.74 (Erradicación Definitiva de 504 Gateway Timeout, Fallback Determinista Autónomo en LLM Catch y Motor de Resiliencia 0ms):
+### Novedades v31.75 (Erradicación Definitiva de 504 Gateway Timeout, Fallback Determinista Autónomo en LLM Catch y Motor de Resiliencia 0ms):
 - **Diagnóstico y Causas Raíz Identificadas**:
   1) *Error 504 Gateway Timeout en Admin Panel*: Ráfagas masivas de publicaciones en WhatsApp ejecutaban concurrentemente `findMatchesForProperty` evaluando 1.500 requerimientos con regex geográficos complejos (`parseStreetCarreraBoundaries`) sin caché en memoria, consumiendo el 100% de la CPU. Paralelamente, `llm.ts` realizaba hasta 24 reintentos en cascada por mensaje con timeouts de 25s, reteniendo sockets y bloqueando las peticiones HTTP entrantes (`auth.me`, `getBotStatus`, `getAllMatches`).
   2) *JanIA Desfalleciendo por Rate Limit 429 de Gemini*: Al alcanzar el límite gratuito de 15 RPM en Google, el bloque `catch` de `server/_core/janIA.ts` retornaba `{ classification: "CONSULTA_GENERAL", response: "", mentions: [] }`, provocando que `whatsapp-match.ts` silenciara los mensajes de grupos sin reaccionar (`👍`/`📝`) ni guardar en PostgreSQL. Para los usuarios, el bot "se moría" durante los 60 segundos de cooldown de Google.

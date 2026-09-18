@@ -322,7 +322,7 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
-### 🔖 v31.74 — Septiembre 2026
+### 🔖 v31.75 — Septiembre 2026
 
 #### 📌 ERRADICACIÓN DEFINITIVA DE 504 GATEWAY TIMEOUT, FALLBACK DETERMINISTA AUTÓNOMO EN LLM CATCH Y MOTOR DE RESILIENCIA 0MS
 

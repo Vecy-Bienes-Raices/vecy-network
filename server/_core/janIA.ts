@@ -9,6 +9,7 @@ import { validarZona, normalizarTextoGeografico, desambiguarBarriosCompuestos, d
 import { validateCity } from "./divipola";
 import { findMatchesForProperty, findMatchesForRequirement, isNonRealEstateText, isHollowListing } from "./matching";
 import { transcribeAudio } from "./voiceTranscription";
+import { parseColombianListing } from "../../shared/colombianRealEstateParser";
 import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
 import { storagePut } from "../storage";
 import { esDominioPermitido, extractPortalAndListingId } from "./scraper";
@@ -780,13 +781,23 @@ export function extractFallbackDataFromText(text: string): any {
       areaMax = parseFloat(areaRangeMatch[2].replace(',', '.'));
       area = areaMin;
     } else {
-      // B. Captura área simple con prefijos: "📐 183 m²", "Area: 180 Mts", "Mínimo 150m2"
-      const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
+      // B. Captura área simple con prefijos: "📐 183 m²", "Area: 180 Mts", "Mínimo 150m2", "Mínimo 160m"
+      const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)/i);
       if (areaMatch) {
         area = parseFloat(areaMatch[1].replace(',', '.'));
         areaMin = area;
         areaMax = area;
       }
+    }
+  }
+
+  // C. Rescate con el parser de jerga colombiana si aún no se detectó área
+  if (area === 0) {
+    const pl = parseColombianListing(text);
+    if (pl.areaM2 && pl.areaM2 > 0) {
+      area = pl.areaM2;
+      areaMin = pl.areaM2;
+      areaMax = pl.areaM2;
     }
   }
 

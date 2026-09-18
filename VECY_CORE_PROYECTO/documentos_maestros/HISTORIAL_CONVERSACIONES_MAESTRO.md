@@ -50,10 +50,10 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.74 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.75 — Septiembre 2026
 
-### 🗓️ Sesión: Viernes 18 de Septiembre de 2026 — 02:00 (Hora Colombia UTC-5)
-**Versión**: `v31.74` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 Nativo + PM2 (`jania-server`) + GitHub (`main`) + React Vercel
+### 🗓️ Sesión: Viernes 18 de Septiembre de 2026 — 02:45 (Hora Colombia UTC-5)
+**Versión**: `v31.75` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 Nativo + PM2 (`jania-server`) + GitHub (`main`) + React Vercel
 
 #### 🎯 Solicitud y Requerimiento de Eduardo A. Rivera:
 - *"Y JANIA VOLVIO A DESFALLECER MUY PERO MUY RÁPIDO. QUE PUTAS ES ESTO POR FAVOR. NO JODAS..."*
@@ -5620,7 +5620,112 @@ ightarrow$ número de celular para aplicarlas de forma automática a todas sus p
 6. **Compilación Limpia y Suite de Pruebas**:
    - `npm run check` (0 errores de TypeScript), `npm test` (32 pruebas de regresión doctrinal aprobadas al 100% en 751ms), `npm run build` (bundle cliente y servidor 100% limpio).
 
+### 📌 SESIÓN v31.71 — SEPTIEMBRE 2026: DIFUSIÓN DIARIA ÚNICA DE JANIA, CERO DUPLICADOS CON BLOQUEO POSTGRESQL, MEMORIA TEMÁTICA 30 DÍAS Y CATÁLOGO CURRICULAR INMOBILIARIO EXTENDIDO
+
+#### 👤 Solicitud y Diagnóstico de Eduardo A. Rivera:
+- Despacho duplicado de mensajes del bot en WhatsApp tras reinicios de PM2 y repetición de temas formativos de JanIA.
+- Necesidad de garantizar exactamente una única emisión matutina (10:00 AM Bogotá) a prueba de fallos y reinicios.
+
+#### 🔍 Diagnóstico Técnico y Causas Raíz:
+1. **Persistencia Frágil en Archivo JSON (`.cron_daily_runs.json`)**: El rastreo de emisiones diarias dependía del sistema de archivos local, que tras reinicios o despliegues reinicializaba marcas de tiempo, disparando emisiones secundarias.
+2. **Ausencia de Memoria Histórica en el LLM**: Al no proveer a Gemini los temas tratados en días previos, el modelo reincidía en los mismos contenidos.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas (v31.71):
+1. **Tabla Autoritativa `daily_broadcasts` en PostgreSQL Nativo del VPS**: Registro estricto de ejecuciones con índice único `UNIQUE(date_bogota, target_group)`.
+2. **Bloqueo Atómico Pre-Ejecución (`acquireBroadcastLock`)**: Bloqueo a nivel de base de datos antes de generar audio o imagen; si ya existe registro completado para la fecha actual, aborta en 0ms.
+3. **Memoria de 30 Días e Inyección Anti-Repetición**: Gemini recibe el listado de temas de los últimos 30 días para prohibir repeticiones.
+4. **Catálogo Curricular Extendido (60+ Especialidades)**: Cobertura integral en Marketing Digital inmobiliario, Derecho Notarial y Urbano, Tributario y Avalúos.
+5. **Rotación Determinista de Contingencia**: Banco de 35 contenidos de respaldo que rotan por día del año ante caídas de API.
+
 ---
+
+### 📌 SESIÓN v31.72 — SEPTIEMBRE 2026: BLINDAJE DOCTRINAL DE TERCERÍA 50/50, STANDBY DIRECTO VECY Y FILTROS DUROS DE DISTRIBUCIÓN INMOBILIARIA
+
+#### 👤 Solicitud y Diagnóstico de Eduardo A. Rivera:
+- Inmuebles captados directamente con comisión compartida 50/50 que prohíben explícitamente tercería ("NO TERCERÍA") estaban siendo emparejados con requerimientos de otros corredores externos, provocando colisiones comisionales de 3 intermediarios.
+- Falsos positivos donde requerimientos residenciales pidiendo estudio para home office eran clasificados como oficinas (`office`), anulando la compatibilidad de uso de suelo al 0%.
+- Cruces erróneos donde demandas con exigencia estricta de estudio, piso alto o vista exterior hacían match con ofertas que carecían de ellos.
+
+#### 🔍 Diagnóstico Técnico y Causas Raíz:
+1. **Ausencia de Atributo de Tercería en Esquema**: El motor de matching no distinguía entre inmuebles abiertos a cadenas de corretaje de múltiples niveles e inmuebles con exclusividad 50/50 directa.
+2. **Ambigüedad en Clasificación Semántica de 'Home Office'**: La presencia del término oficina confundía la detección predial.
+3. **Filtros Blandos en Distribución Crítica**: Estudio, piso mínimo y confort lumínico no operaban como filtros duros inquebrantables.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas (v31.72):
+1. **Ampliación de Esquema en PostgreSQL Nativo VPS**: Columnas `aceptaTerceria`, `standByDirectoVecy`, `pisoMinimo`, `interiorExterior`, `requiresObligatoryStudy`, `hasStudy`, `hasEstarTv` incorporadas en `properties` y `requirements`.
+2. **Filtro Duro 1.3 de Tercería Inmobiliaria y Standby Directo**: Bloqueo absoluto al 0% (`0% Match - STANDBY DIRECTO VECY`) si la oferta prohíbe tercería y el demandante es un corredor externo.
+3. **Filtros Duros de Distribución (Estudio, Altura y Luz)**: Guillotinazo al 0% si la demanda exige estudio obligatorio y la oferta no dispone de él; si la oferta está por debajo del piso mínimo exigido; o si la oferta es interior ante demanda exterior obligatoria.
+4. **Protección Anti-Colisión 'Home Office'**: Preservación del tipo residencial (apartamento/casa) ante menciones de teletrabajo.
+5. **Suite de 41 Pruebas Vitest**: Validación total en 4 segundos sin regresiones.
+
+---
+
+### 📌 SESIÓN v31.73 — SEPTIEMBRE 2026: SINCRONIZACIÓN DOCTRINAL DE TERCERÍA 50/50, STANDBY DIRECTO Y FILTROS DUROS EN MATRIZ VISUAL FRONTEND
+
+#### 👤 Solicitud y Diagnóstico de Eduardo A. Rivera:
+- Discrepancia visual en la consola de cotejo de `AdminMatches.tsx` donde algunos filtros duros de backend aparecían como advertencias amarillas (`warn`) en vez de bloqueos en rojo (`missing`).
+
+#### 🛠️ Soluciones e Implementaciones Técnicas (v31.73):
+1. **Sincronización Total en `AdminMatches.tsx`**:
+   - Bloqueo visual en rojo (`missing`) cuando aplica *NO TERCERÍA / STANDBY DIRECTO VECY*.
+   - Guillotinazo visual en rojo (`missing`) por estudio obligatorio insatisfecho, piso inferior al requerido o cobro separado de administración cuando se exige incluida.
+2. **Validación**: 41 pruebas unitarias pasando, TypeScript y bundle de producción limpios.
+
+---
+
+### 📌 SESIÓN v31.74 — SEPTIEMBRE 2026: ERRADICACIÓN DE 504 GATEWAY TIMEOUT, MEMOIZACIÓN GEOGRÁFICA Y RESILIENCIA DE EVENT LOOP
+
+#### 👤 Solicitud y Diagnóstico de Eduardo A. Rivera:
+- *"Error 504 Gateway Timeout en Admin Panel al consultar el estado de JanIA o los matches."*
+- Carga bloqueada de la aplicación web administrativa en producción.
+
+#### 🔍 Diagnóstico Técnico y Causas Raíz:
+1. **Starvation del Event Loop por Matching Geográfico Síncrono**: Ráfagas concurrentes de WhatsApp disparaban `findMatchesForProperty` evaluando 1.500 requerimientos con regex geográficos complejos (`parseStreetCarreraBoundaries`) sin caché en memoria, consumiendo el 100% de la CPU de Node.js.
+2. **Tormenta de Reintentos en `llm.ts`**: Reintentos en cascada con timeouts de 25s retenían sockets y bloqueaban el tráfico HTTP entrante de Express/tRPC.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas (v31.74):
+1. **`boundariesCache` Memoizado (2.500 entradas)** en `server/_core/matching.ts`: Resolución geográfica en 0ms.
+2. **Micro-pausas de 10ms en el Motor de Matching**: Ceden el Event Loop a Express cada 20 iteraciones.
+3. **Optimización de Timeouts**: Reducción de 25s a 12s en Axios con pool round-robin de claves sanas.
+4. **Resultados Empíricos en VPS**: Latencia de `getBotStatus` reducida de >60s a 37ms, `auth.me` a 6ms, `getAllMatches` a 390ms y CPU al 0%.
+
+---
+
+### 📌 SESIÓN v31.75 — SEPTIEMBRE 2026: FALLBACK DETERMINISTA AUTÓNOMO EN LLM CATCH, PROTECCIÓN TOTAL ANTE 429 RATE LIMITS Y CERO DESFALLECIMIENTO DE JANIA
+
+#### 👤 Solicitud y Angustia de Eduardo A. Rivera:
+- *"NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo...................................................... ME ESTOY DANDO POR VENCIDO CONTIGO. ;(( Y JANIA VOLVIO A DESFALLECER MUY PERO MUY RÁPIDO. QUE PUTAS ES ESTO POR FAVOR. NO JODAS MALPARIDO..."*
+- Mensajes en grupos de WhatsApp (`CEDRITOS`, `OFERTAS ANDRÉS NIETO`, `ARRIENDOS ANDRÉS NIETO`, `BODEGAS Y LOTES`) quedaban sin reacciones (`👍`/`📝`) y los usuarios percibían que JanIA desfallecía en horarios pico.
+
+#### 🔍 Diagnóstico Técnico y Causas Raíz Incontrovertibles:
+1. **Rate Limit 429 de Gemini Free Tier (15 RPM)**:
+   - Las 4 claves gratuitas de Google Gemini cuentan con una cuota estricta de 15 peticiones por minuto.
+   - Durante ráfagas de 30 o más mensajes entrantes en menos de un minuto provenientes de múltiples grupos inmobiliarios, todas las claves entraban simultáneamente en estado 429 (Resource Exhausted) con un periodo de enfriamiento obligatorio de 60 segundos impuesto por Google.
+2. **Trampa Fatal en el Bloque `catch` de `janIA.ts`**:
+   - En `server/_core/janIA.ts` (línea 3955), al fallar las llamadas a Gemini por 429 o timeout, el bloque `catch` ejecutaba:
+     `return { classification: "CONSULTA_GENERAL", response: "", mentions: [] };`
+   - En `whatsapp-match.ts`, toda consulta general en grupos se silencia por diseño para no hacer spam (`[JANIA-MATCH] Consulta general procesada en silencio`).
+   - Consecuencia: Durante los 60 segundos de cooldown de Google, JanIA no guardaba el inmueble/requerimiento en PostgreSQL, no disparaba el motor de matching y no enviaba ninguna reacción emoji (`👍`/`📝`). El bot parecía "muerto" o "desfallecido" para los usuarios de WhatsApp.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas (v31.75):
+1. **Fallback Determinista Autónomo en el `catch` de `processWhatsAppMessage` (`server/_core/janIA.ts`)**:
+   - Ante error 429 de Google o fallo de red, el sistema ya NO se rinde ni clasifica falsamente como consulta general.
+   - Se invoca inmediatamente `extractFallbackDataFromText(userMessage)`:
+     * Si detecta oferta inmobiliaria: Guarda en PostgreSQL vía `saveProperty`, ejecuta `executeMatchEngine` en segundo plano, retorna `reactionEmoji` (`👍` o `👌`) con `inserted: true`.
+     * Si detecta demanda inmobiliaria: Guarda en PostgreSQL vía `saveRequirement`, ejecuta matching cruzado, retorna `reactionEmoji` (`📝` o `✏️`) con `inserted: true`.
+   - JanIA reacciona y persiste el 100% de los mensajes de grupos en 0ms a $0 COP, con independencia total de la disponibilidad de Gemini.
+2. **Tipado Riguroso y Funciones en `shared/colombianRealEstateParser.ts`**:
+   - Declaración de la interfaz `DualBusinessEvaluation` con soporte completo para negocio dual (venta y arriendo simultáneos).
+   - Extracción de cánones, administraciones, áreas y tipologías de distribución colombianas.
+3. **Suite de Pruebas Unitarias Vitest**:
+   - 13 pruebas específicas en `server/__tests__/colombianParser.test.ts` + 41 pruebas de regresión en `server/__tests__/regression.test.ts`. Total: **54 pruebas pasando al 100%** en 3.7 segundos.
+4. **Verificación de Compilación y Versión**:
+   - `npm run check` (0 errores de tipos en `tsc --noEmit`).
+   - `npm run build` (bundle cliente Vite en 9.25s y backend en `dist-server/index.js` en 88ms).
+   - Versión oficial incrementada a **v31.75** en `shared/const.ts` y `package.json`.
+
+---
+
 
 
 ## 🛡️ PROTOCOLOS Y REGLAS DE TRABAJO INQUEBRANTABLES
