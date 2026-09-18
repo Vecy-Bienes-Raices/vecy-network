@@ -21778,6 +21778,9 @@ async function startServer() {
   });
   app.use(express2.json({ limit: "50mb" }));
   app.use(express2.urlencoded({ limit: "50mb", extended: true }));
+  app.get("/api/health", (_req, res) => {
+    res.status(200).json({ status: "ok", uptime: process.uptime(), timestamp: Date.now() });
+  });
   registerOAuthRoutes(app);
   const webhookGetHandler = (req, res) => {
     const mode = req.query["hub.mode"];
