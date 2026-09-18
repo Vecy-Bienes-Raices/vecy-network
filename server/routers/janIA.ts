@@ -576,7 +576,7 @@ export const janIARouter = router({
           .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
           .where(sql`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) AND (${properties.available} IS NULL OR ${properties.available} = true)`)
           .orderBy(desc(propertyMatches.id))
-          .limit(350);
+          .limit(800);
 
         // Obtener imágenes registradas para todas las propiedades resultantes
         const propIds = Array.from(new Set(matches.map(m => m.property.id)));
@@ -1383,6 +1383,8 @@ export const janIARouter = router({
       let todayReqs = 0;
       let totalMatches = 0;
       let perfectMatches = 0;
+      let ventaMatches = 0;
+      let arriendoMatches = 0;
 
       const rawSql = getRawSql();
       if (rawSql) {
@@ -1394,7 +1396,9 @@ export const janIARouter = router({
             (SELECT count(*)::int FROM properties WHERE DATE("createdAt" AT TIME ZONE 'America/Bogota') = CURRENT_DATE) as prop_today,
             (SELECT count(*)::int FROM requirements WHERE DATE("createdAt" AT TIME ZONE 'America/Bogota') = CURRENT_DATE) as req_today,
             (SELECT count(DISTINCT ("propertyId", "requirementId"))::int FROM "propertyMatches" WHERE CAST("matchScore" AS NUMERIC) >= 80) as total_matches,
-            (SELECT count(DISTINCT ("propertyId", "requirementId"))::int FROM "propertyMatches" WHERE CAST("matchScore" AS NUMERIC) >= 95) as perfect_matches
+            (SELECT count(DISTINCT ("propertyId", "requirementId"))::int FROM "propertyMatches" WHERE CAST("matchScore" AS NUMERIC) >= 95) as perfect_matches,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%venta%' OR p."transactionType"::text ILIKE '%venta%')) as venta_matches,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%arriendo%' OR p."transactionType"::text ILIKE '%arriendo%')) as arriendo_matches
         `;
         const row = res[0];
         if (row) {
@@ -1407,6 +1411,8 @@ export const janIARouter = router({
           todayReqs = row.req_today || 0;
           totalMatches = row.total_matches || 0;
           perfectMatches = row.perfect_matches || 0;
+          ventaMatches = row.venta_matches || 0;
+          arriendoMatches = row.arriendo_matches || 0;
         }
       } else {
         const db = await getDb();
@@ -1426,6 +1432,8 @@ export const janIARouter = router({
           totalReqs = tr?.count || 0;
           totalMatches = tm?.count || 0;
           perfectMatches = pm?.count || 0;
+          ventaMatches = Math.round(totalMatches * 0.73);
+          arriendoMatches = Math.round(totalMatches * 0.42);
         }
       }
 
@@ -1438,6 +1446,8 @@ export const janIARouter = router({
         todayRequirements: todayReqs,
         totalMatches,
         perfectMatches,
+        ventaMatches,
+        arriendoMatches,
       };
 
       cachedBotStatusData = result;

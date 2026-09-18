@@ -3542,12 +3542,25 @@ export default function AdminMatches() {
       const isPropArriendo = propType === 'arriendo' || propType === 'venta_o_arriendo' || dual;
       if (isReqArriendo && isPropArriendo) countArriendo++;
     }
+
+    // Si hay un término de búsqueda activo, mostramos los conteos específicos de esa búsqueda
+    const isSearching = (searchTerm || '').trim().length > 0;
+    const all = !isSearching && (botStatus as any)?.totalMatches && (botStatus as any).totalMatches > 0
+      ? (botStatus as any).totalMatches
+      : list.length;
+    const venta = !isSearching && (botStatus as any)?.ventaMatches && (botStatus as any).ventaMatches > 0
+      ? (botStatus as any).ventaMatches
+      : countVenta;
+    const arriendo = !isSearching && (botStatus as any)?.arriendoMatches && (botStatus as any).arriendoMatches > 0
+      ? (botStatus as any).arriendoMatches
+      : countArriendo;
+
     return {
-      all: list.length,
-      venta: countVenta,
-      arriendo: countArriendo
+      all,
+      venta,
+      arriendo
     };
-  }, [processedMatches]);
+  }, [processedMatches, botStatus, searchTerm]);
 
   const exportData = () => {
     const headers = ['ID Coincidencia', 'Porcentaje Match', 'Propiedad', 'Propietario Telefono', 'Requerimiento', 'Interesado Telefono', 'Estado', 'Fecha'];
