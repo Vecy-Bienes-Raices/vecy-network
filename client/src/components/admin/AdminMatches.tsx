@@ -18,6 +18,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatColombiaDate } from '@/lib/dateUtils';
 import { supabase } from '@/lib/supabase';
 import { VECY_VERSION_LABEL } from '@/const';
+import {
+  parseColombianCurrency,
+  parseArea,
+  parseAdminFee,
+  parseMaxAge,
+  formatRequirementField
+} from '@shared/colombianRealEstateParser';
 
 type MatchStatus = "exact" | "warn" | "missing" | "ok" | "neutral" | "plus";
 
@@ -1069,16 +1076,15 @@ function scoreRows(req: any, prop: any) {
   }
 
   // 1. Extracción de Precio de Venta en Oferta
-  // 🛡️ DOCTRINA v31.62: Precio oficial de BD primero
+  // 🛡️ DOCTRINA v31.62 / v31.74: Precio oficial de BD y extracción robusta de jerga
   let propSalePrice = !isPropPureRent ? parseSafePrice(prop.price, prop.rawText) : 0;
   
-  // Solo si no hay precio en base de datos y no es arriendo puro, buscar como fallback en texto
-  if (propSalePrice === 0 && !isPropPureRent && propTextLower) {
-    const saleExplicitMatch = propTextLower.match(/(?:precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|valor\s*un\s*poco\s*negociable|valor\s*negociable|precio\s*negociable)\s*:?\s*\*?\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+  if (propTextLower && !isPropPureRent) {
+    const saleExplicitMatch = propTextLower.match(/(?:precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|venta\s*:|vr\s*[\.\/]?\s*venta|valor\s*un\s*poco\s*negociable|valor\s*negociable|precio\s*negociable)\s*:?\s*\*?\$?\s*([^\n,•]+)/i);
     if (saleExplicitMatch) {
-      const computed = parseColombianPriceOrBudget(saleExplicitMatch[1], saleExplicitMatch[2] || "", true);
-      if (computed >= 30_000_000 && !isPhoneNumberNotPrice(computed, prop.rawText)) {
-        propSalePrice = computed;
+      const parsedText = parseColombianCurrency(saleExplicitMatch[0]);
+      if (parsedText && parsedText >= 30_000_000 && !isPhoneNumberNotPrice(parsedText, prop.rawText)) {
+        propSalePrice = parsedText;
       }
     }
     if (propSalePrice === 0) {
@@ -1090,225 +1096,148 @@ function scoreRows(req: any, prop: any) {
         }
       }
     }
-    if (propSalePrice === 0) {
-      const millonMatch = propTextLower.match(/\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millon|millones|millón|mll|mlls|mill|mills|mm)\b/i);
-      if (millonMatch) {
-        const computed = parseColombianPriceOrBudget(millonMatch[1], millonMatch[2], true);
-        if (computed >= 30_000_000 && !isPhoneNumberNotPrice(computed, prop.rawText)) {
-          propSalePrice = computed;
-        }
-      }
-    }
-    if (propSalePrice === 0) {
-      const colMatch = propTextLower.match(/\$\s*(\d{1,3}(?:\.\d{3}){2,4})/);
-      if (colMatch) {
-        const parsed = parseFloat(colMatch[1].replace(/\./g, ''));
-        if (!isNaN(parsed) && parsed >= 50_000_000 && !isPhoneNumberNotPrice(parsed, prop.rawText)) {
-          propSalePrice = parsed;
-        }
-      }
-    }
   }
 
   // 2. Extracción de Presupuesto de Venta en Demanda
-  // 🛡️ DOCTRINA v31.62: Presupuesto oficial de BD primero
+  // 🛡️ DOCTRINA v31.62 / v31.74: Presupuesto oficial de BD primero y extracción robusta
   let reqSaleBudget = (!isReqRentMatch && !isPropPureRent) ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
   
-  // Blindaje anti-edad: si el presupuesto guardado es 15 mil millones o similar desproporcionado pero el texto habla de millones reales o años
+  // Blindaje anti-edad: si el presupuesto guardado es desproporcionado pero el texto habla de millones reales o años
   if (reqSaleBudget >= 5_000_000_000 && reqTextLower && !reqTextLower.includes("mil millones") && !reqTextLower.includes("billones")) {
     reqSaleBudget = 0; // Forzar reevaluación limpia con el texto
   }
 
-  if ((reqSaleBudget <= 0 || reqSaleBudget < 100_000_000) && reqTextLower && !isReqRentMatch && !isPropPureRent && !isReqOpenBudget) {
-    // 1) Rango de presupuesto (soporta 'presupuesto', 'prespuesto' sin u, 'ppto', 'compra')
-    const rangeMatch = reqTextLower.match(/(?:presupuesto(?:\s*m[aá]ximo)?|prespuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|hasta|tope|valor|inversi[oó]n|compra)?\s*:?\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:a|hasta|-|y)\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\*?\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);
-    if (rangeMatch && (rangeMatch[0].includes("presupuesto") || rangeMatch[0].includes("prespuesto") || rangeMatch[0].includes("ppto") || rangeMatch[0].includes("compra") || rangeMatch[3])) {
-      const parsedMax = parseColombianPriceOrBudget(rangeMatch[2], rangeMatch[3] || "", true);
-      if (parsedMax >= 10_000_000) reqSaleBudget = parsedMax;
-    }
-    // 2) Presupuesto máximo explícito (con 'presupuesto', 'prespuesto', etc., omitiendo explícitamente años/edad)
-    if (reqSaleBudget <= 0) {
-      const ceilingMatch = reqTextLower.match(/(?:presupuesto(?:\s*m[aá]ximo)?|prespuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|tope|techo|l[ií]mite)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\*?\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
-      if (ceilingMatch) {
-        // Verificar que no sea seguido por años
-        const afterText = reqTextLower.slice(reqTextLower.indexOf(ceilingMatch[0]) + ceilingMatch[0].length, reqTextLower.indexOf(ceilingMatch[0]) + ceilingMatch[0].length + 15);
-        if (!/años|anos|edad|antig/i.test(afterText)) {
-          const parsed = parseColombianPriceOrBudget(ceilingMatch[1], ceilingMatch[2] || "", true);
-          if (parsed >= 10_000_000) reqSaleBudget = parsed;
-        }
+  if (reqTextLower && !isReqRentMatch && !isPropPureRent && !isReqOpenBudget) {
+    const buyMatch = reqTextLower.match(/(?:presupuesto\s*(?:para\s*)?compra|ppto\s*(?:para\s*)?compra|compra\s*:|inversi[oó]n|presupuesto(?:\s*m[aá]ximo)?)\s*:?\s*\*?\$?\s*([^\n,•]+)/i);
+    if (buyMatch) {
+      const parsed = parseColombianCurrency(buyMatch[0]);
+      if (parsed && parsed >= 30_000_000) {
+        reqSaleBudget = parsed;
       }
     }
-    // 3) Valor único con signo pesos
     if (reqSaleBudget <= 0) {
-      const singleMatch = reqTextLower.match(/\$\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);
-      if (singleMatch) {
-        const parsed = parseColombianPriceOrBudget(singleMatch[1], singleMatch[2] || "", true);
-        if (parsed >= 10_000_000) reqSaleBudget = parsed;
+      const rangeMatch = reqTextLower.match(/(?:presupuesto(?:\s*m[aá]ximo)?|prespuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|hasta|tope|valor|inversi[oó]n|compra)?\s*:?\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:a|hasta|-|y)\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\*?\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?\b/i);
+      if (rangeMatch && (rangeMatch[0].includes("presupuesto") || rangeMatch[0].includes("prespuesto") || rangeMatch[0].includes("ppto") || rangeMatch[0].includes("compra") || rangeMatch[3])) {
+        const parsedMax = parseColombianPriceOrBudget(rangeMatch[2], rangeMatch[3] || "", true);
+        if (parsedMax >= 10_000_000) reqSaleBudget = parsedMax;
       }
     }
   }
 
   if (propSalePrice < 30_000_000) propSalePrice = 0;
 
-  let reqSaleLabel = isReqRentMatch ? "N/A (Búsqueda de Arriendo)" : (isReqOpenBudget ? "Presupuesto Abierto" : (reqSaleBudget > 0 ? formatCOP(reqSaleBudget) : "Flexible / Presupuesto Abierto"));
-  let propSaleLabel = propSalePrice >= 30_000_000 ? formatCOP(propSalePrice) : (isPropPureRent ? "N/A (Inmueble en Arriendo)" : "N/E (Consultar)");
-
-  let saleS: MatchStatus = "neutral";
-  if (isReqRentMatch) {
-    saleS = "exact";
-  } else if (isReqOpenBudget) {
-    saleS = propSalePrice > 0 ? "warn" : "neutral";
-  } else if (reqSaleBudget > 0 && propSalePrice > 0) {
-    if (propSalePrice === reqSaleBudget) {
-      saleS = "exact"; // Coincide idéntico
-    } else if (propSalePrice < reqSaleBudget) {
-      saleS = "warn";  // Aproximado (dentro de presupuesto)
-    } else {
-      saleS = "missing"; // Supera presupuesto -> Guillotina
-    }
-  } else {
-    saleS = "neutral";
-  }
-
-  const isDualBiz = cleanReqBiz.includes("venta_arriendo") || cleanPropBiz.includes("venta_arriendo") || 
-    (cleanReqBiz.includes("arriendo") && cleanPropBiz.includes("venta_arriendo")) ||
-    (cleanReqBiz.includes("venta") && cleanPropBiz.includes("venta_arriendo"));
-
-  const showSalePrice = !isReqRentMatch || isDualBiz;
-  const showRentPrice = isReqRentMatch || isPropPureRent || isDualBiz;
-
-  if (showSalePrice) {
-    add("Precio de Venta", reqSaleLabel, propSaleLabel, saleS, isReqRentMatch ? 0 : 15, <DollarSign className="w-3.5 h-3.5" />);
-  }
-
   // 3. Canon de Arriendo en Oferta
-  // 🛡️ DOCTRINA v31.62: Canon oficial de BD primero
+  // 🛡️ DOCTRINA v31.62 / v31.74: Canon oficial de BD primero y jerga colombiana
   let propRentPrice = !isPropPureVenta ? parseSafePrice(prop.rentPrice || prop.priceRent, prop.rawText) : 0;
   
-  // Solo si no hay canon en BD y no es venta pura, buscar como fallback en texto
-  if (propRentPrice === 0 && !isPropPureVenta && propTextLower) {
-    const canonExplicitMatch = propTextLower.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo)\s*:?\s*\*?\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
-    if (canonExplicitMatch) {
-      const computed = parseColombianPriceOrBudget(canonExplicitMatch[1], canonExplicitMatch[2] || "", false);
-      if (computed >= 300_000 && computed <= 100_000_000 && !isPhoneNumberNotPrice(computed, prop.rawText)) {
-        propRentPrice = computed;
-      }
-    }
-    if (propRentPrice === 0 && isPropPureRent) {
-      const simplePriceMatch = propTextLower.match(/(?:precio|valor)\s*:\s*\*?\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
-      if (simplePriceMatch) {
-        const computed = parseColombianPriceOrBudget(simplePriceMatch[1], simplePriceMatch[2] || "", false);
-        if (computed >= 300_000 && computed <= 100_000_000 && !isPhoneNumberNotPrice(computed, prop.rawText)) {
-          propRentPrice = computed;
-        }
-      }
-    }
-    if (propRentPrice === 0) {
-      const colRentMatch = propTextLower.match(/\$\s*(\d{1,2}(?:\.\d{3}){2})/);
-      if (colRentMatch) {
-        const parsed = parseFloat(colRentMatch[1].replace(/\./g, ''));
-        if (!isNaN(parsed) && parsed >= 300_000 && parsed <= 50_000_000 && !isPhoneNumberNotPrice(parsed, prop.rawText)) {
-          propRentPrice = parsed;
-        }
+  if (propTextLower && !isPropPureVenta) {
+    const rentExplicitMatch = propTextLower.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|arrendamiento\s*:|arriendo\s*:|vr\s*[\.\/]?\s*renta|renta\s*:)\s*:?\s*\*?\$?\s*([^\n,•]+)/i);
+    if (rentExplicitMatch) {
+      const parsed = parseColombianCurrency(rentExplicitMatch[0]);
+      if (parsed && parsed >= 300_000 && parsed <= 100_000_000 && !isPhoneNumberNotPrice(parsed, prop.rawText)) {
+        propRentPrice = parsed;
       }
     }
   }
 
   // 4. Presupuesto de Arriendo en Demanda
-  // 🛡️ DOCTRINA v31.62: Presupuesto arriendo oficial de BD primero
   let reqRentBudget = isReqRentMatch ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
-  if (isReqRentMatch && reqTextLower && !isReqOpenBudget && reqRentBudget <= 0) {
-    // Soportar rangos tipo 'de 14 o 15 millones', 'de 14 a 15 millones', 'entre 10 y 12 millones'
-    const matchRangeRent = reqTextLower.match(/(?:de|entre)\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:a|hasta|-|o|u|y)\s*(\d{1,3}(?:[.,]\d+)?)\s*(mil\s*millones?|millones|millón|mll|mlls|mm|m)\b/i);
-    if (matchRangeRent) {
-      const computedMax = parseColombianPriceOrBudget(matchRangeRent[2], matchRangeRent[3] || "", false);
-      if (computedMax >= 300_000 && computedMax <= 100_000_000) reqRentBudget = computedMax;
+  if (reqTextLower && !isReqOpenBudget) {
+    const rentMatch = reqTextLower.match(/(?:presupuesto\s*(?:para\s*)?(?:alquiler|arriendo|renta)|ppto\s*(?:para\s*)?(?:alquiler|arriendo)|alquiler\s*:|canon\s*:)\s*:?\s*\*?\$?\s*([^\n,•]+)/i);
+    if (rentMatch) {
+      const parsed = parseColombianCurrency(rentMatch[0]);
+      if (parsed && parsed >= 300_000 && parsed <= 100_000_000) {
+        reqRentBudget = parsed;
+      }
     }
-    if (reqRentBudget <= 0) {
-      const matchPresu = reqTextLower.match(/(?:presupuesto|prespuesto|ppto|canon|valor|hasta|máximo|max|tope)\s*(?:máximo|max)?\s*:?\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones|millón|mll|mlls|mm|m)?(?:\s*con\s*adm|\s*incluid|\s*total|\s|$|\n)/i);
-      if (matchPresu) {
-        const computed = parseColombianPriceOrBudget(matchPresu[1], matchPresu[2] || "", false);
-        if (computed >= 300_000 && computed <= 100_000_000) reqRentBudget = computed;
+    if (reqRentBudget <= 0 && isReqRentMatch) {
+      const matchRangeRent = reqTextLower.match(/(?:de|entre)\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:a|hasta|-|o|u|y)\s*(\d{1,3}(?:[.,]\d+)?)\s*(mil\s*millones?|millones|millón|mll|mlls|mm|m)\b/i);
+      if (matchRangeRent) {
+        const computedMax = parseColombianPriceOrBudget(matchRangeRent[2], matchRangeRent[3] || "", false);
+        if (computedMax >= 300_000 && computedMax <= 100_000_000) reqRentBudget = computedMax;
       }
     }
   }
 
-  let reqRentLabel = !isReqRentMatch ? "N/A (Búsqueda de Venta)" : (isReqOpenBudget ? "Presupuesto Abierto" : (reqRentBudget > 0 ? formatCOP(reqRentBudget) : "Flexible / Presupuesto Abierto"));
-  let propRentLabel = propRentPrice > 0 ? formatCOP(propRentPrice) : (isPropPureVenta ? "N/A (Inmueble en Venta)" : "N/E (Consultar)");
+  // DETECCIÓN INTELIGENTE DE NEGOCIO DUAL (VENTA Y ARRIENDO SIMULTÁNEOS)
+  const hasSaleSignals = propSalePrice > 0 || reqSaleBudget > 0 || /\b(?:venta|ventas|vende|compra|comprar)\b/i.test(propTextLower) || /\b(?:compra|comprar)\b/i.test(reqTextLower);
+  const hasRentSignals = propRentPrice > 0 || reqRentBudget > 0 || /\b(?:arriendo|arrendamiento|alquiler|renta)\b/i.test(propTextLower) || /\b(?:arriendo|arrendamiento|alquiler|renta)\b/i.test(reqTextLower);
+  
+  const isDualBiz = cleanReqBiz.includes("venta_arriendo") || cleanPropBiz.includes("venta_arriendo") || 
+    (cleanReqBiz.includes("arriendo") && cleanPropBiz.includes("venta_arriendo")) ||
+    (cleanReqBiz.includes("venta") && cleanPropBiz.includes("venta_arriendo")) ||
+    (hasSaleSignals && hasRentSignals && (propSalePrice > 0 || propRentPrice > 0) && (reqSaleBudget > 0 || reqRentBudget > 0));
+
+  const showSalePrice = propSalePrice > 0 || reqSaleBudget > 0 || !isReqRentMatch || isDualBiz;
+  const showRentPrice = propRentPrice > 0 || reqRentBudget > 0 || isReqRentMatch || isPropPureRent || isDualBiz;
+
+  // Evaluación Fila 1: Precio de Venta
+  let reqSaleLabel = (isReqRentMatch && !isDualBiz) ? "N/A (Búsqueda de Arriendo)" : (isReqOpenBudget ? "Presupuesto Abierto" : (reqSaleBudget > 0 ? formatCOP(reqSaleBudget) : "Flexible / Presupuesto Abierto"));
+  let propSaleLabel = propSalePrice >= 30_000_000 ? formatCOP(propSalePrice) : ((isPropPureRent && !isDualBiz) ? "N/A (Inmueble en Arriendo)" : "N/E (Consultar)");
+
+  let saleS: MatchStatus = "neutral";
+  if (isReqRentMatch && !isDualBiz) {
+    saleS = "exact";
+  } else if (isReqOpenBudget) {
+    saleS = propSalePrice > 0 ? "warn" : "neutral";
+  } else if (reqSaleBudget > 0 && propSalePrice > 0) {
+    if (propSalePrice <= reqSaleBudget) {
+      saleS = "exact"; // Coincide idéntico o está dentro de presupuesto
+    } else if (propSalePrice <= reqSaleBudget * 1.10) {
+      saleS = "warn";  // Negociable (+10% margen)
+    } else {
+      saleS = isDualBiz && propRentPrice > 0 && reqRentBudget > 0 ? "warn" : "missing"; // Si es dual y arriendo cumple, no aplicar guillotina total
+    }
+  } else {
+    saleS = "neutral";
+  }
+
+  if (showSalePrice) {
+    add("Precio de Venta", reqSaleLabel, propSaleLabel, saleS, (isReqRentMatch && !isDualBiz) ? 0 : 15, <DollarSign className="w-3.5 h-3.5" />);
+  }
+
+  // Evaluación Fila 2: Canon de Arriendo
+  const propAdminInfo = parseAdminFee(prop.rawText || "");
+  const propRentSuffix = propAdminInfo.requiresInquiry ? " (+ Adm por verificar)" : "";
+  let reqRentLabel = (!isReqRentMatch && !isDualBiz) ? "N/A (Búsqueda de Venta)" : (isReqOpenBudget ? "Presupuesto Abierto" : (reqRentBudget > 0 ? formatCOP(reqRentBudget) : "Flexible / Presupuesto Abierto"));
+  let propRentLabel = propRentPrice > 0 ? `${formatCOP(propRentPrice)}${propRentSuffix}` : ((isPropPureVenta && !isDualBiz) ? "N/A (Inmueble en Venta)" : "N/E (Consultar)");
 
   let rentS: MatchStatus = "neutral";
-  if (!isReqRentMatch) {
+  if (!isReqRentMatch && !isDualBiz) {
     rentS = "exact";
   } else if (isReqOpenBudget) {
     rentS = propRentPrice > 0 ? "warn" : "neutral";
   } else if (reqRentBudget > 0 && propRentPrice > 0) {
-    if (propRentPrice === reqRentBudget) {
-      rentS = "exact"; // Coincide idéntico
-    } else if (propRentPrice < reqRentBudget) {
-      rentS = "warn";  // Aproximado (dentro de presupuesto)
+    if (propRentPrice <= reqRentBudget) {
+      rentS = "exact"; // Coincide dentro del canon presupuestado
+    } else if (propRentPrice <= reqRentBudget * 1.10) {
+      rentS = "warn";  // Diferencia negociable (+10% margen)
     } else {
-      rentS = "missing"; // Supera canon -> Guillotina
+      rentS = isDualBiz && propSalePrice > 0 && reqRentBudget > 0 && propSalePrice <= reqRentBudget ? "warn" : "missing";
     }
   } else {
     rentS = "neutral";
   }
 
   if (showRentPrice) {
-    add("Precio de Arriendo / Canon", reqRentLabel, propRentLabel, rentS, isReqRentMatch ? 15 : 0, <Receipt className="w-3.5 h-3.5" />);
+    add("Precio de Arriendo / Canon", reqRentLabel, propRentLabel, rentS, (!isReqRentMatch && !isDualBiz) ? 0 : 15, <DollarSign className="w-3.5 h-3.5" />);
   }
 
-  // 5. Valor admin (Cuota de Administración)
-  // 🛡️ DOCTRINA: 'Valor admin' oficial de BD primero
-  let reqAdminMax = parseSafePrice(req.adminFeeMax, req.rawText);
-  if (reqAdminMax <= 0 && reqTextLower) {
-    const admReqMatch = reqTextLower.match(/(?:^|[-•*#\s])(?:v\s*[\/\-]\s*)?(?:adm|admon|admón|administraci[oó]n|admin|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite|menor\s*a)?\s*:?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b|\s*millones\b)?/i);
-    if (admReqMatch) {
-      const rawNumStr = admReqMatch[1].replace(/\./g, '');
-      let rawANum = parseFloat(rawNumStr);
-      if (!isNaN(rawANum)) {
-        if (rawANum >= 500 && rawANum <= 15000) rawANum = rawANum * 1000;
-        if (rawANum >= 50_000 && rawANum <= 30_000_000 && !isPhoneNumberNotPrice(rawANum, req.rawText)) {
-          reqAdminMax = rawANum;
-        }
-      }
-    }
-  }
-
-  // 🛡️ DOCTRINA: Valor admin en Oferta de BD primero
+  // 5. Cuota de Administración (Valor admin)
   let propAdminFee = parseSafePrice(prop.adminFee, prop.rawText);
-  const isPropAdminIncluded = propTextLower.includes("incluida la administraci") || propTextLower.includes("incluida administraci") || propTextLower.includes("admon incluida") || propTextLower.includes("administracion incluida") || propTextLower.includes("con admon") || propTextLower.includes("con administración");
+  const isPropAdminIncluded = propAdminInfo.isIncluded || propTextLower.includes("incluida la administraci") || propTextLower.includes("incluida administraci") || propTextLower.includes("admon incluida") || propTextLower.includes("administracion incluida") || propTextLower.includes("con admon") || propTextLower.includes("con administración");
 
-  if (propAdminFee <= 0 && propTextLower && !isPropAdminIncluded) {
-    const admMatch = propTextLower.match(/(?:^|[-•*#\s])(?:v\s*[\/\-]\s*)?(?:adm|admon|admón|administraci[oó]n|admin|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*[:\/\-=\s]?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
-    if (admMatch) {
-      const rawANum = parseFloat(admMatch[1].replace(/\./g, ''));
-      if (!isNaN(rawANum) && rawANum >= 10_000 && rawANum <= 30_000_000 && !isPhoneNumberNotPrice(rawANum, prop.rawText) && rawANum !== propRentPrice && rawANum !== propSalePrice) {
-        propAdminFee = rawANum;
-      }
-    }
-    if (propAdminFee <= 0) {
-      const adminMilMatch = propTextLower.match(/(?:^|[-•*#\s])(?:admon|adm[oó]n|adm|admin|cuota)\s*[:\/\-=\s]?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:mil|k)\b/i);
-      if (adminMilMatch) {
-        const numParsed = parseFloat(adminMilMatch[1].replace(',', '.'));
-        if (!isNaN(numParsed) && numParsed >= 20 && numParsed <= 15000) {
-          const calculatedFee = Math.round(numParsed * 1000);
-          if (calculatedFee >= 50_000 && calculatedFee <= 15_000_000 && calculatedFee !== propRentPrice && calculatedFee !== propSalePrice) {
-            propAdminFee = calculatedFee;
-          }
-        }
-      }
-    }
+  const reqAdminInfo = parseAdminFee(req.rawText || "");
+  const isReqAdminIncluded = reqAdminInfo.isIncluded || reqTextLower.includes("incluida la administraci") || reqTextLower.includes("incluida administraci") || reqTextLower.includes("admon incluida") || reqTextLower.includes("con admon incluida") || reqTextLower.includes("administracion incluida");
+  let reqAdminMax = parseSafePrice((req as any).adminFeeMax || (req as any).adminFee, req.rawText);
+  if (reqAdminMax <= 0 && reqAdminInfo.fee) {
+    reqAdminMax = reqAdminInfo.fee;
   }
 
-  // Si por alguna razón la administración quedó idéntica al canon o precio de venta, es una confusión -> desasociar
-  if (propAdminFee > 0 && (propAdminFee === propRentPrice || propAdminFee === propSalePrice)) {
-    propAdminFee = 0;
-  }
+  let propAdminLabel = isPropAdminIncluded ? "Incluida en el canon" : (propAdminFee > 0 ? `${formatCOP(propAdminFee)} / mes` : (propAdminInfo.requiresInquiry ? "Averiguar / Por consultar (+ Adm)" : "Flexible / N/E"));
+  let reqAdminLabel = reqAdminMax > 0 ? `≤ ${formatCOP(reqAdminMax)} Max.` : (isReqAdminIncluded ? "Debe ir incluida en el canon" : "Flexible / Sin restricción");
 
-  const isReqAdminIncluded = /(?:admin(?:istraci[oó]n)?\s*incluid[ao]|incluid[ao]\s*(?:la\s*)?admin(?:istraci[oó]n)?)/i.test(reqTextLower);
   let adminS: MatchStatus = "neutral";
-  let reqAdminLabel = reqAdminMax > 0 ? `≤ ${formatCOP(reqAdminMax)}` : "Flexible / Sin restricción";
-
   if (isReqAdminIncluded) {
     reqAdminLabel = "Debe ir incluida en el canon";
     if (isPropAdminIncluded) {
@@ -1326,11 +1255,12 @@ function scoreRows(req: any, prop: any) {
     } else {
       adminS = "exact";
     }
-  } else if (reqAdminMax === 0 && propAdminFee > 0) {
+  } else if (reqAdminInfo.requiresInquiry && reqAdminMax > 0) {
+    adminS = "warn"; // Pendiente de verificación frente al tope demandado
+  } else {
     adminS = "neutral";
   }
 
-  const propAdminLabel = isPropAdminIncluded ? "Incluida en el canon" : (propAdminFee > 0 ? `${formatCOP(propAdminFee)} / mes` : "Flexible / N/E");
 
   add("Valor admin", reqAdminLabel, propAdminLabel, adminS, 5, <Receipt className="w-3.5 h-3.5" />);
 
@@ -1496,6 +1426,10 @@ function scoreRows(req: any, prop: any) {
   let ageR = req.antiguedadMax ? Number(req.antiguedadMax) : (req.preferredAge ? Number(req.preferredAge) : 0);
   if (ageR <= 0 && (req.caracteristicasDeseadas as any)?.antiguedadMax) {
     ageR = Number((req.caracteristicasDeseadas as any).antiguedadMax);
+  }
+  if (ageR <= 0 && reqTextLower) {
+    const parsedAge = parseMaxAge(reqTextLower);
+    if (parsedAge && parsedAge > 0) ageR = parsedAge;
   }
 
   let yearBuiltP = prop.yearBuilt ? Number(prop.yearBuilt) : (prop.constructionYear ? Number(prop.constructionYear) : null);

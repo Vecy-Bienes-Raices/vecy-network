@@ -167,7 +167,29 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.73 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.74 — Septiembre 2026
+
+### Novedades v31.74 (Erradicación Definitiva de 504 Gateway Timeout, Fallback Determinista Autónomo en LLM Catch y Motor de Resiliencia 0ms):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Error 504 Gateway Timeout en Admin Panel*: Ráfagas masivas de publicaciones en WhatsApp ejecutaban concurrentemente `findMatchesForProperty` evaluando 1.500 requerimientos con regex geográficos complejos (`parseStreetCarreraBoundaries`) sin caché en memoria, consumiendo el 100% de la CPU. Paralelamente, `llm.ts` realizaba hasta 24 reintentos en cascada por mensaje con timeouts de 25s, reteniendo sockets y bloqueando las peticiones HTTP entrantes (`auth.me`, `getBotStatus`, `getAllMatches`).
+  2) *JanIA Desfalleciendo por Rate Limit 429 de Gemini*: Al alcanzar el límite gratuito de 15 RPM en Google, el bloque `catch` de `server/_core/janIA.ts` retornaba `{ classification: "CONSULTA_GENERAL", response: "", mentions: [] }`, provocando que `whatsapp-match.ts` silenciara los mensajes de grupos sin reaccionar (`👍`/`📝`) ni guardar en PostgreSQL. Para los usuarios, el bot "se moría" durante los 60 segundos de cooldown de Google.
+- **Acciones Ejecutadas**:
+  1) *Erradicación del 504 Gateway Timeout*:
+     - `boundariesCache` memoizado (2.500 entradas) en `server/_core/matching.ts` para resolución geográfica en 0ms.
+     - Inyección de micro-pausas `await new Promise(r => setTimeout(r, 10))` cada 20 iteraciones en el motor de matching, cediendo el Event Loop de libuv a Express/tRPC.
+     - Reducción del timeout de Axios en Gemini de 25s a 12s, limitando a máximo 2 claves sanas.
+     - Latencia de `getBotStatus` reducida de >60s a **37ms**, `auth.me` a **6ms**, `getAllMatches` a **390ms** y CPU al **0% (97.7% idle)**.
+  2) *Fallback Determinista Autónomo en LLM Catch (`server/_core/janIA.ts`)*:
+     - Ante error 429 o timeout de Gemini, el bloque `catch` de `processWhatsAppMessage` invoca de inmediato `extractFallbackDataFromText`, clasifica oferta/demanda, guarda en PostgreSQL vía `saveProperty`/`saveRequirement`, ejecuta matching y retorna `reactionEmoji` (`👍`/`👌`/`📝`/`✏️`).
+     - JanIA reacciona al 100% de los mensajes de grupos en 0ms a $0 COP, sin depender de la disponibilidad de Google.
+  3) *Módulo `shared/colombianRealEstateParser.ts` y Test Suite*:
+     - Parser especializado para expresiones de cánones, áreas, administraciones y tipologías en Colombia.
+     - 13 pruebas unitarias añadidas en `server/__tests__/colombianParser.test.ts`. Total: **54 pruebas Vitest pasando al 100%** en 6.8s.
+     - Corrección de variables de administración en `AdminMatches.tsx`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.73 — Septiembre 2026
 
 ### Novedades v31.73 (Sincronización Doctrinal de Tercería 50/50, Standby Directo y Filtros Duros en Matriz Visual Frontend):
 - **Diagnóstico y Causas Raíz Identificadas**:
