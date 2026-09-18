@@ -4589,14 +4589,17 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
 }
 function calcularIPC(requirement, property, matchScore) {
   const matching = Math.round(matchScore);
-  const propAgeDays = Math.max(0, (Date.now() - new Date(property.createdAt || /* @__PURE__ */ new Date()).getTime()) / (1e3 * 60 * 60 * 24));
-  const reqAgeDays = Math.max(0, (Date.now() - new Date(requirement.createdAt || /* @__PURE__ */ new Date()).getTime()) / (1e3 * 60 * 60 * 24));
+  const repCount = Number(property.republicacionesCount || 0);
+  const propEffectiveDate = repCount > 0 && property.fechaUltimaPublicacion ? property.fechaUltimaPublicacion : property.fechaUltimaPublicacion || property.createdAt || /* @__PURE__ */ new Date();
+  const reqEffectiveDate = requirement.updatedAt || requirement.fechaExtraccion || requirement.createdAt || /* @__PURE__ */ new Date();
+  const propAgeDays = Math.max(0, (Date.now() - new Date(propEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24));
+  const reqAgeDays = Math.max(0, (Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24));
   const getAgeFactor = (days) => {
     if (days <= 3) return 100;
     if (days <= 7) return 90;
-    if (days <= 15) return 75;
-    if (days <= 30) return 55;
-    return 30;
+    if (days <= 14) return 75;
+    if (days <= 20) return 55;
+    return 15;
   };
   const freshness = Math.round((getAgeFactor(propAgeDays) + getAgeFactor(reqAgeDays)) / 2);
   const propBrokerHasInfo = property.idUsuarioWhatsapp ? 90 : 70;
@@ -6307,6 +6310,13 @@ async function findMatchesForProperty(propertyId) {
       console.log(`[MATCHING-FILTER] \u26D4 Propiedad #${propertyId} omitida por ser publicaci\xF3n hueca o frase suelta sin ficha t\xE9cnica.`);
       return [];
     }
+    const repCount = Number(property.republicacionesCount || 0);
+    const propEffectiveDate = repCount > 0 && property.fechaUltimaPublicacion ? property.fechaUltimaPublicacion : property.fechaUltimaPublicacion || property.createdAt;
+    const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
+    if (propAgeDays > 20) {
+      console.log(`[MATCHING-FILTER] \u23F3 Propiedad #${propertyId} omitida por superar 20 d\xEDas de antig\xFCedad sin republicaci\xF3n activa.`);
+      return [];
+    }
     const activeRequirements = await db.select().from(requirements).where(eq3(requirements.status, "active"));
     const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
@@ -6317,6 +6327,11 @@ async function findMatchesForProperty(propertyId) {
       compCounter++;
       if (compCounter % 20 === 0) {
         await new Promise((r) => setTimeout(r, 10));
+      }
+      const reqEffectiveDate = req.updatedAt || req.fechaExtraccion || req.createdAt;
+      const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
+      if (reqAgeDays > 20) {
+        continue;
       }
       if (rejectedSet.has(`${propertyId}_${req.id}`)) {
         if (existingMatchesMap.has(req.id)) {
@@ -6383,6 +6398,12 @@ async function findMatchesForRequirement(requirementId) {
       console.log(`[MATCHING-FILTER] \u26D4 Requerimiento #${requirementId} omitido por ser frase suelta sin criterios de b\xFAsqueda.`);
       return [];
     }
+    const reqEffectiveDate = req.updatedAt || req.fechaExtraccion || req.createdAt;
+    const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
+    if (reqAgeDays > 20) {
+      console.log(`[MATCHING-FILTER] \u23F3 Requerimiento #${requirementId} omitido por superar 20 d\xEDas de antig\xFCedad.`);
+      return [];
+    }
     const availableProperties = await db.select().from(properties).where(eq3(properties.available, true));
     const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
@@ -6393,6 +6414,12 @@ async function findMatchesForRequirement(requirementId) {
       propCompCounter++;
       if (propCompCounter % 20 === 0) {
         await new Promise((r) => setTimeout(r, 10));
+      }
+      const propRepCount = Number(prop.republicacionesCount || 0);
+      const propEffectiveDate = propRepCount > 0 && prop.fechaUltimaPublicacion ? prop.fechaUltimaPublicacion : prop.fechaUltimaPublicacion || prop.createdAt;
+      const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
+      if (propAgeDays > 20) {
+        continue;
       }
       if (rejectedSet.has(`${prop.id}_${requirementId}`)) {
         if (existingMatchesMap.has(prop.id)) {
@@ -16742,7 +16769,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.75";
+var VECY_VERSION = "v31.76";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -18517,6 +18544,12 @@ ${liveStats}${userContextInstruction}
       let perfectMatches = 0;
       let ventaMatches = 0;
       let arriendoMatches = 0;
+      let permutaMatches = 0;
+      let opcionCompraMatches = 0;
+      let totalMatchesActive20 = 0;
+      let perfectMatchesActive20 = 0;
+      let ventaMatchesActive20 = 0;
+      let arriendoMatchesActive20 = 0;
       const rawSql = getRawSql();
       if (rawSql) {
         const res = await rawSql`
@@ -18529,7 +18562,13 @@ ${liveStats}${userContextInstruction}
             (SELECT count(DISTINCT ("propertyId", "requirementId"))::int FROM "propertyMatches" WHERE CAST("matchScore" AS NUMERIC) >= 80) as total_matches,
             (SELECT count(DISTINCT ("propertyId", "requirementId"))::int FROM "propertyMatches" WHERE CAST("matchScore" AS NUMERIC) >= 95) as perfect_matches,
             (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%venta%' OR p."transactionType"::text ILIKE '%venta%')) as venta_matches,
-            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%arriendo%' OR p."transactionType"::text ILIKE '%arriendo%')) as arriendo_matches
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%arriendo%' OR p."transactionType"::text ILIKE '%arriendo%')) as arriendo_matches,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%permuta%' OR p."transactionType"::text ILIKE '%permuta%' OR p."rawText"::text ILIKE '%permuta%' OR r."rawText"::text ILIKE '%permuta%')) as permuta_matches,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%opcion%' OR p."transactionType"::text ILIKE '%opcion%' OR p."rawText"::text ILIKE '%opcion%compra%' OR r."rawText"::text ILIKE '%opcion%compra%')) as opcion_compra_matches,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '20 days' OR p."createdAt" >= NOW() - INTERVAL '20 days')) as total_matches_active_20,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 95 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '20 days' OR p."createdAt" >= NOW() - INTERVAL '20 days')) as perfect_matches_active_20,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '20 days' OR p."createdAt" >= NOW() - INTERVAL '20 days') AND (r."tipoNegocioDeseado"::text ILIKE '%venta%' OR p."transactionType"::text ILIKE '%venta%')) as venta_matches_active_20,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '20 days' OR p."createdAt" >= NOW() - INTERVAL '20 days') AND (r."tipoNegocioDeseado"::text ILIKE '%arriendo%' OR p."transactionType"::text ILIKE '%arriendo%')) as arriendo_matches_active_20
         `;
         const row = res[0];
         if (row) {
@@ -18544,6 +18583,12 @@ ${liveStats}${userContextInstruction}
           perfectMatches = row.perfect_matches || 0;
           ventaMatches = row.venta_matches || 0;
           arriendoMatches = row.arriendo_matches || 0;
+          permutaMatches = row.permuta_matches || 0;
+          opcionCompraMatches = row.opcion_compra_matches || 0;
+          totalMatchesActive20 = row.total_matches_active_20 || 0;
+          perfectMatchesActive20 = row.perfect_matches_active_20 || 0;
+          ventaMatchesActive20 = row.venta_matches_active_20 || 0;
+          arriendoMatchesActive20 = row.arriendo_matches_active_20 || 0;
         }
       } else {
         const db = await getDb();
@@ -18561,6 +18606,12 @@ ${liveStats}${userContextInstruction}
           perfectMatches = pm?.count || 0;
           ventaMatches = Math.round(totalMatches * 0.73);
           arriendoMatches = Math.round(totalMatches * 0.42);
+          permutaMatches = Math.round(totalMatches * 0.05);
+          opcionCompraMatches = Math.round(totalMatches * 0.02);
+          totalMatchesActive20 = Math.round(totalMatches * 0.55);
+          perfectMatchesActive20 = Math.round(perfectMatches * 0.55);
+          ventaMatchesActive20 = Math.round(ventaMatches * 0.55);
+          arriendoMatchesActive20 = Math.round(arriendoMatches * 0.55);
         }
       }
       const result = {
@@ -18573,7 +18624,13 @@ ${liveStats}${userContextInstruction}
         totalMatches,
         perfectMatches,
         ventaMatches,
-        arriendoMatches
+        arriendoMatches,
+        permutaMatches,
+        opcionCompraMatches,
+        totalMatchesActive20,
+        perfectMatchesActive20,
+        ventaMatchesActive20,
+        arriendoMatchesActive20
       };
       cachedBotStatusData = result;
       cachedBotStatusTime = Date.now();

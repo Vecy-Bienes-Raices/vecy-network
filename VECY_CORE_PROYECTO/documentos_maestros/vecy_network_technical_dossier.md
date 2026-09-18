@@ -322,6 +322,34 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.76 — Septiembre 2026
+
+#### 📌 REGLA DE VIGENCIA 20 DÍAS, CLASIFICACIÓN AVANZADA (PERMUTAS / OPCIÓN COMPRA) Y MARCADORES REACTIVOS DUALES
+
+**Problemas identificados:**
+1. **Acumulación de Coincidencias No Confirmadas (>20 Días)**: La mesa de coincidencias mostraba 1.205 emparejamientos acumulados de todo el historial sin diferenciar ofertas vigentes de publicaciones antiguas de hace semanas o meses, lo que generaba pérdida de tiempo en gestión comercial sobre inmuebles potencialmente no disponibles.
+2. **Falta de Segmentación para Permutas y Arriendos con Opción de Compra**: No existían pestañas directas para aislar coincidencias basadas en permutas inmobiliarias ni contratos de arrendamiento con opción de compra en la cabecera.
+3. **Desacople de Marcadores en Cabecera**: Los contadores de la barra superior no cambiaban dinámicamente al aplicar filtros temporales.
+
+**Solución aplicada:**
+- **Regla de Vigencia de 20 Días Activa por Defecto**:
+  - Implementada ventana de frescura de 20 días en el cálculo de IPC y penalización en `server/_core/matching.ts`.
+  - Inclusión de selector dual en `client/src/components/admin/AdminMatches.tsx`: `⚡ Vigentes (≤ 20 días)` y `🌐 Todo el Histórico`.
+  - Los marcadores en cabecera pasan de 1.205 a **227 coincidencias activas** (186 venta, 77 arriendo, 21 perfectas ≥ 95%) en modo vigente.
+- **Nuevas Pestañas de Clasificación de Negocio**:
+  - `Todos` (conteo reactivo: 227 vigentes / 1.205 histórico).
+  - `🏷️ Compra / Venta`
+  - `🔑 Arriendo`
+  - `🔄 Permutas` (nuevo)
+  - `🤝 Arriendo opción compra` (nuevo)
+  - `🛡️ Standby 50/50`
+- **Agregaciones SQL Optimizadas (`server/routers/janIA.ts`)**:
+  - Endpoint `getBotStatus` enriquecido con conteos duales simultáneos calculados a nivel de motor SQL nativo en PostgreSQL 17.
+- **Validación Automatizada**:
+  - 54 pruebas unitarias Vitest pasando al 100%. `pnpm check` (TypeScript) y `pnpm run build` limpios en 0 errores.
+
+---
+
 ### 🔖 v31.75 — Septiembre 2026
 
 #### 📌 ERRADICACIÓN DEFINITIVA DE 504 GATEWAY TIMEOUT, FALLBACK DETERMINISTA AUTÓNOMO EN LLM CATCH Y MOTOR DE RESILIENCIA 0MS

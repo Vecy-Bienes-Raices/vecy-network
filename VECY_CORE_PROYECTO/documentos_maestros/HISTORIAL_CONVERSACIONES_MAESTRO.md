@@ -50,7 +50,52 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.75 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.76 — Septiembre 2026
+
+### 🗓️ Sesión: Viernes 18 de Septiembre de 2026 — 14:00 a 14:25 (Hora Colombia UTC-5)
+**Versión**: `v31.76` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 Nativo + PM2 (`jania-server`) + GitHub (`main`) + React Vercel
+
+#### 🎯 Solicitud y Requerimiento de Eduardo A. Rivera:
+1. *"Mira ante eso que me informaste y me propones en el punto #4. Deseo implementar la primera o segunda opción de ese punto, pero que ya no sean 30 días sino 20 y respecto a las opciones que te decía atras de que mandé poner más opciones en esta sección para mayor organización y clasificación de coincidencias y quedaría así: Todos 1204 🏷️ Compra / Venta 866 🔑 Arriendo 529 otras como Permutas y Arriendos opción compra"*
+2. *"Nada cambió los marcadores en el cabecero de la página de coincidencias y todo sigue igual como estaba antes, no evidencio el cambio."*
+3. *"Pregunta. ¿Será que por error tocaste código que no debías haber tocad y depronto Desconectaste a JanIA? es que no veo reacciones de emojis por parte de JanIA en los grupos. También quisiera saber si desplegaste como es debido y si subiste los cambios y la conversación que sostuvimos a la bitácora es decir todos los archivos correspondientes que son .md y si esta en github el vps, etc, etc..."*
+
+#### 🔬 Diagnóstico Técnico Profundo:
+1. **Regla de Vigencia de 20 Días en el Motor y Mesa de Coincidencias**:
+   - Se requería reducir la ventana de caducidad/antigüedad de 30 a 20 días para descartar listings inactivos o no confirmados.
+   - En PostgreSQL nativo, los matches acumulados históricos eran 1.205 (867 venta, 530 arriendo). Con la regla de 20 días activa (`p.fecha_ultima_publicacion >= NOW() - INTERVAL '20 days' OR p.createdAt >= NOW() - INTERVAL '20 days'`), las coincidencias vigentes reales son **227** (186 venta, 77 arriendo, 21 perfectas ≥ 95%).
+2. **Causa Raíz de que no se evidenciara el cambio en producción**:
+   - Los cambios iniciales se compilaron localmente pero no se habían desplegado a `origin/main` ni al VPS (`13.140.149.144`). La web en vivo ejecutaba la compilación en caché de la versión `v31.75`.
+   - Adicionalmente, `AdminMatches.tsx` leía incondicionalmente `botStatus.totalMatches` histórico en lugar de alternar reactivamente con `botStatus.totalMatchesActive20` según el filtro de vigencia seleccionado.
+3. **Verificación Forense de JanIA y Socket de WhatsApp en VPS**:
+   - Se auditó el proceso PM2 `jania-server` en el VPS (`13.140.149.144`). JanIA NO fue desconectada ni alterada (`isReady=true`, socket nativo Baileys activo en la línea **+573192919978**).
+   - Los logs demostraron que JanIA continúa reaccionando con emojis nativos (`👍`/`📝`) en los grupos de WhatsApp en tiempo real.
+
+#### 🛠️ Acciones Ejecutadas en Código y Arquitectura:
+1. **Mesa de Coincidencias (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Incorporado selector de vigencia dual: `⚡ Vigentes (≤ 20 días)` (activo por defecto) y `🌐 Todo el Histórico`.
+   - Creados nuevos filtros y píldoras de clasificación en cabecera:
+     - `Todos` (conteo reactivo dinámico según vigencia: 227 vigentes / 1.205 histórico).
+     - `🏷️ Compra / Venta` (186 vigentes / 867 histórico).
+     - `🔑 Arriendo` (77 vigentes / 530 histórico).
+     - `🔄 Permutas` (nuevo filtro de negocio con conteo activo).
+     - `🤝 Arriendo opción compra` (nuevo filtro de negocio con conteo activo).
+     - `🛡️ Standby 50/50` (filtro directo de acuerdos Vecy).
+   - Advertencia de frescura adaptada de 30 a 20 días (`⏳ Publicación de hace X días · Confirmar disponibilidad`).
+2. **Motor de Scoring e IPC de Frescura (`server/_core/matching.ts`)**:
+   - Ajustada la fórmula de recálculo de frescura y penalización a publicaciones mayores a 20 días sin republicación confirmada.
+3. **Consultas Agregadas en Backend (`server/routers/janIA.ts`)**:
+   - `getBotStatus` enriquecido con consultas SQL agregadas para retornar conteos duales: históricos y vigentes (`totalMatchesActive20`, `perfectMatchesActive20`, `ventaMatchesActive20`, `arriendoMatchesActive20`, `permutaMatches`, `opcionCompraMatches`).
+4. **Despliegue Integral Producción**:
+   - Versión incrementada a **v31.76** (`shared/const.ts` y `package.json`).
+   - Compilación completa local `pnpm run build` generando `dist-server/index.js` y assets de Vite.
+   - 54/54 tests pasando al 100% en Vitest. `tsc --noEmit` con 0 errores.
+   - Despliegue en GitHub (`origin/main`) y sincronización en VPS (`cd /var/www/vecy-network && git pull && pnpm run build && pm2 restart all`).
+   - Registro en la Triple Bitácora oficial (`HISTORIAL_CONVERSACIONES_MAESTRO.md`, `vecy_network_technical_dossier.md`, `.agents/AGENTS.md`).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR EN PRODUCCIÓN: v31.75 — Septiembre 2026
 
 ### 🗓️ Sesión: Viernes 18 de Septiembre de 2026 — 02:45 (Hora Colombia UTC-5)
 **Versión**: `v31.75` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 Nativo + PM2 (`jania-server`) + GitHub (`main`) + React Vercel

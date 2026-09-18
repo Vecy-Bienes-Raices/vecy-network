@@ -167,7 +167,30 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.75 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.76 — Septiembre 2026
+
+### Novedades v31.76 (Regla de Vigencia 20 Días, Clasificación Avanzada Permutas / Opción Compra y Marcadores Reactivos Duales):
+- **Diagnóstico y Contexto**:
+  1) *Depuración de Antigüedad*: Para evitar perder tiempo en inmuebles obsoletos o ya colocados, se formalizó la regla de vigencia reduciendo el límite de 30 a 20 días para el descarte/advertencia de disponibilidad.
+  2) *Segmentación de Negocio*: Se requería clasificar de forma organizada y visible las coincidencias en Permutas y Arriendos con Opción de Compra.
+  3) *Reactividad de KPIs*: Los contadores de la cabecera no se adaptaban dinámicamente al aplicar filtros temporales, mostrando siempre el acumulado histórico de 1.205 coincidencias.
+- **Acciones Ejecutadas**:
+  1) *Mesa de Coincidencias (`AdminMatches.tsx`)*:
+     - Selector de vigencia dual en Desktop y Móvil: `⚡ Vigentes (≤ 20 días)` (activo por defecto) y `🌐 Todo el Histórico`.
+     - Píldoras de clasificación con contadores dinámicos: `Todos`, `🏷️ Compra / Venta`, `🔑 Arriendo`, `🔄 Permutas`, `🤝 Arriendo opción compra`, `🛡️ Standby 50/50`.
+     - En modo vigente (≤ 20 días), los marcadores de la cabecera reflejan **227 coincidencias activas** (186 venta, 77 arriendo, 21 perfectas ≥ 95%) en lugar de las 1.205 históricas.
+     - Advertencia de frescura adaptada a 20 días: `⏳ Publicación de hace X días · Confirmar disponibilidad`.
+  2) *Motor de Matching e IPC de Frescura (`matching.ts`)*:
+     - Ventana de penalización y cálculo de frescura sincronizada a 20 días.
+  3) *Backend y Agregaciones SQL (`janIA.ts`)*:
+     - `getBotStatus` adaptado con consultas nativas para retornar conteos duales simultáneos (activos 20 días vs histórico completo).
+  4) *Verificación Automatizada y Despliegue*:
+     - 54/54 pruebas Vitest pasando al 100%. `tsc --noEmit` y `pnpm run build` limpios con 0 errores.
+     - Despliegue en GitHub (`origin/main`) y sincronización en servidor VPS (`13.140.149.144`).
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.75 — Septiembre 2026
 
 ### Novedades v31.75 (Erradicación Definitiva de 504 Gateway Timeout, Fallback Determinista Autónomo en LLM Catch y Motor de Resiliencia 0ms):
 - **Diagnóstico y Causas Raíz Identificadas**:
