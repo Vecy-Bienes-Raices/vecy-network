@@ -28,7 +28,10 @@ if ! pg_isready -h localhost -p 5432 -q; then
 fi
 
 # 2. Verificar estado en PM2
-PM2_STATUS=$(node -e 'try { const list = JSON.parse(require("child_process").execSync("pm2 jlist").toString()); const s = list.find(x => x.name === "jania-server"); console.log(s ? s.pm2_env.status : "not_found"); } catch(e) { console.log("error"); }')
+PM2_DATA=$(node -e 'try { const list = JSON.parse(require("child_process").execSync("pm2 jlist").toString()); const s = list.find(x => x.name === "jania-server"); if (!s) { console.log("not_found 0"); } else { const uptimeSec = Math.floor((Date.now() - s.pm2_env.pm_uptime) / 1000); console.log(s.pm2_env.status + " " + uptimeSec); } } catch(e) { console.log("error 0"); }')
+
+PM2_STATUS=$(echo "$PM2_DATA" | awk '{print $1}')
+PM2_UPTIME_SEC=$(echo "$PM2_DATA" | awk '{print $2}')
 
 if [ "$PM2_STATUS" != "online" ]; then
     log "⚠️ jania-server no está online (estado: $PM2_STATUS). Reiniciando..."
@@ -37,12 +40,23 @@ if [ "$PM2_STATUS" != "online" ]; then
     exit 0
 fi
 
-# 3. Verificar respuesta HTTP en endpoint local (timeout 5s)
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "http://localhost:3000/api/trpc/janIA.getBotStatus?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D")
-
-if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "400" ]; then
-    log "⚠️ Endpoint local HTTP no respondió adecuadamente (código: $HTTP_CODE). Posible asfixia de Event Loop. Reiniciando..."
-    pm2 restart jania-server
-    log "🔄 jania-server reiniciado por falla en sondeo HTTP."
+# 3. Periodo de gracia tras arranque (120 segundos)
+if [ -n "$PM2_UPTIME_SEC" ] && [ "$PM2_UPTIME_SEC" -lt 120 ]; then
+    # El servidor acaba de iniciar; darle tiempo para cargar índices y socket sin reiniciar prematuramente
     exit 0
+fi
+
+# 4. Verificar respuesta HTTP en endpoint /api/health (timeout 10s con doble verificación)
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://localhost:3000/api/health")
+
+if [ "$HTTP_CODE" != "200" ]; then
+    # Primer intento falló, esperar 5 segundos y reintentar para descartar picos transitorios
+    sleep 5
+    RETRY_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://localhost:3000/api/health")
+    if [ "$RETRY_CODE" != "200" ]; then
+        log "⚠️ Endpoint /api/health no respondió tras 2 intentos (códigos: $HTTP_CODE, $RETRY_CODE). Posible asfixia de Event Loop. Reiniciando..."
+        pm2 restart jania-server
+        log "🔄 jania-server reiniciado por falla confirmada en sondeo HTTP."
+        exit 0
+    fi
 fi

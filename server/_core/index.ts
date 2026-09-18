@@ -202,7 +202,7 @@ async function startServer() {
       const qrPath = path.join(process.cwd(), 'qr-match.png');
       const distQrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
       const activePath = fs.existsSync(qrPath) ? qrPath : distQrPath;
-      
+
       if (fs.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
@@ -227,7 +227,7 @@ async function startServer() {
       const qrPath = path.join(process.cwd(), 'qr-match.png');
       const distQrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
       const activePath = fs.existsSync(qrPath) ? qrPath : distQrPath;
-      
+
       if (fs.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
@@ -250,11 +250,11 @@ async function startServer() {
       console.log("[ADMIN] Re-inicializando sesión de Baileys para refrescar QR...");
       await janiaMatchBot.initialize();
       await new Promise(resolve => setTimeout(resolve, 4000));
-      
+
       const qrPath = path.join(process.cwd(), 'qr-match.png');
       const distQrPath = path.join(process.cwd(), 'dist', 'qr-match.png');
       const activePath = fs.existsSync(qrPath) ? qrPath : distQrPath;
-      
+
       if (fs.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         return res.sendFile(activePath);
@@ -288,7 +288,7 @@ async function startServer() {
       const qrPath = path.join(process.cwd(), 'qr-captador.png');
       const distQrPath = path.join(process.cwd(), 'dist', 'qr-captador.png');
       const activePath = fs.existsSync(qrPath) ? qrPath : distQrPath;
-      
+
       if (fs.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
@@ -320,7 +320,7 @@ async function startServer() {
     try {
       const { text, token, phone, mentions } = req.body;
       const verifyToken = process.env.WEBHOOK_VERIFY_TOKEN || "vecy_network_secret_token";
-      
+
       if (token !== verifyToken) {
         return res.status(401).json({ error: "Unauthorized. Invalid token." });
       }
@@ -348,7 +348,7 @@ async function startServer() {
         }
         await matchBot.queuedSend(targetPhone, text, options);
       }
-      
+
       res.json({ ok: true, message: "Notification sent successfully." });
     } catch (err: any) {
       console.error("[NOTIFICACIÓN-API] Error enviando mensaje:", err);
@@ -406,7 +406,7 @@ async function startServer() {
       if (!whatsappBot.isReady) {
         return res.status(503).send("El bot de WhatsApp no está listo todavía.");
       }
-      const warningText = 
+      const warningText =
         `Hola @573132547441 (Maria Claudia) 👋🏻, espero te encuentres muy bien.\n\n` +
         `🚫 *Has publicado esta oferta en el grupo equivocado.* Este canal es exclusivo para consultas de **Soporte Legal, Tributario, Avalúos y Marketing Inmobiliario**.\n\n` +
         `Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro canal oficial de corretaje:\n` +
@@ -520,7 +520,7 @@ async function startServer() {
       const g1 = '120363259687769411@g.us';
       const g2 = '120363260445880355@g.us';
       const g3 = '120363260108880069@g.us';
-      
+
       const results: any[] = [];
       for (const g of [g1, g2, g3]) {
         try {
@@ -612,7 +612,7 @@ async function startServer() {
     } catch (err: any) {
       res.status(500).send(err.message);
     }
-  });  app.get("/api/trigger-nightly-rematch", async (req, res) => {
+  }); app.get("/api/trigger-nightly-rematch", async (req, res) => {
     try {
       const { runNightlyRematch } = await import("../jobs/nightlyRematch");
       console.log("[API-TRIGGER] Ejecutando cruce masivo manual desde endpoint...");
@@ -717,7 +717,7 @@ async function startServer() {
       const targetGroupId = (whatsappBot as any).targetGroupId || '120363260108880069@g.us';
       const chat = await client.getChatById(targetGroupId);
       const msgs = await chat.fetchMessages({ limit: 100 });
-      
+
       let summaryMsg: any = null;
       for (const m of msgs) {
         if (m.fromMe && m.body && (m.body.includes("RESUMEN: ¡JANIA V2.0 ACTIVA EN LA RED!") || m.body.includes("RESUMEN: ¡JANIA V2.5 ACTIVA EN LA RED!"))) {
@@ -729,13 +729,13 @@ async function startServer() {
       if (summaryMsg) {
         const senderId = '573118588254@c.us'; // ~ trato hecho Bienes raices
         const realName = 'trato hecho Bienes raices';
-        
-        const promptContext = 
+
+        const promptContext =
           `[REACCIÓN DE BURLA/SARCASMO]: El usuario @573118588254 (${realName}) ha reaccionado con el emoji 😂 a tu mensaje: "${summaryMsg.body}". ` +
           `Genera una respuesta en el grupo dirigiéndote a este aliado/colega. Responde de manera profesional, sofisticada, ética y con sutil auto-defensa. ` +
           `Demuestra con altura y elegancia que la tecnología seria y la colaboración estructurada es el camino para cerrar negocios, debatiendo con ingenio pero con respeto. ` +
           `Usa emojis.`;
-        
+
         const result = await processWhatsAppMessage(promptContext, senderId, realName, false, [], undefined, undefined, true, undefined, undefined, targetGroupId, chat.name);
         if (result && result.response && result.response.trim() !== "") {
           await (whatsappBot as any).queuedSend(targetGroupId, result.response, {
@@ -761,7 +761,7 @@ async function startServer() {
     if (token !== 'vecy2025admin') {
       return res.status(403).json({ error: 'Unauthorized' });
     }
-    
+
     try {
       if (!whatsappBot.isReady) {
         return res.status(503).json({ error: 'Bot no está listo aún' });
@@ -881,7 +881,7 @@ Dirección obligatoria:
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
-    
+
     // NOTA PROTECCIÓN SUPABASE EGRESS: El recálculo y limpieza se ejecuta en el cron diario (08:00 AM)
     // para evitar descargar miles de registros en cada reinicio del servidor PM2.
 
@@ -896,7 +896,7 @@ Dirección obligatoria:
     } else {
       console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante variables de entorno.");
     }
-    
+
     // Inicializar el orquestador de agendas automatizadas (Cron)
     initCronScheduler();
   });
@@ -908,7 +908,7 @@ Dirección obligatoria:
  */
 const gracefulShutdown = async (signal: string) => {
   console.log(`\n[SYSTEM] Cerrando recursos de forma ordenada por señal: ${signal}`);
-  
+
   try {
     if (janiaMatchBot) {
       console.log("[SYSTEM] Cerrando sesión de JanIA Match Bot (Baileys)...");
