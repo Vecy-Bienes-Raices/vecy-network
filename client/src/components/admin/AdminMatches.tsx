@@ -7,7 +7,7 @@ import {
   Edit3, Save, Loader2, RotateCcw, Sun, Zap, Utensils, Home, Flame, ThumbsUp, ThumbsDown,
   Trees, ShieldCheck, BookOpen, Copy, Check, ClipboardList, Archive, Layers,
   Tv, Wine, Wind, Lock, Dumbbell, Waves, Landmark, School, Fuel, Percent, Compass, Smile, Maximize, Coffee, Mountain, Trophy, ShieldAlert, VolumeX, Plus, Tag,
-  ArrowUp, X
+  ArrowUp, X, Clock
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -323,6 +323,40 @@ export function checkIsStandbyDirectoVecy(prop: any, req: any): boolean {
   const pRaw = String(prop.rawText || prop.description || prop.name || '');
   const rRaw = String(req.rawText || req.name || '');
   return NO_TERCERIA_REGEX.test(pRaw) || NO_TERCERIA_REGEX.test(rRaw);
+}
+
+export function getPropertyEffectiveDaysAgo(property: any): number {
+  if (!property) return 0;
+  const repCount = Number(property.republicacionesCount || 0);
+  const effectiveDate = (repCount > 0 && property.fechaUltimaPublicacion)
+    ? property.fechaUltimaPublicacion
+    : (property.fechaUltimaPublicacion || property.createdAt);
+  if (!effectiveDate) return 0;
+  const dateObj = new Date(effectiveDate);
+  return Math.max(0, Math.floor((Date.now() - dateObj.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
+export function checkIsPermutaMatch(prop: any, req: any): boolean {
+  const propTx = String(prop?.transactionType || '').toLowerCase();
+  const reqTx = String(req?.tipoNegocioDeseado || '').toLowerCase();
+  const propRaw = String(prop?.rawText || prop?.description || prop?.name || '').toLowerCase();
+  const reqRaw = String(req?.rawText || req?.name || '').toLowerCase();
+
+  return propTx.includes('permuta') || reqTx.includes('permuta') ||
+    /\b(?:permuta|permutas|permuto|recibe\s+(?:menor|mayor)\s+valor|recibe\s+(?:carro|vehiculo|inmueble)|parte\s+de\s+pago)\b/i.test(propRaw) ||
+    /\b(?:permuta|permutas|permuto|entrego\s+(?:menor|mayor)\s+valor|entrego\s+(?:carro|vehiculo|inmueble)|parte\s+de\s+pago)\b/i.test(reqRaw);
+}
+
+export function checkIsOpcionCompraMatch(prop: any, req: any): boolean {
+  const propTx = String(prop?.transactionType || '').toLowerCase();
+  const reqTx = String(req?.tipoNegocioDeseado || '').toLowerCase();
+  const propRaw = String(prop?.rawText || prop?.description || prop?.name || '').toLowerCase();
+  const reqRaw = String(req?.rawText || req?.name || '').toLowerCase();
+
+  return propTx.includes('opcion') || reqTx.includes('opcion') ||
+    propTx.includes('promesa') || reqTx.includes('promesa') ||
+    /\b(?:opci[oó]n\s+de?\s*compra|arriendo\s+con\s+opci[oó]n|rent\s+to\s+own|leasing\s+habitacional)\b/i.test(propRaw) ||
+    /\b(?:opci[oó]n\s+de?\s*compra|arriendo\s+con\s+opci[oó]n|rent\s+to\s+own|leasing\s+habitacional)\b/i.test(reqRaw);
 }
 
 export function isNonRealEstateText(text: string | null | undefined): boolean {
@@ -1088,11 +1122,17 @@ function scoreRows(req: any, prop: any) {
       }
     }
     if (propSalePrice === 0) {
-      const simplePriceMatch = propTextLower.match(/(?:precio|valor)\s*:\s*\*?\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
-      if (simplePriceMatch) {
-        const computed = parseColombianPriceOrBudget(simplePriceMatch[1], simplePriceMatch[2] || "", true);
-        if (computed >= 30_000_000 && !isPhoneNumberNotPrice(computed, prop.rawText)) {
-          propSalePrice = computed;
+      const colombianSaleMatch = propTextLower.match(/(?:(?:precio|valor|venta)[^\d\n]*\$?\s*)?(\d{1,3}(?:[\s.'’]\d{3}){2,3})/i)
+        || propTextLower.match(/(?:precio|valor)\s*:\s*\*?\$?\s*([\d][\d.\s'’]*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+      if (colombianSaleMatch) {
+        const parsed = parseColombianCurrency(colombianSaleMatch[0]);
+        if (parsed && parsed >= 30_000_000 && !isPhoneNumberNotPrice(parsed, prop.rawText)) {
+          propSalePrice = parsed;
+        } else if (colombianSaleMatch[2]) {
+          const computed = parseColombianPriceOrBudget(colombianSaleMatch[1].replace(/[\s'’]/g, ""), colombianSaleMatch[2] || "", true);
+          if (computed >= 30_000_000 && !isPhoneNumberNotPrice(computed, prop.rawText)) {
+            propSalePrice = computed;
+          }
         }
       }
     }
@@ -1198,7 +1238,8 @@ function scoreRows(req: any, prop: any) {
 
   // Evaluación Fila 2: Canon de Arriendo
   const propAdminInfo = parseAdminFee(prop.rawText || "");
-  const propRentSuffix = propAdminInfo.requiresInquiry ? " (+ Adm por verificar)" : "";
+  const isPropAdminIncluded = propAdminInfo.isIncluded || propTextLower.includes("incluida la administraci") || propTextLower.includes("incluida administraci") || propTextLower.includes("admon incluida") || propTextLower.includes("administracion incluida") || propTextLower.includes("con admon") || propTextLower.includes("con administración");
+  const propRentSuffix = propAdminInfo.requiresInquiry ? " + Admin" : (isPropAdminIncluded ? " (Inc. Adm)" : "");
   let reqRentLabel = (!isReqRentMatch && !isDualBiz) ? "N/A (Búsqueda de Venta)" : (isReqOpenBudget ? "Presupuesto Abierto" : (reqRentBudget > 0 ? formatCOP(reqRentBudget) : "Flexible / Presupuesto Abierto"));
   let propRentLabel = propRentPrice > 0 ? `${formatCOP(propRentPrice)}${propRentSuffix}` : ((isPropPureVenta && !isDualBiz) ? "N/A (Inmueble en Venta)" : "N/E (Consultar)");
 
@@ -1225,7 +1266,6 @@ function scoreRows(req: any, prop: any) {
 
   // 5. Cuota de Administración (Valor admin)
   let propAdminFee = parseSafePrice(prop.adminFee, prop.rawText);
-  const isPropAdminIncluded = propAdminInfo.isIncluded || propTextLower.includes("incluida la administraci") || propTextLower.includes("incluida administraci") || propTextLower.includes("admon incluida") || propTextLower.includes("administracion incluida") || propTextLower.includes("con admon") || propTextLower.includes("con administración");
 
   const reqAdminInfo = parseAdminFee(req.rawText || "");
   const isReqAdminIncluded = reqAdminInfo.isIncluded || reqTextLower.includes("incluida la administraci") || reqTextLower.includes("incluida administraci") || reqTextLower.includes("admon incluida") || reqTextLower.includes("con admon incluida") || reqTextLower.includes("administracion incluida");
@@ -1234,8 +1274,18 @@ function scoreRows(req: any, prop: any) {
     reqAdminMax = reqAdminInfo.fee;
   }
 
-  let propAdminLabel = isPropAdminIncluded ? "Incluida en el canon" : (propAdminFee > 0 ? `${formatCOP(propAdminFee)} / mes` : (propAdminInfo.requiresInquiry ? "Averiguar / Por consultar (+ Adm)" : "Flexible / N/E"));
-  let reqAdminLabel = reqAdminMax > 0 ? `≤ ${formatCOP(reqAdminMax)} Max.` : (isReqAdminIncluded ? "Debe ir incluida en el canon" : "Flexible / Sin restricción");
+  let propAdminLabel = isPropAdminIncluded
+    ? "Incluida en el canon"
+    : (propAdminFee > 0
+        ? `${formatCOP(propAdminFee)} / mes`
+        : (propAdminInfo.requiresInquiry
+            ? "Administración mensual: Averiguar"
+            : (isReqRentMatch || isPropPureRent ? "Administración mensual: Consultar" : "Flexible / N/E")));
+  let reqAdminLabel = reqAdminMax > 0
+    ? `≤ ${formatCOP(reqAdminMax)} Max.`
+    : (isReqAdminIncluded
+        ? "Debe ir incluida en el canon"
+        : (reqTextLower.includes("admin") ? "Administración flexible" : "Sin restricción de administración"));
 
   let adminS: MatchStatus = "neutral";
   if (isReqAdminIncluded) {
@@ -1310,7 +1360,7 @@ function scoreRows(req: any, prop: any) {
   } else if (areaR === 0 && areaP > 0) {
     areS = "neutral";
   }
-  const reqAreaLabel = areaR > 0 ? (areaRMax > 0 ? `${areaR} - ${areaRMax} m²` : `≥ ${areaR} m²`) : "Flexible / Sin restricción";
+  const reqAreaLabel = areaR > 0 ? (areaRMax > 0 ? `${areaR} - ${areaRMax} m²` : `≥ ${areaR} m²`) : "Sin mínimo de área exigido";
 
   add("Área Total", reqAreaLabel, areaPropLabel, areS, 10, <Ruler className="w-3.5 h-3.5" />);
 
@@ -1342,7 +1392,7 @@ function scoreRows(req: any, prop: any) {
   } else if (bedR === 0 && bedP > 0) {
     bedS = "neutral";
   }
-  const reqBedLabel = bedR > 0 ? `${bedR} hab.` : "Flexible / Sin restricción";
+  const reqBedLabel = bedR > 0 ? `${bedR} hab${bedR > 1 ? "s" : ""}.` : "Sin mínimo de alcobas";
 
   add("Habitaciones", reqBedLabel, bedP > 0 ? `${bedP} hab.` : "N/E", bedS, 8, <Bed className="w-3.5 h-3.5" />);
 
@@ -1374,9 +1424,9 @@ function scoreRows(req: any, prop: any) {
       bathS = "plus";
     }
   } else if (bathR === 0 && bathP > 0) {
-    bathS = "neutral";
+    bedS = "neutral";
   }
-  const reqBathLabel = bathR > 0 ? `≥ ${bathR} baño${bathR > 1 ? "s" : ""}` : "Flexible / Sin restricción";
+  const reqBathLabel = bathR > 0 ? `≥ ${bathR} baño${bathR > 1 ? "s" : ""}` : "Sin mínimo de baños";
 
   add("Baños", reqBathLabel, bathP > 0 ? `${bathP} baño${bathP > 1 ? "s" : ""}` : "N/E", bathS, 5, <Bath className="w-3.5 h-3.5" />);
 
@@ -1417,7 +1467,7 @@ function scoreRows(req: any, prop: any) {
   } else if (garR === 0 && garP > 0) {
     garS = "neutral";
   }
-  const garReqLabel = garR > 0 ? `≥ ${garR} garaje${garR > 1 ? "s" : ""}` : "Flexible / Sin restricción";
+  const garReqLabel = garR > 0 ? `≥ ${garR} garaje${garR > 1 ? "s" : ""}` : "Sin exigencia de garaje";
 
   add("Parqueaderos", garReqLabel, garPropLabel, garS, 5, <Car className="w-3.5 h-3.5" />);
 
@@ -1480,7 +1530,7 @@ function scoreRows(req: any, prop: any) {
   } else if (ageR > 0 && ageP < 0) {
     ageS = "neutral";
   }
-  const reqAgeLabel = ageR > 0 ? `Máx ${ageR} años` : "Flexible / Sin restricción";
+  const reqAgeLabel = ageR > 0 ? `Máx ${ageR} años` : "Sin límite de antigüedad";
   const propAgeLabel = ageP >= 0 
     ? (ageP === 0 ? "A estrenar / Sobre planos (0 años)" : (yearBuiltP ? `${yearBuiltP} (${ageP} años)` : `${ageP} años`))
     : "N/E (Consultar)";
@@ -1516,7 +1566,7 @@ function scoreRows(req: any, prop: any) {
   } else if (!hasEstratoReq && (estratoP && Number(estratoP) > 0)) {
     estS = "neutral";
   }
-  const reqEstratoLabel = hasEstratoReq ? `Estrato ${estratoArr.join(", ")}` : "Flexible / Sin restricción";
+  const reqEstratoLabel = hasEstratoReq ? `Estrato ${estratoArr.join(", ")}` : "Cualquier estrato";
 
   add("Estrato", reqEstratoLabel, (estratoP && Number(estratoP) > 0) ? `Estrato ${estratoP}` : "N/E", estS, 7, <Shield className="w-3.5 h-3.5" />);
 
@@ -1823,29 +1873,44 @@ function scoreRows(req: any, prop: any) {
     );
   }
 
-  // 26. Ubicación en Piso (Vista Exterior / Interior) (Doctrina v31.7)
+  // 26. Ubicación en Piso (Vista Exterior / Interior) (Doctrina v31.7 / v31.76)
+  const reqWantsExterior = /\b(muy\s+iluminad[ao]|iluminad[ao]|buena\s+vista|linda\s+vista|vista\s+(?:agradable|despejada|panor[aá]mica|abierta|exterior|verde)|mucha\s+luz|luz\s+natural|exterior)\b/i.test(reqTextLower);
+  const reqWantsInterior = /\b(interior|vista\s+interior)\b/i.test(reqTextLower) && !reqWantsExterior;
+
   let reqExtInt = (req.caracteristicasDeseadas as any)?.interiorExterior 
-    || (reqTextLower.includes("exterior") ? "Exterior" : (reqTextLower.includes("interior") ? "Interior" : null));
+    || (reqWantsExterior ? "Exterior" : (reqWantsInterior ? "Interior" : null));
+  
+  const propHasExterior = /\b(exterior|vista\s+exterior|muy\s+iluminad[ao]|iluminad[ao]|linda\s+vista|vista\s+panor[aá]mica|vista\s+despejada)\b/i.test(propRawText);
+  const propHasInterior = /\b(interior|vista\s+interior)\b/i.test(propRawText) && !propHasExterior;
+
   let propExtInt = (prop.amenities as any)?.interiorExterior 
     || prop.interiorExterior 
-    || (propRawText.includes("exterior") ? "Exterior" : (propRawText.includes("interior") ? "Interior" : null));
+    || (propHasExterior ? "Exterior" : (propHasInterior ? "Interior" : null));
   if (propExtInt && /na|n\/a|sin\s*especificar/i.test(String(propExtInt))) propExtInt = null;
   if (reqExtInt && /na|n\/a|flexible|sin\s*restricci[oó]n/i.test(String(reqExtInt))) reqExtInt = null;
 
   const isMultiUnit = /apartamento|apto|apartaestudio|loft|penthouse|oficina|consultorio/i.test(prop.propertyType || req.tipoInmuebleDeseado || "");
   if (reqExtInt || propExtInt || isMultiUnit) {
     let viewS: MatchStatus = "neutral";
-    if (reqExtInt && propExtInt) {
+    if (reqWantsExterior && propHasInterior) {
+      viewS = "missing"; // 🔴 Cliente exige iluminación/exterior y la oferta es interior -> Incompatible
+    } else if (reqExtInt && propExtInt) {
       viewS = String(reqExtInt).toLowerCase() === String(propExtInt).toLowerCase() ? "exact" : "missing";
     } else if (!reqExtInt && propExtInt) {
       viewS = "exact"; // Oferta tiene vista definida y demanda es flexible -> Coincide!
     } else if (reqExtInt && !propExtInt) {
       viewS = "neutral";
     }
+
+    const reqViewLabel = reqExtInt 
+      ? (reqWantsExterior && !reqTextLower.includes("exterior") ? "Exige Vista Exterior (Muy iluminado)" : `Exige Vista ${reqExtInt}`) 
+      : "Sin exigencia de vista";
+    const propViewLabel = propExtInt ? `Vista ${propExtInt}` : "Vista no especificada (Consultar)";
+
     add(
       "Ubicación en Piso (Vista)",
-      reqExtInt ? `Exige Vista ${reqExtInt}` : "Flexible / Sin restricción",
-      propExtInt ? `Vista ${propExtInt}` : "Consultar / N/E",
+      reqViewLabel,
+      propViewLabel,
       viewS,
       3,
       <Compass className="w-3.5 h-3.5" />
@@ -2243,7 +2308,8 @@ function checkTxCompatFrontend(reqTypeRaw: string, propTypeRaw: string, propAcce
 export default function AdminMatches() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [minScore, setMinScore] = React.useState('80');
-  const [transactionFilter, setTransactionFilter] = React.useState<'all' | 'venta' | 'arriendo'>('all');
+  const [transactionFilter, setTransactionFilter] = React.useState<'all' | 'venta' | 'arriendo' | 'permuta' | 'opcion_compra' | 'standby'>('all');
+  const [ageFilter, setAgeFilter] = React.useState<'active_20' | 'all'>('active_20');
   const [activeTab, setActiveTab] = React.useState<'calificados' | 'incompletos'>('calificados');
   
   // Estados para Edición Interactiva de Fichas Prediales directamente desde el Cotejo
@@ -3256,7 +3322,7 @@ export default function AdminMatches() {
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, minScore, transactionFilter]);
+  }, [searchTerm, minScore, transactionFilter, ageFilter]);
 
   // 1. Indexación ultra-rápida sin bloqueo de hilo principal (<1ms)
   const processedMatches = useMemo(() => {
@@ -3339,12 +3405,20 @@ export default function AdminMatches() {
         if (displayScore < minVal) return false;
       }
 
-      // Filtro de Transacción: Compra / Venta vs Arriendo (v31.16)
+      // Filtro de Antigüedad / Vigencia: ≤ 20 días por defecto (Regla Doctrinal v31.76)
+      if (ageFilter === 'active_20') {
+        const daysAgo = getPropertyEffectiveDaysAgo(match._effectiveProp || match.property);
+        if (daysAgo > 20) return false;
+      }
+
+      // Filtro de Transacción: Compra / Venta vs Arriendo vs Permutas vs Opción Compra vs Standby (v31.76)
       if (transactionFilter !== 'all') {
-        const propTx = String(match.property?.transactionType || '').toLowerCase();
-        const reqTx = String(match.requirement?.tipoNegocioDeseado || '').toLowerCase();
-        const propRaw = String(match.property?.rawText || '').toLowerCase();
-        const reqRaw = String(match.requirement?.rawText || '').toLowerCase();
+        const effProp = match._effectiveProp || match.property;
+        const effReq = match._effectiveReq || match.requirement;
+        const propTx = String(effProp?.transactionType || '').toLowerCase();
+        const reqTx = String(effReq?.tipoNegocioDeseado || '').toLowerCase();
+        const propRaw = String(effProp?.rawText || '').toLowerCase();
+        const reqRaw = String(effReq?.rawText || '').toLowerCase();
 
         const isPureRentProp = propTx === 'arriendo' || propTx === 'arriendo_temporal';
         const isPureRentReq = reqTx === 'arriendo' || reqTx === 'arriendo_temporal';
@@ -3357,6 +3431,12 @@ export default function AdminMatches() {
           if (isRentMatch && !propTx.includes('venta') && !reqTx.includes('venta')) return false;
         } else if (transactionFilter === 'arriendo') {
           if (!isRentMatch && propTx !== 'venta_o_arriendo' && reqTx !== 'venta_o_arriendo') return false;
+        } else if (transactionFilter === 'permuta') {
+          if (!checkIsPermutaMatch(effProp, effReq)) return false;
+        } else if (transactionFilter === 'opcion_compra') {
+          if (!checkIsOpcionCompraMatch(effProp, effReq)) return false;
+        } else if (transactionFilter === 'standby') {
+          if (!checkIsStandbyDirectoVecy(effProp, effReq)) return false;
         }
       }
 
@@ -3367,7 +3447,7 @@ export default function AdminMatches() {
 
       return true;
     });
-  }, [processedMatches, minScore, deferredSearchTerm, transactionFilter]);
+  }, [processedMatches, minScore, deferredSearchTerm, transactionFilter, ageFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredMatches.length / pageSize));
   const paginatedMatches = useMemo(() => {
@@ -3482,13 +3562,19 @@ export default function AdminMatches() {
 
   const kpiStats = useMemo(() => {
     const rawList = processedMatches || [];
-    const total = (botStatus as any)?.totalMatches && (botStatus as any).totalMatches > 0
-      ? (botStatus as any).totalMatches
-      : rawList.length;
-    const perfect = (botStatus as any)?.perfectMatches !== undefined && (botStatus as any).perfectMatches !== null
-      ? (botStatus as any).perfectMatches
-      : rawList.filter((m: any) => m._precomputedScore >= 95).length;
-    const approx = rawList.filter((m: any) => {
+    const list = ageFilter === 'active_20'
+      ? rawList.filter(m => getPropertyEffectiveDaysAgo(m._effectiveProp || m.property) <= 20)
+      : rawList;
+
+    const total = ageFilter === 'active_20'
+      ? ((botStatus as any)?.totalMatchesActive20 && (botStatus as any).totalMatchesActive20 > 0 ? (botStatus as any).totalMatchesActive20 : list.length)
+      : ((botStatus as any)?.totalMatches && (botStatus as any).totalMatches > 0 ? (botStatus as any).totalMatches : list.length);
+
+    const perfect = ageFilter === 'active_20'
+      ? ((botStatus as any)?.perfectMatchesActive20 !== undefined ? (botStatus as any).perfectMatchesActive20 : list.filter((m: any) => m._precomputedScore >= 95).length)
+      : ((botStatus as any)?.perfectMatches !== undefined && (botStatus as any).perfectMatches !== null ? (botStatus as any).perfectMatches : list.filter((m: any) => m._precomputedScore >= 95).length);
+
+    const approx = list.filter((m: any) => {
       const s = m._precomputedScore;
       return s >= 85 && s < 95;
     }).length;
@@ -3497,16 +3583,27 @@ export default function AdminMatches() {
     const totalReqs = (botStatus as any)?.totalRequirements ?? (botStatus?.todayRequirements ?? 0);
 
     return { total, perfect, approx, totalProps, totalReqs };
-  }, [processedMatches, botStatus]);
+  }, [processedMatches, botStatus, ageFilter]);
 
   const filterCounts = useMemo(() => {
-    const list = processedMatches || [];
+    const rawList = processedMatches || [];
+    const list = ageFilter === 'active_20'
+      ? rawList.filter(m => getPropertyEffectiveDaysAgo(m._effectiveProp || m.property) <= 20)
+      : rawList;
+
     let countVenta = 0;
     let countArriendo = 0;
+    let countPermuta = 0;
+    let countOpcionCompra = 0;
+    let countStandby = 0;
+
     for (const m of list) {
-      const reqType = (m.requirement?.tipoNegocioDeseado || "").toLowerCase();
-      const propType = (m.property?.transactionType || "").toLowerCase();
-      const dual = isPropertyDualOffer(m.property);
+      const effProp = m._effectiveProp || m.property;
+      const effReq = m._effectiveReq || m.requirement;
+      const reqType = (effReq?.tipoNegocioDeseado || "").toLowerCase();
+      const propType = (effProp?.transactionType || "").toLowerCase();
+      const dual = isPropertyDualOffer(effProp);
+
       const isReqVenta = reqType === 'venta' || !reqType;
       const isPropVenta = propType === 'venta' || propType === 'venta_o_arriendo' || dual;
       if (isReqVenta && isPropVenta) countVenta++;
@@ -3514,26 +3611,49 @@ export default function AdminMatches() {
       const isReqArriendo = reqType === 'arriendo';
       const isPropArriendo = propType === 'arriendo' || propType === 'venta_o_arriendo' || dual;
       if (isReqArriendo && isPropArriendo) countArriendo++;
+
+      if (checkIsPermutaMatch(effProp, effReq)) {
+        countPermuta++;
+      }
+
+      if (checkIsOpcionCompraMatch(effProp, effReq)) {
+        countOpcionCompra++;
+      }
+
+      if (checkIsStandbyDirectoVecy(effProp, effReq)) {
+        countStandby++;
+      }
     }
 
     // Si hay un término de búsqueda activo, mostramos los conteos específicos de esa búsqueda
     const isSearching = (searchTerm || '').trim().length > 0;
-    const all = !isSearching && (botStatus as any)?.totalMatches && (botStatus as any).totalMatches > 0
-      ? (botStatus as any).totalMatches
+    const isAllAge = ageFilter === 'all';
+
+    const all = !isSearching
+      ? (isAllAge && (botStatus as any)?.totalMatches ? (botStatus as any).totalMatches : (!isAllAge && (botStatus as any)?.totalMatchesActive20 ? (botStatus as any).totalMatchesActive20 : list.length))
       : list.length;
-    const venta = !isSearching && (botStatus as any)?.ventaMatches && (botStatus as any).ventaMatches > 0
-      ? (botStatus as any).ventaMatches
+    const venta = !isSearching
+      ? (isAllAge && (botStatus as any)?.ventaMatches ? (botStatus as any).ventaMatches : (!isAllAge && (botStatus as any)?.ventaMatchesActive20 ? (botStatus as any).ventaMatchesActive20 : countVenta))
       : countVenta;
-    const arriendo = !isSearching && (botStatus as any)?.arriendoMatches && (botStatus as any).arriendoMatches > 0
-      ? (botStatus as any).arriendoMatches
+    const arriendo = !isSearching
+      ? (isAllAge && (botStatus as any)?.arriendoMatches ? (botStatus as any).arriendoMatches : (!isAllAge && (botStatus as any)?.arriendoMatchesActive20 ? (botStatus as any).arriendoMatchesActive20 : countArriendo))
       : countArriendo;
+    const permuta = !isSearching && isAllAge && (botStatus as any)?.permutaMatches !== undefined && (botStatus as any).permutaMatches > 0
+      ? (botStatus as any).permutaMatches
+      : countPermuta;
+    const opcionCompra = !isSearching && isAllAge && (botStatus as any)?.opcionCompraMatches !== undefined && (botStatus as any).opcionCompraMatches > 0
+      ? (botStatus as any).opcionCompraMatches
+      : countOpcionCompra;
 
     return {
       all,
       venta,
-      arriendo
+      arriendo,
+      permuta,
+      opcionCompra,
+      standby: countStandby
     };
-  }, [processedMatches, botStatus, searchTerm]);
+  }, [processedMatches, botStatus, searchTerm, ageFilter]);
 
   const exportData = () => {
     const headers = ['ID Coincidencia', 'Porcentaje Match', 'Propiedad', 'Propietario Telefono', 'Requerimiento', 'Interesado Telefono', 'Estado', 'Fecha'];
@@ -3688,12 +3808,12 @@ export default function AdminMatches() {
             )}
           </div>
 
-          {/* Pills de Operación Comercial (Todos, Compra/Venta, Arriendo con badges) */}
-          <div className="flex items-center gap-1 bg-black/70 border border-white/15 rounded-xl p-1 text-white h-10 shrink-0">
+          {/* Pills de Operación Comercial (Todos, Compra/Venta, Arriendo, Permutas, Opción Compra, Standby con badges) */}
+          <div className="flex items-center gap-1 bg-black/70 border border-white/15 rounded-xl p-1 text-white h-10 shrink-0 overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => { setTransactionFilter('all'); setCurrentPage(1); }}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 transactionFilter === 'all'
                   ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black shadow-md font-extrabold'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
@@ -3707,7 +3827,7 @@ export default function AdminMatches() {
             <button
               type="button"
               onClick={() => { setTransactionFilter('venta'); setCurrentPage(1); }}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 transactionFilter === 'venta'
                   ? 'bg-emerald-600 text-white shadow-md font-extrabold'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
@@ -3722,7 +3842,7 @@ export default function AdminMatches() {
             <button
               type="button"
               onClick={() => { setTransactionFilter('arriendo'); setCurrentPage(1); }}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                 transactionFilter === 'arriendo'
                   ? 'bg-blue-600 text-white shadow-md font-extrabold'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
@@ -3732,6 +3852,51 @@ export default function AdminMatches() {
               <span>🔑 Arriendo</span>
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${transactionFilter === 'arriendo' ? 'bg-black/30 text-white' : 'bg-white/10 text-zinc-400'}`}>
                 {filterCounts.arriendo}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTransactionFilter('permuta'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                transactionFilter === 'permuta'
+                  ? 'bg-purple-600 text-white shadow-md font-extrabold'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+              title="Filtrar coincidencias de Permuta o pago mixto con vehículo / inmueble"
+            >
+              <span>🔄 Permutas</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${transactionFilter === 'permuta' ? 'bg-black/30 text-white' : 'bg-white/10 text-zinc-400'}`}>
+                {filterCounts.permuta}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTransactionFilter('opcion_compra'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                transactionFilter === 'opcion_compra'
+                  ? 'bg-teal-600 text-white shadow-md font-extrabold'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+              title="Filtrar coincidencias de Arriendo con Opción de Compra o Leasing"
+            >
+              <span>🤝 Arriendo opción compra</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${transactionFilter === 'opcion_compra' ? 'bg-black/30 text-white' : 'bg-white/10 text-zinc-400'}`}>
+                {filterCounts.opcionCompra}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTransactionFilter('standby'); setCurrentPage(1); }}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                transactionFilter === 'standby'
+                  ? 'bg-amber-600 text-white shadow-md font-extrabold'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+              title="Filtrar publicaciones exclusivas Standby Directo VECY (50/50 No Tercería)"
+            >
+              <span>🛡️ Standby 50/50</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${transactionFilter === 'standby' ? 'bg-black/30 text-white' : 'bg-white/10 text-zinc-400'}`}>
+                {filterCounts.standby}
               </span>
             </button>
           </div>
@@ -3748,6 +3913,20 @@ export default function AdminMatches() {
               <option className="bg-[#0c0c0e]" value="80">⚡ Todos (80% - 100%)</option>
               <option className="bg-[#0c0c0e]" value="80_94">⚡ Aprox. (80% - 94%)</option>
               <option className="bg-[#0c0c0e]" value="95">🎯 Perfectos (95% - 100%)</option>
+            </select>
+          </div>
+
+          {/* Filtro de Antigüedad / Vigencia (≤ 20 días) */}
+          <div className="flex items-center gap-2 bg-black/70 border border-white/15 rounded-xl px-3 text-white h-10 text-xs shrink-0">
+            <Clock className="w-3.5 h-3.5 text-[#bf953f] shrink-0" />
+            <span className="text-zinc-400 text-[11px] shrink-0">Vigencia:</span>
+            <select
+              value={ageFilter}
+              onChange={(e) => { setAgeFilter(e.target.value as 'active_20' | 'all'); setCurrentPage(1); }}
+              className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none"
+            >
+              <option className="bg-[#0c0c0e]" value="active_20">⚡ Vigentes (≤ 20 días)</option>
+              <option className="bg-[#0c0c0e]" value="all">🌐 Todo el Histórico</option>
             </select>
           </div>
 
@@ -3812,11 +3991,11 @@ export default function AdminMatches() {
           </div>
 
           <div className="flex items-center justify-between gap-2 overflow-x-auto scrollbar-none pb-0.5">
-            <div className="flex items-center gap-1 bg-black/70 border border-white/15 rounded-xl p-1 text-white h-9 shrink-0">
+            <div className="flex items-center gap-1 bg-black/70 border border-white/15 rounded-xl p-1 text-white h-9 shrink-0 overflow-x-auto scrollbar-none">
               <button
                 type="button"
                 onClick={() => { setTransactionFilter('all'); setCurrentPage(1); }}
-                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 ${
+                className={`px-2 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 whitespace-nowrap ${
                   transactionFilter === 'all'
                     ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black shadow-md font-extrabold'
                     : 'text-zinc-400 hover:text-white'
@@ -3828,7 +4007,7 @@ export default function AdminMatches() {
               <button
                 type="button"
                 onClick={() => { setTransactionFilter('venta'); setCurrentPage(1); }}
-                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 ${
+                className={`px-2 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 whitespace-nowrap ${
                   transactionFilter === 'venta'
                     ? 'bg-emerald-600 text-white shadow-md font-extrabold'
                     : 'text-zinc-400 hover:text-white'
@@ -3840,7 +4019,7 @@ export default function AdminMatches() {
               <button
                 type="button"
                 onClick={() => { setTransactionFilter('arriendo'); setCurrentPage(1); }}
-                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 ${
+                className={`px-2 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 whitespace-nowrap ${
                   transactionFilter === 'arriendo'
                     ? 'bg-blue-600 text-white shadow-md font-extrabold'
                     : 'text-zinc-400 hover:text-white'
@@ -3848,6 +4027,43 @@ export default function AdminMatches() {
               >
                 <span>🔑 Arriendo</span>
                 <span className="text-[9px] px-1 rounded-full bg-black/30">{filterCounts.arriendo}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTransactionFilter('permuta'); setCurrentPage(1); }}
+                className={`px-2 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 whitespace-nowrap ${
+                  transactionFilter === 'permuta'
+                    ? 'bg-purple-600 text-white shadow-md font-extrabold'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <span>🔄 Permutas</span>
+                <span className="text-[9px] px-1 rounded-full bg-black/30">{filterCounts.permuta}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTransactionFilter('opcion_compra'); setCurrentPage(1); }}
+                className={`px-2 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 whitespace-nowrap ${
+                  transactionFilter === 'opcion_compra'
+                    ? 'bg-teal-600 text-white shadow-md font-extrabold'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <span>🤝 Opción Compra</span>
+                <span className="text-[9px] px-1 rounded-full bg-black/30">{filterCounts.opcionCompra}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setTransactionFilter('standby'); setCurrentPage(1); }}
+                className={`px-2 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 whitespace-nowrap ${
+                  transactionFilter === 'standby'
+                    ? 'bg-amber-600 text-white shadow-md font-extrabold'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+                title="Standby Directo Vecy (50/50 No Tercería)"
+              >
+                <span>🛡️ Standby</span>
+                <span className="text-[9px] px-1 rounded-full bg-black/30">{filterCounts.standby}</span>
               </button>
             </div>
 
@@ -3861,6 +4077,17 @@ export default function AdminMatches() {
                   <option className="bg-[#0c0c0e]" value="80">⚡ 80%-100%</option>
                   <option className="bg-[#0c0c0e]" value="80_94">⚡ 80%-94%</option>
                   <option className="bg-[#0c0c0e]" value="95">🎯 ≥95%</option>
+                </select>
+              </div>
+
+              <div className="flex items-center bg-black/70 border border-white/15 rounded-xl px-2 h-9 text-xs">
+                <select
+                  value={ageFilter}
+                  onChange={(e) => { setAgeFilter(e.target.value as 'active_20' | 'all'); setCurrentPage(1); }}
+                  className="bg-transparent border-none text-white focus:ring-0 text-[11px] font-semibold cursor-pointer outline-none"
+                >
+                  <option className="bg-[#0c0c0e]" value="active_20">⚡ ≤20d</option>
+                  <option className="bg-[#0c0c0e]" value="all">🌐 Todo</option>
                 </select>
               </div>
 
@@ -4189,10 +4416,10 @@ export default function AdminMatches() {
                                   >
                                     <span>🔥 Republicado y Actualizado hace {diasTexto} (100% Activo)</span>
                                   </span>
-                                ) : daysAgo > 30 ? (
+                                ) : daysAgo > 20 ? (
                                   <span
                                     className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400/90 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md"
-                                    title={`Publicación inicial de hace ${daysAgo} días. Verificar disponibilidad con el captador.`}
+                                    title={`Publicación inicial de hace ${daysAgo} días. Supera 20 días sin republicación. Verificar disponibilidad con el captador.`}
                                   >
                                     <span>⏳ Publicación de hace {daysAgo} días · Confirmar disponibilidad</span>
                                   </span>

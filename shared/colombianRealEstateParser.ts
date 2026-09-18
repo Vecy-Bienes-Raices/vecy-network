@@ -309,8 +309,8 @@ export function parseAdminFee(rawText: string): { fee: number | null; isIncluded
   const isIncluded = /incluid[ao]|inc\b|con\s+(?:admi?n|adm[oó]n|adm\b)/i.test(clean);
   const requiresInquiry = /\+\s*(?:admi?n|adm[oó]n|adm\b)|\b(?:mas|más)\s*(?:admi?n|adm[oó]n|adm\b)/i.test(clean);
 
-  const feeMatch = clean.match(/(?:max|máximo|hasta|tope|de|valor)?\s*(?:cop|\$)?\s*(\d+(?:[\s.'’]\d+)*)\s*(?:m|millones|millon|mil|k)?\s*(?:de\s+)?(?:admi?n|administraci[oó]n|cuota)/i)
-    || clean.match(/(?:admi?n|administraci[oó]n|cuota)\s*(?:de|es)?\s*:?\s*(?:cop|\$)?\s*(\d+(?:[\s.'’]\d+)*)\s*(?:m|millones|millon|mil|k)?/i);
+  const feeMatch = clean.match(/(?:max|máximo|hasta|tope|de|valor)?\s*(?:cop|\$)?\s*(\d+(?:[\s.'’]\d+)*)\s*(?:m|millones|millon|mil|k)?\s*(?:de\s+)?(?:admin|admon|admón|adm|administraci[oó]n|cuota)/i)
+    || clean.match(/(?:admin|admon|admón|adm|administraci[oó]n|cuota)(?:[^\d\n]*?)\$?\s*(\d+(?:[\s.'’]\d+)*)\s*(?:m|millones|millon|mil|k)?/i);
 
   let fee: number | null = null;
   if (feeMatch) {

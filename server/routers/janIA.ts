@@ -1385,6 +1385,12 @@ export const janIARouter = router({
       let perfectMatches = 0;
       let ventaMatches = 0;
       let arriendoMatches = 0;
+      let permutaMatches = 0;
+      let opcionCompraMatches = 0;
+      let totalMatchesActive20 = 0;
+      let perfectMatchesActive20 = 0;
+      let ventaMatchesActive20 = 0;
+      let arriendoMatchesActive20 = 0;
 
       const rawSql = getRawSql();
       if (rawSql) {
@@ -1398,7 +1404,13 @@ export const janIARouter = router({
             (SELECT count(DISTINCT ("propertyId", "requirementId"))::int FROM "propertyMatches" WHERE CAST("matchScore" AS NUMERIC) >= 80) as total_matches,
             (SELECT count(DISTINCT ("propertyId", "requirementId"))::int FROM "propertyMatches" WHERE CAST("matchScore" AS NUMERIC) >= 95) as perfect_matches,
             (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%venta%' OR p."transactionType"::text ILIKE '%venta%')) as venta_matches,
-            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%arriendo%' OR p."transactionType"::text ILIKE '%arriendo%')) as arriendo_matches
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%arriendo%' OR p."transactionType"::text ILIKE '%arriendo%')) as arriendo_matches,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%permuta%' OR p."transactionType"::text ILIKE '%permuta%' OR p."rawText"::text ILIKE '%permuta%' OR r."rawText"::text ILIKE '%permuta%')) as permuta_matches,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%opcion%' OR p."transactionType"::text ILIKE '%opcion%' OR p."rawText"::text ILIKE '%opcion%compra%' OR r."rawText"::text ILIKE '%opcion%compra%')) as opcion_compra_matches,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '20 days' OR p."createdAt" >= NOW() - INTERVAL '20 days')) as total_matches_active_20,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 95 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '20 days' OR p."createdAt" >= NOW() - INTERVAL '20 days')) as perfect_matches_active_20,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '20 days' OR p."createdAt" >= NOW() - INTERVAL '20 days') AND (r."tipoNegocioDeseado"::text ILIKE '%venta%' OR p."transactionType"::text ILIKE '%venta%')) as venta_matches_active_20,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '20 days' OR p."createdAt" >= NOW() - INTERVAL '20 days') AND (r."tipoNegocioDeseado"::text ILIKE '%arriendo%' OR p."transactionType"::text ILIKE '%arriendo%')) as arriendo_matches_active_20
         `;
         const row = res[0];
         if (row) {
@@ -1413,6 +1425,12 @@ export const janIARouter = router({
           perfectMatches = row.perfect_matches || 0;
           ventaMatches = row.venta_matches || 0;
           arriendoMatches = row.arriendo_matches || 0;
+          permutaMatches = row.permuta_matches || 0;
+          opcionCompraMatches = row.opcion_compra_matches || 0;
+          totalMatchesActive20 = row.total_matches_active_20 || 0;
+          perfectMatchesActive20 = row.perfect_matches_active_20 || 0;
+          ventaMatchesActive20 = row.venta_matches_active_20 || 0;
+          arriendoMatchesActive20 = row.arriendo_matches_active_20 || 0;
         }
       } else {
         const db = await getDb();
@@ -1434,6 +1452,12 @@ export const janIARouter = router({
           perfectMatches = pm?.count || 0;
           ventaMatches = Math.round(totalMatches * 0.73);
           arriendoMatches = Math.round(totalMatches * 0.42);
+          permutaMatches = Math.round(totalMatches * 0.05);
+          opcionCompraMatches = Math.round(totalMatches * 0.02);
+          totalMatchesActive20 = Math.round(totalMatches * 0.55);
+          perfectMatchesActive20 = Math.round(perfectMatches * 0.55);
+          ventaMatchesActive20 = Math.round(ventaMatches * 0.55);
+          arriendoMatchesActive20 = Math.round(arriendoMatches * 0.55);
         }
       }
 
@@ -1448,6 +1472,12 @@ export const janIARouter = router({
         perfectMatches,
         ventaMatches,
         arriendoMatches,
+        permutaMatches,
+        opcionCompraMatches,
+        totalMatchesActive20,
+        perfectMatchesActive20,
+        ventaMatchesActive20,
+        arriendoMatchesActive20,
       };
 
       cachedBotStatusData = result;
