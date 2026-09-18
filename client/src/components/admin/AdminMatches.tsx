@@ -305,8 +305,18 @@ const DYNAMIC_AMENITIES: Array<{
   { name: "Terraza Comunal / Rooftop", patterns: ["terraza comunal", "rooftop", "terraza comunitaria"], icon: <Layers className="w-3.5 h-3.5" /> },
   { name: "Transporte Público Cercano", patterns: ["transporte publico", "transporte público", "transmilenio", "sitp"], icon: <MapPin className="w-3.5 h-3.5" /> },
   { name: "Zonas Deportivas", patterns: ["zonas deportivas", "polideportivo"], icon: <Trophy className="w-3.5 h-3.5" /> },
-  { name: "Zonas Verdes", patterns: ["zonas verdes", "senderos verdes", "jardines comunales"], icon: <Trees className="w-3.5 h-3.5" /> },
 ];
+
+export const NO_TERCERIA_REGEX = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios)\b/i;
+
+export function checkIsStandbyDirectoVecy(prop: any, req: any): boolean {
+  if (!prop || !req) return false;
+  if (prop.standByDirectoVecy || req.standByDirectoVecy) return true;
+  if (prop.aceptaTerceria === false || req.aceptaTerceria === false) return true;
+  const pRaw = String(prop.rawText || prop.description || prop.name || '');
+  const rRaw = String(req.rawText || req.name || '');
+  return NO_TERCERIA_REGEX.test(pRaw) || NO_TERCERIA_REGEX.test(rRaw);
+}
 
 export function isNonRealEstateText(text: string | null | undefined): boolean {
   if (!text) return false;
@@ -472,6 +482,12 @@ function scoreRows(req: any, prop: any) {
 
   if (isExactClone || isSharedPhotoLink) {
     add("Validación Cruzada", "Demanda Independiente", "Oferta Duplicada (Auto-Match)", "missing", 100, null);
+    return { rows, autoScore: 0, pts: 0, max };
+  }
+
+  // ── REGLA DOCTRINAL v31.72: REGLA DE ORO DE TERCERÍA Y STANDBY DIRECTO VECY (0% Match Imposible) ──
+  if (checkIsStandbyDirectoVecy(prop, req)) {
+    add("Tercería / Cadena Inmobiliaria", "Demanda Externa / Intermediación", "NO TERCERÍA / STANDBY DIRECTO VECY", "missing", 100, <ShieldAlert className="w-3.5 h-3.5" />);
     return { rows, autoScore: 0, pts: 0, max };
   }
 
@@ -1289,8 +1305,20 @@ function scoreRows(req: any, prop: any) {
     propAdminFee = 0;
   }
 
+  const isReqAdminIncluded = /(?:admin(?:istraci[oó]n)?\s*incluid[ao]|incluid[ao]\s*(?:la\s*)?admin(?:istraci[oó]n)?)/i.test(reqTextLower);
   let adminS: MatchStatus = "neutral";
-  if (isPropAdminIncluded) {
+  let reqAdminLabel = reqAdminMax > 0 ? `≤ ${formatCOP(reqAdminMax)}` : "Flexible / Sin restricción";
+
+  if (isReqAdminIncluded) {
+    reqAdminLabel = "Debe ir incluida en el canon";
+    if (isPropAdminIncluded) {
+      adminS = "exact";
+    } else if (propAdminFee > 0) {
+      adminS = "missing"; // 🔴 Exige que vaya incluida en el canon y la oferta cobra administración aparte
+    } else {
+      adminS = "neutral";
+    }
+  } else if (isPropAdminIncluded) {
     adminS = "exact";
   } else if (reqAdminMax > 0 && propAdminFee > 0) {
     if (propAdminFee > reqAdminMax) {
@@ -1302,7 +1330,6 @@ function scoreRows(req: any, prop: any) {
     adminS = "neutral";
   }
 
-  const reqAdminLabel = reqAdminMax > 0 ? `≤ ${formatCOP(reqAdminMax)}` : "Flexible / Sin restricción";
   const propAdminLabel = isPropAdminIncluded ? "Incluida en el canon" : (propAdminFee > 0 ? `${formatCOP(propAdminFee)} / mes` : "Flexible / N/E");
 
   add("Valor admin", reqAdminLabel, propAdminLabel, adminS, 5, <Receipt className="w-3.5 h-3.5" />);
@@ -1750,19 +1777,22 @@ function scoreRows(req: any, prop: any) {
     );
   }
 
-  // 21. Estudio / Star de TV / Home Office
-  const propHasStudy = propRawText.includes("estudio") || propRawText.includes("estar de tv") || propRawText.includes("star de tv") || propRawText.includes("sala de tv") || prop.hasStudy;
+  // 21. Estudio / Star de TV / Home Office (Doctrina v31.72)
+  const propHasStudy = propRawText.includes("estudio") || propRawText.includes("estar de tv") || propRawText.includes("star de tv") || propRawText.includes("sala de tv") || (prop as any).hasStudy || (prop as any).hasEstarTv;
   const reqWantsStudy = reqTextLower.includes("estudio") || reqTextLower.includes("estar de tv") || reqTextLower.includes("star de tv") || reqTextLower.includes("home office");
+  const isObligatoryStudy = (req as any).requiresObligatoryStudy || /(?:con\s+estudio|estudio\s+obligatorio|indispensable\s+estudio|requiere\s+estudio|necesita\s+estudio|estudio\s+o\s+estar)/i.test(reqTextLower);
+
   if (propHasStudy || reqWantsStudy) {
     let studyStatus: MatchStatus = "neutral";
     if (reqWantsStudy && propHasStudy) studyStatus = "exact";
-    else if (reqWantsStudy && !propHasStudy) studyStatus = "warn";
-    else if (!reqWantsStudy && propHasStudy) studyStatus = "plus";
+    else if (reqWantsStudy && !propHasStudy) {
+      studyStatus = isObligatoryStudy ? "missing" : "warn"; // 🔴 Si es indispensable -> Guillotina
+    } else if (!reqWantsStudy && propHasStudy) studyStatus = "plus";
     else studyStatus = "neutral";
     add(
       "Estudio / Star de TV",
-      reqWantsStudy ? "Exige Estudio / Star de TV" : "Flexible",
-      propHasStudy ? "Sí (Estudio independiente)" : "Sin estudio especificado",
+      reqWantsStudy ? (isObligatoryStudy ? "Exige Estudio Indispensable" : "Exige Estudio / Star de TV") : "Flexible",
+      propHasStudy ? "Sí (Estudio / Estar TV)" : "Sin estudio especificado",
       studyStatus,
       4,
       <Tv className="w-3.5 h-3.5" />
@@ -1835,7 +1865,16 @@ function scoreRows(req: any, prop: any) {
     const reqFloorLabel = reqFloorFromField ? String(reqFloorFromField) : (reqFloorMatch ? reqFloorMatch[0].toUpperCase() : "Flexible");
     const propFloorLabel = propFloorFromField ? String(propFloorFromField) : (propFloorMatch ? propFloorMatch[0].toUpperCase() : "Consultar");
     let floorS: MatchStatus = "neutral";
-    if (reqFloorLabel !== "Flexible" && propFloorLabel !== "Consultar") {
+    const reqMinFloorMatch = reqTextLower.match(/(?:piso\s*(\d+)\s*(?:en adelante|hacia arriba|\+)|piso\s*m[ií]nimo\s*(\d+)|m[ií]nimo\s*piso\s*(\d+)|desde\s*el\s*piso\s*(\d+))/i);
+    const reqMinFloor = (req as any).pisoMinimo || (reqMinFloorMatch ? parseInt(reqMinFloorMatch[1] || reqMinFloorMatch[2] || reqMinFloorMatch[3] || reqMinFloorMatch[4], 10) : null);
+    const propFloorNum = (prop.piso !== undefined && prop.piso !== null) ? Number(prop.piso) : (propFloorMatch && propFloorMatch[1] ? parseInt(propFloorMatch[1], 10) : (propRawText.includes("primer piso") ? 1 : null));
+    const reqNoFirstFloor = /no\s*(?:en\s*)?(?:primer|1er|1\s*er)\s*piso/i.test(reqTextLower);
+
+    if (reqNoFirstFloor && propFloorNum === 1) {
+      floorS = "missing"; // 🔴 Cliente vetó explícitamente 1er piso
+    } else if (reqMinFloor && propFloorNum && propFloorNum < reqMinFloor) {
+      floorS = "missing"; // 🔴 Por debajo del piso mínimo exigido
+    } else if (reqFloorLabel !== "Flexible" && propFloorLabel !== "Consultar") {
       floorS = reqFloorLabel.toLowerCase() === propFloorLabel.toLowerCase() ? "exact" : "warn";
     } else if (reqFloorLabel === "Flexible" && propFloorLabel !== "Consultar") {
       floorS = "plus";

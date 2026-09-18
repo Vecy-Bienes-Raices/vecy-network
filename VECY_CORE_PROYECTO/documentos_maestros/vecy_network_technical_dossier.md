@@ -322,6 +322,25 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.73 — Septiembre 2026
+
+#### 📌 SINCRONIZACIÓN DOCTRINAL DE TERCERÍA 50/50, STANDBY DIRECTO Y FILTROS DUROS EN MATRIZ VISUAL FRONTEND
+
+**Problemas identificados:**
+1. **Diferencial de Evaluación entre Backend y Frontend**: En el backend (`server/_core/matching.ts`, v31.72) se formalizó el bloqueo al 0% para cláusulas de "NO TERCERÍA", ausencia de estudio indispensable y pisos inferiores al solicitado. Sin embargo, en el panel administrativo (`AdminMatches.tsx`), la tabla visual mostraba algunos de estos renglones como advertencias amarillas (`warn`) o informativas (`neutral`), permitiendo discrepancias entre el veredicto del motor y la matriz visual.
+
+**Solución aplicada:**
+- **Sincronización Total en `AdminMatches.tsx`**:
+  - Detección visual de "NO TERCERÍA / STANDBY DIRECTO VECY" con corte al 0% y tarjeta roja de error crítico (`missing`).
+  - Guillotinazo visual en rojo (`missing`) cuando la demanda exige estudio obligatorio (`isObligatoryStudy`) y la oferta no dispone de él.
+  - Guillotinazo visual en rojo (`missing`) cuando la oferta está por debajo del piso mínimo demandado o en primer piso vetado.
+  - Guillotinazo visual en rojo (`missing`) cuando la demanda exige administración incluida en el canon y la oferta la cobra aparte.
+- **Validación Automatizada y Compilación Limpia**:
+  - 41 pruebas unitarias Vitest pasadas al 100%.
+  - `tsc --noEmit` y `npm run build` ejecutados con cero errores.
+
+---
+
 ### 🔖 v31.72 — Septiembre 2026
 
 #### 📌 BLINDAJE DOCTRINAL DE TERCERÍA 50/50, STANDBY DIRECTO VECY Y FILTROS DUROS DE DISTRIBUCIÓN INMOBILIARIA

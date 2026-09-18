@@ -50,7 +50,36 @@ TOTAL                      → 100 pts (Umbral de guardado: Score ≥ 85%)
 - **Filtro Duro de Precio**: Si el precio de la Oferta supera el presupuesto máximo de la Demanda (`Precio Oferta > Presupuesto Máximo`) → **0% Match / Bloqueo Absoluto**.
 - **Jerarquía Geográfica de 3 Niveles**: Todo match verídico debe concordar en 3 niveles: 1) Barrio/Vereda, 2) Localidad/Comuna, y 3) Ciudad/Municipio.
 
-## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.72 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL EN PRODUCCIÓN: v31.73 — Septiembre 2026
+
+### 🗓️ Sesión: Jueves 17 de Septiembre de 2026 — 22:25 (Hora Colombia UTC-5)
+**Versión**: `v31.73` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 Nativo + PM2 (`jania-server`) + GitHub (`main`) + React Vercel
+
+#### 🎯 Solicitud y Requerimiento de Eduardo A. Rivera:
+- Sincronización doctrinal completa e inmediata del Frontend (`AdminMatches.tsx`) con los filtros duros inquebrantables del Backend (`v31.72`):
+  1) **Matriz Visual de Tercería Inmobiliaria 50/50 y Standby Directo Vecy**: Si un inmueble o requerimiento tiene la cláusula "NO TERCERÍA", la tabla de cotejo visual de administración debe reflejar inmediatamente el bloqueo al **0% Match con estado `missing` (rojo)** bajo el concepto *"Tercería / Cadena Inmobiliaria: NO TERCERÍA / STANDBY DIRECTO VECY"*.
+  2) **Filtro Duro de Estudio Indispensable en Frontend**: Si la demanda exige estudio obligatorio (`requiresObligatoryStudy` o "estudio obligatorio/indispensable") y la oferta carece de él, el renglón debe catalogarse como `missing` (rojo) forzando el `autoScore = 0`.
+  3) **Filtro Duro de Piso Mínimo y Veto a 1er Piso en Frontend**: Si la demanda exige un piso mínimo (ej: "piso 5 hacia arriba") o veta expresamente el primer piso ("no primer piso"), y la oferta está por debajo de la altura o es piso 1, se cataloga como `missing` (rojo) arrojando incompatibilidad total.
+  4) **Exigencia de Administración Incluida en Canon**: Si el cliente exige que la administración esté incluida en el canon y la oferta cobra administración por separado, se marca como `missing` (rojo) evitando falsas coincidencias presupuestales.
+
+#### 🔬 Diagnóstico Técnico y Causas Raíz Identificadas:
+- En `v31.72`, el motor de matching del backend (`server/_core/matching.ts`) ya bloqueaba al 0% estas condiciones, pero en el panel administrativo de React (`AdminMatches.tsx`), la función `scoreRows` mantenía ciertos criterios como advertencias amarillas (`warn`) o neutrales (`neutral`), permitiendo que el cálculo visual del frontend difiriera del veredicto autoritativo del backend.
+
+#### 🛠️ Acciones Técnicas Ejecutadas:
+1. **Sincronización en `client/src/components/admin/AdminMatches.tsx`**:
+   - Incorporada la función `checkIsStandbyDirectoVecy(prop, req)` y regex `NO_TERCERIA_REGEX`.
+   - Incorporado el Guillotinazo Doctrinal de Tercería al inicio de `scoreRows`: genera la fila de error crítico y retorna `autoScore: 0` de inmediato.
+   - Modificado el renglón 21 (*Estudio / Star de TV*): si es indispensable (`isObligatoryStudy`) y la oferta no dispone de él, asigna status `missing` en vez de `warn`.
+   - Modificado el renglón 25 (*Piso / Nivel*): detección de `reqMinFloor` y `reqNoFirstFloor`, asignando status `missing` si la oferta incumple la restricción de altura.
+   - Modificado el renglón de administración: si la demanda exige administración incluida y la oferta cobra administración aparte, asigna status `missing`.
+2. **Validación Integral**:
+   - `npm run check` (TypeScript) ejecutado con código 0 limpio.
+   - `npx vitest run` ejecutado: 41 pruebas unitarias pasadas al 100%.
+   - `npm run build` ejecutado: bundle de Vite y Node.js compilados sin errores.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.72 — Septiembre 2026
 
 ### 🗓️ Sesión: Jueves 17 de Septiembre de 2026 — 21:45 (Hora Colombia UTC-5)
 **Versión**: `v31.72` | **Ambiente**: Producción VPS (`13.140.149.144`) + PostgreSQL 17.11 Nativo + PM2 (`jania-server`) + GitHub (`main`) + React Vercel

@@ -167,7 +167,22 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.72 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.73 — Septiembre 2026
+
+### Novedades v31.73 (Sincronización Doctrinal de Tercería 50/50, Standby Directo y Filtros Duros en Matriz Visual Frontend):
+- **Diagnóstico y Causas Raíz Identificadas**:
+  1) *Diferencial entre Verificación de Backend y Frontend*: Mientras que en `server/_core/matching.ts` (v31.72) se implementó el bloqueo duro al 0% para ofertas con "NO TERCERÍA", demandas con estudio indispensable insatisfecho y pisos inferiores a los solicitados, la matriz de cotejo visual en `AdminMatches.tsx` seguía procesando algunos de estos factores como advertencias amarillas (`warn`) o neutrales (`neutral`), permitiendo discrepancias visuales.
+- **Acciones Ejecutadas**:
+  1) *Sincronización Total en `AdminMatches.tsx`*:
+     - Bloqueo duro al 0% con renglón crítico en rojo (`missing`) cuando aplica *NO TERCERÍA / STANDBY DIRECTO VECY*.
+     - Guillotinazo en rojo (`missing`) si la demanda exige estudio obligatorio (`isObligatoryStudy`) y la oferta no dispone de él.
+     - Guillotinazo en rojo (`missing`) si la oferta está por debajo del piso mínimo demandado o en primer piso vetado.
+     - Guillotinazo en rojo (`missing`) si la demanda exige administración incluida en el canon y la oferta la factura por separado.
+  2) *Validación Completa*: Suite Vitest de 41 pruebas limpia en 4s, `tsc --noEmit` y `npm run build` sin errores.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.72 — Septiembre 2026
 
 ### Novedades v31.72 (Blindaje Doctrinal de Tercería 50/50, Standby Directo Vecy y Filtros Duros de Distribución Inmobiliaria):
 - **Diagnóstico y Causas Raíz Identificadas**:
