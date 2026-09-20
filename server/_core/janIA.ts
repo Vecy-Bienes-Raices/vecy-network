@@ -598,18 +598,18 @@ export function extractFallbackDataFromText(text: string): any {
     transactionType = clean.includes("venta") || isInvestorPurchase ? "venta_permuta" : "permuta";
   } else if (hasRentSignals && (clean.includes("venta") || clean.includes("valor venta") || clean.includes("precio de venta")) && (clean.includes("arriendo") || clean.includes("valor arriendo") || clean.includes("canon"))) {
     transactionType = "venta_o_arriendo";
-  } else if (hasRentSignals && !clean.includes("compro") && !clean.includes("para compra") && !clean.includes("en compra") && !isInvestorPurchase) {
+  } else if (hasRentSignals && !clean.includes("compro") && !clean.includes("para compra") && !clean.includes("en compra") && !clean.includes("en venta") && !clean.includes("venta") && !isInvestorPurchase) {
     transactionType = "arriendo";
   } else {
     transactionType = "venta";
   }
 
   let propertyType = "apartment";
-  if (clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("médic") || clean.includes("medic")) {
+  if ((clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("médic") || clean.includes("medic")) && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
     propertyType = "consultorio";
   } else if ((clean.includes("oficina") || clean.includes("oficinas") || clean.includes("office")) && !clean.includes("home office") && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
     propertyType = "office";
-  } else if (clean.includes("local comercial") || clean.includes("locales comerciales") || clean.includes("local") || clean.includes("locales") || clean.includes("comercial") || clean.includes("commercial")) {
+  } else if ((clean.includes("local comercial") || clean.includes("locales comerciales") || clean.includes("local") || clean.includes("locales") || clean.includes("comercial") || clean.includes("commercial")) && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa") && !clean.includes("centro comercial") && !clean.includes("centros comerciales")) {
     propertyType = "commercial";
   } else if (clean.includes("bodega") || clean.includes("bodegas") || clean.includes("warehouse")) {
     propertyType = "warehouse";

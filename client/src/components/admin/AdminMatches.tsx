@@ -461,7 +461,7 @@ export function isHollowListing(rawText: string | null | undefined, name?: strin
 
 const scoreRowsCache = new Map<string, { rows: ScoreRow[]; autoScore: number; pts: number; max: number }>();
 
-function scoreRows(req: any, prop: any) {
+export function scoreRows(req: any, prop: any) {
   if (!req || !prop) return { rows: [], autoScore: 0, pts: 0, max: 0 };
 
   const cacheKey = `${req.id || 'r'}_${req.presupuestoMax || ''}_${req.areaMin || ''}_${req.habitacionesMin || ''}_${req.banosMin || ''}_${req.parqueaderosMin || ''}_${req.zonaDeseada || ''}_${req.addressNeighborhood || ''}_${req.ciudadDeseada || ''}_${req.tipoInmuebleDeseado || ''}_${req.tipoNegocioDeseado || ''}_${req.idUsuarioWhatsapp || ''}_${req.antiguedadMax || ''}_${(req.caracteristicasDeseadas as any)?.interiorExterior || ''}__${prop.id || 'p'}_${prop.price || ''}_${prop.rentPrice || ''}_${prop.adminFee || ''}_${prop.areaTotal || ''}_${prop.bedrooms || ''}_${prop.bathrooms || ''}_${prop.garages || ''}_${prop.stratum || ''}_${prop.zone || ''}_${prop.addressNeighborhood || ''}_${prop.city || ''}_${prop.propertyType || ''}_${prop.transactionType || ''}_${prop.idUsuarioWhatsapp || ''}_${prop.yearBuilt || ''}_${prop.antiguedadAnos || ''}_${(prop.amenities as any)?.interiorExterior || ''}_${(prop.amenities as any)?.antiguedad || ''}`;
