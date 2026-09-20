@@ -2095,51 +2095,82 @@ export function scoreRows(req: any, prop: any) {
   );
 
 
-  // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY (v27.0) ──
-  // 1. Primeras 5 casillas (Núcleo Duro Innegociable): Tipo Inmueble, Tipo Negocio, Barrio, Localidad, Ciudad
-  const top5Rows = rows.slice(0, 5);
-  const hasHardMismatch = top5Rows.some(r => r.status === "missing");
-
-  // 2. Guillotina Total: Si CUALQUIER fila en todo el cotejo tiene estado "missing" ("No Coincide" / "No Cumple" en rojo) -> 0%
+  // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY (v31.80) ──
+  // 1. Guillotina Total Inflexible: Si CUALQUIER fila en todo el cotejo tiene estado "missing" ("No Coincide" / "No Cumple" en rojo) -> 0% Inmediato
   const hasAnyMissingRow = rows.some(r => r.status === "missing");
   let autoScore = 0;
 
-  if (!hasHardMismatch && !hasAnyMissingRow) {
-    // Casillas de la 6 en adelante (Precio, Área, Habitaciones, Baños, Garajes, Antigüedad, Estrato y TODAS las características dinámicas que aparecieron)
-    // Excluyendo la fila informativa de Teléfono
-    const evaluableRows6Plus = rows.slice(5).filter(r => !r.label.includes("Teléfono"));
-    const N = evaluableRows6Plus.length;
+  if (!hasAnyMissingRow) {
+    // Casillas evaluables (todas excepto la fila puramente informativa de Teléfono)
+    const evaluableRows = rows.filter(r => !r.label.includes("Teléfono"));
 
-    if (N === 0) {
+    // Comprobar si todas las casillas son idénticas y exactas
+    const isAllExact = evaluableRows.every(r => r.status === "exact" || r.status === "ok");
+
+    if (isAllExact) {
       autoScore = 100;
     } else {
-      // Base sólida del 85% al cumplir al 100% las 5 primeras casillas en duro
-      const base85 = 85;
-      const pointsPerSlot = 15 / N; // Los 15 puntos restantes se dividen equitativamente entre las N casillas activas que aparecieron
+      let totalDeduction = 0;
 
-      let earnedSlotPoints = 0;
-      let hasAnyPending = false;
-
-      for (const r of evaluableRows6Plus) {
+      for (const r of evaluableRows) {
         if (r.status === "exact" || r.status === "ok") {
-          earnedSlotPoints += pointsPerSlot * 1.0; // 100% de la cuota de la casilla (Coincide idéntico)
-        } else if (r.status === "plus") {
-          earnedSlotPoints += pointsPerSlot * 1.0; // 100% de la cuota (Plus ofertado / Valor agregado)
-        } else if (r.status === "warn") {
-          earnedSlotPoints += pointsPerSlot * 0.70; // 70% de la cuota (Aproximado / Rango viable)
-        } else if (r.status === "neutral") {
-          hasAnyPending = true;
-          earnedSlotPoints += pointsPerSlot * 0.0; // 0% de la cuota (Dato faltante / pendiente por indagar con las partes)
+          continue; // Coincidencia 100% exacta: 0 deducción
+        }
+
+        const lbl = r.label.toLowerCase();
+
+        // ── Nivel 1: Financiero Crítico (Precio de Venta, Canon de Arriendo, Presupuesto)
+        if (lbl.includes("precio de venta") || lbl.includes("precio de arriendo") || lbl.includes("canon")) {
+          if (r.status === "neutral") {
+            // Falta el precio o presupuesto: Castigo severo por incertidumbre financiera (cae cerca al 80%-83%)
+            totalDeduction += 16.50;
+          } else if (r.status === "warn") {
+            totalDeduction += 2.50;
+          }
+        }
+        // ── Nivel 2: Habitacional Duro (Área Total, Habitaciones, Baños, Parqueaderos)
+        else if (lbl.includes("área total") || lbl.includes("habitaciones") || lbl.includes("baños") || lbl.includes("parqueaderos")) {
+          if (r.status === "plus") {
+            totalDeduction += 0.03; // Plus habitacional (ej. más alcobas o garajes de los pedidos)
+          } else if (r.status === "warn") {
+            totalDeduction += 0.80; // Margen funcional negociable
+          } else if (r.status === "neutral") {
+            totalDeduction += 3.50; // Incertidumbre en metraje o espacios
+          }
+        }
+        // ── Nivel 3: Confort y Estructura (Valor admin, Piso, Vista, Antigüedad, Estrato, CBS, Estudio, Depósito, Cocina, Chimenea, Vigilancia, Parqueadero Visitantes, Cava, BBQ, etc.)
+        else if (
+          lbl.includes("admin") || lbl.includes("piso") || lbl.includes("vista") || lbl.includes("antigüedad") ||
+          lbl.includes("estrato") || lbl.includes("servicio") || lbl.includes("estudio") || lbl.includes("depósito") ||
+          lbl.includes("cocina") || lbl.includes("chimenea") || lbl.includes("vigilancia") || lbl.includes("visitantes") ||
+          lbl.includes("moto") || lbl.includes("cava") || lbl.includes("bbq") || lbl.includes("balcón") || lbl.includes("terraza") || lbl.includes("ascensor")
+        ) {
+          if (r.status === "plus") {
+            totalDeduction += 0.02; // Plus de confort (ej. balcón privado, ascensor)
+          } else if (r.status === "warn") {
+            totalDeduction += 0.40; // Aproximado
+          } else if (r.status === "neutral") {
+            totalDeduction += 1.20; // Dato pendiente de confort
+          }
+        }
+        // ── Nivel 4: 59 Amenidades Dinámicas Secundarias (Piscina, Gimnasio, Kiosco, Shut, Canchas, etc.)
+        else {
+          if (r.status === "plus") {
+            totalDeduction += 0.01; // Plus ofertado secundario (agrega valor pero resta micro-fracción para no ser 100%)
+          } else if (r.status === "warn") {
+            totalDeduction += 0.15; // Desea y no tiene especificado
+          } else if (r.status === "neutral") {
+            totalDeduction += 0.05; // Duda de amenidad secundaria
+          }
         }
       }
 
-      // Si todas las casillas activas están llenas (sin Datos Faltantes/Pendientes) y en verde/plus -> 100%
-      if (!hasAnyPending && evaluableRows6Plus.every(r => r.status === "exact" || r.status === "ok" || r.status === "plus")) {
+      if (totalDeduction === 0) {
         autoScore = 100;
       } else {
-        const totalCalc = Math.round(base85 + earnedSlotPoints);
-        // Garantizar que si no hay ningún rojo, el score califica en 85% hasta 99%
-        autoScore = Math.min(99, Math.max(85, totalCalc));
+        // Garantizar escala continua con 2 decimales entre 80.00% y 99.99%
+        const calculated = 100 - totalDeduction;
+        autoScore = Math.max(80.00, Math.min(99.99, Number(calculated.toFixed(2))));
       }
     }
   }
