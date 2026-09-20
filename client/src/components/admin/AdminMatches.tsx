@@ -1749,8 +1749,8 @@ export function scoreRows(req: any, prop: any) {
   }
 
   // 18. Tipología de Cocina - REACTIVO ("POR ARTE DE MAGIA")
-  let reqKitchen = req.kitchenType || (reqTextLower.includes("cocina cerrada") ? "Cerrada" : reqTextLower.includes("cocina abierta") ? "Abierta" : reqTextLower.includes("tipo isla") || reqTextLower.includes("isla") ? "Abierta tipo Isla" : null);
-  let propKitchen = prop.kitchenType || (propRawText.includes("cocina cerrada") ? "Cerrada" : propRawText.includes("cocina abierta") ? "Abierta" : propRawText.includes("tipo isla") || propRawText.includes("isla") ? "Abierta tipo Isla" : propRawText.includes("cocina integral") ? "Integral" : null);
+  let reqKitchen = req.kitchenType || (req.caracteristicasDeseadas as any)?.kitchenType || (reqTextLower.includes("cocina cerrada") ? "Cerrada" : reqTextLower.includes("cocina abierta") ? "Abierta" : reqTextLower.includes("tipo isla") || reqTextLower.includes("isla") ? "Abierta tipo Isla" : reqTextLower.includes("cocina integral") || reqTextLower.includes("integral") ? "Integral" : null);
+  let propKitchen = prop.kitchenType || (prop.amenities as any)?.kitchenType || (propRawText.includes("cocina cerrada") ? "Cerrada" : propRawText.includes("cocina abierta") ? "Abierta" : propRawText.includes("tipo isla") || propRawText.includes("isla") ? "Abierta tipo Isla" : propRawText.includes("cocina integral") || propRawText.includes("integral") ? "Integral" : null);
 
   if (reqKitchen || propKitchen) {
     let kStatus: MatchStatus = "neutral";
