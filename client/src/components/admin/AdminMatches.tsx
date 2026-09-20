@@ -834,6 +834,26 @@ function scoreRows(req: any, prop: any) {
     ? reqBarriosInText 
     : (!isGenericZone(req.zonaDeseada) ? [req.zonaDeseada!] : (!isGenericZone(req.addressNeighborhood) ? [req.addressNeighborhood!] : []));
 
+  // Inserción perimetral: si no se nombró un barrio específico pero hay delimitación de calles en Bogotá
+  if (reqTrueBarriosList.length === 0) {
+    const stMatch = reqTextLower.match(/(?:entre|de)?\s*(?:la|las)?\s*(?:calle|calles|clle|cll)\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(?:calle|calles|clle|cll)?\s*(\d{1,3})/i);
+    if (stMatch) {
+      const s1 = parseInt(stMatch[1], 10);
+      const s2 = parseInt(stMatch[2], 10);
+      const minS = Math.min(s1, s2);
+      const maxS = Math.max(s1, s2);
+      if (minS >= 85 && maxS <= 96) {
+        reqTrueBarriosList.push("El Chicó", "Chicó Reservado", "La Cabrera", "Antiguo Country");
+      } else if (minS >= 96 && maxS <= 100) {
+        reqTrueBarriosList.push("Chicó Norte", "Chicó Reservado", "El Chicó");
+      } else if (minS >= 100 && maxS <= 127) {
+        reqTrueBarriosList.push("Santa Bárbara", "Santa Paula", "Santa Ana", "San Patricio");
+      } else if (minS >= 127 && maxS <= 150) {
+        reqTrueBarriosList.push("Cedritos", "Los Cedros", "Bella Suiza", "El Contador");
+      }
+    }
+  }
+
   const SUB_CALIFICADORES = ["alta", "alto", "baja", "bajo", "norte", "sur", "oriental", "occidental", "reservado", "i ", "ii ", "iii ", "navarra"];
 
   const normalizeBarrio = (s: string) =>
@@ -1179,11 +1199,18 @@ function scoreRows(req: any, prop: any) {
   }
 
   if (reqTextLower && !isReqRentMatch && !isPropPureRent && !isReqOpenBudget) {
-    const buyMatch = reqTextLower.match(/(?:presupuesto\s*(?:para\s*)?compra|ppto\s*(?:para\s*)?compra|compra\s*:|inversi[oó]n|presupuesto(?:\s*m[aá]ximo)?)\s*:?\s*\*?\$?\s*([^\n,•]+)/i);
+    const buyMatch = reqTextLower.match(/(?:presupuesto\s*(?:para\s*)?compra|ppto\s*(?:para\s*)?compra|compra\s*:|inversi[oó]n|presupuesto(?:\s*m[aá]ximo)?)\s*:?\s*\*?\$?\s*([^\n•]+)/i);
     if (buyMatch) {
       const parsed = parseColombianCurrency(buyMatch[0]);
       if (parsed && parsed >= 30_000_000) {
         reqSaleBudget = parsed;
+      }
+    }
+    if (reqSaleBudget <= 0) {
+      const singleMatch = reqTextLower.match(/(?:presupuesto|ppto|valor|precio|inversi[oó]n|compra)\s*:?\s*\*?\$?\s*(\d{1,4}(?:[.,]\d{1,3})?|\d+)\s*(?:mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
+      if (singleMatch) {
+        const parsed = parseColombianPriceOrBudget(singleMatch[1], singleMatch[2] || "millones", true);
+        if (parsed >= 10_000_000) reqSaleBudget = parsed;
       }
     }
     if (reqSaleBudget <= 0) {
@@ -1202,7 +1229,7 @@ function scoreRows(req: any, prop: any) {
   let propRentPrice = !isPropPureVenta ? parseSafePrice(prop.rentPrice || prop.priceRent, prop.rawText) : 0;
   
   if (propTextLower && !isPropPureVenta) {
-    const rentExplicitMatch = propTextLower.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|arrendamiento\s*:|arriendo\s*:|vr\s*[\.\/]?\s*renta|renta\s*:)\s*:?\s*\*?\$?\s*([^\n,•]+)/i);
+    const rentExplicitMatch = propTextLower.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|arrendamiento\s*:|arriendo\s*:|vr\s*[\.\/]?\s*renta|renta\s*:)\s*:?\s*\*?\$?\s*([^\n•]+)/i);
     if (rentExplicitMatch) {
       const parsed = parseColombianCurrency(rentExplicitMatch[0]);
       if (parsed && parsed >= 300_000 && parsed <= 100_000_000 && !isPhoneNumberNotPrice(parsed, prop.rawText)) {
@@ -1214,7 +1241,7 @@ function scoreRows(req: any, prop: any) {
   // 4. Presupuesto de Arriendo en Demanda
   let reqRentBudget = isReqRentMatch ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
   if (reqTextLower && !isReqOpenBudget) {
-    const rentMatch = reqTextLower.match(/(?:presupuesto\s*(?:para\s*)?(?:alquiler|arriendo|renta)|ppto\s*(?:para\s*)?(?:alquiler|arriendo)|alquiler\s*:|canon\s*:)\s*:?\s*\*?\$?\s*([^\n,•]+)/i);
+    const rentMatch = reqTextLower.match(/(?:presupuesto\s*(?:para\s*)?(?:alquiler|arriendo|renta)|ppto\s*(?:para\s*)?(?:alquiler|arriendo)|alquiler\s*:|canon\s*:)\s*:?\s*\*?\$?\s*([^\n•]+)/i);
     if (rentMatch) {
       const parsed = parseColombianCurrency(rentMatch[0]);
       if (parsed && parsed >= 300_000 && parsed <= 100_000_000) {
@@ -1348,12 +1375,18 @@ function scoreRows(req: any, prop: any) {
   let areaR = parseFloat(req.areaMin || req.areaMinimaM2 || "0");
   let areaRMax = 0;
   if (reqTextLower) {
-    const areaRangeR = reqTextLower.match(/(?:📐|area|área|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
-    if (areaRangeR) {
-      areaR = parseFloat(areaRangeR[1].replace(",", "."));
-      areaRMax = parseFloat(areaRangeR[2].replace(",", "."));
+    const normReqAreaText = reqTextLower.replace(/[\u2013\u2014]/g, "-");
+    const areaRangeR = normReqAreaText.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*:?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?/i);
+    if (areaRangeR && (areaRangeR[1] || areaRangeR[2])) {
+      const hasCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaRangeR[0]);
+      const n1 = parseFloat(areaRangeR[1].replace(",", "."));
+      const n2 = parseFloat(areaRangeR[2].replace(",", "."));
+      if (hasCtx && !isNaN(n1) && !isNaN(n2) && n1 >= 15 && n1 <= 15000 && n2 >= 15 && n2 <= 15000) {
+        areaR = Math.min(n1, n2);
+        areaRMax = Math.max(n1, n2);
+      }
     } else if (areaR <= 0) {
-      const mRA = reqTextLower.match(/(?:mínimo|min|de|área)?\s*([\d.,]+)\s*(?:m2|mts|m²|metros)/i);
+      const mRA = normReqAreaText.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|m[ií]nimo|min|de)?\s*:?\s*([\d.,]+)\s*(?:m2|mts2?|m²|metros)/i);
       if (mRA) {
         let valRA = parseFloat(mRA[1].replace(/\./g, "").replace(",", "."));
         if (!isNaN(valRA) && valRA > 10 && valRA < 10000) areaR = valRA;

@@ -107,4 +107,16 @@ describe("VECY NETWORK — SUITE DE VALIDACIÓN ARQUITECTURAL COLOMBIANA", () =>
       expect(formatRequirementField(null, "años")).toBe("Sin restricción especificada");
     });
   });
+
+  describe("7. Caso de Producción Req #1541 (Guillotina Total y Extracción de Precisión)", () => {
+    it("debe extraer 'Presupuesto: 1,800 MILLONES CONTADO' con coma como 1.800.000.000 COP", () => {
+      const budget = parseColombianCurrency("Presupuesto: 1,800 MILLONES CONTADO");
+      expect(budget).toBe(1_800_000_000);
+    });
+
+    it("debe extraer '• M2: 180 – 200' con en-dash y prefijo M2 como 180 m²", () => {
+      const area = parseArea("• M2: 180 – 200");
+      expect(area).toBe(180);
+    });
+  });
 });

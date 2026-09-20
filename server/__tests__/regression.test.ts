@@ -515,6 +515,65 @@ describe("VECY NETWORK — SUITE DE REGRESIÓN DOCTRINAL AUTOMATIZADA", () => {
       expect(result.score).toBe(0);
       expect(result.blockers.some(b => b.includes("Choque de Confort Lumínico") || b.includes("INTERIOR"))).toBe(true);
     });
+
+    it("Req #1541 vs Prop #2208 (Match #M14530): debe aplicar guillotina total 0% por precio (+80%), área (+53%) y ubicación", () => {
+      const rawReq1541 = `Busco para cliente directo apto, con estas características: YA VENDIO LE URGE COMPRAR
+• Zona: entre calle 89 y 92 de la 13 a la 7ª.
+• M2: 180 – 200
+• Indispensable: Terraza o balcón
+• Ubicación: Exterior: X Interior:
+• Moderno o clásico: no tan antiguo
+• Cocina abierta o cerrada: no importa, pero no vieja
+• Número habitaciones: 3
+• Estudio: Si
+• Número baños: 3 y auxiliar
+• Cuarto y baño de servicio: mejor o baño servicio
+• Número de piso: después del 2
+• Número de parqueaderos: 2 amplios para camionetas
+• Vigilancia o automatizado: vigilancia
+• Presupuesto: 1,800 MILLONES CONTADO
+• Si tienes el inmueble compartimos 50-50`;
+
+      // 1. Validar extracción de fallback
+      const extracted = extractFallbackDataFromText(rawReq1541);
+      expect(extracted.presupuestoMax).toBe(1_800_000_000);
+      expect(extracted.areaMin).toBe(180);
+      expect(extracted.areaMax).toBe(200);
+      expect(extracted.zone.toLowerCase()).toMatch(/cabrera|chic/);
+
+      // 2. Validar que el cotejo contra Prop #2208 resulta en 0% absoluto (Guillotina)
+      const prop2208 = {
+        id: 2208,
+        propertyType: "apartment",
+        transactionType: "venta",
+        addressCity: "Bogotá",
+        zone: "Bogotá",
+        price: 3_250_000_000,
+        areaTotal: 306,
+        bedrooms: 3,
+        bathrooms: 4,
+        garages: 6,
+        rawText: "Apartamento en venta Bogotá 306 m2, 3 habitaciones, 4 baños, 6 garajes, terraza, $3.250.000.000"
+      };
+
+      const req1541 = {
+        id: 1541,
+        propertyType: "apartment",
+        tipoInmuebleDeseado: "apartment",
+        transactionType: "venta",
+        tipoNegocioDeseado: "venta",
+        addressCity: "Bogotá",
+        ciudadDeseada: "Bogotá",
+        zonaDeseada: extracted.zone,
+        presupuestoMax: extracted.presupuestoMax,
+        areaMin: extracted.areaMin,
+        rawText: rawReq1541
+      };
+
+      const matchExplanation = explicarMatch(req1541, prop2208);
+      expect(matchExplanation.score).toBe(0);
+      expect(matchExplanation.blockers.length).toBeGreaterThan(0);
+    });
   });
 });
 

@@ -7,7 +7,8 @@ import { getDb, getRawSql } from "../db";
 import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches, messages as dbMessages, conversations as dbConversations, propertyPublicationHistory, inmobiliarioLexicon, matchFeedback } from "../../drizzle/schema";
 import { validarZona, normalizarTextoGeografico, desambiguarBarriosCompuestos, deducirGeografiaTripartita, resolveIntersectionToBarrio } from "./geography";
 import { validateCity } from "./divipola";
-import { findMatchesForProperty, findMatchesForRequirement, isNonRealEstateText, isHollowListing } from "./matching";
+import { findMatchesForProperty, findMatchesForRequirement, isNonRealEstateText, isHollowListing, parseStreetCarreraBoundaries } from "./matching";
+import { lookupBarriosByPerimeter } from "./geo-lookup";
 import { transcribeAudio } from "./voiceTranscription";
 import { parseColombianListing } from "../../shared/colombianRealEstateParser";
 import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
@@ -497,13 +498,13 @@ export function parseColombianPriceOrBudget(numStr: string, unit: string, isSale
     return parsed;
   }
 
-  // Si tiene formato de miles con punto (ej: "2.100", "1.390", "1.300", "3.500")
-  if (/^\d{1,3}\.\d{3}$/.test(cleanStr)) {
-    const n = parseInt(cleanStr.replace(".", ""), 10);
+  // Si tiene formato de miles con punto o coma (ej: "2.100", "1.390", "1.300", "1,800", "3.500")
+  if (/^\d{1,3}[.,]\d{3}$/.test(cleanStr)) {
+    const n = parseInt(cleanStr.replace(/[.,]/g, ""), 10);
     if (!isSale) {
       return n * 1_000; // 3800 -> 3.800.000 COP en arriendo
     }
-    return n * 1_000_000; // 2100 * 1M = 2.100.000.000 COP en venta
+    return n * 1_000_000; // 1800 * 1M = 1.800.000.000 COP en venta
   }
   
   let val = parseFloat(cleanStr.replace(",", "."));
@@ -521,7 +522,7 @@ export function parseColombianPriceOrBudget(numStr: string, unit: string, isSale
     }
     // Venta: En Colombia si dicen "1450 millones", "540 millones" o "980 m", se multiplica por 1_000_000.
     // 🛡️ NUNCA multiplicar un entero < 30 por 1.000.000.000 (previene transformar 15 años o 15M en 15 mil millones)
-    if (val < 10 && val > 0 && cleanStr.includes(".")) {
+    if (val < 10 && val > 0 && (cleanStr.includes(".") || cleanStr.includes(","))) {
       // Solo decimales tipo 1.5, 2.3 millones en venta equivalen a 1.500M / 2.300M
       return Math.round(val * 1_000_000_000);
     }
@@ -546,6 +547,7 @@ export function extractFallbackDataFromText(text: string): any {
   const clean = (text || "")
     .toLowerCase()
     .replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "")
+    .replace(/[\u2013\u2014]/g, "-")
     .replace(/['´`’‘\u00B4\u2019\u2018]/g, ".")
     .replace(/[*_~]/g, "")
     .replace(/[\t ]+/g, " ");
@@ -637,7 +639,7 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   // 2. Canon de Arriendo Explícito (ej: "CANON $11'500.000", "CANON DE ARRIENDO: $4.500.000", "Canon: $6.200.000", "Arriendo $3.800.000", "VR RENTA $5.300.000")
-  const canonMatch = clean.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|vr\s*[\.\/]?\s*renta|renta)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
+  const canonMatch = clean.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|vr\s*[\.\/]?\s*renta|renta)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
   if (canonMatch) {
     const isSale = false;
     const computed = parseColombianPriceOrBudget(canonMatch[1], canonMatch[2] || "", isSale);
@@ -647,7 +649,7 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   // 3. Precio de Venta Explícito (ej: "PRECIO DE VENTA/ $950.000.000", "Precio de venta: $3.400.000.000", "VALOR VENTA: $2.400'000.000", "VR. VENTA $1.600.000.000", "Venta: $885.000.000", "Valor un poco negociable $780 MM", "$1 450 Millones")
-  const saleMatch = clean.match(/(?:precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|vr\s*[\.\/]?\s*venta|venta\s*(?:de\s*apartamento|de\s*apto|de\s*casa)?|valor\s*un\s*poco\s*negociable|valor\s*negociable|precio\s*negociable)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
+  const saleMatch = clean.match(/(?:precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|vr\s*[\.\/]?\s*venta|venta\s*(?:de\s*apartamento|de\s*apto|de\s*casa)?|valor\s*un\s*poco\s*negociable|valor\s*negociable|precio\s*negociable)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
   if (saleMatch) {
     const isSale = true;
     const computed = parseColombianPriceOrBudget(saleMatch[1], saleMatch[2] || "", isSale);
@@ -659,8 +661,8 @@ export function extractFallbackDataFromText(text: string): any {
 
   // 4. Rango de Presupuesto en Demanda (ej: "Presupuesto 1.300 - 1.400", "de 14 o 15 millones", "entre 800 y 900 millones", "ppto 1200 a 1400", "800 a 1.200 millones")
   if (price === 0 && rentPrice === 0) {
-    const rangeMatch = clean.match(/(?:presupuesto|prespuesto|ppto|inversi[oó]n|compra)\s*:?\s*(?:entre\s+)?\$?\s*([\d][\d.\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i)
-                    || clean.match(/(?:entre|de)\s+\$?\s*([\d][\d.\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
+    const rangeMatch = clean.match(/(?:presupuesto|prespuesto|ppto|inversi[oó]n|compra)\s*:?\s*(?:entre\s+)?\$?\s*([\d][\d.,\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.,\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i)
+                    || clean.match(/(?:entre|de)\s+\$?\s*([\d][\d.,\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.,\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
     if (rangeMatch) {
       const isSale = transactionType !== "arriendo";
       presupuestoMin = parseColombianPriceOrBudget(rangeMatch[1], rangeMatch[3] || "", isSale);
@@ -672,9 +674,9 @@ export function extractFallbackDataFromText(text: string): any {
     }
   }
 
-  // 5. Presupuesto Máximo con Prefijos (ej: "Prespuesto Máximo $ 540 millones", "Presupuesto máximo de $800 mll", "Presupuesto: 1.500 millones máximo", "Hasta 4 millones", "Ppto max 12 MM")
+  // 5. Presupuesto Máximo con Prefijos (ej: "Prespuesto Máximo $ 540 millones", "Presupuesto máximo de $800 mll", "Presupuesto: 1.500 millones máximo", "Presupuesto: 1,800 MILLONES CONTADO", "Hasta 4 millones", "Ppto max 12 MM")
   if (price === 0 && rentPrice === 0) {
-    const ceilingMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|prespuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|\btope\b|\btecho\b|\bl[ií]mite\b)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\$?\s*([\d][\d.\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
+    const ceilingMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|prespuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|\btope\b|\btecho\b|\bl[ií]mite\b)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
     if (ceilingMatch) {
       const afterText = clean.slice(clean.indexOf(ceilingMatch[0]) + ceilingMatch[0].length, clean.indexOf(ceilingMatch[0]) + ceilingMatch[0].length + 15);
       if (!/años|anos|edad|antig/i.test(afterText)) {
@@ -694,7 +696,7 @@ export function extractFallbackDataFromText(text: string): any {
 
   // 6. Etiqueta Simple "Precio: $..." o "Valor: $..."
   if (price === 0 && rentPrice === 0) {
-    const simplePriceMatch = clean.match(/(?:precio|valor)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
+    const simplePriceMatch = clean.match(/(?:precio|valor)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
     if (simplePriceMatch) {
       const isSale = transactionType !== "arriendo";
       const computed = parseColombianPriceOrBudget(simplePriceMatch[1], simplePriceMatch[2] || "", isSale);
@@ -728,7 +730,7 @@ export function extractFallbackDataFromText(text: string): any {
 
       // 7B. Buscar cifras con taquigrafía tipo "$1,250. MM" o "850 millones" o "$1 450 Millones"
       if (price === 0) {
-        const mmMatches = [...clean.matchAll(/(?:precio|valor|venta)?\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.\s']*)\s*(?:mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/gi)];
+        const mmMatches = [...clean.matchAll(/(?:precio|valor|venta)?\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)\s*(?:mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/gi)];
         for (const m of mmMatches) {
           const computed = parseColombianPriceOrBudget(m[1], "millones", true);
           if (computed >= 30_000_000 && computed !== adminFee && !isPhoneNumberNotPrice(computed, text)) {
@@ -773,19 +775,29 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   if (area === 0) {
-    // A. Captura rango de área con soporte para unidades intermedias (ej: "de 70m2 a 80m2", "de 50-70 mt2", "50 a 70 m2", "50-70 metros")
-    const areaRangeMatch = clean.match(/(?:📐|area|área|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
-    if (areaRangeMatch) {
-      areaMin = parseFloat(areaRangeMatch[1].replace(',', '.'));
-      areaMax = parseFloat(areaRangeMatch[2].replace(',', '.'));
-      area = areaMin;
-    } else {
-      // B. Captura área simple con prefijos: "📐 183 m²", "Area: 180 Mts", "Mínimo 150m2", "Mínimo 160m"
-      const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)/i);
+    // A. Captura rango de área con soporte para unidades intermedias o prefijo m2: (ej: "M2: 180 – 200", "de 70m2 a 80m2", "de 50-70 mt2", "50 a 70 m2", "50-70 metros")
+    const areaRangeMatch = clean.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*:?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?/i);
+    if (areaRangeMatch && (areaRangeMatch[1] || areaRangeMatch[2])) {
+      const hasAreaCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaRangeMatch[0]);
+      const n1 = parseFloat(areaRangeMatch[1].replace(',', '.'));
+      const n2 = parseFloat(areaRangeMatch[2].replace(',', '.'));
+      if (hasAreaCtx && !isNaN(n1) && !isNaN(n2) && n1 >= 15 && n1 <= 15000 && n2 >= 15 && n2 <= 15000) {
+        areaMin = Math.min(n1, n2);
+        areaMax = Math.max(n1, n2);
+        area = areaMin;
+      }
+    }
+    if (area === 0) {
+      // B. Captura área simple con prefijos: "📐 183 m²", "M2: 180", "Area: 180 Mts", "Mínimo 150m2", "Mínimo 160m"
+      const areaMatch = clean.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|m²)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?/i);
       if (areaMatch) {
-        area = parseFloat(areaMatch[1].replace(',', '.'));
-        areaMin = area;
-        areaMax = area;
+        const hasAreaCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaMatch[0]);
+        const val = parseFloat(areaMatch[1].replace(',', '.'));
+        if (hasAreaCtx && !isNaN(val) && val >= 15 && val <= 15000) {
+          area = val;
+          areaMin = area;
+          areaMax = area;
+        }
       }
     }
   }
@@ -1131,6 +1143,29 @@ export function extractFallbackDataFromText(text: string): any {
   else if (clean.includes("chapinero central")) zone = "Chapinero Central";
   else if (clean.includes("chapinero")) zone = "Chapinero";
   else if (clean.includes("usaquen") || clean.includes("usaquén")) zone = "Usaquén";
+
+  if (!zone) {
+    try {
+      const bounds = parseStreetCarreraBoundaries(text);
+      if (bounds.minStreet && bounds.maxStreet) {
+        const defaultMaxCra = (bounds.maxStreet <= 100) ? 20 : 45;
+        const idecaRes = lookupBarriosByPerimeter({
+          calleNorte: bounds.maxStreet,
+          calleSur: bounds.minStreet,
+          craOriente: bounds.minCarrera || 1,
+          craOccidente: bounds.maxCarrera || defaultMaxCra,
+          ciudad: "bogota"
+        });
+        if (idecaRes.barrios && idecaRes.barrios.length > 0) {
+          const preferred = idecaRes.barrios.find(b => b.toLowerCase().includes("chico") || b.toLowerCase().includes("cabrera")) || idecaRes.barrios[0];
+          zone = preferred;
+          if (!city) city = "Bogotá, D.C.";
+        }
+      }
+    } catch (e) {
+      // Ignorar error si no se puede resolver perímetro
+    }
+  }
 
   // ── DETECCIONES DOCTRINALES ESTRUCTURADAS (v31.72) ──
   const noTerceriaMatch = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(clean);

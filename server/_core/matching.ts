@@ -389,6 +389,22 @@ export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundar
     }
   }
 
+  // Caso 2C: 'de la 13 a la 7ª', 'de la 13 a la 7', 'de 13 a 7', 'entre 7 y 15', 'de la 7 a la 15'
+  if (!res.minCarrera || !res.maxCarrera) {
+    const contextCarreraRegex = /(?:de|entre)\s+(?:la\s+)?(\d{1,2}|septima|7a?)\s*(?:a|y|-|hasta)\s*(?:la\s+)?(\d{1,2}|septima|7a?)/i;
+    const match = norm.match(contextCarreraRegex);
+    if (match) {
+      const raw1 = match[1].replace(/7a?/i, "7").replace(/septima/i, "7");
+      const raw2 = match[2].replace(/7a?/i, "7").replace(/septima/i, "7");
+      const n1 = parseInt(raw1, 10);
+      const n2 = parseInt(raw2, 10);
+      if (!isNaN(n1) && !isNaN(n2) && n1 >= 1 && n1 <= 40 && n2 >= 1 && n2 <= 40 && (n1 !== res.minStreet || n2 !== res.maxStreet)) {
+        res.minCarrera = Math.min(n1, n2);
+        res.maxCarrera = Math.max(n1, n2);
+      }
+    }
+  }
+
   // 3. Orientación en cuadrante arterial
   const mencionaAutopistaNorte = norm.includes("autopista norte") || norm.includes("autonorte");
   const orienteAutopista = norm.includes("arriba de la autopista") || norm.includes("oriente de la autopista") || norm.includes("sobre la autopista");
@@ -782,11 +798,12 @@ export function matchesGeography(
     return { matches: false, score: 0 };
   }
 
-  // 1.45 Guard Doctrinal v21.21: Cardinales y Zonas Genéricas ("Norte", "Sur", "Oriente", "Occidente", "Centro", "Sabana")
-  // "Norte" NO es un barrio ni vereda. No puede coincidir como nombre de barrio ni dar 20 puntos por coincidir la palabra "Norte".
+  // 1.45 Guard Doctrinal v21.21: Cardinales y Zonas Genéricas ("Norte", "Sur", "Oriente", "Occidente", "Centro", "Sabana", Ciudades)
+  // "Norte" o "Bogotá" NO es un barrio ni vereda. No puede coincidir como nombre de barrio ni dar 20 puntos por coincidir la palabra "Norte" o "Bogotá".
   const GENERIC_CARDINAL_TERMS = new Set([
     "norte", "sur", "oriente", "occidente", "centro", "sabana", "sabana norte", "sabana occidente",
     "zona norte", "zona sur", "zona oriente", "zona occidente", "zona centro",
+    "bogota", "bogotá", "bogota d.c.", "bogota dc", "bogota, d.c.", "medellin", "medellín", "cali", "barranquilla", "cartagena", "bucaramanga", "colombia",
     "bogota norte", "bogotá norte", "bogota sur", "bogotá sur", "bogota centro", "bogotá centro",
     "bogota occidente", "bogotá occidente", "cualquiera", "varias zonas", "varios barrios",
     "toda la ciudad", "sin especificar", "n/e", "na", "n/a", "por definir"
@@ -795,19 +812,13 @@ export function matchesGeography(
   const isReqGeneric = !reqZone || GENERIC_CARDINAL_TERMS.has(reqZone.toLowerCase().trim());
   const isPropGeneric = !propZone || GENERIC_CARDINAL_TERMS.has(propZone.toLowerCase().trim());
 
-  // Si la zona es genérica (ej: "Norte") y NO hay delimitación vial de calles/carreras coincidentes ni barrio específico, BLOQUEAR (0%)
+  // Si la zona es genérica (ej: "Norte" o ciudad sin barrio) y NO hay delimitación vial de calles/carreras coincidentes ni barrio específico, BLOQUEAR (0%)
   if (isReqGeneric || isPropGeneric) {
     const hasStreetBoundaryMatch = (propNumbers.street && reqBoundaries.minStreet !== undefined && reqBoundaries.maxStreet !== undefined && propNumbers.street >= reqBoundaries.minStreet && propNumbers.street <= reqBoundaries.maxStreet)
       || (propNumbers.carrera && reqBoundaries.minCarrera !== undefined && reqBoundaries.maxCarrera !== undefined && propNumbers.carrera >= reqBoundaries.minCarrera && propNumbers.carrera <= reqBoundaries.maxCarrera);
     if (!hasStreetBoundaryMatch) {
       return { matches: false, score: 0 };
     }
-  }
-
-  // Si la zona/localidad requerida es genérica de ciudad (ej. "bogota", "medellin", "cali"), y hay barrio en la propiedad
-  const stopCities = new Set(["bogota", "bogotá", "medellin", "medellín", "cali", "barranquilla", "cartagena", "bucaramanga", "colombia"]);
-  if (!reqZone || stopCities.has(reqZone.toLowerCase().trim())) {
-    return { matches: true, score: 20 };
   }
 
   // 1.5 Guard de Sub-barrios y Micro-sectores Estrictos (v20.0 Precisión Catastral)
@@ -1927,8 +1938,17 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   const reqType = (requirement.tipoInmuebleDeseado || requirement.propertyType || "").toLowerCase().trim();
   const propType = (property.propertyType || "").toLowerCase().trim();
 
-  const reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
-  const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
+  let reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
+  let propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
+
+  if (requirement.rawText && (!reqZone || reqZone === "bogota" || reqZone === "n/e" || reqZone === "na")) {
+    const fbR = extractFallbackDataFromText(requirement.rawText);
+    if (fbR.zone) reqZone = normalizarTextoGeografico(fbR.zone);
+  }
+  if (property.rawText && (!propZone || propZone === "bogota" || propZone === "n/e" || propZone === "na")) {
+    const fbP = extractFallbackDataFromText(property.rawText);
+    if (fbP.zone) propZone = normalizarTextoGeografico(fbP.zone);
+  }
 
   // ── FILTRO DURO 0: Inmueble/Requerimiento Vacío o Sin Contenido Legible (Tolerancia Cero) ──
   const propTextClean = (property.rawText || property.description || property.name || "").trim();

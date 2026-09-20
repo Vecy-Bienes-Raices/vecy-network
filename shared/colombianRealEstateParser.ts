@@ -233,7 +233,7 @@ export function parseColombianCurrency(rawText: string): number | null {
     .toLowerCase()
     .replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "")
     .replace(/[*_~]/g, "")
-    .replace(/,/g, ".");
+    .replace(/[\u2013\u2014]/g, "-");
 
   // Caso A: Cifra completa directa con puntos o comillas de miles: ej: "$1.450.000.000", "$8.300.000", "1'450.000.000"
   const fullMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,3}(?:[.'’]\d{3}){2,3})/);
@@ -242,28 +242,34 @@ export function parseColombianCurrency(rawText: string): number | null {
     if (!isNaN(val) && val > 0) return val;
   }
 
-  // Caso B: Millones con separación por espacios, puntos, comillas o compacto:
-  const millionMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,4}(?:[\s.'’]\d{3})*|\d+(?:\.\d+)?)\s*(?:mil\s*millones?|millones|millón|mm|m\b)/i);
+  // Caso B: Millones con separación por espacios, puntos, comillas, comas o compacto (ej: "1,800 MILLONES", "1.450M", "$1 450 Millones")
+  const millionMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,4}(?:[\s.'’,]\d{3})*|\d+(?:[.,]\d+)?)\s*(?:mil\s*millones?|millones|millón|mm|m\b)/i);
   if (millionMatch) {
     const rawNumber = millionMatch[1].replace(/[\s'’]/g, "");
-    const value = parseFloat(rawNumber);
+    if (clean.includes("mil millon")) {
+      const v = parseFloat(rawNumber.replace(",", "."));
+      return Math.round(v * 1_000_000_000);
+    }
+    // Si tiene formato de miles con punto o coma (ej: "1.800", "1,800", "1.450") seguido de millones -> 1.800 * 1M = 1.800.000.000
+    if (/^\d{1,4}[.,]\d{3}$/.test(rawNumber)) {
+      const parsedThousands = parseInt(rawNumber.replace(/[.,]/g, ""), 10);
+      return parsedThousands * 1_000_000;
+    }
+    const value = parseFloat(rawNumber.replace(",", "."));
     if (!isNaN(value)) {
-      if (clean.includes("mil millon")) {
-        return Math.round(value * 1_000_000_000);
-      }
       return value < 10000 ? Math.round(value * 1_000_000) : Math.round(value);
     }
   }
 
   // Caso C: Miles con k o mil: ej: "800k", "800 mil", "500 k", "2000 mil"
-  const thousandMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d+(?:\.\d+)?)\s*(?:mil|k\b)/i);
+  const thousandMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d+(?:[.,]\d+)?)\s*(?:mil|k\b)/i);
   if (thousandMatch) {
-    const val = parseFloat(thousandMatch[1]);
+    const val = parseFloat(thousandMatch[1].replace(",", "."));
     if (!isNaN(val)) return Math.round(val * 1_000);
   }
 
   // Caso D: Taquigrafía de miles con un solo punto (ej: "3.500" para arriendo -> 3.500.000)
-  const shortThousandMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,3})\.(\d{3})\b/);
+  const shortThousandMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,3})[.,](\d{3})\b/);
   if (shortThousandMatch) {
     const n = parseInt(shortThousandMatch[1] + shortThousandMatch[2], 10);
     return n * 1_000;
@@ -280,19 +286,27 @@ export function parseArea(rawText: string): number | null {
   const clean = rawText
     .toLowerCase()
     .replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "")
+    .replace(/[\u2013\u2014]/g, "-")
     .replace(/[*_~]/g, "");
 
-  // Rango: "160 a 200 m2" o "de 160-200 mt"
-  const rangeMatch = clean.match(/(?:área|area|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)/i);
-  if (rangeMatch) {
+  // Rango: "M2: 180 - 200", "160 a 200 m2" o "de 160-200 mt"
+  const rangeMatch = clean.match(/(?:área|area|superficie|m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*:?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?/i);
+  if (rangeMatch && (rangeMatch[1] || rangeMatch[2])) {
+    const hasAreaCtx = /(?:área|area|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(rangeMatch[0]);
     const val = parseFloat(rangeMatch[1].replace(",", "."));
+    if (hasAreaCtx && !isNaN(val) && val > 10 && val < 50000) return val;
+  }
+
+  // Valor directo con o sin prefijo: "M2: 180", "Minimo 160m", "230M2", "160 m2", "160 mts", "área: 230"
+  const matchWithUnit = clean.match(/(?:área|area|minimo|mínimo|maximo|máximo|superficie|desde)?\s*[:\s]*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|m²|mt2|mts|metros(?:\s+cuadrados)?|m\b)/i);
+  if (matchWithUnit) {
+    const val = parseFloat(matchWithUnit[1].replace(",", "."));
     if (!isNaN(val) && val > 10 && val < 50000) return val;
   }
 
-  // Valor directo con o sin prefijo: "Minimo 160m", "230M2", "160 m2", "160 mts", "área: 230"
-  const match = clean.match(/(?:área|area|minimo|mínimo|maximo|máximo|superficie|desde)?\s*[:\s]*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|m²|mt2|mts|metros(?:\s+cuadrados)?|m\b)/i);
-  if (match) {
-    const val = parseFloat(match[1].replace(",", "."));
+  const matchWithPrefix = clean.match(/(?:área|area|superficie|m2|mts2|mt2|mts|m²)\s*[:\s]+(\d+(?:[.,]\d+)?)/i);
+  if (matchWithPrefix) {
+    const val = parseFloat(matchWithPrefix[1].replace(",", "."));
     if (!isNaN(val) && val > 10 && val < 50000) return val;
   }
 

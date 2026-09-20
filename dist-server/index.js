@@ -3850,6 +3850,20 @@ function parseStreetCarreraBoundaries(text2) {
       }
     }
   }
+  if (!res.minCarrera || !res.maxCarrera) {
+    const contextCarreraRegex = /(?:de|entre)\s+(?:la\s+)?(\d{1,2}|septima|7a?)\s*(?:a|y|-|hasta)\s*(?:la\s+)?(\d{1,2}|septima|7a?)/i;
+    const match = norm2.match(contextCarreraRegex);
+    if (match) {
+      const raw1 = match[1].replace(/7a?/i, "7").replace(/septima/i, "7");
+      const raw2 = match[2].replace(/7a?/i, "7").replace(/septima/i, "7");
+      const n1 = parseInt(raw1, 10);
+      const n2 = parseInt(raw2, 10);
+      if (!isNaN(n1) && !isNaN(n2) && n1 >= 1 && n1 <= 40 && n2 >= 1 && n2 <= 40 && (n1 !== res.minStreet || n2 !== res.maxStreet)) {
+        res.minCarrera = Math.min(n1, n2);
+        res.maxCarrera = Math.max(n1, n2);
+      }
+    }
+  }
   const mencionaAutopistaNorte = norm2.includes("autopista norte") || norm2.includes("autonorte");
   const orienteAutopista = norm2.includes("arriba de la autopista") || norm2.includes("oriente de la autopista") || norm2.includes("sobre la autopista");
   const occidenteAutopista = norm2.includes("abajo de la autopista") || norm2.includes("occidente de la autopista");
@@ -4106,6 +4120,18 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
     "zona oriente",
     "zona occidente",
     "zona centro",
+    "bogota",
+    "bogot\xE1",
+    "bogota d.c.",
+    "bogota dc",
+    "bogota, d.c.",
+    "medellin",
+    "medell\xEDn",
+    "cali",
+    "barranquilla",
+    "cartagena",
+    "bucaramanga",
+    "colombia",
     "bogota norte",
     "bogot\xE1 norte",
     "bogota sur",
@@ -4131,10 +4157,6 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
     if (!hasStreetBoundaryMatch) {
       return { matches: false, score: 0 };
     }
-  }
-  const stopCities = /* @__PURE__ */ new Set(["bogota", "bogot\xE1", "medellin", "medell\xEDn", "cali", "barranquilla", "cartagena", "bucaramanga", "colombia"]);
-  if (!reqZone || stopCities.has(reqZone.toLowerCase().trim())) {
-    return { matches: true, score: 20 };
   }
   const tieneAledanosInicial = hasAledanos(reqZoneRaw);
   if (reqZone && propZone && !tieneAledanosInicial) {
@@ -5434,8 +5456,16 @@ function explicarMatch(requirement, property) {
   const reqEstrato = requirement.estratoDeseado != null ? Number(requirement.estratoDeseado) : -1;
   const reqType = (requirement.tipoInmuebleDeseado || requirement.propertyType || "").toLowerCase().trim();
   const propType = (property.propertyType || "").toLowerCase().trim();
-  const reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
-  const propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
+  let reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
+  let propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
+  if (requirement.rawText && (!reqZone || reqZone === "bogota" || reqZone === "n/e" || reqZone === "na")) {
+    const fbR = extractFallbackDataFromText(requirement.rawText);
+    if (fbR.zone) reqZone = normalizarTextoGeografico(fbR.zone);
+  }
+  if (property.rawText && (!propZone || propZone === "bogota" || propZone === "n/e" || propZone === "na")) {
+    const fbP = extractFallbackDataFromText(property.rawText);
+    if (fbP.zone) propZone = normalizarTextoGeografico(fbP.zone);
+  }
   const propTextClean = (property.rawText || property.description || property.name || "").trim();
   const reqTextClean = (requirement.rawText || requirement.name || "").trim();
   if (propTextClean.length < 8 || reqTextClean.length < 8) {
@@ -7840,8 +7870,8 @@ function parseColombianPriceOrBudget(numStr, unit, isSale) {
     }
     return parsed;
   }
-  if (/^\d{1,3}\.\d{3}$/.test(cleanStr)) {
-    const n = parseInt(cleanStr.replace(".", ""), 10);
+  if (/^\d{1,3}[.,]\d{3}$/.test(cleanStr)) {
+    const n = parseInt(cleanStr.replace(/[.,]/g, ""), 10);
     if (!isSale) {
       return n * 1e3;
     }
@@ -7859,7 +7889,7 @@ function parseColombianPriceOrBudget(numStr, unit, isSale) {
       }
       return Math.round(val);
     }
-    if (val < 10 && val > 0 && cleanStr.includes(".")) {
+    if (val < 10 && val > 0 && (cleanStr.includes(".") || cleanStr.includes(","))) {
       return Math.round(val * 1e9);
     }
     if (val >= 10 && val < 100 && isSale) {
@@ -7877,7 +7907,7 @@ function parseColombianPriceOrBudget(numStr, unit, isSale) {
   return Math.round(val);
 }
 function extractFallbackDataFromText(text2) {
-  const clean = (text2 || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/['´`’‘\u00B4\u2019\u2018]/g, ".").replace(/[*_~]/g, "").replace(/[\t ]+/g, " ");
+  const clean = (text2 || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[\u2013\u2014]/g, "-").replace(/['´`’‘\u00B4\u2019\u2018]/g, ".").replace(/[*_~]/g, "").replace(/[\t ]+/g, " ");
   let transactionType = "venta";
   const isInvestorPurchase = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|para compra|compro|compra ya|busco para compra)\b/i.test(clean);
   const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(clean);
@@ -7950,7 +7980,7 @@ function extractFallbackDataFromText(text2) {
       }
     }
   }
-  const canonMatch = clean.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|vr\s*[\.\/]?\s*renta|renta)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
+  const canonMatch = clean.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|vr\s*[\.\/]?\s*renta|renta)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
   if (canonMatch) {
     const isSale = false;
     const computed = parseColombianPriceOrBudget(canonMatch[1], canonMatch[2] || "", isSale);
@@ -7958,7 +7988,7 @@ function extractFallbackDataFromText(text2) {
       rentPrice = computed;
     }
   }
-  const saleMatch = clean.match(/(?:precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|vr\s*[\.\/]?\s*venta|venta\s*(?:de\s*apartamento|de\s*apto|de\s*casa)?|valor\s*un\s*poco\s*negociable|valor\s*negociable|precio\s*negociable)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
+  const saleMatch = clean.match(/(?:precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|vr\s*[\.\/]?\s*venta|venta\s*(?:de\s*apartamento|de\s*apto|de\s*casa)?|valor\s*un\s*poco\s*negociable|valor\s*negociable|precio\s*negociable)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
   if (saleMatch) {
     const isSale = true;
     const computed = parseColombianPriceOrBudget(saleMatch[1], saleMatch[2] || "", isSale);
@@ -7968,7 +7998,7 @@ function extractFallbackDataFromText(text2) {
     }
   }
   if (price === 0 && rentPrice === 0) {
-    const rangeMatch = clean.match(/(?:presupuesto|prespuesto|ppto|inversi[oó]n|compra)\s*:?\s*(?:entre\s+)?\$?\s*([\d][\d.\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i) || clean.match(/(?:entre|de)\s+\$?\s*([\d][\d.\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
+    const rangeMatch = clean.match(/(?:presupuesto|prespuesto|ppto|inversi[oó]n|compra)\s*:?\s*(?:entre\s+)?\$?\s*([\d][\d.,\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.,\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i) || clean.match(/(?:entre|de)\s+\$?\s*([\d][\d.,\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.,\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
     if (rangeMatch) {
       const isSale = transactionType !== "arriendo";
       presupuestoMin = parseColombianPriceOrBudget(rangeMatch[1], rangeMatch[3] || "", isSale);
@@ -7980,7 +8010,7 @@ function extractFallbackDataFromText(text2) {
     }
   }
   if (price === 0 && rentPrice === 0) {
-    const ceilingMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|prespuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|\btope\b|\btecho\b|\bl[ií]mite\b)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\$?\s*([\d][\d.\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
+    const ceilingMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|prespuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|\btope\b|\btecho\b|\bl[ií]mite\b)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
     if (ceilingMatch) {
       const afterText = clean.slice(clean.indexOf(ceilingMatch[0]) + ceilingMatch[0].length, clean.indexOf(ceilingMatch[0]) + ceilingMatch[0].length + 15);
       if (!/años|anos|edad|antig/i.test(afterText)) {
@@ -7998,7 +8028,7 @@ function extractFallbackDataFromText(text2) {
     }
   }
   if (price === 0 && rentPrice === 0) {
-    const simplePriceMatch = clean.match(/(?:precio|valor)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
+    const simplePriceMatch = clean.match(/(?:precio|valor)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
     if (simplePriceMatch) {
       const isSale = transactionType !== "arriendo";
       const computed = parseColombianPriceOrBudget(simplePriceMatch[1], simplePriceMatch[2] || "", isSale);
@@ -8026,7 +8056,7 @@ function extractFallbackDataFromText(text2) {
         }
       }
       if (price === 0) {
-        const mmMatches = [...clean.matchAll(/(?:precio|valor|venta)?\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.\s']*)\s*(?:mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/gi)];
+        const mmMatches = [...clean.matchAll(/(?:precio|valor|venta)?\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)\s*(?:mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/gi)];
         for (const m of mmMatches) {
           const computed = parseColombianPriceOrBudget(m[1], "millones", true);
           if (computed >= 3e7 && computed !== adminFee && !isPhoneNumberNotPrice(computed, text2)) {
@@ -8065,17 +8095,27 @@ function extractFallbackDataFromText(text2) {
     }
   }
   if (area === 0) {
-    const areaRangeMatch = clean.match(/(?:📐|area|área|superficie)?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
-    if (areaRangeMatch) {
-      areaMin = parseFloat(areaRangeMatch[1].replace(",", "."));
-      areaMax = parseFloat(areaRangeMatch[2].replace(",", "."));
-      area = areaMin;
-    } else {
-      const areaMatch = clean.match(/(?:📐|area|área|superficie)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)/i);
+    const areaRangeMatch = clean.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*:?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?/i);
+    if (areaRangeMatch && (areaRangeMatch[1] || areaRangeMatch[2])) {
+      const hasAreaCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaRangeMatch[0]);
+      const n1 = parseFloat(areaRangeMatch[1].replace(",", "."));
+      const n2 = parseFloat(areaRangeMatch[2].replace(",", "."));
+      if (hasAreaCtx && !isNaN(n1) && !isNaN(n2) && n1 >= 15 && n1 <= 15e3 && n2 >= 15 && n2 <= 15e3) {
+        areaMin = Math.min(n1, n2);
+        areaMax = Math.max(n1, n2);
+        area = areaMin;
+      }
+    }
+    if (area === 0) {
+      const areaMatch = clean.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|m²)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?/i);
       if (areaMatch) {
-        area = parseFloat(areaMatch[1].replace(",", "."));
-        areaMin = area;
-        areaMax = area;
+        const hasAreaCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaMatch[0]);
+        const val = parseFloat(areaMatch[1].replace(",", "."));
+        if (hasAreaCtx && !isNaN(val) && val >= 15 && val <= 15e3) {
+          area = val;
+          areaMin = area;
+          areaMax = area;
+        }
       }
     }
   }
@@ -8457,6 +8497,27 @@ function extractFallbackDataFromText(text2) {
   else if (clean.includes("chapinero central")) zone = "Chapinero Central";
   else if (clean.includes("chapinero")) zone = "Chapinero";
   else if (clean.includes("usaquen") || clean.includes("usaqu\xE9n")) zone = "Usaqu\xE9n";
+  if (!zone) {
+    try {
+      const bounds = parseStreetCarreraBoundaries(text2);
+      if (bounds.minStreet && bounds.maxStreet) {
+        const defaultMaxCra = bounds.maxStreet <= 100 ? 20 : 45;
+        const idecaRes = lookupBarriosByPerimeter({
+          calleNorte: bounds.maxStreet,
+          calleSur: bounds.minStreet,
+          craOriente: bounds.minCarrera || 1,
+          craOccidente: bounds.maxCarrera || defaultMaxCra,
+          ciudad: "bogota"
+        });
+        if (idecaRes.barrios && idecaRes.barrios.length > 0) {
+          const preferred = idecaRes.barrios.find((b) => b.toLowerCase().includes("chico") || b.toLowerCase().includes("cabrera")) || idecaRes.barrios[0];
+          zone = preferred;
+          if (!city) city = "Bogot\xE1, D.C.";
+        }
+      }
+    } catch (e) {
+    }
+  }
   const noTerceriaMatch = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(clean);
   const aceptaTerceria = !noTerceriaMatch;
   const standByDirectoVecy = noTerceriaMatch;
@@ -12264,6 +12325,7 @@ var init_janIA = __esm({
     init_geography();
     init_divipola();
     init_matching();
+    init_geo_lookup();
     init_voiceTranscription();
     init_colombianRealEstateParser();
     init_storage();
