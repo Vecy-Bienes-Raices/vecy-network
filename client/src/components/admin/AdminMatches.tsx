@@ -314,6 +314,75 @@ const DYNAMIC_AMENITIES: Array<{
   { name: "Zonas Deportivas", patterns: ["zonas deportivas", "polideportivo"], icon: <Trophy className="w-3.5 h-3.5" /> },
 ];
 
+export const ATTRIBUTE_CATALOG: Array<{
+  key: string;
+  label: string;
+  defaultReq: string;
+  defaultProp: string;
+}> = [
+  { key: "mascotas", label: "Acepta Mascotas (Pet Friendly)", defaultReq: "Exige que admita mascotas", defaultProp: "Sí (Edificio Pet Friendly)" },
+  { key: "calentador", label: "Calentador (Gas / Eléctrico)", defaultReq: "Exige calentador a gas", defaultProp: "Sí (Calentador a gas instalado)" },
+  { key: "puerta_seguridad", label: "Puerta de Seguridad / Blindada", defaultReq: "Desea puerta blindada", defaultProp: "Sí (Puerta de seguridad)" },
+  { key: "cortinas_blackouts", label: "Cortinas / Persianas / Blackouts", defaultReq: "Desea cortinas/blackouts instalados", defaultProp: "Sí (Incluye cortinas/blackouts)" },
+  { key: "parqueadero_cubierto", label: "Parqueadero Cubierto / Sótano", defaultReq: "Exige parqueadero cubierto", defaultProp: "Sí (En sótano cubierto)" },
+  { key: "deposito", label: "Depósito / Cuarto Útil", defaultReq: "Exige depósito privado", defaultProp: "Sí (Depósito en sótano)" },
+  { key: "gas_natural", label: "Gas Natural Domiciliario", defaultReq: "Exige gas natural", defaultProp: "Sí (Red de gas natural conectada)" },
+  { key: "lavanderia_indep", label: "Zona de Lavandería Independiente", defaultReq: "Exige zona de ropas ventilada", defaultProp: "Sí (Zona de lavandería independiente)" },
+  { key: "aire_acondicionado", label: "Aire Acondicionado", defaultReq: "Desea aire acondicionado", defaultProp: "Sí (Aire acondicionado instalado)" },
+  { key: "balcon_terraza", label: "Balcón / Terraza Privada", defaultReq: "Exige balcón o terraza", defaultProp: "Sí (Balcón privado con vista)" },
+  { key: "vista_panoramica", label: "Vista Panorámica / Exterior", defaultReq: "Exige vista exterior despejada", defaultProp: "Sí (Exterior vista panorámica)" },
+  { key: "gimnasio", label: "Gimnasio Dotado", defaultReq: "Desea gimnasio en el edificio", defaultProp: "Sí (Gimnasio completamente dotado)" },
+  { key: "piscina", label: "Piscina Climatizada", defaultReq: "Desea piscina", defaultProp: "Sí (Piscina climatizada)" },
+  { key: "parque_infantil", label: "Zonas Verdes / Parque Infantil", defaultReq: "Desea zonas infantiles para niños", defaultProp: "Sí (Parque infantil y zonas verdes)" },
+  { key: "salon_social", label: "Salón Comunal / Social", defaultReq: "Desea salón de eventos", defaultProp: "Sí (Salón social amplio)" },
+  { key: "vigilancia_24_7", label: "Vigilancia / Portería 24/7", defaultReq: "Exige seguridad privada 24 horas", defaultProp: "Sí (Portería 24/7 con CCTV)" },
+  { key: "ascensor", label: "Ascensor", defaultReq: "Exige ascensor directo o al piso", defaultProp: "Sí (Edificio con ascensor)" },
+  { key: "planta_electrica", label: "Planta Eléctrica de Suplencia Total", defaultReq: "Desea planta eléctrica total", defaultProp: "Sí (Planta eléctrica suplencia total)" },
+  { key: "otra", label: "✍️ Otra Característica (Personalizada)", defaultReq: "Exige / Indispensable", defaultProp: "Sí cuenta con ello" },
+];
+
+export const REJECT_CATEGORIES = [
+  {
+    category: "🎯 Criterio Innegociable del Cliente (Demanda descarta Oferta)",
+    badgeColor: "text-amber-400 bg-amber-500/10 border-amber-500/30",
+    options: [
+      { id: "presupuesto_alto", label: "Presupuesto o administración excede capacidad máxima del cliente", icon: "💰" },
+      { id: "zona_incompatible", label: "Zona o micro-sector incompatible (calle, costado o entorno no deseado)", icon: "📍" },
+      { id: "distribucion_espacio", label: "Distribución o metraje no se ajusta (espacios reducidos, mala distribución)", icon: "📐" },
+      { id: "piso_vista_luz", label: "Piso, vista o iluminación desfavorables (inmueble oscuro, interior, o piso bajo)", icon: "☀️" },
+      { id: "estado_inmueble", label: "Estado físico incompatible (cliente pide moderno/estrenar y es para remodelar)", icon: "🔨" },
+      { id: "garajes_incompatibles", label: "Garajes incompatibles (exige independiente y es lineal, o no tiene)", icon: "🚗" },
+      { id: "politica_convivencia", label: "Restricción de convivencia / Faltante indispensable (no admite mascotas, sin ascensor)", icon: "🐾" },
+    ]
+  },
+  {
+    category: "🔒 Disponibilidad Comercial del Inmueble (Oferta no disponible)",
+    badgeColor: "text-rose-400 bg-rose-500/10 border-rose-500/30",
+    options: [
+      { id: "ya_vendido", label: "Inmueble YA VENDIDO (marcar como Vendido y retirar del catálogo)", icon: "🏷️" },
+      { id: "ya_arrendado", label: "Inmueble YA ARRENDADO (marcar como Arrendado y retirar del catálogo)", icon: "🔑" },
+      { id: "retirado_mercado", label: "Inmueble suspendido o retirado temporalmente por el propietario", icon: "⛔" },
+      { id: "asesor_no_responde", label: "Captador o propietario no responde / no permite agendar visitas", icon: "📵" },
+    ]
+  },
+  {
+    category: "💼 Condiciones Comerciales / Jurídicas de Cierre",
+    badgeColor: "text-cyan-400 bg-cyan-500/10 border-cyan-500/30",
+    options: [
+      { id: "comision_rechazada", label: "Comisión u honorarios no aceptados por la contraparte (no comparte 50/50)", icon: "🤝" },
+      { id: "forma_pago", label: "Forma de pago incompatible (requiere crédito hipotecario y oferta solo contado)", icon: "💳" },
+      { id: "traba_juridica", label: "Inconveniente jurídico (embargo, sucesión pendiente, afectación familiar)", icon: "⚖️" },
+    ]
+  },
+  {
+    category: "✍️ Otro Motivo / Enseñanza Específica para JanIA",
+    badgeColor: "text-purple-400 bg-purple-500/10 border-purple-500/30",
+    options: [
+      { id: "otro_motivo", label: "Otro motivo puntual (especificar detalles a continuación)", icon: "✍️" },
+    ]
+  }
+];
+
 export const NO_TERCERIA_REGEX = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50|50[-/]50|solo\s*50[-/]50|no\s*intermediarios)\b/i;
 
 export function checkIsStandbyDirectoVecy(prop: any, req: any): boolean {
@@ -464,7 +533,7 @@ const scoreRowsCache = new Map<string, { rows: ScoreRow[]; autoScore: number; pt
 export function scoreRows(req: any, prop: any) {
   if (!req || !prop) return { rows: [], autoScore: 0, pts: 0, max: 0 };
 
-  const cacheKey = `${req.id || 'r'}_${req.presupuestoMax || ''}_${req.areaMin || ''}_${req.habitacionesMin || ''}_${req.banosMin || ''}_${req.parqueaderosMin || ''}_${req.zonaDeseada || ''}_${req.addressNeighborhood || ''}_${req.ciudadDeseada || ''}_${req.tipoInmuebleDeseado || ''}_${req.tipoNegocioDeseado || ''}_${req.idUsuarioWhatsapp || ''}_${req.antiguedadMax || ''}_${(req.caracteristicasDeseadas as any)?.interiorExterior || ''}__${prop.id || 'p'}_${prop.price || ''}_${prop.rentPrice || ''}_${prop.adminFee || ''}_${prop.areaTotal || ''}_${prop.bedrooms || ''}_${prop.bathrooms || ''}_${prop.garages || ''}_${prop.stratum || ''}_${prop.zone || ''}_${prop.addressNeighborhood || ''}_${prop.city || ''}_${prop.propertyType || ''}_${prop.transactionType || ''}_${prop.idUsuarioWhatsapp || ''}_${prop.yearBuilt || ''}_${prop.antiguedadAnos || ''}_${(prop.amenities as any)?.interiorExterior || ''}_${(prop.amenities as any)?.antiguedad || ''}`;
+  const cacheKey = `${req.id || 'r'}_${req.presupuestoMax || ''}_${req.areaMin || ''}_${req.habitacionesMin || ''}_${req.banosMin || ''}_${req.parqueaderosMin || ''}_${req.zonaDeseada || ''}_${req.addressNeighborhood || ''}_${req.ciudadDeseada || ''}_${req.tipoInmuebleDeseado || ''}_${req.tipoNegocioDeseado || ''}_${req.idUsuarioWhatsapp || ''}_${req.antiguedadMax || ''}_${JSON.stringify(req.caracteristicasDeseadas || {})}__${prop.id || 'p'}_${prop.price || ''}_${prop.rentPrice || ''}_${prop.adminFee || ''}_${prop.areaTotal || ''}_${prop.bedrooms || ''}_${prop.bathrooms || ''}_${prop.garages || ''}_${prop.stratum || ''}_${prop.zone || ''}_${prop.addressNeighborhood || ''}_${prop.city || ''}_${prop.propertyType || ''}_${prop.transactionType || ''}_${prop.idUsuarioWhatsapp || ''}_${prop.yearBuilt || ''}_${prop.antiguedadAnos || ''}_${JSON.stringify(prop.amenities || {})}`;
 
   if (scoreRowsCache.has(cacheKey)) {
     return scoreRowsCache.get(cacheKey)!;
@@ -2051,35 +2120,102 @@ export function scoreRows(req: any, prop: any) {
 
   // ── INYECCIÓN DINÁMICA DE LAS 64 CARACTERÍSTICAS & AMENIDADES ("POR ARTE DE MAGIA") ──
   for (const item of DYNAMIC_AMENITIES) {
-    const inReq = item.patterns.some(p => reqTextLower.includes(p));
-    const inProp = item.patterns.some(p => propRawText.includes(p));
+    const itemNorm = item.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const reqStoredVal = (req.caracteristicasDeseadas as any)?.[item.name] || (req.caracteristicasDeseadas as any)?.[itemNorm];
+    const propStoredVal = (prop.amenities as any)?.[item.name] || (prop.amenities as any)?.[itemNorm];
+
+    const inReq = item.patterns.some(p => reqTextLower.includes(p)) || Boolean(reqStoredVal);
+    const inProp = item.patterns.some(p => propRawText.includes(p)) || Boolean(propStoredVal);
 
     if (!inReq && !inProp) continue;
 
     let amS: MatchStatus = "neutral";
-    let reqLabel = "Flexible";
-    let propLabel = "Sin especificar";
+    let reqLabel = typeof reqStoredVal === 'string' && reqStoredVal.trim() ? reqStoredVal : "Flexible";
+    let propLabel = typeof propStoredVal === 'string' && propStoredVal.trim() ? propStoredVal : "Sin especificar";
 
     if (inReq && inProp) {
       amS = "exact";
-      reqLabel = `Exige ${item.name}`;
-      propLabel = `Sí (Cuenta con ${item.name})`;
+      if (!reqStoredVal) reqLabel = `Exige ${item.name}`;
+      if (!propStoredVal) propLabel = `Sí (Cuenta con ${item.name})`;
     } else if (!inReq && inProp) {
       amS = "plus";
-      reqLabel = "Flexible";
-      propLabel = `Sí (${item.name} Incluido)`;
+      if (!reqStoredVal) reqLabel = "Flexible";
+      if (!propStoredVal) propLabel = `Sí (${item.name} Incluido)`;
     } else if (inReq && !inProp) {
       const itemNameLower = item.name.toLowerCase();
       const isHard = reqTextLower.includes(`indispensable ${itemNameLower}`) || 
                      reqTextLower.includes(`obligatorio ${itemNameLower}`) || 
                      reqTextLower.includes(`excluyente ${itemNameLower}`) ||
-                     reqTextLower.includes(`si o si ${itemNameLower}`);
+                     reqTextLower.includes(`si o si ${itemNameLower}`) ||
+                     (typeof reqStoredVal === 'string' && (reqStoredVal.toLowerCase().includes('indispensable') || reqStoredVal.toLowerCase().includes('obligatorio')));
       amS = isHard ? "missing" : "warn";
-      reqLabel = isHard ? `Exige ${item.name} (Obligatorio)` : `Desea ${item.name}`;
-      propLabel = `Sin ${item.name} especificado`;
+      if (!reqStoredVal) reqLabel = isHard ? `Exige ${item.name} (Obligatorio)` : `Desea ${item.name}`;
+      if (!propStoredVal) propLabel = `Sin ${item.name} especificado`;
     }
 
     add(item.name, reqLabel, propLabel, amS, item.weight || 3, item.icon);
+  }
+
+  // ── INYECCIÓN DE CARACTERÍSTICAS PERSONALIZADAS ("OTRA CARACTERÍSTICA" EN COTEJO) ──
+  const propAmenitiesObj = (prop.amenities && typeof prop.amenities === 'object') ? prop.amenities : {};
+  const reqCaractObj = (req.caracteristicasDeseadas && typeof req.caracteristicasDeseadas === 'object') ? req.caracteristicasDeseadas : {};
+
+  const standardReservedKeys = new Set([
+    'antiguedad', 'cocina', 'interiorexterior', 'depositos', 'deposito', 'cuartobanoservicio', 'cbs',
+    'balcon', 'terraza', 'piso', 'antiguedadmax', 'estratodeseado', 'areamin', 'presupuestomax',
+    'kitchentype', 'vigilancia', 'visitantes', 'moto', 'motos', 'cava', 'bbq', 'chimenea', 'estudio', 'patio',
+    'shut', 'gas', 'caldera', 'parqueadero'
+  ]);
+
+  const customKeys = new Set<string>();
+  for (const k of Object.keys(propAmenitiesObj)) {
+    const norm = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!standardReservedKeys.has(norm) && !DYNAMIC_AMENITIES.some(a => a.name.toLowerCase().replace(/[^a-z0-9]/g, '') === norm)) {
+      customKeys.add(k);
+    }
+  }
+  for (const k of Object.keys(reqCaractObj)) {
+    const norm = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!standardReservedKeys.has(norm) && !DYNAMIC_AMENITIES.some(a => a.name.toLowerCase().replace(/[^a-z0-9]/g, '') === norm)) {
+      customKeys.add(k);
+    }
+  }
+
+  for (const key of Array.from(customKeys)) {
+    const keyClean = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (standardReservedKeys.has(keyClean) || rows.some(r => {
+      const rClean = r.label.toLowerCase().replace(/[^a-z0-9]/g, '');
+      return rClean === keyClean || rClean.includes(keyClean) || keyClean.includes(rClean);
+    })) {
+      continue;
+    }
+
+    const pVal = propAmenitiesObj[key];
+    const rVal = reqCaractObj[key];
+    if (pVal === undefined && rVal === undefined) continue;
+
+    const hasP = pVal !== undefined && pVal !== null && pVal !== "" && pVal !== false;
+    const hasR = rVal !== undefined && rVal !== null && rVal !== "" && rVal !== false;
+
+    let st: MatchStatus = "neutral";
+    let rLbl = hasR ? String(rVal) : "Flexible / No exigido";
+    let pLbl = hasP ? String(pVal) : "Sin especificar";
+
+    if (hasR && hasP) {
+      const pStr = String(pVal).toLowerCase();
+      if (pStr === "no" || pStr.includes("no cuenta") || pStr.includes("no tiene") || pStr.includes("no admite")) {
+        st = "missing";
+      } else {
+        st = "exact";
+      }
+    } else if (!hasR && hasP) {
+      st = "plus";
+    } else if (hasR && !hasP) {
+      st = "warn";
+    }
+
+    const formattedLabel = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+    add(formattedLabel, rLbl, pLbl, st, 3, <Sparkles className="w-3.5 h-3.5 text-amber-400" />);
   }
 
   // 30. Teléfono / Contacto WhatsApp
@@ -2752,6 +2888,89 @@ export default function AdminMatches() {
   const [rejectModalMatch, setRejectModalMatch] = React.useState<any>(null);
   const [rejectReason, setRejectReason] = React.useState<string>('');
   const [customRejectNote, setCustomRejectNote] = React.useState<string>('');
+
+  // Estados para Agregar Atributo / Campo al Cotejo (Robustecer Oferta y Demanda)
+  const [addFieldModalMatch, setAddFieldModalMatch] = React.useState<any>(null);
+  const [selectedAttributeKey, setSelectedAttributeKey] = React.useState<string>('mascotas');
+  const [customAttributeName, setCustomAttributeName] = React.useState<string>('');
+  const [addFieldReqVal, setAddFieldReqVal] = React.useState<string>('Exige / Indispensable');
+  const [addFieldPropVal, setAddFieldPropVal] = React.useState<string>('Sí (Cuenta con ello)');
+  const [addFieldStatus, setAddFieldStatus] = React.useState<MatchStatus>('exact');
+  const [persistInOffer, setPersistInOffer] = React.useState<boolean>(true);
+  const [persistInDemand, setPersistInDemand] = React.useState<boolean>(true);
+  const [isSavingAddField, setIsSavingAddField] = React.useState<boolean>(false);
+
+  const handleSaveNewField = async () => {
+    if (!addFieldModalMatch) return;
+    setIsSavingAddField(true);
+    try {
+      const isCustom = selectedAttributeKey === 'otra';
+      const attrName = isCustom 
+        ? customAttributeName.trim() 
+        : (ATTRIBUTE_CATALOG.find(a => a.key === selectedAttributeKey)?.label || selectedAttributeKey);
+
+      if (!attrName) {
+        toast.error("Por favor especifica el nombre de la característica");
+        setIsSavingAddField(false);
+        return;
+      }
+
+      const attrKey = attrName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const pId = addFieldModalMatch.property?.id;
+      const rId = addFieldModalMatch.requirement?.id;
+
+      const promises: Promise<any>[] = [];
+
+      // 1. Guardar en Oferta si está seleccionado
+      if (persistInOffer && pId) {
+        const existingAmenities = { ...(addFieldModalMatch.property?.amenities || {}) };
+        existingAmenities[attrKey] = addFieldPropVal || "Sí";
+        promises.push(
+          updatePropMut.mutateAsync({
+            propertyId: pId,
+            amenities: existingAmenities,
+          })
+        );
+        if (addFieldModalMatch.property) {
+          addFieldModalMatch.property.amenities = existingAmenities;
+        }
+      }
+
+      // 2. Guardar en Demanda si está seleccionado
+      if (persistInDemand && rId) {
+        const existingCaract = { ...(addFieldModalMatch.requirement?.caracteristicasDeseadas || {}) };
+        existingCaract[attrKey] = addFieldReqVal || "Exige";
+        promises.push(
+          updateReqMut.mutateAsync({
+            requirementId: rId,
+            caracteristicasDeseadas: existingCaract,
+          })
+        );
+        if (addFieldModalMatch.requirement) {
+          addFieldModalMatch.requirement.caracteristicasDeseadas = existingCaract;
+        }
+      }
+
+      await Promise.all(promises);
+
+      // Limpiar caché y forzar re-render de cotejo
+      scoreRowsCache.clear();
+      setLocalUpdateTick(t => t + 1);
+
+      toast.success("✅ Atributo agregado y guardado con éxito", {
+        description: `Característica "${attrName}" registrada permanentemente en la base de datos.`,
+      });
+
+      setAddFieldModalMatch(null);
+      setSelectedAttributeKey('mascotas');
+      setCustomAttributeName('');
+    } catch (err: any) {
+      console.error("Error al guardar nuevo atributo en cotejo:", err);
+      toast.error("Error al guardar atributo: " + (err.message || "Error desconocido"));
+    } finally {
+      setIsSavingAddField(false);
+    }
+  };
 
   const handleFeedback = async (m: any, action: 'exitoso' | 'rechazado' | 'en_negociacion', reason?: string, note?: string) => {
     try {
@@ -4299,133 +4518,6 @@ export default function AdminMatches() {
                 >
                   <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-gradient-to-b from-[#bf953f] to-[#a67d32] opacity-50 group-hover:opacity-100 transition-opacity" />
 
-                  {/* PANEL INLINE DE DESCARTE Y APRENDIZAJE JANIA (SOBRE LA TARJETA) */}
-                  {rejectModalMatch?.id === m.id && (
-                    <div className="absolute inset-0 z-50 bg-[#0e0e0e]/98 backdrop-blur-2xl p-4 sm:p-6 overflow-y-auto flex flex-col justify-between border-2 border-rose-500/60 shadow-[0_0_50px_rgba(244,63,94,0.35)] animate-in fade-in zoom-in-95 duration-200 rounded-3xl">
-                      <div className="space-y-4">
-                        {/* Header */}
-                        <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                          <div className="flex items-center gap-2.5 text-rose-400 font-extrabold text-base">
-                            <div className="p-2 bg-rose-500/10 border border-rose-500/30 rounded-xl">
-                              <ThumbsDown className="w-5 h-5 text-rose-400" />
-                            </div>
-                            <div>
-                              <span className="block text-sm sm:text-base text-white font-bold">Descartar Coincidencia Comercial</span>
-                              <span className="text-[11px] font-mono text-rose-400 font-medium">JanIA Active Feedback Loop · Memoria Doctrinal Permanente</span>
-                            </div>
-                          </div>
-                          <button 
-                            type="button"
-                            onClick={() => { setRejectModalMatch(null); setRejectReason(''); setCustomRejectNote(''); }}
-                            className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-                            title="Cerrar sin descartar"
-                          >
-                            ✕
-                          </button>
-                        </div>
-
-                        {/* Ficha Resumen de la Coincidencia a Descartar */}
-                        <div className="p-3 rounded-xl bg-black/70 border border-white/5 space-y-1.5 text-xs">
-                          <div className="flex items-center justify-between text-zinc-400 font-mono text-[11px]">
-                            <span className="text-emerald-400 font-bold">🏢 Oferta #{m.property?.id || '—'}</span>
-                            <span className="text-zinc-500">↔</span>
-                            <span className="text-amber-400 font-bold">🔍 Demanda #{m.requirement?.id || '—'}</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 text-[11px]">
-                            <div className="bg-zinc-900/60 p-2 rounded-lg border border-white/5 truncate">
-                              <div className="text-zinc-300 font-semibold truncate">{m.property?.name || 'Inmueble'}</div>
-                              <div className="text-emerald-300 text-[10px] truncate">📍 {rows.find((r: any) => r.label?.includes("Barrio"))?.propVal || m.property?.zone || m.property?.addressNeighborhood || 'Bogotá'}</div>
-                            </div>
-                            <div className="bg-zinc-900/60 p-2 rounded-lg border border-white/5 truncate">
-                              <div className="text-zinc-300 font-semibold truncate">{m.requirement?.name || m.requirement?.nombreUsuarioWhatsapp || 'Requerimiento'}</div>
-                              <div className="text-amber-300 text-[10px] truncate">📍 {rows.find((r: any) => r.label?.includes("Barrio"))?.reqVal || m.requirement?.zonaDeseada || m.requirement?.addressNeighborhood || 'Bogotá'}</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <p className="text-xs text-zinc-300 leading-relaxed font-medium">
-                          Selecciona el motivo puntual por el cual este inmueble no encaja. JanIA grabará esta regla en su memoria permanente y nunca volverá a proponer esta pareja:
-                        </p>
-
-                        {/* Lista de Motivos Doctrinales */}
-                        <div className="space-y-2 max-h-[36vh] sm:max-h-[42vh] overflow-y-auto pr-1">
-                          {[
-                            { label: "Incompatibilidad de estado (ej: Demanda pide Moderno / Estrenar y Oferta es para Remodelar)", icon: "🔨" },
-                            { label: "Zona o micro-sector incompatible (ej: Rosales Alto vs Rosales Bajo, Chicó Norte vs Chicó Navarra)", icon: "📍" },
-                            { label: "Cuota de administración muy alta / supera límite del comprador", icon: "💰" },
-                            { label: "Piso no deseado (cliente no quiere 1er piso / exige piso alto)", icon: "🏢" },
-                            { label: "Inmueble muy oscuro / sin asoleación ni luz natural", icon: "☀️" },
-                            { label: "Incompatibilidad de garajes (exige independiente y oferta es lineal)", icon: "🚗" },
-                            { label: "Distribución o metraje no se ajusta al requerimiento", icon: "📐" },
-                            { label: "Ubicación no deseada / zona ruidosa / sobre vía principal", icon: "🔇" },
-                            { label: "Inmueble ya se vendió / arrendó / no disponible", icon: "🔒" },
-                            { label: "Otro motivo (especificar a continuación)", icon: "✍️" }
-                          ].map(({ label, icon }) => (
-                            <label 
-                              key={label}
-                              onClick={() => setRejectReason(label)}
-                              className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
-                                rejectReason === label 
-                                  ? 'bg-rose-500/15 border-rose-500 text-rose-200 shadow-[0_0_15px_rgba(244,63,94,0.3)]' 
-                                  : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
-                              }`}
-                            >
-                              <input 
-                                type="radio" 
-                                name={`rejectReason-${m.id}`}
-                                checked={rejectReason === label} 
-                                onChange={() => setRejectReason(label)} 
-                                className="accent-rose-500 mt-0.5 shrink-0"
-                              />
-                              <span className="leading-snug">
-                                <span className="mr-1.5">{icon}</span>
-                                {label}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-
-                        {(rejectReason.includes("Otro motivo") || rejectReason !== "") && (
-                          <div className="pt-1">
-                            <Input
-                              placeholder="Especifica el motivo puntual u observación para el aprendizaje de JanIA..."
-                              value={customRejectNote}
-                              onChange={(e) => setCustomRejectNote(e.target.value)}
-                              className="bg-black/60 border-zinc-700 text-xs text-zinc-200 placeholder:text-zinc-500 focus:border-rose-500 h-9"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Acciones */}
-                      <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-white/10 mt-4">
-                        <Button
-                          variant="outline"
-                          type="button"
-                          onClick={() => { setRejectModalMatch(null); setRejectReason(''); setCustomRejectNote(''); }}
-                          className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white text-xs h-9 px-4 cursor-pointer"
-                        >
-                          Cancelar
-                        </Button>
-                        <Button
-                          disabled={!rejectReason || recordFeedbackMut.isPending}
-                          type="button"
-                          onClick={() => {
-                            const finalReason = rejectReason.includes("Otro motivo") && customRejectNote ? customRejectNote : rejectReason;
-                            handleFeedback(m, 'rechazado', finalReason, customRejectNote);
-                            setRejectModalMatch(null);
-                            setRejectReason('');
-                            setCustomRejectNote('');
-                          }}
-                          className="bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-extrabold text-xs h-9 px-5 flex items-center gap-2 shadow-lg shadow-rose-900/40 cursor-pointer disabled:opacity-40"
-                        >
-                          {recordFeedbackMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
-                          Confirmar Descarte
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Top Bar info */}
                   <div className="bg-white/[0.01] px-3.5 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5">
                     <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
@@ -5116,18 +5208,39 @@ export default function AdminMatches() {
                       <>
                         {/* Barra de Control de Despliegue */}
                         <div className="bg-zinc-950/90 border-b border-white/5 px-3.5 sm:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => toggleExpandMatch(m.id)}
-                            className={`flex items-center gap-2 text-xs font-bold px-3.5 py-2 rounded-xl border transition-all cursor-pointer select-none active:scale-95 ${
-                              isCotejoExpanded 
-                                ? 'bg-[#bf953f]/20 border-[#bf953f] text-[#bf953f] shadow-[0_0_12px_rgba(191,149,63,0.3)]' 
-                                : 'bg-zinc-900 border-white/10 text-zinc-300 hover:text-white hover:border-[#bf953f]/50'
-                            }`}
-                          >
-                            <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
-                            <span>{isCotejoExpanded ? '🔼 Ocultar Tabla de Cotejo' : '📊 Ver Tabla de Cotejo Técnico (10 Atributos)'}</span>
-                          </button>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => toggleExpandMatch(m.id)}
+                              className={`flex items-center gap-2 text-xs font-bold px-3.5 py-2 rounded-xl border transition-all cursor-pointer select-none active:scale-95 ${
+                                isCotejoExpanded 
+                                  ? 'bg-[#bf953f]/20 border-[#bf953f] text-[#bf953f] shadow-[0_0_12px_rgba(191,149,63,0.3)]' 
+                                  : 'bg-zinc-900 border-white/10 text-zinc-300 hover:text-white hover:border-[#bf953f]/50'
+                              }`}
+                            >
+                              <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
+                              <span>{isCotejoExpanded ? '🔼 Ocultar Tabla de Cotejo' : `📊 Ver Tabla de Cotejo Técnico (${rows.length} Atributos)`}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAddFieldModalMatch(m);
+                                setSelectedAttributeKey('mascotas');
+                                setCustomAttributeName('');
+                                setAddFieldReqVal('Exige / Indispensable');
+                                setAddFieldPropVal('Sí (Cuenta con ello)');
+                                setAddFieldStatus('exact');
+                                setPersistInOffer(true);
+                                setPersistInDemand(true);
+                              }}
+                              className="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition-all cursor-pointer shadow-sm active:scale-95"
+                              title="Agregar un atributo o pregunta surgida en la visita para robustecer este match"
+                            >
+                              <Plus className="w-3.5 h-3.5 text-amber-400" />
+                              <span>+ Agregar Atributo al Cotejo</span>
+                            </button>
+                          </div>
 
                           {/* Resumen Compacto de Cumplimiento cuando está Plegado */}
                           {!isCotejoExpanded && (
@@ -5155,13 +5268,33 @@ export default function AdminMatches() {
                             <h5 className="text-xs font-bold uppercase tracking-widest text-[#bf953f] mb-3 flex items-center justify-between gap-2 flex-wrap">
                               <span className="flex items-center gap-2">
                                 <CheckCircle2 className="w-4 h-4" />
-                                Cotejo técnico de afinidad comercial
+                                Cotejo técnico de afinidad comercial ({rows.length} características evaluadas)
                               </span>
-                              {isEditingThisCard && (
-                                <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded font-bold animate-pulse">
-                                  ⚡ Recálculo en tiempo real activo
-                                </span>
-                              )}
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setAddFieldModalMatch(m);
+                                    setSelectedAttributeKey('mascotas');
+                                    setCustomAttributeName('');
+                                    setAddFieldReqVal('Exige / Indispensable');
+                                    setAddFieldPropVal('Sí (Cuenta con ello)');
+                                    setAddFieldStatus('exact');
+                                    setPersistInOffer(true);
+                                    setPersistInDemand(true);
+                                  }}
+                                  className="flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/25 text-amber-300 transition-all cursor-pointer active:scale-95"
+                                  title="Agregar un atributo o pregunta surgida en la visita para robustecer este match"
+                                >
+                                  <Plus className="w-3 h-3 text-amber-400" />
+                                  + Agregar Atributo
+                                </button>
+                                {isEditingThisCard && (
+                                  <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded font-bold animate-pulse">
+                                    ⚡ Recálculo en tiempo real activo
+                                  </span>
+                                )}
+                              </div>
                             </h5>
                     
                     {/* VISTA ESCRITORIO (md:table - 4 columnas) */}
@@ -6540,6 +6673,378 @@ export default function AdminMatches() {
         <div>VECY Network Colombia &copy; 2026</div>
         <div className="text-[#bf953f] font-bold">{VECY_VERSION_LABEL}</div>
       </div>
+
+      {/* ── POPUP MEJORADO DE DESCARTE Y APRENDIZAJE DOCTRINAL JANIA ── */}
+      {rejectModalMatch && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-[#101010] border-2 border-rose-500/50 rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-[0_0_60px_rgba(244,63,94,0.35)] overflow-hidden">
+            
+            {/* Header */}
+            <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-rose-500/15 border border-rose-500/30 rounded-2xl text-rose-400">
+                  <ThumbsDown className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
+                    Descartar Coincidencia Comercial
+                  </h3>
+                  <p className="text-[11px] font-mono text-rose-400">
+                    JanIA Active Feedback Loop · Memoria Doctrinal Permanente
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setRejectModalMatch(null); setRejectReason(''); setCustomRejectNote(''); }}
+                className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                title="Cerrar ventana"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs">
+              
+              {/* Resumen Bilateral de la Pareja */}
+              <div className="p-3.5 rounded-2xl bg-black/70 border border-white/10 space-y-2">
+                <div className="flex items-center justify-between text-zinc-400 font-mono text-[11px]">
+                  <span className="text-emerald-400 font-bold">🏢 Oferta #{rejectModalMatch.property?.id || '—'}</span>
+                  <span className="text-zinc-500 font-bold">↔</span>
+                  <span className="text-amber-400 font-bold">🔍 Demanda #{rejectModalMatch.requirement?.id || '—'}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2.5 text-[11px]">
+                  <div className="bg-zinc-900/80 p-2.5 rounded-xl border border-white/5 truncate">
+                    <div className="text-zinc-200 font-bold truncate">{rejectModalMatch.property?.name || 'Inmueble'}</div>
+                    <div className="text-emerald-300 text-[10px] truncate mt-0.5">
+                      📍 {rejectModalMatch.property?.zone || rejectModalMatch.property?.addressNeighborhood || 'Bogotá'}
+                    </div>
+                  </div>
+                  <div className="bg-zinc-900/80 p-2.5 rounded-xl border border-white/5 truncate">
+                    <div className="text-zinc-200 font-bold truncate">{rejectModalMatch.requirement?.name || rejectModalMatch.requirement?.nombreUsuarioWhatsapp || 'Requerimiento'}</div>
+                    <div className="text-amber-300 text-[10px] truncate mt-0.5">
+                      📍 {rejectModalMatch.requirement?.zonaDeseada || rejectModalMatch.requirement?.addressNeighborhood || 'Bogotá'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-zinc-300 font-medium leading-relaxed">
+                Selecciona la causa puntual por la cual esta coincidencia no es viable. Esta retroalimentación se graba en la memoria permanente de JanIA para no volver a emparejarlos y buscar nuevas alternativas más precisas:
+              </p>
+
+              {/* Categorías Temáticas de Descarte */}
+              <div className="space-y-3.5">
+                {REJECT_CATEGORIES.map((cat, cIdx) => (
+                  <div key={cIdx} className="space-y-1.5">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5 px-1">
+                      <span>{cat.category}</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {cat.options.map((opt) => {
+                        const isSelected = rejectReason === opt.label;
+                        return (
+                          <label
+                            key={opt.id}
+                            onClick={() => setRejectReason(opt.label)}
+                            className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
+                              isSelected
+                                ? 'bg-rose-500/15 border-rose-500 text-rose-200 shadow-[0_0_15px_rgba(244,63,94,0.3)] font-semibold'
+                                : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="rejectReasonGlobal"
+                              checked={isSelected}
+                              onChange={() => setRejectReason(opt.label)}
+                              className="accent-rose-500 mt-0.5 shrink-0"
+                            />
+                            <span className="leading-snug flex-1">
+                              <span className="mr-1.5">{opt.icon}</span>
+                              {opt.label}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Campo de Detalle / Observación Pedagógica */}
+              <div className="space-y-1.5 pt-2 border-t border-white/5">
+                <label className="text-[11px] font-bold text-zinc-300 flex items-center justify-between">
+                  <span>Detalle u observación específica para JanIA (Opcional):</span>
+                  <span className="text-[10px] text-zinc-500 font-mono">Retroalimentación de aprendizaje</span>
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Ej: El cliente no acepta apartamento sin terraza privada o con administración superior a $400.000..."
+                  value={customRejectNote}
+                  onChange={(e) => setCustomRejectNote(e.target.value)}
+                  className="w-full bg-black/80 border border-zinc-700 focus:border-rose-500 rounded-xl p-2.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              {/* Mensaje de Enseñanza y Auto-Búsqueda */}
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-300 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 shrink-0 text-emerald-400" />
+                <span>
+                  Al confirmar el descarte, JanIA registrará este veto y disparará de inmediato la búsqueda de nuevas opciones compatibles para la Demanda #{rejectModalMatch.requirement?.id}.
+                </span>
+              </div>
+
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-4 sm:p-5 border-t border-white/10 bg-white/[0.02] flex items-center justify-end gap-3">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => { setRejectModalMatch(null); setRejectReason(''); setCustomRejectNote(''); }}
+                className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white text-xs h-9 px-4 cursor-pointer"
+              >
+                Cancelar
+              </Button>
+              <Button
+                disabled={!rejectReason || recordFeedbackMut.isPending}
+                type="button"
+                onClick={() => {
+                  const finalReason = rejectReason.includes("Otro motivo") && customRejectNote ? customRejectNote : (
+                    customRejectNote ? `${rejectReason} — Observación: ${customRejectNote}` : rejectReason
+                  );
+                  handleFeedback(rejectModalMatch, 'rechazado', finalReason, customRejectNote);
+                  setRejectModalMatch(null);
+                  setRejectReason('');
+                  setCustomRejectNote('');
+                }}
+                className="bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-extrabold text-xs h-9 px-5 flex items-center gap-2 shadow-lg shadow-rose-900/40 cursor-pointer disabled:opacity-40"
+              >
+                {recordFeedbackMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
+                Confirmar Descarte y Guardar Aprendizaje
+              </Button>
+            </div>
+
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── MODAL AGREGAR ATRIBUTO AL COTEJO (ROBUSTECER OFERTA Y DEMANDA) ── */}
+      {addFieldModalMatch && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-[#101010] border-2 border-amber-500/50 rounded-3xl max-w-xl w-full max-h-[92vh] flex flex-col shadow-[0_0_60px_rgba(245,158,11,0.3)] overflow-hidden">
+            
+            {/* Header */}
+            <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-amber-500/15 border border-amber-500/30 rounded-2xl text-amber-400">
+                  <Plus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
+                    + Agregar Atributo al Cotejo
+                  </h3>
+                  <p className="text-[11px] font-mono text-amber-400">
+                    Pregunta de Visita · Robustecer Ficha de Oferta y Demanda
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setAddFieldModalMatch(null); setSelectedAttributeKey('mascotas'); setCustomAttributeName(''); }}
+                className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                title="Cerrar ventana"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Scrollable Form */}
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs">
+              
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-zinc-300 leading-relaxed text-[11px]">
+                💡 Agrega una pregunta o especificación surgida durante la gestión de visita. Las respuestas quedarán grabadas en la base de datos para que la Oferta y la Demanda sean más completas en futuras búsquedas.
+              </div>
+
+              {/* Selector de Característica */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-zinc-300">
+                  Característica o Atributo a Evaluar:
+                </label>
+                <select
+                  value={selectedAttributeKey}
+                  onChange={(e) => {
+                    const k = e.target.value;
+                    setSelectedAttributeKey(k);
+                    const item = ATTRIBUTE_CATALOG.find(a => a.key === k);
+                    if (item && k !== 'otra') {
+                      setAddFieldReqVal(item.defaultReq);
+                      setAddFieldPropVal(item.defaultProp);
+                    }
+                  }}
+                  className="w-full bg-black/80 border border-zinc-700 focus:border-amber-500 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none"
+                >
+                  {ATTRIBUTE_CATALOG.map((a) => (
+                    <option key={a.key} value={a.key} className="bg-zinc-900 text-zinc-200">
+                      {a.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Campo para nombre si seleccionó 'otra' */}
+              {selectedAttributeKey === 'otra' && (
+                <div className="space-y-1.5 animate-in fade-in duration-150">
+                  <label className="text-[11px] font-bold text-amber-400">
+                    Nombre de la Nueva Característica:
+                  </label>
+                  <Input
+                    placeholder="Ej: Calentador a Gas, Altura Libre 3m, Planta Eléctrica Total..."
+                    value={customAttributeName}
+                    onChange={(e) => setCustomAttributeName(e.target.value)}
+                    className="bg-black/80 border-amber-500/60 text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-amber-400 h-9"
+                  />
+                </div>
+              )}
+
+              {/* Requerimiento de la Demanda */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-cyan-400">
+                    🔍 Solicitado por la DEMANDA (Requerimiento #{addFieldModalMatch.requirement?.id}):
+                  </label>
+                </div>
+                <Input
+                  value={addFieldReqVal}
+                  onChange={(e) => setAddFieldReqVal(e.target.value)}
+                  placeholder="Ej: Exige / Indispensable, Deseable, Flexible..."
+                  className="bg-black/80 border-zinc-700 focus:border-cyan-500 text-xs text-zinc-200 h-9"
+                />
+                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                  {["Exige / Indispensable", "Deseable", "Flexible / No indispensable"].map((pill) => (
+                    <button
+                      key={pill}
+                      type="button"
+                      onClick={() => setAddFieldReqVal(pill)}
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/20 cursor-pointer"
+                    >
+                      {pill}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Ofrecido por la Oferta */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-[#bf953f]">
+                    🏢 Cuenta la OFERTA (Inmueble #{addFieldModalMatch.property?.id}):
+                  </label>
+                </div>
+                <Input
+                  value={addFieldPropVal}
+                  onChange={(e) => setAddFieldPropVal(e.target.value)}
+                  placeholder="Ej: Sí (Cuenta con ello), No cuenta, Por confirmar..."
+                  className="bg-black/80 border-zinc-700 focus:border-[#bf953f] text-xs text-zinc-200 h-9"
+                />
+                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                  {["Sí (Cuenta con ello)", "No cuenta", "Por confirmar con propietario"].map((pill) => (
+                    <button
+                      key={pill}
+                      type="button"
+                      onClick={() => setAddFieldPropVal(pill)}
+                      className="text-[10px] px-2 py-0.5 rounded-full bg-[#bf953f]/10 border border-[#bf953f]/30 text-[#bf953f] hover:bg-[#bf953f]/20 cursor-pointer"
+                    >
+                      {pill}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Calificación de Cumplimiento */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-zinc-300">
+                  Estado de Cumplimiento en la Tabla:
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                  {[
+                    { val: "exact" as MatchStatus, label: "Coincide", color: "border-emerald-500 bg-emerald-500/20 text-emerald-300" },
+                    { val: "plus" as MatchStatus, label: "Plus", color: "border-cyan-500 bg-cyan-500/20 text-cyan-300" },
+                    { val: "warn" as MatchStatus, label: "Aproximado", color: "border-amber-500 bg-amber-500/20 text-amber-300" },
+                    { val: "neutral" as MatchStatus, label: "Pendiente", color: "border-zinc-600 bg-zinc-800 text-zinc-300" },
+                    { val: "missing" as MatchStatus, label: "No Cumple", color: "border-rose-500 bg-rose-500/20 text-rose-300" },
+                  ].map((s) => (
+                    <button
+                      key={s.val}
+                      type="button"
+                      onClick={() => setAddFieldStatus(s.val)}
+                      className={`text-[11px] font-bold py-1.5 px-2 rounded-xl border transition-all cursor-pointer text-center ${
+                        addFieldStatus === s.val ? `${s.color} ring-2 ring-white/20 shadow-md` : 'border-zinc-800 bg-zinc-950 text-zinc-500 hover:border-zinc-700'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Opciones de Persistencia en Base de Datos */}
+              <div className="pt-2 border-t border-white/5 space-y-2">
+                <label className="text-[11px] font-bold text-zinc-300 block">
+                  Persistencia y Enriquecimiento de Fichas:
+                </label>
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-2 cursor-pointer text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={persistInOffer}
+                      onChange={(e) => setPersistInOffer(e.target.checked)}
+                      className="accent-amber-500 rounded"
+                    />
+                    <span>Guardar en la Ficha del Inmueble (Oferta #{addFieldModalMatch.property?.id})</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={persistInDemand}
+                      onChange={(e) => setPersistInDemand(e.target.checked)}
+                      className="accent-amber-500 rounded"
+                    />
+                    <span>Guardar en el Requerimiento (Demanda #{addFieldModalMatch.requirement?.id})</span>
+                  </label>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-4 sm:p-5 border-t border-white/10 bg-white/[0.02] flex items-center justify-end gap-3">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => { setAddFieldModalMatch(null); setSelectedAttributeKey('mascotas'); setCustomAttributeName(''); }}
+                className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white text-xs h-9 px-4 cursor-pointer"
+              >
+                Cancelar
+              </Button>
+              <Button
+                disabled={isSavingAddField || (selectedAttributeKey === 'otra' && !customAttributeName.trim())}
+                type="button"
+                onClick={handleSaveNewField}
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-extrabold text-xs h-9 px-5 flex items-center gap-2 shadow-lg shadow-amber-900/30 cursor-pointer disabled:opacity-40"
+              >
+                {isSavingAddField ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : <Save className="w-4 h-4 text-black" />}
+                Guardar en Cotejo y Base de Datos
+              </Button>
+            </div>
+
+          </div>
+        </div>,
+        document.body
+      )}
 
     </div>
   );

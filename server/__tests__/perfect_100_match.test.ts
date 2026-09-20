@@ -258,4 +258,38 @@ ${amenitiesText}`;
     expect(result.rows.some(r => r.status === "missing")).toBe(true);
     expect(result.autoScore).toBe(0); // 0% Guillotina Inmediata
   });
+
+  it("debe inyectar atributos personalizados agregados al cotejo (ej. Calentador a Gas, Mascotas o personalizado) y reflejarlos en la tabla de cotejo", () => {
+    const reqConAtributo = {
+      ...req,
+      id: 8881,
+      caracteristicasDeseadas: {
+        calentador_a_gas: "Exige calentador a gas",
+        puerta_seguridad: "Desea puerta blindada"
+      }
+    };
+
+    const propConAtributo = {
+      ...prop,
+      id: 8882,
+      amenities: {
+        ...prop.amenities,
+        calentador_a_gas: "Sí (Calentador a gas nuevo Bosch)",
+        puerta_seguridad: "Sí (Puerta de seguridad blindada)"
+      }
+    };
+
+    const result = scoreRows(reqConAtributo, propConAtributo);
+    const calentadorRow = result.rows.find(r => r.label.toLowerCase().includes("calentador"));
+    const puertaRow = result.rows.find(r => r.label.toLowerCase().includes("puerta"));
+
+    expect(calentadorRow).toBeDefined();
+    expect(calentadorRow?.status).toBe("exact");
+    expect(calentadorRow?.reqVal).toBe("Exige calentador a gas");
+    expect(calentadorRow?.propVal).toBe("Sí (Calentador a gas nuevo Bosch)");
+
+    expect(puertaRow).toBeDefined();
+    expect(puertaRow?.status).toBe("exact");
+    expect(puertaRow?.propVal).toBe("Sí (Puerta de seguridad blindada)");
+  });
 });
