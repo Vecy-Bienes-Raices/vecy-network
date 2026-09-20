@@ -543,7 +543,16 @@ export function parseColombianPriceOrBudget(numStr: string, unit: string, isSale
   return Math.round(val);
 }
 
+// ─── Cache en memoria de extracción determinista (v31.77) ──────────────────
+const fallbackDataCache = new Map<string, any>();
+
 export function extractFallbackDataFromText(text: string): any {
+  if (!text || typeof text !== "string") return {};
+  const cacheKey = text.trim();
+  if (cacheKey.length < 5000 && fallbackDataCache.has(cacheKey)) {
+    return fallbackDataCache.get(cacheKey);
+  }
+
   const clean = (text || "")
     .toLowerCase()
     .replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "")
@@ -1184,7 +1193,7 @@ export function extractFallbackDataFromText(text: string): any {
   const adminFeeIncluded = /(?:admin(?:istraci[oó]n)?|admon)\s*(?:incluida|inc\b)|(?:con|\+|mas|más)\s*(?:admin(?:istraci[oó]n)?|admon)/i.test(clean);
   const isAmoblado = /\b(?:amoblado|amoblada|con\s*muebles|completamente\s*amoblado|dotado)\b/i.test(clean);
 
-  return {
+  const result = {
     propertyType,
     transactionType,
     tipoInmuebleDeseado: propertyType,
@@ -1235,6 +1244,15 @@ export function extractFallbackDataFromText(text: string): any {
       amoblado: isAmoblado ? true : null
     }
   };
+
+  if (cacheKey.length < 5000) {
+    if (fallbackDataCache.size > 3000) {
+      fallbackDataCache.clear();
+    }
+    fallbackDataCache.set(cacheKey, result);
+  }
+
+  return result;
 }
 
 /**

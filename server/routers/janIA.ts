@@ -607,7 +607,13 @@ export const janIARouter = router({
         const seenPairs = new Set<string>();
         const validEvaluatedMatches: any[] = [];
 
+        let matchIdx = 0;
         for (const m of matches) {
+          matchIdx++;
+          if (matchIdx % 25 === 0) {
+            await new Promise(r => setTimeout(r, 5));
+          }
+
           const key = `${m.property.id}-${m.requirement.id}`;
           if (seenPairs.has(key)) continue; // Eliminar duplicados
           if (rejectedPairs.has(`${m.property.id}_${m.requirement.id}`)) continue; // Veto Doctrinal Humano (v31.4)
@@ -619,6 +625,10 @@ export const janIARouter = router({
 
           if (!evaluation) {
             evaluation = explicarMatch(m.requirement, m.property);
+            db.update(propertyMatches)
+              .set({ matchExplanation: evaluation })
+              .where(eq(propertyMatches.id, m.id))
+              .catch(() => {});
           }
 
           // Si el score es menor a 75% o falla cualquier filtro duro -> Descartar

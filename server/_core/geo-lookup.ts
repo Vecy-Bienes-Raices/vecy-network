@@ -285,8 +285,15 @@ function toTitleCase(name: string): string {
  * });
  * // → { barrios: ["La Cabrera", "El Nogal", "Los Rosales", "Emaús"], ... }
  */
+// ─── Cache en memoria de perímetros (v31.77) ──────────────────────────────
+const perimeterLookupCache = new Map<string, GeoLookupResult>();
+
 export function lookupBarriosByPerimeter(perimeter: GeoPerimeter): GeoLookupResult {
   const ciudad = perimeter.ciudad?.toLowerCase() || 'bogota';
+  const cacheKey = `${ciudad}_${perimeter.calleSur}_${perimeter.calleNorte}_${perimeter.craOriente}_${perimeter.craOccidente}`;
+  const cached = perimeterLookupCache.get(cacheKey);
+  if (cached) return cached;
+
   const sectors = loadSectors(ciudad);
 
   if (sectors.length === 0) {
@@ -320,13 +327,20 @@ export function lookupBarriosByPerimeter(perimeter: GeoPerimeter): GeoLookupResu
   const sectoresCatastrales = [...uniqueNames.keys()].sort();
   const barrios = [...uniqueNames.values()].sort();
 
-  return {
+  const result: GeoLookupResult = {
     barrios,
     sectoresCatastrales,
     totalSectores: matched.length,
     ciudad,
     fuente: 'IDECA-CadastroBogota-2026-06',
   };
+
+  if (perimeterLookupCache.size > 2000) {
+    perimeterLookupCache.clear();
+  }
+  perimeterLookupCache.set(cacheKey, result);
+
+  return result;
 }
 
 /**

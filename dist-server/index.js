@@ -2045,6 +2045,9 @@ function toTitleCase(name) {
 }
 function lookupBarriosByPerimeter(perimeter) {
   const ciudad = perimeter.ciudad?.toLowerCase() || "bogota";
+  const cacheKey = `${ciudad}_${perimeter.calleSur}_${perimeter.calleNorte}_${perimeter.craOriente}_${perimeter.craOccidente}`;
+  const cached = perimeterLookupCache.get(cacheKey);
+  if (cached) return cached;
   const sectors = loadSectors(ciudad);
   if (sectors.length === 0) {
     return { barrios: [], sectoresCatastrales: [], totalSectores: 0, ciudad, fuente: "N/A" };
@@ -2067,15 +2070,20 @@ function lookupBarriosByPerimeter(perimeter) {
   }
   const sectoresCatastrales = [...uniqueNames.keys()].sort();
   const barrios = [...uniqueNames.values()].sort();
-  return {
+  const result = {
     barrios,
     sectoresCatastrales,
     totalSectores: matched.length,
     ciudad,
     fuente: "IDECA-CadastroBogota-2026-06"
   };
+  if (perimeterLookupCache.size > 2e3) {
+    perimeterLookupCache.clear();
+  }
+  perimeterLookupCache.set(cacheKey, result);
+  return result;
 }
-var sectorData, CRA7_ANCHORS, LNG_PER_CRA, LAT_PER_CRA, TILDE_CORRECTIONS;
+var sectorData, CRA7_ANCHORS, LNG_PER_CRA, LAT_PER_CRA, TILDE_CORRECTIONS, perimeterLookupCache;
 var init_geo_lookup = __esm({
   "server/_core/geo-lookup.ts"() {
     "use strict";
@@ -2109,6 +2117,7 @@ var init_geo_lookup = __esm({
       "CHICO LAGO": "Chic\xF3 Lago",
       "LOS ROSALES": "Los Rosales"
     };
+    perimeterLookupCache = /* @__PURE__ */ new Map();
   }
 });
 
@@ -4903,10 +4912,12 @@ function isHollowListing(rawText, name, externalUrl) {
   }
   return { isHollow: false, reason: "Publicaci\xF3n con contenido suficiente" };
 }
-function explicarMatch(requirement, property) {
+function explicarMatch(requirement, property, precomputedFbReq, precomputedFbProp) {
   const blockers = [];
   const positives = [];
   const negatives = [];
+  const fbProp = precomputedFbProp || (property.rawText ? extractFallbackDataFromText(property.rawText) : {});
+  const fbReq = precomputedFbReq || (requirement.rawText ? extractFallbackDataFromText(requirement.rawText) : {});
   const propHollow = isHollowListing(property.rawText, property.name, property.externalUrl || property.enlace_origen);
   if (propHollow.isHollow) {
     blockers.push(`\u26D4 Oferta Inviable (Publicaci\xF3n Hueca / Frase Suelta): ${propHollow.reason}. MATCH IMPOSIBLE 0%.`);
@@ -4944,14 +4955,8 @@ function explicarMatch(requirement, property) {
   const isNA = (v) => !v || v.trim() === "" || v.trim().toUpperCase() === "NA" || v.trim().toUpperCase() === "N/E" || v.trim().toUpperCase() === "N/A" || v.trim() === "-";
   let propTypeHard = property.propertyType || property.tipoInmueble || property.property_type || "";
   let reqTypeHard = requirement.tipoInmuebleDeseado || requirement.propertyType || requirement.property_type || "";
-  if (!propTypeHard && property.rawText) {
-    const fb = extractFallbackDataFromText(property.rawText);
-    if (fb.propertyType) propTypeHard = fb.propertyType;
-  }
-  if (!reqTypeHard && requirement.rawText) {
-    const fb = extractFallbackDataFromText(requirement.rawText);
-    if (fb.propertyType) reqTypeHard = fb.propertyType;
-  }
+  if (!propTypeHard && fbProp.propertyType) propTypeHard = fbProp.propertyType;
+  if (!reqTypeHard && fbReq.propertyType) reqTypeHard = fbReq.propertyType;
   if (isNA(propTypeHard)) {
     blockers.push("\u26D4 Inmueble Incompleto: Tipo de Inmueble no especificado (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -4962,14 +4967,8 @@ function explicarMatch(requirement, property) {
   }
   let propBizHard = property.transactionType || property.transaction_type || "";
   let reqBizHard = requirement.tipoNegocioDeseado || requirement.transactionType || requirement.transaction_type || "";
-  if (property.rawText) {
-    const fb = extractFallbackDataFromText(property.rawText);
-    if (fb.transactionType) propBizHard = fb.transactionType;
-  }
-  if (requirement.rawText) {
-    const fb = extractFallbackDataFromText(requirement.rawText);
-    if (fb.transactionType) reqBizHard = fb.transactionType;
-  }
+  if (fbProp.transactionType) propBizHard = fbProp.transactionType;
+  if (fbReq.transactionType) reqBizHard = fbReq.transactionType;
   if (isNA(propBizHard)) {
     blockers.push("\u26D4 Inmueble Incompleto: Tipo de Negocio no especificado (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -5004,17 +5003,11 @@ function explicarMatch(requirement, property) {
   }
   let propBarrioHard = property.zone || property.addressNeighborhood || property.address_neighborhood || "";
   let reqBarrioHard = requirement.zonaDeseada || requirement.addressNeighborhood || requirement.address_neighborhood || "";
-  if (property.rawText) {
-    const fb = extractFallbackDataFromText(property.rawText);
-    if (fb.zone && (!propBarrioHard || !property.rawText.toLowerCase().includes(propBarrioHard.toLowerCase()))) {
-      propBarrioHard = fb.zone;
-    }
+  if (fbProp.zone && (!propBarrioHard || !property.rawText?.toLowerCase().includes(propBarrioHard.toLowerCase()))) {
+    propBarrioHard = fbProp.zone;
   }
-  if (requirement.rawText) {
-    const fb = extractFallbackDataFromText(requirement.rawText);
-    if (fb.zone && (!reqBarrioHard || !requirement.rawText.toLowerCase().includes(reqBarrioHard.toLowerCase()))) {
-      reqBarrioHard = fb.zone;
-    }
+  if (fbReq.zone && (!reqBarrioHard || !requirement.rawText?.toLowerCase().includes(reqBarrioHard.toLowerCase()))) {
+    reqBarrioHard = fbReq.zone;
   }
   if (isNA(propBarrioHard)) {
     blockers.push("\u26D4 Inmueble Incompleto: Barrio/Vereda no especificado (N/E). No puede participar en Matches.");
@@ -5235,14 +5228,8 @@ function explicarMatch(requirement, property) {
   }
   let reqBiz = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase();
   let propBiz = (property.transactionType || "").toLowerCase();
-  if (property.rawText) {
-    const fb = extractFallbackDataFromText(property.rawText);
-    if (fb.transactionType) propBiz = fb.transactionType.toLowerCase();
-  }
-  if (requirement.rawText) {
-    const fb = extractFallbackDataFromText(requirement.rawText);
-    if (fb.transactionType) reqBiz = fb.transactionType.toLowerCase();
-  }
+  if (fbProp.transactionType) propBiz = fbProp.transactionType.toLowerCase();
+  if (fbReq.transactionType) reqBiz = fbReq.transactionType.toLowerCase();
   const propAccepted = Array.isArray(property.acceptedTransactionTypes) ? property.acceptedTransactionTypes.map((t2) => t2.toLowerCase()) : [];
   const transactionCompatible = checkTransactionCompatibility(reqBiz, propBiz, propAccepted);
   if (!transactionCompatible) {
@@ -5395,12 +5382,11 @@ function explicarMatch(requirement, property) {
   if (isPhoneNumberNotPrice2(budgetMax, requirement.rawText)) budgetMax = 0;
   const isSaleMatch = (property.transactionType || "").toLowerCase().includes("venta") || !(property.transactionType || "").toLowerCase().includes("arriendo");
   if (isSaleMatch) {
-    if ((price <= 0 || price < 3e7) && property.rawText) {
-      const fbP = extractFallbackDataFromText(property.rawText);
-      if (fbP.price >= 3e7) {
-        price = fbP.price;
-        if ((!property.adminFee || parseFloat(String(property.adminFee)) <= 0) && fbP.adminFee > 0) {
-          property.adminFee = fbP.adminFee;
+    if (price <= 0 || price < 3e7) {
+      if (fbProp.price >= 3e7) {
+        price = fbProp.price;
+        if ((!property.adminFee || parseFloat(String(property.adminFee)) <= 0) && fbProp.adminFee > 0) {
+          property.adminFee = fbProp.adminFee;
         }
       } else {
         price = 0;
@@ -5418,37 +5404,35 @@ function explicarMatch(requirement, property) {
   let reqBathrooms = requirement.banosMin != null ? Number(requirement.banosMin) : -1;
   let pGarages = property.garages != null ? Number(property.garages) : -1;
   let reqGarages = requirement.parqueaderosMin != null ? Number(requirement.parqueaderosMin) : -1;
-  if (requirement.rawText) {
-    const fbR = extractFallbackDataFromText(requirement.rawText);
+  if (fbReq.presupuestoMax || fbReq.areaMin || fbReq.areaMax || fbReq.bedroomsMin || fbReq.bathrooms || fbReq.garages) {
     if (budgetMax <= 0 || isReqRent && budgetMax > 5e7 || !isReqRent && budgetMax < 1e8) {
-      if (fbR.presupuestoMax >= 3e5) {
-        budgetMax = fbR.presupuestoMax;
+      if (fbReq.presupuestoMax >= 3e5) {
+        budgetMax = fbReq.presupuestoMax;
       }
     }
-    if (reqAreaMin <= 0 && fbR.areaMin) {
-      reqAreaMin = fbR.areaMin;
+    if (reqAreaMin <= 0 && fbReq.areaMin) {
+      reqAreaMin = fbReq.areaMin;
     }
-    if (fbR.areaMax) {
-      reqAreaMax = fbR.areaMax;
+    if (fbReq.areaMax) {
+      reqAreaMax = fbReq.areaMax;
     }
-    if (reqBedrooms <= 0 && fbR.bedroomsMin) {
-      reqBedrooms = fbR.bedroomsMin;
+    if (reqBedrooms <= 0 && fbReq.bedroomsMin) {
+      reqBedrooms = fbReq.bedroomsMin;
     }
-    if (reqBathrooms <= 0 && fbR.bathrooms) {
-      reqBathrooms = fbR.bathrooms;
+    if (reqBathrooms <= 0 && fbReq.bathrooms) {
+      reqBathrooms = fbReq.bathrooms;
     }
-    if (reqGarages <= 0 && fbR.garages) {
-      reqGarages = fbR.garages;
+    if (reqGarages <= 0 && fbReq.garages) {
+      reqGarages = fbReq.garages;
     }
   }
   let propArea = parseFloat(String(property.areaTotal || property.area || "0"));
-  if (property.rawText) {
-    const fbP = extractFallbackDataFromText(property.rawText);
-    if (price <= 0 && fbP.price) price = fbP.price;
-    if (propArea <= 0 && fbP.area) propArea = fbP.area;
-    if (pBedrooms <= 0 && fbP.bedrooms) pBedrooms = fbP.bedrooms;
-    if (pBathrooms <= 0 && fbP.bathrooms) pBathrooms = fbP.bathrooms;
-    if (pGarages <= 0 && fbP.garages) pGarages = fbP.garages;
+  if (fbProp.price || fbProp.area || fbProp.bedrooms || fbProp.bathrooms || fbProp.garages) {
+    if (price <= 0 && fbProp.price) price = fbProp.price;
+    if (propArea <= 0 && fbProp.area) propArea = fbProp.area;
+    if (pBedrooms <= 0 && fbProp.bedrooms) pBedrooms = fbProp.bedrooms;
+    if (pBathrooms <= 0 && fbProp.bathrooms) pBathrooms = fbProp.bathrooms;
+    if (pGarages <= 0 && fbProp.garages) pGarages = fbProp.garages;
   }
   const pAdminFee = property.adminFee != null ? parseFloat(String(property.adminFee)) : -1;
   const reqAdminMax = requirement.adminFeeMax != null ? parseFloat(String(requirement.adminFeeMax)) : -1;
@@ -5458,13 +5442,11 @@ function explicarMatch(requirement, property) {
   const propType = (property.propertyType || "").toLowerCase().trim();
   let reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
   let propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
-  if (requirement.rawText && (!reqZone || reqZone === "bogota" || reqZone === "n/e" || reqZone === "na")) {
-    const fbR = extractFallbackDataFromText(requirement.rawText);
-    if (fbR.zone) reqZone = normalizarTextoGeografico(fbR.zone);
+  if ((!reqZone || reqZone === "bogota" || reqZone === "n/e" || reqZone === "na") && fbReq.zone) {
+    reqZone = normalizarTextoGeografico(fbReq.zone);
   }
-  if (property.rawText && (!propZone || propZone === "bogota" || propZone === "n/e" || propZone === "na")) {
-    const fbP = extractFallbackDataFromText(property.rawText);
-    if (fbP.zone) propZone = normalizarTextoGeografico(fbP.zone);
+  if ((!propZone || propZone === "bogota" || propZone === "n/e" || propZone === "na") && fbProp.zone) {
+    propZone = normalizarTextoGeografico(fbProp.zone);
   }
   const propTextClean = (property.rawText || property.description || property.name || "").trim();
   const reqTextClean = (requirement.rawText || requirement.name || "").trim();
@@ -6349,8 +6331,22 @@ function evaluarMatch(requirement, property) {
   return calcularScoreMatch(requirement, property) >= 80;
 }
 async function findMatchesForProperty(propertyId) {
+  if (activeMatchingProps.has(propertyId)) {
+    console.log(`[MATCHING-DEBOUNCE] Propiedad #${propertyId} ya est\xE1 en ejecuci\xF3n activa. Omitiendo duplicado.`);
+    return [];
+  }
+  const lastTimeP = lastMatchingTimeProps.get(propertyId) || 0;
+  if (Date.now() - lastTimeP < 2e4) {
+    console.log(`[MATCHING-DEBOUNCE] Propiedad #${propertyId} evaluada hace menos de 20s. Omitiendo rec\xE1lculo concurrente.`);
+    return [];
+  }
+  activeMatchingProps.add(propertyId);
+  lastMatchingTimeProps.set(propertyId, Date.now());
   const db = await getDb();
-  if (!db) return [];
+  if (!db) {
+    activeMatchingProps.delete(propertyId);
+    return [];
+  }
   try {
     const [property] = await db.select().from(properties).where(eq3(properties.id, propertyId));
     if (!property) return [];
@@ -6365,6 +6361,7 @@ async function findMatchesForProperty(propertyId) {
       console.log(`[MATCHING-FILTER] \u23F3 Propiedad #${propertyId} omitida por superar 20 d\xEDas de antig\xFCedad sin republicaci\xF3n activa.`);
       return [];
     }
+    const fbProp = property.rawText ? extractFallbackDataFromText(property.rawText) : {};
     const activeRequirements = await db.select().from(requirements).where(eq3(requirements.status, "active"));
     const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
@@ -6388,7 +6385,7 @@ async function findMatchesForProperty(propertyId) {
         }
         continue;
       }
-      const explanation = explicarMatch(req, property);
+      const explanation = explicarMatch(req, property, void 0, fbProp);
       const score = explanation.score;
       if (score >= 80) {
         let matchId;
@@ -6434,11 +6431,27 @@ async function findMatchesForProperty(propertyId) {
   } catch (e) {
     console.error("[Matching] Error en findMatchesForProperty:", e.message);
     return [];
+  } finally {
+    activeMatchingProps.delete(propertyId);
   }
 }
 async function findMatchesForRequirement(requirementId) {
+  if (activeMatchingReqs.has(requirementId)) {
+    console.log(`[MATCHING-DEBOUNCE] Requerimiento #${requirementId} ya est\xE1 en ejecuci\xF3n activa. Omitiendo duplicado.`);
+    return [];
+  }
+  const lastTimeR = lastMatchingTimeReqs.get(requirementId) || 0;
+  if (Date.now() - lastTimeR < 2e4) {
+    console.log(`[MATCHING-DEBOUNCE] Requerimiento #${requirementId} evaluado hace menos de 20s. Omitiendo rec\xE1lculo concurrente.`);
+    return [];
+  }
+  activeMatchingReqs.add(requirementId);
+  lastMatchingTimeReqs.set(requirementId, Date.now());
   const db = await getDb();
-  if (!db) return [];
+  if (!db) {
+    activeMatchingReqs.delete(requirementId);
+    return [];
+  }
   try {
     const [req] = await db.select().from(requirements).where(eq3(requirements.id, requirementId));
     if (!req) return [];
@@ -6452,6 +6465,7 @@ async function findMatchesForRequirement(requirementId) {
       console.log(`[MATCHING-FILTER] \u23F3 Requerimiento #${requirementId} omitido por superar 20 d\xEDas de antig\xFCedad.`);
       return [];
     }
+    const fbReq = req.rawText ? extractFallbackDataFromText(req.rawText) : {};
     const availableProperties = await db.select().from(properties).where(eq3(properties.available, true));
     const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
@@ -6476,7 +6490,7 @@ async function findMatchesForRequirement(requirementId) {
         }
         continue;
       }
-      const explanation = explicarMatch(req, prop);
+      const explanation = explicarMatch(req, prop, fbReq, void 0);
       const score = explanation.score;
       if (score >= 80) {
         let matchId;
@@ -6522,6 +6536,8 @@ async function findMatchesForRequirement(requirementId) {
   } catch (e) {
     console.error("[Matching] Error en findMatchesForRequirement:", e.message);
     return [];
+  } finally {
+    activeMatchingReqs.delete(requirementId);
   }
 }
 async function executeMatchEngine(propertyId, requirementId) {
@@ -6586,7 +6602,7 @@ function buildBigTechAdminReport(prop, req, score) {
 
 \u{1F449} Ver en el panel web: https://vecy-network.vercel.app/admin`;
 }
-var cachedRejectedPairs, lastRejectedPairsFetch, REJECTED_PAIRS_TTL_MS, TRANSACTION_COMPATIBILITY_MATRIX, boundariesCache, MAX_BOUNDARIES_CACHE, KNOWN_BARRIOS_CANONICAL, BOGOTA_BARRIO_STREET_BOUNDS;
+var cachedRejectedPairs, lastRejectedPairsFetch, REJECTED_PAIRS_TTL_MS, TRANSACTION_COMPATIBILITY_MATRIX, boundariesCache, MAX_BOUNDARIES_CACHE, KNOWN_BARRIOS_CANONICAL, BOGOTA_BARRIO_STREET_BOUNDS, activeMatchingReqs, activeMatchingProps, lastMatchingTimeReqs, lastMatchingTimeProps;
 var init_matching = __esm({
   "server/_core/matching.ts"() {
     "use strict";
@@ -6858,6 +6874,10 @@ var init_matching = __esm({
       "la castellana": { minStreet: 92, maxStreet: 100, minCra: 28, maxCra: 50 },
       "castellana": { minStreet: 92, maxStreet: 100, minCra: 28, maxCra: 50 }
     };
+    activeMatchingReqs = /* @__PURE__ */ new Set();
+    activeMatchingProps = /* @__PURE__ */ new Set();
+    lastMatchingTimeReqs = /* @__PURE__ */ new Map();
+    lastMatchingTimeProps = /* @__PURE__ */ new Map();
   }
 });
 
@@ -7907,6 +7927,11 @@ function parseColombianPriceOrBudget(numStr, unit, isSale) {
   return Math.round(val);
 }
 function extractFallbackDataFromText(text2) {
+  if (!text2 || typeof text2 !== "string") return {};
+  const cacheKey = text2.trim();
+  if (cacheKey.length < 5e3 && fallbackDataCache.has(cacheKey)) {
+    return fallbackDataCache.get(cacheKey);
+  }
   const clean = (text2 || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[\u2013\u2014]/g, "-").replace(/['´`’‘\u00B4\u2019\u2018]/g, ".").replace(/[*_~]/g, "").replace(/[\t ]+/g, " ");
   let transactionType = "venta";
   const isInvestorPurchase = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|para compra|compro|compra ya|busco para compra)\b/i.test(clean);
@@ -8529,7 +8554,7 @@ function extractFallbackDataFromText(text2) {
   const interiorExterior = requiresExterior ? "exterior" : clean.includes("interior") && !clean.includes("exterior") ? "interior" : null;
   const adminFeeIncluded = /(?:admin(?:istraci[oó]n)?|admon)\s*(?:incluida|inc\b)|(?:con|\+|mas|más)\s*(?:admin(?:istraci[oó]n)?|admon)/i.test(clean);
   const isAmoblado = /\b(?:amoblado|amoblada|con\s*muebles|completamente\s*amoblado|dotado)\b/i.test(clean);
-  return {
+  const result = {
     propertyType,
     transactionType,
     tipoInmuebleDeseado: propertyType,
@@ -8580,6 +8605,13 @@ function extractFallbackDataFromText(text2) {
       amoblado: isAmoblado ? true : null
     }
   };
+  if (cacheKey.length < 5e3) {
+    if (fallbackDataCache.size > 3e3) {
+      fallbackDataCache.clear();
+    }
+    fallbackDataCache.set(cacheKey, result);
+  }
+  return result;
 }
 async function enrichLexiconFromText(rawText) {
   if (!rawText || rawText.length < 15) return;
@@ -12315,7 +12347,7 @@ function sanitizeResponseMarkdown(text2) {
   if (!text2) return "";
   return text2.replace(/\*\*/g, "*");
 }
-var janiaResultSchema, COMMON_FIRST_NAMES, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, promptCache, JANIA_PROMPT, splitMultiPropertyMessage, brokerDirectoryCache, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, consultingConversationHistory, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
+var janiaResultSchema, COMMON_FIRST_NAMES, fallbackDataCache, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, promptCache, JANIA_PROMPT, splitMultiPropertyMessage, brokerDirectoryCache, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, consultingConversationHistory, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
 var init_janIA = __esm({
   "server/_core/janIA.ts"() {
     "use strict";
@@ -12609,6 +12641,7 @@ var init_janIA = __esm({
       "ximena",
       "jimena"
     ]);
+    fallbackDataCache = /* @__PURE__ */ new Map();
     GREETED_TODAY = /* @__PURE__ */ new Map();
     REPUTATION_HOOK = "\u26A0\uFE0F *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnol\xF3gico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexi\xF3n privada de JanIA, ser\xEDa un verdadero honor para nosotros que nos compartieras tu testimonio y calificaci\xF3n de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
     cachedLiveStatsText = "";
@@ -16849,7 +16882,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.76";
+var VECY_VERSION = "v31.77";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -17976,13 +18009,20 @@ ${liveStats}${userContextInstruction}
       const rejectedPairs = await getRejectedPairsSet();
       const seenPairs = /* @__PURE__ */ new Set();
       const validEvaluatedMatches = [];
+      let matchIdx = 0;
       for (const m of matches) {
+        matchIdx++;
+        if (matchIdx % 25 === 0) {
+          await new Promise((r) => setTimeout(r, 5));
+        }
         const key = `${m.property.id}-${m.requirement.id}`;
         if (seenPairs.has(key)) continue;
         if (rejectedPairs.has(`${m.property.id}_${m.requirement.id}`)) continue;
         let evaluation = m.matchExplanation && m.matchExplanation.score !== void 0 ? m.matchExplanation : null;
         if (!evaluation) {
           evaluation = explicarMatch(m.requirement, m.property);
+          db.update(propertyMatches).set({ matchExplanation: evaluation }).where(eq8(propertyMatches.id, m.id)).catch(() => {
+          });
         }
         if (evaluation.score < 75 || evaluation.blockers && evaluation.blockers.length > 0) {
           continue;

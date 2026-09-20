@@ -1337,10 +1337,14 @@ export function isHollowListing(rawText: string | null | undefined, name?: strin
   return { isHollow: false, reason: 'Publicación con contenido suficiente' };
 }
 
-export function explicarMatch(requirement: any, property: any): MatchExplanation {
+export function explicarMatch(requirement: any, property: any, precomputedFbReq?: any, precomputedFbProp?: any): MatchExplanation {
   const blockers: string[] = [];
   const positives: string[] = [];
   const negatives: string[] = [];
+
+  // Reutilización y memoización de fallback data para evitar decenas de re-análisis por llamada (v31.77)
+  const fbProp = precomputedFbProp || (property.rawText ? extractFallbackDataFromText(property.rawText) : {});
+  const fbReq = precomputedFbReq || (requirement.rawText ? extractFallbackDataFromText(requirement.rawText) : {});
 
   // ── FILTRO DURO 00-HOLLOW: ANTI-PUBLICACIONES HUECAS O FRASES SUELTAS (Doctrinal v31.5) ──
   const propHollow = isHollowListing(property.rawText, property.name, property.externalUrl || property.enlace_origen);
@@ -1401,14 +1405,8 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   // Tipo de Inmueble obligatorio en ambos
   let propTypeHard = property.propertyType || (property as any).tipoInmueble || (property as any).property_type || "";
   let reqTypeHard = requirement.tipoInmuebleDeseado || requirement.propertyType || (requirement as any).property_type || "";
-  if (!propTypeHard && property.rawText) {
-    const fb = extractFallbackDataFromText(property.rawText);
-    if (fb.propertyType) propTypeHard = fb.propertyType;
-  }
-  if (!reqTypeHard && requirement.rawText) {
-    const fb = extractFallbackDataFromText(requirement.rawText);
-    if (fb.propertyType) reqTypeHard = fb.propertyType;
-  }
+  if (!propTypeHard && fbProp.propertyType) propTypeHard = fbProp.propertyType;
+  if (!reqTypeHard && fbReq.propertyType) reqTypeHard = fbReq.propertyType;
   if (isNA(propTypeHard)) {
     blockers.push("⛔ Inmueble Incompleto: Tipo de Inmueble no especificado (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -1421,14 +1419,8 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   // Tipo de Negocio obligatorio en ambos
   let propBizHard = property.transactionType || (property as any).transaction_type || "";
   let reqBizHard = requirement.tipoNegocioDeseado || requirement.transactionType || (requirement as any).transaction_type || "";
-  if (property.rawText) {
-    const fb = extractFallbackDataFromText(property.rawText);
-    if (fb.transactionType) propBizHard = fb.transactionType;
-  }
-  if (requirement.rawText) {
-    const fb = extractFallbackDataFromText(requirement.rawText);
-    if (fb.transactionType) reqBizHard = fb.transactionType;
-  }
+  if (fbProp.transactionType) propBizHard = fbProp.transactionType;
+  if (fbReq.transactionType) reqBizHard = fbReq.transactionType;
   if (isNA(propBizHard)) {
     blockers.push("⛔ Inmueble Incompleto: Tipo de Negocio no especificado (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -1469,17 +1461,11 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   // Barrio/Vereda/Caserío obligatorio en ambos
   let propBarrioHard = property.zone || property.addressNeighborhood || (property as any).address_neighborhood || "";
   let reqBarrioHard = requirement.zonaDeseada || requirement.addressNeighborhood || (requirement as any).address_neighborhood || "";
-  if (property.rawText) {
-    const fb = extractFallbackDataFromText(property.rawText);
-    if (fb.zone && (!propBarrioHard || !property.rawText.toLowerCase().includes(propBarrioHard.toLowerCase()))) {
-      propBarrioHard = fb.zone;
-    }
+  if (fbProp.zone && (!propBarrioHard || !property.rawText?.toLowerCase().includes(propBarrioHard.toLowerCase()))) {
+    propBarrioHard = fbProp.zone;
   }
-  if (requirement.rawText) {
-    const fb = extractFallbackDataFromText(requirement.rawText);
-    if (fb.zone && (!reqBarrioHard || !requirement.rawText.toLowerCase().includes(reqBarrioHard.toLowerCase()))) {
-      reqBarrioHard = fb.zone;
-    }
+  if (fbReq.zone && (!reqBarrioHard || !requirement.rawText?.toLowerCase().includes(reqBarrioHard.toLowerCase()))) {
+    reqBarrioHard = fbReq.zone;
   }
   if (isNA(propBarrioHard)) {
     blockers.push("⛔ Inmueble Incompleto: Barrio/Vereda no especificado (N/E). No puede participar en Matches.");
@@ -1723,14 +1709,8 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   // ── FILTRO DURO 1: Tipo de Negocio (arriendo vs venta NUNCA coinciden) ──
   let reqBiz = (requirement.tipoNegocioDeseado || requirement.transactionType || "").toLowerCase();
   let propBiz = (property.transactionType || "").toLowerCase();
-  if (property.rawText) {
-    const fb = extractFallbackDataFromText(property.rawText);
-    if (fb.transactionType) propBiz = fb.transactionType.toLowerCase();
-  }
-  if (requirement.rawText) {
-    const fb = extractFallbackDataFromText(requirement.rawText);
-    if (fb.transactionType) reqBiz = fb.transactionType.toLowerCase();
-  }
+  if (fbProp.transactionType) propBiz = fbProp.transactionType.toLowerCase();
+  if (fbReq.transactionType) reqBiz = fbReq.transactionType.toLowerCase();
   const propAccepted: string[] = Array.isArray(property.acceptedTransactionTypes)
     ? (property.acceptedTransactionTypes as string[]).map((t: string) => t.toLowerCase())
     : [];
@@ -1867,12 +1847,11 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   // ── SANIDAD PREDIAL DE PRECIOS EN EL MOTOR v20.0 / v25.4 / v31.3 ──────────────────────────────
   const isSaleMatch = (property.transactionType || "").toLowerCase().includes("venta") || !(property.transactionType || "").toLowerCase().includes("arriendo");
   if (isSaleMatch) {
-    if ((price <= 0 || price < 30_000_000) && property.rawText) {
-      const fbP = extractFallbackDataFromText(property.rawText);
-      if (fbP.price >= 30_000_000) {
-        price = fbP.price;
-        if ((!property.adminFee || parseFloat(String(property.adminFee)) <= 0) && fbP.adminFee > 0) {
-          (property as any).adminFee = fbP.adminFee;
+    if (price <= 0 || price < 30_000_000) {
+      if (fbProp.price >= 30_000_000) {
+        price = fbProp.price;
+        if ((!property.adminFee || parseFloat(String(property.adminFee)) <= 0) && fbProp.adminFee > 0) {
+          (property as any).adminFee = fbProp.adminFee;
         }
       } else {
         price = 0; // En venta, valores < 30M son cuotas de administración o residuos, NUNCA precio de venta
@@ -1894,38 +1873,36 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   let pGarages = property.garages != null ? Number(property.garages) : -1;
   let reqGarages = requirement.parqueaderosMin != null ? Number(requirement.parqueaderosMin) : -1;
 
-  if (requirement.rawText) {
-    const fbR = extractFallbackDataFromText(requirement.rawText);
+  if (fbReq.presupuestoMax || fbReq.areaMin || fbReq.areaMax || fbReq.bedroomsMin || fbReq.bathrooms || fbReq.garages) {
     if (budgetMax <= 0 || (isReqRent && budgetMax > 50_000_000) || (!isReqRent && budgetMax < 100_000_000)) {
-      if (fbR.presupuestoMax >= 300_000) {
-        budgetMax = fbR.presupuestoMax;
+      if (fbReq.presupuestoMax >= 300_000) {
+        budgetMax = fbReq.presupuestoMax;
       }
     }
-    if (reqAreaMin <= 0 && fbR.areaMin) {
-      reqAreaMin = fbR.areaMin;
+    if (reqAreaMin <= 0 && fbReq.areaMin) {
+      reqAreaMin = fbReq.areaMin;
     }
-    if (fbR.areaMax) {
-      reqAreaMax = fbR.areaMax;
+    if (fbReq.areaMax) {
+      reqAreaMax = fbReq.areaMax;
     }
-    if (reqBedrooms <= 0 && fbR.bedroomsMin) {
-      reqBedrooms = fbR.bedroomsMin;
+    if (reqBedrooms <= 0 && fbReq.bedroomsMin) {
+      reqBedrooms = fbReq.bedroomsMin;
     }
-    if (reqBathrooms <= 0 && fbR.bathrooms) {
-      reqBathrooms = fbR.bathrooms;
+    if (reqBathrooms <= 0 && fbReq.bathrooms) {
+      reqBathrooms = fbReq.bathrooms;
     }
-    if (reqGarages <= 0 && fbR.garages) {
-      reqGarages = fbR.garages;
+    if (reqGarages <= 0 && fbReq.garages) {
+      reqGarages = fbReq.garages;
     }
   }
 
   let propArea = parseFloat(String(property.areaTotal || property.area || "0"));
-  if (property.rawText) {
-    const fbP = extractFallbackDataFromText(property.rawText);
-    if (price <= 0 && fbP.price) price = fbP.price;
-    if (propArea <= 0 && fbP.area) propArea = fbP.area;
-    if (pBedrooms <= 0 && fbP.bedrooms) pBedrooms = fbP.bedrooms;
-    if (pBathrooms <= 0 && fbP.bathrooms) pBathrooms = fbP.bathrooms;
-    if (pGarages <= 0 && fbP.garages) pGarages = fbP.garages;
+  if (fbProp.price || fbProp.area || fbProp.bedrooms || fbProp.bathrooms || fbProp.garages) {
+    if (price <= 0 && fbProp.price) price = fbProp.price;
+    if (propArea <= 0 && fbProp.area) propArea = fbProp.area;
+    if (pBedrooms <= 0 && fbProp.bedrooms) pBedrooms = fbProp.bedrooms;
+    if (pBathrooms <= 0 && fbProp.bathrooms) pBathrooms = fbProp.bathrooms;
+    if (pGarages <= 0 && fbProp.garages) pGarages = fbProp.garages;
   }
 
   const pAdminFee = property.adminFee != null ? parseFloat(String(property.adminFee)) : -1;
@@ -1941,13 +1918,11 @@ export function explicarMatch(requirement: any, property: any): MatchExplanation
   let reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
   let propZone = normalizarTextoGeografico(property.zone || property.addressNeighborhood || "");
 
-  if (requirement.rawText && (!reqZone || reqZone === "bogota" || reqZone === "n/e" || reqZone === "na")) {
-    const fbR = extractFallbackDataFromText(requirement.rawText);
-    if (fbR.zone) reqZone = normalizarTextoGeografico(fbR.zone);
+  if ((!reqZone || reqZone === "bogota" || reqZone === "n/e" || reqZone === "na") && fbReq.zone) {
+    reqZone = normalizarTextoGeografico(fbReq.zone);
   }
-  if (property.rawText && (!propZone || propZone === "bogota" || propZone === "n/e" || propZone === "na")) {
-    const fbP = extractFallbackDataFromText(property.rawText);
-    if (fbP.zone) propZone = normalizarTextoGeografico(fbP.zone);
+  if ((!propZone || propZone === "bogota" || propZone === "n/e" || propZone === "na") && fbProp.zone) {
+    propZone = normalizarTextoGeografico(fbProp.zone);
   }
 
   // ── FILTRO DURO 0: Inmueble/Requerimiento Vacío o Sin Contenido Legible (Tolerancia Cero) ──
@@ -3245,12 +3220,33 @@ export function evaluarMatch(requirement: any, property: any): boolean {
   return calcularScoreMatch(requirement, property) >= 80;
 }
 
+// ── Concurrencia y Debounce de Matching (v31.77) ──────────────────────────
+const activeMatchingReqs = new Set<number>();
+const activeMatchingProps = new Set<number>();
+const lastMatchingTimeReqs = new Map<number, number>();
+const lastMatchingTimeProps = new Map<number, number>();
+
 /**
  * Busca requerimientos que hagan match con un inmueble recién publicado.
  */
 export async function findMatchesForProperty(propertyId: number) {
+  if (activeMatchingProps.has(propertyId)) {
+    console.log(`[MATCHING-DEBOUNCE] Propiedad #${propertyId} ya está en ejecución activa. Omitiendo duplicado.`);
+    return [];
+  }
+  const lastTimeP = lastMatchingTimeProps.get(propertyId) || 0;
+  if (Date.now() - lastTimeP < 20_000) {
+    console.log(`[MATCHING-DEBOUNCE] Propiedad #${propertyId} evaluada hace menos de 20s. Omitiendo recálculo concurrente.`);
+    return [];
+  }
+  activeMatchingProps.add(propertyId);
+  lastMatchingTimeProps.set(propertyId, Date.now());
+
   const db = await getDb();
-  if (!db) return [];
+  if (!db) {
+    activeMatchingProps.delete(propertyId);
+    return [];
+  }
 
   try {
     const [property] = await db.select().from(properties).where(eq(properties.id, propertyId));
@@ -3270,6 +3266,9 @@ export async function findMatchesForProperty(propertyId: number) {
       console.log(`[MATCHING-FILTER] ⏳ Propiedad #${propertyId} omitida por superar 20 días de antigüedad sin republicación activa.`);
       return [];
     }
+
+    // Extracción determinista única de la propiedad para 0ms de re-análisis en el loop
+    const fbProp = property.rawText ? extractFallbackDataFromText(property.rawText) : {};
 
     // Carga requerimientos activos para cotejo en memoria con resolución geográfica canónica (matchesGeography)
     const activeRequirements = await db
@@ -3308,7 +3307,7 @@ export async function findMatchesForProperty(propertyId: number) {
         }
         continue;
       }
-      const explanation = explicarMatch(req, property);
+      const explanation = explicarMatch(req, property, undefined, fbProp);
       const score = explanation.score;
       if (score >= 80) {
         let matchId: number;
@@ -3358,6 +3357,8 @@ export async function findMatchesForProperty(propertyId: number) {
   } catch (e: any) {
     console.error("[Matching] Error en findMatchesForProperty:", e.message);
     return [];
+  } finally {
+    activeMatchingProps.delete(propertyId);
   }
 }
 
@@ -3365,8 +3366,23 @@ export async function findMatchesForProperty(propertyId: number) {
  * Busca inmuebles que hagan match con un requerimiento recién publicado.
  */
 export async function findMatchesForRequirement(requirementId: number) {
+  if (activeMatchingReqs.has(requirementId)) {
+    console.log(`[MATCHING-DEBOUNCE] Requerimiento #${requirementId} ya está en ejecución activa. Omitiendo duplicado.`);
+    return [];
+  }
+  const lastTimeR = lastMatchingTimeReqs.get(requirementId) || 0;
+  if (Date.now() - lastTimeR < 20_000) {
+    console.log(`[MATCHING-DEBOUNCE] Requerimiento #${requirementId} evaluado hace menos de 20s. Omitiendo recálculo concurrente.`);
+    return [];
+  }
+  activeMatchingReqs.add(requirementId);
+  lastMatchingTimeReqs.set(requirementId, Date.now());
+
   const db = await getDb();
-  if (!db) return [];
+  if (!db) {
+    activeMatchingReqs.delete(requirementId);
+    return [];
+  }
 
   try {
     const [req] = await db.select().from(requirements).where(eq(requirements.id, requirementId));
@@ -3383,6 +3399,9 @@ export async function findMatchesForRequirement(requirementId: number) {
       console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por superar 20 días de antigüedad.`);
       return [];
     }
+
+    // Extracción determinista única del requerimiento para 0ms de re-análisis en el loop
+    const fbReq = req.rawText ? extractFallbackDataFromText(req.rawText) : {};
 
     // Carga inmuebles disponibles para cotejo en memoria con resolución geográfica canónica (matchesGeography)
     const availableProperties = await db
@@ -3424,7 +3443,7 @@ export async function findMatchesForRequirement(requirementId: number) {
         }
         continue;
       }
-      const explanation = explicarMatch(req, prop);
+      const explanation = explicarMatch(req, prop, fbReq, undefined);
       const score = explanation.score;
       if (score >= 80) {
         let matchId: number;
@@ -3474,6 +3493,8 @@ export async function findMatchesForRequirement(requirementId: number) {
   } catch (e: any) {
     console.error("[Matching] Error en findMatchesForRequirement:", e.message);
     return [];
+  } finally {
+    activeMatchingReqs.delete(requirementId);
   }
 }
 
