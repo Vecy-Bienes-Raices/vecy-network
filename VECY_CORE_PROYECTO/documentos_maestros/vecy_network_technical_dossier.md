@@ -322,6 +322,37 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.80 — Septiembre 2026
+
+#### 📌 GUILLOTINAS INFLEXIBLES DE COCINA, CBS Y DISPONIBILIDAD TEMPORAL, Y CORRECCIÓN DE PARSERS DE JERGA INMOBILIARIA
+
+**Problemas identificados:**
+1. **Match Errante #M14570 con 90.00% Indebido**: Se detectó que el match entre Demanda `#378` y Oferta `#3363` recibió 90.00% a pesar de múltiples incompatibilidades estructurales insalvables:
+   - Cocina: Demanda exigía estrictamente `Cocina cerrada`; oferta disponía de `Cocina abierta moderna`.
+   - CBS: Demanda exigía `CBS (indispensable)`; oferta disponía solo de `Baño de servicio`.
+   - Disponibilidad: Demanda requería arriendo *"Para Ya"*; oferta indicaba *"Disponible para finales de nov."*.
+2. **Deficiencias en Expresiones Regulares de JanIA**:
+   - `clean.match(...)` en garajes cruzaba saltos de línea y capturaba el `7` de `Vigilancia 24-7\nDos parqueaderos`.
+   - En metraje, `clean.match(...)` con prefijos y sufijos opcionales capturaba `79 ` de la dirección `79 con 8`, bloqueando la lectura de `169 mts`.
+   - En administración, cuotas en miles como `Admin $1.800` eran descartadas por ser menores a $10.000 COP.
+   - En `saveProperty`, las alcobas y baños no contaban con rescate desde `fallbackD` cuando el LLM devolvía null.
+
+**Solución aplicada:**
+- **Bloqueadores K, L y M en Backend (`matching.ts`)**:
+  - `Bloqueador K`: Choque de cocina (Cerrada vs Abierta / Isla / Americana) $\rightarrow$ 0.00%.
+  - `Bloqueador L`: Choque de CBS indispensable insatisfecho / solo baño de servicio $\rightarrow$ 0.00%.
+  - `Bloqueador M`: Choque de disponibilidad temporal ("Para ya" vs entrega futura diferida) $\rightarrow$ 0.00%.
+- **Guillotinas Visuales y Calificación en Frontend (`AdminMatches.tsx`)**:
+  - Estado `missing` en rojo en las filas de Cocina, CBS y la nueva fila *"Disponibilidad / Entrega"*.
+  - Disparo de `autoScore = 0.00%` automático ante cualquier fila `missing`.
+- **Endurecimiento de Parsers (`janIA.ts` & `colombianRealEstateParser.ts`)**:
+  - Garajes con negative lookbehind `(?<!24[\/\-])` y espaciado horizontal estricto $\rightarrow$ Dos parqueaderos = 2.
+  - Metraje con prefijo o sufijo obligatorio $\rightarrow$ 169 mts = 169 m².
+  - Cuotas en miles $\rightarrow$ Admin $1.800 = $1.800.000 COP.
+  - Rescate de alcobas y baños en `saveProperty` (3 alcobas, 3 baños).
+
+---
+
 ### 🔖 v31.79 — Septiembre 2026
 
 #### 📌 INTEGRACIÓN EN POPUP DE DESCARTE DE OPCIONES DE NO-TERCERÍA, ENRUTAMIENTO AUTOMÁTICO A INMUEBLES STANDBY Y FILTRADO ADMINISTRATIVO

@@ -167,7 +167,22 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.79 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.80 — Septiembre 2026
+
+### Novedades v31.80 (Guillotinas Inflexibles de Cocina, CBS y Disponibilidad Temporal, Corrección de Parsers y Rescate de Ficha #3363):
+- **Guillotinas Inflexibles por Choques Arquitectónicos y Temporales (`matching.ts` & `AdminMatches.tsx`)**:
+  - **Choque de Tipología de Cocina (Bloqueo K / Guillotina 0%)**: Incompatibilidad fatal si la demanda exige `Cocina Cerrada` y la oferta tiene `Cocina Abierta / Tipo Americana / Tipo Isla`, o viceversa. Marcado como `missing` (rojo / *"No Coincide"*) en la tabla de cotejo y puntaje 0% automático.
+  - **Choque de Cuarto de Servicio Indispensable (Bloqueo L / Guillotina 0%)**: Si la demanda exige `CBS (indispensable)` (o palabras clave como `obligatorio`, `innegociable`, `excluyente`), y la oferta carece de CBS o únicamente ofrece `Baño de servicio` (sin habitación de descanso), se marca como `missing` en la tabla de cotejo con estado *"Solo Baño de Servicio (Sin Cuarto)"* y puntaje 0% inmediato.
+  - **Choque de Disponibilidad Temporal Incompatible (Bloqueo M / Guillotina 0%)**: Incorporada fila evaluable *"Disponibilidad / Entrega"* en la tabla de cotejo. Si la demanda exige entrega o arriendo *"Para Ya"* (inmediata) y la oferta tiene disponibilidad futura diferida (ej: *"Disponible para finales de nov."*), se guillotina a 0% por desfase temporal incompatible.
+- **Corrección de Expresiones Regulares y Parsers de Jerga Inmobiliaria (`janIA.ts` & `colombianRealEstateParser.ts`)**:
+  - **Aislamiento Multilínea de Garajes**: Corregida captura en `clean.match(...)` agregando `(?<!24[\/\-])` y espaciado horizontal `[^\S\r\n]*` para evitar que secuencias como `Vigilancia 24-7\nDos parqueaderos` consuman el `7` en vez de `Dos` (2).
+  - **Metraje y Áreas sin Cruce de Direcciones**: Se exige prefijo de metraje (`📐|area|área|superficie`) o sufijo de unidad (`m2|mts2|mts|metros|m²`), impidiendo que nomenclaturas urbanas como `79 con 8` bloqueen la extracción de `169 mts`.
+  - **Soporte de Notación Abreviada de Administración**: Reconocimiento de cifras en miles en cuotas de administración (ej: `Admin $1.800` → `$1.800.000 COP`).
+  - **Rescate de Alcobas y Baños en `saveProperty`**: Mecanismo de rescate desde `fallbackD` para `bedrooms` y `bathrooms` cuando la extracción por LLM retorna null o 0. Extracción de baños discriminados (principal, social, servicio).
+- **Sanidad de Base de Datos y Purga del Match Errante #M14570**:
+  - Reversión/purga del Match `#M14570` (Req #378 vs Prop #3363) a 0.00% con triple bloqueo explícito.
+  - Saneamiento de ficha física `#3363` en PostgreSQL.
+- **Verificación Automatizada**: 64 pruebas de Vitest pasando al 100%, build de Vite y esbuild limpio en 30s.
 
 ### Novedades v31.79 (Integración de Descarte por No-Tercería en POPUP, Enrutamiento Automático a Inmuebles StandBy y Filtrado de Catálogo):
 - **Opciones Doctrinales de Tercería en POPUP de Descarte (`AdminMatches.tsx`)**:

@@ -574,6 +574,88 @@ describe("VECY NETWORK — SUITE DE REGRESIÓN DOCTRINAL AUTOMATIZADA", () => {
       expect(matchExplanation.score).toBe(0);
       expect(matchExplanation.blockers.length).toBeGreaterThan(0);
     });
+
+    it("Match #M14570 (Req #378 vs Prop #3363): debe guillotinar a 0% por Cocina Cerrada, CBS Indispensable y Disponibilidad Incompatible", () => {
+      const rawReq378 = `Busco Arriendo para Ya !
+2 o 3 alcobas
+Cocina cerrada
+CBS (indispensable)
+Pisos en madera
+Parqueadero Visitantss
+Planta eléctrica
+Solo estos Barrios: Cabrera, Retiro, Nogal, Chico Museo
+Presupuesto: $12.000.000`;
+
+      const rawProp3363 = `*Arriendo lindo apto en el Nogal duplex*
+79 con 8
+169 mts
+4 piso
+Techos altos. Ventaneria de piso a techo
+Ascensor directo al apto
+Cocina abierta moderna
+Baño de servicio
+Sala comedor amplios
+Baño social
+3 cuartos el principal con Walk in closet y baño
+Canon $10mm
+Admin $1.800
+Vigilancia 24-7
+Dos parqueaderos
+Disponible para finales de nov.`;
+
+      // 1. Validar extracción correcta de Propiedad #3363 sin cruce de saltos de línea
+      const extractedProp = extractFallbackDataFromText(rawProp3363);
+      expect(extractedProp.area).toBe(169);
+      expect(extractedProp.garages).toBe(2); // Debe ser 2, NO 7 por 'Vigilancia 24-7\nDos parqueaderos'
+      expect(extractedProp.adminFee).toBe(1_800_000); // Admin $1.800 -> 1.800.000 COP
+      expect(extractedProp.bedrooms).toBe(3);
+      expect(extractedProp.bathrooms).toBe(3);
+
+      const prop3363 = {
+        id: 3363,
+        propertyType: "apartment",
+        transactionType: "arriendo",
+        addressCity: "Bogotá",
+        zone: "El Nogal",
+        rentPrice: 10_000_000,
+        adminFee: 1_800_000,
+        areaTotal: 169,
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        amenities: {
+          cocina: "Abierta",
+          cbs: false,
+          cuartoBanoServicio: "Solo Baño de Servicio"
+        },
+        rawText: rawProp3363
+      };
+
+      const req378 = {
+        id: 378,
+        propertyType: "apartment",
+        tipoInmuebleDeseado: "apartment",
+        transactionType: "arriendo",
+        tipoNegocioDeseado: "arriendo",
+        addressCity: "Bogotá",
+        ciudadDeseada: "Bogotá",
+        zonaDeseada: "Nogal, Cabrera, Retiro",
+        presupuestoMax: 12_000_000,
+        caracteristicasDeseadas: {
+          cocina: "Cerrada",
+          cbs: "indispensable"
+        },
+        demandsCBSMandatory: true,
+        rawText: rawReq378
+      };
+
+      const matchExplanation = explicarMatch(req378, prop3363);
+      expect(matchExplanation.score).toBe(0);
+      expect(matchExplanation.blockers.length).toBeGreaterThan(0);
+      // Debe contener bloqueos explícitos
+      const allBlockers = matchExplanation.blockers.join(" ");
+      expect(allBlockers).toMatch(/Cocina|CBS|Disponibilidad/i);
+    });
   });
 });
 

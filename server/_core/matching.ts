@@ -2868,6 +2868,51 @@ export function explicarMatch(
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
+  // K. Choque de Tipología de Cocina (Cerrada vs Abierta / Tipo Americana / Tipo Isla) (Doctrina v31.80)
+  const reqKitchenClosed = /\b(?:cocina\s*cerrada|cocina\s*tradicional|cocina\s*independiente|cerrada\s*indispensable|cocina\s*no\s*abierta)\b/i.test(reqRawTextLower) ||
+    requirement.caracteristicasDeseadas?.cocina === "Cerrada";
+  const reqKitchenOpen = /\b(?:cocina\s*abierta|cocina\s*americana|tipo\s*isla|cocina\s*tipo\s*isla|cocina\s*integrada)\b/i.test(reqRawTextLower) ||
+    requirement.caracteristicasDeseadas?.cocina === "Abierta" || requirement.caracteristicasDeseadas?.cocina === "Abierta tipo Isla";
+
+  const propKitchenClosed = /\b(?:cocina\s*cerrada|cocina\s*independiente|cocina\s*tradicional)\b/i.test(propRawTextLower) ||
+    property.amenities?.cocina === "Cerrada";
+  const propKitchenOpen = /\b(?:cocina\s*abierta|cocina\s*tipo\s*isla|tipo\s*isla|cocina\s*americana|cocina\s*integrada|cocina\s*abierta\s*moderna)\b/i.test(propRawTextLower) ||
+    property.amenities?.cocina === "Abierta" || property.amenities?.cocina === "Abierta tipo Isla";
+
+  if (reqKitchenClosed && propKitchenOpen && !propKitchenClosed) {
+    blockers.push("Choque de Tipología de Cocina: La demanda exige estrictamente COCINA CERRADA y la oferta cuenta con COCINA ABIERTA / Tipo Americana. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (reqKitchenOpen && propKitchenClosed && !propKitchenOpen) {
+    blockers.push("Choque de Tipología de Cocina: La demanda exige COCINA ABIERTA / Tipo Americana y la oferta cuenta con COCINA CERRADA independiente. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // L. Choque de Cuarto de Servicio: CBS Indispensable insatisfecho (Doctrina v31.80)
+  const reqRequiresCBSMandatory = /\b(?:cbs\s*(?:indispensable|obligatorio|si\s*o\s*si|innegociable|excluyente)|cuarto\s*(?:de\s*)?servicio\s*(?:indispensable|obligatorio|si\s*o\s*si|innegociable|excluyente)|exige\s*cbs)\b/i.test(reqRawTextLower) ||
+    (requirement as any).demandsCBSMandatory === true;
+
+  const propHasCBS = Boolean(property.caracteristicas?.cbs) ||
+    Boolean((property as any).hasServiceRoom) ||
+    Boolean(property.amenities?.cuartoBanoServicio && String(property.amenities?.cuartoBanoServicio).toLowerCase().includes("cuarto")) ||
+    /\b(?:cbs|cuarto\s*(?:de\s*)?servicio|alcoba\s*(?:de\s*)?servicio|cuarto\s*y\s*baño\s*de\s*servicio|cuarto\s*y\s*bano\s*de\s*servicio|habitaci[oó]n\s*de\s*servicio)\b/i.test(propRawTextLower);
+
+  const propOnlyServiceBath = !propHasCBS && /\b(?:baño\s*de\s*servicio|bano\s*de\s*servicio)\b/i.test(propRawTextLower);
+
+  if (reqRequiresCBSMandatory && (!propHasCBS || propOnlyServiceBath)) {
+    blockers.push("Choque de Distribución (CBS Indispensable): La demanda exige estrictamente CUARTO Y BAÑO DE SERVICIO (CBS) y la oferta no dispone de habitación de servicio" + (propOnlyServiceBath ? " (solo cuenta con baño de servicio)." : ". Match Inviable (0%)."));
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // M. Choque de Disponibilidad Temporal Incompatible (Para Ya vs Entrega Diferida / Meses Vista) (Doctrina v31.80)
+  const reqDemandsImmediate = /\b(?:para\s*ya|arriendo\s*para\s*ya|inmediat[oa]|urgente|lo\s*antes\s*posible|este\s*mes|entrega\s*inmediata|disponibilidad\s*inmediata|ingreso\s*inmediato|mudanza\s*inmediata)\b/i.test(reqRawTextLower);
+  const propHasDeferredAvailability = propRawTextLower.match(/\b(?:disponible\s*(?:para|a\s*partir\s*de|desde|en)?|desocupan?\s*(?:el|en)?|entrega\s*(?:para|a\s*partir\s*de|en)?)\s*(?:finales\s*de|mediados\s*de|principios\s*de)?\s*(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|nov\.?|dic\.?|ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|\d{1,2}\s*de\s*[a-z]+)\b/i);
+
+  if (reqDemandsImmediate && propHasDeferredAvailability && !/\b(?:disponible\s*ya|disponibilidad\s*inmediata|desocupado|vac[ií]o)\b/i.test(propRawTextLower)) {
+    blockers.push(`Choque de Disponibilidad Temporal: La demanda exige arriendo/entrega 'PARA YA' (Inmediata) y la oferta está '${propHasDeferredAvailability[0].trim()}'. Desfase temporal incompatible. Match Inviable (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
   // Auditoría de tipo de garaje (independiente vs lineal) v20.0
   const propGarageType = (property.garageType || "").toLowerCase();
   const reqGarageTypeRaw = (requirement.rawText || "").toLowerCase();

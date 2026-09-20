@@ -1,8 +1,8 @@
-# 🏢 VECY Network (v31.79)
+# 🏢 VECY Network (v31.80)
 
 > **Red colaborativa e inteligente de corretaje inmobiliario para Colombia.**
 
-VECY Network es una plataforma que integra inteligencia artificial (JanIA - Google Gemini 2.5 Flash), automatización de WhatsApp (Baileys WebSocket) y un motor de matching cruzado con escala continua decimal (80.00% - 100.00%), tolerancia cero a no-coincidencias, tablas de cotejo dinámicas con persistencia permanente en base de datos y enrutamiento a Inmuebles StandBy para protección de comisión 50/50.
+VECY Network es una plataforma que integra inteligencia artificial (JanIA - Google Gemini 2.5 Flash), automatización de WhatsApp (Baileys WebSocket) y un motor de matching cruzado con escala continua decimal (80.00% - 100.00%), guillotinas inflexibles por choques arquitectónicos/temporales (Cocina Cerrada vs Abierta, CBS indispensable, Disponibilidad inmediata "para ya"), tablas de cotejo dinámicas con persistencia permanente en base de datos y enrutamiento a Inmuebles StandBy para protección de comisión 50/50.
 
 ---
 

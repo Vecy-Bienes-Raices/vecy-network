@@ -5967,6 +5967,42 @@ ightarrow$ número de celular para aplicarlas de forma automática a todas sus p
 
 ---
 
+### 📌 SESIÓN v31.80 — SEPTIEMBRE 2026: AUDITORÍA DE MATCH #M14570, GUILLOTINAS INFLEXIBLES DE COCINA, CBS Y DISPONIBILIDAD TEMPORAL, Y CORRECCIÓN DE PARSERS DE JERGA
+
+#### 👤 Solicitud y Directrices de Eduardo A. Rivera:
+1. **Auditoría Forense del Match #M14570**:
+   - Eduardo detectó un error garrafal en el Match `#M14570` (Demanda `#378` vs Oferta `#3363`), que aparecía calificado con un erróneo **90.00%** de compatibilidad a pesar de tener incompatibilidades físicas, arquitectónicas y temporales flagrantes:
+     * *Cocina*: Demanda exige estrictamente `Cocina cerrada`; oferta dice textualmente `Cocina abierta moderna`.
+     * *CBS*: Demanda exige `CBS (indispensable)`; oferta dice textualmente `Baño de servicio` (solo baño, sin habitación para empleada).
+     * *Disponibilidad*: Demanda busca `Busco Arriendo para Ya !`; oferta dice `Disponible para finales de nov.` (más de 2 meses de desfase).
+     * *Parqueaderos*: Oferta tiene `Dos parqueaderos`, pero en BD se guardó `garages: 7` debido a que el parser cruzó el salto de línea `Vigilancia 24-7\nDos parqueaderos`.
+     * *Campos Físicos Faltantes*: Oferta `#3363` guardó `areaTotal = null` (el parser se detuvo en la dirección `79 con 8`), `bedrooms = null` (texto dice `3 cuartos`), `bathrooms = null` (texto dice `3 baños`) y `adminFee = null` (texto dice `Admin $1.800`).
+2. **Exigencia Doctrinal Innegociable**:
+   - Todo choque directo donde la demanda exija una característica indispensable o cerrada y la oferta ofrezca lo contrario, DEBE activar una **Guillotina Total al 0.00%** (Estado `missing` / *"No Coincide"* en rojo), descartando el match de inmediato.
+   - Saneamiento y corrección profunda de los regex de extracción para que nunca más crucen líneas ni interpreten direcciones como áreas o vigilancia 24-7 como parqueaderos.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas (v31.80):
+1. **Bloqueadores K, L y M en el Motor de Matching Backend (`server/_core/matching.ts`)**:
+   - **Bloqueador K (Tipología de Cocina)**: Detección estricta de choques `Cerrada` vs `Abierta / Tipo Americana / Tipo Isla`. Guillotina al 0.00%.
+   - **Bloqueador L (Cuarto de Servicio CBS Indispensable)**: Si la demanda exige CBS como `indispensable`, `obligatorio`, `si o si`, `innegociable`, `excluyente` o `exige cbs`, y la oferta no dispone de habitación de servicio (o solo cuenta con baño de servicio), guillotina al 0.00%.
+   - **Bloqueador M (Disponibilidad Temporal Incompatible)**: Si la demanda busca arriendo/entrega *"Para Ya"* (inmediata) y la oferta tiene fecha de entrega diferida (ej: *"Disponible para finales de nov."*), guillotina al 0.00%.
+2. **Guillotinas Visuales y Calificadoras en la Tabla de Cotejo (`client/src/components/admin/AdminMatches.tsx`)**:
+   - En la fila `Tipología de Cocina`: Si `reqKitchen` y `propKitchen` chocan (Cerrada vs Abierta), se establece `kStatus = "missing"` (rojo / *"No Coincide"*).
+   - En la fila `Cuarto de Servicio (CBS)`: Si `isObligatoryCBS` o la oferta solo tiene baño (`propHasServiceBathOnly`), se establece `cbsStatus = "missing"` con etiqueta explicativa *"Solo Baño de Servicio (Sin Cuarto)"*.
+   - Nueva fila evaluable `Disponibilidad / Entrega`: Muestra *"Inmediata (Para Ya)"* vs *"Disponible para finales de nov."*, estableciendo `dispStatus = "missing"`.
+   - Regla Guillotina `hasAnyMissingRow`: Si cualquier fila es `missing`, `autoScore = 0.00%` inmediato.
+3. **Corrección de Expresiones Regulares en JanIA (`server/_core/janIA.ts` & `shared/colombianRealEstateParser.ts`)**:
+   - **Garajes**: Incorporado negative lookbehind `(?<!24[\/\-])` y espaciado horizontal `[^\S\r\n]*` para aislar el número en la misma línea, capturando limpiamente `Dos` (2) e ignorando el `7` de `Vigilancia 24-7`.
+   - **Área**: La expresión regular ahora exige prefijo (`📐|area|área|superficie`) o sufijo métrico (`m2|mts2|mts|metros|m²`), saltando nomenclaturas urbanas como `79 con 8` y capturando `169 mts`.
+   - **Cuota de Administración**: Reconocimiento de notación abreviada en miles (ej. `Admin $1.800` → `$1.800.000 COP`).
+   - **Rescate de Alcobas y Baños en `saveProperty`**: Cuando la extracción por LLM retorna null o 0, rescate directo desde `fallbackD` para `bedrooms` y `bathrooms` (incluyendo conteo de baño principal, baño social y baño de servicio).
+   - **Parser Compartido**: Soporte de `cuartos|dormitorios` en `bedMatch` y palabras clave `indispensable|excluyente|innegociable` en `demandsCBSMandatory`.
+4. **Verificación Automatizada**:
+   - Incorporada prueba de regresión para el Match `#M14570` en `server/__tests__/regression.test.ts`.
+   - 64 pruebas de Vitest superadas al 100%. Build completo de Vite y esbuild limpio. Versión oficial actualizada a **v31.80**.
+
+---
+
 ## 🛡️ PROTOCOLOS Y REGLAS DE TRABAJO INQUEBRANTABLES
 1. **Adición Pura de Código**: NUNCA borrar, modificar ni romper funcionalidades o reglas previas ya validadas al agregar nuevo código.
 2. **Revisión del Historial al Iniciar**: Consultar esta bitácora y `.agents/AGENTS.md` al comienzo de cada conversación.

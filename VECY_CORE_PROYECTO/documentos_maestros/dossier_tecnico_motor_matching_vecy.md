@@ -717,6 +717,21 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   - *"El colega Demanda No acepta tercería, ni referidos"*: JanIA actualiza la Demanda en PostgreSQL (`requirements.aceptaTerceria = false`, `requirements.standByDirectoVecy = true`) para asignación prioritaria con cartera directa.
 - **Filtro Rápido en Catálogo de Inmuebles**: En `AdminProperties.tsx`, incorporación de píldoras de navegación (`Todos`, `Disponibles`, `🛡️ Inmuebles StandBy`) y distintivo visual `🛡️ Standby Directo` en desktop y móvil.
 
+---
+
+### 🔖 v31.80 — SEPTIEMBRE 2026: GUILLOTINAS INFLEXIBLES DE COCINA, CBS Y DISPONIBILIDAD TEMPORAL, Y CORRECCIÓN DE PARSERS DE JERGA
+
+#### 1. GUILLOTINAS TOTALES POR CHOQUE ARQUITECTÓNICO Y TEMPORAL
+- **Choque de Tipología de Cocina (Bloqueo K)**: Incompatibilidad insalvable si la demanda exige `Cocina Cerrada` y la oferta dispone de `Cocina Abierta / Tipo Americana / Tipo Isla` (o viceversa). Marca `missing` (rojo / *"No Coincide"*) y califica automáticamente al 0.00%.
+- **Choque de Cuarto de Servicio Indispensable (Bloqueo L)**: Exigencia expresa de `CBS (indispensable)` (o `obligatorio`, `si o si`, `innegociable`, `excluyente`). Si la oferta carece de habitación de servicio o únicamente dispone de `Baño de servicio` (sin dormitorio para el personal de servicio), guillotina fulminante al 0.00% con advertencia en cotejo *"Solo Baño de Servicio (Sin Cuarto)"*.
+- **Choque de Disponibilidad Temporal Incompatible (Bloqueo M)**: Fila evaluable *"Disponibilidad / Entrega"*. Si la demanda exige arriendo o entrega *"Para Ya"* (inmediata) y la oferta tiene disponibilidad futura diferida (ej: *"Disponible para finales de nov."*), guillotina al 0.00% por desfase temporal directo.
+
+#### 2. CORRECCIÓN Y ENDURECIMIENTO DE EXPRESIONES REGULARES DE JANIA
+- **Aislamiento Multilínea de Garajes**: `(?<!24[\/\-])` y espaciado horizontal `[^\S\r\n]*` evitan que `Vigilancia 24-7\nDos parqueaderos` consuma el dígito 7, capturando fielmente `Dos` (2 garajes).
+- **Extracción Métrica sin Cruces Urbanos**: `clean.match(...)` exige prefijos o sufijos de unidad para evitar que direcciones como `79 con 8` bloqueen la captura del área real `169 mts`.
+- **Notación Abreviada de Administración**: Reconocimiento de cuotas en miles (`Admin $1.800` $\rightarrow$ `$1.800.000 COP`).
+- **Rescate de Alcobas y Baños en Base de Datos**: Inyección de respaldo en `saveProperty` para evitar que campos físicos queden en `null` cuando la inferencia LLM falle.
+
 
 
 

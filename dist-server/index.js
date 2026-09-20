@@ -6076,6 +6076,31 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     blockers.push("Choque de Confort Lum\xEDnico: El cliente exige expresamente inmueble muy luminoso / con vista agradable exterior y la oferta es de tipolog\xEDa interior. Match Inviable (0%).");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
+  const reqKitchenClosed = /\b(?:cocina\s*cerrada|cocina\s*tradicional|cocina\s*independiente|cerrada\s*indispensable|cocina\s*no\s*abierta)\b/i.test(reqRawTextLower) || requirement.caracteristicasDeseadas?.cocina === "Cerrada";
+  const reqKitchenOpen = /\b(?:cocina\s*abierta|cocina\s*americana|tipo\s*isla|cocina\s*tipo\s*isla|cocina\s*integrada)\b/i.test(reqRawTextLower) || requirement.caracteristicasDeseadas?.cocina === "Abierta" || requirement.caracteristicasDeseadas?.cocina === "Abierta tipo Isla";
+  const propKitchenClosed = /\b(?:cocina\s*cerrada|cocina\s*independiente|cocina\s*tradicional)\b/i.test(propRawTextLower) || property.amenities?.cocina === "Cerrada";
+  const propKitchenOpen = /\b(?:cocina\s*abierta|cocina\s*tipo\s*isla|tipo\s*isla|cocina\s*americana|cocina\s*integrada|cocina\s*abierta\s*moderna)\b/i.test(propRawTextLower) || property.amenities?.cocina === "Abierta" || property.amenities?.cocina === "Abierta tipo Isla";
+  if (reqKitchenClosed && propKitchenOpen && !propKitchenClosed) {
+    blockers.push("Choque de Tipolog\xEDa de Cocina: La demanda exige estrictamente COCINA CERRADA y la oferta cuenta con COCINA ABIERTA / Tipo Americana. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (reqKitchenOpen && propKitchenClosed && !propKitchenOpen) {
+    blockers.push("Choque de Tipolog\xEDa de Cocina: La demanda exige COCINA ABIERTA / Tipo Americana y la oferta cuenta con COCINA CERRADA independiente. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const reqRequiresCBSMandatory = /\b(?:cbs\s*(?:indispensable|obligatorio|si\s*o\s*si|innegociable|excluyente)|cuarto\s*(?:de\s*)?servicio\s*(?:indispensable|obligatorio|si\s*o\s*si|innegociable|excluyente)|exige\s*cbs)\b/i.test(reqRawTextLower) || requirement.demandsCBSMandatory === true;
+  const propHasCBS = Boolean(property.caracteristicas?.cbs) || Boolean(property.hasServiceRoom) || Boolean(property.amenities?.cuartoBanoServicio && String(property.amenities?.cuartoBanoServicio).toLowerCase().includes("cuarto")) || /\b(?:cbs|cuarto\s*(?:de\s*)?servicio|alcoba\s*(?:de\s*)?servicio|cuarto\s*y\s*baño\s*de\s*servicio|cuarto\s*y\s*bano\s*de\s*servicio|habitaci[oó]n\s*de\s*servicio)\b/i.test(propRawTextLower);
+  const propOnlyServiceBath = !propHasCBS && /\b(?:baño\s*de\s*servicio|bano\s*de\s*servicio)\b/i.test(propRawTextLower);
+  if (reqRequiresCBSMandatory && (!propHasCBS || propOnlyServiceBath)) {
+    blockers.push("Choque de Distribuci\xF3n (CBS Indispensable): La demanda exige estrictamente CUARTO Y BA\xD1O DE SERVICIO (CBS) y la oferta no dispone de habitaci\xF3n de servicio" + (propOnlyServiceBath ? " (solo cuenta con ba\xF1o de servicio)." : ". Match Inviable (0%)."));
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const reqDemandsImmediate = /\b(?:para\s*ya|arriendo\s*para\s*ya|inmediat[oa]|urgente|lo\s*antes\s*posible|este\s*mes|entrega\s*inmediata|disponibilidad\s*inmediata|ingreso\s*inmediato|mudanza\s*inmediata)\b/i.test(reqRawTextLower);
+  const propHasDeferredAvailability = propRawTextLower.match(/\b(?:disponible\s*(?:para|a\s*partir\s*de|desde|en)?|desocupan?\s*(?:el|en)?|entrega\s*(?:para|a\s*partir\s*de|en)?)\s*(?:finales\s*de|mediados\s*de|principios\s*de)?\s*(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|nov\.?|dic\.?|ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|\d{1,2}\s*de\s*[a-z]+)\b/i);
+  if (reqDemandsImmediate && propHasDeferredAvailability && !/\b(?:disponible\s*ya|disponibilidad\s*inmediata|desocupado|vac[ií]o)\b/i.test(propRawTextLower)) {
+    blockers.push(`Choque de Disponibilidad Temporal: La demanda exige arriendo/entrega 'PARA YA' (Inmediata) y la oferta est\xE1 '${propHasDeferredAvailability[0].trim()}'. Desfase temporal incompatible. Match Inviable (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
   const propGarageType = (property.garageType || "").toLowerCase();
   const reqGarageTypeRaw = (requirement.rawText || "").toLowerCase();
   const reqWantsIndependent = reqGarageTypeRaw.includes("independiente") || reqGarageTypeRaw.includes("libre") || reqGarageTypeRaw.includes("no lineal");
@@ -7188,10 +7213,10 @@ function parseColombianListing(rawText) {
   if (ageMatch) {
     result.maxAgeYears = parseInt(ageMatch[1], 10);
   }
-  const bedMatch = text2.match(/(\d+)\s*(?:habitaciones|alcobas|habs)/i);
+  const bedMatch = text2.match(/(\d+)\s*(?:habitaciones|alcobas|habs|cuartos|dormitorios)/i);
   if (bedMatch) result.bedrooms = parseInt(bedMatch[1], 10);
-  result.hasCBS = /\bcbs\b|cuarto\s+(?:de\s+)?servicio/i.test(text2);
-  result.demandsCBSMandatory = /cbs[^\n]*(?:imprescindible|obligatorio|si\s+o\s+si)/i.test(text2);
+  result.hasCBS = /\bcbs\b|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio/i.test(text2);
+  result.demandsCBSMandatory = /(?:cbs|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio)[^\n]*(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente|exige)/i.test(text2) || /(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente)[^\n]*(?:cbs|cuarto\s+(?:de\s+)?servicio)/i.test(text2);
   result.hasStudio = /\bestudio\b|star\s+de\s+tv|estar\s+tv/i.test(text2);
   result.demandsStudioMandatory = /(?:estudio|star)[^\n]*(?:obligatorio|imprescindible|excluyente)/i.test(text2);
   result.demandsBalconyOrTerrace = /balc[oó]n|terraza/i.test(text2);
@@ -8000,7 +8025,10 @@ function extractFallbackDataFromText(text2) {
   let adminFee = 0;
   const adminMatch = clean.match(/(?:^|[-•*#\s])(?:v\s*[\/\-]\s*)?(?:adm[oó]n|admon|administraci[oó]n|administ|admin|cta\s*adm[oó]n|cuota\s*adm[oó]n)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*[:\/\-=\s]?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
   if (adminMatch) {
-    const rawANum = parseFloat(adminMatch[1].replace(/\./g, ""));
+    let rawANum = parseFloat(adminMatch[1].replace(/\./g, ""));
+    if (rawANum >= 100 && rawANum < 1e4) {
+      rawANum = rawANum * 1e3;
+    }
     if (!isNaN(rawANum) && rawANum >= 1e4 && rawANum <= 3e7 && !isPhoneNumberNotPrice(rawANum, text2)) {
       adminFee = rawANum;
     }
@@ -8153,7 +8181,7 @@ function extractFallbackDataFromText(text2) {
       }
     }
     if (area === 0) {
-      const areaMatch = clean.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|m²)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?/i);
+      const areaMatch = clean.match(/(?:📐|area|área|superficie)\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?/i) || clean.match(/(?:(?:m[ií]nimo|min|m[aá]ximo|max|de)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)\b/i);
       if (areaMatch) {
         const hasAreaCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaMatch[0]);
         const val = parseFloat(areaMatch[1].replace(",", "."));
@@ -8234,6 +8262,13 @@ function extractFallbackDataFromText(text2) {
       bathrooms = parseWordOrDigit(bathMatch[1]);
     }
   }
+  if (bathrooms === 0) {
+    let countBaths = 0;
+    if (/\bbaño\s*(?:social|de\s*visitas)\b/i.test(clean)) countBaths++;
+    if (/\bbaño\s*de\s*servicio\b/i.test(clean)) countBaths++;
+    if (/\b(?:baño\s*(?:privado|principal)|principal[^\n]*baño|con\s*baño)\b/i.test(clean)) countBaths++;
+    if (countBaths > 0) bathrooms = countBaths;
+  }
   let garages = 0;
   let garageType = null;
   const kvGarMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(?:parqueaderos?|garajes?|parqueos?|estacionamientos?|pks?|parqs?)\s*[:\-=]\s*(?:m[ií]nimo\s*|minimo\s*|m[ií]n\s*|min\s*)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\b/i);
@@ -8241,7 +8276,7 @@ function extractFallbackDataFromText(text2) {
     const val = parseWordOrDigit(kvGarMatch[1]);
     if (val <= 20) garages = val;
   } else {
-    const garMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(?:con\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d{1,2}))?\s*(?:amplios?|cubiertos?|privados?|independientes?|en\s*l[ií]nea|lineales?)?\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)/i) || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)\s*:?\s*(\d{1,2}|un|una|uno|dos|tres|cuatro|cinco)/i);
+    const garMatch = clean.match(/(?:🚙|🚗|🚘)?[^\S\r\n]*(?:con\s+)?(?<!24[\/\-])(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})(?:[^\S\r\n]*(?:\([0-9]+\)|[a-záéíóúñ]+))?[^\S\r\n]*(?:amplios?|cubiertos?|privados?|independientes?|en\s*l[ií]nea|lineales?)?[^\S\r\n]*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)/i) || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)[^\S\r\n]*:?[^\S\r\n]*(\d{1,2}|un|una|uno|dos|tres|cuatro|cinco)/i);
     if (garMatch) {
       const val = parseWordOrDigit(garMatch[1]);
       if (val >= 1900 && val <= 2100) {
@@ -11269,6 +11304,12 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
     }
     if (!data.areaTotal && !data.area && fallbackD.area > 0) {
       data.areaTotal = fallbackD.area;
+    }
+    if ((data.bedrooms === void 0 || data.bedrooms === null || Number(data.bedrooms) <= 0) && fallbackD.bedrooms > 0) {
+      data.bedrooms = fallbackD.bedrooms;
+    }
+    if ((data.bathrooms === void 0 || data.bathrooms === null || Number(data.bathrooms) <= 0) && fallbackD.bathrooms > 0) {
+      data.bathrooms = fallbackD.bathrooms;
     }
   }
   if (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogot\xE1" || data.zone.toLowerCase() === "colombia") {
@@ -16902,7 +16943,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.79";
+var VECY_VERSION = "v31.80";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

@@ -1841,8 +1841,17 @@ export function scoreRows(req: any, prop: any) {
 
   if (reqKitchen || propKitchen) {
     let kStatus: MatchStatus = "neutral";
+    const reqKLower = (reqKitchen || "").toLowerCase();
+    const propKLower = (propKitchen || "").toLowerCase();
+    const isConflict = (reqKLower.includes("cerrada") && (propKLower.includes("abierta") || propKLower.includes("isla") || propKLower.includes("americana"))) ||
+                       ((reqKLower.includes("abierta") || reqKLower.includes("isla") || reqKLower.includes("americana")) && propKLower.includes("cerrada"));
+
     if (reqKitchen && propKitchen) {
-      kStatus = reqKitchen.toLowerCase() === propKitchen.toLowerCase() ? "exact" : "warn";
+      if (isConflict) {
+        kStatus = "missing"; // 🔴 Choque arquitectónico directo (Cerrada vs Abierta) -> Guillotina (No Coincide)
+      } else {
+        kStatus = reqKLower === propKLower ? "exact" : "warn";
+      }
     } else if (!reqKitchen && propKitchen) {
       kStatus = "plus";
     } else {
@@ -1888,24 +1897,33 @@ export function scoreRows(req: any, prop: any) {
     );
   }
 
-  // 20. Cuarto de Servicio (CBS) con/sin baño
+  // 20. Cuarto de Servicio (CBS) con/sin baño (Doctrina v31.80)
   const reqCBS = reqTextLower.includes("cbs") || reqTextLower.includes("cuarto de servicio") || reqTextLower.includes("alcoba de servicio") || reqTextLower.includes("cuarto y baño de servicio") || reqTextLower.includes("cuarto y bano de servicio");
   const propCBS = propRawText.includes("cbs") || propRawText.includes("cuarto de servicio") || propRawText.includes("alcoba de servicio") || propRawText.includes("cuarto y baño de servicio") || propRawText.includes("alcoba para el servicio") || prop.hasServiceRoom;
+  const isObligatoryCBS = (req as any).requiresObligatoryCBS || 
+    /(?:cbs|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio)[^\n]*(?:indispensable|obligatorio|si\s*o\s*si|innegociable|excluyente|exige|estricto)/i.test(reqTextLower) ||
+    /(?:indispensable|obligatorio|si\s*o\s*si|innegociable|excluyente)[^\n]*(?:cbs|cuarto\s+(?:de\s+)?servicio)/i.test(reqTextLower);
   
   if (reqCBS || propCBS) {
     const reqHasBathInCBS = reqTextLower.includes("con baño") || reqTextLower.includes("con bano") || reqTextLower.includes("cuarto y baño");
     const propHasBathInCBS = propRawText.includes("con baño") || propRawText.includes("con bano") || propRawText.includes("cuarto y baño") || propRawText.includes("cbs");
+    const propHasServiceBathOnly = !propCBS && (propRawText.includes("baño de servicio") || propRawText.includes("bano de servicio"));
 
     let cbsStatus: MatchStatus = "neutral";
-    if (reqCBS && propCBS) cbsStatus = "exact";
-    else if (reqCBS && !propCBS) cbsStatus = "warn";
-    else if (!reqCBS && propCBS) cbsStatus = "plus";
-    else cbsStatus = "neutral";
+    if (reqCBS && propCBS) {
+      cbsStatus = "exact";
+    } else if (reqCBS && !propCBS) {
+      cbsStatus = (isObligatoryCBS || propHasServiceBathOnly) ? "missing" : "warn"; // 🔴 Si es indispensable o solo tiene baño -> Guillotina (No Coincide)
+    } else if (!reqCBS && propCBS) {
+      cbsStatus = "plus";
+    } else {
+      cbsStatus = "neutral";
+    }
 
     add(
       "Cuarto de Servicio (CBS)",
-      reqCBS ? (reqHasBathInCBS ? "Exige CBS con Baño" : "Exige Cuarto de Servicio") : "Flexible / No exigido",
-      propCBS ? (propHasBathInCBS ? "Sí (Con Baño Privado)" : "Sí (Sin Baño)") : "Sin CBS especificado",
+      reqCBS ? (isObligatoryCBS ? "Exige CBS Indispensable" : (reqHasBathInCBS ? "Exige CBS con Baño" : "Exige Cuarto de Servicio")) : "Flexible / No exigido",
+      propCBS ? (propHasBathInCBS ? "Sí (Con Baño Privado)" : "Sí (Sin Baño)") : (propHasServiceBathOnly ? "Solo Baño de Servicio (Sin Cuarto)" : "Sin CBS especificado"),
       cbsStatus,
       4,
       <Home className="w-3.5 h-3.5" />
@@ -2136,6 +2154,38 @@ export function scoreRows(req: any, prop: any) {
     );
   }
 
+  // 30. Disponibilidad / Entrega Inmediata vs Futura (Doctrina v31.80)
+  const reqImmediate = /\b(?:para\s*ya|arriendo\s*para\s*ya|inmediat[oa]|urgente|lo\s*antes\s*posible|este\s*mes|entrega\s*inmediata|disponibilidad\s*inmediata|ingreso\s*inmediato|mudanza\s*inmediata)\b/i.test(reqTextLower);
+  const propImmediate = /\b(?:disponible\s*ya|disponibilidad\s*inmediata|para\s*entrega\s*inmediata|desocupado|vac[ií]o|para\s*ya)\b/i.test(propRawText);
+  const propFutureMatch = propRawText.match(/\b(?:disponible\s*(?:para|a\s*partir\s*de|desde|en)?|desocupan?\s*(?:el|en)?|entrega\s*(?:para|a\s*partir\s*de|en)?)\s*(?:finales\s*de|mediados\s*de|principios\s*de)?\s*(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|nov\.?|dic\.?|ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|\d{1,2}\s*de\s*[a-z]+)\b/i);
+
+  if (reqImmediate || propFutureMatch || propImmediate) {
+    let dispStatus: MatchStatus = "neutral";
+    let reqDispLabel = reqImmediate ? "Inmediata (Para Ya)" : "Flexible";
+    let propDispLabel = propImmediate ? "Inmediata / Desocupado" : (propFutureMatch ? propFutureMatch[0].trim() : "Disponible");
+
+    if (reqImmediate && propFutureMatch) {
+      dispStatus = "missing"; // 🔴 Choque temporal directo (Para Ya vs Entrega diferida) -> Guillotina (No Coincide)
+    } else if (reqImmediate && propImmediate) {
+      dispStatus = "exact";
+    } else if (!reqImmediate && propFutureMatch) {
+      dispStatus = "neutral";
+    } else if (!reqImmediate && propImmediate) {
+      dispStatus = "plus";
+    } else {
+      dispStatus = "neutral";
+    }
+
+    add(
+      "Disponibilidad / Entrega",
+      reqDispLabel,
+      propDispLabel,
+      dispStatus,
+      4,
+      <Calendar className="w-3.5 h-3.5" />
+    );
+  }
+
   // ── INYECCIÓN DINÁMICA DE LAS 64 CARACTERÍSTICAS & AMENIDADES ("POR ARTE DE MAGIA") ──
   for (const item of DYNAMIC_AMENITIES) {
     const itemNorm = item.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
@@ -2182,7 +2232,7 @@ export function scoreRows(req: any, prop: any) {
     'antiguedad', 'cocina', 'interiorexterior', 'depositos', 'deposito', 'cuartobanoservicio', 'cbs',
     'balcon', 'terraza', 'piso', 'antiguedadmax', 'estratodeseado', 'areamin', 'presupuestomax',
     'kitchentype', 'vigilancia', 'visitantes', 'moto', 'motos', 'cava', 'bbq', 'chimenea', 'estudio', 'patio',
-    'shut', 'gas', 'caldera', 'parqueadero'
+    'shut', 'gas', 'caldera', 'parqueadero', 'disponibilidad', 'entrega'
   ]);
 
   const customKeys = new Set<string>();
@@ -2297,7 +2347,8 @@ export function scoreRows(req: any, prop: any) {
           lbl.includes("admin") || lbl.includes("piso") || lbl.includes("vista") || lbl.includes("antigüedad") ||
           lbl.includes("estrato") || lbl.includes("servicio") || lbl.includes("estudio") || lbl.includes("depósito") ||
           lbl.includes("cocina") || lbl.includes("chimenea") || lbl.includes("vigilancia") || lbl.includes("visitantes") ||
-          lbl.includes("moto") || lbl.includes("cava") || lbl.includes("bbq") || lbl.includes("balcón") || lbl.includes("terraza") || lbl.includes("ascensor")
+          lbl.includes("moto") || lbl.includes("cava") || lbl.includes("bbq") || lbl.includes("balcón") || lbl.includes("terraza") || lbl.includes("ascensor") ||
+          lbl.includes("disponibilidad") || lbl.includes("entrega")
         ) {
           if (r.status === "plus") {
             totalDeduction += 0.02; // Plus de confort (ej. balcón privado, ascensor)

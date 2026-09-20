@@ -641,7 +641,10 @@ export function extractFallbackDataFromText(text: string): any {
   // 1A. Prefijo con soporte de viñetas y guiones (-admón:, -admon:, etc.)
   const adminMatch = clean.match(/(?:^|[-•*#\s])(?:v\s*[\/\-]\s*)?(?:adm[oó]n|admon|administraci[oó]n|administ|admin|cta\s*adm[oó]n|cuota\s*adm[oó]n)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*[:\/\-=\s]?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
   if (adminMatch) {
-    const rawANum = parseFloat(adminMatch[1].replace(/\./g, ''));
+    let rawANum = parseFloat(adminMatch[1].replace(/\./g, ''));
+    if (rawANum >= 100 && rawANum < 10_000) {
+      rawANum = rawANum * 1000;
+    }
     if (!isNaN(rawANum) && rawANum >= 10_000 && rawANum <= 30_000_000 && !isPhoneNumberNotPrice(rawANum, text)) {
       adminFee = rawANum;
     }
@@ -820,7 +823,8 @@ export function extractFallbackDataFromText(text: string): any {
     }
     if (area === 0) {
       // B. Captura área simple con prefijos: "📐 183 m²", "M2: 180", "Area: 180 Mts", "Mínimo 150m2", "Mínimo 160m"
-      const areaMatch = clean.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|m²)?\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?/i);
+      const areaMatch = clean.match(/(?:📐|area|área|superficie)\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?/i)
+                     || clean.match(/(?:(?:m[ií]nimo|min|m[aá]ximo|max|de)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)\b/i);
       if (areaMatch) {
         const hasAreaCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaMatch[0]);
         const val = parseFloat(areaMatch[1].replace(',', '.'));
@@ -901,6 +905,13 @@ export function extractFallbackDataFromText(text: string): any {
       bathrooms = parseWordOrDigit(bathMatch[1]);
     }
   }
+  if (bathrooms === 0) {
+    let countBaths = 0;
+    if (/\bbaño\s*(?:social|de\s*visitas)\b/i.test(clean)) countBaths++;
+    if (/\bbaño\s*de\s*servicio\b/i.test(clean)) countBaths++;
+    if (/\b(?:baño\s*(?:privado|principal)|principal[^\n]*baño|con\s*baño)\b/i.test(clean)) countBaths++;
+    if (countBaths > 0) bathrooms = countBaths;
+  }
 
   let garages = 0;
   let garageType = null;
@@ -911,8 +922,8 @@ export function extractFallbackDataFromText(text: string): any {
     if (val <= 20) garages = val;
   } else {
     // B. Formato Estándar
-    const garMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(?:con\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d{1,2}))?\s*(?:amplios?|cubiertos?|privados?|independientes?|en\s*l[ií]nea|lineales?)?\s*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)/i)
-                  || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)\s*:?\s*(\d{1,2}|un|una|uno|dos|tres|cuatro|cinco)/i);
+    const garMatch = clean.match(/(?:🚙|🚗|🚘)?[^\S\r\n]*(?:con\s+)?(?<!24[\/\-])(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})(?:[^\S\r\n]*(?:\([0-9]+\)|[a-záéíóúñ]+))?[^\S\r\n]*(?:amplios?|cubiertos?|privados?|independientes?|en\s*l[ií]nea|lineales?)?[^\S\r\n]*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)/i)
+                  || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)[^\S\r\n]*:?[^\S\r\n]*(\d{1,2}|un|una|uno|dos|tres|cuatro|cinco)/i);
     if (garMatch) {
       const val = parseWordOrDigit(garMatch[1]);
       if (val >= 1900 && val <= 2100) {
@@ -5079,6 +5090,12 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     }
     if ((!data.areaTotal && !data.area) && fallbackD.area > 0) {
       data.areaTotal = fallbackD.area;
+    }
+    if ((data.bedrooms === undefined || data.bedrooms === null || Number(data.bedrooms) <= 0) && fallbackD.bedrooms > 0) {
+      data.bedrooms = fallbackD.bedrooms;
+    }
+    if ((data.bathrooms === undefined || data.bathrooms === null || Number(data.bathrooms) <= 0) && fallbackD.bathrooms > 0) {
+      data.bathrooms = fallbackD.bathrooms;
     }
   }
 

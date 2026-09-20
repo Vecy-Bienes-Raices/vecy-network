@@ -98,13 +98,14 @@ export function parseColombianListing(rawText: string): ParsedListing {
     result.maxAgeYears = parseInt(ageMatch[1], 10);
   }
 
-  // 6. HABITACIONES (3 habitaciones, 2 alcobas)
-  const bedMatch = text.match(/(\d+)\s*(?:habitaciones|alcobas|habs)/i);
+  // 6. HABITACIONES (3 habitaciones, 2 alcobas, 3 cuartos)
+  const bedMatch = text.match(/(\d+)\s*(?:habitaciones|alcobas|habs|cuartos|dormitorios)/i);
   if (bedMatch) result.bedrooms = parseInt(bedMatch[1], 10);
 
   // 7. CUARTO DE SERVICIO (CBS)
-  result.hasCBS = /\bcbs\b|cuarto\s+(?:de\s+)?servicio/i.test(text);
-  result.demandsCBSMandatory = /cbs[^\n]*(?:imprescindible|obligatorio|si\s+o\s+si)/i.test(text);
+  result.hasCBS = /\bcbs\b|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio/i.test(text);
+  result.demandsCBSMandatory = /(?:cbs|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio)[^\n]*(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente|exige)/i.test(text) ||
+    /(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente)[^\n]*(?:cbs|cuarto\s+(?:de\s+)?servicio)/i.test(text);
 
   // 8. ESTUDIO / ESTAR DE TV
   result.hasStudio = /\bestudio\b|star\s+de\s+tv|estar\s+tv/i.test(text);
