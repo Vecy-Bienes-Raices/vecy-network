@@ -2611,7 +2611,7 @@ function checkTxCompatFrontend(reqTypeRaw: string, propTypeRaw: string, propAcce
 export default function AdminMatches() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [minScore, setMinScore] = React.useState('80');
-  const [transactionFilter, setTransactionFilter] = React.useState<'all' | 'venta' | 'arriendo' | 'permuta' | 'opcion_compra' | 'standby'>('all');
+  const [transactionFilter, setTransactionFilter] = React.useState<'all' | 'venta' | 'arriendo' | 'permuta' | 'opcion_compra' | 'standby'>('venta');
   const [ageFilter, setAgeFilter] = React.useState<'active_20' | 'all'>('active_20');
   const [activeTab, setActiveTab] = React.useState<'calificados' | 'incompletos'>('calificados');
   
@@ -4200,22 +4200,8 @@ export default function AdminMatches() {
             )}
           </div>
 
-          {/* Pills de Operación Comercial (Todos, Compra/Venta, Arriendo, Permutas, Opción Compra, Standby con badges) */}
-          <div className="flex items-center gap-1 bg-black/70 border border-white/15 rounded-xl p-1 text-white h-10 shrink-0 overflow-x-auto scrollbar-none">
-            <button
-              type="button"
-              onClick={() => { setTransactionFilter('all'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                transactionFilter === 'all'
-                  ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black shadow-md font-extrabold'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <span>Todos</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${transactionFilter === 'all' ? 'bg-black/25 text-black' : 'bg-white/10 text-zinc-400'}`}>
-                {filterCounts.all}
-              </span>
-            </button>
+          {/* Pills de Operación Comercial (Compraventa, Arriendo, Permuta, 50/50) */}
+          <div className="flex items-center gap-1.5 bg-black/70 border border-white/15 rounded-xl p-1 text-white h-10 shrink-0 overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => { setTransactionFilter('venta'); setCurrentPage(1); }}
@@ -4224,9 +4210,9 @@ export default function AdminMatches() {
                   ? 'bg-emerald-600 text-white shadow-md font-extrabold'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
-              title="Filtrar únicamente coincidencias de Compra (Demanda) y Venta (Oferta)"
+              title="Filtrar coincidencias de Compraventa"
             >
-              <span>🏷️ Compra / Venta</span>
+              <span>🏷️ Compraventa</span>
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${transactionFilter === 'venta' ? 'bg-black/30 text-white' : 'bg-white/10 text-zinc-400'}`}>
                 {filterCounts.venta}
               </span>
@@ -4239,7 +4225,7 @@ export default function AdminMatches() {
                   ? 'bg-blue-600 text-white shadow-md font-extrabold'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
-              title="Filtrar únicamente coincidencias de Arriendo"
+              title="Filtrar coincidencias de Arriendo"
             >
               <span>🔑 Arriendo</span>
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${transactionFilter === 'arriendo' ? 'bg-black/30 text-white' : 'bg-white/10 text-zinc-400'}`}>
@@ -4254,26 +4240,11 @@ export default function AdminMatches() {
                   ? 'bg-purple-600 text-white shadow-md font-extrabold'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
-              title="Filtrar coincidencias de Permuta o pago mixto con vehículo / inmueble"
+              title="Filtrar coincidencias de Permuta"
             >
-              <span>🔄 Permutas</span>
+              <span>🔄 Permuta</span>
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${transactionFilter === 'permuta' ? 'bg-black/30 text-white' : 'bg-white/10 text-zinc-400'}`}>
                 {filterCounts.permuta}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => { setTransactionFilter('opcion_compra'); setCurrentPage(1); }}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
-                transactionFilter === 'opcion_compra'
-                  ? 'bg-teal-600 text-white shadow-md font-extrabold'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
-              }`}
-              title="Filtrar coincidencias de Arriendo con Opción de Compra o Leasing"
-            >
-              <span>🤝 Arriendo opción compra</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${transactionFilter === 'opcion_compra' ? 'bg-black/30 text-white' : 'bg-white/10 text-zinc-400'}`}>
-                {filterCounts.opcionCompra}
               </span>
             </button>
             <button
@@ -4284,9 +4255,9 @@ export default function AdminMatches() {
                   ? 'bg-amber-600 text-white shadow-md font-extrabold'
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
-              title="Filtrar publicaciones exclusivas Standby Directo VECY (50/50 No Tercería)"
+              title="Filtrar coincidencias Standby Directo Vecy (50/50 No Tercería)"
             >
-              <span>🛡️ Standby 50/50</span>
+              <span>🛡️ 50/50</span>
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${transactionFilter === 'standby' ? 'bg-black/30 text-white' : 'bg-white/10 text-zinc-400'}`}>
                 {filterCounts.standby}
               </span>
@@ -4386,18 +4357,6 @@ export default function AdminMatches() {
             <div className="flex items-center gap-1 bg-black/70 border border-white/15 rounded-xl p-1 text-white h-9 shrink-0 overflow-x-auto scrollbar-none">
               <button
                 type="button"
-                onClick={() => { setTransactionFilter('all'); setCurrentPage(1); }}
-                className={`px-2 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 whitespace-nowrap ${
-                  transactionFilter === 'all'
-                    ? 'bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black shadow-md font-extrabold'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <span>Todos</span>
-                <span className="text-[9px] px-1 rounded-full bg-black/25">{filterCounts.all}</span>
-              </button>
-              <button
-                type="button"
                 onClick={() => { setTransactionFilter('venta'); setCurrentPage(1); }}
                 className={`px-2 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 whitespace-nowrap ${
                   transactionFilter === 'venta'
@@ -4405,7 +4364,7 @@ export default function AdminMatches() {
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                <span>🏷️ Venta</span>
+                <span>🏷️ Compraventa</span>
                 <span className="text-[9px] px-1 rounded-full bg-black/30">{filterCounts.venta}</span>
               </button>
               <button
@@ -4429,20 +4388,8 @@ export default function AdminMatches() {
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                <span>🔄 Permutas</span>
+                <span>🔄 Permuta</span>
                 <span className="text-[9px] px-1 rounded-full bg-black/30">{filterCounts.permuta}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => { setTransactionFilter('opcion_compra'); setCurrentPage(1); }}
-                className={`px-2 py-1 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1 whitespace-nowrap ${
-                  transactionFilter === 'opcion_compra'
-                    ? 'bg-teal-600 text-white shadow-md font-extrabold'
-                    : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                <span>🤝 Opción Compra</span>
-                <span className="text-[9px] px-1 rounded-full bg-black/30">{filterCounts.opcionCompra}</span>
               </button>
               <button
                 type="button"
@@ -4454,7 +4401,7 @@ export default function AdminMatches() {
                 }`}
                 title="Standby Directo Vecy (50/50 No Tercería)"
               >
-                <span>🛡️ Standby</span>
+                <span>🛡️ 50/50</span>
                 <span className="text-[9px] px-1 rounded-full bg-black/30">{filterCounts.standby}</span>
               </button>
             </div>

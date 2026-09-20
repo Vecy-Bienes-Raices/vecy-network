@@ -6031,8 +6031,16 @@ ightarrow$ número de celular para aplicarlas de forma automática a todas sus p
 4. **Auditoría Forense de Base de Datos y Purga de Choques**:
    - Se evaluaron los matches de la base de datos, sancionando con guillotina doctrinal al 0.00% y estado `rejected` a 9 cruces con choques insalvables de cocina cerrada vs abierta, primer piso y estudio indispensable.
 
-5. **Verificación y Pruebas**:
-   - 64 pruebas de Vitest superadas al 100%.
+5. **Rediseño Minimalista del Cabecero y Pestañas de Filtro**:
+   - Atendiendo la solicitud expresa de Eduardo para des-saturar la barra fija de comandos, se eliminaron los botones redundantes *Todos* y *Arriendo opción compra*.
+   - Se consolidaron 4 pestañas de operación comercial directas, limpias y proporcionales tanto en desktop como en móvil:
+     * `🏷️ Compraventa` (activa por defecto al ingresar a la mesa)
+     * `🔑 Arriendo`
+     * `🔄 Permuta`
+     * `🛡️ 50/50` (Inmuebles Standby directo Vecy sin tercería)
+
+6. **Verificación y Pruebas**:
+   - 64 pruebas de Vitest superadas al 100%. TypeScript verificado sin errores (`tsc --noEmit`, 0 errores).
    - Sincronización oficial de versión a **v31.81** en `package.json`, `shared/const.ts`, `README.md` y documentos maestros.
 
 ---

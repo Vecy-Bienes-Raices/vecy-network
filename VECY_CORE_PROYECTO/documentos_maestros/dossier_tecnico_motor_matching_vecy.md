@@ -747,6 +747,10 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 #### 3. ERRADICACIÓN DE METADATOS EN TABLA DE COTEJO ("WANTS/GIVES")
 - **Filtro Absoluto de Objetos y Arrays**: En `scoreRows`, se adicionaron las claves internas `'wants'`, `'gives'`, `'iscollaborativepool'`, `'metadata'`, etc., a la lista negra `standardReservedKeys`, y se implementó un salto defensivo que ignora cualquier atributo que contenga estructuras no escalares (objetos o arrays JSON).
 
+#### 4. REDISEÑO MINIMALISTA DE PESTAÑAS DEL CABECERO (4 OPERACIONES CLAVE)
+- **Des-saturación de la Barra de Comandos**: Se eliminaron los botones redundantes *Todos* y *Arriendo opción compra*.
+- **Pills Enfocadas y Proporcionales**: La barra superior ahora cuenta únicamente con las 4 operaciones comerciales nucleares: `🏷️ Compraventa` (default), `🔑 Arriendo`, `🔄 Permuta` y `🛡️ 50/50`. Cada pill muestra de forma exacta e instantánea la cantidad de coincidencias disponibles en esa categoría.
+
 
 
 
