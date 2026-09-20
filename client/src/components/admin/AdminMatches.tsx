@@ -3741,6 +3741,17 @@ export default function AdminMatches() {
         continue;
       }
 
+      // Aislamiento de Especímenes de Benchmark / Pruebas para Entrenamiento JanIA
+      if (
+        property.estadoComercial === 'BENCHMARK' || 
+        (property as any).estado_comercial === 'BENCHMARK' ||
+        property.name?.includes('(Test 100% Exacto)') || 
+        requirement.name?.includes('(Test 100% Exacto)') ||
+        match.matchReason?.includes('Benchmark Doctrinal')
+      ) {
+        continue;
+      }
+
       // Cálculo de afinidad comercial y guillotina técnica
       const computed = scoreRows(requirement, property);
       const exactScore = computed.autoScore;
@@ -3961,14 +3972,8 @@ export default function AdminMatches() {
       ? rawList.filter(m => getPropertyEffectiveDaysAgo(m._effectiveProp || m.property) <= 20)
       : rawList;
 
-    const total = ageFilter === 'active_20'
-      ? ((botStatus as any)?.totalMatchesActive20 && (botStatus as any).totalMatchesActive20 > 0 ? (botStatus as any).totalMatchesActive20 : list.length)
-      : ((botStatus as any)?.totalMatches && (botStatus as any).totalMatches > 0 ? (botStatus as any).totalMatches : list.length);
-
-    const perfect = ageFilter === 'active_20'
-      ? ((botStatus as any)?.perfectMatchesActive20 !== undefined ? (botStatus as any).perfectMatchesActive20 : list.filter((m: any) => m._precomputedScore >= 95).length)
-      : ((botStatus as any)?.perfectMatches !== undefined && (botStatus as any).perfectMatches !== null ? (botStatus as any).perfectMatches : list.filter((m: any) => m._precomputedScore >= 95).length);
-
+    const total = list.length;
+    const perfect = list.filter((m: any) => m._precomputedScore >= 95).length;
     const approx = list.filter((m: any) => {
       const s = m._precomputedScore;
       return s >= 85 && s < 95;
@@ -3986,26 +3991,38 @@ export default function AdminMatches() {
       ? rawList.filter(m => getPropertyEffectiveDaysAgo(m._effectiveProp || m.property) <= 20)
       : rawList;
 
+    const searchLower = (searchTerm || '').toLowerCase().trim();
+    const effectiveList = searchLower
+      ? list.filter((m: any) => m._searchIndex && m._searchIndex.includes(searchLower))
+      : list;
+
     let countVenta = 0;
     let countArriendo = 0;
     let countPermuta = 0;
     let countOpcionCompra = 0;
     let countStandby = 0;
 
-    for (const m of list) {
+    for (const m of effectiveList) {
       const effProp = m._effectiveProp || m.property;
       const effReq = m._effectiveReq || m.requirement;
-      const reqType = (effReq?.tipoNegocioDeseado || "").toLowerCase();
-      const propType = (effProp?.transactionType || "").toLowerCase();
-      const dual = isPropertyDualOffer(effProp);
+      const propTx = (effProp?.transactionType || "").toLowerCase();
+      const reqTx = (effReq?.tipoNegocioDeseado || "").toLowerCase();
+      const propRaw = String(effProp?.rawText || '').toLowerCase();
+      const reqRaw = String(effReq?.rawText || '').toLowerCase();
 
-      const isReqVenta = reqType === 'venta' || !reqType;
-      const isPropVenta = propType === 'venta' || propType === 'venta_o_arriendo' || dual;
-      if (isReqVenta && isPropVenta) countVenta++;
+      const isPureRentProp = propTx === 'arriendo' || propTx === 'arriendo_temporal';
+      const isPureRentReq = reqTx === 'arriendo' || reqTx === 'arriendo_temporal';
+      const isRentMatch = isPureRentProp || isPureRentReq || 
+        /\b(?:en arriendo|arriendo|alquilo|alquiler|canon)\b/i.test(propRaw) ||
+        /\b(?:tomo en arriendo|para arrendar|busco arriendo|en renta)\b/i.test(reqRaw);
 
-      const isReqArriendo = reqType === 'arriendo';
-      const isPropArriendo = propType === 'arriendo' || propType === 'venta_o_arriendo' || dual;
-      if (isReqArriendo && isPropArriendo) countArriendo++;
+      if (!isPureRentProp && !isPureRentReq && (!isRentMatch || propTx.includes('venta') || reqTx.includes('venta'))) {
+        countVenta++;
+      }
+
+      if (isRentMatch || propTx === 'venta_o_arriendo' || reqTx === 'venta_o_arriendo') {
+        countArriendo++;
+      }
 
       if (checkIsPermutaMatch(effProp, effReq)) {
         countPermuta++;
@@ -4020,47 +4037,15 @@ export default function AdminMatches() {
       }
     }
 
-    // Para nichos comerciales (Permutas y Opción Compra), garantizamos visibilidad de oportunidades disponibles
-    let countPermutaRaw = 0;
-    let countOpcionCompraRaw = 0;
-    for (const m of rawList) {
-      const effProp = m._effectiveProp || m.property;
-      const effReq = m._effectiveReq || m.requirement;
-      if (checkIsPermutaMatch(effProp, effReq)) countPermutaRaw++;
-      if (checkIsOpcionCompraMatch(effProp, effReq)) countOpcionCompraRaw++;
-    }
-    const effectivePermuta = countPermuta > 0 ? countPermuta : countPermutaRaw;
-    const effectiveOpcionCompra = countOpcionCompra > 0 ? countOpcionCompra : countOpcionCompraRaw;
-
-    // Si hay un término de búsqueda activo, mostramos los conteos específicos de esa búsqueda
-    const isSearching = (searchTerm || '').trim().length > 0;
-    const isAllAge = ageFilter === 'all';
-
-    const all = !isSearching
-      ? (isAllAge && (botStatus as any)?.totalMatches ? (botStatus as any).totalMatches : (!isAllAge && (botStatus as any)?.totalMatchesActive20 ? (botStatus as any).totalMatchesActive20 : list.length))
-      : list.length;
-    const venta = !isSearching
-      ? (isAllAge && (botStatus as any)?.ventaMatches ? (botStatus as any).ventaMatches : (!isAllAge && (botStatus as any)?.ventaMatchesActive20 ? (botStatus as any).ventaMatchesActive20 : countVenta))
-      : countVenta;
-    const arriendo = !isSearching
-      ? (isAllAge && (botStatus as any)?.arriendoMatches ? (botStatus as any).arriendoMatches : (!isAllAge && (botStatus as any)?.arriendoMatchesActive20 ? (botStatus as any).arriendoMatchesActive20 : countArriendo))
-      : countArriendo;
-    const permuta = !isSearching && isAllAge && (botStatus as any)?.permutaMatches !== undefined && (botStatus as any).permutaMatches > 0
-      ? (botStatus as any).permutaMatches
-      : effectivePermuta;
-    const opcionCompra = !isSearching && isAllAge && (botStatus as any)?.opcionCompraMatches !== undefined && (botStatus as any).opcionCompraMatches > 0
-      ? (botStatus as any).opcionCompraMatches
-      : effectiveOpcionCompra;
-
     return {
-      all,
-      venta,
-      arriendo,
-      permuta,
-      opcionCompra,
+      all: effectiveList.length,
+      venta: countVenta,
+      arriendo: countArriendo,
+      permuta: countPermuta,
+      opcionCompra: countOpcionCompra,
       standby: countStandby
     };
-  }, [processedMatches, botStatus, searchTerm, ageFilter]);
+  }, [processedMatches, searchTerm, ageFilter]);
 
   const exportData = () => {
     const headers = ['ID Coincidencia', 'Porcentaje Match', 'Propiedad', 'Propietario Telefono', 'Requerimiento', 'Interesado Telefono', 'Estado', 'Fecha'];

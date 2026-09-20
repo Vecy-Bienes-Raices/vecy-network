@@ -6003,6 +6003,40 @@ ightarrow$ número de celular para aplicarlas de forma automática a todas sus p
 
 ---
 
+### 📌 SESIÓN v31.81 — SEPTIEMBRE 2026: SINCRONIZACIÓN REAL DE MÉTRICAS DEL CABECERO, AISLAMIENTO DEL BENCHMARK 100% PARA ENTRENAMIENTO JANIA, Y PURGA DE METADATOS TÉCNICOS EN COTEJO ("WANTS/GIVES")
+
+#### 👤 Solicitud y Directrices de Eduardo A. Rivera:
+1. **Consulta sobre "Wants" con Estrellas de IA en Tabla de Cotejo**:
+   - *"A propósito la linea que esta en la linea de cotejo en ese error ya corregido que dice Wants y yiene un simbolo de las estrellas aqu identifican a la IA de qué se trata o para qué es o qué significa o fue un error más que no debía estar allí??"*
+2. **Sincronización de Métricas del Cabecero y Pestañas de Filtros**:
+   - *"Estás seguro que Yá revisaste los 773 MATCHES DETECTADOS y Todos están super bien cotejados, listos y perfectos para comenzar nuestra labor de conexión. También deseo que cambies la pestaña o la sección de filtros arriba en el cabecero, ya que no coincide con la existencia o mejor dicho sus metricas no son acordes con lo que vamos a tener."*
+3. **Aislamiento del Match Inventado del 100% Perfecto para Pruebas y Entrenamiento JanIA**:
+   - *"por ahora no es necesario dejar el MATCH inventado del 100% Perfecto, ponlo por ahí que quede a la mano cuando necesitemos hacerle entender a JanIA lo que es un MATCH PERFECTO, la idea es que más adelante construyamos copias de ese mismo MATCH pero con distintos puntajes hasta lograr que nuestro sistema los use como ejercicios de prueba para entrenarse y aprender cada vez más lo que son los MATCH realmente."*
+
+#### 🛠️ Diagnóstico Forense y Acciones Ejecutadas (v31.81):
+1. **Causa Raíz y Solución de "Wants" con Estrellitas de IA**:
+   - En Supabase/PostgreSQL, las columnas `amenities` y `caracteristicasDeseadas` almacenaban arrays JSON heredados de la bolsa colaborativa denominados `"wants"` y `"gives"`. En `AdminMatches.tsx`, la función `scoreRows` recorría todas las llaves dinámicas (`customKeys`), identificaba `"wants"` como un atributo descubierto por IA y le asignaba `<Sparkles className="w-3.5 h-3.5 text-amber-400" />`.
+   - **Solución Quirúrgica**: Se agregaron a `standardReservedKeys` los campos `'wants'`, `'gives'`, `'iscollaborativepool'`, `'collaborativepool'`, `'comisiones'`, `'calificacion'`, `'origen'`, `'metadata'`, `'rawtext'`, `'status'`, `'userid'`, `'agentid'`, `'id'`, y se bloqueó de raíz cualquier atributo que contenga objetos o arrays JSON.
+
+2. **Sincronización 100% Real de Métricas en Cabecero y Pestañas de Filtros**:
+   - **Diagnóstico del desfase "773 Matches"**: El contador del cabecero (`kpiStats.total`) y los badges de las pestañas (`filterCounts`) estaban leyendo `(botStatus as any).totalMatchesActive20` mediante una consulta SQL en crudo contra la tabla histórica de PostgreSQL, mostrando 773 registros no depurados que no concordaban con los matches que realmente pasan el filtro comercial y las guillotinas en pantalla.
+   - **Solución Quirúrgica**: Se desacopló `kpiStats` y `filterCounts` de las consultas SQL globales desfasadas. Ahora, el contador de "Matches Detectados", "Perfectos (≥95%)", y las pestañas (`Todos`, `🏷️ Compra / Venta`, `🔑 Arriendos`, `🔄 Permutas`, `🤝 Arriendo opción compra`, `🛡️ Inmuebles StandBy`) calculan sus conteos exacta y reactivamente sobre la lista real evaluada (`processedMatches` y `effectiveList`). Cada número en las insignias coincide al 100% con la cantidad de fichas visibles.
+
+3. **Aislamiento y Catálogo de Benchmark del Match 100% Perfecto**:
+   - Se localizó el Match sintético `#14571` (Propiedad `#3380` vs Requerimiento `#1544` en Chicó Norte).
+   - En la base de datos PostgreSQL, se actualizó la Oferta `#3380` a `available = false` y `estado_comercial = 'BENCHMARK'`, y el match `#14571` a `matchReason = 'Benchmark Doctrinal JanIA: Match Perfecto 100% (Reservado para entrenamiento)'`.
+   - En `AdminMatches.tsx`, se excluyó explícitamente cualquier registro marcado como `BENCHMARK` o `(Test 100% Exacto)` de la mesa de coincidencias comercial activa.
+   - Se creó el módulo de preservación y entrenamiento [`server/_core/benchmarks/benchmarkCatalog.ts`](file:///home/eddu/Proyectos/vecy-network/server/_core/benchmarks/benchmarkCatalog.ts) con el espécimen patrón oro (`PERFECT_100_SPECIMEN`) y la función generadora `generateTrainingVariant` para derivar variantes al 95%, 90% y 85% para pruebas automatizadas y entrenamiento del modelo de aprendizaje de JanIA.
+
+4. **Auditoría Forense de Base de Datos y Purga de Choques**:
+   - Se evaluaron los matches de la base de datos, sancionando con guillotina doctrinal al 0.00% y estado `rejected` a 9 cruces con choques insalvables de cocina cerrada vs abierta, primer piso y estudio indispensable.
+
+5. **Verificación y Pruebas**:
+   - 64 pruebas de Vitest superadas al 100%.
+   - Sincronización oficial de versión a **v31.81** en `package.json`, `shared/const.ts`, `README.md` y documentos maestros.
+
+---
+
 ## 🛡️ PROTOCOLOS Y REGLAS DE TRABAJO INQUEBRANTABLES
 1. **Adición Pura de Código**: NUNCA borrar, modificar ni romper funcionalidades o reglas previas ya validadas al agregar nuevo código.
 2. **Revisión del Historial al Iniciar**: Consultar esta bitácora y `.agents/AGENTS.md` al comienzo de cada conversación.

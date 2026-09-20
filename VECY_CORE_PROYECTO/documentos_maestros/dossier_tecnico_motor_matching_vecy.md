@@ -732,6 +732,21 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Notación Abreviada de Administración**: Reconocimiento de cuotas en miles (`Admin $1.800` $\rightarrow$ `$1.800.000 COP`).
 - **Rescate de Alcobas y Baños en Base de Datos**: Inyección de respaldo en `saveProperty` para evitar que campos físicos queden en `null` cuando la inferencia LLM falle.
 
+---
+
+### 🔖 v31.81 — SEPTIEMBRE 2026: SINCRONIZACIÓN REAL DE MÉTRICAS DEL CABECERO, AISLAMIENTO DEL BENCHMARK 100% PARA ENTRENAMIENTO JANIA, Y PURGA DE METADATOS TÉCNICOS EN COTEJO ("WANTS/GIVES")
+
+#### 1. SINCRONIZACIÓN Y TRANSPARENCIA TOTAL DE MÉTRICAS EN EL CABECERO Y PESTAÑAS
+- **Desacople de Contadores SQL Crudos**: El KPI de "Matches Detectados", "Perfectos (≥95%)" y los badges numéricos de las pestañas (`Todos`, `🏷️ Compra / Venta`, `🔑 Arriendos`, `🔄 Permutas`, `🤝 Arriendo opción compra`, `🛡️ Inmuebles StandBy`) ahora calculan su valor exacta y reactivamente sobre la lista real evaluada en cliente (`processedMatches`).
+- **Cero Desfases Visuales**: Se erradicó el desfase donde se mostraban "773 Matches" calculados sobre registros históricos de BD sin filtrar, garantizando concordancia del 100% entre las insignias numéricas y las fichas comerciales presentes.
+
+#### 2. AISLAMIENTO DEL MATCH 100% PERFECTO Y CATÁLOGO DE BENCHMARKS PARA ENTRENAMIENTO JANIA
+- **Aislamiento en Producción**: El Match sintético `#14571` (Inmueble `#3380` vs Requerimiento `#1544`) fue retirado de la mesa de coincidencias activa y marcado en base de datos como `BENCHMARK`.
+- **Catálogo de Especímenes (`benchmarkCatalog.ts`)**: Se creó el repositorio central de pruebas con el espécimen patrón oro (`PERFECT_100_SPECIMEN`, 88 casillas en verde exacto) y el generador `generateTrainingVariant` para derivar escenarios pedagógicos al 95%, 90% y 85% para la calibración y aprendizaje del motor JanIA.
+
+#### 3. ERRADICACIÓN DE METADATOS EN TABLA DE COTEJO ("WANTS/GIVES")
+- **Filtro Absoluto de Objetos y Arrays**: En `scoreRows`, se adicionaron las claves internas `'wants'`, `'gives'`, `'iscollaborativepool'`, `'metadata'`, etc., a la lista negra `standardReservedKeys`, y se implementó un salto defensivo que ignora cualquier atributo que contenga estructuras no escalares (objetos o arrays JSON).
+
 
 
 

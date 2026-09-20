@@ -1,4 +1,4 @@
-# 🏢 VECY Network (v31.80)
+# 🏢 VECY Network (v31.81)
 
 > **Red colaborativa e inteligente de corretaje inmobiliario para Colombia.**
 
