@@ -617,11 +617,6 @@ export function scoreRows(req: any, prop: any) {
     return { rows, autoScore: 0, pts: 0, max };
   }
 
-  // ── REGLA DOCTRINAL v31.76: REGLA DE TERCERÍA Y STANDBY DIRECTO VECY (Visualización para Superadmin) ──
-  if (checkIsStandbyDirectoVecy(prop, req)) {
-    add("Tercería / Cadena Inmobiliaria", "Demanda Vecy / Directa", "🛡️ STANDBY 50/50 (Reserva Directa Vecy)", "warn", 5, <ShieldAlert className="w-3.5 h-3.5" />);
-  }
-
   // 1. Tipo de Inmueble (REGLA DOCTRINAL ESTRICTA - Exactitud Total de Subtipo)
   const reqTypeRaw = req.tipoInmuebleDeseado || req.propertyType;
   const propTypeRaw = prop.propertyType;
@@ -3817,7 +3812,7 @@ export default function AdminMatches() {
         if (daysAgo > 20) return false;
       }
 
-      // Filtro de Transacción: Compra / Venta vs Arriendo vs Permutas vs Opción Compra vs Standby (v31.76)
+      // Filtro de Transacción: Compraventa vs Arriendo vs Permutas vs 50/50 (Standby)
       if (transactionFilter !== 'all') {
         const effProp = match._effectiveProp || match.property;
         const effReq = match._effectiveReq || match.requirement;
@@ -3826,23 +3821,31 @@ export default function AdminMatches() {
         const propRaw = String(effProp?.rawText || '').toLowerCase();
         const reqRaw = String(effReq?.rawText || '').toLowerCase();
 
-        const isPureRentProp = propTx === 'arriendo' || propTx === 'arriendo_temporal';
-        const isPureRentReq = reqTx === 'arriendo' || reqTx === 'arriendo_temporal';
-        const isRentMatch = isPureRentProp || isPureRentReq || 
-          /\b(?:en arriendo|arriendo|alquilo|alquiler|canon)\b/i.test(propRaw) ||
-          /\b(?:tomo en arriendo|para arrendar|busco arriendo|en renta)\b/i.test(reqRaw);
+        const isStandby = checkIsStandbyDirectoVecy(effProp, effReq);
 
-        if (transactionFilter === 'venta') {
-          if (isPureRentProp || isPureRentReq) return false;
-          if (isRentMatch && !propTx.includes('venta') && !reqTx.includes('venta')) return false;
-        } else if (transactionFilter === 'arriendo') {
-          if (!isRentMatch && propTx !== 'venta_o_arriendo' && reqTx !== 'venta_o_arriendo') return false;
-        } else if (transactionFilter === 'permuta') {
-          if (!checkIsPermutaMatch(effProp, effReq)) return false;
-        } else if (transactionFilter === 'opcion_compra') {
-          if (!checkIsOpcionCompraMatch(effProp, effReq)) return false;
-        } else if (transactionFilter === 'standby') {
-          if (!checkIsStandbyDirectoVecy(effProp, effReq)) return false;
+        if (transactionFilter === 'standby') {
+          if (!isStandby) return false;
+        } else {
+          // REGLA DOCTRINAL: Si el match es Standby 50/50, pertenece EXCLUSIVAMENTE a la sección 50/50.
+          // NUNCA debe mostrarse en Compraventa, ni en Arriendo, ni en Permuta.
+          if (isStandby) return false;
+
+          const isPureRentProp = propTx === 'arriendo' || propTx === 'arriendo_temporal';
+          const isPureRentReq = reqTx === 'arriendo' || reqTx === 'arriendo_temporal';
+          const isRentMatch = isPureRentProp || isPureRentReq || 
+            /\b(?:en arriendo|arriendo|alquilo|alquiler|canon)\b/i.test(propRaw) ||
+            /\b(?:tomo en arriendo|para arrendar|busco arriendo|en renta)\b/i.test(reqRaw);
+
+          if (transactionFilter === 'venta') {
+            if (isPureRentProp || isPureRentReq) return false;
+            if (isRentMatch && !propTx.includes('venta') && !reqTx.includes('venta')) return false;
+          } else if (transactionFilter === 'arriendo') {
+            if (!isRentMatch && propTx !== 'venta_o_arriendo' && reqTx !== 'venta_o_arriendo') return false;
+          } else if (transactionFilter === 'permuta') {
+            if (!checkIsPermutaMatch(effProp, effReq)) return false;
+          } else if (transactionFilter === 'opcion_compra') {
+            if (!checkIsOpcionCompraMatch(effProp, effReq)) return false;
+          }
         }
       }
 
@@ -4010,6 +4013,12 @@ export default function AdminMatches() {
       const propRaw = String(effProp?.rawText || '').toLowerCase();
       const reqRaw = String(effReq?.rawText || '').toLowerCase();
 
+      const isStandby = checkIsStandbyDirectoVecy(effProp, effReq);
+      if (isStandby) {
+        countStandby++;
+        continue;
+      }
+
       const isPureRentProp = propTx === 'arriendo' || propTx === 'arriendo_temporal';
       const isPureRentReq = reqTx === 'arriendo' || reqTx === 'arriendo_temporal';
       const isRentMatch = isPureRentProp || isPureRentReq || 
@@ -4030,10 +4039,6 @@ export default function AdminMatches() {
 
       if (checkIsOpcionCompraMatch(effProp, effReq)) {
         countOpcionCompra++;
-      }
-
-      if (checkIsStandbyDirectoVecy(effProp, effReq)) {
-        countStandby++;
       }
     }
 

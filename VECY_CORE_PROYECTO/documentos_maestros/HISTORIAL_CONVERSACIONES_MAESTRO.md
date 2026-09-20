@@ -6039,7 +6039,11 @@ ightarrow$ número de celular para aplicarlas de forma automática a todas sus p
      * `🔄 Permuta`
      * `🛡️ 50/50` (Inmuebles Standby directo Vecy sin tercería)
 
-6. **Verificación y Pruebas**:
+6. **Erradicación de Fila 'Tercería / Cadena Inmobiliaria' en Cotejo y Enrutamiento Estricto a 50/50**:
+   - Se eliminó de raíz la fila `"Tercería / Cadena Inmobiliaria"` de la tabla de cotejo (`scoreRows`). Ningún match ni tabla de cotejo volverá a incluir esta casilla.
+   - Enrutamiento estricto: Las coincidencias identificadas con cláusula de Standby / 50-50 (como el Match `#M14484`) se dirigen **EXCLUSIVAMENTE a la sección `🛡️ 50/50`**, quedando completamente excluidas de `🏷️ Compraventa`, `🔑 Arriendo` y `🔄 Permuta`.
+
+7. **Verificación y Pruebas**:
    - 64 pruebas de Vitest superadas al 100%. TypeScript verificado sin errores (`tsc --noEmit`, 0 errores).
    - Sincronización oficial de versión a **v31.81** en `package.json`, `shared/const.ts`, `README.md` y documentos maestros.
 
