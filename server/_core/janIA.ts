@@ -2817,6 +2817,56 @@ export async function processWhatsAppMessage(
       );
     }
 
+    // ── MECANISMO DE URL DIFERIDA (Doctrina v31.82) ──────────────────────────────────────────
+    // Cuando un colega publica el texto del inmueble y luego envía la URL del portal en un
+    // mensaje separado (patrón muy común en WhatsApp), JanIA rescata el enlace y lo asocia
+    // retroactivamente al inmueble más reciente de ese mismo usuario (≤ 10 minutos).
+    // También recupera el nombre del grupo (origen_nombre) si faltaba.
+    const trimmedTextForUrl = text.trim();
+    const urlLineOnly = trimmedTextForUrl.split('\n').find(l => /^https?:\/\/\S+$/.test(l.trim()));
+    const isSoloUrlMsg = !!urlLineOnly && trimmedTextForUrl.replace(/\s+/g, '').length <= urlLineOnly.replace(/\s+/g,'').length + 5;
+    if (isSoloUrlMsg && urlLineOnly && esDominioPermitido(urlLineOnly.trim())) {
+      const soloUrl = urlLineOnly.trim();
+      const TEN_MIN_AGO = new Date(Date.now() - 10 * 60 * 1000);
+      try {
+        const db = await getDb();
+        if (!db) throw new Error('DB no disponible');
+        const recentProps = await db
+          .select({ id: properties.id, rawText: properties.rawText, origenNombre: properties.origenNombre })
+          .from(properties)
+          .where(and(
+            eq(properties.idUsuarioWhatsapp, userId.split('@')[0]),
+            gte(properties.createdAt, TEN_MIN_AGO),
+            eq(properties.available, true)
+          ))
+          .orderBy(desc(properties.createdAt))
+          .limit(1);
+
+        if (recentProps.length > 0) {
+          const prop = recentProps[0];
+          const portalInfo = extractPortalAndListingId(soloUrl);
+          const updatedRaw = (prop.rawText || '').trimEnd().endsWith(':')
+            ? `${prop.rawText}\n${soloUrl}`
+            : `${prop.rawText}\n\n🔗 Info y galería:\n${soloUrl}`;
+
+          await db.update(properties).set({
+            externalUrl: soloUrl,
+            rawText: updatedRaw,
+            origenNombre: prop.origenNombre || groupName || undefined,
+            origenId: groupJid || undefined,
+            ...(portalInfo?.portal ? { portal: portalInfo.portal } : {}),
+            ...(portalInfo?.listingId ? { externalListingId: portalInfo.listingId } : {}),
+          }).where(eq(properties.id, prop.id));
+
+          console.log(`[JanIA-URLDiferida] ✅ URL de portal enlazada retroactivamente a Prop #${prop.id} de ${userId}: ${soloUrl}`);
+          return { classification: 'INMUEBLE' as const, response: '', reactionEmoji: '🔗', inserted: false };
+        }
+      } catch (urlPatchErr: unknown) {
+        console.warn(`[JanIA-URLDiferida] ⚠️ Error al enlazar URL diferida: ${urlPatchErr instanceof Error ? urlPatchErr.message : String(urlPatchErr)}`);
+      }
+    }
+    // ────────────────────────────────────────────────────────────────────────────────────────
+
     let messageToProcess = text;
 
     // Texto del usuario — preserva 100% el texto exacto recibido desde WhatsApp incluyendo URLs, emojis y montos.
