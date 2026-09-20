@@ -438,8 +438,17 @@ export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundar
   return res;
 }
 
+const propertyAddressNumbersCache = new Map<string, PropertyAddressNumbers>();
+const MAX_ADDRESS_NUMBERS_CACHE = 2500;
+
 export function parsePropertyAddressNumbers(text: string): PropertyAddressNumbers {
+  if (!text) return {};
   const norm = String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (!norm) return {};
+
+  const cached = propertyAddressNumbersCache.get(norm);
+  if (cached) return cached;
+
   const res: PropertyAddressNumbers = {};
 
   // 1. Detección estricta de CALLE (Calle, Cll, Cl, C/)
@@ -460,6 +469,12 @@ export function parsePropertyAddressNumbers(text: string): PropertyAddressNumber
   if (norm.includes("autonorte") || norm.includes("autopista norte")) {
     res.isAutoNorte = true;
   }
+
+  if (propertyAddressNumbersCache.size >= MAX_ADDRESS_NUMBERS_CACHE) {
+    const firstKey = propertyAddressNumbersCache.keys().next().value;
+    if (firstKey) propertyAddressNumbersCache.delete(firstKey);
+  }
+  propertyAddressNumbersCache.set(norm, res);
 
   return res;
 }
@@ -487,18 +502,43 @@ export const KNOWN_BARRIOS_CANONICAL = [
 ];
 KNOWN_BARRIOS_CANONICAL.sort((a, b) => b.length - a.length);
 
+interface CompiledBarrio {
+  name: string;
+  regex: RegExp;
+}
+
+const COMPILED_BARRIOS: CompiledBarrio[] = KNOWN_BARRIOS_CANONICAL.map(b => {
+  const bNorm = b.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const escaped = bNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return {
+    name: b.charAt(0).toUpperCase() + b.slice(1),
+    regex: new RegExp(`\\b${escaped}\\b`, "i"),
+  };
+});
+
+const extractBarriosCache = new Map<string, string[]>();
+const MAX_BARRIOS_CACHE = 2500;
+
 export function extractAllBarriosFromText(text: string): string[] {
   if (!text) return [];
+  const cached = extractBarriosCache.get(text);
+  if (cached) return cached;
+
   let norm = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const found: string[] = [];
-  for (const b of KNOWN_BARRIOS_CANONICAL) {
-    const bNorm = b.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const reg = new RegExp(`\\b${bNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, "i");
-    if (reg.test(norm)) {
-      found.push(b.charAt(0).toUpperCase() + b.slice(1));
-      norm = norm.replace(reg, " ");
+  for (const item of COMPILED_BARRIOS) {
+    if (item.regex.test(norm)) {
+      found.push(item.name);
+      norm = norm.replace(item.regex, " ");
     }
   }
+
+  if (extractBarriosCache.size >= MAX_BARRIOS_CACHE) {
+    const firstKey = extractBarriosCache.keys().next().value;
+    if (firstKey) extractBarriosCache.delete(firstKey);
+  }
+  extractBarriosCache.set(text, found);
+
   return found;
 }
 
@@ -1337,7 +1377,14 @@ export function isHollowListing(rawText: string | null | undefined, name?: strin
   return { isHollow: false, reason: 'Publicación con contenido suficiente' };
 }
 
-export function explicarMatch(requirement: any, property: any, precomputedFbReq?: any, precomputedFbProp?: any): MatchExplanation {
+export function explicarMatch(
+  requirement: any,
+  property: any,
+  precomputedFbReq?: any,
+  precomputedFbProp?: any,
+  precomputedReqBarrios?: string[],
+  precomputedPropBarrios?: string[]
+): MatchExplanation {
   const blockers: string[] = [];
   const positives: string[] = [];
   const negatives: string[] = [];
@@ -1771,8 +1818,8 @@ export function explicarMatch(requirement: any, property: any, precomputedFbReq?
   const reqCityNorm = normalizarTextoGeografico(reqCity);
   const propCityNorm = normalizarTextoGeografico(propCity);
 
-  const propBarriosInText = extractAllBarriosFromText((property as any).rawText || (property as any).description || property.name || "");
-  const reqBarriosInText = extractAllBarriosFromText((requirement as any).rawText || (requirement as any).description || requirement.name || "");
+  const propBarriosInText = precomputedPropBarrios || extractAllBarriosFromText((property as any).rawText || (property as any).description || property.name || "");
+  const reqBarriosInText = precomputedReqBarrios || extractAllBarriosFromText((requirement as any).rawText || (requirement as any).description || requirement.name || "");
 
   const rawPropBarrio = propBarriosInText[0] || property.zone || property.addressNeighborhood || "";
   const rawReqBarriosList = reqBarriosInText.length > 0
@@ -3269,6 +3316,7 @@ export async function findMatchesForProperty(propertyId: number) {
 
     // Extracción determinista única de la propiedad para 0ms de re-análisis en el loop
     const fbProp = property.rawText ? extractFallbackDataFromText(property.rawText) : {};
+    const propBarrios = extractAllBarriosFromText((property as any).rawText || (property as any).description || property.name || "");
 
     // Carga requerimientos activos para cotejo en memoria con resolución geográfica canónica (matchesGeography)
     const activeRequirements = await db
@@ -3307,7 +3355,7 @@ export async function findMatchesForProperty(propertyId: number) {
         }
         continue;
       }
-      const explanation = explicarMatch(req, property, undefined, fbProp);
+      const explanation = explicarMatch(req, property, undefined, fbProp, undefined, propBarrios);
       const score = explanation.score;
       if (score >= 80) {
         let matchId: number;
@@ -3402,6 +3450,7 @@ export async function findMatchesForRequirement(requirementId: number) {
 
     // Extracción determinista única del requerimiento para 0ms de re-análisis en el loop
     const fbReq = req.rawText ? extractFallbackDataFromText(req.rawText) : {};
+    const reqBarrios = extractAllBarriosFromText((req as any).rawText || (req as any).description || req.name || "");
 
     // Carga inmuebles disponibles para cotejo en memoria con resolución geográfica canónica (matchesGeography)
     const availableProperties = await db
@@ -3443,7 +3492,7 @@ export async function findMatchesForRequirement(requirementId: number) {
         }
         continue;
       }
-      const explanation = explicarMatch(req, prop, fbReq, undefined);
+      const explanation = explicarMatch(req, prop, fbReq, undefined, reqBarrios, undefined);
       const score = explanation.score;
       if (score >= 80) {
         let matchId: number;

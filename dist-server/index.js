@@ -3901,7 +3901,11 @@ function parseStreetCarreraBoundaries(text2) {
   return res;
 }
 function parsePropertyAddressNumbers(text2) {
+  if (!text2) return {};
   const norm2 = String(text2 || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (!norm2) return {};
+  const cached = propertyAddressNumbersCache.get(norm2);
+  if (cached) return cached;
   const res = {};
   const streetMatch = norm2.match(/(?:calle|cll|cl|c\/)\s*#?\s*(\d{1,3})\b/i);
   if (streetMatch) {
@@ -3916,20 +3920,30 @@ function parsePropertyAddressNumbers(text2) {
   if (norm2.includes("autonorte") || norm2.includes("autopista norte")) {
     res.isAutoNorte = true;
   }
+  if (propertyAddressNumbersCache.size >= MAX_ADDRESS_NUMBERS_CACHE) {
+    const firstKey = propertyAddressNumbersCache.keys().next().value;
+    if (firstKey) propertyAddressNumbersCache.delete(firstKey);
+  }
+  propertyAddressNumbersCache.set(norm2, res);
   return res;
 }
 function extractAllBarriosFromText(text2) {
   if (!text2) return [];
+  const cached = extractBarriosCache.get(text2);
+  if (cached) return cached;
   let norm2 = text2.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const found = [];
-  for (const b of KNOWN_BARRIOS_CANONICAL) {
-    const bNorm = b.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const reg = new RegExp(`\\b${bNorm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
-    if (reg.test(norm2)) {
-      found.push(b.charAt(0).toUpperCase() + b.slice(1));
-      norm2 = norm2.replace(reg, " ");
+  for (const item of COMPILED_BARRIOS) {
+    if (item.regex.test(norm2)) {
+      found.push(item.name);
+      norm2 = norm2.replace(item.regex, " ");
     }
   }
+  if (extractBarriosCache.size >= MAX_BARRIOS_CACHE) {
+    const firstKey = extractBarriosCache.keys().next().value;
+    if (firstKey) extractBarriosCache.delete(firstKey);
+  }
+  extractBarriosCache.set(text2, found);
   return found;
 }
 function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCityRaw, propCityRaw, reqFullText, propFullText) {
@@ -4912,7 +4926,7 @@ function isHollowListing(rawText, name, externalUrl) {
   }
   return { isHollow: false, reason: "Publicaci\xF3n con contenido suficiente" };
 }
-function explicarMatch(requirement, property, precomputedFbReq, precomputedFbProp) {
+function explicarMatch(requirement, property, precomputedFbReq, precomputedFbProp, precomputedReqBarrios, precomputedPropBarrios) {
   const blockers = [];
   const positives = [];
   const negatives = [];
@@ -5324,8 +5338,8 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
   const propCity = resolveCityField(property.addressCity || "", property.city || "");
   const reqCityNorm = normalizarTextoGeografico(reqCity);
   const propCityNorm = normalizarTextoGeografico(propCity);
-  const propBarriosInText = extractAllBarriosFromText(property.rawText || property.description || property.name || "");
-  const reqBarriosInText = extractAllBarriosFromText(requirement.rawText || requirement.description || requirement.name || "");
+  const propBarriosInText = precomputedPropBarrios || extractAllBarriosFromText(property.rawText || property.description || property.name || "");
+  const reqBarriosInText = precomputedReqBarrios || extractAllBarriosFromText(requirement.rawText || requirement.description || requirement.name || "");
   const rawPropBarrio = propBarriosInText[0] || property.zone || property.addressNeighborhood || "";
   const rawReqBarriosList = reqBarriosInText.length > 0 ? reqBarriosInText : [requirement.zonaDeseada || requirement.addressNeighborhood || ""].filter(Boolean);
   const reqLocality = requirement.addressLocality || requirement.localidadDeseada || "";
@@ -6362,6 +6376,7 @@ async function findMatchesForProperty(propertyId) {
       return [];
     }
     const fbProp = property.rawText ? extractFallbackDataFromText(property.rawText) : {};
+    const propBarrios = extractAllBarriosFromText(property.rawText || property.description || property.name || "");
     const activeRequirements = await db.select().from(requirements).where(eq3(requirements.status, "active"));
     const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
@@ -6385,7 +6400,7 @@ async function findMatchesForProperty(propertyId) {
         }
         continue;
       }
-      const explanation = explicarMatch(req, property, void 0, fbProp);
+      const explanation = explicarMatch(req, property, void 0, fbProp, void 0, propBarrios);
       const score = explanation.score;
       if (score >= 80) {
         let matchId;
@@ -6466,6 +6481,7 @@ async function findMatchesForRequirement(requirementId) {
       return [];
     }
     const fbReq = req.rawText ? extractFallbackDataFromText(req.rawText) : {};
+    const reqBarrios = extractAllBarriosFromText(req.rawText || req.description || req.name || "");
     const availableProperties = await db.select().from(properties).where(eq3(properties.available, true));
     const rejectedSet = await getRejectedPairsSet();
     const validMatches = [];
@@ -6490,7 +6506,7 @@ async function findMatchesForRequirement(requirementId) {
         }
         continue;
       }
-      const explanation = explicarMatch(req, prop, fbReq, void 0);
+      const explanation = explicarMatch(req, prop, fbReq, void 0, reqBarrios, void 0);
       const score = explanation.score;
       if (score >= 80) {
         let matchId;
@@ -6602,7 +6618,7 @@ function buildBigTechAdminReport(prop, req, score) {
 
 \u{1F449} Ver en el panel web: https://vecy-network.vercel.app/admin`;
 }
-var cachedRejectedPairs, lastRejectedPairsFetch, REJECTED_PAIRS_TTL_MS, TRANSACTION_COMPATIBILITY_MATRIX, boundariesCache, MAX_BOUNDARIES_CACHE, KNOWN_BARRIOS_CANONICAL, BOGOTA_BARRIO_STREET_BOUNDS, activeMatchingReqs, activeMatchingProps, lastMatchingTimeReqs, lastMatchingTimeProps;
+var cachedRejectedPairs, lastRejectedPairsFetch, REJECTED_PAIRS_TTL_MS, TRANSACTION_COMPATIBILITY_MATRIX, boundariesCache, MAX_BOUNDARIES_CACHE, propertyAddressNumbersCache, MAX_ADDRESS_NUMBERS_CACHE, KNOWN_BARRIOS_CANONICAL, COMPILED_BARRIOS, extractBarriosCache, MAX_BARRIOS_CACHE, BOGOTA_BARRIO_STREET_BOUNDS, activeMatchingReqs, activeMatchingProps, lastMatchingTimeReqs, lastMatchingTimeProps;
 var init_matching = __esm({
   "server/_core/matching.ts"() {
     "use strict";
@@ -6627,6 +6643,8 @@ var init_matching = __esm({
     };
     boundariesCache = /* @__PURE__ */ new Map();
     MAX_BOUNDARIES_CACHE = 2500;
+    propertyAddressNumbersCache = /* @__PURE__ */ new Map();
+    MAX_ADDRESS_NUMBERS_CACHE = 2500;
     KNOWN_BARRIOS_CANONICAL = [
       "santa b\xE1rbara occidental",
       "santa barbara occidental",
@@ -6804,6 +6822,16 @@ var init_matching = __esm({
       "sotomayor"
     ];
     KNOWN_BARRIOS_CANONICAL.sort((a, b) => b.length - a.length);
+    COMPILED_BARRIOS = KNOWN_BARRIOS_CANONICAL.map((b) => {
+      const bNorm = b.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const escaped = bNorm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return {
+        name: b.charAt(0).toUpperCase() + b.slice(1),
+        regex: new RegExp(`\\b${escaped}\\b`, "i")
+      };
+    });
+    extractBarriosCache = /* @__PURE__ */ new Map();
+    MAX_BARRIOS_CACHE = 2500;
     BOGOTA_BARRIO_STREET_BOUNDS = {
       // Chapinero
       "rosales": { minStreet: 70, maxStreet: 85, minCra: 1, maxCra: 7 },
@@ -8329,101 +8357,19 @@ function extractFallbackDataFromText(text2) {
     city = "Girardot";
   }
   let zone = "";
-  const KNOWN_BARRIOS_CANONICAL_SORTED = [
-    "Santa B\xE1rbara Occidental",
-    "Santa B\xE1rbara Oriental",
-    "Santa B\xE1rbara Central",
-    "Santa B\xE1rbara Alta",
-    "Santa B\xE1rbara",
-    "Santa Ana Occidental",
-    "Santa Ana Oriental",
-    "Santa Ana Alta",
-    "Santa Ana Central",
-    "Santa Ana",
-    "San Crist\xF3bal Norte",
-    "La Alameda",
-    "San Antonio Norte",
-    "Villa Magdala",
-    "Chic\xF3 Reservado",
-    "Chic\xF3 Norte",
-    "Chic\xF3 Navarra",
-    "Rinc\xF3n del Chic\xF3",
-    "El Chic\xF3",
-    "Chic\xF3",
-    "Santa Paula",
-    "Santa Bibiana",
-    "San Patricio",
-    "Santa Teresa",
-    "La Cabrera",
-    "Cabrera",
-    "Los Rosales Alto",
-    "Rosales Alto",
-    "Los Rosales Bajo",
-    "Rosales Bajo",
-    "Los Rosales",
-    "Rosales",
-    "El Nogal",
-    "Nogal",
-    "El Virrey",
-    "El Retiro",
-    "El Refugio",
-    "Refugio",
-    "Quinta Camacho",
-    "Antiguo Country",
-    "Country Club",
-    "La Calleja",
-    "Calleja Alta",
-    "Calleja Baja",
-    "La Carolina",
-    "Bosque Medina",
-    "El Contador",
-    "Alcal\xE1",
-    "Belmira",
-    "La Castellana",
-    "Polo Club",
-    "San Felipe",
-    "Ema\xFAs",
-    "Colina Campestre",
-    "Ciudad Mel\xE9ndez",
-    "Ciudad Jard\xEDn Norte",
-    "Ciudad Jard\xEDn Sur",
-    "Ciudad Jard\xEDn",
-    "\xC1lamos Norte",
-    "\xC1lamos Sur",
-    "\xC1lamos",
-    "La Candelaria Centro",
-    "Candelaria la Nueva",
-    "Candelaria Sur",
-    "La Candelaria",
-    "Nuevo Country",
-    "Niza Norte",
-    "Niza",
-    "Bella Suiza",
-    "Lisboa",
-    "Alejandr\xEDa",
-    "Carmel Club",
-    "Cantalejo",
-    "Sotavento",
-    "San Jos\xE9 de Bavaria",
-    "Chapinero Alto",
-    "Chapinero Central",
-    "Chapinero",
-    "Cedritos"
-  ];
   const acceptedNeighborhoods = [];
   const rejectedNeighborhoods = [];
-  for (const b of KNOWN_BARRIOS_CANONICAL_SORTED) {
-    const bLower = b.toLowerCase();
+  for (const item of KNOWN_BARRIOS_SORTED_ITEMS) {
     let pos = 0;
-    while ((pos = clean.indexOf(bLower, pos)) !== -1) {
+    while ((pos = clean.indexOf(item.lower, pos)) !== -1) {
       const precedingText = clean.slice(Math.max(0, pos - 45), pos);
       const isNegated = /(?:no\s+les?\s+gusta|no\s+gusta|no\s+quiere|no\s+|excepto\s+|menos\s+|sin\s+|descartado\s+|fuera\s+de\s+|abstenerse\s+|no\s+enviar\s+|no\s+recibo\s+|no\s+buscar\s+)/i.test(precedingText);
       if (isNegated) {
-        if (!rejectedNeighborhoods.includes(b)) rejectedNeighborhoods.push(b);
+        if (!rejectedNeighborhoods.includes(item.canonical)) rejectedNeighborhoods.push(item.canonical);
       } else {
-        if (!acceptedNeighborhoods.includes(b)) acceptedNeighborhoods.push(b);
+        if (!acceptedNeighborhoods.includes(item.canonical)) acceptedNeighborhoods.push(item.canonical);
       }
-      pos += bLower.length;
+      pos += item.lower.length;
     }
   }
   const validNeighborhoods = acceptedNeighborhoods.filter((b) => !rejectedNeighborhoods.includes(b));
@@ -12347,7 +12293,7 @@ function sanitizeResponseMarkdown(text2) {
   if (!text2) return "";
   return text2.replace(/\*\*/g, "*");
 }
-var janiaResultSchema, COMMON_FIRST_NAMES, fallbackDataCache, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, promptCache, JANIA_PROMPT, splitMultiPropertyMessage, brokerDirectoryCache, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, consultingConversationHistory, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
+var janiaResultSchema, COMMON_FIRST_NAMES, fallbackDataCache, KNOWN_BARRIOS_SORTED_ITEMS, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, promptCache, JANIA_PROMPT, splitMultiPropertyMessage, brokerDirectoryCache, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, consultingConversationHistory, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
 var init_janIA = __esm({
   "server/_core/janIA.ts"() {
     "use strict";
@@ -12642,6 +12588,87 @@ var init_janIA = __esm({
       "jimena"
     ]);
     fallbackDataCache = /* @__PURE__ */ new Map();
+    KNOWN_BARRIOS_SORTED_ITEMS = [
+      "Santa B\xE1rbara Occidental",
+      "Santa B\xE1rbara Oriental",
+      "Santa B\xE1rbara Central",
+      "Santa B\xE1rbara Alta",
+      "Santa B\xE1rbara",
+      "Santa Ana Occidental",
+      "Santa Ana Oriental",
+      "Santa Ana Alta",
+      "Santa Ana Central",
+      "Santa Ana",
+      "San Crist\xF3bal Norte",
+      "La Alameda",
+      "San Antonio Norte",
+      "Villa Magdala",
+      "Chic\xF3 Reservado",
+      "Chic\xF3 Norte",
+      "Chic\xF3 Navarra",
+      "Rinc\xF3n del Chic\xF3",
+      "El Chic\xF3",
+      "Chic\xF3",
+      "Santa Paula",
+      "Santa Bibiana",
+      "San Patricio",
+      "Santa Teresa",
+      "La Cabrera",
+      "Cabrera",
+      "Los Rosales Alto",
+      "Rosales Alto",
+      "Los Rosales Bajo",
+      "Rosales Bajo",
+      "Los Rosales",
+      "Rosales",
+      "El Nogal",
+      "Nogal",
+      "El Virrey",
+      "El Retiro",
+      "El Refugio",
+      "Refugio",
+      "Quinta Camacho",
+      "Antiguo Country",
+      "Country Club",
+      "La Calleja",
+      "Calleja Alta",
+      "Calleja Baja",
+      "La Carolina",
+      "Bosque Medina",
+      "El Contador",
+      "Alcal\xE1",
+      "Belmira",
+      "La Castellana",
+      "Polo Club",
+      "San Felipe",
+      "Ema\xFAs",
+      "Colina Campestre",
+      "Ciudad Mel\xE9ndez",
+      "Ciudad Jard\xEDn Norte",
+      "Ciudad Jard\xEDn Sur",
+      "Ciudad Jard\xEDn",
+      "\xC1lamos Norte",
+      "\xC1lamos Sur",
+      "\xC1lamos",
+      "La Candelaria Centro",
+      "Candelaria la Nueva",
+      "Candelaria Sur",
+      "La Candelaria",
+      "Nuevo Country",
+      "Niza Norte",
+      "Niza",
+      "Bella Suiza",
+      "Lisboa",
+      "Alejandr\xEDa",
+      "Carmel Club",
+      "Cantalejo",
+      "Sotavento",
+      "San Jos\xE9 de Bavaria",
+      "Chapinero Alto",
+      "Chapinero Central",
+      "Chapinero",
+      "Cedritos"
+    ].map((b) => ({ canonical: b, lower: b.toLowerCase() }));
     GREETED_TODAY = /* @__PURE__ */ new Map();
     REPUTATION_HOOK = "\u26A0\uFE0F *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnol\xF3gico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexi\xF3n privada de JanIA, ser\xEDa un verdadero honor para nosotros que nos compartieras tu testimonio y calificaci\xF3n de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
     cachedLiveStatsText = "";

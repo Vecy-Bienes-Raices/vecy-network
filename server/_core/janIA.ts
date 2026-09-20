@@ -546,6 +546,28 @@ export function parseColombianPriceOrBudget(numStr: string, unit: string, isSale
 // ─── Cache en memoria de extracción determinista (v31.77) ──────────────────
 const fallbackDataCache = new Map<string, any>();
 
+interface CanonicalBarrioItem {
+  canonical: string;
+  lower: string;
+}
+
+const KNOWN_BARRIOS_SORTED_ITEMS: CanonicalBarrioItem[] = [
+  "Santa Bárbara Occidental", "Santa Bárbara Oriental", "Santa Bárbara Central", "Santa Bárbara Alta", "Santa Bárbara",
+  "Santa Ana Occidental", "Santa Ana Oriental", "Santa Ana Alta", "Santa Ana Central", "Santa Ana",
+  "San Cristóbal Norte", "La Alameda", "San Antonio Norte", "Villa Magdala",
+  "Chicó Reservado", "Chicó Norte", "Chicó Navarra", "Rincón del Chicó", "El Chicó", "Chicó",
+  "Santa Paula", "Santa Bibiana", "San Patricio", "Santa Teresa", "La Cabrera", "Cabrera",
+  "Los Rosales Alto", "Rosales Alto", "Los Rosales Bajo", "Rosales Bajo", "Los Rosales", "Rosales",
+  "El Nogal", "Nogal", "El Virrey", "El Retiro", "El Refugio", "Refugio", "Quinta Camacho", "Antiguo Country", "Country Club",
+  "La Calleja", "Calleja Alta", "Calleja Baja", "La Carolina", "Bosque Medina", "El Contador", "Alcalá", "Belmira", "La Castellana",
+  "Polo Club", "San Felipe", "Emaús", "Colina Campestre", "Ciudad Meléndez",
+  "Ciudad Jardín Norte", "Ciudad Jardín Sur", "Ciudad Jardín",
+  "Álamos Norte", "Álamos Sur", "Álamos",
+  "La Candelaria Centro", "Candelaria la Nueva", "Candelaria Sur", "La Candelaria",
+  "Nuevo Country", "Niza Norte", "Niza", "Bella Suiza", "Lisboa", "Alejandría", "Carmel Club",
+  "Cantalejo", "Sotavento", "San José de Bavaria", "Chapinero Alto", "Chapinero Central", "Chapinero", "Cedritos"
+].map(b => ({ canonical: b, lower: b.toLowerCase() }));
+
 export function extractFallbackDataFromText(text: string): any {
   if (!text || typeof text !== "string") return {};
   const cacheKey = text.trim();
@@ -1018,39 +1040,20 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   let zone = "";
-  // ── EXTRACTOR CATASTRAL CON BLINDAJE DE NEGACIONES (Anti-Negation Guard) ──
-  const KNOWN_BARRIOS_CANONICAL_SORTED = [
-    "Santa Bárbara Occidental", "Santa Bárbara Oriental", "Santa Bárbara Central", "Santa Bárbara Alta", "Santa Bárbara",
-    "Santa Ana Occidental", "Santa Ana Oriental", "Santa Ana Alta", "Santa Ana Central", "Santa Ana",
-    "San Cristóbal Norte", "La Alameda", "San Antonio Norte", "Villa Magdala",
-    "Chicó Reservado", "Chicó Norte", "Chicó Navarra", "Rincón del Chicó", "El Chicó", "Chicó",
-    "Santa Paula", "Santa Bibiana", "San Patricio", "Santa Teresa", "La Cabrera", "Cabrera",
-    "Los Rosales Alto", "Rosales Alto", "Los Rosales Bajo", "Rosales Bajo", "Los Rosales", "Rosales",
-    "El Nogal", "Nogal", "El Virrey", "El Retiro", "El Refugio", "Refugio", "Quinta Camacho", "Antiguo Country", "Country Club",
-    "La Calleja", "Calleja Alta", "Calleja Baja", "La Carolina", "Bosque Medina", "El Contador", "Alcalá", "Belmira", "La Castellana",
-    "Polo Club", "San Felipe", "Emaús", "Colina Campestre", "Ciudad Meléndez",
-    "Ciudad Jardín Norte", "Ciudad Jardín Sur", "Ciudad Jardín",
-    "Álamos Norte", "Álamos Sur", "Álamos",
-    "La Candelaria Centro", "Candelaria la Nueva", "Candelaria Sur", "La Candelaria",
-    "Nuevo Country", "Niza Norte", "Niza", "Bella Suiza", "Lisboa", "Alejandría", "Carmel Club",
-    "Cantalejo", "Sotavento", "San José de Bavaria", "Chapinero Alto", "Chapinero Central", "Chapinero", "Cedritos"
-  ];
-
   const acceptedNeighborhoods: string[] = [];
   const rejectedNeighborhoods: string[] = [];
 
-  for (const b of KNOWN_BARRIOS_CANONICAL_SORTED) {
-    const bLower = b.toLowerCase();
+  for (const item of KNOWN_BARRIOS_SORTED_ITEMS) {
     let pos = 0;
-    while ((pos = clean.indexOf(bLower, pos)) !== -1) {
+    while ((pos = clean.indexOf(item.lower, pos)) !== -1) {
       const precedingText = clean.slice(Math.max(0, pos - 45), pos);
       const isNegated = /(?:no\s+les?\s+gusta|no\s+gusta|no\s+quiere|no\s+|excepto\s+|menos\s+|sin\s+|descartado\s+|fuera\s+de\s+|abstenerse\s+|no\s+enviar\s+|no\s+recibo\s+|no\s+buscar\s+)/i.test(precedingText);
       if (isNegated) {
-        if (!rejectedNeighborhoods.includes(b)) rejectedNeighborhoods.push(b);
+        if (!rejectedNeighborhoods.includes(item.canonical)) rejectedNeighborhoods.push(item.canonical);
       } else {
-        if (!acceptedNeighborhoods.includes(b)) acceptedNeighborhoods.push(b);
+        if (!acceptedNeighborhoods.includes(item.canonical)) acceptedNeighborhoods.push(item.canonical);
       }
-      pos += bLower.length;
+      pos += item.lower.length;
     }
   }
 
