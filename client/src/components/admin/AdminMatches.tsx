@@ -1133,14 +1133,16 @@ export function scoreRows(req: any, prop: any) {
   let localityMatchStatus: MatchStatus = "neutral";
   if (isNonRealEstateReq || isNonRealEstateProp) {
     localityMatchStatus = "missing";
-  } else if (barrioMatchStatus === "exact" && (normalizeBarrio(reqLocalityDisplay) === normalizeBarrio(propLocalityDisplay) || reqLocalityDisplay === propLocalityDisplay || isSantasInvolved)) {
+  } else if (barrioMatchStatus === "exact") {
+    // BUG 7 fix: Si el barrio coincidió exactamente, la localidad se homologa automáticamente como exacta.
+    // El barrio es el identificador geográfico de mayor precisión; si coincide, la localidad es implícita.
     localityMatchStatus = "exact";
   } else if (reqLocalityDisplay === "N/E" || propLocalityDisplay === "N/E") {
     localityMatchStatus = "neutral";
   } else if (normalizeBarrio(reqLocalityDisplay) === normalizeBarrio(propLocalityDisplay)) {
     localityMatchStatus = "exact";
   } else {
-    localityMatchStatus = "warn";
+    localityMatchStatus = "missing"; // Localidades distintas cuando el barrio tampoco coincidió → Guillotina
   }
 
   let cityMatchStatus: MatchStatus = (!isNonRealEstateReq && !isNonRealEstateProp && isCityMatch) ? "exact" : "missing";
@@ -1359,7 +1361,7 @@ export function scoreRows(req: any, prop: any) {
   if (isReqRentMatch && !isDualBiz) {
     saleS = "exact";
   } else if (isReqOpenBudget) {
-    saleS = propSalePrice > 0 ? "warn" : "neutral";
+    saleS = propSalePrice > 0 ? "plus" : "neutral"; // BUG 6 fix: Presupuesto Abierto → plus (azul), no warn
   } else if (reqSaleBudget > 0 && propSalePrice > 0) {
     if (propSalePrice <= reqSaleBudget) {
       saleS = "exact"; // Coincide idéntico o está dentro de presupuesto
@@ -1666,17 +1668,28 @@ export function scoreRows(req: any, prop: any) {
     yearBuiltP = currentSystemYear - ageP;
   }
 
+  // ── Exención Doctrinal de Antigüedad: si la demanda dice "sin importar la antigüedad", "remodelado",
+  // "bien cuidado", "renovado", "reformado" → la restricción de años se levanta completamente.
+  const isAgeFlexible = /sin\s+importar\s+(?:la\s+)?antig[üu]edad|no\s+importa\s+(?:la\s+)?antig[üu]edad|antig[üu]edad\s+(?:no\s+)?flexible|cualquier\s+antig[üu]edad|(?:bien\s+cuidado|buen\s+estado|remodelad[oa]|renov[aáa]d[oa]|refom[aáa]d[oa]|restaurad[oa]|reformad[oa])\s+(?:no\s+importa|independientemente)/i.test(reqTextLower)
+    || /(?:desde\s+que|siempre\s+(?:y\s+cuando|que))\s+(?:est[eé]\s+)?(?:bien\s+cuidado|en\s+buen\s+estado|remodelad[oa]|renov[aáa]d[oa]|reformad[oa])/i.test(reqTextLower);
+
   let ageS: MatchStatus = "neutral";
-  if (ageR > 0 && ageP >= 0) {
+  if (isAgeFlexible) {
+    // La demanda levanta la restricción de antigüedad: se acepta cualquier edad
+    // → Plus si la oferta tiene dato claro, neutral si no se conoce la antigüedad
+    ageS = ageP >= 0 ? "plus" : "neutral";
+  } else if (ageR > 0 && ageP >= 0) {
     if (ageP <= ageR) ageS = "exact";
-    else if (ageP <= ageR + 5) ageS = "warn";
-    else ageS = "warn";
+    else if (ageP <= ageR + 3) ageS = "warn";   // Margen doctrinal de 3 años (edificios con leves diferencias de registro)
+    else ageS = "missing"; // 🔴 Supera el máximo de antigüedad exigido → Guillotina Doctrinal
   } else if (ageR <= 0 && ageP >= 0) {
     ageS = "exact"; // 🟢 Coincide: la demanda no puso restricción y la oferta tiene el dato claro
   } else if (ageR > 0 && ageP < 0) {
-    ageS = "neutral";
+    ageS = "neutral"; // Demanda exige antigüedad máxima pero la oferta no tiene el dato
   }
-  const reqAgeLabel = ageR > 0 ? `Máx ${ageR} años` : "Sin límite de antigüedad";
+  const reqAgeLabel = isAgeFlexible
+    ? "Flexible (Remodelado / Bien Cuidado)"
+    : (ageR > 0 ? `Máx ${ageR} años` : "Sin límite de antigüedad");
   const propAgeLabel = ageP >= 0 
     ? (ageP === 0 ? "A estrenar / Sobre planos (0 años)" : (yearBuiltP ? `${yearBuiltP} (${ageP} años)` : `${ageP} años`))
     : "N/E (Consultar)";
@@ -1705,9 +1718,9 @@ export function scoreRows(req: any, prop: any) {
     } else if (estratoArr.includes(Number(estratoP))) {
       estS = "exact";
     } else if (Math.abs(Number(estratoP) - estratoArr[0]) <= 1) {
-      estS = "warn";
+      estS = "warn"; // Diferencia de ±1 estrato: aproximado
     } else {
-      estS = "warn";
+      estS = "missing"; // 🔴 Estrato incompatible (diferencia > 1) → Guillotina (BUG 2 fix)
     }
   } else if (!hasEstratoReq && (estratoP && Number(estratoP) > 0)) {
     estS = "neutral";
@@ -1751,9 +1764,9 @@ export function scoreRows(req: any, prop: any) {
         reqExtLabel = reqTerraza ? "Exige Terraza" : "Exige Balcón";
         propExtLabel = propTerraza ? "Sí (Cuenta con Terraza)" : "Sí (Cuenta con Balcón)";
       } else if ((reqBalcon || reqTerraza) && !propBalcon && !propTerraza) {
-        extS = "warn";
-        reqExtLabel = reqTerraza ? "Exige Terraza" : "Exige Balcón";
-        propExtLabel = "Sin balcón/terraza especificado";
+        extS = "missing"; // 🔴 BUG 3 fix: Demanda exige balcón/terraza y oferta no tiene → Guillotina doctrinal
+        reqExtLabel = reqTerraza ? "Exige Terraza (Indispensable)" : "Exige Balcón (Indispensable)";
+        propExtLabel = "No tiene balcón ni terraza";
       } else if (!reqBalcon && !reqTerraza && (propBalcon || propTerraza)) {
         extS = "plus";
         reqExtLabel = "Flexible";
@@ -1779,8 +1792,8 @@ export function scoreRows(req: any, prop: any) {
         reqEqLabel = "Exige Conjunto Cerrado";
         propEqLabel = "Sí (Conjunto Cerrado)";
       } else if (reqConj && !propConj) {
-        eqS = "warn";
-        reqEqLabel = "Exige Conjunto Cerrado";
+        eqS = "missing"; // 🔴 BUG 4 fix: Demanda exige conjunto cerrado y oferta no lo tiene → Guillotina
+        reqEqLabel = "Exige Conjunto Cerrado (Indispensable)";
         propEqLabel = "Casa Independiente / Sin conjunto";
       } else if (!reqConj && propConj) {
         eqS = "plus";
@@ -1794,8 +1807,8 @@ export function scoreRows(req: any, prop: any) {
         reqEqLabel = "Exige Ascensor";
         propEqLabel = "Sí (Edificio con Ascensor)";
       } else if (reqAsc && !propAsc) {
-        eqS = "warn";
-        reqEqLabel = "Exige Ascensor";
+        eqS = "missing"; // 🔴 BUG 4 fix: Demanda exige ascensor y oferta no lo tiene → Guillotina
+        reqEqLabel = "Exige Ascensor (Indispensable)";
         propEqLabel = "Sin ascensor especificado";
       } else if (!reqAsc && propAsc) {
         eqS = "plus";

@@ -9,6 +9,30 @@
 
 ---
 
+## 📋 SESIÓN v31.82 — 20 Septiembre 2026
+
+### Solicitud de Eduardo
+Eduardo explicó la doctrina definitiva del sistema de matching y señaló que varios campos en la lógica de scoring estaban asignando estados incorrectos:
+1. **"Plus Ofertado"** = la oferta tiene algo que la demanda no pidió → NO es MATCH FALLIDO.
+2. Atributos físicos (habitaciones, baños, garajes, área, balcones, terrazas): **Oferta ≥ Demanda** = OK, **Oferta < Demanda** = MATCH FALLIDO.
+3. Precios: la demanda pone un TOPE MÁXIMO. Si oferta supera el tope → FALLIDO. "Presupuesto Abierto" → el precio no importa.
+4. Los 5 campos OBLIGATORIOS: Tipo Inmueble, Tipo Negocio, Barrio, Localidad/Comuna, Ciudad/Municipio.
+
+### 6 Bugs Corregidos en `scoreRows()` (AdminMatches.tsx)
+
+| Bug | Campo | Problema | Corrección |
+|---|---|---|---|
+| 1 | Antigüedad | `ageP > ageR + 5` siempre daba `warn` | `ageP > ageR + 3` → `missing` (guillotina) |
+| 2 | Estrato | Diferencia > ±1 estrato siempre daba `warn` | → `missing` (guillotina) |
+| 3 | Balcón/Terraza | Demanda exige y oferta no tiene → `warn` | → `missing` (guillotina) |
+| 4 | Ascensor/Conjunto | Demanda exige y oferta no tiene → `warn` | → `missing` (guillotina) |
+| 5 | Presupuesto Abierto | Con ppto abierto daba `warn` (amarillo) | → `plus` (azul, sin penalización) |
+| 6 | Localidad | Barrio exacto no garantizaba localidad exacta | → `exact` automático; localidad incompatible → `missing` |
+
+### Verificación: tsc 0 errores ✅ · 64/64 tests ✅ · build limpio 24.57s ✅
+
+---
+
 ## 🏛️ RESUMEN EJECUTIVO Y CONTEXTO MAESTRO DEL PROYECTO VECY NETWORK
 
 ### 1. Visión y Propósito

@@ -322,6 +322,34 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.82 — Septiembre 2026
+
+#### 📌 CORRECCIÓN DOCTRINAL DE 7 BUGS EN MOTOR DE SCORING `scoreRows()` + EXENCIÓN DE ANTIGÜEDAD FLEXIBLE
+
+**Problemas identificados:**
+1. **Antigüedad**: `ageP > ageR + 5` siempre retornaba `warn`, nunca `missing`. Si la oferta supera el máximo de años exigido por la demanda, debe ser guillotina a 0%.
+2. **Estrato**: Diferencia de más de ±1 estrato siempre retornaba `warn`. Estratos incompatibles (diferencia > 1) deben ser guillotina a 0%.
+3. **Balcón/Terraza**: Cuando la demanda exige balcón o terraza y la oferta no lo tiene, retornaba `warn` en vez de `missing`.
+4. **Ascensor/Conjunto Cerrado**: Igual que balcón/terraza — exigencia no satisfecha retornaba `warn`.
+5. **Presupuesto Abierto**: Cuando la demanda dice "presupuesto abierto" y la oferta tiene precio, retornaba `warn` (amarillo penaliza score) en vez de `plus` (azul — no penaliza).
+6. **Localidad**: Cuando el barrio coincidía exactamente, la localidad aún podía quedar en `warn`. Se corrigió para que barrio exacto implique localidad exacta automáticamente. Localidades incompatibles (sin barrio coincidente) pasan de `warn` a `missing`.
+7. **Exención Doctrinal de Antigüedad Flexible**: Añadida detección de frases como *"sin importar la antigüedad"*, *"remodelado"*, *"bien cuidado"*, *"renovado"*, *"desde que esté en buen estado"* etc. en el texto de la demanda. Cuando se detectan, la restricción de antigüedad se levanta y la oferta recibe `plus` (azul) en vez de `missing`.
+
+**Doctrina clarificada por Eduardo A. Rivera:**
+- `missing` (rojo) → MATCH FALLIDO, 0% — solo este estado descarta el match.
+- `plus` (azul) → La oferta tiene algo que la demanda no pidió, o supera lo pedido → NO FALLA, es un beneficio.
+- `warn` (amarillo) → Aproximado/negociable → NO FALLA, penaliza levemente el score.
+- `neutral` (gris) → Dato pendiente en uno o ambos → NO FALLA en campos secundarios.
+- `exact`/`ok` (verde) → Coincidencia exacta → Score pleno.
+
+**Solución aplicada:**
+- `client/src/components/admin/AdminMatches.tsx`: 7 correcciones quirúrgicas en `scoreRows()`.
+- `shared/const.ts` y `package.json`: Versión incrementada a `v31.82`.
+
+**Verificación:** `tsc --noEmit` 0 errores · `npx vitest run` 64/64 tests · `npm run build` limpio ✅
+
+---
+
 ### 🔖 v31.80 — Septiembre 2026
 
 #### 📌 GUILLOTINAS INFLEXIBLES DE COCINA, CBS Y DISPONIBILIDAD TEMPORAL, Y CORRECCIÓN DE PARSERS DE JERGA INMOBILIARIA

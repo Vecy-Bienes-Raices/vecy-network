@@ -167,7 +167,26 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.80 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.82 — Septiembre 2026
+
+### Novedades v31.82 (Corrección Doctrinal de 7 Bugs en Motor de Scoring `scoreRows()` + Exención de Antigüedad Flexible):
+- **7 Bugs corregidos en `client/src/components/admin/AdminMatches.tsx` — función `scoreRows()`**:
+  - **Bug 1 — Antigüedad**: `ageP > ageR + 5` siempre devolvía `warn`. Corregido: si la oferta supera el tope máximo de años (+3 de margen) → `missing` (guillotina a 0%).
+  - **Bug 2 — Estrato**: Diferencia de estrato > ±1 siempre devolvía `warn`. Corregido: diferencia > 1 → `missing` (guillotina a 0%).
+  - **Bug 3 — Balcón/Terraza**: Demanda exige y oferta no tiene → era `warn`. Corregido: → `missing` (guillotina a 0%).
+  - **Bug 4 — Ascensor/Conjunto Cerrado**: Demanda exige y oferta no tiene → era `warn`. Corregido: → `missing` (guillotina a 0%).
+  - **Bug 5 — Presupuesto Abierto**: "Presupuesto Abierto" con precio en oferta → era `warn` (amarillo, penalizaba). Corregido: → `plus` (azul, no penaliza).
+  - **Bug 6 — Localidad**: Barrio exacto no garantizaba localidad exacta → podía quedar en `warn`. Corregido: barrio `exact` → localidad automáticamente `exact`. Localidades incompatibles sin barrio coincidente → `missing`.
+  - **Bug 7 — Exención Doctrinal de Antigüedad Flexible**: Añadida detección de frases como *"sin importar la antigüedad"*, *"remodelado"*, *"bien cuidado"*, *"renovado"*, *"desde que esté en buen estado"*. Cuando se detectan, la restricción de años se levanta: la oferta recibe `plus` (azul) en vez de `missing`. La etiqueta de demanda muestra `"Flexible (Remodelado / Bien Cuidado)"`.
+- **Doctrina Canónica de Estados de Cotejo (v31.82)**:
+  - `missing` 🔴 → MATCH FALLIDO (0%) — único estado que descarta el match.
+  - `plus` 🔵 → Oferta supera o tiene más de lo pedido → NO FALLA, beneficio.
+  - `warn` 🟡 → Aproximado/negociable → NO FALLA, leve penalización de score.
+  - `neutral` ⚪ → Dato pendiente → NO FALLA en campos secundarios.
+  - `exact`/`ok` 🟢 → Coincidencia exacta → Score pleno.
+- **Verificación**: 64/64 tests Vitest ✅ · `tsc --noEmit` 0 errores ✅ · build limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.80 — Septiembre 2026
 
 ### Novedades v31.80 (Guillotinas Inflexibles de Cocina, CBS y Disponibilidad Temporal, Corrección de Parsers y Rescate de Ficha #3363):
 - **Guillotinas Inflexibles por Choques Arquitectónicos y Temporales (`matching.ts` & `AdminMatches.tsx`)**:
