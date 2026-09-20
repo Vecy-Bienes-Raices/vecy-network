@@ -2232,7 +2232,9 @@ export function scoreRows(req: any, prop: any) {
     'antiguedad', 'cocina', 'interiorexterior', 'depositos', 'deposito', 'cuartobanoservicio', 'cbs',
     'balcon', 'terraza', 'piso', 'antiguedadmax', 'estratodeseado', 'areamin', 'presupuestomax',
     'kitchentype', 'vigilancia', 'visitantes', 'moto', 'motos', 'cava', 'bbq', 'chimenea', 'estudio', 'patio',
-    'shut', 'gas', 'caldera', 'parqueadero', 'disponibilidad', 'entrega'
+    'shut', 'gas', 'caldera', 'parqueadero', 'disponibilidad', 'entrega',
+    'wants', 'gives', 'iscollaborativepool', 'collaborativepool', 'comisiones', 'calificacion', 'origen',
+    'metadata', 'rawtext', 'status', 'userid', 'agentid', 'id'
   ]);
 
   const customKeys = new Set<string>();
@@ -2261,6 +2263,7 @@ export function scoreRows(req: any, prop: any) {
     const pVal = propAmenitiesObj[key];
     const rVal = reqCaractObj[key];
     if (pVal === undefined && rVal === undefined) continue;
+    if (Array.isArray(pVal) || Array.isArray(rVal) || (typeof pVal === 'object' && pVal !== null) || (typeof rVal === 'object' && rVal !== null)) continue;
 
     const hasP = pVal !== undefined && pVal !== null && pVal !== "" && pVal !== false;
     const hasR = rVal !== undefined && rVal !== null && rVal !== "" && rVal !== false;
