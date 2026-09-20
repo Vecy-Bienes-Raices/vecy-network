@@ -708,16 +708,23 @@ export const janIARouter = router({
             .where(inArray(propertyPublicationHistory.propertyId, propertyIds))
             .orderBy(desc(propertyPublicationHistory.fecha));
 
-          finalMatches = validEvaluatedMatches.map(m => {
-            const propertyHistory = histories.filter(h => h.propertyId === m.property.id);
-            return {
-              ...m,
-              property: {
-                ...m.property,
-                publicationHistory: propertyHistory
-              }
-            };
-          });
+          const historyMap = new Map<number, any[]>();
+          for (const h of histories) {
+            let list = historyMap.get(h.propertyId);
+            if (!list) {
+              list = [];
+              historyMap.set(h.propertyId, list);
+            }
+            list.push(h);
+          }
+
+          finalMatches = validEvaluatedMatches.map(m => ({
+            ...m,
+            property: {
+              ...m.property,
+              publicationHistory: historyMap.get(m.property.id) || []
+            }
+          }));
         }
 
         cachedAllMatchesData = finalMatches;
