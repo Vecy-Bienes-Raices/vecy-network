@@ -134,10 +134,27 @@ export default function AdminProperties() {
 
   const cancelForm = () => { setShowForm(false); setEditingId(null); setFormData({ ...emptyForm }); };
 
-  const filtered = (properties || []).filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    (p.location ?? '').toLowerCase().includes(search.toLowerCase())
-  );
+  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'standby'>('all');
+
+  const countAll = (properties || []).length;
+  const countAvailable = (properties || []).filter((p: any) => p.available && !p.standByDirectoVecy && p.estadoComercial !== 'STANDBY').length;
+  const countStandby = (properties || []).filter((p: any) => p.standByDirectoVecy || p.aceptaTerceria === false || p.estadoComercial === 'STANDBY').length;
+
+  const filtered = (properties || []).filter((p: any) => {
+    const matchesSearch =
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      (p.location ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      (p.zone ?? '').toLowerCase().includes(search.toLowerCase());
+    if (!matchesSearch) return false;
+
+    if (statusFilter === 'available') {
+      return p.available && !p.standByDirectoVecy && p.estadoComercial !== 'STANDBY';
+    }
+    if (statusFilter === 'standby') {
+      return p.standByDirectoVecy || p.aceptaTerceria === false || p.estadoComercial === 'STANDBY';
+    }
+    return true;
+  });
 
   const ITEMS_PER_PAGE = 20;
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
@@ -175,6 +192,49 @@ export default function AdminProperties() {
           )}
         </div>
       </div>
+
+      {/* Pills de Estado y Sección StandBy */}
+      {!showForm && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => { setStatusFilter('all'); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              statusFilter === 'all'
+                ? 'bg-[#d4af37] text-black font-bold shadow-[0_0_12px_rgba(212,175,55,0.4)]'
+                : 'bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
+            }`}
+          >
+            <span>Todos</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/20 text-white font-mono">{countAll}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setStatusFilter('available'); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              statusFilter === 'available'
+                ? 'bg-emerald-500 text-black font-bold shadow-[0_0_12px_rgba(16,185,129,0.4)]'
+                : 'bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white hover:border-white/20'
+            }`}
+          >
+            <span>Disponibles</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/20 text-white font-mono">{countAvailable}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setStatusFilter('standby'); setCurrentPage(1); }}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              statusFilter === 'standby'
+                ? 'bg-amber-500 text-black font-bold shadow-[0_0_12px_rgba(245,158,11,0.5)]'
+                : 'bg-zinc-900 border border-amber-500/30 text-amber-300 hover:border-amber-400 hover:text-white'
+            }`}
+            title="Inmuebles en reserva exclusiva StandBy Directo Vecy (No Tercería / No Referidos)"
+          >
+            <span>🛡️ Inmuebles StandBy</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-black/30 text-amber-200 font-mono">{countStandby}</span>
+          </button>
+        </div>
+      )}
 
       {/* Search Bar */}
       {!showForm && (
@@ -408,9 +468,16 @@ export default function AdminProperties() {
                           ${Number(prop.price).toLocaleString('es-CO')}
                         </td>
                         <td className="px-6 py-4">
-                          <span className={prop.available ? 'badge-active' : 'badge-muted'}>
-                            {prop.available ? 'Disponible' : 'No disponible'}
-                          </span>
+                          <div className="flex flex-col gap-1 items-start">
+                            <span className={prop.available ? 'badge-active' : 'badge-muted'}>
+                              {prop.available ? 'Disponible' : 'No disponible'}
+                            </span>
+                            {(prop.standByDirectoVecy || prop.estadoComercial === 'STANDBY' || prop.aceptaTerceria === false) && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 whitespace-nowrap">
+                                🛡️ Standby Directo
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex gap-2">
@@ -440,9 +507,16 @@ export default function AdminProperties() {
                     </div>
                     <div className="flex items-center justify-between border-t border-border pt-2.5">
                       <p className="font-bold text-primary text-sm">${Number(prop.price).toLocaleString('es-CO')}</p>
-                      <span className={prop.available ? 'badge-active text-[10px]' : 'badge-muted text-[10px]'}>
-                        {prop.available ? 'Disponible' : 'No disponible'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {(prop.standByDirectoVecy || prop.estadoComercial === 'STANDBY' || prop.aceptaTerceria === false) && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            🛡️ Standby
+                          </span>
+                        )}
+                        <span className={prop.available ? 'badge-active text-[10px]' : 'badge-muted text-[10px]'}>
+                          {prop.available ? 'Disponible' : 'No disponible'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}

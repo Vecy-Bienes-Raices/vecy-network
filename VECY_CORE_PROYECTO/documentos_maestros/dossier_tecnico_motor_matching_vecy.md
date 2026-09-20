@@ -692,6 +692,31 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
 - **Filtro `SERVER_BOOT_TIME`**: Los mensajes publicados con fecha/hora previa al reinicio del servidor son ignorados de forma intencional para evitar reprocesados retroactivos de historial.
 - **Protocolo de Lectura Total de Mensajes**: JanIA recibe el 100% del texto plano vía WebSocket de Baileys sin importar el botón visual "Leer más" de la interfaz gráfica de WhatsApp.
 
+---
+
+### 🔖 v31.79 — SEPTIEMBRE 2026: EVOLUCIÓN MATEMÁTICA Y OPERATIVA DEL MOTOR DE MATCHING (100% EXCLUSIVO, COTEJO DINÁMICO Y STANDBY DIRECTO)
+
+#### 1. DOCTRINA MATEMÁTICA DEL MATCH 100% PERFECTO VS ESCALA CONTINUA DECIMAL (80.00% - 99.99%)
+- **Exclusividad del 100.00%**: El puntaje perfecto de 100.00% queda reservado estrictamente para emparejamientos donde el 100% de los atributos evaluados coincide de forma exacta (*"Coincide"* en verde), sin ningún Plus Ofertado, Aproximado ni Dato Faltante.
+- **Penalizaciones Asimétricas Continuas**:
+  - `Plus Ofertado`: Penalización mínima ($\Delta = -0.01\% \rightarrow 99.99\%, 99.98\%$).
+  - `Aproximado`: Penalización moderada ($\Delta = -0.03\% \text{ a } -0.05\% \rightarrow 99.95\%, 99.93\%$).
+  - `Dato Faltante No Crítico`: Penalización proporcional ($\Delta = -0.08\% \text{ a } -0.10\% \rightarrow 99.90\%, 99.84\%$).
+  - `Dato Faltante en Precio / Canon`: Castigo financiero severo (caída a la base de ~83.50%).
+  - `No Coincide`: Guillotina fulminante al 0.00% ante cualquier discrepancia no negociable.
+
+#### 2. COTEJO ENFOCADO Y ADICIÓN DINÁMICA CON PERSISTENCIA PERMANENTE EN BASE DE DATOS
+- **Tablas de Cotejo Relevantes**: Se abandonó el despliegue indiscriminado de las 88 casillas; la tabla evalúa y expone únicamente las características solicitadas por la demanda y ofertadas por el inmueble.
+- **Botón "+ Agregar Atributo al Cotejo"**: Modal desacoplado (`createPortal`) que permite incorporar características en caliente durante la gestión de visitas (19 amenidades estándar + opción abierta *"✍️ Otra Característica"*).
+- **Persistencia en Base de Datos**: Dos casillas de verificación permiten guardar permanentemente los atributos en `properties.amenities` y `requirements.caracteristicasDeseadas`. Si la negociación actual no concluye, ambos registros quedan enriquecidos de por vida para futuros matches.
+
+#### 3. BUCLE DE APRENDIZAJE JANIA Y ENRUTAMIENTO AUTOMÁTICO A INMUEBLES STANDBY (NO TERCERÍA / NO REFERIDOS)
+- **Modal de Descarte Global Pedagógico**: Desacoplado de la tarjeta relativa hacia el `document.body` con 4 categorías pedagógicas para el entrenamiento del *Active Feedback Loop*.
+- **Opciones Doctrinales de Tercería Inmobiliaria 50/50**:
+  - *"El colega de OFERTA no acepta Tercería, ni referidos"*: JanIA actualiza la Oferta en PostgreSQL (`properties.aceptaTerceria = false`, `properties.standByDirectoVecy = true`, `properties.estadoComercial = 'STANDBY'`), purga matches con intermediarios externos y la traslada a la sección de **Inmuebles StandBy** para cierre exclusivo por Vecy Bienes Raíces.
+  - *"El colega Demanda No acepta tercería, ni referidos"*: JanIA actualiza la Demanda en PostgreSQL (`requirements.aceptaTerceria = false`, `requirements.standByDirectoVecy = true`) para asignación prioritaria con cartera directa.
+- **Filtro Rápido en Catálogo de Inmuebles**: En `AdminProperties.tsx`, incorporación de píldoras de navegación (`Todos`, `Disponibles`, `🛡️ Inmuebles StandBy`) y distintivo visual `🛡️ Standby Directo` en desktop y móvil.
+
 
 
 

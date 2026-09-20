@@ -13463,7 +13463,7 @@ import _baileys, {
 import qrcodeTerminal from "qrcode-terminal";
 import fs7 from "fs";
 import path7 from "path";
-import { eq as eq5 } from "drizzle-orm";
+import { eq as eq6 } from "drizzle-orm";
 import QRCode from "qrcode";
 function getWASocket() {
   if (typeof _baileys === "function") return _baileys;
@@ -14901,7 +14901,7 @@ ${result.response}`);
         try {
           const db = await getDb();
           if (!db) return;
-          let conv = await db.select().from(conversations).where(eq5(conversations.sessionId, senderId)).limit(1);
+          let conv = await db.select().from(conversations).where(eq6(conversations.sessionId, senderId)).limit(1);
           let conversationId;
           if (conv.length === 0) {
             const [newConv] = await db.insert(conversations).values({
@@ -14915,7 +14915,7 @@ ${result.response}`);
             await db.update(conversations).set({
               lastMessage: content.slice(0, 150),
               updatedAt: /* @__PURE__ */ new Date()
-            }).where(eq5(conversations.id, conversationId));
+            }).where(eq6(conversations.id, conversationId));
           }
           await db.insert(messages).values({
             conversationId,
@@ -14982,13 +14982,13 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
             await this.queuedSend(senderId, "\u26A0\uFE0F El sistema de base de datos no est\xE1 disponible en este momento. Int\xE9ntalo m\xE1s tarde.");
             return;
           }
-          const [match] = await db.select().from(propertyMatches).where(eq5(propertyMatches.id, matchId)).limit(1);
+          const [match] = await db.select().from(propertyMatches).where(eq6(propertyMatches.id, matchId)).limit(1);
           if (!match) {
             await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ninguna coincidencia registrada con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
             return;
           }
-          const [prop] = await db.select().from(properties).where(eq5(properties.id, match.propertyId)).limit(1);
-          const [req] = await db.select().from(requirements).where(eq5(requirements.id, match.requirementId)).limit(1);
+          const [prop] = await db.select().from(properties).where(eq6(properties.id, match.propertyId)).limit(1);
+          const [req] = await db.select().from(requirements).where(eq6(requirements.id, match.requirementId)).limit(1);
           if (!prop || !req) {
             await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de esta coincidencia.");
             return;
@@ -15003,7 +15003,7 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
             return;
           }
           if (decision === "no") {
-            await db.update(propertyMatches).set({ status: "rejected" }).where(eq5(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq6(propertyMatches.id, matchId));
             await this.queuedSend(senderId, `Entendido. He marcado la coincidencia *#M${matchId}* como cancelada. No se compartir\xE1n tus datos de contacto.`);
             await this.logToDb(senderId, "janIA", `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
             const otherJid = isOwner ? seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@s.whatsapp.net` : ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@s.whatsapp.net`;
@@ -15017,19 +15017,19 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
           if (isSeeker) {
             updateFields.seekerConfirmed = true;
           }
-          await db.update(propertyMatches).set(updateFields).where(eq5(propertyMatches.id, matchId));
-          const [updatedMatch] = await db.select().from(propertyMatches).where(eq5(propertyMatches.id, matchId)).limit(1);
+          await db.update(propertyMatches).set(updateFields).where(eq6(propertyMatches.id, matchId));
+          const [updatedMatch] = await db.select().from(propertyMatches).where(eq6(propertyMatches.id, matchId)).limit(1);
           if (updatedMatch.ownerConfirmed && updatedMatch.seekerConfirmed) {
-            await db.update(propertyMatches).set({ status: "interested" }).where(eq5(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "interested" }).where(eq6(propertyMatches.id, matchId));
             let ownerName = "Oferente";
             let seekerName = "Interesado";
             try {
-              const [ownerUser] = await db.select().from(users).where(eq5(users.phone, ownerPhone)).limit(1);
+              const [ownerUser] = await db.select().from(users).where(eq6(users.phone, ownerPhone)).limit(1);
               if (ownerUser && ownerUser.name) ownerName = ownerUser.name;
             } catch {
             }
             try {
-              const [seekerUser] = await db.select().from(users).where(eq5(users.phone, seekerPhone)).limit(1);
+              const [seekerUser] = await db.select().from(users).where(eq6(users.phone, seekerPhone)).limit(1);
               if (seekerUser && seekerUser.name) seekerName = seekerUser.name;
             } catch {
             }
@@ -15515,7 +15515,7 @@ __export(nightlyRematch_exports, {
   recalculateAndCleanupMatches: () => recalculateAndCleanupMatches,
   runNightlyRematch: () => runNightlyRematch
 });
-import { and as and4, eq as eq6 } from "drizzle-orm";
+import { and as and5, eq as eq7 } from "drizzle-orm";
 async function runNightlyRematch() {
   if (isRematchRunning) {
     console.log("[NIGHTLY-REMATCH] Ya hay una ejecuci\xF3n en curso, saltando...");
@@ -15531,8 +15531,8 @@ async function runNightlyRematch() {
   }
   try {
     const [activeReqs, availProps] = await Promise.all([
-      db.select().from(requirements).where(eq6(requirements.status, "active")),
-      db.select().from(properties).where(eq6(properties.available, true))
+      db.select().from(requirements).where(eq7(requirements.status, "active")),
+      db.select().from(properties).where(eq7(properties.available, true))
     ]);
     console.log(
       `[NIGHTLY-REMATCH] ${activeReqs.length} reqs \xD7 ${availProps.length} props = ${activeReqs.length * availProps.length} pares a evaluar`
@@ -15589,9 +15589,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and4(
-                  eq6(propertyMatches.requirementId, req.id),
-                  eq6(propertyMatches.propertyId, prop.id)
+                and5(
+                  eq7(propertyMatches.requirementId, req.id),
+                  eq7(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -15602,9 +15602,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and4(
-                  eq6(propertyMatches.requirementId, req.id),
-                  eq6(propertyMatches.propertyId, prop.id)
+                and5(
+                  eq7(propertyMatches.requirementId, req.id),
+                  eq7(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -15631,9 +15631,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and4(
-                  eq6(propertyMatches.requirementId, req.id),
-                  eq6(propertyMatches.propertyId, prop.id)
+                and5(
+                  eq7(propertyMatches.requirementId, req.id),
+                  eq7(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -15642,9 +15642,9 @@ async function runNightlyRematch() {
           }
           seenPairs.add(pairKey);
           const existing = await db.select({ id: propertyMatches.id, matchScore: propertyMatches.matchScore }).from(propertyMatches).where(
-            and4(
-              eq6(propertyMatches.requirementId, req.id),
-              eq6(propertyMatches.propertyId, prop.id)
+            and5(
+              eq7(propertyMatches.requirementId, req.id),
+              eq7(propertyMatches.propertyId, prop.id)
             )
           ).limit(1);
           if (existing.length === 0) {
@@ -15664,7 +15664,7 @@ async function runNightlyRematch() {
               await db.update(propertyMatches).set({
                 matchScore: exp.score.toFixed(2),
                 matchReason: `VECY DOCTRINAL v28.0: ${exp.score.toFixed(0)}/100`
-              }).where(eq6(propertyMatches.id, existing[0].id));
+              }).where(eq7(propertyMatches.id, existing[0].id));
               updatedCount++;
             }
           }
@@ -15711,14 +15711,14 @@ async function recalculateAndCleanupMatches() {
     let updatedCount = 0;
     for (const m of allMatches) {
       if (rejectedPairsSet.has(`${m.propertyId}_${m.requirementId}`)) {
-        await db.delete(propertyMatches).where(eq6(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq7(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
-      const [prop] = await db.select().from(properties).where(eq6(properties.id, m.propertyId)).limit(1);
-      const [req] = await db.select().from(requirements).where(eq6(requirements.id, m.requirementId)).limit(1);
+      const [prop] = await db.select().from(properties).where(eq7(properties.id, m.propertyId)).limit(1);
+      const [req] = await db.select().from(requirements).where(eq7(requirements.id, m.requirementId)).limit(1);
       if (!prop || !req) {
-        await db.delete(propertyMatches).where(eq6(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq7(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
@@ -15731,12 +15731,12 @@ async function recalculateAndCleanupMatches() {
       const newScore = exp ? exp.score : 0;
       const hasBlockers = exp ? exp.blockers.length > 0 : true;
       if (newScore < 80 || hasBlockers) {
-        await db.delete(propertyMatches).where(eq6(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq7(propertyMatches.id, m.id));
         deletedCount++;
       } else {
         const storedScore = parseFloat(String(m.matchScore));
         if (Math.abs(storedScore - newScore) > 0.5) {
-          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado v28.0: ${newScore.toFixed(0)}/100` }).where(eq6(propertyMatches.id, m.id));
+          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado v28.0: ${newScore.toFixed(0)}/100` }).where(eq7(propertyMatches.id, m.id));
           updatedCount++;
         }
       }
@@ -15792,7 +15792,7 @@ import cron from "node-cron";
 import path8 from "path";
 import fs8 from "fs";
 import { fileURLToPath } from "url";
-import { gte as gte2, and as and5, eq as eq7, sql as sql4, desc as desc2 } from "drizzle-orm";
+import { gte as gte2, and as and6, eq as eq8, sql as sql5, desc as desc3 } from "drizzle-orm";
 function getBogotaDateString(d = /* @__PURE__ */ new Date()) {
   return d.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
 }
@@ -15805,9 +15805,9 @@ async function acquireBroadcastLock(targetGroup, tipCategory, dateBogota, force 
     }
     if (!force) {
       const existing = await db.select().from(dailyBroadcasts).where(
-        and5(
-          eq7(dailyBroadcasts.dateBogota, dateBogota),
-          eq7(dailyBroadcasts.targetGroup, targetGroup)
+        and6(
+          eq8(dailyBroadcasts.dateBogota, dateBogota),
+          eq8(dailyBroadcasts.targetGroup, targetGroup)
         )
       ).limit(1);
       if (existing.length > 0) {
@@ -15839,7 +15839,7 @@ async function acquireBroadcastLock(targetGroup, tipCategory, dateBogota, force 
       set: {
         tipCategory,
         status: "in_progress",
-        createdAt: sql4`NOW()`
+        createdAt: sql5`NOW()`
       }
     }).returning();
     return { allowed: true, broadcastId: inserted?.id };
@@ -15863,7 +15863,7 @@ async function completeBroadcast(broadcastId, data) {
       voiceText: data.voiceText,
       captionText: data.captionText,
       status: "completed"
-    }).where(eq7(dailyBroadcasts.id, broadcastId));
+    }).where(eq8(dailyBroadcasts.id, broadcastId));
     console.log(`[CRON-PERSISTENCE] \u2705 Difusi\xF3n #${broadcastId} asentada con \xE9xito en PostgreSQL: "${data.topicTitle}".`);
   } catch (err) {
     console.error(`[CRON-PERSISTENCE] Error completando difusi\xF3n #${broadcastId}:`, err?.message || err);
@@ -15877,7 +15877,7 @@ async function failBroadcast(broadcastId, reason) {
     await db.update(dailyBroadcasts).set({
       topicTitle: `Error: ${reason}`,
       status: "failed"
-    }).where(eq7(dailyBroadcasts.id, broadcastId));
+    }).where(eq8(dailyBroadcasts.id, broadcastId));
   } catch (err) {
     console.warn(`[CRON-PERSISTENCE] Error marcando fallo en difusi\xF3n #${broadcastId}:`, err?.message);
   }
@@ -15889,7 +15889,7 @@ async function getRecentBroadcastTopics(limit = 30) {
     const rows = await db.select({
       dateBogota: dailyBroadcasts.dateBogota,
       topicTitle: dailyBroadcasts.topicTitle
-    }).from(dailyBroadcasts).where(eq7(dailyBroadcasts.status, "completed")).orderBy(desc2(dailyBroadcasts.createdAt)).limit(limit);
+    }).from(dailyBroadcasts).where(eq8(dailyBroadcasts.status, "completed")).orderBy(desc3(dailyBroadcasts.createdAt)).limit(limit);
     return rows;
   } catch (err) {
     console.warn("[CRON-TOPICS] Error leyendo historial de temas de PostgreSQL:", err?.message);
@@ -15902,7 +15902,7 @@ async function getRecentImageFiles(limit = 3) {
     if (!db) return [];
     const rows = await db.select({
       imageFileName: dailyBroadcasts.imageFileName
-    }).from(dailyBroadcasts).where(and5(eq7(dailyBroadcasts.status, "completed"), sql4`image_file_name IS NOT NULL`)).orderBy(desc2(dailyBroadcasts.createdAt)).limit(limit);
+    }).from(dailyBroadcasts).where(and6(eq8(dailyBroadcasts.status, "completed"), sql5`image_file_name IS NOT NULL`)).orderBy(desc3(dailyBroadcasts.createdAt)).limit(limit);
     return rows.map((r) => r.imageFileName).filter(Boolean);
   } catch {
     return [];
@@ -16433,9 +16433,9 @@ async function getLiveMarketStats() {
     const db = await getDb();
     if (!db) throw new Error("Database not connected");
     const [propCountRes, reqCountRes, matchCountRes] = await Promise.all([
-      db.select({ count: sql4`count(*)::int` }).from(properties).where(eq7(properties.available, true)),
-      db.select({ count: sql4`count(*)::int` }).from(requirements).where(eq7(requirements.status, "active")),
-      db.select({ count: sql4`count(*)::int` }).from(propertyMatches).where(gte2(propertyMatches.matchScore, "80"))
+      db.select({ count: sql5`count(*)::int` }).from(properties).where(eq8(properties.available, true)),
+      db.select({ count: sql5`count(*)::int` }).from(requirements).where(eq8(requirements.status, "active")),
+      db.select({ count: sql5`count(*)::int` }).from(propertyMatches).where(gte2(propertyMatches.matchScore, "80"))
     ]);
     const totalProps = propCountRes[0]?.count || 0;
     const totalReqs = reqCountRes[0]?.count || 0;
@@ -16902,7 +16902,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.77";
+var VECY_VERSION = "v31.79";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -17508,13 +17508,13 @@ var systemRouter = router({
 });
 
 // server/routers/janIA.ts
-import { z as z2 } from "zod";
+import { z as z3 } from "zod";
 init_llm();
 init_db();
 init_schema();
 init_scraper();
 init_janIA();
-import { eq as eq8, and as and6, desc as desc3, sql as sql5, inArray } from "drizzle-orm";
+import { eq as eq9, and as and7, desc as desc4, sql as sql6, inArray } from "drizzle-orm";
 
 // server/_core/taxEngine.ts
 var VALOR_UVT_2026 = 50318;
@@ -17573,6 +17573,610 @@ init_storage();
 import axios7 from "axios";
 import fs9 from "fs";
 import path9 from "path";
+
+// server/routers/properties.ts
+import { z as z2 } from "zod";
+init_db();
+init_schema();
+import { eq as eq5, desc as desc2, ilike, or as or2, and as and3 } from "drizzle-orm";
+import { TRPCError as TRPCError3 } from "@trpc/server";
+var propertyInputSchema = z2.object({
+  name: z2.string().min(2),
+  description: z2.string().optional(),
+  propertyType: z2.enum([
+    "apartment",
+    "house",
+    "building",
+    "warehouse",
+    "farm",
+    "hotel",
+    "office",
+    "land",
+    "commercial",
+    "loft",
+    "consultorio"
+  ]),
+  transactionType: z2.enum([
+    "venta",
+    "arriendo",
+    "venta_o_arriendo",
+    "arriendo_temporal",
+    "arriendo_con_opcion_de_compra",
+    "permuta",
+    "venta_permuta",
+    "aporte"
+  ]).default("venta"),
+  price: z2.string().min(1),
+  currency: z2.enum(["COP", "USD"]).default("COP"),
+  city: z2.string().default("Bogot\xE1"),
+  location: z2.string().optional().nullable(),
+  zone: z2.string().min(2),
+  addressCity: z2.string().optional().nullable(),
+  addressLocality: z2.string().optional().nullable(),
+  addressNeighborhood: z2.string().optional().nullable(),
+  coordinates: z2.any().optional().nullable(),
+  bedrooms: z2.number().optional().nullable(),
+  bathrooms: z2.number().optional().nullable(),
+  garages: z2.number().optional().nullable(),
+  stratum: z2.number().optional().nullable(),
+  floorDetail: z2.string().optional().nullable(),
+  areaTotal: z2.string().optional().nullable(),
+  areaPrivate: z2.string().optional().nullable(),
+  yearBuilt: z2.number().optional().nullable(),
+  antiguedadAnos: z2.number().optional().nullable(),
+  isAmoblado: z2.boolean().optional().default(false),
+  adminFee: z2.string().optional().nullable(),
+  commissionPercent: z2.string().optional().nullable(),
+  matriculaInmobiliaria: z2.string().optional().nullable(),
+  videoUrl: z2.string().optional().nullable(),
+  externalUrl: z2.string().optional().nullable(),
+  rawText: z2.string().optional().nullable(),
+  featured: z2.boolean().optional().default(false),
+  available: z2.boolean().optional().default(true),
+  idUsuarioWhatsapp: z2.string().optional().nullable(),
+  amenities: z2.any().optional().nullable(),
+  latitude: z2.string().optional().nullable(),
+  longitude: z2.string().optional().nullable(),
+  images: z2.array(z2.string()).optional().nullable()
+});
+var propertyFields = {
+  id: properties.id,
+  name: properties.name,
+  price: properties.price,
+  rentPrice: properties.rentPrice,
+  city: properties.city,
+  location: properties.location,
+  zone: properties.zone,
+  addressCity: properties.addressCity,
+  addressLocality: properties.addressLocality,
+  addressNeighborhood: properties.addressNeighborhood,
+  propertyType: properties.propertyType,
+  transactionType: properties.transactionType,
+  description: properties.description,
+  bedrooms: properties.bedrooms,
+  bathrooms: properties.bathrooms,
+  garages: properties.garages,
+  stratum: properties.stratum,
+  floorDetail: properties.floorDetail,
+  areaTotal: properties.areaTotal,
+  yearBuilt: properties.yearBuilt,
+  adminFee: properties.adminFee,
+  matriculaInmobiliaria: properties.matriculaInmobiliaria,
+  featured: properties.featured,
+  available: properties.available,
+  standByDirectoVecy: properties.standByDirectoVecy,
+  aceptaTerceria: properties.aceptaTerceria,
+  estadoComercial: properties.estadoComercial,
+  amenities: properties.amenities,
+  images: properties.images,
+  createdAt: properties.createdAt
+};
+var cachedAdminMyList = null;
+var cachedAdminMyListTime = 0;
+function invalidatePropertiesListCache() {
+  cachedAdminMyList = null;
+  cachedAdminMyListTime = 0;
+}
+var propertyGetByIdCache = /* @__PURE__ */ new Map();
+function parsePropertyDeterministically(text2) {
+  const norm2 = text2.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+  const lower = norm2.toLowerCase();
+  let propertyType = "apartment";
+  let propertyTypeExact = "Casa";
+  let isSubtipoComercial = false;
+  let subtype = null;
+  if (lower.includes("casa comercial") || lower.includes("sede empresarial") || lower.includes("oficina en casa")) {
+    propertyType = "commercial";
+    propertyTypeExact = "Casa";
+    isSubtipoComercial = true;
+    subtype = lower.includes("sede") ? "Sede Empresarial / Institucional" : lower.includes("oficina") ? "Oficina en Casa" : "Casa Comercial / Oficinas / Sede";
+  } else if (lower.includes("local comercial") || lower.includes("local")) {
+    propertyType = "commercial";
+    propertyTypeExact = "Local";
+    isSubtipoComercial = true;
+    subtype = lower.includes("centro comercial") ? "Local en Centro Comercial" : "Local Comercial a la Calle";
+  } else if (lower.includes("oficina") || lower.includes("consultorio")) {
+    propertyType = "office";
+    propertyTypeExact = "Oficina";
+    isSubtipoComercial = true;
+    subtype = lower.includes("consultorio") ? "Consultorio / Salud" : "Oficina Corporativa / Edificio Empresarial";
+  } else if (lower.includes("apartaestudio")) {
+    propertyType = "apartment";
+    propertyTypeExact = "Apartaestudio";
+  } else if (lower.includes("penthouse duplex") || lower.includes("pent house duplex")) {
+    propertyType = "apartment";
+    propertyTypeExact = "Pent House D\xFAplex";
+  } else if (lower.includes("penthouse") || lower.includes("pent house")) {
+    propertyType = "apartment";
+    propertyTypeExact = "Pent House";
+  } else if (lower.includes("apartamento duplex") || lower.includes("apto duplex")) {
+    propertyType = "apartment";
+    propertyTypeExact = "Apartamento D\xFAplex";
+  } else if (lower.includes("apartamento") || lower.includes("apto")) {
+    propertyType = "apartment";
+    propertyTypeExact = "Apartamento";
+  } else if (lower.includes("casa campestre")) {
+    propertyType = "house";
+    propertyTypeExact = "Casa Campestre";
+    subtype = "Casa Campestre";
+  } else if (lower.includes("casa quinta")) {
+    propertyType = "house";
+    propertyTypeExact = "Casa Quinta";
+    subtype = "Casa Quinta";
+  } else if (lower.includes("casa") || lower.includes("chalet") || lower.includes("townhouse")) {
+    propertyType = "house";
+    propertyTypeExact = "Casa";
+    subtype = "Casa Familiar Unifamiliar";
+  } else if (lower.includes("bodega")) {
+    propertyType = "warehouse";
+    propertyTypeExact = "Bodega";
+    subtype = lower.includes("industrial") ? "Bodega Industrial / Producci\xF3n" : "Bodega de Almacenamiento";
+  } else if (lower.includes("edificio")) {
+    propertyType = "building";
+    propertyTypeExact = "Edificio";
+    if (lower.includes("oficina")) subtype = "Edificio de Oficinas";
+    else if (lower.includes("local")) subtype = "Edificio de Locales / Comercial";
+    else if (lower.includes("residencial")) subtype = "Edificio Residencial";
+    else subtype = "Edificio Mixto (Oficinas / Locales / Vivienda)";
+  } else if (lower.includes("lote") || lower.includes("terreno")) {
+    propertyType = "land";
+    propertyTypeExact = "Lote / Terreno";
+  } else if (lower.includes("finca")) {
+    propertyType = "farm";
+    propertyTypeExact = "Finca";
+    if (lower.includes("productiva") || lower.includes("agro")) subtype = "Finca Productiva / Agropecuaria";
+    else if (lower.includes("hotel") || lower.includes("turis")) subtype = "Finca Agrotur\xEDstica / Hotel Campestre";
+    else subtype = "Finca de Recreo / Vacacional";
+  } else if (lower.includes("caba\xF1a")) {
+    propertyType = "house";
+    propertyTypeExact = "Caba\xF1a";
+  } else if (lower.includes("aparta-hotel") || lower.includes("aparta hotel")) {
+    propertyType = "hotel";
+    propertyTypeExact = "Aparta Hotel";
+    subtype = "Aparta-hotel";
+  } else if (lower.includes("aparta-suites") || lower.includes("aparta suites")) {
+    propertyType = "hotel";
+    propertyTypeExact = "Hotel";
+    subtype = "Aparta-Suites";
+  } else if (lower.includes("hostal")) {
+    propertyType = "hotel";
+    propertyTypeExact = "Hostal";
+    subtype = "Hostal";
+  } else if (lower.includes("motel")) {
+    propertyType = "hotel";
+    propertyTypeExact = "Hotel";
+    subtype = "Motel";
+  } else if (lower.includes("residencia")) {
+    propertyType = "hotel";
+    propertyTypeExact = "Hotel";
+    subtype = "Residencia";
+  } else if (lower.includes("hospedaje")) {
+    propertyType = "hotel";
+    propertyTypeExact = "Hotel";
+    subtype = "Hospedaje";
+  } else if (lower.includes("hotel")) {
+    propertyType = "hotel";
+    propertyTypeExact = "Hotel";
+    subtype = "Hotel Boutique / Tur\xEDstico";
+  } else if (lower.includes("villa")) {
+    propertyType = "house";
+    propertyTypeExact = "Villa";
+  }
+  let transactionType = "venta";
+  if (lower.includes("arriendo") || lower.includes("alquiler") || lower.includes("renta")) {
+    transactionType = "arriendo";
+  } else if (lower.includes("permuta")) {
+    transactionType = "venta_permuta";
+  }
+  let price = "0";
+  const ahoraMatch = norm2.match(/(?:ahora|hoy|precio|valor|venta)[\s\:\$💲🔥]*([0-9\.\,]+(?:\s*(?:millones|mil millones|mm))?)/i);
+  if (ahoraMatch) {
+    const cleanNum = ahoraMatch[1].replace(/\./g, "").replace(/\,/g, "").trim();
+    const parsed = parseInt(cleanNum, 10);
+    if (!isNaN(parsed) && parsed > 1e5) price = String(parsed);
+  }
+  if (price === "0") {
+    const prices = Array.from(norm2.matchAll(/\$\s*([0-9]{1,3}(?:\.[0-9]{3}){1,4})/g));
+    if (prices.length > 0) {
+      const last = prices[prices.length - 1][1].replace(/[^\d]/g, "");
+      const parsed = parseInt(last, 10);
+      if (!isNaN(parsed) && parsed > 1e5) price = String(parsed);
+    }
+  }
+  let rentPrice = "0";
+  if (transactionType === "arriendo") {
+    const canonM = norm2.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|vr\s*[\.\/]?\s*renta|renta|arriendo)\s*[:\/\-=\s]?\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
+    if (canonM) {
+      const cleanNum = canonM[1].replace(/\./g, "").replace(/\,/g, "").trim();
+      const parsed = parseInt(cleanNum, 10);
+      if (!isNaN(parsed) && parsed >= 3e5 && parsed <= 1e8) {
+        rentPrice = String(parsed);
+      }
+    }
+  }
+  let adminFee = "0";
+  const admM = norm2.match(/(?:^|[-•*#\s])(?:v\s*[\/\-]\s*)?(?:adm[oó]n|admon|administraci[oó]n|administ|admin|cta\s*adm[oó]n|cuota\s*adm[oó]n)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*[:\/\-=\s]?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
+  if (admM) {
+    const rawANum = parseFloat(admM[1].replace(/\./g, ""));
+    if (!isNaN(rawANum) && rawANum >= 1e4 && rawANum <= 3e7) {
+      adminFee = String(rawANum);
+    }
+  }
+  let areaConstruida = "";
+  const acM = norm2.match(/(?:area construida|area total|construida)[\s\:\*]*([0-9]+(?:\.[0-9]+)?)\s*m/i) || norm2.match(/([0-9]+(?:\.[0-9]+)?)\s*m[2²]/i);
+  if (acM) areaConstruida = acM[1];
+  let areaPrivada = "";
+  const apM = norm2.match(/(?:area privada|privada)[\s\:\*]*([0-9]+(?:\.[0-9]+)?)\s*m/i);
+  if (apM) areaPrivada = apM[1];
+  let yearBuilt = null;
+  const antM = norm2.match(/(?:antiguedad|edad|anos de construccion)[\s\:\*]*([0-9]+)/i);
+  if (antM) {
+    yearBuilt = 2026 - parseInt(antM[1], 10);
+  }
+  let bedrooms = null;
+  const bedMatch = norm2.match(/(?:habitacion|habitaciones|alcoba|alcobas|oficinas|dormitorio)[\s\:\/\*]*([0-9]+)/i);
+  if (bedMatch) {
+    bedrooms = parseInt(bedMatch[1], 10);
+  }
+  let bathrooms = null;
+  const bathMatch = norm2.match(/(?:bano|banos)[\s\:\/\*]*([0-9]+)/i);
+  if (bathMatch) {
+    bathrooms = parseInt(bathMatch[1], 10);
+  }
+  let garages = null;
+  const garMatch = norm2.match(/(?:garaje|garajes|parqueadero|parqueaderos)[\s\:\/\*]*([0-9]+)/i);
+  if (garMatch) {
+    garages = parseInt(garMatch[1], 10);
+  }
+  let stratum = 4;
+  const strMatch = norm2.match(/estrato[\s\:\*]*([0-6])/i);
+  if (strMatch) {
+    stratum = parseInt(strMatch[1], 10);
+  }
+  let cocina = "Integral";
+  if (lower.includes("abierta tipo isla")) cocina = "Abierta tipo isla";
+  else if (lower.includes("abierta")) cocina = "Abierta";
+  else if (lower.includes("cerrada remodelada")) cocina = "Cerrada remodelada";
+  else if (lower.includes("cerrada")) cocina = "Cerrada convencional";
+  else if (lower.includes("moderna")) cocina = "Moderna";
+  else if (lower.includes("integral")) cocina = "Integral";
+  else if (lower.includes("a remodelar")) cocina = "A remodelar";
+  let estudios = 0;
+  const estM = norm2.match(/(?:estudio|sala de juntas)[\s\:\/\*\D]*?([0-9]+)/i);
+  if (estM) estudios = parseInt(estM[1], 10);
+  let depositos = 0;
+  const depM = norm2.match(/(?:deposito|depositos)[\s\:\/\*\D]*?([0-9]+)/i);
+  if (depM) depositos = parseInt(depM[1], 10);
+  let piso = "";
+  const pisoM = norm2.match(/(?:plantas|pisos|piso)[\s\:\/\*\D]*?([0-9]+)/i);
+  if (pisoM) piso = pisoM[1];
+  let addressNeighborhood = null;
+  let zone = null;
+  let city = "Bogot\xE1";
+  const barrioMatch = norm2.match(/barrio[\s\:\*]*([a-zA-Z\s]+)/i);
+  if (barrioMatch) {
+    addressNeighborhood = barrioMatch[1].split("\n")[0].trim();
+  }
+  if (!addressNeighborhood) {
+    if (lower.includes("morato")) addressNeighborhood = "Morato";
+    else if (lower.includes("cedritos")) addressNeighborhood = "Cedritos";
+    else if (lower.includes("chico")) addressNeighborhood = "Chic\xF3";
+    else if (lower.includes("rosales")) addressNeighborhood = "Rosales";
+    else if (lower.includes("santa barbara")) addressNeighborhood = "Santa B\xE1rbara";
+  }
+  const locMatch = norm2.match(/localidad[\s\:\*]*([a-zA-Z\s]+)/i);
+  if (locMatch) {
+    zone = locMatch[1].split("\n")[0].trim();
+  }
+  if (!zone) {
+    if (lower.includes("suba")) zone = "Suba";
+    else if (lower.includes("usaquen")) zone = "Usaqu\xE9n";
+    else if (lower.includes("chapinero")) zone = "Chapinero";
+    else if (lower.includes("teusaquillo")) zone = "Teusaquillo";
+  }
+  const sectorDisplay = addressNeighborhood || zone || city || "Bogot\xE1";
+  const tipoDisplay = isSubtipoComercial && !propertyTypeExact.toLowerCase().includes("comercial") ? `${propertyTypeExact} Comercial` : propertyTypeExact;
+  const name = `${tipoDisplay} en ${sectorDisplay}`;
+  const selectedInternas = [];
+  if (lower.includes("iluminacion natural") || lower.includes("luz natural")) selectedInternas.push("Iluminaci\xF3n natural");
+  if (lower.includes("closet") || lower.includes("closets") || lower.includes("archiveros")) selectedInternas.push("Cl\xF3sets");
+  if (lower.includes("comedor")) selectedInternas.push("Comedor auxiliar");
+  if (lower.includes("doble ventana")) selectedInternas.push("Doble Ventana");
+  if (lower.includes("gas")) selectedInternas.push("Gas domiciliario");
+  if (lower.includes("balcon")) selectedInternas.push("Balc\xF3n");
+  if (lower.includes("alarma") || lower.includes("seguridad")) selectedInternas.push("Alarma");
+  if (lower.includes("lavanderia") || lower.includes("zona de ropas")) selectedInternas.push("Zona de lavander\xEDa");
+  if (lower.includes("acabados modernos") || lower.includes("madera flotante")) selectedInternas.push("Acabados modernos");
+  if (lower.includes("patio")) selectedInternas.push("Patio");
+  const selectedExternas = [];
+  if (lower.includes("pavimentado") || lower.includes("acceso")) selectedExternas.push("Acceso pavimentado");
+  if (lower.includes("transporte") || lower.includes("transmilenio")) selectedExternas.push("Transporte p\xFAblico cercano");
+  if (lower.includes("via principal") || lower.includes("av.") || lower.includes("avenida")) selectedExternas.push("Sobre v\xEDa principal");
+  if (lower.includes("banco") || lower.includes("bancos")) selectedExternas.push("Bancos cercanos");
+  if (lower.includes("comercial") || lower.includes("centro comercial") || lower.includes("comercios")) selectedExternas.push("Centros Comerciales");
+  if (lower.includes("medico") || lower.includes("clinica") || lower.includes("hospital")) selectedExternas.push("Centros m\xE9dicos hospitalarios");
+  if (lower.includes("parque") || lower.includes("parques")) selectedExternas.push("Parques cercanos");
+  if (lower.includes("zonas verdes") || lower.includes("verde")) selectedExternas.push("Zonas verdes");
+  if (lower.includes("recepcion") || lower.includes("porteria")) selectedExternas.push("Porter\xEDa / Recepci\xF3n");
+  if (lower.includes("seguridad 24/7") || lower.includes("vigilancia")) selectedExternas.push("Seguridad privada 24/7");
+  return {
+    name: name || `Inmueble en ${addressNeighborhood || city}`,
+    propertyType,
+    propertyTypeExact,
+    subtype,
+    isSubtipoComercial,
+    transactionType,
+    price,
+    rentPrice: rentPrice !== "0" ? rentPrice : void 0,
+    adminFee: adminFee !== "0" ? adminFee : void 0,
+    areaTotal: areaConstruida || "",
+    areaConstruida: areaConstruida || "",
+    areaPrivada: areaPrivada || "",
+    yearBuilt,
+    bedrooms,
+    bathrooms,
+    garages,
+    garajesCarro: garages,
+    garajesMoto: 0,
+    stratum,
+    cocina,
+    estudios,
+    estarTv: 0,
+    depositos,
+    piso,
+    city,
+    zone: zone || addressNeighborhood || "Bogot\xE1",
+    addressNeighborhood: addressNeighborhood || zone || "Bogot\xE1",
+    description: text2.trim().slice(0, 500),
+    selectedInternas,
+    selectedExternas,
+    pdfUrl: void 0
+  };
+}
+var propertiesRouter = router({
+  // --- PUBLIC ---
+  list: publicProcedure.input(z2.object({
+    search: z2.string().optional(),
+    zone: z2.string().optional(),
+    type: z2.string().optional(),
+    transactionType: z2.string().optional(),
+    limit: z2.number().min(1).max(200).default(100),
+    offset: z2.number().default(0)
+  }).optional()).query(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+    const whereConditions = [];
+    if (input?.search) {
+      whereConditions.push(
+        or2(
+          ilike(properties.name, `%${input.search}%`),
+          ilike(properties.description, `%${input.search}%`),
+          ilike(properties.zone, `%${input.search}%`),
+          ilike(properties.addressNeighborhood, `%${input.search}%`),
+          ilike(properties.city, `%${input.search}%`)
+        )
+      );
+    }
+    if (input?.zone) {
+      whereConditions.push(
+        or2(
+          ilike(properties.zone, `%${input.zone}%`),
+          ilike(properties.addressNeighborhood, `%${input.zone}%`),
+          ilike(properties.addressLocality, `%${input.zone}%`)
+        )
+      );
+    }
+    if (input?.type) {
+      whereConditions.push(eq5(properties.propertyType, input.type));
+    }
+    if (input?.transactionType) {
+      whereConditions.push(eq5(properties.transactionType, input.transactionType));
+    }
+    whereConditions.push(eq5(properties.available, true));
+    const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and3(...whereConditions) : void 0).orderBy(desc2(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
+    const items = await query;
+    return items;
+  }),
+  getById: publicProcedure.input(z2.object({ id: z2.number() })).query(async ({ input }) => {
+    const now = Date.now();
+    const cached = propertyGetByIdCache.get(input.id);
+    if (cached && cached.expiresAt > now) {
+      return cached.data;
+    }
+    const db = await getDb();
+    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+    const item = await db.select().from(properties).where(eq5(properties.id, input.id)).limit(1);
+    if (item.length === 0) throw new TRPCError3({ code: "NOT_FOUND" });
+    const images = await db.select().from(propertyImages).where(eq5(propertyImages.propertyId, input.id)).orderBy(propertyImages.displayOrder);
+    const result = {
+      ...item[0],
+      imagesList: images
+    };
+    propertyGetByIdCache.set(input.id, { data: result, expiresAt: now + 6e4 });
+    return result;
+  }),
+  // --- MUTATIONS (CREAR / EDITAR) ---
+  create: publicProcedure.input(propertyInputSchema).mutation(async ({ ctx, input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+    const newProperty = await db.insert(properties).values({
+      ...input,
+      agentId: ctx?.user?.id ?? 1
+    }).returning();
+    invalidatePropertiesListCache();
+    return newProperty[0];
+  }),
+  parseText: publicProcedure.input(z2.object({
+    text: z2.string().optional().default(""),
+    pdfBase64: z2.string().optional(),
+    pdfMimeType: z2.string().optional(),
+    fileName: z2.string().optional()
+  })).mutation(async ({ input }) => {
+    const deterministic = parsePropertyDeterministically(input.text || "");
+    let pdfUrl = void 0;
+    if (input.pdfBase64) {
+      try {
+        const cleanBase64 = input.pdfBase64.replace(/^data:[^;]+;base64,/, "");
+        const safeName = (input.fileName || "ficha_tecnica.pdf").replace(/[^\w\d_\-\.]/g, "_");
+        const { storagePut: storagePut2 } = await Promise.resolve().then(() => (init_storage(), storage_exports));
+        const stored = await storagePut2(`documents/ficha_${Date.now()}_${safeName}`, cleanBase64, input.pdfMimeType || "application/pdf");
+        pdfUrl = stored.url;
+      } catch (storageErr) {
+        console.warn("[parseText] No se pudo guardar el archivo PDF:", storageErr.message);
+      }
+    }
+    try {
+      const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
+      const prompt = `Eres JanIA, arquitecta e ingeniera inmobiliaria senior de Vecy Network Colombia.
+Analiza minuciosamente este texto y/o documento PDF adjunto de un inmueble.
+Extrae de forma exhaustiva y precisa los datos clave en formato JSON con la siguiente estructura estricta:
+{
+  "name": "T\xEDtulo estandarizado corto en formato '[Tipo de Inmueble] en [Barrio]', ej: 'Casa en Morato', 'Edificio de Oficinas en Chic\xF3', 'Apartamento en Rosales'",
+  "propertyType": "apartment | house | building | warehouse | farm | hotel | office | land | commercial | loft | consultorio",
+  "propertyTypeExact": "Casa | Edificio | Hotel | Hostal | Aparta Hotel | Local | Bodega | Finca | Oficina | Apartamento | Pent House | etc.",
+  "subtype": "Subtipo espec\xEDfico (ej: 'Casa Comercial / Oficinas / Sede', 'Edificio de Oficinas', 'Edificio Residencial', 'Edificio de Locales', 'Aparta-hotel', 'Aparta-Suites', 'Hospedaje', 'Hostal', 'Motel', 'Residencia', 'Finca de Recreo', 'Finca Productiva')",
+  "isSubtipoComercial": true o false,
+  "transactionType": "venta | arriendo | venta_o_arriendo | permuta",
+  "price": "precio de venta o canon en COP num\xE9rico sin puntos",
+  "adminFee": "cuota administraci\xF3n mensual en COP num\xE9rico o null",
+  "areaConstruida": "\xE1rea construida total en m2 en n\xFAmero string o null",
+  "areaPrivada": "\xE1rea privada en m2 en n\xFAmero string o null",
+  "yearBuilt": a\xF1o num\xE9rico de construcci\xF3n o null,
+  "bedrooms": n\xFAmero entero de habitaciones u oficinas (puede ser de 1 a 50+),
+  "bathrooms": n\xFAmero entero de ba\xF1os (puede ser de 1 a 50+),
+  "garages": n\xFAmero entero de parqueaderos (puede ser de 1 a 50+),
+  "garajesCarro": n\xFAmero entero de garajes para carro,
+  "garajesMoto": n\xFAmero entero de garajes para moto,
+  "depositos": n\xFAmero entero de dep\xF3sitos o bodegas,
+  "estudios": n\xFAmero entero de estudios o salas de juntas,
+  "estarTv": n\xFAmero entero de salas de estar o espera,
+  "stratum": estrato socioecon\xF3mico 0 a 6,
+  "cocina": "Integral | Abierta | Abierta tipo isla | Cerrada convencional | Cerrada remodelada | Moderna | A remodelar",
+  "city": "Bogot\xE1 u otra ciudad",
+  "zone": "Localidad o zona principal (ej: Suba, Usaqu\xE9n)",
+  "addressNeighborhood": "Barrio espec\xEDfico (ej: Morato, Cedritos, Santa B\xE1rbara)",
+  "description": "Descripci\xF3n profesional atractiva destacando potencial urban\xEDstico (POT 555, valoraci\xF3n, usos permitidos, etc.)",
+  "potUrbanistico": "Informaci\xF3n normativa de POT o tratamiento si se menciona (ej: POT 555, Tratamiento Renovaci\xF3n Urbana, Altura hasta 7 pisos, Valor Catastral)",
+  "selectedInternas": ["lista de caracter\xEDsticas internas encontradas"],
+  "selectedExternas": ["lista de caracter\xEDsticas externas encontradas"]
+}
+Devuelve \xDANICAMENTE el objeto JSON sin texto introductorio ni bloques de c\xF3digo extra.
+
+Texto del inmueble:
+${input.text || "Ver documento PDF adjunto"}`;
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 8500));
+      const cleanBase64 = input.pdfBase64 ? input.pdfBase64.replace(/^data:[^;]+;base64,/, "") : void 0;
+      const aiPromise = invokeLLM2({
+        messages: [{ role: "user", content: prompt }],
+        pdfBuffer: cleanBase64,
+        pdfMimeType: input.pdfMimeType || "application/pdf"
+      });
+      const response = await Promise.race([aiPromise, timeoutPromise]);
+      const text2 = response?.choices?.[0]?.message?.content;
+      const cleaned = typeof text2 === "string" ? text2.replace(/```json\n?|\n?```/g, "").trim() : "{}";
+      const parsed = JSON.parse(cleaned);
+      return {
+        ...deterministic,
+        ...parsed,
+        price: parsed.price ? String(parsed.price) : deterministic.price,
+        name: deterministic.name || parsed.name,
+        propertyType: parsed.propertyType || deterministic.propertyType,
+        propertyTypeExact: parsed.propertyTypeExact || deterministic.propertyTypeExact,
+        subtype: parsed.subtype || deterministic.subtype,
+        isSubtipoComercial: parsed.isSubtipoComercial !== void 0 ? parsed.isSubtipoComercial : deterministic.isSubtipoComercial,
+        transactionType: parsed.transactionType || deterministic.transactionType,
+        zone: parsed.zone || deterministic.zone,
+        addressNeighborhood: parsed.addressNeighborhood || parsed.zone || deterministic.addressNeighborhood,
+        areaTotal: parsed.areaConstruida ? String(parsed.areaConstruida) : parsed.areaTotal ? String(parsed.areaTotal) : deterministic.areaTotal,
+        areaConstruida: parsed.areaConstruida ? String(parsed.areaConstruida) : deterministic.areaConstruida,
+        areaPrivada: parsed.areaPrivada ? String(parsed.areaPrivada) : deterministic.areaPrivada,
+        bedrooms: parsed.bedrooms !== void 0 && parsed.bedrooms !== null ? Number(parsed.bedrooms) : deterministic.bedrooms,
+        bathrooms: parsed.bathrooms !== void 0 && parsed.bathrooms !== null ? Number(parsed.bathrooms) : deterministic.bathrooms,
+        garages: parsed.garages !== void 0 && parsed.garages !== null ? Number(parsed.garages) : deterministic.garages,
+        garajesCarro: parsed.garajesCarro !== void 0 && parsed.garajesCarro !== null ? Number(parsed.garajesCarro) : deterministic.garajesCarro,
+        garajesMoto: parsed.garajesMoto !== void 0 && parsed.garajesMoto !== null ? Number(parsed.garajesMoto) : deterministic.garajesMoto,
+        depositos: parsed.depositos !== void 0 && parsed.depositos !== null ? Number(parsed.depositos) : deterministic.depositos,
+        estudios: parsed.estudios !== void 0 && parsed.estudios !== null ? Number(parsed.estudios) : deterministic.estudios,
+        estarTv: parsed.estarTv !== void 0 && parsed.estarTv !== null ? Number(parsed.estarTv) : deterministic.estarTv,
+        stratum: parsed.stratum !== void 0 && parsed.stratum !== null ? Number(parsed.stratum) : deterministic.stratum,
+        description: parsed.description || deterministic.description,
+        pdfUrl: pdfUrl || deterministic.pdfUrl
+      };
+    } catch (err) {
+      console.warn("[parseText] Gemini no respondi\xF3 a tiempo o error. Usando extracci\xF3n determinista:", err.message);
+      return {
+        ...deterministic,
+        pdfUrl
+      };
+    }
+  }),
+  update: publicProcedure.input(z2.object({
+    id: z2.number(),
+    data: propertyInputSchema.partial()
+  })).mutation(async ({ ctx, input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+    const existing = await db.select().from(properties).where(eq5(properties.id, input.id)).limit(1);
+    if (existing.length === 0) throw new TRPCError3({ code: "NOT_FOUND" });
+    if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
+      throw new TRPCError3({ code: "FORBIDDEN" });
+    }
+    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq5(properties.id, input.id)).returning();
+    invalidatePropertiesListCache();
+    return updated[0];
+  }),
+  delete: publicProcedure.input(z2.object({ id: z2.number() })).mutation(async ({ ctx, input }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+    const existing = await db.select().from(properties).where(eq5(properties.id, input.id)).limit(1);
+    if (existing.length === 0) throw new TRPCError3({ code: "NOT_FOUND" });
+    if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
+      throw new TRPCError3({ code: "FORBIDDEN" });
+    }
+    await db.delete(properties).where(eq5(properties.id, input.id));
+    invalidatePropertiesListCache();
+    return { success: true };
+  }),
+  // List my own properties (agent view) or all properties (admin view) - Protegido con micro-caché para Supabase Egress
+  myList: publicProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+    const user = ctx?.user;
+    if (!user || user.role === "admin") {
+      const now = Date.now();
+      if (cachedAdminMyList && now - cachedAdminMyListTime < 18e4) {
+        return cachedAdminMyList;
+      }
+      const data = await db.select(propertyFields).from(properties).orderBy(desc2(properties.id));
+      cachedAdminMyList = data;
+      cachedAdminMyListTime = now;
+      return data;
+    }
+    return await db.select(propertyFields).from(properties).where(eq5(properties.agentId, user.id)).orderBy(desc2(properties.id));
+  })
+});
+
+// server/routers/janIA.ts
 var cachedAllMatchesData = null;
 var cachedAllMatchesTime = 0;
 var cachedBotStatusData = null;
@@ -17602,7 +18206,7 @@ async function processUnresolvedMatches() {
       try {
         const exp = explicarMatch(task.requirement, task.property);
         if (db) {
-          await db.update(propertyMatches).set({ matchExplanation: exp }).where(eq8(propertyMatches.id, task.id));
+          await db.update(propertyMatches).set({ matchExplanation: exp }).where(eq9(propertyMatches.id, task.id));
         }
       } catch (err) {
       }
@@ -17614,7 +18218,7 @@ async function processUnresolvedMatches() {
 }
 var janIARouter = router({
   // New: Extract property data from link
-  extractFromLink: publicProcedure.input(z2.object({ url: z2.string().url() })).mutation(async ({ input }) => {
+  extractFromLink: publicProcedure.input(z3.object({ url: z3.string().url() })).mutation(async ({ input }) => {
     try {
       const data = await scrapePropertyLink(input.url);
       return {
@@ -17628,17 +18232,17 @@ var janIARouter = router({
   }),
   // Chat endpoint
   chat: publicProcedure.input(
-    z2.object({
-      sessionId: z2.string(),
-      message: z2.string(),
-      propertyId: z2.number().optional(),
-      leadId: z2.number().optional()
+    z3.object({
+      sessionId: z3.string(),
+      message: z3.string(),
+      propertyId: z3.number().optional(),
+      leadId: z3.number().optional()
     })
   ).mutation(async ({ input, ctx }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      let conversation = await db.select().from(conversations).where(eq8(conversations.sessionId, input.sessionId)).limit(1);
+      let conversation = await db.select().from(conversations).where(eq9(conversations.sessionId, input.sessionId)).limit(1);
       let conversationId;
       if (conversation.length === 0) {
         const insertData = {
@@ -17653,7 +18257,7 @@ var janIARouter = router({
       } else {
         conversationId = conversation[0].id;
         if (ctx.user && !conversation[0].userId) {
-          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq8(conversations.id, conversationId));
+          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq9(conversations.id, conversationId));
         }
       }
       const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
@@ -17712,7 +18316,7 @@ var janIARouter = router({
 ${liveStats}${userContextInstruction}
 
 [INSTRUCCI\xD3N MAESTRA - CHAT WEB VECY 24/7]: Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento l\xF3gico, amplio criterio jur\xEDdico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa y estructurada. PROHIBIDO usar plantillas fijas o cierres/firmas con membretes. Responde en formato JSON estrictamente como: {"response": "tu respuesta viva y razonada"}`;
-        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq8(messages.conversationId, conversationId)).orderBy(desc3(messages.createdAt)).limit(6);
+        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq9(messages.conversationId, conversationId)).orderBy(desc4(messages.createdAt)).limit(6);
         const formattedHistory = recentHistory.reverse().map((m) => ({
           role: m.role === "janIA" ? "assistant" : "user",
           content: m.content
@@ -17757,7 +18361,7 @@ ${liveStats}${userContextInstruction}
       await db.update(conversations).set({
         lastMessage: janIAResponse,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq8(conversations.id, conversationId));
+      }).where(eq9(conversations.id, conversationId));
       return {
         content: janIAResponse,
         wantsVoice,
@@ -17775,7 +18379,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).where(eq8(conversations.userId, String(ctx.user.id))).orderBy(desc3(conversations.updatedAt));
+      return await db.select().from(conversations).where(eq9(conversations.userId, String(ctx.user.id))).orderBy(desc4(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting user conversations:", error);
       return [];
@@ -17786,34 +18390,34 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).orderBy(desc3(conversations.updatedAt));
+      return await db.select().from(conversations).orderBy(desc4(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting all conversations:", error);
       return [];
     }
   }),
   // Get messages for a conversation session
-  getConversationMessages: publicProcedure.input(z2.object({ sessionId: z2.string() })).query(async ({ input }) => {
+  getConversationMessages: publicProcedure.input(z3.object({ sessionId: z3.string() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) return [];
     try {
-      const conv = await db.select().from(conversations).where(eq8(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq9(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length === 0) return [];
-      return await db.select().from(messages).where(eq8(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
+      return await db.select().from(messages).where(eq9(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
     } catch (error) {
       console.error("Error getting conversation messages:", error);
       return [];
     }
   }),
   // Delete a conversation and its messages
-  deleteConversation: publicProcedure.input(z2.object({ sessionId: z2.string() })).mutation(async ({ input }) => {
+  deleteConversation: publicProcedure.input(z3.object({ sessionId: z3.string() })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const conv = await db.select().from(conversations).where(eq8(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq9(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length > 0) {
-        await db.delete(messages).where(eq8(messages.conversationId, conv[0].id));
-        await db.delete(conversations).where(eq8(conversations.id, conv[0].id));
+        await db.delete(messages).where(eq9(messages.conversationId, conv[0].id));
+        await db.delete(conversations).where(eq9(conversations.id, conv[0].id));
       }
       return { success: true };
     } catch (error) {
@@ -17823,12 +18427,12 @@ ${liveStats}${userContextInstruction}
   }),
   // Analyze file endpoint
   analyzeFile: publicProcedure.input(
-    z2.object({
-      sessionId: z2.string(),
-      fileUrl: z2.string(),
-      fileType: z2.string(),
-      propertyId: z2.number().optional(),
-      leadId: z2.number().optional()
+    z3.object({
+      sessionId: z3.string(),
+      fileUrl: z3.string(),
+      fileType: z3.string(),
+      propertyId: z3.number().optional(),
+      leadId: z3.number().optional()
     })
   ).mutation(async ({ input, ctx }) => {
     const db = await getDb();
@@ -17888,7 +18492,7 @@ ${liveStats}${userContextInstruction}
         pdfMimeType
       );
       const analysis = result.response && result.response.trim() !== "" ? (result.dmResponse ? result.dmResponse + "\n\n" : "") + result.response : result.dmResponse || result.response;
-      const conversation = await db.select().from(conversations).where(eq8(conversations.sessionId, input.sessionId)).limit(1);
+      const conversation = await db.select().from(conversations).where(eq9(conversations.sessionId, input.sessionId)).limit(1);
       if (conversation.length > 0) {
         const conversationId = conversation[0].id;
         await db.insert(messages).values({
@@ -17907,7 +18511,7 @@ ${liveStats}${userContextInstruction}
         await db.update(conversations).set({
           lastMessage: analysis,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq8(conversations.id, conversationId));
+        }).where(eq9(conversations.id, conversationId));
       }
       return {
         analysis
@@ -17919,15 +18523,15 @@ ${liveStats}${userContextInstruction}
   }),
   // Get property matches
   getPropertyMatches: publicProcedure.input(
-    z2.object({
-      requirementId: z2.number(),
-      limit: z2.number().default(5)
+    z3.object({
+      requirementId: z3.number(),
+      limit: z3.number().default(5)
     })
   ).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const matches = await db.select().from(propertyMatches).where(eq8(propertyMatches.requirementId, input.requirementId)).orderBy(desc3(propertyMatches.matchScore)).limit(input.limit);
+      const matches = await db.select().from(propertyMatches).where(eq9(propertyMatches.requirementId, input.requirementId)).orderBy(desc4(propertyMatches.matchScore)).limit(input.limit);
       return matches;
     } catch (error) {
       console.error("Error getting property matches:", error);
@@ -18036,7 +18640,7 @@ ${liveStats}${userContextInstruction}
           enlaceOrigen: requirements.enlaceOrigen,
           createdAt: requirements.createdAt
         }
-      }).from(propertyMatches).innerJoin(properties, eq8(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq8(propertyMatches.requirementId, requirements.id)).where(sql5`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) AND (${properties.available} IS NULL OR ${properties.available} = true)`).orderBy(desc3(propertyMatches.id)).limit(800);
+      }).from(propertyMatches).innerJoin(properties, eq9(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq9(propertyMatches.requirementId, requirements.id)).where(sql6`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) AND (${properties.available} IS NULL OR ${properties.available} = true)`).orderBy(desc4(propertyMatches.id)).limit(800);
       const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
       const imagesMap = {};
       if (propIds.length > 0) {
@@ -18101,7 +18705,7 @@ ${liveStats}${userContextInstruction}
           broker: propertyPublicationHistory.broker,
           portal: propertyPublicationHistory.portal,
           grupo: propertyPublicationHistory.grupo
-        }).from(propertyPublicationHistory).where(inArray(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc3(propertyPublicationHistory.fecha));
+        }).from(propertyPublicationHistory).where(inArray(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc4(propertyPublicationHistory.fecha));
         const historyMap = /* @__PURE__ */ new Map();
         for (const h of histories) {
           let list = historyMap.get(h.propertyId);
@@ -18129,36 +18733,36 @@ ${liveStats}${userContextInstruction}
     }
   }),
   // Actualizar datos prediales de un inmueble oferta directamente desde la Mesa de Cotejo
-  updatePropertyDetails: publicProcedure.input(z2.object({
-    propertyId: z2.number(),
-    name: z2.string().optional(),
-    price: z2.string().optional(),
-    rentPrice: z2.string().optional().nullable(),
-    adminFee: z2.string().optional().nullable(),
-    bedrooms: z2.union([z2.number(), z2.string()]).optional().nullable(),
-    bathrooms: z2.union([z2.number(), z2.string()]).optional().nullable(),
-    garages: z2.union([z2.number(), z2.string()]).optional().nullable(),
-    areaTotal: z2.string().optional().nullable(),
-    stratum: z2.union([z2.number(), z2.string()]).optional().nullable(),
-    zone: z2.string().optional().nullable(),
-    addressNeighborhood: z2.string().optional().nullable(),
-    addressLocality: z2.string().optional().nullable(),
-    city: z2.string().optional().nullable(),
-    propertyType: z2.string().optional().nullable(),
-    transactionType: z2.string().optional().nullable(),
-    idUsuarioWhatsapp: z2.string().optional().nullable(),
-    nombreUsuarioWhatsapp: z2.string().optional().nullable(),
-    origenNombre: z2.string().optional().nullable(),
-    yearBuilt: z2.union([z2.number(), z2.string()]).optional().nullable(),
-    antiguedadAnos: z2.union([z2.number(), z2.string()]).optional().nullable(),
-    interiorExterior: z2.string().optional().nullable(),
-    garageType: z2.string().optional().nullable(),
-    floorDetail: z2.string().optional().nullable(),
-    amenities: z2.record(z2.string(), z2.any()).optional().nullable()
+  updatePropertyDetails: publicProcedure.input(z3.object({
+    propertyId: z3.number(),
+    name: z3.string().optional(),
+    price: z3.string().optional(),
+    rentPrice: z3.string().optional().nullable(),
+    adminFee: z3.string().optional().nullable(),
+    bedrooms: z3.union([z3.number(), z3.string()]).optional().nullable(),
+    bathrooms: z3.union([z3.number(), z3.string()]).optional().nullable(),
+    garages: z3.union([z3.number(), z3.string()]).optional().nullable(),
+    areaTotal: z3.string().optional().nullable(),
+    stratum: z3.union([z3.number(), z3.string()]).optional().nullable(),
+    zone: z3.string().optional().nullable(),
+    addressNeighborhood: z3.string().optional().nullable(),
+    addressLocality: z3.string().optional().nullable(),
+    city: z3.string().optional().nullable(),
+    propertyType: z3.string().optional().nullable(),
+    transactionType: z3.string().optional().nullable(),
+    idUsuarioWhatsapp: z3.string().optional().nullable(),
+    nombreUsuarioWhatsapp: z3.string().optional().nullable(),
+    origenNombre: z3.string().optional().nullable(),
+    yearBuilt: z3.union([z3.number(), z3.string()]).optional().nullable(),
+    antiguedadAnos: z3.union([z3.number(), z3.string()]).optional().nullable(),
+    interiorExterior: z3.string().optional().nullable(),
+    garageType: z3.string().optional().nullable(),
+    floorDetail: z3.string().optional().nullable(),
+    amenities: z3.record(z3.string(), z3.any()).optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const existingProp = await db.select().from(properties).where(eq8(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
+    const existingProp = await db.select().from(properties).where(eq9(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
     const sanitizeNumeric = (val) => {
       if (val === void 0 || val === null) return null;
       let s = String(val).trim();
@@ -18280,7 +18884,7 @@ ${liveStats}${userContextInstruction}
     if (hasAmenitiesChange) {
       updateData.amenities = mergedAmenities;
     }
-    await db.update(properties).set(updateData).where(eq8(properties.id, input.propertyId));
+    await db.update(properties).set(updateData).where(eq9(properties.id, input.propertyId));
     console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const hasPhone = Boolean(input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp);
     const hasName = Boolean(input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp);
@@ -18316,32 +18920,32 @@ ${liveStats}${userContextInstruction}
     return { success: true, message: "Propiedad actualizada con \xE9xito" };
   }),
   // Actualizar datos prediales de un requerimiento demanda directamente desde la Mesa de Cotejo
-  updateRequirementDetails: publicProcedure.input(z2.object({
-    requirementId: z2.number(),
-    name: z2.string().optional(),
-    presupuestoMax: z2.string().optional(),
-    presupuestoMin: z2.string().optional().nullable(),
-    adminFeeMax: z2.string().optional().nullable(),
-    habitacionesMin: z2.union([z2.number(), z2.string()]).optional().nullable(),
-    banosMin: z2.union([z2.number(), z2.string()]).optional().nullable(),
-    parqueaderosMin: z2.union([z2.number(), z2.string()]).optional().nullable(),
-    areaMin: z2.string().optional().nullable(),
-    estratoDeseado: z2.union([z2.number(), z2.string()]).optional().nullable(),
-    zonaDeseada: z2.string().optional().nullable(),
-    addressNeighborhood: z2.string().optional().nullable(),
-    ciudadDeseada: z2.string().optional().nullable(),
-    tipoInmuebleDeseado: z2.string().optional().nullable(),
-    tipoNegocioDeseado: z2.string().optional().nullable(),
-    idUsuarioWhatsapp: z2.string().optional().nullable(),
-    nombreUsuarioWhatsapp: z2.string().optional().nullable(),
-    origenNombre: z2.string().optional().nullable(),
-    antiguedadMax: z2.union([z2.number(), z2.string()]).optional().nullable(),
-    interiorExterior: z2.string().optional().nullable(),
-    caracteristicasDeseadas: z2.record(z2.string(), z2.any()).optional().nullable()
+  updateRequirementDetails: publicProcedure.input(z3.object({
+    requirementId: z3.number(),
+    name: z3.string().optional(),
+    presupuestoMax: z3.string().optional(),
+    presupuestoMin: z3.string().optional().nullable(),
+    adminFeeMax: z3.string().optional().nullable(),
+    habitacionesMin: z3.union([z3.number(), z3.string()]).optional().nullable(),
+    banosMin: z3.union([z3.number(), z3.string()]).optional().nullable(),
+    parqueaderosMin: z3.union([z3.number(), z3.string()]).optional().nullable(),
+    areaMin: z3.string().optional().nullable(),
+    estratoDeseado: z3.union([z3.number(), z3.string()]).optional().nullable(),
+    zonaDeseada: z3.string().optional().nullable(),
+    addressNeighborhood: z3.string().optional().nullable(),
+    ciudadDeseada: z3.string().optional().nullable(),
+    tipoInmuebleDeseado: z3.string().optional().nullable(),
+    tipoNegocioDeseado: z3.string().optional().nullable(),
+    idUsuarioWhatsapp: z3.string().optional().nullable(),
+    nombreUsuarioWhatsapp: z3.string().optional().nullable(),
+    origenNombre: z3.string().optional().nullable(),
+    antiguedadMax: z3.union([z3.number(), z3.string()]).optional().nullable(),
+    interiorExterior: z3.string().optional().nullable(),
+    caracteristicasDeseadas: z3.record(z3.string(), z3.any()).optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const existingReq = await db.select().from(requirements).where(eq8(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
+    const existingReq = await db.select().from(requirements).where(eq9(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
     const sanitizeNumeric = (val) => {
       if (val === void 0 || val === null) return null;
       let s = String(val).trim();
@@ -18435,7 +19039,7 @@ ${liveStats}${userContextInstruction}
     if (hasCaractChange) {
       updateData.caracteristicasDeseadas = mergedCaract;
     }
-    await db.update(requirements).set(updateData).where(eq8(requirements.id, input.requirementId));
+    await db.update(requirements).set(updateData).where(eq9(requirements.id, input.requirementId));
     console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const hasPhone = Boolean(input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp);
     const hasName = Boolean(input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp);
@@ -18471,9 +19075,9 @@ ${liveStats}${userContextInstruction}
     return { success: true, message: "Requerimiento actualizado con \xE9xito" };
   }),
   // Recalcular cruces y afinidad predial para Oferta y/o Demanda tras edición en Mesa de Cotejo
-  recalculateMatchForPair: publicProcedure.input(z2.object({
-    propertyId: z2.number().optional().nullable(),
-    requirementId: z2.number().optional().nullable()
+  recalculateMatchForPair: publicProcedure.input(z3.object({
+    propertyId: z3.number().optional().nullable(),
+    requirementId: z3.number().optional().nullable()
   })).mutation(async ({ input }) => {
     invalidateAdminMatchesCache();
     let propMatchesCount = 0;
@@ -18503,14 +19107,14 @@ ${liveStats}${userContextInstruction}
     };
   }),
   // Registrar Retroalimentación de Match (Capa C - Feedback Loop)
-  recordMatchFeedback: publicProcedure.input(z2.object({
-    matchId: z2.number().optional().nullable(),
-    propertyId: z2.number().optional().nullable(),
-    requirementId: z2.number().optional().nullable(),
-    action: z2.enum(["exitoso", "rechazado", "en_negociacion"]),
-    motivoRechazo: z2.string().optional().nullable(),
-    notasBroker: z2.string().optional().nullable(),
-    ajustesGuardados: z2.record(z2.string(), z2.any()).optional().nullable()
+  recordMatchFeedback: publicProcedure.input(z3.object({
+    matchId: z3.number().optional().nullable(),
+    propertyId: z3.number().optional().nullable(),
+    requirementId: z3.number().optional().nullable(),
+    action: z3.enum(["exitoso", "rechazado", "en_negociacion"]),
+    motivoRechazo: z3.string().optional().nullable(),
+    notasBroker: z3.string().optional().nullable(),
+    ajustesGuardados: z3.record(z3.string(), z3.any()).optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Base de datos no disponible");
@@ -18526,13 +19130,13 @@ ${liveStats}${userContextInstruction}
       }).returning();
       if (input.action === "rechazado") {
         if (input.matchId) {
-          await db.delete(propertyMatches).where(eq8(propertyMatches.id, input.matchId));
+          await db.delete(propertyMatches).where(eq9(propertyMatches.id, input.matchId));
         }
         if (input.propertyId && input.requirementId) {
           await db.delete(propertyMatches).where(
-            and6(
-              eq8(propertyMatches.propertyId, input.propertyId),
-              eq8(propertyMatches.requirementId, input.requirementId)
+            and7(
+              eq9(propertyMatches.propertyId, input.propertyId),
+              eq9(propertyMatches.requirementId, input.requirementId)
             )
           );
         }
@@ -18545,11 +19149,36 @@ ${liveStats}${userContextInstruction}
             estadoComercial: nuevoEstado,
             vigenciaIa: "NO_DISPONIBLE",
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq8(properties.id, input.propertyId));
-          await db.delete(propertyMatches).where(eq8(propertyMatches.propertyId, input.propertyId));
+          }).where(eq9(properties.id, input.propertyId));
+          await db.delete(propertyMatches).where(eq9(propertyMatches.propertyId, input.propertyId));
+          invalidatePropertiesListCache();
           console.log(`[JanIA-Feedback] Propiedad #${input.propertyId} marcada como ${nuevoEstado} y purgada de matches`);
         }
-        if (input.requirementId) {
+        const isOfertaNoTerceria = reasonLower.includes("oferta") && (reasonLower.includes("tercer") || reasonLower.includes("referid") || reasonLower.includes("standby"));
+        if (isOfertaNoTerceria && input.propertyId) {
+          await db.update(properties).set({
+            aceptaTerceria: false,
+            standByDirectoVecy: true,
+            estadoComercial: "STANDBY",
+            updatedAt: /* @__PURE__ */ new Date()
+          }).where(eq9(properties.id, input.propertyId));
+          await db.delete(propertyMatches).where(eq9(propertyMatches.propertyId, input.propertyId));
+          invalidatePropertiesListCache();
+          console.log(`[JanIA-Feedback] Inmueble #${input.propertyId} enviado a secci\xF3n Inmuebles StandBy (No Tercer\xEDa / No Referidos)`);
+        }
+        const isDemandaNoTerceria = reasonLower.includes("demanda") && (reasonLower.includes("tercer") || reasonLower.includes("referid") || reasonLower.includes("standby"));
+        if (isDemandaNoTerceria && input.requirementId) {
+          await db.update(requirements).set({
+            aceptaTerceria: false,
+            standByDirectoVecy: true,
+            updatedAt: /* @__PURE__ */ new Date()
+          }).where(eq9(requirements.id, input.requirementId));
+          await db.delete(propertyMatches).where(eq9(propertyMatches.requirementId, input.requirementId));
+          cachedRequirementsData = null;
+          cachedRequirementsTime = 0;
+          console.log(`[JanIA-Feedback] Demanda #${input.requirementId} enviada a Standby Directo Vecy (No Tercer\xEDa / No Referidos)`);
+        }
+        if (input.requirementId && !isUnavailable) {
           findMatchesForRequirement(input.requirementId).catch((err) => {
             console.error(`[JanIA-Feedback] Error buscando alternativas para Req #${input.requirementId}:`, err);
           });
@@ -18566,11 +19195,11 @@ ${liveStats}${userContextInstruction}
     }
   }),
   // Menú Rápido de Estado Comercial (Vendido, Arrendado, Inactivo / Ya No Disponible) - v31.16
-  updatePropertyCommercialStatus: publicProcedure.input(z2.object({
-    propertyId: z2.number(),
-    status: z2.enum(["VENDIDO", "ARRENDADO", "INACTIVO"]),
-    matchId: z2.number().optional().nullable(),
-    requirementId: z2.number().optional().nullable()
+  updatePropertyCommercialStatus: publicProcedure.input(z3.object({
+    propertyId: z3.number(),
+    status: z3.enum(["VENDIDO", "ARRENDADO", "INACTIVO"]),
+    matchId: z3.number().optional().nullable(),
+    requirementId: z3.number().optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Base de datos no disponible");
@@ -18580,8 +19209,8 @@ ${liveStats}${userContextInstruction}
       estadoComercial: nuevoEstado,
       vigenciaIa: "NO_DISPONIBLE",
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq8(properties.id, input.propertyId));
-    await db.delete(propertyMatches).where(eq8(propertyMatches.propertyId, input.propertyId));
+    }).where(eq9(properties.id, input.propertyId));
+    await db.delete(propertyMatches).where(eq9(propertyMatches.propertyId, input.propertyId));
     try {
       await db.insert(matchFeedback).values({
         matchId: input.matchId || null,
@@ -18614,7 +19243,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      const terms = await db.select().from(inmobiliarioLexicon).orderBy(desc3(inmobiliarioLexicon.frecuenciaUso)).limit(100);
+      const terms = await db.select().from(inmobiliarioLexicon).orderBy(desc4(inmobiliarioLexicon.frecuenciaUso)).limit(100);
       return terms;
     } catch (e) {
       console.error("[JanIA-Lexicon] Error obteniendo l\xE9xico:", e.message);
@@ -18622,11 +19251,11 @@ ${liveStats}${userContextInstruction}
     }
   }),
   // Aprender o Registrar Nuevo Término Inmobiliario (Capa B)
-  learnNewLexiconTerm: publicProcedure.input(z2.object({
-    terminoColoquial: z2.string(),
-    categoria: z2.string(),
-    conceptoCanonico: z2.string(),
-    origen: z2.string().default("humano_validado")
+  learnNewLexiconTerm: publicProcedure.input(z3.object({
+    terminoColoquial: z3.string(),
+    categoria: z3.string(),
+    conceptoCanonico: z3.string(),
+    origen: z3.string().default("humano_validado")
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Base de datos no disponible");
@@ -18641,7 +19270,7 @@ ${liveStats}${userContextInstruction}
       }).onConflictDoUpdate({
         target: inmobiliarioLexicon.terminoColoquial,
         set: {
-          frecuenciaUso: sql5`${inmobiliarioLexicon.frecuenciaUso} + 1`,
+          frecuenciaUso: sql6`${inmobiliarioLexicon.frecuenciaUso} + 1`,
           updatedAt: /* @__PURE__ */ new Date()
         }
       }).returning();
@@ -18653,14 +19282,14 @@ ${liveStats}${userContextInstruction}
   }),
   // Create lead from conversation
   createLead: publicProcedure.input(
-    z2.object({
-      name: z2.string(),
-      email: z2.string().email(),
-      phone: z2.string().optional(),
-      inquiryType: z2.enum(["buy", "sell", "rent", "invest", "general"]),
-      budget: z2.string().optional(),
-      preferredZones: z2.array(z2.string()).optional(),
-      message: z2.string().optional()
+    z3.object({
+      name: z3.string(),
+      email: z3.string().email(),
+      phone: z3.string().optional(),
+      inquiryType: z3.enum(["buy", "sell", "rent", "invest", "general"]),
+      budget: z3.string().optional(),
+      preferredZones: z3.array(z3.string()).optional(),
+      message: z3.string().optional()
     })
   ).mutation(async ({ input }) => {
     const db = await getDb();
@@ -18690,11 +19319,11 @@ ${liveStats}${userContextInstruction}
     }
   }),
   // Get market analysis for zone
-  getMarketAnalysis: publicProcedure.input(z2.object({ zone: z2.string() })).query(async ({ input }) => {
+  getMarketAnalysis: publicProcedure.input(z3.object({ zone: z3.string() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const zoneProperties = await db.select().from(properties).where(eq8(properties.zone, input.zone));
+      const zoneProperties = await db.select().from(properties).where(eq9(properties.zone, input.zone));
       if (zoneProperties.length === 0) {
         return {
           zone: input.zone,
@@ -18780,13 +19409,13 @@ ${liveStats}${userContextInstruction}
       } else {
         const db = await getDb();
         if (db) {
-          const [statusRow] = await db.select().from(pendingSessions).where(eq8(pendingSessions.jid, "system:bot_status")).limit(1);
+          const [statusRow] = await db.select().from(pendingSessions).where(eq9(pendingSessions.jid, "system:bot_status")).limit(1);
           const sessionData = statusRow?.sessionData;
           if (sessionData?.phone) phone = sessionData.phone;
-          const [tp] = await db.select({ count: sql5`count(*)::int` }).from(properties);
-          const [tr] = await db.select({ count: sql5`count(*)::int` }).from(requirements);
-          const [tm] = await db.select({ count: sql5`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql5`CAST("matchScore" AS NUMERIC) >= 80`);
-          const [pm] = await db.select({ count: sql5`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql5`CAST("matchScore" AS NUMERIC) >= 95`);
+          const [tp] = await db.select({ count: sql6`count(*)::int` }).from(properties);
+          const [tr] = await db.select({ count: sql6`count(*)::int` }).from(requirements);
+          const [tm] = await db.select({ count: sql6`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql6`CAST("matchScore" AS NUMERIC) >= 80`);
+          const [pm] = await db.select({ count: sql6`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql6`CAST("matchScore" AS NUMERIC) >= 95`);
           totalProps = tp?.count || 0;
           totalReqs = tr?.count || 0;
           totalMatches = tm?.count || 0;
@@ -18866,7 +19495,7 @@ ${liveStats}${userContextInstruction}
         presupuestoMin: requirements.presupuestoMin,
         areaMin: requirements.areaMin,
         createdAt: requirements.createdAt
-      }).from(requirements).orderBy(desc3(requirements.id));
+      }).from(requirements).orderBy(desc4(requirements.id));
       cachedRequirementsData = data;
       cachedRequirementsTime = now;
       return data;
@@ -18881,20 +19510,20 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const [propTotal] = await db.select({ count: sql5`count(*)::int` }).from(properties);
-      const [propActive] = await db.select({ count: sql5`count(*)::int` }).from(properties).where(sql5`${properties.available} = true`);
-      const [reqTotal] = await db.select({ count: sql5`count(*)::int` }).from(requirements);
-      const [reqActive] = await db.select({ count: sql5`count(*)::int` }).from(requirements).where(eq8(requirements.status, "active"));
-      const [matchTotal] = await db.select({ count: sql5`count(*)::int` }).from(propertyMatches);
-      const [convTotal] = await db.select({ count: sql5`count(*)::int` }).from(conversations);
-      const monthlyProps = await db.execute(sql5`
+      const [propTotal] = await db.select({ count: sql6`count(*)::int` }).from(properties);
+      const [propActive] = await db.select({ count: sql6`count(*)::int` }).from(properties).where(sql6`${properties.available} = true`);
+      const [reqTotal] = await db.select({ count: sql6`count(*)::int` }).from(requirements);
+      const [reqActive] = await db.select({ count: sql6`count(*)::int` }).from(requirements).where(eq9(requirements.status, "active"));
+      const [matchTotal] = await db.select({ count: sql6`count(*)::int` }).from(propertyMatches);
+      const [convTotal] = await db.select({ count: sql6`count(*)::int` }).from(conversations);
+      const monthlyProps = await db.execute(sql6`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM properties
         WHERE "createdAt" >= now() - interval '6 months'
         GROUP BY 1 ORDER BY 1
       `);
-      const monthlyReqs = await db.execute(sql5`
+      const monthlyReqs = await db.execute(sql6`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM requirements
@@ -18916,11 +19545,11 @@ ${liveStats}${userContextInstruction}
   }),
   // Liquidación tributaria de Retención en la Fuente y Ganancia Ocasional (DIAN v17.6)
   calcularImpuestos: publicProcedure.input(
-    z2.object({
-      precioVenta: z2.number().min(0),
-      costoFiscal: z2.number().min(0),
-      anosPosesion: z2.number().min(0),
-      esViviendaHabitacion: z2.boolean().default(false)
+    z3.object({
+      precioVenta: z3.number().min(0),
+      costoFiscal: z3.number().min(0),
+      anosPosesion: z3.number().min(0),
+      esViviendaHabitacion: z3.boolean().default(false)
     })
   ).mutation(({ input }) => {
     return liquidarImpuestosVenta({
@@ -18941,7 +19570,7 @@ ${liveStats}${userContextInstruction}
     return await publishWeeklyReportNow2();
   }),
   // Parser Inteligente de Requerimientos desde Texto Libre
-  parseRequirementText: publicProcedure.input(z2.object({ text: z2.string() })).mutation(async ({ input }) => {
+  parseRequirementText: publicProcedure.input(z3.object({ text: z3.string() })).mutation(async ({ input }) => {
     try {
       const prompt = `Act\xFAa como JanIA, el motor de inteligencia artificial de Vecy Network especializado en corretaje inmobiliario en Colombia.
 Analiza este texto de requerimiento o solicitud de cliente/agente y extrae los datos estructurados en formato JSON con los siguientes campos:
@@ -19053,9 +19682,9 @@ Texto: ${input.text}`;
     }
   }),
   // Parser Inteligente de Requerimientos desde Flyer / Imagen con JanIA Vision (OCR Multimodal)
-  parseRequirementFlyer: publicProcedure.input(z2.object({
-    imageBase64: z2.string(),
-    mimeType: z2.string().default("image/jpeg")
+  parseRequirementFlyer: publicProcedure.input(z3.object({
+    imageBase64: z3.string(),
+    mimeType: z3.string().default("image/jpeg")
   })).mutation(async ({ input }) => {
     try {
       const cleanBase64 = input.imageBase64.includes(",") ? input.imageBase64.split(",")[1] : input.imageBase64;
@@ -19133,9 +19762,9 @@ Devuelve \xDANICAMENTE el objeto JSON sin bloques de c\xF3digo ni comentarios.`;
     }
   }),
   // Crear Requerimiento (Demanda) directamente en Base de Datos
-  createRequirement: publicProcedure.input(z2.object({
-    name: z2.string().min(2),
-    tipoInmuebleDeseado: z2.enum([
+  createRequirement: publicProcedure.input(z3.object({
+    name: z3.string().min(2),
+    tipoInmuebleDeseado: z3.enum([
       "apartment",
       "house",
       "building",
@@ -19148,7 +19777,7 @@ Devuelve \xDANICAMENTE el objeto JSON sin bloques de c\xF3digo ni comentarios.`;
       "loft",
       "consultorio"
     ]).default("apartment"),
-    tipoNegocioDeseado: z2.enum([
+    tipoNegocioDeseado: z3.enum([
       "venta",
       "arriendo",
       "venta_o_arriendo",
@@ -19158,23 +19787,23 @@ Devuelve \xDANICAMENTE el objeto JSON sin bloques de c\xF3digo ni comentarios.`;
       "venta_permuta",
       "aporte"
     ]).default("arriendo"),
-    ciudadDeseada: z2.string().default("Bogot\xE1"),
-    addressNeighborhood: z2.string().optional().nullable(),
-    zonaDeseada: z2.string().optional().nullable(),
-    presupuestoMin: z2.string().optional().nullable(),
-    presupuestoMax: z2.string().optional().nullable(),
-    areaMin: z2.string().optional().nullable(),
-    habitacionesMin: z2.number().optional().nullable(),
-    banosMin: z2.number().optional().nullable(),
-    parqueaderosMin: z2.number().optional().nullable(),
-    adminFeeMax: z2.string().optional().nullable(),
-    estratoDeseado: z2.any().optional().nullable(),
-    amobladoDeseado: z2.boolean().optional().nullable(),
-    caracteristicasDeseadas: z2.any().optional().nullable(),
-    rawText: z2.string().optional().nullable(),
-    enlaceOrigen: z2.string().optional().nullable(),
-    nombreUsuarioWhatsapp: z2.string().optional().nullable(),
-    idUsuarioWhatsapp: z2.string().optional().nullable()
+    ciudadDeseada: z3.string().default("Bogot\xE1"),
+    addressNeighborhood: z3.string().optional().nullable(),
+    zonaDeseada: z3.string().optional().nullable(),
+    presupuestoMin: z3.string().optional().nullable(),
+    presupuestoMax: z3.string().optional().nullable(),
+    areaMin: z3.string().optional().nullable(),
+    habitacionesMin: z3.number().optional().nullable(),
+    banosMin: z3.number().optional().nullable(),
+    parqueaderosMin: z3.number().optional().nullable(),
+    adminFeeMax: z3.string().optional().nullable(),
+    estratoDeseado: z3.any().optional().nullable(),
+    amobladoDeseado: z3.boolean().optional().nullable(),
+    caracteristicasDeseadas: z3.any().optional().nullable(),
+    rawText: z3.string().optional().nullable(),
+    enlaceOrigen: z3.string().optional().nullable(),
+    nombreUsuarioWhatsapp: z3.string().optional().nullable(),
+    idUsuarioWhatsapp: z3.string().optional().nullable()
   })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new Error("Base de datos no disponible");
@@ -19210,10 +19839,10 @@ Devuelve \xDANICAMENTE el objeto JSON sin bloques de c\xF3digo ni comentarios.`;
 });
 
 // server/routers/github.ts
-import { z as z3 } from "zod";
+import { z as z4 } from "zod";
 init_db();
 init_schema();
-import { eq as eq9 } from "drizzle-orm";
+import { eq as eq10 } from "drizzle-orm";
 
 // server/github-integration.ts
 import { Octokit } from "@octokit/rest";
@@ -19578,8 +20207,8 @@ var githubRouter = router({
    * Synchronize properties from GitHub repositories
    */
   syncPropertiesFromGitHub: publicProcedure.input(
-    z3.object({
-      repositories: z3.array(z3.string()).optional()
+    z4.object({
+      repositories: z4.array(z4.string()).optional()
     })
   ).mutation(async ({ input }) => {
     if (!GITHUB_TOKEN) {
@@ -19589,7 +20218,7 @@ var githubRouter = router({
     if (!db) throw new Error("Database not available");
     try {
       const { octokit, user } = await initializeGitHubIntegration(GITHUB_TOKEN);
-      const adminUser = await db.select().from(users).where(eq9(users.email, "vecybienesraices@gmail.com")).limit(1);
+      const adminUser = await db.select().from(users).where(eq10(users.email, "vecybienesraices@gmail.com")).limit(1);
       const adminId = adminUser.length > 0 ? adminUser[0].id : 1;
       let reposToSync = input.repositories || [];
       if (reposToSync.length === 0) {
@@ -19606,14 +20235,14 @@ var githubRouter = router({
             repoName
           );
           if (propertyData) {
-            const existing = await db.select().from(properties).where(eq9(properties.sourceRepository, repoName)).limit(1);
+            const existing = await db.select().from(properties).where(eq10(properties.sourceRepository, repoName)).limit(1);
             if (existing.length > 0) {
               await db.update(properties).set({
                 ...propertyData,
                 agentId: adminId,
                 sourceRepository: repoName,
                 lastSyncedAt: /* @__PURE__ */ new Date()
-              }).where(eq9(properties.id, existing[0].id));
+              }).where(eq10(properties.id, existing[0].id));
             } else {
               await db.insert(properties).values({
                 ...propertyData,
@@ -19697,25 +20326,25 @@ var githubRouter = router({
 });
 
 // server/routers/images.ts
-import { z as z4 } from "zod";
+import { z as z5 } from "zod";
 init_storage();
 init_db();
 init_db();
 init_schema();
-import { eq as eq10 } from "drizzle-orm";
+import { eq as eq11 } from "drizzle-orm";
 var imagesRouter = {
   /**
    * Upload image to S3 and save to database
    */
   uploadPropertyImage: publicProcedure.input(
-    z4.object({
-      propertyId: z4.number(),
-      fileBase64: z4.string(),
+    z5.object({
+      propertyId: z5.number(),
+      fileBase64: z5.string(),
       // Base64 encoded file
-      fileName: z4.string(),
-      mimeType: z4.string(),
-      caption: z4.string().optional(),
-      isMainImage: z4.boolean().optional()
+      fileName: z5.string(),
+      mimeType: z5.string(),
+      caption: z5.string().optional(),
+      isMainImage: z5.boolean().optional()
     })
   ).mutation(async ({ input }) => {
     try {
@@ -19727,7 +20356,7 @@ var imagesRouter = {
       if (input.isMainImage) {
         const db = await getDb();
         if (db) {
-          await db.update(propertyImages).set({ isMainImage: false }).where(eq10(propertyImages.propertyId, input.propertyId));
+          await db.update(propertyImages).set({ isMainImage: false }).where(eq11(propertyImages.propertyId, input.propertyId));
         }
       }
       const images = await getPropertyImages(input.propertyId);
@@ -19754,7 +20383,7 @@ var imagesRouter = {
   /**
    * Get all images for a property
    */
-  getPropertyImages: publicProcedure.input(z4.object({ propertyId: z4.number() })).query(async ({ input }) => {
+  getPropertyImages: publicProcedure.input(z5.object({ propertyId: z5.number() })).query(async ({ input }) => {
     try {
       const images = await getPropertyImages(input.propertyId);
       return {
@@ -19769,7 +20398,7 @@ var imagesRouter = {
   /**
    * Delete an image
    */
-  deletePropertyImage: publicProcedure.input(z4.object({ imageId: z4.number() })).mutation(async ({ input }) => {
+  deletePropertyImage: publicProcedure.input(z5.object({ imageId: z5.number() })).mutation(async ({ input }) => {
     try {
       await deletePropertyImage(input.imageId);
       return {
@@ -19784,15 +20413,15 @@ var imagesRouter = {
    * Update image display order
    */
   updateImageOrder: publicProcedure.input(
-    z4.object({
-      imageId: z4.number(),
-      displayOrder: z4.number()
+    z5.object({
+      imageId: z5.number(),
+      displayOrder: z5.number()
     })
   ).mutation(async ({ input }) => {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq10(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq11(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Image order updated successfully"
@@ -19805,16 +20434,16 @@ var imagesRouter = {
    * Set main image for property
    */
   setMainImage: publicProcedure.input(
-    z4.object({
-      propertyId: z4.number(),
-      imageId: z4.number()
+    z5.object({
+      propertyId: z5.number(),
+      imageId: z5.number()
     })
   ).mutation(async ({ input }) => {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ isMainImage: false }).where(eq10(propertyImages.propertyId, input.propertyId));
-      await db.update(propertyImages).set({ isMainImage: true }).where(eq10(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ isMainImage: false }).where(eq11(propertyImages.propertyId, input.propertyId));
+      await db.update(propertyImages).set({ isMainImage: true }).where(eq11(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Main image updated successfully"
@@ -19826,58 +20455,58 @@ var imagesRouter = {
 };
 
 // server/routers/agent.ts
-import { z as z5 } from "zod";
+import { z as z6 } from "zod";
 init_db();
 init_schema();
-import { eq as eq11, and as and7, desc as desc4, isNull } from "drizzle-orm";
-import { TRPCError as TRPCError3 } from "@trpc/server";
+import { eq as eq12, and as and8, desc as desc5, isNull as isNull2 } from "drizzle-orm";
+import { TRPCError as TRPCError4 } from "@trpc/server";
 var agentRouter = router({
   // Public: Get agent profile for branding (Agenda Pro, Personal Shops)
-  getProfile: publicProcedure.input(z5.object({ id: z5.number() })).query(async ({ input }) => {
+  getProfile: publicProcedure.input(z6.object({ id: z6.number() })).query(async ({ input }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
     const agent = await db.select({
       id: users.id,
       name: users.name,
       customLogoUrl: users.customLogoUrl,
       themeConfig: users.themeConfig,
       subdomain: users.subdomain
-    }).from(users).where(eq11(users.id, input.id)).limit(1);
-    if (agent.length === 0) throw new TRPCError3({ code: "NOT_FOUND", message: "Agent not found" });
+    }).from(users).where(eq12(users.id, input.id)).limit(1);
+    if (agent.length === 0) throw new TRPCError4({ code: "NOT_FOUND", message: "Agent not found" });
     return agent[0];
   }),
   getMyProperties: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(eq11(properties.agentId, ctx.user.id)).orderBy(desc4(properties.createdAt));
+    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    return await db.select().from(properties).where(eq12(properties.agentId, ctx.user.id)).orderBy(desc5(properties.createdAt));
   }),
   // For testing: Allows an agent to claim a property that has no agent assigned
-  claimProperty: protectedProcedure.input(z5.object({ propertyId: z5.number() })).mutation(async ({ ctx, input }) => {
+  claimProperty: protectedProcedure.input(z6.object({ propertyId: z6.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq11(properties.id, input.propertyId)).limit(1);
-    if (property.length === 0) throw new TRPCError3({ code: "NOT_FOUND", message: "Property not found" });
-    if (property[0].agentId) throw new TRPCError3({ code: "FORBIDDEN", message: "Property already has an agent" });
-    await db.update(properties).set({ agentId: ctx.user.id }).where(eq11(properties.id, input.propertyId));
+    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const property = await db.select().from(properties).where(eq12(properties.id, input.propertyId)).limit(1);
+    if (property.length === 0) throw new TRPCError4({ code: "NOT_FOUND", message: "Property not found" });
+    if (property[0].agentId) throw new TRPCError4({ code: "FORBIDDEN", message: "Property already has an agent" });
+    await db.update(properties).set({ agentId: ctx.user.id }).where(eq12(properties.id, input.propertyId));
     return { success: true };
   }),
   getAvailablePropertiesToClaim: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(isNull(properties.agentId)).orderBy(desc4(properties.createdAt));
+    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    return await db.select().from(properties).where(isNull2(properties.agentId)).orderBy(desc5(properties.createdAt));
   }),
-  generateStealthLink: protectedProcedure.input(z5.object({ propertyId: z5.number() })).mutation(async ({ ctx, input }) => {
+  generateStealthLink: protectedProcedure.input(z6.object({ propertyId: z6.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq11(properties.id, input.propertyId)).limit(1);
-    if (property.length === 0) throw new TRPCError3({ code: "NOT_FOUND", message: "Property not found" });
+    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const property = await db.select().from(properties).where(eq12(properties.id, input.propertyId)).limit(1);
+    if (property.length === 0) throw new TRPCError4({ code: "NOT_FOUND", message: "Property not found" });
     if (property[0].agentId !== ctx.user.id && ctx.user.role !== "admin") {
-      throw new TRPCError3({ code: "FORBIDDEN", message: "You don't own this property" });
+      throw new TRPCError4({ code: "FORBIDDEN", message: "You don't own this property" });
     }
     const existingLink = await db.select().from(referralLinks).where(
-      and7(
-        eq11(referralLinks.propertyId, input.propertyId),
-        eq11(referralLinks.agentId, ctx.user.id)
+      and8(
+        eq12(referralLinks.propertyId, input.propertyId),
+        eq12(referralLinks.agentId, ctx.user.id)
       )
     ).limit(1);
     if (existingLink.length > 0) {
@@ -19893,7 +20522,7 @@ var agentRouter = router({
   }),
   getStealthLinks: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
     return await db.select({
       link: referralLinks,
       property: {
@@ -19902,26 +20531,26 @@ var agentRouter = router({
         matriculaInmobiliaria: properties.matriculaInmobiliaria,
         location: properties.location
       }
-    }).from(referralLinks).innerJoin(properties, eq11(referralLinks.propertyId, properties.id)).where(eq11(referralLinks.agentId, ctx.user.id)).orderBy(desc4(referralLinks.createdAt));
+    }).from(referralLinks).innerJoin(properties, eq12(referralLinks.propertyId, properties.id)).where(eq12(referralLinks.agentId, ctx.user.id)).orderBy(desc5(referralLinks.createdAt));
   })
 });
 
 // server/routers/leads.ts
-import { z as z6 } from "zod";
+import { z as z7 } from "zod";
 init_db();
 init_schema();
-import { eq as eq12, sql as sql6 } from "drizzle-orm";
-import { TRPCError as TRPCError4 } from "@trpc/server";
+import { eq as eq13, sql as sql7 } from "drizzle-orm";
+import { TRPCError as TRPCError5 } from "@trpc/server";
 var leadsRouter = router({
-  resolveStealthLink: publicProcedure.input(z6.object({ token: z6.string() })).query(async ({ input }) => {
+  resolveStealthLink: publicProcedure.input(z7.object({ token: z7.string() })).query(async ({ input }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq12(referralLinks.token, input.token)).limit(1);
+    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
+    const linkRecord = await db.select().from(referralLinks).where(eq13(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
-      throw new TRPCError4({ code: "NOT_FOUND", message: "Stealth Link invalido o expirado." });
+      throw new TRPCError5({ code: "NOT_FOUND", message: "Stealth Link invalido o expirado." });
     }
     const link = linkRecord[0];
-    await db.update(referralLinks).set({ clicks: sql6`${referralLinks.clicks} + 1` }).where(eq12(referralLinks.id, link.id));
+    await db.update(referralLinks).set({ clicks: sql7`${referralLinks.clicks} + 1` }).where(eq13(referralLinks.id, link.id));
     const prop = await db.select({
       id: properties.id,
       name: properties.name,
@@ -19932,26 +20561,26 @@ var leadsRouter = router({
       zone: properties.zone,
       // specifically NOT returning full location/latitude/longitude/matricula
       images: properties.images
-    }).from(properties).where(eq12(properties.id, link.propertyId)).limit(1);
+    }).from(properties).where(eq13(properties.id, link.propertyId)).limit(1);
     if (prop.length === 0) {
-      throw new TRPCError4({ code: "NOT_FOUND", message: "Inmueble no disponible." });
+      throw new TRPCError5({ code: "NOT_FOUND", message: "Inmueble no disponible." });
     }
     return {
       property: prop[0]
     };
   }),
-  submitStealthLead: publicProcedure.input(z6.object({
-    token: z6.string(),
-    name: z6.string().min(2),
-    documentNumber: z6.string().min(5),
-    email: z6.string().email(),
-    phone: z6.string().min(7)
+  submitStealthLead: publicProcedure.input(z7.object({
+    token: z7.string(),
+    name: z7.string().min(2),
+    documentNumber: z7.string().min(5),
+    email: z7.string().email(),
+    phone: z7.string().min(7)
   })).mutation(async ({ input }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq12(referralLinks.token, input.token)).limit(1);
+    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
+    const linkRecord = await db.select().from(referralLinks).where(eq13(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
-      throw new TRPCError4({ code: "BAD_REQUEST", message: "Token invalido." });
+      throw new TRPCError5({ code: "BAD_REQUEST", message: "Token invalido." });
     }
     const link = linkRecord[0];
     const newLead = await db.insert(leads).values({
@@ -19971,605 +20600,6 @@ var leadsRouter = router({
       referralToken: link.token
     });
     return { success: true };
-  })
-});
-
-// server/routers/properties.ts
-import { z as z7 } from "zod";
-init_db();
-init_schema();
-import { eq as eq13, desc as desc5, ilike, or as or2, and as and8 } from "drizzle-orm";
-import { TRPCError as TRPCError5 } from "@trpc/server";
-var propertyInputSchema = z7.object({
-  name: z7.string().min(2),
-  description: z7.string().optional(),
-  propertyType: z7.enum([
-    "apartment",
-    "house",
-    "building",
-    "warehouse",
-    "farm",
-    "hotel",
-    "office",
-    "land",
-    "commercial",
-    "loft",
-    "consultorio"
-  ]),
-  transactionType: z7.enum([
-    "venta",
-    "arriendo",
-    "venta_o_arriendo",
-    "arriendo_temporal",
-    "arriendo_con_opcion_de_compra",
-    "permuta",
-    "venta_permuta",
-    "aporte"
-  ]).default("venta"),
-  price: z7.string().min(1),
-  currency: z7.enum(["COP", "USD"]).default("COP"),
-  city: z7.string().default("Bogot\xE1"),
-  location: z7.string().optional().nullable(),
-  zone: z7.string().min(2),
-  addressCity: z7.string().optional().nullable(),
-  addressLocality: z7.string().optional().nullable(),
-  addressNeighborhood: z7.string().optional().nullable(),
-  coordinates: z7.any().optional().nullable(),
-  bedrooms: z7.number().optional().nullable(),
-  bathrooms: z7.number().optional().nullable(),
-  garages: z7.number().optional().nullable(),
-  stratum: z7.number().optional().nullable(),
-  floorDetail: z7.string().optional().nullable(),
-  areaTotal: z7.string().optional().nullable(),
-  areaPrivate: z7.string().optional().nullable(),
-  yearBuilt: z7.number().optional().nullable(),
-  antiguedadAnos: z7.number().optional().nullable(),
-  isAmoblado: z7.boolean().optional().default(false),
-  adminFee: z7.string().optional().nullable(),
-  commissionPercent: z7.string().optional().nullable(),
-  matriculaInmobiliaria: z7.string().optional().nullable(),
-  videoUrl: z7.string().optional().nullable(),
-  externalUrl: z7.string().optional().nullable(),
-  rawText: z7.string().optional().nullable(),
-  featured: z7.boolean().optional().default(false),
-  available: z7.boolean().optional().default(true),
-  idUsuarioWhatsapp: z7.string().optional().nullable(),
-  amenities: z7.any().optional().nullable(),
-  latitude: z7.string().optional().nullable(),
-  longitude: z7.string().optional().nullable(),
-  images: z7.array(z7.string()).optional().nullable()
-});
-var propertyFields = {
-  id: properties.id,
-  name: properties.name,
-  price: properties.price,
-  rentPrice: properties.rentPrice,
-  city: properties.city,
-  location: properties.location,
-  zone: properties.zone,
-  addressCity: properties.addressCity,
-  addressLocality: properties.addressLocality,
-  addressNeighborhood: properties.addressNeighborhood,
-  propertyType: properties.propertyType,
-  transactionType: properties.transactionType,
-  description: properties.description,
-  bedrooms: properties.bedrooms,
-  bathrooms: properties.bathrooms,
-  garages: properties.garages,
-  stratum: properties.stratum,
-  floorDetail: properties.floorDetail,
-  areaTotal: properties.areaTotal,
-  yearBuilt: properties.yearBuilt,
-  adminFee: properties.adminFee,
-  matriculaInmobiliaria: properties.matriculaInmobiliaria,
-  featured: properties.featured,
-  available: properties.available,
-  amenities: properties.amenities,
-  images: properties.images,
-  createdAt: properties.createdAt
-};
-var cachedAdminMyList = null;
-var cachedAdminMyListTime = 0;
-function invalidatePropertiesListCache() {
-  cachedAdminMyList = null;
-  cachedAdminMyListTime = 0;
-}
-var propertyGetByIdCache = /* @__PURE__ */ new Map();
-function parsePropertyDeterministically(text2) {
-  const norm2 = text2.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
-  const lower = norm2.toLowerCase();
-  let propertyType = "apartment";
-  let propertyTypeExact = "Casa";
-  let isSubtipoComercial = false;
-  let subtype = null;
-  if (lower.includes("casa comercial") || lower.includes("sede empresarial") || lower.includes("oficina en casa")) {
-    propertyType = "commercial";
-    propertyTypeExact = "Casa";
-    isSubtipoComercial = true;
-    subtype = lower.includes("sede") ? "Sede Empresarial / Institucional" : lower.includes("oficina") ? "Oficina en Casa" : "Casa Comercial / Oficinas / Sede";
-  } else if (lower.includes("local comercial") || lower.includes("local")) {
-    propertyType = "commercial";
-    propertyTypeExact = "Local";
-    isSubtipoComercial = true;
-    subtype = lower.includes("centro comercial") ? "Local en Centro Comercial" : "Local Comercial a la Calle";
-  } else if (lower.includes("oficina") || lower.includes("consultorio")) {
-    propertyType = "office";
-    propertyTypeExact = "Oficina";
-    isSubtipoComercial = true;
-    subtype = lower.includes("consultorio") ? "Consultorio / Salud" : "Oficina Corporativa / Edificio Empresarial";
-  } else if (lower.includes("apartaestudio")) {
-    propertyType = "apartment";
-    propertyTypeExact = "Apartaestudio";
-  } else if (lower.includes("penthouse duplex") || lower.includes("pent house duplex")) {
-    propertyType = "apartment";
-    propertyTypeExact = "Pent House D\xFAplex";
-  } else if (lower.includes("penthouse") || lower.includes("pent house")) {
-    propertyType = "apartment";
-    propertyTypeExact = "Pent House";
-  } else if (lower.includes("apartamento duplex") || lower.includes("apto duplex")) {
-    propertyType = "apartment";
-    propertyTypeExact = "Apartamento D\xFAplex";
-  } else if (lower.includes("apartamento") || lower.includes("apto")) {
-    propertyType = "apartment";
-    propertyTypeExact = "Apartamento";
-  } else if (lower.includes("casa campestre")) {
-    propertyType = "house";
-    propertyTypeExact = "Casa Campestre";
-    subtype = "Casa Campestre";
-  } else if (lower.includes("casa quinta")) {
-    propertyType = "house";
-    propertyTypeExact = "Casa Quinta";
-    subtype = "Casa Quinta";
-  } else if (lower.includes("casa") || lower.includes("chalet") || lower.includes("townhouse")) {
-    propertyType = "house";
-    propertyTypeExact = "Casa";
-    subtype = "Casa Familiar Unifamiliar";
-  } else if (lower.includes("bodega")) {
-    propertyType = "warehouse";
-    propertyTypeExact = "Bodega";
-    subtype = lower.includes("industrial") ? "Bodega Industrial / Producci\xF3n" : "Bodega de Almacenamiento";
-  } else if (lower.includes("edificio")) {
-    propertyType = "building";
-    propertyTypeExact = "Edificio";
-    if (lower.includes("oficina")) subtype = "Edificio de Oficinas";
-    else if (lower.includes("local")) subtype = "Edificio de Locales / Comercial";
-    else if (lower.includes("residencial")) subtype = "Edificio Residencial";
-    else subtype = "Edificio Mixto (Oficinas / Locales / Vivienda)";
-  } else if (lower.includes("lote") || lower.includes("terreno")) {
-    propertyType = "land";
-    propertyTypeExact = "Lote / Terreno";
-  } else if (lower.includes("finca")) {
-    propertyType = "farm";
-    propertyTypeExact = "Finca";
-    if (lower.includes("productiva") || lower.includes("agro")) subtype = "Finca Productiva / Agropecuaria";
-    else if (lower.includes("hotel") || lower.includes("turis")) subtype = "Finca Agrotur\xEDstica / Hotel Campestre";
-    else subtype = "Finca de Recreo / Vacacional";
-  } else if (lower.includes("caba\xF1a")) {
-    propertyType = "house";
-    propertyTypeExact = "Caba\xF1a";
-  } else if (lower.includes("aparta-hotel") || lower.includes("aparta hotel")) {
-    propertyType = "hotel";
-    propertyTypeExact = "Aparta Hotel";
-    subtype = "Aparta-hotel";
-  } else if (lower.includes("aparta-suites") || lower.includes("aparta suites")) {
-    propertyType = "hotel";
-    propertyTypeExact = "Hotel";
-    subtype = "Aparta-Suites";
-  } else if (lower.includes("hostal")) {
-    propertyType = "hotel";
-    propertyTypeExact = "Hostal";
-    subtype = "Hostal";
-  } else if (lower.includes("motel")) {
-    propertyType = "hotel";
-    propertyTypeExact = "Hotel";
-    subtype = "Motel";
-  } else if (lower.includes("residencia")) {
-    propertyType = "hotel";
-    propertyTypeExact = "Hotel";
-    subtype = "Residencia";
-  } else if (lower.includes("hospedaje")) {
-    propertyType = "hotel";
-    propertyTypeExact = "Hotel";
-    subtype = "Hospedaje";
-  } else if (lower.includes("hotel")) {
-    propertyType = "hotel";
-    propertyTypeExact = "Hotel";
-    subtype = "Hotel Boutique / Tur\xEDstico";
-  } else if (lower.includes("villa")) {
-    propertyType = "house";
-    propertyTypeExact = "Villa";
-  }
-  let transactionType = "venta";
-  if (lower.includes("arriendo") || lower.includes("alquiler") || lower.includes("renta")) {
-    transactionType = "arriendo";
-  } else if (lower.includes("permuta")) {
-    transactionType = "venta_permuta";
-  }
-  let price = "0";
-  const ahoraMatch = norm2.match(/(?:ahora|hoy|precio|valor|venta)[\s\:\$💲🔥]*([0-9\.\,]+(?:\s*(?:millones|mil millones|mm))?)/i);
-  if (ahoraMatch) {
-    const cleanNum = ahoraMatch[1].replace(/\./g, "").replace(/\,/g, "").trim();
-    const parsed = parseInt(cleanNum, 10);
-    if (!isNaN(parsed) && parsed > 1e5) price = String(parsed);
-  }
-  if (price === "0") {
-    const prices = Array.from(norm2.matchAll(/\$\s*([0-9]{1,3}(?:\.[0-9]{3}){1,4})/g));
-    if (prices.length > 0) {
-      const last = prices[prices.length - 1][1].replace(/[^\d]/g, "");
-      const parsed = parseInt(last, 10);
-      if (!isNaN(parsed) && parsed > 1e5) price = String(parsed);
-    }
-  }
-  let rentPrice = "0";
-  if (transactionType === "arriendo") {
-    const canonM = norm2.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|vr\s*[\.\/]?\s*renta|renta|arriendo)\s*[:\/\-=\s]?\s*\$?\s*([\d.]+)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i);
-    if (canonM) {
-      const cleanNum = canonM[1].replace(/\./g, "").replace(/\,/g, "").trim();
-      const parsed = parseInt(cleanNum, 10);
-      if (!isNaN(parsed) && parsed >= 3e5 && parsed <= 1e8) {
-        rentPrice = String(parsed);
-      }
-    }
-  }
-  let adminFee = "0";
-  const admM = norm2.match(/(?:^|[-•*#\s])(?:v\s*[\/\-]\s*)?(?:adm[oó]n|admon|administraci[oó]n|administ|admin|cta\s*adm[oó]n|cuota\s*adm[oó]n)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*[:\/\-=\s]?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
-  if (admM) {
-    const rawANum = parseFloat(admM[1].replace(/\./g, ""));
-    if (!isNaN(rawANum) && rawANum >= 1e4 && rawANum <= 3e7) {
-      adminFee = String(rawANum);
-    }
-  }
-  let areaConstruida = "";
-  const acM = norm2.match(/(?:area construida|area total|construida)[\s\:\*]*([0-9]+(?:\.[0-9]+)?)\s*m/i) || norm2.match(/([0-9]+(?:\.[0-9]+)?)\s*m[2²]/i);
-  if (acM) areaConstruida = acM[1];
-  let areaPrivada = "";
-  const apM = norm2.match(/(?:area privada|privada)[\s\:\*]*([0-9]+(?:\.[0-9]+)?)\s*m/i);
-  if (apM) areaPrivada = apM[1];
-  let yearBuilt = null;
-  const antM = norm2.match(/(?:antiguedad|edad|anos de construccion)[\s\:\*]*([0-9]+)/i);
-  if (antM) {
-    yearBuilt = 2026 - parseInt(antM[1], 10);
-  }
-  let bedrooms = null;
-  const bedMatch = norm2.match(/(?:habitacion|habitaciones|alcoba|alcobas|oficinas|dormitorio)[\s\:\/\*]*([0-9]+)/i);
-  if (bedMatch) {
-    bedrooms = parseInt(bedMatch[1], 10);
-  }
-  let bathrooms = null;
-  const bathMatch = norm2.match(/(?:bano|banos)[\s\:\/\*]*([0-9]+)/i);
-  if (bathMatch) {
-    bathrooms = parseInt(bathMatch[1], 10);
-  }
-  let garages = null;
-  const garMatch = norm2.match(/(?:garaje|garajes|parqueadero|parqueaderos)[\s\:\/\*]*([0-9]+)/i);
-  if (garMatch) {
-    garages = parseInt(garMatch[1], 10);
-  }
-  let stratum = 4;
-  const strMatch = norm2.match(/estrato[\s\:\*]*([0-6])/i);
-  if (strMatch) {
-    stratum = parseInt(strMatch[1], 10);
-  }
-  let cocina = "Integral";
-  if (lower.includes("abierta tipo isla")) cocina = "Abierta tipo isla";
-  else if (lower.includes("abierta")) cocina = "Abierta";
-  else if (lower.includes("cerrada remodelada")) cocina = "Cerrada remodelada";
-  else if (lower.includes("cerrada")) cocina = "Cerrada convencional";
-  else if (lower.includes("moderna")) cocina = "Moderna";
-  else if (lower.includes("integral")) cocina = "Integral";
-  else if (lower.includes("a remodelar")) cocina = "A remodelar";
-  let estudios = 0;
-  const estM = norm2.match(/(?:estudio|sala de juntas)[\s\:\/\*\D]*?([0-9]+)/i);
-  if (estM) estudios = parseInt(estM[1], 10);
-  let depositos = 0;
-  const depM = norm2.match(/(?:deposito|depositos)[\s\:\/\*\D]*?([0-9]+)/i);
-  if (depM) depositos = parseInt(depM[1], 10);
-  let piso = "";
-  const pisoM = norm2.match(/(?:plantas|pisos|piso)[\s\:\/\*\D]*?([0-9]+)/i);
-  if (pisoM) piso = pisoM[1];
-  let addressNeighborhood = null;
-  let zone = null;
-  let city = "Bogot\xE1";
-  const barrioMatch = norm2.match(/barrio[\s\:\*]*([a-zA-Z\s]+)/i);
-  if (barrioMatch) {
-    addressNeighborhood = barrioMatch[1].split("\n")[0].trim();
-  }
-  if (!addressNeighborhood) {
-    if (lower.includes("morato")) addressNeighborhood = "Morato";
-    else if (lower.includes("cedritos")) addressNeighborhood = "Cedritos";
-    else if (lower.includes("chico")) addressNeighborhood = "Chic\xF3";
-    else if (lower.includes("rosales")) addressNeighborhood = "Rosales";
-    else if (lower.includes("santa barbara")) addressNeighborhood = "Santa B\xE1rbara";
-  }
-  const locMatch = norm2.match(/localidad[\s\:\*]*([a-zA-Z\s]+)/i);
-  if (locMatch) {
-    zone = locMatch[1].split("\n")[0].trim();
-  }
-  if (!zone) {
-    if (lower.includes("suba")) zone = "Suba";
-    else if (lower.includes("usaquen")) zone = "Usaqu\xE9n";
-    else if (lower.includes("chapinero")) zone = "Chapinero";
-    else if (lower.includes("teusaquillo")) zone = "Teusaquillo";
-  }
-  const sectorDisplay = addressNeighborhood || zone || city || "Bogot\xE1";
-  const tipoDisplay = isSubtipoComercial && !propertyTypeExact.toLowerCase().includes("comercial") ? `${propertyTypeExact} Comercial` : propertyTypeExact;
-  const name = `${tipoDisplay} en ${sectorDisplay}`;
-  const selectedInternas = [];
-  if (lower.includes("iluminacion natural") || lower.includes("luz natural")) selectedInternas.push("Iluminaci\xF3n natural");
-  if (lower.includes("closet") || lower.includes("closets") || lower.includes("archiveros")) selectedInternas.push("Cl\xF3sets");
-  if (lower.includes("comedor")) selectedInternas.push("Comedor auxiliar");
-  if (lower.includes("doble ventana")) selectedInternas.push("Doble Ventana");
-  if (lower.includes("gas")) selectedInternas.push("Gas domiciliario");
-  if (lower.includes("balcon")) selectedInternas.push("Balc\xF3n");
-  if (lower.includes("alarma") || lower.includes("seguridad")) selectedInternas.push("Alarma");
-  if (lower.includes("lavanderia") || lower.includes("zona de ropas")) selectedInternas.push("Zona de lavander\xEDa");
-  if (lower.includes("acabados modernos") || lower.includes("madera flotante")) selectedInternas.push("Acabados modernos");
-  if (lower.includes("patio")) selectedInternas.push("Patio");
-  const selectedExternas = [];
-  if (lower.includes("pavimentado") || lower.includes("acceso")) selectedExternas.push("Acceso pavimentado");
-  if (lower.includes("transporte") || lower.includes("transmilenio")) selectedExternas.push("Transporte p\xFAblico cercano");
-  if (lower.includes("via principal") || lower.includes("av.") || lower.includes("avenida")) selectedExternas.push("Sobre v\xEDa principal");
-  if (lower.includes("banco") || lower.includes("bancos")) selectedExternas.push("Bancos cercanos");
-  if (lower.includes("comercial") || lower.includes("centro comercial") || lower.includes("comercios")) selectedExternas.push("Centros Comerciales");
-  if (lower.includes("medico") || lower.includes("clinica") || lower.includes("hospital")) selectedExternas.push("Centros m\xE9dicos hospitalarios");
-  if (lower.includes("parque") || lower.includes("parques")) selectedExternas.push("Parques cercanos");
-  if (lower.includes("zonas verdes") || lower.includes("verde")) selectedExternas.push("Zonas verdes");
-  if (lower.includes("recepcion") || lower.includes("porteria")) selectedExternas.push("Porter\xEDa / Recepci\xF3n");
-  if (lower.includes("seguridad 24/7") || lower.includes("vigilancia")) selectedExternas.push("Seguridad privada 24/7");
-  return {
-    name: name || `Inmueble en ${addressNeighborhood || city}`,
-    propertyType,
-    propertyTypeExact,
-    subtype,
-    isSubtipoComercial,
-    transactionType,
-    price,
-    rentPrice: rentPrice !== "0" ? rentPrice : void 0,
-    adminFee: adminFee !== "0" ? adminFee : void 0,
-    areaTotal: areaConstruida || "",
-    areaConstruida: areaConstruida || "",
-    areaPrivada: areaPrivada || "",
-    yearBuilt,
-    bedrooms,
-    bathrooms,
-    garages,
-    garajesCarro: garages,
-    garajesMoto: 0,
-    stratum,
-    cocina,
-    estudios,
-    estarTv: 0,
-    depositos,
-    piso,
-    city,
-    zone: zone || addressNeighborhood || "Bogot\xE1",
-    addressNeighborhood: addressNeighborhood || zone || "Bogot\xE1",
-    description: text2.trim().slice(0, 500),
-    selectedInternas,
-    selectedExternas,
-    pdfUrl: void 0
-  };
-}
-var propertiesRouter = router({
-  // --- PUBLIC ---
-  list: publicProcedure.input(z7.object({
-    search: z7.string().optional(),
-    zone: z7.string().optional(),
-    type: z7.string().optional(),
-    transactionType: z7.string().optional(),
-    limit: z7.number().min(1).max(200).default(100),
-    offset: z7.number().default(0)
-  }).optional()).query(async ({ input }) => {
-    const db = await getDb();
-    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const whereConditions = [];
-    if (input?.search) {
-      whereConditions.push(
-        or2(
-          ilike(properties.name, `%${input.search}%`),
-          ilike(properties.description, `%${input.search}%`),
-          ilike(properties.zone, `%${input.search}%`),
-          ilike(properties.addressNeighborhood, `%${input.search}%`),
-          ilike(properties.city, `%${input.search}%`)
-        )
-      );
-    }
-    if (input?.zone) {
-      whereConditions.push(
-        or2(
-          ilike(properties.zone, `%${input.zone}%`),
-          ilike(properties.addressNeighborhood, `%${input.zone}%`),
-          ilike(properties.addressLocality, `%${input.zone}%`)
-        )
-      );
-    }
-    if (input?.type) {
-      whereConditions.push(eq13(properties.propertyType, input.type));
-    }
-    if (input?.transactionType) {
-      whereConditions.push(eq13(properties.transactionType, input.transactionType));
-    }
-    whereConditions.push(eq13(properties.available, true));
-    const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and8(...whereConditions) : void 0).orderBy(desc5(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
-    const items = await query;
-    return items;
-  }),
-  getById: publicProcedure.input(z7.object({ id: z7.number() })).query(async ({ input }) => {
-    const now = Date.now();
-    const cached = propertyGetByIdCache.get(input.id);
-    if (cached && cached.expiresAt > now) {
-      return cached.data;
-    }
-    const db = await getDb();
-    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const item = await db.select().from(properties).where(eq13(properties.id, input.id)).limit(1);
-    if (item.length === 0) throw new TRPCError5({ code: "NOT_FOUND" });
-    const images = await db.select().from(propertyImages).where(eq13(propertyImages.propertyId, input.id)).orderBy(propertyImages.displayOrder);
-    const result = {
-      ...item[0],
-      imagesList: images
-    };
-    propertyGetByIdCache.set(input.id, { data: result, expiresAt: now + 6e4 });
-    return result;
-  }),
-  // --- MUTATIONS (CREAR / EDITAR) ---
-  create: publicProcedure.input(propertyInputSchema).mutation(async ({ ctx, input }) => {
-    const db = await getDb();
-    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const newProperty = await db.insert(properties).values({
-      ...input,
-      agentId: ctx?.user?.id ?? 1
-    }).returning();
-    invalidatePropertiesListCache();
-    return newProperty[0];
-  }),
-  parseText: publicProcedure.input(z7.object({
-    text: z7.string().optional().default(""),
-    pdfBase64: z7.string().optional(),
-    pdfMimeType: z7.string().optional(),
-    fileName: z7.string().optional()
-  })).mutation(async ({ input }) => {
-    const deterministic = parsePropertyDeterministically(input.text || "");
-    let pdfUrl = void 0;
-    if (input.pdfBase64) {
-      try {
-        const cleanBase64 = input.pdfBase64.replace(/^data:[^;]+;base64,/, "");
-        const safeName = (input.fileName || "ficha_tecnica.pdf").replace(/[^\w\d_\-\.]/g, "_");
-        const { storagePut: storagePut2 } = await Promise.resolve().then(() => (init_storage(), storage_exports));
-        const stored = await storagePut2(`documents/ficha_${Date.now()}_${safeName}`, cleanBase64, input.pdfMimeType || "application/pdf");
-        pdfUrl = stored.url;
-      } catch (storageErr) {
-        console.warn("[parseText] No se pudo guardar el archivo PDF:", storageErr.message);
-      }
-    }
-    try {
-      const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
-      const prompt = `Eres JanIA, arquitecta e ingeniera inmobiliaria senior de Vecy Network Colombia.
-Analiza minuciosamente este texto y/o documento PDF adjunto de un inmueble.
-Extrae de forma exhaustiva y precisa los datos clave en formato JSON con la siguiente estructura estricta:
-{
-  "name": "T\xEDtulo estandarizado corto en formato '[Tipo de Inmueble] en [Barrio]', ej: 'Casa en Morato', 'Edificio de Oficinas en Chic\xF3', 'Apartamento en Rosales'",
-  "propertyType": "apartment | house | building | warehouse | farm | hotel | office | land | commercial | loft | consultorio",
-  "propertyTypeExact": "Casa | Edificio | Hotel | Hostal | Aparta Hotel | Local | Bodega | Finca | Oficina | Apartamento | Pent House | etc.",
-  "subtype": "Subtipo espec\xEDfico (ej: 'Casa Comercial / Oficinas / Sede', 'Edificio de Oficinas', 'Edificio Residencial', 'Edificio de Locales', 'Aparta-hotel', 'Aparta-Suites', 'Hospedaje', 'Hostal', 'Motel', 'Residencia', 'Finca de Recreo', 'Finca Productiva')",
-  "isSubtipoComercial": true o false,
-  "transactionType": "venta | arriendo | venta_o_arriendo | permuta",
-  "price": "precio de venta o canon en COP num\xE9rico sin puntos",
-  "adminFee": "cuota administraci\xF3n mensual en COP num\xE9rico o null",
-  "areaConstruida": "\xE1rea construida total en m2 en n\xFAmero string o null",
-  "areaPrivada": "\xE1rea privada en m2 en n\xFAmero string o null",
-  "yearBuilt": a\xF1o num\xE9rico de construcci\xF3n o null,
-  "bedrooms": n\xFAmero entero de habitaciones u oficinas (puede ser de 1 a 50+),
-  "bathrooms": n\xFAmero entero de ba\xF1os (puede ser de 1 a 50+),
-  "garages": n\xFAmero entero de parqueaderos (puede ser de 1 a 50+),
-  "garajesCarro": n\xFAmero entero de garajes para carro,
-  "garajesMoto": n\xFAmero entero de garajes para moto,
-  "depositos": n\xFAmero entero de dep\xF3sitos o bodegas,
-  "estudios": n\xFAmero entero de estudios o salas de juntas,
-  "estarTv": n\xFAmero entero de salas de estar o espera,
-  "stratum": estrato socioecon\xF3mico 0 a 6,
-  "cocina": "Integral | Abierta | Abierta tipo isla | Cerrada convencional | Cerrada remodelada | Moderna | A remodelar",
-  "city": "Bogot\xE1 u otra ciudad",
-  "zone": "Localidad o zona principal (ej: Suba, Usaqu\xE9n)",
-  "addressNeighborhood": "Barrio espec\xEDfico (ej: Morato, Cedritos, Santa B\xE1rbara)",
-  "description": "Descripci\xF3n profesional atractiva destacando potencial urban\xEDstico (POT 555, valoraci\xF3n, usos permitidos, etc.)",
-  "potUrbanistico": "Informaci\xF3n normativa de POT o tratamiento si se menciona (ej: POT 555, Tratamiento Renovaci\xF3n Urbana, Altura hasta 7 pisos, Valor Catastral)",
-  "selectedInternas": ["lista de caracter\xEDsticas internas encontradas"],
-  "selectedExternas": ["lista de caracter\xEDsticas externas encontradas"]
-}
-Devuelve \xDANICAMENTE el objeto JSON sin texto introductorio ni bloques de c\xF3digo extra.
-
-Texto del inmueble:
-${input.text || "Ver documento PDF adjunto"}`;
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("AI_TIMEOUT")), 8500));
-      const cleanBase64 = input.pdfBase64 ? input.pdfBase64.replace(/^data:[^;]+;base64,/, "") : void 0;
-      const aiPromise = invokeLLM2({
-        messages: [{ role: "user", content: prompt }],
-        pdfBuffer: cleanBase64,
-        pdfMimeType: input.pdfMimeType || "application/pdf"
-      });
-      const response = await Promise.race([aiPromise, timeoutPromise]);
-      const text2 = response?.choices?.[0]?.message?.content;
-      const cleaned = typeof text2 === "string" ? text2.replace(/```json\n?|\n?```/g, "").trim() : "{}";
-      const parsed = JSON.parse(cleaned);
-      return {
-        ...deterministic,
-        ...parsed,
-        price: parsed.price ? String(parsed.price) : deterministic.price,
-        name: deterministic.name || parsed.name,
-        propertyType: parsed.propertyType || deterministic.propertyType,
-        propertyTypeExact: parsed.propertyTypeExact || deterministic.propertyTypeExact,
-        subtype: parsed.subtype || deterministic.subtype,
-        isSubtipoComercial: parsed.isSubtipoComercial !== void 0 ? parsed.isSubtipoComercial : deterministic.isSubtipoComercial,
-        transactionType: parsed.transactionType || deterministic.transactionType,
-        zone: parsed.zone || deterministic.zone,
-        addressNeighborhood: parsed.addressNeighborhood || parsed.zone || deterministic.addressNeighborhood,
-        areaTotal: parsed.areaConstruida ? String(parsed.areaConstruida) : parsed.areaTotal ? String(parsed.areaTotal) : deterministic.areaTotal,
-        areaConstruida: parsed.areaConstruida ? String(parsed.areaConstruida) : deterministic.areaConstruida,
-        areaPrivada: parsed.areaPrivada ? String(parsed.areaPrivada) : deterministic.areaPrivada,
-        bedrooms: parsed.bedrooms !== void 0 && parsed.bedrooms !== null ? Number(parsed.bedrooms) : deterministic.bedrooms,
-        bathrooms: parsed.bathrooms !== void 0 && parsed.bathrooms !== null ? Number(parsed.bathrooms) : deterministic.bathrooms,
-        garages: parsed.garages !== void 0 && parsed.garages !== null ? Number(parsed.garages) : deterministic.garages,
-        garajesCarro: parsed.garajesCarro !== void 0 && parsed.garajesCarro !== null ? Number(parsed.garajesCarro) : deterministic.garajesCarro,
-        garajesMoto: parsed.garajesMoto !== void 0 && parsed.garajesMoto !== null ? Number(parsed.garajesMoto) : deterministic.garajesMoto,
-        depositos: parsed.depositos !== void 0 && parsed.depositos !== null ? Number(parsed.depositos) : deterministic.depositos,
-        estudios: parsed.estudios !== void 0 && parsed.estudios !== null ? Number(parsed.estudios) : deterministic.estudios,
-        estarTv: parsed.estarTv !== void 0 && parsed.estarTv !== null ? Number(parsed.estarTv) : deterministic.estarTv,
-        stratum: parsed.stratum !== void 0 && parsed.stratum !== null ? Number(parsed.stratum) : deterministic.stratum,
-        description: parsed.description || deterministic.description,
-        pdfUrl: pdfUrl || deterministic.pdfUrl
-      };
-    } catch (err) {
-      console.warn("[parseText] Gemini no respondi\xF3 a tiempo o error. Usando extracci\xF3n determinista:", err.message);
-      return {
-        ...deterministic,
-        pdfUrl
-      };
-    }
-  }),
-  update: publicProcedure.input(z7.object({
-    id: z7.number(),
-    data: propertyInputSchema.partial()
-  })).mutation(async ({ ctx, input }) => {
-    const db = await getDb();
-    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq13(properties.id, input.id)).limit(1);
-    if (existing.length === 0) throw new TRPCError5({ code: "NOT_FOUND" });
-    if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
-      throw new TRPCError5({ code: "FORBIDDEN" });
-    }
-    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq13(properties.id, input.id)).returning();
-    invalidatePropertiesListCache();
-    return updated[0];
-  }),
-  delete: publicProcedure.input(z7.object({ id: z7.number() })).mutation(async ({ ctx, input }) => {
-    const db = await getDb();
-    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq13(properties.id, input.id)).limit(1);
-    if (existing.length === 0) throw new TRPCError5({ code: "NOT_FOUND" });
-    if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
-      throw new TRPCError5({ code: "FORBIDDEN" });
-    }
-    await db.delete(properties).where(eq13(properties.id, input.id));
-    invalidatePropertiesListCache();
-    return { success: true };
-  }),
-  // List my own properties (agent view) or all properties (admin view) - Protegido con micro-caché para Supabase Egress
-  myList: publicProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
-    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const user = ctx?.user;
-    if (!user || user.role === "admin") {
-      const now = Date.now();
-      if (cachedAdminMyList && now - cachedAdminMyListTime < 18e4) {
-        return cachedAdminMyList;
-      }
-      const data = await db.select(propertyFields).from(properties).orderBy(desc5(properties.id));
-      cachedAdminMyList = data;
-      cachedAdminMyListTime = now;
-      return data;
-    }
-    return await db.select(propertyFields).from(properties).where(eq13(properties.agentId, user.id)).orderBy(desc5(properties.id));
   })
 });
 

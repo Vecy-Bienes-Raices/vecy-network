@@ -73,6 +73,9 @@ type AdminPropertyListItem = {
   matriculaInmobiliaria: string | null;
   featured: boolean | null;
   available: boolean | null;
+  standByDirectoVecy: boolean | null;
+  aceptaTerceria: boolean | null;
+  estadoComercial: string | null;
   images: unknown;
   createdAt: Date;
 };
@@ -102,6 +105,9 @@ const propertyFields = {
   matriculaInmobiliaria: properties.matriculaInmobiliaria,
   featured: properties.featured,
   available: properties.available,
+  standByDirectoVecy: properties.standByDirectoVecy,
+  aceptaTerceria: properties.aceptaTerceria,
+  estadoComercial: properties.estadoComercial,
   amenities: properties.amenities,
   images: properties.images,
   createdAt: properties.createdAt,

@@ -5868,6 +5868,105 @@ ightarrow$ número de celular para aplicarlas de forma automática a todas sus p
 
 ---
 
+### 📌 SESIÓN v31.77 — SEPTIEMBRE 2026: COINCIDENCIA CON MATCH PERFECTO 100% EXCLUSIVO Y MODELO DE PUNTUACIÓN CONTINUA (80.00% A 99.99%) CON TOLERANCIA CERO A NO-COINCIDENCIAS
+
+#### 👤 Solicitud y Doctrina Inmobiliaria de Eduardo A. Rivera:
+1. **Match Perfecto 100% de Prueba**:
+   - Construir una coincidencia de prueba inventada con cotejo exhaustivo de todos los atributos existentes (88 casillas totales) donde cada renglón aparezca rigurosamente en verde con la palabra *"Coincide"*.
+   - Prohibido dejar ningún *"Aproximado"*, *"Plus Ofertado"* ni *"Dato Faltante"*. Coincidencia 100% exacta y pura.
+2. **Doctrina Matemática del Match Perfecto vs Casi Perfecto**:
+   - El **100.00% es sagrado y exclusivo**: Únicamente se otorga si el 100% de los atributos evaluados coincide de forma exacta.
+   - Si aparece un solo *"Plus Ofertado"*, el match deja de ser 100.00% y desciende a **99.99%** ("Casi Perfecto"), un segundo plus a **99.98%**, un tercero a **99.97%**.
+   - Si aparece un *"Aproximado"*, la penalización es mayor: **99.95%**, un segundo a **99.93%**.
+   - Si aparece un *"Dato Faltante / Pendiente"*, desciende a **99.90%**, dos más a **99.84%**, escalando de forma continua entre el 80.00% y el 99.99%.
+3. **Guillotina Absoluta al 0.00% (Tolerancia Cero a No-Coincidencias)**:
+   - Si en cualquier casilla (así sea la última de zonas deportivas o detalles menores) aparece un *"No Coincide"*, el match se descalifica fulminantemente al **0.00%**. Cero falsos positivos en la mesa de coincidencias.
+4. **Castigo Financiero Severo**:
+   - Si en el precio de venta u operación comercial aparece un *"Dato Pendiente"*, se aplica una penalización financiera drástica que hunde la calificación a la base del ~83.50%.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas (v31.77):
+1. **Alineación del Motor Backend (`server/_core/matching.ts`)**:
+   - Fórmula matemática continua con penalizaciones asimétricas por tipo de desvío:
+     * `Plus Ofertado`: Deducción mínima ($\Delta = 0.01\%$).
+     * `Aproximado`: Deducción moderada ($\Delta = 0.03\% - 0.05\%$).
+     * `Dato Faltante No Crítico`: Deducción calibrada ($\Delta = 0.08\% - 0.10\%$).
+   - Regla inquebrantable: `autoScore = 100` SI Y SOLO SI `ratioCumplimiento === 1.0` y no existen deducciones.
+2. **Sincronización en Matriz de Cotejo Visual (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Cálculo idéntico en `scoreRows` para garantizar que lo que visualiza el bróker en la tabla de cotejo coincida exactamente con el veredicto del motor de JanIA.
+3. **Suite de Pruebas Unitarias Automatizadas**:
+   - Creación de `server/__tests__/perfect_100_match.test.ts` con 4 pruebas específicas validando los 88 atributos en verde al 100.00%, deducciones continuas (99.99%), castigo financiero por precio faltante y guillotina al 0.00% ante cualquier "No Coincide".
+
+---
+
+### 📌 SESIÓN v31.78 — SEPTIEMBRE 2026: TABLAS DE COTEJO ENFOCADAS EN ATRIBUTOS SOLICITADOS, ADICIÓN DINÁMICA CON PERSISTENCIA EN BD Y POPUP FLOTANTE DE DESCARTE CON APRENDIZAJE JANIA
+
+#### 👤 Solicitud y Directrices de Eduardo A. Rivera:
+1. **Enfoque en Atributos Relevantes Solicitados**:
+   - En las tablas de cotejo no deben aparecer los 88 campos de forma indiscriminada. Solo deben presentarse los atributos solicitados por la demanda y los ofertados por el inmueble.
+2. **Botón Interactivo "+ Agregar Atributo al Cotejo"**:
+   - Durante la gestión de visitas surgen preguntas entre el captador y el solicitante. Debe existir la opción de agregar campos en caliente para robustecer el cotejo (ej. Calentador a gas, Mascotas, Puerta blindada o campo personalizado "Otra Característica").
+3. **Persistencia Permanente en Base de Datos PostgreSQL**:
+   - Toda adición al cotejo debe poder guardarse en la Oferta (`properties.amenities`) y en la Demanda (`requirements.caracteristicasDeseadas`). Si el negocio actual no se concreta, ambos registros quedan enriquecidos de por vida para futuros matches.
+4. **POPUP de Descarte Desacoplado y Flotante con Aprendizaje JanIA**:
+   - Corregir el popup de descarte para que flote en toda la pantalla (`createPortal`) y no quede recortado dentro de la tarjeta de match.
+   - Clasificar los motivos de descarte en categorías pedagógicas que alimenten el bucle de aprendizaje activo (*Active Feedback Loop*) de JanIA y disparen la búsqueda inmediata de nuevas alternativas para la demanda.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas (v31.78):
+1. **Filtrado Inteligente de Filas en Cotejo (`AdminMatches.tsx`)**:
+   - `DYNAMIC_AMENITIES` ahora evalúa exclusivamente las características presentes en `req.caracteristicasDeseadas` y `prop.amenities`.
+   - La cabecera indica dinámicamente: `${rows.length} Atributos Solicitados`.
+2. **Modal Global Flotante "+ Agregar Atributo al Cotejo"**:
+   - Integrado con `createPortal(..., document.body)` con backdrop difuminado.
+   - Catálogo de 19 características estándar + opción libre `✍️ Otra Característica`.
+   - Selectores de valor para Demanda y Oferta (con pills rápidas) y estado de coincidencia.
+   - Casillas para persistir en `properties.amenities` y/o `requirements.caracteristicasDeseadas`.
+3. **POPUP Global de Descarte Pedagógico JanIA**:
+   - Estructurado en 4 categorías:
+     * Criterio Innegociable del Cliente (Presupuesto, Zona, Metraje, Iluminación, Estado físico, Garajes).
+     * Disponibilidad Comercial del Inmueble (Vendido, Arrendado, Retirado, Captador no responde).
+     * Condiciones Comerciales / Jurídicas de Cierre (Comisión, Forma de pago, Traba jurídica).
+     * Otro Motivo / Enseñanza Específica para JanIA (Campo de texto libre).
+   - Al confirmar el descarte, JanIA purga la pareja y dispara la búsqueda de nuevas opciones para la demanda.
+
+---
+
+### 📌 SESIÓN v31.79 — SEPTIEMBRE 2026: INTEGRACIÓN EN EL POPUP DE DESCARTE DE OPCIONES DE NO-TERCERÍA, ENRUTAMIENTO AUTOMÁTICO A INMUEBLES STANDBY Y FILTRADO ADMINISTRATIVO
+
+#### 👤 Solicitud y Directrices de Eduardo A. Rivera:
+1. **Opciones Doctrinales de No-Tercería en el POPUP de Descarte**:
+   - Agregar expresamente al popup de descarte de match las dos opciones de incompatibilidad de comisión y cadena inmobiliaria:
+     * *"El colega Demanda No acepta tercería, ni referidos"*
+     * *"El colega de OFERTA no acepta Tercería, ni referidos"*
+2. **Enrutamiento Automático a la Sección de Inmuebles StandBy**:
+   - Al seleccionar cualquiera de estas razones, JanIA debe enviar automáticamente el registro a la sección de **Inmuebles StandBy** (`standByDirectoVecy: true`, `aceptaTerceria: false`, `estadoComercial: 'STANDBY'`).
+   - El inmueble queda en reserva exclusiva para cierre directo por Vecy Bienes Raíces (protegiendo el 100% de la comisión 50/50 y evitando fugas hacia intermediarios externos).
+3. **Actualización Integral de Bitácoras y Archivos `.md`**:
+   - Registrar minuciosamente todas las conversaciones, mejoras, implementaciones y eliminaciones en la memoria persistente del proyecto.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas (v31.79):
+1. **Categoría Doctrinal en `REJECT_CATEGORIES` (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Incorporada la categoría *"🛡️ Regla Doctrinal de Tercería Inmobiliaria 50/50 (StandBy Directo Vecy)"* con:
+     * `oferta_no_terceria`: *"El colega de OFERTA no acepta Tercería, ni referidos"*. Hint: *"JanIA enviará este inmueble a la sección de Inmuebles StandBy para gestión directa Vecy"*.
+     * `demanda_no_terceria`: *"El colega Demanda No acepta tercería, ni referidos"*. Hint: *"JanIA enviará esta demanda a StandBy Directo Vecy para asignación exclusiva"*.
+   - Mensaje de confirmación contextual dinámico en el modal de descarte advirtiendo el enrutamiento a StandBy.
+2. **Lógica de Persistencia y Purga en Backend (`server/routers/janIA.ts`)**:
+   - En `recordMatchFeedback`, detección heurística de motivos de tercería/referidos:
+     * Si la oferta no acepta tercería: Actualiza `properties` con `aceptaTerceria: false`, `standByDirectoVecy: true` y `estadoComercial: 'STANDBY'`. Purga matches abiertos con demandas no directas e invalida caché del catálogo de inmuebles (`invalidatePropertiesListCache`).
+     * Si la demanda no acepta tercería: Actualiza `requirements` con `aceptaTerceria: false`, `standByDirectoVecy: true`. Purga matches con ofertas no directas e invalida caché de requerimientos.
+3. **Sección y Filtros en Catálogo de Inmuebles (`client/src/components/admin/AdminProperties.tsx`)**:
+   - Agregadas las columnas `standByDirectoVecy`, `aceptaTerceria` y `estadoComercial` al router de inmuebles (`server/routers/properties.ts`).
+   - Incorporadas pills de filtrado rápido en la cabecera:
+     * `Todos (${countAll})`
+     * `Disponibles (${countAvailable})`
+     * `🛡️ Inmuebles StandBy (${countStandby})`
+   - Incorporado distintivo visual `🛡️ Standby Directo` en las filas de la tabla de escritorio y en las tarjetas móviles.
+4. **Verificación y Pruebas Automatizadas**:
+   - 63 pruebas de Vitest superadas al 100% (incluyendo validación en `perfect_100_match.test.ts` de la presencia de las opciones de tercería).
+   - Verificación limpia de TypeScript (`tsc --noEmit`, 0 errores).
+   - Sincronización oficial de versión a **v31.79** en `package.json` y `shared/const.ts`.
+
+---
+
 ## 🛡️ PROTOCOLOS Y REGLAS DE TRABAJO INQUEBRANTABLES
 1. **Adición Pura de Código**: NUNCA borrar, modificar ni romper funcionalidades o reglas previas ya validadas al agregar nuevo código.
 2. **Revisión del Historial al Iniciar**: Consultar esta bitácora y `.agents/AGENTS.md` al comienzo de cada conversación.

@@ -366,6 +366,24 @@ export const REJECT_CATEGORIES = [
     ]
   },
   {
+    category: "🛡️ Regla Doctrinal de Tercería Inmobiliaria 50/50 (StandBy Directo Vecy)",
+    badgeColor: "text-amber-400 bg-amber-500/10 border-amber-500/30",
+    options: [
+      { 
+        id: "oferta_no_terceria", 
+        label: "El colega de OFERTA no acepta Tercería, ni referidos", 
+        icon: "🏢",
+        hint: "JanIA enviará este inmueble a la sección de Inmuebles StandBy para gestión directa Vecy" 
+      },
+      { 
+        id: "demanda_no_terceria", 
+        label: "El colega Demanda No acepta tercería, ni referidos", 
+        icon: "🔍",
+        hint: "JanIA enviará esta demanda a StandBy Directo Vecy para asignación exclusiva" 
+      },
+    ]
+  },
+  {
     category: "💼 Condiciones Comerciales / Jurídicas de Cierre",
     badgeColor: "text-cyan-400 bg-cyan-500/10 border-cyan-500/30",
     options: [
@@ -2992,6 +3010,13 @@ export default function AdminMatches() {
       });
 
       utils.janIA.getAllMatches.invalidate();
+      utils.properties.myList.invalidate();
+      utils.janIA.getAllRequirements.invalidate();
+      if (reason && (reason.toLowerCase().includes('tercer') || reason.toLowerCase().includes('referid'))) {
+        toast.info("🛡️ Asignado a StandBy Directo Vecy", {
+          description: "JanIA ha enviado el registro a la sección StandBy para protección de comisión 50/50.",
+        });
+      }
       if (action === 'rechazado') {
         setTimeout(() => {
           refetch();
@@ -6763,7 +6788,12 @@ export default function AdminMatches() {
                             />
                             <span className="leading-snug flex-1">
                               <span className="mr-1.5">{opt.icon}</span>
-                              {opt.label}
+                              <span className="font-medium">{opt.label}</span>
+                              {(opt as any).hint && (
+                                <span className="block text-[10px] text-amber-300/90 font-normal mt-0.5">
+                                  🛡️ {(opt as any).hint}
+                                </span>
+                              )}
                             </span>
                           </label>
                         );
@@ -6772,6 +6802,21 @@ export default function AdminMatches() {
                   </div>
                 ))}
               </div>
+
+              {/* Alerta contextual si se selecciona opción de Tercería / Standby */}
+              {rejectReason.toLowerCase().includes('tercer') && (
+                <div className="p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-[11px] text-amber-200 flex items-start gap-2 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
+                  <ShieldAlert className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+                  <div>
+                    <span className="font-bold block text-amber-300">Enrutamiento Automático a StandBy Directo Vecy</span>
+                    <span>
+                      {rejectReason.toLowerCase().includes('oferta')
+                        ? 'El Inmueble será marcado como StandBy Directo Vecy (No Tercería / No Referidos) y se enviará a la sección de Inmuebles StandBy para gestión y cierre exclusivo por nuestra inmobiliaria.'
+                        : 'La Demanda será marcada como StandBy Directo Vecy (No Tercería / No Referidos) para asignación prioritaria con cartera propia.'}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Campo de Detalle / Observación Pedagógica */}
               <div className="space-y-1.5 pt-2 border-t border-white/5">

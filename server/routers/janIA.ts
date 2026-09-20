@@ -14,6 +14,7 @@ import fs from 'fs';
 import path from 'path';
 import { transcribeAudioBuffer } from '../_core/voiceTranscription';
 import { storagePut } from '../storage';
+import { invalidatePropertiesListCache } from './properties';
 
 // In-memory micro-cache for blazing fast admin responsiveness & Supabase Egress protection
 let cachedAllMatchesData: any = null;
@@ -1218,11 +1219,49 @@ export const janIARouter = router({
 
             // Purgar cualquier otro match abierto que involucre este inmueble no disponible
             await db.delete(propertyMatches).where(eq(propertyMatches.propertyId, input.propertyId));
+            invalidatePropertiesListCache();
             console.log(`[JanIA-Feedback] Propiedad #${input.propertyId} marcada como ${nuevoEstado} y purgada de matches`);
           }
 
-          // Disparar en segundo plano la búsqueda de nuevas opciones para la demanda
-          if (input.requirementId) {
+          // REGLA DOCTRINAL DE TERCERÍA Y STANDBY DIRECTO VECY:
+          // Caso A: El colega de OFERTA no acepta tercería ni referidos -> Enviar a Inmuebles StandBy
+          const isOfertaNoTerceria = reasonLower.includes('oferta') && 
+            (reasonLower.includes('tercer') || reasonLower.includes('referid') || reasonLower.includes('standby'));
+
+          if (isOfertaNoTerceria && input.propertyId) {
+            await db.update(properties).set({
+              aceptaTerceria: false,
+              standByDirectoVecy: true,
+              estadoComercial: 'STANDBY',
+              updatedAt: new Date()
+            }).where(eq(properties.id, input.propertyId));
+
+            // Purgar matches abiertos de este inmueble para que quede en reserva exclusiva de cierre directo Vecy
+            await db.delete(propertyMatches).where(eq(propertyMatches.propertyId, input.propertyId));
+            invalidatePropertiesListCache();
+            console.log(`[JanIA-Feedback] Inmueble #${input.propertyId} enviado a sección Inmuebles StandBy (No Tercería / No Referidos)`);
+          }
+
+          // Caso B: El colega Demanda No acepta tercería ni referidos -> Enviar Demanda a StandBy Directo Vecy
+          const isDemandaNoTerceria = reasonLower.includes('demanda') && 
+            (reasonLower.includes('tercer') || reasonLower.includes('referid') || reasonLower.includes('standby'));
+
+          if (isDemandaNoTerceria && input.requirementId) {
+            await db.update(requirements).set({
+              aceptaTerceria: false,
+              standByDirectoVecy: true,
+              updatedAt: new Date()
+            }).where(eq(requirements.id, input.requirementId));
+
+            // Purgar matches abiertos de esta demanda con captaciones que no sean directas
+            await db.delete(propertyMatches).where(eq(propertyMatches.requirementId, input.requirementId));
+            cachedRequirementsData = null;
+            cachedRequirementsTime = 0;
+            console.log(`[JanIA-Feedback] Demanda #${input.requirementId} enviada a Standby Directo Vecy (No Tercería / No Referidos)`);
+          }
+
+          // Disparar en segundo plano la búsqueda de nuevas opciones para la demanda (si no está cerrada ni indisponible)
+          if (input.requirementId && !isUnavailable) {
             findMatchesForRequirement(input.requirementId).catch((err: any) => {
               console.error(`[JanIA-Feedback] Error buscando alternativas para Req #${input.requirementId}:`, err);
             });

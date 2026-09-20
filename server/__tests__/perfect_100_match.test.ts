@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scoreRows } from "../../client/src/components/admin/AdminMatches";
+import { scoreRows, REJECT_CATEGORIES } from "../../client/src/components/admin/AdminMatches";
 
 describe("VERIFICACIÓN DE COINCIDENCIA CON MATCH PERFECTO 100% Y TODAS LAS CASILLAS EN VERDE", () => {
   const amenitiesText = [
@@ -291,5 +291,17 @@ ${amenitiesText}`;
     expect(puertaRow).toBeDefined();
     expect(puertaRow?.status).toBe("exact");
     expect(puertaRow?.propVal).toBe("Sí (Puerta de seguridad blindada)");
+  });
+
+  it("debe contener en REJECT_CATEGORIES las opciones de descarte por no-tercería para Oferta y Demanda", () => {
+    const allOptions = REJECT_CATEGORIES.flatMap(c => c.options);
+    const ofertaNoTerceria = allOptions.find(o => o.id === "oferta_no_terceria");
+    const demandaNoTerceria = allOptions.find(o => o.id === "demanda_no_terceria");
+
+    expect(ofertaNoTerceria).toBeDefined();
+    expect(ofertaNoTerceria?.label).toContain("El colega de OFERTA no acepta Tercería, ni referidos");
+
+    expect(demandaNoTerceria).toBeDefined();
+    expect(demandaNoTerceria?.label).toContain("El colega Demanda No acepta tercería, ni referidos");
   });
 });

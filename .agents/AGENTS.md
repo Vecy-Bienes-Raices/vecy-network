@@ -167,7 +167,47 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.76 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.79 — Septiembre 2026
+
+### Novedades v31.79 (Integración de Descarte por No-Tercería en POPUP, Enrutamiento Automático a Inmuebles StandBy y Filtrado de Catálogo):
+- **Opciones Doctrinales de Tercería en POPUP de Descarte (`AdminMatches.tsx`)**:
+  - Incorporadas en `REJECT_CATEGORIES` bajo la categoría *"🛡️ Regla Doctrinal de Tercería Inmobiliaria 50/50 (StandBy Directo Vecy)"*:
+    * `oferta_no_terceria`: *"El colega de OFERTA no acepta Tercería, ni referidos"* (con hint de envío a Inmuebles StandBy).
+    * `demanda_no_terceria`: *"El colega Demanda No acepta tercería, ni referidos"* (con hint de envío a StandBy Directo Vecy).
+  - Alerta contextual interactiva dentro del modal al seleccionar cualquiera de estas razones.
+- **Enrutamiento y Persistencia Automática a StandBy (`server/routers/janIA.ts`)**:
+  - En `recordMatchFeedback`:
+    * Si la oferta no acepta tercería: Mutación en PostgreSQL `properties` con `aceptaTerceria: false`, `standByDirectoVecy: true`, `estadoComercial: 'STANDBY'`. Purga automática de cruces abiertos con intermediarios externos e invalidación de caché del catálogo.
+    * Si la demanda no acepta tercería: Mutación en PostgreSQL `requirements` con `aceptaTerceria: false`, `standByDirectoVecy: true`. Purga de cruces abiertos con ofertas de terceros e invalidación de caché.
+- **Sección y Filtrado en Catálogo de Inmuebles (`AdminProperties.tsx` & `properties.ts`)**:
+  - Exposición de campos `standByDirectoVecy`, `aceptaTerceria` y `estadoComercial` en `propertyFields` de `properties.ts`.
+  - Pestañas de filtrado en el encabezado: `Todos`, `Disponibles` y `🛡️ Inmuebles StandBy`.
+  - Distintivo visual `🛡️ Standby Directo` en las filas de tabla y tarjetas móviles.
+- **Verificación Automatizada**: 63 pruebas de Vitest pasando al 100%, compilación TypeScript limpia (`tsc --noEmit`, 0 errores).
+
+### Novedades v31.78 (Tablas de Cotejo Enfocadas en Atributos Solicitados, Adición Dinámica con Persistencia y POPUP Global de Descarte):
+- **Tablas de Cotejo Enfocadas**:
+  - En `AdminMatches.tsx`, la tabla de cotejo visual ya no despliega todos los 88 campos de forma indiscriminada; evalúa y muestra únicamente los atributos requeridos por la demanda y ofertados por el inmueble.
+  - Contador dinámico en cabecera: `${rows.length} Atributos Solicitados`.
+- **Botón "+ Agregar Atributo al Cotejo" con Persistencia en BD**:
+  - Modal flotante desacoplado (`createPortal(..., document.body)`) para incorporar características durante la gestión de visitas.
+  - Catálogo de 19 amenidades más opción personalizada `✍️ Otra Característica`.
+  - Checkboxes para persistir permanentemente en `properties.amenities` y/o `requirements.caracteristicasDeseadas`.
+- **POPUP Global de Descarte Pedagógico JanIA**:
+  - Desacoplado de la tarjeta de match mediante `createPortal` en pantalla completa con backdrop difuminado.
+  - 4 categorías pedagógicas para alimentar el bucle de retroalimentación activa de JanIA (*Active Feedback Loop*) y disparar la búsqueda inmediata de nuevas alternativas para la demanda.
+
+### Novedades v31.77 (Coincidencia con MATCH Perfecto 100% Exclusivo y Escala Decimal Continua 80.00% a 99.99%):
+- **Doctrina Matemática del Match Perfecto**:
+  - El 100.00% es sagrado y exclusivo: Solo se otorga si el 100% de las casillas evaluadas coincide con exactitud en verde (*"Coincide"*).
+  - Escala continua decimal asimétrica: Deducción mínima por Plus Ofertado (99.99%, 99.98%), moderada por Aproximado (99.95%, 99.93%) y calibrada por Datos Faltantes no críticos (99.90%, 99.84%).
+  - Guillotina total e inflexible al 0.00% ante cualquier *"No Coincide"*.
+  - Castigo financiero severo si falta el dato de precio de venta (desciende a ~83.50%).
+- **Alineación de Motores**: Sincronización exacta entre `server/_core/matching.ts` y `client/src/components/admin/AdminMatches.tsx`.
+
+---
+
+## 🔖 VERSIÓN ANTERIOR: v31.76 — Septiembre 2026
 
 ### Novedades v31.76 (Doctrina Canónica "Las Santas", Corrección 100% Coincide en Match #M14229 y Rescate Operativo de Permutas, Opción Compra y Standby 50/50):
 - **Diagnóstico y Causas Raíz Identificadas**:

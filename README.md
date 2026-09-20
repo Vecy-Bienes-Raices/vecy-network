@@ -1,19 +1,19 @@
-# 🏢 VECY Network (v17.9H)
+# 🏢 VECY Network (v31.79)
 
 > **Red colaborativa e inteligente de corretaje inmobiliario para Colombia.**
 
-VECY Network es una plataforma que integra inteligencia artificial (JanIA - Google Gemini 2.5 Flash), automatización de WhatsApp (Baileys WebSocket) y un motor de matching cruzado de propiedades y requerimientos ($\ge 85\%$).
+VECY Network es una plataforma que integra inteligencia artificial (JanIA - Google Gemini 2.5 Flash), automatización de WhatsApp (Baileys WebSocket) y un motor de matching cruzado con escala continua decimal (80.00% - 100.00%), tolerancia cero a no-coincidencias, tablas de cotejo dinámicas con persistencia permanente en base de datos y enrutamiento a Inmuebles StandBy para protección de comisión 50/50.
 
 ---
 
 ## 🏗️ STACK TECNOLÓGICO
 
-- **Frontend:** React 18 + Vite + Tailwind CSS + Lucide Icons + Wouter
+- **Frontend:** React 19 + Vite 7 + Tailwind CSS + Lucide Icons + Wouter
 - **Backend:** Node.js + Express + tRPC v11
-- **Base de Datos:** Supabase (PostgreSQL) + Drizzle ORM (`drizzle/schema.ts`)
+- **Base de Datos:** PostgreSQL 17.11 + PostGIS 3.6.4 (Nativo en VPS) + Drizzle ORM (`drizzle/schema.ts`)
 - **Inteligencia Artificial:** Google Gemini 2.5 Flash (`@google/generative-ai`)
-- **WhatsApp Bot:** Baileys WebSocket Nativo (`@whiskeysockets/baileys`)
-- **Deploy:** Vercel (Frontend Estático / SPA Routing) + VPS Linux con PM2 (`vecy.co`)
+- **WhatsApp Bot:** Baileys WebSocket Nativo (`@whiskeysockets/baileys`) en VPS vía PM2 (`+573192919978`)
+- **Deploy:** PM2 en VPS Linux (`vecy.co` / `13.140.149.144`) + Vercel (Frontend Estático / SPA Routing)
 
 ---
 

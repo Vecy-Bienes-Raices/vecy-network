@@ -322,6 +322,68 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.79 — Septiembre 2026
+
+#### 📌 INTEGRACIÓN EN POPUP DE DESCARTE DE OPCIONES DE NO-TERCERÍA, ENRUTAMIENTO AUTOMÁTICO A INMUEBLES STANDBY Y FILTRADO ADMINISTRATIVO
+
+**Problemas identificados:**
+1. **Falta de Causales de Tercería en Descarte de Match**: Cuando un colega de oferta o demanda notificaba que no aceptaba intermediarios externos o esquemas de tercería 50/50, el bróker carecía de una opción directa y estandarizada en el popup para catalogarlo pedagógicamente.
+2. **Desconexión con la Sección de StandBy Directo Vecy**: No existía una mutación automática que al descartar por no-tercería actualizara de inmediato el registro en base de datos (`standByDirectoVecy: true`, `aceptaTerceria: false`, `estadoComercial: 'STANDBY'`), dejando el inmueble en riesgo de volver a ser emparejado indebidamente con otros intermediarios.
+3. **Ausencia de Vista Rápida de Inmuebles StandBy en Catálogo**: El administrador no tenía un acceso directo en `AdminProperties.tsx` para listar exclusivamente los inmuebles en reserva StandBy.
+
+**Solución aplicada:**
+- **Ampliación de `REJECT_CATEGORIES` (`AdminMatches.tsx`)**:
+  - Incorporada la categoría *"🛡️ Regla Doctrinal de Tercería Inmobiliaria 50/50 (StandBy Directo Vecy)"*.
+  - Opciones: `oferta_no_terceria` (*"El colega de OFERTA no acepta Tercería, ni referidos"*) y `demanda_no_terceria` (*"El colega Demanda No acepta tercería, ni referidos"*).
+  - Alerta interactiva dentro del modal advirtiendo el enrutamiento a StandBy.
+- **Enrutamiento Backend en `recordMatchFeedback` (`server/routers/janIA.ts`)**:
+  - Para Oferta: Modificación de `properties` (`standByDirectoVecy = true`, `aceptaTerceria = false`, `estadoComercial = 'STANDBY'`). Purga de matches con intermediarios externos e invalidación de caché del catálogo.
+  - Para Demanda: Modificación de `requirements` (`standByDirectoVecy = true`, `aceptaTerceria = false`). Purga de matches incompatibles.
+- **Filtros y Distintivo en Catálogo de Inmuebles (`AdminProperties.tsx` & `properties.ts`)**:
+  - Inclusión de `standByDirectoVecy`, `aceptaTerceria` y `estadoComercial` en `propertyFields`.
+  - Pestaña de filtrado `🛡️ Inmuebles StandBy` y badges visuales en desktop y móvil.
+
+---
+
+### 🔖 v31.78 — Septiembre 2026
+
+#### 📌 TABLAS DE COTEJO ENFOCADAS EN ATRIBUTOS SOLICITADOS, ADICIÓN DINÁMICA CON PERSISTENCIA EN BD Y POPUP FLOTANTE DE DESCARTE
+
+**Problemas identificados:**
+1. **Sobrecarga Visual en Tablas de Cotejo**: Desplegar los 88 campos simultáneamente saturaba al usuario con información no solicitada por la demanda ni ofertada por el inmueble.
+2. **Rigidez en Visitas Inmobiliarias**: Durante el proceso comercial surgen dudas o requisitos nuevos del cliente que no estaban capturados previamente.
+3. **Pérdida de Enriquecimiento Comercial**: Los datos aclarados en una negociación no se consolidaban en la base de datos si el negocio actual no se cerraba.
+4. **Popup de Descarte Recortado**: El modal de descarte estaba anclado al contenedor relativo de la tarjeta, recortándose en pantallas pequeñas.
+
+**Solución aplicada:**
+- **Filtrado Inteligente de Filas (`AdminMatches.tsx`)**:
+  - `DYNAMIC_AMENITIES` solo renderiza características demandadas u ofertadas. Encabezado dinámico: `${rows.length} Atributos Solicitados`.
+- **Botón Interactivo "+ Agregar Atributo al Cotejo"**:
+  - Modal desacoplado (`createPortal`) con catálogo de 19 amenidades + opción personalizada `✍️ Otra Característica`.
+  - Persistencia permanente en `properties.amenities` y/o `requirements.caracteristicasDeseadas`.
+- **Popup Global de Descarte Pedagógico JanIA**:
+  - Modal flotante en pantalla completa estructurado en 4 categorías educativas para el bucle de retroalimentación activa (*Active Feedback Loop*).
+
+---
+
+### 🔖 v31.77 — Septiembre 2026
+
+#### 📌 COINCIDENCIA CON MATCH PERFECTO 100% EXCLUSIVO Y MODELO DE PUNTUACIÓN CONTINUA (80.00% A 99.99%) CON TOLERANCIA CERO A NO-COINCIDENCIAS
+
+**Problemas identificados:**
+1. **Devaluación del Match 100% Perfecto**: El sistema permitía calificaciones de 100% incluso cuando existían diferencias menores o "Plus Ofertados".
+2. **Escala Discreta por Bloques**: La puntuación daba saltos abruptos sin reflejar la sutileza de penalización asimétrica entre Plus Ofertados, Aproximados y Datos Pendientes.
+
+**Solución aplicada:**
+- **Doctrina Matemática del 100% Exclusivo**:
+  - 100.00% reservado estricta y únicamente para coincidencia 100% exacta y pura (todas las casillas en verde "Coincide").
+  - Escala continua decimal (80.00% - 99.99%): Deducción mínima de 0.01% por Plus Ofertado (99.99%, 99.98%), moderada por Aproximado (99.95%, 99.93%) y calibrada por Datos Faltantes (99.90%, 99.84%).
+  - Guillotina fulminante al 0.00% ante cualquier "No Coincide".
+  - Castigo severo por precio faltante (caída a ~83.50%).
+- **Sincronización Total Backend y Frontend**: Idéntica formulación en `server/_core/matching.ts` y `client/src/components/admin/AdminMatches.tsx`.
+
+---
+
 ### 🔖 v31.76 — Septiembre 2026
 
 #### 📌 REGLA DE VIGENCIA 20 DÍAS, CLASIFICACIÓN AVANZADA (PERMUTAS / OPCIÓN COMPRA) Y MARCADORES REACTIVOS DUALES
