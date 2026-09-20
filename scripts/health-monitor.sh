@@ -40,19 +40,19 @@ if [ "$PM2_STATUS" != "online" ]; then
     exit 0
 fi
 
-# 3. Periodo de gracia tras arranque (120 segundos)
-if [ -n "$PM2_UPTIME_SEC" ] && [ "$PM2_UPTIME_SEC" -lt 120 ]; then
+# 3. Periodo de gracia tras arranque (180 segundos)
+if [ -n "$PM2_UPTIME_SEC" ] && [ "$PM2_UPTIME_SEC" -lt 180 ]; then
     # El servidor acaba de iniciar; darle tiempo para cargar índices y socket sin reiniciar prematuramente
     exit 0
 fi
 
-# 4. Verificar respuesta HTTP en endpoint /api/health (timeout 10s con doble verificación)
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://localhost:3000/api/health")
+# 4. Verificar respuesta HTTP en endpoint /api/health (timeout 15s con doble verificación)
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "http://localhost:3000/api/health")
 
 if [ "$HTTP_CODE" != "200" ]; then
-    # Primer intento falló, esperar 5 segundos y reintentar para descartar picos transitorios
-    sleep 5
-    RETRY_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "http://localhost:3000/api/health")
+    # Primer intento falló, esperar 10 segundos y reintentar para descartar picos transitorios
+    sleep 10
+    RETRY_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "http://localhost:3000/api/health")
     if [ "$RETRY_CODE" != "200" ]; then
         log "⚠️ Endpoint /api/health no respondió tras 2 intentos (códigos: $HTTP_CODE, $RETRY_CODE). Posible asfixia de Event Loop. Reiniciando..."
         pm2 restart jania-server

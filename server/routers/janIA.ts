@@ -37,6 +37,41 @@ export function invalidateRequirementsCache() {
   cachedRequirementsData = null;
 }
 
+// Cola de procesamiento asíncrono en segundo plano para explicaciones faltantes (v31.78)
+interface UnresolvedMatchTask {
+  id: number;
+  requirement: any;
+  property: any;
+}
+const unresolvedMatchQueue: UnresolvedMatchTask[] = [];
+let isProcessingUnresolved = false;
+
+async function processUnresolvedMatches() {
+  if (isProcessingUnresolved || unresolvedMatchQueue.length === 0) return;
+  isProcessingUnresolved = true;
+  try {
+    const db = await getDb();
+    while (unresolvedMatchQueue.length > 0) {
+      const task = unresolvedMatchQueue.shift();
+      if (!task) break;
+      try {
+        const exp = explicarMatch(task.requirement, task.property);
+        if (db) {
+          await db.update(propertyMatches)
+            .set({ matchExplanation: exp })
+            .where(eq(propertyMatches.id, task.id));
+        }
+      } catch (err) {
+        // Silencioso para no ensuciar logs
+      }
+      // Micro-pausa de 30ms para ceder el Event Loop a WhatsApp y queries HTTP
+      await new Promise(r => setTimeout(r, 30));
+    }
+  } finally {
+    isProcessingUnresolved = false;
+  }
+}
+
 export const janIARouter = router({
   // New: Extract property data from link
   extractFromLink: publicProcedure
@@ -618,17 +653,23 @@ export const janIARouter = router({
           if (seenPairs.has(key)) continue; // Eliminar duplicados
           if (rejectedPairs.has(`${m.property.id}_${m.requirement.id}`)) continue; // Veto Doctrinal Humano (v31.4)
 
-          // Reutilizar explicación precalculada persistida en BD para 0ms de CPU; fallback a motor si falta
+          // Reutilizar explicación precalculada persistida en BD para 0ms de CPU (v31.78)
           let evaluation = (m.matchExplanation && (m.matchExplanation as any).score !== undefined)
             ? (m.matchExplanation as any)
             : null;
 
           if (!evaluation) {
-            evaluation = explicarMatch(m.requirement, m.property);
-            db.update(propertyMatches)
-              .set({ matchExplanation: evaluation })
-              .where(eq(propertyMatches.id, m.id))
-              .catch(() => {});
+            const scoreNum = Number(m.matchScore) || 80;
+            evaluation = {
+              score: scoreNum,
+              blockers: [],
+              positives: [m.matchReason || `Match VECY Core ${scoreNum}%`],
+              negatives: []
+            };
+            unresolvedMatchQueue.push({ id: m.id, requirement: m.requirement, property: m.property });
+            if (!isProcessingUnresolved) {
+              setTimeout(() => processUnresolvedMatches(), 200);
+            }
           }
 
           // Si el score es menor a 75% o falla cualquier filtro duro -> Descartar

@@ -2011,20 +2011,20 @@ function pointInPolygon(point, ring) {
   }
   return inside;
 }
-function sectorIntersectsPerimeter(sector, perimeterPoly, bbox) {
+function sectorIntersectsPerimeter(sector, polyCoords, bbox) {
   const [sMinLng, sMinLat, sMaxLng, sMaxLat] = sector.bbox;
   if (sMaxLng < bbox.minLng || sMinLng > bbox.maxLng) return false;
   if (sMaxLat < bbox.minLat || sMinLat > bbox.maxLat) return false;
   const centroidLat = (sMinLat + sMaxLat) / 2;
   const centroidLng = (sMinLng + sMaxLng) / 2;
-  if (pointInPolygon({ lat: centroidLat, lng: centroidLng }, perimeterPoly.map((p) => [p.lng, p.lat]))) {
+  if (pointInPolygon({ lat: centroidLat, lng: centroidLng }, polyCoords)) {
     return true;
   }
   for (const ring of sector.rings) {
     const step = Math.max(1, Math.floor(ring.length / 8));
     for (let i = 0; i < ring.length; i += step) {
       const [lng, lat] = ring[i];
-      if (pointInPolygon({ lat, lng }, perimeterPoly.map((p) => [p.lng, p.lat]))) {
+      if (pointInPolygon({ lat, lng }, polyCoords)) {
         return true;
       }
     }
@@ -2053,6 +2053,7 @@ function lookupBarriosByPerimeter(perimeter) {
     return { barrios: [], sectoresCatastrales: [], totalSectores: 0, ciudad, fuente: "N/A" };
   }
   const perimeterPoly = buildPerimeterPolygon(perimeter);
+  const polyCoords = perimeterPoly.map((p) => [p.lng, p.lat]);
   const lats = perimeterPoly.map((p) => p.lat);
   const lngs = perimeterPoly.map((p) => p.lng);
   const bbox = {
@@ -2061,7 +2062,7 @@ function lookupBarriosByPerimeter(perimeter) {
     minLng: Math.min(...lngs),
     maxLng: Math.max(...lngs)
   };
-  const matched = sectors.filter((s) => sectorIntersectsPerimeter(s, perimeterPoly, bbox));
+  const matched = sectors.filter((s) => sectorIntersectsPerimeter(s, polyCoords, bbox));
   const uniqueNames = /* @__PURE__ */ new Map();
   for (const s of matched) {
     if (!uniqueNames.has(s.nombre)) {
@@ -17596,6 +17597,29 @@ function invalidateRequirementsCache() {
   cachedRequirementsTime = 0;
   cachedRequirementsData = null;
 }
+var unresolvedMatchQueue = [];
+var isProcessingUnresolved = false;
+async function processUnresolvedMatches() {
+  if (isProcessingUnresolved || unresolvedMatchQueue.length === 0) return;
+  isProcessingUnresolved = true;
+  try {
+    const db = await getDb();
+    while (unresolvedMatchQueue.length > 0) {
+      const task = unresolvedMatchQueue.shift();
+      if (!task) break;
+      try {
+        const exp = explicarMatch(task.requirement, task.property);
+        if (db) {
+          await db.update(propertyMatches).set({ matchExplanation: exp }).where(eq8(propertyMatches.id, task.id));
+        }
+      } catch (err) {
+      }
+      await new Promise((r) => setTimeout(r, 30));
+    }
+  } finally {
+    isProcessingUnresolved = false;
+  }
+}
 var janIARouter = router({
   // New: Extract property data from link
   extractFromLink: publicProcedure.input(z2.object({ url: z2.string().url() })).mutation(async ({ input }) => {
@@ -18047,9 +18071,17 @@ ${liveStats}${userContextInstruction}
         if (rejectedPairs.has(`${m.property.id}_${m.requirement.id}`)) continue;
         let evaluation = m.matchExplanation && m.matchExplanation.score !== void 0 ? m.matchExplanation : null;
         if (!evaluation) {
-          evaluation = explicarMatch(m.requirement, m.property);
-          db.update(propertyMatches).set({ matchExplanation: evaluation }).where(eq8(propertyMatches.id, m.id)).catch(() => {
-          });
+          const scoreNum = Number(m.matchScore) || 80;
+          evaluation = {
+            score: scoreNum,
+            blockers: [],
+            positives: [m.matchReason || `Match VECY Core ${scoreNum}%`],
+            negatives: []
+          };
+          unresolvedMatchQueue.push({ id: m.id, requirement: m.requirement, property: m.property });
+          if (!isProcessingUnresolved) {
+            setTimeout(() => processUnresolvedMatches(), 200);
+          }
         }
         if (evaluation.score < 75 || evaluation.blockers && evaluation.blockers.length > 0) {
           continue;

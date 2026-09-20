@@ -198,7 +198,7 @@ function pointInPolygon(point: LatLng, ring: number[][]): boolean {
  */
 function sectorIntersectsPerimeter(
   sector: SectorEntry,
-  perimeterPoly: LatLng[],
+  polyCoords: number[][],
   bbox: { minLat: number; maxLat: number; minLng: number; maxLng: number }
 ): boolean {
   // Pre-filtro rápido: si los bbox no se solapan, descartamos
@@ -211,7 +211,7 @@ function sectorIntersectsPerimeter(
   const centroidLat = (sMinLat + sMaxLat) / 2;
   const centroidLng = (sMinLng + sMaxLng) / 2;
 
-  if (pointInPolygon({ lat: centroidLat, lng: centroidLng }, perimeterPoly.map(p => [p.lng, p.lat]))) {
+  if (pointInPolygon({ lat: centroidLat, lng: centroidLng }, polyCoords)) {
     return true;
   }
 
@@ -221,7 +221,7 @@ function sectorIntersectsPerimeter(
     const step = Math.max(1, Math.floor(ring.length / 8));
     for (let i = 0; i < ring.length; i += step) {
       const [lng, lat] = ring[i];
-      if (pointInPolygon({ lat, lng }, perimeterPoly.map(p => [p.lng, p.lat]))) {
+      if (pointInPolygon({ lat, lng }, polyCoords)) {
         return true;
       }
     }
@@ -302,6 +302,7 @@ export function lookupBarriosByPerimeter(perimeter: GeoPerimeter): GeoLookupResu
 
   // 1. Construir polígono irregular del perímetro (trapezoide por la diagonal Cra 7)
   const perimeterPoly = buildPerimeterPolygon(perimeter);
+  const polyCoords = perimeterPoly.map(p => [p.lng, p.lat]);
 
   // 2. Calcular bbox del perímetro para pre-filtro rápido
   const lats = perimeterPoly.map(p => p.lat);
@@ -314,7 +315,7 @@ export function lookupBarriosByPerimeter(perimeter: GeoPerimeter): GeoLookupResu
   };
 
   // 3. Filtrar sectores que intersectan con el perímetro
-  const matched = sectors.filter(s => sectorIntersectsPerimeter(s, perimeterPoly, bbox));
+  const matched = sectors.filter(s => sectorIntersectsPerimeter(s, polyCoords, bbox));
 
   // 4. Deduplicar por nombre y convertir a Title Case
   const uniqueNames = new Map<string, string>();
