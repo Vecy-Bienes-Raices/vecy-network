@@ -6281,22 +6281,14 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
   if (reqEstrato > 0 && pEstrato === reqEstrato) filledDownstreamSpecs += 0.5;
   if (propAge >= 0) filledDownstreamSpecs++;
   const completionRatio = Math.min(1, filledDownstreamSpecs / totalDownstreamSpecs);
-  let finalPercentage = 85;
-  if (completionRatio >= 0.8) {
+  let finalPercentage = 80;
+  if (completionRatio >= 1) {
     finalPercentage = 100;
     positives.push(`\u{1F31F} MATCH PERFECTO 100%: 5 campos en duro 100% en verde + TODAS las especificaciones compatibles!`);
-  } else if (completionRatio >= 0.6) {
-    finalPercentage = 95;
-    positives.push(`\u2705 Match 95%: 5 campos en duro 100% en verde + alta compatibilidad en especificaciones (${Math.round(completionRatio * 100)}%)`);
-  } else if (completionRatio >= 0.35) {
-    finalPercentage = 93;
-    positives.push(`\u2705 Match 93%: 5 campos en duro 100% en verde + especificaciones solicitadas plenamente satisfechas (${Math.round(completionRatio * 100)}%)`);
-  } else if (completionRatio >= 0.2) {
-    finalPercentage = 90;
-    positives.push(`\u2705 Match 90%: 5 campos en duro 100% en verde + compatibilidad en especificaciones (${Math.round(completionRatio * 100)}%)`);
   } else {
-    finalPercentage = 85;
-    positives.push(`\u2705 Match 85%: 5 campos en duro 100% en verde + especificaciones cuantitativas b\xE1sicas`);
+    const scaled = 80 + completionRatio * 19.99;
+    finalPercentage = Number(Math.max(80, Math.min(99.99, scaled)).toFixed(2));
+    positives.push(`\u2705 Match Compatible ${finalPercentage}%: 5 campos en duro 100% en verde + alta compatibilidad en especificaciones (${Math.round(completionRatio * 100)}%)`);
   }
   return buildExplanationResult(finalPercentage, blockers, positives, negatives, isStrictCompliant, missingFieldsList);
 }
@@ -7970,17 +7962,17 @@ function extractFallbackDataFromText(text2) {
     transactionType = clean.includes("venta") || isInvestorPurchase ? "venta_permuta" : "permuta";
   } else if (hasRentSignals && (clean.includes("venta") || clean.includes("valor venta") || clean.includes("precio de venta")) && (clean.includes("arriendo") || clean.includes("valor arriendo") || clean.includes("canon"))) {
     transactionType = "venta_o_arriendo";
-  } else if (hasRentSignals && !clean.includes("compro") && !clean.includes("para compra") && !clean.includes("en compra") && !isInvestorPurchase) {
+  } else if (hasRentSignals && !clean.includes("compro") && !clean.includes("para compra") && !clean.includes("en compra") && !clean.includes("en venta") && !clean.includes("venta") && !isInvestorPurchase) {
     transactionType = "arriendo";
   } else {
     transactionType = "venta";
   }
   let propertyType = "apartment";
-  if (clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("m\xE9dic") || clean.includes("medic")) {
+  if ((clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("m\xE9dic") || clean.includes("medic")) && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
     propertyType = "consultorio";
   } else if ((clean.includes("oficina") || clean.includes("oficinas") || clean.includes("office")) && !clean.includes("home office") && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
     propertyType = "office";
-  } else if (clean.includes("local comercial") || clean.includes("locales comerciales") || clean.includes("local") || clean.includes("locales") || clean.includes("comercial") || clean.includes("commercial")) {
+  } else if ((clean.includes("local comercial") || clean.includes("locales comerciales") || clean.includes("local") || clean.includes("locales") || clean.includes("comercial") || clean.includes("commercial")) && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa") && !clean.includes("centro comercial") && !clean.includes("centros comerciales")) {
     propertyType = "commercial";
   } else if (clean.includes("bodega") || clean.includes("bodegas") || clean.includes("warehouse")) {
     propertyType = "warehouse";

@@ -3173,24 +3173,17 @@ export function explicarMatch(
 
   const completionRatio = Math.min(1.0, filledDownstreamSpecs / totalDownstreamSpecs);
 
-  // DOCTRINA VECY v31.5: Con los 5 campos en duro 100% en verde y CERO bloqueadores,
-  // el match cumple el umbral comercial VECY (85% a 100%).
-  let finalPercentage = 85;
-  if (completionRatio >= 0.80) {
+  // DOCTRINA VECY v31.80: Con los 5 campos en duro 100% en verde y CERO bloqueadores:
+  // 100.00% es y siempre será EXCLUSIVO de Coincidencia Plena (Match Perfecto 100%).
+  // Si hay cualquier especificación faltante o aproximación, es 'Casi Perfecto' (máximo 99.99%).
+  let finalPercentage = 80;
+  if (completionRatio >= 1.0) {
     finalPercentage = 100;
     positives.push(`🌟 MATCH PERFECTO 100%: 5 campos en duro 100% en verde + TODAS las especificaciones compatibles!`);
-  } else if (completionRatio >= 0.60) {
-    finalPercentage = 95;
-    positives.push(`✅ Match 95%: 5 campos en duro 100% en verde + alta compatibilidad en especificaciones (${Math.round(completionRatio * 100)}%)`);
-  } else if (completionRatio >= 0.35) {
-    finalPercentage = 93;
-    positives.push(`✅ Match 93%: 5 campos en duro 100% en verde + especificaciones solicitadas plenamente satisfechas (${Math.round(completionRatio * 100)}%)`);
-  } else if (completionRatio >= 0.20) {
-    finalPercentage = 90;
-    positives.push(`✅ Match 90%: 5 campos en duro 100% en verde + compatibilidad en especificaciones (${Math.round(completionRatio * 100)}%)`);
   } else {
-    finalPercentage = 85;
-    positives.push(`✅ Match 85%: 5 campos en duro 100% en verde + especificaciones cuantitativas básicas`);
+    const scaled = 80 + (completionRatio * 19.99);
+    finalPercentage = Number(Math.max(80.00, Math.min(99.99, scaled)).toFixed(2));
+    positives.push(`✅ Match Compatible ${finalPercentage}%: 5 campos en duro 100% en verde + alta compatibilidad en especificaciones (${Math.round(completionRatio * 100)}%)`);
   }
 
   return buildExplanationResult(finalPercentage, blockers, positives, negatives, isStrictCompliant, missingFieldsList);
