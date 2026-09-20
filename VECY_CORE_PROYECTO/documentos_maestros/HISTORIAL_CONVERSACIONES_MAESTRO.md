@@ -5822,11 +5822,56 @@ ightarrow$ número de celular para aplicarlas de forma automática a todas sus p
 
 ---
 
+### 📌 SESIÓN v31.76 — SEPTIEMBRE 2026: ERRADICACIÓN DE FALSOS POSITIVOS EN MATCHING (CASO #M14530 / REQ #1541 VS PROP #2208), GUILLOTINAS AL 0% Y NORMALIZACIÓN DE COMAS EN MILLONES Y EN-DASH EN ÁREAS
 
+#### 👤 Solicitud y Reporte de Eduardo A. Rivera:
+- Falso positivo severo en producción: **Match `#M14530`** (y `#M14529`) puntuado en **95% - 97%** ("Match casi perfecto 95%-99%") entre:
+  * **Demanda (Req #1541)**: Cliente con pago de contado urgente, presupuesto de `$1.800 Millones` (`1,800 MILLONES CONTADO`), área `180 – 200 m²`, perímetro `entre calle 89 y 92 de la 13 a la 7ª` (El Chicó / Chicó Reservado / La Cabrera, Chapinero).
+  * **Oferta (Prop #2208)**: Apartamento en `$3.250 Millones` (+$1.450 Millones, +80.5% sobre presupuesto), área `306 m²` (+106 m², +53% sobre área máxima), ubicación indefinida (`N/E`, genérico "Bogotá").
+
+#### 🔍 Diagnóstico Técnico y Causas Raíz:
+1. **Truncamiento de Comas en Millones (`1,800 MILLONES`)**:
+   - En `shared/colombianRealEstateParser.ts`, `server/_core/janIA.ts` y `client/src/components/admin/AdminMatches.tsx`, los regex de precio negaban la coma (`[^\n,•]+`), cortando `1,800` en `1` ($1 COP, descartado por ser < 30M COP). El requerimiento quedó en base de datos con `presupuestoMax = null`.
+2. **Guion En-dash (`–`, U+2013) y Prefijo `M2:` en Áreas**:
+   - El texto usaba `• M2: 180 – 200` (con en-dash Unicode y sin sufijo "m2" al final). El parser de área no normalizaba en-dash ni extraía el rango con el prefijo, dejando `areaMin = null, areaMax = null`.
+3. **Loophole de 20 Puntos por "Bogotá" y Ausencia de Guillotinas Estrictas**:
+   - En `matchesGeography` (`matching.ts`), existía la regla legacy `if (!reqZone || stopCities.has(reqZone.toLowerCase().trim())) return { matches: true, score: 20 };`. Al tener ambos registros "Bogotá" como fallback, recibían 20 puntos geográficos gratuitos.
+   - En la tabla de administración (`AdminMatches.tsx`), ante la ausencia de precio, área y barrio en los datos planos, el frontend otorgaba una base de 85 puntos y acumulaba parqueaderos, habitaciones y baños hasta inflar el score al 97%.
+
+#### 🛠️ Soluciones e Implementaciones Técnicas (v31.76):
+1. **Parser de Moneda Colombiana (`shared/colombianRealEstateParser.ts` y `server/_core/janIA.ts`)**:
+   - Soporte explícito para formato de miles con coma o punto (`/^\d{1,4}[.,]\d{3}$/`) antes de la palabra "millones" (`1,800 MILLONES` -> $1.800.000.000 COP).
+2. **Parser de Área Robusto**:
+   - Normalización universal de caracteres guion Unicode (`[\u2013\u2014]` -> `-`).
+   - Extracción de rangos antecedidos por prefijos `m2:` o `área:` sin requerir unidad repetida al final.
+3. **Perímetros Viales Bogotanos en JanIA**:
+   - Soporte en `parseStreetCarreraBoundaries` para carreras expresadas sin prefijo explícito (ej. `de la 13 a la 7ª`).
+   - Mapeo automático de perímetros viales a barrios IDECA (ej. Calles 85-96 / Carreras 7-15 -> El Chicó, Chicó Reservado, La Cabrera, Antiguo Country).
+4. **Guillotina Inflexible al 0% (Triple Candado Backend, Parser y Frontend)**:
+   - Eliminado el loophole de 20 puntos gratuitos para nombres genéricos de ciudad ("Bogotá", "Medellín", etc.) en `matchesGeography`.
+   - Guillotina 0% inmediata si:
+     * El precio de la oferta supera en más del 10% el presupuesto de la demanda.
+     * El área de la oferta supera en más del 35% el área máxima solicitada.
+     * La geografía es incompatible o no verificada.
+   - Sincronización idéntica de las guillotinas en la tabla de cotización del Frontend (`AdminMatches.tsx`).
+5. **Pruebas Automatizadas y Validación Empírica**:
+   - 15 pruebas pasando en `server/__tests__/colombianParser.test.ts`.
+   - 42 pruebas pasando en `server/__tests__/regression.test.ts` (incluyendo test específico de regresión donde Req #1541 vs Prop #2208 evalúa exactamente en 0% match).
+   - Build 100% limpio en TypeScript y Vite.
+6. **Saneamiento en Base de Datos de Producción (VPS `13.140.149.144`)**:
+   - Actualización de Req #1541 con presupuesto real ($1.800.000.000 COP), área (180 m²) y barrio El Chicó (Chapinero).
+   - Eliminación de los matches espurios `#14530` y `#14529` (así como sus registros foráneos en `notificationLogs`).
+   - Depuración de 83 matches obsoletos con sobrecosto superior al 10%.
+7. **Despliegue y Estado en VPS**:
+   - Commit `373715e` sincronizado en `origin/main` y desplegado en VPS con `pm2 restart all && pm2 save`.
+   - Socket Baileys de WhatsApp operando sin caídas ni desconexiones (`isReady=true`, teléfono 573192919978).
+
+---
 
 ## 🛡️ PROTOCOLOS Y REGLAS DE TRABAJO INQUEBRANTABLES
 1. **Adición Pura de Código**: NUNCA borrar, modificar ni romper funcionalidades o reglas previas ya validadas al agregar nuevo código.
 2. **Revisión del Historial al Iniciar**: Consultar esta bitácora y `.agents/AGENTS.md` al comienzo de cada conversación.
 3. **Limpieza Continua**: Mantener el directorio `server/` libre de archivos script residuales o duplicados.
 4. **Rol de Co-Piloto Guardián**: La IA debe evaluar las consecuencias secundarias de cualquier instrucción y frenar a tiempo si un cambio propuesto arriesga la integridad de la base de datos o rompe reglas del negocio.
+
 
