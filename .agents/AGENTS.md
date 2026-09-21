@@ -167,9 +167,27 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.82 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.83 — Septiembre 2026
 
-### Novedades v31.82 (Corrección Doctrinal de 7 Bugs en Motor de Scoring `scoreRows()` + Exención de Antigüedad Flexible):
+### Novedades v31.83 (Diagnóstico Forense Prop #2078 Jennifer Puerto + Corrección BD + Aclaración Origen):
+- **Diagnóstico Forense Real del Inmueble #2078 (Jennifer Puerto — La Cabrera $2.400MM)**:
+  - **Causa raíz identificada**: El inmueble #2078 NO venía de ningún grupo de WhatsApp donde JanIA fuera miembro. El mensaje original de Jennifer fue publicado el 15-Jul-2026 como un **mensaje privado/DM** (`sessionId: 25864460865697@lid` → `Kveintiuno Inmobiliaria`), donde envió DOS inmuebles en un mismo texto (Los Lagartos $765MM + La Cabrera $2.400MM) junto con sus links Wasi.
+  - **Flujo real**: El script `split_and_sanitize_multi_items.ts` (v29.3) dividió ese mensaje multi-item en dos fichas separadas: #35 → Los Lagartos y #2078 → La Cabrera. Al hacer el split, los links Wasi se perdieron del rawText de cada ficha separada (quedaron solo en el mensaje original de la conv 75).
+  - **Error previo**: Se asignó incorrectamente `origen_nombre = 'KVEINTIUNO APARTAMENTOS'` basándose en patrones sin verificar. Ese grupo existe pero JanIA no es miembro de él.
+  - **Acción ejecutada en BD (PostgreSQL)**: Inmueble #2078 corregido manualmente:
+    - `externalUrl` → `https://info.wasi.co/apartamento-venta-cabrera-bogotá-d-c/10083817?shared=whatsapp`
+    - `origen_nombre` → `'Chat Privado WhatsApp (K•VEINTIUNO)'`
+    - `origen_tipo` → `'dm'`
+    - `rawText` → Restaurado con el link Wasi completo + nota de arriendo
+    - `areaTotal` → `226.65`, `stratum` → `6`, `rent_price` → `9500000` (también arrienda a $9.5M)
+    - `transactionType` → `venta_o_arriendo`, `accepted_transaction_types` → `['venta','arriendo']`
+  - **Inmueble #35 también corregido**: `externalUrl` → link Wasi de Los Lagartos, `name` → "Apartamento remodelado en venta - Los Lagartos", `origen_tipo` → `'dm'`
+- **Conclusión Operativa**: El link que Jennifer pide (`info.wasi.co/...10083817`) **SÍ EXISTE** y está activo. Se lo puedes compartir tú directamente. El inmueble ya tiene el link correcto en la BD y aparece en la ficha.
+- **Verdad sobre el nombre del grupo en el admin panel**: La etiqueta `"📍 Registro Histórico Red (Julio 2026)"` que aparece en el admin panel es el **fallback correcto** — el inmueble vino de un DM/chat privado, no de un grupo de la red. Es un dato legítimo.
+
+## 🔖 VERSIÓN ANTERIOR: v31.82 — Septiembre 2026
+
+### Novedades v31.82 (Corrección Doctrinal de 7 Bugs en Motor de Scoring `scoreRows()` + Exención de Antigüedad Flexible + Mecanismo URL Diferida):
 - **7 Bugs corregidos en `client/src/components/admin/AdminMatches.tsx` — función `scoreRows()`**:
   - **Bug 1 — Antigüedad**: `ageP > ageR + 5` siempre devolvía `warn`. Corregido: si la oferta supera el tope máximo de años (+3 de margen) → `missing` (guillotina a 0%).
   - **Bug 2 — Estrato**: Diferencia de estrato > ±1 siempre devolvía `warn`. Corregido: diferencia > 1 → `missing` (guillotina a 0%).
