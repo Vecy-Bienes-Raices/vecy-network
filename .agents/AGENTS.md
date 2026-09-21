@@ -167,7 +167,18 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.83 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.84 — Septiembre 2026
+
+### Novedades v31.84 (Reducción de Vigencia de Matches: 20 → 10 Días):
+- **Regla Doctrinal (10 Días de Vigencia)** — reducida de 20 a 10 días en todos los motores:
+  - `server/_core/matching.ts`: 4 bloques de filtro actualizados (`propAgeDays > 10`, `reqAgeDays > 10`)
+  - `client/src/components/admin/AdminMatches.tsx`: filtro UI `active_10` con etiquetas `⚡ Vigentes (≤ 10 días)` y `⚡ ≤10d`
+  - `server/routers/janIA.ts`: queries SQL de KPI cambiadas de `INTERVAL '20 days'` a `INTERVAL '10 days'`
+- **Motivación**: Tras contactar colegas de matches generados el 01-Sep-2026, Eduardo verificó que muchas ofertas ya estaban vendidas y demandas ya habían conseguido lo que buscaban. El umbral de 10 días elimina esas oportunidades caducas y asegura que solo se trabajan leads frescos.
+- **Badge de advertencia**: El badge ⏳ *"Confirmar disponibilidad"* ahora se muestra a partir de los **10 días** (antes 20).
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | 64/64 tests Vitest ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.83 — Septiembre 2026
 
 ### Novedades v31.83 (Diagnóstico Forense Prop #2078 Jennifer Puerto + Corrección BD + Aclaración Origen):
 - **Diagnóstico Forense Real del Inmueble #2078 (Jennifer Puerto — La Cabrera $2.400MM)**:

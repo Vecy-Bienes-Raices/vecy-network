@@ -3341,14 +3341,14 @@ export async function findMatchesForProperty(propertyId: number) {
       return [];
     }
 
-    // REGLA DOCTRINAL (20 Días de Vigencia): Omitir propiedades de más de 20 días sin republicación activa (v31.76)
+    // REGLA DOCTRINAL (10 Días de Vigencia): Omitir propiedades de más de 10 días sin republicación activa (v31.84)
     const repCount = Number(property.republicacionesCount || 0);
     const propEffectiveDate = (repCount > 0 && property.fechaUltimaPublicacion)
       ? property.fechaUltimaPublicacion
       : (property.fechaUltimaPublicacion || property.createdAt);
     const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-    if (propAgeDays > 20) {
-      console.log(`[MATCHING-FILTER] ⏳ Propiedad #${propertyId} omitida por superar 20 días de antigüedad sin republicación activa.`);
+    if (propAgeDays > 10) {
+      console.log(`[MATCHING-FILTER] ⏳ Propiedad #${propertyId} omitida por superar 10 días de antigüedad sin republicación activa.`);
       return [];
     }
 
@@ -3379,10 +3379,10 @@ export async function findMatchesForProperty(propertyId: number) {
         await new Promise(r => setTimeout(r, 10));
       }
 
-      // Regla Doctrinal (20 Días de Vigencia): Omitir requerimientos inactivos de más de 20 días
+      // Regla Doctrinal (10 Días de Vigencia): Omitir requerimientos inactivos de más de 10 días
       const reqEffectiveDate = req.updatedAt || req.fechaExtraccion || req.createdAt;
       const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-      if (reqAgeDays > 20) {
+      if (reqAgeDays > 10) {
         continue;
       }
 
@@ -3478,11 +3478,11 @@ export async function findMatchesForRequirement(requirementId: number) {
       return [];
     }
 
-    // REGLA DOCTRINAL (20 Días de Vigencia): Omitir requerimientos inactivos de más de 20 días (v31.76)
+    // REGLA DOCTRINAL (10 Días de Vigencia): Omitir requerimientos inactivos de más de 10 días (v31.84)
     const reqEffectiveDate = req.updatedAt || req.fechaExtraccion || req.createdAt;
     const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-    if (reqAgeDays > 20) {
-      console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por superar 20 días de antigüedad.`);
+    if (reqAgeDays > 10) {
+      console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por superar 10 días de antigüedad.`);
       return [];
     }
 
@@ -3513,13 +3513,13 @@ export async function findMatchesForRequirement(requirementId: number) {
         await new Promise(r => setTimeout(r, 10));
       }
 
-      // Regla Doctrinal (20 Días de Vigencia): Omitir propiedades de más de 20 días sin republicación activa
+      // Regla Doctrinal (10 Días de Vigencia): Omitir propiedades de más de 10 días sin republicación activa
       const propRepCount = Number(prop.republicacionesCount || 0);
       const propEffectiveDate = (propRepCount > 0 && prop.fechaUltimaPublicacion)
         ? prop.fechaUltimaPublicacion
         : (prop.fechaUltimaPublicacion || prop.createdAt);
       const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-      if (propAgeDays > 20) {
+      if (propAgeDays > 10) {
         continue;
       }
 

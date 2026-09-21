@@ -2620,7 +2620,7 @@ export default function AdminMatches() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [minScore, setMinScore] = React.useState('80');
   const [transactionFilter, setTransactionFilter] = React.useState<'all' | 'venta' | 'arriendo' | 'permuta' | 'opcion_compra' | 'standby'>('venta');
-  const [ageFilter, setAgeFilter] = React.useState<'active_20' | 'all'>('active_20');
+  const [ageFilter, setAgeFilter] = React.useState<'active_10' | 'all'>('active_10');
   const [activeTab, setActiveTab] = React.useState<'calificados' | 'incompletos'>('calificados');
   
   // Estados para Edición Interactiva de Fichas Prediales directamente desde el Cotejo
@@ -3817,12 +3817,12 @@ export default function AdminMatches() {
         if (displayScore < minVal) return false;
       }
 
-      // Filtro de Antigüedad / Vigencia: ≤ 20 días por defecto (Regla Doctrinal v31.76)
+      // Filtro de Antigüedad / Vigencia: ≤ 10 días por defecto (Regla Doctrinal v31.84)
       // Excepción estratégica: Si el usuario está filtrando específicamente por nichos especializados ('permuta', 'opcion_compra'),
       // se muestran los matches existentes de ese nicho para asegurar visibilidad operativa de las oportunidades.
-      if (ageFilter === 'active_20' && transactionFilter !== 'permuta' && transactionFilter !== 'opcion_compra') {
+      if (ageFilter === 'active_10' && transactionFilter !== 'permuta' && transactionFilter !== 'opcion_compra') {
         const daysAgo = getPropertyEffectiveDaysAgo(match._effectiveProp || match.property);
-        if (daysAgo > 20) return false;
+        if (daysAgo > 10) return false;
       }
 
       // Filtro de Transacción: Compraventa vs Arriendo vs Permutas vs 50/50 (Standby)
@@ -3984,8 +3984,8 @@ export default function AdminMatches() {
 
   const kpiStats = useMemo(() => {
     const rawList = processedMatches || [];
-    const list = ageFilter === 'active_20'
-      ? rawList.filter(m => getPropertyEffectiveDaysAgo(m._effectiveProp || m.property) <= 20)
+    const list = ageFilter === 'active_10'
+      ? rawList.filter(m => getPropertyEffectiveDaysAgo(m._effectiveProp || m.property) <= 10)
       : rawList;
 
     const total = list.length;
@@ -4003,8 +4003,8 @@ export default function AdminMatches() {
 
   const filterCounts = useMemo(() => {
     const rawList = processedMatches || [];
-    const list = ageFilter === 'active_20'
-      ? rawList.filter(m => getPropertyEffectiveDaysAgo(m._effectiveProp || m.property) <= 20)
+    const list = ageFilter === 'active_10'
+      ? rawList.filter(m => getPropertyEffectiveDaysAgo(m._effectiveProp || m.property) <= 10)
       : rawList;
 
     const searchLower = (searchTerm || '').toLowerCase().trim();
@@ -4297,16 +4297,16 @@ export default function AdminMatches() {
             </select>
           </div>
 
-          {/* Filtro de Antigüedad / Vigencia (≤ 20 días) */}
+          {/* Filtro de Antigüedad / Vigencia (≤ 10 días) */}
           <div className="flex items-center gap-2 bg-black/70 border border-white/15 rounded-xl px-3 text-white h-10 text-xs shrink-0">
             <Clock className="w-3.5 h-3.5 text-[#bf953f] shrink-0" />
             <span className="text-zinc-400 text-[11px] shrink-0">Vigencia:</span>
             <select
               value={ageFilter}
-              onChange={(e) => { setAgeFilter(e.target.value as 'active_20' | 'all'); setCurrentPage(1); }}
+              onChange={(e) => { setAgeFilter(e.target.value as 'active_10' | 'all'); setCurrentPage(1); }}
               className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none"
             >
-              <option className="bg-[#0c0c0e]" value="active_20">⚡ Vigentes (≤ 20 días)</option>
+              <option className="bg-[#0c0c0e]" value="active_10">⚡ Vigentes (≤ 10 días)</option>
               <option className="bg-[#0c0c0e]" value="all">🌐 Todo el Histórico</option>
             </select>
           </div>
@@ -4440,10 +4440,10 @@ export default function AdminMatches() {
               <div className="flex items-center bg-black/70 border border-white/15 rounded-xl px-2 h-9 text-xs">
                 <select
                   value={ageFilter}
-                  onChange={(e) => { setAgeFilter(e.target.value as 'active_20' | 'all'); setCurrentPage(1); }}
+                  onChange={(e) => { setAgeFilter(e.target.value as 'active_10' | 'all'); setCurrentPage(1); }}
                   className="bg-transparent border-none text-white focus:ring-0 text-[11px] font-semibold cursor-pointer outline-none"
                 >
-                  <option className="bg-[#0c0c0e]" value="active_20">⚡ ≤20d</option>
+                  <option className="bg-[#0c0c0e]" value="active_10">⚡ ≤10d</option>
                   <option className="bg-[#0c0c0e]" value="all">🌐 Todo</option>
                 </select>
               </div>
@@ -4646,10 +4646,10 @@ export default function AdminMatches() {
                                   >
                                     <span>🔥 Republicado y Actualizado hace {diasTexto} (100% Activo)</span>
                                   </span>
-                                ) : daysAgo > 20 ? (
+                                ) : daysAgo > 10 ? (
                                   <span
                                     className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400/90 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md"
-                                    title={`Publicación inicial de hace ${daysAgo} días. Supera 20 días sin republicación. Verificar disponibilidad con el captador.`}
+                                    title={`Publicación inicial de hace ${daysAgo} días. Supera 10 días sin republicación. Verificar disponibilidad con el captador.`}
                                   >
                                     <span>⏳ Publicación de hace {daysAgo} días · Confirmar disponibilidad</span>
                                   </span>
