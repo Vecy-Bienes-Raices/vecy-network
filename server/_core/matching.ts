@@ -1145,7 +1145,7 @@ export function calcularIPC(requirement: any, property: any, matchScore: number)
   const propEffectiveDate = (repCount > 0 && property.fechaUltimaPublicacion)
     ? property.fechaUltimaPublicacion
     : (property.fechaUltimaPublicacion || property.createdAt || new Date());
-  const reqEffectiveDate = requirement.updatedAt || requirement.fechaExtraccion || requirement.createdAt || new Date();
+  const reqEffectiveDate = requirement.createdAt || requirement.fechaExtraccion || new Date();
 
   const propAgeDays = Math.max(0, (Date.now() - new Date(propEffectiveDate).getTime()) / (1000 * 60 * 60 * 24));
   const reqAgeDays = Math.max(0, (Date.now() - new Date(reqEffectiveDate).getTime()) / (1000 * 60 * 60 * 24));
@@ -3407,8 +3407,11 @@ export async function findMatchesForProperty(propertyId: number) {
         await new Promise(r => setTimeout(r, 10));
       }
 
-      // Regla Doctrinal (10 Días de Vigencia v31.84/v31.85): Omitir requerimientos inactivos de más de 10 días
-      const reqEffectiveDate = req.fechaExtraccion || req.createdAt;
+      // Regla Doctrinal (10 Días de Vigencia v31.84/v31.86): Omitir requerimientos inactivos o de más de 10 días
+      if ((req as any).status === 'expired') {
+        continue;
+      }
+      const reqEffectiveDate = req.createdAt || req.fechaExtraccion;
       const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
       if (reqAgeDays > 10) {
         continue;
@@ -3506,8 +3509,12 @@ export async function findMatchesForRequirement(requirementId: number) {
       return [];
     }
 
-    // REGLA DOCTRINAL (10 Días de Vigencia): Omitir requerimientos inactivos de más de 10 días (v31.84/v31.85)
-    const reqEffectiveDate = req.fechaExtraccion || req.createdAt;
+    // REGLA DOCTRINAL (10 Días de Vigencia): Omitir requerimientos inactivos o de más de 10 días (v31.84/v31.86)
+    if ((req as any).status === 'expired') {
+      console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por estar marcado como vencido/out.`);
+      return [];
+    }
+    const reqEffectiveDate = req.createdAt || req.fechaExtraccion;
     const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
     if (reqAgeDays > 10) {
       console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por superar 10 días de antigüedad.`);

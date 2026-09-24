@@ -423,6 +423,15 @@ export function getPropertyEffectiveDaysAgo(property: any): number {
   return Math.max(0, Math.floor((Date.now() - dateObj.getTime()) / (1000 * 60 * 60 * 24)));
 }
 
+export function getRequirementEffectiveDaysAgo(requirement: any): number {
+  if (!requirement) return 0;
+  // Regla Doctrinal v31.86: La fecha canónica de publicación original es createdAt
+  const effectiveDate = requirement.createdAt;
+  if (!effectiveDate) return 0;
+  const dateObj = new Date(effectiveDate);
+  return Math.max(0, Math.floor((Date.now() - dateObj.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
 export function checkIsPermutaMatch(prop: any, req: any): boolean {
   const propTx = String(prop?.transactionType || '').toLowerCase();
   const reqTx = String(req?.tipoNegocioDeseado || '').toLowerCase();
@@ -3874,12 +3883,13 @@ export default function AdminMatches() {
         if (displayScore < minVal) return false;
       }
 
-      // Filtro de Antigüedad / Vigencia: ≤ 10 días por defecto (Regla Doctrinal v31.84)
+      // Filtro de Antigüedad / Vigencia: ≤ 10 días por defecto (Regla Doctrinal v31.84/v31.86)
       // Excepción estratégica: Si el usuario está filtrando específicamente por nichos especializados ('permuta', 'opcion_compra'),
       // se muestran los matches existentes de ese nicho para asegurar visibilidad operativa de las oportunidades.
       if (ageFilter === 'active_10' && transactionFilter !== 'permuta' && transactionFilter !== 'opcion_compra') {
-        const daysAgo = getPropertyEffectiveDaysAgo(match._effectiveProp || match.property);
-        if (daysAgo > 10) return false;
+        const propDaysAgo = getPropertyEffectiveDaysAgo(match._effectiveProp || match.property);
+        const reqDaysAgo = getRequirementEffectiveDaysAgo(match._effectiveReq || match.requirement);
+        if (propDaysAgo > 10 || reqDaysAgo > 10) return false;
       }
 
       // Filtro de Transacción: Compraventa vs Arriendo vs Permutas vs 50/50 (Standby)
@@ -4042,7 +4052,10 @@ export default function AdminMatches() {
   const kpiStats = useMemo(() => {
     const rawList = processedMatches || [];
     const list = ageFilter === 'active_10'
-      ? rawList.filter(m => getPropertyEffectiveDaysAgo(m._effectiveProp || m.property) <= 10)
+      ? rawList.filter(m => 
+          getPropertyEffectiveDaysAgo(m._effectiveProp || m.property) <= 10 &&
+          getRequirementEffectiveDaysAgo(m._effectiveReq || m.requirement) <= 10
+        )
       : rawList;
 
     const total = list.length;
@@ -4061,7 +4074,10 @@ export default function AdminMatches() {
   const filterCounts = useMemo(() => {
     const rawList = processedMatches || [];
     const list = ageFilter === 'active_10'
-      ? rawList.filter(m => getPropertyEffectiveDaysAgo(m._effectiveProp || m.property) <= 10)
+      ? rawList.filter(m => 
+          getPropertyEffectiveDaysAgo(m._effectiveProp || m.property) <= 10 &&
+          getRequirementEffectiveDaysAgo(m._effectiveReq || m.requirement) <= 10
+        )
       : rawList;
 
     const searchLower = (searchTerm || '').toLowerCase().trim();

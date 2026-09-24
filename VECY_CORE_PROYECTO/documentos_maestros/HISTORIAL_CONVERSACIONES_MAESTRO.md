@@ -9,6 +9,48 @@
 
 ---
 
+## 📋 SESIÓN v31.86 — 24 Septiembre 2026
+
+### Solicitud de Eduardo
+Eduardo detectó y cuestionó:
+*"Sigo viendo publicaciones en una DEMANDA publicada el 10 de septiembre, esta ya no debería estar en lista ni en la mesa de coincidencias, debería estar 'aout' porque si es del 10 pues por pura lógica tiene más de diez a hoy. '¿No crees?'. O tu que aconsejas?"*
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **La Demanda #1263 / #1264 ("BUSCAMOS APARTAMENTO – PRESUPUESTO $750 MILLONES")**:
+   - Fecha original de publicación (`createdAt`): **10 de septiembre de 2026** (14 días de antigüedad al día de hoy, 24-Sep).
+   - Generó los matches caducos `#14983` y `#14982`.
+2. **Cuatro causas técnicas por las que seguía visible**:
+   - *Filtro Incompleto en `AdminMatches.tsx`*: El filtro cliente `ageFilter === 'active_10'` únicamente evaluaba `getPropertyEffectiveDaysAgo(property) <= 10`, omitiendo verificar la edad del requerimiento (`requirement`). Si la oferta emparejada era reciente (1 o 2 días), el match pasaba sin importar que la demanda fuera del 10 de septiembre.
+   - *Rejuvenecimiento en `saveRequirement`*: Al llegar un mensaje duplicado por WhatsApp a las 15:45 del 24-Sep, `saveRequirement` actualizaba `fechaExtraccion` con `new Date()`, provocando que el filtro backend (`COALESCE(fechaExtraccion, createdAt) >= NOW() - 10 days`) fuera burlado.
+   - *Demanda nunca marcada como OUT en Base de Datos*: 978 demandas con más de 10 días permanecían con `status = 'active'` en PostgreSQL.
+   - *Buscador de Requerimientos (`AdminRequirements.tsx`)*: No contaba con filtro de vigencia, cargando todos los 1.500+ requerimientos históricos sin discriminar vigentes de vencidos.
+
+### Acciones Ejecutadas
+1. **PostgreSQL VPS (`vecy_network`)**:
+   - `UPDATE requirements SET status = 'expired' WHERE status = 'active' AND "createdAt" < NOW() - INTERVAL '10 days'`: 978 requerimientos pasados a estado OUT/vencido.
+   - `DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE "createdAt" < NOW() - INTERVAL '10 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '10 days')`: **2.165 matches caducos eliminados** físicamente de la base de datos.
+2. **Frontend `AdminMatches.tsx`**:
+   - Creación de función `getRequirementEffectiveDaysAgo(requirement)`.
+   - Modificación del filtro `active_10`, `kpiStats` y `filterCounts` para exigir que **TANTO la oferta COMO la demanda** cumplan `daysAgo <= 10`.
+3. **Frontend `AdminRequirements.tsx`**:
+   - Incorporación de filtro de vigencia de 4 columnas: `⚡ Vigentes (≤ 10 días)` (por defecto), `🔴 OUT / Vencidos (> 10 días)` y `📋 Todos (Histórico)`.
+   - Badges visuales en vivo: `🟢 Vigente (hace X d)` vs `🔴 OUT (hace X d)`.
+   - Contadores KPI superiores para monitoreo en tiempo real.
+4. **Backend `server/routers/janIA.ts`**:
+   - `getAllMatches`: Filtrado SQL estricto por `requirements.createdAt >= NOW() - INTERVAL '10 days'` y `requirements.status != 'expired'`.
+   - `getAllRequirements`: Exposición del campo `status`.
+5. **Backend `server/_core/janIA.ts`, `matching.ts` & `nightlyRematch.ts`**:
+   - `saveRequirement`: Preservación estricta de `fechaExtraccion` en actualizaciones; requerimientos con > 10 días quedan en `status = 'expired'` y no recalculan matches.
+   - `matching.ts`: Chequeo inmutable por `req.createdAt` y bloqueo si `req.status === 'expired'`.
+   - `nightlyRematch.ts`: Mantenimiento automático en cada ciclo nocturno.
+
+### Verificación Automatizada
+- `vitest run`: 64/64 pruebas pasando limpias al 100%.
+- `tsc --noEmit`: 0 errores de tipado TypeScript.
+- `npm run build`: Bundle de Vite y esbuild limpio en 32s.
+
+---
+
 ## 📋 SESIÓN v31.85 — 24 Septiembre 2026
 
 ### Solicitud de Eduardo

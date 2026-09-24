@@ -1,6 +1,6 @@
 import { getDb } from "../db";
 import { properties, requirements, propertyMatches } from "../../drizzle/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import {
   explicarMatch,
   extractTrueCityFromText,
@@ -34,6 +34,10 @@ export async function runNightlyRematch() {
   }
 
   try {
+    // Regla Doctrinal v31.86: Transición automática a 'expired' de requerimientos mayores a 10 días
+    await db.execute(sql`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND "createdAt" < NOW() - INTERVAL '10 days'`);
+    await db.execute(sql`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE "createdAt" < NOW() - INTERVAL '10 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '10 days')`);
+
     const [activeReqs, availProps] = await Promise.all([
       db.select().from(requirements).where(eq(requirements.status, "active")),
       db.select().from(properties).where(eq(properties.available, true)),
@@ -100,8 +104,8 @@ export async function runNightlyRematch() {
           const pairKey = `${req.id}-${prop.id}`;
           if (seenPairs.has(pairKey)) continue;
 
-          // Regla Doctrinal (10 Días de Vigencia v31.84/v31.85): Omitir demandas u ofertas de más de 10 días
-          const reqEffectiveDate = (req as any).fechaExtraccion || req.createdAt;
+          // Regla Doctrinal (10 Días de Vigencia v31.84/v31.86): Omitir demandas u ofertas de más de 10 días
+          const reqEffectiveDate = req.createdAt || (req as any).fechaExtraccion;
           const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
           if (reqAgeDays > 10) {
             skippedCount++;

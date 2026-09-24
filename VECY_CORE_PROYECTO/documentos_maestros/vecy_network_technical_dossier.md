@@ -322,6 +322,30 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.86 — Septiembre 2026
+
+#### 📌 EXPULSIÓN DE DEMANDAS CADUCAS (>10 DÍAS), PURGA DE 2.165 MATCHES OBSOLETOS, FILTRO DUAL EN COINCIDENCIAS Y FILTRADO POR VIGENCIA EN BUSCADOR DE REQUERIMIENTOS
+
+**Problemas identificados:**
+1. **Demandas caducas (>10 días) aún presentes en la mesa de coincidencias y listas**: Demandas como #1263 / #1264 (creadas el 10-Sep-2026 con 14 días de antigüedad) seguían activas y con matches sugeridos (#14983, #14982).
+2. **Filtro unilateral en `AdminMatches.tsx`**: `ageFilter === 'active_10'` solo validaba `getPropertyEffectiveDaysAgo(property) <= 10`, dejando pasar demandas vencidas si el inmueble era reciente.
+3. **Rejuvenecimiento por deduplicación en `saveRequirement`**: Al recibir un mensaje idéntico, se sobreescribía `fechaExtraccion` con `new Date()`, reseteando la edad a 0 días.
+4. **Falta de transición a 'expired' en Base de Datos**: 978 demandas de más de 10 días continuaban en `status = 'active'`.
+5. **Falta de discriminación de vigencia en `AdminRequirements.tsx`**: La lista mostraba todo el histórico sin filtro por defecto.
+
+**Solución aplicada:**
+- **PostgreSQL VPS**: Ejecutada transición masiva de 978 demandas a `status = 'expired'` y purgados 2.165 matches caducos.
+- `client/src/components/admin/AdminMatches.tsx`: Creada `getRequirementEffectiveDaysAgo(req)` y blindado `ageFilter === 'active_10'` para exigir `propDaysAgo <= 10 && reqDaysAgo <= 10`.
+- `client/src/components/admin/AdminRequirements.tsx`: Selector de vigencia por defecto (`⚡ Vigentes ≤10d`), badges de estado en vivo (`🟢 Vigente` vs `🔴 OUT`) y contadores KPI superiores.
+- `server/routers/janIA.ts`: En `getAllMatches`, cláusula SQL estricta `requirements.createdAt >= NOW() - INTERVAL '10 days'` y `status != 'expired'`.
+- `server/_core/janIA.ts` & `matching.ts`: En deduplicación se preserva la fecha original y se omite re-matching de requerimientos vencidos. Bloqueo en matching para requerimientos con status 'expired'.
+- `server/jobs/nightlyRematch.ts`: Mantenimiento automático diario en BD.
+- `shared/const.ts` y `package.json`: Versión incrementada a `v31.86`.
+
+**Verificación:** `tsc --noEmit` 0 errores ✅ | `vitest run` 64/64 tests ✅ | Build limpio de Vite y esbuild ✅
+
+---
+
 ### 🔖 v31.85 — Septiembre 2026
 
 #### 📌 BLINDAJE ANTI-DEMANDAS INFILTRADAS, GUILLOTINAS DE MODERNIDAD, VISTA EXTERIOR Y CARRO ELÉCTRICO, PURGA DE FECHAS REJUVENECIDAS Y POPUP DE DESCARTE MULTISELECCIÓN SIN ERRORES

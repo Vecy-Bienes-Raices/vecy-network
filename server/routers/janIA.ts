@@ -623,7 +623,8 @@ export const janIARouter = router({
           .where(sql`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
             AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) 
             AND (${properties.available} IS NULL OR ${properties.available} = true)
-            AND (COALESCE(${requirements.fechaExtraccion}, ${requirements.createdAt}) >= NOW() - INTERVAL '10 days')
+            AND (${requirements.status} IS NULL OR CAST(${requirements.status} AS TEXT) != 'expired')
+            AND (${requirements.createdAt} >= NOW() - INTERVAL '10 days')
             AND (COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt}) >= NOW() - INTERVAL '10 days')
             AND NOT (${properties.rawText} ~* '(\\m(busco|buscamos|se busca|estoy buscando|para compra ya)\\M)')`)
           .orderBy(desc(propertyMatches.id))
@@ -1663,6 +1664,7 @@ export const janIARouter = router({
           presupuestoMax: requirements.presupuestoMax,
           presupuestoMin: requirements.presupuestoMin,
           areaMin: requirements.areaMin,
+          status: requirements.status,
           createdAt: requirements.createdAt,
         })
         .from(requirements)

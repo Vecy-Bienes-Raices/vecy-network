@@ -167,7 +167,38 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.85 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.86 — Septiembre 2026
+
+### Novedades v31.86 (Expulsión Fulminante de Demandas >10 Días: Estado OUT Automático, Purga de 2.165 Matches Caducos, Filtro Dual en Coincidencias y Nuevo Filtro de Vigencia en Lista de Requerimientos):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Toda demanda u oferta con más de 10 días de publicación debe estar **"OUT" (vencida / descartada)** tanto de la mesa de coincidencias como de las listas operativas.
+  - Una demanda del 10 de septiembre tenía 14 días al 24 de septiembre; no tenía ninguna justificación doctrinal para seguir visible.
+- **Causas Raíz Identificadas**:
+  1. *Filtro incompleto en `AdminMatches.tsx`*: El filtro `ageFilter === 'active_10'` únicamente evaluaba `getPropertyEffectiveDaysAgo(property) <= 10`, ignorando por completo la edad del requerimiento (`requirement`). Si la oferta era de hace 1 día, permitía que pasaran demandas de hace semanas.
+  2. *Rejuvenecimiento en `saveRequirement`*: Al recibir un mensaje repetido en WhatsApp, `saveRequirement` actualizaba `fechaExtraccion` con `new Date()`, reseteando artificialmente la edad de demandas creadas el 10 de septiembre a 0 días.
+  3. *Inexistencia de purga de estado en BD*: 978 requerimientos viejos permanecían con `status = 'active'` en PostgreSQL porque no existía un proceso que hiciera la transición automática a `'expired'`.
+  4. *Ausencia de filtro de vigencia en `AdminRequirements.tsx`*: El "Buscador de Requerimientos" cargaba los 1.500+ registros históricos sin filtro por defecto de vigencia.
+- **Acciones Ejecutadas**:
+  1. **PostgreSQL VPS (`vecy_network`)**:
+     - Transición masiva: `UPDATE requirements SET status = 'expired' WHERE status = 'active' AND "createdAt" < NOW() - INTERVAL '10 days'` (978 demandas pasadas a estado OUT).
+     - Purga masiva de coincidencias: `DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE "createdAt" < NOW() - INTERVAL '10 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '10 days')` (**2.165 matches caducos eliminados** de la base de datos).
+  2. **Frontend `AdminMatches.tsx`**:
+     - Creada función `getRequirementEffectiveDaysAgo(requirement)`.
+     - Filtro `ageFilter === 'active_10'` blindado con chequeo dual estricto: `propDaysAgo <= 10 && reqDaysAgo <= 10` (tanto en la lista filtrada como en `kpiStats` y `filterCounts`).
+  3. **Frontend `AdminRequirements.tsx` (Lista de Demandas)**:
+     - Nuevo filtro de 4 columnas con selector de vigencia: `⚡ Vigentes (≤ 10 días)` (por defecto), `🔴 OUT / Vencidos (> 10 días)` y `📋 Todos (Histórico)`.
+     - Badges de estado en vivo en tabla y tarjetas móviles: `🟢 Vigente (hace X d)` vs `🔴 OUT (hace X d)`.
+     - Tarjetas KPI superiores: `⚡ Vigentes (≤10d)`, `🔴 OUT / Vencidos` y `Total Histórico`.
+  4. **Backend `server/routers/janIA.ts`**:
+     - `getAllMatches`: Filtro SQL estricto `requirements.createdAt >= NOW() - INTERVAL '10 days'` y `requirements.status != 'expired'`.
+     - `getAllRequirements`: Inclusión del campo `status` para consumo del frontend.
+  5. **Backend `server/_core/janIA.ts` & `matching.ts`**:
+     - `saveRequirement`: Si un requerimiento existente se actualiza por duplicado, se preserva su fecha original inmutable y, si tiene > 10 días, se mantiene en `status = 'expired'` sin recalcular matches.
+     - `matching.ts`: Se verifica `(req as any).status !== 'expired'` y `req.createdAt` <= 10 días antes de generar cruces.
+     - `nightlyRematch.ts`: Incorporada la expiración automática en cada ciclo.
+- **Verificación**: 64/64 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build limpio de Vite y esbuild ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.85 — Septiembre 2026
 
 ### Novedades v31.85 (Blindaje Anti-Demanda Infiltrada, Guillotinas de Modernidad, Vista Exterior y Carro Eléctrico, Purga de Rejuvenecimiento de Fechas y POPUP de Descarte Multiselección sin Errores):
 - **Diagnóstico Forense de los 3 Matches Reportados**:

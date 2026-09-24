@@ -5708,17 +5708,24 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
   };
 
   if (existing.length > 0) {
-    // Si ya existe, actualizamos los datos (por si cambió presupuesto, área, descripción, etc.)
+    // Si ya existe, actualizamos los datos pero preservamos fechaExtraccion original (Regla Doctrinal v31.86)
+    const { fechaExtraccion: _ignored, ...updateFields } = insertDataWithCalif;
+    const existingAgeDays = existing[0].createdAt ? Math.max(0, Math.floor((Date.now() - new Date(existing[0].createdAt).getTime()) / (1000 * 60 * 60 * 24))) : 0;
+    const targetStatus = existingAgeDays > 10 ? 'expired' : (existing[0].status || 'active');
+
     const [updated] = await db
       .update(requirements)
       .set({
-        ...insertDataWithCalif,
+        ...updateFields,
+        status: targetStatus,
         updatedAt: new Date()
       })
       .where(eq(requirements.id, existing[0].id))
       .returning();
-    console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id})`);
-    findMatchesForRequirement(updated.id).catch((mErr: any) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
+    console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id}, Status: ${targetStatus}, Antigüedad: ${existingAgeDays}d)`);
+    if (targetStatus !== 'expired') {
+      findMatchesForRequirement(updated.id).catch((mErr: any) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
+    }
     return updated;
   }
 

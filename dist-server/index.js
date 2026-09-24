@@ -4655,7 +4655,7 @@ function calcularIPC(requirement, property, matchScore) {
   const matching = Math.round(matchScore);
   const repCount = Number(property.republicacionesCount || 0);
   const propEffectiveDate = repCount > 0 && property.fechaUltimaPublicacion ? property.fechaUltimaPublicacion : property.fechaUltimaPublicacion || property.createdAt || /* @__PURE__ */ new Date();
-  const reqEffectiveDate = requirement.updatedAt || requirement.fechaExtraccion || requirement.createdAt || /* @__PURE__ */ new Date();
+  const reqEffectiveDate = requirement.createdAt || requirement.fechaExtraccion || /* @__PURE__ */ new Date();
   const propAgeDays = Math.max(0, (Date.now() - new Date(propEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24));
   const reqAgeDays = Math.max(0, (Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24));
   const getAgeFactor = (days) => {
@@ -6429,7 +6429,10 @@ async function findMatchesForProperty(propertyId) {
       if (compCounter % 20 === 0) {
         await new Promise((r) => setTimeout(r, 10));
       }
-      const reqEffectiveDate = req.fechaExtraccion || req.createdAt;
+      if (req.status === "expired") {
+        continue;
+      }
+      const reqEffectiveDate = req.createdAt || req.fechaExtraccion;
       const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
       if (reqAgeDays > 10) {
         continue;
@@ -6515,7 +6518,11 @@ async function findMatchesForRequirement(requirementId) {
       console.log(`[MATCHING-FILTER] \u26D4 Requerimiento #${requirementId} omitido por ser frase suelta sin criterios de b\xFAsqueda.`);
       return [];
     }
-    const reqEffectiveDate = req.fechaExtraccion || req.createdAt;
+    if (req.status === "expired") {
+      console.log(`[MATCHING-FILTER] \u23F3 Requerimiento #${requirementId} omitido por estar marcado como vencido/out.`);
+      return [];
+    }
+    const reqEffectiveDate = req.createdAt || req.fechaExtraccion;
     const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
     if (reqAgeDays > 10) {
       console.log(`[MATCHING-FILTER] \u23F3 Requerimiento #${requirementId} omitido por superar 10 d\xEDas de antig\xFCedad.`);
@@ -11847,12 +11854,18 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
     calificacion: calif
   };
   if (existing.length > 0) {
+    const { fechaExtraccion: _ignored, ...updateFields } = insertDataWithCalif;
+    const existingAgeDays = existing[0].createdAt ? Math.max(0, Math.floor((Date.now() - new Date(existing[0].createdAt).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
+    const targetStatus = existingAgeDays > 10 ? "expired" : existing[0].status || "active";
     const [updated] = await db.update(requirements).set({
-      ...insertDataWithCalif,
+      ...updateFields,
+      status: targetStatus,
       updatedAt: /* @__PURE__ */ new Date()
     }).where(eq4(requirements.id, existing[0].id)).returning();
-    console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id})`);
-    findMatchesForRequirement(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
+    console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id}, Status: ${targetStatus}, Antig\xFCedad: ${existingAgeDays}d)`);
+    if (targetStatus !== "expired") {
+      findMatchesForRequirement(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
+    }
     return updated;
   }
   const [result] = await db.insert(requirements).values(insertDataWithCalif).returning();
@@ -15631,7 +15644,7 @@ __export(nightlyRematch_exports, {
   recalculateAndCleanupMatches: () => recalculateAndCleanupMatches,
   runNightlyRematch: () => runNightlyRematch
 });
-import { and as and5, eq as eq7 } from "drizzle-orm";
+import { and as and5, eq as eq7, sql as sql5 } from "drizzle-orm";
 async function runNightlyRematch() {
   if (isRematchRunning) {
     console.log("[NIGHTLY-REMATCH] Ya hay una ejecuci\xF3n en curso, saltando...");
@@ -15646,6 +15659,8 @@ async function runNightlyRematch() {
     return;
   }
   try {
+    await db.execute(sql5`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND "createdAt" < NOW() - INTERVAL '10 days'`);
+    await db.execute(sql5`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE "createdAt" < NOW() - INTERVAL '10 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '10 days')`);
     const [activeReqs, availProps] = await Promise.all([
       db.select().from(requirements).where(eq7(requirements.status, "active")),
       db.select().from(properties).where(eq7(properties.available, true))
@@ -15701,7 +15716,7 @@ async function runNightlyRematch() {
         for (const prop of enrichedProps) {
           const pairKey = `${req.id}-${prop.id}`;
           if (seenPairs.has(pairKey)) continue;
-          const reqEffectiveDate = req.fechaExtraccion || req.createdAt;
+          const reqEffectiveDate = req.createdAt || req.fechaExtraccion;
           const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
           if (reqAgeDays > 10) {
             skippedCount++;
@@ -15954,7 +15969,7 @@ import cron from "node-cron";
 import path8 from "path";
 import fs8 from "fs";
 import { fileURLToPath } from "url";
-import { gte as gte2, and as and6, eq as eq8, sql as sql5, desc as desc3 } from "drizzle-orm";
+import { gte as gte2, and as and6, eq as eq8, sql as sql6, desc as desc3 } from "drizzle-orm";
 function getBogotaDateString(d = /* @__PURE__ */ new Date()) {
   return d.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
 }
@@ -16001,7 +16016,7 @@ async function acquireBroadcastLock(targetGroup, tipCategory, dateBogota, force 
       set: {
         tipCategory,
         status: "in_progress",
-        createdAt: sql5`NOW()`
+        createdAt: sql6`NOW()`
       }
     }).returning();
     return { allowed: true, broadcastId: inserted?.id };
@@ -16064,7 +16079,7 @@ async function getRecentImageFiles(limit = 3) {
     if (!db) return [];
     const rows = await db.select({
       imageFileName: dailyBroadcasts.imageFileName
-    }).from(dailyBroadcasts).where(and6(eq8(dailyBroadcasts.status, "completed"), sql5`image_file_name IS NOT NULL`)).orderBy(desc3(dailyBroadcasts.createdAt)).limit(limit);
+    }).from(dailyBroadcasts).where(and6(eq8(dailyBroadcasts.status, "completed"), sql6`image_file_name IS NOT NULL`)).orderBy(desc3(dailyBroadcasts.createdAt)).limit(limit);
     return rows.map((r) => r.imageFileName).filter(Boolean);
   } catch {
     return [];
@@ -16595,9 +16610,9 @@ async function getLiveMarketStats() {
     const db = await getDb();
     if (!db) throw new Error("Database not connected");
     const [propCountRes, reqCountRes, matchCountRes] = await Promise.all([
-      db.select({ count: sql5`count(*)::int` }).from(properties).where(eq8(properties.available, true)),
-      db.select({ count: sql5`count(*)::int` }).from(requirements).where(eq8(requirements.status, "active")),
-      db.select({ count: sql5`count(*)::int` }).from(propertyMatches).where(gte2(propertyMatches.matchScore, "80"))
+      db.select({ count: sql6`count(*)::int` }).from(properties).where(eq8(properties.available, true)),
+      db.select({ count: sql6`count(*)::int` }).from(requirements).where(eq8(requirements.status, "active")),
+      db.select({ count: sql6`count(*)::int` }).from(propertyMatches).where(gte2(propertyMatches.matchScore, "80"))
     ]);
     const totalProps = propCountRes[0]?.count || 0;
     const totalReqs = reqCountRes[0]?.count || 0;
@@ -17064,7 +17079,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.85";
+var VECY_VERSION = "v31.86";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -17676,7 +17691,7 @@ init_db();
 init_schema();
 init_scraper();
 init_janIA();
-import { eq as eq9, and as and7, desc as desc4, sql as sql6, inArray } from "drizzle-orm";
+import { eq as eq9, and as and7, desc as desc4, sql as sql7, inArray } from "drizzle-orm";
 
 // server/_core/taxEngine.ts
 var VALOR_UVT_2026 = 50318;
@@ -18802,10 +18817,11 @@ ${liveStats}${userContextInstruction}
           enlaceOrigen: requirements.enlaceOrigen,
           createdAt: requirements.createdAt
         }
-      }).from(propertyMatches).innerJoin(properties, eq9(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq9(propertyMatches.requirementId, requirements.id)).where(sql6`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
+      }).from(propertyMatches).innerJoin(properties, eq9(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq9(propertyMatches.requirementId, requirements.id)).where(sql7`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
             AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) 
             AND (${properties.available} IS NULL OR ${properties.available} = true)
-            AND (COALESCE(${requirements.fechaExtraccion}, ${requirements.createdAt}) >= NOW() - INTERVAL '10 days')
+            AND (${requirements.status} IS NULL OR CAST(${requirements.status} AS TEXT) != 'expired')
+            AND (${requirements.createdAt} >= NOW() - INTERVAL '10 days')
             AND (COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt}) >= NOW() - INTERVAL '10 days')
             AND NOT (${properties.rawText} ~* '(\\m(busco|buscamos|se busca|estoy buscando|para compra ya)\\M)')`).orderBy(desc4(propertyMatches.id)).limit(800);
       const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
@@ -19452,7 +19468,7 @@ ${liveStats}${userContextInstruction}
       }).onConflictDoUpdate({
         target: inmobiliarioLexicon.terminoColoquial,
         set: {
-          frecuenciaUso: sql6`${inmobiliarioLexicon.frecuenciaUso} + 1`,
+          frecuenciaUso: sql7`${inmobiliarioLexicon.frecuenciaUso} + 1`,
           updatedAt: /* @__PURE__ */ new Date()
         }
       }).returning();
@@ -19594,10 +19610,10 @@ ${liveStats}${userContextInstruction}
           const [statusRow] = await db.select().from(pendingSessions).where(eq9(pendingSessions.jid, "system:bot_status")).limit(1);
           const sessionData = statusRow?.sessionData;
           if (sessionData?.phone) phone = sessionData.phone;
-          const [tp] = await db.select({ count: sql6`count(*)::int` }).from(properties);
-          const [tr] = await db.select({ count: sql6`count(*)::int` }).from(requirements);
-          const [tm] = await db.select({ count: sql6`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql6`CAST("matchScore" AS NUMERIC) >= 80`);
-          const [pm] = await db.select({ count: sql6`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql6`CAST("matchScore" AS NUMERIC) >= 95`);
+          const [tp] = await db.select({ count: sql7`count(*)::int` }).from(properties);
+          const [tr] = await db.select({ count: sql7`count(*)::int` }).from(requirements);
+          const [tm] = await db.select({ count: sql7`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql7`CAST("matchScore" AS NUMERIC) >= 80`);
+          const [pm] = await db.select({ count: sql7`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql7`CAST("matchScore" AS NUMERIC) >= 95`);
           totalProps = tp?.count || 0;
           totalReqs = tr?.count || 0;
           totalMatches = tm?.count || 0;
@@ -19676,6 +19692,7 @@ ${liveStats}${userContextInstruction}
         presupuestoMax: requirements.presupuestoMax,
         presupuestoMin: requirements.presupuestoMin,
         areaMin: requirements.areaMin,
+        status: requirements.status,
         createdAt: requirements.createdAt
       }).from(requirements).orderBy(desc4(requirements.id));
       cachedRequirementsData = data;
@@ -19692,20 +19709,20 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const [propTotal] = await db.select({ count: sql6`count(*)::int` }).from(properties);
-      const [propActive] = await db.select({ count: sql6`count(*)::int` }).from(properties).where(sql6`${properties.available} = true`);
-      const [reqTotal] = await db.select({ count: sql6`count(*)::int` }).from(requirements);
-      const [reqActive] = await db.select({ count: sql6`count(*)::int` }).from(requirements).where(eq9(requirements.status, "active"));
-      const [matchTotal] = await db.select({ count: sql6`count(*)::int` }).from(propertyMatches);
-      const [convTotal] = await db.select({ count: sql6`count(*)::int` }).from(conversations);
-      const monthlyProps = await db.execute(sql6`
+      const [propTotal] = await db.select({ count: sql7`count(*)::int` }).from(properties);
+      const [propActive] = await db.select({ count: sql7`count(*)::int` }).from(properties).where(sql7`${properties.available} = true`);
+      const [reqTotal] = await db.select({ count: sql7`count(*)::int` }).from(requirements);
+      const [reqActive] = await db.select({ count: sql7`count(*)::int` }).from(requirements).where(eq9(requirements.status, "active"));
+      const [matchTotal] = await db.select({ count: sql7`count(*)::int` }).from(propertyMatches);
+      const [convTotal] = await db.select({ count: sql7`count(*)::int` }).from(conversations);
+      const monthlyProps = await db.execute(sql7`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM properties
         WHERE "createdAt" >= now() - interval '6 months'
         GROUP BY 1 ORDER BY 1
       `);
-      const monthlyReqs = await db.execute(sql6`
+      const monthlyReqs = await db.execute(sql7`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM requirements
@@ -20721,7 +20738,7 @@ var agentRouter = router({
 import { z as z7 } from "zod";
 init_db();
 init_schema();
-import { eq as eq13, sql as sql7 } from "drizzle-orm";
+import { eq as eq13, sql as sql8 } from "drizzle-orm";
 import { TRPCError as TRPCError5 } from "@trpc/server";
 var leadsRouter = router({
   resolveStealthLink: publicProcedure.input(z7.object({ token: z7.string() })).query(async ({ input }) => {
@@ -20732,7 +20749,7 @@ var leadsRouter = router({
       throw new TRPCError5({ code: "NOT_FOUND", message: "Stealth Link invalido o expirado." });
     }
     const link = linkRecord[0];
-    await db.update(referralLinks).set({ clicks: sql7`${referralLinks.clicks} + 1` }).where(eq13(referralLinks.id, link.id));
+    await db.update(referralLinks).set({ clicks: sql8`${referralLinks.clicks} + 1` }).where(eq13(referralLinks.id, link.id));
     const prop = await db.select({
       id: properties.id,
       name: properties.name,
@@ -20789,7 +20806,7 @@ var leadsRouter = router({
 import { z as z8 } from "zod";
 init_db();
 init_schema();
-import { desc as desc6, ilike as ilike2, or as or3, sql as sql8, eq as eq14 } from "drizzle-orm";
+import { desc as desc6, ilike as ilike2, or as or3, sql as sql9, eq as eq14 } from "drizzle-orm";
 import { TRPCError as TRPCError6 } from "@trpc/server";
 import { Solver } from "@2captcha/captcha-solver";
 import https from "https";
@@ -21845,9 +21862,9 @@ var agendaRouter = router({
         );
       }
     }
-    const finalWhere = whereConditions.length > 0 ? sql8.join(whereConditions, sql8` AND `) : void 0;
+    const finalWhere = whereConditions.length > 0 ? sql9.join(whereConditions, sql9` AND `) : void 0;
     const items = await db.select().from(solicitudes).where(finalWhere).orderBy(desc6(solicitudes.solicitudId), desc6(solicitudes.id)).limit(limit).offset(offset);
-    const totalRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(finalWhere);
+    const totalRes = await db.select({ count: sql9`count(*)` }).from(solicitudes).where(finalWhere);
     return {
       items,
       total: Number(totalRes[0]?.count || 0)
@@ -21856,9 +21873,9 @@ var agendaRouter = router({
   getStats: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
-    const totalRes = await db.select({ count: sql8`count(*)` }).from(solicitudes);
+    const totalRes = await db.select({ count: sql9`count(*)` }).from(solicitudes);
     const total = Number(totalRes[0]?.count || 0);
-    const agentesRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(
+    const agentesRes = await db.select({ count: sql9`count(*)` }).from(solicitudes).where(
       or3(
         ilike2(solicitudes.solicitantePerfil, "%agente%"),
         ilike2(solicitudes.solicitantePerfil, "%inmobiliaria%"),
@@ -21867,7 +21884,7 @@ var agendaRouter = router({
       )
     );
     const agentes = Number(agentesRes[0]?.count || 0);
-    const conFirmaRes = await db.select({ count: sql8`count(*)` }).from(solicitudes).where(sql8`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
+    const conFirmaRes = await db.select({ count: sql9`count(*)` }).from(solicitudes).where(sql9`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
     const conFirma = Number(conFirmaRes[0]?.count || 0);
     const directos = Math.max(0, total - agentes);
     return {
@@ -22073,10 +22090,10 @@ var agendaRouter = router({
         }
       }
     }
-    const maxRes = await db.select({ maxId: sql8`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
+    const maxRes = await db.select({ maxId: sql9`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
     const nextSolicitudId = Number(maxRes[0]?.maxId || 0) + 1;
     const inserted = await db.insert(solicitudes).values({
-      id: sql8`nextval('solicitudes_id_seq')`,
+      id: sql9`nextval('solicitudes_id_seq')`,
       solicitudId: nextSolicitudId,
       solicitanteNombre: input.solicitante_nombre,
       solicitanteTipoPersona: input.solicitante_tipo_persona || "Persona Natural",
