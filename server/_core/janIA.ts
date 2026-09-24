@@ -3628,6 +3628,19 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
     }
 
+    // ── GUARDARRAÍL DETERMINISTA ANTI-CONFUSIÓN OFERTA / DEMANDA (v31.85) ──
+    // Evita categóricamente que demandas como "Busco apto", "Apto para compra ya", "Estoy buscando" se clasifiquen como INMUEBLE
+    const textToCheckForDemand = (cleanText || messageToProcess || rawUserText || '').toLowerCase();
+    const isExplicitDemandSignal = /\b(?:busco|buscamos|se\s*busca|estoy\s*buscando|estamos\s*buscando|cliente\s*busca|cliente\s*directo\s*busca|compro|compramos|para\s*compra\s*ya|para\s*compra|solicito\s*para\s*compra|solicito|requiero|requerimiento|necesito|necesitamos|quien\s*tiene|alguien\s*tiene|alguien\s*cuenta\s*con|en\s*b[uú]squeda\s*de)\b/i.test(textToCheckForDemand);
+    const isExplicitOfferSignal = /\b(?:vendo|se\s*vende|en\s*venta\s*(?:lindo|hermoso|excelente|gran|amplio|espectacular|duplex|casa|apto|apartamento|finca|lote|bodega)|ofrezco\s*(?:en\s*venta|en\s*arriendo|apartamento|casa|apto)|se\s*arrienda|arriendo\s*(?:lindo|hermoso|directo|apto|casa))\b/i.test(textToCheckForDemand);
+
+    if (isExplicitDemandSignal && !isExplicitOfferSignal) {
+      if (result.classification !== "REQUERIMIENTO") {
+        console.log(`[JANIA-GUARDRAIL v31.85] 🔄 Reclasificando a REQUERIMIENTO (Señal inequívoca de demanda detectada): "${textToCheckForDemand.substring(0, 60)}..."`);
+        result.classification = "REQUERIMIENTO";
+      }
+    }
+
     const extracted = result.extractedData || {};
     let isRequirement = result.classification === "REQUERIMIENTO";
     let isProperty = result.classification === "INMUEBLE";
@@ -4929,6 +4942,15 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
 
   if (isNonRealEstateText(data.rawText) || isNonRealEstateText(data.name) || isNonRealEstateText(data.description)) {
     console.log(`[JanIA-Reject] 🚫 Inmueble descartado: mensaje no corresponde a finca raíz (materiales/canteras/maquinaria): ${data.name || data.rawText}`);
+    return null;
+  }
+
+  // Guardarraíl Crítico v31.85: Si el texto del inmueble es inequívocamente una DEMANDA, JAMÁS insertar en properties
+  const rawLower = `${data.rawText || ""} ${data.name || ""}`.toLowerCase();
+  const isStrictDemandInProperty = /\b(?:busco|buscamos|se\s*busca|estoy\s*buscando|estamos\s*buscando|cliente\s*busca|para\s*compra\s*ya|solicito\s*para\s*compra|compro\s*apto|compro\s*casa|necesito\s*apto|requiero\s*apto)\b/i.test(rawLower) &&
+    !/\b(?:vendo|se\s*vende|ofrezco\s*(?:en\s*venta|en\s*arriendo)|se\s*arrienda|arriendo)\b/i.test(rawLower);
+  if (isStrictDemandInProperty) {
+    console.error(`[JanIA-Guardrail v31.85] ⛔ BLOQUEO CRÍTICO: Se intentó guardar una DEMANDA en la tabla properties. Abortando inserción: "${rawLower.substring(0, 80)}..."`);
     return null;
   }
 

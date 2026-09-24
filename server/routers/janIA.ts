@@ -620,7 +620,12 @@ export const janIARouter = router({
           .from(propertyMatches)
           .innerJoin(properties, eq(propertyMatches.propertyId, properties.id))
           .innerJoin(requirements, eq(propertyMatches.requirementId, requirements.id))
-          .where(sql`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) AND (${properties.available} IS NULL OR ${properties.available} = true)`)
+          .where(sql`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
+            AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) 
+            AND (${properties.available} IS NULL OR ${properties.available} = true)
+            AND (COALESCE(${requirements.fechaExtraccion}, ${requirements.createdAt}) >= NOW() - INTERVAL '10 days')
+            AND (COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt}) >= NOW() - INTERVAL '10 days')
+            AND NOT (${properties.rawText} ~* '(\\m(busco|buscamos|se busca|estoy buscando|para compra ya)\\M)')`)
           .orderBy(desc(propertyMatches.id))
           .limit(800);
 
@@ -1187,19 +1192,38 @@ export const janIARouter = router({
           ajustesGuardados: input.ajustesGuardados || null,
         }).returning();
 
-        // Si el match fue rechazado, eliminar en propertyMatches y actualizar disponibilidad
+        // Si el match fue rechazado, marcar status = 'rejected' y purgar de forma segura
         if (input.action === 'rechazado') {
           if (input.matchId) {
-            await db.delete(propertyMatches)
-              .where(eq(propertyMatches.id, input.matchId));
+            try {
+              await db.update(propertyMatches)
+                .set({ status: 'rejected' })
+                .where(eq(propertyMatches.id, input.matchId));
+              await db.delete(propertyMatches)
+                .where(eq(propertyMatches.id, input.matchId));
+            } catch (delErr: any) {
+              console.warn(`[JanIA-Feedback] Match #${input.matchId} marcado como rejected (conservado por registros relacionados):`, delErr.message);
+            }
           }
           if (input.propertyId && input.requirementId) {
-            await db.delete(propertyMatches).where(
-              and(
-                eq(propertyMatches.propertyId, input.propertyId),
-                eq(propertyMatches.requirementId, input.requirementId)
-              )
-            );
+            try {
+              await db.update(propertyMatches)
+                .set({ status: 'rejected' })
+                .where(
+                  and(
+                    eq(propertyMatches.propertyId, input.propertyId),
+                    eq(propertyMatches.requirementId, input.requirementId)
+                  )
+                );
+              await db.delete(propertyMatches).where(
+                and(
+                  eq(propertyMatches.propertyId, input.propertyId),
+                  eq(propertyMatches.requirementId, input.requirementId)
+                )
+              );
+            } catch (delErrPair: any) {
+              console.warn(`[JanIA-Feedback] Par Prop #${input.propertyId} / Req #${input.requirementId} marcado como rejected`);
+            }
           }
 
           // Si el motivo indica que el inmueble ya no está disponible (arrendado o vendido)

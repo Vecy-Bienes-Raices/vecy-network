@@ -6036,10 +6036,10 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     blockers.push("Choque de Accesibilidad: El cliente exige obligatoriamente ASCENSOR (por edad/movilidad) y el inmueble ofrecido es por ESCALERAS / Sin Ascensor. Match Inviable (0%).");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  const reqDemandsExterior = reqRawTextLower.includes("solo exterior") || reqRawTextLower.includes("estrictamente exterior") || reqRawTextLower.includes("nada interior") || reqRawTextLower.includes("cero interior") || reqRawTextLower.includes("no interior");
-  const propIsInterior = propRawTextLower.includes("es interior") || propRawTextLower.includes("vista interior") || propRawTextLower.includes("apartamento interior") || propRawTextLower.includes("apto interior");
+  const reqDemandsExterior = /\b(?:exterior|solo\s*exterior|estrictamente\s*exterior|nada\s*interior|cero\s*interior|no\s*interior)\b/i.test(reqRawTextLower) || requirement.caracteristicasDeseadas?.interiorExterior === "Exterior";
+  const propIsInterior = /\b(?:es\s*interior|vista\s*interior|apartamento\s*interior|apto\s*interior|inmueble\s*interior)\b/i.test(propRawTextLower) && !/\b(?:vista\s*exterior|apartamento\s*exterior|apto\s*exterior|piso\s*\d+\s*exterior)\b/i.test(propRawTextLower);
   if (reqDemandsExterior && propIsInterior) {
-    blockers.push("Choque de Orientaci\xF3n Visual: El cliente exige expresamente 'SOLO EXTERIOR' y el inmueble ofrecido es INTERIOR. Match Inviable (0%).");
+    blockers.push("Choque de Orientaci\xF3n Visual: El cliente exige expresamente 'EXTERIOR' y el inmueble ofrecido es de tipolog\xEDa INTERIOR. Match Inviable (0%).");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   const propNoTerceria = property.aceptaTerceria === false || property.standByDirectoVecy === true || /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(propRawTextLower);
@@ -6076,10 +6076,10 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     blockers.push("Choque de Confort Lum\xEDnico: El cliente exige expresamente inmueble muy luminoso / con vista agradable exterior y la oferta es de tipolog\xEDa interior. Match Inviable (0%).");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  const reqKitchenClosed = /\b(?:cocina\s*cerrada|cocina\s*tradicional|cocina\s*independiente|cerrada\s*indispensable|cocina\s*no\s*abierta)\b/i.test(reqRawTextLower) || requirement.caracteristicasDeseadas?.cocina === "Cerrada";
-  const reqKitchenOpen = /\b(?:cocina\s*abierta|cocina\s*americana|tipo\s*isla|cocina\s*tipo\s*isla|cocina\s*integrada)\b/i.test(reqRawTextLower) || requirement.caracteristicasDeseadas?.cocina === "Abierta" || requirement.caracteristicasDeseadas?.cocina === "Abierta tipo Isla";
-  const propKitchenClosed = /\b(?:cocina\s*cerrada|cocina\s*independiente|cocina\s*tradicional)\b/i.test(propRawTextLower) || property.amenities?.cocina === "Cerrada";
-  const propKitchenOpen = /\b(?:cocina\s*abierta|cocina\s*tipo\s*isla|tipo\s*isla|cocina\s*americana|cocina\s*integrada|cocina\s*abierta\s*moderna)\b/i.test(propRawTextLower) || property.amenities?.cocina === "Abierta" || property.amenities?.cocina === "Abierta tipo Isla";
+  const reqKitchenClosed = /\b(?:cocinas?\s*cerradas?|cocinas?\s*tradicional(?:es)?|cocinas?\s*independiente(?:s)?|cerrada\s*indispensable|cocinas?\s*no\s*abierta(?:s)?)\b/i.test(reqRawTextLower) || requirement.caracteristicasDeseadas?.cocina === "Cerrada";
+  const reqKitchenOpen = /\b(?:cocinas?\s*abiertas?|cocinas?\s*americanas?|tipo\s*isla|cocinas?\s*tipo\s*isla|cocinas?\s*integradas?|aman\s*(?:las\s*)?cocinas?\s*abiertas?)\b/i.test(reqRawTextLower) || requirement.caracteristicasDeseadas?.cocina === "Abierta" || requirement.caracteristicasDeseadas?.cocina === "Abierta tipo Isla";
+  const propKitchenClosed = /\b(?:cocinas?\s*cerradas?|cocinas?\s*independiente(?:s)?|cocinas?\s*tradicional(?:es)?)\b/i.test(propRawTextLower) || property.amenities?.cocina === "Cerrada";
+  const propKitchenOpen = /\b(?:cocinas?\s*abiertas?|cocinas?\s*tipo\s*isla|tipo\s*isla|cocinas?\s*americanas?|cocinas?\s*integradas?|cocinas?\s*abiertas?\s*modernas?)\b/i.test(propRawTextLower) || property.amenities?.cocina === "Abierta" || property.amenities?.cocina === "Abierta tipo Isla";
   if (reqKitchenClosed && propKitchenOpen && !propKitchenClosed) {
     blockers.push("Choque de Tipolog\xEDa de Cocina: La demanda exige estrictamente COCINA CERRADA y la oferta cuenta con COCINA ABIERTA / Tipo Americana. Match Inviable (0%).");
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -6100,6 +6100,29 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
   if (reqDemandsImmediate && propHasDeferredAvailability && !/\b(?:disponible\s*ya|disponibilidad\s*inmediata|desocupado|vac[ií]o)\b/i.test(propRawTextLower)) {
     blockers.push(`Choque de Disponibilidad Temporal: La demanda exige arriendo/entrega 'PARA YA' (Inmediata) y la oferta est\xE1 '${propHasDeferredAvailability[0].trim()}'. Desfase temporal incompatible. Match Inviable (0%).`);
     return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  let earlyPropAge = property.antiguedadAnos != null ? Number(property.antiguedadAnos) : -1;
+  if (earlyPropAge < 0 && property.yearBuilt != null) {
+    earlyPropAge = (/* @__PURE__ */ new Date()).getFullYear() - Number(property.yearBuilt);
+  }
+  if (earlyPropAge < 0 && property.rawText) {
+    const mPropAge = property.rawText.toLowerCase().match(/(?:edificio\s*de|antigüedad|antiguedad|tiene)\s*(\d{1,2})\s*años/i) || property.rawText.toLowerCase().match(/(\d{1,2})\s*años\s*(?:de\s*)?(?:antigüedad|construido|edificio)/i);
+    if (mPropAge) earlyPropAge = parseInt(mPropAge[1], 10);
+  }
+  const reqDemandsModern = /\b(?:moderno|modernos|para\s*estrenar|a\s*estrenar|estrenar|acabados\s*modernos|nuevo|pareja\s*joven|bonito,\s*moderno)\b/i.test(reqRawTextLower);
+  const propNeedsRemodel = /\b(?:para\s*remodelar|potencial\s*de\s*remodelaci[oó]n|remodelar|para\s*actualizar|original)\b/i.test(propRawTextLower);
+  if (reqDemandsModern && (propNeedsRemodel || earlyPropAge >= 25)) {
+    blockers.push(`Choque de Estado F\xEDsico y Modernidad: La demanda busca un inmueble moderno/estrenar para pareja joven y la oferta es un inmueble antiguo de ${earlyPropAge >= 0 ? earlyPropAge + " a\xF1os" : "\xE9poca"} con potencial de remodelaci\xF3n. Match Inviable (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  const reqWantsElectricCar = /\b(?:carro\s*el[eé]ctrico|veh[ií]culo\s*el[eé]ctrico|electrolinera|carga\s*el[eé]ctrica|toma\s*el[eé]ctric\w*)\b/i.test(reqRawTextLower);
+  const propMentionsElectricCar = /\b(?:carro\s*el[eé]ctrico|veh[ií]culo\s*el[eé]ctrico|electrolinera|carga\s*el[eé]ctrica|toma\s*el[eé]ctric\w*)\b/i.test(propRawTextLower) || Boolean(property.amenities?.carro_electrico);
+  if (reqWantsElectricCar && !propMentionsElectricCar) {
+    const isStrictElectric = /\b(?:importante|indispensable|obligatorio|requisito|excluyente|necesario)\b/i.test(reqRawTextLower);
+    if (isStrictElectric && earlyPropAge > 15) {
+      blockers.push(`Choque de Infraestructura para Veh\xEDculo El\xE9ctrico: La demanda exige indispensablemente capacidad o adecuaci\xF3n para carro el\xE9ctrico, y el inmueble es un edificio antiguo (${earlyPropAge >= 0 ? earlyPropAge + " a\xF1os" : "sin tomas"}) sin esta infraestructura certificada. Match Inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
   }
   const propGarageType = (property.garageType || "").toLowerCase();
   const reqGarageTypeRaw = (requirement.rawText || "").toLowerCase();
@@ -6389,8 +6412,8 @@ async function findMatchesForProperty(propertyId) {
     const repCount = Number(property.republicacionesCount || 0);
     const propEffectiveDate = repCount > 0 && property.fechaUltimaPublicacion ? property.fechaUltimaPublicacion : property.fechaUltimaPublicacion || property.createdAt;
     const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
-    if (propAgeDays > 20) {
-      console.log(`[MATCHING-FILTER] \u23F3 Propiedad #${propertyId} omitida por superar 20 d\xEDas de antig\xFCedad sin republicaci\xF3n activa.`);
+    if (propAgeDays > 10) {
+      console.log(`[MATCHING-FILTER] \u23F3 Propiedad #${propertyId} omitida por superar 10 d\xEDas de antig\xFCedad sin republicaci\xF3n activa.`);
       return [];
     }
     const fbProp = property.rawText ? extractFallbackDataFromText(property.rawText) : {};
@@ -6406,9 +6429,9 @@ async function findMatchesForProperty(propertyId) {
       if (compCounter % 20 === 0) {
         await new Promise((r) => setTimeout(r, 10));
       }
-      const reqEffectiveDate = req.updatedAt || req.fechaExtraccion || req.createdAt;
+      const reqEffectiveDate = req.fechaExtraccion || req.createdAt;
       const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
-      if (reqAgeDays > 20) {
+      if (reqAgeDays > 10) {
         continue;
       }
       if (rejectedSet.has(`${propertyId}_${req.id}`)) {
@@ -6492,10 +6515,10 @@ async function findMatchesForRequirement(requirementId) {
       console.log(`[MATCHING-FILTER] \u26D4 Requerimiento #${requirementId} omitido por ser frase suelta sin criterios de b\xFAsqueda.`);
       return [];
     }
-    const reqEffectiveDate = req.updatedAt || req.fechaExtraccion || req.createdAt;
+    const reqEffectiveDate = req.fechaExtraccion || req.createdAt;
     const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
-    if (reqAgeDays > 20) {
-      console.log(`[MATCHING-FILTER] \u23F3 Requerimiento #${requirementId} omitido por superar 20 d\xEDas de antig\xFCedad.`);
+    if (reqAgeDays > 10) {
+      console.log(`[MATCHING-FILTER] \u23F3 Requerimiento #${requirementId} omitido por superar 10 d\xEDas de antig\xFCedad.`);
       return [];
     }
     const fbReq = req.rawText ? extractFallbackDataFromText(req.rawText) : {};
@@ -6514,7 +6537,7 @@ async function findMatchesForRequirement(requirementId) {
       const propRepCount = Number(prop.republicacionesCount || 0);
       const propEffectiveDate = propRepCount > 0 && prop.fechaUltimaPublicacion ? prop.fechaUltimaPublicacion : prop.fechaUltimaPublicacion || prop.createdAt;
       const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
-      if (propAgeDays > 20) {
+      if (propAgeDays > 10) {
         continue;
       }
       if (rejectedSet.has(`${prop.id}_${requirementId}`)) {
@@ -9492,6 +9515,43 @@ __is_sub_message__`,
         groupJid
       );
     }
+    const trimmedTextForUrl = text2.trim();
+    const urlLineOnly = trimmedTextForUrl.split("\n").find((l) => /^https?:\/\/\S+$/.test(l.trim()));
+    const isSoloUrlMsg = !!urlLineOnly && trimmedTextForUrl.replace(/\s+/g, "").length <= urlLineOnly.replace(/\s+/g, "").length + 5;
+    if (isSoloUrlMsg && urlLineOnly && esDominioPermitido(urlLineOnly.trim())) {
+      const soloUrl = urlLineOnly.trim();
+      const TEN_MIN_AGO = new Date(Date.now() - 10 * 60 * 1e3);
+      try {
+        const db = await getDb();
+        if (!db) throw new Error("DB no disponible");
+        const recentProps = await db.select({ id: properties.id, rawText: properties.rawText, origenNombre: properties.origenNombre }).from(properties).where(and2(
+          eq4(properties.idUsuarioWhatsapp, userId.split("@")[0]),
+          gte(properties.createdAt, TEN_MIN_AGO),
+          eq4(properties.available, true)
+        )).orderBy(desc(properties.createdAt)).limit(1);
+        if (recentProps.length > 0) {
+          const prop = recentProps[0];
+          const portalInfo = extractPortalAndListingId(soloUrl);
+          const updatedRaw = (prop.rawText || "").trimEnd().endsWith(":") ? `${prop.rawText}
+${soloUrl}` : `${prop.rawText}
+
+\u{1F517} Info y galer\xEDa:
+${soloUrl}`;
+          await db.update(properties).set({
+            externalUrl: soloUrl,
+            rawText: updatedRaw,
+            origenNombre: prop.origenNombre || groupName || void 0,
+            origenId: groupJid || void 0,
+            ...portalInfo?.portal ? { portal: portalInfo.portal } : {},
+            ...portalInfo?.listingId ? { externalListingId: portalInfo.listingId } : {}
+          }).where(eq4(properties.id, prop.id));
+          console.log(`[JanIA-URLDiferida] \u2705 URL de portal enlazada retroactivamente a Prop #${prop.id} de ${userId}: ${soloUrl}`);
+          return { classification: "INMUEBLE", response: "", reactionEmoji: "\u{1F517}", inserted: false };
+        }
+      } catch (urlPatchErr) {
+        console.warn(`[JanIA-URLDiferida] \u26A0\uFE0F Error al enlazar URL diferida: ${urlPatchErr instanceof Error ? urlPatchErr.message : String(urlPatchErr)}`);
+      }
+    }
     let messageToProcess = text2;
     const rawUserText = text2;
     const SCRAPE_BLOCKLIST = [
@@ -10141,6 +10201,15 @@ ${liveStats}` : buildSystemPrompt(groupJid);
       if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && hollowEarlyCheck.isHollow && !imageBuffer && !result.isFlyerOrBanner && !hasRealPropertyCore) {
         console.log(`[JANIA-FILTER] \u26D4 Descartando publicaci\xF3n hueca o frase suelta (${hollowEarlyCheck.reason}): "${cleanText2.substring(0, 60)}...". Degenerado a CONSULTA_GENERAL.`);
         result.classification = "CONSULTA_GENERAL";
+      }
+    }
+    const textToCheckForDemand = (cleanText || messageToProcess || rawUserText || "").toLowerCase();
+    const isExplicitDemandSignal = /\b(?:busco|buscamos|se\s*busca|estoy\s*buscando|estamos\s*buscando|cliente\s*busca|cliente\s*directo\s*busca|compro|compramos|para\s*compra\s*ya|para\s*compra|solicito\s*para\s*compra|solicito|requiero|requerimiento|necesito|necesitamos|quien\s*tiene|alguien\s*tiene|alguien\s*cuenta\s*con|en\s*b[uú]squeda\s*de)\b/i.test(textToCheckForDemand);
+    const isExplicitOfferSignal = /\b(?:vendo|se\s*vende|en\s*venta\s*(?:lindo|hermoso|excelente|gran|amplio|espectacular|duplex|casa|apto|apartamento|finca|lote|bodega)|ofrezco\s*(?:en\s*venta|en\s*arriendo|apartamento|casa|apto)|se\s*arrienda|arriendo\s*(?:lindo|hermoso|directo|apto|casa))\b/i.test(textToCheckForDemand);
+    if (isExplicitDemandSignal && !isExplicitOfferSignal) {
+      if (result.classification !== "REQUERIMIENTO") {
+        console.log(`[JANIA-GUARDRAIL v31.85] \u{1F504} Reclasificando a REQUERIMIENTO (Se\xF1al inequ\xEDvoca de demanda detectada): "${textToCheckForDemand.substring(0, 60)}..."`);
+        result.classification = "REQUERIMIENTO";
       }
     }
     const extracted = result.extractedData || {};
@@ -11137,6 +11206,12 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   if (!db) return null;
   if (isNonRealEstateText(data.rawText) || isNonRealEstateText(data.name) || isNonRealEstateText(data.description)) {
     console.log(`[JanIA-Reject] \u{1F6AB} Inmueble descartado: mensaje no corresponde a finca ra\xEDz (materiales/canteras/maquinaria): ${data.name || data.rawText}`);
+    return null;
+  }
+  const rawLower = `${data.rawText || ""} ${data.name || ""}`.toLowerCase();
+  const isStrictDemandInProperty = /\b(?:busco|buscamos|se\s*busca|estoy\s*buscando|estamos\s*buscando|cliente\s*busca|para\s*compra\s*ya|solicito\s*para\s*compra|compro\s*apto|compro\s*casa|necesito\s*apto|requiero\s*apto)\b/i.test(rawLower) && !/\b(?:vendo|se\s*vende|ofrezco\s*(?:en\s*venta|en\s*arriendo)|se\s*arrienda|arriendo)\b/i.test(rawLower);
+  if (isStrictDemandInProperty) {
+    console.error(`[JanIA-Guardrail v31.85] \u26D4 BLOQUEO CR\xCDTICO: Se intent\xF3 guardar una DEMANDA en la tabla properties. Abortando inserci\xF3n: "${rawLower.substring(0, 80)}..."`);
     return null;
   }
   const rawTextContent = `${data.rawText || ""} ${data.description || ""} ${data.name || ""}`;
@@ -15626,6 +15701,52 @@ async function runNightlyRematch() {
         for (const prop of enrichedProps) {
           const pairKey = `${req.id}-${prop.id}`;
           if (seenPairs.has(pairKey)) continue;
+          const reqEffectiveDate = req.fechaExtraccion || req.createdAt;
+          const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
+          if (reqAgeDays > 10) {
+            skippedCount++;
+            try {
+              await db.delete(propertyMatches).where(
+                and5(
+                  eq7(propertyMatches.requirementId, req.id),
+                  eq7(propertyMatches.propertyId, prop.id)
+                )
+              );
+            } catch {
+            }
+            continue;
+          }
+          const repCount = Number(prop.republicacionesCount || 0);
+          const propEffectiveDate = repCount > 0 && prop.fechaUltimaPublicacion ? prop.fechaUltimaPublicacion : prop.fechaUltimaPublicacion || prop.createdAt;
+          const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
+          if (propAgeDays > 10) {
+            skippedCount++;
+            try {
+              await db.delete(propertyMatches).where(
+                and5(
+                  eq7(propertyMatches.requirementId, req.id),
+                  eq7(propertyMatches.propertyId, prop.id)
+                )
+              );
+            } catch {
+            }
+            continue;
+          }
+          const propLower = `${prop.rawText || ""} ${prop.name || ""}`.toLowerCase();
+          const isPropActuallyDemand = /\b(?:busco|buscamos|se\s*busca|estoy\s*buscando|estamos\s*buscando|cliente\s*busca|para\s*compra\s*ya|solicito\s*para\s*compra|compro\s*apto|compro\s*casa|necesito\s*apto|requiero\s*apto)\b/i.test(propLower) && !/\b(?:vendo|se\s*vende|ofrezco\s*(?:en\s*venta|en\s*arriendo)|se\s*arrienda|arriendo)\b/i.test(propLower);
+          if (isPropActuallyDemand) {
+            skippedCount++;
+            try {
+              await db.delete(propertyMatches).where(
+                and5(
+                  eq7(propertyMatches.requirementId, req.id),
+                  eq7(propertyMatches.propertyId, prop.id)
+                )
+              );
+            } catch {
+            }
+            continue;
+          }
           if (rejectedPairsSet.has(`${prop.id}_${req.id}`)) {
             skippedCount++;
             try {
@@ -16943,7 +17064,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.82";
+var VECY_VERSION = "v31.85";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -18681,7 +18802,12 @@ ${liveStats}${userContextInstruction}
           enlaceOrigen: requirements.enlaceOrigen,
           createdAt: requirements.createdAt
         }
-      }).from(propertyMatches).innerJoin(properties, eq9(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq9(propertyMatches.requirementId, requirements.id)).where(sql6`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) AND (${properties.available} IS NULL OR ${properties.available} = true)`).orderBy(desc4(propertyMatches.id)).limit(800);
+      }).from(propertyMatches).innerJoin(properties, eq9(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq9(propertyMatches.requirementId, requirements.id)).where(sql6`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
+            AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) 
+            AND (${properties.available} IS NULL OR ${properties.available} = true)
+            AND (COALESCE(${requirements.fechaExtraccion}, ${requirements.createdAt}) >= NOW() - INTERVAL '10 days')
+            AND (COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt}) >= NOW() - INTERVAL '10 days')
+            AND NOT (${properties.rawText} ~* '(\\m(busco|buscamos|se busca|estoy buscando|para compra ya)\\M)')`).orderBy(desc4(propertyMatches.id)).limit(800);
       const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
       const imagesMap = {};
       if (propIds.length > 0) {
@@ -19171,15 +19297,30 @@ ${liveStats}${userContextInstruction}
       }).returning();
       if (input.action === "rechazado") {
         if (input.matchId) {
-          await db.delete(propertyMatches).where(eq9(propertyMatches.id, input.matchId));
+          try {
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq9(propertyMatches.id, input.matchId));
+            await db.delete(propertyMatches).where(eq9(propertyMatches.id, input.matchId));
+          } catch (delErr) {
+            console.warn(`[JanIA-Feedback] Match #${input.matchId} marcado como rejected (conservado por registros relacionados):`, delErr.message);
+          }
         }
         if (input.propertyId && input.requirementId) {
-          await db.delete(propertyMatches).where(
-            and7(
-              eq9(propertyMatches.propertyId, input.propertyId),
-              eq9(propertyMatches.requirementId, input.requirementId)
-            )
-          );
+          try {
+            await db.update(propertyMatches).set({ status: "rejected" }).where(
+              and7(
+                eq9(propertyMatches.propertyId, input.propertyId),
+                eq9(propertyMatches.requirementId, input.requirementId)
+              )
+            );
+            await db.delete(propertyMatches).where(
+              and7(
+                eq9(propertyMatches.propertyId, input.propertyId),
+                eq9(propertyMatches.requirementId, input.requirementId)
+              )
+            );
+          } catch (delErrPair) {
+            console.warn(`[JanIA-Feedback] Par Prop #${input.propertyId} / Req #${input.requirementId} marcado como rejected`);
+          }
         }
         const reasonLower = (input.motivoRechazo || "").toLowerCase();
         const isUnavailable = reasonLower.includes("arrend") || reasonLower.includes("vendi") || reasonLower.includes("no disponible");
@@ -19403,10 +19544,10 @@ ${liveStats}${userContextInstruction}
       let arriendoMatches = 0;
       let permutaMatches = 0;
       let opcionCompraMatches = 0;
-      let totalMatchesActive20 = 0;
-      let perfectMatchesActive20 = 0;
-      let ventaMatchesActive20 = 0;
-      let arriendoMatchesActive20 = 0;
+      let totalMatchesActive10 = 0;
+      let perfectMatchesActive10 = 0;
+      let ventaMatchesActive10 = 0;
+      let arriendoMatchesActive10 = 0;
       const rawSql = getRawSql();
       if (rawSql) {
         const res = await rawSql`
@@ -19422,10 +19563,10 @@ ${liveStats}${userContextInstruction}
             (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%arriendo%' OR p."transactionType"::text ILIKE '%arriendo%')) as arriendo_matches,
             (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%permuta%' OR p."transactionType"::text ILIKE '%permuta%' OR p."rawText"::text ILIKE '%permuta%' OR r."rawText"::text ILIKE '%permuta%')) as permuta_matches,
             (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%opcion%' OR p."transactionType"::text ILIKE '%opcion%' OR p."rawText"::text ILIKE '%opcion%compra%' OR r."rawText"::text ILIKE '%opcion%compra%')) as opcion_compra_matches,
-            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '20 days' OR p."createdAt" >= NOW() - INTERVAL '20 days')) as total_matches_active_20,
-            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 95 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '20 days' OR p."createdAt" >= NOW() - INTERVAL '20 days')) as perfect_matches_active_20,
-            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '20 days' OR p."createdAt" >= NOW() - INTERVAL '20 days') AND (r."tipoNegocioDeseado"::text ILIKE '%venta%' OR p."transactionType"::text ILIKE '%venta%')) as venta_matches_active_20,
-            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '20 days' OR p."createdAt" >= NOW() - INTERVAL '20 days') AND (r."tipoNegocioDeseado"::text ILIKE '%arriendo%' OR p."transactionType"::text ILIKE '%arriendo%')) as arriendo_matches_active_20
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '10 days' OR p."createdAt" >= NOW() - INTERVAL '10 days')) as total_matches_active_10,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 95 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '10 days' OR p."createdAt" >= NOW() - INTERVAL '10 days')) as perfect_matches_active_10,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '10 days' OR p."createdAt" >= NOW() - INTERVAL '10 days') AND (r."tipoNegocioDeseado"::text ILIKE '%venta%' OR p."transactionType"::text ILIKE '%venta%')) as venta_matches_active_10,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '10 days' OR p."createdAt" >= NOW() - INTERVAL '10 days') AND (r."tipoNegocioDeseado"::text ILIKE '%arriendo%' OR p."transactionType"::text ILIKE '%arriendo%')) as arriendo_matches_active_10
         `;
         const row = res[0];
         if (row) {
@@ -19442,10 +19583,10 @@ ${liveStats}${userContextInstruction}
           arriendoMatches = row.arriendo_matches || 0;
           permutaMatches = row.permuta_matches || 0;
           opcionCompraMatches = row.opcion_compra_matches || 0;
-          totalMatchesActive20 = row.total_matches_active_20 || 0;
-          perfectMatchesActive20 = row.perfect_matches_active_20 || 0;
-          ventaMatchesActive20 = row.venta_matches_active_20 || 0;
-          arriendoMatchesActive20 = row.arriendo_matches_active_20 || 0;
+          totalMatchesActive10 = row.total_matches_active_10 || 0;
+          perfectMatchesActive10 = row.perfect_matches_active_10 || 0;
+          ventaMatchesActive10 = row.venta_matches_active_10 || 0;
+          arriendoMatchesActive10 = row.arriendo_matches_active_10 || 0;
         }
       } else {
         const db = await getDb();
@@ -19465,10 +19606,10 @@ ${liveStats}${userContextInstruction}
           arriendoMatches = Math.round(totalMatches * 0.42);
           permutaMatches = Math.round(totalMatches * 0.05);
           opcionCompraMatches = Math.round(totalMatches * 0.02);
-          totalMatchesActive20 = Math.round(totalMatches * 0.55);
-          perfectMatchesActive20 = Math.round(perfectMatches * 0.55);
-          ventaMatchesActive20 = Math.round(ventaMatches * 0.55);
-          arriendoMatchesActive20 = Math.round(arriendoMatches * 0.55);
+          totalMatchesActive10 = Math.round(totalMatches * 0.55);
+          perfectMatchesActive10 = Math.round(perfectMatches * 0.55);
+          ventaMatchesActive10 = Math.round(ventaMatches * 0.55);
+          arriendoMatchesActive10 = Math.round(arriendoMatches * 0.55);
         }
       }
       const result = {
@@ -19484,10 +19625,10 @@ ${liveStats}${userContextInstruction}
         arriendoMatches,
         permutaMatches,
         opcionCompraMatches,
-        totalMatchesActive20,
-        perfectMatchesActive20,
-        ventaMatchesActive20,
-        arriendoMatchesActive20
+        totalMatchesActive10,
+        perfectMatchesActive10,
+        ventaMatchesActive10,
+        arriendoMatchesActive10
       };
       cachedBotStatusData = result;
       cachedBotStatusTime = Date.now();

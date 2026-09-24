@@ -100,6 +100,57 @@ export async function runNightlyRematch() {
           const pairKey = `${req.id}-${prop.id}`;
           if (seenPairs.has(pairKey)) continue;
 
+          // Regla Doctrinal (10 Días de Vigencia v31.84/v31.85): Omitir demandas u ofertas de más de 10 días
+          const reqEffectiveDate = (req as any).fechaExtraccion || req.createdAt;
+          const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
+          if (reqAgeDays > 10) {
+            skippedCount++;
+            try {
+              await db.delete(propertyMatches).where(
+                and(
+                  eq(propertyMatches.requirementId, req.id),
+                  eq(propertyMatches.propertyId, prop.id)
+                )
+              );
+            } catch {}
+            continue;
+          }
+
+          const repCount = Number((prop as any).republicacionesCount || 0);
+          const propEffectiveDate = (repCount > 0 && (prop as any).fechaUltimaPublicacion)
+            ? (prop as any).fechaUltimaPublicacion
+            : ((prop as any).fechaUltimaPublicacion || prop.createdAt);
+          const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
+          if (propAgeDays > 10) {
+            skippedCount++;
+            try {
+              await db.delete(propertyMatches).where(
+                and(
+                  eq(propertyMatches.requirementId, req.id),
+                  eq(propertyMatches.propertyId, prop.id)
+                )
+              );
+            } catch {}
+            continue;
+          }
+
+          // Filtro Guardarraíl: si la propiedad en realidad es una demanda infiltrada, jamás emparejar
+          const propLower = `${prop.rawText || ''} ${prop.name || ''}`.toLowerCase();
+          const isPropActuallyDemand = /\b(?:busco|buscamos|se\s*busca|estoy\s*buscando|estamos\s*buscando|cliente\s*busca|para\s*compra\s*ya|solicito\s*para\s*compra|compro\s*apto|compro\s*casa|necesito\s*apto|requiero\s*apto)\b/i.test(propLower) &&
+            !/\b(?:vendo|se\s*vende|ofrezco\s*(?:en\s*venta|en\s*arriendo)|se\s*arrienda|arriendo)\b/i.test(propLower);
+          if (isPropActuallyDemand) {
+            skippedCount++;
+            try {
+              await db.delete(propertyMatches).where(
+                and(
+                  eq(propertyMatches.requirementId, req.id),
+                  eq(propertyMatches.propertyId, prop.id)
+                )
+              );
+            } catch {}
+            continue;
+          }
+
           // Veto Doctrinal Humano (Tolerancia Cero): si fue descartado previamente, nunca reinsertar
           if (rejectedPairsSet.has(`${prop.id}_${req.id}`)) {
             skippedCount++;

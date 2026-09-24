@@ -322,6 +322,38 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.85 — Septiembre 2026
+
+#### 📌 BLINDAJE ANTI-DEMANDAS INFILTRADAS, GUILLOTINAS DE MODERNIDAD, VISTA EXTERIOR Y CARRO ELÉCTRICO, PURGA DE FECHAS REJUVENECIDAS Y POPUP DE DESCARTE MULTISELECCIÓN SIN ERRORES
+
+**Problemas identificados:**
+1. **Match M14880 (Cruce Inadmisible de 2 Demandas)**: El inmueble `#3721` ("Apartamento en venta en Santa Bárbara Central $1.800M") provenía de un texto de WhatsApp que era una demanda de compra ("APTO PARA COMPRA YA... Presupuesto hasta $1.800M"). Fue erróneamente clasificado e insertado como oferta en `properties`, provocando cruces demanda ↔ demanda.
+2. **Match M15051 (Demanda Caduca + Incompatibilidad Extrema de Perfil Moderno, Cocina y Carro Eléctrico)**:
+   - *Filtro de 10 días burlado*: El Requerimiento `#1090` (publicado el 03-Sep-2026) tenía más de 20 días. Al consultar la vigencia, los motores usaban `r.updatedAt || r.createdAt`. Un script masivo previo actualizó los `updatedAt` de la tabla, "rejuveneciendo" artificialmente los requerimientos viejos.
+   - *Incompatibilidad física no detectada*: Pareja joven demandaba apartamento moderno con cocina abierta y cargador para carro eléctrico. Se le cruzó una oferta de 39 años (#3933), con cocina tradicional cerrada para remodelar y sin cargador. La regex de cocina abierta solo soportaba singular ("cocina abierta", no "cocinas abiertas").
+3. **Match M15034 (Vista Exterior burlada + Error 500 al Descartar)**:
+   - *Vista Exterior*: La regex requería "solo exterior" o "estrictamente exterior", dejando pasar inmuebles interiores cuando la demanda decía simplemente "exterior".
+   - *Error al Descartar*: La tabla `notificationLogs` en PostgreSQL tenía `FOREIGN KEY ("matchId") REFERENCES "propertyMatches"(id) ON DELETE NO ACTION`. Al pulsar "Descartar", la eliminación física del match era abortada por violación de integridad referencial de PostgreSQL.
+
+**Solución aplicada:**
+- **PostgreSQL VPS**: Modificada clave foránea de `notificationLogs` a `ON DELETE SET NULL`. Eliminados matches erróneos (#14880, #15051, #15034). Desactivadas 12 demandas infiltradas en `properties` con `estado_comercial = 'ERROR_DEMANDA_INFILTRADA'`, `available = false` y `vigencia_ia = 'NO_DISPONIBLE'`.
+- `server/_core/janIA.ts`: Barrera determinista anti-demanda antes del LLM y en `saveProperty` (bloqueo ante `busco`, `para compra ya`, `solicito`, `cliente busca`, `estoy buscando`).
+- `server/_core/matching.ts`: Blindada fecha canónica usando `req.fechaExtraccion || req.createdAt`. Agregados **Bloqueo O** (Choque de Estado Físico / Modernidad) y **Bloqueo P** (Choque de Carro Eléctrico). Ampliada regex para cocina abierta plural y vista exterior estricta.
+- `server/jobs/nightlyRematch.ts` y `server/routers/janIA.ts`: Actualizados a fecha canónica inmutable y filtros anti-demanda. En `recordMatchFeedback` se marca primero `status = 'rejected'` y se encapsula la eliminación en `try/catch`.
+- `client/src/components/admin/AdminMatches.tsx`: Modal de descarte reconstruido con **casillas de verificación múltiple (checkboxes)**, botones de "Marcar todas" por bloque temático, contador de selección dinámico, concatenación limpia de motivos y resolución definitiva del error al guardar.
+- `shared/const.ts` y `package.json`: Versión incrementada a `v31.85`.
+
+**Verificación:** `tsc --noEmit` 0 errores ✅ | `vitest run` 64/64 tests ✅ | Build limpio de Vite y esbuild ✅
+
+---
+
+### 🔖 v31.84 — Septiembre 2026
+
+#### 📌 REDUCCIÓN DE VIGENCIA DE MATCHES: 20 → 10 DÍAS
+- Reducción del ciclo de vida activo de matches y leads de 20 a 10 días para garantizar que solo se gestionen oportunidades frescas en el mercado.
+
+---
+
 ### 🔖 v31.82 — Septiembre 2026
 
 #### 📌 CORRECCIÓN DOCTRINAL DE 7 BUGS EN MOTOR DE SCORING `scoreRows()` + EXENCIÓN DE ANTIGÜEDAD FLEXIBLE

@@ -2797,20 +2797,15 @@ export function explicarMatch(
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // F. Choque de Orientación Visual (Exige "Solo Exterior" vs "Interior") (Doctrina v25.0)
-  const reqDemandsExterior = reqRawTextLower.includes("solo exterior") ||
-    reqRawTextLower.includes("estrictamente exterior") ||
-    reqRawTextLower.includes("nada interior") ||
-    reqRawTextLower.includes("cero interior") ||
-    reqRawTextLower.includes("no interior");
+  // F. Choque de Orientación Visual (Exige "Exterior" vs "Interior") (Doctrina v25.0 / v31.85)
+  const reqDemandsExterior = /\b(?:exterior|solo\s*exterior|estrictamente\s*exterior|nada\s*interior|cero\s*interior|no\s*interior)\b/i.test(reqRawTextLower) ||
+    requirement.caracteristicasDeseadas?.interiorExterior === "Exterior";
 
-  const propIsInterior = propRawTextLower.includes("es interior") ||
-    propRawTextLower.includes("vista interior") ||
-    propRawTextLower.includes("apartamento interior") ||
-    propRawTextLower.includes("apto interior");
+  const propIsInterior = /\b(?:es\s*interior|vista\s*interior|apartamento\s*interior|apto\s*interior|inmueble\s*interior)\b/i.test(propRawTextLower) &&
+    !/\b(?:vista\s*exterior|apartamento\s*exterior|apto\s*exterior|piso\s*\d+\s*exterior)\b/i.test(propRawTextLower);
 
   if (reqDemandsExterior && propIsInterior) {
-    blockers.push("Choque de Orientación Visual: El cliente exige expresamente 'SOLO EXTERIOR' y el inmueble ofrecido es INTERIOR. Match Inviable (0%).");
+    blockers.push("Choque de Orientación Visual: El cliente exige expresamente 'EXTERIOR' y el inmueble ofrecido es de tipología INTERIOR. Match Inviable (0%).");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
@@ -2868,15 +2863,15 @@ export function explicarMatch(
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // K. Choque de Tipología de Cocina (Cerrada vs Abierta / Tipo Americana / Tipo Isla) (Doctrina v31.80)
-  const reqKitchenClosed = /\b(?:cocina\s*cerrada|cocina\s*tradicional|cocina\s*independiente|cerrada\s*indispensable|cocina\s*no\s*abierta)\b/i.test(reqRawTextLower) ||
+  // K. Choque de Tipología de Cocina (Cerrada vs Abierta / Tipo Americana / Tipo Isla) (Doctrina v31.80 / v31.85)
+  const reqKitchenClosed = /\b(?:cocinas?\s*cerradas?|cocinas?\s*tradicional(?:es)?|cocinas?\s*independiente(?:s)?|cerrada\s*indispensable|cocinas?\s*no\s*abierta(?:s)?)\b/i.test(reqRawTextLower) ||
     requirement.caracteristicasDeseadas?.cocina === "Cerrada";
-  const reqKitchenOpen = /\b(?:cocina\s*abierta|cocina\s*americana|tipo\s*isla|cocina\s*tipo\s*isla|cocina\s*integrada)\b/i.test(reqRawTextLower) ||
+  const reqKitchenOpen = /\b(?:cocinas?\s*abiertas?|cocinas?\s*americanas?|tipo\s*isla|cocinas?\s*tipo\s*isla|cocinas?\s*integradas?|aman\s*(?:las\s*)?cocinas?\s*abiertas?)\b/i.test(reqRawTextLower) ||
     requirement.caracteristicasDeseadas?.cocina === "Abierta" || requirement.caracteristicasDeseadas?.cocina === "Abierta tipo Isla";
 
-  const propKitchenClosed = /\b(?:cocina\s*cerrada|cocina\s*independiente|cocina\s*tradicional)\b/i.test(propRawTextLower) ||
+  const propKitchenClosed = /\b(?:cocinas?\s*cerradas?|cocinas?\s*independiente(?:s)?|cocinas?\s*tradicional(?:es)?)\b/i.test(propRawTextLower) ||
     property.amenities?.cocina === "Cerrada";
-  const propKitchenOpen = /\b(?:cocina\s*abierta|cocina\s*tipo\s*isla|tipo\s*isla|cocina\s*americana|cocina\s*integrada|cocina\s*abierta\s*moderna)\b/i.test(propRawTextLower) ||
+  const propKitchenOpen = /\b(?:cocinas?\s*abiertas?|cocinas?\s*tipo\s*isla|tipo\s*isla|cocinas?\s*americanas?|cocinas?\s*integradas?|cocinas?\s*abiertas?\s*modernas?)\b/i.test(propRawTextLower) ||
     property.amenities?.cocina === "Abierta" || property.amenities?.cocina === "Abierta tipo Isla";
 
   if (reqKitchenClosed && propKitchenOpen && !propKitchenClosed) {
@@ -2911,6 +2906,39 @@ export function explicarMatch(
   if (reqDemandsImmediate && propHasDeferredAvailability && !/\b(?:disponible\s*ya|disponibilidad\s*inmediata|desocupado|vac[ií]o)\b/i.test(propRawTextLower)) {
     blockers.push(`Choque de Disponibilidad Temporal: La demanda exige arriendo/entrega 'PARA YA' (Inmediata) y la oferta está '${propHasDeferredAvailability[0].trim()}'. Desfase temporal incompatible. Match Inviable (0%).`);
     return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // N. Detección Temprana de Antigüedad para Guillotinas Cualitativas
+  let earlyPropAge = property.antiguedadAnos != null ? Number(property.antiguedadAnos) : -1;
+  if (earlyPropAge < 0 && property.yearBuilt != null) {
+    earlyPropAge = new Date().getFullYear() - Number(property.yearBuilt);
+  }
+  if (earlyPropAge < 0 && property.rawText) {
+    const mPropAge = property.rawText.toLowerCase().match(/(?:edificio\s*de|antigüedad|antiguedad|tiene)\s*(\d{1,2})\s*años/i)
+      || property.rawText.toLowerCase().match(/(\d{1,2})\s*años\s*(?:de\s*)?(?:antigüedad|construido|edificio)/i);
+    if (mPropAge) earlyPropAge = parseInt(mPropAge[1], 10);
+  }
+
+  // O. Choque de Estado Físico y Modernidad: Demanda busca Moderno/Estrenar vs Oferta Para Remodelar/Antigua (Doctrina v31.85)
+  const reqDemandsModern = /\b(?:moderno|modernos|para\s*estrenar|a\s*estrenar|estrenar|acabados\s*modernos|nuevo|pareja\s*joven|bonito,\s*moderno)\b/i.test(reqRawTextLower);
+  const propNeedsRemodel = /\b(?:para\s*remodelar|potencial\s*de\s*remodelaci[oó]n|remodelar|para\s*actualizar|original)\b/i.test(propRawTextLower);
+
+  if (reqDemandsModern && (propNeedsRemodel || earlyPropAge >= 25)) {
+    blockers.push(`Choque de Estado Físico y Modernidad: La demanda busca un inmueble moderno/estrenar para pareja joven y la oferta es un inmueble antiguo de ${earlyPropAge >= 0 ? earlyPropAge + ' años' : 'época'} con potencial de remodelación. Match Inviable (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
+  // P. Choque por Adecuación para Carro Eléctrico (Doctrina v31.85)
+  const reqWantsElectricCar = /\b(?:carro\s*el[eé]ctrico|veh[ií]culo\s*el[eé]ctrico|electrolinera|carga\s*el[eé]ctrica|toma\s*el[eé]ctric\w*)\b/i.test(reqRawTextLower);
+  const propMentionsElectricCar = /\b(?:carro\s*el[eé]ctrico|veh[ií]culo\s*el[eé]ctrico|electrolinera|carga\s*el[eé]ctrica|toma\s*el[eé]ctric\w*)\b/i.test(propRawTextLower) ||
+    Boolean(property.amenities?.carro_electrico);
+
+  if (reqWantsElectricCar && !propMentionsElectricCar) {
+    const isStrictElectric = /\b(?:importante|indispensable|obligatorio|requisito|excluyente|necesario)\b/i.test(reqRawTextLower);
+    if (isStrictElectric && earlyPropAge > 15) {
+      blockers.push(`Choque de Infraestructura para Vehículo Eléctrico: La demanda exige indispensablemente capacidad o adecuación para carro eléctrico, y el inmueble es un edificio antiguo (${earlyPropAge >= 0 ? earlyPropAge + ' años' : 'sin tomas'}) sin esta infraestructura certificada. Match Inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    }
   }
 
   // Auditoría de tipo de garaje (independiente vs lineal) v20.0
@@ -3379,8 +3407,8 @@ export async function findMatchesForProperty(propertyId: number) {
         await new Promise(r => setTimeout(r, 10));
       }
 
-      // Regla Doctrinal (10 Días de Vigencia): Omitir requerimientos inactivos de más de 10 días
-      const reqEffectiveDate = req.updatedAt || req.fechaExtraccion || req.createdAt;
+      // Regla Doctrinal (10 Días de Vigencia v31.84/v31.85): Omitir requerimientos inactivos de más de 10 días
+      const reqEffectiveDate = req.fechaExtraccion || req.createdAt;
       const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
       if (reqAgeDays > 10) {
         continue;
@@ -3478,8 +3506,8 @@ export async function findMatchesForRequirement(requirementId: number) {
       return [];
     }
 
-    // REGLA DOCTRINAL (10 Días de Vigencia): Omitir requerimientos inactivos de más de 10 días (v31.84)
-    const reqEffectiveDate = req.updatedAt || req.fechaExtraccion || req.createdAt;
+    // REGLA DOCTRINAL (10 Días de Vigencia): Omitir requerimientos inactivos de más de 10 días (v31.84/v31.85)
+    const reqEffectiveDate = req.fechaExtraccion || req.createdAt;
     const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
     if (reqAgeDays > 10) {
       console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por superar 10 días de antigüedad.`);

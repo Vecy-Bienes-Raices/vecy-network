@@ -167,7 +167,40 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.84 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.85 — Septiembre 2026
+
+### Novedades v31.85 (Blindaje Anti-Demanda Infiltrada, Guillotinas de Modernidad, Vista Exterior y Carro Eléctrico, Purga de Rejuvenecimiento de Fechas y POPUP de Descarte Multiselección sin Errores):
+- **Diagnóstico Forense de los 3 Matches Reportados**:
+  - **Match M14880 (Cruce Inadmisible de 2 Demandas)**:
+    - *Causa raíz*: El Inmueble `#3721` ("Apartamento en venta en Santa Bárbara Central $1.800M") era en realidad un post de WhatsApp de un colega comprador que decía: *"APTO PARA COMPRA YA... Presupuesto hasta $1.800M"*. Un modelo LLM previo lo clasificó erróneamente como OFERTA y lo insertó en `properties`. JanIA cruzó la Demanda #1541 contra la Oferta infiltrada #3721.
+    - *Corrección Integral*:
+      1. Barrera determinista anti-demanda en `server/_core/janIA.ts` tanto antes de llamar al LLM como en `saveProperty` (bloqueo automático e inserción abortada si el texto contiene `busco`, `para compra ya`, `solicito`, `cliente busca`).
+      2. Auditoría en PostgreSQL VPS: Se detectaron y desactivaron 12 propiedades que eran demandas infiltradas (#4007, #3992, #3849, #3790, #3721, #3704, #3308, #3154, #3082, #2497, #2226, #1896) marcadas con `estado_comercial = 'ERROR_DEMANDA_INFILTRADA'`, `available = false` y `vigencia_ia = 'NO_DISPONIBLE'`.
+      3. Se eliminaron 23 cruces inválidos generados contra estas fichas erróneas.
+      4. Filtro defensivo añadido en `nightlyRematch.ts`, `server/routers/janIA.ts` y en `scoreRows()` del cliente web.
+  - **Match M15051 (Demanda Caduca + Incompatibilidad Extrema de Perfil Moderno, Cocina y Carro Eléctrico)**:
+    - *Causa raíz 1 (Filtro 10 días burlado por `updatedAt`)*: La Demanda #1090 se publicó el 3 de septiembre. Los motores usaban `r.updatedAt || r.createdAt`. Un script por lotes actualizó los timestamps de `updatedAt` a la fecha actual, "rejuveneciendo" artificialmente requerimientos caducos de hace más de 20 días.
+    - *Solución*: En `matching.ts`, `nightlyRematch.ts` y `server/routers/janIA.ts` se blindó la fecha canónica usando `req.fechaExtraccion || req.createdAt`.
+    - *Causa raíz 2 (Incompatibilidad Física Ignorada)*: La pareja joven exigía apartamento moderno, cocina abierta e infraestructura para cargador de carro eléctrico. El inmueble ofrecido (#3933) tenía 39 años de antigüedad, cocina cerrada tradicional para remodelar y sin opción de carga eléctrica.
+    - *Solución*: Se incorporaron en `matching.ts` y `AdminMatches.tsx`:
+      - **Bloqueo O (Choque de Estado Físico / Modernidad)**: Si la demanda exige inmueble moderno/nuevo/pareja joven y la oferta es antigua (≥25 años) o para remodelar → Guillotina 0% (`missing`).
+      - **Bloqueo P (Choque de Infraestructura para Carro Eléctrico)**: Si la demanda exige cargador/carro eléctrico y el edificio tiene más de 15 años sin adecuación documentada → Guillotina 0% (`missing`).
+      - Soporte en expresiones regulares para cocina abierta en plural (*"cocinas abiertas"*).
+  - **Match M15034 (Choque de Vista Exterior / Interior + Falla Crítica en Modal de Descarte)**:
+    - *Causa raíz 1 (Vista Exterior burlada)*: El inmueble era interior y la demanda exigía exterior. La regex previa requería frases compuestas como "solo exterior" o "estrictamente exterior", ignorando cuando simplemente se especificaba "exterior". Corregido a coincidencia estricta en `matching.ts` y marcado como advertencia/bloqueo en `AdminMatches.tsx`.
+    - *Causa raíz 2 (Error 500 al descartar match)*: La tabla `notificationLogs` en PostgreSQL tenía una llave foránea hacia `propertyMatches.id` con restricción `ON DELETE NO ACTION`. Al pulsar "Descartar", el servidor intentaba borrar el match y PostgreSQL arrojaba un error de violación de clave foránea.
+    - *Solución en BD*: Se modificó la restricción en PostgreSQL VPS a `ON DELETE SET NULL`.
+    - *Solución en Código*: En `server/routers/janIA.ts`, `recordMatchFeedback` primero marca el registro como `status = 'rejected'` y luego intenta la eliminación dentro de un bloque seguro `try/catch`.
+- **Nuevo Modal de Descarte Multiselección Ágil y Flexible (`AdminMatches.tsx`)**:
+  - Se transformó la selección única por radio buttons en un sistema de **casillas de verificación múltiple (checkboxes)**.
+  - Soporta marcar varias o todas las razones que apliquen simultáneamente (ej: *"El inmueble es interior cuando se exigió exterior"* + *"Cocina cerrada cuando se pidió abierta"*).
+  - Botón de conveniencia *"Marcar todas"* / *"Desmarcar todas"* por cada una de las 4 categorías doctrinales.
+  - Contador dinámico en vivo (`X seleccionadas`) y botón para *"Limpiar selección"*.
+  - Concatenación limpia de motivos separados por viñetas (`·`) para registro en el historial de feedback.
+  - Cero fallos al guardar y retroalimentación inmediata sin bloqueos.
+- **Verificación**: 64/64 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 27s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.84 — Septiembre 2026
 
 ### Novedades v31.84 (Reducción de Vigencia de Matches: 20 → 10 Días):
 - **Regla Doctrinal (10 Días de Vigencia)** — reducida de 20 a 10 días en todos los motores:

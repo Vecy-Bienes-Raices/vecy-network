@@ -9,6 +9,48 @@
 
 ---
 
+## 📋 SESIÓN v31.85 — 24 Septiembre 2026
+
+### Solicitud de Eduardo
+Eduardo manifestó su frustración por fallas inminentes y repetitivas en el cotejamiento de datos, aportando tres ejemplos claros de errores garrafales muy desfasados para resolver de raíz:
+1. **Match M14880**: Cruce de dos DEMANDAS como si fuera un match (inaceptable e imposible).
+2. **Match M15051**: Demanda de una pareja joven que busca algo moderno, bonito, con cocina abierta y carro eléctrico con cargador. El inmueble asignado (#3933) es antiguo (39 años), cerrado, feo, sin ascensor y para remodelar. Además, el requerimiento fue publicado el 3 de septiembre (> 10 días de antigüedad), violando la regla de vigencia de 10 días establecida previamente.
+3. **Match M15034**: Inmueble interior cuando la demanda exigía estrictamente exterior. Además, la herramienta del botón para descartar el match solo permitía seleccionar una opción, salía error al guardar y no era accesible ni fácil de manejar (se solicita selección múltiple de motivos de descarte y solución del fallo de guardado).
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Match M14880 (Demanda infiltrada en tabla de Ofertas)**:
+   - Al inspeccionar la oferta vinculada `#3721` ("Apartamento en venta en Santa Bárbara Central $1.800M"), su `rawText` original reveló que era un requerimiento de WhatsApp: *"APTO PARA COMPRA YA... Presupuesto hasta $1.800M"*. Un modelo LLM en el pasado lo clasificó erróneamente como inmueble (`OFERTA`) y lo insertó en `properties`. JanIA cruzó la Demanda #1541 con esta supuesta oferta, provocando un match demanda ↔ demanda.
+   - Auditoría en PostgreSQL: Se descubrieron 12 propiedades que eran en realidad demandas de WhatsApp (#4007, #3992, #3849, #3790, #3721, #3704, #3308, #3154, #3082, #2497, #2226, #1896).
+2. **Match M15051 (Rejuvenecimiento involuntario de demandas + Incompatibilidad física extrema)**:
+   - *Filtro de 10 días burlado*: El requerimiento `#1090` fue publicado el 03-Sep-2026. Aunque el código filtraba por antigüedad, `nightlyRematch.ts` y `matching.ts` usaban `req.updatedAt || req.createdAt`. Al ejecutar migraciones o scripts de saneamiento en BD, el campo `updatedAt` se actualizó automáticamente a la fecha de hoy, haciendo parecer que la demanda tenía 0 días de antigüedad.
+   - *Incompatibilidad física no detectada*: La demanda exigía cocina abierta ("aman las cocinas abiertas"), inmueble moderno y cargador de carro eléctrico. El inmueble ofrecido (#3933) tenía 39 años de antigüedad, cocina cerrada y ningún cargador. La regex de cocina solo buscaba el singular "cocina abierta" (no plural "cocinas abiertas"), y no existía un choque explícito para perfil moderno vs edificio antiguo o requerimiento de carro eléctrico.
+3. **Match M15034 (Filtro exterior burlado + Error de Clave Foránea en PostgreSQL al descartar)**:
+   - *Vista Exterior*: La regex de `matching.ts` buscaba frases compuestas como "solo exterior" o "estrictamente exterior", pero no capturaba cuando la demanda decía simplemente "exterior" o "piso alto exterior".
+   - *Error al descartar match (Error 500 / Fallo al guardar)*: En PostgreSQL VPS, la tabla `notificationLogs` poseía una foreign key: `notificationLogs.matchId` -> `propertyMatches.id` con `ON DELETE NO ACTION`. Cuando el usuario pulsaba "Descartar", el endpoint llamaba a `DELETE FROM propertyMatches WHERE id = matchId`, disparando una excepción no controlada por restricción de clave foránea (`violates foreign key constraint`).
+
+### Acciones Ejecutadas
+1. **Base de Datos PostgreSQL VPS (`vecy_network`)**:
+   - Se alteró la restricción foránea de `notificationLogs`: `ALTER TABLE "notificationLogs" DROP CONSTRAINT ...; ALTER TABLE "notificationLogs" ADD CONSTRAINT ... FOREIGN KEY ("matchId") REFERENCES "propertyMatches"(id) ON DELETE SET NULL;`
+   - Se eliminaron los matches inválidos #14880, #15051 y #15034.
+   - Se auditaron y marcaron las 12 demandas infiltradas en `properties` con `estado_comercial = 'ERROR_DEMANDA_INFILTRADA'`, `available = false` y `vigencia_ia = 'NO_DISPONIBLE'`, purgando 23 matches fantasma asociados.
+2. **Backend (`janIA.ts`, `matching.ts`, `nightlyRematch.ts`, `server/routers/janIA.ts`)**:
+   - Barrera determinista anti-demanda en `janIA.ts`: Tanto antes de llamar a Gemini como dentro de `saveProperty`, si el mensaje contiene patrones estrictos de demanda (`busco`, `para compra ya`, `solicito`, `cliente busca`, `estoy buscando`), se rechaza e impide categóricamente su inserción como oferta.
+   - Reparación del cálculo de antigüedad: Uso inmutable de `fechaExtraccion || createdAt` (prohibido `updatedAt` para vigencia).
+   - Incorporación de **Bloqueo O (Choque de Estado Físico / Modernidad)** y **Bloqueo P (Choque de Carro Eléctrico)** en `matching.ts` que fuerzan 0% ante disparidad con edificios antiguos (≥25 años o para remodelar).
+   - Ampliación de regex para vista exterior estricta y cocinas abiertas en plural.
+   - Blindaje en `recordMatchFeedback`: Actualiza primero `status = 'rejected'` y encapsula la eliminación en un bloque defensivo `try/catch`.
+3. **Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+   - **Nuevo Modal de Descarte Multiselección**: Reemplazo de radio buttons por casillas de selección múltiple (checkboxes). Permite elegir varias razones simultáneas (ej: interior vs exterior + cocina cerrada + sin carro eléctrico), incluye botón *"Marcar todas"* y *"Desmarcar todas"* por bloque temático, contador de selección dinámico y botón para *"Limpiar selección"*.
+   - Integración de validación de carro eléctrico y perfil moderno en la tabla de cotejo visual.
+   - Cero errores de guardado.
+
+### Verificación Automatizada
+- `vitest run`: 64/64 pruebas pasando limpias al 100%.
+- `tsc --noEmit`: 0 errores de tipado TypeScript.
+- `npm run build`: Build limpio de Vite y esbuild (`dist/` y `dist-server/index.js`).
+
+---
+
 ## 📋 SESIÓN v31.82 — 20 Septiembre 2026
 
 ### Solicitud de Eduardo
