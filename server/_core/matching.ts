@@ -2863,23 +2863,38 @@ export function explicarMatch(
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // K. Choque de Tipología de Cocina (Cerrada vs Abierta / Tipo Americana / Tipo Isla) (Doctrina v31.80 / v31.85)
+  // N. Detección Temprana de Antigüedad para Guillotinas Cualitativas
+  let earlyPropAge = property.antiguedadAnos != null ? Number(property.antiguedadAnos) : -1;
+  if (earlyPropAge < 0 && property.yearBuilt != null) {
+    earlyPropAge = new Date().getFullYear() - Number(property.yearBuilt);
+  }
+  if (earlyPropAge < 0 && property.rawText) {
+    const mPropAge = property.rawText.toLowerCase().match(/(?:edificio\s*de|antigüedad|antiguedad|tiene)\s*(\d{1,2})\s*años/i)
+      || property.rawText.toLowerCase().match(/(\d{1,2})\s*años\s*(?:de\s*)?(?:antigüedad|construido|edificio)/i);
+    if (mPropAge) earlyPropAge = parseInt(mPropAge[1], 10);
+  }
+
+  // K. Choque de Tipología de Cocina (Cerrada vs Abierta / Tipo Americana / Tipo Isla) (Doctrina v31.80 / v31.85 / v31.87)
   const reqKitchenClosed = /\b(?:cocinas?\s*cerradas?|cocinas?\s*tradicional(?:es)?|cocinas?\s*independiente(?:s)?|cerrada\s*indispensable|cocinas?\s*no\s*abierta(?:s)?)\b/i.test(reqRawTextLower) ||
     requirement.caracteristicasDeseadas?.cocina === "Cerrada";
-  const reqKitchenOpen = /\b(?:cocinas?\s*abiertas?|cocinas?\s*americanas?|tipo\s*isla|cocinas?\s*tipo\s*isla|cocinas?\s*integradas?|aman\s*(?:las\s*)?cocinas?\s*abiertas?)\b/i.test(reqRawTextLower) ||
-    requirement.caracteristicasDeseadas?.cocina === "Abierta" || requirement.caracteristicasDeseadas?.cocina === "Abierta tipo Isla";
+  const reqKitchenOpen = /\b(?:cocinas?\s*abiertas?|cocinas?\s*americanas?|cocinas?\s*tipo\s*americana|tipo\s*isla|cocinas?\s*tipo\s*isla|cocinas?\s*integradas?|aman\s*(?:las\s*)?cocinas?\s*abiertas?|les\s*encantan?\s*(?:las\s*)?cocinas?\s*abiertas?|quieren\s*cocinas?\s*abiertas?|prefieren\s*cocinas?\s*abiertas?)\b/i.test(reqRawTextLower) ||
+    requirement.caracteristicasDeseadas?.cocina === "Abierta" || requirement.caracteristicasDeseadas?.cocina === "Abierta tipo Isla" || requirement.caracteristicasDeseadas?.cocina === "Americana";
 
   const propKitchenClosed = /\b(?:cocinas?\s*cerradas?|cocinas?\s*independiente(?:s)?|cocinas?\s*tradicional(?:es)?)\b/i.test(propRawTextLower) ||
     property.amenities?.cocina === "Cerrada";
-  const propKitchenOpen = /\b(?:cocinas?\s*abiertas?|cocinas?\s*tipo\s*isla|tipo\s*isla|cocinas?\s*americanas?|cocinas?\s*integradas?|cocinas?\s*abiertas?\s*modernas?)\b/i.test(propRawTextLower) ||
-    property.amenities?.cocina === "Abierta" || property.amenities?.cocina === "Abierta tipo Isla";
+  const propKitchenOpen = /\b(?:cocinas?\s*abiertas?|cocinas?\s*tipo\s*isla|tipo\s*isla|cocinas?\s*americanas?|cocinas?\s*tipo\s*americana|cocinas?\s*integradas?|cocinas?\s*abiertas?\s*modernas?)\b/i.test(propRawTextLower) ||
+    property.amenities?.cocina === "Abierta" || property.amenities?.cocina === "Abierta tipo Isla" || property.amenities?.cocina === "Americana";
 
   if (reqKitchenClosed && propKitchenOpen && !propKitchenClosed) {
     blockers.push("Choque de Tipología de Cocina: La demanda exige estrictamente COCINA CERRADA y la oferta cuenta con COCINA ABIERTA / Tipo Americana. Match Inviable (0%).");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   if (reqKitchenOpen && propKitchenClosed && !propKitchenOpen) {
-    blockers.push("Choque de Tipología de Cocina: La demanda exige COCINA ABIERTA / Tipo Americana y la oferta cuenta con COCINA CERRADA independiente. Match Inviable (0%).");
+    blockers.push("Choque de Tipología de Cocina: La demanda exige COCINA ABIERTA / Tipo Americana y la oferta cuenta con COCINA CERRADA tradicional independiente. Match Inviable (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (reqKitchenOpen && !propKitchenOpen && earlyPropAge >= 25) {
+    blockers.push(`Choque de Tipología de Cocina: La demanda exige COCINA ABIERTA y la oferta es un inmueble antiguo de ${earlyPropAge} años con cocina tradicional cerrada sin remodelar. Match Inviable (0%).`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
@@ -2908,17 +2923,6 @@ export function explicarMatch(
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // N. Detección Temprana de Antigüedad para Guillotinas Cualitativas
-  let earlyPropAge = property.antiguedadAnos != null ? Number(property.antiguedadAnos) : -1;
-  if (earlyPropAge < 0 && property.yearBuilt != null) {
-    earlyPropAge = new Date().getFullYear() - Number(property.yearBuilt);
-  }
-  if (earlyPropAge < 0 && property.rawText) {
-    const mPropAge = property.rawText.toLowerCase().match(/(?:edificio\s*de|antigüedad|antiguedad|tiene)\s*(\d{1,2})\s*años/i)
-      || property.rawText.toLowerCase().match(/(\d{1,2})\s*años\s*(?:de\s*)?(?:antigüedad|construido|edificio)/i);
-    if (mPropAge) earlyPropAge = parseInt(mPropAge[1], 10);
-  }
-
   // O. Choque de Estado Físico y Modernidad: Demanda busca Moderno/Estrenar vs Oferta Para Remodelar/Antigua (Doctrina v31.85)
   const reqDemandsModern = /\b(?:moderno|modernos|para\s*estrenar|a\s*estrenar|estrenar|acabados\s*modernos|nuevo|pareja\s*joven|bonito,\s*moderno)\b/i.test(reqRawTextLower);
   const propNeedsRemodel = /\b(?:para\s*remodelar|potencial\s*de\s*remodelaci[oó]n|remodelar|para\s*actualizar|original)\b/i.test(propRawTextLower);
@@ -2928,29 +2932,27 @@ export function explicarMatch(
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // P. Choque por Adecuación para Carro Eléctrico (Doctrina v31.85)
-  const reqWantsElectricCar = /\b(?:carro\s*el[eé]ctrico|veh[ií]culo\s*el[eé]ctrico|electrolinera|carga\s*el[eé]ctrica|toma\s*el[eé]ctric\w*)\b/i.test(reqRawTextLower);
+  // P. Choque por Adecuación para Carro Eléctrico (Doctrina v31.85 / v31.87)
+  const reqWantsElectricCar = /\b(?:carro\s*el[eé]ctrico|veh[ií]culo\s*el[eé]ctrico|electrolinera|carga\s*el[eé]ctrica|toma\s*el[eé]ctric\w*)\b/i.test(reqRawTextLower) ||
+    Boolean((requirement.caracteristicasDeseadas as any)?.carro_electrico);
   const propMentionsElectricCar = /\b(?:carro\s*el[eé]ctrico|veh[ií]culo\s*el[eé]ctrico|electrolinera|carga\s*el[eé]ctrica|toma\s*el[eé]ctric\w*)\b/i.test(propRawTextLower) ||
     Boolean(property.amenities?.carro_electrico);
 
   if (reqWantsElectricCar && !propMentionsElectricCar) {
-    const isStrictElectric = /\b(?:importante|indispensable|obligatorio|requisito|excluyente|necesario)\b/i.test(reqRawTextLower);
-    if (isStrictElectric && earlyPropAge > 15) {
-      blockers.push(`Choque de Infraestructura para Vehículo Eléctrico: La demanda exige indispensablemente capacidad o adecuación para carro eléctrico, y el inmueble es un edificio antiguo (${earlyPropAge >= 0 ? earlyPropAge + ' años' : 'sin tomas'}) sin esta infraestructura certificada. Match Inviable (0%).`);
-      return buildExplanationResult(0, blockers, positives, negatives);
-    }
+    blockers.push(`Choque de Infraestructura para Vehículo Eléctrico: La demanda solicita capacidad o adecuación para carro eléctrico, y el inmueble ofrecido (${earlyPropAge >= 0 ? earlyPropAge + ' años' : 'edificio'}) no certifica infraestructura ni tomas de carga eléctrica. Match Inviable (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // Auditoría de tipo de garaje (independiente vs lineal) v20.0
+  // Auditoría de tipo de garaje (independiente vs lineal) v20.0 / v31.87
   const propGarageType = (property.garageType || "").toLowerCase();
   const reqGarageTypeRaw = (requirement.rawText || "").toLowerCase();
   const reqWantsIndependent = reqGarageTypeRaw.includes("independiente") || reqGarageTypeRaw.includes("libre") || reqGarageTypeRaw.includes("no lineal");
 
   let garageComfortPenalty = 0;
   if (reqGarages > 0 && pGarages >= reqGarages) {
-    if (reqWantsIndependent && propGarageType === "lineal") {
-      garageComfortPenalty = 1; // Castigo duro: -30 pts
-      negatives.push(`⚠️ Parqueadero(s) ofrecidos son LINEALES (servidumbre). El demandante exige ESTRICTAMENTE independientes (-30 pts).`);
+    if (reqWantsIndependent && (propGarageType === "lineal" || propRawTextLower.includes("lineal") || propRawTextLower.includes("servidumbre"))) {
+      blockers.push(`Choque de Tipología de Parqueadero: El demandante exige garajes INDEPENDIENTES y la oferta cuenta con garajes lineales / servidumbre. Match Inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
     } else if (propGarageType === "independiente" && pGarages > reqGarages) {
       garageComfortPenalty = 2; // bono de excedente independiente
       positives.push(`✅ Excedente de parqueaderos independientes (${pGarages} ofrecidos vs ${reqGarages} requeridos) — Bono de confort`);

@@ -322,6 +322,50 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.87 — Septiembre 2026
+
+#### 📌 DOCTRINA "EN DURO" TOTAL PARA EXIGENCIAS DE DEMANDA, GUILLOTINAS INFLEXIBLES DE ANTIGÜEDAD Y COCINA, ELIMINACIÓN DE FALSAS FLEXIBILIDADES Y ERRADICACIÓN DE "N/E"
+
+**Problemas identificados:**
+1. **Margen residual de +3 años en Antigüedad (`AdminMatches.tsx:1706`)**: Cuando una demanda exigía un tope de antigüedad (ej. máx 18 años) y el inmueble ofrecido tenía 20 años, una condición residual `ageP <= ageR + 3` lo degradaba a advertencia amarilla (`warn`), deduciendo apenas ~0.8 puntos y permitiendo matches espurios de 95% a 97% en lugar de bloquearlos de inmediato.
+2. **Falsa flexibilidad sobrepasando límites numéricos (`AdminMatches.tsx:1691`)**: La detección de frases como *"remodelado"* activaba `isAgeFlexible = true` de forma incondicional, sobreescribiendo topes numéricos estrictos (`ageR > 0`) por la etiqueta *"Flexible (Remodelado / Bien Cuidado)"* y premiando la oferta con estatus `plus`.
+3. **Brechas de extracción y proyección "N/E" en Cocina y Amenities**:
+   - En la tabla de cotejo, la tipología de cocina dependía únicamente del campo `kitchenType`, perdiendo `(prop.amenities as any)?.cocina` y expresiones comunes en el rawText (*"cocina tipo americana"*, *"cocina con isla"*, *"les encantan las cocinas abiertas"*), mostrando *"Integral (Consultar)"* o *"N/E"*.
+   - Choques entre cocina abierta demandada y cocina cerrada ofrecida no siempre detonaban guillotina en la UI ni en `matching.ts`.
+4. **Degradación a `warn` en exigencias físicas de la demanda**: Cuando el comprador exigía explícitamente Depósito, CBS (cuarto de servicio), Estudio/Star TV, o Garajes Independientes, y la oferta carecía de ellos o eran garajes lineales, la tabla de cotejo asignaba `warn` en lugar de guillotina 0% (`missing`).
+5. **Typo en Baños**: En la condición de estatus neutro para baños, el código asignaba `bedS = "neutral"` en lugar de `bathS = "neutral"`.
+
+**Solución aplicada:**
+- `shared/colombianRealEstateParser.ts`:
+  - `parseMaxAge`: Enriquecido con patrones regex robustos para capturar expresiones colombianas (*"antigüedad de 18 años"*, *"antigüedad máx 18"*, *"hasta 18 años"*, etc.).
+  - `parseKitchenType`: Nueva función unificada que clasifica e identifica en el texto cocinas *"Abierta"*, *"Abierta tipo Isla"*, *"Americana"*, *"Cerrada"* e *"Integral"*.
+- `client/src/components/admin/AdminMatches.tsx` (`scoreRows`):
+  - **Antigüedad En Duro**: Si `ageR > 0`, `isAgeFlexible` se desactiva forzosamente. Si `ageP > ageR`, estatus automático `missing` (0% Guillotina sin margen de +3 años).
+  - **Cocina En Duro**: Integrado `parseKitchenType`. Incompatibilidad fatal Abierta vs Cerrada o predio ≥25 años sin cocina abierta es `missing` (0% Guillotina). Se proyecta en la columna de la oferta la tipología real detectada, erradicando los *"N/E"*.
+  - **Depósito / Cuarto Útil En Duro**: Demanda exige y oferta carece -> `depS = "missing"`.
+  - **Cuarto de Servicio (CBS) En Duro**: Demanda exige y oferta carece -> `cbsStatus = "missing"`.
+  - **Estudio / Star TV En Duro**: Demanda exige y oferta carece -> `studyStatus = "missing"`.
+  - **Carro Eléctrico En Duro**: Demanda exige y oferta carece -> `evStatus = "missing"`.
+  - **Garajes Independientes En Duro**: Demanda exige independientes y oferta es lineal -> `garS = "missing"`.
+  - **Amenidades Dinámicas y Especiales En Duro**: Cualquier amenidad explícitamente solicitada por la demanda que falte en la oferta detona `missing`.
+  - **Blindaje de Reglas Unidireccionales de Confort**: Preservado que `Oferta >= Demanda` en Alcobas, Baños, Garajes, Área y Balcones/Terrazas/Depósitos sea `exact` o `plus` (beneficio / confort adicional).
+  - **Corrección de Typos**: Corregido `bedS` por `bathS` en la asignación de baños neutros.
+- `server/_core/matching.ts` (`explicarMatch`):
+  - Trasladada la definición de `earlyPropAge` antes del filtro de cocina para evitar referencias fuera de alcance.
+  - Guillotinas directas (Score = 0) aplicadas ante choques de cocina, ausencia de adecuación para carro eléctrico y garajes lineales cuando se exigen independientes.
+- `server/__tests__/regression.test.ts`:
+  - 5 nuevos tests de regresión en la Sección 10 validando:
+    1. Guillotina de antigüedad estricta (18 años exigidos vs 20 años oferta -> 0%).
+    2. Guillotina de cocina (Abierta exigida vs Cerrada oferta -> 0%).
+    3. Guillotina de carro eléctrico (Demanda exige infraestructura vs Edificio antiguo sin adecuación -> 0%).
+    4. Guillotina de parqueaderos independientes (Demanda exige independientes vs Oferta lineal -> 0%).
+    5. Confort unidireccional preservado (3 alcobas y 3 baños ofrecidos para demanda de 2 alcobas y 2 baños -> 100% Coincidencia Plena / Plus).
+- `shared/const.ts` y `package.json`: Versión incrementada a `v31.87`.
+
+**Verificación:** `tsc --noEmit` 0 errores ✅ | `vitest run` 69/69 tests ✅ | Build limpio de Vite y esbuild ✅
+
+---
+
 ### 🔖 v31.86 — Septiembre 2026
 
 #### 📌 EXPULSIÓN DE DEMANDAS CADUCAS (>10 DÍAS), PURGA DE 2.165 MATCHES OBSOLETOS, FILTRO DUAL EN COINCIDENCIAS Y FILTRADO POR VIGENCIA EN BUSCADOR DE REQUERIMIENTOS

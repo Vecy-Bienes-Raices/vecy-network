@@ -167,7 +167,43 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.86 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.87 — Septiembre 2026
+
+### Novedades v31.87 (Doctrina En Duro Total para Demandas, Eliminación de Margen +3 en Antigüedad, Guillotinas Inflexibles de Cocina, Depósito, CBS, Estudio, EV y Garajes, Erradicación de Falsos 'N/E' y Preservación de Confort Unidireccional):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Toda característica especial solicitada/pedida/requerida por los demandantes (ej: antigüedad máxima de 18 años, cocina abierta, balcón/terraza, ascensor, conjunto cerrado, depósito, CBS, estudio, carro eléctrico, garajes independientes) debe operar **100% EN DURO** (filtro estricto / Guillotina 0% / `missing` si la oferta no lo satisface).
+  - Si un demandante fija un tope de antigüedad como 18 años y el inmueble tiene 20 o más años: **es de lógica pura que no funciona**. Se eliminó por completo el margen artificial de `+3` años que lo dejaba pasar en amarillo (`warn`).
+  - La etiqueta accesoria *"Flexible (Remodelado / Bien Cuidado)"* JAMÁS debe anular ni sobreescribir una restricción cuantitativa de años (`ageR > 0`). Si el demandante fijó tope de 18 años, es sagrado e innegociable.
+  - Si la demanda pide cocina abierta y la oferta tiene cocina cerrada tradicional o tiene más de 25 años sin remodelar: **Guillotina Inflexible 0% (`missing`)**.
+  - Erradicación de falsos *"N/E"* en ofertas: cuando la oferta especifica características en su texto crudo o amenities (ej: *"cocina tipo americana"*, *"vista exterior"*, *"garajes independientes"*, *"depósito en sótano"*, *"estrato 4"*), el sistema las extrae y proyecta con exactitud en la tabla de cotejo.
+  - **Preservación Estricta de Tolerancias Unidireccionales de Mayor Confort**:
+    - Habitaciones, Baños, Garajes, Área M2, Balcones, Terrazas, Depósitos: `Oferta >= Demanda` es SIEMPRE bienvenida y premiada como **100% Coincidente (`exact`)** o **Plus de Confort (`plus`)**. La guillotina solo actúa cuando `Oferta < Demanda`.
+    - Variables de techo financiero/físico: Precio Venta, Canon, Administración, Antigüedad: `Oferta <= Demanda` es correcta. `Oferta > Demanda` es Guillotina Inmediata (`missing`).
+- **Acciones Ejecutadas en Código**:
+  1. **Módulo Compartido `shared/colombianRealEstateParser.ts`**:
+     - `parseMaxAge`: Enriquecido para capturar con exactitud expresiones como *"antigüedad de 18 años"*, *"antigüedad: 18 años"*, *"máx 18 años"*, *"hasta 18 años"*.
+     - `parseKitchenType`: Nuevo analizador y clasificador universal de tipología de cocina (*"Abierta"*, *"Abierta tipo Isla"*, *"Americana"*, *"Cerrada"*, *"Integral"*).
+  2. **Frontend `client/src/components/admin/AdminMatches.tsx` (`scoreRows`)**:
+     - **Antigüedad**: Si `ageR > 0`, `isAgeFlexible` se fuerza a `false`. Si `ageP > ageR`, pasa directamente a `missing` (0% Guillotina). Eliminado el margen de `ageP <= ageR + 3` que degradaba a `warn`.
+     - **Cocina**: Tipología analizada con `parseKitchenType`. Choque directo Abierta vs Cerrada o edificio ≥25 años sin cocina abierta certificada pasa a `missing` (0% Guillotina).
+     - **Depósito / Cuarto Útil**: Si la demanda pide depósito y la oferta no lo tiene -> `missing` (Guillotina en duro).
+     - **Cuarto de Servicio (CBS)**: Si la demanda pide CBS y la oferta no cuenta con alcoba de servicio -> `missing` (Guillotina en duro).
+     - **Estudio / Star TV**: Si la demanda pide estudio y la oferta no tiene -> `missing` (Guillotina en duro).
+     - **Carro Eléctrico**: Si la demanda pide adecuación eléctrica y la oferta no cuenta con ella -> `missing` (Guillotina en duro).
+     - **Garajes Independientes**: Si la demanda pide garajes independientes y la oferta son lineales/servidumbre -> `missing` (Guillotina en duro).
+     - **Amenidades Dinámicas y Personalizadas**: Si la demanda pide una amenidad del catálogo o clave personalizada y la oferta no la tiene -> `missing` (Guillotina en duro).
+     - **Corrección de Typos y Erradicación de N/E**:
+       - Corregido typo histórico en Baños (`bathS = "neutral"` en vez de `bedS = "neutral"`).
+       - Estrato soporta números en letras (*"cuatro"*, *"cinco"*, *"seis"*) para evitar N/E injustificado.
+       - Extracción de tipo de garaje (independiente vs lineal) directo de la descripción si la columna viene vacía.
+  3. **Backend `server/_core/matching.ts` (`explicarMatch`)**:
+     - Trasladada la inicialización de `earlyPropAge` antes del filtro de cocina para evitar referencias tardías.
+     - Choques de cocina, carro eléctrico y garajes independientes convertidos en bloqueadores duros inmediatos (0% Score).
+  4. **Suite de Regresión `server/__tests__/regression.test.ts`**:
+     - Incorporados 5 nuevos tests doctrinales en la sección 10 para blindar antigüedad estricta, cocina abierta, carro eléctrico, parqueadero independiente y confort unidireccional.
+- **Verificación**: 69/69 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 17s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.86 — Septiembre 2026
 
 ### Novedades v31.86 (Expulsión Fulminante de Demandas >10 Días: Estado OUT Automático, Purga de 2.165 Matches Caducos, Filtro Dual en Coincidencias y Nuevo Filtro de Vigencia en Lista de Requerimientos):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

@@ -341,8 +341,39 @@ export function parseAdminFee(rawText: string): { fee: number | null; isIncluded
 export function parseMaxAge(rawText: string): number | null {
   if (!rawText) return null;
   const clean = rawText.toLowerCase().replace(/[*_~]/g, "");
-  const match = clean.match(/(?:m[aá]ximo|hasta|tope|menor\s*a|no\s*mayor\s*a)?\s*(\d{1,2})\s*a[ñn]os(?:\s*de\s*antig[uü]edad)?/i);
-  return match ? parseInt(match[1], 10) : null;
+  
+  // 1. Patrones explícitos de límite máximo o antigüedad requerida
+  const explicitMatch = clean.match(/(?:antig[üu]edad|edad)(?:\s*(?:m[aá]xima|max|de|hasta|menor\s*a|tope|no\s*mayor\s*a|:))?\s*(\d{1,2})\s*a[ñn]os?/i)
+    || clean.match(/(?:m[aá]ximo|hasta|tope|menor\s*a|no\s*mayor\s*a)\s*(\d{1,2})\s*a[ñn]os?(?:\s*(?:de\s*)?antig[üu]edad)?/i)
+    || clean.match(/(\d{1,2})\s*a[ñn]os?\s*(?:de\s*)?(?:antig[üu]edad|construid[oa]|construcci[oó]n)/i)
+    || clean.match(/(?:m[aá]ximo|hasta|tope|menor\s*a|no\s*mayor\s*a)?\s*(\d{1,2})\s*a[ñn]os(?:\s*de\s*antig[uü]edad)?/i);
+    
+  return explicitMatch ? parseInt(explicitMatch[1], 10) : null;
+}
+
+/**
+ * Extractor y clasificador de Tipología de Cocina
+ */
+export function parseKitchenType(rawText: string, structured?: any): "Abierta" | "Abierta tipo Isla" | "Americana" | "Cerrada" | "Integral" | null {
+  if (structured) {
+    const s = String(structured).toLowerCase();
+    if (s.includes("isla")) return "Abierta tipo Isla";
+    if (s.includes("americana")) return "Americana";
+    if (s.includes("abierta")) return "Abierta";
+    if (s.includes("cerrada") || s.includes("independiente") || s.includes("tradicional") || s.includes("clasica")) return "Cerrada";
+    if (s.includes("integral")) return "Integral";
+  }
+  if (!rawText) return null;
+  const t = rawText.toLowerCase().replace(/[*_~]/g, "");
+  if (/\b(?:tipo\s*isla|cocinas?\s*(?:con|tipo)?\s*isla|isla\s*central)\b/i.test(t)) return "Abierta tipo Isla";
+  if (/\b(?:cocinas?\s*(?:tipo|estilo)?\s*americanas?|americana)\b/i.test(t)) return "Americana";
+  if (/\b(?:cocinas?\s*abiertas?|aman\s*(?:las\s*)?cocinas?\s*abiertas?|quieren\s*cocinas?\s*abiertas?|prefieren\s*cocinas?\s*abiertas?|les\s*encantan?\s*(?:las\s*)?cocinas?\s*abiertas?|cocinas?\s*integradas?|cocinas?\s*semi\s*abiertas?)\b/i.test(t)) return "Abierta";
+  if (/\b(?:cocinas?\s*cerradas?|cocinas?\s*independientes?|cocinas?\s*tradicional(?:es)?|cocinas?\s*cl[aá]sicas?)\b/i.test(t)) return "Cerrada";
+  if (/\b(?:cocina\s*integral|integral\s*abierta)\b/i.test(t)) {
+    if (t.includes("abierta") || t.includes("americana") || t.includes("isla")) return "Abierta";
+    return "Integral";
+  }
+  return null;
 }
 
 export function formatRequirementField(value: any, unit: string, originalSnippet?: string): string {

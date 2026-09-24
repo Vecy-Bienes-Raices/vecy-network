@@ -9,6 +9,53 @@
 
 ---
 
+## 📋 SESIÓN v31.87 — 24 Septiembre 2026
+
+### Solicitud de Eduardo
+Eduardo solicitó formalmente y con máxima claridad doctrinal:
+*"Entonces necesito que esas características especiales que los DEMANDANTES requieren, solicitan, piden o exigen, etc. quden en duro, excepto las que ya tenemos bien definidas, es que veo que cuando alguien dice, necesito que tenga una antigueda de 18 años y si el inmueble dice 20 o más años pues de lógica que no funciona o si dice que quiere o le envcantan las cocinas abiertas y el otro dice cocina cerrada pues no se está respetando la función en duro, mejor dicho yo digo que todas las características que pidan los demandantes deben ser en duro y siempre deben aparecer en la tabla de cotejo, porque veo que muchas veces la demanda las nombra de distintas maneras, pero jamás aparecen en la tabla de cotejo y en vez de aparecer dice disque dato flexible, igualmente sucede con algunas en las ofertas que se dicen o están siendo indicadas y aparecen se ven presentes pero en la tabla dice N/E. No se si puedas revisar y afinar muy bien esta parte, lógicamente sin ir a dañar los datos que si tienen restricciones pero que aceptan que pueden ser más o en otros casos menos de lo que exige la demanda."*
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Brecha Doctrinal en Antigüedad (`AdminMatches.tsx`)**:
+   - En la línea 1706 existía una condición residual: `else if (ageP <= ageR + 3) ageS = "warn"`. Este margen de cortesía de +3 años permitía que si un demandante exigía máximo 18 años y la oferta tenía 20 años (`20 <= 18 + 3 = 21`), la casilla se pintara en amarillo (`warn`), deduciendo apenas ~0.8 puntos del score y permitiendo que pasara como match viable (95%-97%) en lugar de ser bloqueado de inmediato.
+   - En la línea 1691, la expresión regular para detectar solicitudes de inmuebles *"remodelados"* o *"bien cuidados"* activaba `isAgeFlexible = true` de forma incondicional, incluso cuando el cliente había fijado un tope numérico sagrado (`ageR > 0`). Esto sobreescribía el requerimiento de *"Máx 18 años"* por *"Flexible (Remodelado / Bien Cuidado)"* y le otorgaba estatus `plus` o `neutral` a cualquier edad del predio.
+2. **Brecha Doctrinal en Tipología de Cocina (`matching.ts` & `AdminMatches.tsx`)**:
+   - En `AdminMatches.tsx`, la extracción revisaba únicamente la propiedad `kitchenType`, perdiendo de vista el campo `(prop.amenities as any)?.cocina` y `(req.caracteristicasDeseadas as any)?.cocina`.
+   - Las expresiones regulares carecían de sinónimos colombianos comunes como *"cocina tipo americana"*, *"cocina con isla"*, *"les encantan las cocinas abiertas"*, *"cocinas independientes"*, provocando que la tipología de la oferta cayera en `Integral (Consultar)` o `N/E` y no se contrastara en duro.
+3. **Brecha en Otras Características Especiales (Depósito, CBS, Estudio, EV, Garajes)**:
+   - En `AdminMatches.tsx`, cuando la demanda pedía Depósito o Estudio y la oferta no lo tenía, la casilla se marcaba como `warn` (amarillo) en lugar de guillotina.
+   - Cuando la demanda pedía garajes independientes y la oferta era lineal, el cotejo marcaba `warn` en lugar de bloqueo directo.
+   - En las 64 amenidades dinámicas, la falta de una amenidad pedida por la demanda se degradaba a `warn` a menos que estuviera acompañada de palabras literales como *"indispensable piscina"*.
+   - Typos menores: en Baños, la asignación de neutral decía `bedS = "neutral"` en lugar de `bathS = "neutral"`.
+
+### Acciones Ejecutadas
+1. **Módulo Compartido `shared/colombianRealEstateParser.ts`**:
+   - `parseMaxAge`: Enriquecido con patrones regex robustos para capturar *"antigüedad de 18 años"*, *"antigüedad máx 18"*, *"hasta 18 años"*, etc.
+   - `parseKitchenType`: Nueva función unificada de clasificación de cocinas (*"Abierta"*, *"Abierta tipo Isla"*, *"Americana"*, *"Cerrada"*, *"Integral"*).
+2. **Frontend `AdminMatches.tsx` (`scoreRows`)**:
+   - **Antigüedad En Duro**: Si `ageR > 0`, `isAgeFlexible` se apaga forzosamente. Si `ageP > ageR`, el estatus es `missing` (0% Guillotina automática sin margen de +3 años).
+   - **Cocina En Duro**: Integrado `parseKitchenType`. Choque directo Abierta vs Cerrada o predio ≥25 años sin cocina abierta es `missing` (0% Guillotina). En la columna de la oferta se proyecta el tipo real detectado (ej: *"Cocina Americana"*), eliminando los *"N/E"*.
+   - **Depósito / Cuarto Útil En Duro**: Demanda exige depósito y oferta no tiene -> `missing` (Guillotina).
+   - **CBS En Duro**: Demanda exige cuarto de servicio y oferta no cuenta con alcoba -> `missing` (Guillotina).
+   - **Estudio / Star TV En Duro**: Demanda exige estudio y oferta no tiene -> `missing` (Guillotina).
+   - **Carro Eléctrico En Duro**: Demanda pide adecuación y oferta no tiene -> `missing` (Guillotina).
+   - **Garajes Independientes En Duro**: Demanda pide independientes y oferta es lineal -> `missing` (Guillotina).
+   - **Amenidades Dinámicas y Personalizadas**: Cualquier amenidad escrita en la demanda que falte en la oferta se evalúa como `missing` (Guillotina).
+   - **Blindaje de Reglas Unidireccionales de Confort**: Preservado al 100% que `Oferta >= Demanda` en Alcobas, Baños, Garajes, Área y Balcones/Terrazas/Depósitos es `exact` o `plus` (beneficio).
+   - **Corrección de Typos**: Corregido `bedS` por `bathS` en la condición de baños neutros.
+3. **Backend `server/_core/matching.ts` (`explicarMatch`)**:
+   - Trasladada la definición de `earlyPropAge` antes del filtro de cocina.
+   - Guillotinas directas (0% Score) aplicadas ante choques de cocina, infraestructura de carro eléctrico y garajes lineales cuando se demandan independientes.
+4. **Pruebas de Regresión `server/__tests__/regression.test.ts`**:
+   - Incorporados 5 nuevos tests doctrinales en la sección 10 (`v31.87`).
+
+### Verificación Automatizada
+- `npx vitest run`: **69/69 pruebas unitarias y de regresión pasando al 100%**.
+- `tsc --noEmit`: **0 errores de tipado TypeScript**.
+- `npm run build`: **Compilación limpia de Vite y esbuild en 16.75s**.
+
+---
+
 ## 📋 SESIÓN v31.86 — 24 Septiembre 2026
 
 ### Solicitud de Eduardo

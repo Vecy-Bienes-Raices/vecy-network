@@ -23,6 +23,7 @@ import {
   parseArea,
   parseAdminFee,
   parseMaxAge,
+  parseKitchenType,
   formatRequirementField
 } from '@shared/colombianRealEstateParser';
 
@@ -1590,7 +1591,7 @@ export function scoreRows(req: any, prop: any) {
       bathS = "plus";
     }
   } else if (bathR === 0 && bathP > 0) {
-    bedS = "neutral";
+    bathS = "neutral";
   }
   const reqBathLabel = bathR > 0 ? `≥ ${bathR} baño${bathR > 1 ? "s" : ""}` : "Sin mínimo de baños";
 
@@ -1616,28 +1617,39 @@ export function scoreRows(req: any, prop: any) {
     }
   }
 
-  const garType = (prop.garageType || "").toLowerCase();
+  let effectiveGarType = (prop.garageType || "").toLowerCase();
+  if (!effectiveGarType && propTextLower) {
+    if (propTextLower.includes("independiente") || propTextLower.includes("no lineal") || propTextLower.includes("sin servidumbre")) {
+      effectiveGarType = "independiente";
+    } else if (propTextLower.includes("lineal") || propTextLower.includes("en linea") || propTextLower.includes("en línea") || propTextLower.includes("servidumbre")) {
+      effectiveGarType = "lineal";
+    }
+  }
+
   const reqWantsIndep = reqTextLower.includes("independiente") || reqTextLower.includes("libre") || reqTextLower.includes("no lineal");
 
   let garS: MatchStatus = "neutral";
-  let garPropLabel = garP > 0 ? `${garP} garaje${garP > 1 ? "s" : ""}` : "N/E";
+  let garPropLabel = garP > 0 ? `${garP} garaje${garP > 1 ? "s" : ""}${effectiveGarType ? ` (${effectiveGarType})` : ""}` : "N/E";
 
   if (garR > 0 && garP > 0) {
     if (garP < garR) {
       garS = "missing"; // Oferta < Demanda -> Bloqueo Doctrinal
-    } else if (reqWantsIndep && garType === "lineal") {
-      garS = "warn";
+    } else if (reqWantsIndep && effectiveGarType === "lineal") {
+      garS = "missing"; // 🔴 EN DURO: Demanda exige garaje independiente y oferta es lineal/servidumbre -> Guillotina
+      garPropLabel = `${garP} garaje${garP > 1 ? "s" : ""} (Lineales / Servidumbre - Incompatible)`;
+    } else if (garP > garR) {
+      garS = "plus"; // Más parqueaderos -> Bono de confort
     } else {
       garS = "exact";
     }
   } else if (garR === 0 && garP > 0) {
     garS = "neutral";
   }
-  const garReqLabel = garR > 0 ? `≥ ${garR} garaje${garR > 1 ? "s" : ""}` : "Sin exigencia de garaje";
+  const garReqLabel = garR > 0 ? `≥ ${garR} garaje${garR > 1 ? "s" : ""}${reqWantsIndep ? " (Independientes En Duro)" : ""}` : "Sin exigencia de garaje";
 
   add("Parqueaderos", garReqLabel, garPropLabel, garS, 5, <Car className="w-3.5 h-3.5" />);
 
-  // 12. Antigüedad / Año de Construcción (Doctrina v31.7)
+  // 12. Antigüedad / Año de Construcción (Doctrina v31.87 - EN DURO)
   const currentSystemYear = 2026;
   let ageR = req.antiguedadMax ? Number(req.antiguedadMax) : (req.preferredAge ? Number(req.preferredAge) : 0);
   if (ageR <= 0 && (req.caracteristicasDeseadas as any)?.antiguedadMax) {
@@ -1665,13 +1677,13 @@ export function scoreRows(req: any, prop: any) {
   }
 
   if (ageP < 0 && propTextLower) {
-    const yMatch = propTextLower.match(/\b(?:año|construido en|de)\s*:?\s*(19\d\d|20\d\d)\b/i);
+    const yMatch = propTextLower.match(/\b(?:año|construido en|de|construcci[oó]n\s*:?)\s*:?\s*(19\d\d|20\d\d)\b/i);
     if (yMatch) {
       yearBuiltP = parseInt(yMatch[1], 10);
       ageP = Math.max(0, currentSystemYear - yearBuiltP);
     } else {
-      const ageMatchP = propTextLower.match(/(?:antigüedad|antiguedad|edad|tiene|\|)\s*:?\s*(\d{1,2})\s*a[ñn]os/i)
-                     || propTextLower.match(/(\d{1,2})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)/i);
+      const ageMatchP = propTextLower.match(/(?:antigüedad|antiguedad|edad|tiene|edificio\s*(?:de)?|\|)\s*:?\s*(\d{1,2})\s*a[ñn]os/i)
+                     || propTextLower.match(/(\d{1,2})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio|construcci[oó]n)/i);
       if (ageMatchP) {
         ageP = parseInt(ageMatchP[1], 10);
         if (!yearBuiltP) yearBuiltP = currentSystemYear - ageP;
@@ -1686,10 +1698,11 @@ export function scoreRows(req: any, prop: any) {
     yearBuiltP = currentSystemYear - ageP;
   }
 
-  // ── Exención Doctrinal de Antigüedad: si la demanda dice "sin importar la antigüedad", "remodelado",
-  // "bien cuidado", "renovado", "reformado" → la restricción de años se levanta completamente.
-  const isAgeFlexible = /sin\s+importar\s+(?:la\s+)?antig[üu]edad|no\s+importa\s+(?:la\s+)?antig[üu]edad|antig[üu]edad\s+(?:no\s+)?flexible|cualquier\s+antig[üu]edad|(?:bien\s+cuidado|buen\s+estado|remodelad[oa]|renov[aáa]d[oa]|refom[aáa]d[oa]|restaurad[oa]|reformad[oa])\s+(?:no\s+importa|independientemente)/i.test(reqTextLower)
-    || /(?:desde\s+que|siempre\s+(?:y\s+cuando|que))\s+(?:est[eé]\s+)?(?:bien\s+cuidado|en\s+buen\s+estado|remodelad[oa]|renov[aáa]d[oa]|reformad[oa])/i.test(reqTextLower);
+  // ── Exención de Antigüedad: Solo es flexible si la demanda NO especificó un tope numérico (ageR <= 0)
+  const isAgeFlexible = (ageR <= 0) && (
+    /sin\s+importar\s+(?:la\s+)?antig[üu]edad|no\s+importa\s+(?:la\s+)?antig[üu]edad|antig[üu]edad\s+(?:no\s+)?flexible|cualquier\s+antig[üu]edad|(?:bien\s+cuidado|buen\s+estado|remodelad[oa]|renov[aáa]d[oa]|refom[aáa]d[oa]|restaurad[oa]|reformad[oa])\s+(?:no\s+importa|independientemente)/i.test(reqTextLower)
+    || /(?:desde\s+que|siempre\s+(?:y\s+cuando|que))\s+(?:est[eé]\s+)?(?:bien\s+cuidado|en\s+buen\s+estado|remodelad[oa]|renov[aáa]d[oa]|reformad[oa])/i.test(reqTextLower)
+  );
 
   const reqDemandsModern = /\b(?:moderno|modernos|para\s*estrenar|a\s*estrenar|estrenar|acabados\s*modernos|nuevo|pareja\s*joven|bonito,\s*moderno)\b/i.test(reqTextLower);
   const propNeedsRemodel = /\b(?:para\s*remodelar|potencial\s*de\s*remodelaci[oó]n|remodelar|para\s*actualizar|original)\b/i.test(propTextLower);
@@ -1697,42 +1710,55 @@ export function scoreRows(req: any, prop: any) {
   let ageS: MatchStatus = "neutral";
   if (reqDemandsModern && (propNeedsRemodel || ageP >= 25)) {
     ageS = "missing"; // 🔴 Incompatible: demanda exige moderno y oferta es antigua para remodelar -> Guillotina Doctrinal
-  } else if (isAgeFlexible) {
-    // La demanda levanta la restricción de antigüedad: se acepta cualquier edad
-    // → Plus si la oferta tiene dato claro, neutral si no se conoce la antigüedad
-    ageS = ageP >= 0 ? "plus" : "neutral";
   } else if (ageR > 0 && ageP >= 0) {
-    if (ageP <= ageR) ageS = "exact";
-    else if (ageP <= ageR + 3) ageS = "warn";   // Margen doctrinal de 3 años (edificios con leves diferencias de registro)
-    else ageS = "missing"; // 🔴 Supera el máximo de antigüedad exigido → Guillotina Doctrinal
+    if (ageP <= ageR) {
+      ageS = "exact"; // Cumple la antigüedad en duro
+    } else {
+      ageS = "missing"; // 🔴 Supera el máximo de antigüedad exigido (Cero tolerancia +3) -> Guillotina Doctrinal EN DURO
+    }
+  } else if (isAgeFlexible) {
+    ageS = ageP >= 0 ? "plus" : "neutral";
   } else if (ageR <= 0 && ageP >= 0) {
-    ageS = reqDemandsModern && ageP > 15 ? "warn" : "exact"; // 🟢 Coincide: sin restricción y oferta tiene dato claro
+    ageS = reqDemandsModern && ageP > 15 ? "warn" : "exact";
   } else if (ageR > 0 && ageP < 0) {
-    ageS = "neutral"; // Demanda exige antigüedad máxima pero la oferta no tiene el dato
+    ageS = "neutral";
   }
+
   const reqAgeLabel = reqDemandsModern && (propNeedsRemodel || ageP >= 25)
-    ? "Exige Moderno / Reciente"
-    : (isAgeFlexible
-      ? "Flexible (Remodelado / Bien Cuidado)"
-      : (ageR > 0 ? `Máx ${ageR} años` : (reqDemandsModern ? "Exige Moderno / Estrenar" : "Sin límite de antigüedad")));
+    ? "Exige Moderno / Reciente (En Duro)"
+    : (ageR > 0
+      ? `Máx ${ageR} años (En Duro)`
+      : (isAgeFlexible
+        ? "Flexible (Remodelado / Bien Cuidado)"
+        : (reqDemandsModern ? "Exige Moderno / Estrenar (En Duro)" : "Sin límite de antigüedad")));
+
   const propAgeLabel = ageP >= 0 
-    ? (ageP === 0 ? "A estrenar / Sobre planos (0 años)" : (propNeedsRemodel ? `${yearBuiltP ? yearBuiltP + ' ' : ''}(${ageP} años - Para Remodelar)` : (yearBuiltP ? `${yearBuiltP} (${ageP} años)` : `${ageP} años`)))
-    : "N/E (Consultar)";
+    ? (ageR > 0 && ageP > ageR
+        ? `${ageP} años (${yearBuiltP ? yearBuiltP + ' - ' : ''}Supera tope de ${ageR}a)`
+        : (ageP === 0 ? "A estrenar / Sobre planos (0 años)" : (propNeedsRemodel ? `${yearBuiltP ? yearBuiltP + ' ' : ''}(${ageP} años - Para Remodelar)` : (yearBuiltP ? `${yearBuiltP} (${ageP} años)` : `${ageP} años`))))
+    : "N/E (Consultar antigüedad)";
   add("Antigüedad / Año", reqAgeLabel, propAgeLabel, ageS, 5, <Calendar className="w-3.5 h-3.5" />);
 
   // 13. Estrato Socioeconómico
+  const ESTRATO_MAP: Record<string, number> = { "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6 };
   const estratoArr: number[] = Array.isArray(req.estratoDeseado) ? req.estratoDeseado
     : req.estratoDeseado ? [Number(req.estratoDeseado)] : [];
 
   if (estratoArr.length === 0 && reqTextLower) {
-    const estMatchR = reqTextLower.match(/(?:estrato|estr\.)\s*:?\s*([1-6])\b/i);
-    if (estMatchR) estratoArr.push(Number(estMatchR[1]));
+    const estMatchR = reqTextLower.match(/(?:estrato|estr\.)\s*:?\s*([1-6]|uno|dos|tres|cuatro|cinco|seis)\b/i);
+    if (estMatchR) {
+      const eVal = ESTRATO_MAP[estMatchR[1].toLowerCase()] || Number(estMatchR[1]);
+      if (eVal >= 1 && eVal <= 6) estratoArr.push(eVal);
+    }
   }
 
-  let estratoP = prop.stratum || prop.estrato;
+  let estratoP = prop.stratum || prop.estrato || (prop.amenities as any)?.estrato;
   if ((!estratoP || Number(estratoP) <= 0) && propTextLower) {
-    const estMatchP = propTextLower.match(/(?:estrato|estr\.)\s*:?\s*([1-6])\b/i);
-    if (estMatchP) estratoP = Number(estMatchP[1]);
+    const estMatchP = propTextLower.match(/(?:estrato|estr\.)\s*:?\s*([1-6]|uno|dos|tres|cuatro|cinco|seis)\b/i);
+    if (estMatchP) {
+      const eP = ESTRATO_MAP[estMatchP[1].toLowerCase()] || Number(estMatchP[1]);
+      if (eP >= 1 && eP <= 6) estratoP = eP;
+    }
   }
 
   const hasEstratoReq = estratoArr.length > 0 && estratoArr[0] > 0;
@@ -1844,9 +1870,9 @@ export function scoreRows(req: any, prop: any) {
     }
   }
 
-  // 17. Depósito / Cuarto Útil - REACTIVO ("POR ARTE DE MAGIA")
-  const reqDep = reqTextLower.includes("deposito") || reqTextLower.includes("depósito") || reqTextLower.includes("cuarto util") || reqTextLower.includes("cuarto útil");
-  const propDep = propRawText.includes("deposito") || propRawText.includes("depósito") || propRawText.includes("cuarto util") || propRawText.includes("cuarto útil") || prop.hasStorage;
+  // 17. Depósito / Cuarto Útil - EN DURO (Doctrina v31.87)
+  const reqDep = reqTextLower.includes("deposito") || reqTextLower.includes("depósito") || reqTextLower.includes("cuarto util") || reqTextLower.includes("cuarto útil") || reqTextLower.includes("bodega") || Boolean((req.caracteristicasDeseadas as any)?.deposito);
+  const propDep = propRawText.includes("deposito") || propRawText.includes("depósito") || propRawText.includes("cuarto util") || propRawText.includes("cuarto útil") || propRawText.includes("bodega") || propRawText.includes("locker") || prop.hasStorage || Boolean((prop.amenities as any)?.deposito) || Boolean((prop.amenities as any)?.cuarto_util) || Boolean((prop.amenities as any)?.storage);
 
   if (reqDep || propDep) {
     let depS: MatchStatus = "neutral";
@@ -1854,12 +1880,12 @@ export function scoreRows(req: any, prop: any) {
     let propDepLabel = "Sin dato especificado";
     if (reqDep && propDep) {
       depS = "exact";
-      reqDepLabel = "Exige Depósito / Cuarto Útil";
-      propDepLabel = "Sí (Incluye Depósito)";
+      reqDepLabel = "Exige Depósito / Cuarto Útil (En Duro)";
+      propDepLabel = "Sí (Cuenta con Depósito Privado)";
     } else if (reqDep && !propDep) {
-      depS = "warn";
-      reqDepLabel = "Exige Depósito / Cuarto Útil";
-      propDepLabel = "Sin depósito especificado";
+      depS = "missing"; // 🔴 EN DURO (Doctrina v31.87): Demanda exige depósito y la oferta no cuenta con él -> Guillotina (No Cumple)
+      reqDepLabel = "Exige Depósito / Cuarto Útil (En Duro)";
+      propDepLabel = "No tiene depósito especificado (No Cumple)";
     } else if (!reqDep && propDep) {
       depS = "plus";
       reqDepLabel = "Flexible";
@@ -1868,39 +1894,59 @@ export function scoreRows(req: any, prop: any) {
     add("Depósito / Cuarto Útil", reqDepLabel, propDepLabel, depS, 4, <Archive className="w-3.5 h-3.5" />);
   }
 
-  // 18. Tipología de Cocina - REACTIVO ("POR ARTE DE MAGIA" v31.85)
-  let reqKitchen = req.kitchenType || (req.caracteristicasDeseadas as any)?.kitchenType || (/\bcocinas?\s*cerradas?\b/i.test(reqTextLower) ? "Cerrada" : /\b(?:cocinas?\s*abiertas?|aman\s*(?:las\s*)?cocinas?\s*abiertas?|tipo\s*isla)\b/i.test(reqTextLower) ? "Abierta" : reqTextLower.includes("tipo isla") || reqTextLower.includes("isla") ? "Abierta tipo Isla" : reqTextLower.includes("cocina integral") || reqTextLower.includes("integral") ? "Integral" : null);
-  let propKitchen = prop.kitchenType || (prop.amenities as any)?.kitchenType || (/\bcocinas?\s*cerradas?\b/i.test(propRawText) ? "Cerrada" : /\bcocinas?\s*abiertas?\b/i.test(propRawText) ? "Abierta" : propRawText.includes("tipo isla") || propRawText.includes("isla") ? "Abierta tipo Isla" : propRawText.includes("cocina integral") || propRawText.includes("integral") ? "Integral" : null);
+  // 18. Tipología de Cocina - EN DURO (Doctrina v31.87)
+  const reqKitchenStructured = req.kitchenType || (req.caracteristicasDeseadas as any)?.kitchenType || (req.caracteristicasDeseadas as any)?.cocina;
+  const propKitchenStructured = prop.kitchenType || (prop.amenities as any)?.kitchenType || (prop.amenities as any)?.cocina;
+
+  let reqKitchen = parseKitchenType(reqTextLower, reqKitchenStructured);
+  let propKitchen = parseKitchenType(propRawText, propKitchenStructured);
 
   if (reqKitchen || propKitchen) {
     let kStatus: MatchStatus = "neutral";
     const reqKLower = (reqKitchen || "").toLowerCase();
     const propKLower = (propKitchen || "").toLowerCase();
-    const isConflict = (reqKLower.includes("cerrada") && (propKLower.includes("abierta") || propKLower.includes("isla") || propKLower.includes("americana"))) ||
-                       ((reqKLower.includes("abierta") || reqKLower.includes("isla") || reqKLower.includes("americana")) && propKLower.includes("cerrada"));
 
-    if (reqKitchen && propKitchen) {
-      if (isConflict) {
-        kStatus = "missing"; // 🔴 Choque arquitectónico directo (Cerrada vs Abierta) -> Guillotina (No Coincide)
+    const isReqOpen = reqKLower.includes("abierta") || reqKLower.includes("isla") || reqKLower.includes("americana");
+    const isReqClosed = reqKLower.includes("cerrada") || reqKLower.includes("independiente") || reqKLower.includes("tradicional");
+
+    const isPropOpen = propKLower.includes("abierta") || propKLower.includes("isla") || propKLower.includes("americana");
+    const isPropClosed = propKLower.includes("cerrada") || propKLower.includes("independiente") || propKLower.includes("tradicional");
+
+    if (isReqOpen && isPropClosed) {
+      kStatus = "missing"; // 🔴 Choque arquitectónico EN DURO (Demanda exige abierta y oferta es cerrada) -> Guillotina
+    } else if (isReqClosed && isPropOpen) {
+      kStatus = "missing"; // 🔴 Choque arquitectónico EN DURO (Demanda exige cerrada y oferta es abierta) -> Guillotina
+    } else if (isReqOpen && !isPropOpen) {
+      if (ageP >= 25) {
+        kStatus = "missing"; // 🔴 Inmueble de más de 25 años con cocina cerrada tradicional -> Guillotina
+      } else if (isPropClosed) {
+        kStatus = "missing";
       } else {
-        kStatus = reqKLower === propKLower ? "exact" : "warn";
+        kStatus = "missing"; // 🔴 Demanda exige cocina abierta y oferta no especifica cocina abierta -> Guillotina EN DURO
       }
-    } else if (reqKitchen && !propKitchen) {
-      // Si la demanda exige cocina abierta y la oferta tiene más de 25 años sin remodelar -> Guillotina Doctrinal
-      if (reqKLower.includes("abierta") && ageP >= 25) {
-        kStatus = "missing"; // 🔴 Inmueble de más de 25 años con cocina de época cerrada
+    } else if (isReqClosed && !isPropClosed) {
+      if (isPropOpen) {
+        kStatus = "missing";
+      } else if (ageP >= 25) {
+        kStatus = "exact"; // Por época arquitectónica las cocinas de >25 años son cerradas
       } else {
-        kStatus = "warn";
+        kStatus = "exact";
       }
+    } else if (reqKitchen && propKitchen) {
+      kStatus = (reqKLower === propKLower || (isReqOpen && isPropOpen) || (isReqClosed && isPropClosed)) ? "exact" : "missing";
     } else if (!reqKitchen && propKitchen) {
       kStatus = "plus";
-    } else {
-      kStatus = "warn";
     }
+
+    const reqKitchenLabel = reqKitchen ? `Cocina ${reqKitchen} (En Duro)` : "Flexible / No exigido";
+    const propKitchenLabel = propKitchen 
+      ? `Cocina ${propKitchen}` 
+      : (reqKitchen && isReqOpen && ageP >= 25 ? `Cocina tradicional cerrada (${ageP} años - Incompatible)` : "Cocina no especificada (No Cumple)");
+
     add(
       "Tipología de Cocina",
-      reqKitchen ? `Cocina ${reqKitchen}` : "Flexible / No exigido",
-      propKitchen ? `Cocina ${propKitchen}` : (reqKitchen && ageP >= 25 ? `Cocina tradicional (${ageP} años)` : "Integral (Consultar)"),
+      reqKitchenLabel,
+      propKitchenLabel,
       kStatus,
       4,
       <Utensils className="w-3.5 h-3.5" />
@@ -1937,12 +1983,9 @@ export function scoreRows(req: any, prop: any) {
     );
   }
 
-  // 20. Cuarto de Servicio (CBS) con/sin baño (Doctrina v31.80)
-  const reqCBS = reqTextLower.includes("cbs") || reqTextLower.includes("cuarto de servicio") || reqTextLower.includes("alcoba de servicio") || reqTextLower.includes("cuarto y baño de servicio") || reqTextLower.includes("cuarto y bano de servicio");
-  const propCBS = propRawText.includes("cbs") || propRawText.includes("cuarto de servicio") || propRawText.includes("alcoba de servicio") || propRawText.includes("cuarto y baño de servicio") || propRawText.includes("alcoba para el servicio") || prop.hasServiceRoom;
-  const isObligatoryCBS = (req as any).requiresObligatoryCBS || 
-    /(?:cbs|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio)[^\n]*(?:indispensable|obligatorio|si\s*o\s*si|innegociable|excluyente|exige|estricto)/i.test(reqTextLower) ||
-    /(?:indispensable|obligatorio|si\s*o\s*si|innegociable|excluyente)[^\n]*(?:cbs|cuarto\s+(?:de\s+)?servicio)/i.test(reqTextLower);
+  // 20. Cuarto de Servicio (CBS) con/sin baño - EN DURO (Doctrina v31.87)
+  const reqCBS = reqTextLower.includes("cbs") || reqTextLower.includes("cuarto de servicio") || reqTextLower.includes("alcoba de servicio") || reqTextLower.includes("cuarto y baño de servicio") || reqTextLower.includes("cuarto y bano de servicio") || Boolean((req.caracteristicasDeseadas as any)?.cbs);
+  const propCBS = propRawText.includes("cbs") || propRawText.includes("cuarto de servicio") || propRawText.includes("alcoba de servicio") || propRawText.includes("cuarto y baño de servicio") || propRawText.includes("alcoba para el servicio") || prop.hasServiceRoom || Boolean((prop.amenities as any)?.cbs) || Boolean((prop.amenities as any)?.cuartoBanoServicio);
   
   if (reqCBS || propCBS) {
     const reqHasBathInCBS = reqTextLower.includes("con baño") || reqTextLower.includes("con bano") || reqTextLower.includes("cuarto y baño");
@@ -1953,7 +1996,7 @@ export function scoreRows(req: any, prop: any) {
     if (reqCBS && propCBS) {
       cbsStatus = "exact";
     } else if (reqCBS && !propCBS) {
-      cbsStatus = (isObligatoryCBS || propHasServiceBathOnly) ? "missing" : "warn"; // 🔴 Si es indispensable o solo tiene baño -> Guillotina (No Coincide)
+      cbsStatus = "missing"; // 🔴 EN DURO (Doctrina v31.87): Demanda exige CBS y oferta no cuenta con cuarto de servicio -> Guillotina (No Coincide)
     } else if (!reqCBS && propCBS) {
       cbsStatus = "plus";
     } else {
@@ -1962,30 +2005,29 @@ export function scoreRows(req: any, prop: any) {
 
     add(
       "Cuarto de Servicio (CBS)",
-      reqCBS ? (isObligatoryCBS ? "Exige CBS Indispensable" : (reqHasBathInCBS ? "Exige CBS con Baño" : "Exige Cuarto de Servicio")) : "Flexible / No exigido",
-      propCBS ? (propHasBathInCBS ? "Sí (Con Baño Privado)" : "Sí (Sin Baño)") : (propHasServiceBathOnly ? "Solo Baño de Servicio (Sin Cuarto)" : "Sin CBS especificado"),
+      reqCBS ? (reqHasBathInCBS ? "Exige CBS con Baño (En Duro)" : "Exige Cuarto de Servicio (En Duro)") : "Flexible / No exigido",
+      propCBS ? (propHasBathInCBS ? "Sí (Con Baño Privado)" : "Sí (Sin Baño)") : (propHasServiceBathOnly ? "Solo Baño de Servicio (Sin Cuarto - No Cumple)" : "Sin CBS especificado (No Cumple)"),
       cbsStatus,
       4,
       <Home className="w-3.5 h-3.5" />
     );
   }
 
-  // 21. Estudio / Star de TV / Home Office (Doctrina v31.72)
-  const propHasStudy = propRawText.includes("estudio") || propRawText.includes("estar de tv") || propRawText.includes("star de tv") || propRawText.includes("sala de tv") || (prop as any).hasStudy || (prop as any).hasEstarTv;
-  const reqWantsStudy = reqTextLower.includes("estudio") || reqTextLower.includes("estar de tv") || reqTextLower.includes("star de tv") || reqTextLower.includes("home office");
-  const isObligatoryStudy = (req as any).requiresObligatoryStudy || /(?:con\s+estudio|estudio\s+obligatorio|indispensable\s+estudio|requiere\s+estudio|necesita\s+estudio|estudio\s+o\s+estar)/i.test(reqTextLower);
+  // 21. Estudio / Star de TV / Home Office - EN DURO (Doctrina v31.87)
+  const propHasStudy = propRawText.includes("estudio") || propRawText.includes("estar de tv") || propRawText.includes("star de tv") || propRawText.includes("sala de tv") || (prop as any).hasStudy || (prop as any).hasEstarTv || Boolean((prop.amenities as any)?.estudio);
+  const reqWantsStudy = reqTextLower.includes("estudio") || reqTextLower.includes("estar de tv") || reqTextLower.includes("star de tv") || reqTextLower.includes("home office") || Boolean((req.caracteristicasDeseadas as any)?.estudio);
 
   if (propHasStudy || reqWantsStudy) {
     let studyStatus: MatchStatus = "neutral";
     if (reqWantsStudy && propHasStudy) studyStatus = "exact";
     else if (reqWantsStudy && !propHasStudy) {
-      studyStatus = isObligatoryStudy ? "missing" : "warn"; // 🔴 Si es indispensable -> Guillotina
+      studyStatus = "missing"; // 🔴 EN DURO (Doctrina v31.87): Demanda exige estudio y oferta no cuenta con él -> Guillotina (No Cumple)
     } else if (!reqWantsStudy && propHasStudy) studyStatus = "plus";
     else studyStatus = "neutral";
     add(
       "Estudio / Star de TV",
-      reqWantsStudy ? (isObligatoryStudy ? "Exige Estudio Indispensable" : "Exige Estudio / Star de TV") : "Flexible",
-      propHasStudy ? "Sí (Estudio / Estar TV)" : "Sin estudio especificado",
+      reqWantsStudy ? "Exige Estudio / Star de TV (En Duro)" : "Flexible",
+      propHasStudy ? "Sí (Cuenta con Estudio / Estar TV)" : "Sin estudio especificado (No Cumple)",
       studyStatus,
       4,
       <Tv className="w-3.5 h-3.5" />
@@ -2160,8 +2202,9 @@ export function scoreRows(req: any, prop: any) {
     );
   }
 
-  // 27.5. Capacidad / Adecuación para Carro Eléctrico (Doctrina v31.85)
-  const reqWantsEV = /\b(?:carro\s*el[eé]ctrico|veh[ií]culo\s*el[eé]ctrico|electrolinera|carga\s*el[eé]ctrica|toma\s*el[eé]ctric\w*)\b/i.test(reqTextLower);
+  // 27.5. Capacidad / Adecuación para Carro Eléctrico - EN DURO (Doctrina v31.87)
+  const reqWantsEV = /\b(?:carro\s*el[eé]ctrico|veh[ií]culo\s*el[eé]ctrico|electrolinera|carga\s*el[eé]ctrica|toma\s*el[eé]ctric\w*)\b/i.test(reqTextLower) ||
+    Boolean((req.caracteristicasDeseadas as any)?.carro_electrico);
   const propHasEV = /\b(?:carro\s*el[eé]ctrico|veh[ií]culo\s*el[eé]ctrico|electrolinera|carga\s*el[eé]ctrica|toma\s*el[eé]ctric\w*)\b/i.test(propRawText) ||
     Boolean((prop.amenities as any)?.carro_electrico);
 
@@ -2172,13 +2215,12 @@ export function scoreRows(req: any, prop: any) {
     } else if (!reqWantsEV && propHasEV) {
       evStatus = "plus";
     } else if (reqWantsEV && !propHasEV) {
-      const isStrictEV = /\b(?:importante|indispensable|obligatorio|requisito|excluyente|necesario)\b/i.test(reqTextLower);
-      evStatus = (isStrictEV && ageP > 15) ? "missing" : "warn";
+      evStatus = "missing"; // 🔴 EN DURO (Doctrina v31.87): Demanda exige adecuación para vehículo eléctrico y oferta no la tiene -> Guillotina (No Cumple)
     }
     add(
       "Carro Eléctrico",
-      reqWantsEV ? "Exige capacidad para carro eléctrico" : "No requerido",
-      propHasEV ? "Sí (Capacidad / Adecuación eléctrica)" : (ageP > 15 ? `Edificio antiguo (${ageP} años) sin tomas` : "Por confirmar adecuación"),
+      reqWantsEV ? "Exige capacidad para carro eléctrico (En Duro)" : "No requerido",
+      propHasEV ? "Sí (Capacidad / Adecuación eléctrica)" : (ageP > 15 ? `Edificio antiguo (${ageP} años) sin tomas (No Cumple)` : "Sin adecuación eléctrica especificada (No Cumple)"),
       evStatus,
       4,
       <Zap className="w-3.5 h-3.5" />
@@ -2270,22 +2312,16 @@ export function scoreRows(req: any, prop: any) {
 
     if (inReq && inProp) {
       amS = "exact";
-      if (!reqStoredVal) reqLabel = `Exige ${item.name}`;
+      if (!reqStoredVal) reqLabel = `Exige ${item.name} (En Duro)`;
       if (!propStoredVal) propLabel = `Sí (Cuenta con ${item.name})`;
     } else if (!inReq && inProp) {
       amS = "plus";
       if (!reqStoredVal) reqLabel = "Flexible";
       if (!propStoredVal) propLabel = `Sí (${item.name} Incluido)`;
     } else if (inReq && !inProp) {
-      const itemNameLower = item.name.toLowerCase();
-      const isHard = reqTextLower.includes(`indispensable ${itemNameLower}`) || 
-                     reqTextLower.includes(`obligatorio ${itemNameLower}`) || 
-                     reqTextLower.includes(`excluyente ${itemNameLower}`) ||
-                     reqTextLower.includes(`si o si ${itemNameLower}`) ||
-                     (typeof reqStoredVal === 'string' && (reqStoredVal.toLowerCase().includes('indispensable') || reqStoredVal.toLowerCase().includes('obligatorio')));
-      amS = isHard ? "missing" : "warn";
-      if (!reqStoredVal) reqLabel = isHard ? `Exige ${item.name} (Obligatorio)` : `Desea ${item.name}`;
-      if (!propStoredVal) propLabel = `Sin ${item.name} especificado`;
+      amS = "missing"; // 🔴 EN DURO (Doctrina v31.87): Si la demanda solicitó esta característica y la oferta no la tiene -> Guillotina (No Cumple)
+      if (!reqStoredVal) reqLabel = `Exige ${item.name} (En Duro)`;
+      if (!propStoredVal) propLabel = `Sin ${item.name} especificado (No Cumple)`;
     }
 
     add(item.name, reqLabel, propLabel, amS, item.weight || 3, item.icon);
@@ -2349,7 +2385,8 @@ export function scoreRows(req: any, prop: any) {
     } else if (!hasR && hasP) {
       st = "plus";
     } else if (hasR && !hasP) {
-      st = "warn";
+      st = "missing"; // 🔴 EN DURO (Doctrina v31.87): Característica solicitada por la demanda no provista por la oferta -> Guillotina (No Cumple)
+      pLbl = "Sin dato especificado (No Cumple)";
     }
 
     const formattedLabel = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');

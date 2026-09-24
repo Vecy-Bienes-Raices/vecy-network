@@ -657,5 +657,171 @@ Disponible para finales de nov.`;
       expect(allBlockers).toMatch(/Cocina|CBS|Disponibilidad/i);
     });
   });
+
+  // ─────────────────────────────────────────────────────────────
+  // 10. CARACTERÍSTICAS ESPECIALES EN DURO (Doctrina v31.87)
+  // ─────────────────────────────────────────────────────────────
+  describe("10. Características Especiales En Duro y Antigüedad Estricta (v31.87)", () => {
+    it("debe aplicar guillotina 0% en duro si demanda pide máx 18 años y la oferta tiene 20 años", () => {
+      const req = {
+        id: 101,
+        propertyType: "apartment",
+        transactionType: "venta",
+        presupuestoMax: 900_000_000,
+        areaMin: 90,
+        habitacionesMin: 2,
+        banosMin: 2,
+        parqueaderosMin: 1,
+        antiguedadMax: 18,
+        rawText: "Busco apartamento en venta en Cedritos, presupuesto hasta 900M, área 90m2, 2 habs, 2 baños, 1 garaje, necesito que tenga una antigüedad máxima de 18 años."
+      };
+
+      const prop = {
+        id: 201,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 850_000_000,
+        areaTotal: 95,
+        bedrooms: 2,
+        bathrooms: 2,
+        garages: 1,
+        antiguedadAnos: 20,
+        rawText: "Apartamento en venta Cedritos $850M, 95m2, 2 alcobas, 2 baños, 1 garaje, tiene 20 años de construido."
+      };
+
+      const res = explicarMatch(req, prop);
+      expect(res.score).toBe(0);
+      const allBlockers = res.blockers.join(" ");
+      expect(allBlockers).toMatch(/Antigüedad/i);
+    });
+
+    it("debe aplicar guillotina 0% si la demanda exige cocina abierta y la oferta tiene cocina cerrada", () => {
+      const req = {
+        id: 102,
+        propertyType: "apartment",
+        transactionType: "venta",
+        presupuestoMax: 1_200_000_000,
+        areaMin: 100,
+        habitacionesMin: 3,
+        banosMin: 2,
+        parqueaderosMin: 2,
+        caracteristicasDeseadas: { cocina: "Abierta" },
+        rawText: "Busco apto en venta en Chicó, presupuesto $1.200M, le encantan las cocinas abiertas tipo americana, 3 alcobas, 2 baños, 2 parqueaderos."
+      };
+
+      const prop = {
+        id: 202,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 1_150_000_000,
+        areaTotal: 110,
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        amenities: { cocina: "Cerrada" },
+        rawText: "Vendo apto en Chicó $1.150M, 110m2, 3 habs, 3 baños, cocina cerrada tradicional independiente, 2 parqueaderos."
+      };
+
+      const res = explicarMatch(req, prop);
+      expect(res.score).toBe(0);
+      const allBlockers = res.blockers.join(" ");
+      expect(allBlockers).toMatch(/Cocina/i);
+    });
+
+    it("debe aplicar guillotina 0% si la demanda exige carro eléctrico y el predio no tiene infraestructura", () => {
+      const req = {
+        id: 103,
+        propertyType: "apartment",
+        transactionType: "venta",
+        presupuestoMax: 1_500_000_000,
+        areaMin: 120,
+        habitacionesMin: 3,
+        banosMin: 3,
+        parqueaderosMin: 2,
+        rawText: "Busco apto en Rosales, presupuesto 1500 millones, 3 alcobas, indispensable que tenga adecuación para carro eléctrico."
+      };
+
+      const prop = {
+        id: 203,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 1_400_000_000,
+        areaTotal: 130,
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        antiguedadAnos: 28,
+        rawText: "Hermoso apartamento en Rosales $1.400M, 130m2, 3 alcobas, 28 años de construido, 2 garajes."
+      };
+
+      const res = explicarMatch(req, prop);
+      expect(res.score).toBe(0);
+      const allBlockers = res.blockers.join(" ");
+      expect(allBlockers).toMatch(/Vehículo Eléctrico|carro eléctrico/i);
+    });
+
+    it("debe aplicar guillotina 0% si la demanda exige garajes independientes y la oferta ofrece lineales", () => {
+      const req = {
+        id: 104,
+        propertyType: "apartment",
+        transactionType: "venta",
+        presupuestoMax: 800_000_000,
+        areaMin: 85,
+        habitacionesMin: 2,
+        banosMin: 2,
+        parqueaderosMin: 2,
+        rawText: "Busco apartamento en Chapinero Alto, 2 parqueaderos estrictamente independientes no lineal, presupuesto 800M."
+      };
+
+      const prop = {
+        id: 204,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 780_000_000,
+        areaTotal: 90,
+        bedrooms: 2,
+        bathrooms: 2,
+        garages: 2,
+        garageType: "lineal",
+        rawText: "Apartamento en Chapinero Alto $780M, 90m2, 2 garajes lineales en servidumbre."
+      };
+
+      const res = explicarMatch(req, prop);
+      expect(res.score).toBe(0);
+      const allBlockers = res.blockers.join(" ");
+      expect(allBlockers).toMatch(/Parqueadero|lineal/i);
+    });
+
+    it("debe ACEPTAR y premiar con plus/confort cuando la oferta tiene IGUAL O MÁS alcobas, baños o área", () => {
+      const req = {
+        id: 105,
+        propertyType: "apartment",
+        transactionType: "venta",
+        presupuestoMax: 900_000_000,
+        areaMin: 80,
+        habitacionesMin: 2,
+        banosMin: 2,
+        parqueaderosMin: 1,
+        rawText: "Busco apto en Cedritos, min 80m2, 2 alcobas, 2 baños, 1 parqueadero."
+      };
+
+      const prop = {
+        id: 205,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 880_000_000,
+        areaTotal: 92,
+        bedrooms: 3, // Más de lo pedido -> Confort
+        bathrooms: 3, // Más de lo pedido -> Confort
+        garages: 2,   // Más de lo pedido -> Confort
+        antiguedadAnos: 5,
+        rawText: "Excelente apto en Cedritos $880M, 92m2, 3 alcobas amplias, 3 baños, 2 garajes independientes, 5 años."
+      };
+
+      const res = explicarMatch(req, prop);
+      expect(res.score).toBeGreaterThanOrEqual(85);
+      expect(res.blockers.length).toBe(0);
+    });
+  });
 });
 
