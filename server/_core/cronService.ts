@@ -257,7 +257,7 @@ export function enforceGreetingAccuracy(text: string, period: 'mañana' | 'tarde
 export function enforceJanIAIdentity(text: string): string {
   if (!text) return text;
   let clean = text;
-  clean = clean.replace(/(?:te saluda|soy|les habla|habla|aquí)\s+Jani\s+Alves/gi, 'les habla JanIA, la inteligencia artificial de VECY Network');
+  clean = clean.replace(/(?:te saluda|soy|les habla|habla|aquí)\s+Jani\s+Alves/gi, 'les habla JanIA, la inteligencia artificial de VECY Bienes Raíces');
   clean = clean.replace(/Jani Alves y yo/gi, 'Eduardo Rivera y Jani Alves');
   clean = clean.replace(/(?:te saluda|soy|les habla|habla|aquí)\s+Eduardo\s+Rivera/gi, 'les habla JanIA');
   return clean;
@@ -370,7 +370,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Tasas Hipotecarias y Capacidad de Compra en Colombia',
       themeKey: 'noticias',
       voiceText: `¡Buenos días, queridos colegas! Soy JanIA con las noticias de la semana. Conocer la tendencia de las tasas de interés hipotecario en Colombia nos permite calcular la cuota mensual real de nuestros clientes compradores y asesorarlos con ventaja. Si el crédito baja un punto, la capacidad de compra de una familia aumenta hasta un diez por ciento. Los invito a orientar a sus compradores con cifras exactas y a consultar análisis de mercado conmigo. ¡Excelente semana comercial!`,
-      captionText: `🎙️ *NOTICIAS INMOBILIARIAS & TASAS DE INTERÉS — VECY NETWORK* 🇨🇴\n\n` +
+      captionText: `🎙️ *NOTICIAS INMOBILIARIAS & TASAS DE INTERÉS — VECY BIENES RAÍCES* 🇨🇴\n\n` +
         `¡Buenos días a todos los colegas y aliados inmobiliarios!\n\n` +
         `📊 *Capacidad de Compra & Crédito Hipotecario:*\n` +
         `El comportamiento de las tasas de interés de colocación hipotecaria impacta de forma directa el poder adquisitivo de los compradores. Una variación del 1% en la tasa representa hasta un 10% más de presupuesto disponible para adquirir vivienda.\n\n` +
@@ -381,7 +381,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Tope Legal de Incremento de Arriendos bajo Ley 820',
       themeKey: 'noticias',
       voiceText: `¡Buenos días a todos! Les habla JanIA. Recordemos que bajo la Ley 820 de 2003, el canon de arrendamiento de vivienda urbana solo puede reajustarse cada doce meses de ejecución contractual y con el tope máximo del IPC del año inmediatamente anterior, sin que supere el uno por ciento del valor comercial del predio. Conocer este límite evita controversias con los propietarios y protege a los inquilinos. ¡Muchos éxitos hoy!`,
-      captionText: `📋 *ARRENDAMIENTOS & TOPE LEGAL IPC (LEY 820) — VECY NETWORK* 🏢\n\n` +
+      captionText: `📋 *ARRENDAMIENTOS & TOPE LEGAL IPC (LEY 820) — VECY BIENES RAÍCES* 🏢\n\n` +
         `¡Buenos días, queridos colegas corredores e inmobiliarios!\n\n` +
         `⚖️ *Reglas Clave para Reajuste de Cánones:*\n` +
         `• Solo aplica cada 12 meses de contrato continuo.\n` +
@@ -394,7 +394,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Rentas Cortas y Registro Nacional de Turismo (RNT)',
       themeKey: 'noticias',
       voiceText: `¡Buenos días, colegas! Soy JanIA. La vivienda turística y de rentas cortas vive un auge sin precedentes en ciudades como Medellín, Bogotá y la Costa. Sin embargo, para que un propietario pueda arrendar por días legalmente, el reglamento de propiedad horizontal debe autorizarlo de forma expresa y el predio debe contar con Registro Nacional de Turismo vigente. Blindar a sus clientes con la norma correcta es sello de profesionalismo. ¡A cerrar con seguridad!`,
-      captionText: `🏖️ *VIVIENDA TURÍSTICA & RNT EN PROPIEDAD HORIZONTAL — VECY NETWORK* 🗺️\n\n` +
+      captionText: `🏖️ *VIVIENDA TURÍSTICA & RNT EN PROPIEDAD HORIZONTAL — VECY BIENES RAÍCES* 🗺️\n\n` +
         `¡Buenos días, aliados de la red inmobiliaria!\n\n` +
         `📌 *Puntos Clave para Rentas Cortas Legales:*\n` +
         `1. El Reglamento de Propiedad Horizontal debe permitir explícitamente el uso de hospedaje turístico.\n` +
@@ -410,7 +410,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Cláusula Penal vs Arras en Promesas de Compraventa',
       themeKey: 'juridico',
       voiceText: `¡Buenos días, queridos colegas! Soy JanIA con su tip jurídico. En las promesas de compraventa es fundamental distinguir las arras de retracto de las arras confirmatorias y la cláusula penal. Si pactan arras de retracto sin aclararlo, cualquiera de las partes puede desistir del negocio pagando la sanción sin que se pueda exigir el cumplimiento forzoso. Redactar promesas claras protege las comisiones y el patrimonio de sus clientes. Cuenten conmigo para revisar sus minutas en cualquier momento.`,
-      captionText: `⚖️ *CLÁUSULA PENAL VS ARRAS EN PROMESAS — VECY NETWORK* 🏛️\n\n` +
+      captionText: `⚖️ *CLÁUSULA PENAL VS ARRAS EN PROMESAS — VECY BIENES RAÍCES* 🏛️\n\n` +
         `¡Hola, queridos colegas corredores e inmobiliarios!\n\n` +
         `📌 *Tip Jurídico del Día: Precisión Notarial en Promesas de Compraventa*\n` +
         `• *Arras de Retracto (Art. 1859 C.C.):* Permiten a comprador o vendedor desistir legalmente del negocio perdiendo las arras o pagándolas dobladas, extinguiendo la promesa.\n` +
@@ -423,7 +423,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Defensa de la Comisión 50/50 y Contrato de Corretaje',
       themeKey: 'juridico',
       voiceText: `Hola, queridos colegas. Soy JanIA. El contrato de corretaje inmobiliario está protegido por los artículos mil trescientos cuarenta a mil trescientos cuarenta y seis del Código de Comercio. La remuneración del corredor se causa desde el momento en que se celebra el negocio entre las partes gracias a su gestión. Dejar constancia escrita u hoja de visita digital blindada garantiza el cobro de la comisión justa y previene el bypassing entre agentes. ¡Defendamos el honor de nuestro oficio!`,
-      captionText: `🤝 *DEFENSA DE LA COMISIÓN 50/50 & CÓDIGO DE COMERCIO — VECY NETWORK* 📜\n\n` +
+      captionText: `🤝 *DEFENSA DE LA COMISIÓN 50/50 & CÓDIGO DE COMERCIO — VECY BIENES RAÍCES* 📜\n\n` +
         `¡Buenos días a todos los aliados del corretaje!\n\n` +
         `⚖️ *Fundamentos Legales del Corretaje en Colombia:*\n` +
         `• **Art. 1340 C.Co.:** Define al corredor como el mediador independiente que facilita la celebración de negocios.\n` +
@@ -436,7 +436,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Estudio de Títulos y Alertas en Folios de Matrícula SNR',
       themeKey: 'juridico',
       voiceText: `Buenos días, aliados inmobiliarios. Les habla JanIA. En el estudio de títulos no basta con mirar el último propietario. Es indispensable verificar la tradición jurídica de los últimos veinte años en el certificado de tradición de la Superintendencia de Notariado y Registro. Fíjense con lupa en notas devolutivas, embargos vigentes, condiciones resolutorias no canceladas y afectaciones a vivienda familiar. Prevenir un negocio inviable les ahorra meses de litigios. ¡A cuidar a sus clientes!`,
-      captionText: `🔍 *ESTUDIO DE TÍTULOS & AUDITORÍA EN FOLIOS SNR — VECY NETWORK* 📋\n\n` +
+      captionText: `🔍 *ESTUDIO DE TÍTULOS & AUDITORÍA EN FOLIOS SNR — VECY BIENES RAÍCES* 📋\n\n` +
         `¡Buenos días, colegas de toda Colombia!\n\n` +
         `📌 *Puntos Críticos al Interpretar un Folio de Matrícula Inmobiliaria:*\n` +
         `1️⃣ **Tradición de 20 Años:** Revisar que cada transferencia de dominio esté inscrita de forma continua sin saltos registrales.\n` +
@@ -452,7 +452,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Fotografía Inmobiliaria Profesional con Smartphone',
       themeKey: 'marketing',
       voiceText: `¡Buenas tardes, colegas! Soy JanIA con su tip de marketing inmobiliario. Para captar compradores de inmediato, tomen las fotos siempre a la altura del pecho, en posición horizontal y utilizando la luz natural de la mañana. Antes de disparar, despersonalicen los espacios: cierren las tapas de los inodoros, guarden los productos de aseo y despejen los mesones de la cocina. Las fotos limpias y luminosas aumentan hasta tres veces las visitas comerciales. ¡Pruébenlo hoy mismo!`,
-      captionText: `📸 *FOTOGRAFÍA INMOBILIARIA PROFESIONAL CON TU MÓVIL — VECY NETWORK* 📱\n\n` +
+      captionText: `📸 *FOTOGRAFÍA INMOBILIARIA PROFESIONAL CON TU MÓVIL — VECY BIENES RAÍCES* 📱\n\n` +
         `¡Buenas tardes, queridos colegas corredores!\n\n` +
         `🎯 *Consejos Prácticos para Fotos que Venden en Minutos:*\n` +
         `• **Altura y Perspectiva:** Dispara a la altura de tu pecho (1.20m a 1.40m), nunca desde la altura de tus ojos.\n` +
@@ -466,7 +466,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Viralización Orgánica en Redes Sociales para Inmuebles',
       themeKey: 'marketing',
       voiceText: `¡Buenas tardes a todos! Les habla JanIA. No necesitan pagar miles de pesos en pauta para conseguir prospectos reales. Los videos cortos y dinámicos de cuarenta y cinco segundos en Instagram Reels y TikTok mostrando los tres mejores atractivos del inmueble generan un alcance orgánico impresionante. Inicien siempre con un gancho que despierte curiosidad, como el valor del metro cuadrado en la zona o la vista panorámica del balcón. ¡A romper las redes con calidad!`,
-      captionText: `🚀 *VIRALIZACIÓN ORGÁNICA EN REELS Y TIKTOK — VECY NETWORK* 🎬\n\n` +
+      captionText: `🚀 *VIRALIZACIÓN ORGÁNICA EN REELS Y TIKTOK — VECY BIENES RAÍCES* 🎬\n\n` +
         `¡Buenas tardes, aliados y agentes de la red!\n\n` +
         `🔥 *Estructura de un Video Inmobiliario de Alto Impacto (45 Segundos):*\n` +
         `1️⃣ **Gancho (Segundos 1 a 3):** Muestra el atributo estrella (terraza, cocina abierta o precio de oportunidad).\n` +
@@ -479,7 +479,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Los 7 Pilares Obligatorios de una Publicación Exitosa',
       themeKey: 'marketing',
       voiceText: `¡Buenas tardes, colegas! Soy JanIA. El ochenta por ciento de las publicaciones inmobiliarias se descartan porque les faltan datos esenciales. Si quieren cerrar rápido tanto en ofertas como en demandas, incluyan siempre los siete pilares: tipo de predio, ciudad y barrio exacto, precio y administración, área en metros cuadrados, habitaciones, baños y parqueaderos independientes o en línea. Publicar completo le ahorra tiempo a toda la comunidad y activa el cruce de JanIA. ¡Éxitos!`,
-      captionText: `📢 *LA REGLA DE ORO: LOS 7 PILARES INMOBILIARIOS — VECY NETWORK* 🎯\n\n` +
+      captionText: `📢 *LA REGLA DE ORO: LOS 7 PILARES INMOBILIARIOS — VECY BIENES RAÍCES* 🎯\n\n` +
         `¡Buenas tardes a toda la red de corretaje en Colombia!\n\n` +
         `¿Por qué se pierden miles de negocios en los grupos? Por publicaciones ambiguas o incompletas.\n\n` +
         `🏆 *Publica SIEMPRE con los 7 Pilares tanto en DEMANDAS como en OFERTAS:*\n` +
@@ -500,7 +500,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Retención en la Fuente en Enajenación de Inmuebles',
       themeKey: 'tributario',
       voiceText: `¡Buenos días, colegas! Soy JanIA con su tip tributario del día. Recuerden que al escriturar una venta de inmueble ante notaría, la retención en la fuente para personas naturales es del uno por ciento sobre el valor de la enajenación, según el artículo trescientos noventa y ocho del Estatuto Tributario. Para personas jurídicas la tarifa es del dos punto cinco por ciento. Aclarar desde la promesa a quién corresponde cada gasto previene disgustos el día de la firma. ¡A asesorar con números claros!`,
-      captionText: `💰 *RETENCIÓN EN LA FUENTE ANTE NOTARÍA — VECY NETWORK* 📋\n\n` +
+      captionText: `💰 *RETENCIÓN EN LA FUENTE ANTE NOTARÍA — VECY BIENES RAÍCES* 📋\n\n` +
         `¡Buenos días a todos los corredores e inmobiliarios!\n\n` +
         `📌 *Tarifas de Retención en la Fuente en Venta de Inmuebles:*\n` +
         `• **Persona Natural:** Tarifa del **1%** sobre el valor total fijado en la escritura pública (Art. 398 E.T.).\n` +
@@ -513,7 +513,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Deducción de Mejoras y Refacciones con Facturación Electrónica',
       themeKey: 'tributario',
       voiceText: `Hola, queridos colegas. Soy JanIA. Muchos propietarios pagan un impuesto de ganancia ocasional muy alto porque no saben que las remodelaciones y mejoras estructurales pueden sumarse al costo fiscal del inmueble para reducir la utilidad gravable. La condición indispensable de la DIAN es que todas esas refacciones estén soportadas con facturación electrónica a nombre del propietario. Asesorar a sus clientes en este aspecto les ahorra millones de pesos. ¡A vender informados!`,
-      captionText: `🛠️ *DEDUCCIÓN DE MEJORAS & FACTURA ELECTRÓNICA ANTE LA DIAN — VECY NETWORK* 🧾\n\n` +
+      captionText: `🛠️ *DEDUCCIÓN DE MEJORAS & FACTURA ELECTRÓNICA ANTE LA DIAN — VECY BIENES RAÍCES* 🧾\n\n` +
         `¡Buenos días a todos los aliados inmobiliarios!\n\n` +
         `💡 *Cómo Reducir Legalmente la Ganancia Ocasional:*\n` +
         `Al vender un inmueble, el impuesto del 15% se calcula sobre la diferencia entre el precio de venta y el costo fiscal. ¿Cómo elevar el costo fiscal legalmente?\n\n` +
@@ -526,7 +526,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Desglose Exacto de Gastos Notariales y de Registro en Colombia',
       themeKey: 'tributario',
       voiceText: `Buenos días, aliados de la red. Les habla JanIA. En Colombia existe una distribución tradicional de los gastos de escrituración que todo asesor debe dominar con exactitud: los derechos notariales se comparten por partes iguales cincuenta y cincuenta entre comprador y vendedor; la retención en la fuente la paga el vendedor; y el impuesto de registro y beneficencia lo asume el comprador. Entregar este desglose por escrito desde el inicio genera confianza total. ¡Muchos éxitos!`,
-      captionText: `📊 *DESGLOSE DE GASTOS NOTARIALES Y DE REGISTRO EN COLOMBIA — VECY NETWORK* 🏛️\n\n` +
+      captionText: `📊 *DESGLOSE DE GASTOS NOTARIALES Y DE REGISTRO EN COLOMBIA — VECY BIENES RAÍCES* 🏛️\n\n` +
         `¡Buenos días, colegas corredores!\n\n` +
         `Para que tu promesa de compraventa esté completamente blindada, ten clara la distribución habitual de gastos en notarías colombianas:\n\n` +
         `🤝 **Notaría (Derechos Notariales):** Se divide **50% Vendedor / 50% Comprador** (Aprox. 0.54% del valor del negocio + IVA).\n` +
@@ -541,11 +541,11 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
     {
       topicTitle: 'Estudios de Mercado de Valor por M² (100% Virtuales)',
       themeKey: 'avaluos',
-      voiceText: `¡Excelente viernes, queridos colegas! Soy JanIA. Para captar con éxito y no quemar los inmuebles en los portales, es fundamental fijar precios realistas con los propietarios. Recuerden que en VECY Network NO hacemos avalúos presenciales con perito de lonja, sino estudios de mercado aproximados sobre el valor del metro cuadrado en la zona y sondeos de arriendo sugeridos. Todos nuestros análisis son cien por ciento virtuales, ágiles y al servicio de su gestión comercial. ¡A cerrar la semana con éxito!`,
-      captionText: `📐 *ESTUDIOS DE MERCADO & VALOR DEL M² (100% VIRTUALES) — VECY NETWORK* 🏙️\n\n` +
+      voiceText: `¡Excelente viernes, queridos colegas! Soy JanIA. Para captar con éxito y no quemar los inmuebles en los portales, es fundamental fijar precios realistas con los propietarios. Recuerden que en VECY Bienes Raíces NO hacemos avalúos presenciales con perito de lonja, sino estudios de mercado aproximados sobre el valor del metro cuadrado en la zona y sondeos de arriendo sugeridos. Todos nuestros análisis son cien por ciento virtuales, ágiles y al servicio de su gestión comercial. ¡A cerrar la semana con éxito!`,
+      captionText: `📐 *ESTUDIOS DE MERCADO & VALOR DEL M² (100% VIRTUALES) — VECY BIENES RAÍCES* 🏙️\n\n` +
         `¡Excelente viernes para todos los colegas de la red!\n\n` +
         `📊 *Fijación de Precios de Captación Reales y Competitivos:*\n` +
-        `¿Vas a captar un predio y necesitas orientar al propietario para que no infle el precio y queme el anuncio en los portales? En VECY Network te apoyamos con:\n\n` +
+        `¿Vas a captar un predio y necesitas orientar al propietario para que no infle el precio y queme el anuncio en los portales? En VECY Bienes Raíces te apoyamos con:\n\n` +
         `• Sondeo de mercado comparativo por zona y tipología urbana.\n` +
         `• Rango sugerido de valor por metro cuadrado para venta rápida.\n` +
         `• Estimación de canon de arrendamiento según oferta y demanda.\n\n` +
@@ -556,7 +556,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Interpretación de Fichas Normativas SINUPOT en Bogotá',
       themeKey: 'avaluos',
       voiceText: `¡Buenos días, colegas! Soy JanIA. Si están captando un lote, una casa antigua o un predio con potencial constructor en Bogotá, la herramienta clave es la ficha del SINUPOT. A través de este sistema pueden conocer el tratamiento urbanístico, el área de actividad, los usos del suelo permitidos y la edificabilidad máxima. Compartan conmigo la ficha en PDF y les extraigo el potencial del terreno en cuestión de segundos. ¡A captar con visión!`,
-      captionText: `🗺️ *ESTUDIOS DE SUELO & FICHAS SINUPOT AL INSTANTE — VECY NETWORK* 📐\n\n` +
+      captionText: `🗺️ *ESTUDIOS DE SUELO & FICHAS SINUPOT AL INSTANTE — VECY BIENES RAÍCES* 📐\n\n` +
         `¡Excelente viernes para todos los corredores visionarios!\n\n` +
         `¿Captaste un lote o una casa con potencial para desarrollo comercial o residencial en Bogotá?\n\n` +
         `🏢 *Qué analizamos en la Ficha SINUPOT:*\n` +
@@ -570,7 +570,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Cálculo de Cánones de Arrendamiento Sugeridos',
       themeKey: 'avaluos',
       voiceText: `Feliz viernes para todos. Les habla JanIA. Para calcular el canon comercial adecuado de un inmueble en arrendamiento, la regla técnica en Colombia oscila entre el cero punto cinco y el cero punto ocho por ciento del valor comercial real del predio, según estrato, amenidades del conjunto y antigüedad. Asesorar a los arrendadores con este parámetro evita que el apartamento permanezca meses desocupado generando pérdidas en administración. ¡A monetizar con inteligencia!`,
-      captionText: `💰 *CÁLCULO DEL CANON DE ARRIENDO COMPETITIVO — VECY NETWORK* 🏢\n\n` +
+      captionText: `💰 *CÁLCULO DEL CANON DE ARRIENDO COMPETITIVO — VECY BIENES RAÍCES* 🏢\n\n` +
         `¡Excelente viernes, aliados y agentes de arrendamiento!\n\n` +
         `🎯 *Criterios Técnicos para Fijar el Canon Adecuado:*\n` +
         `• **Rango Promedio en Colombia:** Entre el **0.5% y el 0.8%** mensual sobre el valor comercial real del inmueble.\n` +
@@ -584,8 +584,8 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
     {
       topicTitle: 'Ética y Alianzas Compartidas en el Corretaje',
       themeKey: 'cafe',
-      voiceText: `Buenos días, queridos aliados de la red. Cerramos una semana extraordinaria de actividad comercial. Recuerden que en el negocio inmobiliario la reputación y la ética son nuestro activo más valioso. Compartir puntas con colegas serios, respetar la hoja de presentación del cliente y honrar los acuerdos al cincuenta cincuenta es lo que construye carreras sólidas y duraderas. Los invito a invitar a más colegas profesionales a sumarse a VECY Network. ¡Disfruten su café y que tengan un reparador fin de semana!`,
-      captionText: `☕ *SÁBADO DE CAFÉ INMOBILIARIO & ÉTICA ENTRE COLEGAS — VECY NETWORK* 🤝\n\n` +
+      voiceText: `Buenos días, queridos aliados de la red. Cerramos una semana extraordinaria de actividad comercial. Recuerden que en el negocio inmobiliario la reputación y la ética son nuestro activo más valioso. Compartir puntas con colegas serios, respetar la hoja de presentación del cliente y honrar los acuerdos al cincuenta cincuenta es lo que construye carreras sólidas y duraderas. Los invito a invitar a más colegas profesionales a sumarse a VECY Bienes Raíces. ¡Disfruten su café y que tengan un reparador fin de semana!`,
+      captionText: `☕ *SÁBADO DE CAFÉ INMOBILIARIO & ÉTICA ENTRE COLEGAS — VECY BIENES RAÍCES* 🤝\n\n` +
         `¡Buenos días a todos los aliados y corredores de Colombia!\n\n` +
         `Culminamos una semana muy productiva en nuestra comunidad. Hoy reflexionamos sobre los pilares del éxito duradero en bienes raíces:\n\n` +
         `🌟 **La Reputación Comercial:** En un mercado competitivo, los corredores que cumplen su palabra y respetan los acuerdos de corretaje compartido multiplican sus negocios por recomendación natural.\n` +
@@ -597,14 +597,14 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Identidad de JanIA: Creada para Empoderar al Asesor',
       themeKey: 'cafe',
       voiceText: `Buenos días a todos mis queridos colegas. Les habla JanIA. Para quienes se unen por primera vez a nuestra comunidad, quiero contarles quién soy: fui concebida por nuestros directores Eduardo Rivera y Jani Alves como la primera inteligencia artificial inmobiliaria de Colombia. Mi propósito no es reemplazar al corredor, sino darle superpoderes: cruzo ofertas y requerimientos las veinticuatro horas, redacto contratos, oriento en temas tributarios y promuevo la colaboración ética. ¡Bienvenidos a la nueva era del corretaje!`,
-      captionText: `🤖 *CONOCE A JANIA: LA IA INMOBILIARIA DE COLOMBIA — VECY NETWORK* 🇨🇴\n\n` +
+      captionText: `🤖 *CONOCE A JANIA: LA IA INMOBILIARIA DE COLOMBIA — VECY BIENES RAÍCES* 🇨🇴\n\n` +
         `¡Buenos días, queridos colegas y nuevos aliados!\n\n` +
         `Hoy en nuestro café inmobiliario queremos compartir el corazón de esta innovación:\n\n` +
         `💡 *¿Quién es JanIA y por qué fue creada?*\n` +
         `• Concebida por nuestros fundadores **Eduardo A. Rivera** (Director de Tecnología) y **Jani Alves** (Directora de Operaciones).\n` +
         `• Diseñada para empoderar al agente independiente y a la agencia, brindándoles herramientas que antes solo tenían las multinacionales.\n` +
         `• **Qué hace 24/7:** Monitorea solicitudes, empata ofertas y demandas al instante, revisa minutas y analiza normativas fiscales.\n\n` +
-        `🤝 *VECY Network es tu aliado tecnológico permanente.*\n\n` +
+        `🤝 *VECY Bienes Raíces es tu aliado tecnológico permanente.*\n\n` +
         `📲 *Interactúa con JanIA:* https://vecy-network.vercel.app/jania`
     }
   ],
@@ -614,8 +614,8 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
       topicTitle: 'Consultorio 24/7 y Portafolio 100% Virtual VECY',
       themeKey: 'soporte',
       voiceText: `¡Feliz y bendecido domingo para todos mis queridos colegas! Soy JanIA. Hoy quiero recordarles que nuestro consultorio inmobiliario está a su entera disposición los siete días de la semana. Ya sea que necesiten estructurar una promesa de compraventa, liquidar la ganancia ocasional ante la DIAN, realizar un estudio de mercado del valor del metro cuadrado o diseñar una campaña de marketing con inteligencia artificial, aquí estamos para respaldarlos con servicios cien por ciento virtuales y ágiles. ¡Que disfruten un domingo reparador en familia!`,
-      captionText: `🛎️ *DOMINGO DE SOPORTE INTEGRAL 100% VIRTUAL — VECY NETWORK* 🌟\n\n` +
-        `¡Feliz y descansado domingo para todos los aliados y colegas de VECY Network!\n\n` +
+      captionText: `🛎️ *DOMINGO DE SOPORTE INTEGRAL 100% VIRTUAL — VECY BIENES RAÍCES* 🌟\n\n` +
+        `¡Feliz y descansado domingo para todos los aliados y colegas de VECY Bienes Raíces!\n\n` +
         `En VECY cuentas con un respaldo permanente para impulsar tus operaciones en toda Colombia:\n\n` +
         `⚖️ *Consultoría Jurídica:* Promesas de compraventa, corretaje 50/50 y blindaje contractual.\n` +
         `💰 *Asesoría Tributaria DIAN:* Liquidación de retenciones en la fuente y ganancia ocasional.\n` +
@@ -628,8 +628,8 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
     {
       topicTitle: 'Bolsa Colaborativa VECY y Comisiones Transparentes (35/35/15/15)',
       themeKey: 'soporte',
-      voiceText: `Feliz domingo, aliados inmobiliarios. Les habla JanIA. En VECY Network estamos construyendo la primera bolsa inmobiliaria colaborativa y fintech de Colombia, basada en la equidad y el respeto mutuo. Nuestro modelo de comisiones justas reconoce el trabajo del asesor captador con el treinta y cinco por ciento, el asesor colocador con el treinta y cinco por ciento, y destina el resto a la bolsa colaborativa y a la plataforma que los respalda. Los invito a sumar a colegas éticos para crecer juntos. ¡Feliz día!`,
-      captionText: `🤝 *BOLSA COLABORATIVA & COMISIONES JUSTAS (35/35/15/15) — VECY NETWORK* 🏛️\n\n` +
+      voiceText: `Feliz domingo, aliados inmobiliarios. Les habla JanIA. En VECY Bienes Raíces estamos construyendo la primera bolsa inmobiliaria colaborativa y fintech de Colombia, basada en la equidad y el respeto mutuo. Nuestro modelo de comisiones justas reconoce el trabajo del asesor captador con el treinta y cinco por ciento, el asesor colocador con el treinta y cinco por ciento, y destina el resto a la bolsa colaborativa y a la plataforma que los respalda. Los invito a sumar a colegas éticos para crecer juntos. ¡Feliz día!`,
+      captionText: `🤝 *BOLSA COLABORATIVA & COMISIONES JUSTAS (35/35/15/15) — VECY BIENES RAÍCES* 🏛️\n\n` +
         `¡Feliz domingo para todos los visionarios del sector!\n\n` +
         `🎯 *El Nuevo Estándar del Corretaje Inmobiliario en Colombia:*\n` +
         `• **35% Asesor Captador:** Quien consigue la propiedad exclusiva o disponible.\n` +
@@ -713,7 +713,7 @@ export async function generateDailyContent(
   // 1. Obtener historial de los últimos 30 temas para PROHIBIR su repetición
   const recentTopics = await getRecentBroadcastTopics(30);
   const forbiddenTopicsPrompt = recentTopics.length > 0
-    ? `\n🚫 TEMAS TRATADOS RECIENTEMENTE EN VECY NETWORK (TERMINANTEMENTE PROHIBIDO REPETIR O REFRITAR ESTOS TEMAS HOY):\n` +
+    ? `\n🚫 TEMAS TRATADOS RECIENTEMENTE EN VECY BIENES RAÍCES (TERMINANTEMENTE PROHIBIDO REPETIR O REFRITAR ESTOS TEMAS HOY):\n` +
       recentTopics.map((t, idx) => `${idx + 1}. [${t.dateBogota}] ${t.topicTitle}`).join('\n') +
       `\n\nTu misión primordial: Debes escoger obligatoriamente un tema NUEVO, FRESCO, DIFERENTE e INNOVADOR que NO figure en esa lista ni trate sobre los mismos conceptos exactos.\n`
     : '';
@@ -766,21 +766,21 @@ Elige libremente entre:
     sabado_cafe: `Tema: Sábado de Café Inmobiliario, Reflexión & Identidad JanIA (${fechaBogota}).
 Estilo podcast / café inmobiliario, cercano, reflexivo y motivador:
 - Ética gremial: respeto por el cliente del colega, transparencia en la comisión compartida y construcción de marca personal.
-- Portafolio de Servicios Virtuales de VECY Network: estudios de mercado m², liquidaciones DIAN, contratos digitales y cobranzas.
+- Portafolio de Servicios Virtuales de VECY Bienes Raíces: estudios de mercado m², liquidaciones DIAN, contratos digitales y cobranzas.
 - Identidad de JanIA: explicar con orgullo que fue creada por Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones) para empoderar al corredor independiente.
 - Línea de Atención Oficial con el Bróker: para acompañamiento o casos personalizados, contactar a Eduardo y Jani en el WhatsApp oficial (+57 316 656 9719).`,
 
-    domingo_soporte: `Tema: Domingo de Soporte JanIA, Consultoría 24/7 & Visión VECY Network (${fechaBogota}).
+    domingo_soporte: `Tema: Domingo de Soporte JanIA, Consultoría 24/7 & Visión VECY Bienes Raíces (${fechaBogota}).
 Mensaje cálido dominical recordando el respaldo continuo:
 - Consultorio integral 24/7: contratos, promesas, impuestos y asesoría permanente en WhatsApp y web.
 - La Primera Bolsa Inmobiliaria Colaborativa y Fintech de Colombia: tecnología abierta y comisiones transparentes (35/35/15/15).
-- Próximamente al Aire: preparativos y herramientas de élite para el lanzamiento oficial de VECY Network.
+- Próximamente al Aire: preparativos y herramientas de élite para el lanzamiento oficial de VECY Bienes Raíces.
 - Cero canibalismo comercial: complementariedad y profesionalismo en la red nacional.`,
 
     inmuebles_network: `Tema: Operaciones Comerciales y Cruce Nacional (${fechaBogota}).
 Motivar la publicación de inmuebles y requerimientos con datos completos para activar el cruce instantáneo.`,
 
-    proyecto_vecy: `Tema: Visión Ecosistema VECY Network — Quiénes Somos, Misión y Futuro (${fechaBogota}).
+    proyecto_vecy: `Tema: Visión Ecosistema VECY Bienes Raíces — Quiénes Somos, Misión y Futuro (${fechaBogota}).
 Inspirar a la comunidad destacando:
 1. Quiénes nos crearon: JanIA habla en primera persona como JanIA explicando quiénes son sus creadores y líderes: Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones).
 2. Qué es JanIA: La inteligencia artificial creada para conectar la oferta y demanda en Colombia, realizar matching y respaldar al asesor 24/7.
@@ -790,7 +790,7 @@ Inspirar a la comunidad destacando:
 
   const promptEspecifico = promptsMap[tipo] || promptsMap.lunes_arranque;
 
-  const systemPrompt = `Eres JanIA, la inteligencia artificial oficial y periodista inmobiliaria de VECY Network en Colombia.
+  const systemPrompt = `Eres JanIA, la inteligencia artificial oficial y periodista inmobiliaria de VECY Bienes Raíces en Colombia.
 Hablas en primera persona con tono femenino profesional, cálido, colombiano, sumamente elocuente y motivador.
 
 🚨 SALUDO SEGÚN EL HORARIO EN COLOMBIA (OBLIGATORIO):
@@ -799,12 +799,12 @@ Hablas en primera persona con tono femenino profesional, cálido, colombiano, su
 - Está TERMINANTEMENTE PROHIBIDO saludar con "Buenos días" en la tarde o noche, o con "Buenas noches" en la mañana.
 
 🚨 REGLA DOCTRINAL DE IDENTIDAD Y CERO SUPLANTACIÓN (MANDATORIA E INQUEBRANTABLE):
-- Eres SIEMPRE Y EXCLUSIVAMENTE JanIA, la Inteligencia Artificial de VECY Network.
+- Eres SIEMPRE Y EXCLUSIVAMENTE JanIA, la Inteligencia Artificial de VECY Bienes Raíces.
 - NUNCA, BAJO NINGUNA CIRCUNSTANCIA, digas que eres Jani Alves ni Eduardo Rivera.
 - NUNCA uses fórmulas como "Te saluda Jani Alves", "Soy Jani Alves", "Te habla Eduardo Rivera", "Soy Eduardo Rivera" ni "Jani Alves y yo".
 - Eduardo A. Rivera y Jani Alves son seres humanos reales, los fundadores y directores de carne y hueso que te crearon a ti, JanIA.
 - Tú eres la IA (JanIA). Te presentas siempre como JanIA:
-  "${timeInfo.greeting} mis queridos colegas. Soy JanIA, la inteligencia artificial de VECY Network..."
+  "${timeInfo.greeting} mis queridos colegas. Soy JanIA, la inteligencia artificial de VECY Bienes Raíces..."
   "Fundada por Eduardo A. Rivera y Jani Alves, nuestra red nace para..."
   "Soy JanIA y hoy les traigo las noticias más relevantes..."
 - Si mencionas a Eduardo Rivera o Jani Alves, debes hacerlo SIEMPRE en tercera persona ("nuestros fundadores Eduardo A. Rivera y Jani Alves...", "nuestro equipo liderado por Eduardo y Jani...").
@@ -813,7 +813,7 @@ Hablas en primera persona con tono femenino profesional, cálido, colombiano, su
 🚨 DIRECTRICES DE LIBRE ALBEDRÍO Y ANTI-REPETICIÓN ESTRICTA:
 ${forbiddenTopicsPrompt}
 - NUNCA repitas el mismo consejo, noticia o ejemplo de días anteriores. Selecciona un ángulo fresco, novedoso y de gran utilidad práctica.
-- REGLA DOCTRINAL DE SERVICIOS: En VECY Network NO realizamos avalúos comerciales certificados por perito ni visitas in situ. Nuestros servicios son 100% VIRTUALES: estudios de mercado aproximados sobre el valor del metro cuadrado en la zona, sondeos de precios de venta y arriendo para orientar a propietarios, asesoría tributaria DIAN, contratos digitales, cobranzas de arrendamiento y marketing con IA.
+- REGLA DOCTRINAL DE SERVICIOS: En VECY Bienes Raíces NO realizamos avalúos comerciales certificados por perito ni visitas in situ. Nuestros servicios son 100% VIRTUALES: estudios de mercado aproximados sobre el valor del metro cuadrado en la zona, sondeos de precios de venta y arriendo para orientar a propietarios, asesoría tributaria DIAN, contratos digitales, cobranzas de arrendamiento y marketing con IA.
 - ESTRUCTURA DEL MENSAJE:
   1. Saludo inicial: Iniciando con "${timeInfo.greeting}" y presentándote siempre como JanIA.
   2. Desarrollo temático: Didáctico, conciso y con ejemplos reales de Colombia.
@@ -974,11 +974,11 @@ export async function publishGrupo3TipNow(force: boolean = false) {
     return { skipped: true, reason: lock.reason };
   }
 
-  console.log('[CRON-SERVICE] 🚀 Publicando tip dinámico para Grupo 3 (PROYECTO Vecy Network) + Canal Oficial...');
-  const fallbackVoice = `Hola, equipo VECY. Soy JanIA, la inteligencia artificial de VECY Network. Este grupo es nuestro espacio más especial: el canal del Proyecto Vecy Network es donde nacen las ideas y donde construimos juntos el futuro del corretaje inmobiliario en Colombia. Eduardo Rivera y Jani Alves crearon este proyecto con la firme convicción de unir a los corredores independientes y agencias, ofreciéndoles herramientas inteligentes, estudios de mercado, soporte jurídico y tributario, y comisiones justas compartidas al treinta y cinco, treinta y cinco, quince y quince por ciento. Aquí no competimos, nos complementamos. Los invito a participar activamente, debatir y compartir sus sugerencias para seguir enriqueciendo nuestra red. ¡Seguimos adelante!`;
-  const fallbackCaption = `💡 *PROYECTO VECY NETWORK — INNOVACIÓN, COMUNIDAD & PROPÓSITO* 🇨🇴\n\n` +
+  console.log('[CRON-SERVICE] 🚀 Publicando tip dinámico para Grupo 3 (PROYECTO Vecy Bienes Raíces) + Canal Oficial...');
+  const fallbackVoice = `Hola, equipo VECY. Soy JanIA, la inteligencia artificial de VECY Bienes Raíces. Este grupo es nuestro espacio más especial: el canal del Proyecto Vecy Bienes Raíces es donde nacen las ideas y donde construimos juntos el futuro del corretaje inmobiliario en Colombia. Eduardo Rivera y Jani Alves crearon este proyecto con la firme convicción de unir a los corredores independientes y agencias, ofreciéndoles herramientas inteligentes, estudios de mercado, soporte jurídico y tributario, y comisiones justas compartidas al treinta y cinco, treinta y cinco, quince y quince por ciento. Aquí no competimos, nos complementamos. Los invito a participar activamente, debatir y compartir sus sugerencias para seguir enriqueciendo nuestra red. ¡Seguimos adelante!`;
+  const fallbackCaption = `💡 *PROYECTO VECY BIENES RAÍCES — INNOVACIÓN, COMUNIDAD & PROPÓSITO* 🇨🇴\n\n` +
     `¡Hola, queridos colegas, aliados y miembros visionarios!\n\n` +
-    `Soy JanIA, y este grupo es el corazón del proyecto VECY Network. Aquí debatimos, aportamos ideas y construimos la primera bolsa inmobiliaria colaborativa y fintech de Colombia con comisiones justas (35/35/15/15) e Inteligencia Artificial 24/7.\n\n` +
+    `Soy JanIA, y este grupo es el corazón del proyecto VECY Bienes Raíces. Aquí debatimos, aportamos ideas y construimos la primera bolsa inmobiliaria colaborativa y fintech de Colombia con comisiones justas (35/35/15/15) e Inteligencia Artificial 24/7.\n\n` +
     `🏢 *¿Quiénes nos crearon y qué estamos construyendo?*\n` +
     `Liderados por nuestros fundadores Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones), desarrollamos herramientas 100% virtuales al servicio del corretaje: estudios de mercado m², cruce inteligente de ofertas y demandas, consultoría legal y tributaria, y comisiones transparentes.\n\n` +
     `🎯 *Nuestra Misión y Visión:*\n` +
@@ -1085,11 +1085,11 @@ export async function publishWeeklyReportNow(force: boolean = true) {
   console.log('[CRON-SERVICE] 📊 Disparando Reporte Semanal de la Bolsa Inmobiliaria con estadísticas en vivo...');
   const stats = await getLiveMarketStats();
 
-  const fallbackVoice = `¡Buenas noches, estimados colegas inmobiliarios de Colombia! Les saluda JanIA con el Reporte Semanal de la Bolsa Inmobiliaria de VECY Network. Durante los últimos siete días nuestro motor evaluó más de setecientas mil combinaciones entre ofertas y demandas en todo el país. La clave para que sus clientes cierren más rápido es publicar siempre con barrio exacto, metraje y presupuesto real. Los invito a revisar sus coincidencias en nuestra plataforma. ¡Feliz noche para todos!`;
+  const fallbackVoice = `¡Buenas noches, estimados colegas inmobiliarios de Colombia! Les saluda JanIA con el Reporte Semanal de la Bolsa Inmobiliaria de VECY Bienes Raíces. Durante los últimos siete días nuestro motor evaluó más de setecientas mil combinaciones entre ofertas y demandas en todo el país. La clave para que sus clientes cierren más rápido es publicar siempre con barrio exacto, metraje y presupuesto real. Los invito a revisar sus coincidencias en nuestra plataforma. ¡Feliz noche para todos!`;
 
   const fallbackCaption = `📊 *EL PULSO DE LA BOLSA INMOBILIARIA VECY* 🇨🇴\n` +
     `🗓️ *Reporte Semanal de Eficiencia & Auditoría de Coincidencias*\n` +
-    `🎙️ *Por: JanIA — Inteligencia Artificial VECY Network*\n\n` +
+    `🎙️ *Por: JanIA — Inteligencia Artificial VECY Bienes Raíces*\n\n` +
     `¡Buenas noches, queridos colegas y aliados del corretaje inmobiliario!\n\n` +
     `Al cierre de esta jornada, presentamos el balance de nuestra bolsa inmobiliaria colaborativa tras cruzar en vivo **${stats.totalPairs.toLocaleString('es-CO')} combinaciones** en más de 30 ciudades de Colombia:\n\n` +
     `📈 *RADIOGRAFÍA DE LA BOLSA EN VIVO:*\n` +

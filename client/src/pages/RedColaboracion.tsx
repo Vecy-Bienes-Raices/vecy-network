@@ -52,7 +52,7 @@ export default function RedColaboracion() {
               RED DE <span className="text-gradient-gold">COLABORACIÓN</span>
             </h1>
             <p className="vecy-subtitle max-w-3xl mx-auto">
-              En VECY NETWORK no gastamos en publicidad tradicional. Premiamos tu influencia. 
+              En VECY BIENES RAÍCES no gastamos en publicidad tradicional. Premiamos tu influencia. 
               Ayuda a tus colegas a vender y <span className="font-bold text-white uppercase">gana una parte de la comisión</span> sin ser el captador ni el comprador.
             </p>
           </ScrollReveal>
@@ -102,7 +102,7 @@ export default function RedColaboracion() {
                   {/* VECY SHARE */}
                   <div className="relative h-12 bg-white/5 rounded-lg border border-white/10 flex items-center px-4 overflow-hidden group">
                     <div className="absolute inset-0 bg-primary/20 w-[15%] transition-all group-hover:bg-primary/30" />
-                    <span className="relative text-xs font-bold text-primary uppercase">VECY NETWORK (Plataforma + IA)</span>
+                    <span className="relative text-xs font-bold text-primary uppercase">VECY BIENES RAÍCES (Plataforma + IA)</span>
                     <span className="ml-auto relative text-xs font-black">15%</span>
                   </div>
 
@@ -314,7 +314,7 @@ export default function RedColaboracion() {
         <div className="container text-center">
           <img src="/logo-vecy.png" alt="Vecy" className="h-10 mx-auto mb-6 opacity-50 grayscale" />
           <p className="text-gray-500 text-[10px] uppercase tracking-[0.3em]">
-            &copy; 2026 VECY NETWORK. El Futuro del Real Estate es Colaborativo.
+            &copy; 2026 VECY BIENES RAÍCES. El Futuro del Real Estate es Colaborativo.
           </p>
         </div>
       </footer>

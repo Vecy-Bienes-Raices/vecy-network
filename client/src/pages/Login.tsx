@@ -192,7 +192,7 @@ export default function Login() {
               <Shield className="w-8 h-8 text-accent animate-pulse" />
             </div>
             <h1 className="text-2xl font-display font-bold text-accent uppercase tracking-wider">
-              VECY NETWORK
+              VECY BIENES RAÍCES
             </h1>
             <p className="text-xs text-muted-foreground uppercase tracking-widest mt-1">
               {isRegister ? 'Registro de Colegas' : 'Iniciar Sesión'}

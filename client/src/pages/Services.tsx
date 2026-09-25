@@ -137,7 +137,7 @@ export default function Services() {
           </div>
           <div className="border-t border-white/5 mt-20 pt-8 text-center">
             <p className="text-[10px] text-gray-700 uppercase tracking-[0.5em]">
-              © 2026 VECY Network — Tu Red Inmobiliaria Inteligente.
+              © 2026 VECY Bienes Raíces — Red Inmobiliaria Inteligente.
             </p>
           </div>
         </div>

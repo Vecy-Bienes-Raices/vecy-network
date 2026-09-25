@@ -5385,7 +5385,7 @@ export default function AdminMatches() {
                             </div>
                             {clean10 ? (
                               <a 
-                                href={`https://wa.me/57${clean10}?text=${encodeURIComponent(`Hola! Te contacto por el inmueble "${m.property?.name || 'de la red'}" publicado en ${isPropDirect ? 'VECY Network' : (m.property?.origenNombre || 'VECY Network')}. Tienes un Match del ${score.toFixed(0)}% con un requerimiento activo.`)}`} 
+                                href={`https://wa.me/57${clean10}?text=${encodeURIComponent(`Hola! Te contacto por el inmueble "${m.property?.name || 'de la red'}" publicado en ${isPropDirect ? 'VECY Bienes Raíces' : (m.property?.origenNombre || 'VECY Bienes Raíces')}. Tienes un Match del ${score.toFixed(0)}% con un requerimiento activo.`)}`} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="group bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-extrabold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-[0_0_20px_rgba(37,211,102,0.4)] hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto shrink-0"
@@ -5671,7 +5671,7 @@ export default function AdminMatches() {
                             </div>
                             {clean10 ? (
                               <a 
-                                href={`https://wa.me/57${clean10}?text=${encodeURIComponent(`Hola! Te contacto por tu requerimiento de inmueble en ${m.requirement?.zonaDeseada || m.requirement?.ciudadDeseada || 'VECY Network'}. Encontramos una propiedad con un Match del ${score.toFixed(0)}%.`)}`} 
+                                href={`https://wa.me/57${clean10}?text=${encodeURIComponent(`Hola! Te contacto por tu requerimiento de inmueble en ${m.requirement?.zonaDeseada || m.requirement?.ciudadDeseada || 'VECY Bienes Raíces'}. Encontramos una propiedad con un Match del ${score.toFixed(0)}%.`)}`} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="group bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-extrabold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-[0_0_20px_rgba(37,211,102,0.4)] hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto shrink-0"
@@ -7249,7 +7249,7 @@ export default function AdminMatches() {
 
       {/* Footer Version Stamp */}
       <div className="pt-6 border-t border-white/5 flex items-center justify-between text-[11px] text-zinc-500 font-mono">
-        <div>VECY Network Colombia &copy; 2026</div>
+        <div>VECY Bienes Raíces Colombia &copy; 2026</div>
         <div className="text-[#bf953f] font-bold">{VECY_VERSION_LABEL}</div>
       </div>
 

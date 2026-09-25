@@ -253,7 +253,7 @@ export function formatAppraisalReportMarkdown(res: AppraisalResult, areaTotal?: 
   const formatMoney = (val: number) => `$${Number(val).toLocaleString('es-CO')} ${currencySuffix}`;
   const formatM2 = (val: number) => `$${Number(val).toLocaleString('es-CO')} COP/m²`;
 
-  let report = `# 📊 INFORME DE AVALÚO COMERCIAL — VECY NETWORK\n`;
+  let report = `# 📊 INFORME DE AVALÚO COMERCIAL — VECY BIENES RAÍCES\n`;
   report += `*Generado en tiempo real con datos del mercado inmobiliario real*\n\n`;
 
   report += `### 📌 RESUMEN DE LA PROPIEDAD Y SECTOR\n`;
@@ -296,7 +296,7 @@ export function formatAppraisalReportMarkdown(res: AppraisalResult, areaTotal?: 
     });
   }
 
-  report += `> 💡 *Nota Técnica:* Este avalúo comercial es una estimación estadística realizada por el motor predictivo de VECY Network sobre ofertas reales registradas. No reemplaza un peritaje técnico o avalúo catastral formal de lonja.`;
+  report += `> 💡 *Nota Técnica:* Este avalúo comercial es una estimación estadística realizada por el motor predictivo de VECY Bienes Raíces sobre ofertas reales registradas. No reemplaza un peritaje técnico o avalúo catastral formal de lonja.`;
 
   return report;
 }

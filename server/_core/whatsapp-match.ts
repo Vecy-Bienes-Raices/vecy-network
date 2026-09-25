@@ -986,7 +986,7 @@ export class JaniaMatchBot {
         `Mis grupos:\n\n` +
         `Para publicar tus INMUEBLES y REQUERIMIENTOS tenemos el grupo de *𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗨𝗘𝗕𝗟𝗘𝗦 𝗡𝗘𝗧𝗪𝗢𝗥𝗞* : Si aún no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\n` +
         `Para hacer tus consultas de casos inmobiliarios en temas jurídicos, tributarios, avalúos, ayuda en guía de procesos y redacción de contratos, tenemos el grupo de *𝗩𝗘𝗖𝗬: 𝗦𝗢𝗣𝗢𝗥𝗧𝗘 𝗟𝗘𝗚𝗔𝗟, 𝗧𝗥𝗜𝗕𝗨𝗧𝗔𝗥𝗜𝗢 𝗬 𝗔𝗩𝗔𝗟Ú𝗢𝗦* : Si aún no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n` +
-        `Para preguntar acerca de nuestro proyecto *VECY Network* y debatir acerca de nuestras funciones beneficios y competencias, tenemos el grupo de *𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢 "𝗩𝗲𝗰𝘆 𝗡𝗲𝘁𝘄𝗼𝗿𝗸"* : Si aún no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n` +
+        `Para preguntar acerca de *VECY Bienes Raíces* y debatir acerca de nuestras funciones, red colaborativa, beneficios y competencias, tenemos el grupo de *𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢 "𝗩𝗲𝗰𝘆 𝗡𝗲𝘁𝘄𝗼𝗿𝗸"* : Si aún no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n` +
         `Te espero. ¡Allí te atenderé con gusto! 🚀`;
       
       this.queuedSend(chatId, redirectText);
@@ -1084,7 +1084,7 @@ export class JaniaMatchBot {
         if (isOffTopicLegal || isOffTopicCirculo) {
           const groupName = isOffTopicLegal ? 'VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING' : (process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"');
           const redirectMsg =
-            `Hola ${realName} 👋🏻, veo que tu consulta es sobre ${isOffTopicLegal ? 'temas jurídicos, tributarios, avalúos o marketing inmobiliario' : 'el funcionamiento de VECY Network y JanIA'}. ¡Perfecto! 🎯\n\n` +
+            `Hola ${realName} 👋🏻, veo que tu consulta es sobre ${isOffTopicLegal ? 'temas jurídicos, tributarios, avalúos o marketing inmobiliario' : 'el funcionamiento de VECY Bienes Raíces y JanIA'}. ¡Perfecto! 🎯\n\n` +
             `Ese tipo de preguntas las atiendo con más profundidad en el grupo *${groupName}* de nuestra comunidad de WhatsApp. 🏠\n\n` +
             `También puedes consultarme directamente en mi chat privado de JanIA 📲: https://wa.me/573192919978\n\n` +
             `¡Allí te atiendo con todo el detalle que mereces! 😊`;
@@ -1312,7 +1312,7 @@ export class JaniaMatchBot {
 
           const rawPhone = senderId.split('@')[0];
           const mentionJid = `${rawPhone}@s.whatsapp.net`;
-          const warningText = `🚫 @${rawPhone}: Esta clase de publicaciones (publicidad de cursos, entrenamientos, capacitaciones o servicios ajenos a la oferta y demanda directa de inmuebles) VIOLAN las normas de nuestros grupos oficiales VECY Network.\n\nPor favor elimina esta publicación. Te advertimos que la reincidencia dará lugar a la expulsión inmediata del grupo.`;
+          const warningText = `🚫 @${rawPhone}: Esta clase de publicaciones (publicidad de cursos, entrenamientos, capacitaciones o servicios ajenos a la oferta y demanda directa de inmuebles) VIOLAN las normas de nuestros grupos oficiales de VECY Bienes Raíces.\n\nPor favor elimina esta publicación. Te advertimos que la reincidencia dará lugar a la expulsión inmediata del grupo.`;
 
           this.queuedSend(chatId, warningText, { mentions: [mentionJid], quoted: msg }).catch(() => {});
         } else {
@@ -1985,7 +1985,7 @@ export class JaniaMatchBot {
         `Mis grupos:\n\n` +
         `Para publicar tus INMUEBLES y REQUERIMIENTOS tenemos el grupo de 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗨𝗘𝗕𝗟𝗘𝗦 𝗡𝗘𝗧𝗪𝗢𝗥𝗞 : Si aún no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\n` +
         `Para hacer tus consultas de casos inmobiliarios en temas jurídicos, tributarios, avalúos, ayuda en guía de procesos y redacción de contratos, tenemos el grupo de 𝗩𝗘𝗖𝗬: 𝗦𝗢𝗣𝗢𝗥𝗧𝗘 𝗟𝗘𝗚𝗔𝗟, 𝗧𝗥𝗜𝗕𝗨𝗧𝗔𝗥𝗜𝗢 𝗬 𝗔𝗩𝗔𝗟Ú𝗢𝗦 : Si aún no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n` +
-        `Para preguntar acerca de nuestro proyecto VECY Network y debatir acerca de nuestras funciones beneficios y competencias, tenemos el grupo de 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢 "𝗩𝗲𝗰𝘆 𝗡𝗲𝘁𝘄𝗼𝗿𝗸" : Si aún no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n` +
+        `Para preguntar acerca de VECY Bienes Raíces y debatir acerca de nuestras funciones, red colaborativa, beneficios y competencias, tenemos el grupo de 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢 "𝗩𝗲𝗰𝘆 𝗡𝗲𝘁𝘄𝗼𝗿𝗸" : Si aún no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n` +
         `Te espero. ¡Allí te atenderé con gusto! 🚀`;
 
       await this.queuedSend(senderId, redirectMsg, { quoted: msg });
@@ -2482,7 +2482,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         
         const response1 = await invokeLLM({
           messages: [
-            { role: 'system', content: 'Eres JanIA, la asistente de voz e inteligencia artificial de la red colaborativa VECY Network. Te expresas de manera natural, humana, cálida y profesional.' },
+            { role: 'system', content: 'Eres JanIA, la asistente de voz e inteligencia artificial de VECY Bienes Raíces. Te expresas de manera natural, humana, cálida y profesional.' },
             { role: 'user', content: `${grupo.promptCierre}\n- IMPORTANTE: Debe sonar como un mensaje de voz natural de WhatsApp grabado de forma espontánea por una colega real. Empieza con naturalidad como: "Hola colegas", "Buenas tardes", etc. sin formalismos robóticos.\n- Máximo 350 caracteres.\n- CRÍTICO: Responde ÚNICAMENTE con las palabras habladas de la nota de voz. NO agregues preámbulos, comentarios ni envuelvas el texto en comillas, llaves o corchetes.` }
           ]
         });

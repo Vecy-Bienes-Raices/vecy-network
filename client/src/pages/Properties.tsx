@@ -427,7 +427,7 @@ export default function Properties() {
             <button onClick={() => navigate('/services')} className="text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-primary transition-colors cursor-pointer">Servicios</button>
           </div>
           <p className="text-zinc-600 text-[10px] uppercase tracking-[0.3em]">
-            &copy; 2026 VECY NETWORK. Red Colaborativa Inmobiliaria de Colombia.
+            &copy; 2026 VECY BIENES RAÍCES. Red Colaborativa Inmobiliaria de Colombia.
           </p>
         </div>
       </footer>

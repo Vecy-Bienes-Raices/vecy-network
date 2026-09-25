@@ -243,7 +243,7 @@ ${sol.solicitanteRepresentanteLegal ? `🏛️ *Rep. Legal:* ${sol.solicitanteRe
 ⏰ *Hora Cita:* ${sol.horaCita || 'Pendiente'}
 ${sol.interesadoNombre ? `\n🤝 *Cliente Referido:* ${sol.interesadoNombre} (${sol.interesadoTipoDocumento || 'Doc'}: ${sol.interesadoDocumento || 'N/A'})\n` : ''}
 ${sol.firmaFechahoraAudit ? `✍️ *Firma Auditada:* ${new Date(sol.firmaFechahoraAudit).toLocaleString('es-CO', { timeZone: 'America/Bogota' })}\n` : ''}
-Sistema: Vecy Network — Bolsa Inmobiliaria Colaborativa`;
+Sistema: Vecy Bienes Raíces — Red Inmobiliaria Colaborativa`;
 
     navigator.clipboard.writeText(summaryText);
     toast.success(`Resumen completo de la solicitud #${solNum} copiado`);

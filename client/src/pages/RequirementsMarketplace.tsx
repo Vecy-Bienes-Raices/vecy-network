@@ -292,7 +292,7 @@ export default function RequirementsMarketplace() {
         <div className="container text-center">
           <img src="/logo-vecy.png" alt="Vecy" className="h-10 mx-auto mb-6 opacity-30 grayscale" />
           <p className="text-gray-600 text-[10px] uppercase tracking-[0.3em]">
-            &copy; 2026 VECY NETWORK. El Futuro del Real Estate es Colaborativo.
+            &copy; 2026 VECY BIENES RAÍCES. El Futuro del Real Estate es Colaborativo.
           </p>
         </div>
       </footer>

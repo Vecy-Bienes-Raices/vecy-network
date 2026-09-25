@@ -120,7 +120,7 @@ export const ReportView: React.FC<ReportProps> = ({
 
       {/* PIE DE PÁGINA */}
       <div className="text-center pt-2 text-slate-500 text-xs flex items-center justify-center gap-1.5">
-        <ShieldCheck className="w-3.5 h-3.5 text-[#bf953f]" /> Dictamen generado por <strong>JanIA Match v17.6</strong> — VECY Network Colombia
+        <ShieldCheck className="w-3.5 h-3.5 text-[#bf953f]" /> Dictamen generado por <strong>JanIA Match</strong> — VECY Bienes Raíces Colombia
       </div>
     </div>
   );

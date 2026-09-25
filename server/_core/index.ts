@@ -775,8 +775,8 @@ async function startServer() {
 
       const tematicas = [
         "Incentivar a los asesores a interactuar con JanIA sin miedo, ya sea por texto o enviando notas de voz en el grupo, preguntándole sobre inmuebles, requerimientos, leyes o funcionamiento.",
-        "Explicar de forma sencilla qué es VECY Network, el rol de JanIA como asistente de inteligencia artificial y cómo funciona el sistema de coincidencia (matching) en segundos.",
-        "Compartir la historia de VECY Network, quiénes son nuestros fundadores Eduardo A. Rivera y Jani Alves y por qué crearon esta red colaborativa nacional.",
+        "Explicar de forma sencilla qué es VECY Bienes Raíces, el rol de JanIA como asistente de inteligencia artificial y cómo funciona el sistema de coincidencia (matching) en segundos.",
+        "Compartir la historia de VECY Bienes Raíces, quiénes son nuestros fundadores Eduardo A. Rivera y Jani Alves y por qué crearon esta red colaborativa nacional.",
         "Explicar los servicios que ofrecemos, cómo contactarnos y en qué redes sociales nos pueden encontrar.",
         "Recordar que actualmente todo el proyecto y las herramientas son 100% gratuitos por estar en fase de pruebas, y hablar con entusiasmo de las grandes cosas que están por venir.",
         "Preguntar a los colegas cómo ven el proyecto, qué les agrada más, qué les molesta, qué cambiarían o qué ideas/mejoras aportarían para que JanIA y el portal estén mejor a su servicio.",
@@ -821,7 +821,7 @@ Dirección obligatoria:
       console.log(`[ADMIN-TRIGGER] Generando audio motivador para ${nombreGrupo} (Temática idx ${idx})...`);
       const response = await invokeLLM({
         messages: [
-          { role: 'system', content: 'Eres JanIA, la asistente de voz e inteligencia artificial de la red colaborativa VECY Network. NUNCA digas que eres Jani Alves ni Eduardo Rivera; ellos son los fundadores que te crearon a ti, JanIA. Te expresas de manera natural, humana, cálida y profesional.' },
+          { role: 'system', content: 'Eres JanIA, la asistente de voz e inteligencia artificial de VECY Bienes Raíces. NUNCA digas que eres Jani Alves ni Eduardo Rivera; ellos son los fundadores que te crearon a ti, JanIA. Te expresas de manera natural, humana, cálida y profesional.' },
           { role: 'user', content: promptVoz }
         ]
       });

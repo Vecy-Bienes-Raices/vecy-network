@@ -322,6 +322,30 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.92 — Septiembre 2026
+
+#### 📌 UNIFICACIÓN ESTRATÉGICA Y COMERCIAL DE MARCA A "VECY BIENES RAÍCES"
+
+**Problemas identificados:**
+1. **Confusión Cognitiva y Dispersión de Marca**: El proyecto se presentaba dualmente como "VECY Network" y "VECY Bienes Raíces". El público general, clientes, Google, perfiles de redes sociales y colegas inmobiliarios identifican y buscan la empresa como **VECY BIENES RAÍCES**. La denominación "Network" generaba confusión sobre si era una empresa distinta o un desarrollo ajeno.
+2. **Preservación Crítica de Infraestructura**: Renombrar carpetas del sistema operativo en disco (`/home/eddu/Proyectos/vecy-network` o `/var/www/vecy-network`), repositorios de GitHub (`Vecy-Bienes-Raices/vecy-network`) o nombres de base de datos PostgreSQL (`vecy_network`) representaba un riesgo innecesario de romper el entorno IDE de Antigravity, rutas de logs, PM2 en el servidor VPS, configuraciones Nginx y webhooks de despliegue en Vercel.
+
+**Solución aplicada:**
+- **Diferenciación Doctrinal de Capas**:
+  - *Capa de Marca Visible (100% Unificada)*: Todo el frontend web, títulos HTML, metadatos SEO/OpenGraph/Twitter, footers, modales, correos, consolas interactivas, personalidades de JanIA y plantillas de WhatsApp se actualizaron formalmente a **VECY BIENES RAÍCES** (o *"Vecy Bienes Raíces — Red Inmobiliaria Colaborativa"* en contextos colaborativos de corretaje).
+  - *Capa de Infraestructura (Intacta)*: Rutas de archivos, repositorios git, base de datos PostgreSQL y subdominios técnicos se mantuvieron sin cambios, garantizando 0% de interrupciones y 100% de estabilidad operativa.
+- **Frontend y SEO (`client/`)**:
+  - `client/index.html`: Título SEO, metadatos y marcado JSON-LD unificados a `Vecy Bienes Raíces`.
+  - Vistas públicas y operativas (`Services.tsx`, `Properties.tsx`, `PropertyDetail.tsx`, `AgentDashboard.tsx`, `Home.tsx`, `Login.tsx`, `RequirementsMarketplace.tsx`, `RedColaboracion.tsx`, `Admin.tsx`, `ReportView.tsx`, `AdminAgenda.tsx`, `JanIAWidget.tsx`, `AdminMatches.tsx`): cabeceras, botones, modales y pies de página adaptados a la marca oficial.
+- **Backend, Prompts y JanIA (`server/_core/`)**:
+  - `prompts/base.md`, prompts por grupos (`VECY_INMUEBLES_NETWORK.md`, `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`, `PROYECTO_Vecy Network.md`), `web_console.md`, `whatsapp-match.ts` e `index.ts`: identidad institucional de JanIA adaptada a `VECY Bienes Raíces`.
+  - `cronService.ts`: `enforceJanIAIdentity` y todos los captions/podcasts de noticias, legal, marketing, tributario, avalúos, sábado de café y domingo de soporte alineados a `VECY Bienes Raíces`.
+  - `janIA.ts`: Estadísticas en vivo, prompt central, visión de afiches y mensajes de publicación adaptados a `VECY Bienes Raíces`.
+  - `avaluo-engine.ts` y `scraper.ts`: Reporte de avalúo comercial markdown y prompts de extracción estructurada adaptados a `VECY Bienes Raíces`.
+- **Verificación**: 86/86 tests Vitest en verde, `npm run check` con 0 errores y compilación `npm run build` impecable.
+
+---
+
 ### 🔖 v31.91 — Septiembre 2026
 
 #### 📌 EXTRACCIÓN, DISCRIMINACIÓN AUTOMÁTICA Y EDICIÓN DEDICADA DE MEDIDAS DE TERRAZA Y BALCÓN EN TABLA DE COTEJO TÉCNICO

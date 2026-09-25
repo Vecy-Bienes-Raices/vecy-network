@@ -63,7 +63,7 @@ export default function PropertyDetail() {
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
         <Search className="w-16 h-16 text-muted-foreground mb-6 opacity-20" />
         <h2 className="text-2xl font-bold text-white mb-4">Inmueble No Encontrado</h2>
-        <p className="text-zinc-400 mb-8 max-w-sm">No pudimos encontrar la propiedad solicitada en la red de Vecy Network.</p>
+        <p className="text-zinc-400 mb-8 max-w-sm">No pudimos encontrar la propiedad solicitada en la red de Vecy Bienes Raíces.</p>
         <button onClick={() => navigate('/ofertas')} className="btn-gold px-8 py-3 uppercase tracking-widest text-xs font-black">
           VOLVER A TIENDA OFERTAS
         </button>
@@ -266,7 +266,7 @@ export default function PropertyDetail() {
               <button
                 onClick={() => {
                   setShareModalConfig({
-                    text: `Mira este inmueble en Vecy Network: ${property.name}`,
+                    text: `Mira este inmueble en Vecy Bienes Raíces: ${property.name}`,
                     url: window.location.href,
                     modalTitle: "Compartir Propiedad"
                   });
@@ -549,7 +549,7 @@ export default function PropertyDetail() {
                   <MapPin className="w-4 h-4 text-primary" /> Ubicación del Inmueble
                 </h3>
                 <p className="text-xs text-zinc-400 mb-4">
-                  Zona geográfica verificada por el captador oficial de Vecy Network.
+                  Zona geográfica verificada por el captador oficial de Vecy Bienes Raíces.
                 </p>
                 <div className="h-80 rounded-2xl overflow-hidden border border-white/10">
                   <NeighborhoodMap 
@@ -640,7 +640,7 @@ export default function PropertyDetail() {
       <footer className="bg-black border-t border-white/10 py-16 mt-16">
         <div className="container text-center">
           <img src="/logo-vecy.png" alt="Vecy" className="h-8 mx-auto mb-6 opacity-40 grayscale" />
-          <p className="text-zinc-600 text-[10px] uppercase tracking-[0.3em]">VECY Network — Red Colaborativa de Corretaje Inmobiliario para Colombia.</p>
+          <p className="text-zinc-600 text-[10px] uppercase tracking-[0.3em]">VECY Bienes Raíces — Red Colaborativa de Corretaje Inmobiliario para Colombia.</p>
         </div>
       </footer>
     </div>

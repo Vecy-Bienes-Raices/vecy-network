@@ -224,12 +224,12 @@ export default function Admin() {
                 <div className="flex items-center gap-3 animate-fade-in overflow-hidden">
                   <img
                     src="/logo-vecy.png"
-                    alt="Vecy Network"
+                    alt="Vecy Bienes Raíces"
                     className="h-8 w-auto object-contain filter drop-shadow-[0_0_8px_rgba(191,149,63,0.3)] shrink-0"
                   />
                   <div className="flex flex-col">
                     <span className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.15em] text-xs uppercase leading-tight">
-                      Vecy Network
+                      Vecy Bienes Raíces
                     </span>
                     <p className="text-muted-foreground text-[9px] uppercase tracking-[0.25em] whitespace-nowrap">
                       Panel Admin
@@ -266,12 +266,12 @@ export default function Admin() {
             <div className="flex items-center gap-3">
               <img
                 src="/logo-vecy.png"
-                alt="Vecy Network"
+                alt="Vecy Bienes Raíces"
                 className="h-8 w-auto object-contain"
               />
               <div className="flex flex-col">
                 <span className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.15em] text-xs uppercase leading-tight">
-                  Vecy Network
+                  Vecy Bienes Raíces
                 </span>
                 <p className="text-muted-foreground text-[9px] uppercase tracking-[0.25em]">
                   Panel Admin

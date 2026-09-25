@@ -85,7 +85,7 @@ export async function scrapePropertyLink(url: string) {
 
     // 4. Invocación Magistral a JanIA para Estructuración
     const systemPrompt = `
-      Eres el motor de extracción de datos de JanIA (VECY Network). Tu misión es convertir texto sucio de portales inmobiliarios (como Wasi, FincaRaíz, etc.) en datos perfectos.
+      Eres el motor de extracción de datos de JanIA (VECY Bienes Raíces). Tu misión es convertir texto sucio de portales inmobiliarios (como Wasi, FincaRaíz, etc.) en datos perfectos.
       
       REGLAS DE ORO:
       - PRICE: Busca el valor numérico más alto que parezca el precio (ej: 550000000). Ignora la administración. Devuelve SOLO el número.

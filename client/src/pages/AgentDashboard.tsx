@@ -238,7 +238,7 @@ export default function AgentDashboard() {
           <div className="panel-card p-6 bg-primary/5 border-primary/20 mb-10">
             <div className="flex items-center gap-3 mb-2">
               <Zap className="w-5 h-5 text-primary" />
-              <h2 className="text-lg font-bold text-foreground italic">¡Novedad VECY Network!</h2>
+              <h2 className="text-lg font-bold text-foreground italic">¡Novedad VECY Bienes Raíces!</h2>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Nuestro sistema **Gana-Gana** ya está activo. Al compartir cualquier inmueble del portal en tus redes, acumulas **Puntos**. Estos puntos se convierten en una comisión real de cierre (Multinivel) al momento del negocio. ¡Ayuda a tus colegas y gana tú también!
@@ -702,7 +702,7 @@ export default function AgentDashboard() {
                     ) : (
                       <>
                         <Plus className="w-4 h-4 mr-2" />
-                        Publicar Inmueble en Vecy Network
+                        Publicar Inmueble en Vecy Bienes Raíces
                       </>
                     )}
                   </button>

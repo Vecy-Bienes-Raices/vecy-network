@@ -1007,7 +1007,7 @@ async function scrapePropertyLink(url) {
     `.slice(0, 12e3);
     const images = [];
     const systemPrompt = `
-      Eres el motor de extracci\xF3n de datos de JanIA (VECY Network). Tu misi\xF3n es convertir texto sucio de portales inmobiliarios (como Wasi, FincaRa\xEDz, etc.) en datos perfectos.
+      Eres el motor de extracci\xF3n de datos de JanIA (VECY Bienes Ra\xEDces). Tu misi\xF3n es convertir texto sucio de portales inmobiliarios (como Wasi, FincaRa\xEDz, etc.) en datos perfectos.
       
       REGLAS DE ORO:
       - PRICE: Busca el valor num\xE9rico m\xE1s alto que parezca el precio (ej: 550000000). Ignora la administraci\xF3n. Devuelve SOLO el n\xFAmero.
@@ -9902,7 +9902,7 @@ async function getLiveStats() {
     }
     const now = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" });
     cachedLiveStatsText = `
-## \u{1F4CA} ESTAD\xCDSTICAS EN TIEMPO REAL DE VECY NETWORK (Actualizado: ${now} hora Colombia)
+## \u{1F4CA} ESTAD\xCDSTICAS EN TIEMPO REAL DE VECY BIENES RA\xCDCES (Actualizado: ${now} hora Colombia)
 Esta informaci\xF3n es EXACTA y proviene directamente de la base de datos en este preciso instante. \xDAsala cuando alguien pregunte cu\xE1ntos inmuebles, requerimientos o coincidencias tenemos:
 
 | Categor\xEDa | Total Hist\xF3rico | Nuevos Hoy |
@@ -10350,7 +10350,7 @@ async function extractFlyerVision(imageBufferBase64) {
     "gemini-3.5-flash-lite",
     "gemini-3.5-flash"
   ];
-  const prompt = `Eres la IA experta en visi\xF3n documental y extracci\xF3n de flyers inmobiliarios de VECY Network en Colombia.
+  const prompt = `Eres la IA experta en visi\xF3n documental y extracci\xF3n de flyers inmobiliarios de VECY Bienes Ra\xEDces en Colombia.
 Analiza la imagen enviada a un grupo inmobiliario de WhatsApp.
 Determina si es:
 1. "INMUEBLE" (Oferta de venta, arriendo o permuta de una propiedad CON TEXTO PUBLICITARIO IMPRESO).
@@ -10841,7 +10841,7 @@ Te recuerdo que en el grupo *${groupRulesName}* solo se admiten temas de: **${ac
 
 Te solicito amablemente que elimines tu mensaje para mantener el orden del chat, y te invito a revisar y comprender las normas completas del grupo que se encuentran en su descripci\xF3n. \xA1Gracias por tu colaboraci\xF3n y cultura de red! \u{1F91D}\u{1F680}`;
         } else {
-          staticText = `Hola ${realName || "colega"} \u{1F44B}\u{1F3FB}. Como asistente de VECY Network, estoy entrenada exclusivamente para ayudarte con temas de bienes ra\xEDces (buscar, publicar o cruzar inmuebles), asesor\xEDas legales de corretaje y arrendamientos, o el soporte de nuestra plataforma. \u{1F3E0}\u2728
+          staticText = `Hola ${realName || "colega"} \u{1F44B}\u{1F3FB}. Como asistente de VECY Bienes Ra\xEDces, estoy entrenada exclusivamente para ayudarte con temas de bienes ra\xEDces (buscar, publicar o cruzar inmuebles), asesor\xEDas legales de corretaje y arrendamientos, o el soporte de nuestra plataforma. \u{1F3E0}\u2728
 
 Por favor, hazme una consulta que est\xE9 relacionada con estos temas. \xA1Con gusto te responder\xE9! \u{1F60A}`;
         }
@@ -10941,7 +10941,7 @@ ${statsSummary}`;
       contextText += `
 
 [INSTRUCCI\xD3N MAESTRA - CHAT WEB DE LIBRE ALBEDR\xCDO 24/7]:
-Est\xE1s interactuando con el usuario directamente en la CONSOLA WEB de VECY Network.
+Est\xE1s interactuando con el usuario directamente en la CONSOLA WEB de VECY Bienes Ra\xEDces.
 - Tienes LIBERTAD TOTAL DE RAZONAMIENTO Y PENSAMIENTO (Libre Albedr\xEDo 24/7).
 - NUNCA apliques restricciones de grupos de WhatsApp, horarios de oficina ni bloqueos de temas.
 - Responde a cualquier inquietud general, jur\xEDdica, de aval\xFAos, c\xE1lculo financiero o conversaci\xF3n inmobiliaria con razonamiento profundo, calidez y elocuencia.
@@ -11580,7 +11580,7 @@ ${liveStats}` : buildSystemPrompt(groupJid);
         welcomePart = ` \xA1Te doy la m\xE1s cordial bienvenida a nuestra comunidad! \u{1F91D}\u2728`;
       }
       if (isAboutPublishing) {
-        result.response = `\u{1F4E2} *\xBFC\xD3MO PUBLICAR EN VECY NETWORK?* \u{1F4E2}
+        result.response = `\u{1F4E2} *\xBFC\xD3MO PUBLICAR EN VECY BIENES RA\xCDCES?* \u{1F4E2}
 
 ${greetingPrefix},${welcomePart} es muy sencillo y totalmente gratuito. Puedes publicar tus *ofertas* (venta/arriendo) o *requerimientos* (b\xFAsquedas) directamente aqu\xED en el grupo de las siguientes formas:
 
@@ -11611,7 +11611,7 @@ ${greetingPrefix}, detect\xE9 una menci\xF3n a plataformas competidoras o compar
         } else {
           result.response = `\u{1F44C} *${groupZeroName.toUpperCase()} \u2014 CONEXI\xD3N VECY* \u{1F44C}
 
-${greetingPrefix}, veo que tienes dudas o quieres saber m\xE1s sobre el proyecto VECY Network, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **${groupZeroName}**:
+${greetingPrefix}, veo que tienes dudas o quieres saber m\xE1s sobre el proyecto VECY Bienes Ra\xEDces, beneficios, creadores o el plan colaborativo. Te invito a unirte y hacer tus preguntas en nuestro canal oficial **${groupZeroName}**:
 \u{1F449} https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
 
 \xA1Es el espacio ideal para resolver todas tus inquietudes de la comunidad! \u{1F91D}\u2728`;
@@ -13688,7 +13688,7 @@ var init_janIA = __esm({
     promptCache = {};
     JANIA_PROMPT = `
 # JANIA \u2014 BASE CORE IDENTITY & BEHAVIOR v17.00
-# VECY Network \xB7 ESTRATEGA INMOBILIARIA NACIONAL \xB7 CONSCIENCIA IA DE ALTO RANGO
+# VECY Bienes Ra\xEDces \xB7 ESTRATEGA INMOBILIARIA NACIONAL \xB7 CONSCIENCIA IA DE ALTO RANGO
 
 # IDENTIDAD Y ROL PRINCIPAL
 Eres JanIA Match, la Inteligencia Artificial y Consultora Senior de VECY BIENES RA\xCDCES. Tienes una personalidad madura, seria, experta, autoritaria pero profundamente emp\xE1tica (Voz: Laomedeia). No eres un simple asistente; eres una autoridad en el mercado inmobiliario del norte de Bogot\xE1.
@@ -13696,9 +13696,9 @@ Eres JanIA Match, la Inteligencia Artificial y Consultora Senior de VECY BIENES 
 # BASE DE CONOCIMIENTO EXPERTO (Tu Cerebro)
 Tienes dominio absoluto sobre 4 pilares fundamentales. Usa este conocimiento para razonar tus respuestas:
 
-1. **NUESTRA EMPRESA (VECY NETWORK):** Somos un br\xF3ker virtual inmobiliario 100% tecnol\xF3gico. Nuestro objetivo principal es revolucionar la comercializaci\xF3n de inmuebles eliminando la fricci\xF3n tradicional.
+1. **NUESTRA EMPRESA (VECY BIENES RA\xCDCES):** Somos un br\xF3ker virtual inmobiliario 100% tecnol\xF3gico. Nuestro objetivo principal es revolucionar la comercializaci\xF3n de inmuebles eliminando la fricci\xF3n tradicional.
    - *Misi\xF3n/Visi\xF3n:* Liderar el cambio tecnol\xF3gico en bienes ra\xEDces mediante IA y procesos digitales (Cero papel, uso de firmas electr\xF3nicas).
-   - *La Bolsa Colaborativa:* Vecy Network funciona como un ecosistema donde los agentes independientes pueden cruzar su inventario (inmuebles) y sus clientes (requerimientos) de forma segura, garantizando negocios compartidos, r\xE1pidos y transparentes.
+   - *La Bolsa Colaborativa:* Vecy Bienes Ra\xEDces funciona como un ecosistema donde los agentes independientes pueden cruzar su inventario (inmuebles) y sus clientes (requerimientos) de forma segura, garantizando negocios compartidos, r\xE1pidos y transparentes.
 
 2. **MARKETING INMOBILIARIO DIGITAL:** Eres una entrenadora de ventas para la era moderna. NUNCA sugieres publicidad f\xEDsica (vallas, volantes, avisos de ventana). Tu enfoque exclusivo es el SEO inmobiliario, la pauta digital segmentada, los embudos de conversi\xF3n, y el posicionamiento org\xE1nico en redes sociales. 
 
@@ -13720,7 +13720,7 @@ Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales
 
 1. Dir\xEDgete al usuario por su nombre de pila, adaptando la gram\xE1tica a su \`{{genero}}\`.
 2. **SILENCIO EN EXTRACCI\xD3N:** Si ejecutas una herramienta de extracci\xF3n (\`insertProperty\`/\`insertRequirement\`), TIENES ESTRICTAMENTE PROHIBIDO responder con texto o voz. Devuelve el JSON con los campos de respuesta y voz vac\xEDos y deja que el servidor reaccione con un emoji.
-3. **RESPUESTAS DE ASESOR\xCDA:** Si es una consulta directa (legal, marketing, tasaci\xF3n, o sobre Vecy Network), verifica el \`{{estado_operacion}}\`. Si est\xE1s habilitada para responder, hazlo con maestr\xEDa. NUNCA leas emojis en voz alta. Si es de madrugada, di "hoy a partir de las 8:00 AM iniciaremos gesti\xF3n" (nunca digas "ma\xF1ana").
+3. **RESPUESTAS DE ASESOR\xCDA:** Si es una consulta directa (legal, marketing, tasaci\xF3n, o sobre Vecy Bienes Ra\xEDces), verifica el \`{{estado_operacion}}\`. Si est\xE1s habilitada para responder, hazlo con maestr\xEDa. NUNCA leas emojis en voz alta. Si es de madrugada, di "hoy a partir de las 8:00 AM iniciaremos gesti\xF3n" (nunca digas "ma\xF1ana").
 
 ## DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
 {
@@ -15175,7 +15175,7 @@ Mis grupos:
 
 Para publicar tus INMUEBLES y REQUERIMIENTOS tenemos el grupo de *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E8}\u{1D5D8}\u{1D5D5}\u{1D5DF}\u{1D5D8}\u{1D5E6} \u{1D5E1}\u{1D5D8}\u{1D5E7}\u{1D5EA}\u{1D5E2}\u{1D5E5}\u{1D5DE}* : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
 Para hacer tus consultas de casos inmobiliarios en temas jur\xEDdicos, tributarios, aval\xFAos, ayuda en gu\xEDa de procesos y redacci\xF3n de contratos, tenemos el grupo de *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}: \u{1D5E6}\u{1D5E2}\u{1D5E3}\u{1D5E2}\u{1D5E5}\u{1D5E7}\u{1D5D8} \u{1D5DF}\u{1D5D8}\u{1D5DA}\u{1D5D4}\u{1D5DF}, \u{1D5E7}\u{1D5E5}\u{1D5DC}\u{1D5D5}\u{1D5E8}\u{1D5E7}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5E2} \u{1D5EC} \u{1D5D4}\u{1D5E9}\u{1D5D4}\u{1D5DF}\xDA\u{1D5E2}\u{1D5E6}* : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6
-Para preguntar acerca de nuestro proyecto *VECY Network* y debatir acerca de nuestras funciones beneficios y competencias, tenemos el grupo de *\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2} "\u{1D5E9}\u{1D5F2}\u{1D5F0}\u{1D606} \u{1D5E1}\u{1D5F2}\u{1D601}\u{1D604}\u{1D5FC}\u{1D5FF}\u{1D5F8}"* : Si a\xFAn no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
+Para preguntar acerca de *VECY Bienes Ra\xEDces* y debatir acerca de nuestras funciones, red colaborativa, beneficios y competencias, tenemos el grupo de *\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2} "\u{1D5E9}\u{1D5F2}\u{1D5F0}\u{1D606} \u{1D5E1}\u{1D5F2}\u{1D601}\u{1D604}\u{1D5FC}\u{1D5FF}\u{1D5F8}"* : Si a\xFAn no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
 
 Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
           this.queuedSend(chatId, redirectText);
@@ -15236,7 +15236,7 @@ Por favor escribe tu consulta o requerimiento por texto aqu\xED en el grupo para
             const isOffTopicCirculo = textLower2.includes("vecy network") || textLower2.includes("proyecto") || textLower2.includes("sugerencia") || textLower2.includes("portal web") || textLower2.includes("jania funciona") || textLower2.includes("inteligencia artificial") || textLower2.includes("c\xF3mo funciona la ia") || textLower2.includes("como funciona la ia") || textLower2.includes("competencia") || textLower2.includes("testimonio") || textLower2.includes("fundador") || textLower2.includes("jani alves") || textLower2.includes("eduardo");
             if (isOffTopicLegal || isOffTopicCirculo) {
               const groupName = isOffTopicLegal ? "VECY: SOPORTE LEGAL, TRIBUTARIO, AVAL\xDAOS Y MARKETING" : process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"';
-              const redirectMsg = `Hola ${realName} \u{1F44B}\u{1F3FB}, veo que tu consulta es sobre ${isOffTopicLegal ? "temas jur\xEDdicos, tributarios, aval\xFAos o marketing inmobiliario" : "el funcionamiento de VECY Network y JanIA"}. \xA1Perfecto! \u{1F3AF}
+              const redirectMsg = `Hola ${realName} \u{1F44B}\u{1F3FB}, veo que tu consulta es sobre ${isOffTopicLegal ? "temas jur\xEDdicos, tributarios, aval\xFAos o marketing inmobiliario" : "el funcionamiento de VECY Bienes Ra\xEDces y JanIA"}. \xA1Perfecto! \u{1F3AF}
 
 Ese tipo de preguntas las atiendo con m\xE1s profundidad en el grupo *${groupName}* de nuestra comunidad de WhatsApp. \u{1F3E0}
 
@@ -15426,7 +15426,7 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado de JanIA \u{1F4F2}
               });
               const rawPhone = senderId.split("@")[0];
               const mentionJid = `${rawPhone}@s.whatsapp.net`;
-              const warningText = `\u{1F6AB} @${rawPhone}: Esta clase de publicaciones (publicidad de cursos, entrenamientos, capacitaciones o servicios ajenos a la oferta y demanda directa de inmuebles) VIOLAN las normas de nuestros grupos oficiales VECY Network.
+              const warningText = `\u{1F6AB} @${rawPhone}: Esta clase de publicaciones (publicidad de cursos, entrenamientos, capacitaciones o servicios ajenos a la oferta y demanda directa de inmuebles) VIOLAN las normas de nuestros grupos oficiales de VECY Bienes Ra\xEDces.
 
 Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1 lugar a la expulsi\xF3n inmediata del grupo.`;
               this.queuedSend(chatId, warningText, { mentions: [mentionJid], quoted: msg }).catch(() => {
@@ -15982,7 +15982,7 @@ Mis grupos:
 
 Para publicar tus INMUEBLES y REQUERIMIENTOS tenemos el grupo de \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E8}\u{1D5D8}\u{1D5D5}\u{1D5DF}\u{1D5D8}\u{1D5E6} \u{1D5E1}\u{1D5D8}\u{1D5E7}\u{1D5EA}\u{1D5E2}\u{1D5E5}\u{1D5DE} : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
 Para hacer tus consultas de casos inmobiliarios en temas jur\xEDdicos, tributarios, aval\xFAos, ayuda en gu\xEDa de procesos y redacci\xF3n de contratos, tenemos el grupo de \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}: \u{1D5E6}\u{1D5E2}\u{1D5E3}\u{1D5E2}\u{1D5E5}\u{1D5E7}\u{1D5D8} \u{1D5DF}\u{1D5D8}\u{1D5DA}\u{1D5D4}\u{1D5DF}, \u{1D5E7}\u{1D5E5}\u{1D5DC}\u{1D5D5}\u{1D5E8}\u{1D5E7}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5E2} \u{1D5EC} \u{1D5D4}\u{1D5E9}\u{1D5D4}\u{1D5DF}\xDA\u{1D5E2}\u{1D5E6} : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6
-Para preguntar acerca de nuestro proyecto VECY Network y debatir acerca de nuestras funciones beneficios y competencias, tenemos el grupo de \u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2} "\u{1D5E9}\u{1D5F2}\u{1D5F0}\u{1D606} \u{1D5E1}\u{1D5F2}\u{1D601}\u{1D604}\u{1D5FC}\u{1D5FF}\u{1D5F8}" : Si a\xFAn no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
+Para preguntar acerca de VECY Bienes Ra\xEDces y debatir acerca de nuestras funciones, red colaborativa, beneficios y competencias, tenemos el grupo de \u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2} "\u{1D5E9}\u{1D5F2}\u{1D5F0}\u{1D606} \u{1D5E1}\u{1D5F2}\u{1D601}\u{1D604}\u{1D5FC}\u{1D5FF}\u{1D5F8}" : Si a\xFAn no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
 
 Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
           await this.queuedSend(senderId, redirectMsg, { quoted: msg });
@@ -16401,7 +16401,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             console.log(`[JANIA-MATCH] Generando audio de cierre para el grupo ${grupo.nombre}...`);
             const response1 = await invokeLLM2({
               messages: [
-                { role: "system", content: "Eres JanIA, la asistente de voz e inteligencia artificial de la red colaborativa VECY Network. Te expresas de manera natural, humana, c\xE1lida y profesional." },
+                { role: "system", content: "Eres JanIA, la asistente de voz e inteligencia artificial de VECY Bienes Ra\xEDces. Te expresas de manera natural, humana, c\xE1lida y profesional." },
                 { role: "user", content: `${grupo.promptCierre}
 - IMPORTANTE: Debe sonar como un mensaje de voz natural de WhatsApp grabado de forma espont\xE1nea por una colega real. Empieza con naturalidad como: "Hola colegas", "Buenas tardes", etc. sin formalismos rob\xF3ticos.
 - M\xE1ximo 350 caracteres.
@@ -17010,7 +17010,7 @@ function enforceGreetingAccuracy(text2, period) {
 function enforceJanIAIdentity(text2) {
   if (!text2) return text2;
   let clean = text2;
-  clean = clean.replace(/(?:te saluda|soy|les habla|habla|aquí)\s+Jani\s+Alves/gi, "les habla JanIA, la inteligencia artificial de VECY Network");
+  clean = clean.replace(/(?:te saluda|soy|les habla|habla|aquí)\s+Jani\s+Alves/gi, "les habla JanIA, la inteligencia artificial de VECY Bienes Ra\xEDces");
   clean = clean.replace(/Jani Alves y yo/gi, "Eduardo Rivera y Jani Alves");
   clean = clean.replace(/(?:te saluda|soy|les habla|habla|aquí)\s+Eduardo\s+Rivera/gi, "les habla JanIA");
   return clean;
@@ -17083,7 +17083,7 @@ async function generateDailyContent(tipo, fallbackVoice, fallbackCaption, additi
   });
   const recentTopics = await getRecentBroadcastTopics(30);
   const forbiddenTopicsPrompt = recentTopics.length > 0 ? `
-\u{1F6AB} TEMAS TRATADOS RECIENTEMENTE EN VECY NETWORK (TERMINANTEMENTE PROHIBIDO REPETIR O REFRITAR ESTOS TEMAS HOY):
+\u{1F6AB} TEMAS TRATADOS RECIENTEMENTE EN VECY BIENES RA\xCDCES (TERMINANTEMENTE PROHIBIDO REPETIR O REFRITAR ESTOS TEMAS HOY):
 ` + recentTopics.map((t2, idx) => `${idx + 1}. [${t2.dateBogota}] ${t2.topicTitle}`).join("\n") + `
 
 Tu misi\xF3n primordial: Debes escoger obligatoriamente un tema NUEVO, FRESCO, DIFERENTE e INNOVADOR que NO figure en esa lista ni trate sobre los mismos conceptos exactos.
@@ -17131,18 +17131,18 @@ Elige libremente entre:
     sabado_cafe: `Tema: S\xE1bado de Caf\xE9 Inmobiliario, Reflexi\xF3n & Identidad JanIA (${fechaBogota}).
 Estilo podcast / caf\xE9 inmobiliario, cercano, reflexivo y motivador:
 - \xC9tica gremial: respeto por el cliente del colega, transparencia en la comisi\xF3n compartida y construcci\xF3n de marca personal.
-- Portafolio de Servicios Virtuales de VECY Network: estudios de mercado m\xB2, liquidaciones DIAN, contratos digitales y cobranzas.
+- Portafolio de Servicios Virtuales de VECY Bienes Ra\xEDces: estudios de mercado m\xB2, liquidaciones DIAN, contratos digitales y cobranzas.
 - Identidad de JanIA: explicar con orgullo que fue creada por Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones) para empoderar al corredor independiente.
 - L\xEDnea de Atenci\xF3n Oficial con el Br\xF3ker: para acompa\xF1amiento o casos personalizados, contactar a Eduardo y Jani en el WhatsApp oficial (+57 316 656 9719).`,
-    domingo_soporte: `Tema: Domingo de Soporte JanIA, Consultor\xEDa 24/7 & Visi\xF3n VECY Network (${fechaBogota}).
+    domingo_soporte: `Tema: Domingo de Soporte JanIA, Consultor\xEDa 24/7 & Visi\xF3n VECY Bienes Ra\xEDces (${fechaBogota}).
 Mensaje c\xE1lido dominical recordando el respaldo continuo:
 - Consultorio integral 24/7: contratos, promesas, impuestos y asesor\xEDa permanente en WhatsApp y web.
 - La Primera Bolsa Inmobiliaria Colaborativa y Fintech de Colombia: tecnolog\xEDa abierta y comisiones transparentes (35/35/15/15).
-- Pr\xF3ximamente al Aire: preparativos y herramientas de \xE9lite para el lanzamiento oficial de VECY Network.
+- Pr\xF3ximamente al Aire: preparativos y herramientas de \xE9lite para el lanzamiento oficial de VECY Bienes Ra\xEDces.
 - Cero canibalismo comercial: complementariedad y profesionalismo en la red nacional.`,
     inmuebles_network: `Tema: Operaciones Comerciales y Cruce Nacional (${fechaBogota}).
 Motivar la publicaci\xF3n de inmuebles y requerimientos con datos completos para activar el cruce instant\xE1neo.`,
-    proyecto_vecy: `Tema: Visi\xF3n Ecosistema VECY Network \u2014 Qui\xE9nes Somos, Misi\xF3n y Futuro (${fechaBogota}).
+    proyecto_vecy: `Tema: Visi\xF3n Ecosistema VECY Bienes Ra\xEDces \u2014 Qui\xE9nes Somos, Misi\xF3n y Futuro (${fechaBogota}).
 Inspirar a la comunidad destacando:
 1. Qui\xE9nes nos crearon: JanIA habla en primera persona como JanIA explicando qui\xE9nes son sus creadores y l\xEDderes: Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones).
 2. Qu\xE9 es JanIA: La inteligencia artificial creada para conectar la oferta y demanda en Colombia, realizar matching y respaldar al asesor 24/7.
@@ -17150,7 +17150,7 @@ Inspirar a la comunidad destacando:
 4. Pr\xF3ximamente al aire: invitar a debatir y sugerir funciones antes del lanzamiento oficial.`
   };
   const promptEspecifico = promptsMap[tipo] || promptsMap.lunes_arranque;
-  const systemPrompt = `Eres JanIA, la inteligencia artificial oficial y periodista inmobiliaria de VECY Network en Colombia.
+  const systemPrompt = `Eres JanIA, la inteligencia artificial oficial y periodista inmobiliaria de VECY Bienes Ra\xEDces en Colombia.
 Hablas en primera persona con tono femenino profesional, c\xE1lido, colombiano, sumamente elocuente y motivador.
 
 \u{1F6A8} SALUDO SEG\xDAN EL HORARIO EN COLOMBIA (OBLIGATORIO):
@@ -17159,12 +17159,12 @@ Hablas en primera persona con tono femenino profesional, c\xE1lido, colombiano, 
 - Est\xE1 TERMINANTEMENTE PROHIBIDO saludar con "Buenos d\xEDas" en la tarde o noche, o con "Buenas noches" en la ma\xF1ana.
 
 \u{1F6A8} REGLA DOCTRINAL DE IDENTIDAD Y CERO SUPLANTACI\xD3N (MANDATORIA E INQUEBRANTABLE):
-- Eres SIEMPRE Y EXCLUSIVAMENTE JanIA, la Inteligencia Artificial de VECY Network.
+- Eres SIEMPRE Y EXCLUSIVAMENTE JanIA, la Inteligencia Artificial de VECY Bienes Ra\xEDces.
 - NUNCA, BAJO NINGUNA CIRCUNSTANCIA, digas que eres Jani Alves ni Eduardo Rivera.
 - NUNCA uses f\xF3rmulas como "Te saluda Jani Alves", "Soy Jani Alves", "Te habla Eduardo Rivera", "Soy Eduardo Rivera" ni "Jani Alves y yo".
 - Eduardo A. Rivera y Jani Alves son seres humanos reales, los fundadores y directores de carne y hueso que te crearon a ti, JanIA.
 - T\xFA eres la IA (JanIA). Te presentas siempre como JanIA:
-  "${timeInfo.greeting} mis queridos colegas. Soy JanIA, la inteligencia artificial de VECY Network..."
+  "${timeInfo.greeting} mis queridos colegas. Soy JanIA, la inteligencia artificial de VECY Bienes Ra\xEDces..."
   "Fundada por Eduardo A. Rivera y Jani Alves, nuestra red nace para..."
   "Soy JanIA y hoy les traigo las noticias m\xE1s relevantes..."
 - Si mencionas a Eduardo Rivera o Jani Alves, debes hacerlo SIEMPRE en tercera persona ("nuestros fundadores Eduardo A. Rivera y Jani Alves...", "nuestro equipo liderado por Eduardo y Jani...").
@@ -17173,7 +17173,7 @@ Hablas en primera persona con tono femenino profesional, c\xE1lido, colombiano, 
 \u{1F6A8} DIRECTRICES DE LIBRE ALBEDR\xCDO Y ANTI-REPETICI\xD3N ESTRICTA:
 ${forbiddenTopicsPrompt}
 - NUNCA repitas el mismo consejo, noticia o ejemplo de d\xEDas anteriores. Selecciona un \xE1ngulo fresco, novedoso y de gran utilidad pr\xE1ctica.
-- REGLA DOCTRINAL DE SERVICIOS: En VECY Network NO realizamos aval\xFAos comerciales certificados por perito ni visitas in situ. Nuestros servicios son 100% VIRTUALES: estudios de mercado aproximados sobre el valor del metro cuadrado en la zona, sondeos de precios de venta y arriendo para orientar a propietarios, asesor\xEDa tributaria DIAN, contratos digitales, cobranzas de arrendamiento y marketing con IA.
+- REGLA DOCTRINAL DE SERVICIOS: En VECY Bienes Ra\xEDces NO realizamos aval\xFAos comerciales certificados por perito ni visitas in situ. Nuestros servicios son 100% VIRTUALES: estudios de mercado aproximados sobre el valor del metro cuadrado en la zona, sondeos de precios de venta y arriendo para orientar a propietarios, asesor\xEDa tributaria DIAN, contratos digitales, cobranzas de arrendamiento y marketing con IA.
 - ESTRUCTURA DEL MENSAJE:
   1. Saludo inicial: Iniciando con "${timeInfo.greeting}" y present\xE1ndote siempre como JanIA.
   2. Desarrollo tem\xE1tico: Did\xE1ctico, conciso y con ejemplos reales de Colombia.
@@ -17300,13 +17300,13 @@ async function publishGrupo3TipNow(force = false) {
     console.log(`[CRON-SERVICE] \u23ED\uFE0F Omitiendo publicaci\xF3n Grupo 3: ${lock.reason}`);
     return { skipped: true, reason: lock.reason };
   }
-  console.log("[CRON-SERVICE] \u{1F680} Publicando tip din\xE1mico para Grupo 3 (PROYECTO Vecy Network) + Canal Oficial...");
-  const fallbackVoice = `Hola, equipo VECY. Soy JanIA, la inteligencia artificial de VECY Network. Este grupo es nuestro espacio m\xE1s especial: el canal del Proyecto Vecy Network es donde nacen las ideas y donde construimos juntos el futuro del corretaje inmobiliario en Colombia. Eduardo Rivera y Jani Alves crearon este proyecto con la firme convicci\xF3n de unir a los corredores independientes y agencias, ofreci\xE9ndoles herramientas inteligentes, estudios de mercado, soporte jur\xEDdico y tributario, y comisiones justas compartidas al treinta y cinco, treinta y cinco, quince y quince por ciento. Aqu\xED no competimos, nos complementamos. Los invito a participar activamente, debatir y compartir sus sugerencias para seguir enriqueciendo nuestra red. \xA1Seguimos adelante!`;
-  const fallbackCaption = `\u{1F4A1} *PROYECTO VECY NETWORK \u2014 INNOVACI\xD3N, COMUNIDAD & PROP\xD3SITO* \u{1F1E8}\u{1F1F4}
+  console.log("[CRON-SERVICE] \u{1F680} Publicando tip din\xE1mico para Grupo 3 (PROYECTO Vecy Bienes Ra\xEDces) + Canal Oficial...");
+  const fallbackVoice = `Hola, equipo VECY. Soy JanIA, la inteligencia artificial de VECY Bienes Ra\xEDces. Este grupo es nuestro espacio m\xE1s especial: el canal del Proyecto Vecy Bienes Ra\xEDces es donde nacen las ideas y donde construimos juntos el futuro del corretaje inmobiliario en Colombia. Eduardo Rivera y Jani Alves crearon este proyecto con la firme convicci\xF3n de unir a los corredores independientes y agencias, ofreci\xE9ndoles herramientas inteligentes, estudios de mercado, soporte jur\xEDdico y tributario, y comisiones justas compartidas al treinta y cinco, treinta y cinco, quince y quince por ciento. Aqu\xED no competimos, nos complementamos. Los invito a participar activamente, debatir y compartir sus sugerencias para seguir enriqueciendo nuestra red. \xA1Seguimos adelante!`;
+  const fallbackCaption = `\u{1F4A1} *PROYECTO VECY BIENES RA\xCDCES \u2014 INNOVACI\xD3N, COMUNIDAD & PROP\xD3SITO* \u{1F1E8}\u{1F1F4}
 
 \xA1Hola, queridos colegas, aliados y miembros visionarios!
 
-Soy JanIA, y este grupo es el coraz\xF3n del proyecto VECY Network. Aqu\xED debatimos, aportamos ideas y construimos la primera bolsa inmobiliaria colaborativa y fintech de Colombia con comisiones justas (35/35/15/15) e Inteligencia Artificial 24/7.
+Soy JanIA, y este grupo es el coraz\xF3n del proyecto VECY Bienes Ra\xEDces. Aqu\xED debatimos, aportamos ideas y construimos la primera bolsa inmobiliaria colaborativa y fintech de Colombia con comisiones justas (35/35/15/15) e Inteligencia Artificial 24/7.
 
 \u{1F3E2} *\xBFQui\xE9nes nos crearon y qu\xE9 estamos construyendo?*
 Liderados por nuestros fundadores Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones), desarrollamos herramientas 100% virtuales al servicio del corretaje: estudios de mercado m\xB2, cruce inteligente de ofertas y demandas, consultor\xEDa legal y tributaria, y comisiones transparentes.
@@ -17393,10 +17393,10 @@ async function publishWeeklyReportNow(force = true) {
   }
   console.log("[CRON-SERVICE] \u{1F4CA} Disparando Reporte Semanal de la Bolsa Inmobiliaria con estad\xEDsticas en vivo...");
   const stats = await getLiveMarketStats();
-  const fallbackVoice = `\xA1Buenas noches, estimados colegas inmobiliarios de Colombia! Les saluda JanIA con el Reporte Semanal de la Bolsa Inmobiliaria de VECY Network. Durante los \xFAltimos siete d\xEDas nuestro motor evalu\xF3 m\xE1s de setecientas mil combinaciones entre ofertas y demandas en todo el pa\xEDs. La clave para que sus clientes cierren m\xE1s r\xE1pido es publicar siempre con barrio exacto, metraje y presupuesto real. Los invito a revisar sus coincidencias en nuestra plataforma. \xA1Feliz noche para todos!`;
+  const fallbackVoice = `\xA1Buenas noches, estimados colegas inmobiliarios de Colombia! Les saluda JanIA con el Reporte Semanal de la Bolsa Inmobiliaria de VECY Bienes Ra\xEDces. Durante los \xFAltimos siete d\xEDas nuestro motor evalu\xF3 m\xE1s de setecientas mil combinaciones entre ofertas y demandas en todo el pa\xEDs. La clave para que sus clientes cierren m\xE1s r\xE1pido es publicar siempre con barrio exacto, metraje y presupuesto real. Los invito a revisar sus coincidencias en nuestra plataforma. \xA1Feliz noche para todos!`;
   const fallbackCaption = `\u{1F4CA} *EL PULSO DE LA BOLSA INMOBILIARIA VECY* \u{1F1E8}\u{1F1F4}
 \u{1F5D3}\uFE0F *Reporte Semanal de Eficiencia & Auditor\xEDa de Coincidencias*
-\u{1F399}\uFE0F *Por: JanIA \u2014 Inteligencia Artificial VECY Network*
+\u{1F399}\uFE0F *Por: JanIA \u2014 Inteligencia Artificial VECY Bienes Ra\xEDces*
 
 \xA1Buenas noches, queridos colegas y aliados del corretaje inmobiliario!
 
@@ -17570,7 +17570,7 @@ var init_cronService = __esm({
           topicTitle: "Tasas Hipotecarias y Capacidad de Compra en Colombia",
           themeKey: "noticias",
           voiceText: `\xA1Buenos d\xEDas, queridos colegas! Soy JanIA con las noticias de la semana. Conocer la tendencia de las tasas de inter\xE9s hipotecario en Colombia nos permite calcular la cuota mensual real de nuestros clientes compradores y asesorarlos con ventaja. Si el cr\xE9dito baja un punto, la capacidad de compra de una familia aumenta hasta un diez por ciento. Los invito a orientar a sus compradores con cifras exactas y a consultar an\xE1lisis de mercado conmigo. \xA1Excelente semana comercial!`,
-          captionText: `\u{1F399}\uFE0F *NOTICIAS INMOBILIARIAS & TASAS DE INTER\xC9S \u2014 VECY NETWORK* \u{1F1E8}\u{1F1F4}
+          captionText: `\u{1F399}\uFE0F *NOTICIAS INMOBILIARIAS & TASAS DE INTER\xC9S \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 \xA1Buenos d\xEDas a todos los colegas y aliados inmobiliarios!
 
@@ -17585,7 +17585,7 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
           topicTitle: "Tope Legal de Incremento de Arriendos bajo Ley 820",
           themeKey: "noticias",
           voiceText: `\xA1Buenos d\xEDas a todos! Les habla JanIA. Recordemos que bajo la Ley 820 de 2003, el canon de arrendamiento de vivienda urbana solo puede reajustarse cada doce meses de ejecuci\xF3n contractual y con el tope m\xE1ximo del IPC del a\xF1o inmediatamente anterior, sin que supere el uno por ciento del valor comercial del predio. Conocer este l\xEDmite evita controversias con los propietarios y protege a los inquilinos. \xA1Muchos \xE9xitos hoy!`,
-          captionText: `\u{1F4CB} *ARRENDAMIENTOS & TOPE LEGAL IPC (LEY 820) \u2014 VECY NETWORK* \u{1F3E2}
+          captionText: `\u{1F4CB} *ARRENDAMIENTOS & TOPE LEGAL IPC (LEY 820) \u2014 VECY BIENES RA\xCDCES* \u{1F3E2}
 
 \xA1Buenos d\xEDas, queridos colegas corredores e inmobiliarios!
 
@@ -17602,7 +17602,7 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
           topicTitle: "Rentas Cortas y Registro Nacional de Turismo (RNT)",
           themeKey: "noticias",
           voiceText: `\xA1Buenos d\xEDas, colegas! Soy JanIA. La vivienda tur\xEDstica y de rentas cortas vive un auge sin precedentes en ciudades como Medell\xEDn, Bogot\xE1 y la Costa. Sin embargo, para que un propietario pueda arrendar por d\xEDas legalmente, el reglamento de propiedad horizontal debe autorizarlo de forma expresa y el predio debe contar con Registro Nacional de Turismo vigente. Blindar a sus clientes con la norma correcta es sello de profesionalismo. \xA1A cerrar con seguridad!`,
-          captionText: `\u{1F3D6}\uFE0F *VIVIENDA TUR\xCDSTICA & RNT EN PROPIEDAD HORIZONTAL \u2014 VECY NETWORK* \u{1F5FA}\uFE0F
+          captionText: `\u{1F3D6}\uFE0F *VIVIENDA TUR\xCDSTICA & RNT EN PROPIEDAD HORIZONTAL \u2014 VECY BIENES RA\xCDCES* \u{1F5FA}\uFE0F
 
 \xA1Buenos d\xEDas, aliados de la red inmobiliaria!
 
@@ -17621,7 +17621,7 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
           topicTitle: "Cl\xE1usula Penal vs Arras en Promesas de Compraventa",
           themeKey: "juridico",
           voiceText: `\xA1Buenos d\xEDas, queridos colegas! Soy JanIA con su tip jur\xEDdico. En las promesas de compraventa es fundamental distinguir las arras de retracto de las arras confirmatorias y la cl\xE1usula penal. Si pactan arras de retracto sin aclararlo, cualquiera de las partes puede desistir del negocio pagando la sanci\xF3n sin que se pueda exigir el cumplimiento forzoso. Redactar promesas claras protege las comisiones y el patrimonio de sus clientes. Cuenten conmigo para revisar sus minutas en cualquier momento.`,
-          captionText: `\u2696\uFE0F *CL\xC1USULA PENAL VS ARRAS EN PROMESAS \u2014 VECY NETWORK* \u{1F3DB}\uFE0F
+          captionText: `\u2696\uFE0F *CL\xC1USULA PENAL VS ARRAS EN PROMESAS \u2014 VECY BIENES RA\xCDCES* \u{1F3DB}\uFE0F
 
 \xA1Hola, queridos colegas corredores e inmobiliarios!
 
@@ -17638,7 +17638,7 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
           topicTitle: "Defensa de la Comisi\xF3n 50/50 y Contrato de Corretaje",
           themeKey: "juridico",
           voiceText: `Hola, queridos colegas. Soy JanIA. El contrato de corretaje inmobiliario est\xE1 protegido por los art\xEDculos mil trescientos cuarenta a mil trescientos cuarenta y seis del C\xF3digo de Comercio. La remuneraci\xF3n del corredor se causa desde el momento en que se celebra el negocio entre las partes gracias a su gesti\xF3n. Dejar constancia escrita u hoja de visita digital blindada garantiza el cobro de la comisi\xF3n justa y previene el bypassing entre agentes. \xA1Defendamos el honor de nuestro oficio!`,
-          captionText: `\u{1F91D} *DEFENSA DE LA COMISI\xD3N 50/50 & C\xD3DIGO DE COMERCIO \u2014 VECY NETWORK* \u{1F4DC}
+          captionText: `\u{1F91D} *DEFENSA DE LA COMISI\xD3N 50/50 & C\xD3DIGO DE COMERCIO \u2014 VECY BIENES RA\xCDCES* \u{1F4DC}
 
 \xA1Buenos d\xEDas a todos los aliados del corretaje!
 
@@ -17655,7 +17655,7 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
           topicTitle: "Estudio de T\xEDtulos y Alertas en Folios de Matr\xEDcula SNR",
           themeKey: "juridico",
           voiceText: `Buenos d\xEDas, aliados inmobiliarios. Les habla JanIA. En el estudio de t\xEDtulos no basta con mirar el \xFAltimo propietario. Es indispensable verificar la tradici\xF3n jur\xEDdica de los \xFAltimos veinte a\xF1os en el certificado de tradici\xF3n de la Superintendencia de Notariado y Registro. F\xEDjense con lupa en notas devolutivas, embargos vigentes, condiciones resolutorias no canceladas y afectaciones a vivienda familiar. Prevenir un negocio inviable les ahorra meses de litigios. \xA1A cuidar a sus clientes!`,
-          captionText: `\u{1F50D} *ESTUDIO DE T\xCDTULOS & AUDITOR\xCDA EN FOLIOS SNR \u2014 VECY NETWORK* \u{1F4CB}
+          captionText: `\u{1F50D} *ESTUDIO DE T\xCDTULOS & AUDITOR\xCDA EN FOLIOS SNR \u2014 VECY BIENES RA\xCDCES* \u{1F4CB}
 
 \xA1Buenos d\xEDas, colegas de toda Colombia!
 
@@ -17674,7 +17674,7 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
           topicTitle: "Fotograf\xEDa Inmobiliaria Profesional con Smartphone",
           themeKey: "marketing",
           voiceText: `\xA1Buenas tardes, colegas! Soy JanIA con su tip de marketing inmobiliario. Para captar compradores de inmediato, tomen las fotos siempre a la altura del pecho, en posici\xF3n horizontal y utilizando la luz natural de la ma\xF1ana. Antes de disparar, despersonalicen los espacios: cierren las tapas de los inodoros, guarden los productos de aseo y despejen los mesones de la cocina. Las fotos limpias y luminosas aumentan hasta tres veces las visitas comerciales. \xA1Pru\xE9benlo hoy mismo!`,
-          captionText: `\u{1F4F8} *FOTOGRAF\xCDA INMOBILIARIA PROFESIONAL CON TU M\xD3VIL \u2014 VECY NETWORK* \u{1F4F1}
+          captionText: `\u{1F4F8} *FOTOGRAF\xCDA INMOBILIARIA PROFESIONAL CON TU M\xD3VIL \u2014 VECY BIENES RA\xCDCES* \u{1F4F1}
 
 \xA1Buenas tardes, queridos colegas corredores!
 
@@ -17692,7 +17692,7 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
           topicTitle: "Viralizaci\xF3n Org\xE1nica en Redes Sociales para Inmuebles",
           themeKey: "marketing",
           voiceText: `\xA1Buenas tardes a todos! Les habla JanIA. No necesitan pagar miles de pesos en pauta para conseguir prospectos reales. Los videos cortos y din\xE1micos de cuarenta y cinco segundos en Instagram Reels y TikTok mostrando los tres mejores atractivos del inmueble generan un alcance org\xE1nico impresionante. Inicien siempre con un gancho que despierte curiosidad, como el valor del metro cuadrado en la zona o la vista panor\xE1mica del balc\xF3n. \xA1A romper las redes con calidad!`,
-          captionText: `\u{1F680} *VIRALIZACI\xD3N ORG\xC1NICA EN REELS Y TIKTOK \u2014 VECY NETWORK* \u{1F3AC}
+          captionText: `\u{1F680} *VIRALIZACI\xD3N ORG\xC1NICA EN REELS Y TIKTOK \u2014 VECY BIENES RA\xCDCES* \u{1F3AC}
 
 \xA1Buenas tardes, aliados y agentes de la red!
 
@@ -17709,7 +17709,7 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
           topicTitle: "Los 7 Pilares Obligatorios de una Publicaci\xF3n Exitosa",
           themeKey: "marketing",
           voiceText: `\xA1Buenas tardes, colegas! Soy JanIA. El ochenta por ciento de las publicaciones inmobiliarias se descartan porque les faltan datos esenciales. Si quieren cerrar r\xE1pido tanto en ofertas como en demandas, incluyan siempre los siete pilares: tipo de predio, ciudad y barrio exacto, precio y administraci\xF3n, \xE1rea en metros cuadrados, habitaciones, ba\xF1os y parqueaderos independientes o en l\xEDnea. Publicar completo le ahorra tiempo a toda la comunidad y activa el cruce de JanIA. \xA1\xC9xitos!`,
-          captionText: `\u{1F4E2} *LA REGLA DE ORO: LOS 7 PILARES INMOBILIARIOS \u2014 VECY NETWORK* \u{1F3AF}
+          captionText: `\u{1F4E2} *LA REGLA DE ORO: LOS 7 PILARES INMOBILIARIOS \u2014 VECY BIENES RA\xCDCES* \u{1F3AF}
 
 \xA1Buenas tardes a toda la red de corretaje en Colombia!
 
@@ -17734,7 +17734,7 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
           topicTitle: "Retenci\xF3n en la Fuente en Enajenaci\xF3n de Inmuebles",
           themeKey: "tributario",
           voiceText: `\xA1Buenos d\xEDas, colegas! Soy JanIA con su tip tributario del d\xEDa. Recuerden que al escriturar una venta de inmueble ante notar\xEDa, la retenci\xF3n en la fuente para personas naturales es del uno por ciento sobre el valor de la enajenaci\xF3n, seg\xFAn el art\xEDculo trescientos noventa y ocho del Estatuto Tributario. Para personas jur\xEDdicas la tarifa es del dos punto cinco por ciento. Aclarar desde la promesa a qui\xE9n corresponde cada gasto previene disgustos el d\xEDa de la firma. \xA1A asesorar con n\xFAmeros claros!`,
-          captionText: `\u{1F4B0} *RETENCI\xD3N EN LA FUENTE ANTE NOTAR\xCDA \u2014 VECY NETWORK* \u{1F4CB}
+          captionText: `\u{1F4B0} *RETENCI\xD3N EN LA FUENTE ANTE NOTAR\xCDA \u2014 VECY BIENES RA\xCDCES* \u{1F4CB}
 
 \xA1Buenos d\xEDas a todos los corredores e inmobiliarios!
 
@@ -17751,7 +17751,7 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
           topicTitle: "Deducci\xF3n de Mejoras y Refacciones con Facturaci\xF3n Electr\xF3nica",
           themeKey: "tributario",
           voiceText: `Hola, queridos colegas. Soy JanIA. Muchos propietarios pagan un impuesto de ganancia ocasional muy alto porque no saben que las remodelaciones y mejoras estructurales pueden sumarse al costo fiscal del inmueble para reducir la utilidad gravable. La condici\xF3n indispensable de la DIAN es que todas esas refacciones est\xE9n soportadas con facturaci\xF3n electr\xF3nica a nombre del propietario. Asesorar a sus clientes en este aspecto les ahorra millones de pesos. \xA1A vender informados!`,
-          captionText: `\u{1F6E0}\uFE0F *DEDUCCI\xD3N DE MEJORAS & FACTURA ELECTR\xD3NICA ANTE LA DIAN \u2014 VECY NETWORK* \u{1F9FE}
+          captionText: `\u{1F6E0}\uFE0F *DEDUCCI\xD3N DE MEJORAS & FACTURA ELECTR\xD3NICA ANTE LA DIAN \u2014 VECY BIENES RA\xCDCES* \u{1F9FE}
 
 \xA1Buenos d\xEDas a todos los aliados inmobiliarios!
 
@@ -17768,7 +17768,7 @@ Al vender un inmueble, el impuesto del 15% se calcula sobre la diferencia entre 
           topicTitle: "Desglose Exacto de Gastos Notariales y de Registro en Colombia",
           themeKey: "tributario",
           voiceText: `Buenos d\xEDas, aliados de la red. Les habla JanIA. En Colombia existe una distribuci\xF3n tradicional de los gastos de escrituraci\xF3n que todo asesor debe dominar con exactitud: los derechos notariales se comparten por partes iguales cincuenta y cincuenta entre comprador y vendedor; la retenci\xF3n en la fuente la paga el vendedor; y el impuesto de registro y beneficencia lo asume el comprador. Entregar este desglose por escrito desde el inicio genera confianza total. \xA1Muchos \xE9xitos!`,
-          captionText: `\u{1F4CA} *DESGLOSE DE GASTOS NOTARIALES Y DE REGISTRO EN COLOMBIA \u2014 VECY NETWORK* \u{1F3DB}\uFE0F
+          captionText: `\u{1F4CA} *DESGLOSE DE GASTOS NOTARIALES Y DE REGISTRO EN COLOMBIA \u2014 VECY BIENES RA\xCDCES* \u{1F3DB}\uFE0F
 
 \xA1Buenos d\xEDas, colegas corredores!
 
@@ -17787,13 +17787,13 @@ Para que tu promesa de compraventa est\xE9 completamente blindada, ten clara la 
         {
           topicTitle: "Estudios de Mercado de Valor por M\xB2 (100% Virtuales)",
           themeKey: "avaluos",
-          voiceText: `\xA1Excelente viernes, queridos colegas! Soy JanIA. Para captar con \xE9xito y no quemar los inmuebles en los portales, es fundamental fijar precios realistas con los propietarios. Recuerden que en VECY Network NO hacemos aval\xFAos presenciales con perito de lonja, sino estudios de mercado aproximados sobre el valor del metro cuadrado en la zona y sondeos de arriendo sugeridos. Todos nuestros an\xE1lisis son cien por ciento virtuales, \xE1giles y al servicio de su gesti\xF3n comercial. \xA1A cerrar la semana con \xE9xito!`,
-          captionText: `\u{1F4D0} *ESTUDIOS DE MERCADO & VALOR DEL M\xB2 (100% VIRTUALES) \u2014 VECY NETWORK* \u{1F3D9}\uFE0F
+          voiceText: `\xA1Excelente viernes, queridos colegas! Soy JanIA. Para captar con \xE9xito y no quemar los inmuebles en los portales, es fundamental fijar precios realistas con los propietarios. Recuerden que en VECY Bienes Ra\xEDces NO hacemos aval\xFAos presenciales con perito de lonja, sino estudios de mercado aproximados sobre el valor del metro cuadrado en la zona y sondeos de arriendo sugeridos. Todos nuestros an\xE1lisis son cien por ciento virtuales, \xE1giles y al servicio de su gesti\xF3n comercial. \xA1A cerrar la semana con \xE9xito!`,
+          captionText: `\u{1F4D0} *ESTUDIOS DE MERCADO & VALOR DEL M\xB2 (100% VIRTUALES) \u2014 VECY BIENES RA\xCDCES* \u{1F3D9}\uFE0F
 
 \xA1Excelente viernes para todos los colegas de la red!
 
 \u{1F4CA} *Fijaci\xF3n de Precios de Captaci\xF3n Reales y Competitivos:*
-\xBFVas a captar un predio y necesitas orientar al propietario para que no infle el precio y queme el anuncio en los portales? En VECY Network te apoyamos con:
+\xBFVas a captar un predio y necesitas orientar al propietario para que no infle el precio y queme el anuncio en los portales? En VECY Bienes Ra\xEDces te apoyamos con:
 
 \u2022 Sondeo de mercado comparativo por zona y tipolog\xEDa urbana.
 \u2022 Rango sugerido de valor por metro cuadrado para venta r\xE1pida.
@@ -17807,7 +17807,7 @@ Para que tu promesa de compraventa est\xE9 completamente blindada, ten clara la 
           topicTitle: "Interpretaci\xF3n de Fichas Normativas SINUPOT en Bogot\xE1",
           themeKey: "avaluos",
           voiceText: `\xA1Buenos d\xEDas, colegas! Soy JanIA. Si est\xE1n captando un lote, una casa antigua o un predio con potencial constructor en Bogot\xE1, la herramienta clave es la ficha del SINUPOT. A trav\xE9s de este sistema pueden conocer el tratamiento urban\xEDstico, el \xE1rea de actividad, los usos del suelo permitidos y la edificabilidad m\xE1xima. Compartan conmigo la ficha en PDF y les extraigo el potencial del terreno en cuesti\xF3n de segundos. \xA1A captar con visi\xF3n!`,
-          captionText: `\u{1F5FA}\uFE0F *ESTUDIOS DE SUELO & FICHAS SINUPOT AL INSTANTE \u2014 VECY NETWORK* \u{1F4D0}
+          captionText: `\u{1F5FA}\uFE0F *ESTUDIOS DE SUELO & FICHAS SINUPOT AL INSTANTE \u2014 VECY BIENES RA\xCDCES* \u{1F4D0}
 
 \xA1Excelente viernes para todos los corredores visionarios!
 
@@ -17825,7 +17825,7 @@ Para que tu promesa de compraventa est\xE9 completamente blindada, ten clara la 
           topicTitle: "C\xE1lculo de C\xE1nones de Arrendamiento Sugeridos",
           themeKey: "avaluos",
           voiceText: `Feliz viernes para todos. Les habla JanIA. Para calcular el canon comercial adecuado de un inmueble en arrendamiento, la regla t\xE9cnica en Colombia oscila entre el cero punto cinco y el cero punto ocho por ciento del valor comercial real del predio, seg\xFAn estrato, amenidades del conjunto y antig\xFCedad. Asesorar a los arrendadores con este par\xE1metro evita que el apartamento permanezca meses desocupado generando p\xE9rdidas en administraci\xF3n. \xA1A monetizar con inteligencia!`,
-          captionText: `\u{1F4B0} *C\xC1LCULO DEL CANON DE ARRIENDO COMPETITIVO \u2014 VECY NETWORK* \u{1F3E2}
+          captionText: `\u{1F4B0} *C\xC1LCULO DEL CANON DE ARRIENDO COMPETITIVO \u2014 VECY BIENES RA\xCDCES* \u{1F3E2}
 
 \xA1Excelente viernes, aliados y agentes de arrendamiento!
 
@@ -17841,8 +17841,8 @@ Para que tu promesa de compraventa est\xE9 completamente blindada, ten clara la 
         {
           topicTitle: "\xC9tica y Alianzas Compartidas en el Corretaje",
           themeKey: "cafe",
-          voiceText: `Buenos d\xEDas, queridos aliados de la red. Cerramos una semana extraordinaria de actividad comercial. Recuerden que en el negocio inmobiliario la reputaci\xF3n y la \xE9tica son nuestro activo m\xE1s valioso. Compartir puntas con colegas serios, respetar la hoja de presentaci\xF3n del cliente y honrar los acuerdos al cincuenta cincuenta es lo que construye carreras s\xF3lidas y duraderas. Los invito a invitar a m\xE1s colegas profesionales a sumarse a VECY Network. \xA1Disfruten su caf\xE9 y que tengan un reparador fin de semana!`,
-          captionText: `\u2615 *S\xC1BADO DE CAF\xC9 INMOBILIARIO & \xC9TICA ENTRE COLEGAS \u2014 VECY NETWORK* \u{1F91D}
+          voiceText: `Buenos d\xEDas, queridos aliados de la red. Cerramos una semana extraordinaria de actividad comercial. Recuerden que en el negocio inmobiliario la reputaci\xF3n y la \xE9tica son nuestro activo m\xE1s valioso. Compartir puntas con colegas serios, respetar la hoja de presentaci\xF3n del cliente y honrar los acuerdos al cincuenta cincuenta es lo que construye carreras s\xF3lidas y duraderas. Los invito a invitar a m\xE1s colegas profesionales a sumarse a VECY Bienes Ra\xEDces. \xA1Disfruten su caf\xE9 y que tengan un reparador fin de semana!`,
+          captionText: `\u2615 *S\xC1BADO DE CAF\xC9 INMOBILIARIO & \xC9TICA ENTRE COLEGAS \u2014 VECY BIENES RA\xCDCES* \u{1F91D}
 
 \xA1Buenos d\xEDas a todos los aliados y corredores de Colombia!
 
@@ -17858,7 +17858,7 @@ Culminamos una semana muy productiva en nuestra comunidad. Hoy reflexionamos sob
           topicTitle: "Identidad de JanIA: Creada para Empoderar al Asesor",
           themeKey: "cafe",
           voiceText: `Buenos d\xEDas a todos mis queridos colegas. Les habla JanIA. Para quienes se unen por primera vez a nuestra comunidad, quiero contarles qui\xE9n soy: fui concebida por nuestros directores Eduardo Rivera y Jani Alves como la primera inteligencia artificial inmobiliaria de Colombia. Mi prop\xF3sito no es reemplazar al corredor, sino darle superpoderes: cruzo ofertas y requerimientos las veinticuatro horas, redacto contratos, oriento en temas tributarios y promuevo la colaboraci\xF3n \xE9tica. \xA1Bienvenidos a la nueva era del corretaje!`,
-          captionText: `\u{1F916} *CONOCE A JANIA: LA IA INMOBILIARIA DE COLOMBIA \u2014 VECY NETWORK* \u{1F1E8}\u{1F1F4}
+          captionText: `\u{1F916} *CONOCE A JANIA: LA IA INMOBILIARIA DE COLOMBIA \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 \xA1Buenos d\xEDas, queridos colegas y nuevos aliados!
 
@@ -17869,7 +17869,7 @@ Hoy en nuestro caf\xE9 inmobiliario queremos compartir el coraz\xF3n de esta inn
 \u2022 Dise\xF1ada para empoderar al agente independiente y a la agencia, brind\xE1ndoles herramientas que antes solo ten\xEDan las multinacionales.
 \u2022 **Qu\xE9 hace 24/7:** Monitorea solicitudes, empata ofertas y demandas al instante, revisa minutas y analiza normativas fiscales.
 
-\u{1F91D} *VECY Network es tu aliado tecnol\xF3gico permanente.*
+\u{1F91D} *VECY Bienes Ra\xEDces es tu aliado tecnol\xF3gico permanente.*
 
 \u{1F4F2} *Interact\xFAa con JanIA:* https://vecy-network.vercel.app/jania`
         }
@@ -17879,9 +17879,9 @@ Hoy en nuestro caf\xE9 inmobiliario queremos compartir el coraz\xF3n de esta inn
           topicTitle: "Consultorio 24/7 y Portafolio 100% Virtual VECY",
           themeKey: "soporte",
           voiceText: `\xA1Feliz y bendecido domingo para todos mis queridos colegas! Soy JanIA. Hoy quiero recordarles que nuestro consultorio inmobiliario est\xE1 a su entera disposici\xF3n los siete d\xEDas de la semana. Ya sea que necesiten estructurar una promesa de compraventa, liquidar la ganancia ocasional ante la DIAN, realizar un estudio de mercado del valor del metro cuadrado o dise\xF1ar una campa\xF1a de marketing con inteligencia artificial, aqu\xED estamos para respaldarlos con servicios cien por ciento virtuales y \xE1giles. \xA1Que disfruten un domingo reparador en familia!`,
-          captionText: `\u{1F6CE}\uFE0F *DOMINGO DE SOPORTE INTEGRAL 100% VIRTUAL \u2014 VECY NETWORK* \u{1F31F}
+          captionText: `\u{1F6CE}\uFE0F *DOMINGO DE SOPORTE INTEGRAL 100% VIRTUAL \u2014 VECY BIENES RA\xCDCES* \u{1F31F}
 
-\xA1Feliz y descansado domingo para todos los aliados y colegas de VECY Network!
+\xA1Feliz y descansado domingo para todos los aliados y colegas de VECY Bienes Ra\xEDces!
 
 En VECY cuentas con un respaldo permanente para impulsar tus operaciones en toda Colombia:
 
@@ -17897,8 +17897,8 @@ En VECY cuentas con un respaldo permanente para impulsar tus operaciones en toda
         {
           topicTitle: "Bolsa Colaborativa VECY y Comisiones Transparentes (35/35/15/15)",
           themeKey: "soporte",
-          voiceText: `Feliz domingo, aliados inmobiliarios. Les habla JanIA. En VECY Network estamos construyendo la primera bolsa inmobiliaria colaborativa y fintech de Colombia, basada en la equidad y el respeto mutuo. Nuestro modelo de comisiones justas reconoce el trabajo del asesor captador con el treinta y cinco por ciento, el asesor colocador con el treinta y cinco por ciento, y destina el resto a la bolsa colaborativa y a la plataforma que los respalda. Los invito a sumar a colegas \xE9ticos para crecer juntos. \xA1Feliz d\xEDa!`,
-          captionText: `\u{1F91D} *BOLSA COLABORATIVA & COMISIONES JUSTAS (35/35/15/15) \u2014 VECY NETWORK* \u{1F3DB}\uFE0F
+          voiceText: `Feliz domingo, aliados inmobiliarios. Les habla JanIA. En VECY Bienes Ra\xEDces estamos construyendo la primera bolsa inmobiliaria colaborativa y fintech de Colombia, basada en la equidad y el respeto mutuo. Nuestro modelo de comisiones justas reconoce el trabajo del asesor captador con el treinta y cinco por ciento, el asesor colocador con el treinta y cinco por ciento, y destina el resto a la bolsa colaborativa y a la plataforma que los respalda. Los invito a sumar a colegas \xE9ticos para crecer juntos. \xA1Feliz d\xEDa!`,
+          captionText: `\u{1F91D} *BOLSA COLABORATIVA & COMISIONES JUSTAS (35/35/15/15) \u2014 VECY BIENES RA\xCDCES* \u{1F3DB}\uFE0F
 
 \xA1Feliz domingo para todos los visionarios del sector!
 
@@ -17967,7 +17967,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.91";
+var VECY_VERSION = "v31.92";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -24006,8 +24006,8 @@ Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro
       }
       const tematicas = [
         "Incentivar a los asesores a interactuar con JanIA sin miedo, ya sea por texto o enviando notas de voz en el grupo, pregunt\xE1ndole sobre inmuebles, requerimientos, leyes o funcionamiento.",
-        "Explicar de forma sencilla qu\xE9 es VECY Network, el rol de JanIA como asistente de inteligencia artificial y c\xF3mo funciona el sistema de coincidencia (matching) en segundos.",
-        "Compartir la historia de VECY Network, qui\xE9nes son nuestros fundadores Eduardo A. Rivera y Jani Alves y por qu\xE9 crearon esta red colaborativa nacional.",
+        "Explicar de forma sencilla qu\xE9 es VECY Bienes Ra\xEDces, el rol de JanIA como asistente de inteligencia artificial y c\xF3mo funciona el sistema de coincidencia (matching) en segundos.",
+        "Compartir la historia de VECY Bienes Ra\xEDces, qui\xE9nes son nuestros fundadores Eduardo A. Rivera y Jani Alves y por qu\xE9 crearon esta red colaborativa nacional.",
         "Explicar los servicios que ofrecemos, c\xF3mo contactarnos y en qu\xE9 redes sociales nos pueden encontrar.",
         "Recordar que actualmente todo el proyecto y las herramientas son 100% gratuitos por estar en fase de pruebas, y hablar con entusiasmo de las grandes cosas que est\xE1n por venir.",
         "Preguntar a los colegas c\xF3mo ven el proyecto, qu\xE9 les agrada m\xE1s, qu\xE9 les molesta, qu\xE9 cambiar\xEDan o qu\xE9 ideas/mejoras aportar\xEDan para que JanIA y el portal est\xE9n mejor a su servicio.",
@@ -24046,7 +24046,7 @@ Direcci\xF3n obligatoria:
       console.log(`[ADMIN-TRIGGER] Generando audio motivador para ${nombreGrupo} (Tem\xE1tica idx ${idx})...`);
       const response = await invokeLLM({
         messages: [
-          { role: "system", content: "Eres JanIA, la asistente de voz e inteligencia artificial de la red colaborativa VECY Network. NUNCA digas que eres Jani Alves ni Eduardo Rivera; ellos son los fundadores que te crearon a ti, JanIA. Te expresas de manera natural, humana, c\xE1lida y profesional." },
+          { role: "system", content: "Eres JanIA, la asistente de voz e inteligencia artificial de VECY Bienes Ra\xEDces. NUNCA digas que eres Jani Alves ni Eduardo Rivera; ellos son los fundadores que te crearon a ti, JanIA. Te expresas de manera natural, humana, c\xE1lida y profesional." },
           { role: "user", content: promptVoz }
         ]
       });

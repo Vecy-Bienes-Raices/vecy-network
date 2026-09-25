@@ -167,7 +167,32 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.91 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.92 — Septiembre 2026
+
+### Novedades v31.92 (Unificación Estratégica y Comercial de Marca a "VECY BIENES RAÍCES"):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo propuso unificar comercialmente la marca en todo el proyecto: reemplazar "VECY NETWORK" por el nombre reconocido, respetado y posicionado **"VECY BIENES RAÍCES"** (o *"Vecy Bienes Raíces — Red Inmobiliaria Colaborativa"* en contextos de red).
+  - Todos los canales oficiales, redes sociales, Google y GitHub identifican al bróker como Vecy Bienes Raíces; mantener el nombre dual generaba confusión en usuarios y colegas.
+  - Se blindó la infraestructura técnica: rutas en disco (`/home/eddu/Proyectos/vecy-network`, `/var/www/vecy-network`), repositorios, BD PostgreSQL (`vecy_network`) y subdominio de Vercel se mantuvieron intactos sin romper entornos, PM2 ni CI/CD.
+- **Acciones Ejecutadas en Código**:
+  1. **Frontend Web y Metadatos SEO**:
+     - `client/index.html`: `<title>`, meta `description`, `keywords`, OpenGraph, Twitter Cards y JSON-LD actualizados a `Vecy Bienes Raíces`.
+     - Páginas públicas y operativas (`Services.tsx`, `Properties.tsx`, `PropertyDetail.tsx`, `AgentDashboard.tsx`, `Home.tsx`, `Login.tsx`, `RequirementsMarketplace.tsx`, `RedColaboracion.tsx`, `Admin.tsx`): cabeceras, héroes, modales y footers actualizados a `VECY Bienes Raíces`.
+  2. **Componentes y Widgets**:
+     - `ReportView.tsx`: Dictamen oficial actualizado a `JanIA Match — VECY Bienes Raíces Colombia`.
+     - `AdminAgenda.tsx`: Resumen de eventos actualizado a `Sistema: Vecy Bienes Raíces — Red Inmobiliaria Colaborativa`.
+     - `JanIAWidget.tsx`: Saludo de JanIA actualizado a `Agente Senior de VECY Bienes Raíces`.
+     - `AdminMatches.tsx`: Mensajes directos de WhatsApp para captador y demandante y footer actualizados a `VECY Bienes Raíces`.
+  3. **JanIA Prompts y Fallbacks Deterministas**:
+     - `server/_core/prompts/base.md`: Perfil legal, mapa oficial de grupos y presentación institucional actualizados a `VECY Bienes Raíces`.
+     - Prompts de grupos WhatsApp (`VECY_INMUEBLES_NETWORK.md`, `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`, `PROYECTO_Vecy Network.md`): normas y descripciones actualizadas a `VECY Bienes Raíces`.
+     - `web_console.md`, `whatsapp-match.ts` e `index.ts`: avisos y directrices de voz/audio actualizados a `VECY Bienes Raíces`.
+     - `cronService.ts`: `enforceJanIAIdentity`, captions y podcasts diarios de lunes a domingo actualizados a `VECY Bienes Raíces`.
+     - `janIA.ts`: Título de estadísticas en tiempo real, `JANIA_PROMPT`, visión de flyers, mensajes fuera de tema y de publicación actualizados a `VECY Bienes Raíces`.
+     - `avaluo-engine.ts` y `scraper.ts`: Título del reporte markdown de avalúo comercial y prompt de extracción estructurada actualizados a `VECY Bienes Raíces`.
+- **Verificación**: 86/86 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 25s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.91 — Septiembre 2026
 
 ### Novedades v31.91 (Extracción, Discriminación Automática y Edición Dedicada de Medidas de Terraza y Balcón en Tabla de Cotejo Técnico):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

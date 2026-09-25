@@ -7,6 +7,69 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.92 — 25 Septiembre 2026
+
+### Solicitud de Eduardo
+Unificación Estratégica y Comercial de Marca a "VECY BIENES RAÍCES":
+*"Tengo un locura en mente. ¿Podemos cambiar el nombre a todo el proyecto en todas las parte donde diga NETWORK?, es que estuve echandole cabeza al asunto y pues para qué crear un VECY NETWORK si ya tenemos cierta fama como VECY BIENES RAÍCES, pues lo que estamos es confundiendo al usuario, no crees. Todos nos conocen como Vecy Bienes Raíces y ya aparecemos así en google y en todas las redes sociales hasta en GitHub jejeje. No se que opines y qué tan dificil sea, incluso no se si puedas o debas cambiar el nombre de nuestra carpeta principal tambien por nuestro nombre original o no se puede?. DIme por favor si esto es viable y si no se rompería o arruinaría nada, y si es factible o viable. Dímelo antes de comenzar."*
+*"Adelante agente desarrollador senior, ingeniero y arquitecto en jefe. Jejeje :)"*
+
+### Diagnóstico Técnico Profundo y Análisis de Viabilidad
+1. **Diferenciación Arquitectónica: Capa de Marca Visible vs. Capa de Infraestructura**:
+   - **Capa de Marca Visible / Experiencia de Usuario (100% Viable y Ejecutada)**:
+     - El posicionamiento consolidado en Google, redes sociales y el sector inmobiliario colombiano pertenece a **VECY BIENES RAÍCES**. Mantener una doble marca ("Vecy Network") generaba fricción cognitiva y diluía el reconocimiento de marca.
+     - Se acordó proyectar comercialmente en todas las páginas web, títulos HTML/SEO, metadatos OpenGraph/Twitter, modales, footers, correos, consolas web, audios de JanIA, prompts de LLM y comunicados de WhatsApp el nombre oficial: **VECY BIENES RAÍCES** (o *"Vecy Bienes Raíces — Red Inmobiliaria Colaborativa"* en contextos de red).
+   - **Capa de Infraestructura Interna (Blindada e Intocable por Seguridad Operativa)**:
+     - **Rutas de carpetas en disco**: `/home/eddu/Proyectos/vecy-network` (local) y `/var/www/vecy-network` (VPS). Renombrarlas destruiría la configuración del IDE Antigravity, rutas absolutas en scripts, servicios systemd, PM2 y el proxy inverso Nginx.
+     - **Repositorio y Despliegues**: `Vecy-Bienes-Raices/vecy-network` en GitHub, dominio de Vercel `vecy-network.vercel.app` y base de datos PostgreSQL `vecy_network` se mantuvieron intactos para preservar webhooks de CI/CD y estabilidad sin caídas.
+     - **Prohibición de Replace Global Ciego**: Evitado cualquier reemplazo masivo que pudiera romper APIs internas de Node.js (`os.networkInterfaces`, sockets de red, configuraciones de VPC o axios).
+
+### Acciones Ejecutadas
+1. **Frontend Web y Metadatos SEO (`client/index.html` y páginas)**:
+   - `client/index.html`: `<title>` actualizado a `VECY Bienes Raíces — Red Inmobiliaria Colaborativa & Inteligencia Artificial 🇨🇴`. Metadatos `description`, `keywords`, `og:title`, `og:description`, `twitter:title`, `twitter:description`, notas de arquitectura para agentes IA y marcado estructurado JSON-LD actualizados a `Vecy Bienes Raíces`.
+   - `client/src/pages/Services.tsx`: Actualizado el footer y derechos reservados a `VECY Bienes Raíces — Red Inmobiliaria Inteligente`.
+   - `client/src/pages/Properties.tsx`: Actualizado el footer a `VECY BIENES RAÍCES. Red Colaborativa Inmobiliaria de Colombia`.
+   - `client/src/pages/PropertyDetail.tsx`: Actualizadas 4 menciones en alertas, textos de compartir en WhatsApp, verificación de zona y pie de página a `VECY Bienes Raíces`.
+   - `client/src/pages/AgentDashboard.tsx`: Banner de bienvenida y botón de publicación actualizados a `VECY Bienes Raíces`.
+   - `client/src/pages/Home.tsx`: Pie de página actualizado a `VECY Bienes Raíces — Todos los derechos reservados`.
+   - `client/src/pages/Login.tsx`: Cabecera principal actualizada a `VECY BIENES RAÍCES`.
+   - `client/src/pages/RequirementsMarketplace.tsx`: Footer actualizado a `VECY BIENES RAÍCES. El Futuro del Real Estate es Colaborativo`.
+   - `client/src/pages/RedColaboracion.tsx`: Hero, sección de split 50/50 y pie de página actualizados a `VECY BIENES RAÍCES`.
+   - `client/src/pages/Admin.tsx`: Encabezados de barra lateral en escritorio y móvil actualizados a `Vecy Bienes Raíces`.
+2. **Componentes y Widgets de Usuario**:
+   - `client/src/components/valuation/ReportView.tsx`: Dictamen oficial actualizado a `JanIA Match — VECY Bienes Raíces Colombia`.
+   - `client/src/components/admin/AdminAgenda.tsx`: Resumen copiado actualizado a `Sistema: Vecy Bienes Raíces — Red Inmobiliaria Colaborativa`.
+   - `client/src/components/JanIAWidget.tsx`: Saludo inicial actualizado a `Agente Senior de VECY Bienes Raíces`.
+   - `client/src/components/admin/AdminMatches.tsx`: Mensajes directos predeterminados de WhatsApp para captador y demandante actualizados a `VECY Bienes Raíces`, footer actualizado a `VECY Bienes Raíces Colombia © 2026`.
+3. **Cerebro de JanIA, Prompts y Fallbacks Deterministas (`server/_core/`)**:
+   - `server/_core/prompts/base.md`: Perfil legal, mapa oficial de grupos, política de desvío de off-topic y presentación institucional actualizados a `VECY Bienes Raíces`.
+   - `server/_core/prompts/grupos/VECY_INMUEBLES_NETWORK.md`: Descripción oficial y bienvenida actualizadas a `VECY Bienes Raíces`.
+   - `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`: 7 menciones actualizadas (presentación de JanIA, peritajes, directores de cierre, lanzamiento gratuito, reviews Google y normas contra spam).
+   - `server/_core/prompts/grupos/PROYECTO_Vecy Network.md`: Actualizada la visión comunitaria y reglas a `PROYECTO "Vecy Bienes Raíces"`.
+   - `server/_core/prompts/web/web_console.md`: Prompt de consola web actualizado a `VECY Bienes Raíces`.
+   - `server/_core/whatsapp-match.ts`: Avisos de redirección, notas de infracción y system prompt de audio de JanIA actualizados a `VECY Bienes Raíces`.
+   - `server/_core/index.ts`: Temáticas de motivación, cron jobs y system prompt de voz actualizados a `VECY Bienes Raíces`.
+   - `server/_core/cronService.ts`:
+     - Función `enforceJanIAIdentity`: normaliza a `'les habla JanIA, la inteligencia artificial de VECY Bienes Raíces'`.
+     - Títulos de captions de lunes a domingo: reemplazado `— VECY NETWORK` por `— VECY BIENES RAÍCES`.
+     - Textos de podcasts y reportes semanales actualizados a `VECY Bienes Raíces`.
+     - Prompts dinámicos para Gemini actualizados con la identidad oficial de `VECY Bienes Raíces`.
+   - `server/_core/janIA.ts`:
+     - Título de estadísticas en vivo actualizado a `ESTADÍSTICAS EN TIEMPO REAL DE VECY BIENES RAÍCES`.
+     - `JANIA_PROMPT`: Misión, empresa, bolsa colaborativa y rol institucional actualizados a `VECY Bienes Raíces`.
+     - Prompt de visión de flyers y avisos de normas actualizados a `VECY Bienes Raíces`.
+     - Mensajes de bienvenida y cómo publicar actualizados a `VECY Bienes Raíces`.
+   - `server/_core/avaluo-engine.ts`: Encabezado del reporte markdown `# 📊 INFORME DE AVALÚO COMERCIAL — VECY BIENES RAÍCES` y nota técnica institucional actualizada.
+   - `server/_core/scraper.ts`: System prompt del motor de extracción actualizado a `JanIA (VECY Bienes Raíces)`.
+
+### Verificación y Resultados
+- **Tests Vitest**: 86/86 tests pasando al 100% en verde.
+- **Chequeo de Tipos**: `npm run check` (`tsc --noEmit` completado con cero errores).
+- **Compilación de Producción**: `npm run build` (Vite 25.55s + esbuild 135ms con cero errores).
+- **Versión Oficial**: Incrementada a **v31.92** en `package.json` y `shared/const.ts`.
+
+---
+
 ## 📋 SESIÓN v31.91 — 25 Septiembre 2026
 
 ### Solicitud de Eduardo

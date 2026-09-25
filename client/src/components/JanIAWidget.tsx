@@ -52,7 +52,7 @@ export default function JanIAWidget({ propertyId, leadId }: JanIAWidgetProps) {
       const welcomeMessage: Message = {
         id: `msg-${Date.now()}`,
         role: 'janIA',
-        content: '¡Hola! Soy JanIA, Agente Senior de VECY Network. 🏛️\n\nEstoy aquí para asistirte con nuestro portafolio de activos, análisis de mercado y gestión de cierres. Soy experta en optimizar procesos inmobiliarios con IA.\n\n**¿En qué puedo apoyarte hoy para que tu gestión sea más eficiente?**',
+        content: '¡Hola! Soy JanIA, Agente Senior de VECY Bienes Raíces. 🏛️\n\nEstoy aquí para asistirte con nuestro portafolio de activos, análisis de mercado y gestión de cierres. Soy experta en optimizar procesos inmobiliarios con IA.\n\n**¿En qué puedo apoyarte hoy para que tu gestión sea más eficiente?**',
         messageType: 'text',
         timestamp: new Date(),
       };
