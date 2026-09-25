@@ -19,6 +19,31 @@ import fs from "fs";
 import path from "path";
 import axios from "axios";
 import crypto from "crypto";
+import {
+  brokerDirectoryCache,
+  isGenericName,
+  extractColombianPhoneFromText,
+  normalizeAdvisorPhone,
+  isLidIdentifier,
+  lookupAdvisorSync,
+  preserveVerifiedAdvisorContact,
+  saveOrUpdateAdvisor,
+  initAdvisorsDirectory,
+  lookupAdvisor,
+} from "./advisors";
+
+export {
+  brokerDirectoryCache,
+  isGenericName,
+  extractColombianPhoneFromText,
+  normalizeAdvisorPhone,
+  isLidIdentifier,
+  lookupAdvisorSync,
+  preserveVerifiedAdvisorContact,
+  saveOrUpdateAdvisor,
+  initAdvisorsDirectory,
+  lookupAdvisor,
+};
 
 export function generarHashMensaje(rawText: string, remitente: string): string {
   const normalizado = (rawText || "")
@@ -4304,85 +4329,40 @@ Por lo tanto, DEBES hacer lo siguiente:
   }
 }
 
-export function isGenericName(n: string | null | undefined): boolean {
-  if (!n) return true;
-  const lower = n.toLowerCase().trim();
-  return lower.startsWith("asesor +") || 
-         lower === "asesor" || 
-         lower === "nuevo asesor" || 
-         lower === "colega" || 
-         lower === "";
-}
-
-// ── DIRECTORIO GLOBAL DE BROKERS Y RESOLUCIÓN INTELIGENTE DE CONTACTO (100% PASIVO / SEGURO) ──
-export const brokerDirectoryCache = new Map<string, { phone: string; name?: string }>();
-
-export function extractColombianPhoneFromText(text: string | null | undefined): string | null {
-  if (!text) return null;
-  const clean = text.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, ' ');
-
-  // 1. Enlaces directos wa.me y api.whatsapp.com (ej: wa.me/57310... o api.whatsapp.com/send?phone=57318...)
-  const waMatch = clean.match(/(?:wa\.me\/|api\.whatsapp\.com\/send\/?\?(?:[^&\s]*&)*phone=)(?:\+?57)?(3\d{9})/i);
-  if (waMatch) return '57' + waMatch[1];
-
-  // 2. Prefijos explícitos de contacto (Tel, Cel, WhatsApp, Inf, Contacto, Asesor, etc.)
-  const contactMatch = clean.match(/(?:tel[eé]fono|tel|celular|cel|whatsapp|wapp|wa|contacto|llamar|inf|info|informaci[oó]n|asesor|escribir|comunicarse|m[oó]vil)\s*:?\s*(?:\+?57\s*)?(3[\d\s.\-]{8,14})/i);
-  if (contactMatch) {
-    const digits = contactMatch[1].replace(/\D/g, '');
-    if (digits.length === 10 && digits.startsWith('3')) {
-      return '57' + digits;
-    }
-  }
-
-  // 3. Patrón genérico celular Colombia (3xx xxx xxxx) validando que no sea precio ni área
-  const genericMatches = clean.matchAll(/(?:\+?57\s*)?(3\d{2}[\s.\-]?\d{3}[\s.\-]?\d{4})\b/g);
-  for (const m of genericMatches) {
-    const digits = m[1].replace(/\D/g, '');
-    if (digits.length === 10 && digits.startsWith('3')) {
-      const idx = m.index ?? 0;
-      const before = clean.substring(Math.max(0, idx - 15), idx).toLowerCase();
-      const after = clean.substring(idx + m[0].length, idx + m[0].length + 15).toLowerCase();
-      
-      if (before.includes('$') || before.includes('precio') || before.includes('canon') || before.includes('ppto') || before.includes('presupuesto')) {
-        continue;
-      }
-      if (after.includes('millon') || after.includes('mil') || after.includes('m2') || after.includes('mts') || after.includes('pesos')) {
-        continue;
-      }
-      return '57' + digits;
-    }
-  }
-  return null;
-}
-
 export function resolveContactPhone(userId: string, rawText?: string, userName?: string, extractedPhone?: string): string {
   const cleanUserId = userId.split(':')[0].split('@')[0];
-  const isLid = cleanUserId.length > 13 || cleanUserId.startsWith('1203');
+  const isLid = isLidIdentifier(cleanUserId) || userId.includes('@lid');
 
   // 1. Prioridad Máxima: Si en el texto viene un teléfono explícito
   const phoneFromText = extractColombianPhoneFromText(rawText);
   if (phoneFromText) {
     brokerDirectoryCache.set(cleanUserId, { phone: phoneFromText, name: userName });
-    if (userName) brokerDirectoryCache.set(userName, { phone: phoneFromText, name: userName });
+    if (userName && !isGenericName(userName)) brokerDirectoryCache.set(userName, { phone: phoneFromText, name: userName });
+    // Guardar para siempre en la base de datos PostgreSQL
+    saveOrUpdateAdvisor({
+      phone: phoneFromText,
+      name: userName,
+      oldPhoneOrLid: cleanUserId,
+    }).catch(err => console.warn(`[AdvisorsCore] Auto-registro desde texto:`, err?.message));
     return phoneFromText;
   }
 
   // 2. Si el LLM extrajo un teléfono válido
   if (extractedPhone) {
-    const cleanExt = extractedPhone.replace(/\D/g, '');
-    if (cleanExt.length === 10 && cleanExt.startsWith('3')) {
-      const p = '57' + cleanExt;
-      brokerDirectoryCache.set(cleanUserId, { phone: p, name: userName });
-      return p;
-    }
-    if (cleanExt.length === 12 && cleanExt.startsWith('573')) {
+    const cleanExt = normalizeAdvisorPhone(extractedPhone);
+    if (cleanExt) {
       brokerDirectoryCache.set(cleanUserId, { phone: cleanExt, name: userName });
+      saveOrUpdateAdvisor({
+        phone: cleanExt,
+        name: userName,
+        oldPhoneOrLid: cleanUserId,
+      }).catch(err => console.warn(`[AdvisorsCore] Auto-registro desde LLM:`, err?.message));
       return cleanExt;
     }
   }
 
-  // 3. Consultar en el directorio de brokers previamente aprendidos
-  const cached = brokerDirectoryCache.get(cleanUserId) || (userName ? brokerDirectoryCache.get(userName) : null);
+  // 3. Consultar en el directorio permanente de asesores (memoria instantánea 0ms)
+  const cached = lookupAdvisorSync(cleanUserId, userName);
   if (cached && cached.phone) {
     return cached.phone;
   }
@@ -4399,48 +4379,7 @@ export function resolveContactPhone(userId: string, rawText?: string, userName?:
 
 export async function initBrokerDirectory() {
   try {
-    const db = await getDb();
-    if (!db) return;
-    const knownProps = await db.select({
-      phone: properties.idUsuarioWhatsapp,
-      name: properties.nombreUsuarioWhatsapp
-    }).from(properties);
-
-    const knownReqs = await db.select({
-      phone: requirements.idUsuarioWhatsapp,
-      name: requirements.nombreUsuarioWhatsapp
-    }).from(requirements);
-
-    const knownUsers = await db.select({
-      openId: users.openId,
-      phone: users.phone,
-      name: users.name
-    }).from(users);
-
-    for (const item of [...knownProps, ...knownReqs]) {
-      if (item.phone && (item.phone.startsWith('573') || item.phone.startsWith('3')) && item.phone.length <= 12) {
-        const cleanPhone = item.phone.startsWith('3') && item.phone.length === 10 ? `57${item.phone}` : item.phone;
-        brokerDirectoryCache.set(item.phone, { phone: cleanPhone, name: item.name || undefined });
-        if (item.name && !isGenericName(item.name)) {
-          brokerDirectoryCache.set(item.name, { phone: cleanPhone, name: item.name });
-        }
-      }
-    }
-
-    for (const u of knownUsers) {
-      if (u.phone && (u.phone.startsWith('573') || u.phone.startsWith('3')) && u.phone.length <= 12) {
-        const cleanPhone = u.phone.startsWith('3') && u.phone.length === 10 ? `57${u.phone}` : u.phone;
-        if (u.openId && u.openId.startsWith('wa-')) {
-          const lidOrId = u.openId.replace('wa-', '');
-          brokerDirectoryCache.set(lidOrId, { phone: cleanPhone, name: u.name || undefined });
-        }
-        if (u.name && !isGenericName(u.name)) {
-          brokerDirectoryCache.set(u.name, { phone: cleanPhone, name: u.name });
-        }
-      }
-    }
-
-    console.log(`[JanIA-Directory] ✅ Directorio de brokers cargado en memoria (${brokerDirectoryCache.size} entradas conocidas).`);
+    await initAdvisorsDirectory();
   } catch (err: any) {
     console.warn(`[JanIA-Directory] Advertencia cargando directorio inicial:`, err?.message || err);
   }
@@ -4448,137 +4387,32 @@ export async function initBrokerDirectory() {
 
 /**
  * Propaga en cascada un teléfono de contacto a todas las propiedades y requerimientos
- * del mismo broker/remitente (por Nombre o por LID antiguo), y lo registra en el directorio en memoria.
+ * del mismo broker/remitente (por Nombre o por LID antiguo), persistiendo para siempre en la tabla advisors.
  */
 export async function propagateBrokerPhoneAcrossAllListings(params: {
   rawPhoneOrText?: string | null;
   brokerName?: string | null;
   oldPhoneOrLid?: string | null;
+  sourceGroup?: string | null;
+  agency?: string | null;
+  notes?: string | null;
 }): Promise<{ updatedProps: number; updatedReqs: number; cleanPhone: string | null }> {
-  const { rawPhoneOrText, brokerName, oldPhoneOrLid } = params;
-
-  let cleanPhone: string | null = null;
-  if (rawPhoneOrText) {
-    cleanPhone = extractColombianPhoneFromText(rawPhoneOrText);
-    if (!cleanPhone) {
-      const digits = rawPhoneOrText.replace(/\D/g, '');
-      if (digits.length === 10 && digits.startsWith('3')) {
-        cleanPhone = '57' + digits;
-      } else if (digits.length === 12 && digits.startsWith('573')) {
-        cleanPhone = digits;
-      }
-    }
-  }
-
-  const validBrokerName = brokerName && !isGenericName(brokerName) ? brokerName.trim() : null;
-
-  // Si no hay ni teléfono limpio ni nombre válido para propagar, no hay nada que propagar
-  if (!cleanPhone && !validBrokerName) {
-    return { updatedProps: 0, updatedReqs: 0, cleanPhone: null };
-  }
-
-  const db = await getDb();
-  if (!db) return { updatedProps: 0, updatedReqs: 0, cleanPhone };
-
-  // 1. Actualizar memoria de directorio permanente
-  if (cleanPhone && validBrokerName) {
-    brokerDirectoryCache.set(validBrokerName.toLowerCase(), { phone: cleanPhone, name: validBrokerName });
-    brokerDirectoryCache.set(validBrokerName, { phone: cleanPhone, name: validBrokerName });
-    brokerDirectoryCache.set(cleanPhone, { phone: cleanPhone, name: validBrokerName });
-  } else if (cleanPhone) {
-    brokerDirectoryCache.set(cleanPhone, { phone: cleanPhone, name: validBrokerName || undefined });
-  }
-  if (oldPhoneOrLid && cleanPhone) {
-    brokerDirectoryCache.set(oldPhoneOrLid, { phone: cleanPhone, name: validBrokerName || undefined });
-  }
-
-  let updatedProps = 0;
-  let updatedReqs = 0;
-
-  // 2. Propagar a TODAS LAS PROPIEDADES del mismo broker en Supabase (incluyendo las que están en espera sin match)
-  const allProps = await db.select({
-    id: properties.id,
-    name: properties.nombreUsuarioWhatsapp,
-    phone: properties.idUsuarioWhatsapp
-  }).from(properties);
-
-  for (const p of allProps) {
-    const isSameName = validBrokerName && p.name && !isGenericName(p.name) && (
-      p.name.trim().toLowerCase() === validBrokerName.toLowerCase() ||
-      p.name.trim().toLowerCase().includes(validBrokerName.toLowerCase()) ||
-      validBrokerName.toLowerCase().includes(p.name.trim().toLowerCase())
-    );
-    const isSamePhone = cleanPhone && p.phone === cleanPhone;
-    const isSameLid = oldPhoneOrLid && p.phone === oldPhoneOrLid;
-
-    // Si no hay ninguna coincidencia de identidad, continuar
-    if (!isSameLid && !isSameName && !isSamePhone) continue;
-
-    const updates: { idUsuarioWhatsapp?: string; nombreUsuarioWhatsapp?: string } = {};
-
-    // Asignar teléfono si tenemos cleanPhone y la propiedad no tiene teléfono real, tiene LID o coincide por nombre/LID
-    if (cleanPhone && p.phone !== cleanPhone) {
-      if (!p.phone || p.phone.length > 12 || p.phone.startsWith('1203') || p.phone.includes('@') || p.phone === oldPhoneOrLid || isSameName) {
-        updates.idUsuarioWhatsapp = cleanPhone;
-      }
-    }
-
-    // Asignar nombre si tenemos validBrokerName y la propiedad no tiene nombre real o tiene genérico
-    if (validBrokerName && p.name !== validBrokerName) {
-      if (!p.name || isGenericName(p.name) || isSameLid || isSamePhone) {
-        updates.nombreUsuarioWhatsapp = validBrokerName;
-      }
-    }
-
-    if (Object.keys(updates).length > 0) {
-      await db.update(properties).set(updates).where(eq(properties.id, p.id));
-      updatedProps++;
-    }
-  }
-
-  // 3. Propagar a TODOS LOS REQUERIMIENTOS del mismo broker en Supabase (incluyendo los que están en espera sin match)
-  const allReqs = await db.select({
-    id: requirements.id,
-    name: requirements.nombreUsuarioWhatsapp,
-    phone: requirements.idUsuarioWhatsapp
-  }).from(requirements);
-
-  for (const r of allReqs) {
-    const isSameName = validBrokerName && r.name && !isGenericName(r.name) && (
-      r.name.trim().toLowerCase() === validBrokerName.toLowerCase() ||
-      r.name.trim().toLowerCase().includes(validBrokerName.toLowerCase()) ||
-      validBrokerName.toLowerCase().includes(r.name.trim().toLowerCase())
-    );
-    const isSamePhone = cleanPhone && r.phone === cleanPhone;
-    const isSameLid = oldPhoneOrLid && r.phone === oldPhoneOrLid;
-
-    if (!isSameLid && !isSameName && !isSamePhone) continue;
-
-    const updates: { idUsuarioWhatsapp?: string; nombreUsuarioWhatsapp?: string } = {};
-
-    if (cleanPhone && r.phone !== cleanPhone) {
-      if (!r.phone || r.phone.length > 12 || r.phone.startsWith('1203') || r.phone.includes('@') || r.phone === oldPhoneOrLid || isSameName) {
-        updates.idUsuarioWhatsapp = cleanPhone;
-      }
-    }
-
-    if (validBrokerName && r.name !== validBrokerName) {
-      if (!r.name || isGenericName(r.name) || isSameLid || isSamePhone) {
-        updates.nombreUsuarioWhatsapp = validBrokerName;
-      }
-    }
-
-    if (Object.keys(updates).length > 0) {
-      await db.update(requirements).set(updates).where(eq(requirements.id, r.id));
-      updatedReqs++;
-    }
-  }
-
-  console.log(`[JanIA-Propagate] 🚀 Broker ${validBrokerName || 'Sin Nombre'} (+${cleanPhone || 'Sin Celular'}) propagado a ${updatedProps} propiedades y ${updatedReqs} requerimientos en Supabase.`);
-  return { updatedProps, updatedReqs, cleanPhone };
+  const result = await saveOrUpdateAdvisor({
+    phone: params.rawPhoneOrText,
+    name: params.brokerName,
+    oldPhoneOrLid: params.oldPhoneOrLid,
+    sourceGroup: params.sourceGroup,
+    agency: params.agency,
+    notes: params.notes,
+  });
+  return {
+    updatedProps: result.updatedProps,
+    updatedReqs: result.updatedReqs,
+    cleanPhone: result.cleanPhone,
+  };
 }
 
-// Inicialización automática diferida
+// Inicialización automática diferida del directorio permanente de asesores
 setTimeout(() => {
   initBrokerDirectory().catch(() => {});
 }, 3000);
@@ -5354,7 +5188,14 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
   };
 
   if (existing.length > 0) {
-    // Si ya existe, actualizamos los datos comerciales y de trazabilidad
+    // Si ya existe, actualizamos los datos comerciales y de trazabilidad preservando contacto verificado (v31.88)
+    const preservedContact = preserveVerifiedAdvisorContact(
+      existing[0].idUsuarioWhatsapp,
+      existing[0].nombreUsuarioWhatsapp,
+      insertDataWithCalif.idUsuarioWhatsapp,
+      insertDataWithCalif.nombreUsuarioWhatsapp
+    );
+
     const updatedCount = (existing[0].republicacionesCount || 0) + 1;
     const [updated] = await db
       .update(properties)
@@ -5365,8 +5206,9 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
         images: finalImages.length > 0 ? finalImages : existing[0].images,
         origenTipo: insertDataWithCalif.origenTipo,
         origenId: insertDataWithCalif.origenId,
-        origenNombre: insertDataWithCalif.origenNombre,
-        idUsuarioWhatsapp: insertDataWithCalif.idUsuarioWhatsapp,
+        origenNombre: insertDataWithCalif.origenNombre || existing[0].origenNombre,
+        idUsuarioWhatsapp: preservedContact.effectivePhone || existing[0].idUsuarioWhatsapp,
+        nombreUsuarioWhatsapp: preservedContact.effectiveName || existing[0].nombreUsuarioWhatsapp,
         fechaUltimaPublicacion: getColombiaNow(),
         updatedAt: new Date(),
         republicacionesCount: updatedCount,
@@ -5377,7 +5219,7 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
       .where(eq(properties.id, existing[0].id))
       .returning();
 
-    console.log(`[Deduplication] Propiedad existente detectada (${canonicalExternalId || 'Comercial'}). Actualizando datos (ID: ${updated.id}, Republicado: ${updatedCount})`);
+    console.log(`[Deduplication] Propiedad existente detectada (${canonicalExternalId || 'Comercial'}). Actualizando datos (ID: ${updated.id}, Republicado: ${updatedCount}, Asesor: ${updated.nombreUsuarioWhatsapp || 'N/A'} - Tel: ${updated.idUsuarioWhatsapp || 'N/A'})`);
 
     // Insertar auditoría histórica de la republicación
     try {
@@ -5708,7 +5550,14 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
   };
 
   if (existing.length > 0) {
-    // Si ya existe, actualizamos los datos pero preservamos fechaExtraccion original (Regla Doctrinal v31.86)
+    // Si ya existe, actualizamos los datos pero preservamos fechaExtraccion original (Regla Doctrinal v31.86) y contacto verificado (v31.88)
+    const preservedContact = preserveVerifiedAdvisorContact(
+      existing[0].idUsuarioWhatsapp,
+      existing[0].nombreUsuarioWhatsapp,
+      insertDataWithCalif.idUsuarioWhatsapp,
+      insertDataWithCalif.nombreUsuarioWhatsapp
+    );
+
     const { fechaExtraccion: _ignored, ...updateFields } = insertDataWithCalif;
     const existingAgeDays = existing[0].createdAt ? Math.max(0, Math.floor((Date.now() - new Date(existing[0].createdAt).getTime()) / (1000 * 60 * 60 * 24))) : 0;
     const targetStatus = existingAgeDays > 10 ? 'expired' : (existing[0].status || 'active');
@@ -5717,12 +5566,14 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
       .update(requirements)
       .set({
         ...updateFields,
+        idUsuarioWhatsapp: preservedContact.effectivePhone || existing[0].idUsuarioWhatsapp,
+        nombreUsuarioWhatsapp: preservedContact.effectiveName || existing[0].nombreUsuarioWhatsapp,
         status: targetStatus,
         updatedAt: new Date()
       })
       .where(eq(requirements.id, existing[0].id))
       .returning();
-    console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id}, Status: ${targetStatus}, Antigüedad: ${existingAgeDays}d)`);
+    console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id}, Status: ${targetStatus}, Antigüedad: ${existingAgeDays}d, Asesor: ${updated.nombreUsuarioWhatsapp || 'N/A'} - Tel: ${updated.idUsuarioWhatsapp || 'N/A'})`);
     if (targetStatus !== 'expired') {
       findMatchesForRequirement(updated.id).catch((mErr: any) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
     }

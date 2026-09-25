@@ -322,6 +322,41 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.88 — Septiembre 2026
+
+#### 📌 PERSISTENCIA INDESTRUCTIBLE DE ASESORES E INMOBILIARIAS EN POSTGRESQL, BLINDAJE ANTI-SOBREESCRITURA DE LIDS EN DEDUPLICACIÓN, DIRECTORIO CANÓNICO Y ENRIQUECIMIENTO DE CONTACTO
+
+**Problemas identificados:**
+1. **Inexistencia de Tabla Canónica para Asesores**: Los teléfonos y nombres de captadores y requirientes se almacenaban de forma fragmentada en filas de `properties` y `requirements` y en un `Map()` volátil en memoria (`brokerDirectoryCache`). Al reiniciarse PM2 en el VPS, se borraban los contactos no mapeados en BD.
+2. **Sobreescritura Destructiva por LIDs de WhatsApp en Deduplicación**: En `saveProperty` (línea 5369) y `saveRequirement` (línea 5719), cuando un inmueble o requerimiento era republicado en WhatsApp, el sistema ejecutaba `idUsuarioWhatsapp: insertDataWithCalif.idUsuarioWhatsapp`. Como los mensajes de Baileys contienen el LID del remitente (`259514976747768`) en lugar del número celular colombiano, ¡el sistema borraba el número real que Eduardo había verificado y guardado manualmente!
+3. **Pérdida de Identidad al Recalcular o Cambiar Estado**: Al rechazar matches, recalcular o enviar a StandBy Directo 50/50, si una ficha se desacoplaba o no tenía teléfono directo, quedaba huérfana en "N/A" sin posibilidad de recuperar al asesor original.
+
+**Solución aplicada:**
+- **PostgreSQL VPS (`vecy_network`) & Drizzle (`drizzle/schema.ts`)**:
+  - Creada tabla canónica permanente `advisors` con campos `name`, `phone`, `normalized_phone UNIQUE`, `whatsapp_lids TEXT[]`, `aliases TEXT[]`, `agency`, `source_group`, `notes` e índices relacionales.
+- **Nuevo Módulo `server/_core/advisors.ts` (0% Dependencias Circulares)**:
+  - `normalizeAdvisorPhone`: Normalización canónica a formato `573XXXXXXXXX` y rechazo categórico del número del socket JanIA Bot (`+573192919978`) y LIDs.
+  - `saveOrUpdateAdvisor`: Upsert permanente en PostgreSQL `advisors`, sincronización de tabla `users`, cascada a todas las propiedades y requerimientos de ese broker en BD, y actualización en caliente de memoria.
+  - `initAdvisorsDirectory`: Carga automática en memoria al iniciar el backend y bootstrap histórico desde propiedades/requerimientos.
+  - `preserveVerifiedAdvisorContact`: Guardián de contacto en deduplicación que bloquea de forma inquebrantable cualquier intento de sobreescribir un teléfono o nombre verificado por un LID o nombre genérico.
+  - `lookupAdvisorSync`: Búsqueda instantánea en 0ms en memoria para enriquecer vistas y cruces.
+- **Backend `server/_core/janIA.ts`**:
+  - `saveProperty` y `saveRequirement` blindados con `preserveVerifiedAdvisorContact`.
+  - `resolveContactPhone` auto-registra permanentemente en `advisors` todo teléfono extraído de texto o LLM.
+  - `propagateBrokerPhoneAcrossAllListings` delegada a `saveOrUpdateAdvisor`.
+- **Router `server/routers/janIA.ts`**:
+  - `getAllMatches` y `getAllRequirements` enriquecidos con datos del Directorio Permanente si vienen con LID o vacíos.
+  - Nueva mutación tRPC `saveAdvisorContact`.
+- **Frontend `client/src/components/admin/AdminMatches.tsx`**:
+  - `normalizePhoneInput` excluye el número de JanIA Bot (+573192919978).
+- **Pruebas de Regresión (`server/__tests__/regression.test.ts`)**:
+  - Sección 11 incorporada con 6 nuevos tests doctrinales blindando normalización, exclusión del bot, LID check, preservación de contacto y resolución sincrónica.
+- `shared/const.ts` y `package.json`: Versión incrementada a `v31.88`.
+
+**Verificación:** `tsc --noEmit` 0 errores ✅ | `vitest run` 75/75 tests ✅ | Build limpio de Vite y esbuild en 23.15s ✅
+
+---
+
 ### 🔖 v31.87 — Septiembre 2026
 
 #### 📌 DOCTRINA "EN DURO" TOTAL PARA EXIGENCIAS DE DEMANDA, GUILLOTINAS INFLEXIBLES DE ANTIGÜEDAD Y COCINA, ELIMINACIÓN DE FALSAS FLEXIBILIDADES Y ERRADICACIÓN DE "N/E"

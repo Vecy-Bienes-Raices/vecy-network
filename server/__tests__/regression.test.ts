@@ -12,6 +12,14 @@ import {
   enforceJanIAIdentity,
   ROTATING_FALLBACK_CATALOG
 } from "../_core/cronService";
+import {
+  normalizeAdvisorPhone,
+  isLidIdentifier,
+  isGenericName,
+  preserveVerifiedAdvisorContact,
+  lookupAdvisorSync,
+  brokerDirectoryCache,
+} from "../_core/advisors";
 
 describe("VECY NETWORK — SUITE DE REGRESIÓN DOCTRINAL AUTOMATIZADA", () => {
   // ─────────────────────────────────────────────────────────────
@@ -821,6 +829,88 @@ Disponible para finales de nov.`;
       const res = explicarMatch(req, prop);
       expect(res.score).toBeGreaterThanOrEqual(85);
       expect(res.blockers.length).toBe(0);
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // 11. DIRECTORIO PERMANENTE DE ASESORES — PERSISTENCIA INDESTRUCTIBLE (v31.88)
+  // ─────────────────────────────────────────────────────────────
+  describe("11. Directorio Permanente de Asesores e Identidad Indestructible (v31.88)", () => {
+    it("debe normalizar celulares colombianos a 12 dígitos y excluir radicalmente la línea oficial JanIA Bot (+573192919978)", () => {
+      // Teléfono regular 10 dígitos -> 573...
+      expect(normalizeAdvisorPhone("3101234567")).toBe("573101234567");
+      expect(normalizeAdvisorPhone("+57 310 123 4567")).toBe("573101234567");
+      expect(normalizeAdvisorPhone("573101234567@s.whatsapp.net")).toBe("573101234567");
+
+      // ⛔ EXCLUSIÓN RADICAL: Número oficial de JanIA Bot Socket Baileys
+      expect(normalizeAdvisorPhone("573192919978")).toBeNull();
+      expect(normalizeAdvisorPhone("+57 319 291 9978")).toBeNull();
+      expect(normalizeAdvisorPhone("3192919978")).toBeNull();
+      expect(normalizeAdvisorPhone("573192919978@s.whatsapp.net")).toBeNull();
+    });
+
+    it("debe detectar correctamente identificadores internos LID de WhatsApp y rechazar considerarlos teléfonos", () => {
+      expect(isLidIdentifier("259514976747768")).toBe(true);
+      expect(isLidIdentifier("259514976747768@lid")).toBe(true);
+      expect(isLidIdentifier("120363417740040773@g.us")).toBe(true);
+      expect(isLidIdentifier("3101234567")).toBe(false);
+      expect(isLidIdentifier("573101234567")).toBe(false);
+
+      expect(normalizeAdvisorPhone("259514976747768")).toBeNull();
+      expect(normalizeAdvisorPhone("259514976747768@lid")).toBeNull();
+    });
+
+    it("debe detectar nombres genéricos y diferenciarlos de nombres reales de asesores", () => {
+      expect(isGenericName("Asesor +573101234567")).toBe(true);
+      expect(isGenericName("asesor")).toBe(true);
+      expect(isGenericName("Nuevo Asesor")).toBe(true);
+      expect(isGenericName("colega")).toBe(true);
+      expect(isGenericName("Sin Nombre")).toBe(true);
+      expect(isGenericName("")).toBe(true);
+      expect(isGenericName(null)).toBe(true);
+
+      expect(isGenericName("Carlos Gómez")).toBe(false);
+      expect(isGenericName("Erika Del Pilar")).toBe(false);
+      expect(isGenericName("Inmobiliaria Santa María")).toBe(false);
+    });
+
+    it("preserveVerifiedAdvisorContact: NUNCA debe permitir que un LID entrante sobreescriba un teléfono verificado guardado por Eduardo", () => {
+      const existingPhone = "573105551234";
+      const existingName = "Erika Del Pilar";
+      const incomingLid = "259514976747768@lid";
+      const incomingGenericName = "Asesor +259514976747768";
+
+      const preserved = preserveVerifiedAdvisorContact(existingPhone, existingName, incomingLid, incomingGenericName);
+
+      // El teléfono verificado se mantiene intacto para siempre
+      expect(preserved.effectivePhone).toBe("573105551234");
+      // El nombre real se mantiene intacto para siempre
+      expect(preserved.effectiveName).toBe("Erika Del Pilar");
+    });
+
+    it("preserveVerifiedAdvisorContact: debe resolver el teléfono real cuando un LID entrante ya fue mapeado a un asesor en el directorio", () => {
+      // Simular que el LID fue previamente asociado en el caché/directorio
+      brokerDirectoryCache.set("259514976747768", { phone: "573159998877", name: "Mauricio Morales" });
+
+      const incomingLid = "259514976747768";
+      const preserved = preserveVerifiedAdvisorContact(null, null, incomingLid, null);
+
+      expect(preserved.effectivePhone).toBe("573159998877");
+      expect(preserved.effectiveName).toBe("Mauricio Morales");
+    });
+
+    it("lookupAdvisorSync: debe resolver contactos en 0ms desde memoria por teléfono, LID o nombre", () => {
+      brokerDirectoryCache.set("573187776655", { phone: "573187776655", name: "Diana Quintero" });
+      brokerDirectoryCache.set("diana quintero", { phone: "573187776655", name: "Diana Quintero" });
+
+      const byPhone = lookupAdvisorSync("573187776655");
+      expect(byPhone).toBeDefined();
+      expect(byPhone?.phone).toBe("573187776655");
+      expect(byPhone?.name).toBe("Diana Quintero");
+
+      const byName = lookupAdvisorSync(null, "Diana Quintero");
+      expect(byName).toBeDefined();
+      expect(byName?.phone).toBe("573187776655");
     });
   });
 });

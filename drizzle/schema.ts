@@ -539,3 +539,27 @@ export const dailyBroadcasts = pgTable("daily_broadcasts", {
 
 export type DailyBroadcast = typeof dailyBroadcasts.$inferSelect;
 export type InsertDailyBroadcast = typeof dailyBroadcasts.$inferInsert;
+
+/**
+ * Directorio Permanente de Asesores e Inmobiliarias (VECY Directory Core) - v31.88
+ * Garantiza persistencia indestructible de nombres, teléfonos y LIDs de WhatsApp de brokers.
+ */
+export const advisors = pgTable("advisors", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 50 }).notNull(),
+  normalizedPhone: varchar("normalized_phone", { length: 50 }).notNull().unique(),
+  whatsappLids: text("whatsapp_lids").array().default([]), // LIDs asociados de WhatsApp Baileys
+  aliases: text("aliases").array().default([]), // Nombres alternativos o pushNames observados
+  agency: varchar("agency", { length: 255 }),
+  sourceGroup: varchar("source_group", { length: 255 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("advisors_norm_phone_idx").on(table.normalizedPhone),
+  index("advisors_name_idx").on(table.name),
+]);
+
+export type Advisor = typeof advisors.$inferSelect;
+export type InsertAdvisor = typeof advisors.$inferInsert;

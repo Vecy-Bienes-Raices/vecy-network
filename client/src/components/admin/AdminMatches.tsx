@@ -3280,6 +3280,7 @@ export default function AdminMatches() {
     const raw = val.trim();
     if (raw.includes('@')) return raw;
     const digits = raw.replace(/\D/g, '');
+    if (digits === '573192919978' || digits === '3192919978') return undefined;
     if (digits.length === 10) return `57${digits}`;
     if (digits.length > 10) return digits;
     return digits || raw;

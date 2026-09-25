@@ -167,7 +167,37 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.87 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.88 — Septiembre 2026
+
+### Novedades v31.88 (Persistencia Indestructible de Asesores e Inmobiliarias en PostgreSQL, Blindaje Anti-Sobreescritura de LIDs en Deduplicación, Directorio Canónico y Enriquecimiento de Contacto):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo reportó que cada vez que guardaba el teléfono y nombre de un asesor, al cabo del tiempo o al avanzar negociaciones, recalcular, descartar matches o recibir republicaciones, el dato se perdía y volvía a quedar en blanco o con identificadores raros de WhatsApp.
+  - Exigencia sagrada: *"Cuando yo guarde el número del asesor se quede en la base de datos para siempre sin importar si se empezó el proceso de negociación, se eliminó o denegó el Match, si no coincidió o si se le dió recalcular o se envió a 50/50, etc."*
+- **Causas Raíz Identificadas**:
+  1. *Falta de tabla dedicada*: Los datos se guardaban dispersos en `properties`/`requirements` y en memoria volátil `brokerDirectoryCache` (que se borraba con cada reinicio de PM2).
+  2. *Sobreescritura en deduplicación*: `saveProperty` (línea 5369) y `saveRequirement` (línea 5719) ejecutaban `idUsuarioWhatsapp: insertDataWithCalif.idUsuarioWhatsapp`, sobreescribiendo el teléfono verificado por el LID del remitente (`259514976747768`) cada vez que un colega republicaba su inmueble.
+  3. *LID huérfano*: Al guardar el teléfono, nunca se asociaba el LID de WhatsApp al número real del asesor en base de datos.
+- **Acciones Ejecutadas**:
+  1. **PostgreSQL VPS (`vecy_network`) & Drizzle (`drizzle/schema.ts`)**:
+     - Creada tabla permanente `advisors` con `normalized_phone UNIQUE`, `whatsapp_lids TEXT[]`, `aliases TEXT[]`, `agency`, `source_group`, `notes` e índices optimizados.
+  2. **Nuevo Módulo `server/_core/advisors.ts` (0% Dependencias Circulares)**:
+     - `normalizeAdvisorPhone`: Estandarización a 12 dígitos (`573...`), exclusión del bot JanIA (+573192919978) y descarte de LIDs.
+     - `saveOrUpdateAdvisor`: Upsert permanente en PostgreSQL `advisors`, sincronización de tabla `users`, cascada a todas las propiedades y demandas, y actualización en caliente de memoria.
+     - `initAdvisorsDirectory`: Carga automática en memoria al arrancar PM2 y bootstrap de asesores históricos.
+     - `preserveVerifiedAdvisorContact`: Guardián de contacto en deduplicación que impide la sobreescritura de teléfonos/nombres verificados por LIDs o genéricos.
+     - `lookupAdvisorSync`: Búsqueda instantánea en 0ms por teléfono, LID o nombre.
+  3. **Backend `server/_core/janIA.ts`**:
+     - Integración de `preserveVerifiedAdvisorContact` en `saveProperty` y `saveRequirement`.
+     - `resolveContactPhone` registra de forma permanente en `advisors` todo teléfono extraído de texto o LLM.
+     - `propagateBrokerPhoneAcrossAllListings` delegada a `saveOrUpdateAdvisor`.
+  4. **Router `server/routers/janIA.ts`**:
+     - `getAllMatches` y `getAllRequirements` enriquecidos con datos del Directorio Permanente si vienen con LID o vacíos.
+     - Nueva mutación tRPC `saveAdvisorContact`.
+  5. **Pruebas de Regresión (`server/__tests__/regression.test.ts`)**:
+     - 6 nuevos tests en Sección 11 blindando normalización, exclusión del bot, LID check, `preserveVerifiedAdvisorContact` y resolución sincrónica.
+- **Verificación**: 75/75 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 23s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.87 — Septiembre 2026
 
 ### Novedades v31.87 (Doctrina En Duro Total para Demandas, Eliminación de Margen +3 en Antigüedad, Guillotinas Inflexibles de Cocina, Depósito, CBS, Estudio, EV y Garajes, Erradicación de Falsos 'N/E' y Preservación de Confort Unidireccional):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

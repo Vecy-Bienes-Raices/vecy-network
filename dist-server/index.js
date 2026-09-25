@@ -11,6 +11,7 @@ var __export = (target, all) => {
 // drizzle/schema.ts
 var schema_exports = {};
 __export(schema_exports, {
+  advisors: () => advisors,
   clientLedger: () => clientLedger,
   colombiaGeography: () => colombiaGeography,
   conversationStatusEnum: () => conversationStatusEnum,
@@ -54,7 +55,7 @@ __export(schema_exports, {
   zoneAliases: () => zoneAliases
 });
 import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb, bigint, uuid, index } from "drizzle-orm/pg-core";
-var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, notificationLogs, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes, propertyPublicationHistory, userBehavioralFingerprints, userPatterns, zoneAliases, inmobiliarioLexicon, matchFeedback, dailyBroadcasts;
+var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, notificationLogs, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes, propertyPublicationHistory, userBehavioralFingerprints, userPatterns, zoneAliases, inmobiliarioLexicon, matchFeedback, dailyBroadcasts, advisors;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
     "use strict";
@@ -520,6 +521,24 @@ var init_schema = __esm({
     }, (table) => [
       index("daily_broadcasts_date_idx").on(table.dateBogota),
       index("daily_broadcasts_target_date_idx").on(table.targetGroup, table.dateBogota)
+    ]);
+    advisors = pgTable("advisors", {
+      id: serial("id").primaryKey(),
+      name: varchar("name", { length: 255 }).notNull(),
+      phone: varchar("phone", { length: 50 }).notNull(),
+      normalizedPhone: varchar("normalized_phone", { length: 50 }).notNull().unique(),
+      whatsappLids: text("whatsapp_lids").array().default([]),
+      // LIDs asociados de WhatsApp Baileys
+      aliases: text("aliases").array().default([]),
+      // Nombres alternativos o pushNames observados
+      agency: varchar("agency", { length: 255 }),
+      sourceGroup: varchar("source_group", { length: 255 }),
+      notes: text("notes"),
+      createdAt: timestamp("created_at").defaultNow().notNull(),
+      updatedAt: timestamp("updated_at").defaultNow().notNull()
+    }, (table) => [
+      index("advisors_norm_phone_idx").on(table.normalizedPhone),
+      index("advisors_name_idx").on(table.name)
     ]);
   }
 });
@@ -7657,6 +7676,466 @@ var init_nameAndGenderResolver = __esm({
   }
 });
 
+// server/_core/advisors.ts
+import { eq as eq4, or, sql as sql3 } from "drizzle-orm";
+function isGenericName(n) {
+  if (!n) return true;
+  const lower = n.toLowerCase().trim();
+  return lower.startsWith("asesor +") || lower.startsWith("cliente +") || lower.startsWith("broker +") || lower.startsWith("captador +") || lower === "asesor" || lower === "nuevo asesor" || lower === "colega" || lower === "sin nombre" || lower === "desconocido" || lower === "";
+}
+function extractColombianPhoneFromText(text2) {
+  if (!text2) return null;
+  const clean = text2.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
+  const waMatch = clean.match(/(?:wa\.me\/|api\.whatsapp\.com\/send\/?\?(?:[^&\s]*&)*phone=)(?:\+?57)?(3\d{9})/i);
+  if (waMatch) {
+    const p = waMatch[1];
+    if (p !== "3192919978") return "57" + p;
+  }
+  const contactMatch = clean.match(/(?:tel[eé]fono|tel|celular|cel|whatsapp|wapp|wa|contacto|llamar|inf|info|informaci[oó]n|asesor|escribir|comunicarse|m[oó]vil)\s*:?\s*(?:\+?57\s*)?(3[\d\s.\-]{8,14})/i);
+  if (contactMatch) {
+    const digits = contactMatch[1].replace(/\D/g, "");
+    if (digits.length === 10 && digits.startsWith("3") && digits !== "3192919978") {
+      return "57" + digits;
+    }
+  }
+  const genericMatches = clean.matchAll(/(?:\+?57\s*)?(3\d{2}[\s.\-]?\d{3}[\s.\-]?\d{4})\b/g);
+  for (const m of genericMatches) {
+    const digits = m[1].replace(/\D/g, "");
+    if (digits.length === 10 && digits.startsWith("3") && digits !== "3192919978") {
+      const idx = m.index ?? 0;
+      const before = clean.substring(Math.max(0, idx - 15), idx).toLowerCase();
+      const after = clean.substring(idx + m[0].length, idx + m[0].length + 15).toLowerCase();
+      if (before.includes("$") || before.includes("precio") || before.includes("canon") || before.includes("ppto") || before.includes("presupuesto")) {
+        continue;
+      }
+      if (after.includes("millon") || after.includes("mil") || after.includes("m2") || after.includes("mts") || after.includes("pesos")) {
+        continue;
+      }
+      return "57" + digits;
+    }
+  }
+  return null;
+}
+function normalizeAdvisorPhone(val) {
+  if (!val || typeof val !== "string") return null;
+  const trimmed = val.trim();
+  if (trimmed.includes("@") && !trimmed.endsWith("@s.whatsapp.net")) {
+    if (trimmed.includes("@lid") || trimmed.includes("@g.us")) return null;
+  }
+  const digits = trimmed.split("@")[0].replace(/\D/g, "");
+  if (digits === "573192919978" || digits === "3192919978") {
+    return null;
+  }
+  if (digits.length > 13 || digits.startsWith("11") || digits.startsWith("1203")) {
+    return null;
+  }
+  if (digits.length === 10 && digits.startsWith("3")) {
+    return `57${digits}`;
+  }
+  if (digits.length === 12 && digits.startsWith("573")) {
+    return digits;
+  }
+  if (digits.length >= 10 && digits.length <= 12) {
+    return digits;
+  }
+  return null;
+}
+function isLidIdentifier(val) {
+  if (!val || typeof val !== "string") return false;
+  const clean = val.split("@")[0].replace(/\D/g, "");
+  return clean.length > 13 || clean.startsWith("11") || clean.startsWith("1203") || val.includes("@lid");
+}
+function lookupAdvisorSync(phoneOrLid, name) {
+  if (phoneOrLid) {
+    const cleanDigits = phoneOrLid.split("@")[0].replace(/\D/g, "");
+    const found = brokerDirectoryCache.get(cleanDigits) || brokerDirectoryCache.get(phoneOrLid);
+    if (found && found.phone) return found;
+  }
+  if (name && !isGenericName(name)) {
+    const trimmed = name.trim();
+    const found = brokerDirectoryCache.get(trimmed.toLowerCase()) || brokerDirectoryCache.get(trimmed);
+    if (found && found.phone) return found;
+  }
+  return null;
+}
+function preserveVerifiedAdvisorContact(existingPhone, existingName, incomingPhone, incomingName) {
+  const normExisting = normalizeAdvisorPhone(existingPhone);
+  const normIncoming = normalizeAdvisorPhone(incomingPhone);
+  let effectivePhone = normIncoming || incomingPhone || null;
+  let knownAdvisorName = null;
+  if (normExisting && (!normIncoming || isLidIdentifier(incomingPhone))) {
+    effectivePhone = normExisting;
+    if (incomingPhone && isLidIdentifier(incomingPhone)) {
+      saveOrUpdateAdvisor({
+        phone: normExisting,
+        name: existingName || incomingName,
+        oldPhoneOrLid: incomingPhone
+      }).catch(() => {
+      });
+    }
+  } else if (!normIncoming && incomingPhone && isLidIdentifier(incomingPhone)) {
+    const known = lookupAdvisorSync(incomingPhone);
+    if (known && known.phone) {
+      effectivePhone = known.phone;
+      if (known.name && !isGenericName(known.name)) {
+        knownAdvisorName = known.name;
+      }
+    }
+  }
+  let effectiveName = incomingName || null;
+  const isExistingGoodName = existingName && !isGenericName(existingName);
+  const isIncomingGoodName = incomingName && !isGenericName(incomingName);
+  if (isExistingGoodName && !isIncomingGoodName) {
+    effectiveName = existingName.trim();
+  } else if (isIncomingGoodName) {
+    effectiveName = incomingName.trim();
+  } else if (knownAdvisorName) {
+    effectiveName = knownAdvisorName;
+  } else if (effectivePhone) {
+    const known = lookupAdvisorSync(effectivePhone);
+    if (known?.name && !isGenericName(known.name)) {
+      effectiveName = known.name;
+    }
+  }
+  return { effectivePhone, effectiveName };
+}
+async function saveOrUpdateAdvisor(params) {
+  const { name, phone, oldPhoneOrLid, sourceGroup, agency, notes } = params;
+  const cleanPhone = normalizeAdvisorPhone(phone) || (oldPhoneOrLid ? normalizeAdvisorPhone(oldPhoneOrLid) : null);
+  const validName = name && !isGenericName(name) ? name.trim() : null;
+  if (!cleanPhone && !validName) {
+    return { success: false, cleanPhone: null, validName: null, updatedProps: 0, updatedReqs: 0 };
+  }
+  const db = await getDb();
+  if (!db) {
+    return { success: false, cleanPhone, validName, updatedProps: 0, updatedReqs: 0 };
+  }
+  let advisorId;
+  const extractedLid = oldPhoneOrLid && isLidIdentifier(oldPhoneOrLid) ? oldPhoneOrLid.split("@")[0].replace(/\D/g, "") : null;
+  try {
+    if (cleanPhone) {
+      const existing = await db.select().from(advisors).where(eq4(advisors.normalizedPhone, cleanPhone)).limit(1).then((r) => r[0]);
+      if (existing) {
+        advisorId = existing.id;
+        const currentLids = Array.isArray(existing.whatsappLids) ? existing.whatsappLids : [];
+        const currentAliases = Array.isArray(existing.aliases) ? existing.aliases : [];
+        const newLids = [...currentLids];
+        if (extractedLid && !newLids.includes(extractedLid)) {
+          newLids.push(extractedLid);
+        }
+        const newAliases = [...currentAliases];
+        if (validName && !newAliases.some((a) => a.toLowerCase() === validName.toLowerCase())) {
+          newAliases.push(validName);
+        }
+        const updates = {
+          updatedAt: /* @__PURE__ */ new Date(),
+          whatsappLids: newLids,
+          aliases: newAliases
+        };
+        if (validName && (isGenericName(existing.name) || validName.length > existing.name.length)) {
+          updates.name = validName;
+        }
+        if (sourceGroup && (!existing.sourceGroup || existing.sourceGroup.trim() === "")) {
+          updates.sourceGroup = sourceGroup.trim();
+        }
+        if (agency && (!existing.agency || existing.agency.trim() === "")) {
+          updates.agency = agency.trim();
+        }
+        if (notes) {
+          updates.notes = existing.notes ? `${existing.notes}
+${notes}` : notes;
+        }
+        await db.update(advisors).set(updates).where(eq4(advisors.id, existing.id));
+      } else {
+        let existingByName = null;
+        if (validName) {
+          existingByName = await db.select().from(advisors).where(sql3`LOWER(${advisors.name}) = LOWER(${validName})`).limit(1).then((r) => r[0]);
+        }
+        if (existingByName) {
+          advisorId = existingByName.id;
+          const currentLids = Array.isArray(existingByName.whatsappLids) ? existingByName.whatsappLids : [];
+          const newLids = [...currentLids];
+          if (extractedLid && !newLids.includes(extractedLid)) {
+            newLids.push(extractedLid);
+          }
+          await db.update(advisors).set({
+            phone: cleanPhone,
+            normalizedPhone: cleanPhone,
+            whatsappLids: newLids,
+            sourceGroup: sourceGroup?.trim() || existingByName.sourceGroup,
+            agency: agency?.trim() || existingByName.agency,
+            updatedAt: /* @__PURE__ */ new Date()
+          }).where(eq4(advisors.id, existingByName.id));
+        } else {
+          const initialLids = extractedLid ? [extractedLid] : [];
+          const initialAliases = validName ? [validName] : [];
+          const [inserted] = await db.insert(advisors).values({
+            name: validName || `Asesor +${cleanPhone}`,
+            phone: cleanPhone,
+            normalizedPhone: cleanPhone,
+            whatsappLids: initialLids,
+            aliases: initialAliases,
+            sourceGroup: sourceGroup?.trim() || null,
+            agency: agency?.trim() || null,
+            notes: notes?.trim() || null
+          }).returning();
+          advisorId = inserted.id;
+        }
+      }
+    } else if (validName && extractedLid) {
+      const existing = await db.select().from(advisors).where(sql3`LOWER(${advisors.name}) = LOWER(${validName})`).limit(1).then((r) => r[0]);
+      if (existing) {
+        advisorId = existing.id;
+        const currentLids = Array.isArray(existing.whatsappLids) ? existing.whatsappLids : [];
+        if (!currentLids.includes(extractedLid)) {
+          await db.update(advisors).set({
+            whatsappLids: [...currentLids, extractedLid],
+            updatedAt: /* @__PURE__ */ new Date()
+          }).where(eq4(advisors.id, existing.id));
+        }
+      }
+    }
+  } catch (dbErr) {
+    console.error(`[AdvisorsCore] Error al persistir asesor en tabla advisors:`, dbErr?.message);
+  }
+  try {
+    if (cleanPhone) {
+      const openId = `wa-${cleanPhone}`;
+      const existingUser = await db.select().from(users).where(or(eq4(users.phone, cleanPhone), eq4(users.openId, openId))).limit(1).then((r) => r[0]);
+      if (existingUser) {
+        const uUpdates = { updatedAt: /* @__PURE__ */ new Date() };
+        if (validName && (isGenericName(existingUser.name) || validName.length > (existingUser.name?.length || 0))) {
+          uUpdates.name = validName;
+        }
+        if (!existingUser.phone || existingUser.phone !== cleanPhone) {
+          uUpdates.phone = cleanPhone;
+        }
+        if (Object.keys(uUpdates).length > 1) {
+          await db.update(users).set(uUpdates).where(eq4(users.id, existingUser.id));
+        }
+      } else if (extractedLid) {
+        const userByLid = await db.select().from(users).where(eq4(users.openId, `wa-${extractedLid}`)).limit(1).then((r) => r[0]);
+        if (userByLid) {
+          await db.update(users).set({
+            phone: cleanPhone,
+            name: validName || userByLid.name,
+            updatedAt: /* @__PURE__ */ new Date()
+          }).where(eq4(users.id, userByLid.id));
+        } else {
+          try {
+            await db.insert(users).values({
+              openId,
+              name: validName || `Asesor +${cleanPhone}`,
+              phone: cleanPhone,
+              role: "agent",
+              loginMethod: "whatsapp"
+            });
+          } catch (uInsErr) {
+          }
+        }
+      }
+    }
+  } catch (uErr) {
+    console.warn(`[AdvisorsCore] Advertencia sincronizando users:`, uErr?.message);
+  }
+  const finalEffectiveName = validName || `Asesor +${cleanPhone}`;
+  if (cleanPhone) {
+    brokerDirectoryCache.set(cleanPhone, { phone: cleanPhone, name: finalEffectiveName });
+    if (cleanPhone.startsWith("57") && cleanPhone.length === 12) {
+      brokerDirectoryCache.set(cleanPhone.substring(2), { phone: cleanPhone, name: finalEffectiveName });
+    }
+    if (validName) {
+      brokerDirectoryCache.set(validName.toLowerCase(), { phone: cleanPhone, name: validName });
+      brokerDirectoryCache.set(validName, { phone: cleanPhone, name: validName });
+    }
+    if (extractedLid) {
+      brokerDirectoryCache.set(extractedLid, { phone: cleanPhone, name: finalEffectiveName });
+    }
+    if (oldPhoneOrLid && oldPhoneOrLid !== cleanPhone) {
+      brokerDirectoryCache.set(oldPhoneOrLid, { phone: cleanPhone, name: finalEffectiveName });
+    }
+  }
+  let updatedProps = 0;
+  let updatedReqs = 0;
+  try {
+    const allProps = await db.select({
+      id: properties.id,
+      name: properties.nombreUsuarioWhatsapp,
+      phone: properties.idUsuarioWhatsapp
+    }).from(properties);
+    for (const p of allProps) {
+      const isSamePhone = cleanPhone && p.phone === cleanPhone;
+      const isSameLid = extractedLid && p.phone === extractedLid;
+      const isOldPhone = oldPhoneOrLid && p.phone === oldPhoneOrLid;
+      const isSameName = validName && p.name && !isGenericName(p.name) && p.name.trim().toLowerCase() === validName.toLowerCase();
+      if (!isSamePhone && !isSameLid && !isOldPhone && !isSameName) continue;
+      const pUpdates = {};
+      if (cleanPhone && p.phone !== cleanPhone) {
+        if (!p.phone || isLidIdentifier(p.phone) || p.phone === oldPhoneOrLid || isSameName) {
+          pUpdates.idUsuarioWhatsapp = cleanPhone;
+        }
+      }
+      if (validName && p.name !== validName) {
+        if (!p.name || isGenericName(p.name) || isSameLid || isSamePhone) {
+          pUpdates.nombreUsuarioWhatsapp = validName;
+        }
+      }
+      if (Object.keys(pUpdates).length > 0) {
+        await db.update(properties).set(pUpdates).where(eq4(properties.id, p.id));
+        updatedProps++;
+      }
+    }
+  } catch (propErr) {
+    console.error(`[AdvisorsCore] Error propagando en properties:`, propErr?.message);
+  }
+  try {
+    const allReqs = await db.select({
+      id: requirements.id,
+      name: requirements.nombreUsuarioWhatsapp,
+      phone: requirements.idUsuarioWhatsapp
+    }).from(requirements);
+    for (const r of allReqs) {
+      const isSamePhone = cleanPhone && r.phone === cleanPhone;
+      const isSameLid = extractedLid && r.phone === extractedLid;
+      const isOldPhone = oldPhoneOrLid && r.phone === oldPhoneOrLid;
+      const isSameName = validName && r.name && !isGenericName(r.name) && r.name.trim().toLowerCase() === validName.toLowerCase();
+      if (!isSamePhone && !isSameLid && !isOldPhone && !isSameName) continue;
+      const rUpdates = {};
+      if (cleanPhone && r.phone !== cleanPhone) {
+        if (!r.phone || isLidIdentifier(r.phone) || r.phone === oldPhoneOrLid || isSameName) {
+          rUpdates.idUsuarioWhatsapp = cleanPhone;
+        }
+      }
+      if (validName && r.name !== validName) {
+        if (!r.name || isGenericName(r.name) || isSameLid || isSamePhone) {
+          rUpdates.nombreUsuarioWhatsapp = validName;
+        }
+      }
+      if (Object.keys(rUpdates).length > 0) {
+        await db.update(requirements).set(rUpdates).where(eq4(requirements.id, r.id));
+        updatedReqs++;
+      }
+    }
+  } catch (reqErr) {
+    console.error(`[AdvisorsCore] Error propagando en requirements:`, reqErr?.message);
+  }
+  console.log(`[AdvisorsCore] \u{1F3DB}\uFE0F Asesor persistido para siempre: ${validName || "Sin Nombre"} (${cleanPhone || "Sin Celular"}). Propagado a ${updatedProps} props y ${updatedReqs} reqs.`);
+  return {
+    success: true,
+    advisorId,
+    cleanPhone,
+    validName,
+    updatedProps,
+    updatedReqs
+  };
+}
+async function initAdvisorsDirectory() {
+  let loadedCount = 0;
+  try {
+    const db = await getDb();
+    if (!db) return 0;
+    const allAdvisors = await db.select().from(advisors);
+    for (const adv of allAdvisors) {
+      if (adv.normalizedPhone) {
+        const cleanPhone = adv.normalizedPhone;
+        const name = adv.name || void 0;
+        brokerDirectoryCache.set(cleanPhone, { phone: cleanPhone, name });
+        if (cleanPhone.startsWith("57") && cleanPhone.length === 12) {
+          brokerDirectoryCache.set(cleanPhone.substring(2), { phone: cleanPhone, name });
+        }
+        if (name && !isGenericName(name)) {
+          brokerDirectoryCache.set(name.toLowerCase(), { phone: cleanPhone, name });
+          brokerDirectoryCache.set(name, { phone: cleanPhone, name });
+        }
+        if (Array.isArray(adv.whatsappLids)) {
+          for (const lid of adv.whatsappLids) {
+            if (lid && lid.trim() !== "") {
+              brokerDirectoryCache.set(lid.trim(), { phone: cleanPhone, name });
+            }
+          }
+        }
+        if (Array.isArray(adv.aliases)) {
+          for (const alias of adv.aliases) {
+            if (alias && alias.trim() !== "" && !isGenericName(alias)) {
+              brokerDirectoryCache.set(alias.trim().toLowerCase(), { phone: cleanPhone, name });
+            }
+          }
+        }
+        loadedCount++;
+      }
+    }
+    const knownProps = await db.select({
+      phone: properties.idUsuarioWhatsapp,
+      name: properties.nombreUsuarioWhatsapp,
+      group: properties.origenNombre
+    }).from(properties).where(sql3`${properties.idUsuarioWhatsapp} IS NOT NULL AND ${properties.idUsuarioWhatsapp} != ''`);
+    const knownReqs = await db.select({
+      phone: requirements.idUsuarioWhatsapp,
+      name: requirements.nombreUsuarioWhatsapp,
+      group: requirements.origenNombre
+    }).from(requirements).where(sql3`${requirements.idUsuarioWhatsapp} IS NOT NULL AND ${requirements.idUsuarioWhatsapp} != ''`);
+    for (const item of [...knownProps, ...knownReqs]) {
+      const cleanPhone = normalizeAdvisorPhone(item.phone);
+      const name = item.name && !isGenericName(item.name) ? item.name.trim() : null;
+      if (cleanPhone) {
+        if (!brokerDirectoryCache.has(cleanPhone)) {
+          brokerDirectoryCache.set(cleanPhone, { phone: cleanPhone, name: name || void 0 });
+        }
+        if (name) {
+          const lowerName = name.toLowerCase();
+          if (!brokerDirectoryCache.has(lowerName)) {
+            brokerDirectoryCache.set(lowerName, { phone: cleanPhone, name });
+          }
+        }
+      }
+    }
+    console.log(`[JanIA-Advisors] \u2705 Directorio permanente cargado (${loadedCount} asesores oficiales en PostgreSQL, ${brokerDirectoryCache.size} claves activas en memoria).`);
+  } catch (err) {
+    console.warn(`[JanIA-Advisors] Advertencia cargando directorio permanente:`, err?.message || err);
+  }
+  return loadedCount;
+}
+async function lookupAdvisor(identifier) {
+  const { lidOrUserId, phone, name } = identifier;
+  const syncFound = lookupAdvisorSync(phone || lidOrUserId, name);
+  if (syncFound) return { phone: syncFound.phone, name: syncFound.name || syncFound.phone };
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    if (lidOrUserId) {
+      const cleanLid = lidOrUserId.split("@")[0].replace(/\D/g, "");
+      const foundByLid = await db.select().from(advisors).where(sql3`${cleanLid} = ANY(${advisors.whatsappLids})`).limit(1).then((r) => r[0]);
+      if (foundByLid) {
+        brokerDirectoryCache.set(cleanLid, { phone: foundByLid.normalizedPhone, name: foundByLid.name });
+        return { phone: foundByLid.normalizedPhone, name: foundByLid.name };
+      }
+    }
+    if (name && !isGenericName(name)) {
+      const trimmedName = name.trim();
+      const foundByName = await db.select().from(advisors).where(or(
+        sql3`LOWER(${advisors.name}) = LOWER(${trimmedName})`,
+        sql3`${trimmedName} = ANY(${advisors.aliases})`
+      )).limit(1).then((r) => r[0]);
+      if (foundByName) {
+        brokerDirectoryCache.set(trimmedName.toLowerCase(), { phone: foundByName.normalizedPhone, name: foundByName.name });
+        return { phone: foundByName.normalizedPhone, name: foundByName.name };
+      }
+    }
+  } catch (err) {
+    console.warn(`[AdvisorsCore] Error consultando advisors en BD:`, err?.message);
+  }
+  return null;
+}
+var brokerDirectoryCache;
+var init_advisors = __esm({
+  "server/_core/advisors.ts"() {
+    "use strict";
+    init_db();
+    init_schema();
+    brokerDirectoryCache = /* @__PURE__ */ new Map();
+  }
+});
+
 // server/_core/janIA.ts
 var janIA_exports = {};
 __export(janIA_exports, {
@@ -7696,17 +8175,23 @@ __export(janIA_exports, {
   handleAmendmentUpdate: () => handleAmendmentUpdate,
   handleDetectedMatches: () => handleDetectedMatches,
   hasRealEstateTextKeyword: () => hasRealEstateTextKeyword,
+  initAdvisorsDirectory: () => initAdvisorsDirectory,
   initBrokerDirectory: () => initBrokerDirectory,
   isGenericName: () => isGenericName,
+  isLidIdentifier: () => isLidIdentifier,
   isOutsideWorkingHours: () => isOutsideWorkingHours,
   isPhoneNumberNotPrice: () => isPhoneNumberNotPrice,
   isSessionMuted: () => isSessionMuted,
   janiaResultSchema: () => janiaResultSchema,
+  lookupAdvisor: () => lookupAdvisor,
+  lookupAdvisorSync: () => lookupAdvisorSync,
   muteSession: () => muteSession,
+  normalizeAdvisorPhone: () => normalizeAdvisorPhone,
   normalizePhoneNumber: () => normalizePhoneNumber,
   obtenerCamposRequeridosYPreguntas: () => obtenerCamposRequeridosYPreguntas,
   parseColombianPriceOrBudget: () => parseColombianPriceOrBudget,
   parseSafeJSON: () => parseSafeJSON,
+  preserveVerifiedAdvisorContact: () => preserveVerifiedAdvisorContact,
   processCirculoMessage: () => processCirculoMessage,
   processConsultingMessage: () => processConsultingMessage,
   processWhatsAppMessage: () => processWhatsAppMessage,
@@ -7714,13 +8199,14 @@ __export(janIA_exports, {
   repairJSON: () => repairJSON,
   resolveContactPhone: () => resolveContactPhone,
   sanitizeResponseMarkdown: () => sanitizeResponseMarkdown,
+  saveOrUpdateAdvisor: () => saveOrUpdateAdvisor,
   scrapeUrlWithBypass: () => scrapeUrlWithBypass,
   splitMultiItemMessage: () => splitMultiItemMessage,
   splitMultiPropertyMessage: () => splitMultiPropertyMessage,
   translatePropertyType: () => translatePropertyType,
   translateTransactionType: () => translateTransactionType
 });
-import { eq as eq4, and as and2, sql as sql3, gte, desc } from "drizzle-orm";
+import { eq as eq5, and as and2, sql as sql4, gte, desc } from "drizzle-orm";
 import fs5 from "fs";
 import path5 from "path";
 import axios6 from "axios";
@@ -8648,7 +9134,7 @@ async function enrichLexiconFromText(rawText) {
         }).onConflictDoUpdate({
           target: inmobiliarioLexicon.terminoColoquial,
           set: {
-            frecuenciaUso: sql3`${inmobiliarioLexicon.frecuenciaUso} + 1`,
+            frecuenciaUso: sql4`${inmobiliarioLexicon.frecuenciaUso} + 1`,
             updatedAt: /* @__PURE__ */ new Date()
           }
         });
@@ -8668,7 +9154,7 @@ async function muteSession(userId, isMuted) {
     const cleanJid2 = cleanSessionJid(userId);
     const muteJid = `mute:${cleanJid2}`;
     if (!isMuted) {
-      await db.delete(pendingSessions).where(eq4(pendingSessions.jid, muteJid));
+      await db.delete(pendingSessions).where(eq5(pendingSessions.jid, muteJid));
       console.log(`[JanIA-Mute] Sesi\xF3n ${cleanJid2} desmarcada (eliminada de BD)`);
       return;
     }
@@ -8694,7 +9180,7 @@ async function isSessionMuted(userId) {
     const db = await getDb();
     if (!db) return false;
     const cleanJid2 = cleanSessionJid(userId);
-    const [existing] = await db.select().from(pendingSessions).where(eq4(pendingSessions.jid, `mute:${cleanJid2}`)).limit(1);
+    const [existing] = await db.select().from(pendingSessions).where(eq5(pendingSessions.jid, `mute:${cleanJid2}`)).limit(1);
     if (!existing) return false;
     return !!existing.sessionData?.isMuted;
   } catch (err) {
@@ -8707,7 +9193,7 @@ async function getPendingSession(userId) {
     const db = await getDb();
     if (!db) return null;
     const cleanJid2 = cleanSessionJid(userId);
-    const [session] = await db.select().from(pendingSessions).where(eq4(pendingSessions.jid, cleanJid2)).limit(1);
+    const [session] = await db.select().from(pendingSessions).where(eq5(pendingSessions.jid, cleanJid2)).limit(1);
     if (!session) return null;
     return session.sessionData;
   } catch (err) {
@@ -8720,7 +9206,7 @@ async function deletePendingSession(userId) {
     const db = await getDb();
     if (!db) return;
     const cleanJid2 = cleanSessionJid(userId);
-    await db.delete(pendingSessions).where(eq4(pendingSessions.jid, cleanJid2));
+    await db.delete(pendingSessions).where(eq5(pendingSessions.jid, cleanJid2));
   } catch (err) {
     console.error("[Database] Error deleting pending session:", err);
   }
@@ -8731,7 +9217,7 @@ async function resolveRealName(userId, userName) {
   try {
     const db = await getDb();
     if (db) {
-      const [u] = await db.select().from(users).where(eq4(users.phone, rawPhone)).limit(1);
+      const [u] = await db.select().from(users).where(eq5(users.phone, rawPhone)).limit(1);
       if (u && u.name && u.name.trim() !== "") {
         name = u.name;
       }
@@ -8747,10 +9233,10 @@ async function hasGreetedUserToday(userId) {
     if (!db) return false;
     const startOfToday = /* @__PURE__ */ new Date();
     startOfToday.setHours(0, 0, 0, 0);
-    const recentMsgs = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq4(messages.conversationId, conversations.id)).where(
+    const recentMsgs = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq5(messages.conversationId, conversations.id)).where(
       and2(
-        eq4(conversations.sessionId, userId),
-        eq4(messages.role, "janIA"),
+        eq5(conversations.sessionId, userId),
+        eq5(messages.role, "janIA"),
         gte(messages.createdAt, startOfToday)
       )
     ).limit(1);
@@ -8782,9 +9268,9 @@ async function getRecentChatHistory(userId, limit = 20) {
       role: messages.role,
       content: messages.content,
       createdAt: messages.createdAt
-    }).from(messages).innerJoin(conversations, eq4(messages.conversationId, conversations.id)).where(
+    }).from(messages).innerJoin(conversations, eq5(messages.conversationId, conversations.id)).where(
       and2(
-        eq4(conversations.sessionId, userId),
+        eq5(conversations.sessionId, userId),
         gte(messages.createdAt, fourDaysAgo)
       )
     ).orderBy(desc(messages.createdAt)).limit(limit);
@@ -8892,8 +9378,8 @@ async function getLiveStats() {
     } else {
       const db = await getDb();
       if (!db) return cachedLiveStatsText || "";
-      const [propCount] = await db.select({ total: sql3`count(*)::int` }).from(properties);
-      const [reqCount] = await db.select({ total: sql3`count(*)::int` }).from(requirements);
+      const [propCount] = await db.select({ total: sql4`count(*)::int` }).from(properties);
+      const [reqCount] = await db.select({ total: sql4`count(*)::int` }).from(requirements);
       stats = { prop_count: propCount?.total ?? 0, req_count: reqCount?.total ?? 0, match_count: 0, prop_today: 0, req_today: 0, match_today: 0 };
     }
     const now = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" });
@@ -9036,11 +9522,11 @@ async function handleDetectedMatches(matches, isProperty, savedRecord, userId, r
     try {
       const db = await getDb();
       if (db) {
-        const [su] = await db.select().from(users).where(eq4(users.phone, savedRawPhone)).limit(1);
+        const [su] = await db.select().from(users).where(eq5(users.phone, savedRawPhone)).limit(1);
         if (su && su.name && su.name.trim() !== "") {
           savedUserName = su.name;
         }
-        const [mu] = await db.select().from(users).where(eq4(users.phone, matchedRawPhone)).limit(1);
+        const [mu] = await db.select().from(users).where(eq5(users.phone, matchedRawPhone)).limit(1);
         if (mu && mu.name && mu.name.trim() !== "") {
           matchedUserName = mu.name;
         }
@@ -9124,7 +9610,7 @@ async function getTimeOfDayGreetingForUser(phone, realName, alreadyGreeted, isGr
   try {
     const db = await getDb();
     if (db) {
-      const [u] = await db.select().from(users).where(eq4(users.phone, phone)).limit(1);
+      const [u] = await db.select().from(users).where(eq5(users.phone, phone)).limit(1);
       if (u && u.name && u.name.trim() !== "") {
         nameToUse = u.name;
       }
@@ -9533,9 +10019,9 @@ __is_sub_message__`,
         const db = await getDb();
         if (!db) throw new Error("DB no disponible");
         const recentProps = await db.select({ id: properties.id, rawText: properties.rawText, origenNombre: properties.origenNombre }).from(properties).where(and2(
-          eq4(properties.idUsuarioWhatsapp, userId.split("@")[0]),
+          eq5(properties.idUsuarioWhatsapp, userId.split("@")[0]),
           gte(properties.createdAt, TEN_MIN_AGO),
-          eq4(properties.available, true)
+          eq5(properties.available, true)
         )).orderBy(desc(properties.createdAt)).limit(1);
         if (recentProps.length > 0) {
           const prop = recentProps[0];
@@ -9552,7 +10038,7 @@ ${soloUrl}`;
             origenId: groupJid || void 0,
             ...portalInfo?.portal ? { portal: portalInfo.portal } : {},
             ...portalInfo?.listingId ? { externalListingId: portalInfo.listingId } : {}
-          }).where(eq4(properties.id, prop.id));
+          }).where(eq5(properties.id, prop.id));
           console.log(`[JanIA-URLDiferida] \u2705 URL de portal enlazada retroactivamente a Prop #${prop.id} de ${userId}: ${soloUrl}`);
           return { classification: "INMUEBLE", response: "", reactionEmoji: "\u{1F517}", inserted: false };
         }
@@ -10737,63 +11223,33 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
     return { classification: "CONSULTA_GENERAL", response: "", mentions: [] };
   }
 }
-function isGenericName(n) {
-  if (!n) return true;
-  const lower = n.toLowerCase().trim();
-  return lower.startsWith("asesor +") || lower === "asesor" || lower === "nuevo asesor" || lower === "colega" || lower === "";
-}
-function extractColombianPhoneFromText(text2) {
-  if (!text2) return null;
-  const clean = text2.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0]/g, " ");
-  const waMatch = clean.match(/(?:wa\.me\/|api\.whatsapp\.com\/send\/?\?(?:[^&\s]*&)*phone=)(?:\+?57)?(3\d{9})/i);
-  if (waMatch) return "57" + waMatch[1];
-  const contactMatch = clean.match(/(?:tel[eé]fono|tel|celular|cel|whatsapp|wapp|wa|contacto|llamar|inf|info|informaci[oó]n|asesor|escribir|comunicarse|m[oó]vil)\s*:?\s*(?:\+?57\s*)?(3[\d\s.\-]{8,14})/i);
-  if (contactMatch) {
-    const digits = contactMatch[1].replace(/\D/g, "");
-    if (digits.length === 10 && digits.startsWith("3")) {
-      return "57" + digits;
-    }
-  }
-  const genericMatches = clean.matchAll(/(?:\+?57\s*)?(3\d{2}[\s.\-]?\d{3}[\s.\-]?\d{4})\b/g);
-  for (const m of genericMatches) {
-    const digits = m[1].replace(/\D/g, "");
-    if (digits.length === 10 && digits.startsWith("3")) {
-      const idx = m.index ?? 0;
-      const before = clean.substring(Math.max(0, idx - 15), idx).toLowerCase();
-      const after = clean.substring(idx + m[0].length, idx + m[0].length + 15).toLowerCase();
-      if (before.includes("$") || before.includes("precio") || before.includes("canon") || before.includes("ppto") || before.includes("presupuesto")) {
-        continue;
-      }
-      if (after.includes("millon") || after.includes("mil") || after.includes("m2") || after.includes("mts") || after.includes("pesos")) {
-        continue;
-      }
-      return "57" + digits;
-    }
-  }
-  return null;
-}
 function resolveContactPhone(userId, rawText, userName, extractedPhone) {
   const cleanUserId = userId.split(":")[0].split("@")[0];
-  const isLid = cleanUserId.length > 13 || cleanUserId.startsWith("1203");
+  const isLid = isLidIdentifier(cleanUserId) || userId.includes("@lid");
   const phoneFromText = extractColombianPhoneFromText(rawText);
   if (phoneFromText) {
     brokerDirectoryCache.set(cleanUserId, { phone: phoneFromText, name: userName });
-    if (userName) brokerDirectoryCache.set(userName, { phone: phoneFromText, name: userName });
+    if (userName && !isGenericName(userName)) brokerDirectoryCache.set(userName, { phone: phoneFromText, name: userName });
+    saveOrUpdateAdvisor({
+      phone: phoneFromText,
+      name: userName,
+      oldPhoneOrLid: cleanUserId
+    }).catch((err) => console.warn(`[AdvisorsCore] Auto-registro desde texto:`, err?.message));
     return phoneFromText;
   }
   if (extractedPhone) {
-    const cleanExt = extractedPhone.replace(/\D/g, "");
-    if (cleanExt.length === 10 && cleanExt.startsWith("3")) {
-      const p = "57" + cleanExt;
-      brokerDirectoryCache.set(cleanUserId, { phone: p, name: userName });
-      return p;
-    }
-    if (cleanExt.length === 12 && cleanExt.startsWith("573")) {
+    const cleanExt = normalizeAdvisorPhone(extractedPhone);
+    if (cleanExt) {
       brokerDirectoryCache.set(cleanUserId, { phone: cleanExt, name: userName });
+      saveOrUpdateAdvisor({
+        phone: cleanExt,
+        name: userName,
+        oldPhoneOrLid: cleanUserId
+      }).catch((err) => console.warn(`[AdvisorsCore] Auto-registro desde LLM:`, err?.message));
       return cleanExt;
     }
   }
-  const cached = brokerDirectoryCache.get(cleanUserId) || (userName ? brokerDirectoryCache.get(userName) : null);
+  const cached = lookupAdvisorSync(cleanUserId, userName);
   if (cached && cached.phone) {
     return cached.phone;
   }
@@ -10806,141 +11262,33 @@ function resolveContactPhone(userId, rawText, userName, extractedPhone) {
 }
 async function initBrokerDirectory() {
   try {
-    const db = await getDb();
-    if (!db) return;
-    const knownProps = await db.select({
-      phone: properties.idUsuarioWhatsapp,
-      name: properties.nombreUsuarioWhatsapp
-    }).from(properties);
-    const knownReqs = await db.select({
-      phone: requirements.idUsuarioWhatsapp,
-      name: requirements.nombreUsuarioWhatsapp
-    }).from(requirements);
-    const knownUsers = await db.select({
-      openId: users.openId,
-      phone: users.phone,
-      name: users.name
-    }).from(users);
-    for (const item of [...knownProps, ...knownReqs]) {
-      if (item.phone && (item.phone.startsWith("573") || item.phone.startsWith("3")) && item.phone.length <= 12) {
-        const cleanPhone = item.phone.startsWith("3") && item.phone.length === 10 ? `57${item.phone}` : item.phone;
-        brokerDirectoryCache.set(item.phone, { phone: cleanPhone, name: item.name || void 0 });
-        if (item.name && !isGenericName(item.name)) {
-          brokerDirectoryCache.set(item.name, { phone: cleanPhone, name: item.name });
-        }
-      }
-    }
-    for (const u of knownUsers) {
-      if (u.phone && (u.phone.startsWith("573") || u.phone.startsWith("3")) && u.phone.length <= 12) {
-        const cleanPhone = u.phone.startsWith("3") && u.phone.length === 10 ? `57${u.phone}` : u.phone;
-        if (u.openId && u.openId.startsWith("wa-")) {
-          const lidOrId = u.openId.replace("wa-", "");
-          brokerDirectoryCache.set(lidOrId, { phone: cleanPhone, name: u.name || void 0 });
-        }
-        if (u.name && !isGenericName(u.name)) {
-          brokerDirectoryCache.set(u.name, { phone: cleanPhone, name: u.name });
-        }
-      }
-    }
-    console.log(`[JanIA-Directory] \u2705 Directorio de brokers cargado en memoria (${brokerDirectoryCache.size} entradas conocidas).`);
+    await initAdvisorsDirectory();
   } catch (err) {
     console.warn(`[JanIA-Directory] Advertencia cargando directorio inicial:`, err?.message || err);
   }
 }
 async function propagateBrokerPhoneAcrossAllListings(params) {
-  const { rawPhoneOrText, brokerName, oldPhoneOrLid } = params;
-  let cleanPhone = null;
-  if (rawPhoneOrText) {
-    cleanPhone = extractColombianPhoneFromText(rawPhoneOrText);
-    if (!cleanPhone) {
-      const digits = rawPhoneOrText.replace(/\D/g, "");
-      if (digits.length === 10 && digits.startsWith("3")) {
-        cleanPhone = "57" + digits;
-      } else if (digits.length === 12 && digits.startsWith("573")) {
-        cleanPhone = digits;
-      }
-    }
-  }
-  const validBrokerName = brokerName && !isGenericName(brokerName) ? brokerName.trim() : null;
-  if (!cleanPhone && !validBrokerName) {
-    return { updatedProps: 0, updatedReqs: 0, cleanPhone: null };
-  }
-  const db = await getDb();
-  if (!db) return { updatedProps: 0, updatedReqs: 0, cleanPhone };
-  if (cleanPhone && validBrokerName) {
-    brokerDirectoryCache.set(validBrokerName.toLowerCase(), { phone: cleanPhone, name: validBrokerName });
-    brokerDirectoryCache.set(validBrokerName, { phone: cleanPhone, name: validBrokerName });
-    brokerDirectoryCache.set(cleanPhone, { phone: cleanPhone, name: validBrokerName });
-  } else if (cleanPhone) {
-    brokerDirectoryCache.set(cleanPhone, { phone: cleanPhone, name: validBrokerName || void 0 });
-  }
-  if (oldPhoneOrLid && cleanPhone) {
-    brokerDirectoryCache.set(oldPhoneOrLid, { phone: cleanPhone, name: validBrokerName || void 0 });
-  }
-  let updatedProps = 0;
-  let updatedReqs = 0;
-  const allProps = await db.select({
-    id: properties.id,
-    name: properties.nombreUsuarioWhatsapp,
-    phone: properties.idUsuarioWhatsapp
-  }).from(properties);
-  for (const p of allProps) {
-    const isSameName = validBrokerName && p.name && !isGenericName(p.name) && (p.name.trim().toLowerCase() === validBrokerName.toLowerCase() || p.name.trim().toLowerCase().includes(validBrokerName.toLowerCase()) || validBrokerName.toLowerCase().includes(p.name.trim().toLowerCase()));
-    const isSamePhone = cleanPhone && p.phone === cleanPhone;
-    const isSameLid = oldPhoneOrLid && p.phone === oldPhoneOrLid;
-    if (!isSameLid && !isSameName && !isSamePhone) continue;
-    const updates = {};
-    if (cleanPhone && p.phone !== cleanPhone) {
-      if (!p.phone || p.phone.length > 12 || p.phone.startsWith("1203") || p.phone.includes("@") || p.phone === oldPhoneOrLid || isSameName) {
-        updates.idUsuarioWhatsapp = cleanPhone;
-      }
-    }
-    if (validBrokerName && p.name !== validBrokerName) {
-      if (!p.name || isGenericName(p.name) || isSameLid || isSamePhone) {
-        updates.nombreUsuarioWhatsapp = validBrokerName;
-      }
-    }
-    if (Object.keys(updates).length > 0) {
-      await db.update(properties).set(updates).where(eq4(properties.id, p.id));
-      updatedProps++;
-    }
-  }
-  const allReqs = await db.select({
-    id: requirements.id,
-    name: requirements.nombreUsuarioWhatsapp,
-    phone: requirements.idUsuarioWhatsapp
-  }).from(requirements);
-  for (const r of allReqs) {
-    const isSameName = validBrokerName && r.name && !isGenericName(r.name) && (r.name.trim().toLowerCase() === validBrokerName.toLowerCase() || r.name.trim().toLowerCase().includes(validBrokerName.toLowerCase()) || validBrokerName.toLowerCase().includes(r.name.trim().toLowerCase()));
-    const isSamePhone = cleanPhone && r.phone === cleanPhone;
-    const isSameLid = oldPhoneOrLid && r.phone === oldPhoneOrLid;
-    if (!isSameLid && !isSameName && !isSamePhone) continue;
-    const updates = {};
-    if (cleanPhone && r.phone !== cleanPhone) {
-      if (!r.phone || r.phone.length > 12 || r.phone.startsWith("1203") || r.phone.includes("@") || r.phone === oldPhoneOrLid || isSameName) {
-        updates.idUsuarioWhatsapp = cleanPhone;
-      }
-    }
-    if (validBrokerName && r.name !== validBrokerName) {
-      if (!r.name || isGenericName(r.name) || isSameLid || isSamePhone) {
-        updates.nombreUsuarioWhatsapp = validBrokerName;
-      }
-    }
-    if (Object.keys(updates).length > 0) {
-      await db.update(requirements).set(updates).where(eq4(requirements.id, r.id));
-      updatedReqs++;
-    }
-  }
-  console.log(`[JanIA-Propagate] \u{1F680} Broker ${validBrokerName || "Sin Nombre"} (+${cleanPhone || "Sin Celular"}) propagado a ${updatedProps} propiedades y ${updatedReqs} requerimientos en Supabase.`);
-  return { updatedProps, updatedReqs, cleanPhone };
+  const result = await saveOrUpdateAdvisor({
+    phone: params.rawPhoneOrText,
+    name: params.brokerName,
+    oldPhoneOrLid: params.oldPhoneOrLid,
+    sourceGroup: params.sourceGroup,
+    agency: params.agency,
+    notes: params.notes
+  });
+  return {
+    updatedProps: result.updatedProps,
+    updatedReqs: result.updatedReqs,
+    cleanPhone: result.cleanPhone
+  };
 }
 async function findOrCreateUserByPhone(phone, realName) {
   const db = await getDb();
   if (!db) return null;
   const cleanPhone = phone.split(":")[0];
-  let user = await db.select().from(users).where(eq4(users.phone, cleanPhone)).limit(1).then((r) => r[0]);
+  let user = await db.select().from(users).where(eq5(users.phone, cleanPhone)).limit(1).then((r) => r[0]);
   if (!user) {
-    user = await db.select().from(users).where(eq4(users.openId, `wa-${cleanPhone}`)).limit(1).then((r) => r[0]);
+    user = await db.select().from(users).where(eq5(users.openId, `wa-${cleanPhone}`)).limit(1).then((r) => r[0]);
   }
   if (!user) {
     const openId = `wa-${cleanPhone}`;
@@ -10957,7 +11305,7 @@ async function findOrCreateUserByPhone(phone, realName) {
     } catch (insertErr) {
       if (insertErr.code === "23505" || String(insertErr).includes("unique constraint")) {
         console.log(`[JanIA-findOrCreateUserByPhone] Colisi\xF3n concurrente detectada para ${cleanPhone}. Re-buscando usuario...`);
-        user = await db.select().from(users).where(eq4(users.openId, openId)).limit(1).then((r) => r[0]);
+        user = await db.select().from(users).where(eq5(users.openId, openId)).limit(1).then((r) => r[0]);
       } else {
         throw insertErr;
       }
@@ -10965,7 +11313,7 @@ async function findOrCreateUserByPhone(phone, realName) {
   } else {
     if (realName && !isGenericName(realName) && isGenericName(user.name)) {
       console.log(`[JanIA-findOrCreateUserByPhone] Actualizando nombre de usuario para ID ${user.id} a ${realName}`);
-      const [updatedUser] = await db.update(users).set({ name: realName }).where(eq4(users.id, user.id)).returning();
+      const [updatedUser] = await db.update(users).set({ name: realName }).where(eq5(users.id, user.id)).returning();
       user = updatedUser;
     }
   }
@@ -11142,7 +11490,7 @@ async function handleAmendmentUpdate(userId, text2) {
   if (!isAmendmentTrigger) return false;
   const fallbackData = extractFallbackDataFromText(text2);
   const lastReqs = await db.select().from(requirements).where(and2(
-    eq4(requirements.idUsuarioWhatsapp, rawPhone),
+    eq5(requirements.idUsuarioWhatsapp, rawPhone),
     gte(requirements.createdAt, twoHoursAgo)
   )).orderBy(desc(requirements.createdAt)).limit(1);
   if (lastReqs.length > 0) {
@@ -11165,7 +11513,7 @@ async function handleAmendmentUpdate(userId, text2) {
     }
     if (Object.keys(updates).length > 0) {
       updates.updatedAt = /* @__PURE__ */ new Date();
-      await db.update(requirements).set(updates).where(eq4(requirements.id, req.id));
+      await db.update(requirements).set(updates).where(eq5(requirements.id, req.id));
       console.log(`[JANIA-AMENDMENT] \u2705 Requerimiento #${req.id} actualizado silenciosamente en BD (Ventana 2h):`, updates);
       const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
       setImmediate(() => {
@@ -11175,7 +11523,7 @@ async function handleAmendmentUpdate(userId, text2) {
     }
   }
   const lastProps = await db.select().from(properties).where(and2(
-    eq4(properties.idUsuarioWhatsapp, rawPhone),
+    eq5(properties.idUsuarioWhatsapp, rawPhone),
     gte(properties.createdAt, twoHoursAgo)
   )).orderBy(desc(properties.createdAt)).limit(1);
   if (lastProps.length > 0) {
@@ -11198,7 +11546,7 @@ async function handleAmendmentUpdate(userId, text2) {
     }
     if (Object.keys(updates).length > 0) {
       updates.updatedAt = /* @__PURE__ */ new Date();
-      await db.update(properties).set(updates).where(eq4(properties.id, prop.id));
+      await db.update(properties).set(updates).where(eq5(properties.id, prop.id));
       console.log(`[JANIA-AMENDMENT] \u2705 Propiedad #${prop.id} actualizada silenciosamente en BD (Ventana 2h):`, updates);
       const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
       setImmediate(() => {
@@ -11506,36 +11854,36 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   if (canonicalExternalId) {
     existing = await db.select().from(properties).where(
       and2(
-        eq4(properties.canonicalExternalId, canonicalExternalId),
-        eq4(properties.available, true)
+        eq5(properties.canonicalExternalId, canonicalExternalId),
+        eq5(properties.available, true)
       )
     ).limit(1);
   }
   if (existing.length === 0 && finalInsertData.matriculaInmobiliaria) {
     existing = await db.select().from(properties).where(
       and2(
-        eq4(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
-        eq4(properties.available, true)
+        eq5(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
+        eq5(properties.available, true)
       )
     ).limit(1);
   }
   if (existing.length === 0 && finalInsertData.rawText && finalInsertData.rawText.trim().length > 25) {
     existing = await db.select().from(properties).where(
       and2(
-        eq4(properties.rawText, finalInsertData.rawText.trim()),
-        eq4(properties.available, true)
+        eq5(properties.rawText, finalInsertData.rawText.trim()),
+        eq5(properties.available, true)
       )
     ).limit(1);
   }
   if (existing.length === 0) {
     existing = await db.select().from(properties).where(
       and2(
-        eq4(properties.idUsuarioWhatsapp, rawPhone),
-        eq4(properties.propertyType, finalInsertData.propertyType),
-        eq4(properties.transactionType, finalInsertData.transactionType),
-        eq4(properties.city, finalInsertData.city),
-        eq4(properties.zone, finalInsertData.zone),
-        eq4(properties.available, true)
+        eq5(properties.idUsuarioWhatsapp, rawPhone),
+        eq5(properties.propertyType, finalInsertData.propertyType),
+        eq5(properties.transactionType, finalInsertData.transactionType),
+        eq5(properties.city, finalInsertData.city),
+        eq5(properties.zone, finalInsertData.zone),
+        eq5(properties.available, true)
       )
     ).limit(1);
   }
@@ -11545,6 +11893,12 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
     calificacion: calif
   };
   if (existing.length > 0) {
+    const preservedContact = preserveVerifiedAdvisorContact(
+      existing[0].idUsuarioWhatsapp,
+      existing[0].nombreUsuarioWhatsapp,
+      insertDataWithCalif.idUsuarioWhatsapp,
+      insertDataWithCalif.nombreUsuarioWhatsapp
+    );
     const updatedCount = (existing[0].republicacionesCount || 0) + 1;
     const [updated] = await db.update(properties).set({
       price: insertDataWithCalif.price,
@@ -11553,16 +11907,17 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
       images: finalImages.length > 0 ? finalImages : existing[0].images,
       origenTipo: insertDataWithCalif.origenTipo,
       origenId: insertDataWithCalif.origenId,
-      origenNombre: insertDataWithCalif.origenNombre,
-      idUsuarioWhatsapp: insertDataWithCalif.idUsuarioWhatsapp,
+      origenNombre: insertDataWithCalif.origenNombre || existing[0].origenNombre,
+      idUsuarioWhatsapp: preservedContact.effectivePhone || existing[0].idUsuarioWhatsapp,
+      nombreUsuarioWhatsapp: preservedContact.effectiveName || existing[0].nombreUsuarioWhatsapp,
       fechaUltimaPublicacion: getColombiaNow(),
       updatedAt: /* @__PURE__ */ new Date(),
       republicacionesCount: updatedCount,
       estadoComercial: "REPUBLICADO",
       ultimaActividad: "REPUBLICACI\xD3N",
       vigenciaIa: "VIGENTE"
-    }).where(eq4(properties.id, existing[0].id)).returning();
-    console.log(`[Deduplication] Propiedad existente detectada (${canonicalExternalId || "Comercial"}). Actualizando datos (ID: ${updated.id}, Republicado: ${updatedCount})`);
+    }).where(eq5(properties.id, existing[0].id)).returning();
+    console.log(`[Deduplication] Propiedad existente detectada (${canonicalExternalId || "Comercial"}). Actualizando datos (ID: ${updated.id}, Republicado: ${updatedCount}, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
     try {
       await db.insert(propertyPublicationHistory).values({
         propertyId: existing[0].id,
@@ -11832,20 +12187,20 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
   if (insertData.rawText && insertData.rawText.trim().length > 25) {
     existing = await db.select().from(requirements).where(
       and2(
-        eq4(requirements.rawText, insertData.rawText.trim()),
-        eq4(requirements.status, "active")
+        eq5(requirements.rawText, insertData.rawText.trim()),
+        eq5(requirements.status, "active")
       )
     ).limit(1);
   }
   if (existing.length === 0) {
     existing = await db.select().from(requirements).where(
       and2(
-        eq4(requirements.idUsuarioWhatsapp, rawPhone),
-        eq4(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
-        eq4(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
-        eq4(requirements.ciudadDeseada, insertData.ciudadDeseada),
-        eq4(requirements.zonaDeseada, insertData.zonaDeseada),
-        eq4(requirements.status, "active")
+        eq5(requirements.idUsuarioWhatsapp, rawPhone),
+        eq5(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
+        eq5(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
+        eq5(requirements.ciudadDeseada, insertData.ciudadDeseada),
+        eq5(requirements.zonaDeseada, insertData.zonaDeseada),
+        eq5(requirements.status, "active")
       )
     ).limit(1);
   }
@@ -11855,15 +12210,23 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
     calificacion: calif
   };
   if (existing.length > 0) {
+    const preservedContact = preserveVerifiedAdvisorContact(
+      existing[0].idUsuarioWhatsapp,
+      existing[0].nombreUsuarioWhatsapp,
+      insertDataWithCalif.idUsuarioWhatsapp,
+      insertDataWithCalif.nombreUsuarioWhatsapp
+    );
     const { fechaExtraccion: _ignored, ...updateFields } = insertDataWithCalif;
     const existingAgeDays = existing[0].createdAt ? Math.max(0, Math.floor((Date.now() - new Date(existing[0].createdAt).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
     const targetStatus = existingAgeDays > 10 ? "expired" : existing[0].status || "active";
     const [updated] = await db.update(requirements).set({
       ...updateFields,
+      idUsuarioWhatsapp: preservedContact.effectivePhone || existing[0].idUsuarioWhatsapp,
+      nombreUsuarioWhatsapp: preservedContact.effectiveName || existing[0].nombreUsuarioWhatsapp,
       status: targetStatus,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq4(requirements.id, existing[0].id)).returning();
-    console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id}, Status: ${targetStatus}, Antig\xFCedad: ${existingAgeDays}d)`);
+    }).where(eq5(requirements.id, existing[0].id)).returning();
+    console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id}, Status: ${targetStatus}, Antig\xFCedad: ${existingAgeDays}d, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
     if (targetStatus !== "expired") {
       findMatchesForRequirement(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
     }
@@ -12416,7 +12779,7 @@ function sanitizeResponseMarkdown(text2) {
   if (!text2) return "";
   return text2.replace(/\*\*/g, "*");
 }
-var janiaResultSchema, COMMON_FIRST_NAMES, fallbackDataCache, KNOWN_BARRIOS_SORTED_ITEMS, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, promptCache, JANIA_PROMPT, splitMultiPropertyMessage, brokerDirectoryCache, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, consultingConversationHistory, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
+var janiaResultSchema, COMMON_FIRST_NAMES, fallbackDataCache, KNOWN_BARRIOS_SORTED_ITEMS, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, promptCache, JANIA_PROMPT, splitMultiPropertyMessage, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, consultingConversationHistory, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
 var init_janIA = __esm({
   "server/_core/janIA.ts"() {
     "use strict";
@@ -12432,6 +12795,7 @@ var init_janIA = __esm({
     init_storage();
     init_scraper();
     init_nameAndGenderResolver();
+    init_advisors();
     janiaResultSchema = {
       type: "OBJECT",
       properties: {
@@ -12874,7 +13238,6 @@ Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales
 }
 `;
     splitMultiPropertyMessage = splitMultiItemMessage;
-    brokerDirectoryCache = /* @__PURE__ */ new Map();
     setTimeout(() => {
       initBrokerDirectory().catch(() => {
       });
@@ -13593,7 +13956,7 @@ import _baileys, {
 import qrcodeTerminal from "qrcode-terminal";
 import fs7 from "fs";
 import path7 from "path";
-import { eq as eq6 } from "drizzle-orm";
+import { eq as eq7 } from "drizzle-orm";
 import QRCode from "qrcode";
 function getWASocket() {
   if (typeof _baileys === "function") return _baileys;
@@ -15031,7 +15394,7 @@ ${result.response}`);
         try {
           const db = await getDb();
           if (!db) return;
-          let conv = await db.select().from(conversations).where(eq6(conversations.sessionId, senderId)).limit(1);
+          let conv = await db.select().from(conversations).where(eq7(conversations.sessionId, senderId)).limit(1);
           let conversationId;
           if (conv.length === 0) {
             const [newConv] = await db.insert(conversations).values({
@@ -15045,7 +15408,7 @@ ${result.response}`);
             await db.update(conversations).set({
               lastMessage: content.slice(0, 150),
               updatedAt: /* @__PURE__ */ new Date()
-            }).where(eq6(conversations.id, conversationId));
+            }).where(eq7(conversations.id, conversationId));
           }
           await db.insert(messages).values({
             conversationId,
@@ -15112,13 +15475,13 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
             await this.queuedSend(senderId, "\u26A0\uFE0F El sistema de base de datos no est\xE1 disponible en este momento. Int\xE9ntalo m\xE1s tarde.");
             return;
           }
-          const [match] = await db.select().from(propertyMatches).where(eq6(propertyMatches.id, matchId)).limit(1);
+          const [match] = await db.select().from(propertyMatches).where(eq7(propertyMatches.id, matchId)).limit(1);
           if (!match) {
             await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ninguna coincidencia registrada con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
             return;
           }
-          const [prop] = await db.select().from(properties).where(eq6(properties.id, match.propertyId)).limit(1);
-          const [req] = await db.select().from(requirements).where(eq6(requirements.id, match.requirementId)).limit(1);
+          const [prop] = await db.select().from(properties).where(eq7(properties.id, match.propertyId)).limit(1);
+          const [req] = await db.select().from(requirements).where(eq7(requirements.id, match.requirementId)).limit(1);
           if (!prop || !req) {
             await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de esta coincidencia.");
             return;
@@ -15133,7 +15496,7 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
             return;
           }
           if (decision === "no") {
-            await db.update(propertyMatches).set({ status: "rejected" }).where(eq6(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq7(propertyMatches.id, matchId));
             await this.queuedSend(senderId, `Entendido. He marcado la coincidencia *#M${matchId}* como cancelada. No se compartir\xE1n tus datos de contacto.`);
             await this.logToDb(senderId, "janIA", `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
             const otherJid = isOwner ? seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@s.whatsapp.net` : ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@s.whatsapp.net`;
@@ -15147,19 +15510,19 @@ Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
           if (isSeeker) {
             updateFields.seekerConfirmed = true;
           }
-          await db.update(propertyMatches).set(updateFields).where(eq6(propertyMatches.id, matchId));
-          const [updatedMatch] = await db.select().from(propertyMatches).where(eq6(propertyMatches.id, matchId)).limit(1);
+          await db.update(propertyMatches).set(updateFields).where(eq7(propertyMatches.id, matchId));
+          const [updatedMatch] = await db.select().from(propertyMatches).where(eq7(propertyMatches.id, matchId)).limit(1);
           if (updatedMatch.ownerConfirmed && updatedMatch.seekerConfirmed) {
-            await db.update(propertyMatches).set({ status: "interested" }).where(eq6(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "interested" }).where(eq7(propertyMatches.id, matchId));
             let ownerName = "Oferente";
             let seekerName = "Interesado";
             try {
-              const [ownerUser] = await db.select().from(users).where(eq6(users.phone, ownerPhone)).limit(1);
+              const [ownerUser] = await db.select().from(users).where(eq7(users.phone, ownerPhone)).limit(1);
               if (ownerUser && ownerUser.name) ownerName = ownerUser.name;
             } catch {
             }
             try {
-              const [seekerUser] = await db.select().from(users).where(eq6(users.phone, seekerPhone)).limit(1);
+              const [seekerUser] = await db.select().from(users).where(eq7(users.phone, seekerPhone)).limit(1);
               if (seekerUser && seekerUser.name) seekerName = seekerUser.name;
             } catch {
             }
@@ -15645,7 +16008,7 @@ __export(nightlyRematch_exports, {
   recalculateAndCleanupMatches: () => recalculateAndCleanupMatches,
   runNightlyRematch: () => runNightlyRematch
 });
-import { and as and5, eq as eq7, sql as sql5 } from "drizzle-orm";
+import { and as and5, eq as eq8, sql as sql6 } from "drizzle-orm";
 async function runNightlyRematch() {
   if (isRematchRunning) {
     console.log("[NIGHTLY-REMATCH] Ya hay una ejecuci\xF3n en curso, saltando...");
@@ -15660,11 +16023,11 @@ async function runNightlyRematch() {
     return;
   }
   try {
-    await db.execute(sql5`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND "createdAt" < NOW() - INTERVAL '10 days'`);
-    await db.execute(sql5`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE "createdAt" < NOW() - INTERVAL '10 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '10 days')`);
+    await db.execute(sql6`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND "createdAt" < NOW() - INTERVAL '10 days'`);
+    await db.execute(sql6`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE "createdAt" < NOW() - INTERVAL '10 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '10 days')`);
     const [activeReqs, availProps] = await Promise.all([
-      db.select().from(requirements).where(eq7(requirements.status, "active")),
-      db.select().from(properties).where(eq7(properties.available, true))
+      db.select().from(requirements).where(eq8(requirements.status, "active")),
+      db.select().from(properties).where(eq8(properties.available, true))
     ]);
     console.log(
       `[NIGHTLY-REMATCH] ${activeReqs.length} reqs \xD7 ${availProps.length} props = ${activeReqs.length * availProps.length} pares a evaluar`
@@ -15724,8 +16087,8 @@ async function runNightlyRematch() {
             try {
               await db.delete(propertyMatches).where(
                 and5(
-                  eq7(propertyMatches.requirementId, req.id),
-                  eq7(propertyMatches.propertyId, prop.id)
+                  eq8(propertyMatches.requirementId, req.id),
+                  eq8(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -15740,8 +16103,8 @@ async function runNightlyRematch() {
             try {
               await db.delete(propertyMatches).where(
                 and5(
-                  eq7(propertyMatches.requirementId, req.id),
-                  eq7(propertyMatches.propertyId, prop.id)
+                  eq8(propertyMatches.requirementId, req.id),
+                  eq8(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -15755,8 +16118,8 @@ async function runNightlyRematch() {
             try {
               await db.delete(propertyMatches).where(
                 and5(
-                  eq7(propertyMatches.requirementId, req.id),
-                  eq7(propertyMatches.propertyId, prop.id)
+                  eq8(propertyMatches.requirementId, req.id),
+                  eq8(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -15768,8 +16131,8 @@ async function runNightlyRematch() {
             try {
               await db.delete(propertyMatches).where(
                 and5(
-                  eq7(propertyMatches.requirementId, req.id),
-                  eq7(propertyMatches.propertyId, prop.id)
+                  eq8(propertyMatches.requirementId, req.id),
+                  eq8(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -15781,8 +16144,8 @@ async function runNightlyRematch() {
             try {
               await db.delete(propertyMatches).where(
                 and5(
-                  eq7(propertyMatches.requirementId, req.id),
-                  eq7(propertyMatches.propertyId, prop.id)
+                  eq8(propertyMatches.requirementId, req.id),
+                  eq8(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -15810,8 +16173,8 @@ async function runNightlyRematch() {
             try {
               await db.delete(propertyMatches).where(
                 and5(
-                  eq7(propertyMatches.requirementId, req.id),
-                  eq7(propertyMatches.propertyId, prop.id)
+                  eq8(propertyMatches.requirementId, req.id),
+                  eq8(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -15821,8 +16184,8 @@ async function runNightlyRematch() {
           seenPairs.add(pairKey);
           const existing = await db.select({ id: propertyMatches.id, matchScore: propertyMatches.matchScore }).from(propertyMatches).where(
             and5(
-              eq7(propertyMatches.requirementId, req.id),
-              eq7(propertyMatches.propertyId, prop.id)
+              eq8(propertyMatches.requirementId, req.id),
+              eq8(propertyMatches.propertyId, prop.id)
             )
           ).limit(1);
           if (existing.length === 0) {
@@ -15842,7 +16205,7 @@ async function runNightlyRematch() {
               await db.update(propertyMatches).set({
                 matchScore: exp.score.toFixed(2),
                 matchReason: `VECY DOCTRINAL v28.0: ${exp.score.toFixed(0)}/100`
-              }).where(eq7(propertyMatches.id, existing[0].id));
+              }).where(eq8(propertyMatches.id, existing[0].id));
               updatedCount++;
             }
           }
@@ -15889,14 +16252,14 @@ async function recalculateAndCleanupMatches() {
     let updatedCount = 0;
     for (const m of allMatches) {
       if (rejectedPairsSet.has(`${m.propertyId}_${m.requirementId}`)) {
-        await db.delete(propertyMatches).where(eq7(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq8(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
-      const [prop] = await db.select().from(properties).where(eq7(properties.id, m.propertyId)).limit(1);
-      const [req] = await db.select().from(requirements).where(eq7(requirements.id, m.requirementId)).limit(1);
+      const [prop] = await db.select().from(properties).where(eq8(properties.id, m.propertyId)).limit(1);
+      const [req] = await db.select().from(requirements).where(eq8(requirements.id, m.requirementId)).limit(1);
       if (!prop || !req) {
-        await db.delete(propertyMatches).where(eq7(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq8(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
@@ -15909,12 +16272,12 @@ async function recalculateAndCleanupMatches() {
       const newScore = exp ? exp.score : 0;
       const hasBlockers = exp ? exp.blockers.length > 0 : true;
       if (newScore < 80 || hasBlockers) {
-        await db.delete(propertyMatches).where(eq7(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq8(propertyMatches.id, m.id));
         deletedCount++;
       } else {
         const storedScore = parseFloat(String(m.matchScore));
         if (Math.abs(storedScore - newScore) > 0.5) {
-          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado v28.0: ${newScore.toFixed(0)}/100` }).where(eq7(propertyMatches.id, m.id));
+          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado v28.0: ${newScore.toFixed(0)}/100` }).where(eq8(propertyMatches.id, m.id));
           updatedCount++;
         }
       }
@@ -15970,7 +16333,7 @@ import cron from "node-cron";
 import path8 from "path";
 import fs8 from "fs";
 import { fileURLToPath } from "url";
-import { gte as gte2, and as and6, eq as eq8, sql as sql6, desc as desc3 } from "drizzle-orm";
+import { gte as gte2, and as and6, eq as eq9, sql as sql7, desc as desc3 } from "drizzle-orm";
 function getBogotaDateString(d = /* @__PURE__ */ new Date()) {
   return d.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
 }
@@ -15984,8 +16347,8 @@ async function acquireBroadcastLock(targetGroup, tipCategory, dateBogota, force 
     if (!force) {
       const existing = await db.select().from(dailyBroadcasts).where(
         and6(
-          eq8(dailyBroadcasts.dateBogota, dateBogota),
-          eq8(dailyBroadcasts.targetGroup, targetGroup)
+          eq9(dailyBroadcasts.dateBogota, dateBogota),
+          eq9(dailyBroadcasts.targetGroup, targetGroup)
         )
       ).limit(1);
       if (existing.length > 0) {
@@ -16017,7 +16380,7 @@ async function acquireBroadcastLock(targetGroup, tipCategory, dateBogota, force 
       set: {
         tipCategory,
         status: "in_progress",
-        createdAt: sql6`NOW()`
+        createdAt: sql7`NOW()`
       }
     }).returning();
     return { allowed: true, broadcastId: inserted?.id };
@@ -16041,7 +16404,7 @@ async function completeBroadcast(broadcastId, data) {
       voiceText: data.voiceText,
       captionText: data.captionText,
       status: "completed"
-    }).where(eq8(dailyBroadcasts.id, broadcastId));
+    }).where(eq9(dailyBroadcasts.id, broadcastId));
     console.log(`[CRON-PERSISTENCE] \u2705 Difusi\xF3n #${broadcastId} asentada con \xE9xito en PostgreSQL: "${data.topicTitle}".`);
   } catch (err) {
     console.error(`[CRON-PERSISTENCE] Error completando difusi\xF3n #${broadcastId}:`, err?.message || err);
@@ -16055,7 +16418,7 @@ async function failBroadcast(broadcastId, reason) {
     await db.update(dailyBroadcasts).set({
       topicTitle: `Error: ${reason}`,
       status: "failed"
-    }).where(eq8(dailyBroadcasts.id, broadcastId));
+    }).where(eq9(dailyBroadcasts.id, broadcastId));
   } catch (err) {
     console.warn(`[CRON-PERSISTENCE] Error marcando fallo en difusi\xF3n #${broadcastId}:`, err?.message);
   }
@@ -16067,7 +16430,7 @@ async function getRecentBroadcastTopics(limit = 30) {
     const rows = await db.select({
       dateBogota: dailyBroadcasts.dateBogota,
       topicTitle: dailyBroadcasts.topicTitle
-    }).from(dailyBroadcasts).where(eq8(dailyBroadcasts.status, "completed")).orderBy(desc3(dailyBroadcasts.createdAt)).limit(limit);
+    }).from(dailyBroadcasts).where(eq9(dailyBroadcasts.status, "completed")).orderBy(desc3(dailyBroadcasts.createdAt)).limit(limit);
     return rows;
   } catch (err) {
     console.warn("[CRON-TOPICS] Error leyendo historial de temas de PostgreSQL:", err?.message);
@@ -16080,7 +16443,7 @@ async function getRecentImageFiles(limit = 3) {
     if (!db) return [];
     const rows = await db.select({
       imageFileName: dailyBroadcasts.imageFileName
-    }).from(dailyBroadcasts).where(and6(eq8(dailyBroadcasts.status, "completed"), sql6`image_file_name IS NOT NULL`)).orderBy(desc3(dailyBroadcasts.createdAt)).limit(limit);
+    }).from(dailyBroadcasts).where(and6(eq9(dailyBroadcasts.status, "completed"), sql7`image_file_name IS NOT NULL`)).orderBy(desc3(dailyBroadcasts.createdAt)).limit(limit);
     return rows.map((r) => r.imageFileName).filter(Boolean);
   } catch {
     return [];
@@ -16611,9 +16974,9 @@ async function getLiveMarketStats() {
     const db = await getDb();
     if (!db) throw new Error("Database not connected");
     const [propCountRes, reqCountRes, matchCountRes] = await Promise.all([
-      db.select({ count: sql6`count(*)::int` }).from(properties).where(eq8(properties.available, true)),
-      db.select({ count: sql6`count(*)::int` }).from(requirements).where(eq8(requirements.status, "active")),
-      db.select({ count: sql6`count(*)::int` }).from(propertyMatches).where(gte2(propertyMatches.matchScore, "80"))
+      db.select({ count: sql7`count(*)::int` }).from(properties).where(eq9(properties.available, true)),
+      db.select({ count: sql7`count(*)::int` }).from(requirements).where(eq9(requirements.status, "active")),
+      db.select({ count: sql7`count(*)::int` }).from(propertyMatches).where(gte2(propertyMatches.matchScore, "80"))
     ]);
     const totalProps = propCountRes[0]?.count || 0;
     const totalReqs = reqCountRes[0]?.count || 0;
@@ -17080,7 +17443,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.87";
+var VECY_VERSION = "v31.88";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -17692,7 +18055,7 @@ init_db();
 init_schema();
 init_scraper();
 init_janIA();
-import { eq as eq9, and as and7, desc as desc4, sql as sql7, inArray } from "drizzle-orm";
+import { eq as eq10, and as and7, desc as desc4, sql as sql8, inArray } from "drizzle-orm";
 
 // server/_core/taxEngine.ts
 var VALOR_UVT_2026 = 50318;
@@ -17756,7 +18119,7 @@ import path9 from "path";
 import { z as z2 } from "zod";
 init_db();
 init_schema();
-import { eq as eq5, desc as desc2, ilike, or as or2, and as and3 } from "drizzle-orm";
+import { eq as eq6, desc as desc2, ilike, or as or3, and as and3 } from "drizzle-orm";
 import { TRPCError as TRPCError3 } from "@trpc/server";
 var propertyInputSchema = z2.object({
   name: z2.string().min(2),
@@ -18146,7 +18509,7 @@ var propertiesRouter = router({
     const whereConditions = [];
     if (input?.search) {
       whereConditions.push(
-        or2(
+        or3(
           ilike(properties.name, `%${input.search}%`),
           ilike(properties.description, `%${input.search}%`),
           ilike(properties.zone, `%${input.search}%`),
@@ -18157,7 +18520,7 @@ var propertiesRouter = router({
     }
     if (input?.zone) {
       whereConditions.push(
-        or2(
+        or3(
           ilike(properties.zone, `%${input.zone}%`),
           ilike(properties.addressNeighborhood, `%${input.zone}%`),
           ilike(properties.addressLocality, `%${input.zone}%`)
@@ -18165,12 +18528,12 @@ var propertiesRouter = router({
       );
     }
     if (input?.type) {
-      whereConditions.push(eq5(properties.propertyType, input.type));
+      whereConditions.push(eq6(properties.propertyType, input.type));
     }
     if (input?.transactionType) {
-      whereConditions.push(eq5(properties.transactionType, input.transactionType));
+      whereConditions.push(eq6(properties.transactionType, input.transactionType));
     }
-    whereConditions.push(eq5(properties.available, true));
+    whereConditions.push(eq6(properties.available, true));
     const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and3(...whereConditions) : void 0).orderBy(desc2(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
     const items = await query;
     return items;
@@ -18183,9 +18546,9 @@ var propertiesRouter = router({
     }
     const db = await getDb();
     if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const item = await db.select().from(properties).where(eq5(properties.id, input.id)).limit(1);
+    const item = await db.select().from(properties).where(eq6(properties.id, input.id)).limit(1);
     if (item.length === 0) throw new TRPCError3({ code: "NOT_FOUND" });
-    const images = await db.select().from(propertyImages).where(eq5(propertyImages.propertyId, input.id)).orderBy(propertyImages.displayOrder);
+    const images = await db.select().from(propertyImages).where(eq6(propertyImages.propertyId, input.id)).orderBy(propertyImages.displayOrder);
     const result = {
       ...item[0],
       imagesList: images
@@ -18314,24 +18677,24 @@ ${input.text || "Ver documento PDF adjunto"}`;
   })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq5(properties.id, input.id)).limit(1);
+    const existing = await db.select().from(properties).where(eq6(properties.id, input.id)).limit(1);
     if (existing.length === 0) throw new TRPCError3({ code: "NOT_FOUND" });
     if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
       throw new TRPCError3({ code: "FORBIDDEN" });
     }
-    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq5(properties.id, input.id)).returning();
+    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq6(properties.id, input.id)).returning();
     invalidatePropertiesListCache();
     return updated[0];
   }),
   delete: publicProcedure.input(z2.object({ id: z2.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq5(properties.id, input.id)).limit(1);
+    const existing = await db.select().from(properties).where(eq6(properties.id, input.id)).limit(1);
     if (existing.length === 0) throw new TRPCError3({ code: "NOT_FOUND" });
     if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
       throw new TRPCError3({ code: "FORBIDDEN" });
     }
-    await db.delete(properties).where(eq5(properties.id, input.id));
+    await db.delete(properties).where(eq6(properties.id, input.id));
     invalidatePropertiesListCache();
     return { success: true };
   }),
@@ -18350,7 +18713,7 @@ ${input.text || "Ver documento PDF adjunto"}`;
       cachedAdminMyListTime = now;
       return data;
     }
-    return await db.select(propertyFields).from(properties).where(eq5(properties.agentId, user.id)).orderBy(desc2(properties.id));
+    return await db.select(propertyFields).from(properties).where(eq6(properties.agentId, user.id)).orderBy(desc2(properties.id));
   })
 });
 
@@ -18384,7 +18747,7 @@ async function processUnresolvedMatches() {
       try {
         const exp = explicarMatch(task.requirement, task.property);
         if (db) {
-          await db.update(propertyMatches).set({ matchExplanation: exp }).where(eq9(propertyMatches.id, task.id));
+          await db.update(propertyMatches).set({ matchExplanation: exp }).where(eq10(propertyMatches.id, task.id));
         }
       } catch (err) {
       }
@@ -18420,7 +18783,7 @@ var janIARouter = router({
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      let conversation = await db.select().from(conversations).where(eq9(conversations.sessionId, input.sessionId)).limit(1);
+      let conversation = await db.select().from(conversations).where(eq10(conversations.sessionId, input.sessionId)).limit(1);
       let conversationId;
       if (conversation.length === 0) {
         const insertData = {
@@ -18435,7 +18798,7 @@ var janIARouter = router({
       } else {
         conversationId = conversation[0].id;
         if (ctx.user && !conversation[0].userId) {
-          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq9(conversations.id, conversationId));
+          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq10(conversations.id, conversationId));
         }
       }
       const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
@@ -18494,7 +18857,7 @@ var janIARouter = router({
 ${liveStats}${userContextInstruction}
 
 [INSTRUCCI\xD3N MAESTRA - CHAT WEB VECY 24/7]: Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento l\xF3gico, amplio criterio jur\xEDdico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa y estructurada. PROHIBIDO usar plantillas fijas o cierres/firmas con membretes. Responde en formato JSON estrictamente como: {"response": "tu respuesta viva y razonada"}`;
-        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq9(messages.conversationId, conversationId)).orderBy(desc4(messages.createdAt)).limit(6);
+        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq10(messages.conversationId, conversationId)).orderBy(desc4(messages.createdAt)).limit(6);
         const formattedHistory = recentHistory.reverse().map((m) => ({
           role: m.role === "janIA" ? "assistant" : "user",
           content: m.content
@@ -18539,7 +18902,7 @@ ${liveStats}${userContextInstruction}
       await db.update(conversations).set({
         lastMessage: janIAResponse,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq9(conversations.id, conversationId));
+      }).where(eq10(conversations.id, conversationId));
       return {
         content: janIAResponse,
         wantsVoice,
@@ -18557,7 +18920,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).where(eq9(conversations.userId, String(ctx.user.id))).orderBy(desc4(conversations.updatedAt));
+      return await db.select().from(conversations).where(eq10(conversations.userId, String(ctx.user.id))).orderBy(desc4(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting user conversations:", error);
       return [];
@@ -18579,9 +18942,9 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      const conv = await db.select().from(conversations).where(eq9(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq10(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length === 0) return [];
-      return await db.select().from(messages).where(eq9(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
+      return await db.select().from(messages).where(eq10(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
     } catch (error) {
       console.error("Error getting conversation messages:", error);
       return [];
@@ -18592,10 +18955,10 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const conv = await db.select().from(conversations).where(eq9(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq10(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length > 0) {
-        await db.delete(messages).where(eq9(messages.conversationId, conv[0].id));
-        await db.delete(conversations).where(eq9(conversations.id, conv[0].id));
+        await db.delete(messages).where(eq10(messages.conversationId, conv[0].id));
+        await db.delete(conversations).where(eq10(conversations.id, conv[0].id));
       }
       return { success: true };
     } catch (error) {
@@ -18670,7 +19033,7 @@ ${liveStats}${userContextInstruction}
         pdfMimeType
       );
       const analysis = result.response && result.response.trim() !== "" ? (result.dmResponse ? result.dmResponse + "\n\n" : "") + result.response : result.dmResponse || result.response;
-      const conversation = await db.select().from(conversations).where(eq9(conversations.sessionId, input.sessionId)).limit(1);
+      const conversation = await db.select().from(conversations).where(eq10(conversations.sessionId, input.sessionId)).limit(1);
       if (conversation.length > 0) {
         const conversationId = conversation[0].id;
         await db.insert(messages).values({
@@ -18689,7 +19052,7 @@ ${liveStats}${userContextInstruction}
         await db.update(conversations).set({
           lastMessage: analysis,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq9(conversations.id, conversationId));
+        }).where(eq10(conversations.id, conversationId));
       }
       return {
         analysis
@@ -18709,7 +19072,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const matches = await db.select().from(propertyMatches).where(eq9(propertyMatches.requirementId, input.requirementId)).orderBy(desc4(propertyMatches.matchScore)).limit(input.limit);
+      const matches = await db.select().from(propertyMatches).where(eq10(propertyMatches.requirementId, input.requirementId)).orderBy(desc4(propertyMatches.matchScore)).limit(input.limit);
       return matches;
     } catch (error) {
       console.error("Error getting property matches:", error);
@@ -18818,7 +19181,7 @@ ${liveStats}${userContextInstruction}
           enlaceOrigen: requirements.enlaceOrigen,
           createdAt: requirements.createdAt
         }
-      }).from(propertyMatches).innerJoin(properties, eq9(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq9(propertyMatches.requirementId, requirements.id)).where(sql7`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
+      }).from(propertyMatches).innerJoin(properties, eq10(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq10(propertyMatches.requirementId, requirements.id)).where(sql8`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
             AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) 
             AND (${properties.available} IS NULL OR ${properties.available} = true)
             AND (${requirements.status} IS NULL OR CAST(${requirements.status} AS TEXT) != 'expired')
@@ -18907,9 +19270,42 @@ ${liveStats}${userContextInstruction}
           }
         }));
       }
-      cachedAllMatchesData = finalMatches;
+      const enrichedMatches = finalMatches.map((m) => {
+        let propPhone = m.property?.idUsuarioWhatsapp;
+        let propName = m.property?.nombreUsuarioWhatsapp;
+        if (!propPhone || isLidIdentifier(propPhone) || !normalizeAdvisorPhone(propPhone)) {
+          const knownP = lookupAdvisorSync(propPhone, propName);
+          if (knownP && knownP.phone) {
+            propPhone = knownP.phone;
+            if (knownP.name && (!propName || isGenericName(propName))) propName = knownP.name;
+          }
+        }
+        let reqPhone = m.requirement?.idUsuarioWhatsapp;
+        let reqName = m.requirement?.nombreUsuarioWhatsapp;
+        if (!reqPhone || isLidIdentifier(reqPhone) || !normalizeAdvisorPhone(reqPhone)) {
+          const knownR = lookupAdvisorSync(reqPhone, reqName);
+          if (knownR && knownR.phone) {
+            reqPhone = knownR.phone;
+            if (knownR.name && (!reqName || isGenericName(reqName))) reqName = knownR.name;
+          }
+        }
+        return {
+          ...m,
+          property: {
+            ...m.property,
+            idUsuarioWhatsapp: propPhone,
+            nombreUsuarioWhatsapp: propName
+          },
+          requirement: {
+            ...m.requirement,
+            idUsuarioWhatsapp: reqPhone,
+            nombreUsuarioWhatsapp: reqName
+          }
+        };
+      });
+      cachedAllMatchesData = enrichedMatches;
       cachedAllMatchesTime = Date.now();
-      return finalMatches;
+      return enrichedMatches;
     } catch (error) {
       console.error("Error getting all matches:", error);
       if (cachedAllMatchesData) return cachedAllMatchesData;
@@ -18946,7 +19342,7 @@ ${liveStats}${userContextInstruction}
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const existingProp = await db.select().from(properties).where(eq9(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
+    const existingProp = await db.select().from(properties).where(eq10(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
     const sanitizeNumeric = (val) => {
       if (val === void 0 || val === null) return null;
       let s = String(val).trim();
@@ -19068,7 +19464,7 @@ ${liveStats}${userContextInstruction}
     if (hasAmenitiesChange) {
       updateData.amenities = mergedAmenities;
     }
-    await db.update(properties).set(updateData).where(eq9(properties.id, input.propertyId));
+    await db.update(properties).set(updateData).where(eq10(properties.id, input.propertyId));
     console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const hasPhone = Boolean(input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp);
     const hasName = Boolean(input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp);
@@ -19076,7 +19472,8 @@ ${liveStats}${userContextInstruction}
       propagateBrokerPhoneAcrossAllListings({
         rawPhoneOrText: input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp || "",
         brokerName: input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp,
-        oldPhoneOrLid: existingProp?.idUsuarioWhatsapp
+        oldPhoneOrLid: existingProp?.idUsuarioWhatsapp,
+        sourceGroup: input.origenNombre || existingProp?.origenNombre
       }).then((res) => {
         if (Array.isArray(cachedAllMatchesData) && (res.cleanPhone || input.nombreUsuarioWhatsapp)) {
           const targetPhone = res.cleanPhone;
@@ -19129,7 +19526,7 @@ ${liveStats}${userContextInstruction}
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const existingReq = await db.select().from(requirements).where(eq9(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
+    const existingReq = await db.select().from(requirements).where(eq10(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
     const sanitizeNumeric = (val) => {
       if (val === void 0 || val === null) return null;
       let s = String(val).trim();
@@ -19223,7 +19620,7 @@ ${liveStats}${userContextInstruction}
     if (hasCaractChange) {
       updateData.caracteristicasDeseadas = mergedCaract;
     }
-    await db.update(requirements).set(updateData).where(eq9(requirements.id, input.requirementId));
+    await db.update(requirements).set(updateData).where(eq10(requirements.id, input.requirementId));
     console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const hasPhone = Boolean(input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp);
     const hasName = Boolean(input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp);
@@ -19231,7 +19628,8 @@ ${liveStats}${userContextInstruction}
       propagateBrokerPhoneAcrossAllListings({
         rawPhoneOrText: input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp || "",
         brokerName: input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp,
-        oldPhoneOrLid: existingReq?.idUsuarioWhatsapp
+        oldPhoneOrLid: existingReq?.idUsuarioWhatsapp,
+        sourceGroup: input.origenNombre || existingReq?.origenNombre
       }).then((res) => {
         if (Array.isArray(cachedAllMatchesData) && (res.cleanPhone || input.nombreUsuarioWhatsapp)) {
           const targetPhone = res.cleanPhone;
@@ -19315,8 +19713,8 @@ ${liveStats}${userContextInstruction}
       if (input.action === "rechazado") {
         if (input.matchId) {
           try {
-            await db.update(propertyMatches).set({ status: "rejected" }).where(eq9(propertyMatches.id, input.matchId));
-            await db.delete(propertyMatches).where(eq9(propertyMatches.id, input.matchId));
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq10(propertyMatches.id, input.matchId));
+            await db.delete(propertyMatches).where(eq10(propertyMatches.id, input.matchId));
           } catch (delErr) {
             console.warn(`[JanIA-Feedback] Match #${input.matchId} marcado como rejected (conservado por registros relacionados):`, delErr.message);
           }
@@ -19325,14 +19723,14 @@ ${liveStats}${userContextInstruction}
           try {
             await db.update(propertyMatches).set({ status: "rejected" }).where(
               and7(
-                eq9(propertyMatches.propertyId, input.propertyId),
-                eq9(propertyMatches.requirementId, input.requirementId)
+                eq10(propertyMatches.propertyId, input.propertyId),
+                eq10(propertyMatches.requirementId, input.requirementId)
               )
             );
             await db.delete(propertyMatches).where(
               and7(
-                eq9(propertyMatches.propertyId, input.propertyId),
-                eq9(propertyMatches.requirementId, input.requirementId)
+                eq10(propertyMatches.propertyId, input.propertyId),
+                eq10(propertyMatches.requirementId, input.requirementId)
               )
             );
           } catch (delErrPair) {
@@ -19348,8 +19746,8 @@ ${liveStats}${userContextInstruction}
             estadoComercial: nuevoEstado,
             vigenciaIa: "NO_DISPONIBLE",
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq9(properties.id, input.propertyId));
-          await db.delete(propertyMatches).where(eq9(propertyMatches.propertyId, input.propertyId));
+          }).where(eq10(properties.id, input.propertyId));
+          await db.delete(propertyMatches).where(eq10(propertyMatches.propertyId, input.propertyId));
           invalidatePropertiesListCache();
           console.log(`[JanIA-Feedback] Propiedad #${input.propertyId} marcada como ${nuevoEstado} y purgada de matches`);
         }
@@ -19360,8 +19758,8 @@ ${liveStats}${userContextInstruction}
             standByDirectoVecy: true,
             estadoComercial: "STANDBY",
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq9(properties.id, input.propertyId));
-          await db.delete(propertyMatches).where(eq9(propertyMatches.propertyId, input.propertyId));
+          }).where(eq10(properties.id, input.propertyId));
+          await db.delete(propertyMatches).where(eq10(propertyMatches.propertyId, input.propertyId));
           invalidatePropertiesListCache();
           console.log(`[JanIA-Feedback] Inmueble #${input.propertyId} enviado a secci\xF3n Inmuebles StandBy (No Tercer\xEDa / No Referidos)`);
         }
@@ -19371,8 +19769,8 @@ ${liveStats}${userContextInstruction}
             aceptaTerceria: false,
             standByDirectoVecy: true,
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq9(requirements.id, input.requirementId));
-          await db.delete(propertyMatches).where(eq9(propertyMatches.requirementId, input.requirementId));
+          }).where(eq10(requirements.id, input.requirementId));
+          await db.delete(propertyMatches).where(eq10(propertyMatches.requirementId, input.requirementId));
           cachedRequirementsData = null;
           cachedRequirementsTime = 0;
           console.log(`[JanIA-Feedback] Demanda #${input.requirementId} enviada a Standby Directo Vecy (No Tercer\xEDa / No Referidos)`);
@@ -19408,8 +19806,8 @@ ${liveStats}${userContextInstruction}
       estadoComercial: nuevoEstado,
       vigenciaIa: "NO_DISPONIBLE",
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq9(properties.id, input.propertyId));
-    await db.delete(propertyMatches).where(eq9(propertyMatches.propertyId, input.propertyId));
+    }).where(eq10(properties.id, input.propertyId));
+    await db.delete(propertyMatches).where(eq10(propertyMatches.propertyId, input.propertyId));
     try {
       await db.insert(matchFeedback).values({
         matchId: input.matchId || null,
@@ -19469,7 +19867,7 @@ ${liveStats}${userContextInstruction}
       }).onConflictDoUpdate({
         target: inmobiliarioLexicon.terminoColoquial,
         set: {
-          frecuenciaUso: sql7`${inmobiliarioLexicon.frecuenciaUso} + 1`,
+          frecuenciaUso: sql8`${inmobiliarioLexicon.frecuenciaUso} + 1`,
           updatedAt: /* @__PURE__ */ new Date()
         }
       }).returning();
@@ -19522,7 +19920,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const zoneProperties = await db.select().from(properties).where(eq9(properties.zone, input.zone));
+      const zoneProperties = await db.select().from(properties).where(eq10(properties.zone, input.zone));
       if (zoneProperties.length === 0) {
         return {
           zone: input.zone,
@@ -19608,13 +20006,13 @@ ${liveStats}${userContextInstruction}
       } else {
         const db = await getDb();
         if (db) {
-          const [statusRow] = await db.select().from(pendingSessions).where(eq9(pendingSessions.jid, "system:bot_status")).limit(1);
+          const [statusRow] = await db.select().from(pendingSessions).where(eq10(pendingSessions.jid, "system:bot_status")).limit(1);
           const sessionData = statusRow?.sessionData;
           if (sessionData?.phone) phone = sessionData.phone;
-          const [tp] = await db.select({ count: sql7`count(*)::int` }).from(properties);
-          const [tr] = await db.select({ count: sql7`count(*)::int` }).from(requirements);
-          const [tm] = await db.select({ count: sql7`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql7`CAST("matchScore" AS NUMERIC) >= 80`);
-          const [pm] = await db.select({ count: sql7`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql7`CAST("matchScore" AS NUMERIC) >= 95`);
+          const [tp] = await db.select({ count: sql8`count(*)::int` }).from(properties);
+          const [tr] = await db.select({ count: sql8`count(*)::int` }).from(requirements);
+          const [tm] = await db.select({ count: sql8`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql8`CAST("matchScore" AS NUMERIC) >= 80`);
+          const [pm] = await db.select({ count: sql8`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql8`CAST("matchScore" AS NUMERIC) >= 95`);
           totalProps = tp?.count || 0;
           totalReqs = tr?.count || 0;
           totalMatches = tm?.count || 0;
@@ -19696,34 +20094,63 @@ ${liveStats}${userContextInstruction}
         status: requirements.status,
         createdAt: requirements.createdAt
       }).from(requirements).orderBy(desc4(requirements.id));
-      cachedRequirementsData = data;
+      const enrichedData = data.map((r) => {
+        let phone = r.idUsuarioWhatsapp;
+        let name = r.nombreUsuarioWhatsapp;
+        if (!phone || isLidIdentifier(phone) || !normalizeAdvisorPhone(phone)) {
+          const known = lookupAdvisorSync(phone, name);
+          if (known && known.phone) {
+            phone = known.phone;
+            if (known.name && (!name || isGenericName(name))) name = known.name;
+          }
+        }
+        return {
+          ...r,
+          idUsuarioWhatsapp: phone,
+          nombreUsuarioWhatsapp: name
+        };
+      });
+      cachedRequirementsData = enrichedData;
       cachedRequirementsTime = now;
-      return data;
+      return enrichedData;
     } catch (error) {
       if (cachedRequirementsData) return cachedRequirementsData;
       console.error("Error getting all requirements:", error);
       throw error;
     }
   }),
+  // Guardar y persistir permanentemente los datos de un asesor en PostgreSQL (v31.88)
+  saveAdvisorContact: publicProcedure.input(z3.object({
+    phone: z3.string(),
+    name: z3.string().optional().nullable(),
+    oldPhoneOrLid: z3.string().optional().nullable(),
+    sourceGroup: z3.string().optional().nullable(),
+    agency: z3.string().optional().nullable(),
+    notes: z3.string().optional().nullable()
+  })).mutation(async ({ input }) => {
+    const result = await saveOrUpdateAdvisor(input);
+    invalidateAdminMatchesCache();
+    return result;
+  }),
   // Real-time report stats from DB
   getReportStats: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const [propTotal] = await db.select({ count: sql7`count(*)::int` }).from(properties);
-      const [propActive] = await db.select({ count: sql7`count(*)::int` }).from(properties).where(sql7`${properties.available} = true`);
-      const [reqTotal] = await db.select({ count: sql7`count(*)::int` }).from(requirements);
-      const [reqActive] = await db.select({ count: sql7`count(*)::int` }).from(requirements).where(eq9(requirements.status, "active"));
-      const [matchTotal] = await db.select({ count: sql7`count(*)::int` }).from(propertyMatches);
-      const [convTotal] = await db.select({ count: sql7`count(*)::int` }).from(conversations);
-      const monthlyProps = await db.execute(sql7`
+      const [propTotal] = await db.select({ count: sql8`count(*)::int` }).from(properties);
+      const [propActive] = await db.select({ count: sql8`count(*)::int` }).from(properties).where(sql8`${properties.available} = true`);
+      const [reqTotal] = await db.select({ count: sql8`count(*)::int` }).from(requirements);
+      const [reqActive] = await db.select({ count: sql8`count(*)::int` }).from(requirements).where(eq10(requirements.status, "active"));
+      const [matchTotal] = await db.select({ count: sql8`count(*)::int` }).from(propertyMatches);
+      const [convTotal] = await db.select({ count: sql8`count(*)::int` }).from(conversations);
+      const monthlyProps = await db.execute(sql8`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM properties
         WHERE "createdAt" >= now() - interval '6 months'
         GROUP BY 1 ORDER BY 1
       `);
-      const monthlyReqs = await db.execute(sql7`
+      const monthlyReqs = await db.execute(sql8`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM requirements
@@ -20042,7 +20469,7 @@ Devuelve \xDANICAMENTE el objeto JSON sin bloques de c\xF3digo ni comentarios.`;
 import { z as z4 } from "zod";
 init_db();
 init_schema();
-import { eq as eq10 } from "drizzle-orm";
+import { eq as eq11 } from "drizzle-orm";
 
 // server/github-integration.ts
 import { Octokit } from "@octokit/rest";
@@ -20418,7 +20845,7 @@ var githubRouter = router({
     if (!db) throw new Error("Database not available");
     try {
       const { octokit, user } = await initializeGitHubIntegration(GITHUB_TOKEN);
-      const adminUser = await db.select().from(users).where(eq10(users.email, "vecybienesraices@gmail.com")).limit(1);
+      const adminUser = await db.select().from(users).where(eq11(users.email, "vecybienesraices@gmail.com")).limit(1);
       const adminId = adminUser.length > 0 ? adminUser[0].id : 1;
       let reposToSync = input.repositories || [];
       if (reposToSync.length === 0) {
@@ -20435,14 +20862,14 @@ var githubRouter = router({
             repoName
           );
           if (propertyData) {
-            const existing = await db.select().from(properties).where(eq10(properties.sourceRepository, repoName)).limit(1);
+            const existing = await db.select().from(properties).where(eq11(properties.sourceRepository, repoName)).limit(1);
             if (existing.length > 0) {
               await db.update(properties).set({
                 ...propertyData,
                 agentId: adminId,
                 sourceRepository: repoName,
                 lastSyncedAt: /* @__PURE__ */ new Date()
-              }).where(eq10(properties.id, existing[0].id));
+              }).where(eq11(properties.id, existing[0].id));
             } else {
               await db.insert(properties).values({
                 ...propertyData,
@@ -20531,7 +20958,7 @@ init_storage();
 init_db();
 init_db();
 init_schema();
-import { eq as eq11 } from "drizzle-orm";
+import { eq as eq12 } from "drizzle-orm";
 var imagesRouter = {
   /**
    * Upload image to S3 and save to database
@@ -20556,7 +20983,7 @@ var imagesRouter = {
       if (input.isMainImage) {
         const db = await getDb();
         if (db) {
-          await db.update(propertyImages).set({ isMainImage: false }).where(eq11(propertyImages.propertyId, input.propertyId));
+          await db.update(propertyImages).set({ isMainImage: false }).where(eq12(propertyImages.propertyId, input.propertyId));
         }
       }
       const images = await getPropertyImages(input.propertyId);
@@ -20621,7 +21048,7 @@ var imagesRouter = {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq11(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq12(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Image order updated successfully"
@@ -20642,8 +21069,8 @@ var imagesRouter = {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ isMainImage: false }).where(eq11(propertyImages.propertyId, input.propertyId));
-      await db.update(propertyImages).set({ isMainImage: true }).where(eq11(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ isMainImage: false }).where(eq12(propertyImages.propertyId, input.propertyId));
+      await db.update(propertyImages).set({ isMainImage: true }).where(eq12(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Main image updated successfully"
@@ -20658,7 +21085,7 @@ var imagesRouter = {
 import { z as z6 } from "zod";
 init_db();
 init_schema();
-import { eq as eq12, and as and8, desc as desc5, isNull as isNull2 } from "drizzle-orm";
+import { eq as eq13, and as and8, desc as desc5, isNull as isNull2 } from "drizzle-orm";
 import { TRPCError as TRPCError4 } from "@trpc/server";
 var agentRouter = router({
   // Public: Get agent profile for branding (Agenda Pro, Personal Shops)
@@ -20671,23 +21098,23 @@ var agentRouter = router({
       customLogoUrl: users.customLogoUrl,
       themeConfig: users.themeConfig,
       subdomain: users.subdomain
-    }).from(users).where(eq12(users.id, input.id)).limit(1);
+    }).from(users).where(eq13(users.id, input.id)).limit(1);
     if (agent.length === 0) throw new TRPCError4({ code: "NOT_FOUND", message: "Agent not found" });
     return agent[0];
   }),
   getMyProperties: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(eq12(properties.agentId, ctx.user.id)).orderBy(desc5(properties.createdAt));
+    return await db.select().from(properties).where(eq13(properties.agentId, ctx.user.id)).orderBy(desc5(properties.createdAt));
   }),
   // For testing: Allows an agent to claim a property that has no agent assigned
   claimProperty: protectedProcedure.input(z6.object({ propertyId: z6.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq12(properties.id, input.propertyId)).limit(1);
+    const property = await db.select().from(properties).where(eq13(properties.id, input.propertyId)).limit(1);
     if (property.length === 0) throw new TRPCError4({ code: "NOT_FOUND", message: "Property not found" });
     if (property[0].agentId) throw new TRPCError4({ code: "FORBIDDEN", message: "Property already has an agent" });
-    await db.update(properties).set({ agentId: ctx.user.id }).where(eq12(properties.id, input.propertyId));
+    await db.update(properties).set({ agentId: ctx.user.id }).where(eq13(properties.id, input.propertyId));
     return { success: true };
   }),
   getAvailablePropertiesToClaim: protectedProcedure.query(async ({ ctx }) => {
@@ -20698,15 +21125,15 @@ var agentRouter = router({
   generateStealthLink: protectedProcedure.input(z6.object({ propertyId: z6.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq12(properties.id, input.propertyId)).limit(1);
+    const property = await db.select().from(properties).where(eq13(properties.id, input.propertyId)).limit(1);
     if (property.length === 0) throw new TRPCError4({ code: "NOT_FOUND", message: "Property not found" });
     if (property[0].agentId !== ctx.user.id && ctx.user.role !== "admin") {
       throw new TRPCError4({ code: "FORBIDDEN", message: "You don't own this property" });
     }
     const existingLink = await db.select().from(referralLinks).where(
       and8(
-        eq12(referralLinks.propertyId, input.propertyId),
-        eq12(referralLinks.agentId, ctx.user.id)
+        eq13(referralLinks.propertyId, input.propertyId),
+        eq13(referralLinks.agentId, ctx.user.id)
       )
     ).limit(1);
     if (existingLink.length > 0) {
@@ -20731,7 +21158,7 @@ var agentRouter = router({
         matriculaInmobiliaria: properties.matriculaInmobiliaria,
         location: properties.location
       }
-    }).from(referralLinks).innerJoin(properties, eq12(referralLinks.propertyId, properties.id)).where(eq12(referralLinks.agentId, ctx.user.id)).orderBy(desc5(referralLinks.createdAt));
+    }).from(referralLinks).innerJoin(properties, eq13(referralLinks.propertyId, properties.id)).where(eq13(referralLinks.agentId, ctx.user.id)).orderBy(desc5(referralLinks.createdAt));
   })
 });
 
@@ -20739,18 +21166,18 @@ var agentRouter = router({
 import { z as z7 } from "zod";
 init_db();
 init_schema();
-import { eq as eq13, sql as sql8 } from "drizzle-orm";
+import { eq as eq14, sql as sql9 } from "drizzle-orm";
 import { TRPCError as TRPCError5 } from "@trpc/server";
 var leadsRouter = router({
   resolveStealthLink: publicProcedure.input(z7.object({ token: z7.string() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq13(referralLinks.token, input.token)).limit(1);
+    const linkRecord = await db.select().from(referralLinks).where(eq14(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
       throw new TRPCError5({ code: "NOT_FOUND", message: "Stealth Link invalido o expirado." });
     }
     const link = linkRecord[0];
-    await db.update(referralLinks).set({ clicks: sql8`${referralLinks.clicks} + 1` }).where(eq13(referralLinks.id, link.id));
+    await db.update(referralLinks).set({ clicks: sql9`${referralLinks.clicks} + 1` }).where(eq14(referralLinks.id, link.id));
     const prop = await db.select({
       id: properties.id,
       name: properties.name,
@@ -20761,7 +21188,7 @@ var leadsRouter = router({
       zone: properties.zone,
       // specifically NOT returning full location/latitude/longitude/matricula
       images: properties.images
-    }).from(properties).where(eq13(properties.id, link.propertyId)).limit(1);
+    }).from(properties).where(eq14(properties.id, link.propertyId)).limit(1);
     if (prop.length === 0) {
       throw new TRPCError5({ code: "NOT_FOUND", message: "Inmueble no disponible." });
     }
@@ -20778,7 +21205,7 @@ var leadsRouter = router({
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq13(referralLinks.token, input.token)).limit(1);
+    const linkRecord = await db.select().from(referralLinks).where(eq14(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
       throw new TRPCError5({ code: "BAD_REQUEST", message: "Token invalido." });
     }
@@ -20807,7 +21234,7 @@ var leadsRouter = router({
 import { z as z8 } from "zod";
 init_db();
 init_schema();
-import { desc as desc6, ilike as ilike2, or as or3, sql as sql9, eq as eq14 } from "drizzle-orm";
+import { desc as desc6, ilike as ilike2, or as or4, sql as sql10, eq as eq15 } from "drizzle-orm";
 import { TRPCError as TRPCError6 } from "@trpc/server";
 import { Solver } from "@2captcha/captcha-solver";
 import https from "https";
@@ -21720,7 +22147,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       const profileRows = await db.select({
         fullName: profiles.fullName,
         numeroDocumento: profiles.numeroDocumento
-      }).from(profiles).where(eq14(profiles.numeroDocumento, clean)).limit(5);
+      }).from(profiles).where(eq15(profiles.numeroDocumento, clean)).limit(5);
       for (const row of profileRows) {
         if (row.fullName && row.fullName.trim().length >= 4) {
           const formatTitleCase = (s) => s.toLowerCase().split(/\s+/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
@@ -21742,9 +22169,9 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
         interesadoDocumento: solicitudes.interesadoDocumento,
         interesadoNombre: solicitudes.interesadoNombre
       }).from(solicitudes).where(
-        or3(
-          eq14(solicitudes.solicitanteNumeroDocumento, clean),
-          eq14(solicitudes.interesadoDocumento, clean)
+        or4(
+          eq15(solicitudes.solicitanteNumeroDocumento, clean),
+          eq15(solicitudes.interesadoDocumento, clean)
         )
       ).orderBy(desc6(solicitudes.id)).limit(10);
       for (const row of solRows) {
@@ -21840,14 +22267,14 @@ var agendaRouter = router({
         ilike2(solicitudes.interesadoNombre, searchPattern)
       ];
       if (!isNaN(numSearch)) {
-        searchConditions.push(eq14(solicitudes.solicitudId, numSearch));
+        searchConditions.push(eq15(solicitudes.solicitudId, numSearch));
       }
-      whereConditions.push(or3(...searchConditions));
+      whereConditions.push(or4(...searchConditions));
     }
     if (perfilFilter && perfilFilter !== "all") {
       if (perfilFilter === "agente") {
         whereConditions.push(
-          or3(
+          or4(
             ilike2(solicitudes.solicitantePerfil, "%agente%"),
             ilike2(solicitudes.solicitantePerfil, "%inmobiliaria%"),
             ilike2(solicitudes.solicitantePerfil, "%broker%"),
@@ -21856,16 +22283,16 @@ var agendaRouter = router({
         );
       } else if (perfilFilter === "directo") {
         whereConditions.push(
-          or3(
+          or4(
             ilike2(solicitudes.solicitantePerfil, "%directo%"),
             ilike2(solicitudes.solicitantePerfil, "%cliente%")
           )
         );
       }
     }
-    const finalWhere = whereConditions.length > 0 ? sql9.join(whereConditions, sql9` AND `) : void 0;
+    const finalWhere = whereConditions.length > 0 ? sql10.join(whereConditions, sql10` AND `) : void 0;
     const items = await db.select().from(solicitudes).where(finalWhere).orderBy(desc6(solicitudes.solicitudId), desc6(solicitudes.id)).limit(limit).offset(offset);
-    const totalRes = await db.select({ count: sql9`count(*)` }).from(solicitudes).where(finalWhere);
+    const totalRes = await db.select({ count: sql10`count(*)` }).from(solicitudes).where(finalWhere);
     return {
       items,
       total: Number(totalRes[0]?.count || 0)
@@ -21874,10 +22301,10 @@ var agendaRouter = router({
   getStats: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
-    const totalRes = await db.select({ count: sql9`count(*)` }).from(solicitudes);
+    const totalRes = await db.select({ count: sql10`count(*)` }).from(solicitudes);
     const total = Number(totalRes[0]?.count || 0);
-    const agentesRes = await db.select({ count: sql9`count(*)` }).from(solicitudes).where(
-      or3(
+    const agentesRes = await db.select({ count: sql10`count(*)` }).from(solicitudes).where(
+      or4(
         ilike2(solicitudes.solicitantePerfil, "%agente%"),
         ilike2(solicitudes.solicitantePerfil, "%inmobiliaria%"),
         ilike2(solicitudes.solicitantePerfil, "%broker%"),
@@ -21885,7 +22312,7 @@ var agendaRouter = router({
       )
     );
     const agentes = Number(agentesRes[0]?.count || 0);
-    const conFirmaRes = await db.select({ count: sql9`count(*)` }).from(solicitudes).where(sql9`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
+    const conFirmaRes = await db.select({ count: sql10`count(*)` }).from(solicitudes).where(sql10`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
     const conFirma = Number(conFirmaRes[0]?.count || 0);
     const directos = Math.max(0, total - agentes);
     return {
@@ -22002,7 +22429,7 @@ var agendaRouter = router({
     const db = await getDb();
     if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
     const { id, ...dataToUpdate } = input;
-    const updated = await db.update(solicitudes).set(dataToUpdate).where(eq14(solicitudes.id, id)).returning();
+    const updated = await db.update(solicitudes).set(dataToUpdate).where(eq15(solicitudes.id, id)).returning();
     return {
       success: true,
       item: updated[0] || null
@@ -22091,10 +22518,10 @@ var agendaRouter = router({
         }
       }
     }
-    const maxRes = await db.select({ maxId: sql9`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
+    const maxRes = await db.select({ maxId: sql10`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
     const nextSolicitudId = Number(maxRes[0]?.maxId || 0) + 1;
     const inserted = await db.insert(solicitudes).values({
-      id: sql9`nextval('solicitudes_id_seq')`,
+      id: sql10`nextval('solicitudes_id_seq')`,
       solicitudId: nextSolicitudId,
       solicitanteNombre: input.solicitante_nombre,
       solicitanteTipoPersona: input.solicitante_tipo_persona || "Persona Natural",
@@ -22246,10 +22673,10 @@ async function createContext(opts) {
         try {
           const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
           const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-          const { eq: eq15 } = await import("drizzle-orm");
+          const { eq: eq16 } = await import("drizzle-orm");
           const db = await getDb2();
           if (db) {
-            await db.update(users2).set({ role: "admin" }).where(eq15(users2.id, user.id));
+            await db.update(users2).set({ role: "admin" }).where(eq16(users2.id, user.id));
             user = { ...user, role: "admin" };
             console.log(`[Auth] \u2705 Admin auto-promocionado: ${user.email}`);
           }
@@ -22263,10 +22690,10 @@ async function createContext(opts) {
       try {
         const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
         const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        const { eq: eq15 } = await import("drizzle-orm");
+        const { eq: eq16 } = await import("drizzle-orm");
         const db = await getDb2();
         if (db) {
-          const existingUser = await db.select().from(users2).where(eq15(users2.openId, "mock-local-user")).limit(1);
+          const existingUser = await db.select().from(users2).where(eq16(users2.openId, "mock-local-user")).limit(1);
           if (existingUser.length > 0) {
             user = existingUser[0];
           } else {
@@ -22947,7 +23374,7 @@ Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro
     try {
       const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
       const { propertyMatches: propertyMatches3, requirements: requirements2, properties: properties2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq15, gte: gte4 } = await import("drizzle-orm");
+      const { eq: eq16, gte: gte4 } = await import("drizzle-orm");
       const { handleDetectedMatches: handleDetectedMatches2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
       const db = await getDb2();
       if (!db) return res.status(500).send("No DB connection");
@@ -22969,8 +23396,8 @@ Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro
         let count = 0;
         for (const match of uniqueMatches) {
           try {
-            const [reqRec] = await db.select().from(requirements2).where(eq15(requirements2.id, match.requirementId)).limit(1);
-            const [propRec] = await db.select().from(properties2).where(eq15(properties2.id, match.propertyId)).limit(1);
+            const [reqRec] = await db.select().from(requirements2).where(eq16(requirements2.id, match.requirementId)).limit(1);
+            const [propRec] = await db.select().from(properties2).where(eq16(properties2.id, match.propertyId)).limit(1);
             if (reqRec && propRec) {
               const score = Number(match.matchScore);
               const matchedItem = {

@@ -6,7 +6,16 @@ import { conversations, messages, leads, propertyMatches, properties, requiremen
 import { eq, and, desc, sql, inArray, gte } from 'drizzle-orm';
 
 import { scrapePropertyLink } from '../_core/scraper';
-import { JANIA_PROMPT, processWhatsAppMessage, propagateBrokerPhoneAcrossAllListings } from '../_core/janIA';
+import {
+  JANIA_PROMPT,
+  processWhatsAppMessage,
+  propagateBrokerPhoneAcrossAllListings,
+  saveOrUpdateAdvisor,
+  lookupAdvisorSync,
+  normalizeAdvisorPhone,
+  isLidIdentifier,
+  isGenericName,
+} from '../_core/janIA';
 import { liquidarImpuestosVenta } from '../_core/taxEngine';
 import { explicarMatch, findMatchesForProperty, findMatchesForRequirement, getRejectedPairsSet, invalidateRejectedPairsCache } from '../_core/matching';
 import axios from 'axios';
@@ -734,9 +743,46 @@ export const janIARouter = router({
           }));
         }
 
-        cachedAllMatchesData = finalMatches;
+        // Enriquecer todas las coincidencias con datos del Directorio Permanente de Asesores (v31.88)
+        const enrichedMatches = finalMatches.map((m: any) => {
+          let propPhone = m.property?.idUsuarioWhatsapp;
+          let propName = m.property?.nombreUsuarioWhatsapp;
+          if (!propPhone || isLidIdentifier(propPhone) || !normalizeAdvisorPhone(propPhone)) {
+            const knownP = lookupAdvisorSync(propPhone, propName);
+            if (knownP && knownP.phone) {
+              propPhone = knownP.phone;
+              if (knownP.name && (!propName || isGenericName(propName))) propName = knownP.name;
+            }
+          }
+
+          let reqPhone = m.requirement?.idUsuarioWhatsapp;
+          let reqName = m.requirement?.nombreUsuarioWhatsapp;
+          if (!reqPhone || isLidIdentifier(reqPhone) || !normalizeAdvisorPhone(reqPhone)) {
+            const knownR = lookupAdvisorSync(reqPhone, reqName);
+            if (knownR && knownR.phone) {
+              reqPhone = knownR.phone;
+              if (knownR.name && (!reqName || isGenericName(reqName))) reqName = knownR.name;
+            }
+          }
+
+          return {
+            ...m,
+            property: {
+              ...m.property,
+              idUsuarioWhatsapp: propPhone,
+              nombreUsuarioWhatsapp: propName,
+            },
+            requirement: {
+              ...m.requirement,
+              idUsuarioWhatsapp: reqPhone,
+              nombreUsuarioWhatsapp: reqName,
+            }
+          };
+        });
+
+        cachedAllMatchesData = enrichedMatches;
         cachedAllMatchesTime = Date.now();
-        return finalMatches;
+        return enrichedMatches;
       } catch (error) {
         console.error('Error getting all matches:', error);
         if (cachedAllMatchesData) return cachedAllMatchesData;
@@ -921,7 +967,8 @@ export const janIARouter = router({
         propagateBrokerPhoneAcrossAllListings({
           rawPhoneOrText: input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp || '',
           brokerName: input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp,
-          oldPhoneOrLid: existingProp?.idUsuarioWhatsapp
+          oldPhoneOrLid: existingProp?.idUsuarioWhatsapp,
+          sourceGroup: input.origenNombre || existingProp?.origenNombre,
         }).then((res) => {
           if (Array.isArray(cachedAllMatchesData) && (res.cleanPhone || input.nombreUsuarioWhatsapp)) {
             const targetPhone = res.cleanPhone;
@@ -1096,7 +1143,8 @@ export const janIARouter = router({
         propagateBrokerPhoneAcrossAllListings({
           rawPhoneOrText: input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp || '',
           brokerName: input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp,
-          oldPhoneOrLid: existingReq?.idUsuarioWhatsapp
+          oldPhoneOrLid: existingReq?.idUsuarioWhatsapp,
+          sourceGroup: input.origenNombre || existingReq?.origenNombre,
         }).then((res) => {
           if (Array.isArray(cachedAllMatchesData) && (res.cleanPhone || input.nombreUsuarioWhatsapp)) {
             const targetPhone = res.cleanPhone;
@@ -1670,15 +1718,49 @@ export const janIARouter = router({
         .from(requirements)
         .orderBy(desc(requirements.id));
 
-      cachedRequirementsData = data;
+      // Enriquecer contacto de asesores desde el Directorio Permanente (v31.88)
+      const enrichedData = data.map((r: any) => {
+        let phone = r.idUsuarioWhatsapp;
+        let name = r.nombreUsuarioWhatsapp;
+        if (!phone || isLidIdentifier(phone) || !normalizeAdvisorPhone(phone)) {
+          const known = lookupAdvisorSync(phone, name);
+          if (known && known.phone) {
+            phone = known.phone;
+            if (known.name && (!name || isGenericName(name))) name = known.name;
+          }
+        }
+        return {
+          ...r,
+          idUsuarioWhatsapp: phone,
+          nombreUsuarioWhatsapp: name,
+        };
+      });
+
+      cachedRequirementsData = enrichedData;
       cachedRequirementsTime = now;
-      return data;
+      return enrichedData;
     } catch (error) {
       if (cachedRequirementsData) return cachedRequirementsData;
       console.error('Error getting all requirements:', error);
       throw error;
     }
   }),
+
+  // Guardar y persistir permanentemente los datos de un asesor en PostgreSQL (v31.88)
+  saveAdvisorContact: publicProcedure
+    .input(z.object({
+      phone: z.string(),
+      name: z.string().optional().nullable(),
+      oldPhoneOrLid: z.string().optional().nullable(),
+      sourceGroup: z.string().optional().nullable(),
+      agency: z.string().optional().nullable(),
+      notes: z.string().optional().nullable(),
+    }))
+    .mutation(async ({ input }) => {
+      const result = await saveOrUpdateAdvisor(input);
+      invalidateAdminMatchesCache();
+      return result;
+    }),
 
   // Real-time report stats from DB
   getReportStats: publicProcedure.query(async () => {

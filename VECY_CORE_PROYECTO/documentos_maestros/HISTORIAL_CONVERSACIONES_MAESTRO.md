@@ -7,6 +7,64 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.88 — 24 Septiembre 2026
+
+### Solicitud de Eduardo
+Eduardo expresó un dolor operativo recurrente y solicitó una solución definitiva e indestructible:
+*"Necesito que cuando yo guarde el número del asesor se quede en la base de datos para siempre sin importar si se empezó el proceso de negociación, se eliminó o denegó el Match, si no coincidió o si se le dió recalcular o se envió a 50/50, etc. Siempre debe ya quedar guardado el nombre y número de teléfono del asesor. Así me evitas seguir y seguir teniendo que buscar quien es y cuales son sus datos, esto ya lo habíamos hecho, no se si no lo hiciste bien, si no lo entendiste o quizás lo dañaste al arreglar otra cosa. Revisa y corrige o verifica si ya estaba y repara pero has que funcione."*
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Inexistencia de una Tabla Dedicada en PostgreSQL para Asesores (`advisors`)**:
+   - Históricamente, la información de contacto del asesor (nombre, teléfono y origen) se almacenaba dispersa en columnas de `properties` y `requirements` (`idUsuarioWhatsapp`, `nombreUsuarioWhatsapp`), y se mantenía temporalmente en una variable volátil en memoria RAM (`brokerDirectoryCache = new Map()`).
+   - Cada vez que el proceso PM2 del backend se reiniciaba o recargaba en el VPS, `brokerDirectoryCache` se borraba por completo, perdiendo cualquier relación no consolidada.
+2. **Sobreescritura Destructiva por Ingesta de WhatsApp / Baileys en Deduplicaciones**:
+   - En `server/_core/janIA.ts:5369` (`saveProperty`) y `:5719` (`saveRequirement`), cuando un colega volvía a publicar un inmueble o demanda en los grupos de WhatsApp, el bloque de deduplicación actualizaba la ficha pero ejecutaba:
+     `idUsuarioWhatsapp: insertDataWithCalif.idUsuarioWhatsapp`
+   - Los mensajes entrantes desde Baileys contienen el identificador de dispositivo interno de WhatsApp (LID, ej: `259514976747768`), NO el número de teléfono celular colombiano.
+   - En consecuencia, tan pronto llegaba un nuevo mensaje o republicación, ¡el sistema SOBREESCRIBÍA el teléfono celular real y verificado que Eduardo había guardado manualmente, reemplazándolo por el LID numérico o por `null`!
+3. **Pérdida del Mapeo LID ↔ Teléfono Real**:
+   - Cuando Eduardo guardaba el número de celular de un asesor, el sistema no vinculaba el LID con el número de teléfono en una estructura persistente. Si ese mismo asesor enviaba una nueva oferta desde el mismo dispositivo, JanIA lo trataba como un asesor desconocido con un LID huérfano.
+4. **Ciclo de Vida de Matches y Desconexión Relacional**:
+   - Cuando un match se descartaba, se iniciaba negociación, se recalculaba o se enviaba a StandBy 50/50, si la propiedad o demanda quedaba desacoplada o el usuario editaba datos, la falta de una entidad canónica independiente provocaba que la ficha volviera a quedar en "N/A" o "Número no disponible".
+
+### Acciones Ejecutadas
+1. **Creación de la Tabla Canónica `advisors` en PostgreSQL VPS (`vecy_network`)**:
+   - Creada tabla relacional indestructible con índices optimizados:
+     - `id SERIAL PRIMARY KEY`
+     - `name VARCHAR(255) NOT NULL`
+     - `phone VARCHAR(50) NOT NULL`
+     - `normalized_phone VARCHAR(50) NOT NULL UNIQUE` (con índice único)
+     - `whatsapp_lids TEXT[] DEFAULT '{}'` (array de LIDs conocidos asociados a ese broker)
+     - `aliases TEXT[] DEFAULT '{}'` (array de variantes de nombres/pushNames observados)
+     - `agency VARCHAR(255)`, `source_group VARCHAR(255)`, `notes TEXT`
+     - `created_at TIMESTAMP`, `updated_at TIMESTAMP`
+   - Esquema Drizzle actualizado en `drizzle/schema.ts` (`export const advisors = pgTable(...)`).
+2. **Nuevo Módulo Autónomo `server/_core/advisors.ts` (0% Dependencias Circulares)**:
+   - `normalizeAdvisorPhone`: Valida y normaliza a estándar colombiano (10/12 dígitos `573XXXXXXXXX`), excluyendo de forma inquebrantable el número del socket de JanIA (`+573192919978`) y LIDs.
+   - `saveOrUpdateAdvisor`: Upsert permanente en PostgreSQL en la tabla `advisors`, sincronización de la tabla `users` (`openId: wa-573...`), propagación en cascada a todas las propiedades y requerimientos de ese asesor, y actualización en caliente del caché en memoria `brokerDirectoryCache`.
+   - `initAdvisorsDirectory`: Carga automática en memoria al iniciar el backend desde la tabla `advisors` y bootstrap de registros históricos desde `properties` y `requirements`.
+   - `lookupAdvisorSync` y `lookupAdvisor`: Resolución ultrarrápida (0ms en memoria y fallback en BD) de asesor a partir de LID, teléfono o nombre.
+   - `preserveVerifiedAdvisorContact`: Guardián de contacto que impide categóricamente que una republicación entrante con LID o nombre genérico sobreescriba un teléfono o nombre real previamente validado en base de datos.
+3. **Blindaje de Ingesta y Deduplicación en `server/_core/janIA.ts`**:
+   - `saveProperty` (`existing.length > 0`): Protegido con `preserveVerifiedAdvisorContact`. Si el inmueble ya tenía un teléfono verificado y llega un mensaje con LID, el teléfono verificado se preserva intacto y el nuevo LID se asocia al asesor en la tabla `advisors`.
+   - `saveRequirement` (`existing.length > 0`): Mismo blindaje protector para evitar borrado de contactos en demandas.
+   - `resolveContactPhone`: Auto-registro inmediato y permanente en `advisors` cada vez que se extrae un teléfono del texto o del LLM, y resolución de LIDs previamente guardados.
+   - `propagateBrokerPhoneAcrossAllListings`: Delegada 100% a `saveOrUpdateAdvisor` para que toda propagación de broker quede grabada para siempre en PostgreSQL.
+4. **Enriquecimiento en Routers `server/routers/janIA.ts`**:
+   - `getAllMatches`: Se enriquecen todas las propiedades y requerimientos con el teléfono y nombre verificado del Directorio Permanente si vienen con LID o vacíos.
+   - `getAllRequirements`: Enriquecimiento automático de asesores al consultar la lista de demandas.
+   - `updatePropertyDetails` y `updateRequirementDetails`: Envío del grupo de origen a la persistencia permanente.
+   - `saveAdvisorContact`: Nueva mutación tRPC expuesta para actualización directa e instantánea de asesores.
+5. **Frontend `client/src/components/admin/AdminMatches.tsx`**:
+   - Exclusión del bot JanIA (`573192919978`) en `normalizePhoneInput`.
+6. **Pruebas Automatizadas de Regresión (`server/__tests__/regression.test.ts`)**:
+   - Incorporada Sección 11 con 6 nuevos tests doctrinales blindando normalización, exclusión del bot, detección de LIDs, `preserveVerifiedAdvisorContact`, resolución por LID en memoria y detección de nombres genéricos.
+
+### Verificación Automatizada
+- `npx tsc --noEmit`: **0 errores de tipado TypeScript**.
+- `npx vitest run`: **75/75 pruebas unitarias y de regresión pasando al 100%** (las 69 anteriores + 6 nuevas de persistencia de asesores).
+- `npm run build`: **Compilación limpia de Vite y esbuild en 23.15s**.
+
 ---
 
 ## 📋 SESIÓN v31.87 — 24 Septiembre 2026
