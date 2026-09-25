@@ -322,6 +322,34 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.90 — Septiembre 2026
+
+#### 📌 DOCTRINA EN DURO DE SEGURIDAD 24/7 VS EDIFICIO AUTOMATIZADO/CONSERJE, GUILLOTINA DE COHERENCIA DE SEGMENTO FINANCIERO Y METRAJE, Y ERRADICACIÓN DE MATCHES ESPURIOS
+
+**Problemas identificados:**
+1. **Falso 'Aproximado' (`warn`) en Seguridad 24/7**: Cuando la demanda exigía expresamente seguridad/vigilancia 24 horas y la oferta era un edificio automatizado o sin celador nocturno, `AdminMatches.tsx` lo marcaba en amarillo (`warn`), restando solo 0.40 puntos y permitiendo que un choque innegociable alcanzara 86% de match espurio (Caso Match #M14977).
+2. **Ceguera Semántica de Edificio Automatizado y Conserjería Diurna**: La oferta (#2609) indicaba `Conserje` y `Ed Automatizado` en su texto crudo. El motor solo buscaba palabras clave tradicionales de vigilancia y no discriminaba tecnologías remotas o conserjes de horario de oficina.
+3. **Ausencia de Piso de Coherencia de Segmento Financiero y Metraje**: Un comprador con presupuesto generoso de $1.200 MM busca comodidad, amplitud y confort representativo. El sistema evaluaba el precio con `propSalePrice <= reqSaleBudget` y le adjudicaba 100% de cumplimiento a un apartamento pequeño de $630 MM (52.5% del presupuesto) de solo 75 m², calificando de "Oportunidad" lo que para el cliente es un abismo de segmento y estilo de vida insatisfactorio.
+4. **Registro de Coincidencia Espuria en Producción**: El par #2609 vs #1715 estaba grabado en PostgreSQL bajo `#M14977`.
+
+**Solución aplicada:**
+- **Analizador Universal en `shared/colombianRealEstateParser.ts`**:
+  - `demands24hSecurity(text)`: Identifica exigencia estricta de vigilancia 24 horas presencial.
+  - `parseSecurityType(text)`: Categoriza con precisión en `"24_7"`, `"automated"` o `"none"`.
+  - `checkFinancialSegmentCoherence({ budgetMax, offeredPrice, offeredArea, isSale })`: Función de coherencia matemática: guillotina a 0% cuando el precio ofertado es <58% del presupuesto alto (en compras ≥$500M) con área <95 m², o <55% del canon (en arriendos ≥$4.5M) con área <80 m².
+- **Motor de Matching `server/_core/matching.ts`**:
+  - Regla Q de Seguridad 24/7: choque demanda 24h vs automatizado/conserje/sin vigilancia -> Guillotina Inmediata 0%.
+  - Filtro Duro 7 de Presupuesto: evaluado `checkFinancialSegmentCoherence` -> Guillotina Inmediata 0%.
+- **Frontend `client/src/components/admin/AdminMatches.tsx`**:
+  - Fila 22 (Vigilancia): Erradicado `warn`. Choque pasa a `missing` (0% Guillotina), activando `hasAnyMissingRow` y proyectando etiquetas claras.
+  - Filas de Precio y Área: Integrada coherencia de segmento marcando `missing` cuando hay desproporción comercial.
+- **Base de Datos PostgreSQL VPS**: Purgado físicamente el match espurio `#M14977`.
+- **Suite de Regresión `server/__tests__/regression.test.ts`**: Añadida Sección 12 con 5 nuevos tests doctrinales blindando todas las reglas.
+
+**Verificación:** `tsc --noEmit` 0 errores ✅ | `vitest run` 80/80 tests ✅ | Build Vite + esbuild en 15s ✅ | Match #M14977 purgado de PostgreSQL VPS ✅
+
+---
+
 ### 🔖 v31.89 — Septiembre 2026
 
 #### 📌 CONSOLIDACIÓN DEFINITIVA DEL DIRECTORIO PERMANENTE DE ASESORES: 355 ASESORES EN POSTGRESQL, BOTONES DIRECTOS DE GUARDADO, AUTO-PERSISTENCIA Y DDL AUTO-REPARABLE

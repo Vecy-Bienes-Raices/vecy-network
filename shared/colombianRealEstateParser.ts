@@ -481,3 +481,94 @@ export function evaluateDualBusinessMatch(
   };
 }
 
+/**
+ * Analiza el nivel de vigilancia y seguridad en un texto inmobiliario colombiano (Doctrina v31.90).
+ * Retorna:
+ * - "24_7": Vigilancia privada / portería física las 24 horas confirmada.
+ * - "automated": Edificio automatizado, portería remota/virtual, acceso digital o conserje diurno (NO es 24h presencial).
+ * - "none": Sin vigilancia especificada o explícitamente sin portería.
+ */
+export function parseSecurityType(text: string): "24_7" | "automated" | "none" {
+  if (!text) return "none";
+  const lower = text.toLowerCase();
+
+  // 1. Detectar si es expresamente edificio automatizado, portería virtual/remota o conserje
+  const isAutomatedOrConserje = /\b(?:ed(?:ificio)?\s*automatizado|automatizado|porter[ií]a\s*remota|porter[ií]a\s*virtual|porter[ií]a\s*inteligente|acceso\s*digital|acceso\s*inteligente|cerradura\s*digital|sin\s*porter[ií]a|sin\s*vigilancia|sin\s*celadur[ií]a|no\s*tiene\s*vigilancia|no\s*cuenta\s*con\s*vigilancia|porter[ií]a\s*(?:solo\s*)?de\s*d[ií]a|conserje\s*diurno|conserjer[ií]a\s*diurna|solo\s*conserje)\b/i.test(lower) ||
+    (/\bconserje\b/i.test(lower) && !/\b(?:24\s*horas|24\/7|24h|permanente)\b/i.test(lower));
+
+  if (isAutomatedOrConserje) {
+    return "automated";
+  }
+
+  // 2. Detectar si tiene seguridad / vigilancia 24 horas confirmada
+  const has24h = /\b(?:seguridad\s*(?:las\s*)?24\s*(?:horas|h|hrs)|seguridad\s*24\/7|vigilancia\s*(?:las\s*)?24\s*(?:horas|h|hrs)|vigilancia\s*24\/7|porter[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|porter[ií]a\s*24\/7|celadur[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|celadur[ií]a\s*24\/7|porter[ií]a\s*permanente|vigilancia\s*permanente|seguridad\s*permanente|guardas?\s*24\s*horas|celador\s*24\s*horas)\b/i.test(lower) ||
+    /\b(?:24\s*horas|24\/7)\s*(?:de\s*)?(?:vigilancia|seguridad|porter[ií]a|celadur[ií]a)\b/i.test(lower);
+
+  if (has24h) {
+    return "24_7";
+  }
+
+  return "none";
+}
+
+/**
+ * Determina si la demanda exige obligatoriamente seguridad o vigilancia 24 horas (Doctrina v31.90).
+ */
+export function demands24hSecurity(text: string): boolean {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  return /\b(?:seguridad\s*(?:las\s*)?24\s*(?:horas|h|hrs)|seguridad\s*24\/7|vigilancia\s*(?:las\s*)?24\s*(?:horas|h|hrs)|vigilancia\s*24\/7|porter[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|porter[ií]a\s*24\/7|celadur[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|celadur[ií]a\s*24\/7|guarda\s*(?:de\s*seguridad)?\s*24\s*(?:horas|h|hrs)|portero\s*24\s*horas|celador\s*24\s*horas|exige\s*(?:seguridad|vigilancia|porter[ií]a)\s*24|seguridad\s*privada\s*24)\b/i.test(lower);
+}
+
+/**
+ * Evalúa si hay una desproporción abismal de segmento financiero y metraje (Doctrina v31.90).
+ * Si un cliente tiene un presupuesto generoso (ej: $1.200 MM en venta o $5M en arriendo),
+ * ofrecerle un inmueble que cueste menos del 58% del presupuesto (ej: $630 MM) con un área
+ * modesta/reducida (< 95 m² en venta o < 80 m² en arriendo) es un choque de segmento comercial.
+ */
+export function checkFinancialSegmentCoherence(params: {
+  budgetMax: number;
+  offeredPrice: number;
+  offeredArea?: number;
+  isSale: boolean;
+}): { isCompatible: boolean; reason?: string } {
+  const { budgetMax, offeredPrice, offeredArea, isSale } = params;
+  if (!budgetMax || budgetMax <= 0 || !offeredPrice || offeredPrice <= 0) {
+    return { isCompatible: true };
+  }
+
+  if (isSale) {
+    // Aplica a presupuestos medios-altos y altos (>= $500M)
+    if (budgetMax >= 500_000_000) {
+      const priceRatio = offeredPrice / budgetMax;
+      // Si cuesta menos del 58% del presupuesto (caída > 42%)
+      if (priceRatio < 0.58) {
+        // Y el área es modesta / reducida (< 95 m²)
+        if (offeredArea && offeredArea > 0 && offeredArea < 95) {
+          const pct = Math.round(priceRatio * 100);
+          return {
+            isCompatible: false,
+            reason: `Desproporción de Segmento Comercial: El demandante cuenta con un presupuesto de $${(budgetMax / 1_000_000).toLocaleString("es-CO")}M y la oferta cuesta apenas $${(offeredPrice / 1_000_000).toLocaleString("es-CO")}M (${pct}% del presupuesto) con solo ${offeredArea} m². No corresponde al segmento de confort y amplitud buscado.`
+          };
+        }
+      }
+    }
+  } else {
+    // Arriendo: presupuestos altos (>= $4.5M)
+    if (budgetMax >= 4_500_000) {
+      const rentRatio = offeredPrice / budgetMax;
+      if (rentRatio < 0.55) {
+        if (offeredArea && offeredArea > 0 && offeredArea < 80) {
+          const pct = Math.round(rentRatio * 100);
+          return {
+            isCompatible: false,
+            reason: `Desproporción de Segmento en Arriendo: El canon ofertado de $${(offeredPrice / 1_000_000).toLocaleString("es-CO")}M representa solo el ${pct}% del canon presupuestado ($${(budgetMax / 1_000_000).toLocaleString("es-CO")}M) con metraje reducido (${offeredArea} m²).`
+          };
+        }
+      }
+    }
+  }
+
+  return { isCompatible: true };
+}
+

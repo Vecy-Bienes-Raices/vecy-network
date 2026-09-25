@@ -167,7 +167,31 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.89 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.90 — Septiembre 2026
+
+### Novedades v31.90 (Doctrina En Duro de Seguridad 24/7 vs Edificio Automatizado/Conserje, Guillotina de Coherencia de Segmento Financiero y Metraje, y Erradicación de Falsos Matches Espurios):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Si una demanda exige obligatoriamente seguridad o vigilancia 24 horas (`"Seguridad las 24 horas"`, `"vigilancia 24/7"`, etc.), la oferta NO puede ser un edificio automatizado (`"Edificio automatizado"`, `"Ed Automatizado"`, `"portería virtual"`, `"conserje"` diurno o `"sin vigilancia"`). Debe operar como **FILTRO EN DURO CON GUILLOTINA TOTAL 0% (Missing / Inviable)**; jamás como advertencia en amarillo (`warn` / "Aproximado").
+  - Si un demandante cuenta con un presupuesto generoso (ej: $1.200 MM en venta o $5M+ en arriendo), ofrecerle un apartamento pequeño de apenas 75 m² que cuesta la mitad de lo presupuestado ($630 MM) es irracional y carece de lógica de mercado. Ningún comprador de ese segmento busca un inmueble tan modesto habiendo presupuestado el doble.
+  - El sistema premiaba falsamente como "100% Coincide" (`exact`) un precio de $630M frente a $1.200M y dejaba el área en "Pendiente", permitiendo que el match #M14977 alcanzara un 86% de coincidencia espuria.
+- **Acciones Ejecutadas en Código**:
+  1. **Módulo Compartido `shared/colombianRealEstateParser.ts`**:
+     - `demands24hSecurity(text)`: Extractor y clasificador universal que detecta si la demanda exige seguridad/vigilancia 24 horas presencial.
+     - `parseSecurityType(text)`: Clasifica con precisión en `"24_7"`, `"automated"` (edificio automatizado, conserje diurno, portería virtual) o `"none"`.
+     - `checkFinancialSegmentCoherence({ budgetMax, offeredPrice, offeredArea, isSale })`: Función de coherencia predial que guillotina a 0% cuando la oferta cuesta menos del 58% del presupuesto (en compras ≥$500M) con un metraje reducido (<95 m²), o menos del 55% del canon (en arriendos ≥$4.5M) con metraje <80 m².
+  2. **Motor de Matching `server/_core/matching.ts`**:
+     - **Regla Q de Seguridad 24/7**: Si la demanda exige 24h y la oferta es `automated` o `none` -> Guillotina Inmediata 0% (`blockers.push(...)` y `return buildExplanationResult(0, ...)`).
+     - **Filtro Duro 7 de Presupuesto**: Evaluado `checkFinancialSegmentCoherence` tanto en venta como en arriendo. Si hay desproporción abismal de segmento financiero y metraje -> Guillotina Inmediata 0%.
+  3. **Tabla de Cotejo Técnico `client/src/components/admin/AdminMatches.tsx`**:
+     - **Fila 22 (Vigilancia & Seguridad 24/7)**: Erradicado el falso `warn` ("Aproximado"). Si la demanda exige 24h y la oferta es automatizado/conserje o no certifica 24h, pasa a `missing` (0% Guillotina), activando `hasAnyMissingRow` y colapsando el score a 0%. Proyecta etiquetas claras: `"Edificio Automatizado / Conserje (Sin Vigilancia 24H)"` y `"Sin vigilancia 24H especificada (No Cumple)"`.
+     - **Filas de Precio y Área**: Integrado `checkFinancialSegmentCoherence`. Si hay desproporción, el precio y el área se marcan en `missing` (0% Guillotina) mostrando `"Sub-segmento < 58% ppto"` y `"Área reducida para ppto $1.200M"`.
+  4. **Base de Datos PostgreSQL VPS (`vecy_network`)**:
+     - Purgado de forma definitiva el match espurio #M14977 (`DELETE FROM "propertyMatches" WHERE id = 14977;`).
+  5. **Suite de Regresión `server/__tests__/regression.test.ts` (Sección 12)**:
+     - 5 nuevos tests doctrinales blindando `demands24hSecurity`, `parseSecurityType`, `checkFinancialSegmentCoherence` y colapso estricto a 0% del caso Pedro D vs Apto $630M y Seguridad 24h vs Ed Automatizado.
+- **Verificación**: 80/80 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 15s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.89 — Septiembre 2026
 
 ### Novedades v31.89 (Consolidación Definitiva del Directorio Permanente de Asesores: 355 Asesores en PostgreSQL, Botones Directos de Guardado, Persistencia en Guardar/Recalcular y Auto-Provisionamiento DDL):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

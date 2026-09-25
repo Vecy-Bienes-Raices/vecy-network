@@ -3613,6 +3613,135 @@ var init_divipola = __esm({
   }
 });
 
+// shared/colombianRealEstateParser.ts
+function parseColombianListing(rawText) {
+  if (!rawText) {
+    return {
+      adminIncluded: false,
+      adminNeedsInquiry: false,
+      hasCBS: false,
+      demandsCBSMandatory: false,
+      hasStudio: false,
+      demandsStudioMandatory: false,
+      demandsBalconyOrTerrace: false,
+      isThirdPartyCommission: false,
+      prohibitsThirdPartyCommission: false
+    };
+  }
+  const text2 = rawText.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[*_~]/g, "");
+  const result = {
+    adminIncluded: false,
+    adminNeedsInquiry: false,
+    hasCBS: false,
+    demandsCBSMandatory: false,
+    hasStudio: false,
+    demandsStudioMandatory: false,
+    demandsBalconyOrTerrace: false,
+    isThirdPartyCommission: false,
+    prohibitsThirdPartyCommission: false
+  };
+  const saleMatch = text2.match(/(?:presupuesto\s*(?:para\s*)?compra|precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|para\s*compra)[^$\d\n]*(?:\n[^$\d\n]*)?(?:max|hasta|tope)?\s*\$?\s*(\d{1,4}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i) || text2.match(/(?:venta|comprar|compra)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
+  if (saleMatch) {
+    const cleanNum = saleMatch[1].replace(/[\s.'’]/g, "");
+    result.salePriceCOP = parseInt(cleanNum, 10) * 1e6;
+  }
+  const rentMatch = text2.match(/(?:presupuesto\s*(?:para\s*)?(?:alquiler|arriendo)|canon|para\s*(?:alquiler|arriendo))[^\d\n]*(?:\n[^\d\n]*)?(?:max|hasta|tope)?\s*[:\s\-]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i) || text2.match(/(?:arriendo|arrendamiento|alquiler)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
+  if (rentMatch) {
+    const cleanNum = rentMatch[1].replace(/[\s.'’]/g, "");
+    result.rentPriceCOP = parseInt(cleanNum, 10) * 1e6;
+  }
+  if (/\b(?:con|incluida|incluye)\s+(?:la\s+)?admi?n/i.test(text2)) {
+    result.adminIncluded = true;
+  } else if (/\+\s*adm|\bmas\s+admi?n/i.test(text2)) {
+    result.adminNeedsInquiry = true;
+  }
+  const adminValMatch = text2.match(/(?:admin(?:istraci[oó]n)?|admon)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m|mil|k\b)?/i);
+  if (adminValMatch) {
+    const cleanNum = parseInt(adminValMatch[1].replace(/[\s.'’]/g, ""), 10);
+    const multiplier = /mill|m\b/i.test(adminValMatch[0]) ? 1e6 : /mil|k\b/i.test(adminValMatch[0]) ? 1e3 : 1;
+    result.adminFeeCOP = cleanNum * multiplier;
+  }
+  const areaMatch = text2.match(/(?:m[ií]nimo|[\u00e1a]rea)[^\d\n]*(\d{2,4})\s*(?:m2|mts2|metros|m\b|mt|mts|m²)/i) || text2.match(/(?:^|[\s▪︎•\-])(\d{2,4})\s*(?:m2|mts2|m²|mt2|mts|metros)/i);
+  if (areaMatch) {
+    result.areaM2 = parseInt(areaMatch[1], 10);
+  }
+  const ageMatch = text2.match(/(?:m[aá]ximo\s+)?(\d{1,2})\s*a[ñn]os(?:\s+de\s+antig[uü]edad)?/i);
+  if (ageMatch) {
+    result.maxAgeYears = parseInt(ageMatch[1], 10);
+  }
+  const bedMatch = text2.match(/(\d+)\s*(?:habitaciones|alcobas|habs|cuartos|dormitorios)/i);
+  if (bedMatch) result.bedrooms = parseInt(bedMatch[1], 10);
+  result.hasCBS = /\bcbs\b|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio/i.test(text2);
+  result.demandsCBSMandatory = /(?:cbs|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio)[^\n]*(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente|exige)/i.test(text2) || /(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente)[^\n]*(?:cbs|cuarto\s+(?:de\s+)?servicio)/i.test(text2);
+  result.hasStudio = /\bestudio\b|star\s+de\s+tv|estar\s+tv/i.test(text2);
+  result.demandsStudioMandatory = /(?:estudio|star)[^\n]*(?:obligatorio|imprescindible|excluyente)/i.test(text2);
+  result.demandsBalconyOrTerrace = /balc[oó]n|terraza/i.test(text2);
+  const minFloorMatch = text2.match(/piso\s+(\d+)\s+(?:hacia\s+arriba|en\s+adelante)/i);
+  if (minFloorMatch) result.minFloorRequired = parseInt(minFloorMatch[1], 10);
+  const exactFloorMatch = text2.match(/piso[:\s]+(\d+)/i);
+  if (exactFloorMatch) result.floor = parseInt(exactFloorMatch[1], 10);
+  result.prohibitsThirdPartyCommission = /no\s+tercer[ií]a|sin\s+terceros/i.test(text2);
+  result.isThirdPartyCommission = /en\s+tercer[ií]a|\btercer[ií]a\b/i.test(text2);
+  return result;
+}
+function parseSecurityType(text2) {
+  if (!text2) return "none";
+  const lower = text2.toLowerCase();
+  const isAutomatedOrConserje = /\b(?:ed(?:ificio)?\s*automatizado|automatizado|porter[ií]a\s*remota|porter[ií]a\s*virtual|porter[ií]a\s*inteligente|acceso\s*digital|acceso\s*inteligente|cerradura\s*digital|sin\s*porter[ií]a|sin\s*vigilancia|sin\s*celadur[ií]a|no\s*tiene\s*vigilancia|no\s*cuenta\s*con\s*vigilancia|porter[ií]a\s*(?:solo\s*)?de\s*d[ií]a|conserje\s*diurno|conserjer[ií]a\s*diurna|solo\s*conserje)\b/i.test(lower) || /\bconserje\b/i.test(lower) && !/\b(?:24\s*horas|24\/7|24h|permanente)\b/i.test(lower);
+  if (isAutomatedOrConserje) {
+    return "automated";
+  }
+  const has24h = /\b(?:seguridad\s*(?:las\s*)?24\s*(?:horas|h|hrs)|seguridad\s*24\/7|vigilancia\s*(?:las\s*)?24\s*(?:horas|h|hrs)|vigilancia\s*24\/7|porter[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|porter[ií]a\s*24\/7|celadur[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|celadur[ií]a\s*24\/7|porter[ií]a\s*permanente|vigilancia\s*permanente|seguridad\s*permanente|guardas?\s*24\s*horas|celador\s*24\s*horas)\b/i.test(lower) || /\b(?:24\s*horas|24\/7)\s*(?:de\s*)?(?:vigilancia|seguridad|porter[ií]a|celadur[ií]a)\b/i.test(lower);
+  if (has24h) {
+    return "24_7";
+  }
+  return "none";
+}
+function demands24hSecurity(text2) {
+  if (!text2) return false;
+  const lower = text2.toLowerCase();
+  return /\b(?:seguridad\s*(?:las\s*)?24\s*(?:horas|h|hrs)|seguridad\s*24\/7|vigilancia\s*(?:las\s*)?24\s*(?:horas|h|hrs)|vigilancia\s*24\/7|porter[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|porter[ií]a\s*24\/7|celadur[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|celadur[ií]a\s*24\/7|guarda\s*(?:de\s*seguridad)?\s*24\s*(?:horas|h|hrs)|portero\s*24\s*horas|celador\s*24\s*horas|exige\s*(?:seguridad|vigilancia|porter[ií]a)\s*24|seguridad\s*privada\s*24)\b/i.test(lower);
+}
+function checkFinancialSegmentCoherence(params) {
+  const { budgetMax, offeredPrice, offeredArea, isSale } = params;
+  if (!budgetMax || budgetMax <= 0 || !offeredPrice || offeredPrice <= 0) {
+    return { isCompatible: true };
+  }
+  if (isSale) {
+    if (budgetMax >= 5e8) {
+      const priceRatio = offeredPrice / budgetMax;
+      if (priceRatio < 0.58) {
+        if (offeredArea && offeredArea > 0 && offeredArea < 95) {
+          const pct = Math.round(priceRatio * 100);
+          return {
+            isCompatible: false,
+            reason: `Desproporci\xF3n de Segmento Comercial: El demandante cuenta con un presupuesto de $${(budgetMax / 1e6).toLocaleString("es-CO")}M y la oferta cuesta apenas $${(offeredPrice / 1e6).toLocaleString("es-CO")}M (${pct}% del presupuesto) con solo ${offeredArea} m\xB2. No corresponde al segmento de confort y amplitud buscado.`
+          };
+        }
+      }
+    }
+  } else {
+    if (budgetMax >= 45e5) {
+      const rentRatio = offeredPrice / budgetMax;
+      if (rentRatio < 0.55) {
+        if (offeredArea && offeredArea > 0 && offeredArea < 80) {
+          const pct = Math.round(rentRatio * 100);
+          return {
+            isCompatible: false,
+            reason: `Desproporci\xF3n de Segmento en Arriendo: El canon ofertado de $${(offeredPrice / 1e6).toLocaleString("es-CO")}M representa solo el ${pct}% del canon presupuestado ($${(budgetMax / 1e6).toLocaleString("es-CO")}M) con metraje reducido (${offeredArea} m\xB2).`
+          };
+        }
+      }
+    }
+  }
+  return { isCompatible: true };
+}
+var init_colombianRealEstateParser = __esm({
+  "shared/colombianRealEstateParser.ts"() {
+    "use strict";
+  }
+});
+
 // server/_core/matching.ts
 var matching_exports = {};
 __export(matching_exports, {
@@ -5840,6 +5969,16 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
       } else {
         positives.push(`\u2705 Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del presupuesto m\xE1ximo ($${budgetMax.toLocaleString()})`);
       }
+      const segmentRentCheck = checkFinancialSegmentCoherence({
+        budgetMax,
+        offeredPrice: totalRent,
+        offeredArea: propArea,
+        isSale: false
+      });
+      if (!segmentRentCheck.isCompatible) {
+        blockers.push(`Guillotina de Segmento Financiero y Metraje: ${segmentRentCheck.reason} Match Inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      }
     } else {
       const budgetMin2 = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
       let salePrice = price;
@@ -5857,6 +5996,16 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
           blockers.push(`Guillotina Financiera: El precio del inmueble ($${salePrice.toLocaleString()}) est\xE1 por debajo del segmento solicitado (m\xEDnimo $${lowerSaleLimit.toLocaleString()}).`);
           return buildExplanationResult(0, blockers, positives, negatives);
         }
+      }
+      const segmentSaleCheck = checkFinancialSegmentCoherence({
+        budgetMax,
+        offeredPrice: salePrice,
+        offeredArea: propArea,
+        isSale: true
+      });
+      if (!segmentSaleCheck.isCompatible) {
+        blockers.push(`Guillotina de Segmento Financiero y Metraje: ${segmentSaleCheck.reason} Match Inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
       }
     }
   }
@@ -6157,6 +6306,18 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
       positives.push(`\u2705 Excedente de parqueaderos independientes (${pGarages} ofrecidos vs ${reqGarages} requeridos) \u2014 Bono de confort`);
     } else if (propGarageType === "lineal" && pGarages >= reqGarages) {
       negatives.push(`\u2139\uFE0F Parqueadero(s) lineales/servidumbre \u2014 requiere mover veh\xEDculos para acceder.`);
+    }
+  }
+  const reqDemands24h = demands24hSecurity(reqRawTextLower) || demands24hSecurity(requirement.notes || "") || demands24hSecurity(String(requirement.caracteristicasDeseadas?.seguridad || ""));
+  if (reqDemands24h) {
+    const propSecCombinedText = propRawTextLower + " " + (property.description || "") + " " + String(property.amenities?.seguridad || "");
+    const propSecType = parseSecurityType(propSecCombinedText);
+    if (propSecType === "automated") {
+      blockers.push("Choque de Seguridad y Vigilancia: La demanda exige estrictamente SEGURIDAD / VIGILANCIA 24 HORAS y la oferta es un EDIFICIO AUTOMATIZADO / CONSERJE (sin celadur\xEDa presencial permanente 24/7). Match Inviable (0%).");
+      return buildExplanationResult(0, blockers, positives, negatives);
+    } else if (propSecType === "none") {
+      blockers.push("Choque de Seguridad y Vigilancia: La demanda exige estrictamente SEGURIDAD / VIGILANCIA 24 HORAS y la oferta NO certifica vigilancia 24 horas ni porter\xEDa permanente. Match Inviable (0%).");
+      return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
   const reqWantsLightAir = reqRawTextLower.includes("luz natural") || reqRawTextLower.includes("ventilacion natural") || reqRawTextLower.includes("vista panoramica") || reqRawTextLower.includes("vista a la ciudad") || reqRawTextLower.includes("vista a la montana") || reqRawTextLower.includes("vista a cerros") || reqRawTextLower.includes("vista verde") || reqRawTextLower.includes("frente a parque") || reqRawTextLower.includes("iluminacion") || reqRawTextLower.includes("iluminado") || reqRawTextLower.includes("esquinero") || reqRawTextLower.includes("sol de manana") || reqRawTextLower.includes("sol de tarde");
@@ -6695,6 +6856,7 @@ var init_matching = __esm({
     init_geography();
     init_geo_lookup();
     init_janIA();
+    init_colombianRealEstateParser();
     init_events();
     cachedRejectedPairs = null;
     lastRejectedPairsFetch = 0;
@@ -7204,83 +7366,6 @@ var init_voiceTranscription = __esm({
   "server/_core/voiceTranscription.ts"() {
     "use strict";
     init_env();
-  }
-});
-
-// shared/colombianRealEstateParser.ts
-function parseColombianListing(rawText) {
-  if (!rawText) {
-    return {
-      adminIncluded: false,
-      adminNeedsInquiry: false,
-      hasCBS: false,
-      demandsCBSMandatory: false,
-      hasStudio: false,
-      demandsStudioMandatory: false,
-      demandsBalconyOrTerrace: false,
-      isThirdPartyCommission: false,
-      prohibitsThirdPartyCommission: false
-    };
-  }
-  const text2 = rawText.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[*_~]/g, "");
-  const result = {
-    adminIncluded: false,
-    adminNeedsInquiry: false,
-    hasCBS: false,
-    demandsCBSMandatory: false,
-    hasStudio: false,
-    demandsStudioMandatory: false,
-    demandsBalconyOrTerrace: false,
-    isThirdPartyCommission: false,
-    prohibitsThirdPartyCommission: false
-  };
-  const saleMatch = text2.match(/(?:presupuesto\s*(?:para\s*)?compra|precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|para\s*compra)[^$\d\n]*(?:\n[^$\d\n]*)?(?:max|hasta|tope)?\s*\$?\s*(\d{1,4}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i) || text2.match(/(?:venta|comprar|compra)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
-  if (saleMatch) {
-    const cleanNum = saleMatch[1].replace(/[\s.'’]/g, "");
-    result.salePriceCOP = parseInt(cleanNum, 10) * 1e6;
-  }
-  const rentMatch = text2.match(/(?:presupuesto\s*(?:para\s*)?(?:alquiler|arriendo)|canon|para\s*(?:alquiler|arriendo))[^\d\n]*(?:\n[^\d\n]*)?(?:max|hasta|tope)?\s*[:\s\-]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i) || text2.match(/(?:arriendo|arrendamiento|alquiler)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
-  if (rentMatch) {
-    const cleanNum = rentMatch[1].replace(/[\s.'’]/g, "");
-    result.rentPriceCOP = parseInt(cleanNum, 10) * 1e6;
-  }
-  if (/\b(?:con|incluida|incluye)\s+(?:la\s+)?admi?n/i.test(text2)) {
-    result.adminIncluded = true;
-  } else if (/\+\s*adm|\bmas\s+admi?n/i.test(text2)) {
-    result.adminNeedsInquiry = true;
-  }
-  const adminValMatch = text2.match(/(?:admin(?:istraci[oó]n)?|admon)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m|mil|k\b)?/i);
-  if (adminValMatch) {
-    const cleanNum = parseInt(adminValMatch[1].replace(/[\s.'’]/g, ""), 10);
-    const multiplier = /mill|m\b/i.test(adminValMatch[0]) ? 1e6 : /mil|k\b/i.test(adminValMatch[0]) ? 1e3 : 1;
-    result.adminFeeCOP = cleanNum * multiplier;
-  }
-  const areaMatch = text2.match(/(?:m[ií]nimo|[\u00e1a]rea)[^\d\n]*(\d{2,4})\s*(?:m2|mts2|metros|m\b|mt|mts|m²)/i) || text2.match(/(?:^|[\s▪︎•\-])(\d{2,4})\s*(?:m2|mts2|m²|mt2|mts|metros)/i);
-  if (areaMatch) {
-    result.areaM2 = parseInt(areaMatch[1], 10);
-  }
-  const ageMatch = text2.match(/(?:m[aá]ximo\s+)?(\d{1,2})\s*a[ñn]os(?:\s+de\s+antig[uü]edad)?/i);
-  if (ageMatch) {
-    result.maxAgeYears = parseInt(ageMatch[1], 10);
-  }
-  const bedMatch = text2.match(/(\d+)\s*(?:habitaciones|alcobas|habs|cuartos|dormitorios)/i);
-  if (bedMatch) result.bedrooms = parseInt(bedMatch[1], 10);
-  result.hasCBS = /\bcbs\b|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio/i.test(text2);
-  result.demandsCBSMandatory = /(?:cbs|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio)[^\n]*(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente|exige)/i.test(text2) || /(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente)[^\n]*(?:cbs|cuarto\s+(?:de\s+)?servicio)/i.test(text2);
-  result.hasStudio = /\bestudio\b|star\s+de\s+tv|estar\s+tv/i.test(text2);
-  result.demandsStudioMandatory = /(?:estudio|star)[^\n]*(?:obligatorio|imprescindible|excluyente)/i.test(text2);
-  result.demandsBalconyOrTerrace = /balc[oó]n|terraza/i.test(text2);
-  const minFloorMatch = text2.match(/piso\s+(\d+)\s+(?:hacia\s+arriba|en\s+adelante)/i);
-  if (minFloorMatch) result.minFloorRequired = parseInt(minFloorMatch[1], 10);
-  const exactFloorMatch = text2.match(/piso[:\s]+(\d+)/i);
-  if (exactFloorMatch) result.floor = parseInt(exactFloorMatch[1], 10);
-  result.prohibitsThirdPartyCommission = /no\s+tercer[ií]a|sin\s+terceros/i.test(text2);
-  result.isThirdPartyCommission = /en\s+tercer[ií]a|\btercer[ií]a\b/i.test(text2);
-  return result;
-}
-var init_colombianRealEstateParser = __esm({
-  "shared/colombianRealEstateParser.ts"() {
-    "use strict";
   }
 });
 

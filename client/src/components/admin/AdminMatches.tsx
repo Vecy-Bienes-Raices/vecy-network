@@ -24,7 +24,10 @@ import {
   parseAdminFee,
   parseMaxAge,
   parseKitchenType,
-  formatRequirementField
+  formatRequirementField,
+  parseSecurityType,
+  demands24hSecurity,
+  checkFinancialSegmentCoherence
 } from '@shared/colombianRealEstateParser';
 
 type MatchStatus = "exact" | "warn" | "missing" | "ok" | "neutral" | "plus";
@@ -1371,6 +1374,59 @@ export function scoreRows(req: any, prop: any) {
 
   const showSalePrice = propSalePrice > 0 || reqSaleBudget > 0 || !isReqRentMatch || isDualBiz;
   const showRentPrice = propRentPrice > 0 || reqRentBudget > 0 || isReqRentMatch || isPropPureRent || isDualBiz;
+  let propAdminFee = parseSafePrice(prop.adminFee, prop.rawText);
+
+  // Extracción temprana de metraje de oferta y requerimiento para evaluar coherencia de segmento financiero (Doctrina v31.90)
+  let areaR = parseFloat(req.areaMin || req.areaMinimaM2 || "0");
+  let areaRMax = 0;
+  if (reqTextLower) {
+    const normReqAreaText = reqTextLower.replace(/[\u2013\u2014]/g, "-");
+    const areaRangeR = normReqAreaText.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*:?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?/i);
+    if (areaRangeR && (areaRangeR[1] || areaRangeR[2])) {
+      const hasCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaRangeR[0]);
+      const n1 = parseFloat(areaRangeR[1].replace(",", "."));
+      const n2 = parseFloat(areaRangeR[2].replace(",", "."));
+      if (hasCtx && !isNaN(n1) && !isNaN(n2) && n1 >= 15 && n1 <= 15000 && n2 >= 15 && n2 <= 15000) {
+        areaR = Math.min(n1, n2);
+        areaRMax = Math.max(n1, n2);
+      }
+    } else if (areaR <= 0) {
+      const mRA = normReqAreaText.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|m[ií]nimo|min|de)?\s*:?\s*([\d.,]+)\s*(?:m2|mts2?|m²|metros)/i);
+      if (mRA) {
+        let valRA = parseFloat(mRA[1].replace(/\./g, "").replace(",", "."));
+        if (!isNaN(valRA) && valRA > 10 && valRA < 10000) areaR = valRA;
+      }
+    }
+  }
+
+  let areaP = parseFloat(prop.areaTotal || prop.areaPrivate || "0");
+  if (areaP <= 0 && propTextLower) {
+    const m2Match = propTextLower.match(/(?:área|area|superficie)\s*:?\s*(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:m2|mts2|mts|mt2|metros|m²)?/i)
+      || propTextLower.match(/(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
+    if (m2Match) {
+      const rawDec = parseFloat(m2Match[1].replace(",", "."));
+      if (!isNaN(rawDec) && rawDec > 10 && rawDec < 2000 && rawDec !== propAdminFee && rawDec !== propSalePrice) {
+        areaP = rawDec;
+      }
+    }
+  } else if (areaP > 1000 && areaP < 100000 && !prop.propertyType?.includes("lote") && !prop.propertyType?.includes("land") && !prop.propertyType?.includes("finca") && !prop.propertyType?.includes("farm")) {
+    areaP = areaP / 100;
+  }
+
+  // Chequeo de Coherencia de Segmento Financiero y Metraje (Doctrina v31.90)
+  const segmentSaleCheck = checkFinancialSegmentCoherence({
+    budgetMax: reqSaleBudget,
+    offeredPrice: propSalePrice,
+    offeredArea: areaP,
+    isSale: true
+  });
+
+  const segmentRentCheck = checkFinancialSegmentCoherence({
+    budgetMax: reqRentBudget,
+    offeredPrice: propRentPrice,
+    offeredArea: areaP,
+    isSale: false
+  });
 
   // Evaluación Fila 1: Precio de Venta
   let reqSaleLabel = (isReqRentMatch && !isDualBiz) ? "N/A (Búsqueda de Arriendo)" : (isReqOpenBudget ? "Presupuesto Abierto" : (reqSaleBudget > 0 ? formatCOP(reqSaleBudget) : "Flexible / Presupuesto Abierto"));
@@ -1380,9 +1436,12 @@ export function scoreRows(req: any, prop: any) {
   if (isReqRentMatch && !isDualBiz) {
     saleS = "exact";
   } else if (isReqOpenBudget) {
-    saleS = propSalePrice > 0 ? "plus" : "neutral"; // BUG 6 fix: Presupuesto Abierto → plus (azul), no warn
+    saleS = propSalePrice > 0 ? "plus" : "neutral";
   } else if (reqSaleBudget > 0 && propSalePrice > 0) {
-    if (propSalePrice <= reqSaleBudget) {
+    if (!segmentSaleCheck.isCompatible) {
+      saleS = "missing"; // Guillotina Inflexible por desproporción de segmento financiero y metraje (Doctrina v31.90)
+      propSaleLabel = `${formatCOP(propSalePrice)} (Sub-segmento < 58% ppto)`;
+    } else if (propSalePrice <= reqSaleBudget) {
       saleS = "exact"; // Coincide idéntico o está dentro de presupuesto
     } else if (propSalePrice <= reqSaleBudget * 1.10) {
       saleS = "warn";  // Negociable (+10% margen)
@@ -1410,7 +1469,10 @@ export function scoreRows(req: any, prop: any) {
   } else if (isReqOpenBudget) {
     rentS = propRentPrice > 0 ? "warn" : "neutral";
   } else if (reqRentBudget > 0 && propRentPrice > 0) {
-    if (propRentPrice <= reqRentBudget) {
+    if (!segmentRentCheck.isCompatible) {
+      rentS = "missing"; // Guillotina Inflexible por desproporción de segmento en arriendo (Doctrina v31.90)
+      propRentLabel = `${formatCOP(propRentPrice)}${propRentSuffix} (Sub-segmento < 55% canon)`;
+    } else if (propRentPrice <= reqRentBudget) {
       rentS = "exact"; // Coincide dentro del canon presupuestado
     } else if (propRentPrice <= reqRentBudget * 1.10) {
       rentS = "warn";  // Diferencia negociable (+10% margen)
@@ -1426,7 +1488,7 @@ export function scoreRows(req: any, prop: any) {
   }
 
   // 5. Cuota de Administración (Valor admin)
-  let propAdminFee = parseSafePrice(prop.adminFee, prop.rawText);
+  propAdminFee = parseSafePrice(prop.adminFee, prop.rawText);
 
   const reqAdminInfo = parseAdminFee(req.rawText || "");
   const isReqAdminIncluded = reqAdminInfo.isIncluded || reqTextLower.includes("incluida la administraci") || reqTextLower.includes("incluida administraci") || reqTextLower.includes("admon incluida") || reqTextLower.includes("con admon incluida") || reqTextLower.includes("administracion incluida");
@@ -1475,46 +1537,16 @@ export function scoreRows(req: any, prop: any) {
 
   add("Valor admin", reqAdminLabel, propAdminLabel, adminS, 5, <Receipt className="w-3.5 h-3.5" />);
 
-  let areaR = parseFloat(req.areaMin || req.areaMinimaM2 || "0");
-  let areaRMax = 0;
-  if (reqTextLower) {
-    const normReqAreaText = reqTextLower.replace(/[\u2013\u2014]/g, "-");
-    const areaRangeR = normReqAreaText.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*:?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?/i);
-    if (areaRangeR && (areaRangeR[1] || areaRangeR[2])) {
-      const hasCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaRangeR[0]);
-      const n1 = parseFloat(areaRangeR[1].replace(",", "."));
-      const n2 = parseFloat(areaRangeR[2].replace(",", "."));
-      if (hasCtx && !isNaN(n1) && !isNaN(n2) && n1 >= 15 && n1 <= 15000 && n2 >= 15 && n2 <= 15000) {
-        areaR = Math.min(n1, n2);
-        areaRMax = Math.max(n1, n2);
-      }
-    } else if (areaR <= 0) {
-      const mRA = normReqAreaText.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|m[ií]nimo|min|de)?\s*:?\s*([\d.,]+)\s*(?:m2|mts2?|m²|metros)/i);
-      if (mRA) {
-        let valRA = parseFloat(mRA[1].replace(/\./g, "").replace(",", "."));
-        if (!isNaN(valRA) && valRA > 10 && valRA < 10000) areaR = valRA;
-      }
-    }
-  }
-
-  let areaP = parseFloat(prop.areaTotal || prop.areaPrivate || "0");
-  if (areaP <= 0 && propTextLower) {
-    // Solo extraer metraje si viene acompañado explícitamente de unidades de área o prefijo 'área:'
-    const m2Match = propTextLower.match(/(?:área|area|superficie)\s*:?\s*(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:m2|mts2|mts|mt2|metros|m²)?/i)
-      || propTextLower.match(/(\d{1,4}(?:[.,]\d{1,2})?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)/i);
-    if (m2Match) {
-      const rawDec = parseFloat(m2Match[1].replace(",", "."));
-      if (!isNaN(rawDec) && rawDec > 10 && rawDec < 2000 && rawDec !== propAdminFee && rawDec !== propSalePrice) {
-        areaP = rawDec;
-      }
-    }
-  } else if (areaP > 1000 && areaP < 100000 && !prop.propertyType?.includes("lote") && !prop.propertyType?.includes("land") && !prop.propertyType?.includes("finca") && !prop.propertyType?.includes("farm")) {
-    areaP = areaP / 100;
-  }
-
   let areS: MatchStatus = "neutral";
   let areaPropLabel = areaP > 0 ? `${areaP} m²` : "N/E";
-  if (areaR > 0 && areaP > 0) {
+
+  if (showSalePrice && !isReqRentMatch && !segmentSaleCheck.isCompatible) {
+    areS = "missing"; // Guillotina de metraje insuficiente para el segmento de presupuesto (Doctrina v31.90)
+    areaPropLabel = `${areaP} m² (Área reducida para ppto $${(reqSaleBudget / 1_000_000).toLocaleString("es-CO")}M)`;
+  } else if (showRentPrice && isReqRentMatch && !segmentRentCheck.isCompatible) {
+    areS = "missing"; // Guillotina de metraje insuficiente para el canon presupuestado (Doctrina v31.90)
+    areaPropLabel = `${areaP} m² (Área reducida para canon $${(reqRentBudget / 1_000_000).toLocaleString("es-CO")}M)`;
+  } else if (areaR > 0 && areaP > 0) {
     if (areaP < areaR) {
       areS = "missing"; // Área inferior al mínimo exigido (Tolerancia 0%) -> 0% Guillotina Inmediata
     } else if (areaRMax > 0 && areaP > areaRMax * 1.35) {
@@ -2034,19 +2066,49 @@ export function scoreRows(req: any, prop: any) {
     );
   }
 
-  // 22. Vigilancia & Seguridad 24/7
-  const reqVig = reqTextLower.includes("vigilancia") || reqTextLower.includes("porteria") || reqTextLower.includes("portería") || reqTextLower.includes("seguridad");
-  const propVig = propRawText.includes("vigilancia") || propRawText.includes("porteria") || propRawText.includes("portería") || propRawText.includes("24 horas") || propRawText.includes("24/7");
-  if (reqVig || propVig) {
+  // 22. Vigilancia & Seguridad 24/7 (Doctrina v31.90)
+  const reqDemands24h = demands24hSecurity(reqTextLower) || demands24hSecurity((req as any).notes || "") || demands24hSecurity(String((req.caracteristicasDeseadas as any)?.seguridad || ""));
+  const reqVig = reqDemands24h || reqTextLower.includes("vigilancia") || reqTextLower.includes("porteria") || reqTextLower.includes("portería") || reqTextLower.includes("seguridad");
+  const propSecCombined = propRawText + " " + (prop.description || "") + " " + String((prop.amenities as any)?.seguridad || "");
+  const propSecType = parseSecurityType(propSecCombined);
+  const propVig = propSecType === "24_7" || propRawText.includes("vigilancia") || propRawText.includes("porteria") || propRawText.includes("portería") || propRawText.includes("24 horas") || propRawText.includes("24/7");
+
+  if (reqVig || propVig || propSecType !== "none") {
     let vigStatus: MatchStatus = "neutral";
-    if (reqVig && propVig) vigStatus = "exact";
-    else if (reqVig && !propVig) vigStatus = "warn";
-    else if (!reqVig && propVig) vigStatus = "plus";
-    else vigStatus = "neutral";
+    let propVigLabel = "Sin vigilancia especificada";
+    const reqVigLabel = reqDemands24h ? "Exige Vigilancia 24 Horas" : (reqVig ? "Prefiere Vigilancia" : "Flexible");
+
+    if (propSecType === "automated") {
+      propVigLabel = "Edificio Automatizado / Conserje (Sin Vigilancia 24H)";
+    } else if (propSecType === "24_7") {
+      propVigLabel = "Sí (Portería y Vigilancia 24/7)";
+    } else if (propVig) {
+      propVigLabel = "Sí (Portería / Vigilancia)";
+    } else {
+      propVigLabel = "Sin vigilancia 24H especificada (No Cumple)";
+    }
+
+    if (reqDemands24h) {
+      if (propSecType === "24_7") {
+        vigStatus = "exact";
+      } else {
+        // En duro: edificio automatizado, conserje o sin vigilancia 24h es GUILLOTINA 0% (missing)
+        vigStatus = "missing";
+      }
+    } else if (reqVig) {
+      if (propSecType === "24_7" || propVig) vigStatus = "exact";
+      else if (propSecType === "automated") vigStatus = "warn";
+      else vigStatus = "warn";
+    } else {
+      // Demanda flexible
+      if (propSecType === "24_7" || propVig) vigStatus = "plus";
+      else vigStatus = "neutral";
+    }
+
     add(
       "Vigilancia & Seguridad 24/7",
-      reqVig ? "Exige Vigilancia 24 Horas" : "Flexible",
-      propVig ? "Sí (Portería y Vigilancia 24/7)" : "Sin vigilancia especificada",
+      reqVigLabel,
+      propVigLabel,
       vigStatus,
       3,
       <Shield className="w-3.5 h-3.5" />

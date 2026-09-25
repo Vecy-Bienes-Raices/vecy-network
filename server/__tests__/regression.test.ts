@@ -20,6 +20,11 @@ import {
   lookupAdvisorSync,
   brokerDirectoryCache,
 } from "../_core/advisors";
+import {
+  parseSecurityType,
+  demands24hSecurity,
+  checkFinancialSegmentCoherence
+} from "../../shared/colombianRealEstateParser";
 
 describe("VECY NETWORK — SUITE DE REGRESIÓN DOCTRINAL AUTOMATIZADA", () => {
   // ─────────────────────────────────────────────────────────────
@@ -911,6 +916,150 @@ Disponible para finales de nov.`;
       const byName = lookupAdvisorSync(null, "Diana Quintero");
       expect(byName).toBeDefined();
       expect(byName?.phone).toBe("573187776655");
+    });
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // 12. DOCTRINA v31.90: GUILLOTINAS EN DURO DE SEGURIDAD 24/7 VS EDIFICIO AUTOMATIZADO / CONSERJE Y COHERENCIA DE SEGMENTO FINANCIERO Y METRAJE
+  // ─────────────────────────────────────────────────────────────
+  describe("12. Doctrina v31.90: Seguridad 24/7 en Duro y Coherencia de Segmento Financiero", () => {
+    it("demands24hSecurity: debe detectar exigencia estricta de seguridad / vigilancia 24 horas", () => {
+      const textPedro = "· Características adicionales: Seguridad las 24 horas, no duplex, parqueadero, silencioso.";
+      expect(demands24hSecurity(textPedro)).toBe(true);
+
+      const text247 = "Busco apto en Rosales, vigilancia 24/7 obligatoria, 3 alcobas";
+      expect(demands24hSecurity(text247)).toBe(true);
+
+      const textPorteria24 = "Necesita portería 24 horas con celador presencial";
+      expect(demands24hSecurity(textPorteria24)).toBe(true);
+
+      const textFlexible = "Apto bonito en arriendo, preferible con vigilancia o conserje diurno";
+      expect(demands24hSecurity(textFlexible)).toBe(false);
+    });
+
+    it("parseSecurityType: debe identificar Edificio Automatizado y Conserje diurno como 'automated'", () => {
+      const textOferta2609 = "🤠Conserje\nEd Automatizado\n💰 *$630.000.000*";
+      expect(parseSecurityType(textOferta2609)).toBe("automated");
+
+      const textPorteriaVirtual = "Edificio moderno con portería virtual y acceso inteligente";
+      expect(parseSecurityType(textPorteriaVirtual)).toBe("automated");
+
+      const textSinVig = "Apartamento sin vigilancia ni administración alta";
+      expect(parseSecurityType(textSinVig)).toBe("automated");
+
+      const text247 = "Edificio tradicional con vigilancia 24 horas y cámaras de seguridad";
+      expect(parseSecurityType(text247)).toBe("24_7");
+    });
+
+    it("checkFinancialSegmentCoherence: debe guillotinar desproporción abismal de presupuesto alto vs oferta reducida", () => {
+      // Caso Pedro D: Presupuesto $1.200M vs Oferta $630M (52.5%) con solo 75 m²
+      const resultSale = checkFinancialSegmentCoherence({
+        budgetMax: 1_200_000_000,
+        offeredPrice: 630_000_000,
+        offeredArea: 75,
+        isSale: true
+      });
+      expect(resultSale.isCompatible).toBe(false);
+      expect(resultSale.reason).toContain("Desproporción de Segmento Comercial");
+
+      // Si el área fuera amplia (ej: 140 m² de oportunidad), no debe bloquear
+      const resultWide = checkFinancialSegmentCoherence({
+        budgetMax: 1_200_000_000,
+        offeredPrice: 630_000_000,
+        offeredArea: 140,
+        isSale: true
+      });
+      expect(resultWide.isCompatible).toBe(true);
+
+      // Si el precio estuviera dentro de un rango razonable (> 58% del presupuesto)
+      const resultNormal = checkFinancialSegmentCoherence({
+        budgetMax: 1_200_000_000,
+        offeredPrice: 850_000_000,
+        offeredArea: 90,
+        isSale: true
+      });
+      expect(resultNormal.isCompatible).toBe(true);
+    });
+
+    it("explicarMatch: Caso Pedro D vs Apto $630M Ed Automatizado debe colapsar a Score 0% por Desproporción de Segmento", () => {
+      const reqPedro = {
+        id: 1715,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "venta",
+        ciudadDeseada: "Bogotá",
+        zonaDeseada: "Chapinero Alto",
+        presupuestoMax: 1_200_000_000,
+        habitacionesMin: 2,
+        rawText: `🚨REQUERIMIENTO
+· Compra
+· Cliente: Pedro D
+· Presupuesto: 1.200 MM
+· Habitaciones: 2 o 3
+· Ubicación: Chapinero alto, la Soledad, la Macarena, Rosales, arriba de la séptima.
+· Características adicionales: Seguridad las 24 horas, no duplex, parqueadero, silencioso.`
+      };
+
+      const propApto630 = {
+        id: 2609,
+        propertyType: "apartment",
+        transactionType: "venta",
+        addressCity: "Bogotá",
+        barrio: "Chapinero Alto",
+        price: 630_000_000,
+        areaTotal: 75,
+        bedrooms: 2,
+        bathrooms: 2,
+        garages: 2,
+        rawText: `🛑 *VENDO BONITO APTO EN CHAPINERO ALTO*
+📍 Calle (51 #4 ) Piso 6 - EXTERIOR MODERNO
+☀️ 75m² + Balcón 2m² con LINDA VISTA
+🛏️ 2 Habitaciones c/u con baño
+🖥️ Espacio para Estudio
+🚗 2 Parqueaderos indp + 1 Depósito pequeño
+🏢 Terraza comunal
+🤠Conserje
+Ed Automatizado
+💰 *$630.000.000*
+💲Admon $770.000 mil
+Ed del 2014.
+☘️Info y fotos ✍🏻3102300099`
+      };
+
+      const result = explicarMatch(reqPedro, propApto630);
+      expect(result.score).toBe(0);
+      expect(result.blockers.some(b => b.includes("Segmento Financiero") || b.includes("Desproporción"))).toBe(true);
+    });
+
+    it("explicarMatch: Exigencia de Seguridad 24 Horas vs Oferta en Edificio Automatizado debe colapsar a Score 0%", () => {
+      const reqSeguridad24 = {
+        id: 1716,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "venta",
+        ciudadDeseada: "Bogotá",
+        zonaDeseada: "Chapinero Alto",
+        presupuestoMax: 700_000_000,
+        habitacionesMin: 2,
+        rawText: "Busco apartamento en Chapinero Alto, 2 habitaciones, presupuesto 700 millones, indispensable Seguridad las 24 horas."
+      };
+
+      const propAutomatizado = {
+        id: 2610,
+        propertyType: "apartment",
+        subtipoInmueble: "apartamento_estandar",
+        transactionType: "venta",
+        addressCity: "Bogotá",
+        barrio: "Chapinero Alto",
+        price: 650_000_000,
+        areaTotal: 75,
+        bedrooms: 2,
+        bathrooms: 2,
+        garages: 1,
+        rawText: "Apto exterior en venta Chapinero Alto, 75 m2, 2 habitaciones, Ed Automatizado con conserje diurno y cerradura inteligente. $650 MM."
+      };
+
+      const result = explicarMatch(reqSeguridad24, propAutomatizado);
+      expect(result.score).toBe(0);
+      expect(result.blockers.some(b => b.includes("Choque de Seguridad y Vigilancia") || b.includes("EDIFICIO AUTOMATIZADO"))).toBe(true);
     });
   });
 });

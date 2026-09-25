@@ -5,6 +5,11 @@ import { normalizarTextoGeografico, isLasSantasZone, isBarrioInLasSantas, BARRIO
 import { lookupBarriosByPerimeter } from "./geo-lookup";
 import { VECY_VERSION_LABEL } from "../../shared/const";
 import { extractFallbackDataFromText } from "./janIA";
+import {
+  parseSecurityType,
+  demands24hSecurity,
+  checkFinancialSegmentCoherence
+} from "../../shared/colombianRealEstateParser";
 
 /**
  * Caché en memoria de pares rechazados por feedback doctrinal humano (v31.4)
@@ -2473,6 +2478,17 @@ export function explicarMatch(
       } else {
         positives.push(`✅ Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del presupuesto máximo ($${budgetMax.toLocaleString()})`);
       }
+      // Chequeo de Coherencia de Segmento Financiero y Metraje en Arriendo (Doctrina v31.90)
+      const segmentRentCheck = checkFinancialSegmentCoherence({
+        budgetMax,
+        offeredPrice: totalRent,
+        offeredArea: propArea,
+        isSale: false
+      });
+      if (!segmentRentCheck.isCompatible) {
+        blockers.push(`Guillotina de Segmento Financiero y Metraje: ${segmentRentCheck.reason} Match Inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      }
     } else {
       // Para Compras / Ventas:
       const budgetMin = requirement.presupuestoMin ? parseFloat(String(requirement.presupuestoMin)) : 0;
@@ -2494,6 +2510,18 @@ export function explicarMatch(
           blockers.push(`Guillotina Financiera: El precio del inmueble ($${salePrice.toLocaleString()}) está por debajo del segmento solicitado (mínimo $${lowerSaleLimit.toLocaleString()}).`);
           return buildExplanationResult(0, blockers, positives, negatives);
         }
+      }
+
+      // Chequeo de Coherencia de Segmento Financiero y Metraje en Venta (Doctrina v31.90)
+      const segmentSaleCheck = checkFinancialSegmentCoherence({
+        budgetMax,
+        offeredPrice: salePrice,
+        offeredArea: propArea,
+        isSale: true
+      });
+      if (!segmentSaleCheck.isCompatible) {
+        blockers.push(`Guillotina de Segmento Financiero y Metraje: ${segmentSaleCheck.reason} Match Inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
       }
     }
   }
@@ -2958,6 +2986,20 @@ export function explicarMatch(
       positives.push(`✅ Excedente de parqueaderos independientes (${pGarages} ofrecidos vs ${reqGarages} requeridos) — Bono de confort`);
     } else if (propGarageType === "lineal" && pGarages >= reqGarages) {
       negatives.push(`ℹ️ Parqueadero(s) lineales/servidumbre — requiere mover vehículos para acceder.`);
+    }
+  }
+
+  // Q. Choque de Seguridad 24/7 vs Edificio Automatizado / Conserje / Sin Vigilancia (Doctrina v31.90)
+  const reqDemands24h = demands24hSecurity(reqRawTextLower) || demands24hSecurity((requirement as any).notes || "") || demands24hSecurity(String((requirement.caracteristicasDeseadas as any)?.seguridad || ""));
+  if (reqDemands24h) {
+    const propSecCombinedText = propRawTextLower + " " + (property.description || "") + " " + String((property.amenities as any)?.seguridad || "");
+    const propSecType = parseSecurityType(propSecCombinedText);
+    if (propSecType === "automated") {
+      blockers.push("Choque de Seguridad y Vigilancia: La demanda exige estrictamente SEGURIDAD / VIGILANCIA 24 HORAS y la oferta es un EDIFICIO AUTOMATIZADO / CONSERJE (sin celaduría presencial permanente 24/7). Match Inviable (0%).");
+      return buildExplanationResult(0, blockers, positives, negatives);
+    } else if (propSecType === "none") {
+      blockers.push("Choque de Seguridad y Vigilancia: La demanda exige estrictamente SEGURIDAD / VIGILANCIA 24 HORAS y la oferta NO certifica vigilancia 24 horas ni portería permanente. Match Inviable (0%).");
+      return buildExplanationResult(0, blockers, positives, negatives);
     }
   }
 
