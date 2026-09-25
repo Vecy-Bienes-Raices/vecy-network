@@ -3614,6 +3614,11 @@ var init_divipola = __esm({
 });
 
 // shared/colombianRealEstateParser.ts
+function isOutdoorAreaPreceding(precedingText) {
+  if (!precedingText) return false;
+  const clean = precedingText.toLowerCase().trim();
+  return /\b(?:terraza|balc[oó]n|balcon|patio|jard[ií]n)(?:[^\w\n]+(?:privada|exclusiva|social|amplia|hermosa|espectacular|exterior|cubierta|descubierta))?(?:[^\w\n]+(?:de|con|desde|aprox|aproximadamente))?(?:[^\w\n]+(?:al\s+menos|m[ií]nimo|m[ií]n|min|por\s+lo\s+menos|m[aá]s\s+de|mas\s+de|superior\s+a|mayor\s+a|[>≥]=?))?$/i.test(clean) || /\+\s*(?:al\s+menos|m[ií]nimo|m[ií]n|min)?$/i.test(clean);
+}
 function parseColombianListing(rawText) {
   if (!rawText) {
     return {
@@ -3624,6 +3629,9 @@ function parseColombianListing(rawText) {
       hasStudio: false,
       demandsStudioMandatory: false,
       demandsBalconyOrTerrace: false,
+      hasTerrace: false,
+      hasBalcony: false,
+      hasPatio: false,
       isThirdPartyCommission: false,
       prohibitsThirdPartyCommission: false
     };
@@ -3637,6 +3645,9 @@ function parseColombianListing(rawText) {
     hasStudio: false,
     demandsStudioMandatory: false,
     demandsBalconyOrTerrace: false,
+    hasTerrace: false,
+    hasBalcony: false,
+    hasPatio: false,
     isThirdPartyCommission: false,
     prohibitsThirdPartyCommission: false
   };
@@ -3661,9 +3672,27 @@ function parseColombianListing(rawText) {
     const multiplier = /mill|m\b/i.test(adminValMatch[0]) ? 1e6 : /mil|k\b/i.test(adminValMatch[0]) ? 1e3 : 1;
     result.adminFeeCOP = cleanNum * multiplier;
   }
-  const areaMatch = text2.match(/(?:m[ií]nimo|[\u00e1a]rea)[^\d\n]*(\d{2,4})\s*(?:m2|mts2|metros|m\b|mt|mts|m²)/i) || text2.match(/(?:^|[\s▪︎•\-])(\d{2,4})\s*(?:m2|mts2|m²|mt2|mts|metros)/i);
-  if (areaMatch) {
-    result.areaM2 = parseInt(areaMatch[1], 10);
+  const outdoorInfo = parseOutdoorAreas(text2);
+  result.demandsBalconyOrTerrace = outdoorInfo.hasBalcony || outdoorInfo.hasTerrace;
+  result.hasTerrace = outdoorInfo.hasTerrace;
+  result.hasBalcony = outdoorInfo.hasBalcony;
+  result.hasPatio = outdoorInfo.hasPatio;
+  if (outdoorInfo.terraceArea) result.terraceAreaM2 = outdoorInfo.terraceArea;
+  if (outdoorInfo.balconyArea) result.balconyAreaM2 = outdoorInfo.balconyArea;
+  if (outdoorInfo.patioArea) result.patioAreaM2 = outdoorInfo.patioArea;
+  const allAreaMatches = Array.from(text2.matchAll(/(?:(?:m[ií]nimo|[\u00e1a]rea)[^\d\n]*(\d{2,4})\s*(?:m2|mts2|metros|m\b|mt|mts|m²))|(?:(?:^|[\s▪︎•\-])(\d{2,4})\s*(?:m2|mts2|m²|mt2|mts|metros))/gi));
+  for (const m of allAreaMatches) {
+    const numStr = m[1] || m[2];
+    if (!numStr) continue;
+    const parsedVal = parseInt(numStr, 10);
+    if (outdoorInfo.terraceArea && parsedVal === outdoorInfo.terraceArea) continue;
+    if (outdoorInfo.balconyArea && parsedVal === outdoorInfo.balconyArea) continue;
+    if (outdoorInfo.patioArea && parsedVal === outdoorInfo.patioArea) continue;
+    const mIdx = m.index ?? 0;
+    const preceding = text2.slice(Math.max(0, mIdx - 45), mIdx);
+    if (isOutdoorAreaPreceding(preceding)) continue;
+    result.areaM2 = parsedVal;
+    break;
   }
   const ageMatch = text2.match(/(?:m[aá]ximo\s+)?(\d{1,2})\s*a[ñn]os(?:\s+de\s+antig[uü]edad)?/i);
   if (ageMatch) {
@@ -3675,7 +3704,6 @@ function parseColombianListing(rawText) {
   result.demandsCBSMandatory = /(?:cbs|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio)[^\n]*(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente|exige)/i.test(text2) || /(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente)[^\n]*(?:cbs|cuarto\s+(?:de\s+)?servicio)/i.test(text2);
   result.hasStudio = /\bestudio\b|star\s+de\s+tv|estar\s+tv/i.test(text2);
   result.demandsStudioMandatory = /(?:estudio|star)[^\n]*(?:obligatorio|imprescindible|excluyente)/i.test(text2);
-  result.demandsBalconyOrTerrace = /balc[oó]n|terraza/i.test(text2);
   const minFloorMatch = text2.match(/piso\s+(\d+)\s+(?:hacia\s+arriba|en\s+adelante)/i);
   if (minFloorMatch) result.minFloorRequired = parseInt(minFloorMatch[1], 10);
   const exactFloorMatch = text2.match(/piso[:\s]+(\d+)/i);
@@ -3735,6 +3763,162 @@ function checkFinancialSegmentCoherence(params) {
     }
   }
   return { isCompatible: true };
+}
+function parseOutdoorAreas(rawText) {
+  if (!rawText) {
+    return {
+      terraceArea: null,
+      balconyArea: null,
+      patioArea: null,
+      hasTerrace: false,
+      hasBalcony: false,
+      hasPatio: false,
+      terraceCount: 0,
+      balconyCount: 0,
+      summaryOfferLabel: "Sin dato especificado",
+      summaryReqLabel: "Flexible / No exigido"
+    };
+  }
+  const clean = rawText.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, " ").replace(/[*_~]/g, " ").toLowerCase();
+  const hasTerrace = /\bterrazas?\b/i.test(clean);
+  const hasBalcony = /\bbalc[oó]n(?:es)?\b/i.test(clean);
+  const hasPatio = /\bpatio(?:s)?\b|\bjard[ií]n(?:es)?\b/i.test(clean);
+  let terraceArea = null;
+  let balconyArea = null;
+  let patioArea = null;
+  const plusTerraceMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros)?\s*(?:de\s+)?(?:hermosa\s+|amplia\s+|gran\s+|privada\s+)?terrazas?/i);
+  if (plusTerraceMatch) {
+    const val = parseFloat(plusTerraceMatch[1].replace(",", "."));
+    if (!isNaN(val) && val > 0 && val <= 2e3) {
+      terraceArea = val;
+    }
+  }
+  if (terraceArea === null) {
+    const phraseTerraceMatch = clean.match(/(?:terraza|terrazas)\s+(?:privada|exclusiva|social|amplia|hermosa|espectacular|cubierta|descubierta)?\s*(?:de\s+|con\s+|de\s*aprox(?:imadamente)?\s*|desde\s+)?(?:al\s+menos\s+|m[ií]nimo\s+|m[ií]n\s*[:.]?\s*|por\s+lo\s+menos\s+|m[aá]s\s+de\s+|superior\s+a\s+|mayor\s+a\s+|[>≥]=?\s*)?(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)/i);
+    if (phraseTerraceMatch) {
+      const val = parseFloat(phraseTerraceMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 2e3) {
+        terraceArea = val;
+      }
+    }
+  }
+  if (terraceArea === null) {
+    const invTerraceMatch = clean.match(/(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)\s*(?:de\s+)?(?:hermosa\s+|amplia\s+|gran\s+|privada\s+)?terrazas?/i);
+    if (invTerraceMatch) {
+      const val = parseFloat(invTerraceMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 2e3) {
+        terraceArea = val;
+      }
+    }
+  }
+  if (terraceArea === null) {
+    const colonTerraceMatch = clean.match(/(?:terraza|terrazas)\s*[:=-]\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?/i) || clean.match(/(?:terraza|terrazas)\s+(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i);
+    if (colonTerraceMatch) {
+      const val = parseFloat(colonTerraceMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 2e3) {
+        terraceArea = val;
+      }
+    }
+  }
+  const plusBalconyMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?\s*(?:de\s+)?(?:hermoso\s+|amplio\s+|privado\s+)?balc[oó]n(?:es)?/i);
+  if (plusBalconyMatch) {
+    const val = parseFloat(plusBalconyMatch[1].replace(",", "."));
+    if (!isNaN(val) && val > 0 && val <= 150) {
+      balconyArea = val;
+    }
+  }
+  if (balconyArea === null) {
+    const phraseBalconyMatch = clean.match(/(?:balc[oó]n|balcones)\s+(?:privado|exterior|social|amplio|hermoso|cubierto)?\s*(?:de\s+|con\s+|de\s*aprox(?:imadamente)?\s*|desde\s+)?(?:al\s+menos\s+|m[ií]nimo\s+|m[ií]n\s*[:.]?\s*|por\s+lo\s+menos\s+|m[aá]s\s+de\s+|superior\s+a\s+|mayor\s+a\s+|[>≥]=?\s*)?(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)/i);
+    if (phraseBalconyMatch) {
+      const val = parseFloat(phraseBalconyMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 150) {
+        balconyArea = val;
+      }
+    }
+  }
+  if (balconyArea === null) {
+    const invBalconyMatch = clean.match(/(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)\s*(?:de\s+)?(?:hermoso\s+|amplio\s+|privado\s+)?balc[oó]n(?:es)?/i);
+    if (invBalconyMatch) {
+      const val = parseFloat(invBalconyMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 150) {
+        balconyArea = val;
+      }
+    }
+  }
+  if (balconyArea === null) {
+    const colonBalconyMatch = clean.match(/(?:balc[oó]n|balcones)\s*[:=-]\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?/i) || clean.match(/(?:balc[oó]n|balcones)\s+(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i);
+    if (colonBalconyMatch) {
+      const val = parseFloat(colonBalconyMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 150) {
+        balconyArea = val;
+      }
+    }
+  }
+  const patioMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?\s*(?:de\s+)?patio/i) || clean.match(/patio\s+(?:privado\s+)?(?:de\s+|con\s+)?(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i) || clean.match(/(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)\s*(?:de\s+)?patio/i);
+  if (patioMatch) {
+    const val = parseFloat(patioMatch[1].replace(",", "."));
+    if (!isNaN(val) && val > 0 && val <= 1e3) {
+      patioArea = val;
+    }
+  }
+  let terraceCount = 0;
+  if (hasTerrace) {
+    if (/\b(?:2|dos)\s*terrazas\b/i.test(clean)) {
+      terraceCount = 2;
+    } else if (/\b(?:3|tres)\s*terrazas\b/i.test(clean)) {
+      terraceCount = 3;
+    } else {
+      terraceCount = 1;
+    }
+  }
+  let balconyCount = 0;
+  if (hasBalcony) {
+    if (/\b(?:2|dos)\s*balcones\b/i.test(clean)) {
+      balconyCount = 2;
+    } else if (/\b(?:3|tres)\s*balcones\b/i.test(clean)) {
+      balconyCount = 3;
+    } else {
+      balconyCount = 1;
+    }
+  }
+  let summaryOfferLabel = "Sin dato especificado";
+  if (hasBalcony && hasTerrace) {
+    if (balconyArea && terraceArea) {
+      summaryOfferLabel = `S\xED (Balc\xF3n ${balconyArea} m\xB2 + Terraza ${terraceArea} m\xB2)`;
+    } else if (terraceArea) {
+      summaryOfferLabel = `S\xED (Balc\xF3n + Terraza ${terraceArea} m\xB2)`;
+    } else if (balconyArea) {
+      summaryOfferLabel = `S\xED (Balc\xF3n ${balconyArea} m\xB2 + Terraza)`;
+    } else {
+      summaryOfferLabel = "S\xED (Balc\xF3n y Terraza)";
+    }
+  } else if (hasTerrace) {
+    summaryOfferLabel = terraceArea ? `S\xED (Terraza Privada ${terraceArea} m\xB2)` : "S\xED (Cuenta con Terraza)";
+  } else if (hasBalcony) {
+    summaryOfferLabel = balconyArea ? `S\xED (Balc\xF3n ${balconyArea} m\xB2)` : "S\xED (Cuenta con Balc\xF3n)";
+  } else if (hasPatio) {
+    summaryOfferLabel = patioArea ? `S\xED (Patio ${patioArea} m\xB2)` : "S\xED (Cuenta con Patio)";
+  }
+  let summaryReqLabel = "Flexible / No exigido";
+  if (hasTerrace) {
+    summaryReqLabel = terraceArea ? `Exige Terraza \u2265 ${terraceArea} m\xB2` : "Exige Terraza";
+  } else if (hasBalcony) {
+    summaryReqLabel = balconyArea ? `Exige Balc\xF3n \u2265 ${balconyArea} m\xB2` : "Exige Balc\xF3n";
+  } else if (hasPatio) {
+    summaryReqLabel = patioArea ? `Exige Patio \u2265 ${patioArea} m\xB2` : "Exige Patio";
+  }
+  return {
+    terraceArea,
+    balconyArea,
+    patioArea,
+    hasTerrace,
+    hasBalcony,
+    hasPatio,
+    terraceCount,
+    balconyCount,
+    summaryOfferLabel,
+    summaryReqLabel
+  };
 }
 var init_colombianRealEstateParser = __esm({
   "shared/colombianRealEstateParser.ts"() {
@@ -6152,15 +6336,15 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
       positives.push(`Balcones ofrecidos (${propBalconies}) iguales o superiores a los exigidos (${effectiveReqBalconies}) \u2014 Cumplimiento Confort`);
     }
   }
+  const reqOutdoorInfo = parseOutdoorAreas(reqTextLow);
+  const propOutdoorInfo = parseOutdoorAreas(propRawTextLower);
   let effectiveReqTerraces = 0;
-  if (requirement.hasTerrace || reqTextLow.includes("con terraza") || reqTextLow.includes("exige terraza") || reqTextLow.includes("terrazas")) {
-    const mTer = reqTextLow.match(/(\d+)\s*(?:terraza|terrazas)/i);
-    effectiveReqTerraces = mTer ? parseInt(mTer[1], 10) : 1;
+  if (requirement.hasTerrace || reqTextLow.includes("con terraza") || reqTextLow.includes("exige terraza") || reqOutdoorInfo.hasTerrace) {
+    effectiveReqTerraces = reqOutdoorInfo.terraceCount > 0 ? reqOutdoorInfo.terraceCount : 1;
   }
   let propTerraces = 0;
-  if (property.hasTerrace || propRawTextLower.includes("terraza") || propRawTextLower.includes("terrazas")) {
-    const mPropTer = propRawTextLower.match(/(\d+)\s*(?:terraza|terrazas)/i);
-    propTerraces = mPropTer ? parseInt(mPropTer[1], 10) : property.terraces ? Number(property.terraces) : 1;
+  if (property.hasTerrace || propRawTextLower.includes("terraza") || propOutdoorInfo.hasTerrace) {
+    propTerraces = propOutdoorInfo.terraceCount > 0 ? propOutdoorInfo.terraceCount : property.terraces ? Number(property.terraces) : 1;
   }
   if (propRawTextLower.includes("sin terraza") || propRawTextLower.includes("no tiene terraza")) {
     propTerraces = 0;
@@ -6170,6 +6354,15 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
       blockers.push(`Atributo Fallido (Terrazas): Terrazas ofrecidas (${propTerraces}) son inferiores a las exigidas (${effectiveReqTerraces}). Match Inviable (0%).`);
       return buildExplanationResult(0, blockers, positives, negatives);
     } else {
+      if (reqOutdoorInfo.terraceArea && reqOutdoorInfo.terraceArea > 0) {
+        const propTArea = propOutdoorInfo.terraceArea || Number(property.amenities?.areaTerraza) || 0;
+        if (propTArea > 0 && propTArea < reqOutdoorInfo.terraceArea) {
+          blockers.push(`Atributo Fallido (\xC1rea de Terraza): El \xE1rea de terraza ofertada (${propTArea} m\xB2) es inferior a la m\xEDnima exigida (${reqOutdoorInfo.terraceArea} m\xB2). Match Inviable (0%).`);
+          return buildExplanationResult(0, blockers, positives, negatives);
+        } else if (propTArea >= reqOutdoorInfo.terraceArea) {
+          positives.push(`\xC1rea de terraza ofertada (${propTArea} m\xB2) cumple la exigencia demandada (\u2265 ${reqOutdoorInfo.terraceArea} m\xB2)`);
+        }
+      }
       positives.push(`Terrazas ofrecidas (${propTerraces}) iguales o superiores a las exigidas (${effectiveReqTerraces}) \u2014 Cumplimiento Confort`);
     }
   }
@@ -9002,25 +9195,36 @@ function extractFallbackDataFromText(text2) {
   if (area === 0) {
     const areaRangeMatch = clean.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*:?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?/i);
     if (areaRangeMatch && (areaRangeMatch[1] || areaRangeMatch[2])) {
-      const hasAreaCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaRangeMatch[0]);
-      const n1 = parseFloat(areaRangeMatch[1].replace(",", "."));
-      const n2 = parseFloat(areaRangeMatch[2].replace(",", "."));
-      if (hasAreaCtx && !isNaN(n1) && !isNaN(n2) && n1 >= 15 && n1 <= 15e3 && n2 >= 15 && n2 <= 15e3) {
-        areaMin = Math.min(n1, n2);
-        areaMax = Math.max(n1, n2);
-        area = areaMin;
+      const rIdx = areaRangeMatch.index ?? 0;
+      const rPreceding = clean.slice(Math.max(0, rIdx - 45), rIdx);
+      if (!isOutdoorAreaPreceding(rPreceding)) {
+        const hasAreaCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaRangeMatch[0]);
+        const n1 = parseFloat(areaRangeMatch[1].replace(",", "."));
+        const n2 = parseFloat(areaRangeMatch[2].replace(",", "."));
+        if (hasAreaCtx && !isNaN(n1) && !isNaN(n2) && n1 >= 15 && n1 <= 15e3 && n2 >= 15 && n2 <= 15e3) {
+          areaMin = Math.min(n1, n2);
+          areaMax = Math.max(n1, n2);
+          area = areaMin;
+        }
       }
     }
-    if (area === 0) {
-      const areaMatch = clean.match(/(?:📐|area|área|superficie)\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?/i) || clean.match(/(?:(?:m[ií]nimo|min|m[aá]ximo|max|de)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)\b/i);
-      if (areaMatch) {
-        const hasAreaCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaMatch[0]);
-        const val = parseFloat(areaMatch[1].replace(",", "."));
-        if (hasAreaCtx && !isNaN(val) && val >= 15 && val <= 15e3) {
-          area = val;
-          areaMin = area;
-          areaMax = area;
-        }
+    const outdoor = parseOutdoorAreas(clean);
+    const areaMatches = Array.from(clean.matchAll(/(?:(?:📐|area|área|superficie)\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?)|(?:(?:(?:m[ií]nimo|min|m[aá]ximo|max|de)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)\b)/gi));
+    for (const m of areaMatches) {
+      const valStr = m[1] || m[2];
+      if (!valStr) continue;
+      const val = parseFloat(valStr.replace(",", "."));
+      if (outdoor.terraceArea && val === outdoor.terraceArea) continue;
+      if (outdoor.balconyArea && val === outdoor.balconyArea) continue;
+      if (outdoor.patioArea && val === outdoor.patioArea) continue;
+      const mIdx = m.index ?? 0;
+      const preceding = clean.slice(Math.max(0, mIdx - 45), mIdx);
+      if (isOutdoorAreaPreceding(preceding)) continue;
+      if (!isNaN(val) && val >= 15 && val <= 15e3) {
+        area = val;
+        areaMin = area;
+        areaMax = area;
+        break;
       }
     }
   }
@@ -17763,7 +17967,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.90";
+var VECY_VERSION = "v31.91";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

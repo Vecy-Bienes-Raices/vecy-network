@@ -10,7 +10,7 @@ import { validateCity } from "./divipola";
 import { findMatchesForProperty, findMatchesForRequirement, isNonRealEstateText, isHollowListing, parseStreetCarreraBoundaries } from "./matching";
 import { lookupBarriosByPerimeter } from "./geo-lookup";
 import { transcribeAudio } from "./voiceTranscription";
-import { parseColombianListing } from "../../shared/colombianRealEstateParser";
+import { parseColombianListing, parseOutdoorAreas, isOutdoorAreaPreceding } from "../../shared/colombianRealEstateParser";
 import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
 import { storagePut } from "../storage";
 import { esDominioPermitido, extractPortalAndListingId } from "./scraper";
@@ -837,27 +837,41 @@ export function extractFallbackDataFromText(text: string): any {
     // A. Captura rango de área con soporte para unidades intermedias o prefijo m2: (ej: "M2: 180 – 200", "de 70m2 a 80m2", "de 50-70 mt2", "50 a 70 m2", "50-70 metros")
     const areaRangeMatch = clean.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*:?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?/i);
     if (areaRangeMatch && (areaRangeMatch[1] || areaRangeMatch[2])) {
-      const hasAreaCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaRangeMatch[0]);
-      const n1 = parseFloat(areaRangeMatch[1].replace(',', '.'));
-      const n2 = parseFloat(areaRangeMatch[2].replace(',', '.'));
-      if (hasAreaCtx && !isNaN(n1) && !isNaN(n2) && n1 >= 15 && n1 <= 15000 && n2 >= 15 && n2 <= 15000) {
-        areaMin = Math.min(n1, n2);
-        areaMax = Math.max(n1, n2);
-        area = areaMin;
+      const rIdx = areaRangeMatch.index ?? 0;
+      const rPreceding = clean.slice(Math.max(0, rIdx - 45), rIdx);
+      if (!isOutdoorAreaPreceding(rPreceding)) {
+        const hasAreaCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaRangeMatch[0]);
+        const n1 = parseFloat(areaRangeMatch[1].replace(',', '.'));
+        const n2 = parseFloat(areaRangeMatch[2].replace(',', '.'));
+        if (hasAreaCtx && !isNaN(n1) && !isNaN(n2) && n1 >= 15 && n1 <= 15000 && n2 >= 15 && n2 <= 15000) {
+          areaMin = Math.min(n1, n2);
+          areaMax = Math.max(n1, n2);
+          area = areaMin;
+        }
       }
     }
-    if (area === 0) {
-      // B. Captura área simple con prefijos: "📐 183 m²", "M2: 180", "Area: 180 Mts", "Mínimo 150m2", "Mínimo 160m"
-      const areaMatch = clean.match(/(?:📐|area|área|superficie)\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?/i)
-                     || clean.match(/(?:(?:m[ií]nimo|min|m[aá]ximo|max|de)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)\b/i);
-      if (areaMatch) {
-        const hasAreaCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaMatch[0]);
-        const val = parseFloat(areaMatch[1].replace(',', '.'));
-        if (hasAreaCtx && !isNaN(val) && val >= 15 && val <= 15000) {
-          area = val;
-          areaMin = area;
-          areaMax = area;
-        }
+
+    // B. Captura área simple con prefijos: "📐 183 m²", "M2: 180", "Area: 180 Mts", "Mínimo 150m2", "Mínimo 160m"
+    const outdoor = parseOutdoorAreas(clean);
+    const areaMatches = Array.from(clean.matchAll(/(?:(?:📐|area|área|superficie)\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?)|(?:(?:(?:m[ií]nimo|min|m[aá]ximo|max|de)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)\b)/gi));
+
+    for (const m of areaMatches) {
+      const valStr = m[1] || m[2];
+      if (!valStr) continue;
+      const val = parseFloat(valStr.replace(',', '.'));
+      if (outdoor.terraceArea && val === outdoor.terraceArea) continue;
+      if (outdoor.balconyArea && val === outdoor.balconyArea) continue;
+      if (outdoor.patioArea && val === outdoor.patioArea) continue;
+
+      const mIdx = m.index ?? 0;
+      const preceding = clean.slice(Math.max(0, mIdx - 45), mIdx);
+      if (isOutdoorAreaPreceding(preceding)) continue;
+
+      if (!isNaN(val) && val >= 15 && val <= 15000) {
+        area = val;
+        areaMin = area;
+        areaMax = area;
+        break;
       }
     }
   }

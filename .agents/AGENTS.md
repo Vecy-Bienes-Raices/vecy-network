@@ -167,7 +167,38 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.90 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.91 — Septiembre 2026
+
+### Novedades v31.91 (Extracción, Discriminación Automática y Edición Dedicada de Medidas de Terraza y Balcón en Tabla de Cotejo Técnico):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - En publicaciones inmobiliarias colombianas (ej: `"VENDO SANTA PAULA COD2010 138M2 +72 TERRAZA $1.290.MLL ..."`), es común desglosar las medidas de área de terraza y balcón por separado.
+  - Eduardo solicitó que en la tabla de cotejo técnico (`AdminMatches.tsx`), cuando una oferta o una demanda nombre terraza o balcón con sus metros de área, haya campos dedicados automáticos donde se coloquen y visualicen las medidas en m² para terraza y balcón.
+  - **Detección y Corrección de Bug Crítico**: Cuando una demanda pedía terraza de metraje mínimo (ej: `"terraza de al menos 50 m²"`), el sistema confundía erróneamente esa cifra con el área construida total del apartamento demandado y la comparaba contra la oferta (138 m²), provocando una guillotina falsa a 0% por exceso de área (+35%).
+- **Acciones Ejecutadas en Código**:
+  1. **Módulo Compartido `shared/colombianRealEstateParser.ts`**:
+     - Creada la interfaz `ParsedOutdoorAreas` y la función maestra `parseOutdoorAreas(rawText)`.
+     - Soporta sintaxis aditiva (`"138M2 +72 TERRAZA"`, `"+2 BALCÓN"`), frases descriptivas (`"terraza de 72m2"`, `"conecta a hermosa terraza de 72m2"`), exigencias (`"terraza de al menos 50 m²"`), orden inverso (`"72m2 de terraza"`) y dos puntos/guiones (`"terraza: 72 m2"`).
+     - Función `isOutdoorAreaPreceding(precedingText)` y blindaje en `parseColombianListing`: si una cifra de m² corresponde a terraza/balcón o viene precedida por términos de espacio exterior, se descarta como área construida del inmueble.
+  2. **Backend Determinista `server/_core/janIA.ts`**:
+     - Integrado `parseOutdoorAreas` e `isOutdoorAreaPreceding` en `extractFallbackDataFromText`, evitando que medidas de terraza o balcón contaminen el área del inmueble.
+  3. **Motor de Cotejo `server/_core/matching.ts`**:
+     - Actualizado Filtro Duro 10D para distinguir metraje de terraza de la cantidad de unidades.
+     - Si la demanda exige metraje mínimo de terraza y la oferta tiene metraje menor -> Guillotina 0% (`Atributo Fallido (Área de Terraza)`).
+     - Si la oferta tiene metraje igual o superior -> Cumplimiento pleno y bono de confort positivo.
+  4. **Tabla de Cotejo Técnico en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+     - **Fila "Área Total"**: Proyecta metraje construido junto a sus anexos (ej: `138 m² (+ 72 m² terraza)`).
+     - **Fila 15 "Espacio Exterior (Balcón / Terraza)"**: Proyecta el detalle de ambos espacios (ej: `Sí (Balcón + Terraza 72 m²)`).
+     - **Filas Dedicadas Reactivas**: Creadas las filas `"Área de Terraza (m²)"` y `"Área de Balcón (m²)"`.
+     - **Edición y Persistencia en PostgreSQL**:
+       - Inputs numéricos específicos para Oferta (`propTerraceArea`, `propBalconyArea`) y Demanda (`reqTerraceArea`, `reqBalconyArea`).
+       - Soporte en `handleAddAttributeToCard` (`terraza_area`, `balcon_area`).
+       - Guardado y recálculo persistiendo en `amenities.areaTerraza`/`amenities.areaBalcon` de la propiedad y `caracteristicasDeseadas.areaTerraza`/`caracteristicasDeseadas.areaBalcon` del requerimiento.
+     - **Scope Seguro**: Firma `scoreRows(req, prop, editFormData?)` desacoplada y reactiva en tiempo real.
+  5. **Suite de Regresión `server/__tests__/regression.test.ts` (Sección 13)**:
+     - 6 nuevos tests blindando caso Santa Paula de Eduardo, balcones discriminados, penthouses mixtos, exigencia de terraza mínima, confort y guillotina por metraje insuficiente.
+- **Verificación**: 86/86 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 10s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.90 — Septiembre 2026
 
 ### Novedades v31.90 (Doctrina En Duro de Seguridad 24/7 vs Edificio Automatizado/Conserje, Guillotina de Coherencia de Segmento Financiero y Metraje, y Erradicación de Falsos Matches Espurios):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

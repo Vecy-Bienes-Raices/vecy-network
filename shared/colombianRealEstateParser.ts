@@ -18,10 +18,27 @@ export interface ParsedListing {
   hasStudio: boolean;
   demandsStudioMandatory: boolean;
   demandsBalconyOrTerrace: boolean;
+  hasTerrace: boolean;
+  hasBalcony: boolean;
+  hasPatio: boolean;
+  terraceAreaM2?: number;
+  balconyAreaM2?: number;
+  patioAreaM2?: number;
   floor?: number;
   minFloorRequired?: number;
   isThirdPartyCommission: boolean;      // Es tercería
   prohibitsThirdPartyCommission: boolean; // No tercería
+}
+
+/**
+ * Determina si el texto inmediatamente precedente a una cifra de m² indica que
+ * corresponde a una terraza, balcón, patio o espacio exterior y NO al área del inmueble.
+ */
+export function isOutdoorAreaPreceding(precedingText: string): boolean {
+  if (!precedingText) return false;
+  const clean = precedingText.toLowerCase().trim();
+  return /\b(?:terraza|balc[oó]n|balcon|patio|jard[ií]n)(?:[^\w\n]+(?:privada|exclusiva|social|amplia|hermosa|espectacular|exterior|cubierta|descubierta))?(?:[^\w\n]+(?:de|con|desde|aprox|aproximadamente))?(?:[^\w\n]+(?:al\s+menos|m[ií]nimo|m[ií]n|min|por\s+lo\s+menos|m[aá]s\s+de|mas\s+de|superior\s+a|mayor\s+a|[>≥]=?))?$/i.test(clean)
+    || /\+\s*(?:al\s+menos|m[ií]nimo|m[ií]n|min)?$/i.test(clean);
 }
 
 export function parseColombianListing(rawText: string): ParsedListing {
@@ -34,6 +51,9 @@ export function parseColombianListing(rawText: string): ParsedListing {
       hasStudio: false,
       demandsStudioMandatory: false,
       demandsBalconyOrTerrace: false,
+      hasTerrace: false,
+      hasBalcony: false,
+      hasPatio: false,
       isThirdPartyCommission: false,
       prohibitsThirdPartyCommission: false,
     };
@@ -51,6 +71,9 @@ export function parseColombianListing(rawText: string): ParsedListing {
     hasStudio: false,
     demandsStudioMandatory: false,
     demandsBalconyOrTerrace: false,
+    hasTerrace: false,
+    hasBalcony: false,
+    hasPatio: false,
     isThirdPartyCommission: false,
     prohibitsThirdPartyCommission: false,
   };
@@ -85,11 +108,33 @@ export function parseColombianListing(rawText: string): ParsedListing {
     result.adminFeeCOP = cleanNum * multiplier;
   }
 
-  // 4. ÁREA TOTAL (Mínimo 160m, 230M2, 160 mts, 160 m2, Área: 230)
-  const areaMatch = text.match(/(?:m[ií]nimo|[\u00e1a]rea)[^\d\n]*(\d{2,4})\s*(?:m2|mts2|metros|m\b|mt|mts|m²)/i)
-    || text.match(/(?:^|[\s▪︎•\-])(\d{2,4})\s*(?:m2|mts2|m²|mt2|mts|metros)/i);
-  if (areaMatch) {
-    result.areaM2 = parseInt(areaMatch[1], 10);
+  // 4. ESPACIO EXTERIOR PREVIO (Para no confundir áreas de terraza/balcón con el área del inmueble)
+  const outdoorInfo = parseOutdoorAreas(text);
+  result.demandsBalconyOrTerrace = outdoorInfo.hasBalcony || outdoorInfo.hasTerrace;
+  result.hasTerrace = outdoorInfo.hasTerrace;
+  result.hasBalcony = outdoorInfo.hasBalcony;
+  result.hasPatio = outdoorInfo.hasPatio;
+  if (outdoorInfo.terraceArea) result.terraceAreaM2 = outdoorInfo.terraceArea;
+  if (outdoorInfo.balconyArea) result.balconyAreaM2 = outdoorInfo.balconyArea;
+  if (outdoorInfo.patioArea) result.patioAreaM2 = outdoorInfo.patioArea;
+
+  // 5. ÁREA TOTAL (Mínimo 160m, 230M2, 160 mts, 160 m2, Área: 230)
+  const allAreaMatches = Array.from(text.matchAll(/(?:(?:m[ií]nimo|[\u00e1a]rea)[^\d\n]*(\d{2,4})\s*(?:m2|mts2|metros|m\b|mt|mts|m²))|(?:(?:^|[\s▪︎•\-])(\d{2,4})\s*(?:m2|mts2|m²|mt2|mts|metros))/gi));
+  for (const m of allAreaMatches) {
+    const numStr = m[1] || m[2];
+    if (!numStr) continue;
+    const parsedVal = parseInt(numStr, 10);
+    // Si este número coincide con la medida de terraza, balcón o patio ya identificada, descartar como área construida
+    if (outdoorInfo.terraceArea && parsedVal === outdoorInfo.terraceArea) continue;
+    if (outdoorInfo.balconyArea && parsedVal === outdoorInfo.balconyArea) continue;
+    if (outdoorInfo.patioArea && parsedVal === outdoorInfo.patioArea) continue;
+
+    const mIdx = m.index ?? 0;
+    const preceding = text.slice(Math.max(0, mIdx - 45), mIdx);
+    if (isOutdoorAreaPreceding(preceding)) continue;
+
+    result.areaM2 = parsedVal;
+    break;
   }
 
   // 5. ANTIGÜEDAD (*Maximo* 20 años, 38 años)
@@ -111,8 +156,7 @@ export function parseColombianListing(rawText: string): ParsedListing {
   result.hasStudio = /\bestudio\b|star\s+de\s+tv|estar\s+tv/i.test(text);
   result.demandsStudioMandatory = /(?:estudio|star)[^\n]*(?:obligatorio|imprescindible|excluyente)/i.test(text);
 
-  // 9. ESPACIO EXTERIOR (Balcón / Terraza)
-  result.demandsBalconyOrTerrace = /balc[oó]n|terraza/i.test(text);
+
 
   // 10. FILTROS DE PISO
   const minFloorMatch = text.match(/piso\s+(\d+)\s+(?:hacia\s+arriba|en\s+adelante)/i);
@@ -571,4 +615,223 @@ export function checkFinancialSegmentCoherence(params: {
 
   return { isCompatible: true };
 }
+
+export interface ParsedOutdoorAreas {
+  terraceArea: number | null;
+  balconyArea: number | null;
+  patioArea: number | null;
+  hasTerrace: boolean;
+  hasBalcony: boolean;
+  hasPatio: boolean;
+  terraceCount: number;
+  balconyCount: number;
+  summaryOfferLabel: string;
+  summaryReqLabel: string;
+}
+
+/**
+ * Analizador y extractor universal de medidas de espacios exteriores (Terraza, Balcón, Patio)
+ * en la jerga inmobiliaria colombiana (Doctrina v31.91).
+ * Soporta expresiones como:
+ * - "138M2 +72 TERRAZA", "+ 72 TERRAZA", "138M2 + 72M2 TERRAZA"
+ * - "TERRAZA DE 72M2", "HERMOSA TERRAZA DE 72 MTS", "CONECTA A HERMOSA TERRAZA DE 72M2"
+ * - "72M2 DE TERRAZA", "72 METROS DE TERRAZA"
+ * - "75M2 + 2 BALCÓN", "BALCÓN DE 4M2", "BALCÓN 2M2", "2M2 DE BALCÓN"
+ * - "PATIO DE 15M2", "+ 20 PATIO"
+ */
+export function parseOutdoorAreas(rawText: string): ParsedOutdoorAreas {
+  if (!rawText) {
+    return {
+      terraceArea: null,
+      balconyArea: null,
+      patioArea: null,
+      hasTerrace: false,
+      hasBalcony: false,
+      hasPatio: false,
+      terraceCount: 0,
+      balconyCount: 0,
+      summaryOfferLabel: "Sin dato especificado",
+      summaryReqLabel: "Flexible / No exigido",
+    };
+  }
+
+  const clean = rawText
+    .replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, " ")
+    .replace(/[*_~]/g, " ")
+    .toLowerCase();
+
+  const hasTerrace = /\bterrazas?\b/i.test(clean);
+  const hasBalcony = /\bbalc[oó]n(?:es)?\b/i.test(clean);
+  const hasPatio = /\bpatio(?:s)?\b|\bjard[ií]n(?:es)?\b/i.test(clean);
+
+  let terraceArea: number | null = null;
+  let balconyArea: number | null = null;
+  let patioArea: number | null = null;
+
+  // 1. TERRAZA: EXTRACCIÓN DE ÁREA EN M2
+  // Caso A: Sintaxis aditiva clásica colombiana (ej: "138M2 +72 TERRAZA", "+ 72 TERRAZA", "138M2 + 72M2 TERRAZA")
+  const plusTerraceMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros)?\s*(?:de\s+)?(?:hermosa\s+|amplia\s+|gran\s+|privada\s+)?terrazas?/i);
+  if (plusTerraceMatch) {
+    const val = parseFloat(plusTerraceMatch[1].replace(",", "."));
+    if (!isNaN(val) && val > 0 && val <= 2000) {
+      terraceArea = val;
+    }
+  }
+
+  // Caso B: "terraza de 72m2", "hermosa terraza de 72 mts", "conecta a hermosa terraza de 72m2", "terraza privada de 72 m2", "terraza de al menos 50m2"
+  if (terraceArea === null) {
+    const phraseTerraceMatch = clean.match(/(?:terraza|terrazas)\s+(?:privada|exclusiva|social|amplia|hermosa|espectacular|cubierta|descubierta)?\s*(?:de\s+|con\s+|de\s*aprox(?:imadamente)?\s*|desde\s+)?(?:al\s+menos\s+|m[ií]nimo\s+|m[ií]n\s*[:.]?\s*|por\s+lo\s+menos\s+|m[aá]s\s+de\s+|superior\s+a\s+|mayor\s+a\s+|[>≥]=?\s*)?(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)/i);
+    if (phraseTerraceMatch) {
+      const val = parseFloat(phraseTerraceMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 2000) {
+        terraceArea = val;
+      }
+    }
+  }
+
+  // Caso C: Inverso: "72m2 de terraza", "72 mts de terraza", "72 metros de terraza"
+  if (terraceArea === null) {
+    const invTerraceMatch = clean.match(/(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)\s*(?:de\s+)?(?:hermosa\s+|amplia\s+|gran\s+|privada\s+)?terrazas?/i);
+    if (invTerraceMatch) {
+      const val = parseFloat(invTerraceMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 2000) {
+        terraceArea = val;
+      }
+    }
+  }
+
+  // Caso D: Con dos puntos o guión: "terraza: 72 m2", "terraza - 72 mts", "terraza 72 m2"
+  if (terraceArea === null) {
+    const colonTerraceMatch = clean.match(/(?:terraza|terrazas)\s*[:=-]\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?/i)
+      || clean.match(/(?:terraza|terrazas)\s+(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i);
+    if (colonTerraceMatch) {
+      const val = parseFloat(colonTerraceMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 2000) {
+        terraceArea = val;
+      }
+    }
+  }
+
+  // 2. BALCÓN: EXTRACCIÓN DE ÁREA EN M2
+  // Caso A: Sintaxis aditiva (ej: "+2 BALCÓN", "+ 2M2 BALCÓN", "75M2 + 4 BALCON")
+  const plusBalconyMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?\s*(?:de\s+)?(?:hermoso\s+|amplio\s+|privado\s+)?balc[oó]n(?:es)?/i);
+  if (plusBalconyMatch) {
+    const val = parseFloat(plusBalconyMatch[1].replace(",", "."));
+    if (!isNaN(val) && val > 0 && val <= 150) {
+      balconyArea = val;
+    }
+  }
+
+  // Caso B: "balcón de 4m2", "balcón exterior de 2 mts", "balcón con 3 metros", "balcón de al menos 2 m2"
+  if (balconyArea === null) {
+    const phraseBalconyMatch = clean.match(/(?:balc[oó]n|balcones)\s+(?:privado|exterior|social|amplio|hermoso|cubierto)?\s*(?:de\s+|con\s+|de\s*aprox(?:imadamente)?\s*|desde\s+)?(?:al\s+menos\s+|m[ií]nimo\s+|m[ií]n\s*[:.]?\s*|por\s+lo\s+menos\s+|m[aá]s\s+de\s+|superior\s+a\s+|mayor\s+a\s+|[>≥]=?\s*)?(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)/i);
+    if (phraseBalconyMatch) {
+      const val = parseFloat(phraseBalconyMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 150) {
+        balconyArea = val;
+      }
+    }
+  }
+
+  // Caso C: Inverso: "2m2 de balcón", "4 mts de balcón"
+  if (balconyArea === null) {
+    const invBalconyMatch = clean.match(/(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)\s*(?:de\s+)?(?:hermoso\s+|amplio\s+|privado\s+)?balc[oó]n(?:es)?/i);
+    if (invBalconyMatch) {
+      const val = parseFloat(invBalconyMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 150) {
+        balconyArea = val;
+      }
+    }
+  }
+
+  // Caso D: Con dos puntos o espacio directo: "balcón: 3 m2", "balcón 4 m2"
+  if (balconyArea === null) {
+    const colonBalconyMatch = clean.match(/(?:balc[oó]n|balcones)\s*[:=-]\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?/i)
+      || clean.match(/(?:balc[oó]n|balcones)\s+(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i);
+    if (colonBalconyMatch) {
+      const val = parseFloat(colonBalconyMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 150) {
+        balconyArea = val;
+      }
+    }
+  }
+
+  // 3. PATIO: EXTRACCIÓN DE ÁREA EN M2
+  const patioMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?\s*(?:de\s+)?patio/i)
+    || clean.match(/patio\s+(?:privado\s+)?(?:de\s+|con\s+)?(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i)
+    || clean.match(/(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)\s*(?:de\s+)?patio/i);
+  if (patioMatch) {
+    const val = parseFloat(patioMatch[1].replace(",", "."));
+    if (!isNaN(val) && val > 0 && val <= 1000) {
+      patioArea = val;
+    }
+  }
+
+  // 4. CONTEO DE UNIDADES (distinguiendo de medidas de m2)
+  let terraceCount = 0;
+  if (hasTerrace) {
+    if (/\b(?:2|dos)\s*terrazas\b/i.test(clean)) {
+      terraceCount = 2;
+    } else if (/\b(?:3|tres)\s*terrazas\b/i.test(clean)) {
+      terraceCount = 3;
+    } else {
+      terraceCount = 1;
+    }
+  }
+
+  let balconyCount = 0;
+  if (hasBalcony) {
+    if (/\b(?:2|dos)\s*balcones\b/i.test(clean)) {
+      balconyCount = 2;
+    } else if (/\b(?:3|tres)\s*balcones\b/i.test(clean)) {
+      balconyCount = 3;
+    } else {
+      balconyCount = 1;
+    }
+  }
+
+  // 5. CONSTRUCCIÓN DE ETIQUETA INFORMATIVA PARA OFERTA
+  let summaryOfferLabel = "Sin dato especificado";
+  if (hasBalcony && hasTerrace) {
+    if (balconyArea && terraceArea) {
+      summaryOfferLabel = `Sí (Balcón ${balconyArea} m² + Terraza ${terraceArea} m²)`;
+    } else if (terraceArea) {
+      summaryOfferLabel = `Sí (Balcón + Terraza ${terraceArea} m²)`;
+    } else if (balconyArea) {
+      summaryOfferLabel = `Sí (Balcón ${balconyArea} m² + Terraza)`;
+    } else {
+      summaryOfferLabel = "Sí (Balcón y Terraza)";
+    }
+  } else if (hasTerrace) {
+    summaryOfferLabel = terraceArea ? `Sí (Terraza Privada ${terraceArea} m²)` : "Sí (Cuenta con Terraza)";
+  } else if (hasBalcony) {
+    summaryOfferLabel = balconyArea ? `Sí (Balcón ${balconyArea} m²)` : "Sí (Cuenta con Balcón)";
+  } else if (hasPatio) {
+    summaryOfferLabel = patioArea ? `Sí (Patio ${patioArea} m²)` : "Sí (Cuenta con Patio)";
+  }
+
+  // 6. CONSTRUCCIÓN DE ETIQUETA INFORMATIVA PARA DEMANDA
+  let summaryReqLabel = "Flexible / No exigido";
+  if (hasTerrace) {
+    summaryReqLabel = terraceArea ? `Exige Terraza ≥ ${terraceArea} m²` : "Exige Terraza";
+  } else if (hasBalcony) {
+    summaryReqLabel = balconyArea ? `Exige Balcón ≥ ${balconyArea} m²` : "Exige Balcón";
+  } else if (hasPatio) {
+    summaryReqLabel = patioArea ? `Exige Patio ≥ ${patioArea} m²` : "Exige Patio";
+  }
+
+  return {
+    terraceArea,
+    balconyArea,
+    patioArea,
+    hasTerrace,
+    hasBalcony,
+    hasPatio,
+    terraceCount,
+    balconyCount,
+    summaryOfferLabel,
+    summaryReqLabel,
+  };
+}
+
 

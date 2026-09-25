@@ -27,7 +27,8 @@ import {
   formatRequirementField,
   parseSecurityType,
   demands24hSecurity,
-  checkFinancialSegmentCoherence
+  checkFinancialSegmentCoherence,
+  parseOutdoorAreas
 } from '@shared/colombianRealEstateParser';
 
 type MatchStatus = "exact" | "warn" | "missing" | "ok" | "neutral" | "plus";
@@ -561,12 +562,12 @@ export function isHollowListing(rawText: string | null | undefined, name?: strin
 
 const scoreRowsCache = new Map<string, { rows: ScoreRow[]; autoScore: number; pts: number; max: number }>();
 
-export function scoreRows(req: any, prop: any) {
+export function scoreRows(req: any, prop: any, editFormData?: any) {
   if (!req || !prop) return { rows: [], autoScore: 0, pts: 0, max: 0 };
 
-  const cacheKey = `${req.id || 'r'}_${req.presupuestoMax || ''}_${req.areaMin || ''}_${req.habitacionesMin || ''}_${req.banosMin || ''}_${req.parqueaderosMin || ''}_${req.zonaDeseada || ''}_${req.addressNeighborhood || ''}_${req.ciudadDeseada || ''}_${req.tipoInmuebleDeseado || ''}_${req.tipoNegocioDeseado || ''}_${req.idUsuarioWhatsapp || ''}_${req.antiguedadMax || ''}_${JSON.stringify(req.caracteristicasDeseadas || {})}__${prop.id || 'p'}_${prop.price || ''}_${prop.rentPrice || ''}_${prop.adminFee || ''}_${prop.areaTotal || ''}_${prop.bedrooms || ''}_${prop.bathrooms || ''}_${prop.garages || ''}_${prop.stratum || ''}_${prop.zone || ''}_${prop.addressNeighborhood || ''}_${prop.city || ''}_${prop.propertyType || ''}_${prop.transactionType || ''}_${prop.idUsuarioWhatsapp || ''}_${prop.yearBuilt || ''}_${prop.antiguedadAnos || ''}_${JSON.stringify(prop.amenities || {})}`;
+  const cacheKey = editFormData ? '' : `${req.id || 'r'}_${req.presupuestoMax || ''}_${req.areaMin || ''}_${req.habitacionesMin || ''}_${req.banosMin || ''}_${req.parqueaderosMin || ''}_${req.zonaDeseada || ''}_${req.addressNeighborhood || ''}_${req.ciudadDeseada || ''}_${req.tipoInmuebleDeseado || ''}_${req.tipoNegocioDeseado || ''}_${req.idUsuarioWhatsapp || ''}_${req.antiguedadMax || ''}_${JSON.stringify(req.caracteristicasDeseadas || {})}__${prop.id || 'p'}_${prop.price || ''}_${prop.rentPrice || ''}_${prop.adminFee || ''}_${prop.areaTotal || ''}_${prop.bedrooms || ''}_${prop.bathrooms || ''}_${prop.garages || ''}_${prop.stratum || ''}_${prop.zone || ''}_${prop.addressNeighborhood || ''}_${prop.city || ''}_${prop.propertyType || ''}_${prop.transactionType || ''}_${prop.idUsuarioWhatsapp || ''}_${prop.yearBuilt || ''}_${prop.antiguedadAnos || ''}_${JSON.stringify(prop.amenities || {})}`;
 
-  if (scoreRowsCache.has(cacheKey)) {
+  if (cacheKey && scoreRowsCache.has(cacheKey)) {
     return scoreRowsCache.get(cacheKey)!;
   }
 
@@ -1537,8 +1538,37 @@ export function scoreRows(req: any, prop: any) {
 
   add("Valor admin", reqAdminLabel, propAdminLabel, adminS, 5, <Receipt className="w-3.5 h-3.5" />);
 
+  // Extracción de áreas y características de espacios exteriores (Terraza / Balcón / Patio - Doctrina v31.91)
+  const propOutdoor = parseOutdoorAreas(propRawText || "");
+  const reqOutdoor = parseOutdoorAreas(reqTextLower || "");
+
+  const effectivePropTerraceArea = (editFormData?.propTerraceArea !== undefined && editFormData?.propTerraceArea !== '')
+    ? (parseFloat(String(editFormData.propTerraceArea).replace(',', '.')) || 0)
+    : (Number(prop?.amenities?.areaTerraza) || propOutdoor.terraceArea || 0);
+
+  const effectivePropBalconyArea = (editFormData?.propBalconyArea !== undefined && editFormData?.propBalconyArea !== '')
+    ? (parseFloat(String(editFormData.propBalconyArea).replace(',', '.')) || 0)
+    : (Number(prop?.amenities?.areaBalcon) || propOutdoor.balconyArea || 0);
+
+  const effectiveReqTerraceArea = (editFormData?.reqTerraceArea !== undefined && editFormData?.reqTerraceArea !== '')
+    ? (parseFloat(String(editFormData.reqTerraceArea).replace(',', '.')) || 0)
+    : (Number(req?.caracteristicasDeseadas?.areaTerraza) || reqOutdoor.terraceArea || 0);
+
+  const effectiveReqBalconyArea = (editFormData?.reqBalconyArea !== undefined && editFormData?.reqBalconyArea !== '')
+    ? (parseFloat(String(editFormData.reqBalconyArea).replace(',', '.')) || 0)
+    : (Number(req?.caracteristicasDeseadas?.areaBalcon) || reqOutdoor.balconyArea || 0);
+
   let areS: MatchStatus = "neutral";
   let areaPropLabel = areaP > 0 ? `${areaP} m²` : "N/E";
+  if (areaP > 0) {
+    if (effectivePropTerraceArea > 0 && effectivePropBalconyArea > 0) {
+      areaPropLabel = `${areaP} m² (+ ${effectivePropTerraceArea} m² terraza + ${effectivePropBalconyArea} m² balcón)`;
+    } else if (effectivePropTerraceArea > 0) {
+      areaPropLabel = `${areaP} m² (+ ${effectivePropTerraceArea} m² terraza)`;
+    } else if (effectivePropBalconyArea > 0) {
+      areaPropLabel = `${areaP} m² (+ ${effectivePropBalconyArea} m² balcón)`;
+    }
+  }
 
   if (showSalePrice && !isReqRentMatch && !segmentSaleCheck.isCompatible) {
     areS = "missing"; // Guillotina de metraje insuficiente para el segmento de presupuesto (Doctrina v31.90)
@@ -1814,12 +1844,12 @@ export function scoreRows(req: any, prop: any) {
 
   // 15. Espacio Exterior (Balcón / Terraza / Patio / Jardín) - REACTIVO ("POR ARTE DE MAGIA")
   const isHouse = (req.tipoInmuebleDeseado || req.propertyType || prop.propertyType || "").toLowerCase().includes("casa");
-  const reqPatio = isHouse && (reqTextLower.includes("patio") || reqTextLower.includes("jardin") || reqTextLower.includes("jardín"));
-  const propPatio = isHouse && (propRawText.includes("patio") || propRawText.includes("jardin") || propRawText.includes("jardín"));
-  const reqBalcon = !isHouse && (reqTextLower.includes("balcon") || reqTextLower.includes("balcón"));
-  const reqTerraza = !isHouse && reqTextLower.includes("terraza");
-  const propBalcon = !isHouse && (propRawText.includes("balcon") || propRawText.includes("balcón") || prop.hasBalcony);
-  const propTerraza = !isHouse && (propRawText.includes("terraza") || prop.hasTerrace);
+  const reqPatio = isHouse && (reqTextLower.includes("patio") || reqTextLower.includes("jardin") || reqTextLower.includes("jardín") || reqOutdoor.hasPatio);
+  const propPatio = isHouse && (propRawText.includes("patio") || propRawText.includes("jardin") || propRawText.includes("jardín") || propOutdoor.hasPatio);
+  const reqBalcon = !isHouse && (reqTextLower.includes("balcon") || reqTextLower.includes("balcón") || reqOutdoor.hasBalcony || effectiveReqBalconyArea > 0);
+  const reqTerraza = !isHouse && (reqTextLower.includes("terraza") || reqOutdoor.hasTerrace || effectiveReqTerraceArea > 0);
+  const propBalcon = !isHouse && (propRawText.includes("balcon") || propRawText.includes("balcón") || prop.hasBalcony || propOutdoor.hasBalcony || effectivePropBalconyArea > 0);
+  const propTerraza = !isHouse && (propRawText.includes("terraza") || prop.hasTerrace || propOutdoor.hasTerrace || effectivePropTerraceArea > 0);
 
   if (isHouse ? (reqPatio || propPatio) : (reqBalcon || reqTerraza || propBalcon || propTerraza)) {
     let extS: MatchStatus = "neutral";
@@ -1842,21 +1872,112 @@ export function scoreRows(req: any, prop: any) {
       }
       add("Espacio Exterior (Patio / Jardín)", reqExtLabel, propExtLabel, extS, 5, <Trees className="w-3.5 h-3.5" />);
     } else {
+      // Formatear etiquetas de la oferta con medidas reales de terraza y balcón (Doctrina v31.91)
+      if (propBalcon && propTerraza) {
+        if (effectivePropBalconyArea > 0 && effectivePropTerraceArea > 0) {
+          propExtLabel = `Sí (Balcón ${effectivePropBalconyArea} m² + Terraza ${effectivePropTerraceArea} m²)`;
+        } else if (effectivePropTerraceArea > 0) {
+          propExtLabel = `Sí (Balcón + Terraza ${effectivePropTerraceArea} m²)`;
+        } else if (effectivePropBalconyArea > 0) {
+          propExtLabel = `Sí (Balcón ${effectivePropBalconyArea} m² + Terraza)`;
+        } else {
+          propExtLabel = "Sí (Balcón y Terraza Privada)";
+        }
+      } else if (propTerraza) {
+        propExtLabel = effectivePropTerraceArea > 0 ? `Sí (Terraza Privada ${effectivePropTerraceArea} m²)` : "Sí (Cuenta con Terraza)";
+      } else if (propBalcon) {
+        propExtLabel = effectivePropBalconyArea > 0 ? `Sí (Balcón ${effectivePropBalconyArea} m²)` : "Sí (Cuenta con Balcón)";
+      } else {
+        propExtLabel = "No tiene balcón ni terraza";
+      }
+
+      // Formatear etiqueta de la demanda
+      if (reqBalcon && reqTerraza) {
+        reqExtLabel = "Exige Balcón y Terraza";
+      } else if (reqTerraza) {
+        reqExtLabel = effectiveReqTerraceArea > 0 ? `Exige Terraza (≥ ${effectiveReqTerraceArea} m²)` : "Exige Terraza";
+      } else if (reqBalcon) {
+        reqExtLabel = effectiveReqBalconyArea > 0 ? `Exige Balcón (≥ ${effectiveReqBalconyArea} m²)` : "Exige Balcón";
+      }
+
+      // Evaluar coincidencia
       if ((reqBalcon || reqTerraza) && (propBalcon || propTerraza)) {
-        extS = "exact";
-        reqExtLabel = reqTerraza ? "Exige Terraza" : "Exige Balcón";
-        propExtLabel = propTerraza ? "Sí (Cuenta con Terraza)" : "Sí (Cuenta con Balcón)";
+        if (reqTerraza && effectiveReqTerraceArea > 0) {
+          if (!propTerraza) {
+            extS = "missing";
+          } else if (effectivePropTerraceArea > 0 && effectivePropTerraceArea < effectiveReqTerraceArea) {
+            extS = "missing"; // Guillotina por metraje de terraza insuficiente
+          } else {
+            extS = "exact";
+          }
+        } else if (reqBalcon && effectiveReqBalconyArea > 0) {
+          if (!propBalcon) {
+            extS = "missing";
+          } else if (effectivePropBalconyArea > 0 && effectivePropBalconyArea < effectiveReqBalconyArea) {
+            extS = "missing"; // Guillotina por metraje de balcón insuficiente
+          } else {
+            extS = "exact";
+          }
+        } else {
+          extS = "exact";
+        }
       } else if ((reqBalcon || reqTerraza) && !propBalcon && !propTerraza) {
         extS = "missing"; // 🔴 BUG 3 fix: Demanda exige balcón/terraza y oferta no tiene → Guillotina doctrinal
-        reqExtLabel = reqTerraza ? "Exige Terraza (Indispensable)" : "Exige Balcón (Indispensable)";
+        if (reqTerraza) reqExtLabel = effectiveReqTerraceArea > 0 ? `Exige Terraza ≥ ${effectiveReqTerraceArea} m² (Indispensable)` : "Exige Terraza (Indispensable)";
+        else if (reqBalcon) reqExtLabel = effectiveReqBalconyArea > 0 ? `Exige Balcón ≥ ${effectiveReqBalconyArea} m² (Indispensable)` : "Exige Balcón (Indispensable)";
         propExtLabel = "No tiene balcón ni terraza";
       } else if (!reqBalcon && !reqTerraza && (propBalcon || propTerraza)) {
         extS = "plus";
-        reqExtLabel = "Flexible";
-        propExtLabel = propTerraza ? "Sí (Terraza Privada)" : "Sí (Balcón Exterior)";
+        reqExtLabel = "Flexible / No exigido";
       }
       add("Espacio Exterior (Balcón / Terraza)", reqExtLabel, propExtLabel, extS, 5, <Sparkles className="w-3.5 h-3.5" />);
     }
+  }
+
+  // 15B. Fila Reactiva Dedicada: Área de Terraza (m²) si hay medida especificada o exigida (Doctrina v31.91)
+  if (effectiveReqTerraceArea > 0 || effectivePropTerraceArea > 0) {
+    let terS: MatchStatus = "neutral";
+    const reqTerLabel = effectiveReqTerraceArea > 0 ? `≥ ${effectiveReqTerraceArea} m²` : (reqTerraza ? "Exige Terraza" : "Flexible");
+    const propTerLabel = effectivePropTerraceArea > 0 ? `${effectivePropTerraceArea} m²` : (propTerraza ? "Tiene terraza (m² N/E)" : "No tiene");
+
+    if (effectiveReqTerraceArea > 0) {
+      if (effectivePropTerraceArea >= effectiveReqTerraceArea) {
+        terS = "exact";
+      } else if (effectivePropTerraceArea > 0 && effectivePropTerraceArea < effectiveReqTerraceArea) {
+        terS = "missing"; // Metraje de terraza inferior al piso demandado -> Guillotina
+      } else if (!propTerraza) {
+        terS = "missing";
+      } else {
+        terS = "warn";
+      }
+    } else {
+      terS = effectivePropTerraceArea > 0 ? "plus" : "neutral";
+    }
+
+    add("Área de Terraza", reqTerLabel, propTerLabel, terS, 5, <Layers className="w-3.5 h-3.5" />);
+  }
+
+  // 15C. Fila Reactiva Dedicada: Área de Balcón (m²) si hay medida especificada o exigida (Doctrina v31.91)
+  if (effectiveReqBalconyArea > 0 || effectivePropBalconyArea > 0) {
+    let balS: MatchStatus = "neutral";
+    const reqBalLabel = effectiveReqBalconyArea > 0 ? `≥ ${effectiveReqBalconyArea} m²` : (reqBalcon ? "Exige Balcón" : "Flexible");
+    const propBalLabel = effectivePropBalconyArea > 0 ? `${effectivePropBalconyArea} m²` : (propBalcon ? "Tiene balcón (m² N/E)" : "No tiene");
+
+    if (effectiveReqBalconyArea > 0) {
+      if (effectivePropBalconyArea >= effectiveReqBalconyArea) {
+        balS = "exact";
+      } else if (effectivePropBalconyArea > 0 && effectivePropBalconyArea < effectiveReqBalconyArea) {
+        balS = "missing";
+      } else if (!propBalcon) {
+        balS = "missing";
+      } else {
+        balS = "warn";
+      }
+    } else {
+      balS = effectivePropBalconyArea > 0 ? "plus" : "neutral";
+    }
+
+    add("Área de Balcón", reqBalLabel, propBalLabel, balS, 4, <Sparkles className="w-3.5 h-3.5" />);
   }
 
   // 16. Equipamiento (Ascensor / Conjunto Cerrado) - REACTIVO ("POR ARTE DE MAGIA")
@@ -2399,6 +2520,7 @@ export function scoreRows(req: any, prop: any) {
     'kitchentype', 'vigilancia', 'seguridad', 'visitantes', 'moto', 'motos', 'cava', 'bbq', 'chimenea', 'estudio', 'patio',
     'shut', 'gas', 'caldera', 'parqueadero', 'disponibilidad', 'entrega',
     'adminfeeincluded', 'adminincluded', 'adminfee', 'lavanderiaindependiente', 'tipopisos',
+    'areaterraza', 'areabalcon', 'terracearea', 'balconyarea', 'terrazaarea', 'balconarea',
     'wants', 'gives', 'iscollaborativepool', 'collaborativepool', 'comisiones', 'calificacion', 'origen',
     'metadata', 'rawtext', 'status', 'userid', 'agentid', 'id'
   ]);
@@ -2835,6 +2957,8 @@ export default function AdminMatches() {
       cbs: { key: 'cbs', label: 'Cuarto de Servicio (CBS)' },
       deposito: { key: 'deposito', label: 'Depósito / Cuarto Útil' },
       balcon: { key: 'balcon', label: 'Balcón / Terraza / Patio' },
+      terraza_area: { key: 'terraza_area', label: 'Área de Terraza (m²)' },
+      balcon_area: { key: 'balcon_area', label: 'Área de Balcón (m²)' },
       garaje_tipo: { key: 'garaje_tipo', label: 'Tipo de Garaje' },
       ascensor: { key: 'ascensor', label: 'Equipamiento (Ascensor)' },
       conjunto: { key: 'conjunto', label: 'Equipamiento (Conjunto Cerrado)' },
@@ -3384,6 +3508,8 @@ export default function AdminMatches() {
       propDepositos: m.property?.amenities?.depositos ?? '',
       propCuartoServicio: m.property?.amenities?.cuartoBanoServicio || '',
       propBalcon: m.property?.amenities?.balcon || '',
+      propTerraceArea: m.property?.amenities?.areaTerraza ?? parseOutdoorAreas(m.property?.rawText || '').terraceArea ?? '',
+      propBalconyArea: m.property?.amenities?.areaBalcon ?? parseOutdoorAreas(m.property?.rawText || '').balconyArea ?? '',
       propGarageType: m.property?.garageType || '',
       propPisoNivel: m.property?.floorDetail || m.property?.amenities?.piso || '',
 
@@ -3414,6 +3540,8 @@ export default function AdminMatches() {
       reqDepositos: m.requirement?.caracteristicasDeseadas?.depositos ?? '',
       reqCuartoServicio: m.requirement?.caracteristicasDeseadas?.cuartoBanoServicio || '',
       reqBalcon: m.requirement?.caracteristicasDeseadas?.balcon || '',
+      reqTerraceArea: m.requirement?.caracteristicasDeseadas?.areaTerraza ?? parseOutdoorAreas(m.requirement?.rawText || '').terraceArea ?? '',
+      reqBalconyArea: m.requirement?.caracteristicasDeseadas?.areaBalcon ?? parseOutdoorAreas(m.requirement?.rawText || '').balconyArea ?? '',
       reqPisoNivel: m.requirement?.caracteristicasDeseadas?.piso || '',
     });
   };
@@ -3491,6 +3619,12 @@ export default function AdminMatches() {
         if (editForm.propBalcon !== undefined && editForm.propBalcon !== '') {
           propAmenitiesToSave.balcon = editForm.propBalcon;
         }
+        if (editForm.propTerraceArea !== undefined && editForm.propTerraceArea !== '') {
+          propAmenitiesToSave.areaTerraza = cleanNumberForSave(editForm.propTerraceArea);
+        }
+        if (editForm.propBalconyArea !== undefined && editForm.propBalconyArea !== '') {
+          propAmenitiesToSave.areaBalcon = cleanNumberForSave(editForm.propBalconyArea);
+        }
         const parsedYear = cleanIntForSave(editForm.propYearBuilt);
         const parsedAge = cleanIntForSave(editForm.propAntiguedadAnos);
         if (parsedYear || parsedAge !== undefined) {
@@ -3567,6 +3701,12 @@ export default function AdminMatches() {
         if (editForm.reqBalcon !== undefined && editForm.reqBalcon !== '') {
           reqCaractToSave.balcon = editForm.reqBalcon;
         }
+        if (editForm.reqTerraceArea !== undefined && editForm.reqTerraceArea !== '') {
+          reqCaractToSave.areaTerraza = cleanNumberForSave(editForm.reqTerraceArea);
+        }
+        if (editForm.reqBalconyArea !== undefined && editForm.reqBalconyArea !== '') {
+          reqCaractToSave.areaBalcon = cleanNumberForSave(editForm.reqBalconyArea);
+        }
         if (editForm.reqPisoNivel !== undefined && editForm.reqPisoNivel !== '') {
           reqCaractToSave.piso = editForm.reqPisoNivel;
         }
@@ -3632,6 +3772,8 @@ export default function AdminMatches() {
         if (editForm.propDepositos) propAmenitiesToSave.depositos = cleanIntForSave(editForm.propDepositos);
         if (editForm.propCuartoServicio) propAmenitiesToSave.cuartoBanoServicio = editForm.propCuartoServicio;
         if (editForm.propBalcon) propAmenitiesToSave.balcon = editForm.propBalcon;
+        if (editForm.propTerraceArea) propAmenitiesToSave.areaTerraza = cleanNumberForSave(editForm.propTerraceArea);
+        if (editForm.propBalconyArea) propAmenitiesToSave.areaBalcon = cleanNumberForSave(editForm.propBalconyArea);
         if (editForm.propPisoNivel) propAmenitiesToSave.piso = editForm.propPisoNivel;
         if (parsedYear || parsedAge !== undefined) {
           const yr = parsedYear || (parsedAge !== undefined ? 2026 - parsedAge : '');
@@ -3670,6 +3812,8 @@ export default function AdminMatches() {
         if (editForm.reqDepositos) reqCaractToSave.depositos = cleanIntForSave(editForm.reqDepositos);
         if (editForm.reqCuartoServicio) reqCaractToSave.cuartoBanoServicio = editForm.reqCuartoServicio;
         if (editForm.reqBalcon) reqCaractToSave.balcon = editForm.reqBalcon;
+        if (editForm.reqTerraceArea) reqCaractToSave.areaTerraza = cleanNumberForSave(editForm.reqTerraceArea);
+        if (editForm.reqBalconyArea) reqCaractToSave.areaBalcon = cleanNumberForSave(editForm.reqBalconyArea);
         if (editForm.reqPisoNivel) reqCaractToSave.piso = editForm.reqPisoNivel;
 
         Object.assign(m.requirement, {
@@ -3740,6 +3884,12 @@ export default function AdminMatches() {
         }
         if (editForm.propBalcon !== undefined && editForm.propBalcon !== '') {
           propAmenitiesToSave.balcon = editForm.propBalcon;
+        }
+        if (editForm.propTerraceArea !== undefined && editForm.propTerraceArea !== '') {
+          propAmenitiesToSave.areaTerraza = cleanNumberForSave(editForm.propTerraceArea);
+        }
+        if (editForm.propBalconyArea !== undefined && editForm.propBalconyArea !== '') {
+          propAmenitiesToSave.areaBalcon = cleanNumberForSave(editForm.propBalconyArea);
         }
         const parsedYear = cleanIntForSave(editForm.propYearBuilt);
         const parsedAge = cleanIntForSave(editForm.propAntiguedadAnos);
@@ -3816,6 +3966,12 @@ export default function AdminMatches() {
         }
         if (editForm.reqBalcon !== undefined && editForm.reqBalcon !== '') {
           reqCaractToSave.balcon = editForm.reqBalcon;
+        }
+        if (editForm.reqTerraceArea !== undefined && editForm.reqTerraceArea !== '') {
+          reqCaractToSave.areaTerraza = cleanNumberForSave(editForm.reqTerraceArea);
+        }
+        if (editForm.reqBalconyArea !== undefined && editForm.reqBalconyArea !== '') {
+          reqCaractToSave.areaBalcon = cleanNumberForSave(editForm.reqBalconyArea);
         }
         if (editForm.reqPisoNivel !== undefined && editForm.reqPisoNivel !== '') {
           reqCaractToSave.piso = editForm.reqPisoNivel;
@@ -4247,7 +4403,7 @@ export default function AdminMatches() {
           caracteristicasDeseadas: effectiveReqCaract,
         };
 
-        const computed = scoreRows(effectiveReq, effectiveProp);
+        const computed = scoreRows(effectiveReq, effectiveProp, editForm);
         return {
           ...m,
           _effectiveProp: effectiveProp,
@@ -6245,6 +6401,46 @@ export default function AdminMatches() {
                                 );
                               }
 
+                              if (cleanLbl.includes('área de terraza') || cleanLbl.includes('area de terraza')) {
+                                return isOffer ? (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: 72 m²"
+                                    value={editForm.propTerraceArea !== undefined ? editForm.propTerraceArea : (defaultVal !== 'N/E' ? defaultVal : '')}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propTerraceArea: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: 50 m² ó Flexible"
+                                    value={editForm.reqTerraceArea !== undefined ? editForm.reqTerraceArea : (defaultVal !== 'N/E' ? defaultVal : '')}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqTerraceArea: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
+                              if (cleanLbl.includes('área de balcón') || cleanLbl.includes('area de balcón') || cleanLbl.includes('area de balcon') || cleanLbl.includes('área de balcon')) {
+                                return isOffer ? (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: 4 m²"
+                                    value={editForm.propBalconyArea !== undefined ? editForm.propBalconyArea : (defaultVal !== 'N/E' ? defaultVal : '')}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, propBalconyArea: e.target.value }))}
+                                    className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder="Ej: 2 m² ó Flexible"
+                                    value={editForm.reqBalconyArea !== undefined ? editForm.reqBalconyArea : (defaultVal !== 'N/E' ? defaultVal : '')}
+                                    onChange={(e) => setEditForm(prev => ({ ...prev, reqBalconyArea: e.target.value }))}
+                                    className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                  />
+                                );
+                              }
+
                               if (cleanLbl.includes('balcón') || cleanLbl.includes('balcon') || cleanLbl.includes('terraza') || cleanLbl.includes('patio')) {
                                 return isOffer ? (
                                   <select
@@ -6660,6 +6856,22 @@ export default function AdminMatches() {
                               <input type="text" placeholder="Ej: 1 ó Sí" value={editForm.propDepositos !== undefined ? editForm.propDepositos : (defaultVal !== 'N/E' ? defaultVal : '')} onChange={(e) => setEditForm(prev => ({ ...prev, propDepositos: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
                             ) : (
                               <input type="text" placeholder="Ej: 1 ó Exige Depósito" value={editForm.reqDepositos !== undefined ? editForm.reqDepositos : (defaultVal !== 'N/E' ? defaultVal : '')} onChange={(e) => setEditForm(prev => ({ ...prev, reqDepositos: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+
+                          if (cleanLbl.includes('área de terraza') || cleanLbl.includes('area de terraza')) {
+                            return isOffer ? (
+                              <input type="text" placeholder="Ej: 72 m²" value={editForm.propTerraceArea !== undefined ? editForm.propTerraceArea : (defaultVal !== 'N/E' ? defaultVal : '')} onChange={(e) => setEditForm(prev => ({ ...prev, propTerraceArea: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="text" placeholder="Ej: 50 m²" value={editForm.reqTerraceArea !== undefined ? editForm.reqTerraceArea : (defaultVal !== 'N/E' ? defaultVal : '')} onChange={(e) => setEditForm(prev => ({ ...prev, reqTerraceArea: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                            );
+                          }
+
+                          if (cleanLbl.includes('área de balcón') || cleanLbl.includes('area de balcón') || cleanLbl.includes('area de balcon') || cleanLbl.includes('área de balcon')) {
+                            return isOffer ? (
+                              <input type="text" placeholder="Ej: 4 m²" value={editForm.propBalconyArea !== undefined ? editForm.propBalconyArea : (defaultVal !== 'N/E' ? defaultVal : '')} onChange={(e) => setEditForm(prev => ({ ...prev, propBalconyArea: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                            ) : (
+                              <input type="text" placeholder="Ej: 2 m²" value={editForm.reqBalconyArea !== undefined ? editForm.reqBalconyArea : (defaultVal !== 'N/E' ? defaultVal : '')} onChange={(e) => setEditForm(prev => ({ ...prev, reqBalconyArea: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
                             );
                           }
 

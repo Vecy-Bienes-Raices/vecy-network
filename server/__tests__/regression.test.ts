@@ -23,7 +23,8 @@ import {
 import {
   parseSecurityType,
   demands24hSecurity,
-  checkFinancialSegmentCoherence
+  checkFinancialSegmentCoherence,
+  parseOutdoorAreas
 } from "../../shared/colombianRealEstateParser";
 
 describe("VECY NETWORK — SUITE DE REGRESIÓN DOCTRINAL AUTOMATIZADA", () => {
@@ -1062,5 +1063,116 @@ Ed del 2014.
       expect(result.blockers.some(b => b.includes("Choque de Seguridad y Vigilancia") || b.includes("EDIFICIO AUTOMATIZADO"))).toBe(true);
     });
   });
+
+  // ─────────────────────────────────────────────────────────────
+  // 13. EXTRACCIÓN Y DISCRIMINACIÓN DE ÁREAS DE TERRAZA Y BALCÓN (Doctrina v31.91)
+  // ─────────────────────────────────────────────────────────────
+  describe("13. Extracción y Discriminación de Áreas de Terraza, Balcón y Espacios Exteriores (Doctrina v31.91)", () => {
+    it("Caso Santa Paula de Eduardo: debe extraer 72 m² de terraza y presencia de balcón desde '138M2 +72 TERRAZA'", () => {
+      const publicacionSantaPaula = `VENDO SANTA PAULA COD2010 138M2 +72 TERRAZA $1.290.MLL  EXCELENTE APARTAMENTO EN SEGUNDO PISO EXTERIOR 15 AÑOS , LOBBY SALON SOCIAL, JUEGOS INFANTILES  GIMNASIO, JAULA DE GOLF. 
+3 HABITACIONES 3 BAÑOS , EXCELENTE ZONA SOCIAL CON BALCON, CHIMENEA A GAS Y CONECTA A HERMOSA TERRAZA DE 72M2 ,AMPLIA COCINA CERRADA CON ALCOBA Y BAÑO DE SERVICIO, 2 PARQUEADEROS Y DEPOSITO 
+138M2 +72 TERRAZA $1.290 MLL ADMINISTRACIÓN $1.200.000`;
+
+      const outdoor = parseOutdoorAreas(publicacionSantaPaula);
+      expect(outdoor.hasTerrace).toBe(true);
+      expect(outdoor.hasBalcony).toBe(true);
+      expect(outdoor.terraceArea).toBe(72);
+      expect(outdoor.summaryOfferLabel).toBe("Sí (Balcón + Terraza 72 m²)");
+    });
+
+    it("Caso Balcón discriminado: debe extraer 2 m² de balcón desde '75m² + Balcón 2m²'", () => {
+      const publicacionChapinero = "75m² + Balcón 2m² con LINDA VISTA, 2 habitaciones, 2 baños";
+      const outdoor = parseOutdoorAreas(publicacionChapinero);
+      expect(outdoor.hasBalcony).toBe(true);
+      expect(outdoor.balconyArea).toBe(2);
+      expect(outdoor.summaryOfferLabel).toBe("Sí (Balcón 2 m²)");
+    });
+
+    it("Caso Penthouse con Balcón y Terraza con medidas discriminadas", () => {
+      const ph = "PENTHOUSE 160M2 + 4M2 BALCÓN + 45M2 TERRAZA PRIVADA CON BBQ";
+      const outdoor = parseOutdoorAreas(ph);
+      expect(outdoor.hasBalcony).toBe(true);
+      expect(outdoor.hasTerrace).toBe(true);
+      expect(outdoor.balconyArea).toBe(4);
+      expect(outdoor.terraceArea).toBe(45);
+      expect(outdoor.summaryOfferLabel).toBe("Sí (Balcón 4 m² + Terraza 45 m²)");
+    });
+
+    it("Demanda con metraje mínimo de terraza: 'terraza de al menos 50 m²'", () => {
+      const reqText = "Busco apartamento con terraza de al menos 50 m², 3 habitaciones, Chicó";
+      const outdoor = parseOutdoorAreas(reqText);
+      expect(outdoor.hasTerrace).toBe(true);
+      expect(outdoor.terraceArea).toBe(50);
+      expect(outdoor.summaryReqLabel).toBe("Exige Terraza ≥ 50 m²");
+    });
+
+    it("explicarMatch: Si demanda exige terraza de al menos 50 m² y oferta tiene 72 m², debe aprobar con cumplimiento confort", () => {
+      const reqConTerraza50 = {
+        id: 1801,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "venta",
+        ciudadDeseada: "Bogotá",
+        zonaDeseada: "Santa Paula",
+        presupuestoMax: 1_500_000_000,
+        habitacionesMin: 3,
+        rawText: "Busco apartamento en Santa Paula con terraza de al menos 50 m², 3 habitaciones, presupuesto $1.500M"
+      };
+
+      const propConTerraza72 = {
+        id: 2801,
+        propertyType: "apartment",
+        transactionType: "venta",
+        addressCity: "Bogotá",
+        zone: "Santa Paula",
+        addressNeighborhood: "Santa Paula",
+        barrio: "Santa Paula",
+        price: 1_290_000_000,
+        areaTotal: 138,
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        rawText: "VENDO SANTA PAULA 138M2 +72 TERRAZA $1.290.MLL 3 HABITACIONES 3 BAÑOS HERMOSA TERRAZA DE 72M2"
+      };
+
+      const result = explicarMatch(reqConTerraza50, propConTerraza72);
+      expect(result.blockers).toEqual([]);
+      expect(result.score).toBeGreaterThanOrEqual(85);
+      expect(result.positives.some(p => p.includes("cumple la exigencia demandada"))).toBe(true);
+    });
+
+    it("explicarMatch: Si demanda exige terraza de al menos 50 m² y oferta solo tiene 20 m², debe guillotinar a Score 0%", () => {
+      const reqConTerraza50 = {
+        id: 1802,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "venta",
+        ciudadDeseada: "Bogotá",
+        zonaDeseada: "Santa Paula",
+        presupuestoMax: 1_500_000_000,
+        habitacionesMin: 3,
+        rawText: "Busco apartamento en Santa Paula con terraza de al menos 50 m², 3 habitaciones"
+      };
+
+      const propConTerraza20 = {
+        id: 2802,
+        propertyType: "apartment",
+        transactionType: "venta",
+        addressCity: "Bogotá",
+        zone: "Santa Paula",
+        addressNeighborhood: "Santa Paula",
+        barrio: "Santa Paula",
+        price: 1_200_000_000,
+        areaTotal: 120,
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        rawText: "VENDO APTO SANTA PAULA 120M2 + 20M2 TERRAZA $1.200.MLL 3 HABITACIONES"
+      };
+
+      const result = explicarMatch(reqConTerraza50, propConTerraza20);
+      expect(result.score).toBe(0);
+      expect(result.blockers.some(b => b.includes("Área de Terraza") || b.includes("inferior a la mínima exigida"))).toBe(true);
+    });
+  });
 });
+
 

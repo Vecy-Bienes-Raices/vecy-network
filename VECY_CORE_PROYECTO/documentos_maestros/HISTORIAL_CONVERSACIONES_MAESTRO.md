@@ -7,6 +7,56 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.91 — 25 Septiembre 2026
+
+### Solicitud de Eduardo
+Extracción, Discriminación Automática y Edición Dedicada de Medidas de Terraza y Balcón en Tabla de Cotejo Técnico:
+*"Observa esta publicación: 'VENDO SANTA PAULA COD2010 138M2 +72 TERRAZA $1.290.MLL EXCELENTE APARTAMENTO EN SEGUNDO PISO EXTERIOR 15 AÑOS , LOBBY SALON SOCIAL, JUEGOS INFANTILES GIMNASIO, JAULA DE GOLF. 3 HABITACIONES 3 BAÑOS , EXCELENTE ZONA SOCIAL CON BALCON, CHIMENEA A GAS Y CONECTA A HERMOSA TERRAZA DE 72M2 ,AMPLIA COCINA CERRADA CON ALCOBA Y BAÑO DE SERVICIO, 2 PARQUEADEROS Y DEPOSITO 138M2 +72 TERRAZA $1.290 MLL ADMINISTRACIÓN $1.200.000'. Como estas hay muchas que discriminan sus medidas de área exactas nombrando cuanto tiene una terraza/s u otros en el balcón/es y nosotros en la tabla de cotejo sería bueno que pudieramos colocar esas medidas, es decir si la oferta o la demanda nombran terraza de tantos metros de área, pues que haya un campo, se ponga en automático no se cómo lo organices para que se puedan colocar el área en m2 para la terraza o aparte si es balcón y existen esas medidas. Bueno, espero me hayas entendido."*
+
+### Diagnóstico Técnico Profundo y Causas Raíz Identificadas
+1. **Falta de Discriminación Automática de Metrajes de Terraza y Balcón**:
+   - En el mercado inmobiliario colombiano es habitual desglosar la superficie en sintaxis aditiva (`"138M2 +72 TERRAZA"`, `"+2 BALCÓN"`) o descriptiva (`"conecta a hermosa terraza de 72m2"`, `"balcón de 2 m2"`, `"terraza de al menos 50 m²"`).
+   - Los motores previos no tenían un módulo dedicado a extraer y separar las medidas numéricas exactas en m² de las terrazas, balcones y patios.
+2. **Confusión Crítica de Metraje Exterior con Área Construida del Inmueble (Bug de Guillotina Falsa)**:
+   - Si una demanda pedía `"Busco apartamento en Santa Paula con terraza de al menos 50 m², 3 habitaciones"`, los extractores deterministas de `janIA.ts` y `colombianRealEstateParser.ts` capturaban `50 m²` como si fuera el metraje construido total del apartamento buscado.
+   - Cuando se cotejaba contra un apartamento de 138 m², el filtro duro de área guillotinaba a 0% el match argumentando que 138 m² excedía desproporcionadamente (+35%) el rango máximo de 50 m², impidiendo un match legítimo.
+3. **Confusión de Metraje con Conteo de Unidades en `matching.ts`**:
+   - En `server/_core/matching.ts`, expresiones como `+72 terraza` hacían que la expresión `(\d+)\s*(?:terraza|terrazas)` asignara `propTerraces = 72` (creyendo que el predio tenía 72 terrazas en lugar de 72 m² de terraza).
+4. **Ausencia de Campos Editables Dedicados en la Tabla de Cotejo Técnico**:
+   - No existían filas dedicadas automáticas para `"Área de Terraza (m²)"` y `"Área de Balcón (m²)"` en la tabla de cotejo (`AdminMatches.tsx`), ni campos de entrada numérica en el modal/formulario de edición que permitieran a Eduardo ingresar, corregir y persistir de por vida en la base de datos PostgreSQL (`amenities.areaTerraza` y `caracteristicasDeseadas.areaTerraza`).
+
+### Acciones Ejecutadas
+1. **Módulo Compartido `shared/colombianRealEstateParser.ts`**:
+   - Diseñada e implementada la interfaz `ParsedOutdoorAreas` y la función maestra `parseOutdoorAreas(rawText)`.
+   - Soporta sintaxis aditiva (`"138M2 +72 TERRAZA"`, `"+2 BALCÓN"`), frases descriptivas (`"terraza de 72m2"`, `"conecta a hermosa terraza de 72m2"`), frases de exigencia (`"terraza de al menos 50 m²"`), orden inverso (`"72m2 de terraza"`) y dos puntos/guiones (`"terraza: 72 m2"`).
+   - Discrimina `terraceArea`, `balconyArea`, `patioArea`, conteos y genera etiquetas informativas para oferta y demanda.
+   - Creado el validador `isOutdoorAreaPreceding(precedingText)` y blindada la función `parseColombianListing`: si una cifra de m² coincide con las medidas de terraza/balcón o viene precedida por términos de espacio exterior, se descarta como área construida del inmueble.
+2. **Backend Determinista `server/_core/janIA.ts`**:
+   - Integrado `parseOutdoorAreas` e `isOutdoorAreaPreceding` en la función `extractFallbackDataFromText`. Si un número de m² pertenece a terraza, balcón o patio, no se almacena como `area`, `areaMin` o `areaMax` del inmueble.
+3. **Motor de Cotejo `server/_core/matching.ts`**:
+   - Actualizado el Filtro Duro 10D con `parseOutdoorAreas` para no confundir metraje con conteo de terrazas.
+   - Si la demanda exige metraje mínimo de terraza (`reqOutdoorInfo.terraceArea > 0`) y la oferta tiene metraje inferior -> Guillotina 0% (`Atributo Fallido (Área de Terraza)`).
+   - Si la oferta tiene metraje igual o superior -> Cumplimiento pleno y bono de confort positivo.
+4. **Tabla de Cotejo Técnico en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+   - **Fila "Área Total" Enriquecida**: Proyecta el metraje construido junto a sus anexos exteriores (ej: `138 m² (+ 72 m² terraza)` o `138 m² (+ 72 m² terraza + 2 m² balcón)`).
+   - **Fila 15 "Espacio Exterior (Balcón / Terraza)"**: Proyecta de forma descriptiva el metraje de ambos espacios (ej: `Sí (Balcón + Terraza 72 m²)`).
+   - **Nuevas Filas Reactivas Dedicadas**: Creadas las filas `"Área de Terraza (m²)"` y `"Área de Balcón (m²)"`, que se activan automáticamente si alguna de las partes menciona medidas exteriores o si Eduardo las agrega/edita.
+   - **Edición y Persistencia Permanente**:
+     - Agregados inputs específicos en modo edición de escritorio y móvil para Oferta (`propTerraceArea`, `propBalconyArea`) y Demanda (`reqTerraceArea`, `reqBalconyArea`).
+     - Soportado en `handleAddAttributeToCard` con las claves normalizadas `terraza_area` y `balcon_area`.
+     - Actualizadas las funciones de guardado (`handleOnlySave`) y recálculo (`handleRecalculateMatch`) para persistir `areaTerraza` y `areaBalcon` en `amenities` de la propiedad y `caracteristicasDeseadas` del requerimiento en PostgreSQL.
+   - **Cálculo Dinámico sin Errores de Scope**: Actualizada la firma de `scoreRows(req, prop, editFormData?)` para recalcular en caliente y admitir ejecuciones desacopladas tanto en la UI como en tests unitarios.
+5. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+   - Creada la Sección 13 con 6 pruebas doctrinales exhaustivas cubriendo extracción desde el caso real de Santa Paula de Eduardo, balcones discriminados, penthouses mixtos, exigencias de área mínima de terraza en demandas, cumplimiento de confort (`72 m² vs 50 m²`) y guillotina 0% ante metraje insuficiente (`20 m² vs 50 m²`).
+
+### Verificación y Resultados
+- **Tests Vitest**: 86/86 tests pasando al 100% en verde.
+- **Chequeo de Tipos**: `npm run check` (cero errores de TypeScript).
+- **Compilación de Producción**: `npm run build` (Vite 10.11s + esbuild 61ms con cero errores).
+- **Versión Oficial**: Incrementada a **v31.91**.
+
+---
+
 ## 📋 SESIÓN v31.90 — 24 Septiembre 2026
 
 ### Solicitud de Eduardo

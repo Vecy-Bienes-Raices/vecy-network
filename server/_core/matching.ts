@@ -8,7 +8,8 @@ import { extractFallbackDataFromText } from "./janIA";
 import {
   parseSecurityType,
   demands24hSecurity,
-  checkFinancialSegmentCoherence
+  checkFinancialSegmentCoherence,
+  parseOutdoorAreas
 } from "../../shared/colombianRealEstateParser";
 
 /**
@@ -2700,17 +2701,18 @@ export function explicarMatch(
     }
   }
 
-  // ── FILTRO DURO 10D: Terrazas Mínimas (REGLA DOCTRINAL v22.4: Oferta < Demanda = BLOQUEO 0%) ──
+  // ── FILTRO DURO 10D: Terrazas Mínimas y Metraje (REGLA DOCTRINAL v22.4 / v31.91: Oferta < Demanda = BLOQUEO 0%) ──
+  const reqOutdoorInfo = parseOutdoorAreas(reqTextLow);
+  const propOutdoorInfo = parseOutdoorAreas(propRawTextLower);
+
   let effectiveReqTerraces = 0;
-  if (requirement.hasTerrace || reqTextLow.includes("con terraza") || reqTextLow.includes("exige terraza") || reqTextLow.includes("terrazas")) {
-    const mTer = reqTextLow.match(/(\d+)\s*(?:terraza|terrazas)/i);
-    effectiveReqTerraces = mTer ? parseInt(mTer[1], 10) : 1;
+  if (requirement.hasTerrace || reqTextLow.includes("con terraza") || reqTextLow.includes("exige terraza") || reqOutdoorInfo.hasTerrace) {
+    effectiveReqTerraces = reqOutdoorInfo.terraceCount > 0 ? reqOutdoorInfo.terraceCount : 1;
   }
 
   let propTerraces = 0;
-  if (property.hasTerrace || propRawTextLower.includes("terraza") || propRawTextLower.includes("terrazas")) {
-    const mPropTer = propRawTextLower.match(/(\d+)\s*(?:terraza|terrazas)/i);
-    propTerraces = mPropTer ? parseInt(mPropTer[1], 10) : (property.terraces ? Number(property.terraces) : 1);
+  if (property.hasTerrace || propRawTextLower.includes("terraza") || propOutdoorInfo.hasTerrace) {
+    propTerraces = propOutdoorInfo.terraceCount > 0 ? propOutdoorInfo.terraceCount : (property.terraces ? Number(property.terraces) : 1);
   }
   if (propRawTextLower.includes("sin terraza") || propRawTextLower.includes("no tiene terraza")) {
     propTerraces = 0;
@@ -2721,6 +2723,16 @@ export function explicarMatch(
       blockers.push(`Atributo Fallido (Terrazas): Terrazas ofrecidas (${propTerraces}) son inferiores a las exigidas (${effectiveReqTerraces}). Match Inviable (0%).`);
       return buildExplanationResult(0, blockers, positives, negatives);
     } else {
+      // Evaluar metraje de terraza si la demanda exige un metraje mínimo
+      if (reqOutdoorInfo.terraceArea && reqOutdoorInfo.terraceArea > 0) {
+        const propTArea = propOutdoorInfo.terraceArea || Number((property.amenities as any)?.areaTerraza) || 0;
+        if (propTArea > 0 && propTArea < reqOutdoorInfo.terraceArea) {
+          blockers.push(`Atributo Fallido (Área de Terraza): El área de terraza ofertada (${propTArea} m²) es inferior a la mínima exigida (${reqOutdoorInfo.terraceArea} m²). Match Inviable (0%).`);
+          return buildExplanationResult(0, blockers, positives, negatives);
+        } else if (propTArea >= reqOutdoorInfo.terraceArea) {
+          positives.push(`Área de terraza ofertada (${propTArea} m²) cumple la exigencia demandada (≥ ${reqOutdoorInfo.terraceArea} m²)`);
+        }
+      }
       positives.push(`Terrazas ofrecidas (${propTerraces}) iguales o superiores a las exigidas (${effectiveReqTerraces}) — Cumplimiento Confort`);
     }
   }

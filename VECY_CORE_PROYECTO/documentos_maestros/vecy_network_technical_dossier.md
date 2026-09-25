@@ -322,6 +322,35 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.91 — Septiembre 2026
+
+#### 📌 EXTRACCIÓN, DISCRIMINACIÓN AUTOMÁTICA Y EDICIÓN DEDICADA DE MEDIDAS DE TERRAZA Y BALCÓN EN TABLA DE COTEJO TÉCNICO
+
+**Problemas identificados:**
+1. **Falta de Discriminación Automática de Metrajes Exteriores**: Las publicaciones colombianas discriminan sus áreas mediante sintaxis aditiva (`"138M2 +72 TERRAZA"`, `"+2 BALCÓN"`) o frases descriptivas (`"conecta a hermosa terraza de 72m2"`, `"balcón de 2 m2"`). El sistema no extraía ni aislaba estas medidas numéricas.
+2. **Confusión de Metraje Exterior con Área Construida (Guillotina Falsa a 0%)**: Cuando una demanda pedía `"apartamento con terraza de al menos 50 m²"`, los parsers de fallback capturaban `50 m²` como si fuera el metraje total del apartamento. Al cotejarlo con una oferta de 138 m², el filtro duro de área guillotinaba el match argumentando que 138 m² excedía desproporcionadamente (+35%) el rango máximo de 50 m².
+3. **Confusión de Metraje con Conteo de Unidades**: En `server/_core/matching.ts`, expresiones como `+72 terraza` hacían que `propTerraces = 72` (72 terrazas en lugar de 72 m²).
+4. **Ausencia de Campos Editables Dedicados**: En la tabla de cotejo técnico (`AdminMatches.tsx`) no existían filas reactivas para `"Área de Terraza (m²)"` ni `"Área de Balcón (m²)"`, ni inputs para persistirlas de por vida en la base de datos PostgreSQL.
+
+**Solución aplicada:**
+- **Analizador Especializado `shared/colombianRealEstateParser.ts`**:
+  - `parseOutdoorAreas(rawText)`: Extrae y clasifica con precisión `terraceArea`, `balconyArea`, `patioArea`, conteos y etiquetas para oferta y requerimiento.
+  - `isOutdoorAreaPreceding(precedingText)`: Validador semántico que previene que medidas de terrazas, balcones o patios sean capturadas erróneamente como área construida del predio en `parseColombianListing`.
+- **Backend Determinista `server/_core/janIA.ts`**:
+  - Integrado `parseOutdoorAreas` e `isOutdoorAreaPreceding` en `extractFallbackDataFromText`, blindando el extractor para que no asigne metrajes exteriores a `area`, `areaMin` ni `areaMax`.
+- **Motor de Matching `server/_core/matching.ts`**:
+  - Filtro Duro 10D: discriminación de metraje frente a conteo de terrazas. Si la demanda exige metraje mínimo de terraza y la oferta tiene menos -> Guillotina 0%. Si la oferta tiene igual o más -> Cumplimiento y confort pleno.
+- **Frontend `client/src/components/admin/AdminMatches.tsx`**:
+  - Fila "Área Total": Proyecta metraje construido + desglose de terraza y balcón (ej: `138 m² (+ 72 m² terraza)`).
+  - Fila 15 "Espacio Exterior": Muestra el metraje de ambos espacios (ej: `Sí (Balcón + Terraza 72 m²)`).
+  - Nuevas Filas Reactivas Dedicadas: `"Área de Terraza (m²)"` y `"Área de Balcón (m²)"`.
+  - Edición y Persistencia en PostgreSQL: Inputs dedicados para oferta y demanda en escritorio y móvil, vinculados a `amenities.areaTerraza`/`amenities.areaBalcon` y `caracteristicasDeseadas.areaTerraza`/`caracteristicasDeseadas.areaBalcon`.
+  - Desacoplamiento seguro de `scoreRows(req, prop, editFormData?)` para recálculo en vivo sin errores de scope.
+- **Suite de Regresión Doctrinal `server/__tests__/regression.test.ts`**:
+  - Sección 13 con 6 pruebas doctrinales blindando extracción aditiva, descriptiva, inversa, exigencia de terraza mínima, confort y guillotina 0%.
+
+---
+
 ### 🔖 v31.90 — Septiembre 2026
 
 #### 📌 DOCTRINA EN DURO DE SEGURIDAD 24/7 VS EDIFICIO AUTOMATIZADO/CONSERJE, GUILLOTINA DE COHERENCIA DE SEGMENTO FINANCIERO Y METRAJE, Y ERRADICACIÓN DE MATCHES ESPURIOS
