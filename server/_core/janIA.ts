@@ -5017,6 +5017,18 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     }
   }
 
+  const canonicalPropPhone = normalizeAdvisorPhone(rawPhone) || 
+                             normalizeAdvisorPhone(data.idUsuarioWhatsapp) || 
+                             (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : (data.idUsuarioWhatsapp || rawPhone));
+  const knownPropAdvisor = lookupAdvisorSync(canonicalPropPhone || data.idUsuarioWhatsapp, realName || data.nombreUsuarioWhatsapp);
+  const finalEffectivePropName = (realName && !isGenericName(realName))
+    ? realName.trim()
+    : (data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp))
+    ? data.nombreUsuarioWhatsapp.trim()
+    : (knownPropAdvisor?.name && !isGenericName(knownPropAdvisor.name))
+    ? knownPropAdvisor.name
+    : realName || null;
+
   const insertData = {
     ...data,
     name: safeSlice(data.name || `Propiedad en ${data.city || data.zone || "Colombia"}`, 255) || "Propiedad",
@@ -5028,8 +5040,8 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     location: safeSlice(data.location, 255) || null,
     matriculaInmobiliaria: safeSlice(data.matriculaInmobiliaria, 100) || null,
     enlaceOrigen: safeSlice(data.enlaceOrigen, 1000) || null,
-    idUsuarioWhatsapp: safeSlice(data.idUsuarioWhatsapp || rawPhone, 100) || null,
-    nombreUsuarioWhatsapp: safeSlice((realName && realName.trim() !== "" && !realName.startsWith("Asesor +")) ? realName : (data.nombreUsuarioWhatsapp || realName), 255) || null,
+    idUsuarioWhatsapp: safeSlice(canonicalPropPhone, 100) || null,
+    nombreUsuarioWhatsapp: safeSlice(finalEffectivePropName, 255) || null,
     propertyType: sanitizePropertyType(data.propertyType),
     transactionType: sanitizeTransactionType(data.transactionType),
     acceptedTransactionTypes: sanitizeTransactionTypes(data.transactionTypes || data.transactionType),
@@ -5364,6 +5376,18 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     }
   }
 
+  const canonicalReqPhone = normalizeAdvisorPhone(rawPhone) || 
+                            normalizeAdvisorPhone(data.idUsuarioWhatsapp) || 
+                            (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : (data.idUsuarioWhatsapp || rawPhone));
+  const knownReqAdvisor = lookupAdvisorSync(canonicalReqPhone || data.idUsuarioWhatsapp, realName || data.nombreUsuarioWhatsapp);
+  const finalEffectiveReqName = (realName && !isGenericName(realName))
+    ? realName.trim()
+    : (data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp))
+    ? data.nombreUsuarioWhatsapp.trim()
+    : (knownReqAdvisor?.name && !isGenericName(knownReqAdvisor.name))
+    ? knownReqAdvisor.name
+    : realName || null;
+
   const insertData = {
     ...data,
     name: safeSlice(data.name, 255) || null,
@@ -5373,8 +5397,8 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
     addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
     enlaceOrigen: safeSlice(data.enlaceOrigen, 1000) || null,
-    idUsuarioWhatsapp: safeSlice(data.idUsuarioWhatsapp || rawPhone, 100) || null,
-    nombreUsuarioWhatsapp: safeSlice((realName && realName.trim() !== "" && !realName.startsWith("Asesor +")) ? realName : (data.nombreUsuarioWhatsapp || realName), 255) || null,
+    idUsuarioWhatsapp: safeSlice(canonicalReqPhone, 100) || null,
+    nombreUsuarioWhatsapp: safeSlice(finalEffectiveReqName, 255) || null,
     tipoInmuebleDeseado: sanitizePropertyType(data.tipoInmuebleDeseado || data.propertyType),
     tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
     tiposNegocioAceptados: sanitizeTransactionTypes(data.transactionTypes || data.tipoNegocioDeseado || data.transactionType),

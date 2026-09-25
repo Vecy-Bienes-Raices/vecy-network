@@ -3014,6 +3014,48 @@ export default function AdminMatches() {
   const recalculateMatchMut = trpc.janIA.recalculateMatchForPair.useMutation();
   const recordFeedbackMut = trpc.janIA.recordMatchFeedback.useMutation();
   const updateCommercialStatusMut = trpc.janIA.updatePropertyCommercialStatus.useMutation();
+  const saveAdvisorMut = trpc.janIA.saveAdvisorContact.useMutation();
+
+  const handleSaveAdvisorDirect = async (isOffer: boolean, m: any) => {
+    const rawPhone = isOffer ? editForm.propPhone : editForm.reqPhone;
+    const rawName = isOffer ? editForm.propSenderName : editForm.reqSenderName;
+    const rawGroup = isOffer ? editForm.propOrigenNombre : editForm.reqOrigenNombre;
+    const currentItem = isOffer ? m.property : m.requirement;
+
+    const cleanPhone = normalizePhoneInput(rawPhone);
+    const validName = rawName && !isGenericBrokerName(rawName) ? rawName.trim() : null;
+
+    if (!cleanPhone && !validName) {
+      toast.error("Ingresa un número de celular o nombre de asesor válido");
+      return;
+    }
+
+    try {
+      await saveAdvisorMut.mutateAsync({
+        phone: cleanPhone || currentItem?.idUsuarioWhatsapp,
+        name: validName || currentItem?.nombreUsuarioWhatsapp,
+        oldPhoneOrLid: currentItem?.idUsuarioWhatsapp,
+        sourceGroup: rawGroup || currentItem?.origenNombre,
+      });
+
+      if (cleanPhone) {
+        if (isOffer && m.property) {
+          m.property.idUsuarioWhatsapp = cleanPhone;
+          if (validName) m.property.nombreUsuarioWhatsapp = validName;
+        } else if (!isOffer && m.requirement) {
+          m.requirement.idUsuarioWhatsapp = cleanPhone;
+          if (validName) m.requirement.nombreUsuarioWhatsapp = validName;
+        }
+      }
+
+      toast.success("🏛️ Asesor guardado para siempre en la base de datos", {
+        description: `${validName || 'Asesor'} (${cleanPhone || 'Sin celular'}) persistido y sincronizado en todas sus publicaciones.`,
+      });
+      setLocalUpdateTick(prev => prev + 1);
+    } catch (err: any) {
+      toast.error("Error guardando asesor: " + (err?.message || "Error"));
+    }
+  };
 
   const handleUpdateCommercialStatus = async (m: any, status: 'VENDIDO' | 'ARRENDADO' | 'INACTIVO') => {
     const propId = m.property?.id;
@@ -3165,6 +3207,31 @@ export default function AdminMatches() {
         });
       }
 
+      // Persistencia indestructible: Si se estaba editando este match, guardar datos de asesor antes de aplicar feedback
+      if (editingMatchId === m.id) {
+        const pPhone = normalizePhoneInput(editForm.propPhone);
+        const pName = editForm.propSenderName && !isGenericBrokerName(editForm.propSenderName) ? editForm.propSenderName.trim() : null;
+        if (pPhone || pName) {
+          saveAdvisorMut.mutateAsync({
+            phone: pPhone || m.property?.idUsuarioWhatsapp,
+            name: pName || m.property?.nombreUsuarioWhatsapp,
+            oldPhoneOrLid: m.property?.idUsuarioWhatsapp,
+            sourceGroup: editForm.propOrigenNombre || m.property?.origenNombre,
+          }).catch(() => {});
+        }
+
+        const rPhone = normalizePhoneInput(editForm.reqPhone);
+        const rName = editForm.reqSenderName && !isGenericBrokerName(editForm.reqSenderName) ? editForm.reqSenderName.trim() : null;
+        if (rPhone || rName) {
+          saveAdvisorMut.mutateAsync({
+            phone: rPhone || m.requirement?.idUsuarioWhatsapp,
+            name: rName || m.requirement?.nombreUsuarioWhatsapp,
+            oldPhoneOrLid: m.requirement?.idUsuarioWhatsapp,
+            sourceGroup: editForm.reqOrigenNombre || m.requirement?.origenNombre,
+          }).catch(() => {});
+        }
+      }
+
       await recordFeedbackMut.mutateAsync({
         matchId: m.id,
         propertyId: m.property?.id,
@@ -3220,6 +3287,9 @@ export default function AdminMatches() {
       return next;
     });
 
+    const propContact = extractPhoneFromItem(m.property);
+    const reqContact = extractPhoneFromItem(m.requirement);
+
     setEditForm({
       // Oferta (Inmueble)
       propSenderName: m.property?.nombreUsuarioWhatsapp || (isPropDirect ? m.property?.origenNombre : '') || '',
@@ -3236,7 +3306,12 @@ export default function AdminMatches() {
       propCity: m.property?.city || 'Bogotá',
       propPropertyType: m.property?.propertyType || '',
       propTransactionType: m.property?.transactionType || '',
-      propPhone: m.property?.idUsuarioWhatsapp || m.property?.phone || m.property?.contactPhone || '',
+      propPhone: (() => {
+        const raw = m.property?.idUsuarioWhatsapp || m.property?.phone || m.property?.contactPhone || '';
+        if (isValidRealPhoneNumber(raw)) return raw;
+        if (propContact.cleanNumber) return propContact.cleanNumber;
+        return '';
+      })(),
       propOrigenNombre: isPropDirect ? '' : (m.property?.origenNombre || ''),
       propYearBuilt: m.property?.yearBuilt ?? '',
       propAntiguedadAnos: m.property?.antiguedadAnos ?? '',
@@ -3263,7 +3338,12 @@ export default function AdminMatches() {
       reqCity: m.requirement?.ciudadDeseada || 'Bogotá',
       reqPropertyType: m.requirement?.tipoInmuebleDeseado || '',
       reqTransactionType: m.requirement?.tipoNegocioDeseado || '',
-      reqPhone: m.requirement?.idUsuarioWhatsapp || m.requirement?.phone || m.requirement?.contactPhone || '',
+      reqPhone: (() => {
+        const raw = m.requirement?.idUsuarioWhatsapp || m.requirement?.phone || m.requirement?.contactPhone || '';
+        if (isValidRealPhoneNumber(raw)) return raw;
+        if (reqContact.cleanNumber) return reqContact.cleanNumber;
+        return '';
+      })(),
       reqOrigenNombre: isReqDirect ? '' : (m.requirement?.origenNombre || ''),
       reqAntiguedadMax: m.requirement?.antiguedadMax || m.requirement?.caracteristicasDeseadas?.antiguedadMax || '',
       reqExtInt: m.requirement?.caracteristicasDeseadas?.interiorExterior || (m.requirement?.rawText?.toLowerCase().includes('interior') ? 'Interior' : (m.requirement?.rawText?.toLowerCase().includes('exterior') ? 'Exterior' : '')),
@@ -3278,12 +3358,16 @@ export default function AdminMatches() {
   const normalizePhoneInput = (val?: string) => {
     if (!val || val.trim() === '') return undefined;
     const raw = val.trim();
-    if (raw.includes('@')) return raw;
-    const digits = raw.replace(/\D/g, '');
+    if (raw.includes('@lid') || raw.includes('@g.us')) return undefined;
+    const cleanRaw = raw.split('@')[0];
+    const digits = cleanRaw.replace(/\D/g, '');
     if (digits === '573192919978' || digits === '3192919978') return undefined;
-    if (digits.length === 10) return `57${digits}`;
-    if (digits.length > 10) return digits;
-    return digits || raw;
+    // Rechazar LIDs o identificadores internos de WhatsApp (> 13 dígitos o empieza por 11/1203)
+    if (digits.length > 13 || digits.startsWith('11') || digits.startsWith('1203')) return undefined;
+    if (digits.length === 10 && digits.startsWith('3')) return `57${digits}`;
+    if (digits.length === 12 && digits.startsWith('573')) return digits;
+    if (digits.length >= 10 && digits.length <= 12) return digits;
+    return undefined;
   };
 
   const cleanNumberForSave = (val: any): string | undefined => {
@@ -3386,6 +3470,17 @@ export default function AdminMatches() {
             amenities: propAmenitiesToSave,
           })
         );
+
+        if (cleanPropPhone || (editForm.propSenderName && !isGenericBrokerName(editForm.propSenderName))) {
+          promises.push(
+            saveAdvisorMut.mutateAsync({
+              phone: cleanPropPhone || m.property.idUsuarioWhatsapp,
+              name: editForm.propSenderName ? String(editForm.propSenderName).trim() : m.property.nombreUsuarioWhatsapp,
+              oldPhoneOrLid: m.property.idUsuarioWhatsapp,
+              sourceGroup: editForm.propOrigenNombre ? String(editForm.propOrigenNombre).trim() : m.property.origenNombre,
+            }).catch(e => console.warn("[handleOnlySave] Error auto-saving prop advisor:", e))
+          );
+        }
       }
 
       if (m.requirement?.id && (Object.keys(editForm).some(k => k.startsWith('req')) || editForm.reqPhone || editForm.reqSenderName || editForm.reqOrigenNombre)) {
@@ -3442,6 +3537,17 @@ export default function AdminMatches() {
             caracteristicasDeseadas: reqCaractToSave,
           })
         );
+
+        if (cleanReqPhone || (editForm.reqSenderName && !isGenericBrokerName(editForm.reqSenderName))) {
+          promises.push(
+            saveAdvisorMut.mutateAsync({
+              phone: cleanReqPhone || m.requirement.idUsuarioWhatsapp,
+              name: editForm.reqSenderName ? String(editForm.reqSenderName).trim() : m.requirement.nombreUsuarioWhatsapp,
+              oldPhoneOrLid: m.requirement.idUsuarioWhatsapp,
+              sourceGroup: editForm.reqOrigenNombre ? String(editForm.reqOrigenNombre).trim() : m.requirement.origenNombre,
+            }).catch(e => console.warn("[handleOnlySave] Error auto-saving req advisor:", e))
+          );
+        }
       }
 
       // Guardado en paralelo ultrarrápido con carrera protectora contra timeouts de red (máx 15s)
@@ -3614,6 +3720,17 @@ export default function AdminMatches() {
             amenities: propAmenitiesToSave,
           })
         );
+
+        if (cleanPropPhone || (editForm.propSenderName && !isGenericBrokerName(editForm.propSenderName))) {
+          savePromises.push(
+            saveAdvisorMut.mutateAsync({
+              phone: cleanPropPhone || m.property.idUsuarioWhatsapp,
+              name: editForm.propSenderName ? String(editForm.propSenderName).trim() : m.property.nombreUsuarioWhatsapp,
+              oldPhoneOrLid: m.property.idUsuarioWhatsapp,
+              sourceGroup: editForm.propOrigenNombre ? String(editForm.propOrigenNombre).trim() : m.property.origenNombre,
+            }).catch(e => console.warn("[handleRecalculateMatch] Error auto-saving prop advisor:", e))
+          );
+        }
       }
 
       if (m.requirement?.id && (Object.keys(editForm).some(k => k.startsWith('req')) || editForm.reqPhone || editForm.reqSenderName || editForm.reqOrigenNombre)) {
@@ -3670,6 +3787,17 @@ export default function AdminMatches() {
             caracteristicasDeseadas: reqCaractToSave,
           })
         );
+
+        if (cleanReqPhone || (editForm.reqSenderName && !isGenericBrokerName(editForm.reqSenderName))) {
+          savePromises.push(
+            saveAdvisorMut.mutateAsync({
+              phone: cleanReqPhone || m.requirement.idUsuarioWhatsapp,
+              name: editForm.reqSenderName ? String(editForm.reqSenderName).trim() : m.requirement.nombreUsuarioWhatsapp,
+              oldPhoneOrLid: m.requirement.idUsuarioWhatsapp,
+              sourceGroup: editForm.reqOrigenNombre ? String(editForm.reqOrigenNombre).trim() : m.requirement.origenNombre,
+            }).catch(e => console.warn("[handleRecalculateMatch] Error auto-saving req advisor:", e))
+          );
+        }
       }
 
       if (savePromises.length > 0) {
@@ -5836,6 +5964,15 @@ export default function AdminMatches() {
                                         className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs pl-6 pr-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#bf953f]"
                                       />
                                     </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveAdvisorDirect(true, m)}
+                                      disabled={saveAdvisorMut.isPending}
+                                      className="w-full mt-1 py-1.5 px-2 rounded-lg bg-gradient-to-r from-amber-600/30 to-amber-700/30 hover:from-amber-600/50 hover:to-amber-700/50 border border-amber-500/50 text-amber-300 font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                      title="Guardar asesor permanentemente en PostgreSQL para que jamás se pierda"
+                                    >
+                                      {saveAdvisorMut.isPending ? "⏳ Guardando..." : "💾 Guardar Asesor Permanente"}
+                                    </button>
                                   </div>
                                 ) : (
                                   <div className="space-y-1.5 w-full">
@@ -5869,6 +6006,15 @@ export default function AdminMatches() {
                                         className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs pl-6 pr-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
                                       />
                                     </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveAdvisorDirect(false, m)}
+                                      disabled={saveAdvisorMut.isPending}
+                                      className="w-full mt-1 py-1.5 px-2 rounded-lg bg-gradient-to-r from-cyan-600/30 to-blue-700/30 hover:from-cyan-600/50 hover:to-blue-700/50 border border-cyan-500/50 text-cyan-300 font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                      title="Guardar asesor permanentemente en PostgreSQL para que jamás se pierda"
+                                    >
+                                      {saveAdvisorMut.isPending ? "⏳ Guardando..." : "💾 Guardar Asesor Permanente"}
+                                    </button>
                                   </div>
                                 );
                               }
@@ -6300,12 +6446,30 @@ export default function AdminMatches() {
                                 <input type="text" placeholder="👤 Nombre Asesor (ej: Erika Del Pilar)" value={editForm.propSenderName || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propSenderName: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
                                 <input type="text" placeholder="📞 WhatsApp (ej: +57 310 123 4567)" value={editForm.propPhone || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propPhone: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
                                 <input type="text" placeholder="📍 Grupo WhatsApp (ej: Rosales-Chicó)" value={editForm.propOrigenNombre || ''} onChange={(e) => setEditForm(prev => ({ ...prev, propOrigenNombre: e.target.value }))} className="w-full bg-black/80 border border-[#bf953f] text-[#bf953f] font-bold text-xs p-1.5 rounded-lg" />
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveAdvisorDirect(true, m)}
+                                  disabled={saveAdvisorMut.isPending}
+                                  className="w-full mt-1 py-1.5 px-2 rounded-lg bg-gradient-to-r from-amber-600/30 to-amber-700/30 hover:from-amber-600/50 hover:to-amber-700/50 border border-amber-500/50 text-amber-300 font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                  title="Guardar asesor permanentemente en PostgreSQL para que jamás se pierda"
+                                >
+                                  {saveAdvisorMut.isPending ? "⏳ Guardando..." : "💾 Guardar Asesor Permanente"}
+                                </button>
                               </div>
                             ) : (
                               <div className="space-y-1.5 w-full">
                                 <input type="text" placeholder="👤 Nombre Asesor (ej: Erika Del Pilar)" value={editForm.reqSenderName || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqSenderName: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
                                 <input type="text" placeholder="📞 WhatsApp (ej: +57 310 123 4567)" value={editForm.reqPhone || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqPhone: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
                                 <input type="text" placeholder="📍 Grupo WhatsApp (ej: VECY INMUEBLES NETWORK)" value={editForm.reqOrigenNombre || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqOrigenNombre: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveAdvisorDirect(false, m)}
+                                  disabled={saveAdvisorMut.isPending}
+                                  className="w-full mt-1 py-1.5 px-2 rounded-lg bg-gradient-to-r from-cyan-600/30 to-blue-700/30 hover:from-cyan-600/50 hover:to-blue-700/50 border border-cyan-500/50 text-cyan-300 font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                                  title="Guardar asesor permanentemente en PostgreSQL para que jamás se pierda"
+                                >
+                                  {saveAdvisorMut.isPending ? "⏳ Guardando..." : "💾 Guardar Asesor Permanente"}
+                                </button>
                               </div>
                             );
                           }

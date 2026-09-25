@@ -167,7 +167,31 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.88 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.89 — Septiembre 2026
+
+### Novedades v31.89 (Consolidación Definitiva del Directorio Permanente de Asesores: 355 Asesores en PostgreSQL, Botones Directos de Guardado, Persistencia en Guardar/Recalcular y Auto-Provisionamiento DDL):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - En la versión v31.88 se sentaron las bases del módulo `advisors.ts` y la mutación tRPC, pero la tabla `advisors` aún no existía físicamente en la base de datos PostgreSQL de producción, lo que provocaba que las consultas fallaran silenciosamente con `relation "advisors" does not exist`.
+  - Además, los botones de guardado de ficha (`handleOnlySave`) y recálculo (`handleRecalculateMatch`) en `AdminMatches.tsx` no disparaban la mutación `saveAdvisorContact`, dependiendo únicamente de que el usuario cambiara de match o editara campos específicos.
+  - No existía un botón visible en la interfaz para que Eduardo guardara o actualizara los datos de un asesor con un solo clic directamente desde la fila de edición de la tabla de cotejo.
+- **Acciones Ejecutadas en Código**:
+  1. **Auto-Provisionamiento DDL Auto-Reparable (Self-Healing DDL en `server/_core/advisors.ts`)**:
+     - `initAdvisorsDirectory()` ejecuta automáticamente la creación de la tabla `advisors` y sus índices únicos si no existen, garantizando que el sistema sea 100% resiliente en cualquier entorno o reinicio de PM2.
+     - Creada tabla e índices en PostgreSQL: `CREATE TABLE IF NOT EXISTS advisors (...)` e índices sobre `normalized_phone` y `name`.
+  2. **Backfill y Consolidación Histórica Exitosa (`scripts/backfill_advisors_directory.ts`)**:
+     - Procesadas **1.908 ofertas**, **1.041 requerimientos** y **951 usuarios**.
+     - Identificados, consolidados y persistidos con éxito **355 asesores únicos** con teléfonos canónicos colombianos en la tabla `advisors` de PostgreSQL.
+     - En el arranque, JanIA carga instantáneamente **355 asesores oficiales y 1.340 claves de acceso rápido en memoria** (teléfono 12d, 10d, LIDs de Baileys, alias y nombres).
+  3. **Botones de Guardado Directo en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+     - Incorporado botón visible con microinteracción: `💾 Guardar Asesor Permanente` tanto en la fila de edición de escritorio como en la de dispositivos móviles.
+     - Permite a Eduardo fijar el nombre, teléfono y grupo de un asesor de por vida en PostgreSQL con un solo clic.
+  4. **Auto-Persistencia en Guardado de Ficha y Recálculo (`handleOnlySave` y `handleRecalculateMatch`)**:
+     - `handleOnlySave` y `handleRecalculateMatch` ahora invocan en paralelo `saveAdvisorMut.mutateAsync` tanto para oferta como demanda si se proporciona o actualiza un teléfono o nombre válido.
+  5. **Inmunidad Total de Contactos**:
+     - El asesor guardado permanece en la base de datos sin importar si el match pasa a negociación, se descarta, se elimina, se envía a 50/50 o se recalcula.
+- **Verificación**: 75/75 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 25s ✅ | 355 asesores verificados en PostgreSQL ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.88 — Septiembre 2026
 
 ### Novedades v31.88 (Persistencia Indestructible de Asesores e Inmobiliarias en PostgreSQL, Blindaje Anti-Sobreescritura de LIDs en Deduplicación, Directorio Canónico y Enriquecimiento de Contacto):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

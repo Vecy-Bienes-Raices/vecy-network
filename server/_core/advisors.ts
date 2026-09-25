@@ -1,6 +1,6 @@
 import { getDb } from '../db';
 import { advisors, properties, requirements, users } from '../../drizzle/schema';
-import { eq, or, sql } from 'drizzle-orm';
+import { and, eq, or, sql } from 'drizzle-orm';
 
 // ── DIRECTORIO GLOBAL DE BROKERS Y RESOLUCIÓN INTELIGENTE EN MEMORIA ──
 export const brokerDirectoryCache = new Map<string, { phone: string; name?: string }>();
@@ -435,86 +435,143 @@ export async function saveOrUpdateAdvisor(params: {
     }
   }
 
-  // ── 4. PROPAGACIÓN EN CASCADA A TODAS LAS PROPIEDADES EN BD ──
+  // ── 4. PROPAGACIÓN EN CASCADA A TODAS LAS PROPIEDADES EN BD (SQL Atómico Ultrarrápido) ──
   let updatedProps = 0;
   let updatedReqs = 0;
 
   try {
-    const allProps = await db.select({
-      id: properties.id,
-      name: properties.nombreUsuarioWhatsapp,
-      phone: properties.idUsuarioWhatsapp
-    }).from(properties);
-
-    for (const p of allProps) {
-      const isSamePhone = cleanPhone && p.phone === cleanPhone;
-      const isSameLid = extractedLid && p.phone === extractedLid;
-      const isOldPhone = oldPhoneOrLid && p.phone === oldPhoneOrLid;
-      const isSameName = validName && p.name && !isGenericName(p.name) && (
-        p.name.trim().toLowerCase() === validName.toLowerCase()
-      );
-
-      if (!isSamePhone && !isSameLid && !isOldPhone && !isSameName) continue;
-
-      const pUpdates: { idUsuarioWhatsapp?: string; nombreUsuarioWhatsapp?: string } = {};
-
-      if (cleanPhone && p.phone !== cleanPhone) {
-        // Asignar si no tiene teléfono real o tiene LID o coincidió por nombre/LID
-        if (!p.phone || isLidIdentifier(p.phone) || p.phone === oldPhoneOrLid || isSameName) {
-          pUpdates.idUsuarioWhatsapp = cleanPhone;
-        }
+    if (cleanPhone) {
+      // A. Si se proporcionó un LID anterior, actualizar todas las propiedades con ese LID
+      if (extractedLid) {
+        const resLid = await db
+          .update(properties)
+          .set({
+            idUsuarioWhatsapp: cleanPhone,
+            ...(validName ? { nombreUsuarioWhatsapp: validName } : {}),
+            updatedAt: new Date(),
+          })
+          .where(or(
+            eq(properties.idUsuarioWhatsapp, extractedLid),
+            eq(properties.idUsuarioWhatsapp, `${extractedLid}@lid`),
+            eq(properties.idUsuarioWhatsapp, `${extractedLid}@s.whatsapp.net`)
+          ))
+          .returning({ id: properties.id });
+        updatedProps += resLid.length;
       }
 
-      if (validName && p.name !== validName) {
-        if (!p.name || isGenericName(p.name) || isSameLid || isSamePhone) {
-          pUpdates.nombreUsuarioWhatsapp = validName;
-        }
+      // B. Si se proporcionó un teléfono anterior distinto, actualizar
+      if (oldPhoneOrLid && oldPhoneOrLid !== cleanPhone && !isLidIdentifier(oldPhoneOrLid)) {
+        const resOld = await db
+          .update(properties)
+          .set({
+            idUsuarioWhatsapp: cleanPhone,
+            ...(validName ? { nombreUsuarioWhatsapp: validName } : {}),
+            updatedAt: new Date(),
+          })
+          .where(eq(properties.idUsuarioWhatsapp, oldPhoneOrLid))
+          .returning({ id: properties.id });
+        updatedProps += resOld.length;
       }
 
-      if (Object.keys(pUpdates).length > 0) {
-        await db.update(properties).set(pUpdates).where(eq(properties.id, p.id));
-        updatedProps++;
+      // C. Si se proporcionó un nombre válido, actualizar propiedades con ese nombre que tengan LID o no tengan teléfono
+      if (validName) {
+        const resName = await db
+          .update(properties)
+          .set({
+            idUsuarioWhatsapp: cleanPhone,
+            nombreUsuarioWhatsapp: validName,
+            updatedAt: new Date(),
+          })
+          .where(sql`LOWER(${properties.nombreUsuarioWhatsapp}) = LOWER(${validName}) AND (${properties.idUsuarioWhatsapp} IS NULL OR ${properties.idUsuarioWhatsapp} = '' OR ${properties.idUsuarioWhatsapp} ~ '^[0-9]{13,}$' OR ${properties.idUsuarioWhatsapp} LIKE '%@lid')`)
+          .returning({ id: properties.id });
+        updatedProps += resName.length;
+      }
+
+      // D. Si hay propiedades con este teléfono pero con nombre genérico o vacío, asignar el nombre válido
+      if (validName) {
+        await db
+          .update(properties)
+          .set({
+            nombreUsuarioWhatsapp: validName,
+            updatedAt: new Date(),
+          })
+          .where(and(
+            eq(properties.idUsuarioWhatsapp, cleanPhone),
+            or(
+              sql`${properties.nombreUsuarioWhatsapp} IS NULL`,
+              sql`${properties.nombreUsuarioWhatsapp} = ''`,
+              sql`LOWER(${properties.nombreUsuarioWhatsapp}) LIKE 'asesor%'`,
+              sql`LOWER(${properties.nombreUsuarioWhatsapp}) LIKE 'cliente%'`
+            )
+          ));
       }
     }
   } catch (propErr: any) {
     console.error(`[AdvisorsCore] Error propagando en properties:`, propErr?.message);
   }
 
-  // ── 5. PROPAGACIÓN EN CASCADA A TODOS LOS REQUERIMIENTOS EN BD ──
+  // ── 5. PROPAGACIÓN EN CASCADA A TODOS LOS REQUERIMIENTOS EN BD (SQL Atómico Ultrarrápido) ──
   try {
-    const allReqs = await db.select({
-      id: requirements.id,
-      name: requirements.nombreUsuarioWhatsapp,
-      phone: requirements.idUsuarioWhatsapp
-    }).from(requirements);
-
-    for (const r of allReqs) {
-      const isSamePhone = cleanPhone && r.phone === cleanPhone;
-      const isSameLid = extractedLid && r.phone === extractedLid;
-      const isOldPhone = oldPhoneOrLid && r.phone === oldPhoneOrLid;
-      const isSameName = validName && r.name && !isGenericName(r.name) && (
-        r.name.trim().toLowerCase() === validName.toLowerCase()
-      );
-
-      if (!isSamePhone && !isSameLid && !isOldPhone && !isSameName) continue;
-
-      const rUpdates: { idUsuarioWhatsapp?: string; nombreUsuarioWhatsapp?: string } = {};
-
-      if (cleanPhone && r.phone !== cleanPhone) {
-        if (!r.phone || isLidIdentifier(r.phone) || r.phone === oldPhoneOrLid || isSameName) {
-          rUpdates.idUsuarioWhatsapp = cleanPhone;
-        }
+    if (cleanPhone) {
+      if (extractedLid) {
+        const resReqLid = await db
+          .update(requirements)
+          .set({
+            idUsuarioWhatsapp: cleanPhone,
+            ...(validName ? { nombreUsuarioWhatsapp: validName } : {}),
+            updatedAt: new Date(),
+          })
+          .where(or(
+            eq(requirements.idUsuarioWhatsapp, extractedLid),
+            eq(requirements.idUsuarioWhatsapp, `${extractedLid}@lid`),
+            eq(requirements.idUsuarioWhatsapp, `${extractedLid}@s.whatsapp.net`)
+          ))
+          .returning({ id: requirements.id });
+        updatedReqs += resReqLid.length;
       }
 
-      if (validName && r.name !== validName) {
-        if (!r.name || isGenericName(r.name) || isSameLid || isSamePhone) {
-          rUpdates.nombreUsuarioWhatsapp = validName;
-        }
+      if (oldPhoneOrLid && oldPhoneOrLid !== cleanPhone && !isLidIdentifier(oldPhoneOrLid)) {
+        const resReqOld = await db
+          .update(requirements)
+          .set({
+            idUsuarioWhatsapp: cleanPhone,
+            ...(validName ? { nombreUsuarioWhatsapp: validName } : {}),
+            updatedAt: new Date(),
+          })
+          .where(eq(requirements.idUsuarioWhatsapp, oldPhoneOrLid))
+          .returning({ id: requirements.id });
+        updatedReqs += resReqOld.length;
       }
 
-      if (Object.keys(rUpdates).length > 0) {
-        await db.update(requirements).set(rUpdates).where(eq(requirements.id, r.id));
-        updatedReqs++;
+      if (validName) {
+        const resReqName = await db
+          .update(requirements)
+          .set({
+            idUsuarioWhatsapp: cleanPhone,
+            nombreUsuarioWhatsapp: validName,
+            updatedAt: new Date(),
+          })
+          .where(sql`LOWER(${requirements.nombreUsuarioWhatsapp}) = LOWER(${validName}) AND (${requirements.idUsuarioWhatsapp} IS NULL OR ${requirements.idUsuarioWhatsapp} = '' OR ${requirements.idUsuarioWhatsapp} ~ '^[0-9]{13,}$' OR ${requirements.idUsuarioWhatsapp} LIKE '%@lid')`)
+          .returning({ id: requirements.id });
+        updatedReqs += resReqName.length;
+      }
+
+      if (validName) {
+        await db
+          .update(requirements)
+          .set({
+            nombreUsuarioWhatsapp: validName,
+            updatedAt: new Date(),
+          })
+          .where(and(
+            eq(requirements.idUsuarioWhatsapp, cleanPhone),
+            or(
+              sql`${requirements.nombreUsuarioWhatsapp} IS NULL`,
+              sql`${requirements.nombreUsuarioWhatsapp} = ''`,
+              sql`LOWER(${requirements.nombreUsuarioWhatsapp}) LIKE 'asesor%'`,
+              sql`LOWER(${requirements.nombreUsuarioWhatsapp}) LIKE 'cliente%'`
+            )
+          ));
       }
     }
   } catch (reqErr: any) {
@@ -534,6 +591,239 @@ export async function saveOrUpdateAdvisor(params: {
 }
 
 /**
+ * Realiza una consolidación y backfill masivo de todos los asesores existentes en la base de datos
+ * hacia la tabla `advisors`, asociando sus LIDs, alias y propagando sus teléfonos verificados
+ * a todas las publicaciones que tenían solo LID o teléfono vacío.
+ */
+export async function reconcileAndBackfillAdvisors(db: any): Promise<number> {
+  console.log(`[JanIA-Advisors] 🏛️ Iniciando consolidación y backfill masivo de asesores en PostgreSQL...`);
+  let totalConsolidated = 0;
+
+  try {
+    const allProps = await db.select({
+      id: properties.id,
+      phone: properties.idUsuarioWhatsapp,
+      name: properties.nombreUsuarioWhatsapp,
+      rawText: properties.rawText,
+      description: properties.description,
+      group: properties.origenNombre,
+    }).from(properties);
+
+    const allReqs = await db.select({
+      id: requirements.id,
+      phone: requirements.idUsuarioWhatsapp,
+      name: requirements.nombreUsuarioWhatsapp,
+      rawText: requirements.rawText,
+      group: requirements.origenNombre,
+    }).from(requirements);
+
+    const allUsers = await db.select({
+      id: users.id,
+      phone: users.phone,
+      name: users.name,
+    }).from(users);
+
+    interface AdvisorAggregate {
+      phone: string;
+      names: Set<string>;
+      bestName: string | null;
+      lids: Set<string>;
+      groups: Set<string>;
+    }
+
+    const advisorsByPhone = new Map<string, AdvisorAggregate>();
+
+    function register(rawPhone: string | null | undefined, name: string | null | undefined, associatedLid: string | null | undefined, group: string | null | undefined) {
+      const cleanPhone = normalizeAdvisorPhone(rawPhone);
+      if (!cleanPhone) return;
+
+      let agg = advisorsByPhone.get(cleanPhone);
+      if (!agg) {
+        agg = {
+          phone: cleanPhone,
+          names: new Set(),
+          bestName: null,
+          lids: new Set(),
+          groups: new Set(),
+        };
+        advisorsByPhone.set(cleanPhone, agg);
+      }
+
+      if (name && !isGenericName(name)) {
+        const trimmed = name.trim();
+        agg.names.add(trimmed);
+        if (!agg.bestName || trimmed.length > agg.bestName.length) {
+          agg.bestName = trimmed;
+        }
+      }
+
+      if (associatedLid && isLidIdentifier(associatedLid)) {
+        const cleanLid = associatedLid.split('@')[0].replace(/\D/g, '');
+        if (cleanLid) agg.lids.add(cleanLid);
+      }
+
+      if (group && group.trim() !== '') {
+        agg.groups.add(group.trim());
+      }
+    }
+
+    for (const u of allUsers) {
+      const p = normalizeAdvisorPhone(u.phone);
+      if (p) register(p, u.name, null, null);
+    }
+
+    for (const p of allProps) {
+      const directPhone = normalizeAdvisorPhone(p.phone);
+      const isLid = isLidIdentifier(p.phone);
+      const lidVal = isLid ? p.phone : null;
+
+      if (directPhone) register(directPhone, p.name, null, p.group);
+
+      const textPhone = extractColombianPhoneFromText(`${p.rawText || ''} ${p.description || ''}`);
+      if (textPhone) register(textPhone, p.name, lidVal, p.group);
+    }
+
+    for (const r of allReqs) {
+      const directPhone = normalizeAdvisorPhone(r.phone);
+      const isLid = isLidIdentifier(r.phone);
+      const lidVal = isLid ? r.phone : null;
+
+      if (directPhone) register(directPhone, r.name, null, r.group);
+
+      const textPhone = extractColombianPhoneFromText(r.rawText);
+      if (textPhone) register(textPhone, r.name, lidVal, r.group);
+    }
+
+    // Mapear LIDs por nombres de asesores
+    const nameToPhoneMap = new Map<string, string>();
+    for (const [phone, agg] of advisorsByPhone.entries()) {
+      for (const n of agg.names) {
+        nameToPhoneMap.set(n.toLowerCase(), phone);
+      }
+    }
+
+    for (const item of [...allProps, ...allReqs]) {
+      if (item.name && !isGenericName(item.name)) {
+        const lower = item.name.trim().toLowerCase();
+        const matchedPhone = nameToPhoneMap.get(lower);
+        if (matchedPhone && isLidIdentifier(item.phone)) {
+          const cleanLid = item.phone!.split('@')[0].replace(/\D/g, '');
+          if (cleanLid) {
+            advisorsByPhone.get(matchedPhone)?.lids.add(cleanLid);
+          }
+        }
+      }
+    }
+
+    // Upsert masivo en tabla `advisors`
+    for (const [phone, agg] of advisorsByPhone.entries()) {
+      const effectiveName = agg.bestName || `Asesor +${phone}`;
+      const lidsArray = Array.from(agg.lids);
+      const aliasesArray = Array.from(agg.names);
+      const primaryGroup = Array.from(agg.groups)[0] || null;
+
+      try {
+        const existing = await db
+          .select()
+          .from(advisors)
+          .where(eq(advisors.normalizedPhone, phone))
+          .limit(1)
+          .then((r: any) => r[0]);
+
+        if (existing) {
+          const mergedLids = Array.from(new Set([...(existing.whatsappLids || []), ...lidsArray]));
+          const mergedAliases = Array.from(new Set([...(existing.aliases || []), ...aliasesArray]));
+          const newName = (isGenericName(existing.name) && agg.bestName) ? agg.bestName : existing.name;
+
+          await db
+            .update(advisors)
+            .set({
+              name: newName,
+              whatsappLids: mergedLids,
+              aliases: mergedAliases,
+              sourceGroup: existing.sourceGroup || primaryGroup,
+              updatedAt: new Date(),
+            })
+            .where(eq(advisors.id, existing.id));
+        } else {
+          await db.insert(advisors).values({
+            name: effectiveName,
+            phone: phone,
+            normalizedPhone: phone,
+            whatsappLids: lidsArray,
+            aliases: aliasesArray,
+            sourceGroup: primaryGroup,
+          });
+        }
+        totalConsolidated++;
+      } catch (e: any) {
+        // Ignorar colisiones concurrentes
+      }
+    }
+
+    // Propagar teléfonos de vuelta a properties con LIDs
+    for (const [phone, agg] of advisorsByPhone.entries()) {
+      const lidsList = Array.from(agg.lids);
+      const validName = agg.bestName;
+
+      if (lidsList.length > 0) {
+        for (const lid of lidsList) {
+          await db
+            .update(properties)
+            .set({
+              idUsuarioWhatsapp: phone,
+              ...(validName ? { nombreUsuarioWhatsapp: validName } : {}),
+              updatedAt: new Date(),
+            })
+            .where(or(
+              eq(properties.idUsuarioWhatsapp, lid),
+              eq(properties.idUsuarioWhatsapp, `${lid}@lid`),
+              eq(properties.idUsuarioWhatsapp, `${lid}@s.whatsapp.net`)
+            ));
+          await db
+            .update(requirements)
+            .set({
+              idUsuarioWhatsapp: phone,
+              ...(validName ? { nombreUsuarioWhatsapp: validName } : {}),
+              updatedAt: new Date(),
+            })
+            .where(or(
+              eq(requirements.idUsuarioWhatsapp, lid),
+              eq(requirements.idUsuarioWhatsapp, `${lid}@lid`),
+              eq(requirements.idUsuarioWhatsapp, `${lid}@s.whatsapp.net`)
+            ));
+        }
+      }
+
+      if (validName) {
+        await db
+          .update(properties)
+          .set({
+            idUsuarioWhatsapp: phone,
+            nombreUsuarioWhatsapp: validName,
+            updatedAt: new Date(),
+          })
+          .where(sql`LOWER(${properties.nombreUsuarioWhatsapp}) = LOWER(${validName}) AND (${properties.idUsuarioWhatsapp} IS NULL OR ${properties.idUsuarioWhatsapp} = '' OR ${properties.idUsuarioWhatsapp} ~ '^[0-9]{13,}$' OR ${properties.idUsuarioWhatsapp} LIKE '%@lid')`);
+        await db
+          .update(requirements)
+          .set({
+            idUsuarioWhatsapp: phone,
+            nombreUsuarioWhatsapp: validName,
+            updatedAt: new Date(),
+          })
+          .where(sql`LOWER(${requirements.nombreUsuarioWhatsapp}) = LOWER(${validName}) AND (${requirements.idUsuarioWhatsapp} IS NULL OR ${requirements.idUsuarioWhatsapp} = '' OR ${requirements.idUsuarioWhatsapp} ~ '^[0-9]{13,}$' OR ${requirements.idUsuarioWhatsapp} LIKE '%@lid')`);
+      }
+    }
+
+    console.log(`[JanIA-Advisors] ✅ Consolidación completada: ${totalConsolidated} asesores guardados en PostgreSQL.`);
+  } catch (err: any) {
+    console.error(`[JanIA-Advisors] Error durante la consolidación:`, err?.message);
+  }
+
+  return totalConsolidated;
+}
+
+/**
  * Inicializa y carga en memoria el directorio permanente de asesores desde PostgreSQL al arrancar el servidor.
  * Restaura LIDs, nombres y teléfonos para que ningún reinicio de PM2 borre lo aprendido.
  */
@@ -543,8 +833,39 @@ export async function initAdvisorsDirectory(): Promise<number> {
     const db = await getDb();
     if (!db) return 0;
 
+    // 0. Auto-verificar y crear tabla e índices en PostgreSQL si no existen (Self-healing DDL)
+    try {
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS advisors (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          phone VARCHAR(50) NOT NULL,
+          normalized_phone VARCHAR(50) NOT NULL UNIQUE,
+          whatsapp_lids TEXT[] DEFAULT '{}',
+          aliases TEXT[] DEFAULT '{}',
+          agency VARCHAR(255),
+          source_group VARCHAR(255),
+          notes TEXT,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS advisors_norm_phone_idx ON advisors (normalized_phone);
+        CREATE INDEX IF NOT EXISTS advisors_name_idx ON advisors (name);
+      `);
+    } catch (ddlErr: any) {
+      console.warn("[JanIA-Advisors] Aviso comprobando DDL de advisors:", ddlErr?.message);
+    }
+
     // 1. Cargar desde la tabla canónica `advisors`
-    const allAdvisors = await db.select().from(advisors);
+    let allAdvisors = await db.select().from(advisors);
+
+    // Si la tabla advisors tiene menos de 20 registros, disparar backfill automático de bootstrap
+    if (allAdvisors.length < 20) {
+      console.log(`[JanIA-Advisors] 🏛️ Tabla advisors con pocos registros (${allAdvisors.length}). Ejecutando backfill masivo automático...`);
+      await reconcileAndBackfillAdvisors(db);
+      allAdvisors = await db.select().from(advisors);
+    }
+
     for (const adv of allAdvisors) {
       if (adv.normalizedPhone) {
         const cleanPhone = adv.normalizedPhone;
@@ -580,7 +901,7 @@ export async function initAdvisorsDirectory(): Promise<number> {
       }
     }
 
-    // 2. Bootstrap complementario desde `properties` y `requirements` para poblar asesores históricos
+    // 2. Bootstrap complementario desde `properties` y `requirements`
     const knownProps = await db
       .select({
         phone: properties.idUsuarioWhatsapp,

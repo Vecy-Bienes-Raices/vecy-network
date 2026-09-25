@@ -322,6 +322,33 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.89 — Septiembre 2026
+
+#### 📌 CONSOLIDACIÓN DEFINITIVA DEL DIRECTORIO PERMANENTE DE ASESORES: 355 ASESORES EN POSTGRESQL, BOTONES DIRECTOS DE GUARDADO, AUTO-PERSISTENCIA Y DDL AUTO-REPARABLE
+
+**Problemas identificados:**
+1. **Ausencia de Tabla Física en PostgreSQL de Producción**: Aunque el modelo fue definido en `drizzle/schema.ts`, la sentencia DDL no se había ejecutado en la base de datos PostgreSQL conectada a `DATABASE_URL`, arrojando errores silenciosos `relation "advisors" does not exist`.
+2. **Carencia de Auto-Provisionamiento DDL**: Reinicios o migraciones a nuevos entornos no contaban con rutina tolerante a fallos para auto-crear la tabla.
+3. **Ausencia de Botón Directo en UI de Cotejo**: No existía un botón dedicado para que el usuario guardara o fijara al asesor de por vida con 1 solo clic en la fila de contacto.
+4. **Falta de Auto-Persistencia al Guardar Ficha o Recalcular**: Si el usuario editaba el teléfono o nombre en el formulario modal y pulsaba "Guardar Ficha" (`handleOnlySave`) o "Recalcular" (`handleRecalculateMatch`), estas funciones actualizaban `properties`/`requirements` pero no invocaban la mutación `saveAdvisorContact`.
+
+**Solución aplicada:**
+- **Auto-Provisionamiento DDL Auto-Reparable (`server/_core/advisors.ts`)**:
+  - `initAdvisorsDirectory()` verifica y ejecuta `CREATE TABLE IF NOT EXISTS advisors (...)` e índices sobre `normalized_phone` y `name`, asegurando auto-reparación permanente ante cualquier arranque de PM2.
+- **Backfill y Consolidación Histórica Exitosa (`scripts/backfill_advisors_directory.ts`)**:
+  - Analizadas **1.908 ofertas**, **1.041 demandas** y **951 usuarios**.
+  - Consolidados y guardados **355 asesores únicos** con teléfonos canónicos colombianos en la tabla `advisors`.
+  - En el arranque, JanIA carga **355 asesores oficiales y 1.340 claves de acceso instantáneo en memoria** (12d, 10d, LIDs, aliases y nombres).
+- **Botones Directos en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+  - Incorporado botón interactivo con feedback visual: `💾 Guardar Asesor Permanente` en la sección de contacto tanto en Desktop como en Mobile.
+- **Auto-Persistencia en `handleOnlySave` y `handleRecalculateMatch`**:
+  - Toda acción de guardado o recálculo que incluya teléfono o nombre dispara en paralelo `saveAdvisorMut.mutateAsync` para oferta y demanda con protección contra timeouts.
+- `shared/const.ts` y `package.json`: Versión incrementada a `v31.89`.
+
+**Verificación:** `tsc --noEmit` 0 errores ✅ | `vitest run` 75/75 tests ✅ | Build limpio de Vite y esbuild en 25s ✅ | 355 asesores verificados en PostgreSQL ✅
+
+---
+
 ### 🔖 v31.88 — Septiembre 2026
 
 #### 📌 PERSISTENCIA INDESTRUCTIBLE DE ASESORES E INMOBILIARIAS EN POSTGRESQL, BLINDAJE ANTI-SOBREESCRITURA DE LIDS EN DEDUPLICACIÓN, DIRECTORIO CANÓNICO Y ENRIQUECIMIENTO DE CONTACTO

@@ -7,6 +7,46 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.89 — 24 Septiembre 2026
+
+### Solicitud de Eduardo
+Consolidación y verificación indestructible de la persistencia de datos de asesores e inmobiliarias en PostgreSQL:
+*"Necesito que cuando yo guarde el número del asesor se quede en la base de datos para siempre sin importar si se empezó el proceso de negociación, se eliminó o denegó el Match, si no coincidió o si se le dió recalcular o se envió a 50/50, etc."*
+
+### Diagnóstico Técnico Profundo y Causas Raíz Identificadas
+1. **Ausencia Física de la Tabla `advisors` en PostgreSQL de Producción**:
+   - En la sesión anterior se definió el esquema en `drizzle/schema.ts`, pero no se había ejecutado la sentencia DDL en la base de datos PostgreSQL conectada a `DATABASE_URL`. Al consultar la tabla, la base de datos arrojaba `relation "advisors" does not exist`.
+2. **Carencia de Auto-Provisionamiento DDL Auto-Reparable**:
+   - Si la base de datos se reiniciaba o se desplegaba en un entorno nuevo, no existía una rutina de auto-creación tolerante a fallos (`CREATE TABLE IF NOT EXISTS advisors`).
+3. **Falta de Botón de Guardado Directo e Instantáneo en la Interfaz**:
+   - En la tabla de cotejo (`AdminMatches.tsx`), Eduardo no disponía de un botón visible para guardar los datos de un asesor con un solo clic en la fila de edición sin tener que guardar o recalcular toda la ficha técnica.
+4. **Falta de Auto-Persistencia en `handleOnlySave` y `handleRecalculateMatch`**:
+   - Cuando Eduardo editaba el celular o nombre del asesor en el formulario y presionaba "Guardar Ficha" (`handleOnlySave`) o "Recalcular" (`handleRecalculateMatch`), estas rutinas actualizaban las tablas `properties`/`requirements` pero no invocaban la mutación `saveAdvisorContact`.
+5. **Historial de Asesores No Consolidado**:
+   - Más de 1.900 propiedades y 1.000 requerimientos históricos contenían teléfonos y nombres de asesores dispersos que no habían sido indexados en la tabla permanente `advisors`.
+
+### Acciones Ejecutadas
+1. **Creación y Blindaje DDL de la Tabla `advisors` en PostgreSQL VPS**:
+   - Ejecutado script DDL creando la tabla `advisors` e índices sobre `normalized_phone` y `name`.
+   - Incorporado bloque de auto-reparación (Self-healing DDL) en `initAdvisorsDirectory()` (`server/_core/advisors.ts`) para verificar y crear automáticamente la tabla en cada arranque del backend.
+2. **Backfill y Consolidación Histórica Exitosa (`scripts/backfill_advisors_directory.ts`)**:
+   - Procesadas **1.908 ofertas**, **1.041 requerimientos** y **951 usuarios** históricos.
+   - Consolidados y guardados exitosamente **355 asesores únicos** en la tabla permanente `advisors` de PostgreSQL.
+   - En el arranque, JanIA carga en memoria **355 asesores oficiales y 1.340 claves de mapeo rápido** (teléfono 12 dígitos, 10 dígitos, LIDs de Baileys, alias y nombres).
+3. **Botón Directo "💾 Guardar Asesor Permanente" en `AdminMatches.tsx`**:
+   - Implementado botón con microinteracción visual en la fila de contacto de la tabla de cotejo tanto en la vista Desktop como Mobile.
+   - Con un solo clic, invoca `handleSaveAdvisorDirect`, ejecuta `saveAdvisorMut.mutateAsync`, sincroniza el estado local optimista y muestra confirmación inmediata tipo Toast.
+4. **Auto-Persistencia en `handleOnlySave` y `handleRecalculateMatch`**:
+   - Al pulsar "Guardar Ficha" o "Recalcular", si se modificó el teléfono o nombre del asesor, se envía automáticamente `saveAdvisorMut.mutateAsync` para oferta y demanda en paralelo con carrera protectora contra timeouts.
+5. **Doble Filtro Anti-LID en `normalizePhoneInput`**:
+   - Se asegura que los LIDs numéricos (>13 dígitos o con sufijos `@lid`/`@g.us`) jamás se traten como números de celular válidos ni sobreescriban teléfonos reales.
+
+### Verificación y Resultados
+- **Tests Automatizados**: 75/75 tests Vitest pasando al 100% en 5.2 segundos (`server/__tests__/regression.test.ts`, `server/__tests__/colombianParser.test.ts`, `server/__tests__/perfect_100_match.test.ts`).
+- **Chequeo de Tipos**: `tsc --noEmit` completado con 0 errores.
+- **Compilación de Producción**: `npm run build` generado limpiamente (Vite client + esbuild server bundle en 25s).
+- **PostgreSQL**: 355 asesores verificados y persistidos en la tabla `advisors`.
+
 ## 📋 SESIÓN v31.88 — 24 Septiembre 2026
 
 ### Solicitud de Eduardo

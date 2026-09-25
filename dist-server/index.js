@@ -7677,7 +7677,7 @@ var init_nameAndGenderResolver = __esm({
 });
 
 // server/_core/advisors.ts
-import { eq as eq4, or, sql as sql3 } from "drizzle-orm";
+import { and as and2, eq as eq4, or, sql as sql3 } from "drizzle-orm";
 function isGenericName(n) {
   if (!n) return true;
   const lower = n.toLowerCase().trim();
@@ -7958,62 +7958,96 @@ ${notes}` : notes;
   let updatedProps = 0;
   let updatedReqs = 0;
   try {
-    const allProps = await db.select({
-      id: properties.id,
-      name: properties.nombreUsuarioWhatsapp,
-      phone: properties.idUsuarioWhatsapp
-    }).from(properties);
-    for (const p of allProps) {
-      const isSamePhone = cleanPhone && p.phone === cleanPhone;
-      const isSameLid = extractedLid && p.phone === extractedLid;
-      const isOldPhone = oldPhoneOrLid && p.phone === oldPhoneOrLid;
-      const isSameName = validName && p.name && !isGenericName(p.name) && p.name.trim().toLowerCase() === validName.toLowerCase();
-      if (!isSamePhone && !isSameLid && !isOldPhone && !isSameName) continue;
-      const pUpdates = {};
-      if (cleanPhone && p.phone !== cleanPhone) {
-        if (!p.phone || isLidIdentifier(p.phone) || p.phone === oldPhoneOrLid || isSameName) {
-          pUpdates.idUsuarioWhatsapp = cleanPhone;
-        }
+    if (cleanPhone) {
+      if (extractedLid) {
+        const resLid = await db.update(properties).set({
+          idUsuarioWhatsapp: cleanPhone,
+          ...validName ? { nombreUsuarioWhatsapp: validName } : {},
+          updatedAt: /* @__PURE__ */ new Date()
+        }).where(or(
+          eq4(properties.idUsuarioWhatsapp, extractedLid),
+          eq4(properties.idUsuarioWhatsapp, `${extractedLid}@lid`),
+          eq4(properties.idUsuarioWhatsapp, `${extractedLid}@s.whatsapp.net`)
+        )).returning({ id: properties.id });
+        updatedProps += resLid.length;
       }
-      if (validName && p.name !== validName) {
-        if (!p.name || isGenericName(p.name) || isSameLid || isSamePhone) {
-          pUpdates.nombreUsuarioWhatsapp = validName;
-        }
+      if (oldPhoneOrLid && oldPhoneOrLid !== cleanPhone && !isLidIdentifier(oldPhoneOrLid)) {
+        const resOld = await db.update(properties).set({
+          idUsuarioWhatsapp: cleanPhone,
+          ...validName ? { nombreUsuarioWhatsapp: validName } : {},
+          updatedAt: /* @__PURE__ */ new Date()
+        }).where(eq4(properties.idUsuarioWhatsapp, oldPhoneOrLid)).returning({ id: properties.id });
+        updatedProps += resOld.length;
       }
-      if (Object.keys(pUpdates).length > 0) {
-        await db.update(properties).set(pUpdates).where(eq4(properties.id, p.id));
-        updatedProps++;
+      if (validName) {
+        const resName = await db.update(properties).set({
+          idUsuarioWhatsapp: cleanPhone,
+          nombreUsuarioWhatsapp: validName,
+          updatedAt: /* @__PURE__ */ new Date()
+        }).where(sql3`LOWER(${properties.nombreUsuarioWhatsapp}) = LOWER(${validName}) AND (${properties.idUsuarioWhatsapp} IS NULL OR ${properties.idUsuarioWhatsapp} = '' OR ${properties.idUsuarioWhatsapp} ~ '^[0-9]{13,}$' OR ${properties.idUsuarioWhatsapp} LIKE '%@lid')`).returning({ id: properties.id });
+        updatedProps += resName.length;
+      }
+      if (validName) {
+        await db.update(properties).set({
+          nombreUsuarioWhatsapp: validName,
+          updatedAt: /* @__PURE__ */ new Date()
+        }).where(and2(
+          eq4(properties.idUsuarioWhatsapp, cleanPhone),
+          or(
+            sql3`${properties.nombreUsuarioWhatsapp} IS NULL`,
+            sql3`${properties.nombreUsuarioWhatsapp} = ''`,
+            sql3`LOWER(${properties.nombreUsuarioWhatsapp}) LIKE 'asesor%'`,
+            sql3`LOWER(${properties.nombreUsuarioWhatsapp}) LIKE 'cliente%'`
+          )
+        ));
       }
     }
   } catch (propErr) {
     console.error(`[AdvisorsCore] Error propagando en properties:`, propErr?.message);
   }
   try {
-    const allReqs = await db.select({
-      id: requirements.id,
-      name: requirements.nombreUsuarioWhatsapp,
-      phone: requirements.idUsuarioWhatsapp
-    }).from(requirements);
-    for (const r of allReqs) {
-      const isSamePhone = cleanPhone && r.phone === cleanPhone;
-      const isSameLid = extractedLid && r.phone === extractedLid;
-      const isOldPhone = oldPhoneOrLid && r.phone === oldPhoneOrLid;
-      const isSameName = validName && r.name && !isGenericName(r.name) && r.name.trim().toLowerCase() === validName.toLowerCase();
-      if (!isSamePhone && !isSameLid && !isOldPhone && !isSameName) continue;
-      const rUpdates = {};
-      if (cleanPhone && r.phone !== cleanPhone) {
-        if (!r.phone || isLidIdentifier(r.phone) || r.phone === oldPhoneOrLid || isSameName) {
-          rUpdates.idUsuarioWhatsapp = cleanPhone;
-        }
+    if (cleanPhone) {
+      if (extractedLid) {
+        const resReqLid = await db.update(requirements).set({
+          idUsuarioWhatsapp: cleanPhone,
+          ...validName ? { nombreUsuarioWhatsapp: validName } : {},
+          updatedAt: /* @__PURE__ */ new Date()
+        }).where(or(
+          eq4(requirements.idUsuarioWhatsapp, extractedLid),
+          eq4(requirements.idUsuarioWhatsapp, `${extractedLid}@lid`),
+          eq4(requirements.idUsuarioWhatsapp, `${extractedLid}@s.whatsapp.net`)
+        )).returning({ id: requirements.id });
+        updatedReqs += resReqLid.length;
       }
-      if (validName && r.name !== validName) {
-        if (!r.name || isGenericName(r.name) || isSameLid || isSamePhone) {
-          rUpdates.nombreUsuarioWhatsapp = validName;
-        }
+      if (oldPhoneOrLid && oldPhoneOrLid !== cleanPhone && !isLidIdentifier(oldPhoneOrLid)) {
+        const resReqOld = await db.update(requirements).set({
+          idUsuarioWhatsapp: cleanPhone,
+          ...validName ? { nombreUsuarioWhatsapp: validName } : {},
+          updatedAt: /* @__PURE__ */ new Date()
+        }).where(eq4(requirements.idUsuarioWhatsapp, oldPhoneOrLid)).returning({ id: requirements.id });
+        updatedReqs += resReqOld.length;
       }
-      if (Object.keys(rUpdates).length > 0) {
-        await db.update(requirements).set(rUpdates).where(eq4(requirements.id, r.id));
-        updatedReqs++;
+      if (validName) {
+        const resReqName = await db.update(requirements).set({
+          idUsuarioWhatsapp: cleanPhone,
+          nombreUsuarioWhatsapp: validName,
+          updatedAt: /* @__PURE__ */ new Date()
+        }).where(sql3`LOWER(${requirements.nombreUsuarioWhatsapp}) = LOWER(${validName}) AND (${requirements.idUsuarioWhatsapp} IS NULL OR ${requirements.idUsuarioWhatsapp} = '' OR ${requirements.idUsuarioWhatsapp} ~ '^[0-9]{13,}$' OR ${requirements.idUsuarioWhatsapp} LIKE '%@lid')`).returning({ id: requirements.id });
+        updatedReqs += resReqName.length;
+      }
+      if (validName) {
+        await db.update(requirements).set({
+          nombreUsuarioWhatsapp: validName,
+          updatedAt: /* @__PURE__ */ new Date()
+        }).where(and2(
+          eq4(requirements.idUsuarioWhatsapp, cleanPhone),
+          or(
+            sql3`${requirements.nombreUsuarioWhatsapp} IS NULL`,
+            sql3`${requirements.nombreUsuarioWhatsapp} = ''`,
+            sql3`LOWER(${requirements.nombreUsuarioWhatsapp}) LIKE 'asesor%'`,
+            sql3`LOWER(${requirements.nombreUsuarioWhatsapp}) LIKE 'cliente%'`
+          )
+        ));
       }
     }
   } catch (reqErr) {
@@ -8029,12 +8063,207 @@ ${notes}` : notes;
     updatedReqs
   };
 }
+async function reconcileAndBackfillAdvisors(db) {
+  console.log(`[JanIA-Advisors] \u{1F3DB}\uFE0F Iniciando consolidaci\xF3n y backfill masivo de asesores en PostgreSQL...`);
+  let totalConsolidated = 0;
+  try {
+    let register2 = function(rawPhone, name, associatedLid, group) {
+      const cleanPhone = normalizeAdvisorPhone(rawPhone);
+      if (!cleanPhone) return;
+      let agg = advisorsByPhone.get(cleanPhone);
+      if (!agg) {
+        agg = {
+          phone: cleanPhone,
+          names: /* @__PURE__ */ new Set(),
+          bestName: null,
+          lids: /* @__PURE__ */ new Set(),
+          groups: /* @__PURE__ */ new Set()
+        };
+        advisorsByPhone.set(cleanPhone, agg);
+      }
+      if (name && !isGenericName(name)) {
+        const trimmed = name.trim();
+        agg.names.add(trimmed);
+        if (!agg.bestName || trimmed.length > agg.bestName.length) {
+          agg.bestName = trimmed;
+        }
+      }
+      if (associatedLid && isLidIdentifier(associatedLid)) {
+        const cleanLid = associatedLid.split("@")[0].replace(/\D/g, "");
+        if (cleanLid) agg.lids.add(cleanLid);
+      }
+      if (group && group.trim() !== "") {
+        agg.groups.add(group.trim());
+      }
+    };
+    var register = register2;
+    const allProps = await db.select({
+      id: properties.id,
+      phone: properties.idUsuarioWhatsapp,
+      name: properties.nombreUsuarioWhatsapp,
+      rawText: properties.rawText,
+      description: properties.description,
+      group: properties.origenNombre
+    }).from(properties);
+    const allReqs = await db.select({
+      id: requirements.id,
+      phone: requirements.idUsuarioWhatsapp,
+      name: requirements.nombreUsuarioWhatsapp,
+      rawText: requirements.rawText,
+      group: requirements.origenNombre
+    }).from(requirements);
+    const allUsers = await db.select({
+      id: users.id,
+      phone: users.phone,
+      name: users.name
+    }).from(users);
+    const advisorsByPhone = /* @__PURE__ */ new Map();
+    for (const u of allUsers) {
+      const p = normalizeAdvisorPhone(u.phone);
+      if (p) register2(p, u.name, null, null);
+    }
+    for (const p of allProps) {
+      const directPhone = normalizeAdvisorPhone(p.phone);
+      const isLid = isLidIdentifier(p.phone);
+      const lidVal = isLid ? p.phone : null;
+      if (directPhone) register2(directPhone, p.name, null, p.group);
+      const textPhone = extractColombianPhoneFromText(`${p.rawText || ""} ${p.description || ""}`);
+      if (textPhone) register2(textPhone, p.name, lidVal, p.group);
+    }
+    for (const r of allReqs) {
+      const directPhone = normalizeAdvisorPhone(r.phone);
+      const isLid = isLidIdentifier(r.phone);
+      const lidVal = isLid ? r.phone : null;
+      if (directPhone) register2(directPhone, r.name, null, r.group);
+      const textPhone = extractColombianPhoneFromText(r.rawText);
+      if (textPhone) register2(textPhone, r.name, lidVal, r.group);
+    }
+    const nameToPhoneMap = /* @__PURE__ */ new Map();
+    for (const [phone, agg] of advisorsByPhone.entries()) {
+      for (const n of agg.names) {
+        nameToPhoneMap.set(n.toLowerCase(), phone);
+      }
+    }
+    for (const item of [...allProps, ...allReqs]) {
+      if (item.name && !isGenericName(item.name)) {
+        const lower = item.name.trim().toLowerCase();
+        const matchedPhone = nameToPhoneMap.get(lower);
+        if (matchedPhone && isLidIdentifier(item.phone)) {
+          const cleanLid = item.phone.split("@")[0].replace(/\D/g, "");
+          if (cleanLid) {
+            advisorsByPhone.get(matchedPhone)?.lids.add(cleanLid);
+          }
+        }
+      }
+    }
+    for (const [phone, agg] of advisorsByPhone.entries()) {
+      const effectiveName = agg.bestName || `Asesor +${phone}`;
+      const lidsArray = Array.from(agg.lids);
+      const aliasesArray = Array.from(agg.names);
+      const primaryGroup = Array.from(agg.groups)[0] || null;
+      try {
+        const existing = await db.select().from(advisors).where(eq4(advisors.normalizedPhone, phone)).limit(1).then((r) => r[0]);
+        if (existing) {
+          const mergedLids = Array.from(/* @__PURE__ */ new Set([...existing.whatsappLids || [], ...lidsArray]));
+          const mergedAliases = Array.from(/* @__PURE__ */ new Set([...existing.aliases || [], ...aliasesArray]));
+          const newName = isGenericName(existing.name) && agg.bestName ? agg.bestName : existing.name;
+          await db.update(advisors).set({
+            name: newName,
+            whatsappLids: mergedLids,
+            aliases: mergedAliases,
+            sourceGroup: existing.sourceGroup || primaryGroup,
+            updatedAt: /* @__PURE__ */ new Date()
+          }).where(eq4(advisors.id, existing.id));
+        } else {
+          await db.insert(advisors).values({
+            name: effectiveName,
+            phone,
+            normalizedPhone: phone,
+            whatsappLids: lidsArray,
+            aliases: aliasesArray,
+            sourceGroup: primaryGroup
+          });
+        }
+        totalConsolidated++;
+      } catch (e) {
+      }
+    }
+    for (const [phone, agg] of advisorsByPhone.entries()) {
+      const lidsList = Array.from(agg.lids);
+      const validName = agg.bestName;
+      if (lidsList.length > 0) {
+        for (const lid of lidsList) {
+          await db.update(properties).set({
+            idUsuarioWhatsapp: phone,
+            ...validName ? { nombreUsuarioWhatsapp: validName } : {},
+            updatedAt: /* @__PURE__ */ new Date()
+          }).where(or(
+            eq4(properties.idUsuarioWhatsapp, lid),
+            eq4(properties.idUsuarioWhatsapp, `${lid}@lid`),
+            eq4(properties.idUsuarioWhatsapp, `${lid}@s.whatsapp.net`)
+          ));
+          await db.update(requirements).set({
+            idUsuarioWhatsapp: phone,
+            ...validName ? { nombreUsuarioWhatsapp: validName } : {},
+            updatedAt: /* @__PURE__ */ new Date()
+          }).where(or(
+            eq4(requirements.idUsuarioWhatsapp, lid),
+            eq4(requirements.idUsuarioWhatsapp, `${lid}@lid`),
+            eq4(requirements.idUsuarioWhatsapp, `${lid}@s.whatsapp.net`)
+          ));
+        }
+      }
+      if (validName) {
+        await db.update(properties).set({
+          idUsuarioWhatsapp: phone,
+          nombreUsuarioWhatsapp: validName,
+          updatedAt: /* @__PURE__ */ new Date()
+        }).where(sql3`LOWER(${properties.nombreUsuarioWhatsapp}) = LOWER(${validName}) AND (${properties.idUsuarioWhatsapp} IS NULL OR ${properties.idUsuarioWhatsapp} = '' OR ${properties.idUsuarioWhatsapp} ~ '^[0-9]{13,}$' OR ${properties.idUsuarioWhatsapp} LIKE '%@lid')`);
+        await db.update(requirements).set({
+          idUsuarioWhatsapp: phone,
+          nombreUsuarioWhatsapp: validName,
+          updatedAt: /* @__PURE__ */ new Date()
+        }).where(sql3`LOWER(${requirements.nombreUsuarioWhatsapp}) = LOWER(${validName}) AND (${requirements.idUsuarioWhatsapp} IS NULL OR ${requirements.idUsuarioWhatsapp} = '' OR ${requirements.idUsuarioWhatsapp} ~ '^[0-9]{13,}$' OR ${requirements.idUsuarioWhatsapp} LIKE '%@lid')`);
+      }
+    }
+    console.log(`[JanIA-Advisors] \u2705 Consolidaci\xF3n completada: ${totalConsolidated} asesores guardados en PostgreSQL.`);
+  } catch (err) {
+    console.error(`[JanIA-Advisors] Error durante la consolidaci\xF3n:`, err?.message);
+  }
+  return totalConsolidated;
+}
 async function initAdvisorsDirectory() {
   let loadedCount = 0;
   try {
     const db = await getDb();
     if (!db) return 0;
-    const allAdvisors = await db.select().from(advisors);
+    try {
+      await db.execute(sql3`
+        CREATE TABLE IF NOT EXISTS advisors (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          phone VARCHAR(50) NOT NULL,
+          normalized_phone VARCHAR(50) NOT NULL UNIQUE,
+          whatsapp_lids TEXT[] DEFAULT '{}',
+          aliases TEXT[] DEFAULT '{}',
+          agency VARCHAR(255),
+          source_group VARCHAR(255),
+          notes TEXT,
+          created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS advisors_norm_phone_idx ON advisors (normalized_phone);
+        CREATE INDEX IF NOT EXISTS advisors_name_idx ON advisors (name);
+      `);
+    } catch (ddlErr) {
+      console.warn("[JanIA-Advisors] Aviso comprobando DDL de advisors:", ddlErr?.message);
+    }
+    let allAdvisors = await db.select().from(advisors);
+    if (allAdvisors.length < 20) {
+      console.log(`[JanIA-Advisors] \u{1F3DB}\uFE0F Tabla advisors con pocos registros (${allAdvisors.length}). Ejecutando backfill masivo autom\xE1tico...`);
+      await reconcileAndBackfillAdvisors(db);
+      allAdvisors = await db.select().from(advisors);
+    }
     for (const adv of allAdvisors) {
       if (adv.normalizedPhone) {
         const cleanPhone = adv.normalizedPhone;
@@ -8206,7 +8435,7 @@ __export(janIA_exports, {
   translatePropertyType: () => translatePropertyType,
   translateTransactionType: () => translateTransactionType
 });
-import { eq as eq5, and as and2, sql as sql4, gte, desc } from "drizzle-orm";
+import { eq as eq5, and as and3, sql as sql4, gte, desc } from "drizzle-orm";
 import fs5 from "fs";
 import path5 from "path";
 import axios6 from "axios";
@@ -9234,7 +9463,7 @@ async function hasGreetedUserToday(userId) {
     const startOfToday = /* @__PURE__ */ new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const recentMsgs = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq5(messages.conversationId, conversations.id)).where(
-      and2(
+      and3(
         eq5(conversations.sessionId, userId),
         eq5(messages.role, "janIA"),
         gte(messages.createdAt, startOfToday)
@@ -9269,7 +9498,7 @@ async function getRecentChatHistory(userId, limit = 20) {
       content: messages.content,
       createdAt: messages.createdAt
     }).from(messages).innerJoin(conversations, eq5(messages.conversationId, conversations.id)).where(
-      and2(
+      and3(
         eq5(conversations.sessionId, userId),
         gte(messages.createdAt, fourDaysAgo)
       )
@@ -10018,7 +10247,7 @@ __is_sub_message__`,
       try {
         const db = await getDb();
         if (!db) throw new Error("DB no disponible");
-        const recentProps = await db.select({ id: properties.id, rawText: properties.rawText, origenNombre: properties.origenNombre }).from(properties).where(and2(
+        const recentProps = await db.select({ id: properties.id, rawText: properties.rawText, origenNombre: properties.origenNombre }).from(properties).where(and3(
           eq5(properties.idUsuarioWhatsapp, userId.split("@")[0]),
           gte(properties.createdAt, TEN_MIN_AGO),
           eq5(properties.available, true)
@@ -11489,7 +11718,7 @@ async function handleAmendmentUpdate(userId, text2) {
   const isAmendmentTrigger = cleanTextLower.startsWith("correccion") || cleanTextLower.startsWith("correcci\xF3n") || cleanTextLower.startsWith("fe de erratas") || cleanTextLower.startsWith("fe de errata") || cleanTextLower.startsWith("rectificacion") || cleanTextLower.startsWith("rectificaci\xF3n") || cleanTextLower.startsWith("ajuste:") || cleanTextLower.startsWith("ajuste ") || cleanTextLower.startsWith("disculpen");
   if (!isAmendmentTrigger) return false;
   const fallbackData = extractFallbackDataFromText(text2);
-  const lastReqs = await db.select().from(requirements).where(and2(
+  const lastReqs = await db.select().from(requirements).where(and3(
     eq5(requirements.idUsuarioWhatsapp, rawPhone),
     gte(requirements.createdAt, twoHoursAgo)
   )).orderBy(desc(requirements.createdAt)).limit(1);
@@ -11522,7 +11751,7 @@ async function handleAmendmentUpdate(userId, text2) {
       return true;
     }
   }
-  const lastProps = await db.select().from(properties).where(and2(
+  const lastProps = await db.select().from(properties).where(and3(
     eq5(properties.idUsuarioWhatsapp, rawPhone),
     gte(properties.createdAt, twoHoursAgo)
   )).orderBy(desc(properties.createdAt)).limit(1);
@@ -11753,6 +11982,9 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
       console.log(`[JanIA-GeoResolver] \u{1F9ED} Inmueble: cruce vial deducido exitosamente: '${(data.rawText || "").slice(0, 45)}...' \u2192 Barrio: ${geoInferred.barrio} | Localidad: ${geoInferred.localidad} | Ciudad: ${geoInferred.ciudad}`);
     }
   }
+  const canonicalPropPhone = normalizeAdvisorPhone(rawPhone) || normalizeAdvisorPhone(data.idUsuarioWhatsapp) || (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : data.idUsuarioWhatsapp || rawPhone);
+  const knownPropAdvisor = lookupAdvisorSync(canonicalPropPhone || data.idUsuarioWhatsapp, realName || data.nombreUsuarioWhatsapp);
+  const finalEffectivePropName = realName && !isGenericName(realName) ? realName.trim() : data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp) ? data.nombreUsuarioWhatsapp.trim() : knownPropAdvisor?.name && !isGenericName(knownPropAdvisor.name) ? knownPropAdvisor.name : realName || null;
   const insertData = {
     ...data,
     name: safeSlice(data.name || `Propiedad en ${data.city || data.zone || "Colombia"}`, 255) || "Propiedad",
@@ -11764,8 +11996,8 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
     location: safeSlice(data.location, 255) || null,
     matriculaInmobiliaria: safeSlice(data.matriculaInmobiliaria, 100) || null,
     enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
-    idUsuarioWhatsapp: safeSlice(data.idUsuarioWhatsapp || rawPhone, 100) || null,
-    nombreUsuarioWhatsapp: safeSlice(realName && realName.trim() !== "" && !realName.startsWith("Asesor +") ? realName : data.nombreUsuarioWhatsapp || realName, 255) || null,
+    idUsuarioWhatsapp: safeSlice(canonicalPropPhone, 100) || null,
+    nombreUsuarioWhatsapp: safeSlice(finalEffectivePropName, 255) || null,
     propertyType: sanitizePropertyType(data.propertyType),
     transactionType: sanitizeTransactionType(data.transactionType),
     acceptedTransactionTypes: sanitizeTransactionTypes(data.transactionTypes || data.transactionType),
@@ -11853,7 +12085,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   let existing = [];
   if (canonicalExternalId) {
     existing = await db.select().from(properties).where(
-      and2(
+      and3(
         eq5(properties.canonicalExternalId, canonicalExternalId),
         eq5(properties.available, true)
       )
@@ -11861,7 +12093,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   }
   if (existing.length === 0 && finalInsertData.matriculaInmobiliaria) {
     existing = await db.select().from(properties).where(
-      and2(
+      and3(
         eq5(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
         eq5(properties.available, true)
       )
@@ -11869,7 +12101,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   }
   if (existing.length === 0 && finalInsertData.rawText && finalInsertData.rawText.trim().length > 25) {
     existing = await db.select().from(properties).where(
-      and2(
+      and3(
         eq5(properties.rawText, finalInsertData.rawText.trim()),
         eq5(properties.available, true)
       )
@@ -11877,7 +12109,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   }
   if (existing.length === 0) {
     existing = await db.select().from(properties).where(
-      and2(
+      and3(
         eq5(properties.idUsuarioWhatsapp, rawPhone),
         eq5(properties.propertyType, finalInsertData.propertyType),
         eq5(properties.transactionType, finalInsertData.transactionType),
@@ -12038,6 +12270,9 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
       console.log(`[JanIA-GeoResolver] \u{1F9ED} Requerimiento: cruce vial deducido exitosamente: '${(data.rawText || "").slice(0, 45)}...' \u2192 Barrio: ${geoInferred.barrio} | Localidad: ${geoInferred.localidad} | Ciudad: ${geoInferred.ciudad}`);
     }
   }
+  const canonicalReqPhone = normalizeAdvisorPhone(rawPhone) || normalizeAdvisorPhone(data.idUsuarioWhatsapp) || (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : data.idUsuarioWhatsapp || rawPhone);
+  const knownReqAdvisor = lookupAdvisorSync(canonicalReqPhone || data.idUsuarioWhatsapp, realName || data.nombreUsuarioWhatsapp);
+  const finalEffectiveReqName = realName && !isGenericName(realName) ? realName.trim() : data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp) ? data.nombreUsuarioWhatsapp.trim() : knownReqAdvisor?.name && !isGenericName(knownReqAdvisor.name) ? knownReqAdvisor.name : realName || null;
   const insertData = {
     ...data,
     name: safeSlice(data.name, 255) || null,
@@ -12047,8 +12282,8 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
     addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
     enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
-    idUsuarioWhatsapp: safeSlice(data.idUsuarioWhatsapp || rawPhone, 100) || null,
-    nombreUsuarioWhatsapp: safeSlice(realName && realName.trim() !== "" && !realName.startsWith("Asesor +") ? realName : data.nombreUsuarioWhatsapp || realName, 255) || null,
+    idUsuarioWhatsapp: safeSlice(canonicalReqPhone, 100) || null,
+    nombreUsuarioWhatsapp: safeSlice(finalEffectiveReqName, 255) || null,
     tipoInmuebleDeseado: sanitizePropertyType(data.tipoInmuebleDeseado || data.propertyType),
     tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
     tiposNegocioAceptados: sanitizeTransactionTypes(data.transactionTypes || data.tipoNegocioDeseado || data.transactionType),
@@ -12186,7 +12421,7 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
   let existing = [];
   if (insertData.rawText && insertData.rawText.trim().length > 25) {
     existing = await db.select().from(requirements).where(
-      and2(
+      and3(
         eq5(requirements.rawText, insertData.rawText.trim()),
         eq5(requirements.status, "active")
       )
@@ -12194,7 +12429,7 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
   }
   if (existing.length === 0) {
     existing = await db.select().from(requirements).where(
-      and2(
+      and3(
         eq5(requirements.idUsuarioWhatsapp, rawPhone),
         eq5(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
         eq5(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
@@ -16008,7 +16243,7 @@ __export(nightlyRematch_exports, {
   recalculateAndCleanupMatches: () => recalculateAndCleanupMatches,
   runNightlyRematch: () => runNightlyRematch
 });
-import { and as and5, eq as eq8, sql as sql6 } from "drizzle-orm";
+import { and as and6, eq as eq8, sql as sql6 } from "drizzle-orm";
 async function runNightlyRematch() {
   if (isRematchRunning) {
     console.log("[NIGHTLY-REMATCH] Ya hay una ejecuci\xF3n en curso, saltando...");
@@ -16086,7 +16321,7 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and5(
+                and6(
                   eq8(propertyMatches.requirementId, req.id),
                   eq8(propertyMatches.propertyId, prop.id)
                 )
@@ -16102,7 +16337,7 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and5(
+                and6(
                   eq8(propertyMatches.requirementId, req.id),
                   eq8(propertyMatches.propertyId, prop.id)
                 )
@@ -16117,7 +16352,7 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and5(
+                and6(
                   eq8(propertyMatches.requirementId, req.id),
                   eq8(propertyMatches.propertyId, prop.id)
                 )
@@ -16130,7 +16365,7 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and5(
+                and6(
                   eq8(propertyMatches.requirementId, req.id),
                   eq8(propertyMatches.propertyId, prop.id)
                 )
@@ -16143,7 +16378,7 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and5(
+                and6(
                   eq8(propertyMatches.requirementId, req.id),
                   eq8(propertyMatches.propertyId, prop.id)
                 )
@@ -16172,7 +16407,7 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and5(
+                and6(
                   eq8(propertyMatches.requirementId, req.id),
                   eq8(propertyMatches.propertyId, prop.id)
                 )
@@ -16183,7 +16418,7 @@ async function runNightlyRematch() {
           }
           seenPairs.add(pairKey);
           const existing = await db.select({ id: propertyMatches.id, matchScore: propertyMatches.matchScore }).from(propertyMatches).where(
-            and5(
+            and6(
               eq8(propertyMatches.requirementId, req.id),
               eq8(propertyMatches.propertyId, prop.id)
             )
@@ -16333,7 +16568,7 @@ import cron from "node-cron";
 import path8 from "path";
 import fs8 from "fs";
 import { fileURLToPath } from "url";
-import { gte as gte2, and as and6, eq as eq9, sql as sql7, desc as desc3 } from "drizzle-orm";
+import { gte as gte2, and as and7, eq as eq9, sql as sql7, desc as desc3 } from "drizzle-orm";
 function getBogotaDateString(d = /* @__PURE__ */ new Date()) {
   return d.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
 }
@@ -16346,7 +16581,7 @@ async function acquireBroadcastLock(targetGroup, tipCategory, dateBogota, force 
     }
     if (!force) {
       const existing = await db.select().from(dailyBroadcasts).where(
-        and6(
+        and7(
           eq9(dailyBroadcasts.dateBogota, dateBogota),
           eq9(dailyBroadcasts.targetGroup, targetGroup)
         )
@@ -16443,7 +16678,7 @@ async function getRecentImageFiles(limit = 3) {
     if (!db) return [];
     const rows = await db.select({
       imageFileName: dailyBroadcasts.imageFileName
-    }).from(dailyBroadcasts).where(and6(eq9(dailyBroadcasts.status, "completed"), sql7`image_file_name IS NOT NULL`)).orderBy(desc3(dailyBroadcasts.createdAt)).limit(limit);
+    }).from(dailyBroadcasts).where(and7(eq9(dailyBroadcasts.status, "completed"), sql7`image_file_name IS NOT NULL`)).orderBy(desc3(dailyBroadcasts.createdAt)).limit(limit);
     return rows.map((r) => r.imageFileName).filter(Boolean);
   } catch {
     return [];
@@ -17443,7 +17678,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.88";
+var VECY_VERSION = "v31.89";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -18055,7 +18290,7 @@ init_db();
 init_schema();
 init_scraper();
 init_janIA();
-import { eq as eq10, and as and7, desc as desc4, sql as sql8, inArray } from "drizzle-orm";
+import { eq as eq10, and as and8, desc as desc4, sql as sql8, inArray } from "drizzle-orm";
 
 // server/_core/taxEngine.ts
 var VALOR_UVT_2026 = 50318;
@@ -18119,7 +18354,7 @@ import path9 from "path";
 import { z as z2 } from "zod";
 init_db();
 init_schema();
-import { eq as eq6, desc as desc2, ilike, or as or3, and as and3 } from "drizzle-orm";
+import { eq as eq6, desc as desc2, ilike, or as or3, and as and4 } from "drizzle-orm";
 import { TRPCError as TRPCError3 } from "@trpc/server";
 var propertyInputSchema = z2.object({
   name: z2.string().min(2),
@@ -18534,7 +18769,7 @@ var propertiesRouter = router({
       whereConditions.push(eq6(properties.transactionType, input.transactionType));
     }
     whereConditions.push(eq6(properties.available, true));
-    const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and3(...whereConditions) : void 0).orderBy(desc2(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
+    const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and4(...whereConditions) : void 0).orderBy(desc2(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
     const items = await query;
     return items;
   }),
@@ -19722,13 +19957,13 @@ ${liveStats}${userContextInstruction}
         if (input.propertyId && input.requirementId) {
           try {
             await db.update(propertyMatches).set({ status: "rejected" }).where(
-              and7(
+              and8(
                 eq10(propertyMatches.propertyId, input.propertyId),
                 eq10(propertyMatches.requirementId, input.requirementId)
               )
             );
             await db.delete(propertyMatches).where(
-              and7(
+              and8(
                 eq10(propertyMatches.propertyId, input.propertyId),
                 eq10(propertyMatches.requirementId, input.requirementId)
               )
@@ -21085,7 +21320,7 @@ var imagesRouter = {
 import { z as z6 } from "zod";
 init_db();
 init_schema();
-import { eq as eq13, and as and8, desc as desc5, isNull as isNull2 } from "drizzle-orm";
+import { eq as eq13, and as and9, desc as desc5, isNull as isNull2 } from "drizzle-orm";
 import { TRPCError as TRPCError4 } from "@trpc/server";
 var agentRouter = router({
   // Public: Get agent profile for branding (Agenda Pro, Personal Shops)
@@ -21131,7 +21366,7 @@ var agentRouter = router({
       throw new TRPCError4({ code: "FORBIDDEN", message: "You don't own this property" });
     }
     const existingLink = await db.select().from(referralLinks).where(
-      and8(
+      and9(
         eq13(referralLinks.propertyId, input.propertyId),
         eq13(referralLinks.agentId, ctx.user.id)
       )
