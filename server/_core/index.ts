@@ -17,7 +17,7 @@ import { invokeLLM } from "./llm";
 import { textToSpeechMedia } from "./whatsapp-utils";
 import { janiaMatchBot as whatsappBot, janiaMatchBot } from "./whatsapp-match";
 import "./notification";
-import { executeIdentityVerification, identityJobs, AUTHORITATIVE_FAMILY_IDENTITIES } from "../routers/agenda";
+import { executeIdentityVerification, identityJobs, AUTHORITATIVE_FAMILY_IDENTITIES, processAndSaveSolicitud } from "../routers/agenda";
 
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -169,6 +169,27 @@ async function startServer() {
     if (!job) return res.status(200).json({ status: "error", error: "Job no encontrado o expirado" });
     return res.status(200).json(job);
   });
+
+  // 📋 Endpoint REST Directo para Registrar Solicitudes de Agenda (Vecy Agenda Pro + Integraciones)
+  const handleAgendaSubmit = async (req: express.Request, res: express.Response) => {
+    try {
+      const payload = req.body || {};
+      if (!payload.solicitante_nombre) {
+        return res.status(400).json({ success: false, error: "solicitante_nombre es obligatorio" });
+      }
+      const result = await processAndSaveSolicitud(payload);
+      return res.status(200).json(result);
+    } catch (e: any) {
+      console.error("[AGENDA-REST-ERROR]", e?.message);
+      return res.status(e?.code === "BAD_REQUEST" ? 400 : 500).json({
+        success: false,
+        error: e?.message || "Error procesando solicitud de agenda",
+      });
+    }
+  };
+
+  app.post("/api/agenda/submit", handleAgendaSubmit);
+  app.post("/api/solicitudes/submit", handleAgendaSubmit);
 
   app.get("/api/list-chats", async (req, res) => {
     try {

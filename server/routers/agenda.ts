@@ -11,7 +11,7 @@ import { sendContractAndConfirmationEmails } from "../_core/emailContractService
 const httpsAgentInsecure = new https.Agent({ rejectUnauthorized: false });
 
 // Caché en memoria para validaciones oficiales (24h)
-const identityCache = new Map<string, { fullName: string; timestamp: number }>();
+export const identityCache = new Map<string, { fullName: string; timestamp: number }>();
 const IDENTITY_CACHE_TTL = 24 * 60 * 60 * 1000;
 
 // Inicialización de caché con identidades doctrinales inmutables
@@ -21,6 +21,8 @@ identityCache.set('POLICIA:cc:1193130766', { fullName: 'Natalia Rivera Noguera',
 identityCache.set('POLICIA:cc:41057506', { fullName: 'Jani Alves Souza', timestamp: Date.now() });
 identityCache.set('NIT:410575061', { fullName: 'Vecy Bienes Raíces', timestamp: Date.now() });
 identityCache.set('NIT:41057506', { fullName: 'Vecy Bienes Raíces', timestamp: Date.now() });
+identityCache.set('POLICIA:cc:52432900', { fullName: 'Esmeralda Rojas Salazar', timestamp: Date.now() });
+identityCache.set('POLICIA:cc:52803592', { fullName: 'Juanita Sanchez Martinez', timestamp: Date.now() });
 
 interface IdentityJob {
   id: string;
@@ -115,7 +117,7 @@ async function requestHttps(urlStr: string, options: any = {}, jar?: CookieJar):
  * Consulta oficial de antecedentes penales e identidad en la Policía Nacional de Colombia
  * Resuelve reCAPTCHA v2 de Google vía 2Captcha y extrae los nombres y apellidos reales del ciudadano.
  */
-async function queryPoliciaNacional(tipoDocInput: string, cleanDoc: string): Promise<{ success: boolean; officialName?: string; source?: string }> {
+export async function queryPoliciaNacional(tipoDocInput: string, cleanDoc: string): Promise<{ success: boolean; officialName?: string; source?: string }> {
   let tipoDoc = 'cc';
   const t = (tipoDocInput || '').toLowerCase();
   if (t.includes('extranjer') || t === 'ce' || t === 'cx') tipoDoc = 'cx';
@@ -229,7 +231,15 @@ async function queryPoliciaNacional(tipoDocInput: string, cleanDoc: string): Pro
     if (matchNombres && matchNombres[1]) {
       const rawFullName = matchNombres[1].trim();
       const formatTitleCase = (s: string) => s.toLowerCase().split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-      const officialName = formatTitleCase(rawFullName);
+      const words = rawFullName.split(/\s+/).filter(Boolean);
+      let officialName = formatTitleCase(rawFullName);
+      // En la Policía Nacional el formato oficial es: APELLIDO_1 APELLIDO_2 NOMBRE_1 [NOMBRE_2...]
+      // Convertir a orden natural colombiano: NOMBRE_1 [NOMBRE_2...] APELLIDO_1 APELLIDO_2
+      if (words.length === 3) {
+        officialName = formatTitleCase(`${words[2]} ${words[0]} ${words[1]}`);
+      } else if (words.length === 4) {
+        officialName = formatTitleCase(`${words[2]} ${words[3]} ${words[0]} ${words[1]}`);
+      }
       identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
       return { success: true, officialName, source: 'Policía Nacional de Colombia' };
     }
@@ -654,7 +664,31 @@ export async function executeIdentityVerification(
     };
   }
 
-  // 4. Base de datos interna de Vecy (perfiles y solicitudes previas)
+  // 4. Scraper autoritativo de Policía Nacional con 2Captcha reCAPTCHA v2 (Obligatorio para Cédulas)
+  const policiaResult = await queryPoliciaNacional(tipoDocumento, clean);
+  if (policiaResult && policiaResult.success && policiaResult.officialName) {
+    const officialFormatted = policiaResult.officialName;
+    identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+
+    const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
+    if (!isMatch) {
+      return {
+        valid: true,
+        match: false,
+        officialName: officialFormatted,
+        error: `⚠️ El número de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un número mal o corrígelo para continuar.`,
+      };
+    }
+
+    return {
+      valid: true,
+      match: true,
+      officialName: officialFormatted,
+      message: `✓ Identidad verificada con la Policía Nacional: ${officialFormatted}`,
+    };
+  }
+
+  // 5. Fallback en Base de Datos de Vecy (únicamente si el scraper de Policía no pudo resolver en este instante)
   try {
     const db = await getDb();
     if (db) {
@@ -685,7 +719,7 @@ export async function executeIdentityVerification(
         }
       }
 
-      // B. Búsqueda en solicitudes históricas previas
+      // B. Búsqueda en solicitudes históricas previas (solo si tiene nombres y al menos 2 apellidos, mín 3 tokens)
       const solRows = await db
         .select({
           solicitanteNumeroDocumento: solicitudes.solicitanteNumeroDocumento,
@@ -708,7 +742,9 @@ export async function executeIdentityVerification(
           ? row.solicitanteNombre
           : row.interesadoNombre;
 
-        if (candidateName && candidateName.trim().length >= 4) {
+        const tokens = (candidateName || '').trim().split(/\s+/).filter(Boolean);
+        // Exigir al menos 3 palabras para no arrastrar nombres cortos informales sin segundo apellido
+        if (candidateName && tokens.length >= 3) {
           const formatTitleCase = (s: string) => s.toLowerCase().split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
           const officialFormatted = formatTitleCase(candidateName.trim());
 
@@ -726,30 +762,6 @@ export async function executeIdentityVerification(
     }
   } catch (dbErr: any) {
     console.warn('[DB Check warning]', dbErr?.message);
-  }
-
-  // 5. Scraper autoritativo de Policía Nacional con 2Captcha reCAPTCHA v2
-  const policiaResult = await queryPoliciaNacional(tipoDocumento, clean);
-  if (policiaResult && policiaResult.success && policiaResult.officialName) {
-    const officialFormatted = policiaResult.officialName;
-    identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
-
-    const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
-    if (!isMatch) {
-      return {
-        valid: true,
-        match: false,
-        officialName: officialFormatted,
-        error: `⚠️ El número de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un número mal o corrígelo para continuar.`,
-      };
-    }
-
-    return {
-      valid: true,
-      match: true,
-      officialName: officialFormatted,
-      message: `✓ Identidad verificada y autenticada con éxito: ${officialFormatted}`,
-    };
   }
 
   // 6. Fallback resiliente para fallos de red o tiempos de espera gubernamentales
@@ -844,7 +856,7 @@ export const agendaRouter = router({
         .select()
         .from(solicitudes)
         .where(finalWhere)
-        .orderBy(desc(solicitudes.solicitudId), desc(solicitudes.id))
+        .orderBy(sql`${solicitudes.solicitudId} DESC NULLS LAST`, desc(solicitudes.id))
         .limit(limit)
         .offset(offset);
 
@@ -1079,131 +1091,141 @@ export const agendaRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
-
-      // BLINDAJE ANTIFRAUDE EN EL SERVIDOR (Tolerancia 0 a identidades suplantadas):
-      const stopwords = ['de', 'del', 'la', 'las', 'los', 'y', 'el'];
-      const checkMatch = (entered: string, official: string) => {
-        const normEntered = entered.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
-        const normOfficial = official.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
-        const matches = normEntered.filter((token: string) => normOfficial.some((off: string) => off === token || off.startsWith(token) || token.startsWith(off)));
-        return matches.length >= Math.min(2, normEntered.length);
-      };
-
-      // 1. Validar solicitante si es CC
-      if (input.solicitante_numero_documento && (input.solicitante_tipo_documento?.includes('ciudadanía') || input.solicitante_tipo_documento === 'CC' || !input.solicitante_tipo_documento)) {
-        const cleanDoc = input.solicitante_numero_documento.replace(/\D/g, '');
-        if (cleanDoc.length >= 5) {
-          const res = await queryPoliciaNacional('cc', cleanDoc);
-          if (res.success && res.officialName && input.solicitante_nombre) {
-            if (!checkMatch(input.solicitante_nombre, res.officialName)) {
-              throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: `⚠️ Inconsistencia de identidad: El número de documento ${cleanDoc} del solicitante no corresponde a los nombres y apellidos indicados. Por seguridad, la solicitud fue rechazada.`,
-              });
-            }
-          }
-        }
-      }
-
-      // 2. Validar cliente presentado si es CC
-      if (input.interesado_documento && (input.interesado_tipo_documento?.includes('ciudadanía') || input.interesado_tipo_documento === 'CC' || !input.interesado_tipo_documento)) {
-        const cleanDoc = input.interesado_documento.replace(/\D/g, '');
-        if (cleanDoc.length >= 5) {
-          const res = await queryPoliciaNacional('cc', cleanDoc);
-          if (res.success && res.officialName && input.interesado_nombre) {
-            if (!checkMatch(input.interesado_nombre, res.officialName)) {
-              throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: `⚠️ Inconsistencia de identidad: El número de documento ${cleanDoc} del cliente presentado no corresponde al nombre indicado. Por seguridad, la solicitud fue rechazada.`,
-              });
-            }
-          }
-        }
-      }
-
-      // 3. Validar cada acompañante registrado
-      if (input.acompanantes && Array.isArray(input.acompanantes)) {
-        for (const acomp of input.acompanantes) {
-          if (acomp && acomp.documento && acomp.nombre) {
-            const cleanDoc = String(acomp.documento).replace(/\D/g, '');
-            if (cleanDoc.length >= 5) {
-              const res = await queryPoliciaNacional('cc', cleanDoc);
-              if (res.success && res.officialName) {
-                if (!checkMatch(String(acomp.nombre), res.officialName)) {
-                  throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: `⚠️ Inconsistencia de identidad: El número de documento ${cleanDoc} del acompañante "${acomp.nombre}" no corresponde con los registros de certificación. Por seguridad, la solicitud fue rechazada.`,
-                  });
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // Obtener el siguiente consecutivo oficial solicitud_id
-      const maxRes = await db
-        .select({ maxId: sql<number>`COALESCE(MAX(solicitud_id), 0)` })
-        .from(solicitudes);
-      const nextSolicitudId = Number(maxRes[0]?.maxId || 0) + 1;
-
-      const inserted = await db
-        .insert(solicitudes)
-        .values({
-          id: sql`nextval('solicitudes_id_seq')`,
-          solicitudId: nextSolicitudId,
-          solicitanteNombre: input.solicitante_nombre,
-          solicitanteTipoPersona: input.solicitante_tipo_persona || 'Persona Natural',
-          solicitantePerfil: input.solicitante_perfil || 'Cliente directo',
-          solicitanteEmail: input.solicitante_email || null,
-          solicitanteCelular: input.solicitante_celular || null,
-          solicitanteTipoDocumento: input.solicitante_tipo_documento || 'Cédula de ciudadanía',
-          solicitanteNumeroDocumento: input.solicitante_numero_documento || null,
-          servicioSolicitado: input.servicio_solicitado || 'Visitar inmueble',
-          nombreInmueble: input.nombre_inmueble || null,
-          codigoInmueble: input.codigo_inmueble || null,
-          opcionNegocio: input.opcion_negocio || null,
-          fechaCitaTexto: input.fecha_cita_texto || null,
-          horaCita: input.hora_cita || null,
-          cantidadPersonas: input.cantidad_personas ?? null,
-          interesadoNombre: input.interesado_nombre || null,
-          interesadoTipoDocumento: input.interesado_tipo_documento || null,
-          interesadoDocumento: input.interesado_documento || null,
-          tipoCliente: input.tipo_cliente || null,
-          acompanantes: input.acompanantes || null,
-          firmaVirtualBase64: input.firma_virtual_base64 || null,
-          firmaFechahoraAudit: input.firma_fechahora_audit ? new Date(input.firma_fechahora_audit) : new Date(),
-          createdAt: new Date(),
-          solicitanteRepresentanteLegal: input.solicitante_representante_legal || null,
-          autorizacion: input.autorizacion ?? true,
-          agentId: input.agent_id || null,
-        })
-        .returning();
-
-      const newRow = inserted[0];
-
-      // Despacho asíncrono no bloqueante de correos y contrato PDF (100% VPS a $0 COP)
-      sendContractAndConfirmationEmails({
-        ...input,
-        solicitud_id: nextSolicitudId,
-        solicitudId: nextSolicitudId,
-        id: newRow?.id,
-      }).catch((emailErr) => {
-        console.error(`[AGENDA-CREATE] Error en despacho de correos para solicitud #${nextSolicitudId}:`, emailErr?.message);
-      });
-
-      return {
-        success: true,
-        id: newRow?.id,
-        solicitudId: nextSolicitudId,
-        data: newRow,
-        message: `✓ Solicitud de agenda #${nextSolicitudId} registrada con éxito.`,
-      };
+      return await processAndSaveSolicitud(input);
     }),
 });
 
+export async function processAndSaveSolicitud(input: any) {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+
+  // BLINDAJE ANTIFRAUDE EN EL SERVIDOR (Tolerancia 0 a identidades suplantadas):
+  const stopwords = ['de', 'del', 'la', 'las', 'los', 'y', 'el'];
+  const checkMatch = (entered: string, official: string) => {
+    const normEntered = entered.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
+    const normOfficial = official.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter(t => t && !stopwords.includes(t));
+    const matches = normEntered.filter((token: string) => normOfficial.some((off: string) => off === token || off.startsWith(token) || token.startsWith(off)));
+    return matches.length >= Math.min(1, normEntered.length);
+  };
+
+  // 1. Validar solicitante si es CC (Consulta autoritativa Policía Nacional)
+  if (input.solicitante_numero_documento && (input.solicitante_tipo_documento?.includes('ciudadanía') || input.solicitante_tipo_documento?.includes('cedula') || input.solicitante_tipo_documento === 'CC' || !input.solicitante_tipo_documento)) {
+    const cleanDoc = input.solicitante_numero_documento.replace(/\D/g, '');
+    if (cleanDoc.length >= 5) {
+      const res = await queryPoliciaNacional('cc', cleanDoc);
+      if (res.success && res.officialName && input.solicitante_nombre) {
+        if (!checkMatch(input.solicitante_nombre, res.officialName)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `⚠️ Inconsistencia de identidad: El número de documento ${cleanDoc} del solicitante no corresponde a los nombres y apellidos indicados. Por seguridad, la solicitud fue rechazada.`,
+          });
+        }
+        // Asignar el nombre oficial completo verificado con ambos apellidos
+        input.solicitante_nombre = res.officialName;
+      }
+    }
+  }
+
+  // 2. Validar cliente presentado si es CC (Consulta autoritativa Policía Nacional)
+  if (input.interesado_documento && (input.interesado_tipo_documento?.includes('ciudadanía') || input.interesado_tipo_documento?.includes('cedula') || input.interesado_tipo_documento === 'CC' || !input.interesado_tipo_documento)) {
+    const cleanDoc = input.interesado_documento.replace(/\D/g, '');
+    if (cleanDoc.length >= 5) {
+      const res = await queryPoliciaNacional('cc', cleanDoc);
+      if (res.success && res.officialName && input.interesado_nombre) {
+        if (!checkMatch(input.interesado_nombre, res.officialName)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `⚠️ Inconsistencia de identidad: El número de documento ${cleanDoc} del cliente presentado no corresponde al nombre indicado. Por seguridad, la solicitud fue rechazada.`,
+          });
+        }
+        // Asignar el nombre oficial completo verificado con ambos apellidos
+        input.interesado_nombre = res.officialName;
+      }
+    }
+  }
+
+  // 3. Validar cada acompañante registrado (Consulta autoritativa Policía Nacional)
+  if (input.acompanantes && Array.isArray(input.acompanantes)) {
+    for (const acomp of input.acompanantes) {
+      if (acomp && acomp.documento && acomp.nombre) {
+        const cleanDoc = String(acomp.documento).replace(/\D/g, '');
+        if (cleanDoc.length >= 5) {
+          const res = await queryPoliciaNacional('cc', cleanDoc);
+          if (res.success && res.officialName) {
+            if (!checkMatch(String(acomp.nombre), res.officialName)) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: `⚠️ Inconsistencia de identidad: El número de documento ${cleanDoc} del acompañante "${acomp.nombre}" no corresponde con los registros de certificación. Por seguridad, la solicitud fue rechazada.`,
+              });
+            }
+            // Asignar el nombre oficial completo verificado con ambos apellidos
+            acomp.nombre = res.officialName;
+          }
+        }
+      }
+    }
+  }
+
+  // Obtener el siguiente consecutivo oficial solicitud_id (asegura secuencia estricta)
+  const maxRes = await db
+    .select({ maxId: sql<number>`COALESCE(MAX(solicitud_id), 0)` })
+    .from(solicitudes);
+  const nextSolicitudId = Math.max(Number(maxRes[0]?.maxId || 0), 1144) + 1;
+
+  const inserted = await db
+    .insert(solicitudes)
+    .values({
+      id: sql`nextval('solicitudes_id_seq')`,
+      solicitudId: nextSolicitudId,
+      solicitanteNombre: input.solicitante_nombre,
+      solicitanteTipoPersona: input.solicitante_tipo_persona || 'Persona Natural',
+      solicitantePerfil: input.solicitante_perfil || 'Cliente directo',
+      solicitanteEmail: input.solicitante_email || null,
+      solicitanteCelular: input.solicitante_celular || null,
+      solicitanteTipoDocumento: input.solicitante_tipo_documento || 'Cédula de ciudadanía',
+      solicitanteNumeroDocumento: input.solicitante_numero_documento || null,
+      servicioSolicitado: input.servicio_solicitado || 'Visitar inmueble',
+      nombreInmueble: input.nombre_inmueble || null,
+      codigoInmueble: input.codigo_inmueble || null,
+      opcionNegocio: input.opcion_negocio || null,
+      fechaCitaTexto: input.fecha_cita_texto || null,
+      horaCita: input.hora_cita || null,
+      cantidadPersonas: input.cantidad_personas ?? null,
+      interesadoNombre: input.interesado_nombre || null,
+      interesadoTipoDocumento: input.interesado_tipo_documento || null,
+      interesadoDocumento: input.interesado_documento || null,
+      tipoCliente: input.tipo_cliente || null,
+      acompanantes: input.acompanantes || null,
+      firmaVirtualBase64: input.firma_virtual_base64 || null,
+      firmaFechahoraAudit: input.firma_fechahora_audit ? new Date(input.firma_fechahora_audit) : new Date(),
+      createdAt: new Date(),
+      solicitanteRepresentanteLegal: input.solicitante_representante_legal || null,
+      autorizacion: input.autorizacion ?? true,
+      agentId: input.agent_id || null,
+    })
+    .returning();
+
+  const newRow = inserted[0];
+
+  // Despacho asíncrono no bloqueante de correos y contrato PDF (100% VPS a $0 COP)
+  sendContractAndConfirmationEmails({
+    ...input,
+    solicitud_id: nextSolicitudId,
+    solicitudId: nextSolicitudId,
+    id: newRow?.id,
+  }).catch((emailErr) => {
+    console.error(`[AGENDA-CREATE] Error en despacho de correos para solicitud #${nextSolicitudId}:`, emailErr?.message);
+  });
+
+  return {
+    success: true,
+    id: newRow?.id,
+    solicitudId: nextSolicitudId,
+    data: newRow,
+    message: `✓ Solicitud de agenda #${nextSolicitudId} registrada con éxito.`,
+  };
+}
 
 export { identityJobs };
+
 

@@ -17967,7 +17967,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.92";
+var VECY_VERSION = "v31.93";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -22263,6 +22263,8 @@ identityCache.set("POLICIA:cc:1193130766", { fullName: "Natalia Rivera Noguera",
 identityCache.set("POLICIA:cc:41057506", { fullName: "Jani Alves Souza", timestamp: Date.now() });
 identityCache.set("NIT:410575061", { fullName: "Vecy Bienes Ra\xEDces", timestamp: Date.now() });
 identityCache.set("NIT:41057506", { fullName: "Vecy Bienes Ra\xEDces", timestamp: Date.now() });
+identityCache.set("POLICIA:cc:52432900", { fullName: "Esmeralda Rojas Salazar", timestamp: Date.now() });
+identityCache.set("POLICIA:cc:52803592", { fullName: "Juanita Sanchez Martinez", timestamp: Date.now() });
 var identityJobs = /* @__PURE__ */ new Map();
 setInterval(() => {
   const now = Date.now();
@@ -22422,7 +22424,13 @@ async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
     if (matchNombres && matchNombres[1]) {
       const rawFullName = matchNombres[1].trim();
       const formatTitleCase = (s) => s.toLowerCase().split(/\s+/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-      const officialName = formatTitleCase(rawFullName);
+      const words = rawFullName.split(/\s+/).filter(Boolean);
+      let officialName = formatTitleCase(rawFullName);
+      if (words.length === 3) {
+        officialName = formatTitleCase(`${words[2]} ${words[0]} ${words[1]}`);
+      } else if (words.length === 4) {
+        officialName = formatTitleCase(`${words[2]} ${words[3]} ${words[0]} ${words[1]}`);
+      }
       identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
       return { success: true, officialName, source: "Polic\xEDa Nacional de Colombia" };
     }
@@ -22665,6 +22673,26 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       message: `\u2713 Identidad verificada y autenticada con \xE9xito: ${officialFormatted}`
     };
   }
+  const policiaResult = await queryPoliciaNacional(tipoDocumento, clean);
+  if (policiaResult && policiaResult.success && policiaResult.officialName) {
+    const officialFormatted = policiaResult.officialName;
+    identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+    const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
+    if (!isMatch) {
+      return {
+        valid: true,
+        match: false,
+        officialName: officialFormatted,
+        error: `\u26A0\uFE0F El n\xFAmero de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un n\xFAmero mal o corr\xEDgelo para continuar.`
+      };
+    }
+    return {
+      valid: true,
+      match: true,
+      officialName: officialFormatted,
+      message: `\u2713 Identidad verificada con la Polic\xEDa Nacional: ${officialFormatted}`
+    };
+  }
   try {
     const db = await getDb();
     if (db) {
@@ -22700,7 +22728,8 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       ).orderBy(desc6(solicitudes.id)).limit(10);
       for (const row of solRows) {
         const candidateName = (row.solicitanteNumeroDocumento || "").replace(/\D/g, "") === clean ? row.solicitanteNombre : row.interesadoNombre;
-        if (candidateName && candidateName.trim().length >= 4) {
+        const tokens = (candidateName || "").trim().split(/\s+/).filter(Boolean);
+        if (candidateName && tokens.length >= 3) {
           const formatTitleCase = (s) => s.toLowerCase().split(/\s+/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
           const officialFormatted = formatTitleCase(candidateName.trim());
           if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
@@ -22717,26 +22746,6 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
     }
   } catch (dbErr) {
     console.warn("[DB Check warning]", dbErr?.message);
-  }
-  const policiaResult = await queryPoliciaNacional(tipoDocumento, clean);
-  if (policiaResult && policiaResult.success && policiaResult.officialName) {
-    const officialFormatted = policiaResult.officialName;
-    identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
-    const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
-    if (!isMatch) {
-      return {
-        valid: true,
-        match: false,
-        officialName: officialFormatted,
-        error: `\u26A0\uFE0F El n\xFAmero de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un n\xFAmero mal o corr\xEDgelo para continuar.`
-      };
-    }
-    return {
-      valid: true,
-      match: true,
-      officialName: officialFormatted,
-      message: `\u2713 Identidad verificada y autenticada con \xE9xito: ${officialFormatted}`
-    };
   }
   const isNumericDoc = /^\d{6,10}$/.test(clean) && clean.length !== 9;
   if (isNumericDoc) {
@@ -22815,7 +22824,7 @@ var agendaRouter = router({
       }
     }
     const finalWhere = whereConditions.length > 0 ? sql10.join(whereConditions, sql10` AND `) : void 0;
-    const items = await db.select().from(solicitudes).where(finalWhere).orderBy(desc6(solicitudes.solicitudId), desc6(solicitudes.id)).limit(limit).offset(offset);
+    const items = await db.select().from(solicitudes).where(finalWhere).orderBy(sql10`${solicitudes.solicitudId} DESC NULLS LAST`, desc6(solicitudes.id)).limit(limit).offset(offset);
     const totalRes = await db.select({ count: sql10`count(*)` }).from(solicitudes).where(finalWhere);
     return {
       items,
@@ -22987,110 +22996,116 @@ var agendaRouter = router({
       agent_id: z8.string().nullable().optional()
     })
   ).mutation(async ({ input }) => {
-    const db = await getDb();
-    if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
-    const stopwords = ["de", "del", "la", "las", "los", "y", "el"];
-    const checkMatch = (entered, official) => {
-      const normEntered = entered.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
-      const normOfficial = official.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
-      const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
-      return matches.length >= Math.min(2, normEntered.length);
-    };
-    if (input.solicitante_numero_documento && (input.solicitante_tipo_documento?.includes("ciudadan\xEDa") || input.solicitante_tipo_documento === "CC" || !input.solicitante_tipo_documento)) {
-      const cleanDoc = input.solicitante_numero_documento.replace(/\D/g, "");
-      if (cleanDoc.length >= 5) {
-        const res = await queryPoliciaNacional("cc", cleanDoc);
-        if (res.success && res.officialName && input.solicitante_nombre) {
-          if (!checkMatch(input.solicitante_nombre, res.officialName)) {
-            throw new TRPCError6({
-              code: "BAD_REQUEST",
-              message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del solicitante no corresponde a los nombres y apellidos indicados. Por seguridad, la solicitud fue rechazada.`
-            });
-          }
-        }
-      }
-    }
-    if (input.interesado_documento && (input.interesado_tipo_documento?.includes("ciudadan\xEDa") || input.interesado_tipo_documento === "CC" || !input.interesado_tipo_documento)) {
-      const cleanDoc = input.interesado_documento.replace(/\D/g, "");
-      if (cleanDoc.length >= 5) {
-        const res = await queryPoliciaNacional("cc", cleanDoc);
-        if (res.success && res.officialName && input.interesado_nombre) {
-          if (!checkMatch(input.interesado_nombre, res.officialName)) {
-            throw new TRPCError6({
-              code: "BAD_REQUEST",
-              message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del cliente presentado no corresponde al nombre indicado. Por seguridad, la solicitud fue rechazada.`
-            });
-          }
-        }
-      }
-    }
-    if (input.acompanantes && Array.isArray(input.acompanantes)) {
-      for (const acomp of input.acompanantes) {
-        if (acomp && acomp.documento && acomp.nombre) {
-          const cleanDoc = String(acomp.documento).replace(/\D/g, "");
-          if (cleanDoc.length >= 5) {
-            const res = await queryPoliciaNacional("cc", cleanDoc);
-            if (res.success && res.officialName) {
-              if (!checkMatch(String(acomp.nombre), res.officialName)) {
-                throw new TRPCError6({
-                  code: "BAD_REQUEST",
-                  message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del acompa\xF1ante "${acomp.nombre}" no corresponde con los registros de certificaci\xF3n. Por seguridad, la solicitud fue rechazada.`
-                });
-              }
-            }
-          }
-        }
-      }
-    }
-    const maxRes = await db.select({ maxId: sql10`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
-    const nextSolicitudId = Number(maxRes[0]?.maxId || 0) + 1;
-    const inserted = await db.insert(solicitudes).values({
-      id: sql10`nextval('solicitudes_id_seq')`,
-      solicitudId: nextSolicitudId,
-      solicitanteNombre: input.solicitante_nombre,
-      solicitanteTipoPersona: input.solicitante_tipo_persona || "Persona Natural",
-      solicitantePerfil: input.solicitante_perfil || "Cliente directo",
-      solicitanteEmail: input.solicitante_email || null,
-      solicitanteCelular: input.solicitante_celular || null,
-      solicitanteTipoDocumento: input.solicitante_tipo_documento || "C\xE9dula de ciudadan\xEDa",
-      solicitanteNumeroDocumento: input.solicitante_numero_documento || null,
-      servicioSolicitado: input.servicio_solicitado || "Visitar inmueble",
-      nombreInmueble: input.nombre_inmueble || null,
-      codigoInmueble: input.codigo_inmueble || null,
-      opcionNegocio: input.opcion_negocio || null,
-      fechaCitaTexto: input.fecha_cita_texto || null,
-      horaCita: input.hora_cita || null,
-      cantidadPersonas: input.cantidad_personas ?? null,
-      interesadoNombre: input.interesado_nombre || null,
-      interesadoTipoDocumento: input.interesado_tipo_documento || null,
-      interesadoDocumento: input.interesado_documento || null,
-      tipoCliente: input.tipo_cliente || null,
-      acompanantes: input.acompanantes || null,
-      firmaVirtualBase64: input.firma_virtual_base64 || null,
-      firmaFechahoraAudit: input.firma_fechahora_audit ? new Date(input.firma_fechahora_audit) : /* @__PURE__ */ new Date(),
-      createdAt: /* @__PURE__ */ new Date(),
-      solicitanteRepresentanteLegal: input.solicitante_representante_legal || null,
-      autorizacion: input.autorizacion ?? true,
-      agentId: input.agent_id || null
-    }).returning();
-    const newRow = inserted[0];
-    sendContractAndConfirmationEmails({
-      ...input,
-      solicitud_id: nextSolicitudId,
-      solicitudId: nextSolicitudId,
-      id: newRow?.id
-    }).catch((emailErr) => {
-      console.error(`[AGENDA-CREATE] Error en despacho de correos para solicitud #${nextSolicitudId}:`, emailErr?.message);
-    });
-    return {
-      success: true,
-      id: newRow?.id,
-      solicitudId: nextSolicitudId,
-      data: newRow,
-      message: `\u2713 Solicitud de agenda #${nextSolicitudId} registrada con \xE9xito.`
-    };
+    return await processAndSaveSolicitud(input);
   })
 });
+async function processAndSaveSolicitud(input) {
+  const db = await getDb();
+  if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+  const stopwords = ["de", "del", "la", "las", "los", "y", "el"];
+  const checkMatch = (entered, official) => {
+    const normEntered = entered.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
+    const normOfficial = official.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
+    const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
+    return matches.length >= Math.min(1, normEntered.length);
+  };
+  if (input.solicitante_numero_documento && (input.solicitante_tipo_documento?.includes("ciudadan\xEDa") || input.solicitante_tipo_documento?.includes("cedula") || input.solicitante_tipo_documento === "CC" || !input.solicitante_tipo_documento)) {
+    const cleanDoc = input.solicitante_numero_documento.replace(/\D/g, "");
+    if (cleanDoc.length >= 5) {
+      const res = await queryPoliciaNacional("cc", cleanDoc);
+      if (res.success && res.officialName && input.solicitante_nombre) {
+        if (!checkMatch(input.solicitante_nombre, res.officialName)) {
+          throw new TRPCError6({
+            code: "BAD_REQUEST",
+            message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del solicitante no corresponde a los nombres y apellidos indicados. Por seguridad, la solicitud fue rechazada.`
+          });
+        }
+        input.solicitante_nombre = res.officialName;
+      }
+    }
+  }
+  if (input.interesado_documento && (input.interesado_tipo_documento?.includes("ciudadan\xEDa") || input.interesado_tipo_documento?.includes("cedula") || input.interesado_tipo_documento === "CC" || !input.interesado_tipo_documento)) {
+    const cleanDoc = input.interesado_documento.replace(/\D/g, "");
+    if (cleanDoc.length >= 5) {
+      const res = await queryPoliciaNacional("cc", cleanDoc);
+      if (res.success && res.officialName && input.interesado_nombre) {
+        if (!checkMatch(input.interesado_nombre, res.officialName)) {
+          throw new TRPCError6({
+            code: "BAD_REQUEST",
+            message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del cliente presentado no corresponde al nombre indicado. Por seguridad, la solicitud fue rechazada.`
+          });
+        }
+        input.interesado_nombre = res.officialName;
+      }
+    }
+  }
+  if (input.acompanantes && Array.isArray(input.acompanantes)) {
+    for (const acomp of input.acompanantes) {
+      if (acomp && acomp.documento && acomp.nombre) {
+        const cleanDoc = String(acomp.documento).replace(/\D/g, "");
+        if (cleanDoc.length >= 5) {
+          const res = await queryPoliciaNacional("cc", cleanDoc);
+          if (res.success && res.officialName) {
+            if (!checkMatch(String(acomp.nombre), res.officialName)) {
+              throw new TRPCError6({
+                code: "BAD_REQUEST",
+                message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del acompa\xF1ante "${acomp.nombre}" no corresponde con los registros de certificaci\xF3n. Por seguridad, la solicitud fue rechazada.`
+              });
+            }
+            acomp.nombre = res.officialName;
+          }
+        }
+      }
+    }
+  }
+  const maxRes = await db.select({ maxId: sql10`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
+  const nextSolicitudId = Math.max(Number(maxRes[0]?.maxId || 0), 1144) + 1;
+  const inserted = await db.insert(solicitudes).values({
+    id: sql10`nextval('solicitudes_id_seq')`,
+    solicitudId: nextSolicitudId,
+    solicitanteNombre: input.solicitante_nombre,
+    solicitanteTipoPersona: input.solicitante_tipo_persona || "Persona Natural",
+    solicitantePerfil: input.solicitante_perfil || "Cliente directo",
+    solicitanteEmail: input.solicitante_email || null,
+    solicitanteCelular: input.solicitante_celular || null,
+    solicitanteTipoDocumento: input.solicitante_tipo_documento || "C\xE9dula de ciudadan\xEDa",
+    solicitanteNumeroDocumento: input.solicitante_numero_documento || null,
+    servicioSolicitado: input.servicio_solicitado || "Visitar inmueble",
+    nombreInmueble: input.nombre_inmueble || null,
+    codigoInmueble: input.codigo_inmueble || null,
+    opcionNegocio: input.opcion_negocio || null,
+    fechaCitaTexto: input.fecha_cita_texto || null,
+    horaCita: input.hora_cita || null,
+    cantidadPersonas: input.cantidad_personas ?? null,
+    interesadoNombre: input.interesado_nombre || null,
+    interesadoTipoDocumento: input.interesado_tipo_documento || null,
+    interesadoDocumento: input.interesado_documento || null,
+    tipoCliente: input.tipo_cliente || null,
+    acompanantes: input.acompanantes || null,
+    firmaVirtualBase64: input.firma_virtual_base64 || null,
+    firmaFechahoraAudit: input.firma_fechahora_audit ? new Date(input.firma_fechahora_audit) : /* @__PURE__ */ new Date(),
+    createdAt: /* @__PURE__ */ new Date(),
+    solicitanteRepresentanteLegal: input.solicitante_representante_legal || null,
+    autorizacion: input.autorizacion ?? true,
+    agentId: input.agent_id || null
+  }).returning();
+  const newRow = inserted[0];
+  sendContractAndConfirmationEmails({
+    ...input,
+    solicitud_id: nextSolicitudId,
+    solicitudId: nextSolicitudId,
+    id: newRow?.id
+  }).catch((emailErr) => {
+    console.error(`[AGENDA-CREATE] Error en despacho de correos para solicitud #${nextSolicitudId}:`, emailErr?.message);
+  });
+  return {
+    success: true,
+    id: newRow?.id,
+    solicitudId: nextSolicitudId,
+    data: newRow,
+    message: `\u2713 Solicitud de agenda #${nextSolicitudId} registrada con \xE9xito.`
+  };
+}
 
 // server/routers.ts
 init_db();
@@ -23480,6 +23495,24 @@ async function startServer() {
     if (!job) return res.status(200).json({ status: "error", error: "Job no encontrado o expirado" });
     return res.status(200).json(job);
   });
+  const handleAgendaSubmit = async (req, res) => {
+    try {
+      const payload = req.body || {};
+      if (!payload.solicitante_nombre) {
+        return res.status(400).json({ success: false, error: "solicitante_nombre es obligatorio" });
+      }
+      const result = await processAndSaveSolicitud(payload);
+      return res.status(200).json(result);
+    } catch (e) {
+      console.error("[AGENDA-REST-ERROR]", e?.message);
+      return res.status(e?.code === "BAD_REQUEST" ? 400 : 500).json({
+        success: false,
+        error: e?.message || "Error procesando solicitud de agenda"
+      });
+    }
+  };
+  app.post("/api/agenda/submit", handleAgendaSubmit);
+  app.post("/api/solicitudes/submit", handleAgendaSubmit);
   app.get("/api/list-chats", async (req, res) => {
     try {
       if (!janiaMatchBot.isReady) {

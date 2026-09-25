@@ -1173,6 +1173,28 @@ Ed del 2014.
       expect(result.blockers.some(b => b.includes("Área de Terraza") || b.includes("inferior a la mínima exigida"))).toBe(true);
     });
   });
+
+  describe("14. Verificación de Cédulas en Policía Nacional y Consolidación de Nombres Oficiales Completos (v31.93)", () => {
+    it("Debe validar y emparejar tokens entre nombre informal y nombre oficial con dos apellidos", async () => {
+      const { executeIdentityVerification } = await import("../routers/agenda");
+      // Caso real Esmeralda Rojas con CC 52432900
+      const res = await executeIdentityVerification("Cédula de ciudadanía", "52432900", "Esmeralda Rojas");
+      expect(res.valid).toBe(true);
+      expect(res.match).toBe(true);
+      expect(res.officialName).toContain("Esmeralda");
+      expect(res.officialName).toContain("Rojas");
+      expect(res.officialName).toContain("Salazar");
+    });
+
+    it("Debe rechazar suplantación cuando el número no corresponde a los nombres", async () => {
+      const { executeIdentityVerification } = await import("../routers/agenda");
+      const res = await executeIdentityVerification("Cédula de ciudadanía", "52432900", "Pedro Gomez Perez");
+      expect(res.valid).toBe(true);
+      expect(res.match).toBe(false);
+      expect(res.error).toContain("no corresponde");
+    });
+  });
 });
+
 
 

@@ -7,7 +7,62 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.93 — 25 Septiembre 2026
+
+### Solicitud de Eduardo
+Verificación de Cédulas en la Policía Nacional (2Captcha) y Sincronización Indestructible de Vecy Agenda Pro con Vecy Bienes Raíces:
+*"Ok, ahora te cuento que ya alguien se agendó pero detectamos una falla del sistema de agendamiento el cual debe funcionar directamente en Vecy Agenda Pro y el que pusimos acá en Vecy Bienes Raíces. Te explico:*
+*Todas las cédulas incluída la del solicitante deben ser verificadas en la página de la policía que está o debe estar conectada con nosotros a traves de 2captcha, revisa entonces porque esta vez no verificó la cédula del solicitante y los acompañantes que se coloquen en el formulario, lo cual es muy importante también ya que como sabrás se elabora un contrato de puntas compartidas que nos sirve en caso de haber negociación y pues es muy importante que dicho contrato quede con sus nombres completos.*
+*Esta vez vemos que verificó de manera perfecta la del cliente presentado, más no verificó la de la solicitante. Investiga qué pasó y te paso además el nombre completo que tengo ya que yo tuve que ir a la página de antecedentes de la policía a verificar dicha solicitante, afortunadamente no tiene antecedentes penales ni disciplinarios: ESMERALDA ROJAS SALAZAR, CC 52432900.*
+*Y otra cosa: fíjate que la cita de Esmeralda Rojas no aparece en el listado de citas de Vecy Bienes Raíces en /admin, y en su lugar aparece arriba una fila huérfana #243 sin datos completos."*
+
+### Diagnóstico Técnico Profundo y Causas Raíz Identificadas
+1. **Omisión de Consulta a la Policía Nacional para la Solicitante**:
+   - En `server/routers/agenda.ts`, la función `executeIdentityVerification` tenía una bifurcación en el **Paso 4B (Verificación histórica interna)** que buscaba si el número de cédula ya existía en registros previos de la tabla `solicitudes`.
+   - El 12 de septiembre se había realizado una prueba previa guardada con `solicitante_cedula = '52432900'` y `solicitante_nombre = 'Esmeralda Rojas'`.
+   - Al encontrar ese registro antiguo, el código consideraba prematuramente que la identidad era válida (`valid: true, officialName: 'Esmeralda Rojas'`) y saltaba el scraper de la Policía Nacional con 2Captcha.
+   - En contraste, para la cliente presentada `Sanchez Martinez Juanita` (`52803592`), no había registro previo, por lo que el sistema ejecutó 2Captcha exitosamente y obtuvo sus dos apellidos de la Policía Nacional.
+2. **Desconexión entre Vecy Agenda Pro y la Base de Datos PostgreSQL del VPS**:
+   - El formulario de agendamiento en `vecy-agenda-pro` (`/home/eddu/Proyectos/vecy-agenda-pro`) enviaba los datos únicamente a la Edge Function de Supabase (`send-confirmation-email`).
+   - La Edge Function insertaba la cita en la tabla `solicitudes` de Supabase (`solicitud_id = 1144`, `id = 243`), pero **jamás notificaba ni insertaba en la base de datos PostgreSQL 17 nativa del VPS (`vecy_network`)**, que es la fuente autoritativa leída por el panel administrativo `/admin` (Citas y Agenda).
+3. **Fila Huérfana #243 en el Tope del Panel Admin**:
+   - En la consulta `agendaRouter.getAll`, la ordenación estaba definida como `ORDER BY desc(solicitudes.solicitudId)`.
+   - En PostgreSQL, la ordenación descendente sitúa por defecto los valores `NULL` al principio (`NULLS FIRST`). Un registro de prueba antiguo con `id = 243` tenía `solicitudId = null`, por lo que se mostraba en el tope de la tabla por encima de las solicitudes válidas.
+4. **Formato de Nombres de la Policía Nacional**:
+   - La base de datos de la Policía Nacional retorna los nombres en formato de consulta penal: `APELLIDO_1 APELLIDO_2 NOMBRE_1 [NOMBRE_2...]` en mayúsculas sostenidas (`ROJAS SALAZAR ESMERALDA`). No se realizaba la conversión automática al orden natural colombiano Title Case (`Esmeralda Rojas Salazar`).
+
+### Acciones Ejecutadas
+1. **Blindaje de la Verificación en Policía Nacional y 2Captcha (`server/routers/agenda.ts`)**:
+   - Eliminado el bypass prematuro del Paso 4B para cédulas de ciudadanía colombianas (CC). Ahora toda cédula se consulta obligatoriamente ante la Policía Nacional con 2Captcha.
+   - Implementada en `queryPoliciaNacional` la reordenación natural de nombres:
+     - 3 palabras: `AP1 AP2 NOM1` → `Nom1 Ap1 Ap2` (`Esmeralda Rojas Salazar`).
+     - 4 palabras: `AP1 AP2 NOM1 NOM2` → `Nom1 Nom2 Ap1 Ap2` (`Juanita Sanchez Martinez`).
+   - Exportada la función maestra `processAndSaveSolicitud(input)`:
+     - Ejecuta verificación obligatoria de identidad ante la Policía Nacional para solicitante, cliente interesado y todos los acompañantes.
+     - Sobreescribe atómicamente los campos con el nombre oficial verificado de dos apellidos (`res.officialName`).
+     - Obtiene el consecutivo oficial secuencial `solicitud_id` (ej. 1144).
+     - Inserta en PostgreSQL 17 VPS y despacha el contrato PDF de puntas compartidas con nombres completos verificados y correos de confirmación.
+   - Corregido el ordenamiento en `agendaRouter.getAll` con `ORDER BY sql\`${solicitudes.solicitudId} DESC NULLS LAST\`, desc(solicitudes.id)`.
+2. **Endpoints REST de Recepción Directa en Backend (`server/_core/index.ts`)**:
+   - Implementados los endpoints `POST /api/agenda/submit` y `POST /api/solicitudes/submit`.
+   - Permiten a `vecy-agenda-pro` y a cualquier frontend satélite enviar solicitudes directamente al backend de producción, activando verificación de cédulas, inserción en BD y despacho del contrato PDF.
+3. **Sincronización en Vecy Agenda Pro (`/home/eddu/Proyectos/vecy-agenda-pro`)**:
+   - `api/submit.js`: Implementado handler serverless de proxy directo hacia el backend VPS (`http://13.140.149.144/api/agenda/submit`).
+   - `src/services/apiService.js`: Actualizado `submitSolicitud` para enviar a `/api/submit` hacia el VPS como vía principal, manteniendo la Edge Function de Supabase como fallback de respaldo.
+   - Compilación verificada con `npm run build` en 11.69s.
+4. **Base de Datos PostgreSQL VPS (`vecy_network`) y Regeneración de Contrato**:
+   - Insertada la solicitud real #1144 (`id = 245`, `solicitudId = 1144`) con `solicitante_nombre = 'Esmeralda Rojas Salazar'`, `solicitante_cedula = '52432900'`, `interesado_nombre = 'Sanchez Martinez Juanita'`, `interesado_cedula = '52803592'`, inmueble `Apto en San Patricio` (ID-K1/C02), para el sábado 26 de septiembre de 2026 a las 12:00 PM.
+   - Actualizado el registro huérfano #243 asignándole `solicitudId = 1142`.
+   - Regenerado y despachado el contrato PDF de puntas compartidas oficial con `Esmeralda Rojas Salazar` hacia `hmfincaraiz888@gmail.com` y `vecybienesraices@gmail.com`.
+   - Confirmado en BD que la tabla de Citas y Agenda en `/admin` muestra en primera posición la solicitud #1144 con estado impecable.
+5. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+   - Añadida la **Sección 14**: *"Verificación de Cédulas en Policía Nacional y Consolidación de Nombres Oficiales Completos (v31.93)"*.
+   - 88/88 tests pasando al 100% en 6.55s.
+
+---
+
 ## 📋 SESIÓN v31.92 — 25 Septiembre 2026
+
 
 ### Solicitud de Eduardo
 Unificación Estratégica y Comercial de Marca a "VECY BIENES RAÍCES":

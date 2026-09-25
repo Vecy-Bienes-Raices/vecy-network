@@ -322,7 +322,39 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.93 — Septiembre 2026
+
+#### 📌 VERIFICACIÓN DE CÉDULAS EN POLICÍA NACIONAL VÍA 2CAPTCHA Y SINCRONIZACIÓN INDESTRUCTIBLE DE VECY AGENDA PRO CON VECY BIENES RAÍCES
+
+**Problemas identificados:**
+1. **Omisión de Consulta a la Policía Nacional para Solicitantes de Citas**: Al procesar la solicitud de agendamiento #1144 en Vecy Agenda Pro, el sistema verificó con la Policía Nacional a la cliente presentada (`Sanchez Martinez Juanita`, CC `52803592`), pero omitió a la solicitante (`Esmeralda Rojas`, CC `52432900`). La causa raíz fue un atajo en el Paso 4B de `executeIdentityVerification` que encontraba una prueba del 12 de septiembre en el histórico de solicitudes y daba por validado el nombre informal, saltándose 2Captcha. Esto impedía consolidar sus dos apellidos (`Esmeralda Rojas Salazar`) en la base de datos y en el contrato de puntas compartidas.
+2. **Desconexión entre Vecy Agenda Pro y la Base de Datos PostgreSQL del VPS**: El frontend de `vecy-agenda-pro` sólo enviaba las citas a la Edge Function de Supabase (`send-confirmation-email`), sin notificar ni persistir en la base de datos PostgreSQL 17 nativa del VPS (`vecy_network`). Como resultado, la cita #1144 no se reflejaba en el panel administrativo `/admin` (Citas y Agenda).
+3. **Fila Huérfana #243 en el Tope del Panel Admin**: La ordenación en PostgreSQL `ORDER BY desc(solicitudes.solicitudId)` colocaba los registros con `solicitudId = null` al principio (`NULLS FIRST`), mostrando un registro antiguo de prueba en la cima de la tabla.
+4. **Formato Policial Inverso de Nombres**: La Policía Nacional devuelve los nombres en formato penal `APELLIDO_1 APELLIDO_2 NOMBRE_1 [NOMBRE_2...]` en mayúsculas (`ROJAS SALAZAR ESMERALDA`), requiriendo transformación determinista al orden natural colombiano Title Case (`Esmeralda Rojas Salazar`).
+
+**Solución aplicada:**
+- **Blindaje de la Verificación en Policía Nacional y 2Captcha (`server/routers/agenda.ts`)**:
+  - Eliminado el bypass prematuro del Paso 4B para cédulas colombianas (CC), forzando consulta obligatoria a la Policía Nacional con 2Captcha.
+  - Implementada reordenación automática en `queryPoliciaNacional` para transformar respuestas de 3 y 4 tokens al orden natural colombiano con mayúsculas iniciales.
+  - Creada y exportada `processAndSaveSolicitud(input)` para procesar solicitante, cliente interesado y acompañantes, sobreescribir atómicamente con los nombres oficiales completos validados, generar consecutivo oficial `solicitud_id`, persistir en PostgreSQL VPS y emitir el contrato PDF y correos de confirmación.
+  - Ordenación de `agendaRouter.getAll` blindada con `ORDER BY sql\`${solicitudes.solicitudId} DESC NULLS LAST\`, desc(solicitudes.id)`.
+- **Endpoints REST Directos en Backend (`server/_core/index.ts`)**:
+  - Habilitados `POST /api/agenda/submit` y `POST /api/solicitudes/submit` para permitir que `vecy-agenda-pro` u otros frontends inserten citas directamente en la base de datos autoritativa de producción.
+- **Sincronización en Vecy Agenda Pro (`/home/eddu/Proyectos/vecy-agenda-pro`)**:
+  - `api/submit.js`: Implementado proxy serverless hacia `http://13.140.149.144/api/agenda/submit`.
+  - `src/services/apiService.js`: Despacho prioritario hacia el backend VPS con fallback en Supabase.
+- **Base de Datos PostgreSQL VPS (`vecy_network`) y Regeneración de Contrato**:
+  - Persistida la solicitud oficial #1144 (`id = 245`, `solicitudId = 1144`) con `Esmeralda Rojas Salazar` y `Sanchez Martinez Juanita`, para el sábado 26 de septiembre de 2026 a las 12:00 PM (`Apto en San Patricio` ID-K1/C02).
+  - Corregida la fila huérfana #243 con `solicitudId = 1142`.
+  - Despachado el contrato oficial PDF regenerado de puntas compartidas con `Esmeralda Rojas Salazar`.
+- **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+  - Creada la Sección 14 con tests de validación de tokens y rechazo de suplantación.
+- **Verificación**: 88/88 tests Vitest pasando al 100%, `tsc --noEmit` con 0 errores y compilación `npm run build` impecable.
+
+---
+
 ### 🔖 v31.92 — Septiembre 2026
+
 
 #### 📌 UNIFICACIÓN ESTRATÉGICA Y COMERCIAL DE MARCA A "VECY BIENES RAÍCES"
 

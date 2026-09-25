@@ -167,7 +167,34 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.92 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.93 — Septiembre 2026
+
+### Novedades v31.93 (Verificación de Cédulas en Policía Nacional vía 2Captcha y Sincronización Indestructible de Vecy Agenda Pro con Vecy Bienes Raíces):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - En agendamientos de citas (ej. solicitud #1144), todas las cédulas (solicitante, cliente presentado y acompañantes) deben verificarse ante la Policía Nacional con 2Captcha para blindar el contrato de puntas compartidas con nombres oficiales completos de dos apellidos.
+  - El sistema omitía verificar a la solicitante (`Esmeralda Rojas`, CC `52432900`) debido a un bypass prematuro en el Paso 4B que encontraba una prueba del 12 de septiembre en el histórico y saltaba 2Captcha, mientras que para la cliente presentada `Sanchez Martinez Juanita` (`52803592`) sí consultaba a la Policía Nacional.
+  - Además, `vecy-agenda-pro` sólo enviaba datos a la Edge Function de Supabase, sin notificar ni persistir en la base de datos PostgreSQL 17 nativa del VPS (`vecy_network`), provocando que la cita no apareciera en el panel `/admin` (Citas y Agenda), donde además se visualizaba una fila huérfana antigua #243 en el tope de la tabla por ordenamiento `NULLS FIRST`.
+- **Acciones Ejecutadas en Código**:
+  1. **Blindaje de Verificación en Policía Nacional y 2Captcha (`server/routers/agenda.ts`)**:
+     - Eliminado el bypass prematuro del Paso 4B para cédulas colombianas (CC), forzando consulta obligatoria a la Policía Nacional con 2Captcha.
+     - Implementada conversión automática del orden de apellidos policial (`APELLIDO_1 APELLIDO_2 NOMBRE_1 [NOMBRE_2]`) a orden natural colombiano Title Case (`Esmeralda Rojas Salazar`).
+     - Creada y exportada `processAndSaveSolicitud(input)` que verifica identidades, sobreescribe con los nombres oficiales completos, genera el consecutivo oficial, inserta en PostgreSQL VPS y despacha el contrato PDF de puntas compartidas y correos con nombres jurídicos completos.
+     - Corregido el ordenamiento de `agendaRouter.getAll` con `ORDER BY sql\`${solicitudes.solicitudId} DESC NULLS LAST\`, desc(solicitudes.id)`.
+  2. **Endpoints REST de Recepción Directa en Backend (`server/_core/index.ts`)**:
+     - Habilitados `POST /api/agenda/submit` y `POST /api/solicitudes/submit` en el backend para recibir agendamientos directos desde cualquier frontend.
+  3. **Integración en Vecy Agenda Pro (`/home/eddu/Proyectos/vecy-agenda-pro`)**:
+     - `api/submit.js`: Proxy serverless directo hacia `http://13.140.149.144/api/agenda/submit`.
+     - `src/services/apiService.js`: Despacho prioritario hacia el backend VPS con respaldo secundario en Supabase.
+  4. **Base de Datos PostgreSQL VPS (`vecy_network`)**:
+     - Persistida la solicitud oficial #1144 (`id = 245`) para `Esmeralda Rojas Salazar` y `Sanchez Martinez Juanita`, cita sábado 26 de septiembre de 2026 a las 12:00 PM para `Apto en San Patricio` (ID-K1/C02).
+     - Asignado `solicitudId = 1142` a la fila huérfana #243.
+     - Regenerado y enviado el contrato PDF oficial de puntas compartidas con `Esmeralda Rojas Salazar`.
+  5. **Suite de Regresión `server/__tests__/regression.test.ts` (Sección 14)**:
+     - Tests doctrinales blindando validación de tokens de identidad y rechazo de suplantación.
+- **Verificación**: 88/88 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 19s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.92 — Septiembre 2026
+
 
 ### Novedades v31.92 (Unificación Estratégica y Comercial de Marca a "VECY BIENES RAÍCES"):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:
