@@ -69,7 +69,7 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
               {brandName || "VECY"}
             </h1>
             <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] mt-1 italic font-black">
-              {brandSubtitle || "NETWORK"}
+              {brandSubtitle || "BIENES RAÍCES"}
             </p>
           </div>
         </div>

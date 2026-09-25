@@ -63,7 +63,7 @@ export default function Home() {
                 </div>
                 
                 <h1 className="vecy-title-hero mb-6">
-                  VECY <span className="text-gradient-gold uppercase">NETWORK</span>
+                  VECY <span className="text-gradient-gold uppercase">BIENES RAÍCES</span>
                 </h1>
                 
                 <p className="vecy-subtitle max-w-2xl mx-auto mb-10 text-xl md:text-2xl leading-relaxed">
