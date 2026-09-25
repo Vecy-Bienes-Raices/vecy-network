@@ -2395,9 +2395,10 @@ export function scoreRows(req: any, prop: any) {
 
   const standardReservedKeys = new Set([
     'antiguedad', 'cocina', 'interiorexterior', 'depositos', 'deposito', 'cuartobanoservicio', 'cbs',
-    'balcon', 'terraza', 'piso', 'antiguedadmax', 'estratodeseado', 'areamin', 'presupuestomax',
-    'kitchentype', 'vigilancia', 'visitantes', 'moto', 'motos', 'cava', 'bbq', 'chimenea', 'estudio', 'patio',
+    'balcon', 'terraza', 'piso', 'pisominimo', 'pisomaximo', 'floordetail', 'antiguedadmax', 'estratodeseado', 'areamin', 'presupuestomax', 'presupuestomin',
+    'kitchentype', 'vigilancia', 'seguridad', 'visitantes', 'moto', 'motos', 'cava', 'bbq', 'chimenea', 'estudio', 'patio',
     'shut', 'gas', 'caldera', 'parqueadero', 'disponibilidad', 'entrega',
+    'adminfeeincluded', 'adminincluded', 'adminfee', 'lavanderiaindependiente', 'tipopisos',
     'wants', 'gives', 'iscollaborativepool', 'collaborativepool', 'comisiones', 'calificacion', 'origen',
     'metadata', 'rawtext', 'status', 'userid', 'agentid', 'id'
   ]);

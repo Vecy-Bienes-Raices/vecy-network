@@ -343,6 +343,7 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 - **Frontend `client/src/components/admin/AdminMatches.tsx`**:
   - Fila 22 (Vigilancia): Erradicado `warn`. Choque pasa a `missing` (0% Guillotina), activando `hasAnyMissingRow` y proyectando etiquetas claras.
   - Filas de Precio y Área: Integrada coherencia de segmento marcando `missing` cuando hay desproporción comercial.
+  - Erradicación de Claves Técnicas Duplicadas (`standardReservedKeys`): Excluidas `adminfeeincluded`, `adminincluded`, `adminfee`, `pisominimo`, `pisomaximo`, `floordetail`, `lavanderiaindependiente`, `tipopisos` para evitar filas redundantes en camelCase/inglés.
 - **Base de Datos PostgreSQL VPS**: Purgado físicamente el match espurio `#M14977`.
 - **Suite de Regresión `server/__tests__/regression.test.ts`**: Añadida Sección 12 con 5 nuevos tests doctrinales blindando todas las reglas.
 

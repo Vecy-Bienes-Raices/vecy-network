@@ -38,7 +38,10 @@ Doctrina En Duro de Seguridad 24/7 vs Edificio Automatizado/Conserje y Coherenci
    - **Filas de Precio de Venta, Canon de Arriendo y Área Total**: Evaluado `checkFinancialSegmentCoherence`. Si hay desproporción de segmento, el precio y el área se marcan en `missing` (0% Guillotina) mostrando etiquetas informativas: `"Sub-segmento < 58% ppto"` y `"Área reducida para ppto $1.200M"`.
 4. **Purga Física en Base de Datos PostgreSQL VPS (`vecy_network`)**:
    - Eliminado con éxito el match espurio #M14977 (`DELETE FROM "propertyMatches" WHERE id = 14977;`).
-5. **Suite de Pruebas de Regresión (`server/__tests__/regression.test.ts`)**:
+5. **Erradicación de Claves Técnicas Duplicadas en Tabla de Cotejo (`AdminMatches.tsx`)**:
+   - Agregadas las claves internas `adminfeeincluded`, `adminincluded`, `adminfee`, `pisominimo`, `pisomaximo`, `floordetail`, `lavanderiaindependiente`, `tipopisos` al conjunto `standardReservedKeys`.
+   - Eliminadas las filas espurias y redundantes que se mostraban en camelCase/inglés (`AdminFeeIncluded` y `PisoMinimo`), las cuales ya están cubiertas de forma oficial y tipificada en las filas `Valor admin` y `Piso / Nivel`.
+6. **Suite de Pruebas de Regresión (`server/__tests__/regression.test.ts`)**:
    - Creada Sección 12 con 5 nuevos tests doctrinales blindando seguridad 24/7, edificio automatizado, coherencia de segmento financiero y colapso estricto a 0% del caso Pedro D.
 
 ### Verificación y Resultados

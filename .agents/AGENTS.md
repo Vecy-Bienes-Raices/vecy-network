@@ -187,7 +187,10 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
      - **Filas de Precio y Área**: Integrado `checkFinancialSegmentCoherence`. Si hay desproporción, el precio y el área se marcan en `missing` (0% Guillotina) mostrando `"Sub-segmento < 58% ppto"` y `"Área reducida para ppto $1.200M"`.
   4. **Base de Datos PostgreSQL VPS (`vecy_network`)**:
      - Purgado de forma definitiva el match espurio #M14977 (`DELETE FROM "propertyMatches" WHERE id = 14977;`).
-  5. **Suite de Regresión `server/__tests__/regression.test.ts` (Sección 12)**:
+  5. **Erradicación de Claves Técnicas Duplicadas en Tabla de Cotejo (`AdminMatches.tsx`)**:
+     - Agregadas `adminfeeincluded`, `adminincluded`, `adminfee`, `pisominimo`, `pisomaximo`, `floordetail`, `lavanderiaindependiente`, `tipopisos` al set de exclusión `standardReservedKeys`.
+     - Eliminadas las filas técnicas redundantes en camelCase/inglés (`AdminFeeIncluded` y `PisoMinimo`), ya cubiertas oficialmente en `Valor admin` y `Piso / Nivel`.
+  6. **Suite de Regresión `server/__tests__/regression.test.ts` (Sección 12)**:
      - 5 nuevos tests doctrinales blindando `demands24hSecurity`, `parseSecurityType`, `checkFinancialSegmentCoherence` y colapso estricto a 0% del caso Pedro D vs Apto $630M y Seguridad 24h vs Ed Automatizado.
 - **Verificación**: 80/80 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 15s ✅
 
