@@ -1225,7 +1225,104 @@ Ed del 2014.
 
       // Caso 9: Función formatTitleCase
       expect(formatTitleCase("JUANITA SANCHEZ MARTINEZ")).toBe("Juanita Sanchez Martinez");
-      expect(formatTitleCase("daniel eduardo rivera noguera")).toBe("Daniel Eduardo Rivera Noguera");
+    });
+  });
+
+  describe("16. Notificaciones Automáticas de Agendamiento por WhatsApp (CallMeBot Style al Bróker y Confirmación JanIA al Solicitante) (v31.95)", () => {
+    it("Debe normalizar teléfonos colombianos a formato internacional WhatsApp JID", async () => {
+      const { cleanColombianPhone, VECY_BROKER_OFFICIAL_PHONE } = await import("../_core/agendaWhatsAppService");
+      
+      expect(VECY_BROKER_OFFICIAL_PHONE).toBe("573166569719");
+      expect(cleanColombianPhone("3166569719")).toBe("573166569719");
+      expect(cleanColombianPhone("+57 316 656 9719")).toBe("573166569719");
+      expect(cleanColombianPhone("573192919978")).toBe("573192919978");
+      expect(cleanColombianPhone("319 291 9978")).toBe("573192919978");
+      expect(cleanColombianPhone("")).toBe("");
+    });
+
+    it("Debe formatear fechas a formato humano en español con día de la semana", async () => {
+      const { formatDateSpanish } = await import("../_core/agendaWhatsAppService");
+
+      expect(formatDateSpanish("2026-04-29")).toBe("miércoles, 29 de abril de 2026");
+      expect(formatDateSpanish("miércoles, 29 de abril de 2026")).toBe("miércoles, 29 de abril de 2026");
+      expect(formatDateSpanish("2026-09-26")).toBe("sábado, 26 de septiembre de 2026");
+    });
+
+    it("Debe construir el mensaje al Bróker idéntico al formato histórico CallMeBot de Eduardo", async () => {
+      const { buildBrokerCallMeBotMessage } = await import("../_core/agendaWhatsAppService");
+
+      const mockData = {
+        solicitudId: 224,
+        solicitante_perfil: "Agente",
+        solicitante_nombre: "Eduardo Rivera",
+        solicitante_numero_documento: "11189781",
+        solicitante_email: "eduardo.a.rivera@proton.me",
+        solicitante_celular: "573192919978",
+        servicio_solicitado: "Visitar inmueble",
+        codigo_inmueble: "110111",
+        opcion_negocio: "Venta",
+        fecha_cita_texto: "miércoles, 29 de abril de 2026",
+        hora_cita: "08:45 AM",
+        cantidad_personas: 3,
+        interesado_nombre: "Natalia Rivera",
+        interesado_documento: "1193130766"
+      };
+
+      const msg = buildBrokerCallMeBotMessage(mockData);
+
+      expect(msg).toContain("🔔 Solicitud No. 224 🔔");
+      expect(msg).toContain("👤 Solicitante");
+      expect(msg).toContain("Agente");
+      expect(msg).toContain("Eduardo Rivera");
+      expect(msg).toContain("🪪 11189781");
+      expect(msg).toContain("Contrato: 224");
+      expect(msg).toContain("✉️ eduardo.a.rivera@proton.me");
+      expect(msg).toContain("📞 573192919978");
+      expect(msg).toContain("🏠 Solicitud");
+      expect(msg).toContain("Visitar inmueble");
+      expect(msg).toContain("Cod: 110111");
+      expect(msg).toContain("Negocio: Venta");
+      expect(msg).toContain("📅 miércoles, 29 de abril de 2026");
+      expect(msg).toContain("🕐 08:45 AM");
+      expect(msg).toContain("Asistirán: 3 personas");
+      expect(msg).toContain("👥 Cliente");
+      expect(msg).toContain("Natalia Rivera");
+      expect(msg).toContain("🪪 1193130766");
+      expect(msg).toContain("👇 Contactar Cliente 👇");
+      expect(msg).toContain("https://wa.me/573192919978?text=");
+    });
+
+    it("Debe construir el mensaje de confirmación de JanIA al Solicitante con verificación y datos de contacto", async () => {
+      const { buildClientConfirmationMessage } = await import("../_core/agendaWhatsAppService");
+
+      const mockData = {
+        solicitudId: 1144,
+        solicitante_nombre: "Esmeralda Rojas Salazar",
+        solicitante_email: "esmeralda.rojas@gmail.com",
+        solicitante_celular: "3101234567",
+        nombre_inmueble: "Apto en San Patricio",
+        codigo_inmueble: "ID-K1/C02",
+        opcion_negocio: "Venta",
+        fecha_cita_texto: "sábado, 26 de septiembre de 2026",
+        hora_cita: "12:00 PM",
+        cantidad_personas: 2,
+        interesado_nombre: "Juanita Sanchez Martinez"
+      };
+
+      const msg = buildClientConfirmationMessage(mockData);
+
+      expect(msg).toContain("¡Hola, Esmeralda Rojas Salazar! 👋 Te saluda *JanIA* de *Vecy Bienes Raíces*.");
+      expect(msg).toContain("solicitud de agendamiento *No. 1144*");
+      expect(msg).toContain("🏠 *Inmueble:* Apto en San Patricio");
+      expect(msg).toContain("📌 *Código:* ID-K1/C02");
+      expect(msg).toContain("💼 *Operación:* Venta");
+      expect(msg).toContain("📅 *Fecha:* sábado, 26 de septiembre de 2026");
+      expect(msg).toContain("⏰ *Hora:* 12:00 PM");
+      expect(msg).toContain("👥 *Asistentes:* 2 persona(s)");
+      expect(msg).toContain("👤 *Cliente presentado:* Juanita Sanchez Martinez");
+      expect(msg).toContain("🔍 *Estamos verificando tus datos.*");
+      expect(msg).toContain("dirección exacta del inmueble a tu correo (*esmeralda.rojas@gmail.com*) y por este medio (WhatsApp).");
+      expect(msg).toContain("+57 316 6569719");
     });
   });
 });

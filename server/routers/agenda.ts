@@ -7,6 +7,7 @@ import { TRPCError } from "@trpc/server";
 import { Solver } from "@2captcha/captcha-solver";
 import https from "https";
 import { sendContractAndConfirmationEmails } from "../_core/emailContractService";
+import { sendAgendaWhatsAppNotifications } from "../_core/agendaWhatsAppService";
 
 const httpsAgentInsecure = new https.Agent({ rejectUnauthorized: false });
 
@@ -1275,6 +1276,16 @@ export async function processAndSaveSolicitud(input: any) {
     id: newRow?.id,
   }).catch((emailErr) => {
     console.error(`[AGENDA-CREATE] Error en despacho de correos para solicitud #${nextSolicitudId}:`, emailErr?.message);
+  });
+
+  // Despacho asíncrono no bloqueante de WhatsApp (Formato CallMeBot al Bróker + confirmación JanIA al cliente)
+  sendAgendaWhatsAppNotifications({
+    ...input,
+    solicitud_id: nextSolicitudId,
+    solicitudId: nextSolicitudId,
+    id: newRow?.id,
+  }).catch((waErr) => {
+    console.error(`[AGENDA-CREATE] Error en despacho de WhatsApp para solicitud #${nextSolicitudId}:`, waErr?.message);
   });
 
   return {

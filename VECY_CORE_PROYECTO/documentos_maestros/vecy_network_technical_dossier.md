@@ -322,6 +322,34 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.95 — Septiembre 2026
+
+#### 📌 NOTIFICACIONES AUTOMÁTICAS DE AGENDAMIENTO POR WHATSAPP (CALLMEBOT STYLE AL BRÓKER Y CONFIRMACIÓN INMEDIATA DE JANIA AL SOLICITANTE)
+
+**Problemas identificados:**
+1. **Falta de Notificación Instantánea al Bróker en WhatsApp**: Al agendar una cita (en `Vecy Agenda Pro` o en la web de `vecy.co / Vecy Bienes Raíces`), el sistema enviaba correos electrónicos y generaba el contrato PDF, pero no notificaba por WhatsApp al número oficial de corretaje de la inmobiliaria (`+57 316 6569719`), requiriendo que Eduardo y Jani revisaran el correo o el panel administrativo.
+2. **Escudo Anti-Ban en Baileys (`queuedSend`)**: En `server/_core/whatsapp-match.ts`, el escudo anti-ban bloqueaba cualquier mensaje directo (DM a `@s.whatsapp.net`) cuyo destinatario no fuera el número administrador (`573192919978`). El número oficial del bróker (`573166569719`) era filtrado y no existía un mecanismo para despachar confirmaciones transaccionales legítimas solicitadas por usuarios.
+3. **Ausencia de Confirmación Inmediata de JanIA al Cliente**: El cliente/solicitante no recibía una confirmación inmediata por WhatsApp que le informara que sus datos estaban en verificación y que la dirección del inmueble le sería remitida a su correo y WhatsApp, aportando el contacto oficial del bróker.
+
+**Solución aplicada:**
+- **Infraestructura de Mensajería Baileys (`server/_core/whatsapp-match.ts`)**:
+  - Whitelist de staff en `queuedSend`: añadida incondicionalmente la línea oficial del bróker **`573166569719`**.
+  - Habilitado el flag `allowDirectMessage === true` para excepciones transaccionales autorizadas.
+  - Implementado el método público `sendDirectMessage(targetPhoneOrJid, text, options)` en `JaniaMatchBot`, normalizando prefijos colombianos (+57) a formato JID de WhatsApp.
+- **Servicio Especializado de Notificaciones (`server/_core/agendaWhatsAppService.ts`)**:
+  - `cleanColombianPhone`: Limpia y estandariza cualquier formato de número celular colombiano.
+  - `formatDateSpanish`: Formatea fechas simples/ISO a texto legible en español con día de la semana.
+  - `buildBrokerCallMeBotMessage`: Reproduce con exactitud la plantilla histórica de CallMeBot con emojis, bloques desglosados de Solicitante, Solicitud y Cliente, y el enlace `👇 Contactar Cliente 👇` (`https://wa.me/{celular}?text=...`) prearmado.
+  - `buildClientConfirmationMessage`: Mensaje cálido, institucional y formal de JanIA confirmando la recepción y los datos del agendamiento.
+  - `sendAgendaWhatsAppNotifications`: Orquestador asíncrono no bloqueante con tolerancia total a fallos de red.
+- **Backend Autoritativo (`server/routers/agenda.ts`)**:
+  - Conectada `sendAgendaWhatsAppNotifications` en `processAndSaveSolicitud`, garantizando cobertura universal tanto para `Vecy Agenda Pro` como para la agenda web incorporada.
+- **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+  - Incorporada la Sección 16 con 4 tests unitarios blindando normalización, fechas y plantillas de WhatsApp.
+- **Verificación**: 93/93 tests Vitest pasando al 100%, TypeScript 0 errores y build de producción limpio.
+
+---
+
 ### 🔖 v31.94 — Septiembre 2026
 
 #### 📌 CONVERSIÓN UNIVERSAL Y REVELACIÓN DE NOMBRES EN ORDEN CIVIL NATURAL ("NOMBRES Y APELLIDOS") EN FORMULARIOS Y BASE DE DATOS

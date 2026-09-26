@@ -2137,13 +2137,17 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           }
         }
 
-        // Failsafe de DM: Impedir el envío de cualquier mensaje directo a usuarios que no sean administradores
+        // Failsafe de DM: Impedir el envío de cualquier mensaje directo a usuarios que no sean administradores ni broker oficial, salvo transaccionales autorizados
         if (targetJid.endsWith('@s.whatsapp.net')) {
           const rawPhone = targetJid.split('@')[0];
           const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
-          const isAdmin = rawPhone === "573192919978" || 
-                          rawPhone.includes(ADMIN_PHONE);
-          if (!isAdmin) {
+          const BROKER_OFFICIAL_PHONE = "573166569719";
+          const isAuthorizedStaff = rawPhone === "573192919978" || 
+                                    rawPhone === BROKER_OFFICIAL_PHONE ||
+                                    rawPhone.includes(ADMIN_PHONE);
+          const isTransactionalAllowed = options.allowDirectMessage === true || options.isTransactionalNotification === true;
+
+          if (!isAuthorizedStaff && !isTransactionalAllowed) {
             console.log(`[JANIA-ANTI-BAN-SHIELD] 🛡️ Bloqueado envío de mensaje directo (DM) a usuario no administrador (${targetJid}). Prohibición absoluta de DMs a terceros.`);
             return;
           }
@@ -2231,6 +2235,19 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       }
     });
     return outgoingQueue;
+  }
+
+  /**
+   * Envía un mensaje de texto directo a un número o JID específico,
+   * normalizando celulares colombianos y habilitando el flag allowDirectMessage.
+   */
+  public async sendDirectMessage(targetPhoneOrJid: string, text: string, options: any = {}) {
+    let clean = (targetPhoneOrJid || '').replace(/\D/g, '');
+    if (clean.length === 10 && clean.startsWith('3')) {
+      clean = '57' + clean;
+    }
+    const jid = targetPhoneOrJid.includes('@') ? targetPhoneOrJid : `${clean}@s.whatsapp.net`;
+    return this.queuedSend(jid, text, { allowDirectMessage: true, ...options });
   }
 
   public async sendToGroup(text: string, mediaPath?: string, mentions?: string[], groupId?: string) {

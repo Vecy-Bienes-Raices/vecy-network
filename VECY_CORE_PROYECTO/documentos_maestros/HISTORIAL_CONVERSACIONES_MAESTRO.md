@@ -7,6 +7,51 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.95 — 25 Septiembre 2026
+
+### Solicitud de Eduardo
+Notificaciones Automáticas de Agendamiento por WhatsApp (Formato CallMeBot al Bróker y Confirmación Inmediata de JanIA al Solicitante):
+*"¡Excelente! Ahora qué posibilidad hay de que JanIA me envíe una notificación o llámese mensaje al siguiente número de Whatsapp de Vecy Bienes Raíces [+57 3166569719], cada vez que alguien solicite un agendamiento bien sea a travéz de Vecy Agenda Pro o de acá mismo?? ponle un formato bien bonito más o menos así como el que usabamos con callMeBot. Te lo pego acá y te envío una imagen. ¡Uff! Ojalá también JanIA le pudier escribir o enviar un mensaje de confirmación del agendamiento de la visita y decirle algo ccómo: Estamos verificando tus datos en un momento te enviaremos la confirmación y la dirección del inmueble [Título, código:] a tu correo y por este medio(Whatsapp). Sería genialísimo, mira y te muestro cómo era con CallMeBot:
+SI te das cuenta antes CallMeBot generaba ese enlace largo ya listo con el mensaje, para que nosotros le dieramos clic y directamente le enviaramos ese mensaj ya programado al cliente, pero si tu lo logras hacer con JanIA ya no lo necesitaríamos y sería la misma JanIA quien le contestara en automático al ciente, que te parece, por eso poco a poco cuando ya tengamos lista la tienda de inmuebles será mucho mejor enviar directamente desde allí el enlace de Vecy Agenda de nuestra web ya con el nombre y código del inmueble, donde JanIA tendra incluído el acceso a ver la dirección exacta de ese inmueble y entregársela directamente al solicitante por correo y whatsapp. Uff sería increíble. ¿Puedes hacerlo sin ir a dañar nada y hacerlo en ambos ? Vecy Agenda Pro el formulario digital y lo que tenemos acá nuestra Vecy Agenda incorporada??"*
+
+### Diagnóstico Técnico Profundo y Causas Raíz Identificadas
+1. **Unificación Neurálgica en `processAndSaveSolicitud`**:
+   - Tanto las solicitudes enviadas desde la plataforma externa `Vecy Agenda Pro` (vía `POST /api/agenda/submit`) como las generadas en la agenda incorporada en `vecy.co / Vecy Bienes Raíces` (vía el router tRPC `agendaRouter.create`) convergen en una única función maestra autoritativa en el backend: `processAndSaveSolicitud(input)` en `server/routers/agenda.ts`.
+   - Incorporar la lógica de notificación en este punto neurálgico garantiza cobertura del 100% de manera unificada y sin duplicidad de código.
+2. **Escudo Anti-Ban en Baileys (`server/_core/whatsapp-match.ts`)**:
+   - En versiones previas se había instalado una regla dura en `queuedSend`: los mensajes directos (DMs a `@s.whatsapp.net`) se bloqueaban si el destinatario no era el teléfono de administración (`573192919978`).
+   - El número oficial de corretaje y atención bróker de Vecy Bienes Raíces es **`573166569719`** (atendido por Eduardo y Jani). Si no se incluía explícitamente en la lista blanca del staff, el escudo anti-ban bloqueaba el envío.
+   - Igualmente, para los clientes/solicitantes que solicitan explícitamente una confirmación al agendar, se requería una excepción controlada para mensajes transaccionales autorizados (`allowDirectMessage: true`), preservando la protección total contra spam para el resto de usuarios.
+3. **Formato Histórico CallMeBot y Enlace de Contacto Rápido**:
+   - Analizadas las capturas históricas aportadas por Eduardo: cabecera con campanitas `🔔 Solicitud No. X 🔔`, bloque de `👤 Solicitante`, bloque de `🏠 Solicitud` (con fecha en español, hora, código, negocio y asistentes), bloque de `👥 Cliente` y bloque `👇 Contactar Cliente 👇` con un enlace precargado `https://wa.me/{celular}?text=...`.
+   - El enlace wa.me permite que el bróker, con un solo toque desde su WhatsApp, pueda abrir el chat del cliente con un mensaje precargado en caso de requerir comunicación manual complementaria, mientras JanIA ya le habrá despachado de forma paralela y automática el mensaje de bienvenida y verificación.
+
+### Acciones Ejecutadas
+1. **Actualización de Infraestructura de Mensajería (`server/_core/whatsapp-match.ts`)**:
+   - Modificado el escudo de seguridad en `queuedSend`: agregada la línea oficial del bróker **`573166569719`** como staff autorizado incondicional junto con `573192919978`.
+   - Habilitado el flag `allowDirectMessage === true` para permitir envíos transaccionales directos solicitados por usuarios.
+   - Creado el método público `sendDirectMessage(targetPhoneOrJid: string, text: string, options: any = {})` en `JaniaMatchBot`, que normaliza celulares colombianos y despacha al socket de Baileys.
+2. **Servicio Especializado de Notificaciones (`server/_core/agendaWhatsAppService.ts`)**:
+   - Implementada `cleanColombianPhone(rawPhone)` para normalizar teléfonos a estándar internacional WhatsApp JID (`57XXXXXXXXXX@s.whatsapp.net`).
+   - Implementada `formatDateSpanish(rawDate)` que convierte fechas simples/ISO a formato legible en español con día de la semana (ej. *"sábado, 26 de septiembre de 2026"*).
+   - Implementada `buildBrokerCallMeBotMessage(data)` que construye fielmente la plantilla visual histórica de CallMeBot solicitada por Eduardo con todos los emojis, datos desglosados y el enlace wa.me prearmado.
+   - Implementada `buildClientConfirmationMessage(data)` con el mensaje institucional, empático y formal de JanIA confirmando la recepción de la solicitud, informando que sus datos están en verificación y que la dirección del inmueble y confirmación serán enviadas a su correo y WhatsApp, aportando el número de contacto directo del bróker (+57 316 6569719).
+   - Implementada `sendAgendaWhatsAppNotifications(payload)` con despacho asíncrono no bloqueante protegido contra fallos de red.
+3. **Conexión en Backend Autoritativo (`server/routers/agenda.ts`)**:
+   - Integrada la invocación asíncrona de `sendAgendaWhatsAppNotifications` en `processAndSaveSolicitud`, inmediatamente después del guardado en PostgreSQL 17 y del despacho de correos y contratos PDF.
+   - Opera simultáneamente para `Vecy Agenda Pro` y para la agenda incorporada en la web.
+4. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+   - Añadida la **Sección 16**: *"Notificaciones Automáticas de Agendamiento por WhatsApp (CallMeBot Style al Bróker y Confirmación JanIA al Solicitante) (v31.95)"*.
+   - 4 tests unitarios validando normalización de celulares, formateo de fechas, mensaje CallMeBot al bróker y mensaje de confirmación de JanIA al cliente.
+   - **93/93 tests Vitest pasando al 100%**.
+   - **`npm run check` (TypeScript) limpio con 0 errores**.
+   - **`npm run build` (Vite + esbuild) completado limpiamente**.
+5. **Incremento de Versión Oficial**:
+   - Actualizado `shared/const.ts` a `v31.95`.
+   - Actualizado `package.json` a `31.95.0`.
+
+---
+
 ## 📋 SESIÓN v31.94 — 25 Septiembre 2026
 
 ### Solicitud de Eduardo

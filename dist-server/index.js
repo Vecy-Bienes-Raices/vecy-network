@@ -16104,8 +16104,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             if (targetJid.endsWith("@s.whatsapp.net")) {
               const rawPhone = targetJid.split("@")[0];
               const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
-              const isAdmin = rawPhone === "573192919978" || rawPhone.includes(ADMIN_PHONE);
-              if (!isAdmin) {
+              const BROKER_OFFICIAL_PHONE = "573166569719";
+              const isAuthorizedStaff = rawPhone === "573192919978" || rawPhone === BROKER_OFFICIAL_PHONE || rawPhone.includes(ADMIN_PHONE);
+              const isTransactionalAllowed = options.allowDirectMessage === true || options.isTransactionalNotification === true;
+              if (!isAuthorizedStaff && !isTransactionalAllowed) {
                 console.log(`[JANIA-ANTI-BAN-SHIELD] \u{1F6E1}\uFE0F Bloqueado env\xEDo de mensaje directo (DM) a usuario no administrador (${targetJid}). Prohibici\xF3n absoluta de DMs a terceros.`);
                 return;
               }
@@ -16179,6 +16181,18 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
         });
         return outgoingQueue;
+      }
+      /**
+       * Envía un mensaje de texto directo a un número o JID específico,
+       * normalizando celulares colombianos y habilitando el flag allowDirectMessage.
+       */
+      async sendDirectMessage(targetPhoneOrJid, text2, options = {}) {
+        let clean = (targetPhoneOrJid || "").replace(/\D/g, "");
+        if (clean.length === 10 && clean.startsWith("3")) {
+          clean = "57" + clean;
+        }
+        const jid = targetPhoneOrJid.includes("@") ? targetPhoneOrJid : `${clean}@s.whatsapp.net`;
+        return this.queuedSend(jid, text2, { allowDirectMessage: true, ...options });
       }
       async sendToGroup(text2, mediaPath, mentions, groupId) {
         try {
@@ -17967,7 +17981,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.94";
+var VECY_VERSION = "v31.95";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -22253,6 +22267,163 @@ async function sendContractAndConfirmationEmails(rawPayload) {
   return { success: true };
 }
 
+// server/_core/agendaWhatsAppService.ts
+init_whatsapp_match();
+var VECY_BROKER_OFFICIAL_PHONE = "573166569719";
+function cleanColombianPhone(rawPhone) {
+  if (!rawPhone) return "";
+  const digits = String(rawPhone).replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length === 10 && digits.startsWith("3")) {
+    return "57" + digits;
+  }
+  if (digits.length === 12 && digits.startsWith("57")) {
+    return digits;
+  }
+  return digits;
+}
+function formatDateSpanish(rawDate) {
+  if (!rawDate) return "Fecha por coordinar";
+  const str = String(rawDate).trim();
+  const mesesKeywords = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  if (mesesKeywords.some((m) => str.toLowerCase().includes(m))) {
+    return str;
+  }
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const day = parseInt(match[3], 10);
+    const dateObj = new Date(year, month, day, 12, 0, 0);
+    const diasSemana = ["domingo", "lunes", "martes", "mi\xE9rcoles", "jueves", "viernes", "s\xE1bado"];
+    const nombresMeses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+    const diaNombre = diasSemana[dateObj.getDay()] || "d\xEDa";
+    const mesNombre = nombresMeses[month] || "mes";
+    return `${diaNombre}, ${day} de ${mesNombre} de ${year}`;
+  }
+  return str;
+}
+function buildBrokerCallMeBotMessage(data) {
+  const numSolicitud = data.solicitudId || data.solicitud_id || data.id || "Pendiente";
+  const perfil = data.solicitante_perfil || data.solicitantePerfil || "Cliente directo";
+  const nombre = data.solicitante_nombre || data.solicitanteNombre || "Solicitante";
+  const doc = data.solicitante_numero_documento || data.solicitanteNumeroDocumento || "Sin registrar";
+  const email = data.solicitante_email || data.solicitanteEmail || "Sin email";
+  const rawCelular = data.solicitante_celular || data.solicitanteCelular || "";
+  const cleanCel = cleanColombianPhone(rawCelular);
+  const celularDisplay = cleanCel || rawCelular || "Sin celular";
+  const servicio = data.servicio_solicitado || data.servicioSolicitado || "Visitar inmueble";
+  const codigo = data.codigo_inmueble || data.codigoInmueble || "S/C";
+  const negocio = data.opcion_negocio || data.opcionNegocio || "Venta";
+  const fechaTexto = formatDateSpanish(data.fecha_cita_texto || data.fechaCitaTexto);
+  const hora = data.hora_cita || data.horaCita || "Por coordinar";
+  let personas = Number(data.cantidad_personas ?? data.cantidadPersonas ?? 0);
+  if (!personas || isNaN(personas)) {
+    personas = 1;
+    if (data.acompanantes && Array.isArray(data.acompanantes)) {
+      personas += data.acompanantes.length;
+    }
+  }
+  const clienteNombre = data.interesado_nombre || data.interesadoNombre || nombre;
+  const clienteDoc = data.interesado_documento || data.interesadoDocumento || doc;
+  const waPreloadedText = `*Confirmaci\xF3n Solicitud ${numSolicitud}* \u{1F5D3}\uFE0F ${servicio} *${codigo}* \u{1F4C5} Fecha: ${fechaTexto} \u{1F550} Hora: ${hora} \u{1F464} Cliente: ${clienteNombre}`;
+  const waContactUrl = cleanCel ? `https://wa.me/${cleanCel}?text=${encodeURIComponent(waPreloadedText)}` : `(Sin n\xFAmero registrado)`;
+  return `\u{1F514} Solicitud No. ${numSolicitud} \u{1F514}
+
+\u{1F464} Solicitante
+${perfil}
+${nombre}
+\u{1FAAA} ${doc}
+Contrato: ${numSolicitud}
+\u2709\uFE0F ${email}
+\u{1F4DE} ${celularDisplay}
+
+\u{1F3E0} Solicitud
+${servicio}
+Cod: ${codigo}
+Negocio: ${negocio}
+\u{1F4C5} ${fechaTexto}
+\u{1F550} ${hora}
+Asistir\xE1n: ${personas} personas
+
+\u{1F465} Cliente
+${clienteNombre}
+\u{1FAAA} ${clienteDoc}
+
+\u{1F447} Contactar Cliente \u{1F447}
+${waContactUrl}`;
+}
+function buildClientConfirmationMessage(data) {
+  const numSolicitud = data.solicitudId || data.solicitud_id || data.id || "";
+  const nombre = data.solicitante_nombre || data.solicitanteNombre || "Cliente";
+  const nombreInmueble = data.nombre_inmueble || data.nombreInmueble || "Inmueble seleccionado";
+  const codigo = data.codigo_inmueble || data.codigoInmueble || "S/C";
+  const negocio = data.opcion_negocio || data.opcionNegocio || "Inmobiliario";
+  const fechaTexto = formatDateSpanish(data.fecha_cita_texto || data.fechaCitaTexto);
+  const hora = data.hora_cita || data.horaCita || "Por coordinar";
+  const email = data.solicitante_email || data.solicitanteEmail || "tu correo registrado";
+  let personas = Number(data.cantidad_personas ?? data.cantidadPersonas ?? 0);
+  if (!personas || isNaN(personas)) {
+    personas = 1;
+    if (data.acompanantes && Array.isArray(data.acompanantes)) {
+      personas += data.acompanantes.length;
+    }
+  }
+  const clienteNombre = data.interesado_nombre || data.interesadoNombre || "";
+  const lineaCliente = clienteNombre && clienteNombre !== nombre ? `
+\u{1F464} *Cliente presentado:* ${clienteNombre}` : "";
+  return `\xA1Hola, ${nombre}! \u{1F44B} Te saluda *JanIA* de *Vecy Bienes Ra\xEDces*. \u{1F3E2}\u2728
+
+Hemos recibido tu solicitud de agendamiento *No. ${numSolicitud}*:
+
+\u{1F3E0} *Inmueble:* ${nombreInmueble}
+\u{1F4CC} *C\xF3digo:* ${codigo}
+\u{1F4BC} *Operaci\xF3n:* ${negocio}
+\u{1F4C5} *Fecha:* ${fechaTexto}
+\u23F0 *Hora:* ${hora}
+\u{1F465} *Asistentes:* ${personas} persona(s)${lineaCliente}
+
+\u{1F50D} *Estamos verificando tus datos.* En un momento te enviaremos la confirmaci\xF3n oficial y la direcci\xF3n exacta del inmueble a tu correo (*${email}*) y por este medio (WhatsApp). \u{1F4E9}\u{1F4F2}
+
+Si requieres comunicarte directamente con nuestro br\xF3ker oficial para peritajes, cotizaciones o coordinaciones, puedes escribirnos o llamarnos al *+57 316 6569719*.
+
+\xA1Gracias por confiar en *Vecy Bienes Ra\xEDces*! \u{1F91D}\u{1F3E1}`;
+}
+async function sendAgendaWhatsAppNotifications(payload) {
+  let brokerSent = false;
+  let clientSent = false;
+  const numSolicitud = payload.solicitudId || payload.solicitud_id || payload.id || "N/A";
+  try {
+    const brokerMsg = buildBrokerCallMeBotMessage(payload);
+    console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u{1F4E4} Enviando notificaci\xF3n CallMeBot al Br\xF3ker (+57 316 6569719)...`);
+    try {
+      await janiaMatchBot.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE, brokerMsg);
+      brokerSent = true;
+      console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u2705 Notificaci\xF3n entregada al socket para Br\xF3ker (+57 316 6569719).`);
+    } catch (brokerErr) {
+      console.error(`[AGENDA-WHATSAPP-#${numSolicitud}] \u26A0\uFE0F Error notificando al Br\xF3ker:`, brokerErr?.message || brokerErr);
+    }
+    const rawCel = payload.solicitante_celular || payload.solicitanteCelular || "";
+    const cleanClientCel = cleanColombianPhone(rawCel);
+    if (cleanClientCel && cleanClientCel.length >= 10) {
+      const clientMsg = buildClientConfirmationMessage(payload);
+      console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u{1F4E4} Enviando mensaje de confirmaci\xF3n de JanIA al Solicitante (${cleanClientCel})...`);
+      try {
+        await janiaMatchBot.sendDirectMessage(cleanClientCel, clientMsg);
+        clientSent = true;
+        console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u2705 Confirmaci\xF3n de JanIA entregada al socket para Solicitante (${cleanClientCel}).`);
+      } catch (clientErr) {
+        console.error(`[AGENDA-WHATSAPP-#${numSolicitud}] \u26A0\uFE0F Error enviando confirmaci\xF3n al solicitante (${cleanClientCel}):`, clientErr?.message || clientErr);
+      }
+    } else {
+      console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u2139\uFE0F Solicitante no proporcion\xF3 un celular v\xE1lido para WhatsApp.`);
+    }
+  } catch (err) {
+    console.error(`[AGENDA-WHATSAPP-#${numSolicitud}] \u274C Error general en servicio de WhatsApp para agenda:`, err?.message || err);
+  }
+  return { brokerSent, clientSent };
+}
+
 // server/routers/agenda.ts
 var httpsAgentInsecure = new https.Agent({ rejectUnauthorized: false });
 var identityCache = /* @__PURE__ */ new Map();
@@ -23136,6 +23307,14 @@ async function processAndSaveSolicitud(input) {
     id: newRow?.id
   }).catch((emailErr) => {
     console.error(`[AGENDA-CREATE] Error en despacho de correos para solicitud #${nextSolicitudId}:`, emailErr?.message);
+  });
+  sendAgendaWhatsAppNotifications({
+    ...input,
+    solicitud_id: nextSolicitudId,
+    solicitudId: nextSolicitudId,
+    id: newRow?.id
+  }).catch((waErr) => {
+    console.error(`[AGENDA-CREATE] Error en despacho de WhatsApp para solicitud #${nextSolicitudId}:`, waErr?.message);
   });
   return {
     success: true,

@@ -167,7 +167,28 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.94 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.95 — Septiembre 2026
+
+### Novedades v31.95 (Notificaciones Automáticas de Agendamiento por WhatsApp: Formato CallMeBot al Bróker y Confirmación Inmediata de JanIA al Solicitante):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - En cada solicitud de visita o agendamiento (generada desde `Vecy Agenda Pro` o desde la web incorporada en `vecy.co / Vecy Bienes Raíces`), JanIA debe notificar de inmediato al número oficial de WhatsApp de corretaje de Vecy Bienes Raíces (**`+57 316 6569719`**) con la plantilla histórica de **CallMeBot**.
+  - Dicha plantilla incluye: `🔔 Solicitud No. X 🔔`, bloques desglosados de `👤 Solicitante`, `🏠 Solicitud` y `👥 Cliente`, y el enlace `👇 Contactar Cliente 👇` (`https://wa.me/{celular}?text=...`) precargado con el mensaje de confirmación para que el bróker pueda responder con un solo clic.
+  - Además, JanIA debe enviar automáticamente un mensaje directo de confirmación y bienvenida al solicitante (`solicitante_celular`) informándole: *"Estamos verificando tus datos. En un momento te enviaremos la confirmación y la dirección del inmueble [Título, código] a tu correo y por este medio (WhatsApp)..."*, facilitando el canal de contacto bróker (`+57 316 6569719`).
+- **Acciones Ejecutadas en Código**:
+  1. **Infraestructura de Mensajería Baileys (`server/_core/whatsapp-match.ts`)**:
+     - Autorizado incondicionalmente el número oficial de atención bróker **`573166569719`** en el whitelist de staff de `queuedSend`.
+     - Habilitada la excepción para mensajes transaccionales autorizados (`allowDirectMessage: true`), preservando la protección anti-ban para el resto de usuarios.
+     - Añadido el método público `sendDirectMessage(targetPhoneOrJid: string, text: string, options: any = {})` en `JaniaMatchBot`, con auto-normalización de celulares colombianos.
+  2. **Servicio Especializado de Notificaciones (`server/_core/agendaWhatsAppService.ts`)**:
+     - Creadas funciones `cleanColombianPhone`, `formatDateSpanish`, `buildBrokerCallMeBotMessage` y `buildClientConfirmationMessage`.
+     - Creada `sendAgendaWhatsAppNotifications(payload)` con despacho asíncrono no bloqueante y manejo robusto de errores de red.
+  3. **Backend Autoritativo (`server/routers/agenda.ts`)**:
+     - Integrada `sendAgendaWhatsAppNotifications` en `processAndSaveSolicitud`. Cobertura simultánea para `Vecy Agenda Pro` (REST `/api/agenda/submit`) y la agenda web incorporada (`agendaRouter.create`).
+  4. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+     - Añadida la **Sección 16** con 4 pruebas unitarias blindando la normalización telefónica, fechas, plantilla CallMeBot y confirmación de JanIA.
+- **Verificación**: 93/93 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 17.67s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.94 — Septiembre 2026
 
 ### Novedades v31.94 (Conversión Universal y Revelación de Nombres en Orden Civil Natural "Nombres y Apellidos" en Formularios y Base de Datos):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:
