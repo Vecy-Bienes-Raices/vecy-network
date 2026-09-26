@@ -322,6 +322,33 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.97 — Septiembre 2026
+
+#### 📌 CORRECCIÓN QUIRÚRGICA DE FILTRO E2E DE SENDER KEYS Y ORQUESTACIÓN DE ENCUESTAS MATUTINAS (08:00 AM)
+
+**Problemas identificados:**
+1. **Detención Generalizada de Reacciones en Grupos Inmobiliarios a partir de las 11:34 AM**: En grupos clave como "Oferta inmuebles Bogotá y Sabana Norte", "Amoblados" y "Mazuren-Colina-Alejandría", JanIA dejó de reaccionar y captar publicaciones de inmuebles y requerimientos a partir de las 11:34 AM.
+2. **Causa Raíz en Filtro Criptográfico de Baileys (`server/_core/whatsapp-match.ts`)**: En el commit v31.96, al intentar filtrar paquetes de protocolo para resolver el mensaje involuntario a Martha Stella, se añadió la condición `if (rawMsg?.protocolMessage || rawMsg?.senderKeyDistributionMessage || ...) continue;`. En la arquitectura oficial de WhatsApp y Baileys (`proto.Message`), cuando un participante de un grupo re-sincroniza o renueva sus claves de cifrado E2E, WhatsApp **adjunta `senderKeyDistributionMessage` DENTRO DEL MISMO OBJETO DE MENSAJE** junto con el texto (`conversation`, `extendedTextMessage`) o la imagen (`imageMessage`). Dicha comprobación prematura descartaba al 100% las publicaciones legítimas de los asesores antes de que se pudieran extraer el texto o las imágenes.
+3. **Omisión de Encuesta Matutina de las 8:00 AM**: La orden de Eduardo de programar una encuesta interactiva a las 8:00 AM en el Grupo 2 y el Canal no se había codificado en `cronService.ts` ni en Baileys.
+4. **Desfase de Ratchet de Sincronización en VPS**: En `.baileys_auth/session-167108705018103.0.json`, el ratchet de sincronización entre el teléfono principal de Eduardo y la sesión secundaria de Baileys acumulaba más de 2000 pasos de desfase (`Over 2000 messages into the future!`), arrojando 4.428 errores de descifrado en el log.
+
+**Solución aplicada:**
+- **Corrección Quirúrgica de Filtro de Protocolo en Baileys (`server/_core/whatsapp-match.ts`)**:
+  - Removido `rawMsg?.senderKeyDistributionMessage` del filtro temprano. Los paquetes vacíos de protocolo sin texto ni multimedia se descartan limpiamente con la salvaguarda `if (!body.trim() && !hasRawMedia) continue;`.
+- **Encuestas Nativas en Baileys (`server/_core/whatsapp-match.ts`)**:
+  - Creado `sendPollToGroup(name, options, groupId, selectableCount)` utilizando el formato oficial `poll: { name, values: options, selectableCount }`.
+- **Catálogo Curricular y Cron de 08:00 AM (`server/_core/cronService.ts`)**:
+  - Creado `DAILY_POLLS_MAP` con encuestas temáticas especializadas para cada día de la semana y funciones `publishDailyPoll` / `publishDailyPollNow`.
+  - Programado el cron a las 08:00 AM hora Bogotá (`0 8 * * *`) enviando encuesta nativa interactiva al Grupo 2 y formato interactivo numerado al Canal Oficial de WhatsApp.
+  - Bloqueo en PostgreSQL mediante `acquireBroadcastLock('grupo2_poll', 'encuesta_matutina', dateBogota)` para garantizar cero duplicados.
+- **Limpieza de Ratchet Desfasado en Servidor VPS**:
+  - Respaldado y purgado el archivo desfasado `session-167108705018103.0.json`.
+- **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+  - Añadida la Sección 18 validando el catálogo semanal de 7 días y la preservación obligatoria de mensajes con `senderKeyDistributionMessage`.
+- **Verificación**: 96/96 tests Vitest pasando al 100%, `tsc --noEmit` 0 errores y build de producción limpio en 11.76s.
+
+---
+
 ### 🔖 v31.96 — Septiembre 2026
 
 #### 📌 BLINDAJE TOTAL CONTRA MENSAJES DE PROTOCOLO, NOTIFICACIONES DE CIFRADO Y REACCIONES HUÉRFANAS EN GRUPOS CONVERSACIONALES

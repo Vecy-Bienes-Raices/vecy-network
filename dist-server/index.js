@@ -14870,7 +14870,7 @@ var init_whatsapp_match = __esm({
                   continue;
                 }
                 const rawMsg = unwrapMessage(msg.message);
-                if (rawMsg?.protocolMessage || rawMsg?.senderKeyDistributionMessage || rawMsg?.e2eNotificationMessage || rawMsg?.keyTransparency) {
+                if (rawMsg?.protocolMessage && !rawMsg.protocolMessage.editedMessage || rawMsg?.e2eNotificationMessage || rawMsg?.keyTransparency) {
                   continue;
                 }
                 if (rawMsg?.stickerMessage) {
@@ -16219,6 +16219,32 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
         const jid = targetPhoneOrJid.includes("@") ? targetPhoneOrJid : `${clean}@s.whatsapp.net`;
         return this.queuedSend(jid, text2, { allowDirectMessage: true, ...options });
       }
+      /**
+       * Envía una encuesta nativa e interactiva de WhatsApp a un grupo específico.
+       * Utiliza la funcionalidad nativa de Baileys pollCreationMessage.
+       */
+      async sendPollToGroup(name, options, groupId, selectableCount = 1) {
+        try {
+          if (!this.sock || !this.isReady) {
+            console.warn(`[JANIA-MATCH] Bot no listo para enviar encuesta a ${groupId}`);
+            return false;
+          }
+          const targetJid = groupId || this.buzonGroupId;
+          console.log(`[JANIA-MATCH] \u{1F4CA} Despachando encuesta nativa a ${targetJid}: "${name}" (${options.length} opciones)...`);
+          await this.sock.sendMessage(targetJid, {
+            poll: {
+              name,
+              values: options,
+              selectableCount
+            }
+          });
+          console.log(`[JANIA-MATCH] \u2705 Encuesta enviada exitosamente a ${targetJid}`);
+          return true;
+        } catch (err) {
+          console.error(`[JANIA-MATCH] \u274C Error enviando encuesta a ${groupId}:`, err?.message || err);
+          return false;
+        }
+      }
       async sendToGroup(text2, mediaPath, mentions, groupId) {
         try {
           const target = groupId || this.targetGroupId;
@@ -16868,6 +16894,7 @@ var init_nightlyRematch = __esm({
 var cronService_exports = {};
 __export(cronService_exports, {
   ALL_JANIA_IMAGES: () => ALL_JANIA_IMAGES,
+  DAILY_POLLS_MAP: () => DAILY_POLLS_MAP,
   DAILY_TIPS_CONFIG: () => DAILY_TIPS_CONFIG,
   ROTATING_FALLBACK_CATALOG: () => ROTATING_FALLBACK_CATALOG,
   THEME_IMAGE_PREFERENCES: () => THEME_IMAGE_PREFERENCES,
@@ -16886,6 +16913,8 @@ __export(cronService_exports, {
   getThemedImagePath: () => getThemedImagePath,
   getThemedImagePathAsync: () => getThemedImagePathAsync,
   initCronScheduler: () => initCronScheduler,
+  publishDailyPoll: () => publishDailyPoll,
+  publishDailyPollNow: () => publishDailyPollNow,
   publishDailyTipForDay: () => publishDailyTipForDay,
   publishGrupo3TipNow: () => publishGrupo3TipNow,
   publishNoticiaNacionalNow: () => publishNoticiaNacionalNow,
@@ -17263,8 +17292,55 @@ ${additionalInstructions || ""}` }
     chosenTheme: dynamicFallback.themeKey
   };
 }
+async function publishDailyPoll(targetDateBogota, force = false) {
+  const dateBogota = targetDateBogota || getBogotaDateString();
+  const d = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
+  const dayOfWeek = d.getDay();
+  const poll = DAILY_POLLS_MAP[dayOfWeek] || DAILY_POLLS_MAP[6];
+  console.log(`[CRON-POLL] Evaluando despacho de encuesta matutina para ${dateBogota} (D\xEDa ${dayOfWeek})...`);
+  const lock = await acquireBroadcastLock("grupo2_poll", "encuesta_matutina", dateBogota, force);
+  if (!lock.allowed) {
+    console.log(`[CRON-POLL] \u23ED\uFE0F Omitiendo encuesta matutina: ${lock.reason}`);
+    return { success: false, reason: lock.reason };
+  }
+  try {
+    const targetGroup = janiaMatchBot.buzonGroupId || "120363417740040773@g.us";
+    const pollSent = await janiaMatchBot.sendPollToGroup(poll.question, poll.options, targetGroup, 1);
+    if (janiaMatchBot.channelNewsletterId) {
+      const channelText = `\u{1F4CA} *ENCUESTA DE LA COMUNIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F4CA}
+
+${poll.question}
+
+` + poll.options.map((opt, i) => `${i + 1}\uFE0F\u20E3 ${opt}`).join("\n") + `
+
+\u{1F4AC} *\xA1Vota en vivo en nuestro Grupo Oficial de Soporte Legal o d\xE9janos tu reacci\xF3n!* \u{1F91D}\u2728`;
+      await janiaMatchBot.sendDirectMessage(janiaMatchBot.channelNewsletterId, channelText, { allowDirectMessage: true }).catch(() => {
+      });
+    }
+    await completeBroadcast(lock.broadcastId, {
+      topicTitle: poll.question,
+      themeKey: "encuesta",
+      voiceText: poll.question,
+      captionText: poll.options.join(" | ")
+    });
+    console.log(`[CRON-POLL] \u2705 Encuesta matutina despachada exitosamente a Grupo 2 y Canal.`);
+    return { success: true, pollSent, question: poll.question };
+  } catch (err) {
+    await failBroadcast(lock.broadcastId, err?.message);
+    console.error(`[CRON-POLL] \u274C Error despachando encuesta matutina:`, err?.message || err);
+    return { success: false, error: err?.message };
+  }
+}
+async function publishDailyPollNow(force = false) {
+  const dateBogota = getBogotaDateString();
+  return publishDailyPoll(dateBogota, force);
+}
 function initCronScheduler() {
   console.log("[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v31.71 (PostgreSQL Lock, Anti-Duplicados, Memoria 30 D\xEDas e Identidad JanIA)...");
+  cron.schedule("0 8 * * *", async () => {
+    console.log("[CRON-SERVICE] Disparando cron matutino de Encuesta Interactiva (08:00 AM)...");
+    await publishDailyPoll(void 0, false);
+  }, { timezone: "America/Bogota" });
   cron.schedule("0 10 * * 1", async () => {
     await publishDailyTipForDay("lunes_arranque", false);
   }, { timezone: "America/Bogota" });
@@ -17563,7 +17639,7 @@ async function getLiveMarketStats() {
     };
   }
 }
-var __filename, __dirname, ALL_JANIA_IMAGES, THEME_IMAGE_PREFERENCES, ROTATING_FALLBACK_CATALOG, DAILY_TIPS_CONFIG;
+var __filename, __dirname, ALL_JANIA_IMAGES, THEME_IMAGE_PREFERENCES, ROTATING_FALLBACK_CATALOG, DAILY_TIPS_CONFIG, DAILY_POLLS_MAP;
 var init_cronService = __esm({
   "server/_core/cronService.ts"() {
     "use strict";
@@ -17990,6 +18066,78 @@ En VECY cuentas con un respaldo permanente para impulsar tus operaciones en toda
         caption: ROTATING_FALLBACK_CATALOG.domingo_soporte[0].captionText
       }
     };
+    DAILY_POLLS_MAP = {
+      1: {
+        // Lunes
+        question: "\u{1F4CA} \xBFCu\xE1l es tu principal meta o prioridad inmobiliaria para esta semana?",
+        options: [
+          "Captar inmuebles en exclusiva",
+          "Cerrar clientes demandantes activos",
+          "Alianzas de puntas compartidas",
+          "Tr\xE1mites notariales y de escrituraci\xF3n"
+        ]
+      },
+      2: {
+        // Martes
+        question: "\u2696\uFE0F \xBFCu\xE1l es el desaf\xEDo legal que m\xE1s te consultan tus clientes en Colombia?",
+        options: [
+          "Estudio de t\xEDtulos y grav\xE1menes",
+          "R\xE9gimen de Propiedad Horizontal",
+          "Cl\xE1usulas de promesa de compraventa",
+          "Sucesiones y cancelaciones de patrimonio"
+        ]
+      },
+      3: {
+        // Miércoles
+        question: "\u{1F680} \xBFQu\xE9 estrategia de marketing inmobiliario te genera mayor tasa de conversi\xF3n?",
+        options: [
+          "Red Colaborativa (Vecy Bienes Ra\xEDces)",
+          "Portales pagos tradicionales",
+          "Redes sociales (Instagram / TikTok)",
+          "Referidos y c\xEDrculo c\xE1lido"
+        ]
+      },
+      4: {
+        // Jueves
+        question: "\u{1F4BC} En materia tributaria, \xBFqu\xE9 concepto genera m\xE1s dudas a tus compradores/vendedores?",
+        options: [
+          "Retenci\xF3n en la fuente en ventas",
+          "Ganancia ocasional e inmuebles heredados",
+          "Impuesto predial y plusval\xEDa",
+          "Facturaci\xF3n electr\xF3nica y corretaje"
+        ]
+      },
+      5: {
+        // Viernes
+        question: "\u{1F4D0} \xBFQu\xE9 m\xE9todo consideras m\xE1s confiable para sustentar el precio justo a un propietario?",
+        options: [
+          "Aval\xFAo comercial corporativo (RND)",
+          "M\xE9todo comparativo de mercado",
+          "An\xE1lisis de rentabilidad / renta",
+          "Estudio de mercado en Vecy Network"
+        ]
+      },
+      6: {
+        // Sábado
+        question: "\u2615 Caf\xE9 Inmobiliario: \xBFC\xF3mo integras herramientas de Inteligencia Artificial en tu corretaje?",
+        options: [
+          "Asistentes como JanIA (matching y consultas)",
+          "Redacci\xF3n de fichas descriptivas",
+          "Generaci\xF3n de im\xE1genes y flyers",
+          "A\xFAn realizo todo el proceso tradicional"
+        ]
+      },
+      0: {
+        // Domingo
+        question: "\u2728 Proyecci\xF3n semanal: \xBFEn qu\xE9 tipo de inmueble proyectas mayor dinamismo comercial?",
+        options: [
+          "Apartamentos residenciales",
+          "Casas en conjuntos campestres",
+          "Locales comerciales y bodegas",
+          "Oficinas y consultorios"
+        ]
+      }
+    };
   }
 });
 
@@ -18006,7 +18154,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.96";
+var VECY_VERSION = "v31.97";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

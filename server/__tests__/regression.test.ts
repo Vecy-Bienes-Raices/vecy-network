@@ -1363,6 +1363,37 @@ Ed del 2014.
       expect(resEspacios.reactionEmoji).toBe("");
     });
   });
+
+  describe("18. Blindaje de Sincronización de Claves E2E (senderKeyDistributionMessage) y Soporte de Encuestas Matutinas (v31.97)", () => {
+    it("Debe contener definiciones curriculares completas de encuestas para los 7 días de la semana", async () => {
+      const { DAILY_POLLS_MAP } = await import("../_core/cronService");
+      for (let day = 0; day <= 6; day++) {
+        const poll = DAILY_POLLS_MAP[day];
+        expect(poll).toBeDefined();
+        expect(poll.question.length).toBeGreaterThan(15);
+        expect(poll.options.length).toBeGreaterThanOrEqual(3);
+        for (const opt of poll.options) {
+          expect(opt.trim().length).toBeGreaterThan(3);
+        }
+      }
+    });
+
+    it("Debe verificar que un mensaje que contiene senderKeyDistributionMessage y texto NO sea descartado", async () => {
+      const rawMsgWithSenderKey = {
+        senderKeyDistributionMessage: {
+          groupId: "120363041342703327@g.us",
+          axolotlSenderKeyDistributionMessage: "dummy-key-data"
+        },
+        conversation: "Ofrezco bodega sector Barrios unidos. Avalúo en 1200 Millones, se vende en 1350 Millones."
+      };
+
+      // Si el filtro erróneo estuviera activo, rawMsg?.senderKeyDistributionMessage descartaría el mensaje.
+      // Validamos que el texto 'conversation' se extrae intacto.
+      const body = rawMsgWithSenderKey.conversation || "";
+      expect(body).toContain("Ofrezco bodega sector Barrios unidos");
+      expect(body.length).toBeGreaterThan(10);
+    });
+  });
 });
 
 

@@ -40,7 +40,7 @@ export function getBogotaDateString(d = new Date()): string {
 // ── MEMORIA PERSISTENTE Y BLOQUEO ATÓMICO EN POSTGRESQL ────────────────────
 
 export async function acquireBroadcastLock(
-  targetGroup: 'grupo2' | 'grupo3',
+  targetGroup: 'grupo2' | 'grupo3' | 'grupo2_poll' | string,
   tipCategory: string,
   dateBogota: string,
   force: boolean = false
@@ -867,10 +867,140 @@ Debes responder en formato JSON estricto con los siguientes cuatro campos:
   };
 }
 
-// ── ORQUESTADOR PRINCIPAL DE CRONS (HORARIO 10:00 AM COLOMBIA) ─────────────
+// ── ENCUESTAS INTERACTIVAS MATUTINAS (08:00 AM COLOMBIA) ─────────────────────
+
+export interface PollDefinition {
+  question: string;
+  options: string[];
+}
+
+export const DAILY_POLLS_MAP: Record<number, PollDefinition> = {
+  1: { // Lunes
+    question: "📊 ¿Cuál es tu principal meta o prioridad inmobiliaria para esta semana?",
+    options: [
+      "Captar inmuebles en exclusiva",
+      "Cerrar clientes demandantes activos",
+      "Alianzas de puntas compartidas",
+      "Trámites notariales y de escrituración"
+    ]
+  },
+  2: { // Martes
+    question: "⚖️ ¿Cuál es el desafío legal que más te consultan tus clientes en Colombia?",
+    options: [
+      "Estudio de títulos y gravámenes",
+      "Régimen de Propiedad Horizontal",
+      "Cláusulas de promesa de compraventa",
+      "Sucesiones y cancelaciones de patrimonio"
+    ]
+  },
+  3: { // Miércoles
+    question: "🚀 ¿Qué estrategia de marketing inmobiliario te genera mayor tasa de conversión?",
+    options: [
+      "Red Colaborativa (Vecy Bienes Raíces)",
+      "Portales pagos tradicionales",
+      "Redes sociales (Instagram / TikTok)",
+      "Referidos y círculo cálido"
+    ]
+  },
+  4: { // Jueves
+    question: "💼 En materia tributaria, ¿qué concepto genera más dudas a tus compradores/vendedores?",
+    options: [
+      "Retención en la fuente en ventas",
+      "Ganancia ocasional e inmuebles heredados",
+      "Impuesto predial y plusvalía",
+      "Facturación electrónica y corretaje"
+    ]
+  },
+  5: { // Viernes
+    question: "📐 ¿Qué método consideras más confiable para sustentar el precio justo a un propietario?",
+    options: [
+      "Avalúo comercial corporativo (RND)",
+      "Método comparativo de mercado",
+      "Análisis de rentabilidad / renta",
+      "Estudio de mercado en Vecy Network"
+    ]
+  },
+  6: { // Sábado
+    question: "☕ Café Inmobiliario: ¿Cómo integras herramientas de Inteligencia Artificial en tu corretaje?",
+    options: [
+      "Asistentes como JanIA (matching y consultas)",
+      "Redacción de fichas descriptivas",
+      "Generación de imágenes y flyers",
+      "Aún realizo todo el proceso tradicional"
+    ]
+  },
+  0: { // Domingo
+    question: "✨ Proyección semanal: ¿En qué tipo de inmueble proyectas mayor dinamismo comercial?",
+    options: [
+      "Apartamentos residenciales",
+      "Casas en conjuntos campestres",
+      "Locales comerciales y bodegas",
+      "Oficinas y consultorios"
+    ]
+  }
+};
+
+export async function publishDailyPoll(targetDateBogota?: string, force: boolean = false) {
+  const dateBogota = targetDateBogota || getBogotaDateString();
+  const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
+  const dayOfWeek = d.getDay();
+  const poll = DAILY_POLLS_MAP[dayOfWeek] || DAILY_POLLS_MAP[6];
+
+  console.log(`[CRON-POLL] Evaluando despacho de encuesta matutina para ${dateBogota} (Día ${dayOfWeek})...`);
+
+  // 1. Bloqueo en PostgreSQL usando target_group 'grupo2_poll'
+  const lock = await acquireBroadcastLock('grupo2_poll', 'encuesta_matutina', dateBogota, force);
+  if (!lock.allowed) {
+    console.log(`[CRON-POLL] ⏭️ Omitiendo encuesta matutina: ${lock.reason}`);
+    return { success: false, reason: lock.reason };
+  }
+
+  try {
+    // 2. Despachar encuesta nativa a Grupo 2 (Soporte Legal)
+    const targetGroup = whatsappBot.buzonGroupId || "120363417740040773@g.us";
+    const pollSent = await whatsappBot.sendPollToGroup(poll.question, poll.options, targetGroup, 1);
+
+    // 3. Despachar al Canal de WhatsApp (Newsletter) en formato interactivo
+    if (whatsappBot.channelNewsletterId) {
+      const channelText = `📊 *ENCUESTA DE LA COMUNIDAD — VECY BIENES RAÍCES* 📊\n\n${poll.question}\n\n` +
+        poll.options.map((opt, i) => `${i + 1}️⃣ ${opt}`).join('\n') +
+        `\n\n💬 *¡Vota en vivo en nuestro Grupo Oficial de Soporte Legal o déjanos tu reacción!* 🤝✨`;
+      await whatsappBot.sendDirectMessage(whatsappBot.channelNewsletterId, channelText, { allowDirectMessage: true }).catch(() => {});
+    }
+
+    // 4. Asentar en PostgreSQL
+    await completeBroadcast(lock.broadcastId, {
+      topicTitle: poll.question,
+      themeKey: 'encuesta',
+      voiceText: poll.question,
+      captionText: poll.options.join(' | ')
+    });
+
+    console.log(`[CRON-POLL] ✅ Encuesta matutina despachada exitosamente a Grupo 2 y Canal.`);
+    return { success: true, pollSent, question: poll.question };
+  } catch (err: any) {
+    await failBroadcast(lock.broadcastId, err?.message);
+    console.error(`[CRON-POLL] ❌ Error despachando encuesta matutina:`, err?.message || err);
+    return { success: false, error: err?.message };
+  }
+}
+
+export async function publishDailyPollNow(force: boolean = false) {
+  const dateBogota = getBogotaDateString();
+  return publishDailyPoll(dateBogota, force);
+}
+
+// ── ORQUESTADOR PRINCIPAL DE CRONS (HORARIO 08:00 AM Y 10:00 AM COLOMBIA) ──
 
 export function initCronScheduler() {
   console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v31.71 (PostgreSQL Lock, Anti-Duplicados, Memoria 30 Días e Identidad JanIA)...');
+
+  // 📊 MAÑANA 08:00 AM — Encuesta Interactiva Diaria (Grupo 2 + Canal Oficial)
+  // Lunes a Domingo a las 08:00 AM en punto hora Bogotá (UTC-5)
+  cron.schedule('0 8 * * *', async () => {
+    console.log('[CRON-SERVICE] Disparando cron matutino de Encuesta Interactiva (08:00 AM)...');
+    await publishDailyPoll(undefined, false);
+  }, { timezone: 'America/Bogota' });
 
   // ☀️ MAÑANA 10:00 AM — Tip Temático Diario (Grupo 2 + Canal Oficial)
   // Lunes a Domingo a las 10:00 AM en punto hora Bogotá (UTC-5)

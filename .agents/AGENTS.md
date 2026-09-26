@@ -167,7 +167,31 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.96 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.97 — Septiembre 2026
+
+### Novedades v31.97 (Corrección de Filtro E2E de Sender Keys y Orquestación de Encuestas Matutinas a las 08:00 AM):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo reportó que a partir de las 11:34 AM JanIA dejó de emitir reacciones en los grupos inmobiliarios (Mazuren-Colina, Ofertas Bogotá, Amoblados, etc.) y que la encuesta de las 8:00 AM solicitada anoche no llegó al Grupo 2 ni al Canal.
+  - **Causas Raíz Identificadas**:
+    1. En la v31.96, al agregar el filtro criptográfico `rawMsg?.senderKeyDistributionMessage`, se descartaban erróneamente todas las publicaciones grupales donde WhatsApp adjunta la distribución de claves E2E en el mismo paquete junto con el texto/imagen.
+    2. La encuesta de las 8:00 AM no se había codificado en `cronService.ts` ni en Baileys.
+    3. En el VPS, `session-167108705018103.0.json` tenía un ratchet desfasado generando logs repetitivos de `Over 2000 messages into the future!`.
+- **Acciones Ejecutadas en Código**:
+  1. **Corrección de Filtro de Protocolo en Baileys (`server/_core/whatsapp-match.ts`)**:
+     - Removido `rawMsg?.senderKeyDistributionMessage` del descarte temprano; los paquetes vacíos de protocolo puro se filtran limpiamente mediante `if (!body.trim() && !hasRawMedia) continue;`.
+  2. **Encuestas Nativas en Baileys (`server/_core/whatsapp-match.ts`)**:
+     - Creado `sendPollToGroup(name, options, groupId, selectableCount)` usando el payload oficial `poll: { name, values: options, selectableCount }`.
+  3. **Catálogo Curricular y Cron de 08:00 AM (`server/_core/cronService.ts`)**:
+     - Creado `DAILY_POLLS_MAP` con preguntas/opciones temáticas para los 7 días de la semana y funciones `publishDailyPoll` / `publishDailyPollNow`.
+     - Programado el cron a las 08:00 AM hora Bogotá (`0 8 * * *`) enviando encuesta nativa a Grupo 2 y formato interactivo al Canal Oficial.
+     - Persistencia con bloqueo atómico en PostgreSQL (`target_group = 'grupo2_poll'`).
+  4. **Limpieza en Servidor VPS**:
+     - Respaldado y purgado el archivo desfasado `session-167108705018103.0.json`.
+  5. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+     - Añadida la **Sección 18** validando el catálogo de 7 días y la preservación de mensajes con `senderKeyDistributionMessage` (**96/96 tests Vitest pasando** ✅).
+- **Verificación**: 96/96 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 11.76s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.96 — Septiembre 2026
 
 ### Novedades v31.96 (Blindaje Total contra Mensajes de Protocolo, Notificaciones de Cifrado y Reacciones Huérfanas en Grupos Conversacionales):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

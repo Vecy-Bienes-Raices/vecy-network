@@ -495,11 +495,11 @@ export class JaniaMatchBot {
             const rawMsg = unwrapMessage(msg.message);
 
             // 🛡️ BLINDAJE DE PROTOCOLO Y CRIPTOGRAFÍA WHATSAPP:
-            // Ignorar paquetes de sincronización de claves E2E (senderKeyDistributionMessage),
-            // mensajes de protocolo (protocolMessage), notificaciones de clave/transparencia
+            // Ignorar paquetes de protocolo puro sin contenido (revocaciones sin editar, notificaciones de clave)
+            // NOTA DOCTRINAL (v31.97): NUNCA filtrar senderKeyDistributionMessage aquí, pues en WhatsApp grupal
+            // viaja habitualmente dentro del mismo mensaje junto al texto o imágenes del usuario.
             if (
-              rawMsg?.protocolMessage ||
-              rawMsg?.senderKeyDistributionMessage ||
+              (rawMsg?.protocolMessage && !rawMsg.protocolMessage.editedMessage) ||
               (rawMsg as any)?.e2eNotificationMessage ||
               (rawMsg as any)?.keyTransparency
             ) {
@@ -2276,6 +2276,33 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     }
     const jid = targetPhoneOrJid.includes('@') ? targetPhoneOrJid : `${clean}@s.whatsapp.net`;
     return this.queuedSend(jid, text, { allowDirectMessage: true, ...options });
+  }
+
+  /**
+   * Envía una encuesta nativa e interactiva de WhatsApp a un grupo específico.
+   * Utiliza la funcionalidad nativa de Baileys pollCreationMessage.
+   */
+  public async sendPollToGroup(name: string, options: string[], groupId?: string, selectableCount: number = 1): Promise<boolean> {
+    try {
+      if (!this.sock || !this.isReady) {
+        console.warn(`[JANIA-MATCH] Bot no listo para enviar encuesta a ${groupId}`);
+        return false;
+      }
+      const targetJid = groupId || this.buzonGroupId;
+      console.log(`[JANIA-MATCH] 📊 Despachando encuesta nativa a ${targetJid}: "${name}" (${options.length} opciones)...`);
+      await this.sock.sendMessage(targetJid, {
+        poll: {
+          name,
+          values: options,
+          selectableCount
+        }
+      });
+      console.log(`[JANIA-MATCH] ✅ Encuesta enviada exitosamente a ${targetJid}`);
+      return true;
+    } catch (err: any) {
+      console.error(`[JANIA-MATCH] ❌ Error enviando encuesta a ${groupId}:`, err?.message || err);
+      return false;
+    }
   }
 
   public async sendToGroup(text: string, mediaPath?: string, mentions?: string[], groupId?: string) {
