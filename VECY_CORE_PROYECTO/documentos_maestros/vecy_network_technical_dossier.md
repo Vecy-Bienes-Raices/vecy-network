@@ -341,6 +341,8 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
   - Creado `DAILY_POLLS_MAP` con encuestas temáticas especializadas para cada día de la semana y funciones `publishDailyPoll` / `publishDailyPollNow`.
   - Programado el cron a las 08:00 AM hora Bogotá (`0 8 * * *`) enviando encuesta nativa interactiva al Grupo 2 y formato interactivo numerado al Canal Oficial de WhatsApp.
   - Bloqueo en PostgreSQL mediante `acquireBroadcastLock('grupo2_poll', 'encuesta_matutina', dateBogota)` para garantizar cero duplicados.
+- **Endpoint Administrativo y Disparo Inmediato de Encuesta (`server/_core/index.ts`)**:
+  - Habilitado `POST /admin/trigger-poll` protegido por token. Ejecutado el despacho en vivo de la encuesta de hoy sábado (*"☕ Café Inmobiliario: ¿Cómo integras herramientas de Inteligencia Artificial en tu corretaje?"*) entregada nativamente en Grupo 2 y Canal con asiento #14 en PostgreSQL.
 - **Limpieza de Ratchet Desfasado en Servidor VPS**:
   - Respaldado y purgado el archivo desfasado `session-167108705018103.0.json`.
 - **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:

@@ -47,9 +47,13 @@ Reporte de Detención de Reacciones en Grupos y Falta de Encuesta Matutina de la
    - **96/96 tests Vitest pasando al 100%** ✅.
    - **`tsc --noEmit` limpio con 0 errores** ✅.
    - **`npm run build` completado limpiamente en 11.76s** ✅.
-6. **Incremento de Versión Oficial**:
+6. **Endpoint Administrativo y Disparo Inmediato de Encuesta (`server/_core/index.ts`)**:
+   - Creado el endpoint `POST /admin/trigger-poll` protegido por token administrativo.
+   - Ejecutado el disparo en vivo de la encuesta de hoy sábado (*"☕ Café Inmobiliario: ¿Cómo integras herramientas de Inteligencia Artificial en tu corretaje?"*), enviada nativamente con éxito a Grupo 2 (`120363417740040773@g.us`), al Canal Oficial (`120363399889853806@newsletter`) y asentada en PostgreSQL (`daily_broadcasts` #14).
+7. **Incremento de Versión Oficial y Despliegue en Producción**:
    - Actualizado `shared/const.ts` a `v31.97`.
    - Actualizado `package.json` a `31.97.0`.
+   - Git push a `main`, pull en VPS `/var/www/vecy-network`, build exitoso y recarga de PM2 (`jania-server` online y monitoreado sin errores).
 
 ---
 

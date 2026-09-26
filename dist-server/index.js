@@ -24528,6 +24528,20 @@ Direcci\xF3n obligatoria:
       res.status(500).json({ error: err.message });
     }
   });
+  app.post("/admin/trigger-poll", async (req, res) => {
+    const { token, force } = req.body || {};
+    if (token !== "vecy2025admin") {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+    try {
+      const { publishDailyPollNow: publishDailyPollNow2 } = await Promise.resolve().then(() => (init_cronService(), cronService_exports));
+      const result = await publishDailyPollNow2(force ?? true);
+      res.json(result);
+    } catch (err) {
+      console.error("[ADMIN-TRIGGER-POLL] Error:", err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
   app.use("/api/trpc", (req, res, next) => {
     console.log(`[TRPC-ROUTER] ${req.method} ${req.url}`);
     next();
