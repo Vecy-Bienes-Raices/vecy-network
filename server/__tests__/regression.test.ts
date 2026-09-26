@@ -1289,7 +1289,24 @@ Ed del 2014.
       expect(msg).toContain("Natalia Rivera");
       expect(msg).toContain("🪪 1193130766");
       expect(msg).toContain("👇 Contactar Cliente 👇");
-      expect(msg).toContain("https://wa.me/573192919978?text=");
+      expect(msg).toContain("https://wa.me/573192919978");
+      expect(msg).not.toContain("?text=");
+
+      // Probar inclusión de acompañantes únicamente si existen
+      const mockWithAcomp = {
+        ...mockData,
+        acompanantes: [{ nombre: "Carlos Rivera", documento: "10203040" }]
+      };
+      const msgWithAcomp = buildBrokerCallMeBotMessage(mockWithAcomp);
+      expect(msgWithAcomp).toContain("Carlos Rivera\n🪪 10203040");
+
+      // Probar que sin acompañantes no incluye líneas huérfanas
+      const mockSinAcomp = {
+        ...mockData,
+        acompanantes: []
+      };
+      const msgSinAcomp = buildBrokerCallMeBotMessage(mockSinAcomp);
+      expect(msgSinAcomp).not.toContain("Carlos Rivera");
     });
 
     it("Debe construir el mensaje de confirmación de JanIA al Solicitante con verificación y datos de contacto", async () => {
@@ -1322,7 +1339,7 @@ Ed del 2014.
       expect(msg).toContain("👤 *Cliente presentado:* Juanita Sanchez Martinez");
       expect(msg).toContain("🔍 *Estamos verificando tus datos.*");
       expect(msg).toContain("dirección exacta del inmueble a tu correo (*esmeralda.rojas@gmail.com*) y por este medio (WhatsApp).");
-      expect(msg).toContain("+57 316 6569719");
+      expect(msg).toContain("Si deseas cancelar, reagendar, tienes alguna duda o requieres otro tipo de servicio comunícate directamente con nosotros al *+57 316 6569719*.");
     });
   });
 });

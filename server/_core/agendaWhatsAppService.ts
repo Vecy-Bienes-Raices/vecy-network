@@ -109,21 +109,53 @@ export function buildBrokerCallMeBotMessage(data: AgendaWhatsAppPayload): string
   const fechaTexto = formatDateSpanish(data.fecha_cita_texto || data.fechaCitaTexto);
   const hora = data.hora_cita || data.horaCita || "Por coordinar";
 
+  // Procesamiento y parseo de acompañantes
+  let acompList: any[] = [];
+  if (data.acompanantes) {
+    if (Array.isArray(data.acompanantes)) {
+      acompList = data.acompanantes;
+    } else if (typeof data.acompanantes === "string") {
+      try {
+        const parsed = JSON.parse(data.acompanantes);
+        if (Array.isArray(parsed)) acompList = parsed;
+      } catch (_) {}
+    }
+  }
+
+  const validAcomps = acompList.filter((a: any) => a && (a.nombre || a.documento || a.numero_documento));
+
   let personas = Number(data.cantidad_personas ?? data.cantidadPersonas ?? 0);
   if (!personas || isNaN(personas)) {
-    personas = 1;
-    if (data.acompanantes && Array.isArray(data.acompanantes)) {
-      personas += data.acompanantes.length;
-    }
+    personas = 1 + validAcomps.length;
   }
 
   const clienteNombre = data.interesado_nombre || data.interesadoNombre || nombre;
   const clienteDoc = data.interesado_documento || data.interesadoDocumento || doc;
 
-  // Texto del enlace wa.me para que el broker pueda responder en un clic
-  const waPreloadedText = `*Confirmación Solicitud ${numSolicitud}* 🗓️ ${servicio} *${codigo}* 📅 Fecha: ${fechaTexto} 🕐 Hora: ${hora} 👤 Cliente: ${clienteNombre}`;
+  // Bloque de Solicitud con acompañantes desglosados únicamente si existen
+  const lineasSolicitud = [
+    `🏠 Solicitud`,
+    servicio,
+    `Cod: ${codigo}`,
+    `Negocio: ${negocio}`,
+    `📅 ${fechaTexto}`,
+    `🕐 ${hora}`,
+    `Asistirán: ${personas} personas`
+  ];
+
+  if (validAcomps.length > 0) {
+    for (const acomp of validAcomps) {
+      const acompNombre = acomp.nombre || "Acompañante";
+      const acompDoc = acomp.documento || acomp.numero_documento || "";
+      lineasSolicitud.push(`${acompNombre}\n🪪 ${acompDoc}`);
+    }
+  }
+
+  const bloqueSolicitud = lineasSolicitud.join("\n");
+
+  // Enlace directo wa.me limpio para contactar sin mensaje predeterminado
   const waContactUrl = cleanCel 
-    ? `https://wa.me/${cleanCel}?text=${encodeURIComponent(waPreloadedText)}`
+    ? `https://wa.me/${cleanCel}`
     : `(Sin número registrado)`;
 
   return (
@@ -137,13 +169,7 @@ Contrato: ${numSolicitud}
 ✉️ ${email}
 📞 ${celularDisplay}
 
-🏠 Solicitud
-${servicio}
-Cod: ${codigo}
-Negocio: ${negocio}
-📅 ${fechaTexto}
-🕐 ${hora}
-Asistirán: ${personas} personas
+${bloqueSolicitud}
 
 👥 Cliente
 ${clienteNombre}
@@ -194,7 +220,7 @@ Hemos recibido tu solicitud de agendamiento *No. ${numSolicitud}*:
 
 🔍 *Estamos verificando tus datos.* En un momento te enviaremos la confirmación oficial y la dirección exacta del inmueble a tu correo (*${email}*) y por este medio (WhatsApp). 📩📲
 
-Si requieres comunicarte directamente con nuestro bróker oficial para peritajes, cotizaciones o coordinaciones, puedes escribirnos o llamarnos al *+57 316 6569719*.
+Si deseas cancelar, reagendar, tienes alguna duda o requieres otro tipo de servicio comunícate directamente con nosotros al *+57 316 6569719*.
 
 ¡Gracias por confiar en *Vecy Bienes Raíces*! 🤝🏡`
   );

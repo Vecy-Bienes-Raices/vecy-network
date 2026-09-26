@@ -22317,17 +22317,44 @@ function buildBrokerCallMeBotMessage(data) {
   const negocio = data.opcion_negocio || data.opcionNegocio || "Venta";
   const fechaTexto = formatDateSpanish(data.fecha_cita_texto || data.fechaCitaTexto);
   const hora = data.hora_cita || data.horaCita || "Por coordinar";
+  let acompList = [];
+  if (data.acompanantes) {
+    if (Array.isArray(data.acompanantes)) {
+      acompList = data.acompanantes;
+    } else if (typeof data.acompanantes === "string") {
+      try {
+        const parsed = JSON.parse(data.acompanantes);
+        if (Array.isArray(parsed)) acompList = parsed;
+      } catch (_) {
+      }
+    }
+  }
+  const validAcomps = acompList.filter((a) => a && (a.nombre || a.documento || a.numero_documento));
   let personas = Number(data.cantidad_personas ?? data.cantidadPersonas ?? 0);
   if (!personas || isNaN(personas)) {
-    personas = 1;
-    if (data.acompanantes && Array.isArray(data.acompanantes)) {
-      personas += data.acompanantes.length;
-    }
+    personas = 1 + validAcomps.length;
   }
   const clienteNombre = data.interesado_nombre || data.interesadoNombre || nombre;
   const clienteDoc = data.interesado_documento || data.interesadoDocumento || doc;
-  const waPreloadedText = `*Confirmaci\xF3n Solicitud ${numSolicitud}* \u{1F5D3}\uFE0F ${servicio} *${codigo}* \u{1F4C5} Fecha: ${fechaTexto} \u{1F550} Hora: ${hora} \u{1F464} Cliente: ${clienteNombre}`;
-  const waContactUrl = cleanCel ? `https://wa.me/${cleanCel}?text=${encodeURIComponent(waPreloadedText)}` : `(Sin n\xFAmero registrado)`;
+  const lineasSolicitud = [
+    `\u{1F3E0} Solicitud`,
+    servicio,
+    `Cod: ${codigo}`,
+    `Negocio: ${negocio}`,
+    `\u{1F4C5} ${fechaTexto}`,
+    `\u{1F550} ${hora}`,
+    `Asistir\xE1n: ${personas} personas`
+  ];
+  if (validAcomps.length > 0) {
+    for (const acomp of validAcomps) {
+      const acompNombre = acomp.nombre || "Acompa\xF1ante";
+      const acompDoc = acomp.documento || acomp.numero_documento || "";
+      lineasSolicitud.push(`${acompNombre}
+\u{1FAAA} ${acompDoc}`);
+    }
+  }
+  const bloqueSolicitud = lineasSolicitud.join("\n");
+  const waContactUrl = cleanCel ? `https://wa.me/${cleanCel}` : `(Sin n\xFAmero registrado)`;
   return `\u{1F514} Solicitud No. ${numSolicitud} \u{1F514}
 
 \u{1F464} Solicitante
@@ -22338,13 +22365,7 @@ Contrato: ${numSolicitud}
 \u2709\uFE0F ${email}
 \u{1F4DE} ${celularDisplay}
 
-\u{1F3E0} Solicitud
-${servicio}
-Cod: ${codigo}
-Negocio: ${negocio}
-\u{1F4C5} ${fechaTexto}
-\u{1F550} ${hora}
-Asistir\xE1n: ${personas} personas
+${bloqueSolicitud}
 
 \u{1F465} Cliente
 ${clienteNombre}
@@ -22385,7 +22406,7 @@ Hemos recibido tu solicitud de agendamiento *No. ${numSolicitud}*:
 
 \u{1F50D} *Estamos verificando tus datos.* En un momento te enviaremos la confirmaci\xF3n oficial y la direcci\xF3n exacta del inmueble a tu correo (*${email}*) y por este medio (WhatsApp). \u{1F4E9}\u{1F4F2}
 
-Si requieres comunicarte directamente con nuestro br\xF3ker oficial para peritajes, cotizaciones o coordinaciones, puedes escribirnos o llamarnos al *+57 316 6569719*.
+Si deseas cancelar, reagendar, tienes alguna duda o requieres otro tipo de servicio comun\xEDcate directamente con nosotros al *+57 316 6569719*.
 
 \xA1Gracias por confiar en *Vecy Bienes Ra\xEDces*! \u{1F91D}\u{1F3E1}`;
 }
