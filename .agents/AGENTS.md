@@ -167,7 +167,36 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.97 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.98 — Septiembre 2026
+
+### Novedades v31.98 (Servicio Oficial de Verificación de Identidad con Policía Nacional vía 2Captcha y Asistencia de Impuesto Predial Bogotá vía CHIP en WhatsApp, Chat Web y Canales):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Confirmación de estabilidad absoluta y preservación integral de las dos Vecy Agendas (`Vecy Agenda Pro` en repositorio independiente y `Vecy Agenda` incorporada en la web oficial).
+  - Activación del servicio de verificación de antecedentes penales e identidad directamente por WhatsApp y Chat Web con solo enviar el número de cédula o escribirle a JanIA.
+  - Activación del servicio de asistencia y liquidación del Impuesto Predial Bogotá con el código CHIP y cédula de los inmuebles.
+  - Promoción y anuncio del servicio a través de Grupo 2 (Soporte Legal), Grupo 3 (Proyecto Vecy Network) y el Canal Oficial de WhatsApp.
+- **Acciones Ejecutadas en Código**:
+  1. **Servicio Oficial de Verificación de Identidad (`server/_core/identityVerificationService.ts`)**:
+     - Extracción flexible de cédulas colombianas en texto libre (`extractCedulaForVerification`), soportando números puros en mensajes directos (DM), menciones a JanIA y frases formales ("verificar cédula...", "consultar antecedentes...", "CC...").
+     - Consulta en tiempo real a la Policía Nacional con resolución automatizada de reCAPTCHA v2 mediante 2Captcha (`queryPoliciaNacional`).
+     - Conversión obligatoria a orden natural civil Title Case (`parsePoliceAntecedentesFullName`) y emisión del reporte institucional de antecedentes y seguridad para acuerdos 50/50 y hojas de visita.
+  2. **Servicio de Asistencia y Liquidación Predial Bogotá (`server/_core/predialService.ts`)**:
+     - Detección precisa de código CHIP distrital (`AAA...`) y número de cédula/NIT.
+     - Motor de liquidación tributaria distrital según Acuerdos 648 de 2016 y 780 de 2020 (tarifas progresivas residenciales por estratos 1 a 6 y comerciales al 10.5 por mil con descuento del 10% por pronto pago).
+     - Entrega de enlace directo oficial de la Secretaría Distrital de Hacienda y pautas notariales para promesas de compraventa y escrituración.
+  3. **Integración Multicanal y Manejo de Privacidad (`server/_core/janIA.ts`, `server/_core/whatsapp-match.ts`, `server/routers/janIA.ts`)**:
+     - Intercepción directa en Grupo 2 (Soporte Legal) y Grupo 3 (Círculo Cero).
+     - Intercepción en mensajes privados (DM) con excepción de seguridad anti-ban (`allowDirectMessage: true`), permitiendo a cualquier cliente o asesor consultar su documento sin restricciones.
+     - Intercepción en Chat Web (`janIARouter.chat`) y registro en la base de datos de mensajes.
+  4. **Difusión y Promoción Curricular (`server/_core/cronService.ts`, `server/routers/janIA.ts`, prompts de grupos)**:
+     - Incorporados los Pilares 7 y 8 en `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` y actualización en `PROYECTO_Vecy Network.md`.
+     - Enriquecidos los cron jobs semanales (`martes_juridico`, `jueves_tributario`, `sabado_cafe`).
+     - Creada `publishIdentityAndPredialServiceAnnouncement` y expuesta como mutación en tRPC para anunciar en Grupo 2, Grupo 3 y Canal Oficial.
+  5. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+     - Añadida la **Sección 19** con pruebas exhaustivas para extracción de cédulas, formatos con puntos, validación de CHIP y cálculo de tarifas prediales (**98/98 tests Vitest pasando** ✅).
+- **Verificación**: 98/98 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 12.05s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.97 — Septiembre 2026
 
 ### Novedades v31.97 (Corrección de Filtro E2E de Sender Keys y Orquestación de Encuestas Matutinas a las 08:00 AM):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

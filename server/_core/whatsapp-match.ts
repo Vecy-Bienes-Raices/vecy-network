@@ -975,6 +975,26 @@ export class JaniaMatchBot {
       return;
     }
 
+    // 🛡️ INTERCEPTOR DIRECTO DM: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
+    const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
+    const idCheck = await executeIdentityVerificationFromWhatsApp(body, true);
+    if (idCheck.isVerificationRequest && idCheck.reportText) {
+      console.log(`[JANIA-MATCH] [DM] Verificación de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
+      await this.queuedSend(senderId, idCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+      await this.logToDb(senderId, 'janIA', idCheck.reportText);
+      return;
+    }
+
+    // 🏛️ INTERCEPTOR DIRECTO DM: ASISTENCIA PREDIAL BOGOTÁ (CHIP + CÉDULA)
+    const { executePredialAssistanceFromWhatsApp } = await import('./predialService');
+    const predialCheck = await executePredialAssistanceFromWhatsApp(body);
+    if (predialCheck.isPredialRequest && predialCheck.reportText) {
+      console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || 'General'})`);
+      await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+      await this.logToDb(senderId, 'janIA', predialCheck.reportText);
+      return;
+    }
+
     if (!isAdmin) {
       // DMs privados de contactos personales o terceros no se procesan para captación ni se reacciona con emojis
       return;
@@ -1971,6 +1991,27 @@ export class JaniaMatchBot {
   private async handlePrivateDmConversation(msg: proto.IWebMessageInfo, senderId: string, rawPhone: string, bodyText: string) {
     try {
       const realName = msg.pushName || `Asesor +${rawPhone}`;
+
+      // 🛡️ INTERCEPTOR ADMIN: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
+      const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
+      const idCheck = await executeIdentityVerificationFromWhatsApp(bodyText, true);
+      if (idCheck.isVerificationRequest && idCheck.reportText) {
+        await this.queuedSend(senderId, idCheck.reportText, { quoted: msg, allowDirectMessage: true });
+        await this.logToDb(senderId, 'janIA', idCheck.reportText);
+        await this.sock.sendPresenceUpdate('paused', senderId);
+        return;
+      }
+
+      // 🏛️ INTERCEPTOR ADMIN: ASISTENCIA PREDIAL BOGOTÁ (CHIP + CÉDULA)
+      const { executePredialAssistanceFromWhatsApp } = await import('./predialService');
+      const predialCheck = await executePredialAssistanceFromWhatsApp(bodyText);
+      if (predialCheck.isPredialRequest && predialCheck.reportText) {
+        await this.queuedSend(senderId, predialCheck.reportText, { quoted: msg, allowDirectMessage: true });
+        await this.logToDb(senderId, 'janIA', predialCheck.reportText);
+        await this.sock.sendPresenceUpdate('paused', senderId);
+        return;
+      }
+
       await this.sock.sendPresenceUpdate('recording', senderId);
 
       const saludo = getGreetingByTime();

@@ -24,6 +24,10 @@ Este es el canal oficial de **Consultoría Jurídica Inmobiliaria, Liquidación 
      - Asesoría extrajudicial para el manejo de mora en cánones de arriendo, cartas de requerimiento de pago, actas de entrega, inventarios y conciliación con arrendatarios.
   6. **🗞️ Noticias Inmobiliarias Nacionales, Coyuntura y Primicias (JanIA Periodista):**
      - Información y análisis periodístico de coyuntura de bienes raíces en Colombia: tasas hipotecarias del Banco de la República, inflación y topes legales de incremento en cánones (Ley 820 de 2003 / IPC), subsidios Mi Casa Ya, cifras CAMACOL de iniciaciones y ventas, valorización del metro cuadrado por ciudades, novedades notariales/SNR y primicias normativas de última hora.
+  7. **🛡️ Verificación Oficial de Cédulas y Antecedentes (Policía Nacional vía 2Captcha):**
+     - Servicio automatizado en tiempo real para todos los miembros de la red: cualquier corredor puede escribir *"JanIA, verifica la cédula XXXXXXXX"* o enviar el número de documento de un solicitante, cliente presentado o acompañante. JanIA consulta oficialmente ante la Policía Nacional de Colombia, valida la ausencia de antecedentes judiciales y extrae el nombre oficial civil completo con dos apellidos para blindar contratos de corretaje, hojas de visita y promesas de compraventa.
+  8. **🏛️ Asistencia y Liquidación de Impuesto Predial Bogotá (CHIP + Cédula):**
+     - Orientación y liquidación del Impuesto Predial Unificado de Bogotá: si el usuario envía el código CHIP del predio y la cédula del propietario (ej: *"JanIA, predial del CHIP AAA0123ABCD cédula XXXXXXXX"*), JanIA liquida la tarifa oficial por milaje (Acuerdo 648 de 2016 / 780 de 2020), calcula los descuentos por pronto pago y entrega el enlace directo oficial de la Secretaría Distrital de Hacienda para descargar la factura oficial con código de barras.
 
 ---
 

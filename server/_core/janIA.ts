@@ -5982,6 +5982,34 @@ export async function processConsultingMessage(
     const genderTerm = nameInfo.genderTerm;
     const alreadyGreeted = await checkAlreadyGreeted(userId);
 
+    // 🛡️ INTERCEPTOR DIRECTO 1: VERIFICACIÓN OFICIAL DE CÉDULA / ANTECEDENTES (2CAPTCHA + POLICÍA NACIONAL)
+    const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
+    const idCheck = await executeIdentityVerificationFromWhatsApp(messageToProcess);
+    if (idCheck.isVerificationRequest && idCheck.reportText) {
+      console.log(`[JanIA-IdentityCheck] Verificación de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: idCheck.reportText,
+        reactionEmoji: idCheck.success ? "🛡️" : "⚠️",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+
+    // 🏛️ INTERCEPTOR DIRECTO 2: ASISTENCIA Y GESTIÓN DE PREDIALES BOGOTÁ (CHIP + CÉDULA)
+    const { executePredialAssistanceFromWhatsApp } = await import('./predialService');
+    const predialCheck = await executePredialAssistanceFromWhatsApp(messageToProcess);
+    if (predialCheck.isPredialRequest && predialCheck.reportText) {
+      console.log(`[JanIA-PredialCheck] Asistencia de predial Bogotá ejecutada para ${userId} (CHIP: ${predialCheck.chip || 'General'}): isPredialRequest=true`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: predialCheck.reportText,
+        reactionEmoji: "📄",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+
     const systemPrompt = 
       `Eres JanIA, la Inteligencia Artificial viva, empática y de máxima capacidad resolutiva de VECY Network. ` +
       `Estás operando en el grupo "VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING". Tu objetivo es responder con precisión quirúrgica, rigor legal, calidez humana y alta competencia técnica, resolviendo de fondo las inquietudes de los inmobiliarios como una abogada senior, perita tasadora y estratega de marketing de élite.\n\n` +
@@ -6222,6 +6250,35 @@ export async function processCirculoMessage(
     }
 
     const alreadyGreeted = await checkAlreadyGreeted(userId);
+
+    // 🛡️ INTERCEPTOR DIRECTO 1: VERIFICACIÓN OFICIAL DE CÉDULA / ANTECEDENTES (2CAPTCHA + POLICÍA NACIONAL)
+    const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
+    const idCheck = await executeIdentityVerificationFromWhatsApp(text);
+    if (idCheck.isVerificationRequest && idCheck.reportText) {
+      console.log(`[JanIA-Circulo-IdentityCheck] Verificación de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: idCheck.reportText,
+        reactionEmoji: idCheck.success ? "🛡️" : "⚠️",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+
+    // 🏛️ INTERCEPTOR DIRECTO 2: ASISTENCIA Y GESTIÓN DE PREDIALES BOGOTÁ (CHIP + CÉDULA)
+    const { executePredialAssistanceFromWhatsApp } = await import('./predialService');
+    const predialCheck = await executePredialAssistanceFromWhatsApp(text);
+    if (predialCheck.isPredialRequest && predialCheck.reportText) {
+      console.log(`[JanIA-Circulo-PredialCheck] Asistencia de predial Bogotá ejecutada para ${userId} (CHIP: ${predialCheck.chip || 'General'}): isPredialRequest=true`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: predialCheck.reportText,
+        reactionEmoji: "📄",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+
     const groupZeroName = process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"';
     const systemPrompt = 
       `Eres JanIA, la Inteligencia Artificial oficial y cerebro innovador de VECY Network. Estás operando en el grupo "${groupZeroName}". ` +

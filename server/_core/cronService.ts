@@ -729,6 +729,7 @@ Elige un ángulo de análisis fresco y de alto impacto sobre el mercado colombia
 
     martes_juridico: `Tema: Martes Jurídico, Blindaje Notarial & Código de Comercio (${fechaBogota}).
 Selecciona un tema legal inmobiliario colombiano específico y didáctico:
+- Verificación oficial de identidad y antecedentes de la Policía Nacional: cómo blindar contratos de corretaje y acuerdos de puntas compartidas 50/50 validando la cédula de clientes y acompañantes en segundos directamente en el chat con JanIA.
 - Cláusula penal vs arras confirmatorias y de retracto en la promesa de compraventa (Arts. 1859-1861 C.C.).
 - Causales de terminación unilateral y restitución de inmueble arrendado bajo la Ley 820 de 2003.
 - Validez probatoria de la hoja de visita digital y correos certificados bajo la Ley 527 de 1999 para blindar el cobro de comisión.
@@ -747,6 +748,7 @@ Enseña técnicas prácticas y vanguardistas para que los corredores vendan y ca
 
     jueves_tributario: `Tema: Jueves Tributario DIAN, Contabilidad & Ahorro Fiscal Inmobiliario (${fechaBogota}).
 Selecciona con rigor técnico un consejo tributario o financiero colombiano:
+- Liquidación y Gestión de Impuesto Predial Bogotá: cómo consultar el avalúo catastral y facturas oficiales con el código CHIP y cédula directamente con JanIA para llegar con cuentas claras a la promesa de compraventa.
 - Retención en la fuente por venta de inmuebles en notaría: 1% personas naturales vs 2.5% personas jurídicas y quién la asume.
 - Deducción de mejoras y adiciones: cómo documentar refacciones con Facturación Electrónica para rebajar la ganancia ocasional al escriturar.
 - Desglose exacto de gastos notariales en Colombia: Derechos notariales (50/50), Retención en la fuente (vendedor), Registro y beneficencia (comprador).
@@ -766,7 +768,7 @@ Elige libremente entre:
     sabado_cafe: `Tema: Sábado de Café Inmobiliario, Reflexión & Identidad JanIA (${fechaBogota}).
 Estilo podcast / café inmobiliario, cercano, reflexivo y motivador:
 - Ética gremial: respeto por el cliente del colega, transparencia en la comisión compartida y construcción de marca personal.
-- Portafolio de Servicios Virtuales de VECY Bienes Raíces: estudios de mercado m², liquidaciones DIAN, contratos digitales y cobranzas.
+- Portafolio de Servicios Virtuales de VECY Bienes Raíces: verificación oficial de cédulas y antecedentes penales de clientes (Policía Nacional), liquidación de prediales Bogotá (CHIP), estudios de mercado m², liquidaciones DIAN y contratos digitales.
 - Identidad de JanIA: explicar con orgullo que fue creada por Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones) para empoderar al corredor independiente.
 - Línea de Atención Oficial con el Bróker: para acompañamiento o casos personalizados, contactar a Eduardo y Jani en el WhatsApp oficial (+57 316 656 9719).`,
 
@@ -1368,5 +1370,60 @@ export async function getLiveMarketStats(): Promise<{
       totalCities: 30,
       totalPairs: 770012,
     };
+  }
+}
+
+/**
+ * Publica el anuncio oficial de los servicios de Verificación de Cédula (Policía Nacional)
+ * y Asistencia de Predial Bogotá (CHIP) en Grupo 2, Grupo 3 y Canal Oficial.
+ */
+export async function publishIdentityAndPredialServiceAnnouncement(force: boolean = false) {
+  const dateKey = getBogotaDateString();
+  const lock = await acquireBroadcastLock('anuncio_servicios', 'identidad_predial', dateKey, force);
+  if (!lock.allowed) {
+    console.log(`[CRON-SERVICE] ⏭️ Omitiendo anuncio de servicios: ${lock.reason}`);
+    return { skipped: true, reason: lock.reason };
+  }
+
+  const announcementText = 
+    `🛡️ *NUEVAS HERRAMIENTAS ACTIVAS EN VECY NETWORK: VERIFICACIÓN DE IDENTIDAD Y ASISTENCIA PREDIAL BOGOTÁ* 🇨🇴\n\n` +
+    `Estimada comunidad de corredores, aliados y propietarios:\n\n` +
+    `Para que cierres tus negocios con total blindaje jurídico, seguridad notarial y rapidez tributaria, JanIA ahora cuenta con dos herramientas directas operando 24/7 en WhatsApp:\n\n` +
+    `1️⃣ 🛡️ *VERIFICACIÓN OFICIAL DE CÉDULA Y ANTECEDENTES (POLICÍA NACIONAL)*\n` +
+    `¿Vas a mostrar un inmueble o a firmar un acuerdo de puntas compartidas (50/50)?\n` +
+    `• Simplemente escribe aquí o por mensaje privado a JanIA:\n` +
+    `👉 *"JanIA, verificar cédula [número]"* o *"CC [número]"*\n` +
+    `• JanIA consulta en tiempo real con la base de datos de la Policía Nacional de Colombia (cotejo en línea con 2Captcha), valida los nombres y apellidos oficiales en orden civil natural y confirma que no existan antecedentes pendientes para blindar tus contratos y hojas de visita.\n\n` +
+    `2️⃣ 🏛️ *ASISTENCIA Y LIQUIDACIÓN DE IMPUESTO PREDIAL BOGOTÁ*\n` +
+    `¿Necesitas saber el predial o descargar la factura oficial para escrituración?\n` +
+    `• Envía el código CHIP y la cédula del propietario:\n` +
+    `👉 *"JanIA, predial CHIP AAA0123ABCD cédula [número]"*\n` +
+    `• JanIA te entrega la liquidación estimada según tarifas distritales y te proporciona el enlace directo oficial de la Secretaría Distrital de Hacienda para descargar la factura oficial en PDF.\n\n` +
+    `🤝 *¡Blindamos tu comisión, tu tiempo y tu seguridad inmobiliaria!*\n` +
+    `Cualquier duda, nuestro bróker y directores Eduardo y Jani están a tu disposición en la línea oficial: +57 316 6569719. ✨`;
+
+  try {
+    if (whatsappBot.buzonGroupId) {
+      await whatsappBot.queuedSend(whatsappBot.buzonGroupId, announcementText);
+    }
+    if (whatsappBot.circuloGroupId) {
+      await whatsappBot.queuedSend(whatsappBot.circuloGroupId, announcementText);
+    }
+    if (whatsappBot.channelNewsletterId) {
+      await whatsappBot.sendDirectMessage(whatsappBot.channelNewsletterId, announcementText, { allowDirectMessage: true }).catch(() => {});
+    }
+
+    await completeBroadcast(lock.broadcastId, {
+      topicTitle: "Anuncio Oficial: Verificación de Cédula y Predial Bogotá",
+      themeKey: "servicios_jania",
+      captionText: announcementText
+    });
+
+    console.log(`[CRON-SERVICE] ✅ Anuncio de Verificación de Cédula y Predial despachado a Grupo 2, Grupo 3 y Canal.`);
+    return { success: true };
+  } catch (err: any) {
+    console.error(`[CRON-SERVICE] ❌ Error despachando anuncio de servicios:`, err?.message || err);
+    await failBroadcast(lock.broadcastId, err?.message);
+    return { success: false, error: err?.message };
   }
 }

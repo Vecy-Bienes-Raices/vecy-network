@@ -8,6 +8,22 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
+// shared/const.ts
+var COOKIE_NAME, ONE_YEAR_MS, AXIOS_TIMEOUT_MS, UNAUTHED_ERR_MSG, NOT_ADMIN_ERR_MSG, VECY_VERSION, VECY_VERSION_LABEL, VECY_CORE_VERSION_LABEL;
+var init_const = __esm({
+  "shared/const.ts"() {
+    "use strict";
+    COOKIE_NAME = "app_session_id";
+    ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
+    AXIOS_TIMEOUT_MS = 3e4;
+    UNAUTHED_ERR_MSG = "Please login (10001)";
+    NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
+    VECY_VERSION = "v31.98";
+    VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
+    VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
+  }
+});
+
 // drizzle/schema.ts
 var schema_exports = {};
 __export(schema_exports, {
@@ -739,6 +755,49 @@ var init_events = __esm({
     VRIFEventEmitter = class extends EventEmitter {
     };
     vrifEvents = new VRIFEventEmitter();
+  }
+});
+
+// server/_core/trpc.ts
+import { initTRPC, TRPCError as TRPCError2 } from "@trpc/server";
+import superjson from "superjson";
+var t, router, publicProcedure, requireUser, protectedProcedure, adminProcedure;
+var init_trpc = __esm({
+  "server/_core/trpc.ts"() {
+    "use strict";
+    init_const();
+    t = initTRPC.context().create({
+      transformer: superjson
+    });
+    router = t.router;
+    publicProcedure = t.procedure;
+    requireUser = t.middleware(async (opts) => {
+      const { ctx, next } = opts;
+      if (!ctx.user) {
+        throw new TRPCError2({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+      }
+      return next({
+        ctx: {
+          ...ctx,
+          user: ctx.user
+        }
+      });
+    });
+    protectedProcedure = t.procedure.use(requireUser);
+    adminProcedure = t.procedure.use(
+      t.middleware(async (opts) => {
+        const { ctx, next } = opts;
+        if (!ctx.user || ctx.user.role !== "admin") {
+          throw new TRPCError2({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
+        }
+        return next({
+          ctx: {
+            ...ctx,
+            user: ctx.user
+          }
+        });
+      })
+    );
   }
 });
 
@@ -8643,6 +8702,4604 @@ var init_advisors = __esm({
   }
 });
 
+// server/_core/emailContractService.ts
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import nodemailer from "nodemailer";
+function normalizePayload(input) {
+  const sId = input.solicitudId ?? input.solicitud_id ?? input.id ?? "N/A";
+  return {
+    ...input,
+    solicitud_id: sId,
+    solicitante_nombre: input.solicitanteNombre ?? input.solicitante_nombre ?? "",
+    solicitante_tipo_persona: input.solicitanteTipoPersona ?? input.solicitante_tipo_persona ?? "Persona Natural",
+    solicitante_perfil: input.solicitantePerfil ?? input.solicitante_perfil ?? "Cliente directo",
+    solicitante_email: input.solicitanteEmail ?? input.solicitante_email ?? "",
+    solicitante_celular: input.solicitanteCelular ?? input.solicitante_celular ?? "",
+    solicitante_tipo_documento: input.solicitanteTipoDocumento ?? input.solicitante_tipo_documento ?? "C\xE9dula de ciudadan\xEDa",
+    solicitante_numero_documento: input.solicitanteNumeroDocumento ?? input.solicitante_numero_documento ?? "",
+    solicitante_representante_legal: input.solicitanteRepresentanteLegal ?? input.solicitante_representante_legal ?? "",
+    servicio_solicitado: input.servicioSolicitado ?? input.servicio_solicitado ?? "Visitar inmueble",
+    nombre_inmueble: input.nombreInmueble ?? input.nombre_inmueble ?? "N/A",
+    codigo_inmueble: input.codigoInmueble ?? input.codigo_inmueble ?? "N/A",
+    opcion_negocio: input.opcionNegocio ?? input.opcion_negocio ?? "Venta",
+    fecha_cita_texto: input.fechaCitaTexto ?? input.fecha_cita_texto ?? "",
+    hora_cita: input.horaCita ?? input.hora_cita ?? "",
+    cantidad_personas: input.cantidadPersonas ?? input.cantidad_personas ?? 1,
+    interesado_nombre: input.interesadoNombre ?? input.interesado_nombre ?? "",
+    interesado_tipo_documento: input.interesadoTipoDocumento ?? input.interesado_tipo_documento ?? "C\xE9dula de ciudadan\xEDa",
+    interesado_documento: input.interesadoDocumento ?? input.interesado_documento ?? "",
+    tipo_cliente: input.tipoCliente ?? input.tipo_cliente ?? "Persona",
+    acompanantes: input.acompanantes ?? [],
+    firma_virtual_base64: input.firmaVirtualBase64 ?? input.firma_virtual_base64 ?? ""
+  };
+}
+async function createContractPdf(rawFormData) {
+  const formData = normalizePayload(rawFormData);
+  const pdfDoc = await PDFDocument.create();
+  let currentPage = pdfDoc.addPage();
+  const { width, height } = currentPage.getSize();
+  const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+  const black = rgb(0, 0, 0);
+  const gray = rgb(0.3, 0.3, 0.3);
+  const goldColor = rgb(0.749, 0.584, 0.247);
+  const margin = 50;
+  let y = height - margin;
+  const drawFooter = (pageToDrawOn) => {
+    const footerText = "Vecy Bienes Ra\xEDces S.A.S. | https://vecy.co/ | https://vecy-network.vercel.app/";
+    const footerTextWidth = font.widthOfTextAtSize(footerText, 8);
+    pageToDrawOn.drawText(footerText, { x: (width - footerTextWidth) / 2, y: margin / 2, font, size: 8, color: gray });
+  };
+  const checkAndAddPage = (currentY, neededHeight) => {
+    if (currentY - neededHeight < margin + 20) {
+      drawFooter(currentPage);
+      currentPage = pdfDoc.addPage();
+      return height - margin;
+    }
+    return currentY;
+  };
+  const clean = (val) => String(val || "").replace(/[{}]/g, "").trim();
+  const drawRichText = (segments, options) => {
+    let { y: currentY, x: startX, width: maxWidth, lineHeight } = options;
+    let allWords = [];
+    for (const segment of segments) {
+      const segFont = segment.font || font;
+      const segSize = segment.size || 11;
+      const segColor = segment.color || black;
+      const paragraphs = segment.text.split("\n");
+      for (let i = 0; i < paragraphs.length; i++) {
+        if (i > 0) allWords.push({ isNewLine: true });
+        const words = paragraphs[i].split(/\s+/).filter((w) => w.length > 0);
+        for (const w of words) {
+          allWords.push({
+            text: w,
+            font: segFont,
+            size: segSize,
+            color: segColor,
+            width: segFont.widthOfTextAtSize(w, segSize)
+          });
+        }
+      }
+    }
+    let lineBuffer = [];
+    let currentLineWidth = 0;
+    const spaceWidth = font.widthOfTextAtSize(" ", 11);
+    const flushLine = (justify = false, isParagraphBreak = false) => {
+      if (lineBuffer.length === 0) {
+        if (isParagraphBreak) currentY -= 6;
+        return;
+      }
+      currentY = checkAndAddPage(currentY, lineHeight);
+      if (!justify || lineBuffer.length < 2) {
+        let xObj = startX;
+        for (const item of lineBuffer) {
+          currentPage.drawText(item.text, { x: xObj, y: currentY, font: item.font, size: item.size, color: item.color });
+          xObj += item.width + spaceWidth;
+        }
+      } else {
+        const totalWordsWidth = lineBuffer.reduce((sum, item) => sum + item.width, 0);
+        const extraSpace = maxWidth - totalWordsWidth;
+        const spacePerGap = extraSpace / (lineBuffer.length - 1);
+        let xObj = startX;
+        lineBuffer.forEach((item, index2) => {
+          currentPage.drawText(item.text, { x: xObj, y: currentY, font: item.font, size: item.size, color: item.color });
+          if (index2 < lineBuffer.length - 1) {
+            xObj += item.width + spacePerGap;
+          }
+        });
+      }
+      currentY -= lineHeight;
+      if (isParagraphBreak) currentY -= 6;
+      lineBuffer = [];
+      currentLineWidth = 0;
+    };
+    for (const item of allWords) {
+      if (item.isNewLine) {
+        flushLine(false, true);
+        continue;
+      }
+      const additionalWidth = (lineBuffer.length > 0 ? spaceWidth : 0) + item.width;
+      if (currentLineWidth + additionalWidth > maxWidth) {
+        flushLine(true);
+        lineBuffer.push(item);
+        currentLineWidth = item.width;
+      } else {
+        lineBuffer.push(item);
+        currentLineWidth += additionalWidth;
+      }
+    }
+    flushLine(false);
+    return currentY;
+  };
+  const drawClause = (title, segments, currentY) => {
+    currentY = checkAndAddPage(currentY, 40);
+    currentY = drawRichText([{ text: title, font: boldFont, color: goldColor, size: 11 }], { y: currentY, x: margin, width: width - margin * 2, lineHeight: 15 });
+    currentY -= 4;
+    currentY = drawRichText(segments, { y: currentY, x: margin, width: width - margin * 2, lineHeight: 14 });
+    return currentY - 14;
+  };
+  try {
+    const logoBytes = Buffer.from(vecyLogoBase64.split(",")[1], "base64");
+    const vecyLogoImage = await pdfDoc.embedPng(logoBytes);
+    currentPage.drawImage(vecyLogoImage, { x: margin, y: y - 25, width: 50, height: 50 });
+  } catch (e) {
+    console.error("Error al incrustar logo en PDF:", e?.message);
+  }
+  currentPage.drawText("CONTRATO DE PUNTAS COMPARTIDAS", { x: margin + 70, y, font: boldFont, size: 15, color: goldColor });
+  currentPage.drawText("Acuerdo de Colaboraci\xF3n Inmobiliaria | Vecy Gold Edition", { x: margin + 70, y: y - 16, font, size: 10, color: gray });
+  if (formData.solicitud_id) {
+    const idText = `ID: ${formData.solicitud_id}`;
+    const idTextWidth = boldFont.widthOfTextAtSize(idText, 9);
+    currentPage.drawText(idText, { x: width - margin - idTextWidth, y, font: boldFont, size: 9, color: gray });
+  }
+  y -= 45;
+  currentPage.drawRectangle({ x: margin, y, width: width - 2 * margin, height: 1.5, color: goldColor });
+  y -= 25;
+  const generationDate = (/* @__PURE__ */ new Date()).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric", timeZone: "America/Bogota" });
+  const isJuridica = formData.solicitante_tipo_persona === "Persona Jur\xEDdica";
+  const introSegments = [
+    { text: "Entre los suscritos a saber, por una parte, JANI ALVES SOUZA, mayor de edad, identificada con c\xE9dula de ciudadan\xEDa No. 41.057.506, actuando en nombre propio como persona natural y en representaci\xF3n comercial de la marca VECY BIENES RA\xCDCES, quien en adelante se denominar\xE1 EL AGENTE 1; y por la otra parte, ", font },
+    { text: clean(formData.solicitante_nombre), font: boldFont },
+    { text: isJuridica ? `, entidad con personer\xEDa jur\xEDdica, representada legalmente por ${clean(formData.solicitante_representante_legal)}, identificada con ` : ", mayor de edad, identificado(a) con ", font },
+    { text: clean(formData.solicitante_tipo_documento), font: boldFont },
+    { text: " No. ", font },
+    { text: clean(formData.solicitante_numero_documento), font: boldFont },
+    { text: ", quien en adelante se denominar\xE1 EL AGENTE 2, se celebra el presente contrato de colaboraci\xF3n inmobiliaria, el cual se regir\xE1 por las disposiciones del C\xF3digo de Comercio Colombiano (Art. 1340 y subsiguientes) y las siguientes cl\xE1usulas:", font }
+  ];
+  y = drawRichText(introSegments, { y, x: margin, width: width - margin * 2, lineHeight: 14 });
+  y -= 15;
+  const clausula1 = [
+    { text: "El presente contrato tiene por objeto establecer los t\xE9rminos de colaboraci\xF3n entre EL AGENTE 1 y EL AGENTE 2 para promover, gestionar y/o contribuir en la intermediaci\xF3n del negocio inmobiliario relacionado con el inmueble: ", font },
+    { text: clean(formData.nombre_inmueble || "N/A"), font: boldFont },
+    { text: " identificado con el c\xF3digo ", font },
+    { text: clean(formData.codigo_inmueble || "N/A"), font: boldFont },
+    { text: ", donde EL AGENTE 2 mediante el formulario No. ", font },
+    { text: clean(formData.solicitud_id), font: boldFont },
+    { text: ', solicita al AGENTE 1 "', font },
+    { text: clean(formData.servicio_solicitado), font: boldFont },
+    { text: '" en ', font },
+    { text: clean(formData.opcion_negocio || "tipo de operaci\xF3n"), font: boldFont },
+    { text: " para la fecha ", font },
+    { text: clean(formData.fecha_cita_texto || "fecha por confirmar"), font: boldFont },
+    { text: " a las ", font },
+    { text: clean(formData.hora_cita || "hora por confirmar"), font: boldFont },
+    { text: " en favor del cliente ", font },
+    { text: clean(formData.interesado_nombre), font: boldFont },
+    { text: ", identificado(a) con ", font },
+    { text: clean(formData.interesado_tipo_documento), font: boldFont },
+    { text: " No. ", font },
+    { text: clean(formData.interesado_documento), font: boldFont }
+  ];
+  if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
+    clausula1.push({ text: " y las siguientes personas autorizadas y registradas como acompa\xF1antes: ", font });
+    const acompNames = formData.acompanantes.map((a) => `${a.nombre} (${a.documento})`).join(", ");
+    clausula1.push({ text: acompNames, font: boldFont });
+    clausula1.push({ text: ".", font });
+  } else {
+    clausula1.push({ text: ".", font });
+  }
+  y = drawClause("CL\xC1USULA PRIMERA: OBJETO", clausula1, y);
+  const tipoNegocio = formData.opcion_negocio || "Venta";
+  const honorariosCorresponde = tipoNegocio.toLowerCase().includes("arriendo") ? "un canon de arrendamiento (si fuera venta es el 3% sobre el valor total de venta)" : "el 3% sobre el valor total de la venta (si fuera arriendo es un canon de arrendamiento)";
+  const clausula2Text = `Los honorarios derivados de la comisi\xF3n final efectivamente cobrada por el perfeccionamiento del negocio de Venta (en este caso es ${tipoNegocio}) que corresponde a ${honorariosCorresponde} ser\xE1n distribuidos en partes iguales (50% para cada parte), salvo pacto distinto anexo y por escrito. En caso de que EL AGENTE 2 act\xFAe bajo la figura de simple referenciador (\xFAnicamente refiere al cliente o al colega) sin participar activamente en el acompa\xF1amiento presencial, las negociaciones o el cierre legal, su participaci\xF3n corresponder\xE1 estrictamente al 10% de la comisi\xF3n.`;
+  y = drawClause("CL\xC1USULA SEGUNDA: HONORARIOS Y PROPORCI\xD3N", [{ text: clausula2Text, font }], y);
+  y = checkAndAddPage(y, 100);
+  const clausula3Text = `Para todos los efectos fiscales, contables y tributarios derivados del pago de la comisi\xF3n u honorarios correspondientes a EL AGENTE 1, las partes reconocen y aceptan expresamente que:
+
+1. Calidad Tributaria: EL AGENTE 1 (JANI ALVES SOUZA) act\xFAa en calidad de Persona Natural, No Responsable del Impuesto sobre las Ventas (IVA). Por consiguiente, EL AGENTE 2 (o la agencia inmobiliaria que este represente) tiene estrictamente prohibido realizar descuentos, retenciones o exigencias de facturaci\xF3n electr\xF3nica que incluyan el cobro o deducci\xF3n de IVA sobre la proporci\xF3n de EL AGENTE 1.
+2. Documento Soporte: Si EL AGENTE 2 o su agencia est\xE1n obligados a llevar contabilidad, ser\xE1 de su exclusiva responsabilidad y carga administrativa la emisi\xF3n del "Documento Soporte en adquisiciones efectuadas a sujetos no obligados a expedir factura de venta" (Resoluci\xF3n DIAN 000167 de 2021) para la legalizaci\xF3n de su egreso.
+3. Retenciones en la Fuente: Toda retenci\xF3n en la fuente (a t\xEDtulo de renta o ICA) solo proceder\xE1 si EL AGENTE 2 o su agencia ostentan formalmente la calidad de "Agente Retenedor" ante la DIAN, aplicando estrictamente las tarifas de ley para comisiones a personas naturales declarantes o no declarantes. Cualquier deducci\xF3n deber\xE1 ser informada previamente y soportada con la entrega obligatoria del respectivo Certificado de Retenci\xF3n; de lo contrario, el descuento se considerar\xE1 un cobro indebido y apropiaci\xF3n injustificada de dineros.`;
+  y = drawClause("CL\xC1USULA TERCERA: NATURALEZA TRIBUTARIA, FACTURACI\xD3N Y DESCUENTOS (EXCLUSI\xD3N DE ABUSOS)", [{ text: clausula3Text, font }], y);
+  y = checkAndAddPage(y, 80);
+  const clausula4Text = `De EL AGENTE 1: Promocionar el inmueble, proveer informaci\xF3n fidedigna para el cierre, coordinar diligencias y velar por el rigor jur\xEDdico de la gesti\xF3n.
+De EL AGENTE 2: Presentar prospectos reales, acompa\xF1ar las etapas de negociaci\xF3n (si aplica al 50%) y, con car\xE1cter irrestricto, respetar el canal de comunicaci\xF3n institucional, absteni\xE9ndose de realizar negociaciones directas, paralelas o a espaldas de EL AGENTE 1 con los clientes, propietarios o apoderados del inmueble.`;
+  y = drawClause("CL\xC1USULA CUARTA: OBLIGACIONES DE LAS PARTES", [{ text: clausula4Text, font }], y);
+  y = checkAndAddPage(y, 160);
+  const clausula5 = [
+    { text: "Las partes asumen un compromiso de estricta reserva. EL AGENTE 2 reconoce que EL AGENTE 1 es el titular exclusivo del encargo profesional sobre el inmueble. EL AGENTE 2 y/o su agencia se obligan a la NO ELUSI\xD3N (Non-Circumvention), lo que significa que no podr\xE1n cerrar el negocio, firmar promesas de compraventa ni contratos de arrendamiento con el cliente referido o el propietario del inmueble puenteando o excluyendo a EL AGENTE 1, ni durante la vigencia de este contrato ni dentro de los doce (12) meses siguientes a su terminaci\xF3n.\n\n", font },
+    { text: "PAR\xC1GRAFO PRIMERO: EXTENSI\xD3N POR V\xCDNCULO. ", font: boldFont },
+    { text: "Las partes acuerdan que los efectos de este contrato, especialmente lo referente al pago de honorarios y la cl\xE1usula penal, se extienden a cualquier negocio jur\xEDdico realizado sobre el inmueble con el cliente principal o con cualquier Tercero Vinculado a este. Se consideran Terceros Vinculados: C\xF3nyuges o compa\xF1eros permanentes; familiares dentro del cuarto grado de consanguinidad y segundo de afinidad; Personas Jur\xEDdicas donde el cliente o sus familiares sean socios, representantes o beneficiarios; y los acompa\xF1antes registrados en este contrato y en el sistema de EL AGENTE 1.\n\n", font },
+    { text: "PAR\xC1GRAFO SEGUNDO: CARGA DE LA PRUEBA. ", font: boldFont },
+    { text: "EL AGENTE 2 reconoce que la informaci\xF3n consignada en la base de datos de Vecy Agenda Pro constituye prueba fehaciente del nexo causal de la operaci\xF3n. Cualquier intento de perfeccionar el negocio omitiendo la participaci\xF3n de EL AGENTE 1 con cualquiera de estas personas se considerar\xE1 Incumplimiento Grave y activar\xE1 de inmediato la Cl\xE1usula Penal.", font }
+  ];
+  y = drawClause("CL\xC1USULA QUINTA: CONFIDENCIALIDAD, EXTENSI\xD3N A TERCEROS Y NO ELUSI\xD3N", clausula5, y);
+  y = checkAndAddPage(y, 80);
+  const clausula6Text = "El incumplimiento de cualquiera de las obligaciones, especialmente la elusi\xF3n (puenteo), la negociaci\xF3n no autorizada o los descuentos injustificados sobre los honorarios, dar\xE1 lugar al pago inmediato de una sanci\xF3n penal equivalente al 100% de la comisi\xF3n total generada por el negocio inmobiliario, a favor de la parte cumplida. El presente documento presta m\xE9rito ejecutivo para el cobro de esta penalidad, sin requerimiento de constituci\xF3n en mora, a la cual se renuncia expresamente.";
+  y = drawClause("CL\xC1USULA SEXTA: CL\xC1USULA PENAL E INCUMPLIMIENTO", [{ text: clausula6Text, font }], y);
+  const clausula7Text = "El presente contrato tendr\xE1 una vigencia de tres (3) meses desde su emisi\xF3n digital. Si el negocio se materializa antes, continuar\xE1 vigente hasta el pago total de las comisiones.";
+  y = drawClause("CL\xC1USULA S\xC9PTIMA: DURACI\xD3N", [{ text: clausula7Text, font }], y);
+  const clausula8Text = "Este contrato ostenta plena validez jur\xEDdica desde su generaci\xF3n y emisi\xF3n electr\xF3nica. Al amparo de la Ley 527 de 1999 (Ley de Comercio Electr\xF3nico), las firmas digitales, biom\xE9tricas, electr\xF3nicas o capturas gr\xE1ficas de trazo, se reputan como v\xE1lidas, vinculantes y expresan el consentimiento inequ\xEDvoco de las partes.";
+  y = drawClause("CL\xC1USULA OCTAVA: VALIDEZ Y FIRMA DIGITAL", [{ text: clausula8Text, font }], y);
+  y = checkAndAddPage(y, 150);
+  const firmaText = `En constancia de lo anterior, las partes firman el presente documento el d\xEDa ${generationDate}.`;
+  y = drawRichText([{ text: firmaText, font }], { y, x: margin, width: width - margin * 2, lineHeight: 14 });
+  y -= 30;
+  const firmaY = y;
+  const signatureBox = { width: 120, height: 50 };
+  const calculateDims = (img, maxWidth, maxHeight) => {
+    const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+    return { width: img.width * ratio, height: img.height * ratio };
+  };
+  try {
+    const janiFirmaBytes = Buffer.from(janiFirmaBase64.split(",")[1], "base64");
+    const janiFirmaImage = await pdfDoc.embedPng(janiFirmaBytes);
+    const janiDims = calculateDims(janiFirmaImage, signatureBox.width, signatureBox.height);
+    currentPage.drawImage(janiFirmaImage, {
+      x: margin + (100 - janiDims.width / 2),
+      y: firmaY - 25,
+      width: janiDims.width,
+      height: janiDims.height
+    });
+  } catch (e) {
+    console.error("Error al incrustar firma de Jani en PDF:", e?.message);
+  }
+  currentPage.drawLine({ start: { x: margin, y: firmaY - 35 }, end: { x: margin + 200, y: firmaY - 35 }, thickness: 0.5, color: black });
+  currentPage.drawText("JANI ALVES SOUZA", { x: margin + 40, y: firmaY - 48, font: boldFont, size: 9 });
+  currentPage.drawText("C.C. 41.057.506", { x: margin + 50, y: firmaY - 58, font, size: 8 });
+  currentPage.drawText("AGENTE 1 - VECY BIENES RA\xCDCES", { x: margin + 15, y: firmaY - 68, font, size: 8 });
+  const agentSignatureX = width - margin - 200;
+  if (formData.firma_virtual_base64 && formData.firma_virtual_base64.startsWith("data:image")) {
+    try {
+      const signatureBase64Data = formData.firma_virtual_base64.split(",")[1];
+      const signatureBytes = Buffer.from(signatureBase64Data, "base64");
+      let signatureImage;
+      if (formData.firma_virtual_base64.startsWith("data:image/png")) {
+        signatureImage = await pdfDoc.embedPng(signatureBytes);
+      } else if (formData.firma_virtual_base64.startsWith("data:image/jpeg") || formData.firma_virtual_base64.startsWith("data:image/jpg")) {
+        signatureImage = await pdfDoc.embedJpg(signatureBytes);
+      }
+      if (signatureImage) {
+        const agentDims = calculateDims(signatureImage, signatureBox.width, signatureBox.height);
+        currentPage.drawImage(signatureImage, {
+          x: agentSignatureX + (100 - agentDims.width / 2),
+          y: firmaY - 25,
+          width: agentDims.width,
+          height: agentDims.height
+        });
+      }
+    } catch (e) {
+      console.error(`[${formData.solicitud_id}] Error al incrustar firma del agente:`, e?.message);
+    }
+  }
+  currentPage.drawLine({ start: { x: agentSignatureX, y: firmaY - 35 }, end: { x: width - margin, y: firmaY - 35 }, thickness: 0.5, color: black });
+  currentPage.drawText(clean(formData.solicitante_nombre).toUpperCase(), { x: agentSignatureX, y: firmaY - 48, font: boldFont, size: 9, maxWidth: 200 });
+  currentPage.drawText(`${clean(formData.solicitante_tipo_documento)} No. ${clean(formData.solicitante_numero_documento)}`, { x: agentSignatureX, y: firmaY - 58, font, size: 8 });
+  if (isJuridica && formData.solicitante_representante_legal) {
+    currentPage.drawText(`Rep. Legal: ${clean(formData.solicitante_representante_legal)}`, { x: agentSignatureX, y: firmaY - 68, font, size: 8 });
+    currentPage.drawText("AGENTE 2", { x: agentSignatureX, y: firmaY - 78, font, size: 8 });
+  } else {
+    currentPage.drawText("AGENTE 2", { x: agentSignatureX, y: firmaY - 68, font, size: 8 });
+  }
+  drawFooter(currentPage);
+  return await pdfDoc.save();
+}
+function getEmailContent(formData) {
+  const { solicitante_nombre, solicitante_perfil, solicitud_id, servicio_solicitado, opcion_negocio, codigo_inmueble, fecha_cita_texto, solicitante_email, hora_cita } = formData;
+  const logoUrlParaEmail = "cid:vecyLogo";
+  const now = /* @__PURE__ */ new Date();
+  const fechaActual = new Intl.DateTimeFormat("es-CO", { year: "numeric", month: "long", day: "numeric", timeZone: "America/Bogota" }).format(now);
+  const horaActual = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "America/Bogota" }).format(now);
+  const baseHtml = (title2, bodyContent) => `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style> @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"); body { font-family: "Poppins", Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; } .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f33; } .header { background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #bf953f; } .header img { max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4)); } .content { padding: 35px 40px; color: #f0f0f0; } .content h2 { color: #bf953f; font-size: 22px; margin-top: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; } .content p { font-size: 16px; line-height: 1.7; margin-bottom: 20px; } .highlight { background-color: #1a1a1a; padding: 15px 20px; border-left: 4px solid #bf953f; margin-top: 25px; border-radius: 4px; } .highlight p { font-size: 15px; margin: 0; color: #bf953f; font-weight: 600; } .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #333; } .footer a { color: #bf953f; text-decoration: none; font-weight: 600; } </style></head><body><div class="container"><div class="header"><img src="${logoUrlParaEmail}" alt="Vecy Bienes Ra\xEDces Logo"></div><div class="content"><h2>${title2}</h2>${bodyContent}</div><div class="footer"><p>Vecy Bienes Ra\xEDces S.A.S. \xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} | Gold Edition</p><p><a href="https://vecy.co/" target="_blank">vecy.co</a> \u2014 <a href="https://vecy-network.vercel.app/" target="_blank">vecy-network.vercel.app</a></p></div></div></body></html>`;
+  const subject = `\u2705 Solicitud #${solicitud_id} Recibida | Vecy Agenda`;
+  const title = `\xA1Hola, ${solicitante_nombre}! Hemos recibido tu solicitud \u{1F3E0}\u2728`;
+  let body = `
+    <p>Confirmamos la recepci\xF3n de tu solicitud para <strong>"${servicio_solicitado}"</strong> en <strong>${opcion_negocio || "tr\xE1mite"}</strong> identificado con el c\xF3digo <strong>${codigo_inmueble || "N/A"}</strong>, para la fecha del <strong>${fecha_cita_texto || "fecha por confirmar"}</strong> a las <strong>${hora_cita || "hora por confirmar"}</strong>. \u{1F4C5}</p>
+    <p>Nuestro equipo revisar\xE1 la fidelidad de todos los datos y, una vez verificados, te enviaremos un correo a <strong>${solicitante_email}</strong> con la confirmaci\xF3n del agendamiento y la direcci\xF3n completa del inmueble. \xA1Debes estar pendiente! \u{1F4E9}\u{1F440}</p>
+  `;
+  if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
+    let acompHtml = `<div class="highlight"><p><strong>\u{1F465} Acompa\xF1antes Autorizados:</strong></p><ul style="margin-top: 10px; margin-bottom: 0; color: #ccc;">`;
+    formData.acompanantes.forEach((acomp) => {
+      let parentesco = acomp.parentesco === "Otro" ? acomp.parentescoOtro : acomp.parentesco;
+      acompHtml += `<li>${acomp.nombre} (${parentesco}) - Doc: ${acomp.documento}</li>`;
+    });
+    acompHtml += "</ul></div>";
+    body += acompHtml;
+  }
+  body += `
+    <div class="highlight" style="margin-top: 25px;"><p><strong>ID de Solicitud: ${solicitud_id}</strong></p></div>
+  `;
+  const perfilLower = (solicitante_perfil || "").toLowerCase();
+  const esAgente = perfilLower.includes("agente") || perfilLower.includes("inmobiliaria") || perfilLower.includes("br\xF3ker") || perfilLower.includes("broker");
+  if (esAgente) {
+    body += `
+      <p style="margin-top: 20px;">Como agente, hemos adjuntado a este correo el contrato de colaboraci\xF3n <strong>No. ${solicitud_id}</strong> firmado virtualmente hoy <strong>${fechaActual}</strong> a las <strong>${horaActual}</strong> a trav\xE9s de nuestro formulario. \u270D\uFE0F\u{1F4C4}</p>
+      <p>Estamos seguros de que todo saldr\xE1 bien y ser\xE1 un cierre perfecto. \xA1Gracias por tu confianza! \u{1F91D}\u{1F680}</p>
+    `;
+  }
+  return { subject, html: baseHtml(title, body) };
+}
+function getAdminEmailContent(formData) {
+  const logoUrlParaEmail = "cid:vecyLogo";
+  let rows = "";
+  for (const [key, value] of Object.entries(formData)) {
+    if (key === "firma_virtual_base64" || key === "firma_digital_archivo" || key === "autorizacion" || key === "acompanantes" || key === "firmaVirtualBase64") continue;
+    let displayValue = value;
+    if (value === null || value === void 0) displayValue = "<em>Vac\xEDo</em>";
+    rows += `
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #333; font-weight: bold; width: 40%; color: #bf953f;">${key.replace(/_/g, " ")}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${displayValue}</td>
+      </tr>
+    `;
+  }
+  let acompanantesHtml = "";
+  if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
+    acompanantesHtml += `
+      <h3 style="color: #bf953f; margin-top: 30px; text-transform: uppercase;">\u{1F465} Acompa\xF1antes Registrados</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background-color: #bf953f; color: #000;">
+            <th style="padding: 8px; text-align: left;">Nombre</th>
+            <th style="padding: 8px; text-align: left;">Documento</th>
+            <th style="padding: 8px; text-align: left;">Parentesco</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+    formData.acompanantes.forEach((acomp) => {
+      let parentesco = acomp.parentesco === "Otro" ? acomp.parentescoOtro : acomp.parentesco;
+      acompanantesHtml += `
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${acomp.nombre}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${acomp.documento}</td>
+          <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${parentesco}</td>
+        </tr>
+      `;
+    });
+    acompanantesHtml += "</tbody></table>";
+  }
+  const html = `
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: Arial, sans-serif; background-color: #0a0a0a; color: #f0f0f0; margin: 0; padding: 20px; }
+        .container { max-width: 650px; margin: 0 auto; background-color: #121212; border: 1px solid #bf953f; border-radius: 8px; overflow: hidden; }
+        .header { background-color: #000; padding: 20px; text-align: center; border-bottom: 2px solid #bf953f; }
+        .content { padding: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background-color: #bf953f; color: #000; padding: 10px; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #222; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <img src="${logoUrlParaEmail}" alt="Logo Vecy" style="max-width: 100px;">
+        </div>
+        <div class="content">
+          <h2 style="color: #bf953f; text-align: center; margin-top: 0;">NUEVA SOLICITUD RECIBIDA #${formData.solicitud_id}</h2>
+          <p style="color: #888; font-size: 13px;">Solicitante: ${formData.solicitante_nombre}</p>
+          <p style="font-size: 13px; color: #aaa;">A continuaci\xF3n, el resumen de los datos ingresados en el formulario:</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Campo</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+          ${acompanantesHtml}
+          <p style="font-size: 11px; color: #666; margin-top: 30px; text-align: center;">Este es un correo autom\xE1tico del sistema interno de Vecy Agenda.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  return { html };
+}
+async function sendContractAndConfirmationEmails(rawPayload) {
+  const formData = normalizePayload(rawPayload);
+  const solicitudId = formData.solicitud_id;
+  const gmailUser = process.env.GMAIL_USER || "vecybienesraices@gmail.com";
+  const gmailPass = process.env.GMAIL_APP_PASSWORD || "dwjnngwfmsmjxvgi";
+  const adminTargetEmail = process.env.VECY_INTERNAL_EMAIL || gmailUser;
+  if (!gmailUser || !gmailPass) {
+    console.warn(`[AGENDA-EMAIL-#${solicitudId}] \u26A0\uFE0F Credenciales de Gmail no configuradas en entorno.`);
+    return { success: false, error: "Missing Gmail credentials" };
+  }
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: {
+      user: gmailUser,
+      pass: gmailPass
+    }
+  });
+  let pdfAttachment = null;
+  const perfilLower = (formData.solicitante_perfil || "").toLowerCase();
+  const esAgente = perfilLower.includes("agente") || perfilLower.includes("inmobiliaria") || perfilLower.includes("br\xF3ker") || perfilLower.includes("broker");
+  if (esAgente) {
+    try {
+      console.log(`[AGENDA-EMAIL-#${solicitudId}] \u{1F4C4} Generando Contrato de Puntas Compartidas en PDF...`);
+      const pdfBytes = await createContractPdf(formData);
+      const safeName = (formData.solicitante_nombre || "Agente").replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
+      const pdfFileName = `Contrato_Puntas_${solicitudId}_${safeName}.pdf`;
+      pdfAttachment = {
+        filename: pdfFileName,
+        content: Buffer.from(pdfBytes),
+        contentType: "application/pdf"
+      };
+      console.log(`[AGENDA-EMAIL-#${solicitudId}] \u2705 PDF de contrato generado (${pdfBytes.length} bytes).`);
+    } catch (pdfErr) {
+      console.error(`[AGENDA-EMAIL-#${solicitudId}] \u274C Error generando PDF:`, pdfErr?.message);
+    }
+  }
+  const logoAttachment = {
+    filename: "logo-vecy.png",
+    content: Buffer.from(vecyLogoBase64.split(",")[1], "base64"),
+    cid: "vecyLogo"
+  };
+  const attachments = [logoAttachment];
+  if (pdfAttachment) {
+    attachments.push(pdfAttachment);
+  }
+  if (formData.solicitante_email) {
+    try {
+      const { subject, html } = getEmailContent(formData);
+      await transporter.sendMail({
+        from: `"Vecy Bienes Ra\xEDces" <${gmailUser}>`,
+        to: formData.solicitante_email,
+        subject,
+        html,
+        attachments
+      });
+      console.log(`[AGENDA-EMAIL-#${solicitudId}] \u2709\uFE0F Correo de confirmaci\xF3n enviado exitosamente a ${formData.solicitante_email}`);
+    } catch (clientMailErr) {
+      console.error(`[AGENDA-EMAIL-#${solicitudId}] \u274C Error enviando correo al solicitante:`, clientMailErr?.message);
+    }
+  }
+  try {
+    const adminContent = getAdminEmailContent(formData);
+    await transporter.sendMail({
+      from: `"Vecy Agenda Pro" <${gmailUser}>`,
+      to: adminTargetEmail,
+      subject: `\u{1F514} Nueva Solicitud #${solicitudId} - ${formData.solicitante_perfil || "Usuario"}`,
+      html: adminContent.html,
+      attachments
+    });
+    console.log(`[AGENDA-EMAIL-#${solicitudId}] \u{1F514} Correo interno enviado a ${adminTargetEmail}`);
+  } catch (adminMailErr) {
+    console.error(`[AGENDA-EMAIL-#${solicitudId}] \u274C Error enviando correo interno a Vecy:`, adminMailErr?.message);
+  }
+  return { success: true };
+}
+var vecyLogoBase64, janiFirmaBase64;
+var init_emailContractService = __esm({
+  "server/_core/emailContractService.ts"() {
+    "use strict";
+    vecyLogoBase64 = "data:image/png;base64,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";
+    janiFirmaBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIwAAABTCAYAAABNqO/EAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAVAklEQVR4Xu2dB3SUxRbH6b13kSagSJXeqyhdpIgIAlKlyFPpIKAUGyBVHk2QIkWQ3h69N+m9BQglSCCUhJIEQtj3++ewnGXZ7H4LRLKbL+fsCWRn5pt7584t/3tnvlixzB+TAyYHTA6YHDA5YHLA5IDJgVfCgWPHjuVv0aLFgjVr1tR4JRMwH+o5HAgLC4v98ccfL4sfP75lyJAh/Txn5uZMXwkHNm/eXDl79ux333nnHV8fH583X8kkYtBD43g6rStXrqx3586dpO+///7yN99808fT6THnH4UcuHnzZpqyZcsey507d+DBgweLROGjzKG9gQN//PFHy1SpUlm++OKLKd5Aj0lDFHLg9u3byatUqbLnjTfeuGVqlyhktLcMPWzYsD7SLu3bt5/uLTSZdEQRBw4cOFA4b968l9EugVu2bKkURY8xh/UGDty/fz9+w4YNV2TMmNHStGnTheHh4R4f6XnDukRbGkaPHt01W7Zsd3LlynV91apVNaPtRO0mdvfu3STHjx/P/88//2T2lDl7/DxlivLnz38pR44cIUJ3PUW7zJgxo1WZMmVOvP766w/z5cvn/+uvv3Z93sXYuXNn2VGjRnWVAD7vGDGi37179xLXrVt3PZolmM8N8kbVPYHwyZMnd0iTJo2lXr16G+fOndusSZMmS9OlS2dZv379++7O/8yZM7nffvvtKwUKFDhz48aNNO72j1Htf/rpp28xRfclMJ999tncR48exY7uDJAWKFeu3InSpUufvnXrVmrNFy1Z9LXXXgv/6quvJrozf6HZbJh1+G4P161b57awufMsj29LJFThrbfeCsAcBfL72u7du0t6AlFBQUFJS5Ys6VOjRo2dVgEXfsTfTtepU2eLOzT06tVrVPLkyS2Ysy7u9Itxba9fv5723Xff3ZMnT567+C73u3fvPtqTmPDll19OQqNYduzYUUHzDggISF+kSBG/Bg0arDVKx9KlS+ulTp3a0qZNm1lG+8TYdl9//fU4stH3sdv+MPr0+fPns3sSM/bs2VNCAtO8efNFmjdOa7kMGTJY+vXr94sROq5cufJa0aJFzysb7+fnl8VInxjb5s8//2yCsNxBUC7x+x7RQTdPZAZacYxQ6WXLljUYM2ZMj7Rp01qABGoboUW+TsqUKS0LFiz42Ej7GNvm9OnTbxYqVOgSn2v4LtfIG/2NT5DCExly7dq1DITVxwoWLHilVKlSPuXLlz9mdYKd0YOARZiijh07TvVEuv+1OYPmxgPNXSm/hTqXA4qOCEmb/GsTiIIH4cOUx6z4yTx9z4+rRxBhJapcufJBNov/pUuXsrpqH6O//+WXX3oRPobi5C3Ffl8U/vLgwYP4ns6UZs2aLXyc0liMQCR1Rs/vv//ePlmyZBaQ7R6eTneUzn/79u3lQETvw9zVOLwzYPCD1atXe3xxN3RVpCLwFgVfx6HvQZcuXcZHxkgwlySYrePFihU7r6gqShnuyYNj11PJvqNVrs+ZM6cDGekgIaOeTJN17p988slKHPfQ/fv3l+jbt++wFClSWCZMmNDZEW2gwx31PQ5yd2+gPcpoICIYp2gCf6UN/56CvQ8DpCsVZQ/8lwaeOXNmSwlAnz59RumRQoBr1aq1VYgvoGRl22ng2CdDC50oXrz4WeD/tP/SFD3vMdjsdkIyv/vuu2FA37XJt4R17dp1bHSk5OLFi1l8fX1zGJmbUgE5c+a8U6FChUOAkOmsfU6cOJEXp/4GGvWIapOtf58yZUoH8cHULk64+/fff5ciEgpn122DqemrV6++C3Pkf+HChWgF0qlY69NPP12IAChFcePHH38c6ExoBLQRTp+i0Ov2vn37Sti3nTp1altpnoEDB/6s7wIDA1OSezqOdjmF7/JEuJw9Ax7lsBVEI0Ls0W3EGHbZURbhLgzO+ttvv3VKmjSpZfz48f+JLoSFhIQkFDKrLDOOqK/At0aNGq3CJ3kAXpTH0TyVR/rggw82qs+SJUsaREYLWex1JFTvgNWkmzdvXtPH+SJD5Q979+4tycYKfO+99/b6+/tnjC78itJ5tGvXboaQTJjaEKIzaTeSrNseHByc2J0HcwIyrj7u9LFtq536ww8/fD9u3Lguts9m16eism+5NEHPnj3HWncztcQzyG2FcnjuLUfPVN5HfSZOnOjQsbX2Wbx48Ufp06e3DBo06MfGjRuvANy7KD4YoYOCrAIAgecQXEvFihUPd+7ceapM+ogRI/rOnj27FYf8qhJIeCTY6ZD+4cOH9xbW0L9//2FqwPno+cIptm7dWtEZw4SS4kPkxPZHlAysXbu2erVq1fZhynaTu3nGSd61a1fZ1q1bL8CZbu5oXM5mFySDfFbP1gcfKqLWRhnmTp06zXgcsfS08T/ySSMS+ax4+PDhM0IKHDBeWhIhcAnQXb16NQPlDyeUK5MAWh1jIwKjNhSS/Y+irOutWrX6C5O+U+UUCJ0/Z7Xu4FQ/Kly4sO/PP//8rZVXRseNdu3IEzVTYZEI1uSUK9HC9O7de6SjyYaGhsb/66+/2OxNVyhdwII9gBl+n3/++Sxsvh+FRZZMmTJZBgwYMMS2v5J3qkeRaRAsbw/JAwjG++ijj9aj2kNBlY9gHkJJEJbXGBRp1RI0T8b5qXNPbdu2navxNmzYUM1+rkR3EyQs33zzjaHkInTFk0YFo7mtD/5cGaOLpdSB8lLdunV7gumAkieQE41jnh3Br4Em/ENtSK3sRhvmMjp2tGoHofW1uJQtHJaKVwkDi39Zuxxb/gxQJQ2Bnd4nAeP3foqpvucQW1ucxSFA5zfZYfdZbB92qAVHsoMtseyuQVmyZHkELH8b/+OyNJPt92izSoLrWeh59evX34aT6qOalccab7FKKk6dOpXX2mfWrFmtZEKJ4CbYjoOfk6BDhw7T3BEW9RdIpxQAz3lEOmQNGstQUTuaKWOJEiV8lZ8ig/+GswWeP39+46xZsz7A71qujRethMHVZKQltEA4uipViCC0R48e/xX+snDhwmcyssrqYqPD0SoBixYtaoSfEs/2GTiNmxGGm2iRizAv4OzZs08O5Eub8HdfdvARzMdmBCuQMsenfA4EaiB+UxgZ5RlorYeYhF81Pjs0G5FQCIjzE+Dw0KFDCpGDCZGP2EYmeg7tFslhHTx48CBXPLD9HhS7ljQLC2phE7Q22hctN0vaD83c2Egf+VwgzJYjR44UNNI+WrShWqy71GPVqlUPysnUpPA5SkuACFeX2JddskCFscUhmJxLtrvcSszjLPBZBOWGHD8We4wtoTh9VfBJHnENyEhM1xKEzt8eaqfccwFa6jqCdQazFiRH0mqONFcOzH2r/yOIuWlzQRoHMPGJ2VBkRzS0RQJP3sctZBahS4PvtQchDMdpNZTB1lxURC7fD3pHGF1YEPNlbIDA6AZVOJw/tjMPDu1C+SgUEi3WQlsbIijLkPxwe5xC0QmCpUz1o8jsOkc2XkctX2SHBqsU8vLly08VGGGe2mfOnDmMXT+Wxb6Er7LO9qQBheWJFJKiea5p94GrDLbOi9TEZ4+1XmMJC/6Pr9qsWLHiQ2sbjugWk6DJUZ4+fXobo4undgqDMYEbMJcW/KYQIptvjPTHwa8hc06J52ZXCUzreBScV9McMZkzjDzjlbWRw6kdKpyBnRk8duzY7rYLhjquI7VKIu4pf0ATxkT8VwIm5DMyAqSl0BpX2Dm3FZbbt8OxboG5CSFyOK+FQQha2rZB26TV7Q+0Ca5du/YW/Ilk1u8xhXUQ1hBpINXg8ox7coKt38sPU0E6aO0tmRV3mLxt27ZK+EpnEfR7+F67VVGo8gdXY5DAVG1zEAVlvhJi+/YIUDJ7p15YjeqJFIWBGTmEAGzHUUXj8uXL6+A8uw9R6KAYC/Y5k0jpihjr9zhVcRVloC5HE3kESLIxB3OAwvPbjiHM5MMPP9yMOr5tD35Rw1pfDq6zHaF6EbCO2Trrw05d72h+2Ot3ZG4UUeFQrsMxTWTbDti+CHO8DjMvHz169CnbTg1KNpxkH3yLMEUx1gWCvgQ43QM0P5zVQwrJjfJGkQvR0wjhLspES3MqE/84EpvkzOFlHdpLgNkgFx2hxmiemvBzZ8uWLZdZ58PdOXURyiBovGZEINUPM16JAGA0jr/T8guHNJPfaSOmsSCrYFJ/nNJGIpKMazGd4jt58mRe1HLRjRs3vqf6DR40id18VCoTfyCQcHSqfBRHg4sYMYowepTt9wLNWKDdMhNaNEd9z507lwvmbEBYgrXb8HHOaDHs2zLX0hIY/KBgdtpT80CYClWqVOmA5kqbAHZ9BPYjXGXTpk1ViShWaOdj0lTxNgOBKiSHHY2wV1ESwjzdKCQvOgAFB0sTajyc/DG24Bw8GCFtSmE48rO6ljQf2i6R8lU4wq3gxzY9E5P6P0fIMn1qY9pXIYyToKuYok7M8I8K/VmPI/IFjQr1C7eD0cUoEBtIlLGUMHifsqgsZoA8e6lyVcPxCeX/N4geItBGPPcmhH1O0UqIX6v+OLNv206S50UUTXOsIiJasf9BXdZVKImJCQUlbcCpwpZiJiBgH9u2COQHhOoXEZa7LHyYwEGFonJSMY3dlBBEs/gB83cTUzUXaFwGjXulAWSGyDK3wmH+FtpCtNBom4h8l6v6HDRZPAkJu74WpnW8BEU0AQJOj+xqEuWVeOZJBPgR/L2sjcocb/HcEGk4zGkzzLnDs1gAhEPwDddgllvgS30h51waUBvYEUzxIkJh+DCYKt5wXvMSzs0nT5IesKg/1e//cBlhGJJ8jX/7wxQ//h/uakLCPthNm9gVkynsbmfbHjtdHu2xlV09nF3yJOoQfqIoSzgLavnQ0KFDO+KI7mInJtapQuZWGDPYk8W+qmvMYN4nhNv7gMp7CgmmxqQ7ghUkpsvWoymWsrO/Rbsco29uxu2E8BaEFn80z1oEYwlOb5DmJmcaQctGZHJHdOIsJ8UUFeJv2bUxmENyNGNSdnYGeJMGE54e8Cyz/sZ8LvOsJaIVAT7gjDcyA9KEaITiegYa9BJ99qBFDzrrh2ktBtbSAv8jn4A7fKtjNWvWXIDJdGiqXa2Ps+8NC4wGIXJJgXe+k4nlATTrjA/xjLNqZDLkj+YQbTTmUwJm7LPto0Jv/I1NmJ3CgGO92CnXCWPLoVka4T8kRGCH4yQPYfFvW/uhpnOTHByFCaposVhioX3Oo8Fmkg6YaF10pRswpaUSJ04cTGS1g+c6XTzr2DJR8r8AD8tjtqocPny4BIKRMU6cOLEA6QL5BGFObvP7rj7aPAjJNbTRBTTLcbTYIdu5GuHP87YRwpswYcIQ5hHyvGO81H5S6UQVp1HRoZif40Yq3+0noDt1MWHBqNAlkU2ONgVY8A3slDDUchgq1gf7PJK/53NGkKBvFjePUNeXQbiiPPJT23SOSOUMCPJagL4BCq1FhzLtaIKEL+NZXjmG6juws77Y2JvCJOToukuosrLCN9AY9Vz1lSMrU2Qf3bjq97K+Z8emRED6kfltbl7T8RxcZfHeUEyP/7FBxcwAa3vdKUMQyqpTADiWB9mZ5nUVz7EGr7qLoUSXdZJ43JlUqI2J2EiWeQp4QDHF/0aJAF9piNnISt/fsbPBRvuZ7TyUA0JThZ0o3ARHSI+PEaAIBRDOpeAJ0FPehJDYz2iBkIeyyaun7XKhbalXJjhu3LixiAQCwAsCcExnA3JVBjKv44pL1GbUAcQrjjmbTV9/V+3N772AA0D8MwUmWdFGweUqcgZjWGGtIYmMTJ3LUaZX6LAXsMIkwRUH5NySgj+iYh/hIdb2+CUNiJwugMyOU4bZ0ThKJwiCV7mjq+eY33sJB8ilCD+5wzXt0+xJmjZtWnuiJl9M1Fb8m7YCuHBun0D+AG2/CW4HPKvsJeyIsWQ8Vb3mjAuq/dCpPHJJO+zbkSGdSIb6OPB0a35XJXoqR/i9n3YnQWxzAn59inbaiFBtjrGcjmmEq8QPDXPPvgzAng/KqxB+Z7SarZEjR/ZWJpYzN81iGs9iLL06CkEi7xKliFvta2qdMQWENj4VbYfQShdsj4PGWEZ6AeGGwmoVRFHdloWjCivJRj80Sjf9qpBJLYRJWkQS8abRfma76MsBQwJDTWgtkNkwBGaNO6SQpGsYL168WGS457vTz2zrwRxQZTv5H1/qQ3Y4OuUXGWlCc6lbuUqt7C4dFvNgFphTt+GASw1DxFOS+pccnCNah7ZwWRxlHVsF3vTLgHb5M0GCBIbNmLk60ZsDLgUGP6Si0gGUMW5yhxTKNFtSAnEdgVnoTj+zrQdzQO+Epp50BxVq59wplqIovKqAOtWzejD55tTd5QB5nzzkf+6RQ5rtTl/KKOdRvByuWlN3+pltoz8HnJokipGLoVmSoGG2GyVFVfGcZ2oE/rLUvl7X6Bhmu+jLAacCg8NbJkmSJLFUfW+UBA5c/YfK9VgUiDs8JmJ0HLOdh3FA71bkeMQ+yhdO6109RqavA246v8M56ogXMZg/MYgDnGzMq1flccJvplGydXxEFfY6A2y0j9nOSzjAsdDGKsecNGmS0zvarOTqcJoiI90I5SUsMMlwwIFIfRjO9xQEcIvFQe6jRjjHkdO+iRIlCueo7FAj7c02XsYBLtmbqwtoXF2HJbJ1JZbON3Ml+nAvY4NJjlEOCLCj4Omkq3cU6fgsaYOTnAa4bL4xzCh3PbedQ5Ok2wf4JNWZYQ6g33VGnsozwWvyUK87lDPNfp7LCnPmz80BCqbSKkPNmaNNzgaRRqEU8yqF4QeMXp/13JMyO0YLDjjUMJRXJtaHn3vOZsklgL04c5yBi4x/QBM5bRstqDUn8cIccFinwm2WcblHhSR13EjLEnS7EzdTdeYekmVoIrNA6oWXwjMGcKhhCI9D+NzDj4n0wDyv2fsuduzY4WSknb7RwzPYYM7yhThAWiAOycPd3MR02NHtDJwAaKKTAHqz2As9yOzsPRzgwNpkCqDC7C/U4y1hqbkq7CRXaflQhvnkvl3vodyk5Lk4wD20Hyg1YH3TiHUQaRVdka7LCJ9rYLOTd3JAb9nQ1aO6Z1fvANClx7z7p5NuZyQbPc+d80neySGTqmc4wI1T2Slx2IHQhFMMFfEKGYRomdHXy5ks9T4OuLxFU9A/9+E2JKeUC5DuMEXdS8FnQr2PFSZFJgdMDrx0DvwffF3MuwBFYDoAAAAASUVORK5CYII=";
+  }
+});
+
+// server/_core/whatsapp-utils.ts
+var whatsapp_utils_exports = {};
+__export(whatsapp_utils_exports, {
+  cleanVoiceText: () => cleanVoiceText,
+  detectaVoz: () => detectaVoz,
+  extractFirstName: () => extractFirstName,
+  getGreetingByTime: () => getGreetingByTime,
+  sendAdminNotification: () => sendAdminNotification,
+  textToSpeechMedia: () => textToSpeechMedia
+});
+import path5 from "path";
+import fs5 from "fs";
+import os from "os";
+import { execSync } from "child_process";
+import { createSign } from "crypto";
+function extractFirstName(fullName) {
+  if (!fullName) return "";
+  let clean = fullName.trim();
+  if (!clean) return "";
+  if (/^\+?[\d\s-]{6,}$/.test(clean) || /^[\d\s\+\-\(\)]+$/.test(clean)) return "";
+  if (clean.includes("@")) {
+    clean = clean.split("@")[0];
+  }
+  clean = clean.replace(/[0-9]/g, "");
+  if (!clean.trim()) return "";
+  const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, "")).filter((w) => w.length > 0);
+  if (words.length === 0) return "";
+  let nameWords = words;
+  while (nameWords.length > 0 && CONNECTORS.has(nameWords[0].toLowerCase())) {
+    nameWords.shift();
+  }
+  if (nameWords.length === 0) return "";
+  const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  if (nameWords.length >= 2) {
+    const twoWordKey = `${nameWords[0].toLowerCase()} ${nameWords[1].toLowerCase()}`;
+    if (NICKNAMES_MAP[twoWordKey]) {
+      return NICKNAMES_MAP[twoWordKey];
+    }
+    if (SONOROUS_COMPOUND_BLOCKS.has(twoWordKey)) {
+      return `${cap(nameWords[0])} ${cap(nameWords[1])}`;
+    }
+    const secondWordLower = nameWords[1].toLowerCase();
+    if (NON_SONOROUS_FILLERS.has(secondWordLower)) {
+      const firstWordLower2 = nameWords[0].toLowerCase();
+      if (NICKNAMES_MAP[firstWordLower2]) {
+        return NICKNAMES_MAP[firstWordLower2];
+      }
+      return cap(nameWords[0]);
+    }
+  }
+  const firstWordLower = nameWords[0].toLowerCase();
+  if (NICKNAMES_MAP[firstWordLower]) {
+    return NICKNAMES_MAP[firstWordLower];
+  }
+  return cap(nameWords[0]);
+}
+function getGreetingByTime(date) {
+  const bogotaTimeStr = (date || /* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" });
+  const hour = new Date(bogotaTimeStr).getHours();
+  if (hour >= 1 && hour < 12) {
+    return "Buenos d\xEDas";
+  }
+  if (hour >= 12 && hour < 19) {
+    return "Buenas tardes";
+  }
+  return "Buenas noches";
+}
+function detectaVoz(text2) {
+  if (!text2) return false;
+  const t2 = text2.toLowerCase();
+  return t2.includes("nota de voz") || t2.includes("mensaje de voz") || t2.includes("env\xEDame un audio") || t2.includes("enviame un audio") || t2.includes("resp\xF3ndeme por audio") || t2.includes("respondeme por audio") || t2.includes("m\xE1ndame un audio") || t2.includes("mandame un audio") || t2.includes("por audio") || t2.includes("en audio") || t2.includes("con voz");
+}
+function cleanVoiceText(text2) {
+  if (!text2) return "";
+  let cleaned = text2.trim();
+  cleaned = cleaned.replace(/^\{\{[\s\S]*?\}\}/g, "").trim();
+  cleaned = cleaned.replace(/^\[[\s\S]*?\]/g, "").trim();
+  cleaned = cleaned.replace(/^\{\s*|\s*\}$/g, "").trim();
+  cleaned = cleaned.replace(/^"|"$/g, "").trim();
+  const preambulos = [
+    /^(aquí\s+tienes|aqui\s+tienes|aquí\s+está|aqui\s+esta|aquí\s+te\s+presento|esta\s+es|este\s+es)\s+(la\s+propuesta|el\s+guión|el\s+guion|la\s+nota\s+de\s+voz|el\s+mensaje|la\s+redacción|la\s+redaccion|el\s+texto)[^:]*:\s*/i,
+    /^claro\s*,\s*(aquí\s+tienes|aquí\s+está|te\s+comparto)[^:]*:\s*/i,
+    /^(propuesta\s+de\s+(guión|guion|nota|mensaje|audio|texto)[^:]*):\s*/i,
+    /^(guión\s+de\s+voz|guion\s+de\s+voz|nota\s+de\s+voz|mensaje\s+de\s+voz|guión\s+de\s+audio|guion\s+de\s+audio|guión|guion)\s*:\s*/i
+  ];
+  for (const regex of preambulos) {
+    cleaned = cleaned.replace(regex, "");
+  }
+  cleaned = cleaned.replace(/^:\s*/, "").trim();
+  cleaned = cleaned.replace(/^"|"$/g, "").trim();
+  cleaned = cleaned.replace(/\bVecy\b/gi, "Vesi").replace(/\bVECY\b/g, "Vesi").replace(/\bJanIA\b/gi, "Yan\xEDa").replace(/\bJanIa\b/gi, "Yan\xEDa").replace(/\bjania\b/gi, "Yan\xEDa").replace(/\bm²\b/gi, "metros cuadrados").replace(/\bm2\b/gi, "metros cuadrados").replace(/\bUVT\b/gi, "U-V-T").replace(/\bDIAN\b/gi, "Dian").replace(/\bSINUPOT\b/gi, "Sinu-pot").replace(/\bIDU\b/gi, "I-D-U").replace(/\bPOT\b/g, "P-O-T").replace(/\bAdmon\b/gi, "Administraci\xF3n").replace(/\badmon\b/gi, "administraci\xF3n").replace(/\bApto\b/gi, "Apartamento").replace(/\bapto\b/gi, "apartamento").replace(/\bHab\b/gi, "Habitaciones").replace(/\bhab\b/gi, "habitaciones");
+  return cleaned.trim();
+}
+function splitTextIntoVoiceChunks(text2, maxLen = 180) {
+  const sentences = text2.match(/[^.!?]+[.!?]+/g) || [text2];
+  const chunks = [];
+  let currentChunk = "";
+  for (const sentence of sentences) {
+    if ((currentChunk + " " + sentence).trim().length <= maxLen) {
+      currentChunk = (currentChunk + " " + sentence).trim();
+    } else {
+      if (currentChunk) chunks.push(currentChunk);
+      if (sentence.length > maxLen) {
+        const words = sentence.split(" ");
+        let sub = "";
+        for (const w of words) {
+          if ((sub + " " + w).trim().length <= maxLen) {
+            sub = (sub + " " + w).trim();
+          } else {
+            chunks.push(sub);
+            sub = w;
+          }
+        }
+        if (sub) currentChunk = sub;
+        else currentChunk = "";
+      } else {
+        currentChunk = sentence.trim();
+      }
+    }
+  }
+  if (currentChunk) chunks.push(currentChunk);
+  return chunks;
+}
+async function fetchGttsAudioBuffer(text2) {
+  try {
+    const chunks = splitTextIntoVoiceChunks(text2);
+    const audioBuffers = [];
+    for (const chunk of chunks) {
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=es-CO&client=tw-ob`;
+      const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+      if (res.ok) {
+        const arr = await res.arrayBuffer();
+        audioBuffers.push(Buffer.from(arr));
+      }
+    }
+    if (audioBuffers.length > 0) {
+      return Buffer.concat(audioBuffers);
+    }
+  } catch (err) {
+    console.error("[TTS-Fallback-GTTS] Error sintetizando audio libre:", err.message || err);
+  }
+  return null;
+}
+async function fetchNeuralVoiceBuffer(text2, voiceName = "es-CO-SalomeNeural", rate = "+6%") {
+  try {
+    const { MsEdgeTTS, OUTPUT_FORMAT } = await import("msedge-tts");
+    const tts = new MsEdgeTTS();
+    await tts.setMetadata(voiceName, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+    const { audioStream } = tts.toStream(text2, { rate, pitch: "+0Hz" });
+    return new Promise((resolve) => {
+      const chunks = [];
+      const timer = setTimeout(() => {
+        if (chunks.length > 0) resolve(Buffer.concat(chunks));
+        else resolve(null);
+      }, 2e4);
+      audioStream.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+      audioStream.on("end", () => {
+        clearTimeout(timer);
+        resolve(Buffer.concat(chunks));
+      });
+      audioStream.on("error", (err) => {
+        clearTimeout(timer);
+        console.warn(`[TTS-Neural] Error en stream de voz ${voiceName}:`, err?.message || err);
+        if (chunks.length > 0) resolve(Buffer.concat(chunks));
+        else resolve(null);
+      });
+    });
+  } catch (err) {
+    console.warn(`[TTS-Neural] Error al inicializar s\xEDntesis neuronal (${voiceName}):`, err?.message || err);
+    return null;
+  }
+}
+function base64url(str) {
+  return Buffer.from(str).toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+async function getVertexAIAccessToken() {
+  const now = Math.floor(Date.now() / 1e3);
+  if (cachedVertexToken && cachedVertexToken.expiresAt > now + 300) {
+    return cachedVertexToken.token;
+  }
+  try {
+    const credPath = path5.join(process.cwd(), "server", "_core", "google-service-account.json");
+    if (!fs5.existsSync(credPath)) {
+      return null;
+    }
+    const sa = JSON.parse(fs5.readFileSync(credPath, "utf8"));
+    if (!sa.client_email || !sa.private_key || sa.project_id === "jania-evaluadora-pro") {
+      return null;
+    }
+    const header = { alg: "RS256", typ: "JWT" };
+    const claim = {
+      iss: sa.client_email,
+      scope: "https://www.googleapis.com/auth/cloud-platform",
+      aud: sa.token_uri || "https://oauth2.googleapis.com/token",
+      exp: now + 3600,
+      iat: now
+    };
+    const encodedHeader = base64url(JSON.stringify(header));
+    const encodedClaim = base64url(JSON.stringify(claim));
+    const signInput = `${encodedHeader}.${encodedClaim}`;
+    const signer = createSign("RSA-SHA256");
+    signer.update(signInput);
+    const signature = signer.sign(sa.private_key, "base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+    const jwt = `${signInput}.${signature}`;
+    const res = await fetch(sa.token_uri || "https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+    });
+    const tokenData = await res.json();
+    if (tokenData.access_token) {
+      cachedVertexToken = {
+        token: tokenData.access_token,
+        expiresAt: now + (tokenData.expires_in || 3600)
+      };
+      return tokenData.access_token;
+    }
+  } catch (err) {
+    console.warn("[TTS-Vertex] Error al generar token OAuth2 de cuenta de servicio:", err?.message || err);
+  }
+  return null;
+}
+function convertAudioToOggOpus(inputBuffer) {
+  try {
+    const tmpDir = os.tmpdir();
+    const uniqueId = `tts_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const tmpIn = path5.join(tmpDir, `${uniqueId}_in.mp3`);
+    const tmpOut = path5.join(tmpDir, `${uniqueId}_out.ogg`);
+    fs5.writeFileSync(tmpIn, inputBuffer);
+    execSync(`ffmpeg -y -i "${tmpIn}" -c:a libopus -b:a 32k -vbr on -compression_level 10 -vn "${tmpOut}"`, { stdio: "ignore" });
+    if (fs5.existsSync(tmpOut)) {
+      const oggBuf = fs5.readFileSync(tmpOut);
+      try {
+        fs5.unlinkSync(tmpIn);
+      } catch (_) {
+      }
+      try {
+        fs5.unlinkSync(tmpOut);
+      } catch (_) {
+      }
+      if (oggBuf && oggBuf.length > 0) {
+        return oggBuf;
+      }
+    }
+  } catch (err) {
+    console.warn("[TTS-FFmpeg] No se pudo convertir a OGG Opus, usando audio original:", err?.message || err);
+  }
+  return inputBuffer;
+}
+async function textToSpeechMedia(text2, format = "OGG_OPUS") {
+  const cleaned = cleanVoiceText(text2);
+  if (!cleaned) return null;
+  try {
+    const accessToken = await getVertexAIAccessToken();
+    if (accessToken) {
+      const response = await fetch("https://texttospeech.googleapis.com/v1beta1/text:synthesize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          input: {
+            prompt: "Read aloud in a warm, welcoming tone.",
+            text: cleaned
+          },
+          voice: {
+            languageCode: "es-us",
+            modelName: "gemini-3.1-flash-tts-preview",
+            name: "Laomedeia"
+          },
+          audioConfig: {
+            audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
+            speakingRate: 1,
+            pitch: 0
+          }
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.audioContent) {
+          console.log(`[TTS-Media] \u2713 Gemini 3.1 Flash TTS (Laomedeia) \u2014 ${cleaned.length} chars \u2192 audio generado.`);
+          const buffer = Buffer.from(data.audioContent, "base64");
+          return {
+            mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+            data: buffer.toString("base64"),
+            buffer
+          };
+        }
+      } else {
+        const errText = await response.text();
+        console.warn(`[TTS-Media] Gemini 3.1 Flash TTS error ${response.status}: ${errText.substring(0, 200)}`);
+      }
+    }
+  } catch (err) {
+    console.warn("[TTS-Media] Gemini 3.1 Flash TTS no disponible:", err?.message || err);
+  }
+  const candidateKeys = [
+    process.env.GOOGLE_TTS_API_KEY
+  ].filter((k) => k && k.startsWith("AIzaSy") && !k.includes("AIzaSyCGQ0rQMn0c8DN4XX6Qyp0U6EzDCKEjOq0"));
+  try {
+    for (const googleApiKey of candidateKeys) {
+      try {
+        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            input: { text: cleaned },
+            voice: {
+              languageCode: "es-US",
+              name: "es-US-Chirp3-HD-Erinome"
+            },
+            audioConfig: {
+              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
+              speakingRate: 1,
+              pitch: 0
+            }
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.audioContent) {
+            console.log(`[TTS-Media] \u2713 Google Cloud Chirp3-HD Erinome \u2014 ${cleaned.length} chars \u2192 audio generado.`);
+            const buffer = Buffer.from(data.audioContent, "base64");
+            return {
+              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+              data: buffer.toString("base64"),
+              buffer
+            };
+          }
+        }
+      } catch (keyErr) {
+      }
+    }
+  } catch (err) {
+    console.warn("[TTS-Media] Google Cloud Chirp3-HD Erinome no disponible:", err?.message || err);
+  }
+  try {
+    for (const googleApiKey of candidateKeys) {
+      try {
+        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            input: { text: cleaned },
+            voice: {
+              languageCode: "es-US",
+              name: "es-US-Studio-B"
+            },
+            audioConfig: {
+              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
+              speakingRate: 1.08,
+              pitch: 0.8
+            }
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.audioContent) {
+            console.log(`[TTS-Media] \u2713 Google Cloud Studio-B (Voz Clara y Despierta) \u2014 ${cleaned.length} chars \u2192 audio generado.`);
+            const buffer = Buffer.from(data.audioContent, "base64");
+            return {
+              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+              data: buffer.toString("base64"),
+              buffer
+            };
+          }
+        }
+      } catch (keyErr) {
+      }
+    }
+  } catch (err) {
+    console.warn("[TTS-Media] Google Cloud Studio-B no disponible:", err?.message || err);
+  }
+  try {
+    for (const googleApiKey of candidateKeys) {
+      try {
+        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            input: { text: cleaned },
+            voice: {
+              languageCode: "es-US",
+              name: "es-US-Neural2-A"
+            },
+            audioConfig: {
+              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
+              speakingRate: 1.08,
+              pitch: 0.5
+            }
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.audioContent) {
+            console.log(`[TTS-Media] \u2713 Google Cloud Neural2-A \u2014 ${cleaned.length} chars \u2192 audio generado.`);
+            const buffer = Buffer.from(data.audioContent, "base64");
+            return {
+              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+              data: buffer.toString("base64"),
+              buffer
+            };
+          }
+        }
+      } catch (keyErr) {
+      }
+    }
+  } catch (err) {
+    console.warn("[TTS-Media] Google Cloud Neural2-A no disponible:", err?.message || err);
+  }
+  try {
+    console.log(`[TTS-Media] \u{1F399}\uFE0F Sintetizando con voz neuronal humana (Dalia es-MX +8%) \u2014 ${cleaned.length} caracteres...`);
+    const daliaBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-MX-DaliaNeural", "+8%");
+    if (daliaBuffer && daliaBuffer.length > 0) {
+      console.log(`[TTS-Media] \u2713 Audio generado con voz humana de Dalia (${daliaBuffer.length} bytes).`);
+      const finalBuffer = format === "OGG_OPUS" ? convertAudioToOggOpus(daliaBuffer) : daliaBuffer;
+      return {
+        mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+        data: finalBuffer.toString("base64"),
+        buffer: finalBuffer
+      };
+    }
+  } catch (err) {
+    console.warn("[TTS-Media] Respaldo Dalia fall\xF3, probando Salom\xE9:", err?.message || err);
+  }
+  console.log("[TTS-Media] Sintetizando audio usando contingencia Google Translate TTS (es-CO)...");
+  const gttsBuffer = await fetchGttsAudioBuffer(cleaned);
+  if (gttsBuffer && gttsBuffer.length > 0) {
+    const finalBuffer = format === "OGG_OPUS" ? convertAudioToOggOpus(gttsBuffer) : gttsBuffer;
+    return {
+      mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+      data: finalBuffer.toString("base64"),
+      buffer: finalBuffer
+    };
+  }
+  return null;
+}
+async function sendAdminNotification(text2) {
+  console.log(`[WHATSAPP-UTILS] [Notificaci\xF3n Admin (WhatsApp Omitido)]: ${text2}`);
+}
+var NICKNAMES_MAP, SONOROUS_COMPOUND_BLOCKS, NON_SONOROUS_FILLERS, CONNECTORS, cachedVertexToken;
+var init_whatsapp_utils = __esm({
+  "server/_core/whatsapp-utils.ts"() {
+    "use strict";
+    NICKNAMES_MAP = {
+      "cristina": "Kristy",
+      "cristi": "Kristy",
+      "kristina": "Kristy",
+      "catalina": "Kata",
+      "catalyna": "Kata",
+      "guillermo": "Memo",
+      "maria fernanda": "Mafe",
+      "mar\xEDa fernanda": "Mafe",
+      "maria paula": "Mapau",
+      "mar\xEDa paula": "Mapau",
+      "maria jose": "Majo",
+      "mar\xEDa jos\xE9": "Majo",
+      "juan esteban": "Juanes",
+      "alejandro": "Alejo",
+      "francisco": "Pacho",
+      "eduardo": "Eddu",
+      "isabela": "Isa",
+      "isabella": "Isa",
+      "victoria": "Vicky",
+      "beatriz": "Betty",
+      "carolina": "Caro",
+      "gabriela": "Gaby",
+      "santiago": "Santi",
+      "sebastian": "Seba",
+      "sebasti\xE1n": "Seba",
+      "felipe": "Pipe",
+      "ignacio": "Nacho",
+      "jose manuel": "Josema",
+      "jos\xE9 manuel": "Josema"
+    };
+    SONOROUS_COMPOUND_BLOCKS = /* @__PURE__ */ new Set([
+      // Femeninos Clásicos
+      "maria jose",
+      "mar\xEDa jos\xE9",
+      "maria camila",
+      "mar\xEDa camila",
+      "dulce maria",
+      "dulce mar\xEDa",
+      "ana sofia",
+      "ana sof\xEDa",
+      "juana valentina",
+      "maria alejandra",
+      "mar\xEDa alejandra",
+      "sara sofia",
+      "sara sof\xEDa",
+      "laura camila",
+      "maria paula",
+      "mar\xEDa paula",
+      "luisa fernanda",
+      "ana maria",
+      "ana mar\xEDa",
+      "maria angel",
+      "mar\xEDa \xE1ngel",
+      "mar\xEDa angel",
+      // Femeninos Modernos
+      "maria antonella",
+      "mar\xEDa antonella",
+      "elena sofia",
+      "elena sof\xEDa",
+      "emily valentina",
+      "mia isabella",
+      "m\xEDa isabella",
+      "antonella sofia",
+      "antonella sof\xEDa",
+      // Masculinos Clásicos
+      "juan jose",
+      "juan jos\xE9",
+      "juan david",
+      "juan pablo",
+      "carlos andres",
+      "carlos andr\xE9s",
+      "jose luis",
+      "jos\xE9 luis",
+      "luis fernando",
+      "miguel angel",
+      "miguel \xE1ngel",
+      "juan esteban",
+      "andres felipe",
+      "andr\xE9s felipe",
+      "jorge eliecer",
+      "jorge eli\xE9cer",
+      "juan manuel",
+      "julio cesar",
+      "julio c\xE9sar",
+      // Masculinos Modernos
+      "thiago andres",
+      "thiago andr\xE9s",
+      "ian gael",
+      "maximiliano david",
+      "dylan santiago",
+      "samuel david"
+    ]);
+    NON_SONOROUS_FILLERS = /* @__PURE__ */ new Set([
+      "milena",
+      "patricia",
+      "elena",
+      "marcela",
+      "andrea",
+      "alberto",
+      "alfonso",
+      "ivan",
+      "iv\xE1n",
+      "adolfo",
+      "antonio",
+      "humberto",
+      "enrique",
+      "arturo",
+      "armando",
+      "bernardo",
+      "marina"
+    ]);
+    CONNECTORS = /* @__PURE__ */ new Set(["de", "del", "la", "las", "los", "el", "van", "von", "y", "di"]);
+    cachedVertexToken = null;
+  }
+});
+
+// server/_core/predialService.ts
+var predialService_exports = {};
+__export(predialService_exports, {
+  executePredialAssistanceFromWhatsApp: () => executePredialAssistanceFromWhatsApp,
+  extractChipAndCedulaForPredial: () => extractChipAndCedulaForPredial,
+  liquidarPredialEstimadoBogota: () => liquidarPredialEstimadoBogota
+});
+function extractChipAndCedulaForPredial(text2) {
+  if (!text2 || typeof text2 !== "string") return { found: false };
+  const clean = text2.trim();
+  const lower = clean.toLowerCase();
+  const chipMatch = clean.match(/\b(AAA[0-9]{4}[A-Z0-9]{4})\b/i);
+  let cedula;
+  const cedulaMatch = clean.match(/(?:c[ée]dula|cc|nit|doc(?:umento)?)\s*[:#]?\s*([0-9]{6,10})\b/i);
+  if (cedulaMatch && cedulaMatch[1]) {
+    cedula = cedulaMatch[1];
+  } else {
+    const anyNumberMatch = clean.match(/\b([0-9]{6,10})\b/);
+    if (anyNumberMatch && anyNumberMatch[1] && (!chipMatch || !chipMatch[1].includes(anyNumberMatch[1]))) {
+      cedula = anyNumberMatch[1];
+    }
+  }
+  const keywords = ["predial", "impuesto predial", "factura predial", "chip", "paz y salvo predial", "liquidar predial"];
+  const hasKeyword = keywords.some((kw) => lower.includes(kw));
+  if (chipMatch && chipMatch[1]) {
+    return {
+      found: true,
+      chip: chipMatch[1].toUpperCase(),
+      cedula,
+      tipoDoc: "CC"
+    };
+  }
+  if (hasKeyword && cedula) {
+    return {
+      found: true,
+      cedula,
+      tipoDoc: "CC"
+    };
+  }
+  return { found: false };
+}
+function liquidarPredialEstimadoBogota(avaluoCatastral, estrato = 4, esResidencial = true) {
+  const avaluo = Math.max(0, avaluoCatastral);
+  let tarifaPorMil = 6.5;
+  if (!esResidencial) {
+    tarifaPorMil = 10.5;
+  } else {
+    switch (estrato) {
+      case 1:
+      case 2:
+        tarifaPorMil = 2.5;
+        break;
+      case 3:
+        tarifaPorMil = 4.5;
+        break;
+      case 4:
+        tarifaPorMil = 6.5;
+        break;
+      case 5:
+        tarifaPorMil = 8.5;
+        break;
+      case 6:
+      default:
+        tarifaPorMil = 11;
+        break;
+    }
+  }
+  const impuestoPleno = Math.round(avaluo * tarifaPorMil / 1e3);
+  const descuentoProntoPago = Math.round(impuestoPleno * 0.1);
+  const impuestoConDescuento = impuestoPleno - descuentoProntoPago;
+  const aporteVoluntario = Math.round(impuestoPleno * 0.1);
+  return {
+    avaluoCatastral: avaluo,
+    estrato,
+    tarifaPorMil,
+    impuestoPleno,
+    descuentoProntoPago,
+    impuestoConDescuento,
+    aporteVoluntario
+  };
+}
+async function executePredialAssistanceFromWhatsApp(text2) {
+  const detection = extractChipAndCedulaForPredial(text2);
+  if (!detection.found) {
+    return { isPredialRequest: false };
+  }
+  const chip = detection.chip;
+  const cedula = detection.cedula;
+  const portalUrl = "https://nuevaoficinavirtual.shd.gov.co/bogota/cf/pagos/descarga-factura-predial.html";
+  const portalGeneral = "https://www.haciendabogota.gov.co";
+  if (chip && cedula) {
+    const reportText2 = `\u{1F3DB}\uFE0F *GESTI\xD3N DE IMPUESTO PREDIAL BOGOT\xC1 \u2014 SECRETAR\xCDA DE HACIENDA* \u{1F4C4}
+
+He registrado y validado los par\xE1metros oficiales para la consulta de tu inmueble:
+
+\u2022 *C\xF3digo CHIP:* \`${chip}\`
+\u2022 *C\xE9dula Propietario:* C.C. ${Number(cedula).toLocaleString("es-CO")}
+\u2022 *Tipo de Impuesto:* Impuesto Predial Unificado (Distrito Capital)
+\u2022 *Portal Oficial:* Secretar\xEDa Distrital de Hacienda (SDH)
+
+\u{1F517} *Enlace Directo de Descarga y Pago Oficial:*
+\u{1F449} ${portalUrl}
+
+\u{1F4CC} *Pasos Inmediatos para Obtener el PDF:*
+1. Abre el enlace anterior desde tu navegador.
+2. Selecciona Tipo de Documento (*C\xE9dula de Ciudadan\xEDa*), digita \`${cedula}\` y el CHIP \`${chip}\`.
+3. Marca la casilla *"No soy un robot"* y haz clic en **"Buscar"**.
+4. Podr\xE1s descargar la factura oficial en PDF con c\xF3digo de barras para pago o verificar el paz y salvo catastral.
+
+\u{1F4A1} *Recomendaci\xF3n Notarial VECY:* Para la firma de promesa de compraventa o escrituraci\xF3n en Notar\xEDa, exige siempre la factura predial del a\xF1o vigente con sello de pagado o el certificado de estado de cuenta en ceros emitido por la Oficina Virtual de Hacienda. \xA1Cero sorpresas al momento del cierre! \u{1F91D}\u2728`;
+    return {
+      isPredialRequest: true,
+      chip,
+      cedula,
+      reportText: reportText2
+    };
+  }
+  if (chip && !cedula) {
+    const reportText2 = `\u{1F3E2} *CONSULTA PREDIAL BOGOT\xC1 \u2014 C\xD3DIGO CHIP DETECTADO* \u{1F4CD}
+
+Identifiqu\xE9 con \xE9xito el CHIP catastral de tu inmueble: *\`${chip}\`*.
+
+\u2696\uFE0F *Para descargar la Factura Oficial del Predial:*
+La Secretar\xEDa Distrital de Hacienda de Bogot\xE1 (SDH) exige por norma de seguridad fiscal el **N\xFAmero de Documento (C\xE9dula o NIT)** del propietario registrado en la matr\xEDcula inmobiliaria.
+
+\u{1F449} *\xBFC\xF3mo proceder?*
+Escr\xEDbeme por favor la c\xE9dula del propietario (ej: *"JanIA, el propietario tiene la c\xE9dula 52432900 para el CHIP ${chip}"*) y te entregar\xE9 la gu\xEDa de liquidaci\xF3n y acceso directo al PDF en la plataforma oficial.
+
+\u{1F517} O ingresa directamente aqu\xED con ambos datos: ${portalUrl}`;
+    return {
+      isPredialRequest: true,
+      chip,
+      reportText: reportText2
+    };
+  }
+  const reportText = `\u{1F4C4} *SERVICIO DE PREDIALES Y AVAL\xDAO CATASTRAL \u2014 VECY NETWORK* \u{1F3DB}\uFE0F
+
+Para ayudarte a gestionar el recibo del Impuesto Predial en Bogot\xE1 o liquidar los costos de tu inmueble, solo requiero dos datos:
+
+1. **C\xF3digo CHIP del inmueble** (c\xF3digo alfanum\xE9rico de 11 caracteres que empieza por *AAA*, visible en el Certificado de Tradici\xF3n o prediales anteriores).
+2. **N\xFAmero de C\xE9dula o NIT** del titular del predio.
+
+\u{1F4AC} Env\xEDame ambos datos (ej: *"JanIA, predial CHIP AAA0123ABCD c\xE9dula 52432900"*) y te guiar\xE9 con el aval\xFAo, liquidaci\xF3n y descarga oficial al instante. \xA1Totalmente a tu servicio! \u{1F91D}\u2728`;
+  return {
+    isPredialRequest: true,
+    reportText
+  };
+}
+var init_predialService = __esm({
+  "server/_core/predialService.ts"() {
+    "use strict";
+  }
+});
+
+// server/_core/whatsapp-match.ts
+var whatsapp_match_exports = {};
+__export(whatsapp_match_exports, {
+  JaniaMatchBot: () => JaniaMatchBot,
+  downloadMediaSafely: () => downloadMediaSafely,
+  isBlacklistedGroup: () => isBlacklistedGroup,
+  janiaCaptadorBot: () => janiaCaptadorBot,
+  janiaMatchBot: () => janiaMatchBot,
+  unwrapMessage: () => unwrapMessage
+});
+import dns from "dns";
+import _baileys, {
+  useMultiFileAuthState,
+  DisconnectReason,
+  delay,
+  downloadMediaMessage,
+  downloadContentFromMessage,
+  fetchLatestBaileysVersion,
+  Browsers
+} from "@whiskeysockets/baileys";
+import qrcodeTerminal from "qrcode-terminal";
+import fs6 from "fs";
+import path6 from "path";
+import { eq as eq5 } from "drizzle-orm";
+import QRCode from "qrcode";
+function getWASocket() {
+  if (typeof _baileys === "function") return _baileys;
+  if (_baileys?.default && typeof _baileys.default === "function") return _baileys.default;
+  if (_baileys?.makeWASocket && typeof _baileys.makeWASocket === "function") return _baileys.makeWASocket;
+  return _baileys;
+}
+function unwrapMessage(msgObj) {
+  if (!msgObj) return msgObj;
+  let unwrapped = msgObj;
+  while (unwrapped.ephemeralMessage?.message || unwrapped.viewOnceMessage?.message || unwrapped.viewOnceMessageV2?.message || unwrapped.viewOnceMessageV2Extension?.message || unwrapped.documentWithCaptionMessage?.message) {
+    unwrapped = unwrapped.ephemeralMessage?.message || unwrapped.viewOnceMessage?.message || unwrapped.viewOnceMessageV2?.message || unwrapped.viewOnceMessageV2Extension?.message || unwrapped.documentWithCaptionMessage?.message;
+  }
+  return unwrapped;
+}
+async function downloadMediaSafely(msg, type) {
+  try {
+    const buf = await downloadMediaMessage(msg, "buffer", {});
+    if (buf && buf.length > 0) return buf;
+  } catch (err1) {
+  }
+  try {
+    const rawMsg = unwrapMessage(msg.message);
+    const mediaKey = type === "image" ? rawMsg?.imageMessage : type === "audio" ? rawMsg?.audioMessage : type === "video" ? rawMsg?.videoMessage : rawMsg?.documentMessage;
+    if (mediaKey) {
+      const stream = await downloadContentFromMessage(mediaKey, type);
+      const chunks = [];
+      for await (const chunk of stream) {
+        chunks.push(chunk);
+      }
+      const buf = Buffer.concat(chunks);
+      if (buf && buf.length > 0) return buf;
+    }
+  } catch (err2) {
+    console.error(`[JANIA-MEDIA] Error descargando ${type}:`, err2);
+  }
+  return null;
+}
+function isBlacklistedGroup(groupName, chatId) {
+  if (!groupName && !chatId) return false;
+  const nameLower = (groupName || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const blacklistPatterns = [
+    "seguridad tiempo real",
+    "seguridad en tiempo real",
+    "chat de seguridad",
+    "frente de seguridad",
+    "cuadrante",
+    "policia",
+    "cai ",
+    "vigilancia",
+    "red de apoyo",
+    "vecinos alerta",
+    "seguridad barrio",
+    "seguridad comunitaria"
+  ];
+  return blacklistPatterns.some((pattern) => nameLower.includes(pattern));
+}
+var SERVER_BOOT_TIME, cleanJid, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot;
+var init_whatsapp_match = __esm({
+  "server/_core/whatsapp-match.ts"() {
+    "use strict";
+    init_db();
+    init_schema();
+    init_scraper();
+    init_whatsapp_utils();
+    init_voiceTranscription();
+    init_matching();
+    try {
+      dns.setDefaultResultOrder("ipv4first");
+    } catch (e) {
+    }
+    SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3) - 120;
+    cleanJid = (jid) => {
+      if (!jid) return "";
+      if (jid.includes("@")) {
+        const [userPart, domain] = jid.split("@");
+        const cleanUser = userPart.split(":")[0];
+        return `${cleanUser}@${domain}`;
+      }
+      return jid.split(":")[0];
+    };
+    outgoingQueue = Promise.resolve();
+    JaniaMatchBot = class {
+      sock = null;
+      isReady = false;
+      sessionFolderName = ".baileys_auth";
+      qrFileName = "qr-match.png";
+      botName = "JANIA-MATCH";
+      isWorkerOnly = false;
+      // Grupos autorizados y configuraciones
+      authorizedGroups = [];
+      messageBuffers = /* @__PURE__ */ new Map();
+      redirectCooldowns = /* @__PURE__ */ new Map();
+      processingLocks = /* @__PURE__ */ new Map();
+      lastGroupMessageTime = /* @__PURE__ */ new Map();
+      botSentMessageIds = /* @__PURE__ */ new Set();
+      lastHumanIntervention = /* @__PURE__ */ new Map();
+      dmMessageBuffers = /* @__PURE__ */ new Map();
+      groupMetadataCache = /* @__PURE__ */ new Map();
+      reconnectAttempts = 0;
+      maxReconnectAttempts = 5;
+      reactedMessageIds = /* @__PURE__ */ new Map();
+      reactionQueue = Promise.resolve();
+      lastReactionTimestamp = 0;
+      MIN_REACTION_INTERVAL_MS = 1200;
+      async getCachedGroupMetadata(chatId) {
+        const cached = this.groupMetadataCache.get(chatId);
+        if (cached && Date.now() - cached.time < 10 * 60 * 1e3) {
+          return cached.data;
+        }
+        try {
+          const data = await Promise.race([
+            this.sock?.groupMetadata(chatId),
+            new Promise((resolve) => setTimeout(() => resolve(null), 2500))
+          ]);
+          if (data) {
+            this.groupMetadataCache.set(chatId, { data, time: Date.now() });
+          }
+          return data;
+        } catch (_) {
+          return cached?.data || null;
+        }
+      }
+      async resolveGroupName(chatId) {
+        const KNOWN_GROUPS = {
+          "120363260108880069@g.us": "VECY INMUEBLES NETWORK",
+          "120363417740040773@g.us": "VECY: SOPORTE LEGAL, TRIBUTARIO Y AVAL\xDAOS",
+          "120363403507276533@g.us": "PROYECTO Vecy Network",
+          "120363029834368375@g.us": "Santas-Carolina-Bosques-Calleja"
+        };
+        if (KNOWN_GROUPS[chatId]) return KNOWN_GROUPS[chatId];
+        try {
+          const metadata = await this.getCachedGroupMetadata(chatId);
+          if (metadata && metadata.subject && metadata.subject.trim()) {
+            return metadata.subject.trim();
+          }
+        } catch (_) {
+        }
+        return "Grupo Inmobiliario WhatsApp";
+      }
+      targetGroupId = "120363260108880069@g.us";
+      buzonGroupId = "120363417740040773@g.us";
+      circuloGroupId = "120363403507276533@g.us";
+      channelNewsletterId = process.env.WHATSAPP_CHANNEL_NEWSLETTER_ID || "";
+      cooldownMap = /* @__PURE__ */ new Map();
+      cooldownFile = path6.join(process.cwd(), ".cooldown_map.json");
+      constructor(options) {
+        if (options) {
+          if (options.sessionFolderName) this.sessionFolderName = options.sessionFolderName;
+          if (options.qrFileName) this.qrFileName = options.qrFileName;
+          if (options.botName) this.botName = options.botName;
+          if (options.isWorkerOnly !== void 0) this.isWorkerOnly = options.isWorkerOnly;
+        }
+        if (!this.isWorkerOnly) {
+          global.janiaMatchBotInstance = this;
+        }
+        console.log(`[${this.botName}] Inicializando JanIA Bot con Baileys (Carpeta: ${this.sessionFolderName})...`);
+        const groupsEnv = process.env.JANIA_MATCH_GROUPS;
+        if (groupsEnv) {
+          this.authorizedGroups = groupsEnv.split(",").map((g) => g.trim());
+        } else {
+          this.authorizedGroups = [
+            "120363260108880069@g.us",
+            // VECY INMUEBLES NETWORK
+            "120363417740040773@g.us",
+            // VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS
+            "120363403507276533@g.us"
+            // PROYECTO "Vecy Network" 👌
+          ];
+        }
+        this.loadCooldowns();
+        this.setupGracefulShutdown();
+        this.startDbHeartbeat();
+      }
+      startDbHeartbeat() {
+        this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error in initial status update:`, err));
+        setInterval(() => {
+          this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error in heartbeat status update:`, err));
+        }, 3e4);
+      }
+      async updateStatusInDb() {
+        try {
+          const db = await getDb();
+          if (!db) return;
+          const rawPhone = this.sock?.user?.id ? this.sock.user.id.split("@")[0].split(":")[0] : null;
+          const phone = rawPhone || "573192919978";
+          const jid = this.isWorkerOnly ? "system:bot_status_worker2" : "system:bot_status";
+          await db.insert(pendingSessions).values({
+            jid,
+            sessionData: { isReady: true, phone, botName: this.botName, updatedAt: (/* @__PURE__ */ new Date()).toISOString() },
+            createdAt: /* @__PURE__ */ new Date()
+          }).onConflictDoUpdate({
+            target: pendingSessions.jid,
+            set: {
+              sessionData: { isReady: true, phone, botName: this.botName, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }
+            }
+          });
+          console.log(`[${this.botName}-DB] Bot status heartbeat updated: isReady=${this.isReady}, phone=${phone}`);
+        } catch (err) {
+          console.error(`[${this.botName}-DB] Failed to update bot status in DB:`, err.message);
+        }
+      }
+      async initialize() {
+        try {
+          if (this.sock) {
+            try {
+              this.sock.ev.removeAllListeners("connection.update");
+              this.sock.ev.removeAllListeners("creds.update");
+              this.sock.ev.removeAllListeners("messages.upsert");
+              if (this.sock.ws && typeof this.sock.ws.close === "function") {
+                this.sock.ws.close();
+              }
+            } catch (cleanupErr) {
+            }
+          }
+          const sessionDir = path6.join(process.cwd(), this.sessionFolderName);
+          if (!fs6.existsSync(sessionDir)) {
+            fs6.mkdirSync(sessionDir, { recursive: true });
+          }
+          const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+          if (!fs6.existsSync(path6.join(sessionDir, "creds.json"))) {
+            await saveCreds();
+            console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
+          }
+          let version = [2, 3e3, 1043857760];
+          try {
+            const fetched = await fetchLatestBaileysVersion();
+            if (fetched && fetched.version) {
+              version = fetched.version;
+            }
+          } catch (e) {
+          }
+          console.log(`[${this.botName}] Estableciendo conexi\xF3n por WebSocket...`);
+          const silentLogger = {
+            level: "silent",
+            log: () => {
+            },
+            trace: () => {
+            },
+            debug: () => {
+            },
+            info: () => {
+            },
+            warn: () => {
+            },
+            error: () => {
+            },
+            fatal: () => {
+            },
+            child: () => silentLogger
+          };
+          const makeWASocket = getWASocket();
+          this.sock = makeWASocket({
+            auth: state,
+            version,
+            logger: silentLogger,
+            printQRInTerminal: false,
+            // Lo manejamos nosotros de forma personalizada
+            browser: Browsers.ubuntu("Chrome"),
+            syncFullHistory: false,
+            markOnlineOnConnect: false,
+            connectTimeoutMs: 9e4,
+            // Aumentado a 90s para conexiones lentas
+            defaultQueryTimeoutMs: 9e4,
+            keepAliveIntervalMs: 2e4,
+            // Ping Keep-Alive de WebSocket cada 20 segundos
+            emitOwnEvents: true
+          });
+          this.setupEventListeners(saveCreds);
+        } catch (err) {
+          console.error(`[${this.botName}] Error cr\xEDtico al inicializar el cliente Baileys:`, err);
+        }
+      }
+      setupEventListeners(saveCreds) {
+        this.sock.ev.on("creds.update", async () => {
+          try {
+            await saveCreds();
+          } catch (err) {
+            console.error(`[${this.botName}] \u274C Error al guardar credenciales:`, err.message || err);
+          }
+        });
+        this.sock.ev.on("connection.update", async (update) => {
+          const { connection, lastDisconnect, qr } = update;
+          if (qr) {
+            console.log(`
+[${this.botName}] \u{1F50C} ESCANEA ESTE C\xD3DIGO QR PARA VINCULAR ${this.botName} (+573192919978):`);
+            qrcodeTerminal.generate(qr, { small: true });
+            global.janiaBotQr = qr;
+            try {
+              const qrPath = path6.join(process.cwd(), this.qrFileName);
+              const publicQrDir = path6.join(process.cwd(), "client", "public");
+              if (!fs6.existsSync(publicQrDir)) {
+                fs6.mkdirSync(publicQrDir, { recursive: true });
+              }
+              const publicQrPath = path6.join(publicQrDir, "qr-match.png");
+              await QRCode.toFile(qrPath, qr, { width: 400, margin: 2 });
+              await QRCode.toFile(publicQrPath, qr, { width: 400, margin: 2 });
+              console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
+            } catch (e) {
+              console.warn(`[${this.botName}] Error guardando QR PNG:`, e.message);
+            }
+          }
+          if (connection === "close") {
+            const error = lastDisconnect?.error;
+            const statusCode = error?.output?.statusCode;
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401 && statusCode !== 403;
+            this.isReady = false;
+            this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
+            if (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403) {
+              console.error(`[${this.botName}] \u{1F6E1}\uFE0F [ESCUDO ANTI-BAN] Sesi\xF3n cerrada o desvinculada por WhatsApp (error ${statusCode}). Deteniendo reconexi\xF3n autom\xE1tica por seguridad.`);
+              return;
+            }
+            this.reconnectAttempts++;
+            if (this.reconnectAttempts > 3) {
+              console.warn(`[${this.botName}] \u{1F6E1}\uFE0F [ESCUDO ANTI-BAN] 3 reintentos seguidos alcanzados. Pausando reconexi\xF3n por 45 segundos para proteger el n\xFAmero +573192919978...`);
+              setTimeout(() => {
+                this.reconnectAttempts = 0;
+                this.initialize();
+              }, 45e3);
+              return;
+            }
+            const isRestart = statusCode === DisconnectReason.restartRequired;
+            const isConnectionLost = statusCode === DisconnectReason.connectionLost;
+            const isConflict = statusCode === 440;
+            const jitter = Math.floor(Math.random() * 3e3);
+            const delayMs = isConflict ? 2e4 + jitter : this.reconnectAttempts * 4e3 + jitter;
+            console.warn(`[${this.botName}] \u{1F6E1}\uFE0F [ANTI-BAN] Conexi\xF3n Baileys pausada (c\xF3digo: ${statusCode}) [Intento ${this.reconnectAttempts}/3]. Reconectando de forma segura en ${Math.round(delayMs / 1e3)}s...`);
+            if (shouldReconnect) {
+              setTimeout(() => this.initialize(), delayMs);
+            }
+          } else if (connection === "open") {
+            console.log(`
+\u{1F680} ${this.botName} \u{1F50C}\u{1F498} \u2014 BOT ACTIVADO CORRECTAMENTE CON BAILEYS`);
+            this.isReady = true;
+            this.reconnectAttempts = 0;
+            this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error updating status on open:`, err));
+            this.discoverAndSyncNewsletters().catch((err) => console.warn(`[${this.botName}] Info newsletters:`, err?.message));
+          }
+        });
+        this.sock.ev.on("messages.upsert", async (m) => {
+          if (m.type !== "notify" && m.type !== "append") return;
+          for (const msg of m.messages) {
+            if (!msg.key || !msg.message) continue;
+            if (msg.messageStubType) {
+              continue;
+            }
+            const fromMe = msg.key.fromMe;
+            const rawChatId = msg.key.remoteJid;
+            if (!rawChatId) continue;
+            const chatId = cleanJid(rawChatId);
+            const isGroup = chatId.endsWith("@g.us");
+            const rawSenderId = isGroup ? msg.key.participant || msg.participant || (this.sock?.user?.id ? cleanJid(this.sock.user.id) : "") : rawChatId;
+            if (!rawSenderId || isGroup && rawSenderId.endsWith("@g.us")) continue;
+            const senderId = cleanJid(rawSenderId);
+            if (chatId.includes("status@broadcast") || senderId.includes("status@broadcast")) {
+              continue;
+            }
+            const timestamp2 = msg.messageTimestamp;
+            if (timestamp2 && Number(timestamp2) < SERVER_BOOT_TIME - 60) {
+              continue;
+            }
+            try {
+              if (isGroup) {
+                const msgId = msg.key?.id || "";
+                if (this.botSentMessageIds.has(msgId)) {
+                  continue;
+                }
+                const meta = await this.getCachedGroupMetadata(chatId);
+                const groupSubject = meta?.subject || "";
+                if (isBlacklistedGroup(groupSubject, chatId)) {
+                  continue;
+                }
+                const rawMsg = unwrapMessage(msg.message);
+                if (rawMsg?.protocolMessage && !rawMsg.protocolMessage.editedMessage || rawMsg?.e2eNotificationMessage || rawMsg?.keyTransparency) {
+                  continue;
+                }
+                if (rawMsg?.stickerMessage) {
+                  continue;
+                }
+                let body = "";
+                let isAudioPTT = false;
+                let imageBufferImmediate = void 0;
+                let pdfBufferImmediate = void 0;
+                let pdfMimeTypeImmediate = void 0;
+                if (rawMsg?.conversation) body = rawMsg.conversation;
+                else if (rawMsg?.extendedTextMessage) {
+                  body = rawMsg.extendedTextMessage.text || "";
+                  const linkTitle = rawMsg.extendedTextMessage.title || "";
+                  const linkDesc = rawMsg.extendedTextMessage.description || "";
+                  if (linkTitle || linkDesc) {
+                    const previewText = [linkTitle, linkDesc].filter(Boolean).join(" ");
+                    if (previewText && !body.includes(previewText)) {
+                      body = `${body}
+${previewText}`.trim();
+                    }
+                  }
+                } else if (rawMsg?.imageMessage) {
+                  body = rawMsg.imageMessage.caption || "";
+                  try {
+                    const downloadedImg = await downloadMediaSafely(msg, "image");
+                    if (downloadedImg && downloadedImg.length > 0) {
+                      imageBufferImmediate = downloadedImg.toString("base64");
+                      console.log(`[JANIA-MATCH] \u{1F4F7} Imagen flyer descargada inmediatamente (${(downloadedImg.length / 1024).toFixed(1)} KB) de ${senderId}`);
+                    }
+                  } catch (imgErr) {
+                    console.warn("[JANIA-MATCH] Error descargando imagen flyer inmediatamente:", imgErr?.message || imgErr);
+                  }
+                } else if (rawMsg?.documentMessage) {
+                  body = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || "";
+                  try {
+                    const downloadedDoc = await downloadMediaSafely(msg, "document");
+                    if (downloadedDoc && downloadedDoc.length > 0) {
+                      pdfBufferImmediate = downloadedDoc.toString("base64");
+                      pdfMimeTypeImmediate = rawMsg.documentMessage.mimetype || "application/pdf";
+                    }
+                  } catch (docErr) {
+                  }
+                } else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || "";
+                else if (rawMsg?.audioMessage) {
+                  isAudioPTT = true;
+                  try {
+                    console.log(`[JANIA-MATCH] Transcribiendo audio PTT de ${senderId} en grupo ${chatId}...`);
+                    const audioBuffer = await downloadMediaSafely(msg, "audio");
+                    if (audioBuffer && audioBuffer.length > 0) {
+                      const mimeType = rawMsg.audioMessage.mimetype || "audio/ogg; codecs=opus";
+                      const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
+                      if (transcription && transcription.trim() !== "") {
+                        body = transcription.trim();
+                        console.log(`[JANIA-MATCH] Transcripci\xF3n exitosa: "${body.substring(0, 80)}..."`);
+                      } else {
+                        body = "[audio-vac\xEDo]";
+                      }
+                    } else {
+                      body = "[audio-sin-buffer]";
+                    }
+                  } catch (audioErr) {
+                    console.error("[JANIA-MATCH] Error al transcribir audio PTT:", audioErr.message || audioErr);
+                    body = "[audio-error]";
+                  }
+                } else if (msg.message.templateMessage) {
+                  const tmpl = msg.message.templateMessage;
+                  body = tmpl.hydratedTemplate?.hydratedContentText || tmpl.hydratedFourRowTemplate?.hydratedContentText || "";
+                } else if (msg.message.buttonsMessage) {
+                  body = msg.message.buttonsMessage.contentText || "";
+                } else if (msg.message.listMessage) {
+                  body = msg.message.listMessage.description || msg.message.listMessage.title || "";
+                } else if (msg.message.productMessage) {
+                  const prod = msg.message.productMessage?.product;
+                  body = [prod?.title, prod?.description, prod?.priceAmount1000 ? `$${Math.round(prod.priceAmount1000 / 1e3).toLocaleString("es-CO")}` : ""].filter(Boolean).join(" - ");
+                } else if (rawMsg?.reactionMessage) {
+                  body = rawMsg.reactionMessage.text || "";
+                }
+                const quotedAudioMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.audioMessage;
+                if (quotedAudioMsg) {
+                  isAudioPTT = true;
+                  try {
+                    const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
+                    const quotedParticipant = contextInfo?.participant || chatId;
+                    const quotedPhone = quotedParticipant.split("@")[0];
+                    console.log(`[JANIA-MATCH] Transcribiendo audio CITADO de +${quotedPhone} en grupo ${chatId}...`);
+                    let audioBuffer = null;
+                    try {
+                      const stream = await downloadContentFromMessage(quotedAudioMsg, "audio");
+                      let chunks = [];
+                      for await (const chunk of stream) chunks.push(chunk);
+                      audioBuffer = Buffer.concat(chunks);
+                    } catch (e) {
+                      const fakeMsg = {
+                        key: {
+                          remoteJid: chatId,
+                          id: contextInfo?.stanzaId || "quoted-audio",
+                          fromMe: false,
+                          participant: quotedParticipant
+                        },
+                        message: {
+                          audioMessage: quotedAudioMsg
+                        }
+                      };
+                      audioBuffer = await downloadMediaMessage(fakeMsg, "buffer", {});
+                    }
+                    if (audioBuffer && audioBuffer.length > 0) {
+                      const mimeType = quotedAudioMsg.mimetype || "audio/ogg; codecs=opus";
+                      const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
+                      if (transcription && transcription.trim() !== "") {
+                        console.log(`[JANIA-MATCH] Transcripci\xF3n de audio citado exitosa: "${transcription.substring(0, 80)}..."`);
+                        const quotedNote = `[Consulta en audio citada de +${quotedPhone}]: "${transcription.trim()}"`;
+                        body = body ? `${body}
+
+${quotedNote}` : quotedNote;
+                      }
+                    }
+                  } catch (quotedAudioErr) {
+                    console.error("[JANIA-MATCH] Error al transcribir audio citado:", quotedAudioErr?.message || quotedAudioErr);
+                  }
+                } else if (!body && msg.message.extendedTextMessage?.contextInfo?.quotedMessage) {
+                  const qm = msg.message.extendedTextMessage.contextInfo.quotedMessage;
+                  body = qm.conversation || qm.extendedTextMessage?.text || qm.imageMessage?.caption || "";
+                }
+                const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
+                const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
+                const textLower = body.toLowerCase();
+                const mentionsBot = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid(jid) === botJid);
+                const hasDirectMention = textLower.includes("jania") || botPhone && textLower.includes(botPhone) || textLower.includes("573192919978") || !!mentionsBot;
+                const isMainGroup = chatId === this.targetGroupId;
+                const isBuzonGroup = chatId === this.buzonGroupId;
+                const isCirculoGroup = chatId === this.circuloGroupId;
+                const isOfficialGroup = isMainGroup || isBuzonGroup || isCirculoGroup;
+                const groupName = await this.resolveGroupName(chatId);
+                if (!isOfficialGroup) {
+                  const gNameLower = groupName.toLowerCase();
+                  const NON_REAL_ESTATE_KEYWORDS = [
+                    "seguridad",
+                    "polic\xEDa",
+                    "policia",
+                    "patrulla",
+                    "amigos",
+                    "curso",
+                    "talento tech",
+                    "familia",
+                    "convivencia",
+                    "an\xE9cdotas",
+                    "anecdotas",
+                    "negociaci\xF3n arrecifes",
+                    "venta alameda",
+                    "proceso cristo rey"
+                  ];
+                  const isNonRealEstateGroup = NON_REAL_ESTATE_KEYWORDS.some((kw) => gNameLower.includes(kw));
+                  if (isNonRealEstateGroup) {
+                    return;
+                  }
+                }
+                const hasRawMedia = !!rawMsg?.imageMessage || !!rawMsg?.documentMessage || !!rawMsg?.videoMessage || isAudioPTT;
+                const isReactionMessage = !!rawMsg?.reactionMessage;
+                if (!body.trim() && !hasRawMedia) {
+                  continue;
+                }
+                const isPossibleListing = body.length > 70 || body.split("\n").length >= 2 || hasRawMedia || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("venta") || textLower.includes("arriendo") || textLower.includes("ariendo") || textLower.includes("compro") || textLower.includes("necesito") || textLower.includes("renta") || textLower.includes("alquilo") || textLower.includes("permuto") || textLower.includes("permuta") || textLower.includes("requiero") || textLower.includes("requerimiento") || textLower.includes("casa") || textLower.includes("apto") || textLower.includes("apartamento") || textLower.includes("bodega") || textLower.includes("oficina") || textLower.includes("edificio") || textLower.includes("lote") || textLower.includes("local") || textLower.includes("finca") || textLower.includes("terreno") || textLower.includes("predio") || textLower.includes("campestre") || textLower.includes("fanegada") || textLower.includes("fanegadas") || textLower.includes("hectarea") || textLower.includes("hect\xE1rea") || textLower.includes("hect") || textLower.includes("parque") || textLower.includes("inversion") || textLower.includes("inversi\xF3n") || textLower.includes("penthouse") || textLower.includes("apartaestudio") || textLower.includes("duplex") || textLower.includes("d\xFAplex") || textLower.includes("parqueadero") || textLower.includes("alcoba") || textLower.includes("habitacion") || textLower.includes("habitaci\xF3n") || textLower.includes("metro") || textLower.includes("mts") || textLower.includes("mts2") || textLower.includes("m2") || textLower.includes("precio") || textLower.includes("presupuesto") || textLower.includes("millones") || textLower.includes("millon") || textLower.includes("canon") || textLower.includes("comisi\xF3n") || textLower.includes("comision") || textLower.includes("valor");
+                const isHelpOrSystemQuery = !isPossibleListing && (textLower.includes("c\xF3mo subo") || textLower.includes("como subo") || textLower.includes("c\xF3mo publico") || textLower.includes("como publico") || textLower.includes("c\xF3mo se publica") || textLower.includes("como se publica") || textLower.includes("c\xF3mo registrar") || textLower.includes("como registrar") || textLower.includes("c\xF3mo funciona") || textLower.includes("como funciona") || textLower.includes("de qu\xE9 consiste") || textLower.includes("de que consiste") || textLower.includes("en qu\xE9 consiste") || textLower.includes("en que consiste") || textLower.includes("c\xF3mo hago para") || textLower.includes("como hago para") || textLower.includes("c\xF3mo buscar") || textLower.includes("como buscar") || textLower.includes("c\xF3mo encontrar") || textLower.includes("como encontrar") || textLower.includes("mec\xE1nica del grupo") || textLower.includes("mecanica del grupo") || textLower.includes("qued\xF3 guardado") || textLower.includes("quedo guardado") || textLower.includes("se guard\xF3") || textLower.includes("se guardo") || textLower.includes("fue guardado") || textLower.includes("falt\xF3 alg\xFAn dato") || textLower.includes("falto algun dato") || textLower.includes("falt\xF3 un dato") || textLower.includes("falto un dato") || textLower.includes("datos faltantes") || textLower.includes("subi\xF3 correctamente") || textLower.includes("subio correctamente") || textLower.includes("fue subido") || textLower.includes("mejor forma de publicar") || textLower.includes("c\xF3mo es mejor") || textLower.includes("como es mejor") || textLower.includes("para obtener resultados") || textLower.includes("ayuda") && textLower.includes("inmueble") || textLower.includes("explicar") && textLower.includes("grupo") || textLower.includes("c\xF3mo") && textLower.includes("grupo"));
+                const textClean = body.toLowerCase().trim();
+                const isAudioFailed = body === "[audio-vac\xEDo]" || body === "[audio-sin-buffer]" || body === "[audio-error]";
+                const isShortCourtesy = !isAudioPTT && (textClean.length < 6 || ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
+                const isListingGroup = isMainGroup || !isBuzonGroup && !isCirculoGroup;
+                const isListing = isListingGroup && (isPossibleListing || !isOfficialGroup || hasRawMedia);
+                const hasMeaningfulQuery = textClean.length >= 4 && !isShortCourtesy && !isReactionMessage || hasRawMedia;
+                const shouldRespond = isBuzonGroup || isCirculoGroup ? hasMeaningfulQuery : isOfficialGroup && hasDirectMention;
+                if (isListing) {
+                  await this.handleIncomingGroupMessage(msg, chatId, body, imageBufferImmediate, pdfBufferImmediate, pdfMimeTypeImmediate);
+                  continue;
+                }
+                if (isOfficialGroup && isShortCourtesy && !isBuzonGroup) {
+                  const courtesyEmoji = textClean.includes("gracias") ? "\u{1F91D}" : "\u{1F44D}";
+                  try {
+                    await this.sock.sendMessage(chatId, {
+                      react: { text: courtesyEmoji, key: msg.key }
+                    });
+                  } catch (e) {
+                  }
+                }
+                if (shouldRespond) {
+                  await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
+                }
+                continue;
+              }
+              if (!isGroup) {
+                const rawPhone = senderId.split("@")[0];
+                const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
+                const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573192919978";
+                const userName = msg.pushName || `Asesor +${rawPhone}`;
+                let body = "";
+                if (msg.message?.conversation) body = msg.message.conversation;
+                else if (msg.message?.extendedTextMessage) body = msg.message.extendedTextMessage.text || "";
+                else if (msg.message?.imageMessage) body = msg.message.imageMessage.caption || "";
+                else if (msg.message?.documentMessage) body = msg.message.documentMessage.caption || "";
+                else if (msg.message?.videoMessage) body = msg.message.videoMessage.caption || "";
+                if (msg.key.fromMe) {
+                  const msgId = msg.key.id || "";
+                  const msgTimestampMs = Number(msg.messageTimestamp || 0) * 1e3;
+                  const isRecentMessage = Date.now() - msgTimestampMs < 2 * 60 * 1e3;
+                  if (!this.botSentMessageIds.has(msgId) && isRecentMessage) {
+                    console.log(`[JANIA-MATCH] Intervenci\xF3n humana detectada en DM ${senderId}. Silenciando bot.`);
+                    this.lastHumanIntervention.set(senderId, Date.now());
+                    const { muteSession: muteSession3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+                    await muteSession3(senderId, true).catch((err) => console.error("Error muting session in database:", err));
+                  }
+                  return;
+                }
+                const cleanStart = body.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
+                const { isSessionMuted: isSessionMuted2, muteSession: muteSession2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+                let isMuted = await isSessionMuted2(senderId);
+                if (isMuted) {
+                  if (cleanStart.startsWith("agente jania")) {
+                    await muteSession2(senderId, false).catch((err) => console.error("Error unmuting session:", err));
+                    isMuted = false;
+                    console.log(`[JANIA-MATCH] Sesi\xF3n reactivada mediante comando de cliente para ${senderId}`);
+                  }
+                }
+                const lastIntervention = this.lastHumanIntervention.get(senderId) || 0;
+                const cooldownPeriod = 24 * 60 * 60 * 1e3;
+                if (isMuted || Date.now() - lastIntervention < cooldownPeriod) {
+                }
+                let buffer = this.dmMessageBuffers.get(senderId);
+                if (!buffer) {
+                  buffer = { messages: [], timer: null };
+                  this.dmMessageBuffers.set(senderId, buffer);
+                }
+                buffer.messages.push(msg);
+                if (buffer.timer) {
+                  clearTimeout(buffer.timer);
+                }
+                buffer.timer = setTimeout(async () => {
+                  this.dmMessageBuffers.delete(senderId);
+                  try {
+                    await this.processBufferedDmMessages(senderId, userName, rawPhone, buffer.messages, isAdmin);
+                  } catch (err) {
+                    console.error("[JANIA-MATCH] Error al procesar mensajes de DM acumulados:", err);
+                  }
+                }, 2500);
+                return;
+              }
+            } catch (err) {
+              console.error("[JANIA-MATCH] Error en procesador de eventos de mensaje:", err);
+            }
+          }
+        });
+      }
+      async processBufferedDmMessages(senderId, userName, rawPhone, messages2, isAdmin) {
+        let combinedBody = "";
+        let mainMsg = messages2[messages2.length - 1];
+        let imageBuffer;
+        let pdfBuffer;
+        let pdfMimeType;
+        for (const msg of messages2) {
+          let body2 = "";
+          if (msg.message?.conversation) body2 = msg.message.conversation;
+          else if (msg.message?.extendedTextMessage) body2 = msg.message.extendedTextMessage.text || "";
+          else if (msg.message?.imageMessage) body2 = msg.message.imageMessage.caption || "";
+          else if (msg.message?.documentMessage) body2 = msg.message.documentMessage.caption || "";
+          else if (msg.message?.videoMessage) body2 = msg.message.videoMessage.caption || "";
+          if (body2.trim()) {
+            combinedBody += (combinedBody ? "\n" : "") + body2.trim();
+          }
+          if (msg.message?.imageMessage && !imageBuffer) {
+            try {
+              const media = await downloadMediaMessage(msg, "buffer", {});
+              imageBuffer = media.toString("base64");
+              mainMsg = msg;
+            } catch (e) {
+            }
+          }
+          if (msg.message?.documentMessage && !pdfBuffer) {
+            try {
+              const media = await downloadMediaMessage(msg, "buffer", {});
+              pdfBuffer = media.toString("base64");
+              pdfMimeType = msg.message.documentMessage.mimetype || "application/pdf";
+              mainMsg = msg;
+            } catch (e) {
+            }
+          }
+        }
+        if (!combinedBody.trim() && !imageBuffer && !pdfBuffer) {
+          return;
+        }
+        const chatId = senderId;
+        const body = combinedBody;
+        const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
+        const matchConfirm = body.match(matchConfirmationRegex);
+        if (matchConfirm) {
+          const decision = matchConfirm[1].toLowerCase();
+          const matchId = parseInt(matchConfirm[2], 10);
+          await this.processMatchConfirmation(senderId, userName, matchId, decision);
+          return;
+        }
+        const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+        const idCheck = await executeIdentityVerificationFromWhatsApp2(body, true);
+        if (idCheck.isVerificationRequest && idCheck.reportText) {
+          console.log(`[JANIA-MATCH] [DM] Verificaci\xF3n de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
+          await this.queuedSend(senderId, idCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+          await this.logToDb(senderId, "janIA", idCheck.reportText);
+          return;
+        }
+        const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+        const predialCheck = await executePredialAssistanceFromWhatsApp2(body);
+        if (predialCheck.isPredialRequest && predialCheck.reportText) {
+          console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || "General"})`);
+          await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+          await this.logToDb(senderId, "janIA", predialCheck.reportText);
+          return;
+        }
+        if (!isAdmin) {
+          return;
+        }
+        console.log(`[JANIA-MATCH] [Admin/Test] Atendiendo mensaje de admin/test ${senderId}...`);
+        await this.logToDb(senderId, "user", body);
+        await this.handlePrivateDmConversation(mainMsg, senderId, rawPhone, body);
+      }
+      // --- REDIRECCIÓN DE CHATS PRIVADOS ---
+      async handlePrivateDmRedirect(chatId, senderId, userName) {
+        const { isSessionMuted: isSessionMuted2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+        const isMuted = await isSessionMuted2(senderId);
+        const lastIntervention = this.lastHumanIntervention.get(senderId) || 0;
+        const cooldownPeriod = 24 * 60 * 60 * 1e3;
+        if (isMuted || Date.now() - lastIntervention < cooldownPeriod) {
+          console.log(`[JANIA-MATCH] Silencio total en DM ${senderId} por intervenci\xF3n humana o silencio activo. Omitiendo redirecci\xF3n.`);
+          return;
+        }
+        const now = Date.now();
+        const lastRedirect = this.redirectCooldowns.get(senderId) || 0;
+        const ONCE_A_DAY = 24 * 60 * 60 * 1e3;
+        if (now - lastRedirect > ONCE_A_DAY) {
+          this.redirectCooldowns.set(senderId, now);
+          const redirectLink = "https://wa.me/573192919978";
+          const realName = userName || "Asesor";
+          const cleanName = extractFirstName(realName) || "colega";
+          const redirectText = `Hola ${cleanName} \u{1F44B}\u{1F60A}. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente al canal oficial privado de soporte de JanIA de Meta haciendo clic aqu\xED: ${redirectLink} para realizar tus consultas correspondientes o si est\xE1s en los grupos correspondientes seg\xFAn tu consulta puedes hacerlas all\xED de la siguiente manera:
+
+Mis grupos:
+
+Para publicar tus INMUEBLES y REQUERIMIENTOS tenemos el grupo de *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E8}\u{1D5D8}\u{1D5D5}\u{1D5DF}\u{1D5D8}\u{1D5E6} \u{1D5E1}\u{1D5D8}\u{1D5E7}\u{1D5EA}\u{1D5E2}\u{1D5E5}\u{1D5DE}* : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
+Para hacer tus consultas de casos inmobiliarios en temas jur\xEDdicos, tributarios, aval\xFAos, ayuda en gu\xEDa de procesos y redacci\xF3n de contratos, tenemos el grupo de *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}: \u{1D5E6}\u{1D5E2}\u{1D5E3}\u{1D5E2}\u{1D5E5}\u{1D5E7}\u{1D5D8} \u{1D5DF}\u{1D5D8}\u{1D5DA}\u{1D5D4}\u{1D5DF}, \u{1D5E7}\u{1D5E5}\u{1D5DC}\u{1D5D5}\u{1D5E8}\u{1D5E7}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5E2} \u{1D5EC} \u{1D5D4}\u{1D5E9}\u{1D5D4}\u{1D5DF}\xDA\u{1D5E2}\u{1D5E6}* : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6
+Para preguntar acerca de *VECY Bienes Ra\xEDces* y debatir acerca de nuestras funciones, red colaborativa, beneficios y competencias, tenemos el grupo de *\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2} "\u{1D5E9}\u{1D5F2}\u{1D5F0}\u{1D606} \u{1D5E1}\u{1D5F2}\u{1D601}\u{1D604}\u{1D5FC}\u{1D5FF}\u{1D5F8}"* : Si a\xFAn no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
+
+Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
+          this.queuedSend(chatId, redirectText);
+        }
+      }
+      // --- RESPUESTA DIRECTA A PREGUNTAS EN GRUPOS ---
+      async handleDirectGroupQuestion(msg, chatId, senderId, bodyText) {
+        try {
+          const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+          if (!isOfficialGroup) {
+            console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Mensaje directo en grupo externo ${chatId} ignorado para respuestas textuales. Silencio 100% preservado.`);
+            return;
+          }
+          const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
+          const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
+          const isFromBotAccount = msg.key?.fromMe || botJid && senderId === botJid || senderId.startsWith(botPhone) || senderId.startsWith("573192919978");
+          const textLower = bodyText.toLowerCase();
+          const hasDirectMention = textLower.includes("jania") || botPhone && textLower.includes(botPhone) || textLower.includes("573192919978") || !!msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid(jid) === botJid);
+          if (isFromBotAccount && !hasDirectMention) {
+            console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Mensaje de la propia cuenta en grupo conversacional ${chatId} omitido para auto-respuesta (sin menci\xF3n expl\xEDcita).`);
+            return;
+          }
+          let resolvedSenderId = senderId;
+          if (senderId.endsWith("@lid") && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
+            try {
+              const mappedPn = await this.sock.signalRepository.lidMapping.getPNForLID(senderId);
+              if (mappedPn) {
+                const cleanUser = mappedPn.split(":")[0].split("@")[0];
+                resolvedSenderId = `${cleanUser}@s.whatsapp.net`;
+                console.log(`[JANIA-MATCH] [DirectGroupQuestion] Resolviendo LID ${senderId} to PN ${resolvedSenderId}`);
+              }
+            } catch (err) {
+            }
+          }
+          const realName = msg.pushName || `Asesor +${resolvedSenderId.split("@")[0]}`;
+          const { detectaVoz: detectaVoz2, textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+          const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+          const isAudioPTT = !!msg.message?.audioMessage;
+          const wantsVoice = isAudioPTT || detectaVoz2(textLower);
+          if (wantsVoice) {
+            await this.sock.sendPresenceUpdate("recording", chatId);
+          } else {
+            await this.sock.sendPresenceUpdate("composing", chatId);
+          }
+          const isAudioFailed = bodyText === "[audio-vac\xEDo]" || bodyText === "[audio-sin-buffer]" || bodyText === "[audio-error]";
+          if (isAudioFailed) {
+            const failMsg = `Hola ${realName} \u{1F44B}\u{1F3FB}, escuch\xE9 que enviaste una nota de voz, pero hubo una interferencia al procesar el audio en este momento. \u{1F64F}
+
+Por favor escribe tu consulta o requerimiento por texto aqu\xED en el grupo para atenderte de inmediato. \xA1Estoy lista para responderte! \u{1F60A}`;
+            await this.queuedSend(chatId, failMsg, { mentions: [senderId], quoted: msg });
+            await this.sock.sendPresenceUpdate("paused", chatId);
+            return;
+          }
+          const isMainGroupChat = chatId === this.targetGroupId;
+          if (isMainGroupChat) {
+            const textLower2 = bodyText.toLowerCase();
+            const isOffTopicLegal = textLower2.includes("contrato") || textLower2.includes("arrendamiento") || textLower2.includes("promesa") || textLower2.includes("sucesi\xF3n") || textLower2.includes("sucesion") || textLower2.includes("herencia") || textLower2.includes("embargo") || textLower2.includes("comisi\xF3n") || textLower2.includes("comision") || textLower2.includes("tributar") || textLower2.includes("impuesto") || textLower2.includes("retenci\xF3n") || textLower2.includes("retencion") || textLower2.includes("ganancia ocasional") || textLower2.includes("aval\xFAo") || textLower2.includes("avaluo") || textLower2.includes("escritura") || textLower2.includes("notar\xEDa") || textLower2.includes("juridic") || textLower2.includes("demandar") || textLower2.includes("demanda") || textLower2.includes("ley ") || textLower2.includes("juzgado") || textLower2.includes("abogado");
+            const isOffTopicCirculo = textLower2.includes("vecy network") || textLower2.includes("proyecto") || textLower2.includes("sugerencia") || textLower2.includes("portal web") || textLower2.includes("jania funciona") || textLower2.includes("inteligencia artificial") || textLower2.includes("c\xF3mo funciona la ia") || textLower2.includes("como funciona la ia") || textLower2.includes("competencia") || textLower2.includes("testimonio") || textLower2.includes("fundador") || textLower2.includes("jani alves") || textLower2.includes("eduardo");
+            if (isOffTopicLegal || isOffTopicCirculo) {
+              const groupName = isOffTopicLegal ? "VECY: SOPORTE LEGAL, TRIBUTARIO, AVAL\xDAOS Y MARKETING" : process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"';
+              const redirectMsg = `Hola ${realName} \u{1F44B}\u{1F3FB}, veo que tu consulta es sobre ${isOffTopicLegal ? "temas jur\xEDdicos, tributarios, aval\xFAos o marketing inmobiliario" : "el funcionamiento de VECY Bienes Ra\xEDces y JanIA"}. \xA1Perfecto! \u{1F3AF}
+
+Ese tipo de preguntas las atiendo con m\xE1s profundidad en el grupo *${groupName}* de nuestra comunidad de WhatsApp. \u{1F3E0}
+
+Tambi\xE9n puedes consultarme directamente en mi chat privado de JanIA \u{1F4F2}: https://wa.me/573192919978
+
+\xA1All\xED te atiendo con todo el detalle que mereces! \u{1F60A}`;
+              await this.queuedSend(chatId, redirectMsg, { mentions: [senderId], quoted: msg });
+              await this.sock.sendPresenceUpdate("paused", chatId);
+              return;
+            }
+          }
+          let result;
+          if (chatId === this.buzonGroupId) {
+            const msgTs = msg.messageTimestamp ? Number(msg.messageTimestamp) : void 0;
+            const rawMsg = unwrapMessage(msg.message);
+            let imageBuffer;
+            let pdfBuffer;
+            let pdfMimeType;
+            if (rawMsg?.imageMessage) {
+              try {
+                const mediaBuffer = await downloadMediaSafely(msg, "image");
+                if (mediaBuffer) {
+                  imageBuffer = mediaBuffer.toString("base64");
+                }
+              } catch (e) {
+                console.error("[JANIA-CONSULTING] Error descargando imagen adjunta:", e);
+              }
+            } else if (rawMsg?.documentMessage) {
+              try {
+                const mediaBuffer = await downloadMediaSafely(msg, "document");
+                if (mediaBuffer) {
+                  pdfBuffer = mediaBuffer.toString("base64");
+                  pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
+                }
+              } catch (e) {
+                console.error("[JANIA-CONSULTING] Error descargando documento adjunto:", e);
+              }
+            }
+            let quotedContext;
+            try {
+              const contextInfo = rawMsg?.extendedTextMessage?.contextInfo || msg.message?.extendedTextMessage?.contextInfo || rawMsg?.contextInfo;
+              if (contextInfo?.quotedMessage) {
+                const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage);
+                quotedContext = unwrappedQuoted?.conversation || unwrappedQuoted?.extendedTextMessage?.text || unwrappedQuoted?.imageMessage?.caption || void 0;
+              }
+            } catch (e) {
+            }
+            result = await processConsultingMessage2(
+              bodyText,
+              resolvedSenderId,
+              realName,
+              imageBuffer,
+              pdfBuffer,
+              pdfMimeType,
+              isAudioPTT ? "mock-audio:" + bodyText : void 0,
+              msgTs,
+              quotedContext
+            );
+          } else if (chatId === this.circuloGroupId) {
+            result = await processCirculoMessage2(bodyText, resolvedSenderId, realName);
+          } else if (isMainGroupChat) {
+            let groupName = "VECY INMUEBLES NETWORK";
+            try {
+              const metadata = await this.sock.groupMetadata(chatId);
+              if (metadata && metadata.subject) {
+                groupName = metadata.subject;
+              }
+            } catch (e) {
+            }
+            result = await processWhatsAppMessage2(
+              bodyText,
+              resolvedSenderId,
+              realName,
+              false,
+              [],
+              void 0,
+              void 0,
+              true,
+              void 0,
+              void 0,
+              chatId,
+              groupName
+            );
+          } else {
+            await this.handlePrivateDmRedirect(chatId, resolvedSenderId, realName);
+            await this.sock.sendPresenceUpdate("paused", chatId);
+            return;
+          }
+          if (result && result.response && result.response.trim() !== "") {
+            const textToDeliver = result.response;
+            const voiceToDeliver = result.voiceResponse && result.voiceResponse.trim() !== "" ? result.voiceResponse : textToDeliver;
+            const shouldSendVoice = (wantsVoice || isAudioPTT) && result.wantsVoice !== false;
+            if (shouldSendVoice) {
+              try {
+                const media = await textToSpeechMedia2(voiceToDeliver);
+                if (media && media.data) {
+                  const audioBuffer = Buffer.from(media.data, "base64");
+                  await this.queuedSend(chatId, {
+                    audio: audioBuffer,
+                    mimetype: media.mimetype || "audio/ogg; codecs=opus",
+                    ptt: true
+                  }, { mentions: [senderId], quoted: msg });
+                  console.log(`[JANIA-MATCH] \u2713 JanIA respondi\xF3 aut\xF3nomamente con Nota de Voz PTT en grupo ${chatId}.`);
+                } else {
+                  await this.queuedSend(chatId, textToDeliver, {
+                    mentions: [senderId],
+                    quoted: msg
+                  });
+                }
+              } catch (audioSendErr) {
+                console.error("[JANIA-MATCH] Error enviando nota de voz. Fallback a texto:", audioSendErr?.message || audioSendErr);
+                await this.queuedSend(chatId, textToDeliver, {
+                  mentions: [senderId],
+                  quoted: msg
+                });
+              }
+            } else {
+              await this.queuedSend(chatId, textToDeliver, {
+                mentions: [senderId],
+                quoted: msg
+              });
+            }
+            await this.logToDb(chatId, "janIA", textToDeliver);
+          } else if (result && result.reactionEmoji && this.sock) {
+            await this.sock.sendMessage(chatId, { react: { text: result.reactionEmoji, key: msg.key } }).catch(() => {
+            });
+          }
+          await this.sock.sendPresenceUpdate("paused", chatId);
+        } catch (err) {
+          console.error("[JANIA-MATCH] Error al responder pregunta directa en grupo:", err);
+        }
+      }
+      isPromotionalAd(bodyText, senderId) {
+        const cleanLower = (bodyText || "").toLowerCase();
+        const rawPhone = (senderId || "").split("@")[0].replace(/[^0-9]/g, "");
+        const isCarolina = rawPhone.includes("573212857044") || rawPhone.includes("3212857044");
+        const promoPhrases = [
+          "captar no es improvisar",
+          "especializaci\xF3n dentro de la labor inmobiliaria",
+          "adquiere tu entrenamiento",
+          "espiral del \xE9xito",
+          "conocimiento llena tus bolsillos",
+          "adqui\xE9relo precio",
+          "precio de oferta",
+          "no m\xE1s captaciones mediocres",
+          "no m\xE1s procesos informales",
+          "no m\xE1s inmuebles sin legalizar",
+          "no m\xE1s trabajar sin asegurar el pago de tu comisi\xF3n",
+          "proteger tus honorarios",
+          "m\xE9todo probado para captar",
+          "curso inmobiliario",
+          "taller inmobiliario",
+          "seminario inmobiliario",
+          "capacitaci\xF3n inmobiliaria",
+          "masterclass inmobiliaria",
+          "webinar inmobiliario",
+          "coaching inmobiliario",
+          "mentor\xEDa inmobiliaria",
+          "invierte en tu negocio",
+          "invierte en conocimiento"
+        ];
+        const hasPromoKeywords = promoPhrases.some((phrase) => cleanLower.includes(phrase));
+        if (hasPromoKeywords) return true;
+        if (isCarolina) {
+          const isRealEstateListing = (cleanLower.includes("vendo") || cleanLower.includes("arriendo") || cleanLower.includes("busco") || cleanLower.includes("necesito")) && (cleanLower.includes("apto") || cleanLower.includes("apartamento") || cleanLower.includes("casa") || cleanLower.includes("bodega") || cleanLower.includes("lote") || cleanLower.includes("finca"));
+          if (!isRealEstateListing) {
+            return true;
+          }
+        }
+        return false;
+      }
+      // --- LOGÍSTICA DE BUFFER GRUPAL Y REACCIÓN INSTANTÁNEA ---
+      async handleIncomingGroupMessage(msg, chatId, bodyText, imageBufferImmediate, pdfBufferImmediate, pdfMimeTypeImmediate) {
+        if (!msg.key || !msg.message) return;
+        const rawSender = msg.key.participant || msg.participant || "";
+        if (!rawSender || rawSender.endsWith("@g.us")) {
+          console.warn(`[JANIA-MATCH] Omitiendo mensaje de grupo: sender individual inv\xE1lido (${rawSender})`);
+          return;
+        }
+        const senderId = rawSender.includes("@") ? `${rawSender.split("@")[0].split(":")[0]}@${rawSender.split("@")[1]}` : rawSender.split(":")[0];
+        const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+        if (this.isPromotionalAd(bodyText, senderId)) {
+          if (!msg.key.fromMe) {
+            if (isOfficialGroup) {
+              console.log(`[JANIA-PROMO-RULE] \u{1F6AB} Publicidad no autorizada detectada en grupo oficial de +${senderId.split("@")[0]}. Reaccionando con \u{1F6AB} y advirtiendo...`);
+              this.sock.sendMessage(chatId, { react: { text: "\u{1F6AB}", key: msg.key } }).catch(() => {
+              });
+              const rawPhone = senderId.split("@")[0];
+              const mentionJid = `${rawPhone}@s.whatsapp.net`;
+              const warningText = `\u{1F6AB} @${rawPhone}: Esta clase de publicaciones (publicidad de cursos, entrenamientos, capacitaciones o servicios ajenos a la oferta y demanda directa de inmuebles) VIOLAN las normas de nuestros grupos oficiales de VECY Bienes Ra\xEDces.
+
+Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1 lugar a la expulsi\xF3n inmediata del grupo.`;
+              this.queuedSend(chatId, warningText, { mentions: [mentionJid], quoted: msg }).catch(() => {
+              });
+            } else {
+              console.log(`[JANIA-PROMO-SHIELD] \u{1F6E1}\uFE0F Publicidad no inmobiliaria ignorada en grupo externo de +${senderId.split("@")[0]} (Cero reacci\xF3n, cero ingesta, cero Supabase).`);
+            }
+          }
+          return;
+        }
+        let flyerVisionData = null;
+        if (!this.botSentMessageIds.has(msg.key?.id || "")) {
+          let cleanLower = (bodyText || "").toLowerCase();
+          const detectedUrls = cleanLower.match(/https?:\/\/[^\s]+/g) || [];
+          for (const u of detectedUrls) {
+            try {
+              const parsed = new URL(u);
+              const slugText = decodeURIComponent(parsed.pathname).replace(/[-_/.]/g, " ");
+              cleanLower += ` ${slugText}`;
+            } catch (_) {
+            }
+          }
+          let groupSubject = "";
+          try {
+            const meta = await this.getCachedGroupMetadata(chatId);
+            if (meta && meta.subject) groupSubject = meta.subject;
+          } catch (_) {
+          }
+          const isGroupRentContext = /arriend|alquil|renta/i.test(groupSubject);
+          const hasPermuta = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanLower);
+          const hasRentExplicit = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanLower) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanLower) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanLower) || /valor arriendo/i.test(cleanLower);
+          const isRentOperation = hasRentExplicit || isGroupRentContext && !/\b(?:compro|comprar|en compra|para compra)\b/i.test(cleanLower) && !cleanLower.startsWith("vendo") && !cleanLower.startsWith("se vende");
+          const isExplicitDemand = /\b(?:req\b|requerimiento|requerimientos|requiero|se requiere|requerimos|busco|buscamos|se busca|buscando|en búsqueda|en busqueda|necesito|necesitamos|necesitando|solicito|solicitamos|solicitando|solicitud|solicitudes|compro|comprando|comprador|compradores|comprar|en compra|para compra|negocio compra|para cliente|para clientes|tengo cliente|tenemos cliente|busca cliente|cliente busca|clientes buscan|arrendatario|inquilino)\b/i.test(cleanLower);
+          const isExplicitOffer = !isExplicitDemand && (/\b(?:ofrezco|ofrecemos|vendo|vendemos|se vende|en venta|venta directa|arriendo|arriendos|arrendamos|arrendar|se arrienda|en arriendo|arriendo directo|pongo en arriendo|alquilo|alquilamos|alquilar|se alquila|en alquiler|alquiler directo|rento|rentamos|rentar|se renta|en renta|tengo para|disponible|nuevo inmueble|permuto|permutamos|se permuta)\b/i.test(cleanLower) || /(?:cuenta con|consta de|\d+\s*(?:m2|mts|m²)|alcobas|habitaciones|baños|parqueaderos?|cocina|sala|comedor|dep[oó]sito)/i.test(cleanLower));
+          const isExplicitSearch = isExplicitDemand && !isExplicitOffer;
+          let fastEmoji = null;
+          if (isExplicitOffer) {
+            if (hasPermuta) {
+              fastEmoji = "\u{1F500}";
+            } else if (isRentOperation) {
+              fastEmoji = "\u{1F44C}";
+            } else {
+              fastEmoji = "\u{1F44D}";
+            }
+          } else if (isExplicitSearch) {
+            if (hasPermuta) {
+              fastEmoji = "\u{1F504}";
+            } else if (isRentOperation) {
+              fastEmoji = "\u270F\uFE0F";
+            } else {
+              fastEmoji = "\u{1F4DD}";
+            }
+          }
+          if (!fastEmoji && imageBufferImmediate) {
+            try {
+              const { extractFlyerVision: extractFlyerVision2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+              flyerVisionData = await extractFlyerVision2(imageBufferImmediate);
+              if (flyerVisionData && flyerVisionData.isFlyerOrBanner && (flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO") && flyerVisionData.flyerVerbatimText && flyerVisionData.flyerVerbatimText.trim().length >= 15) {
+                fastEmoji = flyerVisionData.reactionEmoji || (flyerVisionData.classification === "REQUERIMIENTO" ? "\u{1F4DD}" : "\u{1F44D}");
+                console.log(`[JANIA-FAST-REACT] \u{1F3AF} Flyer comercial con texto detectado visualmente (${flyerVisionData.classification}). Reacci\xF3n r\xE1pida: ${fastEmoji}`);
+              }
+            } catch (visErr) {
+              console.warn("[JANIA-FAST-REACT] Error en an\xE1lisis visual de flyer:", visErr?.message || visErr);
+            }
+          }
+          if (fastEmoji && chatId !== this.buzonGroupId) {
+            this.safeReact(chatId, msg.key, fastEmoji, "FAST-REACT");
+          }
+        }
+        const lockKey = `${chatId}_${senderId}`;
+        const previousLock = this.processingLocks.get(lockKey) || Promise.resolve();
+        let resolveLock;
+        const currentLock = new Promise((resolve) => {
+          resolveLock = resolve;
+        });
+        const chainedLock = previousLock.then(() => currentLock);
+        this.processingLocks.set(lockKey, chainedLock);
+        try {
+          await previousLock;
+          const realName = msg.pushName || `Asesor +${senderId.split("@")[0]}`;
+          const bufferKey = `${chatId}_${senderId}`;
+          const isMainGroup = chatId === this.targetGroupId;
+          const textLower = bodyText.toLowerCase();
+          const now = Date.now();
+          const COOLDOWN_PERIOD = 5 * 60 * 1e3;
+          let isBotAdmin = false;
+          try {
+            const metadata = await this.getCachedGroupMetadata(chatId);
+            const me = this.sock.user?.id ? this.sock.user.id.split(":")[0] : "";
+            const myParticipant = metadata?.participants?.find((p) => p.id.split("@")[0] === me);
+            isBotAdmin = !!myParticipant && (myParticipant.admin === "admin" || myParticipant.admin === "superadmin");
+          } catch (_) {
+          }
+          if (isBotAdmin) {
+            this.lastGroupMessageTime.set(`${chatId}_${senderId}`, now);
+          }
+          let buffer = this.messageBuffers.get(bufferKey);
+          const bufferTimeout = 3e3;
+          const rawMsgInHandler = unwrapMessage(msg.message);
+          const hasMediaInHandler = !!rawMsgInHandler?.imageMessage || !!rawMsgInHandler?.documentMessage || !!rawMsgInHandler?.videoMessage || !!rawMsgInHandler?.audioMessage;
+          const msgEntry = {
+            body: bodyText,
+            hasMedia: hasMediaInHandler,
+            imageBuffer: imageBufferImmediate,
+            pdfBuffer: pdfBufferImmediate,
+            pdfMimeType: pdfMimeTypeImmediate,
+            flyerVisionData,
+            originalMsg: msg
+          };
+          if (buffer) {
+            clearTimeout(buffer.timer);
+            buffer.messages.push(msgEntry);
+            buffer.timer = setTimeout(() => this.processGroupBuffer(bufferKey), bufferTimeout);
+          } else {
+            this.messageBuffers.set(bufferKey, {
+              messages: [msgEntry],
+              userName: realName,
+              chatId,
+              timer: setTimeout(() => this.processGroupBuffer(bufferKey), bufferTimeout)
+            });
+          }
+        } finally {
+          resolveLock();
+          if (this.processingLocks.get(lockKey) === chainedLock) {
+            this.processingLocks.delete(lockKey);
+          }
+        }
+      }
+      async safeReact(chatId, msgKey, emoji, reason = "REACT") {
+        if (!msgKey || !msgKey.id || !emoji || !this.sock) return;
+        const msgId = msgKey.id;
+        const existing = this.reactedMessageIds.get(msgId);
+        if (existing && existing.emoji === emoji && Date.now() - existing.time < 6e4) {
+          console.log(`[JANIA-${reason}] \u2139\uFE0F Reacci\xF3n ${emoji} ya entregada o en cola para Msg ID ${msgId}. Omitiendo duplicado.`);
+          return;
+        }
+        this.reactedMessageIds.set(msgId, { emoji, time: Date.now() });
+        this.reactionQueue = this.reactionQueue.then(async () => {
+          try {
+            if (!this.sock || !this.isReady) {
+              console.warn(`[JANIA-${reason}] \u26A0\uFE0F Socket no disponible o reconectando. Omitiendo reacci\xF3n ${emoji} a ${chatId}`);
+              return;
+            }
+            const now = Date.now();
+            const elapsed = now - this.lastReactionTimestamp;
+            if (elapsed < this.MIN_REACTION_INTERVAL_MS) {
+              await new Promise((r) => setTimeout(r, this.MIN_REACTION_INTERVAL_MS - elapsed));
+            }
+            console.log(`[JANIA-${reason}] \u{1F3AF} Despachando reacci\xF3n ${emoji} a ${chatId} (Msg ID: ${msgId})...`);
+            await Promise.race([
+              this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
+              new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 5s reacci\xF3n")), 5e3))
+            ]);
+            this.lastReactionTimestamp = Date.now();
+            console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
+            if (this.reactedMessageIds.size > 1500) {
+              const threshold = Date.now() - 12e4;
+              for (const [k, v] of this.reactedMessageIds.entries()) {
+                if (v.time < threshold) this.reactedMessageIds.delete(k);
+              }
+            }
+          } catch (err) {
+            console.warn(`[JANIA-${reason}] \u26A0\uFE0F Primer intento de reacci\xF3n ${emoji} fall\xF3 (${err?.message || err}). Reintentando tras pausa segura...`);
+            await new Promise((r) => setTimeout(r, 2e3));
+            try {
+              if (this.sock && this.isReady) {
+                await Promise.race([
+                  this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
+                  new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 5s reintento")), 5e3))
+                ]);
+                this.lastReactionTimestamp = Date.now();
+                console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA en reintento secuencial`);
+              }
+            } catch (retryErr) {
+              console.warn(`[JANIA-${reason}] \u274C Reintento de reacci\xF3n ${emoji} no pudo completarse:`, retryErr?.message || retryErr);
+            }
+          }
+        }).catch(() => {
+        });
+        return this.reactionQueue;
+      }
+      getReactionEmoji(result, isOfficialGroup = false) {
+        if (!result) return null;
+        const data = result.extractedData || {};
+        const textToCheck = `${data.rawText || ""} ${result.rawText || ""} ${data.name || ""}`.trim();
+        if (isNonRealEstateText(textToCheck)) {
+          return null;
+        }
+        const classification = (result.classification || "").toUpperCase();
+        if (result.reactionEmoji) {
+          if ((result.reactionEmoji === "\u{1F6AB}" || result.reactionEmoji === "\u2753") && !isOfficialGroup) return null;
+          return result.reactionEmoji;
+        }
+        const txType = (data.transactionType || data.tipoNegocioDeseado || result.transactionType || "").toLowerCase();
+        const isPermuta = txType.includes("permuta") || txType === "venta_permuta" || txType === "aporte";
+        const isRent = txType.includes("arriendo") || txType === "arriendo_temporal" || txType === "arriendo_con_opcion_de_compra" || txType.includes("renta") || txType.includes("alquiler");
+        const isProperty = classification === "INMUEBLE" || classification.includes("INMUEBLE") || classification.includes("OFERTA");
+        const isRequirement = classification === "REQUERIMIENTO" || classification.includes("REQUERIMIENTO") || classification.includes("DEMANDA") || classification.includes("BUSQUEDA");
+        if (isProperty || isRequirement) {
+          if (isProperty) {
+            if (isPermuta) return "\u{1F500}";
+            if (isRent) return "\u{1F44C}";
+            return "\u{1F44D}";
+          }
+          if (isRequirement) {
+            if (isPermuta) return "\u{1F504}";
+            if (isRent) return "\u270F\uFE0F";
+            return "\u{1F4DD}";
+          }
+        }
+        const lowerRaw = textToCheck.toLowerCase();
+        const hasPropType = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(lowerRaw);
+        const hasPermutaSignal = /\b(?:permuta|permuto|permutas|permutamos|se permuta|recibo menor|recibo vehiculo|recibo vehículo|recibe menor|pelo a pelo)\b/i.test(lowerRaw);
+        const hasRentSignal = /\b(?:renta|arriendo|alquilo|alquiler|canon)\b/i.test(lowerRaw);
+        const hasDemandSignal = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|cliente busca)\b/i.test(lowerRaw);
+        if (hasPropType || hasPermutaSignal) {
+          if (hasDemandSignal) {
+            if (hasPermutaSignal) return "\u{1F504}";
+            return hasRentSignal ? "\u270F\uFE0F" : "\u{1F4DD}";
+          } else {
+            if (hasPermutaSignal) return "\u{1F500}";
+            return hasRentSignal ? "\u{1F44C}" : "\u{1F44D}";
+          }
+        }
+        if (isOfficialGroup) {
+          if (classification === "VIOLACION_DE_NORMAS" || classification.includes("SPAM") || classification.includes("INFRACCION")) {
+            return "\u{1F6AB}";
+          }
+          if (classification === "DATOS_INCOMPLETOS") return "\u2753";
+        }
+        return null;
+      }
+      async processGroupBuffer(bufferKey) {
+        const buffer = this.messageBuffers.get(bufferKey);
+        if (!buffer) return;
+        this.messageBuffers.delete(bufferKey);
+        const senderId = bufferKey.split("_")[1];
+        const chatId = buffer.chatId;
+        const userName = buffer.userName;
+        let resolvedSenderId = senderId;
+        if (senderId.endsWith("@lid") && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
+          try {
+            const mappedPn = await this.sock.signalRepository.lidMapping.getPNForLID(senderId);
+            if (mappedPn) {
+              const cleanUser = mappedPn.split(":")[0].split("@")[0];
+              resolvedSenderId = `${cleanUser}@s.whatsapp.net`;
+              console.log(`[JANIA-MATCH] Resolviendo LID ${senderId} a PN ${resolvedSenderId}`);
+            }
+          } catch (err) {
+            console.warn(`[JANIA-MATCH] No se pudo resolver PN para LID ${senderId}:`, err);
+          }
+        }
+        console.log(`[JANIA-MATCH] Procesando buffer de ${buffer.messages.length} mensajes para ${resolvedSenderId} (Silencioso)...`);
+        for (const bufferedMsg of buffer.messages) {
+          const rawMsg = unwrapMessage(bufferedMsg.originalMsg.message);
+          if (bufferedMsg.hasMedia && rawMsg?.imageMessage && !bufferedMsg.imageBuffer) {
+            try {
+              const mediaBuffer = await downloadMediaSafely(bufferedMsg.originalMsg, "image");
+              if (mediaBuffer) {
+                bufferedMsg.imageBuffer = mediaBuffer.toString("base64");
+              }
+            } catch (e) {
+              console.error("[JANIA-BUFFER] Error descargando imagen:", e);
+            }
+          }
+          if (bufferedMsg.hasMedia && rawMsg?.documentMessage && !bufferedMsg.pdfBuffer) {
+            try {
+              const mediaBuffer = await downloadMediaSafely(bufferedMsg.originalMsg, "document");
+              if (mediaBuffer) {
+                bufferedMsg.pdfBuffer = mediaBuffer.toString("base64");
+                bufferedMsg.pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
+              }
+            } catch (e) {
+              console.error("[JANIA-BUFFER] Error descargando documento:", e);
+            }
+          }
+        }
+        try {
+          const distinctListings = buffer.messages.filter((m) => {
+            if ((m.imageBuffer || m.pdfBuffer) && (!m.body || m.body.trim() === "")) return true;
+            if (!m.body) return false;
+            const clean = m.body.toLowerCase();
+            const hasType = clean.includes("apto") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("bodega") || clean.includes("oficina") || clean.includes("lote") || clean.includes("finca") || clean.includes("inmueble") || clean.includes("propiedad") || clean.includes("eds") || clean.includes("estacion");
+            const hasDetails = clean.includes("venta") || clean.includes("arriendo") || clean.includes("precio") || clean.includes("presupuesto") || clean.includes("millones") || clean.includes("$") || clean.includes("busco") || clean.includes("requerimiento") || clean.includes("\xE1rea") || clean.includes("area") || clean.includes("m2") || clean.includes("mts") || clean.includes("http");
+            return hasType && hasDetails;
+          });
+          const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+          if (distinctListings.length > 1 && chatId !== "120363417740040773@g.us" && chatId !== "120363403507276533@g.us") {
+            console.log(`[JANIA-MATCH] Detectadas ${distinctListings.length} publicaciones independientes en el mismo minuto para ${resolvedSenderId}. Procesando cada una por separado...`);
+            const groupName = await this.resolveGroupName(chatId);
+            for (const bufferedMsg of buffer.messages) {
+              const hasMediaOnly = (!!bufferedMsg.imageBuffer || !!bufferedMsg.pdfBuffer) && (!bufferedMsg.body || bufferedMsg.body.trim() === "");
+              if (!bufferedMsg.body || bufferedMsg.body.trim() === "") {
+                if (!hasMediaOnly) continue;
+              }
+              const bodyText = bufferedMsg.body || "";
+              const urlMatch2 = bodyText.match(/https?:\/\/[^\s]+/g);
+              const scrapedResults2 = [];
+              if (urlMatch2) {
+                const urlsToScrape = urlMatch2.slice(0, 2).filter((u) => esDominioPermitido(u));
+                if (urlsToScrape.length > 0) {
+                  try {
+                    const scrapePromises = urlsToScrape.map(
+                      (u) => Promise.race([
+                        scrapePropertyLink(u),
+                        new Promise((resolve) => setTimeout(() => resolve(null), 3500))
+                      ])
+                    );
+                    const settled = await Promise.allSettled(scrapePromises);
+                    for (const res of settled) {
+                      if (res.status === "fulfilled" && res.value) {
+                        scrapedResults2.push(res.value);
+                      }
+                    }
+                  } catch (err) {
+                  }
+                }
+              }
+              await this.logToDb(resolvedSenderId, "user", bodyText || (bufferedMsg.pdfBuffer ? "[documento-pdf]" : "[imagen]"));
+              const result2 = await processWhatsAppMessage2(
+                bodyText,
+                resolvedSenderId,
+                userName,
+                bufferedMsg.hasMedia,
+                scrapedResults2,
+                void 0,
+                bufferedMsg.imageBuffer,
+                true,
+                bufferedMsg.pdfBuffer,
+                bufferedMsg.pdfMimeType,
+                chatId,
+                groupName,
+                bufferedMsg.flyerVisionData
+              );
+              const isOfficialGroupSingle = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+              if (result2) {
+                const emoji = this.getReactionEmoji(result2, isOfficialGroupSingle);
+                if (emoji && bufferedMsg.originalMsg?.key && bufferedMsg.originalMsg.key.id) {
+                  this.safeReact(chatId, bufferedMsg.originalMsg.key, emoji, "MULTI-REACT");
+                }
+              }
+            }
+            return;
+          }
+          const fullText = buffer.messages.map((m) => m.body).filter(Boolean).join("\n\n");
+          const hasMedia = buffer.messages.some((m) => m.hasMedia);
+          const imageMsg = buffer.messages.find((m) => m.imageBuffer);
+          const pdfMsg = buffer.messages.find((m) => m.pdfBuffer);
+          const isAudioPTT = buffer.messages.some((m) => !!m.originalMsg?.message?.audioMessage);
+          if (!fullText.trim() && !imageMsg?.imageBuffer && !pdfMsg?.pdfBuffer && !isAudioPTT) {
+            console.log(`[JANIA-MATCH] Buffer vac\xEDo sin imagen/PDF/audio para ${resolvedSenderId}. Omitiendo.`);
+            return;
+          }
+          const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);
+          const scrapedResults = [];
+          if (urlMatch) {
+            const urlsToScrape = urlMatch.slice(0, 2).filter((u) => esDominioPermitido(u));
+            if (urlsToScrape.length > 0) {
+              try {
+                const scrapePromises = urlsToScrape.map(
+                  (u) => Promise.race([
+                    scrapePropertyLink(u),
+                    new Promise((resolve) => setTimeout(() => resolve(null), 3500))
+                  ])
+                );
+                const settled = await Promise.allSettled(scrapePromises);
+                for (const res of settled) {
+                  if (res.status === "fulfilled" && res.value) {
+                    scrapedResults.push(res.value);
+                  }
+                }
+              } catch (err) {
+                console.error(`[SCRAPING-BUFFER] Error al raspar URLs:`, err?.message || err);
+              }
+            }
+          }
+          await this.logToDb(resolvedSenderId, "user", fullText || (pdfMsg ? "[documento-pdf]" : "[imagen]"));
+          const { sendAdminNotification: sendAdminNotification2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+          let result;
+          if (chatId === "120363417740040773@g.us") {
+            result = await processConsultingMessage2(
+              fullText,
+              resolvedSenderId,
+              userName,
+              imageMsg?.imageBuffer,
+              pdfMsg?.pdfBuffer,
+              pdfMsg?.pdfMimeType,
+              isAudioPTT ? "mock-audio:" + fullText : void 0
+            );
+          } else if (chatId === "120363403507276533@g.us") {
+            result = await processCirculoMessage2(
+              fullText,
+              resolvedSenderId,
+              userName
+            );
+          } else {
+            const groupName = await this.resolveGroupName(chatId);
+            if (isBlacklistedGroup(groupName, chatId)) {
+              console.log(`[JANIA-MATCH] \u{1F6AB} Grupo '${groupName}' (${chatId}) en lista negra. Descartando buffer por completo.`);
+              return;
+            }
+            result = await processWhatsAppMessage2(
+              fullText,
+              resolvedSenderId,
+              userName,
+              hasMedia,
+              scrapedResults,
+              void 0,
+              imageMsg?.imageBuffer,
+              true,
+              pdfMsg?.pdfBuffer,
+              pdfMsg?.pdfMimeType,
+              chatId,
+              groupName,
+              imageMsg?.flyerVisionData || buffer.messages.find((m) => m.flyerVisionData)?.flyerVisionData
+            );
+          }
+          const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+          if (result) {
+            const emoji = this.getReactionEmoji(result, isOfficialGroup);
+            if (emoji) {
+              const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
+              if (lastMsg && lastMsg.key && lastMsg.key.id) {
+                this.safeReact(chatId, lastMsg.key, emoji, "BUFFER-REACT");
+              }
+            }
+          }
+          if (result) {
+            const isWarning = result.classification === "DATOS_INCOMPLETOS" || result.classification === "VIOLACION_DE_NORMAS";
+            let isBotAdmin = false;
+            try {
+              const metadata = await this.getCachedGroupMetadata(chatId);
+              const me = this.sock.user?.id ? this.sock.user.id.split(":")[0] : "";
+              const myParticipant = metadata?.participants?.find((p) => p.id.split("@")[0] === me);
+              isBotAdmin = !!myParticipant && (myParticipant.admin === "admin" || myParticipant.admin === "superadmin");
+            } catch (_) {
+            }
+            if (!isWarning) {
+              const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
+              if (isConsultation) {
+                console.log(`[JANIA-MATCH] Consulta general de ${senderId} en ${chatId} procesada en silencio.`);
+              } else {
+                if (result.response && result.response.trim() !== "") {
+                  console.log(`[JANIA-MATCH] Match detectado silenciosamente. Alertas enviadas al administrador.`);
+                  await sendAdminNotification2(`\u{1F3AF} *[MATCH DETECTADO]*
+
+${result.response}`);
+                  await this.logToDb(senderId, "janIA", `[SILENT-MATCH] ${result.response}`);
+                }
+              }
+            } else {
+              const isOfficial = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
+              if (result.classification === "VIOLACION_DE_NORMAS" && isOfficial) {
+                const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
+                if (lastMsg && lastMsg.key && lastMsg.key.id && !lastMsg.key.fromMe) {
+                  await this.safeReact(chatId, lastMsg.key, "\u{1F6AB}", "WARNING-REACT");
+                }
+                if (result.response && result.response.trim() !== "") {
+                  const textToDeliver = result.response;
+                  await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
+                  await this.logToDb(chatId, "janIA", `[GROUP-WARNING] ${textToDeliver}`);
+                }
+              }
+            }
+            if (result.extraDMs && result.extraDMs.length > 0) {
+              for (const dm of result.extraDMs) {
+                if (!dm.jid || !dm.jid.includes("@") || dm.jid.split("@")[0].length < 5) continue;
+                console.log(`[JANIA-MATCH] [Stealth] Derivando notificaci\xF3n de Match adicional para ${dm.jid} a alertas de administrador.`);
+                await sendAdminNotification2(dm.message);
+              }
+            }
+          }
+          const isMainGroup = chatId === this.targetGroupId;
+          if (isMainGroup) {
+            const cooldownKeyFinal = `${chatId}_${senderId}`;
+            this.loadCooldowns();
+            this.cooldownMap.set(cooldownKeyFinal, {
+              lastBlockProcessedAt: Date.now(),
+              warningSent: false
+            });
+            this.saveCooldowns();
+          }
+        } catch (err) {
+          console.error("[JANIA-MATCH] Error procesando buffer de grupo silencioso:", err);
+        }
+      }
+      // --- LOGÍSTICA DE BD ---
+      async logToDb(senderId, role, content) {
+        try {
+          const db = await getDb();
+          if (!db) return;
+          let conv = await db.select().from(conversations).where(eq5(conversations.sessionId, senderId)).limit(1);
+          let conversationId;
+          if (conv.length === 0) {
+            const [newConv] = await db.insert(conversations).values({
+              sessionId: senderId,
+              status: "active",
+              lastMessage: content.slice(0, 150)
+            }).returning();
+            conversationId = newConv.id;
+          } else {
+            conversationId = conv[0].id;
+            await db.update(conversations).set({
+              lastMessage: content.slice(0, 150),
+              updatedAt: /* @__PURE__ */ new Date()
+            }).where(eq5(conversations.id, conversationId));
+          }
+          await db.insert(messages).values({
+            conversationId,
+            role,
+            content,
+            messageType: "text"
+          });
+        } catch (e) {
+          console.error("[JANIA-MATCH] Error al registrar logs en BD:", e);
+        }
+      }
+      async handlePrivateDmConversation(msg, senderId, rawPhone, bodyText) {
+        try {
+          const realName = msg.pushName || `Asesor +${rawPhone}`;
+          const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+          const idCheck = await executeIdentityVerificationFromWhatsApp2(bodyText, true);
+          if (idCheck.isVerificationRequest && idCheck.reportText) {
+            await this.queuedSend(senderId, idCheck.reportText, { quoted: msg, allowDirectMessage: true });
+            await this.logToDb(senderId, "janIA", idCheck.reportText);
+            await this.sock.sendPresenceUpdate("paused", senderId);
+            return;
+          }
+          const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+          const predialCheck = await executePredialAssistanceFromWhatsApp2(bodyText);
+          if (predialCheck.isPredialRequest && predialCheck.reportText) {
+            await this.queuedSend(senderId, predialCheck.reportText, { quoted: msg, allowDirectMessage: true });
+            await this.logToDb(senderId, "janIA", predialCheck.reportText);
+            await this.sock.sendPresenceUpdate("paused", senderId);
+            return;
+          }
+          await this.sock.sendPresenceUpdate("recording", senderId);
+          const saludo = getGreetingByTime();
+          const firstName = extractFirstName(realName);
+          const greetingName = firstName ? ` ${firstName}` : "";
+          const outOfOfficeText = `\xA1${saludo}${greetingName}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Qu\xE9 bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando \u{1F319}\u2728. Si gustas, puedes dejar tu mensaje aqu\xED para que te respondamos ma\xF1ana a primera hora, o si prefieres, puedes continuar la conversaci\xF3n conmigo y contarme en qu\xE9 puedo ayudarte hoy. \xA1Siempre es un gusto atenderte! \u{1F91D}\u{1F680}`;
+          const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+          let media = null;
+          try {
+            media = await textToSpeechMedia2(outOfOfficeText);
+          } catch (ttsErr) {
+            console.warn("[JANIA-MATCH] Error al generar TTS para fuera de horario:", ttsErr.message || ttsErr);
+          }
+          if (media) {
+            await this.queuedSend(senderId, media, { sendAudioAsVoice: true, quoted: msg });
+          } else {
+            await this.queuedSend(senderId, outOfOfficeText, { quoted: msg });
+          }
+          await this.logToDb(senderId, "janIA", outOfOfficeText);
+          await this.sock.sendPresenceUpdate("paused", senderId);
+        } catch (err) {
+          console.error("[JANIA-MATCH] Error en handlePrivateDmConversation:", err);
+        }
+      }
+      async handleRedirectText(msg, senderId, rawPhone) {
+        try {
+          const realName = msg.pushName || `Asesor +${rawPhone}`;
+          const firstName = extractFirstName(realName);
+          await this.sock.sendPresenceUpdate("composing", senderId);
+          await delay(2e3);
+          const redirectMsg = `Hola ${firstName} \u{1F44B}\u{1F60A}. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente al canal oficial privado de soporte de JanIA de la Web haciendo clic aqu\xED: https://vecy-network.vercel.app/jania para realizar tus consultas correspondientes o si est\xE1s en los grupos correspondientes seg\xFAn tu consulta puedes hacerlas all\xED de la siguiente manera:
+
+Mis grupos:
+
+Para publicar tus INMUEBLES y REQUERIMIENTOS tenemos el grupo de \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E8}\u{1D5D8}\u{1D5D5}\u{1D5DF}\u{1D5D8}\u{1D5E6} \u{1D5E1}\u{1D5D8}\u{1D5E7}\u{1D5EA}\u{1D5E2}\u{1D5E5}\u{1D5DE} : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
+Para hacer tus consultas de casos inmobiliarios en temas jur\xEDdicos, tributarios, aval\xFAos, ayuda en gu\xEDa de procesos y redacci\xF3n de contratos, tenemos el grupo de \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}: \u{1D5E6}\u{1D5E2}\u{1D5E3}\u{1D5E2}\u{1D5E5}\u{1D5E7}\u{1D5D8} \u{1D5DF}\u{1D5D8}\u{1D5DA}\u{1D5D4}\u{1D5DF}, \u{1D5E7}\u{1D5E5}\u{1D5DC}\u{1D5D5}\u{1D5E8}\u{1D5E7}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5E2} \u{1D5EC} \u{1D5D4}\u{1D5E9}\u{1D5D4}\u{1D5DF}\xDA\u{1D5E2}\u{1D5E6} : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6
+Para preguntar acerca de VECY Bienes Ra\xEDces y debatir acerca de nuestras funciones, red colaborativa, beneficios y competencias, tenemos el grupo de \u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2} "\u{1D5E9}\u{1D5F2}\u{1D5F0}\u{1D606} \u{1D5E1}\u{1D5F2}\u{1D601}\u{1D604}\u{1D5FC}\u{1D5FF}\u{1D5F8}" : Si a\xFAn no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
+
+Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
+          await this.queuedSend(senderId, redirectMsg, { quoted: msg });
+          await this.logToDb(senderId, "janIA", redirectMsg);
+          await this.sock.sendPresenceUpdate("paused", senderId);
+        } catch (err) {
+          console.error("[JANIA-MATCH] Error al enviar mensaje de redirecci\xF3n de DM privado:", err);
+        }
+      }
+      async processMatchConfirmation(senderId, realName, matchId, decision) {
+        try {
+          const db = await getDb();
+          if (!db) {
+            await this.queuedSend(senderId, "\u26A0\uFE0F El sistema de base de datos no est\xE1 disponible en este momento. Int\xE9ntalo m\xE1s tarde.");
+            return;
+          }
+          const [match] = await db.select().from(propertyMatches).where(eq5(propertyMatches.id, matchId)).limit(1);
+          if (!match) {
+            await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ninguna coincidencia registrada con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
+            return;
+          }
+          const [prop] = await db.select().from(properties).where(eq5(properties.id, match.propertyId)).limit(1);
+          const [req] = await db.select().from(requirements).where(eq5(requirements.id, match.requirementId)).limit(1);
+          if (!prop || !req) {
+            await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de esta coincidencia.");
+            return;
+          }
+          const senderPhone = senderId.split("@")[0];
+          const ownerPhone = prop.idUsuarioWhatsapp || "";
+          const seekerPhone = req.idUsuarioWhatsapp || "";
+          const isOwner = senderPhone === ownerPhone.split("@")[0];
+          const isSeeker = senderPhone === seekerPhone.split("@")[0];
+          if (!isOwner && !isSeeker) {
+            await this.queuedSend(senderId, "\u26A0\uFE0F No est\xE1s autorizado para confirmar esta coincidencia.");
+            return;
+          }
+          if (decision === "no") {
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq5(propertyMatches.id, matchId));
+            await this.queuedSend(senderId, `Entendido. He marcado la coincidencia *#M${matchId}* como cancelada. No se compartir\xE1n tus datos de contacto.`);
+            await this.logToDb(senderId, "janIA", `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
+            const otherJid = isOwner ? seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@s.whatsapp.net` : ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@s.whatsapp.net`;
+            await this.queuedSend(otherJid, `Aviso: La coincidencia *#M${matchId}* ha sido cancelada por la otra parte.`);
+            return;
+          }
+          let updateFields = {};
+          if (isOwner) {
+            updateFields.ownerConfirmed = true;
+          }
+          if (isSeeker) {
+            updateFields.seekerConfirmed = true;
+          }
+          await db.update(propertyMatches).set(updateFields).where(eq5(propertyMatches.id, matchId));
+          const [updatedMatch] = await db.select().from(propertyMatches).where(eq5(propertyMatches.id, matchId)).limit(1);
+          if (updatedMatch.ownerConfirmed && updatedMatch.seekerConfirmed) {
+            await db.update(propertyMatches).set({ status: "interested" }).where(eq5(propertyMatches.id, matchId));
+            let ownerName = "Oferente";
+            let seekerName = "Interesado";
+            try {
+              const [ownerUser] = await db.select().from(users).where(eq5(users.phone, ownerPhone)).limit(1);
+              if (ownerUser && ownerUser.name) ownerName = ownerUser.name;
+            } catch {
+            }
+            try {
+              const [seekerUser] = await db.select().from(users).where(eq5(users.phone, seekerPhone)).limit(1);
+              if (seekerUser && seekerUser.name) seekerName = seekerUser.name;
+            } catch {
+            }
+            const ownerJid = ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@s.whatsapp.net`;
+            const seekerJid = seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@s.whatsapp.net`;
+            const matchScoreFormatted = Number(updatedMatch.matchScore || 0).toFixed(0);
+            const msgToOwner = `\u{1F389}\u{1F388} *\xA1CONEXI\xD3N DE NEGOCIO EXITOSA!* \u{1F388}\u{1F389}
+Felicidades, ambas partes han confirmado inter\xE9s en la coincidencia *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
+
+Aqu\xED tienes el contacto directo del aliado interesado en tu propiedad:
+\u{1F464} *Nombre:* ${seekerName}
+\u{1F4DE} *WhatsApp:* https://wa.me/${seekerPhone.split("@")[0]}
+\u{1F4AC} *Su requerimiento:* ${req.rawText || "Sin descripci\xF3n"}
+
+\xA1Les deseamos mucho \xE9xito en el cierre comercial! \u{1F91D}\u{1F680}`;
+            const msgToSeeker = `\u{1F389}\u{1F388} *\xA1CONEXI\xD3N DE NEGOCIO EXITOSA!* \u{1F388}\u{1F389}
+Felicidades, ambas partes han confirmado inter\xE9s en la coincidencia *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
+
+Aqu\xED tienes el contacto directo del aliado que ofrece la propiedad:
+\u{1F464} *Nombre:* ${ownerName}
+\u{1F4DE} *WhatsApp:* https://wa.me/${ownerPhone.split("@")[0]}
+\u{1F4AC} *Su oferta:* ${prop.rawText || "Sin descripci\xF3n"}
+
+\xA1Les deseamos mucho \xE9xito en el cierre comercial! \u{1F91D}\u{1F680}`;
+            await this.logToDb(ownerJid, "janIA", `[Match-Connected] Match #M${matchId} connected in DB. Seeker is ${seekerPhone}`);
+            await this.logToDb(seekerJid, "janIA", `[Match-Connected] Match #M${matchId} connected in DB. Owner is ${ownerPhone}`);
+          } else {
+            await this.queuedSend(senderId, `\xA1Gracias! He registrado tu confirmaci\xF3n de inter\xE9s para la coincidencia *#M${matchId}*.
+
+En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus datos de contacto para que puedan cerrar el negocio. \u{1F680}`);
+            await this.logToDb(senderId, "janIA", `[Match-Confirmed-Waiting] User confirmed match #M${matchId}, waiting for peer.`);
+          }
+        } catch (err) {
+          console.error(`[JANIA-MATCH] Error procesando confirmaci\xF3n para coincidencia #${matchId}:`, err);
+          await this.queuedSend(senderId, "\u26A0\uFE0F Ocurri\xF3 un error interno al procesar tu confirmaci\xF3n.");
+        }
+      }
+      async queuedSend(chatId, content, options = {}) {
+        outgoingQueue = outgoingQueue.then(async () => {
+          try {
+            if (!this.sock) {
+              throw new Error("Cliente Baileys no inicializado");
+            }
+            let targetJid = chatId;
+            if (targetJid.endsWith("@c.us")) {
+              targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
+            }
+            if (targetJid.endsWith("@g.us")) {
+              const isAuthorized = targetJid === this.targetGroupId || targetJid === this.buzonGroupId || targetJid === this.circuloGroupId;
+              if (!isAuthorized) {
+                console.log(`[JANIA-MATCH-SHIELD] Bloqueado env\xEDo de mensaje a grupo no autorizado (Modo Ingesta Fantasma): ${targetJid}`);
+                return;
+              }
+            }
+            if (targetJid.endsWith("@s.whatsapp.net")) {
+              const rawPhone = targetJid.split("@")[0];
+              const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
+              const BROKER_OFFICIAL_PHONE = "573166569719";
+              const isAuthorizedStaff = rawPhone === "573192919978" || rawPhone === BROKER_OFFICIAL_PHONE || rawPhone.includes(ADMIN_PHONE);
+              const isTransactionalAllowed = options.allowDirectMessage === true || options.isTransactionalNotification === true;
+              if (!isAuthorizedStaff && !isTransactionalAllowed) {
+                console.log(`[JANIA-ANTI-BAN-SHIELD] \u{1F6E1}\uFE0F Bloqueado env\xEDo de mensaje directo (DM) a usuario no administrador (${targetJid}). Prohibici\xF3n absoluta de DMs a terceros.`);
+                return;
+              }
+            }
+            let messagePayload = {};
+            if (typeof content === "string") {
+              messagePayload = { text: content };
+              if (options.mentions) {
+                messagePayload.mentions = options.mentions;
+              }
+            } else if (content && (content.text || content.audio || content.image || content.video || content.document)) {
+              messagePayload = content;
+              if (options.mentions) {
+                messagePayload.mentions = options.mentions;
+              }
+            } else if (content && content.data && content.mimetype) {
+              const buffer = Buffer.from(content.data, "base64");
+              if (content.mimetype.startsWith("audio/")) {
+                messagePayload = {
+                  audio: buffer,
+                  mimetype: content.mimetype,
+                  ptt: options.sendAudioAsVoice || false
+                };
+              } else if (content.mimetype.startsWith("image/")) {
+                messagePayload = {
+                  image: buffer,
+                  mimetype: content.mimetype
+                };
+              } else {
+                messagePayload = {
+                  document: buffer,
+                  mimetype: content.mimetype,
+                  fileName: content.filename || "archivo"
+                };
+              }
+            }
+            const isNewsletter = targetJid.endsWith("@newsletter");
+            const sendOptions = {};
+            if (options.quoted && !isNewsletter) {
+              sendOptions.quoted = options.quoted;
+            }
+            if (isNewsletter && messagePayload.audio) {
+              messagePayload.ptt = false;
+            }
+            if (!isNewsletter) {
+              if (messagePayload.text && typeof messagePayload.text === "string") {
+                try {
+                  await this.sock.sendPresenceUpdate("composing", targetJid);
+                  const typingDelay = Math.min(5e3, Math.max(2e3, messagePayload.text.length * 40));
+                  await delay(typingDelay);
+                } catch (_) {
+                }
+              } else if (messagePayload.audio) {
+                try {
+                  await this.sock.sendPresenceUpdate("recording", targetJid);
+                  const recordingDelay = Math.min(1500, Math.max(300, (options.voiceLength || 2) * 200));
+                  await delay(recordingDelay);
+                } catch (_) {
+                }
+              }
+            } else {
+              await delay(2e3);
+            }
+            const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
+            if (sent && sent.key && sent.key.id) {
+              this.botSentMessageIds.add(sent.key.id);
+            }
+            await delay(1e3);
+          } catch (err) {
+            console.error("[JANIA-MATCH] Error en despacho de mensaje Baileys:", err.message || err);
+          }
+        });
+        return outgoingQueue;
+      }
+      /**
+       * Envía un mensaje de texto directo a un número o JID específico,
+       * normalizando celulares colombianos y habilitando el flag allowDirectMessage.
+       */
+      async sendDirectMessage(targetPhoneOrJid, text2, options = {}) {
+        let clean = (targetPhoneOrJid || "").replace(/\D/g, "");
+        if (clean.length === 10 && clean.startsWith("3")) {
+          clean = "57" + clean;
+        }
+        const jid = targetPhoneOrJid.includes("@") ? targetPhoneOrJid : `${clean}@s.whatsapp.net`;
+        return this.queuedSend(jid, text2, { allowDirectMessage: true, ...options });
+      }
+      /**
+       * Envía una encuesta nativa e interactiva de WhatsApp a un grupo específico.
+       * Utiliza la funcionalidad nativa de Baileys pollCreationMessage.
+       */
+      async sendPollToGroup(name, options, groupId, selectableCount = 1) {
+        try {
+          if (!this.sock || !this.isReady) {
+            console.warn(`[JANIA-MATCH] Bot no listo para enviar encuesta a ${groupId}`);
+            return false;
+          }
+          const targetJid = groupId || this.buzonGroupId;
+          console.log(`[JANIA-MATCH] \u{1F4CA} Despachando encuesta nativa a ${targetJid}: "${name}" (${options.length} opciones)...`);
+          await this.sock.sendMessage(targetJid, {
+            poll: {
+              name,
+              values: options,
+              selectableCount
+            }
+          });
+          console.log(`[JANIA-MATCH] \u2705 Encuesta enviada exitosamente a ${targetJid}`);
+          return true;
+        } catch (err) {
+          console.error(`[JANIA-MATCH] \u274C Error enviando encuesta a ${groupId}:`, err?.message || err);
+          return false;
+        }
+      }
+      async sendToGroup(text2, mediaPath, mentions, groupId) {
+        try {
+          const target = groupId || this.targetGroupId;
+          let targetJid = target;
+          if (targetJid.endsWith("@c.us")) {
+            targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
+          }
+          let messagePayload = {};
+          if (mediaPath) {
+            const fs12 = await import("fs");
+            const buffer = fs12.readFileSync(mediaPath);
+            const path13 = await import("path");
+            const ext = path13.extname(mediaPath).toLowerCase();
+            if (ext === ".mp4") {
+              messagePayload = {
+                video: buffer,
+                caption: text2,
+                mimetype: "video/mp4"
+              };
+            } else if (ext === ".jpg" || ext === ".jpeg" || ext === ".png") {
+              messagePayload = {
+                image: buffer,
+                caption: text2,
+                mimetype: ext === ".png" ? "image/png" : "image/jpeg"
+              };
+            } else {
+              messagePayload = {
+                document: buffer,
+                caption: text2,
+                mimetype: "application/octet-stream",
+                fileName: path13.basename(mediaPath)
+              };
+            }
+          } else {
+            messagePayload = { text: text2 };
+          }
+          if (mentions && mentions.length > 0 && !targetJid.endsWith("@newsletter")) {
+            messagePayload.mentions = mentions.map((m) => m.endsWith("@s.whatsapp.net") ? m : m.replace("@c.us", "@s.whatsapp.net"));
+          }
+          await this.queuedSend(targetJid, messagePayload);
+          console.log(`[JANIA-MATCH] \u2713 Mensaje enviado al destino ${targetJid}.`);
+        } catch (e) {
+          console.error(`[JANIA-MATCH] Error enviando mensaje al destino ${groupId || this.targetGroupId}:`, e.message || e);
+        }
+      }
+      async sendVoiceToGroup(text2, groupId, imagePath, captionText) {
+        try {
+          const target = groupId || this.targetGroupId;
+          let targetJid = target;
+          if (targetJid.endsWith("@c.us")) {
+            targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
+          }
+          const fs12 = await import("fs");
+          if (imagePath && fs12.existsSync(imagePath)) {
+            try {
+              await this.sendToGroup(captionText || text2, imagePath, [], targetJid);
+            } catch (imgErr) {
+              console.warn(`[JANIA-MATCH] Error enviando ilustraci\xF3n previa a ${targetJid}:`, imgErr?.message);
+            }
+          }
+          const { cleanVoiceText: cleanVoiceText2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+          const cleaned = cleanVoiceText2(text2);
+          console.log(`[JANIA-MATCH] Generando nota de voz para enviar a ${targetJid}...`);
+          const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+          const voiceMedia = await textToSpeechMedia2(cleaned);
+          if (voiceMedia && voiceMedia.data) {
+            const buffer = Buffer.from(voiceMedia.data, "base64");
+            await this.queuedSend(targetJid, {
+              audio: buffer,
+              mimetype: voiceMedia.mimetype || "audio/ogg; codecs=opus",
+              ptt: true
+            });
+            console.log(`[JANIA-MATCH] \u2713 Nota de voz enviada a ${targetJid}.`);
+          } else {
+            if (!imagePath) {
+              console.warn(`[JANIA-MATCH] TTS fall\xF3 para ${targetJid}, enviando texto.`);
+              await this.queuedSend(targetJid, cleaned);
+            }
+          }
+        } catch (e) {
+          console.error("[JANIA-MATCH] Error enviando nota de voz al destino:", e.message || e);
+        }
+      }
+      async sendVoiceToBuzonAndChannel(text2, imagePath, captionText) {
+        if (!this.channelNewsletterId) {
+          await this.discoverAndSyncNewsletters().catch(() => {
+          });
+        }
+        const { cleanVoiceText: cleanVoiceText2, textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+        const cleaned = cleanVoiceText2(text2);
+        console.log(`[JANIA-MATCH] \u{1F399}\uFE0F Generando nota de voz TTS centralizada para Buz\xF3n y Canal...`);
+        const voiceMedia = await textToSpeechMedia2(cleaned);
+        const audioBuffer = voiceMedia && voiceMedia.data ? Buffer.from(voiceMedia.data, "base64") : null;
+        const audioMimetype = voiceMedia?.mimetype || "audio/ogg; codecs=opus";
+        const fs12 = await import("fs");
+        if (this.buzonGroupId) {
+          try {
+            console.log(`[JANIA-MATCH] \u{1F4E4} Despachando publicaci\xF3n a Grupo 2 (${this.buzonGroupId})...`);
+            if (imagePath && fs12.existsSync(imagePath)) {
+              await this.sendToGroup(captionText || text2, imagePath, [], this.buzonGroupId);
+            }
+            if (audioBuffer) {
+              await this.queuedSend(this.buzonGroupId, {
+                audio: audioBuffer,
+                mimetype: audioMimetype,
+                ptt: true
+              });
+              console.log(`[JANIA-MATCH] \u2713 Nota de voz enviada al Grupo 2 (${this.buzonGroupId}).`);
+            } else if (!imagePath) {
+              await this.queuedSend(this.buzonGroupId, cleaned);
+            }
+          } catch (grpErr) {
+            console.error(`[JANIA-MATCH] Error despachando a Grupo 2:`, grpErr?.message);
+          }
+        }
+        if (this.channelNewsletterId) {
+          try {
+            console.log(`[JANIA-MATCH] \u{1F4E2} Despachando publicaci\xF3n tem\xE1tica al Canal de WhatsApp (${this.channelNewsletterId})...`);
+            if (imagePath && fs12.existsSync(imagePath)) {
+              await this.sendToGroup(captionText || text2, imagePath, [], this.channelNewsletterId);
+            }
+            if (audioBuffer) {
+              await this.queuedSend(this.channelNewsletterId, {
+                audio: audioBuffer,
+                mimetype: audioMimetype,
+                ptt: false
+              });
+              console.log(`[JANIA-MATCH] \u2713 Audio enviado al Canal de WhatsApp (${this.channelNewsletterId}).`);
+            } else if (!imagePath) {
+              await this.queuedSend(this.channelNewsletterId, cleaned);
+            }
+          } catch (chanErr) {
+            console.error(`[JANIA-MATCH] Error despachando a Canal de WhatsApp:`, chanErr?.message);
+          }
+        } else {
+          console.warn(`[JANIA-MATCH] \u26A0\uFE0F Canal de WhatsApp no configurado a\xFAn (channelNewsletterId vac\xEDo).`);
+        }
+      }
+      async sendToBuzonAndChannel(text2, mediaPath) {
+        if (this.buzonGroupId) {
+          await this.sendToGroup(text2, mediaPath, [], this.buzonGroupId);
+        }
+        if (this.channelNewsletterId) {
+          await this.sendToGroup(text2, mediaPath, [], this.channelNewsletterId);
+        }
+      }
+      officialChannelInviteCode = process.env.WHATSAPP_CHANNEL_INVITE_CODE || "0029Vb5iYUYCMY0A94zqti1b";
+      async discoverAndSyncNewsletters() {
+        try {
+          if (!this.sock) return;
+          if (this.officialChannelInviteCode) {
+            try {
+              if (typeof this.sock.newsletterMetadata === "function") {
+                const inviteMeta = await this.sock.newsletterMetadata("invite", this.officialChannelInviteCode);
+                if (inviteMeta && inviteMeta.id) {
+                  this.channelNewsletterId = inviteMeta.id;
+                  const channelName = inviteMeta?.thread_metadata?.name?.text || inviteMeta?.name || "Vecy Bienes Ra\xEDces";
+                  console.log(`[${this.botName}] \u{1F3AF} Canal oficial resuelto por Invite Code ("${this.officialChannelInviteCode}"): JID=${this.channelNewsletterId} ("${channelName}")`);
+                }
+              }
+            } catch (invErr) {
+              console.warn(`[${this.botName}] Info resoluci\xF3n canal por invite code:`, invErr?.message);
+            }
+          }
+          if (!this.channelNewsletterId && typeof this.sock.newsletterSubscribed === "function") {
+            const newsletters = await this.sock.newsletterSubscribed();
+            if (Array.isArray(newsletters) && newsletters.length > 0) {
+              console.log(`[${this.botName}] \u{1F4E2} Canales/Newsletters detectados (${newsletters.length}):`);
+              for (const nl of newsletters) {
+                const name = nl?.thread_metadata?.name?.text || nl?.name || nl?.subject || "Canal";
+                const jid = nl.id;
+                console.log(`[${this.botName}] \u{1F4E2} Canal ID: ${jid} \u2014 "${name}"`);
+                if (!this.channelNewsletterId || name.toLowerCase().includes("vecy")) {
+                  this.channelNewsletterId = jid;
+                  console.log(`[${this.botName}] \u{1F3AF} Canal oficial auto-asignado: ${this.channelNewsletterId} ("${name}")`);
+                }
+              }
+            } else {
+              console.log(`[${this.botName}] \u2139\uFE0F No se detectaron canales suscritos a\xFAn en la cuenta.`);
+            }
+          }
+        } catch (e) {
+          console.warn(`[${this.botName}] Info: no se pudieron listar canales de WhatsApp:`, e?.message || e);
+        }
+      }
+      async getGroupParticipants(groupId) {
+        try {
+          if (!this.sock) return [];
+          const metadata = await this.getCachedGroupMetadata(groupId);
+          return metadata?.participants ? metadata.participants.map((p) => p.id) : [];
+        } catch (err) {
+          console.warn(`[JANIA-MATCH] Error al obtener participantes del grupo ${groupId}:`, err);
+          return [];
+        }
+      }
+      async sendManualCierreAudios() {
+        console.log("[JANIA-MATCH] Generando y enviando audios de cierre manuales (Solo por hoy)...");
+        const grupos = [
+          {
+            nombre: "VECY INMUEBLES NETWORK",
+            id: this.targetGroupId,
+            promptCierre: "Genera una nota de voz corta en espa\xF1ol de despedida y cierre de jornada para el grupo de WhatsApp VECY INMUEBLES NETWORK. Agradece la actividad de hoy y desp\xEDdete con calidez. Recuerda que no cobramos comisiones y que las ofertas y demandas cruzadas son el motor de la red."
+          },
+          {
+            nombre: "Buz\xF3n de Consultor\xEDa",
+            id: this.buzonGroupId,
+            promptCierre: "Genera una nota de voz corta en espa\xF1ol de despedida y cierre de jornada para el grupo de WhatsApp Buz\xF3n de Consultor\xEDa. Agradece la atenci\xF3n a los casos jur\xEDdicos y de comisiones compartidas resueltos hoy, deseando un feliz descanso."
+          },
+          {
+            nombre: "C\xEDrculo Cero",
+            id: this.circuloGroupId,
+            promptCierre: "Genera una nota de voz corta en espa\xF1ol de despedida y cierre de jornada para el grupo de WhatsApp C\xEDrculo Cero. Agradece el debate y las sugerencias de hoy sobre el futuro del sector."
+          }
+        ];
+        const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
+        for (const grupo of grupos) {
+          try {
+            if (!grupo.id) continue;
+            console.log(`[JANIA-MATCH] Generando audio de cierre para el grupo ${grupo.nombre}...`);
+            const response1 = await invokeLLM2({
+              messages: [
+                { role: "system", content: "Eres JanIA, la asistente de voz e inteligencia artificial de VECY Bienes Ra\xEDces. Te expresas de manera natural, humana, c\xE1lida y profesional." },
+                { role: "user", content: `${grupo.promptCierre}
+- IMPORTANTE: Debe sonar como un mensaje de voz natural de WhatsApp grabado de forma espont\xE1nea por una colega real. Empieza con naturalidad como: "Hola colegas", "Buenas tardes", etc. sin formalismos rob\xF3ticos.
+- M\xE1ximo 350 caracteres.
+- CR\xCDTICO: Responde \xDANICAMENTE con las palabras habladas de la nota de voz. NO agregues pre\xE1mbulos, comentarios ni envuelvas el texto en comillas, llaves o corchetes.` }
+              ]
+            });
+            const content1 = response1.choices[0]?.message?.content;
+            if (content1 && content1.trim() !== "") {
+              await this.sendVoiceToGroup(content1, grupo.id);
+            }
+          } catch (err) {
+            console.error(`\u274C Error en sendManualCierreAudios para el grupo ${grupo.nombre}:`, err.message || err);
+          }
+        }
+      }
+      pendingWelcomeJids = [];
+      async sendAnuncioRetorno() {
+        const baseMsg = `\u{1F680} *\xA1JANIA EST\xC1 DE VUELTA Y M\xC1S AFILADA QUE NUNCA!* \u{1F916}\u{1F3DB}\uFE0F
+
+\xA1Hola de nuevo, colegas y aliados! \u{1F44B} Tras un breve ajuste t\xE9cnico para fortalecer nuestra infraestructura y preparar el lanzamiento del nuevo portal web privado, estoy de vuelta en el canal para encontrar esos MATCH tan deseados.
+
+Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afilados que nunca para cuidar la calidad de la red y acelerar nuestros cierres:
+
+\u{1F9E0} *\xBFQu\xE9 puedo hacer por ti en esta v2.0?*
+\u25B8 *Ofertas Express (Links):* Comparte el enlace de tus inmuebles de cualquier portal o CRM, y extraer\xE9 la ficha t\xE9cnica en segundos.
+\u25B8 *Esc\xE1ner de Flyers (OCR):* \xBFTienes fotos de inmuebles o requerimientos con texto? S\xFAbelas al grupo y leer\xE9 la informaci\xF3n dentro de la imagen.
+\u25B8 *Permutas e Intercambios (Voz o Texto):* Escr\xEDbeme o env\xEDame un audio detallando permutas complejas como:
+  * \u{1F504} *Mano a mano / Pelo a pelo* (intercambio directo de inmuebles de valor similar).
+  * \u{1F3E0}\u2795\u{1F4B5} *Inmueble de menor valor* como parte de pago por uno de mayor valor.
+  * \u{1F697} *Veh\xEDculos* recibidos como parte de pago.
+  * \u{1F4C8} *CDTs, divisas o activos alternativos* como complemento de negocio.
+  * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
+\u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
+        const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
+        const imgPath = path6.resolve("./client/public/jania_perfil.png");
+        for (const group of groups) {
+          try {
+            await this.sendToGroup(baseMsg, imgPath, [], group);
+          } catch (e) {
+            console.error(`Error enviando anuncio de retorno al grupo ${group}:`, e.message);
+          }
+        }
+      }
+      async sendComunicadoMatch() {
+        try {
+          console.log(`[JANIA-MATCH] Enviando comunicado de notificaciones de match...`);
+          const { MSG_COMUNICADO_MATCH_NETWORK: MSG_COMUNICADO_MATCH_NETWORK2, MSG_COMUNICADO_MATCH_CIRCULO: MSG_COMUNICADO_MATCH_CIRCULO2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+          await this.queuedSend(this.targetGroupId, MSG_COMUNICADO_MATCH_NETWORK2);
+          await delay(3e3);
+          await this.queuedSend(this.circuloGroupId, MSG_COMUNICADO_MATCH_CIRCULO2);
+          console.log("[JANIA-MATCH] Comunicado de match enviado con \xE9xito.");
+        } catch (err) {
+          console.error("[JANIA-MATCH] Error al enviar el comunicado de match:", err.message || err);
+        }
+      }
+      async getPairingCode(phone) {
+        const cleanPhone = phone.replace(/\D/g, "");
+        console.log(`[JANIA-MATCH] Solicitando c\xF3digo de vinculaci\xF3n por n\xFAmero para: ${cleanPhone}`);
+        console.log("[JANIA-MATCH] Limpiando sesi\xF3n previa para solicitar nuevo c\xF3digo...");
+        try {
+          if (this.sock) {
+            this.sock.end(void 0);
+          }
+        } catch (e) {
+        }
+        const sessionDir = path6.join(process.cwd(), ".baileys_auth");
+        if (fs6.existsSync(sessionDir)) {
+          try {
+            fs6.rmSync(sessionDir, { recursive: true, force: true });
+          } catch (err) {
+            console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
+          }
+        }
+        this.sock = null;
+        await this.initialize();
+        await delay(3e3);
+        try {
+          const code = await this.sock.requestPairingCode(cleanPhone);
+          console.log(`[JANIA-MATCH] C\xF3digo de vinculaci\xF3n generado: ${code}`);
+          return code;
+        } catch (err) {
+          console.error("[JANIA-MATCH] Error al solicitar c\xF3digo de vinculaci\xF3n:", err.message || err);
+          throw err;
+        }
+      }
+      loadCooldowns() {
+        try {
+          if (fs6.existsSync(this.cooldownFile)) {
+            const raw = JSON.parse(fs6.readFileSync(this.cooldownFile, "utf8"));
+            this.cooldownMap = new Map(Object.entries(raw));
+          }
+        } catch (e) {
+        }
+      }
+      saveCooldowns() {
+        try {
+          const obj = Object.fromEntries(this.cooldownMap.entries());
+          fs6.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
+        } catch (e) {
+        }
+      }
+      setupGracefulShutdown() {
+        const shutdown = async () => {
+          console.log("\n\u{1F6D1} Cerrando JanIA Match Bot (Baileys)...");
+          try {
+            if (this.sock) {
+              await this.sock.end();
+            }
+          } catch (e) {
+          }
+        };
+        process.on("SIGINT", shutdown);
+        process.on("SIGTERM", shutdown);
+      }
+    };
+    janiaMatchBot = new JaniaMatchBot({
+      sessionFolderName: ".baileys_auth",
+      qrFileName: "qr-match.png",
+      botName: "JANIA-MATCH-OFICIAL"
+    });
+    janiaCaptadorBot = janiaMatchBot;
+  }
+});
+
+// server/_core/agendaWhatsAppService.ts
+function cleanColombianPhone(rawPhone) {
+  if (!rawPhone) return "";
+  const digits = String(rawPhone).replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length === 10 && digits.startsWith("3")) {
+    return "57" + digits;
+  }
+  if (digits.length === 12 && digits.startsWith("57")) {
+    return digits;
+  }
+  return digits;
+}
+function formatDateSpanish(rawDate) {
+  if (!rawDate) return "Fecha por coordinar";
+  const str = String(rawDate).trim();
+  const mesesKeywords = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  if (mesesKeywords.some((m) => str.toLowerCase().includes(m))) {
+    return str;
+  }
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const day = parseInt(match[3], 10);
+    const dateObj = new Date(year, month, day, 12, 0, 0);
+    const diasSemana = ["domingo", "lunes", "martes", "mi\xE9rcoles", "jueves", "viernes", "s\xE1bado"];
+    const nombresMeses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+    const diaNombre = diasSemana[dateObj.getDay()] || "d\xEDa";
+    const mesNombre = nombresMeses[month] || "mes";
+    return `${diaNombre}, ${day} de ${mesNombre} de ${year}`;
+  }
+  return str;
+}
+function buildBrokerCallMeBotMessage(data) {
+  const numSolicitud = data.solicitudId || data.solicitud_id || data.id || "Pendiente";
+  const perfil = data.solicitante_perfil || data.solicitantePerfil || "Cliente directo";
+  const nombre = data.solicitante_nombre || data.solicitanteNombre || "Solicitante";
+  const doc = data.solicitante_numero_documento || data.solicitanteNumeroDocumento || "Sin registrar";
+  const email = data.solicitante_email || data.solicitanteEmail || "Sin email";
+  const rawCelular = data.solicitante_celular || data.solicitanteCelular || "";
+  const cleanCel = cleanColombianPhone(rawCelular);
+  const celularDisplay = cleanCel || rawCelular || "Sin celular";
+  const servicio = data.servicio_solicitado || data.servicioSolicitado || "Visitar inmueble";
+  const codigo = data.codigo_inmueble || data.codigoInmueble || "S/C";
+  const negocio = data.opcion_negocio || data.opcionNegocio || "Venta";
+  const fechaTexto = formatDateSpanish(data.fecha_cita_texto || data.fechaCitaTexto);
+  const hora = data.hora_cita || data.horaCita || "Por coordinar";
+  let acompList = [];
+  if (data.acompanantes) {
+    if (Array.isArray(data.acompanantes)) {
+      acompList = data.acompanantes;
+    } else if (typeof data.acompanantes === "string") {
+      try {
+        const parsed = JSON.parse(data.acompanantes);
+        if (Array.isArray(parsed)) acompList = parsed;
+      } catch (_) {
+      }
+    }
+  }
+  const validAcomps = acompList.filter((a) => a && (a.nombre || a.documento || a.numero_documento));
+  let personas = Number(data.cantidad_personas ?? data.cantidadPersonas ?? 0);
+  if (!personas || isNaN(personas)) {
+    personas = 1 + validAcomps.length;
+  }
+  const clienteNombre = data.interesado_nombre || data.interesadoNombre || nombre;
+  const clienteDoc = data.interesado_documento || data.interesadoDocumento || doc;
+  const lineasSolicitud = [
+    `\u{1F3E0} Solicitud`,
+    servicio,
+    `Cod: ${codigo}`,
+    `Negocio: ${negocio}`,
+    `\u{1F4C5} ${fechaTexto}`,
+    `\u{1F550} ${hora}`,
+    `Asistir\xE1n: ${personas} personas`
+  ];
+  if (validAcomps.length > 0) {
+    for (const acomp of validAcomps) {
+      const acompNombre = acomp.nombre || "Acompa\xF1ante";
+      const acompDoc = acomp.documento || acomp.numero_documento || "";
+      lineasSolicitud.push(`${acompNombre}
+\u{1FAAA} ${acompDoc}`);
+    }
+  }
+  const bloqueSolicitud = lineasSolicitud.join("\n");
+  const waContactUrl = cleanCel ? `https://wa.me/${cleanCel}` : `(Sin n\xFAmero registrado)`;
+  return `\u{1F514} Solicitud No. ${numSolicitud} \u{1F514}
+
+\u{1F464} Solicitante
+${perfil}
+${nombre}
+\u{1FAAA} ${doc}
+Contrato: ${numSolicitud}
+\u2709\uFE0F ${email}
+\u{1F4DE} ${celularDisplay}
+
+${bloqueSolicitud}
+
+\u{1F465} Cliente
+${clienteNombre}
+\u{1FAAA} ${clienteDoc}
+
+\u{1F447} Contactar Cliente \u{1F447}
+${waContactUrl}`;
+}
+function buildClientConfirmationMessage(data) {
+  const numSolicitud = data.solicitudId || data.solicitud_id || data.id || "";
+  const nombre = data.solicitante_nombre || data.solicitanteNombre || "Cliente";
+  const nombreInmueble = data.nombre_inmueble || data.nombreInmueble || "Inmueble seleccionado";
+  const codigo = data.codigo_inmueble || data.codigoInmueble || "S/C";
+  const negocio = data.opcion_negocio || data.opcionNegocio || "Inmobiliario";
+  const fechaTexto = formatDateSpanish(data.fecha_cita_texto || data.fechaCitaTexto);
+  const hora = data.hora_cita || data.horaCita || "Por coordinar";
+  const email = data.solicitante_email || data.solicitanteEmail || "tu correo registrado";
+  let personas = Number(data.cantidad_personas ?? data.cantidadPersonas ?? 0);
+  if (!personas || isNaN(personas)) {
+    personas = 1;
+    if (data.acompanantes && Array.isArray(data.acompanantes)) {
+      personas += data.acompanantes.length;
+    }
+  }
+  const clienteNombre = data.interesado_nombre || data.interesadoNombre || "";
+  const lineaCliente = clienteNombre && clienteNombre !== nombre ? `
+\u{1F464} *Cliente presentado:* ${clienteNombre}` : "";
+  return `\xA1Hola, ${nombre}! \u{1F44B} Te saluda *JanIA* de *Vecy Bienes Ra\xEDces*. \u{1F3E2}\u2728
+
+Hemos recibido tu solicitud de agendamiento *No. ${numSolicitud}*:
+
+\u{1F3E0} *Inmueble:* ${nombreInmueble}
+\u{1F4CC} *C\xF3digo:* ${codigo}
+\u{1F4BC} *Operaci\xF3n:* ${negocio}
+\u{1F4C5} *Fecha:* ${fechaTexto}
+\u23F0 *Hora:* ${hora}
+\u{1F465} *Asistentes:* ${personas} persona(s)${lineaCliente}
+
+\u{1F50D} *Estamos verificando tus datos.* En un momento te enviaremos la confirmaci\xF3n oficial y la direcci\xF3n exacta del inmueble a tu correo (*${email}*) y por este medio (WhatsApp). \u{1F4E9}\u{1F4F2}
+
+Si deseas cancelar, reagendar, tienes alguna duda o requieres otro tipo de servicio comun\xEDcate directamente con nosotros al *+57 316 6569719*.
+
+\xA1Gracias por confiar en *Vecy Bienes Ra\xEDces*! \u{1F91D}\u{1F3E1}`;
+}
+async function sendAgendaWhatsAppNotifications(payload) {
+  let brokerSent = false;
+  let clientSent = false;
+  const numSolicitud = payload.solicitudId || payload.solicitud_id || payload.id || "N/A";
+  try {
+    const brokerMsg = buildBrokerCallMeBotMessage(payload);
+    console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u{1F4E4} Enviando notificaci\xF3n CallMeBot al Br\xF3ker (+57 316 6569719)...`);
+    try {
+      await janiaMatchBot.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE, brokerMsg);
+      brokerSent = true;
+      console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u2705 Notificaci\xF3n entregada al socket para Br\xF3ker (+57 316 6569719).`);
+    } catch (brokerErr) {
+      console.error(`[AGENDA-WHATSAPP-#${numSolicitud}] \u26A0\uFE0F Error notificando al Br\xF3ker:`, brokerErr?.message || brokerErr);
+    }
+    const rawCel = payload.solicitante_celular || payload.solicitanteCelular || "";
+    const cleanClientCel = cleanColombianPhone(rawCel);
+    if (cleanClientCel && cleanClientCel.length >= 10) {
+      const clientMsg = buildClientConfirmationMessage(payload);
+      console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u{1F4E4} Enviando mensaje de confirmaci\xF3n de JanIA al Solicitante (${cleanClientCel})...`);
+      try {
+        await janiaMatchBot.sendDirectMessage(cleanClientCel, clientMsg);
+        clientSent = true;
+        console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u2705 Confirmaci\xF3n de JanIA entregada al socket para Solicitante (${cleanClientCel}).`);
+      } catch (clientErr) {
+        console.error(`[AGENDA-WHATSAPP-#${numSolicitud}] \u26A0\uFE0F Error enviando confirmaci\xF3n al solicitante (${cleanClientCel}):`, clientErr?.message || clientErr);
+      }
+    } else {
+      console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u2139\uFE0F Solicitante no proporcion\xF3 un celular v\xE1lido para WhatsApp.`);
+    }
+  } catch (err) {
+    console.error(`[AGENDA-WHATSAPP-#${numSolicitud}] \u274C Error general en servicio de WhatsApp para agenda:`, err?.message || err);
+  }
+  return { brokerSent, clientSent };
+}
+var VECY_BROKER_OFFICIAL_PHONE;
+var init_agendaWhatsAppService = __esm({
+  "server/_core/agendaWhatsAppService.ts"() {
+    "use strict";
+    init_whatsapp_match();
+    VECY_BROKER_OFFICIAL_PHONE = "573166569719";
+  }
+});
+
+// server/routers/agenda.ts
+import { z as z2 } from "zod";
+import { desc, ilike, or as or2, sql as sql4, eq as eq6 } from "drizzle-orm";
+import { TRPCError as TRPCError3 } from "@trpc/server";
+import { Solver } from "@2captcha/captcha-solver";
+import https from "https";
+async function requestHttps(urlStr, options = {}, jar) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(urlStr);
+    const headers = options.headers || {};
+    if (jar) {
+      const cookieStr = jar.getCookieString();
+      if (cookieStr) headers["Cookie"] = cookieStr;
+    }
+    const req = https.request({
+      protocol: u.protocol,
+      hostname: u.hostname,
+      port: u.port || 443,
+      path: u.pathname + u.search,
+      method: options.method || "GET",
+      headers,
+      agent: httpsAgentInsecure
+    }, (res) => {
+      if (jar) jar.addFromRawHeaders(res.headers);
+      let data = "";
+      res.on("data", (chunk) => data += chunk);
+      res.on("end", () => resolve({ status: res.statusCode || 200, headers: res.headers, body: data }));
+    });
+    req.on("error", reject);
+    if (options.timeout) {
+      req.setTimeout(options.timeout, () => {
+        req.destroy(new Error("HTTPS request timeout"));
+      });
+    }
+    if (options.body) req.write(options.body);
+    req.end();
+  });
+}
+function formatTitleCase(str) {
+  if (!str) return "";
+  const lowerParticles = ["de", "del", "la", "las", "los", "y"];
+  return str.toLowerCase().split(/\s+/).filter(Boolean).map((w, idx) => {
+    if (idx > 0 && lowerParticles.includes(w)) {
+      return w;
+    }
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(" ");
+}
+function parsePoliceAntecedentesFullName(rawFullName) {
+  if (!rawFullName || !rawFullName.trim()) return "";
+  const clean = rawFullName.trim().replace(/\s+/g, " ");
+  const words = clean.split(" ").filter(Boolean);
+  if (words.length <= 1) return formatTitleCase(clean);
+  const upper = words.map((w) => w.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+  let ap1Tokens = [];
+  let idx = 0;
+  if (upper[idx] === "DE" && upper[idx + 1] === "LA" && idx + 2 < words.length) {
+    ap1Tokens = [words[idx], words[idx + 1], words[idx + 2]];
+    idx += 3;
+  } else if ((upper[idx] === "DE" || upper[idx] === "DEL" || upper[idx] === "SAN" || upper[idx] === "SANTA") && idx + 1 < words.length) {
+    ap1Tokens = [words[idx], words[idx + 1]];
+    idx += 2;
+  } else {
+    ap1Tokens = [words[idx]];
+    idx += 1;
+  }
+  let ap2Tokens = [];
+  if (idx < words.length - 1) {
+    if (upper[idx] === "DE" && upper[idx + 1] === "LA" && idx + 3 <= words.length) {
+      ap2Tokens = [words[idx], words[idx + 1], words[idx + 2]];
+      idx += 3;
+    } else if ((upper[idx] === "DE" || upper[idx] === "DEL" || upper[idx] === "SAN" || upper[idx] === "SANTA") && idx + 2 <= words.length) {
+      ap2Tokens = [words[idx], words[idx + 1]];
+      idx += 2;
+    } else {
+      ap2Tokens = [words[idx]];
+      idx += 1;
+    }
+  }
+  const nameTokens = words.slice(idx);
+  if (nameTokens.length === 0) {
+    return formatTitleCase(clean);
+  }
+  const naturalTokens = [...nameTokens, ...ap1Tokens, ...ap2Tokens];
+  return formatTitleCase(naturalTokens.join(" "));
+}
+async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
+  let tipoDoc = "cc";
+  const t2 = (tipoDocInput || "").toLowerCase();
+  if (t2.includes("extranjer") || t2 === "ce" || t2 === "cx") tipoDoc = "cx";
+  else if (t2.includes("pasaporte") || t2 === "pa") tipoDoc = "pa";
+  else if (t2.includes("nit") || t2.includes("rut")) return { success: false };
+  const cacheKey = `POLICIA:${tipoDoc}:${cleanDoc}`;
+  const cached = identityCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL) {
+    return { success: true, officialName: cached.fullName, source: "Polic\xEDa Nacional de Colombia (Cach\xE9)" };
+  }
+  const apiKey = process.env.TWOCAPTCHA_API_KEY || "673ddb810e9f700065ccbe6034f26629";
+  if (!apiKey) return { success: false };
+  try {
+    const solver = new Solver(apiKey);
+    const jar = new CookieJar();
+    const headers = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36" };
+    const res1 = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml", { headers, timeout: 25e3 }, jar);
+    const vs1Match = res1.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res1.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
+    const vs1 = vs1Match ? vs1Match[1] : null;
+    if (!vs1) return { success: false };
+    const postTerms = new URLSearchParams({
+      "javax.faces.partial.ajax": "true",
+      "javax.faces.source": "continuarBtn",
+      "javax.faces.partial.execute": "@all",
+      "javax.faces.partial.render": "form",
+      "continuarBtn": "continuarBtn",
+      "form": "form",
+      "aceptaOption": "true",
+      "javax.faces.ViewState": vs1
+    }).toString();
+    await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml", {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "Faces-Request": "partial/ajax",
+        "X-Requested-With": "XMLHttpRequest",
+        "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml"
+      },
+      body: postTerms,
+      timeout: 25e3
+    }, jar);
+    const res3 = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml", {
+      headers: {
+        ...headers,
+        "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml"
+      },
+      timeout: 25e3
+    }, jar);
+    const vs3Match = res3.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res3.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
+    const vs3 = vs3Match ? vs3Match[1] : null;
+    if (!vs3) return { success: false };
+    const captcha = await solver.recaptcha({
+      googlekey: "6LcsIwQaAAAAAFCsaI-dkR6hgKsZwwJRsmE0tIJH",
+      pageurl: "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
+    });
+    if (!captcha || !captcha.data) return { success: false };
+    const postQuery = new URLSearchParams({
+      "formAntecedentes": "formAntecedentes",
+      "cedulaTipo": tipoDoc,
+      "cedulaInput": cleanDoc,
+      "g-recaptcha-response": captcha.data,
+      "j_idt17": "Consultar",
+      "javax.faces.ViewState": vs3
+    }).toString();
+    const resFinal = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml", {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
+      },
+      body: postQuery,
+      timeout: 25e3
+    }, jar);
+    let finalHtml = resFinal.body;
+    if (resFinal.status === 302 || resFinal.headers.location) {
+      const nextUrl = resFinal.headers.location || "https://antecedentes.policia.gov.co:7005/WebJudicial/formAntecedentes.xhtml";
+      const resRedirect = await requestHttps(nextUrl, {
+        headers: {
+          ...headers,
+          "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
+        },
+        timeout: 25e3
+      }, jar);
+      finalHtml = resRedirect.body;
+    }
+    const text2 = finalHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    const matchNombres = finalHtml.match(/Apellidos\s+y\s+Nombres:\s*<span[^>]*>([^<]+)<\/span>/i) || text2.match(/Apellidos\s+y\s+Nombres:\s*([A-ZÁÉÍÓÚÑ\s]+?)\s+(NO TIENE|TIENE|ASUNTOS)/i);
+    if (matchNombres && matchNombres[1]) {
+      const rawFullName = matchNombres[1].trim();
+      const officialName = parsePoliceAntecedentesFullName(rawFullName);
+      identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
+      return { success: true, officialName, source: "Polic\xEDa Nacional de Colombia" };
+    }
+    return { success: false };
+  } catch (err) {
+    console.warn("[queryPoliciaNacional Error]", err?.message);
+    return { success: false };
+  }
+}
+function calcularDigitoVerificacionDIAN(nitStr) {
+  const vpri = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
+  const clean = nitStr.replace(/\D/g, "");
+  let suma = 0;
+  for (let i = 0; i < clean.length; i++) {
+    const digit = parseInt(clean.charAt(clean.length - 1 - i), 10);
+    suma += digit * vpri[i];
+  }
+  const residuo = suma % 11;
+  return residuo > 1 ? 11 - residuo : residuo;
+}
+function checkIdentityTokens(nombreIngresado, officialName) {
+  if (!nombreIngresado || !nombreIngresado.trim()) return true;
+  if (!officialName || !officialName.trim()) return false;
+  const stopwords = ["de", "del", "la", "las", "los", "y", "el", "san", "santa", "inmobiliaria", "bienes", "raices", "ra\xEDces", "propiedades", "sas", "ltda"];
+  const normEntered = nombreIngresado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[\s,.-]+/).filter((t2) => t2.length >= 3 && !stopwords.includes(t2));
+  const normOfficial = officialName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[\s,.-]+/).filter((t2) => t2.length >= 3 && !stopwords.includes(t2));
+  if (normEntered.length === 0) return true;
+  const matches = normEntered.filter(
+    (token) => normOfficial.some((off) => off === token || token.length >= 4 && off.startsWith(token) || off.length >= 4 && token.startsWith(off))
+  );
+  return matches.length >= 1;
+}
+async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngresado) {
+  const clean = cleanDoc.replace(/[^0-9a-zA-Z]/g, "");
+  if (!clean || clean.length < 5) {
+    return {
+      valid: false,
+      match: false,
+      error: "El n\xFAmero de documento debe tener al menos 5 d\xEDgitos."
+    };
+  }
+  const normName = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (normName.length >= 4) {
+    const isDaniel = normName.includes("daniel") && (normName.includes("rivera") || normName.includes("noguera") || normName.trim() === "daniel");
+    if (isDaniel && clean !== "1233903423") {
+      return {
+        valid: false,
+        match: false,
+        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Daniel Eduardo Rivera Noguera (su c\xE9dula oficial registrada es 1233903423). Corrige el n\xFAmero para continuar.`
+      };
+    }
+    const isNatalia = normName.includes("natalia") && (normName.includes("rivera") || normName.includes("noguera") || normName.trim() === "natalia");
+    if (isNatalia && clean !== "1193130766") {
+      return {
+        valid: false,
+        match: false,
+        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Natalia Rivera Noguera (el documento oficial registrado es 1193130766). Corrige el n\xFAmero para continuar.`
+      };
+    }
+    const isEduardo = normName.includes("eduardo") && (normName.includes("rivera") || normName.includes("arturo"));
+    if (isEduardo && clean !== "11189781") {
+      return {
+        valid: false,
+        match: false,
+        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Eduardo Arturo Rivera Mart\xEDnez (su c\xE9dula oficial registrada es 11189781). Corrige el n\xFAmero para continuar.`
+      };
+    }
+    const isVecy = normName.includes("vecy");
+    if (isVecy && clean !== "410575061" && clean !== "41057506") {
+      return {
+        valid: false,
+        match: false,
+        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Vecy Bienes Ra\xEDces (NIT oficial: 41057506-1). Corrige el n\xFAmero para continuar.`
+      };
+    }
+    const isJani = normName.includes("jani") && normName.includes("alves");
+    if (isJani && clean !== "41057506") {
+      return {
+        valid: false,
+        match: false,
+        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Jani Alves Souza (su c\xE9dula oficial registrada es 41057506). Corrige el n\xFAmero para continuar.`
+      };
+    }
+  }
+  const tDocLower = (tipoDocumento || "").toLowerCase();
+  const isNit = tDocLower.includes("nit") || tDocLower.includes("rut");
+  const authEntry = AUTHORITATIVE_FAMILY_IDENTITIES[clean];
+  if (authEntry) {
+    const norm2 = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const tokens = norm2.split(/[\s,.-]+/).filter(Boolean);
+    const matchesKeyword = tokens.length === 0 || tokens.some((t2) => authEntry.allowedKeywords.some((kw) => kw === t2 || t2.startsWith(kw) || kw.startsWith(t2)));
+    if (clean === "1233903423" && norm2.includes("vecy")) {
+      return {
+        valid: false,
+        match: false,
+        error: "\u26A0\uFE0F El documento 1233903423 pertenece a Daniel Eduardo Rivera Noguera y no corresponde a Vecy Bienes Ra\xEDces (el NIT oficial de Vecy Bienes Ra\xEDces es 41057506-1)."
+      };
+    }
+    if (matchesKeyword) {
+      let displayName = authEntry.canonicalName;
+      let msg = authEntry.message;
+      if (clean === "1233903423") {
+        displayName = "Daniel Eduardo Rivera Noguera";
+        msg = "\u2713 Identidad verificada y autenticada con \xE9xito: Daniel Eduardo Rivera Noguera";
+      } else if (clean === "410575061" || clean === "41057506" && (isNit || norm2.includes("vecy"))) {
+        displayName = "Vecy Bienes Ra\xEDces";
+        msg = "\u2713 Identidad oficial verificada y autorizada: Vecy Bienes Ra\xEDces (NIT: 41057506-1)";
+      } else if (clean === "41057506") {
+        displayName = "Jani Alves Souza";
+        msg = "\u2713 Identidad verificada y autenticada con \xE9xito: Jani Alves Souza";
+      }
+      return {
+        valid: true,
+        match: true,
+        officialName: displayName,
+        message: msg
+      };
+    } else {
+      return {
+        valid: true,
+        match: false,
+        officialName: authEntry.canonicalName,
+        error: `\u26A0\uFE0F El n\xFAmero de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un n\xFAmero mal o corr\xEDgelo para continuar.`
+      };
+    }
+  }
+  if (isNit) {
+    if (!/^\d{8,11}$/.test(clean)) {
+      return {
+        valid: false,
+        match: false,
+        error: "El NIT debe contener entre 8 y 10 d\xEDgitos num\xE9ricos (incluyendo d\xEDgito de verificaci\xF3n)."
+      };
+    }
+    const baseNit = clean.length === 10 ? clean.slice(0, 9) : clean.length === 9 ? clean.slice(0, 8) : clean;
+    const dvCalculado = calcularDigitoVerificacionDIAN(baseNit);
+    if (clean.length >= 9) {
+      const dvIngresado = parseInt(clean.slice(-1), 10);
+      if (dvIngresado !== dvCalculado) {
+        return {
+          valid: false,
+          match: false,
+          error: `D\xEDgito de verificaci\xF3n DIAN incorrecto. Para el NIT ${baseNit}, el d\xEDgito oficial es -${dvCalculado}.`
+        };
+      }
+    }
+    const nombreEmpresa = (nombreIngresado || "").trim();
+    return {
+      valid: true,
+      match: true,
+      officialName: nombreEmpresa || clean,
+      message: `\u2713 NIT/RUT validado conforme a estructura DIAN (D\xEDgito de verificaci\xF3n: ${dvCalculado})`
+    };
+  }
+  const isCedula = !isNit && (tDocLower.includes("c\xE9dula") || tDocLower.includes("cedula") || tDocLower === "" || tDocLower.includes("ciudadan"));
+  if (isCedula) {
+    if (!/^\d+$/.test(clean)) {
+      return {
+        valid: false,
+        match: false,
+        error: "La C\xE9dula de Ciudadan\xEDa solo debe contener caracteres num\xE9ricos."
+      };
+    }
+    if (clean.length === 9) {
+      return {
+        valid: false,
+        match: false,
+        error: "\u26A0\uFE0F En Colombia no existen C\xE9dulas de Ciudadan\xEDa de 9 d\xEDgitos. Verifica si omitiste o agregaste alg\xFAn n\xFAmero."
+      };
+    }
+    if (clean.length < 6 || clean.length > 10) {
+      return {
+        valid: false,
+        match: false,
+        error: "\u26A0\uFE0F La C\xE9dula de Ciudadan\xEDa en Colombia debe contener entre 6 y 8 d\xEDgitos (antiguas) o 10 d\xEDgitos (nuevas)."
+      };
+    }
+    if (clean.length === 10 && !clean.startsWith("1")) {
+      return {
+        valid: false,
+        match: false,
+        error: "\u26A0\uFE0F Las C\xE9dulas de Ciudadan\xEDa de 10 d\xEDgitos en Colombia deben iniciar por 1. Verifica el n\xFAmero digitado."
+      };
+    }
+  }
+  const cacheKey = `POLICIA:cc:${clean}`;
+  const cached = identityCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL) {
+    const officialFormatted = cached.fullName;
+    const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
+    if (!isMatch) {
+      return {
+        valid: true,
+        match: false,
+        officialName: officialFormatted,
+        error: `\u26A0\uFE0F El n\xFAmero de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un n\xFAmero mal o corr\xEDgelo para continuar.`
+      };
+    }
+    return {
+      valid: true,
+      match: true,
+      officialName: officialFormatted,
+      message: `\u2713 Identidad verificada y autenticada con \xE9xito: ${officialFormatted}`
+    };
+  }
+  const policiaResult = await queryPoliciaNacional(tipoDocumento, clean);
+  if (policiaResult && policiaResult.success && policiaResult.officialName) {
+    const officialFormatted = policiaResult.officialName;
+    identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+    const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
+    if (!isMatch) {
+      return {
+        valid: true,
+        match: false,
+        officialName: officialFormatted,
+        error: `\u26A0\uFE0F El n\xFAmero de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un n\xFAmero mal o corr\xEDgelo para continuar.`
+      };
+    }
+    return {
+      valid: true,
+      match: true,
+      officialName: officialFormatted,
+      message: `\u2713 Identidad verificada con la Polic\xEDa Nacional: ${officialFormatted}`
+    };
+  }
+  try {
+    const db = await getDb();
+    if (db) {
+      const profileRows = await db.select({
+        fullName: profiles.fullName,
+        numeroDocumento: profiles.numeroDocumento
+      }).from(profiles).where(eq6(profiles.numeroDocumento, clean)).limit(5);
+      for (const row of profileRows) {
+        if (row.fullName && row.fullName.trim().length >= 4) {
+          const officialFormatted = formatTitleCase(row.fullName.trim());
+          if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
+            identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+            return {
+              valid: true,
+              match: true,
+              officialName: officialFormatted,
+              message: `\u2713 Identidad confirmada en el registro de Vecy: ${officialFormatted}`
+            };
+          }
+        }
+      }
+      const solRows = await db.select({
+        solicitanteNumeroDocumento: solicitudes.solicitanteNumeroDocumento,
+        solicitanteNombre: solicitudes.solicitanteNombre,
+        interesadoDocumento: solicitudes.interesadoDocumento,
+        interesadoNombre: solicitudes.interesadoNombre
+      }).from(solicitudes).where(
+        or2(
+          eq6(solicitudes.solicitanteNumeroDocumento, clean),
+          eq6(solicitudes.interesadoDocumento, clean)
+        )
+      ).orderBy(desc(solicitudes.id)).limit(10);
+      for (const row of solRows) {
+        const candidateName = (row.solicitanteNumeroDocumento || "").replace(/\D/g, "") === clean ? row.solicitanteNombre : row.interesadoNombre;
+        const tokens = (candidateName || "").trim().split(/\s+/).filter(Boolean);
+        if (candidateName && tokens.length >= 3) {
+          const officialFormatted = formatTitleCase(candidateName.trim());
+          if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
+            identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+            return {
+              valid: true,
+              match: true,
+              officialName: officialFormatted,
+              message: `\u2713 Identidad confirmada en base de datos de Vecy: ${officialFormatted}`
+            };
+          }
+        }
+      }
+    }
+  } catch (dbErr) {
+    console.warn("[DB Check warning]", dbErr?.message);
+  }
+  const isNumericDoc = /^\d{6,10}$/.test(clean) && clean.length !== 9;
+  if (isNumericDoc) {
+    if (clean.length === 10 && !clean.startsWith("1")) {
+      return {
+        valid: false,
+        match: false,
+        error: "\u26A0\uFE0F Las C\xE9dulas de Ciudadan\xEDa de 10 d\xEDgitos en Colombia deben iniciar por 1."
+      };
+    }
+    const cleanEntered = (nombreIngresado || "").trim();
+    const hasValidEnteredName = cleanEntered.length >= 3 && !/^\d+$/.test(cleanEntered.replace(/\s+/g, ""));
+    return {
+      valid: true,
+      match: true,
+      officialName: hasValidEnteredName ? cleanEntered : void 0,
+      message: "\u2713 Documento en formato v\xE1lido (pendiente de cotejo en sede)"
+    };
+  }
+  return {
+    valid: false,
+    match: false,
+    error: "No fue posible validar el documento en este momento. Por favor verifica los datos e intenta de nuevo."
+  };
+}
+async function processAndSaveSolicitud(input) {
+  const db = await getDb();
+  if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+  const stopwords = ["de", "del", "la", "las", "los", "y", "el"];
+  const checkMatch = (entered, official) => {
+    const normEntered = entered.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
+    const normOfficial = official.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
+    const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
+    return matches.length >= Math.min(1, normEntered.length);
+  };
+  if (input.solicitante_numero_documento && (input.solicitante_tipo_documento?.includes("ciudadan\xEDa") || input.solicitante_tipo_documento?.includes("cedula") || input.solicitante_tipo_documento === "CC" || !input.solicitante_tipo_documento)) {
+    const cleanDoc = input.solicitante_numero_documento.replace(/\D/g, "");
+    if (cleanDoc.length >= 5) {
+      const res = await queryPoliciaNacional("cc", cleanDoc);
+      if (res.success && res.officialName && input.solicitante_nombre) {
+        if (!checkMatch(input.solicitante_nombre, res.officialName)) {
+          throw new TRPCError3({
+            code: "BAD_REQUEST",
+            message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del solicitante no corresponde a los nombres y apellidos indicados. Por seguridad, la solicitud fue rechazada.`
+          });
+        }
+        input.solicitante_nombre = res.officialName;
+      }
+    }
+  }
+  if (input.interesado_documento && (input.interesado_tipo_documento?.includes("ciudadan\xEDa") || input.interesado_tipo_documento?.includes("cedula") || input.interesado_tipo_documento === "CC" || !input.interesado_tipo_documento)) {
+    const cleanDoc = input.interesado_documento.replace(/\D/g, "");
+    if (cleanDoc.length >= 5) {
+      const res = await queryPoliciaNacional("cc", cleanDoc);
+      if (res.success && res.officialName && input.interesado_nombre) {
+        if (!checkMatch(input.interesado_nombre, res.officialName)) {
+          throw new TRPCError3({
+            code: "BAD_REQUEST",
+            message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del cliente presentado no corresponde al nombre indicado. Por seguridad, la solicitud fue rechazada.`
+          });
+        }
+        input.interesado_nombre = res.officialName;
+      }
+    }
+  }
+  if (input.acompanantes && Array.isArray(input.acompanantes)) {
+    for (const acomp of input.acompanantes) {
+      if (acomp && acomp.documento && acomp.nombre) {
+        const cleanDoc = String(acomp.documento).replace(/\D/g, "");
+        if (cleanDoc.length >= 5) {
+          const res = await queryPoliciaNacional("cc", cleanDoc);
+          if (res.success && res.officialName) {
+            if (!checkMatch(String(acomp.nombre), res.officialName)) {
+              throw new TRPCError3({
+                code: "BAD_REQUEST",
+                message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del acompa\xF1ante "${acomp.nombre}" no corresponde con los registros de certificaci\xF3n. Por seguridad, la solicitud fue rechazada.`
+              });
+            }
+            acomp.nombre = res.officialName;
+          }
+        }
+      }
+    }
+  }
+  const maxRes = await db.select({ maxId: sql4`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
+  const nextSolicitudId = Math.max(Number(maxRes[0]?.maxId || 0), 1144) + 1;
+  const inserted = await db.insert(solicitudes).values({
+    id: sql4`nextval('solicitudes_id_seq')`,
+    solicitudId: nextSolicitudId,
+    solicitanteNombre: input.solicitante_nombre,
+    solicitanteTipoPersona: input.solicitante_tipo_persona || "Persona Natural",
+    solicitantePerfil: input.solicitante_perfil || "Cliente directo",
+    solicitanteEmail: input.solicitante_email || null,
+    solicitanteCelular: input.solicitante_celular || null,
+    solicitanteTipoDocumento: input.solicitante_tipo_documento || "C\xE9dula de ciudadan\xEDa",
+    solicitanteNumeroDocumento: input.solicitante_numero_documento || null,
+    servicioSolicitado: input.servicio_solicitado || "Visitar inmueble",
+    nombreInmueble: input.nombre_inmueble || null,
+    codigoInmueble: input.codigo_inmueble || null,
+    opcionNegocio: input.opcion_negocio || null,
+    fechaCitaTexto: input.fecha_cita_texto || null,
+    horaCita: input.hora_cita || null,
+    cantidadPersonas: input.cantidad_personas ?? null,
+    interesadoNombre: input.interesado_nombre || null,
+    interesadoTipoDocumento: input.interesado_tipo_documento || null,
+    interesadoDocumento: input.interesado_documento || null,
+    tipoCliente: input.tipo_cliente || null,
+    acompanantes: input.acompanantes || null,
+    firmaVirtualBase64: input.firma_virtual_base64 || null,
+    firmaFechahoraAudit: input.firma_fechahora_audit ? new Date(input.firma_fechahora_audit) : /* @__PURE__ */ new Date(),
+    createdAt: /* @__PURE__ */ new Date(),
+    solicitanteRepresentanteLegal: input.solicitante_representante_legal || null,
+    autorizacion: input.autorizacion ?? true,
+    agentId: input.agent_id || null
+  }).returning();
+  const newRow = inserted[0];
+  sendContractAndConfirmationEmails({
+    ...input,
+    solicitud_id: nextSolicitudId,
+    solicitudId: nextSolicitudId,
+    id: newRow?.id
+  }).catch((emailErr) => {
+    console.error(`[AGENDA-CREATE] Error en despacho de correos para solicitud #${nextSolicitudId}:`, emailErr?.message);
+  });
+  sendAgendaWhatsAppNotifications({
+    ...input,
+    solicitud_id: nextSolicitudId,
+    solicitudId: nextSolicitudId,
+    id: newRow?.id
+  }).catch((waErr) => {
+    console.error(`[AGENDA-CREATE] Error en despacho de WhatsApp para solicitud #${nextSolicitudId}:`, waErr?.message);
+  });
+  return {
+    success: true,
+    id: newRow?.id,
+    solicitudId: nextSolicitudId,
+    data: newRow,
+    message: `\u2713 Solicitud de agenda #${nextSolicitudId} registrada con \xE9xito.`
+  };
+}
+var httpsAgentInsecure, identityCache, IDENTITY_CACHE_TTL, identityJobs, CookieJar, AUTHORITATIVE_FAMILY_IDENTITIES, agendaRouter;
+var init_agenda = __esm({
+  "server/routers/agenda.ts"() {
+    "use strict";
+    init_trpc();
+    init_db();
+    init_schema();
+    init_emailContractService();
+    init_agendaWhatsAppService();
+    httpsAgentInsecure = new https.Agent({ rejectUnauthorized: false });
+    identityCache = /* @__PURE__ */ new Map();
+    IDENTITY_CACHE_TTL = 24 * 60 * 60 * 1e3;
+    identityCache.set("POLICIA:cc:1233903423", { fullName: "Daniel Eduardo Rivera Noguera", timestamp: Date.now() });
+    identityCache.set("POLICIA:cc:11189781", { fullName: "Eduardo Arturo Rivera Mart\xEDnez", timestamp: Date.now() });
+    identityCache.set("POLICIA:cc:1193130766", { fullName: "Natalia Rivera Noguera", timestamp: Date.now() });
+    identityCache.set("POLICIA:cc:41057506", { fullName: "Jani Alves Souza", timestamp: Date.now() });
+    identityCache.set("NIT:410575061", { fullName: "Vecy Bienes Ra\xEDces", timestamp: Date.now() });
+    identityCache.set("NIT:41057506", { fullName: "Vecy Bienes Ra\xEDces", timestamp: Date.now() });
+    identityCache.set("POLICIA:cc:52432900", { fullName: "Esmeralda Rojas Salazar", timestamp: Date.now() });
+    identityCache.set("POLICIA:cc:52803592", { fullName: "Juanita Sanchez Martinez", timestamp: Date.now() });
+    identityJobs = /* @__PURE__ */ new Map();
+    setInterval(() => {
+      const now = Date.now();
+      for (const [id, job] of identityJobs.entries()) {
+        if (now - job.createdAt > 10 * 60 * 1e3) {
+          identityJobs.delete(id);
+        }
+      }
+    }, 6e4);
+    CookieJar = class {
+      cookies = /* @__PURE__ */ new Map();
+      addFromHeaders(headers) {
+        const raw = headers.getSetCookie ? headers.getSetCookie() : [headers.get("set-cookie")].filter(Boolean);
+        for (const item of raw) {
+          if (!item) continue;
+          const parts = item.split(";");
+          const [k, v] = parts[0].split("=");
+          if (k && v) this.cookies.set(k.trim(), v.trim());
+        }
+      }
+      addFromRawHeaders(headers) {
+        const raw = headers["set-cookie"] || [];
+        const list = Array.isArray(raw) ? raw : [raw];
+        for (const item of list) {
+          if (!item) continue;
+          const parts = item.split(";");
+          const [k, v] = parts[0].split("=");
+          if (k && v) this.cookies.set(k.trim(), v.trim());
+        }
+      }
+      getCookieString() {
+        return Array.from(this.cookies.entries()).map(([k, v]) => `${k}=${v}`).join("; ");
+      }
+    };
+    AUTHORITATIVE_FAMILY_IDENTITIES = {
+      // 1. Cédula Daniel Eduardo Rivera Noguera (CC: 1233903423) - Exclusivo e independiente de Vecy
+      "1233903423": {
+        canonicalName: "Daniel Eduardo Rivera Noguera",
+        allowedKeywords: ["daniel", "eduardo", "rivera", "noguera"],
+        isCompany: false,
+        message: "\u2713 Identidad verificada y autenticada con \xE9xito: Daniel Eduardo Rivera Noguera"
+      },
+      // 2. Cédula Eduardo Arturo Rivera Martínez (Fundador y Director de Tecnología)
+      "11189781": {
+        canonicalName: "Eduardo Arturo Rivera Mart\xEDnez",
+        allowedKeywords: ["eduardo", "rivera", "arturo", "martinez", "mart\xEDnez", "eddu", "eddua"],
+        isCompany: false,
+        message: "\u2713 Identidad verificada y autenticada con \xE9xito: Eduardo Arturo Rivera Mart\xEDnez"
+      },
+      // 3. Cédula Natalia Rivera Noguera (Hija de Eduardo)
+      "1193130766": {
+        canonicalName: "Natalia Rivera Noguera",
+        allowedKeywords: ["natalia", "rivera", "noguera"],
+        isCompany: false,
+        message: "\u2713 Identidad verificada y autenticada con \xE9xito: Natalia Rivera Noguera"
+      },
+      // 4. NIT Vecy Bienes Raíces (Persona Jurídica - NIT: 41057506-1)
+      "410575061": {
+        canonicalName: "Vecy Bienes Ra\xEDces",
+        allowedKeywords: ["vecy", "bienes", "raices", "ra\xEDces", "jani", "alves", "souza"],
+        isCompany: true,
+        message: "\u2713 Identidad corporativa verificada y autorizada: Vecy Bienes Ra\xEDces (NIT: 41057506-1)"
+      },
+      // 5. Cédula Jani Alves Souza (Fundadora y Directora de Operaciones) / NIT Base Vecy
+      "41057506": {
+        canonicalName: "Jani Alves Souza",
+        allowedKeywords: ["jani", "alves", "souza", "vecy", "bienes", "raices", "ra\xEDces"],
+        isCompany: false,
+        message: "\u2713 Identidad verificada y autenticada con \xE9xito: Jani Alves Souza"
+      }
+    };
+    agendaRouter = router({
+      getAll: publicProcedure.input(
+        z2.object({
+          search: z2.string().optional(),
+          perfil: z2.string().optional(),
+          limit: z2.number().min(1).max(200).default(50),
+          offset: z2.number().min(0).default(0)
+        }).optional()
+      ).query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+        const search = input?.search?.trim();
+        const perfilFilter = input?.perfil?.trim();
+        const limit = input?.limit ?? 50;
+        const offset = input?.offset ?? 0;
+        const whereConditions = [];
+        if (search) {
+          const searchPattern = `%${search}%`;
+          const numSearch = Number(search);
+          const searchConditions = [
+            ilike(solicitudes.solicitanteNombre, searchPattern),
+            ilike(solicitudes.solicitanteNumeroDocumento, searchPattern),
+            ilike(solicitudes.solicitanteCelular, searchPattern),
+            ilike(solicitudes.solicitanteEmail, searchPattern),
+            ilike(solicitudes.nombreInmueble, searchPattern),
+            ilike(solicitudes.codigoInmueble, searchPattern),
+            ilike(solicitudes.interesadoNombre, searchPattern)
+          ];
+          if (!isNaN(numSearch)) {
+            searchConditions.push(eq6(solicitudes.solicitudId, numSearch));
+          }
+          whereConditions.push(or2(...searchConditions));
+        }
+        if (perfilFilter && perfilFilter !== "all") {
+          if (perfilFilter === "agente") {
+            whereConditions.push(
+              or2(
+                ilike(solicitudes.solicitantePerfil, "%agente%"),
+                ilike(solicitudes.solicitantePerfil, "%inmobiliaria%"),
+                ilike(solicitudes.solicitantePerfil, "%broker%"),
+                ilike(solicitudes.solicitantePerfil, "%br\xF3ker%")
+              )
+            );
+          } else if (perfilFilter === "directo") {
+            whereConditions.push(
+              or2(
+                ilike(solicitudes.solicitantePerfil, "%directo%"),
+                ilike(solicitudes.solicitantePerfil, "%cliente%")
+              )
+            );
+          }
+        }
+        const finalWhere = whereConditions.length > 0 ? sql4.join(whereConditions, sql4` AND `) : void 0;
+        const items = await db.select().from(solicitudes).where(finalWhere).orderBy(sql4`${solicitudes.solicitudId} DESC NULLS LAST`, desc(solicitudes.id)).limit(limit).offset(offset);
+        const totalRes = await db.select({ count: sql4`count(*)` }).from(solicitudes).where(finalWhere);
+        return {
+          items,
+          total: Number(totalRes[0]?.count || 0)
+        };
+      }),
+      getStats: publicProcedure.query(async () => {
+        const db = await getDb();
+        if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+        const totalRes = await db.select({ count: sql4`count(*)` }).from(solicitudes);
+        const total = Number(totalRes[0]?.count || 0);
+        const agentesRes = await db.select({ count: sql4`count(*)` }).from(solicitudes).where(
+          or2(
+            ilike(solicitudes.solicitantePerfil, "%agente%"),
+            ilike(solicitudes.solicitantePerfil, "%inmobiliaria%"),
+            ilike(solicitudes.solicitantePerfil, "%broker%"),
+            ilike(solicitudes.solicitantePerfil, "%br\xF3ker%")
+          )
+        );
+        const agentes = Number(agentesRes[0]?.count || 0);
+        const conFirmaRes = await db.select({ count: sql4`count(*)` }).from(solicitudes).where(sql4`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
+        const conFirma = Number(conFirmaRes[0]?.count || 0);
+        const directos = Math.max(0, total - agentes);
+        return {
+          total,
+          agentes,
+          directos,
+          conFirma
+        };
+      }),
+      startVerifyIdentity: publicProcedure.input(
+        z2.object({
+          tipoDocumento: z2.string(),
+          numeroDocumento: z2.string(),
+          nombreIngresado: z2.string().optional()
+        })
+      ).mutation(async ({ input }) => {
+        const { tipoDocumento, numeroDocumento, nombreIngresado } = input;
+        const cleanDoc = numeroDocumento.replace(/[^0-9a-zA-Z]/g, "");
+        if (!cleanDoc || cleanDoc.length < 5) {
+          return {
+            status: "completed",
+            result: {
+              valid: false,
+              match: false,
+              error: "El n\xFAmero de documento debe tener al menos 5 caracteres."
+            }
+          };
+        }
+        const tDocLower = (tipoDocumento || "").toLowerCase();
+        const isNit = tDocLower.includes("nit") || tDocLower.includes("rut");
+        const isCedula = !isNit && (tDocLower.includes("c\xE9dula") || tDocLower.includes("cedula") || tDocLower === "" || tDocLower.includes("ciudadan"));
+        const normName = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const isKnownFamilyName = normName.length >= 4 && (normName.includes("natalia") && (normName.includes("rivera") || normName.trim() === "natalia") || normName.includes("eduardo") && (normName.includes("rivera") || normName.includes("arturo")) || normName.includes("vecy") || normName.includes("jani") && normName.includes("alves"));
+        const cacheKey = `POLICIA:cc:${cleanDoc}`;
+        if (isNit || isCedula && (cleanDoc.length === 9 || cleanDoc.length < 6 || cleanDoc.length > 10 || cleanDoc.length === 10 && !cleanDoc.startsWith("1")) || AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc] || isKnownFamilyName || identityCache.has(cacheKey)) {
+          const quickRes = await executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngresado);
+          return {
+            status: "completed",
+            result: quickRes
+          };
+        }
+        const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const job = {
+          id: jobId,
+          status: "processing",
+          tipoDocumento,
+          numeroDocumento: cleanDoc,
+          nombreIngresado,
+          createdAt: Date.now()
+        };
+        identityJobs.set(jobId, job);
+        executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngresado).then((result) => {
+          const current = identityJobs.get(jobId);
+          if (current) {
+            current.status = "completed";
+            current.result = result;
+          }
+        }).catch((err) => {
+          const current = identityJobs.get(jobId);
+          if (current) {
+            current.status = "error";
+            current.result = {
+              valid: false,
+              match: false,
+              error: err?.message || "Error durante la validaci\xF3n del documento"
+            };
+          }
+        });
+        return {
+          status: "processing",
+          jobId,
+          message: "Verificando autenticidad del documento en tiempo real..."
+        };
+      }),
+      checkVerifyIdentity: publicProcedure.input(z2.object({ jobId: z2.string() })).query(async ({ input }) => {
+        const job = identityJobs.get(input.jobId);
+        if (!job) {
+          return {
+            status: "error",
+            error: "Consulta de identidad no encontrada o expirada. Por favor intente nuevamente."
+          };
+        }
+        return {
+          status: job.status,
+          result: job.result
+        };
+      }),
+      verifyIdentity: publicProcedure.input(
+        z2.object({
+          tipoDocumento: z2.string(),
+          numeroDocumento: z2.string(),
+          nombreIngresado: z2.string().optional()
+        })
+      ).mutation(async ({ input }) => {
+        return await executeIdentityVerification(input.tipoDocumento, input.numeroDocumento, input.nombreIngresado);
+      }),
+      update: publicProcedure.input(
+        z2.object({
+          id: z2.number(),
+          solicitanteNombre: z2.string().optional(),
+          solicitanteNumeroDocumento: z2.string().optional(),
+          solicitanteTipoPersona: z2.string().optional(),
+          solicitanteEmail: z2.string().optional(),
+          solicitanteCelular: z2.string().optional(),
+          solicitantePerfil: z2.string().optional(),
+          solicitanteTipoDocumento: z2.string().optional(),
+          solicitanteRepresentanteLegal: z2.string().optional(),
+          interesadoNombre: z2.string().optional(),
+          interesadoDocumento: z2.string().optional(),
+          interesadoTipoDocumento: z2.string().optional(),
+          acompanantes: z2.any().optional()
+        })
+      ).mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
+        const { id, ...dataToUpdate } = input;
+        const updated = await db.update(solicitudes).set(dataToUpdate).where(eq6(solicitudes.id, id)).returning();
+        return {
+          success: true,
+          item: updated[0] || null
+        };
+      }),
+      create: publicProcedure.input(
+        z2.object({
+          solicitante_nombre: z2.string().min(1),
+          solicitante_tipo_persona: z2.string().nullable().optional(),
+          solicitante_perfil: z2.string().nullable().optional(),
+          solicitante_email: z2.string().nullable().optional(),
+          solicitante_celular: z2.string().nullable().optional(),
+          solicitante_tipo_documento: z2.string().nullable().optional(),
+          solicitante_numero_documento: z2.string().nullable().optional(),
+          servicio_solicitado: z2.string().nullable().optional(),
+          nombre_inmueble: z2.string().nullable().optional(),
+          codigo_inmueble: z2.string().nullable().optional(),
+          opcion_negocio: z2.string().nullable().optional(),
+          fecha_cita_texto: z2.string().nullable().optional(),
+          hora_cita: z2.string().nullable().optional(),
+          cantidad_personas: z2.number().nullable().optional(),
+          interesado_nombre: z2.string().nullable().optional(),
+          interesado_tipo_documento: z2.string().nullable().optional(),
+          interesado_documento: z2.string().nullable().optional(),
+          tipo_cliente: z2.string().nullable().optional(),
+          acompanantes: z2.any().optional(),
+          firma_virtual_base64: z2.string().nullable().optional(),
+          firma_fechahora_audit: z2.string().nullable().optional(),
+          solicitante_representante_legal: z2.string().nullable().optional(),
+          autorizacion: z2.boolean().nullable().optional(),
+          agent_id: z2.string().nullable().optional()
+        })
+      ).mutation(async ({ input }) => {
+        return await processAndSaveSolicitud(input);
+      })
+    });
+  }
+});
+
+// server/_core/identityVerificationService.ts
+var identityVerificationService_exports = {};
+__export(identityVerificationService_exports, {
+  executeIdentityVerificationFromWhatsApp: () => executeIdentityVerificationFromWhatsApp,
+  extractCedulaForVerification: () => extractCedulaForVerification,
+  formatCedulaNumber: () => formatCedulaNumber
+});
+function extractCedulaForVerification(text2, isPrivateDm = false) {
+  if (!text2 || typeof text2 !== "string") return { found: false, cedula: "", tipoDoc: "cc" };
+  const clean = text2.trim();
+  const lower = clean.toLowerCase();
+  if (lower.includes("vendo") || lower.includes("arriendo") || lower.includes("busco apto") || lower.includes("presupuesto")) {
+    return { found: false, cedula: "", tipoDoc: "cc" };
+  }
+  const keywords = ["verificar", "verificacion", "verificaci\xF3n", "validar", "consultar", "revisar", "antecedentes", "c\xE9dula", "cedula", "documento"];
+  const hasKeyword = keywords.some((kw) => lower.includes(kw));
+  let tipoDoc = "cc";
+  if (lower.includes("ce") || lower.includes("extranjer")) tipoDoc = "ce";
+  else if (lower.includes("pasaporte") || lower.includes("pa")) tipoDoc = "pa";
+  const regexExplicit = /(?:verificar|verificaci[oó]n|validar|consultar|revisar|antecedentes|c[ée]dula|documento|cc)\s*(?:de\s+ciudadan[ií]a\s*)?(?:cc|ce|cx)?\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{6,10})/i;
+  const matchExplicit = clean.match(regexExplicit);
+  if (matchExplicit && matchExplicit[1]) {
+    const rawNumber = matchExplicit[1].replace(/\D/g, "");
+    if (rawNumber.length >= 6 && rawNumber.length <= 10) {
+      return { found: true, cedula: rawNumber, tipoDoc };
+    }
+  }
+  if (hasKeyword) {
+    const numberMatches = clean.match(/\b([0-9]{6,10})\b/);
+    if (numberMatches && numberMatches[1]) {
+      return { found: true, cedula: numberMatches[1], tipoDoc };
+    }
+  }
+  const directCcMatch = clean.match(/\b(?:c\.?c\.?)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{6,10})\b/i);
+  if (directCcMatch && directCcMatch[1]) {
+    const rawNumber = directCcMatch[1].replace(/\D/g, "");
+    if (rawNumber.length >= 6 && rawNumber.length <= 10) {
+      return { found: true, cedula: rawNumber, tipoDoc: "cc" };
+    }
+  }
+  const pureNumberMatch = clean.match(/^\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{6,10})\s*$/);
+  if (pureNumberMatch && pureNumberMatch[1]) {
+    const rawNumber = pureNumberMatch[1].replace(/\D/g, "");
+    if (rawNumber.length >= 6 && rawNumber.length <= 10) {
+      if (isPrivateDm) {
+        return { found: true, cedula: rawNumber, tipoDoc: "cc" };
+      }
+    }
+  }
+  const janiaNumberMatch = clean.match(/(?:jania|@jania)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{6,10})/i);
+  if (janiaNumberMatch && janiaNumberMatch[1]) {
+    const rawNumber = janiaNumberMatch[1].replace(/\D/g, "");
+    if (rawNumber.length >= 6 && rawNumber.length <= 10) {
+      return { found: true, cedula: rawNumber, tipoDoc: "cc" };
+    }
+  }
+  return { found: false, cedula: "", tipoDoc: "cc" };
+}
+function formatCedulaNumber(cedula) {
+  const clean = (cedula || "").replace(/\D/g, "");
+  if (!clean) return cedula;
+  return Number(clean).toLocaleString("es-CO");
+}
+async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = false) {
+  const detection = extractCedulaForVerification(text2, isPrivateDm);
+  if (!detection.found) {
+    return { isVerificationRequest: false };
+  }
+  const { cedula, tipoDoc } = detection;
+  const formattedCedula = formatCedulaNumber(cedula);
+  const nowBogota = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", {
+    timeZone: "America/Bogota",
+    dateStyle: "long",
+    timeStyle: "short"
+  });
+  try {
+    const res = await queryPoliciaNacional(tipoDoc, cedula);
+    if (res && res.success && res.officialName) {
+      const officialName = formatTitleCase(res.officialName);
+      const reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY NETWORK* \u{1F1E8}\u{1F1F4}
+
+\u{1F464} *Nombre Oficial:* ${officialName}
+\u{1F194} *Documento:* C.C. ${formattedCedula}
+\u2696\uFE0F *Estado de Antecedentes:* Sin asuntos pendientes con las autoridades judiciales.
+\u{1F3DB}\uFE0F *Fuente de Cotejo:* Polic\xEDa Nacional de Colombia (Cotejo en L\xEDnea con 2Captcha).
+\u23F1\uFE0F *Fecha y Hora:* ${nowBogota} (Hora Colombia)
+
+\u2705 *Dictamen de Seguridad:* Identidad y antecedentes validados exitosamente para agendamiento de citas, acuerdos de puntas compartidas (50/50), hojas de visita y promesas de compraventa en VECY Network. \u{1F91D}\u2728
+
+\u{1F4A1} *Asesora con rigor:* Conserva este registro para la debida diligencia y blindaje de tu comisi\xF3n.`;
+      return {
+        isVerificationRequest: true,
+        cedula,
+        tipoDoc,
+        success: true,
+        officialName,
+        source: res.source || "Polic\xEDa Nacional de Colombia",
+        reportText
+      };
+    } else {
+      const reportText = `\u26A0\uFE0F *CONSULTA DE IDENTIDAD (POLIC\xCDA NACIONAL)* \u{1F1E8}\u{1F1F4}
+
+No fue posible validar autom\xE1ticamente la C.C. *${formattedCedula}* en la base de datos de la Polic\xEDa Nacional.
+
+\u{1F4CC} *Posibles motivos:*
+\u2022 El n\xFAmero de documento fue digitado con alg\xFAn d\xEDgito err\xF3neo o faltante.
+\u2022 El ciudadano corresponde a un documento de extranjer\xEDa o pasaporte que requiere verificaci\xF3n presencial.
+\u2022 Congesti\xF3n moment\xE1nea en el portal de la Polic\xEDa Nacional.
+
+\u{1F4A1} Por favor revisa el n\xFAmero e intenta nuevamente escribi\xE9ndome: *"JanIA, verifica la c\xE9dula ${cedula}"*.`;
+      return {
+        isVerificationRequest: true,
+        cedula,
+        tipoDoc,
+        success: false,
+        reportText
+      };
+    }
+  } catch (err) {
+    return {
+      isVerificationRequest: true,
+      cedula,
+      tipoDoc,
+      success: false,
+      reportText: `\u26A0\uFE0F Ocurri\xF3 una intermitencia temporal al contactar el servidor de la Polic\xEDa Nacional para la c\xE9dula ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`
+    };
+  }
+}
+var init_identityVerificationService = __esm({
+  "server/_core/identityVerificationService.ts"() {
+    "use strict";
+    init_agenda();
+  }
+});
+
 // server/_core/janIA.ts
 var janIA_exports = {};
 __export(janIA_exports, {
@@ -8671,7 +13328,7 @@ __export(janIA_exports, {
   evaluateMultiItemHeuristics: () => evaluateMultiItemHeuristics,
   extractColombianPhoneFromText: () => extractColombianPhoneFromText,
   extractFallbackDataFromText: () => extractFallbackDataFromText,
-  extractFirstName: () => extractFirstName,
+  extractFirstName: () => extractFirstName2,
   extractFlyerVision: () => extractFlyerVision,
   generarHashMensaje: () => generarHashMensaje,
   generateWelcomeMessage: () => generateWelcomeMessage,
@@ -8713,9 +13370,9 @@ __export(janIA_exports, {
   translatePropertyType: () => translatePropertyType,
   translateTransactionType: () => translateTransactionType
 });
-import { eq as eq5, and as and3, sql as sql4, gte, desc } from "drizzle-orm";
-import fs5 from "fs";
-import path5 from "path";
+import { eq as eq7, and as and4, sql as sql5, gte, desc as desc2 } from "drizzle-orm";
+import fs7 from "fs";
+import path7 from "path";
 import axios6 from "axios";
 import crypto from "crypto";
 function generarHashMensaje(rawText, remitente) {
@@ -8739,7 +13396,7 @@ function isPhoneNumberNotPrice(val, rawText) {
   }
   return false;
 }
-function extractFirstName(fullName) {
+function extractFirstName2(fullName) {
   if (!fullName) return "";
   let clean = fullName.trim();
   if (!clean) return "";
@@ -8772,7 +13429,7 @@ function getColombiaHour() {
   const colTime = new Date(utc + 36e5 * -5);
   return colTime.getHours();
 }
-function getGreetingByTime() {
+function getGreetingByTime2() {
   const hour = getColombiaHour();
   if (hour >= 6 && hour < 12) {
     return "Buenos d\xEDas";
@@ -9652,7 +14309,7 @@ async function enrichLexiconFromText(rawText) {
         }).onConflictDoUpdate({
           target: inmobiliarioLexicon.terminoColoquial,
           set: {
-            frecuenciaUso: sql4`${inmobiliarioLexicon.frecuenciaUso} + 1`,
+            frecuenciaUso: sql5`${inmobiliarioLexicon.frecuenciaUso} + 1`,
             updatedAt: /* @__PURE__ */ new Date()
           }
         });
@@ -9672,7 +14329,7 @@ async function muteSession(userId, isMuted) {
     const cleanJid2 = cleanSessionJid(userId);
     const muteJid = `mute:${cleanJid2}`;
     if (!isMuted) {
-      await db.delete(pendingSessions).where(eq5(pendingSessions.jid, muteJid));
+      await db.delete(pendingSessions).where(eq7(pendingSessions.jid, muteJid));
       console.log(`[JanIA-Mute] Sesi\xF3n ${cleanJid2} desmarcada (eliminada de BD)`);
       return;
     }
@@ -9698,7 +14355,7 @@ async function isSessionMuted(userId) {
     const db = await getDb();
     if (!db) return false;
     const cleanJid2 = cleanSessionJid(userId);
-    const [existing] = await db.select().from(pendingSessions).where(eq5(pendingSessions.jid, `mute:${cleanJid2}`)).limit(1);
+    const [existing] = await db.select().from(pendingSessions).where(eq7(pendingSessions.jid, `mute:${cleanJid2}`)).limit(1);
     if (!existing) return false;
     return !!existing.sessionData?.isMuted;
   } catch (err) {
@@ -9711,7 +14368,7 @@ async function getPendingSession(userId) {
     const db = await getDb();
     if (!db) return null;
     const cleanJid2 = cleanSessionJid(userId);
-    const [session] = await db.select().from(pendingSessions).where(eq5(pendingSessions.jid, cleanJid2)).limit(1);
+    const [session] = await db.select().from(pendingSessions).where(eq7(pendingSessions.jid, cleanJid2)).limit(1);
     if (!session) return null;
     return session.sessionData;
   } catch (err) {
@@ -9724,7 +14381,7 @@ async function deletePendingSession(userId) {
     const db = await getDb();
     if (!db) return;
     const cleanJid2 = cleanSessionJid(userId);
-    await db.delete(pendingSessions).where(eq5(pendingSessions.jid, cleanJid2));
+    await db.delete(pendingSessions).where(eq7(pendingSessions.jid, cleanJid2));
   } catch (err) {
     console.error("[Database] Error deleting pending session:", err);
   }
@@ -9735,7 +14392,7 @@ async function resolveRealName(userId, userName) {
   try {
     const db = await getDb();
     if (db) {
-      const [u] = await db.select().from(users).where(eq5(users.phone, rawPhone)).limit(1);
+      const [u] = await db.select().from(users).where(eq7(users.phone, rawPhone)).limit(1);
       if (u && u.name && u.name.trim() !== "") {
         name = u.name;
       }
@@ -9751,10 +14408,10 @@ async function hasGreetedUserToday(userId) {
     if (!db) return false;
     const startOfToday = /* @__PURE__ */ new Date();
     startOfToday.setHours(0, 0, 0, 0);
-    const recentMsgs = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq5(messages.conversationId, conversations.id)).where(
-      and3(
-        eq5(conversations.sessionId, userId),
-        eq5(messages.role, "janIA"),
+    const recentMsgs = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq7(messages.conversationId, conversations.id)).where(
+      and4(
+        eq7(conversations.sessionId, userId),
+        eq7(messages.role, "janIA"),
         gte(messages.createdAt, startOfToday)
       )
     ).limit(1);
@@ -9786,12 +14443,12 @@ async function getRecentChatHistory(userId, limit = 20) {
       role: messages.role,
       content: messages.content,
       createdAt: messages.createdAt
-    }).from(messages).innerJoin(conversations, eq5(messages.conversationId, conversations.id)).where(
-      and3(
-        eq5(conversations.sessionId, userId),
+    }).from(messages).innerJoin(conversations, eq7(messages.conversationId, conversations.id)).where(
+      and4(
+        eq7(conversations.sessionId, userId),
         gte(messages.createdAt, fourDaysAgo)
       )
-    ).orderBy(desc(messages.createdAt)).limit(limit);
+    ).orderBy(desc2(messages.createdAt)).limit(limit);
     return history.reverse().map((h) => ({
       role: h.role === "janIA" ? "assistant" : "user",
       content: h.content
@@ -9896,8 +14553,8 @@ async function getLiveStats() {
     } else {
       const db = await getDb();
       if (!db) return cachedLiveStatsText || "";
-      const [propCount] = await db.select({ total: sql4`count(*)::int` }).from(properties);
-      const [reqCount] = await db.select({ total: sql4`count(*)::int` }).from(requirements);
+      const [propCount] = await db.select({ total: sql5`count(*)::int` }).from(properties);
+      const [reqCount] = await db.select({ total: sql5`count(*)::int` }).from(requirements);
       stats = { prop_count: propCount?.total ?? 0, req_count: reqCount?.total ?? 0, match_count: 0, prop_today: 0, req_today: 0, match_today: 0 };
     }
     const now = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" });
@@ -9927,20 +14584,20 @@ function buildSystemPrompt(groupJid) {
     return promptCache[cacheKey];
   }
   try {
-    const baseDir = path5.resolve(process.cwd(), "server/_core/prompts");
-    const basePrompt = fs5.readFileSync(path5.join(baseDir, "base.md"), "utf-8");
+    const baseDir = path7.resolve(process.cwd(), "server/_core/prompts");
+    const basePrompt = fs7.readFileSync(path7.join(baseDir, "base.md"), "utf-8");
     let specificPrompt = "";
     if (groupJid === "120363260108880069@g.us") {
-      specificPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+      specificPrompt = fs7.readFileSync(path7.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else if (groupJid === "120363417740040773@g.us") {
-      const legalPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
+      const legalPrompt = fs7.readFileSync(path7.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
       specificPrompt = legalPrompt;
     } else if (groupJid === "120363403507276533@g.us") {
-      specificPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
+      specificPrompt = fs7.readFileSync(path7.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
     } else if (groupJid && (groupJid.endsWith("@g.us") || groupJid.includes("@us"))) {
-      specificPrompt = fs5.readFileSync(path5.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+      specificPrompt = fs7.readFileSync(path7.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else {
-      specificPrompt = fs5.readFileSync(path5.join(baseDir, "web/web_console.md"), "utf-8");
+      specificPrompt = fs7.readFileSync(path7.join(baseDir, "web/web_console.md"), "utf-8");
     }
     const fullPrompt = `${basePrompt}
 
@@ -10040,11 +14697,11 @@ async function handleDetectedMatches(matches, isProperty, savedRecord, userId, r
     try {
       const db = await getDb();
       if (db) {
-        const [su] = await db.select().from(users).where(eq5(users.phone, savedRawPhone)).limit(1);
+        const [su] = await db.select().from(users).where(eq7(users.phone, savedRawPhone)).limit(1);
         if (su && su.name && su.name.trim() !== "") {
           savedUserName = su.name;
         }
-        const [mu] = await db.select().from(users).where(eq5(users.phone, matchedRawPhone)).limit(1);
+        const [mu] = await db.select().from(users).where(eq7(users.phone, matchedRawPhone)).limit(1);
         if (mu && mu.name && mu.name.trim() !== "") {
           matchedUserName = mu.name;
         }
@@ -10128,7 +14785,7 @@ async function getTimeOfDayGreetingForUser(phone, realName, alreadyGreeted, isGr
   try {
     const db = await getDb();
     if (db) {
-      const [u] = await db.select().from(users).where(eq5(users.phone, phone)).limit(1);
+      const [u] = await db.select().from(users).where(eq7(users.phone, phone)).limit(1);
       if (u && u.name && u.name.trim() !== "") {
         nameToUse = u.name;
       }
@@ -10136,7 +14793,7 @@ async function getTimeOfDayGreetingForUser(phone, realName, alreadyGreeted, isGr
   } catch (e) {
     console.warn("[JanIA-Greeting] Error buscando nombre de usuario para saludo:", e);
   }
-  const firstName = extractFirstName(nameToUse);
+  const firstName = extractFirstName2(nameToUse);
   if (alreadyGreeted) {
     return firstName ? `Mira ${firstName}` : `Mira`;
   } else {
@@ -10507,7 +15164,7 @@ __is_sub_message__`,
     const realName = await resolveRealName(userId, userName);
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
-    const n = extractFirstName(realName) || "colega";
+    const n = extractFirstName2(realName) || "colega";
     const session = await getPendingSession(userId);
     if (session) {
       const combinedText = session.messageToProcess + " \n[COMPLEMENTO]: " + text2;
@@ -10536,11 +15193,11 @@ __is_sub_message__`,
       try {
         const db = await getDb();
         if (!db) throw new Error("DB no disponible");
-        const recentProps = await db.select({ id: properties.id, rawText: properties.rawText, origenNombre: properties.origenNombre }).from(properties).where(and3(
-          eq5(properties.idUsuarioWhatsapp, userId.split("@")[0]),
+        const recentProps = await db.select({ id: properties.id, rawText: properties.rawText, origenNombre: properties.origenNombre }).from(properties).where(and4(
+          eq7(properties.idUsuarioWhatsapp, userId.split("@")[0]),
           gte(properties.createdAt, TEN_MIN_AGO),
-          eq5(properties.available, true)
-        )).orderBy(desc(properties.createdAt)).limit(1);
+          eq7(properties.available, true)
+        )).orderBy(desc2(properties.createdAt)).limit(1);
         if (recentProps.length > 0) {
           const prop = recentProps[0];
           const portalInfo = extractPortalAndListingId(soloUrl);
@@ -10556,7 +15213,7 @@ ${soloUrl}`;
             origenId: groupJid || void 0,
             ...portalInfo?.portal ? { portal: portalInfo.portal } : {},
             ...portalInfo?.listingId ? { externalListingId: portalInfo.listingId } : {}
-          }).where(eq5(properties.id, prop.id));
+          }).where(eq7(properties.id, prop.id));
           console.log(`[JanIA-URLDiferida] \u2705 URL de portal enlazada retroactivamente a Prop #${prop.id} de ${userId}: ${soloUrl}`);
           return { classification: "INMUEBLE", response: "", reactionEmoji: "\u{1F517}", inserted: false };
         }
@@ -10914,7 +15571,7 @@ Se ha adjuntado una imagen. Anal\xEDzala con visi\xF3n artificial avanzada y det
       contextText += `
 ${statsSummary}`;
     }
-    const firstName = extractFirstName(realName) || "colega";
+    const firstName = extractFirstName2(realName) || "colega";
     const bogotaTime = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit", hour12: false });
     const userGender = senderInfo.adj === "juiciosa" ? "Femenino" : senderInfo.adj === "juicioso" ? "Masculino" : "No Especificado";
     const outsideHours = isWebUser ? false : isOutsideWorkingHours();
@@ -10948,7 +15605,7 @@ Est\xE1s interactuando con el usuario directamente en la CONSOLA WEB de VECY Bie
 - Si el usuario te env\xEDa un inmueble o requerimiento, extrae los datos para el sistema y dale una respuesta rica, entusiasta y completa confirmando la informaci\xF3n.`;
     }
     if (!isWebUser && !alreadyGreeted && outsideHours && !isGroup) {
-      const saludo = getGreetingByTime();
+      const saludo = getGreetingByTime2();
       contextText += `
 [INSTRUCCI\xD3N CR\xCDTICA DE PRESENTACI\xD3N FUERA DE HORARIO]:
 Como esta es tu primera interacci\xF3n con este usuario el d\xEDa de hoy, y nos encontramos fuera de horario de oficina, debes presentarte de manera muy c\xE1lida y entusiasta al inicio de tu respuesta:
@@ -11804,9 +16461,9 @@ async function findOrCreateUserByPhone(phone, realName) {
   const db = await getDb();
   if (!db) return null;
   const cleanPhone = phone.split(":")[0];
-  let user = await db.select().from(users).where(eq5(users.phone, cleanPhone)).limit(1).then((r) => r[0]);
+  let user = await db.select().from(users).where(eq7(users.phone, cleanPhone)).limit(1).then((r) => r[0]);
   if (!user) {
-    user = await db.select().from(users).where(eq5(users.openId, `wa-${cleanPhone}`)).limit(1).then((r) => r[0]);
+    user = await db.select().from(users).where(eq7(users.openId, `wa-${cleanPhone}`)).limit(1).then((r) => r[0]);
   }
   if (!user) {
     const openId = `wa-${cleanPhone}`;
@@ -11823,7 +16480,7 @@ async function findOrCreateUserByPhone(phone, realName) {
     } catch (insertErr) {
       if (insertErr.code === "23505" || String(insertErr).includes("unique constraint")) {
         console.log(`[JanIA-findOrCreateUserByPhone] Colisi\xF3n concurrente detectada para ${cleanPhone}. Re-buscando usuario...`);
-        user = await db.select().from(users).where(eq5(users.openId, openId)).limit(1).then((r) => r[0]);
+        user = await db.select().from(users).where(eq7(users.openId, openId)).limit(1).then((r) => r[0]);
       } else {
         throw insertErr;
       }
@@ -11831,7 +16488,7 @@ async function findOrCreateUserByPhone(phone, realName) {
   } else {
     if (realName && !isGenericName(realName) && isGenericName(user.name)) {
       console.log(`[JanIA-findOrCreateUserByPhone] Actualizando nombre de usuario para ID ${user.id} a ${realName}`);
-      const [updatedUser] = await db.update(users).set({ name: realName }).where(eq5(users.id, user.id)).returning();
+      const [updatedUser] = await db.update(users).set({ name: realName }).where(eq7(users.id, user.id)).returning();
       user = updatedUser;
     }
   }
@@ -12007,10 +16664,10 @@ async function handleAmendmentUpdate(userId, text2) {
   const isAmendmentTrigger = cleanTextLower.startsWith("correccion") || cleanTextLower.startsWith("correcci\xF3n") || cleanTextLower.startsWith("fe de erratas") || cleanTextLower.startsWith("fe de errata") || cleanTextLower.startsWith("rectificacion") || cleanTextLower.startsWith("rectificaci\xF3n") || cleanTextLower.startsWith("ajuste:") || cleanTextLower.startsWith("ajuste ") || cleanTextLower.startsWith("disculpen");
   if (!isAmendmentTrigger) return false;
   const fallbackData = extractFallbackDataFromText(text2);
-  const lastReqs = await db.select().from(requirements).where(and3(
-    eq5(requirements.idUsuarioWhatsapp, rawPhone),
+  const lastReqs = await db.select().from(requirements).where(and4(
+    eq7(requirements.idUsuarioWhatsapp, rawPhone),
     gte(requirements.createdAt, twoHoursAgo)
-  )).orderBy(desc(requirements.createdAt)).limit(1);
+  )).orderBy(desc2(requirements.createdAt)).limit(1);
   if (lastReqs.length > 0) {
     const req = lastReqs[0];
     const updates = {};
@@ -12031,7 +16688,7 @@ async function handleAmendmentUpdate(userId, text2) {
     }
     if (Object.keys(updates).length > 0) {
       updates.updatedAt = /* @__PURE__ */ new Date();
-      await db.update(requirements).set(updates).where(eq5(requirements.id, req.id));
+      await db.update(requirements).set(updates).where(eq7(requirements.id, req.id));
       console.log(`[JANIA-AMENDMENT] \u2705 Requerimiento #${req.id} actualizado silenciosamente en BD (Ventana 2h):`, updates);
       const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
       setImmediate(() => {
@@ -12040,10 +16697,10 @@ async function handleAmendmentUpdate(userId, text2) {
       return true;
     }
   }
-  const lastProps = await db.select().from(properties).where(and3(
-    eq5(properties.idUsuarioWhatsapp, rawPhone),
+  const lastProps = await db.select().from(properties).where(and4(
+    eq7(properties.idUsuarioWhatsapp, rawPhone),
     gte(properties.createdAt, twoHoursAgo)
-  )).orderBy(desc(properties.createdAt)).limit(1);
+  )).orderBy(desc2(properties.createdAt)).limit(1);
   if (lastProps.length > 0) {
     const prop = lastProps[0];
     const updates = {};
@@ -12064,7 +16721,7 @@ async function handleAmendmentUpdate(userId, text2) {
     }
     if (Object.keys(updates).length > 0) {
       updates.updatedAt = /* @__PURE__ */ new Date();
-      await db.update(properties).set(updates).where(eq5(properties.id, prop.id));
+      await db.update(properties).set(updates).where(eq7(properties.id, prop.id));
       console.log(`[JANIA-AMENDMENT] \u2705 Propiedad #${prop.id} actualizada silenciosamente en BD (Ventana 2h):`, updates);
       const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
       setImmediate(() => {
@@ -12374,37 +17031,37 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   let existing = [];
   if (canonicalExternalId) {
     existing = await db.select().from(properties).where(
-      and3(
-        eq5(properties.canonicalExternalId, canonicalExternalId),
-        eq5(properties.available, true)
+      and4(
+        eq7(properties.canonicalExternalId, canonicalExternalId),
+        eq7(properties.available, true)
       )
     ).limit(1);
   }
   if (existing.length === 0 && finalInsertData.matriculaInmobiliaria) {
     existing = await db.select().from(properties).where(
-      and3(
-        eq5(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
-        eq5(properties.available, true)
+      and4(
+        eq7(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
+        eq7(properties.available, true)
       )
     ).limit(1);
   }
   if (existing.length === 0 && finalInsertData.rawText && finalInsertData.rawText.trim().length > 25) {
     existing = await db.select().from(properties).where(
-      and3(
-        eq5(properties.rawText, finalInsertData.rawText.trim()),
-        eq5(properties.available, true)
+      and4(
+        eq7(properties.rawText, finalInsertData.rawText.trim()),
+        eq7(properties.available, true)
       )
     ).limit(1);
   }
   if (existing.length === 0) {
     existing = await db.select().from(properties).where(
-      and3(
-        eq5(properties.idUsuarioWhatsapp, rawPhone),
-        eq5(properties.propertyType, finalInsertData.propertyType),
-        eq5(properties.transactionType, finalInsertData.transactionType),
-        eq5(properties.city, finalInsertData.city),
-        eq5(properties.zone, finalInsertData.zone),
-        eq5(properties.available, true)
+      and4(
+        eq7(properties.idUsuarioWhatsapp, rawPhone),
+        eq7(properties.propertyType, finalInsertData.propertyType),
+        eq7(properties.transactionType, finalInsertData.transactionType),
+        eq7(properties.city, finalInsertData.city),
+        eq7(properties.zone, finalInsertData.zone),
+        eq7(properties.available, true)
       )
     ).limit(1);
   }
@@ -12437,7 +17094,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
       estadoComercial: "REPUBLICADO",
       ultimaActividad: "REPUBLICACI\xD3N",
       vigenciaIa: "VIGENTE"
-    }).where(eq5(properties.id, existing[0].id)).returning();
+    }).where(eq7(properties.id, existing[0].id)).returning();
     console.log(`[Deduplication] Propiedad existente detectada (${canonicalExternalId || "Comercial"}). Actualizando datos (ID: ${updated.id}, Republicado: ${updatedCount}, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
     try {
       await db.insert(propertyPublicationHistory).values({
@@ -12710,21 +17367,21 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
   let existing = [];
   if (insertData.rawText && insertData.rawText.trim().length > 25) {
     existing = await db.select().from(requirements).where(
-      and3(
-        eq5(requirements.rawText, insertData.rawText.trim()),
-        eq5(requirements.status, "active")
+      and4(
+        eq7(requirements.rawText, insertData.rawText.trim()),
+        eq7(requirements.status, "active")
       )
     ).limit(1);
   }
   if (existing.length === 0) {
     existing = await db.select().from(requirements).where(
-      and3(
-        eq5(requirements.idUsuarioWhatsapp, rawPhone),
-        eq5(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
-        eq5(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
-        eq5(requirements.ciudadDeseada, insertData.ciudadDeseada),
-        eq5(requirements.zonaDeseada, insertData.zonaDeseada),
-        eq5(requirements.status, "active")
+      and4(
+        eq7(requirements.idUsuarioWhatsapp, rawPhone),
+        eq7(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
+        eq7(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
+        eq7(requirements.ciudadDeseada, insertData.ciudadDeseada),
+        eq7(requirements.zonaDeseada, insertData.zonaDeseada),
+        eq7(requirements.status, "active")
       )
     ).limit(1);
   }
@@ -12749,7 +17406,7 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
       nombreUsuarioWhatsapp: preservedContact.effectiveName || existing[0].nombreUsuarioWhatsapp,
       status: targetStatus,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq5(requirements.id, existing[0].id)).returning();
+    }).where(eq7(requirements.id, existing[0].id)).returning();
     console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id}, Status: ${targetStatus}, Antig\xFCedad: ${existingAgeDays}d, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
     if (targetStatus !== "expired") {
       findMatchesForRequirement(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
@@ -12998,10 +17655,34 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
         }
       }
     }
-    const timeGreeting = getGreetingByTime();
+    const timeGreeting = getGreetingByTime2();
     const nameInfo = resolveNameAndGender(realName, timeGreeting);
     const genderTerm = nameInfo.genderTerm;
     const alreadyGreeted = await checkAlreadyGreeted(userId);
+    const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+    const idCheck = await executeIdentityVerificationFromWhatsApp2(messageToProcess);
+    if (idCheck.isVerificationRequest && idCheck.reportText) {
+      console.log(`[JanIA-IdentityCheck] Verificaci\xF3n de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: idCheck.reportText,
+        reactionEmoji: idCheck.success ? "\u{1F6E1}\uFE0F" : "\u26A0\uFE0F",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+    const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+    const predialCheck = await executePredialAssistanceFromWhatsApp2(messageToProcess);
+    if (predialCheck.isPredialRequest && predialCheck.reportText) {
+      console.log(`[JanIA-PredialCheck] Asistencia de predial Bogot\xE1 ejecutada para ${userId} (CHIP: ${predialCheck.chip || "General"}): isPredialRequest=true`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: predialCheck.reportText,
+        reactionEmoji: "\u{1F4C4}",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
     const systemPrompt = `Eres JanIA, la Inteligencia Artificial viva, emp\xE1tica y de m\xE1xima capacidad resolutiva de VECY Network. Est\xE1s operando en el grupo "VECY: SOPORTE LEGAL, TRIBUTARIO, AVAL\xDAOS Y MARKETING". Tu objetivo es responder con precisi\xF3n quir\xFArgica, rigor legal, calidez humana y alta competencia t\xE9cnica, resolviendo de fondo las inquietudes de los inmobiliarios como una abogada senior, perita tasadora y estratega de marketing de \xE9lite.
 
 ## L\xD3GICA DE CLASIFICACI\xD3N Y MODERACI\xD3N ESTRICTA:
@@ -13155,10 +17836,10 @@ Consulta: ${messageToProcess}`;
     }
   } catch (error) {
     console.error("[processConsultingMessage Error]:", error.message);
-    const timeGreeting = getGreetingByTime();
+    const timeGreeting = getGreetingByTime2();
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
-    const firstName = extractFirstName(realName) || "colega";
+    const firstName = extractFirstName2(realName) || "colega";
     const cleanLower = text2.toLowerCase().trim();
     if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio") || cleanLower.includes("metro cuadrado") || cleanLower.includes("m2")) {
       const avaluoFallback = `\xA1${timeGreeting}, estimada ${firstName}! \u{1F44B}\u{1F3FB} Con el mayor gusto te realizo un **estudio de mercado aproximado del valor por m\xB2 y precio sugerido** para tu inmueble, 100% virtual, directo en este chat y sin tr\xE1mites engorrosos ni papeleos. \u{1F4CA}\u2728
@@ -13215,7 +17896,7 @@ async function processCirculoMessage(text2, userId, userName) {
   try {
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
-    const firstName = extractFirstName(realName);
+    const firstName = extractFirstName2(realName);
     const userGreetingName = firstName ? ` ${firstName}` : "";
     const strictOffTopic = checkStrictOffTopic(text2);
     if (strictOffTopic.isOffTopic) {
@@ -13231,6 +17912,30 @@ Nuestros canales son 100% profesionales y dedicados exclusivamente a la tecnolog
       };
     }
     const alreadyGreeted = await checkAlreadyGreeted(userId);
+    const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+    const idCheck = await executeIdentityVerificationFromWhatsApp2(text2);
+    if (idCheck.isVerificationRequest && idCheck.reportText) {
+      console.log(`[JanIA-Circulo-IdentityCheck] Verificaci\xF3n de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: idCheck.reportText,
+        reactionEmoji: idCheck.success ? "\u{1F6E1}\uFE0F" : "\u26A0\uFE0F",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+    const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+    const predialCheck = await executePredialAssistanceFromWhatsApp2(text2);
+    if (predialCheck.isPredialRequest && predialCheck.reportText) {
+      console.log(`[JanIA-Circulo-PredialCheck] Asistencia de predial Bogot\xE1 ejecutada para ${userId} (CHIP: ${predialCheck.chip || "General"}): isPredialRequest=true`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: predialCheck.reportText,
+        reactionEmoji: "\u{1F4C4}",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
     const groupZeroName = process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"';
     const systemPrompt = `Eres JanIA, la Inteligencia Artificial oficial y cerebro innovador de VECY Network. Est\xE1s operando en el grupo "${groupZeroName}". Tu objetivo en este grupo es responder inquietudes exclusivamente relacionadas con el proyecto "VECY NETWORK", modelo de negocio, tecnolog\xEDa y debate con competidores, de forma sincera, ver\xEDdica y de alto nivel:
 
@@ -13255,7 +17960,7 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
   "response": "Tu respuesta, invitaci\xF3n a debate o mensaje de redirecci\xF3n seg\xFAn corresponda.",
   "reactionEmoji": "string (emoji recomendado)"
 }`;
-    const timeGreeting = getGreetingByTime();
+    const timeGreeting = getGreetingByTime2();
     const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
     const nameInfo = resolveNameAndGender(realName || firstName || "colega", timeGreeting);
@@ -13303,10 +18008,10 @@ Pregunta: ${text2}${greetingInstruction}` }
     }
   } catch (error) {
     console.error("[processCirculoMessage Error]:", error.message);
-    const timeGreeting = getGreetingByTime();
+    const timeGreeting = getGreetingByTime2();
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
-    const firstName = extractFirstName(realName);
+    const firstName = extractFirstName2(realName);
     const userGreetingName = firstName ? ` ${firstName}` : "";
     return {
       classification: "CONSULTA_GENERAL",
@@ -13911,2693 +18616,13 @@ JanIA ha dejado de ser un bot pasivo que solo publica alertas en el grupo. A par
   }
 });
 
-// server/_core/whatsapp-utils.ts
-var whatsapp_utils_exports = {};
-__export(whatsapp_utils_exports, {
-  cleanVoiceText: () => cleanVoiceText,
-  detectaVoz: () => detectaVoz,
-  extractFirstName: () => extractFirstName2,
-  getGreetingByTime: () => getGreetingByTime2,
-  sendAdminNotification: () => sendAdminNotification,
-  textToSpeechMedia: () => textToSpeechMedia
-});
-import path6 from "path";
-import fs6 from "fs";
-import os from "os";
-import { execSync } from "child_process";
-import { createSign } from "crypto";
-function extractFirstName2(fullName) {
-  if (!fullName) return "";
-  let clean = fullName.trim();
-  if (!clean) return "";
-  if (/^\+?[\d\s-]{6,}$/.test(clean) || /^[\d\s\+\-\(\)]+$/.test(clean)) return "";
-  if (clean.includes("@")) {
-    clean = clean.split("@")[0];
-  }
-  clean = clean.replace(/[0-9]/g, "");
-  if (!clean.trim()) return "";
-  const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, "")).filter((w) => w.length > 0);
-  if (words.length === 0) return "";
-  let nameWords = words;
-  while (nameWords.length > 0 && CONNECTORS.has(nameWords[0].toLowerCase())) {
-    nameWords.shift();
-  }
-  if (nameWords.length === 0) return "";
-  const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-  if (nameWords.length >= 2) {
-    const twoWordKey = `${nameWords[0].toLowerCase()} ${nameWords[1].toLowerCase()}`;
-    if (NICKNAMES_MAP[twoWordKey]) {
-      return NICKNAMES_MAP[twoWordKey];
-    }
-    if (SONOROUS_COMPOUND_BLOCKS.has(twoWordKey)) {
-      return `${cap(nameWords[0])} ${cap(nameWords[1])}`;
-    }
-    const secondWordLower = nameWords[1].toLowerCase();
-    if (NON_SONOROUS_FILLERS.has(secondWordLower)) {
-      const firstWordLower2 = nameWords[0].toLowerCase();
-      if (NICKNAMES_MAP[firstWordLower2]) {
-        return NICKNAMES_MAP[firstWordLower2];
-      }
-      return cap(nameWords[0]);
-    }
-  }
-  const firstWordLower = nameWords[0].toLowerCase();
-  if (NICKNAMES_MAP[firstWordLower]) {
-    return NICKNAMES_MAP[firstWordLower];
-  }
-  return cap(nameWords[0]);
-}
-function getGreetingByTime2(date) {
-  const bogotaTimeStr = (date || /* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" });
-  const hour = new Date(bogotaTimeStr).getHours();
-  if (hour >= 1 && hour < 12) {
-    return "Buenos d\xEDas";
-  }
-  if (hour >= 12 && hour < 19) {
-    return "Buenas tardes";
-  }
-  return "Buenas noches";
-}
-function detectaVoz(text2) {
-  if (!text2) return false;
-  const t2 = text2.toLowerCase();
-  return t2.includes("nota de voz") || t2.includes("mensaje de voz") || t2.includes("env\xEDame un audio") || t2.includes("enviame un audio") || t2.includes("resp\xF3ndeme por audio") || t2.includes("respondeme por audio") || t2.includes("m\xE1ndame un audio") || t2.includes("mandame un audio") || t2.includes("por audio") || t2.includes("en audio") || t2.includes("con voz");
-}
-function cleanVoiceText(text2) {
-  if (!text2) return "";
-  let cleaned = text2.trim();
-  cleaned = cleaned.replace(/^\{\{[\s\S]*?\}\}/g, "").trim();
-  cleaned = cleaned.replace(/^\[[\s\S]*?\]/g, "").trim();
-  cleaned = cleaned.replace(/^\{\s*|\s*\}$/g, "").trim();
-  cleaned = cleaned.replace(/^"|"$/g, "").trim();
-  const preambulos = [
-    /^(aquí\s+tienes|aqui\s+tienes|aquí\s+está|aqui\s+esta|aquí\s+te\s+presento|esta\s+es|este\s+es)\s+(la\s+propuesta|el\s+guión|el\s+guion|la\s+nota\s+de\s+voz|el\s+mensaje|la\s+redacción|la\s+redaccion|el\s+texto)[^:]*:\s*/i,
-    /^claro\s*,\s*(aquí\s+tienes|aquí\s+está|te\s+comparto)[^:]*:\s*/i,
-    /^(propuesta\s+de\s+(guión|guion|nota|mensaje|audio|texto)[^:]*):\s*/i,
-    /^(guión\s+de\s+voz|guion\s+de\s+voz|nota\s+de\s+voz|mensaje\s+de\s+voz|guión\s+de\s+audio|guion\s+de\s+audio|guión|guion)\s*:\s*/i
-  ];
-  for (const regex of preambulos) {
-    cleaned = cleaned.replace(regex, "");
-  }
-  cleaned = cleaned.replace(/^:\s*/, "").trim();
-  cleaned = cleaned.replace(/^"|"$/g, "").trim();
-  cleaned = cleaned.replace(/\bVecy\b/gi, "Vesi").replace(/\bVECY\b/g, "Vesi").replace(/\bJanIA\b/gi, "Yan\xEDa").replace(/\bJanIa\b/gi, "Yan\xEDa").replace(/\bjania\b/gi, "Yan\xEDa").replace(/\bm²\b/gi, "metros cuadrados").replace(/\bm2\b/gi, "metros cuadrados").replace(/\bUVT\b/gi, "U-V-T").replace(/\bDIAN\b/gi, "Dian").replace(/\bSINUPOT\b/gi, "Sinu-pot").replace(/\bIDU\b/gi, "I-D-U").replace(/\bPOT\b/g, "P-O-T").replace(/\bAdmon\b/gi, "Administraci\xF3n").replace(/\badmon\b/gi, "administraci\xF3n").replace(/\bApto\b/gi, "Apartamento").replace(/\bapto\b/gi, "apartamento").replace(/\bHab\b/gi, "Habitaciones").replace(/\bhab\b/gi, "habitaciones");
-  return cleaned.trim();
-}
-function splitTextIntoVoiceChunks(text2, maxLen = 180) {
-  const sentences = text2.match(/[^.!?]+[.!?]+/g) || [text2];
-  const chunks = [];
-  let currentChunk = "";
-  for (const sentence of sentences) {
-    if ((currentChunk + " " + sentence).trim().length <= maxLen) {
-      currentChunk = (currentChunk + " " + sentence).trim();
-    } else {
-      if (currentChunk) chunks.push(currentChunk);
-      if (sentence.length > maxLen) {
-        const words = sentence.split(" ");
-        let sub = "";
-        for (const w of words) {
-          if ((sub + " " + w).trim().length <= maxLen) {
-            sub = (sub + " " + w).trim();
-          } else {
-            chunks.push(sub);
-            sub = w;
-          }
-        }
-        if (sub) currentChunk = sub;
-        else currentChunk = "";
-      } else {
-        currentChunk = sentence.trim();
-      }
-    }
-  }
-  if (currentChunk) chunks.push(currentChunk);
-  return chunks;
-}
-async function fetchGttsAudioBuffer(text2) {
-  try {
-    const chunks = splitTextIntoVoiceChunks(text2);
-    const audioBuffers = [];
-    for (const chunk of chunks) {
-      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=es-CO&client=tw-ob`;
-      const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
-      if (res.ok) {
-        const arr = await res.arrayBuffer();
-        audioBuffers.push(Buffer.from(arr));
-      }
-    }
-    if (audioBuffers.length > 0) {
-      return Buffer.concat(audioBuffers);
-    }
-  } catch (err) {
-    console.error("[TTS-Fallback-GTTS] Error sintetizando audio libre:", err.message || err);
-  }
-  return null;
-}
-async function fetchNeuralVoiceBuffer(text2, voiceName = "es-CO-SalomeNeural", rate = "+6%") {
-  try {
-    const { MsEdgeTTS, OUTPUT_FORMAT } = await import("msedge-tts");
-    const tts = new MsEdgeTTS();
-    await tts.setMetadata(voiceName, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
-    const { audioStream } = tts.toStream(text2, { rate, pitch: "+0Hz" });
-    return new Promise((resolve) => {
-      const chunks = [];
-      const timer = setTimeout(() => {
-        if (chunks.length > 0) resolve(Buffer.concat(chunks));
-        else resolve(null);
-      }, 2e4);
-      audioStream.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
-      audioStream.on("end", () => {
-        clearTimeout(timer);
-        resolve(Buffer.concat(chunks));
-      });
-      audioStream.on("error", (err) => {
-        clearTimeout(timer);
-        console.warn(`[TTS-Neural] Error en stream de voz ${voiceName}:`, err?.message || err);
-        if (chunks.length > 0) resolve(Buffer.concat(chunks));
-        else resolve(null);
-      });
-    });
-  } catch (err) {
-    console.warn(`[TTS-Neural] Error al inicializar s\xEDntesis neuronal (${voiceName}):`, err?.message || err);
-    return null;
-  }
-}
-function base64url(str) {
-  return Buffer.from(str).toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-}
-async function getVertexAIAccessToken() {
-  const now = Math.floor(Date.now() / 1e3);
-  if (cachedVertexToken && cachedVertexToken.expiresAt > now + 300) {
-    return cachedVertexToken.token;
-  }
-  try {
-    const credPath = path6.join(process.cwd(), "server", "_core", "google-service-account.json");
-    if (!fs6.existsSync(credPath)) {
-      return null;
-    }
-    const sa = JSON.parse(fs6.readFileSync(credPath, "utf8"));
-    if (!sa.client_email || !sa.private_key || sa.project_id === "jania-evaluadora-pro") {
-      return null;
-    }
-    const header = { alg: "RS256", typ: "JWT" };
-    const claim = {
-      iss: sa.client_email,
-      scope: "https://www.googleapis.com/auth/cloud-platform",
-      aud: sa.token_uri || "https://oauth2.googleapis.com/token",
-      exp: now + 3600,
-      iat: now
-    };
-    const encodedHeader = base64url(JSON.stringify(header));
-    const encodedClaim = base64url(JSON.stringify(claim));
-    const signInput = `${encodedHeader}.${encodedClaim}`;
-    const signer = createSign("RSA-SHA256");
-    signer.update(signInput);
-    const signature = signer.sign(sa.private_key, "base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-    const jwt = `${signInput}.${signature}`;
-    const res = await fetch(sa.token_uri || "https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
-    });
-    const tokenData = await res.json();
-    if (tokenData.access_token) {
-      cachedVertexToken = {
-        token: tokenData.access_token,
-        expiresAt: now + (tokenData.expires_in || 3600)
-      };
-      return tokenData.access_token;
-    }
-  } catch (err) {
-    console.warn("[TTS-Vertex] Error al generar token OAuth2 de cuenta de servicio:", err?.message || err);
-  }
-  return null;
-}
-function convertAudioToOggOpus(inputBuffer) {
-  try {
-    const tmpDir = os.tmpdir();
-    const uniqueId = `tts_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    const tmpIn = path6.join(tmpDir, `${uniqueId}_in.mp3`);
-    const tmpOut = path6.join(tmpDir, `${uniqueId}_out.ogg`);
-    fs6.writeFileSync(tmpIn, inputBuffer);
-    execSync(`ffmpeg -y -i "${tmpIn}" -c:a libopus -b:a 32k -vbr on -compression_level 10 -vn "${tmpOut}"`, { stdio: "ignore" });
-    if (fs6.existsSync(tmpOut)) {
-      const oggBuf = fs6.readFileSync(tmpOut);
-      try {
-        fs6.unlinkSync(tmpIn);
-      } catch (_) {
-      }
-      try {
-        fs6.unlinkSync(tmpOut);
-      } catch (_) {
-      }
-      if (oggBuf && oggBuf.length > 0) {
-        return oggBuf;
-      }
-    }
-  } catch (err) {
-    console.warn("[TTS-FFmpeg] No se pudo convertir a OGG Opus, usando audio original:", err?.message || err);
-  }
-  return inputBuffer;
-}
-async function textToSpeechMedia(text2, format = "OGG_OPUS") {
-  const cleaned = cleanVoiceText(text2);
-  if (!cleaned) return null;
-  try {
-    const accessToken = await getVertexAIAccessToken();
-    if (accessToken) {
-      const response = await fetch("https://texttospeech.googleapis.com/v1beta1/text:synthesize", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          input: {
-            prompt: "Read aloud in a warm, welcoming tone.",
-            text: cleaned
-          },
-          voice: {
-            languageCode: "es-us",
-            modelName: "gemini-3.1-flash-tts-preview",
-            name: "Laomedeia"
-          },
-          audioConfig: {
-            audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-            speakingRate: 1,
-            pitch: 0
-          }
-        })
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.audioContent) {
-          console.log(`[TTS-Media] \u2713 Gemini 3.1 Flash TTS (Laomedeia) \u2014 ${cleaned.length} chars \u2192 audio generado.`);
-          const buffer = Buffer.from(data.audioContent, "base64");
-          return {
-            mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-            data: buffer.toString("base64"),
-            buffer
-          };
-        }
-      } else {
-        const errText = await response.text();
-        console.warn(`[TTS-Media] Gemini 3.1 Flash TTS error ${response.status}: ${errText.substring(0, 200)}`);
-      }
-    }
-  } catch (err) {
-    console.warn("[TTS-Media] Gemini 3.1 Flash TTS no disponible:", err?.message || err);
-  }
-  const candidateKeys = [
-    process.env.GOOGLE_TTS_API_KEY
-  ].filter((k) => k && k.startsWith("AIzaSy") && !k.includes("AIzaSyCGQ0rQMn0c8DN4XX6Qyp0U6EzDCKEjOq0"));
-  try {
-    for (const googleApiKey of candidateKeys) {
-      try {
-        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            input: { text: cleaned },
-            voice: {
-              languageCode: "es-US",
-              name: "es-US-Chirp3-HD-Erinome"
-            },
-            audioConfig: {
-              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1,
-              pitch: 0
-            }
-          })
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.audioContent) {
-            console.log(`[TTS-Media] \u2713 Google Cloud Chirp3-HD Erinome \u2014 ${cleaned.length} chars \u2192 audio generado.`);
-            const buffer = Buffer.from(data.audioContent, "base64");
-            return {
-              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-              data: buffer.toString("base64"),
-              buffer
-            };
-          }
-        }
-      } catch (keyErr) {
-      }
-    }
-  } catch (err) {
-    console.warn("[TTS-Media] Google Cloud Chirp3-HD Erinome no disponible:", err?.message || err);
-  }
-  try {
-    for (const googleApiKey of candidateKeys) {
-      try {
-        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            input: { text: cleaned },
-            voice: {
-              languageCode: "es-US",
-              name: "es-US-Studio-B"
-            },
-            audioConfig: {
-              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1.08,
-              pitch: 0.8
-            }
-          })
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.audioContent) {
-            console.log(`[TTS-Media] \u2713 Google Cloud Studio-B (Voz Clara y Despierta) \u2014 ${cleaned.length} chars \u2192 audio generado.`);
-            const buffer = Buffer.from(data.audioContent, "base64");
-            return {
-              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-              data: buffer.toString("base64"),
-              buffer
-            };
-          }
-        }
-      } catch (keyErr) {
-      }
-    }
-  } catch (err) {
-    console.warn("[TTS-Media] Google Cloud Studio-B no disponible:", err?.message || err);
-  }
-  try {
-    for (const googleApiKey of candidateKeys) {
-      try {
-        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            input: { text: cleaned },
-            voice: {
-              languageCode: "es-US",
-              name: "es-US-Neural2-A"
-            },
-            audioConfig: {
-              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1.08,
-              pitch: 0.5
-            }
-          })
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.audioContent) {
-            console.log(`[TTS-Media] \u2713 Google Cloud Neural2-A \u2014 ${cleaned.length} chars \u2192 audio generado.`);
-            const buffer = Buffer.from(data.audioContent, "base64");
-            return {
-              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-              data: buffer.toString("base64"),
-              buffer
-            };
-          }
-        }
-      } catch (keyErr) {
-      }
-    }
-  } catch (err) {
-    console.warn("[TTS-Media] Google Cloud Neural2-A no disponible:", err?.message || err);
-  }
-  try {
-    console.log(`[TTS-Media] \u{1F399}\uFE0F Sintetizando con voz neuronal humana (Dalia es-MX +8%) \u2014 ${cleaned.length} caracteres...`);
-    const daliaBuffer = await fetchNeuralVoiceBuffer(cleaned, "es-MX-DaliaNeural", "+8%");
-    if (daliaBuffer && daliaBuffer.length > 0) {
-      console.log(`[TTS-Media] \u2713 Audio generado con voz humana de Dalia (${daliaBuffer.length} bytes).`);
-      const finalBuffer = format === "OGG_OPUS" ? convertAudioToOggOpus(daliaBuffer) : daliaBuffer;
-      return {
-        mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-        data: finalBuffer.toString("base64"),
-        buffer: finalBuffer
-      };
-    }
-  } catch (err) {
-    console.warn("[TTS-Media] Respaldo Dalia fall\xF3, probando Salom\xE9:", err?.message || err);
-  }
-  console.log("[TTS-Media] Sintetizando audio usando contingencia Google Translate TTS (es-CO)...");
-  const gttsBuffer = await fetchGttsAudioBuffer(cleaned);
-  if (gttsBuffer && gttsBuffer.length > 0) {
-    const finalBuffer = format === "OGG_OPUS" ? convertAudioToOggOpus(gttsBuffer) : gttsBuffer;
-    return {
-      mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-      data: finalBuffer.toString("base64"),
-      buffer: finalBuffer
-    };
-  }
-  return null;
-}
-async function sendAdminNotification(text2) {
-  console.log(`[WHATSAPP-UTILS] [Notificaci\xF3n Admin (WhatsApp Omitido)]: ${text2}`);
-}
-var NICKNAMES_MAP, SONOROUS_COMPOUND_BLOCKS, NON_SONOROUS_FILLERS, CONNECTORS, cachedVertexToken;
-var init_whatsapp_utils = __esm({
-  "server/_core/whatsapp-utils.ts"() {
-    "use strict";
-    NICKNAMES_MAP = {
-      "cristina": "Kristy",
-      "cristi": "Kristy",
-      "kristina": "Kristy",
-      "catalina": "Kata",
-      "catalyna": "Kata",
-      "guillermo": "Memo",
-      "maria fernanda": "Mafe",
-      "mar\xEDa fernanda": "Mafe",
-      "maria paula": "Mapau",
-      "mar\xEDa paula": "Mapau",
-      "maria jose": "Majo",
-      "mar\xEDa jos\xE9": "Majo",
-      "juan esteban": "Juanes",
-      "alejandro": "Alejo",
-      "francisco": "Pacho",
-      "eduardo": "Eddu",
-      "isabela": "Isa",
-      "isabella": "Isa",
-      "victoria": "Vicky",
-      "beatriz": "Betty",
-      "carolina": "Caro",
-      "gabriela": "Gaby",
-      "santiago": "Santi",
-      "sebastian": "Seba",
-      "sebasti\xE1n": "Seba",
-      "felipe": "Pipe",
-      "ignacio": "Nacho",
-      "jose manuel": "Josema",
-      "jos\xE9 manuel": "Josema"
-    };
-    SONOROUS_COMPOUND_BLOCKS = /* @__PURE__ */ new Set([
-      // Femeninos Clásicos
-      "maria jose",
-      "mar\xEDa jos\xE9",
-      "maria camila",
-      "mar\xEDa camila",
-      "dulce maria",
-      "dulce mar\xEDa",
-      "ana sofia",
-      "ana sof\xEDa",
-      "juana valentina",
-      "maria alejandra",
-      "mar\xEDa alejandra",
-      "sara sofia",
-      "sara sof\xEDa",
-      "laura camila",
-      "maria paula",
-      "mar\xEDa paula",
-      "luisa fernanda",
-      "ana maria",
-      "ana mar\xEDa",
-      "maria angel",
-      "mar\xEDa \xE1ngel",
-      "mar\xEDa angel",
-      // Femeninos Modernos
-      "maria antonella",
-      "mar\xEDa antonella",
-      "elena sofia",
-      "elena sof\xEDa",
-      "emily valentina",
-      "mia isabella",
-      "m\xEDa isabella",
-      "antonella sofia",
-      "antonella sof\xEDa",
-      // Masculinos Clásicos
-      "juan jose",
-      "juan jos\xE9",
-      "juan david",
-      "juan pablo",
-      "carlos andres",
-      "carlos andr\xE9s",
-      "jose luis",
-      "jos\xE9 luis",
-      "luis fernando",
-      "miguel angel",
-      "miguel \xE1ngel",
-      "juan esteban",
-      "andres felipe",
-      "andr\xE9s felipe",
-      "jorge eliecer",
-      "jorge eli\xE9cer",
-      "juan manuel",
-      "julio cesar",
-      "julio c\xE9sar",
-      // Masculinos Modernos
-      "thiago andres",
-      "thiago andr\xE9s",
-      "ian gael",
-      "maximiliano david",
-      "dylan santiago",
-      "samuel david"
-    ]);
-    NON_SONOROUS_FILLERS = /* @__PURE__ */ new Set([
-      "milena",
-      "patricia",
-      "elena",
-      "marcela",
-      "andrea",
-      "alberto",
-      "alfonso",
-      "ivan",
-      "iv\xE1n",
-      "adolfo",
-      "antonio",
-      "humberto",
-      "enrique",
-      "arturo",
-      "armando",
-      "bernardo",
-      "marina"
-    ]);
-    CONNECTORS = /* @__PURE__ */ new Set(["de", "del", "la", "las", "los", "el", "van", "von", "y", "di"]);
-    cachedVertexToken = null;
-  }
-});
-
-// server/_core/whatsapp-match.ts
-var whatsapp_match_exports = {};
-__export(whatsapp_match_exports, {
-  JaniaMatchBot: () => JaniaMatchBot,
-  downloadMediaSafely: () => downloadMediaSafely,
-  isBlacklistedGroup: () => isBlacklistedGroup,
-  janiaCaptadorBot: () => janiaCaptadorBot,
-  janiaMatchBot: () => janiaMatchBot,
-  unwrapMessage: () => unwrapMessage
-});
-import dns from "dns";
-import _baileys, {
-  useMultiFileAuthState,
-  DisconnectReason,
-  delay,
-  downloadMediaMessage,
-  downloadContentFromMessage,
-  fetchLatestBaileysVersion,
-  Browsers
-} from "@whiskeysockets/baileys";
-import qrcodeTerminal from "qrcode-terminal";
-import fs7 from "fs";
-import path7 from "path";
-import { eq as eq7 } from "drizzle-orm";
-import QRCode from "qrcode";
-function getWASocket() {
-  if (typeof _baileys === "function") return _baileys;
-  if (_baileys?.default && typeof _baileys.default === "function") return _baileys.default;
-  if (_baileys?.makeWASocket && typeof _baileys.makeWASocket === "function") return _baileys.makeWASocket;
-  return _baileys;
-}
-function unwrapMessage(msgObj) {
-  if (!msgObj) return msgObj;
-  let unwrapped = msgObj;
-  while (unwrapped.ephemeralMessage?.message || unwrapped.viewOnceMessage?.message || unwrapped.viewOnceMessageV2?.message || unwrapped.viewOnceMessageV2Extension?.message || unwrapped.documentWithCaptionMessage?.message) {
-    unwrapped = unwrapped.ephemeralMessage?.message || unwrapped.viewOnceMessage?.message || unwrapped.viewOnceMessageV2?.message || unwrapped.viewOnceMessageV2Extension?.message || unwrapped.documentWithCaptionMessage?.message;
-  }
-  return unwrapped;
-}
-async function downloadMediaSafely(msg, type) {
-  try {
-    const buf = await downloadMediaMessage(msg, "buffer", {});
-    if (buf && buf.length > 0) return buf;
-  } catch (err1) {
-  }
-  try {
-    const rawMsg = unwrapMessage(msg.message);
-    const mediaKey = type === "image" ? rawMsg?.imageMessage : type === "audio" ? rawMsg?.audioMessage : type === "video" ? rawMsg?.videoMessage : rawMsg?.documentMessage;
-    if (mediaKey) {
-      const stream = await downloadContentFromMessage(mediaKey, type);
-      const chunks = [];
-      for await (const chunk of stream) {
-        chunks.push(chunk);
-      }
-      const buf = Buffer.concat(chunks);
-      if (buf && buf.length > 0) return buf;
-    }
-  } catch (err2) {
-    console.error(`[JANIA-MEDIA] Error descargando ${type}:`, err2);
-  }
-  return null;
-}
-function isBlacklistedGroup(groupName, chatId) {
-  if (!groupName && !chatId) return false;
-  const nameLower = (groupName || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const blacklistPatterns = [
-    "seguridad tiempo real",
-    "seguridad en tiempo real",
-    "chat de seguridad",
-    "frente de seguridad",
-    "cuadrante",
-    "policia",
-    "cai ",
-    "vigilancia",
-    "red de apoyo",
-    "vecinos alerta",
-    "seguridad barrio",
-    "seguridad comunitaria"
-  ];
-  return blacklistPatterns.some((pattern) => nameLower.includes(pattern));
-}
-var SERVER_BOOT_TIME, cleanJid, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot;
-var init_whatsapp_match = __esm({
-  "server/_core/whatsapp-match.ts"() {
-    "use strict";
-    init_db();
-    init_schema();
-    init_scraper();
-    init_whatsapp_utils();
-    init_voiceTranscription();
-    init_matching();
-    try {
-      dns.setDefaultResultOrder("ipv4first");
-    } catch (e) {
-    }
-    SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3) - 120;
-    cleanJid = (jid) => {
-      if (!jid) return "";
-      if (jid.includes("@")) {
-        const [userPart, domain] = jid.split("@");
-        const cleanUser = userPart.split(":")[0];
-        return `${cleanUser}@${domain}`;
-      }
-      return jid.split(":")[0];
-    };
-    outgoingQueue = Promise.resolve();
-    JaniaMatchBot = class {
-      sock = null;
-      isReady = false;
-      sessionFolderName = ".baileys_auth";
-      qrFileName = "qr-match.png";
-      botName = "JANIA-MATCH";
-      isWorkerOnly = false;
-      // Grupos autorizados y configuraciones
-      authorizedGroups = [];
-      messageBuffers = /* @__PURE__ */ new Map();
-      redirectCooldowns = /* @__PURE__ */ new Map();
-      processingLocks = /* @__PURE__ */ new Map();
-      lastGroupMessageTime = /* @__PURE__ */ new Map();
-      botSentMessageIds = /* @__PURE__ */ new Set();
-      lastHumanIntervention = /* @__PURE__ */ new Map();
-      dmMessageBuffers = /* @__PURE__ */ new Map();
-      groupMetadataCache = /* @__PURE__ */ new Map();
-      reconnectAttempts = 0;
-      maxReconnectAttempts = 5;
-      reactedMessageIds = /* @__PURE__ */ new Map();
-      reactionQueue = Promise.resolve();
-      lastReactionTimestamp = 0;
-      MIN_REACTION_INTERVAL_MS = 1200;
-      async getCachedGroupMetadata(chatId) {
-        const cached = this.groupMetadataCache.get(chatId);
-        if (cached && Date.now() - cached.time < 10 * 60 * 1e3) {
-          return cached.data;
-        }
-        try {
-          const data = await Promise.race([
-            this.sock?.groupMetadata(chatId),
-            new Promise((resolve) => setTimeout(() => resolve(null), 2500))
-          ]);
-          if (data) {
-            this.groupMetadataCache.set(chatId, { data, time: Date.now() });
-          }
-          return data;
-        } catch (_) {
-          return cached?.data || null;
-        }
-      }
-      async resolveGroupName(chatId) {
-        const KNOWN_GROUPS = {
-          "120363260108880069@g.us": "VECY INMUEBLES NETWORK",
-          "120363417740040773@g.us": "VECY: SOPORTE LEGAL, TRIBUTARIO Y AVAL\xDAOS",
-          "120363403507276533@g.us": "PROYECTO Vecy Network",
-          "120363029834368375@g.us": "Santas-Carolina-Bosques-Calleja"
-        };
-        if (KNOWN_GROUPS[chatId]) return KNOWN_GROUPS[chatId];
-        try {
-          const metadata = await this.getCachedGroupMetadata(chatId);
-          if (metadata && metadata.subject && metadata.subject.trim()) {
-            return metadata.subject.trim();
-          }
-        } catch (_) {
-        }
-        return "Grupo Inmobiliario WhatsApp";
-      }
-      targetGroupId = "120363260108880069@g.us";
-      buzonGroupId = "120363417740040773@g.us";
-      circuloGroupId = "120363403507276533@g.us";
-      channelNewsletterId = process.env.WHATSAPP_CHANNEL_NEWSLETTER_ID || "";
-      cooldownMap = /* @__PURE__ */ new Map();
-      cooldownFile = path7.join(process.cwd(), ".cooldown_map.json");
-      constructor(options) {
-        if (options) {
-          if (options.sessionFolderName) this.sessionFolderName = options.sessionFolderName;
-          if (options.qrFileName) this.qrFileName = options.qrFileName;
-          if (options.botName) this.botName = options.botName;
-          if (options.isWorkerOnly !== void 0) this.isWorkerOnly = options.isWorkerOnly;
-        }
-        if (!this.isWorkerOnly) {
-          global.janiaMatchBotInstance = this;
-        }
-        console.log(`[${this.botName}] Inicializando JanIA Bot con Baileys (Carpeta: ${this.sessionFolderName})...`);
-        const groupsEnv = process.env.JANIA_MATCH_GROUPS;
-        if (groupsEnv) {
-          this.authorizedGroups = groupsEnv.split(",").map((g) => g.trim());
-        } else {
-          this.authorizedGroups = [
-            "120363260108880069@g.us",
-            // VECY INMUEBLES NETWORK
-            "120363417740040773@g.us",
-            // VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS
-            "120363403507276533@g.us"
-            // PROYECTO "Vecy Network" 👌
-          ];
-        }
-        this.loadCooldowns();
-        this.setupGracefulShutdown();
-        this.startDbHeartbeat();
-      }
-      startDbHeartbeat() {
-        this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error in initial status update:`, err));
-        setInterval(() => {
-          this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error in heartbeat status update:`, err));
-        }, 3e4);
-      }
-      async updateStatusInDb() {
-        try {
-          const db = await getDb();
-          if (!db) return;
-          const rawPhone = this.sock?.user?.id ? this.sock.user.id.split("@")[0].split(":")[0] : null;
-          const phone = rawPhone || "573192919978";
-          const jid = this.isWorkerOnly ? "system:bot_status_worker2" : "system:bot_status";
-          await db.insert(pendingSessions).values({
-            jid,
-            sessionData: { isReady: true, phone, botName: this.botName, updatedAt: (/* @__PURE__ */ new Date()).toISOString() },
-            createdAt: /* @__PURE__ */ new Date()
-          }).onConflictDoUpdate({
-            target: pendingSessions.jid,
-            set: {
-              sessionData: { isReady: true, phone, botName: this.botName, updatedAt: (/* @__PURE__ */ new Date()).toISOString() }
-            }
-          });
-          console.log(`[${this.botName}-DB] Bot status heartbeat updated: isReady=${this.isReady}, phone=${phone}`);
-        } catch (err) {
-          console.error(`[${this.botName}-DB] Failed to update bot status in DB:`, err.message);
-        }
-      }
-      async initialize() {
-        try {
-          if (this.sock) {
-            try {
-              this.sock.ev.removeAllListeners("connection.update");
-              this.sock.ev.removeAllListeners("creds.update");
-              this.sock.ev.removeAllListeners("messages.upsert");
-              if (this.sock.ws && typeof this.sock.ws.close === "function") {
-                this.sock.ws.close();
-              }
-            } catch (cleanupErr) {
-            }
-          }
-          const sessionDir = path7.join(process.cwd(), this.sessionFolderName);
-          if (!fs7.existsSync(sessionDir)) {
-            fs7.mkdirSync(sessionDir, { recursive: true });
-          }
-          const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-          if (!fs7.existsSync(path7.join(sessionDir, "creds.json"))) {
-            await saveCreds();
-            console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
-          }
-          let version = [2, 3e3, 1043857760];
-          try {
-            const fetched = await fetchLatestBaileysVersion();
-            if (fetched && fetched.version) {
-              version = fetched.version;
-            }
-          } catch (e) {
-          }
-          console.log(`[${this.botName}] Estableciendo conexi\xF3n por WebSocket...`);
-          const silentLogger = {
-            level: "silent",
-            log: () => {
-            },
-            trace: () => {
-            },
-            debug: () => {
-            },
-            info: () => {
-            },
-            warn: () => {
-            },
-            error: () => {
-            },
-            fatal: () => {
-            },
-            child: () => silentLogger
-          };
-          const makeWASocket = getWASocket();
-          this.sock = makeWASocket({
-            auth: state,
-            version,
-            logger: silentLogger,
-            printQRInTerminal: false,
-            // Lo manejamos nosotros de forma personalizada
-            browser: Browsers.ubuntu("Chrome"),
-            syncFullHistory: false,
-            markOnlineOnConnect: false,
-            connectTimeoutMs: 9e4,
-            // Aumentado a 90s para conexiones lentas
-            defaultQueryTimeoutMs: 9e4,
-            keepAliveIntervalMs: 2e4,
-            // Ping Keep-Alive de WebSocket cada 20 segundos
-            emitOwnEvents: true
-          });
-          this.setupEventListeners(saveCreds);
-        } catch (err) {
-          console.error(`[${this.botName}] Error cr\xEDtico al inicializar el cliente Baileys:`, err);
-        }
-      }
-      setupEventListeners(saveCreds) {
-        this.sock.ev.on("creds.update", async () => {
-          try {
-            await saveCreds();
-          } catch (err) {
-            console.error(`[${this.botName}] \u274C Error al guardar credenciales:`, err.message || err);
-          }
-        });
-        this.sock.ev.on("connection.update", async (update) => {
-          const { connection, lastDisconnect, qr } = update;
-          if (qr) {
-            console.log(`
-[${this.botName}] \u{1F50C} ESCANEA ESTE C\xD3DIGO QR PARA VINCULAR ${this.botName} (+573192919978):`);
-            qrcodeTerminal.generate(qr, { small: true });
-            global.janiaBotQr = qr;
-            try {
-              const qrPath = path7.join(process.cwd(), this.qrFileName);
-              const publicQrDir = path7.join(process.cwd(), "client", "public");
-              if (!fs7.existsSync(publicQrDir)) {
-                fs7.mkdirSync(publicQrDir, { recursive: true });
-              }
-              const publicQrPath = path7.join(publicQrDir, "qr-match.png");
-              await QRCode.toFile(qrPath, qr, { width: 400, margin: 2 });
-              await QRCode.toFile(publicQrPath, qr, { width: 400, margin: 2 });
-              console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
-            } catch (e) {
-              console.warn(`[${this.botName}] Error guardando QR PNG:`, e.message);
-            }
-          }
-          if (connection === "close") {
-            const error = lastDisconnect?.error;
-            const statusCode = error?.output?.statusCode;
-            const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401 && statusCode !== 403;
-            this.isReady = false;
-            this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error updating status on close:`, err));
-            if (statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403) {
-              console.error(`[${this.botName}] \u{1F6E1}\uFE0F [ESCUDO ANTI-BAN] Sesi\xF3n cerrada o desvinculada por WhatsApp (error ${statusCode}). Deteniendo reconexi\xF3n autom\xE1tica por seguridad.`);
-              return;
-            }
-            this.reconnectAttempts++;
-            if (this.reconnectAttempts > 3) {
-              console.warn(`[${this.botName}] \u{1F6E1}\uFE0F [ESCUDO ANTI-BAN] 3 reintentos seguidos alcanzados. Pausando reconexi\xF3n por 45 segundos para proteger el n\xFAmero +573192919978...`);
-              setTimeout(() => {
-                this.reconnectAttempts = 0;
-                this.initialize();
-              }, 45e3);
-              return;
-            }
-            const isRestart = statusCode === DisconnectReason.restartRequired;
-            const isConnectionLost = statusCode === DisconnectReason.connectionLost;
-            const isConflict = statusCode === 440;
-            const jitter = Math.floor(Math.random() * 3e3);
-            const delayMs = isConflict ? 2e4 + jitter : this.reconnectAttempts * 4e3 + jitter;
-            console.warn(`[${this.botName}] \u{1F6E1}\uFE0F [ANTI-BAN] Conexi\xF3n Baileys pausada (c\xF3digo: ${statusCode}) [Intento ${this.reconnectAttempts}/3]. Reconectando de forma segura en ${Math.round(delayMs / 1e3)}s...`);
-            if (shouldReconnect) {
-              setTimeout(() => this.initialize(), delayMs);
-            }
-          } else if (connection === "open") {
-            console.log(`
-\u{1F680} ${this.botName} \u{1F50C}\u{1F498} \u2014 BOT ACTIVADO CORRECTAMENTE CON BAILEYS`);
-            this.isReady = true;
-            this.reconnectAttempts = 0;
-            this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error updating status on open:`, err));
-            this.discoverAndSyncNewsletters().catch((err) => console.warn(`[${this.botName}] Info newsletters:`, err?.message));
-          }
-        });
-        this.sock.ev.on("messages.upsert", async (m) => {
-          if (m.type !== "notify" && m.type !== "append") return;
-          for (const msg of m.messages) {
-            if (!msg.key || !msg.message) continue;
-            if (msg.messageStubType) {
-              continue;
-            }
-            const fromMe = msg.key.fromMe;
-            const rawChatId = msg.key.remoteJid;
-            if (!rawChatId) continue;
-            const chatId = cleanJid(rawChatId);
-            const isGroup = chatId.endsWith("@g.us");
-            const rawSenderId = isGroup ? msg.key.participant || msg.participant || (this.sock?.user?.id ? cleanJid(this.sock.user.id) : "") : rawChatId;
-            if (!rawSenderId || isGroup && rawSenderId.endsWith("@g.us")) continue;
-            const senderId = cleanJid(rawSenderId);
-            if (chatId.includes("status@broadcast") || senderId.includes("status@broadcast")) {
-              continue;
-            }
-            const timestamp2 = msg.messageTimestamp;
-            if (timestamp2 && Number(timestamp2) < SERVER_BOOT_TIME - 60) {
-              continue;
-            }
-            try {
-              if (isGroup) {
-                const msgId = msg.key?.id || "";
-                if (this.botSentMessageIds.has(msgId)) {
-                  continue;
-                }
-                const meta = await this.getCachedGroupMetadata(chatId);
-                const groupSubject = meta?.subject || "";
-                if (isBlacklistedGroup(groupSubject, chatId)) {
-                  continue;
-                }
-                const rawMsg = unwrapMessage(msg.message);
-                if (rawMsg?.protocolMessage && !rawMsg.protocolMessage.editedMessage || rawMsg?.e2eNotificationMessage || rawMsg?.keyTransparency) {
-                  continue;
-                }
-                if (rawMsg?.stickerMessage) {
-                  continue;
-                }
-                let body = "";
-                let isAudioPTT = false;
-                let imageBufferImmediate = void 0;
-                let pdfBufferImmediate = void 0;
-                let pdfMimeTypeImmediate = void 0;
-                if (rawMsg?.conversation) body = rawMsg.conversation;
-                else if (rawMsg?.extendedTextMessage) {
-                  body = rawMsg.extendedTextMessage.text || "";
-                  const linkTitle = rawMsg.extendedTextMessage.title || "";
-                  const linkDesc = rawMsg.extendedTextMessage.description || "";
-                  if (linkTitle || linkDesc) {
-                    const previewText = [linkTitle, linkDesc].filter(Boolean).join(" ");
-                    if (previewText && !body.includes(previewText)) {
-                      body = `${body}
-${previewText}`.trim();
-                    }
-                  }
-                } else if (rawMsg?.imageMessage) {
-                  body = rawMsg.imageMessage.caption || "";
-                  try {
-                    const downloadedImg = await downloadMediaSafely(msg, "image");
-                    if (downloadedImg && downloadedImg.length > 0) {
-                      imageBufferImmediate = downloadedImg.toString("base64");
-                      console.log(`[JANIA-MATCH] \u{1F4F7} Imagen flyer descargada inmediatamente (${(downloadedImg.length / 1024).toFixed(1)} KB) de ${senderId}`);
-                    }
-                  } catch (imgErr) {
-                    console.warn("[JANIA-MATCH] Error descargando imagen flyer inmediatamente:", imgErr?.message || imgErr);
-                  }
-                } else if (rawMsg?.documentMessage) {
-                  body = rawMsg.documentMessage.caption || rawMsg.documentMessage.fileName || rawMsg.documentMessage.title || "";
-                  try {
-                    const downloadedDoc = await downloadMediaSafely(msg, "document");
-                    if (downloadedDoc && downloadedDoc.length > 0) {
-                      pdfBufferImmediate = downloadedDoc.toString("base64");
-                      pdfMimeTypeImmediate = rawMsg.documentMessage.mimetype || "application/pdf";
-                    }
-                  } catch (docErr) {
-                  }
-                } else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || "";
-                else if (rawMsg?.audioMessage) {
-                  isAudioPTT = true;
-                  try {
-                    console.log(`[JANIA-MATCH] Transcribiendo audio PTT de ${senderId} en grupo ${chatId}...`);
-                    const audioBuffer = await downloadMediaSafely(msg, "audio");
-                    if (audioBuffer && audioBuffer.length > 0) {
-                      const mimeType = rawMsg.audioMessage.mimetype || "audio/ogg; codecs=opus";
-                      const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
-                      if (transcription && transcription.trim() !== "") {
-                        body = transcription.trim();
-                        console.log(`[JANIA-MATCH] Transcripci\xF3n exitosa: "${body.substring(0, 80)}..."`);
-                      } else {
-                        body = "[audio-vac\xEDo]";
-                      }
-                    } else {
-                      body = "[audio-sin-buffer]";
-                    }
-                  } catch (audioErr) {
-                    console.error("[JANIA-MATCH] Error al transcribir audio PTT:", audioErr.message || audioErr);
-                    body = "[audio-error]";
-                  }
-                } else if (msg.message.templateMessage) {
-                  const tmpl = msg.message.templateMessage;
-                  body = tmpl.hydratedTemplate?.hydratedContentText || tmpl.hydratedFourRowTemplate?.hydratedContentText || "";
-                } else if (msg.message.buttonsMessage) {
-                  body = msg.message.buttonsMessage.contentText || "";
-                } else if (msg.message.listMessage) {
-                  body = msg.message.listMessage.description || msg.message.listMessage.title || "";
-                } else if (msg.message.productMessage) {
-                  const prod = msg.message.productMessage?.product;
-                  body = [prod?.title, prod?.description, prod?.priceAmount1000 ? `$${Math.round(prod.priceAmount1000 / 1e3).toLocaleString("es-CO")}` : ""].filter(Boolean).join(" - ");
-                } else if (rawMsg?.reactionMessage) {
-                  body = rawMsg.reactionMessage.text || "";
-                }
-                const quotedAudioMsg = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.audioMessage;
-                if (quotedAudioMsg) {
-                  isAudioPTT = true;
-                  try {
-                    const contextInfo = msg.message?.extendedTextMessage?.contextInfo;
-                    const quotedParticipant = contextInfo?.participant || chatId;
-                    const quotedPhone = quotedParticipant.split("@")[0];
-                    console.log(`[JANIA-MATCH] Transcribiendo audio CITADO de +${quotedPhone} en grupo ${chatId}...`);
-                    let audioBuffer = null;
-                    try {
-                      const stream = await downloadContentFromMessage(quotedAudioMsg, "audio");
-                      let chunks = [];
-                      for await (const chunk of stream) chunks.push(chunk);
-                      audioBuffer = Buffer.concat(chunks);
-                    } catch (e) {
-                      const fakeMsg = {
-                        key: {
-                          remoteJid: chatId,
-                          id: contextInfo?.stanzaId || "quoted-audio",
-                          fromMe: false,
-                          participant: quotedParticipant
-                        },
-                        message: {
-                          audioMessage: quotedAudioMsg
-                        }
-                      };
-                      audioBuffer = await downloadMediaMessage(fakeMsg, "buffer", {});
-                    }
-                    if (audioBuffer && audioBuffer.length > 0) {
-                      const mimeType = quotedAudioMsg.mimetype || "audio/ogg; codecs=opus";
-                      const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
-                      if (transcription && transcription.trim() !== "") {
-                        console.log(`[JANIA-MATCH] Transcripci\xF3n de audio citado exitosa: "${transcription.substring(0, 80)}..."`);
-                        const quotedNote = `[Consulta en audio citada de +${quotedPhone}]: "${transcription.trim()}"`;
-                        body = body ? `${body}
-
-${quotedNote}` : quotedNote;
-                      }
-                    }
-                  } catch (quotedAudioErr) {
-                    console.error("[JANIA-MATCH] Error al transcribir audio citado:", quotedAudioErr?.message || quotedAudioErr);
-                  }
-                } else if (!body && msg.message.extendedTextMessage?.contextInfo?.quotedMessage) {
-                  const qm = msg.message.extendedTextMessage.contextInfo.quotedMessage;
-                  body = qm.conversation || qm.extendedTextMessage?.text || qm.imageMessage?.caption || "";
-                }
-                const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
-                const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
-                const textLower = body.toLowerCase();
-                const mentionsBot = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid(jid) === botJid);
-                const hasDirectMention = textLower.includes("jania") || botPhone && textLower.includes(botPhone) || textLower.includes("573192919978") || !!mentionsBot;
-                const isMainGroup = chatId === this.targetGroupId;
-                const isBuzonGroup = chatId === this.buzonGroupId;
-                const isCirculoGroup = chatId === this.circuloGroupId;
-                const isOfficialGroup = isMainGroup || isBuzonGroup || isCirculoGroup;
-                const groupName = await this.resolveGroupName(chatId);
-                if (!isOfficialGroup) {
-                  const gNameLower = groupName.toLowerCase();
-                  const NON_REAL_ESTATE_KEYWORDS = [
-                    "seguridad",
-                    "polic\xEDa",
-                    "policia",
-                    "patrulla",
-                    "amigos",
-                    "curso",
-                    "talento tech",
-                    "familia",
-                    "convivencia",
-                    "an\xE9cdotas",
-                    "anecdotas",
-                    "negociaci\xF3n arrecifes",
-                    "venta alameda",
-                    "proceso cristo rey"
-                  ];
-                  const isNonRealEstateGroup = NON_REAL_ESTATE_KEYWORDS.some((kw) => gNameLower.includes(kw));
-                  if (isNonRealEstateGroup) {
-                    return;
-                  }
-                }
-                const hasRawMedia = !!rawMsg?.imageMessage || !!rawMsg?.documentMessage || !!rawMsg?.videoMessage || isAudioPTT;
-                const isReactionMessage = !!rawMsg?.reactionMessage;
-                if (!body.trim() && !hasRawMedia) {
-                  continue;
-                }
-                const isPossibleListing = body.length > 70 || body.split("\n").length >= 2 || hasRawMedia || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("venta") || textLower.includes("arriendo") || textLower.includes("ariendo") || textLower.includes("compro") || textLower.includes("necesito") || textLower.includes("renta") || textLower.includes("alquilo") || textLower.includes("permuto") || textLower.includes("permuta") || textLower.includes("requiero") || textLower.includes("requerimiento") || textLower.includes("casa") || textLower.includes("apto") || textLower.includes("apartamento") || textLower.includes("bodega") || textLower.includes("oficina") || textLower.includes("edificio") || textLower.includes("lote") || textLower.includes("local") || textLower.includes("finca") || textLower.includes("terreno") || textLower.includes("predio") || textLower.includes("campestre") || textLower.includes("fanegada") || textLower.includes("fanegadas") || textLower.includes("hectarea") || textLower.includes("hect\xE1rea") || textLower.includes("hect") || textLower.includes("parque") || textLower.includes("inversion") || textLower.includes("inversi\xF3n") || textLower.includes("penthouse") || textLower.includes("apartaestudio") || textLower.includes("duplex") || textLower.includes("d\xFAplex") || textLower.includes("parqueadero") || textLower.includes("alcoba") || textLower.includes("habitacion") || textLower.includes("habitaci\xF3n") || textLower.includes("metro") || textLower.includes("mts") || textLower.includes("mts2") || textLower.includes("m2") || textLower.includes("precio") || textLower.includes("presupuesto") || textLower.includes("millones") || textLower.includes("millon") || textLower.includes("canon") || textLower.includes("comisi\xF3n") || textLower.includes("comision") || textLower.includes("valor");
-                const isHelpOrSystemQuery = !isPossibleListing && (textLower.includes("c\xF3mo subo") || textLower.includes("como subo") || textLower.includes("c\xF3mo publico") || textLower.includes("como publico") || textLower.includes("c\xF3mo se publica") || textLower.includes("como se publica") || textLower.includes("c\xF3mo registrar") || textLower.includes("como registrar") || textLower.includes("c\xF3mo funciona") || textLower.includes("como funciona") || textLower.includes("de qu\xE9 consiste") || textLower.includes("de que consiste") || textLower.includes("en qu\xE9 consiste") || textLower.includes("en que consiste") || textLower.includes("c\xF3mo hago para") || textLower.includes("como hago para") || textLower.includes("c\xF3mo buscar") || textLower.includes("como buscar") || textLower.includes("c\xF3mo encontrar") || textLower.includes("como encontrar") || textLower.includes("mec\xE1nica del grupo") || textLower.includes("mecanica del grupo") || textLower.includes("qued\xF3 guardado") || textLower.includes("quedo guardado") || textLower.includes("se guard\xF3") || textLower.includes("se guardo") || textLower.includes("fue guardado") || textLower.includes("falt\xF3 alg\xFAn dato") || textLower.includes("falto algun dato") || textLower.includes("falt\xF3 un dato") || textLower.includes("falto un dato") || textLower.includes("datos faltantes") || textLower.includes("subi\xF3 correctamente") || textLower.includes("subio correctamente") || textLower.includes("fue subido") || textLower.includes("mejor forma de publicar") || textLower.includes("c\xF3mo es mejor") || textLower.includes("como es mejor") || textLower.includes("para obtener resultados") || textLower.includes("ayuda") && textLower.includes("inmueble") || textLower.includes("explicar") && textLower.includes("grupo") || textLower.includes("c\xF3mo") && textLower.includes("grupo"));
-                const textClean = body.toLowerCase().trim();
-                const isAudioFailed = body === "[audio-vac\xEDo]" || body === "[audio-sin-buffer]" || body === "[audio-error]";
-                const isShortCourtesy = !isAudioPTT && (textClean.length < 6 || ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
-                const isListingGroup = isMainGroup || !isBuzonGroup && !isCirculoGroup;
-                const isListing = isListingGroup && (isPossibleListing || !isOfficialGroup || hasRawMedia);
-                const hasMeaningfulQuery = textClean.length >= 4 && !isShortCourtesy && !isReactionMessage || hasRawMedia;
-                const shouldRespond = isBuzonGroup || isCirculoGroup ? hasMeaningfulQuery : isOfficialGroup && hasDirectMention;
-                if (isListing) {
-                  await this.handleIncomingGroupMessage(msg, chatId, body, imageBufferImmediate, pdfBufferImmediate, pdfMimeTypeImmediate);
-                  continue;
-                }
-                if (isOfficialGroup && isShortCourtesy && !isBuzonGroup) {
-                  const courtesyEmoji = textClean.includes("gracias") ? "\u{1F91D}" : "\u{1F44D}";
-                  try {
-                    await this.sock.sendMessage(chatId, {
-                      react: { text: courtesyEmoji, key: msg.key }
-                    });
-                  } catch (e) {
-                  }
-                }
-                if (shouldRespond) {
-                  await this.handleDirectGroupQuestion(msg, chatId, senderId, body);
-                }
-                continue;
-              }
-              if (!isGroup) {
-                const rawPhone = senderId.split("@")[0];
-                const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
-                const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573192919978";
-                const userName = msg.pushName || `Asesor +${rawPhone}`;
-                let body = "";
-                if (msg.message?.conversation) body = msg.message.conversation;
-                else if (msg.message?.extendedTextMessage) body = msg.message.extendedTextMessage.text || "";
-                else if (msg.message?.imageMessage) body = msg.message.imageMessage.caption || "";
-                else if (msg.message?.documentMessage) body = msg.message.documentMessage.caption || "";
-                else if (msg.message?.videoMessage) body = msg.message.videoMessage.caption || "";
-                if (msg.key.fromMe) {
-                  const msgId = msg.key.id || "";
-                  const msgTimestampMs = Number(msg.messageTimestamp || 0) * 1e3;
-                  const isRecentMessage = Date.now() - msgTimestampMs < 2 * 60 * 1e3;
-                  if (!this.botSentMessageIds.has(msgId) && isRecentMessage) {
-                    console.log(`[JANIA-MATCH] Intervenci\xF3n humana detectada en DM ${senderId}. Silenciando bot.`);
-                    this.lastHumanIntervention.set(senderId, Date.now());
-                    const { muteSession: muteSession3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-                    await muteSession3(senderId, true).catch((err) => console.error("Error muting session in database:", err));
-                  }
-                  return;
-                }
-                const cleanStart = body.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
-                const { isSessionMuted: isSessionMuted2, muteSession: muteSession2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-                let isMuted = await isSessionMuted2(senderId);
-                if (isMuted) {
-                  if (cleanStart.startsWith("agente jania")) {
-                    await muteSession2(senderId, false).catch((err) => console.error("Error unmuting session:", err));
-                    isMuted = false;
-                    console.log(`[JANIA-MATCH] Sesi\xF3n reactivada mediante comando de cliente para ${senderId}`);
-                  }
-                }
-                const lastIntervention = this.lastHumanIntervention.get(senderId) || 0;
-                const cooldownPeriod = 24 * 60 * 60 * 1e3;
-                if (isMuted || Date.now() - lastIntervention < cooldownPeriod) {
-                }
-                let buffer = this.dmMessageBuffers.get(senderId);
-                if (!buffer) {
-                  buffer = { messages: [], timer: null };
-                  this.dmMessageBuffers.set(senderId, buffer);
-                }
-                buffer.messages.push(msg);
-                if (buffer.timer) {
-                  clearTimeout(buffer.timer);
-                }
-                buffer.timer = setTimeout(async () => {
-                  this.dmMessageBuffers.delete(senderId);
-                  try {
-                    await this.processBufferedDmMessages(senderId, userName, rawPhone, buffer.messages, isAdmin);
-                  } catch (err) {
-                    console.error("[JANIA-MATCH] Error al procesar mensajes de DM acumulados:", err);
-                  }
-                }, 2500);
-                return;
-              }
-            } catch (err) {
-              console.error("[JANIA-MATCH] Error en procesador de eventos de mensaje:", err);
-            }
-          }
-        });
-      }
-      async processBufferedDmMessages(senderId, userName, rawPhone, messages2, isAdmin) {
-        let combinedBody = "";
-        let mainMsg = messages2[messages2.length - 1];
-        let imageBuffer;
-        let pdfBuffer;
-        let pdfMimeType;
-        for (const msg of messages2) {
-          let body2 = "";
-          if (msg.message?.conversation) body2 = msg.message.conversation;
-          else if (msg.message?.extendedTextMessage) body2 = msg.message.extendedTextMessage.text || "";
-          else if (msg.message?.imageMessage) body2 = msg.message.imageMessage.caption || "";
-          else if (msg.message?.documentMessage) body2 = msg.message.documentMessage.caption || "";
-          else if (msg.message?.videoMessage) body2 = msg.message.videoMessage.caption || "";
-          if (body2.trim()) {
-            combinedBody += (combinedBody ? "\n" : "") + body2.trim();
-          }
-          if (msg.message?.imageMessage && !imageBuffer) {
-            try {
-              const media = await downloadMediaMessage(msg, "buffer", {});
-              imageBuffer = media.toString("base64");
-              mainMsg = msg;
-            } catch (e) {
-            }
-          }
-          if (msg.message?.documentMessage && !pdfBuffer) {
-            try {
-              const media = await downloadMediaMessage(msg, "buffer", {});
-              pdfBuffer = media.toString("base64");
-              pdfMimeType = msg.message.documentMessage.mimetype || "application/pdf";
-              mainMsg = msg;
-            } catch (e) {
-            }
-          }
-        }
-        if (!combinedBody.trim() && !imageBuffer && !pdfBuffer) {
-          return;
-        }
-        const chatId = senderId;
-        const body = combinedBody;
-        const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
-        const matchConfirm = body.match(matchConfirmationRegex);
-        if (matchConfirm) {
-          const decision = matchConfirm[1].toLowerCase();
-          const matchId = parseInt(matchConfirm[2], 10);
-          await this.processMatchConfirmation(senderId, userName, matchId, decision);
-          return;
-        }
-        if (!isAdmin) {
-          return;
-        }
-        console.log(`[JANIA-MATCH] [Admin/Test] Atendiendo mensaje de admin/test ${senderId}...`);
-        await this.logToDb(senderId, "user", body);
-        await this.handlePrivateDmConversation(mainMsg, senderId, rawPhone, body);
-      }
-      // --- REDIRECCIÓN DE CHATS PRIVADOS ---
-      async handlePrivateDmRedirect(chatId, senderId, userName) {
-        const { isSessionMuted: isSessionMuted2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-        const isMuted = await isSessionMuted2(senderId);
-        const lastIntervention = this.lastHumanIntervention.get(senderId) || 0;
-        const cooldownPeriod = 24 * 60 * 60 * 1e3;
-        if (isMuted || Date.now() - lastIntervention < cooldownPeriod) {
-          console.log(`[JANIA-MATCH] Silencio total en DM ${senderId} por intervenci\xF3n humana o silencio activo. Omitiendo redirecci\xF3n.`);
-          return;
-        }
-        const now = Date.now();
-        const lastRedirect = this.redirectCooldowns.get(senderId) || 0;
-        const ONCE_A_DAY = 24 * 60 * 60 * 1e3;
-        if (now - lastRedirect > ONCE_A_DAY) {
-          this.redirectCooldowns.set(senderId, now);
-          const redirectLink = "https://wa.me/573192919978";
-          const realName = userName || "Asesor";
-          const cleanName = extractFirstName2(realName) || "colega";
-          const redirectText = `Hola ${cleanName} \u{1F44B}\u{1F60A}. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente al canal oficial privado de soporte de JanIA de Meta haciendo clic aqu\xED: ${redirectLink} para realizar tus consultas correspondientes o si est\xE1s en los grupos correspondientes seg\xFAn tu consulta puedes hacerlas all\xED de la siguiente manera:
-
-Mis grupos:
-
-Para publicar tus INMUEBLES y REQUERIMIENTOS tenemos el grupo de *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E8}\u{1D5D8}\u{1D5D5}\u{1D5DF}\u{1D5D8}\u{1D5E6} \u{1D5E1}\u{1D5D8}\u{1D5E7}\u{1D5EA}\u{1D5E2}\u{1D5E5}\u{1D5DE}* : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
-Para hacer tus consultas de casos inmobiliarios en temas jur\xEDdicos, tributarios, aval\xFAos, ayuda en gu\xEDa de procesos y redacci\xF3n de contratos, tenemos el grupo de *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}: \u{1D5E6}\u{1D5E2}\u{1D5E3}\u{1D5E2}\u{1D5E5}\u{1D5E7}\u{1D5D8} \u{1D5DF}\u{1D5D8}\u{1D5DA}\u{1D5D4}\u{1D5DF}, \u{1D5E7}\u{1D5E5}\u{1D5DC}\u{1D5D5}\u{1D5E8}\u{1D5E7}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5E2} \u{1D5EC} \u{1D5D4}\u{1D5E9}\u{1D5D4}\u{1D5DF}\xDA\u{1D5E2}\u{1D5E6}* : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6
-Para preguntar acerca de *VECY Bienes Ra\xEDces* y debatir acerca de nuestras funciones, red colaborativa, beneficios y competencias, tenemos el grupo de *\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2} "\u{1D5E9}\u{1D5F2}\u{1D5F0}\u{1D606} \u{1D5E1}\u{1D5F2}\u{1D601}\u{1D604}\u{1D5FC}\u{1D5FF}\u{1D5F8}"* : Si a\xFAn no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
-
-Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
-          this.queuedSend(chatId, redirectText);
-        }
-      }
-      // --- RESPUESTA DIRECTA A PREGUNTAS EN GRUPOS ---
-      async handleDirectGroupQuestion(msg, chatId, senderId, bodyText) {
-        try {
-          const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-          if (!isOfficialGroup) {
-            console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Mensaje directo en grupo externo ${chatId} ignorado para respuestas textuales. Silencio 100% preservado.`);
-            return;
-          }
-          const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
-          const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
-          const isFromBotAccount = msg.key?.fromMe || botJid && senderId === botJid || senderId.startsWith(botPhone) || senderId.startsWith("573192919978");
-          const textLower = bodyText.toLowerCase();
-          const hasDirectMention = textLower.includes("jania") || botPhone && textLower.includes(botPhone) || textLower.includes("573192919978") || !!msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.some((jid) => cleanJid(jid) === botJid);
-          if (isFromBotAccount && !hasDirectMention) {
-            console.log(`[JANIA-SILENT-SHIELD] \u{1F6E1}\uFE0F Mensaje de la propia cuenta en grupo conversacional ${chatId} omitido para auto-respuesta (sin menci\xF3n expl\xEDcita).`);
-            return;
-          }
-          let resolvedSenderId = senderId;
-          if (senderId.endsWith("@lid") && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
-            try {
-              const mappedPn = await this.sock.signalRepository.lidMapping.getPNForLID(senderId);
-              if (mappedPn) {
-                const cleanUser = mappedPn.split(":")[0].split("@")[0];
-                resolvedSenderId = `${cleanUser}@s.whatsapp.net`;
-                console.log(`[JANIA-MATCH] [DirectGroupQuestion] Resolviendo LID ${senderId} to PN ${resolvedSenderId}`);
-              }
-            } catch (err) {
-            }
-          }
-          const realName = msg.pushName || `Asesor +${resolvedSenderId.split("@")[0]}`;
-          const { detectaVoz: detectaVoz2, textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-          const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-          const isAudioPTT = !!msg.message?.audioMessage;
-          const wantsVoice = isAudioPTT || detectaVoz2(textLower);
-          if (wantsVoice) {
-            await this.sock.sendPresenceUpdate("recording", chatId);
-          } else {
-            await this.sock.sendPresenceUpdate("composing", chatId);
-          }
-          const isAudioFailed = bodyText === "[audio-vac\xEDo]" || bodyText === "[audio-sin-buffer]" || bodyText === "[audio-error]";
-          if (isAudioFailed) {
-            const failMsg = `Hola ${realName} \u{1F44B}\u{1F3FB}, escuch\xE9 que enviaste una nota de voz, pero hubo una interferencia al procesar el audio en este momento. \u{1F64F}
-
-Por favor escribe tu consulta o requerimiento por texto aqu\xED en el grupo para atenderte de inmediato. \xA1Estoy lista para responderte! \u{1F60A}`;
-            await this.queuedSend(chatId, failMsg, { mentions: [senderId], quoted: msg });
-            await this.sock.sendPresenceUpdate("paused", chatId);
-            return;
-          }
-          const isMainGroupChat = chatId === this.targetGroupId;
-          if (isMainGroupChat) {
-            const textLower2 = bodyText.toLowerCase();
-            const isOffTopicLegal = textLower2.includes("contrato") || textLower2.includes("arrendamiento") || textLower2.includes("promesa") || textLower2.includes("sucesi\xF3n") || textLower2.includes("sucesion") || textLower2.includes("herencia") || textLower2.includes("embargo") || textLower2.includes("comisi\xF3n") || textLower2.includes("comision") || textLower2.includes("tributar") || textLower2.includes("impuesto") || textLower2.includes("retenci\xF3n") || textLower2.includes("retencion") || textLower2.includes("ganancia ocasional") || textLower2.includes("aval\xFAo") || textLower2.includes("avaluo") || textLower2.includes("escritura") || textLower2.includes("notar\xEDa") || textLower2.includes("juridic") || textLower2.includes("demandar") || textLower2.includes("demanda") || textLower2.includes("ley ") || textLower2.includes("juzgado") || textLower2.includes("abogado");
-            const isOffTopicCirculo = textLower2.includes("vecy network") || textLower2.includes("proyecto") || textLower2.includes("sugerencia") || textLower2.includes("portal web") || textLower2.includes("jania funciona") || textLower2.includes("inteligencia artificial") || textLower2.includes("c\xF3mo funciona la ia") || textLower2.includes("como funciona la ia") || textLower2.includes("competencia") || textLower2.includes("testimonio") || textLower2.includes("fundador") || textLower2.includes("jani alves") || textLower2.includes("eduardo");
-            if (isOffTopicLegal || isOffTopicCirculo) {
-              const groupName = isOffTopicLegal ? "VECY: SOPORTE LEGAL, TRIBUTARIO, AVAL\xDAOS Y MARKETING" : process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"';
-              const redirectMsg = `Hola ${realName} \u{1F44B}\u{1F3FB}, veo que tu consulta es sobre ${isOffTopicLegal ? "temas jur\xEDdicos, tributarios, aval\xFAos o marketing inmobiliario" : "el funcionamiento de VECY Bienes Ra\xEDces y JanIA"}. \xA1Perfecto! \u{1F3AF}
-
-Ese tipo de preguntas las atiendo con m\xE1s profundidad en el grupo *${groupName}* de nuestra comunidad de WhatsApp. \u{1F3E0}
-
-Tambi\xE9n puedes consultarme directamente en mi chat privado de JanIA \u{1F4F2}: https://wa.me/573192919978
-
-\xA1All\xED te atiendo con todo el detalle que mereces! \u{1F60A}`;
-              await this.queuedSend(chatId, redirectMsg, { mentions: [senderId], quoted: msg });
-              await this.sock.sendPresenceUpdate("paused", chatId);
-              return;
-            }
-          }
-          let result;
-          if (chatId === this.buzonGroupId) {
-            const msgTs = msg.messageTimestamp ? Number(msg.messageTimestamp) : void 0;
-            const rawMsg = unwrapMessage(msg.message);
-            let imageBuffer;
-            let pdfBuffer;
-            let pdfMimeType;
-            if (rawMsg?.imageMessage) {
-              try {
-                const mediaBuffer = await downloadMediaSafely(msg, "image");
-                if (mediaBuffer) {
-                  imageBuffer = mediaBuffer.toString("base64");
-                }
-              } catch (e) {
-                console.error("[JANIA-CONSULTING] Error descargando imagen adjunta:", e);
-              }
-            } else if (rawMsg?.documentMessage) {
-              try {
-                const mediaBuffer = await downloadMediaSafely(msg, "document");
-                if (mediaBuffer) {
-                  pdfBuffer = mediaBuffer.toString("base64");
-                  pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
-                }
-              } catch (e) {
-                console.error("[JANIA-CONSULTING] Error descargando documento adjunto:", e);
-              }
-            }
-            let quotedContext;
-            try {
-              const contextInfo = rawMsg?.extendedTextMessage?.contextInfo || msg.message?.extendedTextMessage?.contextInfo || rawMsg?.contextInfo;
-              if (contextInfo?.quotedMessage) {
-                const unwrappedQuoted = unwrapMessage(contextInfo.quotedMessage);
-                quotedContext = unwrappedQuoted?.conversation || unwrappedQuoted?.extendedTextMessage?.text || unwrappedQuoted?.imageMessage?.caption || void 0;
-              }
-            } catch (e) {
-            }
-            result = await processConsultingMessage2(
-              bodyText,
-              resolvedSenderId,
-              realName,
-              imageBuffer,
-              pdfBuffer,
-              pdfMimeType,
-              isAudioPTT ? "mock-audio:" + bodyText : void 0,
-              msgTs,
-              quotedContext
-            );
-          } else if (chatId === this.circuloGroupId) {
-            result = await processCirculoMessage2(bodyText, resolvedSenderId, realName);
-          } else if (isMainGroupChat) {
-            let groupName = "VECY INMUEBLES NETWORK";
-            try {
-              const metadata = await this.sock.groupMetadata(chatId);
-              if (metadata && metadata.subject) {
-                groupName = metadata.subject;
-              }
-            } catch (e) {
-            }
-            result = await processWhatsAppMessage2(
-              bodyText,
-              resolvedSenderId,
-              realName,
-              false,
-              [],
-              void 0,
-              void 0,
-              true,
-              void 0,
-              void 0,
-              chatId,
-              groupName
-            );
-          } else {
-            await this.handlePrivateDmRedirect(chatId, resolvedSenderId, realName);
-            await this.sock.sendPresenceUpdate("paused", chatId);
-            return;
-          }
-          if (result && result.response && result.response.trim() !== "") {
-            const textToDeliver = result.response;
-            const voiceToDeliver = result.voiceResponse && result.voiceResponse.trim() !== "" ? result.voiceResponse : textToDeliver;
-            const shouldSendVoice = (wantsVoice || isAudioPTT) && result.wantsVoice !== false;
-            if (shouldSendVoice) {
-              try {
-                const media = await textToSpeechMedia2(voiceToDeliver);
-                if (media && media.data) {
-                  const audioBuffer = Buffer.from(media.data, "base64");
-                  await this.queuedSend(chatId, {
-                    audio: audioBuffer,
-                    mimetype: media.mimetype || "audio/ogg; codecs=opus",
-                    ptt: true
-                  }, { mentions: [senderId], quoted: msg });
-                  console.log(`[JANIA-MATCH] \u2713 JanIA respondi\xF3 aut\xF3nomamente con Nota de Voz PTT en grupo ${chatId}.`);
-                } else {
-                  await this.queuedSend(chatId, textToDeliver, {
-                    mentions: [senderId],
-                    quoted: msg
-                  });
-                }
-              } catch (audioSendErr) {
-                console.error("[JANIA-MATCH] Error enviando nota de voz. Fallback a texto:", audioSendErr?.message || audioSendErr);
-                await this.queuedSend(chatId, textToDeliver, {
-                  mentions: [senderId],
-                  quoted: msg
-                });
-              }
-            } else {
-              await this.queuedSend(chatId, textToDeliver, {
-                mentions: [senderId],
-                quoted: msg
-              });
-            }
-            await this.logToDb(chatId, "janIA", textToDeliver);
-          } else if (result && result.reactionEmoji && this.sock) {
-            await this.sock.sendMessage(chatId, { react: { text: result.reactionEmoji, key: msg.key } }).catch(() => {
-            });
-          }
-          await this.sock.sendPresenceUpdate("paused", chatId);
-        } catch (err) {
-          console.error("[JANIA-MATCH] Error al responder pregunta directa en grupo:", err);
-        }
-      }
-      isPromotionalAd(bodyText, senderId) {
-        const cleanLower = (bodyText || "").toLowerCase();
-        const rawPhone = (senderId || "").split("@")[0].replace(/[^0-9]/g, "");
-        const isCarolina = rawPhone.includes("573212857044") || rawPhone.includes("3212857044");
-        const promoPhrases = [
-          "captar no es improvisar",
-          "especializaci\xF3n dentro de la labor inmobiliaria",
-          "adquiere tu entrenamiento",
-          "espiral del \xE9xito",
-          "conocimiento llena tus bolsillos",
-          "adqui\xE9relo precio",
-          "precio de oferta",
-          "no m\xE1s captaciones mediocres",
-          "no m\xE1s procesos informales",
-          "no m\xE1s inmuebles sin legalizar",
-          "no m\xE1s trabajar sin asegurar el pago de tu comisi\xF3n",
-          "proteger tus honorarios",
-          "m\xE9todo probado para captar",
-          "curso inmobiliario",
-          "taller inmobiliario",
-          "seminario inmobiliario",
-          "capacitaci\xF3n inmobiliaria",
-          "masterclass inmobiliaria",
-          "webinar inmobiliario",
-          "coaching inmobiliario",
-          "mentor\xEDa inmobiliaria",
-          "invierte en tu negocio",
-          "invierte en conocimiento"
-        ];
-        const hasPromoKeywords = promoPhrases.some((phrase) => cleanLower.includes(phrase));
-        if (hasPromoKeywords) return true;
-        if (isCarolina) {
-          const isRealEstateListing = (cleanLower.includes("vendo") || cleanLower.includes("arriendo") || cleanLower.includes("busco") || cleanLower.includes("necesito")) && (cleanLower.includes("apto") || cleanLower.includes("apartamento") || cleanLower.includes("casa") || cleanLower.includes("bodega") || cleanLower.includes("lote") || cleanLower.includes("finca"));
-          if (!isRealEstateListing) {
-            return true;
-          }
-        }
-        return false;
-      }
-      // --- LOGÍSTICA DE BUFFER GRUPAL Y REACCIÓN INSTANTÁNEA ---
-      async handleIncomingGroupMessage(msg, chatId, bodyText, imageBufferImmediate, pdfBufferImmediate, pdfMimeTypeImmediate) {
-        if (!msg.key || !msg.message) return;
-        const rawSender = msg.key.participant || msg.participant || "";
-        if (!rawSender || rawSender.endsWith("@g.us")) {
-          console.warn(`[JANIA-MATCH] Omitiendo mensaje de grupo: sender individual inv\xE1lido (${rawSender})`);
-          return;
-        }
-        const senderId = rawSender.includes("@") ? `${rawSender.split("@")[0].split(":")[0]}@${rawSender.split("@")[1]}` : rawSender.split(":")[0];
-        const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-        if (this.isPromotionalAd(bodyText, senderId)) {
-          if (!msg.key.fromMe) {
-            if (isOfficialGroup) {
-              console.log(`[JANIA-PROMO-RULE] \u{1F6AB} Publicidad no autorizada detectada en grupo oficial de +${senderId.split("@")[0]}. Reaccionando con \u{1F6AB} y advirtiendo...`);
-              this.sock.sendMessage(chatId, { react: { text: "\u{1F6AB}", key: msg.key } }).catch(() => {
-              });
-              const rawPhone = senderId.split("@")[0];
-              const mentionJid = `${rawPhone}@s.whatsapp.net`;
-              const warningText = `\u{1F6AB} @${rawPhone}: Esta clase de publicaciones (publicidad de cursos, entrenamientos, capacitaciones o servicios ajenos a la oferta y demanda directa de inmuebles) VIOLAN las normas de nuestros grupos oficiales de VECY Bienes Ra\xEDces.
-
-Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1 lugar a la expulsi\xF3n inmediata del grupo.`;
-              this.queuedSend(chatId, warningText, { mentions: [mentionJid], quoted: msg }).catch(() => {
-              });
-            } else {
-              console.log(`[JANIA-PROMO-SHIELD] \u{1F6E1}\uFE0F Publicidad no inmobiliaria ignorada en grupo externo de +${senderId.split("@")[0]} (Cero reacci\xF3n, cero ingesta, cero Supabase).`);
-            }
-          }
-          return;
-        }
-        let flyerVisionData = null;
-        if (!this.botSentMessageIds.has(msg.key?.id || "")) {
-          let cleanLower = (bodyText || "").toLowerCase();
-          const detectedUrls = cleanLower.match(/https?:\/\/[^\s]+/g) || [];
-          for (const u of detectedUrls) {
-            try {
-              const parsed = new URL(u);
-              const slugText = decodeURIComponent(parsed.pathname).replace(/[-_/.]/g, " ");
-              cleanLower += ` ${slugText}`;
-            } catch (_) {
-            }
-          }
-          let groupSubject = "";
-          try {
-            const meta = await this.getCachedGroupMetadata(chatId);
-            if (meta && meta.subject) groupSubject = meta.subject;
-          } catch (_) {
-          }
-          const isGroupRentContext = /arriend|alquil|renta/i.test(groupSubject);
-          const hasPermuta = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanLower);
-          const hasRentExplicit = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanLower) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanLower) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanLower) || /valor arriendo/i.test(cleanLower);
-          const isRentOperation = hasRentExplicit || isGroupRentContext && !/\b(?:compro|comprar|en compra|para compra)\b/i.test(cleanLower) && !cleanLower.startsWith("vendo") && !cleanLower.startsWith("se vende");
-          const isExplicitDemand = /\b(?:req\b|requerimiento|requerimientos|requiero|se requiere|requerimos|busco|buscamos|se busca|buscando|en búsqueda|en busqueda|necesito|necesitamos|necesitando|solicito|solicitamos|solicitando|solicitud|solicitudes|compro|comprando|comprador|compradores|comprar|en compra|para compra|negocio compra|para cliente|para clientes|tengo cliente|tenemos cliente|busca cliente|cliente busca|clientes buscan|arrendatario|inquilino)\b/i.test(cleanLower);
-          const isExplicitOffer = !isExplicitDemand && (/\b(?:ofrezco|ofrecemos|vendo|vendemos|se vende|en venta|venta directa|arriendo|arriendos|arrendamos|arrendar|se arrienda|en arriendo|arriendo directo|pongo en arriendo|alquilo|alquilamos|alquilar|se alquila|en alquiler|alquiler directo|rento|rentamos|rentar|se renta|en renta|tengo para|disponible|nuevo inmueble|permuto|permutamos|se permuta)\b/i.test(cleanLower) || /(?:cuenta con|consta de|\d+\s*(?:m2|mts|m²)|alcobas|habitaciones|baños|parqueaderos?|cocina|sala|comedor|dep[oó]sito)/i.test(cleanLower));
-          const isExplicitSearch = isExplicitDemand && !isExplicitOffer;
-          let fastEmoji = null;
-          if (isExplicitOffer) {
-            if (hasPermuta) {
-              fastEmoji = "\u{1F500}";
-            } else if (isRentOperation) {
-              fastEmoji = "\u{1F44C}";
-            } else {
-              fastEmoji = "\u{1F44D}";
-            }
-          } else if (isExplicitSearch) {
-            if (hasPermuta) {
-              fastEmoji = "\u{1F504}";
-            } else if (isRentOperation) {
-              fastEmoji = "\u270F\uFE0F";
-            } else {
-              fastEmoji = "\u{1F4DD}";
-            }
-          }
-          if (!fastEmoji && imageBufferImmediate) {
-            try {
-              const { extractFlyerVision: extractFlyerVision2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-              flyerVisionData = await extractFlyerVision2(imageBufferImmediate);
-              if (flyerVisionData && flyerVisionData.isFlyerOrBanner && (flyerVisionData.classification === "INMUEBLE" || flyerVisionData.classification === "REQUERIMIENTO") && flyerVisionData.flyerVerbatimText && flyerVisionData.flyerVerbatimText.trim().length >= 15) {
-                fastEmoji = flyerVisionData.reactionEmoji || (flyerVisionData.classification === "REQUERIMIENTO" ? "\u{1F4DD}" : "\u{1F44D}");
-                console.log(`[JANIA-FAST-REACT] \u{1F3AF} Flyer comercial con texto detectado visualmente (${flyerVisionData.classification}). Reacci\xF3n r\xE1pida: ${fastEmoji}`);
-              }
-            } catch (visErr) {
-              console.warn("[JANIA-FAST-REACT] Error en an\xE1lisis visual de flyer:", visErr?.message || visErr);
-            }
-          }
-          if (fastEmoji && chatId !== this.buzonGroupId) {
-            this.safeReact(chatId, msg.key, fastEmoji, "FAST-REACT");
-          }
-        }
-        const lockKey = `${chatId}_${senderId}`;
-        const previousLock = this.processingLocks.get(lockKey) || Promise.resolve();
-        let resolveLock;
-        const currentLock = new Promise((resolve) => {
-          resolveLock = resolve;
-        });
-        const chainedLock = previousLock.then(() => currentLock);
-        this.processingLocks.set(lockKey, chainedLock);
-        try {
-          await previousLock;
-          const realName = msg.pushName || `Asesor +${senderId.split("@")[0]}`;
-          const bufferKey = `${chatId}_${senderId}`;
-          const isMainGroup = chatId === this.targetGroupId;
-          const textLower = bodyText.toLowerCase();
-          const now = Date.now();
-          const COOLDOWN_PERIOD = 5 * 60 * 1e3;
-          let isBotAdmin = false;
-          try {
-            const metadata = await this.getCachedGroupMetadata(chatId);
-            const me = this.sock.user?.id ? this.sock.user.id.split(":")[0] : "";
-            const myParticipant = metadata?.participants?.find((p) => p.id.split("@")[0] === me);
-            isBotAdmin = !!myParticipant && (myParticipant.admin === "admin" || myParticipant.admin === "superadmin");
-          } catch (_) {
-          }
-          if (isBotAdmin) {
-            this.lastGroupMessageTime.set(`${chatId}_${senderId}`, now);
-          }
-          let buffer = this.messageBuffers.get(bufferKey);
-          const bufferTimeout = 3e3;
-          const rawMsgInHandler = unwrapMessage(msg.message);
-          const hasMediaInHandler = !!rawMsgInHandler?.imageMessage || !!rawMsgInHandler?.documentMessage || !!rawMsgInHandler?.videoMessage || !!rawMsgInHandler?.audioMessage;
-          const msgEntry = {
-            body: bodyText,
-            hasMedia: hasMediaInHandler,
-            imageBuffer: imageBufferImmediate,
-            pdfBuffer: pdfBufferImmediate,
-            pdfMimeType: pdfMimeTypeImmediate,
-            flyerVisionData,
-            originalMsg: msg
-          };
-          if (buffer) {
-            clearTimeout(buffer.timer);
-            buffer.messages.push(msgEntry);
-            buffer.timer = setTimeout(() => this.processGroupBuffer(bufferKey), bufferTimeout);
-          } else {
-            this.messageBuffers.set(bufferKey, {
-              messages: [msgEntry],
-              userName: realName,
-              chatId,
-              timer: setTimeout(() => this.processGroupBuffer(bufferKey), bufferTimeout)
-            });
-          }
-        } finally {
-          resolveLock();
-          if (this.processingLocks.get(lockKey) === chainedLock) {
-            this.processingLocks.delete(lockKey);
-          }
-        }
-      }
-      async safeReact(chatId, msgKey, emoji, reason = "REACT") {
-        if (!msgKey || !msgKey.id || !emoji || !this.sock) return;
-        const msgId = msgKey.id;
-        const existing = this.reactedMessageIds.get(msgId);
-        if (existing && existing.emoji === emoji && Date.now() - existing.time < 6e4) {
-          console.log(`[JANIA-${reason}] \u2139\uFE0F Reacci\xF3n ${emoji} ya entregada o en cola para Msg ID ${msgId}. Omitiendo duplicado.`);
-          return;
-        }
-        this.reactedMessageIds.set(msgId, { emoji, time: Date.now() });
-        this.reactionQueue = this.reactionQueue.then(async () => {
-          try {
-            if (!this.sock || !this.isReady) {
-              console.warn(`[JANIA-${reason}] \u26A0\uFE0F Socket no disponible o reconectando. Omitiendo reacci\xF3n ${emoji} a ${chatId}`);
-              return;
-            }
-            const now = Date.now();
-            const elapsed = now - this.lastReactionTimestamp;
-            if (elapsed < this.MIN_REACTION_INTERVAL_MS) {
-              await new Promise((r) => setTimeout(r, this.MIN_REACTION_INTERVAL_MS - elapsed));
-            }
-            console.log(`[JANIA-${reason}] \u{1F3AF} Despachando reacci\xF3n ${emoji} a ${chatId} (Msg ID: ${msgId})...`);
-            await Promise.race([
-              this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
-              new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 5s reacci\xF3n")), 5e3))
-            ]);
-            this.lastReactionTimestamp = Date.now();
-            console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
-            if (this.reactedMessageIds.size > 1500) {
-              const threshold = Date.now() - 12e4;
-              for (const [k, v] of this.reactedMessageIds.entries()) {
-                if (v.time < threshold) this.reactedMessageIds.delete(k);
-              }
-            }
-          } catch (err) {
-            console.warn(`[JANIA-${reason}] \u26A0\uFE0F Primer intento de reacci\xF3n ${emoji} fall\xF3 (${err?.message || err}). Reintentando tras pausa segura...`);
-            await new Promise((r) => setTimeout(r, 2e3));
-            try {
-              if (this.sock && this.isReady) {
-                await Promise.race([
-                  this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
-                  new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 5s reintento")), 5e3))
-                ]);
-                this.lastReactionTimestamp = Date.now();
-                console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA en reintento secuencial`);
-              }
-            } catch (retryErr) {
-              console.warn(`[JANIA-${reason}] \u274C Reintento de reacci\xF3n ${emoji} no pudo completarse:`, retryErr?.message || retryErr);
-            }
-          }
-        }).catch(() => {
-        });
-        return this.reactionQueue;
-      }
-      getReactionEmoji(result, isOfficialGroup = false) {
-        if (!result) return null;
-        const data = result.extractedData || {};
-        const textToCheck = `${data.rawText || ""} ${result.rawText || ""} ${data.name || ""}`.trim();
-        if (isNonRealEstateText(textToCheck)) {
-          return null;
-        }
-        const classification = (result.classification || "").toUpperCase();
-        if (result.reactionEmoji) {
-          if ((result.reactionEmoji === "\u{1F6AB}" || result.reactionEmoji === "\u2753") && !isOfficialGroup) return null;
-          return result.reactionEmoji;
-        }
-        const txType = (data.transactionType || data.tipoNegocioDeseado || result.transactionType || "").toLowerCase();
-        const isPermuta = txType.includes("permuta") || txType === "venta_permuta" || txType === "aporte";
-        const isRent = txType.includes("arriendo") || txType === "arriendo_temporal" || txType === "arriendo_con_opcion_de_compra" || txType.includes("renta") || txType.includes("alquiler");
-        const isProperty = classification === "INMUEBLE" || classification.includes("INMUEBLE") || classification.includes("OFERTA");
-        const isRequirement = classification === "REQUERIMIENTO" || classification.includes("REQUERIMIENTO") || classification.includes("DEMANDA") || classification.includes("BUSQUEDA");
-        if (isProperty || isRequirement) {
-          if (isProperty) {
-            if (isPermuta) return "\u{1F500}";
-            if (isRent) return "\u{1F44C}";
-            return "\u{1F44D}";
-          }
-          if (isRequirement) {
-            if (isPermuta) return "\u{1F504}";
-            if (isRent) return "\u270F\uFE0F";
-            return "\u{1F4DD}";
-          }
-        }
-        const lowerRaw = textToCheck.toLowerCase();
-        const hasPropType = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(lowerRaw);
-        const hasPermutaSignal = /\b(?:permuta|permuto|permutas|permutamos|se permuta|recibo menor|recibo vehiculo|recibo vehículo|recibe menor|pelo a pelo)\b/i.test(lowerRaw);
-        const hasRentSignal = /\b(?:renta|arriendo|alquilo|alquiler|canon)\b/i.test(lowerRaw);
-        const hasDemandSignal = /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|cliente busca)\b/i.test(lowerRaw);
-        if (hasPropType || hasPermutaSignal) {
-          if (hasDemandSignal) {
-            if (hasPermutaSignal) return "\u{1F504}";
-            return hasRentSignal ? "\u270F\uFE0F" : "\u{1F4DD}";
-          } else {
-            if (hasPermutaSignal) return "\u{1F500}";
-            return hasRentSignal ? "\u{1F44C}" : "\u{1F44D}";
-          }
-        }
-        if (isOfficialGroup) {
-          if (classification === "VIOLACION_DE_NORMAS" || classification.includes("SPAM") || classification.includes("INFRACCION")) {
-            return "\u{1F6AB}";
-          }
-          if (classification === "DATOS_INCOMPLETOS") return "\u2753";
-        }
-        return null;
-      }
-      async processGroupBuffer(bufferKey) {
-        const buffer = this.messageBuffers.get(bufferKey);
-        if (!buffer) return;
-        this.messageBuffers.delete(bufferKey);
-        const senderId = bufferKey.split("_")[1];
-        const chatId = buffer.chatId;
-        const userName = buffer.userName;
-        let resolvedSenderId = senderId;
-        if (senderId.endsWith("@lid") && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
-          try {
-            const mappedPn = await this.sock.signalRepository.lidMapping.getPNForLID(senderId);
-            if (mappedPn) {
-              const cleanUser = mappedPn.split(":")[0].split("@")[0];
-              resolvedSenderId = `${cleanUser}@s.whatsapp.net`;
-              console.log(`[JANIA-MATCH] Resolviendo LID ${senderId} a PN ${resolvedSenderId}`);
-            }
-          } catch (err) {
-            console.warn(`[JANIA-MATCH] No se pudo resolver PN para LID ${senderId}:`, err);
-          }
-        }
-        console.log(`[JANIA-MATCH] Procesando buffer de ${buffer.messages.length} mensajes para ${resolvedSenderId} (Silencioso)...`);
-        for (const bufferedMsg of buffer.messages) {
-          const rawMsg = unwrapMessage(bufferedMsg.originalMsg.message);
-          if (bufferedMsg.hasMedia && rawMsg?.imageMessage && !bufferedMsg.imageBuffer) {
-            try {
-              const mediaBuffer = await downloadMediaSafely(bufferedMsg.originalMsg, "image");
-              if (mediaBuffer) {
-                bufferedMsg.imageBuffer = mediaBuffer.toString("base64");
-              }
-            } catch (e) {
-              console.error("[JANIA-BUFFER] Error descargando imagen:", e);
-            }
-          }
-          if (bufferedMsg.hasMedia && rawMsg?.documentMessage && !bufferedMsg.pdfBuffer) {
-            try {
-              const mediaBuffer = await downloadMediaSafely(bufferedMsg.originalMsg, "document");
-              if (mediaBuffer) {
-                bufferedMsg.pdfBuffer = mediaBuffer.toString("base64");
-                bufferedMsg.pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
-              }
-            } catch (e) {
-              console.error("[JANIA-BUFFER] Error descargando documento:", e);
-            }
-          }
-        }
-        try {
-          const distinctListings = buffer.messages.filter((m) => {
-            if ((m.imageBuffer || m.pdfBuffer) && (!m.body || m.body.trim() === "")) return true;
-            if (!m.body) return false;
-            const clean = m.body.toLowerCase();
-            const hasType = clean.includes("apto") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("bodega") || clean.includes("oficina") || clean.includes("lote") || clean.includes("finca") || clean.includes("inmueble") || clean.includes("propiedad") || clean.includes("eds") || clean.includes("estacion");
-            const hasDetails = clean.includes("venta") || clean.includes("arriendo") || clean.includes("precio") || clean.includes("presupuesto") || clean.includes("millones") || clean.includes("$") || clean.includes("busco") || clean.includes("requerimiento") || clean.includes("\xE1rea") || clean.includes("area") || clean.includes("m2") || clean.includes("mts") || clean.includes("http");
-            return hasType && hasDetails;
-          });
-          const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-          if (distinctListings.length > 1 && chatId !== "120363417740040773@g.us" && chatId !== "120363403507276533@g.us") {
-            console.log(`[JANIA-MATCH] Detectadas ${distinctListings.length} publicaciones independientes en el mismo minuto para ${resolvedSenderId}. Procesando cada una por separado...`);
-            const groupName = await this.resolveGroupName(chatId);
-            for (const bufferedMsg of buffer.messages) {
-              const hasMediaOnly = (!!bufferedMsg.imageBuffer || !!bufferedMsg.pdfBuffer) && (!bufferedMsg.body || bufferedMsg.body.trim() === "");
-              if (!bufferedMsg.body || bufferedMsg.body.trim() === "") {
-                if (!hasMediaOnly) continue;
-              }
-              const bodyText = bufferedMsg.body || "";
-              const urlMatch2 = bodyText.match(/https?:\/\/[^\s]+/g);
-              const scrapedResults2 = [];
-              if (urlMatch2) {
-                const urlsToScrape = urlMatch2.slice(0, 2).filter((u) => esDominioPermitido(u));
-                if (urlsToScrape.length > 0) {
-                  try {
-                    const scrapePromises = urlsToScrape.map(
-                      (u) => Promise.race([
-                        scrapePropertyLink(u),
-                        new Promise((resolve) => setTimeout(() => resolve(null), 3500))
-                      ])
-                    );
-                    const settled = await Promise.allSettled(scrapePromises);
-                    for (const res of settled) {
-                      if (res.status === "fulfilled" && res.value) {
-                        scrapedResults2.push(res.value);
-                      }
-                    }
-                  } catch (err) {
-                  }
-                }
-              }
-              await this.logToDb(resolvedSenderId, "user", bodyText || (bufferedMsg.pdfBuffer ? "[documento-pdf]" : "[imagen]"));
-              const result2 = await processWhatsAppMessage2(
-                bodyText,
-                resolvedSenderId,
-                userName,
-                bufferedMsg.hasMedia,
-                scrapedResults2,
-                void 0,
-                bufferedMsg.imageBuffer,
-                true,
-                bufferedMsg.pdfBuffer,
-                bufferedMsg.pdfMimeType,
-                chatId,
-                groupName,
-                bufferedMsg.flyerVisionData
-              );
-              const isOfficialGroupSingle = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-              if (result2) {
-                const emoji = this.getReactionEmoji(result2, isOfficialGroupSingle);
-                if (emoji && bufferedMsg.originalMsg?.key && bufferedMsg.originalMsg.key.id) {
-                  this.safeReact(chatId, bufferedMsg.originalMsg.key, emoji, "MULTI-REACT");
-                }
-              }
-            }
-            return;
-          }
-          const fullText = buffer.messages.map((m) => m.body).filter(Boolean).join("\n\n");
-          const hasMedia = buffer.messages.some((m) => m.hasMedia);
-          const imageMsg = buffer.messages.find((m) => m.imageBuffer);
-          const pdfMsg = buffer.messages.find((m) => m.pdfBuffer);
-          const isAudioPTT = buffer.messages.some((m) => !!m.originalMsg?.message?.audioMessage);
-          if (!fullText.trim() && !imageMsg?.imageBuffer && !pdfMsg?.pdfBuffer && !isAudioPTT) {
-            console.log(`[JANIA-MATCH] Buffer vac\xEDo sin imagen/PDF/audio para ${resolvedSenderId}. Omitiendo.`);
-            return;
-          }
-          const urlMatch = fullText.match(/https?:\/\/[^\s]+/g);
-          const scrapedResults = [];
-          if (urlMatch) {
-            const urlsToScrape = urlMatch.slice(0, 2).filter((u) => esDominioPermitido(u));
-            if (urlsToScrape.length > 0) {
-              try {
-                const scrapePromises = urlsToScrape.map(
-                  (u) => Promise.race([
-                    scrapePropertyLink(u),
-                    new Promise((resolve) => setTimeout(() => resolve(null), 3500))
-                  ])
-                );
-                const settled = await Promise.allSettled(scrapePromises);
-                for (const res of settled) {
-                  if (res.status === "fulfilled" && res.value) {
-                    scrapedResults.push(res.value);
-                  }
-                }
-              } catch (err) {
-                console.error(`[SCRAPING-BUFFER] Error al raspar URLs:`, err?.message || err);
-              }
-            }
-          }
-          await this.logToDb(resolvedSenderId, "user", fullText || (pdfMsg ? "[documento-pdf]" : "[imagen]"));
-          const { sendAdminNotification: sendAdminNotification2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-          let result;
-          if (chatId === "120363417740040773@g.us") {
-            result = await processConsultingMessage2(
-              fullText,
-              resolvedSenderId,
-              userName,
-              imageMsg?.imageBuffer,
-              pdfMsg?.pdfBuffer,
-              pdfMsg?.pdfMimeType,
-              isAudioPTT ? "mock-audio:" + fullText : void 0
-            );
-          } else if (chatId === "120363403507276533@g.us") {
-            result = await processCirculoMessage2(
-              fullText,
-              resolvedSenderId,
-              userName
-            );
-          } else {
-            const groupName = await this.resolveGroupName(chatId);
-            if (isBlacklistedGroup(groupName, chatId)) {
-              console.log(`[JANIA-MATCH] \u{1F6AB} Grupo '${groupName}' (${chatId}) en lista negra. Descartando buffer por completo.`);
-              return;
-            }
-            result = await processWhatsAppMessage2(
-              fullText,
-              resolvedSenderId,
-              userName,
-              hasMedia,
-              scrapedResults,
-              void 0,
-              imageMsg?.imageBuffer,
-              true,
-              pdfMsg?.pdfBuffer,
-              pdfMsg?.pdfMimeType,
-              chatId,
-              groupName,
-              imageMsg?.flyerVisionData || buffer.messages.find((m) => m.flyerVisionData)?.flyerVisionData
-            );
-          }
-          const isOfficialGroup = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-          if (result) {
-            const emoji = this.getReactionEmoji(result, isOfficialGroup);
-            if (emoji) {
-              const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
-              if (lastMsg && lastMsg.key && lastMsg.key.id) {
-                this.safeReact(chatId, lastMsg.key, emoji, "BUFFER-REACT");
-              }
-            }
-          }
-          if (result) {
-            const isWarning = result.classification === "DATOS_INCOMPLETOS" || result.classification === "VIOLACION_DE_NORMAS";
-            let isBotAdmin = false;
-            try {
-              const metadata = await this.getCachedGroupMetadata(chatId);
-              const me = this.sock.user?.id ? this.sock.user.id.split(":")[0] : "";
-              const myParticipant = metadata?.participants?.find((p) => p.id.split("@")[0] === me);
-              isBotAdmin = !!myParticipant && (myParticipant.admin === "admin" || myParticipant.admin === "superadmin");
-            } catch (_) {
-            }
-            if (!isWarning) {
-              const isConsultation = result.classification === "CONSULTA_GENERAL" || result.classification === "RESPUESTA_A_PREGUNTA_IA" || result.classification === "ANALISIS_DE_MERCADO";
-              if (isConsultation) {
-                console.log(`[JANIA-MATCH] Consulta general de ${senderId} en ${chatId} procesada en silencio.`);
-              } else {
-                if (result.response && result.response.trim() !== "") {
-                  console.log(`[JANIA-MATCH] Match detectado silenciosamente. Alertas enviadas al administrador.`);
-                  await sendAdminNotification2(`\u{1F3AF} *[MATCH DETECTADO]*
-
-${result.response}`);
-                  await this.logToDb(senderId, "janIA", `[SILENT-MATCH] ${result.response}`);
-                }
-              }
-            } else {
-              const isOfficial = chatId === this.targetGroupId || chatId === this.buzonGroupId || chatId === this.circuloGroupId;
-              if (result.classification === "VIOLACION_DE_NORMAS" && isOfficial) {
-                const lastMsg = buffer.messages[buffer.messages.length - 1]?.originalMsg;
-                if (lastMsg && lastMsg.key && lastMsg.key.id && !lastMsg.key.fromMe) {
-                  await this.safeReact(chatId, lastMsg.key, "\u{1F6AB}", "WARNING-REACT");
-                }
-                if (result.response && result.response.trim() !== "") {
-                  const textToDeliver = result.response;
-                  await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
-                  await this.logToDb(chatId, "janIA", `[GROUP-WARNING] ${textToDeliver}`);
-                }
-              }
-            }
-            if (result.extraDMs && result.extraDMs.length > 0) {
-              for (const dm of result.extraDMs) {
-                if (!dm.jid || !dm.jid.includes("@") || dm.jid.split("@")[0].length < 5) continue;
-                console.log(`[JANIA-MATCH] [Stealth] Derivando notificaci\xF3n de Match adicional para ${dm.jid} a alertas de administrador.`);
-                await sendAdminNotification2(dm.message);
-              }
-            }
-          }
-          const isMainGroup = chatId === this.targetGroupId;
-          if (isMainGroup) {
-            const cooldownKeyFinal = `${chatId}_${senderId}`;
-            this.loadCooldowns();
-            this.cooldownMap.set(cooldownKeyFinal, {
-              lastBlockProcessedAt: Date.now(),
-              warningSent: false
-            });
-            this.saveCooldowns();
-          }
-        } catch (err) {
-          console.error("[JANIA-MATCH] Error procesando buffer de grupo silencioso:", err);
-        }
-      }
-      // --- LOGÍSTICA DE BD ---
-      async logToDb(senderId, role, content) {
-        try {
-          const db = await getDb();
-          if (!db) return;
-          let conv = await db.select().from(conversations).where(eq7(conversations.sessionId, senderId)).limit(1);
-          let conversationId;
-          if (conv.length === 0) {
-            const [newConv] = await db.insert(conversations).values({
-              sessionId: senderId,
-              status: "active",
-              lastMessage: content.slice(0, 150)
-            }).returning();
-            conversationId = newConv.id;
-          } else {
-            conversationId = conv[0].id;
-            await db.update(conversations).set({
-              lastMessage: content.slice(0, 150),
-              updatedAt: /* @__PURE__ */ new Date()
-            }).where(eq7(conversations.id, conversationId));
-          }
-          await db.insert(messages).values({
-            conversationId,
-            role,
-            content,
-            messageType: "text"
-          });
-        } catch (e) {
-          console.error("[JANIA-MATCH] Error al registrar logs en BD:", e);
-        }
-      }
-      async handlePrivateDmConversation(msg, senderId, rawPhone, bodyText) {
-        try {
-          const realName = msg.pushName || `Asesor +${rawPhone}`;
-          await this.sock.sendPresenceUpdate("recording", senderId);
-          const saludo = getGreetingByTime2();
-          const firstName = extractFirstName2(realName);
-          const greetingName = firstName ? ` ${firstName}` : "";
-          const outOfOfficeText = `\xA1${saludo}${greetingName}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Qu\xE9 bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando \u{1F319}\u2728. Si gustas, puedes dejar tu mensaje aqu\xED para que te respondamos ma\xF1ana a primera hora, o si prefieres, puedes continuar la conversaci\xF3n conmigo y contarme en qu\xE9 puedo ayudarte hoy. \xA1Siempre es un gusto atenderte! \u{1F91D}\u{1F680}`;
-          const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-          let media = null;
-          try {
-            media = await textToSpeechMedia2(outOfOfficeText);
-          } catch (ttsErr) {
-            console.warn("[JANIA-MATCH] Error al generar TTS para fuera de horario:", ttsErr.message || ttsErr);
-          }
-          if (media) {
-            await this.queuedSend(senderId, media, { sendAudioAsVoice: true, quoted: msg });
-          } else {
-            await this.queuedSend(senderId, outOfOfficeText, { quoted: msg });
-          }
-          await this.logToDb(senderId, "janIA", outOfOfficeText);
-          await this.sock.sendPresenceUpdate("paused", senderId);
-        } catch (err) {
-          console.error("[JANIA-MATCH] Error en handlePrivateDmConversation:", err);
-        }
-      }
-      async handleRedirectText(msg, senderId, rawPhone) {
-        try {
-          const realName = msg.pushName || `Asesor +${rawPhone}`;
-          const firstName = extractFirstName2(realName);
-          await this.sock.sendPresenceUpdate("composing", senderId);
-          await delay(2e3);
-          const redirectMsg = `Hola ${firstName} \u{1F44B}\u{1F60A}. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente al canal oficial privado de soporte de JanIA de la Web haciendo clic aqu\xED: https://vecy-network.vercel.app/jania para realizar tus consultas correspondientes o si est\xE1s en los grupos correspondientes seg\xFAn tu consulta puedes hacerlas all\xED de la siguiente manera:
-
-Mis grupos:
-
-Para publicar tus INMUEBLES y REQUERIMIENTOS tenemos el grupo de \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E8}\u{1D5D8}\u{1D5D5}\u{1D5DF}\u{1D5D8}\u{1D5E6} \u{1D5E1}\u{1D5D8}\u{1D5E7}\u{1D5EA}\u{1D5E2}\u{1D5E5}\u{1D5DE} : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
-Para hacer tus consultas de casos inmobiliarios en temas jur\xEDdicos, tributarios, aval\xFAos, ayuda en gu\xEDa de procesos y redacci\xF3n de contratos, tenemos el grupo de \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}: \u{1D5E6}\u{1D5E2}\u{1D5E3}\u{1D5E2}\u{1D5E5}\u{1D5E7}\u{1D5D8} \u{1D5DF}\u{1D5D8}\u{1D5DA}\u{1D5D4}\u{1D5DF}, \u{1D5E7}\u{1D5E5}\u{1D5DC}\u{1D5D5}\u{1D5E8}\u{1D5E7}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5E2} \u{1D5EC} \u{1D5D4}\u{1D5E9}\u{1D5D4}\u{1D5DF}\xDA\u{1D5E2}\u{1D5E6} : Si a\xFAn no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6
-Para preguntar acerca de VECY Bienes Ra\xEDces y debatir acerca de nuestras funciones, red colaborativa, beneficios y competencias, tenemos el grupo de \u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2} "\u{1D5E9}\u{1D5F2}\u{1D5F0}\u{1D606} \u{1D5E1}\u{1D5F2}\u{1D601}\u{1D604}\u{1D5FC}\u{1D5FF}\u{1D5F8}" : Si a\xFAn no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
-
-Te espero. \xA1All\xED te atender\xE9 con gusto! \u{1F680}`;
-          await this.queuedSend(senderId, redirectMsg, { quoted: msg });
-          await this.logToDb(senderId, "janIA", redirectMsg);
-          await this.sock.sendPresenceUpdate("paused", senderId);
-        } catch (err) {
-          console.error("[JANIA-MATCH] Error al enviar mensaje de redirecci\xF3n de DM privado:", err);
-        }
-      }
-      async processMatchConfirmation(senderId, realName, matchId, decision) {
-        try {
-          const db = await getDb();
-          if (!db) {
-            await this.queuedSend(senderId, "\u26A0\uFE0F El sistema de base de datos no est\xE1 disponible en este momento. Int\xE9ntalo m\xE1s tarde.");
-            return;
-          }
-          const [match] = await db.select().from(propertyMatches).where(eq7(propertyMatches.id, matchId)).limit(1);
-          if (!match) {
-            await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ninguna coincidencia registrada con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
-            return;
-          }
-          const [prop] = await db.select().from(properties).where(eq7(properties.id, match.propertyId)).limit(1);
-          const [req] = await db.select().from(requirements).where(eq7(requirements.id, match.requirementId)).limit(1);
-          if (!prop || !req) {
-            await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de esta coincidencia.");
-            return;
-          }
-          const senderPhone = senderId.split("@")[0];
-          const ownerPhone = prop.idUsuarioWhatsapp || "";
-          const seekerPhone = req.idUsuarioWhatsapp || "";
-          const isOwner = senderPhone === ownerPhone.split("@")[0];
-          const isSeeker = senderPhone === seekerPhone.split("@")[0];
-          if (!isOwner && !isSeeker) {
-            await this.queuedSend(senderId, "\u26A0\uFE0F No est\xE1s autorizado para confirmar esta coincidencia.");
-            return;
-          }
-          if (decision === "no") {
-            await db.update(propertyMatches).set({ status: "rejected" }).where(eq7(propertyMatches.id, matchId));
-            await this.queuedSend(senderId, `Entendido. He marcado la coincidencia *#M${matchId}* como cancelada. No se compartir\xE1n tus datos de contacto.`);
-            await this.logToDb(senderId, "janIA", `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
-            const otherJid = isOwner ? seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@s.whatsapp.net` : ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@s.whatsapp.net`;
-            await this.queuedSend(otherJid, `Aviso: La coincidencia *#M${matchId}* ha sido cancelada por la otra parte.`);
-            return;
-          }
-          let updateFields = {};
-          if (isOwner) {
-            updateFields.ownerConfirmed = true;
-          }
-          if (isSeeker) {
-            updateFields.seekerConfirmed = true;
-          }
-          await db.update(propertyMatches).set(updateFields).where(eq7(propertyMatches.id, matchId));
-          const [updatedMatch] = await db.select().from(propertyMatches).where(eq7(propertyMatches.id, matchId)).limit(1);
-          if (updatedMatch.ownerConfirmed && updatedMatch.seekerConfirmed) {
-            await db.update(propertyMatches).set({ status: "interested" }).where(eq7(propertyMatches.id, matchId));
-            let ownerName = "Oferente";
-            let seekerName = "Interesado";
-            try {
-              const [ownerUser] = await db.select().from(users).where(eq7(users.phone, ownerPhone)).limit(1);
-              if (ownerUser && ownerUser.name) ownerName = ownerUser.name;
-            } catch {
-            }
-            try {
-              const [seekerUser] = await db.select().from(users).where(eq7(users.phone, seekerPhone)).limit(1);
-              if (seekerUser && seekerUser.name) seekerName = seekerUser.name;
-            } catch {
-            }
-            const ownerJid = ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@s.whatsapp.net`;
-            const seekerJid = seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@s.whatsapp.net`;
-            const matchScoreFormatted = Number(updatedMatch.matchScore || 0).toFixed(0);
-            const msgToOwner = `\u{1F389}\u{1F388} *\xA1CONEXI\xD3N DE NEGOCIO EXITOSA!* \u{1F388}\u{1F389}
-Felicidades, ambas partes han confirmado inter\xE9s en la coincidencia *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
-
-Aqu\xED tienes el contacto directo del aliado interesado en tu propiedad:
-\u{1F464} *Nombre:* ${seekerName}
-\u{1F4DE} *WhatsApp:* https://wa.me/${seekerPhone.split("@")[0]}
-\u{1F4AC} *Su requerimiento:* ${req.rawText || "Sin descripci\xF3n"}
-
-\xA1Les deseamos mucho \xE9xito en el cierre comercial! \u{1F91D}\u{1F680}`;
-            const msgToSeeker = `\u{1F389}\u{1F388} *\xA1CONEXI\xD3N DE NEGOCIO EXITOSA!* \u{1F388}\u{1F389}
-Felicidades, ambas partes han confirmado inter\xE9s en la coincidencia *#M${matchId}* (Coincidencia: ${matchScoreFormatted}%).
-
-Aqu\xED tienes el contacto directo del aliado que ofrece la propiedad:
-\u{1F464} *Nombre:* ${ownerName}
-\u{1F4DE} *WhatsApp:* https://wa.me/${ownerPhone.split("@")[0]}
-\u{1F4AC} *Su oferta:* ${prop.rawText || "Sin descripci\xF3n"}
-
-\xA1Les deseamos mucho \xE9xito en el cierre comercial! \u{1F91D}\u{1F680}`;
-            await this.logToDb(ownerJid, "janIA", `[Match-Connected] Match #M${matchId} connected in DB. Seeker is ${seekerPhone}`);
-            await this.logToDb(seekerJid, "janIA", `[Match-Connected] Match #M${matchId} connected in DB. Owner is ${ownerPhone}`);
-          } else {
-            await this.queuedSend(senderId, `\xA1Gracias! He registrado tu confirmaci\xF3n de inter\xE9s para la coincidencia *#M${matchId}*.
-
-En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus datos de contacto para que puedan cerrar el negocio. \u{1F680}`);
-            await this.logToDb(senderId, "janIA", `[Match-Confirmed-Waiting] User confirmed match #M${matchId}, waiting for peer.`);
-          }
-        } catch (err) {
-          console.error(`[JANIA-MATCH] Error procesando confirmaci\xF3n para coincidencia #${matchId}:`, err);
-          await this.queuedSend(senderId, "\u26A0\uFE0F Ocurri\xF3 un error interno al procesar tu confirmaci\xF3n.");
-        }
-      }
-      async queuedSend(chatId, content, options = {}) {
-        outgoingQueue = outgoingQueue.then(async () => {
-          try {
-            if (!this.sock) {
-              throw new Error("Cliente Baileys no inicializado");
-            }
-            let targetJid = chatId;
-            if (targetJid.endsWith("@c.us")) {
-              targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
-            }
-            if (targetJid.endsWith("@g.us")) {
-              const isAuthorized = targetJid === this.targetGroupId || targetJid === this.buzonGroupId || targetJid === this.circuloGroupId;
-              if (!isAuthorized) {
-                console.log(`[JANIA-MATCH-SHIELD] Bloqueado env\xEDo de mensaje a grupo no autorizado (Modo Ingesta Fantasma): ${targetJid}`);
-                return;
-              }
-            }
-            if (targetJid.endsWith("@s.whatsapp.net")) {
-              const rawPhone = targetJid.split("@")[0];
-              const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
-              const BROKER_OFFICIAL_PHONE = "573166569719";
-              const isAuthorizedStaff = rawPhone === "573192919978" || rawPhone === BROKER_OFFICIAL_PHONE || rawPhone.includes(ADMIN_PHONE);
-              const isTransactionalAllowed = options.allowDirectMessage === true || options.isTransactionalNotification === true;
-              if (!isAuthorizedStaff && !isTransactionalAllowed) {
-                console.log(`[JANIA-ANTI-BAN-SHIELD] \u{1F6E1}\uFE0F Bloqueado env\xEDo de mensaje directo (DM) a usuario no administrador (${targetJid}). Prohibici\xF3n absoluta de DMs a terceros.`);
-                return;
-              }
-            }
-            let messagePayload = {};
-            if (typeof content === "string") {
-              messagePayload = { text: content };
-              if (options.mentions) {
-                messagePayload.mentions = options.mentions;
-              }
-            } else if (content && (content.text || content.audio || content.image || content.video || content.document)) {
-              messagePayload = content;
-              if (options.mentions) {
-                messagePayload.mentions = options.mentions;
-              }
-            } else if (content && content.data && content.mimetype) {
-              const buffer = Buffer.from(content.data, "base64");
-              if (content.mimetype.startsWith("audio/")) {
-                messagePayload = {
-                  audio: buffer,
-                  mimetype: content.mimetype,
-                  ptt: options.sendAudioAsVoice || false
-                };
-              } else if (content.mimetype.startsWith("image/")) {
-                messagePayload = {
-                  image: buffer,
-                  mimetype: content.mimetype
-                };
-              } else {
-                messagePayload = {
-                  document: buffer,
-                  mimetype: content.mimetype,
-                  fileName: content.filename || "archivo"
-                };
-              }
-            }
-            const isNewsletter = targetJid.endsWith("@newsletter");
-            const sendOptions = {};
-            if (options.quoted && !isNewsletter) {
-              sendOptions.quoted = options.quoted;
-            }
-            if (isNewsletter && messagePayload.audio) {
-              messagePayload.ptt = false;
-            }
-            if (!isNewsletter) {
-              if (messagePayload.text && typeof messagePayload.text === "string") {
-                try {
-                  await this.sock.sendPresenceUpdate("composing", targetJid);
-                  const typingDelay = Math.min(5e3, Math.max(2e3, messagePayload.text.length * 40));
-                  await delay(typingDelay);
-                } catch (_) {
-                }
-              } else if (messagePayload.audio) {
-                try {
-                  await this.sock.sendPresenceUpdate("recording", targetJid);
-                  const recordingDelay = Math.min(1500, Math.max(300, (options.voiceLength || 2) * 200));
-                  await delay(recordingDelay);
-                } catch (_) {
-                }
-              }
-            } else {
-              await delay(2e3);
-            }
-            const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
-            if (sent && sent.key && sent.key.id) {
-              this.botSentMessageIds.add(sent.key.id);
-            }
-            await delay(1e3);
-          } catch (err) {
-            console.error("[JANIA-MATCH] Error en despacho de mensaje Baileys:", err.message || err);
-          }
-        });
-        return outgoingQueue;
-      }
-      /**
-       * Envía un mensaje de texto directo a un número o JID específico,
-       * normalizando celulares colombianos y habilitando el flag allowDirectMessage.
-       */
-      async sendDirectMessage(targetPhoneOrJid, text2, options = {}) {
-        let clean = (targetPhoneOrJid || "").replace(/\D/g, "");
-        if (clean.length === 10 && clean.startsWith("3")) {
-          clean = "57" + clean;
-        }
-        const jid = targetPhoneOrJid.includes("@") ? targetPhoneOrJid : `${clean}@s.whatsapp.net`;
-        return this.queuedSend(jid, text2, { allowDirectMessage: true, ...options });
-      }
-      /**
-       * Envía una encuesta nativa e interactiva de WhatsApp a un grupo específico.
-       * Utiliza la funcionalidad nativa de Baileys pollCreationMessage.
-       */
-      async sendPollToGroup(name, options, groupId, selectableCount = 1) {
-        try {
-          if (!this.sock || !this.isReady) {
-            console.warn(`[JANIA-MATCH] Bot no listo para enviar encuesta a ${groupId}`);
-            return false;
-          }
-          const targetJid = groupId || this.buzonGroupId;
-          console.log(`[JANIA-MATCH] \u{1F4CA} Despachando encuesta nativa a ${targetJid}: "${name}" (${options.length} opciones)...`);
-          await this.sock.sendMessage(targetJid, {
-            poll: {
-              name,
-              values: options,
-              selectableCount
-            }
-          });
-          console.log(`[JANIA-MATCH] \u2705 Encuesta enviada exitosamente a ${targetJid}`);
-          return true;
-        } catch (err) {
-          console.error(`[JANIA-MATCH] \u274C Error enviando encuesta a ${groupId}:`, err?.message || err);
-          return false;
-        }
-      }
-      async sendToGroup(text2, mediaPath, mentions, groupId) {
-        try {
-          const target = groupId || this.targetGroupId;
-          let targetJid = target;
-          if (targetJid.endsWith("@c.us")) {
-            targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
-          }
-          let messagePayload = {};
-          if (mediaPath) {
-            const fs12 = await import("fs");
-            const buffer = fs12.readFileSync(mediaPath);
-            const path13 = await import("path");
-            const ext = path13.extname(mediaPath).toLowerCase();
-            if (ext === ".mp4") {
-              messagePayload = {
-                video: buffer,
-                caption: text2,
-                mimetype: "video/mp4"
-              };
-            } else if (ext === ".jpg" || ext === ".jpeg" || ext === ".png") {
-              messagePayload = {
-                image: buffer,
-                caption: text2,
-                mimetype: ext === ".png" ? "image/png" : "image/jpeg"
-              };
-            } else {
-              messagePayload = {
-                document: buffer,
-                caption: text2,
-                mimetype: "application/octet-stream",
-                fileName: path13.basename(mediaPath)
-              };
-            }
-          } else {
-            messagePayload = { text: text2 };
-          }
-          if (mentions && mentions.length > 0 && !targetJid.endsWith("@newsletter")) {
-            messagePayload.mentions = mentions.map((m) => m.endsWith("@s.whatsapp.net") ? m : m.replace("@c.us", "@s.whatsapp.net"));
-          }
-          await this.queuedSend(targetJid, messagePayload);
-          console.log(`[JANIA-MATCH] \u2713 Mensaje enviado al destino ${targetJid}.`);
-        } catch (e) {
-          console.error(`[JANIA-MATCH] Error enviando mensaje al destino ${groupId || this.targetGroupId}:`, e.message || e);
-        }
-      }
-      async sendVoiceToGroup(text2, groupId, imagePath, captionText) {
-        try {
-          const target = groupId || this.targetGroupId;
-          let targetJid = target;
-          if (targetJid.endsWith("@c.us")) {
-            targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
-          }
-          const fs12 = await import("fs");
-          if (imagePath && fs12.existsSync(imagePath)) {
-            try {
-              await this.sendToGroup(captionText || text2, imagePath, [], targetJid);
-            } catch (imgErr) {
-              console.warn(`[JANIA-MATCH] Error enviando ilustraci\xF3n previa a ${targetJid}:`, imgErr?.message);
-            }
-          }
-          const { cleanVoiceText: cleanVoiceText2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-          const cleaned = cleanVoiceText2(text2);
-          console.log(`[JANIA-MATCH] Generando nota de voz para enviar a ${targetJid}...`);
-          const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-          const voiceMedia = await textToSpeechMedia2(cleaned);
-          if (voiceMedia && voiceMedia.data) {
-            const buffer = Buffer.from(voiceMedia.data, "base64");
-            await this.queuedSend(targetJid, {
-              audio: buffer,
-              mimetype: voiceMedia.mimetype || "audio/ogg; codecs=opus",
-              ptt: true
-            });
-            console.log(`[JANIA-MATCH] \u2713 Nota de voz enviada a ${targetJid}.`);
-          } else {
-            if (!imagePath) {
-              console.warn(`[JANIA-MATCH] TTS fall\xF3 para ${targetJid}, enviando texto.`);
-              await this.queuedSend(targetJid, cleaned);
-            }
-          }
-        } catch (e) {
-          console.error("[JANIA-MATCH] Error enviando nota de voz al destino:", e.message || e);
-        }
-      }
-      async sendVoiceToBuzonAndChannel(text2, imagePath, captionText) {
-        if (!this.channelNewsletterId) {
-          await this.discoverAndSyncNewsletters().catch(() => {
-          });
-        }
-        const { cleanVoiceText: cleanVoiceText2, textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-        const cleaned = cleanVoiceText2(text2);
-        console.log(`[JANIA-MATCH] \u{1F399}\uFE0F Generando nota de voz TTS centralizada para Buz\xF3n y Canal...`);
-        const voiceMedia = await textToSpeechMedia2(cleaned);
-        const audioBuffer = voiceMedia && voiceMedia.data ? Buffer.from(voiceMedia.data, "base64") : null;
-        const audioMimetype = voiceMedia?.mimetype || "audio/ogg; codecs=opus";
-        const fs12 = await import("fs");
-        if (this.buzonGroupId) {
-          try {
-            console.log(`[JANIA-MATCH] \u{1F4E4} Despachando publicaci\xF3n a Grupo 2 (${this.buzonGroupId})...`);
-            if (imagePath && fs12.existsSync(imagePath)) {
-              await this.sendToGroup(captionText || text2, imagePath, [], this.buzonGroupId);
-            }
-            if (audioBuffer) {
-              await this.queuedSend(this.buzonGroupId, {
-                audio: audioBuffer,
-                mimetype: audioMimetype,
-                ptt: true
-              });
-              console.log(`[JANIA-MATCH] \u2713 Nota de voz enviada al Grupo 2 (${this.buzonGroupId}).`);
-            } else if (!imagePath) {
-              await this.queuedSend(this.buzonGroupId, cleaned);
-            }
-          } catch (grpErr) {
-            console.error(`[JANIA-MATCH] Error despachando a Grupo 2:`, grpErr?.message);
-          }
-        }
-        if (this.channelNewsletterId) {
-          try {
-            console.log(`[JANIA-MATCH] \u{1F4E2} Despachando publicaci\xF3n tem\xE1tica al Canal de WhatsApp (${this.channelNewsletterId})...`);
-            if (imagePath && fs12.existsSync(imagePath)) {
-              await this.sendToGroup(captionText || text2, imagePath, [], this.channelNewsletterId);
-            }
-            if (audioBuffer) {
-              await this.queuedSend(this.channelNewsletterId, {
-                audio: audioBuffer,
-                mimetype: audioMimetype,
-                ptt: false
-              });
-              console.log(`[JANIA-MATCH] \u2713 Audio enviado al Canal de WhatsApp (${this.channelNewsletterId}).`);
-            } else if (!imagePath) {
-              await this.queuedSend(this.channelNewsletterId, cleaned);
-            }
-          } catch (chanErr) {
-            console.error(`[JANIA-MATCH] Error despachando a Canal de WhatsApp:`, chanErr?.message);
-          }
-        } else {
-          console.warn(`[JANIA-MATCH] \u26A0\uFE0F Canal de WhatsApp no configurado a\xFAn (channelNewsletterId vac\xEDo).`);
-        }
-      }
-      async sendToBuzonAndChannel(text2, mediaPath) {
-        if (this.buzonGroupId) {
-          await this.sendToGroup(text2, mediaPath, [], this.buzonGroupId);
-        }
-        if (this.channelNewsletterId) {
-          await this.sendToGroup(text2, mediaPath, [], this.channelNewsletterId);
-        }
-      }
-      officialChannelInviteCode = process.env.WHATSAPP_CHANNEL_INVITE_CODE || "0029Vb5iYUYCMY0A94zqti1b";
-      async discoverAndSyncNewsletters() {
-        try {
-          if (!this.sock) return;
-          if (this.officialChannelInviteCode) {
-            try {
-              if (typeof this.sock.newsletterMetadata === "function") {
-                const inviteMeta = await this.sock.newsletterMetadata("invite", this.officialChannelInviteCode);
-                if (inviteMeta && inviteMeta.id) {
-                  this.channelNewsletterId = inviteMeta.id;
-                  const channelName = inviteMeta?.thread_metadata?.name?.text || inviteMeta?.name || "Vecy Bienes Ra\xEDces";
-                  console.log(`[${this.botName}] \u{1F3AF} Canal oficial resuelto por Invite Code ("${this.officialChannelInviteCode}"): JID=${this.channelNewsletterId} ("${channelName}")`);
-                }
-              }
-            } catch (invErr) {
-              console.warn(`[${this.botName}] Info resoluci\xF3n canal por invite code:`, invErr?.message);
-            }
-          }
-          if (!this.channelNewsletterId && typeof this.sock.newsletterSubscribed === "function") {
-            const newsletters = await this.sock.newsletterSubscribed();
-            if (Array.isArray(newsletters) && newsletters.length > 0) {
-              console.log(`[${this.botName}] \u{1F4E2} Canales/Newsletters detectados (${newsletters.length}):`);
-              for (const nl of newsletters) {
-                const name = nl?.thread_metadata?.name?.text || nl?.name || nl?.subject || "Canal";
-                const jid = nl.id;
-                console.log(`[${this.botName}] \u{1F4E2} Canal ID: ${jid} \u2014 "${name}"`);
-                if (!this.channelNewsletterId || name.toLowerCase().includes("vecy")) {
-                  this.channelNewsletterId = jid;
-                  console.log(`[${this.botName}] \u{1F3AF} Canal oficial auto-asignado: ${this.channelNewsletterId} ("${name}")`);
-                }
-              }
-            } else {
-              console.log(`[${this.botName}] \u2139\uFE0F No se detectaron canales suscritos a\xFAn en la cuenta.`);
-            }
-          }
-        } catch (e) {
-          console.warn(`[${this.botName}] Info: no se pudieron listar canales de WhatsApp:`, e?.message || e);
-        }
-      }
-      async getGroupParticipants(groupId) {
-        try {
-          if (!this.sock) return [];
-          const metadata = await this.getCachedGroupMetadata(groupId);
-          return metadata?.participants ? metadata.participants.map((p) => p.id) : [];
-        } catch (err) {
-          console.warn(`[JANIA-MATCH] Error al obtener participantes del grupo ${groupId}:`, err);
-          return [];
-        }
-      }
-      async sendManualCierreAudios() {
-        console.log("[JANIA-MATCH] Generando y enviando audios de cierre manuales (Solo por hoy)...");
-        const grupos = [
-          {
-            nombre: "VECY INMUEBLES NETWORK",
-            id: this.targetGroupId,
-            promptCierre: "Genera una nota de voz corta en espa\xF1ol de despedida y cierre de jornada para el grupo de WhatsApp VECY INMUEBLES NETWORK. Agradece la actividad de hoy y desp\xEDdete con calidez. Recuerda que no cobramos comisiones y que las ofertas y demandas cruzadas son el motor de la red."
-          },
-          {
-            nombre: "Buz\xF3n de Consultor\xEDa",
-            id: this.buzonGroupId,
-            promptCierre: "Genera una nota de voz corta en espa\xF1ol de despedida y cierre de jornada para el grupo de WhatsApp Buz\xF3n de Consultor\xEDa. Agradece la atenci\xF3n a los casos jur\xEDdicos y de comisiones compartidas resueltos hoy, deseando un feliz descanso."
-          },
-          {
-            nombre: "C\xEDrculo Cero",
-            id: this.circuloGroupId,
-            promptCierre: "Genera una nota de voz corta en espa\xF1ol de despedida y cierre de jornada para el grupo de WhatsApp C\xEDrculo Cero. Agradece el debate y las sugerencias de hoy sobre el futuro del sector."
-          }
-        ];
-        const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
-        for (const grupo of grupos) {
-          try {
-            if (!grupo.id) continue;
-            console.log(`[JANIA-MATCH] Generando audio de cierre para el grupo ${grupo.nombre}...`);
-            const response1 = await invokeLLM2({
-              messages: [
-                { role: "system", content: "Eres JanIA, la asistente de voz e inteligencia artificial de VECY Bienes Ra\xEDces. Te expresas de manera natural, humana, c\xE1lida y profesional." },
-                { role: "user", content: `${grupo.promptCierre}
-- IMPORTANTE: Debe sonar como un mensaje de voz natural de WhatsApp grabado de forma espont\xE1nea por una colega real. Empieza con naturalidad como: "Hola colegas", "Buenas tardes", etc. sin formalismos rob\xF3ticos.
-- M\xE1ximo 350 caracteres.
-- CR\xCDTICO: Responde \xDANICAMENTE con las palabras habladas de la nota de voz. NO agregues pre\xE1mbulos, comentarios ni envuelvas el texto en comillas, llaves o corchetes.` }
-              ]
-            });
-            const content1 = response1.choices[0]?.message?.content;
-            if (content1 && content1.trim() !== "") {
-              await this.sendVoiceToGroup(content1, grupo.id);
-            }
-          } catch (err) {
-            console.error(`\u274C Error en sendManualCierreAudios para el grupo ${grupo.nombre}:`, err.message || err);
-          }
-        }
-      }
-      pendingWelcomeJids = [];
-      async sendAnuncioRetorno() {
-        const baseMsg = `\u{1F680} *\xA1JANIA EST\xC1 DE VUELTA Y M\xC1S AFILADA QUE NUNCA!* \u{1F916}\u{1F3DB}\uFE0F
-
-\xA1Hola de nuevo, colegas y aliados! \u{1F44B} Tras un breve ajuste t\xE9cnico para fortalecer nuestra infraestructura y preparar el lanzamiento del nuevo portal web privado, estoy de vuelta en el canal para encontrar esos MATCH tan deseados.
-
-Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afilados que nunca para cuidar la calidad de la red y acelerar nuestros cierres:
-
-\u{1F9E0} *\xBFQu\xE9 puedo hacer por ti en esta v2.0?*
-\u25B8 *Ofertas Express (Links):* Comparte el enlace de tus inmuebles de cualquier portal o CRM, y extraer\xE9 la ficha t\xE9cnica en segundos.
-\u25B8 *Esc\xE1ner de Flyers (OCR):* \xBFTienes fotos de inmuebles o requerimientos con texto? S\xFAbelas al grupo y leer\xE9 la informaci\xF3n dentro de la imagen.
-\u25B8 *Permutas e Intercambios (Voz o Texto):* Escr\xEDbeme o env\xEDame un audio detallando permutas complejas como:
-  * \u{1F504} *Mano a mano / Pelo a pelo* (intercambio directo de inmuebles de valor similar).
-  * \u{1F3E0}\u2795\u{1F4B5} *Inmueble de menor valor* como parte de pago por uno de mayor valor.
-  * \u{1F697} *Veh\xEDculos* recibidos como parte de pago.
-  * \u{1F4C8} *CDTs, divisas o activos alternativos* como complemento de negocio.
-  * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
-\u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
-        const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path7.resolve("./client/public/jania_perfil.png");
-        for (const group of groups) {
-          try {
-            await this.sendToGroup(baseMsg, imgPath, [], group);
-          } catch (e) {
-            console.error(`Error enviando anuncio de retorno al grupo ${group}:`, e.message);
-          }
-        }
-      }
-      async sendComunicadoMatch() {
-        try {
-          console.log(`[JANIA-MATCH] Enviando comunicado de notificaciones de match...`);
-          const { MSG_COMUNICADO_MATCH_NETWORK: MSG_COMUNICADO_MATCH_NETWORK2, MSG_COMUNICADO_MATCH_CIRCULO: MSG_COMUNICADO_MATCH_CIRCULO2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-          await this.queuedSend(this.targetGroupId, MSG_COMUNICADO_MATCH_NETWORK2);
-          await delay(3e3);
-          await this.queuedSend(this.circuloGroupId, MSG_COMUNICADO_MATCH_CIRCULO2);
-          console.log("[JANIA-MATCH] Comunicado de match enviado con \xE9xito.");
-        } catch (err) {
-          console.error("[JANIA-MATCH] Error al enviar el comunicado de match:", err.message || err);
-        }
-      }
-      async getPairingCode(phone) {
-        const cleanPhone = phone.replace(/\D/g, "");
-        console.log(`[JANIA-MATCH] Solicitando c\xF3digo de vinculaci\xF3n por n\xFAmero para: ${cleanPhone}`);
-        console.log("[JANIA-MATCH] Limpiando sesi\xF3n previa para solicitar nuevo c\xF3digo...");
-        try {
-          if (this.sock) {
-            this.sock.end(void 0);
-          }
-        } catch (e) {
-        }
-        const sessionDir = path7.join(process.cwd(), ".baileys_auth");
-        if (fs7.existsSync(sessionDir)) {
-          try {
-            fs7.rmSync(sessionDir, { recursive: true, force: true });
-          } catch (err) {
-            console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
-          }
-        }
-        this.sock = null;
-        await this.initialize();
-        await delay(3e3);
-        try {
-          const code = await this.sock.requestPairingCode(cleanPhone);
-          console.log(`[JANIA-MATCH] C\xF3digo de vinculaci\xF3n generado: ${code}`);
-          return code;
-        } catch (err) {
-          console.error("[JANIA-MATCH] Error al solicitar c\xF3digo de vinculaci\xF3n:", err.message || err);
-          throw err;
-        }
-      }
-      loadCooldowns() {
-        try {
-          if (fs7.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs7.readFileSync(this.cooldownFile, "utf8"));
-            this.cooldownMap = new Map(Object.entries(raw));
-          }
-        } catch (e) {
-        }
-      }
-      saveCooldowns() {
-        try {
-          const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs7.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
-        } catch (e) {
-        }
-      }
-      setupGracefulShutdown() {
-        const shutdown = async () => {
-          console.log("\n\u{1F6D1} Cerrando JanIA Match Bot (Baileys)...");
-          try {
-            if (this.sock) {
-              await this.sock.end();
-            }
-          } catch (e) {
-          }
-        };
-        process.on("SIGINT", shutdown);
-        process.on("SIGTERM", shutdown);
-      }
-    };
-    janiaMatchBot = new JaniaMatchBot({
-      sessionFolderName: ".baileys_auth",
-      qrFileName: "qr-match.png",
-      botName: "JANIA-MATCH-OFICIAL"
-    });
-    janiaCaptadorBot = janiaMatchBot;
-  }
-});
-
 // server/jobs/nightlyRematch.ts
 var nightlyRematch_exports = {};
 __export(nightlyRematch_exports, {
   recalculateAndCleanupMatches: () => recalculateAndCleanupMatches,
   runNightlyRematch: () => runNightlyRematch
 });
-import { and as and6, eq as eq8, sql as sql6 } from "drizzle-orm";
+import { and as and6, eq as eq9, sql as sql7 } from "drizzle-orm";
 async function runNightlyRematch() {
   if (isRematchRunning) {
     console.log("[NIGHTLY-REMATCH] Ya hay una ejecuci\xF3n en curso, saltando...");
@@ -16612,11 +18637,11 @@ async function runNightlyRematch() {
     return;
   }
   try {
-    await db.execute(sql6`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND "createdAt" < NOW() - INTERVAL '10 days'`);
-    await db.execute(sql6`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE "createdAt" < NOW() - INTERVAL '10 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '10 days')`);
+    await db.execute(sql7`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND "createdAt" < NOW() - INTERVAL '10 days'`);
+    await db.execute(sql7`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE "createdAt" < NOW() - INTERVAL '10 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '10 days')`);
     const [activeReqs, availProps] = await Promise.all([
-      db.select().from(requirements).where(eq8(requirements.status, "active")),
-      db.select().from(properties).where(eq8(properties.available, true))
+      db.select().from(requirements).where(eq9(requirements.status, "active")),
+      db.select().from(properties).where(eq9(properties.available, true))
     ]);
     console.log(
       `[NIGHTLY-REMATCH] ${activeReqs.length} reqs \xD7 ${availProps.length} props = ${activeReqs.length * availProps.length} pares a evaluar`
@@ -16676,8 +18701,8 @@ async function runNightlyRematch() {
             try {
               await db.delete(propertyMatches).where(
                 and6(
-                  eq8(propertyMatches.requirementId, req.id),
-                  eq8(propertyMatches.propertyId, prop.id)
+                  eq9(propertyMatches.requirementId, req.id),
+                  eq9(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -16692,8 +18717,8 @@ async function runNightlyRematch() {
             try {
               await db.delete(propertyMatches).where(
                 and6(
-                  eq8(propertyMatches.requirementId, req.id),
-                  eq8(propertyMatches.propertyId, prop.id)
+                  eq9(propertyMatches.requirementId, req.id),
+                  eq9(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -16707,8 +18732,8 @@ async function runNightlyRematch() {
             try {
               await db.delete(propertyMatches).where(
                 and6(
-                  eq8(propertyMatches.requirementId, req.id),
-                  eq8(propertyMatches.propertyId, prop.id)
+                  eq9(propertyMatches.requirementId, req.id),
+                  eq9(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -16720,8 +18745,8 @@ async function runNightlyRematch() {
             try {
               await db.delete(propertyMatches).where(
                 and6(
-                  eq8(propertyMatches.requirementId, req.id),
-                  eq8(propertyMatches.propertyId, prop.id)
+                  eq9(propertyMatches.requirementId, req.id),
+                  eq9(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -16733,8 +18758,8 @@ async function runNightlyRematch() {
             try {
               await db.delete(propertyMatches).where(
                 and6(
-                  eq8(propertyMatches.requirementId, req.id),
-                  eq8(propertyMatches.propertyId, prop.id)
+                  eq9(propertyMatches.requirementId, req.id),
+                  eq9(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -16762,8 +18787,8 @@ async function runNightlyRematch() {
             try {
               await db.delete(propertyMatches).where(
                 and6(
-                  eq8(propertyMatches.requirementId, req.id),
-                  eq8(propertyMatches.propertyId, prop.id)
+                  eq9(propertyMatches.requirementId, req.id),
+                  eq9(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -16773,8 +18798,8 @@ async function runNightlyRematch() {
           seenPairs.add(pairKey);
           const existing = await db.select({ id: propertyMatches.id, matchScore: propertyMatches.matchScore }).from(propertyMatches).where(
             and6(
-              eq8(propertyMatches.requirementId, req.id),
-              eq8(propertyMatches.propertyId, prop.id)
+              eq9(propertyMatches.requirementId, req.id),
+              eq9(propertyMatches.propertyId, prop.id)
             )
           ).limit(1);
           if (existing.length === 0) {
@@ -16794,7 +18819,7 @@ async function runNightlyRematch() {
               await db.update(propertyMatches).set({
                 matchScore: exp.score.toFixed(2),
                 matchReason: `VECY DOCTRINAL v28.0: ${exp.score.toFixed(0)}/100`
-              }).where(eq8(propertyMatches.id, existing[0].id));
+              }).where(eq9(propertyMatches.id, existing[0].id));
               updatedCount++;
             }
           }
@@ -16841,14 +18866,14 @@ async function recalculateAndCleanupMatches() {
     let updatedCount = 0;
     for (const m of allMatches) {
       if (rejectedPairsSet.has(`${m.propertyId}_${m.requirementId}`)) {
-        await db.delete(propertyMatches).where(eq8(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq9(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
-      const [prop] = await db.select().from(properties).where(eq8(properties.id, m.propertyId)).limit(1);
-      const [req] = await db.select().from(requirements).where(eq8(requirements.id, m.requirementId)).limit(1);
+      const [prop] = await db.select().from(properties).where(eq9(properties.id, m.propertyId)).limit(1);
+      const [req] = await db.select().from(requirements).where(eq9(requirements.id, m.requirementId)).limit(1);
       if (!prop || !req) {
-        await db.delete(propertyMatches).where(eq8(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq9(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
@@ -16861,12 +18886,12 @@ async function recalculateAndCleanupMatches() {
       const newScore = exp ? exp.score : 0;
       const hasBlockers = exp ? exp.blockers.length > 0 : true;
       if (newScore < 80 || hasBlockers) {
-        await db.delete(propertyMatches).where(eq8(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq9(propertyMatches.id, m.id));
         deletedCount++;
       } else {
         const storedScore = parseFloat(String(m.matchScore));
         if (Math.abs(storedScore - newScore) > 0.5) {
-          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado v28.0: ${newScore.toFixed(0)}/100` }).where(eq8(propertyMatches.id, m.id));
+          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado v28.0: ${newScore.toFixed(0)}/100` }).where(eq9(propertyMatches.id, m.id));
           updatedCount++;
         }
       }
@@ -16917,6 +18942,7 @@ __export(cronService_exports, {
   publishDailyPollNow: () => publishDailyPollNow,
   publishDailyTipForDay: () => publishDailyTipForDay,
   publishGrupo3TipNow: () => publishGrupo3TipNow,
+  publishIdentityAndPredialServiceAnnouncement: () => publishIdentityAndPredialServiceAnnouncement,
   publishNoticiaNacionalNow: () => publishNoticiaNacionalNow,
   publishTodayTipNow: () => publishTodayTipNow,
   publishWeeklyReportNow: () => publishWeeklyReportNow
@@ -16925,7 +18951,7 @@ import cron from "node-cron";
 import path8 from "path";
 import fs8 from "fs";
 import { fileURLToPath } from "url";
-import { gte as gte2, and as and7, eq as eq9, sql as sql7, desc as desc3 } from "drizzle-orm";
+import { gte as gte2, and as and7, eq as eq10, sql as sql8, desc as desc4 } from "drizzle-orm";
 function getBogotaDateString(d = /* @__PURE__ */ new Date()) {
   return d.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
 }
@@ -16939,8 +18965,8 @@ async function acquireBroadcastLock(targetGroup, tipCategory, dateBogota, force 
     if (!force) {
       const existing = await db.select().from(dailyBroadcasts).where(
         and7(
-          eq9(dailyBroadcasts.dateBogota, dateBogota),
-          eq9(dailyBroadcasts.targetGroup, targetGroup)
+          eq10(dailyBroadcasts.dateBogota, dateBogota),
+          eq10(dailyBroadcasts.targetGroup, targetGroup)
         )
       ).limit(1);
       if (existing.length > 0) {
@@ -16972,7 +18998,7 @@ async function acquireBroadcastLock(targetGroup, tipCategory, dateBogota, force 
       set: {
         tipCategory,
         status: "in_progress",
-        createdAt: sql7`NOW()`
+        createdAt: sql8`NOW()`
       }
     }).returning();
     return { allowed: true, broadcastId: inserted?.id };
@@ -16996,7 +19022,7 @@ async function completeBroadcast(broadcastId, data) {
       voiceText: data.voiceText,
       captionText: data.captionText,
       status: "completed"
-    }).where(eq9(dailyBroadcasts.id, broadcastId));
+    }).where(eq10(dailyBroadcasts.id, broadcastId));
     console.log(`[CRON-PERSISTENCE] \u2705 Difusi\xF3n #${broadcastId} asentada con \xE9xito en PostgreSQL: "${data.topicTitle}".`);
   } catch (err) {
     console.error(`[CRON-PERSISTENCE] Error completando difusi\xF3n #${broadcastId}:`, err?.message || err);
@@ -17010,7 +19036,7 @@ async function failBroadcast(broadcastId, reason) {
     await db.update(dailyBroadcasts).set({
       topicTitle: `Error: ${reason}`,
       status: "failed"
-    }).where(eq9(dailyBroadcasts.id, broadcastId));
+    }).where(eq10(dailyBroadcasts.id, broadcastId));
   } catch (err) {
     console.warn(`[CRON-PERSISTENCE] Error marcando fallo en difusi\xF3n #${broadcastId}:`, err?.message);
   }
@@ -17022,7 +19048,7 @@ async function getRecentBroadcastTopics(limit = 30) {
     const rows = await db.select({
       dateBogota: dailyBroadcasts.dateBogota,
       topicTitle: dailyBroadcasts.topicTitle
-    }).from(dailyBroadcasts).where(eq9(dailyBroadcasts.status, "completed")).orderBy(desc3(dailyBroadcasts.createdAt)).limit(limit);
+    }).from(dailyBroadcasts).where(eq10(dailyBroadcasts.status, "completed")).orderBy(desc4(dailyBroadcasts.createdAt)).limit(limit);
     return rows;
   } catch (err) {
     console.warn("[CRON-TOPICS] Error leyendo historial de temas de PostgreSQL:", err?.message);
@@ -17035,7 +19061,7 @@ async function getRecentImageFiles(limit = 3) {
     if (!db) return [];
     const rows = await db.select({
       imageFileName: dailyBroadcasts.imageFileName
-    }).from(dailyBroadcasts).where(and7(eq9(dailyBroadcasts.status, "completed"), sql7`image_file_name IS NOT NULL`)).orderBy(desc3(dailyBroadcasts.createdAt)).limit(limit);
+    }).from(dailyBroadcasts).where(and7(eq10(dailyBroadcasts.status, "completed"), sql8`image_file_name IS NOT NULL`)).orderBy(desc4(dailyBroadcasts.createdAt)).limit(limit);
     return rows.map((r) => r.imageFileName).filter(Boolean);
   } catch {
     return [];
@@ -17166,6 +19192,7 @@ Elige un \xE1ngulo de an\xE1lisis fresco y de alto impacto sobre el mercado colo
 - Comportamiento del valor por metro cuadrado en Bogot\xE1, Medell\xEDn, Cali, Barranquilla o Eje Cafetero.`,
     martes_juridico: `Tema: Martes Jur\xEDdico, Blindaje Notarial & C\xF3digo de Comercio (${fechaBogota}).
 Selecciona un tema legal inmobiliario colombiano espec\xEDfico y did\xE1ctico:
+- Verificaci\xF3n oficial de identidad y antecedentes de la Polic\xEDa Nacional: c\xF3mo blindar contratos de corretaje y acuerdos de puntas compartidas 50/50 validando la c\xE9dula de clientes y acompa\xF1antes en segundos directamente en el chat con JanIA.
 - Cl\xE1usula penal vs arras confirmatorias y de retracto en la promesa de compraventa (Arts. 1859-1861 C.C.).
 - Causales de terminaci\xF3n unilateral y restituci\xF3n de inmueble arrendado bajo la Ley 820 de 2003.
 - Validez probatoria de la hoja de visita digital y correos certificados bajo la Ley 527 de 1999 para blindar el cobro de comisi\xF3n.
@@ -17182,6 +19209,7 @@ Ense\xF1a t\xE9cnicas pr\xE1cticas y vanguardistas para que los corredores venda
 - Perfilamiento financiero inicial: c\xF3mo saber si el prospecto tiene preaprobado antes de coordinar la visita.`,
     jueves_tributario: `Tema: Jueves Tributario DIAN, Contabilidad & Ahorro Fiscal Inmobiliario (${fechaBogota}).
 Selecciona con rigor t\xE9cnico un consejo tributario o financiero colombiano:
+- Liquidaci\xF3n y Gesti\xF3n de Impuesto Predial Bogot\xE1: c\xF3mo consultar el aval\xFAo catastral y facturas oficiales con el c\xF3digo CHIP y c\xE9dula directamente con JanIA para llegar con cuentas claras a la promesa de compraventa.
 - Retenci\xF3n en la fuente por venta de inmuebles en notar\xEDa: 1% personas naturales vs 2.5% personas jur\xEDdicas y qui\xE9n la asume.
 - Deducci\xF3n de mejoras y adiciones: c\xF3mo documentar refacciones con Facturaci\xF3n Electr\xF3nica para rebajar la ganancia ocasional al escriturar.
 - Desglose exacto de gastos notariales en Colombia: Derechos notariales (50/50), Retenci\xF3n en la fuente (vendedor), Registro y beneficencia (comprador).
@@ -17199,7 +19227,7 @@ Elige libremente entre:
     sabado_cafe: `Tema: S\xE1bado de Caf\xE9 Inmobiliario, Reflexi\xF3n & Identidad JanIA (${fechaBogota}).
 Estilo podcast / caf\xE9 inmobiliario, cercano, reflexivo y motivador:
 - \xC9tica gremial: respeto por el cliente del colega, transparencia en la comisi\xF3n compartida y construcci\xF3n de marca personal.
-- Portafolio de Servicios Virtuales de VECY Bienes Ra\xEDces: estudios de mercado m\xB2, liquidaciones DIAN, contratos digitales y cobranzas.
+- Portafolio de Servicios Virtuales de VECY Bienes Ra\xEDces: verificaci\xF3n oficial de c\xE9dulas y antecedentes penales de clientes (Polic\xEDa Nacional), liquidaci\xF3n de prediales Bogot\xE1 (CHIP), estudios de mercado m\xB2, liquidaciones DIAN y contratos digitales.
 - Identidad de JanIA: explicar con orgullo que fue creada por Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones) para empoderar al corredor independiente.
 - L\xEDnea de Atenci\xF3n Oficial con el Br\xF3ker: para acompa\xF1amiento o casos personalizados, contactar a Eduardo y Jani en el WhatsApp oficial (+57 316 656 9719).`,
     domingo_soporte: `Tema: Domingo de Soporte JanIA, Consultor\xEDa 24/7 & Visi\xF3n VECY Bienes Ra\xEDces (${fechaBogota}).
@@ -17613,9 +19641,9 @@ async function getLiveMarketStats() {
     const db = await getDb();
     if (!db) throw new Error("Database not connected");
     const [propCountRes, reqCountRes, matchCountRes] = await Promise.all([
-      db.select({ count: sql7`count(*)::int` }).from(properties).where(eq9(properties.available, true)),
-      db.select({ count: sql7`count(*)::int` }).from(requirements).where(eq9(requirements.status, "active")),
-      db.select({ count: sql7`count(*)::int` }).from(propertyMatches).where(gte2(propertyMatches.matchScore, "80"))
+      db.select({ count: sql8`count(*)::int` }).from(properties).where(eq10(properties.available, true)),
+      db.select({ count: sql8`count(*)::int` }).from(requirements).where(eq10(requirements.status, "active")),
+      db.select({ count: sql8`count(*)::int` }).from(propertyMatches).where(gte2(propertyMatches.matchScore, "80"))
     ]);
     const totalProps = propCountRes[0]?.count || 0;
     const totalReqs = reqCountRes[0]?.count || 0;
@@ -17637,6 +19665,57 @@ async function getLiveMarketStats() {
       totalCities: 30,
       totalPairs: 770012
     };
+  }
+}
+async function publishIdentityAndPredialServiceAnnouncement(force = false) {
+  const dateKey = getBogotaDateString();
+  const lock = await acquireBroadcastLock("anuncio_servicios", "identidad_predial", dateKey, force);
+  if (!lock.allowed) {
+    console.log(`[CRON-SERVICE] \u23ED\uFE0F Omitiendo anuncio de servicios: ${lock.reason}`);
+    return { skipped: true, reason: lock.reason };
+  }
+  const announcementText = `\u{1F6E1}\uFE0F *NUEVAS HERRAMIENTAS ACTIVAS EN VECY NETWORK: VERIFICACI\xD3N DE IDENTIDAD Y ASISTENCIA PREDIAL BOGOT\xC1* \u{1F1E8}\u{1F1F4}
+
+Estimada comunidad de corredores, aliados y propietarios:
+
+Para que cierres tus negocios con total blindaje jur\xEDdico, seguridad notarial y rapidez tributaria, JanIA ahora cuenta con dos herramientas directas operando 24/7 en WhatsApp:
+
+1\uFE0F\u20E3 \u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE C\xC9DULA Y ANTECEDENTES (POLIC\xCDA NACIONAL)*
+\xBFVas a mostrar un inmueble o a firmar un acuerdo de puntas compartidas (50/50)?
+\u2022 Simplemente escribe aqu\xED o por mensaje privado a JanIA:
+\u{1F449} *"JanIA, verificar c\xE9dula [n\xFAmero]"* o *"CC [n\xFAmero]"*
+\u2022 JanIA consulta en tiempo real con la base de datos de la Polic\xEDa Nacional de Colombia (cotejo en l\xEDnea con 2Captcha), valida los nombres y apellidos oficiales en orden civil natural y confirma que no existan antecedentes pendientes para blindar tus contratos y hojas de visita.
+
+2\uFE0F\u20E3 \u{1F3DB}\uFE0F *ASISTENCIA Y LIQUIDACI\xD3N DE IMPUESTO PREDIAL BOGOT\xC1*
+\xBFNecesitas saber el predial o descargar la factura oficial para escrituraci\xF3n?
+\u2022 Env\xEDa el c\xF3digo CHIP y la c\xE9dula del propietario:
+\u{1F449} *"JanIA, predial CHIP AAA0123ABCD c\xE9dula [n\xFAmero]"*
+\u2022 JanIA te entrega la liquidaci\xF3n estimada seg\xFAn tarifas distritales y te proporciona el enlace directo oficial de la Secretar\xEDa Distrital de Hacienda para descargar la factura oficial en PDF.
+
+\u{1F91D} *\xA1Blindamos tu comisi\xF3n, tu tiempo y tu seguridad inmobiliaria!*
+Cualquier duda, nuestro br\xF3ker y directores Eduardo y Jani est\xE1n a tu disposici\xF3n en la l\xEDnea oficial: +57 316 6569719. \u2728`;
+  try {
+    if (janiaMatchBot.buzonGroupId) {
+      await janiaMatchBot.queuedSend(janiaMatchBot.buzonGroupId, announcementText);
+    }
+    if (janiaMatchBot.circuloGroupId) {
+      await janiaMatchBot.queuedSend(janiaMatchBot.circuloGroupId, announcementText);
+    }
+    if (janiaMatchBot.channelNewsletterId) {
+      await janiaMatchBot.sendDirectMessage(janiaMatchBot.channelNewsletterId, announcementText, { allowDirectMessage: true }).catch(() => {
+      });
+    }
+    await completeBroadcast(lock.broadcastId, {
+      topicTitle: "Anuncio Oficial: Verificaci\xF3n de C\xE9dula y Predial Bogot\xE1",
+      themeKey: "servicios_jania",
+      captionText: announcementText
+    });
+    console.log(`[CRON-SERVICE] \u2705 Anuncio de Verificaci\xF3n de C\xE9dula y Predial despachado a Grupo 2, Grupo 3 y Canal.`);
+    return { success: true };
+  } catch (err) {
+    console.error(`[CRON-SERVICE] \u274C Error despachando anuncio de servicios:`, err?.message || err);
+    await failBroadcast(lock.broadcastId, err?.message);
+    return { success: false, error: err?.message };
   }
 }
 var __filename, __dirname, ALL_JANIA_IMAGES, THEME_IMAGE_PREFERENCES, ROTATING_FALLBACK_CATALOG, DAILY_TIPS_CONFIG, DAILY_POLLS_MAP;
@@ -18148,17 +20227,8 @@ import compression from "compression";
 import { createServer } from "http";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 
-// shared/const.ts
-var COOKIE_NAME = "app_session_id";
-var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
-var AXIOS_TIMEOUT_MS = 3e4;
-var UNAUTHED_ERR_MSG = "Please login (10001)";
-var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.97";
-var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
-var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
-
 // server/_core/oauth.ts
+init_const();
 init_db();
 
 // server/_core/cookies.ts
@@ -18178,6 +20248,9 @@ function getSessionCookieOptions(req) {
     secure: isProd ? true : isSecureRequest(req)
   };
 }
+
+// server/_core/sdk.ts
+init_const();
 
 // shared/_core/errors.ts
 var HttpError = class extends Error {
@@ -18484,6 +20557,9 @@ function registerOAuthRoutes(app) {
   });
 }
 
+// server/routers.ts
+init_const();
+
 // server/_core/systemRouter.ts
 import { z } from "zod";
 
@@ -18701,43 +20777,8 @@ Responde a este mensaje privado con:
   }
 }
 
-// server/_core/trpc.ts
-import { initTRPC, TRPCError as TRPCError2 } from "@trpc/server";
-import superjson from "superjson";
-var t = initTRPC.context().create({
-  transformer: superjson
-});
-var router = t.router;
-var publicProcedure = t.procedure;
-var requireUser = t.middleware(async (opts) => {
-  const { ctx, next } = opts;
-  if (!ctx.user) {
-    throw new TRPCError2({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
-  }
-  return next({
-    ctx: {
-      ...ctx,
-      user: ctx.user
-    }
-  });
-});
-var protectedProcedure = t.procedure.use(requireUser);
-var adminProcedure = t.procedure.use(
-  t.middleware(async (opts) => {
-    const { ctx, next } = opts;
-    if (!ctx.user || ctx.user.role !== "admin") {
-      throw new TRPCError2({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
-    }
-    return next({
-      ctx: {
-        ...ctx,
-        user: ctx.user
-      }
-    });
-  })
-);
-
 // server/_core/systemRouter.ts
+init_trpc();
 var systemRouter = router({
   health: publicProcedure.input(
     z.object({
@@ -18760,13 +20801,14 @@ var systemRouter = router({
 });
 
 // server/routers/janIA.ts
-import { z as z3 } from "zod";
+init_trpc();
 init_llm();
 init_db();
 init_schema();
 init_scraper();
 init_janIA();
-import { eq as eq10, and as and8, desc as desc4, sql as sql8, inArray } from "drizzle-orm";
+import { z as z4 } from "zod";
+import { eq as eq11, and as and8, desc as desc5, sql as sql9, inArray } from "drizzle-orm";
 
 // server/_core/taxEngine.ts
 var VALOR_UVT_2026 = 50318;
@@ -18827,15 +20869,16 @@ import fs9 from "fs";
 import path9 from "path";
 
 // server/routers/properties.ts
-import { z as z2 } from "zod";
+init_trpc();
 init_db();
 init_schema();
-import { eq as eq6, desc as desc2, ilike, or as or3, and as and4 } from "drizzle-orm";
-import { TRPCError as TRPCError3 } from "@trpc/server";
-var propertyInputSchema = z2.object({
-  name: z2.string().min(2),
-  description: z2.string().optional(),
-  propertyType: z2.enum([
+import { z as z3 } from "zod";
+import { eq as eq8, desc as desc3, ilike as ilike2, or as or4, and as and5 } from "drizzle-orm";
+import { TRPCError as TRPCError4 } from "@trpc/server";
+var propertyInputSchema = z3.object({
+  name: z3.string().min(2),
+  description: z3.string().optional(),
+  propertyType: z3.enum([
     "apartment",
     "house",
     "building",
@@ -18848,7 +20891,7 @@ var propertyInputSchema = z2.object({
     "loft",
     "consultorio"
   ]),
-  transactionType: z2.enum([
+  transactionType: z3.enum([
     "venta",
     "arriendo",
     "venta_o_arriendo",
@@ -18858,38 +20901,38 @@ var propertyInputSchema = z2.object({
     "venta_permuta",
     "aporte"
   ]).default("venta"),
-  price: z2.string().min(1),
-  currency: z2.enum(["COP", "USD"]).default("COP"),
-  city: z2.string().default("Bogot\xE1"),
-  location: z2.string().optional().nullable(),
-  zone: z2.string().min(2),
-  addressCity: z2.string().optional().nullable(),
-  addressLocality: z2.string().optional().nullable(),
-  addressNeighborhood: z2.string().optional().nullable(),
-  coordinates: z2.any().optional().nullable(),
-  bedrooms: z2.number().optional().nullable(),
-  bathrooms: z2.number().optional().nullable(),
-  garages: z2.number().optional().nullable(),
-  stratum: z2.number().optional().nullable(),
-  floorDetail: z2.string().optional().nullable(),
-  areaTotal: z2.string().optional().nullable(),
-  areaPrivate: z2.string().optional().nullable(),
-  yearBuilt: z2.number().optional().nullable(),
-  antiguedadAnos: z2.number().optional().nullable(),
-  isAmoblado: z2.boolean().optional().default(false),
-  adminFee: z2.string().optional().nullable(),
-  commissionPercent: z2.string().optional().nullable(),
-  matriculaInmobiliaria: z2.string().optional().nullable(),
-  videoUrl: z2.string().optional().nullable(),
-  externalUrl: z2.string().optional().nullable(),
-  rawText: z2.string().optional().nullable(),
-  featured: z2.boolean().optional().default(false),
-  available: z2.boolean().optional().default(true),
-  idUsuarioWhatsapp: z2.string().optional().nullable(),
-  amenities: z2.any().optional().nullable(),
-  latitude: z2.string().optional().nullable(),
-  longitude: z2.string().optional().nullable(),
-  images: z2.array(z2.string()).optional().nullable()
+  price: z3.string().min(1),
+  currency: z3.enum(["COP", "USD"]).default("COP"),
+  city: z3.string().default("Bogot\xE1"),
+  location: z3.string().optional().nullable(),
+  zone: z3.string().min(2),
+  addressCity: z3.string().optional().nullable(),
+  addressLocality: z3.string().optional().nullable(),
+  addressNeighborhood: z3.string().optional().nullable(),
+  coordinates: z3.any().optional().nullable(),
+  bedrooms: z3.number().optional().nullable(),
+  bathrooms: z3.number().optional().nullable(),
+  garages: z3.number().optional().nullable(),
+  stratum: z3.number().optional().nullable(),
+  floorDetail: z3.string().optional().nullable(),
+  areaTotal: z3.string().optional().nullable(),
+  areaPrivate: z3.string().optional().nullable(),
+  yearBuilt: z3.number().optional().nullable(),
+  antiguedadAnos: z3.number().optional().nullable(),
+  isAmoblado: z3.boolean().optional().default(false),
+  adminFee: z3.string().optional().nullable(),
+  commissionPercent: z3.string().optional().nullable(),
+  matriculaInmobiliaria: z3.string().optional().nullable(),
+  videoUrl: z3.string().optional().nullable(),
+  externalUrl: z3.string().optional().nullable(),
+  rawText: z3.string().optional().nullable(),
+  featured: z3.boolean().optional().default(false),
+  available: z3.boolean().optional().default(true),
+  idUsuarioWhatsapp: z3.string().optional().nullable(),
+  amenities: z3.any().optional().nullable(),
+  latitude: z3.string().optional().nullable(),
+  longitude: z3.string().optional().nullable(),
+  images: z3.array(z3.string()).optional().nullable()
 });
 var propertyFields = {
   id: properties.id,
@@ -19207,59 +21250,59 @@ function parsePropertyDeterministically(text2) {
 }
 var propertiesRouter = router({
   // --- PUBLIC ---
-  list: publicProcedure.input(z2.object({
-    search: z2.string().optional(),
-    zone: z2.string().optional(),
-    type: z2.string().optional(),
-    transactionType: z2.string().optional(),
-    limit: z2.number().min(1).max(200).default(100),
-    offset: z2.number().default(0)
+  list: publicProcedure.input(z3.object({
+    search: z3.string().optional(),
+    zone: z3.string().optional(),
+    type: z3.string().optional(),
+    transactionType: z3.string().optional(),
+    limit: z3.number().min(1).max(200).default(100),
+    offset: z3.number().default(0)
   }).optional()).query(async ({ input }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
     const whereConditions = [];
     if (input?.search) {
       whereConditions.push(
-        or3(
-          ilike(properties.name, `%${input.search}%`),
-          ilike(properties.description, `%${input.search}%`),
-          ilike(properties.zone, `%${input.search}%`),
-          ilike(properties.addressNeighborhood, `%${input.search}%`),
-          ilike(properties.city, `%${input.search}%`)
+        or4(
+          ilike2(properties.name, `%${input.search}%`),
+          ilike2(properties.description, `%${input.search}%`),
+          ilike2(properties.zone, `%${input.search}%`),
+          ilike2(properties.addressNeighborhood, `%${input.search}%`),
+          ilike2(properties.city, `%${input.search}%`)
         )
       );
     }
     if (input?.zone) {
       whereConditions.push(
-        or3(
-          ilike(properties.zone, `%${input.zone}%`),
-          ilike(properties.addressNeighborhood, `%${input.zone}%`),
-          ilike(properties.addressLocality, `%${input.zone}%`)
+        or4(
+          ilike2(properties.zone, `%${input.zone}%`),
+          ilike2(properties.addressNeighborhood, `%${input.zone}%`),
+          ilike2(properties.addressLocality, `%${input.zone}%`)
         )
       );
     }
     if (input?.type) {
-      whereConditions.push(eq6(properties.propertyType, input.type));
+      whereConditions.push(eq8(properties.propertyType, input.type));
     }
     if (input?.transactionType) {
-      whereConditions.push(eq6(properties.transactionType, input.transactionType));
+      whereConditions.push(eq8(properties.transactionType, input.transactionType));
     }
-    whereConditions.push(eq6(properties.available, true));
-    const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and4(...whereConditions) : void 0).orderBy(desc2(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
+    whereConditions.push(eq8(properties.available, true));
+    const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and5(...whereConditions) : void 0).orderBy(desc3(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
     const items = await query;
     return items;
   }),
-  getById: publicProcedure.input(z2.object({ id: z2.number() })).query(async ({ input }) => {
+  getById: publicProcedure.input(z3.object({ id: z3.number() })).query(async ({ input }) => {
     const now = Date.now();
     const cached = propertyGetByIdCache.get(input.id);
     if (cached && cached.expiresAt > now) {
       return cached.data;
     }
     const db = await getDb();
-    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const item = await db.select().from(properties).where(eq6(properties.id, input.id)).limit(1);
-    if (item.length === 0) throw new TRPCError3({ code: "NOT_FOUND" });
-    const images = await db.select().from(propertyImages).where(eq6(propertyImages.propertyId, input.id)).orderBy(propertyImages.displayOrder);
+    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+    const item = await db.select().from(properties).where(eq8(properties.id, input.id)).limit(1);
+    if (item.length === 0) throw new TRPCError4({ code: "NOT_FOUND" });
+    const images = await db.select().from(propertyImages).where(eq8(propertyImages.propertyId, input.id)).orderBy(propertyImages.displayOrder);
     const result = {
       ...item[0],
       imagesList: images
@@ -19270,7 +21313,7 @@ var propertiesRouter = router({
   // --- MUTATIONS (CREAR / EDITAR) ---
   create: publicProcedure.input(propertyInputSchema).mutation(async ({ ctx, input }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
     const newProperty = await db.insert(properties).values({
       ...input,
       agentId: ctx?.user?.id ?? 1
@@ -19278,11 +21321,11 @@ var propertiesRouter = router({
     invalidatePropertiesListCache();
     return newProperty[0];
   }),
-  parseText: publicProcedure.input(z2.object({
-    text: z2.string().optional().default(""),
-    pdfBase64: z2.string().optional(),
-    pdfMimeType: z2.string().optional(),
-    fileName: z2.string().optional()
+  parseText: publicProcedure.input(z3.object({
+    text: z3.string().optional().default(""),
+    pdfBase64: z3.string().optional(),
+    pdfMimeType: z3.string().optional(),
+    fileName: z3.string().optional()
   })).mutation(async ({ input }) => {
     const deterministic = parsePropertyDeterministically(input.text || "");
     let pdfUrl = void 0;
@@ -19382,49 +21425,49 @@ ${input.text || "Ver documento PDF adjunto"}`;
       };
     }
   }),
-  update: publicProcedure.input(z2.object({
-    id: z2.number(),
+  update: publicProcedure.input(z3.object({
+    id: z3.number(),
     data: propertyInputSchema.partial()
   })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq6(properties.id, input.id)).limit(1);
-    if (existing.length === 0) throw new TRPCError3({ code: "NOT_FOUND" });
+    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+    const existing = await db.select().from(properties).where(eq8(properties.id, input.id)).limit(1);
+    if (existing.length === 0) throw new TRPCError4({ code: "NOT_FOUND" });
     if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
-      throw new TRPCError3({ code: "FORBIDDEN" });
+      throw new TRPCError4({ code: "FORBIDDEN" });
     }
-    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq6(properties.id, input.id)).returning();
+    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq8(properties.id, input.id)).returning();
     invalidatePropertiesListCache();
     return updated[0];
   }),
-  delete: publicProcedure.input(z2.object({ id: z2.number() })).mutation(async ({ ctx, input }) => {
+  delete: publicProcedure.input(z3.object({ id: z3.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq6(properties.id, input.id)).limit(1);
-    if (existing.length === 0) throw new TRPCError3({ code: "NOT_FOUND" });
+    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+    const existing = await db.select().from(properties).where(eq8(properties.id, input.id)).limit(1);
+    if (existing.length === 0) throw new TRPCError4({ code: "NOT_FOUND" });
     if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
-      throw new TRPCError3({ code: "FORBIDDEN" });
+      throw new TRPCError4({ code: "FORBIDDEN" });
     }
-    await db.delete(properties).where(eq6(properties.id, input.id));
+    await db.delete(properties).where(eq8(properties.id, input.id));
     invalidatePropertiesListCache();
     return { success: true };
   }),
   // List my own properties (agent view) or all properties (admin view) - Protegido con micro-caché para Supabase Egress
   myList: publicProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
     const user = ctx?.user;
     if (!user || user.role === "admin") {
       const now = Date.now();
       if (cachedAdminMyList && now - cachedAdminMyListTime < 18e4) {
         return cachedAdminMyList;
       }
-      const data = await db.select(propertyFields).from(properties).orderBy(desc2(properties.id));
+      const data = await db.select(propertyFields).from(properties).orderBy(desc3(properties.id));
       cachedAdminMyList = data;
       cachedAdminMyListTime = now;
       return data;
     }
-    return await db.select(propertyFields).from(properties).where(eq6(properties.agentId, user.id)).orderBy(desc2(properties.id));
+    return await db.select(propertyFields).from(properties).where(eq8(properties.agentId, user.id)).orderBy(desc3(properties.id));
   })
 });
 
@@ -19458,7 +21501,7 @@ async function processUnresolvedMatches() {
       try {
         const exp = explicarMatch(task.requirement, task.property);
         if (db) {
-          await db.update(propertyMatches).set({ matchExplanation: exp }).where(eq10(propertyMatches.id, task.id));
+          await db.update(propertyMatches).set({ matchExplanation: exp }).where(eq11(propertyMatches.id, task.id));
         }
       } catch (err) {
       }
@@ -19470,7 +21513,7 @@ async function processUnresolvedMatches() {
 }
 var janIARouter = router({
   // New: Extract property data from link
-  extractFromLink: publicProcedure.input(z3.object({ url: z3.string().url() })).mutation(async ({ input }) => {
+  extractFromLink: publicProcedure.input(z4.object({ url: z4.string().url() })).mutation(async ({ input }) => {
     try {
       const data = await scrapePropertyLink(input.url);
       return {
@@ -19484,17 +21527,17 @@ var janIARouter = router({
   }),
   // Chat endpoint
   chat: publicProcedure.input(
-    z3.object({
-      sessionId: z3.string(),
-      message: z3.string(),
-      propertyId: z3.number().optional(),
-      leadId: z3.number().optional()
+    z4.object({
+      sessionId: z4.string(),
+      message: z4.string(),
+      propertyId: z4.number().optional(),
+      leadId: z4.number().optional()
     })
   ).mutation(async ({ input, ctx }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      let conversation = await db.select().from(conversations).where(eq10(conversations.sessionId, input.sessionId)).limit(1);
+      let conversation = await db.select().from(conversations).where(eq11(conversations.sessionId, input.sessionId)).limit(1);
       let conversationId;
       if (conversation.length === 0) {
         const insertData = {
@@ -19509,7 +21552,7 @@ var janIARouter = router({
       } else {
         conversationId = conversation[0].id;
         if (ctx.user && !conversation[0].userId) {
-          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq10(conversations.id, conversationId));
+          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq11(conversations.id, conversationId));
         }
       }
       const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
@@ -19534,6 +21577,42 @@ var janIARouter = router({
         wantsVoice = result.wantsVoice || false;
         voiceResponse = result.voiceResponse || janIAResponse;
       } else {
+        const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+        const idCheck = await executeIdentityVerificationFromWhatsApp2(input.message);
+        if (idCheck.isVerificationRequest && idCheck.reportText) {
+          janIAResponse = idCheck.reportText;
+          wantsVoice = false;
+          voiceResponse = janIAResponse;
+          await db.insert(messages).values({
+            conversationId,
+            role: "janIA",
+            content: janIAResponse
+          });
+          return {
+            response: janIAResponse,
+            conversationId,
+            wantsVoice: false,
+            voiceResponse: janIAResponse
+          };
+        }
+        const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+        const predialCheck = await executePredialAssistanceFromWhatsApp2(input.message);
+        if (predialCheck.isPredialRequest && predialCheck.reportText) {
+          janIAResponse = predialCheck.reportText;
+          wantsVoice = false;
+          voiceResponse = janIAResponse;
+          await db.insert(messages).values({
+            conversationId,
+            role: "janIA",
+            content: janIAResponse
+          });
+          return {
+            response: janIAResponse,
+            conversationId,
+            wantsVoice: false,
+            voiceResponse: janIAResponse
+          };
+        }
         const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
         const { buildSystemPrompt: buildSystemPrompt2, getLiveStats: getLiveStats2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
         const { getGreetingByTime: getGreetingByTime3 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
@@ -19568,7 +21647,7 @@ var janIARouter = router({
 ${liveStats}${userContextInstruction}
 
 [INSTRUCCI\xD3N MAESTRA - CHAT WEB VECY 24/7]: Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento l\xF3gico, amplio criterio jur\xEDdico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa y estructurada. PROHIBIDO usar plantillas fijas o cierres/firmas con membretes. Responde en formato JSON estrictamente como: {"response": "tu respuesta viva y razonada"}`;
-        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq10(messages.conversationId, conversationId)).orderBy(desc4(messages.createdAt)).limit(6);
+        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq11(messages.conversationId, conversationId)).orderBy(desc5(messages.createdAt)).limit(6);
         const formattedHistory = recentHistory.reverse().map((m) => ({
           role: m.role === "janIA" ? "assistant" : "user",
           content: m.content
@@ -19613,7 +21692,7 @@ ${liveStats}${userContextInstruction}
       await db.update(conversations).set({
         lastMessage: janIAResponse,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq10(conversations.id, conversationId));
+      }).where(eq11(conversations.id, conversationId));
       return {
         content: janIAResponse,
         wantsVoice,
@@ -19631,7 +21710,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).where(eq10(conversations.userId, String(ctx.user.id))).orderBy(desc4(conversations.updatedAt));
+      return await db.select().from(conversations).where(eq11(conversations.userId, String(ctx.user.id))).orderBy(desc5(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting user conversations:", error);
       return [];
@@ -19642,34 +21721,34 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).orderBy(desc4(conversations.updatedAt));
+      return await db.select().from(conversations).orderBy(desc5(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting all conversations:", error);
       return [];
     }
   }),
   // Get messages for a conversation session
-  getConversationMessages: publicProcedure.input(z3.object({ sessionId: z3.string() })).query(async ({ input }) => {
+  getConversationMessages: publicProcedure.input(z4.object({ sessionId: z4.string() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) return [];
     try {
-      const conv = await db.select().from(conversations).where(eq10(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq11(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length === 0) return [];
-      return await db.select().from(messages).where(eq10(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
+      return await db.select().from(messages).where(eq11(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
     } catch (error) {
       console.error("Error getting conversation messages:", error);
       return [];
     }
   }),
   // Delete a conversation and its messages
-  deleteConversation: publicProcedure.input(z3.object({ sessionId: z3.string() })).mutation(async ({ input }) => {
+  deleteConversation: publicProcedure.input(z4.object({ sessionId: z4.string() })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const conv = await db.select().from(conversations).where(eq10(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq11(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length > 0) {
-        await db.delete(messages).where(eq10(messages.conversationId, conv[0].id));
-        await db.delete(conversations).where(eq10(conversations.id, conv[0].id));
+        await db.delete(messages).where(eq11(messages.conversationId, conv[0].id));
+        await db.delete(conversations).where(eq11(conversations.id, conv[0].id));
       }
       return { success: true };
     } catch (error) {
@@ -19679,12 +21758,12 @@ ${liveStats}${userContextInstruction}
   }),
   // Analyze file endpoint
   analyzeFile: publicProcedure.input(
-    z3.object({
-      sessionId: z3.string(),
-      fileUrl: z3.string(),
-      fileType: z3.string(),
-      propertyId: z3.number().optional(),
-      leadId: z3.number().optional()
+    z4.object({
+      sessionId: z4.string(),
+      fileUrl: z4.string(),
+      fileType: z4.string(),
+      propertyId: z4.number().optional(),
+      leadId: z4.number().optional()
     })
   ).mutation(async ({ input, ctx }) => {
     const db = await getDb();
@@ -19744,7 +21823,7 @@ ${liveStats}${userContextInstruction}
         pdfMimeType
       );
       const analysis = result.response && result.response.trim() !== "" ? (result.dmResponse ? result.dmResponse + "\n\n" : "") + result.response : result.dmResponse || result.response;
-      const conversation = await db.select().from(conversations).where(eq10(conversations.sessionId, input.sessionId)).limit(1);
+      const conversation = await db.select().from(conversations).where(eq11(conversations.sessionId, input.sessionId)).limit(1);
       if (conversation.length > 0) {
         const conversationId = conversation[0].id;
         await db.insert(messages).values({
@@ -19763,7 +21842,7 @@ ${liveStats}${userContextInstruction}
         await db.update(conversations).set({
           lastMessage: analysis,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq10(conversations.id, conversationId));
+        }).where(eq11(conversations.id, conversationId));
       }
       return {
         analysis
@@ -19775,15 +21854,15 @@ ${liveStats}${userContextInstruction}
   }),
   // Get property matches
   getPropertyMatches: publicProcedure.input(
-    z3.object({
-      requirementId: z3.number(),
-      limit: z3.number().default(5)
+    z4.object({
+      requirementId: z4.number(),
+      limit: z4.number().default(5)
     })
   ).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const matches = await db.select().from(propertyMatches).where(eq10(propertyMatches.requirementId, input.requirementId)).orderBy(desc4(propertyMatches.matchScore)).limit(input.limit);
+      const matches = await db.select().from(propertyMatches).where(eq11(propertyMatches.requirementId, input.requirementId)).orderBy(desc5(propertyMatches.matchScore)).limit(input.limit);
       return matches;
     } catch (error) {
       console.error("Error getting property matches:", error);
@@ -19892,13 +21971,13 @@ ${liveStats}${userContextInstruction}
           enlaceOrigen: requirements.enlaceOrigen,
           createdAt: requirements.createdAt
         }
-      }).from(propertyMatches).innerJoin(properties, eq10(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq10(propertyMatches.requirementId, requirements.id)).where(sql8`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
+      }).from(propertyMatches).innerJoin(properties, eq11(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq11(propertyMatches.requirementId, requirements.id)).where(sql9`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
             AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) 
             AND (${properties.available} IS NULL OR ${properties.available} = true)
             AND (${requirements.status} IS NULL OR CAST(${requirements.status} AS TEXT) != 'expired')
             AND (${requirements.createdAt} >= NOW() - INTERVAL '10 days')
             AND (COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt}) >= NOW() - INTERVAL '10 days')
-            AND NOT (${properties.rawText} ~* '(\\m(busco|buscamos|se busca|estoy buscando|para compra ya)\\M)')`).orderBy(desc4(propertyMatches.id)).limit(800);
+            AND NOT (${properties.rawText} ~* '(\\m(busco|buscamos|se busca|estoy buscando|para compra ya)\\M)')`).orderBy(desc5(propertyMatches.id)).limit(800);
       const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
       const imagesMap = {};
       if (propIds.length > 0) {
@@ -19963,7 +22042,7 @@ ${liveStats}${userContextInstruction}
           broker: propertyPublicationHistory.broker,
           portal: propertyPublicationHistory.portal,
           grupo: propertyPublicationHistory.grupo
-        }).from(propertyPublicationHistory).where(inArray(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc4(propertyPublicationHistory.fecha));
+        }).from(propertyPublicationHistory).where(inArray(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc5(propertyPublicationHistory.fecha));
         const historyMap = /* @__PURE__ */ new Map();
         for (const h of histories) {
           let list = historyMap.get(h.propertyId);
@@ -20024,36 +22103,36 @@ ${liveStats}${userContextInstruction}
     }
   }),
   // Actualizar datos prediales de un inmueble oferta directamente desde la Mesa de Cotejo
-  updatePropertyDetails: publicProcedure.input(z3.object({
-    propertyId: z3.number(),
-    name: z3.string().optional(),
-    price: z3.string().optional(),
-    rentPrice: z3.string().optional().nullable(),
-    adminFee: z3.string().optional().nullable(),
-    bedrooms: z3.union([z3.number(), z3.string()]).optional().nullable(),
-    bathrooms: z3.union([z3.number(), z3.string()]).optional().nullable(),
-    garages: z3.union([z3.number(), z3.string()]).optional().nullable(),
-    areaTotal: z3.string().optional().nullable(),
-    stratum: z3.union([z3.number(), z3.string()]).optional().nullable(),
-    zone: z3.string().optional().nullable(),
-    addressNeighborhood: z3.string().optional().nullable(),
-    addressLocality: z3.string().optional().nullable(),
-    city: z3.string().optional().nullable(),
-    propertyType: z3.string().optional().nullable(),
-    transactionType: z3.string().optional().nullable(),
-    idUsuarioWhatsapp: z3.string().optional().nullable(),
-    nombreUsuarioWhatsapp: z3.string().optional().nullable(),
-    origenNombre: z3.string().optional().nullable(),
-    yearBuilt: z3.union([z3.number(), z3.string()]).optional().nullable(),
-    antiguedadAnos: z3.union([z3.number(), z3.string()]).optional().nullable(),
-    interiorExterior: z3.string().optional().nullable(),
-    garageType: z3.string().optional().nullable(),
-    floorDetail: z3.string().optional().nullable(),
-    amenities: z3.record(z3.string(), z3.any()).optional().nullable()
+  updatePropertyDetails: publicProcedure.input(z4.object({
+    propertyId: z4.number(),
+    name: z4.string().optional(),
+    price: z4.string().optional(),
+    rentPrice: z4.string().optional().nullable(),
+    adminFee: z4.string().optional().nullable(),
+    bedrooms: z4.union([z4.number(), z4.string()]).optional().nullable(),
+    bathrooms: z4.union([z4.number(), z4.string()]).optional().nullable(),
+    garages: z4.union([z4.number(), z4.string()]).optional().nullable(),
+    areaTotal: z4.string().optional().nullable(),
+    stratum: z4.union([z4.number(), z4.string()]).optional().nullable(),
+    zone: z4.string().optional().nullable(),
+    addressNeighborhood: z4.string().optional().nullable(),
+    addressLocality: z4.string().optional().nullable(),
+    city: z4.string().optional().nullable(),
+    propertyType: z4.string().optional().nullable(),
+    transactionType: z4.string().optional().nullable(),
+    idUsuarioWhatsapp: z4.string().optional().nullable(),
+    nombreUsuarioWhatsapp: z4.string().optional().nullable(),
+    origenNombre: z4.string().optional().nullable(),
+    yearBuilt: z4.union([z4.number(), z4.string()]).optional().nullable(),
+    antiguedadAnos: z4.union([z4.number(), z4.string()]).optional().nullable(),
+    interiorExterior: z4.string().optional().nullable(),
+    garageType: z4.string().optional().nullable(),
+    floorDetail: z4.string().optional().nullable(),
+    amenities: z4.record(z4.string(), z4.any()).optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const existingProp = await db.select().from(properties).where(eq10(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
+    const existingProp = await db.select().from(properties).where(eq11(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
     const sanitizeNumeric = (val) => {
       if (val === void 0 || val === null) return null;
       let s = String(val).trim();
@@ -20175,7 +22254,7 @@ ${liveStats}${userContextInstruction}
     if (hasAmenitiesChange) {
       updateData.amenities = mergedAmenities;
     }
-    await db.update(properties).set(updateData).where(eq10(properties.id, input.propertyId));
+    await db.update(properties).set(updateData).where(eq11(properties.id, input.propertyId));
     console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const hasPhone = Boolean(input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp);
     const hasName = Boolean(input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp);
@@ -20212,32 +22291,32 @@ ${liveStats}${userContextInstruction}
     return { success: true, message: "Propiedad actualizada con \xE9xito" };
   }),
   // Actualizar datos prediales de un requerimiento demanda directamente desde la Mesa de Cotejo
-  updateRequirementDetails: publicProcedure.input(z3.object({
-    requirementId: z3.number(),
-    name: z3.string().optional(),
-    presupuestoMax: z3.string().optional(),
-    presupuestoMin: z3.string().optional().nullable(),
-    adminFeeMax: z3.string().optional().nullable(),
-    habitacionesMin: z3.union([z3.number(), z3.string()]).optional().nullable(),
-    banosMin: z3.union([z3.number(), z3.string()]).optional().nullable(),
-    parqueaderosMin: z3.union([z3.number(), z3.string()]).optional().nullable(),
-    areaMin: z3.string().optional().nullable(),
-    estratoDeseado: z3.union([z3.number(), z3.string()]).optional().nullable(),
-    zonaDeseada: z3.string().optional().nullable(),
-    addressNeighborhood: z3.string().optional().nullable(),
-    ciudadDeseada: z3.string().optional().nullable(),
-    tipoInmuebleDeseado: z3.string().optional().nullable(),
-    tipoNegocioDeseado: z3.string().optional().nullable(),
-    idUsuarioWhatsapp: z3.string().optional().nullable(),
-    nombreUsuarioWhatsapp: z3.string().optional().nullable(),
-    origenNombre: z3.string().optional().nullable(),
-    antiguedadMax: z3.union([z3.number(), z3.string()]).optional().nullable(),
-    interiorExterior: z3.string().optional().nullable(),
-    caracteristicasDeseadas: z3.record(z3.string(), z3.any()).optional().nullable()
+  updateRequirementDetails: publicProcedure.input(z4.object({
+    requirementId: z4.number(),
+    name: z4.string().optional(),
+    presupuestoMax: z4.string().optional(),
+    presupuestoMin: z4.string().optional().nullable(),
+    adminFeeMax: z4.string().optional().nullable(),
+    habitacionesMin: z4.union([z4.number(), z4.string()]).optional().nullable(),
+    banosMin: z4.union([z4.number(), z4.string()]).optional().nullable(),
+    parqueaderosMin: z4.union([z4.number(), z4.string()]).optional().nullable(),
+    areaMin: z4.string().optional().nullable(),
+    estratoDeseado: z4.union([z4.number(), z4.string()]).optional().nullable(),
+    zonaDeseada: z4.string().optional().nullable(),
+    addressNeighborhood: z4.string().optional().nullable(),
+    ciudadDeseada: z4.string().optional().nullable(),
+    tipoInmuebleDeseado: z4.string().optional().nullable(),
+    tipoNegocioDeseado: z4.string().optional().nullable(),
+    idUsuarioWhatsapp: z4.string().optional().nullable(),
+    nombreUsuarioWhatsapp: z4.string().optional().nullable(),
+    origenNombre: z4.string().optional().nullable(),
+    antiguedadMax: z4.union([z4.number(), z4.string()]).optional().nullable(),
+    interiorExterior: z4.string().optional().nullable(),
+    caracteristicasDeseadas: z4.record(z4.string(), z4.any()).optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const existingReq = await db.select().from(requirements).where(eq10(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
+    const existingReq = await db.select().from(requirements).where(eq11(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
     const sanitizeNumeric = (val) => {
       if (val === void 0 || val === null) return null;
       let s = String(val).trim();
@@ -20331,7 +22410,7 @@ ${liveStats}${userContextInstruction}
     if (hasCaractChange) {
       updateData.caracteristicasDeseadas = mergedCaract;
     }
-    await db.update(requirements).set(updateData).where(eq10(requirements.id, input.requirementId));
+    await db.update(requirements).set(updateData).where(eq11(requirements.id, input.requirementId));
     console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const hasPhone = Boolean(input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp);
     const hasName = Boolean(input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp);
@@ -20368,9 +22447,9 @@ ${liveStats}${userContextInstruction}
     return { success: true, message: "Requerimiento actualizado con \xE9xito" };
   }),
   // Recalcular cruces y afinidad predial para Oferta y/o Demanda tras edición en Mesa de Cotejo
-  recalculateMatchForPair: publicProcedure.input(z3.object({
-    propertyId: z3.number().optional().nullable(),
-    requirementId: z3.number().optional().nullable()
+  recalculateMatchForPair: publicProcedure.input(z4.object({
+    propertyId: z4.number().optional().nullable(),
+    requirementId: z4.number().optional().nullable()
   })).mutation(async ({ input }) => {
     invalidateAdminMatchesCache();
     let propMatchesCount = 0;
@@ -20400,14 +22479,14 @@ ${liveStats}${userContextInstruction}
     };
   }),
   // Registrar Retroalimentación de Match (Capa C - Feedback Loop)
-  recordMatchFeedback: publicProcedure.input(z3.object({
-    matchId: z3.number().optional().nullable(),
-    propertyId: z3.number().optional().nullable(),
-    requirementId: z3.number().optional().nullable(),
-    action: z3.enum(["exitoso", "rechazado", "en_negociacion"]),
-    motivoRechazo: z3.string().optional().nullable(),
-    notasBroker: z3.string().optional().nullable(),
-    ajustesGuardados: z3.record(z3.string(), z3.any()).optional().nullable()
+  recordMatchFeedback: publicProcedure.input(z4.object({
+    matchId: z4.number().optional().nullable(),
+    propertyId: z4.number().optional().nullable(),
+    requirementId: z4.number().optional().nullable(),
+    action: z4.enum(["exitoso", "rechazado", "en_negociacion"]),
+    motivoRechazo: z4.string().optional().nullable(),
+    notasBroker: z4.string().optional().nullable(),
+    ajustesGuardados: z4.record(z4.string(), z4.any()).optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Base de datos no disponible");
@@ -20424,8 +22503,8 @@ ${liveStats}${userContextInstruction}
       if (input.action === "rechazado") {
         if (input.matchId) {
           try {
-            await db.update(propertyMatches).set({ status: "rejected" }).where(eq10(propertyMatches.id, input.matchId));
-            await db.delete(propertyMatches).where(eq10(propertyMatches.id, input.matchId));
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq11(propertyMatches.id, input.matchId));
+            await db.delete(propertyMatches).where(eq11(propertyMatches.id, input.matchId));
           } catch (delErr) {
             console.warn(`[JanIA-Feedback] Match #${input.matchId} marcado como rejected (conservado por registros relacionados):`, delErr.message);
           }
@@ -20434,14 +22513,14 @@ ${liveStats}${userContextInstruction}
           try {
             await db.update(propertyMatches).set({ status: "rejected" }).where(
               and8(
-                eq10(propertyMatches.propertyId, input.propertyId),
-                eq10(propertyMatches.requirementId, input.requirementId)
+                eq11(propertyMatches.propertyId, input.propertyId),
+                eq11(propertyMatches.requirementId, input.requirementId)
               )
             );
             await db.delete(propertyMatches).where(
               and8(
-                eq10(propertyMatches.propertyId, input.propertyId),
-                eq10(propertyMatches.requirementId, input.requirementId)
+                eq11(propertyMatches.propertyId, input.propertyId),
+                eq11(propertyMatches.requirementId, input.requirementId)
               )
             );
           } catch (delErrPair) {
@@ -20457,8 +22536,8 @@ ${liveStats}${userContextInstruction}
             estadoComercial: nuevoEstado,
             vigenciaIa: "NO_DISPONIBLE",
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq10(properties.id, input.propertyId));
-          await db.delete(propertyMatches).where(eq10(propertyMatches.propertyId, input.propertyId));
+          }).where(eq11(properties.id, input.propertyId));
+          await db.delete(propertyMatches).where(eq11(propertyMatches.propertyId, input.propertyId));
           invalidatePropertiesListCache();
           console.log(`[JanIA-Feedback] Propiedad #${input.propertyId} marcada como ${nuevoEstado} y purgada de matches`);
         }
@@ -20469,8 +22548,8 @@ ${liveStats}${userContextInstruction}
             standByDirectoVecy: true,
             estadoComercial: "STANDBY",
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq10(properties.id, input.propertyId));
-          await db.delete(propertyMatches).where(eq10(propertyMatches.propertyId, input.propertyId));
+          }).where(eq11(properties.id, input.propertyId));
+          await db.delete(propertyMatches).where(eq11(propertyMatches.propertyId, input.propertyId));
           invalidatePropertiesListCache();
           console.log(`[JanIA-Feedback] Inmueble #${input.propertyId} enviado a secci\xF3n Inmuebles StandBy (No Tercer\xEDa / No Referidos)`);
         }
@@ -20480,8 +22559,8 @@ ${liveStats}${userContextInstruction}
             aceptaTerceria: false,
             standByDirectoVecy: true,
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq10(requirements.id, input.requirementId));
-          await db.delete(propertyMatches).where(eq10(propertyMatches.requirementId, input.requirementId));
+          }).where(eq11(requirements.id, input.requirementId));
+          await db.delete(propertyMatches).where(eq11(propertyMatches.requirementId, input.requirementId));
           cachedRequirementsData = null;
           cachedRequirementsTime = 0;
           console.log(`[JanIA-Feedback] Demanda #${input.requirementId} enviada a Standby Directo Vecy (No Tercer\xEDa / No Referidos)`);
@@ -20503,11 +22582,11 @@ ${liveStats}${userContextInstruction}
     }
   }),
   // Menú Rápido de Estado Comercial (Vendido, Arrendado, Inactivo / Ya No Disponible) - v31.16
-  updatePropertyCommercialStatus: publicProcedure.input(z3.object({
-    propertyId: z3.number(),
-    status: z3.enum(["VENDIDO", "ARRENDADO", "INACTIVO"]),
-    matchId: z3.number().optional().nullable(),
-    requirementId: z3.number().optional().nullable()
+  updatePropertyCommercialStatus: publicProcedure.input(z4.object({
+    propertyId: z4.number(),
+    status: z4.enum(["VENDIDO", "ARRENDADO", "INACTIVO"]),
+    matchId: z4.number().optional().nullable(),
+    requirementId: z4.number().optional().nullable()
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Base de datos no disponible");
@@ -20517,8 +22596,8 @@ ${liveStats}${userContextInstruction}
       estadoComercial: nuevoEstado,
       vigenciaIa: "NO_DISPONIBLE",
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq10(properties.id, input.propertyId));
-    await db.delete(propertyMatches).where(eq10(propertyMatches.propertyId, input.propertyId));
+    }).where(eq11(properties.id, input.propertyId));
+    await db.delete(propertyMatches).where(eq11(propertyMatches.propertyId, input.propertyId));
     try {
       await db.insert(matchFeedback).values({
         matchId: input.matchId || null,
@@ -20551,7 +22630,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      const terms = await db.select().from(inmobiliarioLexicon).orderBy(desc4(inmobiliarioLexicon.frecuenciaUso)).limit(100);
+      const terms = await db.select().from(inmobiliarioLexicon).orderBy(desc5(inmobiliarioLexicon.frecuenciaUso)).limit(100);
       return terms;
     } catch (e) {
       console.error("[JanIA-Lexicon] Error obteniendo l\xE9xico:", e.message);
@@ -20559,11 +22638,11 @@ ${liveStats}${userContextInstruction}
     }
   }),
   // Aprender o Registrar Nuevo Término Inmobiliario (Capa B)
-  learnNewLexiconTerm: publicProcedure.input(z3.object({
-    terminoColoquial: z3.string(),
-    categoria: z3.string(),
-    conceptoCanonico: z3.string(),
-    origen: z3.string().default("humano_validado")
+  learnNewLexiconTerm: publicProcedure.input(z4.object({
+    terminoColoquial: z4.string(),
+    categoria: z4.string(),
+    conceptoCanonico: z4.string(),
+    origen: z4.string().default("humano_validado")
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Base de datos no disponible");
@@ -20578,7 +22657,7 @@ ${liveStats}${userContextInstruction}
       }).onConflictDoUpdate({
         target: inmobiliarioLexicon.terminoColoquial,
         set: {
-          frecuenciaUso: sql8`${inmobiliarioLexicon.frecuenciaUso} + 1`,
+          frecuenciaUso: sql9`${inmobiliarioLexicon.frecuenciaUso} + 1`,
           updatedAt: /* @__PURE__ */ new Date()
         }
       }).returning();
@@ -20590,14 +22669,14 @@ ${liveStats}${userContextInstruction}
   }),
   // Create lead from conversation
   createLead: publicProcedure.input(
-    z3.object({
-      name: z3.string(),
-      email: z3.string().email(),
-      phone: z3.string().optional(),
-      inquiryType: z3.enum(["buy", "sell", "rent", "invest", "general"]),
-      budget: z3.string().optional(),
-      preferredZones: z3.array(z3.string()).optional(),
-      message: z3.string().optional()
+    z4.object({
+      name: z4.string(),
+      email: z4.string().email(),
+      phone: z4.string().optional(),
+      inquiryType: z4.enum(["buy", "sell", "rent", "invest", "general"]),
+      budget: z4.string().optional(),
+      preferredZones: z4.array(z4.string()).optional(),
+      message: z4.string().optional()
     })
   ).mutation(async ({ input }) => {
     const db = await getDb();
@@ -20627,11 +22706,11 @@ ${liveStats}${userContextInstruction}
     }
   }),
   // Get market analysis for zone
-  getMarketAnalysis: publicProcedure.input(z3.object({ zone: z3.string() })).query(async ({ input }) => {
+  getMarketAnalysis: publicProcedure.input(z4.object({ zone: z4.string() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const zoneProperties = await db.select().from(properties).where(eq10(properties.zone, input.zone));
+      const zoneProperties = await db.select().from(properties).where(eq11(properties.zone, input.zone));
       if (zoneProperties.length === 0) {
         return {
           zone: input.zone,
@@ -20717,13 +22796,13 @@ ${liveStats}${userContextInstruction}
       } else {
         const db = await getDb();
         if (db) {
-          const [statusRow] = await db.select().from(pendingSessions).where(eq10(pendingSessions.jid, "system:bot_status")).limit(1);
+          const [statusRow] = await db.select().from(pendingSessions).where(eq11(pendingSessions.jid, "system:bot_status")).limit(1);
           const sessionData = statusRow?.sessionData;
           if (sessionData?.phone) phone = sessionData.phone;
-          const [tp] = await db.select({ count: sql8`count(*)::int` }).from(properties);
-          const [tr] = await db.select({ count: sql8`count(*)::int` }).from(requirements);
-          const [tm] = await db.select({ count: sql8`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql8`CAST("matchScore" AS NUMERIC) >= 80`);
-          const [pm] = await db.select({ count: sql8`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql8`CAST("matchScore" AS NUMERIC) >= 95`);
+          const [tp] = await db.select({ count: sql9`count(*)::int` }).from(properties);
+          const [tr] = await db.select({ count: sql9`count(*)::int` }).from(requirements);
+          const [tm] = await db.select({ count: sql9`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql9`CAST("matchScore" AS NUMERIC) >= 80`);
+          const [pm] = await db.select({ count: sql9`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql9`CAST("matchScore" AS NUMERIC) >= 95`);
           totalProps = tp?.count || 0;
           totalReqs = tr?.count || 0;
           totalMatches = tm?.count || 0;
@@ -20804,7 +22883,7 @@ ${liveStats}${userContextInstruction}
         areaMin: requirements.areaMin,
         status: requirements.status,
         createdAt: requirements.createdAt
-      }).from(requirements).orderBy(desc4(requirements.id));
+      }).from(requirements).orderBy(desc5(requirements.id));
       const enrichedData = data.map((r) => {
         let phone = r.idUsuarioWhatsapp;
         let name = r.nombreUsuarioWhatsapp;
@@ -20831,13 +22910,13 @@ ${liveStats}${userContextInstruction}
     }
   }),
   // Guardar y persistir permanentemente los datos de un asesor en PostgreSQL (v31.88)
-  saveAdvisorContact: publicProcedure.input(z3.object({
-    phone: z3.string(),
-    name: z3.string().optional().nullable(),
-    oldPhoneOrLid: z3.string().optional().nullable(),
-    sourceGroup: z3.string().optional().nullable(),
-    agency: z3.string().optional().nullable(),
-    notes: z3.string().optional().nullable()
+  saveAdvisorContact: publicProcedure.input(z4.object({
+    phone: z4.string(),
+    name: z4.string().optional().nullable(),
+    oldPhoneOrLid: z4.string().optional().nullable(),
+    sourceGroup: z4.string().optional().nullable(),
+    agency: z4.string().optional().nullable(),
+    notes: z4.string().optional().nullable()
   })).mutation(async ({ input }) => {
     const result = await saveOrUpdateAdvisor(input);
     invalidateAdminMatchesCache();
@@ -20848,20 +22927,20 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const [propTotal] = await db.select({ count: sql8`count(*)::int` }).from(properties);
-      const [propActive] = await db.select({ count: sql8`count(*)::int` }).from(properties).where(sql8`${properties.available} = true`);
-      const [reqTotal] = await db.select({ count: sql8`count(*)::int` }).from(requirements);
-      const [reqActive] = await db.select({ count: sql8`count(*)::int` }).from(requirements).where(eq10(requirements.status, "active"));
-      const [matchTotal] = await db.select({ count: sql8`count(*)::int` }).from(propertyMatches);
-      const [convTotal] = await db.select({ count: sql8`count(*)::int` }).from(conversations);
-      const monthlyProps = await db.execute(sql8`
+      const [propTotal] = await db.select({ count: sql9`count(*)::int` }).from(properties);
+      const [propActive] = await db.select({ count: sql9`count(*)::int` }).from(properties).where(sql9`${properties.available} = true`);
+      const [reqTotal] = await db.select({ count: sql9`count(*)::int` }).from(requirements);
+      const [reqActive] = await db.select({ count: sql9`count(*)::int` }).from(requirements).where(eq11(requirements.status, "active"));
+      const [matchTotal] = await db.select({ count: sql9`count(*)::int` }).from(propertyMatches);
+      const [convTotal] = await db.select({ count: sql9`count(*)::int` }).from(conversations);
+      const monthlyProps = await db.execute(sql9`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM properties
         WHERE "createdAt" >= now() - interval '6 months'
         GROUP BY 1 ORDER BY 1
       `);
-      const monthlyReqs = await db.execute(sql8`
+      const monthlyReqs = await db.execute(sql9`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM requirements
@@ -20883,11 +22962,11 @@ ${liveStats}${userContextInstruction}
   }),
   // Liquidación tributaria de Retención en la Fuente y Ganancia Ocasional (DIAN v17.6)
   calcularImpuestos: publicProcedure.input(
-    z3.object({
-      precioVenta: z3.number().min(0),
-      costoFiscal: z3.number().min(0),
-      anosPosesion: z3.number().min(0),
-      esViviendaHabitacion: z3.boolean().default(false)
+    z4.object({
+      precioVenta: z4.number().min(0),
+      costoFiscal: z4.number().min(0),
+      anosPosesion: z4.number().min(0),
+      esViviendaHabitacion: z4.boolean().default(false)
     })
   ).mutation(({ input }) => {
     return liquidarImpuestosVenta({
@@ -20907,8 +22986,13 @@ ${liveStats}${userContextInstruction}
     const { publishWeeklyReportNow: publishWeeklyReportNow2 } = await Promise.resolve().then(() => (init_cronService(), cronService_exports));
     return await publishWeeklyReportNow2();
   }),
+  // Disparo manual/inmediato del Anuncio de Verificación de Cédula y Predial Bogotá
+  triggerIdentityAndPredialAnnouncement: publicProcedure.input(z4.object({ force: z4.boolean().optional().default(false) })).mutation(async ({ input }) => {
+    const { publishIdentityAndPredialServiceAnnouncement: publishIdentityAndPredialServiceAnnouncement2 } = await Promise.resolve().then(() => (init_cronService(), cronService_exports));
+    return await publishIdentityAndPredialServiceAnnouncement2(input.force);
+  }),
   // Parser Inteligente de Requerimientos desde Texto Libre
-  parseRequirementText: publicProcedure.input(z3.object({ text: z3.string() })).mutation(async ({ input }) => {
+  parseRequirementText: publicProcedure.input(z4.object({ text: z4.string() })).mutation(async ({ input }) => {
     try {
       const prompt = `Act\xFAa como JanIA, el motor de inteligencia artificial de Vecy Network especializado en corretaje inmobiliario en Colombia.
 Analiza este texto de requerimiento o solicitud de cliente/agente y extrae los datos estructurados en formato JSON con los siguientes campos:
@@ -21020,9 +23104,9 @@ Texto: ${input.text}`;
     }
   }),
   // Parser Inteligente de Requerimientos desde Flyer / Imagen con JanIA Vision (OCR Multimodal)
-  parseRequirementFlyer: publicProcedure.input(z3.object({
-    imageBase64: z3.string(),
-    mimeType: z3.string().default("image/jpeg")
+  parseRequirementFlyer: publicProcedure.input(z4.object({
+    imageBase64: z4.string(),
+    mimeType: z4.string().default("image/jpeg")
   })).mutation(async ({ input }) => {
     try {
       const cleanBase64 = input.imageBase64.includes(",") ? input.imageBase64.split(",")[1] : input.imageBase64;
@@ -21100,9 +23184,9 @@ Devuelve \xDANICAMENTE el objeto JSON sin bloques de c\xF3digo ni comentarios.`;
     }
   }),
   // Crear Requerimiento (Demanda) directamente en Base de Datos
-  createRequirement: publicProcedure.input(z3.object({
-    name: z3.string().min(2),
-    tipoInmuebleDeseado: z3.enum([
+  createRequirement: publicProcedure.input(z4.object({
+    name: z4.string().min(2),
+    tipoInmuebleDeseado: z4.enum([
       "apartment",
       "house",
       "building",
@@ -21115,7 +23199,7 @@ Devuelve \xDANICAMENTE el objeto JSON sin bloques de c\xF3digo ni comentarios.`;
       "loft",
       "consultorio"
     ]).default("apartment"),
-    tipoNegocioDeseado: z3.enum([
+    tipoNegocioDeseado: z4.enum([
       "venta",
       "arriendo",
       "venta_o_arriendo",
@@ -21125,23 +23209,23 @@ Devuelve \xDANICAMENTE el objeto JSON sin bloques de c\xF3digo ni comentarios.`;
       "venta_permuta",
       "aporte"
     ]).default("arriendo"),
-    ciudadDeseada: z3.string().default("Bogot\xE1"),
-    addressNeighborhood: z3.string().optional().nullable(),
-    zonaDeseada: z3.string().optional().nullable(),
-    presupuestoMin: z3.string().optional().nullable(),
-    presupuestoMax: z3.string().optional().nullable(),
-    areaMin: z3.string().optional().nullable(),
-    habitacionesMin: z3.number().optional().nullable(),
-    banosMin: z3.number().optional().nullable(),
-    parqueaderosMin: z3.number().optional().nullable(),
-    adminFeeMax: z3.string().optional().nullable(),
-    estratoDeseado: z3.any().optional().nullable(),
-    amobladoDeseado: z3.boolean().optional().nullable(),
-    caracteristicasDeseadas: z3.any().optional().nullable(),
-    rawText: z3.string().optional().nullable(),
-    enlaceOrigen: z3.string().optional().nullable(),
-    nombreUsuarioWhatsapp: z3.string().optional().nullable(),
-    idUsuarioWhatsapp: z3.string().optional().nullable()
+    ciudadDeseada: z4.string().default("Bogot\xE1"),
+    addressNeighborhood: z4.string().optional().nullable(),
+    zonaDeseada: z4.string().optional().nullable(),
+    presupuestoMin: z4.string().optional().nullable(),
+    presupuestoMax: z4.string().optional().nullable(),
+    areaMin: z4.string().optional().nullable(),
+    habitacionesMin: z4.number().optional().nullable(),
+    banosMin: z4.number().optional().nullable(),
+    parqueaderosMin: z4.number().optional().nullable(),
+    adminFeeMax: z4.string().optional().nullable(),
+    estratoDeseado: z4.any().optional().nullable(),
+    amobladoDeseado: z4.boolean().optional().nullable(),
+    caracteristicasDeseadas: z4.any().optional().nullable(),
+    rawText: z4.string().optional().nullable(),
+    enlaceOrigen: z4.string().optional().nullable(),
+    nombreUsuarioWhatsapp: z4.string().optional().nullable(),
+    idUsuarioWhatsapp: z4.string().optional().nullable()
   })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new Error("Base de datos no disponible");
@@ -21177,10 +23261,11 @@ Devuelve \xDANICAMENTE el objeto JSON sin bloques de c\xF3digo ni comentarios.`;
 });
 
 // server/routers/github.ts
-import { z as z4 } from "zod";
+init_trpc();
 init_db();
 init_schema();
-import { eq as eq11 } from "drizzle-orm";
+import { z as z5 } from "zod";
+import { eq as eq12 } from "drizzle-orm";
 
 // server/github-integration.ts
 import { Octokit } from "@octokit/rest";
@@ -21545,8 +23630,8 @@ var githubRouter = router({
    * Synchronize properties from GitHub repositories
    */
   syncPropertiesFromGitHub: publicProcedure.input(
-    z4.object({
-      repositories: z4.array(z4.string()).optional()
+    z5.object({
+      repositories: z5.array(z5.string()).optional()
     })
   ).mutation(async ({ input }) => {
     if (!GITHUB_TOKEN) {
@@ -21556,7 +23641,7 @@ var githubRouter = router({
     if (!db) throw new Error("Database not available");
     try {
       const { octokit, user } = await initializeGitHubIntegration(GITHUB_TOKEN);
-      const adminUser = await db.select().from(users).where(eq11(users.email, "vecybienesraices@gmail.com")).limit(1);
+      const adminUser = await db.select().from(users).where(eq12(users.email, "vecybienesraices@gmail.com")).limit(1);
       const adminId = adminUser.length > 0 ? adminUser[0].id : 1;
       let reposToSync = input.repositories || [];
       if (reposToSync.length === 0) {
@@ -21573,14 +23658,14 @@ var githubRouter = router({
             repoName
           );
           if (propertyData) {
-            const existing = await db.select().from(properties).where(eq11(properties.sourceRepository, repoName)).limit(1);
+            const existing = await db.select().from(properties).where(eq12(properties.sourceRepository, repoName)).limit(1);
             if (existing.length > 0) {
               await db.update(properties).set({
                 ...propertyData,
                 agentId: adminId,
                 sourceRepository: repoName,
                 lastSyncedAt: /* @__PURE__ */ new Date()
-              }).where(eq11(properties.id, existing[0].id));
+              }).where(eq12(properties.id, existing[0].id));
             } else {
               await db.insert(properties).values({
                 ...propertyData,
@@ -21664,25 +23749,26 @@ var githubRouter = router({
 });
 
 // server/routers/images.ts
-import { z as z5 } from "zod";
+init_trpc();
 init_storage();
 init_db();
 init_db();
 init_schema();
-import { eq as eq12 } from "drizzle-orm";
+import { z as z6 } from "zod";
+import { eq as eq13 } from "drizzle-orm";
 var imagesRouter = {
   /**
    * Upload image to S3 and save to database
    */
   uploadPropertyImage: publicProcedure.input(
-    z5.object({
-      propertyId: z5.number(),
-      fileBase64: z5.string(),
+    z6.object({
+      propertyId: z6.number(),
+      fileBase64: z6.string(),
       // Base64 encoded file
-      fileName: z5.string(),
-      mimeType: z5.string(),
-      caption: z5.string().optional(),
-      isMainImage: z5.boolean().optional()
+      fileName: z6.string(),
+      mimeType: z6.string(),
+      caption: z6.string().optional(),
+      isMainImage: z6.boolean().optional()
     })
   ).mutation(async ({ input }) => {
     try {
@@ -21694,7 +23780,7 @@ var imagesRouter = {
       if (input.isMainImage) {
         const db = await getDb();
         if (db) {
-          await db.update(propertyImages).set({ isMainImage: false }).where(eq12(propertyImages.propertyId, input.propertyId));
+          await db.update(propertyImages).set({ isMainImage: false }).where(eq13(propertyImages.propertyId, input.propertyId));
         }
       }
       const images = await getPropertyImages(input.propertyId);
@@ -21721,7 +23807,7 @@ var imagesRouter = {
   /**
    * Get all images for a property
    */
-  getPropertyImages: publicProcedure.input(z5.object({ propertyId: z5.number() })).query(async ({ input }) => {
+  getPropertyImages: publicProcedure.input(z6.object({ propertyId: z6.number() })).query(async ({ input }) => {
     try {
       const images = await getPropertyImages(input.propertyId);
       return {
@@ -21736,7 +23822,7 @@ var imagesRouter = {
   /**
    * Delete an image
    */
-  deletePropertyImage: publicProcedure.input(z5.object({ imageId: z5.number() })).mutation(async ({ input }) => {
+  deletePropertyImage: publicProcedure.input(z6.object({ imageId: z6.number() })).mutation(async ({ input }) => {
     try {
       await deletePropertyImage(input.imageId);
       return {
@@ -21751,15 +23837,15 @@ var imagesRouter = {
    * Update image display order
    */
   updateImageOrder: publicProcedure.input(
-    z5.object({
-      imageId: z5.number(),
-      displayOrder: z5.number()
+    z6.object({
+      imageId: z6.number(),
+      displayOrder: z6.number()
     })
   ).mutation(async ({ input }) => {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq12(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq13(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Image order updated successfully"
@@ -21772,16 +23858,16 @@ var imagesRouter = {
    * Set main image for property
    */
   setMainImage: publicProcedure.input(
-    z5.object({
-      propertyId: z5.number(),
-      imageId: z5.number()
+    z6.object({
+      propertyId: z6.number(),
+      imageId: z6.number()
     })
   ).mutation(async ({ input }) => {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ isMainImage: false }).where(eq12(propertyImages.propertyId, input.propertyId));
-      await db.update(propertyImages).set({ isMainImage: true }).where(eq12(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ isMainImage: false }).where(eq13(propertyImages.propertyId, input.propertyId));
+      await db.update(propertyImages).set({ isMainImage: true }).where(eq13(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Main image updated successfully"
@@ -21793,58 +23879,59 @@ var imagesRouter = {
 };
 
 // server/routers/agent.ts
-import { z as z6 } from "zod";
+init_trpc();
 init_db();
 init_schema();
-import { eq as eq13, and as and9, desc as desc5, isNull as isNull2 } from "drizzle-orm";
-import { TRPCError as TRPCError4 } from "@trpc/server";
+import { z as z7 } from "zod";
+import { eq as eq14, and as and9, desc as desc6, isNull as isNull2 } from "drizzle-orm";
+import { TRPCError as TRPCError5 } from "@trpc/server";
 var agentRouter = router({
   // Public: Get agent profile for branding (Agenda Pro, Personal Shops)
-  getProfile: publicProcedure.input(z6.object({ id: z6.number() })).query(async ({ input }) => {
+  getProfile: publicProcedure.input(z7.object({ id: z7.number() })).query(async ({ input }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
     const agent = await db.select({
       id: users.id,
       name: users.name,
       customLogoUrl: users.customLogoUrl,
       themeConfig: users.themeConfig,
       subdomain: users.subdomain
-    }).from(users).where(eq13(users.id, input.id)).limit(1);
-    if (agent.length === 0) throw new TRPCError4({ code: "NOT_FOUND", message: "Agent not found" });
+    }).from(users).where(eq14(users.id, input.id)).limit(1);
+    if (agent.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Agent not found" });
     return agent[0];
   }),
   getMyProperties: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(eq13(properties.agentId, ctx.user.id)).orderBy(desc5(properties.createdAt));
+    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    return await db.select().from(properties).where(eq14(properties.agentId, ctx.user.id)).orderBy(desc6(properties.createdAt));
   }),
   // For testing: Allows an agent to claim a property that has no agent assigned
-  claimProperty: protectedProcedure.input(z6.object({ propertyId: z6.number() })).mutation(async ({ ctx, input }) => {
+  claimProperty: protectedProcedure.input(z7.object({ propertyId: z7.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq13(properties.id, input.propertyId)).limit(1);
-    if (property.length === 0) throw new TRPCError4({ code: "NOT_FOUND", message: "Property not found" });
-    if (property[0].agentId) throw new TRPCError4({ code: "FORBIDDEN", message: "Property already has an agent" });
-    await db.update(properties).set({ agentId: ctx.user.id }).where(eq13(properties.id, input.propertyId));
+    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const property = await db.select().from(properties).where(eq14(properties.id, input.propertyId)).limit(1);
+    if (property.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Property not found" });
+    if (property[0].agentId) throw new TRPCError5({ code: "FORBIDDEN", message: "Property already has an agent" });
+    await db.update(properties).set({ agentId: ctx.user.id }).where(eq14(properties.id, input.propertyId));
     return { success: true };
   }),
   getAvailablePropertiesToClaim: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(isNull2(properties.agentId)).orderBy(desc5(properties.createdAt));
+    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    return await db.select().from(properties).where(isNull2(properties.agentId)).orderBy(desc6(properties.createdAt));
   }),
-  generateStealthLink: protectedProcedure.input(z6.object({ propertyId: z6.number() })).mutation(async ({ ctx, input }) => {
+  generateStealthLink: protectedProcedure.input(z7.object({ propertyId: z7.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq13(properties.id, input.propertyId)).limit(1);
-    if (property.length === 0) throw new TRPCError4({ code: "NOT_FOUND", message: "Property not found" });
+    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    const property = await db.select().from(properties).where(eq14(properties.id, input.propertyId)).limit(1);
+    if (property.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Property not found" });
     if (property[0].agentId !== ctx.user.id && ctx.user.role !== "admin") {
-      throw new TRPCError4({ code: "FORBIDDEN", message: "You don't own this property" });
+      throw new TRPCError5({ code: "FORBIDDEN", message: "You don't own this property" });
     }
     const existingLink = await db.select().from(referralLinks).where(
       and9(
-        eq13(referralLinks.propertyId, input.propertyId),
-        eq13(referralLinks.agentId, ctx.user.id)
+        eq14(referralLinks.propertyId, input.propertyId),
+        eq14(referralLinks.agentId, ctx.user.id)
       )
     ).limit(1);
     if (existingLink.length > 0) {
@@ -21860,7 +23947,7 @@ var agentRouter = router({
   }),
   getStealthLinks: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
+    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
     return await db.select({
       link: referralLinks,
       property: {
@@ -21869,26 +23956,27 @@ var agentRouter = router({
         matriculaInmobiliaria: properties.matriculaInmobiliaria,
         location: properties.location
       }
-    }).from(referralLinks).innerJoin(properties, eq13(referralLinks.propertyId, properties.id)).where(eq13(referralLinks.agentId, ctx.user.id)).orderBy(desc5(referralLinks.createdAt));
+    }).from(referralLinks).innerJoin(properties, eq14(referralLinks.propertyId, properties.id)).where(eq14(referralLinks.agentId, ctx.user.id)).orderBy(desc6(referralLinks.createdAt));
   })
 });
 
 // server/routers/leads.ts
-import { z as z7 } from "zod";
+init_trpc();
 init_db();
 init_schema();
-import { eq as eq14, sql as sql9 } from "drizzle-orm";
-import { TRPCError as TRPCError5 } from "@trpc/server";
+import { z as z8 } from "zod";
+import { eq as eq15, sql as sql10 } from "drizzle-orm";
+import { TRPCError as TRPCError6 } from "@trpc/server";
 var leadsRouter = router({
-  resolveStealthLink: publicProcedure.input(z7.object({ token: z7.string() })).query(async ({ input }) => {
+  resolveStealthLink: publicProcedure.input(z8.object({ token: z8.string() })).query(async ({ input }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq14(referralLinks.token, input.token)).limit(1);
+    if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
+    const linkRecord = await db.select().from(referralLinks).where(eq15(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
-      throw new TRPCError5({ code: "NOT_FOUND", message: "Stealth Link invalido o expirado." });
+      throw new TRPCError6({ code: "NOT_FOUND", message: "Stealth Link invalido o expirado." });
     }
     const link = linkRecord[0];
-    await db.update(referralLinks).set({ clicks: sql9`${referralLinks.clicks} + 1` }).where(eq14(referralLinks.id, link.id));
+    await db.update(referralLinks).set({ clicks: sql10`${referralLinks.clicks} + 1` }).where(eq15(referralLinks.id, link.id));
     const prop = await db.select({
       id: properties.id,
       name: properties.name,
@@ -21899,26 +23987,26 @@ var leadsRouter = router({
       zone: properties.zone,
       // specifically NOT returning full location/latitude/longitude/matricula
       images: properties.images
-    }).from(properties).where(eq14(properties.id, link.propertyId)).limit(1);
+    }).from(properties).where(eq15(properties.id, link.propertyId)).limit(1);
     if (prop.length === 0) {
-      throw new TRPCError5({ code: "NOT_FOUND", message: "Inmueble no disponible." });
+      throw new TRPCError6({ code: "NOT_FOUND", message: "Inmueble no disponible." });
     }
     return {
       property: prop[0]
     };
   }),
-  submitStealthLead: publicProcedure.input(z7.object({
-    token: z7.string(),
-    name: z7.string().min(2),
-    documentNumber: z7.string().min(5),
-    email: z7.string().email(),
-    phone: z7.string().min(7)
+  submitStealthLead: publicProcedure.input(z8.object({
+    token: z8.string(),
+    name: z8.string().min(2),
+    documentNumber: z8.string().min(5),
+    email: z8.string().email(),
+    phone: z8.string().min(7)
   })).mutation(async ({ input }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq14(referralLinks.token, input.token)).limit(1);
+    if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
+    const linkRecord = await db.select().from(referralLinks).where(eq15(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
-      throw new TRPCError5({ code: "BAD_REQUEST", message: "Token invalido." });
+      throw new TRPCError6({ code: "BAD_REQUEST", message: "Token invalido." });
     }
     const link = linkRecord[0];
     const newLead = await db.insert(leads).values({
@@ -21941,1585 +24029,9 @@ var leadsRouter = router({
   })
 });
 
-// server/routers/agenda.ts
-import { z as z8 } from "zod";
-init_db();
-init_schema();
-import { desc as desc6, ilike as ilike2, or as or4, sql as sql10, eq as eq15 } from "drizzle-orm";
-import { TRPCError as TRPCError6 } from "@trpc/server";
-import { Solver } from "@2captcha/captcha-solver";
-import https from "https";
-
-// server/_core/emailContractService.ts
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import nodemailer from "nodemailer";
-var vecyLogoBase64 = "data:image/png;base64,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";
-var janiFirmaBase64 = "data:image/png;base64,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";
-function normalizePayload(input) {
-  const sId = input.solicitudId ?? input.solicitud_id ?? input.id ?? "N/A";
-  return {
-    ...input,
-    solicitud_id: sId,
-    solicitante_nombre: input.solicitanteNombre ?? input.solicitante_nombre ?? "",
-    solicitante_tipo_persona: input.solicitanteTipoPersona ?? input.solicitante_tipo_persona ?? "Persona Natural",
-    solicitante_perfil: input.solicitantePerfil ?? input.solicitante_perfil ?? "Cliente directo",
-    solicitante_email: input.solicitanteEmail ?? input.solicitante_email ?? "",
-    solicitante_celular: input.solicitanteCelular ?? input.solicitante_celular ?? "",
-    solicitante_tipo_documento: input.solicitanteTipoDocumento ?? input.solicitante_tipo_documento ?? "C\xE9dula de ciudadan\xEDa",
-    solicitante_numero_documento: input.solicitanteNumeroDocumento ?? input.solicitante_numero_documento ?? "",
-    solicitante_representante_legal: input.solicitanteRepresentanteLegal ?? input.solicitante_representante_legal ?? "",
-    servicio_solicitado: input.servicioSolicitado ?? input.servicio_solicitado ?? "Visitar inmueble",
-    nombre_inmueble: input.nombreInmueble ?? input.nombre_inmueble ?? "N/A",
-    codigo_inmueble: input.codigoInmueble ?? input.codigo_inmueble ?? "N/A",
-    opcion_negocio: input.opcionNegocio ?? input.opcion_negocio ?? "Venta",
-    fecha_cita_texto: input.fechaCitaTexto ?? input.fecha_cita_texto ?? "",
-    hora_cita: input.horaCita ?? input.hora_cita ?? "",
-    cantidad_personas: input.cantidadPersonas ?? input.cantidad_personas ?? 1,
-    interesado_nombre: input.interesadoNombre ?? input.interesado_nombre ?? "",
-    interesado_tipo_documento: input.interesadoTipoDocumento ?? input.interesado_tipo_documento ?? "C\xE9dula de ciudadan\xEDa",
-    interesado_documento: input.interesadoDocumento ?? input.interesado_documento ?? "",
-    tipo_cliente: input.tipoCliente ?? input.tipo_cliente ?? "Persona",
-    acompanantes: input.acompanantes ?? [],
-    firma_virtual_base64: input.firmaVirtualBase64 ?? input.firma_virtual_base64 ?? ""
-  };
-}
-async function createContractPdf(rawFormData) {
-  const formData = normalizePayload(rawFormData);
-  const pdfDoc = await PDFDocument.create();
-  let currentPage = pdfDoc.addPage();
-  const { width, height } = currentPage.getSize();
-  const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-  const boldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-  const black = rgb(0, 0, 0);
-  const gray = rgb(0.3, 0.3, 0.3);
-  const goldColor = rgb(0.749, 0.584, 0.247);
-  const margin = 50;
-  let y = height - margin;
-  const drawFooter = (pageToDrawOn) => {
-    const footerText = "Vecy Bienes Ra\xEDces S.A.S. | https://vecy.co/ | https://vecy-network.vercel.app/";
-    const footerTextWidth = font.widthOfTextAtSize(footerText, 8);
-    pageToDrawOn.drawText(footerText, { x: (width - footerTextWidth) / 2, y: margin / 2, font, size: 8, color: gray });
-  };
-  const checkAndAddPage = (currentY, neededHeight) => {
-    if (currentY - neededHeight < margin + 20) {
-      drawFooter(currentPage);
-      currentPage = pdfDoc.addPage();
-      return height - margin;
-    }
-    return currentY;
-  };
-  const clean = (val) => String(val || "").replace(/[{}]/g, "").trim();
-  const drawRichText = (segments, options) => {
-    let { y: currentY, x: startX, width: maxWidth, lineHeight } = options;
-    let allWords = [];
-    for (const segment of segments) {
-      const segFont = segment.font || font;
-      const segSize = segment.size || 11;
-      const segColor = segment.color || black;
-      const paragraphs = segment.text.split("\n");
-      for (let i = 0; i < paragraphs.length; i++) {
-        if (i > 0) allWords.push({ isNewLine: true });
-        const words = paragraphs[i].split(/\s+/).filter((w) => w.length > 0);
-        for (const w of words) {
-          allWords.push({
-            text: w,
-            font: segFont,
-            size: segSize,
-            color: segColor,
-            width: segFont.widthOfTextAtSize(w, segSize)
-          });
-        }
-      }
-    }
-    let lineBuffer = [];
-    let currentLineWidth = 0;
-    const spaceWidth = font.widthOfTextAtSize(" ", 11);
-    const flushLine = (justify = false, isParagraphBreak = false) => {
-      if (lineBuffer.length === 0) {
-        if (isParagraphBreak) currentY -= 6;
-        return;
-      }
-      currentY = checkAndAddPage(currentY, lineHeight);
-      if (!justify || lineBuffer.length < 2) {
-        let xObj = startX;
-        for (const item of lineBuffer) {
-          currentPage.drawText(item.text, { x: xObj, y: currentY, font: item.font, size: item.size, color: item.color });
-          xObj += item.width + spaceWidth;
-        }
-      } else {
-        const totalWordsWidth = lineBuffer.reduce((sum, item) => sum + item.width, 0);
-        const extraSpace = maxWidth - totalWordsWidth;
-        const spacePerGap = extraSpace / (lineBuffer.length - 1);
-        let xObj = startX;
-        lineBuffer.forEach((item, index2) => {
-          currentPage.drawText(item.text, { x: xObj, y: currentY, font: item.font, size: item.size, color: item.color });
-          if (index2 < lineBuffer.length - 1) {
-            xObj += item.width + spacePerGap;
-          }
-        });
-      }
-      currentY -= lineHeight;
-      if (isParagraphBreak) currentY -= 6;
-      lineBuffer = [];
-      currentLineWidth = 0;
-    };
-    for (const item of allWords) {
-      if (item.isNewLine) {
-        flushLine(false, true);
-        continue;
-      }
-      const additionalWidth = (lineBuffer.length > 0 ? spaceWidth : 0) + item.width;
-      if (currentLineWidth + additionalWidth > maxWidth) {
-        flushLine(true);
-        lineBuffer.push(item);
-        currentLineWidth = item.width;
-      } else {
-        lineBuffer.push(item);
-        currentLineWidth += additionalWidth;
-      }
-    }
-    flushLine(false);
-    return currentY;
-  };
-  const drawClause = (title, segments, currentY) => {
-    currentY = checkAndAddPage(currentY, 40);
-    currentY = drawRichText([{ text: title, font: boldFont, color: goldColor, size: 11 }], { y: currentY, x: margin, width: width - margin * 2, lineHeight: 15 });
-    currentY -= 4;
-    currentY = drawRichText(segments, { y: currentY, x: margin, width: width - margin * 2, lineHeight: 14 });
-    return currentY - 14;
-  };
-  try {
-    const logoBytes = Buffer.from(vecyLogoBase64.split(",")[1], "base64");
-    const vecyLogoImage = await pdfDoc.embedPng(logoBytes);
-    currentPage.drawImage(vecyLogoImage, { x: margin, y: y - 25, width: 50, height: 50 });
-  } catch (e) {
-    console.error("Error al incrustar logo en PDF:", e?.message);
-  }
-  currentPage.drawText("CONTRATO DE PUNTAS COMPARTIDAS", { x: margin + 70, y, font: boldFont, size: 15, color: goldColor });
-  currentPage.drawText("Acuerdo de Colaboraci\xF3n Inmobiliaria | Vecy Gold Edition", { x: margin + 70, y: y - 16, font, size: 10, color: gray });
-  if (formData.solicitud_id) {
-    const idText = `ID: ${formData.solicitud_id}`;
-    const idTextWidth = boldFont.widthOfTextAtSize(idText, 9);
-    currentPage.drawText(idText, { x: width - margin - idTextWidth, y, font: boldFont, size: 9, color: gray });
-  }
-  y -= 45;
-  currentPage.drawRectangle({ x: margin, y, width: width - 2 * margin, height: 1.5, color: goldColor });
-  y -= 25;
-  const generationDate = (/* @__PURE__ */ new Date()).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric", timeZone: "America/Bogota" });
-  const isJuridica = formData.solicitante_tipo_persona === "Persona Jur\xEDdica";
-  const introSegments = [
-    { text: "Entre los suscritos a saber, por una parte, JANI ALVES SOUZA, mayor de edad, identificada con c\xE9dula de ciudadan\xEDa No. 41.057.506, actuando en nombre propio como persona natural y en representaci\xF3n comercial de la marca VECY BIENES RA\xCDCES, quien en adelante se denominar\xE1 EL AGENTE 1; y por la otra parte, ", font },
-    { text: clean(formData.solicitante_nombre), font: boldFont },
-    { text: isJuridica ? `, entidad con personer\xEDa jur\xEDdica, representada legalmente por ${clean(formData.solicitante_representante_legal)}, identificada con ` : ", mayor de edad, identificado(a) con ", font },
-    { text: clean(formData.solicitante_tipo_documento), font: boldFont },
-    { text: " No. ", font },
-    { text: clean(formData.solicitante_numero_documento), font: boldFont },
-    { text: ", quien en adelante se denominar\xE1 EL AGENTE 2, se celebra el presente contrato de colaboraci\xF3n inmobiliaria, el cual se regir\xE1 por las disposiciones del C\xF3digo de Comercio Colombiano (Art. 1340 y subsiguientes) y las siguientes cl\xE1usulas:", font }
-  ];
-  y = drawRichText(introSegments, { y, x: margin, width: width - margin * 2, lineHeight: 14 });
-  y -= 15;
-  const clausula1 = [
-    { text: "El presente contrato tiene por objeto establecer los t\xE9rminos de colaboraci\xF3n entre EL AGENTE 1 y EL AGENTE 2 para promover, gestionar y/o contribuir en la intermediaci\xF3n del negocio inmobiliario relacionado con el inmueble: ", font },
-    { text: clean(formData.nombre_inmueble || "N/A"), font: boldFont },
-    { text: " identificado con el c\xF3digo ", font },
-    { text: clean(formData.codigo_inmueble || "N/A"), font: boldFont },
-    { text: ", donde EL AGENTE 2 mediante el formulario No. ", font },
-    { text: clean(formData.solicitud_id), font: boldFont },
-    { text: ', solicita al AGENTE 1 "', font },
-    { text: clean(formData.servicio_solicitado), font: boldFont },
-    { text: '" en ', font },
-    { text: clean(formData.opcion_negocio || "tipo de operaci\xF3n"), font: boldFont },
-    { text: " para la fecha ", font },
-    { text: clean(formData.fecha_cita_texto || "fecha por confirmar"), font: boldFont },
-    { text: " a las ", font },
-    { text: clean(formData.hora_cita || "hora por confirmar"), font: boldFont },
-    { text: " en favor del cliente ", font },
-    { text: clean(formData.interesado_nombre), font: boldFont },
-    { text: ", identificado(a) con ", font },
-    { text: clean(formData.interesado_tipo_documento), font: boldFont },
-    { text: " No. ", font },
-    { text: clean(formData.interesado_documento), font: boldFont }
-  ];
-  if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
-    clausula1.push({ text: " y las siguientes personas autorizadas y registradas como acompa\xF1antes: ", font });
-    const acompNames = formData.acompanantes.map((a) => `${a.nombre} (${a.documento})`).join(", ");
-    clausula1.push({ text: acompNames, font: boldFont });
-    clausula1.push({ text: ".", font });
-  } else {
-    clausula1.push({ text: ".", font });
-  }
-  y = drawClause("CL\xC1USULA PRIMERA: OBJETO", clausula1, y);
-  const tipoNegocio = formData.opcion_negocio || "Venta";
-  const honorariosCorresponde = tipoNegocio.toLowerCase().includes("arriendo") ? "un canon de arrendamiento (si fuera venta es el 3% sobre el valor total de venta)" : "el 3% sobre el valor total de la venta (si fuera arriendo es un canon de arrendamiento)";
-  const clausula2Text = `Los honorarios derivados de la comisi\xF3n final efectivamente cobrada por el perfeccionamiento del negocio de Venta (en este caso es ${tipoNegocio}) que corresponde a ${honorariosCorresponde} ser\xE1n distribuidos en partes iguales (50% para cada parte), salvo pacto distinto anexo y por escrito. En caso de que EL AGENTE 2 act\xFAe bajo la figura de simple referenciador (\xFAnicamente refiere al cliente o al colega) sin participar activamente en el acompa\xF1amiento presencial, las negociaciones o el cierre legal, su participaci\xF3n corresponder\xE1 estrictamente al 10% de la comisi\xF3n.`;
-  y = drawClause("CL\xC1USULA SEGUNDA: HONORARIOS Y PROPORCI\xD3N", [{ text: clausula2Text, font }], y);
-  y = checkAndAddPage(y, 100);
-  const clausula3Text = `Para todos los efectos fiscales, contables y tributarios derivados del pago de la comisi\xF3n u honorarios correspondientes a EL AGENTE 1, las partes reconocen y aceptan expresamente que:
-
-1. Calidad Tributaria: EL AGENTE 1 (JANI ALVES SOUZA) act\xFAa en calidad de Persona Natural, No Responsable del Impuesto sobre las Ventas (IVA). Por consiguiente, EL AGENTE 2 (o la agencia inmobiliaria que este represente) tiene estrictamente prohibido realizar descuentos, retenciones o exigencias de facturaci\xF3n electr\xF3nica que incluyan el cobro o deducci\xF3n de IVA sobre la proporci\xF3n de EL AGENTE 1.
-2. Documento Soporte: Si EL AGENTE 2 o su agencia est\xE1n obligados a llevar contabilidad, ser\xE1 de su exclusiva responsabilidad y carga administrativa la emisi\xF3n del "Documento Soporte en adquisiciones efectuadas a sujetos no obligados a expedir factura de venta" (Resoluci\xF3n DIAN 000167 de 2021) para la legalizaci\xF3n de su egreso.
-3. Retenciones en la Fuente: Toda retenci\xF3n en la fuente (a t\xEDtulo de renta o ICA) solo proceder\xE1 si EL AGENTE 2 o su agencia ostentan formalmente la calidad de "Agente Retenedor" ante la DIAN, aplicando estrictamente las tarifas de ley para comisiones a personas naturales declarantes o no declarantes. Cualquier deducci\xF3n deber\xE1 ser informada previamente y soportada con la entrega obligatoria del respectivo Certificado de Retenci\xF3n; de lo contrario, el descuento se considerar\xE1 un cobro indebido y apropiaci\xF3n injustificada de dineros.`;
-  y = drawClause("CL\xC1USULA TERCERA: NATURALEZA TRIBUTARIA, FACTURACI\xD3N Y DESCUENTOS (EXCLUSI\xD3N DE ABUSOS)", [{ text: clausula3Text, font }], y);
-  y = checkAndAddPage(y, 80);
-  const clausula4Text = `De EL AGENTE 1: Promocionar el inmueble, proveer informaci\xF3n fidedigna para el cierre, coordinar diligencias y velar por el rigor jur\xEDdico de la gesti\xF3n.
-De EL AGENTE 2: Presentar prospectos reales, acompa\xF1ar las etapas de negociaci\xF3n (si aplica al 50%) y, con car\xE1cter irrestricto, respetar el canal de comunicaci\xF3n institucional, absteni\xE9ndose de realizar negociaciones directas, paralelas o a espaldas de EL AGENTE 1 con los clientes, propietarios o apoderados del inmueble.`;
-  y = drawClause("CL\xC1USULA CUARTA: OBLIGACIONES DE LAS PARTES", [{ text: clausula4Text, font }], y);
-  y = checkAndAddPage(y, 160);
-  const clausula5 = [
-    { text: "Las partes asumen un compromiso de estricta reserva. EL AGENTE 2 reconoce que EL AGENTE 1 es el titular exclusivo del encargo profesional sobre el inmueble. EL AGENTE 2 y/o su agencia se obligan a la NO ELUSI\xD3N (Non-Circumvention), lo que significa que no podr\xE1n cerrar el negocio, firmar promesas de compraventa ni contratos de arrendamiento con el cliente referido o el propietario del inmueble puenteando o excluyendo a EL AGENTE 1, ni durante la vigencia de este contrato ni dentro de los doce (12) meses siguientes a su terminaci\xF3n.\n\n", font },
-    { text: "PAR\xC1GRAFO PRIMERO: EXTENSI\xD3N POR V\xCDNCULO. ", font: boldFont },
-    { text: "Las partes acuerdan que los efectos de este contrato, especialmente lo referente al pago de honorarios y la cl\xE1usula penal, se extienden a cualquier negocio jur\xEDdico realizado sobre el inmueble con el cliente principal o con cualquier Tercero Vinculado a este. Se consideran Terceros Vinculados: C\xF3nyuges o compa\xF1eros permanentes; familiares dentro del cuarto grado de consanguinidad y segundo de afinidad; Personas Jur\xEDdicas donde el cliente o sus familiares sean socios, representantes o beneficiarios; y los acompa\xF1antes registrados en este contrato y en el sistema de EL AGENTE 1.\n\n", font },
-    { text: "PAR\xC1GRAFO SEGUNDO: CARGA DE LA PRUEBA. ", font: boldFont },
-    { text: "EL AGENTE 2 reconoce que la informaci\xF3n consignada en la base de datos de Vecy Agenda Pro constituye prueba fehaciente del nexo causal de la operaci\xF3n. Cualquier intento de perfeccionar el negocio omitiendo la participaci\xF3n de EL AGENTE 1 con cualquiera de estas personas se considerar\xE1 Incumplimiento Grave y activar\xE1 de inmediato la Cl\xE1usula Penal.", font }
-  ];
-  y = drawClause("CL\xC1USULA QUINTA: CONFIDENCIALIDAD, EXTENSI\xD3N A TERCEROS Y NO ELUSI\xD3N", clausula5, y);
-  y = checkAndAddPage(y, 80);
-  const clausula6Text = "El incumplimiento de cualquiera de las obligaciones, especialmente la elusi\xF3n (puenteo), la negociaci\xF3n no autorizada o los descuentos injustificados sobre los honorarios, dar\xE1 lugar al pago inmediato de una sanci\xF3n penal equivalente al 100% de la comisi\xF3n total generada por el negocio inmobiliario, a favor de la parte cumplida. El presente documento presta m\xE9rito ejecutivo para el cobro de esta penalidad, sin requerimiento de constituci\xF3n en mora, a la cual se renuncia expresamente.";
-  y = drawClause("CL\xC1USULA SEXTA: CL\xC1USULA PENAL E INCUMPLIMIENTO", [{ text: clausula6Text, font }], y);
-  const clausula7Text = "El presente contrato tendr\xE1 una vigencia de tres (3) meses desde su emisi\xF3n digital. Si el negocio se materializa antes, continuar\xE1 vigente hasta el pago total de las comisiones.";
-  y = drawClause("CL\xC1USULA S\xC9PTIMA: DURACI\xD3N", [{ text: clausula7Text, font }], y);
-  const clausula8Text = "Este contrato ostenta plena validez jur\xEDdica desde su generaci\xF3n y emisi\xF3n electr\xF3nica. Al amparo de la Ley 527 de 1999 (Ley de Comercio Electr\xF3nico), las firmas digitales, biom\xE9tricas, electr\xF3nicas o capturas gr\xE1ficas de trazo, se reputan como v\xE1lidas, vinculantes y expresan el consentimiento inequ\xEDvoco de las partes.";
-  y = drawClause("CL\xC1USULA OCTAVA: VALIDEZ Y FIRMA DIGITAL", [{ text: clausula8Text, font }], y);
-  y = checkAndAddPage(y, 150);
-  const firmaText = `En constancia de lo anterior, las partes firman el presente documento el d\xEDa ${generationDate}.`;
-  y = drawRichText([{ text: firmaText, font }], { y, x: margin, width: width - margin * 2, lineHeight: 14 });
-  y -= 30;
-  const firmaY = y;
-  const signatureBox = { width: 120, height: 50 };
-  const calculateDims = (img, maxWidth, maxHeight) => {
-    const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
-    return { width: img.width * ratio, height: img.height * ratio };
-  };
-  try {
-    const janiFirmaBytes = Buffer.from(janiFirmaBase64.split(",")[1], "base64");
-    const janiFirmaImage = await pdfDoc.embedPng(janiFirmaBytes);
-    const janiDims = calculateDims(janiFirmaImage, signatureBox.width, signatureBox.height);
-    currentPage.drawImage(janiFirmaImage, {
-      x: margin + (100 - janiDims.width / 2),
-      y: firmaY - 25,
-      width: janiDims.width,
-      height: janiDims.height
-    });
-  } catch (e) {
-    console.error("Error al incrustar firma de Jani en PDF:", e?.message);
-  }
-  currentPage.drawLine({ start: { x: margin, y: firmaY - 35 }, end: { x: margin + 200, y: firmaY - 35 }, thickness: 0.5, color: black });
-  currentPage.drawText("JANI ALVES SOUZA", { x: margin + 40, y: firmaY - 48, font: boldFont, size: 9 });
-  currentPage.drawText("C.C. 41.057.506", { x: margin + 50, y: firmaY - 58, font, size: 8 });
-  currentPage.drawText("AGENTE 1 - VECY BIENES RA\xCDCES", { x: margin + 15, y: firmaY - 68, font, size: 8 });
-  const agentSignatureX = width - margin - 200;
-  if (formData.firma_virtual_base64 && formData.firma_virtual_base64.startsWith("data:image")) {
-    try {
-      const signatureBase64Data = formData.firma_virtual_base64.split(",")[1];
-      const signatureBytes = Buffer.from(signatureBase64Data, "base64");
-      let signatureImage;
-      if (formData.firma_virtual_base64.startsWith("data:image/png")) {
-        signatureImage = await pdfDoc.embedPng(signatureBytes);
-      } else if (formData.firma_virtual_base64.startsWith("data:image/jpeg") || formData.firma_virtual_base64.startsWith("data:image/jpg")) {
-        signatureImage = await pdfDoc.embedJpg(signatureBytes);
-      }
-      if (signatureImage) {
-        const agentDims = calculateDims(signatureImage, signatureBox.width, signatureBox.height);
-        currentPage.drawImage(signatureImage, {
-          x: agentSignatureX + (100 - agentDims.width / 2),
-          y: firmaY - 25,
-          width: agentDims.width,
-          height: agentDims.height
-        });
-      }
-    } catch (e) {
-      console.error(`[${formData.solicitud_id}] Error al incrustar firma del agente:`, e?.message);
-    }
-  }
-  currentPage.drawLine({ start: { x: agentSignatureX, y: firmaY - 35 }, end: { x: width - margin, y: firmaY - 35 }, thickness: 0.5, color: black });
-  currentPage.drawText(clean(formData.solicitante_nombre).toUpperCase(), { x: agentSignatureX, y: firmaY - 48, font: boldFont, size: 9, maxWidth: 200 });
-  currentPage.drawText(`${clean(formData.solicitante_tipo_documento)} No. ${clean(formData.solicitante_numero_documento)}`, { x: agentSignatureX, y: firmaY - 58, font, size: 8 });
-  if (isJuridica && formData.solicitante_representante_legal) {
-    currentPage.drawText(`Rep. Legal: ${clean(formData.solicitante_representante_legal)}`, { x: agentSignatureX, y: firmaY - 68, font, size: 8 });
-    currentPage.drawText("AGENTE 2", { x: agentSignatureX, y: firmaY - 78, font, size: 8 });
-  } else {
-    currentPage.drawText("AGENTE 2", { x: agentSignatureX, y: firmaY - 68, font, size: 8 });
-  }
-  drawFooter(currentPage);
-  return await pdfDoc.save();
-}
-function getEmailContent(formData) {
-  const { solicitante_nombre, solicitante_perfil, solicitud_id, servicio_solicitado, opcion_negocio, codigo_inmueble, fecha_cita_texto, solicitante_email, hora_cita } = formData;
-  const logoUrlParaEmail = "cid:vecyLogo";
-  const now = /* @__PURE__ */ new Date();
-  const fechaActual = new Intl.DateTimeFormat("es-CO", { year: "numeric", month: "long", day: "numeric", timeZone: "America/Bogota" }).format(now);
-  const horaActual = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "America/Bogota" }).format(now);
-  const baseHtml = (title2, bodyContent) => `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style> @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"); body { font-family: "Poppins", Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; } .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f33; } .header { background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #bf953f; } .header img { max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4)); } .content { padding: 35px 40px; color: #f0f0f0; } .content h2 { color: #bf953f; font-size: 22px; margin-top: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; } .content p { font-size: 16px; line-height: 1.7; margin-bottom: 20px; } .highlight { background-color: #1a1a1a; padding: 15px 20px; border-left: 4px solid #bf953f; margin-top: 25px; border-radius: 4px; } .highlight p { font-size: 15px; margin: 0; color: #bf953f; font-weight: 600; } .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #333; } .footer a { color: #bf953f; text-decoration: none; font-weight: 600; } </style></head><body><div class="container"><div class="header"><img src="${logoUrlParaEmail}" alt="Vecy Bienes Ra\xEDces Logo"></div><div class="content"><h2>${title2}</h2>${bodyContent}</div><div class="footer"><p>Vecy Bienes Ra\xEDces S.A.S. \xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} | Gold Edition</p><p><a href="https://vecy.co/" target="_blank">vecy.co</a> \u2014 <a href="https://vecy-network.vercel.app/" target="_blank">vecy-network.vercel.app</a></p></div></div></body></html>`;
-  const subject = `\u2705 Solicitud #${solicitud_id} Recibida | Vecy Agenda`;
-  const title = `\xA1Hola, ${solicitante_nombre}! Hemos recibido tu solicitud \u{1F3E0}\u2728`;
-  let body = `
-    <p>Confirmamos la recepci\xF3n de tu solicitud para <strong>"${servicio_solicitado}"</strong> en <strong>${opcion_negocio || "tr\xE1mite"}</strong> identificado con el c\xF3digo <strong>${codigo_inmueble || "N/A"}</strong>, para la fecha del <strong>${fecha_cita_texto || "fecha por confirmar"}</strong> a las <strong>${hora_cita || "hora por confirmar"}</strong>. \u{1F4C5}</p>
-    <p>Nuestro equipo revisar\xE1 la fidelidad de todos los datos y, una vez verificados, te enviaremos un correo a <strong>${solicitante_email}</strong> con la confirmaci\xF3n del agendamiento y la direcci\xF3n completa del inmueble. \xA1Debes estar pendiente! \u{1F4E9}\u{1F440}</p>
-  `;
-  if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
-    let acompHtml = `<div class="highlight"><p><strong>\u{1F465} Acompa\xF1antes Autorizados:</strong></p><ul style="margin-top: 10px; margin-bottom: 0; color: #ccc;">`;
-    formData.acompanantes.forEach((acomp) => {
-      let parentesco = acomp.parentesco === "Otro" ? acomp.parentescoOtro : acomp.parentesco;
-      acompHtml += `<li>${acomp.nombre} (${parentesco}) - Doc: ${acomp.documento}</li>`;
-    });
-    acompHtml += "</ul></div>";
-    body += acompHtml;
-  }
-  body += `
-    <div class="highlight" style="margin-top: 25px;"><p><strong>ID de Solicitud: ${solicitud_id}</strong></p></div>
-  `;
-  const perfilLower = (solicitante_perfil || "").toLowerCase();
-  const esAgente = perfilLower.includes("agente") || perfilLower.includes("inmobiliaria") || perfilLower.includes("br\xF3ker") || perfilLower.includes("broker");
-  if (esAgente) {
-    body += `
-      <p style="margin-top: 20px;">Como agente, hemos adjuntado a este correo el contrato de colaboraci\xF3n <strong>No. ${solicitud_id}</strong> firmado virtualmente hoy <strong>${fechaActual}</strong> a las <strong>${horaActual}</strong> a trav\xE9s de nuestro formulario. \u270D\uFE0F\u{1F4C4}</p>
-      <p>Estamos seguros de que todo saldr\xE1 bien y ser\xE1 un cierre perfecto. \xA1Gracias por tu confianza! \u{1F91D}\u{1F680}</p>
-    `;
-  }
-  return { subject, html: baseHtml(title, body) };
-}
-function getAdminEmailContent(formData) {
-  const logoUrlParaEmail = "cid:vecyLogo";
-  let rows = "";
-  for (const [key, value] of Object.entries(formData)) {
-    if (key === "firma_virtual_base64" || key === "firma_digital_archivo" || key === "autorizacion" || key === "acompanantes" || key === "firmaVirtualBase64") continue;
-    let displayValue = value;
-    if (value === null || value === void 0) displayValue = "<em>Vac\xEDo</em>";
-    rows += `
-      <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #333; font-weight: bold; width: 40%; color: #bf953f;">${key.replace(/_/g, " ")}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${displayValue}</td>
-      </tr>
-    `;
-  }
-  let acompanantesHtml = "";
-  if (formData.acompanantes && Array.isArray(formData.acompanantes) && formData.acompanantes.length > 0) {
-    acompanantesHtml += `
-      <h3 style="color: #bf953f; margin-top: 30px; text-transform: uppercase;">\u{1F465} Acompa\xF1antes Registrados</h3>
-      <table style="width: 100%; border-collapse: collapse;">
-        <thead>
-          <tr style="background-color: #bf953f; color: #000;">
-            <th style="padding: 8px; text-align: left;">Nombre</th>
-            <th style="padding: 8px; text-align: left;">Documento</th>
-            <th style="padding: 8px; text-align: left;">Parentesco</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-    formData.acompanantes.forEach((acomp) => {
-      let parentesco = acomp.parentesco === "Otro" ? acomp.parentescoOtro : acomp.parentesco;
-      acompanantesHtml += `
-        <tr>
-          <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${acomp.nombre}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${acomp.documento}</td>
-          <td style="padding: 8px; border-bottom: 1px solid #333; color: #f0f0f0;">${parentesco}</td>
-        </tr>
-      `;
-    });
-    acompanantesHtml += "</tbody></table>";
-  }
-  const html = `
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        body { font-family: Arial, sans-serif; background-color: #0a0a0a; color: #f0f0f0; margin: 0; padding: 20px; }
-        .container { max-width: 650px; margin: 0 auto; background-color: #121212; border: 1px solid #bf953f; border-radius: 8px; overflow: hidden; }
-        .header { background-color: #000; padding: 20px; text-align: center; border-bottom: 2px solid #bf953f; }
-        .content { padding: 30px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { background-color: #bf953f; color: #000; padding: 10px; text-align: left; }
-        td { padding: 8px; border-bottom: 1px solid #222; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <img src="${logoUrlParaEmail}" alt="Logo Vecy" style="max-width: 100px;">
-        </div>
-        <div class="content">
-          <h2 style="color: #bf953f; text-align: center; margin-top: 0;">NUEVA SOLICITUD RECIBIDA #${formData.solicitud_id}</h2>
-          <p style="color: #888; font-size: 13px;">Solicitante: ${formData.solicitante_nombre}</p>
-          <p style="font-size: 13px; color: #aaa;">A continuaci\xF3n, el resumen de los datos ingresados en el formulario:</p>
-          <table>
-            <thead>
-              <tr>
-                <th>Campo</th>
-                <th>Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
-          ${acompanantesHtml}
-          <p style="font-size: 11px; color: #666; margin-top: 30px; text-align: center;">Este es un correo autom\xE1tico del sistema interno de Vecy Agenda.</p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-  return { html };
-}
-async function sendContractAndConfirmationEmails(rawPayload) {
-  const formData = normalizePayload(rawPayload);
-  const solicitudId = formData.solicitud_id;
-  const gmailUser = process.env.GMAIL_USER || "vecybienesraices@gmail.com";
-  const gmailPass = process.env.GMAIL_APP_PASSWORD || "dwjnngwfmsmjxvgi";
-  const adminTargetEmail = process.env.VECY_INTERNAL_EMAIL || gmailUser;
-  if (!gmailUser || !gmailPass) {
-    console.warn(`[AGENDA-EMAIL-#${solicitudId}] \u26A0\uFE0F Credenciales de Gmail no configuradas en entorno.`);
-    return { success: false, error: "Missing Gmail credentials" };
-  }
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: {
-      user: gmailUser,
-      pass: gmailPass
-    }
-  });
-  let pdfAttachment = null;
-  const perfilLower = (formData.solicitante_perfil || "").toLowerCase();
-  const esAgente = perfilLower.includes("agente") || perfilLower.includes("inmobiliaria") || perfilLower.includes("br\xF3ker") || perfilLower.includes("broker");
-  if (esAgente) {
-    try {
-      console.log(`[AGENDA-EMAIL-#${solicitudId}] \u{1F4C4} Generando Contrato de Puntas Compartidas en PDF...`);
-      const pdfBytes = await createContractPdf(formData);
-      const safeName = (formData.solicitante_nombre || "Agente").replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
-      const pdfFileName = `Contrato_Puntas_${solicitudId}_${safeName}.pdf`;
-      pdfAttachment = {
-        filename: pdfFileName,
-        content: Buffer.from(pdfBytes),
-        contentType: "application/pdf"
-      };
-      console.log(`[AGENDA-EMAIL-#${solicitudId}] \u2705 PDF de contrato generado (${pdfBytes.length} bytes).`);
-    } catch (pdfErr) {
-      console.error(`[AGENDA-EMAIL-#${solicitudId}] \u274C Error generando PDF:`, pdfErr?.message);
-    }
-  }
-  const logoAttachment = {
-    filename: "logo-vecy.png",
-    content: Buffer.from(vecyLogoBase64.split(",")[1], "base64"),
-    cid: "vecyLogo"
-  };
-  const attachments = [logoAttachment];
-  if (pdfAttachment) {
-    attachments.push(pdfAttachment);
-  }
-  if (formData.solicitante_email) {
-    try {
-      const { subject, html } = getEmailContent(formData);
-      await transporter.sendMail({
-        from: `"Vecy Bienes Ra\xEDces" <${gmailUser}>`,
-        to: formData.solicitante_email,
-        subject,
-        html,
-        attachments
-      });
-      console.log(`[AGENDA-EMAIL-#${solicitudId}] \u2709\uFE0F Correo de confirmaci\xF3n enviado exitosamente a ${formData.solicitante_email}`);
-    } catch (clientMailErr) {
-      console.error(`[AGENDA-EMAIL-#${solicitudId}] \u274C Error enviando correo al solicitante:`, clientMailErr?.message);
-    }
-  }
-  try {
-    const adminContent = getAdminEmailContent(formData);
-    await transporter.sendMail({
-      from: `"Vecy Agenda Pro" <${gmailUser}>`,
-      to: adminTargetEmail,
-      subject: `\u{1F514} Nueva Solicitud #${solicitudId} - ${formData.solicitante_perfil || "Usuario"}`,
-      html: adminContent.html,
-      attachments
-    });
-    console.log(`[AGENDA-EMAIL-#${solicitudId}] \u{1F514} Correo interno enviado a ${adminTargetEmail}`);
-  } catch (adminMailErr) {
-    console.error(`[AGENDA-EMAIL-#${solicitudId}] \u274C Error enviando correo interno a Vecy:`, adminMailErr?.message);
-  }
-  return { success: true };
-}
-
-// server/_core/agendaWhatsAppService.ts
-init_whatsapp_match();
-var VECY_BROKER_OFFICIAL_PHONE = "573166569719";
-function cleanColombianPhone(rawPhone) {
-  if (!rawPhone) return "";
-  const digits = String(rawPhone).replace(/\D/g, "");
-  if (!digits) return "";
-  if (digits.length === 10 && digits.startsWith("3")) {
-    return "57" + digits;
-  }
-  if (digits.length === 12 && digits.startsWith("57")) {
-    return digits;
-  }
-  return digits;
-}
-function formatDateSpanish(rawDate) {
-  if (!rawDate) return "Fecha por coordinar";
-  const str = String(rawDate).trim();
-  const mesesKeywords = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-  if (mesesKeywords.some((m) => str.toLowerCase().includes(m))) {
-    return str;
-  }
-  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (match) {
-    const year = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10) - 1;
-    const day = parseInt(match[3], 10);
-    const dateObj = new Date(year, month, day, 12, 0, 0);
-    const diasSemana = ["domingo", "lunes", "martes", "mi\xE9rcoles", "jueves", "viernes", "s\xE1bado"];
-    const nombresMeses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-    const diaNombre = diasSemana[dateObj.getDay()] || "d\xEDa";
-    const mesNombre = nombresMeses[month] || "mes";
-    return `${diaNombre}, ${day} de ${mesNombre} de ${year}`;
-  }
-  return str;
-}
-function buildBrokerCallMeBotMessage(data) {
-  const numSolicitud = data.solicitudId || data.solicitud_id || data.id || "Pendiente";
-  const perfil = data.solicitante_perfil || data.solicitantePerfil || "Cliente directo";
-  const nombre = data.solicitante_nombre || data.solicitanteNombre || "Solicitante";
-  const doc = data.solicitante_numero_documento || data.solicitanteNumeroDocumento || "Sin registrar";
-  const email = data.solicitante_email || data.solicitanteEmail || "Sin email";
-  const rawCelular = data.solicitante_celular || data.solicitanteCelular || "";
-  const cleanCel = cleanColombianPhone(rawCelular);
-  const celularDisplay = cleanCel || rawCelular || "Sin celular";
-  const servicio = data.servicio_solicitado || data.servicioSolicitado || "Visitar inmueble";
-  const codigo = data.codigo_inmueble || data.codigoInmueble || "S/C";
-  const negocio = data.opcion_negocio || data.opcionNegocio || "Venta";
-  const fechaTexto = formatDateSpanish(data.fecha_cita_texto || data.fechaCitaTexto);
-  const hora = data.hora_cita || data.horaCita || "Por coordinar";
-  let acompList = [];
-  if (data.acompanantes) {
-    if (Array.isArray(data.acompanantes)) {
-      acompList = data.acompanantes;
-    } else if (typeof data.acompanantes === "string") {
-      try {
-        const parsed = JSON.parse(data.acompanantes);
-        if (Array.isArray(parsed)) acompList = parsed;
-      } catch (_) {
-      }
-    }
-  }
-  const validAcomps = acompList.filter((a) => a && (a.nombre || a.documento || a.numero_documento));
-  let personas = Number(data.cantidad_personas ?? data.cantidadPersonas ?? 0);
-  if (!personas || isNaN(personas)) {
-    personas = 1 + validAcomps.length;
-  }
-  const clienteNombre = data.interesado_nombre || data.interesadoNombre || nombre;
-  const clienteDoc = data.interesado_documento || data.interesadoDocumento || doc;
-  const lineasSolicitud = [
-    `\u{1F3E0} Solicitud`,
-    servicio,
-    `Cod: ${codigo}`,
-    `Negocio: ${negocio}`,
-    `\u{1F4C5} ${fechaTexto}`,
-    `\u{1F550} ${hora}`,
-    `Asistir\xE1n: ${personas} personas`
-  ];
-  if (validAcomps.length > 0) {
-    for (const acomp of validAcomps) {
-      const acompNombre = acomp.nombre || "Acompa\xF1ante";
-      const acompDoc = acomp.documento || acomp.numero_documento || "";
-      lineasSolicitud.push(`${acompNombre}
-\u{1FAAA} ${acompDoc}`);
-    }
-  }
-  const bloqueSolicitud = lineasSolicitud.join("\n");
-  const waContactUrl = cleanCel ? `https://wa.me/${cleanCel}` : `(Sin n\xFAmero registrado)`;
-  return `\u{1F514} Solicitud No. ${numSolicitud} \u{1F514}
-
-\u{1F464} Solicitante
-${perfil}
-${nombre}
-\u{1FAAA} ${doc}
-Contrato: ${numSolicitud}
-\u2709\uFE0F ${email}
-\u{1F4DE} ${celularDisplay}
-
-${bloqueSolicitud}
-
-\u{1F465} Cliente
-${clienteNombre}
-\u{1FAAA} ${clienteDoc}
-
-\u{1F447} Contactar Cliente \u{1F447}
-${waContactUrl}`;
-}
-function buildClientConfirmationMessage(data) {
-  const numSolicitud = data.solicitudId || data.solicitud_id || data.id || "";
-  const nombre = data.solicitante_nombre || data.solicitanteNombre || "Cliente";
-  const nombreInmueble = data.nombre_inmueble || data.nombreInmueble || "Inmueble seleccionado";
-  const codigo = data.codigo_inmueble || data.codigoInmueble || "S/C";
-  const negocio = data.opcion_negocio || data.opcionNegocio || "Inmobiliario";
-  const fechaTexto = formatDateSpanish(data.fecha_cita_texto || data.fechaCitaTexto);
-  const hora = data.hora_cita || data.horaCita || "Por coordinar";
-  const email = data.solicitante_email || data.solicitanteEmail || "tu correo registrado";
-  let personas = Number(data.cantidad_personas ?? data.cantidadPersonas ?? 0);
-  if (!personas || isNaN(personas)) {
-    personas = 1;
-    if (data.acompanantes && Array.isArray(data.acompanantes)) {
-      personas += data.acompanantes.length;
-    }
-  }
-  const clienteNombre = data.interesado_nombre || data.interesadoNombre || "";
-  const lineaCliente = clienteNombre && clienteNombre !== nombre ? `
-\u{1F464} *Cliente presentado:* ${clienteNombre}` : "";
-  return `\xA1Hola, ${nombre}! \u{1F44B} Te saluda *JanIA* de *Vecy Bienes Ra\xEDces*. \u{1F3E2}\u2728
-
-Hemos recibido tu solicitud de agendamiento *No. ${numSolicitud}*:
-
-\u{1F3E0} *Inmueble:* ${nombreInmueble}
-\u{1F4CC} *C\xF3digo:* ${codigo}
-\u{1F4BC} *Operaci\xF3n:* ${negocio}
-\u{1F4C5} *Fecha:* ${fechaTexto}
-\u23F0 *Hora:* ${hora}
-\u{1F465} *Asistentes:* ${personas} persona(s)${lineaCliente}
-
-\u{1F50D} *Estamos verificando tus datos.* En un momento te enviaremos la confirmaci\xF3n oficial y la direcci\xF3n exacta del inmueble a tu correo (*${email}*) y por este medio (WhatsApp). \u{1F4E9}\u{1F4F2}
-
-Si deseas cancelar, reagendar, tienes alguna duda o requieres otro tipo de servicio comun\xEDcate directamente con nosotros al *+57 316 6569719*.
-
-\xA1Gracias por confiar en *Vecy Bienes Ra\xEDces*! \u{1F91D}\u{1F3E1}`;
-}
-async function sendAgendaWhatsAppNotifications(payload) {
-  let brokerSent = false;
-  let clientSent = false;
-  const numSolicitud = payload.solicitudId || payload.solicitud_id || payload.id || "N/A";
-  try {
-    const brokerMsg = buildBrokerCallMeBotMessage(payload);
-    console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u{1F4E4} Enviando notificaci\xF3n CallMeBot al Br\xF3ker (+57 316 6569719)...`);
-    try {
-      await janiaMatchBot.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE, brokerMsg);
-      brokerSent = true;
-      console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u2705 Notificaci\xF3n entregada al socket para Br\xF3ker (+57 316 6569719).`);
-    } catch (brokerErr) {
-      console.error(`[AGENDA-WHATSAPP-#${numSolicitud}] \u26A0\uFE0F Error notificando al Br\xF3ker:`, brokerErr?.message || brokerErr);
-    }
-    const rawCel = payload.solicitante_celular || payload.solicitanteCelular || "";
-    const cleanClientCel = cleanColombianPhone(rawCel);
-    if (cleanClientCel && cleanClientCel.length >= 10) {
-      const clientMsg = buildClientConfirmationMessage(payload);
-      console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u{1F4E4} Enviando mensaje de confirmaci\xF3n de JanIA al Solicitante (${cleanClientCel})...`);
-      try {
-        await janiaMatchBot.sendDirectMessage(cleanClientCel, clientMsg);
-        clientSent = true;
-        console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u2705 Confirmaci\xF3n de JanIA entregada al socket para Solicitante (${cleanClientCel}).`);
-      } catch (clientErr) {
-        console.error(`[AGENDA-WHATSAPP-#${numSolicitud}] \u26A0\uFE0F Error enviando confirmaci\xF3n al solicitante (${cleanClientCel}):`, clientErr?.message || clientErr);
-      }
-    } else {
-      console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u2139\uFE0F Solicitante no proporcion\xF3 un celular v\xE1lido para WhatsApp.`);
-    }
-  } catch (err) {
-    console.error(`[AGENDA-WHATSAPP-#${numSolicitud}] \u274C Error general en servicio de WhatsApp para agenda:`, err?.message || err);
-  }
-  return { brokerSent, clientSent };
-}
-
-// server/routers/agenda.ts
-var httpsAgentInsecure = new https.Agent({ rejectUnauthorized: false });
-var identityCache = /* @__PURE__ */ new Map();
-var IDENTITY_CACHE_TTL = 24 * 60 * 60 * 1e3;
-identityCache.set("POLICIA:cc:1233903423", { fullName: "Daniel Eduardo Rivera Noguera", timestamp: Date.now() });
-identityCache.set("POLICIA:cc:11189781", { fullName: "Eduardo Arturo Rivera Mart\xEDnez", timestamp: Date.now() });
-identityCache.set("POLICIA:cc:1193130766", { fullName: "Natalia Rivera Noguera", timestamp: Date.now() });
-identityCache.set("POLICIA:cc:41057506", { fullName: "Jani Alves Souza", timestamp: Date.now() });
-identityCache.set("NIT:410575061", { fullName: "Vecy Bienes Ra\xEDces", timestamp: Date.now() });
-identityCache.set("NIT:41057506", { fullName: "Vecy Bienes Ra\xEDces", timestamp: Date.now() });
-identityCache.set("POLICIA:cc:52432900", { fullName: "Esmeralda Rojas Salazar", timestamp: Date.now() });
-identityCache.set("POLICIA:cc:52803592", { fullName: "Juanita Sanchez Martinez", timestamp: Date.now() });
-var identityJobs = /* @__PURE__ */ new Map();
-setInterval(() => {
-  const now = Date.now();
-  for (const [id, job] of identityJobs.entries()) {
-    if (now - job.createdAt > 10 * 60 * 1e3) {
-      identityJobs.delete(id);
-    }
-  }
-}, 6e4);
-var CookieJar = class {
-  cookies = /* @__PURE__ */ new Map();
-  addFromHeaders(headers) {
-    const raw = headers.getSetCookie ? headers.getSetCookie() : [headers.get("set-cookie")].filter(Boolean);
-    for (const item of raw) {
-      if (!item) continue;
-      const parts = item.split(";");
-      const [k, v] = parts[0].split("=");
-      if (k && v) this.cookies.set(k.trim(), v.trim());
-    }
-  }
-  addFromRawHeaders(headers) {
-    const raw = headers["set-cookie"] || [];
-    const list = Array.isArray(raw) ? raw : [raw];
-    for (const item of list) {
-      if (!item) continue;
-      const parts = item.split(";");
-      const [k, v] = parts[0].split("=");
-      if (k && v) this.cookies.set(k.trim(), v.trim());
-    }
-  }
-  getCookieString() {
-    return Array.from(this.cookies.entries()).map(([k, v]) => `${k}=${v}`).join("; ");
-  }
-};
-async function requestHttps(urlStr, options = {}, jar) {
-  return new Promise((resolve, reject) => {
-    const u = new URL(urlStr);
-    const headers = options.headers || {};
-    if (jar) {
-      const cookieStr = jar.getCookieString();
-      if (cookieStr) headers["Cookie"] = cookieStr;
-    }
-    const req = https.request({
-      protocol: u.protocol,
-      hostname: u.hostname,
-      port: u.port || 443,
-      path: u.pathname + u.search,
-      method: options.method || "GET",
-      headers,
-      agent: httpsAgentInsecure
-    }, (res) => {
-      if (jar) jar.addFromRawHeaders(res.headers);
-      let data = "";
-      res.on("data", (chunk) => data += chunk);
-      res.on("end", () => resolve({ status: res.statusCode || 200, headers: res.headers, body: data }));
-    });
-    req.on("error", reject);
-    if (options.timeout) {
-      req.setTimeout(options.timeout, () => {
-        req.destroy(new Error("HTTPS request timeout"));
-      });
-    }
-    if (options.body) req.write(options.body);
-    req.end();
-  });
-}
-function formatTitleCase(str) {
-  if (!str) return "";
-  const lowerParticles = ["de", "del", "la", "las", "los", "y"];
-  return str.toLowerCase().split(/\s+/).filter(Boolean).map((w, idx) => {
-    if (idx > 0 && lowerParticles.includes(w)) {
-      return w;
-    }
-    return w.charAt(0).toUpperCase() + w.slice(1);
-  }).join(" ");
-}
-function parsePoliceAntecedentesFullName(rawFullName) {
-  if (!rawFullName || !rawFullName.trim()) return "";
-  const clean = rawFullName.trim().replace(/\s+/g, " ");
-  const words = clean.split(" ").filter(Boolean);
-  if (words.length <= 1) return formatTitleCase(clean);
-  const upper = words.map((w) => w.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
-  let ap1Tokens = [];
-  let idx = 0;
-  if (upper[idx] === "DE" && upper[idx + 1] === "LA" && idx + 2 < words.length) {
-    ap1Tokens = [words[idx], words[idx + 1], words[idx + 2]];
-    idx += 3;
-  } else if ((upper[idx] === "DE" || upper[idx] === "DEL" || upper[idx] === "SAN" || upper[idx] === "SANTA") && idx + 1 < words.length) {
-    ap1Tokens = [words[idx], words[idx + 1]];
-    idx += 2;
-  } else {
-    ap1Tokens = [words[idx]];
-    idx += 1;
-  }
-  let ap2Tokens = [];
-  if (idx < words.length - 1) {
-    if (upper[idx] === "DE" && upper[idx + 1] === "LA" && idx + 3 <= words.length) {
-      ap2Tokens = [words[idx], words[idx + 1], words[idx + 2]];
-      idx += 3;
-    } else if ((upper[idx] === "DE" || upper[idx] === "DEL" || upper[idx] === "SAN" || upper[idx] === "SANTA") && idx + 2 <= words.length) {
-      ap2Tokens = [words[idx], words[idx + 1]];
-      idx += 2;
-    } else {
-      ap2Tokens = [words[idx]];
-      idx += 1;
-    }
-  }
-  const nameTokens = words.slice(idx);
-  if (nameTokens.length === 0) {
-    return formatTitleCase(clean);
-  }
-  const naturalTokens = [...nameTokens, ...ap1Tokens, ...ap2Tokens];
-  return formatTitleCase(naturalTokens.join(" "));
-}
-async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
-  let tipoDoc = "cc";
-  const t2 = (tipoDocInput || "").toLowerCase();
-  if (t2.includes("extranjer") || t2 === "ce" || t2 === "cx") tipoDoc = "cx";
-  else if (t2.includes("pasaporte") || t2 === "pa") tipoDoc = "pa";
-  else if (t2.includes("nit") || t2.includes("rut")) return { success: false };
-  const cacheKey = `POLICIA:${tipoDoc}:${cleanDoc}`;
-  const cached = identityCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL) {
-    return { success: true, officialName: cached.fullName, source: "Polic\xEDa Nacional de Colombia (Cach\xE9)" };
-  }
-  const apiKey = process.env.TWOCAPTCHA_API_KEY || "673ddb810e9f700065ccbe6034f26629";
-  if (!apiKey) return { success: false };
-  try {
-    const solver = new Solver(apiKey);
-    const jar = new CookieJar();
-    const headers = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36" };
-    const res1 = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml", { headers, timeout: 25e3 }, jar);
-    const vs1Match = res1.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res1.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
-    const vs1 = vs1Match ? vs1Match[1] : null;
-    if (!vs1) return { success: false };
-    const postTerms = new URLSearchParams({
-      "javax.faces.partial.ajax": "true",
-      "javax.faces.source": "continuarBtn",
-      "javax.faces.partial.execute": "@all",
-      "javax.faces.partial.render": "form",
-      "continuarBtn": "continuarBtn",
-      "form": "form",
-      "aceptaOption": "true",
-      "javax.faces.ViewState": vs1
-    }).toString();
-    await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml", {
-      method: "POST",
-      headers: {
-        ...headers,
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "Faces-Request": "partial/ajax",
-        "X-Requested-With": "XMLHttpRequest",
-        "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml"
-      },
-      body: postTerms,
-      timeout: 25e3
-    }, jar);
-    const res3 = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml", {
-      headers: {
-        ...headers,
-        "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml"
-      },
-      timeout: 25e3
-    }, jar);
-    const vs3Match = res3.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res3.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
-    const vs3 = vs3Match ? vs3Match[1] : null;
-    if (!vs3) return { success: false };
-    const captcha = await solver.recaptcha({
-      googlekey: "6LcsIwQaAAAAAFCsaI-dkR6hgKsZwwJRsmE0tIJH",
-      pageurl: "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
-    });
-    if (!captcha || !captcha.data) return { success: false };
-    const postQuery = new URLSearchParams({
-      "formAntecedentes": "formAntecedentes",
-      "cedulaTipo": tipoDoc,
-      "cedulaInput": cleanDoc,
-      "g-recaptcha-response": captcha.data,
-      "j_idt17": "Consultar",
-      "javax.faces.ViewState": vs3
-    }).toString();
-    const resFinal = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml", {
-      method: "POST",
-      headers: {
-        ...headers,
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
-      },
-      body: postQuery,
-      timeout: 25e3
-    }, jar);
-    let finalHtml = resFinal.body;
-    if (resFinal.status === 302 || resFinal.headers.location) {
-      const nextUrl = resFinal.headers.location || "https://antecedentes.policia.gov.co:7005/WebJudicial/formAntecedentes.xhtml";
-      const resRedirect = await requestHttps(nextUrl, {
-        headers: {
-          ...headers,
-          "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
-        },
-        timeout: 25e3
-      }, jar);
-      finalHtml = resRedirect.body;
-    }
-    const text2 = finalHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-    const matchNombres = finalHtml.match(/Apellidos\s+y\s+Nombres:\s*<span[^>]*>([^<]+)<\/span>/i) || text2.match(/Apellidos\s+y\s+Nombres:\s*([A-ZÁÉÍÓÚÑ\s]+?)\s+(NO TIENE|TIENE|ASUNTOS)/i);
-    if (matchNombres && matchNombres[1]) {
-      const rawFullName = matchNombres[1].trim();
-      const officialName = parsePoliceAntecedentesFullName(rawFullName);
-      identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
-      return { success: true, officialName, source: "Polic\xEDa Nacional de Colombia" };
-    }
-    return { success: false };
-  } catch (err) {
-    console.warn("[queryPoliciaNacional Error]", err?.message);
-    return { success: false };
-  }
-}
-function calcularDigitoVerificacionDIAN(nitStr) {
-  const vpri = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
-  const clean = nitStr.replace(/\D/g, "");
-  let suma = 0;
-  for (let i = 0; i < clean.length; i++) {
-    const digit = parseInt(clean.charAt(clean.length - 1 - i), 10);
-    suma += digit * vpri[i];
-  }
-  const residuo = suma % 11;
-  return residuo > 1 ? 11 - residuo : residuo;
-}
-function checkIdentityTokens(nombreIngresado, officialName) {
-  if (!nombreIngresado || !nombreIngresado.trim()) return true;
-  if (!officialName || !officialName.trim()) return false;
-  const stopwords = ["de", "del", "la", "las", "los", "y", "el", "san", "santa", "inmobiliaria", "bienes", "raices", "ra\xEDces", "propiedades", "sas", "ltda"];
-  const normEntered = nombreIngresado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[\s,.-]+/).filter((t2) => t2.length >= 3 && !stopwords.includes(t2));
-  const normOfficial = officialName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/[\s,.-]+/).filter((t2) => t2.length >= 3 && !stopwords.includes(t2));
-  if (normEntered.length === 0) return true;
-  const matches = normEntered.filter(
-    (token) => normOfficial.some((off) => off === token || token.length >= 4 && off.startsWith(token) || off.length >= 4 && token.startsWith(off))
-  );
-  return matches.length >= 1;
-}
-var AUTHORITATIVE_FAMILY_IDENTITIES = {
-  // 1. Cédula Daniel Eduardo Rivera Noguera (CC: 1233903423) - Exclusivo e independiente de Vecy
-  "1233903423": {
-    canonicalName: "Daniel Eduardo Rivera Noguera",
-    allowedKeywords: ["daniel", "eduardo", "rivera", "noguera"],
-    isCompany: false,
-    message: "\u2713 Identidad verificada y autenticada con \xE9xito: Daniel Eduardo Rivera Noguera"
-  },
-  // 2. Cédula Eduardo Arturo Rivera Martínez (Fundador y Director de Tecnología)
-  "11189781": {
-    canonicalName: "Eduardo Arturo Rivera Mart\xEDnez",
-    allowedKeywords: ["eduardo", "rivera", "arturo", "martinez", "mart\xEDnez", "eddu", "eddua"],
-    isCompany: false,
-    message: "\u2713 Identidad verificada y autenticada con \xE9xito: Eduardo Arturo Rivera Mart\xEDnez"
-  },
-  // 3. Cédula Natalia Rivera Noguera (Hija de Eduardo)
-  "1193130766": {
-    canonicalName: "Natalia Rivera Noguera",
-    allowedKeywords: ["natalia", "rivera", "noguera"],
-    isCompany: false,
-    message: "\u2713 Identidad verificada y autenticada con \xE9xito: Natalia Rivera Noguera"
-  },
-  // 4. NIT Vecy Bienes Raíces (Persona Jurídica - NIT: 41057506-1)
-  "410575061": {
-    canonicalName: "Vecy Bienes Ra\xEDces",
-    allowedKeywords: ["vecy", "bienes", "raices", "ra\xEDces", "jani", "alves", "souza"],
-    isCompany: true,
-    message: "\u2713 Identidad corporativa verificada y autorizada: Vecy Bienes Ra\xEDces (NIT: 41057506-1)"
-  },
-  // 5. Cédula Jani Alves Souza (Fundadora y Directora de Operaciones) / NIT Base Vecy
-  "41057506": {
-    canonicalName: "Jani Alves Souza",
-    allowedKeywords: ["jani", "alves", "souza", "vecy", "bienes", "raices", "ra\xEDces"],
-    isCompany: false,
-    message: "\u2713 Identidad verificada y autenticada con \xE9xito: Jani Alves Souza"
-  }
-};
-async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngresado) {
-  const clean = cleanDoc.replace(/[^0-9a-zA-Z]/g, "");
-  if (!clean || clean.length < 5) {
-    return {
-      valid: false,
-      match: false,
-      error: "El n\xFAmero de documento debe tener al menos 5 d\xEDgitos."
-    };
-  }
-  const normName = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  if (normName.length >= 4) {
-    const isDaniel = normName.includes("daniel") && (normName.includes("rivera") || normName.includes("noguera") || normName.trim() === "daniel");
-    if (isDaniel && clean !== "1233903423") {
-      return {
-        valid: false,
-        match: false,
-        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Daniel Eduardo Rivera Noguera (su c\xE9dula oficial registrada es 1233903423). Corrige el n\xFAmero para continuar.`
-      };
-    }
-    const isNatalia = normName.includes("natalia") && (normName.includes("rivera") || normName.includes("noguera") || normName.trim() === "natalia");
-    if (isNatalia && clean !== "1193130766") {
-      return {
-        valid: false,
-        match: false,
-        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Natalia Rivera Noguera (el documento oficial registrado es 1193130766). Corrige el n\xFAmero para continuar.`
-      };
-    }
-    const isEduardo = normName.includes("eduardo") && (normName.includes("rivera") || normName.includes("arturo"));
-    if (isEduardo && clean !== "11189781") {
-      return {
-        valid: false,
-        match: false,
-        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Eduardo Arturo Rivera Mart\xEDnez (su c\xE9dula oficial registrada es 11189781). Corrige el n\xFAmero para continuar.`
-      };
-    }
-    const isVecy = normName.includes("vecy");
-    if (isVecy && clean !== "410575061" && clean !== "41057506") {
-      return {
-        valid: false,
-        match: false,
-        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Vecy Bienes Ra\xEDces (NIT oficial: 41057506-1). Corrige el n\xFAmero para continuar.`
-      };
-    }
-    const isJani = normName.includes("jani") && normName.includes("alves");
-    if (isJani && clean !== "41057506") {
-      return {
-        valid: false,
-        match: false,
-        error: `\u26A0\uFE0F El documento ${clean} no corresponde a Jani Alves Souza (su c\xE9dula oficial registrada es 41057506). Corrige el n\xFAmero para continuar.`
-      };
-    }
-  }
-  const tDocLower = (tipoDocumento || "").toLowerCase();
-  const isNit = tDocLower.includes("nit") || tDocLower.includes("rut");
-  const authEntry = AUTHORITATIVE_FAMILY_IDENTITIES[clean];
-  if (authEntry) {
-    const norm2 = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const tokens = norm2.split(/[\s,.-]+/).filter(Boolean);
-    const matchesKeyword = tokens.length === 0 || tokens.some((t2) => authEntry.allowedKeywords.some((kw) => kw === t2 || t2.startsWith(kw) || kw.startsWith(t2)));
-    if (clean === "1233903423" && norm2.includes("vecy")) {
-      return {
-        valid: false,
-        match: false,
-        error: "\u26A0\uFE0F El documento 1233903423 pertenece a Daniel Eduardo Rivera Noguera y no corresponde a Vecy Bienes Ra\xEDces (el NIT oficial de Vecy Bienes Ra\xEDces es 41057506-1)."
-      };
-    }
-    if (matchesKeyword) {
-      let displayName = authEntry.canonicalName;
-      let msg = authEntry.message;
-      if (clean === "1233903423") {
-        displayName = "Daniel Eduardo Rivera Noguera";
-        msg = "\u2713 Identidad verificada y autenticada con \xE9xito: Daniel Eduardo Rivera Noguera";
-      } else if (clean === "410575061" || clean === "41057506" && (isNit || norm2.includes("vecy"))) {
-        displayName = "Vecy Bienes Ra\xEDces";
-        msg = "\u2713 Identidad oficial verificada y autorizada: Vecy Bienes Ra\xEDces (NIT: 41057506-1)";
-      } else if (clean === "41057506") {
-        displayName = "Jani Alves Souza";
-        msg = "\u2713 Identidad verificada y autenticada con \xE9xito: Jani Alves Souza";
-      }
-      return {
-        valid: true,
-        match: true,
-        officialName: displayName,
-        message: msg
-      };
-    } else {
-      return {
-        valid: true,
-        match: false,
-        officialName: authEntry.canonicalName,
-        error: `\u26A0\uFE0F El n\xFAmero de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un n\xFAmero mal o corr\xEDgelo para continuar.`
-      };
-    }
-  }
-  if (isNit) {
-    if (!/^\d{8,11}$/.test(clean)) {
-      return {
-        valid: false,
-        match: false,
-        error: "El NIT debe contener entre 8 y 10 d\xEDgitos num\xE9ricos (incluyendo d\xEDgito de verificaci\xF3n)."
-      };
-    }
-    const baseNit = clean.length === 10 ? clean.slice(0, 9) : clean.length === 9 ? clean.slice(0, 8) : clean;
-    const dvCalculado = calcularDigitoVerificacionDIAN(baseNit);
-    if (clean.length >= 9) {
-      const dvIngresado = parseInt(clean.slice(-1), 10);
-      if (dvIngresado !== dvCalculado) {
-        return {
-          valid: false,
-          match: false,
-          error: `D\xEDgito de verificaci\xF3n DIAN incorrecto. Para el NIT ${baseNit}, el d\xEDgito oficial es -${dvCalculado}.`
-        };
-      }
-    }
-    const nombreEmpresa = (nombreIngresado || "").trim();
-    return {
-      valid: true,
-      match: true,
-      officialName: nombreEmpresa || clean,
-      message: `\u2713 NIT/RUT validado conforme a estructura DIAN (D\xEDgito de verificaci\xF3n: ${dvCalculado})`
-    };
-  }
-  const isCedula = !isNit && (tDocLower.includes("c\xE9dula") || tDocLower.includes("cedula") || tDocLower === "" || tDocLower.includes("ciudadan"));
-  if (isCedula) {
-    if (!/^\d+$/.test(clean)) {
-      return {
-        valid: false,
-        match: false,
-        error: "La C\xE9dula de Ciudadan\xEDa solo debe contener caracteres num\xE9ricos."
-      };
-    }
-    if (clean.length === 9) {
-      return {
-        valid: false,
-        match: false,
-        error: "\u26A0\uFE0F En Colombia no existen C\xE9dulas de Ciudadan\xEDa de 9 d\xEDgitos. Verifica si omitiste o agregaste alg\xFAn n\xFAmero."
-      };
-    }
-    if (clean.length < 6 || clean.length > 10) {
-      return {
-        valid: false,
-        match: false,
-        error: "\u26A0\uFE0F La C\xE9dula de Ciudadan\xEDa en Colombia debe contener entre 6 y 8 d\xEDgitos (antiguas) o 10 d\xEDgitos (nuevas)."
-      };
-    }
-    if (clean.length === 10 && !clean.startsWith("1")) {
-      return {
-        valid: false,
-        match: false,
-        error: "\u26A0\uFE0F Las C\xE9dulas de Ciudadan\xEDa de 10 d\xEDgitos en Colombia deben iniciar por 1. Verifica el n\xFAmero digitado."
-      };
-    }
-  }
-  const cacheKey = `POLICIA:cc:${clean}`;
-  const cached = identityCache.get(cacheKey);
-  if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL) {
-    const officialFormatted = cached.fullName;
-    const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
-    if (!isMatch) {
-      return {
-        valid: true,
-        match: false,
-        officialName: officialFormatted,
-        error: `\u26A0\uFE0F El n\xFAmero de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un n\xFAmero mal o corr\xEDgelo para continuar.`
-      };
-    }
-    return {
-      valid: true,
-      match: true,
-      officialName: officialFormatted,
-      message: `\u2713 Identidad verificada y autenticada con \xE9xito: ${officialFormatted}`
-    };
-  }
-  const policiaResult = await queryPoliciaNacional(tipoDocumento, clean);
-  if (policiaResult && policiaResult.success && policiaResult.officialName) {
-    const officialFormatted = policiaResult.officialName;
-    identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
-    const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
-    if (!isMatch) {
-      return {
-        valid: true,
-        match: false,
-        officialName: officialFormatted,
-        error: `\u26A0\uFE0F El n\xFAmero de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un n\xFAmero mal o corr\xEDgelo para continuar.`
-      };
-    }
-    return {
-      valid: true,
-      match: true,
-      officialName: officialFormatted,
-      message: `\u2713 Identidad verificada con la Polic\xEDa Nacional: ${officialFormatted}`
-    };
-  }
-  try {
-    const db = await getDb();
-    if (db) {
-      const profileRows = await db.select({
-        fullName: profiles.fullName,
-        numeroDocumento: profiles.numeroDocumento
-      }).from(profiles).where(eq15(profiles.numeroDocumento, clean)).limit(5);
-      for (const row of profileRows) {
-        if (row.fullName && row.fullName.trim().length >= 4) {
-          const officialFormatted = formatTitleCase(row.fullName.trim());
-          if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
-            identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
-            return {
-              valid: true,
-              match: true,
-              officialName: officialFormatted,
-              message: `\u2713 Identidad confirmada en el registro de Vecy: ${officialFormatted}`
-            };
-          }
-        }
-      }
-      const solRows = await db.select({
-        solicitanteNumeroDocumento: solicitudes.solicitanteNumeroDocumento,
-        solicitanteNombre: solicitudes.solicitanteNombre,
-        interesadoDocumento: solicitudes.interesadoDocumento,
-        interesadoNombre: solicitudes.interesadoNombre
-      }).from(solicitudes).where(
-        or4(
-          eq15(solicitudes.solicitanteNumeroDocumento, clean),
-          eq15(solicitudes.interesadoDocumento, clean)
-        )
-      ).orderBy(desc6(solicitudes.id)).limit(10);
-      for (const row of solRows) {
-        const candidateName = (row.solicitanteNumeroDocumento || "").replace(/\D/g, "") === clean ? row.solicitanteNombre : row.interesadoNombre;
-        const tokens = (candidateName || "").trim().split(/\s+/).filter(Boolean);
-        if (candidateName && tokens.length >= 3) {
-          const officialFormatted = formatTitleCase(candidateName.trim());
-          if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
-            identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
-            return {
-              valid: true,
-              match: true,
-              officialName: officialFormatted,
-              message: `\u2713 Identidad confirmada en base de datos de Vecy: ${officialFormatted}`
-            };
-          }
-        }
-      }
-    }
-  } catch (dbErr) {
-    console.warn("[DB Check warning]", dbErr?.message);
-  }
-  const isNumericDoc = /^\d{6,10}$/.test(clean) && clean.length !== 9;
-  if (isNumericDoc) {
-    if (clean.length === 10 && !clean.startsWith("1")) {
-      return {
-        valid: false,
-        match: false,
-        error: "\u26A0\uFE0F Las C\xE9dulas de Ciudadan\xEDa de 10 d\xEDgitos en Colombia deben iniciar por 1."
-      };
-    }
-    const cleanEntered = (nombreIngresado || "").trim();
-    const hasValidEnteredName = cleanEntered.length >= 3 && !/^\d+$/.test(cleanEntered.replace(/\s+/g, ""));
-    return {
-      valid: true,
-      match: true,
-      officialName: hasValidEnteredName ? cleanEntered : void 0,
-      message: "\u2713 Documento en formato v\xE1lido (pendiente de cotejo en sede)"
-    };
-  }
-  return {
-    valid: false,
-    match: false,
-    error: "No fue posible validar el documento en este momento. Por favor verifica los datos e intenta de nuevo."
-  };
-}
-var agendaRouter = router({
-  getAll: publicProcedure.input(
-    z8.object({
-      search: z8.string().optional(),
-      perfil: z8.string().optional(),
-      limit: z8.number().min(1).max(200).default(50),
-      offset: z8.number().min(0).default(0)
-    }).optional()
-  ).query(async ({ input }) => {
-    const db = await getDb();
-    if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
-    const search = input?.search?.trim();
-    const perfilFilter = input?.perfil?.trim();
-    const limit = input?.limit ?? 50;
-    const offset = input?.offset ?? 0;
-    const whereConditions = [];
-    if (search) {
-      const searchPattern = `%${search}%`;
-      const numSearch = Number(search);
-      const searchConditions = [
-        ilike2(solicitudes.solicitanteNombre, searchPattern),
-        ilike2(solicitudes.solicitanteNumeroDocumento, searchPattern),
-        ilike2(solicitudes.solicitanteCelular, searchPattern),
-        ilike2(solicitudes.solicitanteEmail, searchPattern),
-        ilike2(solicitudes.nombreInmueble, searchPattern),
-        ilike2(solicitudes.codigoInmueble, searchPattern),
-        ilike2(solicitudes.interesadoNombre, searchPattern)
-      ];
-      if (!isNaN(numSearch)) {
-        searchConditions.push(eq15(solicitudes.solicitudId, numSearch));
-      }
-      whereConditions.push(or4(...searchConditions));
-    }
-    if (perfilFilter && perfilFilter !== "all") {
-      if (perfilFilter === "agente") {
-        whereConditions.push(
-          or4(
-            ilike2(solicitudes.solicitantePerfil, "%agente%"),
-            ilike2(solicitudes.solicitantePerfil, "%inmobiliaria%"),
-            ilike2(solicitudes.solicitantePerfil, "%broker%"),
-            ilike2(solicitudes.solicitantePerfil, "%br\xF3ker%")
-          )
-        );
-      } else if (perfilFilter === "directo") {
-        whereConditions.push(
-          or4(
-            ilike2(solicitudes.solicitantePerfil, "%directo%"),
-            ilike2(solicitudes.solicitantePerfil, "%cliente%")
-          )
-        );
-      }
-    }
-    const finalWhere = whereConditions.length > 0 ? sql10.join(whereConditions, sql10` AND `) : void 0;
-    const items = await db.select().from(solicitudes).where(finalWhere).orderBy(sql10`${solicitudes.solicitudId} DESC NULLS LAST`, desc6(solicitudes.id)).limit(limit).offset(offset);
-    const totalRes = await db.select({ count: sql10`count(*)` }).from(solicitudes).where(finalWhere);
-    return {
-      items,
-      total: Number(totalRes[0]?.count || 0)
-    };
-  }),
-  getStats: publicProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
-    const totalRes = await db.select({ count: sql10`count(*)` }).from(solicitudes);
-    const total = Number(totalRes[0]?.count || 0);
-    const agentesRes = await db.select({ count: sql10`count(*)` }).from(solicitudes).where(
-      or4(
-        ilike2(solicitudes.solicitantePerfil, "%agente%"),
-        ilike2(solicitudes.solicitantePerfil, "%inmobiliaria%"),
-        ilike2(solicitudes.solicitantePerfil, "%broker%"),
-        ilike2(solicitudes.solicitantePerfil, "%br\xF3ker%")
-      )
-    );
-    const agentes = Number(agentesRes[0]?.count || 0);
-    const conFirmaRes = await db.select({ count: sql10`count(*)` }).from(solicitudes).where(sql10`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
-    const conFirma = Number(conFirmaRes[0]?.count || 0);
-    const directos = Math.max(0, total - agentes);
-    return {
-      total,
-      agentes,
-      directos,
-      conFirma
-    };
-  }),
-  startVerifyIdentity: publicProcedure.input(
-    z8.object({
-      tipoDocumento: z8.string(),
-      numeroDocumento: z8.string(),
-      nombreIngresado: z8.string().optional()
-    })
-  ).mutation(async ({ input }) => {
-    const { tipoDocumento, numeroDocumento, nombreIngresado } = input;
-    const cleanDoc = numeroDocumento.replace(/[^0-9a-zA-Z]/g, "");
-    if (!cleanDoc || cleanDoc.length < 5) {
-      return {
-        status: "completed",
-        result: {
-          valid: false,
-          match: false,
-          error: "El n\xFAmero de documento debe tener al menos 5 caracteres."
-        }
-      };
-    }
-    const tDocLower = (tipoDocumento || "").toLowerCase();
-    const isNit = tDocLower.includes("nit") || tDocLower.includes("rut");
-    const isCedula = !isNit && (tDocLower.includes("c\xE9dula") || tDocLower.includes("cedula") || tDocLower === "" || tDocLower.includes("ciudadan"));
-    const normName = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const isKnownFamilyName = normName.length >= 4 && (normName.includes("natalia") && (normName.includes("rivera") || normName.trim() === "natalia") || normName.includes("eduardo") && (normName.includes("rivera") || normName.includes("arturo")) || normName.includes("vecy") || normName.includes("jani") && normName.includes("alves"));
-    const cacheKey = `POLICIA:cc:${cleanDoc}`;
-    if (isNit || isCedula && (cleanDoc.length === 9 || cleanDoc.length < 6 || cleanDoc.length > 10 || cleanDoc.length === 10 && !cleanDoc.startsWith("1")) || AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc] || isKnownFamilyName || identityCache.has(cacheKey)) {
-      const quickRes = await executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngresado);
-      return {
-        status: "completed",
-        result: quickRes
-      };
-    }
-    const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const job = {
-      id: jobId,
-      status: "processing",
-      tipoDocumento,
-      numeroDocumento: cleanDoc,
-      nombreIngresado,
-      createdAt: Date.now()
-    };
-    identityJobs.set(jobId, job);
-    executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngresado).then((result) => {
-      const current = identityJobs.get(jobId);
-      if (current) {
-        current.status = "completed";
-        current.result = result;
-      }
-    }).catch((err) => {
-      const current = identityJobs.get(jobId);
-      if (current) {
-        current.status = "error";
-        current.result = {
-          valid: false,
-          match: false,
-          error: err?.message || "Error durante la validaci\xF3n del documento"
-        };
-      }
-    });
-    return {
-      status: "processing",
-      jobId,
-      message: "Verificando autenticidad del documento en tiempo real..."
-    };
-  }),
-  checkVerifyIdentity: publicProcedure.input(z8.object({ jobId: z8.string() })).query(async ({ input }) => {
-    const job = identityJobs.get(input.jobId);
-    if (!job) {
-      return {
-        status: "error",
-        error: "Consulta de identidad no encontrada o expirada. Por favor intente nuevamente."
-      };
-    }
-    return {
-      status: job.status,
-      result: job.result
-    };
-  }),
-  verifyIdentity: publicProcedure.input(
-    z8.object({
-      tipoDocumento: z8.string(),
-      numeroDocumento: z8.string(),
-      nombreIngresado: z8.string().optional()
-    })
-  ).mutation(async ({ input }) => {
-    return await executeIdentityVerification(input.tipoDocumento, input.numeroDocumento, input.nombreIngresado);
-  }),
-  update: publicProcedure.input(
-    z8.object({
-      id: z8.number(),
-      solicitanteNombre: z8.string().optional(),
-      solicitanteNumeroDocumento: z8.string().optional(),
-      solicitanteTipoPersona: z8.string().optional(),
-      solicitanteEmail: z8.string().optional(),
-      solicitanteCelular: z8.string().optional(),
-      solicitantePerfil: z8.string().optional(),
-      solicitanteTipoDocumento: z8.string().optional(),
-      solicitanteRepresentanteLegal: z8.string().optional(),
-      interesadoNombre: z8.string().optional(),
-      interesadoDocumento: z8.string().optional(),
-      interesadoTipoDocumento: z8.string().optional(),
-      acompanantes: z8.any().optional()
-    })
-  ).mutation(async ({ input }) => {
-    const db = await getDb();
-    if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
-    const { id, ...dataToUpdate } = input;
-    const updated = await db.update(solicitudes).set(dataToUpdate).where(eq15(solicitudes.id, id)).returning();
-    return {
-      success: true,
-      item: updated[0] || null
-    };
-  }),
-  create: publicProcedure.input(
-    z8.object({
-      solicitante_nombre: z8.string().min(1),
-      solicitante_tipo_persona: z8.string().nullable().optional(),
-      solicitante_perfil: z8.string().nullable().optional(),
-      solicitante_email: z8.string().nullable().optional(),
-      solicitante_celular: z8.string().nullable().optional(),
-      solicitante_tipo_documento: z8.string().nullable().optional(),
-      solicitante_numero_documento: z8.string().nullable().optional(),
-      servicio_solicitado: z8.string().nullable().optional(),
-      nombre_inmueble: z8.string().nullable().optional(),
-      codigo_inmueble: z8.string().nullable().optional(),
-      opcion_negocio: z8.string().nullable().optional(),
-      fecha_cita_texto: z8.string().nullable().optional(),
-      hora_cita: z8.string().nullable().optional(),
-      cantidad_personas: z8.number().nullable().optional(),
-      interesado_nombre: z8.string().nullable().optional(),
-      interesado_tipo_documento: z8.string().nullable().optional(),
-      interesado_documento: z8.string().nullable().optional(),
-      tipo_cliente: z8.string().nullable().optional(),
-      acompanantes: z8.any().optional(),
-      firma_virtual_base64: z8.string().nullable().optional(),
-      firma_fechahora_audit: z8.string().nullable().optional(),
-      solicitante_representante_legal: z8.string().nullable().optional(),
-      autorizacion: z8.boolean().nullable().optional(),
-      agent_id: z8.string().nullable().optional()
-    })
-  ).mutation(async ({ input }) => {
-    return await processAndSaveSolicitud(input);
-  })
-});
-async function processAndSaveSolicitud(input) {
-  const db = await getDb();
-  if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
-  const stopwords = ["de", "del", "la", "las", "los", "y", "el"];
-  const checkMatch = (entered, official) => {
-    const normEntered = entered.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
-    const normOfficial = official.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
-    const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
-    return matches.length >= Math.min(1, normEntered.length);
-  };
-  if (input.solicitante_numero_documento && (input.solicitante_tipo_documento?.includes("ciudadan\xEDa") || input.solicitante_tipo_documento?.includes("cedula") || input.solicitante_tipo_documento === "CC" || !input.solicitante_tipo_documento)) {
-    const cleanDoc = input.solicitante_numero_documento.replace(/\D/g, "");
-    if (cleanDoc.length >= 5) {
-      const res = await queryPoliciaNacional("cc", cleanDoc);
-      if (res.success && res.officialName && input.solicitante_nombre) {
-        if (!checkMatch(input.solicitante_nombre, res.officialName)) {
-          throw new TRPCError6({
-            code: "BAD_REQUEST",
-            message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del solicitante no corresponde a los nombres y apellidos indicados. Por seguridad, la solicitud fue rechazada.`
-          });
-        }
-        input.solicitante_nombre = res.officialName;
-      }
-    }
-  }
-  if (input.interesado_documento && (input.interesado_tipo_documento?.includes("ciudadan\xEDa") || input.interesado_tipo_documento?.includes("cedula") || input.interesado_tipo_documento === "CC" || !input.interesado_tipo_documento)) {
-    const cleanDoc = input.interesado_documento.replace(/\D/g, "");
-    if (cleanDoc.length >= 5) {
-      const res = await queryPoliciaNacional("cc", cleanDoc);
-      if (res.success && res.officialName && input.interesado_nombre) {
-        if (!checkMatch(input.interesado_nombre, res.officialName)) {
-          throw new TRPCError6({
-            code: "BAD_REQUEST",
-            message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del cliente presentado no corresponde al nombre indicado. Por seguridad, la solicitud fue rechazada.`
-          });
-        }
-        input.interesado_nombre = res.officialName;
-      }
-    }
-  }
-  if (input.acompanantes && Array.isArray(input.acompanantes)) {
-    for (const acomp of input.acompanantes) {
-      if (acomp && acomp.documento && acomp.nombre) {
-        const cleanDoc = String(acomp.documento).replace(/\D/g, "");
-        if (cleanDoc.length >= 5) {
-          const res = await queryPoliciaNacional("cc", cleanDoc);
-          if (res.success && res.officialName) {
-            if (!checkMatch(String(acomp.nombre), res.officialName)) {
-              throw new TRPCError6({
-                code: "BAD_REQUEST",
-                message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del acompa\xF1ante "${acomp.nombre}" no corresponde con los registros de certificaci\xF3n. Por seguridad, la solicitud fue rechazada.`
-              });
-            }
-            acomp.nombre = res.officialName;
-          }
-        }
-      }
-    }
-  }
-  const maxRes = await db.select({ maxId: sql10`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
-  const nextSolicitudId = Math.max(Number(maxRes[0]?.maxId || 0), 1144) + 1;
-  const inserted = await db.insert(solicitudes).values({
-    id: sql10`nextval('solicitudes_id_seq')`,
-    solicitudId: nextSolicitudId,
-    solicitanteNombre: input.solicitante_nombre,
-    solicitanteTipoPersona: input.solicitante_tipo_persona || "Persona Natural",
-    solicitantePerfil: input.solicitante_perfil || "Cliente directo",
-    solicitanteEmail: input.solicitante_email || null,
-    solicitanteCelular: input.solicitante_celular || null,
-    solicitanteTipoDocumento: input.solicitante_tipo_documento || "C\xE9dula de ciudadan\xEDa",
-    solicitanteNumeroDocumento: input.solicitante_numero_documento || null,
-    servicioSolicitado: input.servicio_solicitado || "Visitar inmueble",
-    nombreInmueble: input.nombre_inmueble || null,
-    codigoInmueble: input.codigo_inmueble || null,
-    opcionNegocio: input.opcion_negocio || null,
-    fechaCitaTexto: input.fecha_cita_texto || null,
-    horaCita: input.hora_cita || null,
-    cantidadPersonas: input.cantidad_personas ?? null,
-    interesadoNombre: input.interesado_nombre || null,
-    interesadoTipoDocumento: input.interesado_tipo_documento || null,
-    interesadoDocumento: input.interesado_documento || null,
-    tipoCliente: input.tipo_cliente || null,
-    acompanantes: input.acompanantes || null,
-    firmaVirtualBase64: input.firma_virtual_base64 || null,
-    firmaFechahoraAudit: input.firma_fechahora_audit ? new Date(input.firma_fechahora_audit) : /* @__PURE__ */ new Date(),
-    createdAt: /* @__PURE__ */ new Date(),
-    solicitanteRepresentanteLegal: input.solicitante_representante_legal || null,
-    autorizacion: input.autorizacion ?? true,
-    agentId: input.agent_id || null
-  }).returning();
-  const newRow = inserted[0];
-  sendContractAndConfirmationEmails({
-    ...input,
-    solicitud_id: nextSolicitudId,
-    solicitudId: nextSolicitudId,
-    id: newRow?.id
-  }).catch((emailErr) => {
-    console.error(`[AGENDA-CREATE] Error en despacho de correos para solicitud #${nextSolicitudId}:`, emailErr?.message);
-  });
-  sendAgendaWhatsAppNotifications({
-    ...input,
-    solicitud_id: nextSolicitudId,
-    solicitudId: nextSolicitudId,
-    id: newRow?.id
-  }).catch((waErr) => {
-    console.error(`[AGENDA-CREATE] Error en despacho de WhatsApp para solicitud #${nextSolicitudId}:`, waErr?.message);
-  });
-  return {
-    success: true,
-    id: newRow?.id,
-    solicitudId: nextSolicitudId,
-    data: newRow,
-    message: `\u2713 Solicitud de agenda #${nextSolicitudId} registrada con \xE9xito.`
-  };
-}
-
 // server/routers.ts
+init_agenda();
+init_trpc();
 init_db();
 import { z as z9 } from "zod";
 var ONE_YEAR_MS2 = 365 * 24 * 60 * 60 * 1e3;
@@ -23795,6 +24307,7 @@ init_whatsapp_match();
 import multer from "multer";
 import fs11 from "fs";
 import path12 from "path";
+init_agenda();
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
 });

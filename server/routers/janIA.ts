@@ -175,6 +175,46 @@ export const janIARouter = router({
           wantsVoice = result.wantsVoice || false;
           voiceResponse = result.voiceResponse || janIAResponse;
         } else {
+          // 🛡️ Interceptor Web 1: Verificación Oficial de Cédula (Policía Nacional vía 2Captcha)
+          const { executeIdentityVerificationFromWhatsApp } = await import("../_core/identityVerificationService");
+          const idCheck = await executeIdentityVerificationFromWhatsApp(input.message);
+          if (idCheck.isVerificationRequest && idCheck.reportText) {
+            janIAResponse = idCheck.reportText;
+            wantsVoice = false;
+            voiceResponse = janIAResponse;
+            await db.insert(messages).values({
+              conversationId,
+              role: "janIA",
+              content: janIAResponse
+            });
+            return {
+              response: janIAResponse,
+              conversationId,
+              wantsVoice: false,
+              voiceResponse: janIAResponse
+            };
+          }
+
+          // 🏛️ Interceptor Web 2: Asistencia y Gestión de Predial Bogotá (CHIP + Cédula)
+          const { executePredialAssistanceFromWhatsApp } = await import("../_core/predialService");
+          const predialCheck = await executePredialAssistanceFromWhatsApp(input.message);
+          if (predialCheck.isPredialRequest && predialCheck.reportText) {
+            janIAResponse = predialCheck.reportText;
+            wantsVoice = false;
+            voiceResponse = janIAResponse;
+            await db.insert(messages).values({
+              conversationId,
+              role: "janIA",
+              content: janIAResponse
+            });
+            return {
+              response: janIAResponse,
+              conversationId,
+              wantsVoice: false,
+              voiceResponse: janIAResponse
+            };
+          }
+
           // Direct ultra-fast LLM reasoning for web consultation questions & natural chat with JanIA
           const { invokeLLM } = await import("../_core/llm");
           const { buildSystemPrompt, getLiveStats } = await import("../_core/janIA");
@@ -1835,6 +1875,14 @@ export const janIARouter = router({
     .mutation(async () => {
       const { publishWeeklyReportNow } = await import('../_core/cronService');
       return await publishWeeklyReportNow();
+    }),
+
+  // Disparo manual/inmediato del Anuncio de Verificación de Cédula y Predial Bogotá
+  triggerIdentityAndPredialAnnouncement: publicProcedure
+    .input(z.object({ force: z.boolean().optional().default(false) }))
+    .mutation(async ({ input }) => {
+      const { publishIdentityAndPredialServiceAnnouncement } = await import('../_core/cronService');
+      return await publishIdentityAndPredialServiceAnnouncement(input.force);
     }),
 
   // Parser Inteligente de Requerimientos desde Texto Libre

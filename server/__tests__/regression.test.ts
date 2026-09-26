@@ -1394,6 +1394,83 @@ Ed del 2014.
       expect(body.length).toBeGreaterThan(10);
     });
   });
+
+  describe("19. Servicio Oficial de Verificación de Identidad (Policía Nacional) y Predial Bogotá (v31.98)", () => {
+    it("Debe detectar correctamente solicitudes de verificación de cédula con formatos diversos", async () => {
+      const { extractCedulaForVerification, formatCedulaNumber } = await import("../_core/identityVerificationService");
+
+      // 1. Frases explícitas con palabras clave
+      const r1 = extractCedulaForVerification("JanIA por favor verificar cédula 52432900");
+      expect(r1.found).toBe(true);
+      expect(r1.cedula).toBe("52432900");
+      expect(r1.tipoDoc).toBe("cc");
+
+      const r2 = extractCedulaForVerification("validar CC 52.432.900 para una cita");
+      expect(r2.found).toBe(true);
+      expect(r2.cedula).toBe("52432900");
+
+      const r3 = extractCedulaForVerification("consultar antecedentes de 52803592");
+      expect(r3.found).toBe(true);
+      expect(r3.cedula).toBe("52803592");
+
+      const r4 = extractCedulaForVerification("CC: 1018456789");
+      expect(r4.found).toBe(true);
+      expect(r4.cedula).toBe("1018456789");
+
+      // 2. DM Privado con número puro
+      const rDm = extractCedulaForVerification("52432900", true);
+      expect(rDm.found).toBe(true);
+      expect(rDm.cedula).toBe("52432900");
+
+      const rDmDot = extractCedulaForVerification("52.432.900", true);
+      expect(rDmDot.found).toBe(true);
+      expect(rDmDot.cedula).toBe("52432900");
+
+      // 3. Grupo sin contexto ni palabra clave (debe ignorar para evitar falsos positivos)
+      const rGroupBare = extractCedulaForVerification("52432900", false);
+      expect(rGroupBare.found).toBe(false);
+
+      // 4. Mención a JanIA en grupo con número
+      const rGroupJania = extractCedulaForVerification("@JanIA 52432900", false);
+      expect(rGroupJania.found).toBe(true);
+      expect(rGroupJania.cedula).toBe("52432900");
+
+      // 5. Oferta inmobiliaria que contiene números (debe descartarse para no interferir con la captación)
+      const rOffer = extractCedulaForVerification("Vendo apartamento en Rosales 3 habitaciones presupuesto 850 millones");
+      expect(rOffer.found).toBe(false);
+
+      // 6. Formateador con separadores de miles
+      expect(formatCedulaNumber("52432900")).toBe("52.432.900");
+      expect(formatCedulaNumber("1018456789")).toBe("1.018.456.789");
+    });
+
+    it("Debe detectar CHIP y Cédula para Asistencia y Liquidación de Impuesto Predial Bogotá", async () => {
+      const { extractChipAndCedulaForPredial, liquidarPredialEstimadoBogota } = await import("../_core/predialService");
+
+      // 1. Extracción con CHIP y Cédula
+      const p1 = extractChipAndCedulaForPredial("JanIA, predial CHIP AAA0123ABCD cédula 52432900");
+      expect(p1.found).toBe(true);
+      expect(p1.chip).toBe("AAA0123ABCD");
+      expect(p1.cedula).toBe("52432900");
+
+      // 2. Extracción solo con CHIP
+      const p2 = extractChipAndCedulaForPredial("Necesito el predial con CHIP AAA0234WXQR");
+      expect(p2.found).toBe(true);
+      expect(p2.chip).toBe("AAA0234WXQR");
+
+      // 3. Liquidación estimada Bogotá estrato 4 (tarifa 6.5 por mil)
+      const liqEstrato4 = liquidarPredialEstimadoBogota(500_000_000, 4, true);
+      expect(liqEstrato4.tarifaPorMil).toBe(6.5);
+      expect(liqEstrato4.impuestoPleno).toBe(3_250_000);
+      expect(liqEstrato4.descuentoProntoPago).toBe(325_000);
+      expect(liqEstrato4.impuestoConDescuento).toBe(2_925_000);
+
+      // 4. Liquidación estimada Bogotá no residencial / comercial (tarifa 10.5 por mil)
+      const liqComercial = liquidarPredialEstimadoBogota(1_000_000_000, 4, false);
+      expect(liqComercial.tarifaPorMil).toBe(10.5);
+      expect(liqComercial.impuestoPleno).toBe(10_500_000);
+    });
+  });
 });
 
 

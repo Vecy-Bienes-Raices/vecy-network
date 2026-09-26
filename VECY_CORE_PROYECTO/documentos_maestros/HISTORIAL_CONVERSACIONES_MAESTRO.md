@@ -7,6 +7,54 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.98 — 26 Septiembre 2026
+
+### Solicitud de Eduardo
+Confirmación de Preservación de las Dos Agendas, Verificación de Cédulas en WhatsApp y Asistencia de Prediales Bogotá:
+*"Me preocupa que no haya quedado establecido lo de las dos Vecy Agendas. ¿Recuerdas qué hicimos anoche respecto a eso? Por otra parte quisiera preguntarte a qué otros sitios podemos llegar a optener acceso son 2Captcha, me encantó y me tiene muy contento el poder verificar documentos a travéz de la página de antecedentes de la policía nacional, eso está estupendo... Entonces si yo le doy datos a JanIA en el chat o whatsapp de (Tipo de documento, número de docuemnto y Chip) ella podría ayudarme a sacar el respectivo predial de esa propiedad? Si, me parece superbien, pero asegúrate que en realidad funcione y que esto no vaya a dañar ni a romper nada de lo hasta ahora implementado. También si esto llega a ser posible en realidad, quiero que JanIA a través de nuestros grupos 2 y 3 y también de nuestro canal ofrezaca este servicio de prediales y de verificación de documentos a través de Whatsapp simplemente enviando un mensaje a JanIA con el número de cédula que deseen verificar los usuarios, porque me imagino que también a través de whatsapp podemos hacer lo de los números de documento como lo hacemos en Vecy Agenda Verdad?. Si es así y te comprometes a implementarlo adelante y no se te olvide dejarlo escrito en los .md y desplegar donde debes hacerlo. Quiero todo muy bien. Adelante y éxitos con esto."*
+
+### Diagnóstico Técnico Profundo y Conclusiones de Arquitectura
+1. **Preservación Intacta de las Dos Vecy Agendas**:
+   - Se ratificó la coexistencia armoniosa y sincronizada de ambas plataformas:
+     - **`Vecy Agenda Pro`** (`/home/eddu/Proyectos/vecy-agenda-pro`): Aplicación independiente para asesores y clientes que valida cédulas, formatea nombres en orden civil natural con Title Case, y despacha a la API REST de Vecy Network (`/api/agenda/submit`).
+     - **`Vecy Agenda` (Web Incorporada en `vecy.co`)**: Componente React nativo gestionado mediante tRPC (`agendaRouter.create`) y visualizado por el staff en `/admin`.
+   - Ambas agendas comparten el mismo motor centralizado de validación ante la Policía Nacional con 2Captcha (`processAndSaveSolicitud`), asegurando la persistencia en PostgreSQL VPS (`vecy_network`), la emisión del contrato oficial de puntas compartidas y las notificaciones automáticas por WhatsApp al bróker (+57 316 6569719) y al solicitante.
+2. **Reutilización de Infraestructura 2Captcha para Verificación en WhatsApp**:
+   - La función `queryPoliciaNacional` desarrollada en `server/routers/agenda.ts` ya resuelve de manera óptima el handshake de PrimeFaces y el reCAPTCHA v2 de la Policía Nacional.
+   - En lugar de duplicar lógica o depender de interfaces web, se estructuró un servicio desacoplado (`server/_core/identityVerificationService.ts`) que puede ser invocado directamente por el socket de Baileys cuando cualquier usuario envía un número de documento a JanIA.
+3. **Viabilidad de Consulta de Impuesto Predial Bogotá (SDH / Catastro)**:
+   - A diferencia de ADRES (cuyo firewall bloquea IPs de centros de datos con error 504 Gateway Timeout), el portal de descarga de facturas de la Secretaría Distrital de Hacienda de Bogotá (`nuevaoficinavirtual.shd.gov.co`) y los servidores GIS de IDECA / Catastro Distrital son accesibles.
+   - Para la descarga oficial de la factura en PDF se exige de manera estricta el **código CHIP (11 caracteres tipo AAA...)** y el **número de identificación del propietario**. Se diseñó un motor de asistencia y liquidación estimada según los Acuerdos Distritales 648 de 2016 y 780 de 2020 (`server/_core/predialService.ts`), guiando al usuario con las tarifas vigentes y proporcionando el enlace directo oficial.
+
+### Acciones Ejecutadas
+1. **Módulo Oficial de Verificación de Identidad (`server/_core/identityVerificationService.ts`)**:
+   - Desarrollada `extractCedulaForVerification(text, isPrivateDm)`: detecta cédulas de 6 a 10 dígitos en texto libre, números puros enviados en chats privados con JanIA, menciones en grupos (`@JanIA 52432900`), o solicitudes formales ("verificar cédula...", "consultar antecedentes...", "CC..."), ignorando automáticamente publicaciones inmobiliarias de oferta o demanda para no interferir en la captación.
+   - Desarrollada `executeIdentityVerificationFromWhatsApp(text, isPrivateDm)`: consulta en tiempo real a la Policía Nacional con 2Captcha, convierte los apellidos y nombres penitenciarios a orden civil natural con Title Case (`parsePoliceAntecedentesFullName`) y redacta el dictamen de seguridad notarial para acuerdos 50/50 y hojas de visita.
+2. **Módulo de Asistencia y Liquidación Predial Bogotá (`server/_core/predialService.ts`)**:
+   - Desarrollada `extractChipAndCedulaForPredial(text)`: detecta el código CHIP distrital (`AAA...`) y cédula o NIT asociado.
+   - Desarrollada `liquidarPredialEstimadoBogota(avaluo, estrato, esResidencial)`: calcula el milaje distrital (2.5 a 11 por mil residencial, 10.5 por mil comercial) y el descuento del 10% por pronto pago.
+   - Desarrollada `executePredialAssistanceFromWhatsApp(text)`: genera el reporte de asistencia catastral con enlace oficial directo de descarga de factura en PDF en la Secretaría de Hacienda.
+3. **Integración Multicanal en JanIA (`server/_core/janIA.ts`, `server/_core/whatsapp-match.ts`, `server/routers/janIA.ts`)**:
+   - Intercepción de alta prioridad en Grupo 2 (`processConsultingMessage`) y Grupo 3 (`processCirculoMessage`).
+   - Intercepción en mensajes privados por WhatsApp (`processBufferedDmMessages` y `handlePrivateDmConversation`), habilitando `allowDirectMessage: true` en la cola de salida para que cualquier usuario o asesor reciba su reporte sin ser bloqueado por el filtro anti-ban.
+   - Intercepción en Chat Web (`janIARouter.chat`) con persistencia en la base de datos de mensajes.
+4. **Promoción Curricular y Difusión en Canales Oficiales (`server/_core/cronService.ts`, prompts)**:
+   - Añadidos los Pilares 7 y 8 en `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` y actualización en `PROYECTO_Vecy Network.md`.
+   - Enriquecidas las directrices de temas semanales (`martes_juridico`, `jueves_tributario`, `sabado_cafe`).
+   - Creada `publishIdentityAndPredialServiceAnnouncement(force)` para despachar el comunicado oficial a Grupo 2, Grupo 3 y Canal de WhatsApp.
+   - Añadida la mutación `triggerIdentityAndPredialAnnouncement` en `server/routers/janIA.ts`.
+5. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+   - Añadida la **Sección 19**: *"Servicio Oficial de Verificación de Identidad (Policía Nacional) y Predial Bogotá (v31.98)"*.
+   - Pruebas unitarias para extracción de cédulas, números puros en DM, discriminación en grupos, formateo con puntos, extracción de CHIP y cálculo de liquidación predial.
+   - **98/98 tests Vitest pasando al 100%** ✅.
+   - **`tsc --noEmit` limpio con 0 errores** ✅.
+   - **`npm run build` completado limpiamente en 12.05s** ✅.
+6. **Incremento de Versión Oficial y Despliegue en Producción**:
+   - Actualizado `shared/const.ts` a `v31.98`.
+   - Actualizado `package.json` a `31.98.0`.
+
+---
+
 ## 📋 SESIÓN v31.97 — 26 Septiembre 2026
 
 ### Solicitud de Eduardo

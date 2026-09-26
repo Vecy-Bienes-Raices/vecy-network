@@ -322,6 +322,38 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.98 — Septiembre 2026
+
+#### 📌 SERVICIO OFICIAL DE VERIFICACIÓN DE IDENTIDAD CON POLICÍA NACIONAL VÍA 2CAPTCHA Y ASISTENCIA DE IMPUESTO PREDIAL BOGOTÁ VÍA CHIP EN WHATSAPP, CHAT WEB Y CANALES
+
+**Problemas identificados:**
+1. **Necesidad de Blindaje Jurídico de Identidad y Hojas de Visita en WhatsApp**: Los asesores inmobiliarios y usuarios de la red requerían verificar antecedentes penales e identidades oficiales de sus clientes y acompañantes antes de agendar citas presenciales o firmar acuerdos de puntas compartidas (50/50), sin tener que ingresar manualmente a portales gubernamentales complejos.
+2. **Acceso al Impuesto Predial Unificado de Bogotá**: En promesas de compraventa y procesos de escrituración en notaría, se exigía conocer de inmediato el avalúo catastral, las tarifas vigentes del impuesto predial y contar con el enlace directo oficial de la Secretaría Distrital de Hacienda para descargar la factura oficial en PDF a partir del código CHIP y la cédula del titular.
+3. **Preservación Integral de las Dos Vecy Agendas**: Existía la inquietud de asegurar que ninguna modificación rompiera el funcionamiento de `Vecy Agenda Pro` (aplicación web y móvil independiente) ni de la `Vecy Agenda` integrada en la web oficial (`vecy.co`).
+
+**Solución aplicada:**
+- **Servicio Oficial de Verificación de Identidad (`server/_core/identityVerificationService.ts`)**:
+  - Detección autónoma y flexible de cédulas colombianas en texto libre (`extractCedulaForVerification`), soportando consultas directas en mensajes privados (DM) con números puros, menciones o etiquetas a JanIA en grupos y frases de intención formal ("verificar cédula 52432900", "validar CC 52.432.900", "consultar antecedentes 52803592").
+  - Consulta en tiempo real a la plataforma oficial de la Policía Nacional de Colombia con resolución automatizada de reCAPTCHA v2 mediante 2Captcha (`queryPoliciaNacional`), aprovechando la infraestructura probada en `server/routers/agenda.ts`.
+  - Reensamblaje y formateo de nombres al orden civil natural Title Case (`parsePoliceAntecedentesFullName`) y emisión del dictamen formal de seguridad para blindar comisiones y acuerdos 50/50.
+- **Servicio de Asistencia y Liquidación Predial Bogotá (`server/_core/predialService.ts`)**:
+  - Detección precisa de código CHIP distrital (`AAA...`) y número de cédula/NIT del propietario.
+  - Motor de liquidación tributaria distrital según Acuerdos 648 de 2016 y 780 de 2020 (tarifas progresivas residenciales por estratos 1 a 6 y comerciales al 10.5 por mil con descuento del 10% por pronto pago).
+  - Entrega de enlace directo oficial de la Secretaría Distrital de Hacienda y pautas notariales para promesas de compraventa y escrituración.
+- **Integración Multicanal y Manejo de Privacidad (`server/_core/janIA.ts`, `server/_core/whatsapp-match.ts`, `server/routers/janIA.ts`)**:
+  - Intercepción directa en Grupo 2 (Soporte Legal) y Grupo 3 (Círculo Cero).
+  - Intercepción en mensajes privados (DM) con excepción de seguridad anti-ban (`allowDirectMessage: true`), permitiendo a cualquier cliente o asesor consultar su documento sin restricciones.
+  - Intercepción en Chat Web (`janIARouter.chat`) y registro en la base de datos de mensajes.
+- **Difusión y Promoción Curricular (`server/_core/cronService.ts`, `server/routers/janIA.ts`, prompts de grupos)**:
+  - Incorporados los Pilares 7 y 8 en `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` y actualización en `PROYECTO_Vecy Network.md`.
+  - Enriquecidos los cron jobs semanales (`martes_juridico`, `jueves_tributario`, `sabado_cafe`).
+  - Creada `publishIdentityAndPredialServiceAnnouncement` y expuesta como mutación en tRPC para anunciar en Grupo 2, Grupo 3 y Canal Oficial.
+- **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+  - Añadida la **Sección 19** con pruebas exhaustivas para extracción de cédulas, formatos con puntos, validación de CHIP y cálculo de tarifas prediales (**98/98 tests Vitest pasando** ✅).
+- **Verificación**: 98/98 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 12.05s ✅
+
+---
+
 ### 🔖 v31.97 — Septiembre 2026
 
 #### 📌 CORRECCIÓN QUIRÚRGICA DE FILTRO E2E DE SENDER KEYS Y ORQUESTACIÓN DE ENCUESTAS MATUTINAS (08:00 AM)
