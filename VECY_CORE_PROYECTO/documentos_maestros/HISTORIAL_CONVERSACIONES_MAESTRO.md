@@ -7,6 +7,50 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.94 — 25 Septiembre 2026
+
+### Solicitud de Eduardo
+Transformación Universal y Revelación de Nombres en Orden Civil Natural ("Nombres y Apellidos") en Formularios y Base de Datos:
+*"En base a la anterior conversación del aneterior chat en cual te comparto aquí abajo. Ya recordé que yó mismo había dado esa antigüa orden, lo siento. Por otra parte quisiera ver la posibilidad de que en el formulario se reveklen o se escriban los nombres correctamente "Nombres y apellidos" es decir primero el/los nombre/s y luego su/s apellido/s y no como actualmente lo hace: "primer apellido, segundo apellido y nombres" ya que así sucede es en la página de antecedentes de la policía, claro está que eso es solo si tu ves que es viable hacerlo y que no vamos a romper o a dañar nada. ¿Ok?. Es más no se si te entendí que así es como se viene subiendo la base de datos POSTGRES y que ademas el cambio sea en el proyecto Vecy Agenda pro, como acá en Vecy Bienes Raíces o Vecy Network jejejeje, ¡UPSaún no se cómo llamarlo!. Bueno vamos con esto primero y luego te voy a pedir más favores. Adelante y con total finura y pulcritud."*
+
+### Diagnóstico Técnico Profundo y Causas Raíz Identificadas
+1. **Origen Doctrinal del Formato Invertido Policial**:
+   - Eduardo recordó que en sesiones previas él mismo había dispuesto conservar el orden estricto emitido por el portal de Antecedentes de la Policía Nacional de Colombia (`Apellidos y Nombres: APELLIDO_1 APELLIDO_2 NOMBRE_1 [NOMBRE_2...]`).
+   - Esto provocó que en registros históricos y pruebas previas (como la solicitud #1143 para `Romero Villanueva Jhoann Gonzalo` y la #1144 para `Sanchez Martinez Juanita`), los nombres de los clientes se guardaran en la base de datos con los apellidos por delante de los nombres de pila.
+2. **Impacto en Experiencia de Usuario y Contratos**:
+   - Al autocompletar el formulario en `vecy-agenda-pro`, si el usuario veía reflejado "Sanchez Martinez Juanita", resultaba poco natural para documentos comerciales y contratos de puntas compartidas, donde la usanza jurídica y notarial colombiana privilegia el orden civil natural: **[Nombres] [Primer Apellido] [Segundo Apellido]** (`Juanita Sanchez Martinez`).
+3. **Casos Especiales en la Nomenclatura Colombiana**:
+   - Nombres con partículas o preposiciones (`DE`, `DEL`, `DE LA`, `SAN`, `SANTA`, ej: `DE LA CRUZ MORA JUAN CARLOS`, `DEL CASTILLO PEREZ MARIA FERNANDA`).
+   - Nombres con 2 tokens (apellido único de hijos de madre soltera o extranjeros, ej: `ROJAS ESMERALDA` → `Esmeralda Rojas`).
+   - Nombres con 5 tokens estándar (2 apellidos y 3 nombres de pila, ej: `GARCIA LOPEZ JUAN CARLOS ANDRES` → `Juan Carlos Andres Garcia Lopez`).
+
+### Acciones Ejecutadas
+1. **Algoritmo Universal de Conversión a Orden Natural (`parsePoliceAntecedentesFullName`)**:
+   - Implementada y exportada en `server/routers/agenda.ts` la función `parsePoliceAntecedentesFullName(rawFullName: string): string` y `formatTitleCase(str: string): string`.
+   - Analiza la estructura de palabras detectando apellidos compuestos con preposiciones (`DE`, `DEL`, `DE LA`, `SAN`, `SANTA`), clasifica los tokens de apellidos y extrae los nombres de pila restantes, ensamblándolos en orden civil natural con Title Case respetando partículas minúsculas.
+   - Integrada en `queryPoliciaNacional`: cada consulta a la Policía Nacional con 2Captcha ahora retorna atómicamente `officialName` en orden natural (`Juanita Sanchez Martinez`, `Jhoann Gonzalo Romero Villanueva`, `Esmeralda Rojas Salazar`).
+2. **Sincronización en Vecy Agenda Pro (`/home/eddu/Proyectos/vecy-agenda-pro`)**:
+   - `src/utils/validations.js`: Incorporadas las funciones `formatTitleCase` y `parsePoliceAntecedentesFullName`.
+   - `src/components/AgendaForm.jsx`:
+     - Importado `formatTitleCase`.
+     - `handleNameBlur`: Formatea en tiempo real el nombre del solicitante a Title Case.
+     - `handleClientNameBlur`: Formatea en tiempo real el nombre del cliente presentado a Title Case.
+     - Acompañantes `onBlur`: Formatea en tiempo real los nombres de cada acompañante a Title Case.
+     - `handleVerifyIdentity`, `handleVerifyClientIdentity` y `handleVerifyAcompananteIdentity`: Revelan y autocompletan inmediatamente en los inputs los nombres oficiales verificados en orden natural ("Nombres y Apellidos").
+     - Compilación limpia con `npm run build` en 11.88s.
+3. **Limpieza y Corrección en Base de Datos PostgreSQL 17 VPS (`vecy_network`)**:
+   - Actualizada la fila 246 (Solicitud #1144): `interesado_nombre = 'Juanita Sanchez Martinez'` (reemplazando `Sanchez Martinez Juanita`).
+   - Actualizada la fila 245 (Solicitud #1143): `interesado_nombre = 'Jhoann Gonzalo Romero Villanueva'` (reemplazando `Romero Villanueva Jhoann Gonzalo`).
+   - Asignado `solicitud_id = 1142` a la fila #243 para garantizar integridad referencial estricta.
+4. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+   - Añadida la **Sección 15**: *"Conversión de Formato Policial a Orden Civil y Natural Colombiano (Nombres y Apellidos) (v31.94)"*.
+   - Evaluados 9 casos de prueba doctrinales cubriendo 2, 3, 4 y 5 tokens, preposiciones `DE LA`, `DEL`, partículas minúsculas y Title Case.
+   - **89/89 tests Vitest pasando al 100%**.
+   - **`npm run check` (TypeScript) con 0 errores**.
+   - **`npm run build` (Vite + esbuild) completado limpiamente**.
+
+---
+
 ## 📋 SESIÓN v31.93 — 25 Septiembre 2026
 
 ### Solicitud de Eduardo

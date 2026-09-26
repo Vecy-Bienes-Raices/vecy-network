@@ -167,7 +167,29 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.93 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.94 — Septiembre 2026
+
+### Novedades v31.94 (Conversión Universal y Revelación de Nombres en Orden Civil Natural "Nombres y Apellidos" en Formularios y Base de Datos):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo recordó que en el pasado él mismo había solicitado conservar el formato penal del portal de antecedentes de la Policía Nacional (`Apellidos y Nombres: APELLIDO_1 APELLIDO_2 NOMBRE_1 [NOMBRE_2...]`), pero confirmó la necesidad doctrinal de que tanto en los formularios (`vecy-agenda-pro`) como en la base de datos PostgreSQL (`vecy_network`) y los contratos PDF, los nombres se revelen y escriban en el orden civil natural: **[Nombres] [Apellidos]** (ej: `Juanita Sanchez Martinez`, `Jhoann Gonzalo Romero Villanueva`, `Esmeralda Rojas Salazar`).
+- **Acciones Ejecutadas en Código**:
+  1. **Algoritmo Universal `parsePoliceAntecedentesFullName` (`server/routers/agenda.ts`)**:
+     - Creada y exportada `parsePoliceAntecedentesFullName(raw)` y `formatTitleCase(str)`.
+     - Clasifica y desglosa apellidos simples y compuestos con partículas (`DE`, `DEL`, `DE LA`, `SAN`, `SANTA`), extrayendo nombres de pila y reensamblándolos en orden civil natural con Title Case respetando partículas minúsculas.
+     - Integrada en `queryPoliciaNacional`: retorna el nombre verificado siempre en orden natural.
+  2. **Sincronización en Vecy Agenda Pro (`/home/eddu/Proyectos/vecy-agenda-pro`)**:
+     - `src/utils/validations.js`: Incorporadas `formatTitleCase` y `parsePoliceAntecedentesFullName`.
+     - `src/components/AgendaForm.jsx`: Auto-formateo en blur y revelación inmediata en orden civil natural ("Nombres y Apellidos") en los inputs de solicitante, cliente presentado y acompañantes.
+     - Compilación limpia con `npm run build` en 11.88s.
+  3. **Base de Datos PostgreSQL VPS (`vecy_network`)**:
+     - Actualizada fila #246 (Solicitud #1144): `interesado_nombre = 'Juanita Sanchez Martinez'`.
+     - Actualizada fila #245 (Solicitud #1143): `interesado_nombre = 'Jhoann Gonzalo Romero Villanueva'`.
+     - Asignado `solicitud_id = 1142` a la fila huérfana #243.
+  4. **Suite de Regresión `server/__tests__/regression.test.ts` (Sección 15)**:
+     - 9 tests de conversión doctrinal blindando casos de 2, 3, 4 y 5 tokens, preposiciones y Title Case.
+- **Verificación**: 89/89 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 11.84s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.93 — Septiembre 2026
 
 ### Novedades v31.93 (Verificación de Cédulas en Policía Nacional vía 2Captcha y Sincronización Indestructible de Vecy Agenda Pro con Vecy Bienes Raíces):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

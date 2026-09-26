@@ -322,6 +322,34 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.94 — Septiembre 2026
+
+#### 📌 CONVERSIÓN UNIVERSAL Y REVELACIÓN DE NOMBRES EN ORDEN CIVIL NATURAL ("NOMBRES Y APELLIDOS") EN FORMULARIOS Y BASE DE DATOS
+
+**Problemas identificados:**
+1. **Conservación Doctrinal Previa del Orden Penal de la Policía**: Eduardo recordó que en sesiones pasadas él mismo había instruido mantener el orden del portal de antecedentes policiales (`Apellidos y Nombres: APELLIDO_1 APELLIDO_2 NOMBRE_1 [NOMBRE_2...]`), motivo por el cual solicitudes históricas (como la #1143 para `Romero Villanueva Jhoann Gonzalo` y la #1144 para `Sanchez Martinez Juanita`) tenían los apellidos antepuestos a los nombres de pila.
+2. **Usabilidad en Formularios y Validez Notarial de Contratos**: Mostrar en el formulario y en los contratos de puntas compartidas "Sanchez Martinez Juanita" resultaba contrario a la costumbre civil colombiana, donde los documentos oficiales y notariales se estructuran como **[Nombres de Pila] [Primer Apellido] [Segundo Apellido]** (`Juanita Sanchez Martinez`).
+3. **Manejo de Nombres Complejos**: Casos con preposiciones o partículas en apellidos (`DE`, `DEL`, `DE LA`, `SAN`, `SANTA`), apellidos únicos (2 tokens) o múltiples nombres de pila (5 tokens).
+
+**Solución aplicada:**
+- **Algoritmo Universal `parsePoliceAntecedentesFullName` (`server/routers/agenda.ts`)**:
+  - Creada y exportada la función determinista `parsePoliceAntecedentesFullName(rawFullName: string): string` y `formatTitleCase(str: string): string`.
+  - Descompone y clasifica tokens distinguiendo preposiciones en apellidos y extrayendo nombres de pila para reensamblarlos en orden civil natural con Title Case respetando partículas minúsculas.
+  - Integrada en `queryPoliciaNacional`: retorna el nombre verificado siempre en orden civil natural.
+- **Sincronización en Vecy Agenda Pro (`/home/eddu/Proyectos/vecy-agenda-pro`)**:
+  - `src/utils/validations.js`: Incorporadas `formatTitleCase` y `parsePoliceAntecedentesFullName`.
+  - `src/components/AgendaForm.jsx`: Auto-formateo a Title Case en eventos `onBlur` y autocompletado en orden natural civil en los inputs de solicitante, cliente interesado y acompañantes al verificarse con la Policía Nacional.
+  - Compilación exitosa con `npm run build` en 11.88s.
+- **Limpieza de Datos en PostgreSQL 17 VPS (`vecy_network`)**:
+  - Fila #246 (Solicitud #1144): actualizada a `interesado_nombre = 'Juanita Sanchez Martinez'`.
+  - Fila #245 (Solicitud #1143): actualizada a `interesado_nombre = 'Jhoann Gonzalo Romero Villanueva'`.
+  - Fila #243: consolidada con `solicitud_id = 1142`.
+- **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+  - Creada la Sección 15 evaluando 9 casos doctrinales de transformación de nombres, apellidos compuestos y partículas.
+- **Verificación**: 89/89 tests Vitest pasando al 100%, `tsc --noEmit` con 0 errores y compilación `npm run build` impecable.
+
+---
+
 ### 🔖 v31.93 — Septiembre 2026
 
 #### 📌 VERIFICACIÓN DE CÉDULAS EN POLICÍA NACIONAL VÍA 2CAPTCHA Y SINCRONIZACIÓN INDESTRUCTIBLE DE VECY AGENDA PRO CON VECY BIENES RAÍCES

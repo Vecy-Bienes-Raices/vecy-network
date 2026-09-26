@@ -1194,7 +1194,42 @@ Ed del 2014.
       expect(res.error).toContain("no corresponde");
     });
   });
+
+  describe("15. Conversión de Formato Policial a Orden Civil y Natural Colombiano (Nombres y Apellidos) (v31.94)", () => {
+    it("Debe convertir apellidos y nombres a nombres y apellidos en todos los casos doctrinales", async () => {
+      const { parsePoliceAntecedentesFullName, formatTitleCase } = await import("../routers/agenda");
+
+      // Caso 1: 3 tokens (2 apellidos, 1 nombre) - Caso Juanita Sánchez
+      expect(parsePoliceAntecedentesFullName("SANCHEZ MARTINEZ JUANITA")).toBe("Juanita Sanchez Martinez");
+
+      // Caso 2: 3 tokens (2 apellidos, 1 nombre) - Caso Esmeralda Rojas
+      expect(parsePoliceAntecedentesFullName("ROJAS SALAZAR ESMERALDA")).toBe("Esmeralda Rojas Salazar");
+
+      // Caso 3: 4 tokens (2 apellidos, 2 nombres) - Caso Jhoann Gonzalo Romero
+      expect(parsePoliceAntecedentesFullName("ROMERO VILLANUEVA JHOANN GONZALO")).toBe("Jhoann Gonzalo Romero Villanueva");
+
+      // Caso 4: 4 tokens (2 apellidos, 2 nombres) - Caso Eduardo Arturo Rivera
+      expect(parsePoliceAntecedentesFullName("RIVERA MARTINEZ EDUARDO ARTURO")).toBe("Eduardo Arturo Rivera Martinez");
+
+      // Caso 5: 2 tokens (1 apellido, 1 nombre) - Caso apellido único
+      expect(parsePoliceAntecedentesFullName("ROJAS ESMERALDA")).toBe("Esmeralda Rojas");
+
+      // Caso 6: Apellido compuesto con 'DE LA'
+      expect(parsePoliceAntecedentesFullName("DE LA CRUZ MORA JUAN CARLOS")).toBe("Juan Carlos de la Cruz Mora");
+
+      // Caso 7: Apellido compuesto con 'DEL'
+      expect(parsePoliceAntecedentesFullName("DEL CASTILLO PEREZ MARIA FERNANDA")).toBe("Maria Fernanda del Castillo Perez");
+
+      // Caso 8: 5 tokens estándar (2 apellidos, 3 nombres)
+      expect(parsePoliceAntecedentesFullName("GARCIA LOPEZ JUAN CARLOS ANDRES")).toBe("Juan Carlos Andres Garcia Lopez");
+
+      // Caso 9: Función formatTitleCase
+      expect(formatTitleCase("JUANITA SANCHEZ MARTINEZ")).toBe("Juanita Sanchez Martinez");
+      expect(formatTitleCase("daniel eduardo rivera noguera")).toBe("Daniel Eduardo Rivera Noguera");
+    });
+  });
 });
+
 
 
 

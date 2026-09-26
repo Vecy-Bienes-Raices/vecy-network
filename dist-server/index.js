@@ -17967,7 +17967,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.93";
+var VECY_VERSION = "v31.94";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -22331,6 +22331,54 @@ async function requestHttps(urlStr, options = {}, jar) {
     req.end();
   });
 }
+function formatTitleCase(str) {
+  if (!str) return "";
+  const lowerParticles = ["de", "del", "la", "las", "los", "y"];
+  return str.toLowerCase().split(/\s+/).filter(Boolean).map((w, idx) => {
+    if (idx > 0 && lowerParticles.includes(w)) {
+      return w;
+    }
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(" ");
+}
+function parsePoliceAntecedentesFullName(rawFullName) {
+  if (!rawFullName || !rawFullName.trim()) return "";
+  const clean = rawFullName.trim().replace(/\s+/g, " ");
+  const words = clean.split(" ").filter(Boolean);
+  if (words.length <= 1) return formatTitleCase(clean);
+  const upper = words.map((w) => w.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+  let ap1Tokens = [];
+  let idx = 0;
+  if (upper[idx] === "DE" && upper[idx + 1] === "LA" && idx + 2 < words.length) {
+    ap1Tokens = [words[idx], words[idx + 1], words[idx + 2]];
+    idx += 3;
+  } else if ((upper[idx] === "DE" || upper[idx] === "DEL" || upper[idx] === "SAN" || upper[idx] === "SANTA") && idx + 1 < words.length) {
+    ap1Tokens = [words[idx], words[idx + 1]];
+    idx += 2;
+  } else {
+    ap1Tokens = [words[idx]];
+    idx += 1;
+  }
+  let ap2Tokens = [];
+  if (idx < words.length - 1) {
+    if (upper[idx] === "DE" && upper[idx + 1] === "LA" && idx + 3 <= words.length) {
+      ap2Tokens = [words[idx], words[idx + 1], words[idx + 2]];
+      idx += 3;
+    } else if ((upper[idx] === "DE" || upper[idx] === "DEL" || upper[idx] === "SAN" || upper[idx] === "SANTA") && idx + 2 <= words.length) {
+      ap2Tokens = [words[idx], words[idx + 1]];
+      idx += 2;
+    } else {
+      ap2Tokens = [words[idx]];
+      idx += 1;
+    }
+  }
+  const nameTokens = words.slice(idx);
+  if (nameTokens.length === 0) {
+    return formatTitleCase(clean);
+  }
+  const naturalTokens = [...nameTokens, ...ap1Tokens, ...ap2Tokens];
+  return formatTitleCase(naturalTokens.join(" "));
+}
 async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
   let tipoDoc = "cc";
   const t2 = (tipoDocInput || "").toLowerCase();
@@ -22423,14 +22471,7 @@ async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
     const matchNombres = finalHtml.match(/Apellidos\s+y\s+Nombres:\s*<span[^>]*>([^<]+)<\/span>/i) || text2.match(/Apellidos\s+y\s+Nombres:\s*([A-ZÁÉÍÓÚÑ\s]+?)\s+(NO TIENE|TIENE|ASUNTOS)/i);
     if (matchNombres && matchNombres[1]) {
       const rawFullName = matchNombres[1].trim();
-      const formatTitleCase = (s) => s.toLowerCase().split(/\s+/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-      const words = rawFullName.split(/\s+/).filter(Boolean);
-      let officialName = formatTitleCase(rawFullName);
-      if (words.length === 3) {
-        officialName = formatTitleCase(`${words[2]} ${words[0]} ${words[1]}`);
-      } else if (words.length === 4) {
-        officialName = formatTitleCase(`${words[2]} ${words[3]} ${words[0]} ${words[1]}`);
-      }
+      const officialName = parsePoliceAntecedentesFullName(rawFullName);
       identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
       return { success: true, officialName, source: "Polic\xEDa Nacional de Colombia" };
     }
@@ -22702,7 +22743,6 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       }).from(profiles).where(eq15(profiles.numeroDocumento, clean)).limit(5);
       for (const row of profileRows) {
         if (row.fullName && row.fullName.trim().length >= 4) {
-          const formatTitleCase = (s) => s.toLowerCase().split(/\s+/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
           const officialFormatted = formatTitleCase(row.fullName.trim());
           if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
             identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
@@ -22730,7 +22770,6 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
         const candidateName = (row.solicitanteNumeroDocumento || "").replace(/\D/g, "") === clean ? row.solicitanteNombre : row.interesadoNombre;
         const tokens = (candidateName || "").trim().split(/\s+/).filter(Boolean);
         if (candidateName && tokens.length >= 3) {
-          const formatTitleCase = (s) => s.toLowerCase().split(/\s+/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
           const officialFormatted = formatTitleCase(candidateName.trim());
           if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
             identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });

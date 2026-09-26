@@ -114,6 +114,78 @@ async function requestHttps(urlStr: string, options: any = {}, jar?: CookieJar):
 }
 
 /**
+ * Formatea una cadena en Title Case respetando partículas y preposiciones colombianas (de, del, la, etc.)
+ */
+export function formatTitleCase(str: string): string {
+  if (!str) return '';
+  const lowerParticles = ['de', 'del', 'la', 'las', 'los', 'y'];
+  return str
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w, idx) => {
+      if (idx > 0 && lowerParticles.includes(w)) {
+        return w;
+      }
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    })
+    .join(' ');
+}
+
+/**
+ * Convierte el formato penal de la Policía Nacional de Colombia
+ * (Apellidos y Nombres: APELLIDO_1 APELLIDO_2 NOMBRE_1 [NOMBRE_2...])
+ * al orden civil y natural colombiano (NOMBRE_1 [NOMBRE_2...] APELLIDO_1 APELLIDO_2)
+ * con Title Case respetando partículas y preposiciones (de, del, la, etc.)
+ */
+export function parsePoliceAntecedentesFullName(rawFullName: string): string {
+  if (!rawFullName || !rawFullName.trim()) return '';
+  const clean = rawFullName.trim().replace(/\s+/g, ' ');
+  const words = clean.split(' ').filter(Boolean);
+  if (words.length <= 1) return formatTitleCase(clean);
+
+  const upper = words.map(w => w.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+
+  // Detectar primer apellido (puede ser simple o compuesto: DE, DEL, DE LA, SAN, SANTA)
+  let ap1Tokens: string[] = [];
+  let idx = 0;
+  if (upper[idx] === 'DE' && upper[idx + 1] === 'LA' && idx + 2 < words.length) {
+    ap1Tokens = [words[idx], words[idx + 1], words[idx + 2]];
+    idx += 3;
+  } else if ((upper[idx] === 'DE' || upper[idx] === 'DEL' || upper[idx] === 'SAN' || upper[idx] === 'SANTA') && idx + 1 < words.length) {
+    ap1Tokens = [words[idx], words[idx + 1]];
+    idx += 2;
+  } else {
+    ap1Tokens = [words[idx]];
+    idx += 1;
+  }
+
+  // Detectar segundo apellido si quedan suficientes palabras (mínimo 1 para el nombre de pila)
+  let ap2Tokens: string[] = [];
+  if (idx < words.length - 1) {
+    if (upper[idx] === 'DE' && upper[idx + 1] === 'LA' && idx + 3 <= words.length) {
+      ap2Tokens = [words[idx], words[idx + 1], words[idx + 2]];
+      idx += 3;
+    } else if ((upper[idx] === 'DE' || upper[idx] === 'DEL' || upper[idx] === 'SAN' || upper[idx] === 'SANTA') && idx + 2 <= words.length) {
+      ap2Tokens = [words[idx], words[idx + 1]];
+      idx += 2;
+    } else {
+      ap2Tokens = [words[idx]];
+      idx += 1;
+    }
+  }
+
+  // Las palabras restantes son los nombres de pila (Nombres)
+  const nameTokens = words.slice(idx);
+  if (nameTokens.length === 0) {
+    return formatTitleCase(clean);
+  }
+
+  const naturalTokens = [...nameTokens, ...ap1Tokens, ...ap2Tokens];
+  return formatTitleCase(naturalTokens.join(' '));
+}
+
+/**
  * Consulta oficial de antecedentes penales e identidad en la Policía Nacional de Colombia
  * Resuelve reCAPTCHA v2 de Google vía 2Captcha y extrae los nombres y apellidos reales del ciudadano.
  */
@@ -230,16 +302,7 @@ export async function queryPoliciaNacional(tipoDocInput: string, cleanDoc: strin
 
     if (matchNombres && matchNombres[1]) {
       const rawFullName = matchNombres[1].trim();
-      const formatTitleCase = (s: string) => s.toLowerCase().split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-      const words = rawFullName.split(/\s+/).filter(Boolean);
-      let officialName = formatTitleCase(rawFullName);
-      // En la Policía Nacional el formato oficial es: APELLIDO_1 APELLIDO_2 NOMBRE_1 [NOMBRE_2...]
-      // Convertir a orden natural colombiano: NOMBRE_1 [NOMBRE_2...] APELLIDO_1 APELLIDO_2
-      if (words.length === 3) {
-        officialName = formatTitleCase(`${words[2]} ${words[0]} ${words[1]}`);
-      } else if (words.length === 4) {
-        officialName = formatTitleCase(`${words[2]} ${words[3]} ${words[0]} ${words[1]}`);
-      }
+      const officialName = parsePoliceAntecedentesFullName(rawFullName);
       identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
       return { success: true, officialName, source: 'Policía Nacional de Colombia' };
     }
@@ -370,7 +433,6 @@ async function queryOfficialAdres(tipoDocInput: string, cleanDoc: string): Promi
     if (matchNombres && matchApellidos) {
       const rawNombres = matchNombres[1].trim();
       const rawApellidos = matchApellidos[1].trim();
-      const formatTitleCase = (s: string) => s.toLowerCase().split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
       const fullName = formatTitleCase(`${rawNombres} ${rawApellidos}`);
 
       identityCache.set(cacheKey, { fullName, timestamp: Date.now() });
@@ -704,7 +766,6 @@ export async function executeIdentityVerification(
 
       for (const row of profileRows) {
         if (row.fullName && row.fullName.trim().length >= 4) {
-          const formatTitleCase = (s: string) => s.toLowerCase().split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
           const officialFormatted = formatTitleCase(row.fullName.trim());
 
           if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
@@ -745,7 +806,6 @@ export async function executeIdentityVerification(
         const tokens = (candidateName || '').trim().split(/\s+/).filter(Boolean);
         // Exigir al menos 3 palabras para no arrastrar nombres cortos informales sin segundo apellido
         if (candidateName && tokens.length >= 3) {
-          const formatTitleCase = (s: string) => s.toLowerCase().split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
           const officialFormatted = formatTitleCase(candidateName.trim());
 
           if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
