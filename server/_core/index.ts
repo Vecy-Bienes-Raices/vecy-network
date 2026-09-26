@@ -885,6 +885,23 @@ Dirección obligatoria:
     }
   });
 
+  // Admin endpoint: disparar Encuesta Interactiva Diaria (Grupo 2 y Canal)
+  // Uso: POST /admin/trigger-poll { token, force }
+  app.post('/admin/trigger-poll', async (req: any, res: any) => {
+    const { token, force } = req.body || {};
+    if (token !== 'vecy2025admin') {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    try {
+      const { publishDailyPollNow } = await import('./cronService');
+      const result = await publishDailyPollNow(force ?? true);
+      res.json(result);
+    } catch (err: any) {
+      console.error('[ADMIN-TRIGGER-POLL] Error:', err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // tRPC API
   app.use("/api/trpc", (req, res, next) => {
     console.log(`[TRPC-ROUTER] ${req.method} ${req.url}`);
