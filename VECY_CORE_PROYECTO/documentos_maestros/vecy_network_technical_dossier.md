@@ -322,6 +322,32 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.96 — Septiembre 2026
+
+#### 📌 BLINDAJE TOTAL CONTRA MENSAJES DE PROTOCOLO, NOTIFICACIONES DE CIFRADO Y REACCIONES HUÉRFANAS EN GRUPOS CONVERSACIONALES
+
+**Problemas identificados:**
+1. **Mensaje Fantasma de JanIA en Grupo 2 a las 19:41**: JanIA publicó un mensaje en el Grupo 2 ("VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING") respondiendo a Martha Stella Valderrama ("AYMAR INMOBILIARIA") diciendo: *"Hola Martha Stella 👋. Disculpa la pequeña demora, estuve recalibrando mis motores de consulta en tiempo real. Entiendo tu mensaje sobre tu consulta inmobiliaria. ¿Podrías confirmarme el detalle específico para entregarte la solución completa y estructurada de inmediato? ¡Aquí estoy 100% lista para apoyarte! 🤝✨"*, cuando ningún usuario humano había escrito en el grupo en todo el día.
+2. **Causa Raíz en el Socket de Baileys**: Cuando un participante de un grupo renueva sus claves criptográficas E2E (Signal Protocol) o reinstala WhatsApp, la plataforma emite un aviso de sistema ("Cambió tu código de seguridad con AYMAR INMOBILIARIA") y despacha al socket paquetes de protocolo (`senderKeyDistributionMessage`, `protocolMessage` o stubs `WAMessageStubType.E2E_IDENTITY_CHANGED`). Baileys entregaba estos eventos en `messages.upsert`, donde no se filtraban stubs ni paquetes criptográficos.
+3. **Omisión de Filtro de Mensajes Vacíos y Reacciones**: La variable `body` quedaba vacía (`""`), pero el mensaje no era descartado al no validarse `!body.trim() && !hasRawMedia`. En el Grupo 2, la condición de respuesta asumía que si el mensaje traía emoji de reacción o no era un monosílabo ignorado, debía responderse como consulta del usuario.
+4. **Disparo del Fallback Genérico por Cuota de Gemini (429)**: Al invocarse Gemini con un prompt sin texto sustancial y coincidir con un límite momentáneo de cuota (429 Rate Limit), la ejecución saltó al bloque `catch` de `processConsultingMessage`, disparando la plantilla `genericFallback` disculpándose por la recalibración de motores con el nombre de la titular de AYMAR INMOBILIARIA.
+
+**Solución aplicada:**
+- **Filtro Estricto de Stubs y Paquetes de Protocolo en Baileys (`server/_core/whatsapp-match.ts`)**:
+  - Descarte inmediato de mensajes con `(msg as any).messageStubType` al inicio de `messages.upsert`.
+  - Descarte de paquetes criptográficos y de sincronización: `rawMsg?.protocolMessage`, `rawMsg?.senderKeyDistributionMessage`, `rawMsg?.e2eNotificationMessage` y `rawMsg?.keyTransparency`.
+  - Descarte automático de mensajes sin texto y sin multimedia (`if (!body.trim() && !hasRawMedia) continue;`).
+- **Blindaje de Grupos Conversacionales (`server/_core/whatsapp-match.ts`)**:
+  - En Grupo 2 (Soporte Legal) y Grupo 3 (Círculo Cero), JanIA solo responde si el mensaje tiene texto sustancial (`textClean.length >= 4`), no es cortesía corta ("ok", "gracias", "👍") y NO es una simple reacción con emoji a un mensaje previo (`!isReactionMessage`), o si es multimedia/audio PTT.
+- **Protección de Fallback en Cerebro Consultor (`server/_core/janIA.ts`)**:
+  - En `processConsultingMessage`: Validación de longitud mínima (`cleanText.length < 3 && !isMediaOrAudio`) retornando respuesta silenciosa vacía.
+  - En el bloque `catch`: Se silencia el `genericFallback` si la entrada original no tenía consulta ni archivo adjunto.
+- **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+  - Añadida la Sección 17 blindando el silencio absoluto ante textos vacíos, emojis y espacios en blanco.
+- **Verificación**: 94/94 tests Vitest pasando al 100%, `tsc --noEmit` 0 errores y build de producción limpio en 10.66s.
+
+---
+
 ### 🔖 v31.95 — Septiembre 2026
 
 #### 📌 NOTIFICACIONES AUTOMÁTICAS DE AGENDAMIENTO POR WHATSAPP (CALLMEBOT STYLE AL BRÓKER Y CONFIRMACIÓN INMEDIATA DE JANIA AL SOLICITANTE)

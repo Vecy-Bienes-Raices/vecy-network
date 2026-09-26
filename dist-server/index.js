@@ -12972,6 +12972,14 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
     }
     const cleanText = text2.toLowerCase().trim();
     const isMediaOrAudio = !!imageBuffer || !!pdfBuffer || !!audioUrl;
+    if (cleanText.length < 3 && !isMediaOrAudio) {
+      console.log(`[JanIA-Consulting] Mensaje vac\xEDo o insignificante descartado para ${userId}: "${text2}"`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: "",
+        reactionEmoji: ""
+      };
+    }
     let messageToProcess = text2;
     let isFromAudio = false;
     if (audioUrl) {
@@ -13183,6 +13191,14 @@ Para entregarte un informe escrito muy acertado sobre en cu\xE1nto puedes vender
         classification: "CONSULTA_GENERAL",
         response: legalFallback,
         reactionEmoji: "\u2696\uFE0F"
+      };
+    }
+    const hasMediaInCatch = !!imageBuffer || !!pdfBuffer || !!audioUrl;
+    if (cleanLower.length < 3 && !hasMediaInCatch) {
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: "",
+        reactionEmoji: ""
       };
     }
     const genericFallback = `Hola ${firstName} \u{1F44B}\u{1F3FB}. Disculpa la peque\xF1a demora, estuve recalibrando mis motores de consulta en tiempo real. Entiendo tu mensaje sobre tu consulta inmobiliaria. \xBFPodr\xEDas confirmarme el detalle espec\xEDfico para entregarte la soluci\xF3n completa y estructurada de inmediato? \xA1Aqu\xED estoy 100% lista para apoyarte! \u{1F91D}\u2728`;
@@ -14824,6 +14840,9 @@ var init_whatsapp_match = __esm({
           if (m.type !== "notify" && m.type !== "append") return;
           for (const msg of m.messages) {
             if (!msg.key || !msg.message) continue;
+            if (msg.messageStubType) {
+              continue;
+            }
             const fromMe = msg.key.fromMe;
             const rawChatId = msg.key.remoteJid;
             if (!rawChatId) continue;
@@ -14851,6 +14870,9 @@ var init_whatsapp_match = __esm({
                   continue;
                 }
                 const rawMsg = unwrapMessage(msg.message);
+                if (rawMsg?.protocolMessage || rawMsg?.senderKeyDistributionMessage || rawMsg?.e2eNotificationMessage || rawMsg?.keyTransparency) {
+                  continue;
+                }
                 if (rawMsg?.stickerMessage) {
                   continue;
                 }
@@ -15006,7 +15028,11 @@ ${quotedNote}` : quotedNote;
                     return;
                   }
                 }
-                const hasRawMedia = !!rawMsg?.imageMessage || !!rawMsg?.documentMessage || !!rawMsg?.videoMessage;
+                const hasRawMedia = !!rawMsg?.imageMessage || !!rawMsg?.documentMessage || !!rawMsg?.videoMessage || isAudioPTT;
+                const isReactionMessage = !!rawMsg?.reactionMessage;
+                if (!body.trim() && !hasRawMedia) {
+                  continue;
+                }
                 const isPossibleListing = body.length > 70 || body.split("\n").length >= 2 || hasRawMedia || textLower.includes("http") || textLower.includes("www") || textLower.includes("ofrezco") || textLower.includes("busco") || textLower.includes("vendo") || textLower.includes("venta") || textLower.includes("arriendo") || textLower.includes("ariendo") || textLower.includes("compro") || textLower.includes("necesito") || textLower.includes("renta") || textLower.includes("alquilo") || textLower.includes("permuto") || textLower.includes("permuta") || textLower.includes("requiero") || textLower.includes("requerimiento") || textLower.includes("casa") || textLower.includes("apto") || textLower.includes("apartamento") || textLower.includes("bodega") || textLower.includes("oficina") || textLower.includes("edificio") || textLower.includes("lote") || textLower.includes("local") || textLower.includes("finca") || textLower.includes("terreno") || textLower.includes("predio") || textLower.includes("campestre") || textLower.includes("fanegada") || textLower.includes("fanegadas") || textLower.includes("hectarea") || textLower.includes("hect\xE1rea") || textLower.includes("hect") || textLower.includes("parque") || textLower.includes("inversion") || textLower.includes("inversi\xF3n") || textLower.includes("penthouse") || textLower.includes("apartaestudio") || textLower.includes("duplex") || textLower.includes("d\xFAplex") || textLower.includes("parqueadero") || textLower.includes("alcoba") || textLower.includes("habitacion") || textLower.includes("habitaci\xF3n") || textLower.includes("metro") || textLower.includes("mts") || textLower.includes("mts2") || textLower.includes("m2") || textLower.includes("precio") || textLower.includes("presupuesto") || textLower.includes("millones") || textLower.includes("millon") || textLower.includes("canon") || textLower.includes("comisi\xF3n") || textLower.includes("comision") || textLower.includes("valor");
                 const isHelpOrSystemQuery = !isPossibleListing && (textLower.includes("c\xF3mo subo") || textLower.includes("como subo") || textLower.includes("c\xF3mo publico") || textLower.includes("como publico") || textLower.includes("c\xF3mo se publica") || textLower.includes("como se publica") || textLower.includes("c\xF3mo registrar") || textLower.includes("como registrar") || textLower.includes("c\xF3mo funciona") || textLower.includes("como funciona") || textLower.includes("de qu\xE9 consiste") || textLower.includes("de que consiste") || textLower.includes("en qu\xE9 consiste") || textLower.includes("en que consiste") || textLower.includes("c\xF3mo hago para") || textLower.includes("como hago para") || textLower.includes("c\xF3mo buscar") || textLower.includes("como buscar") || textLower.includes("c\xF3mo encontrar") || textLower.includes("como encontrar") || textLower.includes("mec\xE1nica del grupo") || textLower.includes("mecanica del grupo") || textLower.includes("qued\xF3 guardado") || textLower.includes("quedo guardado") || textLower.includes("se guard\xF3") || textLower.includes("se guardo") || textLower.includes("fue guardado") || textLower.includes("falt\xF3 alg\xFAn dato") || textLower.includes("falto algun dato") || textLower.includes("falt\xF3 un dato") || textLower.includes("falto un dato") || textLower.includes("datos faltantes") || textLower.includes("subi\xF3 correctamente") || textLower.includes("subio correctamente") || textLower.includes("fue subido") || textLower.includes("mejor forma de publicar") || textLower.includes("c\xF3mo es mejor") || textLower.includes("como es mejor") || textLower.includes("para obtener resultados") || textLower.includes("ayuda") && textLower.includes("inmueble") || textLower.includes("explicar") && textLower.includes("grupo") || textLower.includes("c\xF3mo") && textLower.includes("grupo"));
                 const textClean = body.toLowerCase().trim();
@@ -15014,9 +15040,8 @@ ${quotedNote}` : quotedNote;
                 const isShortCourtesy = !isAudioPTT && (textClean.length < 6 || ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
                 const isListingGroup = isMainGroup || !isBuzonGroup && !isCirculoGroup;
                 const isListing = isListingGroup && (isPossibleListing || !isOfficialGroup || hasRawMedia);
-                const hasEmoji = /[\p{Emoji}]/u.test(body);
-                const isSingleCharacter = textClean.length < 3 && !["ok", "si", "s\xED"].includes(textClean) && !hasEmoji;
-                const shouldRespond = isBuzonGroup || isCirculoGroup ? !isSingleCharacter : isOfficialGroup && hasDirectMention;
+                const hasMeaningfulQuery = textClean.length >= 4 && !isShortCourtesy && !isReactionMessage || hasRawMedia;
+                const shouldRespond = isBuzonGroup || isCirculoGroup ? hasMeaningfulQuery : isOfficialGroup && hasDirectMention;
                 if (isListing) {
                   await this.handleIncomingGroupMessage(msg, chatId, body, imageBufferImmediate, pdfBufferImmediate, pdfMimeTypeImmediate);
                   continue;
@@ -17981,7 +18006,7 @@ var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
 var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-var VECY_VERSION = "v31.95";
+var VECY_VERSION = "v31.96";
 var VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
 var VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 

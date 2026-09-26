@@ -167,7 +167,31 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.95 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.96 — Septiembre 2026
+
+### Novedades v31.96 (Blindaje Total contra Mensajes de Protocolo, Notificaciones de Cifrado y Reacciones Huérfanas en Grupos Conversacionales):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo consultó por qué JanIA envió un mensaje extraño a las 19:41 en el Grupo 2 ("VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING") respondiendo a Martha Stella Valderrama ("AYMAR INMOBILIARIA") diciendo: *"Hola Martha Stella 👋. Disculpa la pequeña demora, estuve recalibrando mis motores de consulta en tiempo real. Entiendo tu mensaje sobre tu consulta inmobiliaria. ¿Podrías confirmarme el detalle específico para entregarte la solución completa y estructurada de inmediato? ¡Aquí estoy 100% lista para apoyarte! 🤝✨"*, cuando nadie había escrito texto en todo el día.
+  - **Causa Raíz Identificada**:
+    1. A las 19:41 (00:41 UTC) WhatsApp emitió en el socket de Baileys un paquete de sincronización de claves E2E / cambio de código de seguridad emitido por AYMAR INMOBILIARIA (Martha Stella Valderrama, `86127063080981@lid`).
+    2. El socket de Baileys en `whatsapp-match.ts` no filtraba stubs del sistema (`messageStubType`), ni paquetes de protocolo criptográfico (`protocolMessage`, `senderKeyDistributionMessage`), ni descartaba mensajes vacíos sin multimedia (`!body.trim() && !hasRawMedia`).
+    3. Además, en el Grupo 2 (`isBuzonGroup`) la condición de respuesta evaluaba cualquier mensaje que tuviera emoji o no fuera monosílabo ignorado como una consulta formulada por el usuario (`handleDirectGroupQuestion`).
+    4. Al invocar el LLM de Gemini con prompt vacío/sin contenido, las claves API en el servidor fallaron por cuota momentánea (429 Rate Limit), activando el bloque `catch` con el `genericFallback` que saludó a "Martha Stella" disculpándose por la recalibración de motores.
+- **Acciones Ejecutadas en Código**:
+  1. **Filtro de Stubs y Protocolo en Baileys (`server/_core/whatsapp-match.ts`)**:
+     - Descarte inmediato en `messages.upsert` de `messageStubType` (cambios de código de seguridad, cambios de número, llamadas, participantes agregados/removidos, etc.).
+     - Descarte de paquetes de protocolo criptográfico: `protocolMessage`, `senderKeyDistributionMessage`, `e2eNotificationMessage`, `keyTransparency`.
+     - Descarte automático de cualquier mensaje sin cuerpo textual ni multimedia (`!body.trim() && !hasRawMedia`).
+  2. **Blindaje de Grupos Conversacionales (`server/_core/whatsapp-match.ts`)**:
+     - En el Grupo 2 (Soporte Legal) y Grupo 3 (Círculo Cero), JanIA solo responde si el mensaje tiene texto sustancial (`textClean.length >= 4`), no es una cortesía corta ("ok", "gracias", "👍") y NO es una simple reacción de emoji a un mensaje previo (`!isReactionMessage`), o si es multimedia/audio PTT.
+  3. **Protección de Fallback en Cerebro Consultor (`server/_core/janIA.ts`)**:
+     - `processConsultingMessage`: Descarte y silencio absoluto (`response: ""` y `reactionEmoji: ""`) cuando el texto tiene menos de 3 caracteres y no hay archivos adjuntos ni audios.
+     - Blindaje del bloque `catch`: En caso de fallo de red o cuota del LLM, el `genericFallback` de recalibración de motores jamás se emite si la consulta de entrada no tenía contenido sustancial.
+  4. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+     - Añadida la **Sección 17** con prueba unitaria blindando el silencio total ante textos vacíos, emojis y espacios en blanco en `processConsultingMessage`.
+- **Verificación**: 94/94 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 10.66s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.95 — Septiembre 2026
 
 ### Novedades v31.95 (Notificaciones Automáticas de Agendamiento por WhatsApp: Formato CallMeBot al Bróker y Confirmación Inmediata de JanIA al Solicitante):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

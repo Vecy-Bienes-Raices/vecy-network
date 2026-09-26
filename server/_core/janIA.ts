@@ -5947,6 +5947,16 @@ export async function processConsultingMessage(
     const cleanText = text.toLowerCase().trim();
     const isMediaOrAudio = !!imageBuffer || !!pdfBuffer || !!audioUrl;
 
+    // 🛡️ BLINDAJE DE MENSAJES VACÍOS O SIN CONTENIDO SUSTANCIAL:
+    if (cleanText.length < 3 && !isMediaOrAudio) {
+      console.log(`[JanIA-Consulting] Mensaje vacío o insignificante descartado para ${userId}: "${text}"`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: "",
+        reactionEmoji: ""
+      };
+    }
+
     let messageToProcess = text;
     let isFromAudio = false;
 
@@ -6162,6 +6172,17 @@ ${lateReplyNote}`;
         classification: "CONSULTA_GENERAL",
         response: legalFallback,
         reactionEmoji: "⚖️"
+      };
+    }
+
+    // 🛡️ BLINDAJE DE FALLBACK ANTE MENSAJES INSIGNIFICANTES O VACÍOS:
+    // Si la entrada no contenía una consulta real o un archivo adjunto, silenciar sin emitir mensajes de error o recalibración
+    const hasMediaInCatch = !!imageBuffer || !!pdfBuffer || !!audioUrl;
+    if (cleanLower.length < 3 && !hasMediaInCatch) {
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: "",
+        reactionEmoji: ""
       };
     }
 

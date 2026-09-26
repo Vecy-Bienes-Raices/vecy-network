@@ -446,6 +446,12 @@ export class JaniaMatchBot {
       for (const msg of m.messages) {
         if (!msg.key || !msg.message) continue;
 
+        // 🛡️ BLINDAJE DE PROTOCOLO Y SISTEMA WHATSAPP:
+        // Ignorar stubs (cambios de código de seguridad, cambios de número, añadidos/removidos, llamadas, etc.)
+        if ((msg as any).messageStubType) {
+          continue;
+        }
+
         const fromMe = msg.key.fromMe;
         const rawChatId = msg.key.remoteJid;
         if (!rawChatId) continue;
@@ -487,6 +493,18 @@ export class JaniaMatchBot {
             }
 
             const rawMsg = unwrapMessage(msg.message);
+
+            // 🛡️ BLINDAJE DE PROTOCOLO Y CRIPTOGRAFÍA WHATSAPP:
+            // Ignorar paquetes de sincronización de claves E2E (senderKeyDistributionMessage),
+            // mensajes de protocolo (protocolMessage), notificaciones de clave/transparencia
+            if (
+              rawMsg?.protocolMessage ||
+              rawMsg?.senderKeyDistributionMessage ||
+              (rawMsg as any)?.e2eNotificationMessage ||
+              (rawMsg as any)?.keyTransparency
+            ) {
+              continue;
+            }
 
             // Ignorar stickers
             if (rawMsg?.stickerMessage) {
@@ -668,7 +686,14 @@ export class JaniaMatchBot {
 
 
             // Si es una publicación comercial, procesar con el buffer extractor (Modo Silencioso)
-            const hasRawMedia = !!rawMsg?.imageMessage || !!rawMsg?.documentMessage || !!rawMsg?.videoMessage;
+            const hasRawMedia = !!rawMsg?.imageMessage || !!rawMsg?.documentMessage || !!rawMsg?.videoMessage || isAudioPTT;
+            const isReactionMessage = !!rawMsg?.reactionMessage;
+
+            // 🛡️ DESCARTAR MENSAJES VACÍOS SIN TEXTO NI MULTIMEDIA:
+            if (!body.trim() && !hasRawMedia) {
+              continue;
+            }
+
             const isPossibleListing = 
               body.length > 70 || 
               body.split('\n').length >= 2 || 
@@ -776,11 +801,14 @@ export class JaniaMatchBot {
             const isListingGroup = isMainGroup || (!isBuzonGroup && !isCirculoGroup);
             const isListing = isListingGroup && (isPossibleListing || !isOfficialGroup || hasRawMedia);
 
-            // Ignorar únicamente monosílabos o caracteres sueltos inapropiados (< 3 caracteres sin significado), PERO permitir emojis y reacciones
-            const hasEmoji = /[\p{Emoji}]/u.test(body);
-            const isSingleCharacter = textClean.length < 3 && !["ok", "si", "sí"].includes(textClean) && !hasEmoji;
-
-            const shouldRespond = (isBuzonGroup || isCirculoGroup) ? !isSingleCharacter : (isOfficialGroup && hasDirectMention);
+            // En Soporte Legal (Buzón) y Círculo Cero, solo responder a consultas o preguntas legítimas:
+            // - NO responder a reacciones de emojis (reacciones a mensajes ajenos)
+            // - NO responder a monosílabos de cortesía pura (ok, gracias, 👍, etc.)
+            // - Exigir texto sustancial (longitud >= 4 sin ser cortesía) O mensaje multimedia/audio PTT
+            const hasMeaningfulQuery = (textClean.length >= 4 && !isShortCourtesy && !isReactionMessage) || hasRawMedia;
+            const shouldRespond = (isBuzonGroup || isCirculoGroup) 
+              ? hasMeaningfulQuery 
+              : (isOfficialGroup && hasDirectMention);
 
             if (isListing) {
               await this.handleIncomingGroupMessage(msg, chatId, body, imageBufferImmediate, pdfBufferImmediate, pdfMimeTypeImmediate);

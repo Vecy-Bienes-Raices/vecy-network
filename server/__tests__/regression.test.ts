@@ -1342,6 +1342,27 @@ Ed del 2014.
       expect(msg).toContain("Si deseas cancelar, reagendar, tienes alguna duda o requieres otro tipo de servicio comunícate directamente con nosotros al *+57 316 6569719*.");
     });
   });
+
+  describe("17. Blindaje contra Mensajes de Protocolo, Reacciones y Stubs de Sistema en Grupos Conversacionales (v31.96)", () => {
+    it("Debe descartar y silenciar llamadas a processConsultingMessage con texto vacío o menor a 3 caracteres sin multimedia", async () => {
+      const { processConsultingMessage } = await import("../_core/janIA");
+
+      // 1. Texto vacío
+      const resVacio = await processConsultingMessage("", "86127063080981@lid", "Martha Stella Valderrama");
+      expect(resVacio.response).toBe("");
+      expect(resVacio.reactionEmoji).toBe("");
+
+      // 2. Texto de solo emoji o reacción
+      const resEmoji = await processConsultingMessage("👍", "86127063080981@lid", "Martha Stella Valderrama");
+      expect(resEmoji.response).toBe("");
+      expect(resEmoji.reactionEmoji).toBe("");
+
+      // 3. Espacios en blanco
+      const resEspacios = await processConsultingMessage("   ", "86127063080981@lid", "Martha Stella Valderrama");
+      expect(resEspacios.response).toBe("");
+      expect(resEspacios.reactionEmoji).toBe("");
+    });
+  });
 });
 
 

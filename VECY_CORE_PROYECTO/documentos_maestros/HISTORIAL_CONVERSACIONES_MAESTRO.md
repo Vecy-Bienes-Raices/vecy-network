@@ -7,6 +7,57 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.96 — 25 Septiembre 2026
+
+### Solicitud de Eduardo
+Investigación y Solución del Mensaje Anómalo de JanIA en Grupo 2:
+*"Ok. Ahora investiga por qué habrá escrito JanIA ese mensaje extraño a esa hora en el grupo 2. No lo entiendo, a quien le está respondiendo si nadie escribió hoy. Qué sucedió??"*
+
+### Diagnóstico Técnico Profundo y Causas Raíz Identificadas
+1. **Identificación de la Destinataria ("Martha Stella")**:
+   - El mensaje emitido por JanIA a las 19:41 (00:41 UTC) en el Grupo 2 (*"VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING"*, JID `120363417740040773@g.us`) decía:
+     *"Hola Martha Stella 👋. Disculpa la pequeña demora, estuve recalibrando mis motores de consulta en tiempo real. Entiendo tu mensaje sobre tu consulta inmobiliaria. ¿Podrías confirmarme el detalle específico para entregarte la solución completa y estructurada de inmediato? ¡Aquí estoy 100% lista para apoyarte! 🤝✨"*.
+   - Al cotejar la base de datos PostgreSQL 17 (`vecy_network`), el usuario ID `11173` corresponde a **Martha Stella Valderrama** (LID `86127063080981@lid`).
+   - Martha Stella es la titular de la inmobiliaria **AYMAR INMOBILIARIA**.
+   - En la captura de pantalla compartida por Eduardo, inmediatamente antes del mensaje de JanIA figuran dos avisos del sistema de WhatsApp:
+     *"Cambió tu código de seguridad con AYMAR INMOBILIARIA. Haz clic para obtener más información."*.
+2. **Causa Raíz en el Socket de Baileys (`messages.upsert`)**:
+   - Cuando un contacto de WhatsApp (como Martha Stella / AYMAR INMOBILIARIA) cambia de dispositivo, reinstala WhatsApp o renueva sus claves de cifrado E2E (Signal Protocol), WhatsApp emite al grupo un paquete de sincronización de claves (`senderKeyDistributionMessage` / `protocolMessage` / stubs de identidad `WAMessageStubType.E2E_IDENTITY_CHANGED`).
+   - El manejador `messages.upsert` de Baileys en `server/_core/whatsapp-match.ts` recibía este evento, pero **no filtraba `messageStubType` ni paquetes de protocolo criptográfico** (únicamente filtraba `stickerMessage`).
+   - Al no ser texto ni media, la variable `body` quedaba vacía (`""`), pero el mensaje no era descartado de inmediato al no existir validación de `!body.trim() && !hasRawMedia`.
+   - Adicionalmente, en la condición para responder en el Grupo 2 (`isBuzonGroup`):
+     `const shouldRespond = (isBuzonGroup || isCirculoGroup) ? !isSingleCharacter : (isOfficialGroup && hasDirectMention);`
+     Si el evento traía una reacción de emoji (`reactionMessage`) o no era monosílabo ignorado, `shouldRespond` se evaluaba en `true`, derivando el evento a `handleDirectGroupQuestion` y de allí a `processConsultingMessage`.
+3. **Causa del Mensaje Específico ("Disculpa la pequeña demora, estuve recalibrando mis motores...")**:
+   - Al llamarse `processConsultingMessage` con el nombre de Martha Stella y un texto vacío/insignificante, se invocó la API de Google Gemini.
+   - En ese instante exacto (comprobado en los logs de PM2: `[processConsultingMessage Error]: Request failed with status code 429`), las claves de Gemini se encontraban en pausa momentánea por límite de cuota (15 RPM).
+   - Al fallar la llamada a la IA, la ejecución saltó al bloque `catch (error: any)` de `processConsultingMessage` en `server/_core/janIA.ts` (L6168).
+   - Como el texto no contenía palabras clave de contratos o avalúos, se activó la plantilla de contingencia `genericFallback` con el nombre `${firstName}` extraído del remitente ("Martha Stella"), enviando el mensaje al grupo a las 19:41.
+
+### Acciones Ejecutadas
+1. **Filtro de Stubs y Paquetes de Protocolo en Baileys (`server/_core/whatsapp-match.ts`)**:
+   - Agregado descarte inmediato de cualquier mensaje con `(msg as any).messageStubType` al inicio de `messages.upsert` (cambios de código de seguridad, cambios de número, llamadas, miembros agregados/eliminados, etc.).
+   - Agregado descarte estricto de mensajes de protocolo de cifrado: `protocolMessage`, `senderKeyDistributionMessage`, `e2eNotificationMessage`, `keyTransparency`.
+   - Agregado filtro de descarte automático para cualquier mensaje sin cuerpo de texto real y sin contenido multimedia (`if (!body.trim() && !hasRawMedia) continue;`).
+2. **Blindaje de Grupos Conversacionales (`server/_core/whatsapp-match.ts`)**:
+   - En el Grupo 2 (Soporte Legal) y Grupo 3 (Círculo Cero), JanIA ahora exige que el mensaje contenga una **consulta o pregunta sustancial**:
+     `const hasMeaningfulQuery = (textClean.length >= 4 && !isShortCourtesy && !isReactionMessage) || hasRawMedia;`
+   - Se bloquea completamente que simples reacciones de emoji (`isReactionMessage = true`) activen respuestas de JanIA como si fueran consultas inmobiliarias.
+3. **Protección de Fallback en Cerebro Consultor (`server/_core/janIA.ts`)**:
+   - En `processConsultingMessage`: Validación de longitud mínima (`cleanText.length < 3 && !isMediaOrAudio`) retornando respuesta vacía silenciosa sin llamar a Gemini ni emitir mensajes.
+   - En el bloque `catch (error: any)` de `processConsultingMessage`: Blindaje explícito para que el `genericFallback` de recalibración de motores **jamás se emita** si la entrada era vacía o insignificante (`cleanLower.length < 3 && !hasMediaInCatch`).
+4. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+   - Añadida la **Sección 17**: *"Blindaje contra Mensajes de Protocolo, Reacciones y Stubs de Sistema en Grupos Conversacionales (v31.96)"*.
+   - Prueba unitaria validando que textos vacíos, emojis y espacios en blanco en `processConsultingMessage` son silenciados al 100%.
+   - **94/94 tests Vitest pasando al 100%**.
+   - **`tsc --noEmit` limpio con 0 errores**.
+   - **`npm run build` completado limpiamente**.
+5. **Incremento de Versión Oficial**:
+   - Actualizado `shared/const.ts` a `v31.96`.
+   - Actualizado `package.json` a `31.96.0`.
+
+---
+
 ## 📋 SESIÓN v31.95 — 25 Septiembre 2026
 
 ### Solicitud de Eduardo
