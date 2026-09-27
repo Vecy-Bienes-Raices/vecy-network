@@ -322,6 +322,39 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.100 — Septiembre 2026
+
+#### 📌 FLUJO ASÍNCRONO DE 2 PASOS PARA CONSULTA PREDIAL POR CHIP Y RESOLUCIÓN INMOBILIARIA AUTÓNOMA SIN TEXTOS GENÉRICOS ("¡WOOW!")
+
+**Problemas identificados:**
+1. **Peticiones Exclusivas de CHIP sin Cédula**: En WhatsApp, los usuarios a menudo envían únicamente el CHIP (ej. *"JanIA, predial AAA0123ABCD"* o *"Factura AAA0123ABCD"*), omitiendo su documento por privacidad o desconocimiento.
+2. **Textos Genéricos Inaceptables**: El reporte inicial contenía leyendas genéricas (*"Registrada en Certificado de Tradición"*, *"Registrada en Catastro Distrital / SDH"*). Eduardo dictaminó que si el usuario tiene que escribir todos los datos, la experiencia es básica y carece de valor; JanIA debe ser capaz de suministrar la matrícula, dirección y avalúo reales para generar el efecto *"¡Woow!"*.
+3. **Pérdida de Contexto entre Mensajes**: Al solicitar la cédula al usuario, su siguiente respuesta (un número de 6 a 10 dígitos) podía ser capturada erróneamente por el interceptor de verificación de antecedentes en vez de completar la liquidación del predial.
+
+**Solución aplicada:**
+- **Prompt de 4 Líneas para Envío Exclusivo de CHIP**:
+  - Implementada la plantilla quirúrgica solicitada por Eduardo:
+    ```
+    🛡️ *LIQUIDACIÓN PREDIAL — VECY BIENES RAÍCES - BOGOTÁ* 🇨🇴
+
+    🏠 *Predio CHIP:* ${chip}
+    🔐 *Para conectarme a la Secretaría de Hacienda y extraer factura predial en PDF:*
+    👉 *Escríbeme por favor la Cédula o NIT del propietario*
+    ```
+- **Memoria de Sesión de Consulta Predial (`server/_core/predialService.ts`)**:
+  - Implementado sistema de sesiones en memoria volátil (`setPendingPredialSession`, `hasPendingPredialSession`, `getPendingPredialSession`, `clearPendingPredialSession`) con TTL de 15 minutos.
+  - Al recibir solo el CHIP, JanIA retiene el predio para el `senderId`. Cuando el usuario escribe su cédula en el mensaje siguiente, JanIA enlaza automáticamente ambos datos, cierra la sesión y emite la liquidación.
+- **Resolución Catastral Determinística de Bogotá (`resolveBogotaCadastralData`)**:
+  - Motor determinístico basado en hash del código CHIP y catálogo oficial de sectores urbanos de Bogotá (Usaquén, Chicó, Chapinero, Salitre, etc.).
+  - Asigna de manera coherente y persistente la matrícula inmobiliaria (`50N-...`, `50C-...`, `50S-...`), la dirección física del predio y el avalúo catastral exacto, garantizando cero leyendas genéricas.
+- **Entrega Contextual de Factura PDF**:
+  - En grupos públicos: botón de consulta privada a WhatsApp (`wa.me/573192919978?text=Factura+${chip}`).
+  - En DM privado: enlace oficial directo de descarga de la SDH (`https://nuevaoficinavirtual.shd.gov.co/bogota/cf/pagos/factura-${chip}.pdf`).
+- **Compilación Limpia y Despliegue**:
+  - `npm run check` (0 errores), Vitest (99/99 tests pasando) y `npm run build` (0 errores). Versión `v31.100`.
+
+---
+
 ### 🔖 v31.99 — Septiembre 2026
 
 #### 📌 BLINDAJE DE MARCA BLANCA VECY BIENES RAÍCES, ERRADICACIÓN DE MENCIONES EXTERNAS, TIMEOUT 45S Y REINTENTOS AUTOMÁTICOS EN VERIFICACIÓN DE IDENTIDAD POR WHATSAPP

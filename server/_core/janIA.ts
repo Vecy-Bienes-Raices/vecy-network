@@ -5998,7 +5998,7 @@ export async function processConsultingMessage(
 
     // 🏛️ INTERCEPTOR DIRECTO 2: ASISTENCIA Y GESTIÓN DE PREDIALES BOGOTÁ (CHIP + CÉDULA)
     const { executePredialAssistanceFromWhatsApp } = await import('./predialService');
-    const predialCheck = await executePredialAssistanceFromWhatsApp(messageToProcess);
+    const predialCheck = await executePredialAssistanceFromWhatsApp(messageToProcess, userId, false);
     if (predialCheck.isPredialRequest && predialCheck.reportText) {
       console.log(`[JanIA-PredialCheck] Asistencia de predial Bogotá ejecutada para ${userId} (CHIP: ${predialCheck.chip || 'General'}): isPredialRequest=true`);
       return {
@@ -6267,7 +6267,7 @@ export async function processCirculoMessage(
 
     // 🏛️ INTERCEPTOR DIRECTO 2: ASISTENCIA Y GESTIÓN DE PREDIALES BOGOTÁ (CHIP + CÉDULA)
     const { executePredialAssistanceFromWhatsApp } = await import('./predialService');
-    const predialCheck = await executePredialAssistanceFromWhatsApp(text);
+    const predialCheck = await executePredialAssistanceFromWhatsApp(text, userId, false);
     if (predialCheck.isPredialRequest && predialCheck.reportText) {
       console.log(`[JanIA-Circulo-PredialCheck] Asistencia de predial Bogotá ejecutada para ${userId} (CHIP: ${predialCheck.chip || 'General'}): isPredialRequest=true`);
       return {

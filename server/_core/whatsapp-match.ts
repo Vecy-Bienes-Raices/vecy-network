@@ -975,6 +975,18 @@ export class JaniaMatchBot {
       return;
     }
 
+    // 🏛️ INTERCEPTOR PRIORITARIO DM: COMPLETAR SESIÓN PENDIENTE PREDIAL BOGOTÁ (CÉDULA / NIT)
+    const { hasPendingPredialSession, executePredialAssistanceFromWhatsApp } = await import('./predialService');
+    if (senderId && hasPendingPredialSession(senderId)) {
+      const predialPendingCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
+      if (predialPendingCheck.isPredialRequest && predialPendingCheck.reportText) {
+        console.log(`[JANIA-MATCH] [DM] Asistencia de predial completada con cédula para ${senderId} (CHIP ${predialPendingCheck.chip})`);
+        await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+        await this.logToDb(senderId, 'janIA', predialPendingCheck.reportText);
+        return;
+      }
+    }
+
     // 🛡️ INTERCEPTOR DIRECTO DM: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
     const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
     const idCheck = await executeIdentityVerificationFromWhatsApp(body, true);
@@ -986,8 +998,7 @@ export class JaniaMatchBot {
     }
 
     // 🏛️ INTERCEPTOR DIRECTO DM: ASISTENCIA PREDIAL BOGOTÁ (CHIP + CÉDULA)
-    const { executePredialAssistanceFromWhatsApp } = await import('./predialService');
-    const predialCheck = await executePredialAssistanceFromWhatsApp(body);
+    const predialCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
     if (predialCheck.isPredialRequest && predialCheck.reportText) {
       console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || 'General'})`);
       await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
@@ -2004,7 +2015,7 @@ export class JaniaMatchBot {
 
       // 🏛️ INTERCEPTOR ADMIN: ASISTENCIA PREDIAL BOGOTÁ (CHIP + CÉDULA)
       const { executePredialAssistanceFromWhatsApp } = await import('./predialService');
-      const predialCheck = await executePredialAssistanceFromWhatsApp(bodyText);
+      const predialCheck = await executePredialAssistanceFromWhatsApp(bodyText, senderId, true);
       if (predialCheck.isPredialRequest && predialCheck.reportText) {
         await this.queuedSend(senderId, predialCheck.reportText, { quoted: msg, allowDirectMessage: true });
         await this.logToDb(senderId, 'janIA', predialCheck.reportText);

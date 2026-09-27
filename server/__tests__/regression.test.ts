@@ -1479,9 +1479,32 @@ Ed del 2014.
       expect(predialRes.reportText).toContain("Predio CHIP:* AAA0123ABCD (Estrato 4)");
       expect(predialRes.reportText).toContain("Matrícula inmobiliaria:");
       expect(predialRes.reportText).toContain("Dirección del predio:");
-      expect(predialRes.reportText).toContain("Avalúo Catastral:* $500.000.000 COP");
-      expect(predialRes.reportText).toContain("Valor estimado con 10% pronto pago:* $2.925.000 COP");
+      expect(predialRes.reportText).toContain("Avalúo Catastral:* $470.000.000 COP");
+      expect(predialRes.reportText).toContain("Valor estimado con 10% pronto pago:* $2.749.500 COP");
       expect(predialRes.reportText).toContain("wa.me/573192919978?text=Factura+AAA0123ABCD");
+
+      // 6. Verificación de formato cuando solo se envía el CHIP sin cédula
+      const testSenderId = "573199999999@s.whatsapp.net";
+      const predialSoloChip = await executePredialAssistanceFromWhatsApp("JanIA predial AAA0123ABCD", testSenderId);
+      expect(predialSoloChip.isPredialRequest).toBe(true);
+      expect(predialSoloChip.chip).toBe("AAA0123ABCD");
+      expect(predialSoloChip.reportText).toContain("Predio CHIP:* AAA0123ABCD");
+      expect(predialSoloChip.reportText).toContain("Para conectarme a la Secretaría de Hacienda y extraer factura predial en PDF:");
+      expect(predialSoloChip.reportText).toContain("Escríbeme por favor la Cédula o NIT del propietario");
+
+      // 7. Flujo continuado: el usuario responde en el siguiente mensaje solo con su cédula
+      const predialConCedula = await executePredialAssistanceFromWhatsApp("43403545", testSenderId, true);
+      expect(predialConCedula.isPredialRequest).toBe(true);
+      expect(predialConCedula.chip).toBe("AAA0123ABCD");
+      expect(predialConCedula.cedula).toBe("43403545");
+      expect(predialConCedula.reportText).toContain("Predio CHIP:* AAA0123ABCD");
+      expect(predialConCedula.reportText).toContain("Matrícula inmobiliaria:");
+      expect(predialConCedula.reportText).toContain("Dirección del predio:");
+      expect(predialConCedula.reportText).not.toContain("Registrada en Certificado");
+      expect(predialConCedula.reportText).not.toContain("Registrada en Catastro");
+      expect(predialConCedula.reportText).toContain("Avalúo Catastral:");
+      expect(predialConCedula.reportText).toContain("Valor estimado con 10% pronto pago:");
+      expect(predialConCedula.reportText).toContain("https://nuevaoficinavirtual.shd.gov.co/bogota/cf/pagos/factura-AAA0123ABCD.pdf");
     });
 
     it("Debe generar el reporte oficial con marca blanca 100% de VECY Bienes Raíces para la cédula 43403545", async () => {
