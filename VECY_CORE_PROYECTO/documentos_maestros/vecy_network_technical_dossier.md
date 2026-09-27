@@ -322,6 +322,30 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.107 — Septiembre 2026
+
+#### 📌 REGLA DOCTRINAL DE PISO FINANCIERO DEL 90 AL 95% PARA VENTA Y ARRIENDO
+
+**Problemas identificados:**
+1. **Piso Financiero del 70% Excesivamente Amplio para Inmuebles de Alto Valor**: La tolerancia previa del 70% (`budgetMax * 0.70`) permitía que un comprador con presupuesto de $1.700 MM recibiera ofertas de hasta $1.190 MM (un desfase de más de $510 MM). En los estratos altos de Colombia (5 y 6), un comprador de $1.700 MM jamás busca un inmueble de $1.190 MM, pues la diferencia de acabados, antigüedad del edificio y comodidades es radical. La negociación comercial estándar se sitúa entre el 5% y el 10% de descuento.
+2. **Desproporción Análoga en Cánones de Arriendo**: Un arrendatario con presupuesto de $10.000.000 COP no busca apartamentos de $7.000.000 COP (70%); el estándar de habitabilidad esperado exige un piso mínimo del 90% ($9.000.000 COP).
+3. **Persistencia de Matches Antiguos en Base de Datos**: En la base de datos de producción persistían 67 matches sugeridos antiguos generados con criterios anteriores que estaban entre el 50% y el 88% del presupuesto.
+
+**Solución aplicada:**
+- **Piso Infranqueable del 90% al 95% (`shared/colombianRealEstateParser.ts`)**:
+  - `checkFinancialSegmentCoherence`: `floorRatio` elevado a `0.90` tanto para compras como para arriendos.
+- **Guillotinas de Segmento y Puntuación Doctrinal (`server/_core/matching.ts`)**:
+  - Guillotina en Venta: Si el precio es menor al 90% del presupuesto máximo (`salePrice < budgetMax * 0.90`), colapsa inmediatamente a **Score 0% Match (Guillotina de Segmento Financiero)**.
+  - Guillotina en Arriendo: Si el canon total es menor al 90% del canon presupuestado (`totalRent < budgetMax * 0.90`), colapsa inmediatamente a **Score 0% Match (Guillotina de Segmento Financiero)**.
+  - Puntuación graduada: 95% a 100% $\rightarrow$ 15 puntos plenos (`Presupuesto óptimo`), 90% a 94.9% $\rightarrow$ 12 puntos (`Oportunidad favorable`), < 90% $\rightarrow$ Bloqueo 0%.
+- **Remediación en Base de Datos VPS PostgreSQL (`vecy_network`)**:
+  - 67 matches sugeridos por debajo del 90% del presupuesto marcados con `status = 'rejected'` e inscritos en `match_feedback` con veto inmutable.
+  - Matches activos sugeridos reducidos a 44 registros de máxima afinidad y pureza.
+- **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+  - Añadida Sección 26 con pruebas de venta ($1.700 MM) y arriendo ($10.000.000 COP), con **122/122 tests Vitest pasando** ✅.
+
+---
+
 ### 🔖 v31.106 — Septiembre 2026
 
 #### 📌 CORRECCIÓN DE MODAL DE DESCARTE, ELIMINACIÓN DE BUCLES DE REMATCH, CLASIFICACIÓN ESTRICTA DE ARRIENDOS Y GUILLOTINA DE DEMANDA MEDIOCRE

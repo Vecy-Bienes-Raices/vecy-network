@@ -286,9 +286,9 @@ export function calculateCvpVector15DMatch(requirement: any, property: any): { c
   vReq[13] = (reqText.includes("silencioso") || reqText.includes("tranquilo")) ? 1 : 0;
   vProp[13] = (!propText.includes("ruidoso") && !propText.includes("via principal")) ? 1 : 0;
 
-  // 15. Coherencia Financiera (Piso y Techo de Presupuesto Doctrina v31.105)
+  // 15. Coherencia Financiera (Piso y Techo de Presupuesto Doctrina v31.107 del 90 al 95%)
   vReq[14] = 1;
-  vProp[14] = (reqMax > 0 && propPrice > 0 && propPrice >= reqMax * 0.70 && propPrice <= reqMax) ? 1 : 0.8;
+  vProp[14] = (reqMax > 0 && propPrice > 0 && propPrice >= reqMax * 0.90 && propPrice <= reqMax) ? 1 : 0.8;
 
   // Distancia Euclídea de CVP
   let sumSq = 0;
@@ -2531,10 +2531,10 @@ export function explicarMatch(
         return buildExplanationResult(0, blockers, positives, negatives);
       }
 
-      // 🛡️ REGLA DOCTRINAL v31.105: Guillotina de Piso Financiero en Arriendo (Doctrina Eduardo)
-      const lowerRentLimit = budgetMin > 0 ? (budgetMin * 0.90) : (budgetMax * 0.70);
+      // 🛡️ REGLA DOCTRINAL v31.107: Guillotina de Piso Financiero en Arriendo (Doctrina Eduardo del 90 al 95%)
+      const lowerRentLimit = budgetMin > 0 ? (budgetMin * 0.90) : (budgetMax * 0.90);
       if (totalRent < lowerRentLimit) {
-        blockers.push(`Guillotina de Segmento Financiero (Piso Financiero): Canon de arriendo total ($${totalRent.toLocaleString()}) está por debajo del segmento solicitado (piso mínimo admisible $${lowerRentLimit.toLocaleString()} COP, 70% del canon). Match inviable (0%).`);
+        blockers.push(`Guillotina de Segmento Financiero (Piso Financiero): Canon de arriendo total ($${totalRent.toLocaleString()}) está por debajo del segmento solicitado (piso mínimo admisible $${lowerRentLimit.toLocaleString()} COP, 90% del canon). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
 
@@ -2571,11 +2571,11 @@ export function explicarMatch(
         return buildExplanationResult(0, blockers, positives, negatives);
       }
 
-      // 🛡️ REGLA DOCTRINAL v31.105: Guillotina de Piso Financiero en Venta (Doctrina Eduardo)
-      // Si la demanda busca $1.700 MM, una oferta no puede ser casi a la mitad ($850 MM). Debe reflejar un precio cercano (Piso mínimo 70%).
-      const lowerSaleLimit = budgetMin > 0 ? (budgetMin * 0.90) : (budgetMax * 0.70);
+      // 🛡️ REGLA DOCTRINAL v31.107: Guillotina de Piso Financiero en Venta (Doctrina Eduardo del 90 al 95%)
+      // Si la demanda busca $1.700 MM, ninguna propiedad por debajo de $1.530 MM (90%) puede hacer match (0% Match).
+      const lowerSaleLimit = budgetMin > 0 ? (budgetMin * 0.90) : (budgetMax * 0.90);
       if (salePrice < lowerSaleLimit) {
-        blockers.push(`Guillotina de Segmento Financiero (Piso Financiero): El precio del inmueble ($${salePrice.toLocaleString()} COP) está por debajo del segmento solicitado (piso mínimo admisible $${lowerSaleLimit.toLocaleString()} COP, 70% del presupuesto). Match inviable (0%).`);
+        blockers.push(`Guillotina de Segmento Financiero (Piso Financiero): El precio del inmueble ($${salePrice.toLocaleString()} COP) está por debajo del segmento solicitado (piso mínimo admisible $${lowerSaleLimit.toLocaleString()} COP, 90% del presupuesto). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
 
@@ -3241,19 +3241,16 @@ export function explicarMatch(
         }
       } else {
         const ratio = effectivePrice / budgetMax;
-        if (ratio >= 0.85 && ratio <= 1.0) {
+        if (ratio >= 0.95 && ratio <= 1.0) {
           earnedPoints += 15;
-          positives.push(`💰 Presupuesto óptimo: precio $${effectivePrice.toLocaleString()} coincide con el segmento buscado ($${budgetMax.toLocaleString()})`);
-        } else if (ratio >= 0.75 && ratio < 0.85) {
+          positives.push(`💰 Presupuesto óptimo (95-100%): precio $${effectivePrice.toLocaleString()} coincide plenamente con el segmento buscado ($${budgetMax.toLocaleString()})`);
+        } else if (ratio >= 0.90 && ratio < 0.95) {
           earnedPoints += 12;
-          positives.push(`💰 Oportunidad favorable: precio $${effectivePrice.toLocaleString()} (${Math.round(ratio * 100)}% del presupuesto máx $${budgetMax.toLocaleString()})`);
-        } else if (ratio >= 0.70 && ratio < 0.75) {
-          earnedPoints += 9;
-          positives.push(`💰 Oportunidad en límite de piso: precio $${effectivePrice.toLocaleString()} (${Math.round(ratio * 100)}% del presupuesto máx $${budgetMax.toLocaleString()})`);
+          positives.push(`💰 Oportunidad favorable (90-95%): precio $${effectivePrice.toLocaleString()} (${Math.round(ratio * 100)}% del presupuesto máx $${budgetMax.toLocaleString()})`);
         } else if (effectivePrice <= budgetMax * 1.01) {
           earnedPoints += 13;
         } else {
-          negatives.push(`Precio $${effectivePrice.toLocaleString()} supera presupuesto $${budgetMax.toLocaleString()}`);
+          negatives.push(`Precio $${effectivePrice.toLocaleString()} fuera del rango de presupuesto admisible (piso 90% = $${Math.round(budgetMax * 0.90).toLocaleString()})`);
         }
       }
     } else {

@@ -165,7 +165,31 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v31.106 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.107 — Septiembre 2026
+
+### Novedades v31.107 (Regla Doctrinal de Piso Financiero del 90 al 95% para Venta y Arriendo):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo dictaminó sustituir el piso del 70% por una banda estricta del 90% al 95%:
+    *"Y qué tal si cambias esto: Se fijó como piso infranqueable el 70% del presupuesto máximo (budgetMax * 0.70). Para $1.700 MM, ninguna propiedad por debajo de $1.190 MM puede hacer match (0% Match). Por esto: Se fijó como piso infranqueable del 90 al 95% del presupuesto máximo (budgetMax * minimo 0.95/ máximo 0.90). Para $1.700 MM, ninguna propiedad por debajo de $1.615/1.530MM puede hacer match (0% Match). NOTA: Igualmente para arriendos"*
+- **Causas Raíz y Rigor de Mercado**:
+  1. En los segmentos altos de Bogotá (Estratos 5 y 6), un comprador con presupuesto de $1.700 MM no busca inmuebles de $1.190 MM (piso 70%), pues pertenecen a gamas, metrajes o estados de conservación disonantes. La tolerancia máxima razonable de negociación es del 10% ($1.530 MM a $1.700 MM).
+  2. Igual principio rige los arriendos: un cliente con canon de $10.000.000 COP no acepta inmuebles de $7.000.000 COP; el piso mínimo admisible es $9.000.000 COP.
+- **Acciones Ejecutadas en Código**:
+  1. **Coherencia de Segmento Financiero (`shared/colombianRealEstateParser.ts`)**:
+     - `checkFinancialSegmentCoherence` ajusta `floorRatio = 0.90` (piso del 90% sobre presupuesto máximo, o 90% sobre mínimo en rangos).
+  2. **Motor de Matching y Guillotinas Doctrinales (`server/_core/matching.ts`)**:
+     - Filtro Duro en Venta: ofertas con precio `< budgetMax * 0.90` reciben **0% Match (Guillotina de Segmento Financiero)**.
+     - Filtro Duro en Arriendo: ofertas con canon `< budgetMax * 0.90` reciben **0% Match (Guillotina de Segmento Financiero)**.
+     - Puntuación de presupuesto: 95-100% $\rightarrow$ 15 pts (Óptimo), 90-94.9% $\rightarrow$ 12 pts (Favorable), < 90% $\rightarrow$ Bloqueo 0%.
+  3. **Remediación en Base de Datos VPS PostgreSQL (`vecy_network`)**:
+     - Purgados y descartados masivamente 67 matches antiguos sugeridos que estaban por debajo del 90% del presupuesto.
+     - Insertados 67 registros en `match_feedback` con veto perpetuo y `status = 'rejected'` en `"propertyMatches"`.
+     - Matches sugeridos activos depurados a 44 registros de estricta compatibilidad.
+  4. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+     - Añadida Sección 26 con pruebas completas de venta y arriendo (**122/122 tests Vitest pasando** ✅).
+- **Verificación**: 122/122 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.106 — Septiembre 2026
 
 ### Novedades v31.106 (Corrección de Modal de Descarte, Eliminación de Bucles de Rematch, Clasificación Estricta de Arriendos y Guillotina de Demanda Mediocre):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

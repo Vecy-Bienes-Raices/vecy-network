@@ -7,6 +7,42 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.107 — 27 Septiembre 2026
+
+### Solicitud de Eduardo
+Regla Doctrinal de Piso Financiero del 90 al 95% para Venta y Arriendo:
+*"Y qué tal si cambias esto: Se fijó como piso infranqueable el 70% del presupuesto máximo (budgetMax * 0.70). Para $1.700 MM, ninguna propiedad por debajo de $1.190 MM puede hacer match (0% Match).
+Por esto: Se fijó como piso infranqueable del 90 al 95% del presupuesto máximo (budgetMax * minimo 0.95/ máximo 0.90). Para $1.700 MM, ninguna propiedad por debajo de $1.615/1.530MM puede hacer match (0% Match).
+NOTA: Igualmente para arriendos"*
+
+### Diagnóstico Técnico Profundo y Conclusiones de Arquitectura
+1. **Elevación Doctrinal de Rigor Comercial en Segmento Financiero**:
+   - En el corretaje inmobiliario colombiano (estratos 5 y 6), la tolerancia histórica del 70% permitía una brecha de hasta el 30% a la baja ($1.190 MM para una demanda de $1.700 MM), admitiendo inmuebles con especificaciones de acabados, metrajes o dotación notoriamente ajenas al estándar esperado por el demandante.
+   - Eduardo dictaminó sustituir el piso del 70% por una banda estricta del **90% al 95% del presupuesto máximo** (`budgetMax * 0.90` / `budgetMax * 0.95`).
+   - Para un comprador de $1.700 MM, ninguna propiedad por debajo de $1.530 MM (90%) puede calificar (0% Match). La ventana admisible cubre únicamente del 90% al 100% ($1.530 MM a $1.700 MM), permitiendo un margen de negociación natural del 5% al 10%.
+   - Aplica con idéntico rigor matemático a canones de arriendo: para un presupuesto de $10.000.000 COP, ninguna propiedad por debajo de $9.000.000 COP (90%) puede calificar.
+
+### Acciones Ejecutadas en Código
+1. **Regla de Coherencia de Segmento Financiero (`shared/colombianRealEstateParser.ts`)**:
+   - `checkFinancialSegmentCoherence`: `floorRatio` elevado a `0.90` tanto para ventas como para arriendos.
+   - Mensajes de desproporción comercial actualizados al 90% para orientar al bróker con precisión.
+2. **Motor de Matching y Guillotinas Doctrinales (`server/_core/matching.ts`)**:
+   - **Guillotina de Segmento Financiero en Arriendo**: `lowerRentLimit` actualizado a `budgetMax * 0.90` (o `budgetMin * 0.90` en rangos explícitos). Bloqueo instantáneo al 0% Match.
+   - **Guillotina de Segmento Financiero en Venta**: `lowerSaleLimit` actualizado a `budgetMax * 0.90` (o `budgetMin * 0.90` en rangos explícitos). Bloqueo instantáneo al 0% Match.
+   - **Puntuación Graduada Doctrinal**:
+     - Ratio entre 95% y 100%: 15 puntos plenos (`💰 Presupuesto óptimo (95-100%)`).
+     - Ratio entre 90% y 94.9%: 12 puntos (`💰 Oportunidad favorable (90-95%)`).
+     - Ratio < 90%: 0% Match (Guillotina de Segmento Financiero antes de puntuación).
+3. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+   - Añadida **Sección 26**: 2 pruebas doctrinales exhaustivas con casos de $1.700 MM en venta ($1.615M aprobado 15pts, $1.550M aprobado 12pts, $1.500M/1.190M bloqueados 0%) y $10.000.000 COP en arriendo ($9.5M aprobado 15pts, $9.1M aprobado 12pts, $8.5M bloqueado 0%).
+   - Total suite: **122/122 tests pasando sin fallos** ✅.
+4. **Remediación en Base de Datos VPS PostgreSQL (`vecy_network`)**:
+   - Purga y descarte masivo de 67 matches antiguos sugeridos que estaban por debajo del 90% del presupuesto de sus demandas.
+   - Insertados 67 registros en `match_feedback` con veto inmutable y `status = 'rejected'` en `"propertyMatches"`.
+   - Matches sugeridos activos depurados a 44 registros de máxima pureza comercial.
+
+---
+
 ## 📋 SESIÓN v31.106 — 27 Septiembre 2026
 
 ### Solicitud de Eduardo

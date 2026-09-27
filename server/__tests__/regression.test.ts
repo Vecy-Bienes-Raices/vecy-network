@@ -972,14 +972,23 @@ Disponible para finales de nov.`;
       });
       expect(resultSale2.isCompatible).toBe(false);
 
-      // Si el precio estuviera dentro del rango razonable (>= 70% del presupuesto)
+      // Si el precio estuviera dentro del rango razonable (>= 90% del presupuesto, ej: $1.100M vs $1.200M = 91.6%)
       const resultNormal = checkFinancialSegmentCoherence({
         budgetMax: 1_200_000_000,
-        offeredPrice: 850_000_000, // 850 / 1200 = 70.83%
+        offeredPrice: 1_100_000_000, // 1100 / 1200 = 91.67%
         offeredArea: 90,
         isSale: true
       });
       expect(resultNormal.isCompatible).toBe(true);
+
+      // Si el precio estuviera por debajo del 90% (ej: $1.000M vs $1.200M = 83.3%) debe colapsar
+      const resultBajo90 = checkFinancialSegmentCoherence({
+        budgetMax: 1_200_000_000,
+        offeredPrice: 1_000_000_000, // 1000 / 1200 = 83.33% < 90%
+        offeredArea: 90,
+        isSale: true
+      });
+      expect(resultBajo90.isCompatible).toBe(false);
     });
 
     it("explicarMatch: Caso Pedro D vs Apto $630M Ed Automatizado debe colapsar a Score 0% por Desproporción de Segmento", () => {
@@ -1113,9 +1122,9 @@ Ed del 2014.
         tipoNegocioDeseado: "venta",
         ciudadDeseada: "Bogotá",
         zonaDeseada: "Santa Paula",
-        presupuestoMax: 1_500_000_000,
+        presupuestoMax: 1_400_000_000,
         habitacionesMin: 3,
-        rawText: "Busco apartamento en Santa Paula con terraza de al menos 50 m², 3 habitaciones, presupuesto $1.500M"
+        rawText: "Busco apartamento en Santa Paula con terraza de al menos 50 m², 3 habitaciones, presupuesto $1.400M"
       };
 
       const propConTerraza72 = {
@@ -1126,12 +1135,12 @@ Ed del 2014.
         zone: "Santa Paula",
         addressNeighborhood: "Santa Paula",
         barrio: "Santa Paula",
-        price: 1_290_000_000,
+        price: 1_350_000_000,
         areaTotal: 138,
         bedrooms: 3,
         bathrooms: 3,
         garages: 2,
-        rawText: "VENDO SANTA PAULA 138M2 +72 TERRAZA $1.290.MLL 3 HABITACIONES 3 BAÑOS HERMOSA TERRAZA DE 72M2"
+        rawText: "VENDO SANTA PAULA 138M2 +72 TERRAZA $1.350.MLL 3 HABITACIONES 3 BAÑOS HERMOSA TERRAZA DE 72M2"
       };
 
       const result = explicarMatch(reqConTerraza50, propConTerraza72);
@@ -1147,9 +1156,9 @@ Ed del 2014.
         tipoNegocioDeseado: "venta",
         ciudadDeseada: "Bogotá",
         zonaDeseada: "Santa Paula",
-        presupuestoMax: 1_500_000_000,
+        presupuestoMax: 1_400_000_000,
         habitacionesMin: 3,
-        rawText: "Busco apartamento en Santa Paula con terraza de al menos 50 m², 3 habitaciones"
+        rawText: "Busco apartamento en Santa Paula con terraza de al menos 50 m², 3 habitaciones, presupuesto $1.400M"
       };
 
       const propConTerraza20 = {
@@ -1160,12 +1169,12 @@ Ed del 2014.
         zone: "Santa Paula",
         addressNeighborhood: "Santa Paula",
         barrio: "Santa Paula",
-        price: 1_200_000_000,
+        price: 1_350_000_000,
         areaTotal: 120,
         bedrooms: 3,
         bathrooms: 3,
         garages: 2,
-        rawText: "VENDO APTO SANTA PAULA 120M2 + 20M2 TERRAZA $1.200.MLL 3 HABITACIONES"
+        rawText: "VENDO APTO SANTA PAULA 120M2 + 20M2 TERRAZA $1.350.MLL 3 HABITACIONES"
       };
 
       const result = explicarMatch(reqConTerraza50, propConTerraza20);
@@ -1857,7 +1866,7 @@ Adriana Rebeca Orejuela`;
         id: 2929,
         propertyType: "apartment",
         transactionType: "venta",
-        price: 1050000000,
+        price: 1250000000,
         areaTotal: 125,
         bedrooms: 3,
         bathrooms: 3,
@@ -1866,7 +1875,7 @@ Adriana Rebeca Orejuela`;
         zone: "Santa Paula",
         addressNeighborhood: "Santa Paula",
         addressCity: "Bogotá",
-        rawText: "Vendo 3h Santa Paula. 125 mts2. 3 habitaciones. 2.5 baños. 2 parqueaderos en línea. Precio venta $1.050.000 mm. Precio administración $1.800.000 (precio con descuento)"
+        rawText: "Vendo 3h Santa Paula. 125 mts2. 3 habitaciones. 2.5 baños. 2 parqueaderos en línea. Precio venta $1.250.000 mm. Precio administración $1.800.000 (precio con descuento)"
       };
 
       const resultado = explicarMatch(reqAdminBaja, propAdminCara);
@@ -2134,6 +2143,178 @@ Adriana Rebeca Orejuela`;
       const res = explicarMatch(reqArriendo, propVenta);
       expect(res.score).toBe(0);
       expect(res.blockers.some(b => b.includes("Incompatibilidad de negocio") || b.includes("arriendo vs venta"))).toBe(true);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // 26. REGLA DOCTRINAL DE PISO FINANCIERO DEL 90 AL 95% (DOCTRINA EDUARDO v31.107)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  describe("26. Regla Doctrinal de Piso Financiero del 90 al 95% para Venta y Arriendo (v31.107)", () => {
+    it("Venta: Presupuesto $1.700 MM acepta oferta de $1.615 MM (95%) y $1.550 MM (>90%), pero bloquea < $1.530 MM (0% Match)", () => {
+      const req1700MM = {
+        id: 1901,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "venta",
+        presupuestoMax: 1700000000,
+        habitacionesMin: 3,
+        banosMin: 2,
+        garajesMin: 2,
+        areaMin: 120,
+        zonaDeseada: "El Nogal",
+        addressNeighborhood: "El Nogal",
+        addressCity: "Bogotá",
+        rawText: "Busco apartamento en El Nogal 3 habitaciones 2 baños 2 garajes presupuesto $1.700 MM"
+      };
+
+      // 1. Oferta de $1.615 MM (exactamente 95% de 1.700 MM) -> Confort óptimo (15 pts) y match exitoso
+      const prop1615MM = {
+        id: 2901,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 1615000000,
+        areaTotal: 130,
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        zone: "El Nogal",
+        addressNeighborhood: "El Nogal",
+        addressCity: "Bogotá",
+        rawText: "VENDO APARTAMENTO EL NOGAL 130M2 3 HABITACIONES 3 BAÑOS 2 GARAJES $1.615 MILLONES"
+      };
+      const res1615 = explicarMatch(req1700MM, prop1615MM);
+      expect(res1615.score).toBeGreaterThanOrEqual(85);
+      expect(res1615.positives.some(p => p.includes("Presupuesto óptimo (95-100%)"))).toBe(true);
+
+      // 2. Oferta de $1.550 MM (91.18% > 90% de 1.700 MM) -> Oportunidad favorable (12 pts) y match exitoso
+      const prop1550MM = {
+        id: 2902,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 1550000000,
+        areaTotal: 130,
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        zone: "El Nogal",
+        addressNeighborhood: "El Nogal",
+        addressCity: "Bogotá",
+        rawText: "VENDO APARTAMENTO EL NOGAL 130M2 3 HABITACIONES 3 BAÑOS 2 GARAJES $1.550 MILLONES"
+      };
+      const res1550 = explicarMatch(req1700MM, prop1550MM);
+      expect(res1550.score).toBeGreaterThanOrEqual(85);
+      expect(res1550.positives.some(p => p.includes("Oportunidad favorable (90-95%)"))).toBe(true);
+
+      // 3. Oferta de $1.500 MM (88.2% < 90% = $1.530 MM) -> Guillotina de Piso Financiero (0% Match)
+      const prop1500MM = {
+        id: 2903,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 1500000000,
+        areaTotal: 130,
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        zone: "El Nogal",
+        addressNeighborhood: "El Nogal",
+        addressCity: "Bogotá",
+        rawText: "VENDO APARTAMENTO EL NOGAL 130M2 3 HABITACIONES 3 BAÑOS 2 GARAJES $1.500 MILLONES"
+      };
+      const res1500 = explicarMatch(req1700MM, prop1500MM);
+      expect(res1500.score).toBe(0);
+      expect(res1500.blockers.some(b => b.includes("Guillotina de Segmento Financiero (Piso Financiero)") && b.includes("90% del presupuesto"))).toBe(true);
+
+      // 4. Oferta de $1.190 MM (70% del presupuesto, antes admitido) -> Ahora estrictamente bloqueado (0% Match)
+      const prop1190MM = {
+        id: 2904,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 1190000000,
+        areaTotal: 130,
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        zone: "El Nogal",
+        addressNeighborhood: "El Nogal",
+        addressCity: "Bogotá",
+        rawText: "VENDO APARTAMENTO EL NOGAL 130M2 3 HABITACIONES 3 BAÑOS 2 GARAJES $1.190 MILLONES"
+      };
+      const res1190 = explicarMatch(req1700MM, prop1190MM);
+      expect(res1190.score).toBe(0);
+      expect(res1190.blockers.some(b => b.includes("Guillotina de Segmento Financiero (Piso Financiero)"))).toBe(true);
+    });
+
+    it("Arriendo: Presupuesto $10.000.000 COP acepta canon de $9.5M (95%) y $9.1M (91%), pero bloquea < $9.0M (0% Match)", () => {
+      const reqArriendo10M = {
+        id: 1902,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "arriendo",
+        presupuestoMax: 10000000,
+        habitacionesMin: 3,
+        banosMin: 2,
+        garajesMin: 2,
+        areaMin: 100,
+        zonaDeseada: "Chicó Reservado",
+        addressNeighborhood: "Chicó Reservado",
+        addressCity: "Bogotá",
+        rawText: "Busco en arriendo apartamento en Chicó Reservado presupuesto $10.000.000 3 habitaciones 2 baños 2 garajes"
+      };
+
+      // 1. Canon de $9.500.000 COP (95%) -> Confort óptimo (15 pts) y match exitoso
+      const propArriendo95M = {
+        id: 2905,
+        propertyType: "apartment",
+        transactionType: "arriendo",
+        rentPrice: 9500000,
+        areaTotal: 110,
+        bedrooms: 3,
+        bathrooms: 2,
+        garages: 2,
+        zone: "Chicó Reservado",
+        addressNeighborhood: "Chicó Reservado",
+        addressCity: "Bogotá",
+        rawText: "ARRIENDO APTO CHICÓ RESERVADO 110M2 3 HABITACIONES 2 BAÑOS 2 GARAJES $9.500.000 INCLUIDA ADMON"
+      };
+      const res95M = explicarMatch(reqArriendo10M, propArriendo95M);
+      expect(res95M.score).toBeGreaterThanOrEqual(85);
+      expect(res95M.positives.some(p => p.includes("Presupuesto óptimo (95-100%)"))).toBe(true);
+
+      // 2. Canon de $9.100.000 COP (91% > 90%) -> Oportunidad favorable (12 pts) y match exitoso
+      const propArriendo91M = {
+        id: 2906,
+        propertyType: "apartment",
+        transactionType: "arriendo",
+        rentPrice: 9100000,
+        areaTotal: 110,
+        bedrooms: 3,
+        bathrooms: 2,
+        garages: 2,
+        zone: "Chicó Reservado",
+        addressNeighborhood: "Chicó Reservado",
+        addressCity: "Bogotá",
+        rawText: "ARRIENDO APTO CHICÓ RESERVADO 110M2 3 HABITACIONES 2 BAÑOS 2 GARAJES $9.100.000"
+      };
+      const res91M = explicarMatch(reqArriendo10M, propArriendo91M);
+      expect(res91M.score).toBeGreaterThanOrEqual(85);
+      expect(res91M.positives.some(p => p.includes("Oportunidad favorable (90-95%)"))).toBe(true);
+
+      // 3. Canon de $8.500.000 COP (85% < 90% = $9.000.000) -> Guillotina de Piso Financiero (0% Match)
+      const propArriendo85M = {
+        id: 2907,
+        propertyType: "apartment",
+        transactionType: "arriendo",
+        rentPrice: 8500000,
+        areaTotal: 110,
+        bedrooms: 3,
+        bathrooms: 2,
+        garages: 2,
+        zone: "Chicó Reservado",
+        addressNeighborhood: "Chicó Reservado",
+        addressCity: "Bogotá",
+        rawText: "ARRIENDO APTO CHICÓ RESERVADO 110M2 3 HABITACIONES 2 BAÑOS 2 GARAJES $8.500.000"
+      };
+      const res85M = explicarMatch(reqArriendo10M, propArriendo85M);
+      expect(res85M.score).toBe(0);
+      expect(res85M.blockers.some(b => b.includes("Guillotina de Segmento Financiero (Piso Financiero)") && b.includes("90% del canon"))).toBe(true);
     });
   });
 });

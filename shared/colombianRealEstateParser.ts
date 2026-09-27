@@ -565,11 +565,13 @@ export function demands24hSecurity(text: string): boolean {
 }
 
 /**
- * Evalúa la coherencia de segmento financiero y piso de precio/canon (Doctrina v31.105).
- * Si un cliente tiene un presupuesto de búsqueda (ej: $1.700 MM en compra o $8.5M en arriendo),
- * una oferta con un precio significativamente inferior (< 70% del presupuesto o < 90% del mínimo)
+ * Evalúa la coherencia de segmento financiero y piso de precio/canon (Doctrina Eduardo v31.107).
+ * Regla Doctrinal del 90 al 95% del Presupuesto Máximo (budgetMax * mínimo 0.95 / máximo 0.90).
+ * Para $1.700 MM, ninguna propiedad por debajo de $1.530 MM puede hacer match (0% Match).
+ * En el mercado inmobiliario, una oferta con un precio significativamente inferior (< 90% del presupuesto o < 90% del mínimo)
  * corresponde a un segmento socioeconómico, estado de conservación o nivel de acabados totalmente
- * ajeno al demandado. No se admiten propiedades a casi la mitad del precio buscado (Regla Doctrinal de Eduardo).
+ * ajeno al demandado. No se admiten propiedades alejadas del precio buscado (Regla Doctrinal de Eduardo).
+ * Aplica con igual rigor a venta y a canon de arriendo.
  */
 export function checkFinancialSegmentCoherence(params: {
   budgetMax: number;
@@ -597,8 +599,9 @@ export function checkFinancialSegmentCoherence(params: {
   }
 
   // 2. Si la demanda especificó presupuesto techo único (ej: "1700 millones", "hasta 1300MM"):
-  // Doctrina Eduardo: una oferta no puede ser casi a la mitad del precio buscado, debe reflejar un precio cercano (Piso mínimo 70%).
-  const floorRatio = 0.70;
+  // Doctrina Eduardo v31.107: Piso infranqueable del 90 al 95% del presupuesto máximo (budgetMax * mínimo 0.95 / máximo 0.90).
+  // Para $1.700 MM, ninguna propiedad por debajo de $1.530 MM (90%) puede hacer match (0% Match).
+  const floorRatio = 0.90;
   const minAllowedPrice = budgetMax * floorRatio;
 
   if (offeredPrice < minAllowedPrice) {
@@ -606,12 +609,12 @@ export function checkFinancialSegmentCoherence(params: {
     if (isSale) {
       return {
         isCompatible: false,
-        reason: `Desproporción de Segmento Comercial: El demandante busca en el segmento de $${(budgetMax / 1_000_000).toLocaleString("es-CO")}M y la oferta cuesta apenas $${(offeredPrice / 1_000_000).toLocaleString("es-CO")}M (${pct}% del presupuesto). No corresponde a la gama ni confort esperado (piso mínimo admisible: 70% = $${(minAllowedPrice / 1_000_000).toLocaleString("es-CO")}M).`
+        reason: `Desproporción de Segmento Comercial: El demandante busca en el segmento de $${(budgetMax / 1_000_000).toLocaleString("es-CO")}M y la oferta cuesta apenas $${(offeredPrice / 1_000_000).toLocaleString("es-CO")}M (${pct}% del presupuesto). No corresponde a la gama ni confort esperado (piso mínimo admisible: 90% = $${(minAllowedPrice / 1_000_000).toLocaleString("es-CO")}M).`
       };
     } else {
       return {
         isCompatible: false,
-        reason: `Desproporción de Segmento en Arriendo: El canon ofertado de $${(offeredPrice / 1_000_000).toLocaleString("es-CO")}M representa solo el ${pct}% del canon presupuestado ($${(budgetMax / 1_000_000).toLocaleString("es-CO")}M). No corresponde a la categoría solicitada (piso mínimo admisible: 70% = $${(minAllowedPrice / 1_000_000).toLocaleString("es-CO")}M).`
+        reason: `Desproporción de Segmento en Arriendo: El canon ofertado de $${(offeredPrice / 1_000_000).toLocaleString("es-CO")}M representa solo el ${pct}% del canon presupuestado ($${(budgetMax / 1_000_000).toLocaleString("es-CO")}M). No corresponde a la categoría solicitada (piso mínimo admisible: 90% = $${(minAllowedPrice / 1_000_000).toLocaleString("es-CO")}M).`
       };
     }
   }
