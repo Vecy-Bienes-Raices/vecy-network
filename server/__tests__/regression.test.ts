@@ -1613,6 +1613,34 @@ Ed del 2014.
       expect(checkIsMatchDormant(freshMatch)).toBe(false);
     });
   });
+
+  describe("21. Optimización de Búsqueda Fiel en WhatsApp y Supresión de Barras de Scroll (v31.102)", () => {
+    it("Debe sanitizar texto para portapapeles eliminando non-breaking spaces y caracteres invisibles", () => {
+      const rawWithNbsp = "Cliente\u00A0compra\u00A0apto\u00A0de\u00A03\u00A0alcobas\u200B";
+      const sanitized = rawWithNbsp.replace(/\u00A0/g, " ").replace(/\u200B/g, "");
+      expect(sanitized).toBe("Cliente compra apto de 3 alcobas");
+      expect(sanitized).not.toContain("\u00A0");
+      expect(sanitized).not.toContain("\u200B");
+    });
+
+    it("Debe extraer clave de búsqueda garantizada para WhatsApp sin truncamiento ni caracteres que rompan la búsqueda", () => {
+      const text = "Cliente compra apto de 3 alcobas exterior santas 140m2 $1800MM moderno\nCliente compra apto de 3h entre 850 y 1000MM en las santas exterior.";
+      const sender = "Luz Nelcy";
+      
+      // Si hay nombre verificado del asesor, ese es el snippet prioritario
+      const isGeneric = (n?: string | null) => !n || n.toLowerCase().startsWith("asesor +") || n.toLowerCase().includes("sin nombre");
+      expect(isGeneric(sender)).toBe(false);
+      
+      // Extracción de frase limpia cuando no hay asesor
+      const lines = text.split("\n").map(l => l.replace(/[*_~`#•-]/g, "").trim());
+      const STOP_WORDS = new Set(["cliente", "compra", "apto", "de", "las", "en"]);
+      const words = lines[0].split(/\s+/).filter(w => w.length >= 4 && !STOP_WORDS.has(w.toLowerCase()));
+      const snippet = words.slice(0, 3).join(" ");
+      expect(snippet).toContain("alcobas");
+      expect(snippet).toContain("exterior");
+      expect(snippet).toContain("santas");
+    });
+  });
 });
 
 

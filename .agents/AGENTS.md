@@ -167,7 +167,28 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.101 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.102 — Septiembre 2026
+
+### Novedades v31.102 (Supresión Definitiva de Barras Dobles de Scroll y Botón Dual de Búsqueda Fiel en WhatsApp):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo reportó: *"Ves que si dañaste varias cosas. Mira Salió una barra de scroll., qué digo una, dos horrendas barras de scroll que tu sabes que no me agradan y al copiar la demanda, fui al grupo que dice estar publicada y ala pegar la demanda allí dice que no se encontró, ahí está la falla, eso de que si copiaba y pegaba y no se encontraba, no recuerdo cual era el error o si era en la escritura pero eso ya lo habíamos corregido y superdado, lo dicho, siempre regresas atras e igualmente siempre tengo que estarte diciendo guarda, despliega, etc, etc, etc."*
+- **Causas Raíz Identificadas**:
+  1. En el panel admin (`/admin`), la regla `h-screen` (`100vh`) provocaba un microdesborde vertical en el `<html>/<body>` en modo ventana dividida en Linux/Chrome, activando la barra de scroll de la ventana; simultáneamente, el contenedor `<main>` no tenía `scrollbar-hide`, activando una segunda barra visible.
+  2. Al pulsar `[📋 Copiar Publicación]`, se copiaba el texto multilínea íntegro. Al pegarlo en la barra de búsqueda de WhatsApp Web (lupa del grupo), el buscador corta en ~60 caracteres y no admite saltos de línea ni discrepancias de tokens (cortándose en `$1800M` cuando el texto decía `$1800MM`), provocando *"No se encontró ningún mensaje"*. Además, los espacios no separables (`\u00A0`) de HTML rompían el match con WhatsApp.
+- **Acciones Ejecutadas en Código**:
+  1. **Supresión Universal de Barras de Scroll (`client/src/index.css`, `client/src/pages/Admin.tsx`)**:
+     - `index.css`: supresión de barras en `html, body` y `.scrollbar-hide` con `display: none !important; width: 0 !important; background: transparent !important`.
+     - `Admin.tsx`: `useEffect` que bloquea `overflow: hidden` en `html` y `body` durante la navegación en `/admin`, contenedor raíz con `h-[100dvh] max-h-[100dvh]` y clase `scrollbar-hide` en `<main>`. Scroll con mouse y trackpad 100% fluido y cero barras visibles.
+  2. **Botón Dual `📋 Copiar Publicación` + `🔍 Clave WA` y Restauración de `🔍 Ubicar en Grupo` (`client/src/components/admin/AdminMatches.tsx`)**:
+     - Cada ficha de Oferta y Demanda ahora cuenta con `📋 Copiar Publicación` (texto 100% íntegro) y el nuevo botón `🔍 Clave WA` (término corto infalible purgado de stop-words o nombre de autor verificado e.g. `Luz Nelcy`).
+     - En fichas de contacto sin teléfono directo o LID, se restauró el botón `🔍 Ubicar en Grupo` para localizar al asesor de inmediato en el grupo de WhatsApp.
+  3. **Sanitización de Espacios y Caracteres Invisibles (`copyToClipboard`)**:
+     - Reemplazo automático de `\u00A0` por espacios estándar y purga de `\u200B` para compatibilidad universal con WhatsApp.
+  4. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+     - Añadida Sección 21 (**104/104 tests Vitest pasando** ✅).
+- **Verificación**: 104/104 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 22.41s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.101 — Septiembre 2026
 
 ### Novedades v31.101 (Arquitectura del Ciclo de Vida de los Matches, Republicación de Demandas y Protección de 45 Días para Matches Calientes):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

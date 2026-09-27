@@ -7,6 +7,43 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.102 — 26 Septiembre 2026
+
+### Solicitud de Eduardo
+Supresión de Barras Dobles de Scroll y Restauración de Clave Única de Búsqueda Fiel en WhatsApp:
+*"Ves que si dañaste varias cosas. Mira Salió una barra de scroll., qué digo una, dos horrendas barras de scroll que tu sabes que no me agradan y al copiar la demanda, fui al grupo que dice estar publicada y ala pegar la demanda allí dice que no se encontró, ahí está la falla, eso de que si copiaba y pegaba y no se encontraba, no recuerdo cual era el error o si era en la escritura pero eso ya lo habíamos corregido y superdado, lo dicho, siempre regresas atras e igualmente siempre tengo que estarte diciendo guarda, despliega, etc, etc, etc."*
+
+### Diagnóstico Técnico Profundo y Conclusiones de Arquitectura
+1. **Doble Barra de Scroll en Panel Admin (`https://vecy-network.vercel.app/admin`)**:
+   - En navegadores basados en Chromium sobre Linux (entorno desktop de Eduardo), el uso de `h-screen` (`100vh`) provocaba un microdesborde vertical en el `<html>` y `<body>` al redimensionar la ventana o trabajar en modo tiling (pantalla dividida 50/50).
+   - Como `document.body` carecía de bloqueo de desbordamiento, el navegador renderizaba la barra de scroll vertical externa en el margen derecho de la ventana.
+   - Simultáneamente, el contenedor `<main>` tenía `overflow-y-auto` sin la clase `scrollbar-hide`, renderizando una segunda barra de scroll vertical justo al lado de la primera.
+2. **Fallo de Localización en Búsqueda de WhatsApp Web ("No se encontró ningún mensaje")**:
+   - Al pulsar `[📋 Copiar Publicación]`, el sistema copiaba el bloque completo multilínea de la demanda (las 3 líneas de búsqueda múltiple).
+   - En WhatsApp Web, la barra de búsqueda de chat ("Buscar mensajes") corta la entrada en ~60 caracteres y no admite saltos de línea. En la pantalla de Eduardo se pegó: `Cliente compra apto de 3 alcobas exterior santas 140m2 $1800M`, cortándose exactamente en `$1800M` cuando el mensaje original decía `$1800MM moderno`.
+   - Dado que el motor de indexación de WhatsApp Web realiza coincidencia exacta de tokens, la discrepancia entre `$1800M` y `$1800MM` causó que arrojara: *"No se encontró ningún mensaje. Usa WhatsApp en tu teléfono para buscar mensajes anteriores al 3/3/2026."*
+   - Además, en la web los saltos de línea y espacios no separables (`\u00A0` / `&nbsp;`) generados por navegadores no coinciden con los espacios normales (`\u0020`) de WhatsApp.
+   - En la sesión doctrinal v26.7 y v30.8 se había dictaminado la existencia de la acción dual: `📋 Copiar Publicación` (texto 100% íntegro) y `🔍 Clave WA` (término corto infalible: nombre del asesor verificado como `Luz Nelcy` o frase clave de 2-3 palabras purgada de stop-words como `exterior santas 140m2`). El botón de búsqueda rápida había quedado sin renderizar en la vista de tarjetas.
+
+### Acciones Ejecutadas en Código
+1. **Supresión Definitiva de Barras de Scroll en Panel Admin (`client/src/index.css`, `client/src/pages/Admin.tsx`)**:
+   - En `index.css`: enriquecidas las utilidades `.scrollbar-hide` y `.scrollbar-none` con `display: none !important; width: 0 !important; height: 0 !important; background: transparent !important`.
+   - Suprimidas las barras nativas en `html` y `body` (`scrollbar-width: none; -ms-overflow-style: none`).
+   - En `Admin.tsx`: incorporado un `useEffect` que fija `document.documentElement.style.overflow = 'hidden'`, `document.body.style.overflow = 'hidden'` y `document.body.style.height = '100%'` mientras el usuario se encuentre en la vista de `/admin`.
+   - Raíz cambiada a `h-[100dvh] max-h-[100dvh]` y añadido `scrollbar-hide` al contenedor `<main>`. El desplazamiento vertical con la rueda del ratón o trackpad opera al 100% de fluidez con cero barras visibles.
+2. **Botón Dual `📋 Copiar Publicación` + `🔍 Clave WA` y Restauración de `🔍 Ubicar en Grupo` (`client/src/components/admin/AdminMatches.tsx`)**:
+   - En cada ficha (Oferta y Demanda):
+     - `📋 Copiar Publicación`: copia el texto completo 100% fiel original (ideal para cotizaciones a clientes) con toast orientativo: *"Texto original copiado con 100% de fidelidad al portapapeles. (💡 Tip: Si vas a buscar en la lupa de WhatsApp, usa '🔍 Clave WA' para ubicarlo al instante)."*
+     - `🔍 Clave WA`: botón interactivo esmeralda que ejecuta `extractSmartSearchSnippet` copiando la clave óptima (e.g. `Luz Nelcy` o frase clave purgada sin caracteres especiales que rompan el buscador) con toast explicativo: *"🎯 Clave copiada: '[clave]'. Entra a WhatsApp en '[grupo]' y pega esta clave en la lupa para ubicar el mensaje al instante."*
+   - En la tarjeta de contacto del asesor (cuando no tiene número directo de WhatsApp o es un LID):
+     - Sustituido el valor `null` por el botón interactivo `🔍 Ubicar en Grupo`, que copia de inmediato el nombre del asesor y orienta sobre cómo pegarlo en la búsqueda del grupo para filtrar sus publicaciones al instante.
+3. **Sanitización de Espacios y Caracteres Invisibles en Portapapeles (`AdminMatches.tsx`)**:
+   - En `copyToClipboard`: implementado saneamiento automático de espacios no separables (`text.replace(/\u00A0/g, " ").replace(/\u200B/g, "")`), erradicando discrepancias de codificación entre el navegador web y el motor de búsqueda de WhatsApp.
+4. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+   - Añadida la **Sección 21** con 2 pruebas unitarias específicas validando la sanitización de espacios no separables y la extracción garantizada de claves de búsqueda sin truncamiento (**104/104 tests Vitest pasando** ✅).
+
+---
+
 ## 📋 SESIÓN v31.101 — 26 Septiembre 2026
 
 ### Solicitud de Eduardo

@@ -1,4 +1,4 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useLocation } from 'wouter';
 import { getLoginUrl, VECY_VERSION } from '@/const';
@@ -96,6 +96,21 @@ export default function Admin() {
     }
     return 'matches';
   });
+
+  // Supresión absoluta de scrollbar externo en ventana del navegador
+  useEffect(() => {
+    const origHtmlOverflow = document.documentElement.style.overflow;
+    const origBodyOverflow = document.body.style.overflow;
+    const origBodyHeight = document.body.style.height;
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    document.body.style.height = '100%';
+    return () => {
+      document.documentElement.style.overflow = origHtmlOverflow;
+      document.body.style.overflow = origBodyOverflow;
+      document.body.style.height = origBodyHeight;
+    };
+  }, []);
 
   const handleSelectTab = (tabId: string) => {
     setActiveTab(tabId);
@@ -196,7 +211,7 @@ export default function Admin() {
   };
 
   return (
-    <div className="h-screen bg-background flex flex-col md:flex-row text-foreground relative overflow-hidden font-sans">
+    <div id="admin-root" className="h-[100dvh] max-h-[100dvh] w-full bg-background flex flex-col md:flex-row text-foreground relative overflow-hidden font-sans">
 
       {/* ===== MOBILE BACKDROP OVERLAY ===== */}
       {mobileDrawerOpen && (
@@ -429,7 +444,7 @@ export default function Admin() {
         </div>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 pb-8 pt-0 bg-background">
+        <main className="flex-1 overflow-y-auto scrollbar-hide px-4 sm:px-6 lg:px-8 pb-8 pt-0 bg-background">
           {renderContent()}
         </main>
       </div>

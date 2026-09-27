@@ -322,6 +322,28 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.102 — Septiembre 2026
+
+#### 📌 SUPRESIÓN DEFINITIVA DE BARRAS DOBLES DE SCROLL Y BOTÓN DUAL DE BÚSQUEDA FIEL EN WHATSAPP
+
+**Problemas identificados:**
+1. **Doble Barra de Scroll en Panel Admin**: En monitores divididos (50% tiling en Linux Chrome), el elemento `h-screen` (`100vh`) provocaba un microdesborde vertical en el `<html>` y `<body>`, haciendo que el navegador desplegara la barra de desplazamiento nativa en el borde derecho; conjuntamente, el `<main>` tenía `overflow-y-auto` sin la clase `scrollbar-hide`, activando una segunda barra visible contigua.
+2. **Fallo de Localización en Búsqueda de WhatsApp Web ("No se encontró ningún mensaje")**: Al pulsar `[📋 Copiar Publicación]`, se copiaba el bloque completo multilínea de la demanda. En la barra de búsqueda de chat de WhatsApp Web, las entradas se cortan a ~60 caracteres y no admiten saltos de línea ni discrepancias de formato, cortándose en `$1800M` cuando el texto decía `$1800MM moderno`, arrojando 0 resultados. Asimismo, la presencia de espacios no separables (`\u00A0` / `&nbsp;`) en portapapeles impedía el match de tokens en WhatsApp.
+
+**Solución aplicada:**
+- **Supresión Universal de Barras de Scroll (`client/src/index.css`, `client/src/pages/Admin.tsx`)**:
+  - En `index.css`: supresión de barras en `html, body` y enriquecimiento de utilidades `.scrollbar-hide` y `.scrollbar-none` con `display: none !important; width: 0 !important; background: transparent !important`.
+  - En `Admin.tsx`: `useEffect` que bloquea `overflow: hidden` en `html` y `body` durante la navegación en `/admin`, contenedor raíz con `h-[100dvh] max-h-[100dvh]` y clase `scrollbar-hide` en `<main>`. Scroll con mouse y trackpad 100% fluido y cero barras visibles.
+- **Botón Dual `📋 Copiar Publicación` + `🔍 Clave WA` y Restauración de `🔍 Ubicar en Grupo` (`client/src/components/admin/AdminMatches.tsx`)**:
+  - Cada ficha de Oferta y Demanda ahora cuenta con `📋 Copiar Publicación` (texto 100% íntegro) y el nuevo botón `🔍 Clave WA` (término corto infalible purgado de stop-words o nombre de autor verificado e.g. `Luz Nelcy`).
+  - En fichas de contacto sin teléfono directo o LID, se restauró el botón `🔍 Ubicar en Grupo` para localizar al asesor de inmediato en el grupo de WhatsApp.
+- **Sanitización de Espacios y Caracteres Invisibles (`copyToClipboard`)**:
+  - Reemplazo automático de `\u00A0` por espacios estándar y purga de `\u200B` para compatibilidad universal con WhatsApp.
+- **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+  - Añadida Sección 21 (**104/104 tests Vitest pasando** ✅).
+
+---
+
 ### 🔖 v31.101 — Septiembre 2026
 
 #### 📌 ARQUITECTURA DEL CICLO DE VIDA DE LOS MATCHES, REPUBLICACIÓN DE DEMANDAS Y PROTECCIÓN DE 45 DÍAS PARA COINCIDENCIAS CALIENTES
