@@ -167,7 +167,32 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.100 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.101 — Septiembre 2026
+
+### Novedades v31.101 (Arquitectura del Ciclo de Vida de los Matches, Republicación de Demandas y Protección de 45 Días para Matches Calientes):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo preguntó: *"Pregunta: Entonces cuando un Match así sea perfecto y cumple los diez días sin haber sido gestionado por nosotros, qué pasa con él o según tu lógica qué debe suceder, no se si se va autoregenerando cada vez que es republicado ese inmueble y miesntras lo sigan publicando y republicando pues no se va de la mesa de coincidencias??, porque si es así creo que si ese MATCH vaa a desaparecer porque alguno de los dos DEMANDA u OFERTA ya venció o cumplió sus diez días y sus agente no lo volvió a subir ni arepublicar, pues no se ha actualizado. En tu lógica condicional que tienes dispuesto para estos Match que ya no regresan o son actualizados, cómo lo tienes planificado y si no hay un plan qué sugieres hacer?"*
+  - Y aprobó la solución: *"Me encanta, a ver si empiezo a ver cómo cambian a diario esos marcadores, porque lo que me parece muy raro y aburrido es tener que verlos allí fijos e inertes todo el tiempo, antes por lo menos se movían pero desde anoche ha quedado todo estático. Adelante entonces..."*
+- **Causas Raíz Identificadas**:
+  1. Los matches nunca se borraban de PostgreSQL, pero el filtro rígido `AND requirements.createdAt >= NOW() - INTERVAL '10 days'` y `properties.fecha_ultima_publicacion >= NOW() - INTERVAL '10 days'` los ocultaba de la vista activa si cualquiera de las partes pasaba de 10 días.
+  2. Asimetría: la Oferta sí se renovaba al ser republicada (`fecha_ultima_publicacion`), pero la Demanda (`requirements`) no tenía columnas de republicación y `janIA.ts` la marcaba como `status: 'expired'` si tenía >10 días al ser republicada.
+  3. En Colombia el ciclo real de compraventa es de 45 a 90 días; ocultar oportunidades de 95% o 100% al día 10 hacía perder comisiones millonarias.
+- **Acciones Ejecutadas en Código**:
+  1. **Esquema y Autoregeneración de Demandas (`drizzle/schema.ts`, `server/_core/janIA.ts`)**:
+     - Agregadas columnas `fecha_primera_publicacion`, `fecha_ultima_publicacion` y `republicaciones_count` en `requirements` (migración aplicada en PostgreSQL).
+     - Al detectar republicación de requerimientos, JanIA actualiza `fecha_ultima_publicacion = getColombiaNow()`, incrementa `republicaciones_count`, restaura `status = 'active'` y recalcula matches.
+  2. **Regla de Oro de 45 Días para Matches Calientes en Backend (`server/routers/janIA.ts`)**:
+     - `getAllMatches` protege durante 45 días los matches con score $\ge 90\%$ (incluidos perfectos $\ge 95\%$) y durante 15 días los matches estándar (75% a 89%) renovables por republicación.
+     - `getBotStatus` actualizado con los mismos intervalos analíticos y TTL de caché optimizado a 45s.
+  3. **Filtro Inteligente, Insignias y Acción de Sondeo en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+     - Filtro `⚡ Vigentes & Calientes (≤15d / 45d en ≥90%)`, pestaña `⏳ Oportunidades en Riesgo (>10d sin gestión)`, y `🌐 Todo el Histórico`.
+     - Insignias `🔥 Protegido (Ciclo 45d)` para $\ge 90\%$, `⏳ Requiere Gestión` para oportunidades dormidas, y `🔥 Republicado y Actualizado hace X días` en la ficha de demanda.
+     - Botón `🔍 Sondeo` de 1-clic por WhatsApp para contactar al asesor de la demanda y reactivar clientes activos.
+  4. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+     - Añadida Sección 20 con 3 pruebas unitarias exhaustivas (**102/102 tests Vitest pasando** ✅).
+- **Verificación**: 102/102 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 15.17s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.100 — Septiembre 2026
 
 ### Novedades v31.100 (Flujo de 2 Pasos para Consulta Predial por CHIP y Resolución Inmobiliaria Autónoma Sin Textos Genéricos "¡Woow!"):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

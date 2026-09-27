@@ -430,11 +430,39 @@ export function getPropertyEffectiveDaysAgo(property: any): number {
 
 export function getRequirementEffectiveDaysAgo(requirement: any): number {
   if (!requirement) return 0;
-  // Regla Doctrinal v31.86: La fecha canónica de publicación original es createdAt
-  const effectiveDate = requirement.createdAt;
+  const repCount = Number(requirement.republicacionesCount || 0);
+  const effectiveDate = (repCount > 0 && requirement.fechaUltimaPublicacion)
+    ? requirement.fechaUltimaPublicacion
+    : (requirement.fechaUltimaPublicacion || requirement.createdAt);
   if (!effectiveDate) return 0;
   const dateObj = new Date(effectiveDate);
   return Math.max(0, Math.floor((Date.now() - dateObj.getTime()) / (1000 * 60 * 60 * 24)));
+}
+
+export function checkIsMatchActiveSmart(match: any): boolean {
+  if (!match) return false;
+  const prop = match._effectiveProp || match.property;
+  const req = match._effectiveReq || match.requirement;
+  const propDaysAgo = getPropertyEffectiveDaysAgo(prop);
+  const reqDaysAgo = getRequirementEffectiveDaysAgo(req);
+  const score = match._precomputedScore !== undefined ? match._precomputedScore : parseFloat(match.matchScore?.toString() || "0");
+
+  // Regla Doctrinal v31.101: Matches Calientes y Perfectos (>=90%) protegidos por 45 días (ciclo real de compraventa en Colombia)
+  if (score >= 90) {
+    return propDaysAgo <= 45 && reqDaysAgo <= 45;
+  }
+  // Matches Estándar (75% a 89%): Ventana activa de 15 días renovable por republicación
+  return propDaysAgo <= 15 && reqDaysAgo <= 15;
+}
+
+export function checkIsMatchDormant(match: any): boolean {
+  if (!match) return false;
+  const prop = match._effectiveProp || match.property;
+  const req = match._effectiveReq || match.requirement;
+  const propDaysAgo = getPropertyEffectiveDaysAgo(prop);
+  const reqDaysAgo = getRequirementEffectiveDaysAgo(req);
+  const isUnmanaged = !match.status || match.status === 'suggested';
+  return (propDaysAgo > 10 || reqDaysAgo > 10) && isUnmanaged;
 }
 
 export function checkIsPermutaMatch(prop: any, req: any): boolean {
@@ -2901,7 +2929,7 @@ export default function AdminMatches() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [minScore, setMinScore] = React.useState('80');
   const [transactionFilter, setTransactionFilter] = React.useState<'all' | 'venta' | 'arriendo' | 'permuta' | 'opcion_compra' | 'standby'>('venta');
-  const [ageFilter, setAgeFilter] = React.useState<'active_10' | 'all'>('active_10');
+  const [ageFilter, setAgeFilter] = React.useState<'active_smart' | 'active_10' | 'dormant' | 'all'>('active_smart');
   const [activeTab, setActiveTab] = React.useState<'calificados' | 'incompletos'>('calificados');
   
   // Estados para Edición Interactiva de Fichas Prediales directamente desde el Cotejo
@@ -4268,13 +4296,16 @@ export default function AdminMatches() {
         if (displayScore < minVal) return false;
       }
 
-      // Filtro de Antigüedad / Vigencia: ≤ 10 días por defecto (Regla Doctrinal v31.84/v31.86)
-      // Excepción estratégica: Si el usuario está filtrando específicamente por nichos especializados ('permuta', 'opcion_compra'),
-      // se muestran los matches existentes de ese nicho para asegurar visibilidad operativa de las oportunidades.
-      if (ageFilter === 'active_10' && transactionFilter !== 'permuta' && transactionFilter !== 'opcion_compra') {
-        const propDaysAgo = getPropertyEffectiveDaysAgo(match._effectiveProp || match.property);
-        const reqDaysAgo = getRequirementEffectiveDaysAgo(match._effectiveReq || match.requirement);
-        if (propDaysAgo > 10 || reqDaysAgo > 10) return false;
+      // Filtro de Antigüedad / Vigencia Inteligente (Regla Doctrinal v31.101):
+      // - 'active_smart' o 'active_10': Matches calientes (>=90%) protegidos por 45 días (ciclo real de compraventa), estándar (75%-89%) por 15 días renovable por republicación
+      // - 'dormant': Oportunidades en riesgo (>10 días sin gestión activa)
+      // - 'all': Todo el histórico
+      if (transactionFilter !== 'permuta' && transactionFilter !== 'opcion_compra') {
+        if (ageFilter === 'active_10' || ageFilter === 'active_smart') {
+          if (!checkIsMatchActiveSmart(match)) return false;
+        } else if (ageFilter === 'dormant') {
+          if (!checkIsMatchDormant(match)) return false;
+        }
       }
 
       // Filtro de Transacción: Compraventa vs Arriendo vs Permutas vs 50/50 (Standby)
@@ -4436,11 +4467,10 @@ export default function AdminMatches() {
 
   const kpiStats = useMemo(() => {
     const rawList = processedMatches || [];
-    const list = ageFilter === 'active_10'
-      ? rawList.filter(m => 
-          getPropertyEffectiveDaysAgo(m._effectiveProp || m.property) <= 10 &&
-          getRequirementEffectiveDaysAgo(m._effectiveReq || m.requirement) <= 10
-        )
+    const list = (ageFilter === 'active_10' || ageFilter === 'active_smart')
+      ? rawList.filter(m => checkIsMatchActiveSmart(m))
+      : ageFilter === 'dormant'
+      ? rawList.filter(m => checkIsMatchDormant(m))
       : rawList;
 
     const total = list.length;
@@ -4458,11 +4488,10 @@ export default function AdminMatches() {
 
   const filterCounts = useMemo(() => {
     const rawList = processedMatches || [];
-    const list = ageFilter === 'active_10'
-      ? rawList.filter(m => 
-          getPropertyEffectiveDaysAgo(m._effectiveProp || m.property) <= 10 &&
-          getRequirementEffectiveDaysAgo(m._effectiveReq || m.requirement) <= 10
-        )
+    const list = (ageFilter === 'active_10' || ageFilter === 'active_smart')
+      ? rawList.filter(m => checkIsMatchActiveSmart(m))
+      : ageFilter === 'dormant'
+      ? rawList.filter(m => checkIsMatchDormant(m))
       : rawList;
 
     const searchLower = (searchTerm || '').toLowerCase().trim();
@@ -4755,16 +4784,17 @@ export default function AdminMatches() {
             </select>
           </div>
 
-          {/* Filtro de Antigüedad / Vigencia (≤ 10 días) */}
+          {/* Filtro de Antigüedad / Vigencia Inteligente */}
           <div className="flex items-center gap-2 bg-black/70 border border-white/15 rounded-xl px-3 text-white h-10 text-xs shrink-0">
             <Clock className="w-3.5 h-3.5 text-[#bf953f] shrink-0" />
             <span className="text-zinc-400 text-[11px] shrink-0">Vigencia:</span>
             <select
               value={ageFilter}
-              onChange={(e) => { setAgeFilter(e.target.value as 'active_10' | 'all'); setCurrentPage(1); }}
+              onChange={(e) => { setAgeFilter(e.target.value as any); setCurrentPage(1); }}
               className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none"
             >
-              <option className="bg-[#0c0c0e]" value="active_10">⚡ Vigentes (≤ 10 días)</option>
+              <option className="bg-[#0c0c0e]" value="active_smart">⚡ Vigentes & Calientes (≤15d / 45d en ≥90%)</option>
+              <option className="bg-[#0c0c0e]" value="dormant">⏳ Oportunidades en Riesgo (&gt;10d sin gestión)</option>
               <option className="bg-[#0c0c0e]" value="all">🌐 Todo el Histórico</option>
             </select>
           </div>
@@ -4898,10 +4928,11 @@ export default function AdminMatches() {
               <div className="flex items-center bg-black/70 border border-white/15 rounded-xl px-2 h-9 text-xs">
                 <select
                   value={ageFilter}
-                  onChange={(e) => { setAgeFilter(e.target.value as 'active_10' | 'all'); setCurrentPage(1); }}
+                  onChange={(e) => { setAgeFilter(e.target.value as any); setCurrentPage(1); }}
                   className="bg-transparent border-none text-white focus:ring-0 text-[11px] font-semibold cursor-pointer outline-none"
                 >
-                  <option className="bg-[#0c0c0e]" value="active_10">⚡ ≤10d</option>
+                  <option className="bg-[#0c0c0e]" value="active_smart">⚡ Vigentes (Smart)</option>
+                  <option className="bg-[#0c0c0e]" value="dormant">⏳ En Riesgo</option>
                   <option className="bg-[#0c0c0e]" value="all">🌐 Todo</option>
                 </select>
               </div>
@@ -5024,6 +5055,22 @@ export default function AdminMatches() {
                           ⚡ MATCH APROXIMADO (85% - 94%)
                         </span>
                       )}
+                      {score >= 90 ? (
+                        <span 
+                          className="text-[9px] bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 text-amber-300 px-2 py-0.5 rounded-full font-extrabold flex items-center gap-1 shadow-sm"
+                          title="Match Caliente protegido durante 45 días correspondientes al ciclo real de venta inmobiliaria en Colombia"
+                        >
+                          🔥 Protegido (Ciclo 45d)
+                        </span>
+                      ) : null}
+                      {checkIsMatchDormant(m) ? (
+                        <span 
+                          className="text-[9px] bg-red-500/20 border border-red-500/40 text-red-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 animate-pulse"
+                          title="Este match supera 10 días sin gestión. Requiere contactar al asesor o realizar sondeo."
+                        >
+                          ⏳ Requiere Gestión
+                        </span>
+                      ) : null}
                     </div>
                     <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4 flex-wrap w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
                       <button
@@ -5406,11 +5453,50 @@ export default function AdminMatches() {
                           🔍 Requerimiento / Demanda
                         </span>
                         <div className="flex items-center gap-2 flex-wrap">
-                          {m.requirement?.createdAt && (
-                            <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md flex items-center gap-1 font-mono" title="Fecha de publicación del requerimiento">
-                              📅 {formatColombiaDate(m.requirement.createdAt)}
-                            </span>
-                          )}
+                          {(() => {
+                            const repCount = Number(m.requirement?.republicacionesCount || 0);
+                            const effectiveDate = (repCount > 0 && m.requirement?.fechaUltimaPublicacion)
+                              ? m.requirement.fechaUltimaPublicacion
+                              : (m.requirement?.fechaUltimaPublicacion || m.requirement?.createdAt);
+
+                            const getDaysAgo = (d?: string | Date | null) => {
+                              if (!d) return 0;
+                              const dateObj = new Date(d);
+                              return Math.max(0, Math.floor((Date.now() - dateObj.getTime()) / (1000 * 60 * 60 * 24)));
+                            };
+
+                            const daysAgo = getDaysAgo(effectiveDate);
+                            const diasTexto = daysAgo === 0 ? "hoy" : daysAgo === 1 ? "1 día" : `${daysAgo} días`;
+
+                            return (
+                              <>
+                                {repCount > 0 ? (
+                                  <span
+                                    className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-extrabold text-cyan-300 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-cyan-500/20 border border-cyan-500/50 px-2.5 py-0.5 rounded-md shadow-[0_0_14px_rgba(6,182,212,0.35)] animate-in fade-in"
+                                    title={`Demanda republicada ${repCount} ${repCount === 1 ? 'vez' : 'veces'}. Fecha de última actualización: ${formatColombiaDate(effectiveDate)}`}
+                                  >
+                                    <span>🔥 Republicado y Actualizado hace {diasTexto} (100% Activo)</span>
+                                  </span>
+                                ) : daysAgo > 10 ? (
+                                  <span
+                                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-cyan-400/90 bg-cyan-500/10 border border-cyan-500/25 px-2 py-0.5 rounded-md"
+                                    title={`Demanda inicial de hace ${daysAgo} días. Verificar si el cliente aún sigue buscando.`}
+                                  >
+                                    <span>⏳ Solicitud de hace {daysAgo} días · Sondeo de búsqueda</span>
+                                  </span>
+                                ) : null}
+
+                                {effectiveDate && (
+                                  <span
+                                    className="text-[10px] text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md flex items-center gap-1 font-mono"
+                                    title={repCount > 0 ? `Fecha de última actualización comercial (${repCount} republicaciones)` : "Fecha de publicación del requerimiento"}
+                                  >
+                                    📅 {formatColombiaDate(effectiveDate)}
+                                  </span>
+                                )}
+                              </>
+                            );
+                          })()}
                           {(() => {
                             const isReqDirect = m.requirement?.origenTipo === 'contacto_directo' || m.requirement?.origenTipo === 'dm';
                             if (isReqDirect) {
@@ -5670,15 +5756,26 @@ export default function AdminMatches() {
                               </div>
                             </div>
                             {clean10 ? (
-                              <a 
-                                href={`https://wa.me/57${clean10}?text=${encodeURIComponent(`Hola! Te contacto por tu requerimiento de inmueble en ${m.requirement?.zonaDeseada || m.requirement?.ciudadDeseada || 'VECY Bienes Raíces'}. Encontramos una propiedad con un Match del ${score.toFixed(0)}%.`)}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="group bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-extrabold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-[0_0_20px_rgba(37,211,102,0.4)] hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto shrink-0"
-                              >
-                                <span>Contactar WA</span>
-                                <ExternalLink className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                              </a>
+                              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+                                <a 
+                                  href={`https://wa.me/57${clean10}?text=${encodeURIComponent(`Hola! Te contacto por tu requerimiento de inmueble en ${m.requirement?.zonaDeseada || m.requirement?.ciudadDeseada || 'VECY Bienes Raíces'}. Encontramos una propiedad con un Match del ${score.toFixed(0)}%.`)}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="group bg-[#25D366] hover:bg-[#20ba5a] text-black text-xs font-extrabold px-3 sm:px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-[0_0_20px_rgba(37,211,102,0.4)] hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto shrink-0"
+                                >
+                                  <span>Contactar WA</span>
+                                  <ExternalLink className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                                </a>
+                                <a 
+                                  href={`https://wa.me/57${clean10}?text=${encodeURIComponent(`Hola ${senderName && !isGenericBrokerName(senderName) ? senderName : ''} 👋 Te contacto de VECY Bienes Raíces. Quería consultarte si tu cliente aún sigue buscando inmueble en ${m.requirement?.zonaDeseada || m.requirement?.ciudadDeseada || 'Bogotá'}. Tenemos una opción con coincidencia del ${score.toFixed(0)}% para compartir comisión.`)}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="group bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 hover:text-cyan-200 border border-cyan-500/40 text-xs font-bold px-3 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-300 shadow-sm hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto shrink-0"
+                                  title="Enviar mensaje rápido de sondeo para saber si el cliente sigue buscando y reactivar la demanda"
+                                >
+                                  <span>🔍 Sondeo</span>
+                                </a>
+                              </div>
                             ) : null}
                           </div>
                         );

@@ -322,6 +322,31 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.101 — Septiembre 2026
+
+#### 📌 ARQUITECTURA DEL CICLO DE VIDA DE LOS MATCHES, REPUBLICACIÓN DE DEMANDAS Y PROTECCIÓN DE 45 DÍAS PARA COINCIDENCIAS CALIENTES
+
+**Problemas identificados:**
+1. **Falsa Muerte y Ocultamiento de Matches Calientes**: En PostgreSQL se encontraban preservados todos los matches históricos (581 registros), pero la consulta de backend `getAllMatches` y la UI del Admin filtraban mediante un límite rígido de `<= 10 días` evaluando conjuntamente tanto la propiedad como el requerimiento. Si una de las dos partes alcanzaba el día 11, la oportunidad salía de la vista activa de trabajo diario.
+2. **Asimetría Crítica entre Oferta y Demanda**: Las propiedades (`properties`) contaban con `fecha_ultima_publicacion` y `republicaciones_count`, reseteando su vigencia a Día 0 ante cada republicación. En contraste, los requerimientos (`requirements`) carecían de estas columnas, y `janIA.ts` marcaba como `status: 'expired'` cualquier demanda de más de 10 días al detectarla nuevamente, impidiendo su reactivación.
+3. **Incompatibilidad con el Ciclo Inmobiliario Real Colombiano**: Una compraventa inmobiliaria típica tarda entre 45 y 90 días. Descartar oportunidades de afinidad del 95% o 100% a los 10 días resultaba perjudicial para la gestión comercial de la red.
+
+**Solución aplicada:**
+- **Esquema y Autoregeneración de Requerimientos (`drizzle/schema.ts`, `server/_core/janIA.ts`)**:
+  - Incorporadas columnas `fecha_primera_publicacion`, `fecha_ultima_publicacion` y `republicaciones_count` en la tabla `requirements`.
+  - En la ingesta de JanIA, ante republicaciones se actualiza `fecha_ultima_publicacion = getColombiaNow()`, se incrementa `republicaciones_count`, se restablece `status = 'active'` y se recalcula el cotejo con `findMatchesForRequirement`.
+- **Regla Doctrinal de 45 Días para Matches Calientes en Backend (`server/routers/janIA.ts`)**:
+  - En `getAllMatches`: matches con score $\ge 90\%$ protegidos por 45 días (ciclo real de compraventa); matches estándar (75% a 89%) con ventana de 15 días renovable por republicación.
+  - Sincronizados los conteos analíticos de `getBotStatus` y reducido el TTL de caché de 180s a 45s para dinamismo inmediato.
+- **Filtro Inteligente, Insignias y Acción de Sondeo en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+  - Selector de vigencia enriquecido con `⚡ Vigentes & Calientes (≤15d / 45d en ≥90%)`, `⏳ Oportunidades en Riesgo (>10d sin gestión)` y `🌐 Todo el Histórico`.
+  - Insignia de ciclo `🔥 Protegido (Ciclo 45d)` para $\ge 90\%$, `⏳ Requiere Gestión` para oportunidades dormidas, e insignia de actualización `🔥 Republicado y Actualizado hace X días` en la demanda.
+  - Botón de 1-clic `🔍 Sondeo` por WhatsApp para validar con el asesor si el comprador sigue buscando.
+- **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+  - Añadida Sección 20 con 3 pruebas unitarias exhaustivas (**102/102 tests Vitest pasando** ✅).
+
+---
+
 ### 🔖 v31.100 — Septiembre 2026
 
 #### 📌 FLUJO ASÍNCRONO DE 2 PASOS PARA CONSULTA PREDIAL POR CHIP Y RESOLUCIÓN INMOBILIARIA AUTÓNOMA SIN TEXTOS GENÉRICOS ("¡WOOW!")

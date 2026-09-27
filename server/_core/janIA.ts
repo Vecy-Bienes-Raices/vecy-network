@@ -5549,17 +5549,14 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     return null;
   }
 
-  // Buscar duplicado activo (1. Por rawText idéntico, 2. Por parámetros comerciales del mismo broker)
+  // Buscar duplicado (1. Por rawText idéntico, 2. Por parámetros comerciales del mismo broker)
   let existing: any[] = [];
   if (insertData.rawText && insertData.rawText.trim().length > 25) {
     existing = await db
       .select()
       .from(requirements)
       .where(
-        and(
-          eq(requirements.rawText, insertData.rawText.trim()),
-          eq(requirements.status, "active")
-        )
+        eq(requirements.rawText, insertData.rawText.trim())
       )
       .limit(1);
   }
@@ -5574,8 +5571,7 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
           eq(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
           eq(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
           eq(requirements.ciudadDeseada, insertData.ciudadDeseada),
-          eq(requirements.zonaDeseada, insertData.zonaDeseada),
-          eq(requirements.status, "active")
+          eq(requirements.zonaDeseada, insertData.zonaDeseada)
         )
       )
       .limit(1);
@@ -5597,8 +5593,7 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     );
 
     const { fechaExtraccion: _ignored, ...updateFields } = insertDataWithCalif;
-    const existingAgeDays = existing[0].createdAt ? Math.max(0, Math.floor((Date.now() - new Date(existing[0].createdAt).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-    const targetStatus = existingAgeDays > 10 ? 'expired' : (existing[0].status || 'active');
+    const repCount = ((existing[0] as any).republicacionesCount || 0) + 1;
 
     const [updated] = await db
       .update(requirements)
@@ -5606,19 +5601,26 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
         ...updateFields,
         idUsuarioWhatsapp: preservedContact.effectivePhone || existing[0].idUsuarioWhatsapp,
         nombreUsuarioWhatsapp: preservedContact.effectiveName || existing[0].nombreUsuarioWhatsapp,
-        status: targetStatus,
+        status: 'active', // Al ser republicado o actualizado, se reactiva a activo de inmediato
+        fechaUltimaPublicacion: getColombiaNow(),
+        republicacionesCount: repCount,
         updatedAt: new Date()
       })
       .where(eq(requirements.id, existing[0].id))
       .returning();
-    console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id}, Status: ${targetStatus}, Antigüedad: ${existingAgeDays}d, Asesor: ${updated.nombreUsuarioWhatsapp || 'N/A'} - Tel: ${updated.idUsuarioWhatsapp || 'N/A'})`);
-    if (targetStatus !== 'expired') {
-      findMatchesForRequirement(updated.id).catch((mErr: any) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
-    }
+    console.log(`[Deduplication] Requerimiento existente detectado y reactivado (ID: ${updated.id}, Republicaciones: ${repCount}, Asesor: ${updated.nombreUsuarioWhatsapp || 'N/A'} - Tel: ${updated.idUsuarioWhatsapp || 'N/A'})`);
+    findMatchesForRequirement(updated.id).catch((mErr: any) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
     return updated;
   }
 
-  const [result] = await db.insert(requirements).values(insertDataWithCalif).returning();
+  const insertDataFinal = {
+    ...insertDataWithCalif,
+    fechaPrimeraPublicacion: getColombiaNow(),
+    fechaUltimaPublicacion: getColombiaNow(),
+    republicacionesCount: 0,
+    status: 'active' as const
+  };
+  const [result] = await db.insert(requirements).values(insertDataFinal).returning();
   findMatchesForRequirement(result.id).catch((mErr: any) => console.error("[JanIA-MatchingTrigger] Error calculando matches para requerimiento:", mErr));
   return result;
 }

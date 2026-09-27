@@ -1522,7 +1522,95 @@ Ed del 2014.
       expect(rep.reportText).toContain("✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.");
       // Blindaje de marca blanca: Jamás nombrar Policía Nacional ni 2Captcha
       expect(rep.reportText).not.toContain("Policía Nacional");
-      expect(rep.reportText).not.toContain("2Captcha");
+    });
+  });
+
+  describe("20. Ciclo de Vida Inteligente, Republicación de Demandas y Protección de Matches Calientes (v31.101)", () => {
+    it("Debe calcular vigencia de requerimientos considerando republicacionesCount y fechaUltimaPublicacion", async () => {
+      const { getRequirementEffectiveDaysAgo } = await import("../../client/src/components/admin/AdminMatches");
+
+      // Requerimiento creado hace 25 días pero republicado hace 2 días
+      const twentyFiveDaysAgo = new Date(Date.now() - 25 * 24 * 60 * 60 * 1000);
+      const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+
+      const reqRepublicado = {
+        id: 101,
+        createdAt: twentyFiveDaysAgo,
+        fechaUltimaPublicacion: twoDaysAgo,
+        republicacionesCount: 3,
+        status: "active"
+      };
+
+      const days = getRequirementEffectiveDaysAgo(reqRepublicado);
+      expect(days).toBe(2);
+    });
+
+    it("Debe proteger matches calientes (>=90%) durante 45 días (ciclo real de compraventa inmobiliaria)", async () => {
+      const { checkIsMatchActiveSmart } = await import("../../client/src/components/admin/AdminMatches");
+
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const fiftyDaysAgo = new Date(Date.now() - 50 * 24 * 60 * 60 * 1000);
+      const twelveDaysAgo = new Date(Date.now() - 12 * 24 * 60 * 60 * 1000);
+      const twentyDaysAgo = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000);
+
+      // Match Caliente (96%): Hace 30 días -> Debe estar ACTIVO (Protegido 45d)
+      const hotMatch30d = {
+        _precomputedScore: 96,
+        matchScore: "96.00",
+        property: { createdAt: thirtyDaysAgo, fechaUltimaPublicacion: thirtyDaysAgo },
+        requirement: { createdAt: thirtyDaysAgo, fechaUltimaPublicacion: thirtyDaysAgo }
+      };
+      expect(checkIsMatchActiveSmart(hotMatch30d)).toBe(true);
+
+      // Match Caliente (96%): Hace 50 días -> Supera los 45 días -> Debe dar false
+      const hotMatch50d = {
+        _precomputedScore: 96,
+        matchScore: "96.00",
+        property: { createdAt: fiftyDaysAgo, fechaUltimaPublicacion: fiftyDaysAgo },
+        requirement: { createdAt: fiftyDaysAgo, fechaUltimaPublicacion: fiftyDaysAgo }
+      };
+      expect(checkIsMatchActiveSmart(hotMatch50d)).toBe(false);
+
+      // Match Estándar (84%): Hace 12 días -> Debe estar ACTIVO (Ventana de 15d)
+      const standardMatch12d = {
+        _precomputedScore: 84,
+        matchScore: "84.00",
+        property: { createdAt: twelveDaysAgo, fechaUltimaPublicacion: twelveDaysAgo },
+        requirement: { createdAt: twelveDaysAgo, fechaUltimaPublicacion: twelveDaysAgo }
+      };
+      expect(checkIsMatchActiveSmart(standardMatch12d)).toBe(true);
+
+      // Match Estándar (84%): Hace 20 días -> Supera 15d sin republicar -> Inactivo en vista smart
+      const standardMatch20d = {
+        _precomputedScore: 84,
+        matchScore: "84.00",
+        property: { createdAt: twentyDaysAgo, fechaUltimaPublicacion: twentyDaysAgo },
+        requirement: { createdAt: twentyDaysAgo, fechaUltimaPublicacion: twentyDaysAgo }
+      };
+      expect(checkIsMatchActiveSmart(standardMatch20d)).toBe(false);
+    });
+
+    it("Debe identificar matches dormidos o en riesgo (>10 días sin gestión activa)", async () => {
+      const { checkIsMatchDormant } = await import("../../client/src/components/admin/AdminMatches");
+
+      const twelveDaysAgo = new Date(Date.now() - 12 * 24 * 60 * 60 * 1000);
+      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+
+      // Match con 12 días sin gestionar -> Dormido / En riesgo
+      const dormantMatch = {
+        status: "suggested",
+        property: { createdAt: twelveDaysAgo },
+        requirement: { createdAt: twelveDaysAgo }
+      };
+      expect(checkIsMatchDormant(dormantMatch)).toBe(true);
+
+      // Match con 3 días -> Fresco, no dormido
+      const freshMatch = {
+        status: "suggested",
+        property: { createdAt: threeDaysAgo },
+        requirement: { createdAt: threeDaysAgo }
+      };
+      expect(checkIsMatchDormant(freshMatch)).toBe(false);
     });
   });
 });

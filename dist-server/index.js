@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v31.100";
+    VECY_VERSION = "v31.101";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -248,6 +248,9 @@ var init_schema = __esm({
       rawText: text("rawText"),
       enlaceOrigen: text("enlace_origen"),
       calificacion: varchar("calificacion", { length: 50 }),
+      fechaPrimeraPublicacion: timestamp("fecha_primera_publicacion").defaultNow(),
+      fechaUltimaPublicacion: timestamp("fecha_ultima_publicacion").defaultNow(),
+      republicacionesCount: integer("republicaciones_count").default(0).notNull(),
       createdAt: timestamp("createdAt").defaultNow().notNull(),
       updatedAt: timestamp("updatedAt").defaultNow().notNull(),
       fechaExtraccion: timestamp("fecha_extraccion").defaultNow(),
@@ -17534,10 +17537,7 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
   let existing = [];
   if (insertData.rawText && insertData.rawText.trim().length > 25) {
     existing = await db.select().from(requirements).where(
-      and4(
-        eq7(requirements.rawText, insertData.rawText.trim()),
-        eq7(requirements.status, "active")
-      )
+      eq7(requirements.rawText, insertData.rawText.trim())
     ).limit(1);
   }
   if (existing.length === 0) {
@@ -17547,8 +17547,7 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
         eq7(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
         eq7(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
         eq7(requirements.ciudadDeseada, insertData.ciudadDeseada),
-        eq7(requirements.zonaDeseada, insertData.zonaDeseada),
-        eq7(requirements.status, "active")
+        eq7(requirements.zonaDeseada, insertData.zonaDeseada)
       )
     ).limit(1);
   }
@@ -17565,22 +17564,29 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
       insertDataWithCalif.nombreUsuarioWhatsapp
     );
     const { fechaExtraccion: _ignored, ...updateFields } = insertDataWithCalif;
-    const existingAgeDays = existing[0].createdAt ? Math.max(0, Math.floor((Date.now() - new Date(existing[0].createdAt).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
-    const targetStatus = existingAgeDays > 10 ? "expired" : existing[0].status || "active";
+    const repCount = (existing[0].republicacionesCount || 0) + 1;
     const [updated] = await db.update(requirements).set({
       ...updateFields,
       idUsuarioWhatsapp: preservedContact.effectivePhone || existing[0].idUsuarioWhatsapp,
       nombreUsuarioWhatsapp: preservedContact.effectiveName || existing[0].nombreUsuarioWhatsapp,
-      status: targetStatus,
+      status: "active",
+      // Al ser republicado o actualizado, se reactiva a activo de inmediato
+      fechaUltimaPublicacion: getColombiaNow(),
+      republicacionesCount: repCount,
       updatedAt: /* @__PURE__ */ new Date()
     }).where(eq7(requirements.id, existing[0].id)).returning();
-    console.log(`[Deduplication] Requerimiento existente detectado. Actualizando datos (ID: ${updated.id}, Status: ${targetStatus}, Antig\xFCedad: ${existingAgeDays}d, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
-    if (targetStatus !== "expired") {
-      findMatchesForRequirement(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
-    }
+    console.log(`[Deduplication] Requerimiento existente detectado y reactivado (ID: ${updated.id}, Republicaciones: ${repCount}, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
+    findMatchesForRequirement(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
     return updated;
   }
-  const [result] = await db.insert(requirements).values(insertDataWithCalif).returning();
+  const insertDataFinal = {
+    ...insertDataWithCalif,
+    fechaPrimeraPublicacion: getColombiaNow(),
+    fechaUltimaPublicacion: getColombiaNow(),
+    republicacionesCount: 0,
+    status: "active"
+  };
+  const [result] = await db.insert(requirements).values(insertDataFinal).returning();
   findMatchesForRequirement(result.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error calculando matches para requerimiento:", mErr));
   return result;
 }
@@ -22039,7 +22045,7 @@ ${liveStats}${userContextInstruction}
   // Get all matches in the network
   getAllMatches: publicProcedure.query(async () => {
     const now = Date.now();
-    if (cachedAllMatchesData && now - cachedAllMatchesTime < 18e4) {
+    if (cachedAllMatchesData && now - cachedAllMatchesTime < 45e3) {
       return cachedAllMatchesData;
     }
     const db = await getDb();
@@ -22136,14 +22142,26 @@ ${liveStats}${userContextInstruction}
           caracteristicasDeseadas: requirements.caracteristicasDeseadas,
           rawText: requirements.rawText,
           enlaceOrigen: requirements.enlaceOrigen,
+          fechaPrimeraPublicacion: requirements.fechaPrimeraPublicacion,
+          fechaUltimaPublicacion: requirements.fechaUltimaPublicacion,
+          republicacionesCount: requirements.republicacionesCount,
+          status: requirements.status,
           createdAt: requirements.createdAt
         }
       }).from(propertyMatches).innerJoin(properties, eq11(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq11(propertyMatches.requirementId, requirements.id)).where(sql9`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
             AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) 
             AND (${properties.available} IS NULL OR ${properties.available} = true)
             AND (${requirements.status} IS NULL OR CAST(${requirements.status} AS TEXT) != 'expired')
-            AND (${requirements.createdAt} >= NOW() - INTERVAL '10 days')
-            AND (COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt}) >= NOW() - INTERVAL '10 days')
+            AND (
+              -- Regla Doctrinal v31.101: Matches Calientes y Perfectos (>=90%) protegidos por 45 días (ciclo real de compraventa)
+              (CAST(${propertyMatches.matchScore} AS NUMERIC) >= 90 
+                AND COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt}) >= NOW() - INTERVAL '45 days'
+                AND COALESCE(${requirements.fechaUltimaPublicacion}, ${requirements.createdAt}) >= NOW() - INTERVAL '45 days')
+              OR
+              -- Matches Estándar (75% a 89%) con ventana activa de 15 días renovable por republicación
+              (COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt}) >= NOW() - INTERVAL '15 days'
+                AND COALESCE(${requirements.fechaUltimaPublicacion}, ${requirements.createdAt}) >= NOW() - INTERVAL '15 days')
+            )
             AND NOT (${properties.rawText} ~* '(\\m(busco|buscamos|se busca|estoy buscando|para compra ya)\\M)')`).orderBy(desc5(propertyMatches.id)).limit(800);
       const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
       const imagesMap = {};
@@ -22935,10 +22953,24 @@ ${liveStats}${userContextInstruction}
             (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%arriendo%' OR p."transactionType"::text ILIKE '%arriendo%')) as arriendo_matches,
             (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%permuta%' OR p."transactionType"::text ILIKE '%permuta%' OR p."rawText"::text ILIKE '%permuta%' OR r."rawText"::text ILIKE '%permuta%')) as permuta_matches,
             (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (r."tipoNegocioDeseado"::text ILIKE '%opcion%' OR p."transactionType"::text ILIKE '%opcion%' OR p."rawText"::text ILIKE '%opcion%compra%' OR r."rawText"::text ILIKE '%opcion%compra%')) as opcion_compra_matches,
-            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '10 days' OR p."createdAt" >= NOW() - INTERVAL '10 days')) as total_matches_active_10,
-            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 95 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '10 days' OR p."createdAt" >= NOW() - INTERVAL '10 days')) as perfect_matches_active_10,
-            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '10 days' OR p."createdAt" >= NOW() - INTERVAL '10 days') AND (r."tipoNegocioDeseado"::text ILIKE '%venta%' OR p."transactionType"::text ILIKE '%venta%')) as venta_matches_active_10,
-            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (p."fecha_ultima_publicacion" >= NOW() - INTERVAL '10 days' OR p."createdAt" >= NOW() - INTERVAL '10 days') AND (r."tipoNegocioDeseado"::text ILIKE '%arriendo%' OR p."transactionType"::text ILIKE '%arriendo%')) as arriendo_matches_active_10
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (
+              (CAST(pm."matchScore" AS NUMERIC) >= 90 AND COALESCE(p."fecha_ultima_publicacion", p."createdAt") >= NOW() - INTERVAL '45 days' AND COALESCE(r."fecha_ultima_publicacion", r."createdAt") >= NOW() - INTERVAL '45 days')
+              OR
+              (COALESCE(p."fecha_ultima_publicacion", p."createdAt") >= NOW() - INTERVAL '15 days' AND COALESCE(r."fecha_ultima_publicacion", r."createdAt") >= NOW() - INTERVAL '15 days')
+            )) as total_matches_active_10,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 95 AND (
+              COALESCE(p."fecha_ultima_publicacion", p."createdAt") >= NOW() - INTERVAL '45 days' AND COALESCE(r."fecha_ultima_publicacion", r."createdAt") >= NOW() - INTERVAL '45 days'
+            )) as perfect_matches_active_10,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (
+              (CAST(pm."matchScore" AS NUMERIC) >= 90 AND COALESCE(p."fecha_ultima_publicacion", p."createdAt") >= NOW() - INTERVAL '45 days' AND COALESCE(r."fecha_ultima_publicacion", r."createdAt") >= NOW() - INTERVAL '45 days')
+              OR
+              (COALESCE(p."fecha_ultima_publicacion", p."createdAt") >= NOW() - INTERVAL '15 days' AND COALESCE(r."fecha_ultima_publicacion", r."createdAt") >= NOW() - INTERVAL '15 days')
+            ) AND (r."tipoNegocioDeseado"::text ILIKE '%venta%' OR p."transactionType"::text ILIKE '%venta%')) as venta_matches_active_10,
+            (SELECT count(DISTINCT (pm."propertyId", pm."requirementId"))::int FROM "propertyMatches" pm JOIN properties p ON pm."propertyId" = p.id JOIN requirements r ON pm."requirementId" = r.id WHERE CAST(pm."matchScore" AS NUMERIC) >= 80 AND (
+              (CAST(pm."matchScore" AS NUMERIC) >= 90 AND COALESCE(p."fecha_ultima_publicacion", p."createdAt") >= NOW() - INTERVAL '45 days' AND COALESCE(r."fecha_ultima_publicacion", r."createdAt") >= NOW() - INTERVAL '45 days')
+              OR
+              (COALESCE(p."fecha_ultima_publicacion", p."createdAt") >= NOW() - INTERVAL '15 days' AND COALESCE(r."fecha_ultima_publicacion", r."createdAt") >= NOW() - INTERVAL '15 days')
+            ) AND (r."tipoNegocioDeseado"::text ILIKE '%arriendo%' OR p."transactionType"::text ILIKE '%arriendo%')) as arriendo_matches_active_10
         `;
         const row = res[0];
         if (row) {

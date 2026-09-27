@@ -7,6 +7,50 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.101 — 26 Septiembre 2026
+
+### Solicitud de Eduardo
+Arquitectura del Ciclo de Vida de los Matches, Republicación de Demandas y Protección de Coincidencias Calientes (45 Días):
+*"Pregunta: Entonces cuando un Match así sea perfecto y cumple los diez días sin haber sido gestionado por nosotros, qué pasa con él o según tu lógica qué debe suceder, no se si se va autoregenerando cada vez que es republicado ese inmueble y miesntras lo sigan publicando y republicando pues no se va de la mesa de coincidencias??, porque si es así creo que si ese MATCH vaa a desaparecer porque alguno de los dos DEMANDA u OFERTA ya venció o cumplió sus diez días y sus agente no lo volvió a subir ni arepublicar, pues no se ha actualizado. En tu lógica condicional que tienes dispuesto para estos Match que ya no regresan o son actualizados, cómo lo tienes planificado y si no hay un plan qué sugieres hacer?"*
+Y tras presentar la propuesta arquitectónica de 4 pilares:
+*"Me encanta, a ver si empiezo a ver cómo cambian a diario esos marcadores, porque lo que me parece muy raro y aburrido es tener que verlos allí fijos e inertes todo el tiempo, antes por lo menos se movían pero desde anoche ha quedado todo estático. Adelante entonces y creo que no sobra decirte que por favor no vayas a romper nada que ya esté funcionando y trabajando a la perfección. HA y que no olvides actualizar la verificación, actualización de los .md y despliegues necesarios. Ok. Gracias."*
+
+### Diagnóstico Técnico Profundo y Conclusiones de Arquitectura
+1. **Falsa Muerte por Filtro Ciego de 10 Días**:
+   - Los matches nunca se borraban de la base de datos (581 registros históricos preservados en `propertyMatches`), pero la vista del Admin filtraba rígidamente por `Vigentes (<= 10 días)` tanto en el backend (`getAllMatches` en `server/routers/janIA.ts`) como en el frontend (`AdminMatches.tsx`).
+   - La condición SQL `requirements.createdAt >= NOW() - INTERVAL '10 days'` y `properties.fecha_ultima_publicacion >= NOW() - INTERVAL '10 days'` provocaba que en cuanto una de las dos partes cumplía 11 días, el match salía de la vista activa de trabajo diario.
+2. **Asimetría Crítica entre Oferta y Demanda**:
+   - Para las Ofertas (`properties`), JanIA ya disponía de `fecha_ultima_publicacion` y `republicaciones_count`. Cada vez que el captador volvía a publicar el inmueble en un grupo, su reloj se reiniciaba a Día 0.
+   - Para las Demandas (`requirements`), NO existían estos campos en la tabla ni en el esquema. Peor aún, en `server/_core/janIA.ts` (línea 5601), si el requerimiento superaba 10 días de antigüedad al ser republicado, el código le asignaba `status: 'expired'` y no recalculaba matches, congelando la demanda en el olvido.
+3. **Incoherencia con el Ciclo Real de Venta Inmobiliaria en Colombia**:
+   - En Colombia un comprador promedio tarda entre 45 y 90 días en cerrar una compraventa (búsqueda, visitas, estudio de títulos, aprobación de crédito hipotecario, promesa).
+   - Ocultar matches del 95% o 100% al día 10 simplemente por el transcurso de días cronológicos hacía que se perdieran oportunidades millonarias sin haber sido gestionadas por el equipo de brókers.
+
+### Acciones Ejecutadas en Código
+1. **Esquema de Base de Datos y Deduplicación de Demandas (`drizzle/schema.ts`, `server/_core/janIA.ts`)**:
+   - Añadidas a la tabla `requirements` las columnas `fecha_primera_publicacion`, `fecha_ultima_publicacion` y `republicaciones_count`.
+   - Ejecutada migración DDL en PostgreSQL (`ALTER TABLE requirements ADD COLUMN IF NOT EXISTS...`).
+   - En `server/_core/janIA.ts`: se eliminó el bloqueo de `status = 'active'` en la búsqueda de duplicados para permitir encontrar requerimientos que hubiesen sido marcados como expirados. Al republicarse, se actualiza `fecha_ultima_publicacion = getColombiaNow()`, se incrementa `republicaciones_count`, se restaura `status = 'active'` y se dispara el recálculo automático de coincidencias con `findMatchesForRequirement`.
+2. **Regla de Oro de 45 Días para Matches Calientes en Backend (`server/routers/janIA.ts`)**:
+   - Modificado `getAllMatches`:
+     - Matches con Score $\ge 90\%$ (incluidos perfectos $\ge 95\%$): protegidos durante 45 días (ciclo real de compraventa inmobiliaria).
+     - Matches estándar (75% a 89%): ventana activa de 15 días renovable con cada republicación.
+   - Actualizada la consulta analítica en `getBotStatus` para contabilizar correctamente los matches activos bajo esta regla doctrinal.
+   - Reducido el TTL de caché de `getAllMatches` de 180s a 45s para que los marcadores y cambios de estado reflejen dinamismo inmediato.
+3. **Filtros Inteligentes, Insignias y Acción de Sondeo en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Creados helpers `checkIsMatchActiveSmart`, `checkIsMatchDormant` y actualizado `getRequirementEffectiveDaysAgo`.
+   - Selector de Vigencia enriquecido:
+     - `⚡ Vigentes & Calientes (≤15d / 45d en ≥90%)`: vista predeterminada dinámica y activa.
+     - `⏳ Oportunidades en Riesgo (>10d sin gestión)`: pestaña específica para rescatar matches calientes que llevan más de 10 días sin ser gestionados.
+     - `🌐 Todo el Histórico`: visualización completa sin restricciones temporales.
+   - Insignia de ciclo en cabecera de match: `🔥 Protegido (Ciclo 45d)` para $\ge 90\%$, y `⏳ Requiere Gestión` para oportunidades dormidas.
+   - Insignia de republicación en la ficha del requerimiento: `🔥 Republicado y Actualizado hace X días (100% Activo)`.
+   - Botón interactivo de 1-clic: `🔍 Sondeo` por WhatsApp para consultar directamente al asesor de la demanda si su cliente aún sigue buscando el inmueble.
+4. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+   - Añadida la **Sección 20** con 3 pruebas específicas validando la reactivación de requerimientos, la protección de 45 días para score $\ge 90\%$ y la detección de oportunidades dormidas (**102/102 tests Vitest pasando** ✅).
+
+---
+
 ## 📋 SESIÓN v31.100 — 26 Septiembre 2026
 
 ### Solicitud de Eduardo
