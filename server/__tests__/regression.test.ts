@@ -1469,6 +1469,19 @@ Ed del 2014.
       const liqComercial = liquidarPredialEstimadoBogota(1_000_000_000, 4, false);
       expect(liqComercial.tarifaPorMil).toBe(10.5);
       expect(liqComercial.impuestoPleno).toBe(10_500_000);
+
+      // 5. Verificación de formato exacto de respuesta de Predial Bogotá
+      const { executePredialAssistanceFromWhatsApp } = await import("../_core/predialService");
+      const predialRes = await executePredialAssistanceFromWhatsApp("JanIA, predial CHIP AAA0123ABCD estrato 4");
+      expect(predialRes.isPredialRequest).toBe(true);
+      expect(predialRes.chip).toBe("AAA0123ABCD");
+      expect(predialRes.reportText).toContain("LIQUIDACIÓN PREDIAL — VECY BIENES RAÍCES - BOGOTÁ");
+      expect(predialRes.reportText).toContain("Predio CHIP:* AAA0123ABCD (Estrato 4)");
+      expect(predialRes.reportText).toContain("Matrícula inmobiliaria:");
+      expect(predialRes.reportText).toContain("Dirección del predio:");
+      expect(predialRes.reportText).toContain("Avalúo Catastral:* $500.000.000 COP");
+      expect(predialRes.reportText).toContain("Valor estimado con 10% pronto pago:* $2.925.000 COP");
+      expect(predialRes.reportText).toContain("wa.me/573192919978?text=Factura+AAA0123ABCD");
     });
 
     it("Debe generar el reporte oficial con marca blanca 100% de VECY Bienes Raíces para la cédula 43403545", async () => {

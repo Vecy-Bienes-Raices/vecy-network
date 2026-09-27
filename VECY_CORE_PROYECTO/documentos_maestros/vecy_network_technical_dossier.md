@@ -345,6 +345,16 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
   - Pre-cacheados de forma autoritativa en memoria los datos oficiales de la C.C. `43403545` de **Gilma Estella Botero Gomez** en `identityCache`.
 - **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
   - Sección 19 ampliada con prueba unitaria que procesa el mensaje de Jani Alves, validando el nombre legal verificado `Gilma Estella Botero Gomez`, la atribución VECY Bienes Raíces y la ausencia estricta de "Policía Nacional" y "2Captcha" (99/99 tests pasando).
+- **Formato Ejecutivo de Liquidación Predial Bogotá (`server/_core/predialService.ts`)**:
+  - Incorporados todos los campos y emojis solicitados:
+    - `🛡️ *LIQUIDACIÓN PREDIAL — VECY BIENES RAÍCES - BOGOTÁ* 🇨🇴`
+    - `🏠 *Predio CHIP:* ${chip} (Estrato ${estrato})`
+    - `📑 *Matrícula inmobiliaria:* ${matricula}`
+    - `📍 *Dirección del predio:* ${direccion}`
+    - `🏛️ *Avalúo Catastral:* $${avaluo} COP`
+    - `💰 *Valor estimado con 10% pronto pago:* $${impuestoConDescuento} COP`
+    - `📄 *Para descargar tu factura oficial en PDF en privado, toca aquí:* wa.me/573192919978?text=Factura+${chip}`
+  - Extracción inteligente de CHIP, matrícula inmobiliaria (`50C-...`), dirección y avalúo con liquidación progresiva distrital.
 - **Compilación Limpia y Despliegue**:
   - `npm run check` (0 errores) y `npm run build` (0 errores). Versión `v31.99`.
 

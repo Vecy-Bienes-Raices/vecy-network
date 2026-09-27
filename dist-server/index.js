@@ -9782,6 +9782,39 @@ function extractChipAndCedulaForPredial(text2) {
       cedula = anyNumberMatch[1];
     }
   }
+  let matricula;
+  const matMatch1 = clean.match(/\b(50[CNS]-[0-9]{5,10})\b/i);
+  const matMatch2 = clean.match(/(?:matr[ií]cula(?:\s+inmobiliaria)?|folio|fmi)\s*[:#]?\s*([0-9A-Za-z-]+)/i);
+  if (matMatch1 && matMatch1[1]) {
+    matricula = matMatch1[1].toUpperCase();
+  } else if (matMatch2 && matMatch2[1]) {
+    matricula = matMatch2[1].toUpperCase();
+  }
+  let direccion;
+  const dirMatch1 = clean.match(/(?:direcci[oó]n(?:\s+del\s+predio)?|ubicaci[oó]n)\s*[:#]?\s*([A-Za-z0-9#\s\-\.,]+?)(?=(?:matr[ií]cula|aval[uú]o|chip|c[ée]dula|estrato|valor|$))/i);
+  const dirMatch2 = clean.match(/\b((?:cll?e?|cra?|carrera|diagonal|diag|transversal|transv?|av(?:enida)?|calle)\s+[0-9]+[A-Za-z]?\s*#?\s*[0-9]+[A-Za-z]?\s*[-–]\s*[0-9]+)\b/i);
+  if (dirMatch1 && dirMatch1[1] && dirMatch1[1].trim().length >= 5) {
+    direccion = dirMatch1[1].trim();
+  } else if (dirMatch2 && dirMatch2[1]) {
+    direccion = dirMatch2[1].trim();
+  }
+  let estrato;
+  const estratoMatch = clean.match(/\bestrato\s*([1-6])\b/i);
+  if (estratoMatch && estratoMatch[1]) {
+    estrato = parseInt(estratoMatch[1], 10);
+  }
+  let avaluoCatastral;
+  const avaluoMatch = clean.match(/(?:aval[uú]o(?:\s+catastral)?|valor\s+catastral)\s*[:#]?\s*\$?\s*([0-9.,]+(?:\s*(?:millones|m))?)/i);
+  if (avaluoMatch && avaluoMatch[1]) {
+    const rawVal = avaluoMatch[1].toLowerCase();
+    if (rawVal.includes("millon") || rawVal.includes("m")) {
+      const numOnly = parseFloat(rawVal.replace(/[^\d.,]/g, "").replace(",", "."));
+      if (!isNaN(numOnly)) avaluoCatastral = Math.round(numOnly * 1e6);
+    } else {
+      const numOnly = parseInt(rawVal.replace(/\D/g, ""), 10);
+      if (!isNaN(numOnly) && numOnly > 0) avaluoCatastral = numOnly;
+    }
+  }
   const keywords = ["predial", "impuesto predial", "factura predial", "chip", "paz y salvo predial", "liquidar predial"];
   const hasKeyword = keywords.some((kw) => lower.includes(kw));
   if (chipMatch && chipMatch[1]) {
@@ -9789,14 +9822,22 @@ function extractChipAndCedulaForPredial(text2) {
       found: true,
       chip: chipMatch[1].toUpperCase(),
       cedula,
-      tipoDoc: "CC"
+      tipoDoc: "CC",
+      matricula,
+      direccion,
+      estrato,
+      avaluoCatastral
     };
   }
-  if (hasKeyword && cedula) {
+  if (hasKeyword && (cedula || matricula || direccion)) {
     return {
       found: true,
       cedula,
-      tipoDoc: "CC"
+      tipoDoc: "CC",
+      matricula,
+      direccion,
+      estrato,
+      avaluoCatastral
     };
   }
   return { found: false };
@@ -9848,28 +9889,23 @@ async function executePredialAssistanceFromWhatsApp(text2) {
   }
   const chip = detection.chip;
   const cedula = detection.cedula;
-  const portalUrl = "https://nuevaoficinavirtual.shd.gov.co/bogota/cf/pagos/descarga-factura-predial.html";
-  const portalGeneral = "https://www.haciendabogota.gov.co";
-  if (chip && cedula) {
-    const reportText2 = `\u{1F3DB}\uFE0F *GESTI\xD3N DE IMPUESTO PREDIAL BOGOT\xC1 \u2014 SECRETAR\xCDA DE HACIENDA* \u{1F4C4}
+  const estrato = detection.estrato || 4;
+  const avaluo = detection.avaluoCatastral || 5e8;
+  const matricula = detection.matricula || "Registrada en Certificado de Tradici\xF3n";
+  const direccion = detection.direccion || "Registrada en Catastro Distrital / SDH";
+  if (chip) {
+    const liquidacion = liquidarPredialEstimadoBogota(avaluo, estrato, true);
+    const avaluoFormatted = avaluo.toLocaleString("es-CO");
+    const valorConDescuentoFormatted = liquidacion.impuestoConDescuento.toLocaleString("es-CO");
+    const reportText2 = `\u{1F6E1}\uFE0F *LIQUIDACI\xD3N PREDIAL \u2014 VECY BIENES RA\xCDCES - BOGOT\xC1* \u{1F1E8}\u{1F1F4}
 
-He registrado y validado los par\xE1metros oficiales para la consulta de tu inmueble:
+\u{1F3E0} *Predio CHIP:* ${chip} (Estrato ${estrato})
+\u{1F4D1} *Matr\xEDcula inmobiliaria:* ${matricula}
+\u{1F4CD} *Direcci\xF3n del predio:* ${direccion}
+\u{1F3DB}\uFE0F *Aval\xFAo Catastral:* $${avaluoFormatted} COP
+\u{1F4B0} *Valor estimado con 10% pronto pago:* $${valorConDescuentoFormatted} COP
 
-\u2022 *C\xF3digo CHIP:* \`${chip}\`
-\u2022 *C\xE9dula Propietario:* C.C. ${Number(cedula).toLocaleString("es-CO")}
-\u2022 *Tipo de Impuesto:* Impuesto Predial Unificado (Distrito Capital)
-\u2022 *Portal Oficial:* Secretar\xEDa Distrital de Hacienda (SDH)
-
-\u{1F517} *Enlace Directo de Descarga y Pago Oficial:*
-\u{1F449} ${portalUrl}
-
-\u{1F4CC} *Pasos Inmediatos para Obtener el PDF:*
-1. Abre el enlace anterior desde tu navegador.
-2. Selecciona Tipo de Documento (*C\xE9dula de Ciudadan\xEDa*), digita \`${cedula}\` y el CHIP \`${chip}\`.
-3. Marca la casilla *"No soy un robot"* y haz clic en **"Buscar"**.
-4. Podr\xE1s descargar la factura oficial en PDF con c\xF3digo de barras para pago o verificar el paz y salvo catastral.
-
-\u{1F4A1} *Recomendaci\xF3n Notarial VECY:* Para la firma de promesa de compraventa o escrituraci\xF3n en Notar\xEDa, exige siempre la factura predial del a\xF1o vigente con sello de pagado o el certificado de estado de cuenta en ceros emitido por la Oficina Virtual de Hacienda. \xA1Cero sorpresas al momento del cierre! \u{1F91D}\u2728`;
+\u{1F4C4} *Para descargar tu factura oficial en PDF en privado, toca aqu\xED:* wa.me/573192919978?text=Factura+${chip}`;
     return {
       isPredialRequest: true,
       chip,
@@ -9877,32 +9913,15 @@ He registrado y validado los par\xE1metros oficiales para la consulta de tu inmu
       reportText: reportText2
     };
   }
-  if (chip && !cedula) {
-    const reportText2 = `\u{1F3E2} *CONSULTA PREDIAL BOGOT\xC1 \u2014 C\xD3DIGO CHIP DETECTADO* \u{1F4CD}
+  const reportText = `\u{1F6E1}\uFE0F *LIQUIDACI\xD3N PREDIAL \u2014 VECY BIENES RA\xCDCES - BOGOT\xC1* \u{1F1E8}\u{1F1F4}
 
-Identifiqu\xE9 con \xE9xito el CHIP catastral de tu inmueble: *\`${chip}\`*.
+Para liquidar tu Impuesto Predial y entregarte el reporte oficial con su factura en PDF, solo requiero el c\xF3digo CHIP del inmueble:
 
-\u2696\uFE0F *Para descargar la Factura Oficial del Predial:*
-La Secretar\xEDa Distrital de Hacienda de Bogot\xE1 (SDH) exige por norma de seguridad fiscal el **N\xFAmero de Documento (C\xE9dula o NIT)** del propietario registrado en la matr\xEDcula inmobiliaria.
+\u{1F3E0} *Ejemplo:* Env\xEDame *"JanIA, predial CHIP AAA0123ABCD"*
 
-\u{1F449} *\xBFC\xF3mo proceder?*
-Escr\xEDbeme por favor la c\xE9dula del propietario (ej: *"JanIA, el propietario tiene la c\xE9dula 52432900 para el CHIP ${chip}"*) y te entregar\xE9 la gu\xEDa de liquidaci\xF3n y acceso directo al PDF en la plataforma oficial.
+*(Opcionalmente puedes incluir matr\xEDcula, direcci\xF3n o aval\xFAo para un c\xE1lculo exacto)*.
 
-\u{1F517} O ingresa directamente aqu\xED con ambos datos: ${portalUrl}`;
-    return {
-      isPredialRequest: true,
-      chip,
-      reportText: reportText2
-    };
-  }
-  const reportText = `\u{1F4C4} *SERVICIO DE PREDIALES Y AVAL\xDAO CATASTRAL \u2014 VECY NETWORK* \u{1F3DB}\uFE0F
-
-Para ayudarte a gestionar el recibo del Impuesto Predial en Bogot\xE1 o liquidar los costos de tu inmueble, solo requiero dos datos:
-
-1. **C\xF3digo CHIP del inmueble** (c\xF3digo alfanum\xE9rico de 11 caracteres que empieza por *AAA*, visible en el Certificado de Tradici\xF3n o prediales anteriores).
-2. **N\xFAmero de C\xE9dula o NIT** del titular del predio.
-
-\u{1F4AC} Env\xEDame ambos datos (ej: *"JanIA, predial CHIP AAA0123ABCD c\xE9dula 52432900"*) y te guiar\xE9 con el aval\xFAo, liquidaci\xF3n y descarga oficial al instante. \xA1Totalmente a tu servicio! \u{1F91D}\u2728`;
+\xA1Te entregar\xE9 la liquidaci\xF3n y el acceso a tu factura oficial al instante! \u{1F91D}\u2728`;
   return {
     isPredialRequest: true,
     reportText

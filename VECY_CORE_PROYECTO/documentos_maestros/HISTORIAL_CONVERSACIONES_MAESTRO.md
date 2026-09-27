@@ -77,7 +77,29 @@ Confirmación de Preservación de las Dos Agendas, Verificación de Cédulas en 
   - `👤 *Pertenece a:* ${officialName}`
   - `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`
 - Actualizadas las aserciones de la suite de regresión (`server/__tests__/regression.test.ts`) validando la nueva estructura concisa.
-- Verificación: 99/99 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build exitoso.
+### Requerimiento de Formato para Liquidación Predial Bogotá (Doctrina v31.99):
+*"Necesito que agregues estos campos con sus respectivos emojis al mensaje de respuesta del predial:
+Matrícula inmobiliaria
+Avalúo Catastral: $...
+🛡️ LIQUIDACIÓN PREDIAL — VECY BIENES RAÍCES - BOGOTÁ
+🏠 Predio CHIP: AAA0123ABCD (Estrato 4)
+__ Matrícula inmobiliaria: ________________
+__ Dirección del predio: 
+__ Avalúo Catastral: $...
+💰 Valor estimado con 10% pronto pago: $2.925.000 COP
+📄 Para descargar tu factura oficial en PDF en privado, toca aquí: wa.me/573192919978?text=Factura+AAA0123ABCD"*
+
+### Acciones Ejecutadas en Predial Bogotá:
+- Enriquecido `server/_core/predialService.ts` para extraer CHIP, estrato, avalúo, matrícula inmobiliaria (`50C-...`) y dirección.
+- Estructurado el reporte oficial con los emojis y campos exactos:
+  - `🛡️ *LIQUIDACIÓN PREDIAL — VECY BIENES RAÍCES - BOGOTÁ* 🇨🇴`
+  - `🏠 *Predio CHIP:* ${chip} (Estrato ${estrato})`
+  - `📑 *Matrícula inmobiliaria:* ${matricula}`
+  - `📍 *Dirección del predio:* ${direccion}`
+  - `🏛️ *Avalúo Catastral:* $${avaluo} COP`
+  - `💰 *Valor estimado con 10% pronto pago:* $${impuestoConDescuento} COP`
+  - `📄 *Para descargar tu factura oficial en PDF en privado, toca aquí:* wa.me/573192919978?text=Factura+${chip}`
+- Añadida prueba en `server/__tests__/regression.test.ts` validando la estructura (99/99 tests pasando ✅).
 
 ---
 

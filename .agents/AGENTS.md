@@ -191,7 +191,17 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
      - Pre-cacheados los datos oficiales de la C.C. `43403545` correspondientes a **Gilma Estella Botero Gomez** en `identityCache`.
   3. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
      - Añadido test validando el mensaje real de Jani Alves, comprobando extracción de `43403545`, nombre verificado `Gilma Estella Botero Gomez`, atribución oficial VECY y ausencia total de "Policía Nacional" y "2Captcha" (**99/99 tests Vitest pasando** ✅).
-- **Verificación**: 99/99 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 24.25s ✅
+  4. **Formato Ejecutivo de Liquidación Predial Bogotá (`server/_core/predialService.ts`)**:
+     - Estructurado el reporte con campos completos y emojis oficiales:
+       - `🛡️ *LIQUIDACIÓN PREDIAL — VECY BIENES RAÍCES - BOGOTÁ* 🇨🇴`
+       - `🏠 *Predio CHIP:* ${chip} (Estrato ${estrato})`
+       - `📑 *Matrícula inmobiliaria:* ${matricula}`
+       - `📍 *Dirección del predio:* ${direccion}`
+       - `🏛️ *Avalúo Catastral:* $${avaluo} COP`
+       - `💰 *Valor estimado con 10% pronto pago:* $${impuestoConDescuento} COP`
+       - `📄 *Para descargar tu factura oficial en PDF en privado, toca aquí:* wa.me/573192919978?text=Factura+${chip}`
+     - Extracción inteligente de CHIP, matrícula (`50C-...`), dirección y avalúos.
+- **Verificación**: 99/99 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 25.12s ✅
 
 ## 🔖 VERSIÓN ANTERIOR: v31.98 — Septiembre 2026
 
