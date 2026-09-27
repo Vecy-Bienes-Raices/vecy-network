@@ -178,9 +178,12 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
   1. El solver de 2Captcha tarda entre 18 y 35 segundos en resolver el reCAPTCHA v2 de PrimeFaces en el portal estatal. La petición HTTPS en `server/routers/agenda.ts` tenía un timeout rígido de 25s y 0 reintentos, provocando fallos por latencia transitoria.
   2. Los templates de respuesta en `server/_core/identityVerificationService.ts` exponían el nombre de la institución policial tanto en encabezados como en el cuerpo de error.
 - **Acciones Ejecutadas en Código**:
-  1. **Marca Blanca 100% VECY Bienes Raíces (`server/_core/identityVerificationService.ts`, prompts, crons)**:
+  1. **Marca Blanca 100% VECY Bienes Raíces y Formato Ejecutivo Minimalista (`server/_core/identityVerificationService.ts`, prompts, crons)**:
      - Encabezado oficial: `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴`.
-     - Atribución: `🏛️ *Sistema de Validación:* Central Oficial de Identidad y Seguridad Notarial VECY Bienes Raíces 🔐`.
+     - Formato ejecutivo directo de 3 líneas (solicitado doctrinalmente por Eduardo):
+       - `🆔 *El documento:* C.C. ${formattedCedula}`
+       - `👤 *Pertenece a:* ${officialName}`
+       - `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`
      - Mensaje de intermitencia: `⚠️ *CONSULTA DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\nNo fue posible validar automáticamente en este momento la C.C. *${formattedCedula}* en nuestra Central Oficial de Seguridad e Identidad.` (Cero menciones a Policía o terceros).
      - Prompts (`VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`, `PROYECTO_Vecy Network.md`) y cron jobs de tips actualizados con la marca blanca oficial.
   2. **Timeout de 45s y Reintentos Automáticos con Backoff (`server/routers/agenda.ts`)**:

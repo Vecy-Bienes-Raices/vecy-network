@@ -13283,15 +13283,9 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
       const officialName = formatTitleCase(res.officialName);
       const reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
-\u{1F464} *Nombre Oficial:* ${officialName}
-\u{1F194} *Documento:* C.C. ${formattedCedula}
-\u2696\uFE0F *Estado de Seguridad:* Ciudadano verificado y habilitado. Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.
-\u{1F3DB}\uFE0F *Sistema de Validaci\xF3n:* Central Oficial de Identidad y Seguridad Notarial VECY Bienes Ra\xEDces \u{1F510}
-\u23F1\uFE0F *Fecha y Hora:* ${nowBogota} (Hora Colombia)
-
-\u2705 *Dictamen de Seguridad:* Identidad y antecedentes validados exitosamente para agendamiento de citas, acuerdos de puntas compartidas (50/50), hojas de visita y promesas de compraventa en VECY Network. \u{1F91D}\u2728
-
-\u{1F4A1} *Asesora con rigor:* Conserva este registro para la debida diligencia y blindaje de tu comisi\xF3n.`;
+\u{1F194} *El documento:* C.C. ${formattedCedula}
+\u{1F464} *Pertenece a:* ${officialName}
+\u2705 *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
       return {
         isVerificationRequest: true,
         cedula,

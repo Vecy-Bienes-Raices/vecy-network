@@ -124,13 +124,9 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
       const officialName = formatTitleCase(res.officialName);
       const reportText = 
         `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
-        `👤 *Nombre Oficial:* ${officialName}\n` +
-        `🆔 *Documento:* C.C. ${formattedCedula}\n` +
-        `⚖️ *Estado de Seguridad:* Ciudadano verificado y habilitado. Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.\n` +
-        `🏛️ *Sistema de Validación:* Central Oficial de Identidad y Seguridad Notarial VECY Bienes Raíces 🔐\n` +
-        `⏱️ *Fecha y Hora:* ${nowBogota} (Hora Colombia)\n\n` +
-        `✅ *Dictamen de Seguridad:* Identidad y antecedentes validados exitosamente para agendamiento de citas, acuerdos de puntas compartidas (50/50), hojas de visita y promesas de compraventa en VECY Network. 🤝✨\n\n` +
-        `💡 *Asesora con rigor:* Conserva este registro para la debida diligencia y blindaje de tu comisión.`;
+        `🆔 *El documento:* C.C. ${formattedCedula}\n` +
+        `👤 *Pertenece a:* ${officialName}\n` +
+        `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
 
       return {
         isVerificationRequest: true,

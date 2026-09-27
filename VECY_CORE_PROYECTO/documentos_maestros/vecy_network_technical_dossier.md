@@ -332,8 +332,12 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 3. **Cero Tolerancia a Caídas de Red**: La consulta no contaba con reintentos automáticos ante congestiones temporales de red.
 
 **Solución aplicada:**
-- **Marca Blanca Absoluta 100% VECY Bienes Raíces**:
-  - Reescritas todas las plantillas en `server/_core/identityVerificationService.ts` bajo la denominación institucional `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴` y `🏛️ *Sistema de Validación:* Central Oficial de Identidad y Seguridad Notarial VECY Bienes Raíces 🔐`.
+- **Marca Blanca Absoluta 100% VECY Bienes Raíces y Formato Minimalista**:
+  - Reescritas todas las plantillas en `server/_core/identityVerificationService.ts` bajo el formato ejecutivo directo de 3 líneas solicitado por Eduardo:
+    - `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴`
+    - `🆔 *El documento:* C.C. ${formattedCedula}`
+    - `👤 *Pertenece a:* ${officialName}`
+    - `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`
   - Eliminada toda mención a la Policía Nacional y 2Captcha en las respuestas al usuario, prompts de Grupo 2 y Grupo 3, y mensajes programados de cron.
 - **Resiliencia de Red, Timeout 45s y Reintentos (`server/routers/agenda.ts`)**:
   - Ampliado el timeout de red HTTPS de 25s a **45 segundos**.

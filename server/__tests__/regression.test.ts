@@ -1481,9 +1481,9 @@ Ed del 2014.
       expect(rep.success).toBe(true);
       expect(rep.officialName).toBe("Gilma Estella Botero Gomez");
       expect(rep.reportText).toContain("VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES");
-      expect(rep.reportText).toContain("Gilma Estella Botero Gomez");
-      expect(rep.reportText).toContain("43.403.545");
-      expect(rep.reportText).toContain("Central Oficial de Identidad y Seguridad Notarial VECY Bienes Raíces");
+      expect(rep.reportText).toContain("🆔 *El documento:* C.C. 43.403.545");
+      expect(rep.reportText).toContain("👤 *Pertenece a:* Gilma Estella Botero Gomez");
+      expect(rep.reportText).toContain("✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.");
       // Blindaje de marca blanca: Jamás nombrar Policía Nacional ni 2Captcha
       expect(rep.reportText).not.toContain("Policía Nacional");
       expect(rep.reportText).not.toContain("2Captcha");

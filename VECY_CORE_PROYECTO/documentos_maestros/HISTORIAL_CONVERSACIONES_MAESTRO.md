@@ -64,6 +64,21 @@ Confirmación de Preservación de las Dos Agendas, Verificación de Cédulas en 
    - **`tsc --noEmit` limpio con 0 errores** ✅.
    - **`npm run build` completado limpiamente en 24.25s** ✅.
 
+### Feedback Adicional de Eduardo — Formato Ejecutivo Minimalista y Directo:
+*"Muy largo el mensaje y qué tal si no nos compĺicamos tanto y JanIA contesta solo con esto:
+🛡️ \*VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES\* 🇨🇴
+🆔 \*El documento:\* C.C. 43.403.545
+👤 \*Pertenece a:\* Gilma Estella Botero Gomez
+ ✅ \*Ciudadano verificado y habilitado.\* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias."*
+
+### Ajuste Inmediato de Formato (Doctrina v31.99):
+- Se simplificó la plantilla de respuesta en `server/_core/identityVerificationService.ts` para entregar de forma exacta, contundente y sin adornos innecesarios el formato de 3 líneas solicitado por Eduardo:
+  - `🆔 *El documento:* C.C. ${formattedCedula}`
+  - `👤 *Pertenece a:* ${officialName}`
+  - `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`
+- Actualizadas las aserciones de la suite de regresión (`server/__tests__/regression.test.ts`) validando la nueva estructura concisa.
+- Verificación: 99/99 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build exitoso.
+
 ---
 
 ## 📋 SESIÓN v31.97 — 26 Septiembre 2026
