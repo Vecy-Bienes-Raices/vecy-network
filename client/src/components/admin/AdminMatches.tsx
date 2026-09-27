@@ -1442,19 +1442,22 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
     areaP = areaP / 100;
   }
 
-  // Chequeo de Coherencia de Segmento Financiero y Metraje (Doctrina v31.90)
+  // Chequeo de Coherencia de Segmento Financiero y Metraje (Doctrina v31.105)
+  const reqSaleMinBudget = parseSafePrice(req.presupuestoMin, req.rawText);
   const segmentSaleCheck = checkFinancialSegmentCoherence({
     budgetMax: reqSaleBudget,
     offeredPrice: propSalePrice,
     offeredArea: areaP,
-    isSale: true
+    isSale: true,
+    budgetMin: reqSaleMinBudget
   });
 
   const segmentRentCheck = checkFinancialSegmentCoherence({
     budgetMax: reqRentBudget,
     offeredPrice: propRentPrice,
     offeredArea: areaP,
-    isSale: false
+    isSale: false,
+    budgetMin: reqSaleMinBudget
   });
 
   // Evaluación Fila 1: Precio de Venta
@@ -1468,8 +1471,8 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
     saleS = propSalePrice > 0 ? "plus" : "neutral";
   } else if (reqSaleBudget > 0 && propSalePrice > 0) {
     if (!segmentSaleCheck.isCompatible) {
-      saleS = "missing"; // Guillotina Inflexible por desproporción de segmento financiero y metraje (Doctrina v31.90)
-      propSaleLabel = `${formatCOP(propSalePrice)} (Sub-segmento < 58% ppto)`;
+      saleS = "missing"; // Guillotina Inflexible por desproporción de segmento financiero (Doctrina v31.105)
+      propSaleLabel = `${formatCOP(propSalePrice)} (Inferior al piso financiero: ${Math.round((propSalePrice / reqSaleBudget) * 100)}% del ppto)`;
     } else if (propSalePrice <= reqSaleBudget) {
       saleS = "exact"; // Coincide idéntico o está dentro de presupuesto
     } else if (propSalePrice <= reqSaleBudget * 1.10) {
@@ -1499,8 +1502,8 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
     rentS = propRentPrice > 0 ? "warn" : "neutral";
   } else if (reqRentBudget > 0 && propRentPrice > 0) {
     if (!segmentRentCheck.isCompatible) {
-      rentS = "missing"; // Guillotina Inflexible por desproporción de segmento en arriendo (Doctrina v31.90)
-      propRentLabel = `${formatCOP(propRentPrice)}${propRentSuffix} (Sub-segmento < 55% canon)`;
+      rentS = "missing"; // Guillotina Inflexible por desproporción de segmento en arriendo (Doctrina v31.105)
+      propRentLabel = `${formatCOP(propRentPrice)}${propRentSuffix} (Inferior al piso financiero: ${Math.round((propRentPrice / reqRentBudget) * 100)}% del canon)`;
     } else if (propRentPrice <= reqRentBudget) {
       rentS = "exact"; // Coincide dentro del canon presupuestado
     } else if (propRentPrice <= reqRentBudget * 1.10) {
@@ -1526,7 +1529,7 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
     reqAdminMax = reqAdminInfo.fee;
   }
 
-  const requiresLowAdmin = /administraci[oó]n\s*(?:muy\s*)?baja|baja\s*administraci[oó]n|administraci[oó]n\s*econ[oó]mica|edificio(?:s)?\s*(?:de\s*)?administraci[oó]n\s*baja|edificio(?:s)?\s*inteligente(?:s)?|sin\s*administraci[oó]n/i.test(reqTextLower);
+  const requiresLowAdmin = /administraci[oó]n\s*(?:muy\s*)?baja|baja\s*administraci[oó]n|administraci[oó]n\s*econ[oó]mica|edificio(?:s)?\s*(?:de\s*)?administraci[oó]n\s*baja|sin\s*administraci[oó]n/i.test(reqTextLower);
   let propAdminLabel = isPropAdminIncluded
     ? "Incluida en el canon"
     : (propAdminFee > 0
@@ -1543,7 +1546,7 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
             : (reqTextLower.includes("admin") ? "Administración flexible" : "Sin restricción de administración")));
 
   let adminS: MatchStatus = "neutral";
-  if (requiresLowAdmin) {
+  if (requiresLowAdmin && reqAdminMax <= 0) {
     if (propAdminFee > 750_000) {
       adminS = "missing"; // 🔴 Exige administración baja o inteligente y la oferta tiene una cuota exorbitante
     } else if (propAdminFee > 0) {

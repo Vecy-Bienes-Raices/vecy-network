@@ -365,7 +365,7 @@ export function parseAdminFee(rawText: string): { fee: number | null; isIncluded
   if (!rawText) return { fee: null, isIncluded: false, requiresInquiry: false };
   const clean = rawText.toLowerCase().replace(/[*_~]/g, "");
 
-  const isIncluded = /incluid[ao]|inc\b|con\s+(?:admi?n|adm[oó]n|adm\b)/i.test(clean);
+  const isIncluded = /(?:administraci[oó]n|admin|admon|adm)\s*(?:est[aá]|va)?\s*incluid[ao]|incluid[ao]\s*(?:la\s*)?(?:administraci[oó]n|admin|admon|adm)|(?:admi?n|adm[oó]n)\s*inc\b|con\s+(?:admi?n|adm[oó]n|adm\b)/i.test(clean);
   const requiresInquiry = /\+\s*(?:admi?n|adm[oó]n|adm\b)|\b(?:mas|más)\s*(?:admi?n|adm[oó]n|adm\b)/i.test(clean);
 
   const feeMatch = clean.match(/(?:max|máximo|hasta|tope|de|valor)?\s*(?:cop|\$)?\s*(\d+(?:[\s.'’]\d+)*)\s*(?:m|millones|millon|mil|k)?\s*(?:de\s+)?(?:admin|admon|admón|adm|administraci[oó]n|cuota)/i)
@@ -565,51 +565,54 @@ export function demands24hSecurity(text: string): boolean {
 }
 
 /**
- * Evalúa si hay una desproporción abismal de segmento financiero y metraje (Doctrina v31.90).
- * Si un cliente tiene un presupuesto generoso (ej: $1.200 MM en venta o $5M en arriendo),
- * ofrecerle un inmueble que cueste menos del 58% del presupuesto (ej: $630 MM) con un área
- * modesta/reducida (< 95 m² en venta o < 80 m² en arriendo) es un choque de segmento comercial.
+ * Evalúa la coherencia de segmento financiero y piso de precio/canon (Doctrina v31.105).
+ * Si un cliente tiene un presupuesto de búsqueda (ej: $1.700 MM en compra o $8.5M en arriendo),
+ * una oferta con un precio significativamente inferior (< 70% del presupuesto o < 90% del mínimo)
+ * corresponde a un segmento socioeconómico, estado de conservación o nivel de acabados totalmente
+ * ajeno al demandado. No se admiten propiedades a casi la mitad del precio buscado (Regla Doctrinal de Eduardo).
  */
 export function checkFinancialSegmentCoherence(params: {
   budgetMax: number;
   offeredPrice: number;
   offeredArea?: number;
   isSale: boolean;
+  budgetMin?: number;
 }): { isCompatible: boolean; reason?: string } {
-  const { budgetMax, offeredPrice, offeredArea, isSale } = params;
+  const { budgetMax, offeredPrice, isSale, budgetMin } = params;
   if (!budgetMax || budgetMax <= 0 || !offeredPrice || offeredPrice <= 0) {
     return { isCompatible: true };
   }
 
-  if (isSale) {
-    // Aplica a presupuestos medios-altos y altos (>= $500M)
-    if (budgetMax >= 500_000_000) {
-      const priceRatio = offeredPrice / budgetMax;
-      // Si cuesta menos del 58% del presupuesto (caída > 42%)
-      if (priceRatio < 0.58) {
-        // Y el área es modesta / reducida (< 95 m²)
-        if (offeredArea && offeredArea > 0 && offeredArea < 95) {
-          const pct = Math.round(priceRatio * 100);
-          return {
-            isCompatible: false,
-            reason: `Desproporción de Segmento Comercial: El demandante cuenta con un presupuesto de $${(budgetMax / 1_000_000).toLocaleString("es-CO")}M y la oferta cuesta apenas $${(offeredPrice / 1_000_000).toLocaleString("es-CO")}M (${pct}% del presupuesto) con solo ${offeredArea} m². No corresponde al segmento de confort y amplitud buscado.`
-          };
-        }
-      }
+  // 1. Si la demanda especificó un rango con mínimo explícito (ej: "entre 850 y 1000MM"):
+  if (budgetMin && budgetMin > 0) {
+    const minFloor = budgetMin * 0.90; // Tolerancia máxima del 10% por debajo del mínimo expresado
+    if (offeredPrice < minFloor) {
+      const minLabel = `$${(budgetMin / 1_000_000).toLocaleString("es-CO")}M`;
+      const offLabel = `$${(offeredPrice / 1_000_000).toLocaleString("es-CO")}M`;
+      return {
+        isCompatible: false,
+        reason: `Precio por Debajo del Piso Solicitado: La demanda exige expresamente un mínimo de ${minLabel} y la oferta tiene un valor de ${offLabel} (inferior al piso admisible de $${(minFloor / 1_000_000).toLocaleString("es-CO")}M). Choque de segmento.`
+      };
     }
-  } else {
-    // Arriendo: presupuestos altos (>= $4.5M)
-    if (budgetMax >= 4_500_000) {
-      const rentRatio = offeredPrice / budgetMax;
-      if (rentRatio < 0.55) {
-        if (offeredArea && offeredArea > 0 && offeredArea < 80) {
-          const pct = Math.round(rentRatio * 100);
-          return {
-            isCompatible: false,
-            reason: `Desproporción de Segmento en Arriendo: El canon ofertado de $${(offeredPrice / 1_000_000).toLocaleString("es-CO")}M representa solo el ${pct}% del canon presupuestado ($${(budgetMax / 1_000_000).toLocaleString("es-CO")}M) con metraje reducido (${offeredArea} m²).`
-          };
-        }
-      }
+  }
+
+  // 2. Si la demanda especificó presupuesto techo único (ej: "1700 millones", "hasta 1300MM"):
+  // Doctrina Eduardo: una oferta no puede ser casi a la mitad del precio buscado, debe reflejar un precio cercano (Piso mínimo 70%).
+  const floorRatio = 0.70;
+  const minAllowedPrice = budgetMax * floorRatio;
+
+  if (offeredPrice < minAllowedPrice) {
+    const pct = Math.round((offeredPrice / budgetMax) * 100);
+    if (isSale) {
+      return {
+        isCompatible: false,
+        reason: `Desproporción de Segmento Comercial: El demandante busca en el segmento de $${(budgetMax / 1_000_000).toLocaleString("es-CO")}M y la oferta cuesta apenas $${(offeredPrice / 1_000_000).toLocaleString("es-CO")}M (${pct}% del presupuesto). No corresponde a la gama ni confort esperado (piso mínimo admisible: 70% = $${(minAllowedPrice / 1_000_000).toLocaleString("es-CO")}M).`
+      };
+    } else {
+      return {
+        isCompatible: false,
+        reason: `Desproporción de Segmento en Arriendo: El canon ofertado de $${(offeredPrice / 1_000_000).toLocaleString("es-CO")}M representa solo el ${pct}% del canon presupuestado ($${(budgetMax / 1_000_000).toLocaleString("es-CO")}M). No corresponde a la categoría solicitada (piso mínimo admisible: 70% = $${(minAllowedPrice / 1_000_000).toLocaleString("es-CO")}M).`
+      };
     }
   }
 

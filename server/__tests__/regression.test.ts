@@ -963,19 +963,19 @@ Disponible para finales de nov.`;
       expect(resultSale.isCompatible).toBe(false);
       expect(resultSale.reason).toContain("Desproporción de Segmento Comercial");
 
-      // Si el área fuera amplia (ej: 140 m² de oportunidad), no debe bloquear
-      const resultWide = checkFinancialSegmentCoherence({
+      // Con el piso doctrinal del 70%, $630M frente a $1.200M (52.5%) colapsa independientemente del metraje
+      const resultSale2 = checkFinancialSegmentCoherence({
         budgetMax: 1_200_000_000,
         offeredPrice: 630_000_000,
         offeredArea: 140,
         isSale: true
       });
-      expect(resultWide.isCompatible).toBe(true);
+      expect(resultSale2.isCompatible).toBe(false);
 
-      // Si el precio estuviera dentro de un rango razonable (> 58% del presupuesto)
+      // Si el precio estuviera dentro del rango razonable (>= 70% del presupuesto)
       const resultNormal = checkFinancialSegmentCoherence({
         budgetMax: 1_200_000_000,
-        offeredPrice: 850_000_000,
+        offeredPrice: 850_000_000, // 850 / 1200 = 70.83%
         offeredArea: 90,
         isSale: true
       });
@@ -1872,6 +1872,179 @@ Adriana Rebeca Orejuela`;
       const resultado = explicarMatch(reqAdminBaja, propAdminCara);
       expect(resultado.score).toBe(0);
       expect(resultado.blockers.some(b => b.includes("Guillotina Financiera (Administración Incompatible)"))).toBe(true);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // 24. REGLA DOCTRINAL DE PISO FINANCIERO (PISO MÍNIMO 70% Y COHERENCIA DE SEGMENTO) (v31.105)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  describe("24. Regla Doctrinal de Piso Financiero del 70% y Coherencia de Segmento (v31.105)", () => {
+    it("Caso Match 15100: Demanda de $1.700 MM vs Oferta de $850 MM (50% del precio) debe colapsar a Score 0%", () => {
+      const req1700M = {
+        id: 1475,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "venta",
+        presupuestoMax: 1700000000,
+        habitacionesMin: 3,
+        zonaDeseada: "El Nogal",
+        addressNeighborhood: "El Nogal",
+        addressCity: "Bogotá",
+        rawText: "Busco apto entre el nogal y la 94 1700 millones 3 habitaciones"
+      };
+
+      const prop850M = {
+        id: 492,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 850000000,
+        areaTotal: 115,
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        stratum: 5,
+        zone: "El Nogal",
+        addressNeighborhood: "El Nogal",
+        addressCity: "Bogotá",
+        rawText: "Vendo Apartamento en el Nogal para remodelar: Precio de venta: $850.000.000, 115 M2, 3 Alcobas, 3 Baños, 2 Garajes, Estrato: 5"
+      };
+
+      const res = explicarMatch(req1700M, prop850M);
+      expect(res.score).toBe(0);
+      expect(res.blockers.some(b => b.includes("Guillotina de Segmento Financiero") || b.includes("Desproporción de Segmento Comercial"))).toBe(true);
+    });
+
+    it("Caso Match 15101/15098: Demanda de $4.500 MM vs Ofertas de $795 MM / $830 MM (~18%) debe colapsar a Score 0%", () => {
+      const req4500M = {
+        id: 1636,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "venta",
+        presupuestoMax: 4500000000,
+        habitacionesMin: 3,
+        zonaDeseada: "Chicó",
+        addressNeighborhood: "Chicó",
+        addressCity: "Bogotá",
+        rawText: "Busco apto en Chicó hasta 4500 millones 3 habitaciones exterior amplio"
+      };
+
+      const prop795M = {
+        id: 3367,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 795000000,
+        areaTotal: 110,
+        bedrooms: 3,
+        bathrooms: 3,
+        zone: "Chicó",
+        addressNeighborhood: "Chicó",
+        addressCity: "Bogotá",
+        rawText: "Hermoso inmueble en Chicó venta $795.000.000 3 alcobas 110 m2 3 baños garaje"
+      };
+
+      const prop830M = {
+        id: 4138,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 830000000,
+        areaTotal: 120,
+        bedrooms: 3,
+        bathrooms: 3,
+        zone: "Chicó",
+        addressNeighborhood: "Chicó",
+        addressCity: "Bogotá",
+        rawText: "Inmueble en Chicó Bogotá D.C. venta $830.000.000 3 alcobas 120 m2 garajes"
+      };
+
+      const res1 = explicarMatch(req4500M, prop795M);
+      expect(res1.score).toBe(0);
+      expect(res1.blockers.some(b => b.includes("Guillotina de Segmento Financiero (Piso Financiero)"))).toBe(true);
+
+      const res2 = explicarMatch(req4500M, prop830M);
+      expect(res2.score).toBe(0);
+      expect(res2.blockers.some(b => b.includes("Guillotina de Segmento Financiero (Piso Financiero)"))).toBe(true);
+    });
+
+    it("Demanda con rango explícito 'entre 850 y 1000MM': acepta $850M-$1000M y rechaza < $765M (90% del piso)", () => {
+      const reqRango = {
+        id: 1845,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "venta",
+        presupuestoMin: 850000000,
+        presupuestoMax: 1000000000,
+        habitacionesMin: 3,
+        banosMin: 2,
+        areaMin: 100,
+        zonaDeseada: "Santa Bárbara Central",
+        addressNeighborhood: "Santa Bárbara Central",
+        addressCity: "Bogotá",
+        rawText: "Cliente compra urgente apartamento de 3 habitaciones, 2 baños, 100 m2, presupuesto entre 850 y 1000MM en Santa Bárbara Central exterior."
+      };
+
+      const propAceptable = {
+        id: 2897,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 995000000,
+        areaTotal: 120,
+        bedrooms: 3,
+        bathrooms: 3,
+        zone: "Santa Bárbara Central",
+        addressNeighborhood: "Santa Bárbara Central",
+        addressCity: "Bogotá",
+        rawText: "Hermoso apartamento exterior en venta en Santa Bárbara Central. 120 m2, 3 alcobas, 3 baños, 2 garajes, estrato 5. Precio de venta $995.000.000. Excelente oportunidad."
+      };
+
+      const propBajoPiso = {
+        id: 9991,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 600000000, // < 850M * 0.90 = 765M
+        areaTotal: 100,
+        bedrooms: 3,
+        bathrooms: 3,
+        zone: "Santa Bárbara Central",
+        addressNeighborhood: "Santa Bárbara Central",
+        addressCity: "Bogotá",
+        rawText: "Apartamento exterior en venta en Santa Bárbara Central. 100 m2, 3 alcobas, 3 baños, 2 garajes, estrato 5. Precio de venta $600.000.000. Oportunidad."
+      };
+
+      const resAceptable = explicarMatch(reqRango, propAceptable);
+      expect(resAceptable.score).toBeGreaterThanOrEqual(85);
+
+      const resBajoPiso = explicarMatch(reqRango, propBajoPiso);
+      expect(resBajoPiso.score).toBe(0);
+      expect(resBajoPiso.blockers.some(b => b.includes("Guillotina de Segmento Financiero") || b.includes("por debajo del segmento solicitado"))).toBe(true);
+    });
+
+    it("Caso Match 15097: Inmueble en arriendo sin canon especificado (solo administración) debe colapsar a 0%", () => {
+      const reqArriendo = {
+        id: 1486,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "arriendo",
+        presupuestoMax: 8500000,
+        habitacionesMin: 2,
+        zonaDeseada: "Chicó Reservado",
+        addressNeighborhood: "Chicó Reservado",
+        addressCity: "Bogotá",
+        rawText: "Busco en arriendo apto en Chicó Reservado presupuesto $8.500.000 2 alcobas"
+      };
+
+      const propSinCanon = {
+        id: 2183,
+        propertyType: "apartment",
+        transactionType: "arriendo",
+        price: 0,
+        rentPrice: null,
+        adminFee: 3500000,
+        bedrooms: 3,
+        zone: "Chicó Reservado",
+        addressNeighborhood: "Chicó Reservado",
+        addressCity: "Bogotá",
+        rawText: "💰*Administracion: $3.500.000*\n2ACU - 50/50\nARRIENDO CHICÓ RESERVADO 3 ALCOBAS"
+      };
+
+      const res = explicarMatch(reqArriendo, propSinCanon);
+      expect(res.score).toBe(0);
+      expect(res.blockers.some(b => b.includes("La oferta no especifica canon de arriendo"))).toBe(true);
     });
   });
 });

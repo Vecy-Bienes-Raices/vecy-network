@@ -7,6 +7,49 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.105 — 27 Septiembre 2026
+
+### Solicitud de Eduardo
+Regla Doctrinal de Piso Financiero del 70%, Erradicación de Anomalías a Mitad de Precio y Purga de Matches Espurios:
+*"He descartado estos Match debido a que ya habíamos establecido contigo anoche esta regla de que una oferta no puede ser tan baja referente al precio buscado por la demanda, si busca de 1.700 MM imposiblke le llegue a gustar uno de 850 millones, debe ser coherente y buscarsele una propiedad que tenga muchas coincidencias y refleje siquiera un precio muy cercano al que busca, por debajo pero cercano y no a la mitad casi, eso es ilógico e incoherente. Veo que volvimos a errores del pasado. Debes estar sufriendo de alguna avería."*
+
+### Diagnóstico Técnico Profundo y Conclusiones de Arquitectura
+1. **Excepción Errónea de Área en `checkFinancialSegmentCoherence`**:
+   - En `shared/colombianRealEstateParser.ts`, la función de coherencia financiera contenía una cláusula condicional `if (offeredArea && offeredArea < 95)`.
+   - Si la propiedad ofrecida tenía 95 m² o más (por ejemplo, el inmueble #492 en El Nogal tenía 115 m²), la validación de piso financiero se saltaba por completo, permitiendo que un apartamento de $850 MM emparejara con un comprador de $1.700 MM (50% del presupuesto).
+   - En la doctrina inmobiliaria, un área grande NUNCA justifica un colapso del 50% en el precio: un apartamento grande que cuesta la mitad que el promedio del sector responde a un estado de deterioro crítico para remodelar o a un segmento socioeconómico radicalmente disonante con las expectativas de quien dispone de $1.700 MM.
+2. **Umbral Financiero Previo Demasiado Laxo (58% vs 70%)**:
+   - El código histórico evaluaba `priceRatio < 0.58`, tolerando diferencias de hasta el 42% por debajo del presupuesto del cliente.
+   - La regla doctrinal estricta de Eduardo exige que una oferta refleje un segmento afín: el piso infranqueable debe ser el **70% del presupuesto máximo (`budgetMax * 0.70`)**, o el **90% del presupuesto mínimo (`budgetMin * 0.90`)** cuando el cliente especifica un rango explícito (e.g., "entre 850 y 1000 MM").
+3. **Puntaje Plano y "Ganga Index" Alucinatorio en Matching (`matching.ts`)**:
+   - El motor asignaba 15 puntos íntegros de presupuesto a cualquier oferta cuyo precio estuviera por debajo del presupuesto máximo, sin medir la cercanía ni castigar el abismo de segmento.
+   - Peor aún, existía un multiplicador de `Ganga Index (< 70%)` que bonificaba propiedades con precios muy bajos, premiando incoherencias financieras.
+4. **Anomalía en Extracción de Arriendos sin Canon y Falsos Positivos de Administración**:
+   - Inmuebles como el #2183 tenían $0 de canon de venta/arriendo pero $3.500.000 de administración; la lógica residual utilizaba la administración como canon sustituto, emparejando con demandas de arriendo.
+   - En `parseAdminFee`, la detección de "administración incluida" mediante `/incluid[ao]/` sin contexto detectaba frases como "Cava de vinos incluida", distorsionando el cálculo de administración.
+
+### Acciones Ejecutadas en Código
+1. **Piso Financiero Doctrinal Estricto (`shared/colombianRealEstateParser.ts`)**:
+   - Suprimida definitivamente la excepción de área (`offeredArea < 95`).
+   - Fijado el piso mínimo en **70% de `budgetMax`** para compraventa y arriendo (`offeredPrice < budgetMax * 0.70` $\rightarrow$ `isCompatible: false`).
+   - Fijado el piso mínimo en **90% de `budgetMin`** cuando la demanda define un rango explícito (`offeredPrice < budgetMin * 0.90` $\rightarrow$ `isCompatible: false`).
+   - `parseAdminFee`: el flag de inclusión requiere contexto explícito de administración (e.g. `administracion incluida`, `admon incl`, `canon con administracion`).
+2. **Guillotina de Piso Financiero en el Motor (`server/_core/matching.ts`)**:
+   - **Filtro Duro 7: Guillotina de Segmento Financiero (Piso Financiero)**: Bloqueo inmediato al 0% Match (`⛔ Incompatible: Oferta muy por debajo del segmento buscado (< 70% del presupuesto o < 90% del rango mínimo)`).
+   - Sustituido el "Ganga Index" por penalización y puntuación graduada de presupuesto (85-100% del ppto $\rightarrow$ 15 pts; 75-84.9% $\rightarrow$ 12 pts; 70-74.9% $\rightarrow$ 9 pts; $< 70\%$ $\rightarrow$ 0% bloqueo).
+   - Bloqueo de ofertas de arriendo sin canon declarado ($0 o null) que solo indicaban cuota de administración.
+   - Delimitación del tope predeterminado de administración ($750k) para que solo aplique cuando la demanda no especificó un techo numérico explícito.
+3. **Visualización y Criterios en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Conexión de `reqSaleMinBudget` y `reqRentMinBudget` a las verificaciones de coherencia de segmento en la tabla de cotejo.
+   - Notificación visual clara en rojo si el precio cae por debajo del piso financiero del cliente.
+4. **Remediación en Base de Datos VPS PostgreSQL (`vecy_network`)**:
+   - Matches #15101, #15100, #15098, #15097 y #15096 actualizados a `status = 'rejected'` e insertados en `match_feedback` con veto perpetuo.
+5. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+   - Actualizada Sección 12 para validar la eliminación de la exención de área.
+   - Añadida **Sección 24** con 4 pruebas completas de validación doctrinal (**116/116 tests Vitest pasando** ✅).
+
+---
+
 ## 📋 SESIÓN v31.104 — 27 Septiembre 2026
 
 ### Solicitud de Eduardo

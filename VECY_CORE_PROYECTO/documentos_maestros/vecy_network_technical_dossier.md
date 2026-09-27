@@ -322,6 +322,37 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.105 — Septiembre 2026
+
+#### 📌 REGLA DOCTRINAL DE PISO FINANCIERO DEL 70%, ERRADICACIÓN DE ANOMALÍAS A MITAD DE PRECIO Y PURGA DE MATCHES ESPURIOS
+
+**Problemas identificados:**
+1. **Excepción Errónea de Área en Coherencia de Segmento**: En `shared/colombianRealEstateParser.ts`, la función `checkFinancialSegmentCoherence` incluía `if (offeredArea && offeredArea < 95)`. Si el inmueble tenía $\ge 95$ m² (como el apartamento #492 en El Nogal con 115 m²), la validación de piso financiero se saltaba por completo, permitiendo que un apartamento de $850 MM emparejara con una demanda de $1.700 MM (50% del presupuesto). En doctrina inmobiliaria real, un área amplia jamás justifica un colapso del 50% en el precio: un apartamento grande a mitad de precio responde a un inmueble en ruinas para remodelar o a un estrato/sector incompatible con el perfil de un comprador de $1.700 MM.
+2. **Piso Financiero Histórico Demasiado Laxo (58% vs 70%)**: El código histórico evaluaba `priceRatio < 0.58`, permitiendo desvíos de hasta el 42% por debajo del presupuesto del cliente. La regla doctrinal de Eduardo exige un piso infranqueable del **70% del presupuesto máximo (`budgetMax * 0.70`)**, o del **90% del presupuesto mínimo (`budgetMin * 0.90`)** cuando se especifica un rango explícito.
+3. **Puntuación Plana y "Ganga Index" Alucinatorio en Matching**: En `matching.ts`, el motor asignaba 15 puntos íntegros de presupuesto a cualquier oferta por debajo del presupuesto máximo, e incluso contaba con un multiplicador de `Ganga Index (< 70%)` que bonificaba propiedades con precios muy bajos, premiando incoherencias financieras.
+4. **Anomalía en Arriendos sin Canon y Falsos Positivos de Administración**: Inmuebles con canon $0 pero administración informada (e.g. #2183 con $3.500.000 de administración) eran tomados por el fallback como canon de arriendo. Adicionalmente, el regex `/incluid[ao]/` sin contexto marcaba administración incluida con frases como "Cava de vinos incluida".
+
+**Solución aplicada:**
+- **Piso Financiero Doctrinal Estricto (`shared/colombianRealEstateParser.ts`)**:
+  - Suprimida la exención de área (`offeredArea < 95`).
+  - Fijado el piso mínimo en 70% de `budgetMax` para compraventa y arriendo (`offeredPrice < budgetMax * 0.70` $\rightarrow$ `isCompatible: false`).
+  - Fijado el piso mínimo en 90% de `budgetMin` cuando la demanda define un rango explícito (`offeredPrice < budgetMin * 0.90` $\rightarrow$ `isCompatible: false`).
+  - `parseAdminFee`: el flag de inclusión requiere contexto explícito de administración.
+- **Motor de Matching y Guillotinas Doctrinales (`server/_core/matching.ts`)**:
+  - **Filtro Duro 7: Guillotina de Segmento Financiero (Piso Financiero)**: Bloqueo inmediato al 0% Match ante ofertas $< 70\%$ del presupuesto máximo o $< 90\%$ del mínimo especificado.
+  - Sustituido el "Ganga Index" por penalización y puntuación graduada de presupuesto (85-100% $\rightarrow$ 15 pts; 75-84.9% $\rightarrow$ 12 pts; 70-74.9% $\rightarrow$ 9 pts; $< 70\%$ $\rightarrow$ 0% bloqueo).
+  - Bloqueo absoluto de arriendos sin canon declarado ($0 o null).
+  - El tope predeterminado de administración ($750k) solo opera en ausencia de un tope explícito de la demanda.
+- **Tabla de Cotejo en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+  - Conexión de `reqSaleMinBudget` y `reqRentMinBudget` a las verificaciones de coherencia de segmento en la tabla de cotejo.
+  - Notificación visual clara en rojo si el precio cae por debajo del piso financiero del cliente.
+- **Remediación en Base de Datos VPS PostgreSQL (`vecy_network`)**:
+  - Matches #15101, #15100, #15098, #15097 y #15096 actualizados a `status = 'rejected'` e insertados en `match_feedback` con veto perpetuo.
+- **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+  - Añadida Sección 24 con 4 pruebas doctrinales completas (**116/116 tests Vitest pasando** ✅).
+
+---
+
 ### 🔖 v31.104 — Septiembre 2026
 
 #### 📌 AUDITORÍA DE INCONSISTENCIAS EN RIESGO: BAÑOS 2.5 Y BAÑO SOCIAL, GUILLOTINA DE ADMINISTRACIÓN BAJA/INTELIGENTE Y CORRECCIÓN DE SUBTIPO DE EDIFICIO

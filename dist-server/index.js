@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v31.104";
+    VECY_VERSION = "v31.105";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -3793,35 +3793,35 @@ function demands24hSecurity(text2) {
   return /\b(?:seguridad\s*(?:las\s*)?24\s*(?:horas|h|hrs)|seguridad\s*24\/7|vigilancia\s*(?:las\s*)?24\s*(?:horas|h|hrs)|vigilancia\s*24\/7|porter[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|porter[ií]a\s*24\/7|celadur[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|celadur[ií]a\s*24\/7|guarda\s*(?:de\s*seguridad)?\s*24\s*(?:horas|h|hrs)|portero\s*24\s*horas|celador\s*24\s*horas|exige\s*(?:seguridad|vigilancia|porter[ií]a)\s*24|seguridad\s*privada\s*24)\b/i.test(lower);
 }
 function checkFinancialSegmentCoherence(params) {
-  const { budgetMax, offeredPrice, offeredArea, isSale } = params;
+  const { budgetMax, offeredPrice, isSale, budgetMin } = params;
   if (!budgetMax || budgetMax <= 0 || !offeredPrice || offeredPrice <= 0) {
     return { isCompatible: true };
   }
-  if (isSale) {
-    if (budgetMax >= 5e8) {
-      const priceRatio = offeredPrice / budgetMax;
-      if (priceRatio < 0.58) {
-        if (offeredArea && offeredArea > 0 && offeredArea < 95) {
-          const pct = Math.round(priceRatio * 100);
-          return {
-            isCompatible: false,
-            reason: `Desproporci\xF3n de Segmento Comercial: El demandante cuenta con un presupuesto de $${(budgetMax / 1e6).toLocaleString("es-CO")}M y la oferta cuesta apenas $${(offeredPrice / 1e6).toLocaleString("es-CO")}M (${pct}% del presupuesto) con solo ${offeredArea} m\xB2. No corresponde al segmento de confort y amplitud buscado.`
-          };
-        }
-      }
+  if (budgetMin && budgetMin > 0) {
+    const minFloor = budgetMin * 0.9;
+    if (offeredPrice < minFloor) {
+      const minLabel = `$${(budgetMin / 1e6).toLocaleString("es-CO")}M`;
+      const offLabel = `$${(offeredPrice / 1e6).toLocaleString("es-CO")}M`;
+      return {
+        isCompatible: false,
+        reason: `Precio por Debajo del Piso Solicitado: La demanda exige expresamente un m\xEDnimo de ${minLabel} y la oferta tiene un valor de ${offLabel} (inferior al piso admisible de $${(minFloor / 1e6).toLocaleString("es-CO")}M). Choque de segmento.`
+      };
     }
-  } else {
-    if (budgetMax >= 45e5) {
-      const rentRatio = offeredPrice / budgetMax;
-      if (rentRatio < 0.55) {
-        if (offeredArea && offeredArea > 0 && offeredArea < 80) {
-          const pct = Math.round(rentRatio * 100);
-          return {
-            isCompatible: false,
-            reason: `Desproporci\xF3n de Segmento en Arriendo: El canon ofertado de $${(offeredPrice / 1e6).toLocaleString("es-CO")}M representa solo el ${pct}% del canon presupuestado ($${(budgetMax / 1e6).toLocaleString("es-CO")}M) con metraje reducido (${offeredArea} m\xB2).`
-          };
-        }
-      }
+  }
+  const floorRatio = 0.7;
+  const minAllowedPrice = budgetMax * floorRatio;
+  if (offeredPrice < minAllowedPrice) {
+    const pct = Math.round(offeredPrice / budgetMax * 100);
+    if (isSale) {
+      return {
+        isCompatible: false,
+        reason: `Desproporci\xF3n de Segmento Comercial: El demandante busca en el segmento de $${(budgetMax / 1e6).toLocaleString("es-CO")}M y la oferta cuesta apenas $${(offeredPrice / 1e6).toLocaleString("es-CO")}M (${pct}% del presupuesto). No corresponde a la gama ni confort esperado (piso m\xEDnimo admisible: 70% = $${(minAllowedPrice / 1e6).toLocaleString("es-CO")}M).`
+      };
+    } else {
+      return {
+        isCompatible: false,
+        reason: `Desproporci\xF3n de Segmento en Arriendo: El canon ofertado de $${(offeredPrice / 1e6).toLocaleString("es-CO")}M representa solo el ${pct}% del canon presupuestado ($${(budgetMax / 1e6).toLocaleString("es-CO")}M). No corresponde a la categor\xEDa solicitada (piso m\xEDnimo admisible: 70% = $${(minAllowedPrice / 1e6).toLocaleString("es-CO")}M).`
+      };
     }
   }
   return { isCompatible: true };
@@ -4179,7 +4179,7 @@ function calculateCvpVector15DMatch(requirement, property) {
   vReq[13] = reqText.includes("silencioso") || reqText.includes("tranquilo") ? 1 : 0;
   vProp[13] = !propText.includes("ruidoso") && !propText.includes("via principal") ? 1 : 0;
   vReq[14] = 1;
-  vProp[14] = reqMax > 0 && propPrice > 0 && propPrice <= reqMax * 0.7 ? 1.5 : 1;
+  vProp[14] = reqMax > 0 && propPrice > 0 && propPrice >= reqMax * 0.7 && propPrice <= reqMax ? 1 : 0.8;
   let sumSq = 0;
   for (let i = 0; i < 15; i++) {
     const diff = vReq[i] - vProp[i];
@@ -6226,7 +6226,9 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
         }
       }
       if (propRent <= 0 && price > 0 && price < 1e8) {
-        propRent = price;
+        if (pAdminFee <= 0 || Math.abs(price - pAdminFee) > 100) {
+          propRent = price;
+        }
       }
       const isPropAdminIncluded = (property.rawText || "").toLowerCase().includes("incluida la administraci") || (property.rawText || "").toLowerCase().includes("incluida administraci") || (property.rawText || "").toLowerCase().includes("admon incluida") || (property.rawText || "").toLowerCase().includes("administracion incluida") || (property.rawText || "").toLowerCase().includes("con admon") || (property.rawText || "").toLowerCase().includes("con administraci\xF3n");
       const adminVal = !isPropAdminIncluded && pAdminFee > 0 ? pAdminFee : 0;
@@ -6240,12 +6242,12 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
         blockers.push(`Guillotina Financiera (Tolerancia Cero): Canon de arriendo total ($${totalRent.toLocaleString()}) supera el presupuesto m\xE1ximo de $${budgetMax.toLocaleString()}`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
+      const lowerRentLimit = budgetMin2 > 0 ? budgetMin2 * 0.9 : budgetMax * 0.7;
+      if (totalRent < lowerRentLimit) {
+        blockers.push(`Guillotina de Segmento Financiero (Piso Financiero): Canon de arriendo total ($${totalRent.toLocaleString()}) est\xE1 por debajo del segmento solicitado (piso m\xEDnimo admisible $${lowerRentLimit.toLocaleString()} COP, 70% del canon). Match inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
+      }
       if (budgetMin2 > 0) {
-        const lowerRentLimit = budgetMin2 * 0.95;
-        if (totalRent < lowerRentLimit) {
-          blockers.push(`Guillotina Financiera: Canon de arriendo total ($${totalRent.toLocaleString()}) est\xE1 por debajo del segmento solicitado (m\xEDnimo $${lowerRentLimit.toLocaleString()}).`);
-          return buildExplanationResult(0, blockers, positives, negatives);
-        }
         positives.push(`\u2705 Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del rango (m\xEDn $${lowerRentLimit.toLocaleString()} a m\xE1x $${budgetMax.toLocaleString()})`);
       } else {
         positives.push(`\u2705 Presupuesto de arriendo cumple: Total $${totalRent.toLocaleString()} dentro del presupuesto m\xE1ximo ($${budgetMax.toLocaleString()})`);
@@ -6254,7 +6256,8 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
         budgetMax,
         offeredPrice: totalRent,
         offeredArea: propArea,
-        isSale: false
+        isSale: false,
+        budgetMin: budgetMin2
       });
       if (!segmentRentCheck.isCompatible) {
         blockers.push(`Guillotina de Segmento Financiero y Metraje: ${segmentRentCheck.reason} Match Inviable (0%).`);
@@ -6271,18 +6274,17 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
         blockers.push(`Guillotina Financiera (Tolerancia Cero): El precio de la propiedad ($${salePrice.toLocaleString()}) supera el presupuesto m\xE1ximo del comprador ($${budgetMax.toLocaleString()}). Match inviable (0%).`);
         return buildExplanationResult(0, blockers, positives, negatives);
       }
-      if (budgetMin2 > 0) {
-        const lowerSaleLimit = budgetMin2 * 0.95;
-        if (salePrice < lowerSaleLimit) {
-          blockers.push(`Guillotina Financiera: El precio del inmueble ($${salePrice.toLocaleString()}) est\xE1 por debajo del segmento solicitado (m\xEDnimo $${lowerSaleLimit.toLocaleString()}).`);
-          return buildExplanationResult(0, blockers, positives, negatives);
-        }
+      const lowerSaleLimit = budgetMin2 > 0 ? budgetMin2 * 0.9 : budgetMax * 0.7;
+      if (salePrice < lowerSaleLimit) {
+        blockers.push(`Guillotina de Segmento Financiero (Piso Financiero): El precio del inmueble ($${salePrice.toLocaleString()} COP) est\xE1 por debajo del segmento solicitado (piso m\xEDnimo admisible $${lowerSaleLimit.toLocaleString()} COP, 70% del presupuesto). Match inviable (0%).`);
+        return buildExplanationResult(0, blockers, positives, negatives);
       }
       const segmentSaleCheck = checkFinancialSegmentCoherence({
         budgetMax,
         offeredPrice: salePrice,
         offeredArea: propArea,
-        isSale: true
+        isSale: true,
+        budgetMin: budgetMin2
       });
       if (!segmentSaleCheck.isCompatible) {
         blockers.push(`Guillotina de Segmento Financiero y Metraje: ${segmentSaleCheck.reason} Match Inviable (0%).`);
@@ -6348,8 +6350,8 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     }
   }
   const rawReqTextAdmin = (requirement.rawText || "").toLowerCase();
-  const requiresLowAdmin = /administraci[oó]n\s*(?:muy\s*)?baja|baja\s*administraci[oó]n|administraci[oó]n\s*econ[oó]mica|edificio(?:s)?\s*(?:de\s*)?administraci[oó]n\s*baja|edificio(?:s)?\s*inteligente(?:s)?|sin\s*administraci[oó]n/i.test(rawReqTextAdmin);
-  if (requiresLowAdmin && effectivePropAdmin > 75e4) {
+  const requiresLowAdmin = /administraci[oó]n\s*(?:muy\s*)?baja|baja\s*administraci[oó]n|administraci[oó]n\s*econ[oó]mica|edificio(?:s)?\s*(?:de\s*)?administraci[oó]n\s*baja|sin\s*administraci[oó]n/i.test(rawReqTextAdmin);
+  if (requiresLowAdmin && reqAdminMaxVal <= 0 && effectivePropAdmin > 75e4) {
     blockers.push(`Guillotina Financiera (Administraci\xF3n Incompatible): La demanda exige estrictamente edificio de administraci\xF3n baja o inteligente, y la oferta tiene una cuota de administraci\xF3n de $${effectivePropAdmin.toLocaleString()} COP. Incoherente e inviable (0%).`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
@@ -6693,13 +6695,35 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
   }
   if (budgetMax > 0) {
     if (effectivePrice > 0) {
-      if (effectivePrice < budgetMax) {
-        earnedPoints += 15;
-        positives.push(`\u{1F4B0} Oportunidad: precio $${effectivePrice.toLocaleString()} por debajo del presupuesto $${budgetMax.toLocaleString()}`);
-      } else if (effectivePrice === budgetMax) earnedPoints += 15;
-      else if (effectivePrice <= budgetMax * 1.01) earnedPoints += 13;
-      else if (effectivePrice <= budgetMax * 1.05) earnedPoints += 9;
-      else negatives.push(`Precio $${effectivePrice.toLocaleString()} supera presupuesto $${budgetMax.toLocaleString()}`);
+      if (budgetMin > 0) {
+        if (effectivePrice >= budgetMin && effectivePrice <= budgetMax) {
+          earnedPoints += 15;
+          positives.push(`\u{1F4B0} Precio \xF3ptimo: $${effectivePrice.toLocaleString()} dentro del rango solicitado ($${budgetMin.toLocaleString()} - $${budgetMax.toLocaleString()})`);
+        } else if (effectivePrice < budgetMin && effectivePrice >= budgetMin * 0.9) {
+          earnedPoints += 12;
+          positives.push(`\u{1F4B0} Oportunidad: precio $${effectivePrice.toLocaleString()} ligeramente por debajo del rango ($${budgetMin.toLocaleString()})`);
+        } else if (effectivePrice <= budgetMax * 1.01) {
+          earnedPoints += 13;
+        } else {
+          negatives.push(`Precio $${effectivePrice.toLocaleString()} fuera del rango de presupuesto`);
+        }
+      } else {
+        const ratio = effectivePrice / budgetMax;
+        if (ratio >= 0.85 && ratio <= 1) {
+          earnedPoints += 15;
+          positives.push(`\u{1F4B0} Presupuesto \xF3ptimo: precio $${effectivePrice.toLocaleString()} coincide con el segmento buscado ($${budgetMax.toLocaleString()})`);
+        } else if (ratio >= 0.75 && ratio < 0.85) {
+          earnedPoints += 12;
+          positives.push(`\u{1F4B0} Oportunidad favorable: precio $${effectivePrice.toLocaleString()} (${Math.round(ratio * 100)}% del presupuesto m\xE1x $${budgetMax.toLocaleString()})`);
+        } else if (ratio >= 0.7 && ratio < 0.75) {
+          earnedPoints += 9;
+          positives.push(`\u{1F4B0} Oportunidad en l\xEDmite de piso: precio $${effectivePrice.toLocaleString()} (${Math.round(ratio * 100)}% del presupuesto m\xE1x $${budgetMax.toLocaleString()})`);
+        } else if (effectivePrice <= budgetMax * 1.01) {
+          earnedPoints += 13;
+        } else {
+          negatives.push(`Precio $${effectivePrice.toLocaleString()} supera presupuesto $${budgetMax.toLocaleString()}`);
+        }
+      }
     } else {
       negatives.push("Presupuesto no especificado en la oferta (N/E)");
     }

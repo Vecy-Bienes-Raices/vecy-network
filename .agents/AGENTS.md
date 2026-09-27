@@ -167,7 +167,36 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.104 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.105 — Septiembre 2026
+
+### Novedades v31.105 (Regla Doctrinal de Piso Financiero del 70%, Erradicación de Anomalías a Mitad de Precio y Purga de Matches Espurios):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo auditó los matches y dictaminó con precisión quirúrgica:
+    *"He descartado estos Match debido a que ya habíamos establecido contigo anoche esta regla de que una oferta no puede ser tan baja referente al precio buscado por la demanda, si busca de 1.700 MM imposiblke le llegue a gustar uno de 850 millones, debe ser coherente y buscarsele una propiedad que tenga muchas coincidencias y refleje siquiera un precio muy cercano al que busca, por debajo pero cercano y no a la mitad casi, eso es ilógico e incoherente. Veo que volvimos a errores del pasado. Debes estar sufriendo de alguna avería."*
+- **Causas Raíz Identificadas**:
+  1. **Excepción Errónea de Área en Coherencia de Segmento**: En `shared/colombianRealEstateParser.ts`, la función `checkFinancialSegmentCoherence` contenía la regla `if (offeredArea && offeredArea < 95)`. Si la propiedad ofertada tenía $\ge 95$ m² (como el apto #492 en El Nogal con 115 m²), el chequeo de piso de precio se saltaba completamente. Un metraje amplio jamás justifica un colapso del 50% en el precio: un apartamento grande a mitad de precio responde a estado de deterioro severo o segmento social disonante.
+  2. **Piso Financiero Laxo (58% vs 70%)**: El código histórico evaluaba `priceRatio < 0.58` tolerando hasta un 42% de distancia. La regla doctrinal de Eduardo exige que el piso infranqueable sea el **70% del presupuesto máximo (`budgetMax * 0.70`)**, o el **90% del presupuesto mínimo (`budgetMin * 0.90`)** cuando se especifica un rango explícito (e.g., entre $850M y $1.000M).
+  3. **Puntaje Plano y "Ganga Index" Alucinatorio**: En `matching.ts`, cualquier precio por debajo del presupuesto recibía 15 puntos planos, e incluso existía un multiplicador de `Ganga Index (< 70%)` que premiaba anomalías financieras.
+  4. **Anomalía en Arriendos sin Canon y Falsos Positivos de Administración**: Inmuebles con canon $0 pero administración informada (e.g. #2183 con $3.500.000 de administración) eran tomados por el fallback como canon de arriendo. Adicionalmente, el regex `/incluid[ao]/` sin contexto marcaba administración incluida con frases como "Cava de vinos incluida".
+- **Acciones Ejecutadas en Código**:
+  1. **Piso Financiero Doctrinal Estricto (`shared/colombianRealEstateParser.ts`)**:
+     - Suprimida la exención de área.
+     - Piso infranqueable del 70% sobre `budgetMax` y del 90% sobre `budgetMin` para venta y arriendo.
+     - Detección de administración incluida condicionada a contexto explícito de administración.
+  2. **Motor de Matching y Guillotinas Doctrinales (`server/_core/matching.ts`)**:
+     - **Filtro Duro 7: Guillotina de Segmento Financiero (Piso Financiero)**: Bloqueo inmediato al 0% Match ante ofertas $< 70\%$ del presupuesto máximo o $< 90\%$ del mínimo especificado.
+     - Puntuación graduada de presupuesto (85-100% $\rightarrow$ 15 pts, 75-84.9% $\rightarrow$ 12 pts, 70-74.9% $\rightarrow$ 9 pts, $< 70\%$ $\rightarrow$ 0% bloqueo).
+     - Bloqueo absoluto de arriendos sin canon declarado ($0 o null).
+     - El tope predeterminado de administración ($750k) solo opera en ausencia de un tope explícito de la demanda.
+  3. **Tabla de Cotejo en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+     - Integración de `budgetMin` y despliegue de badge de alerta cuando la oferta cae por debajo del piso financiero.
+  4. **Remediación en Base de Datos VPS PostgreSQL (`vecy_network`)**:
+     - Matches #15101, #15100, #15098, #15097 y #15096 actualizados a `status = 'rejected'` e insertados en `match_feedback` con veto perpetuo.
+  5. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+     - Añadida Sección 24 con 4 pruebas doctrinales completas (**116/116 tests Vitest pasando** ✅).
+- **Verificación**: 116/116 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.104 — Septiembre 2026
 
 ### Novedades v31.104 (Auditoría de Inconsistencias en Riesgo: Baños 2.5 y Baño Social, Guillotina de Administración Baja e Inteligente, y Corrección de Subtipo de Edificio):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:
