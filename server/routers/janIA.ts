@@ -1624,6 +1624,7 @@ export const janIARouter = router({
       let ventaMatchesActive10 = 0;
       let arriendoMatchesActive10 = 0;
 
+      await getDb();
       const rawSql = getRawSql();
       if (rawSql) {
         const res = await rawSql`

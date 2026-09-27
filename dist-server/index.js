@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v31.102";
+    VECY_VERSION = "v31.103";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -22995,6 +22995,7 @@ ${liveStats}${userContextInstruction}
       let perfectMatchesActive10 = 0;
       let ventaMatchesActive10 = 0;
       let arriendoMatchesActive10 = 0;
+      await getDb();
       const rawSql = getRawSql();
       if (rawSql) {
         const res = await rawSql`
