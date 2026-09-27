@@ -1526,6 +1526,7 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
     reqAdminMax = reqAdminInfo.fee;
   }
 
+  const requiresLowAdmin = /administraci[oó]n\s*(?:muy\s*)?baja|baja\s*administraci[oó]n|administraci[oó]n\s*econ[oó]mica|edificio(?:s)?\s*(?:de\s*)?administraci[oó]n\s*baja|edificio(?:s)?\s*inteligente(?:s)?|sin\s*administraci[oó]n/i.test(reqTextLower);
   let propAdminLabel = isPropAdminIncluded
     ? "Incluida en el canon"
     : (propAdminFee > 0
@@ -1535,12 +1536,20 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
             : (isReqRentMatch || isPropPureRent ? "Administración mensual: Consultar" : "Flexible / N/E")));
   let reqAdminLabel = reqAdminMax > 0
     ? `≤ ${formatCOP(reqAdminMax)} Max.`
-    : (isReqAdminIncluded
-        ? "Debe ir incluida en el canon"
-        : (reqTextLower.includes("admin") ? "Administración flexible" : "Sin restricción de administración"));
+    : (requiresLowAdmin
+        ? "Edificio admon baja / inteligente"
+        : (isReqAdminIncluded
+            ? "Debe ir incluida en el canon"
+            : (reqTextLower.includes("admin") ? "Administración flexible" : "Sin restricción de administración")));
 
   let adminS: MatchStatus = "neutral";
-  if (isReqAdminIncluded) {
+  if (requiresLowAdmin) {
+    if (propAdminFee > 750_000) {
+      adminS = "missing"; // 🔴 Exige administración baja o inteligente y la oferta tiene una cuota exorbitante
+    } else if (propAdminFee > 0) {
+      adminS = "exact";
+    }
+  } else if (isReqAdminIncluded) {
     reqAdminLabel = "Debe ir incluida en el canon";
     if (isPropAdminIncluded) {
       adminS = "exact";
@@ -1653,21 +1662,44 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
 
   add("Habitaciones", reqBedLabel, bedP > 0 ? `${bedP} hab.` : "N/E", bedS, 8, <Bed className="w-3.5 h-3.5" />);
 
+  // Fila Baños (Soporte Doctrinal v31.104: Baño social y decimales 2.5)
   let bathR = req.banosMin ? Number(req.banosMin) : 0;
-  if (bathR <= 0 && reqTextLower) {
-    const bathMatchR = reqTextLower.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:baño|baños|bano|banos|wc)/i);
-    if (bathMatchR) {
-      const bw = bathMatchR[1].toLowerCase();
-      bathR = SPANISH_NUM_MAP[bw] || parseInt(bw, 10) || 0;
+  let reqDemandsSocialBath = false;
+  if (reqTextLower) {
+    const socialMatch = reqTextLower.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
+    if (socialMatch) {
+      reqDemandsSocialBath = true;
+      const bw = socialMatch[1].toLowerCase();
+      const base = SPANISH_NUM_MAP[bw] || parseInt(bw, 10) || 2;
+      bathR = Math.max(bathR, base + 1);
+    } else if (bathR <= 0) {
+      const bathMatchR = reqTextLower.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+(?:[\.,]\d+)?)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:baño|baños|bano|banos|wc)/i);
+      if (bathMatchR) {
+        const bw = bathMatchR[1].toLowerCase().replace(',', '.');
+        bathR = SPANISH_NUM_MAP[bw] || parseFloat(bw) || 0;
+      }
     }
   }
 
   let bathP = prop.bathrooms ? Number(prop.bathrooms) : 0;
-  if (bathP <= 0 && propTextLower) {
-    const bathMatchP = propTextLower.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:baño|baños|bano|banos|wc)/i);
-    if (bathMatchP) {
-      const bw = bathMatchP[1].toLowerCase();
-      bathP = SPANISH_NUM_MAP[bw] || parseInt(bw, 10) || 0;
+  let propHasHalfBath = false;
+  if (propTextLower) {
+    const halfBathMatch = propTextLower.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)[\.,]5\s*(?:baño|baños|bñ|wc)/i)
+      || propTextLower.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bñ)\s*(?:y\s*medio|y\s*medio\s*baño)/i);
+    if (halfBathMatch) {
+      propHasHalfBath = true;
+      const bw = halfBathMatch[1].toLowerCase();
+      const base = SPANISH_NUM_MAP[bw] || parseInt(bw, 10) || 2;
+      bathP = base + 0.5;
+    } else if (bathP === 5 && propTextLower.includes("2.5")) {
+      propHasHalfBath = true;
+      bathP = 2.5;
+    } else if (bathP <= 0) {
+      const bathMatchP = propTextLower.match(/(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+(?:[\.,]\d+)?)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:baño|baños|bano|banos|wc)/i);
+      if (bathMatchP) {
+        const bw = bathMatchP[1].toLowerCase().replace(',', '.');
+        bathP = SPANISH_NUM_MAP[bw] || parseFloat(bw) || 0;
+      }
     }
   }
 
@@ -1675,7 +1707,7 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
   if (bathR > 0 && bathP > 0) {
     if (bathP < bathR) {
       bathS = "missing"; // Oferta < Demanda -> Bloqueo Doctrinal
-    } else if (bathP === bathR) {
+    } else if (bathP === bathR || (bathP >= bathR && bathP - bathR < 1)) {
       bathS = "exact";
     } else {
       bathS = "plus";
@@ -1683,9 +1715,15 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
   } else if (bathR === 0 && bathP > 0) {
     bathS = "neutral";
   }
-  const reqBathLabel = bathR > 0 ? `≥ ${bathR} baño${bathR > 1 ? "s" : ""}` : "Sin mínimo de baños";
+  const reqBathLabel = reqDemandsSocialBath
+    ? `${bathR} baños (${bathR - 1} + baño social)`
+    : bathR > 0 ? `≥ ${bathR} baño${bathR > 1 ? "s" : ""}` : "Sin mínimo de baños";
 
-  add("Baños", reqBathLabel, bathP > 0 ? `${bathP} baño${bathP > 1 ? "s" : ""}` : "N/E", bathS, 5, <Bath className="w-3.5 h-3.5" />);
+  const propBathLabel = propHasHalfBath || bathP === 2.5
+    ? "2.5 baños (2 completos + 1 social)"
+    : bathP > 0 ? `${bathP} baño${bathP > 1 ? "s" : ""}` : "N/E";
+
+  add("Baños", reqBathLabel, propBathLabel, bathS, 5, <Bath className="w-3.5 h-3.5" />);
 
   let garR = req.parqueaderosMin ? Number(req.parqueaderosMin) : 0;
   if (garR <= 0 && reqTextLower) {
@@ -4594,6 +4632,13 @@ export default function AdminMatches() {
                 Number(kpiStats.total || 0).toLocaleString('es-CO')
               )}
             </p>
+            <p className="text-[9px] text-[#bf953f]/80 font-medium truncate">
+              {ageFilter === 'active_smart' || ageFilter === 'active_10'
+                ? `En vista activa (${(processedMatches || []).length} global)`
+                : ageFilter === 'dormant'
+                ? `En riesgo >10d (${(processedMatches || []).length} global)`
+                : 'Histórico global'}
+            </p>
           </div>
         </div>
 
@@ -4612,6 +4657,13 @@ export default function AdminMatches() {
               ) : (
                 Number(kpiStats.perfect || 0).toLocaleString('es-CO')
               )}
+            </p>
+            <p className="text-[9px] text-emerald-400/70 font-medium truncate">
+              {ageFilter === 'active_smart' || ageFilter === 'active_10'
+                ? `En vista activa (${(processedMatches || []).filter((m: any) => m._precomputedScore >= 95).length} global)`
+                : ageFilter === 'dormant'
+                ? `En riesgo >10d (${(processedMatches || []).filter((m: any) => m._precomputedScore >= 95).length} global)`
+                : 'Histórico global'}
             </p>
           </div>
         </div>

@@ -2169,8 +2169,9 @@ export function explicarMatch(
       return "apartment";
     }
     // Edificio (completo, residencial o comercial)
-    if (clean.includes("se vende edificio") || clean.includes("edificio en venta") || clean.includes("edificio completo") ||
-        clean.includes("building") || clean.startsWith("edificio")) {
+    const isExplicitWholeBuilding = clean.includes("se vende edificio") || clean.includes("edificio en venta") || clean.includes("edificio completo") ||
+        clean.includes("edificio de renta") || clean.includes("edificio en bloque");
+    if (isExplicitWholeBuilding || (clean.startsWith("edificio") && !clean.includes("administraci") && !clean.includes("admon") && !clean.includes("alcoba") && !clean.includes("hab") && !clean.includes("apto") && !clean.includes("apartamento"))) {
       return "building";
     }
     return "apartment";
@@ -2294,8 +2295,9 @@ export function explicarMatch(
       return "oficina";
     }
 
-    // ── EDIFICIO (Residencial o Comercial) ──
-    if (t === "building" || r.includes("edificio")) {
+    // ── EDIFICIO (Residencial o Comercial en Bloque) ──
+    const isExplicitBuildingListing = /\b(?:se\s*vende|compro|comprar|vendo|busca)\s*(?:un\s*)?edificio\b|\bedificio\s*(?:completo|en\s*bloque|de\s*renta|rentando)\b/i.test(r);
+    if (t === "building" || (isExplicitBuildingListing && t !== "apartment" && t !== "apartamento" && t !== "house" && t !== "casa")) {
       if (r.includes("apartamento") || r.includes("apto") || r.includes("residencial")) return "edificio_residencial";
       if (r.includes("oficina") || r.includes("local") || r.includes("comercial")) return "edificio_comercial";
       return "edificio";
@@ -2572,10 +2574,30 @@ export function explicarMatch(
   }
 
   let effectiveReqBaths = reqBathrooms;
-  if (effectiveReqBaths <= 0) {
-    const mW = reqTextLow.match(/(\d+(?:\.\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i)
+  // 🛡️ REGLA DOCTRINAL v31.104: Si la demanda exige "X baños + [el] baño social", el mínimo real es X + 1 (2 alcobas + social = 3 baños)
+  const socialBathInReq = reqTextLow.match(/(\d+|un|una|dos|tres|cuatro|cinco)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
+  if (socialBathInReq) {
+    const SPANISH_NUM_LOCAL: Record<string, number> = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
+    const bWord = socialBathInReq[1].toLowerCase();
+    const base = SPANISH_NUM_LOCAL[bWord] || parseInt(bWord, 10) || 2;
+    effectiveReqBaths = Math.max(effectiveReqBaths, base + 1);
+  } else if (effectiveReqBaths <= 0) {
+    const mW = reqTextLow.match(/(\d+(?:[\.,]\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i)
       || reqTextLow.match(/(\d+)\s*hab\s*con\s*baño/i);
-    if (mW) effectiveReqBaths = parseFloat(mW[1]);
+    if (mW) {
+      const v = parseFloat(mW[1].replace(',', '.'));
+      effectiveReqBaths = (v > 0 && v % 1 !== 0) ? Math.ceil(v) : v;
+    }
+  }
+
+  // Normalizar baños en la oferta si en el texto dice 2.5 baños (o si vino como 5 por bug previo)
+  if (property.rawText) {
+    const rawPLow = property.rawText.toLowerCase();
+    if (/2[\.,]5\s*(?:baño|baños|bñ)/i.test(rawPLow) || /2\s*(?:baños?|bñ)\s*(?:y\s*medio|y\s*medio\s*baño)/i.test(rawPLow)) {
+      pBathrooms = 3; // 2 baños completos + 1 medio baño social = 3 unidades físicas
+    } else if (pBathrooms === 5 && rawPLow.includes("2.5")) {
+      pBathrooms = 3;
+    }
   }
 
   let effectiveReqGarages = reqGarages;
@@ -2611,6 +2633,17 @@ export function explicarMatch(
         effectivePropAdmin = parsedAdmin;
       }
     }
+  }
+
+  // 🛡️ REGLA DOCTRINAL v31.104: Guillotina Financiera de Coherencia en Administración
+  // Si la demanda exige "administración baja", "administración económica" o "edificio inteligente",
+  // no es viable emparejar con inmuebles de administración alta (> $750.000 COP y con mayor razón > $1.000.000 COP).
+  const rawReqTextAdmin = (requirement.rawText || "").toLowerCase();
+  const requiresLowAdmin = /administraci[oó]n\s*(?:muy\s*)?baja|baja\s*administraci[oó]n|administraci[oó]n\s*econ[oó]mica|edificio(?:s)?\s*(?:de\s*)?administraci[oó]n\s*baja|edificio(?:s)?\s*inteligente(?:s)?|sin\s*administraci[oó]n/i.test(rawReqTextAdmin);
+
+  if (requiresLowAdmin && effectivePropAdmin > 750_000) {
+    blockers.push(`Guillotina Financiera (Administración Incompatible): La demanda exige estrictamente edificio de administración baja o inteligente, y la oferta tiene una cuota de administración de $${effectivePropAdmin.toLocaleString()} COP. Incoherente e inviable (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
   }
 
   if (reqAdminMaxVal > 0 && effectivePropAdmin > 0) {

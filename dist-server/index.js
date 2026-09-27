@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v31.103";
+    VECY_VERSION = "v31.104";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -5995,7 +5995,8 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     if (clean.includes("apartamento") || clean.includes("apto") || clean.includes("penthouse") || clean.includes("pent house") || /\bph\b/.test(clean) || clean.includes("apartment")) {
       return "apartment";
     }
-    if (clean.includes("se vende edificio") || clean.includes("edificio en venta") || clean.includes("edificio completo") || clean.includes("building") || clean.startsWith("edificio")) {
+    const isExplicitWholeBuilding = clean.includes("se vende edificio") || clean.includes("edificio en venta") || clean.includes("edificio completo") || clean.includes("edificio de renta") || clean.includes("edificio en bloque");
+    if (isExplicitWholeBuilding || clean.startsWith("edificio") && !clean.includes("administraci") && !clean.includes("admon") && !clean.includes("alcoba") && !clean.includes("hab") && !clean.includes("apto") && !clean.includes("apartamento")) {
       return "building";
     }
     return "apartment";
@@ -6078,7 +6079,8 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
       if (r.includes("edificio")) return "edificio_oficinas";
       return "oficina";
     }
-    if (t2 === "building" || r.includes("edificio")) {
+    const isExplicitBuildingListing = /\b(?:se\s*vende|compro|comprar|vendo|busca)\s*(?:un\s*)?edificio\b|\bedificio\s*(?:completo|en\s*bloque|de\s*renta|rentando)\b/i.test(r);
+    if (t2 === "building" || isExplicitBuildingListing && t2 !== "apartment" && t2 !== "apartamento" && t2 !== "house" && t2 !== "casa") {
       if (r.includes("apartamento") || r.includes("apto") || r.includes("residencial")) return "edificio_residencial";
       if (r.includes("oficina") || r.includes("local") || r.includes("comercial")) return "edificio_comercial";
       return "edificio";
@@ -6294,9 +6296,26 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     if (mB) effectiveReqBeds = parseInt(mB[1].split("-")[0].trim(), 10);
   }
   let effectiveReqBaths = reqBathrooms;
-  if (effectiveReqBaths <= 0) {
-    const mW = reqTextLow.match(/(\d+(?:\.\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || reqTextLow.match(/(\d+)\s*hab\s*con\s*baño/i);
-    if (mW) effectiveReqBaths = parseFloat(mW[1]);
+  const socialBathInReq = reqTextLow.match(/(\d+|un|una|dos|tres|cuatro|cinco)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
+  if (socialBathInReq) {
+    const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
+    const bWord = socialBathInReq[1].toLowerCase();
+    const base = SPANISH_NUM_LOCAL[bWord] || parseInt(bWord, 10) || 2;
+    effectiveReqBaths = Math.max(effectiveReqBaths, base + 1);
+  } else if (effectiveReqBaths <= 0) {
+    const mW = reqTextLow.match(/(\d+(?:[\.,]\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || reqTextLow.match(/(\d+)\s*hab\s*con\s*baño/i);
+    if (mW) {
+      const v = parseFloat(mW[1].replace(",", "."));
+      effectiveReqBaths = v > 0 && v % 1 !== 0 ? Math.ceil(v) : v;
+    }
+  }
+  if (property.rawText) {
+    const rawPLow = property.rawText.toLowerCase();
+    if (/2[\.,]5\s*(?:baño|baños|bñ)/i.test(rawPLow) || /2\s*(?:baños?|bñ)\s*(?:y\s*medio|y\s*medio\s*baño)/i.test(rawPLow)) {
+      pBathrooms = 3;
+    } else if (pBathrooms === 5 && rawPLow.includes("2.5")) {
+      pBathrooms = 3;
+    }
   }
   let effectiveReqGarages = reqGarages;
   if (effectiveReqGarages <= 0) {
@@ -6327,6 +6346,12 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
         effectivePropAdmin = parsedAdmin;
       }
     }
+  }
+  const rawReqTextAdmin = (requirement.rawText || "").toLowerCase();
+  const requiresLowAdmin = /administraci[oó]n\s*(?:muy\s*)?baja|baja\s*administraci[oó]n|administraci[oó]n\s*econ[oó]mica|edificio(?:s)?\s*(?:de\s*)?administraci[oó]n\s*baja|edificio(?:s)?\s*inteligente(?:s)?|sin\s*administraci[oó]n/i.test(rawReqTextAdmin);
+  if (requiresLowAdmin && effectivePropAdmin > 75e4) {
+    blockers.push(`Guillotina Financiera (Administraci\xF3n Incompatible): La demanda exige estrictamente edificio de administraci\xF3n baja o inteligente, y la oferta tiene una cuota de administraci\xF3n de $${effectivePropAdmin.toLocaleString()} COP. Incoherente e inviable (0%).`);
+    return buildExplanationResult(0, blockers, positives, negatives);
   }
   if (reqAdminMaxVal > 0 && effectivePropAdmin > 0) {
     if (effectivePropAdmin > reqAdminMaxVal) {
@@ -14151,13 +14176,29 @@ function extractFallbackDataFromText(text2) {
     }
   }
   let bathrooms = 0;
-  const kvBathMatch = clean.match(/(?:🚿|🛁|🚽)?\s*(?:baños?|banos?|wc)\s*[:\-=]\s*(?:m[ií]nimo\s*|minimo\s*|m[ií]n\s*|min\s*)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\b/i);
-  if (kvBathMatch) {
-    bathrooms = parseWordOrDigit(kvBathMatch[1]);
+  const socialAddMatch = clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
+  if (socialAddMatch) {
+    const baseVal = parseWordOrDigit(socialAddMatch[1]) || 2;
+    bathrooms = baseVal + 1;
   } else {
-    const bathMatch = clean.match(/(?:🚿|🛁|🚽|de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:amplios?|completos?|sociales?|grandes?)?\s*(?:baño|baños|bano|banos|wc)/i);
-    if (bathMatch) {
-      bathrooms = parseWordOrDigit(bathMatch[1]);
+    const halfBathMatch = clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)[\.,]5\s*(?:baños?|banos?|bñ|wc)/i) || clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baños?|banos?|bñ)\s*(?:y\s*medio|y\s*medio\s*baño)/i);
+    if (halfBathMatch) {
+      const baseVal = parseWordOrDigit(halfBathMatch[1]) || 2;
+      bathrooms = baseVal + 1;
+    } else {
+      const kvBathMatch = clean.match(/(?:🚿|🛁|🚽)?\s*(?:baños?|banos?|wc)\s*[:\-=]\s*(?:m[ií]nimo\s*|minimo\s*|m[ií]n\s*|min\s*)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2}(?:[\.,]\d+)?)\b/i);
+      if (kvBathMatch) {
+        const bw = kvBathMatch[1].replace(",", ".");
+        const parsed = parseFloat(bw);
+        bathrooms = !isNaN(parsed) && parsed % 1 !== 0 ? Math.ceil(parsed) : parseWordOrDigit(kvBathMatch[1]);
+      } else {
+        const bathMatch = clean.match(/(?:🚿|🛁|🚽|de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2}(?:[\.,]\d+)?)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:amplios?|completos?|sociales?|grandes?)?\s*(?:baño|baños|bano|banos|wc)/i);
+        if (bathMatch) {
+          const bw = bathMatch[1].replace(",", ".");
+          const parsed = parseFloat(bw);
+          bathrooms = !isNaN(parsed) && parsed % 1 !== 0 ? Math.ceil(parsed) : parseWordOrDigit(bathMatch[1]);
+        }
+      }
     }
   }
   if (bathrooms === 0) {
@@ -17192,7 +17233,18 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
       return String(v);
     })(),
     bedrooms: data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
-    bathrooms: data.bathrooms !== void 0 && data.bathrooms !== null ? Math.round(Number(data.bathrooms)) : null,
+    bathrooms: (() => {
+      const rawL = (data.rawText || "").toLowerCase();
+      if (/2[\.,]5\s*(?:baño|baños|bñ)/i.test(rawL) || /2\s*(?:baños?|bñ)\s*(?:y\s*medio|y\s*medio\s*baño)/i.test(rawL)) {
+        return 3;
+      }
+      if (data.bathrooms !== void 0 && data.bathrooms !== null) {
+        const num = Number(data.bathrooms);
+        if (num === 5 && /2[\.,]5/i.test(rawL)) return 3;
+        return Math.round(num);
+      }
+      return null;
+    })(),
     garages: (() => {
       if (data.garages === void 0 || data.garages === null) return null;
       const g = Math.round(Number(data.garages));
@@ -17529,11 +17581,26 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
       return m ? parseInt(m[1], 10) : null;
     })(),
     banosMin: (() => {
-      const v = data.banosMin !== void 0 && data.banosMin !== null ? Number(data.banosMin) : data.bathrooms !== void 0 && data.bathrooms !== null ? Number(data.bathrooms) : null;
-      if (v !== null && !isNaN(v) && v > 0) return Math.round(v);
       const rawL = (data.rawText || "").toLowerCase();
-      const m = rawL.match(/(\d+(?:\.\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || rawL.match(/(\d+)\s*hab\s*con\s*baño/i);
-      return m ? Math.round(parseFloat(m[1])) : null;
+      const socialAddMatch = rawL.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
+      if (socialAddMatch) {
+        const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
+        const bWord = socialAddMatch[1].toLowerCase();
+        const base = SPANISH_NUM_LOCAL[bWord] || parseInt(bWord, 10) || 2;
+        return base + 1;
+      }
+      const v = data.banosMin !== void 0 && data.banosMin !== null ? Number(data.banosMin) : data.bathrooms !== void 0 && data.bathrooms !== null ? Number(data.bathrooms) : null;
+      if (v !== null && !isNaN(v) && v > 0) {
+        if (v === 5 && rawL.includes("2.5")) return 3;
+        return Math.round(v);
+      }
+      const m = rawL.match(/(\d+(?:[\.,]\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || rawL.match(/(\d+)\s*hab\s*con\s*baño/i);
+      if (m) {
+        const val = parseFloat(m[1].replace(",", "."));
+        if (val > 0 && val % 1 !== 0) return Math.ceil(val);
+        return Math.round(val);
+      }
+      return null;
     })(),
     parqueaderosMin: (() => {
       const v = data.parqueaderosMin !== void 0 && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : data.garages !== void 0 && data.garages !== null ? Math.round(Number(data.garages)) : null;

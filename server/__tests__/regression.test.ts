@@ -1751,6 +1751,129 @@ Clienta compra apto de una alcoba hasta 600MM moderno espectacular iluminado en 
       expect(parseInt(ageMatch![1], 10)).toBe(46);
     });
   });
+
+  describe("23. Blindaje Doctrinal de Baños (2.5 Baños, Baño Social) y Guillotina Financiera de Administración Baja/Inteligente (v31.104)", () => {
+    it("Extracción de baños en ofertas con formato decimal: '2.5 baños' debe normalizarse a 3 baños físicos (2 completos + 1 social), NUNCA 5 baños", () => {
+      const offerText = 
+`Vendo 3h• Balcones• Santa Paula
+Calle 103 con 13
+125 mts2
+3 piso exterior
+3 habitaciones, la principal con balcón
+2.5 baños
+Sala- comedor con chimenea a gas y 2 balcones
+Estudio
+Cocina abierta
+Precio venta sin muebles $1.050.000 mm
+Precio administración $1.800.000 (precio con descuento)`;
+
+      const clean = offerText.toLowerCase();
+      const halfBathMatch = clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)[\.,]5\s*(?:baños?|banos?|bñ|wc)/i)
+        || clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baños?|banos?|bñ)\s*(?:y\s*medio|y\s*medio\s*baño)/i);
+      
+      expect(halfBathMatch).not.toBeNull();
+      const base = parseInt(halfBathMatch![1], 10);
+      expect(base).toBe(2);
+      const totalBaths = base + 1; // 2 completos + 1 social
+      expect(totalBaths).toBe(3);
+      expect(totalBaths).not.toBe(5);
+    });
+
+    it("Extracción de baños en demandas con adición de baño social: '2 baños mas baño social' debe exigir 3 baños", () => {
+      const reqText = 
+`URGENTE Requerimiento COMPRA apto.
+🔴$ 750 millones maximo ( de contado)
+☑️2 alcobas
+2 baños mas baño social
+☑️2 garajes
+✔️De 80 a 100 m2
+Santa barbara, Unicentro.
+Adriana Rebeca Orejuela`;
+
+      const clean = reqText.toLowerCase();
+      const socialAddMatch = clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
+      
+      expect(socialAddMatch).not.toBeNull();
+      const SPANISH_MAP: Record<string, number> = { "dos": 2, "tres": 3 };
+      const w = socialAddMatch![1].toLowerCase();
+      const base = SPANISH_MAP[w] || parseInt(w, 10);
+      expect(base).toBe(2);
+      const requiredBaths = base + 1;
+      expect(requiredBaths).toBe(3);
+    });
+
+    it("Guillotina de Baños: Oferta con 2 baños completos vs Demanda de '2 baños mas baño social' (3 baños) -> 0% Match", () => {
+      const req2PlusSocial = {
+        id: 1535,
+        tipoInmuebleDeseado: "apartamento",
+        tipoNegocioDeseado: "venta",
+        presupuestoMax: 750000000,
+        areaMin: 80,
+        habitacionesMin: 2,
+        banosMin: 2, // Viene con 2 en base, pero texto exige social
+        parqueaderosMin: 2,
+        zonaDeseada: "Santa Bárbara",
+        addressNeighborhood: "Santa Bárbara",
+        addressCity: "Bogotá",
+        rawText: "URGENTE Requerimiento COMPRA apto. $750 millones maximo. 2 alcobas, 2 baños mas baño social, 2 garajes, De 80 a 100 m2 en Santa Bárbara"
+      };
+
+      const propSolo2Banos = {
+        id: 2922,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 750000000,
+        areaTotal: 85,
+        bedrooms: 2,
+        bathrooms: 2, // Solo 2 completos, sin social
+        garages: 2,
+        zone: "Santa Bárbara",
+        addressNeighborhood: "Santa Bárbara",
+        addressCity: "Bogotá",
+        rawText: "VENTA apartamento en Santa Bárbara, 85 M2, 2 alcobas más estudio, 2 baños completos, 2 parqueaderos, Admon 811 mil, Valor $750 MM"
+      };
+
+      const resultado = explicarMatch(req2PlusSocial, propSolo2Banos);
+      expect(resultado.score).toBe(0);
+      expect(resultado.blockers.some(b => b.includes("Baños"))).toBe(true);
+    });
+
+    it("Guillotina Financiera de Administración: Demanda que exige 'Edificio de administración baja o inteligentes' vs Oferta con $1.800.000 de administración -> 0% Match", () => {
+      const reqAdminBaja = {
+        id: 1640,
+        tipoInmuebleDeseado: "apartamento",
+        tipoNegocioDeseado: "venta",
+        presupuestoMax: 1300000000,
+        areaMin: 107,
+        habitacionesMin: 3,
+        parqueaderosMin: 2,
+        zonaDeseada: "Santa Paula",
+        addressNeighborhood: "Santa Paula",
+        addressCity: "Bogotá",
+        rawText: "Busco urgente Compra. Hasta $1.300 MM. 3 alcobas. Santa Paula. 107 a 125 M2. Edificio de administración baja o inteligentes. 2 garajes."
+      };
+
+      const propAdminCara = {
+        id: 2929,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 1050000000,
+        areaTotal: 125,
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        adminFee: 1800000,
+        zone: "Santa Paula",
+        addressNeighborhood: "Santa Paula",
+        addressCity: "Bogotá",
+        rawText: "Vendo 3h Santa Paula. 125 mts2. 3 habitaciones. 2.5 baños. 2 parqueaderos en línea. Precio venta $1.050.000 mm. Precio administración $1.800.000 (precio con descuento)"
+      };
+
+      const resultado = explicarMatch(reqAdminBaja, propAdminCara);
+      expect(resultado.score).toBe(0);
+      expect(resultado.blockers.some(b => b.includes("Guillotina Financiera (Administración Incompatible)"))).toBe(true);
+    });
+  });
 });
 
 

@@ -322,6 +322,40 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.104 — Septiembre 2026
+
+#### 📌 AUDITORÍA DE INCONSISTENCIAS EN RIESGO: BAÑOS 2.5 Y BAÑO SOCIAL, GUILLOTINA DE ADMINISTRACIÓN BAJA/INTELIGENTE Y CORRECCIÓN DE SUBTIPO DE EDIFICIO
+
+**Problemas identificados:**
+1. **Discrepancia de Cifras Web vs Global**: El panel `/admin` por defecto filtra por `Vigentes & Calientes` (últimos 15/45 días), mostrando 32 matches, mientras que en la base de datos PostgreSQL existen 134 matches activos globales. Los marcadores KPI no aclaraban este contexto, generando dudas en la lectura de métricas.
+2. **Aprendizaje y Persistencia del Descarte de Matches**: Cuando el bróker descarta un match en el modal (`handleFeedback`), se actualiza `propertyMatches.status = 'rejected'` e inserta en la tabla `match_feedback`. Ese par queda vetado de forma permanente en base de datos y memoria, impidiendo que JanIA lo vuelva a emparejar.
+3. **Bug de Extracción de Baños Decimales (`2.5 baños`)**: En la oferta 2929 ("Vendo 3h Santa Paula"), el texto original expresaba `2.5 baños`. El extractor LLM interpretó erróneamente el `.5` como `5` baños completos, guardando en BD `bathrooms = 5` y desplegando datos falsos en la tabla de cotejo.
+4. **Bug Crítico de Clasificación de Subtipo de Edificio en Bloque (`matching.ts`)**: En `deduceFullType` y `getSubtype`, la evaluación `clean.startsWith("edificio")` o `r.includes("edificio")` se ejecutaba antes de verificar si el activo era residencial (`apartment`). Requerimientos como el 1640 ("Edificio de administración baja o inteligentes") o descripciones de apartamentos ("edificio de 10 años") eran reclasificados como `building` (edificio en bloque completo), provocando que la propiedad 2929 se titulara `Building en Santa Paula para venta` y emparejara artificialmente.
+5. **Omisión de Suma de Baño Social en Demandas**: En el requerimiento 1535, el cliente pedía `2 baños mas baño social`. JanIA extrajo `banosMin = 2` obviando la suma del baño social (+1 = 3 unidades físicas), permitiendo que ofertas con solo 2 baños completos emparejaran, violando la regla doctrinal de no admitir `prop < req`.
+6. **Ausencia de Guillotina para Demanda de Administración Baja o Inteligente**: Si un comprador exige "administración baja", "administración económica" o "edificio inteligente", emparejarlo con una propiedad con cuota de $1.800.000 COP mensuales es financieramente incoherente e inviable.
+
+**Solución aplicada:**
+- **Extracción y Normalización de Baños (`server/_core/janIA.ts`)**:
+  - `2.5 baños` se normaliza estrictamente a `3` unidades físicas (2 completos + 1 medio baño social), suprimiendo la alucinación de 5 baños.
+  - Demanda que exige `X baños + [el] baño social`: JanIA calcula `banosMin = X + 1` (ej: 2 baños + social = 3 baños).
+- **Motor de Matching y Guillotinas Doctrinales (`server/_core/matching.ts`)**:
+  - `effectiveReqBaths`: calcula `X + 1` baños si la demanda incluye expresiones como `2 baños mas baño social`.
+  - **Guillotina Financiera de Coherencia en Administración**: Si la demanda exige "administración baja", "administración económica" o "edificio inteligente" y la cuota de la oferta supera $750.000 COP (y con mayor razón $1.800.000 COP), se aplica **0% Match (Bloqueo Absoluto)** con razón `Guillotina Financiera (Administración Incompatible)`.
+  - **Corrección de Subtipo de Edificio en Bloque (`deduceFullType` y `getSubtype`)**: `building` solo se asigna si explícitamente se transa un edificio completo (`se vende edificio`, `edificio en venta`, `edificio en bloque`, `edificio de renta`). Menciones como "edificio de administración baja" o "edificio inteligente" se preservan como `apartment`.
+- **Tabla de Cotejo y Marcadores KPI en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+  - Fila "Valor admin": Detecta demandas de administración baja/inteligente; si la oferta supera $750k se marca en rojo como `missing` (🔴 No coincide ❌).
+  - Fila "Baños": Muestra `3 baños (2 + baño social)` en demanda y `2.5 baños (2 completos + 1 social)` en oferta. Si la oferta tiene 2 y la demanda exige 3, se marca como `missing` (🔴 No coincide ❌).
+  - Marcadores KPI: Añadida etiqueta explicativa que clarifica la cantidad en vista activa versus el total histórico global en base de datos.
+- **Remediación en Base de Datos VPS PostgreSQL (`vecy_network`)**:
+  - Propiedad 2929: corregida a `propertyType = 'apartment'`, `bathrooms = 3`, nombre `"Apartamento 3H Balcones en Santa Paula para venta"`.
+  - Requerimiento 1535: actualizado a `banosMin = 3`.
+  - Matches 15086, 15083, 14731, 14460, 14459, 15091, 15092, 15093: descartados a `status = 'rejected'` e insertados en `match_feedback` para veto perpetuo.
+  - Requerimiento compuesto 1844: cancelado (`status = 'expired'`) y sustituido por los 3 requerimientos individuales limpios de Luz Nelcy ($1800MM, $850-$1000MM, $600MM).
+- **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+  - Añadida Sección 23 con 4 pruebas unitarias exhaustivas (**91/91 tests Vitest pasando** ✅).
+
+---
+
 ### 🔖 v31.103 — Septiembre 2026
 
 #### 📌 SEPARACIÓN DE REQUERIMIENTOS MÚLTIPLES DE ASESORES, BLINDAJE CONTRA ALUCINACIÓN DE ESTRATO Y FILTRO DURO DE ESTRATO EXIGIDO

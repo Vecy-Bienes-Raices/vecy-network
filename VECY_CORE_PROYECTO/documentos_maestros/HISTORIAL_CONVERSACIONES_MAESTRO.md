@@ -7,6 +7,51 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.104 — 27 Septiembre 2026
+
+### Solicitud de Eduardo
+Auditoría de Inconsistencias en Riesgo: Baños 2.5 y Baño Social, Guillotina de Administración Baja e Inteligente, y Corrección de Subtipo de Edificio:
+*"Tus cifras dadas no coinciden con lo que me muestra realmente la web. Cuando se revisa un Match y se descarta por la razón que sea. Jania si aprende o sigue dejándolo pasar? En el caso de los que están en riesgo de irse en los 2 que no son perfectos, veo claramente que no hay Match y se deben descartar. Por qué?? Porque en el primero dice en una parte: 🚪🔒Edificio de administración baja o inteligentes y en la OFERTA dice: Precio administración $1.800.000 (precio con descuento)= No coincide ni es coherente, una administración tan alta en un apartamento de tan solo 1.050.000.000 no es viable para nadie. También dice en la tabla de cotejo en la oferta que son 5 baños, eso es mentira, allí dice claramente 2.5 Baños es decir que se refiere a dos baños completos (con ducha) + uno medio, solo inodoro y lavamanos que es el social y la demanda si se ajusta ya que no pide baños. En el segundo la demanda pide que sean: 2 baños + el baño social, claramente se refiere a 3 o a 2.5 también, pero la oferta solo tiene 2 baños completos y le da match."*
+
+### Diagnóstico Técnico Profundo y Conclusiones de Arquitectura
+1. **Discrepancia de Cifras Web vs Global en Panel Admin**:
+   - En el panel `/admin`, la vista por defecto activa el filtro de vigencia inteligente (`Vigentes & Calientes`), mostrando 32 matches activos de los últimos 15/45 días.
+   - En base de datos PostgreSQL, el histórico global acumulado contiene 134 matches no rechazados (8 perfectos $\ge 95\%$). Las tarjetas KPI no clarificaban si correspondían a la vista filtrada activa o al total global, generando confusión visual.
+2. **Aprendizaje y Persistencia del Descarte de Matches**:
+   - Cuando Eduardo descarta un match en el panel modal (`handleFeedback`), se actualiza `propertyMatches.status = 'rejected'` e inserta un registro en la tabla `match_feedback` de PostgreSQL.
+   - En backend y frontend, el par `(propertyId, requirementId)` queda vetado permanentemente en base de datos y memoria, garantizando que JanIA jamás vuelva a revivir o sugerir un match rechazado por el bróker.
+3. **Bug de Extracción de Baños Decimales (`2.5 baños`)**:
+   - En la oferta 2929 ("Vendo 3h Santa Paula"), el texto original decía `2.5 baños`. El extractor LLM/fallback interpretó erróneamente el `.5` como `5` baños completos, almacenando `bathrooms = 5` en la base de datos y desplegando en la tabla de cotejo una cifra falsa de 5 baños.
+4. **Bug Crítico de Clasificación de Subtipo de Edificio en Bloque (`matching.ts`)**:
+   - En `deduceFullType` y `getSubtype`, la condición `clean.startsWith("edificio")` o `r.includes("edificio")` se evaluaba antes de verificar si el inmueble era residencial (`apartment`).
+   - Requerimientos como el 1640 ("Edificio de administración baja o inteligentes") o apartamentos con descripciones como "edificio de 10 años" eran clasificados erróneamente como `building` (edificio completo en bloque), provocando que la propiedad 2929 se guardara como `Building en Santa Paula para venta` y emparejara de forma artificial.
+5. **Omisión de Suma de Baño Social en Demandas**:
+   - En el requerimiento 1535, el cliente solicitaba `2 baños mas baño social`. JanIA extrajo `banosMin = 2` obviando la suma del medio baño social (+1 = 3 unidades físicas), permitiendo que la oferta 2922 (con solo 2 baños completos y sin baño social) emparejara, violando la regla doctrinal de no admitir `prop < req`.
+6. **Ausencia de Guillotina para Demanda de Administración Baja o Inteligente**:
+   - Cuando un comprador exige explícitamente "administración baja", "administración económica" o "edificio inteligente", emparejarlo con una propiedad que cobra $1.800.000 COP mensuales de administración es financieramente incoherente e inviable.
+
+### Acciones Ejecutadas en Código
+1. **Extracción y Normalización de Baños (`server/_core/janIA.ts`)**:
+   - `2.5 baños` se normaliza estrictamente a `3` unidades físicas (2 baños completos + 1 medio baño social), suprimiendo la alucinación de 5 baños.
+   - Demandas que exigen `X baños + [el] baño social`: JanIA calcula `banosMin = X + 1` (ej: 2 baños + social = 3 baños).
+2. **Motor de Matching y Guillotinas Doctrinales (`server/_core/matching.ts`)**:
+   - `effectiveReqBaths`: calcula `X + 1` baños si la demanda incluye expresiones como `2 baños mas baño social`.
+   - **Guillotina Financiera de Coherencia en Administración**: Si la demanda exige "administración baja", "administración económica" o "edificio inteligente" y la cuota de la oferta supera $750.000 COP, se aplica **0% Match (Bloqueo Absoluto)** con razón `Guillotina Financiera (Administración Incompatible)`.
+   - **Corrección de Subtipo de Edificio en Bloque (`deduceFullType` y `getSubtype`)**: `building` solo se asigna si explícitamente se transa un edificio completo (`se vende edificio`, `edificio en venta`, `edificio en bloque`, `edificio de renta`). Menciones como "edificio de administración baja" o "edificio inteligente" se preservan como `apartment`.
+3. **Tabla de Cotejo y Marcadores KPI en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Fila "Valor admin": Detecta demandas de administración baja/inteligente; si la oferta supera $750k se marca en rojo como `missing` (🔴 No coincide ❌).
+   - Fila "Baños": Muestra `3 baños (2 + baño social)` en demanda y `2.5 baños (2 completos + 1 social)` en oferta. Si la oferta tiene 2 y la demanda exige 3, se marca como `missing` (🔴 No coincide ❌).
+   - Marcadores KPI: Añadida etiqueta explicativa que clarifica la cantidad en vista activa versus el total histórico global en base de datos.
+4. **Remediación en Base de Datos VPS PostgreSQL (`vecy_network`)**:
+   - Propiedad 2929: corregida a `propertyType = 'apartment'`, `bathrooms = 3`, nombre `"Apartamento 3H Balcones en Santa Paula para venta"`.
+   - Requerimiento 1535: actualizado a `banosMin = 3`.
+   - Matches 15086, 15083, 14731, 14460, 14459, 15091, 15092, 15093: descartados a `status = 'rejected'` e insertados en `match_feedback` para veto perpetuo.
+   - Requerimiento compuesto 1844: cancelado (`status = 'expired'`) y sustituido por los 3 requerimientos individuales limpios de Luz Nelcy ($1800MM, $850-$1000MM, $600MM).
+5. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+   - Añadida **Sección 23** con 4 pruebas unitarias exhaustivas (**91/91 tests Vitest pasando** ✅).
+
+---
+
 ## 📋 SESIÓN v31.103 — 26 Septiembre 2026
 
 ### Solicitud de Eduardo

@@ -933,15 +933,34 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   let bathrooms = 0;
-  // A. Formato Key-Value con Prefijo (ej: *Baños*: 3, Baños: mínimo 2, Baños: 2)
-  const kvBathMatch = clean.match(/(?:🚿|🛁|🚽)?\s*(?:baños?|banos?|wc)\s*[:\-=]\s*(?:m[ií]nimo\s*|minimo\s*|m[ií]n\s*|min\s*)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\b/i);
-  if (kvBathMatch) {
-    bathrooms = parseWordOrDigit(kvBathMatch[1]);
+  // 🛡️ REGLA DOCTRINAL v31.104: Detección prioritaria de adición explícita de baño social (ej: 2 baños + baño social = 3 baños)
+  const socialAddMatch = clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
+  if (socialAddMatch) {
+    const baseVal = parseWordOrDigit(socialAddMatch[1]) || 2;
+    bathrooms = baseVal + 1; // 2 baños privados + 1 social = 3 baños
   } else {
-    // B. Formato Estándar (ej: 3 baños, con 2 baños)
-    const bathMatch = clean.match(/(?:🚿|🛁|🚽|de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d+)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:amplios?|completos?|sociales?|grandes?)?\s*(?:baño|baños|bano|banos|wc)/i);
-    if (bathMatch) {
-      bathrooms = parseWordOrDigit(bathMatch[1]);
+    // Detección de baños con medio baño (ej: 2.5 baños = 2 completos + 1 social = 3 baños físicos)
+    const halfBathMatch = clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)[\.,]5\s*(?:baños?|banos?|bñ|wc)/i)
+      || clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baños?|banos?|bñ)\s*(?:y\s*medio|y\s*medio\s*baño)/i);
+    if (halfBathMatch) {
+      const baseVal = parseWordOrDigit(halfBathMatch[1]) || 2;
+      bathrooms = baseVal + 1; // 2.5 baños -> 2 completos + 1 social = 3 baños
+    } else {
+      // A. Formato Key-Value con Prefijo (ej: *Baños*: 3, Baños: mínimo 2, Baños: 2)
+      const kvBathMatch = clean.match(/(?:🚿|🛁|🚽)?\s*(?:baños?|banos?|wc)\s*[:\-=]\s*(?:m[ií]nimo\s*|minimo\s*|m[ií]n\s*|min\s*)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2}(?:[\.,]\d+)?)\b/i);
+      if (kvBathMatch) {
+        const bw = kvBathMatch[1].replace(',', '.');
+        const parsed = parseFloat(bw);
+        bathrooms = !isNaN(parsed) && parsed % 1 !== 0 ? Math.ceil(parsed) : parseWordOrDigit(kvBathMatch[1]);
+      } else {
+        // B. Formato Estándar (ej: 3 baños, con 2 baños)
+        const bathMatch = clean.match(/(?:🚿|🛁|🚽|de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2}(?:[\.,]\d+)?)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:amplios?|completos?|sociales?|grandes?)?\s*(?:baño|baños|bano|banos|wc)/i);
+        if (bathMatch) {
+          const bw = bathMatch[1].replace(',', '.');
+          const parsed = parseFloat(bw);
+          bathrooms = !isNaN(parsed) && parsed % 1 !== 0 ? Math.ceil(parsed) : parseWordOrDigit(bathMatch[1]);
+        }
+      }
     }
   }
   if (bathrooms === 0) {
@@ -5099,7 +5118,18 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
       return String(v);
     })(),
     bedrooms: data.bedrooms !== undefined && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
-    bathrooms: data.bathrooms !== undefined && data.bathrooms !== null ? Math.round(Number(data.bathrooms)) : null,
+    bathrooms: (() => {
+      const rawL = (data.rawText || "").toLowerCase();
+      if (/2[\.,]5\s*(?:baño|baños|bñ)/i.test(rawL) || /2\s*(?:baños?|bñ)\s*(?:y\s*medio|y\s*medio\s*baño)/i.test(rawL)) {
+        return 3; // 2 baños completos + 1 medio baño social = 3 baños físicos
+      }
+      if (data.bathrooms !== undefined && data.bathrooms !== null) {
+        const num = Number(data.bathrooms);
+        if (num === 5 && /2[\.,]5/i.test(rawL)) return 3; // Salvaguarda anti-bug de 2.5 interpretado como 5
+        return Math.round(num);
+      }
+      return null;
+    })(),
     garages: (() => {
       if (data.garages === undefined || data.garages === null) return null;
       const g = Math.round(Number(data.garages));
@@ -5510,11 +5540,27 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
       return m ? parseInt(m[1], 10) : null;
     })(),
     banosMin: (() => {
-      const v = data.banosMin !== undefined && data.banosMin !== null ? Number(data.banosMin) : (data.bathrooms !== undefined && data.bathrooms !== null ? Number(data.bathrooms) : null);
-      if (v !== null && !isNaN(v) && v > 0) return Math.round(v);
       const rawL = (data.rawText || "").toLowerCase();
-      const m = rawL.match(/(\d+(?:\.\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || rawL.match(/(\d+)\s*hab\s*con\s*baño/i);
-      return m ? Math.round(parseFloat(m[1])) : null;
+      // 🛡️ REGLA DOCTRINAL v31.104: Si el cliente exige "X baños + [el] baño social", son X + 1 baños (2 alcobas + social = 3)
+      const socialAddMatch = rawL.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
+      if (socialAddMatch) {
+        const SPANISH_NUM_LOCAL: Record<string, number> = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
+        const bWord = socialAddMatch[1].toLowerCase();
+        const base = SPANISH_NUM_LOCAL[bWord] || parseInt(bWord, 10) || 2;
+        return base + 1; // 2 baños alcobas + 1 social = 3 baños
+      }
+      const v = data.banosMin !== undefined && data.banosMin !== null ? Number(data.banosMin) : (data.bathrooms !== undefined && data.bathrooms !== null ? Number(data.bathrooms) : null);
+      if (v !== null && !isNaN(v) && v > 0) {
+        if (v === 5 && rawL.includes("2.5")) return 3; // Corregir alucinación 2.5 -> 5
+        return Math.round(v);
+      }
+      const m = rawL.match(/(\d+(?:[\.,]\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || rawL.match(/(\d+)\s*hab\s*con\s*baño/i);
+      if (m) {
+        const val = parseFloat(m[1].replace(',', '.'));
+        if (val > 0 && val % 1 !== 0) return Math.ceil(val);
+        return Math.round(val);
+      }
+      return null;
     })(),
     parqueaderosMin: (() => {
       const v = data.parqueaderosMin !== undefined && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : (data.garages !== undefined && data.garages !== null ? Math.round(Number(data.garages)) : null);
