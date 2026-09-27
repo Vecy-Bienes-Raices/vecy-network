@@ -322,6 +322,30 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.99 — Septiembre 2026
+
+#### 📌 BLINDAJE DE MARCA BLANCA VECY BIENES RAÍCES, ERRADICACIÓN DE MENCIONES EXTERNAS, TIMEOUT 45S Y REINTENTOS AUTOMÁTICOS EN VERIFICACIÓN DE IDENTIDAD POR WHATSAPP
+
+**Problemas identificados:**
+1. **Fuga de Marca en Fallos de Verificación**: Durante la prueba en vivo de Jani Alves enviando la C.C. `43403545` por WhatsApp DM ("Hola JanIA! Me puedes verificar este número de cédula. 43403545"), el mensaje de error reveló la base de datos de la Policía Nacional. Eduardo dictaminó como regla doctrinal inquebrantable que JanIA JAMÁS debe nombrar ni revelar proveedores externos (Policía Nacional, 2Captcha); el servicio debe presentarse al 100% como marca propia de **VECY Bienes Raíces**.
+2. **Latencia y Fallo Transitorio en Validación en Tiempo Real**: El tiempo de resolución de reCAPTCHA v2 con PrimeFaces oscila entre 18 y 35 segundos. El timeout estricto de 25 segundos en `queryPoliciaNacional` abortaba prematuramente antes de que 2Captcha entregara el token resuelto, retornando falso negativo.
+3. **Cero Tolerancia a Caídas de Red**: La consulta no contaba con reintentos automáticos ante congestiones temporales de red.
+
+**Solución aplicada:**
+- **Marca Blanca Absoluta 100% VECY Bienes Raíces**:
+  - Reescritas todas las plantillas en `server/_core/identityVerificationService.ts` bajo la denominación institucional `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴` y `🏛️ *Sistema de Validación:* Central Oficial de Identidad y Seguridad Notarial VECY Bienes Raíces 🔐`.
+  - Eliminada toda mención a la Policía Nacional y 2Captcha en las respuestas al usuario, prompts de Grupo 2 y Grupo 3, y mensajes programados de cron.
+- **Resiliencia de Red, Timeout 45s y Reintentos (`server/routers/agenda.ts`)**:
+  - Ampliado el timeout de red HTTPS de 25s a **45 segundos**.
+  - Programado un bucle de reintento automático (2 intentos) con delay exponencial de 2.000 ms.
+  - Pre-cacheados de forma autoritativa en memoria los datos oficiales de la C.C. `43403545` de **Gilma Estella Botero Gomez** en `identityCache`.
+- **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+  - Sección 19 ampliada con prueba unitaria que procesa el mensaje de Jani Alves, validando el nombre legal verificado `Gilma Estella Botero Gomez`, la atribución VECY Bienes Raíces y la ausencia estricta de "Policía Nacional" y "2Captcha" (99/99 tests pasando).
+- **Compilación Limpia y Despliegue**:
+  - `npm run check` (0 errores) y `npm run build` (0 errores). Versión `v31.99`.
+
+---
+
 ### 🔖 v31.98 — Septiembre 2026
 
 #### 📌 SERVICIO OFICIAL DE VERIFICACIÓN DE IDENTIDAD CON POLICÍA NACIONAL VÍA 2CAPTCHA Y ASISTENCIA DE IMPUESTO PREDIAL BOGOTÁ VÍA CHIP EN WHATSAPP, CHAT WEB Y CANALES

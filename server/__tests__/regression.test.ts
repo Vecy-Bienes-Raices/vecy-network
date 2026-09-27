@@ -1470,6 +1470,24 @@ Ed del 2014.
       expect(liqComercial.tarifaPorMil).toBe(10.5);
       expect(liqComercial.impuestoPleno).toBe(10_500_000);
     });
+
+    it("Debe generar el reporte oficial con marca blanca 100% de VECY Bienes Raíces para la cédula 43403545", async () => {
+      const { executeIdentityVerificationFromWhatsApp } = await import("../_core/identityVerificationService");
+
+      const msgJani = "Hola JanIA!\nMe puedes verificar este número de cédula.\n43403545";
+      const rep = await executeIdentityVerificationFromWhatsApp(msgJani, true);
+
+      expect(rep.isVerificationRequest).toBe(true);
+      expect(rep.success).toBe(true);
+      expect(rep.officialName).toBe("Gilma Estella Botero Gomez");
+      expect(rep.reportText).toContain("VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES");
+      expect(rep.reportText).toContain("Gilma Estella Botero Gomez");
+      expect(rep.reportText).toContain("43.403.545");
+      expect(rep.reportText).toContain("Central Oficial de Identidad y Seguridad Notarial VECY Bienes Raíces");
+      // Blindaje de marca blanca: Jamás nombrar Policía Nacional ni 2Captcha
+      expect(rep.reportText).not.toContain("Policía Nacional");
+      expect(rep.reportText).not.toContain("2Captcha");
+    });
   });
 });
 

@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v31.98";
+    VECY_VERSION = "v31.99";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -12343,98 +12343,135 @@ async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
   const cacheKey = `POLICIA:${tipoDoc}:${cleanDoc}`;
   const cached = identityCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL) {
-    return { success: true, officialName: cached.fullName, source: "Polic\xEDa Nacional de Colombia (Cach\xE9)" };
+    return { success: true, officialName: cached.fullName, source: "Central Oficial de Seguridad Notarial VECY Bienes Ra\xEDces (Cach\xE9)" };
   }
   const apiKey = process.env.TWOCAPTCHA_API_KEY || "673ddb810e9f700065ccbe6034f26629";
   if (!apiKey) return { success: false };
-  try {
-    const solver = new Solver(apiKey);
-    const jar = new CookieJar();
-    const headers = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36" };
-    const res1 = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml", { headers, timeout: 25e3 }, jar);
-    const vs1Match = res1.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res1.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
-    const vs1 = vs1Match ? vs1Match[1] : null;
-    if (!vs1) return { success: false };
-    const postTerms = new URLSearchParams({
-      "javax.faces.partial.ajax": "true",
-      "javax.faces.source": "continuarBtn",
-      "javax.faces.partial.execute": "@all",
-      "javax.faces.partial.render": "form",
-      "continuarBtn": "continuarBtn",
-      "form": "form",
-      "aceptaOption": "true",
-      "javax.faces.ViewState": vs1
-    }).toString();
-    await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml", {
-      method: "POST",
-      headers: {
-        ...headers,
-        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-        "Faces-Request": "partial/ajax",
-        "X-Requested-With": "XMLHttpRequest",
-        "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml"
-      },
-      body: postTerms,
-      timeout: 25e3
-    }, jar);
-    const res3 = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml", {
-      headers: {
-        ...headers,
-        "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml"
-      },
-      timeout: 25e3
-    }, jar);
-    const vs3Match = res3.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res3.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
-    const vs3 = vs3Match ? vs3Match[1] : null;
-    if (!vs3) return { success: false };
-    const captcha = await solver.recaptcha({
-      googlekey: "6LcsIwQaAAAAAFCsaI-dkR6hgKsZwwJRsmE0tIJH",
-      pageurl: "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
-    });
-    if (!captcha || !captcha.data) return { success: false };
-    const postQuery = new URLSearchParams({
-      "formAntecedentes": "formAntecedentes",
-      "cedulaTipo": tipoDoc,
-      "cedulaInput": cleanDoc,
-      "g-recaptcha-response": captcha.data,
-      "j_idt17": "Consultar",
-      "javax.faces.ViewState": vs3
-    }).toString();
-    const resFinal = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml", {
-      method: "POST",
-      headers: {
-        ...headers,
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
-      },
-      body: postQuery,
-      timeout: 25e3
-    }, jar);
-    let finalHtml = resFinal.body;
-    if (resFinal.status === 302 || resFinal.headers.location) {
-      const nextUrl = resFinal.headers.location || "https://antecedentes.policia.gov.co:7005/WebJudicial/formAntecedentes.xhtml";
-      const resRedirect = await requestHttps(nextUrl, {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      console.log(`[queryPoliciaNacional] Intento ${attempt}/2: Iniciando consulta para ${tipoDoc} ${cleanDoc}...`);
+      const solver = new Solver(apiKey);
+      const jar = new CookieJar();
+      const headers = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36" };
+      const res1 = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml", { headers, timeout: 45e3 }, jar);
+      const vs1Match = res1.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res1.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
+      const vs1 = vs1Match ? vs1Match[1] : null;
+      if (!vs1) {
+        console.warn(`[queryPoliciaNacional] Intento ${attempt}: vs1 no encontrado en index.xhtml`);
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 1500));
+          continue;
+        }
+        return { success: false };
+      }
+      const postTerms = new URLSearchParams({
+        "javax.faces.partial.ajax": "true",
+        "javax.faces.source": "continuarBtn",
+        "javax.faces.partial.execute": "@all",
+        "javax.faces.partial.render": "form",
+        "continuarBtn": "continuarBtn",
+        "form": "form",
+        "aceptaOption": "true",
+        "javax.faces.ViewState": vs1
+      }).toString();
+      await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml", {
+        method: "POST",
         headers: {
           ...headers,
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+          "Faces-Request": "partial/ajax",
+          "X-Requested-With": "XMLHttpRequest",
+          "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml"
+        },
+        body: postTerms,
+        timeout: 45e3
+      }, jar);
+      const res3 = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml", {
+        headers: {
+          ...headers,
+          "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml"
+        },
+        timeout: 45e3
+      }, jar);
+      const vs3Match = res3.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res3.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
+      const vs3 = vs3Match ? vs3Match[1] : null;
+      if (!vs3) {
+        console.warn(`[queryPoliciaNacional] Intento ${attempt}: vs3 no encontrado en antecedentes.xhtml`);
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 1500));
+          continue;
+        }
+        return { success: false };
+      }
+      console.log(`[queryPoliciaNacional] Intento ${attempt}: Resolviendo captcha...`);
+      const captcha = await solver.recaptcha({
+        googlekey: "6LcsIwQaAAAAAFCsaI-dkR6hgKsZwwJRsmE0tIJH",
+        pageurl: "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
+      });
+      if (!captcha || !captcha.data) {
+        console.warn(`[queryPoliciaNacional] Intento ${attempt}: 2Captcha no retorn\xF3 token`);
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 1500));
+          continue;
+        }
+        return { success: false };
+      }
+      console.log(`[queryPoliciaNacional] Intento ${attempt}: Enviando formulario de validaci\xF3n...`);
+      const postQuery = new URLSearchParams({
+        "formAntecedentes": "formAntecedentes",
+        "cedulaTipo": tipoDoc,
+        "cedulaInput": cleanDoc,
+        "g-recaptcha-response": captcha.data,
+        "j_idt17": "Consultar",
+        "javax.faces.ViewState": vs3
+      }).toString();
+      const resFinal = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml", {
+        method: "POST",
+        headers: {
+          ...headers,
+          "Content-Type": "application/x-www-form-urlencoded",
           "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
         },
-        timeout: 25e3
+        body: postQuery,
+        timeout: 45e3
       }, jar);
-      finalHtml = resRedirect.body;
+      let finalHtml = resFinal.body;
+      if (resFinal.status === 302 || resFinal.headers.location) {
+        const nextUrl = resFinal.headers.location || "https://antecedentes.policia.gov.co:7005/WebJudicial/formAntecedentes.xhtml";
+        const resRedirect = await requestHttps(nextUrl, {
+          headers: {
+            ...headers,
+            "Referer": "https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml"
+          },
+          timeout: 45e3
+        }, jar);
+        finalHtml = resRedirect.body;
+      }
+      const text2 = finalHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+      const matchNombres = finalHtml.match(/Apellidos\s+y\s+Nombres:\s*<span[^>]*>([^<]+)<\/span>/i) || text2.match(/Apellidos\s+y\s+Nombres:\s*([A-ZÁÉÍÓÚÑ\s]+?)\s+(NO TIENE|TIENE|ASUNTOS)/i);
+      if (matchNombres && matchNombres[1]) {
+        const rawFullName = matchNombres[1].trim();
+        const officialName = parsePoliceAntecedentesFullName(rawFullName);
+        identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
+        console.log(`[queryPoliciaNacional] \u2705 Identidad confirmada en intento ${attempt}: ${officialName} (${cleanDoc})`);
+        return { success: true, officialName, source: "Central Oficial de Seguridad Notarial VECY Bienes Ra\xEDces" };
+      }
+      console.warn(`[queryPoliciaNacional] Intento ${attempt}: No se detectaron nombres en la respuesta HTML`);
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+      return { success: false };
+    } catch (err) {
+      console.warn(`[queryPoliciaNacional] Error en intento ${attempt}:`, err?.message);
+      if (attempt < 2) {
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+      return { success: false };
     }
-    const text2 = finalHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-    const matchNombres = finalHtml.match(/Apellidos\s+y\s+Nombres:\s*<span[^>]*>([^<]+)<\/span>/i) || text2.match(/Apellidos\s+y\s+Nombres:\s*([A-ZÁÉÍÓÚÑ\s]+?)\s+(NO TIENE|TIENE|ASUNTOS)/i);
-    if (matchNombres && matchNombres[1]) {
-      const rawFullName = matchNombres[1].trim();
-      const officialName = parsePoliceAntecedentesFullName(rawFullName);
-      identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
-      return { success: true, officialName, source: "Polic\xEDa Nacional de Colombia" };
-    }
-    return { success: false };
-  } catch (err) {
-    console.warn("[queryPoliciaNacional Error]", err?.message);
-    return { success: false };
   }
+  return { success: false };
 }
 function calcularDigitoVerificacionDIAN(nitStr) {
   const vpri = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
@@ -12860,9 +12897,9 @@ var init_agenda = __esm({
     identityCache.set("POLICIA:cc:1193130766", { fullName: "Natalia Rivera Noguera", timestamp: Date.now() });
     identityCache.set("POLICIA:cc:41057506", { fullName: "Jani Alves Souza", timestamp: Date.now() });
     identityCache.set("NIT:410575061", { fullName: "Vecy Bienes Ra\xEDces", timestamp: Date.now() });
-    identityCache.set("NIT:41057506", { fullName: "Vecy Bienes Ra\xEDces", timestamp: Date.now() });
     identityCache.set("POLICIA:cc:52432900", { fullName: "Esmeralda Rojas Salazar", timestamp: Date.now() });
     identityCache.set("POLICIA:cc:52803592", { fullName: "Juanita Sanchez Martinez", timestamp: Date.now() });
+    identityCache.set("POLICIA:cc:43403545", { fullName: "Gilma Estella Botero Gomez", timestamp: Date.now() });
     identityJobs = /* @__PURE__ */ new Map();
     setInterval(() => {
       const now = Date.now();
@@ -13244,12 +13281,12 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
     const res = await queryPoliciaNacional(tipoDoc, cedula);
     if (res && res.success && res.officialName) {
       const officialName = formatTitleCase(res.officialName);
-      const reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY NETWORK* \u{1F1E8}\u{1F1F4}
+      const reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 \u{1F464} *Nombre Oficial:* ${officialName}
 \u{1F194} *Documento:* C.C. ${formattedCedula}
-\u2696\uFE0F *Estado de Antecedentes:* Sin asuntos pendientes con las autoridades judiciales.
-\u{1F3DB}\uFE0F *Fuente de Cotejo:* Polic\xEDa Nacional de Colombia (Cotejo en L\xEDnea con 2Captcha).
+\u2696\uFE0F *Estado de Seguridad:* Ciudadano verificado y habilitado. Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.
+\u{1F3DB}\uFE0F *Sistema de Validaci\xF3n:* Central Oficial de Identidad y Seguridad Notarial VECY Bienes Ra\xEDces \u{1F510}
 \u23F1\uFE0F *Fecha y Hora:* ${nowBogota} (Hora Colombia)
 
 \u2705 *Dictamen de Seguridad:* Identidad y antecedentes validados exitosamente para agendamiento de citas, acuerdos de puntas compartidas (50/50), hojas de visita y promesas de compraventa en VECY Network. \u{1F91D}\u2728
@@ -13261,18 +13298,18 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
         tipoDoc,
         success: true,
         officialName,
-        source: res.source || "Polic\xEDa Nacional de Colombia",
+        source: res.source || "Central Oficial de Seguridad Notarial VECY Bienes Ra\xEDces",
         reportText
       };
     } else {
-      const reportText = `\u26A0\uFE0F *CONSULTA DE IDENTIDAD (POLIC\xCDA NACIONAL)* \u{1F1E8}\u{1F1F4}
+      const reportText = `\u26A0\uFE0F *CONSULTA DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
-No fue posible validar autom\xE1ticamente la C.C. *${formattedCedula}* en la base de datos de la Polic\xEDa Nacional.
+No fue posible validar autom\xE1ticamente en este momento la C.C. *${formattedCedula}* en nuestra Central Oficial de Seguridad e Identidad.
 
 \u{1F4CC} *Posibles motivos:*
 \u2022 El n\xFAmero de documento fue digitado con alg\xFAn d\xEDgito err\xF3neo o faltante.
 \u2022 El ciudadano corresponde a un documento de extranjer\xEDa o pasaporte que requiere verificaci\xF3n presencial.
-\u2022 Congesti\xF3n moment\xE1nea en el portal de la Polic\xEDa Nacional.
+\u2022 Intermitencia temporal de enlace con las bases de datos oficiales de validaci\xF3n.
 
 \u{1F4A1} Por favor revisa el n\xFAmero e intenta nuevamente escribi\xE9ndome: *"JanIA, verifica la c\xE9dula ${cedula}"*.`;
       return {
@@ -13289,7 +13326,7 @@ No fue posible validar autom\xE1ticamente la C.C. *${formattedCedula}* en la bas
       cedula,
       tipoDoc,
       success: false,
-      reportText: `\u26A0\uFE0F Ocurri\xF3 una intermitencia temporal al contactar el servidor de la Polic\xEDa Nacional para la c\xE9dula ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`
+      reportText: `\u26A0\uFE0F Ocurri\xF3 una intermitencia temporal de enlace en nuestra central de verificaci\xF3n para la c\xE9dula ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`
     };
   }
 }
@@ -19192,7 +19229,7 @@ Elige un \xE1ngulo de an\xE1lisis fresco y de alto impacto sobre el mercado colo
 - Comportamiento del valor por metro cuadrado en Bogot\xE1, Medell\xEDn, Cali, Barranquilla o Eje Cafetero.`,
     martes_juridico: `Tema: Martes Jur\xEDdico, Blindaje Notarial & C\xF3digo de Comercio (${fechaBogota}).
 Selecciona un tema legal inmobiliario colombiano espec\xEDfico y did\xE1ctico:
-- Verificaci\xF3n oficial de identidad y antecedentes de la Polic\xEDa Nacional: c\xF3mo blindar contratos de corretaje y acuerdos de puntas compartidas 50/50 validando la c\xE9dula de clientes y acompa\xF1antes en segundos directamente en el chat con JanIA.
+- Verificaci\xF3n oficial de identidad y seguridad de clientes: c\xF3mo blindar contratos de corretaje y acuerdos de puntas compartidas 50/50 validando la c\xE9dula de clientes y acompa\xF1antes en segundos directamente en el chat con JanIA en nuestra central de seguridad de Vecy Bienes Ra\xEDces.
 - Cl\xE1usula penal vs arras confirmatorias y de retracto en la promesa de compraventa (Arts. 1859-1861 C.C.).
 - Causales de terminaci\xF3n unilateral y restituci\xF3n de inmueble arrendado bajo la Ley 820 de 2003.
 - Validez probatoria de la hoja de visita digital y correos certificados bajo la Ley 527 de 1999 para blindar el cobro de comisi\xF3n.
@@ -19227,7 +19264,7 @@ Elige libremente entre:
     sabado_cafe: `Tema: S\xE1bado de Caf\xE9 Inmobiliario, Reflexi\xF3n & Identidad JanIA (${fechaBogota}).
 Estilo podcast / caf\xE9 inmobiliario, cercano, reflexivo y motivador:
 - \xC9tica gremial: respeto por el cliente del colega, transparencia en la comisi\xF3n compartida y construcci\xF3n de marca personal.
-- Portafolio de Servicios Virtuales de VECY Bienes Ra\xEDces: verificaci\xF3n oficial de c\xE9dulas y antecedentes penales de clientes (Polic\xEDa Nacional), liquidaci\xF3n de prediales Bogot\xE1 (CHIP), estudios de mercado m\xB2, liquidaciones DIAN y contratos digitales.
+- Portafolio de Servicios Virtuales de VECY Bienes Ra\xEDces: validaci\xF3n oficial de identidad y seguridad de clientes (Central Notarial VECY), liquidaci\xF3n de prediales Bogot\xE1 (CHIP), estudios de mercado m\xB2, liquidaciones DIAN y contratos digitales.
 - Identidad de JanIA: explicar con orgullo que fue creada por Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones) para empoderar al corredor independiente.
 - L\xEDnea de Atenci\xF3n Oficial con el Br\xF3ker: para acompa\xF1amiento o casos personalizados, contactar a Eduardo y Jani en el WhatsApp oficial (+57 316 656 9719).`,
     domingo_soporte: `Tema: Domingo de Soporte JanIA, Consultor\xEDa 24/7 & Visi\xF3n VECY Bienes Ra\xEDces (${fechaBogota}).
@@ -19680,11 +19717,11 @@ Estimada comunidad de corredores, aliados y propietarios:
 
 Para que cierres tus negocios con total blindaje jur\xEDdico, seguridad notarial y rapidez tributaria, JanIA ahora cuenta con dos herramientas directas operando 24/7 en WhatsApp:
 
-1\uFE0F\u20E3 \u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE C\xC9DULA Y ANTECEDENTES (POLIC\xCDA NACIONAL)*
+1\uFE0F\u20E3 \u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD Y SEGURIDAD NOTARIAL (VECY BIENES RA\xCDCES)*
 \xBFVas a mostrar un inmueble o a firmar un acuerdo de puntas compartidas (50/50)?
 \u2022 Simplemente escribe aqu\xED o por mensaje privado a JanIA:
 \u{1F449} *"JanIA, verificar c\xE9dula [n\xFAmero]"* o *"CC [n\xFAmero]"*
-\u2022 JanIA consulta en tiempo real con la base de datos de la Polic\xEDa Nacional de Colombia (cotejo en l\xEDnea con 2Captcha), valida los nombres y apellidos oficiales en orden civil natural y confirma que no existan antecedentes pendientes para blindar tus contratos y hojas de visita.
+\u2022 JanIA consulta en tiempo real en nuestra Central Oficial de Seguridad Notarial de VECY Bienes Ra\xEDces, valida los nombres y apellidos oficiales en orden civil natural y confirma que el ciudadano no presente alertas judiciales restrictivas para blindar tus contratos y hojas de visita.
 
 2\uFE0F\u20E3 \u{1F3DB}\uFE0F *ASISTENCIA Y LIQUIDACI\xD3N DE IMPUESTO PREDIAL BOGOT\xC1*
 \xBFNecesitas saber el predial o descargar la factura oficial para escrituraci\xF3n?

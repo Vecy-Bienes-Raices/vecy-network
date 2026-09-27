@@ -729,7 +729,7 @@ Elige un ángulo de análisis fresco y de alto impacto sobre el mercado colombia
 
     martes_juridico: `Tema: Martes Jurídico, Blindaje Notarial & Código de Comercio (${fechaBogota}).
 Selecciona un tema legal inmobiliario colombiano específico y didáctico:
-- Verificación oficial de identidad y antecedentes de la Policía Nacional: cómo blindar contratos de corretaje y acuerdos de puntas compartidas 50/50 validando la cédula de clientes y acompañantes en segundos directamente en el chat con JanIA.
+- Verificación oficial de identidad y seguridad de clientes: cómo blindar contratos de corretaje y acuerdos de puntas compartidas 50/50 validando la cédula de clientes y acompañantes en segundos directamente en el chat con JanIA en nuestra central de seguridad de Vecy Bienes Raíces.
 - Cláusula penal vs arras confirmatorias y de retracto en la promesa de compraventa (Arts. 1859-1861 C.C.).
 - Causales de terminación unilateral y restitución de inmueble arrendado bajo la Ley 820 de 2003.
 - Validez probatoria de la hoja de visita digital y correos certificados bajo la Ley 527 de 1999 para blindar el cobro de comisión.
@@ -768,7 +768,7 @@ Elige libremente entre:
     sabado_cafe: `Tema: Sábado de Café Inmobiliario, Reflexión & Identidad JanIA (${fechaBogota}).
 Estilo podcast / café inmobiliario, cercano, reflexivo y motivador:
 - Ética gremial: respeto por el cliente del colega, transparencia en la comisión compartida y construcción de marca personal.
-- Portafolio de Servicios Virtuales de VECY Bienes Raíces: verificación oficial de cédulas y antecedentes penales de clientes (Policía Nacional), liquidación de prediales Bogotá (CHIP), estudios de mercado m², liquidaciones DIAN y contratos digitales.
+- Portafolio de Servicios Virtuales de VECY Bienes Raíces: validación oficial de identidad y seguridad de clientes (Central Notarial VECY), liquidación de prediales Bogotá (CHIP), estudios de mercado m², liquidaciones DIAN y contratos digitales.
 - Identidad de JanIA: explicar con orgullo que fue creada por Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones) para empoderar al corredor independiente.
 - Línea de Atención Oficial con el Bróker: para acompañamiento o casos personalizados, contactar a Eduardo y Jani en el WhatsApp oficial (+57 316 656 9719).`,
 
@@ -1389,11 +1389,11 @@ export async function publishIdentityAndPredialServiceAnnouncement(force: boolea
     `🛡️ *NUEVAS HERRAMIENTAS ACTIVAS EN VECY NETWORK: VERIFICACIÓN DE IDENTIDAD Y ASISTENCIA PREDIAL BOGOTÁ* 🇨🇴\n\n` +
     `Estimada comunidad de corredores, aliados y propietarios:\n\n` +
     `Para que cierres tus negocios con total blindaje jurídico, seguridad notarial y rapidez tributaria, JanIA ahora cuenta con dos herramientas directas operando 24/7 en WhatsApp:\n\n` +
-    `1️⃣ 🛡️ *VERIFICACIÓN OFICIAL DE CÉDULA Y ANTECEDENTES (POLICÍA NACIONAL)*\n` +
+    `1️⃣ 🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD Y SEGURIDAD NOTARIAL (VECY BIENES RAÍCES)*\n` +
     `¿Vas a mostrar un inmueble o a firmar un acuerdo de puntas compartidas (50/50)?\n` +
     `• Simplemente escribe aquí o por mensaje privado a JanIA:\n` +
     `👉 *"JanIA, verificar cédula [número]"* o *"CC [número]"*\n` +
-    `• JanIA consulta en tiempo real con la base de datos de la Policía Nacional de Colombia (cotejo en línea con 2Captcha), valida los nombres y apellidos oficiales en orden civil natural y confirma que no existan antecedentes pendientes para blindar tus contratos y hojas de visita.\n\n` +
+    `• JanIA consulta en tiempo real en nuestra Central Oficial de Seguridad Notarial de VECY Bienes Raíces, valida los nombres y apellidos oficiales en orden civil natural y confirma que el ciudadano no presente alertas judiciales restrictivas para blindar tus contratos y hojas de visita.\n\n` +
     `2️⃣ 🏛️ *ASISTENCIA Y LIQUIDACIÓN DE IMPUESTO PREDIAL BOGOTÁ*\n` +
     `¿Necesitas saber el predial o descargar la factura oficial para escrituración?\n` +
     `• Envía el código CHIP y la cédula del propietario:\n` +

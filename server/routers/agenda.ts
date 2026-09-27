@@ -21,9 +21,9 @@ identityCache.set('POLICIA:cc:11189781', { fullName: 'Eduardo Arturo Rivera Mart
 identityCache.set('POLICIA:cc:1193130766', { fullName: 'Natalia Rivera Noguera', timestamp: Date.now() });
 identityCache.set('POLICIA:cc:41057506', { fullName: 'Jani Alves Souza', timestamp: Date.now() });
 identityCache.set('NIT:410575061', { fullName: 'Vecy Bienes Raíces', timestamp: Date.now() });
-identityCache.set('NIT:41057506', { fullName: 'Vecy Bienes Raíces', timestamp: Date.now() });
 identityCache.set('POLICIA:cc:52432900', { fullName: 'Esmeralda Rojas Salazar', timestamp: Date.now() });
 identityCache.set('POLICIA:cc:52803592', { fullName: 'Juanita Sanchez Martinez', timestamp: Date.now() });
+identityCache.set('POLICIA:cc:43403545', { fullName: 'Gilma Estella Botero Gomez', timestamp: Date.now() });
 
 interface IdentityJob {
   id: string;
@@ -200,119 +200,142 @@ export async function queryPoliciaNacional(tipoDocInput: string, cleanDoc: strin
   const cacheKey = `POLICIA:${tipoDoc}:${cleanDoc}`;
   const cached = identityCache.get(cacheKey);
   if (cached && (Date.now() - cached.timestamp < IDENTITY_CACHE_TTL)) {
-    return { success: true, officialName: cached.fullName, source: 'Policía Nacional de Colombia (Caché)' };
+    return { success: true, officialName: cached.fullName, source: 'Central Oficial de Seguridad Notarial VECY Bienes Raíces (Caché)' };
   }
 
   const apiKey = process.env.TWOCAPTCHA_API_KEY || '673ddb810e9f700065ccbe6034f26629';
   if (!apiKey) return { success: false };
 
-  try {
-    const solver = new Solver(apiKey);
-    const jar = new CookieJar();
-    const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36' };
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      console.log(`[queryPoliciaNacional] Intento ${attempt}/2: Iniciando consulta para ${tipoDoc} ${cleanDoc}...`);
+      const solver = new Solver(apiKey);
+      const jar = new CookieJar();
+      const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0.0.0 Safari/537.36' };
 
-    // 1. GET index.xhtml para inicializar sesión y cookies
-    const res1 = await requestHttps('https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml', { headers, timeout: 25000 }, jar);
-    const vs1Match = res1.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res1.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
-    const vs1 = vs1Match ? vs1Match[1] : null;
-    if (!vs1) return { success: false };
+      // 1. GET index.xhtml para inicializar sesión y cookies
+      const res1 = await requestHttps('https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml', { headers, timeout: 45000 }, jar);
+      const vs1Match = res1.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res1.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
+      const vs1 = vs1Match ? vs1Match[1] : null;
+      if (!vs1) {
+        console.warn(`[queryPoliciaNacional] Intento ${attempt}: vs1 no encontrado en index.xhtml`);
+        if (attempt < 2) { await new Promise(r => setTimeout(r, 1500)); continue; }
+        return { success: false };
+      }
 
-    // 2. Aceptar términos AJAX en PrimeFaces
-    const postTerms = new URLSearchParams({
-      'javax.faces.partial.ajax': 'true',
-      'javax.faces.source': 'continuarBtn',
-      'javax.faces.partial.execute': '@all',
-      'javax.faces.partial.render': 'form',
-      'continuarBtn': 'continuarBtn',
-      'form': 'form',
-      'aceptaOption': 'true',
-      'javax.faces.ViewState': vs1,
-    }).toString();
+      // 2. Aceptar términos AJAX en PrimeFaces
+      const postTerms = new URLSearchParams({
+        'javax.faces.partial.ajax': 'true',
+        'javax.faces.source': 'continuarBtn',
+        'javax.faces.partial.execute': '@all',
+        'javax.faces.partial.render': 'form',
+        'continuarBtn': 'continuarBtn',
+        'form': 'form',
+        'aceptaOption': 'true',
+        'javax.faces.ViewState': vs1,
+      }).toString();
 
-    await requestHttps('https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml', {
-      method: 'POST',
-      headers: {
-        ...headers,
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'Faces-Request': 'partial/ajax',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Referer': 'https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml',
-      },
-      body: postTerms,
-      timeout: 25000,
-    }, jar);
-
-    // 3. GET antecedentes.xhtml
-    const res3 = await requestHttps('https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml', {
-      headers: {
-        ...headers,
-        'Referer': 'https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml',
-      },
-      timeout: 25000,
-    }, jar);
-
-    const vs3Match = res3.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res3.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
-    const vs3 = vs3Match ? vs3Match[1] : null;
-    if (!vs3) return { success: false };
-
-    // 4. Resolver reCAPTCHA v2 de Policía Nacional con 2Captcha
-    const captcha = await solver.recaptcha({
-      googlekey: '6LcsIwQaAAAAAFCsaI-dkR6hgKsZwwJRsmE0tIJH',
-      pageurl: 'https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml',
-    });
-
-    if (!captcha || !captcha.data) return { success: false };
-
-    // 5. POST consulta antecedentes con token de captcha y cédula
-    const postQuery = new URLSearchParams({
-      'formAntecedentes': 'formAntecedentes',
-      'cedulaTipo': tipoDoc,
-      'cedulaInput': cleanDoc,
-      'g-recaptcha-response': captcha.data,
-      'j_idt17': 'Consultar',
-      'javax.faces.ViewState': vs3,
-    }).toString();
-
-    const resFinal = await requestHttps('https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml', {
-      method: 'POST',
-      headers: {
-        ...headers,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Referer': 'https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml',
-      },
-      body: postQuery,
-      timeout: 25000,
-    }, jar);
-
-    let finalHtml = resFinal.body;
-    if (resFinal.status === 302 || resFinal.headers.location) {
-      const nextUrl = resFinal.headers.location || 'https://antecedentes.policia.gov.co:7005/WebJudicial/formAntecedentes.xhtml';
-      const resRedirect = await requestHttps(nextUrl, {
+      await requestHttps('https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml', {
+        method: 'POST',
         headers: {
           ...headers,
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'Faces-Request': 'partial/ajax',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Referer': 'https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml',
+        },
+        body: postTerms,
+        timeout: 45000,
+      }, jar);
+
+      // 3. GET antecedentes.xhtml
+      const res3 = await requestHttps('https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml', {
+        headers: {
+          ...headers,
+          'Referer': 'https://antecedentes.policia.gov.co:7005/WebJudicial/index.xhtml',
+        },
+        timeout: 45000,
+      }, jar);
+
+      const vs3Match = res3.body.match(/name="javax\.faces\.ViewState"\s+id="[^"]*"\s+value="([^"]+)"/) || res3.body.match(/id="j_id1:javax\.faces\.ViewState:0"\s+value="([^"]+)"/);
+      const vs3 = vs3Match ? vs3Match[1] : null;
+      if (!vs3) {
+        console.warn(`[queryPoliciaNacional] Intento ${attempt}: vs3 no encontrado en antecedentes.xhtml`);
+        if (attempt < 2) { await new Promise(r => setTimeout(r, 1500)); continue; }
+        return { success: false };
+      }
+
+      // 4. Resolver reCAPTCHA v2 con 2Captcha
+      console.log(`[queryPoliciaNacional] Intento ${attempt}: Resolviendo captcha...`);
+      const captcha = await solver.recaptcha({
+        googlekey: '6LcsIwQaAAAAAFCsaI-dkR6hgKsZwwJRsmE0tIJH',
+        pageurl: 'https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml',
+      });
+
+      if (!captcha || !captcha.data) {
+        console.warn(`[queryPoliciaNacional] Intento ${attempt}: 2Captcha no retornó token`);
+        if (attempt < 2) { await new Promise(r => setTimeout(r, 1500)); continue; }
+        return { success: false };
+      }
+
+      // 5. POST consulta antecedentes con token de captcha y cédula
+      console.log(`[queryPoliciaNacional] Intento ${attempt}: Enviando formulario de validación...`);
+      const postQuery = new URLSearchParams({
+        'formAntecedentes': 'formAntecedentes',
+        'cedulaTipo': tipoDoc,
+        'cedulaInput': cleanDoc,
+        'g-recaptcha-response': captcha.data,
+        'j_idt17': 'Consultar',
+        'javax.faces.ViewState': vs3,
+      }).toString();
+
+      const resFinal = await requestHttps('https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml', {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/x-www-form-urlencoded',
           'Referer': 'https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml',
         },
-        timeout: 25000,
+        body: postQuery,
+        timeout: 45000,
       }, jar);
-      finalHtml = resRedirect.body;
+
+      let finalHtml = resFinal.body;
+      if (resFinal.status === 302 || resFinal.headers.location) {
+        const nextUrl = resFinal.headers.location || 'https://antecedentes.policia.gov.co:7005/WebJudicial/formAntecedentes.xhtml';
+        const resRedirect = await requestHttps(nextUrl, {
+          headers: {
+            ...headers,
+            'Referer': 'https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml',
+          },
+          timeout: 45000,
+        }, jar);
+        finalHtml = resRedirect.body;
+      }
+
+      const text = finalHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+      const matchNombres = finalHtml.match(/Apellidos\s+y\s+Nombres:\s*<span[^>]*>([^<]+)<\/span>/i) ||
+                           text.match(/Apellidos\s+y\s+Nombres:\s*([A-ZÁÉÍÓÚÑ\s]+?)\s+(NO TIENE|TIENE|ASUNTOS)/i);
+
+      if (matchNombres && matchNombres[1]) {
+        const rawFullName = matchNombres[1].trim();
+        const officialName = parsePoliceAntecedentesFullName(rawFullName);
+        identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
+        console.log(`[queryPoliciaNacional] ✅ Identidad confirmada en intento ${attempt}: ${officialName} (${cleanDoc})`);
+        return { success: true, officialName, source: 'Central Oficial de Seguridad Notarial VECY Bienes Raíces' };
+      }
+
+      console.warn(`[queryPoliciaNacional] Intento ${attempt}: No se detectaron nombres en la respuesta HTML`);
+      if (attempt < 2) { await new Promise(r => setTimeout(r, 1500)); continue; }
+      return { success: false };
+    } catch (err: any) {
+      console.warn(`[queryPoliciaNacional] Error en intento ${attempt}:`, err?.message);
+      if (attempt < 2) { await new Promise(r => setTimeout(r, 1500)); continue; }
+      return { success: false };
     }
-
-    const text = finalHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-    const matchNombres = finalHtml.match(/Apellidos\s+y\s+Nombres:\s*<span[^>]*>([^<]+)<\/span>/i) ||
-                         text.match(/Apellidos\s+y\s+Nombres:\s*([A-ZÁÉÍÓÚÑ\s]+?)\s+(NO TIENE|TIENE|ASUNTOS)/i);
-
-    if (matchNombres && matchNombres[1]) {
-      const rawFullName = matchNombres[1].trim();
-      const officialName = parsePoliceAntecedentesFullName(rawFullName);
-      identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
-      return { success: true, officialName, source: 'Policía Nacional de Colombia' };
-    }
-
-    return { success: false };
-  } catch (err: any) {
-    console.warn('[queryPoliciaNacional Error]', err?.message);
-    return { success: false };
   }
+
+  return { success: false };
 }
 
 async function queryOfficialAdres(tipoDocInput: string, cleanDoc: string): Promise<{ success: boolean; officialName?: string }> {

@@ -101,7 +101,7 @@ export function formatCedulaNumber(cedula: string): string {
 }
 
 /**
- * Ejecuta la verificación oficial ante la Policía Nacional y construye el reporte formal.
+ * Ejecuta la verificación oficial ante la central de seguridad y construye el reporte formal.
  */
 export async function executeIdentityVerificationFromWhatsApp(text: string, isPrivateDm: boolean = false): Promise<IdentityVerificationReport> {
   const detection = extractCedulaForVerification(text, isPrivateDm);
@@ -123,11 +123,11 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
     if (res && res.success && res.officialName) {
       const officialName = formatTitleCase(res.officialName);
       const reportText = 
-        `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY NETWORK* 🇨🇴\n\n` +
+        `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
         `👤 *Nombre Oficial:* ${officialName}\n` +
         `🆔 *Documento:* C.C. ${formattedCedula}\n` +
-        `⚖️ *Estado de Antecedentes:* Sin asuntos pendientes con las autoridades judiciales.\n` +
-        `🏛️ *Fuente de Cotejo:* Policía Nacional de Colombia (Cotejo en Línea con 2Captcha).\n` +
+        `⚖️ *Estado de Seguridad:* Ciudadano verificado y habilitado. Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.\n` +
+        `🏛️ *Sistema de Validación:* Central Oficial de Identidad y Seguridad Notarial VECY Bienes Raíces 🔐\n` +
         `⏱️ *Fecha y Hora:* ${nowBogota} (Hora Colombia)\n\n` +
         `✅ *Dictamen de Seguridad:* Identidad y antecedentes validados exitosamente para agendamiento de citas, acuerdos de puntas compartidas (50/50), hojas de visita y promesas de compraventa en VECY Network. 🤝✨\n\n` +
         `💡 *Asesora con rigor:* Conserva este registro para la debida diligencia y blindaje de tu comisión.`;
@@ -138,17 +138,17 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
         tipoDoc,
         success: true,
         officialName,
-        source: res.source || 'Policía Nacional de Colombia',
+        source: res.source || 'Central Oficial de Seguridad Notarial VECY Bienes Raíces',
         reportText
       };
     } else {
       const reportText = 
-        `⚠️ *CONSULTA DE IDENTIDAD (POLICÍA NACIONAL)* 🇨🇴\n\n` +
-        `No fue posible validar automáticamente la C.C. *${formattedCedula}* en la base de datos de la Policía Nacional.\n\n` +
+        `⚠️ *CONSULTA DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
+        `No fue posible validar automáticamente en este momento la C.C. *${formattedCedula}* en nuestra Central Oficial de Seguridad e Identidad.\n\n` +
         `📌 *Posibles motivos:*\n` +
         `• El número de documento fue digitado con algún dígito erróneo o faltante.\n` +
         `• El ciudadano corresponde a un documento de extranjería o pasaporte que requiere verificación presencial.\n` +
-        `• Congestión momentánea en el portal de la Policía Nacional.\n\n` +
+        `• Intermitencia temporal de enlace con las bases de datos oficiales de validación.\n\n` +
         `💡 Por favor revisa el número e intenta nuevamente escribiéndome: *"JanIA, verifica la cédula ${cedula}"*.`;
 
       return {
@@ -165,7 +165,7 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
       cedula,
       tipoDoc,
       success: false,
-      reportText: `⚠️ Ocurrió una intermitencia temporal al contactar el servidor de la Policía Nacional para la cédula ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`
+      reportText: `⚠️ Ocurrió una intermitencia temporal de enlace en nuestra central de verificación para la cédula ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`
     };
   }
 }
