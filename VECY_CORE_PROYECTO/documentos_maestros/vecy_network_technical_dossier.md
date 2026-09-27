@@ -322,6 +322,41 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.106 — Septiembre 2026
+
+#### 📌 CORRECCIÓN DE MODAL DE DESCARTE, ELIMINACIÓN DE BUCLES DE REMATCH, CLASIFICACIÓN ESTRICTA DE ARRIENDOS Y GUILLOTINA DE DEMANDA MEDIOCRE
+
+**Problemas identificados:**
+1. **Bug de Evento Doble y Botón Deshabilitado en Modal de Descarte (`AdminMatches.tsx`)**: En el modal de descarte, `<label onClick={() => toggleRejectReason(opt.label)}>` envolvía `<input type="checkbox" onChange={() => toggleRejectReason(opt.label)} />`. Al hacer click en el checkbox se disparaban ambos eventos simultáneamente, alternando la selección a true y false inmediatamente en el mismo render, dejando `selectedRejectReasons = []`. El botón `Confirmar Descarte` permanecía `disabled`, impidiendo registrar el descarte. El match #15099 (Colina) nunca llegaba al backend y seguía activo.
+2. **Bug de Eliminación en Cascada y Rematch Agresivo (`server/routers/janIA.ts`)**: `recordMatchFeedback` ejecutaba `db.delete(propertyMatches)`. Por la clave foránea `ON DELETE CASCADE`, borrar de `property_matches` destruía el registro recién insertado en `match_feedback`, borrando el veto de JanIA. Además, el router disparaba `findMatchesForRequirement` en segundo plano, regenerando los matches descartados.
+3. **Multiplicador 1000x en Parseo de Precios con Puntos (`server/_core/janIA.ts`)**: `parseColombianPriceOrBudget` multiplicaba por 1000 números con puntos entre 300k y 30M cuando se asumía venta. La demanda #1636 (`$ 4.500.000 incluida`) se guardó como $4.500 MILLONES en venta, generando 13 matches con apartamentos de venta en Santa Bárbara. Cada vez que Eduardo descartaba uno, aparecía el siguiente en cola.
+4. **Punto Ciego en Señales de Arriendo (`hasRentSignals`)**: El regex requería "administración" explícita junto a "incluida". Textos terminados en `$ 4.500.000 incluida` no se detectaban como canon mensual de arriendo.
+5. **Ausencia de Guillotina para Demandas Mediocres**: Requerimientos con escasez crítica de datos (< 30% de completitud) eran evaluados por el motor de matching generando ruido comercial.
+
+**Solución aplicada:**
+- **Blindaje del Modal de Descarte (`client/src/components/admin/AdminMatches.tsx`)**:
+  - Sustituido `<label>` por `<div role="button">` y `pointer-events-none` en inputs para eliminar disparos duplicados.
+  - Botón `Confirmar Descarte` habilitado siempre (aplica `"Descarte manual por criterio del bróker"` si no hay motivos marcados).
+  - Añadido botón `"⚡ Descarte Rápido"` en el pie del modal para purga inmediata en 1 solo click.
+- **Supresión de Cascada y Rematch (`server/routers/janIA.ts`, `server/_core/matching.ts`)**:
+  - Preservada la fila en `property_matches` con `status = 'rejected'` para evitar cascada destructiva en `match_feedback`.
+  - Suprimido el rematch automático al registrar descarte.
+  - `getRejectedPairsSet()` unifica vetos de `match_feedback` y `propertyMatches.status IN ('rejected', 'rechazado')`.
+- **Corrección de Extractor y Detección de Arriendo (`server/_core/janIA.ts`)**:
+  - Sanitización de caracteres `$` y supresión de multiplicación 1000x en números de 7 dígitos con puntos (`\d{1,4}\.\d{3}\.\d{3}`).
+  - `hasRentSignals` expandido para capturar `\b(?:incluida|incluido|inc)\b` y rangos de arriendo mensual colombiano ($300k-$25M).
+- **Filtro Duro 0D-2: Guillotina de Demanda Mediocre (`server/_core/matching.ts`)**:
+  - Bloqueo instantáneo al 0% Match para toda demanda calificada como `Mediocre`.
+  - Omitidas demandas vencidas, inactivas o mediocres en `findMatchesForProperty` y `findMatchesForRequirement`.
+- **Remediación en Base de Datos VPS PostgreSQL (`vecy_network`)**:
+  - Match #15099 (Colina) marcado como `rejected` e insertado en `match_feedback`.
+  - Requerimiento #1636 corregido a arriendo ($4.5M), `Mediocre` y `expired`; sus 13 matches espurios rechazados e inscritos en `match_feedback`.
+  - Requerimiento #1402 ajustado a presupuesto real ($500M) y purgados matches fuera de rango (#15082, #15065).
+- **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+  - Añadida Sección 25 con 4 pruebas doctrinales completas (**120/120 tests Vitest pasando** ✅).
+
+---
+
 ### 🔖 v31.105 — Septiembre 2026
 
 #### 📌 REGLA DOCTRINAL DE PISO FINANCIERO DEL 70%, ERRADICACIÓN DE ANOMALÍAS A MITAD DE PRECIO Y PURGA DE MATCHES ESPURIOS

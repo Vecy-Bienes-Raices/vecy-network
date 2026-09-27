@@ -2047,6 +2047,95 @@ Adriana Rebeca Orejuela`;
       expect(res.blockers.some(b => b.includes("La oferta no especifica canon de arriendo"))).toBe(true);
     });
   });
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // 25. GUILLOTINA DE DEMANDA MEDIOCRE, CLASIFICACIÓN ESTRICTA DE ARRIENDO Y PARSEO FIEL (v31.106)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  describe("25. Guillotina de Demanda Mediocre, Clasificación Estricta de Arriendos y Blindaje de Descarte (v31.106)", () => {
+    it("Texto con '$ 4.500.000 incluida' debe deducir arriendo y precio de 4.5 millones, jamás venta de 4.500 millones", () => {
+      const text = "Busco las Santas 2 alcobas conjunto $ 4.500.000 incluida";
+      const fb = extractFallbackDataFromText(text);
+      expect(fb.transactionType).toBe("arriendo");
+      expect(fb.price).toBe(4_500_000);
+      expect(fb.price).not.toBe(4_500_000_000);
+    });
+
+    it("parseColombianPriceOrBudget no debe multiplicar por 1000 números con puntos de 7 dígitos", () => {
+      const parsedRent = parseColombianPriceOrBudget("$ 4.500.000", "", false);
+      expect(parsedRent).toBe(4_500_000);
+
+      // Si por error se pasara isSale=true a un monto con formato completo 4.500.000, debe mantenerse en 4.500.000
+      const parsedSaleWithDots = parseColombianPriceOrBudget("$ 4.500.000", "", true);
+      expect(parsedSaleWithDots).toBe(4_500_000);
+    });
+
+    it("Filtro Duro 0D-2: Requerimiento con calificación 'Mediocre' debe ser bloqueado inmediatamente a Score 0%", () => {
+      const reqMediocre = {
+        id: 1636,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "venta",
+        presupuestoMax: 850000000,
+        habitacionesMin: 3,
+        zonaDeseada: "Santa Bárbara",
+        addressNeighborhood: "Santa Bárbara",
+        addressCity: "Bogotá",
+        calificacion: "Mediocre",
+        rawText: "Busco apartamento en venta en Santa Bárbara"
+      };
+
+      const propVenta = {
+        id: 4138,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 830000000,
+        areaTotal: 120,
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        zone: "Santa Bárbara",
+        addressNeighborhood: "Santa Bárbara",
+        addressCity: "Bogotá",
+        rawText: "VENDO APTO SANTA BARBARA 120M2 3 HABITACIONES 3 BAÑOS 2 GARAJES $830 MILLONES"
+      };
+
+      const res = explicarMatch(reqMediocre, propVenta);
+      expect(res.score).toBe(0);
+      expect(res.blockers.some(b => b.includes("Demanda Mediocre / Escasez Crítica de Datos"))).toBe(true);
+    });
+
+    it("Requerimiento de arriendo ($4.5M) jamás puede hacer match con oferta de venta ($830M)", () => {
+      const reqArriendo = {
+        id: 1636,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "arriendo",
+        presupuestoMax: 4500000,
+        habitacionesMin: 2,
+        zonaDeseada: "Santa Bárbara",
+        addressNeighborhood: "Santa Bárbara",
+        addressCity: "Bogotá",
+        rawText: "Busco las Santas 2 alcobas conjunto $ 4.500.000 incluida"
+      };
+
+      const propVenta = {
+        id: 4138,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 830000000,
+        areaTotal: 120,
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        zone: "Santa Bárbara",
+        addressNeighborhood: "Santa Bárbara",
+        addressCity: "Bogotá",
+        rawText: "VENDO APTO SANTA BARBARA 120M2 3 HABITACIONES 3 BAÑOS 2 GARAJES $830 MILLONES"
+      };
+
+      const res = explicarMatch(reqArriendo, propVenta);
+      expect(res.score).toBe(0);
+      expect(res.blockers.some(b => b.includes("Incompatibilidad de negocio") || b.includes("arriendo vs venta"))).toBe(true);
+    });
+  });
 });
 
 

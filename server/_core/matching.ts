@@ -28,17 +28,30 @@ export async function getRejectedPairsSet(): Promise<Set<string>> {
   try {
     const db = await getDb();
     if (!db) return cachedRejectedPairs || new Set();
+    const set = new Set<string>();
+
     const rejected = await db
       .select({ propertyId: matchFeedback.propertyId, requirementId: matchFeedback.requirementId })
       .from(matchFeedback)
       .where(eq(matchFeedback.action, 'rechazado'));
 
-    const set = new Set<string>();
     for (const r of rejected) {
       if (r.propertyId && r.requirementId) {
         set.add(`${r.propertyId}_${r.requirementId}`);
       }
     }
+
+    const rejectedMatches = await db
+      .select({ propertyId: propertyMatches.propertyId, requirementId: propertyMatches.requirementId })
+      .from(propertyMatches)
+      .where(sql`CAST(${propertyMatches.status} AS TEXT) IN ('rejected', 'rechazado')`);
+
+    for (const m of rejectedMatches) {
+      if (m.propertyId && m.requirementId) {
+        set.add(`${m.propertyId}_${m.requirementId}`);
+      }
+    }
+
     cachedRejectedPairs = set;
     lastRejectedPairsFetch = now;
     return set;
@@ -2074,6 +2087,14 @@ export function explicarMatch(
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
+  // ── FILTRO DURO 0D-2: Demanda Mediocre / Escasez Crítica de Datos (Doctrina v31.106) ──
+  // Si la demanda está calificada como Mediocre (< 30% de completitud o vetada por calidad),
+  // carece de datos discriminantes y es inviable para match comercial automático.
+  if (requirement.calificacion === 'Mediocre') {
+    blockers.push("Demanda Mediocre / Escasez Crítica de Datos: El requerimiento cuenta con calificación Mediocre (< 30% de completitud). No genera match comercial (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
+
 
   // ── FILTRO DURO 0E: Incompatibilidad Geográfica Estricta de Ciudad (ya manejado arriba en v22.1) ──
   // (bloque legado reemplazado por reqCityNorm2 para evitar conflicto de variables)
@@ -3564,8 +3585,11 @@ export async function findMatchesForProperty(propertyId: number) {
         await new Promise(r => setTimeout(r, 10));
       }
 
-      // Regla Doctrinal (10 Días de Vigencia v31.84/v31.86): Omitir requerimientos inactivos o de más de 10 días
-      if ((req as any).status === 'expired') {
+      // Regla Doctrinal (10 Días de Vigencia v31.84/v31.86 y Guillotina Mediocre): Omitir requerimientos inactivos, vencidos, mediocres o de más de 10 días
+      if ((req as any).status === 'expired' || (req as any).calificacion === 'Mediocre') {
+        continue;
+      }
+      if (isHollowListing(req.rawText, req.name, req.enlaceOrigen).isHollow) {
         continue;
       }
       const reqEffectiveDate = req.createdAt || req.fechaExtraccion;
@@ -3666,9 +3690,9 @@ export async function findMatchesForRequirement(requirementId: number) {
       return [];
     }
 
-    // REGLA DOCTRINAL (10 Días de Vigencia): Omitir requerimientos inactivos o de más de 10 días (v31.84/v31.86)
-    if ((req as any).status === 'expired') {
-      console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por estar marcado como vencido/out.`);
+    // REGLA DOCTRINAL (10 Días de Vigencia y Guillotina Mediocre): Omitir requerimientos inactivos, vencidos o mediocres (v31.106)
+    if ((req as any).status === 'expired' || (req as any).calificacion === 'Mediocre') {
+      console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por estar marcado como vencido o mediocre.`);
       return [];
     }
     const reqEffectiveDate = req.createdAt || req.fechaExtraccion;

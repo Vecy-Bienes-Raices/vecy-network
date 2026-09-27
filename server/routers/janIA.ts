@@ -1293,17 +1293,15 @@ export const janIARouter = router({
           ajustesGuardados: input.ajustesGuardados || null,
         }).returning();
 
-        // Si el match fue rechazado, marcar status = 'rejected' y purgar de forma segura
+        // Si el match fue rechazado, marcar status = 'rejected' permanentemente
         if (input.action === 'rechazado') {
           if (input.matchId) {
             try {
               await db.update(propertyMatches)
                 .set({ status: 'rejected' })
                 .where(eq(propertyMatches.id, input.matchId));
-              await db.delete(propertyMatches)
-                .where(eq(propertyMatches.id, input.matchId));
             } catch (delErr: any) {
-              console.warn(`[JanIA-Feedback] Match #${input.matchId} marcado como rejected (conservado por registros relacionados):`, delErr.message);
+              console.warn(`[JanIA-Feedback] Match #${input.matchId} error al marcar rejected:`, delErr.message);
             }
           }
           if (input.propertyId && input.requirementId) {
@@ -1316,14 +1314,8 @@ export const janIARouter = router({
                     eq(propertyMatches.requirementId, input.requirementId)
                   )
                 );
-              await db.delete(propertyMatches).where(
-                and(
-                  eq(propertyMatches.propertyId, input.propertyId),
-                  eq(propertyMatches.requirementId, input.requirementId)
-                )
-              );
             } catch (delErrPair: any) {
-              console.warn(`[JanIA-Feedback] Par Prop #${input.propertyId} / Req #${input.requirementId} marcado como rejected`);
+              console.warn(`[JanIA-Feedback] Par Prop #${input.propertyId} / Req #${input.requirementId} error al marcar rejected`);
             }
           }
 
@@ -1385,12 +1377,8 @@ export const janIARouter = router({
             console.log(`[JanIA-Feedback] Demanda #${input.requirementId} enviada a Standby Directo Vecy (No Tercería / No Referidos)`);
           }
 
-          // Disparar en segundo plano la búsqueda de nuevas opciones para la demanda (si no está cerrada ni indisponible)
-          if (input.requirementId && !isUnavailable) {
-            findMatchesForRequirement(input.requirementId).catch((err: any) => {
-              console.error(`[JanIA-Feedback] Error buscando alternativas para Req #${input.requirementId}:`, err);
-            });
-          }
+          // No regenerar matches agresivamente al descartar para no crear bucles de matches espurios
+          // (Si el bróker descarta, respeta su acción en silencio sin revivir opciones descartadas)
         }
 
         // Invalidar caché de matches y pares rechazados inmediatamente

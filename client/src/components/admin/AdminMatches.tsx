@@ -7587,9 +7587,12 @@ export default function AdminMatches() {
                       {cat.options.map((opt) => {
                         const isSelected = selectedRejectReasons.includes(opt.label);
                         return (
-                          <label
+                          <div
                             key={opt.id}
+                            role="button"
+                            tabIndex={0}
                             onClick={() => toggleRejectReason(opt.label)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRejectReason(opt.label); } }}
                             className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition-all select-none ${
                               isSelected
                                 ? 'bg-rose-500/20 border-rose-500 text-rose-200 shadow-[0_0_15px_rgba(244,63,94,0.3)] font-semibold'
@@ -7599,8 +7602,9 @@ export default function AdminMatches() {
                             <input
                               type="checkbox"
                               checked={isSelected}
-                              onChange={() => toggleRejectReason(opt.label)}
-                              className="accent-rose-500 w-4 h-4 rounded mt-0.5 shrink-0 cursor-pointer"
+                              readOnly
+                              tabIndex={-1}
+                              className="accent-rose-500 w-4 h-4 rounded mt-0.5 shrink-0 pointer-events-none"
                             />
                             <span className="leading-snug flex-1">
                               <span className="mr-1.5">{opt.icon}</span>
@@ -7611,7 +7615,7 @@ export default function AdminMatches() {
                                 </span>
                               )}
                             </span>
-                          </label>
+                          </div>
                         );
                       })}
                     </div>
@@ -7663,32 +7667,49 @@ export default function AdminMatches() {
             <div className="p-4 sm:p-5 border-t border-white/10 bg-white/[0.02] flex items-center justify-between gap-3">
               <div className="text-zinc-400 text-xs font-mono">
                 {selectedRejectReasons.length === 0 ? (
-                  <span className="text-zinc-500 italic">Marca al menos una opción para continuar</span>
+                  <span className="text-amber-400/90 text-[11px]">Puedes descartar directamente o marcar razones</span>
                 ) : (
                   <span className="text-rose-400 font-semibold">{selectedRejectReasons.length} {selectedRejectReasons.length === 1 ? 'motivo seleccionado' : 'motivos seleccionados'}</span>
                 )}
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <Button
                   variant="outline"
                   type="button"
                   onClick={() => { setRejectModalMatch(null); setSelectedRejectReasons([]); setCustomRejectNote(''); }}
-                  className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white text-xs h-9 px-4 cursor-pointer"
+                  className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white text-xs h-9 px-3 sm:px-4 cursor-pointer"
                 >
                   Cancelar
                 </Button>
                 <Button
-                  disabled={selectedRejectReasons.length === 0 || recordFeedbackMut.isPending}
+                  variant="outline"
+                  type="button"
+                  disabled={recordFeedbackMut.isPending}
+                  onClick={() => {
+                    handleFeedback(rejectModalMatch, 'rechazado', "Descarte manual por criterio del bróker (Rápido)", customRejectNote);
+                    setRejectModalMatch(null);
+                    setSelectedRejectReasons([]);
+                    setCustomRejectNote('');
+                  }}
+                  className="border-rose-900/60 text-rose-300 hover:bg-rose-950/60 hover:text-white text-xs h-9 px-3 cursor-pointer"
+                  title="Descartar inmediatamente con 1 clic"
+                >
+                  ⚡ Descarte Rápido
+                </Button>
+                <Button
+                  disabled={recordFeedbackMut.isPending}
                   type="button"
                   onClick={() => {
-                    const reasonsJoined = selectedRejectReasons.join(" · ");
-                    const finalReason = customRejectNote ? `${reasonsJoined} — Observación: ${customRejectNote}` : reasonsJoined;
+                    const reasonsJoined = selectedRejectReasons.length > 0
+                      ? selectedRejectReasons.join(" · ")
+                      : (customRejectNote.trim() ? `Observación: ${customRejectNote.trim()}` : "Descarte manual por criterio del bróker");
+                    const finalReason = customRejectNote && selectedRejectReasons.length > 0 ? `${reasonsJoined} — Observación: ${customRejectNote}` : reasonsJoined;
                     handleFeedback(rejectModalMatch, 'rechazado', finalReason, customRejectNote);
                     setRejectModalMatch(null);
                     setSelectedRejectReasons([]);
                     setCustomRejectNote('');
                   }}
-                  className="bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-extrabold text-xs h-9 px-5 flex items-center gap-2 shadow-lg shadow-rose-900/40 cursor-pointer disabled:opacity-40"
+                  className="bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-extrabold text-xs h-9 px-4 sm:px-5 flex items-center gap-2 shadow-lg shadow-rose-900/40 cursor-pointer disabled:opacity-40"
                 >
                   {recordFeedbackMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
                   {selectedRejectReasons.length > 1 ? `Confirmar Descarte (${selectedRejectReasons.length})` : 'Confirmar Descarte'}

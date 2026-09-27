@@ -165,9 +165,48 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
----
+## 🔖 VERSIÓN ACTUAL: v31.106 — Septiembre 2026
 
-## 🔖 VERSIÓN ACTUAL: v31.105 — Septiembre 2026
+### Novedades v31.106 (Corrección de Modal de Descarte, Eliminación de Bucles de Rematch, Clasificación Estricta de Arriendos y Guillotina de Demanda Mediocre):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo reportó fallas críticas en el descarte de matches:
+    *"Borro y borro y descarto Matches mal cotejados, pero no se van o no se si es que se vuelven a subir... Es como uno que pertenece a arriendos y además es una demanda muy mediocre con una frase simple así: Busco las Santas 2 alcobas conjunto $ 4.500.000 incluida, es de lógica que eso pertenece a arriendos y además ni siquiera debería ser tenido en cuenta para Match porque está demasiado escaso de datos. No sirve. Ese de Colina lo he borrado ya más de 5 veces y sigue allí que mamera."*
+- **Causas Raíz Identificadas**:
+  1. **Bug de Doble Evento y Botón Deshabilitado en Modal de Descarte (`AdminMatches.tsx`)**:
+     - `<label onClick={() => toggleRejectReason(opt.label)}>` envolvía al `<input type="checkbox" onChange={() => toggleRejectReason(opt.label)} />`. Al hacer click en el checkbox se disparaban ambos eventos, conmutando la selección a true y false en el mismo render, dejando `selectedRejectReasons = []`.
+     - El botón `Confirmar Descarte` estaba `disabled` si la longitud era 0, impidiendo registrar la mutación. El match #15099 (Colina) nunca llegaba a descartarse en el backend.
+  2. **Bug de Eliminación en Cascada y Rematch Agresivo (`server/routers/janIA.ts`)**:
+     - `recordMatchFeedback` ejecutaba `db.delete(propertyMatches)`. Por la foreign key `ON DELETE CASCADE`, borrar de `property_matches` destruía el registro recién insertado en `match_feedback`.
+     - El router disparaba `findMatchesForRequirement(input.requirementId)` en segundo plano, regenerando de inmediato matches espurios.
+     - `cachedAllMatchesData` retenía los matches durante 45 segundos en memoria sin invalidarse al descartar.
+  3. **Multiplicador 1000x en Parseo de Precios con Puntos (`server/_core/janIA.ts`)**:
+     - `parseColombianPriceOrBudget` multiplicaba por 1000 números con puntos entre 300k y 30M cuando se asumía venta. La demanda #1636 (`$ 4.500.000 incluida`) se guardó como $4.500 MILLONES en venta, generando 13 matches con apartamentos de venta en Santa Bárbara. Cada vez que Eduardo descartaba uno, aparecía el siguiente en cola.
+  4. **Punto Ciego en Señales de Arriendo (`hasRentSignals`)**:
+     - El regex requería "administración" explícita junto a "incluida". Frases como `$ 4.500.000 incluida` no se detectaban como canon mensual de arriendo.
+- **Acciones Ejecutadas en Código**:
+  1. **Blindaje de Modal de Descarte (`client/src/components/admin/AdminMatches.tsx`)**:
+     - Sustituido `<label>` por `<div role="button">` y `pointer-events-none` en inputs para eliminar disparos duplicados.
+     - Botón `Confirmar Descarte` habilitado siempre (aplica `"Descarte manual por criterio del bróker"` si no hay motivos marcados).
+     - Añadido botón `"⚡ Descarte Rápido"` en el pie del modal para purga inmediata en 1 click.
+  2. **Supresión de Cascada y Rematch (`server/routers/janIA.ts`, `server/_core/matching.ts`)**:
+     - Preservada la fila en `property_matches` con `status = 'rejected'` para evitar cascada destructiva en `match_feedback`.
+     - Suprimido el rematch automático al registrar descarte.
+     - `getRejectedPairsSet()` unifica vetos de `match_feedback` y `propertyMatches.status IN ('rejected', 'rechazado')`.
+  3. **Corrección de Extractor y Detección de Arriendo (`server/_core/janIA.ts`)**:
+     - Sanitización de caracteres `$` y supresión de multiplicación 1000x en números de 7 dígitos con puntos (`\d{1,4}\.\d{3}\.\d{3}`).
+     - `hasRentSignals` expandido para capturar `\b(?:incluida|incluido|inc)\b` y rangos de arriendo mensual colombiano ($300k-$25M).
+  4. **Filtro Duro 0D-2: Guillotina de Demanda Mediocre (`server/_core/matching.ts`)**:
+     - Bloqueo instantáneo al 0% Match para toda demanda calificada como `Mediocre`.
+     - Omitidas demandas vencidas, inactivas o mediocres en `findMatchesForProperty` y `findMatchesForRequirement`.
+  5. **Remediación en Base de Datos VPS PostgreSQL (`vecy_network`)**:
+     - Match #15099 (Colina) marcado como `rejected` e insertado en `match_feedback`.
+     - Requerimiento #1636 corregido a arriendo ($4.5M), `Mediocre` y `expired`; sus 13 matches espurios rechazados e inscritos en `match_feedback`.
+     - Requerimiento #1402 ajustado a presupuesto real ($500M) y purgados matches fuera de rango (#15082, #15065).
+  6. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+     - Añadida Sección 25 con 4 pruebas doctrinales completas (**120/120 tests Vitest pasando** ✅).
+- **Verificación**: 120/120 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.105 — Septiembre 2026
 
 ### Novedades v31.105 (Regla Doctrinal de Piso Financiero del 70%, Erradicación de Anomalías a Mitad de Precio y Purga de Matches Espurios):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

@@ -7,6 +7,54 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.106 — 27 Septiembre 2026
+
+### Solicitud de Eduardo
+Corrección del Modal de Descarte de Matches, Eliminación de Bucles de Rematch, Clasificación Estricta de Arriendos ("incluida") y Guillotina de Demanda Mediocre:
+*"Borro y borro y descarto Matches mal cotejados, pero no se van o no se si es que se vuelven a subir. !Qué desesperación contigo USHHHH ¡¡¡!!! Estás fallando y dando pasos hacia atrás o no se qué putas estás haciendo, pero esto ya lo habíamos arreglado y estaba chévere pero lo jodiste todo. Es como uno que pertenece a arriendos y además es una demanda muy mediocre con una frase simple así: Busco las Santas 2 alcobas conjunto $ 4.500.000 incluida, es de lógica que eso pertenece a arriendos y además ni siquiera debería ser tenido en cuenta para Match porque está demasiado escaso de datos. No sirve. Ese de Colina lo he borrado ya más de 5 veces y sigue allí que mamera. Puedes arreglar corregir y dejar todo funcionando en perfectas condiciones o estás arruinado y en completo BUG. Dime porque otra vez has gastado por completo mis Tokens y en tan solo media noche.;(("*
+
+### Diagnóstico Técnico Profundo y Conclusiones de Arquitectura
+1. **Bug de Doble Evento y Botón Deshabilitado en Modal de Descarte (`AdminMatches.tsx`)**:
+   - En el modal de descarte, `<label onClick={() => toggleRejectReason(opt.label)}>` envolvía al elemento `<input type="checkbox" onChange={() => toggleRejectReason(opt.label)} />`.
+   - Al hacer click en el checkbox, el navegador disparaba consecutivamente el `onClick` del label y el `onChange` del checkbox, conmutando la selección a true e inmediatamente a false en el mismo render.
+   - `selectedRejectReasons` permanecía vacío (`[]`), y el botón `Confirmar Descarte` contenía `disabled={selectedRejectReasons.length === 0 || recordFeedbackMut.isPending}`, impidiendo físicamente enviar la solicitud. El match #15099 (Colina) nunca llegaba al backend y seguía activo.
+2. **Bug de Eliminación en Cascada y Rematch Agresivo (`server/routers/janIA.ts`)**:
+   - `recordMatchFeedback` ejecutaba `await db.delete(propertyMatches)`. Debido a la restricción `FOREIGN KEY (match_id) REFERENCES property_matches(id) ON DELETE CASCADE`, al borrar la fila de `property_matches` se eliminaba en cascada el registro recién insertado en `match_feedback`, destruyendo la memoria de veto de JanIA.
+   - Además, al registrar descarte, el router invocaba en segundo plano `findMatchesForRequirement(input.requirementId)`, lo que regeneraba de inmediato los matches espurios para la demanda.
+   - Adicionalmente, `cachedAllMatchesData` retenía los matches durante 45 segundos en memoria sin invalidarse al descartar.
+3. **Bug Multiplicador 1000x en Parseo de Precios con Puntos (`server/_core/janIA.ts`)**:
+   - En `parseColombianPriceOrBudget`, existía la regla `if (isSale && parsed >= 300_000 && parsed <= 30_000_000) return parsed * 1_000;`.
+   - Para el Requerimiento #1636 (`Busco las Santas 2 alcobas conjunto $ 4.500.000 incluida`), al procesarse inicialmente por omisión como venta, el valor `4.500.000` fue multiplicado por 1000, registrando en base de datos `presupuestoMax = 4.500.000.000.00` ($4.500 MILLONES).
+   - JanIA generó 13 matches con apartamentos de venta en Santa Bárbara ($795M - $850M). Cada vez que Eduardo descartaba uno, aparecía el siguiente de los 13 en la lista.
+4. **Punto Ciego en Detección de Señales de Arriendo (`hasRentSignals` en `janIA.ts`)**:
+   - El regex requería `(?:incluida|con)\s*(?:administración|admon)`. Textos terminados en `$ 4.500.000 incluida` no cumplían y caían a venta.
+5. **Ausencia de Guillotina para Demandas Mediocres / Escasez Crítica de Datos**:
+   - Demandas ultra-escasas (< 30% de completitud) eran evaluadas por el motor de matching produciendo ruido comercial.
+
+### Acciones Ejecutadas en Código
+1. **Blindaje del Modal de Descarte (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Sustituido `<label>` por `<div role="button">` y neutralizados eventos del input con `pointer-events-none`.
+   - Eliminada la restricción `disabled` por falta de selección: si el bróker confirma sin marcar casillas, el sistema asigna `"Descarte manual por criterio del bróker"`.
+   - Añadido botón `"⚡ Descarte Rápido"` en el pie del modal para purga inmediata en 1 solo click.
+2. **Supresión de Borrado en Cascada y Rematch en Descarte (`server/routers/janIA.ts`)**:
+   - Eliminado el `db.delete(propertyMatches)`: el match se marca de forma inmutable con `status = 'rejected'`, preservando el registro de auditoría en `match_feedback`.
+   - Eliminado el trigger agresivo de `findMatchesForRequirement` al registrar descarte.
+   - `getRejectedPairsSet()` lee de forma unificada tanto `match_feedback` como `propertyMatches.status IN ('rejected', 'rechazado')`.
+3. **Blindaje de Parseo Colombiano y Señales de Arriendo (`server/_core/janIA.ts`)**:
+   - Suprimida la multiplicación arbitraria por 1000 en cifras con formato completo (`\d{1,4}\.\d{3}\.\d{3}`) y sanitización de caracteres de moneda (`$`, `COP`).
+   - `hasRentSignals` expandido para reconocer `\b(?:incluida|incluido|inc)\b` y rangos típicos de canon mensual colombiano ($300k-$25M) sin términos de compraventa.
+4. **Filtro Duro 0D-2: Guillotina de Demanda Mediocre (`server/_core/matching.ts`)**:
+   - Toda demanda con `calificacion === 'Mediocre'` colapsa de forma instantánea a **Score 0% Match** con razón `Demanda Mediocre / Escasez Crítica de Datos`.
+   - Omitidas demandas inactivas, vencidas o mediocres en los loops de `findMatchesForProperty` y `findMatchesForRequirement`.
+5. **Remediación en Base de Datos VPS PostgreSQL (`vecy_network`)**:
+   - Match #15099 (Colina) marcado como `status = 'rejected'` e insertado en `match_feedback`.
+   - Requerimiento #1636 corregido a `tipoNegocioDeseado = 'arriendo'`, `presupuestoMax = 4.500.000.00`, `calificacion = 'Mediocre'`, `status = 'expired'`; sus 13 matches espurios marcados como `status = 'rejected'` e inscritos en `match_feedback`.
+   - Requerimiento #1402 ajustado a presupuesto real ($500M) y purgados matches fuera de rango (#15082, #15065).
+6. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+   - Añadida **Sección 25** con 4 pruebas completas (**120/120 tests Vitest pasando** ✅).
+
+---
+
 ## 📋 SESIÓN v31.105 — 27 Septiembre 2026
 
 ### Solicitud de Eduardo

@@ -505,7 +505,7 @@ export function buildFlyerBreakdownText(extracted: any, fallbackText?: string): 
 
 export function parseColombianPriceOrBudget(numStr: string, unit: string, isSale: boolean): number {
   if (!numStr) return 0;
-  const cleanStr = (numStr || "").trim().replace(/['´`’‘\u00B4\u2019\u2018*\s\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "");
+  const cleanStr = (numStr || "").trim().replace(/[$COPcop'´`’‘\u00B4\u2019\u2018*\s\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "");
   const cleanUnit = (unit || "").toLowerCase();
   
   if (cleanUnit.includes("mil millon")) {
@@ -516,10 +516,6 @@ export function parseColombianPriceOrBudget(numStr: string, unit: string, isSale
   // Si tiene formato de número completo colombiano con puntos (ej: "3.800.000", "2.900.000", "1.390.000.000", "1450.000.000")
   if (/^\d{1,4}(?:\.\d{3}){2,4}$/.test(cleanStr)) {
     const parsed = parseInt(cleanStr.replace(/\./g, ""), 10);
-    // Taquigrafía en venta: "$1.100.000" para un apartamento en venta significa 1.100 millones
-    if (isSale && parsed >= 300_000 && parsed <= 30_000_000) {
-      return parsed * 1_000;
-    }
     return parsed;
   }
 
@@ -614,9 +610,12 @@ export function extractFallbackDataFromText(text: string): any {
   const hasRentSignals = !isInvestorPurchase && (
     /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|en renta|para renta|busca para renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(clean)
     || /\b(?:para tomar ya|tomar ya|toma ya|para tomar de inmediato|toma inmediata|toma de inmediato|para tomar|para alquilar|para arrendar|en arriendo)\b/i.test(clean)
+    || /\b(?:incluida|incluido|inc)\b/i.test(clean)
     || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(clean)
     || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(clean)
     || /valor arriendo/i.test(clean)
+    // Cifra típica de canon mensual colombiano ($300k a $25M) sin palabras de compra o venta
+    || (/\$\s*([1-9]\d{0,1}(?:[.\s']\d{3}){1,2})\b/.test(clean) && !/\b(?:compra|compro|comprador|compran|venta|vendo|vende|millones|millon|mm|mll)\b/i.test(clean))
   );
 
   if (hasPermutaSignals) {

@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v31.105";
+    VECY_VERSION = "v31.106";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -4019,7 +4019,7 @@ __export(matching_exports, {
   parsePropertyAddressNumbers: () => parsePropertyAddressNumbers,
   parseStreetCarreraBoundaries: () => parseStreetCarreraBoundaries
 });
-import { eq as eq3 } from "drizzle-orm";
+import { eq as eq3, sql as sql2 } from "drizzle-orm";
 async function getRejectedPairsSet() {
   const now = Date.now();
   if (cachedRejectedPairs && now - lastRejectedPairsFetch < REJECTED_PAIRS_TTL_MS) {
@@ -4028,11 +4028,17 @@ async function getRejectedPairsSet() {
   try {
     const db = await getDb();
     if (!db) return cachedRejectedPairs || /* @__PURE__ */ new Set();
-    const rejected = await db.select({ propertyId: matchFeedback.propertyId, requirementId: matchFeedback.requirementId }).from(matchFeedback).where(eq3(matchFeedback.action, "rechazado"));
     const set = /* @__PURE__ */ new Set();
+    const rejected = await db.select({ propertyId: matchFeedback.propertyId, requirementId: matchFeedback.requirementId }).from(matchFeedback).where(eq3(matchFeedback.action, "rechazado"));
     for (const r of rejected) {
       if (r.propertyId && r.requirementId) {
         set.add(`${r.propertyId}_${r.requirementId}`);
+      }
+    }
+    const rejectedMatches = await db.select({ propertyId: propertyMatches.propertyId, requirementId: propertyMatches.requirementId }).from(propertyMatches).where(sql2`CAST(${propertyMatches.status} AS TEXT) IN ('rejected', 'rechazado')`);
+    for (const m of rejectedMatches) {
+      if (m.propertyId && m.requirementId) {
+        set.add(`${m.propertyId}_${m.requirementId}`);
       }
     }
     cachedRejectedPairs = set;
@@ -5932,6 +5938,10 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     blockers.push(`Ficha poco robusta (Demanda: ${reqFilledCount}/8 especificaciones, Oferta: ${propFilledCount}/8 especificaciones). Se requieren publicaciones con datos b\xE1sicos m\xEDnimos (al menos 3 especificaciones).`);
     return buildExplanationResult(0, blockers, positives, negatives);
   }
+  if (requirement.calificacion === "Mediocre") {
+    blockers.push("Demanda Mediocre / Escasez Cr\xEDtica de Datos: El requerimiento cuenta con calificaci\xF3n Mediocre (< 30% de completitud). No genera match comercial (0%).");
+    return buildExplanationResult(0, blockers, positives, negatives);
+  }
   const reqCityNorm2 = (requirement.ciudadDeseada || requirement.addressCity || requirement.city || requirement.rawText || "").toLowerCase();
   const propCityNorm2 = (property.addressCity || property.city || property.zone || property.rawText || "").toLowerCase();
   const isReqCali = reqCityNorm2.includes("cali");
@@ -6949,7 +6959,10 @@ async function findMatchesForProperty(propertyId) {
       if (compCounter % 20 === 0) {
         await new Promise((r) => setTimeout(r, 10));
       }
-      if (req.status === "expired") {
+      if (req.status === "expired" || req.calificacion === "Mediocre") {
+        continue;
+      }
+      if (isHollowListing(req.rawText, req.name, req.enlaceOrigen).isHollow) {
         continue;
       }
       const reqEffectiveDate = req.createdAt || req.fechaExtraccion;
@@ -7038,8 +7051,8 @@ async function findMatchesForRequirement(requirementId) {
       console.log(`[MATCHING-FILTER] \u26D4 Requerimiento #${requirementId} omitido por ser frase suelta sin criterios de b\xFAsqueda.`);
       return [];
     }
-    if (req.status === "expired") {
-      console.log(`[MATCHING-FILTER] \u23F3 Requerimiento #${requirementId} omitido por estar marcado como vencido/out.`);
+    if (req.status === "expired" || req.calificacion === "Mediocre") {
+      console.log(`[MATCHING-FILTER] \u23F3 Requerimiento #${requirementId} omitido por estar marcado como vencido o mediocre.`);
       return [];
     }
     const reqEffectiveDate = req.createdAt || req.fechaExtraccion;
@@ -13859,7 +13872,7 @@ function buildFlyerBreakdownText(extracted, fallbackText) {
 }
 function parseColombianPriceOrBudget(numStr, unit, isSale) {
   if (!numStr) return 0;
-  const cleanStr = (numStr || "").trim().replace(/['´`’‘\u00B4\u2019\u2018*\s\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "");
+  const cleanStr = (numStr || "").trim().replace(/[$COPcop'´`’‘\u00B4\u2019\u2018*\s\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "");
   const cleanUnit = (unit || "").toLowerCase();
   if (cleanUnit.includes("mil millon")) {
     const v = parseFloat(cleanStr.replace(",", "."));
@@ -13867,9 +13880,6 @@ function parseColombianPriceOrBudget(numStr, unit, isSale) {
   }
   if (/^\d{1,4}(?:\.\d{3}){2,4}$/.test(cleanStr)) {
     const parsed = parseInt(cleanStr.replace(/\./g, ""), 10);
-    if (isSale && parsed >= 3e5 && parsed <= 3e7) {
-      return parsed * 1e3;
-    }
     return parsed;
   }
   if (/^\d{1,3}[.,]\d{3}$/.test(cleanStr)) {
@@ -13918,7 +13928,7 @@ function extractFallbackDataFromText(text2) {
   let transactionType = "venta";
   const isInvestorPurchase = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|para compra|compro|compra ya|busco para compra)\b/i.test(clean);
   const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(clean);
-  const hasRentSignals = !isInvestorPurchase && (/\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|en renta|para renta|busca para renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(clean) || /\b(?:para tomar ya|tomar ya|toma ya|para tomar de inmediato|toma inmediata|toma de inmediato|para tomar|para alquilar|para arrendar|en arriendo)\b/i.test(clean) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(clean) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(clean) || /valor arriendo/i.test(clean));
+  const hasRentSignals = !isInvestorPurchase && (/\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|en renta|para renta|busca para renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(clean) || /\b(?:para tomar ya|tomar ya|toma ya|para tomar de inmediato|toma inmediata|toma de inmediato|para tomar|para alquilar|para arrendar|en arriendo)\b/i.test(clean) || /\b(?:incluida|incluido|inc)\b/i.test(clean) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(clean) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(clean) || /valor arriendo/i.test(clean) || /\$\s*([1-9]\d{0,1}(?:[.\s']\d{3}){1,2})\b/.test(clean) && !/\b(?:compra|compro|comprador|compran|venta|vendo|vende|millones|millon|mm|mll)\b/i.test(clean));
   if (hasPermutaSignals) {
     transactionType = clean.includes("venta") || isInvestorPurchase ? "venta_permuta" : "permuta";
   } else if (hasRentSignals && (clean.includes("venta") || clean.includes("valor venta") || clean.includes("precio de venta")) && (clean.includes("arriendo") || clean.includes("valor arriendo") || clean.includes("canon"))) {
@@ -22837,9 +22847,8 @@ ${liveStats}${userContextInstruction}
         if (input.matchId) {
           try {
             await db.update(propertyMatches).set({ status: "rejected" }).where(eq11(propertyMatches.id, input.matchId));
-            await db.delete(propertyMatches).where(eq11(propertyMatches.id, input.matchId));
           } catch (delErr) {
-            console.warn(`[JanIA-Feedback] Match #${input.matchId} marcado como rejected (conservado por registros relacionados):`, delErr.message);
+            console.warn(`[JanIA-Feedback] Match #${input.matchId} error al marcar rejected:`, delErr.message);
           }
         }
         if (input.propertyId && input.requirementId) {
@@ -22850,14 +22859,8 @@ ${liveStats}${userContextInstruction}
                 eq11(propertyMatches.requirementId, input.requirementId)
               )
             );
-            await db.delete(propertyMatches).where(
-              and8(
-                eq11(propertyMatches.propertyId, input.propertyId),
-                eq11(propertyMatches.requirementId, input.requirementId)
-              )
-            );
           } catch (delErrPair) {
-            console.warn(`[JanIA-Feedback] Par Prop #${input.propertyId} / Req #${input.requirementId} marcado como rejected`);
+            console.warn(`[JanIA-Feedback] Par Prop #${input.propertyId} / Req #${input.requirementId} error al marcar rejected`);
           }
         }
         const reasonLower = (input.motivoRechazo || "").toLowerCase();
@@ -22897,11 +22900,6 @@ ${liveStats}${userContextInstruction}
           cachedRequirementsData = null;
           cachedRequirementsTime = 0;
           console.log(`[JanIA-Feedback] Demanda #${input.requirementId} enviada a Standby Directo Vecy (No Tercer\xEDa / No Referidos)`);
-        }
-        if (input.requirementId && !isUnavailable) {
-          findMatchesForRequirement(input.requirementId).catch((err) => {
-            console.error(`[JanIA-Feedback] Error buscando alternativas para Req #${input.requirementId}:`, err);
-          });
         }
       }
       invalidateRejectedPairsCache();
