@@ -347,6 +347,8 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
   - Regex mejorado para capturar `46 años`, `, 46 años`, etc., extrayendo `antiguedadAnos: 46` y catalogando como inmueble clásico.
 - **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
   - Añadida Sección 22 con 4 pruebas unitarias exhaustivas (**108/108 tests Vitest pasando** ✅).
+- **Remediación de Esquema en PostgreSQL VPS (`requirements`)**:
+  - Incorporadas las columnas `fecha_primera_publicacion`, `fecha_ultima_publicacion` y `republicaciones_count` en la tabla `requirements` del VPS, inicializando 1,587 registros y normalizando los marcadores a: **3,345 Ofertas, 1,587 Demandas y 116 Matches Activos (7 Perfectos)**.
 
 ---
 

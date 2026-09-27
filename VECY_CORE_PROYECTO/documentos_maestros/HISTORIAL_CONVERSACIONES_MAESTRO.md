@@ -55,6 +55,10 @@ Separación de Demandas Múltiples de Asesores, Blindaje contra Alucinación de 
    - Mejorado el regex de antigüedad para capturar `46 años`, `, 46 años`, etc., extrayendo `antiguedadAnos: 46` y reconociendo el estado clásico de la propiedad.
 6. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
    - Añadida la **Sección 22** con 4 pruebas unitarias que validan la separación limpia de clientes en `splitMultiItemMessage`, el bloqueo del 100% (0% match) por incompatibilidad de estrato exigido, el comportamiento flexible sin estrato exigido y la extracción de antigüedad `Piso 2, 46 años` (**108/108 tests Vitest pasando** ✅).
+7. **Remediación de Columnas en PostgreSQL VPS y Sincronización de Contadores (`server/routers/janIA.ts`)**:
+   - Se identificó que la tabla `requirements` en PostgreSQL nativo del VPS carecía de las columnas `fecha_primera_publicacion`, `fecha_ultima_publicacion` y `republicaciones_count`, provocando que la consulta de `getAllMatches` y `getBotStatus` fallara con `column r.fecha_ultima_publicacion does not exist` y mostrara todos los marcadores en 0.
+   - Se ejecutó el DDL en PostgreSQL (`ALTER TABLE requirements ADD COLUMN IF NOT EXISTS...`) inicializando 1,587 registros con su respectivo `createdAt`.
+   - Se aseguró el llamado a `await getDb()` antes de `getRawSql()` en `getBotStatus`, restableciendo de inmediato los marcadores a su valor real: **3,345 Ofertas, 1,587 Demandas y 116 Matches Activos y Calientes (7 Perfectos)**.
 
 ---
 

@@ -192,7 +192,9 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
      - Regex mejorado para capturar `46 años`, `, 46 años`, etc., extrayendo `antiguedadAnos: 46` y catalogando como inmueble clásico.
   5. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
      - Añadida Sección 22 con 4 pruebas unitarias exhaustivas (**108/108 tests Vitest pasando** ✅).
-- **Verificación**: 108/108 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 12.62s ✅
+  6. **Remediación de Esquema en PostgreSQL VPS (`requirements`)**:
+     - Se crearon las columnas `fecha_primera_publicacion`, `fecha_ultima_publicacion` y `republicaciones_count` en la tabla `requirements` del VPS, inicializando 1,587 registros y restableciendo los contadores a sus valores reales: **3,345 Ofertas, 1,587 Demandas y 116 Matches Activos (7 Perfectos)**.
+- **Verificación**: 108/108 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 14.87s ✅ | PM2 reload jania-server online ✅
 
 ## 🔖 VERSIÓN ANTERIOR: v31.102 — Septiembre 2026
 
