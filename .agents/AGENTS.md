@@ -167,7 +167,34 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ---
 
-## 🔖 VERSIÓN ACTUAL: v31.102 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.103 — Septiembre 2026
+
+### Novedades v31.103 (Separación de Requerimientos Múltiples de Asesores, Blindaje contra Alucinación de Estrato y Filtro Duro de Estrato Exigido):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo identificó la causa exacta del match 15692: *"Ya vi el error, y no es que la función de copiado y pegado estuviese fallando, es que esta señora publicó varios requerimientos, aunque lo hizo por separado, creo que JanIA se confundió y aunque en la demanda no vemos que diga estrato 6 ella si insertó el valor 6 en la casilla estrato para la demanda, aunque la cotejó mal ya que estrato es un dato en duro si el cliente lo exoge, por lo tanto hay una inconsistencia, ya que tu bien sabes que la regla dice que si hay por un solo 'No coincide', No hay Match."*
+- **Causas Raíz Identificadas**:
+  1. En WhatsApp, Luz Nelcy publicó 5 requerimientos en mensajes consecutivos en el mismo minuto (10:23). El buffer de mensajes (`processGroupBuffer`) tenía un regex de detección incompleto que omitía `compra`, `compran`, `MM`, `millón`, agrupando 3 mensajes en un solo requerimiento "monstruo" con presupuestos cruzados ($1800MM, $850-$1000MM, $600MM).
+  2. Al crear la demanda combinada, Gemini y JanIA le asignaron `estrato 6` de forma artificial/alucinada porque el schema exigía `number` y la zona era "Las Santas" / "Santa Bárbara", pese a que el texto de la demanda NO mencionaba estrato alguno.
+  3. En `matching.ts`, `requirement.estratoDeseado` llegaba como array `[6]`, lo que hacía que `Number(requirement.estratoDeseado)` resultara en `NaN` o no evaluara correctamente, evadiendo el Filtro Duro 5. Además, la tabla de cotejo frontend permitía `±1 estrato` con estado "Aproximado" en lugar de anular el match de inmediato cuando el cliente exige un estrato específico.
+  4. En la oferta de Alfredo Rubio decía `Piso 2, 46 años.` El regex de antigüedad requería palabras como "antigüedad" o "de construido", dejando `antiguedadAnos: null` (N/E) y omitiendo el filtro de antigüedad/estado clásico.
+- **Acciones Ejecutadas en Código**:
+  1. **Separación de Multi-Requerimientos y Buffer Inteligente (`server/_core/whatsapp-match.ts`, `server/_core/janIA.ts`)**:
+     - `distinctListings` en `processGroupBuffer`: ampliado con `compra`, `compran`, `compro`, `cliente`, `clienta`, `mm`, `millon`, `millones` y regex para requerimientos de clientes independientes, procesando cada mensaje individualmente cuando un asesor publica en ráfaga.
+     - `splitMultiItemMessage`: añadidos patrones colombianos de corretaje `(?:Cliente|Clienta|Comprador|Varios clientes)\s+(?:compra|compran|busca|requiere)` para dividir textos compuestos pegados en bloque.
+  2. **Prohibición Absoluta de Alucinación de Estrato en Demandas (`server/_core/janIA.ts`, schemas y `server/_core/prompts/base.md`)**:
+     - En `insertRequirement`: `estratoDeseado` solo se asigna si el texto original (`rawText`) contiene una mención explícita a estrato (`estrato`, `estr.`, `e[1-6]`). Si no lo menciona, queda estrictamente en `null` (flexible).
+     - Prompts y schema actualizados con `number | null` y advertencia estricta de no inferir estrato por ubicación geográfica.
+  3. **Filtro Duro Infalible de Estrato y Tabla de Cotejo (`server/_core/matching.ts`, `client/src/components/admin/AdminMatches.tsx`)**:
+     - Parseo robusto de `reqEstratoList` (arrays, JSON strings o números).
+     - Si el requerimiento exige estrato(s) y la oferta tiene estrato y no coincide: **0% MATCH (Bloqueo Absoluto)** con razón `⛔ Estrato Incompatible (Dato en Duro Exigido)`. Un solo "No coincide" en un dato duro anula el match.
+     - En `AdminMatches.tsx`: eliminada la tolerancia de `warn` (±1 estrato); si el cliente exige estrato y no coincide se marca como `missing` (🔴 No coincide ❌). Si la demanda no exige estrato, se despliega como `Cualquier estrato / Flexible`.
+  4. **Extracción de Antigüedad en Ofertas (`server/_core/janIA.ts`)**:
+     - Regex mejorado para capturar `46 años`, `, 46 años`, etc., extrayendo `antiguedadAnos: 46` y catalogando como inmueble clásico.
+  5. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+     - Añadida Sección 22 con 4 pruebas unitarias exhaustivas (**108/108 tests Vitest pasando** ✅).
+- **Verificación**: 108/108 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 12.62s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.102 — Septiembre 2026
 
 ### Novedades v31.102 (Supresión Definitiva de Barras Dobles de Scroll y Botón Dual de Búsqueda Fiel en WhatsApp):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

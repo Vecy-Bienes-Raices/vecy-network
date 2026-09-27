@@ -5845,8 +5845,38 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
   }
   const pAdminFee = property.adminFee != null ? parseFloat(String(property.adminFee)) : -1;
   const reqAdminMax = requirement.adminFeeMax != null ? parseFloat(String(requirement.adminFeeMax)) : -1;
-  const pEstrato = property.stratum != null ? Number(property.stratum) : property.estrato != null ? Number(property.estrato) : -1;
-  const reqEstrato = requirement.estratoDeseado != null ? Number(requirement.estratoDeseado) : -1;
+  const pEstrato = property.stratum != null && !isNaN(Number(property.stratum)) && Number(property.stratum) > 0 ? Number(property.stratum) : property.estrato != null && !isNaN(Number(property.estrato)) && Number(property.estrato) > 0 ? Number(property.estrato) : -1;
+  let reqEstratoList = [];
+  if (Array.isArray(requirement.estratoDeseado)) {
+    reqEstratoList = requirement.estratoDeseado.map((e) => Number(e)).filter((e) => !isNaN(e) && e >= 1 && e <= 6);
+  } else if (typeof requirement.estratoDeseado === "string") {
+    try {
+      const parsed = JSON.parse(requirement.estratoDeseado);
+      if (Array.isArray(parsed)) {
+        reqEstratoList = parsed.map((e) => Number(e)).filter((e) => !isNaN(e) && e >= 1 && e <= 6);
+      } else if (!isNaN(Number(parsed)) && Number(parsed) >= 1 && Number(parsed) <= 6) {
+        reqEstratoList = [Number(parsed)];
+      }
+    } catch {
+      const m = requirement.estratoDeseado.match(/\d+/g);
+      if (m) {
+        reqEstratoList = m.map((e) => Number(e)).filter((e) => e >= 1 && e <= 6);
+      }
+    }
+  } else if (typeof requirement.estratoDeseado === "number" && requirement.estratoDeseado >= 1 && requirement.estratoDeseado <= 6) {
+    reqEstratoList = [requirement.estratoDeseado];
+  }
+  if (reqEstratoList.length === 0 && requirement.rawText) {
+    const rawReqStratum = requirement.rawText.match(/(?:estrato|estr\.?|e\s*[1-6]\b)\s*:?\s*([1-6]|uno|dos|tres|cuatro|cinco|seis)\b/i);
+    if (rawReqStratum) {
+      const sMap = { "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6 };
+      const parsedVal = sMap[rawReqStratum[1].toLowerCase()] || Number(rawReqStratum[1]);
+      if (parsedVal >= 1 && parsedVal <= 6) {
+        reqEstratoList.push(parsedVal);
+      }
+    }
+  }
+  const reqEstrato = reqEstratoList.length > 0 ? reqEstratoList[0] : -1;
   const reqType = (requirement.tipoInmuebleDeseado || requirement.propertyType || "").toLowerCase().trim();
   const propType = (property.propertyType || "").toLowerCase().trim();
   let reqZone = normalizarTextoGeografico(requirement.zonaDeseada || requirement.addressNeighborhood || "");
@@ -6153,9 +6183,12 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   positives.push(`Ubicaci\xF3n compatible en zona: ${rawPropBarrio || ""}`);
-  if (reqEstrato >= 1 && pEstrato >= 1 && reqEstrato !== pEstrato) {
-    blockers.push(`Estrato incompatible: deseado ${reqEstrato}, ofrecido ${pEstrato}`);
+  if (reqEstratoList.length > 0 && pEstrato >= 1 && !reqEstratoList.includes(pEstrato)) {
+    blockers.push(`\u26D4 Estrato Incompatible (Dato en Duro Exigido): Requerimiento exige estrato ${reqEstratoList.join(" o ")}, pero la oferta es estrato ${pEstrato}. MATCH IMPOSIBLE (0%).`);
     return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (reqEstratoList.length > 0 && pEstrato >= 1 && reqEstratoList.includes(pEstrato)) {
+    positives.push(`\u2705 Estrato compatible (${pEstrato})`);
   }
   if (reqAreaMin > 0) {
     if (propArea > 0) {
@@ -6696,8 +6729,10 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
   } else {
     earnedPoints += 3;
   }
-  if (reqEstrato >= 1 && pEstrato >= 1) {
-    if (reqEstrato === pEstrato) earnedPoints += 3;
+  if (reqEstratoList.length > 0 && pEstrato >= 1) {
+    if (reqEstratoList.includes(pEstrato)) earnedPoints += 3;
+  } else if (pEstrato >= 1) {
+    earnedPoints += 3;
   } else {
     earnedPoints += 2;
   }
@@ -6762,7 +6797,7 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
   if (pBathrooms > 0 && hasReqBathrooms) filledDownstreamSpecs++;
   if (pGarages > 0 && hasReqGarages) filledDownstreamSpecs++;
   if (pEstrato > 0) filledDownstreamSpecs += 0.5;
-  if (reqEstrato > 0 && pEstrato === reqEstrato) filledDownstreamSpecs += 0.5;
+  if (reqEstratoList.length > 0 ? reqEstratoList.includes(pEstrato) : pEstrato > 0) filledDownstreamSpecs += 0.5;
   if (propAge >= 0) filledDownstreamSpecs++;
   const completionRatio = Math.min(1, filledDownstreamSpecs / totalDownstreamSpecs);
   let finalPercentage = 80;
@@ -11330,9 +11365,10 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             if ((m.imageBuffer || m.pdfBuffer) && (!m.body || m.body.trim() === "")) return true;
             if (!m.body) return false;
             const clean = m.body.toLowerCase();
-            const hasType = clean.includes("apto") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("bodega") || clean.includes("oficina") || clean.includes("lote") || clean.includes("finca") || clean.includes("inmueble") || clean.includes("propiedad") || clean.includes("eds") || clean.includes("estacion");
-            const hasDetails = clean.includes("venta") || clean.includes("arriendo") || clean.includes("precio") || clean.includes("presupuesto") || clean.includes("millones") || clean.includes("$") || clean.includes("busco") || clean.includes("requerimiento") || clean.includes("\xE1rea") || clean.includes("area") || clean.includes("m2") || clean.includes("mts") || clean.includes("http");
-            return hasType && hasDetails;
+            const hasType = clean.includes("apto") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("bodega") || clean.includes("oficina") || clean.includes("lote") || clean.includes("finca") || clean.includes("inmueble") || clean.includes("propiedad") || clean.includes("eds") || clean.includes("estacion") || clean.includes("local") || clean.includes("penthouse") || clean.includes("duplex") || clean.includes("d\xFAplex") || clean.includes("alcoba") || clean.includes("alcobas") || clean.includes("hab") || clean.includes("habitacion") || clean.includes("habitaci\xF3n");
+            const hasDetails = clean.includes("venta") || clean.includes("vendo") || clean.includes("vende") || clean.includes("arriendo") || clean.includes("arrienda") || clean.includes("alquilo") || clean.includes("alquila") || clean.includes("compra") || clean.includes("compran") || clean.includes("compro") || clean.includes("cliente") || clean.includes("clienta") || clean.includes("precio") || clean.includes("presupuesto") || clean.includes("millones") || clean.includes("millon") || clean.includes("mill\xF3n") || clean.includes("mm") || clean.includes("$") || clean.includes("busco") || clean.includes("buscan") || clean.includes("necesito") || clean.includes("necesita") || clean.includes("requiero") || clean.includes("requiere") || clean.includes("requerimiento") || clean.includes("\xE1rea") || clean.includes("area") || clean.includes("m2") || clean.includes("mts") || clean.includes("http");
+            const isClientRequestPattern = /(?:cliente|clienta|comprador|compradora|varios\s+clientes|tengo\s+cliente)\s+(?:compra|compran|busca|buscan|requiere|necesita|solicita)/i.test(clean);
+            return hasType && hasDetails || isClientRequestPattern;
           });
           const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
           if (distinctListings.length > 1 && chatId !== "120363417740040773@g.us" && chatId !== "120363403507276533@g.us") {
@@ -14160,7 +14196,7 @@ function extractFallbackDataFromText(text2) {
     garageType = "independiente";
   }
   let antiguedadAnos = null;
-  const ageMatch = clean.match(/(?:🏢|⏳|⏱️|edificio|antigüedad|antiguedad|tiene|\|)\s*(\d{1,2})\s*a[ñn]os/i) || clean.match(/(\d{1,2})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)/i);
+  const ageMatch = clean.match(/(?:🏢|⏳|⏱️|edificio|antigüedad|antiguedad|tiene|\||,|\.)\s*(\d{1,3})\s*a[ñn]os\b/i) || clean.match(/(\d{1,3})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)?\b/i);
   if (ageMatch) {
     antiguedadAnos = parseInt(ageMatch[1], 10);
   }
@@ -15123,8 +15159,8 @@ function splitMultiItemMessage(text2) {
       return validBlocks;
     }
   }
-  const headerSplitRegex = /(?=(?:^|\n)\s*(?:🚨\s*\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*🚨|\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*[:\n]|\*?Cliente\*?\s*:\s*[A-ZÁÉÍÓÚÑ]|\b(?:VENDO|SE VENDE|ARRIENDO|SE ARRIENDA|BUSCO|SE BUSCA)\s+(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|PENTHOUSE|DÚPLEX)\b|(?:^|\n)\s*(?:[1-9][\.\)\️⃣]|\([1-9]\))\s*(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|VENTA|ARRIENDO|BUSCO|SE VENDE)))/gi;
-  const rawBlocks = cleanAndMergeSubstantiveBlocks(text2.split(headerSplitRegex).map((b) => b.trim()).filter((b) => b.length >= 40));
+  const headerSplitRegex = /(?=(?:^|\n)\s*(?:🚨\s*\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*🚨|\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*[:\n]|\*?Cliente\*?\s*:\s*[A-ZÁÉÍÓÚÑ]|\*?(?:Cliente|Clienta|Comprador|Compradora|Varios clientes|Tengo cliente)\s+(?:compra|compran|busca|buscan|requiere|necesita|solicita)\b|\b(?:VENDO|SE VENDE|ARRIENDO|SE ARRIENDA|BUSCO|SE BUSCA)\s+(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|PENTHOUSE|DÚPLEX)\b|(?:^|\n)\s*(?:[1-9][\.\)\️⃣]|\([1-9]\))\s*(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|VENTA|ARRIENDO|BUSCO|SE VENDE)))/gi;
+  const rawBlocks = cleanAndMergeSubstantiveBlocks(text2.split(headerSplitRegex).map((b) => b.trim()).filter((b) => b.length >= 35));
   if (rawBlocks.length >= 2) {
     return rawBlocks;
   }
@@ -15137,7 +15173,7 @@ function splitMultiItemMessage(text2) {
       if (!cleanP) continue;
       const textWithoutUrls = cleanP.replace(/https?:\/\/[^\s]+/gi, "").replace(/[\r\n\t]+/g, " ").trim();
       const isContactOrLinkOnly = !textWithoutUrls || textWithoutUrls.length < 35 || /^(?:contacto|info|galer[ií]a|fotos?|m[aá]s\s+info|link|enlace|agendar|visitas?|escr[ií]beme|ll[aá]mame|whatsapp|asesor)\b/i.test(textWithoutUrls);
-      const isNewItem = !isContactOrLinkOnly && /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|BUSCO|SOLICITO|ATL|REQUERIMIENTO)\b/i.test(textWithoutUrls) && /\$|\b\d{3,}\b|\bm2\b|\bhab\b|\bbaños\b|\balcobas\b/i.test(textWithoutUrls);
+      const isNewItem = !isContactOrLinkOnly && /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|APTO|CASA|BUSCO|SOLICITO|ATL|REQUERIMIENTO|CLIENTE|CLIENTA|COMPRADOR|VARIOS CLIENTES)\b/i.test(textWithoutUrls) && /\$|\b\d{3,}\b|\bm2\b|\bhab\b|\bbaños\b|\balcobas\b|\bmm\b|\bmillon/i.test(textWithoutUrls);
       if (currentBlock && isNewItem) {
         blocks.push(currentBlock.trim());
         currentBlock = cleanP;
@@ -15151,6 +15187,15 @@ ${cleanP}` : cleanP;
     const validParagraphBlocks = cleanAndMergeSubstantiveBlocks(blocks);
     if (validParagraphBlocks.length >= 2) {
       return validParagraphBlocks;
+    }
+  }
+  const clientLines = text2.split(/(?:\r?\n)+/).map((l) => l.trim()).filter(Boolean);
+  if (clientLines.length >= 2) {
+    const multiClientItems = clientLines.filter(
+      (l) => /^(?:\*?(?:cliente|clienta|comprador|compradora|varios\s+clientes|tengo\s+cliente)\s+(?:compra|compran|busca|buscan|requiere|necesita|solicita)|(?:busco|buscan|se\s+busca)\s+(?:apto|apartamento|casa|oficina))\b/i.test(l) && l.length >= 35
+    );
+    if (multiClientItems.length >= 2 && multiClientItems.length >= clientLines.length * 0.6) {
+      return multiClientItems;
     }
   }
   return [text2];
@@ -17497,7 +17542,21 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
       const m = rawL.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i) || rawL.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
       return m ? parseInt(m[1], 10) : null;
     })(),
-    estratoDeseado: data.estratoDeseado || (data.stratum !== void 0 && data.stratum !== null ? [Math.round(Number(data.stratum))] : null),
+    estratoDeseado: (() => {
+      const rawT = (data.rawText || "").toLowerCase();
+      const hasExplicitStratum = /(?:estrato|estr\.?|e\s*[1-6]\b)\s*:?\s*([1-6]|uno|dos|tres|cuatro|cinco|seis)\b/i.test(rawT) || /\b(?:estrato|estr\.?)\s*(?:alto|medio|bajo)\b/i.test(rawT);
+      if (!hasExplicitStratum) {
+        return null;
+      }
+      if (data.estratoDeseado && Array.isArray(data.estratoDeseado) && data.estratoDeseado.length > 0) {
+        return data.estratoDeseado.map((e) => Math.round(Number(e))).filter((e) => !isNaN(e) && e >= 1 && e <= 6);
+      }
+      if (data.stratum !== void 0 && data.stratum !== null && !isNaN(Number(data.stratum))) {
+        const s = Math.round(Number(data.stratum));
+        if (s >= 1 && s <= 6) return [s];
+      }
+      return null;
+    })(),
     userId: user ? user.id : null,
     caracteristicasDeseadas: characteristicsObj,
     origenTipo: data.origenTipo || null,
@@ -18632,9 +18691,7 @@ Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales
     "area": number,
     "bedrooms": number,
     "bathrooms": number,
-    "garages": number,
-    "stratum": number,
-    "adminFee": number,
+    "stratum": "number | null (IMPORTANTE: Para REQUERIMIENTOS/DEMANDAS solo asignar n\xFAmero si el texto EXIGE expresamente un estrato, e.g. 'estrato 6'. Si no lo menciona, devuelve null. NUNCA adivines ni infieras el estrato de la zona.)",
     "isCollaborativePool": boolean (DEFAULT: true),
     "interiorExterior": "interior | exterior | NA",
     "cuartoBanoServicio": "Si | No | NA",

@@ -7,6 +7,57 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.103 — 26 Septiembre 2026
+
+### Solicitud de Eduardo
+Separación de Demandas Múltiples de Asesores, Blindaje contra Alucinación de Estrato y Filtro Duro de Estrato Exigido:
+*"Ya vi el error, y no es que la función de copiado y pegado estuviese fallando, es que esta señora publicó varios requerimientos, aunque lo hizo por separado, creo que JanIA se confundió y aunque en la demanda no vemos que diga estrato 6 ella si insertó el valor 6 en la casilla estrato para la demanda, aunque la cotejó mal ya que estrato es un dato en duro si el cliente lo exoge, por lo tanto hay una inconsistencia, ya que tu bien sabes que la regla dice que si hay por un solo 'No coincide', No hay Match.*
+
+*DEMANDA*
+*Cliente compra apto de 3 alcobas exterior santas 140m2 $1800MM moderno*
+*Cliente compra apto de 3h entre 850 y 1000MM en las santas exterior.*
+*Clienta compra apto de una alcoba hasta 600MM moderno espectacular iluminado en las santas*
+
+*OFERTA*
+*VENTA de Apartamento Clasico en SANTA BARBARA (Central) Exterior. Área 161,51. 3 Alcobas. Estudio, Alc Sv + baño Sala-Comedor independiente Cocina Integr remodelada. 2 Baños con ducha. Baño Social. Estrato 5. Piso 2,46 años. 2 Parqueos en linea. Depósito. V/Administ/$1.260.000 PRECIO DE VENTA/ $950.000.000 Ascensor. Porteria 24 hr. Piso de Habit, SALA Y COMEDOR en Madera. Closet de Linos Excelentes Acabados, Muy Iluminado, Gas Natural. Alfredo Rubio. 3102241073 lo"*
+
+### Diagnóstico Técnico Profundo y Conclusiones de Arquitectura
+1. **Agrupación Errónea de Mensajes Consecutivos en el Buffer de WhatsApp (`whatsapp-match.ts`)**:
+   - La asesora Luz Nelcy envió 5 requerimientos en mensajes separados en el mismo minuto (10:23) en el grupo *Requerimientos Inmuebles Bogotá y Sabana*.
+   - El buffer `processGroupBuffer` evaluaba `distinctListings` con un regex que requería palabras fijas de ofertas y omitía términos comunes de demanda colombiana como `compra`, `compran`, `cliente`, `clienta`, `MM`, `millón`.
+   - Al no clasificar los mensajes 3 y 4 como listados distintos, el buffer los unió con `\n\n` en una sola cadena compuesta, amalgamando presupuestos dispares ($1800MM, $850-$1000MM y $600MM) y especificaciones incompatibles (1 vs 3 alcobas, moderno vs clásico) en un requerimiento artificial llamado *"Búsquedas Múltiples de Compra de Aptos Exteriores en Las Santas"*.
+2. **Alucinación de Estrato en Demandas (`janIA.ts`, prompts y schemas)**:
+   - En el texto de los requerimientos de Luz Nelcy NO se mencionaba estrato alguno.
+   - Sin embargo, como el schema de Gemini especificaba `"stratum": number` (obligatorio) y la ubicación era "Las Santas" / "Santa Bárbara", el LLM infirió arbitrariamente `stratum: 6`.
+   - En `janIA.ts` (`insertRequirement`), la línea `estratoDeseado: data.estratoDeseado || (data.stratum ? [data.stratum] : null)` aceptó esa alucinación sin verificar si el texto original exigía o mencionaba estrato, guardando en la BD `estratoDeseado: [6]`.
+3. **Evasión del Filtro Duro de Estrato en Matching (`matching.ts`)**:
+   - En `matching.ts`, `requirement.estratoDeseado` llegaba como array `[6]`. La instrucción `Number(requirement.estratoDeseado)` resultaba en inconsistencias de tipo ante strings JSON `"[6]"` o arrays múltiples `[5, 6]`, evadiendo la condición `reqEstrato >= 1 && pEstrato >= 1 && reqEstrato !== pEstrato`.
+   - Además, en la tabla de cotejo frontend (`AdminMatches.tsx`), la fila de Estrato permitía una tolerancia de `±1 estrato` con estado `warn` ("Aproximado").
+   - Conforme a la regla doctrinal dictaminada por Eduardo: **El estrato es un dato en duro si el cliente lo exige; un solo "No coincide" anula el match (0% Match)**. Si el requerimiento exige estrato 6 y la oferta es estrato 5, el match DEBE ser 0% absoluto (Bloqueo Inmediato). Si la demanda no exige estrato, debe ser flexible y no restrictivo.
+4. **Omisión de Antigüedad en Ofertas (`janIA.ts`)**:
+   - En la oferta de Alfredo Rubio Celis figuraba: `Piso 2,46 años.`
+   - El regex de antigüedad en `janIA.ts` requería palabras como "antigüedad" o "de construido", omitiendo números directos tras coma o punto, dejando la antigüedad como `N/E` y pasando por alto la condición de inmueble clásico/antiguo frente a requerimientos que exigen acabados modernos.
+
+### Acciones Ejecutadas en Código
+1. **Detección y Separación de Mensajes Consecutivos en Buffer de WhatsApp (`server/_core/whatsapp-match.ts`)**:
+   - Ampliado `distinctListings` en `processGroupBuffer`: incluye `compra`, `compran`, `compro`, `cliente`, `clienta`, `mm`, `millon`, `millones` y regex para requerimientos de corredores (`/^(?:cliente|clienta|comprador|varios\s+clientes)\s+(?:compra|compran|busca|requiere)/i`).
+   - Al detectarse 2 o más publicaciones en el buffer, se procesa cada una de forma estrictamente individual, generando requerimientos independientes con su propio cliente, presupuesto y especificaciones.
+2. **División Inteligente de Requerimientos Compuestos (`server/_core/janIA.ts`)**:
+   - Enriquecido `splitMultiItemMessage` con encabezados de corretaje colombiano (`(?:Cliente|Clienta|Comprador|Varios clientes)\s+(?:compra|compran|busca|requiere|necesita)`) y división por líneas cuando cada línea describe un requerimiento completo.
+3. **Prohibición Absoluta de Alucinación de Estrato en Demandas (`server/_core/janIA.ts`, `server/_core/prompts/base.md`)**:
+   - En `insertRequirement`: `estratoDeseado` solo se asigna si el texto original (`rawText`) contiene una mención explícita a estrato (`/(?:estrato|estr\.?|e\s*[1-6]\b)\s*:?\s*([1-6]|uno|dos|tres|cuatro|cinco|seis)\b/i`). Si no lo menciona, queda forzosamente en `null` (demanda flexible).
+   - En schemas y prompt base: especificado `number | null` con prohibición expresa de adivinar o inferir estratos en requerimientos.
+4. **Filtro Duro de Estrato Exigido y Eliminación de Tolerancia Indebida (`server/_core/matching.ts`, `client/src/components/admin/AdminMatches.tsx`)**:
+   - En `matching.ts`: implementado parseo exhaustivo de `reqEstratoList` (arrays, JSON strings o números).
+   - En el **Filtro Duro 5: Estrato Socioeconómico**: si la demanda exige estrato (`reqEstratoList.length > 0`) y la propiedad tiene estrato (`pEstrato >= 1`) y no coincide, **bloqueo inmediato con 0% MATCH**: `⛔ Estrato Incompatible (Dato en Duro Exigido): Requerimiento exige estrato ${reqEstratoList.join(' o ')}, pero la oferta es estrato ${pEstrato}. MATCH IMPOSIBLE (0%).`
+   - En `AdminMatches.tsx`: eliminada la condición de `±1 estrato` con `warn`. Si la demanda exige estrato y no coincide, se marca en rojo como `missing` (No coincide ❌). Si la demanda no exige estrato, se despliega `Cualquier estrato / Flexible` con estado favorable (`plus`).
+5. **Detección Robusta de Antigüedad en Ofertas (`server/_core/janIA.ts`)**:
+   - Mejorado el regex de antigüedad para capturar `46 años`, `, 46 años`, etc., extrayendo `antiguedadAnos: 46` y reconociendo el estado clásico de la propiedad.
+6. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+   - Añadida la **Sección 22** con 4 pruebas unitarias que validan la separación limpia de clientes en `splitMultiItemMessage`, el bloqueo del 100% (0% match) por incompatibilidad de estrato exigido, el comportamiento flexible sin estrato exigido y la extracción de antigüedad `Piso 2, 46 años` (**108/108 tests Vitest pasando** ✅).
+
+---
+
 ## 📋 SESIÓN v31.102 — 26 Septiembre 2026
 
 ### Solicitud de Eduardo

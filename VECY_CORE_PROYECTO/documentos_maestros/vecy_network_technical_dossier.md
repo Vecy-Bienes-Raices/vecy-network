@@ -322,6 +322,34 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.103 — Septiembre 2026
+
+#### 📌 SEPARACIÓN DE REQUERIMIENTOS MÚLTIPLES DE ASESORES, BLINDAJE CONTRA ALUCINACIÓN DE ESTRATO Y FILTRO DURO DE ESTRATO EXIGIDO
+
+**Problemas identificados:**
+1. **Agrupación Errónea de Mensajes de Asesores en Buffer de WhatsApp**: Cuando un asesor publica varios requerimientos consecutivos en el mismo minuto (e.g. Luz Nelcy con 5 clientes distintos en *Requerimientos Inmuebles Bogotá y Sabana*), el buffer agrupaba los mensajes al no incluir términos de compra/demanda en su filtro heurístico, uniendo presupuestos dispares ($1800MM, $850-$1000MM y $600MM) en una sola demanda monstruo.
+2. **Alucinación de Estrato en Demandas**: Cuando una demanda no especifica estrato, Gemini y JanIA le asignaban `estrato 6` por asociación geográfica con barrios residenciales del norte ("Las Santas", "Santa Bárbara"), insertando restricciones no deseadas por el comprador.
+3. **Evasión del Filtro Duro de Estrato en Matching**: En `matching.ts`, `requirement.estratoDeseado` se procesaba con `Number()` sobre arrays o cadenas JSON, generando `NaN` y evadiendo el Filtro Duro 5. Adicionalmente, el frontend permitía una tolerancia de `±1 estrato` ("Aproximado") en vez de anular el match cuando el cliente exige un estrato determinado. Conforme a la regla doctrinal de Eduardo: **El estrato es un dato en duro si el cliente lo exige; un solo 'No coincide' anula el match (0% Match)**.
+4. **Omisión de Antigüedad en Ofertas**: La expresión `Piso 2, 46 años.` no era capturada por el regex de antigüedad, omitiendo el perfil de inmueble clásico frente a demandas de acabados modernos.
+
+**Solución aplicada:**
+- **Separación de Multi-Requerimientos y Buffer Inteligente (`server/_core/whatsapp-match.ts`, `server/_core/janIA.ts`)**:
+  - `distinctListings` en `processGroupBuffer`: ampliado con `compra`, `compran`, `compro`, `cliente`, `clienta`, `mm`, `millon`, `millones` y regex para demandas de clientes, procesando cada mensaje individualmente cuando un asesor publica en ráfaga.
+  - `splitMultiItemMessage`: añadidos patrones de corretaje (`(?:Cliente|Clienta|Comprador|Varios clientes)\s+(?:compra|compran|busca|requiere)`) para dividir textos compuestos pegados en bloque.
+- **Prohibición Absoluta de Alucinación de Estrato en Demandas (`server/_core/janIA.ts`, schemas y `server/_core/prompts/base.md`)**:
+  - En `insertRequirement`: `estratoDeseado` solo se asigna si el texto original (`rawText`) contiene una mención explícita a estrato (`estrato`, `estr.`, `e[1-6]`). Si no lo menciona, queda estrictamente en `null` (demanda flexible).
+  - Prompts y schema actualizados con `number | null` y advertencia estricta de no inferir estrato por ubicación geográfica.
+- **Filtro Duro Infalible de Estrato y Tabla de Cotejo (`server/_core/matching.ts`, `client/src/components/admin/AdminMatches.tsx`)**:
+  - Parseo robusto de `reqEstratoList` (arrays, JSON strings o números).
+  - Si el requerimiento exige estrato(s) y la oferta tiene estrato y no coincide: **0% MATCH (Bloqueo Absoluto)** con razón `⛔ Estrato Incompatible (Dato en Duro Exigido): Requerimiento exige estrato ${reqEstratoList.join(' o ')}, pero la oferta es estrato ${pEstrato}. MATCH IMPOSIBLE (0%).`
+  - En `AdminMatches.tsx`: eliminada la tolerancia de `warn` (±1 estrato); si el cliente exige estrato y no coincide se marca como `missing` (🔴 No coincide ❌). Si la demanda no exige estrato, se despliega como `Cualquier estrato / Flexible`.
+- **Extracción de Antigüedad en Ofertas (`server/_core/janIA.ts`)**:
+  - Regex mejorado para capturar `46 años`, `, 46 años`, etc., extrayendo `antiguedadAnos: 46` y catalogando como inmueble clásico.
+- **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+  - Añadida Sección 22 con 4 pruebas unitarias exhaustivas (**108/108 tests Vitest pasando** ✅).
+
+---
+
 ### 🔖 v31.102 — Septiembre 2026
 
 #### 📌 SUPRESIÓN DEFINITIVA DE BARRAS DOBLES DE SCROLL Y BOTÓN DUAL DE BÚSQUEDA FIEL EN WHATSAPP

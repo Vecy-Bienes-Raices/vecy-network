@@ -985,8 +985,8 @@ export function extractFallbackDataFromText(text: string): any {
   }
 
   let antiguedadAnos: number | null = null;
-  const ageMatch = clean.match(/(?:🏢|⏳|⏱️|edificio|antigüedad|antiguedad|tiene|\|)\s*(\d{1,2})\s*a[ñn]os/i)
-                || clean.match(/(\d{1,2})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)/i);
+  const ageMatch = clean.match(/(?:🏢|⏳|⏱️|edificio|antigüedad|antiguedad|tiene|\||,|\.)\s*(\d{1,3})\s*a[ñn]os\b/i)
+                || clean.match(/(\d{1,3})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)?\b/i);
   if (ageMatch) {
     antiguedadAnos = parseInt(ageMatch[1], 10);
   }
@@ -2042,9 +2042,7 @@ Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales
     "area": number,
     "bedrooms": number,
     "bathrooms": number,
-    "garages": number,
-    "stratum": number,
-    "adminFee": number,
+    "stratum": "number | null (IMPORTANTE: Para REQUERIMIENTOS/DEMANDAS solo asignar número si el texto EXIGE expresamente un estrato, e.g. 'estrato 6'. Si no lo menciona, devuelve null. NUNCA adivines ni infieras el estrato de la zona.)",
     "isCollaborativePool": boolean (DEFAULT: true),
     "interiorExterior": "interior | exterior | NA",
     "cuartoBanoServicio": "Si | No | NA",
@@ -2532,8 +2530,8 @@ export function splitMultiItemMessage(text: string): string[] {
   }
 
   // 2. Encabezados formales repetidos (Requerimientos, Inmuebles, Clientes, Búsquedas, Ofertas)
-  const headerSplitRegex = /(?=(?:^|\n)\s*(?:🚨\s*\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*🚨|\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*[:\n]|\*?Cliente\*?\s*:\s*[A-ZÁÉÍÓÚÑ]|\b(?:VENDO|SE VENDE|ARRIENDO|SE ARRIENDA|BUSCO|SE BUSCA)\s+(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|PENTHOUSE|DÚPLEX)\b|(?:^|\n)\s*(?:[1-9][\.\)\️⃣]|\([1-9]\))\s*(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|VENTA|ARRIENDO|BUSCO|SE VENDE)))/gi;
-  const rawBlocks = cleanAndMergeSubstantiveBlocks(text.split(headerSplitRegex).map(b => b.trim()).filter(b => b.length >= 40));
+  const headerSplitRegex = /(?=(?:^|\n)\s*(?:🚨\s*\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*🚨|\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*[:\n]|\*?Cliente\*?\s*:\s*[A-ZÁÉÍÓÚÑ]|\*?(?:Cliente|Clienta|Comprador|Compradora|Varios clientes|Tengo cliente)\s+(?:compra|compran|busca|buscan|requiere|necesita|solicita)\b|\b(?:VENDO|SE VENDE|ARRIENDO|SE ARRIENDA|BUSCO|SE BUSCA)\s+(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|PENTHOUSE|DÚPLEX)\b|(?:^|\n)\s*(?:[1-9][\.\)\️⃣]|\([1-9]\))\s*(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|VENTA|ARRIENDO|BUSCO|SE VENDE)))/gi;
+  const rawBlocks = cleanAndMergeSubstantiveBlocks(text.split(headerSplitRegex).map(b => b.trim()).filter(b => b.length >= 35));
   if (rawBlocks.length >= 2) {
     return rawBlocks;
   }
@@ -2555,8 +2553,8 @@ export function splitMultiItemMessage(text: string): string[] {
         /^(?:contacto|info|galer[ií]a|fotos?|m[aá]s\s+info|link|enlace|agendar|visitas?|escr[ií]beme|ll[aá]mame|whatsapp|asesor)\b/i.test(textWithoutUrls);
 
       const isNewItem = !isContactOrLinkOnly && 
-        /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|CASA|BUSCO|SOLICITO|ATL|REQUERIMIENTO)\b/i.test(textWithoutUrls) && 
-        (/\$|\b\d{3,}\b|\bm2\b|\bhab\b|\bbaños\b|\balcobas\b/i.test(textWithoutUrls));
+        /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|APTO|CASA|BUSCO|SOLICITO|ATL|REQUERIMIENTO|CLIENTE|CLIENTA|COMPRADOR|VARIOS CLIENTES)\b/i.test(textWithoutUrls) && 
+        (/\$|\b\d{3,}\b|\bm2\b|\bhab\b|\bbaños\b|\balcobas\b|\bmm\b|\bmillon/i.test(textWithoutUrls));
 
       if (currentBlock && isNewItem) {
         blocks.push(currentBlock.trim());
@@ -2569,6 +2567,18 @@ export function splitMultiItemMessage(text: string): string[] {
     const validParagraphBlocks = cleanAndMergeSubstantiveBlocks(blocks);
     if (validParagraphBlocks.length >= 2) {
       return validParagraphBlocks;
+    }
+  }
+
+  // 4. Detección por saltos de línea simples cuando cada línea representa un requerimiento de cliente independiente
+  const clientLines = text.split(/(?:\r?\n)+/).map(l => l.trim()).filter(Boolean);
+  if (clientLines.length >= 2) {
+    const multiClientItems = clientLines.filter(l => 
+      /^(?:\*?(?:cliente|clienta|comprador|compradora|varios\s+clientes|tengo\s+cliente)\s+(?:compra|compran|busca|buscan|requiere|necesita|solicita)|(?:busco|buscan|se\s+busca)\s+(?:apto|apartamento|casa|oficina))\b/i.test(l) &&
+      l.length >= 35
+    );
+    if (multiClientItems.length >= 2 && multiClientItems.length >= clientLines.length * 0.6) {
+      return multiClientItems;
     }
   }
 
@@ -5514,7 +5524,27 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
              || rawL.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
       return m ? parseInt(m[1], 10) : null;
     })(),
-    estratoDeseado: data.estratoDeseado || (data.stratum !== undefined && data.stratum !== null ? [Math.round(Number(data.stratum))] : null),
+    estratoDeseado: (() => {
+      // 🛡️ REGLA DOCTRINAL v31.103: Prohibición absoluta de alucinar o inferir estrato en requerimientos/demandas.
+      // Solo se asigna estrato si el texto original lo exige explícitamente ("estrato 6", "estrato 5 o 6", etc.).
+      // Si el cliente no mencionó estrato en el texto, estratoDeseado DEBE ser null (flexible).
+      const rawT = (data.rawText || "").toLowerCase();
+      const hasExplicitStratum = /(?:estrato|estr\.?|e\s*[1-6]\b)\s*:?\s*([1-6]|uno|dos|tres|cuatro|cinco|seis)\b/i.test(rawT) ||
+        /\b(?:estrato|estr\.?)\s*(?:alto|medio|bajo)\b/i.test(rawT);
+
+      if (!hasExplicitStratum) {
+        return null;
+      }
+
+      if (data.estratoDeseado && Array.isArray(data.estratoDeseado) && data.estratoDeseado.length > 0) {
+        return data.estratoDeseado.map((e: any) => Math.round(Number(e))).filter((e: number) => !isNaN(e) && e >= 1 && e <= 6);
+      }
+      if (data.stratum !== undefined && data.stratum !== null && !isNaN(Number(data.stratum))) {
+        const s = Math.round(Number(data.stratum));
+        if (s >= 1 && s <= 6) return [s];
+      }
+      return null;
+    })(),
     userId: user ? user.id : null,
     caracteristicasDeseadas: characteristicsObj,
     origenTipo: data.origenTipo || null,

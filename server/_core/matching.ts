@@ -1961,9 +1961,42 @@ export function explicarMatch(
   const pAdminFee = property.adminFee != null ? parseFloat(String(property.adminFee)) : -1;
   const reqAdminMax = requirement.adminFeeMax != null ? parseFloat(String(requirement.adminFeeMax)) : -1;
 
-  const pEstrato = property.stratum != null ? Number(property.stratum) :
-    property.estrato != null ? Number(property.estrato) : -1;
-  const reqEstrato = requirement.estratoDeseado != null ? Number(requirement.estratoDeseado) : -1;
+  const pEstrato = property.stratum != null && !isNaN(Number(property.stratum)) && Number(property.stratum) > 0 ? Number(property.stratum) :
+    property.estrato != null && !isNaN(Number(property.estrato)) && Number(property.estrato) > 0 ? Number(property.estrato) : -1;
+
+  let reqEstratoList: number[] = [];
+  if (Array.isArray(requirement.estratoDeseado)) {
+    reqEstratoList = requirement.estratoDeseado.map((e: any) => Number(e)).filter((e: number) => !isNaN(e) && e >= 1 && e <= 6);
+  } else if (typeof requirement.estratoDeseado === "string") {
+    try {
+      const parsed = JSON.parse(requirement.estratoDeseado);
+      if (Array.isArray(parsed)) {
+        reqEstratoList = parsed.map((e: any) => Number(e)).filter((e: number) => !isNaN(e) && e >= 1 && e <= 6);
+      } else if (!isNaN(Number(parsed)) && Number(parsed) >= 1 && Number(parsed) <= 6) {
+        reqEstratoList = [Number(parsed)];
+      }
+    } catch {
+      const m = requirement.estratoDeseado.match(/\d+/g);
+      if (m) {
+        reqEstratoList = m.map((e: string) => Number(e)).filter((e: number) => e >= 1 && e <= 6);
+      }
+    }
+  } else if (typeof requirement.estratoDeseado === "number" && requirement.estratoDeseado >= 1 && requirement.estratoDeseado <= 6) {
+    reqEstratoList = [requirement.estratoDeseado];
+  }
+
+  // Fallback a texto si estratoDeseado está vacío pero el texto del requerimiento exigió estrato
+  if (reqEstratoList.length === 0 && requirement.rawText) {
+    const rawReqStratum = requirement.rawText.match(/(?:estrato|estr\.?|e\s*[1-6]\b)\s*:?\s*([1-6]|uno|dos|tres|cuatro|cinco|seis)\b/i);
+    if (rawReqStratum) {
+      const sMap: Record<string, number> = { "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6 };
+      const parsedVal = sMap[rawReqStratum[1].toLowerCase()] || Number(rawReqStratum[1]);
+      if (parsedVal >= 1 && parsedVal <= 6) {
+        reqEstratoList.push(parsedVal);
+      }
+    }
+  }
+  const reqEstrato = reqEstratoList.length > 0 ? reqEstratoList[0] : -1;
 
   const reqType = (requirement.tipoInmuebleDeseado || requirement.propertyType || "").toLowerCase().trim();
   const propType = (property.propertyType || "").toLowerCase().trim();
@@ -2400,10 +2433,13 @@ export function explicarMatch(
   }
   positives.push(`Ubicación compatible en zona: ${rawPropBarrio || ""}`);
 
-  // ── FILTRO DURO 5: Estrato ──
-  if (reqEstrato >= 1 && pEstrato >= 1 && reqEstrato !== pEstrato) {
-    blockers.push(`Estrato incompatible: deseado ${reqEstrato}, ofrecido ${pEstrato}`);
+  // ── FILTRO DURO 5: Estrato Socioeconómico (Regla Doctrinal: Dato en duro si el cliente lo exige) ──
+  if (reqEstratoList.length > 0 && pEstrato >= 1 && !reqEstratoList.includes(pEstrato)) {
+    blockers.push(`⛔ Estrato Incompatible (Dato en Duro Exigido): Requerimiento exige estrato ${reqEstratoList.join(' o ')}, pero la oferta es estrato ${pEstrato}. MATCH IMPOSIBLE (0%).`);
     return buildExplanationResult(0, blockers, positives, negatives);
+  }
+  if (reqEstratoList.length > 0 && pEstrato >= 1 && reqEstratoList.includes(pEstrato)) {
+    positives.push(`✅ Estrato compatible (${pEstrato})`);
   }
 
   // ── FILTRO DURO 6: Área (REGLA DOCTRINAL v27.4: Mínimo exigido con Tolerancia 0% e Inmueble dentro de Rango) ──
@@ -3203,9 +3239,11 @@ export function explicarMatch(
   }
 
   // 9. Estrato (3 pts — redistribuido para dar espacio a antigüedad)
-  if (reqEstrato >= 1 && pEstrato >= 1) {
-    if (reqEstrato === pEstrato) earnedPoints += 3;
+  if (reqEstratoList.length > 0 && pEstrato >= 1) {
+    if (reqEstratoList.includes(pEstrato)) earnedPoints += 3;
     // Si no coincide ya lo bloqueó el filtro duro anterior
+  } else if (pEstrato >= 1) {
+    earnedPoints += 3; // Demanda flexible: crédito por transparencia de estrato en la oferta
   } else {
     earnedPoints += 2; // crédito neutral
   }
@@ -3296,7 +3334,7 @@ export function explicarMatch(
   if (pGarages > 0 && hasReqGarages) filledDownstreamSpecs++;
   // 7. Estrato
   if (pEstrato > 0) filledDownstreamSpecs += 0.5;
-  if (reqEstrato > 0 && pEstrato === reqEstrato) filledDownstreamSpecs += 0.5;
+  if (reqEstratoList.length > 0 ? reqEstratoList.includes(pEstrato) : pEstrato > 0) filledDownstreamSpecs += 0.5;
   // 8. Antigüedad
   if (propAge >= 0) filledDownstreamSpecs++;
 

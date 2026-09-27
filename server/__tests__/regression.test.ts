@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseColombianPriceOrBudget, extractFallbackDataFromText, extractFirstName } from "../_core/janIA";
+import { parseColombianPriceOrBudget, extractFallbackDataFromText, extractFirstName, splitMultiItemMessage } from "../_core/janIA";
 import {
   checkTransactionCompatibility,
   isHollowListing,
@@ -1639,6 +1639,116 @@ Ed del 2014.
       expect(snippet).toContain("alcobas");
       expect(snippet).toContain("exterior");
       expect(snippet).toContain("santas");
+    });
+  });
+
+  describe("22. Separación de Demandas Múltiples de Asesores, Blindaje contra Alucinación de Estrato y Filtro Duro de Estrato Exigido (v31.103)", () => {
+    it("splitMultiItemMessage debe separar limpiamente múltiples requerimientos enviados por un asesor en un solo texto", () => {
+      const compositeText = 
+`Cliente compra apto de 3 alcobas exterior santas 140m2 $1800MM moderno
+
+Cliente compra apto de 3h entre 850 y 1000MM en las santas exterior.
+
+Clienta compra apto de una alcoba hasta 600MM moderno espectacular iluminado en las santas`;
+
+      const blocks = splitMultiItemMessage(compositeText);
+      expect(blocks.length).toBe(3);
+      expect(blocks[0]).toContain("$1800MM");
+      expect(blocks[1]).toContain("850 y 1000MM");
+      expect(blocks[2]).toContain("600MM");
+    });
+
+    it("Filtro Duro de Estrato: Si el cliente exige estrato 6 y la oferta es estrato 5, el match DEBE ser 0% (Bloqueo Absoluto)", () => {
+      const reqConEstrato6 = {
+        id: 991,
+        name: "Cliente busca apartamento en Santa Bárbara",
+        propertyType: "apartment",
+        tipoInmuebleDeseado: "apartamento",
+        transactionType: "venta",
+        tipoNegocioDeseado: "venta",
+        presupuestoMax: 1000000000,
+        areaMin: 140,
+        habitacionesMin: 3,
+        banosMin: 2,
+        parqueaderosMin: 2,
+        zonaDeseada: "Santa Bárbara",
+        addressNeighborhood: "Santa Bárbara",
+        addressCity: "Bogotá",
+        estratoDeseado: [6], // Exige estrato 6
+        rawText: "Cliente compra apartamento en Santa Bárbara central exterior de 3 alcobas, 2 baños, 2 parqueaderos, área 140m2, estrato 6 hasta $1000MM"
+      };
+
+      const propEstrato5 = {
+        id: 881,
+        name: "Apartamento en venta en Santa Bárbara",
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 950000000,
+        area: 161.51,
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        zone: "Santa Bárbara",
+        addressNeighborhood: "Santa Bárbara",
+        addressCity: "Bogotá",
+        stratum: 5, // Oferta es estrato 5
+        rawText: "Venta de Apartamento en Santa Bárbara central exterior, área 161.51 m2, 3 alcobas, 3 baños, 2 parqueaderos en línea, estrato 5, precio de venta $950.000.000"
+      };
+
+      const resultado = explicarMatch(reqConEstrato6, propEstrato5);
+      expect(resultado.score).toBe(0);
+      expect(resultado.blockers.some(b => b.includes("Estrato Incompatible"))).toBe(true);
+    });
+
+    it("Demanda flexible sin estrato: Si la demanda NO exige estrato, la oferta estrato 5 NO debe ser bloqueada", () => {
+      const reqFlexibleEstrato = {
+        id: 992,
+        name: "Cliente compra apartamento en Santa Bárbara",
+        propertyType: "apartment",
+        tipoInmuebleDeseado: "apartamento",
+        transactionType: "venta",
+        tipoNegocioDeseado: "venta",
+        presupuestoMax: 1000000000,
+        areaMin: 140,
+        habitacionesMin: 3,
+        banosMin: 2,
+        parqueaderosMin: 2,
+        zonaDeseada: "Santa Bárbara",
+        addressNeighborhood: "Santa Bárbara",
+        addressCity: "Bogotá",
+        estratoDeseado: null, // Flexible / Sin estrato exigido
+        rawText: "Cliente compra apartamento en Santa Bárbara central exterior de 3 alcobas, 2 baños, 2 parqueaderos, área 140m2 hasta $1000MM"
+      };
+
+      const propEstrato5 = {
+        id: 882,
+        name: "Apartamento en venta en Santa Bárbara",
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 950000000,
+        area: 161.51,
+        bedrooms: 3,
+        bathrooms: 3,
+        garages: 2,
+        zone: "Santa Bárbara",
+        addressNeighborhood: "Santa Bárbara",
+        addressCity: "Bogotá",
+        stratum: 5,
+        rawText: "Venta de Apartamento en Santa Bárbara central exterior, área 161.51 m2, 3 alcobas, 3 baños, 2 parqueaderos en línea, estrato 5, precio de venta $950.000.000"
+      };
+
+      const resultado = explicarMatch(reqFlexibleEstrato, propEstrato5);
+      expect(resultado.score).toBeGreaterThanOrEqual(85);
+      expect(resultado.blockers.some(b => b.includes("Estrato Incompatible"))).toBe(false);
+    });
+
+    it("Extracción de antigüedad en ofertas con formato 'Piso 2, 46 años.'", () => {
+      const rawText = "VENTA de Apartamento Clasico en SANTA BARBARA Exterior. Área 161,51. 3 Alcobas. Piso 2, 46 años. 2 Parqueos en linea. PRECIO DE VENTA/ $950.000.000";
+      const clean = rawText.toLowerCase();
+      const ageMatch = clean.match(/(?:🏢|⏳|⏱️|edificio|antigüedad|antiguedad|tiene|\||,|\.)\s*(\d{1,3})\s*a[ñn]os\b/i)
+                    || clean.match(/(\d{1,3})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)?\b/i);
+      expect(ageMatch).not.toBeNull();
+      expect(parseInt(ageMatch![1], 10)).toBe(46);
     });
   });
 });

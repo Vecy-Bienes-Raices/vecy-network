@@ -1854,19 +1854,15 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
   const hasEstratoReq = estratoArr.length > 0 && estratoArr[0] > 0;
   let estS: MatchStatus = "neutral";
   if (hasEstratoReq && estratoP && Number(estratoP) > 0) {
-    if (estratoArr.length === 1 && estratoArr[0] === Number(estratoP)) {
+    if (estratoArr.includes(Number(estratoP))) {
       estS = "exact";
-    } else if (estratoArr.includes(Number(estratoP))) {
-      estS = "exact";
-    } else if (Math.abs(Number(estratoP) - estratoArr[0]) <= 1) {
-      estS = "warn"; // Diferencia de ±1 estrato: aproximado
     } else {
-      estS = "missing"; // 🔴 Estrato incompatible (diferencia > 1) → Guillotina (BUG 2 fix)
+      estS = "missing"; // 🔴 Estrato incompatible (Dato en duro exigido: si no coincide, No hay Match)
     }
   } else if (!hasEstratoReq && (estratoP && Number(estratoP) > 0)) {
-    estS = "neutral";
+    estS = "plus"; // Demanda flexible: se informa estrato de la oferta sin restricción
   }
-  const reqEstratoLabel = hasEstratoReq ? `Estrato ${estratoArr.join(", ")}` : "Cualquier estrato";
+  const reqEstratoLabel = hasEstratoReq ? `Exige Estrato ${estratoArr.join(", ")}` : "Cualquier estrato / Flexible";
 
   add("Estrato", reqEstratoLabel, (estratoP && Number(estratoP) > 0) ? `Estrato ${estratoP}` : "N/E", estS, 7, <Shield className="w-3.5 h-3.5" />);
 
