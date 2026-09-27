@@ -322,6 +322,40 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v31.108 — Septiembre 2026
+
+#### 📌 DOCTRINA DE REVIVIFICACIÓN DE INMUEBLES, PULSO DE REPUBLICACIÓN EN DEMANDAS, REDISEÑO DEL MODAL DE DESCARTE (SIN SCROLLBARS) Y SIMETRÍA FRONTEND
+
+**Problemas identificados:**
+1. **Invisibilización de Inmuebles Republicados desde la Papelera**: Inmuebles o demandas que vencieron y pasaron a retención/papelera no se reactivaban plenamente al ser republicados en WhatsApp por su autor u otro colega, manteniendo `available = false` o estado caduco.
+2. **Punto Ciego en Pulso de Demandas (`matching.ts`)**: El motor evaluaba exclusivamente `req.createdAt`, ignorando `req.fechaUltimaPublicacion` y `req.republicacionesCount`. Si un colega republicaba una demanda en WhatsApp, no se refrescaba el contador ni subía de nuevo con fecha fresca a La Mesa Principal.
+3. **Pestaña Vigencia Sobrecargada**: Nombres excesivamente largos (`⚡ Vigentes & Calientes (≤15d / 45d en ≥90%)`, etc.) saturaban el selector.
+4. **Badges Largos y Asimétricos**: Etiquetas kilométricas como `🔥 Republicado y Actualizado hace 6 días (100% Activo)` congestionaban la visualización, además de existir asimetría informativa (prioridad a la oferta sobre la demanda).
+5. **Modal de Descarte Recargado con Barras de Scroll Molestas**: La ventana de descarte de matches contenía descripciones redundantes y desbordaba la pantalla verticalmente, forzando un scrollbar molesto y poco ergonómico.
+6. **Falso Positivo en Negaciones de Demanda**: En `scoreRows`, frases como `"No sobre vía principal"` castigaban ofertas residenciales que no hablaban de vías principales por ausencia del término, colapsando el match injustamente.
+
+**Solución aplicada:**
+- **Revivificación Integral de Inmuebles y Demandas (`server/_core/janIA.ts`)**:
+  - Al recibir una republicación de un inmueble existente en WhatsApp, se fuerza `available: true`, `estadoComercial: "REPUBLICADO"`, `vigenciaIa: "VIGENTE"`, restableciendo su ciclo desde 0 días.
+  - Para demandas, se preserva `status: "active"`, se incrementa `republicacionesCount` y se refresca `fechaUltimaPublicacion`.
+- **Pulso de Republicación y Fecha Más Reciente en La Mesa (`matching.ts`, `AdminMatches.tsx`)**:
+  - `reqEffectiveDate` computa la fecha más reciente entre creación y republicación.
+  - La tarjeta de match en el frontend calcula `Math.max(propDate, reqDate, matchDate)` para exhibir siempre el timestamp más fresco de la interacción (`[COLOCÁNDOLE LA FECHA MÁS RECIENTE EN LA MESA]`).
+- **Pestaña Vigencia Simplificada (`AdminMatches.tsx`)**:
+  - Reducida a: `⚡ Vigentes`, `⏳ En Riesgo`, `🌐 Histórico`.
+- **Badges Concisos y Simétricos en Oferta y Demanda (`AdminMatches.tsx`)**:
+  - Frases cortas y de alto impacto: `🔥 Republicado hace Xd`, `⚡ Publicado hace Xd`, `⏳ En riesgo (hace Xd)`, implementadas con estricta simetría tanto en Oferta como en Demanda.
+- **Rediseño Minimalista del Modal de Descarte (Cero Scrollbars) (`AdminMatches.tsx`)**:
+  - Cuadrícula compacta de 2 columnas de altura controlada con opciones concisas y checks limpios.
+  - Botón "⚡ Descarte Rápido" en 1 click y caja de texto de retroalimentación de 1 sola línea sin desbordes.
+- **Blindaje de Negaciones con Límite de Palabra (`AdminMatches.tsx`)**:
+  - Regex con `\b` (`/\b(?:no|cero|sin|nunca|evitar)\b/i`) para evitar falsos positivos en términos como "teatrino".
+  - Una negación en la demanda solo penaliza si la contraparte afirma explícitamente tenerla; si no la tiene, se marca como compatible ("Libre de X / Cumple").
+- **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+  - Añadida Sección 27: 2 pruebas unitarias completas (**124/124 tests Vitest pasando** ✅).
+
+---
+
 ### 🔖 v31.107 — Septiembre 2026
 
 #### 📌 REGLA DOCTRINAL DE PISO FINANCIERO DEL 90 AL 95% PARA VENTA Y ARRIENDO

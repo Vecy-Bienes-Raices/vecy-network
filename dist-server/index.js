@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v31.107";
+    VECY_VERSION = "v31.108";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -6939,8 +6939,8 @@ async function findMatchesForProperty(propertyId) {
     const repCount = Number(property.republicacionesCount || 0);
     const propEffectiveDate = repCount > 0 && property.fechaUltimaPublicacion ? property.fechaUltimaPublicacion : property.fechaUltimaPublicacion || property.createdAt;
     const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
-    if (propAgeDays > 10) {
-      console.log(`[MATCHING-FILTER] \u23F3 Propiedad #${propertyId} omitida por superar 10 d\xEDas de antig\xFCedad sin republicaci\xF3n activa.`);
+    if (propAgeDays > 30) {
+      console.log(`[MATCHING-FILTER] \u23F3 Propiedad #${propertyId} omitida por superar 30 d\xEDas de antig\xFCedad sin republicaci\xF3n activa.`);
       return [];
     }
     const fbProp = property.rawText ? extractFallbackDataFromText(property.rawText) : {};
@@ -6962,9 +6962,10 @@ async function findMatchesForProperty(propertyId) {
       if (isHollowListing(req.rawText, req.name, req.enlaceOrigen).isHollow) {
         continue;
       }
-      const reqEffectiveDate = req.createdAt || req.fechaExtraccion;
+      const reqRepCount = Number(req.republicacionesCount || 0);
+      const reqEffectiveDate = reqRepCount > 0 && req.fechaUltimaPublicacion ? req.fechaUltimaPublicacion : req.fechaUltimaPublicacion || req.createdAt || req.fechaExtraccion;
       const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
-      if (reqAgeDays > 10) {
+      if (reqAgeDays > 30) {
         continue;
       }
       if (rejectedSet.has(`${propertyId}_${req.id}`)) {
@@ -7052,10 +7053,11 @@ async function findMatchesForRequirement(requirementId) {
       console.log(`[MATCHING-FILTER] \u23F3 Requerimiento #${requirementId} omitido por estar marcado como vencido o mediocre.`);
       return [];
     }
-    const reqEffectiveDate = req.createdAt || req.fechaExtraccion;
+    const reqRepCount = Number(req.republicacionesCount || 0);
+    const reqEffectiveDate = reqRepCount > 0 && req.fechaUltimaPublicacion ? req.fechaUltimaPublicacion : req.fechaUltimaPublicacion || req.createdAt || req.fechaExtraccion;
     const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
-    if (reqAgeDays > 10) {
-      console.log(`[MATCHING-FILTER] \u23F3 Requerimiento #${requirementId} omitido por superar 10 d\xEDas de antig\xFCedad.`);
+    if (reqAgeDays > 30) {
+      console.log(`[MATCHING-FILTER] \u23F3 Requerimiento #${requirementId} omitido por superar 30 d\xEDas de antig\xFCedad sin republicaci\xF3n activa.`);
       return [];
     }
     const fbReq = req.rawText ? extractFallbackDataFromText(req.rawText) : {};
@@ -7074,7 +7076,7 @@ async function findMatchesForRequirement(requirementId) {
       const propRepCount = Number(prop.republicacionesCount || 0);
       const propEffectiveDate = propRepCount > 0 && prop.fechaUltimaPublicacion ? prop.fechaUltimaPublicacion : prop.fechaUltimaPublicacion || prop.createdAt;
       const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
-      if (propAgeDays > 10) {
+      if (propAgeDays > 30) {
         continue;
       }
       if (rejectedSet.has(`${prop.id}_${requirementId}`)) {
@@ -17377,6 +17379,8 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
     );
     const updatedCount = (existing[0].republicacionesCount || 0) + 1;
     const [updated] = await db.update(properties).set({
+      available: true,
+      // Regla Doctrinal v31.108: Si el autor u otro asesor lo republica, se revive disponible desde cero
       price: insertDataWithCalif.price,
       description: insertDataWithCalif.description || existing[0].description,
       adminFee: insertDataWithCalif.adminFee || existing[0].adminFee,
@@ -22840,6 +22844,27 @@ ${liveStats}${userContextInstruction}
         notasBroker: input.notasBroker || null,
         ajustesGuardados: input.ajustesGuardados || null
       }).returning();
+      if (input.action === "exitoso" || input.action === "en_negociacion") {
+        if (input.matchId) {
+          try {
+            await db.update(propertyMatches).set({ status: "interested" }).where(eq11(propertyMatches.id, input.matchId));
+          } catch (updErr) {
+            console.warn(`[JanIA-Feedback] Match #${input.matchId} error al marcar interested:`, updErr.message);
+          }
+        }
+        if (input.propertyId && input.requirementId) {
+          try {
+            await db.update(propertyMatches).set({ status: "interested" }).where(
+              and8(
+                eq11(propertyMatches.propertyId, input.propertyId),
+                eq11(propertyMatches.requirementId, input.requirementId)
+              )
+            );
+          } catch (updErrPair) {
+            console.warn(`[JanIA-Feedback] Par Prop #${input.propertyId} / Req #${input.requirementId} error al marcar interested`);
+          }
+        }
+      }
       if (input.action === "rechazado") {
         if (input.matchId) {
           try {

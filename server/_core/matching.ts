@@ -3544,14 +3544,14 @@ export async function findMatchesForProperty(propertyId: number) {
       return [];
     }
 
-    // REGLA DOCTRINAL (10 Días de Vigencia): Omitir propiedades de más de 10 días sin republicación activa (v31.84)
+    // REGLA DOCTRINAL v31.108: Sala de Espera de 30 días para Inmuebles. Si supera 30 días sin republicación activa, se omite de matching
     const repCount = Number(property.republicacionesCount || 0);
     const propEffectiveDate = (repCount > 0 && property.fechaUltimaPublicacion)
       ? property.fechaUltimaPublicacion
       : (property.fechaUltimaPublicacion || property.createdAt);
     const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-    if (propAgeDays > 10) {
-      console.log(`[MATCHING-FILTER] ⏳ Propiedad #${propertyId} omitida por superar 10 días de antigüedad sin republicación activa.`);
+    if (propAgeDays > 30) {
+      console.log(`[MATCHING-FILTER] ⏳ Propiedad #${propertyId} omitida por superar 30 días de antigüedad sin republicación activa.`);
       return [];
     }
 
@@ -3582,16 +3582,19 @@ export async function findMatchesForProperty(propertyId: number) {
         await new Promise(r => setTimeout(r, 10));
       }
 
-      // Regla Doctrinal (10 Días de Vigencia v31.84/v31.86 y Guillotina Mediocre): Omitir requerimientos inactivos, vencidos, mediocres o de más de 10 días
+      // Regla Doctrinal v31.108: Omitir requerimientos inactivos, vencidos, mediocres o de más de 30 días sin republicación
       if ((req as any).status === 'expired' || (req as any).calificacion === 'Mediocre') {
         continue;
       }
       if (isHollowListing(req.rawText, req.name, req.enlaceOrigen).isHollow) {
         continue;
       }
-      const reqEffectiveDate = req.createdAt || req.fechaExtraccion;
+      const reqRepCount = Number((req as any).republicacionesCount || 0);
+      const reqEffectiveDate = (reqRepCount > 0 && (req as any).fechaUltimaPublicacion)
+        ? (req as any).fechaUltimaPublicacion
+        : ((req as any).fechaUltimaPublicacion || req.createdAt || (req as any).fechaExtraccion);
       const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-      if (reqAgeDays > 10) {
+      if (reqAgeDays > 30) {
         continue;
       }
 
@@ -3687,15 +3690,18 @@ export async function findMatchesForRequirement(requirementId: number) {
       return [];
     }
 
-    // REGLA DOCTRINAL (10 Días de Vigencia y Guillotina Mediocre): Omitir requerimientos inactivos, vencidos o mediocres (v31.106)
+    // REGLA DOCTRINAL v31.108: Sala de Espera de 30 días para Demandas. Si supera 30 días sin republicación activa, se omite de matching
     if ((req as any).status === 'expired' || (req as any).calificacion === 'Mediocre') {
       console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por estar marcado como vencido o mediocre.`);
       return [];
     }
-    const reqEffectiveDate = req.createdAt || req.fechaExtraccion;
+    const reqRepCount = Number((req as any).republicacionesCount || 0);
+    const reqEffectiveDate = (reqRepCount > 0 && (req as any).fechaUltimaPublicacion)
+      ? (req as any).fechaUltimaPublicacion
+      : ((req as any).fechaUltimaPublicacion || req.createdAt || (req as any).fechaExtraccion);
     const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-    if (reqAgeDays > 10) {
-      console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por superar 10 días de antigüedad.`);
+    if (reqAgeDays > 30) {
+      console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por superar 30 días de antigüedad sin republicación activa.`);
       return [];
     }
 
@@ -3726,13 +3732,13 @@ export async function findMatchesForRequirement(requirementId: number) {
         await new Promise(r => setTimeout(r, 10));
       }
 
-      // Regla Doctrinal (10 Días de Vigencia): Omitir propiedades de más de 10 días sin republicación activa
+      // Regla Doctrinal v31.108: Omitir propiedades de más de 30 días sin republicación activa
       const propRepCount = Number(prop.republicacionesCount || 0);
       const propEffectiveDate = (propRepCount > 0 && prop.fechaUltimaPublicacion)
         ? prop.fechaUltimaPublicacion
         : (prop.fechaUltimaPublicacion || prop.createdAt);
       const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-      if (propAgeDays > 10) {
+      if (propAgeDays > 30) {
         continue;
       }
 

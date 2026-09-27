@@ -165,7 +165,21 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v31.107 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v31.108 — Septiembre 2026
+
+### Novedades v31.108 (Doctrina de Revivificación de Inmuebles, Sincronización de Pulso en Demandas, Rediseño Minimalista de Modal de Descarte sin Scrollbars y Simetría Frontend):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo instruyó: *"D -->|'Retención de 30 a 45 días adicionales'| E['🗑️ Purga Definitiva de Base de Datos'] PERO SI SU AUTOR U OTR AUTOR QUE LO TENGA LO VUELVE A REPUBLICAR, ESTE DEBE SER REVIVIDO Y REUTILIZADO DESDE CERO. OK. Corregimos el bug de server/_core/matching.ts donde la demanda no leía req.fechaUltimaPublicacion. Ahora, cada vez que un colega o asesor vuelve a mandar el requerimiento por el grupo de WhatsApp, su contador se reinicia a 0 días y vuelve a subir a La Mesa Principal automáticamente. [COLOCÁNDOLE LA FECHA MÁS RECIENTE EN LA MESA]. Reduce los avisos de la pestaña Vigencia por: Vigentes, En Riesgo, Histórico. 🔥 Republicado y Actualizado hace 6 días (100% Activo) Reduce este aviso también... y creo que debería tenerlo también la DEMANDA... Igualmente en la ventana que se abre cuando vamos a descartar un Match... haz algo mejor sin esas barras de scroll que las odio, se siente un diseño mediocre y creado por principiantes."*
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Revivificación Integral**: Al detectar republicación en WhatsApp de propiedades existentes, se restablece `available = true`, `estadoComercial = "REPUBLICADO"`, `vigenciaIa = "VIGENTE"`, sacándolas de cualquier estado caduco o de papelera.
+  2. **Pulso de Republicación en Demandas**: En `matching.ts`, `reqEffectiveDate` ahora lee dinámicamente `req.fechaUltimaPublicacion` y `req.republicacionesCount`. En la mesa de cotejo de `AdminMatches.tsx`, la fecha mostrada computa el máximo temporal entre oferta, demanda y match (`Math.max(...)`), asegurando que cualquier republicación refresque de inmediato la posición y fecha en La Mesa.
+  3. **Pestaña Vigencia Concisa**: Selector de vigencia simplificado a `⚡ Vigentes`, `⏳ En Riesgo`, `🌐 Histórico`.
+  4. **Simetría y Concisión de Badges**: Avisos extensos reducidos a `🔥 Republicado hace Xd`, `⚡ Publicado hace Xd`, `⏳ En riesgo (hace Xd)` presentes con estricta simetría tanto en Oferta como en Demanda.
+  5. **Modal de Descarte Ergonómico (Cero Scrollbars)**: Reemplazada la estructura recargada por una cuadrícula limpia de 2 columnas con checklist conciso, botón de acción rápida "⚡ Descarte Rápido" y caja compacta de retroalimentación sin scrollbars verticales.
+  6. **Blindaje de Negaciones**: En `scoreRows`, expresiones como "No sobre vía principal" no castigan ofertas residenciales que no mencionan avenidas; se verifica con `\b` que no existan falsos positivos en términos como "teatrino".
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.107 — Septiembre 2026
 
 ### Novedades v31.107 (Regla Doctrinal de Piso Financiero del 90 al 95% para Venta y Arriendo):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

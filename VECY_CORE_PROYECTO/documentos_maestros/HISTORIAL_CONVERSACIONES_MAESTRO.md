@@ -7,7 +7,75 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v31.108 — 27 Septiembre 2026
+
+### Solicitud de Eduardo
+Doctrina de Revivificación de Inmuebles Republicados, Sincronización de Pulso en Demandas, Rediseño Minimalista del Modal de Descarte (Sin Scrollbars) y Simetría de Badges Frontend:
+*"D -->|'Retención de 30 a 45 días adicionales'| E['🗑️ Purga Definitiva de Base de Datos'] PERO SI SU AUTOR U OTR AUTOR QUE LO TENGA LO VUELVE A REPUBLICAR, ESTE DEBE SER REVIVIDO Y REUTILIZADO DESDE CERO. OK
+
+Corregimos el bug de server/_core/matching.ts donde la demanda no leía req.fechaUltimaPublicacion. Ahora, cada vez que un colega o asesor vuelve a mandar el requerimiento por el grupo de WhatsApp, su contador se reinicia a 0 días y vuelve a subir a La Mesa Principal automáticamente. [COLOCÁNDOLE LA FECHA MÁS RECIENTE EN LA MESA]
+
+Reduce los avisos de la pestaña Vigencia por :
+- Vigentes
+- En Riesgo
+- Histórico
+
+🔥 Republicado y Actualizado hace 6 días (100% Activo) Reduce este aviso también, es que colocas avisos muy largos cuando se pueden colocar fraces o palabras más cortas que no saturen el Frontend y confundan los administradores. Y creo que debería tenerlo también la DEMANDA, yo veo como que tu siempre solamente piensas en la OFERTA y ambas tanto OFERTA como DEMANDA son super importantes, la una sin la otra no serían un MATCH.  
+
+- Igualmente en la ventana que se abre cuando vamos a descartar un Match hay frases muy largas y confusas cuando pudiste haber colocado simplemente un listado que se entienda con su cuadrito o círculo de check list y punto, desde que se entienda tanto para el usuario como para que JanIA o nuestro algoritmo entiendan y logren aprender de ese descarte para no volver a cometer el mismo error será más que suficiente, no lo crees? Además del diseño recargado haz algo mejor sin esas barras de scroll que las odio, se siente un diseño mediocre y creado por principiantes. 
+
+Ahora si, si lograste entenderme a la perfección modifica lo que tengas que modificar en la implementación y arranca."*
+
+### Diagnóstico Técnico Profundo y Conclusiones de Arquitectura
+1. **Revivificación Integral desde la Papelera / Estado No Disponible (`janIA.ts`)**:
+   - En el ciclo de vida inmobiliario de Bogotá, un inmueble o demanda que caduca y pasa a papelera (retención 30-45 días) puede reactivarse si el captador original o un colega asesor lo reenvía a los grupos de WhatsApp.
+   - Anteriormente, la deduplicación de propiedades actualizaba fecha pero no forzaba `available = true`, manteniendo el inmueble invisibilizado en el catálogo si había sido marcado como no disponible o expirado.
+   - Solución doctrinal: Al detectar republicación de una propiedad existente, se fuerza `available: true`, `estadoComercial: "REPUBLICADO"`, `vigenciaIa: "VIGENTE"`, restableciendo su ciclo comercial desde 0 días.
+2. **Sincronización de Pulso y Fecha Más Reciente en La Mesa (`matching.ts`, `AdminMatches.tsx`)**:
+   - En `matching.ts`, `findMatchesForRequirement` y `findMatchesForProperty` leían exclusivamente `req.createdAt`, ignorando `req.fechaUltimaPublicacion` y `req.republicacionesCount`. Una demanda republicada hace 2 horas pero creada hace 20 días era filtrada o catalogada como inactiva.
+   - En la tarjeta del match en el admin, la fecha visible se tomaba de `match.createdAt` u oferta, sin reflejar si la demanda o la contraparte acababa de reactivarse.
+   - Solución doctrinal: Cálculo de `reqEffectiveDate` basado en la fecha más reciente entre creación y republicación. En la tarjeta de La Mesa, se calcula `Math.max(propDate, reqDate, matchDate)` para exhibir la fecha de actividad más reciente de la relación comercial.
+3. **Pestaña Vigencia Concisa y Directa**:
+   - Los textos anteriores (`⚡ Vigentes & Calientes (≤15d / 45d en ≥90%)`, `⌛ Oportunidades en Riesgo (>10d sin gestión)`, `🌐 Todo el Histórico`) saturaban el control selector.
+   - Reducido a:
+     - `⚡ Vigentes`
+     - `⏳ En Riesgo`
+     - `🌐 Histórico`
+4. **Simetría y Concisión Doctrinal en Badges de Oferta y Demanda**:
+   - Reducido el aviso largo `🔥 Republicado y Actualizado hace 6 días (100% Activo)` a expresiones cortas y de alto impacto:
+     - Republicado: `🔥 Republicado hace Xd`
+     - Nuevo/fresco: `⚡ Publicado hace Xd`
+     - En riesgo (>10d): `⏳ En riesgo (hace Xd)`
+   - Implementada estricta simetría: **tanto la Oferta como la Demanda** cuentan ahora con sus badges de ciclo de vida en sus respectivos paneles.
+5. **Rediseño Ergonómico y Minimalista del Modal de Descarte (Cero Scrollbars)**:
+   - El modal anterior acumulaba múltiples títulos de categorías, descripciones prolijas y espaciados excesivos que activaban una barra de scroll vertical tosca y difícil de operar en laptops.
+   - Rediseñado en una cuadrícula compacta de 2 columnas de altura controlada (`max-h-none` o padding optimizado), con etiquetas concisas, checkboxes directos, selector rápido "⚡ Descarte Rápido" en 1 click y caja de texto de retroalimentación de 1 sola línea sin desbordes.
+6. **Resolución de Falso Positivo en Negaciones de Demanda**:
+   - Expresiones como `"No sobre vía principal"` provocaban que el motor marcara "missing" al no encontrar avenidas en la oferta. Se ajustó el motor de cotejo para que una negación de la demanda solo choque si la oferta afirma explícitamente tenerla, considerándose compatible ("Libre de X / Cumple") si la oferta no la posee.
+
+### Acciones Ejecutadas en Código
+1. **Extracción y Deduplicación (`server/_core/janIA.ts`)**:
+   - En reactivación de propiedades existentes: forzado `available: true`, `estadoComercial: "REPUBLICADO"`, `vigenciaIa: "VIGENTE"`.
+   - En requerimientos: preservada reactivación con `status: "active"`, incremento de `republicacionesCount` y refresco de `fechaUltimaPublicacion`.
+2. **Motor de Matching (`server/_core/matching.ts`)**:
+   - `reqEffectiveDate` calculado dinámicamente con `req.fechaUltimaPublicacion` y `req.republicacionesCount`.
+   - Ventana de búsqueda en pool expandida a 30 días para garantizar reenganche con la sala de espera.
+3. **Frontend Admin Matches (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Opciones de Vigencia reducidas a `⚡ Vigentes`, `⏳ En Riesgo`, `🌐 Histórico`.
+   - Fecha de tarjeta de match computa el timestamp más reciente entre oferta, demanda y match (`[COLOCÁNDOLE LA FECHA MÁS RECIENTE EN LA MESA]`).
+   - Badges cortos y simétricos (`🔥 Republicado hace Xd`, `⚡ Publicado hace Xd`, `⏳ En riesgo (hace Xd)`) en Oferta y Demanda.
+   - Modal de descarte rediseñado con cuadrícula de 2 columnas, checklist limpio y eliminación de barras de scroll vertical.
+   - Evaluador de negaciones blindado con `\b` para prevenir falsos positivos en palabras como "teatrino".
+4. **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+   - Añadida **Sección 27**: 2 pruebas unitarias completas de reinicio de ciclo de vida y evaluación de negaciones.
+   - Total suite: **124/124 tests pasando sin fallos** ✅.
+5. **Incremento de Versión Oficial**:
+   - Actualizado a `v31.108` en `shared/const.ts` y `package.json`.
+
+---
+
 ## 📋 SESIÓN v31.107 — 27 Septiembre 2026
+
 
 ### Solicitud de Eduardo
 Regla Doctrinal de Piso Financiero del 90 al 95% para Venta y Arriendo:

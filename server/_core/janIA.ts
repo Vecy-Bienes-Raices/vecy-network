@@ -5265,6 +5265,7 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     const [updated] = await db
       .update(properties)
       .set({
+        available: true, // Regla Doctrinal v31.108: Si el autor u otro asesor lo republica, se revive disponible desde cero
         price: insertDataWithCalif.price,
         description: insertDataWithCalif.description || existing[0].description,
         adminFee: insertDataWithCalif.adminFee || existing[0].adminFee,

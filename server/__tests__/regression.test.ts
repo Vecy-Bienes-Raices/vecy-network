@@ -2317,6 +2317,65 @@ Adriana Rebeca Orejuela`;
       expect(res85M.blockers.some(b => b.includes("Guillotina de Segmento Financiero (Piso Financiero)") && b.includes("90% del canon"))).toBe(true);
     });
   });
+
+  describe("27. Revivificación de Inmuebles, Ciclo de Republicación de Demandas y Simetría Frontend (v31.108)", () => {
+    it("Debe reiniciar ciclo de demanda a 0 días y leer fechaUltimaPublicacion al republicar", async () => {
+      const { getRequirementEffectiveDaysAgo } = await import("../../client/src/components/admin/AdminMatches");
+      
+      const fortyDaysAgo = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
+      const today = new Date();
+
+      // Demanda vieja sin republicar (40 días) -> 40 días
+      const reqViejo = {
+        createdAt: fortyDaysAgo,
+        fechaUltimaPublicacion: fortyDaysAgo,
+        republicacionesCount: 0
+      };
+      expect(getRequirementEffectiveDaysAgo(reqViejo)).toBe(40);
+
+      // Misma demanda republicada hoy por un colega -> 0 días (Revivida en La Mesa)
+      const reqRepublicado = {
+        createdAt: fortyDaysAgo,
+        fechaUltimaPublicacion: today,
+        republicacionesCount: 1
+      };
+      expect(getRequirementEffectiveDaysAgo(reqRepublicado)).toBe(0);
+    });
+
+    it("Debe tratar negaciones en la demanda ('No sobre vía principal') sin falsos positivos cuando la oferta no la menciona", async () => {
+      const { scoreRows } = await import("../../client/src/components/admin/AdminMatches");
+
+      const reqConNegacion = {
+        id: 1700,
+        tipoInmuebleDeseado: "apartment",
+        tipoNegocioDeseado: "venta",
+        presupuestoMax: "1000000000",
+        areaMin: "90",
+        rawText: "Busco apartamento en Santa Bárbara hasta $1.000 MM. No sobre via principal. 3 habitaciones 2 baños.",
+        caracteristicasDeseadas: {}
+      };
+
+      // Oferta residencial tranquila que no menciona vía principal
+      const propNormal = {
+        id: 2897,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: "995000000",
+        areaTotal: "95",
+        bedrooms: 3,
+        bathrooms: 2,
+        zone: "Santa Bárbara",
+        rawText: "Vendo lindo apartamento en Santa Bárbara $995 MM 95m2 3 alcobas 2 baños parqueadero.",
+        amenities: {}
+      };
+
+      const result = scoreRows(reqConNegacion, propNormal);
+      // No debe existir ninguna fila de vía principal en estado "missing"
+      const viaRow = result.rows.find(r => r.label.toLowerCase().includes("vía principal") || r.label.toLowerCase().includes("avenida"));
+      expect(viaRow?.status).not.toBe("missing");
+      expect(result.autoScore).toBeGreaterThanOrEqual(85);
+    });
+  });
 });
 
 

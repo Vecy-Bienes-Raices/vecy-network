@@ -1293,6 +1293,33 @@ export const janIARouter = router({
           ajustesGuardados: input.ajustesGuardados || null,
         }).returning();
 
+        // Si el match fue marcado como exitoso o en negociación (Trato en Curso), otorgar Inmunidad Doctrinal marcando status = 'interested'
+        if (input.action === 'exitoso' || input.action === 'en_negociacion') {
+          if (input.matchId) {
+            try {
+              await db.update(propertyMatches)
+                .set({ status: 'interested' })
+                .where(eq(propertyMatches.id, input.matchId));
+            } catch (updErr: any) {
+              console.warn(`[JanIA-Feedback] Match #${input.matchId} error al marcar interested:`, updErr.message);
+            }
+          }
+          if (input.propertyId && input.requirementId) {
+            try {
+              await db.update(propertyMatches)
+                .set({ status: 'interested' })
+                .where(
+                  and(
+                    eq(propertyMatches.propertyId, input.propertyId),
+                    eq(propertyMatches.requirementId, input.requirementId)
+                  )
+                );
+            } catch (updErrPair: any) {
+              console.warn(`[JanIA-Feedback] Par Prop #${input.propertyId} / Req #${input.requirementId} error al marcar interested`);
+            }
+          }
+        }
+
         // Si el match fue rechazado, marcar status = 'rejected' permanentemente
         if (input.action === 'rechazado') {
           if (input.matchId) {

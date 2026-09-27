@@ -346,63 +346,30 @@ export const ATTRIBUTE_CATALOG: Array<{
   { key: "otra", label: "✍️ Otra Característica (Personalizada)", defaultReq: "Exige / Indispensable", defaultProp: "Sí cuenta con ello" },
 ];
 
+export const REJECT_OPTIONS = [
+  { id: "presupuesto", label: "Presupuesto o administración excede", icon: "💰" },
+  { id: "zona", label: "Zona o micro-sector no deseado", icon: "📍" },
+  { id: "metraje_dist", label: "Metraje o distribución no ajusta", icon: "📐" },
+  { id: "piso_vista", label: "Piso, vista o luz desfavorables", icon: "☀️" },
+  { id: "estado_fisico", label: "Estado físico incompatible (remodelar)", icon: "🔨" },
+  { id: "garajes", label: "Garajes incompatibles (lineal o falta)", icon: "🚗" },
+  { id: "mascotas_ascensor", label: "Sin ascensor o no admite mascotas", icon: "🐾" },
+  { id: "ya_vendido", label: "Inmueble ya vendido", icon: "🏷️" },
+  { id: "ya_arrendado", label: "Inmueble ya arrendado", icon: "🔑" },
+  { id: "retirado", label: "Inmueble retirado o no disponible", icon: "⛔" },
+  { id: "no_responde", label: "Captador o dueño no responde", icon: "📵" },
+  { id: "oferta_no_terceria", label: "El colega de OFERTA no acepta Tercería, ni referidos", icon: "🏢" },
+  { id: "demanda_no_terceria", label: "El colega Demanda No acepta tercería, ni referidos", icon: "🔍" },
+  { id: "comision", label: "No comparte comisión 50/50", icon: "🤝" },
+  { id: "traba_juridica", label: "Traba jurídica o forma de pago", icon: "⚖️" },
+  { id: "otro", label: "Otro motivo puntual", icon: "✍️" },
+];
+
 export const REJECT_CATEGORIES = [
   {
-    category: "🎯 Criterio Innegociable del Cliente (Demanda descarta Oferta)",
-    badgeColor: "text-amber-400 bg-amber-500/10 border-amber-500/30",
-    options: [
-      { id: "presupuesto_alto", label: "Presupuesto o administración excede capacidad máxima del cliente", icon: "💰" },
-      { id: "zona_incompatible", label: "Zona o micro-sector incompatible (calle, costado o entorno no deseado)", icon: "📍" },
-      { id: "distribucion_espacio", label: "Distribución o metraje no se ajusta (espacios reducidos, mala distribución)", icon: "📐" },
-      { id: "piso_vista_luz", label: "Piso, vista o iluminación desfavorables (inmueble oscuro, interior, o piso bajo)", icon: "☀️" },
-      { id: "estado_inmueble", label: "Estado físico incompatible (cliente pide moderno/estrenar y es para remodelar)", icon: "🔨" },
-      { id: "garajes_incompatibles", label: "Garajes incompatibles (exige independiente y es lineal, o no tiene)", icon: "🚗" },
-      { id: "politica_convivencia", label: "Restricción de convivencia / Faltante indispensable (no admite mascotas, sin ascensor)", icon: "🐾" },
-    ]
-  },
-  {
-    category: "🔒 Disponibilidad Comercial del Inmueble (Oferta no disponible)",
+    category: "Opciones de Descarte",
     badgeColor: "text-rose-400 bg-rose-500/10 border-rose-500/30",
-    options: [
-      { id: "ya_vendido", label: "Inmueble YA VENDIDO (marcar como Vendido y retirar del catálogo)", icon: "🏷️" },
-      { id: "ya_arrendado", label: "Inmueble YA ARRENDADO (marcar como Arrendado y retirar del catálogo)", icon: "🔑" },
-      { id: "retirado_mercado", label: "Inmueble suspendido o retirado temporalmente por el propietario", icon: "⛔" },
-      { id: "asesor_no_responde", label: "Captador o propietario no responde / no permite agendar visitas", icon: "📵" },
-    ]
-  },
-  {
-    category: "🛡️ Regla Doctrinal de Tercería Inmobiliaria 50/50 (StandBy Directo Vecy)",
-    badgeColor: "text-amber-400 bg-amber-500/10 border-amber-500/30",
-    options: [
-      { 
-        id: "oferta_no_terceria", 
-        label: "El colega de OFERTA no acepta Tercería, ni referidos", 
-        icon: "🏢",
-        hint: "JanIA enviará este inmueble a la sección de Inmuebles StandBy para gestión directa Vecy" 
-      },
-      { 
-        id: "demanda_no_terceria", 
-        label: "El colega Demanda No acepta tercería, ni referidos", 
-        icon: "🔍",
-        hint: "JanIA enviará esta demanda a StandBy Directo Vecy para asignación exclusiva" 
-      },
-    ]
-  },
-  {
-    category: "💼 Condiciones Comerciales / Jurídicas de Cierre",
-    badgeColor: "text-cyan-400 bg-cyan-500/10 border-cyan-500/30",
-    options: [
-      { id: "comision_rechazada", label: "Comisión u honorarios no aceptados por la contraparte (no comparte 50/50)", icon: "🤝" },
-      { id: "forma_pago", label: "Forma de pago incompatible (requiere crédito hipotecario y oferta solo contado)", icon: "💳" },
-      { id: "traba_juridica", label: "Inconveniente jurídico (embargo, sucesión pendiente, afectación familiar)", icon: "⚖️" },
-    ]
-  },
-  {
-    category: "✍️ Otro Motivo / Enseñanza Específica para JanIA",
-    badgeColor: "text-purple-400 bg-purple-500/10 border-purple-500/30",
-    options: [
-      { id: "otro_motivo", label: "Otro motivo puntual (especificar detalles a continuación)", icon: "✍️" },
-    ]
+    options: REJECT_OPTIONS,
   }
 ];
 
@@ -433,7 +400,7 @@ export function getRequirementEffectiveDaysAgo(requirement: any): number {
   const repCount = Number(requirement.republicacionesCount || 0);
   const effectiveDate = (repCount > 0 && requirement.fechaUltimaPublicacion)
     ? requirement.fechaUltimaPublicacion
-    : (requirement.fechaUltimaPublicacion || requirement.createdAt);
+    : (requirement.fechaUltimaPublicacion || requirement.createdAt || requirement.fechaExtraccion);
   if (!effectiveDate) return 0;
   const dateObj = new Date(effectiveDate);
   return Math.max(0, Math.floor((Date.now() - dateObj.getTime()) / (1000 * 60 * 60 * 24)));
@@ -447,11 +414,23 @@ export function checkIsMatchActiveSmart(match: any): boolean {
   const reqDaysAgo = getRequirementEffectiveDaysAgo(req);
   const score = match._precomputedScore !== undefined ? match._precomputedScore : parseFloat(match.matchScore?.toString() || "0");
 
-  // Regla Doctrinal v31.101: Matches Calientes y Perfectos (>=90%) protegidos por 45 días (ciclo real de compraventa en Colombia)
+  // Inmunidad Doctrinal Perpetua (Regla Doctrinal v31.108): Si está en Trato en Curso, Favorito o en negociación, NUNCA se va de la Mesa
+  if (
+    match.status === 'interested' || 
+    match.status === 'converted' || 
+    (match as any).isFavorite ||
+    (match as any).tratoEnCurso ||
+    (match as any).status === 'en_negociacion'
+  ) {
+    return true;
+  }
+
+  // Regla Doctrinal v31.101/v31.108: Matches Calientes y Perfectos (>=90%) protegidos por 45 días (ciclo real de compraventa en Colombia)
   if (score >= 90) {
     return propDaysAgo <= 45 && reqDaysAgo <= 45;
   }
-  // Matches Estándar (75% a 89%): Ventana activa de 15 días renovable por republicación
+
+  // La Mesa Principal Estándar: AMBAS partes con <= 15 días (o 45 días si score >= 90%)
   return propDaysAgo <= 15 && reqDaysAgo <= 15;
 }
 
@@ -461,8 +440,12 @@ export function checkIsMatchDormant(match: any): boolean {
   const req = match._effectiveReq || match.requirement;
   const propDaysAgo = getPropertyEffectiveDaysAgo(prop);
   const reqDaysAgo = getRequirementEffectiveDaysAgo(req);
-  const isUnmanaged = !match.status || match.status === 'suggested';
-  return (propDaysAgo > 10 || reqDaysAgo > 10) && isUnmanaged;
+  const score = match._precomputedScore !== undefined ? match._precomputedScore : parseFloat(match.matchScore?.toString() || "0");
+
+  const hasExpired10 = propDaysAgo > 10 || reqDaysAgo > 10;
+  const notCalienteProtected = score < 90 || (propDaysAgo > 45 || reqDaysAgo > 45);
+
+  return hasExpired10 && notCalienteProtected;
 }
 
 export function checkIsPermutaMatch(prop: any, req: any): boolean {
@@ -2549,6 +2532,13 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
     const reqStoredVal = (req.caracteristicasDeseadas as any)?.[item.name] || (req.caracteristicasDeseadas as any)?.[itemNorm];
     const propStoredVal = (prop.amenities as any)?.[item.name] || (prop.amenities as any)?.[itemNorm];
 
+    const isNegatedInReq = item.patterns.some(p => {
+      const idx = reqTextLower.indexOf(p);
+      if (idx < 0) return false;
+      const prefix = reqTextLower.slice(Math.max(0, idx - 20), idx);
+      return /\b(?:no|cero|sin|nunca|evitar)\b\s*(?:en|sobre)?\s*$/i.test(prefix);
+    });
+
     const inReq = item.patterns.some(p => reqTextLower.includes(p)) || Boolean(reqStoredVal);
     const inProp = item.patterns.some(p => propRawText.includes(p)) || Boolean(propStoredVal);
 
@@ -2558,7 +2548,20 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
     let reqLabel = typeof reqStoredVal === 'string' && reqStoredVal.trim() ? reqStoredVal : "Flexible";
     let propLabel = typeof propStoredVal === 'string' && propStoredVal.trim() ? propStoredVal : "Sin especificar";
 
-    if (inReq && inProp) {
+    if (isNegatedInReq) {
+      // Regla Doctrinal v31.108: Demanda prohíbe explícitamente esta característica (ej: "No sobre vía principal", "No remodelar")
+      if (inProp) {
+        // Choque directo fatal: la demanda prohíbe esta característica y la oferta la tiene -> Guillotina (No Coincide)
+        amS = "missing";
+        reqLabel = `Prohíbe / Evitar ${item.name}`;
+        propLabel = `Sí cuenta con ${item.name} (Incompatible)`;
+      } else {
+        // La oferta NO la tiene -> Cumple con la exigencia negativa del cliente
+        amS = "exact";
+        reqLabel = `Prohíbe / Evitar ${item.name}`;
+        propLabel = `Libre de ${item.name} (Cumple)`;
+      }
+    } else if (inReq && inProp) {
       amS = "exact";
       if (!reqStoredVal) reqLabel = `Exige ${item.name} (En Duro)`;
       if (!propStoredVal) propLabel = `Sí (Cuenta con ${item.name})`;
@@ -4846,9 +4849,9 @@ export default function AdminMatches() {
               onChange={(e) => { setAgeFilter(e.target.value as any); setCurrentPage(1); }}
               className="bg-transparent border-none text-white focus:ring-0 text-xs font-semibold cursor-pointer outline-none"
             >
-              <option className="bg-[#0c0c0e]" value="active_smart">⚡ Vigentes & Calientes (≤15d / 45d en ≥90%)</option>
-              <option className="bg-[#0c0c0e]" value="dormant">⏳ Oportunidades en Riesgo (&gt;10d sin gestión)</option>
-              <option className="bg-[#0c0c0e]" value="all">🌐 Todo el Histórico</option>
+              <option className="bg-[#0c0c0e]" value="active_smart">⚡ Vigentes</option>
+              <option className="bg-[#0c0c0e]" value="dormant">⏳ En Riesgo</option>
+              <option className="bg-[#0c0c0e]" value="all">🌐 Histórico</option>
             </select>
           </div>
 
@@ -4984,9 +4987,9 @@ export default function AdminMatches() {
                   onChange={(e) => { setAgeFilter(e.target.value as any); setCurrentPage(1); }}
                   className="bg-transparent border-none text-white focus:ring-0 text-[11px] font-semibold cursor-pointer outline-none"
                 >
-                  <option className="bg-[#0c0c0e]" value="active_smart">⚡ Vigentes (Smart)</option>
+                  <option className="bg-[#0c0c0e]" value="active_smart">⚡ Vigentes</option>
                   <option className="bg-[#0c0c0e]" value="dormant">⏳ En Riesgo</option>
-                  <option className="bg-[#0c0c0e]" value="all">🌐 Todo</option>
+                  <option className="bg-[#0c0c0e]" value="all">🌐 Histórico</option>
                 </select>
               </div>
 
@@ -5064,7 +5067,14 @@ export default function AdminMatches() {
                   })
                 ];
                 const score = m._precomputedScore !== undefined ? m._precomputedScore : parseFloat(m.matchScore?.toString() || "0");
-                const date = formatColombiaDate(m.createdAt);
+                const effPropDate = m._effectiveProp?.fechaUltimaPublicacion || m._effectiveProp?.createdAt || m.property?.fechaUltimaPublicacion || m.property?.createdAt;
+                const effReqDate = m._effectiveReq?.fechaUltimaPublicacion || m._effectiveReq?.createdAt || m._effectiveReq?.fechaExtraccion || m.requirement?.fechaUltimaPublicacion || m.requirement?.createdAt || m.requirement?.fechaExtraccion;
+                const mostRecentTs = Math.max(
+                  effPropDate ? new Date(effPropDate).getTime() : 0,
+                  effReqDate ? new Date(effReqDate).getTime() : 0,
+                  m.createdAt ? new Date(m.createdAt).getTime() : 0
+                );
+                const date = formatColombiaDate(new Date(mostRecentTs));
 
                 const exactCount = rows.filter((r: any) => r.status === "exact" || r.status === "ok").length;
                 const plusCount = rows.filter((r: any) => r.status === "plus").length;
@@ -5196,22 +5206,29 @@ export default function AdminMatches() {
 
                             return (
                               <>
-                                {/* Insignia de Republicación y Actualización Doctrinal v31.16 */}
+                                {/* Insignia de Frescura y Republicación Doctrinal v31.108 */}
                                 {repCount > 0 ? (
                                   <span
-                                    className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-extrabold text-amber-300 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border border-amber-500/50 px-2.5 py-0.5 rounded-md shadow-[0_0_14px_rgba(245,158,11,0.35)] animate-in fade-in"
+                                    className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/40 px-2 py-0.5 rounded-md"
                                     title={`Inmueble republicado ${repCount} ${repCount === 1 ? 'vez' : 'veces'}. Fecha de última actualización: ${formatColombiaDate(effectiveDate)}`}
                                   >
-                                    <span>🔥 Republicado y Actualizado hace {diasTexto} (100% Activo)</span>
+                                    🔥 Republicado hace {diasTexto}
                                   </span>
-                                ) : daysAgo > 10 ? (
+                                ) : daysAgo <= 10 ? (
                                   <span
-                                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400/90 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md"
-                                    title={`Publicación inicial de hace ${daysAgo} días. Supera 10 días sin republicación. Verificar disponibilidad con el captador.`}
+                                    className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md"
+                                    title={`Publicación inicial reciente: ${formatColombiaDate(effectiveDate)}`}
                                   >
-                                    <span>⏳ Publicación de hace {daysAgo} días · Confirmar disponibilidad</span>
+                                    ⚡ Publicado hace {diasTexto}
                                   </span>
-                                ) : null}
+                                ) : (
+                                  <span
+                                    className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md"
+                                    title={`Publicación inicial de hace ${daysAgo} días sin republicación.`}
+                                  >
+                                    ⏳ En riesgo (hace {diasTexto})
+                                  </span>
+                                )}
 
                                 {/* Fecha vigente de publicación (eliminando la fecha anterior desactualizada) */}
                                 {effectiveDate && (
@@ -5561,21 +5578,29 @@ export default function AdminMatches() {
 
                             return (
                               <>
+                                {/* Insignia de Frescura y Republicación Doctrinal v31.108 */}
                                 {repCount > 0 ? (
                                   <span
-                                    className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-extrabold text-cyan-300 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-cyan-500/20 border border-cyan-500/50 px-2.5 py-0.5 rounded-md shadow-[0_0_14px_rgba(6,182,212,0.35)] animate-in fade-in"
+                                    className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-cyan-300 bg-cyan-500/15 border border-cyan-500/40 px-2 py-0.5 rounded-md shadow-sm"
                                     title={`Demanda republicada ${repCount} ${repCount === 1 ? 'vez' : 'veces'}. Fecha de última actualización: ${formatColombiaDate(effectiveDate)}`}
                                   >
-                                    <span>🔥 Republicado y Actualizado hace {diasTexto} (100% Activo)</span>
+                                    🔥 Republicado hace {diasTexto}
                                   </span>
-                                ) : daysAgo > 10 ? (
+                                ) : daysAgo <= 10 ? (
                                   <span
-                                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-cyan-400/90 bg-cyan-500/10 border border-cyan-500/25 px-2 py-0.5 rounded-md"
-                                    title={`Demanda inicial de hace ${daysAgo} días. Verificar si el cliente aún sigue buscando.`}
+                                    className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md"
+                                    title={`Solicitud reciente: ${formatColombiaDate(effectiveDate)}`}
                                   >
-                                    <span>⏳ Solicitud de hace {daysAgo} días · Sondeo de búsqueda</span>
+                                    ⚡ Publicado hace {diasTexto}
                                   </span>
-                                ) : null}
+                                ) : (
+                                  <span
+                                    className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold text-cyan-400 bg-cyan-500/10 border border-cyan-500/25 px-2 py-0.5 rounded-md"
+                                    title={`Demanda inicial de hace ${daysAgo} días sin republicación.`}
+                                  >
+                                    ⏳ En riesgo (hace {diasTexto})
+                                  </span>
+                                )}
 
                                 {effectiveDate && (
                                   <span
@@ -7481,203 +7506,107 @@ export default function AdminMatches() {
         <div className="text-[#bf953f] font-bold">{VECY_VERSION_LABEL}</div>
       </div>
 
-      {/* ── POPUP MEJORADO DE DESCARTE Y APRENDIZAJE DOCTRINAL JANIA ── */}
+      {/* ── POPUP MEJORADO DE DESCARTE Y APRENDIZAJE DOCTRINAL JANIA (v31.108: SIN SCROLLBARS, ULTRA COMPACTO) ── */}
       {rejectModalMatch && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-[#101010] border-2 border-rose-500/50 rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-[0_0_60px_rgba(244,63,94,0.35)] overflow-hidden">
+          <div className="bg-[#121215] border border-rose-500/40 rounded-2xl max-w-xl w-full flex flex-col shadow-[0_0_50px_rgba(244,63,94,0.25)] overflow-hidden animate-in zoom-in-95 duration-200">
             
             {/* Header */}
-            <div className="p-4 sm:p-5 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-rose-500/15 border border-rose-500/30 rounded-2xl text-rose-400">
-                  <ThumbsDown className="w-5 h-5" />
+            <div className="px-5 py-3 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-rose-500/15 border border-rose-500/30 rounded-xl text-rose-400">
+                  <ThumbsDown className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base sm:text-lg font-extrabold text-white">
-                      Descartar Coincidencia Comercial
-                    </h3>
-                    {selectedRejectReasons.length > 0 && (
-                      <span className="text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-rose-400" />
-                        {selectedRejectReasons.length} {selectedRejectReasons.length === 1 ? 'motivo seleccionado' : 'motivos seleccionados'}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] font-mono text-rose-400">
-                    JanIA Active Feedback Loop · Selección Múltiple · Memoria Permanente
+                  <h3 className="text-sm sm:text-base font-extrabold text-white leading-tight">
+                    Descartar Coincidencia Comercial
+                  </h3>
+                  <p className="text-[10px] text-zinc-400 font-mono">
+                    Aprendizaje JanIA · No volverá a emparejar este par
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {selectedRejectReasons.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRejectReasons([])}
-                    className="text-[10px] text-zinc-400 hover:text-rose-300 px-2 py-1 rounded bg-zinc-800/60 hover:bg-zinc-800 transition-colors"
-                  >
-                    Limpiar selección
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => { setRejectModalMatch(null); setSelectedRejectReasons([]); setCustomRejectNote(''); }}
-                  className="w-8 h-8 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-                  title="Cerrar ventana"
-                >
-                  ✕
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => { setRejectModalMatch(null); setSelectedRejectReasons([]); setCustomRejectNote(''); }}
+                className="w-7 h-7 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer text-xs"
+                title="Cerrar ventana"
+              >
+                ✕
+              </button>
             </div>
 
-            {/* Scrollable Content */}
-            <div className="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs">
+            {/* Content (Sin scroll vertical, auto-contenido) */}
+            <div className="p-4 sm:p-5 space-y-3 text-xs">
               
-              {/* Resumen Bilateral de la Pareja */}
-              <div className="p-3.5 rounded-2xl bg-black/70 border border-white/10 space-y-2">
-                <div className="flex items-center justify-between text-zinc-400 font-mono text-[11px]">
+              {/* Resumen Bilateral Compacto */}
+              <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-black/60 border border-white/5 text-[11px]">
+                <div className="flex items-center gap-1.5 truncate">
                   <span className="text-emerald-400 font-bold">🏢 Oferta #{rejectModalMatch.property?.id || '—'}</span>
-                  <span className="text-zinc-500 font-bold">↔</span>
+                  <span className="text-zinc-400 truncate">({rejectModalMatch.property?.zone || rejectModalMatch.property?.addressNeighborhood || 'Bogotá'})</span>
+                </div>
+                <span className="text-zinc-600 font-bold mx-2">↔</span>
+                <div className="flex items-center gap-1.5 truncate text-right">
                   <span className="text-amber-400 font-bold">🔍 Demanda #{rejectModalMatch.requirement?.id || '—'}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2.5 text-[11px]">
-                  <div className="bg-zinc-900/80 p-2.5 rounded-xl border border-white/5 truncate">
-                    <div className="text-zinc-200 font-bold truncate">{rejectModalMatch.property?.name || 'Inmueble'}</div>
-                    <div className="text-emerald-300 text-[10px] truncate mt-0.5">
-                      📍 {rejectModalMatch.property?.zone || rejectModalMatch.property?.addressNeighborhood || 'Bogotá'}
-                    </div>
-                  </div>
-                  <div className="bg-zinc-900/80 p-2.5 rounded-xl border border-white/5 truncate">
-                    <div className="text-zinc-200 font-bold truncate">{rejectModalMatch.requirement?.name || rejectModalMatch.requirement?.nombreUsuarioWhatsapp || 'Requerimiento'}</div>
-                    <div className="text-amber-300 text-[10px] truncate mt-0.5">
-                      📍 {rejectModalMatch.requirement?.zonaDeseada || rejectModalMatch.requirement?.addressNeighborhood || 'Bogotá'}
-                    </div>
-                  </div>
+                  <span className="text-zinc-400 truncate">({rejectModalMatch.requirement?.zonaDeseada || rejectModalMatch.requirement?.addressNeighborhood || 'Bogotá'})</span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-zinc-300 font-medium">
-                <span>Puedes marcar <strong>una o varias opciones</strong> que expliquen por qué no encajan:</span>
-                <span className="text-[10px] text-zinc-500 font-mono">Selección Múltiple</span>
+              {/* Grid 2 Columnas de Opciones Limpias */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {REJECT_OPTIONS.map((opt) => {
+                  const isSelected = selectedRejectReasons.includes(opt.label);
+                  return (
+                    <div
+                      key={opt.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => toggleRejectReason(opt.label)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRejectReason(opt.label); } }}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-[11px] cursor-pointer transition-all select-none ${
+                        isSelected
+                          ? 'bg-rose-500/20 border-rose-500/80 text-rose-200 font-semibold shadow-sm'
+                          : 'bg-zinc-900/60 border-zinc-800 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-800/50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        readOnly
+                        tabIndex={-1}
+                        className="accent-rose-500 w-3.5 h-3.5 rounded shrink-0 pointer-events-none"
+                      />
+                      <span className="text-xs shrink-0">{opt.icon}</span>
+                      <span className="truncate">{opt.label}</span>
+                    </div>
+                  );
+                })}
               </div>
 
-              {/* Categorías Temáticas de Descarte */}
-              <div className="space-y-3.5">
-                {REJECT_CATEGORIES.map((cat, cIdx) => (
-                  <div key={cIdx} className="space-y-1.5">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 flex items-center justify-between px-1">
-                      <span>{cat.category}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const catLabels = cat.options.map(o => o.label);
-                          const allSelected = catLabels.every(l => selectedRejectReasons.includes(l));
-                          if (allSelected) {
-                            setSelectedRejectReasons(prev => prev.filter(l => !catLabels.includes(l)));
-                          } else {
-                            setSelectedRejectReasons(prev => Array.from(new Set([...prev, ...catLabels])));
-                          }
-                        }}
-                        className="text-[9px] text-zinc-500 hover:text-zinc-300 underline font-normal lowercase"
-                      >
-                        {cat.options.every(o => selectedRejectReasons.includes(o.label)) ? 'desmarcar todas' : 'marcar todas'}
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                      {cat.options.map((opt) => {
-                        const isSelected = selectedRejectReasons.includes(opt.label);
-                        return (
-                          <div
-                            key={opt.id}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => toggleRejectReason(opt.label)}
-                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRejectReason(opt.label); } }}
-                            className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-xs cursor-pointer transition-all select-none ${
-                              isSelected
-                                ? 'bg-rose-500/20 border-rose-500 text-rose-200 shadow-[0_0_15px_rgba(244,63,94,0.3)] font-semibold'
-                                : 'bg-zinc-950/60 border-zinc-800/80 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              readOnly
-                              tabIndex={-1}
-                              className="accent-rose-500 w-4 h-4 rounded mt-0.5 shrink-0 pointer-events-none"
-                            />
-                            <span className="leading-snug flex-1">
-                              <span className="mr-1.5">{opt.icon}</span>
-                              <span className="font-medium">{opt.label}</span>
-                              {(opt as any).hint && (
-                                <span className="block text-[10px] text-amber-300/90 font-normal mt-0.5">
-                                  🛡️ {(opt as any).hint}
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Alerta contextual si se selecciona opción de Tercería / Standby */}
-              {selectedRejectReasons.some(r => r.toLowerCase().includes('tercer')) && (
-                <div className="p-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-[11px] text-amber-200 flex items-start gap-2 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
-                  <ShieldAlert className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
-                  <div>
-                    <span className="font-bold block text-amber-300">Enrutamiento Automático a StandBy Directo Vecy</span>
-                    <span>
-                      {selectedRejectReasons.some(r => r.toLowerCase().includes('oferta'))
-                        ? 'El Inmueble será marcado como StandBy Directo Vecy (No Tercería / No Referidos) y se enviará a la sección de Inmuebles StandBy para gestión y cierre exclusivo por nuestra inmobiliaria.'
-                        : 'La Demanda será marcada como StandBy Directo Vecy (No Tercería / No Referidos) para asignación prioritaria con cartera propia.'}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Campo de Detalle / Observación Pedagógica */}
-              <div className="space-y-1.5 pt-2 border-t border-white/5">
-                <label className="text-[11px] font-bold text-zinc-300 flex items-center justify-between">
-                  <span>Detalle u observación específica adicional (Opcional):</span>
-                  <span className="text-[10px] text-zinc-500 font-mono">Retroalimentación de aprendizaje</span>
-                </label>
-                <textarea
-                  rows={2}
-                  placeholder="Ej: El cliente no acepta apartamento sin terraza privada o con administración superior a $400.000..."
+              {/* Campo de Detalle / Observación Opcional (1 sola línea) */}
+              <div className="pt-0.5">
+                <input
+                  type="text"
+                  placeholder="Detalle u observación opcional para JanIA..."
                   value={customRejectNote}
                   onChange={(e) => setCustomRejectNote(e.target.value)}
-                  className="w-full bg-black/80 border border-zinc-700 focus:border-rose-500 rounded-xl p-2.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  className="w-full bg-black/70 border border-zinc-800 focus:border-rose-500/70 rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none"
                 />
-              </div>
-
-              {/* Mensaje de Enseñanza y Auto-Búsqueda */}
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-300 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 shrink-0 text-emerald-400" />
-                <span>
-                  Al confirmar el descarte, JanIA registrará estos motivos en su base de aprendizaje permanente y no volverá a emparejar este par.
-                </span>
               </div>
 
             </div>
 
             {/* Footer Actions */}
-            <div className="p-4 sm:p-5 border-t border-white/10 bg-white/[0.02] flex items-center justify-between gap-3">
-              <div className="text-zinc-400 text-xs font-mono">
-                {selectedRejectReasons.length === 0 ? (
-                  <span className="text-amber-400/90 text-[11px]">Puedes descartar directamente o marcar razones</span>
-                ) : (
-                  <span className="text-rose-400 font-semibold">{selectedRejectReasons.length} {selectedRejectReasons.length === 1 ? 'motivo seleccionado' : 'motivos seleccionados'}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3">
+            <div className="px-5 py-3 border-t border-white/10 bg-white/[0.01] flex items-center justify-between gap-3">
+              <span className="text-[11px] text-zinc-400 font-mono">
+                {selectedRejectReasons.length === 0 ? 'Descarte directo o marca motivos' : `${selectedRejectReasons.length} motivos marcados`}
+              </span>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   type="button"
                   onClick={() => { setRejectModalMatch(null); setSelectedRejectReasons([]); setCustomRejectNote(''); }}
-                  className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white text-xs h-9 px-3 sm:px-4 cursor-pointer"
+                  className="border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white text-xs h-8 px-3 cursor-pointer"
                 >
                   Cancelar
                 </Button>
@@ -7686,12 +7615,12 @@ export default function AdminMatches() {
                   type="button"
                   disabled={recordFeedbackMut.isPending}
                   onClick={() => {
-                    handleFeedback(rejectModalMatch, 'rechazado', "Descarte manual por criterio del bróker (Rápido)", customRejectNote);
+                    handleFeedback(rejectModalMatch, 'rechazado', "Descarte rápido por criterio del bróker", customRejectNote);
                     setRejectModalMatch(null);
                     setSelectedRejectReasons([]);
                     setCustomRejectNote('');
                   }}
-                  className="border-rose-900/60 text-rose-300 hover:bg-rose-950/60 hover:text-white text-xs h-9 px-3 cursor-pointer"
+                  className="border-rose-900/60 text-rose-300 hover:bg-rose-950/60 hover:text-white text-xs h-8 px-3 cursor-pointer"
                   title="Descartar inmediatamente con 1 clic"
                 >
                   ⚡ Descarte Rápido
@@ -7709,10 +7638,10 @@ export default function AdminMatches() {
                     setSelectedRejectReasons([]);
                     setCustomRejectNote('');
                   }}
-                  className="bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-extrabold text-xs h-9 px-4 sm:px-5 flex items-center gap-2 shadow-lg shadow-rose-900/40 cursor-pointer disabled:opacity-40"
+                  className="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs h-8 px-4 flex items-center gap-1.5 cursor-pointer disabled:opacity-40"
                 >
-                  {recordFeedbackMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
-                  {selectedRejectReasons.length > 1 ? `Confirmar Descarte (${selectedRejectReasons.length})` : 'Confirmar Descarte'}
+                  {recordFeedbackMut.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ThumbsDown className="w-3.5 h-3.5" />}
+                  {selectedRejectReasons.length > 1 ? `Confirmar (${selectedRejectReasons.length})` : 'Confirmar Descarte'}
                 </Button>
               </div>
             </div>
