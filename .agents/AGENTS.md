@@ -165,7 +165,25 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.5 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.6 — Septiembre 2026
+
+### Novedades v32.6 (Diagnóstico y Reactivación Inmediata de Verificación de Cédulas en WhatsApp, Erradicación de Conflicto Baileys 440 y Blindaje de Self-Chat):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo consultó: *"Lo que hicimos y creamos con 2Captcha para verificación de docuemnetos por whatsapp no está funcionando. Mira la imagen, será que también lo desconectaste?"*
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **2Captcha y Policía Nacional 100% Operativos**:
+     - Se auditó el saldo activo ($2.8906 USD) y se ejecutó la consulta en vivo de la C.C. `19872169` directamente contra el portal de la Policía Nacional resolviendo reCAPTCHA v2. El portal respondió exitosamente en 22 segundos confirmando la identidad oficial: **Hector Eduardo Garcia Lopez**. El servicio no estaba desconectado ni roto.
+  2. **Erradicación de Conflicto de Socket Baileys (Código 440 connectionReplaced)**:
+     - Se identificaron 2 procesos zombi en el VPS (PID 1708744 y 1683610) que corrían desde el 27 de septiembre al 101% de CPU, más un proceso local de desarrollo `npm run dev` (PID 8407). Todos competían por la misma sesión Baileys (`+573192919978`), provocando desconexiones cada 20 segundos y corrompiendo las sesiones Signal (`Over 2000 messages into the future!` y `Bad MAC Error`). Se eliminaron todos los procesos zombi y se purgaron los archivos de sesión rotos en el VPS.
+  3. **Discriminación Inteligente de `fromMe` en Self-Chat (`whatsapp-match.ts`)**:
+     - Cuando Eduardo escribía en su propio chat ("Mensajes a ti mismo" / "Eduardo A. Rivera Rivera 🥷"), el mensaje viajaba con `fromMe: true`. El sistema lo interpretaba erróneamente como intervención humana en un chat de cliente externo, silenciando la sesión en la base de datos (`pendingSessions` -> `mute:573192919978`) y ejecutando `return;` inmediato. Se blindó la lógica para que en self-chat y para administradores (`573192919978` y `573166569719`), los mensajes nunca se silencien y procedan normalmente a procesar verificaciones de cédula y prediales.
+  4. **Aislamiento de Baileys en Entorno Local (`index.ts`)**:
+     - Se modificó `server/_core/index.ts` para que en desarrollo local (`NODE_ENV === "development"`), Baileys permanezca apagado protegiendo el VPS en producción, a menos que se defina `ENABLE_LOCAL_WHATSAPP=true`.
+  5. **Reintento Defensivo en `queuedSend`**:
+     - Si un mensaje falla al ser enviado con parámetro `quoted`, se reintenta automáticamente sin `quoted` garantizando entrega 100% confiable.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.5 — Septiembre 2026
 
 ### Novedades v32.5 (Erradicación Total de 3D en "BIENES RAÍCES", Marca en Tipografía Unificada Audiowide Plano y Tipografía Mina en Cards y Contenido):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

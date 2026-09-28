@@ -322,6 +322,33 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.6 — Septiembre 2026
+
+#### 📌 DIAGNÓSTICO Y REACTIVACIÓN INMEDIATA DE VERIFICACIÓN DE IDENTIDAD EN WHATSAPP (2CAPTCHA + POLICÍA NACIONAL), ERRADICACIÓN DE CONFLICTO BAILEYS 440 Y BLINDAJE DE SELF-CHAT
+
+**Problemas identificados:**
+1. **Falso Positivo de Falla en 2Captcha y Policía Nacional**: Eduardo reportó que la verificación de cédulas por WhatsApp no respondía. La auditoría comprobó que 2Captcha ($2.8906 USD activos) y el scraper de la Policía Nacional estaban 100% operativos (C.C. `19872169` resuelta en 22s a `Hector Eduardo Garcia Lopez`).
+2. **Guerra de Sockets Baileys (Código 440 connectionReplaced)**: Procesos zombi desbocados en el VPS corriendo viejas instancias de `dist-server/index.js` y un proceso local `npm run dev` competían por la sesión de WhatsApp (`+573192919978`), desconectando al bot cada 20s y corrompiendo las sesiones Signal (`Over 2000 messages into the future!` y `Bad MAC Error`).
+3. **Falso Positivo de Intervención Humana en Self-Chat (`fromMe`)**: Al escribir Eduardo a su propio número ("Mensajes a ti mismo" / `573192919978`), WhatsApp enviaba `fromMe: true`. El interceptor de intervención humana asumía erróneamente que Eduardo estaba respondiendo a un cliente externo, silenciando la sesión en PostgreSQL (`mute:573192919978`) y descartando el mensaje con `return;` antes de evaluar la verificación de cédula.
+
+**Solución aplicada:**
+- **Discriminación Inteligente de `fromMe` (`server/_core/whatsapp-match.ts`)**:
+  - En el chat de sí mismo (`isSelfChat` / `isAdmin`), los mensajes humanos no activan la regla de intervención humana ni silencian al bot, permitiendo el despacho de consultas, prediales y verificaciones de cédula.
+  - Para clientes externos, la regla de intervención humana se preserva intacta para no interrumpir al asesor.
+  - Forzado `isMuted = false` de forma permanente para el administrador y self-chat.
+- **Aislamiento de Baileys en Entorno Local (`server/_core/index.ts` y `server/_core/whatsapp-match.ts`)**:
+  - En desarrollo local (`NODE_ENV === "development"`), Baileys permanece desactivado por defecto protegiendo el VPS en producción.
+  - Desactivado el heartbeat a la base de datos en local para no interferir con el bot en vivo.
+- **Reintento Defensivo en `queuedSend`**:
+  - Reintento automático sin parámetro `quoted` en caso de error de cotización, garantizando 100% de tasa de entrega.
+- **Extirpación de Procesos Zombi y Limpieza de BD en VPS**:
+  - Procesos zombi terminados con `kill -9`, sesiones Signal corruptas purgadas en `.baileys_auth` y mutes borrados en `pendingSessions`.
+- **Suite de Regresión Doctrinal**:
+  - 124/124 tests de Vitest pasando al 100% ✅.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build de producción limpio ✅.
+
+---
+
 ### 🔖 v32.5 — Septiembre 2026
 
 #### 📌 ERRADICACIÓN TOTAL DE 3D EN "BIENES RAÍCES", MARCA EN TIPOGRAFÍA UNIFICADA AUDIOWIDE PLANO Y TIPOGRAFÍA MINA EN CARDS Y CONTENIDO

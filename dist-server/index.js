@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.5";
+    VECY_VERSION = "v32.6";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -10339,6 +10339,9 @@ var init_whatsapp_match = __esm({
         this.startDbHeartbeat();
       }
       startDbHeartbeat() {
+        if (process.env.NODE_ENV === "development" && process.env.ENABLE_LOCAL_WHATSAPP !== "true" && process.env.ENABLE_WHATSAPP_BOT !== "true") {
+          return;
+        }
         this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error in initial status update:`, err));
         setInterval(() => {
           this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error in heartbeat status update:`, err));
@@ -10730,7 +10733,10 @@ ${quotedNote}` : quotedNote;
               if (!isGroup) {
                 const rawPhone = senderId.split("@")[0];
                 const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
-                const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573192919978";
+                const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
+                const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
+                const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === ADMIN_PHONE || rawPhone === "573192919978";
+                const isAdmin = isSelfChat || rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone === "573166569719";
                 const userName = msg.pushName || `Asesor +${rawPhone}`;
                 let body = "";
                 if (msg.message?.conversation) body = msg.message.conversation;
@@ -10740,19 +10746,26 @@ ${quotedNote}` : quotedNote;
                 else if (msg.message?.videoMessage) body = msg.message.videoMessage.caption || "";
                 if (msg.key.fromMe) {
                   const msgId = msg.key.id || "";
-                  const msgTimestampMs = Number(msg.messageTimestamp || 0) * 1e3;
-                  const isRecentMessage = Date.now() - msgTimestampMs < 2 * 60 * 1e3;
-                  if (!this.botSentMessageIds.has(msgId) && isRecentMessage) {
-                    console.log(`[JANIA-MATCH] Intervenci\xF3n humana detectada en DM ${senderId}. Silenciando bot.`);
-                    this.lastHumanIntervention.set(senderId, Date.now());
-                    const { muteSession: muteSession3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-                    await muteSession3(senderId, true).catch((err) => console.error("Error muting session in database:", err));
+                  if (this.botSentMessageIds.has(msgId)) {
+                    return;
                   }
-                  return;
+                  if (isSelfChat || isAdmin) {
+                    console.log(`[JANIA-MATCH] Mensaje propio detectado en chat de administraci\xF3n/self-chat (${senderId}). Procediendo a procesar.`);
+                  } else {
+                    const msgTimestampMs = Number(msg.messageTimestamp || 0) * 1e3;
+                    const isRecentMessage = Date.now() - msgTimestampMs < 2 * 60 * 1e3;
+                    if (isRecentMessage) {
+                      console.log(`[JANIA-MATCH] Intervenci\xF3n humana detectada en DM de tercero ${senderId}. Silenciando bot.`);
+                      this.lastHumanIntervention.set(senderId, Date.now());
+                      const { muteSession: muteSession3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+                      await muteSession3(senderId, true).catch((err) => console.error("Error muting session in database:", err));
+                    }
+                    return;
+                  }
                 }
                 const cleanStart = body.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
                 const { isSessionMuted: isSessionMuted2, muteSession: muteSession2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-                let isMuted = await isSessionMuted2(senderId);
+                let isMuted = isSelfChat || isAdmin ? false : await isSessionMuted2(senderId);
                 if (isMuted) {
                   if (cleanStart.startsWith("agente jania")) {
                     await muteSession2(senderId, false).catch((err) => console.error("Error unmuting session:", err));
@@ -11905,7 +11918,18 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             } else {
               await delay(2e3);
             }
-            const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
+            let sent;
+            try {
+              sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
+            } catch (sendErr) {
+              if (sendOptions.quoted) {
+                console.warn(`[JANIA-MATCH] Reintentando despacho a ${targetJid} sin par\xE1metro quoted (${sendErr?.message})...`);
+                delete sendOptions.quoted;
+                sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
+              } else {
+                throw sendErr;
+              }
+            }
             if (sent && sent.key && sent.key.id) {
               this.botSentMessageIds.add(sent.key.id);
             }
@@ -25462,14 +25486,19 @@ Direcci\xF3n obligatoria:
   const port = parseInt(process.env.PORT || "3000");
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
-    const shouldStartBot = process.env.ENABLE_WHATSAPP_BOT !== "false" || process.env.ENABLE_JANIA_MATCH_BOT === "true";
+    const isDev = process.env.NODE_ENV === "development";
+    const shouldStartBot = isDev ? process.env.ENABLE_LOCAL_WHATSAPP === "true" || process.env.ENABLE_WHATSAPP_BOT === "true" : process.env.ENABLE_WHATSAPP_BOT !== "false" || process.env.ENABLE_JANIA_MATCH_BOT === "true";
     if (shouldStartBot) {
       console.log("Iniciando Bot Oficial JanIA (+573192919978) Baileys (.baileys_auth)...");
       Promise.resolve().then(() => (init_whatsapp_match(), whatsapp_match_exports)).then(({ janiaMatchBot: janiaMatchBot2 }) => {
         janiaMatchBot2.initialize();
       }).catch((err) => console.error("[WHATSAPP-MATCH] Error al iniciar bot oficial:", err));
     } else {
-      console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante variables de entorno.");
+      if (isDev) {
+        console.log("[WHATSAPP-BOT] \u{1F6E1}\uFE0F Socket Baileys deshabilitado en desarrollo local para proteger el bot en producci\xF3n VPS (use ENABLE_LOCAL_WHATSAPP=true para forzar conexi\xF3n local).");
+      } else {
+        console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante variables de entorno.");
+      }
     }
     initCronScheduler();
   });

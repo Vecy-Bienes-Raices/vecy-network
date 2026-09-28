@@ -931,14 +931,22 @@ Dirección obligatoria:
 
     // Inicializar los Bots de WhatsApp de Vecy Network (Baileys)
     // Operación exclusiva del Bot Oficial JanIA (+573192919978).
-    const shouldStartBot = process.env.ENABLE_WHATSAPP_BOT !== "false" || process.env.ENABLE_JANIA_MATCH_BOT === "true";
+    const isDev = process.env.NODE_ENV === "development";
+    const shouldStartBot = isDev
+      ? (process.env.ENABLE_LOCAL_WHATSAPP === "true" || process.env.ENABLE_WHATSAPP_BOT === "true")
+      : (process.env.ENABLE_WHATSAPP_BOT !== "false" || process.env.ENABLE_JANIA_MATCH_BOT === "true");
+
     if (shouldStartBot) {
       console.log("Iniciando Bot Oficial JanIA (+573192919978) Baileys (.baileys_auth)...");
       import("./whatsapp-match").then(({ janiaMatchBot }) => {
         janiaMatchBot.initialize();
       }).catch(err => console.error("[WHATSAPP-MATCH] Error al iniciar bot oficial:", err));
     } else {
-      console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante variables de entorno.");
+      if (isDev) {
+        console.log("[WHATSAPP-BOT] 🛡️ Socket Baileys deshabilitado en desarrollo local para proteger el bot en producción VPS (use ENABLE_LOCAL_WHATSAPP=true para forzar conexión local).");
+      } else {
+        console.log("[WHATSAPP-BOT] Deshabilitado temporalmente mediante variables de entorno.");
+      }
     }
 
     // Inicializar el orquestador de agendas automatizadas (Cron)

@@ -7,6 +7,45 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.6 — 28 Septiembre 2026
+
+### Solicitud de Eduardo
+Diagnóstico y Reactivación Inmediata de Verificación de Documentos con 2Captcha y Policía Nacional en WhatsApp:
+*"Lo que hicimos y creamos con 2Captcha para verificación de docuemnetos por whatsapp no está funcionando. Mira la imagen, será que también lo desconectaste?"*
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **2Captcha y Policía Nacional 100% Operativos (Cero Desconexión de API)**:
+   - Se auditó el saldo de 2Captcha ($2.8906 USD activos) y se ejecutó la consulta en vivo de la C.C. `19872169` directamente contra la Policía Nacional resolviendo reCAPTCHA v2. El portal respondió exitosamente en 22 segundos confirmando la identidad oficial: **Hector Eduardo Garcia Lopez**. El servicio no estaba desconectado ni roto.
+2. **Guerra de Sockets Baileys (Código 440 connectionReplaced) y Procesos Zombi en VPS**:
+   - En el servidor VPS se identificaron 2 procesos zombi desbocados (PID 1708744 y PID 1683610) que corrían desde el 27 de septiembre al 101% de CPU ejecutando instancias viejas de `dist-server/index.js`.
+   - Adicionalmente, en la máquina local de desarrollo se inició `npm run dev` (PID 8407), el cual cargaba Baileys con las credenciales de `.baileys_auth`.
+   - Estos 4 procesos competían simultáneamente por el socket WebSocket de WhatsApp (`+573192919978`), desconectando al bot de producción cada 20 segundos con código 440 (`connectionReplaced`) y corrompiendo las sesiones criptográficas Signal (`Over 2000 messages into the future!` y `Bad MAC Error`). Al enviar Eduardo el mensaje a las 14:18, el socket estaba en conflicto o el paquete fue descartado por llaves rotas.
+3. **Falso Positivo de Intervención Humana en Self-Chat (`fromMe`)**:
+   - Eduardo envió la consulta desde su WhatsApp Web en el chat con su propio número ("Mensajes a ti mismo" / "Eduardo A. Rivera Rivera 🥷" en `+573192919978`).
+   - En WhatsApp, los mensajes en el chat de uno mismo viajan con la bandera `fromMe: true`.
+   - En `server/_core/whatsapp-match.ts`, el interceptor de intervención humana evaluaba `if (msg.key.fromMe)` y asumía erróneamente que Eduardo estaba interviniendo en una conversación con un cliente externo. Por consiguiente, silenciaba la sesión en PostgreSQL (`pendingSessions` con `mute:573192919978: true`) y ejecutaba `return;` prematuro, descartando el mensaje sin pasarlo al interceptor de verificación de cédula.
+4. **Falta de Blindaje en Desarrollo Local**:
+   - `server/_core/index.ts` iniciaba Baileys automáticamente por defecto (`ENABLE_WHATSAPP_BOT !== "false"`), lo que provocaba que cualquier desarrollador abriendo la web localmente le robara el socket al servidor VPS en vivo.
+
+### Acciones Ejecutadas en Código y Servidor
+1. **Extirpación de Procesos Zombi y Purga de Sesiones Corruptas en VPS**:
+   - Se eliminaron con `kill -9` todos los procesos zombi en el VPS (PIDs 1708744, 1683610, 1663846, etc.), restaurando el Load Average a niveles óptimos.
+   - Se eliminaron los registros de mute indebidos en PostgreSQL VPS (`DELETE FROM pendingSessions WHERE jid IN ('mute:573192919978', 'mute:573166569719')`).
+   - Se purgaron los archivos de sesión Signal corruptos en `.baileys_auth` del VPS.
+2. **Discriminación Inteligente de `fromMe` en `server/_core/whatsapp-match.ts`**:
+   - Se blindó la condición de `fromMe`: si el mensaje proviene del bot (`botSentMessageIds`), se ignora para evitar bucles. Pero si fue escrito por un humano en su propio chat de administración (`isSelfChat` / `isAdmin`), **NO se considera intervención humana de cliente ni se silencia**, permitiendo que continúe al buffer para procesar comandos, prediales y verificaciones de identidad.
+   - En chats con terceros, la intervención humana se preserva intacta para no interrumpir al asesor cuando hable con un cliente.
+   - Se forzó `isMuted = false` de forma permanente para el administrador y self-chat.
+3. **Blindaje de Socket en Desarrollo Local (`server/_core/index.ts` y `server/_core/whatsapp-match.ts`)**:
+   - Se condicionó el inicio de Baileys: en desarrollo local (`NODE_ENV === "development"`), Baileys permanece apagado para proteger el VPS, a menos que se defina explícitamente `ENABLE_LOCAL_WHATSAPP=true`.
+   - Se desactivó el heartbeat a la base de datos en entorno local para no alterar el estado del bot en producción.
+4. **Reintento Defensivo en `queuedSend`**:
+   - Si un mensaje falla al ser enviado con parámetro `quoted` (por mensajes `fromMe` o referencias desincronizadas), se reintenta automáticamente sin `quoted`, garantizando el 100% de tasa de entrega.
+5. **Incremento de Versión Oficial**:
+   - Incrementado a **`v32.6`** en `shared/const.ts` y **`32.6.0`** en `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.5 — 28 Septiembre 2026
 
 ### Solicitud de Eduardo

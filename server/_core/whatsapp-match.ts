@@ -252,6 +252,10 @@ export class JaniaMatchBot {
   }
 
   private startDbHeartbeat() {
+    if (process.env.NODE_ENV === "development" && process.env.ENABLE_LOCAL_WHATSAPP !== "true" && process.env.ENABLE_WHATSAPP_BOT !== "true") {
+      return;
+    }
+
     // Initial status update
     this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error in initial status update:`, err));
 
@@ -834,7 +838,10 @@ export class JaniaMatchBot {
           if (!isGroup) {
             const rawPhone = senderId.split('@')[0];
             const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
-            const isAdmin = rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573192919978";
+            const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : '';
+            const botPhone = botJid ? botJid.split('@')[0] : '573192919978';
+            const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === ADMIN_PHONE || rawPhone === "573192919978";
+            const isAdmin = isSelfChat || rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone === "573166569719";
             const userName = msg.pushName || `Asesor +${rawPhone}`;
 
             let body = '';
@@ -847,27 +854,34 @@ export class JaniaMatchBot {
             // 1. Detectar si el mensaje es del bot o de un humano (fromMe)
             if (msg.key.fromMe) {
               const msgId = msg.key.id || "";
-              // CRÍTICO: Solo considerar intervención humana si el mensaje es RECIENTE (<2 min)
-              // Los mensajes fromMe históricos (al reconectar) NO son intervenciones humanas.
-              // botSentMessageIds es un Set en memoria que se resetea al reconectar, por lo que
-              // sin esta salvaguarda se dispararía un loop de mute para todos los mensajes previos.
-              const msgTimestampMs = Number(msg.messageTimestamp || 0) * 1000;
-              const isRecentMessage = (Date.now() - msgTimestampMs) < 2 * 60 * 1000; // 2 minutos
-              if (!this.botSentMessageIds.has(msgId) && isRecentMessage) {
-                // Intervención humana detectada (mensaje reciente no enviado por el bot)
-                console.log(`[JANIA-MATCH] Intervención humana detectada en DM ${senderId}. Silenciando bot.`);
-                this.lastHumanIntervention.set(senderId, Date.now());
-                const { muteSession } = await import('./janIA');
-                await muteSession(senderId, true).catch(err => console.error("Error muting session in database:", err));
+              
+              // Si el propio bot despachó el mensaje programáticamente, ignorar para evitar loops
+              if (this.botSentMessageIds.has(msgId)) {
+                return;
               }
-              return;
+
+              // Si es un mensaje escrito en el chat con JanIA / self-chat / admin:
+              if (isSelfChat || isAdmin) {
+                console.log(`[JANIA-MATCH] Mensaje propio detectado en chat de administración/self-chat (${senderId}). Procediendo a procesar.`);
+              } else {
+                // Intervención humana detectada en conversación DM con un tercero (cliente externo)
+                const msgTimestampMs = Number(msg.messageTimestamp || 0) * 1000;
+                const isRecentMessage = (Date.now() - msgTimestampMs) < 2 * 60 * 1000; // 2 minutos
+                if (isRecentMessage) {
+                  console.log(`[JANIA-MATCH] Intervención humana detectada en DM de tercero ${senderId}. Silenciando bot.`);
+                  this.lastHumanIntervention.set(senderId, Date.now());
+                  const { muteSession } = await import('./janIA');
+                  await muteSession(senderId, true).catch(err => console.error("Error muting session in database:", err));
+                }
+                return;
+              }
             }
 
             // 2. Verificar reactivación ("Agente JanIA")
             const cleanStart = body.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
             
             const { isSessionMuted, muteSession } = await import('./janIA');
-            let isMuted = await isSessionMuted(senderId);
+            let isMuted = (isSelfChat || isAdmin) ? false : await isSessionMuted(senderId);
 
             if (isMuted) {
               if (cleanStart.startsWith("agente jania")) {
@@ -2306,7 +2320,18 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           await delay(2000);
         }
 
-        const sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
+        let sent;
+        try {
+          sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
+        } catch (sendErr: any) {
+          if (sendOptions.quoted) {
+            console.warn(`[JANIA-MATCH] Reintentando despacho a ${targetJid} sin parámetro quoted (${sendErr?.message})...`);
+            delete sendOptions.quoted;
+            sent = await this.sock.sendMessage(targetJid, messagePayload, sendOptions);
+          } else {
+            throw sendErr;
+          }
+        }
         if (sent && sent.key && sent.key.id) {
           this.botSentMessageIds.add(sent.key.id);
         }
