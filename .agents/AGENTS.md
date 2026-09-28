@@ -165,7 +165,29 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.9 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.10 — Septiembre 2026
+
+### Novedades v32.10 (Lanzamiento de Broadcast Multimedial de Verificación Gratuita de Cédulas, Invitación Estratégica al Canal Oficial de WhatsApp, Teaser de Impuesto Predial y Simulación 'Composing' en Captions):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo instruyó: *"Crea la mejor propaganda para nuestro nuevo servicio y postéalo en los grupos 2 y 3 + el canal de Whatsapp. Recuerda es gratuito... Dales un ejemplo de cómo solicitar el servicio de forma fácil, corta y agil, es decir envíales una plantilla muy corta de la frase. Un todo en uno, debe ser un solo mensaje para que no se pongan a saludar primero... Te anexo la imagen para que la envíes de una al grupo... Será que usamos esta propaganda para hacer que nos sigan en nuestro canal de whatsapp, diciendoles que nos sigan para obtener más servicios gratuitos como este y próximamate JanIA te ayudará a sacar prediales y entregartelos por whatsapp. Se puede?? Tienes el enlace del canal para ponerlo allí e invitarlos a todos.??"*
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Estrategia de Conversión y Tracción al Canal Oficial de WhatsApp**:
+     - Se integró el enlace oficial público de invitación al canal: `https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b` (*"𝗩𝗘𝗖𝗬 𝗕𝗜𝗘𝗡𝗘𝗦 𝗥𝗔Í𝗖𝗘𝗦 🏘️"*).
+     - Se redactó copy de alta conversión invitando a seguir el canal para obtener más servicios gratuitos exclusivos de **VECY BIENES RAÍCES** y anunciando el spoiler del próximo servicio: liquidación y entrega de **Impuestos Prediales** directamente por WhatsApp.
+  2. **Plantilla Todo-en-Uno Sin Fricción**:
+     - Se diseñó el comando copy-paste: `JanIA, verificar cédula: 12.345.678` para que los colegas soliciten el servicio en un único mensaje sin saludos preliminares.
+  3. **Simulación de Presencia Activa (Tres Puntitos / `composing`) en Captions y DMs**:
+     - Se extendió el escudo de presencia en `server/_core/whatsapp-match.ts` (`queuedSend`) para activar `sendPresenceUpdate('composing')` en mensajes con imagen (`messagePayload.caption`), garantizando que los usuarios vean el indicador antes de la entrega.
+     - Se insertó activación de presencia antes de invocar `executeIdentityVerificationFromWhatsApp` en DMs y grupos.
+  4. **Despacho Multimedial Coordinado a 3 Destinos**:
+     - Endpoint administrativo seguro `/api/admin/broadcast-service-promo` ejecutado por el bot en VPS, enviando el flyer oficial (`jania_verificacion_servicio.jpg`) con texto personalizado a:
+       - **Grupo 2**: `120363417740040773@g.us` (Soporte Legal, Contratos y Avalúos) ✅
+       - **Grupo 3**: `120363403507276533@g.us` (Proyecto Vecy Network) ✅
+       - **Canal Oficial**: `120363399889853806@newsletter` ✅
+       - *(Grupo 1 preservado en silencio absoluto según doctrina)*.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | Despacho confirmado en VPS PM2 ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.9 — Septiembre 2026
 
 ### Novedades v32.9 (Blindaje Criptográfico Signal en Baileys contra "Over 2000 messages into the future!", Trinquete Iterativo 500k y Auto-Reparación de Sesiones):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

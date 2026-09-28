@@ -322,6 +322,35 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.10 — Septiembre 2026
+
+#### 📌 LANZAMIENTO DE BROADCAST MULTIMEDIAL DE VERIFICACIÓN GRATUITA DE CÉDULAS, INVITACIÓN AL CANAL OFICIAL DE WHATSAPP, TEASER DE IMPUESTO PREDIAL Y SIMULACIÓN 'COMPOSING' EN CAPTIONS
+
+**Requerimiento y Objetivos:**
+1. Crear una campaña promocional de alto impacto para el servicio gratuito de verificación de identidad y antecedentes policiales con JanIA.
+2. Despachar el flyer oficial (`jania_verificacion_servicio.jpg`) junto con el texto a:
+   - Grupo 2 (`120363417740040773@g.us` - Soporte Legal, Contratos y Avalúos).
+   - Grupo 3 (`120363403507276533@g.us` - Proyecto Vecy Network).
+   - Canal Oficial de WhatsApp (`120363399889853806@newsletter`).
+   - *(Grupo 1 preservado bajo la regla doctrinal de silencio absoluto)*.
+3. Utilizar la campaña como lead magnet estratégico para captar seguidores hacia el **Canal Oficial de WhatsApp** (`https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`).
+4. Anunciar como adelanto exclusivo / spoiler el próximo servicio gratuito: liquidación y entrega de **Impuestos Prediales** directamente por WhatsApp.
+5. Brindar una plantilla todo-en-uno sin fricción: `JanIA, verificar cédula: 12.345.678` para evitar que los usuarios saluden y esperen turnos.
+6. Garantizar que la presencia de escritura ("tres puntitos" / `composing`) se active antes del despacho de imágenes con caption y durante el procesamiento de cédulas.
+
+**Solución aplicada:**
+- **Simulación de Presencia Activa en Baileys (`server/_core/whatsapp-match.ts`)**:
+  - En `queuedSend`, se expandió el evaluador de texto para soportar `messagePayload.caption`, de modo que el envío de imágenes con caption muestre el estado `composing` durante 2 a 5 segundos de forma orgánica.
+  - Se agregó activación de presencia `composing` antes de ejecutar `executeIdentityVerificationFromWhatsApp` en DMs y grupos.
+- **Endpoint de Difusión Coordinada (`server/_core/index.ts`)**:
+  - `/api/admin/broadcast-service-promo` ejecuta el despacho secuencial seguro a través del socket Baileys activo en PM2, evitando reemplazos o códigos 440.
+  - Copys adaptados para grupos (enlace de suscripción al canal) y canal (fidelización y compartir con colegas).
+- **Despacho y Ejecución en Vivo**:
+  - Flyer alojado en `/var/www/vecy-network/jania_verificacion_servicio.jpg` y entregado exitosamente a Grupo 2, Grupo 3 y Canal Oficial.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | Despacho confirmado en VPS PM2 ✅
+
+---
+
 ### 🔖 v32.9 — Septiembre 2026
 
 #### 📌 BLINDAJE CRIPTOGRÁFICO SIGNAL EN BAILEYS CONTRA "OVER 2000 MESSAGES INTO THE FUTURE!", TRINQUETE ITERATIVO 500K Y AUTO-REPARACIÓN DE SESIONES

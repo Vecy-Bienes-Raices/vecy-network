@@ -7,6 +7,46 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.10 — 28 Septiembre 2026
+
+### Solicitud de Eduardo
+Lanzamiento Estratégico de Propaganda para el Servicio Gratuito de Verificación de Cédulas, Invitación Masiva al Canal Oficial de WhatsApp y Anuncio del Futuro Servicio de Descarga de Impuestos Prediales:
+*(Eduardo instruyó: "Crea la mejor propaganda para nuestro nuevo servicio y postéalo en los grupos 2 y 3 + el canal de Whatsapp. Recuerda es gratuito. Así que bríndaselo con mucho ingénio y gancho a nuestros colegas. Dales un ejemplo de cómo solicitar el servicio de forma fácil, corta y agil, es decir envíales una plantilla muy corta de la frase. Un todo en uno, debe ser un solo mensaje para que no se pongan a saludar primero y luego enviar otro mensaje. No se si le tienes activados los tres puntitos para que vean que JanIA está escribiendo por whatsapp antes de entregarles el mensaje. Te anexo la imagen para que la envíes de una al grupo y espero esté funcionando de maravilla y sin defectos... Será que usamos esta propaganda para hacer que nos sigan en nuestro canal de whatsapp, diciendoles que nos sigan para obtener más servicios gratuitos como este y próximamate JanIA te ayudará a sacar prediales y entregartelos por whatsapp. Se puede?? Tienes el enlace del canal para ponerlo allí e invitarlos a todos.??")*
+
+### Diagnóstico Técnico Profundo y Estrategia de Conversión
+1. **Apalancamiento de Tracción Orgánica para el Canal Oficial de WhatsApp**:
+   - Se validó que el enlace público de invitación oficial del canal es: `https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b` (*"𝗩𝗘𝗖𝗬 𝗕𝗜𝗘𝗡𝗘𝗦 𝗥𝗔Í𝗖𝗘𝗦 🏘️"* / JID: `120363399889853806@newsletter`).
+   - El canal oficial es el medio idóneo para consolidar la comunidad inmobiliaria sin el ruido conversacional de los grupos de debate y sin violar la doctrina de silencio absoluto del Grupo 1.
+2. **Eliminación de Fricción con Plantilla Todo-en-Uno**:
+   - En lugar de flujos conversacionales de múltiples turnos ("Hola" -> esperar respuesta -> enviar cédula), se estableció un comando directo: `JanIA, verificar cédula: 12.345.678`.
+3. **Simulación de Presencia Humana ("Tres Puntitos" / `composing`)**:
+   - El método `queuedSend` en `server/_core/whatsapp-match.ts` validaba únicamente `messagePayload.text`. Al enviar imágenes con texto (`messagePayload.caption`), no ejecutaba `sendPresenceUpdate('composing')`. Se amplió el chequeo para soportar tanto `text` como `caption`.
+   - Se añadió activación inmediata de presencia antes de ejecutar las verificaciones de cédula en DMs y grupos.
+4. **Respeto Doctrinal de Silencio en Grupo 1**:
+   - La propaganda se despachó exclusivamente a Grupo 2 (Soporte Legal), Grupo 3 (Proyecto Vecy Network) y el Canal de WhatsApp. El Grupo 1 (`VECY INMUEBLES NETWORK`) permaneció en silencio absoluto.
+
+### Acciones Ejecutadas en Código, Servidor y Despacho en Vivo
+1. **Endpoint Administrativo de Difusión Multimedial (`server/_core/index.ts`)**:
+   - Endpoint `POST /api/admin/broadcast-service-promo` integrado con el bot Baileys activo para evitar colisiones de socket.
+   - Textos adaptados:
+     - **Grupos 2 y 3**: Enfatiza la seguridad en citas inmobiliarias, la plantilla de un solo mensaje, el enlace directo a JanIA (`wa.me/573192919978`), la invitación al canal oficial de WhatsApp y el spoiler del próximo servicio de descarga de Impuesto Predial.
+     - **Canal Oficial**: Agradece a los miembros por seguir el canal, ofrece la herramienta gratuita con su plantilla y anuncia el próximo lanzamiento de impuestos prediales.
+2. **Copia del Flyer Oficial en el Servidor**:
+   - El flyer `jania_verificacion_servicio.jpg` fue alojado tanto en el cliente web (`client/public/images/jania_verificacion_servicio.jpg`) como en la raíz del servidor VPS (`/var/www/vecy-network/jania_verificacion_servicio.jpg`).
+3. **Despacho Exitoso en VPS**:
+   - Se ejecutó el broadcast contra el proceso en producción. Los logs de PM2 confirmaron:
+     - `✓ Despachado a Grupo 2`
+     - `✓ Despachado a Grupo 3`
+     - `✓ Despachado a Canal (120363399889853806@newsletter)`
+4. **Validación y Compilación**:
+   - 124/124 tests de Vitest pasando al 100% ✅.
+   - Chequeo de tipos `tsc --noEmit` con 0 errores ✅.
+   - Compilación Vite y esbuild (`dist-server/index.js`) 100% limpia ✅.
+5. **Incremento de Versión Oficial**:
+   - Versión elevada a **`v32.10`** en `shared/const.ts` y **`32.10.0`** en `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.9 — 28 Septiembre 2026
 
 ### Solicitud de Eduardo
