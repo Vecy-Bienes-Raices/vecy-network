@@ -322,6 +322,30 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.5 — Septiembre 2026
+
+#### 📌 ERRADICACIÓN TOTAL DE 3D EN "BIENES RAÍCES", MARCA EN TIPOGRAFÍA UNIFICADA AUDIOWIDE PLANO Y TIPOGRAFÍA MINA EN CARDS Y CONTENIDO
+
+**Problemas identificados:**
+1. **Deformación por Sombras 3D en "BIENES RAÍCES"**: Los efectos de extrusión física tridimensional empastaban los caracteres y generaban distorsión visual, restando elegancia a la identidad de marca.
+2. **Invasión Tipográfica en Cards y Paneles**: La regla de encabezados afectó a componentes internos del Admin ("Coincidencias", métricas) y tarjetas de propiedades/requerimientos.
+
+**Solución aplicada:**
+- **Erradicación Total de Efectos 3D y Drop-Shadows (`client/src/index.css`)**:
+  - `.vecy-gold-3d`, `.title-gold-gradient` y `.text-gradient-gold` configuradas con degradé metálico satinado limpio y `filter: none !important; text-shadow: none !important;` (0% 3D).
+- **Marca Oficial en Dos Niveles con Tipografía Unificada (`Audiowide`)**:
+  - `VECY`: en blanco puro resplandeciente con fuente `Audiowide`.
+  - `BIENES RAÍCES`: en degradado dorado satinado con el mismo tipo de letra `Audiowide`, nítido, limpio y plano.
+  - Implementado en `Home.tsx`, `Navbar.tsx`, `Admin.tsx` y `JanIAConsole.tsx`.
+- **Adopción de Tipografía `Mina` en Cards, Títulos de Sección, Subtítulos y Contenido (`client/index.html`, `client/src/index.css`)**:
+  - Importada `Mina` desde Google Fonts.
+  - Asignada a `h1-h6`, títulos de sección, tarjetas de la plataforma y subtítulos (`.vecy-subtitle`), garantizando máxima legibilidad, modernidad y frescura visual.
+- **Suite de Regresión Doctrinal**:
+  - 124/124 tests de Vitest pasando al 100% ✅.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build de producción limpio ✅.
+
+---
+
 ### 🔖 v32.4 — Septiembre 2026
 
 #### 📌 TIPOGRAFÍA FUTURISTA AUDIOWIDE EXCLUSIVA PARA TÍTULOS CON COMBINACIÓN TRADICIONAL DE LETRAS EN BLANCO Y DORADO

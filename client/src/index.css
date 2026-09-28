@@ -62,9 +62,10 @@
   --shadow-luminous-gold: 0 0 20px rgba(212, 175, 55, 0.5), 0 0 40px rgba(212, 175, 55, 0.2);
   
   /* Fonts */
-  --font-display: "Audiowide", cursive, sans-serif;
-  --font-sans: "Inter", sans-serif;
-  --font-heading: "Audiowide", cursive, sans-serif;
+  --font-display: "Mina", "Plus Jakarta Sans", sans-serif;
+  --font-sans: "Mina", "Plus Jakarta Sans", "Inter", sans-serif;
+  --font-heading: "Mina", "Plus Jakarta Sans", sans-serif;
+  --font-brand: "Audiowide", cursive, sans-serif;
 }
 
 :root {
@@ -147,11 +148,11 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-sans, "Inter", sans-serif);
+    font-family: var(--font-sans, "Mina", "Plus Jakarta Sans", "Inter", sans-serif);
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display, "Audiowide", cursive, sans-serif);
-    letter-spacing: -0.01em;
+    font-family: var(--font-heading, "Mina", "Plus Jakarta Sans", sans-serif);
+    letter-spacing: 0.01em;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -539,10 +540,10 @@
 
   /* PAGE HEADER PATTERN */
   .page-header-gold {
-    font-family: "Audiowide", cursive, sans-serif;
-    font-weight: 900;
+    font-family: var(--font-heading, "Mina", sans-serif);
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.04em;
     background: linear-gradient(135deg, #fdf6d8 0%, #eed580 30%, #d4af37 60%, #b8860b 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -586,68 +587,26 @@
   /* ── VECY GLOBAL TYPOGRAPHY UTILITIES ───────────────────────────────────────── */
   
   .vecy-title-hero {
-    @apply text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black uppercase tracking-tight text-white mb-4 leading-tight;
-    font-family: "Audiowide", cursive, sans-serif;
-    filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.85));
+    @apply text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold uppercase tracking-tight text-white mb-4 leading-tight;
+    font-family: var(--font-heading, "Mina", sans-serif);
   }
 
   .vecy-title-section {
-    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white mb-3;
-    font-family: "Audiowide", cursive, sans-serif;
-    filter: drop-shadow(0 3px 12px rgba(0, 0, 0, 0.8));
+    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold uppercase tracking-wide text-white mb-3;
+    font-family: var(--font-heading, "Mina", sans-serif);
   }
 
-  /* ── VECY ESCULPIDO 3D EN ORO MACIZO — ULTRA DEFINICIÓN & 0% OVERHEAD ──────────────── */
+  /* ── DEGRADADO DORADO ELEGANTE, PLANO, BRILLANTE & 0% 3D ── */
   .vecy-gold-3d,
   .title-gold-gradient,
   .text-gradient-gold {
-    font-family: "Audiowide", cursive, sans-serif;
-    font-weight: 900;
-    /* Degradé de 9 paradas: luz especular blanca superior, oro 24k, horizonte biselado y rebote áurico */
-    background: linear-gradient(
-      180deg,
-      #ffffff 0%,
-      #fff8d4 10%,
-      #f5cf6d 26%,
-      #d49d2c 44%,
-      #94640f 52%,
-      #dfb758 66%,
-      #fef3b0 82%,
-      #b38118 94%,
-      #5c3c04 100%
-    );
+    background: linear-gradient(135deg, #dfba6d 0%, #fcf6ba 40%, #c99c3e 70%, #ae832a 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     display: inline-block;
-    padding-bottom: 0.12em;
-    line-height: 1.15;
-    /* Extrusión volumétrica real en capas matemáticas: luz superior, bisel, grosor de lingote y oclusión */
-    filter: 
-      drop-shadow(0 1px 0px rgba(255, 255, 255, 0.45))
-      drop-shadow(0 1px 0px #b8860b)
-      drop-shadow(0 2px 0px #8a631c)
-      drop-shadow(0 3px 0px #5c3f09)
-      drop-shadow(0 4px 1px #221601)
-      drop-shadow(0 6px 14px rgba(0, 0, 0, 0.85))
-      drop-shadow(0 0 20px rgba(212, 175, 55, 0.25));
-    will-change: filter;
-    transform: translateZ(0);
-  }
-
-  /* Versión responsive adaptativa para móviles (pantallas <= 640px): 0 lag y máxima nitidez sin empastes */
-  @media (max-width: 640px) {
-    .vecy-gold-3d,
-    .title-gold-gradient,
-    .text-gradient-gold {
-      padding-bottom: 0.08em;
-      filter: 
-        drop-shadow(0 1px 0px rgba(255, 255, 255, 0.4))
-        drop-shadow(0 1px 0px #b8860b)
-        drop-shadow(0 2px 0px #6d4a0b)
-        drop-shadow(0 2.5px 1px #1f1401)
-        drop-shadow(0 4px 10px rgba(0, 0, 0, 0.9));
-    }
+    filter: none !important;
+    text-shadow: none !important;
   }
 
   /* Sección título con línea dorada - Color sólido dorado para evitar duplicación de texto nativo en Blink <legend> */
@@ -659,6 +618,7 @@
   /* Subtítulos originales de lectura fluida */
   .vecy-subtitle {
     @apply text-sm sm:text-base md:text-lg text-gray-300 font-normal leading-relaxed mb-6;
+    font-family: var(--font-sans, "Mina", "Plus Jakarta Sans", "Inter", sans-serif);
   }
 
   .vecy-paragraph {

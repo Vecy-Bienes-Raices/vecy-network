@@ -165,7 +165,24 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.4 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.5 — Septiembre 2026
+
+### Novedades v32.5 (Erradicación Total de 3D en "BIENES RAÍCES", Marca en Tipografía Unificada Audiowide Plano y Tipografía Mina en Cards y Contenido):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo instruyó: *"La idea era no dejar nada en 3D como le dejaste a la parte que dice 'BIENES RAÍCES', porque vi que eso hace que la letra no se vea bien. Sería mejor y más bien dejar esa parte en el mismo tipo de letra que VECY, pero en color dorado en degradé y para lo demas las cards y eso una letra legible y bien bonita puede ser en tipo 'Mina'. No sé que opinas y pues con los efectos necesarios que tu creas convenientes."*
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Erradicación Total de Efectos 3D y Drop-Shadows Deformes**:
+     - Eliminadas todas las capas pesadas de `drop-shadow` que empastaban y distorsionaban los glifos de "BIENES RAÍCES".
+     - `.vecy-gold-3d`, `.title-gold-gradient` y `.text-gradient-gold` adoptan un acabado satinado puro metálico plano (`filter: none !important; text-shadow: none !important;`).
+  2. **Marca Oficial en Tipografía Unificada (`Audiowide`)**:
+     - **`VECY`**: Arriba en **blanco puro resplandeciente** (`text-white`) con fuente `Audiowide`.
+     - **`BIENES RAÍCES`**: Abajo en **dorado satinado en degradé** (`text-gradient-gold`) con el **mismo tipo de letra** `Audiowide`, plano, limpio y de altísima nitidez.
+     - Implementado simétricamente en el Hero (`Home.tsx`), el Navbar (`Navbar.tsx`) y los sidebars de Admin (`Admin.tsx`) y JanIA (`JanIAConsole.tsx`).
+  3. **Adopción de Tipografía `Mina` en Cards, Títulos de Sección, Subtítulos y Contenido**:
+     - Importada `Mina` de Google Fonts y asignada a `h1-h6`, títulos de sección, tarjetas de la plataforma (inmuebles, requerimientos, matches), panel Admin ("Coincidencias", estadísticas) y subtítulos (`.vecy-subtitle`), aportando máxima legibilidad, modernidad y elegancia visual sin empastes.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.4 — Septiembre 2026
 
 ### Novedades v32.4 (Tipografía Futurista Audiowide Exclusiva para Títulos con Combinación Tradicional de Letras en Blanco y Dorado):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

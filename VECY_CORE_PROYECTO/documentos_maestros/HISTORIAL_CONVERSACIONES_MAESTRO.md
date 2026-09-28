@@ -7,6 +7,38 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.5 — 28 Septiembre 2026
+
+### Solicitud de Eduardo
+Erradicación Definitiva de Sombras 3D Empastadas en "BIENES RAÍCES", Marca en Tipografía Unificada Audiowide (Blanco + Degradé Dorado Plano) y Adopción de Tipografía Mina Ultra-Legible y Elegante para Cards, Títulos de Sección y Contenido:
+*"Continúa. Se que tu sabes de diseño y lo vas a arreglar muy bien, vas a hacer algo genial e impactante. Adelante. La idea era no dejar nada en 3D como le dejaste a la parte que dice 'BIENES RAÍCES', porque vi que eso hace que la letra no se vea bien. Sería mejor y más bien dejar esa parte en el mismo tipo de letra que VECY, pero en color dorado en degradé y para lo demas las cards y eso una letra legible y bien bonita puede ser en tipo 'Mina'. No sé que opinas y pues con los efectos necesarios que tu creas convenientes."*
+
+### Diagnóstico Técnico Profundo y Conclusiones de Arquitectura
+1. **Erradicación Total de Efectos 3D y Drop-Shadows Empastados**:
+   - El uso de capas múltiples de `drop-shadow` para simular extrusión física 3D en textos de tamaño intermedio/pequeño provocaba que los glifos de "BIENES RAÍCES" se empastaran y se vieran deformados y toscos, restando sobriedad y profesionalismo a la marca.
+   - Se eliminaron por completo las sombras 3D artificiales (`filter: none !important; text-shadow: none !important;`).
+2. **Marca Oficial en Dos Niveles con Tipografía Unificada (`Audiowide`)**:
+   - **`VECY`**: en tipografía **`Audiowide`**, en **blanco puro resplandeciente** (`text-white`), nítido y plano.
+   - **`BIENES RAÍCES`**: en el **mismo tipo de letra** (`Audiowide`), en **color dorado satinado en degradé** (`bg-clip-text text-gradient-gold`), plano, limpio y de altísima definición visual.
+   - Aplicado de manera simétrica en el Hero (`Home.tsx`), el Navbar (`Navbar.tsx`) y los sidebars de Admin (`Admin.tsx`) y JanIA (`JanIAConsole.tsx`).
+3. **Adopción de Tipografía `Mina` para Cards, Títulos de Página, Subtítulos y Contenido**:
+   - Para erradicar cualquier invasión de fuentes no deseadas sobre los títulos de cards, paneles y componentes internos, se importó **`Mina`** (Google Fonts).
+   - `Mina` aporta una estética estilizada, limpia, geométrica y sumamente legible para encabezados de sección (`.vecy-title-section`), títulos de tarjetas (cards de propiedades, requerimientos y matches), panel Admin ("Coincidencias", métricas) y subtítulos (`.vecy-subtitle`), respaldada armónicamente por `Plus Jakarta Sans` e `Inter`.
+
+### Acciones Ejecutadas en Código
+1. **Google Fonts (`client/index.html`)**:
+   - Importada la fuente `Mina` (`family=Mina:wght@400;700`).
+2. **Arquitectura CSS (`client/src/index.css`)**:
+   - Asignadas `--font-display: "Mina", "Plus Jakarta Sans", sans-serif;`, `--font-heading: "Mina", "Plus Jakarta Sans", sans-serif;`, `--font-sans: "Mina", "Plus Jakarta Sans", "Inter", sans-serif;` y `--font-brand: "Audiowide", cursive, sans-serif;`.
+   - `.text-gradient-gold`, `.title-gold-gradient` y `.vecy-gold-3d` configuradas con degradé metálico satinado puro y `filter: none !important; text-shadow: none !important;` (0% 3D).
+   - `.page-header-gold`, `.vecy-title-hero`, `.vecy-title-section` y `.vecy-subtitle` configuradas con tipografía `Mina`.
+3. **Sincronización de Componentes de Marca**:
+   - `Home.tsx`, `Navbar.tsx`, `Admin.tsx`, `JanIAConsole.tsx`: `VECY` en blanco puro y `BIENES RAÍCES` en dorado satinado, ambos con la fuente `Audiowide`, planos y nítidos.
+4. **Incremento de Versión Oficial**:
+   - Actualizado a **`v32.5`** en `shared/const.ts` y **`32.5.0`** en `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.4 — 28 Septiembre 2026
 
 ### Solicitud de Eduardo

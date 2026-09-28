@@ -243,7 +243,7 @@ export default function Admin() {
                     className="h-8 w-auto object-contain filter drop-shadow-[0_0_8px_rgba(191,149,63,0.3)] shrink-0"
                   />
                   <div className="flex flex-col">
-                    <span className="font-['Audiowide'] text-white tracking-[0.18em] text-sm uppercase leading-none drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]">
+                    <span className="font-['Audiowide'] text-white tracking-[0.16em] text-sm uppercase leading-none">
                       VECY
                     </span>
                     <span className="font-['Audiowide'] text-gradient-gold tracking-[0.14em] text-[9px] uppercase leading-tight mt-1">
@@ -288,7 +288,7 @@ export default function Admin() {
                 className="h-8 w-auto object-contain"
               />
               <div className="flex flex-col">
-                <span className="font-['Audiowide'] text-white tracking-[0.18em] text-sm uppercase leading-none drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]">
+                <span className="font-['Audiowide'] text-white tracking-[0.16em] text-sm uppercase leading-none">
                   VECY
                 </span>
                 <span className="font-['Audiowide'] text-gradient-gold tracking-[0.14em] text-[9px] uppercase leading-tight mt-1">
