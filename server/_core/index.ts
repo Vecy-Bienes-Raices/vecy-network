@@ -447,6 +447,74 @@ async function startServer() {
     }
   });
 
+  app.post("/api/admin/broadcast-service-promo", async (req, res) => {
+    try {
+      if (!whatsappBot.isReady) {
+        return res.status(503).json({ error: "El bot de WhatsApp no está listo todavía." });
+      }
+
+      const imgPath = path.join(process.cwd(), "jania_verificacion_servicio.jpg");
+      const hasImage = fs.existsSync(imgPath);
+
+      const promoText = req.body?.text || (
+        `🛡️✨ *¡NUEVO SERVICIO EXCLUSIVO DE VECY BIENES RAÍCES PARA NUESTRA RED Y COMUNIDAD!* ✨🛡️\n\n` +
+        `Estimados colegas inmobiliarios y seguidores:\n\n` +
+        `¿Tienes cita para mostrar un inmueble o vas a reunirte con un nuevo cliente y quieres tener total certeza de con quién harás negocios? *¡Tu seguridad física y jurídica en terreno es nuestra máxima prioridad!*\n\n` +
+        `En **VECY BIENES RAÍCES** ponemos a disposición de todos los miembros de nuestros grupos y seguidores del canal nuestro **Servicio Oficial de Verificación de Identidad y Antecedentes con Inteligencia Artificial**, ¡totalmente **GRATUITO**! 🆓🤝\n\n` +
+        `JanIA valida en tiempo real los nombres oficiales completos y antecedentes judiciales ante la Policía Nacional y bases institucionales de seguridad notarial.\n\n` +
+        `⚡ *¿CÓMO SOLICITARLO? (Rápido, fácil y en un solo mensaje)*:\n` +
+        `No tienes que saludar primero ni esperar turnos. Solo envíale a **JanIA** (aquí en el grupo o por mensaje privado al WhatsApp *+573192919978*) **UN SOLO MENSAJE** con esta sencilla frase:\n\n` +
+        `📋 *Plantilla para copiar y pegar (cambia el número):*\n` +
+        `👉 \`JanIA, verificar cédula: 12.345.678\`\n\n` +
+        `*(También válido: \`JanIA, validar cc 12345678\`)*\n\n` +
+        `JanIA procesará la consulta al instante y te entregará el reporte oficial para que asistas a tus citas con total tranquilidad y respaldo.\n\n` +
+        `📲 *Escríbele directamente a JanIA aquí:* https://wa.me/573192919978\n\n` +
+        `💼 *Un aporte de VECY BIENES RAÍCES para blindar y profesionalizar la labor de nuestra red inmobiliaria.* 🚀`
+      );
+
+      console.log("[BROADCAST-PROMO] Iniciando despacho de propaganda a Grupo 2, Grupo 3 y Canal de WhatsApp...");
+
+      const results: any = {};
+
+      // 1. Grupo 2: VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS
+      try {
+        await whatsappBot.sendToGroup(promoText, hasImage ? imgPath : undefined, [], whatsappBot.buzonGroupId);
+        results.grupo2 = "Despachado a Grupo 2 exitosamente";
+        console.log("[BROADCAST-PROMO] ✓ Despachado a Grupo 2");
+      } catch (err2: any) {
+        results.grupo2 = `Error: ${err2.message}`;
+        console.error("[BROADCAST-PROMO] Error en Grupo 2:", err2);
+      }
+
+      // 2. Grupo 3: PROYECTO "Vecy Network" 👌
+      try {
+        await whatsappBot.sendToGroup(promoText, hasImage ? imgPath : undefined, [], whatsappBot.circuloGroupId);
+        results.grupo3 = "Despachado a Grupo 3 exitosamente";
+        console.log("[BROADCAST-PROMO] ✓ Despachado a Grupo 3");
+      } catch (err3: any) {
+        results.grupo3 = `Error: ${err3.message}`;
+        console.error("[BROADCAST-PROMO] Error en Grupo 3:", err3);
+      }
+
+      // 3. Canal de WhatsApp (Newsletter)
+      const channelJid = whatsappBot.channelNewsletterId || "120363399889853806@newsletter";
+      try {
+        await whatsappBot.sendToGroup(promoText, hasImage ? imgPath : undefined, [], channelJid);
+        results.canal = `Despachado a Canal ${channelJid} exitosamente`;
+        console.log(`[BROADCAST-PROMO] ✓ Despachado a Canal (${channelJid})`);
+      } catch (errNl: any) {
+        results.canal = `Error: ${errNl.message}`;
+        console.error("[BROADCAST-PROMO] Error en Canal:", errNl);
+      }
+
+      return res.status(200).json({ success: true, results });
+    } catch (err: any) {
+      console.error("[BROADCAST-PROMO] Error general:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+
   app.get("/api/jania/tts", async (req, res) => {
     try {
       const text = req.query.text as string;

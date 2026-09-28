@@ -11,7 +11,7 @@ function getLibSignal(): any {
       } catch {
         // Fallback para entornos donde libsignal está anidado
         const path = req('path');
-        const resolved = req.resolve('libsignal', {
+        const resolved = (req as any).resolve('libsignal', {
           paths: [process.cwd(), path.join(process.cwd(), 'node_modules')]
         });
         return req(resolved);

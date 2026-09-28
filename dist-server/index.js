@@ -11078,6 +11078,15 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado de JanIA \u{1F4F2}
               return;
             }
           }
+          const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+          const idCheck = await executeIdentityVerificationFromWhatsApp2(bodyText, true);
+          if (idCheck.isVerificationRequest && idCheck.reportText) {
+            console.log(`[JANIA-MATCH] [Group ${chatId}] Verificaci\xF3n de identidad atendida para ${resolvedSenderId} (C.C. ${idCheck.cedula})`);
+            await this.queuedSend(chatId, idCheck.reportText, { mentions: [senderId], quoted: msg });
+            await this.sock.sendPresenceUpdate("paused", chatId);
+            await this.logToDb(chatId, "janIA", idCheck.reportText);
+            return;
+          }
           let result;
           if (chatId === this.buzonGroupId) {
             const msgTs = msg.messageTimestamp ? Number(msg.messageTimestamp) : void 0;
@@ -25185,6 +25194,69 @@ Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro
       res.send("Mensaje de moderaci\xF3n enviado a Grupo 2 exitosamente.");
     } catch (err) {
       res.status(500).send(err.message);
+    }
+  });
+  app.post("/api/admin/broadcast-service-promo", async (req, res) => {
+    try {
+      if (!janiaMatchBot.isReady) {
+        return res.status(503).json({ error: "El bot de WhatsApp no est\xE1 listo todav\xEDa." });
+      }
+      const imgPath = path12.join(process.cwd(), "jania_verificacion_servicio.jpg");
+      const hasImage = fs11.existsSync(imgPath);
+      const promoText = req.body?.text || `\u{1F6E1}\uFE0F\u2728 *\xA1NUEVO SERVICIO EXCLUSIVO DE VECY BIENES RA\xCDCES PARA NUESTRA RED Y COMUNIDAD!* \u2728\u{1F6E1}\uFE0F
+
+Estimados colegas inmobiliarios y seguidores:
+
+\xBFTienes cita para mostrar un inmueble o vas a reunirte con un nuevo cliente y quieres tener total certeza de con qui\xE9n har\xE1s negocios? *\xA1Tu seguridad f\xEDsica y jur\xEDdica en terreno es nuestra m\xE1xima prioridad!*
+
+En **VECY BIENES RA\xCDCES** ponemos a disposici\xF3n de todos los miembros de nuestros grupos y seguidores del canal nuestro **Servicio Oficial de Verificaci\xF3n de Identidad y Antecedentes con Inteligencia Artificial**, \xA1totalmente **GRATUITO**! \u{1F193}\u{1F91D}
+
+JanIA valida en tiempo real los nombres oficiales completos y antecedentes judiciales ante la Polic\xEDa Nacional y bases institucionales de seguridad notarial.
+
+\u26A1 *\xBFC\xD3MO SOLICITARLO? (R\xE1pido, f\xE1cil y en un solo mensaje)*:
+No tienes que saludar primero ni esperar turnos. Solo env\xEDale a **JanIA** (aqu\xED en el grupo o por mensaje privado al WhatsApp *+573192919978*) **UN SOLO MENSAJE** con esta sencilla frase:
+
+\u{1F4CB} *Plantilla para copiar y pegar (cambia el n\xFAmero):*
+\u{1F449} \`JanIA, verificar c\xE9dula: 12.345.678\`
+
+*(Tambi\xE9n v\xE1lido: \`JanIA, validar cc 12345678\`)*
+
+JanIA procesar\xE1 la consulta al instante y te entregar\xE1 el reporte oficial para que asistas a tus citas con total tranquilidad y respaldo.
+
+\u{1F4F2} *Escr\xEDbele directamente a JanIA aqu\xED:* https://wa.me/573192919978
+
+\u{1F4BC} *Un aporte de VECY BIENES RA\xCDCES para blindar y profesionalizar la labor de nuestra red inmobiliaria.* \u{1F680}`;
+      console.log("[BROADCAST-PROMO] Iniciando despacho de propaganda a Grupo 2, Grupo 3 y Canal de WhatsApp...");
+      const results = {};
+      try {
+        await janiaMatchBot.sendToGroup(promoText, hasImage ? imgPath : void 0, [], janiaMatchBot.buzonGroupId);
+        results.grupo2 = "Despachado a Grupo 2 exitosamente";
+        console.log("[BROADCAST-PROMO] \u2713 Despachado a Grupo 2");
+      } catch (err2) {
+        results.grupo2 = `Error: ${err2.message}`;
+        console.error("[BROADCAST-PROMO] Error en Grupo 2:", err2);
+      }
+      try {
+        await janiaMatchBot.sendToGroup(promoText, hasImage ? imgPath : void 0, [], janiaMatchBot.circuloGroupId);
+        results.grupo3 = "Despachado a Grupo 3 exitosamente";
+        console.log("[BROADCAST-PROMO] \u2713 Despachado a Grupo 3");
+      } catch (err3) {
+        results.grupo3 = `Error: ${err3.message}`;
+        console.error("[BROADCAST-PROMO] Error en Grupo 3:", err3);
+      }
+      const channelJid = janiaMatchBot.channelNewsletterId || "120363399889853806@newsletter";
+      try {
+        await janiaMatchBot.sendToGroup(promoText, hasImage ? imgPath : void 0, [], channelJid);
+        results.canal = `Despachado a Canal ${channelJid} exitosamente`;
+        console.log(`[BROADCAST-PROMO] \u2713 Despachado a Canal (${channelJid})`);
+      } catch (errNl) {
+        results.canal = `Error: ${errNl.message}`;
+        console.error("[BROADCAST-PROMO] Error en Canal:", errNl);
+      }
+      return res.status(200).json({ success: true, results });
+    } catch (err) {
+      console.error("[BROADCAST-PROMO] Error general:", err);
+      return res.status(500).json({ error: err.message });
     }
   });
   app.get("/api/jania/tts", async (req, res) => {

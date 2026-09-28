@@ -1174,6 +1174,17 @@ export class JaniaMatchBot {
         }
       }
 
+      // 🛡️ INTERCEPTOR DIRECTO: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
+      const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
+      const idCheck = await executeIdentityVerificationFromWhatsApp(bodyText, true);
+      if (idCheck.isVerificationRequest && idCheck.reportText) {
+        console.log(`[JANIA-MATCH] [Group ${chatId}] Verificación de identidad atendida para ${resolvedSenderId} (C.C. ${idCheck.cedula})`);
+        await this.queuedSend(chatId, idCheck.reportText, { mentions: [senderId], quoted: msg });
+        await this.sock.sendPresenceUpdate('paused', chatId);
+        await this.logToDb(chatId, 'janIA', idCheck.reportText);
+        return;
+      }
+
       let result;
       if (chatId === this.buzonGroupId) { // VECY: Soporte Legal, Tributario, Avalúos y Marketing
         const msgTs = msg.messageTimestamp ? Number(msg.messageTimestamp) : undefined;
