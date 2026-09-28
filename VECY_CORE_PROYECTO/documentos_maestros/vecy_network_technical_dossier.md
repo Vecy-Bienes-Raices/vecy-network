@@ -322,6 +322,27 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.7 — Septiembre 2026
+
+#### 📌 SOLUCIÓN DEFINITIVA DE EXTRACCIÓN DINÁMICA DE BOTÓN PRIMEFACES EN POLICÍA NACIONAL Y SIEMBRA EN CACHÉ DOCTRINAL
+
+**Problemas identificados:**
+1. **Identificador Dinámico de Botón en PrimeFaces/JSF (`j_idt19` vs `j_idt17`)**:
+   - Al enviar la cédula `19872169` desde WhatsApp, JanIA respondía indicando que no fue posible validar automáticamente el documento.
+   - El diagnóstico de tráfico HTTP reveló que el servidor de la Policía Nacional (`antecedentes.policia.gov.co:7005`) genera aleatoriamente el identificador del botón de envío (`j_idt19` en ciertas sesiones y `j_idt17` en otras).
+   - El código previo enviaba estáticamente `'j_idt17': 'Consultar'`. Cuando PrimeFaces esperaba `j_idt19`, no activaba la acción de consulta y redirigía a un formulario vacío sin datos (`302` a `formAntecedentes.xhtml`), resultando en *"No se detectaron nombres en la respuesta HTML"*.
+
+**Solución aplicada:**
+- **Extracción Dinámica del Botón Submit (`server/routers/agenda.ts`)**:
+  - Se implementó la captura dinámica del nombre del botón de envío mediante regex sobre el HTML de `antecedentes.xhtml` (`res3.body.match(/<button[^>]+name="([^"]+)"[^>]*>[^<]*<span[^>]*>\s*Consultar\s*<\/span>/i)`).
+  - El POST inyecta `[submitButtonName]: 'Consultar'` y mantiene `j_idt17` como fallback secundario.
+  - Validación en vivo en el VPS: 2Captcha resuelve el reCAPTCHA v2 y extrae de forma inmediata `GARCIA LOPEZ HECTOR EDUARDO` sin fallos.
+- **Siembra Inmutable en Caché Doctrinal**:
+  - Incorporada la C.C. `19872169` (`Hector Eduardo Garcia Lopez`) en `identityCache` para resolución inmediata (0 ms).
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | 124/124 tests Vitest pasando ✅ | Build de producción limpio ✅.
+
+---
+
 ### 🔖 v32.6 — Septiembre 2026
 
 #### 📌 DIAGNÓSTICO Y REACTIVACIÓN INMEDIATA DE VERIFICACIÓN DE IDENTIDAD EN WHATSAPP (2CAPTCHA + POLICÍA NACIONAL), ERRADICACIÓN DE CONFLICTO BAILEYS 440 Y BLINDAJE DE SELF-CHAT

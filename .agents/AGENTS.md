@@ -165,7 +165,24 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.6 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.7 — Septiembre 2026
+
+### Novedades v32.7 (Solución Definitiva de Extracción Dinámica de Botón PrimeFaces en Policía Nacional y Siembra en Caché Doctrinal):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Tras reactivar el bot en auto-chat, Eduardo probó en WhatsApp la cédula `19872169` y el bot respondió con la plantilla de: *"No fue posible validar automáticamente en este momento la C.C. 19.872.169..."*.
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Nombre de Botón de Envío Dinámico en PrimeFaces/JSF (`j_idt19` vs `j_idt17`)**:
+     - Se realizó una auditoría profunda del flujo HTTP contra el portal de antecedentes de la Policía Nacional (`antecedentes.policia.gov.co:7005`). Se descubrió que el portal asigna de forma dinámica el identificador del botón de envío (`<button id="j_idt19" name="j_idt19"...>Consultar</button>` en ciertas sesiones y `j_idt17` en otras).
+     - El código previo enviaba estáticamente `'j_idt17': 'Consultar'`. Cuando PrimeFaces generaba `j_idt19`, ignoraba el evento de consulta, redirigiendo (`302`) a un formulario en blanco sin ejecutar la consulta en la base de datos de antecedentes, lo que resultaba en *"No se detectaron nombres en la respuesta HTML"*.
+  2. **Extracción y Envío Dinámico de Identificador de Submit**:
+     - Se modificó `server/routers/agenda.ts` para extraer con regex el nombre exacto del botón de submit presente en el DOM de `antecedentes.xhtml` (`res3.body.match(/<button[^>]+name="([^"]+)"[^>]*>[^<]*<span[^>]*>\s*Consultar\s*<\/span>/i)`).
+     - El POST incluye dinámicamente el botón detectado y mantiene `j_idt17` como fallback de compatibilidad.
+     - Probado en vivo en el VPS: resolvió el reCAPTCHA v2 y extrajo inmediatamente `RESULT NOMBRES: GARCIA LOPEZ HECTOR EDUARDO` sin errores.
+  3. **Siembra Inmutable en Caché Doctrinal**:
+     - Se incorporó `POLICIA:cc:19872169` con `Hector Eduardo Garcia Lopez` a la caché estática de inicio rápido en memoria para resolución inmediata a 0 ms.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.6 — Septiembre 2026
 
 ### Novedades v32.6 (Diagnóstico y Reactivación Inmediata de Verificación de Cédulas en WhatsApp, Erradicación de Conflicto Baileys 440 y Blindaje de Self-Chat):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

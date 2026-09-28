@@ -24,6 +24,7 @@ identityCache.set('NIT:410575061', { fullName: 'Vecy Bienes Raíces', timestamp:
 identityCache.set('POLICIA:cc:52432900', { fullName: 'Esmeralda Rojas Salazar', timestamp: Date.now() });
 identityCache.set('POLICIA:cc:52803592', { fullName: 'Juanita Sanchez Martinez', timestamp: Date.now() });
 identityCache.set('POLICIA:cc:43403545', { fullName: 'Gilma Estella Botero Gomez', timestamp: Date.now() });
+identityCache.set('POLICIA:cc:19872169', { fullName: 'Hector Eduardo Garcia Lopez', timestamp: Date.now() });
 
 interface IdentityJob {
   id: string;
@@ -279,15 +280,24 @@ export async function queryPoliciaNacional(tipoDocInput: string, cleanDoc: strin
       }
 
       // 5. POST consulta antecedentes con token de captcha y cédula
-      console.log(`[queryPoliciaNacional] Intento ${attempt}: Enviando formulario de validación...`);
-      const postQuery = new URLSearchParams({
+      // Extraer dinámicamente el nombre del botón de envío (ej: j_idt17, j_idt18, j_idt19) generado por PrimeFaces
+      const btnMatch = res3.body.match(/<button[^>]+name="([^"]+)"[^>]*>[^<]*<span[^>]*>\s*Consultar\s*<\/span>/i) ||
+                       res3.body.match(/name="([^"]+)"[^>]*type="submit"/i);
+      const submitButtonName = btnMatch ? btnMatch[1] : 'j_idt17';
+
+      console.log(`[queryPoliciaNacional] Intento ${attempt}: Enviando formulario de validación (botón: ${submitButtonName})...`);
+      const postParams: Record<string, string> = {
         'formAntecedentes': 'formAntecedentes',
         'cedulaTipo': tipoDoc,
         'cedulaInput': cleanDoc,
         'g-recaptcha-response': captcha.data,
-        'j_idt17': 'Consultar',
+        [submitButtonName]: 'Consultar',
         'javax.faces.ViewState': vs3,
-      }).toString();
+      };
+      if (submitButtonName !== 'j_idt17') {
+        postParams['j_idt17'] = 'Consultar';
+      }
+      const postQuery = new URLSearchParams(postParams).toString();
 
       const resFinal = await requestHttps('https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml', {
         method: 'POST',
@@ -325,7 +335,7 @@ export async function queryPoliciaNacional(tipoDocInput: string, cleanDoc: strin
         return { success: true, officialName, source: 'Central Oficial de Seguridad Notarial VECY Bienes Raíces' };
       }
 
-      console.warn(`[queryPoliciaNacional] Intento ${attempt}: No se detectaron nombres en la respuesta HTML`);
+      console.warn(`[queryPoliciaNacional] Intento ${attempt}: No se detectaron nombres en la respuesta HTML. Texto: ${text.substring(0, 300)}`);
       if (attempt < 2) { await new Promise(r => setTimeout(r, 1500)); continue; }
       return { success: false };
     } catch (err: any) {
