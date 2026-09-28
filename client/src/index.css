@@ -259,57 +259,55 @@
     box-shadow: 0 0 25px rgba(212, 175, 55, 0.3), inset 0 0 15px rgba(212, 175, 55, 0.05);
   }
 
-  /* BOTONES CON EFECTOS ELÉCTRICOS */
+  /* BOTONES OFICIALES VECY (ESTILO EXPORTAR CSV & CRISTAL/VIDRIO) */
   .btn-gold {
-    @apply inline-flex items-center justify-center px-6 py-3 rounded-xl bg-accent text-accent-foreground font-bold uppercase tracking-wider transition-all duration-300 active:scale-95;
-    position: relative;
-    overflow: hidden;
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-full font-black uppercase tracking-wider transition-all duration-300 active:scale-95 cursor-pointer;
+    background: linear-gradient(180deg, #dfba6d 0%, #c99c3e 50%, #ae832a 100%);
+    color: #000000;
+    border: none;
+    box-shadow: 0 4px 15px rgba(191, 149, 63, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4);
   }
   
   .btn-gold:hover {
-    box-shadow: 0 0 20px rgba(191, 149, 63, 0.7), 0 0 40px rgba(191, 149, 63, 0.3);
-    @apply scale-105;
+    filter: brightness(1.08);
+    box-shadow: 0 6px 22px rgba(212, 175, 55, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+    transform: translateY(-1px) scale(1.02);
   }
 
-  .btn-gold::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
+  .btn-gold-outline,
+  .btn-glass {
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-full font-bold uppercase tracking-wider transition-all duration-300 active:scale-95 cursor-pointer;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
   }
 
-  .btn-gold:hover::before {
-    width: 800px;
-    height: 800px;
-  }
-
-  .btn-gold-outline {
-    @apply inline-flex items-center justify-center px-6 py-3 rounded-xl border-2 border-accent text-accent font-bold uppercase tracking-wider transition-all duration-300 active:scale-95;
-    box-shadow: 0 0 15px rgba(191, 149, 63, 0.4), inset 0 0 10px rgba(191, 149, 63, 0.1);
-  }
-
-  .btn-gold-outline:hover {
-    background-color: rgba(191, 149, 63, 0.1);
-    box-shadow: 0 0 25px rgba(191, 149, 63, 0.6), inset 0 0 15px rgba(191, 149, 63, 0.2);
+  .btn-gold-outline:hover,
+  .btn-glass:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(212, 175, 55, 0.45);
+    color: #ffffff;
+    box-shadow: 0 0 20px rgba(191, 149, 63, 0.25);
+    transform: translateY(-1px);
   }
 
   .btn-electric {
-    @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-bold uppercase tracking-wider transition-all duration-300 hover:scale-105 active:scale-95;
-    background: linear-gradient(135deg, #0a0a0a 0%, #121212 100%);
-    color: #f0f0f0;
-    border: 1.5px solid rgba(212, 175, 55, 0.5);
-    box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+    @apply inline-flex items-center justify-center px-6 py-3 rounded-full font-bold uppercase tracking-wider transition-all duration-300 active:scale-95 cursor-pointer;
+    background: rgba(10, 10, 10, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    color: #ffffff;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.25);
   }
 
   .btn-electric:hover {
     border-color: rgba(212, 175, 55, 0.8);
-    box-shadow: 0 0 25px rgba(212, 175, 55, 0.6);
+    box-shadow: 0 0 25px rgba(212, 175, 55, 0.5);
+    transform: translateY(-1px);
   }
 
   .line-gold {

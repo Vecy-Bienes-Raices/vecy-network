@@ -7,6 +7,35 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.2 — 28 Septiembre 2026
+
+### Solicitud de Eduardo
+Jerarquía Tipográfica de Marca (VECY más Grande Encima de BIENES RAÍCES con Tipografía del Sidebar Admin) y Nueva Doctrina de Botones (Oro Sólido Estilo [Exportar CSV] y Cristal/Vidrio Estilo [Refrescar]):
+*"Quiero que la palabre VECY aparezca un poco más grande y encima de la frase BIENES RAÍCES y en este tipo de letra que tiene el sidebar en la página admin y los botones los quiero en el estilo del botón [Exportar CSV] pues los que son de color oro sólido y los otros si en crsital o vidrio."*
+
+### Diagnóstico Técnico Profundo y Conclusiones de Arquitectura
+1. **Quiebre Indebido de la Marca en Sidebar Admin y Dispersión Tipográfica**:
+   - En el sidebar de `Admin.tsx`, el texto `Vecy Bienes Raíces` estaba en una sola etiqueta de texto continuo, lo que forzaba un salto de línea desordenado donde `VECY BIENES` quedaba arriba y `RAÍCES` abajo desbalanceado.
+   - Eduardo instruyó estructurar explícitamente la marca en dos niveles: **`VECY`** arriba, más grande e imponente, y **`BIENES RAÍCES`** inmediatamente debajo, adoptando en todo el ecosistema (Navbar, Hero, Admin, JanIA Console) la tipografía dorada satinada del sidebar (`font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] uppercase`).
+2. **Doctrina Oficial de Botones (Oro Sólido y Cristal/Vidrio)**:
+   - **Botón Oro Sólido (Estilo `[Exportar CSV]`)**: Forma ergonómica de cápsula redondeada (`rounded-full`), degradé satinado de oro metálico (`linear-gradient(180deg, #dfba6d 0%, #c99c3e 50%, #ae832a 100%)`), texto e iconos en negro profundo de máximo contraste (`text-black font-extrabold`), sombra dorada `box-shadow: 0 4px 15px rgba(191,149,63,0.35)` y destello superior.
+   - **Botón de Cristal o Vidrio (Estilo `[Refrescar]`)**: Estilo glassmorphism con fondo oscuro translúcido (`rgba(255, 255, 255, 0.05)`), desenfoque de fondo profundo (`backdrop-filter: blur(16px)`), borde nítido de cristal (`1px solid rgba(255, 255, 255, 0.15)`), texto blanco brillante y hover con resplandor dorado satinado.
+
+### Acciones Ejecutadas en Código
+1. **Separación y Jerarquía de Marca**:
+   - `client/src/pages/Admin.tsx`: Separado el encabezado del sidebar (desktop y mobile) en `VECY` (`text-sm font-sans font-black tracking-[0.18em] uppercase leading-none`) y `BIENES RAÍCES` (`text-[10px] font-sans font-black tracking-[0.14em] uppercase leading-tight mt-1`).
+   - `client/src/components/Navbar.tsx`: Configurada la marca en `VECY` (`text-2xl font-sans font-black tracking-[0.18em] text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f]`) y `BIENES RAÍCES` (`text-[11px] font-sans font-black tracking-[0.2em] mt-1`).
+   - `client/src/pages/Home.tsx`: En el Hero principal, `VECY` se alza monumental en tamaño 6xl a 9xl con `leading-none` encima de `BIENES RAÍCES` en tamaño 2xl a 5xl con el mismo degradé dorado satinado.
+   - `client/src/pages/JanIAConsole.tsx`: Cabecera del sidebar alineada con `VECY` arriba y `BIENES RAÍCES` abajo.
+2. **Diseño de Botones en Sistema de Diseño (`client/src/index.css`, `client/src/components/ui/button.tsx`)**:
+   - `.btn-gold`: Rediseñado a cápsula ergonómica (`rounded-full`) con degradé oro sólido `linear-gradient(180deg, #dfba6d 0%, #c99c3e 50%, #ae832a 100%)`, texto negro e inset highlight idéntico al botón `[Exportar CSV]`.
+   - `.btn-gold-outline` y `.btn-glass`: Rediseñados a cápsula de cristal translúcido con `backdrop-filter: blur(16px)`, borde blanco nítido y hover con resplandor dorado idéntico al botón `[Refrescar]`.
+   - `button.tsx`: Variantes `default`, `gold`, `outline` y `glass` sincronizadas en cápsulas `rounded-full`.
+3. **Incremento de Versión Oficial**:
+   - Actualizado a **`v32.2`** en `shared/const.ts` y **`32.2.0`** en `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.1 — 28 Septiembre 2026
 
 ### Solicitud de Eduardo

@@ -65,11 +65,11 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
             />
           </div>
           <div className="hidden sm:block">
-            <h1 className="text-xl font-display font-black text-gradient-gold tracking-wider leading-none">
-              {brandName || "VECY"}
+            <h1 className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.18em] text-2xl uppercase leading-none">
+              VECY
             </h1>
-            <p className="text-[10px] text-zinc-400 uppercase tracking-[0.2em] mt-1 font-bold">
-              {brandSubtitle || "BIENES RAÍCES"}
+            <p className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.2em] text-[11px] uppercase mt-1 leading-tight">
+              BIENES RAÍCES
             </p>
           </div>
         </div>

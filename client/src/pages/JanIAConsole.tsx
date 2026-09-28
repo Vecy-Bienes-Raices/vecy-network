@@ -762,7 +762,14 @@ export default function JanIAConsole() {
           <div className="flex items-center justify-between p-4 h-16 border-b border-white/5">
             <div className="flex items-center gap-3">
               <VecySparkle />
-              <span className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.15em] text-sm uppercase">Vecy IA</span>
+              <div className="flex flex-col">
+                <span className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.18em] text-sm uppercase leading-none">
+                  VECY
+                </span>
+                <span className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.14em] text-[9px] uppercase leading-tight mt-0.5">
+                  BIENES RAÍCES
+                </span>
+              </div>
             </div>
             <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)} className="text-zinc-400 hover:text-white hover:bg-white/5 rounded-full shrink-0">
               <PanelLeftClose className="w-5 h-5" />

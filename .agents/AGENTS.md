@@ -165,7 +165,18 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.1 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.2 — Septiembre 2026
+
+### Novedades v32.2 (Jerarquía de Marca VECY Encima de BIENES RAÍCES con Tipografía de Sidebar Admin y Nueva Doctrina de Botones Oro Sólido y Cristal/Vidrio):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo instruyó: *"Quiero que la palabre VECY aparezca un poco más grande y encima de la frase BIENES RAÍCES y en este tipo de letra que tiene el sidebar en la página admin y los botones los quiero en el estilo del botón [Exportar CSV] pues los que son de color oro sólido y los otros si en crsital o vidrio."*
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Jerarquía Tipográfica de Marca**: Erradicado el corte automático desordenado (`VECY BIENES` / `RAÍCES`). La marca oficial se estructura en 2 niveles armónicos en todo el sistema: **`VECY`** arriba, más grande e imponente, y **`BIENES RAÍCES`** inmediatamente debajo, adoptando la tipografía del sidebar admin (`font-sans font-black tracking-[0.16em..0.18em] text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] uppercase`).
+  2. **Botón Oro Sólido Oficial (Estilo `[Exportar CSV]`)**: Cápsula redondeada (`rounded-full`), degradé satinado de oro metálico (`linear-gradient(180deg, #dfba6d 0%, #c99c3e 50%, #ae832a 100%)`), tipografía e iconos en negro profundo de máximo contraste (`text-black font-extrabold`) y resplandor satinado de lujo.
+  3. **Botón de Cristal / Vidrio Oficial (Estilo `[Refrescar]`)**: Estilo glassmorphism translúcido (`rgba(255, 255, 255, 0.05)`), desenfoque de fondo profundo (`backdrop-filter: blur(16px)`), borde nítido de cristal (`border border-white/15`) y hover con halo dorado.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.1 — Septiembre 2026
 
 ### Novedades v32.1 (Sustitución Tipográfica a Montserrat de Portada Oficial y Subtítulos con Degradé en Color Oro):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

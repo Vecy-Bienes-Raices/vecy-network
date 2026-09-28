@@ -62,8 +62,13 @@ export default function Home() {
                   <div className="h-px w-12 bg-primary/40"></div>
                 </div>
                 
-                <h1 className="vecy-title-hero mb-6">
-                  VECY <span className="text-gradient-gold uppercase">BIENES RAÍCES</span>
+                <h1 className="flex flex-col items-center mb-6">
+                  <span className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-6xl sm:text-7xl md:text-8xl lg:text-9xl tracking-[0.16em] uppercase leading-none drop-shadow-[0_4px_30px_rgba(191,149,63,0.3)]">
+                    VECY
+                  </span>
+                  <span className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-[0.25em] uppercase leading-tight mt-3">
+                    BIENES RAÍCES
+                  </span>
                 </h1>
                 
                 <p className="vecy-subtitle max-w-2xl mx-auto mb-10 text-xl md:text-2xl leading-relaxed">

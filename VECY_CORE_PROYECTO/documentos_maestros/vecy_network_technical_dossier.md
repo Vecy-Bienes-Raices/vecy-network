@@ -322,6 +322,29 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.2 — Septiembre 2026
+
+#### 📌 JERARQUÍA DE MARCA VECY ENCIMA DE BIENES RAÍCES CON TIPOGRAFÍA DE SIDEBAR ADMIN Y NUEVA DOCTRINA DE BOTONES ORO SÓLIDO Y CRISTAL/VIDRIO
+
+**Problemas identificados:**
+1. **Quiebre Automático Desordenado de Marca en Sidebar Admin**: El texto `Vecy Bienes Raíces` generaba un salto de línea tosco (`VECY BIENES` arriba y `RAÍCES` abajo). Se requería que la palabra `VECY` apareciera más grande y situada encima de `BIENES RAÍCES`.
+2. **Inconsistencia de Botones en la Plataforma**: Los botones presentaban formas rectangulares estándar sin la ergonomía tipo cápsula redondeada (`rounded-full`) ni el acabado satinado oro sólido de `[Exportar CSV]` o el cristal translúcido de `[Refrescar]`.
+
+**Solución aplicada:**
+- **Jerarquía Tipográfica Oficial de Marca**:
+  - `client/src/pages/Admin.tsx`: Separado el encabezado del sidebar en `VECY` (`text-sm font-sans font-black tracking-[0.18em] uppercase leading-none`) y `BIENES RAÍCES` (`text-[10px] font-sans font-black tracking-[0.14em] uppercase leading-tight mt-1`).
+  - `client/src/components/Navbar.tsx`: Marca estructurada con `VECY` (`text-2xl font-sans font-black tracking-[0.18em] text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f]`) encima de `BIENES RAÍCES` (`text-[11px] font-sans font-black tracking-[0.2em] mt-1`).
+  - `client/src/pages/Home.tsx`: En el Hero principal, `VECY` se alza monumental en tamaño 6xl a 9xl con `leading-none` encima de `BIENES RAÍCES` en tamaño 2xl a 5xl con el mismo degradé dorado satinado.
+  - `client/src/pages/JanIAConsole.tsx`: Cabecera del sidebar alineada con `VECY` arriba y `BIENES RAÍCES` abajo.
+- **Doctrina Oficial de Botones (Oro Sólido y Cristal/Vidrio)**:
+  - `.btn-gold`: Rediseñado a cápsula ergonómica (`rounded-full`) con degradé oro sólido `linear-gradient(180deg, #dfba6d 0%, #c99c3e 50%, #ae832a 100%)`, texto negro e inset highlight idéntico al botón `[Exportar CSV]`.
+  - `.btn-gold-outline` y `.btn-glass`: Rediseñados a cápsula de cristal translúcido con `backdrop-filter: blur(16px)`, borde blanco nítido y hover con resplandor dorado idéntico al botón `[Refrescar]`.
+  - `button.tsx`: Variantes `default`, `gold`, `outline` y `glass` sincronizadas en cápsulas `rounded-full`.
+- **Suite de Regresión Doctrinal**:
+  - 124/124 tests de Vitest pasando al 100% ✅.
+
+---
+
 ### 🔖 v32.1 — Septiembre 2026
 
 #### 📌 SUSTITUCIÓN TIPOGRÁFICA A MONTSERRAT DE PORTADA OFICIAL Y SUBTÍTULOS CON DEGRADÉ EN COLOR ORO (¡SÚPER WOOW!)
