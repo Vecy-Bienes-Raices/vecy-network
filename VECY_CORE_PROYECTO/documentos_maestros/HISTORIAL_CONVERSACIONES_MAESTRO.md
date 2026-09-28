@@ -40,8 +40,9 @@ En arriendo pues funciona igual, por eso fue que decidí apartar a aquellos que 
    - Superada la numeración de 3 dígitos (`v31.108`). A partir de esta versión rige el estándar limpio de 1 decimal (`v32.0` a `v32.9`, avanzando de versión mayor cada 10 ciclos a `v33.0`).
 
 ### Acciones Ejecutadas en Código
-1. **Identidad Gráfica**:
-   - Reemplazado `client/public/logo-vecy.png` y `client/public/logo-vecy.jpg` con el nuevo logo optimizado de alta resolución.
+1. **Identidad Gráfica y Portada de Enlaces Social Media**:
+   - Reemplazado `client/public/logo-vecy.png` con el PNG oficial nativo en 2048x2048 de alta resolución con canal alfa transparente (`RGBA`, esquinas `(0,0,0,0)`), eliminando el marco negro cuadrado.
+   - Integrada `client/public/portada-metadatos.jpeg` (2400x1792) como la imagen oficial de metadatos sociales en `client/index.html` (`og:image`, `og:image:secure_url`, `og:image:width: 2400`, `og:image:height: 1792`, `twitter:image`, `link rel="image_src"`), garantizando que al copiar y pegar enlaces de la web `vecy.co` en WhatsApp, Facebook, LinkedIn o Twitter se genere la tarjeta con la portada oficial de alta resolución.
 2. **Prompts de JanIA (`server/_core/prompts/`)**:
    - `base.md`: Actualizadas referencias a comisiones del modelo 45/5/5/45 de VECY BIENES RAÍCES.
    - `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`: Incorporada la doctrina de repartición 45/5/5/45, la explicación de por qué 50/50 y 40/20/40 se apartan, y el servicio de verificación de identidad de visitantes con JanIA.

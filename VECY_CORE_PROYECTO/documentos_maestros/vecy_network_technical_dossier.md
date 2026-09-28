@@ -329,7 +329,7 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 **Problemas identificados:**
 1. **Confusión en Comisiones de Corretaje Colaborativo**: Referencias históricas ambiguas generaban dudas sobre la repartición exacta en la red. Esquemas cerrados de "50/50" o "40/20/40" con intermediarios ocultos restringen la comisión de la contraparte y excluyen a la plataforma.
 2. **Uso Indebido de la Marca "Vecy Network"**: El uso de "Vecy Network" en anuncios y encuestas generaba disonancia frente a la identidad histórica y legal de más de 8 años: **"VECY BIENES RAÍCES"**.
-3. **Logotipo Desactualizado en Frontend y Assets**: Se requería integrar la versión optimizada de alta resolución con el medallón dorado y destellos pulidos.
+3. **Logotipo sin Transparencia y Portada de Enlaces Social Media**: Se requería erradicar el fondo negro cuadrado del logo utilizando un PNG nativo de 2048x2048 con canal alfa transparente (`RGBA`), además de configurar `portada-metadatos.jpeg` (2400x1792) como la tarjeta oficial Open Graph y Twitter card para que al copiar y pegar enlaces de `vecy.co` en WhatsApp y redes sociales se despliegue la miniatura en alta resolución.
 4. **Falta de Difusión del Servicio de Verificación de Identidad**: Los corredores necesitaban conocer activamente el servicio de JanIA para verificar antecedentes en Policía Nacional antes de visitas presenciales.
 5. **Numeración Sobrecargada (`v31.108`)**: Se requería un esquema limpio, profesional y legible.
 
@@ -339,8 +339,9 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
   - Los esquemas excluyentes ("50/50" y "40/20/40") son apartados automáticamente a la bandeja de Standby Directo.
 - **Identidad de Marca Única**:
   - Consolidado exclusivamente el nombre **"VECY BIENES RAÍCES"** en todos los componentes, difusiones y documentación.
-- **Nuevo Logotipo Oficial Integrado**:
-  - Sustituido `client/public/logo-vecy.png` y `logo-vecy.jpg` con el nuevo diseño optimizado de alta resolución (1024x1024).
+- **Logotipo Oficial sin Fondo y Portada de Enlaces Social Media**:
+  - Reemplazado `client/public/logo-vecy.png` con el PNG oficial nativo en 2048x2048 con canal alfa transparente (`RGBA`), eliminando el recuadro negro en todos los fondos claros y oscuros.
+  - Integrada `client/public/portada-metadatos.jpeg` (2400x1792) en `client/index.html` con todos los metatags de Open Graph (`og:image`, `og:image:width: 2400`, `og:image:height: 1792`, `link rel="image_src"`, `twitter:image`), garantizando previsualizaciones instantáneas de alta definición al pegar enlaces en WhatsApp y redes sociales.
 - **Servicio Diario de Verificación de Identidad con JanIA**:
   - Incorporada cápsula formativa en `cronService.ts` e invitaciones directas por WhatsApp para validar cédulas y antecedentes antes de citas presenciales.
 - **Encuestas Semanales Orientadas a la Plataforma Web**:
