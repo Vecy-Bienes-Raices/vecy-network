@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.6";
+    VECY_VERSION = "v32.7";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -12676,15 +12676,21 @@ async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
         }
         return { success: false };
       }
-      console.log(`[queryPoliciaNacional] Intento ${attempt}: Enviando formulario de validaci\xF3n...`);
-      const postQuery = new URLSearchParams({
+      const btnMatch = res3.body.match(/<button[^>]+name="([^"]+)"[^>]*>[^<]*<span[^>]*>\s*Consultar\s*<\/span>/i) || res3.body.match(/name="([^"]+)"[^>]*type="submit"/i);
+      const submitButtonName = btnMatch ? btnMatch[1] : "j_idt17";
+      console.log(`[queryPoliciaNacional] Intento ${attempt}: Enviando formulario de validaci\xF3n (bot\xF3n: ${submitButtonName})...`);
+      const postParams = {
         "formAntecedentes": "formAntecedentes",
         "cedulaTipo": tipoDoc,
         "cedulaInput": cleanDoc,
         "g-recaptcha-response": captcha.data,
-        "j_idt17": "Consultar",
+        [submitButtonName]: "Consultar",
         "javax.faces.ViewState": vs3
-      }).toString();
+      };
+      if (submitButtonName !== "j_idt17") {
+        postParams["j_idt17"] = "Consultar";
+      }
+      const postQuery = new URLSearchParams(postParams).toString();
       const resFinal = await requestHttps("https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml", {
         method: "POST",
         headers: {
@@ -12716,7 +12722,7 @@ async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
         console.log(`[queryPoliciaNacional] \u2705 Identidad confirmada en intento ${attempt}: ${officialName} (${cleanDoc})`);
         return { success: true, officialName, source: "Central Oficial de Seguridad Notarial VECY Bienes Ra\xEDces" };
       }
-      console.warn(`[queryPoliciaNacional] Intento ${attempt}: No se detectaron nombres en la respuesta HTML`);
+      console.warn(`[queryPoliciaNacional] Intento ${attempt}: No se detectaron nombres en la respuesta HTML. Texto: ${text2.substring(0, 300)}`);
       if (attempt < 2) {
         await new Promise((r) => setTimeout(r, 1500));
         continue;
@@ -13160,6 +13166,7 @@ var init_agenda = __esm({
     identityCache.set("POLICIA:cc:52432900", { fullName: "Esmeralda Rojas Salazar", timestamp: Date.now() });
     identityCache.set("POLICIA:cc:52803592", { fullName: "Juanita Sanchez Martinez", timestamp: Date.now() });
     identityCache.set("POLICIA:cc:43403545", { fullName: "Gilma Estella Botero Gomez", timestamp: Date.now() });
+    identityCache.set("POLICIA:cc:19872169", { fullName: "Hector Eduardo Garcia Lopez", timestamp: Date.now() });
     identityJobs = /* @__PURE__ */ new Map();
     setInterval(() => {
       const now = Date.now();
