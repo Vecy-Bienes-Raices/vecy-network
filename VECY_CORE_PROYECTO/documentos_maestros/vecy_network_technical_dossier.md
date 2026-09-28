@@ -322,6 +322,34 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.0 — Septiembre 2026
+
+#### 📌 DOCTRINA FINANCIERA 45/5/5/45 DE VECY BIENES RAÍCES, ERRADICACIÓN DE ESQUEMAS EXCLUYENTES (50/50 Y 40/20/40), NUEVO LOGOTIPO OFICIAL OPTIMIZADO Y NUMERACIÓN LIMPIA
+
+**Problemas identificados:**
+1. **Confusión en Comisiones de Corretaje Colaborativo**: Referencias históricas ambiguas generaban dudas sobre la repartición exacta en la red. Esquemas cerrados de "50/50" o "40/20/40" con intermediarios ocultos restringen la comisión de la contraparte y excluyen a la plataforma.
+2. **Uso Indebido de la Marca "Vecy Network"**: El uso de "Vecy Network" en anuncios y encuestas generaba disonancia frente a la identidad histórica y legal de más de 8 años: **"VECY BIENES RAÍCES"**.
+3. **Logotipo Desactualizado en Frontend y Assets**: Se requería integrar la versión optimizada de alta resolución con el medallón dorado y destellos pulidos.
+4. **Falta de Difusión del Servicio de Verificación de Identidad**: Los corredores necesitaban conocer activamente el servicio de JanIA para verificar antecedentes en Policía Nacional antes de visitas presenciales.
+5. **Numeración Sobrecargada (`v31.108`)**: Se requería un esquema limpio, profesional y legible.
+
+**Solución aplicada:**
+- **Doctrina Oficial de Repartición 45/5/5/45**:
+  - Del 3% de honorarios sobre venta o arriendo: **45% Oferta**, **45% Demanda**, **5% Red Colaborativa** y **5% Vecy Bienes Raíces**.
+  - Los esquemas excluyentes ("50/50" y "40/20/40") son apartados automáticamente a la bandeja de Standby Directo.
+- **Identidad de Marca Única**:
+  - Consolidado exclusivamente el nombre **"VECY BIENES RAÍCES"** en todos los componentes, difusiones y documentación.
+- **Nuevo Logotipo Oficial Integrado**:
+  - Sustituido `client/public/logo-vecy.png` y `logo-vecy.jpg` con el nuevo diseño optimizado de alta resolución (1024x1024).
+- **Servicio Diario de Verificación de Identidad con JanIA**:
+  - Incorporada cápsula formativa en `cronService.ts` e invitaciones directas por WhatsApp para validar cédulas y antecedentes antes de citas presenciales.
+- **Encuestas Semanales Orientadas a la Plataforma Web**:
+  - `DAILY_POLLS_MAP` actualizado para captar feedback de los usuarios sobre la futura web, canales de JanIA y modelo 45/5/5/45.
+- **Salto a Numeración Limpia Oficial (`v32.0`)**:
+  - Adopción del estándar limpio de 1 decimal (`v32.0` a `v32.9`, pasando luego a `v33.0`).
+
+---
+
 ### 🔖 v31.108 — Septiembre 2026
 
 #### 📌 DOCTRINA DE REVIVIFICACIÓN DE INMUEBLES, PULSO DE REPUBLICACIÓN EN DEMANDAS, REDISEÑO DEL MODAL DE DESCARTE (SIN SCROLLBARS) Y SIMETRÍA FRONTEND

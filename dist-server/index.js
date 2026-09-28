@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v31.108";
+    VECY_VERSION = "v32.0";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -20161,21 +20161,41 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
 \u{1F4F2} *Revisi\xF3n de Minutas con JanIA:* https://vecy-network.vercel.app/jania`
         },
         {
-          topicTitle: "Defensa de la Comisi\xF3n 50/50 y Contrato de Corretaje",
+          topicTitle: "Modelo Colaborativo 45/5/5/45 vs Comisiones Excluyentes",
           themeKey: "juridico",
-          voiceText: `Hola, queridos colegas. Soy JanIA. El contrato de corretaje inmobiliario est\xE1 protegido por los art\xEDculos mil trescientos cuarenta a mil trescientos cuarenta y seis del C\xF3digo de Comercio. La remuneraci\xF3n del corredor se causa desde el momento en que se celebra el negocio entre las partes gracias a su gesti\xF3n. Dejar constancia escrita u hoja de visita digital blindada garantiza el cobro de la comisi\xF3n justa y previene el bypassing entre agentes. \xA1Defendamos el honor de nuestro oficio!`,
-          captionText: `\u{1F91D} *DEFENSA DE LA COMISI\xD3N 50/50 & C\xD3DIGO DE COMERCIO \u2014 VECY BIENES RA\xCDCES* \u{1F4DC}
+          voiceText: `Hola, queridos colegas. Soy JanIA. En VECY Bienes Ra\xEDces defendemos una repartici\xF3n justa de honorarios: del tres por ciento de comisi\xF3n, el cuarenta y cinco por ciento es para el captador de la Oferta, el cuarenta y cinco por ciento para quien trae la Demanda calificada, cinco por ciento para la red colaborativa que difunde y cinco por ciento para la plataforma VECY. Rechazamos los esquemas ego\xEDstas de cincuenta cincuenta cerrados o cuarenta veinte cuarenta que imponen terceros ocultos. La verdadera colaboraci\xF3n une a las partes con transparencia y respeto. \xA1A cerrar en equipo!`,
+          captionText: `\u{1F91D} *MODELO COLABORATIVO 45/5/5/45 \u2014 VECY BIENES RA\xCDCES* \u{1F4DC}
 
-\xA1Buenos d\xEDas a todos los aliados del corretaje!
+\xA1Buenos d\xEDas a todos los aliados del corretaje inmobiliario!
 
-\u2696\uFE0F *Fundamentos Legales del Corretaje en Colombia:*
-\u2022 **Art. 1340 C.Co.:** Define al corredor como el mediador independiente que facilita la celebraci\xF3n de negocios.
-\u2022 **Art. 1341 C.Co.:** La remuneraci\xF3n se causa una vez perfeccionado el acuerdo entre comprador y vendedor.
-\u2022 **Validez de Mensajes (Ley 527 de 1999):** La hoja de visita enviada por WhatsApp o correo tiene pleno valor probatorio en tribunales.
+\u2696\uFE0F *\xBFPor qu\xE9 el modelo 45/5/5/45 dignifica a todos los corredores?*
+Del 3% de comisi\xF3n total pactada sobre la venta o arriendo:
+\u2022 **45% Parte OFERTA:** Para el agente captador que tiene al propietario del inmueble.
+\u2022 **45% Parte DEMANDA:** Para el agente que representa al comprador o arrendatario calificado.
+\u2022 **5% Red Colaborativa:** Para los agentes que colaboran publicando y dinamizando el mercado.
+\u2022 **5% VECY BIENES RA\xCDCES:** Para el soporte tecnol\xF3gico, blindaje legal y cruces de JanIA.
 
-\u{1F4A1} *En VECY compartimos puntas con respeto y \xE9tica:* La uni\xF3n entre corredores multiplica los cierres.
+\u{1F6AB} *Cero intermediaci\xF3n desleal:* Los esquemas cerrados de "50/50" o "40/20/40" con terceros interpuestos impiden que la comisi\xF3n sea justa. En VECY todos ganamos con equidad y contratos claros.
 
-\u{1F4F2} *Contratos Digitales JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *T\xE9rminos y Condiciones Colaborativos:* https://vecy.co`
+        },
+        {
+          topicTitle: "Verificaci\xF3n de Identidad de Visitantes y Antecedentes con JanIA",
+          themeKey: "juridico",
+          voiceText: `\xA1Buenos d\xEDas, colegas! Soy JanIA con una herramienta vital para su seguridad. Antes de mostrar un inmueble a un desconocido o compartir fichas reservadas, pueden escribir a mi n\xFAmero de WhatsApp o al de VECY Bienes Ra\xEDces solicitando la verificaci\xF3n de c\xE9dula de su visitante. Verificamos el nombre completo y antecedentes en Polic\xEDa Nacional para que vayan a sus citas con total tranquilidad y dejen un registro probatorio ante cualquier controversia entre colegas o con propietarios. \xA1Seguridad primero!`,
+          captionText: `\u{1F6E1}\uFE0F *VERIFICACI\xD3N DE IDENTIDAD & SEGURIDAD EN VISITAS \u2014 VECY BIENES RA\xCDCES* \u{1F575}\uFE0F\u200D\u2640\uFE0F
+
+\xA1Colegas! Su seguridad f\xEDsica y jur\xEDdica durante las visitas comerciales es nuestra prioridad.
+
+\u{1F4CC} *Servicio Oficial de Validaci\xF3n de Identidad y Antecedentes:*
+Ahora a trav\xE9s del WhatsApp de JanIA (+57 319 291 9978) o de nuestra l\xEDnea oficial (+57 316 656 9719), puedes solicitar en tiempo real:
+1\uFE0F\u20E3 **Verificaci\xF3n Oficial de Documento:** Confirmaci\xF3n del nombre civil completo con dos apellidos.
+2\uFE0F\u20E3 **Consulta de Antecedentes (Polic\xEDa Nacional):** Comprobaci\xF3n de ausencia de requerimientos judiciales.
+3\uFE0F\u20E3 **Identificaci\xF3n de Colegas:** Para presentaciones formales por escrito a propietarios, sirviendo de acervo probatorio legal en caso de controversia sobre el corretaje.
+
+\u{1F4A1} *Cero riesgos:* No lleves visitantes an\xF3nimos a los inmuebles. Verifica primero con JanIA.
+
+\u{1F4F2} *Verifica C\xE9dulas por WhatsApp:* +57 319 291 9978`
         },
         {
           topicTitle: "Estudio de T\xEDtulos y Alertas en Folios de Matr\xEDcula SNR",
@@ -20480,52 +20500,52 @@ En VECY cuentas con un respaldo permanente para impulsar tus operaciones en toda
     DAILY_POLLS_MAP = {
       1: {
         // Lunes
-        question: "\u{1F4CA} \xBFCu\xE1l es tu principal meta o prioridad inmobiliaria para esta semana?",
+        question: "\u{1F91D} \xBFQu\xE9 opinas de la repartici\xF3n colaborativa 45/5/5/45 de VECY BIENES RA\xCDCES para negocios justos?",
         options: [
-          "Captar inmuebles en exclusiva",
-          "Cerrar clientes demandantes activos",
-          "Alianzas de puntas compartidas",
-          "Tr\xE1mites notariales y de escrituraci\xF3n"
+          "Excelente: 45% Oferta, 45% Demanda y 10% red",
+          "Muy justa: dignifica el trabajo de ambas puntas",
+          "Mejor que el 50/50 cerrado o 40/20/40",
+          "Quiero conocer los t\xE9rminos y condiciones"
         ]
       },
       2: {
         // Martes
-        question: "\u2696\uFE0F \xBFCu\xE1l es el desaf\xEDo legal que m\xE1s te consultan tus clientes en Colombia?",
+        question: "\u{1F6E1}\uFE0F \xBFCu\xE1l servicio de seguridad y blindaje jur\xEDdico consideras m\xE1s urgente para tu gesti\xF3n?",
         options: [
-          "Estudio de t\xEDtulos y grav\xE1menes",
-          "R\xE9gimen de Propiedad Horizontal",
-          "Cl\xE1usulas de promesa de compraventa",
-          "Sucesiones y cancelaciones de patrimonio"
+          "Verificaci\xF3n de c\xE9dulas y antecedentes de visitantes",
+          "Identificaci\xF3n de colegas para presentaci\xF3n al due\xF1o",
+          "Redacci\xF3n de promesas y contratos de corretaje",
+          "Estudio de t\xEDtulos y grav\xE1menes SNR"
         ]
       },
       3: {
         // Miércoles
-        question: "\u{1F680} \xBFQu\xE9 estrategia de marketing inmobiliario te genera mayor tasa de conversi\xF3n?",
+        question: "\u{1F310} \xBFQu\xE9 funcionalidad te gustar\xEDa que tuviera primero la plataforma web de VECY BIENES RA\xCDCES?",
         options: [
-          "Red Colaborativa (Vecy Bienes Ra\xEDces)",
-          "Portales pagos tradicionales",
-          "Redes sociales (Instagram / TikTok)",
-          "Referidos y c\xEDrculo c\xE1lido"
+          "Matching autom\xE1tico de oferta y demanda con alertas",
+          "Verificaci\xF3n de identidad y seguridad de visitantes",
+          "Fichas t\xE9cnicas en marca blanca para compartir",
+          "Generador de minutas de promesa y corretaje"
         ]
       },
       4: {
         // Jueves
-        question: "\u{1F4BC} En materia tributaria, \xBFqu\xE9 concepto genera m\xE1s dudas a tus compradores/vendedores?",
+        question: "\u{1F916} \xBFPor cu\xE1l canal prefieres que JanIA te atienda y resuelva tus consultas inmobiliarias?",
         options: [
-          "Retenci\xF3n en la fuente en ventas",
-          "Ganancia ocasional e inmuebles heredados",
-          "Impuesto predial y plusval\xEDa",
-          "Facturaci\xF3n electr\xF3nica y corretaje"
+          "Por WhatsApp (mensajes y notas de voz)",
+          "Por el Chat Web de la plataforma",
+          "Por ambos canales integrados en tiempo real",
+          "Por llamadas y reportes ejecutivos semanales"
         ]
       },
       5: {
         // Viernes
         question: "\u{1F4D0} \xBFQu\xE9 m\xE9todo consideras m\xE1s confiable para sustentar el precio justo a un propietario?",
         options: [
-          "Aval\xFAo comercial corporativo (RND)",
-          "M\xE9todo comparativo de mercado",
-          "An\xE1lisis de rentabilidad / renta",
-          "Estudio de mercado en Vecy Network"
+          "Estudio de mercado en VECY Bienes Ra\xEDces",
+          "M\xE9todo comparativo de mercado y zona",
+          "An\xE1lisis de rentabilidad y canon de renta",
+          "Aval\xFAo comercial corporativo (RND)"
         ]
       },
       6: {
@@ -20533,8 +20553,8 @@ En VECY cuentas con un respaldo permanente para impulsar tus operaciones en toda
         question: "\u2615 Caf\xE9 Inmobiliario: \xBFC\xF3mo integras herramientas de Inteligencia Artificial en tu corretaje?",
         options: [
           "Asistentes como JanIA (matching y consultas)",
-          "Redacci\xF3n de fichas descriptivas",
-          "Generaci\xF3n de im\xE1genes y flyers",
+          "Verificaci\xF3n de identidad de clientes y colegas",
+          "Redacci\xF3n de fichas descriptivas y copys",
           "A\xFAn realizo todo el proceso tradicional"
         ]
       },

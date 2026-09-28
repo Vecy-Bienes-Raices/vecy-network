@@ -7,6 +7,53 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.0 — 27 Septiembre 2026
+
+### Solicitud de Eduardo
+Doctrina Financiera 45/5/5/45 de VECY BIENES RAÍCES, Erradicación de Modelos Excluyentes (50/50 y 40/20/40), Integración de Nuevo Logotipo Oficial Optimizado, Difusiones Diarias de Verificación de Identidad con JanIA y Salto a Numeración Limpia Oficial:
+*"Pero los 50/50 no le sirven a VECY ya que recuerda nuestro trabajo es 45/10/45 donde Del 3% de comisión sobre el valor final en que se venda el inmueble:
+45% es para la parte OFERTA es decir, el agente que tiene al vendedor o actual propietario de ese inmueble que le han otorgado para ser comercializado en venta
+5% es para la parte colaborativa (Otros agentes que ayuden a publicar en la red colaborativa)
+5% es para VECY BIENES RAÍCES
+45% Para quien tiene la DEMANDA es decir el cliente comprador o inversionista
+En arriendo pues funciona igual, por eso fue que decidí apartar a aquellos que dicen 50/50 es porque solo aceptan esa figura: 50 para ellos bien sea por tener la OFERTA o la DEMANDA, son envidiosos y no comparten su comisión en tantas partes. Y menos los que dicen que ofrecen para trabajar 40/20/40, quiere decir que sobre ese activo bien sea DEMANDA u OFERTA es porque ya tienen a otra persona trabajando con ellos o son dos personas mejor dicho, entonces quien consiga la OFERTA o LA DEMANDA según sea el caso tiene que aceptar que se llevará únicamente el 40% de ese 3% de comisión, por lo tanto ninguna de las anteriores nos sirve, JanIA, el algoritmo o motor inteligente debe procurar que haya una repartición justa ya que en este momento como no tenemos red colaborativa aún, VECY debe quedar en la mitad y unir a OFERTA y DEMANDA mientras tanto y mientras terminamos de ajustar nuestra plataforma web para que despues ya sea automático y ahí al momento en que se lleguen a registrar, en ese entonces poderles preguntar: ¿Aceptas nuestros téminos y condiciones, sobre todo la figura de trabajar: 45/5/5/45? y si aceptan pues se registran si no aceptan, no pueden ingresar y pues les vamos a ir explicando muy bien cómo funcionará nuestro sistema, es por eso que te he dicho que JanIA debe publicar a diario en el grupo 2 y nuestro canal de whatsapp todas estas explicaciones a demás de consejos diarios, tips, noticias del momento, ofrecer y brindar nuestros servicios, hacer encuestas sobre cómo les gustaría que fuera o que tuviera esta plataforma, cómo quieren que JanIA les ayude y si les gusta que ella los atienda más por Whatsapp o por su chat Web... Necesito que JanIA les vaya contando en eso que ella publica a diario que Vecy Bienes Raíces ahora ofrece a través del número de JanIA que la contacten para verificar documentos de identidad de sus clientes y de esta manera estar seguros del nombre completo de la persona y que no cuenta con antecedentes, es para estar más seguros de ese visitante, también tener los datos de identificación de sus colegas para poder hacer presentaciones formales por escrito a sus clientes propietarios... Otra cosa que te iba a decir es que voy a ir cambiando las imágenes... dicen nuestro antiguo nombre VECY NETWORK, cuando ya decidimos que en todo lugar red social, conversación siempre seremos 'VECY BIENES RAÍCES'... Apropósito te lo voy a dejar por acá porque le hicimos unos muy pequeños cambios, fue algo más de optimización pero pues cámbialo por favor."*
+
+### Diagnóstico Técnico Profundo y Conclusiones de Arquitectura
+1. **Consolidación Doctrinal del Modelo 45 / 5 / 5 / 45 de VECY BIENES RAÍCES**:
+   - Sobre la comisión comercial estándar del 3% (o canon de arriendo):
+     - **45%**: Para el agente captador de la OFERTA (representante del propietario vendedor o arrendador).
+     - **5%**: Para la red colaborativa difusora (agentes aliados que viralizan y dinamizan el inmueble).
+     - **5%**: Para VECY BIENES RAÍCES (soporte tecnológico, cruce inteligente de JanIA y blindaje de la operación).
+     - **45%**: Para el agente colocador de la DEMANDA (representante del cliente comprador o arrendatario calificado).
+   - Incompatibilidad de modelos no colaborativos:
+     - **50/50 Cerrado**: Pretende repartir la comisión sin dejar espacio para la intermediación colaborativa ni la remuneración de Vecy. Son apartados a la bandeja Standby Directo.
+     - **40/20/40**: Implica que la contraparte ya tiene un tercero interpuesto (2 agentes en una sola punta), forzando a que la otra punta acepte una merma injusta (solo el 40%). El motor inteligente los excluye de La Mesa Principal.
+   - En la etapa actual, al no estar abierta al público la red colaborativa autónoma, Vecy Bienes Raíces se sitúa en el centro para conectar directamente la Oferta con la Demanda.
+2. **Actualización de Identidad de Marca y Sustitución de Logotipo**:
+   - Erradicación de la denominación anterior "VECY NETWORK". La marca histórica, legal y comercial única es **"VECY BIENES RAÍCES"**.
+   - Integración del nuevo logotipo oficial optimizado (`client/public/logo-vecy.png` y `logo-vecy.jpg` a 1024x1024), con el medallón dorado, la casa Vecy y la sonrisa dorada con destellos pulidos.
+3. **Servicio Diario de Verificación de Identidad y Seguridad Notarial con JanIA**:
+   - JanIA difunde a diario en el Grupo 2 y en el Canal de WhatsApp la invitación a los corredores para verificar en tiempo real cédulas de clientes visitantes (para seguridad física en visitas presenciales) y de colegas para presentaciones formales a propietarios y acervos probatorios legales ante disputas de corretaje.
+4. **Encuestas Interactivas Orientadas al Lanzamiento Web**:
+   - `DAILY_POLLS_MAP` en `cronService.ts` configurado con encuestas sobre funcionalidades deseadas en la web, canales de atención preferidos (WhatsApp vs Chat Web) y aceptación del modelo colaborativo 45/5/5/45.
+5. **Salto a Numeración Limpia Oficial (`v32.0`)**:
+   - Superada la numeración de 3 dígitos (`v31.108`). A partir de esta versión rige el estándar limpio de 1 decimal (`v32.0` a `v32.9`, avanzando de versión mayor cada 10 ciclos a `v33.0`).
+
+### Acciones Ejecutadas en Código
+1. **Identidad Gráfica**:
+   - Reemplazado `client/public/logo-vecy.png` y `client/public/logo-vecy.jpg` con el nuevo logo optimizado de alta resolución.
+2. **Prompts de JanIA (`server/_core/prompts/`)**:
+   - `base.md`: Actualizadas referencias a comisiones del modelo 45/5/5/45 de VECY BIENES RAÍCES.
+   - `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`: Incorporada la doctrina de repartición 45/5/5/45, la explicación de por qué 50/50 y 40/20/40 se apartan, y el servicio de verificación de identidad de visitantes con JanIA.
+3. **Servicio de Difusiones y Encuestas Diarias (`server/_core/cronService.ts`)**:
+   - Actualizado `DAILY_POLLS_MAP` con encuestas sobre la web de Vecy Bienes Raíces, canal de preferencia y modelo 45/5/5/45.
+   - Reemplazado el tip de 50/50 por la doctrina de repartición 45/5/5/45 y añadida la cápsula de seguridad para verificación de cédulas de visitantes.
+   - Erradicada la mención de "Vecy Network" en opciones de encuesta por "VECY Bienes Raíces".
+4. **Versión Oficial**:
+   - Actualizado a **`v32.0`** en `shared/const.ts` y **`32.0.0`** en `package.json`.
+
+---
+
 ## 📋 SESIÓN v31.108 — 27 Septiembre 2026
 
 ### Solicitud de Eduardo

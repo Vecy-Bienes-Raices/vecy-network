@@ -165,7 +165,21 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v31.108 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.0 — Septiembre 2026
+
+### Novedades v32.0 (Doctrina Financiera 45/5/5/45 de VECY BIENES RAÍCES, Erradicación de Modelos Excluyentes 50/50 y 40/20/40, Nuevo Logotipo Oficial Optimizado y Salto a Numeración Limpia):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo dictaminó: *"Pero los 50/50 no le sirven a VECY ya que recuerda nuestro trabajo es 45/10/45 donde Del 3% de comisión sobre el valor final en que se venda el inmueble: 45% es para la parte OFERTA, 5% es para la parte colaborativa, 5% es para VECY BIENES RAÍCES, 45% Para quien tiene la DEMANDA... En arriendo pues funciona igual... apartar a aquellos que dicen 50/50 es porque solo aceptan esa figura... y menos los que dicen que ofrecen para trabajar 40/20/40... ninguna de las anteriores nos sirve... JanIA debe publicar a diario en el grupo 2 y nuestro canal de whatsapp todas estas explicaciones... y que Vecy Bienes Raíces ahora ofrece a través del número de JanIA que la contacten para verificar documentos de identidad de sus clientes y antecedentes... Dicen nuestro antiguo nombre VECY NETWORK, cuando ya decidimos que en todo lugar red social, conversación siempre seremos 'VECY BIENES RAÍCES'... Apropósito te lo voy a dejar por acá porque le hicimos unos muy pequeños cambios, fue algo más de optimización pero pues cámbialo por favor."*
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Doctrina de Comisión 45/5/5/45**: Del 3% de honorarios (o canon en arriendos), 45% corresponde a la punta de Oferta, 45% a la punta de Demanda, 5% a la red difusora colaborativa y 5% a Vecy Bienes Raíces. Los anuncios con 50/50 cerrado o 40/20/40 se apartan automáticamente en la bandeja de Standby Directo.
+  2. **Identidad de Marca Única**: Se erradica por completo la denominación "Vecy Network". La marca histórica, legal y comercial única es **"VECY BIENES RAÍCES"**.
+  3. **Integración de Nuevo Logotipo Oficial**: Reemplazado `client/public/logo-vecy.png` con la versión optimizada de alta resolución (1024x1024) con el medallón dorado y destellos pulidos.
+  4. **Servicio Diario de Verificación de Identidad con JanIA**: Configurado en `cronService.ts` y en el prompt del Grupo 2 el servicio para validar cédulas y antecedentes en Policía Nacional para seguridad en visitas y acervos probatorios entre colegas.
+  5. **Encuestas Semanales Orientadas al Lanzamiento**: Actualizado `DAILY_POLLS_MAP` con encuestas sobre requerimientos de la web, canal de atención y modelo colaborativo 45/5/5/45.
+  6. **Salto a Numeración Limpia Oficial (`v32.0`)**: Adoptado el estándar limpio de 1 decimal (`v32.0` a `v32.9`, avanzando de versión mayor cada 10 ciclos a `v33.0`).
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v31.108 — Septiembre 2026
 
 ### Novedades v31.108 (Doctrina de Revivificación de Inmuebles, Sincronización de Pulso en Demandas, Rediseño Minimalista de Modal de Descarte sin Scrollbars y Simetría Frontend):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

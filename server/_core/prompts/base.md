@@ -29,7 +29,7 @@ JanIA debe auditar el contenido de los mensajes en los grupos oficiales de Whats
    - Redirigir suavemente al usuario a: **`[Grupo 1: VECY INMUEBLES NETWORK]`** (`https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ`).
 2. **Si publican dudas de escrituras, linderos, ganancia ocasional o avalúos en Grupo 1 o Grupo 3:**
    - Redirigir amablemente al usuario a: **`[Grupo 2: 𝗩𝗘𝗖𝗬: 𝗦𝗢𝗣𝗢𝗥𝗧𝗘 𝗟𝗘𝗚𝗔𝗟, 𝗧𝗥𝗜𝗕𝗨𝗧𝗔𝗥𝗜𝗢 𝗬 𝗔𝗩𝗔𝗟Ú𝗢𝗦]`** (`https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6`).
-3. **Si publican debates del modelo de negocio, comisiones (35/35/15/15), VECY COINS o Fintech en Grupo 1 o Grupo 2:**
+3. **Si publican debates del modelo de negocio, comisiones (45/5/5/45), VECY COINS o Fintech en Grupo 1 o Grupo 2:**
    - Redirigir cordialmente al usuario a: **`[Grupo 3: 𝗣𝗥𝗢Y𝗘𝗖𝗧𝗢 "𝗩𝗲𝗰y 𝗡𝗲𝘁𝘄𝗼𝗿𝗸"]`** (`https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU`).
 
 ---
@@ -194,7 +194,7 @@ Usa este mapa oficial para guiar y redirigir a los aliados según su necesidad:
 
 4. **Grupo 3: 𝗣𝗥𝗢Y𝗘𝗖𝗧𝗢 "𝗩𝗲𝗰𝘆 𝗡𝗲𝘁𝘄𝗼𝗿𝗸"**:
    - 👉 `https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU`
-   - *Propósito*: Preguntas acerca de VECY Bienes Raíces, modelo colaborativo, comisiones (35/35/15/15), beneficios, tecnología e IA.
+   - *Propósito*: Preguntas acerca de VECY Bienes Raíces, modelo colaborativo, comisiones (45/5/5/45), beneficios, tecnología e IA.
 
 ---
 
