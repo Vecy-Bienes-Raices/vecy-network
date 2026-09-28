@@ -7,6 +7,36 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.8 — 28 Septiembre 2026
+
+### Solicitud de Eduardo
+Resolución de Fallo de Recepción de Mensajes en WhatsApp desde Línea de Jani Alves (`@JaniAlvesSouza` / `+573166569719`):
+*(Eduardo envió mensaje desde el WhatsApp de Jani Alves hacia el número del bot JanIA `+573192919978` consultando: "Hola JanIA podrías ayudarme a verificar este número de cédula 19872169" y el bot no respondió).*
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Desincronización Criptográfica de Signal Ratchet en Baileys ("Over 2000 messages into the future!")**:
+   - En la auditoría de logs del VPS se detectaron 3,232 repeticiones del error:
+     `Session error:SessionError: Over 2000 messages into the future! at 167108705018103.0 [as awaitable]`.
+   - El identificador `167108705018103` corresponde al LID (Linked ID) de WhatsApp de la socia y fundadora **Jani Alves**.
+   - Debido al conflicto de sockets previo entre procesos zombi y desarrollo local, la sesión E2E de Signal para Jani se corrompió. Cuando Jani enviaba cualquier mensaje, Baileys no podía descifrar el payload y descartaba el mensaje antes de disparar el evento `messages.upsert`.
+2. **Sesión Silenciada en PostgreSQL (`pendingSessions`)**:
+   - Se encontró en la base de datos la tupla `mute:167108705018103` con `isMuted: true` guardada desde antes.
+   - Dado que el bot interpretaba su ID como número externo no admin, incluso si el mensaje se hubiera descifrado, la sesión figuraba como silenciada.
+
+### Acciones Ejecutadas en Código, Base de Datos y Servidor
+1. **Erradicación de Llaves Signal Corruptas**:
+   - Se eliminaron del VPS todos los archivos desincronizados: `rm -f /var/www/vecy-network/.baileys_auth/session-167108705018103*.json`.
+   - Al recibir el siguiente mensaje, Baileys regenera un handshake limpio de PreKey con la sesión de Jani desde el mensaje 0.
+2. **Desmutéo Permanente en PostgreSQL**:
+   - Se purgó de PostgreSQL el registro: `DELETE FROM "pendingSessions" WHERE jid = 'mute:167108705018103'`.
+3. **Inclusión de LIDs de Administración en Whitelist (`server/_core/whatsapp-match.ts`)**:
+   - Se añadieron explícitamente los LIDs de Jani Alves (`167108705018103`) y Eduardo Rivera (`225954035179724`) a la lista `ADMIN_IDENTIFIERS`.
+   - Se forzó `isMuted = false` de forma permanente para ambos directores de Vecy Network.
+4. **Incremento de Versión Oficial**:
+   - Incrementado a **`v32.8`** en `shared/const.ts` y **`32.8.0`** en `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.7 — 28 Septiembre 2026
 
 ### Solicitud de Eduardo

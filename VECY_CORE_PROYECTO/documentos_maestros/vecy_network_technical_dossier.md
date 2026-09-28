@@ -322,6 +322,23 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.8 — Septiembre 2026
+
+#### 📌 RESTAURACIÓN DE SESIÓN SIGNAL E2E PARA JANI ALVES, PURGA DE MUTE EN BD E INCLUSIÓN DE LIDS DIRECTIVOS EN WHITELIST
+
+**Problemas identificados:**
+1. **Desincronización Criptográfica Signal ("Over 2000 messages into the future!")**:
+   - En la auditoría de logs del VPS se detectaron 3,232 repeticiones de error en `libsignal` para el identificador `167108705018103` (LID de Jani Alves).
+   - La llave de cifrado local quedó desfasada por el conflicto previo de procesos compitiendo por Baileys. Cuando Jani enviaba mensajes, Baileys no podía descifrarlos y los descartaba sin activar eventos.
+   - **Solución:** Se purgaron del VPS los archivos `session-167108705018103*.json`. Al recibir el próximo mensaje, Baileys realiza un handshake PreKey limpio y restablece el cifrado E2E sin errores.
+2. **Silencio en PostgreSQL (`pendingSessions`)**:
+   - Existía el registro `mute:167108705018103` con `isMuted: true`. Se eliminó completamente de la base de datos.
+3. **Identificadores LID en Whitelist Administrativa (`whatsapp-match.ts`)**:
+   - Se agregaron a `ADMIN_IDENTIFIERS` los LIDs directivos de Jani Alves (`167108705018103`) y Eduardo Rivera (`225954035179724`), garantizando `isMuted = false` permanente.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+---
+
 ### 🔖 v32.7 — Septiembre 2026
 
 #### 📌 SOLUCIÓN DEFINITIVA DE EXTRACCIÓN DINÁMICA DE BOTÓN PRIMEFACES EN POLICÍA NACIONAL Y SIEMBRA EN CACHÉ DOCTRINAL

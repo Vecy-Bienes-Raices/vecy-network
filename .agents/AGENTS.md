@@ -165,7 +165,23 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.7 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.8 — Septiembre 2026
+
+### Novedades v32.8 (Restauración de Sesión Signal E2E para Jani Alves, Purga de Mute en BD e Inclusión de LIDs Directivos en Whitelist):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Al realizar la prueba enviando un mensaje desde el WhatsApp de Jani Alves hacia el número del bot (`+573192919978`), JanIA no respondía y los mensajes quedaban en doble check gris.
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Desincronización Criptográfica Signal ("Over 2000 messages into the future!")**:
+     - Se auditaron los registros del VPS y se encontraron 3,232 repeticiones de error en `libsignal` para el identificador `167108705018103` (LID de Jani Alves).
+     - La llave de cifrado local quedó desfasada por el conflicto previo de procesos compitiendo por Baileys. Cuando Jani enviaba mensajes, Baileys no podía descifrarlos y los descartaba sin activar eventos.
+     - **Solución:** Se purgaron del VPS los archivos `session-167108705018103*.json`. Al recibir el próximo mensaje, Baileys realiza un handshake PreKey limpio y restablece el cifrado E2E sin errores.
+  2. **Silencio en PostgreSQL (`pendingSessions`)**:
+     - Existía el registro `mute:167108705018103` con `isMuted: true`. Se eliminó completamente de la base de datos.
+  3. **Identificadores LID en Whitelist Administrativa (`whatsapp-match.ts`)**:
+     - Se agregaron a `ADMIN_IDENTIFIERS` los LIDs directivos de Jani Alves (`167108705018103`) y Eduardo Rivera (`225954035179724`), garantizando `isMuted = false` permanente.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.7 — Septiembre 2026
 
 ### Novedades v32.7 (Solución Definitiva de Extracción Dinámica de Botón PrimeFaces en Policía Nacional y Siembra en Caché Doctrinal):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

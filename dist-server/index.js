@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.7";
+    VECY_VERSION = "v32.8";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -10735,9 +10735,10 @@ ${quotedNote}` : quotedNote;
                 const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
                 const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
                 const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
-                const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === ADMIN_PHONE || rawPhone === "573192919978";
-                const isAdmin = isSelfChat || rawPhone.includes(ADMIN_PHONE) || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone === "573166569719";
-                const userName = msg.pushName || `Asesor +${rawPhone}`;
+                const ADMIN_IDENTIFIERS = ["573192919978", "573166569719", "167108705018103", "225954035179724", ADMIN_PHONE];
+                const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone === "225954035179724";
+                const isAdmin = isSelfChat || ADMIN_IDENTIFIERS.some((id) => rawPhone.includes(id) || rawPhone === id);
+                const userName = msg.pushName || (rawPhone === "167108705018103" ? "Jani Alves" : rawPhone === "225954035179724" ? "Eduardo Rivera" : `Asesor +${rawPhone}`);
                 let body = "";
                 if (msg.message?.conversation) body = msg.message.conversation;
                 else if (msg.message?.extendedTextMessage) body = msg.message.extendedTextMessage.text || "";
