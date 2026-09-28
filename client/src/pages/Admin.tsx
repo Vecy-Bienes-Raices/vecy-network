@@ -243,10 +243,10 @@ export default function Admin() {
                     className="h-8 w-auto object-contain filter drop-shadow-[0_0_8px_rgba(191,149,63,0.3)] shrink-0"
                   />
                   <div className="flex flex-col">
-                    <span className="vecy-gold-3d tracking-[0.18em] text-sm uppercase leading-none">
+                    <span className="font-['Audiowide'] text-white tracking-[0.18em] text-sm uppercase leading-none drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]">
                       VECY
                     </span>
-                    <span className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.14em] text-[10px] uppercase leading-tight mt-1">
+                    <span className="font-['Audiowide'] text-gradient-gold tracking-[0.14em] text-[9px] uppercase leading-tight mt-1">
                       BIENES RAÍCES
                     </span>
                     <p className="text-muted-foreground text-[8px] uppercase tracking-[0.25em] whitespace-nowrap mt-1">
@@ -288,10 +288,10 @@ export default function Admin() {
                 className="h-8 w-auto object-contain"
               />
               <div className="flex flex-col">
-                <span className="vecy-gold-3d tracking-[0.18em] text-sm uppercase leading-none">
+                <span className="font-['Audiowide'] text-white tracking-[0.18em] text-sm uppercase leading-none drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]">
                   VECY
                 </span>
-                <span className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.14em] text-[10px] uppercase leading-tight mt-1">
+                <span className="font-['Audiowide'] text-gradient-gold tracking-[0.14em] text-[9px] uppercase leading-tight mt-1">
                   BIENES RAÍCES
                 </span>
                 <p className="text-muted-foreground text-[8px] uppercase tracking-[0.25em] mt-1">

@@ -322,6 +322,30 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.4 — Septiembre 2026
+
+#### 📌 TIPOGRAFÍA FUTURISTA AUDIOWIDE EXCLUSIVA PARA TÍTULOS CON COMBINACIÓN TRADICIONAL DE LETRAS EN BLANCO Y DORADO
+
+**Problemas identificados:**
+1. **Solicitud de Nueva Identidad Futurista**: Eduardo requirió sustituir la fuente de títulos por la tipografía geométrica **Audiowide** (Google Fonts).
+2. **Restauración de la Combinación Cromática Blanco + Dorado**: Se requirió volver al contraste tradicional donde la palabra principal `VECY` resplandece en blanco puro y `BIENES RAÍCES` luce en oro satinado, tanto en el Hero como en barras de navegación y encabezados.
+
+**Solución aplicada:**
+- **Integración de Tipografía Audiowide (`client/index.html`, `client/src/index.css`)**:
+  - Fuente `Audiowide` importada desde Google Fonts.
+  - Asignadas `--font-display: "Audiowide", cursive, sans-serif;` y `--font-heading: "Audiowide", cursive, sans-serif;`.
+  - Confinada con rigor a `h1-h6`, `.vecy-title-hero`, `.vecy-title-section`, `.page-header-gold` y utilidades de títulos.
+  - El cuerpo de la web, párrafos y subtítulos (`.vecy-subtitle`) se preservan en la fuente base original (`Inter`).
+- **Combinación Blanco + Oro en Ecosistema**:
+  - `Home.tsx`: Hero con `VECY` en blanco puro y `BIENES RAÍCES` en oro en dos niveles jerarquizados con fuente `Audiowide`.
+  - `Navbar.tsx`: Marca con `VECY` en blanco y `BIENES RAÍCES` en oro.
+  - `Admin.tsx` y `JanIAConsole.tsx`: Cabeceras de sidebar configuradas con `VECY` en blanco y `BIENES RAÍCES` en oro.
+- **Suite de Regresión Doctrinal**:
+  - 124/124 tests de Vitest pasando al 100% ✅.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build de producción limpio ✅.
+
+---
+
 ### 🔖 v32.3 — Septiembre 2026
 
 #### 📌 TIPOGRAFÍA ORIGINAL EN ORO MACIZO 3D ESCULPIDO CON BISEL, REFLEJO ESPECULAR Y SOMBRAS, 0% OVERHEAD Y ADAPTABILIDAD MÓVIL RESPONSIVE

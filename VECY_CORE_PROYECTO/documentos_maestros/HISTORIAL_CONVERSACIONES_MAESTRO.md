@@ -7,6 +7,37 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.4 — 28 Septiembre 2026
+
+### Solicitud de Eduardo
+Tipografía Futurista Audiowide Exclusiva para Títulos con Combinación Tradicional de Letras en Blanco y Dorado:
+*"Y deja la combinación con blanco que usábamos antes de estos cambios en las letras, pero con este tipo de letra solo para los título: Audiowide"*
+
+### Diagnóstico Técnico Profundo y Conclusiones de Arquitectura
+1. **Adopción de Tipografía Futurista `Audiowide` Confinada Exclusivamente a Títulos**:
+   - Eduardo instruyó adoptar la emblemática fuente geométrica/tecnológica **Audiowide** (Google Fonts) de manera estricta y delimitada a los títulos de la plataforma (`h1-h6`, `.vecy-title-hero`, `.vecy-title-section`, `.page-header-gold`, `.text-gradient-gold`).
+   - El resto de la plataforma (párrafos, subtítulos `.vecy-subtitle`, menús, tablas, tarjetas y formularios) permanece intacto en su tipografía base original (`Inter` / `sans-serif` nativo).
+2. **Restauración de la Combinación Cromática Blanco + Oro**:
+   - Siguiendo la estética histórica de la marca, los títulos adoptan el contraste de alto impacto entre **blanco puro resplandeciente** (`text-white`) y **dorado satinado** (`text-gradient-gold`):
+     - **Hero Principal (`Home.tsx`)**: **`VECY`** arriba monumental en blanco puro (`text-white font-['Audiowide'] drop-shadow-[0_4px_30px_rgba(255,255,255,0.2)]`) y **`BIENES RAÍCES`** inmediatamente debajo en oro (`text-gradient-gold font-['Audiowide']`).
+     - **Navbar (`Navbar.tsx`)**: **`VECY`** en blanco y **`BIENES RAÍCES`** en oro.
+     - **Sidebars Admin y JanIA (`Admin.tsx`, `JanIAConsole.tsx`)**: **`VECY`** en blanco y **`BIENES RAÍCES`** en oro.
+     - **Títulos de Sección en Todo el Ecosistema**: Primera palabra o frase en blanco puro (`PROPIEDADES`, `TIENDA`, `CENTRO DE`, `RED DE`, `SOMOS`, `NUESTROS`, `LIDERAZGO`, `ESTAMOS EN`) acompañada por la palabra clave en oro satinado con tipografía `Audiowide`.
+
+### Acciones Ejecutadas en Código
+1. **Importación y Fuentes (`client/index.html`, `client/src/index.css`)**:
+   - Importada la fuente `Audiowide` desde Google Fonts en `client/index.html`.
+   - Asignadas `--font-display: "Audiowide", cursive, sans-serif;` y `--font-heading: "Audiowide", cursive, sans-serif;` en `@theme inline`.
+   - `h1-h6`, `.vecy-title-hero`, `.vecy-title-section`, `.page-header-gold`, `.text-gradient-gold` y `.vecy-gold-3d` configuradas con `Audiowide`.
+2. **Aplicación de Combinación Blanco + Oro**:
+   - `Home.tsx`: Hero con `VECY` en blanco y `BIENES RAÍCES` en oro en tipografía `Audiowide`.
+   - `Navbar.tsx`: Marca superior con `VECY` en blanco y `BIENES RAÍCES` en oro en tipografía `Audiowide`.
+   - `Admin.tsx` y `JanIAConsole.tsx`: Cabeceras de sidebar configuradas con `VECY` en blanco y `BIENES RAÍCES` en oro.
+3. **Incremento de Versión Oficial**:
+   - Actualizado a **`v32.4`** en `shared/const.ts` y **`32.4.0`** en `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.3 — 28 Septiembre 2026
 
 ### Solicitud de Eduardo

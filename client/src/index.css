@@ -62,9 +62,9 @@
   --shadow-luminous-gold: 0 0 20px rgba(212, 175, 55, 0.5), 0 0 40px rgba(212, 175, 55, 0.2);
   
   /* Fonts */
-  --font-display: "Montserrat", sans-serif;
+  --font-display: "Audiowide", cursive, sans-serif;
   --font-sans: "Inter", sans-serif;
-  --font-heading: "Montserrat", sans-serif;
+  --font-heading: "Audiowide", cursive, sans-serif;
 }
 
 :root {
@@ -150,7 +150,7 @@
     font-family: var(--font-sans, "Inter", sans-serif);
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display, "Montserrat", sans-serif);
+    font-family: var(--font-display, "Audiowide", cursive, sans-serif);
     letter-spacing: -0.01em;
   }
   button:not(:disabled),
@@ -539,7 +539,7 @@
 
   /* PAGE HEADER PATTERN */
   .page-header-gold {
-    font-family: 'Montserrat', sans-serif;
+    font-family: "Audiowide", cursive, sans-serif;
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.02em;
@@ -587,13 +587,13 @@
   
   .vecy-title-hero {
     @apply text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black uppercase tracking-tight text-white mb-4 leading-tight;
-    font-family: "Montserrat", sans-serif;
+    font-family: "Audiowide", cursive, sans-serif;
     filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.85));
   }
 
   .vecy-title-section {
     @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white mb-3;
-    font-family: "Montserrat", sans-serif;
+    font-family: "Audiowide", cursive, sans-serif;
     filter: drop-shadow(0 3px 12px rgba(0, 0, 0, 0.8));
   }
 
@@ -601,7 +601,7 @@
   .vecy-gold-3d,
   .title-gold-gradient,
   .text-gradient-gold {
-    font-family: "Montserrat", sans-serif;
+    font-family: "Audiowide", cursive, sans-serif;
     font-weight: 900;
     /* Degradé de 9 paradas: luz especular blanca superior, oro 24k, horizonte biselado y rebote áurico */
     background: linear-gradient(

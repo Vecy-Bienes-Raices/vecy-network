@@ -65,10 +65,10 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
             />
           </div>
           <div className="hidden sm:block">
-            <h1 className="vecy-gold-3d tracking-[0.18em] text-2xl uppercase leading-none">
+            <h1 className="font-['Audiowide'] text-white tracking-[0.18em] text-2xl uppercase leading-none drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)]">
               VECY
             </h1>
-            <p className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.2em] text-[11px] uppercase mt-0.5 leading-tight">
+            <p className="font-['Audiowide'] text-gradient-gold tracking-[0.2em] text-[10px] uppercase mt-0.5 leading-tight">
               BIENES RAÍCES
             </p>
           </div>

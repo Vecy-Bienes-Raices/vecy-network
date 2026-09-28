@@ -165,7 +165,23 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.3 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.4 — Septiembre 2026
+
+### Novedades v32.4 (Tipografía Futurista Audiowide Exclusiva para Títulos con Combinación Tradicional de Letras en Blanco y Dorado):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo instruyó: *"Y deja la combinación con blanco que usábamos antes de estos cambios en las letras, pero con este tipo de letra solo para los título: Audiowide"*
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Tipografía Futurista `Audiowide` en Títulos**:
+     - Importada `Audiowide` desde Google Fonts y asignada a `h1-h6`, `.vecy-title-hero`, `.vecy-title-section`, `.page-header-gold`, `.text-gradient-gold` y encabezados clave.
+     - El resto de la plataforma (párrafos, subtítulos `.vecy-subtitle`, menús, tablas, tarjetas y formularios) permanece intacto en su tipografía base original (`Inter` / `sans-serif` nativo).
+  2. **Combinación Cromática Blanco + Oro**:
+     - **Hero Principal (`Home.tsx`)**: **`VECY`** arriba en **blanco puro resplandeciente** (`text-white font-['Audiowide'] drop-shadow-[0_4px_30px_rgba(255,255,255,0.2)]`) y **`BIENES RAÍCES`** inmediatamente debajo en **oro satinado** (`text-gradient-gold font-['Audiowide']`).
+     - **Navbar (`Navbar.tsx`)**: **`VECY`** en blanco y **`BIENES RAÍCES`** en oro con fuente `Audiowide`.
+     - **Sidebars Admin y JanIA (`Admin.tsx`, `JanIAConsole.tsx`)**: **`VECY`** en blanco y **`BIENES RAÍCES`** en oro con fuente `Audiowide`.
+     - **Títulos de Sección en Todo el Sitio**: Primera parte en blanco puro (`PROPIEDADES`, `TIENDA`, `CENTRO DE`, `RED DE`, `SOMOS`, `NUESTROS`, `LIDERAZGO`, `ESTAMOS EN`) acompañada por la palabra clave en oro satinado con tipografía `Audiowide`.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.3 — Septiembre 2026
 
 ### Novedades v32.3 (Tipografía Original en Oro Macizo 3D Esculpido con Bisel, Reflejo Especular y Sombras, 0% Overhead y Adaptabilidad Móvil Responsive):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:
