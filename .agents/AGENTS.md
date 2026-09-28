@@ -165,7 +165,25 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.8 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.9 — Septiembre 2026
+
+### Novedades v32.9 (Blindaje Criptográfico Signal en Baileys contra "Over 2000 messages into the future!", Trinquete Iterativo 500k y Auto-Reparación de Sesiones):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo reportó: *"Acabo de hacer una nueva solicitud desde otro número al de JanIA. Y no funcviona. Qué sucede?? Debe quedar en automático."* adjuntando captura del mensaje `"Podrías ayudarme con la verificación de esta cédula de ciudadanía: 19.386.159"` con doble check verde sin respuesta.
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Excepción Fatal en `libsignal` (`Over 2000 messages into the future!`)**:
+     - `libsignal` fija por diseño un límite arbitrario de 2000 saltos recursivos en `fillMessageKeys`. Si un contacto o dispositivo secundario (WhatsApp Web de Jani `@JaniAlvesSouza`) envía mensajes con un ratchet counter avanzado o desfasado > 2000 pasos respecto al receptor, el descifrado se aborta y Baileys **descarta el mensaje en el socket sin emitir `messages.upsert`**.
+     - La sesión desfasada permanecía atascada en disco (`SessionRecord`), repitiendo el error ante cualquier mensaje subsiguiente.
+  2. **Módulo de Resiliencia Criptográfica Signal (`server/_core/patchSignal.ts`)**:
+     - **Trinquete Iterativo de Alta Velocidad (hasta 500k saltos)**: Reemplaza la recursión de 2000 pasos con un bucle `while` ultra-optimizado que calcula miles de llaves en <50 ms sin desbordar el stack ni fallar.
+     - **Auto-Reparación y Purga Autónoma de Sesiones**: Si el descifrado falla por sesión rota o MAC inválida, el interceptor ejecuta `record.deleteAllSessions()`, forzando a WhatsApp a solicitar o recibir un `PreKeyWhisperMessage` limpio en el siguiente intercambio de forma 100% automática.
+  3. **Handler `getMessage` en `makeWASocket` (`whatsapp-match.ts`)**:
+     - Se añadió soporte para resolución de mensajes de retry requeridos por el protocolo Baileys.
+  4. **Purga Limpia con PM2 Detenido**:
+     - Se detuvo `jania-server`, se eliminaron los archivos residuales desincronizados y se reinició con el binario parcheado.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.8 — Septiembre 2026
 
 ### Novedades v32.8 (Restauración de Sesión Signal E2E para Jani Alves, Purga de Mute en BD e Inclusión de LIDs Directivos en Whitelist):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

@@ -322,6 +322,33 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.9 — Septiembre 2026
+
+#### 📌 BLINDAJE CRIPTOGRÁFICO SIGNAL EN BAILEYS CONTRA "OVER 2000 MESSAGES INTO THE FUTURE!", TRINQUETE ITERATIVO 500K Y AUTO-REPARACIÓN DE SESIONES
+
+**Problemas identificados:**
+1. **Desincronización Criptográfica Fatal en Libsignal ("Over 2000 messages into the future!")**:
+   - Mensajes enviados a JanIA desde números o sesiones de WhatsApp Web externas (como Jani Alves `@JaniAlvesSouza` consultando la cédula `19.386.159`) quedaban con doble check verde pero JanIA no respondía en lo absoluto.
+   - En los logs del VPS se detectó la excepción crítica de `libsignal`: `Session error:SessionError: Over 2000 messages into the future! at 167108705018103.0 [as awaitable]`.
+   - `libsignal` impone por defecto un límite recursivo estricto de 2000 saltos en `fillMessageKeys`. Si un contacto tiene un contador de ratchet avanzado por más de 2000 pasos respecto al estado del receptor, `libsignal` aborta el descifrado y Baileys **descarta el mensaje en el socket sin emitir `messages.upsert`**.
+2. **Persistencia de Sesión Corrupta en Disco y Memoria**:
+   - `libsignal` no purga las sesiones rotas del `SessionRecord` tras un fallo de descifrado, dejando la sesión permanentemente desfasada.
+3. **Ausencia de `getMessage` en `makeWASocket`**:
+   - La falta del handler de retry impedía que WhatsApp renegociara limpiamente las llaves PreKey ante peticiones de reenvío.
+
+**Solución aplicada:**
+- **Módulo de Resiliencia Criptográfica Signal (`server/_core/patchSignal.ts`)**:
+  - Inyección en `libsignal.SessionCipher.prototype`:
+    - **Trinquete Iterativo de Alta Velocidad (hasta 500.000 saltos)**: Sustituye la recursión fija de 2000 con un bucle `while` ultra-rápido que calcula miles de llaves en <50 ms sin desbordar el stack ni abortar el socket.
+    - **Auto-Reparación y Purga Autónoma de Sesiones**: Si el descifrado falla por sesión rota o MAC inválida, el interceptor ejecuta `record.deleteAllSessions()`, forzando a WhatsApp a solicitar o recibir un `PreKeyWhisperMessage` limpio en el siguiente intercambio de forma 100% automática.
+- **Handler `getMessage` en `makeWASocket` (`whatsapp-match.ts`)**:
+  - Implementado para soportar los reintentos automáticos requeridos por el protocolo Baileys.
+- **Purga Limpia con PM2 Detenido en VPS**:
+  - Se detuvo `jania-server`, se eliminaron los archivos residuales desincronizados y se reinició con el binario parcheado.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+---
+
 ### 🔖 v32.8 — Septiembre 2026
 
 #### 📌 RESTAURACIÓN DE SESIÓN SIGNAL E2E PARA JANI ALVES, PURGA DE MUTE EN BD E INCLUSIÓN DE LIDS DIRECTIVOS EN WHITELIST

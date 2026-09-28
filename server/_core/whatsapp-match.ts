@@ -3,6 +3,9 @@ try {
   dns.setDefaultResultOrder('ipv4first');
 } catch (e) {}
 
+import { applySignalPatches } from './patchSignal';
+applySignalPatches();
+
 import _baileys, { 
   useMultiFileAuthState, 
   DisconnectReason, 
@@ -356,6 +359,9 @@ export class JaniaMatchBot {
         defaultQueryTimeoutMs: 90000,
         keepAliveIntervalMs: 20000, // Ping Keep-Alive de WebSocket cada 20 segundos
         emitOwnEvents: true,
+        getMessage: async (_key: proto.IMessageKey) => {
+          return undefined;
+        },
       });
 
       this.setupEventListeners(saveCreds);

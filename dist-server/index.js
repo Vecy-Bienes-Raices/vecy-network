@@ -1,5 +1,11 @@
 var __defProp = Object.defineProperty;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
+  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
+}) : x)(function(x) {
+  if (typeof require !== "undefined") return require.apply(this, arguments);
+  throw Error('Dynamic require of "' + x + '" is not supported');
+});
 var __esm = (fn, res) => function __init() {
   return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
 };
@@ -18,7 +24,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.8";
+    VECY_VERSION = "v32.9";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -9297,6 +9303,94 @@ var init_emailContractService = __esm({
   }
 });
 
+// server/_core/patchSignal.ts
+function getLibSignal() {
+  try {
+    const req = typeof __require !== "undefined" ? __require : typeof module !== "undefined" ? module.require : null;
+    if (req) {
+      try {
+        return req("libsignal");
+      } catch {
+        const path13 = req("path");
+        const resolved = req.resolve("libsignal", {
+          paths: [process.cwd(), path13.join(process.cwd(), "node_modules")]
+        });
+        return req(resolved);
+      }
+    }
+  } catch {
+  }
+  return null;
+}
+function applySignalPatches() {
+  if (isPatched) return;
+  const libsignal = getLibSignal();
+  if (!libsignal) {
+    return;
+  }
+  const proto2 = libsignal.SessionCipher?.prototype;
+  if (!proto2) {
+    console.warn("[SIGNAL-PATCH] \u26A0\uFE0F libsignal.SessionCipher.prototype no encontrado");
+    return;
+  }
+  isPatched = true;
+  const originalFillMessageKeys = proto2.fillMessageKeys;
+  const originalDecryptWhisperMessage = proto2.decryptWhisperMessage;
+  proto2.fillMessageKeys = function(chain, counter) {
+    if (!chain || !chain.chainKey) return;
+    if (chain.chainKey.counter >= counter) {
+      return;
+    }
+    const diff = counter - chain.chainKey.counter;
+    if (diff > 5e5) {
+      throw new libsignal.SessionError(`Over 500000 messages into the future! (diff=${diff})`);
+    }
+    if (diff > 2e3) {
+      console.log(`[SIGNAL-PATCH] \u26A1 Sincronizando de forma segura ${diff} llaves de trinquete para mensaje entrante (counter ${chain.chainKey.counter} -> ${counter})...`);
+    }
+    while (chain.chainKey.counter < counter) {
+      if (chain.chainKey.key === void 0) {
+        throw new libsignal.SessionError("Chain closed");
+      }
+      const key = chain.chainKey.key;
+      chain.messageKeys[chain.chainKey.counter + 1] = libsignal.crypto.calculateMAC(key, Buffer.from([1]));
+      chain.chainKey.key = libsignal.crypto.calculateMAC(key, Buffer.from([2]));
+      chain.chainKey.counter += 1;
+    }
+  };
+  proto2.decryptWhisperMessage = async function(data) {
+    try {
+      return await originalDecryptWhisperMessage.call(this, data);
+    } catch (err) {
+      const errMsg = err?.message || String(err);
+      const isUnrecoverable = errMsg.includes("No matching sessions") || errMsg.includes("Over 2000") || errMsg.includes("Over 500000") || errMsg.includes("Bad MAC") || errMsg.includes("Key used already");
+      if (isUnrecoverable) {
+        const addrStr = this.addr ? this.addr.toString() : "desconocido";
+        console.warn(`[SIGNAL-AUTO-REPAIR] \u{1F6E0}\uFE0F Sesi\xF3n criptogr\xE1fica desincronizada para ${addrStr} (${errMsg}). Purgando sesiones corruptas para forzar nuevo handshake PreKey.`);
+        try {
+          const record = await this.getRecord();
+          if (record && typeof record.deleteAllSessions === "function") {
+            record.deleteAllSessions();
+            await this.storeRecord(record);
+            console.log(`[SIGNAL-AUTO-REPAIR] \u2705 Registro purgado exitosamente para ${addrStr}. Pr\xF3ximo mensaje solicitar\xE1 PreKey limpia.`);
+          }
+        } catch (repairErr) {
+          console.error("[SIGNAL-AUTO-REPAIR] Error al purgar registro de sesi\xF3n:", repairErr?.message || repairErr);
+        }
+      }
+      throw err;
+    }
+  };
+  console.log("[SIGNAL-PATCH] \u2705 Parches criptogr\xE1ficos de resiliencia Signal aplicados exitosamente (Ratchet hasta 500k + Auto-Repair).");
+}
+var isPatched;
+var init_patchSignal = __esm({
+  "server/_core/patchSignal.ts"() {
+    "use strict";
+    isPatched = false;
+  }
+});
+
 // server/_core/whatsapp-utils.ts
 var whatsapp_utils_exports = {};
 __export(whatsapp_utils_exports, {
@@ -10225,6 +10319,7 @@ var SERVER_BOOT_TIME, cleanJid, outgoingQueue, JaniaMatchBot, janiaMatchBot, jan
 var init_whatsapp_match = __esm({
   "server/_core/whatsapp-match.ts"() {
     "use strict";
+    init_patchSignal();
     init_db();
     init_schema();
     init_scraper();
@@ -10235,6 +10330,7 @@ var init_whatsapp_match = __esm({
       dns.setDefaultResultOrder("ipv4first");
     } catch (e) {
     }
+    applySignalPatches();
     SERVER_BOOT_TIME = Math.floor(Date.now() / 1e3) - 120;
     cleanJid = (jid) => {
       if (!jid) return "";
@@ -10433,7 +10529,10 @@ var init_whatsapp_match = __esm({
             defaultQueryTimeoutMs: 9e4,
             keepAliveIntervalMs: 2e4,
             // Ping Keep-Alive de WebSocket cada 20 segundos
-            emitOwnEvents: true
+            emitOwnEvents: true,
+            getMessage: async (_key) => {
+              return void 0;
+            }
           });
           this.setupEventListeners(saveCreds);
         } catch (err) {
