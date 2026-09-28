@@ -63,10 +63,10 @@ export default function Home() {
                 </div>
                 
                 <h1 className="flex flex-col items-center mb-6">
-                  <span className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-6xl sm:text-7xl md:text-8xl lg:text-9xl tracking-[0.16em] uppercase leading-none drop-shadow-[0_4px_30px_rgba(191,149,63,0.3)]">
+                  <span className="vecy-gold-3d text-6xl sm:text-7xl md:text-8xl lg:text-9xl tracking-[0.16em] uppercase leading-none">
                     VECY
                   </span>
-                  <span className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-[0.25em] uppercase leading-tight mt-3">
+                  <span className="vecy-gold-3d text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-[0.25em] uppercase leading-tight mt-3">
                     BIENES RAÍCES
                   </span>
                 </h1>

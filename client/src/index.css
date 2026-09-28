@@ -417,14 +417,9 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-
-  .text-gradient-gold {
-    background: linear-gradient(135deg, #fcf6ba 0%, #bf953f 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
 }
+
+
 
   /* PANELES INTERNOS — Panel de Captador y Admin */
   .panel-card {
@@ -593,57 +588,77 @@
   .vecy-title-hero {
     @apply text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black uppercase tracking-tight text-white mb-4 leading-tight;
     font-family: "Montserrat", sans-serif;
+    filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.85));
   }
 
   .vecy-title-section {
     @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white mb-3;
     font-family: "Montserrat", sans-serif;
+    filter: drop-shadow(0 3px 12px rgba(0, 0, 0, 0.8));
   }
 
-  /* Título con degradé dorado — de crema pálido a oro vivo y oro profundo */
+  /* ── VECY ESCULPIDO 3D EN ORO MACIZO — ULTRA DEFINICIÓN & 0% OVERHEAD ──────────────── */
+  .vecy-gold-3d,
   .title-gold-gradient,
   .text-gradient-gold {
     font-family: "Montserrat", sans-serif;
     font-weight: 900;
-    background: linear-gradient(135deg, #fff7dc 0%, #eed580 25%, #d4af37 55%, #bf953f 80%, #996515 100%);
+    /* Degradé de 9 paradas: luz especular blanca superior, oro 24k, horizonte biselado y rebote áurico */
+    background: linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #fff8d4 10%,
+      #f5cf6d 26%,
+      #d49d2c 44%,
+      #94640f 52%,
+      #dfb758 66%,
+      #fef3b0 82%,
+      #b38118 94%,
+      #5c3c04 100%
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     display: inline-block;
-    padding-bottom: 0.08em;
-    line-height: 1.2;
+    padding-bottom: 0.12em;
+    line-height: 1.15;
+    /* Extrusión volumétrica real en capas matemáticas: luz superior, bisel, grosor de lingote y oclusión */
+    filter: 
+      drop-shadow(0 1px 0px rgba(255, 255, 255, 0.45))
+      drop-shadow(0 1px 0px #b8860b)
+      drop-shadow(0 2px 0px #8a631c)
+      drop-shadow(0 3px 0px #5c3f09)
+      drop-shadow(0 4px 1px #221601)
+      drop-shadow(0 6px 14px rgba(0, 0, 0, 0.85))
+      drop-shadow(0 0 20px rgba(212, 175, 55, 0.25));
+    will-change: filter;
+    transform: translateZ(0);
+  }
+
+  /* Versión responsive adaptativa para móviles (pantallas <= 640px): 0 lag y máxima nitidez sin empastes */
+  @media (max-width: 640px) {
+    .vecy-gold-3d,
+    .title-gold-gradient,
+    .text-gradient-gold {
+      padding-bottom: 0.08em;
+      filter: 
+        drop-shadow(0 1px 0px rgba(255, 255, 255, 0.4))
+        drop-shadow(0 1px 0px #b8860b)
+        drop-shadow(0 2px 0px #6d4a0b)
+        drop-shadow(0 2.5px 1px #1f1401)
+        drop-shadow(0 4px 10px rgba(0, 0, 0, 0.9));
+    }
   }
 
   /* Sección título con línea dorada - Color sólido dorado para evitar duplicación de texto nativo en Blink <legend> */
   .section-legend-gold {
-    font-family: "Montserrat", sans-serif;
     color: #d4af37;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
   }
 
-  /* Subtítulos con degradé en color oro ¡super Woow! */
+  /* Subtítulos originales de lectura fluida */
   .vecy-subtitle {
-    @apply text-base sm:text-lg md:text-xl font-medium leading-relaxed mb-6;
-    font-family: "Montserrat", sans-serif;
-    background: linear-gradient(135deg, #fff7dc 0%, #ecd07a 35%, #d4af37 70%, #b8860b 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    display: inline-block;
-  }
-
-  .vecy-subtitle-gold,
-  .subtitle-gold-gradient {
-    font-family: "Montserrat", sans-serif;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    background: linear-gradient(135deg, #fff7dc 0%, #ecd07a 35%, #d4af37 70%, #b8860b 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    display: inline-block;
+    @apply text-sm sm:text-base md:text-lg text-gray-300 font-normal leading-relaxed mb-6;
   }
 
   .vecy-paragraph {
@@ -651,9 +666,7 @@
   }
 
   .vecy-accent-tag {
-    @apply tracking-[0.25em] uppercase text-[10px] md:text-xs mb-4 font-bold;
-    font-family: "Montserrat", sans-serif;
-    color: #d4af37;
+    @apply text-accent tracking-[0.3em] uppercase text-[10px] md:text-xs mb-4 font-semibold;
     text-shadow: 0 0 10px rgba(191, 149, 63, 0.5);
   }
 

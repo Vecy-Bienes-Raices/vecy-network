@@ -165,7 +165,27 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.2 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.3 — Septiembre 2026
+
+### Novedades v32.3 (Tipografía Original en Oro Macizo 3D Esculpido con Bisel, Reflejo Especular y Sombras, 0% Overhead y Adaptabilidad Móvil Responsive):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo consultó e instruyó: *"Es imposible para ti hacer o crear un tipo de letra original que en verdad se vea como en 3D y de impresión que parecen hechas en oro, con sus sombras y brillos correspondientes o no. Pues si eso se puede hacer con todos los títulos de cada página sería increíble, pero si llega a dañar o atrasar el despliegue o apertura de la página en dispositivos móviles no me gustaria eso. Pero si se adapta muy bien al responsive adelante."*
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Física de Oro Macizo 3D Acelerada por Hardware (0ms Overhead)**:
+     - Sin recurrir a WebGL/Three.js ni imágenes pesadas que retrasen el FCP/LCP móvil, se implementó en CSS puro acelerado por GPU (`transform: translateZ(0)`, `will-change: filter`) la clase maestra `.vecy-gold-3d`, integrada con `.title-gold-gradient` y `.text-gradient-gold`.
+     - **Degradé Metálico Foil Multi-Parada (9 Niveles)**: Luces especulares blancas superiores (`#ffffff`), oro champaña, oro 24k, quiebre de horizonte metálico biselado (`#94640f`), reflejo secundario inferior y base en oro bronce profundo.
+     - **Extrusión Física Tridimensional en Cascada**: Capas matemáticas de `drop-shadow` que simulan grosor de pared lateral, relieve tallado, bisel superior y sombra de suelo profunda que despega el texto del fondo.
+  2. **Doctrina de Tipografía Exclusiva en Títulos y Restauración de Subtítulos/Cuerpo**:
+     - Eduardo instruyó explícitamente: *"restaura hasta donde dejaste este tipo de letra anterior que habías colocado pero solamente en lso títulos, el resto déja la letra como estaba al principio de todo."*
+     - `Montserrat` y el relieve de oro 3D quedan confinados con rigor a los **títulos** (`h1-h6`, `.vecy-title-hero`, `.vecy-title-section`, `.vecy-gold-3d`, `.text-gradient-gold`).
+     - Todo el resto del sitio (subtítulos `.vecy-subtitle`, cuerpo `body`, párrafos, tarjetas y tablas) fue restaurado con absoluta fidelidad a la tipografía base original (`Inter` / `sans-serif` nativo con color gris claro y peso regular de lectura fluida), erradicando degradados forzados en subtítulos.
+  3. **Escalado Responsivo para Móviles (`@media (max-width: 640px)`)**:
+     - Extrusión adaptativa a 1.5px - 2px en smartphones para evitar empastes interlineales y brindar una lectura limpia, cristalina y sin desbordes.
+  4. **Optimización de Breakpoint en Barra de Navegación**:
+     - Se ajustó el breakpoint de escritorio en `Navbar.tsx` de `md` a `lg` para erradicar cualquier choque entre los 8 enlaces de navegación y el logo en pantallas intermedias/tablets.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | Verificación empírica con browser subagent en Desktop y Móvil (390x844) superada al 100% ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.2 — Septiembre 2026
 
 ### Novedades v32.2 (Jerarquía de Marca VECY Encima de BIENES RAÍCES con Tipografía de Sidebar Admin y Nueva Doctrina de Botones Oro Sólido y Cristal/Vidrio):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

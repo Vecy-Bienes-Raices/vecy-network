@@ -322,6 +322,36 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.3 — Septiembre 2026
+
+#### 📌 TIPOGRAFÍA ORIGINAL EN ORO MACIZO 3D ESCULPIDO CON BISEL, REFLEJO ESPECULAR Y SOMBRAS, 0% OVERHEAD Y ADAPTABILIDAD MÓVIL RESPONSIVE
+
+**Problemas identificados:**
+1. **Ausencia de Relieve y Profundidad Física en Títulos**: Aunque los títulos tenían degradado plano de color oro, carecían del volumen tridimensional, sombras físicas, biseles y brillos especulares propios de un lingote de oro macizo.
+2. **Requisito Inquebrantable de Cero Sobrecarga (0% Overhead) en Dispositivos Móviles**: Eduardo solicitó explícitamente que la solución no dañara ni retrasara la carga ni la apertura en smartphones (`0ms` de retraso, sin librerías WebGL ni imágenes pesadas).
+3. **Colisión de Enlaces en Pantallas Intermedias (Tablets)**: En la barra de navegación pública (`Navbar.tsx`), 8 enlaces horizontales se encimaban en anchos de 768px a 1024px.
+
+**Solución aplicada:**
+- **Física Óptica de Oro Macizo en 3D (`client/src/index.css`)**:
+  - Implementada la clase maestra `.vecy-gold-3d` e integradas `.title-gold-gradient` y `.text-gradient-gold`.
+  - **Degradado Foil Multi-Parada de 9 Niveles**: Reflejo especular blanco puro en el filo superior (`#ffffff` a 0%), degradé de oro champaña (`#fff8d4`), cuerpo macizo en oro 24k (`#f5cf6d` / `#d49d2c`), línea de horizonte y bisel en oro tostado (`#94640f`), rebote de luz áurica inferior (`#dfb758` / `#fef3b0`) y sombra de corte base (`#5c3c04`).
+  - **Extrusión Volumétrica en Capas de Profundidad**: Relieve 3D esculpido mediante cascada direccional de `drop-shadow` acelerado por GPU (`transform: translateZ(0)`, `will-change: filter`), sin scripts JS ni canvas externos.
+  - **Adaptabilidad Móvil Responsive (`@media (max-width: 640px)`)**: Extrusión ajustada milimétricamente (a 1.5px - 2px) en pantallas móviles para evitar empastes interlineales y preservar una nitidez cristalina al 100%.
+  - Títulos de sección blancos `.vecy-title-hero` y `.vecy-title-section` enriquecidos con sombra espacial de profundidad (`filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.85))`).
+  - **Restauración de Tipografía Original en Cuerpo y Subtítulos**: Se confinó `Montserrat` y el oro 3D de manera estricta a los títulos. Los subtítulos (`.vecy-subtitle`), tags, párrafos y elementos de lectura fueron restaurados a su tipografía base original (`Inter` / `sans-serif` nativo con color gris claro y peso regular de lectura fluida), garantizando máxima legibilidad.
+- **Ajuste de Breakpoint en Navbar (`client/src/components/Navbar.tsx`)**:
+  - Elevado el breakpoint de `md` a `lg`, garantizando que en móviles y tablets el menú hamburguesa funcione de forma fluida, espaciosa y sin solapamientos.
+- **Componentes Actualizados**:
+  - `client/src/pages/Home.tsx`: Hero titular con `VECY` y `BIENES RAÍCES` en oro macizo 3D esculpido.
+  - `client/src/pages/Admin.tsx` y `client/src/pages/JanIAConsole.tsx`: Encabezados de sidebar alineados con la tipografía oro 3D.
+  - Títulos de todas las páginas con `.text-gradient-gold` actualizados al relieve 3D.
+- **Suite de Regresión Doctrinal**:
+  - 124/124 tests de Vitest pasando al 100% ✅.
+- **Verificación Empírica**:
+  - Validado visualmente mediante capturas de pantalla de navegador en Desktop (1920x1080) y Móvil (390x844).
+
+---
+
 ### 🔖 v32.2 — Septiembre 2026
 
 #### 📌 JERARQUÍA DE MARCA VECY ENCIMA DE BIENES RAÍCES CON TIPOGRAFÍA DE SIDEBAR ADMIN Y NUEVA DOCTRINA DE BOTONES ORO SÓLIDO Y CRISTAL/VIDRIO

@@ -65,17 +65,17 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
             />
           </div>
           <div className="hidden sm:block">
-            <h1 className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.18em] text-2xl uppercase leading-none">
+            <h1 className="vecy-gold-3d tracking-[0.18em] text-2xl uppercase leading-none">
               VECY
             </h1>
-            <p className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.2em] text-[11px] uppercase mt-1 leading-tight">
+            <p className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.2em] text-[11px] uppercase mt-0.5 leading-tight">
               BIENES RAÍCES
             </p>
           </div>
         </div>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-6">
+        <div className="hidden lg:flex items-center gap-6">
           {navItems.map((item) => (
             <button
               key={item.label}
@@ -93,7 +93,7 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
         </div>
 
         {/* CTA Buttons */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-3">
           {!user && (
             <button onClick={() => navigate('/login')} className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all">
               ACCEDER
@@ -105,7 +105,7 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
         {/* Mobile Menu Button */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="md:hidden text-foreground hover:text-accent transition-colors"
+          className="lg:hidden text-foreground hover:text-accent transition-colors"
         >
           {isOpen ? <X size={24} /> : <Menu size={24} />}
         </button>

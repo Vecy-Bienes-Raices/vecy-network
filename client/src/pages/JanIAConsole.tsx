@@ -763,7 +763,7 @@ export default function JanIAConsole() {
             <div className="flex items-center gap-3">
               <VecySparkle />
               <div className="flex flex-col">
-                <span className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.18em] text-sm uppercase leading-none">
+                <span className="vecy-gold-3d tracking-[0.18em] text-sm uppercase leading-none">
                   VECY
                 </span>
                 <span className="font-sans font-black text-transparent bg-clip-text bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] tracking-[0.14em] text-[9px] uppercase leading-tight mt-0.5">
