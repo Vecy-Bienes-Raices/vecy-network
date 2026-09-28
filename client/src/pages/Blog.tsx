@@ -104,9 +104,9 @@ export default function Blog() {
         <div className="container">
           <div className="text-center">
             <h1 className="text-5xl md:text-6xl font-display font-bold tracking-wider mb-4">
-              LIDERAZGO <span className="text-accent">INTELECTUAL</span>
+              LIDERAZGO <span className="text-gradient-gold">INTELECTUAL</span>
             </h1>
-            <p className="text-gray-300 max-w-2xl mx-auto">
+            <p className="vecy-subtitle max-w-2xl mx-auto">
               Análisis, tendencias e insights del mercado inmobiliario colombiano
             </p>
           </div>

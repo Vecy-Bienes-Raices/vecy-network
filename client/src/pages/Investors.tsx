@@ -73,9 +73,9 @@ export default function Investors() {
         <div className="container">
           <div className="text-center">
             <h1 className="text-5xl md:text-6xl font-display font-bold tracking-wider mb-4">
-              CENTRO DE <span className="text-accent">INVERSORES</span>
+              CENTRO DE <span className="text-gradient-gold">INVERSORES</span>
             </h1>
-            <p className="text-gray-300 max-w-2xl mx-auto">
+            <p className="vecy-subtitle max-w-2xl mx-auto">
               Recursos, análisis y herramientas para optimizar tu portafolio inmobiliario
             </p>
           </div>
@@ -86,8 +86,8 @@ export default function Investors() {
       <section className="py-20 bg-background">
         <div className="container">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-white mb-4 uppercase tracking-wider">
-              Métricas de <span className="text-accent">Mercado</span>
+            <h2 className="text-4xl font-bold text-white mb-4 uppercase tracking-wider font-display">
+              Métricas de <span className="text-gradient-gold">Mercado</span>
             </h2>
             <div className="line-gold w-24 mx-auto"></div>
           </div>

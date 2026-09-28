@@ -120,7 +120,7 @@ export default function Home() {
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
               <div>
                 <p className="vecy-accent-tag mb-4">Portafolio Curado</p>
-                <h2 className="vecy-title-section text-left">PROPIEDADES <span className="text-primary">DE AUTOR</span></h2>
+                <h2 className="vecy-title-section text-left">PROPIEDADES <span className="text-gradient-gold">DE AUTOR</span></h2>
               </div>
               <button 
                 onClick={() => navigate('/properties')}

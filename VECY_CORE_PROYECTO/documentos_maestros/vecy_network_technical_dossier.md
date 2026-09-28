@@ -322,6 +322,26 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.1 — Septiembre 2026
+
+#### 📌 SUSTITUCIÓN TIPOGRÁFICA A MONTSERRAT DE PORTADA OFICIAL Y SUBTÍTULOS CON DEGRADÉ EN COLOR ORO (¡SÚPER WOOW!)
+
+**Problemas identificados:**
+1. **Disonancia de Tipografía Clásica/Barroca (`Playfair Display`)**: Los títulos del sitio web cargaban estilos serif con remates antiguos que chocaban contra la estética tecnológica y futurista de la portada oficial.
+2. **Subtítulos Planos sin Identidad de Lujo**: Los subtítulos de sección carecían del realce satinado dorado presente en la portada (`portada-metadatos.jpeg`).
+
+**Solución aplicada:**
+- **Tipografía Oficial Montserrat Bold/Black (700, 800, 900)**:
+  - Importación ampliada en `client/index.html` con todos los pesos de `Montserrat` e `Inter`.
+  - En `client/src/index.css`: asignada `--font-display: "Montserrat", sans-serif;` y regla general para `h1, h2, h3, h4, h5, h6`.
+  - Reemplazadas todas las clases `font-serif` restantes en `PropertyDetail.tsx` por `font-display`.
+- **Subtítulos con Degradado Oro Metálico Cálido**:
+  - Clases `.vecy-subtitle`, `.vecy-subtitle-gold` y `.subtitle-gold-gradient` enriquecidas con degradado satinado de oro (`#fff7dc` a `#b8860b`) para garantizar impacto visual "¡Súper Woow!" y legibilidad suprema sobre negro.
+- **Suite de Regresión Doctrinal**:
+  - 124/124 tests de Vitest pasando al 100% ✅.
+
+---
+
 ### 🔖 v32.0 — Septiembre 2026
 
 #### 📌 DOCTRINA FINANCIERA 45/5/5/45 DE VECY BIENES RAÍCES, ERRADICACIÓN DE ESQUEMAS EXCLUYENTES (50/50 Y 40/20/40), NUEVO LOGOTIPO OFICIAL OPTIMIZADO Y NUMERACIÓN LIMPIA

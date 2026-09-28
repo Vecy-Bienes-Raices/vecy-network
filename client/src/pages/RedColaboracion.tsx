@@ -66,7 +66,7 @@ export default function RedColaboracion() {
             <div className="space-y-8">
               <ScrollReveal direction="left">
                 <h2 className="vecy-title-section">
-                  La Evolución <span className="text-primary uppercase">Inevitable</span>.
+                  La Evolución <span className="text-gradient-gold uppercase">Inevitable</span>.
                 </h2>
                 <div className="line-electric w-24 mb-6"></div>
                 <p className="vecy-paragraph text-lg">

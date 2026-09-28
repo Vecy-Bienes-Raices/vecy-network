@@ -165,7 +165,18 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.0 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.1 — Septiembre 2026
+
+### Novedades v32.1 (Sustitución Tipográfica a Montserrat de Portada Oficial y Subtítulos con Degradé en Color Oro):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo instruyó: *"Podrías cambiar el tipo de letra actual del sitio en especial el de los títulos de cada página o sección por uno igual al del título de la imagen de portada es que el actual no me gusta la verdad. Aunque los subtítulos también se ven interesantes, todos con ese degradé en color oro se ven ¡super Woow!"*
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Tipografía Oficial Montserrat Bold/Black (900)**: Erradicada la tipografía serif antigua (`Playfair Display`). La nueva fuente de títulos y cabeceras en todo el ecosistema es **Montserrat** (geométrica, mayúsculas limpias, cortes de alta definición y pesos 700, 800 y 900), idéntica a la del título central de la portada oficial.
+  2. **Subtítulos con Degradé en Color Oro Luminoso**: Clases `.vecy-subtitle`, `.vecy-subtitle-gold` y `.subtitle-gold-gradient` enriquecidas con degradado satinado de oro (`#fff7dc` a `#b8860b`) en `client/src/index.css`.
+  3. **Erradicación de Residuos Serif**: Eliminadas todas las clases `font-serif` restantes en `PropertyDetail.tsx` y homogeneizados los títulos de sección en `Home.tsx`, `Investors.tsx`, `Blog.tsx`, `Contact.tsx`, `RedColaboracion.tsx` y `Navbar.tsx`.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.0 — Septiembre 2026
 
 ### Novedades v32.0 (Doctrina Financiera 45/5/5/45 de VECY BIENES RAÍCES, Erradicación de Modelos Excluyentes 50/50 y 40/20/40, Nuevo Logotipo Oficial Optimizado y Salto a Numeración Limpia):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

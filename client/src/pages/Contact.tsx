@@ -14,7 +14,7 @@ export default function Contact() {
             ESTAMOS EN <span className="text-gradient-gold">CONTACTO</span>
           </h1>
           <div className="line-electric w-24 mx-auto mb-6"></div>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto font-light lg:text-2xl">
+          <p className="vecy-subtitle max-w-2xl mx-auto font-medium text-lg lg:text-xl">
             Tu próxima inversión inmobiliaria comienza con una conversación.
           </p>
         </div>

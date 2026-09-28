@@ -7,6 +7,36 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.1 — 28 Septiembre 2026
+
+### Solicitud de Eduardo
+Sustitución de Tipografía en Títulos por la Fuente de la Portada Oficial (Montserrat Bold/Black) y Subtítulos con Degradé en Color Oro (Efecto ¡Súper Woow!):
+*"Podrías cambiar el tipo de letra actual del sitio en especial el de los títulos de cada página o sección por uno igual al del título de la imagen de portada es que el actual no me gusta la verdad. Aunque los subtítulos también se ven interesantes, todos con ese degradé en color oro se ven ¡super Woow!"*
+
+### Diagnóstico Técnico Profundo y Conclusiones de Arquitectura
+1. **Disonancia Estética del Font Display Anterior (`Playfair Display`, serif)**:
+   - Los títulos principales de la plataforma (`vecy-title-hero`, `page-header-gold`, `h1, h2, h3` con `font-display` y `font-serif`) empleaban `Playfair Display`, una tipografía con serifas barrocas y curvas puntiagudas que desentonaba con la identidad moderna, tecnológica y futurista del proyecto.
+   - En la imagen de portada oficial (`portada-metadatos.jpeg`), el título central **"VECY BIENES RAÍCES"** utiliza una tipografía Sans-Serif geométrica imponente, contundente y moderna, con mayúsculas limpias y corte de lujo (idéntica a **Montserrat** en pesos 800/900).
+2. **Subtítulos con Degradado Oro Metálico Cálido**:
+   - Para evocar la elegancia de la portada ("Red Inmobiliaria Inteligente & Broker Virtual", "• Inteligencia Artificial Inmobiliaria", "• Ecosistema PropTech"), los subtítulos de cada sección y página debían recibir un tratamiento cromático premium en degradé de oro luminoso satinado (`background: linear-gradient(135deg, #fff7dc 0%, #ecd07a 35%, #d4af37 70%, #b8860b 100%)`), logrando legibilidad máxima sobre fondo negro y el impacto visual "¡Súper Woow!" solicitado.
+
+### Acciones Ejecutadas en Código
+1. **Tipografía Global y Google Fonts (`client/index.html`, `client/src/index.css`)**:
+   - `client/index.html`: Ampliado el conjunto tipográfico de Google Fonts para importar `Montserrat` completa con todos sus pesos (`wght@0,300..900;1,400..900`) e `Inter` (`wght@300..800`).
+   - `client/src/index.css`:
+     - Reemplazada `--font-display: "Playfair Display", serif;` por `--font-display: "Montserrat", sans-serif;` y `--font-heading: "Montserrat", sans-serif;`.
+     - En `@layer base`, asignada `font-family: var(--font-display, "Montserrat", sans-serif)` a todos los encabezados `h1, h2, h3, h4, h5, h6`.
+     - Actualizadas `.page-header-gold`, `.vecy-title-hero`, `.vecy-title-section`, `.title-gold-gradient` y `.text-gradient-gold` con `font-family: "Montserrat", sans-serif` y peso 900.
+2. **Subtítulos con Degradé en Color Oro (`client/src/index.css`)**:
+   - Enriquecidas las clases utilitarias `.vecy-subtitle`, `.vecy-subtitle-gold` y `.subtitle-gold-gradient` con degradado satinado `linear-gradient(135deg, #fff7dc 0%, #ecd07a 35%, #d4af37 70%, #b8860b 100%)`, `background-clip: text` y `-webkit-text-fill-color: transparent`.
+3. **Erradicación de Residuos Serif en Componentes**:
+   - En `client/src/pages/PropertyDetail.tsx`, sustituido `font-serif` por `font-display` en el título principal del inmueble (`h1`) y en el card de agendamiento (`h3`).
+   - En `client/src/pages/Home.tsx`, `Investors.tsx`, `Blog.tsx`, `Contact.tsx`, `RedColaboracion.tsx` y `Navbar.tsx`, homogeneizados los encabezados de sección y subtítulos con degradado dorado.
+4. **Incremento de Versión Oficial**:
+   - Versión incrementada a **`v32.1`** en `shared/const.ts` y **`32.1.0`** en `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.0 — 27 Septiembre 2026
 
 ### Solicitud de Eduardo

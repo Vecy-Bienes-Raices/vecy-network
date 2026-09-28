@@ -184,7 +184,7 @@ export default function PropertyDetail() {
                   )}
                 </div>
 
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white uppercase tracking-tight font-serif leading-tight">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white uppercase tracking-tight font-display leading-tight">
                   {property.name}
                 </h1>
 
@@ -574,7 +574,7 @@ export default function PropertyDetail() {
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest mb-3">
                     <CalendarCheck className="w-3.5 h-3.5 animate-pulse" /> Visita Oficial
                   </div>
-                  <h3 className="text-xl font-black text-white uppercase tracking-tight font-serif mb-2">
+                  <h3 className="text-xl font-black text-white uppercase tracking-tight font-display mb-2">
                     ¿Deseas conocer este inmueble?
                   </h3>
                   <p className="text-xs text-zinc-400 leading-relaxed">

@@ -62,8 +62,9 @@
   --shadow-luminous-gold: 0 0 20px rgba(212, 175, 55, 0.5), 0 0 40px rgba(212, 175, 55, 0.2);
   
   /* Fonts */
-  --font-display: "Playfair Display", serif;
+  --font-display: "Montserrat", sans-serif;
   --font-sans: "Inter", sans-serif;
+  --font-heading: "Montserrat", sans-serif;
 }
 
 :root {
@@ -146,6 +147,11 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans, "Inter", sans-serif);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display, "Montserrat", sans-serif);
+    letter-spacing: -0.01em;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -540,9 +546,11 @@
 
   /* PAGE HEADER PATTERN */
   .page-header-gold {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Montserrat', sans-serif;
     font-weight: 900;
-    background: linear-gradient(135deg, #fcf6ba 0%, #bf953f 60%, #8b6914 100%);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    background: linear-gradient(135deg, #fdf6d8 0%, #eed580 30%, #d4af37 60%, #b8860b 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -585,34 +593,59 @@
   /* ── VECY GLOBAL TYPOGRAPHY UTILITIES ───────────────────────────────────────── */
   
   .vecy-title-hero {
-    @apply text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-white mb-4 leading-tight;
-    font-family: "Playfair Display", serif;
+    @apply text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black uppercase tracking-tight text-white mb-4 leading-tight;
+    font-family: "Montserrat", sans-serif;
   }
 
   .vecy-title-section {
-    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-normal text-white mb-3;
-    font-family: "Playfair Display", serif;
+    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white mb-3;
+    font-family: "Montserrat", sans-serif;
   }
 
-  /* Título con degradé dorado — horizontal, de crema pálido a dorado Vecy */
-  .title-gold-gradient {
-    background: linear-gradient(to right, #fce4a0 0%, #d4af37 50%, #bf953f 100%);
+  /* Título con degradé dorado — de crema pálido a oro vivo y oro profundo */
+  .title-gold-gradient,
+  .text-gradient-gold {
+    font-family: "Montserrat", sans-serif;
+    font-weight: 900;
+    background: linear-gradient(135deg, #fff7dc 0%, #eed580 25%, #d4af37 55%, #bf953f 80%, #996515 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     display: inline-block;
-    padding-bottom: 0.12em;
-    line-height: 1.25;
+    padding-bottom: 0.08em;
+    line-height: 1.2;
   }
 
   /* Sección título con línea dorada - Color sólido dorado para evitar duplicación de texto nativo en Blink <legend> */
   .section-legend-gold {
+    font-family: "Montserrat", sans-serif;
     color: #d4af37;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 
+  /* Subtítulos con degradé en color oro ¡super Woow! */
   .vecy-subtitle {
-    @apply text-sm sm:text-base md:text-lg text-gray-300 font-normal leading-relaxed mb-6;
+    @apply text-base sm:text-lg md:text-xl font-medium leading-relaxed mb-6;
+    font-family: "Montserrat", sans-serif;
+    background: linear-gradient(135deg, #fff7dc 0%, #ecd07a 35%, #d4af37 70%, #b8860b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: inline-block;
+  }
+
+  .vecy-subtitle-gold,
+  .subtitle-gold-gradient {
+    font-family: "Montserrat", sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    background: linear-gradient(135deg, #fff7dc 0%, #ecd07a 35%, #d4af37 70%, #b8860b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: inline-block;
   }
 
   .vecy-paragraph {
@@ -620,8 +653,9 @@
   }
 
   .vecy-accent-tag {
-    @apply text-accent tracking-[0.3em] uppercase text-[10px] md:text-xs mb-4;
-    font-family: "Playfair Display", serif;
+    @apply tracking-[0.25em] uppercase text-[10px] md:text-xs mb-4 font-bold;
+    font-family: "Montserrat", sans-serif;
+    color: #d4af37;
     text-shadow: 0 0 10px rgba(191, 149, 63, 0.5);
   }
 
