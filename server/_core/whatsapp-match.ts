@@ -1010,6 +1010,9 @@ export class JaniaMatchBot {
 
     // 🛡️ INTERCEPTOR DIRECTO DM: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
     const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
+    try {
+      await this.sock.sendPresenceUpdate('composing', senderId);
+    } catch (_) {}
     const idCheck = await executeIdentityVerificationFromWhatsApp(body, true);
     if (idCheck.isVerificationRequest && idCheck.reportText) {
       console.log(`[JANIA-MATCH] [DM] Verificación de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
@@ -2038,6 +2041,9 @@ export class JaniaMatchBot {
 
       // 🛡️ INTERCEPTOR ADMIN: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
       const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
+      try {
+        await this.sock.sendPresenceUpdate('composing', senderId);
+      } catch (_) {}
       const idCheck = await executeIdentityVerificationFromWhatsApp(bodyText, true);
       if (idCheck.isVerificationRequest && idCheck.reportText) {
         await this.queuedSend(senderId, idCheck.reportText, { quoted: msg, allowDirectMessage: true });
@@ -2320,10 +2326,11 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
 
         // ── ESCUDO DE SIMULACIÓN HUMANA (Human-Like Delay & Presence Updates) ──
         if (!isNewsletter) {
-          if (messagePayload.text && typeof messagePayload.text === 'string') {
+          const textContent = messagePayload.text || messagePayload.caption;
+          if (textContent && typeof textContent === 'string') {
             try {
               await this.sock.sendPresenceUpdate('composing', targetJid);
-              const typingDelay = Math.min(5000, Math.max(2000, messagePayload.text.length * 40));
+              const typingDelay = Math.min(5000, Math.max(2000, textContent.length * 40));
               await delay(typingDelay);
             } catch (_) {}
           } else if (messagePayload.audio) {

@@ -10960,6 +10960,10 @@ ${quotedNote}` : quotedNote;
           }
         }
         const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+        try {
+          await this.sock.sendPresenceUpdate("composing", senderId);
+        } catch (_) {
+        }
         const idCheck = await executeIdentityVerificationFromWhatsApp2(body, true);
         if (idCheck.isVerificationRequest && idCheck.reportText) {
           console.log(`[JANIA-MATCH] [DM] Verificaci\xF3n de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
@@ -11788,6 +11792,10 @@ ${result.response}`);
         try {
           const realName = msg.pushName || `Asesor +${rawPhone}`;
           const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+          try {
+            await this.sock.sendPresenceUpdate("composing", senderId);
+          } catch (_) {
+          }
           const idCheck = await executeIdentityVerificationFromWhatsApp2(bodyText, true);
           if (idCheck.isVerificationRequest && idCheck.reportText) {
             await this.queuedSend(senderId, idCheck.reportText, { quoted: msg, allowDirectMessage: true });
@@ -12009,10 +12017,11 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
               messagePayload.ptt = false;
             }
             if (!isNewsletter) {
-              if (messagePayload.text && typeof messagePayload.text === "string") {
+              const textContent = messagePayload.text || messagePayload.caption;
+              if (textContent && typeof textContent === "string") {
                 try {
                   await this.sock.sendPresenceUpdate("composing", targetJid);
-                  const typingDelay = Math.min(5e3, Math.max(2e3, messagePayload.text.length * 40));
+                  const typingDelay = Math.min(5e3, Math.max(2e3, textContent.length * 40));
                   await delay(typingDelay);
                 } catch (_) {
                 }
@@ -25203,33 +25212,70 @@ Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro
       }
       const imgPath = path12.join(process.cwd(), "jania_verificacion_servicio.jpg");
       const hasImage = fs11.existsSync(imgPath);
-      const promoText = req.body?.text || `\u{1F6E1}\uFE0F\u2728 *\xA1NUEVO SERVICIO EXCLUSIVO DE VECY BIENES RA\xCDCES PARA NUESTRA RED Y COMUNIDAD!* \u2728\u{1F6E1}\uFE0F
+      const channelLink = "https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b";
+      const defaultPromoGroups = `\u{1F6E1}\uFE0F\u2728 *\xA1NUEVO SERVICIO EXCLUSIVO DE VECY BIENES RA\xCDCES PARA NUESTRA COMUNIDAD!* \u2728\u{1F6E1}\uFE0F
 
-Estimados colegas inmobiliarios y seguidores:
+Estimados colegas inmobiliarios:
 
-\xBFTienes cita para mostrar un inmueble o vas a reunirte con un nuevo cliente y quieres tener total certeza de con qui\xE9n har\xE1s negocios? *\xA1Tu seguridad f\xEDsica y jur\xEDdica en terreno es nuestra m\xE1xima prioridad!*
+\xBFTienes cita para mostrar un inmueble o vas a reunirte con un nuevo cliente y quieres tener total certeza de con qui\xE9n har\xE1s negocios? *\xA1Tu seguridad f\xEDsica y jur\xEDdica en terreno es nuestra m\xE1xima prioridad!* \u{1F512}\u{1F4BC}
 
 En **VECY BIENES RA\xCDCES** ponemos a disposici\xF3n de todos los miembros de nuestros grupos y seguidores del canal nuestro **Servicio Oficial de Verificaci\xF3n de Identidad y Antecedentes con Inteligencia Artificial**, \xA1totalmente **GRATUITO**! \u{1F193}\u{1F91D}
 
 JanIA valida en tiempo real los nombres oficiales completos y antecedentes judiciales ante la Polic\xEDa Nacional y bases institucionales de seguridad notarial.
 
-\u26A1 *\xBFC\xD3MO SOLICITARLO? (R\xE1pido, f\xE1cil y en un solo mensaje)*:
+\u26A1 *\xBFC\xD3MO SOLICITARLO? (En un solo mensaje, r\xE1pido y directo)*:
 No tienes que saludar primero ni esperar turnos. Solo env\xEDale a **JanIA** (aqu\xED en el grupo o por mensaje privado al WhatsApp *+573192919978*) **UN SOLO MENSAJE** con esta sencilla frase:
 
 \u{1F4CB} *Plantilla para copiar y pegar (cambia el n\xFAmero):*
 \u{1F449} \`JanIA, verificar c\xE9dula: 12.345.678\`
 
-*(Tambi\xE9n v\xE1lido: \`JanIA, validar cc 12345678\`)*
-
 JanIA procesar\xE1 la consulta al instante y te entregar\xE1 el reporte oficial para que asistas a tus citas con total tranquilidad y respaldo.
 
 \u{1F4F2} *Escr\xEDbele directamente a JanIA aqu\xED:* https://wa.me/573192919978
 
+\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F4E2} *\xA1S\xCDGUENOS EN NUESTRO CANAL OFICIAL DE WHATSAPP!*
+\xDAnete a nuestro canal para acceder a m\xE1s herramientas y servicios gratuitos exclusivos como este:
+\u{1F449} ${channelLink}
+
+\u{1F680} *\xA1SPOILER / PR\xD3XIMO LANZAMIENTO!* 
+Muy pronto JanIA tambi\xE9n te ayudar\xE1 a consultar y descargar recibos de **Impuesto Predial** directamente por WhatsApp en segundos. \xA1Atentos a las novedades en el canal!
+
 \u{1F4BC} *Un aporte de VECY BIENES RA\xCDCES para blindar y profesionalizar la labor de nuestra red inmobiliaria.* \u{1F680}`;
+      const defaultPromoChannel = `\u{1F6E1}\uFE0F\u2728 *\xA1NUEVO SERVICIO EXCLUSIVO DE VECY BIENES RA\xCDCES PARA NUESTROS SEGUIDORES!* \u2728\u{1F6E1}\uFE0F
+
+Estimada comunidad inmobiliaria del Canal:
+
+\xBFTienes cita para mostrar un inmueble o vas a reunirte con un nuevo cliente y quieres tener total certeza de con qui\xE9n har\xE1s negocios? *\xA1Tu seguridad f\xEDsica y jur\xEDdica en terreno es nuestra m\xE1xima prioridad!* \u{1F512}\u{1F4BC}
+
+Como agradecimiento por seguir nuestro canal oficial, en **VECY BIENES RA\xCDCES** activamos para ti nuestro **Servicio Oficial de Verificaci\xF3n de Identidad y Antecedentes con Inteligencia Artificial**, \xA1totalmente **GRATUITO**! \u{1F193}\u{1F91D}
+
+JanIA valida en tiempo real los nombres oficiales completos y antecedentes judiciales ante la Polic\xEDa Nacional y bases institucionales de seguridad notarial.
+
+\u26A1 *\xBFC\xD3MO SOLICITARLO? (En un solo mensaje, r\xE1pido y directo)*:
+No tienes que saludar primero ni esperar turnos. Solo env\xEDale a **JanIA** por mensaje privado a su WhatsApp oficial **UN SOLO MENSAJE** con esta frase:
+
+\u{1F4CB} *Plantilla para copiar y pegar (cambia el n\xFAmero):*
+\u{1F449} \`JanIA, verificar c\xE9dula: 12.345.678\`
+
+JanIA te responder\xE1 al instante con el reporte oficial para que asistas a tus citas con total tranquilidad y respaldo.
+
+\u{1F4F2} *Escr\xEDbele directamente a JanIA aqu\xED:* https://wa.me/573192919978
+
+\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F680} *\xA1PR\xD3XIMO BENEFICIO EXCLUSIVO EN ESTE CANAL!*
+\xA1Mantente conectado! Muy pronto JanIA tambi\xE9n te ayudar\xE1 a consultar y descargar recibos de **Impuesto Predial** directamente por WhatsApp en segundos.
+
+Comparte este canal con tus colegas corredores para que aprovechen estas herramientas gratuitas:
+\u{1F449} ${channelLink}
+
+\u{1F4BC} *VECY BIENES RA\xCDCES \u2014 Tecnolog\xEDa e innovaci\xF3n al servicio del corretaje inmobiliario.* \u{1F680}`;
+      const promoTextGroups = req.body?.textGroups || req.body?.text || defaultPromoGroups;
+      const promoTextChannel = req.body?.textChannel || req.body?.text || defaultPromoChannel;
       console.log("[BROADCAST-PROMO] Iniciando despacho de propaganda a Grupo 2, Grupo 3 y Canal de WhatsApp...");
       const results = {};
       try {
-        await janiaMatchBot.sendToGroup(promoText, hasImage ? imgPath : void 0, [], janiaMatchBot.buzonGroupId);
+        await janiaMatchBot.sendToGroup(promoTextGroups, hasImage ? imgPath : void 0, [], janiaMatchBot.buzonGroupId);
         results.grupo2 = "Despachado a Grupo 2 exitosamente";
         console.log("[BROADCAST-PROMO] \u2713 Despachado a Grupo 2");
       } catch (err2) {
@@ -25237,7 +25283,7 @@ JanIA procesar\xE1 la consulta al instante y te entregar\xE1 el reporte oficial 
         console.error("[BROADCAST-PROMO] Error en Grupo 2:", err2);
       }
       try {
-        await janiaMatchBot.sendToGroup(promoText, hasImage ? imgPath : void 0, [], janiaMatchBot.circuloGroupId);
+        await janiaMatchBot.sendToGroup(promoTextGroups, hasImage ? imgPath : void 0, [], janiaMatchBot.circuloGroupId);
         results.grupo3 = "Despachado a Grupo 3 exitosamente";
         console.log("[BROADCAST-PROMO] \u2713 Despachado a Grupo 3");
       } catch (err3) {
@@ -25246,7 +25292,7 @@ JanIA procesar\xE1 la consulta al instante y te entregar\xE1 el reporte oficial 
       }
       const channelJid = janiaMatchBot.channelNewsletterId || "120363399889853806@newsletter";
       try {
-        await janiaMatchBot.sendToGroup(promoText, hasImage ? imgPath : void 0, [], channelJid);
+        await janiaMatchBot.sendToGroup(promoTextChannel, hasImage ? imgPath : void 0, [], channelJid);
         results.canal = `Despachado a Canal ${channelJid} exitosamente`;
         console.log(`[BROADCAST-PROMO] \u2713 Despachado a Canal (${channelJid})`);
       } catch (errNl) {
