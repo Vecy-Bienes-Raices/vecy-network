@@ -2754,24 +2754,28 @@ export function explicarMatch(
     }
   }
 
-  // ── FILTRO DURO 10B: Depósitos Mínimos (REGLA DOCTRINAL v22.4: Oferta < Demanda = BLOQUEO 0%) ──
+  // ── FILTRO DURO 10B: Depósitos Mínimos (REGLA DOCTRINAL v22.4 / v32.11) ──
   let effectiveReqDeposits = 0;
   if (requirement.hasStorage || reqTextLow.includes("con deposito") || reqTextLow.includes("con depósito") || reqTextLow.includes("exige deposito") || reqTextLow.includes("exige depósito") || reqTextLow.includes("bodega")) {
     const mDep = reqTextLow.match(/(\d+)\s*(?:depósito|depósitos|deposito|depositos|bodega|bodegas)/i);
     effectiveReqDeposits = mDep ? parseInt(mDep[1], 10) : 1;
   }
 
+  const propMentionsDep = property.hasStorage || propRawTextLower.includes("deposito") || propRawTextLower.includes("depósito") || propRawTextLower.includes("bodega");
+  const propExplicitNoDep = propRawTextLower.includes("sin deposito") || propRawTextLower.includes("sin depósito") || propRawTextLower.includes("no tiene deposito") || propRawTextLower.includes("no tiene depósito");
   let propDeposits = 0;
-  if (property.hasStorage || propRawTextLower.includes("deposito") || propRawTextLower.includes("depósito") || propRawTextLower.includes("bodega")) {
+  if (propMentionsDep && !propExplicitNoDep) {
     const mPropDep = propRawTextLower.match(/(\d+)\s*(?:depósito|depósitos|deposito|depositos|bodega|bodegas)/i);
     propDeposits = mPropDep ? parseInt(mPropDep[1], 10) : (property.storageUnits ? Number(property.storageUnits) : 1);
   }
-  if (propRawTextLower.includes("sin deposito") || propRawTextLower.includes("sin depósito") || propRawTextLower.includes("no tiene deposito") || propRawTextLower.includes("no tiene depósito")) {
-    propDeposits = 0;
-  }
 
   if (effectiveReqDeposits > 0) {
-    if (propDeposits < effectiveReqDeposits) {
+    if (propExplicitNoDep) {
+      blockers.push(`Atributo Fallido (Depósitos): Oferta declara explícitamente que no tiene depósito. Match Inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    } else if (!propMentionsDep) {
+      negatives.push(`Dato Pendiente: Por confirmar si la oferta cuenta con depósito (${effectiveReqDeposits} exigido(s)).`);
+    } else if (propDeposits < effectiveReqDeposits) {
       blockers.push(`Atributo Fallido (Depósitos): Depósitos/bodegas ofrecidos (${propDeposits}) son inferiores a los exigidos (${effectiveReqDeposits}). Match Inviable (0%).`);
       return buildExplanationResult(0, blockers, positives, negatives);
     } else {
@@ -2779,24 +2783,28 @@ export function explicarMatch(
     }
   }
 
-  // ── FILTRO DURO 10C: Balcones Mínimos (REGLA DOCTRINAL v22.4: Oferta < Demanda = BLOQUEO 0%) ──
+  // ── FILTRO DURO 10C: Balcones Mínimos (REGLA DOCTRINAL v22.4 / v32.11) ──
   let effectiveReqBalconies = 0;
   if (requirement.hasBalcony || reqTextLow.includes("con balcon") || reqTextLow.includes("con balcón") || reqTextLow.includes("exige balcon") || reqTextLow.includes("exige balcón") || reqTextLow.includes("balcones")) {
     const mBal = reqTextLow.match(/(\d+)\s*(?:balcón|balcones|balcon)/i);
     effectiveReqBalconies = mBal ? parseInt(mBal[1], 10) : 1;
   }
 
+  const propMentionsBal = property.hasBalcony || propRawTextLower.includes("balcon") || propRawTextLower.includes("balcón") || propRawTextLower.includes("balcones");
+  const propExplicitNoBal = propRawTextLower.includes("sin balcon") || propRawTextLower.includes("sin balcón") || propRawTextLower.includes("no tiene balcon") || propRawTextLower.includes("no tiene balcón");
   let propBalconies = 0;
-  if (property.hasBalcony || propRawTextLower.includes("balcon") || propRawTextLower.includes("balcón") || propRawTextLower.includes("balcones")) {
+  if (propMentionsBal && !propExplicitNoBal) {
     const mPropBal = propRawTextLower.match(/(\d+)\s*(?:balcón|balcones|balcon)/i);
     propBalconies = mPropBal ? parseInt(mPropBal[1], 10) : (property.balconies ? Number(property.balconies) : 1);
   }
-  if (propRawTextLower.includes("sin balcon") || propRawTextLower.includes("sin balcón") || propRawTextLower.includes("no tiene balcon") || propRawTextLower.includes("no tiene balcón")) {
-    propBalconies = 0;
-  }
 
   if (effectiveReqBalconies > 0) {
-    if (propBalconies < effectiveReqBalconies) {
+    if (propExplicitNoBal) {
+      blockers.push(`Atributo Fallido (Balcones): Oferta declara explícitamente que no tiene balcón. Match Inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    } else if (!propMentionsBal) {
+      negatives.push(`Dato Pendiente: Por confirmar si la oferta cuenta con balcón.`);
+    } else if (propBalconies < effectiveReqBalconies) {
       blockers.push(`Atributo Fallido (Balcones): Balcones ofrecidos (${propBalconies}) son inferiores a los exigidos (${effectiveReqBalconies}). Match Inviable (0%).`);
       return buildExplanationResult(0, blockers, positives, negatives);
     } else {
@@ -2804,7 +2812,7 @@ export function explicarMatch(
     }
   }
 
-  // ── FILTRO DURO 10D: Terrazas Mínimas y Metraje (REGLA DOCTRINAL v22.4 / v31.91: Oferta < Demanda = BLOQUEO 0%) ──
+  // ── FILTRO DURO 10D: Terrazas Mínimas y Metraje (REGLA DOCTRINAL v22.4 / v31.91 / v32.11) ──
   const reqOutdoorInfo = parseOutdoorAreas(reqTextLow);
   const propOutdoorInfo = parseOutdoorAreas(propRawTextLower);
 
@@ -2813,16 +2821,20 @@ export function explicarMatch(
     effectiveReqTerraces = reqOutdoorInfo.terraceCount > 0 ? reqOutdoorInfo.terraceCount : 1;
   }
 
+  const propMentionsTerr = property.hasTerrace || propRawTextLower.includes("terraza") || propOutdoorInfo.hasTerrace;
+  const propExplicitNoTerr = propRawTextLower.includes("sin terraza") || propRawTextLower.includes("no tiene terraza");
   let propTerraces = 0;
-  if (property.hasTerrace || propRawTextLower.includes("terraza") || propOutdoorInfo.hasTerrace) {
+  if (propMentionsTerr && !propExplicitNoTerr) {
     propTerraces = propOutdoorInfo.terraceCount > 0 ? propOutdoorInfo.terraceCount : (property.terraces ? Number(property.terraces) : 1);
-  }
-  if (propRawTextLower.includes("sin terraza") || propRawTextLower.includes("no tiene terraza")) {
-    propTerraces = 0;
   }
 
   if (effectiveReqTerraces > 0) {
-    if (propTerraces < effectiveReqTerraces) {
+    if (propExplicitNoTerr) {
+      blockers.push(`Atributo Fallido (Terrazas): Oferta declara explícitamente que no tiene terraza. Match Inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    } else if (!propMentionsTerr) {
+      negatives.push(`Dato Pendiente: Por confirmar si la oferta cuenta con terraza.`);
+    } else if (propTerraces < effectiveReqTerraces) {
       blockers.push(`Atributo Fallido (Terrazas): Terrazas ofrecidas (${propTerraces}) son inferiores a las exigidas (${effectiveReqTerraces}). Match Inviable (0%).`);
       return buildExplanationResult(0, blockers, positives, negatives);
     } else {
