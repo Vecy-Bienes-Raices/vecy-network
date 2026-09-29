@@ -880,27 +880,7 @@ export function matchesGeography(
     }
   }
 
-  // 1.5 Guard de Sub-barrios y Micro-sectores Estrictos (v20.0 Precisión Catastral)
-  const tieneAledanosInicial = hasAledanos(reqZoneRaw);
-  if (reqZone && propZone && !tieneAledanosInicial) {
-    const s1 = reqZone.toLowerCase();
-    const s2 = propZone.toLowerCase();
-
-    const orientaciones = ["oriental", "occidental", "norte", "sur", "alta", "alto", "baja", "bajo", "reservado", " central", "navarra"];
-    const tieneDiffOrientacion = orientaciones.some(o =>
-      (s1.includes(o) && !s2.includes(o)) || (!s1.includes(o) && s2.includes(o))
-    );
-
-    const tieneNum1 = s1.match(/\b(i|ii|iii|iv|v|1|2|3|4)\b/);
-    const tieneNum2 = s2.match(/\b(i|ii|iii|iv|v|1|2|3|4)\b/);
-    const diffNum = tieneNum1 && tieneNum2 && tieneNum1[0] !== tieneNum2[0];
-
-    if (tieneDiffOrientacion || diffNum) {
-      return { matches: false, score: 0 };
-    }
-  }
-
-  // 2. Definimos las equivalencias de zonas coloquiales (F4)
+  // 1.5 Definimos las equivalencias de zonas coloquiales (F4)
   const equivalenciasZonas: Record<string, string[]> = {
     "las santas": [
       "santa barbara", "santa barbara alta", "santa barbara oriental", "santa barbara central", "santa barbara occidental", "santa barbara norte",
@@ -954,6 +934,31 @@ export function matchesGeography(
     "lagos": ["lagos de torca", "club los lagartos", "el lago"],
     "las lomas": ["lomas de niza", "lomas"]
   };
+
+  // Guard de Sub-barrios y Micro-sectores Estrictos (v20.0 Precisión Catastral)
+  const tieneAledanosInicial = hasAledanos(reqZoneRaw);
+  if (reqZone && propZone && !tieneAledanosInicial) {
+    const s1 = reqZone.toLowerCase();
+    const s2 = propZone.toLowerCase();
+
+    // Si están declaradas explícitamente en equivalenciasZonas (ej: "chico" y "chico norte"), son 100% compatibles doctrinariamente
+    const sonEquivalentes = equivalenciasZonas[s1]?.includes(s2) || equivalenciasZonas[s2]?.includes(s1);
+    if (!sonEquivalentes) {
+      const orientaciones = ["oriental", "occidental", "norte", "sur", "alta", "alto", "baja", "bajo", "reservado", " central", "navarra"];
+      const o1 = orientaciones.filter(o => s1.includes(o));
+      const o2 = orientaciones.filter(o => s2.includes(o));
+      const tieneDiffOrientacion = (o1.length > 0 && o2.length > 0 && !o1.some(o => o2.includes(o))) ||
+        (o1.length > 0 && o2.length === 0 && !s2.includes(s1));
+
+      const tieneNum1 = s1.match(/\b(i|ii|iii|iv|v|1|2|3|4)\b/);
+      const tieneNum2 = s2.match(/\b(i|ii|iii|iv|v|1|2|3|4)\b/);
+      const diffNum = tieneNum1 && tieneNum2 && tieneNum1[0] !== tieneNum2[0];
+
+      if (tieneDiffOrientacion || diffNum) {
+        return { matches: false, score: 0 };
+      }
+    }
+  }
 
   // Helper para expandir una frase si es zona coloquial o devolverla tal cual
   const expandirZona = (phrase: string): string[] => {
@@ -3582,9 +3587,17 @@ export async function findMatchesForProperty(propertyId: number) {
         await new Promise(r => setTimeout(r, 10));
       }
 
-      // Regla Doctrinal v31.108: Omitir requerimientos inactivos, vencidos, mediocres o de más de 30 días sin republicación
-      if ((req as any).status === 'expired' || (req as any).calificacion === 'Mediocre') {
+      // Regla Doctrinal v31.108: Omitir requerimientos inactivos, vencidos, o de más de 30 días sin republicación
+      if ((req as any).status === 'expired') {
         continue;
+      }
+      if ((req as any).calificacion === 'Mediocre') {
+        const fbCheck = req.rawText ? extractFallbackDataFromText(req.rawText) : {};
+        const hasRecoverableCriteria = (fbCheck.presupuestoMax > 0 || Number(req.presupuestoMax) > 0) &&
+          (fbCheck.areaMin > 0 || Number(req.areaMin) > 0 || fbCheck.bedroomsMin > 0 || Number(req.habitacionesMin) > 0);
+        if (!hasRecoverableCriteria) {
+          continue;
+        }
       }
       if (isHollowListing(req.rawText, req.name, req.enlaceOrigen).isHollow) {
         continue;
@@ -3691,9 +3704,18 @@ export async function findMatchesForRequirement(requirementId: number) {
     }
 
     // REGLA DOCTRINAL v31.108: Sala de Espera de 30 días para Demandas. Si supera 30 días sin republicación activa, se omite de matching
-    if ((req as any).status === 'expired' || (req as any).calificacion === 'Mediocre') {
-      console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por estar marcado como vencido o mediocre.`);
+    if ((req as any).status === 'expired') {
+      console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por estar marcado como vencido.`);
       return [];
+    }
+    if ((req as any).calificacion === 'Mediocre') {
+      const fbCheck = req.rawText ? extractFallbackDataFromText(req.rawText) : {};
+      const hasRecoverableCriteria = (fbCheck.presupuestoMax > 0 || Number(req.presupuestoMax) > 0) &&
+        (fbCheck.areaMin > 0 || Number(req.areaMin) > 0 || fbCheck.bedroomsMin > 0 || Number(req.habitacionesMin) > 0);
+      if (!hasRecoverableCriteria) {
+        console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por ser genuinamente mediocre sin criterios.`);
+        return [];
+      }
     }
     const reqRepCount = Number((req as any).republicacionesCount || 0);
     const reqEffectiveDate = (reqRepCount > 0 && (req as any).fechaUltimaPublicacion)

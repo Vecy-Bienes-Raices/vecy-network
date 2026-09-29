@@ -5442,14 +5442,28 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     ? knownReqAdvisor.name
     : realName || null;
 
+  const rawCombinedReqText = `${data.rawText || ""} ${data.name || ""}`;
+  const fallbackReqD = extractFallbackDataFromText(rawCombinedReqText);
+
   const insertData = {
     ...data,
     name: safeSlice(data.name, 255) || null,
-    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city, 100) || "Bogotá",
-    zonaDeseada: safeSlice(data.zonaDeseada || data.zone || data.addressNeighborhood || data.addressLocality || data.ciudadDeseada || "Bogotá", 100) || "Bogotá",
+    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city || fallbackReqD.city || "Bogotá", 100) || "Bogotá",
+    zonaDeseada: (() => {
+      const explicit = data.zonaDeseada || data.zone || data.addressNeighborhood || data.addressLocality;
+      const explicitClean = (explicit || "").toLowerCase().trim();
+      const isGeneric = !explicit || explicitClean === "bogota" || explicitClean === "bogotá" || explicitClean === "colombia" || explicitClean === "n/e" || explicitClean === "na";
+      if (!isGeneric) {
+        return safeSlice(explicit, 100);
+      }
+      if (fallbackReqD.zonaDeseada && fallbackReqD.zonaDeseada !== "Bogotá") {
+        return safeSlice(fallbackReqD.zonaDeseada, 100);
+      }
+      return safeSlice(data.ciudadDeseada || fallbackReqD.city || "Bogotá", 100) || "Bogotá";
+    })(),
     addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
-    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
+    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood || (fallbackReqD.zonaDeseada !== "Bogotá" ? fallbackReqD.zonaDeseada : null), 150) || null,
     enlaceOrigen: safeSlice(data.enlaceOrigen, 1000) || null,
     idUsuarioWhatsapp: safeSlice(canonicalReqPhone, 100) || null,
     nombreUsuarioWhatsapp: safeSlice(finalEffectiveReqName, 255) || null,
@@ -5466,11 +5480,8 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
           return String(v);
         }
       }
-      if (data.rawText || data.name) {
-        const fallbackD = extractFallbackDataFromText(`${data.rawText || ""} ${data.name || ""}`);
-        if (fallbackD.presupuestoMin >= 300_000) {
-          return String(fallbackD.presupuestoMin);
-        }
+      if (fallbackReqD.presupuestoMin >= 300_000) {
+        return String(fallbackReqD.presupuestoMin);
       }
       return null;
     })(),
@@ -5483,11 +5494,8 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
         }
       }
       // Fallback robusto con extractFallbackDataFromText (soporta rangos como "Presupuesto *1.300 - 1.400*")
-      if (data.rawText || data.name) {
-        const fallbackD = extractFallbackDataFromText(`${data.rawText || ""} ${data.name || ""}`);
-        if (fallbackD.presupuestoMax >= 300_000) {
-          return String(fallbackD.presupuestoMax);
-        }
+      if (fallbackReqD.presupuestoMax >= 300_000) {
+        return String(fallbackReqD.presupuestoMax);
       }
       return null;
     })(),
@@ -5497,10 +5505,13 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
         const v = parseFloat(String(raw));
         if (!isNaN(v) && v >= 10 && v <= 5000) return String(v);
       }
-      // Fallback robusto: extraer desde rawText capturando frases como "Mínimo 150m2", "min 120 m²", "de 150 metros"
+      if (fallbackReqD.areaMin > 0 || fallbackReqD.area > 0) {
+        return String(fallbackReqD.areaMin || fallbackReqD.area);
+      }
+      // Fallback robusto: extraer desde rawText capturando frases como "Mínimo 150m2", "min 120 m²", "de 150 metros", "metraje minimo: 160mts"
       const rawL = (data.rawText || data.name || "").toLowerCase();
       const areaFallback = rawL.match(
-        /(?:(?:m[ií]nimo|m[aá]s\s*de|min(?:imo)?|m[aá]x(?:imo)?|de|desde|con)\s+)([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i
+        /(?:(?:m[ií]nimo|m[aá]s\s*de|min(?:imo)?|m[aá]x(?:imo)?|de|desde|con|metraje\s*(?:m[ií]nimo|min(?:imo)?))\s*[:=-]?\s*)([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i
       );
       if (areaFallback) {
         const v = parseFloat(areaFallback[1].replace(',', '.'));
@@ -5535,9 +5546,17 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     habitacionesMin: (() => {
       const v = data.habitacionesMin !== undefined && data.habitacionesMin !== null ? Math.round(Number(data.habitacionesMin)) : (data.bedrooms !== undefined && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null);
       if (v !== null && !isNaN(v) && v > 0) return v;
+      if (fallbackReqD.bedroomsMin > 0 || fallbackReqD.bedrooms > 0) {
+        return fallbackReqD.bedroomsMin || fallbackReqD.bedrooms;
+      }
       const rawL = (data.rawText || "").toLowerCase();
-      const m = rawL.match(/(\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
-      return m ? parseInt(m[1], 10) : null;
+      const m = rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+      if (m) {
+        const SPANISH_NUM_LOCAL: Record<string, number> = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
+        const w = m[0].split(/\s+/)[0].toLowerCase();
+        return SPANISH_NUM_LOCAL[w] || parseInt(w, 10) || null;
+      }
+      return null;
     })(),
     banosMin: (() => {
       const rawL = (data.rawText || "").toLowerCase();
@@ -5554,17 +5573,27 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
         if (v === 5 && rawL.includes("2.5")) return 3; // Corregir alucinación 2.5 -> 5
         return Math.round(v);
       }
-      const m = rawL.match(/(\d+(?:[\.,]\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || rawL.match(/(\d+)\s*hab\s*con\s*baño/i);
+      if (fallbackReqD.bathrooms > 0) {
+        return fallbackReqD.bathrooms;
+      }
+      const m = rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+(?:[\.,]\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+)\s*hab\s*con\s*baño/i);
       if (m) {
-        const val = parseFloat(m[1].replace(',', '.'));
-        if (val > 0 && val % 1 !== 0) return Math.ceil(val);
-        return Math.round(val);
+        const SPANISH_NUM_LOCAL: Record<string, number> = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
+        const w = m[0].split(/\s+/)[0].toLowerCase();
+        const num = SPANISH_NUM_LOCAL[w] || parseFloat(w.replace(',', '.'));
+        if (!isNaN(num) && num > 0) {
+          if (num % 1 !== 0) return Math.ceil(num);
+          return Math.round(num);
+        }
       }
       return null;
     })(),
     parqueaderosMin: (() => {
       const v = data.parqueaderosMin !== undefined && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : (data.garages !== undefined && data.garages !== null ? Math.round(Number(data.garages)) : null);
       if (v !== null && !isNaN(v) && v > 0) return v;
+      if (fallbackReqD.garages > 0) {
+        return fallbackReqD.garages;
+      }
       const rawL = (data.rawText || "").toLowerCase();
       const m = rawL.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i)
              || rawL.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);

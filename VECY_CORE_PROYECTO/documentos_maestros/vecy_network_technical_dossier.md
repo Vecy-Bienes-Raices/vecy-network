@@ -322,6 +322,39 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.11 — Septiembre 2026
+
+#### 📌 RESTAURACIÓN DE VISIBILIDAD DE MATCHES EN LA MESA DE COINCIDENCIAS, DOCTRINA "DATO PENDIENTE" VS "NO COINCIDE", SABIDURÍA EN INMUEBLES PARA REMODELAR Y RESCATE DE DEMANDAS
+
+**Requerimiento y Objetivos:**
+1. Erradicar la supresión de matches legítimos en el tablero de coincidencias (`/admin` -> tab `matches`).
+2. Implementar la distinción doctrinal:
+   - Si la DEMANDA solicita un atributo secundario (balcón, terraza, estudio, depósito, etc.) y la OFERTA no lo menciona, el resultado debe ser **"Dato Pendiente" (`neutral`)**.
+   - Solo si la OFERTA niega explícitamente tenerlo (*"no tiene balcón"*, *"sin terraza"*), debe ser **"No coincide" (`missing`)**.
+3. Dotar a los motores de sabiduría contextual para condiciones como *"Puede ser para remodelar pero debe ser por debajo de los 2.000 para que pueda remodelar"*, reconociéndolo como flexibilidad y no como exclusión de apartamentos en buen estado.
+4. Preservar las pestañas y secciones: Compraventas como foco principal, junto con Arriendos, Permutas y Standby 50/50 visibles en sus lugares designados.
+5. Corregir la omisión prematura de requerimientos clasificados como "Mediocre" en backend y solventar el guard de orientación geográfica para barrios padres como Chicó vs Chicó Norte.
+
+**Solución aplicada:**
+- **Refactorización de `scoreRows` en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+  - Se configuró para que balcón, terraza, estudio, depósito, cuarto de servicio, cocina, ascensor y los 64 chips dinámicos marquen `neutral` ("Dato Pendiente / Por confirmar si tiene...") cuando la oferta no los especifica.
+  - La condición de guillotina (`hasHardBlocker`) se aisló estrictamente a los 7 criterios estructurales (Tipo Inmueble, Tipo Negocio, Ciudad, Sector/Barrio incompatible, Precio desbordado y Área por debajo del mínimo). Los matches aprobados aumentaron inmediatamente de 7 a 22 sobre los 30 registrados en BD.
+- **Detector de Flexibilidad de Remodelación (`isReqFlexibleRemodelar`)**:
+  - Se reconoce la flexibilidad de reforma, asignando `ok` si la propiedad ofertada está en condición estándar o excelente.
+- **Compatibilidad Venta ↔ Venta/Permuta (50/50, 60/40)**:
+  - En `negMatchStatus` y `checkTxCompatFrontend`, se habilitó la compatibilidad entre Venta y Venta/Permuta como `warn` o `exact`, garantizando presencia en pestañas de Compraventa o Standby 50/50.
+- **Evaluador de Criterios Recuperables en Backend (`server/_core/matching.ts`)**:
+  - `findMatchesForProperty` y `findMatchesForRequirement` ahora analizan mediante `extractFallbackDataFromText` si una demanda etiquetada como `Mediocre` contiene criterios válidos de presupuesto, área o habitaciones, rescatándola del descarte.
+- **Orden de Precedencia Geográfica en `matchesGeography`**:
+  - `equivalenciasZonas` se trasladó antes del guard de orientaciones, validando `sonEquivalentes` para impedir que sectores como "Chicó Norte" sean bloqueados cuando la demanda pide "Chicó".
+- **Ingesta Robusta en `server/_core/janIA.ts`**:
+  - Soporte de números en palabras ("un", "dos", "tres", etc.), colones en metrajes (`minimo: 160mts`) y asignación automática de barrios en `fallbackReqD`.
+- **Actualización de Requerimiento #1904 en Base de Datos VPS**:
+  - Se corrigió en PostgreSQL: `zonaDeseada = 'Chicó'`, `address_neighborhood = 'Chicó'`, `areaMin = 160`, `habitacionesMin = 2`, `banosMin = 2`, `calificacion = 'Perfecta'`, habilitando el match con la Oferta #4279 ($1.500M en Chicó Norte).
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+---
+
 ### 🔖 v32.10 — Septiembre 2026
 
 #### 📌 LANZAMIENTO DE BROADCAST MULTIMEDIAL DE VERIFICACIÓN GRATUITA DE CÉDULAS, INVITACIÓN AL CANAL OFICIAL DE WHATSAPP, TEASER DE IMPUESTO PREDIAL Y SIMULACIÓN 'COMPOSING' EN CAPTIONS

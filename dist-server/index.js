@@ -4588,21 +4588,6 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
       return { matches: false, score: 0 };
     }
   }
-  const tieneAledanosInicial = hasAledanos(reqZoneRaw);
-  if (reqZone && propZone && !tieneAledanosInicial) {
-    const s1 = reqZone.toLowerCase();
-    const s2 = propZone.toLowerCase();
-    const orientaciones = ["oriental", "occidental", "norte", "sur", "alta", "alto", "baja", "bajo", "reservado", " central", "navarra"];
-    const tieneDiffOrientacion = orientaciones.some(
-      (o) => s1.includes(o) && !s2.includes(o) || !s1.includes(o) && s2.includes(o)
-    );
-    const tieneNum1 = s1.match(/\b(i|ii|iii|iv|v|1|2|3|4)\b/);
-    const tieneNum2 = s2.match(/\b(i|ii|iii|iv|v|1|2|3|4)\b/);
-    const diffNum = tieneNum1 && tieneNum2 && tieneNum1[0] !== tieneNum2[0];
-    if (tieneDiffOrientacion || diffNum) {
-      return { matches: false, score: 0 };
-    }
-  }
   const equivalenciasZonas = {
     "las santas": [
       "santa barbara",
@@ -4768,6 +4753,24 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
     "lagos": ["lagos de torca", "club los lagartos", "el lago"],
     "las lomas": ["lomas de niza", "lomas"]
   };
+  const tieneAledanosInicial = hasAledanos(reqZoneRaw);
+  if (reqZone && propZone && !tieneAledanosInicial) {
+    const s1 = reqZone.toLowerCase();
+    const s2 = propZone.toLowerCase();
+    const sonEquivalentes = equivalenciasZonas[s1]?.includes(s2) || equivalenciasZonas[s2]?.includes(s1);
+    if (!sonEquivalentes) {
+      const orientaciones = ["oriental", "occidental", "norte", "sur", "alta", "alto", "baja", "bajo", "reservado", " central", "navarra"];
+      const o1 = orientaciones.filter((o) => s1.includes(o));
+      const o2 = orientaciones.filter((o) => s2.includes(o));
+      const tieneDiffOrientacion = o1.length > 0 && o2.length > 0 && !o1.some((o) => o2.includes(o)) || o1.length > 0 && o2.length === 0 && !s2.includes(s1);
+      const tieneNum1 = s1.match(/\b(i|ii|iii|iv|v|1|2|3|4)\b/);
+      const tieneNum2 = s2.match(/\b(i|ii|iii|iv|v|1|2|3|4)\b/);
+      const diffNum = tieneNum1 && tieneNum2 && tieneNum1[0] !== tieneNum2[0];
+      if (tieneDiffOrientacion || diffNum) {
+        return { matches: false, score: 0 };
+      }
+    }
+  }
   const expandirZona = (phrase) => {
     if (equivalenciasZonas[phrase]) {
       return equivalenciasZonas[phrase];
@@ -6962,8 +6965,15 @@ async function findMatchesForProperty(propertyId) {
       if (compCounter % 20 === 0) {
         await new Promise((r) => setTimeout(r, 10));
       }
-      if (req.status === "expired" || req.calificacion === "Mediocre") {
+      if (req.status === "expired") {
         continue;
+      }
+      if (req.calificacion === "Mediocre") {
+        const fbCheck = req.rawText ? extractFallbackDataFromText(req.rawText) : {};
+        const hasRecoverableCriteria = (fbCheck.presupuestoMax > 0 || Number(req.presupuestoMax) > 0) && (fbCheck.areaMin > 0 || Number(req.areaMin) > 0 || fbCheck.bedroomsMin > 0 || Number(req.habitacionesMin) > 0);
+        if (!hasRecoverableCriteria) {
+          continue;
+        }
       }
       if (isHollowListing(req.rawText, req.name, req.enlaceOrigen).isHollow) {
         continue;
@@ -7055,9 +7065,17 @@ async function findMatchesForRequirement(requirementId) {
       console.log(`[MATCHING-FILTER] \u26D4 Requerimiento #${requirementId} omitido por ser frase suelta sin criterios de b\xFAsqueda.`);
       return [];
     }
-    if (req.status === "expired" || req.calificacion === "Mediocre") {
-      console.log(`[MATCHING-FILTER] \u23F3 Requerimiento #${requirementId} omitido por estar marcado como vencido o mediocre.`);
+    if (req.status === "expired") {
+      console.log(`[MATCHING-FILTER] \u23F3 Requerimiento #${requirementId} omitido por estar marcado como vencido.`);
       return [];
+    }
+    if (req.calificacion === "Mediocre") {
+      const fbCheck = req.rawText ? extractFallbackDataFromText(req.rawText) : {};
+      const hasRecoverableCriteria = (fbCheck.presupuestoMax > 0 || Number(req.presupuestoMax) > 0) && (fbCheck.areaMin > 0 || Number(req.areaMin) > 0 || fbCheck.bedroomsMin > 0 || Number(req.habitacionesMin) > 0);
+      if (!hasRecoverableCriteria) {
+        console.log(`[MATCHING-FILTER] \u23F3 Requerimiento #${requirementId} omitido por ser genuinamente mediocre sin criterios.`);
+        return [];
+      }
     }
     const reqRepCount = Number(req.republicacionesCount || 0);
     const reqEffectiveDate = reqRepCount > 0 && req.fechaUltimaPublicacion ? req.fechaUltimaPublicacion : req.fechaUltimaPublicacion || req.createdAt || req.fechaExtraccion;
@@ -17670,14 +17688,27 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
   const canonicalReqPhone = normalizeAdvisorPhone(rawPhone) || normalizeAdvisorPhone(data.idUsuarioWhatsapp) || (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : data.idUsuarioWhatsapp || rawPhone);
   const knownReqAdvisor = lookupAdvisorSync(canonicalReqPhone || data.idUsuarioWhatsapp, realName || data.nombreUsuarioWhatsapp);
   const finalEffectiveReqName = realName && !isGenericName(realName) ? realName.trim() : data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp) ? data.nombreUsuarioWhatsapp.trim() : knownReqAdvisor?.name && !isGenericName(knownReqAdvisor.name) ? knownReqAdvisor.name : realName || null;
+  const rawCombinedReqText = `${data.rawText || ""} ${data.name || ""}`;
+  const fallbackReqD = extractFallbackDataFromText(rawCombinedReqText);
   const insertData = {
     ...data,
     name: safeSlice(data.name, 255) || null,
-    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city, 100) || "Bogot\xE1",
-    zonaDeseada: safeSlice(data.zonaDeseada || data.zone || data.addressNeighborhood || data.addressLocality || data.ciudadDeseada || "Bogot\xE1", 100) || "Bogot\xE1",
+    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city || fallbackReqD.city || "Bogot\xE1", 100) || "Bogot\xE1",
+    zonaDeseada: (() => {
+      const explicit = data.zonaDeseada || data.zone || data.addressNeighborhood || data.addressLocality;
+      const explicitClean = (explicit || "").toLowerCase().trim();
+      const isGeneric = !explicit || explicitClean === "bogota" || explicitClean === "bogot\xE1" || explicitClean === "colombia" || explicitClean === "n/e" || explicitClean === "na";
+      if (!isGeneric) {
+        return safeSlice(explicit, 100);
+      }
+      if (fallbackReqD.zonaDeseada && fallbackReqD.zonaDeseada !== "Bogot\xE1") {
+        return safeSlice(fallbackReqD.zonaDeseada, 100);
+      }
+      return safeSlice(data.ciudadDeseada || fallbackReqD.city || "Bogot\xE1", 100) || "Bogot\xE1";
+    })(),
     addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
-    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood, 150) || null,
+    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood || (fallbackReqD.zonaDeseada !== "Bogot\xE1" ? fallbackReqD.zonaDeseada : null), 150) || null,
     enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
     idUsuarioWhatsapp: safeSlice(canonicalReqPhone, 100) || null,
     nombreUsuarioWhatsapp: safeSlice(finalEffectiveReqName, 255) || null,
@@ -17694,11 +17725,8 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
           return String(v);
         }
       }
-      if (data.rawText || data.name) {
-        const fallbackD = extractFallbackDataFromText(`${data.rawText || ""} ${data.name || ""}`);
-        if (fallbackD.presupuestoMin >= 3e5) {
-          return String(fallbackD.presupuestoMin);
-        }
+      if (fallbackReqD.presupuestoMin >= 3e5) {
+        return String(fallbackReqD.presupuestoMin);
       }
       return null;
     })(),
@@ -17710,11 +17738,8 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
           return String(v);
         }
       }
-      if (data.rawText || data.name) {
-        const fallbackD = extractFallbackDataFromText(`${data.rawText || ""} ${data.name || ""}`);
-        if (fallbackD.presupuestoMax >= 3e5) {
-          return String(fallbackD.presupuestoMax);
-        }
+      if (fallbackReqD.presupuestoMax >= 3e5) {
+        return String(fallbackReqD.presupuestoMax);
       }
       return null;
     })(),
@@ -17724,9 +17749,12 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
         const v = parseFloat(String(raw));
         if (!isNaN(v) && v >= 10 && v <= 5e3) return String(v);
       }
+      if (fallbackReqD.areaMin > 0 || fallbackReqD.area > 0) {
+        return String(fallbackReqD.areaMin || fallbackReqD.area);
+      }
       const rawL = (data.rawText || data.name || "").toLowerCase();
       const areaFallback = rawL.match(
-        /(?:(?:m[ií]nimo|m[aá]s\s*de|min(?:imo)?|m[aá]x(?:imo)?|de|desde|con)\s+)([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i
+        /(?:(?:m[ií]nimo|m[aá]s\s*de|min(?:imo)?|m[aá]x(?:imo)?|de|desde|con|metraje\s*(?:m[ií]nimo|min(?:imo)?))\s*[:=-]?\s*)([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i
       );
       if (areaFallback) {
         const v = parseFloat(areaFallback[1].replace(",", "."));
@@ -17760,9 +17788,17 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
     habitacionesMin: (() => {
       const v = data.habitacionesMin !== void 0 && data.habitacionesMin !== null ? Math.round(Number(data.habitacionesMin)) : data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null;
       if (v !== null && !isNaN(v) && v > 0) return v;
+      if (fallbackReqD.bedroomsMin > 0 || fallbackReqD.bedrooms > 0) {
+        return fallbackReqD.bedroomsMin || fallbackReqD.bedrooms;
+      }
       const rawL = (data.rawText || "").toLowerCase();
-      const m = rawL.match(/(\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
-      return m ? parseInt(m[1], 10) : null;
+      const m = rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+      if (m) {
+        const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
+        const w = m[0].split(/\s+/)[0].toLowerCase();
+        return SPANISH_NUM_LOCAL[w] || parseInt(w, 10) || null;
+      }
+      return null;
     })(),
     banosMin: (() => {
       const rawL = (data.rawText || "").toLowerCase();
@@ -17778,17 +17814,27 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
         if (v === 5 && rawL.includes("2.5")) return 3;
         return Math.round(v);
       }
-      const m = rawL.match(/(\d+(?:[\.,]\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || rawL.match(/(\d+)\s*hab\s*con\s*baño/i);
+      if (fallbackReqD.bathrooms > 0) {
+        return fallbackReqD.bathrooms;
+      }
+      const m = rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+(?:[\.,]\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+)\s*hab\s*con\s*baño/i);
       if (m) {
-        const val = parseFloat(m[1].replace(",", "."));
-        if (val > 0 && val % 1 !== 0) return Math.ceil(val);
-        return Math.round(val);
+        const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
+        const w = m[0].split(/\s+/)[0].toLowerCase();
+        const num = SPANISH_NUM_LOCAL[w] || parseFloat(w.replace(",", "."));
+        if (!isNaN(num) && num > 0) {
+          if (num % 1 !== 0) return Math.ceil(num);
+          return Math.round(num);
+        }
       }
       return null;
     })(),
     parqueaderosMin: (() => {
       const v = data.parqueaderosMin !== void 0 && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : data.garages !== void 0 && data.garages !== null ? Math.round(Number(data.garages)) : null;
       if (v !== null && !isNaN(v) && v > 0) return v;
+      if (fallbackReqD.garages > 0) {
+        return fallbackReqD.garages;
+      }
       const rawL = (data.rawText || "").toLowerCase();
       const m = rawL.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i) || rawL.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
       return m ? parseInt(m[1], 10) : null;

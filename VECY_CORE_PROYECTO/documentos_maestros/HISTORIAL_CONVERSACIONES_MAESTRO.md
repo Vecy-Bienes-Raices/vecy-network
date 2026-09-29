@@ -7,6 +7,52 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.11 — 28 Septiembre 2026
+
+### Solicitud de Eduardo
+Restauración de Visibilidad de Matches en la Mesa de Coincidencias, Doctrina de "Dato Pendiente" vs "No Coincide", Flexibilidad Razonable de Estado ("Puede ser para remodelar"), Inclusión de 50/50, Arriendos y Permutas en sus Respectivas Secciones, y Corrección de Extracción y Matching para Demandas:
+*(Eduardo instruyó: "Es que tu no me entendiste, te lo vuelvo a decir: Por ejemplo; Si la DEMANDA dice que necesita Balcón y la OFERTA no lo menciona, el campo debe dar como resultado \"Dato Pendiente\", pero si la OFERTA menciona explícitamente que: \"No tiene Balcón\", eso si es un \"No coincide\" y así con todas las características. Pero si dice lo que tu te referías que: [Match #15115 (93.74% en BD): El requerimiento decía \"Puede ser para remodelar pero debe ser por debajo de los 2.000 para que pueda remodelar\". El frontend interpretó que exigía para remodelar y, como el apto ofertado no estaba destruido, marcó \"Estado del Inmueble: missing\" → autoScore: 0%.] En eso nuestros motores tienen que aprender a manejarlo con sabiduría y razonamiento y no descartar tan severamente, hay que analizarlo muy bien. Ok. Vamos corrige eso por favor, no puedo quedarme sin trabajo, no hay inmuebles en la mesa de coincidencias y nosotros trabajamos es compraventas más que todo, pero no por eso vas a anular los arriendos o permutas ni los 50/50 que esos también deben ir a sus lugares y así esos 50/50 no nos sirvan a nosotros, más adelante sabremos que hacer con estos.")*
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Guillotina Excesiva en Cotejo Frontend (`AdminMatches.tsx`)**:
+   - El cotejo frontend recalculaba `scoreRows` y, si cualquier atributo secundario (balcón, terraza, estudio, depósito, cuarto de servicio, cocina, ascensor, o cualquiera de los 64 chips dinámicos) estaba ausente en la oferta cuando la demanda lo mencionaba, se clasificaba erróneamente como `missing` ("No coincide") en lugar de `neutral` ("Dato Pendiente").
+   - Peor aún, si `missing` ocurría, activaba la guillotina del 0% (`autoScore = 0%`), provocando que 23 de los 30 matches reales calificados en BD con puntajes entre 85% y 93.74% fueran suprimidos y desaparecieran de la vista de Eduardo en `/admin`.
+2. **Inflexibilidad en Estado del Inmueble ("Puede ser para remodelar")**:
+   - En el Match #15115 (93.74% en BD), el cliente comprador indicaba: *"Puede ser para remodelar pero debe ser por debajo de los 2.000 para que pueda remodelar"*. Esto representa una *flexibilidad o concesión*, no una exigencia excluyente de comprar un apartamento en ruinas. El frontend interpretaba que la demanda *exigía* que estuviera para remodelar y, al ser la oferta un inmueble en buen estado, lo marcaba como `missing` reduciendo el score a 0%.
+3. **Bloqueo en Compatibilidad de Tipos de Negocio (Venta vs Venta 50% / Permuta 50%)**:
+   - En `AdminMatches.tsx`, `negMatchStatus` marcaba `missing` cuando la demanda era `venta` y la oferta era `venta_permuta_50_50`, guillotinando el match a 0%. Según la doctrina de VECY Network, una oferta que acepta permuta o 50/50 siempre acepta venta en efectivo (es 100% compatible como compraventa o va a su sección 50/50 / Standby).
+4. **Descarte Prematuro de Demandas con Calificación "Mediocre" en Backend (`server/_core/matching.ts` y `janIA.ts`)**:
+   - El requerimiento #1904 (*"Apartamento en Chico o Virrey, Dos habitaciones y estudio, Dos baños, Metraje minimo: 160mts, Presupuesto: 1.500 millones"*) tenía números escritos en letras ("Dos") y formato con dos puntos ("minimo: 160mts"). La ingesta previa de `janIA.ts` no los capturaba con `\d+`, dejando vacíos `habitacionesMin`, `banosMin`, `areaMin` y asignando `zonaDeseada: "Bogotá"`, lo que otorgó un puntaje de completitud de 28.5% (`calificacion: 'Mediocre'`).
+   - El motor de matching en `matching.ts` (`findMatchesForRequirement` y `findMatchesForProperty`) descartaba inmediatamente cualquier requerimiento con `calificacion === 'Mediocre'`, impidiendo que se cruzara con la oferta #4279 (Apto Chicó $1.500M, 167m2, 2 hab, 2 baños).
+5. **Guard Geográfico Rígido en Micro-sectores (`matchesGeography`)**:
+   - En `server/_core/matching.ts`, el guard de orientaciones (1.5) evaluaba si un término contenía "norte" y el otro no. Al cotejar "Chicó" vs "Chicó Norte", se ejecutaba antes de `equivalenciasZonas`, retornando `matches: false, score: 0` a pesar de que "Chicó" es la zona padre y está explícitamente declarada equivalente en `equivalenciasZonas["chico"]`.
+
+### Acciones Ejecutadas en Código, Base de Datos y Servidor
+1. **Regla Doctrinal de "Dato Pendiente" vs "No Coincide" en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Si la demanda solicita un atributo secundario (balcón, terraza, estudio, depósito, CBS, cocina, ascensor, etc.) y la oferta **no lo menciona**, el estado es **`neutral` ("Dato Pendiente / Por confirmar si tiene...")**.
+   - Solo se marca como **`missing` ("No coincide")** si la oferta **indica explícitamente que NO lo tiene** (*"no tiene balcón"*, *"sin terraza"*, etc.).
+   - Se confinaron los bloqueadores duros (`HARD_BLOCKER_ATTRS`) estrictamente a los 7 criterios estructurales: Tipo Inmueble, Tipo Negocio, Ciudad, Sector/Barrio incompatible, Precio desbordado y Área por debajo del piso mínimo.
+   - En los 30 matches reales en BD, los matches aprobados en la tabla pasaron inmediatamente de **7 de 30** a **22 de 30**.
+2. **Sabiduría Contextual en Estado del Inmueble**:
+   - Se incorporó detección de frases de flexibilidad (`isReqFlexibleRemodelar`: *"puede ser para remodelar"*, *"abierto a remodelar"*, *"no importa si es para remodelar"*). Si la oferta está en buen estado o estándar, se clasifica como `ok` ("Excelente estado / Apto para habitar sin remodelar").
+3. **Compatibilidad Venta ↔ Venta/Permuta 50/50 y Preservación de Secciones**:
+   - Se ajustó `negMatchStatus` y `checkTxCompatFrontend` para que la combinación de Venta con Venta/Permuta (incluyendo 50/50, 60/40, etc.) se clasifique como `warn` o `exact`, permitiendo que se visualice en su respectiva pestaña (Standby 50/50 o Compraventas) sin suprimirse con 0%.
+4. **Rescate de Criterios Recuperables en Backend (`server/_core/matching.ts`)**:
+   - Se ajustó `findMatchesForProperty` y `findMatchesForRequirement` para que, si un requerimiento tiene etiqueta `Mediocre`, no se descarte ciegamente: se evalúa si mediante `extractFallbackDataFromText` posee criterios recuperables de presupuesto, área o habitaciones. Si los tiene, se procesa el match.
+5. **Corrección de Guard de Orientación Geográfica (`server/_core/matching.ts`)**:
+   - Se ubicó `equivalenciasZonas` antes del guard de orientación y se verificó `sonEquivalentes`. Si "Chicó" y "Chicó Norte" son equivalentes doctrinales, el guard no genera falso bloqueo.
+6. **Ingesta Robusta en `server/_core/janIA.ts`**:
+   - Se precalculó `fallbackReqD` desde `extractFallbackDataFromText` en la ingesta de demandas, dotándola de soporte para números en palabras ("un", "dos", "tres", "cuatro", "cinco"), colones en metrajes (`minimo: 160mts`) y extracción automática de barrios como "Chicó".
+7. **Actualización de Requerimiento #1904 en Base de Datos de Producción**:
+   - Se actualizaron en PostgreSQL los campos de ID 1904: `zonaDeseada = 'Chicó'`, `address_neighborhood = 'Chicó'`, `areaMin = 160`, `habitacionesMin = 2`, `banosMin = 2`, `calificacion = 'Perfecta'`, dejando habilitado el match con la Oferta #4279.
+8. **Validación, Compilación y Despliegue**:
+   - 124/124 tests de Vitest pasando al 100% ✅.
+   - `tsc --noEmit` completado con 0 errores ✅.
+   - Compilación Vite y esbuild (`dist-server/index.js`) 100% limpia ✅.
+   - Versión oficial incrementada a **`v32.11`** en `shared/const.ts` y **`32.11.0`** en `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.10 — 28 Septiembre 2026
 
 ### Solicitud de Eduardo

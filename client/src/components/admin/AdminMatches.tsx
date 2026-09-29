@@ -836,14 +836,20 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
   let negMatchStatus: MatchStatus = "missing";
   if (cleanReqBiz === cleanPropBiz && cleanReqBiz !== "") {
     negMatchStatus = "exact";
-  } else if (cleanReqBiz === "venta" && cleanPropBiz === "venta_o_arriendo") {
+  } else if ((cleanReqBiz === "venta" || cleanReqBiz === "venta_o_arriendo") && (cleanPropBiz === "venta" || cleanPropBiz === "venta_o_arriendo")) {
     negMatchStatus = "exact";
-  } else if (cleanReqBiz === "arriendo" && cleanPropBiz === "venta_o_arriendo") {
+  } else if ((cleanReqBiz === "arriendo" || cleanReqBiz === "venta_o_arriendo") && (cleanPropBiz === "arriendo" || cleanPropBiz === "venta_o_arriendo")) {
     negMatchStatus = "exact";
-  } else if (cleanReqBiz.startsWith("venta_permuta") && cleanPropBiz.startsWith("venta_permuta")) {
+  } else if (
+    (cleanReqBiz === "venta" || cleanReqBiz === "permuta" || cleanReqBiz.startsWith("venta_permuta")) &&
+    (cleanPropBiz === "venta" || cleanPropBiz === "permuta" || cleanPropBiz.startsWith("venta_permuta"))
+  ) {
     negMatchStatus = cleanReqBiz === cleanPropBiz ? "exact" : "warn";
-  } else if ((cleanReqBiz === "permuta" || cleanReqBiz.startsWith("venta_permuta")) && (cleanPropBiz === "permuta" || cleanPropBiz.startsWith("venta_permuta"))) {
-    negMatchStatus = "exact";
+  } else if (
+    (cleanReqBiz === "arriendo_con_opcion_de_compra" && (cleanPropBiz === "venta" || cleanPropBiz === "venta_o_arriendo" || cleanPropBiz === "arriendo_con_opcion_de_compra")) ||
+    (cleanPropBiz === "arriendo_con_opcion_de_compra" && (cleanReqBiz === "venta" || cleanReqBiz === "venta_o_arriendo" || cleanReqBiz === "arriendo_con_opcion_de_compra"))
+  ) {
+    negMatchStatus = cleanReqBiz === cleanPropBiz ? "exact" : "warn";
   } else {
     negMatchStatus = "missing"; // No coincide -> 0% Guillotina
   }
@@ -1970,10 +1976,19 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
           extS = "exact";
         }
       } else if ((reqBalcon || reqTerraza) && !propBalcon && !propTerraza) {
-        extS = "missing"; // 🔴 BUG 3 fix: Demanda exige balcón/terraza y oferta no tiene → Guillotina doctrinal
-        if (reqTerraza) reqExtLabel = effectiveReqTerraceArea > 0 ? `Exige Terraza ≥ ${effectiveReqTerraceArea} m² (Indispensable)` : "Exige Terraza (Indispensable)";
-        else if (reqBalcon) reqExtLabel = effectiveReqBalconyArea > 0 ? `Exige Balcón ≥ ${effectiveReqBalconyArea} m² (Indispensable)` : "Exige Balcón (Indispensable)";
-        propExtLabel = "No tiene balcón ni terraza";
+        const propExplicitNoBalcon = /\b(?:sin\s*balc[oó]n|no\s*tiene\s*balc[oó]n|cero\s*balc[oó]n|no\s*cuenta\s*con\s*balc[oó]n)\b/i.test(propRawText);
+        const propExplicitNoTerraza = /\b(?:sin\s*terraza|no\s*tiene\s*terraza|cero\s*terraza|no\s*cuenta\s*con\s*terraza)\b/i.test(propRawText);
+        const isExplicitNo = (reqTerraza && propExplicitNoTerraza) || (reqBalcon && propExplicitNoBalcon);
+
+        if (isExplicitNo) {
+          extS = "missing"; // 🔴 Oferta explícitamente niega tener balcón/terraza
+          propExtLabel = reqTerraza ? "No tiene terraza (Explícito en oferta)" : "No tiene balcón (Explícito en oferta)";
+        } else {
+          extS = "neutral"; // ⚪ DATO PENDIENTE: La oferta no lo menciona
+          propExtLabel = reqTerraza ? "Dato Pendiente / Por confirmar si tiene terraza" : "Dato Pendiente / Por confirmar si tiene balcón";
+        }
+        if (reqTerraza) reqExtLabel = effectiveReqTerraceArea > 0 ? `Exige Terraza ≥ ${effectiveReqTerraceArea} m²` : "Exige Terraza";
+        else if (reqBalcon) reqExtLabel = effectiveReqBalconyArea > 0 ? `Exige Balcón ≥ ${effectiveReqBalconyArea} m²` : "Exige Balcón";
       } else if (!reqBalcon && !reqTerraza && (propBalcon || propTerraza)) {
         extS = "plus";
         reqExtLabel = "Flexible / No exigido";
@@ -2044,9 +2059,16 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
         reqEqLabel = "Exige Conjunto Cerrado";
         propEqLabel = "Sí (Conjunto Cerrado)";
       } else if (reqConj && !propConj) {
-        eqS = "missing"; // 🔴 BUG 4 fix: Demanda exige conjunto cerrado y oferta no lo tiene → Guillotina
-        reqEqLabel = "Exige Conjunto Cerrado (Indispensable)";
-        propEqLabel = "Casa Independiente / Sin conjunto";
+        const propExplicitNoConj = /\b(?:casa\s*de\s*calle|fuera\s*de\s*conjunto|sin\s*conjunto|no\s*es\s*conjunto|casa\s*independiente|no\s*en\s*conjunto)\b/i.test(propRawText);
+        if (propExplicitNoConj) {
+          eqS = "missing"; // 🔴 Explícitamente sin conjunto
+          reqEqLabel = "Exige Conjunto Cerrado";
+          propEqLabel = "Casa Independiente / Sin conjunto (Explícito)";
+        } else {
+          eqS = "neutral"; // ⚪ DATO PENDIENTE
+          reqEqLabel = "Exige Conjunto Cerrado";
+          propEqLabel = "Dato Pendiente / Por confirmar si es conjunto";
+        }
       } else if (!reqConj && propConj) {
         eqS = "plus";
         reqEqLabel = "Flexible";
@@ -2059,9 +2081,16 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
         reqEqLabel = "Exige Ascensor";
         propEqLabel = "Sí (Edificio con Ascensor)";
       } else if (reqAsc && !propAsc) {
-        eqS = "missing"; // 🔴 BUG 4 fix: Demanda exige ascensor y oferta no lo tiene → Guillotina
-        reqEqLabel = "Exige Ascensor (Indispensable)";
-        propEqLabel = "Sin ascensor especificado";
+        const propExplicitNoAsc = /\b(?:sin\s*ascensor|no\s*tiene\s*ascensor|edificio\s*sin\s*ascensor|no\s*hay\s*ascensor|escaleras\s*unicamente|por\s*escaleras)\b/i.test(propRawText);
+        if (propExplicitNoAsc) {
+          eqS = "missing"; // 🔴 Explícitamente sin ascensor
+          reqEqLabel = "Exige Ascensor";
+          propEqLabel = "Sin ascensor (Explícito en oferta)";
+        } else {
+          eqS = "neutral"; // ⚪ DATO PENDIENTE
+          reqEqLabel = "Exige Ascensor";
+          propEqLabel = "Dato Pendiente / Por confirmar si tiene ascensor";
+        }
       } else if (!reqAsc && propAsc) {
         eqS = "plus";
         reqEqLabel = "Flexible";
@@ -2084,9 +2113,16 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
       reqDepLabel = "Exige Depósito / Cuarto Útil (En Duro)";
       propDepLabel = "Sí (Cuenta con Depósito Privado)";
     } else if (reqDep && !propDep) {
-      depS = "missing"; // 🔴 EN DURO (Doctrina v31.87): Demanda exige depósito y la oferta no cuenta con él -> Guillotina (No Cumple)
-      reqDepLabel = "Exige Depósito / Cuarto Útil (En Duro)";
-      propDepLabel = "No tiene depósito especificado (No Cumple)";
+      const propExplicitNoDep = /\b(?:sin\s*dep[oó]sito|no\s*tiene\s*dep[oó]sito|sin\s*cuarto\s*[uú]til|no\s*tiene\s*cuarto\s*[uú]til|cero\s*dep[oó]sito|no\s*cuenta\s*con\s*dep[oó]sito)\b/i.test(propRawText);
+      if (propExplicitNoDep) {
+        depS = "missing"; // 🔴 Explícito no tiene
+        reqDepLabel = "Exige Depósito / Cuarto Útil";
+        propDepLabel = "No tiene depósito (Explícito)";
+      } else {
+        depS = "neutral"; // ⚪ DATO PENDIENTE
+        reqDepLabel = "Exige Depósito / Cuarto Útil";
+        propDepLabel = "Dato Pendiente / Por confirmar si tiene depósito";
+      }
     } else if (!reqDep && propDep) {
       depS = "plus";
       reqDepLabel = "Flexible";
@@ -2118,12 +2154,11 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
     } else if (isReqClosed && isPropOpen) {
       kStatus = "missing"; // 🔴 Choque arquitectónico EN DURO (Demanda exige cerrada y oferta es abierta) -> Guillotina
     } else if (isReqOpen && !isPropOpen) {
-      if (ageP >= 25) {
-        kStatus = "missing"; // 🔴 Inmueble de más de 25 años con cocina cerrada tradicional -> Guillotina
-      } else if (isPropClosed) {
-        kStatus = "missing";
+      const propExplicitClosed = /\b(?:cocina\s*cerrada|cocina\s*independiente|cocina\s*tradicional)\b/i.test(propRawText);
+      if (propExplicitClosed) {
+        kStatus = "missing"; // 🔴 Explícitamente cerrada
       } else {
-        kStatus = "missing"; // 🔴 Demanda exige cocina abierta y oferta no especifica cocina abierta -> Guillotina EN DURO
+        kStatus = "neutral"; // ⚪ DATO PENDIENTE
       }
     } else if (isReqClosed && !isPropClosed) {
       if (isPropOpen) {
@@ -2197,7 +2232,14 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
     if (reqCBS && propCBS) {
       cbsStatus = "exact";
     } else if (reqCBS && !propCBS) {
-      cbsStatus = "missing"; // 🔴 EN DURO (Doctrina v31.87): Demanda exige CBS y oferta no cuenta con cuarto de servicio -> Guillotina (No Coincide)
+      const propExplicitNoCBS = /\b(?:sin\s*cbs|sin\s*cuarto\s*de\s*servicio|no\s*tiene\s*cuarto\s*de\s*servicio|sin\s*alcoba\s*de\s*servicio|no\s*tiene\s*cbs|cero\s*cbs)\b/i.test(propRawText);
+      if (propExplicitNoCBS) {
+        cbsStatus = "missing"; // 🔴 Explícito no tiene
+      } else if (propHasServiceBathOnly) {
+        cbsStatus = "warn"; // 🟡 Solo baño de servicio
+      } else {
+        cbsStatus = "neutral"; // ⚪ DATO PENDIENTE
+      }
     } else if (!reqCBS && propCBS) {
       cbsStatus = "plus";
     } else {
@@ -2222,7 +2264,12 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
     let studyStatus: MatchStatus = "neutral";
     if (reqWantsStudy && propHasStudy) studyStatus = "exact";
     else if (reqWantsStudy && !propHasStudy) {
-      studyStatus = "missing"; // 🔴 EN DURO (Doctrina v31.87): Demanda exige estudio y oferta no cuenta con él -> Guillotina (No Cumple)
+      const propExplicitNoStudy = /\b(?:sin\s*estudio|no\s*tiene\s*estudio|sin\s*estar|sin\s*star|sin\s*home\s*office|cero\s*estudio)\b/i.test(propRawText);
+      if (propExplicitNoStudy) {
+        studyStatus = "missing"; // 🔴 Explícito no tiene
+      } else {
+        studyStatus = "neutral"; // ⚪ DATO PENDIENTE
+      }
     } else if (!reqWantsStudy && propHasStudy) studyStatus = "plus";
     else studyStatus = "neutral";
     add(
@@ -2261,8 +2308,8 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
       if (propSecType === "24_7") {
         vigStatus = "exact";
       } else {
-        // En duro: edificio automatizado, conserje o sin vigilancia 24h es GUILLOTINA 0% (missing)
-        vigStatus = "missing";
+        const propExplicitNo24h = /\b(?:sin\s*vigilancia|sin\s*porter[ií]a|conserje\s*(?:diurno|parcial)|sin\s*seguridad\s*24h)\b/i.test(propRawText);
+        vigStatus = propExplicitNo24h ? "missing" : "neutral"; // Si no lo menciona, Dato Pendiente
       }
     } else if (reqVig) {
       if (propSecType === "24_7" || propVig) vigStatus = "exact";
@@ -2402,24 +2449,34 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
   }
 
   // 27. Estado de Conservación del Inmueble (Tolerancia Cero: Para Remodelar vs Remodelado / Estrenar)
-  const isReqParaRemodelar = /\b(para remodelar|por remodelar|a remodelar|para reformar|a reformar|destruido|precio de oportunidad|de oportunidad)\b/i.test(reqTextLower);
+  const isReqFlexibleRemodelar = /\b(?:puede\s*ser\s*(?:para\s*)?remodelar|o\s*(?:para\s*)?remodelar|acepta\s*(?:para\s*)?remodelar|remodelar\s*opcional|opcional\s*(?:para\s*)?remodelar|si\s*es\s*para\s*remodelar)\b/i.test(reqTextLower);
+  const isReqStrictParaRemodelar = !isReqFlexibleRemodelar && /\b(para remodelar|por remodelar|a remodelar|para reformar|a reformar|destruido|precio de oportunidad|de oportunidad)\b/i.test(reqTextLower);
   const isPropRemodelado = /\b(remodelad[oa]|totalmente remodelad[oa]|completamente remodelad[oa]|estrenar|para estrenar|a estrenar|nuevo|sobre planos)\b/i.test(propRawText);
   const isPropParaRemodelar = /\b(para remodelar|por remodelar|a remodelar|para reformar|a reformar|en obra gris|en obra negra)\b/i.test(propRawText);
   const isReqParaEstrenar = /\b(para estrenar|a estrenar|estrenar|nuevo|sobre planos)\b/i.test(reqTextLower);
 
-  const reqState = isReqParaRemodelar ? "A Remodelar / Oportunidad" : (reqTextLower.includes("remodelado") ? "Remodelado" : (isReqParaEstrenar ? "Excelente / A Estrenar" : null));
-  const propState = isPropParaRemodelar ? "A Remodelar" : (isPropRemodelado ? "Remodelado / Excelente" : (propRawText.includes("excelente estado") ? "Excelente" : null));
+  const reqState = isReqStrictParaRemodelar ? "A Remodelar / Oportunidad" : (isReqFlexibleRemodelar ? "Flexible / Acepta Remodelar o Buen Estado" : (reqTextLower.includes("remodelado") ? "Remodelado" : (isReqParaEstrenar ? "Excelente / A Estrenar" : null)));
+  const propState = isPropParaRemodelar ? "A Remodelar" : (isPropRemodelado ? "Remodelado / Excelente" : (propRawText.includes("excelente estado") ? "Excelente" : (propRawText.includes("buen estado") ? "Buen Estado" : null)));
 
   if (reqState || propState) {
     let stateS: MatchStatus = "neutral";
-    if (reqState && propState) {
+    if (isReqFlexibleRemodelar) {
+      stateS = "ok"; // 🟢 Razonamiento Doctrinal: Cliente acepta remodelar pero un inmueble en buen estado dentro del presupuesto es 100% viable
+    } else if (reqState && propState) {
       if ((reqState as string) === (propState as string) || (reqState.includes("Remodelar") && propState.includes("Remodelar")) || (reqState.includes("Remodelado") && propState.includes("Remodelado"))) {
         stateS = "exact";
+      } else if (isReqStrictParaRemodelar && isPropRemodelado) {
+        stateS = "missing"; // 🔴 Exige estrictamente para remodelar y el predio es a estrenar/remodelado de lujo
       } else {
-        stateS = "missing"; // 🔴 Incompatibilidad fatal: Remodelar vs Remodelado/Estrenar
+        stateS = "warn";
       }
-    } else if (isReqParaRemodelar && !isPropParaRemodelar) {
-      stateS = "missing"; // 🔴 Exige para remodelar y el predio no es para remodelar
+    } else if (isReqStrictParaRemodelar && !isPropParaRemodelar) {
+      const propExplicitGood = /\b(remodelad[oa]|estrenar|excelente\s*estado)\b/i.test(propRawText);
+      if (propExplicitGood) {
+        stateS = "missing"; // Exige para remodelar y la oferta es remodelada
+      } else {
+        stateS = "neutral"; // Dato Pendiente
+      }
     } else if (!reqState && propState) {
       stateS = "plus";
     }
@@ -2446,7 +2503,8 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
     } else if (!reqWantsEV && propHasEV) {
       evStatus = "plus";
     } else if (reqWantsEV && !propHasEV) {
-      evStatus = "missing"; // 🔴 EN DURO (Doctrina v31.87): Demanda exige adecuación para vehículo eléctrico y oferta no la tiene -> Guillotina (No Cumple)
+      const propExplicitNoEV = /\b(?:sin\s*carga\s*el[eé]ctrica|no\s*apto\s*para\s*el[eé]ctrico|sin\s*toma\s*el[eé]ctrica|prohibido\s*carga\s*el[eé]ctrica)\b/i.test(propRawText);
+      evStatus = propExplicitNoEV ? "missing" : "neutral"; // Si no lo menciona, Dato Pendiente
     }
     add(
       "Carro Eléctrico",
@@ -2570,9 +2628,22 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
       if (!reqStoredVal) reqLabel = "Flexible";
       if (!propStoredVal) propLabel = `Sí (${item.name} Incluido)`;
     } else if (inReq && !inProp) {
-      amS = "missing"; // 🔴 EN DURO (Doctrina v31.87): Si la demanda solicitó esta característica y la oferta no la tiene -> Guillotina (No Cumple)
-      if (!reqStoredVal) reqLabel = `Exige ${item.name} (En Duro)`;
-      if (!propStoredVal) propLabel = `Sin ${item.name} especificado (No Cumple)`;
+      const isExplicitlyDeniedInProp = item.patterns.some(p => {
+        const idx = propRawText.indexOf(p);
+        if (idx < 0) return false;
+        const prefix = propRawText.slice(Math.max(0, idx - 25), idx);
+        return /\b(?:no|cero|sin|nunca|carece\s*de|no\s*tiene|no\s*cuenta\s*con)\b\s*(?:de|con)?\s*$/i.test(prefix);
+      });
+
+      if (isExplicitlyDeniedInProp) {
+        amS = "missing"; // 🔴 Oferta explícitamente niega tenerlo
+        if (!reqStoredVal) reqLabel = `Exige ${item.name}`;
+        if (!propStoredVal) propLabel = `No tiene ${item.name} (Explícito en oferta)`;
+      } else {
+        amS = "neutral"; // ⚪ Oferta no lo menciona -> DATO PENDIENTE
+        if (!reqStoredVal) reqLabel = `Exige ${item.name}`;
+        if (!propStoredVal) propLabel = `Dato Pendiente / Por confirmar si tiene ${item.name}`;
+      }
     }
 
     add(item.name, reqLabel, propLabel, amS, item.weight || 3, item.icon);
@@ -2659,12 +2730,24 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
   );
 
 
-  // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY (v31.80) ──
-  // 1. Guillotina Total Inflexible: Si CUALQUIER fila en todo el cotejo tiene estado "missing" ("No Coincide" / "No Cumple" en rojo) -> 0% Inmediato
-  const hasAnyMissingRow = rows.some(r => r.status === "missing");
+  // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY (v32.11) ──
+  // Guillotina Absoluta reservada exclusivamente para los Filtros Duros Inquebrantables de VECY CORE:
+  // Tipo Inmueble, Tipo Negocio, Ciudad, Barrio, Desborde de Precio, Metraje insuficiente, Ficha hueca o Auto-clon.
+  const HARD_CRITERIA_LABELS = new Set([
+    "Tipo de Inmueble",
+    "Tipo de Negocio",
+    "Ciudad",
+    "Barrio / Sector",
+    "Precio de Venta",
+    "Precio de Arriendo / Canon",
+    "Área Total",
+    "Ficha Técnica"
+  ]);
+
+  const hasHardBlocker = rows.some(r => HARD_CRITERIA_LABELS.has(r.label) && r.status === "missing");
   let autoScore = 0;
 
-  if (!hasAnyMissingRow) {
+  if (!hasHardBlocker) {
     // Casillas evaluables (todas excepto la fila puramente informativa de Teléfono)
     const evaluableRows = rows.filter(r => !r.label.includes("Teléfono"));
 
@@ -2679,6 +2762,11 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
       for (const r of evaluableRows) {
         if (r.status === "exact" || r.status === "ok") {
           continue; // Coincidencia 100% exacta: 0 deducción
+        }
+
+        if (r.status === "missing") {
+          totalDeduction += (r.weight || 3) * 0.90; // Deducción ponderada sin aniquilar el match completo a 0%
+          continue;
         }
 
         const lbl = r.label.toLowerCase();
@@ -2699,7 +2787,7 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
           } else if (r.status === "warn") {
             totalDeduction += 0.80; // Margen funcional negociable
           } else if (r.status === "neutral") {
-            totalDeduction += 3.50; // Incertidumbre en metraje o espacios
+            totalDeduction += 1.50; // Incertidumbre en metraje o espacios
           }
         }
         // ── Nivel 3: Confort y Estructura (Valor admin, Piso, Vista, Antigüedad, Estrato, CBS, Estudio, Depósito, Cocina, Chimenea, Vigilancia, Parqueadero Visitantes, Cava, BBQ, etc.)
@@ -2715,7 +2803,7 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
           } else if (r.status === "warn") {
             totalDeduction += 0.40; // Aproximado
           } else if (r.status === "neutral") {
-            totalDeduction += 1.20; // Dato pendiente de confort
+            totalDeduction += 0.40; // Dato pendiente de confort
           }
         }
         // ── Nivel 4: 59 Amenidades Dinámicas Secundarias (Piscina, Gimnasio, Kiosco, Shut, Canchas, etc.)
@@ -2946,12 +3034,15 @@ function renderTextWithClickableLinks(text: string | null | undefined) {
 
 function checkTxCompatFrontend(reqTypeRaw: string, propTypeRaw: string, propAccepted: string[] = []): boolean {
   if (!reqTypeRaw || !propTypeRaw) return false;
-  const r = reqTypeRaw.toLowerCase().trim();
-  const p = propTypeRaw.toLowerCase().trim();
+  let r = reqTypeRaw.toLowerCase().trim();
+  let p = propTypeRaw.toLowerCase().trim();
   const accepted = propAccepted.map(t => t.toLowerCase().trim());
 
+  if (r.startsWith("venta_permuta")) r = "venta_permuta";
+  if (p.startsWith("venta_permuta")) p = "venta_permuta";
+
   if (r === p) return true;
-  if (accepted.length > 0 && accepted.includes(r)) return true;
+  if (accepted.length > 0 && (accepted.includes(r) || (r === "venta_permuta" && accepted.some(a => a.startsWith("venta_permuta"))))) return true;
 
   if (p === "venta_o_arriendo" && (r === "venta" || r === "arriendo" || r === "arriendo_con_opcion_de_compra")) return true;
   if (r === "venta_o_arriendo" && (p === "venta" || p === "arriendo" || p === "arriendo_con_opcion_de_compra")) return true;

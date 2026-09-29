@@ -165,7 +165,31 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.10 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.11 — Septiembre 2026
+
+### Novedades v32.11 (Restauración de Visibilidad de Matches en Mesa de Coincidencias, Doctrina "Dato Pendiente" vs "No Coincide", Sabiduría en Inmuebles para Remodelar y Rescate de Demandas):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo instruyó: *"Si la DEMANDA dice que necesita Balcón y la OFERTA no lo menciona, el campo debe dar como resultado 'Dato Pendiente', pero si la OFERTA menciona explícitamente que: 'No tiene Balcón', eso si es un 'No coincide' y así con todas las características... En [Match #15115: 'Puede ser para remodelar pero debe ser por debajo de los 2.000 para que pueda remodelar'] nuestros motores tienen que aprender a manejarlo con sabiduría y razonamiento y no descartar tan severamente... no hay inmuebles en la mesa de coincidencias y nosotros trabajamos es compraventas más que todo, pero no por eso vas a anular los arriendos o permutas ni los 50/50 que esos también deben ir a sus lugares..."*
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Doctrina de "Dato Pendiente" (`neutral`) vs "No Coincide" (`missing`) en Frontend (`AdminMatches.tsx`)**:
+     - Balcón, terraza, estudio, depósito, cuarto de servicio, cocina, ascensor y los 64 chips dinámicos ahora se marcan como `neutral` ("Dato Pendiente / Por confirmar si tiene...") cuando la oferta no los menciona, y `missing` ÚNICAMENTE si la oferta niega explícitamente su existencia (*"no tiene balcón"*, *"sin terraza"*).
+     - La guillotina de 0% se restringió estrictamente a los 7 atributos duros inquebrantables (Tipo Inmueble, Tipo Negocio, Ciudad, Sector/Barrio incompatible, Precio desbordado y Área por debajo del piso mínimo).
+     - Los matches aprobados en la tabla pasaron de 7/30 a 22/30 de forma inmediata.
+  2. **Sabiduría Contextual para Inmuebles para Remodelar**:
+     - Se añadió reconocimiento de frases de flexibilidad (`isReqFlexibleRemodelar`: *"puede ser para remodelar"*, etc.), asignando `ok` si la oferta está en buen estado.
+  3. **Compatibilidad Venta ↔ Venta/Permuta (50/50, 60/40) y Preservación de Secciones**:
+     - Se ajustó `negMatchStatus` y `checkTxCompatFrontend` para que Venta y Venta/Permuta (incluyendo 50/50) no sean `missing`, mostrándose en sus pestañas correspondientes (Standby 50/50 o Compraventas).
+  4. **Rescate de Demandas Calificadas como Mediocres (`matching.ts`)**:
+     - Se dotó a `findMatchesForProperty` y `findMatchesForRequirement` de un evaluador que rescata demandas que contengan criterios recuperables de presupuesto, área o habitaciones, en lugar de omitirlas ciegamente.
+  5. **Corrección de Guard Geográfico en Micro-sectores (`matching.ts`)**:
+     - Se reorganizó `equivalenciasZonas` antes del guard de orientaciones, garantizando que "Chicó" y "Chicó Norte" no se bloqueen falsamente entre sí.
+  6. **Extracción Robusta de Requerimientos en `janIA.ts`**:
+     - Se integró `fallbackReqD` para reconocer números en palabras ("un", "dos", "tres", etc.), colones en áreas (`minimo: 160mts`) y extracción automática de barrios como "Chicó", garantizando calificación `Perfecta` (85.7%).
+  7. **Actualización en Base de Datos de Producción**:
+     - Se actualizó el requerimiento #1904 en PostgreSQL (`zonaDeseada = 'Chicó'`, `areaMin = 160`, `habitacionesMin = 2`, `banosMin = 2`, `calificacion = 'Perfecta'`), habilitando el match con la Oferta #4279.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.10 — Septiembre 2026
 
 ### Novedades v32.10 (Lanzamiento de Broadcast Multimedial de Verificación Gratuita de Cédulas, Invitación Estratégica al Canal Oficial de WhatsApp, Teaser de Impuesto Predial y Simulación 'Composing' en Captions):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:
