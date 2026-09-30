@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.14";
+    VECY_VERSION = "v32.15";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -10248,24 +10248,31 @@ _(Puedes escribirlo con o sin puntos, comas o guiones \u2014 yo lo proceso autom
     };
   }
   if (chip && docNumber) {
-    const urlOficialSdh = `https://shd.gov.co/shd/liquidacion-predial?chip=${encodeURIComponent(chip)}`;
-    const urlLiquidacion = `https://nuevaoficinavirtual.shd.gov.co/bogota/cf/predial/liquidar?chip=${encodeURIComponent(chip)}`;
+    const urlOficialSdh = `https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`;
+    const tipoDocFormulario = detection.tipoDoc === "NIT" ? "NIT (sin d\xEDgito de verificaci\xF3n)" : detection.tipoDoc === "CE" ? "C\xE9dula de Extranjer\xEDa" : "C\xE9dula de Ciudadan\xEDa";
+    const nitWarning = detection.tipoDoc === "NIT" ? `
+\u26A0\uFE0F *Nota sobre el NIT:* El portal de hacienda pide el NIT *sin el d\xEDgito de verificaci\xF3n*. Por ejemplo, si tu NIT es *${docNumber}-X*, debes ingresar solo *${docNumber}*. Si el resultado dice que no encuentra el predio, verifica que el NIT corresponda al propietario registrado a *1 de enero de 2026*.
+` : "";
     const reportText2 = `\u{1F6E1}\uFE0F *PREDIAL BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 \u{1F3E0} *CHIP del predio:* ${chip}
 \u{1FAAA} *${docLabel} registrado:* ${docNumber}
+` + nitWarning + `
+\u{1F517} *Portal oficial Secretar\xEDa de Hacienda \u2014 Descarga tu factura predial aqu\xED:*
+${urlOficialSdh}
 
-\u{1F4CB} *Nota importante:* Los datos catastrales exactos (direcci\xF3n, aval\xFAo, matr\xEDcula) residen en la base de datos oficial de la Secretar\xEDa de Hacienda. Para consultar tu factura predial oficial y liquidar tu impuesto:
+\u{1F4CB} *Instrucciones para descargar tu PDF:*
+1\uFE0F\u20E3 Abre el enlace de arriba
+2\uFE0F\u20E3 En *"Tipo de impuesto"* selecciona: *PREDIAL*
+3\uFE0F\u20E3 En *"Tipo de documento"* selecciona: *${tipoDocFormulario}*
+4\uFE0F\u20E3 En *"N\xFAmero de documento"* ingresa: *${docNumber}*
+5\uFE0F\u20E3 En *"CHIP"* ingresa: *${chip}*
+6\uFE0F\u20E3 Marca la casilla *"No soy un robot"* (CAPTCHA)
+7\uFE0F\u20E3 Haz clic en *BUSCAR* \u2192 aparecer\xE1 el bot\xF3n *"DESCARGA TU FACTURA"* \u2705
 
-\u{1F517} *Portal oficial SDH \u2014 Liquida y descarga tu predial aqu\xED:*
-${urlLiquidacion}
+\u{1F4C4} Descarga el PDF, tiene el c\xF3digo de barras para pago en bancos y Efecty.
 
-\u2139\uFE0F *Instrucciones:*
-1. Ingresa al enlace de arriba
-2. Digita el CHIP: *${chip}*
-3. Descarga tu factura oficial en PDF con c\xF3digo de barras para pago
-
-\xBFNecesitas ayuda con otro tr\xE1mite? Estoy a tu disposici\xF3n \u{1F91D}`;
+\xBFNecesitas que te ayude con otro tr\xE1mite? Estoy a tu disposici\xF3n \u{1F91D}`;
     return {
       isPredialRequest: true,
       chip,
@@ -11167,6 +11174,17 @@ ${quotedNote}` : quotedNote;
             return;
           }
         }
+        try {
+          await this.sock.sendPresenceUpdate("composing", senderId);
+        } catch (_) {
+        }
+        const predialCheck = await executePredialAssistanceFromWhatsApp2(body, senderId, true);
+        if (predialCheck.isPredialRequest && predialCheck.reportText) {
+          console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || "General"})`);
+          await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+          await this.logToDb(senderId, "janIA", predialCheck.reportText);
+          return;
+        }
         const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
         try {
           await this.sock.sendPresenceUpdate("composing", senderId);
@@ -11177,17 +11195,6 @@ ${quotedNote}` : quotedNote;
           console.log(`[JANIA-MATCH] [DM] Verificaci\xF3n de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
           await this.queuedSend(senderId, idCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
           await this.logToDb(senderId, "janIA", idCheck.reportText);
-          return;
-        }
-        try {
-          await this.sock.sendPresenceUpdate("composing", senderId);
-        } catch (_) {
-        }
-        const predialCheck = await executePredialAssistanceFromWhatsApp2(body, senderId, true);
-        if (predialCheck.isPredialRequest && predialCheck.reportText) {
-          console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || "General"})`);
-          await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
-          await this.logToDb(senderId, "janIA", predialCheck.reportText);
           return;
         }
         const { isServiceHelpRequest: isServiceHelpRequest2, PREDIAL_HELP_TEXT: PREDIAL_HELP_TEXT2, CEDULA_HELP_TEXT: CEDULA_HELP_TEXT2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
@@ -12036,6 +12043,14 @@ ${result.response}`);
       async handlePrivateDmConversation(msg, senderId, rawPhone, bodyText) {
         try {
           const realName = msg.pushName || `Asesor +${rawPhone}`;
+          const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+          const predialCheck = await executePredialAssistanceFromWhatsApp2(bodyText, senderId, true);
+          if (predialCheck.isPredialRequest && predialCheck.reportText) {
+            await this.queuedSend(senderId, predialCheck.reportText, { quoted: msg, allowDirectMessage: true });
+            await this.logToDb(senderId, "janIA", predialCheck.reportText);
+            await this.sock.sendPresenceUpdate("paused", senderId);
+            return;
+          }
           const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
           try {
             await this.sock.sendPresenceUpdate("composing", senderId);
@@ -12045,14 +12060,6 @@ ${result.response}`);
           if (idCheck.isVerificationRequest && idCheck.reportText) {
             await this.queuedSend(senderId, idCheck.reportText, { quoted: msg, allowDirectMessage: true });
             await this.logToDb(senderId, "janIA", idCheck.reportText);
-            await this.sock.sendPresenceUpdate("paused", senderId);
-            return;
-          }
-          const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-          const predialCheck = await executePredialAssistanceFromWhatsApp2(bodyText, senderId, true);
-          if (predialCheck.isPredialRequest && predialCheck.reportText) {
-            await this.queuedSend(senderId, predialCheck.reportText, { quoted: msg, allowDirectMessage: true });
-            await this.logToDb(senderId, "janIA", predialCheck.reportText);
             await this.sock.sendPresenceUpdate("paused", senderId);
             return;
           }

@@ -322,6 +322,34 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.15 — Septiembre 2026
+
+#### 📌 CORRECCIÓN DE PORTAL SDH (DESCARGA FACTURA DIRECTA), ENRUTAMIENTO PRIORITARIO PREDIAL > CÉDULA Y GUÍA DE FORMULARIO
+
+**Requerimiento y Objetivos:**
+1. Corregir el enlace del portal de Hacienda entregado por JanIA: reemplazar el enlace que requería registro previo por el portal público directo de descarga de factura predial (`descargaFacturaVA`).
+2. Resolver el conflicto de enrutamiento en mensajes directos (DMs): evitar que una consulta como *"JanIA, predial: CHIP AAA0205AYFZ y cédula 40010967"* sea capturada por el módulo de antecedentes judiciales en lugar del servicio de impuesto predial.
+3. Especificar al usuario las instrucciones detalladas del formulario web de la Secretaría de Hacienda (tipo de impuesto, tipo y número de documento sin DV ni puntos, CHIP, CAPTCHA y descarga del PDF con código de barras).
+4. Determinar la viabilidad técnica para la descarga automatizada del PDF de predial directamente por JanIA en WhatsApp.
+
+**Causas Raíz:**
+- En `server/_core/whatsapp-match.ts`, el interceptor de verificación de cédula (`executeIdentityVerificationFromWhatsApp`) precedía a `executePredialAssistanceFromWhatsApp`. Al encontrar la palabra "cédula" o un número válido de 6 a 10 dígitos, la verificación policial capturaba el mensaje y finalizaba la ejecución sin evaluar el CHIP.
+- La URL previa `/cf/predial/liquidar?chip=...` no abría el formulario directo de descarga exprés disponible al público sin registro.
+
+**Solución aplicada:**
+- **Reordenamiento de Interceptores (`whatsapp-match.ts`)**:
+  - `executePredialAssistanceFromWhatsApp` se trasladó a la primera posición antes de la verificación de identidad tanto en el buffer general de DMs (línea 1037) como en el chat de directores (línea 2106).
+- **Portal Oficial y Guía de Descarga (`predialService.ts`)**:
+  - URL configurada a `https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`.
+  - Pasos exactos numerados del 1 al 7 para orientar al contribuyente.
+  - Alerta especial para NITs sobre el dígito de verificación y la vigencia del propietario a primero de enero de 2026.
+- **Viabilidad Automatización PDF**:
+  - Validada mediante Puppeteer/Playwright y resolución de reCAPTCHA v2 con 2Captcha. Planificada para v32.16.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | Push a GitHub y deploy VPS ✅
+
+---
+
 ### 🔖 v32.14 — Septiembre 2026
 
 #### 📌 HONESTIDAD ABSOLUTA EN PREDIAL: ELIMINACIÓN DE DATOS INVENTADOS, SANITIZACIÓN NIT/CC Y GUÍA CONTEXTUAL DE SERVICIOS

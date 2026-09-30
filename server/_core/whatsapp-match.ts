@@ -1034,6 +1034,18 @@ export class JaniaMatchBot {
       }
     }
 
+    // 🏛️ INTERCEPTOR PRIORITARIO DM: PREDIAL (va ANTES que cédula — si el texto menciona predial/chip, no debe caer en verificación de identidad)
+    try {
+      await this.sock.sendPresenceUpdate('composing', senderId);
+    } catch (_) {}
+    const predialCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
+    if (predialCheck.isPredialRequest && predialCheck.reportText) {
+      console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || 'General'})`);
+      await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+      await this.logToDb(senderId, 'janIA', predialCheck.reportText);
+      return;
+    }
+
     // 🛡️ INTERCEPTOR DIRECTO DM: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
     const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
     try {
@@ -1044,18 +1056,6 @@ export class JaniaMatchBot {
       console.log(`[JANIA-MATCH] [DM] Verificación de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
       await this.queuedSend(senderId, idCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
       await this.logToDb(senderId, 'janIA', idCheck.reportText);
-      return;
-    }
-
-    // 🏛️ INTERCEPTOR DIRECTO DM: ASISTENCIA PREDIAL BOGOTÁ (CHIP + CÉDULA)
-    try {
-      await this.sock.sendPresenceUpdate('composing', senderId);
-    } catch (_) {}
-    const predialCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
-    if (predialCheck.isPredialRequest && predialCheck.reportText) {
-      console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || 'General'})`);
-      await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
-      await this.logToDb(senderId, 'janIA', predialCheck.reportText);
       return;
     }
 
@@ -2103,6 +2103,16 @@ export class JaniaMatchBot {
     try {
       const realName = msg.pushName || `Asesor +${rawPhone}`;
 
+      // 🏛️ INTERCEPTOR ADMIN: ASISTENCIA PREDIAL BOGOTÁ — VA PRIMERO (prioridad sobre verificación de cédula)
+      const { executePredialAssistanceFromWhatsApp } = await import('./predialService');
+      const predialCheck = await executePredialAssistanceFromWhatsApp(bodyText, senderId, true);
+      if (predialCheck.isPredialRequest && predialCheck.reportText) {
+        await this.queuedSend(senderId, predialCheck.reportText, { quoted: msg, allowDirectMessage: true });
+        await this.logToDb(senderId, 'janIA', predialCheck.reportText);
+        await this.sock.sendPresenceUpdate('paused', senderId);
+        return;
+      }
+
       // 🛡️ INTERCEPTOR ADMIN: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
       const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
       try {
@@ -2112,16 +2122,6 @@ export class JaniaMatchBot {
       if (idCheck.isVerificationRequest && idCheck.reportText) {
         await this.queuedSend(senderId, idCheck.reportText, { quoted: msg, allowDirectMessage: true });
         await this.logToDb(senderId, 'janIA', idCheck.reportText);
-        await this.sock.sendPresenceUpdate('paused', senderId);
-        return;
-      }
-
-      // 🏛️ INTERCEPTOR ADMIN: ASISTENCIA PREDIAL BOGOTÁ (CHIP + CÉDULA)
-      const { executePredialAssistanceFromWhatsApp } = await import('./predialService');
-      const predialCheck = await executePredialAssistanceFromWhatsApp(bodyText, senderId, true);
-      if (predialCheck.isPredialRequest && predialCheck.reportText) {
-        await this.queuedSend(senderId, predialCheck.reportText, { quoted: msg, allowDirectMessage: true });
-        await this.logToDb(senderId, 'janIA', predialCheck.reportText);
         await this.sock.sendPresenceUpdate('paused', senderId);
         return;
       }

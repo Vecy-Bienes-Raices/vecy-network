@@ -7,6 +7,48 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.15 — 30 Septiembre 2026
+
+### Solicitud de Eduardo
+Eduardo reportó dos fallas críticas en JanIA tras pruebas deliberadas:
+1. **URL de Hacienda incorrecta**: JanIA entregaba un enlace que dirigía a una sección donde el usuario debía estar previamente registrado como propietario para poder hacer cualquier trámite, en lugar de dar el portal de descarga directa de la factura predial sin registro.
+2. **Confusión y routing erróneo (Predial capturado por Verificador de Cédula)**: Al enviar la instrucción: *"JanIA, predial: CHIP AAA0205AYFZ y cédula 40010967"*, JanIA ignoró la petición de predial y procedió a verificar los antecedentes judiciales y disciplinarios de la cédula en la Policía Nacional, ignorando el CHIP y la palabra clave "predial".
+3. **Manejo de NIT y Dígito de Verificación**: Cuando el predio está a nombre de una empresa (NIT), el portal de Hacienda exige el NIT sin dígito de verificación ni puntos, y si no coincide con el propietario a 1 de enero de 2026, Hacienda no encuentra el predio.
+4. **Pregunta Estratégica**: ¿Es factible que JanIA descargue directamente el PDF del portal de la Secretaría Distrital de Hacienda y se lo entregue al usuario en el chat de WhatsApp?
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **URL del portal SDH inexacta**:
+   - `https://nuevaoficinavirtual.shd.gov.co/bogota/cf/predial/liquidar?chip=...` requería sesión previa de usuario o no abría directamente el formulario de descarga exprés.
+   - El portal real, único y público que emite el PDF oficial de la factura predial con código de barras para pago sin necesidad de usuario ni clave es: `https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`.
+2. **Inversión de Prioridad en Routing de DMs (`whatsapp-match.ts`)**:
+   - En ambos flujos de DMs (línea ~1037 para usuarios en general y línea ~2106 `handlePrivateDmConversation` para directivos/administradores), el interceptor `executeIdentityVerificationFromWhatsApp` se ejecutaba ANTES que `executePredialAssistanceFromWhatsApp`.
+   - Debido a que el mensaje contenía la palabra "cédula" o un número de documento colombiano válido, la regex de verificación de identidad capturaba el documento inmediatamente, enviaba el comprobante policial y retornaba (`return;`), impidiendo que el interceptor de predial pudiera ser evaluado.
+3. **Instrucciones insuficientes para el formulario SDH**:
+   - El usuario recibía un mensaje genérico sin el paso a paso exacto de los campos que exige el portal web de la Secretaría de Hacienda (Tipo de impuesto: PREDIAL, Tipo de documento, Número sin puntos ni DV, CHIP, CAPTCHA y botón BUSCAR).
+
+### Acciones Ejecutadas
+1. **`server/_core/whatsapp-match.ts` — Inversión Prioritaria de Interceptores**:
+   - Se colocó `executePredialAssistanceFromWhatsApp` en primera posición tanto en el flujo de DMs entrantes (línea 1037) como en el manejador privado para administradores (línea 2106).
+   - Ahora, si el mensaje contiene términos de predial o el patrón CHIP, la consulta se atiende prioritariamente como predial sin importar si contiene una cédula o NIT.
+2. **`server/_core/predialService.ts` — URL Oficial Real y Guía Completa de Formulario**:
+   - URL actualizada a la oficial: `https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`.
+   - Inclusión de guía numérica paso a paso:
+     1. Abre el enlace
+     2. Tipo de impuesto: *PREDIAL*
+     3. Tipo de documento: *Cédula / NIT (sin DV)*
+     4. Número de documento: *docNumber*
+     5. CHIP: *chip*
+     6. CAPTCHA ("No soy un robot")
+     7. Clic en *BUSCAR* → Botón *"DESCARGA TU FACTURA"* con código de barras.
+   - Advertencia especial para NITs sobre el dígito de verificación y la fecha de corte catastral al 1 de enero de 2026.
+3. **Versión**: Incremento a `v32.15` en `shared/const.ts` y `32.15.0` en `package.json`.
+4. **Viabilidad Técnica de Automatización Total (Descarga de PDF por JanIA)**:
+   - Se evaluó la arquitectura del portal `descargaFacturaVA`. Cuenta con Google reCAPTCHA v2.
+   - Es 100% técnicamente viable integrando Puppeteer/Playwright en el VPS junto con el solver de 2Captcha (que ya está integrado y funcionando exitosamente en `identityVerificationService.ts` para la Policía Nacional).
+   - Se documenta el plan para implementarlo en la siguiente fase evolutiva (v32.16).
+
+---
+
 ## 📋 SESIÓN v32.14 — 30 Septiembre 2026
 
 ### Solicitud de Eduardo

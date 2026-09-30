@@ -434,23 +434,35 @@ export async function executePredialAssistanceFromWhatsApp(
   // → Dar el link OFICIAL REAL de la SDH. Sin inventar datos catastrales.
   // ────────────────────────────────────────────────────────────────────────
   if (chip && docNumber) {
-    // URL OFICIAL de la SDH Bogotá para consultar/descargar factura predial por CHIP:
-    const urlOficialSdh = `https://shd.gov.co/shd/liquidacion-predial?chip=${encodeURIComponent(chip)}`;
-    // URL directa del portal de liquidación (más simple y funcional):
-    const urlLiquidacion = `https://nuevaoficinavirtual.shd.gov.co/bogota/cf/predial/liquidar?chip=${encodeURIComponent(chip)}`;
+    // URL OFICIAL REAL de la SDH Bogotá — portal de descarga de factura predial:
+    // Este es el único portal que permite descargar el PDF con código de barras sin registro previo.
+    const urlOficialSdh = `https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`;
+
+    // Determinar el tipo de documento para las instrucciones del formulario
+    const tipoDocFormulario = detection.tipoDoc === 'NIT' ? 'NIT (sin dígito de verificación)' : (detection.tipoDoc === 'CE' ? 'Cédula de Extranjería' : 'Cédula de Ciudadanía');
+
+    // Advertencia especial si el documento es NIT (puede tener 9 o 10 dígitos después de limpiar)
+    const nitWarning = detection.tipoDoc === 'NIT'
+      ? `\n⚠️ *Nota sobre el NIT:* El portal de hacienda pide el NIT *sin el dígito de verificación*. Por ejemplo, si tu NIT es *${docNumber}-X*, debes ingresar solo *${docNumber}*. Si el resultado dice que no encuentra el predio, verifica que el NIT corresponda al propietario registrado a *1 de enero de 2026*.\n`
+      : '';
 
     const reportText =
       `🛡️ *PREDIAL BOGOTÁ — VECY BIENES RAÍCES* 🇨🇴\n\n` +
       `🏠 *CHIP del predio:* ${chip}\n` +
-      `🪪 *${docLabel} registrado:* ${docNumber}\n\n` +
-      `📋 *Nota importante:* Los datos catastrales exactos (dirección, avalúo, matrícula) residen en la base de datos oficial de la Secretaría de Hacienda. Para consultar tu factura predial oficial y liquidar tu impuesto:\n\n` +
-      `🔗 *Portal oficial SDH — Liquida y descarga tu predial aquí:*\n` +
-      `${urlLiquidacion}\n\n` +
-      `ℹ️ *Instrucciones:*\n` +
-      `1. Ingresa al enlace de arriba\n` +
-      `2. Digita el CHIP: *${chip}*\n` +
-      `3. Descarga tu factura oficial en PDF con código de barras para pago\n\n` +
-      `¿Necesitas ayuda con otro trámite? Estoy a tu disposición 🤝`;
+      `🪪 *${docLabel} registrado:* ${docNumber}\n` +
+      nitWarning + `\n` +
+      `🔗 *Portal oficial Secretaría de Hacienda — Descarga tu factura predial aquí:*\n` +
+      `${urlOficialSdh}\n\n` +
+      `📋 *Instrucciones para descargar tu PDF:*\n` +
+      `1️⃣ Abre el enlace de arriba\n` +
+      `2️⃣ En *"Tipo de impuesto"* selecciona: *PREDIAL*\n` +
+      `3️⃣ En *"Tipo de documento"* selecciona: *${tipoDocFormulario}*\n` +
+      `4️⃣ En *"Número de documento"* ingresa: *${docNumber}*\n` +
+      `5️⃣ En *"CHIP"* ingresa: *${chip}*\n` +
+      `6️⃣ Marca la casilla *"No soy un robot"* (CAPTCHA)\n` +
+      `7️⃣ Haz clic en *BUSCAR* → aparecerá el botón *"DESCARGA TU FACTURA"* ✅\n\n` +
+      `📄 Descarga el PDF, tiene el código de barras para pago en bancos y Efecty.\n\n` +
+      `¿Necesitas que te ayude con otro trámite? Estoy a tu disposición 🤝`;
 
     return {
       isPredialRequest: true,

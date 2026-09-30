@@ -165,7 +165,23 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.14 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.15 — Septiembre 2026
+
+### Novedades v32.15 (URL Oficial Real SDH descargaFacturaVA, Inversión Prioritaria de Routing Predial > Cédula e Instrucciones Detalladas de Formulario):
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **URL Oficial Real de la Secretaría Distrital de Hacienda**:
+     - Sustitución del enlace que requería registro por el portal oficial de descarga directa sin usuario: `https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`.
+  2. **Inversión de Prioridad en Routing de DMs (`whatsapp-match.ts`)**:
+     - Se corrigió la captura indebida del verificador de cédula cuando el usuario solicitaba predial con CHIP y cédula.
+     - `executePredialAssistanceFromWhatsApp` ahora tiene prioridad absoluta sobre la verificación de antecedentes judiciales tanto en DMs de clientes como de administradores.
+  3. **Guía Paso a Paso del Formulario SDH**:
+     - Se incorporó la lista numerada con los 7 pasos exactos requeridos por el portal de Hacienda (Tipo impuesto, Tipo doc, Número sin puntos, CHIP, CAPTCHA y botón BUSCAR).
+     - Advertencia sobre NITs (sin dígito de verificación) y titularidad al 1 de enero de 2026.
+  4. **Viabilidad de Automatización con Descarga de PDF**:
+     - Factibilidad 100% validada utilizando 2Captcha + Puppeteer/Playwright para la v32.16.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | Push a GitHub y deploy VPS ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.14 — Septiembre 2026
 
 ### Novedades v32.14 (Honestidad Absoluta en Predial, Sanitización NIT/CC y Guía Contextual de Servicios):
 - **Causas Raíz y Solución de Arquitectura**:
