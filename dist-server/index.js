@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.13";
+    VECY_VERSION = "v32.14";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -9978,40 +9978,100 @@ var init_whatsapp_utils = __esm({
 // server/_core/predialService.ts
 var predialService_exports = {};
 __export(predialService_exports, {
+  CEDULA_HELP_TEXT: () => CEDULA_HELP_TEXT,
+  PREDIAL_HELP_TEXT: () => PREDIAL_HELP_TEXT,
   clearPendingPredialSession: () => clearPendingPredialSession,
   executePredialAssistanceFromWhatsApp: () => executePredialAssistanceFromWhatsApp,
   extractChipAndCedulaForPredial: () => extractChipAndCedulaForPredial,
   getPendingPredialSession: () => getPendingPredialSession,
   hasPendingPredialSession: () => hasPendingPredialSession,
+  isServiceHelpRequest: () => isServiceHelpRequest,
   liquidarPredialEstimadoBogota: () => liquidarPredialEstimadoBogota,
-  resolveBogotaCadastralData: () => resolveBogotaCadastralData,
+  sanitizeDocumentNumber: () => sanitizeDocumentNumber,
   setPendingPredialSession: () => setPendingPredialSession
 });
+function sanitizeDocumentNumber(raw, isNit = false) {
+  if (!raw) return "";
+  let cleaned = raw.replace(/[\s.,]/g, "");
+  const dvMatch = cleaned.match(/^(\d+)-(\d)$/);
+  if (dvMatch) {
+    cleaned = dvMatch[1];
+  } else if (isNit) {
+    const digitsOnly = cleaned.replace(/\D/g, "");
+    if (digitsOnly.length > 10) {
+      cleaned = digitsOnly.slice(0, -1);
+    } else {
+      cleaned = digitsOnly;
+    }
+  } else {
+    cleaned = cleaned.replace(/\D/g, "");
+  }
+  return cleaned.replace(/\D/g, "");
+}
 function extractChipAndCedulaForPredial(text2) {
   if (!text2 || typeof text2 !== "string") return { found: false };
   const clean = text2.trim();
   const lower = clean.toLowerCase();
   const chipMatch = clean.match(/\b(AAA[0-9]{4}[A-Z0-9]{4})\b/i);
   let cedula;
-  const cedulaMatch = clean.match(/(?:c[ée]dula|cc|nit|doc(?:umento)?)\s*[:#]?\s*([0-9]{6,10})\b/i);
-  if (cedulaMatch && cedulaMatch[1]) {
-    cedula = cedulaMatch[1];
-  } else {
-    const anyNumberMatch = clean.match(/\b([0-9]{6,10})\b/);
-    if (anyNumberMatch && anyNumberMatch[1] && (!chipMatch || !chipMatch[1].includes(anyNumberMatch[1]))) {
-      cedula = anyNumberMatch[1];
+  let nit;
+  let tipoDoc = "CC";
+  const nitMatch = clean.match(/(?:nit|n\.i\.t\.?)\s*[:#]?\s*([\d.,\s\-]{7,20})/i);
+  if (nitMatch && nitMatch[1]) {
+    const rawNit = nitMatch[1].trim();
+    nit = sanitizeDocumentNumber(rawNit, true);
+    tipoDoc = "NIT";
+  }
+  const ceMatch = clean.match(/(?:c\.?e\.?|c[ée]dula\s+de\s+extranjer[ií]a)\s*[:#]?\s*([\d.,\s\-]{6,15})/i);
+  if (!nit && ceMatch && ceMatch[1]) {
+    cedula = sanitizeDocumentNumber(ceMatch[1].trim());
+    tipoDoc = "CE";
+  }
+  if (!nit && !cedula) {
+    const ccMatch = clean.match(/(?:c[ée]dula(?:\s+de\s+ciudadan[ií]a)?|cc|documento)\s*[:#]?\s*([\d.,\s\-]{6,15})/i);
+    if (ccMatch && ccMatch[1]) {
+      cedula = sanitizeDocumentNumber(ccMatch[1].trim());
+      tipoDoc = "CC";
+    }
+  }
+  if (!nit && !cedula) {
+    const numWithPuncMatch = clean.match(/\b([\d]{1,3}(?:[.,][\d]{3})+(?:-\d)?)\b/);
+    if (numWithPuncMatch && numWithPuncMatch[1]) {
+      const raw = numWithPuncMatch[1];
+      const hasNitKeyword = lower.includes("nit");
+      const cleaned = sanitizeDocumentNumber(raw, hasNitKeyword);
+      if (cleaned.length >= 6 && cleaned.length <= 12) {
+        if (hasNitKeyword) {
+          nit = cleaned;
+          tipoDoc = "NIT";
+        } else {
+          cedula = cleaned;
+        }
+      }
+    } else {
+      const anyNumberMatch = clean.match(/\b([0-9]{6,12})\b/);
+      if (anyNumberMatch && anyNumberMatch[1] && (!chipMatch || !chipMatch[0].includes(anyNumberMatch[1]))) {
+        const candidate = anyNumberMatch[1];
+        const hasNitKeyword = lower.includes("nit");
+        if (hasNitKeyword) {
+          nit = sanitizeDocumentNumber(candidate, true);
+          tipoDoc = "NIT";
+        } else {
+          cedula = candidate;
+        }
+      }
     }
   }
   let matricula;
   const matMatch1 = clean.match(/\b(50[CNS]-[0-9]{5,10})\b/i);
-  const matMatch2 = clean.match(/(?:matr[ií]cula(?:\s+inmobiliaria)?|folio|fmi)\s*[:#]?\s*([0-9A-Za-z-]+)/i);
+  const matMatch2 = clean.match(/(?:matr[íi]cula(?:\s+inmobiliaria)?|folio|fmi)\s*[:#]?\s*([0-9A-Za-z\-]+)/i);
   if (matMatch1 && matMatch1[1]) {
     matricula = matMatch1[1].toUpperCase();
   } else if (matMatch2 && matMatch2[1]) {
     matricula = matMatch2[1].toUpperCase();
   }
   let direccion;
-  const dirMatch1 = clean.match(/(?:direcci[oó]n(?:\s+del\s+predio)?|ubicaci[oó]n)\s*[:#]?\s*([A-Za-z0-9#\s\-\.,]+?)(?=(?:matr[ií]cula|aval[uú]o|chip|c[ée]dula|estrato|valor|$))/i);
+  const dirMatch1 = clean.match(/(?:direcci[oó]n(?:\s+del\s+predio)?|ubicaci[oó]n)\s*[:#]?\s*([A-Za-z0-9#\s\-\.,]+?)(?=(?:matr[íi]cula|aval[uú]o|chip|c[ée]dula|estrato|valor|$))/i);
   const dirMatch2 = clean.match(/\b((?:cll?e?|cra?|carrera|diagonal|diag|transversal|transv?|av(?:enida)?|calle)\s+[0-9]+[A-Za-z]?\s*#?\s*[0-9]+[A-Za-z]?\s*[-–]\s*[0-9]+)\b/i);
   if (dirMatch1 && dirMatch1[1] && dirMatch1[1].trim().length >= 5) {
     direccion = dirMatch1[1].trim();
@@ -10042,18 +10102,20 @@ function extractChipAndCedulaForPredial(text2) {
       found: true,
       chip: chipMatch[1].toUpperCase(),
       cedula,
-      tipoDoc: "CC",
+      nit,
+      tipoDoc,
       matricula,
       direccion,
       estrato,
       avaluoCatastral
     };
   }
-  if (hasKeyword && (cedula || matricula || direccion)) {
+  if (hasKeyword && (cedula || nit || matricula || direccion)) {
     return {
       found: true,
       cedula,
-      tipoDoc: "CC",
+      nit,
+      tipoDoc,
       matricula,
       direccion,
       estrato,
@@ -10133,57 +10195,30 @@ function clearPendingPredialSession(senderId) {
   if (!senderId) return;
   pendingPredialSessions.delete(senderId);
 }
-function resolveBogotaCadastralData(chip) {
-  let hash = 0;
-  const upper = chip.trim().toUpperCase();
-  for (let i = 0; i < upper.length; i++) {
-    hash = (hash << 5) - hash + upper.charCodeAt(i);
-    hash |= 0;
-  }
-  const posHash = Math.abs(hash);
-  const sectoresBogota = [
-    { dir: "Calle 142 # 18A-32 Apto 402", estrato: 4, baseAvaluo: 5e8, zona: "50N" },
-    { dir: "Carrera 15 # 118-45 Of. 301", estrato: 5, baseAvaluo: 62e7, zona: "50N" },
-    { dir: "Calle 127 # 7B-25 Torre 2 Apto 501", estrato: 5, baseAvaluo: 74e7, zona: "50N" },
-    { dir: "Calle 93B # 13-42 Apto 302", estrato: 6, baseAvaluo: 115e7, zona: "50N" },
-    { dir: "Carrera 7 # 67-52 Apto 601", estrato: 5, baseAvaluo: 58e7, zona: "50C" },
-    { dir: "Calle 53 # 24-18 Apto 201", estrato: 4, baseAvaluo: 39e7, zona: "50C" },
-    { dir: "Carrera 24 # 39A-15 Casa", estrato: 4, baseAvaluo: 51e7, zona: "50C" },
-    { dir: "Calle 26 # 68C-61 Torre 1 Apto 804", estrato: 4, baseAvaluo: 43e7, zona: "50C" },
-    { dir: "Carrera 58 # 137B-20 Casa 12", estrato: 4, baseAvaluo: 56e7, zona: "50N" },
-    { dir: "Calle 152 # 11-40 Apto 703", estrato: 4, baseAvaluo: 47e7, zona: "50N" },
-    { dir: "Carrera 72 # 53-40 Apto 401", estrato: 3, baseAvaluo: 285e6, zona: "50C" },
-    { dir: "Calle 8 Sur # 31D-15 Casa", estrato: 3, baseAvaluo: 24e7, zona: "50S" }
-  ];
-  const sectorIndex = posHash % sectoresBogota.length;
-  const sector = sectoresBogota[sectorIndex];
-  const matNum = 2e6 + posHash % 899999;
-  const matricula = `${sector.zona}-${matNum}`;
-  return {
-    estrato: sector.estrato,
-    matricula,
-    direccion: sector.dir,
-    avaluoCatastral: sector.baseAvaluo
-  };
-}
 async function executePredialAssistanceFromWhatsApp(text2, senderId, isPrivateDm) {
   let detection = extractChipAndCedulaForPredial(text2);
   if (!detection.chip && senderId && hasPendingPredialSession(senderId)) {
     const pending = getPendingPredialSession(senderId);
     if (pending) {
-      const cedMatch = text2.match(/\b([0-9]{6,10})\b/);
-      if (cedMatch && cedMatch[1]) {
-        detection = {
-          found: true,
-          chip: pending.chip,
-          cedula: cedMatch[1],
-          tipoDoc: "CC",
-          matricula: pending.matricula,
-          direccion: pending.direccion,
-          estrato: pending.estrato,
-          avaluoCatastral: pending.avaluoCatastral
-        };
-        clearPendingPredialSession(senderId);
+      const rawNumMatch = text2.match(/([\d]{1,3}(?:[.,][\d]{3})+(?:-\d)?|\b\d{6,12}\b)/);
+      if (rawNumMatch && rawNumMatch[1]) {
+        const lower = text2.toLowerCase();
+        const isNitContext = lower.includes("nit") || lower.includes("n.i.t");
+        const cleanedNum = sanitizeDocumentNumber(rawNumMatch[1], isNitContext);
+        if (cleanedNum.length >= 6) {
+          detection = {
+            found: true,
+            chip: pending.chip,
+            cedula: isNitContext ? void 0 : cleanedNum,
+            nit: isNitContext ? cleanedNum : void 0,
+            tipoDoc: isNitContext ? "NIT" : "CC",
+            matricula: pending.matricula,
+            direccion: pending.direccion,
+            estrato: pending.estrato,
+            avaluoCatastral: pending.avaluoCatastral
+          };
+          clearPendingPredialSession(senderId);
+        }
       }
     }
   }
@@ -10191,68 +10226,187 @@ async function executePredialAssistanceFromWhatsApp(text2, senderId, isPrivateDm
     return { isPredialRequest: false };
   }
   const chip = detection.chip;
-  const cedula = detection.cedula;
-  if (chip && !cedula && !detection.estrato && !detection.avaluoCatastral) {
+  const docNumber = detection.nit || detection.cedula;
+  const docLabel = detection.tipoDoc === "NIT" ? "NIT" : detection.tipoDoc === "CE" ? "C\xE9dula de Extranjer\xEDa" : "C\xE9dula";
+  if (chip && !docNumber && !detection.estrato && !detection.avaluoCatastral) {
     if (senderId) {
       setPendingPredialSession(senderId, { chip });
     }
     const reportText2 = `\u{1F6E1}\uFE0F *LIQUIDACI\xD3N PREDIAL \u2014 VECY BIENES RA\xCDCES - BOGOT\xC1* \u{1F1E8}\u{1F1F4}
 
-\u{1F3E0} *Predio CHIP:* ${chip}
-\u{1F510} *Para conectarme a la Secretar\xEDa de Hacienda y extraer factura predial en PDF:*
-\u{1F449} *Escr\xEDbeme por favor la C\xE9dula o NIT del propietario*`;
+\u{1F3E0} *Predio CHIP detectado:* ${chip}
+
+Para acceder al portal oficial de la Secretar\xEDa de Hacienda y entregarte el enlace de descarga de tu factura predial en PDF, necesito un dato m\xE1s:
+
+\u{1F449} *\xBFCu\xE1l es la C\xE9dula o NIT del propietario del predio?*
+
+_(Puedes escribirlo con o sin puntos, comas o guiones \u2014 yo lo proceso autom\xE1ticamente)_ \u2705`;
     return {
       isPredialRequest: true,
       chip,
       reportText: reportText2
     };
   }
-  if (chip) {
-    const resolved = resolveBogotaCadastralData(chip);
-    const estrato = detection.estrato || resolved.estrato;
-    const avaluo = detection.avaluoCatastral || resolved.avaluoCatastral;
-    const matricula = detection.matricula || resolved.matricula;
-    const direccion = detection.direccion || resolved.direccion;
-    const liquidacion = liquidarPredialEstimadoBogota(avaluo, estrato, true);
-    const avaluoFormatted = avaluo.toLocaleString("es-CO");
-    const valorConDescuentoFormatted = liquidacion.impuestoConDescuento.toLocaleString("es-CO");
-    const downloadSection = isPrivateDm ? `\u{1F4C4} *Factura oficial generada con c\xF3digo de barras:*
-https://nuevaoficinavirtual.shd.gov.co/bogota/cf/pagos/factura-${chip}.pdf` : `\u{1F4C4} *Para descargar tu factura oficial en PDF en privado, toca aqu\xED:* wa.me/573192919978?text=Factura+${chip}`;
-    const reportText2 = `\u{1F6E1}\uFE0F *LIQUIDACI\xD3N PREDIAL \u2014 VECY BIENES RA\xCDCES - BOGOT\xC1* \u{1F1E8}\u{1F1F4}
+  if (chip && docNumber) {
+    const urlOficialSdh = `https://shd.gov.co/shd/liquidacion-predial?chip=${encodeURIComponent(chip)}`;
+    const urlLiquidacion = `https://nuevaoficinavirtual.shd.gov.co/bogota/cf/predial/liquidar?chip=${encodeURIComponent(chip)}`;
+    const reportText2 = `\u{1F6E1}\uFE0F *PREDIAL BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
-\u{1F3E0} *Predio CHIP:* ${chip} (Estrato ${estrato})
-\u{1F4D1} *Matr\xEDcula inmobiliaria:* ${matricula}
-\u{1F4CD} *Direcci\xF3n del predio:* ${direccion}
-\u{1F3DB}\uFE0F *Aval\xFAo Catastral:* $${avaluoFormatted} COP
-\u{1F4B0} *Valor estimado con 10% pronto pago:* $${valorConDescuentoFormatted} COP
+\u{1F3E0} *CHIP del predio:* ${chip}
+\u{1FAAA} *${docLabel} registrado:* ${docNumber}
 
-` + downloadSection;
+\u{1F4CB} *Nota importante:* Los datos catastrales exactos (direcci\xF3n, aval\xFAo, matr\xEDcula) residen en la base de datos oficial de la Secretar\xEDa de Hacienda. Para consultar tu factura predial oficial y liquidar tu impuesto:
+
+\u{1F517} *Portal oficial SDH \u2014 Liquida y descarga tu predial aqu\xED:*
+${urlLiquidacion}
+
+\u2139\uFE0F *Instrucciones:*
+1. Ingresa al enlace de arriba
+2. Digita el CHIP: *${chip}*
+3. Descarga tu factura oficial en PDF con c\xF3digo de barras para pago
+
+\xBFNecesitas ayuda con otro tr\xE1mite? Estoy a tu disposici\xF3n \u{1F91D}`;
     return {
       isPredialRequest: true,
       chip,
-      cedula,
+      cedula: docNumber,
       reportText: reportText2
     };
   }
-  const reportText = `\u{1F6E1}\uFE0F *LIQUIDACI\xD3N PREDIAL \u2014 VECY BIENES RA\xCDCES - BOGOT\xC1* \u{1F1E8}\u{1F1F4}
+  if (!chip && detection.avaluoCatastral && detection.avaluoCatastral > 0) {
+    const estrato = detection.estrato || 4;
+    const liquidacion = liquidarPredialEstimadoBogota(detection.avaluoCatastral, estrato, true);
+    const avaluoFormatted = detection.avaluoCatastral.toLocaleString("es-CO");
+    const valorPleno = liquidacion.impuestoPleno.toLocaleString("es-CO");
+    const valorDescuento = liquidacion.impuestoConDescuento.toLocaleString("es-CO");
+    const reportText2 = `\u{1F6E1}\uFE0F *ESTIMACI\xD3N PREDIAL \u2014 VECY BIENES RA\xCDCES - BOGOT\xC1* \u{1F1E8}\u{1F1F4}
 
-Para liquidar tu Impuesto Predial y entregarte el reporte oficial con su factura en PDF, solo requiero el c\xF3digo CHIP del inmueble:
+\u26A0\uFE0F *Este es un c\xE1lculo ESTIMADO* basado en los datos que me proporcionaste. El valor oficial puede variar.
 
-\u{1F3E0} *Ejemplo:* Env\xEDame *"JanIA, predial CHIP AAA0123ABCD"*
+\u{1F3DB}\uFE0F *Aval\xFAo Catastral informado:* $${avaluoFormatted} COP
+\u{1F3E2} *Estrato aplicado:* ${estrato}
+\u{1F4CA} *Tarifa por mil:* ${liquidacion.tarifaPorMil}\u2030
 
-*(Opcionalmente puedes incluir matr\xEDcula, direcci\xF3n o aval\xFAo para un c\xE1lculo exacto)*.
+\u{1F4B0} *Impuesto Predial estimado:* $${valorPleno} COP
+\u2705 *Con 10% descuento pronto pago:* $${valorDescuento} COP
 
-\xA1Te entregar\xE9 la liquidaci\xF3n y el acceso a tu factura oficial al instante! \u{1F91D}\u2728`;
+\u{1F4C4} *Para obtener tu factura oficial con c\xF3digo de barras real, ingresa al portal oficial:*
+\u{1F517} https://nuevaoficinavirtual.shd.gov.co/bogota/cf/predial/liquidar
+
+_(Necesitar\xE1s el c\xF3digo CHIP de tu inmueble \u2014 lo encuentras en facturas anteriores)_`;
+    return {
+      isPredialRequest: true,
+      reportText: reportText2
+    };
+  }
+  const reportText = `\u{1F6E1}\uFE0F *IMPUESTO PREDIAL BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+Para entregarte el enlace oficial de tu factura predial, necesito el *c\xF3digo CHIP* del inmueble:
+
+\u{1F4DD} *Env\xEDame en privado:*
+_JanIA, predial: CHIP AAA0123ABCD y NIT 8600030201_
+
+\u{1F3E0} *\xBFD\xF3nde encuentro el CHIP?* En cualquier factura de predial anterior o en el recibo del impuesto.
+
+\u2705 *Tambi\xE9n puedes enviar:*
+\u2022 CC con puntos \u2714 (ej: 19.386.159)
+\u2022 NIT con d\xEDgito verificador \u2714 (ej: 860.030.201-2)
+\u2022 C\xE9dula de Extranjer\xEDa \u2714
+
+\xA1Te gu\xEDo al instante! \u{1F91D}`;
   return {
     isPredialRequest: true,
     reportText
   };
 }
-var pendingPredialSessions;
+function isServiceHelpRequest(text2) {
+  if (!text2 || typeof text2 !== "string") return null;
+  const lower = text2.toLowerCase().trim();
+  const helpWords = [
+    "c\xF3mo",
+    "como",
+    "qu\xE9 debo",
+    "que debo",
+    "c\xF3mo hago",
+    "como hago",
+    "qu\xE9 datos",
+    "que datos",
+    "qu\xE9 necesito",
+    "que necesito",
+    "c\xF3mo pido",
+    "como pido",
+    "no s\xE9",
+    "no se",
+    "ayuda",
+    "instrucciones",
+    "tutorial",
+    "qu\xE9 env\xEDo",
+    "que envio",
+    "c\xF3mo solicito",
+    "como solicito",
+    "c\xF3mo se pide",
+    "como se pide",
+    "no entend\xED",
+    "no entendi",
+    "no entiendo",
+    "expl\xEDcame",
+    "explicame"
+  ];
+  const predialWords = ["predial", "impuesto predial", "factura predial", "chip", "liquidar"];
+  const cedulaWords = ["c\xE9dula", "cedula", "verificar c\xE9dula", "verificar cedula", "verificaci\xF3n", "verificacion", "identidad", "documento"];
+  const hasHelp = helpWords.some((w) => lower.includes(w));
+  const hasPredial = predialWords.some((w) => lower.includes(w));
+  const hasCedula = cedulaWords.some((w) => lower.includes(w));
+  if (hasHelp && hasPredial) return "predial";
+  if (hasHelp && hasCedula) return "cedula";
+  if ((lower.includes("?") || lower.startsWith("y") || lower.startsWith("\xBF")) && hasPredial) return "predial";
+  if ((lower.includes("?") || lower.startsWith("y") || lower.startsWith("\xBF")) && hasCedula) return "cedula";
+  return null;
+}
+var pendingPredialSessions, PREDIAL_HELP_TEXT, CEDULA_HELP_TEXT;
 var init_predialService = __esm({
   "server/_core/predialService.ts"() {
     "use strict";
     pendingPredialSessions = /* @__PURE__ */ new Map();
+    PREDIAL_HELP_TEXT = `\u{1F3DB}\uFE0F *\xBFC\xF3mo solicitar tu Predial a JanIA?* Es muy sencillo:
+
+1\uFE0F\u20E3 *Env\xEDame en privado* el CHIP del inmueble y el NIT o CC del propietario en un solo mensaje:
+
+\u{1F4DD} *Ejemplo:*
+_JanIA, predial: CHIP AAA0205AYFZ y NIT 8600030201_
+
+\u2139\uFE0F *\xBFD\xF3nde encuentro el CHIP?* En cualquier factura de predial anterior o en el recibo del impuesto.
+
+\u2705 *JanIA acepta:*
+\u2022 CC con o sin puntos (ej: 19.386.159 o 19386159)
+\u2022 NIT con o sin d\xEDgito de verificaci\xF3n (ej: 860.030.201-2 o 8600030201)
+\u2022 C\xE9dula de Extranjer\xEDa (CE)
+
+\u{1F4F2} *Chat directo con JanIA:* https://vecy-network.vercel.app/jania
+
+\u{1F4E2} *S\xEDguenos para m\xE1s herramientas gratuitas:*
+\u{1F449} https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
+    CEDULA_HELP_TEXT = `\u{1FAAA} *\xBFC\xF3mo verificar un documento de identidad con JanIA?* Facil\xEDsimo:
+
+1\uFE0F\u20E3 *Env\xEDame en privado* el tipo y n\xFAmero de documento en un solo mensaje:
+
+\u{1F4DD} *Ejemplos:*
+\u2022 _JanIA, verificar c\xE9dula: 19.386.159_ \u2705
+\u2022 _JanIA, verificar c\xE9dula: 1018456789_ \u2705
+\u2022 _JanIA, verificar CE: 654321_ \u2705 (C\xE9dula de Extranjer\xEDa)
+\u2022 _JanIA, verificar pasaporte: AB123456_ \u2705
+
+\u{1F4CC} *Nota:* Puedes escribir el n\xFAmero con o sin puntos o guiones \u2014 JanIA lo procesa autom\xE1ticamente.
+
+\u{1F50D} *\xBFQu\xE9 informaci\xF3n recibir\xE1s?*
+Nombre completo oficial de la persona registrada en la Polic\xEDa Nacional de Colombia.
+
+\u{1F6E1}\uFE0F *Este servicio es 100% gratuito* y consulta directamente la base oficial de la Polic\xEDa Nacional.
+
+\u{1F4F2} *Chat directo con JanIA:* https://vecy-network.vercel.app/jania
+
+\u{1F4E2} *S\xEDguenos para m\xE1s herramientas gratuitas:*
+\u{1F449} https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
   }
 });
 
@@ -11036,6 +11190,28 @@ ${quotedNote}` : quotedNote;
           await this.logToDb(senderId, "janIA", predialCheck.reportText);
           return;
         }
+        const { isServiceHelpRequest: isServiceHelpRequest2, PREDIAL_HELP_TEXT: PREDIAL_HELP_TEXT2, CEDULA_HELP_TEXT: CEDULA_HELP_TEXT2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+        const helpType = isServiceHelpRequest2(body);
+        if (helpType === "predial") {
+          try {
+            await this.sock.sendPresenceUpdate("composing", senderId);
+          } catch (_) {
+          }
+          console.log(`[JANIA-MATCH] [DM] Gu\xEDa de servicio PREDIAL enviada a ${senderId}`);
+          await this.queuedSend(senderId, PREDIAL_HELP_TEXT2, { quoted: mainMsg, allowDirectMessage: true });
+          await this.logToDb(senderId, "janIA", PREDIAL_HELP_TEXT2);
+          return;
+        }
+        if (helpType === "cedula") {
+          try {
+            await this.sock.sendPresenceUpdate("composing", senderId);
+          } catch (_) {
+          }
+          console.log(`[JANIA-MATCH] [DM] Gu\xEDa de servicio C\xC9DULA enviada a ${senderId}`);
+          await this.queuedSend(senderId, CEDULA_HELP_TEXT2, { quoted: mainMsg, allowDirectMessage: true });
+          await this.logToDb(senderId, "janIA", CEDULA_HELP_TEXT2);
+          return;
+        }
         return;
       }
       // --- REDIRECCIÓN DE CHATS PRIVADOS ---
@@ -11702,6 +11878,22 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           }
           await this.logToDb(resolvedSenderId, "user", fullText || (pdfMsg ? "[documento-pdf]" : "[imagen]"));
           const { sendAdminNotification: sendAdminNotification2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+          if ((chatId === "120363417740040773@g.us" || chatId === "120363403507276533@g.us") && fullText && fullText.trim().length > 0) {
+            const { isServiceHelpRequest: isHelpReq, PREDIAL_HELP_TEXT: predialHelp, CEDULA_HELP_TEXT: cedulaHelp } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+            const helpKind = isHelpReq(fullText);
+            if (helpKind === "predial") {
+              console.log(`[JANIA-MATCH] [GRUPO] Gu\xEDa PREDIAL enviada a ${resolvedSenderId} en ${chatId}`);
+              await this.queuedSend(chatId, predialHelp, { allowGroupMessage: true });
+              await this.logToDb(resolvedSenderId, "janIA", predialHelp);
+              return;
+            }
+            if (helpKind === "cedula") {
+              console.log(`[JANIA-MATCH] [GRUPO] Gu\xEDa C\xC9DULA enviada a ${resolvedSenderId} en ${chatId}`);
+              await this.queuedSend(chatId, cedulaHelp, { allowGroupMessage: true });
+              await this.logToDb(resolvedSenderId, "janIA", cedulaHelp);
+              return;
+            }
+          }
           let result;
           if (chatId === "120363417740040773@g.us") {
             result = await processConsultingMessage2(

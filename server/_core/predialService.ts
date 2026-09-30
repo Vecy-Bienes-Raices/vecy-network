@@ -3,13 +3,19 @@
  * Integración con la Secretaría Distrital de Hacienda (SDH) e IDECA / Catastro Distrital.
  * Permite a los asesores y clientes consultar el CHIP, liquidar el impuesto predial y obtener
  * las instrucciones de descarga oficial de la factura predial.
+ *
+ * REGLA DOCTRINAL v32.14:
+ * - JanIA JAMÁS inventa datos catastrales (dirección, matrícula, avalúo, links de factura).
+ * - Si no puede consultar o resolver un dato, lo dice honestamente y guía al usuario.
+ * - Los links de descarga SIEMPRE apuntan al portal oficial real de la SDH.
  */
 
 export interface PredialDetectionResult {
   found: boolean;
   chip?: string;
   cedula?: string;
-  tipoDoc?: string;
+  nit?: string;
+  tipoDoc?: 'CC' | 'NIT' | 'CE';
   matricula?: string;
   direccion?: string;
   avaluoCatastral?: number;
@@ -23,9 +29,48 @@ export interface PredialReportResult {
   reportText?: string;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SANITIZACIÓN DE DOCUMENTOS — REGLA DOCTRINAL v32.14
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Detecta si un mensaje textual contiene un CHIP de Bogotá o solicita el impuesto predial,
- * extrayendo además matrícula inmobiliaria, dirección, estrato y avalúo si están presentes.
+ * Limpia un número de documento (CC, NIT, CE) eliminando puntos, comas, espacios y guiones.
+ * Para NITs: elimina el dígito de verificación (el dígito tras el guión final).
+ * Ejemplos:
+ *   "19.386.159"      → "19386159"
+ *   "8600030201-2"    → "8600030201"
+ *   "860.003.020-1"   → "860003020"  (NIT sin DV)
+ *   "8.600.030.201"   → "8600030201"
+ */
+export function sanitizeDocumentNumber(raw: string, isNit = false): string {
+  if (!raw) return '';
+  // Primero eliminar todo excepto dígitos y guión (para detectar DV al final)
+  let cleaned = raw.replace(/[\s.,]/g, ''); // quitar puntos, comas, espacios
+  // Si es NIT o tiene guión + 1 dígito al final → eliminar dígito verificador
+  // Patrón: dígitos-dígito (guión seguido de 1 dígito al final)
+  const dvMatch = cleaned.match(/^(\d+)-(\d)$/);
+  if (dvMatch) {
+    // Tiene dígito verificador explícito con guión → quitar el dígito verificador
+    cleaned = dvMatch[1];
+  } else if (isNit) {
+    // NIT sin guión explícito: si tiene 11 dígitos, el último puede ser el DV
+    // NITs colombianos tienen 9-10 dígitos sin DV (con DV serían 10-11)
+    // Estrategia: si tiene >10 dígitos, descartar el último como posible DV
+    const digitsOnly = cleaned.replace(/\D/g, '');
+    if (digitsOnly.length > 10) {
+      cleaned = digitsOnly.slice(0, -1);
+    } else {
+      cleaned = digitsOnly;
+    }
+  } else {
+    cleaned = cleaned.replace(/\D/g, '');
+  }
+  return cleaned.replace(/\D/g, '');
+}
+
+/**
+ * Detecta si un texto contiene una solicitud de predial,
+ * extrayendo CHIP, cédula/NIT (con sanitización), matrícula, dirección, estrato y avalúo si los hay.
  */
 export function extractChipAndCedulaForPredial(text: string): PredialDetectionResult {
   if (!text || typeof text !== 'string') return { found: false };
@@ -36,22 +81,70 @@ export function extractChipAndCedulaForPredial(text: string): PredialDetectionRe
   // 1. Buscar código CHIP de Bogotá: "AAA" + 4 dígitos + 4 caracteres alfanuméricos
   const chipMatch = clean.match(/\b(AAA[0-9]{4}[A-Z0-9]{4})\b/i);
 
-  // 2. Buscar cédula o documento asociado en el mensaje
+  // 2. Detectar tipo de documento y extraer el número (con puntos, comas, dígito verificador)
   let cedula: string | undefined;
-  const cedulaMatch = clean.match(/(?:c[ée]dula|cc|nit|doc(?:umento)?)\s*[:#]?\s*([0-9]{6,10})\b/i);
-  if (cedulaMatch && cedulaMatch[1]) {
-    cedula = cedulaMatch[1];
-  } else {
-    const anyNumberMatch = clean.match(/\b([0-9]{6,10})\b/);
-    if (anyNumberMatch && anyNumberMatch[1] && (!chipMatch || !chipMatch[1].includes(anyNumberMatch[1]))) {
-      cedula = anyNumberMatch[1];
+  let nit: string | undefined;
+  let tipoDoc: 'CC' | 'NIT' | 'CE' = 'CC';
+
+  // Buscar NIT primero (incluyendo con puntos, guiones y DV)
+  const nitMatch = clean.match(/(?:nit|n\.i\.t\.?)\s*[:#]?\s*([\d.,\s\-]{7,20})/i);
+  if (nitMatch && nitMatch[1]) {
+    const rawNit = nitMatch[1].trim();
+    nit = sanitizeDocumentNumber(rawNit, true);
+    tipoDoc = 'NIT';
+  }
+
+  // Buscar cédula de extranjería
+  const ceMatch = clean.match(/(?:c\.?e\.?|c[ée]dula\s+de\s+extranjer[ií]a)\s*[:#]?\s*([\d.,\s\-]{6,15})/i);
+  if (!nit && ceMatch && ceMatch[1]) {
+    cedula = sanitizeDocumentNumber(ceMatch[1].trim());
+    tipoDoc = 'CE';
+  }
+
+  // Buscar CC o cédula genérica
+  if (!nit && !cedula) {
+    const ccMatch = clean.match(/(?:c[ée]dula(?:\s+de\s+ciudadan[ií]a)?|cc|documento)\s*[:#]?\s*([\d.,\s\-]{6,15})/i);
+    if (ccMatch && ccMatch[1]) {
+      cedula = sanitizeDocumentNumber(ccMatch[1].trim());
+      tipoDoc = 'CC';
     }
   }
 
-  // 3. Buscar Matrícula Inmobiliaria (ej: 50C-1234567, 50N-1234567, 50S-1234567 o matrícula ...)
+  // Fallback: cualquier número de 6-12 dígitos que no sea el CHIP
+  if (!nit && !cedula) {
+    // Buscar número con posibles puntos/comas que no sea el CHIP
+    const numWithPuncMatch = clean.match(/\b([\d]{1,3}(?:[.,][\d]{3})+(?:-\d)?)\b/);
+    if (numWithPuncMatch && numWithPuncMatch[1]) {
+      const raw = numWithPuncMatch[1];
+      const hasNitKeyword = lower.includes('nit');
+      const cleaned = sanitizeDocumentNumber(raw, hasNitKeyword);
+      if (cleaned.length >= 6 && cleaned.length <= 12) {
+        if (hasNitKeyword) {
+          nit = cleaned;
+          tipoDoc = 'NIT';
+        } else {
+          cedula = cleaned;
+        }
+      }
+    } else {
+      const anyNumberMatch = clean.match(/\b([0-9]{6,12})\b/);
+      if (anyNumberMatch && anyNumberMatch[1] && (!chipMatch || !chipMatch[0].includes(anyNumberMatch[1]))) {
+        const candidate = anyNumberMatch[1];
+        const hasNitKeyword = lower.includes('nit');
+        if (hasNitKeyword) {
+          nit = sanitizeDocumentNumber(candidate, true);
+          tipoDoc = 'NIT';
+        } else {
+          cedula = candidate;
+        }
+      }
+    }
+  }
+
+  // 3. Buscar Matrícula Inmobiliaria
   let matricula: string | undefined;
   const matMatch1 = clean.match(/\b(50[CNS]-[0-9]{5,10})\b/i);
-  const matMatch2 = clean.match(/(?:matr[ií]cula(?:\s+inmobiliaria)?|folio|fmi)\s*[:#]?\s*([0-9A-Za-z-]+)/i);
+  const matMatch2 = clean.match(/(?:matr[íi]cula(?:\s+inmobiliaria)?|folio|fmi)\s*[:#]?\s*([0-9A-Za-z\-]+)/i);
   if (matMatch1 && matMatch1[1]) {
     matricula = matMatch1[1].toUpperCase();
   } else if (matMatch2 && matMatch2[1]) {
@@ -60,7 +153,7 @@ export function extractChipAndCedulaForPredial(text: string): PredialDetectionRe
 
   // 4. Buscar Dirección del predio
   let direccion: string | undefined;
-  const dirMatch1 = clean.match(/(?:direcci[oó]n(?:\s+del\s+predio)?|ubicaci[oó]n)\s*[:#]?\s*([A-Za-z0-9#\s\-\.,]+?)(?=(?:matr[ií]cula|aval[uú]o|chip|c[ée]dula|estrato|valor|$))/i);
+  const dirMatch1 = clean.match(/(?:direcci[oó]n(?:\s+del\s+predio)?|ubicaci[oó]n)\s*[:#]?\s*([A-Za-z0-9#\s\-\.,]+?)(?=(?:matr[íi]cula|aval[uú]o|chip|c[ée]dula|estrato|valor|$))/i);
   const dirMatch2 = clean.match(/\b((?:cll?e?|cra?|carrera|diagonal|diag|transversal|transv?|av(?:enida)?|calle)\s+[0-9]+[A-Za-z]?\s*#?\s*[0-9]+[A-Za-z]?\s*[-–]\s*[0-9]+)\b/i);
   if (dirMatch1 && dirMatch1[1] && dirMatch1[1].trim().length >= 5) {
     direccion = dirMatch1[1].trim();
@@ -98,7 +191,8 @@ export function extractChipAndCedulaForPredial(text: string): PredialDetectionRe
       found: true,
       chip: chipMatch[1].toUpperCase(),
       cedula,
-      tipoDoc: 'CC',
+      nit,
+      tipoDoc,
       matricula,
       direccion,
       estrato,
@@ -106,11 +200,12 @@ export function extractChipAndCedulaForPredial(text: string): PredialDetectionRe
     };
   }
 
-  if (hasKeyword && (cedula || matricula || direccion)) {
+  if (hasKeyword && (cedula || nit || matricula || direccion)) {
     return {
       found: true,
       cedula,
-      tipoDoc: 'CC',
+      nit,
+      tipoDoc,
       matricula,
       direccion,
       estrato,
@@ -124,10 +219,11 @@ export function extractChipAndCedulaForPredial(text: string): PredialDetectionRe
 /**
  * Calcula la liquidación estimada del Impuesto Predial Unificado de Bogotá
  * según el Estatuto Tributario Distrital (Acuerdos 648 de 2016 y 780 de 2020).
+ * ⚠️ Solo se usa cuando el usuario proporciona el avalúo catastral directamente.
  */
 export function liquidarPredialEstimadoBogota(avaluoCatastral: number, estrato: number = 4, esResidencial: boolean = true) {
   const avaluo = Math.max(0, avaluoCatastral);
-  
+
   // Tabla progresiva de tarifas por milaje (Bogotá SDH)
   let tarifaPorMil = 6.5;
   if (!esResidencial) {
@@ -170,9 +266,9 @@ export function liquidarPredialEstimadoBogota(avaluoCatastral: number, estrato: 
   };
 }
 
-// ---------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 // GESTIÓN DE SESIONES PENDIENTES DE CONSULTA PREDIAL
-// ---------------------------------------------------------
+// ─────────────────────────────────────────────────────────────────────────────
 interface PendingPredialSession {
   chip: string;
   matricula?: string;
@@ -219,56 +315,52 @@ export function clearPendingPredialSession(senderId: string) {
   pendingPredialSessions.delete(senderId);
 }
 
-/**
- * Resuelve y extrae determinísticamente los datos catastrales del predio a partir de su CHIP
- * (utilizando la base catastral distrital IDECA / SDH) para garantizar que jamás aparezcan
- * leyendas genéricas ("Registrada en..."), sino datos inmobiliarios verosímiles y consistentes.
- */
-export function resolveBogotaCadastralData(chip: string): {
-  estrato: number;
-  matricula: string;
-  direccion: string;
-  avaluoCatastral: number;
-} {
-  let hash = 0;
-  const upper = chip.trim().toUpperCase();
-  for (let i = 0; i < upper.length; i++) {
-    hash = (hash << 5) - hash + upper.charCodeAt(i);
-    hash |= 0;
-  }
-  const posHash = Math.abs(hash);
+// ─────────────────────────────────────────────────────────────────────────────
+// TEXTO DE GUÍA — Para usuarios que preguntan cómo usar el servicio
+// ─────────────────────────────────────────────────────────────────────────────
+export const PREDIAL_HELP_TEXT =
+  `🏛️ *¿Cómo solicitar tu Predial a JanIA?* Es muy sencillo:\n\n` +
+  `1️⃣ *Envíame en privado* el CHIP del inmueble y el NIT o CC del propietario en un solo mensaje:\n\n` +
+  `📝 *Ejemplo:*\n` +
+  `_JanIA, predial: CHIP AAA0205AYFZ y NIT 8600030201_\n\n` +
+  `ℹ️ *¿Dónde encuentro el CHIP?* En cualquier factura de predial anterior o en el recibo del impuesto.\n\n` +
+  `✅ *JanIA acepta:*\n` +
+  `• CC con o sin puntos (ej: 19.386.159 o 19386159)\n` +
+  `• NIT con o sin dígito de verificación (ej: 860.030.201-2 o 8600030201)\n` +
+  `• Cédula de Extranjería (CE)\n\n` +
+  `📲 *Chat directo con JanIA:* https://vecy-network.vercel.app/jania\n\n` +
+  `📢 *Síguenos para más herramientas gratuitas:*\n` +
+  `👉 https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
 
-  const sectoresBogota = [
-    { dir: 'Calle 142 # 18A-32 Apto 402', estrato: 4, baseAvaluo: 500_000_000, zona: '50N' },
-    { dir: 'Carrera 15 # 118-45 Of. 301', estrato: 5, baseAvaluo: 620_000_000, zona: '50N' },
-    { dir: 'Calle 127 # 7B-25 Torre 2 Apto 501', estrato: 5, baseAvaluo: 740_000_000, zona: '50N' },
-    { dir: 'Calle 93B # 13-42 Apto 302', estrato: 6, baseAvaluo: 1_150_000_000, zona: '50N' },
-    { dir: 'Carrera 7 # 67-52 Apto 601', estrato: 5, baseAvaluo: 580_000_000, zona: '50C' },
-    { dir: 'Calle 53 # 24-18 Apto 201', estrato: 4, baseAvaluo: 390_000_000, zona: '50C' },
-    { dir: 'Carrera 24 # 39A-15 Casa', estrato: 4, baseAvaluo: 510_000_000, zona: '50C' },
-    { dir: 'Calle 26 # 68C-61 Torre 1 Apto 804', estrato: 4, baseAvaluo: 430_000_000, zona: '50C' },
-    { dir: 'Carrera 58 # 137B-20 Casa 12', estrato: 4, baseAvaluo: 560_000_000, zona: '50N' },
-    { dir: 'Calle 152 # 11-40 Apto 703', estrato: 4, baseAvaluo: 470_000_000, zona: '50N' },
-    { dir: 'Carrera 72 # 53-40 Apto 401', estrato: 3, baseAvaluo: 285_000_000, zona: '50C' },
-    { dir: 'Calle 8 Sur # 31D-15 Casa', estrato: 3, baseAvaluo: 240_000_000, zona: '50S' }
-  ];
+export const CEDULA_HELP_TEXT =
+  `🪪 *¿Cómo verificar un documento de identidad con JanIA?* Facilísimo:\n\n` +
+  `1️⃣ *Envíame en privado* el tipo y número de documento en un solo mensaje:\n\n` +
+  `📝 *Ejemplos:*\n` +
+  `• _JanIA, verificar cédula: 19.386.159_ ✅\n` +
+  `• _JanIA, verificar cédula: 1018456789_ ✅\n` +
+  `• _JanIA, verificar CE: 654321_ ✅ (Cédula de Extranjería)\n` +
+  `• _JanIA, verificar pasaporte: AB123456_ ✅\n\n` +
+  `📌 *Nota:* Puedes escribir el número con o sin puntos o guiones — JanIA lo procesa automáticamente.\n\n` +
+  `🔍 *¿Qué información recibirás?*\n` +
+  `Nombre completo oficial de la persona registrada en la Policía Nacional de Colombia.\n\n` +
+  `🛡️ *Este servicio es 100% gratuito* y consulta directamente la base oficial de la Policía Nacional.\n\n` +
+  `📲 *Chat directo con JanIA:* https://vecy-network.vercel.app/jania\n\n` +
+  `📢 *Síguenos para más herramientas gratuitas:*\n` +
+  `👉 https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
 
-  const sectorIndex = posHash % sectoresBogota.length;
-  const sector = sectoresBogota[sectorIndex];
-  const matNum = 2000000 + (posHash % 899999);
-  const matricula = `${sector.zona}-${matNum}`;
-
-  return {
-    estrato: sector.estrato,
-    matricula,
-    direccion: sector.dir,
-    avaluoCatastral: sector.baseAvaluo
-  };
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// FUNCIÓN PRINCIPAL — Genera el informe y guía oficial de Predial
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Genera el informe institucional de consulta y asistencia del Impuesto Predial de Bogotá
- * bajo el formato ejecutivo, conciso y estructurado oficial solicitado por la Dirección.
+ * Genera el informe institucional de consulta y asistencia del Impuesto Predial de Bogotá.
+ *
+ * REGLA DOCTRINAL v32.14 — HONESTIDAD ABSOLUTA:
+ * - NUNCA se inventan datos (dirección, matrícula, avalúo, links de factura).
+ * - Si solo se tiene el CHIP, se pide la cédula/NIT.
+ * - Si se tienen CHIP + doc del propietario → se indica el link oficial REAL de la SDH para que el usuario descargue.
+ * - Si el usuario proveyó el avalúo catastral directamente → se hace la estimación y se da el link oficial.
+ * - Si hay datos insuficientes o erróneos → se dice honestamente con guía para corregir.
  */
 export async function executePredialAssistanceFromWhatsApp(
   text: string,
@@ -281,20 +373,27 @@ export async function executePredialAssistanceFromWhatsApp(
   if (!detection.chip && senderId && hasPendingPredialSession(senderId)) {
     const pending = getPendingPredialSession(senderId);
     if (pending) {
-      // Buscar si el texto actual contiene una cédula o número
-      const cedMatch = text.match(/\b([0-9]{6,10})\b/);
-      if (cedMatch && cedMatch[1]) {
-        detection = {
-          found: true,
-          chip: pending.chip,
-          cedula: cedMatch[1],
-          tipoDoc: 'CC',
-          matricula: pending.matricula,
-          direccion: pending.direccion,
-          estrato: pending.estrato,
-          avaluoCatastral: pending.avaluoCatastral
-        };
-        clearPendingPredialSession(senderId);
+      // Buscar si el texto actual contiene una cédula, NIT o número
+      // Incluir sanitización de números con puntos/comas
+      const rawNumMatch = text.match(/([\d]{1,3}(?:[.,][\d]{3})+(?:-\d)?|\b\d{6,12}\b)/);
+      if (rawNumMatch && rawNumMatch[1]) {
+        const lower = text.toLowerCase();
+        const isNitContext = lower.includes('nit') || lower.includes('n.i.t');
+        const cleanedNum = sanitizeDocumentNumber(rawNumMatch[1], isNitContext);
+        if (cleanedNum.length >= 6) {
+          detection = {
+            found: true,
+            chip: pending.chip,
+            cedula: isNitContext ? undefined : cleanedNum,
+            nit: isNitContext ? cleanedNum : undefined,
+            tipoDoc: isNitContext ? 'NIT' : 'CC',
+            matricula: pending.matricula,
+            direccion: pending.direccion,
+            estrato: pending.estrato,
+            avaluoCatastral: pending.avaluoCatastral
+          };
+          clearPendingPredialSession(senderId);
+        }
       }
     }
   }
@@ -304,19 +403,24 @@ export async function executePredialAssistanceFromWhatsApp(
   }
 
   const chip = detection.chip;
-  const cedula = detection.cedula;
+  const docNumber = detection.nit || detection.cedula;
+  const docLabel = detection.tipoDoc === 'NIT' ? 'NIT' : (detection.tipoDoc === 'CE' ? 'Cédula de Extranjería' : 'Cédula');
 
-  // Si se envió solo el CHIP sin la cédula del propietario (ni parámetros de liquidación)
-  if (chip && !cedula && !detection.estrato && !detection.avaluoCatastral) {
+  // ────────────────────────────────────────────────────────────────────────
+  // CASO 1: Solo CHIP, sin documento del propietario
+  // → Pedir cédula o NIT del propietario
+  // ────────────────────────────────────────────────────────────────────────
+  if (chip && !docNumber && !detection.estrato && !detection.avaluoCatastral) {
     if (senderId) {
       setPendingPredialSession(senderId, { chip });
     }
 
-    const reportText = 
+    const reportText =
       `🛡️ *LIQUIDACIÓN PREDIAL — VECY BIENES RAÍCES - BOGOTÁ* 🇨🇴\n\n` +
-      `🏠 *Predio CHIP:* ${chip}\n` +
-      `🔐 *Para conectarme a la Secretaría de Hacienda y extraer factura predial en PDF:*\n` +
-      `👉 *Escríbeme por favor la Cédula o NIT del propietario*`;
+      `🏠 *Predio CHIP detectado:* ${chip}\n\n` +
+      `Para acceder al portal oficial de la Secretaría de Hacienda y entregarte el enlace de descarga de tu factura predial en PDF, necesito un dato más:\n\n` +
+      `👉 *¿Cuál es la Cédula o NIT del propietario del predio?*\n\n` +
+      `_(Puedes escribirlo con o sin puntos, comas o guiones — yo lo proceso automáticamente)_ ✅`;
 
     return {
       isPredialRequest: true,
@@ -325,49 +429,125 @@ export async function executePredialAssistanceFromWhatsApp(
     };
   }
 
-  // Si se cuenta con el CHIP y Cédula (o parámetros para liquidación completa)
-  if (chip) {
-    const resolved = resolveBogotaCadastralData(chip);
-    const estrato = detection.estrato || resolved.estrato;
-    const avaluo = detection.avaluoCatastral || resolved.avaluoCatastral;
-    const matricula = detection.matricula || resolved.matricula;
-    const direccion = detection.direccion || resolved.direccion;
+  // ────────────────────────────────────────────────────────────────────────
+  // CASO 2: CHIP + Documento del propietario
+  // → Dar el link OFICIAL REAL de la SDH. Sin inventar datos catastrales.
+  // ────────────────────────────────────────────────────────────────────────
+  if (chip && docNumber) {
+    // URL OFICIAL de la SDH Bogotá para consultar/descargar factura predial por CHIP:
+    const urlOficialSdh = `https://shd.gov.co/shd/liquidacion-predial?chip=${encodeURIComponent(chip)}`;
+    // URL directa del portal de liquidación (más simple y funcional):
+    const urlLiquidacion = `https://nuevaoficinavirtual.shd.gov.co/bogota/cf/predial/liquidar?chip=${encodeURIComponent(chip)}`;
 
-    const liquidacion = liquidarPredialEstimadoBogota(avaluo, estrato, true);
-    const avaluoFormatted = avaluo.toLocaleString('es-CO');
-    const valorConDescuentoFormatted = liquidacion.impuestoConDescuento.toLocaleString('es-CO');
-
-    const downloadSection = isPrivateDm
-      ? `📄 *Factura oficial generada con código de barras:*\nhttps://nuevaoficinavirtual.shd.gov.co/bogota/cf/pagos/factura-${chip}.pdf`
-      : `📄 *Para descargar tu factura oficial en PDF en privado, toca aquí:* wa.me/573192919978?text=Factura+${chip}`;
-
-    const reportText = 
-      `🛡️ *LIQUIDACIÓN PREDIAL — VECY BIENES RAÍCES - BOGOTÁ* 🇨🇴\n\n` +
-      `🏠 *Predio CHIP:* ${chip} (Estrato ${estrato})\n` +
-      `📑 *Matrícula inmobiliaria:* ${matricula}\n` +
-      `📍 *Dirección del predio:* ${direccion}\n` +
-      `🏛️ *Avalúo Catastral:* $${avaluoFormatted} COP\n` +
-      `💰 *Valor estimado con 10% pronto pago:* $${valorConDescuentoFormatted} COP\n\n` +
-      downloadSection;
+    const reportText =
+      `🛡️ *PREDIAL BOGOTÁ — VECY BIENES RAÍCES* 🇨🇴\n\n` +
+      `🏠 *CHIP del predio:* ${chip}\n` +
+      `🪪 *${docLabel} registrado:* ${docNumber}\n\n` +
+      `📋 *Nota importante:* Los datos catastrales exactos (dirección, avalúo, matrícula) residen en la base de datos oficial de la Secretaría de Hacienda. Para consultar tu factura predial oficial y liquidar tu impuesto:\n\n` +
+      `🔗 *Portal oficial SDH — Liquida y descarga tu predial aquí:*\n` +
+      `${urlLiquidacion}\n\n` +
+      `ℹ️ *Instrucciones:*\n` +
+      `1. Ingresa al enlace de arriba\n` +
+      `2. Digita el CHIP: *${chip}*\n` +
+      `3. Descarga tu factura oficial en PDF con código de barras para pago\n\n` +
+      `¿Necesitas ayuda con otro trámite? Estoy a tu disposición 🤝`;
 
     return {
       isPredialRequest: true,
       chip,
-      cedula,
+      cedula: docNumber,
       reportText
     };
   }
 
-  // Solicitud general de predial sin CHIP
-  const reportText = 
-    `🛡️ *LIQUIDACIÓN PREDIAL — VECY BIENES RAÍCES - BOGOTÁ* 🇨🇴\n\n` +
-    `Para liquidar tu Impuesto Predial y entregarte el reporte oficial con su factura en PDF, solo requiero el código CHIP del inmueble:\n\n` +
-    `🏠 *Ejemplo:* Envíame *"JanIA, predial CHIP AAA0123ABCD"*\n\n` +
-    `*(Opcionalmente puedes incluir matrícula, dirección o avalúo para un cálculo exacto)*.\n\n` +
-    `¡Te entregaré la liquidación y el acceso a tu factura oficial al instante! 🤝✨`;
+  // ────────────────────────────────────────────────────────────────────────
+  // CASO 3: El usuario proporcionó avalúo catastral directamente (sin CHIP)
+  // → Estimación local + guía para descargar factura oficial
+  // ────────────────────────────────────────────────────────────────────────
+  if (!chip && detection.avaluoCatastral && detection.avaluoCatastral > 0) {
+    const estrato = detection.estrato || 4;
+    const liquidacion = liquidarPredialEstimadoBogota(detection.avaluoCatastral, estrato, true);
+    const avaluoFormatted = detection.avaluoCatastral.toLocaleString('es-CO');
+    const valorPleno = liquidacion.impuestoPleno.toLocaleString('es-CO');
+    const valorDescuento = liquidacion.impuestoConDescuento.toLocaleString('es-CO');
+
+    const reportText =
+      `🛡️ *ESTIMACIÓN PREDIAL — VECY BIENES RAÍCES - BOGOTÁ* 🇨🇴\n\n` +
+      `⚠️ *Este es un cálculo ESTIMADO* basado en los datos que me proporcionaste. El valor oficial puede variar.\n\n` +
+      `🏛️ *Avalúo Catastral informado:* $${avaluoFormatted} COP\n` +
+      `🏢 *Estrato aplicado:* ${estrato}\n` +
+      `📊 *Tarifa por mil:* ${liquidacion.tarifaPorMil}‰\n\n` +
+      `💰 *Impuesto Predial estimado:* $${valorPleno} COP\n` +
+      `✅ *Con 10% descuento pronto pago:* $${valorDescuento} COP\n\n` +
+      `📄 *Para obtener tu factura oficial con código de barras real, ingresa al portal oficial:*\n` +
+      `🔗 https://nuevaoficinavirtual.shd.gov.co/bogota/cf/predial/liquidar\n\n` +
+      `_(Necesitarás el código CHIP de tu inmueble — lo encuentras en facturas anteriores)_`;
+
+    return {
+      isPredialRequest: true,
+      reportText
+    };
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // CASO 4: Solicitud general de predial sin CHIP ni datos suficientes
+  // → Guía completa de cómo solicitar el servicio
+  // ────────────────────────────────────────────────────────────────────────
+  const reportText =
+    `🛡️ *IMPUESTO PREDIAL BOGOTÁ — VECY BIENES RAÍCES* 🇨🇴\n\n` +
+    `Para entregarte el enlace oficial de tu factura predial, necesito el *código CHIP* del inmueble:\n\n` +
+    `📝 *Envíame en privado:*\n` +
+    `_JanIA, predial: CHIP AAA0123ABCD y NIT 8600030201_\n\n` +
+    `🏠 *¿Dónde encuentro el CHIP?* En cualquier factura de predial anterior o en el recibo del impuesto.\n\n` +
+    `✅ *También puedes enviar:*\n` +
+    `• CC con puntos ✔ (ej: 19.386.159)\n` +
+    `• NIT con dígito verificador ✔ (ej: 860.030.201-2)\n` +
+    `• Cédula de Extranjería ✔\n\n` +
+    `¡Te guío al instante! 🤝`;
 
   return {
     isPredialRequest: true,
     reportText
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DETECCIÓN DE PREGUNTAS DE AYUDA SOBRE EL SERVICIO PREDIAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Detecta si un mensaje es una pregunta de ayuda/orientación sobre cómo usar
+ * el servicio de predial o verificación de documentos.
+ * Usado para responder a usuarios en grupos 2/3 que preguntan "¿cómo hago?"
+ * sin que JanIA se descontrole o active alertas de WhatsApp.
+ */
+export function isServiceHelpRequest(text: string): 'predial' | 'cedula' | null {
+  if (!text || typeof text !== 'string') return null;
+  const lower = text.toLowerCase().trim();
+
+  // Palabras clave de solicitud de ayuda
+  const helpWords = [
+    'cómo', 'como', 'qué debo', 'que debo', 'cómo hago', 'como hago',
+    'qué datos', 'que datos', 'qué necesito', 'que necesito',
+    'cómo pido', 'como pido', 'no sé', 'no se', 'ayuda',
+    'instrucciones', 'tutorial', 'qué envío', 'que envio',
+    'cómo solicito', 'como solicito', 'cómo se pide', 'como se pide',
+    'no entendí', 'no entendi', 'no entiendo', 'explícame', 'explicame'
+  ];
+
+  const predialWords = ['predial', 'impuesto predial', 'factura predial', 'chip', 'liquidar'];
+  const cedulaWords = ['cédula', 'cedula', 'verificar cédula', 'verificar cedula', 'verificación', 'verificacion', 'identidad', 'documento'];
+
+  const hasHelp = helpWords.some(w => lower.includes(w));
+  const hasPredial = predialWords.some(w => lower.includes(w));
+  const hasCedula = cedulaWords.some(w => lower.includes(w));
+
+  if (hasHelp && hasPredial) return 'predial';
+  if (hasHelp && hasCedula) return 'cedula';
+
+  // Preguntas cortas que solo mencionen el servicio con interrogación
+  if ((lower.includes('?') || lower.startsWith('y') || lower.startsWith('¿')) && hasPredial) return 'predial';
+  if ((lower.includes('?') || lower.startsWith('y') || lower.startsWith('¿')) && hasCedula) return 'cedula';
+
+  return null;
 }

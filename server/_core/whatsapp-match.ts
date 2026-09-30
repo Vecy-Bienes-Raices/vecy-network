@@ -1059,6 +1059,25 @@ export class JaniaMatchBot {
       return;
     }
 
+    // 🤝 INTERCEPTOR DM: PREGUNTAS DE AYUDA SOBRE SERVICIOS ("¿cómo verifico?", "¿cómo pido el predial?")
+    // JanIA responde con guía contextual sin activar el motor de conversación general
+    const { isServiceHelpRequest, PREDIAL_HELP_TEXT, CEDULA_HELP_TEXT } = await import('./predialService');
+    const helpType = isServiceHelpRequest(body);
+    if (helpType === 'predial') {
+      try { await this.sock.sendPresenceUpdate('composing', senderId); } catch (_) {}
+      console.log(`[JANIA-MATCH] [DM] Guía de servicio PREDIAL enviada a ${senderId}`);
+      await this.queuedSend(senderId, PREDIAL_HELP_TEXT, { quoted: mainMsg, allowDirectMessage: true });
+      await this.logToDb(senderId, 'janIA', PREDIAL_HELP_TEXT);
+      return;
+    }
+    if (helpType === 'cedula') {
+      try { await this.sock.sendPresenceUpdate('composing', senderId); } catch (_) {}
+      console.log(`[JANIA-MATCH] [DM] Guía de servicio CÉDULA enviada a ${senderId}`);
+      await this.queuedSend(senderId, CEDULA_HELP_TEXT, { quoted: mainMsg, allowDirectMessage: true });
+      await this.logToDb(senderId, 'janIA', CEDULA_HELP_TEXT);
+      return;
+    }
+
     // Si no es una solicitud de servicio oficial (verificación de cédula o predial),
     // JanIA guarda silencio absoluto en DMs tanto para administradores como para terceros
     return;
@@ -1895,6 +1914,30 @@ export class JaniaMatchBot {
       await this.logToDb(resolvedSenderId, 'user', fullText || (pdfMsg ? '[documento-pdf]' : '[imagen]'));
 
       const { sendAdminNotification } = await import('./whatsapp-utils');
+
+      // 🤝 INTERCEPTOR GRUPOS 2/3: PREGUNTAS DE AYUDA SOBRE SERVICIOS DE JANIA
+      // Si alguien pregunta "¿cómo verifico un documento?" o "¿cómo pido el predial?"
+      // JanIA responde directamente con la guía, sin pasar por el motor LLM general.
+      // Límite: solo en grupos 2 y 3 donde JanIA tiene conversación activa.
+      if (
+        (chatId === '120363417740040773@g.us' || chatId === '120363403507276533@g.us') &&
+        fullText && fullText.trim().length > 0
+      ) {
+        const { isServiceHelpRequest: isHelpReq, PREDIAL_HELP_TEXT: predialHelp, CEDULA_HELP_TEXT: cedulaHelp } = await import('./predialService');
+        const helpKind = isHelpReq(fullText);
+        if (helpKind === 'predial') {
+          console.log(`[JANIA-MATCH] [GRUPO] Guía PREDIAL enviada a ${resolvedSenderId} en ${chatId}`);
+          await this.queuedSend(chatId, predialHelp, { allowGroupMessage: true });
+          await this.logToDb(resolvedSenderId, 'janIA', predialHelp);
+          return;
+        }
+        if (helpKind === 'cedula') {
+          console.log(`[JANIA-MATCH] [GRUPO] Guía CÉDULA enviada a ${resolvedSenderId} en ${chatId}`);
+          await this.queuedSend(chatId, cedulaHelp, { allowGroupMessage: true });
+          await this.logToDb(resolvedSenderId, 'janIA', cedulaHelp);
+          return;
+        }
+      }
 
       // Procesar mediante JanIA (guardará en DB de forma automática)
       let result;
