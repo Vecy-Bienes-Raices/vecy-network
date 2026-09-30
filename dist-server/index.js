@@ -24,7 +24,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.12";
+    VECY_VERSION = "v32.13";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -25284,66 +25284,54 @@ Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro
       const imgPath = path12.join(process.cwd(), "jania_verificacion_servicio.jpg");
       const hasImage = fs11.existsSync(imgPath);
       const channelLink = "https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b";
-      const defaultPromoGroups = `\u{1F6E1}\uFE0F\u2728 *\xA1NUEVO SERVICIO EXCLUSIVO DE VECY BIENES RA\xCDCES PARA NUESTRA COMUNIDAD!* \u2728\u{1F6E1}\uFE0F
-
-Estimados colegas inmobiliarios:
-
-\xBFTienes cita para mostrar un inmueble o vas a reunirte con un nuevo cliente y quieres tener total certeza de con qui\xE9n har\xE1s negocios? *\xA1Tu seguridad f\xEDsica y jur\xEDdica en terreno es nuestra m\xE1xima prioridad!* \u{1F512}\u{1F4BC}
-
-En **VECY BIENES RA\xCDCES** ponemos a disposici\xF3n de todos los miembros de nuestros grupos y seguidores del canal nuestro **Servicio Oficial de Verificaci\xF3n de Identidad y Antecedentes con Inteligencia Artificial**, \xA1totalmente **GRATUITO**! \u{1F193}\u{1F91D}
-
-JanIA valida en tiempo real los nombres oficiales completos y antecedentes judiciales ante la Polic\xEDa Nacional y bases institucionales de seguridad notarial.
-
-\u26A1 *\xBFC\xD3MO SOLICITARLO? (En un solo mensaje, r\xE1pido y directo)*:
-No tienes que saludar primero ni esperar turnos. Solo env\xEDale a **JanIA** (aqu\xED en el grupo o por mensaje privado al WhatsApp *+573192919978*) **UN SOLO MENSAJE** con esta sencilla frase:
-
-\u{1F4CB} *Plantilla para copiar y pegar (cambia el n\xFAmero):*
-\u{1F449} \`JanIA, verificar c\xE9dula: 12.345.678\`
-
-JanIA procesar\xE1 la consulta al instante y te entregar\xE1 el reporte oficial para que asistas a tus citas con total tranquilidad y respaldo.
-
-\u{1F4F2} *Escr\xEDbele directamente a JanIA aqu\xED:* https://wa.me/573192919978
-
-\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
-\u{1F4E2} *\xA1S\xCDGUENOS EN NUESTRO CANAL OFICIAL DE WHATSAPP!*
-\xDAnete a nuestro canal para acceder a m\xE1s herramientas y servicios gratuitos exclusivos como este:
+      const ctaOficial = `\u{1F4E2} *S\xCDGUENOS EN NUESTRO CANAL OFICIAL:*
+Participa en encuestas y ay\xFAdanos a crear nuevas herramientas para ti y la comunidad inmobiliaria y mantente al tanto de otras nuevas funciones gratuitas que vendr\xE1n:
 \u{1F449} ${channelLink}
 
-\u{1F680} *\xA1SPOILER / PR\xD3XIMO LANZAMIENTO!* 
-Muy pronto JanIA tambi\xE9n te ayudar\xE1 a consultar y descargar recibos de **Impuesto Predial** directamente por WhatsApp en segundos. \xA1Atentos a las novedades en el canal!
+VECY BIENES RA\xCDCES \u{1F3D8}\uFE0F`;
+      const defaultPromoIdentity = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N DE CLIENTES ANTES DE TU CITA \u2014 100% GRATIS* \u{1F1E8}\u{1F1F4}
 
-\u{1F4BC} *Un aporte de VECY BIENES RA\xCDCES para blindar y profesionalizar la labor de nuestra red inmobiliaria.* \u{1F680}`;
-      const defaultPromoChannel = `\u{1F6E1}\uFE0F\u2728 *\xA1NUEVO SERVICIO EXCLUSIVO DE VECY BIENES RA\xCDCES PARA NUESTROS SEGUIDORES!* \u2728\u{1F6E1}\uFE0F
+Colega inmobiliario:
+\xBFVas a mostrar un inmueble o tienes cita con un cliente nuevo?
+Verifica con qui\xE9n vas a reunirte antes de salir a terreno. JanIA valida nombres completos oficiales y antecedentes en tiempo real ante la Polic\xEDa Nacional.
 
-Estimada comunidad inmobiliaria del Canal:
+\u26A1 *\xBFC\xD3MO SOLICITARLO? (Un solo mensaje directo):*
+Env\xEDale a JanIA por privado a su WhatsApp o aqu\xED en el grupo:
 
-\xBFTienes cita para mostrar un inmueble o vas a reunirte con un nuevo cliente y quieres tener total certeza de con qui\xE9n har\xE1s negocios? *\xA1Tu seguridad f\xEDsica y jur\xEDdica en terreno es nuestra m\xE1xima prioridad!* \u{1F512}\u{1F4BC}
-
-Como agradecimiento por seguir nuestro canal oficial, en **VECY BIENES RA\xCDCES** activamos para ti nuestro **Servicio Oficial de Verificaci\xF3n de Identidad y Antecedentes con Inteligencia Artificial**, \xA1totalmente **GRATUITO**! \u{1F193}\u{1F91D}
-
-JanIA valida en tiempo real los nombres oficiales completos y antecedentes judiciales ante la Polic\xEDa Nacional y bases institucionales de seguridad notarial.
-
-\u26A1 *\xBFC\xD3MO SOLICITARLO? (En un solo mensaje, r\xE1pido y directo)*:
-No tienes que saludar primero ni esperar turnos. Solo env\xEDale a **JanIA** por mensaje privado a su WhatsApp oficial **UN SOLO MENSAJE** con esta frase:
-
-\u{1F4CB} *Plantilla para copiar y pegar (cambia el n\xFAmero):*
 \u{1F449} \`JanIA, verificar c\xE9dula: 12.345.678\`
 
-JanIA te responder\xE1 al instante con el reporte oficial para que asistas a tus citas con total tranquilidad y respaldo.
+*(Tambi\xE9n puedes consultar C\xE9dula de Extranjer\xEDa o Pasaporte indicando: C.E. o Pasaporte).*
 
-\u{1F4F2} *Escr\xEDbele directamente a JanIA aqu\xED:* https://wa.me/573192919978
+\u{1F4F2} *PASO CLAVE:*
+1. Guarda el contacto de JanIA en tu celular como: *JanIA agente IA de VECY* (+57 319 291 9978).
+2. O chatea directamente aqu\xED: https://wa.me/573192919978
+3. Web oficial: https://vecy-network.vercel.app/jania
 
-\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
-\u{1F680} *\xA1PR\xD3XIMO BENEFICIO EXCLUSIVO EN ESTE CANAL!*
-\xA1Mantente conectado! Muy pronto JanIA tambi\xE9n te ayudar\xE1 a consultar y descargar recibos de **Impuesto Predial** directamente por WhatsApp en segundos.
+` + ctaOficial;
+      const defaultPromoPredial = `\u{1F3DB}\uFE0F *LIQUIDACI\xD3N Y FACTURA PREDIAL BOGOT\xC1 AL INSTANTE* \u{1F1E8}\u{1F1F4}
 
-Comparte este canal con tus colegas corredores para que aprovechen estas herramientas gratuitas:
-\u{1F449} ${channelLink}
+\xBFNecesitas liquidar el Impuesto Predial de un inmueble o descargar la factura oficial en PDF para un estudio de t\xEDtulos o escrituraci\xF3n?
 
-\u{1F4BC} *VECY BIENES RA\xCDCES \u2014 Tecnolog\xEDa e innovaci\xF3n al servicio del corretaje inmobiliario.* \u{1F680}`;
-      const promoTextGroups = req.body?.textGroups || req.body?.text || defaultPromoGroups;
-      const promoTextChannel = req.body?.textChannel || req.body?.text || defaultPromoChannel;
-      console.log("[BROADCAST-PROMO] Iniciando despacho de propaganda a Grupo 2, Grupo 3 y Canal de WhatsApp...");
+JanIA se conecta y te entrega el aval\xFAo catastral, valor con descuento del 10% y el enlace oficial de la factura en segundos.
+
+\u26A1 *\xBFC\xD3MO SOLICITARLO? (Un solo mensaje directo):*
+Solo env\xEDale a JanIA:
+
+\u{1F449} \`JanIA, predial: CHIP AAA0123ABCD y C\xE9dula 12.345.678\`
+
+*(Si es persona jur\xEDdica, escribe NIT en lugar de c\xE9dula).*
+
+\u{1F4F2} *PASO CLAVE:*
+1. Guarda el contacto de JanIA en tu agenda: *JanIA agente IA de VECY* (+57 319 291 9978).
+2. Escr\xEDbele directo por WhatsApp: https://wa.me/573192919978
+3. Web oficial: https://vecy-network.vercel.app/jania
+
+` + ctaOficial;
+      const serviceType = req.body?.service || "identity";
+      const baseDefaultPromo = serviceType === "predial" ? defaultPromoPredial : defaultPromoIdentity;
+      const promoTextGroups = req.body?.textGroups || req.body?.text || baseDefaultPromo;
+      const promoTextChannel = req.body?.textChannel || req.body?.text || baseDefaultPromo;
+      console.log(`[BROADCAST-PROMO] Iniciando despacho de propaganda (${serviceType}) a Grupo 2, Grupo 3 y Canal de WhatsApp...`);
       const results = {};
       try {
         await janiaMatchBot.sendToGroup(promoTextGroups, hasImage ? imgPath : void 0, [], janiaMatchBot.buzonGroupId);
