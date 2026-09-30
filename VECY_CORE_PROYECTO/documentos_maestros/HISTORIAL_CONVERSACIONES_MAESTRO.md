@@ -7,6 +7,37 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.14 — 30 Septiembre 2026
+
+### Solicitud de Eduardo
+Eduardo reportó que JanIA **inventó datos del predial** (dirección, matrícula inmobiliaria, avalúo catastral y un link de factura PDF falso) al recibir un CHIP + NIT. Además identificó que:
+- JanIA no sabía limpiar NITs con dígito de verificación (ej: `8600030201-2`) ni números con puntos/comas (ej: `19.386.159`).
+- El link de descarga de factura generado era ficticio (`/bogota/cf/pagos/factura-${chip}.pdf`).
+- Varios usuarios en grupos 2/3 preguntaban "¿cómo verifico un documento?" y "¿cómo pido el predial?" y JanIA no respondía.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Función `resolveBogotaCadastralData()` en `predialService.ts`** — Generaba datos falsos deterministicamente usando un hash del CHIP (sectores de Bogotá hardcodeados, matrículas calculadas, avalúos ficticios). Completamente eliminada.
+2. **Regex de NIT demasiado estrecha** — Solo capturaba 6-10 dígitos continuos, ignorando NITs con puntos (`860.030.201`), comas o dígito verificador (`8600030201-2`).
+3. **Link de factura inventado** — `https://nuevaoficinavirtual.shd.gov.co/bogota/cf/pagos/factura-${chip}.pdf` no existe. La SDH no tiene esta ruta pública sin autenticación.
+4. **Sin guía contextual para preguntas de ayuda** — No había interceptor para responder cuando usuarios preguntaban cómo usar los servicios.
+
+### Acciones Ejecutadas
+1. **`server/_core/predialService.ts` — Reescritura completa (REGLA DOCTRINAL v32.14)**:
+   - Eliminada `resolveBogotaCadastralData()` (generación de datos falsos).
+   - Añadida `sanitizeDocumentNumber(raw, isNit)`: limpia puntos, comas, espacios y dígito verificador de NIT.
+   - Regex ampliada para capturar NITs/CC con formato `860.030.201-2`, `19.386.159`, etc.
+   - CASO 2 (CHIP + doc propietario): Ahora da el link oficial real del portal SDH y guía paso a paso. CERO datos inventados.
+   - CASO 3 (avalúo dado por el usuario): Estimación honesta con advertencia y link oficial.
+   - Añadidas constantes `PREDIAL_HELP_TEXT` y `CEDULA_HELP_TEXT` para guía contextual.
+   - Añadida función `isServiceHelpRequest(text)`: detecta si el mensaje es una pregunta de ayuda sobre predial o cédula.
+2. **`server/_core/whatsapp-match.ts` — Dos interceptores de guía**:
+   - **DMs**: Antes del silencio final, detecta preguntas de ayuda y envía `PREDIAL_HELP_TEXT` o `CEDULA_HELP_TEXT` según el contexto.
+   - **Grupos 2 y 3**: Antes de delegar a `processConsultingMessage`/`processCirculoMessage`, intercepta preguntas de ayuda y responde directamente.
+3. **Versión**: `v32.14` en `shared/const.ts` y `package.json`.
+4. **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | Push a GitHub ✅
+
+---
+
 ## 📋 SESIÓN v32.13 — 30 Septiembre 2026
 
 ### Solicitud de Eduardo

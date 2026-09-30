@@ -165,7 +165,24 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.13 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.14 — Septiembre 2026
+
+### Novedades v32.14 (Honestidad Absoluta en Predial, Sanitización NIT/CC y Guía Contextual de Servicios):
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Eliminación de `resolveBogotaCadastralData()` (`predialService.ts`)**:
+     - La función generaba datos catastrales falsos (dirección, matrícula, avalúo) usando un hash determinístico del CHIP. ELIMINADA.
+     - JanIA JAMÁS inventa datos. Si no puede resolverlos, lo dice honestamente y da el link oficial real de la SDH.
+  2. **Sanitización Robusta de Documentos (`sanitizeDocumentNumber`)**:
+     - Nueva función que limpia NITs con puntos (`860.030.201-2` → `8600030201`), cédulas con puntos (`19.386.159` → `19386159`), dígito verificador, espacios y comas.
+  3. **Link oficial real de descarga del predial**:
+     - `https://nuevaoficinavirtual.shd.gov.co/bogota/cf/predial/liquidar?chip=...` en lugar del link ficticio anterior.
+  4. **Guía Contextual de Servicios (Interceptores en DMs y Grupos 2/3)**:
+     - Nueva función `isServiceHelpRequest(text)` detecta preguntas como "¿cómo verifico?", "¿cómo pido el predial?".
+     - Constantes `PREDIAL_HELP_TEXT` y `CEDULA_HELP_TEXT` con instrucciones claras, ejemplos y links oficiales.
+     - Interceptores añadidos en `whatsapp-match.ts` para DMs y para grupos 2 y 3.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | Push a GitHub ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.13 — Septiembre 2026
 
 ### Novedades v32.13 (Restauración de Atención y Presencia Activa 'Composing' para Línea Directiva +57 3188096811, Desenrrollado Ephemeral en DMs y Purga de Mute en BD):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:
