@@ -322,6 +322,50 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.14 — Septiembre 2026
+
+#### 📌 HONESTIDAD ABSOLUTA EN PREDIAL: ELIMINACIÓN DE DATOS INVENTADOS, SANITIZACIÓN NIT/CC Y GUÍA CONTEXTUAL DE SERVICIOS
+
+**Requerimiento y Objetivos:**
+1. Eliminar la invención de datos catastrales falsos (dirección, matrícula, avalúo, link de factura PDF) que JanIA generaba al recibir un CHIP + NIT.
+2. Manejar robustamente NITs y cédulas con puntos, comas, guiones y dígito de verificación (`860.030.201-2` → `8600030201`, `19.386.159` → `19386159`).
+3. Sustituir el link de descarga de factura ficticio por el portal oficial real de la Secretaría Distrital de Hacienda (SDH).
+4. Implementar respuestas de guía contextual para usuarios que preguntan "¿cómo verifico un documento?" o "¿cómo pido el predial?" en DMs y grupos 2/3.
+
+**Causas Raíz:**
+- `resolveBogotaCadastralData()` generaba determinísticamente datos catastrales ficticios (12 sectores hardcodeados de Bogotá, matrículas calculadas por hash, avalúos inventados) y el link `https://nuevaoficinavirtual.shd.gov.co/bogota/cf/pagos/factura-${chip}.pdf` que no existe.
+- La regex de extracción de documentos solo capturaba 6-10 dígitos continuos, fallando con formatos colombianos reales.
+- No existía interceptor para preguntas de ayuda sobre cómo usar los servicios.
+
+**Solución aplicada:**
+- **Eliminación de `resolveBogotaCadastralData()` (`server/_core/predialService.ts`)**:
+  - Función completamente removida. JanIA JAMÁS genera datos catastrales que no vengan del usuario o de la SDH.
+- **Nueva función `sanitizeDocumentNumber(raw, isNit)`**:
+  - Limpia puntos (`.`), comas (`,`), espacios y guiones de documentos colombianos.
+  - Para NITs: detecta y elimina el dígito verificador (patrón `8600030201-2` → `8600030201`).
+  - Para NITs sin guión pero con >10 dígitos: descarta el último dígito como posible DV.
+- **Link oficial real de la SDH**:
+  - `https://nuevaoficinavirtual.shd.gov.co/bogota/cf/predial/liquidar?chip={CHIP}` — enlace directo al módulo de liquidación de la SDH.
+  - Se incluyen instrucciones paso a paso: ingresar al portal, digitar el CHIP, descargar la factura PDF.
+- **Respuestas honestas por caso**:
+  - CASO 1 (sin datos): guía completa de cómo solicitar el servicio.
+  - CASO 2 (CHIP only): pide documento del propietario, sesión pendiente.
+  - CASO 3 (CHIP + doc): link oficial SDH + instrucciones. CERO datos inventados.
+  - CASO 4 (avalúo dado): estimación honesta con advertencia explícita.
+- **Constantes `PREDIAL_HELP_TEXT` y `CEDULA_HELP_TEXT`**:
+  - Textos de guía ricos con ejemplos, formatos aceptados, links al canal y chat de JanIA.
+- **Función `isServiceHelpRequest(text)`**:
+  - Detecta preguntas de ayuda ("¿cómo lo hago?", "¿cómo verifico?", "¿cómo pido el predial?", "no entiendo", etc.).
+  - Retorna `'predial'`, `'cedula'` o `null`.
+- **Interceptores en `whatsapp-match.ts`**:
+  - **DMs**: antes del silencio final, detecta preguntas de ayuda y responde con la guía correspondiente.
+  - **Grupos 2 y 3**: antes de `processConsultingMessage`/`processCirculoMessage`, intercepta y responde sin pasar por el motor LLM.
+- **Deploy VPS**: `git pull` + build `✓ 17.76s` + `pm2 restart` → `jania-server v32.14.0` **online** ✅
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | Push a GitHub ✅ | Deploy VPS PM2 online ✅
+
+---
+
 ### 🔖 v32.13 — Septiembre 2026
 
 #### 📌 RESTAURACIÓN DE ATENCIÓN Y PRESENCIA ACTIVA 'COMPOSING' PARA LÍNEA DIRECTIVA +57 3188096811, DESENRROLLADO EPHEMERAL EN DMS Y PURGA DE MUTE EN BD
