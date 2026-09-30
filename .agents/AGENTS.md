@@ -165,7 +165,25 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.11 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.12 — Septiembre 2026
+
+### Novedades v32.12 (Erradicación de Audio Residual de Fuera de Horario y Silencio Doctrinal en Chats Privados de Administradores):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo reportó: *"Hay un pequeño error con JanIA, resulta que al yo enviar cualquier mensaje desde el 3192919978 al 3166569719 y no se si a otros números, envío cualquier mensaje y JanIA me devuelve enseguida un audio y mal estructurado... me da miedo que JanIA le comience a enviar esta clase de audios a todos los que le pregunten algo o por su función de verificar un documento que esa si debe estar y la debe responder... esto es una versión antigua que algúna vez intentamos colocar, pero finalmente decidimos suprimirla o anularla... En la transcripción además el audio suena chistoso ya que JanIA lee los emojis y los describe algo como (hombre blanco con mano levantada, luna, estrellas...)"*
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Audio de Fuera de Horario Residual en `handlePrivateDmConversation` (`server/_core/whatsapp-match.ts`)**:
+     - En las líneas 2065-2087, la función conservaba quemado el texto `outOfOfficeText`: *"En este momento nuestros agentes humanos se encuentran descansando 🌙✨..."* y lo sintetizaba mediante TTS (`textToSpeechMedia`) como nota de voz PTT.
+     - Al contener emojis Unicode (`🙋🏻‍♀️`, `🌙✨`, `🤝🚀`), el motor de voz Edge/Azure leía literalmente las descripciones de accesibilidad.
+  2. **Activación Exclusiva en Mensajes Salientes entre Directores (`isAdmin = true`)**:
+     - Ambos números (`573192919978` y `573166569719`) están en `ADMIN_IDENTIFIERS`. Cuando Eduardo le escribía a Jani, el bot procesaba el mensaje con `fromMe: true` en el chat con Jani (`isAdmin: true`).
+     - Al no ser una orden de verificación de cédula ni predial, caía en `this.handlePrivateDmConversation(...)`, enviando el audio no deseado.
+     - Los usuarios externos estaban blindados por `if (!isAdmin) return;`.
+  3. **Extirpación Total y Silencio Doctrinal**:
+     - Se suprimió la generación de audio y el texto de `outOfOfficeText`.
+     - Si el mensaje en DM privado no es una consulta de verificación de cédula o predial, el bot ejecuta `return;` y guarda silencio absoluto.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.11 — Septiembre 2026
 
 ### Novedades v32.11 (Restauración de Visibilidad de Matches en Mesa de Coincidencias, Doctrina "Dato Pendiente" vs "No Coincide", Sabiduría en Inmuebles para Remodelar y Rescate de Demandas):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

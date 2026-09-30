@@ -1030,17 +1030,9 @@ export class JaniaMatchBot {
       return;
     }
 
-    if (!isAdmin) {
-      // DMs privados de contactos personales o terceros no se procesan para captación ni se reacciona con emojis
-      return;
-    }
-
-    // --- FLUJO ADMINISTRADOR O BYPASS DE TEST ---
-    console.log(`[JANIA-MATCH] [Admin/Test] Atendiendo mensaje de admin/test ${senderId}...`);
-
-    // Por defecto chatea libremente con administrador o cuenta de test
-    await this.logToDb(senderId, 'user', body);
-    await this.handlePrivateDmConversation(mainMsg, senderId, rawPhone, body);
+    // Si no es una solicitud de servicio oficial (verificación de cédula o predial),
+    // JanIA guarda silencio absoluto en DMs tanto para administradores como para terceros
+    return;
   }
 
   // --- REDIRECCIÓN DE CHATS PRIVADOS ---
@@ -2062,31 +2054,8 @@ export class JaniaMatchBot {
         return;
       }
 
-      await this.sock.sendPresenceUpdate('recording', senderId);
-
-      const saludo = getGreetingByTime();
-      const firstName = extractFirstName(realName);
-      const greetingName = firstName ? ` ${firstName}` : '';
-
-      const outOfOfficeText = `¡${saludo}${greetingName}! 🙋🏻‍♀️ Qué bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando 🌙✨. Si gustas, puedes dejar tu mensaje aquí para que te respondamos mañana a primera hora, o si prefieres, puedes continuar la conversación conmigo y contarme en qué puedo ayudarte hoy. ¡Siempre es un gusto atenderte! 🤝🚀`;
-
-      // Intentar generar y enviar el audio mediante TTS
-      const { textToSpeechMedia } = await import('./whatsapp-utils');
-      let media = null;
-      try {
-        media = await textToSpeechMedia(outOfOfficeText);
-      } catch (ttsErr: any) {
-        console.warn("[JANIA-MATCH] Error al generar TTS para fuera de horario:", ttsErr.message || ttsErr);
-      }
-
-      if (media) {
-        await this.queuedSend(senderId, media, { sendAudioAsVoice: true, quoted: msg });
-      } else {
-        await this.queuedSend(senderId, outOfOfficeText, { quoted: msg });
-      }
-
-      await this.logToDb(senderId, 'janIA', outOfOfficeText);
-      await this.sock.sendPresenceUpdate('paused', senderId);
+      // Si no es verificación de cédula ni predial, guardar silencio absoluto (cero audios o textos automáticos no solicitados)
+      return;
     } catch (err) {
       console.error('[JANIA-MATCH] Error en handlePrivateDmConversation:', err);
     }

@@ -24,7 +24,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.11";
+    VECY_VERSION = "v32.12";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -11008,12 +11008,7 @@ ${quotedNote}` : quotedNote;
           await this.logToDb(senderId, "janIA", predialCheck.reportText);
           return;
         }
-        if (!isAdmin) {
-          return;
-        }
-        console.log(`[JANIA-MATCH] [Admin/Test] Atendiendo mensaje de admin/test ${senderId}...`);
-        await this.logToDb(senderId, "user", body);
-        await this.handlePrivateDmConversation(mainMsg, senderId, rawPhone, body);
+        return;
       }
       // --- REDIRECCIÓN DE CHATS PRIVADOS ---
       async handlePrivateDmRedirect(chatId, senderId, userName) {
@@ -11841,25 +11836,7 @@ ${result.response}`);
             await this.sock.sendPresenceUpdate("paused", senderId);
             return;
           }
-          await this.sock.sendPresenceUpdate("recording", senderId);
-          const saludo = getGreetingByTime();
-          const firstName = extractFirstName(realName);
-          const greetingName = firstName ? ` ${firstName}` : "";
-          const outOfOfficeText = `\xA1${saludo}${greetingName}! \u{1F64B}\u{1F3FB}\u200D\u2640\uFE0F Qu\xE9 bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando \u{1F319}\u2728. Si gustas, puedes dejar tu mensaje aqu\xED para que te respondamos ma\xF1ana a primera hora, o si prefieres, puedes continuar la conversaci\xF3n conmigo y contarme en qu\xE9 puedo ayudarte hoy. \xA1Siempre es un gusto atenderte! \u{1F91D}\u{1F680}`;
-          const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-          let media = null;
-          try {
-            media = await textToSpeechMedia2(outOfOfficeText);
-          } catch (ttsErr) {
-            console.warn("[JANIA-MATCH] Error al generar TTS para fuera de horario:", ttsErr.message || ttsErr);
-          }
-          if (media) {
-            await this.queuedSend(senderId, media, { sendAudioAsVoice: true, quoted: msg });
-          } else {
-            await this.queuedSend(senderId, outOfOfficeText, { quoted: msg });
-          }
-          await this.logToDb(senderId, "janIA", outOfOfficeText);
-          await this.sock.sendPresenceUpdate("paused", senderId);
+          return;
         } catch (err) {
           console.error("[JANIA-MATCH] Error en handlePrivateDmConversation:", err);
         }
@@ -13875,7 +13852,7 @@ function getColombiaHour() {
   const colTime = new Date(utc + 36e5 * -5);
   return colTime.getHours();
 }
-function getGreetingByTime2() {
+function getGreetingByTime3() {
   const hour = getColombiaHour();
   if (hour >= 6 && hour < 12) {
     return "Buenos d\xEDas";
@@ -16073,7 +16050,7 @@ Est\xE1s interactuando con el usuario directamente en la CONSOLA WEB de VECY Bie
 - Si el usuario te env\xEDa un inmueble o requerimiento, extrae los datos para el sistema y dale una respuesta rica, entusiasta y completa confirmando la informaci\xF3n.`;
     }
     if (!isWebUser && !alreadyGreeted && outsideHours && !isGroup) {
-      const saludo = getGreetingByTime2();
+      const saludo = getGreetingByTime3();
       contextText += `
 [INSTRUCCI\xD3N CR\xCDTICA DE PRESENTACI\xD3N FUERA DE HORARIO]:
 Como esta es tu primera interacci\xF3n con este usuario el d\xEDa de hoy, y nos encontramos fuera de horario de oficina, debes presentarte de manera muy c\xE1lida y entusiasta al inicio de tu respuesta:
@@ -18196,7 +18173,7 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
         }
       }
     }
-    const timeGreeting = getGreetingByTime2();
+    const timeGreeting = getGreetingByTime3();
     const nameInfo = resolveNameAndGender(realName, timeGreeting);
     const genderTerm = nameInfo.genderTerm;
     const alreadyGreeted = await checkAlreadyGreeted(userId);
@@ -18377,7 +18354,7 @@ Consulta: ${messageToProcess}`;
     }
   } catch (error) {
     console.error("[processConsultingMessage Error]:", error.message);
-    const timeGreeting = getGreetingByTime2();
+    const timeGreeting = getGreetingByTime3();
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
     const firstName = extractFirstName2(realName) || "colega";
@@ -18501,7 +18478,7 @@ DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
   "response": "Tu respuesta, invitaci\xF3n a debate o mensaje de redirecci\xF3n seg\xFAn corresponda.",
   "reactionEmoji": "string (emoji recomendado)"
 }`;
-    const timeGreeting = getGreetingByTime2();
+    const timeGreeting = getGreetingByTime3();
     const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
     const hour = nowBogota.getHours();
     const nameInfo = resolveNameAndGender(realName || firstName || "colega", timeGreeting);
@@ -18549,7 +18526,7 @@ Pregunta: ${text2}${greetingInstruction}` }
     }
   } catch (error) {
     console.error("[processCirculoMessage Error]:", error.message);
-    const timeGreeting = getGreetingByTime2();
+    const timeGreeting = getGreetingByTime3();
     const rawPhone = userId.split("@")[0];
     const realName = await resolveRealName(userId, userName);
     const firstName = extractFirstName2(realName);
@@ -22174,9 +22151,9 @@ var janIARouter = router({
         }
         const { invokeLLM: invokeLLM2 } = await Promise.resolve().then(() => (init_llm(), llm_exports));
         const { buildSystemPrompt: buildSystemPrompt2, getLiveStats: getLiveStats2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-        const { getGreetingByTime: getGreetingByTime3 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+        const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
         const { resolveNameAndGender: resolveNameAndGender2 } = await Promise.resolve().then(() => (init_nameAndGenderResolver(), nameAndGenderResolver_exports));
-        const timeGreeting = getGreetingByTime3();
+        const timeGreeting = getGreetingByTime4();
         const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
         const hour = nowBogota.getHours();
         const isRegistered = !!ctx.user;

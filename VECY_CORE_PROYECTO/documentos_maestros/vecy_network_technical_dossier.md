@@ -322,6 +322,23 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.12 — Septiembre 2026
+
+#### 📌 ERRADICACIÓN DE AUDIO RESIDUAL DE FUERA DE HORARIO Y SILENCIO DOCTRINAL EN CONVERSACIONES PRIVADAS DE ADMINISTRADORES EN WHATSAPP
+
+**Requerimiento y Objetivos:**
+1. Eliminar el envío automático e indebido de notas de voz de "agentes humanos descansando" que JanIA emitía al enviarse mensajes entre directores/administradores (Eduardo `+573192919978` y Jani `+573166569719`).
+2. Erradicar la fonética distorsionada del motor TTS provocada por la lectura literal de emojis de accesibilidad.
+3. Asegurar que las conversaciones personales y directas entre fundadores se mantengan en absoluto silencio sin interrupciones del bot.
+4. Preservar al 100% los servicios oficiales de Verificación de Cédulas (2Captcha + Policía Nacional) y Predial Bogotá en chats privados.
+
+**Solución aplicada:**
+- **Extirpación Total de Bloque Residual en `server/_core/whatsapp-match.ts`**:
+  - Se eliminó el bloque de `outOfOfficeText` y la síntesis de voz con `textToSpeechMedia` en `handlePrivateDmConversation`.
+- **Silencio Doctrinal en DMs Privados de Administradores**:
+  - En `processBufferedDmMessages`, si el mensaje no es una solicitud de verificación de identidad ni de asistencia predial, el sistema ejecuta `return;` inmediato, suprimiendo cualquier intento de chateo interactivo no solicitado o notas de voz automáticas.
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
 ### 🔖 v32.11 — Septiembre 2026
 
 #### 📌 RESTAURACIÓN DE VISIBILIDAD DE MATCHES EN LA MESA DE COINCIDENCIAS, DOCTRINA "DATO PENDIENTE" VS "NO COINCIDE", SABIDURÍA EN INMUEBLES PARA REMODELAR Y RESCATE DE DEMANDAS

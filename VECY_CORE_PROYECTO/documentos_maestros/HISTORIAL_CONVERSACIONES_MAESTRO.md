@@ -7,6 +7,46 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.12 — 30 Septiembre 2026
+
+### Solicitud de Eduardo
+Erradicación Definitiva de Audio Residual de Fuera de Horario ("Agentes Humanos Descansando") y Silencio Doctrinal en Conversaciones Privadas entre Directores / Administradores en WhatsApp:
+*(Eduardo reportó: "Hay un pequeño error con JanIA, resulta que al yo enviar cualquier mensaje desde el 3192919978 al 3166569719 y no se si a otros números, envío cualquier mensaje y JanIA me devuelve enseguida un audio y mal estructurado... me da miedo que JanIA le comience a enviar esta clase de audios a todos los que le pregunten algo o por su función de verificar un documento que esa si debe estar y la debe responder... esto es una versión antigua que algúna vez intentamos colocar, pero finalmente decidimos suprimirla o anularla, lo malo es que el audio al parecer se lo autoenvía ella misma cuando yo envío un mensaje desde allí, tu sabes que el 3192919978 es mi canal el de eduardo, pero por allí mientras tanto lo debe seguir utilizando tambien JanIA... En la transcripción que te paso además el audio suena chistoso ya que JanIA lee los emojis y los describe algo como (hombre blanco con mano levantada, luna, estrellas, manos saludandose, cohete despegando... algo así)... pero lo que necesitaría es que esto no debe suceder, no he ordenado colocar algo así...")*
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Remanente Residual de Fuera de Horario en `handlePrivateDmConversation` (`server/_core/whatsapp-match.ts`)**:
+   - En las líneas 2065-2087 de `server/_core/whatsapp-match.ts`, la función `handlePrivateDmConversation` conservaba quemado un flujo obsoleto de auto-respuesta:
+     `const outOfOfficeText = ¡${saludo}${greetingName}! 🙋🏻‍♀️ Qué bueno saludarte de nuevo. En este momento nuestros agentes humanos se encuentran descansando 🌙✨...`.
+   - La función invocaba el motor TTS (`textToSpeechMedia`) para sintetizar dicho texto y despacharlo automáticamente como nota de voz (`sendAudioAsVoice: true`).
+2. **Fonética y Lectura de Emojis por Accesibilidad TTS**:
+   - Al contener emojis Unicode incrustados (`🙋🏻‍♀️`, `🌙✨`, `🤝🚀`), el motor de síntesis de voz Edge/Azure leía literalmente las descripciones de accesibilidad ("mujer con mano levantada tono de piel claro, luna creciente, estrellas brillantes, apretón de manos, cohete despegando..."), produciendo el audio bizarro y descontextualizado reportado por Eduardo.
+3. **Mecánica de Activación en Mensajes Salientes (`fromMe`) entre Directores**:
+   - El socket de Baileys opera en el número de Eduardo (`+573192919978`).
+   - El número de Jani (`573166569719`) forma parte de `ADMIN_IDENTIFIERS`.
+   - Cuando Eduardo le escribía un mensaje personal a Jani, WhatsApp registraba el mensaje con `fromMe: true` en el DM con Jani (`isAdmin: true`).
+   - Al no ser una cédula (interceptor 1) ni un predial (interceptor 2), el mensaje caía directamente en `this.handlePrivateDmConversation(mainMsg, senderId, rawPhone, body)`.
+   - Esto disparaba la síntesis del audio de descanso y lo enviaba de vuelta al chat, interrumpiendo las comunicaciones humanas entre los fundadores.
+4. **Blindaje Previsto para Terceros**:
+   - Se corroboró que a usuarios y clientes externos jamás les llegaba dicho audio debido al guard `if (!isAdmin) return;` en la línea 1033. El comportamiento estaba restringido exclusivamente a las conversaciones con y entre administradores.
+
+### Acciones Ejecutadas en Código, Servidor y Despacho
+1. **Extirpación Total del Audio y Texto de Fuera de Horario (`server/_core/whatsapp-match.ts`)**:
+   - Se eliminó por completo el bloque de generación de audio TTS y el mensaje de `outOfOfficeText` en `handlePrivateDmConversation`.
+2. **Silencio Doctrinal en DMs Privados de Administradores**:
+   - Si un mensaje privado (sea de Eduardo, Jani o terceros) no corresponde a una orden explícita de verificación de identidad o de predial, el pipeline ejecuta `return;` inmediato y guarda silencio absoluto, garantizando que JanIA jamás intervenga en conversaciones personales ni autoenvíe notas de voz.
+3. **Preservación Intacta de Servicios Críticos**:
+   - Verificación Oficial de Cédulas vía 2Captcha y Policía Nacional 100% activa.
+   - Asistencia Predial Bogotá 100% activa.
+   - Ingesta y reacciones automáticas en grupos 100% activas.
+   - Mesa de Coincidencias y motor de matching 100% intactos.
+4. **Validación, Compilación y Despliegue**:
+   - 124/124 tests de Vitest pasando al 100% ✅.
+   - `tsc --noEmit` completado con 0 errores ✅.
+   - Compilación Vite y esbuild (`dist-server/index.js`) 100% limpia ✅.
+   - Versión oficial incrementada a **`v32.12`** en `shared/const.ts` y **`32.12.0`** en `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.11 — 28 Septiembre 2026
 
 ### Solicitud de Eduardo
