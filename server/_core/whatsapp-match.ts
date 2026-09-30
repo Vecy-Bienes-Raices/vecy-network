@@ -842,21 +842,44 @@ export class JaniaMatchBot {
 
           // --- FLUJO 2: CHATS PRIVADOS (DMs) ---
           if (!isGroup) {
-            const rawPhone = senderId.split('@')[0];
+            let resolvedSenderId = senderId;
+            if (senderId.endsWith('@lid') && (this.sock?.signalRepository as any)?.lidMapping?.getPNForLID) {
+              try {
+                const mappedPn = await (this.sock.signalRepository as any).lidMapping.getPNForLID(senderId);
+                if (mappedPn) {
+                  const cleanUser = mappedPn.split(':')[0].split('@')[0];
+                  resolvedSenderId = `${cleanUser}@s.whatsapp.net`;
+                  console.log(`[JANIA-MATCH] [DM] LID ${senderId} resuelto a PN ${resolvedSenderId}`);
+                }
+              } catch (err) {
+                console.warn(`[JANIA-MATCH] [DM] No se pudo resolver PN para LID ${senderId}:`, err);
+              }
+            }
+
+            const rawPhone = resolvedSenderId.split('@')[0];
             const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
             const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : '';
             const botPhone = botJid ? botJid.split('@')[0] : '573192919978';
-            const ADMIN_IDENTIFIERS = ["573192919978", "573166569719", "167108705018103", "225954035179724", ADMIN_PHONE];
+            const ADMIN_IDENTIFIERS = [
+              "573192919978",
+              "573166569719",
+              "573188096811", // Línea Directiva Jani Alves (Esposa de Eduardo)
+              "167108705018103", // LID Directivo Jani Alves
+              "225954035179724", // LID Directivo Eduardo Rivera
+              "218820279050385", // LID Directivo Alterno Jani Alves
+              ADMIN_PHONE
+            ];
             const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone === "225954035179724";
-            const isAdmin = isSelfChat || ADMIN_IDENTIFIERS.some(id => rawPhone.includes(id) || rawPhone === id);
-            const userName = msg.pushName || (rawPhone === "167108705018103" ? "Jani Alves" : (rawPhone === "225954035179724" ? "Eduardo Rivera" : `Asesor +${rawPhone}`));
+            const isAdmin = isSelfChat || ADMIN_IDENTIFIERS.some(id => rawPhone.includes(id) || rawPhone === id || senderId.includes(id));
+            const userName = msg.pushName || (rawPhone === "167108705018103" || rawPhone === "573188096811" || rawPhone === "573166569719" || rawPhone === "218820279050385" ? "Jani Alves" : (rawPhone === "225954035179724" || rawPhone === "573192919978" ? "Eduardo Rivera" : `Asesor +${rawPhone}`));
 
+            const rawMsg = unwrapMessage(msg.message);
             let body = '';
-            if (msg.message?.conversation) body = msg.message.conversation;
-            else if (msg.message?.extendedTextMessage) body = msg.message.extendedTextMessage.text || '';
-            else if (msg.message?.imageMessage) body = msg.message.imageMessage.caption || '';
-            else if (msg.message?.documentMessage) body = msg.message.documentMessage.caption || '';
-            else if (msg.message?.videoMessage) body = msg.message.videoMessage.caption || '';
+            if (rawMsg?.conversation) body = rawMsg.conversation;
+            else if (rawMsg?.extendedTextMessage) body = rawMsg.extendedTextMessage.text || '';
+            else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || '';
+            else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || '';
+            else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || '';
 
             // 1. Detectar si el mensaje es del bot o de un humano (fromMe)
             if (msg.key.fromMe) {
@@ -898,13 +921,6 @@ export class JaniaMatchBot {
               }
             }
 
-            // 3. Verificar si hay una intervención humana activa (últimos 24 horas)
-            const lastIntervention = this.lastHumanIntervention.get(senderId) || 0;
-            const cooldownPeriod = 24 * 60 * 60 * 1000; // 24 horas
-            if (isMuted || (Date.now() - lastIntervention < cooldownPeriod)) {
-              // Módulo 7: chateo interactivo bloqueado. Si es posible listing se procesará silenciosamente más abajo.
-            }
-
             // 3. Buffer de mensajes de DM privado
             let buffer = this.dmMessageBuffers.get(senderId);
             if (!buffer) {
@@ -913,6 +929,11 @@ export class JaniaMatchBot {
             }
 
             buffer.messages.push(msg);
+
+            // ⚡ Simulación de presencia inmediata: Mostrar 'composing' (escribiendo...) al usuario
+            try {
+              await this.sock.sendPresenceUpdate('composing', senderId);
+            } catch (_) {}
 
             if (buffer.timer) {
               clearTimeout(buffer.timer);
@@ -925,7 +946,7 @@ export class JaniaMatchBot {
               } catch (err) {
                 console.error("[JANIA-MATCH] Error al procesar mensajes de DM acumulados:", err);
               }
-            }, 2500); // Esperar 2.5 segundos para agrupar mensajes continuos
+            }, 1500); // 1.5 segundos para respuesta ágil
             return;
           }
 
@@ -951,29 +972,30 @@ export class JaniaMatchBot {
     let pdfMimeType: string | undefined;
 
     for (const msg of messages) {
+      const rawMsg = unwrapMessage(msg.message);
       let body = '';
-      if (msg.message?.conversation) body = msg.message.conversation;
-      else if (msg.message?.extendedTextMessage) body = msg.message.extendedTextMessage.text || '';
-      else if (msg.message?.imageMessage) body = msg.message.imageMessage.caption || '';
-      else if (msg.message?.documentMessage) body = msg.message.documentMessage.caption || '';
-      else if (msg.message?.videoMessage) body = msg.message.videoMessage.caption || '';
+      if (rawMsg?.conversation) body = rawMsg.conversation;
+      else if (rawMsg?.extendedTextMessage) body = rawMsg.extendedTextMessage.text || '';
+      else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || '';
+      else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || '';
+      else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || '';
 
       if (body.trim()) {
         combinedBody += (combinedBody ? "\n" : "") + body.trim();
       }
 
-      if (msg.message?.imageMessage && !imageBuffer) {
+      if (rawMsg?.imageMessage && !imageBuffer) {
         try {
           const media = await downloadMediaMessage(msg, 'buffer', {});
           imageBuffer = media.toString('base64');
           mainMsg = msg; // El mensaje con la imagen se vuelve el mensaje de referencia
         } catch (e) {}
       }
-      if (msg.message?.documentMessage && !pdfBuffer) {
+      if (rawMsg?.documentMessage && !pdfBuffer) {
         try {
           const media = await downloadMediaMessage(msg, 'buffer', {});
           pdfBuffer = media.toString('base64');
-          pdfMimeType = msg.message.documentMessage.mimetype || 'application/pdf';
+          pdfMimeType = rawMsg.documentMessage.mimetype || 'application/pdf';
           mainMsg = msg; // El mensaje con el pdf se vuelve el mensaje de referencia
         } catch (e) {}
       }
@@ -985,6 +1007,7 @@ export class JaniaMatchBot {
 
     const chatId = senderId;
     const body = combinedBody;
+    console.log(`[JANIA-MATCH] [DM] Procesando buffer DM de ${messages.length} mensaje(s) de ${senderId} (${userName}, Tel: ${rawPhone}): "${body}"`);
 
     // Interceptar confirmaciones de Match (SÍ #M123 o NO #M123) para cualquier usuario (Double Opt-In)
     const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
@@ -999,6 +1022,9 @@ export class JaniaMatchBot {
     // 🏛️ INTERCEPTOR PRIORITARIO DM: COMPLETAR SESIÓN PENDIENTE PREDIAL BOGOTÁ (CÉDULA / NIT)
     const { hasPendingPredialSession, executePredialAssistanceFromWhatsApp } = await import('./predialService');
     if (senderId && hasPendingPredialSession(senderId)) {
+      try {
+        await this.sock.sendPresenceUpdate('composing', senderId);
+      } catch (_) {}
       const predialPendingCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
       if (predialPendingCheck.isPredialRequest && predialPendingCheck.reportText) {
         console.log(`[JANIA-MATCH] [DM] Asistencia de predial completada con cédula para ${senderId} (CHIP ${predialPendingCheck.chip})`);
@@ -1022,6 +1048,9 @@ export class JaniaMatchBot {
     }
 
     // 🏛️ INTERCEPTOR DIRECTO DM: ASISTENCIA PREDIAL BOGOTÁ (CHIP + CÉDULA)
+    try {
+      await this.sock.sendPresenceUpdate('composing', senderId);
+    } catch (_) {}
     const predialCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
     if (predialCheck.isPredialRequest && predialCheck.reportText) {
       console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || 'General'})`);

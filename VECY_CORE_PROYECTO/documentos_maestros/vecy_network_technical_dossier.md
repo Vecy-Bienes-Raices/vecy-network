@@ -322,6 +322,34 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.13 — Septiembre 2026
+
+#### 📌 RESTAURACIÓN DE ATENCIÓN Y PRESENCIA ACTIVA 'COMPOSING' PARA LÍNEA DIRECTIVA +57 3188096811, DESENRROLLADO EPHEMERAL EN DMS Y PURGA DE MUTE EN BD
+
+**Requerimiento y Objetivos:**
+1. Resolver la falta de respuesta y de indicador de presencia ("escribiendo...") reportada por Eduardo al enviar comandos de prueba desde la línea de su esposa (`+57 3188096811`) al bot de JanIA (`+57 3192919978`).
+2. Eliminar cualquier registro de silenciamiento residual (`mute:`) en la base de datos PostgreSQL que impida que las líneas directivas interactúen con el bot.
+3. Asegurar que los mensajes privados (DMs) envueltos en temporizadores (mensajes efímeros) o formatos multicapa de WhatsApp Web sean leídos y procesados sin omitirse silenciosamente.
+4. Garantizar que el indicador de escritura (`composing` / "escribiendo...") se active de forma inmediata tanto al recibir el mensaje en el socket como durante la preparación de liquidaciones prediales y verificaciones de identidad.
+5. Diseñar e individualizar las campañas promocionales de Verificación de Identidad (Cédula de Ciudadanía, Extranjería y Pasaporte) y Liquidación de Impuesto Predial y Vehículos Bogotá 2026, integrando enlaces oficiales y la instrucción de guardar el contacto de JanIA.
+
+**Solución aplicada:**
+- **Purga de Registros Mute en Base de Datos (`pendingSessions`)**:
+  - Se eliminaron de PostgreSQL los registros obsoletos `mute:573188096811`, `mute:218820279050385` y `mute:225954035179724`.
+- **Inclusión Directiva Permanente en `ADMIN_IDENTIFIERS` (`server/_core/whatsapp-match.ts`)**:
+  - Se incorporaron `573188096811` y los LIDs asociados a la lista blanca administrativa, asignando automáticamente rol directivo de Jani Alves (`isAdmin: true`).
+- **Resolución Inversa de LID a PN en DMs**:
+  - Se implementó `lidMapping.getPNForLID` en el flujo de DMs, permitiendo reconocer números telefónicos reales cuando los clientes o WhatsApp Web se comunican con identificadores `@lid`.
+- **Desenrrollado Universal con `unwrapMessage` en Flujo Privado**:
+  - Se aplicó `unwrapMessage(msg.message)` en la recepción inicial y en `processBufferedDmMessages`, garantizando que mensajes con temporizador (`ephemeralMessage`) no queden con `body` vacío.
+- **Presencia Inmediata en Tiempo Real**:
+  - `sendPresenceUpdate('composing', senderId)` se activa de inmediato al recibir el mensaje en el buffer (con tiempo de agrupación reducido a 1.5s) y en los interceptores de predial e identidad.
+- **Campañas Especializadas Independientes**:
+  - Se prepararon dos avisos con marketing persuasivo y sin fricción (uno para identidad y antecedentes, y otro para predial de Bogotá) con llamada a guardar el contacto de JanIA (`+573192919978`), seguir el canal de WhatsApp (`https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`) y usar la web oficial (`https://vecy-network.vercel.app/jania`).
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+---
+
 ### 🔖 v32.12 — Septiembre 2026
 
 #### 📌 ERRADICACIÓN DE AUDIO RESIDUAL DE FUERA DE HORARIO Y SILENCIO DOCTRINAL EN CONVERSACIONES PRIVADAS DE ADMINISTRADORES EN WHATSAPP

@@ -165,7 +165,27 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.12 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.13 — Septiembre 2026
+
+### Novedades v32.13 (Restauración de Atención y Presencia Activa 'Composing' para Línea Directiva +57 3188096811, Desenrrollado Ephemeral en DMs y Purga de Mute en BD):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo reportó: *"Le escribí desde el número de mi esposa para probar lo del predial y ni siquiera se ve si JanIA está escribiendo o grabando un audio, algo. No sale nada, sería bueno que revisaras por fa, no se si esos gestos de escribiendo o grabando audio hayan desaparecido de sus funciones. Le escribí de un número diferente es el +57 3188096811..."*
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Purga de Mute Residual en PostgreSQL (`pendingSessions`)**:
+     - Se localizó y eliminó el registro obsoleto `mute:573188096811` que silenciaba preventivamente a la directiva por un intercambio previo evaluado como externo.
+  2. **Inclusión de Línea Directiva y LIDs en `ADMIN_IDENTIFIERS` (`whatsapp-match.ts`)**:
+     - Se registraron permanentemente `573188096811` y sus LIDs correspondientes (`218820279050385`, `167108705018103`) con rol directivo de Jani Alves (`isAdmin: true`), garantizando que jamás sea silenciada.
+  3. **Mapeo Autónomo LID a PN en Mensajería Privada**:
+     - Se implementó resolución inversa de LID a número telefónico (`lidMapping.getPNForLID`) en el flujo de DMs, asegurando el reconocimiento del número de la directiva y asesores.
+  4. **Desenrrollado de Mensajes Ephemeral y Multicapa (`unwrapMessage`)**:
+     - Se aplicó `unwrapMessage(msg.message)` tanto al recibir el mensaje como al procesar el buffer de DMs, solucionando el problema donde mensajes con temporizador o provenientes de WhatsApp Web extraían un cuerpo vacío y se descartaban.
+  5. **Simulación de Presencia Inmediata ('composing' / 'escribiendo...')**:
+     - Se añadió `sendPresenceUpdate('composing', senderId)` inmediatamente al encolar el mensaje en el buffer (con timeout reducido a 1.5s) y en los interceptores de predial y verificación de identidad, garantizando feedback visual en tiempo real.
+  6. **Campañas Individuales Especializadas**:
+     - Se diseñaron los 2 avisos independientes (Verificación Cédula/Identidad vs Predial Bogotá 2026) con instrucciones para guardar el contacto oficial de JanIA (`+573192919978`), enlace al canal de WhatsApp y web oficial en Vercel (`https://vecy-network.vercel.app/jania`).
+- **Verificación**: 124/124 tests Vitest pasando ✅ | `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.12 — Septiembre 2026
 
 ### Novedades v32.12 (Erradicación de Audio Residual de Fuera de Horario y Silencio Doctrinal en Chats Privados de Administradores):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

@@ -10860,20 +10860,46 @@ ${quotedNote}` : quotedNote;
                 continue;
               }
               if (!isGroup) {
-                const rawPhone = senderId.split("@")[0];
+                let resolvedSenderId = senderId;
+                if (senderId.endsWith("@lid") && this.sock?.signalRepository?.lidMapping?.getPNForLID) {
+                  try {
+                    const mappedPn = await this.sock.signalRepository.lidMapping.getPNForLID(senderId);
+                    if (mappedPn) {
+                      const cleanUser = mappedPn.split(":")[0].split("@")[0];
+                      resolvedSenderId = `${cleanUser}@s.whatsapp.net`;
+                      console.log(`[JANIA-MATCH] [DM] LID ${senderId} resuelto a PN ${resolvedSenderId}`);
+                    }
+                  } catch (err) {
+                    console.warn(`[JANIA-MATCH] [DM] No se pudo resolver PN para LID ${senderId}:`, err);
+                  }
+                }
+                const rawPhone = resolvedSenderId.split("@")[0];
                 const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
                 const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
                 const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
-                const ADMIN_IDENTIFIERS = ["573192919978", "573166569719", "167108705018103", "225954035179724", ADMIN_PHONE];
+                const ADMIN_IDENTIFIERS = [
+                  "573192919978",
+                  "573166569719",
+                  "573188096811",
+                  // Línea Directiva Jani Alves (Esposa de Eduardo)
+                  "167108705018103",
+                  // LID Directivo Jani Alves
+                  "225954035179724",
+                  // LID Directivo Eduardo Rivera
+                  "218820279050385",
+                  // LID Directivo Alterno Jani Alves
+                  ADMIN_PHONE
+                ];
                 const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone === "225954035179724";
-                const isAdmin = isSelfChat || ADMIN_IDENTIFIERS.some((id) => rawPhone.includes(id) || rawPhone === id);
-                const userName = msg.pushName || (rawPhone === "167108705018103" ? "Jani Alves" : rawPhone === "225954035179724" ? "Eduardo Rivera" : `Asesor +${rawPhone}`);
+                const isAdmin = isSelfChat || ADMIN_IDENTIFIERS.some((id) => rawPhone.includes(id) || rawPhone === id || senderId.includes(id));
+                const userName = msg.pushName || (rawPhone === "167108705018103" || rawPhone === "573188096811" || rawPhone === "573166569719" || rawPhone === "218820279050385" ? "Jani Alves" : rawPhone === "225954035179724" || rawPhone === "573192919978" ? "Eduardo Rivera" : `Asesor +${rawPhone}`);
+                const rawMsg = unwrapMessage(msg.message);
                 let body = "";
-                if (msg.message?.conversation) body = msg.message.conversation;
-                else if (msg.message?.extendedTextMessage) body = msg.message.extendedTextMessage.text || "";
-                else if (msg.message?.imageMessage) body = msg.message.imageMessage.caption || "";
-                else if (msg.message?.documentMessage) body = msg.message.documentMessage.caption || "";
-                else if (msg.message?.videoMessage) body = msg.message.videoMessage.caption || "";
+                if (rawMsg?.conversation) body = rawMsg.conversation;
+                else if (rawMsg?.extendedTextMessage) body = rawMsg.extendedTextMessage.text || "";
+                else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || "";
+                else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || "";
+                else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || "";
                 if (msg.key.fromMe) {
                   const msgId = msg.key.id || "";
                   if (this.botSentMessageIds.has(msgId)) {
@@ -10903,16 +10929,16 @@ ${quotedNote}` : quotedNote;
                     console.log(`[JANIA-MATCH] Sesi\xF3n reactivada mediante comando de cliente para ${senderId}`);
                   }
                 }
-                const lastIntervention = this.lastHumanIntervention.get(senderId) || 0;
-                const cooldownPeriod = 24 * 60 * 60 * 1e3;
-                if (isMuted || Date.now() - lastIntervention < cooldownPeriod) {
-                }
                 let buffer = this.dmMessageBuffers.get(senderId);
                 if (!buffer) {
                   buffer = { messages: [], timer: null };
                   this.dmMessageBuffers.set(senderId, buffer);
                 }
                 buffer.messages.push(msg);
+                try {
+                  await this.sock.sendPresenceUpdate("composing", senderId);
+                } catch (_) {
+                }
                 if (buffer.timer) {
                   clearTimeout(buffer.timer);
                 }
@@ -10923,7 +10949,7 @@ ${quotedNote}` : quotedNote;
                   } catch (err) {
                     console.error("[JANIA-MATCH] Error al procesar mensajes de DM acumulados:", err);
                   }
-                }, 2500);
+                }, 1500);
                 return;
               }
             } catch (err) {
@@ -10939,16 +10965,17 @@ ${quotedNote}` : quotedNote;
         let pdfBuffer;
         let pdfMimeType;
         for (const msg of messages2) {
+          const rawMsg = unwrapMessage(msg.message);
           let body2 = "";
-          if (msg.message?.conversation) body2 = msg.message.conversation;
-          else if (msg.message?.extendedTextMessage) body2 = msg.message.extendedTextMessage.text || "";
-          else if (msg.message?.imageMessage) body2 = msg.message.imageMessage.caption || "";
-          else if (msg.message?.documentMessage) body2 = msg.message.documentMessage.caption || "";
-          else if (msg.message?.videoMessage) body2 = msg.message.videoMessage.caption || "";
+          if (rawMsg?.conversation) body2 = rawMsg.conversation;
+          else if (rawMsg?.extendedTextMessage) body2 = rawMsg.extendedTextMessage.text || "";
+          else if (rawMsg?.imageMessage) body2 = rawMsg.imageMessage.caption || "";
+          else if (rawMsg?.documentMessage) body2 = rawMsg.documentMessage.caption || "";
+          else if (rawMsg?.videoMessage) body2 = rawMsg.videoMessage.caption || "";
           if (body2.trim()) {
             combinedBody += (combinedBody ? "\n" : "") + body2.trim();
           }
-          if (msg.message?.imageMessage && !imageBuffer) {
+          if (rawMsg?.imageMessage && !imageBuffer) {
             try {
               const media = await downloadMediaMessage(msg, "buffer", {});
               imageBuffer = media.toString("base64");
@@ -10956,11 +10983,11 @@ ${quotedNote}` : quotedNote;
             } catch (e) {
             }
           }
-          if (msg.message?.documentMessage && !pdfBuffer) {
+          if (rawMsg?.documentMessage && !pdfBuffer) {
             try {
               const media = await downloadMediaMessage(msg, "buffer", {});
               pdfBuffer = media.toString("base64");
-              pdfMimeType = msg.message.documentMessage.mimetype || "application/pdf";
+              pdfMimeType = rawMsg.documentMessage.mimetype || "application/pdf";
               mainMsg = msg;
             } catch (e) {
             }
@@ -10971,6 +10998,7 @@ ${quotedNote}` : quotedNote;
         }
         const chatId = senderId;
         const body = combinedBody;
+        console.log(`[JANIA-MATCH] [DM] Procesando buffer DM de ${messages2.length} mensaje(s) de ${senderId} (${userName}, Tel: ${rawPhone}): "${body}"`);
         const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
         const matchConfirm = body.match(matchConfirmationRegex);
         if (matchConfirm) {
@@ -10981,6 +11009,10 @@ ${quotedNote}` : quotedNote;
         }
         const { hasPendingPredialSession: hasPendingPredialSession2, executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
         if (senderId && hasPendingPredialSession2(senderId)) {
+          try {
+            await this.sock.sendPresenceUpdate("composing", senderId);
+          } catch (_) {
+          }
           const predialPendingCheck = await executePredialAssistanceFromWhatsApp2(body, senderId, true);
           if (predialPendingCheck.isPredialRequest && predialPendingCheck.reportText) {
             console.log(`[JANIA-MATCH] [DM] Asistencia de predial completada con c\xE9dula para ${senderId} (CHIP ${predialPendingCheck.chip})`);
@@ -11000,6 +11032,10 @@ ${quotedNote}` : quotedNote;
           await this.queuedSend(senderId, idCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
           await this.logToDb(senderId, "janIA", idCheck.reportText);
           return;
+        }
+        try {
+          await this.sock.sendPresenceUpdate("composing", senderId);
+        } catch (_) {
         }
         const predialCheck = await executePredialAssistanceFromWhatsApp2(body, senderId, true);
         if (predialCheck.isPredialRequest && predialCheck.reportText) {

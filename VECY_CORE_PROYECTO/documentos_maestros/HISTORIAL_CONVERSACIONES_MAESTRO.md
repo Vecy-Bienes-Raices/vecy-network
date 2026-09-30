@@ -7,6 +7,49 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.13 — 30 Septiembre 2026
+
+### Solicitud de Eduardo
+Restauración de Atención y Presencia Activa ("Escribiendo...") en WhatsApp para el Número Directivo +57 3188096811, Desenrrollado de Mensajes Ephemeral en DMs, Desactivación de Mute Residual, y Formulación de Campañas Individuales Especializadas (Cédulas vs Predial Bogotá):
+*(Eduardo reportó: "Le escribí desde el número de mi esposa para probar lo del predial y ni siquiera se ve si JanIA está escribiendo o grabando un audio, algo. No sale nada, sería bueno que revisaras por fa, no se si esos gestos de escribiendo o grabando audio hayan desaparecido de sus funciones. Le escribí de un número diferente es el +57 3188096811... Observaciones y sugerencias: Ambos comerciales deben indicar que guarden el contacto de JanIA para más facilidad y que sigan el canal de Whatsapp para enterarsen de nuesvos servicios como este de poder solicitar la factura predial y la verificación de documentos y antecedentes. El chat de JanIA es este el enlace: https://vecy-network.vercel.app/jania... Indicar qué datos se deben anexar en cada solicitud... Antes de enviarlos a horas distintas y distantes por los grupos 2 / 3 y el canal. Muéstrame los avisos previos que enviarás a los grupos y el canal también dime en qué horario se enviarán.")*
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Registro Residual de Silenciamiento en Base de Datos PostgreSQL (`pendingSessions`)**:
+   - Al auditar la tabla `pendingSessions` en PostgreSQL local del VPS, se detectó el registro:
+     `mute:573188096811 | {"isMuted": true, "mutedAt": "2026-08-19T06:43:30.175Z"}`
+   - Este registro fue creado previamente cuando Eduardo le escribió a su esposa desde el bot, activando el detector de "intervención humana con tercero" debido a que `573188096811` no figuraba en `ADMIN_IDENTIFIERS`.
+   - Como resultado, cualquier mensaje proveniente de `573188096811` era evaluado como silenciado (`isMuted = true`), impidiendo la atención interactiva.
+2. **Omisión de Desenrrollado (`unwrapMessage`) en Flujo de Mensajes Privados (DMs)**:
+   - A diferencia del flujo de grupos (que usaba `unwrapMessage`), el receptor de DMs en las líneas 854-860 y el consolidador de buffer en las líneas 954-960 leían directamente `msg.message?.conversation` o `msg.message?.extendedTextMessage`.
+   - Cuando WhatsApp Web o WhatsApp móvil envía mensajes con temporizador (mensajes efímeros) o envolturas multicapa (`ephemeralMessage`, `viewOnceMessage`, `documentWithCaptionMessage`), dichas propiedades están en `undefined`, dejando `body` como cadena vacía `""` y provocando el descarte silencioso en `if (!combinedBody.trim() && !imageBuffer && !pdfBuffer) return;`.
+3. **Ausencia del Indicador de Presencia (`composing` / "Escribiendo...") en Predial**:
+   - Mientras la verificación de identidad llamaba a `sendPresenceUpdate('composing', senderId)`, los interceptores de asistencia predial (líneas 1000 y 1024) carecían de esta invocación, provocando que el usuario no visualizara feedback inmediato tras su mensaje.
+4. **Falta de Mapeo Inverso de LID a PN en DMs**:
+   - En mensajes privados emitidos por clientes con identificador LID (`@lid`), `rawPhone` conservaba el identificador numérico interno en vez del número telefónico real colombiano (`573188096811`), impidiendo la identificación de la directiva.
+
+### Acciones Ejecutadas en Código, Servidor y Despacho
+1. **Purga Inmediata de Registros Mute en PostgreSQL**:
+   - Se ejecutó en el VPS: `DELETE FROM "pendingSessions" WHERE jid LIKE '%3188096811%' OR jid IN ('mute:225954035179724', 'mute:218820279050385');`, liberando completamente las líneas de los fundadores.
+2. **Inclusión de Línea Directiva en `ADMIN_IDENTIFIERS` (`whatsapp-match.ts`)**:
+   - Se añadieron `"573188096811"` y los LIDs correspondientes (`"218820279050385"`, `"167108705018103"`, `"225954035179724"`) a `ADMIN_IDENTIFIERS`, blindándolos contra silenciamiento permanente y reconociendo a Jani Alves.
+3. **Mapeo Autónomo de LID a PN en DMs Privados**:
+   - Se integró `lidMapping.getPNForLID` en el flujo de DMs, resolviendo el número telefónico nativo antes de clasificar el mensaje.
+4. **Desenrrollado Universal con `unwrapMessage` en DMs**:
+   - Tanto la ingesta individual como el bucle de acumulación en `processBufferedDmMessages` procesan ahora a través de `unwrapMessage(msg.message)`, garantizando la lectura de cualquier mensaje de texto, efímero o multimedia.
+5. **Presencia Activa Inmediata (`composing` / "Escribiendo...")**:
+   - Se añadió `this.sock.sendPresenceUpdate('composing', senderId)` de forma inmediata al encolar el mensaje en el buffer (tiempo de espera reducido a 1.5s) y en los interceptores de predial y verificación de identidad.
+6. **Estructuración de Campañas Individuales Especializadas**:
+   - **Campaña A (Identidad/Antecedentes)**: Cédula de Ciudadanía (C.C.), Cédula de Extranjería (C.E.) y Pasaporte, destacando gratuidad y seguridad notarial.
+   - **Campaña B (Predial y Vehículos Bogotá 2026)**: Consulta y liquidación con CHIP / Placa / Cédula / NIT, enlace oficial a factura en PDF.
+   - Ambas incorporan la instrucción de guardar el contacto de JanIA (`JanIA agente IA de VECY` - `+573192919978`), seguir el canal oficial de WhatsApp (`https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`) y acceder a `https://vecy-network.vercel.app/jania`.
+7. **Validación, Compilación y Despliegue**:
+   - 124/124 tests de Vitest pasando al 100% ✅.
+   - `tsc --noEmit` completado con 0 errores ✅.
+   - Compilación Vite y esbuild (`dist-server/index.js`) 100% limpia ✅.
+   - Versión oficial incrementada a **`v32.13`** en `shared/const.ts` y **`32.13.0`** en `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.12 — 30 Septiembre 2026
 
 ### Solicitud de Eduardo
