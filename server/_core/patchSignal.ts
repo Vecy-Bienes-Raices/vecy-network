@@ -1,24 +1,19 @@
+import { createRequire } from 'module';
+
 let isPatched = false;
 
 function getLibSignal(): any {
   try {
-    // Intentar require en entorno Node / CJS / TSX
-    // @ts-ignore
-    const req = typeof require !== 'undefined' ? require : (typeof module !== 'undefined' ? module.require : null);
-    if (req) {
-      try {
-        return req('libsignal');
-      } catch {
-        // Fallback para entornos donde libsignal está anidado
-        const path = req('path');
-        const resolved = (req as any).resolve('libsignal', {
-          paths: [process.cwd(), path.join(process.cwd(), 'node_modules')]
-        });
-        return req(resolved);
-      }
+    const esmRequire = createRequire(import.meta.url);
+    try {
+      const baileysPath = esmRequire.resolve('@whiskeysockets/baileys');
+      const baileysRequire = createRequire(baileysPath);
+      return baileysRequire('libsignal');
+    } catch {
+      return esmRequire('libsignal');
     }
-  } catch {
-    // Silencioso en entornos de test/Vite donde libsignal no es ejecutado
+  } catch (err) {
+    console.error('[SIGNAL-PATCH] Error resolviendo libsignal:', err);
   }
   return null;
 }

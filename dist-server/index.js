@@ -1,11 +1,5 @@
 var __defProp = Object.defineProperty;
 var __getOwnPropNames = Object.getOwnPropertyNames;
-var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
-  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
-}) : x)(function(x) {
-  if (typeof require !== "undefined") return require.apply(this, arguments);
-  throw Error('Dynamic require of "' + x + '" is not supported');
-});
 var __esm = (fn, res) => function __init() {
   return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
 };
@@ -9334,21 +9328,19 @@ var init_emailContractService = __esm({
 });
 
 // server/_core/patchSignal.ts
+import { createRequire } from "module";
 function getLibSignal() {
   try {
-    const req = typeof __require !== "undefined" ? __require : typeof module !== "undefined" ? module.require : null;
-    if (req) {
-      try {
-        return req("libsignal");
-      } catch {
-        const path13 = req("path");
-        const resolved = req.resolve("libsignal", {
-          paths: [process.cwd(), path13.join(process.cwd(), "node_modules")]
-        });
-        return req(resolved);
-      }
+    const esmRequire = createRequire(import.meta.url);
+    try {
+      const baileysPath = esmRequire.resolve("@whiskeysockets/baileys");
+      const baileysRequire = createRequire(baileysPath);
+      return baileysRequire("libsignal");
+    } catch {
+      return esmRequire("libsignal");
     }
-  } catch {
+  } catch (err) {
+    console.error("[SIGNAL-PATCH] Error resolviendo libsignal:", err);
   }
   return null;
 }
