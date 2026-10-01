@@ -419,9 +419,7 @@ export async function downloadPredialInvoicePdf(
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--single-process',
-        '--no-zygote'
+        '--disable-gpu'
       ]
     });
 
@@ -439,10 +437,22 @@ export async function downloadPredialInvoicePdf(
     });
 
     // 1. Navegar al portal oficial de descarga directa sin registro previo
-    await page.goto('https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA', {
-      waitUntil: 'networkidle2',
-      timeout: 45000
-    });
+    try {
+      await page.goto('https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA', {
+        waitUntil: 'networkidle2',
+        timeout: 45000
+      });
+    } catch (gotoErr: any) {
+      if (gotoErr?.message?.includes('detached') || gotoErr?.message?.includes('timeout') || gotoErr?.message?.includes('LifecycleWatcher')) {
+        console.warn('[PREDIAL-DOWNLOAD] Reintentando page.goto con domcontentloaded...');
+        await page.goto('https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA', {
+          waitUntil: 'domcontentloaded',
+          timeout: 45000
+        });
+      } else {
+        throw gotoErr;
+      }
+    }
 
     // 2. Seleccionar tipo de impuesto: Predial (0001)
     await page.select('#claveImpuesto', '0001');

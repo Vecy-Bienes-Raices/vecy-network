@@ -865,13 +865,14 @@ export class JaniaMatchBot {
               "573166569719",
               "573188096811", // Línea Directiva Jani Alves (Esposa de Eduardo)
               "167108705018103", // LID Directivo Jani Alves
+              "182781141344345", // LID Directivo Activo Jani Alves
               "225954035179724", // LID Directivo Eduardo Rivera
               "218820279050385", // LID Directivo Alterno Jani Alves
               ADMIN_PHONE
             ];
             const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone === "225954035179724";
             const isAdmin = isSelfChat || ADMIN_IDENTIFIERS.some(id => rawPhone.includes(id) || rawPhone === id || senderId.includes(id));
-            const userName = msg.pushName || (rawPhone === "167108705018103" || rawPhone === "573188096811" || rawPhone === "573166569719" || rawPhone === "218820279050385" ? "Jani Alves" : (rawPhone === "225954035179724" || rawPhone === "573192919978" ? "Eduardo Rivera" : `Asesor +${rawPhone}`));
+            const userName = msg.pushName || (rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "573166569719" || rawPhone === "218820279050385" ? "Jani Alves" : (rawPhone === "225954035179724" || rawPhone === "573192919978" ? "Eduardo Rivera" : `Asesor +${rawPhone}`));
 
             const rawMsg = unwrapMessage(msg.message);
             let body = '';

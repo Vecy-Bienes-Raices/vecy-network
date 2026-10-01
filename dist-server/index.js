@@ -9088,9 +9088,7 @@ async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip) {
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
-        "--disable-gpu",
-        "--single-process",
-        "--no-zygote"
+        "--disable-gpu"
       ]
     });
     const page = await browser.newPage();
@@ -9105,10 +9103,22 @@ async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip) {
         }
       }
     });
-    await page.goto("https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA", {
-      waitUntil: "networkidle2",
-      timeout: 45e3
-    });
+    try {
+      await page.goto("https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA", {
+        waitUntil: "networkidle2",
+        timeout: 45e3
+      });
+    } catch (gotoErr) {
+      if (gotoErr?.message?.includes("detached") || gotoErr?.message?.includes("timeout") || gotoErr?.message?.includes("LifecycleWatcher")) {
+        console.warn("[PREDIAL-DOWNLOAD] Reintentando page.goto con domcontentloaded...");
+        await page.goto("https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA", {
+          waitUntil: "domcontentloaded",
+          timeout: 45e3
+        });
+      } else {
+        throw gotoErr;
+      }
+    }
     await page.select("#claveImpuesto", "0001");
     await page.evaluate(() => {
       if (window.ACC && window.ACC.descargaFacturaVA) {
@@ -11233,6 +11243,8 @@ ${quotedNote}` : quotedNote;
                   // Línea Directiva Jani Alves (Esposa de Eduardo)
                   "167108705018103",
                   // LID Directivo Jani Alves
+                  "182781141344345",
+                  // LID Directivo Activo Jani Alves
                   "225954035179724",
                   // LID Directivo Eduardo Rivera
                   "218820279050385",
@@ -11241,7 +11253,7 @@ ${quotedNote}` : quotedNote;
                 ];
                 const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone === "225954035179724";
                 const isAdmin = isSelfChat || ADMIN_IDENTIFIERS.some((id) => rawPhone.includes(id) || rawPhone === id || senderId.includes(id));
-                const userName = msg.pushName || (rawPhone === "167108705018103" || rawPhone === "573188096811" || rawPhone === "573166569719" || rawPhone === "218820279050385" ? "Jani Alves" : rawPhone === "225954035179724" || rawPhone === "573192919978" ? "Eduardo Rivera" : `Asesor +${rawPhone}`);
+                const userName = msg.pushName || (rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "573166569719" || rawPhone === "218820279050385" ? "Jani Alves" : rawPhone === "225954035179724" || rawPhone === "573192919978" ? "Eduardo Rivera" : `Asesor +${rawPhone}`);
                 const rawMsg = unwrapMessage(msg.message);
                 let body = "";
                 if (rawMsg?.conversation) body = rawMsg.conversation;
