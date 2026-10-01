@@ -774,8 +774,8 @@ export function extractFallbackDataFromText(text: string): any {
     // Si la publicación es de venta o contiene pistas claras de venta
     const isSaleContext = transactionType !== "arriendo" || clean.includes("venta") || clean.includes("vendo");
     if (isSaleContext) {
-      // 7A. Buscar todas las cifras completas colombianas $...
-      const allColMatches = [...clean.matchAll(/\$\s*(\d{1,4}(?:[.\s']\d{3}){1,4})/g)];
+      // 7A. Buscar todas las cifras completas colombianas (con $ o como cifra numérica de millones con puntos/apóstrofes ej: 850.000.000)
+      const allColMatches = [...clean.matchAll(/(?:\$\s*|(?<=\s|^))(\d{1,4}(?:[.\s']\d{3}){1,4})(?=\s|$|[.,;:!])/g)];
       for (const m of allColMatches) {
         const parsed = parseColombianPriceOrBudget(m[1], "", true);
         if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text) && parsed !== adminFee && parsed >= 30_000_000) {
@@ -801,7 +801,7 @@ export function extractFallbackDataFromText(text: string): any {
       }
     } else {
       // Para arriendo: buscar cifras < 100M
-      const colMatch = clean.match(/\$\s*(\d{1,4}(?:[.\s']\d{3}){1,4})/);
+      const colMatch = clean.match(/(?:\$\s*|(?<=\s|^))(\d{1,4}(?:[.\s']\d{3}){1,4})(?=\s|$|[.,;:!])/);
       if (colMatch) {
         const parsed = parseColombianPriceOrBudget(colMatch[1], "", false);
         if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text) && parsed !== adminFee && parsed <= 100_000_000) {

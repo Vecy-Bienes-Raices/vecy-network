@@ -1635,7 +1635,8 @@ export function explicarMatch(
   let budgetMaxCheck = parseFloat(String(requirement.presupuestoMax || "0"));
   if (budgetMaxCheck <= 0) {
     const mP = reqTextLow.match(/(?:ppto|presupuesto|busco|hasta|canon|valor)\s*:?\s*\$?([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)?/i)
-      || reqTextLow.match(/\$?\s*([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)\b/i);
+      || reqTextLow.match(/\$?\s*([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)\b/i)
+      || reqTextLow.replace(/['´`’‘\u00B4\u2019\u2018]/g, ".").match(/(?:\$|(?<=\s|^))(\d{1,4}(?:\.\d{3}){2,3})(?=\s|$|[.,;:!])/);
     if (mP) {
       let valR = parseFloat(mP[1].replace(/\./g, ""));
       if (!isNaN(valR)) {
@@ -2106,10 +2107,10 @@ export function explicarMatch(
   const reqCityNorm2 = (requirement.ciudadDeseada || requirement.addressCity || requirement.city || requirement.rawText || "").toLowerCase();
   const propCityNorm2 = (property.addressCity || property.city || property.zone || property.rawText || "").toLowerCase();
 
-  const isReqCali = reqCityNorm2.includes("cali");
-  const isPropCali = propCityNorm2.includes("cali");
-  const isReqBogota = reqCityNorm2.includes("bogota") || reqCityNorm2.includes("bogotá");
-  const isPropBogota = propCityNorm2.includes("bogota") || propCityNorm2.includes("bogotá");
+  const isReqCali = /\bcali\b/i.test(reqCityNorm2);
+  const isPropCali = /\bcali\b/i.test(propCityNorm2);
+  const isReqBogota = /\bbogot[aá]\b/i.test(reqCityNorm2);
+  const isPropBogota = /\bbogot[aá]\b/i.test(propCityNorm2);
 
   if ((isReqCali && isPropBogota && !isPropCali) || (isReqBogota && isPropCali && !isPropBogota)) {
     blockers.push(`Incompatibilidad geográfica de ciudad: Requerimiento en ${isReqCali ? "Cali" : "Bogotá"} vs Oferta en ${isPropCali ? "Cali" : "Bogotá"}.`);

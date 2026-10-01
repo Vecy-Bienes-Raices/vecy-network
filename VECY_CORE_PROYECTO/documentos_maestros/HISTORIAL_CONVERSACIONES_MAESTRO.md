@@ -7,6 +7,58 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.17 — 01 Octubre 2026
+
+### Solicitud de Eduardo
+Eduardo solicitó: *"Uff volviste, por revisa y corrige todo lo malo que haya hecho el agente de Cloude, recuerda guiarte por la bitácora y todos sus archivos .md. Gracias"*, complementado con los requerimientos previos inmediatos:
+1. *"Y este es nuestro dominio por ahora, que no se te olvide, por favor revisa que esté en la bitácora bien estipulado para que a ningun agente se le olvide. https://vecy-network.vercel.app/"*
+2. *"No me gustó la imagen que hiciste de JanIA donde no solo cambiaste su fisonompia, es decir no la hiciste como acostumbramos y además ya teníamos una imagen muy buena de JanIA ofreciendo el servicio. y esta en @[client/public/jania_verificacion_servicio.jpg] esa imagen si me encanta."*
+3. Observación/Feedback registrado en Match #15191: *"No se está respetando lo que instituímos referente a precios que superen menos del 95% del precio solicitado. Revisa"*.
+
+### Diagnóstico Técnico Profundo de las Acciones de Claude y Causas Raíz
+1. **Error Crítico de Número Telefónico en Broadcasts (`server/_core/index.ts`)**:
+   - En las líneas 567 (`broadcast-identity-v2`) y 633 (`broadcast-predial-promo`), Claude introdujo una errata en el número oficial de JanIA Socket: `📲 *+57 319 292 9978*` (escribió `292` en lugar de `291`). El número real y oficial conectado al socket Baileys en el VPS es `+57 319 291 9978`.
+   - Asimismo, en los pies de ambos mensajes promocionales colocó `www.vecy.co` en lugar del dominio activo oficial `https://vecy-network.vercel.app/` ordenado explícitamente por Eduardo.
+2. **Alteración y Eliminación de Archivos de Imagen en Git**:
+   - Claude eliminó `client/public/images/jania_verificacion_servicio.jpg` dejando el git status sucio y enlaces potencialmente rotos, además de haber generado con IA una imagen que alteraba la fisionomía de JanIA.
+3. **Omisión de Cifras con Apóstrofe y Cifras Standalone (`server/_core/janIA.ts` y `server/_core/matching.ts`)**:
+   - El Requerimiento #2001 contenía el texto: `850’000.000` (con comilla/apóstrofe curva `’` U+2019) sin signo `$`.
+   - `clean` normaliza `’` a `.`, resultando en `850.000.000`. Sin embargo, `extractFallbackDataFromText` en `janIA.ts` (línea 778) exigía obligatoriamente el prefijo `\$` (`/\$\s*(\d{1,4}(?:[.\s']\d{3}){1,4})/g`). Al carecer de `$`, la cifra fue ignorada y `presupuestoMax` quedó en `null` (0).
+   - Al tener presupuesto 0 en BD, el motor de matching omitió la Guillotina Financiera (L2574) y emparejó la Oferta #3319 ($2.800.000.000 COP en La Carolina) con la Demanda #2001 ($850.000.000 COP en La Carolina), generando el Match inválido #15191 que Eduardo tuvo que rechazar manualmente.
+4. **Fallo en Tests de Predial (`server/__tests__/regression.test.ts` y `server/_core/predialService.ts`)**:
+   - `predialService.ts` contenía una condición restrictiva `!detection.estrato` en el Caso 1 (L413) que causaba que solicitudes con CHIP y estrato (ej: *"JanIA, predial CHIP AAA0123ABCD estrato 4"*) cayeran al Caso 4 en lugar del Caso 1.
+   - `regression.test.ts` mantenía aserciones obsoletas que esperaban datos catastrales ficticios (470M avalúo, matrícula simulada, enlace falso a pdf) ya extirpados por la regla de "Honestidad Absoluta en Predial" en v32.14.
+5. **Incumplimiento de Registro en Triple Bitácora**:
+   - Claude no actualizó la Triple Bitácora ni estipuló el dominio activo `https://vecy-network.vercel.app/`.
+
+### Acciones Ejecutadas
+1. **`server/_core/index.ts` — Corrección de Número y Dominio en Broadcasts**:
+   - Corregido el número en ambas campañas a: `📲 *+57 319 291 9978*`.
+   - Actualizado el pie a: `https://vecy-network.vercel.app/`.
+2. **`server/_core/janIA.ts` y `server/_core/matching.ts` — Captura Robusta de Cifras**:
+   - Se actualizó el patrón en 7A y en arriendos a `(?:\$\s*|(?<=\s|^))(\d{1,4}(?:[.\s']\d{3}){1,4})(?=\s|$|[.,;:!])` para capturar cifras numéricas completas con o sin signo `$`, con puntos o apóstrofes (`850’000.000` -> `850.000.000 COP`).
+   - Se blindó `budgetMaxCheck` en `matching.ts` con el mismo soporte para demanda.
+   - Se aplicó límite de palabra (`\bcali\b` y `\bbogot[aá]\b`) en la comprobación geográfica de ciudad para prevenir que palabras como "cálido", "calidad" o "localidad" activen una falsa incompatibilidad geográfica.
+3. **Base de Datos VPS**:
+   - Actualizado Requerimiento #2001 con `presupuestoMax = 850000000.00`.
+   - Purgado Match inválido #15191 de la tabla `"propertyMatches"`.
+4. **`server/_core/predialService.ts` y `server/__tests__/regression.test.ts`**:
+   - Simplificada la condición de Caso 1 en `predialService.ts` a `if (chip && !docNumber)`.
+   - Actualizadas aserciones del test 19 para alinearlas con la Doctrina de Honestidad Absoluta y el portal oficial SDH `descargaFacturaVA`.
+   - Agregados 2 tests de regresión específicos: extracción de cifras con apóstrofe y bloqueo 0% por Guillotina Financiera de Oferta #3319 vs Demanda #2001.
+   - Suite Vitest ejecutando 126/126 tests en VERDE (100% exitosa).
+5. **Restauración de Imágenes Oficiales**:
+   - Preservada `client/public/images/jania_verificacion_servicio.jpg` y en raíz `jania_cedulas_comercial.jpg` (imagen oficial de JanIA aprobada por Eduardo).
+6. **Estipulación de Dominio en `shared/const.ts` y Triple Bitácora**:
+   - Agregada constante: `export const VECY_ACTIVE_DOMAIN = "https://vecy-network.vercel.app";`.
+   - Documentado en `.agents/AGENTS.md`, `HISTORIAL_CONVERSACIONES_MAESTRO.md` y `vecy_network_technical_dossier.md`.
+7. **Incremento Oficial de Versión y Compilación**:
+   - `shared/const.ts`: `v32.17`
+   - `package.json`: `32.17.0`
+   - `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅
+
+---
+
 ## 📋 SESIÓN v32.16 — 30 Septiembre 2026
 
 ### Solicitud de Eduardo

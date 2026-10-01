@@ -19,8 +19,11 @@
 - **Número WhatsApp JanIA Socket/Baileys ACTIVO**: **+573192919978** (Línea donde corre el bot en el VPS)
 - **Número Comercial Oficial VECY BIENES RAÍCES (Atención Bróker)**: **+573166569719** (Línea oficial de la inmobiliaria para llamadas y cotizaciones de clientes)
 - **Base de datos**: PostgreSQL 17.11 + PostGIS 3.6.4 (Nativo en VPS — 0% Cuotas Supabase)
-- **Web pública**: vecy.co
-- **Admin panel**: https://vecy-network.vercel.app/admin
+- **Dominio Activo Oficial del Proyecto**: **https://vecy-network.vercel.app/** (Web oficial pública activa por ahora, panel admin: `https://vecy-network.vercel.app/admin`, JanIA landing: `https://vecy-network.vercel.app/jania`)
+- **Dominio Secundario / Transición**: `https://vecy.co`
+
+> 🌐 **DOCTRINA DE DOMINIO OFICIAL VECY (v32.17)**:
+> El dominio principal activo del proyecto por ahora es OBLIGATORIAMENTE **`https://vecy-network.vercel.app/`**. NINGÚN agente debe olvidar este dominio ni omitirlo en comunicaciones o bitácoras.
 
 > 📞 **DISTINCIÓN DOCTRINAL TELEFÓNICA OFICIAL (v31.28)**:
 > - **JanIA Bot en Baileys**: Opera EXCLUSIVAMENTE conectada al socket mediante la línea **`+573192919978`**.
@@ -165,7 +168,28 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.16 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.17 — Octubre 2026
+
+### Novedades v32.17 (Corrección de Errores de Claude, Dominio Oficial en Bitácora, Rescate de Cifras con Apóstrofe, Guillotina Financiera en Match #15191 y Teléfono Oficial de Broadcasts):
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Corrección de Número Telefónico en Broadcasts (`server/_core/index.ts`)**:
+     - Claude introdujo la errata `+57 319 292 9978` (con `292`) en `broadcast-identity-v2` y `broadcast-predial-promo`. Corregido al número oficial de JanIA Socket: `+57 319 291 9978`.
+     - Actualizado el pie de mensaje para incluir la URL oficial activa `https://vecy-network.vercel.app/`.
+  2. **Captura Robusta de Cifras con Apóstrofe y Standalone (`janIA.ts` y `matching.ts`)**:
+     - Requerimiento #2001 contenía `850’000.000` sin `$`, el cual fue ignorado por el extractor al exigir `\$`. Esto dejó el presupuesto en 0 y provocó el match indebido #15191 con la Oferta #3319 ($2.800M).
+     - Se implementó el patrón `(?:\$\s*|(?<=\s|^))(\d{1,4}(?:[.\s']\d{3}){1,4})(?=\s|$|[.,;:!])` para capturar cualquier cifra colombiana en millones con o sin `$`.
+     - Activada la Guillotina Financiera (0%) ante desbordes presupuestales y purgado Match #15191 en PostgreSQL con actualización de presupuesto de #2001 a $850.000.000 COP.
+  3. **Alineación de Predial y Tests de Regresión**:
+     - En `predialService.ts`, simplificado Caso 1 a `if (chip && !docNumber)`.
+     - Tests en `regression.test.ts` alineados con la doctrina de Honestidad Absoluta (URL oficial SDH `descargaFacturaVA`).
+     - Agregados 2 tests de regresión específicos. Suite Vitest: 126/126 tests pasando ✅.
+  4. **Restauración de Imagen Oficial**:
+     - Preservada `client/public/images/jania_verificacion_servicio.jpg` y en raíz `jania_cedulas_comercial.jpg`.
+  5. **Estipulación de Dominio Activo**:
+     - Registrado `https://vecy-network.vercel.app/` en `shared/const.ts` (`VECY_ACTIVE_DOMAIN`), bitácora y dossier.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.16 — Septiembre 2026
 
 ### Novedades v32.16 (Restauración del Pool Completo de Claves Gemini y Cascada de Modelos en `llm.ts`):
 - **Causas Raíz y Solución de Arquitectura**:

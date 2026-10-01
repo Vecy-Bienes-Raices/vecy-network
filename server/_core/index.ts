@@ -564,7 +564,7 @@ async function startServer() {
         `*¿Cómo usarlo?*\n\n` +
         `1️⃣ Guarda el contacto de JanIA como:\n` +
         `👤 _JanIA Agente IA de VECY_\n` +
-        `📲 *+57 319 292 9978*\n\n` +
+        `📲 *+57 319 291 9978*\n\n` +
         `2️⃣ Escríbele directamente así:\n\n` +
         `▸ \`JanIA, verificar CC: 12345678\`\n` +
         `▸ \`JanIA, verificar CE: 123456\`\n` +
@@ -574,7 +574,7 @@ async function startServer() {
         `💡 _Más servicios gratuitos en nuestro canal:_\n` +
         `👉 https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n\n` +
         `*VECY BIENES RAÍCES 🏘️*\n` +
-        `www.vecy.co`;
+        `https://vecy-network.vercel.app/`;
 
       console.log("[BROADCAST-IDENTITY-V2] Iniciando despacho a Grupo 2, Grupo 3 y Canal...");
       const results: any = {};
@@ -630,7 +630,7 @@ async function startServer() {
         `*¿Cómo usarlo?*\n\n` +
         `1️⃣ Guarda el contacto de JanIA:\n` +
         `👤 _JanIA Agente IA de VECY_\n` +
-        `📲 *+57 319 292 9978*\n\n` +
+        `📲 *+57 319 291 9978*\n\n` +
         `2️⃣ Escríbele así:\n\n` +
         `▸ \`JanIA, predial: CHIP AAA0205AYFZ y CC 12345678\`\n` +
         `▸ \`JanIA, predial: CHIP AAA0205AYFZ y NIT 860030201\`\n\n` +
@@ -639,7 +639,7 @@ async function startServer() {
         `💡 _Sigue nuestro canal para más servicios gratuitos:_\n` +
         `👉 https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n\n` +
         `*VECY BIENES RAÍCES 🏘️*\n` +
-        `www.vecy.co`;
+        `https://vecy-network.vercel.app/`;
 
       console.log("[BROADCAST-PREDIAL] Iniciando despacho a Grupo 2, Grupo 3 y Canal...");
       const results: any = {};

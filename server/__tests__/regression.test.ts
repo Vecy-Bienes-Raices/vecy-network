@@ -57,6 +57,14 @@ describe("VECY NETWORK — SUITE DE REGRESIÓN DOCTRINAL AUTOMATIZADA", () => {
       const price = parseColombianPriceOrBudget("1.471.000", "", false);
       expect(price).toBe(1_471_000);
     });
+
+    it("debe extraer cifras de presupuesto colombianas sin signo $ y con apóstrofe (ej: 850’000.000)", async () => {
+      const { extractFallbackDataFromText } = await import("../_core/janIA");
+      const text = `REQUIERO! URGENTE 🚨\n3 habitaciones o dos y estudio\n2 parqueaderos\nDepósito en lo posible\nLa Carolina\nLo más cerca a Unicentro\nApartameto calido\nNO FUPLEX\n850’000.000\n\nMARÍA HERNÁNDEZ REMAX/One\nTel: 3112194889`;
+      const data = extractFallbackDataFromText(text);
+      expect(data.presupuestoMax).toBe(850_000_000);
+      expect(data.price).toBe(850_000_000);
+    });
   });
 
   // ─────────────────────────────────────────────────────────────
@@ -277,6 +285,34 @@ describe("VECY NETWORK — SUITE DE REGRESIÓN DOCTRINAL AUTOMATIZADA", () => {
       const result = explicarMatch(baseReq, propMedellin);
       expect(result.score).toBe(0);
       expect(result.blockers.length).toBeGreaterThan(0);
+    });
+
+    it("GUILLOTINA FINANCIERA (0%): Oferta $2.800M supera presupuesto demandado $850M con cifra apóstrofe (Caso Match #15191)", () => {
+      const prop = {
+        id: 3319,
+        price: 2800000000,
+        rentPrice: 15240000,
+        transactionType: "venta_o_arriendo",
+        propertyType: "apartment",
+        city: "Bogotá, D.C.",
+        zone: "La Carolina",
+        areaTotal: 187,
+        rawText: "✅ Vendo o arriendo apartamento AMOBLADO en La Carolina\n187 m2\n3 habitaciones con baño privado\nFamily room\nBalcon\n4 parqueaderos\nPiso 5 con entrada de sol de mañana\n8 años de construido\nAdmon: 1.760.000\nValor venta: 2.800 mm\nValor renta: 17 mm"
+      };
+      const req = {
+        id: 2001,
+        presupuestoMax: null,
+        presupuestoMin: null,
+        tipoNegocioDeseado: "venta",
+        tipoInmuebleDeseado: "apartment",
+        ciudadDeseada: "Bogotá, D.C.",
+        zonaDeseada: "La Carolina",
+        areaMin: null,
+        rawText: "REQUIERO! URGENTE 🚨\n3 habitaciones o dos y estudio\n2 parqueaderos\nDepósito en lo posible\nLa Carolina\nLo más cerca a Unicentro\nApartameto calido\nNO FUPLEX\n850’000.000\n\nMARÍA HERNÁNDEZ REMAX/One\nTel: 3112194889"
+      };
+      const result = explicarMatch(req as any, prop as any);
+      expect(result.score).toBe(0);
+      expect(result.blockers.some(b => b.includes("Guillotina Financiera") && b.includes("supera el presupuesto"))).toBe(true);
     });
   });
 
@@ -1485,35 +1521,27 @@ Ed del 2014.
       expect(predialRes.isPredialRequest).toBe(true);
       expect(predialRes.chip).toBe("AAA0123ABCD");
       expect(predialRes.reportText).toContain("LIQUIDACIÓN PREDIAL — VECY BIENES RAÍCES - BOGOTÁ");
-      expect(predialRes.reportText).toContain("Predio CHIP:* AAA0123ABCD (Estrato 4)");
-      expect(predialRes.reportText).toContain("Matrícula inmobiliaria:");
-      expect(predialRes.reportText).toContain("Dirección del predio:");
-      expect(predialRes.reportText).toContain("Avalúo Catastral:* $470.000.000 COP");
-      expect(predialRes.reportText).toContain("Valor estimado con 10% pronto pago:* $2.749.500 COP");
-      expect(predialRes.reportText).toContain("wa.me/573192919978?text=Factura+AAA0123ABCD");
+      expect(predialRes.reportText).toContain("Predio CHIP detectado:* AAA0123ABCD");
+      expect(predialRes.reportText).toContain("Cédula o NIT del propietario");
 
       // 6. Verificación de formato cuando solo se envía el CHIP sin cédula
       const testSenderId = "573199999999@s.whatsapp.net";
       const predialSoloChip = await executePredialAssistanceFromWhatsApp("JanIA predial AAA0123ABCD", testSenderId);
       expect(predialSoloChip.isPredialRequest).toBe(true);
       expect(predialSoloChip.chip).toBe("AAA0123ABCD");
-      expect(predialSoloChip.reportText).toContain("Predio CHIP:* AAA0123ABCD");
-      expect(predialSoloChip.reportText).toContain("Para conectarme a la Secretaría de Hacienda y extraer factura predial en PDF:");
-      expect(predialSoloChip.reportText).toContain("Escríbeme por favor la Cédula o NIT del propietario");
+      expect(predialSoloChip.reportText).toContain("Predio CHIP detectado:* AAA0123ABCD");
+      expect(predialSoloChip.reportText).toContain("Cédula o NIT del propietario");
 
       // 7. Flujo continuado: el usuario responde en el siguiente mensaje solo con su cédula
       const predialConCedula = await executePredialAssistanceFromWhatsApp("43403545", testSenderId, true);
       expect(predialConCedula.isPredialRequest).toBe(true);
       expect(predialConCedula.chip).toBe("AAA0123ABCD");
       expect(predialConCedula.cedula).toBe("43403545");
-      expect(predialConCedula.reportText).toContain("Predio CHIP:* AAA0123ABCD");
-      expect(predialConCedula.reportText).toContain("Matrícula inmobiliaria:");
-      expect(predialConCedula.reportText).toContain("Dirección del predio:");
-      expect(predialConCedula.reportText).not.toContain("Registrada en Certificado");
-      expect(predialConCedula.reportText).not.toContain("Registrada en Catastro");
-      expect(predialConCedula.reportText).toContain("Avalúo Catastral:");
-      expect(predialConCedula.reportText).toContain("Valor estimado con 10% pronto pago:");
-      expect(predialConCedula.reportText).toContain("https://nuevaoficinavirtual.shd.gov.co/bogota/cf/pagos/factura-AAA0123ABCD.pdf");
+      expect(predialConCedula.reportText).toContain("PREDIAL BOGOTÁ — VECY BIENES RAÍCES");
+      expect(predialConCedula.reportText).toContain("CHIP del predio:* AAA0123ABCD");
+      expect(predialConCedula.reportText).toContain("43403545");
+      expect(predialConCedula.reportText).toContain("https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA");
+      expect(predialConCedula.reportText).toContain("DESCARGA TU FACTURA");
     });
 
     it("Debe generar el reporte oficial con marca blanca 100% de VECY Bienes Raíces para la cédula 43403545", async () => {

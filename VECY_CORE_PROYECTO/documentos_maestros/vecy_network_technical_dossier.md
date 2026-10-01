@@ -322,6 +322,38 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.17 — Octubre 2026
+
+#### 📌 CORRECCIÓN DE ERRORES DE CLAUDE, DOCTRINA DE DOMINIO OFICIAL, CAPTURA DE CIFRAS CON APÓSTROFE Y BLOQUEO POR GUILLOTINA FINANCIERA EN MATCH #15191
+
+**Requerimiento y Objetivos:**
+1. Revisión exhaustiva y corrección de los errores introducidos por el agente anterior (Claude).
+2. Corregir el número de WhatsApp oficial en los endpoints de broadcast (`server/_core/index.ts`): sustituir la errata `+57 319 292 9978` por el número real conectado al socket Baileys: `+57 319 291 9978`.
+3. Estipular de forma permanente e indeleble en la bitácora maestra y en el código el dominio oficial activo: `https://vecy-network.vercel.app/`.
+4. Solucionar la causa raíz de la queja de Eduardo en el Match #15191 (*"No se está respetando lo que instituímos referente a precios que superen menos del 95% del precio solicitado"*): evitar que una oferta de $2.800M (Propiedad #3319) sea emparejada con una demanda de $850M (Requerimiento #2001).
+5. Restaurar la imagen oficial `jania_verificacion_servicio.jpg` y evitar generación de imágenes artificiales no autorizadas.
+6. Alinear los tests de regresión con la doctrina vigente de Honestidad Absoluta en Predial.
+
+**Causas Raíz:**
+- En `server/_core/index.ts`, Claude escribió `📲 *+57 319 292 9978*` (con `292` en lugar de `291`) y dejó `www.vecy.co`.
+- En `janIA.ts`, la función `extractFallbackDataFromText` (L778) exigía obligatoriamente el carácter `\$` (`/\$\s*(\d{1,4}(?:[.\s']\d{3}){1,4})/g`). Al recibir la cifra `850’000.000` con apóstrofe y sin `$`, la cifra fue ignorada, asignando `presupuestoMax = null` (0).
+- En `matching.ts`, al estar el presupuesto en 0, no se activó la Guillotina Financiera (L2574) y la oferta de $2.800M pasó con score 89/100.
+- En `predialService.ts`, el Caso 1 requería `!detection.estrato`, provocando que solicitudes con CHIP y estrato cayeran a la guía general de solicitud.
+- En `regression.test.ts`, el test 19 esperaba datos simulados antiguos eliminados en v32.14.
+
+**Solución aplicada:**
+- **`server/_core/index.ts`**: Corregido número a `+57 319 291 9978` y pie a `https://vecy-network.vercel.app/`.
+- **`server/_core/janIA.ts`**: Patrón en 7A y arriendos ampliado a `(?:\$\s*|(?<=\s|^))(\d{1,4}(?:[.\s']\d{3}){1,4})(?=\s|$|[.,;:!])` para capturar cualquier cifra colombiana en millones con o sin signo `$`, normalizando apóstrofes (`850’000.000` → `850.000.000 COP`).
+- **`server/_core/matching.ts`**: Actualizado `budgetMaxCheck` con soporte de cifras standalone. Aplicado límite de palabra `\bcali\b` y `\bbogot[aá]\b` para evitar falsas incompatibilidades por palabras como "cálido" o "calidad".
+- **Base de Datos VPS**: `presupuestoMax` de Requerimiento #2001 fijado en `850000000.00`. Purgado Match #15191 de `"propertyMatches"`.
+- **`server/_core/predialService.ts`**: Condición simplificada a `if (chip && !docNumber)`.
+- **Suite Vitest**: 126/126 tests pasando al 100% ✅ (incluyendo 2 nuevos tests de regresión para cifras con apóstrofe y guillotina financiera en Match 3319 vs 2001).
+- **Dominio y Versión**: Agregada constante `VECY_ACTIVE_DOMAIN = "https://vecy-network.vercel.app"` en `shared/const.ts`. Versión incrementada a `v32.17` (`32.17.0`).
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅
+
+---
+
 ### 🔖 v32.16 — Septiembre 2026
 
 #### 📌 RESTAURACIÓN DEL POOL COMPLETO DE CLAVES GEMINI Y CASCADA DE MODELOS (`llm.ts`)

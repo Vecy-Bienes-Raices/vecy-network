@@ -409,8 +409,7 @@ export async function executePredialAssistanceFromWhatsApp(
   // ────────────────────────────────────────────────────────────────────────
   // CASO 1: Solo CHIP, sin documento del propietario
   // → Pedir cédula o NIT del propietario
-  // ────────────────────────────────────────────────────────────────────────
-  if (chip && !docNumber && !detection.estrato && !detection.avaluoCatastral) {
+  if (chip && !docNumber) {
     if (senderId) {
       setPendingPredialSession(senderId, { chip });
     }

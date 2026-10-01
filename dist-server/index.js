@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.16";
+    VECY_VERSION = "v32.17";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -5532,7 +5532,7 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
   const hasSpecificReqZone = hasColZone || hasTextZone;
   let budgetMaxCheck = parseFloat(String(requirement.presupuestoMax || "0"));
   if (budgetMaxCheck <= 0) {
-    const mP = reqTextLow.match(/(?:ppto|presupuesto|busco|hasta|canon|valor)\s*:?\s*\$?([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)?/i) || reqTextLow.match(/\$?\s*([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)\b/i);
+    const mP = reqTextLow.match(/(?:ppto|presupuesto|busco|hasta|canon|valor)\s*:?\s*\$?([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)?/i) || reqTextLow.match(/\$?\s*([\d.]+)\s*(millones|millón|mll|mlls|mm|m|M)\b/i) || reqTextLow.replace(/['´`’‘\u00B4\u2019\u2018]/g, ".").match(/(?:\$|(?<=\s|^))(\d{1,4}(?:\.\d{3}){2,3})(?=\s|$|[.,;:!])/);
     if (mP) {
       let valR = parseFloat(mP[1].replace(/\./g, ""));
       if (!isNaN(valR)) {
@@ -5947,10 +5947,10 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
   }
   const reqCityNorm2 = (requirement.ciudadDeseada || requirement.addressCity || requirement.city || requirement.rawText || "").toLowerCase();
   const propCityNorm2 = (property.addressCity || property.city || property.zone || property.rawText || "").toLowerCase();
-  const isReqCali = reqCityNorm2.includes("cali");
-  const isPropCali = propCityNorm2.includes("cali");
-  const isReqBogota = reqCityNorm2.includes("bogota") || reqCityNorm2.includes("bogot\xE1");
-  const isPropBogota = propCityNorm2.includes("bogota") || propCityNorm2.includes("bogot\xE1");
+  const isReqCali = /\bcali\b/i.test(reqCityNorm2);
+  const isPropCali = /\bcali\b/i.test(propCityNorm2);
+  const isReqBogota = /\bbogot[aá]\b/i.test(reqCityNorm2);
+  const isPropBogota = /\bbogot[aá]\b/i.test(propCityNorm2);
   if (isReqCali && isPropBogota && !isPropCali || isReqBogota && isPropCali && !isPropBogota) {
     blockers.push(`Incompatibilidad geogr\xE1fica de ciudad: Requerimiento en ${isReqCali ? "Cali" : "Bogot\xE1"} vs Oferta en ${isPropCali ? "Cali" : "Bogot\xE1"}.`);
     return buildExplanationResult(0, blockers, positives, negatives);
@@ -10228,7 +10228,7 @@ async function executePredialAssistanceFromWhatsApp(text2, senderId, isPrivateDm
   const chip = detection.chip;
   const docNumber = detection.nit || detection.cedula;
   const docLabel = detection.tipoDoc === "NIT" ? "NIT" : detection.tipoDoc === "CE" ? "C\xE9dula de Extranjer\xEDa" : "C\xE9dula";
-  if (chip && !docNumber && !detection.estrato && !detection.avaluoCatastral) {
+  if (chip && !docNumber) {
     if (senderId) {
       setPendingPredialSession(senderId, { chip });
     }
@@ -14447,7 +14447,7 @@ function extractFallbackDataFromText(text2) {
   if (price === 0 && rentPrice === 0) {
     const isSaleContext = transactionType !== "arriendo" || clean.includes("venta") || clean.includes("vendo");
     if (isSaleContext) {
-      const allColMatches = [...clean.matchAll(/\$\s*(\d{1,4}(?:[.\s']\d{3}){1,4})/g)];
+      const allColMatches = [...clean.matchAll(/(?:\$\s*|(?<=\s|^))(\d{1,4}(?:[.\s']\d{3}){1,4})(?=\s|$|[.,;:!])/g)];
       for (const m of allColMatches) {
         const parsed = parseColombianPriceOrBudget(m[1], "", true);
         if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text2) && parsed !== adminFee && parsed >= 3e7) {
@@ -14470,7 +14470,7 @@ function extractFallbackDataFromText(text2) {
         }
       }
     } else {
-      const colMatch = clean.match(/\$\s*(\d{1,4}(?:[.\s']\d{3}){1,4})/);
+      const colMatch = clean.match(/(?:\$\s*|(?<=\s|^))(\d{1,4}(?:[.\s']\d{3}){1,4})(?=\s|$|[.,;:!])/);
       if (colMatch) {
         const parsed = parseColombianPriceOrBudget(colMatch[1], "", false);
         if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text2) && parsed !== adminFee && parsed <= 1e8) {
@@ -25576,7 +25576,7 @@ Con *JanIA* \u2014 la IA de *VECY BIENES RA\xCDCES* \u2014 puedes verificar cual
 
 1\uFE0F\u20E3 Guarda el contacto de JanIA como:
 \u{1F464} _JanIA Agente IA de VECY_
-\u{1F4F2} *+57 319 292 9978*
+\u{1F4F2} *+57 319 291 9978*
 
 2\uFE0F\u20E3 Escr\xEDbele directamente as\xED:
 
@@ -25591,7 +25591,7 @@ Con *JanIA* \u2014 la IA de *VECY BIENES RA\xCDCES* \u2014 puedes verificar cual
 \u{1F449} https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
 
 *VECY BIENES RA\xCDCES \u{1F3D8}\uFE0F*
-www.vecy.co`;
+https://vecy-network.vercel.app/`;
       console.log("[BROADCAST-IDENTITY-V2] Iniciando despacho a Grupo 2, Grupo 3 y Canal...");
       const results = {};
       try {
@@ -25642,7 +25642,7 @@ Con *JanIA* \u2014 la IA de *VECY BIENES RA\xCDCES* \u2014 puedes consultar y de
 
 1\uFE0F\u20E3 Guarda el contacto de JanIA:
 \u{1F464} _JanIA Agente IA de VECY_
-\u{1F4F2} *+57 319 292 9978*
+\u{1F4F2} *+57 319 291 9978*
 
 2\uFE0F\u20E3 Escr\xEDbele as\xED:
 
@@ -25656,7 +25656,7 @@ Con *JanIA* \u2014 la IA de *VECY BIENES RA\xCDCES* \u2014 puedes consultar y de
 \u{1F449} https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
 
 *VECY BIENES RA\xCDCES \u{1F3D8}\uFE0F*
-www.vecy.co`;
+https://vecy-network.vercel.app/`;
       console.log("[BROADCAST-PREDIAL] Iniciando despacho a Grupo 2, Grupo 3 y Canal...");
       const results = {};
       try {
