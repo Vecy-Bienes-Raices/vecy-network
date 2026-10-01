@@ -544,9 +544,145 @@ async function startServer() {
   });
 
 
+  // ─── COMERCIAL: VERIFICACIÓN DE IDENTIDAD v2 ────────────────────────────────
+  app.post("/api/admin/broadcast-identity-v2", async (req, res) => {
+    try {
+      if (!whatsappBot.isReady) {
+        return res.status(503).json({ error: "El bot de WhatsApp no está listo todavía." });
+      }
+
+      const imgPath = path.join(process.cwd(), "jania_cedulas_comercial.jpg");
+      const hasImage = fs.existsSync(imgPath);
+
+      const promoText =
+        `🪪 *¿SABES A QUIÉN LE ESTÁS VENDIENDO, ARRENDANDO O AGENDANDO UNA VISITA?* 🇨🇴\n\n` +
+        `Con *JanIA* — la IA de *VECY BIENES RAÍCES* — puedes verificar cualquier número de identificación en segundos y saber exactamente:\n\n` +
+        `✅ A quién pertenece el documento (nombres y apellidos completos)\n` +
+        `✅ Si la persona tiene antecedentes o no según el artículo de ley vigente\n\n` +
+        `🔐 _100% oficial y gratuito para nuestra comunidad_\n\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `*¿Cómo usarlo?*\n\n` +
+        `1️⃣ Guarda el contacto de JanIA como:\n` +
+        `👤 _JanIA Agente IA de VECY_\n` +
+        `📲 *+57 319 292 9978*\n\n` +
+        `2️⃣ Escríbele directamente así:\n\n` +
+        `▸ \`JanIA, verificar CC: 12345678\`\n` +
+        `▸ \`JanIA, verificar CE: 123456\`\n` +
+        `▸ \`JanIA, verificar Pasaporte: AB123456\`\n\n` +
+        `3️⃣ En segundos te responde con el nombre completo y el estado de antecedentes ✅\n\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `💡 _Más servicios gratuitos en nuestro canal:_\n` +
+        `👉 https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n\n` +
+        `*VECY BIENES RAÍCES 🏘️*\n` +
+        `www.vecy.co`;
+
+      console.log("[BROADCAST-IDENTITY-V2] Iniciando despacho a Grupo 2, Grupo 3 y Canal...");
+      const results: any = {};
+
+      // Grupo 2: VECY SOPORTE LEGAL, TRIBUTARIO, AVALÚOS
+      try {
+        await whatsappBot.sendToGroup(promoText, hasImage ? imgPath : undefined, [], whatsappBot.buzonGroupId);
+        results.grupo2 = "✓ Despachado";
+        console.log("[BROADCAST-IDENTITY-V2] ✓ Grupo 2");
+      } catch (e: any) { results.grupo2 = `Error: ${e.message}`; }
+
+      await new Promise(r => setTimeout(r, 3000));
+
+      // Grupo 3: PROYECTO Vecy Network
+      try {
+        await whatsappBot.sendToGroup(promoText, hasImage ? imgPath : undefined, [], whatsappBot.circuloGroupId);
+        results.grupo3 = "✓ Despachado";
+        console.log("[BROADCAST-IDENTITY-V2] ✓ Grupo 3");
+      } catch (e: any) { results.grupo3 = `Error: ${e.message}`; }
+
+      await new Promise(r => setTimeout(r, 3000));
+
+      // Canal de WhatsApp
+      const channelJid = whatsappBot.channelNewsletterId || "120363399889853806@newsletter";
+      try {
+        await whatsappBot.sendToGroup(promoText, hasImage ? imgPath : undefined, [], channelJid);
+        results.canal = `✓ Despachado a ${channelJid}`;
+        console.log(`[BROADCAST-IDENTITY-V2] ✓ Canal (${channelJid})`);
+      } catch (e: any) { results.canal = `Error: ${e.message}`; }
+
+      return res.status(200).json({ success: true, imageFound: hasImage, results });
+    } catch (err: any) {
+      console.error("[BROADCAST-IDENTITY-V2] Error general:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ─── COMERCIAL: PREDIAL BOGOTÁ ───────────────────────────────────────────────
+  app.post("/api/admin/broadcast-predial-promo", async (req, res) => {
+    try {
+      if (!whatsappBot.isReady) {
+        return res.status(503).json({ error: "El bot de WhatsApp no está listo todavía." });
+      }
+
+      const imgPath = path.join(process.cwd(), "jania_predial_comercial.jpg");
+      const hasImage = fs.existsSync(imgPath);
+
+      const promoText =
+        `🏠 *¿TIENES PREDIO EN BOGOTÁ?* 🇨🇴\n\n` +
+        `Con *JanIA* — la IA de *VECY BIENES RAÍCES* — puedes consultar y descargar tu *factura del Impuesto Predial 2026* directamente por WhatsApp, con código de barras para pagar en bancos y Efecty.\n\n` +
+        `🎯 _Gratis. Sin filas. Sin portales complicados._\n\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `*¿Cómo usarlo?*\n\n` +
+        `1️⃣ Guarda el contacto de JanIA:\n` +
+        `👤 _JanIA Agente IA de VECY_\n` +
+        `📲 *+57 319 292 9978*\n\n` +
+        `2️⃣ Escríbele así:\n\n` +
+        `▸ \`JanIA, predial: CHIP AAA0205AYFZ y CC 12345678\`\n` +
+        `▸ \`JanIA, predial: CHIP AAA0205AYFZ y NIT 860030201\`\n\n` +
+        `3️⃣ JanIA te entrega el link directo para descargar tu factura PDF oficial con código de barras ✅\n\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `💡 _Sigue nuestro canal para más servicios gratuitos:_\n` +
+        `👉 https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n\n` +
+        `*VECY BIENES RAÍCES 🏘️*\n` +
+        `www.vecy.co`;
+
+      console.log("[BROADCAST-PREDIAL] Iniciando despacho a Grupo 2, Grupo 3 y Canal...");
+      const results: any = {};
+
+      // Grupo 2
+      try {
+        await whatsappBot.sendToGroup(promoText, hasImage ? imgPath : undefined, [], whatsappBot.buzonGroupId);
+        results.grupo2 = "✓ Despachado";
+        console.log("[BROADCAST-PREDIAL] ✓ Grupo 2");
+      } catch (e: any) { results.grupo2 = `Error: ${e.message}`; }
+
+      await new Promise(r => setTimeout(r, 3000));
+
+      // Grupo 3
+      try {
+        await whatsappBot.sendToGroup(promoText, hasImage ? imgPath : undefined, [], whatsappBot.circuloGroupId);
+        results.grupo3 = "✓ Despachado";
+        console.log("[BROADCAST-PREDIAL] ✓ Grupo 3");
+      } catch (e: any) { results.grupo3 = `Error: ${e.message}`; }
+
+      await new Promise(r => setTimeout(r, 3000));
+
+      // Canal
+      const channelJid = whatsappBot.channelNewsletterId || "120363399889853806@newsletter";
+      try {
+        await whatsappBot.sendToGroup(promoText, hasImage ? imgPath : undefined, [], channelJid);
+        results.canal = `✓ Despachado a ${channelJid}`;
+        console.log(`[BROADCAST-PREDIAL] ✓ Canal (${channelJid})`);
+      } catch (e: any) { results.canal = `Error: ${e.message}`; }
+
+      return res.status(200).json({ success: true, imageFound: hasImage, results });
+    } catch (err: any) {
+      console.error("[BROADCAST-PREDIAL] Error general:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+
+
   app.get("/api/jania/tts", async (req, res) => {
     try {
       const text = req.query.text as string;
+
       if (!text) {
         return res.status(400).send("Falta el parámetro 'text'");
       }
