@@ -93,6 +93,8 @@ export type JanIAResult = {
   inserted?: boolean;
   isFlyerOrBanner?: boolean;
   flyerVerbatimText?: string;
+  document?: Buffer;
+  fileName?: string;
 };
 
 export const janiaResultSchema = {
@@ -6121,7 +6123,9 @@ export async function processConsultingMessage(
         response: predialCheck.reportText,
         reactionEmoji: "📄",
         wantsVoice: false,
-        voiceResponse: ""
+        voiceResponse: "",
+        document: predialCheck.pdfBuffer,
+        fileName: predialCheck.pdfFileName
       };
     }
 
@@ -6412,7 +6416,9 @@ export async function processCirculoMessage(
         response: predialCheck.reportText,
         reactionEmoji: "📄",
         wantsVoice: false,
-        voiceResponse: ""
+        voiceResponse: "",
+        document: predialCheck.pdfBuffer,
+        fileName: predialCheck.pdfFileName
       };
     }
 

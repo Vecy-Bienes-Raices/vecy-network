@@ -7,6 +7,52 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.19 — 01 Octubre 2026
+
+### Solicitud de Eduardo
+Eduardo reportó mediante captura de pantalla y mensaje de voz/texto:
+*"Esto quedó mal, acaso JanIA no puede hacer el trámite y enviar de una vez la factura predial en PDF por el Whatsapp, solo da la instrucción y eso es todo?? Así no era que lo ibamos a dejar o si? Mira lo que está contestando, así no debe ser."*
+
+Captura evidenciada: Al enviar *"JanIA, predial: CHIP AAA0058EEXS y NIT 890300279"*, JanIA respondía con una guía textual de 7 pasos instruyendo al usuario a ingresar manualmente al portal de la Secretaría de Hacienda, seleccionar el impuesto, digitar los datos, resolver el captcha y descargar la factura ellos mismos, en lugar de realizar el trámite de forma 100% automatizada y despachar directamente el documento PDF oficial adjunto por WhatsApp.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Falta de Automatización de Descarga en `executePredialAssistanceFromWhatsApp` (`server/_core/predialService.ts`)**:
+   - En CASO 2 (`chip && docNumber`), la función se limitaba a construir una plantilla de texto plano con instrucciones paso a paso para el usuario y el enlace web general `https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`.
+   - No se invocaba el motor de navegación headless ni el servicio de resolución de CAPTCHAs para gestionar la descarga del documento real.
+2. **Infraestructura Disponible y Viable**:
+   - En el servidor VPS Linux se cuenta con Google Chrome nativo (`/usr/bin/google-chrome`), Puppeteer instalado en `node_modules` y la API Key de 2Captcha (`673ddb810e9f700065ccbe6034f26629`) con saldo activo.
+   - La arquitectura del portal de la Secretaría Distrital de Hacienda fue analizada e ingeniería inversa aplicada exitosamente:
+     - Endpoints: `#claveImpuesto` (`0001` Predial), `#tipoDoc` (`NIT`, `CC`, `CE`), `#numDoc`, `#claveObjeto` (CHIP), `#chkTratamientoDatos` (checkbox).
+     - reCAPTCHA v2 sitekey: `6LfZ2bUsAAAAAD7QUEXWj2JY1JJcphwSHfUJYatO`.
+     - Respuesta AJAX: `/bogota/es/descargaFacturaVA/buscarInfo` devuelve el nombre oficial del contribuyente (`nombreContribuyente: "BANCO DE OCCIDENTE SA "`) y la URL firmada directa en la CDN de Hacienda (`/bogota/medias/CHIP-numBP.pdf?context=...&attachment=true`).
+3. **Carencia de Despacho Multimedia de Documentos en WhatsApp (`server/_core/whatsapp-match.ts`)**:
+   - Los interceptores de DM (tanto para usuarios como para directores/administradores) despachaban únicamente mensajes de texto `string`.
+   - Baileys soporta nativamente el envío de documentos con `{ document: Buffer, mimetype: 'application/pdf', fileName: '...', caption: '...' }`, pero no estaba conectado en la ruta de predial.
+
+### Acciones Ejecutadas
+1. **Implementación de Descarga Oficial Automatizada (`server/_core/predialService.ts`)**:
+   - Se creó la función `downloadPredialInvoicePdf(tipoDocInput, numDoc, chip): Promise<DownloadPredialPdfResult>`.
+   - La función normaliza el tipo de documento, sanitiza los números, lanza Puppeteer headless (`--no-sandbox`, `--disable-dev-shm-usage`, etc.), llena el formulario de la SDH, resuelve el reCAPTCHA v2 vía 2Captcha Solver, dispara `window.ACC.descargaFacturaVA.showDownload()` y espera la URL firmada del PDF.
+   - Descarga el archivo binario oficial directamente a memoria (`Buffer`), valida la cabecera `%PDF-1.6` y extrae el nombre oficial del propietario/contribuyente.
+   - En la prueba empírica en vivo con el caso real de Eduardo (CHIP `AAA0058EEXS`, NIT `890300279`), descargó con éxito el PDF oficial de 61,655 bytes correspondiente a `BANCO DE OCCIDENTE SA`.
+2. **Actualización de `executePredialAssistanceFromWhatsApp` (`server/_core/predialService.ts`)**:
+   - En CASO 2 (`chip && docNumber`), intenta la descarga automatizada en entornos de producción.
+   - Si la descarga es exitosa, retorna `pdfBuffer`, `pdfFileName` (`Factura_Predial_CHIP_2026.pdf`), `nombreContribuyente` y un mensaje de entrega formal y conciso sin instrucciones innecesarias.
+   - Si ocurre una inconsistencia en el portal (p. ej. propietario no registrado a 1 de enero de 2026), reporta el motivo exacto y ofrece el enlace oficial de respaldo.
+3. **Despacho del Documento PDF en WhatsApp (`server/_core/whatsapp-match.ts` y `server/_core/janIA.ts`)**:
+   - Se actualizaron los interceptores de DM (usuarios y administradores) y de sesiones pendientes: cuando `predialCheck.pdfBuffer` está presente, despacha el archivo PDF como un documento adjunto nativo de WhatsApp con su respectivo pie de mensaje (`caption`).
+   - Se añadieron micro-reacciones visuales inmediatas: reacción `⏳` al recibir la solicitud y `📄` al completar la entrega del PDF.
+   - En `janIA.ts` y `JanIAResult` se habilitaron los campos `document` y `fileName` para que los grupos conversacionales también puedan despachar archivos adjuntos.
+4. **Pruebas y Verificación Rigurosa**:
+   - `npm run check` (`tsc --noEmit`): 0 errores ✅
+   - `vitest`: 126/126 tests pasando exitosamente ✅
+   - `npm run build` (Vite + esbuild): Compilación limpia de cliente y servidor en 29.28s ✅
+5. **Incremento de Versión Oficial**:
+   - `shared/const.ts`: `v32.19`
+   - `package.json`: `32.19.0`
+
+---
+
 ## 📋 SESIÓN v32.18 — 01 Octubre 2026
 
 ### Solicitud de Eduardo

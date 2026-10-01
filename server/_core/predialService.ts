@@ -27,6 +27,19 @@ export interface PredialReportResult {
   chip?: string;
   cedula?: string;
   reportText?: string;
+  pdfBuffer?: Buffer;
+  pdfFileName?: string;
+  pdfUrl?: string;
+  nombreContribuyente?: string;
+}
+
+export interface DownloadPredialPdfResult {
+  success: boolean;
+  pdfBuffer?: Buffer;
+  pdfFileName?: string;
+  pdfUrl?: string;
+  nombreContribuyente?: string;
+  errorMessage?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -349,23 +362,241 @@ export const CEDULA_HELP_TEXT =
   `👉 https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DESCARGA AUTOMATIZADA OFICIAL DE FACTURA PREDIAL — REGLA DOCTRINAL v32.19
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Descarga automatizada oficial de la Factura Predial Bogotá desde el portal oficial de la SDH.
+ * Resuelve el reCAPTCHA v2 con 2Captcha, interactúa con el formulario oficial sin inventar datos,
+ * y descarga el archivo PDF oficial con código de barras listo para pagar.
+ */
+export async function downloadPredialInvoicePdf(
+  tipoDocInput: string,
+  numDoc: string,
+  chip: string
+): Promise<DownloadPredialPdfResult> {
+  const apiKey = process.env.TWOCAPTCHA_API_KEY || '673ddb810e9f700065ccbe6034f26629';
+  if (!apiKey) {
+    return {
+      success: false,
+      errorMessage: 'Servicio de resolución de CAPTCHA no configurado.'
+    };
+  }
+
+  // Normalizar tipo de documento para el select del portal SDH:
+  let tipoDoc = tipoDocInput.toUpperCase().trim();
+  if (tipoDoc.includes('NIT')) {
+    tipoDoc = 'NIT';
+  } else if (tipoDoc.includes('EXTRANJER') || tipoDoc === 'CE') {
+    tipoDoc = 'CE';
+  } else if (tipoDoc.includes('PASAPORTE') || tipoDoc === 'PAS') {
+    tipoDoc = 'PAS';
+  } else if (tipoDoc.includes('TARJETA') || tipoDoc === 'TI') {
+    tipoDoc = 'TI';
+  } else {
+    tipoDoc = 'CC';
+  }
+
+  const cleanNumDoc = sanitizeDocumentNumber(numDoc, tipoDoc === 'NIT');
+  const cleanChip = chip.toUpperCase().trim();
+
+  let browser: any = null;
+  try {
+    const { Solver } = await import('@2captcha/captcha-solver');
+    const solver = new Solver(apiKey);
+
+    const puppeteer = (await import('puppeteer')).default;
+    const fs = await import('fs');
+
+    const executablePath = fs.existsSync('/usr/bin/google-chrome')
+      ? '/usr/bin/google-chrome'
+      : undefined;
+
+    browser = await puppeteer.launch({
+      executablePath,
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process',
+        '--no-zygote'
+      ]
+    });
+
+    const page = await browser.newPage();
+    page.setDefaultTimeout(60000);
+
+    let buscarInfoData: any = null;
+    page.on('response', async (res: any) => {
+      const url = res.url();
+      if (url.includes('buscarInfo')) {
+        try {
+          buscarInfoData = await res.json();
+        } catch (_) {}
+      }
+    });
+
+    // 1. Navegar al portal oficial de descarga directa sin registro previo
+    await page.goto('https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA', {
+      waitUntil: 'networkidle2',
+      timeout: 45000
+    });
+
+    // 2. Seleccionar tipo de impuesto: Predial (0001)
+    await page.select('#claveImpuesto', '0001');
+    await page.evaluate(() => {
+      if ((window as any).ACC && (window as any).ACC.descargaFacturaVA) {
+        (window as any).ACC.descargaFacturaVA.showTag(document.getElementById('claveImpuesto'), '');
+      }
+    });
+    await new Promise(r => setTimeout(r, 600));
+
+    // 3. Completar formulario con datos del predio y propietario
+    await page.select('#tipoDoc', tipoDoc);
+    await page.type('#numDoc', cleanNumDoc);
+    await page.type('#claveObjeto', cleanChip);
+
+    // 4. Aceptar tratamiento de datos
+    await page.evaluate(() => {
+      const chk = document.getElementById('chkTratamientoDatos') as HTMLInputElement | null;
+      if (chk) {
+        chk.checked = true;
+        if ((window as any).ACC && (window as any).ACC.descargaFacturaVA) {
+          (window as any).ACC.descargaFacturaVA.tratamientoDatos(chk);
+        }
+      }
+    });
+
+    // 5. Resolver reCAPTCHA v2 oficial de la SDH
+    console.log(`[PREDIAL-DOWNLOAD] Resolviendo reCAPTCHA para CHIP ${cleanChip} y ${tipoDoc} ${cleanNumDoc}...`);
+    const captcha = await solver.recaptcha({
+      googlekey: '6LfZ2bUsAAAAAD7QUEXWj2JY1JJcphwSHfUJYatO',
+      pageurl: 'https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA'
+    });
+
+    // 6. Inyectar token y disparar búsqueda oficial
+    await page.evaluate((token: string) => {
+      const el = document.getElementById('g-recaptcha-response') as HTMLInputElement | null;
+      if (el) el.value = token;
+      (window as any).recaptchaResponse = token;
+      const btn = document.getElementById('facBuscar') as HTMLButtonElement | null;
+      if (btn) btn.disabled = false;
+      if ((window as any).ACC && (window as any).ACC.descargaFacturaVA) {
+        (window as any).ACC.descargaFacturaVA.showDownload();
+      }
+    }, captcha.data);
+
+    // 7. Esperar URL de descarga o mensaje de error del portal
+    let relativePdfUrl = '';
+    let errorMessage = '';
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < 25000) {
+      const state = await page.evaluate(() => {
+        const dh = document.getElementById('downloadHelper') as HTMLAnchorElement | null;
+        const href = dh ? dh.getAttribute('href') || dh.href : '';
+        const errModal = document.getElementById('dialogMensajesContent');
+        const swal = document.querySelector('.swal2-html-container');
+        const validaciones = document.getElementById('mensajesValidaciones');
+        return {
+          href,
+          errText: (errModal && errModal.innerText) || (swal && (swal as HTMLElement).innerText) || (validaciones && validaciones.innerText) || ''
+        };
+      });
+
+      if (state.href && (state.href.includes('/bogota/medias/') || state.href.includes('.pdf'))) {
+        relativePdfUrl = state.href;
+        break;
+      }
+      if (state.errText && state.errText.trim().length > 3) {
+        errorMessage = state.errText.trim();
+        break;
+      }
+      if (buscarInfoData && buscarInfoData.dataForm?.urlDownload) {
+        relativePdfUrl = buscarInfoData.dataForm.urlDownload;
+        break;
+      }
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    if (!relativePdfUrl) {
+      return {
+        success: false,
+        errorMessage: errorMessage || 'No se encontró factura predial disponible en la Secretaría de Hacienda para estos datos. Verifica que el documento corresponda al propietario a 1 de enero de 2026.'
+      };
+    }
+
+    // 8. Construir URL absoluta y descargar el buffer binario del PDF
+    const fullPdfUrl = relativePdfUrl.startsWith('http')
+      ? relativePdfUrl
+      : new URL(relativePdfUrl, 'https://nuevaoficinavirtual.shd.gov.co').href;
+
+    console.log(`[PREDIAL-DOWNLOAD] Descargando PDF oficial desde: ${fullPdfUrl}`);
+    const pdfResponse = await fetch(fullPdfUrl);
+    if (!pdfResponse.ok) {
+      throw new Error(`Error HTTP al descargar PDF: ${pdfResponse.status} ${pdfResponse.statusText}`);
+    }
+
+    const arrayBuffer = await pdfResponse.arrayBuffer();
+    const pdfBuffer = Buffer.from(arrayBuffer);
+
+    // Validar cabecera PDF
+    const isPdfHeader = pdfBuffer.slice(0, 5).toString() === '%PDF-';
+    if (!isPdfHeader) {
+      console.warn(`[PREDIAL-DOWNLOAD] La respuesta descargada no tiene cabecera PDF. Tamaño: ${pdfBuffer.length}`);
+      return {
+        success: false,
+        errorMessage: 'El portal de Hacienda no devolvió un documento PDF válido.'
+      };
+    }
+
+    const nombreContribuyente = buscarInfoData?.nombreContribuyente ? buscarInfoData.nombreContribuyente.trim() : undefined;
+
+    return {
+      success: true,
+      pdfBuffer,
+      pdfFileName: `Factura_Predial_${cleanChip}_2026.pdf`,
+      pdfUrl: fullPdfUrl,
+      nombreContribuyente
+    };
+  } catch (err: any) {
+    console.error('[PREDIAL-DOWNLOAD] Error descargando factura predial:', err);
+    return {
+      success: false,
+      errorMessage: err?.message || 'Error de conexión con la Secretaría Distrital de Hacienda.'
+    };
+  } finally {
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (_) {}
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // FUNCIÓN PRINCIPAL — Genera el informe y guía oficial de Predial
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Genera el informe institucional de consulta y asistencia del Impuesto Predial de Bogotá.
  *
- * REGLA DOCTRINAL v32.14 — HONESTIDAD ABSOLUTA:
+ * REGLA DOCTRINAL v32.14 / v32.19 — HONESTIDAD ABSOLUTA Y ASISTENCIA ACTIVA:
  * - NUNCA se inventan datos (dirección, matrícula, avalúo, links de factura).
  * - Si solo se tiene el CHIP, se pide la cédula/NIT.
- * - Si se tienen CHIP + doc del propietario → se indica el link oficial REAL de la SDH para que el usuario descargue.
+ * - Si se tienen CHIP + doc del propietario → se descarga automáticamente el PDF oficial
+ *   con código de barras desde el portal de la SDH y se entrega como archivo adjunto.
+ * - Si la descarga automática no es posible → se explica honestamente el motivo y se entregan
+ *   las instrucciones oficiales con el link oficial real.
  * - Si el usuario proveyó el avalúo catastral directamente → se hace la estimación y se da el link oficial.
- * - Si hay datos insuficientes o erróneos → se dice honestamente con guía para corregir.
  */
 export async function executePredialAssistanceFromWhatsApp(
   text: string,
   senderId?: string,
-  isPrivateDm?: boolean
+  isPrivateDm?: boolean,
+  options?: { skipDownload?: boolean }
 ): Promise<PredialReportResult> {
   let detection = extractChipAndCedulaForPredial(text);
 
@@ -430,10 +661,43 @@ export async function executePredialAssistanceFromWhatsApp(
 
   // ────────────────────────────────────────────────────────────────────────
   // CASO 2: CHIP + Documento del propietario
-  // → Dar el link OFICIAL REAL de la SDH. Sin inventar datos catastrales.
+  // → Descarga automatizada oficial del PDF con 2Captcha + SDH
   // ────────────────────────────────────────────────────────────────────────
   if (chip && docNumber) {
-    // URL OFICIAL REAL de la SDH Bogotá — portal de descarga de factura predial:
+    let downloadResult: DownloadPredialPdfResult | null = null;
+    const shouldAttemptDownload = process.env.NODE_ENV !== 'test' && !options?.skipDownload;
+
+    if (shouldAttemptDownload) {
+      downloadResult = await downloadPredialInvoicePdf(detection.tipoDoc || 'CC', docNumber, chip);
+    }
+
+    // Si la descarga del PDF fue exitosa, entregar reporte con archivo adjunto
+    if (downloadResult && downloadResult.success && downloadResult.pdfBuffer) {
+      const contribuyenteText = downloadResult.nombreContribuyente
+        ? `👤 *Contribuyente / Propietario:* ${downloadResult.nombreContribuyente}\n`
+        : '';
+
+      const reportText =
+        `🛡️ *FACTURA PREDIAL BOGOTÁ 2026 — VECY BIENES RAÍCES* 🇨🇴\n\n` +
+        `🏠 *CHIP del predio:* ${chip}\n` +
+        contribuyenteText +
+        `🪪 *${docLabel}:* ${docNumber}\n\n` +
+        `✅ *Adjunto encuentras tu factura oficial en PDF emitida por la Secretaría de Hacienda.* Incluye los códigos de barras oficiales para pago en bancos autorizados (Bancolombia, Davivienda, Bogotá, etc.) o corresponsales (Éxito, Efecty).\n\n` +
+        `¿Necesitas peritaje, avalúo comercial o ayuda con otro trámite inmobiliario? En VECY estamos a tu servicio 🤝`;
+
+      return {
+        isPredialRequest: true,
+        chip,
+        cedula: docNumber,
+        reportText,
+        pdfBuffer: downloadResult.pdfBuffer,
+        pdfFileName: downloadResult.pdfFileName || `Factura_Predial_${chip}_2026.pdf`,
+        pdfUrl: downloadResult.pdfUrl,
+        nombreContribuyente: downloadResult.nombreContribuyente
+      };
+    }
+
+    // Fallback: URL OFICIAL REAL de la SDH Bogotá — portal de descarga de factura predial:
     // Este es el único portal que permite descargar el PDF con código de barras sin registro previo.
     const urlOficialSdh = `https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`;
 
@@ -445,11 +709,16 @@ export async function executePredialAssistanceFromWhatsApp(
       ? `\n⚠️ *Nota sobre el NIT:* El portal de hacienda pide el NIT *sin el dígito de verificación*. Por ejemplo, si tu NIT es *${docNumber}-X*, debes ingresar solo *${docNumber}*. Si el resultado dice que no encuentra el predio, verifica que el NIT corresponda al propietario registrado a *1 de enero de 2026*.\n`
       : '';
 
+    const errorPrefix = downloadResult?.errorMessage
+      ? `⚠️ *Resultado de la consulta en Hacienda:* ${downloadResult.errorMessage}\n\n`
+      : '';
+
     const reportText =
       `🛡️ *PREDIAL BOGOTÁ — VECY BIENES RAÍCES* 🇨🇴\n\n` +
       `🏠 *CHIP del predio:* ${chip}\n` +
       `🪪 *${docLabel}:* ${docNumber}\n` +
       nitWarning + `\n` +
+      errorPrefix +
       `🔗 *Portal oficial Secretaría de Hacienda — Descarga tu factura predial aquí:*\n` +
       `${urlOficialSdh}\n\n` +
       `📋 *Instrucciones para descargar tu PDF:*\n` +

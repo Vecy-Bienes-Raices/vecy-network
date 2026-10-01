@@ -1024,11 +1024,22 @@ export class JaniaMatchBot {
     if (senderId && hasPendingPredialSession(senderId)) {
       try {
         await this.sock.sendPresenceUpdate('composing', senderId);
+        await this.sock.sendMessage(senderId, { react: { text: '⏳', key: mainMsg.key } }).catch(() => {});
       } catch (_) {}
       const predialPendingCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
       if (predialPendingCheck.isPredialRequest && predialPendingCheck.reportText) {
         console.log(`[JANIA-MATCH] [DM] Asistencia de predial completada con cédula para ${senderId} (CHIP ${predialPendingCheck.chip})`);
-        await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+        if (predialPendingCheck.pdfBuffer) {
+          await this.queuedSend(senderId, {
+            document: predialPendingCheck.pdfBuffer,
+            mimetype: 'application/pdf',
+            fileName: predialPendingCheck.pdfFileName || `Factura_Predial_${predialPendingCheck.chip}_2026.pdf`,
+            caption: predialPendingCheck.reportText
+          }, { quoted: mainMsg, allowDirectMessage: true });
+          await this.sock.sendMessage(senderId, { react: { text: '📄', key: mainMsg.key } }).catch(() => {});
+        } else {
+          await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+        }
         await this.logToDb(senderId, 'janIA', predialPendingCheck.reportText);
         return;
       }
@@ -1037,11 +1048,24 @@ export class JaniaMatchBot {
     // 🏛️ INTERCEPTOR PRIORITARIO DM: PREDIAL (va ANTES que cédula — si el texto menciona predial/chip, no debe caer en verificación de identidad)
     try {
       await this.sock.sendPresenceUpdate('composing', senderId);
+      if (body.toLowerCase().includes('predial') || body.toLowerCase().includes('chip')) {
+        await this.sock.sendMessage(senderId, { react: { text: '⏳', key: mainMsg.key } }).catch(() => {});
+      }
     } catch (_) {}
     const predialCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
     if (predialCheck.isPredialRequest && predialCheck.reportText) {
       console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || 'General'})`);
-      await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+      if (predialCheck.pdfBuffer) {
+        await this.queuedSend(senderId, {
+          document: predialCheck.pdfBuffer,
+          mimetype: 'application/pdf',
+          fileName: predialCheck.pdfFileName || `Factura_Predial_${predialCheck.chip}_2026.pdf`,
+          caption: predialCheck.reportText
+        }, { quoted: mainMsg, allowDirectMessage: true });
+        await this.sock.sendMessage(senderId, { react: { text: '📄', key: mainMsg.key } }).catch(() => {});
+      } else {
+        await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+      }
       await this.logToDb(senderId, 'janIA', predialCheck.reportText);
       return;
     }
@@ -1319,40 +1343,50 @@ export class JaniaMatchBot {
           ? result.voiceResponse
           : textToDeliver;
 
-        // Decisión Autónoma de JanIA (IA Pura): O responde por Nota de Voz PTT exclusiva o por Texto exclusivo (NUNCA ambos a la vez)
-        const shouldSendVoice = (wantsVoice || isAudioPTT) && result.wantsVoice !== false;
+        // Si la respuesta incluye un documento (ej. Factura Predial oficial en PDF)
+        if (result.document) {
+          await this.queuedSend(chatId, {
+            document: result.document,
+            mimetype: 'application/pdf',
+            fileName: result.fileName || 'Factura_Predial_Bogota.pdf',
+            caption: textToDeliver
+          }, { mentions: [senderId], quoted: msg });
+        } else {
+          // Decisión Autónoma de JanIA (IA Pura): O responde por Nota de Voz PTT exclusiva o por Texto exclusivo (NUNCA ambos a la vez)
+          const shouldSendVoice = (wantsVoice || isAudioPTT) && result.wantsVoice !== false;
 
-        if (shouldSendVoice) {
-          try {
-            const media = await textToSpeechMedia(voiceToDeliver);
-            if (media && media.data) {
-              const audioBuffer = Buffer.from(media.data, 'base64');
-              await this.queuedSend(chatId, {
-                audio: audioBuffer,
-                mimetype: media.mimetype || 'audio/ogg; codecs=opus',
-                ptt: true
-              }, { mentions: [senderId], quoted: msg });
-              console.log(`[JANIA-MATCH] ✓ JanIA respondió autónomamente con Nota de Voz PTT en grupo ${chatId}.`);
-            } else {
-              // Fallback a texto solo si la síntesis de voz no produjo buffer
+          if (shouldSendVoice) {
+            try {
+              const media = await textToSpeechMedia(voiceToDeliver);
+              if (media && media.data) {
+                const audioBuffer = Buffer.from(media.data, 'base64');
+                await this.queuedSend(chatId, {
+                  audio: audioBuffer,
+                  mimetype: media.mimetype || 'audio/ogg; codecs=opus',
+                  ptt: true
+                }, { mentions: [senderId], quoted: msg });
+                console.log(`[JANIA-MATCH] ✓ JanIA respondió autónomamente con Nota de Voz PTT en grupo ${chatId}.`);
+              } else {
+                // Fallback a texto solo si la síntesis de voz no produjo buffer
+                await this.queuedSend(chatId, textToDeliver, {
+                  mentions: [senderId],
+                  quoted: msg
+                });
+              }
+            } catch (audioSendErr: any) {
+              console.error('[JANIA-MATCH] Error enviando nota de voz. Fallback a texto:', audioSendErr?.message || audioSendErr);
               await this.queuedSend(chatId, textToDeliver, {
                 mentions: [senderId],
                 quoted: msg
               });
             }
-          } catch (audioSendErr: any) {
-            console.error('[JANIA-MATCH] Error enviando nota de voz. Fallback a texto:', audioSendErr?.message || audioSendErr);
+          } else {
+            // JanIA decidió responder con texto escrito
             await this.queuedSend(chatId, textToDeliver, {
               mentions: [senderId],
               quoted: msg
             });
           }
-        } else {
-          // JanIA decidió responder con texto escrito
-          await this.queuedSend(chatId, textToDeliver, {
-            mentions: [senderId],
-            quoted: msg
-          });
         }
 
         // Registrar la respuesta enviada por JanIA en la BD de mensajes para mantener el hilo de la conversación
@@ -2105,9 +2139,25 @@ export class JaniaMatchBot {
 
       // 🏛️ INTERCEPTOR ADMIN: ASISTENCIA PREDIAL BOGOTÁ — VA PRIMERO (prioridad sobre verificación de cédula)
       const { executePredialAssistanceFromWhatsApp } = await import('./predialService');
+      try {
+        await this.sock.sendPresenceUpdate('composing', senderId);
+        if (bodyText.toLowerCase().includes('predial') || bodyText.toLowerCase().includes('chip')) {
+          await this.sock.sendMessage(senderId, { react: { text: '⏳', key: msg.key } }).catch(() => {});
+        }
+      } catch (_) {}
       const predialCheck = await executePredialAssistanceFromWhatsApp(bodyText, senderId, true);
       if (predialCheck.isPredialRequest && predialCheck.reportText) {
-        await this.queuedSend(senderId, predialCheck.reportText, { quoted: msg, allowDirectMessage: true });
+        if (predialCheck.pdfBuffer) {
+          await this.queuedSend(senderId, {
+            document: predialCheck.pdfBuffer,
+            mimetype: 'application/pdf',
+            fileName: predialCheck.pdfFileName || `Factura_Predial_${predialCheck.chip}_2026.pdf`,
+            caption: predialCheck.reportText
+          }, { quoted: msg, allowDirectMessage: true });
+          await this.sock.sendMessage(senderId, { react: { text: '📄', key: msg.key } }).catch(() => {});
+        } else {
+          await this.queuedSend(senderId, predialCheck.reportText, { quoted: msg, allowDirectMessage: true });
+        }
         await this.logToDb(senderId, 'janIA', predialCheck.reportText);
         await this.sock.sendPresenceUpdate('paused', senderId);
         return;

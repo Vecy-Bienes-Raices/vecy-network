@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.18";
+    VECY_VERSION = "v32.19";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -8837,6 +8837,7 @@ __export(predialService_exports, {
   CEDULA_HELP_TEXT: () => CEDULA_HELP_TEXT,
   PREDIAL_HELP_TEXT: () => PREDIAL_HELP_TEXT,
   clearPendingPredialSession: () => clearPendingPredialSession,
+  downloadPredialInvoicePdf: () => downloadPredialInvoicePdf,
   executePredialAssistanceFromWhatsApp: () => executePredialAssistanceFromWhatsApp,
   extractChipAndCedulaForPredial: () => extractChipAndCedulaForPredial,
   getPendingPredialSession: () => getPendingPredialSession,
@@ -9051,7 +9052,172 @@ function clearPendingPredialSession(senderId) {
   if (!senderId) return;
   pendingPredialSessions.delete(senderId);
 }
-async function executePredialAssistanceFromWhatsApp(text2, senderId, isPrivateDm) {
+async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip) {
+  const apiKey = process.env.TWOCAPTCHA_API_KEY || "673ddb810e9f700065ccbe6034f26629";
+  if (!apiKey) {
+    return {
+      success: false,
+      errorMessage: "Servicio de resoluci\xF3n de CAPTCHA no configurado."
+    };
+  }
+  let tipoDoc = tipoDocInput.toUpperCase().trim();
+  if (tipoDoc.includes("NIT")) {
+    tipoDoc = "NIT";
+  } else if (tipoDoc.includes("EXTRANJER") || tipoDoc === "CE") {
+    tipoDoc = "CE";
+  } else if (tipoDoc.includes("PASAPORTE") || tipoDoc === "PAS") {
+    tipoDoc = "PAS";
+  } else if (tipoDoc.includes("TARJETA") || tipoDoc === "TI") {
+    tipoDoc = "TI";
+  } else {
+    tipoDoc = "CC";
+  }
+  const cleanNumDoc = sanitizeDocumentNumber(numDoc, tipoDoc === "NIT");
+  const cleanChip = chip.toUpperCase().trim();
+  let browser = null;
+  try {
+    const { Solver: Solver2 } = await import("@2captcha/captcha-solver");
+    const solver = new Solver2(apiKey);
+    const puppeteer = (await import("puppeteer")).default;
+    const fs12 = await import("fs");
+    const executablePath = fs12.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
+    browser = await puppeteer.launch({
+      executablePath,
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--single-process",
+        "--no-zygote"
+      ]
+    });
+    const page = await browser.newPage();
+    page.setDefaultTimeout(6e4);
+    let buscarInfoData = null;
+    page.on("response", async (res) => {
+      const url = res.url();
+      if (url.includes("buscarInfo")) {
+        try {
+          buscarInfoData = await res.json();
+        } catch (_) {
+        }
+      }
+    });
+    await page.goto("https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA", {
+      waitUntil: "networkidle2",
+      timeout: 45e3
+    });
+    await page.select("#claveImpuesto", "0001");
+    await page.evaluate(() => {
+      if (window.ACC && window.ACC.descargaFacturaVA) {
+        window.ACC.descargaFacturaVA.showTag(document.getElementById("claveImpuesto"), "");
+      }
+    });
+    await new Promise((r) => setTimeout(r, 600));
+    await page.select("#tipoDoc", tipoDoc);
+    await page.type("#numDoc", cleanNumDoc);
+    await page.type("#claveObjeto", cleanChip);
+    await page.evaluate(() => {
+      const chk = document.getElementById("chkTratamientoDatos");
+      if (chk) {
+        chk.checked = true;
+        if (window.ACC && window.ACC.descargaFacturaVA) {
+          window.ACC.descargaFacturaVA.tratamientoDatos(chk);
+        }
+      }
+    });
+    console.log(`[PREDIAL-DOWNLOAD] Resolviendo reCAPTCHA para CHIP ${cleanChip} y ${tipoDoc} ${cleanNumDoc}...`);
+    const captcha = await solver.recaptcha({
+      googlekey: "6LfZ2bUsAAAAAD7QUEXWj2JY1JJcphwSHfUJYatO",
+      pageurl: "https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA"
+    });
+    await page.evaluate((token) => {
+      const el = document.getElementById("g-recaptcha-response");
+      if (el) el.value = token;
+      window.recaptchaResponse = token;
+      const btn = document.getElementById("facBuscar");
+      if (btn) btn.disabled = false;
+      if (window.ACC && window.ACC.descargaFacturaVA) {
+        window.ACC.descargaFacturaVA.showDownload();
+      }
+    }, captcha.data);
+    let relativePdfUrl = "";
+    let errorMessage = "";
+    const startTime = Date.now();
+    while (Date.now() - startTime < 25e3) {
+      const state = await page.evaluate(() => {
+        const dh = document.getElementById("downloadHelper");
+        const href = dh ? dh.getAttribute("href") || dh.href : "";
+        const errModal = document.getElementById("dialogMensajesContent");
+        const swal = document.querySelector(".swal2-html-container");
+        const validaciones = document.getElementById("mensajesValidaciones");
+        return {
+          href,
+          errText: errModal && errModal.innerText || swal && swal.innerText || validaciones && validaciones.innerText || ""
+        };
+      });
+      if (state.href && (state.href.includes("/bogota/medias/") || state.href.includes(".pdf"))) {
+        relativePdfUrl = state.href;
+        break;
+      }
+      if (state.errText && state.errText.trim().length > 3) {
+        errorMessage = state.errText.trim();
+        break;
+      }
+      if (buscarInfoData && buscarInfoData.dataForm?.urlDownload) {
+        relativePdfUrl = buscarInfoData.dataForm.urlDownload;
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 1e3));
+    }
+    if (!relativePdfUrl) {
+      return {
+        success: false,
+        errorMessage: errorMessage || "No se encontr\xF3 factura predial disponible en la Secretar\xEDa de Hacienda para estos datos. Verifica que el documento corresponda al propietario a 1 de enero de 2026."
+      };
+    }
+    const fullPdfUrl = relativePdfUrl.startsWith("http") ? relativePdfUrl : new URL(relativePdfUrl, "https://nuevaoficinavirtual.shd.gov.co").href;
+    console.log(`[PREDIAL-DOWNLOAD] Descargando PDF oficial desde: ${fullPdfUrl}`);
+    const pdfResponse = await fetch(fullPdfUrl);
+    if (!pdfResponse.ok) {
+      throw new Error(`Error HTTP al descargar PDF: ${pdfResponse.status} ${pdfResponse.statusText}`);
+    }
+    const arrayBuffer = await pdfResponse.arrayBuffer();
+    const pdfBuffer = Buffer.from(arrayBuffer);
+    const isPdfHeader = pdfBuffer.slice(0, 5).toString() === "%PDF-";
+    if (!isPdfHeader) {
+      console.warn(`[PREDIAL-DOWNLOAD] La respuesta descargada no tiene cabecera PDF. Tama\xF1o: ${pdfBuffer.length}`);
+      return {
+        success: false,
+        errorMessage: "El portal de Hacienda no devolvi\xF3 un documento PDF v\xE1lido."
+      };
+    }
+    const nombreContribuyente = buscarInfoData?.nombreContribuyente ? buscarInfoData.nombreContribuyente.trim() : void 0;
+    return {
+      success: true,
+      pdfBuffer,
+      pdfFileName: `Factura_Predial_${cleanChip}_2026.pdf`,
+      pdfUrl: fullPdfUrl,
+      nombreContribuyente
+    };
+  } catch (err) {
+    console.error("[PREDIAL-DOWNLOAD] Error descargando factura predial:", err);
+    return {
+      success: false,
+      errorMessage: err?.message || "Error de conexi\xF3n con la Secretar\xEDa Distrital de Hacienda."
+    };
+  } finally {
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (_) {
+      }
+    }
+  }
+}
+async function executePredialAssistanceFromWhatsApp(text2, senderId, isPrivateDm, options) {
   let detection = extractChipAndCedulaForPredial(text2);
   if (!detection.chip && senderId && hasPendingPredialSession(senderId)) {
     const pending = getPendingPredialSession(senderId);
@@ -9104,17 +9270,47 @@ _(Puedes escribirlo con o sin puntos, comas o guiones \u2014 yo lo proceso autom
     };
   }
   if (chip && docNumber) {
+    let downloadResult = null;
+    const shouldAttemptDownload = process.env.NODE_ENV !== "test" && !options?.skipDownload;
+    if (shouldAttemptDownload) {
+      downloadResult = await downloadPredialInvoicePdf(detection.tipoDoc || "CC", docNumber, chip);
+    }
+    if (downloadResult && downloadResult.success && downloadResult.pdfBuffer) {
+      const contribuyenteText = downloadResult.nombreContribuyente ? `\u{1F464} *Contribuyente / Propietario:* ${downloadResult.nombreContribuyente}
+` : "";
+      const reportText3 = `\u{1F6E1}\uFE0F *FACTURA PREDIAL BOGOT\xC1 2026 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+\u{1F3E0} *CHIP del predio:* ${chip}
+` + contribuyenteText + `\u{1FAAA} *${docLabel}:* ${docNumber}
+
+\u2705 *Adjunto encuentras tu factura oficial en PDF emitida por la Secretar\xEDa de Hacienda.* Incluye los c\xF3digos de barras oficiales para pago en bancos autorizados (Bancolombia, Davivienda, Bogot\xE1, etc.) o corresponsales (\xC9xito, Efecty).
+
+\xBFNecesitas peritaje, aval\xFAo comercial o ayuda con otro tr\xE1mite inmobiliario? En VECY estamos a tu servicio \u{1F91D}`;
+      return {
+        isPredialRequest: true,
+        chip,
+        cedula: docNumber,
+        reportText: reportText3,
+        pdfBuffer: downloadResult.pdfBuffer,
+        pdfFileName: downloadResult.pdfFileName || `Factura_Predial_${chip}_2026.pdf`,
+        pdfUrl: downloadResult.pdfUrl,
+        nombreContribuyente: downloadResult.nombreContribuyente
+      };
+    }
     const urlOficialSdh = `https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`;
     const tipoDocFormulario = detection.tipoDoc === "NIT" ? "NIT (sin d\xEDgito de verificaci\xF3n)" : detection.tipoDoc === "CE" ? "C\xE9dula de Extranjer\xEDa" : "C\xE9dula de Ciudadan\xEDa";
     const nitWarning = detection.tipoDoc === "NIT" ? `
 \u26A0\uFE0F *Nota sobre el NIT:* El portal de hacienda pide el NIT *sin el d\xEDgito de verificaci\xF3n*. Por ejemplo, si tu NIT es *${docNumber}-X*, debes ingresar solo *${docNumber}*. Si el resultado dice que no encuentra el predio, verifica que el NIT corresponda al propietario registrado a *1 de enero de 2026*.
+` : "";
+    const errorPrefix = downloadResult?.errorMessage ? `\u26A0\uFE0F *Resultado de la consulta en Hacienda:* ${downloadResult.errorMessage}
+
 ` : "";
     const reportText2 = `\u{1F6E1}\uFE0F *PREDIAL BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 \u{1F3E0} *CHIP del predio:* ${chip}
 \u{1FAAA} *${docLabel}:* ${docNumber}
 ` + nitWarning + `
-\u{1F517} *Portal oficial Secretar\xEDa de Hacienda \u2014 Descarga tu factura predial aqu\xED:*
+` + errorPrefix + `\u{1F517} *Portal oficial Secretar\xEDa de Hacienda \u2014 Descarga tu factura predial aqu\xED:*
 ${urlOficialSdh}
 
 \u{1F4CB} *Instrucciones para descargar tu PDF:*
@@ -11164,24 +11360,52 @@ ${quotedNote}` : quotedNote;
         if (senderId && hasPendingPredialSession2(senderId)) {
           try {
             await this.sock.sendPresenceUpdate("composing", senderId);
+            await this.sock.sendMessage(senderId, { react: { text: "\u23F3", key: mainMsg.key } }).catch(() => {
+            });
           } catch (_) {
           }
           const predialPendingCheck = await executePredialAssistanceFromWhatsApp2(body, senderId, true);
           if (predialPendingCheck.isPredialRequest && predialPendingCheck.reportText) {
             console.log(`[JANIA-MATCH] [DM] Asistencia de predial completada con c\xE9dula para ${senderId} (CHIP ${predialPendingCheck.chip})`);
-            await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+            if (predialPendingCheck.pdfBuffer) {
+              await this.queuedSend(senderId, {
+                document: predialPendingCheck.pdfBuffer,
+                mimetype: "application/pdf",
+                fileName: predialPendingCheck.pdfFileName || `Factura_Predial_${predialPendingCheck.chip}_2026.pdf`,
+                caption: predialPendingCheck.reportText
+              }, { quoted: mainMsg, allowDirectMessage: true });
+              await this.sock.sendMessage(senderId, { react: { text: "\u{1F4C4}", key: mainMsg.key } }).catch(() => {
+              });
+            } else {
+              await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+            }
             await this.logToDb(senderId, "janIA", predialPendingCheck.reportText);
             return;
           }
         }
         try {
           await this.sock.sendPresenceUpdate("composing", senderId);
+          if (body.toLowerCase().includes("predial") || body.toLowerCase().includes("chip")) {
+            await this.sock.sendMessage(senderId, { react: { text: "\u23F3", key: mainMsg.key } }).catch(() => {
+            });
+          }
         } catch (_) {
         }
         const predialCheck = await executePredialAssistanceFromWhatsApp2(body, senderId, true);
         if (predialCheck.isPredialRequest && predialCheck.reportText) {
           console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || "General"})`);
-          await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+          if (predialCheck.pdfBuffer) {
+            await this.queuedSend(senderId, {
+              document: predialCheck.pdfBuffer,
+              mimetype: "application/pdf",
+              fileName: predialCheck.pdfFileName || `Factura_Predial_${predialCheck.chip}_2026.pdf`,
+              caption: predialCheck.reportText
+            }, { quoted: mainMsg, allowDirectMessage: true });
+            await this.sock.sendMessage(senderId, { react: { text: "\u{1F4C4}", key: mainMsg.key } }).catch(() => {
+            });
+          } else {
+            await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+          }
           await this.logToDb(senderId, "janIA", predialCheck.reportText);
           return;
         }
@@ -11407,36 +11631,45 @@ Tambi\xE9n puedes consultarme directamente en mi chat privado de JanIA \u{1F4F2}
           if (result && result.response && result.response.trim() !== "") {
             const textToDeliver = result.response;
             const voiceToDeliver = result.voiceResponse && result.voiceResponse.trim() !== "" ? result.voiceResponse : textToDeliver;
-            const shouldSendVoice = (wantsVoice || isAudioPTT) && result.wantsVoice !== false;
-            if (shouldSendVoice) {
-              try {
-                const media = await textToSpeechMedia2(voiceToDeliver);
-                if (media && media.data) {
-                  const audioBuffer = Buffer.from(media.data, "base64");
-                  await this.queuedSend(chatId, {
-                    audio: audioBuffer,
-                    mimetype: media.mimetype || "audio/ogg; codecs=opus",
-                    ptt: true
-                  }, { mentions: [senderId], quoted: msg });
-                  console.log(`[JANIA-MATCH] \u2713 JanIA respondi\xF3 aut\xF3nomamente con Nota de Voz PTT en grupo ${chatId}.`);
-                } else {
+            if (result.document) {
+              await this.queuedSend(chatId, {
+                document: result.document,
+                mimetype: "application/pdf",
+                fileName: result.fileName || "Factura_Predial_Bogota.pdf",
+                caption: textToDeliver
+              }, { mentions: [senderId], quoted: msg });
+            } else {
+              const shouldSendVoice = (wantsVoice || isAudioPTT) && result.wantsVoice !== false;
+              if (shouldSendVoice) {
+                try {
+                  const media = await textToSpeechMedia2(voiceToDeliver);
+                  if (media && media.data) {
+                    const audioBuffer = Buffer.from(media.data, "base64");
+                    await this.queuedSend(chatId, {
+                      audio: audioBuffer,
+                      mimetype: media.mimetype || "audio/ogg; codecs=opus",
+                      ptt: true
+                    }, { mentions: [senderId], quoted: msg });
+                    console.log(`[JANIA-MATCH] \u2713 JanIA respondi\xF3 aut\xF3nomamente con Nota de Voz PTT en grupo ${chatId}.`);
+                  } else {
+                    await this.queuedSend(chatId, textToDeliver, {
+                      mentions: [senderId],
+                      quoted: msg
+                    });
+                  }
+                } catch (audioSendErr) {
+                  console.error("[JANIA-MATCH] Error enviando nota de voz. Fallback a texto:", audioSendErr?.message || audioSendErr);
                   await this.queuedSend(chatId, textToDeliver, {
                     mentions: [senderId],
                     quoted: msg
                   });
                 }
-              } catch (audioSendErr) {
-                console.error("[JANIA-MATCH] Error enviando nota de voz. Fallback a texto:", audioSendErr?.message || audioSendErr);
+              } else {
                 await this.queuedSend(chatId, textToDeliver, {
                   mentions: [senderId],
                   quoted: msg
                 });
               }
-            } else {
-              await this.queuedSend(chatId, textToDeliver, {
-                mentions: [senderId],
-                quoted: msg
-              });
             }
             await this.logToDb(chatId, "janIA", textToDeliver);
           } else if (result && result.reactionEmoji && this.sock) {
@@ -12044,9 +12277,28 @@ ${result.response}`);
         try {
           const realName = msg.pushName || `Asesor +${rawPhone}`;
           const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+          try {
+            await this.sock.sendPresenceUpdate("composing", senderId);
+            if (bodyText.toLowerCase().includes("predial") || bodyText.toLowerCase().includes("chip")) {
+              await this.sock.sendMessage(senderId, { react: { text: "\u23F3", key: msg.key } }).catch(() => {
+              });
+            }
+          } catch (_) {
+          }
           const predialCheck = await executePredialAssistanceFromWhatsApp2(bodyText, senderId, true);
           if (predialCheck.isPredialRequest && predialCheck.reportText) {
-            await this.queuedSend(senderId, predialCheck.reportText, { quoted: msg, allowDirectMessage: true });
+            if (predialCheck.pdfBuffer) {
+              await this.queuedSend(senderId, {
+                document: predialCheck.pdfBuffer,
+                mimetype: "application/pdf",
+                fileName: predialCheck.pdfFileName || `Factura_Predial_${predialCheck.chip}_2026.pdf`,
+                caption: predialCheck.reportText
+              }, { quoted: msg, allowDirectMessage: true });
+              await this.sock.sendMessage(senderId, { react: { text: "\u{1F4C4}", key: msg.key } }).catch(() => {
+              });
+            } else {
+              await this.queuedSend(senderId, predialCheck.reportText, { quoted: msg, allowDirectMessage: true });
+            }
             await this.logToDb(senderId, "janIA", predialCheck.reportText);
             await this.sock.sendPresenceUpdate("paused", senderId);
             return;
@@ -18436,7 +18688,9 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
         response: predialCheck.reportText,
         reactionEmoji: "\u{1F4C4}",
         wantsVoice: false,
-        voiceResponse: ""
+        voiceResponse: "",
+        document: predialCheck.pdfBuffer,
+        fileName: predialCheck.pdfFileName
       };
     }
     const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
@@ -18709,7 +18963,9 @@ Nuestros canales son 100% profesionales y dedicados exclusivamente a la tecnolog
         response: predialCheck.reportText,
         reactionEmoji: "\u{1F4C4}",
         wantsVoice: false,
-        voiceResponse: ""
+        voiceResponse: "",
+        document: predialCheck.pdfBuffer,
+        fileName: predialCheck.pdfFileName
       };
     }
     const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));

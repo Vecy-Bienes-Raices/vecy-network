@@ -322,6 +322,33 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.19 — Octubre 2026
+
+#### 📌 DESCARGA AUTOMATIZADA OFICIAL DE FACTURA PREDIAL EN PDF CON 2CAPTCHA + SDH Y ENTREGA DIRECTA EN WHATSAPP
+
+**Requerimiento y Objetivos:**
+1. Atender el reporte de Eduardo: *"Esto quedó mal, acaso JanIA no puede hacer el trámite y enviar de una vez la factura predial en PDF por el Whatsapp, solo da la instrucción y eso es todo?? Así no era que lo ibamos a dejar o si? Mira lo que está contestando, así no debe ser."*
+2. Eliminar la respuesta basada en un instructivo manual de 7 pasos cuando el usuario provee el CHIP y el documento del propietario.
+3. Automatizar el proceso completo ante la Secretaría Distrital de Hacienda (SDH): navegar el portal oficial, diligenciar el formulario, resolver el reCAPTCHA v2 con 2Captcha Solver, obtener la URL firmada de la CDN de Hacienda y descargar el archivo PDF oficial con código de barras listo para pagar.
+4. Despachar el documento PDF nativamente como archivo adjunto por WhatsApp con soporte de presencia inmediata (`⏳` y `📄`).
+
+**Causas Raíz:**
+1. `executePredialAssistanceFromWhatsApp` en CASO 2 únicamente formateaba un mensaje con pasos manuales y enlace genérico.
+2. Los despachadores de WhatsApp en `whatsapp-match.ts` no contemplaban el envío de documentos PDF binarios para las respuestas de predial.
+
+**Solución aplicada:**
+- **`server/_core/predialService.ts`**:
+  - Implementada `downloadPredialInvoicePdf`: lanza Puppeteer headless (`--no-sandbox`, `--disable-gpu`, `--disable-dev-shm-usage`), selecciona `PREDIAL`, diligencia tipo/número sanitizado y CHIP, resuelve reCAPTCHA v2, ejecuta `showDownload()`, captura la URL del PDF firmada en `/bogota/medias/`, descarga el binario a `Buffer`, valida `%PDF-1.6` y extrae `nombreContribuyente`.
+  - Integrada en `executePredialAssistanceFromWhatsApp`: cuando la descarga es exitosa, devuelve `pdfBuffer`, `pdfFileName` y reporte formal. Si hay inconsistencia catastral, expone el motivo exacto de Hacienda.
+- **`server/_core/whatsapp-match.ts` y `server/_core/janIA.ts`**:
+  - Rutas de DM (usuarios y directores) y grupos actualizadas para despachar `{ document: buffer, mimetype: 'application/pdf', fileName: ..., caption: ... }`.
+  - Reacción `⏳` inmediata al detectar la orden y `📄` al entregar el documento.
+- **Versión Oficial**: Bump a `v32.19` (`32.19.0`) en `shared/const.ts` y `package.json`.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio en 29.28s ✅ | 126/126 tests Vitest ✅ | Prueba live en VPS con CHIP `AAA0058EEXS` y NIT `890300279` descargando PDF de 61.6 KB (`BANCO DE OCCIDENTE SA`) ✅
+
+---
+
 ### 🔖 v32.18 — Octubre 2026
 
 #### 📌 BLINDAJE DE INTERCEPTOR PREDIAL VS CÉDULA EN GRUPOS, RESOLUCIÓN DINÁMICA DE IMÁGENES COMERCIALES Y DESPACHO LIMPIO DE BROADCASTS

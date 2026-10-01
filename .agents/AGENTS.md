@@ -168,7 +168,23 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.18 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.19 — Octubre 2026
+
+### Novedades v32.19 (Descarga Automatizada Oficial de Factura Predial en PDF con 2Captcha + SDH y Entrega Directa en WhatsApp):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo reportó: *"Esto quedó mal, acaso JanIA no puede hacer el trámite y enviar de una vez la factura predial en PDF por el Whatsapp, solo da la instrucción y eso es todo?? Así no era que lo ibamos a dejar o si? Mira lo que está contestando, así no debe ser."*
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Automatización Integral de Descarga Oficial (`server/_core/predialService.ts`)**:
+     - Se implementó `downloadPredialInvoicePdf(tipoDoc, numDoc, chip)` utilizando Puppeteer con Google Chrome nativo y 2Captcha Solver (API Key activa en VPS).
+     - El bot navega al portal oficial de la Secretaría Distrital de Hacienda (`https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`), selecciona `PREDIAL (0001)`, diligencia el tipo de documento, número sanitizado y CHIP del predio, acepta tratamiento de datos, resuelve el reCAPTCHA v2 y dispara la búsqueda oficial.
+     - Obtiene la URL firmada del PDF directo desde la CDN de Hacienda (`/bogota/medias/CHIP-numBP.pdf?context=...`), descarga el binario a un `Buffer`, valida la cabecera `%PDF-1.6` y extrae el nombre oficial del contribuyente (`BANCO DE OCCIDENTE SA`).
+  2. **Despacho del Archivo PDF como Documento Adjunto (`server/_core/whatsapp-match.ts` y `server/_core/janIA.ts`)**:
+     - Actualizado el flujo de DMs regulares, sesiones pendientes y DMs de directivos/administradores: cuando `predialCheck.pdfBuffer` está disponible, JanIA envía un mensaje multimedia `{ document: buffer, mimetype: 'application/pdf', fileName: 'Factura_Predial_CHIP_2026.pdf', caption: ... }`.
+     - Presencia inmediata visual: envía reacción `⏳` al recibir la solicitud y `📄` al entregar la factura en PDF.
+     - Fallback honesto: si el portal de Hacienda reporta inconsistencia o el dueño no está registrado a 1 de enero de 2026, explica el motivo exacto y mantiene el enlace oficial sin inventar datos.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅ | Descarga PDF validada empíricamente en VPS (61,655 bytes) ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.18 — Octubre 2026
 
 ### Novedades v32.18 (Blindaje de Interceptor Predial vs Cédula en Grupos, Resolución Dinámica de Imágenes Comerciales y Despacho Limpio):
 - **Causas Raíz y Solución de Arquitectura**:

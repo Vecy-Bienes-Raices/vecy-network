@@ -1542,6 +1542,21 @@ Ed del 2014.
       expect(predialConCedula.reportText).toContain("43403545");
       expect(predialConCedula.reportText).toContain("https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA");
       expect(predialConCedula.reportText).toContain("DESCARGA TU FACTURA");
+
+      // 8. Verificación de entrega de PDF adjunto en Predial Bogotá (Doctrina v32.19)
+      const { downloadPredialInvoicePdf } = await import("../_core/predialService");
+      expect(typeof downloadPredialInvoicePdf).toBe("function");
+
+      const predialFallback = await executePredialAssistanceFromWhatsApp(
+        "JanIA, predial: CHIP AAA0058EEXS y NIT 890300279",
+        testSenderId,
+        true,
+        { skipDownload: true }
+      );
+      expect(predialFallback.isPredialRequest).toBe(true);
+      expect(predialFallback.chip).toBe("AAA0058EEXS");
+      expect(predialFallback.cedula).toBe("890300279");
+      expect(predialFallback.reportText).toContain("PREDIAL BOGOTÁ — VECY BIENES RAÍCES");
     });
 
     it("Debe generar el reporte oficial con marca blanca 100% de VECY Bienes Raíces para la cédula 43403545", async () => {
