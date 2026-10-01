@@ -453,55 +453,60 @@ async function startServer() {
         return res.status(503).json({ error: "El bot de WhatsApp no está listo todavía." });
       }
 
-      const imgPath = path.join(process.cwd(), "jania_verificacion_servicio.jpg");
-      const hasImage = fs.existsSync(imgPath);
+      const serviceType = req.body?.service || 'identity';
 
-      const channelLink = "https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b";
+      const imgInfo = serviceType === 'predial'
+        ? resolveBroadcastImagePath(["jania_predial_comercial.jpg", "jania_tributario.jpg"])
+        : resolveBroadcastImagePath(["jania_verificacion_servicio.jpg", "jania_cedulas_comercial.jpg"]);
 
-      const ctaOficial = (
-        `📢 *SÍGUENOS EN NUESTRO CANAL OFICIAL:*\n` +
-        `Participa en encuestas y ayúdanos a crear nuevas herramientas para ti y la comunidad inmobiliaria y mantente al tanto de otras nuevas funciones gratuitas que vendrán:\n` +
-        `👉 ${channelLink}\n\n` +
-        `VECY BIENES RAÍCES 🏘️`
-      );
+      const imgPath = imgInfo.path;
+      const hasImage = imgInfo.exists;
 
       const defaultPromoIdentity = (
-        `🛡️ *VERIFICACIÓN DE CLIENTES ANTES DE TU CITA — 100% GRATIS* 🇨🇴\n\n` +
-        `Colega inmobiliario:\n` +
-        `¿Vas a mostrar un inmueble o tienes cita con un cliente nuevo?\n` +
-        `Verifica con quién vas a reunirte antes de salir a terreno. JanIA valida nombres completos oficiales y antecedentes en tiempo real ante la Policía Nacional.\n\n` +
-        `⚡ *¿CÓMO SOLICITARLO? (Un solo mensaje directo):*\n` +
-        `Envíale a JanIA por privado a su WhatsApp o aquí en el grupo:\n\n` +
-        `👉 \`JanIA, verificar cédula: 12.345.678\`\n\n` +
-        `*(También puedes consultar Cédula de Extranjería o Pasaporte indicando: C.E. o Pasaporte).*\n\n` +
-        `📲 *PASO CLAVE:*\n` +
-        `1. Guarda el contacto de JanIA en tu celular como: *JanIA agente IA de VECY* (+57 319 291 9978).\n` +
-        `2. O chatea directamente aquí: https://wa.me/573192919978\n` +
-        `3. Web oficial: https://vecy-network.vercel.app/jania\n\n` +
-        ctaOficial
+        `🪪 *¿SABES A QUIÉN LE ESTÁS VENDIENDO, ARRENDANDO O AGENDANDO UNA VISITA?* 🇨🇴\n\n` +
+        `Antes de mostrar un inmueble o reunirte con un cliente nuevo, verifica su identidad con *JanIA* — la IA de *VECY BIENES RAÍCES*:\n\n` +
+        `✅ Valida nombres y apellidos completos oficiales\n` +
+        `✅ Consulta antecedentes ante la Policía Nacional\n` +
+        `🔐 _100% oficial y gratuito para nuestra comunidad inmobiliaria_\n\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `⚡ *¿Cómo usarlo? (En 1 solo mensaje):*\n\n` +
+        `1️⃣ Guarda a JanIA en tus contactos:\n` +
+        `👤 *JanIA Agente IA de VECY*\n` +
+        `📲 *+57 319 291 9978* (o toca aquí: https://wa.me/573192919978)\n\n` +
+        `2️⃣ Escríbele por privado:\n` +
+        `👉 \`JanIA, verificar CC: 12.345.678\`\n` +
+        `_(También acepta CE o Pasaporte)_\n\n` +
+        `3️⃣ En segundos te entrega el nombre oficial y antecedentes ✅\n\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `📢 *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
+        `🌐 *Web oficial:* https://vecy-network.vercel.app/\n\n` +
+        `*VECY BIENES RAÍCES 🏘️*`
       );
 
       const defaultPromoPredial = (
-        `🏛️ *LIQUIDACIÓN Y FACTURA PREDIAL BOGOTÁ AL INSTANTE* 🇨🇴\n\n` +
-        `¿Necesitas liquidar el Impuesto Predial de un inmueble o descargar la factura oficial en PDF para un estudio de títulos o escrituración?\n\n` +
-        `JanIA se conecta y te entrega el avalúo catastral, valor con descuento del 10% y el enlace oficial de la factura en segundos.\n\n` +
-        `⚡ *¿CÓMO SOLICITARLO? (Un solo mensaje directo):*\n` +
-        `Solo envíale a JanIA:\n\n` +
-        `👉 \`JanIA, predial: CHIP AAA0123ABCD y Cédula 12.345.678\`\n\n` +
-        `*(Si es persona jurídica, escribe NIT en lugar de cédula).*\n\n` +
-        `📲 *PASO CLAVE:*\n` +
-        `1. Guarda el contacto de JanIA en tu agenda: *JanIA agente IA de VECY* (+57 319 291 9978).\n` +
-        `2. Escríbele directo por WhatsApp: https://wa.me/573192919978\n` +
-        `3. Web oficial: https://vecy-network.vercel.app/jania\n\n` +
-        ctaOficial
+        `🏠 *¿TIENES PREDIO EN BOGOTÁ?* 🇨🇴\n\n` +
+        `Con *JanIA* — la IA de *VECY BIENES RAÍCES* — obtén el enlace oficial de la Secretaría de Hacienda para descargar tu *factura del Impuesto Predial 2026* en PDF con código de barras para bancos y Efecty.\n\n` +
+        `🎯 _Gratis, rápido y sin filas ni registros complicados._\n\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `⚡ *¿Cómo solicitarla? (En 1 solo mensaje):*\n\n` +
+        `1️⃣ Escríbele a JanIA por privado a su WhatsApp:\n` +
+        `📲 *+57 319 291 9978* (o toca aquí: https://wa.me/573192919978)\n\n` +
+        `2️⃣ Envíale el CHIP y documento en un solo mensaje:\n` +
+        `👉 \`JanIA, predial: CHIP AAA0205AYFZ y CC 12345678\`\n` +
+        `_(Si es empresa, usa NIT en vez de CC)_\n\n` +
+        `3️⃣ JanIA te entrega de inmediato el enlace directo y los pasos exactos para descargar tu PDF oficial ✅\n\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `ℹ️ *¿Dónde está el CHIP?* En cualquier factura o recibo predial anterior.\n` +
+        `📢 *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
+        `🌐 *Web oficial:* https://vecy-network.vercel.app/\n\n` +
+        `*VECY BIENES RAÍCES 🏘️*`
       );
 
-      const serviceType = req.body?.service || 'identity';
       const baseDefaultPromo = serviceType === 'predial' ? defaultPromoPredial : defaultPromoIdentity;
       const promoTextGroups = req.body?.textGroups || req.body?.text || baseDefaultPromo;
       const promoTextChannel = req.body?.textChannel || req.body?.text || baseDefaultPromo;
 
-      console.log(`[BROADCAST-PROMO] Iniciando despacho de propaganda (${serviceType}) a Grupo 2, Grupo 3 y Canal de WhatsApp...`);
+      console.log(`[BROADCAST-PROMO] Despachando (${serviceType}) a Grupo 2, Grupo 3 y Canal (Imagen: ${hasImage ? imgPath : 'Ninguna'})...`);
 
       const results: any = {};
 
@@ -544,6 +549,28 @@ async function startServer() {
   });
 
 
+  function resolveBroadcastImagePath(filenames: string[]): { path: string; exists: boolean } {
+    const searchDirs = [
+      path.join(process.cwd(), "client/public/assets/jania"),
+      path.join(process.cwd(), "client/public/images"),
+      path.join(process.cwd(), "client/public"),
+      process.cwd(),
+      path.join(process.cwd(), "dist/assets/jania"),
+      path.join(process.cwd(), "dist/images"),
+      path.join(process.cwd(), "dist"),
+    ];
+
+    for (const name of filenames) {
+      for (const dir of searchDirs) {
+        const fullPath = path.join(dir, name);
+        if (fs.existsSync(fullPath)) {
+          return { path: fullPath, exists: true };
+        }
+      }
+    }
+    return { path: path.join(process.cwd(), filenames[0]), exists: false };
+  }
+
   // ─── COMERCIAL: VERIFICACIÓN DE IDENTIDAD v2 ────────────────────────────────
   app.post("/api/admin/broadcast-identity-v2", async (req, res) => {
     try {
@@ -551,32 +578,31 @@ async function startServer() {
         return res.status(503).json({ error: "El bot de WhatsApp no está listo todavía." });
       }
 
-      const imgPath = path.join(process.cwd(), "jania_cedulas_comercial.jpg");
-      const hasImage = fs.existsSync(imgPath);
+      const identityImg = resolveBroadcastImagePath(["jania_verificacion_servicio.jpg", "jania_cedulas_comercial.jpg"]);
+      const imgPath = identityImg.path;
+      const hasImage = identityImg.exists;
 
       const promoText =
         `🪪 *¿SABES A QUIÉN LE ESTÁS VENDIENDO, ARRENDANDO O AGENDANDO UNA VISITA?* 🇨🇴\n\n` +
-        `Con *JanIA* — la IA de *VECY BIENES RAÍCES* — puedes verificar cualquier número de identificación en segundos y saber exactamente:\n\n` +
-        `✅ A quién pertenece el documento (nombres y apellidos completos)\n` +
-        `✅ Si la persona tiene antecedentes o no según el artículo de ley vigente\n\n` +
-        `🔐 _100% oficial y gratuito para nuestra comunidad_\n\n` +
+        `Antes de mostrar un inmueble o reunirte con un cliente nuevo, verifica su identidad con *JanIA* — la IA de *VECY BIENES RAÍCES*:\n\n` +
+        `✅ Valida nombres y apellidos completos oficiales\n` +
+        `✅ Consulta antecedentes ante la Policía Nacional\n` +
+        `🔐 _100% oficial y gratuito para nuestra comunidad inmobiliaria_\n\n` +
         `━━━━━━━━━━━━━━━\n` +
-        `*¿Cómo usarlo?*\n\n` +
-        `1️⃣ Guarda el contacto de JanIA como:\n` +
-        `👤 _JanIA Agente IA de VECY_\n` +
-        `📲 *+57 319 291 9978*\n\n` +
-        `2️⃣ Escríbele directamente así:\n\n` +
-        `▸ \`JanIA, verificar CC: 12345678\`\n` +
-        `▸ \`JanIA, verificar CE: 123456\`\n` +
-        `▸ \`JanIA, verificar Pasaporte: AB123456\`\n\n` +
-        `3️⃣ En segundos te responde con el nombre completo y el estado de antecedentes ✅\n\n` +
+        `⚡ *¿Cómo usarlo? (En 1 solo mensaje):*\n\n` +
+        `1️⃣ Guarda a JanIA en tus contactos:\n` +
+        `👤 *JanIA Agente IA de VECY*\n` +
+        `📲 *+57 319 291 9978* (o toca aquí: https://wa.me/573192919978)\n\n` +
+        `2️⃣ Escríbele por privado:\n` +
+        `👉 \`JanIA, verificar CC: 12.345.678\`\n` +
+        `_(También acepta CE o Pasaporte)_\n\n` +
+        `3️⃣ En segundos te entrega el nombre oficial y antecedentes ✅\n\n` +
         `━━━━━━━━━━━━━━━\n` +
-        `💡 _Más servicios gratuitos en nuestro canal:_\n` +
-        `👉 https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n\n` +
-        `*VECY BIENES RAÍCES 🏘️*\n` +
-        `https://vecy-network.vercel.app/`;
+        `📢 *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
+        `🌐 *Web oficial:* https://vecy-network.vercel.app/\n\n` +
+        `*VECY BIENES RAÍCES 🏘️*`;
 
-      console.log("[BROADCAST-IDENTITY-V2] Iniciando despacho a Grupo 2, Grupo 3 y Canal...");
+      console.log(`[BROADCAST-IDENTITY-V2] Despachando a Grupo 2, Grupo 3 y Canal (Imagen: ${hasImage ? imgPath : 'Ninguna'})...`);
       const results: any = {};
 
       // Grupo 2: VECY SOPORTE LEGAL, TRIBUTARIO, AVALÚOS
@@ -605,7 +631,7 @@ async function startServer() {
         console.log(`[BROADCAST-IDENTITY-V2] ✓ Canal (${channelJid})`);
       } catch (e: any) { results.canal = `Error: ${e.message}`; }
 
-      return res.status(200).json({ success: true, imageFound: hasImage, results });
+      return res.status(200).json({ success: true, imageFound: hasImage, imagePath: imgPath, results });
     } catch (err: any) {
       console.error("[BROADCAST-IDENTITY-V2] Error general:", err);
       return res.status(500).json({ error: err.message });
@@ -619,29 +645,29 @@ async function startServer() {
         return res.status(503).json({ error: "El bot de WhatsApp no está listo todavía." });
       }
 
-      const imgPath = path.join(process.cwd(), "jania_predial_comercial.jpg");
-      const hasImage = fs.existsSync(imgPath);
+      const predialImg = resolveBroadcastImagePath(["jania_predial_comercial.jpg", "jania_tributario.jpg"]);
+      const imgPath = predialImg.path;
+      const hasImage = predialImg.exists;
 
       const promoText =
         `🏠 *¿TIENES PREDIO EN BOGOTÁ?* 🇨🇴\n\n` +
-        `Con *JanIA* — la IA de *VECY BIENES RAÍCES* — puedes consultar y descargar tu *factura del Impuesto Predial 2026* directamente por WhatsApp, con código de barras para pagar en bancos y Efecty.\n\n` +
-        `🎯 _Gratis. Sin filas. Sin portales complicados._\n\n` +
+        `Con *JanIA* — la IA de *VECY BIENES RAÍCES* — obtén el enlace oficial de la Secretaría de Hacienda para descargar tu *factura del Impuesto Predial 2026* en PDF con código de barras para bancos y Efecty.\n\n` +
+        `🎯 _Gratis, rápido y sin filas ni registros complicados._\n\n` +
         `━━━━━━━━━━━━━━━\n` +
-        `*¿Cómo usarlo?*\n\n` +
-        `1️⃣ Guarda el contacto de JanIA:\n` +
-        `👤 _JanIA Agente IA de VECY_\n` +
-        `📲 *+57 319 291 9978*\n\n` +
-        `2️⃣ Escríbele así:\n\n` +
-        `▸ \`JanIA, predial: CHIP AAA0205AYFZ y CC 12345678\`\n` +
-        `▸ \`JanIA, predial: CHIP AAA0205AYFZ y NIT 860030201\`\n\n` +
-        `3️⃣ JanIA te entrega el link directo para descargar tu factura PDF oficial con código de barras ✅\n\n` +
+        `⚡ *¿Cómo solicitarla? (En 1 solo mensaje):*\n\n` +
+        `1️⃣ Escríbele a JanIA por privado a su WhatsApp:\n` +
+        `📲 *+57 319 291 9978* (o toca aquí: https://wa.me/573192919978)\n\n` +
+        `2️⃣ Envíale el CHIP y documento en un solo mensaje:\n` +
+        `👉 \`JanIA, predial: CHIP AAA0205AYFZ y CC 12345678\`\n` +
+        `_(Si es empresa, usa NIT en vez de CC)_\n\n` +
+        `3️⃣ JanIA te entrega de inmediato el enlace directo y los pasos exactos para descargar tu PDF oficial ✅\n\n` +
         `━━━━━━━━━━━━━━━\n` +
-        `💡 _Sigue nuestro canal para más servicios gratuitos:_\n` +
-        `👉 https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n\n` +
-        `*VECY BIENES RAÍCES 🏘️*\n` +
-        `https://vecy-network.vercel.app/`;
+        `ℹ️ *¿Dónde está el CHIP?* En cualquier factura o recibo predial anterior.\n` +
+        `📢 *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
+        `🌐 *Web oficial:* https://vecy-network.vercel.app/\n\n` +
+        `*VECY BIENES RAÍCES 🏘️*`;
 
-      console.log("[BROADCAST-PREDIAL] Iniciando despacho a Grupo 2, Grupo 3 y Canal...");
+      console.log(`[BROADCAST-PREDIAL] Despachando a Grupo 2, Grupo 3 y Canal (Imagen: ${hasImage ? imgPath : 'Ninguna'})...`);
       const results: any = {};
 
       // Grupo 2
@@ -670,7 +696,7 @@ async function startServer() {
         console.log(`[BROADCAST-PREDIAL] ✓ Canal (${channelJid})`);
       } catch (e: any) { results.canal = `Error: ${e.message}`; }
 
-      return res.status(200).json({ success: true, imageFound: hasImage, results });
+      return res.status(200).json({ success: true, imageFound: hasImage, imagePath: imgPath, results });
     } catch (err: any) {
       console.error("[BROADCAST-PREDIAL] Error general:", err);
       return res.status(500).json({ error: err.message });

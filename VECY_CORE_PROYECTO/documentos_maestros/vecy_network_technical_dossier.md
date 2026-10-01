@@ -322,6 +322,36 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.18 — Octubre 2026
+
+#### 📌 BLINDAJE DE INTERCEPTOR PREDIAL VS CÉDULA EN GRUPOS, RESOLUCIÓN DINÁMICA DE IMÁGENES COMERCIALES Y DESPACHO LIMPIO DE BROADCASTS
+
+**Requerimiento y Objetivos:**
+1. Despachar nuevamente las publicaciones de difusión comercial a los grupos conversacionales (Grupo 2 y Grupo 3) y al Canal oficial de WhatsApp ("ya los eliminé"), tras la eliminación de los posts con erratas de la sesión anterior.
+2. Garantizar empíricamente el correcto funcionamiento de las solicitudes de Predial Bogotá ("ojalá que en verdad funcione lo del predial porque no lo he probado aún").
+3. Utilizar textos cortos, claros, directos y sin enredos, conservando el titular doctrinal exacto: `🪪 *¿SABES A QUIÉN LE ESTÁS VENDIENDO, ARRENDANDO O AGENDANDO UNA VISITA?* 🇨🇴`.
+4. Vincular las imágenes correctas: Eduardo movió `jania_verificacion_servicio.jpg` a `client/public/assets/jania/`, y se ubicó la imagen de predial comercial `jania_predial_comercial.jpg` en la raíz, incorporándola a las carpetas de assets públicas.
+
+**Causas Raíz:**
+1. **Conflicto de Precedencia en Interceptores de Grupos (`server/_core/janIA.ts`)**:
+   - En `janIA.ts` (líneas 6092 y 6361), la verificación de identidad antecedía a la asistencia de predial. Al recibir `JanIA, predial: CHIP AAA0205AYFZ y CC 12345678`, la regex de cédula extraía `CC 12345678` y disparaba la consulta policial en lugar del predial.
+2. **Falta de Descarte Negativo en Verificación de Cédula (`server/_core/identityVerificationService.ts`)**:
+   - `extractCedulaForVerification` no evaluaba si el mensaje correspondía a una consulta catastral (`predial`, `chip`, `impuesto`).
+3. **Rigidez en la Búsqueda de Archivos de Imagen en Broadcasts (`server/_core/index.ts`)**:
+   - Los endpoints `broadcast-identity-v2` y `broadcast-predial-promo` buscaban la imagen exclusivamente en la raíz mediante `path.join(process.cwd(), filename)`, ignorando subdirectorios como `client/public/assets/jania/`.
+
+**Solución aplicada:**
+- **`server/_core/identityVerificationService.ts`**: Descarte inmediato en `extractCedulaForVerification` si el mensaje contiene `predial`, `chip` o `impuesto`.
+- **`server/_core/janIA.ts`**: Reordenamiento en Grupo 2 y Grupo 3: Asistencia de Predial e `isServiceHelpRequest` ahora se procesan antes de la verificación de cédula.
+- **`server/_core/predialService.ts`**: Ajuste gramatical a `🪪 *${docLabel}:* ${docNumber}`.
+- **Gestión de Imágenes**: Copiada `jania_predial_comercial.jpg` a `client/public/assets/jania/` y `client/public/images/`.
+- **`server/_core/index.ts`**: Función `resolveBroadcastImagePath` implementada con búsqueda en cascada multi-directorio y copias comerciales condensadas, precisas y con llamada a la acción hacia WhatsApp y el portal oficial `https://vecy-network.vercel.app/`.
+- **Versión**: Incrementada a `v32.18` (`32.18.0`).
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅
+
+---
+
 ### 🔖 v32.17 — Octubre 2026
 
 #### 📌 CORRECCIÓN DE ERRORES DE CLAUDE, DOCTRINA DE DOMINIO OFICIAL, CAPTURA DE CIFRAS CON APÓSTROFE Y BLOQUEO POR GUILLOTINA FINANCIERA EN MATCH #15191

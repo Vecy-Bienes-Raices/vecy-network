@@ -7,6 +7,45 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.18 — 01 Octubre 2026
+
+### Solicitud de Eduardo
+Eduardo solicitó: *"Podrías subir a los grupos y al canal nuevamente las publicaciones 'ya los eliminé' y espero que lo del pŕedial ya funcione y postealo con los datos e imágenes correctos y en corto y claros sin enredar a los usuarios. Eso si como le dije al agente anterior: 🪪 ¿SABES A QUIÉN LE ESTÁS VENDIENDO, ARRENDANDO O AGENDANDO UNA VISITA? 🇨🇴. taMBIÉN YA MOVÍ LA IMAGEN DE @[client/public/assets/jania/jania_verificacion_servicio.jpg] a la carpeta correcta, pero no encontré la del predial. Revisa y pon todo en orden por favor. Pero ojalá que en verdad funcione lo del predial porque no lo he probado aún. Adelante por favor."*
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Bug Crítico de Interceptación Cédula vs Predial en Grupos (`server/_core/janIA.ts`)**:
+   - En `janIA.ts` (línea 6092 para Grupo 2 y 6361 para Grupo 3), el interceptor `executeIdentityVerificationFromWhatsApp` se ejecutaba **antes** que `executePredialAssistanceFromWhatsApp`.
+   - Si un usuario enviaba: `JanIA, predial: CHIP AAA0205AYFZ y CC 12345678`, la función `extractCedulaForVerification` detectaba la subcadena `CC 12345678` y enviaba una consulta errónea de antecedentes policiales en vez de entregar la asistencia del impuesto predial.
+2. **Carencia de Filtro Negativo en `extractCedulaForVerification` (`identityVerificationService.ts`)**:
+   - La función descartaba textos largos de oferta/demanda pero no discriminaba palabras clave como `predial`, `chip` o `impuesto`.
+3. **Ubicación de Imágenes Comerciales de Broadcast**:
+   - Eduardo trasladó `jania_verificacion_servicio.jpg` a `client/public/assets/jania/jania_verificacion_servicio.jpg`.
+   - La imagen de predial (`jania_predial_comercial.jpg`, 284.9 KB, 1024x1024) se encontraba en la raíz del proyecto.
+   - El código de despacho de broadcasts en `index.ts` realizaba búsquedas rígidas en la raíz sin explorar carpetas públicas anidadas como `client/public/assets/jania/`.
+4. **Optimización de Textos Promocionales**:
+   - Redacción pulida, concisa, directa y sin tecnicismos innecesarios, manteniendo el titular doctrinal de identidad `🪪 ¿SABES A QUIÉN LE ESTÁS VENDIENDO, ARRENDANDO O AGENDANDO UNA VISITA? 🇨🇴`, el número de WhatsApp oficial `+57 319 291 9978`, el enlace directo `https://wa.me/573192919978` y el dominio oficial activo `https://vecy-network.vercel.app/`.
+
+### Acciones Ejecutadas
+1. **`server/_core/identityVerificationService.ts`**:
+   - Se añadió salvaguarda en `extractCedulaForVerification`: si el texto contiene `predial`, `chip` o `impuesto`, se descarta inmediatamente (`return { found: false }`), impidiendo que secuestre consultas catastrales.
+2. **`server/_core/janIA.ts` (Grupos 2 y 3)**:
+   - Se invirtió la prioridad de interceptores: Predial (`executePredialAssistanceFromWhatsApp`) e `isServiceHelpRequest` ahora se ejecutan con prioridad absoluta antes de la verificación policial.
+3. **`server/_core/predialService.ts`**:
+   - Ajuste gramatical en el informe: `🪪 *${docLabel}:* ${docNumber}` en lugar de `🪪 *${docLabel} registrado:* ${docNumber}`.
+4. **Gestión de Imágenes**:
+   - Se copió `jania_predial_comercial.jpg` a `client/public/assets/jania/` y a `client/public/images/`.
+   - Se creó la función utilitaria `resolveBroadcastImagePath` en `server/_core/index.ts` que busca en cascada en `client/public/assets/jania`, `client/public/images`, `client/public`, raíz y `dist/`.
+5. **`server/_core/index.ts`**:
+   - Endpoints `/api/admin/broadcast-identity-v2`, `/api/admin/broadcast-predial-promo` y `/api/admin/broadcast-service-promo` actualizados con resolución dinámica de imágenes y textos limpios, claros y persuasivos.
+6. **Incremento de Versión y Compilación Limpia**:
+   - `shared/const.ts`: `v32.18`
+   - `package.json`: `32.18.0`
+   - Vitest: 126/126 tests pasando (100% verde) ✅
+   - `tsc --noEmit`: 0 errores ✅
+   - Build de producción (Vite + esbuild): 0 errores ✅
+
+---
+
 ## 📋 SESIÓN v32.17 — 01 Octubre 2026
 
 ### Solicitud de Eduardo

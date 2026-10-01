@@ -168,7 +168,23 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.17 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.18 — Octubre 2026
+
+### Novedades v32.18 (Blindaje de Interceptor Predial vs Cédula en Grupos, Resolución Dinámica de Imágenes Comerciales y Despacho Limpio):
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Blindaje de Interceptores en Grupos 2 y 3 (`server/_core/janIA.ts`)**:
+     - Se invirtió la precedencia en `janIA.ts`: Predial (`executePredialAssistanceFromWhatsApp`) y Guía de Servicios (`isServiceHelpRequest`) ahora se ejecutan antes de la verificación de cédula.
+  2. **Salvaguarda Negativa en Verificación de Identidad (`server/_core/identityVerificationService.ts`)**:
+     - Se añadió descarte en `extractCedulaForVerification` cuando el mensaje contenga `predial`, `chip` o `impuesto`, garantizando que nunca intercepte consultas catastrales.
+  3. **Resolución Robusta de Imágenes de Broadcast (`server/_core/index.ts`)**:
+     - Se implementó `resolveBroadcastImagePath` con búsqueda en cascada (`client/public/assets/jania`, `client/public/images`, `client/public`, raíz y `dist/`).
+     - Imagen oficial de verificación (`jania_verificacion_servicio.jpg`) e imagen oficial de predial (`jania_predial_comercial.jpg`) disponibles en todas las rutas.
+  4. **Optimización de Textos Comerciales de Difusión**:
+     - Titular doctrinal exacto: `🪪 *¿SABES A QUIÉN LE ESTÁS VENDIENDO, ARRENDANDO O AGENDANDO UNA VISITA?* 🇨🇴`.
+     - Textos concisos, enlace directo a WhatsApp `https://wa.me/573192919978` y dominio activo `https://vecy-network.vercel.app/`.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.17 — Octubre 2026
 
 ### Novedades v32.17 (Corrección de Errores de Claude, Dominio Oficial en Bitácora, Rescate de Cifras con Apóstrofe, Guillotina Financiera en Match #15191 y Teléfono Oficial de Broadcasts):
 - **Causas Raíz y Solución de Arquitectura**:

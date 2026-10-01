@@ -30,6 +30,11 @@ export function extractCedulaForVerification(text: string, isPrivateDm: boolean 
     return { found: false, cedula: '', tipoDoc: 'cc' };
   }
 
+  // Descartar si el mensaje es una consulta de impuesto predial o CHIP catastral
+  if (lower.includes('predial') || lower.includes('chip') || lower.includes('impuesto')) {
+    return { found: false, cedula: '', tipoDoc: 'cc' };
+  }
+
   // Palabras clave de intención de verificación
   const keywords = ['verificar', 'verificacion', 'verificación', 'validar', 'consultar', 'revisar', 'antecedentes', 'cédula', 'cedula', 'documento'];
   const hasKeyword = keywords.some(kw => lower.includes(kw));

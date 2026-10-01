@@ -448,7 +448,7 @@ export async function executePredialAssistanceFromWhatsApp(
     const reportText =
       `🛡️ *PREDIAL BOGOTÁ — VECY BIENES RAÍCES* 🇨🇴\n\n` +
       `🏠 *CHIP del predio:* ${chip}\n` +
-      `🪪 *${docLabel} registrado:* ${docNumber}\n` +
+      `🪪 *${docLabel}:* ${docNumber}\n` +
       nitWarning + `\n` +
       `🔗 *Portal oficial Secretaría de Hacienda — Descarga tu factura predial aquí:*\n` +
       `${urlOficialSdh}\n\n` +

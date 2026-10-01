@@ -6089,21 +6089,29 @@ export async function processConsultingMessage(
     const genderTerm = nameInfo.genderTerm;
     const alreadyGreeted = await checkAlreadyGreeted(userId);
 
-    // 🛡️ INTERCEPTOR DIRECTO 1: VERIFICACIÓN OFICIAL DE CÉDULA / ANTECEDENTES (2CAPTCHA + POLICÍA NACIONAL)
-    const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
-    const idCheck = await executeIdentityVerificationFromWhatsApp(messageToProcess);
-    if (idCheck.isVerificationRequest && idCheck.reportText) {
-      console.log(`[JanIA-IdentityCheck] Verificación de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
+    // 🤝 INTERCEPTOR GUÍA DE SERVICIOS (PREDIAL / CÉDULA)
+    const { isServiceHelpRequest, PREDIAL_HELP_TEXT, CEDULA_HELP_TEXT } = await import('./predialService');
+    const helpType = isServiceHelpRequest(messageToProcess);
+    if (helpType === 'predial') {
       return {
         classification: "CONSULTA_GENERAL",
-        response: idCheck.reportText,
-        reactionEmoji: idCheck.success ? "🛡️" : "⚠️",
+        response: PREDIAL_HELP_TEXT,
+        reactionEmoji: "🏛️",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+    if (helpType === 'cedula') {
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: CEDULA_HELP_TEXT,
+        reactionEmoji: "🪪",
         wantsVoice: false,
         voiceResponse: ""
       };
     }
 
-    // 🏛️ INTERCEPTOR DIRECTO 2: ASISTENCIA Y GESTIÓN DE PREDIALES BOGOTÁ (CHIP + CÉDULA)
+    // 🏛️ INTERCEPTOR DIRECTO 1: ASISTENCIA Y GESTIÓN DE PREDIALES BOGOTÁ (CHIP + CÉDULA/NIT)
     const { executePredialAssistanceFromWhatsApp } = await import('./predialService');
     const predialCheck = await executePredialAssistanceFromWhatsApp(messageToProcess, userId, false);
     if (predialCheck.isPredialRequest && predialCheck.reportText) {
@@ -6112,6 +6120,20 @@ export async function processConsultingMessage(
         classification: "CONSULTA_GENERAL",
         response: predialCheck.reportText,
         reactionEmoji: "📄",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+
+    // 🛡️ INTERCEPTOR DIRECTO 2: VERIFICACIÓN OFICIAL DE CÉDULA / ANTECEDENTES (2CAPTCHA + POLICÍA NACIONAL)
+    const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
+    const idCheck = await executeIdentityVerificationFromWhatsApp(messageToProcess);
+    if (idCheck.isVerificationRequest && idCheck.reportText) {
+      console.log(`[JanIA-IdentityCheck] Verificación de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: idCheck.reportText,
+        reactionEmoji: idCheck.success ? "🛡️" : "⚠️",
         wantsVoice: false,
         voiceResponse: ""
       };
@@ -6358,21 +6380,29 @@ export async function processCirculoMessage(
 
     const alreadyGreeted = await checkAlreadyGreeted(userId);
 
-    // 🛡️ INTERCEPTOR DIRECTO 1: VERIFICACIÓN OFICIAL DE CÉDULA / ANTECEDENTES (2CAPTCHA + POLICÍA NACIONAL)
-    const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
-    const idCheck = await executeIdentityVerificationFromWhatsApp(text);
-    if (idCheck.isVerificationRequest && idCheck.reportText) {
-      console.log(`[JanIA-Circulo-IdentityCheck] Verificación de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
+    // 🤝 INTERCEPTOR GUÍA DE SERVICIOS (PREDIAL / CÉDULA)
+    const { isServiceHelpRequest, PREDIAL_HELP_TEXT, CEDULA_HELP_TEXT } = await import('./predialService');
+    const helpType = isServiceHelpRequest(text);
+    if (helpType === 'predial') {
       return {
         classification: "CONSULTA_GENERAL",
-        response: idCheck.reportText,
-        reactionEmoji: idCheck.success ? "🛡️" : "⚠️",
+        response: PREDIAL_HELP_TEXT,
+        reactionEmoji: "🏛️",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+    if (helpType === 'cedula') {
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: CEDULA_HELP_TEXT,
+        reactionEmoji: "🪪",
         wantsVoice: false,
         voiceResponse: ""
       };
     }
 
-    // 🏛️ INTERCEPTOR DIRECTO 2: ASISTENCIA Y GESTIÓN DE PREDIALES BOGOTÁ (CHIP + CÉDULA)
+    // 🏛️ INTERCEPTOR DIRECTO 1: ASISTENCIA Y GESTIÓN DE PREDIALES BOGOTÁ (CHIP + CÉDULA/NIT)
     const { executePredialAssistanceFromWhatsApp } = await import('./predialService');
     const predialCheck = await executePredialAssistanceFromWhatsApp(text, userId, false);
     if (predialCheck.isPredialRequest && predialCheck.reportText) {
@@ -6381,6 +6411,20 @@ export async function processCirculoMessage(
         classification: "CONSULTA_GENERAL",
         response: predialCheck.reportText,
         reactionEmoji: "📄",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+
+    // 🛡️ INTERCEPTOR DIRECTO 2: VERIFICACIÓN OFICIAL DE CÉDULA / ANTECEDENTES (2CAPTCHA + POLICÍA NACIONAL)
+    const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
+    const idCheck = await executeIdentityVerificationFromWhatsApp(text);
+    if (idCheck.isVerificationRequest && idCheck.reportText) {
+      console.log(`[JanIA-Circulo-IdentityCheck] Verificación de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: idCheck.reportText,
+        reactionEmoji: idCheck.success ? "🛡️" : "⚠️",
         wantsVoice: false,
         voiceResponse: ""
       };
