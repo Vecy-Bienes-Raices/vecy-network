@@ -176,7 +176,7 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
      - `modelsToTry.slice(0, 1)` elimina los modelos de respaldo. Corregido a `modelsToTry` para usar los 3 modelos en cascada.
   3. **Nuevo flujo real de alta disponibilidad**:
      - Por cada modelo: prueba Clave #1 → #2 → #3 (con cooldown 60s en 429). Si todas fallan: desciende a `gemini-flash-latest` → `gemini-flash-lite-latest`. Solo si todo falla: Fallback Determinista $0.
-  4. **Nota**: `GEMINI_API_KEY` y `GEMINI_API_KEY_1` son idénticos en `.env`; el Set interno deduplica, dando 3 claves únicas efectivas.
+  4. **Aclaración sobre `.env`**: `GEMINI_API_KEY` y `GEMINI_API_KEY_1` tienen el mismo valor, pero `GEMINI_API_KEYS` contiene las 4 claves separadas por coma. El `Set` interno las deduplica correctamente, dando **4 claves únicas reales** efectivas en el pool.
 - **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | Push GitHub y deploy VPS `jania-server v32.16.0 online` ✅
 
 ## 🔖 VERSIÓN ANTERIOR: v32.15 — Septiembre 2026
