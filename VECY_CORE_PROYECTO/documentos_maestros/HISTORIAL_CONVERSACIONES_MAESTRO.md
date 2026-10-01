@@ -7,6 +7,29 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.16 — 30 Septiembre 2026
+
+### Solicitud de Eduardo
+Eduardo preguntó: *"Jania si está usando sus cuatro APIs, para que cuando una se cuelgue, ponga a funcionar la segunda y cuando esta se cuelgue ponga la tercera y cuando esta se cuelgue ponga la cuarta y cuando la cuarta se cuelgue regresa la primera y así infinitamente para no tener pausas tan largas y poder subir todos los datos que más se puedan a la base de datos y no perder publicaciones o es que aún así con cuatro APIs no alcanza y se cuelga de todas maneras o dime que está funcionando mal"*
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Bug 1 — Loop limitado a 2 claves (Línea 230 de `llm.ts`)**:
+   - `for (let keyAttempt = 0; keyAttempt < Math.min(allKeys.length, 2); keyAttempt++)` — el `Math.min(..., 2)` garantizaba que solo se intentaban **2 claves** antes de lanzar el error "Gemini Cascade Exhausted". Si las claves #1 y #2 daban 429, el sistema se rendía sin probar las claves #3 y #4.
+2. **Bug 2 — Cascada de modelos desactivada (Línea 226 de `llm.ts`)**:
+   - `const targetModels = modelsToTry.slice(0, 1)` — eliminaba los modelos de respaldo (`gemini-flash-latest` y `gemini-flash-lite-latest`), dejando solo `gemini-3.6-flash`. Si este modelo fallaba, no había segundo ni tercer intento con modelos alternativos.
+3. **Bug 3 — Clave duplicada en `.env`**:
+   - `GEMINI_API_KEY` y `GEMINI_API_KEY_1` tienen el mismo valor. El `Set` en `getGeminiKeys()` deduplicará, resultando en solo 3 claves únicas operativas, no 4.
+
+### Acciones Ejecutadas
+1. **`server/_core/llm.ts` — Restauración del Pool Completo (v32.16)**:
+   - Línea 226: `const targetModels = modelsToTry;` — restaurada la cascada completa de 3 modelos.
+   - Línea 230: `for (let keyAttempt = 0; keyAttempt < allKeys.length; keyAttempt++)` — el loop ahora agota todas las claves disponibles antes de rendirse con un modelo, y luego desciende al siguiente modelo.
+   - **Nuevo flujo**: Mensaje → Clave #1 (429 → cooldown) → Clave #2 (429 → cooldown) → Clave #3 (429 → cooldown) → Modelo #2 gemini-flash-latest → itera las 3 claves → Modelo #3 gemini-flash-lite-latest → itera las 3 claves → Fallback Determinista $0 COP.
+2. **Versión**: Incremento a `v32.16` en `shared/const.ts` y `32.16.0` en `package.json`.
+3. **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | Push GitHub y deploy VPS ✅
+
+---
+
 ## 📋 SESIÓN v32.15 — 30 Septiembre 2026
 
 ### Solicitud de Eduardo

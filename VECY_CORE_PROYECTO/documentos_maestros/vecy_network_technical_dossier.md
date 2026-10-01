@@ -322,6 +322,27 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.16 — Septiembre 2026
+
+#### 📌 RESTAURACIÓN DEL POOL COMPLETO DE CLAVES GEMINI Y CASCADA DE MODELOS (`llm.ts`)
+
+**Requerimiento y Objetivos:**
+Eduardo identificó pausas largas en la ingesta de JanIA y preguntó si el sistema estaba usando correctamente las 4 APIs de Gemini en rotación infinita para evitar pérdida de publicaciones.
+
+**Causas Raíz:**
+- **Bug 1 (Línea 230)**: `Math.min(allKeys.length, 2)` — el loop de reintentos solo probaba máximo 2 claves antes de lanzar `Gemini Cascade Exhausted`, ignorando las restantes.
+- **Bug 2 (Línea 226)**: `modelsToTry.slice(0, 1)` — la cascada de modelos de respaldo (`gemini-flash-latest`, `gemini-flash-lite-latest`) fue desactivada, dejando solo el modelo principal.
+- **Adicional**: `GEMINI_API_KEY` y `GEMINI_API_KEY_1` en `.env` tienen el mismo valor; la deduplicación vía `Set` reduce el pool a 3 claves únicas efectivas.
+
+**Solución aplicada:**
+- L226: `const targetModels = modelsToTry;` → cascada completa de 3 modelos restaurada.
+- L230: `for (let keyAttempt = 0; keyAttempt < allKeys.length; keyAttempt++)` → itera todas las N claves disponibles.
+- **Nuevo flujo de alta disponibilidad**: Por modelo, prueba todas las claves (cooldown 60s por 429). Si el modelo falla completamente, cae al siguiente. Solo llama al Fallback Determinista si los 3 modelos × N claves fallan.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | Build limpio ✅ | VPS `jania-server v32.16.0 online` ✅
+
+---
+
 ### 🔖 v32.15 — Septiembre 2026
 
 #### 📌 CORRECCIÓN DE PORTAL SDH (DESCARGA FACTURA DIRECTA), ENRUTAMIENTO PRIORITARIO PREDIAL > CÉDULA Y GUÍA DE FORMULARIO

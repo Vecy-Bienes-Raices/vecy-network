@@ -165,7 +165,21 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.15 — Septiembre 2026
+## 🔖 VERSIÓN ACTUAL: v32.16 — Septiembre 2026
+
+### Novedades v32.16 (Restauración del Pool Completo de Claves Gemini y Cascada de Modelos en `llm.ts`):
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Bug crítico en loop de reintentos (`llm.ts` Línea 230)**:
+     - `Math.min(allKeys.length, 2)` limitaba el pool a solo 2 claves; si fallaban, el sistema se rendía sin probar las restantes.
+     - Corregido a `allKeys.length` — ahora agota todas las claves disponibles (N claves).
+  2. **Cascada de modelos desactivada (`llm.ts` Línea 226)**:
+     - `modelsToTry.slice(0, 1)` elimina los modelos de respaldo. Corregido a `modelsToTry` para usar los 3 modelos en cascada.
+  3. **Nuevo flujo real de alta disponibilidad**:
+     - Por cada modelo: prueba Clave #1 → #2 → #3 (con cooldown 60s en 429). Si todas fallan: desciende a `gemini-flash-latest` → `gemini-flash-lite-latest`. Solo si todo falla: Fallback Determinista $0.
+  4. **Nota**: `GEMINI_API_KEY` y `GEMINI_API_KEY_1` son idénticos en `.env`; el Set interno deduplica, dando 3 claves únicas efectivas.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | Push GitHub y deploy VPS `jania-server v32.16.0 online` ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.15 — Septiembre 2026
 
 ### Novedades v32.15 (URL Oficial Real SDH descargaFacturaVA, Inversión Prioritaria de Routing Predial > Cédula e Instrucciones Detalladas de Formulario):
 - **Causas Raíz y Solución de Arquitectura**:
