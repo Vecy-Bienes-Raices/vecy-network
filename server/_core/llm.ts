@@ -223,11 +223,11 @@ async function invokeGemini(
   }
 
   let lastError: any = null;
-  const targetModels = modelsToTry.slice(0, 1); // 1 modelo principal (gemini-3.6-flash)
+  const targetModels = modelsToTry; // Cascada completa de modelos (gemini-3.6-flash → gemini-flash-latest → gemini-flash-lite-latest)
 
   for (const currentModel of targetModels) {
-    // Intentar a través de máximo 2 claves del Pool para respuesta instantánea
-    for (let keyAttempt = 0; keyAttempt < Math.min(allKeys.length, 2); keyAttempt++) {
+    // Intentar a través de TODAS las claves del Pool en Round-Robin antes de rendirse con este modelo
+    for (let keyAttempt = 0; keyAttempt < allKeys.length; keyAttempt++) {
       const { key: activeKey, index: keyNum } = getActiveFailoverKey();
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${activeKey}`;
 

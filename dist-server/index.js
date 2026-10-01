@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.15";
+    VECY_VERSION = "v32.16";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -948,9 +948,9 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
     payload.tools = [{ googleSearch: {} }];
   }
   let lastError = null;
-  const targetModels = modelsToTry.slice(0, 1);
+  const targetModels = modelsToTry;
   for (const currentModel of targetModels) {
-    for (let keyAttempt = 0; keyAttempt < Math.min(allKeys.length, 2); keyAttempt++) {
+    for (let keyAttempt = 0; keyAttempt < allKeys.length; keyAttempt++) {
       const { key: activeKey, index: keyNum } = getActiveFailoverKey();
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${activeKey}`;
       for (let attempt = 1; attempt <= 1; attempt++) {
