@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.24";
+    VECY_VERSION = "v32.25";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -10902,7 +10902,16 @@ var init_whatsapp_match = __esm({
       processingLocks = /* @__PURE__ */ new Map();
       lastGroupMessageTime = /* @__PURE__ */ new Map();
       botSentMessageIds = /* @__PURE__ */ new Set();
+      messageStore = /* @__PURE__ */ new Map();
       lastHumanIntervention = /* @__PURE__ */ new Map();
+      saveMessageToStore(id, message) {
+        if (!id || !message) return;
+        this.messageStore.set(id, message);
+        if (this.messageStore.size > 2e3) {
+          const firstKey = this.messageStore.keys().next().value;
+          if (firstKey) this.messageStore.delete(firstKey);
+        }
+      }
       dmMessageBuffers = /* @__PURE__ */ new Map();
       groupMetadataCache = /* @__PURE__ */ new Map();
       reconnectAttempts = 0;
@@ -11076,7 +11085,10 @@ var init_whatsapp_match = __esm({
             keepAliveIntervalMs: 2e4,
             // Ping Keep-Alive de WebSocket cada 20 segundos
             emitOwnEvents: true,
-            getMessage: async (_key) => {
+            getMessage: async (key) => {
+              if (key?.id && this.messageStore.has(key.id)) {
+                return this.messageStore.get(key.id);
+              }
               return void 0;
             }
           });
@@ -11155,6 +11167,9 @@ var init_whatsapp_match = __esm({
           if (m.type !== "notify" && m.type !== "append") return;
           for (const msg of m.messages) {
             if (!msg.key || !msg.message) continue;
+            if (msg.key.id && msg.message) {
+              this.saveMessageToStore(msg.key.id, msg.message);
+            }
             if (msg.messageStubType) {
               continue;
             }
@@ -11170,8 +11185,12 @@ var init_whatsapp_match = __esm({
               continue;
             }
             const timestamp2 = msg.messageTimestamp;
-            if (timestamp2 && Number(timestamp2) < SERVER_BOOT_TIME - 60) {
-              continue;
+            if (timestamp2) {
+              const msgAgeSeconds = Math.floor(Date.now() / 1e3) - Number(timestamp2);
+              const maxAgeAllowed = isGroup ? 180 : 1800;
+              if (msgAgeSeconds > maxAgeAllowed) {
+                continue;
+              }
             }
             try {
               if (isGroup) {
@@ -12762,6 +12781,9 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             }
             if (sent && sent.key && sent.key.id) {
               this.botSentMessageIds.add(sent.key.id);
+              if (sent.message) {
+                this.saveMessageToStore(sent.key.id, sent.message);
+              }
             }
             await delay(1e3);
           } catch (err) {
@@ -26029,12 +26051,15 @@ async function startServer() {
             throw new Error("Formato de documento no soportado (debe ser buffer, ruta de archivo o base64).");
           }
           if (matchBot.sock) {
-            await matchBot.sock.sendMessage(targetPhone, {
+            const sentDoc = await matchBot.sock.sendMessage(targetPhone, {
               document: docBuffer,
               mimetype: mimetype || "application/pdf",
               fileName: fileName || "documento.pdf",
               caption: caption || text2 || ""
             });
+            if (sentDoc?.key?.id && sentDoc.message && typeof matchBot.saveMessageToStore === "function") {
+              matchBot.saveMessageToStore(sentDoc.key.id, sentDoc.message);
+            }
           }
         } else {
           console.log(`[NOTIFICACI\xD3N-API] Retransmitiendo mensaje a ${targetPhone} v\xEDa JanIA Match Bot (Baileys)...`);

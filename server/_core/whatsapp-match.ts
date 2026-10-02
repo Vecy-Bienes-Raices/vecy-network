@@ -168,7 +168,17 @@ export class JaniaMatchBot {
   private processingLocks: Map<string, Promise<void>> = new Map();
   private lastGroupMessageTime: Map<string, number> = new Map();
   private botSentMessageIds: Set<string> = new Set();
+  private messageStore: Map<string, proto.IMessage> = new Map();
   private lastHumanIntervention: Map<string, number> = new Map();
+
+  public saveMessageToStore(id: string, message: proto.IMessage) {
+    if (!id || !message) return;
+    this.messageStore.set(id, message);
+    if (this.messageStore.size > 2000) {
+      const firstKey = this.messageStore.keys().next().value;
+      if (firstKey) this.messageStore.delete(firstKey);
+    }
+  }
   private dmMessageBuffers: Map<string, { messages: any[]; timer: NodeJS.Timeout | null }> = new Map();
   private groupMetadataCache: Map<string, { data: any; time: number }> = new Map();
   private reconnectAttempts: number = 0;
@@ -359,7 +369,10 @@ export class JaniaMatchBot {
         defaultQueryTimeoutMs: 90000,
         keepAliveIntervalMs: 20000, // Ping Keep-Alive de WebSocket cada 20 segundos
         emitOwnEvents: true,
-        getMessage: async (_key: proto.IMessageKey) => {
+        getMessage: async (key: proto.IMessageKey) => {
+          if (key?.id && this.messageStore.has(key.id)) {
+            return this.messageStore.get(key.id);
+          }
           return undefined;
         },
       });
@@ -455,6 +468,9 @@ export class JaniaMatchBot {
 
       for (const msg of m.messages) {
         if (!msg.key || !msg.message) continue;
+        if (msg.key.id && msg.message) {
+          this.saveMessageToStore(msg.key.id, msg.message);
+        }
 
         // 🛡️ BLINDAJE DE PROTOCOLO Y SISTEMA WHATSAPP:
         // Ignorar stubs (cambios de código de seguridad, cambios de número, añadidos/removidos, llamadas, etc.)
@@ -479,10 +495,17 @@ export class JaniaMatchBot {
           continue;
         }
 
-        // Omitir mensajes antiguos previos a la inicialización (más de 60s atrás)
+        // 🛡️ FILTRO INTELIGENTE DE MENSAJES HISTÓRICOS:
+        // Para grupos masivos: descartar si tienen más de 180 segundos para evitar saturación de logs.
+        // Para DMs privados (!isGroup): PERMITIR hasta 1800 segundos (30 minutos) atrás para que JanIA
+        // NUNCA ignore a un usuario que escribió mientras el socket se reconectaba o el servidor se actualizaba.
         const timestamp = msg.messageTimestamp;
-        if (timestamp && Number(timestamp) < (SERVER_BOOT_TIME - 60)) {
-          continue;
+        if (timestamp) {
+          const msgAgeSeconds = Math.floor(Date.now() / 1000) - Number(timestamp);
+          const maxAgeAllowed = isGroup ? 180 : 1800; // 3 min en grupos, 30 min en DMs privados
+          if (msgAgeSeconds > maxAgeAllowed) {
+            continue;
+          }
         }
 
         try {
@@ -2500,6 +2523,9 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         }
         if (sent && sent.key && sent.key.id) {
           this.botSentMessageIds.add(sent.key.id);
+          if (sent.message) {
+            this.saveMessageToStore(sent.key.id, sent.message);
+          }
         }
         await delay(1000);
       } catch (err: any) {

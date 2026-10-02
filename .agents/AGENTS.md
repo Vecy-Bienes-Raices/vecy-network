@@ -168,7 +168,23 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.24 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.25 — Octubre 2026
+
+### Novedades v32.25 (Resolución del Bug 'Esperando el mensaje' con messageStore en Baileys y Atención Blindada 24/7 en DMs sin Descarte por Reinicio):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo identificó el bug de *"Esperando el mensaje. Esto puede demorar un poco"* en WhatsApp Web al observar el saludo enviado a Camila Argaez (`+57 317 4029859`). Solicitó que JanIA esté atenta 24/7 sin dormirse ni perder mensajes por desconexiones o reinicios.
+  - Eduardo recordó la importancia de que JanIA salude por el nombre propio del usuario (como en el caso de Euler Calvache), manteniendo el tono de IA Pura y empatía humana.
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Anulación del Bug 'Esperando el mensaje' (`messageStore` + `getMessage` en Baileys)**:
+     - WhatsApp Multi-Device requiere que Baileys almacene copias de los mensajes enviados/recibidos para responder a las solicitudes de sincronización y descifrado de WhatsApp Web y otros clientes vinculados (`retryRequest`).
+     - Al tener `getMessage: async () => undefined`, WhatsApp Web se congelaba esperando las claves de descifrado.
+     - Se implementó `messageStore` (LRU de 2000 mensajes) y se conectó a `getMessage`, `messages.upsert` y `queuedSend`.
+  2. **Tolerancia Dinámica de Timestamps en DMs (Atención 24/7 Ininterrumpida)**:
+     - El filtro estático `SERVER_BOOT_TIME - 60` descartaba mensajes de usuarios si llegaban minutos antes de que el socket de Baileys se reconectara.
+     - Se reemplazó por un filtro dinámico relativo a `Date.now()`: grupos masivos permiten hasta 3 minutos (180s) y **DMs privados permiten hasta 30 minutos (1800s)**, garantizando que JanIA responda siempre.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.24 — Octubre 2026
 
 ### Novedades v32.24 (Atención y Reactivación de Usuarios, Bypass de Anti-Ban Shield en API y Doctrina Anti 'Leer más' Desacoplada):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

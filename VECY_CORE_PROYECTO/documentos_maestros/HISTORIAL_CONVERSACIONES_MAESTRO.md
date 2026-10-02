@@ -7,6 +7,47 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.25 — 02 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Asesoría Estratégica en Dominio y Correo Profesional**:
+   - Eduardo solicitó evaluar opciones de registradores y correo corporativo a partir de una comparativa de Google (Dynadot, Namecheap, Hostinger, Cloudflare).
+   - Solicitó aclarar por qué el 2º enlace (Namecheap) fallaba y explicar qué significaba el 4º (Cloudflare: "solo entrada").
+   - Preguntó si convenía comprar con solo `VECY` (ej: `vecy.co`, `vecy.com.co`) o completo con `VECYBIENESRAICES` (`vecybienesraices.com`), buscando la alternativa más económica y profesional.
+   - Evaluó `vecy.com.co` y descubrió que el registro .CO lo catalogaba como "Premium" a $100 USD/año, mientras que `vecybienesraices.com` salía a solo **$10.46 USD/año plano**.
+   - Consultó si el correo corporativo mantendrá la compatibilidad total con Vecy Agenda Pro / Vecy Agenda y si es posible automatizar el manejo de correos con IA.
+2. **Atención y Recuperación Inmediata de Camila Argaez (`+57 317 4029859`)**:
+   - Eduardo alertó que Camila Argaez había saludado con *"Hola"* a las 18:17 y JanIA parecía no haber contestado.
+   - Observó en WhatsApp Web el estado de mensaje pendiente: *"Esperando el mensaje. Esto puede demorar un poco"*, preguntando qué causaba este bug y cómo combatirlo para que JanIA esté activa 24/7 sin descansos ni fallos.
+   - Resaltó con humor que JanIA saludaba con calidez y nombre de pila (mostrando el ejemplo de Euler Calvache), indagando por qué en el primer envío manual no había salido el nombre de Camila.
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Causa Raíz del Descarte de Mensajes en Reconexión (`SERVER_BOOT_TIME`)**:
+   - En `server/_core/whatsapp-match.ts`, el filtro `if (timestamp && Number(timestamp) < (SERVER_BOOT_TIME - 60)) continue;` evaluaba de forma estática los mensajes basándose en el arranque del proceso. Cuando el WebSocket se reconectó a las 18:21 (tras un timeout 408 de Baileys), los mensajes recibidos a las 18:17 quedaron descartados por tener más de 60 segundos de antigüedad.
+   - **Solución Doctrinal**: Se eliminó la dependencia de `SERVER_BOOT_TIME` y se implementó un filtro dinámico relativo a `Date.now()`: grupos masivos permiten hasta 3 minutos (180s) para evitar ráfagas, mientras que **chats privados (DMs) permiten hasta 30 minutos (1800s)**, garantizando que NUNCA se ignore a un usuario que escribió durante un reinicio o actualización.
+2. **Causa Raíz del Bug "Esperando el mensaje" (`getMessage` en Baileys)**:
+   - Al enviar mensajes desde Baileys, WhatsApp Multi-Device sincroniza copias encriptadas con los otros dispositivos vinculados (como WhatsApp Web en el computador de Eduardo). Si WhatsApp Web necesita descifrar la clave, solicita un reintento a Baileys mediante `getMessage(key)`.
+   - Baileys tenía configurado `getMessage: async () => undefined`. Al no retornar el contenido del mensaje, WhatsApp Web no podía descifrar la copia local y mostraba el mensaje de espera.
+   - **Solución de Arquitectura**: Se implementó una caché en memoria `messageStore` (capacidad de 2000 mensajes con purga automática LRU) que almacena tanto mensajes entrantes como salientes (vía `queuedSend` y notificaciones API). `getMessage` ahora retorna el mensaje real almacenado, resolviendo instantáneamente las peticiones de sincronización multi-dispositivo.
+3. **Causa del Saludo sin Nombre en el Envío de Prueba**:
+   - El código nativo de JanIA (`processPrivateDmConversationalMessage`) siempre extrae el nombre (`pushName` -> `Camila`). En la prueba anterior se invocó `/api/send-whatsapp-notification` con texto predefinido estático. Se envió la aclaración y saludo personalizado a Camila Argaez llamándola por su nombre.
+
+### Acciones Ejecutadas
+1. **`server/_core/whatsapp-match.ts`**:
+   - Creado `messageStore: Map<string, proto.IMessage>` y método público `saveMessageToStore`.
+   - Conectado `getMessage: async (key) => this.messageStore.get(key.id)`.
+   - Guardado automático de mensajes en `messages.upsert` y en `queuedSend`.
+   - Ventana dinámica de tolerancia de timestamp: 180s para grupos, 1800s (30 minutos) para DMs privados.
+2. **`server/_core/index.ts`**:
+   - Guardado automático de documentos en `matchBot.saveMessageToStore` en `/api/send-whatsapp-notification`.
+3. **`shared/const.ts` y `package.json`**:
+   - Incrementada versión a **v32.25** (`32.25.0`).
+4. **Validación**:
+   - `npm run check` (0 errores TypeScript) ✅ | 126/126 tests Vitest superados ✅ | Build limpio en 35.6s ✅.
+   - Despacho y entrega confirmada a Camila Argaez (`573174029859`).
+
+---
+
 ## 📋 SESIÓN v32.24 — 02 Octubre 2026
 
 ### Solicitud de Eduardo

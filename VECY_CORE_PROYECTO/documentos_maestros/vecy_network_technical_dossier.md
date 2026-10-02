@@ -322,6 +322,35 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.25 — Octubre 2026
+
+#### 📌 RESOLUCIÓN DEL BUG 'ESPERANDO EL MENSAJE' CON MESSAGESTORE EN BAILEYS Y ATENCIÓN BLINDADA 24/7 EN DMs
+
+**Requerimiento y Objetivos:**
+1. Resolver de forma definitiva el bug de sincronización en WhatsApp Web donde ciertos mensajes salientes se quedaban congelados mostrando: *"Esperando el mensaje. Esto puede demorar un poco. Más información"*.
+2. Garantizar que JanIA esté atenta 24/7 sin dormirse ni perder mensajes entrantes en chats privados (DMs) debido a micro-desconexiones, timeouts 408 o actualizaciones de proceso.
+3. Asegurar que JanIA salude siempre por el nombre de pila del usuario en chats privados (`¡Hola Camila!`, `¡Hola Euler!`).
+
+**Causas Raíz:**
+1. **Falta de Tienda de Mensajes (`messageStore`) en Baileys**:
+   - En WhatsApp Multi-Device, cuando el bot envía un mensaje a un tercero, WhatsApp genera copias cifradas para los otros dispositivos vinculados (como WhatsApp Web en el PC de Eduardo). Si WhatsApp Web necesita descifrar la clave, solicita retransmisión mediante `getMessage(key)`.
+   - Baileys tenía configurado `getMessage: async () => undefined`, imposibilitando la entrega de claves y dejando WhatsApp Web en estado permanente de espera.
+2. **Descarte Prematuro por Timestamp (`SERVER_BOOT_TIME`)**:
+   - El filtro `timestamp < (SERVER_BOOT_TIME - 60)` descartaba mensajes con más de 60 segundos de antigüedad al reiniciar el socket, ignorando a usuarios que escribieron durante la reconexión.
+
+**Solución Aplicada:**
+- **`server/_core/whatsapp-match.ts`**:
+  - Implementado `messageStore: Map<string, proto.IMessage>` con retención LRU de 2000 mensajes y conectado al hook `getMessage`.
+  - Guardado bidireccional en `messages.upsert` y en `queuedSend`.
+  - Reemplazado `SERVER_BOOT_TIME` por ventana dinámica relativa a `Date.now()`: 180s en grupos y **1800s (30 minutos) en DMs privados**.
+- **`server/_core/index.ts`**:
+  - Guardado automático de mensajes salientes de API en `matchBot.saveMessageToStore`.
+- **Versión Oficial**: Incrementada a **v32.25** (`32.25.0`) en `shared/const.ts` y `package.json`.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅
+
+---
+
 ### 🔖 v32.24 — Octubre 2026
 
 #### 📌 ATENCIÓN Y REACTIVACIÓN DE USUARIOS, BYPASS DE ANTI-BAN SHIELD EN API Y DOCTRINA ANTI "LEER MÁS" DESACOPLADA

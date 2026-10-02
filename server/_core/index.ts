@@ -383,12 +383,15 @@ async function startServer() {
           }
 
           if (matchBot.sock) {
-            await matchBot.sock.sendMessage(targetPhone, {
+            const sentDoc = await matchBot.sock.sendMessage(targetPhone, {
               document: docBuffer,
               mimetype: mimetype || "application/pdf",
               fileName: fileName || "documento.pdf",
               caption: caption || text || ""
             });
+            if (sentDoc?.key?.id && sentDoc.message && typeof matchBot.saveMessageToStore === 'function') {
+              matchBot.saveMessageToStore(sentDoc.key.id, sentDoc.message);
+            }
           }
         } else {
           console.log(`[NOTIFICACIÓN-API] Retransmitiendo mensaje a ${targetPhone} vía JanIA Match Bot (Baileys)...`);
