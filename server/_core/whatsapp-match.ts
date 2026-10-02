@@ -1084,29 +1084,10 @@ export class JaniaMatchBot {
       return;
     }
 
-    // 🤝 INTERCEPTOR DM: PREGUNTAS DE AYUDA SOBRE SERVICIOS ("¿cómo verifico?", "¿cómo pido el predial?")
-    // JanIA responde con guía contextual sin activar el motor de conversación general
-    const { isServiceHelpRequest, PREDIAL_HELP_TEXT, CEDULA_HELP_TEXT } = await import('./predialService');
-    const helpType = isServiceHelpRequest(body);
-    if (helpType === 'predial') {
-      try { await this.sock.sendPresenceUpdate('composing', senderId); } catch (_) {}
-      console.log(`[JANIA-MATCH] [DM] Guía de servicio PREDIAL enviada a ${senderId}`);
-      await this.queuedSend(senderId, PREDIAL_HELP_TEXT, { quoted: mainMsg, allowDirectMessage: true });
-      await this.logToDb(senderId, 'janIA', PREDIAL_HELP_TEXT);
-      return;
-    }
-    if (helpType === 'cedula') {
-      try { await this.sock.sendPresenceUpdate('composing', senderId); } catch (_) {}
-      console.log(`[JANIA-MATCH] [DM] Guía de servicio CÉDULA enviada a ${senderId}`);
-      await this.queuedSend(senderId, CEDULA_HELP_TEXT, { quoted: mainMsg, allowDirectMessage: true });
-      await this.logToDb(senderId, 'janIA', CEDULA_HELP_TEXT);
-      return;
-    }
-
     // 🤖 PROTOCOLO DE INTERACCIÓN IA PURA EN CHAT PRIVADO (DMs TERCEROS):
     // Si no es un chat de directores (isAdmin) y el usuario envió un mensaje,
     // JanIA responde de forma cálida, humana e inteligente, guiando en el uso de los servicios
-    // y ofreciendo la línea humana de VECY (+57 316 656 9719).
+    // de forma amena, corta y paso a paso, y ofreciendo la línea humana de VECY (+57 316 656 9719).
     if (!isAdmin && body.trim()) {
       try {
         await this.sock.sendPresenceUpdate('composing', senderId);
@@ -1122,6 +1103,25 @@ export class JaniaMatchBot {
       } catch (dmAiErr) {
         console.error('[JANIA-MATCH] Error en protocolo de IA conversacional DM:', dmAiErr);
       }
+    }
+
+    // 🤝 INTERCEPTOR DM: PREGUNTAS DE AYUDA SOBRE SERVICIOS ("¿cómo verifico?", "¿cómo pido el predial?")
+    // JanIA responde con guía contextual como fallback si no aplicó la IA pura
+    const { isServiceHelpRequest, PREDIAL_HELP_TEXT, CEDULA_HELP_TEXT } = await import('./predialService');
+    const helpType = isServiceHelpRequest(body);
+    if (helpType === 'predial') {
+      try { await this.sock.sendPresenceUpdate('composing', senderId); } catch (_) {}
+      console.log(`[JANIA-MATCH] [DM] Guía de servicio PREDIAL enviada a ${senderId}`);
+      await this.queuedSend(senderId, PREDIAL_HELP_TEXT, { quoted: mainMsg, allowDirectMessage: true });
+      await this.logToDb(senderId, 'janIA', PREDIAL_HELP_TEXT);
+      return;
+    }
+    if (helpType === 'cedula') {
+      try { await this.sock.sendPresenceUpdate('composing', senderId); } catch (_) {}
+      console.log(`[JANIA-MATCH] [DM] Guía de servicio CÉDULA enviada a ${senderId}`);
+      await this.queuedSend(senderId, CEDULA_HELP_TEXT, { quoted: mainMsg, allowDirectMessage: true });
+      await this.logToDb(senderId, 'janIA', CEDULA_HELP_TEXT);
+      return;
     }
 
     // Si es un chat de administración/directores y no es solicitud de servicio oficial, silencio absoluto.

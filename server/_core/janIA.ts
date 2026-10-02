@@ -6629,6 +6629,19 @@ export async function processPrivateDmConversationalMessage(
     return welcomeMsg;
   }
 
+  // Fast-path: Si el usuario pide verificar documento o antecedentes sin dar aún el número
+  const isDocVerificationIntent =
+    /(verificar\s*(c[eé]dula|documento|antecedentes|identidad|pasaporte|ce|extranjer[ií]a)|quiero\s*verificar|necesito\s*verificar|deseo\s*verificar|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) &&
+    !/\b\d{6,11}\b/.test(clean);
+
+  if (isDocVerificationIntent) {
+    const docPromptMsg =
+      `¡Claro que sí! Solo escríbeme el número de cédula (ej: 12345678) o dime si es cédula de extranjería o pasaporte dame el número y en 20 segundos te confirmo nombres completos y antecedentes en la Policía.`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", docPromptMsg);
+    return docPromptMsg;
+  }
+
   // 2. Si el usuario hace preguntas o continúa la conversación, guiarlo de forma amena y concisa con Gemini LLM
   try {
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
@@ -6645,7 +6658,7 @@ export async function processPrivateDmConversationalMessage(
           `- CERO tecnicismos complejos: nada de "machine learning", "algoritmos", "prompts", "APIs" ni lenguaje robótico.\n` +
           `- Respuestas breves: 1 a 3 frases claras (máximo 2 párrafos muy cortos). Que se sienta como un chat fluido de WhatsApp, no un manual.\n\n` +
           `CÓMO GUIAR AL USUARIO SEGÚN LO QUE RESPONDA:\n` +
-          `1. Si quiere verificar cédula o antecedentes: dile amablemente: "¡Claro que sí! Solo escríbeme el número de cédula (ej: 12345678) y en 20 segundos te confirmo nombres y antecedentes en la Policía."\n` +
+          `1. Si quiere verificar cédula o antecedentes: dile amablemente: "¡Claro que sí! Solo escríbeme el número de cédula (ej: 12345678) o dime si es cédula de extranjería o pasaporte dame el número y en 20 segundos te confirmo nombres completos y antecedentes en la Policía."\n` +
           `2. Si quiere la Factura Predial de Bogotá: dile: "¡Con gusto! Para descargarte la factura oficial en PDF con código de barras, solo envíame el código CHIP del predio y la cédula o NIT del propietario."\n` +
           `3. Si pregunta "¿De qué se trata esto?", "¿Cómo funciona?", "¿Qué es Vecy?", "¿Qué debo hacer?": explícale en 2 frases amenas que en VECY BIENES RAÍCES creamos estas herramientas gratuitas para que los colegas cierren ventas más rápido y seguro sin filas ni trámites, y pregúntale cuál desea probar.\n` +
           `4. Si pregunta si tiene costo: dile que estos dos servicios son 100% gratuitos para nuestra comunidad inmobiliaria.\n` +

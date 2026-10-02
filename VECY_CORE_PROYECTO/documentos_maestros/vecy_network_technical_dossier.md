@@ -322,6 +322,31 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.21 — Octubre 2026
+
+#### 📌 SOPORTE EXPLÍCITO DE CÉDULA DE EXTRANJERÍA Y PASAPORTE EN VERIFICACIÓN Y PRIORIZACIÓN CONVERSACIONAL EN DMs
+
+**Requerimiento y Objetivos:**
+1. Atender la solicitud de Eduardo: *"Este: 👉 JanIA: '¡Claro que sí! Solo escríbeme el número de cédula (ej: 12345678) y en 20 segundos te confirmo nombres completos y antecedentes en la Policía.' Te lo cambio por esto: 👉 JanIA: '¡Claro que sí! Solo escríbeme el número de cédula (ej: 12345678) o dime si es cédula de extranjería o pasaporte dame el número y en 20 segundos te confirmo nombres completos y antecedentes en la Policía.'"*
+2. Abrir explícitamente el abanico de verificación a Cédulas de Extranjería (CE) y Pasaportes en el diálogo con asesores y clientes, evitando la percepción errónea de que el bot solo acepta cédulas colombianas de ciudadanía.
+3. Asegurar que las consultas privadas de los usuarios en WhatsApp sobre cómo verificar o usar el servicio sean recibidas directamente por el protocolo conversacional y no por tutoriales estáticos extensos que generen el corte "Leer más".
+
+**Causas Raíz:**
+1. El prompt conversacional y las respuestas de guía solo hacían mención a "cédula", a pesar de que el motor de Policía Nacional ya soportaba técnicamente CE y pasaporte.
+2. En `whatsapp-match.ts`, el interceptor de ayuda estática (`isServiceHelpRequest`) ejecutaba antes que la IA conversacional en DMs, enviando bloques de texto rígidos de 1.000+ caracteres ante preguntas casuales.
+
+**Solución aplicada:**
+- **`server/_core/janIA.ts`**:
+  - Incorporado fast-path determinista ante intención de verificación sin número (`isDocVerificationIntent`), respondiendo de inmediato con la redacción exacta exigida por Eduardo.
+  - Actualizada la directiva de sistema #1 del prompt de Gemini en `processPrivateDmConversationalMessage` para incluir cédula, cédula de extranjería y pasaporte.
+- **`server/_core/whatsapp-match.ts`**:
+  - Priorizado el protocolo de IA conversacional para usuarios externos (`!isAdmin`) sobre las respuestas predefinidas de `isServiceHelpRequest`.
+- **Versión Oficial**: Incrementada a `v32.21` (`32.21.0`) en `shared/const.ts` y `package.json`.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅
+
+---
+
 ### 🔖 v32.20 — Octubre 2026
 
 #### 📌 PROTOCOLO CONVERSACIONAL DE IA PURA EN DMs PRIVADOS, CANAL HUMANO 3166569719 Y REEMPLAZO DE IMAGEN OFICIAL PREDIAL

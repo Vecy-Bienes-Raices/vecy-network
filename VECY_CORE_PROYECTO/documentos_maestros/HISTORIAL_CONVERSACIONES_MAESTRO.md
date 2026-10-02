@@ -7,6 +7,34 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.21 — 02 Octubre 2026
+
+### Solicitud de Eduardo
+Eduardo solicitó afinar la directiva de respuesta de JanIA cuando un usuario solicite o pregunte por el servicio de verificación de documentos:
+*"Este: 👉 JanIA: '¡Claro que sí! Solo escríbeme el número de cédula (ej: 12345678) y en 20 segundos te confirmo nombres completos y antecedentes en la Policía.'*
+*Te lo cambio por esto: 👉 JanIA: '¡Claro que sí! Solo escríbeme el número de cédula (ej: 12345678) o dime si es cédula de extranjería o pasaporte dame el número y en 20 segundos te confirmo nombres completos y antecedentes en la Policía.'"*
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Inclusión Explícita de Cédula de Extranjería y Pasaporte**:
+   - En el gremio inmobiliario colombiano es sumamente frecuente la atención a arrendatarios o compradores extranjeros (venezolanos con PPT/CE, estadounidenses, europeos, etc.).
+   - Aunque el motor `identityVerificationService.ts` ya contaba con soporte técnico para Cédula de Extranjería (CE) y Pasaporte en las consultas a la Policía Nacional, el mensaje de bienvenida y el prompt conversacional solo mencionaban "cédula", lo que podía hacer creer a los colegas que únicamente se podían verificar cédulas de ciudadanía colombianas.
+2. **Prioridad del Protocolo Conversacional en DMs sobre Guías Estáticas**:
+   - En `whatsapp-match.ts`, el interceptor de ayuda estática (`isServiceHelpRequest`) ejecutaba antes que el protocolo de IA pura, provocando que si un usuario preguntaba "¿cómo verifico una cédula?", recibiera un bloque tutorial de más de 1.000 caracteres con comandos técnicos, provocando el botón "Leer más".
+   - Al invertir la precedencia en DMs de terceros (`!isAdmin`), JanIA atiende primero con el protocolo conversacional ágil y conciso, utilizando la frase exacta solicitada por Eduardo y respondiendo en micro-segundos.
+
+### Acciones Ejecutadas
+1. **Actualización de Directiva y Fast-Path en `server/_core/janIA.ts`**:
+   - Se añadió un fast-path determinista para intenciones de verificación de identidad sin número (`isDocVerificationIntent`), respondiendo de inmediato:
+     `"¡Claro que sí! Solo escríbeme el número de cédula (ej: 12345678) o dime si es cédula de extranjería o pasaporte dame el número y en 20 segundos te confirmo nombres completos y antecedentes en la Policía."`
+   - Se actualizó la regla #1 del prompt de sistema de Gemini en `processPrivateDmConversationalMessage` con la misma redacción exacta para mantener la coherencia cuando haya interacción conversacional extendida.
+2. **Priorización de DMs Conversacionales en `server/_core/whatsapp-match.ts`**:
+   - Para chats privados de terceros (`!isAdmin`), se trasladó el protocolo de IA conversacional para que se ejecute antes de los interceptores de guías estáticas, garantizando una atención humana, amena y sin textos largos.
+3. **Control de Versión y Compilación**:
+   - Incrementada versión a **v32.21** (`32.21.0`) en `shared/const.ts` y `package.json`.
+   - `npm run check` (0 errores) | `npm run build` limpio | 126/126 tests Vitest pasando.
+
+---
+
 ## 📋 SESIÓN v32.20 — 01 Octubre 2026
 
 ### Solicitud de Eduardo

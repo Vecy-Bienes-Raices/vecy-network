@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.20";
+    VECY_VERSION = "v32.21";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -11433,6 +11433,22 @@ ${quotedNote}` : quotedNote;
           await this.logToDb(senderId, "janIA", idCheck.reportText);
           return;
         }
+        if (!isAdmin && body.trim()) {
+          try {
+            await this.sock.sendPresenceUpdate("composing", senderId);
+            const { processPrivateDmConversationalMessage: processPrivateDmConversationalMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+            const reply = await processPrivateDmConversationalMessage2(body, senderId, userName);
+            if (reply && reply.trim()) {
+              console.log(`[JANIA-MATCH] [DM-AI] Respuesta de IA pura enviada a ${senderId} (${userName}): "${reply.substring(0, 60)}..."`);
+              await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
+              await this.logToDb(senderId, "janIA", reply);
+              await this.sock.sendPresenceUpdate("paused", senderId);
+              return;
+            }
+          } catch (dmAiErr) {
+            console.error("[JANIA-MATCH] Error en protocolo de IA conversacional DM:", dmAiErr);
+          }
+        }
         const { isServiceHelpRequest: isServiceHelpRequest2, PREDIAL_HELP_TEXT: PREDIAL_HELP_TEXT2, CEDULA_HELP_TEXT: CEDULA_HELP_TEXT2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
         const helpType = isServiceHelpRequest2(body);
         if (helpType === "predial") {
@@ -11454,22 +11470,6 @@ ${quotedNote}` : quotedNote;
           await this.queuedSend(senderId, CEDULA_HELP_TEXT2, { quoted: mainMsg, allowDirectMessage: true });
           await this.logToDb(senderId, "janIA", CEDULA_HELP_TEXT2);
           return;
-        }
-        if (!isAdmin && body.trim()) {
-          try {
-            await this.sock.sendPresenceUpdate("composing", senderId);
-            const { processPrivateDmConversationalMessage: processPrivateDmConversationalMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-            const reply = await processPrivateDmConversationalMessage2(body, senderId, userName);
-            if (reply && reply.trim()) {
-              console.log(`[JANIA-MATCH] [DM-AI] Respuesta de IA pura enviada a ${senderId} (${userName}): "${reply.substring(0, 60)}..."`);
-              await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
-              await this.logToDb(senderId, "janIA", reply);
-              await this.sock.sendPresenceUpdate("paused", senderId);
-              return;
-            }
-          } catch (dmAiErr) {
-            console.error("[JANIA-MATCH] Error en protocolo de IA conversacional DM:", dmAiErr);
-          }
         }
         return;
       }
@@ -19127,6 +19127,13 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
     appendDmHistory(userId, "assistant", welcomeMsg);
     return welcomeMsg;
   }
+  const isDocVerificationIntent = /(verificar\s*(c[eé]dula|documento|antecedentes|identidad|pasaporte|ce|extranjer[ií]a)|quiero\s*verificar|necesito\s*verificar|deseo\s*verificar|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) && !/\b\d{6,11}\b/.test(clean);
+  if (isDocVerificationIntent) {
+    const docPromptMsg = `\xA1Claro que s\xED! Solo escr\xEDbeme el n\xFAmero de c\xE9dula (ej: 12345678) o dime si es c\xE9dula de extranjer\xEDa o pasaporte dame el n\xFAmero y en 20 segundos te confirmo nombres completos y antecedentes en la Polic\xEDa.`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", docPromptMsg);
+    return docPromptMsg;
+  }
   try {
     const messages2 = [
       {
@@ -19144,7 +19151,7 @@ PERSONALIDAD Y TONO:
 - Respuestas breves: 1 a 3 frases claras (m\xE1ximo 2 p\xE1rrafos muy cortos). Que se sienta como un chat fluido de WhatsApp, no un manual.
 
 C\xD3MO GUIAR AL USUARIO SEG\xDAN LO QUE RESPONDA:
-1. Si quiere verificar c\xE9dula o antecedentes: dile amablemente: "\xA1Claro que s\xED! Solo escr\xEDbeme el n\xFAmero de c\xE9dula (ej: 12345678) y en 20 segundos te confirmo nombres y antecedentes en la Polic\xEDa."
+1. Si quiere verificar c\xE9dula o antecedentes: dile amablemente: "\xA1Claro que s\xED! Solo escr\xEDbeme el n\xFAmero de c\xE9dula (ej: 12345678) o dime si es c\xE9dula de extranjer\xEDa o pasaporte dame el n\xFAmero y en 20 segundos te confirmo nombres completos y antecedentes en la Polic\xEDa."
 2. Si quiere la Factura Predial de Bogot\xE1: dile: "\xA1Con gusto! Para descargarte la factura oficial en PDF con c\xF3digo de barras, solo env\xEDame el c\xF3digo CHIP del predio y la c\xE9dula o NIT del propietario."
 3. Si pregunta "\xBFDe qu\xE9 se trata esto?", "\xBFC\xF3mo funciona?", "\xBFQu\xE9 es Vecy?", "\xBFQu\xE9 debo hacer?": expl\xEDcale en 2 frases amenas que en VECY BIENES RA\xCDCES creamos estas herramientas gratuitas para que los colegas cierren ventas m\xE1s r\xE1pido y seguro sin filas ni tr\xE1mites, y preg\xFAntale cu\xE1l desea probar.
 4. Si pregunta si tiene costo: dile que estos dos servicios son 100% gratuitos para nuestra comunidad inmobiliaria.

@@ -168,7 +168,21 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.20 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.21 — Octubre 2026
+
+### Novedades v32.21 (Inclusión de Cédula de Extranjería y Pasaporte en Verificación y Priorización Conversacional en DMs):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo ajustó la instrucción de JanIA para verificación de documentos:
+    `"¡Claro que sí! Solo escríbeme el número de cédula (ej: 12345678) o dime si es cédula de extranjería o pasaporte dame el número y en 20 segundos te confirmo nombres completos y antecedentes en la Policía."`
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Directiva y Fast-Path de Identidad Multidocumento (`server/_core/janIA.ts`)**:
+     - Fast-path determinista ante solicitudes de verificación sin documento (`isDocVerificationIntent`), respondiendo instantáneamente con la fórmula precisa de Eduardo.
+     - Calibración de la regla #1 del prompt LLM de Gemini en `processPrivateDmConversationalMessage` para contemplar cédulas colombianas, cédulas de extranjería (CE) y pasaportes.
+  2. **Priorización Conversacional en DMs (`server/_core/whatsapp-match.ts`)**:
+     - Se invirtió la prioridad en DMs de terceros (`!isAdmin`): el protocolo de IA conversacional ahora se ejecuta antes del interceptor estático de tutoriales (`isServiceHelpRequest`), eliminando bloques de texto abrumadores y asegurando un diálogo ping-pong corto y ameno.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.20 — Octubre 2026
 
 ### Novedades v32.20 (Protocolo de Interacción IA Pura en DMs Privados, Canal Humano 3166569719 y Nueva Imagen Oficial de Predial):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:
