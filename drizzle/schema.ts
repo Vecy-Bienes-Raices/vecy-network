@@ -566,3 +566,32 @@ export const advisors = pgTable("advisors", {
 
 export type Advisor = typeof advisors.$inferSelect;
 export type InsertAdvisor = typeof advisors.$inferInsert;
+
+/**
+ * Registro Permanente de Consultas Prediales (Big Data para Avalúos Inmobiliarios y Leads) - v32.23
+ * Almacena el historial de consultas de CHIP, contribuyentes, vigencias y enlaces de descarga oficial.
+ */
+export const predialConsultations = pgTable("predial_consultations", {
+  id: serial("id").primaryKey(),
+  chip: varchar("chip", { length: 50 }).notNull(),
+  documentType: varchar("document_type", { length: 20 }).default("CC"),
+  documentNumber: varchar("document_number", { length: 50 }).notNull(),
+  nombreContribuyente: text("nombre_contribuyente"),
+  numBp: varchar("num_bp", { length: 50 }),
+  anoGravable: varchar("ano_gravable", { length: 10 }).default("2026"),
+  queryType: varchar("query_type", { length: 50 }).default("factura"), // "factura" | "certificado_pago"
+  downloadUrl: text("download_url"),
+  requesterPhone: varchar("requester_phone", { length: 50 }),
+  requesterName: text("requester_name"),
+  source: varchar("source", { length: 50 }).default("whatsapp_dm"),
+  status: varchar("status", { length: 50 }).default("completed"), // "completed" | "paid" | "error"
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("predial_consultations_chip_idx").on(table.chip),
+  index("predial_consultations_doc_idx").on(table.documentNumber),
+  index("predial_consultations_phone_idx").on(table.requesterPhone),
+]);
+
+export type PredialConsultation = typeof predialConsultations.$inferSelect;
+export type InsertPredialConsultation = typeof predialConsultations.$inferInsert;

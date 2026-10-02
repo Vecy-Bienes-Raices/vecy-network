@@ -322,6 +322,40 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.23 — Octubre 2026
+
+#### 📌 CERTIFICADO OFICIAL DE PAGO PREDIAL BOGOTÁ, BUCLE VIRAL DE AHORRO DE TIEMPO Y ESTRÉS, RESEÑAS GOOGLE, REDES Y BIG DATA
+
+**Requerimiento y Objetivos:**
+1. Habilitar la descarga y entrega automatizada en PDF del Certificado Oficial de Pago de Impuesto Predial Bogotá desde la Secretaría Distrital de Hacienda (SDH) cuando la factura ya se encuentre cancelada o cuando el usuario solicite un certificado de pago o paz y salvo.
+2. Atender y despachar a Andrés G (`173422306926796@lid` / `573186323601@s.whatsapp.net`) su Certificado Oficial de Pago 2026 para el predio `CHIP AAA0198HCOM`, `CC 79505340`, titular `JESUS GREGORIO CASTAÑO OROZCO`, explicándole la novedad e invitándolo a calificar a Vecy en Google.
+3. Ampliar el mensaje de cierre y bucle viral de JanIA: enfatizar con tono de "IA PURA" no solo el ahorro de filas, sino el ahorro de tiempo, estrés y frustración al no tener que navegar sitios web engorrosos en móviles o computadores.
+4. Integrar el enlace directo a reseñas de Google (`https://g.page/r/CctNbwU6UpX5EBM/review`) para potenciar el posicionamiento del bróker.
+5. Catalogar las redes sociales oficiales de VECY BIENES RAÍCES en `shared/const.ts` (`VECY_SOCIAL_NETWORKS`), incluyendo LinkedIn y Threads.
+6. Almacenar cada consulta catastral en PostgreSQL (`predial_consultations`) como base de datos histórica para avalúos e inteligencia predictiva.
+
+**Causas Raíz y Desafíos Técnicos:**
+1. En el portal de la SDH (`descargaFacturaVA`), el backend invalida el token reCAPTCHA tras la consulta inicial `buscarInfo`. Disparar `descargarCertificadoPago` con el mismo token genera error 500 de validación de captcha. Se resolvió implementando una segunda resolución limpia mediante 2Captcha y navegación headless en Puppeteer.
+2. Los clientes desde WhatsApp Web o dispositivos vinculados interactúan con JIDs `@lid`. Se requirió soporte explícito en el endpoint `/api/send-whatsapp-notification` y soporte de carga de documentos PDF binarios.
+
+**Solución Aplicada:**
+- **`server/_core/predialService.ts`**:
+  - Detección de factura pagada o solicitud de paz y salvo / certificado.
+  - Resolución dual de reCAPTCHA con 2Captcha y llamada directa al endpoint oficial de la SDH.
+  - Generación de reportes diferenciados y persistencia en `predial_consultations`.
+- **`server/_core/identityVerificationService.ts`**:
+  - Incorporación del bucle viral ampliado y enlace de reseñas de Google.
+- **`server/_core/index.ts`**:
+  - Soporte de archivos adjuntos y JIDs `@lid` en `/api/send-whatsapp-notification`.
+- **`drizzle/schema.ts`**:
+  - Tabla `predial_consultations` creada y migrada en PostgreSQL VPS.
+- **`shared/const.ts` y `package.json`**:
+  - Catálogo de redes sociales institucionales e incremento a versión **v32.23** (`32.23.0`).
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅
+
+---
+
 ### 🔖 v32.22 — Octubre 2026
 
 #### 📌 CALIBRACIÓN DOCTRINAL DE IDENTIDAD COMO BRÓKER VIRTUAL INMOBILIARIO INNOVADOR EN CAMINO 3

@@ -7,6 +7,58 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.23 — 02 Octubre 2026
+
+### Solicitud de Eduardo
+Eduardo presentó nuevas directrices y requerimientos de alto impacto tras observar la interacción de los usuarios con JanIA:
+1. **Entrega de Certificado de Pago de Predial Bogotá en PDF**:
+   - Identificó que al consultar prediales ya pagados, el portal de la Secretaría de Hacienda (SDH) ofrece el botón de "Certificado de Pago". Solicitó que JanIA esté capacitada para descargarlo y entregarlo automáticamente en PDF por WhatsApp si la factura ya está cancelada o si el usuario solicita explícitamente el certificado o paz y salvo.
+2. **Atención y Respuesta a Andrés G**:
+   - Responderle a Andrés G (`173422306926796@lid` / `573186323601@s.whatsapp.net`) sobre su solicitud de certificado de pago de ayer (`CHIP AAA0198HCOM`, `CC 79505340`, `JESUS GREGORIO CASTAÑO OROZCO`), enviándole directamente su PDF oficial expedido por la SDH, explicándole la activación de la función e invitándolo a calificar a Vecy en Google.
+3. **Bucle Viral y Propuesta de Valor Expandida en WhatsApp**:
+   - Actualizar el llamado a compartir de JanIA: no solo recalcar que ahorra la fila, sino el tiempo, el estrés y el dolor de cabeza de tener que lidiar con plataformas enredadas desde el celular o el computador, manteniendo su libertad como "IA PURA".
+4. **Reseñas de Google (Reputación Digital)**:
+   - Integrar el enlace oficial de calificación de Google (`https://g.page/r/CctNbwU6UpX5EBM/review`) al finalizar con éxito las gestiones de predial y verificación de documentos.
+5. **Directorio Oficial de Redes Sociales**:
+   - Registrar formalmente en el sistema las URLs de todas las redes institucionales de VECY BIENES RAÍCES, incorporando LinkedIn (`https://www.linkedin.com/in/vecy-bienes-raices`) y Threads (`https://www.threads.net/@vecybienesraices`).
+6. **Big Data y Memoria Inmobiliaria para Futuros Avalúos**:
+   - Persistir en base de datos PostgreSQL cada consulta de predial realizada por WhatsApp (CHIP, titular, cédula, fecha, teléfono del asesor) para alimentar algoritmos futuros de valoración y analítica.
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Mecánica Interna del Portal SDH (`descargaFacturaVA`)**:
+   - Cuando un inmueble canceló su impuesto 2026, la respuesta de `buscarInfo` arroja el código de error `08` con el mensaje decodificado en Base64 *"Esta factura, vigencia 2026, ya fué pagada"*.
+   - El endpoint de descarga de certificado es `/bogota/es/descargaFacturaVA/descargarCertificadoPago`.
+   - **Restricción de reCAPTCHA Token de Hacienda**: El token reCAPTCHA resuelto en el paso 1 queda invalidado inmediatamente tras `buscarInfo`. Enviar el endpoint de certificado con el token previo devuelve `"recaptchaError": "Error de verificación re-captcha"`.
+   - **Solución**: Se implementó una resolución en dos fases con 2Captcha: al detectar factura pagada o solicitud explícita de certificado, se solicita un segundo captcha limpio a 2Captcha, se dispara la llamada AJAX interna en el navegador headless de Puppeteer y se obtiene la URL CDN firmada del PDF (`/bogota/medias/CHIP-numBP.pdf`).
+2. **Recepción en WhatsApp de IDs Vinculados (LIDs)**:
+   - Clientes que interactúan desde WhatsApp Web o dispositivos modernos envían mensajes desde un `JID` tipo `@lid` (`173422306926796@lid`).
+   - Se adaptó `/api/send-whatsapp-notification` para admitir formatos `@lid` además de números convencionales, y para despachar documentos multimedia binarios (`document: Buffer | string`).
+
+### Acciones Ejecutadas
+1. **`server/_core/predialService.ts`**:
+   - Detección autónoma de intención de certificado de pago (`certificado de pago`, `paz y salvo`, `pago de predial`).
+   - Descarga con doble token reCAPTCHA en Puppeteer hacia el endpoint oficial de la SDH.
+   - Textos de entrega diferenciados para Factura vs Certificado Oficial de Pago.
+   - Incorporación del bucle viral de ahorro de tiempo/estrés y el link de Google Reviews.
+   - Registro automático en la tabla `predialConsultations`.
+2. **`server/_core/identityVerificationService.ts`**:
+   - Incorporación del bucle viral humanizado y enlace de reseña de Google al verificar documentos.
+   - Formateo de prefijo dinámico (`C.C.`, `C.E.`, `Pasaporte`).
+3. **`server/_core/janIA.ts`**:
+   - Actualización de saludos y directivas conversacionales para ofrecer "Facturas o Certificados de Pago de Predial".
+4. **`drizzle/schema.ts` y PostgreSQL VPS**:
+   - Diseñada y creada la tabla `predial_consultations` con índices en `chip`, `document_number`, `requester_phone` y `created_at`.
+   - Permisos otorgados a `vecy_admin` en PostgreSQL nativo del VPS.
+5. **`shared/const.ts` y `package.json`**:
+   - Incorporado el catálogo completo `VECY_SOCIAL_NETWORKS`.
+   - Incrementada versión oficial a **v32.23** (`32.23.0`).
+6. **Verificación y Recuperación de Contactos**:
+   - Notificaciones de disculpa y reactivación enviadas exitosamente a Miguel Arbeláez (`573004486520`) y León Andrés (`573222306512`).
+   - Certificado oficial de Andrés G (`Certificado_Pago_AAA0198HCOM_2026.pdf`) validado y listo para despacho.
+   - Pruebas superadas: 126/126 Vitest, build limpio.
+
+---
+
 ## 📋 SESIÓN v32.22 — 02 Octubre 2026
 
 ### Solicitud de Eduardo

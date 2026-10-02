@@ -168,7 +168,30 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.22 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.23 — Octubre 2026
+
+### Novedades v32.23 (Certificado Oficial de Pago Predial Bogotá, Bucle Viral de Ahorro de Tiempo y Estrés, Reseñas Google, Redes y Big Data):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo identificó la oportunidad de valor agregado al ver que las consultas de prediales ya cancelados habilitan el botón "Certificado de Pago" en la SDH. Solicitó que JanIA descargue y entregue automáticamente dicho certificado en PDF oficial.
+  - Eduardo solicitó atender y entregarle a Andrés G (`173422306926796@lid` / `573186323601@s.whatsapp.net`) su Certificado de Pago oficial de la vigencia 2026 (`CHIP AAA0198HCOM`, `CC 79505340`, titular `JESUS GREGORIO CASTAÑO OROZCO`).
+  - Eduardo ordenó expandir el bucle viral de JanIA: no limitarse al "ahorro de filas", sino comunicar con calidez y naturalidad de "IA PURA" el ahorro de tiempo, estrés y dolor de cabeza de tener que lidiar con plataformas complejas y confusas desde el celular o computador.
+  - Integración del enlace oficial de Google Reviews (`https://g.page/r/CctNbwU6UpX5EBM/review`) y catalogación de redes sociales de VECY en el sistema.
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Automatización de Certificado de Pago en `predialService.ts`**:
+     - Detección de factura pagada (`08: "Esta factura, vigencia 2026, ya fué pagada"`) o palabras clave (`certificado de pago`, `paz y salvo`).
+     - Resolución de doble captcha independiente mediante 2Captcha hacia el endpoint oficial `/bogota/es/descargaFacturaVA/descargarCertificadoPago`.
+     - Descarga, validación de encabezado PDF binario (`%PDF-1.6`) y entrega adjunta personalizada en WhatsApp.
+  2. **Bucle Viral y Google Reviews (`predialService.ts` e `identityVerificationService.ts`)**:
+     - Mensaje enriquecido con el llamado viral humanizado y enlace a reseñas de Google.
+  3. **Directorio de Redes Sociales (`shared/const.ts`)**:
+     - Incorporado objeto `VECY_SOCIAL_NETWORKS` con todas las redes oficiales (LinkedIn, Threads, Instagram, YouTube, X, TikTok, Facebook, Pinterest).
+  4. **Big Data y Memoria Inmobiliaria (`drizzle/schema.ts` y PostgreSQL VPS)**:
+     - Tabla `predial_consultations` persistiendo cada solicitud catastral para analítica futura de avalúos comerciales.
+  5. **Soporte de Documentos y LIDs en `/api/send-whatsapp-notification` (`server/_core/index.ts`)**:
+     - Soporte para adjuntar archivos PDF (`document: Buffer | string`) y direccionar a identificadores de WhatsApp vinculados (`@lid`).
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.22 — Octubre 2026
 
 ### Novedades v32.22 (Calibración Doctrinal de Identidad como Bróker Virtual Inmobiliario Innovador en Camino 3):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

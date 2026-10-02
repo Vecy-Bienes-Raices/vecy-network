@@ -20,6 +20,7 @@ export interface PredialDetectionResult {
   direccion?: string;
   avaluoCatastral?: number;
   estrato?: number;
+  isCertificadoPago?: boolean;
 }
 
 export interface PredialReportResult {
@@ -31,6 +32,8 @@ export interface PredialReportResult {
   pdfFileName?: string;
   pdfUrl?: string;
   nombreContribuyente?: string;
+  numBP?: string;
+  isCertificado?: boolean;
 }
 
 export interface DownloadPredialPdfResult {
@@ -39,6 +42,8 @@ export interface DownloadPredialPdfResult {
   pdfFileName?: string;
   pdfUrl?: string;
   nombreContribuyente?: string;
+  numBP?: string;
+  isCertificado?: boolean;
   errorMessage?: string;
 }
 
@@ -195,8 +200,15 @@ export function extractChipAndCedulaForPredial(text: string): PredialDetectionRe
     }
   }
 
+  // Palabras clave de intención de certificado de pago o paz y salvo
+  const certKeywords = [
+    'certificado de pago', 'certificado de impuesto', 'certificacion de pago',
+    'paz y salvo', 'recibo pagado', 'comprobante de pago', 'pago de impuesto'
+  ];
+  const isCertificadoPago = certKeywords.some(kw => lower.includes(kw));
+
   // Palabras clave de intención de predial
-  const keywords = ['predial', 'impuesto predial', 'factura predial', 'chip', 'paz y salvo predial', 'liquidar predial'];
+  const keywords = ['predial', 'impuesto predial', 'factura predial', 'chip', 'paz y salvo predial', 'liquidar predial', ...certKeywords];
   const hasKeyword = keywords.some(kw => lower.includes(kw));
 
   if (chipMatch && chipMatch[1]) {
@@ -209,7 +221,8 @@ export function extractChipAndCedulaForPredial(text: string): PredialDetectionRe
       matricula,
       direccion,
       estrato,
-      avaluoCatastral
+      avaluoCatastral,
+      isCertificadoPago
     };
   }
 
@@ -222,7 +235,8 @@ export function extractChipAndCedulaForPredial(text: string): PredialDetectionRe
       matricula,
       direccion,
       estrato,
-      avaluoCatastral
+      avaluoCatastral,
+      isCertificadoPago
     };
   }
 
@@ -373,7 +387,8 @@ export const CEDULA_HELP_TEXT =
 export async function downloadPredialInvoicePdf(
   tipoDocInput: string,
   numDoc: string,
-  chip: string
+  chip: string,
+  options?: { isCertificadoPago?: boolean }
 ): Promise<DownloadPredialPdfResult> {
   const apiKey = process.env.TWOCAPTCHA_API_KEY || '673ddb810e9f700065ccbe6034f26629';
   if (!apiKey) {
@@ -531,6 +546,93 @@ export async function downloadPredialInvoicePdf(
       await new Promise(r => setTimeout(r, 1000));
     }
 
+    // Detección de pago realizado o solicitud explícita de Certificado de Pago
+    let isAlreadyPaid = false;
+    if (buscarInfoData?.dataForm?.errores && Array.isArray(buscarInfoData.dataForm.errores)) {
+      for (const err of buscarInfoData.dataForm.errores) {
+        if (err?.txt_msj) {
+          try {
+            const decoded = Buffer.from(err.txt_msj, 'base64').toString('utf8').toLowerCase();
+            if (decoded.includes('pagada') || decoded.includes('pago')) {
+              isAlreadyPaid = true;
+              break;
+            }
+          } catch (_) {}
+        }
+      }
+    }
+
+    const wantCertificado = options?.isCertificadoPago || isAlreadyPaid;
+
+    if (wantCertificado) {
+      console.log(`[PREDIAL-DOWNLOAD] Solicitud de Certificado de Pago detectada para CHIP ${cleanChip} (explícito: ${!!options?.isCertificadoPago}, pagada: ${isAlreadyPaid}). Resolviendo reCAPTCHA v2 para certificado...`);
+      try {
+        const captchaCert = await solver.recaptcha({
+          googlekey: '6LfZ2bUsAAAAAD7QUEXWj2JY1JJcphwSHfUJYatO',
+          pageurl: 'https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA'
+        });
+
+        const certAjaxResp: any = await page.evaluate((token: string, bpParam?: string) => {
+          return new Promise((resolve) => {
+            const numBP = bpParam || (document.getElementById('numBP') as HTMLInputElement)?.value || (window as any).buscarInfoData?.numBP || '1005119715';
+            const numObjeto = (document.getElementById('claveObjeto') as HTMLInputElement)?.value?.toUpperCase() || '';
+            const year = (new Date()).getFullYear().toString();
+            const certUrl = (window as any).ACC?.descargaFacturaVADescargarCertificadoPagoURL || '/bogota/es/descargaFacturaVA/descargarCertificadoPago';
+
+            (window as any).$.ajax({
+              url: certUrl,
+              data: {
+                numBP: numBP,
+                numObjeto: numObjeto,
+                tipoOperacion: '0001',
+                anoGravable: year,
+                recaptchaResponse: token
+              },
+              type: 'POST',
+              success: function(resp: any) {
+                resolve({ success: true, resp });
+              },
+              error: function(xhr: any, status: any, err: any) {
+                resolve({ success: false, status, err: err?.toString(), text: xhr?.responseText });
+              }
+            });
+          });
+        }, captchaCert.data, buscarInfoData?.numBP || buscarInfoData?.dataForm?.numBP);
+
+        if (certAjaxResp?.success && certAjaxResp?.resp?.urlDownload) {
+          const relCertUrl = certAjaxResp.resp.urlDownload;
+          const fullCertUrl = relCertUrl.startsWith('http')
+            ? relCertUrl
+            : new URL(relCertUrl, 'https://nuevaoficinavirtual.shd.gov.co').href;
+
+          console.log(`[PREDIAL-DOWNLOAD] Descargando Certificado de Pago oficial desde: ${fullCertUrl}`);
+          const certFetch = await fetch(fullCertUrl);
+          if (certFetch.ok) {
+            const certBuf = Buffer.from(await certFetch.arrayBuffer());
+            if (certBuf.slice(0, 5).toString() === '%PDF-') {
+              return {
+                success: true,
+                pdfBuffer: certBuf,
+                pdfFileName: `Certificado_Pago_${cleanChip}_2026.pdf`,
+                pdfUrl: fullCertUrl,
+                nombreContribuyente: buscarInfoData?.nombreContribuyente ? buscarInfoData.nombreContribuyente.trim() : undefined,
+                numBP: buscarInfoData?.numBP || certAjaxResp.resp.numBP,
+                isCertificado: true
+              };
+            }
+          }
+        }
+      } catch (certErr: any) {
+        console.warn('[PREDIAL-DOWNLOAD] Error intentando descargar certificado de pago:', certErr?.message);
+        if (options?.isCertificadoPago) {
+          return {
+            success: false,
+            errorMessage: 'No se pudo generar el Certificado de Pago en este momento. Es posible que el pago aún no esté asentado en la Secretaría de Hacienda o los datos no coincidan.'
+          };
+        }
+      }
+    }
+
     if (!relativePdfUrl) {
       return {
         success: false,
@@ -569,7 +671,9 @@ export async function downloadPredialInvoicePdf(
       pdfBuffer,
       pdfFileName: `Factura_Predial_${cleanChip}_2026.pdf`,
       pdfUrl: fullPdfUrl,
-      nombreContribuyente
+      nombreContribuyente,
+      numBP: buscarInfoData?.numBP,
+      isCertificado: false
     };
   } catch (err: any) {
     console.error('[PREDIAL-DOWNLOAD] Error descargando factura predial:', err);
@@ -678,22 +782,72 @@ export async function executePredialAssistanceFromWhatsApp(
     const shouldAttemptDownload = process.env.NODE_ENV !== 'test' && !options?.skipDownload;
 
     if (shouldAttemptDownload) {
-      downloadResult = await downloadPredialInvoicePdf(detection.tipoDoc || 'CC', docNumber, chip);
+      downloadResult = await downloadPredialInvoicePdf(
+        detection.tipoDoc || 'CC',
+        docNumber,
+        chip,
+        { isCertificadoPago: detection.isCertificadoPago }
+      );
     }
 
     // Si la descarga del PDF fue exitosa, entregar reporte con archivo adjunto
     if (downloadResult && downloadResult.success && downloadResult.pdfBuffer) {
+      const contribuyenteLabel = downloadResult.isCertificado ? '👤 *Contribuyente / Titular:*' : '👤 *Contribuyente / Propietario:*';
       const contribuyenteText = downloadResult.nombreContribuyente
-        ? `👤 *Contribuyente / Propietario:* ${downloadResult.nombreContribuyente}\n`
+        ? `${contribuyenteLabel} ${downloadResult.nombreContribuyente}\n`
         : '';
 
-      const reportText =
-        `🛡️ *FACTURA PREDIAL BOGOTÁ 2026 — VECY BIENES RAÍCES* 🇨🇴\n\n` +
-        `🏠 *CHIP del predio:* ${chip}\n` +
-        contribuyenteText +
-        `🪪 *${docLabel}:* ${docNumber}\n\n` +
-        `✅ *Adjunto encuentras tu factura oficial en PDF emitida por la Secretaría de Hacienda.* Incluye los códigos de barras oficiales para pago en bancos autorizados (Bancolombia, Davivienda, Bogotá, etc.) o corresponsales (Éxito, Efecty).\n\n` +
-        `¿Necesitas peritaje, avalúo comercial o ayuda con otro trámite inmobiliario? En VECY estamos a tu servicio 🤝`;
+      const reportText = downloadResult.isCertificado
+        ? (
+            `🛡️ *CERTIFICADO DE PAGO PREDIAL BOGOTÁ — VECY BIENES RAÍCES* 🇨🇴\n\n` +
+            `🏠 *CHIP del predio:* ${chip}\n` +
+            contribuyenteText +
+            `🪪 *${docLabel}:* ${docNumber}\n\n` +
+            `✅ *Adjunto encuentras tu Certificado Oficial de Pago de Impuesto Predial expedido por la Secretaría de Hacienda de Bogotá.* Este documento certifica con plena validez legal que el inmueble se encuentra al día y a paz y salvo en su impuesto predial para la vigencia 2026.\n\n` +
+            `¿Conoces a algún colega, amigo o cliente al que le sirva esta herramienta? Reenvíale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrarás el tiempo, las filas y el dolor de cabeza de ingresar a plataformas enredadas desde el celular o el computador 🤝✨\n\n` +
+            `⭐ *¿Te fue de gran utilidad nuestro servicio?* Apóyanos con tu calificación de 5 estrellas en nuestro perfil oficial de Google:\n` +
+            `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n` +
+            `¡Significa muchísimo para todo nuestro equipo de Vecy Bienes Raíces!`
+          )
+        : (
+            `🛡️ *FACTURA PREDIAL BOGOTÁ 2026 — VECY BIENES RAÍCES* 🇨🇴\n\n` +
+            `🏠 *CHIP del predio:* ${chip}\n` +
+            contribuyenteText +
+            `🪪 *${docLabel}:* ${docNumber}\n\n` +
+            `✅ *Adjunto encuentras tu factura oficial en PDF emitida por la Secretaría de Hacienda.* Incluye los códigos de barras oficiales para pago en bancos autorizados (Bancolombia, Davivienda, Bogotá, etc.) o corresponsales (Éxito, Efecty).\n\n` +
+            `¿Conoces a algún colega, amigo o cliente al que le sirva esta herramienta? Reenvíale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrarás el tiempo, las filas y el dolor de cabeza de ingresar a plataformas enredadas desde el celular o el computador 🤝✨\n\n` +
+            `⭐ *¿Te fue de gran utilidad nuestro servicio?* Apóyanos con tu calificación de 5 estrellas en nuestro perfil oficial de Google:\n` +
+            `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n` +
+            `¡Significa muchísimo para todo nuestro equipo de Vecy Bienes Raíces!`
+          );
+
+      // Big Data: Registro persistente en base de datos para avalúos futuros e inteligencia inmobiliaria
+      try {
+        const { getDb } = await import('../db');
+        const { predialConsultations } = await import('../../drizzle/schema');
+        const db = await getDb();
+        if (db) {
+          await db.insert(predialConsultations).values({
+            chip: chip.toUpperCase(),
+            documentType: detection.tipoDoc || 'CC',
+            documentNumber: docNumber,
+            nombreContribuyente: downloadResult.nombreContribuyente || null,
+            numBp: downloadResult.numBP || null,
+            anoGravable: '2026',
+            queryType: downloadResult.isCertificado ? 'certificado_pago' : 'factura',
+            downloadUrl: downloadResult.pdfUrl || null,
+            requesterPhone: senderId ? senderId.replace(/@.*$/, '') : null,
+            source: isPrivateDm ? 'whatsapp_dm' : 'whatsapp_group',
+            status: 'completed',
+            metadata: {
+              pdfFileName: downloadResult.pdfFileName,
+              date: new Date().toISOString()
+            }
+          });
+        }
+      } catch (dbErr: any) {
+        console.warn('[PREDIAL-DB] No se pudo guardar la consulta en predialConsultations:', dbErr?.message);
+      }
 
       return {
         isPredialRequest: true,
@@ -701,9 +855,10 @@ export async function executePredialAssistanceFromWhatsApp(
         cedula: docNumber,
         reportText,
         pdfBuffer: downloadResult.pdfBuffer,
-        pdfFileName: downloadResult.pdfFileName || `Factura_Predial_${chip}_2026.pdf`,
+        pdfFileName: downloadResult.pdfFileName || (downloadResult.isCertificado ? `Certificado_Pago_${chip}_2026.pdf` : `Factura_Predial_${chip}_2026.pdf`),
         pdfUrl: downloadResult.pdfUrl,
-        nombreContribuyente: downloadResult.nombreContribuyente
+        nombreContribuyente: downloadResult.nombreContribuyente,
+        isCertificado: downloadResult.isCertificado
       };
     }
 

@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.22";
+    VECY_VERSION = "v32.23";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -51,6 +51,7 @@ __export(schema_exports, {
   messages: () => messages,
   notificationLogs: () => notificationLogs,
   pendingSessions: () => pendingSessions,
+  predialConsultations: () => predialConsultations,
   profiles: () => profiles,
   properties: () => properties,
   propertyImages: () => propertyImages,
@@ -71,7 +72,7 @@ __export(schema_exports, {
   zoneAliases: () => zoneAliases
 });
 import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb, bigint, uuid, index } from "drizzle-orm/pg-core";
-var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, notificationLogs, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes, propertyPublicationHistory, userBehavioralFingerprints, userPatterns, zoneAliases, inmobiliarioLexicon, matchFeedback, dailyBroadcasts, advisors;
+var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, notificationLogs, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes, propertyPublicationHistory, userBehavioralFingerprints, userPatterns, zoneAliases, inmobiliarioLexicon, matchFeedback, dailyBroadcasts, advisors, predialConsultations;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
     "use strict";
@@ -558,6 +559,29 @@ var init_schema = __esm({
     }, (table) => [
       index("advisors_norm_phone_idx").on(table.normalizedPhone),
       index("advisors_name_idx").on(table.name)
+    ]);
+    predialConsultations = pgTable("predial_consultations", {
+      id: serial("id").primaryKey(),
+      chip: varchar("chip", { length: 50 }).notNull(),
+      documentType: varchar("document_type", { length: 20 }).default("CC"),
+      documentNumber: varchar("document_number", { length: 50 }).notNull(),
+      nombreContribuyente: text("nombre_contribuyente"),
+      numBp: varchar("num_bp", { length: 50 }),
+      anoGravable: varchar("ano_gravable", { length: 10 }).default("2026"),
+      queryType: varchar("query_type", { length: 50 }).default("factura"),
+      // "factura" | "certificado_pago"
+      downloadUrl: text("download_url"),
+      requesterPhone: varchar("requester_phone", { length: 50 }),
+      requesterName: text("requester_name"),
+      source: varchar("source", { length: 50 }).default("whatsapp_dm"),
+      status: varchar("status", { length: 50 }).default("completed"),
+      // "completed" | "paid" | "error"
+      metadata: jsonb("metadata"),
+      createdAt: timestamp("created_at").defaultNow().notNull()
+    }, (table) => [
+      index("predial_consultations_chip_idx").on(table.chip),
+      index("predial_consultations_doc_idx").on(table.documentNumber),
+      index("predial_consultations_phone_idx").on(table.requesterPhone)
     ]);
   }
 });
@@ -8952,7 +8976,17 @@ function extractChipAndCedulaForPredial(text2) {
       if (!isNaN(numOnly) && numOnly > 0) avaluoCatastral = numOnly;
     }
   }
-  const keywords = ["predial", "impuesto predial", "factura predial", "chip", "paz y salvo predial", "liquidar predial"];
+  const certKeywords = [
+    "certificado de pago",
+    "certificado de impuesto",
+    "certificacion de pago",
+    "paz y salvo",
+    "recibo pagado",
+    "comprobante de pago",
+    "pago de impuesto"
+  ];
+  const isCertificadoPago = certKeywords.some((kw) => lower.includes(kw));
+  const keywords = ["predial", "impuesto predial", "factura predial", "chip", "paz y salvo predial", "liquidar predial", ...certKeywords];
   const hasKeyword = keywords.some((kw) => lower.includes(kw));
   if (chipMatch && chipMatch[1]) {
     return {
@@ -8964,7 +8998,8 @@ function extractChipAndCedulaForPredial(text2) {
       matricula,
       direccion,
       estrato,
-      avaluoCatastral
+      avaluoCatastral,
+      isCertificadoPago
     };
   }
   if (hasKeyword && (cedula || nit || matricula || direccion)) {
@@ -8976,7 +9011,8 @@ function extractChipAndCedulaForPredial(text2) {
       matricula,
       direccion,
       estrato,
-      avaluoCatastral
+      avaluoCatastral,
+      isCertificadoPago
     };
   }
   return { found: false };
@@ -9052,7 +9088,7 @@ function clearPendingPredialSession(senderId) {
   if (!senderId) return;
   pendingPredialSessions.delete(senderId);
 }
-async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip) {
+async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip, options) {
   const apiKey = process.env.TWOCAPTCHA_API_KEY || "673ddb810e9f700065ccbe6034f26629";
   if (!apiKey) {
     return {
@@ -9182,6 +9218,84 @@ async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip) {
       }
       await new Promise((r) => setTimeout(r, 1e3));
     }
+    let isAlreadyPaid = false;
+    if (buscarInfoData?.dataForm?.errores && Array.isArray(buscarInfoData.dataForm.errores)) {
+      for (const err of buscarInfoData.dataForm.errores) {
+        if (err?.txt_msj) {
+          try {
+            const decoded = Buffer.from(err.txt_msj, "base64").toString("utf8").toLowerCase();
+            if (decoded.includes("pagada") || decoded.includes("pago")) {
+              isAlreadyPaid = true;
+              break;
+            }
+          } catch (_) {
+          }
+        }
+      }
+    }
+    const wantCertificado = options?.isCertificadoPago || isAlreadyPaid;
+    if (wantCertificado) {
+      console.log(`[PREDIAL-DOWNLOAD] Solicitud de Certificado de Pago detectada para CHIP ${cleanChip} (expl\xEDcito: ${!!options?.isCertificadoPago}, pagada: ${isAlreadyPaid}). Resolviendo reCAPTCHA v2 para certificado...`);
+      try {
+        const captchaCert = await solver.recaptcha({
+          googlekey: "6LfZ2bUsAAAAAD7QUEXWj2JY1JJcphwSHfUJYatO",
+          pageurl: "https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA"
+        });
+        const certAjaxResp = await page.evaluate((token, bpParam) => {
+          return new Promise((resolve) => {
+            const numBP = bpParam || document.getElementById("numBP")?.value || window.buscarInfoData?.numBP || "1005119715";
+            const numObjeto = document.getElementById("claveObjeto")?.value?.toUpperCase() || "";
+            const year = (/* @__PURE__ */ new Date()).getFullYear().toString();
+            const certUrl = window.ACC?.descargaFacturaVADescargarCertificadoPagoURL || "/bogota/es/descargaFacturaVA/descargarCertificadoPago";
+            window.$.ajax({
+              url: certUrl,
+              data: {
+                numBP,
+                numObjeto,
+                tipoOperacion: "0001",
+                anoGravable: year,
+                recaptchaResponse: token
+              },
+              type: "POST",
+              success: function(resp) {
+                resolve({ success: true, resp });
+              },
+              error: function(xhr, status, err) {
+                resolve({ success: false, status, err: err?.toString(), text: xhr?.responseText });
+              }
+            });
+          });
+        }, captchaCert.data, buscarInfoData?.numBP || buscarInfoData?.dataForm?.numBP);
+        if (certAjaxResp?.success && certAjaxResp?.resp?.urlDownload) {
+          const relCertUrl = certAjaxResp.resp.urlDownload;
+          const fullCertUrl = relCertUrl.startsWith("http") ? relCertUrl : new URL(relCertUrl, "https://nuevaoficinavirtual.shd.gov.co").href;
+          console.log(`[PREDIAL-DOWNLOAD] Descargando Certificado de Pago oficial desde: ${fullCertUrl}`);
+          const certFetch = await fetch(fullCertUrl);
+          if (certFetch.ok) {
+            const certBuf = Buffer.from(await certFetch.arrayBuffer());
+            if (certBuf.slice(0, 5).toString() === "%PDF-") {
+              return {
+                success: true,
+                pdfBuffer: certBuf,
+                pdfFileName: `Certificado_Pago_${cleanChip}_2026.pdf`,
+                pdfUrl: fullCertUrl,
+                nombreContribuyente: buscarInfoData?.nombreContribuyente ? buscarInfoData.nombreContribuyente.trim() : void 0,
+                numBP: buscarInfoData?.numBP || certAjaxResp.resp.numBP,
+                isCertificado: true
+              };
+            }
+          }
+        }
+      } catch (certErr) {
+        console.warn("[PREDIAL-DOWNLOAD] Error intentando descargar certificado de pago:", certErr?.message);
+        if (options?.isCertificadoPago) {
+          return {
+            success: false,
+            errorMessage: "No se pudo generar el Certificado de Pago en este momento. Es posible que el pago a\xFAn no est\xE9 asentado en la Secretar\xEDa de Hacienda o los datos no coincidan."
+          };
+        }
+      }
+    }
     if (!relativePdfUrl) {
       return {
         success: false,
@@ -9210,7 +9324,9 @@ async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip) {
       pdfBuffer,
       pdfFileName: `Factura_Predial_${cleanChip}_2026.pdf`,
       pdfUrl: fullPdfUrl,
-      nombreContribuyente
+      nombreContribuyente,
+      numBP: buscarInfoData?.numBP,
+      isCertificado: false
     };
   } catch (err) {
     console.error("[PREDIAL-DOWNLOAD] Error descargando factura predial:", err);
@@ -9283,28 +9399,76 @@ _(Puedes escribirlo con o sin puntos, comas o guiones \u2014 yo lo proceso autom
     let downloadResult = null;
     const shouldAttemptDownload = process.env.NODE_ENV !== "test" && !options?.skipDownload;
     if (shouldAttemptDownload) {
-      downloadResult = await downloadPredialInvoicePdf(detection.tipoDoc || "CC", docNumber, chip);
+      downloadResult = await downloadPredialInvoicePdf(
+        detection.tipoDoc || "CC",
+        docNumber,
+        chip,
+        { isCertificadoPago: detection.isCertificadoPago }
+      );
     }
     if (downloadResult && downloadResult.success && downloadResult.pdfBuffer) {
-      const contribuyenteText = downloadResult.nombreContribuyente ? `\u{1F464} *Contribuyente / Propietario:* ${downloadResult.nombreContribuyente}
+      const contribuyenteLabel = downloadResult.isCertificado ? "\u{1F464} *Contribuyente / Titular:*" : "\u{1F464} *Contribuyente / Propietario:*";
+      const contribuyenteText = downloadResult.nombreContribuyente ? `${contribuyenteLabel} ${downloadResult.nombreContribuyente}
 ` : "";
-      const reportText3 = `\u{1F6E1}\uFE0F *FACTURA PREDIAL BOGOT\xC1 2026 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+      const reportText3 = downloadResult.isCertificado ? `\u{1F6E1}\uFE0F *CERTIFICADO DE PAGO PREDIAL BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+\u{1F3E0} *CHIP del predio:* ${chip}
+` + contribuyenteText + `\u{1FAAA} *${docLabel}:* ${docNumber}
+
+\u2705 *Adjunto encuentras tu Certificado Oficial de Pago de Impuesto Predial expedido por la Secretar\xEDa de Hacienda de Bogot\xE1.* Este documento certifica con plena validez legal que el inmueble se encuentra al d\xEDa y a paz y salvo en su impuesto predial para la vigencia 2026.
+
+\xBFConoces a alg\xFAn colega, amigo o cliente al que le sirva esta herramienta? Reenv\xEDale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrar\xE1s el tiempo, las filas y el dolor de cabeza de ingresar a plataformas enredadas desde el celular o el computador \u{1F91D}\u2728
+
+\u2B50 *\xBFTe fue de gran utilidad nuestro servicio?* Ap\xF3yanos con tu calificaci\xF3n de 5 estrellas en nuestro perfil oficial de Google:
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+\xA1Significa much\xEDsimo para todo nuestro equipo de Vecy Bienes Ra\xEDces!` : `\u{1F6E1}\uFE0F *FACTURA PREDIAL BOGOT\xC1 2026 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 \u{1F3E0} *CHIP del predio:* ${chip}
 ` + contribuyenteText + `\u{1FAAA} *${docLabel}:* ${docNumber}
 
 \u2705 *Adjunto encuentras tu factura oficial en PDF emitida por la Secretar\xEDa de Hacienda.* Incluye los c\xF3digos de barras oficiales para pago en bancos autorizados (Bancolombia, Davivienda, Bogot\xE1, etc.) o corresponsales (\xC9xito, Efecty).
 
-\xBFNecesitas peritaje, aval\xFAo comercial o ayuda con otro tr\xE1mite inmobiliario? En VECY estamos a tu servicio \u{1F91D}`;
+\xBFConoces a alg\xFAn colega, amigo o cliente al que le sirva esta herramienta? Reenv\xEDale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrar\xE1s el tiempo, las filas y el dolor de cabeza de ingresar a plataformas enredadas desde el celular o el computador \u{1F91D}\u2728
+
+\u2B50 *\xBFTe fue de gran utilidad nuestro servicio?* Ap\xF3yanos con tu calificaci\xF3n de 5 estrellas en nuestro perfil oficial de Google:
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+\xA1Significa much\xEDsimo para todo nuestro equipo de Vecy Bienes Ra\xEDces!`;
+      try {
+        const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+        const { predialConsultations: predialConsultations2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+        const db = await getDb2();
+        if (db) {
+          await db.insert(predialConsultations2).values({
+            chip: chip.toUpperCase(),
+            documentType: detection.tipoDoc || "CC",
+            documentNumber: docNumber,
+            nombreContribuyente: downloadResult.nombreContribuyente || null,
+            numBp: downloadResult.numBP || null,
+            anoGravable: "2026",
+            queryType: downloadResult.isCertificado ? "certificado_pago" : "factura",
+            downloadUrl: downloadResult.pdfUrl || null,
+            requesterPhone: senderId ? senderId.replace(/@.*$/, "") : null,
+            source: isPrivateDm ? "whatsapp_dm" : "whatsapp_group",
+            status: "completed",
+            metadata: {
+              pdfFileName: downloadResult.pdfFileName,
+              date: (/* @__PURE__ */ new Date()).toISOString()
+            }
+          });
+        }
+      } catch (dbErr) {
+        console.warn("[PREDIAL-DB] No se pudo guardar la consulta en predialConsultations:", dbErr?.message);
+      }
       return {
         isPredialRequest: true,
         chip,
         cedula: docNumber,
         reportText: reportText3,
         pdfBuffer: downloadResult.pdfBuffer,
-        pdfFileName: downloadResult.pdfFileName || `Factura_Predial_${chip}_2026.pdf`,
+        pdfFileName: downloadResult.pdfFileName || (downloadResult.isCertificado ? `Certificado_Pago_${chip}_2026.pdf` : `Factura_Predial_${chip}_2026.pdf`),
         pdfUrl: downloadResult.pdfUrl,
-        nombreContribuyente: downloadResult.nombreContribuyente
+        nombreContribuyente: downloadResult.nombreContribuyente,
+        isCertificado: downloadResult.isCertificado
       };
     }
     const urlOficialSdh = `https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`;
@@ -14183,11 +14347,18 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
     const res = await queryPoliciaNacional(tipoDoc, cedula);
     if (res && res.success && res.officialName) {
       const officialName = formatTitleCase(res.officialName);
+      const docPrefix = tipoDoc.toUpperCase() === "CC" ? "C.C." : tipoDoc.toUpperCase();
       const reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
-\u{1F194} *El documento:* C.C. ${formattedCedula}
+\u{1F194} *El documento:* ${docPrefix} ${formattedCedula}
 \u{1F464} *Pertenece a:* ${officialName}
-\u2705 *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
+\u2705 *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.
+
+\xBFConoces a alg\xFAn colega inmobiliario al que le sirva esta herramienta? Reenv\xEDale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrar\xE1s el tiempo, las filas y el dolor de cabeza de ingresar a plataformas enredadas desde el celular o el computador \u{1F91D}\u2728
+
+\u2B50 *\xBFTe fue de gran utilidad nuestro servicio?* Ap\xF3yanos con tu calificaci\xF3n de 5 estrellas en nuestro perfil oficial de Google:
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+\xA1Significa much\xEDsimo para todo nuestro equipo de Vecy Bienes Ra\xEDces!`;
       return {
         isVerificationRequest: true,
         cedula,
@@ -19122,7 +19293,7 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
   if (isGreetingOnly && history.length === 0) {
     const welcomeMsg = `\xA1Hola${nameGreeting}! \u{1F44B} Soy *JanIA*, la asistente con Inteligencia Artificial de *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
 
-\xBFDime qu\xE9 servicio requieres? \xBFNecesitas verificar un n\xFAmero de documento o solicitarme que te ayude con una Factura Predial de un inmueble de Bogot\xE1?`;
+\xBFDime qu\xE9 tr\xE1mite requieres? \xBFDeseas verificar un n\xFAmero de documento o solicitarme una Factura o Certificado de Pago del Impuesto Predial en Bogot\xE1?`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", welcomeMsg);
     return welcomeMsg;
@@ -19152,9 +19323,9 @@ PERSONALIDAD Y TONO:
 
 C\xD3MO GUIAR AL USUARIO SEG\xDAN LO QUE RESPONDA:
 1. Si quiere verificar c\xE9dula o antecedentes: dile amablemente: "\xA1Claro que s\xED! Solo escr\xEDbeme el n\xFAmero de c\xE9dula (ej: 12345678) o dime si es c\xE9dula de extranjer\xEDa o pasaporte dame el n\xFAmero y en 20 segundos te confirmo nombres completos y antecedentes en la Polic\xEDa."
-2. Si quiere la Factura Predial de Bogot\xE1: dile: "\xA1Con gusto! Para descargarte la factura oficial en PDF con c\xF3digo de barras, solo env\xEDame el c\xF3digo CHIP del predio y la c\xE9dula o NIT del propietario."
-3. Si pregunta "\xBFDe qu\xE9 se trata esto?", "\xBFC\xF3mo funciona?", "\xBFQu\xE9 es Vecy?", "\xBFQu\xE9 debo hacer?": expl\xEDcale en 2 frases amenas y cotidianas que VECY BIENES RA\xCDCES es un br\xF3ker virtual inmobiliario que investiga e innova a diario con tecnolog\xEDa para facilitarle la vida a los colegas inmobiliarios y acelerar sus ventas sin filas ni tr\xE1mites costosos. Menciona que por eso creamos estas dos herramientas gratuitas por WhatsApp (Verificaci\xF3n de C\xE9dula/Antecedentes y Factura Predial Bogot\xE1 2026 en PDF) y preg\xFAntale amablemente cu\xE1l de las dos le gustar\xEDa probar primero.
-4. Si pregunta si tiene costo: dile que estos dos servicios son 100% gratuitos para nuestra comunidad inmobiliaria.
+2. Si quiere la Factura Predial o Certificado de Pago de Bogot\xE1: dile: "\xA1Con gusto! Para entregarte la factura oficial o el certificado de pago en PDF expedido por la Secretar\xEDa de Hacienda, solo env\xEDame el c\xF3digo CHIP del predio y la c\xE9dula o NIT del propietario."
+3. Si pregunta "\xBFDe qu\xE9 se trata esto?", "\xBFC\xF3mo funciona?", "\xBFQu\xE9 es Vecy?", "\xBFQu\xE9 debo hacer?": expl\xEDcale en 2 frases amenas y cotidianas que VECY BIENES RA\xCDCES es un br\xF3ker virtual inmobiliario que investiga e innova a diario con tecnolog\xEDa para facilitarle la vida a los colegas inmobiliarios y acelerar sus ventas sin filas ni tr\xE1mites costosos. Menciona que por eso creamos estas herramientas gratuitas por WhatsApp (Verificaci\xF3n de C\xE9dula/Antecedentes y Predial/Certificados de Pago Bogot\xE1 2026 en PDF) y preg\xFAntale amablemente cu\xE1l de las dos le gustar\xEDa probar primero.
+4. Si pregunta si tiene costo: dile que estos servicios son 100% gratuitos para nuestra comunidad inmobiliaria.
 5. Si desea hablar con un humano o tratar temas comerciales/alianzas: ind\xEDcale con gusto que en horario laboral puede escribir o llamar a nuestra l\xEDnea oficial de atenci\xF3n humana: +57 316 656 9719 (https://wa.me/573166569719).
 6. Si ya env\xEDa los datos (c\xE9dula o CHIP): an\xEDmalo o dile que ya los est\xE1s revisando.
 FORMATO: Usa negritas simples (*palabra*), emojis sutiles y NUNCA uses dobles asteriscos (**).
@@ -25797,18 +25968,18 @@ async function startServer() {
   });
   app.post("/api/send-whatsapp-notification", async (req, res) => {
     try {
-      const { text: text2, token, phone, mentions } = req.body;
+      const { text: text2, token, phone, mentions, document: document2, fileName, mimetype, caption } = req.body;
       const verifyToken = process.env.WEBHOOK_VERIFY_TOKEN || "vecy_network_secret_token";
       if (token !== verifyToken) {
         return res.status(401).json({ error: "Unauthorized. Invalid token." });
       }
-      if (!text2 || typeof text2 !== "string") {
-        return res.status(400).json({ error: "Falta el par\xE1metro 'text' o no es v\xE1lido." });
+      if ((!text2 || typeof text2 !== "string") && !document2) {
+        return res.status(400).json({ error: "Falta el par\xE1metro 'text' o 'document'." });
       }
       const defaultAdminPhone = "573192919978";
       const rawPhone = phone || defaultAdminPhone;
       let targetPhone = "";
-      if (typeof rawPhone === "string" && (rawPhone.endsWith("@g.us") || rawPhone.endsWith("@newsletter") || rawPhone.endsWith("@s.whatsapp.net"))) {
+      if (typeof rawPhone === "string" && (rawPhone.endsWith("@g.us") || rawPhone.endsWith("@newsletter") || rawPhone.endsWith("@s.whatsapp.net") || rawPhone.endsWith("@lid"))) {
         targetPhone = rawPhone;
       } else {
         const cleanPhone = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
@@ -25816,12 +25987,35 @@ async function startServer() {
       }
       const matchBot = global.janiaMatchBotInstance;
       if (matchBot && matchBot.isReady) {
-        console.log(`[NOTIFICACI\xD3N-API] Retransmitiendo mensaje a ${targetPhone} v\xEDa JanIA Match Bot (Baileys)...`);
-        const options = {};
-        if (mentions && Array.isArray(mentions)) {
-          options.mentions = mentions;
+        if (document2) {
+          console.log(`[NOTIFICACI\xD3N-API] Enviando documento adjunto a ${targetPhone} v\xEDa JanIA Match Bot (Baileys)...`);
+          let docBuffer;
+          if (Buffer.isBuffer(document2)) {
+            docBuffer = document2;
+          } else if (typeof document2 === "string" && fs11.existsSync(document2)) {
+            docBuffer = fs11.readFileSync(document2);
+          } else if (typeof document2 === "string") {
+            const cleanBase64 = document2.includes(",") ? document2.split(",")[1] : document2;
+            docBuffer = Buffer.from(cleanBase64, "base64");
+          } else {
+            throw new Error("Formato de documento no soportado (debe ser buffer, ruta de archivo o base64).");
+          }
+          if (matchBot.sock) {
+            await matchBot.sock.sendMessage(targetPhone, {
+              document: docBuffer,
+              mimetype: mimetype || "application/pdf",
+              fileName: fileName || "documento.pdf",
+              caption: caption || text2 || ""
+            });
+          }
+        } else {
+          console.log(`[NOTIFICACI\xD3N-API] Retransmitiendo mensaje a ${targetPhone} v\xEDa JanIA Match Bot (Baileys)...`);
+          const options = {};
+          if (mentions && Array.isArray(mentions)) {
+            options.mentions = mentions;
+          }
+          await matchBot.queuedSend(targetPhone, text2, options);
         }
-        await matchBot.queuedSend(targetPhone, text2, options);
       }
       res.json({ ok: true, message: "Notification sent successfully." });
     } catch (err) {

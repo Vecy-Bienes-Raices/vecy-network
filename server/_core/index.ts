@@ -345,21 +345,21 @@ async function startServer() {
 
   app.post("/api/send-whatsapp-notification", async (req, res) => {
     try {
-      const { text, token, phone, mentions } = req.body;
+      const { text, token, phone, mentions, document, fileName, mimetype, caption } = req.body;
       const verifyToken = process.env.WEBHOOK_VERIFY_TOKEN || "vecy_network_secret_token";
 
       if (token !== verifyToken) {
         return res.status(401).json({ error: "Unauthorized. Invalid token." });
       }
 
-      if (!text || typeof text !== "string") {
-        return res.status(400).json({ error: "Falta el parámetro 'text' o no es válido." });
+      if ((!text || typeof text !== "string") && !document) {
+        return res.status(400).json({ error: "Falta el parámetro 'text' o 'document'." });
       }
 
       const defaultAdminPhone = "573192919978";
       const rawPhone = phone || defaultAdminPhone;
       let targetPhone = "";
-      if (typeof rawPhone === "string" && (rawPhone.endsWith("@g.us") || rawPhone.endsWith("@newsletter") || rawPhone.endsWith("@s.whatsapp.net"))) {
+      if (typeof rawPhone === "string" && (rawPhone.endsWith("@g.us") || rawPhone.endsWith("@newsletter") || rawPhone.endsWith("@s.whatsapp.net") || rawPhone.endsWith("@lid"))) {
         targetPhone = rawPhone;
       } else {
         const cleanPhone = typeof rawPhone === "string" ? rawPhone.replace(/\D/g, "") : String(rawPhone).replace(/\D/g, "");
@@ -368,12 +368,36 @@ async function startServer() {
 
       const matchBot = (global as any).janiaMatchBotInstance;
       if (matchBot && matchBot.isReady) {
-        console.log(`[NOTIFICACIÓN-API] Retransmitiendo mensaje a ${targetPhone} vía JanIA Match Bot (Baileys)...`);
-        const options: any = {};
-        if (mentions && Array.isArray(mentions)) {
-          options.mentions = mentions;
+        if (document) {
+          console.log(`[NOTIFICACIÓN-API] Enviando documento adjunto a ${targetPhone} vía JanIA Match Bot (Baileys)...`);
+          let docBuffer: Buffer;
+          if (Buffer.isBuffer(document)) {
+            docBuffer = document;
+          } else if (typeof document === "string" && fs.existsSync(document)) {
+            docBuffer = fs.readFileSync(document);
+          } else if (typeof document === "string") {
+            const cleanBase64 = document.includes(",") ? document.split(",")[1] : document;
+            docBuffer = Buffer.from(cleanBase64, "base64");
+          } else {
+            throw new Error("Formato de documento no soportado (debe ser buffer, ruta de archivo o base64).");
+          }
+
+          if (matchBot.sock) {
+            await matchBot.sock.sendMessage(targetPhone, {
+              document: docBuffer,
+              mimetype: mimetype || "application/pdf",
+              fileName: fileName || "documento.pdf",
+              caption: caption || text || ""
+            });
+          }
+        } else {
+          console.log(`[NOTIFICACIÓN-API] Retransmitiendo mensaje a ${targetPhone} vía JanIA Match Bot (Baileys)...`);
+          const options: any = {};
+          if (mentions && Array.isArray(mentions)) {
+            options.mentions = mentions;
+          }
+          await matchBot.queuedSend(targetPhone, text, options);
         }
-        await matchBot.queuedSend(targetPhone, text, options);
       }
 
       res.json({ ok: true, message: "Notification sent successfully." });
