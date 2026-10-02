@@ -598,6 +598,8 @@ async function startServer() {
         `_(También acepta CE o Pasaporte)_\n\n` +
         `3️⃣ En segundos te entrega el nombre oficial y antecedentes ✅\n\n` +
         `━━━━━━━━━━━━━━━\n` +
+        `🤝 _Tecnología gratuita para blindar tus ventas y captaciones en Colombia._\n\n` +
+        `📞 *Atención Bróker VECY:* +57 316 656 9719 (https://wa.me/573166569719)\n` +
         `📢 *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
         `🌐 *Web oficial:* https://vecy-network.vercel.app/\n\n` +
         `*VECY BIENES RAÍCES 🏘️*`;
@@ -650,19 +652,15 @@ async function startServer() {
       const hasImage = predialImg.exists;
 
       const promoText =
-        `🏠 *¿TIENES PREDIO EN BOGOTÁ?* 🇨🇴\n\n` +
-        `Con *JanIA* — la IA de *VECY BIENES RAÍCES* — obtén el enlace oficial de la Secretaría de Hacienda para descargar tu *factura del Impuesto Predial 2026* en PDF con código de barras para bancos y Efecty.\n\n` +
-        `🎯 _Gratis, rápido y sin filas ni registros complicados._\n\n` +
+        `🏠📄 *¿VAS A VENDER UN INMUEBLE O NECESITAS LA FACTURA PREDIAL 2026?* 🇨🇴\n\n` +
+        `En *VECY BIENES RAÍCES* le ahorramos filas y caídas de la página de Hacienda a propietarios y colegas inmobiliarios.\n\n` +
+        `Con *JanIA* obtienes tu *Factura Oficial del Predial Bogotá 2026 en PDF* (con código de barras para bancos o Efecty) en 20 segundos por WhatsApp:\n\n` +
+        `1️⃣ Escríbele al WhatsApp de JanIA: *+57 319 291 9978* (https://wa.me/573192919978)\n` +
+        `2️⃣ Envíale: \`JanIA, predial: CHIP AAA... y CC 12345678\` (o NIT)\n` +
+        `3️⃣ ¡Listo! Te entrega el archivo PDF oficial adjunto en tu chat. 📄✅\n\n` +
         `━━━━━━━━━━━━━━━\n` +
-        `⚡ *¿Cómo solicitarla? (En 1 solo mensaje):*\n\n` +
-        `1️⃣ Escríbele a JanIA por privado a su WhatsApp:\n` +
-        `📲 *+57 319 291 9978* (o toca aquí: https://wa.me/573192919978)\n\n` +
-        `2️⃣ Envíale el CHIP y documento en un solo mensaje:\n` +
-        `👉 \`JanIA, predial: CHIP AAA0205AYFZ y CC 12345678\`\n` +
-        `_(Si es empresa, usa NIT en vez de CC)_\n\n` +
-        `3️⃣ JanIA te entrega de inmediato el enlace directo y los pasos exactos para descargar tu PDF oficial ✅\n\n` +
-        `━━━━━━━━━━━━━━━\n` +
-        `ℹ️ *¿Dónde está el CHIP?* En cualquier factura o recibo predial anterior.\n` +
+        `🤝 _Tecnología gratuita para impulsar el corretaje y dejar en el pasado los portales obsoletos._\n\n` +
+        `📞 *Atención Bróker VECY:* +57 316 656 9719 (https://wa.me/573166569719)\n` +
         `📢 *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
         `🌐 *Web oficial:* https://vecy-network.vercel.app/\n\n` +
         `*VECY BIENES RAÍCES 🏘️*`;
