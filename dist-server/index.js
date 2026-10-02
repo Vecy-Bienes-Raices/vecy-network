@@ -19120,22 +19120,9 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
   const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
   const history = getDmHistory(userId);
   if (isGreetingOnly && history.length === 0) {
-    const welcomeMsg = `\xA1Hola${nameGreeting}! \u{1F44B} Mucho gusto.
+    const welcomeMsg = `\xA1Hola${nameGreeting}! \u{1F44B} Soy *JanIA*, la asistente con Inteligencia Artificial de *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
 
-Soy *JanIA*, la asistente con Inteligencia Artificial de *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
-
-Estoy aqu\xED para apoyarte de forma *100% gratuita* en tus gestiones inmobiliarias:
-
-\u{1FAAA} *Verificar Identidad y Antecedentes:* Si vas a mostrar un inmueble o reunirte con alguien nuevo, env\xEDame su n\xFAmero de c\xE9dula y te confirmo nombres oficiales y antecedentes en la Polic\xEDa Nacional en 20 segundos.
-
-\u{1F3E0} *Factura Predial Bogot\xE1 2026:* Si est\xE1s cerrando una venta, env\xEDame el CHIP del predio y la c\xE9dula/NIT del propietario y te entrego la factura oficial en PDF con c\xF3digo de barras listo para pagar o escriturar.
-
-\u{1F4AC} Si tienes alguna duda o pregunta, \xA1escr\xEDbemela aqu\xED mismo con toda confianza y te responder\xE9!
-
-\u{1F4DE} *Atenci\xF3n Humana:* Si prefieres interactuar o hablar directamente con un agente humano de VECY, puedes escribir o llamar en horario laboral a nuestra l\xEDnea oficial:
-\u{1F4F2} *+57 316 656 9719* (https://wa.me/573166569719).
-
-\xBFEn qu\xE9 te puedo colaborar hoy? \u{1F60A}`;
+\xBFDime qu\xE9 servicio requieres? \xBFNecesitas verificar un n\xFAmero de documento o solicitarme que te ayude con una Factura Predial de un inmueble de Bogot\xE1?`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", welcomeMsg);
     return welcomeMsg;
@@ -19145,18 +19132,25 @@ Estoy aqu\xED para apoyarte de forma *100% gratuita* en tus gestiones inmobiliar
       {
         role: "system",
         content: `Eres JanIA, la asistente virtual con Inteligencia Artificial de VECY BIENES RA\xCDCES (Colombia).
-Est\xE1s atendiendo en un CHAT PRIVADO DE WHATSAPP a un colega asesor inmobiliario o cliente.
+Est\xE1s conversando por MENSAJES DIRECTOS DE WHATSAPP con un colega asesor inmobiliario o cliente.
 
-DIRECTRICES MANDATORIAS DE COMUNICACI\xD3N:
-1. P\xDABLICO OBJETIVO: La mayor\xEDa de nuestros usuarios son personas tradicionales del gremio inmobiliario (50 a 70 a\xF1os) que pueden sentir recelo o timidez al interactuar con tecnolog\xEDa o IA. S\xE9 EXTREMADAMENTE c\xE1lida, paciente, emp\xE1tica, respetuosa y habla en espa\xF1ol colombiano profesional pero sencillo y cotidiano. NUNCA uses tecnicismos como "algoritmos", "prompts", "machine learning", "APIs" ni lenguaje rob\xF3tico.
-2. TRANSPARENCIA: Pres\xE9ntate con orgullo como JanIA, la IA de VECY BIENES RA\xCDCES, pero siempre cercana como si fueras la mejor colega del gremio.
-3. SERVICIOS GRATUITOS DE VECY QUE PUEDES GESTIONAR AQU\xCD:
-   - \u{1FAAA} Verificaci\xF3n oficial de identidad y antecedentes policiales: 100% gratuito. Solo deben enviarte el n\xFAmero de c\xE9dula (ej. "verificar CC: 12345678").
-   - \u{1F3E0} Descarga de Factura Predial oficial de Bogot\xE1 2026 en PDF: 100% gratuito para ventas. Solo deben enviarte el CHIP del predio y el documento del propietario (ej. "predial: CHIP AAA... y CC 12345678").
-   - \u{1F3D8}\uFE0F Red Colaborativa VECY: Una red inmobiliaria moderna que conecta ofertas y requerimientos con matching inteligente y sin cobrar comisiones abusivas como los portales tradicionales.
-4. CANAL HUMANO OFICIAL: Siempre aclara amablemente que si desean interactuar o hablar con un humano, pueden hacerlo en horario laboral escribiendo o llamando al tel\xE9fono oficial de VECY: +57 316 656 9719 (https://wa.me/573166569719), donde Eduardo y los agentes de VECY resolver\xE1n con gusto sus dudas o inquietudes.
-5. EXTENSI\xD3N: S\xE9 CONCISA. M\xE1ximo 2 a 3 p\xE1rrafos cortos para que el mensaje se lea completo en la pantalla de su celular sin que WhatsApp corte con el bot\xF3n "Leer m\xE1s".
-6. FORMATO: Usa negritas simples (*palabra*) y vi\xF1etas claras. No uses dobles asteriscos (**).
+OBJETIVO PRINCIPAL:
+Llevar una conversaci\xF3n amena, corta, natural y humana. NUNCA hables como "lora mojada" soltando p\xE1rrafos largos o aburridos. Ve al grano, escucha lo que el usuario pregunt\xF3 y gu\xEDalo paso a paso con calidez y sencillez.
+
+PERSONALIDAD Y TONO:
+- S\xFAper c\xE1lida, atenta, emp\xE1tica y educada.
+- La mayor\xEDa de nuestros usuarios son personas tradicionales del gremio (50 a 70 a\xF1os). Habla en espa\xF1ol colombiano profesional, claro y cotidiano.
+- CERO tecnicismos complejos: nada de "machine learning", "algoritmos", "prompts", "APIs" ni lenguaje rob\xF3tico.
+- Respuestas breves: 1 a 3 frases claras (m\xE1ximo 2 p\xE1rrafos muy cortos). Que se sienta como un chat fluido de WhatsApp, no un manual.
+
+C\xD3MO GUIAR AL USUARIO SEG\xDAN LO QUE RESPONDA:
+1. Si quiere verificar c\xE9dula o antecedentes: dile amablemente: "\xA1Claro que s\xED! Solo escr\xEDbeme el n\xFAmero de c\xE9dula (ej: 12345678) y en 20 segundos te confirmo nombres y antecedentes en la Polic\xEDa."
+2. Si quiere la Factura Predial de Bogot\xE1: dile: "\xA1Con gusto! Para descargarte la factura oficial en PDF con c\xF3digo de barras, solo env\xEDame el c\xF3digo CHIP del predio y la c\xE9dula o NIT del propietario."
+3. Si pregunta "\xBFDe qu\xE9 se trata esto?", "\xBFC\xF3mo funciona?", "\xBFQu\xE9 es Vecy?", "\xBFQu\xE9 debo hacer?": expl\xEDcale en 2 frases amenas que en VECY BIENES RA\xCDCES creamos estas herramientas gratuitas para que los colegas cierren ventas m\xE1s r\xE1pido y seguro sin filas ni tr\xE1mites, y preg\xFAntale cu\xE1l desea probar.
+4. Si pregunta si tiene costo: dile que estos dos servicios son 100% gratuitos para nuestra comunidad inmobiliaria.
+5. Si desea hablar con un humano o tratar temas comerciales/alianzas: ind\xEDcale con gusto que en horario laboral puede escribir o llamar a nuestra l\xEDnea oficial de atenci\xF3n humana: +57 316 656 9719 (https://wa.me/573166569719).
+6. Si ya env\xEDa los datos (c\xE9dula o CHIP): an\xEDmalo o dile que ya los est\xE1s revisando.
+FORMATO: Usa negritas simples (*palabra*), emojis sutiles y NUNCA uses dobles asteriscos (**).
 `
       }
     ];
@@ -19173,20 +19167,18 @@ DIRECTRICES MANDATORIAS DE COMUNICACI\xD3N:
     let reply = llmRes.choices[0]?.message?.content || "";
     reply = sanitizeResponseMarkdown(reply.trim());
     if (!reply) {
-      reply = `\xA1Hola${nameGreeting}! \u{1F44B} Con gusto te ayudo. En VECY BIENES RA\xCDCES puedes verificar c\xE9dulas y antecedentes gratis antes de tus visitas, o descargar la Factura Predial 2026 de Bogot\xE1 en PDF si est\xE1s vendiendo un inmueble.
+      reply = `\xA1Hola${nameGreeting}! \u{1F44B} Con gusto te ayudo. \xBFDeseas verificar una c\xE9dula antes de una visita o necesitas la Factura Predial 2026 de un inmueble en Bogot\xE1?
 
-Si deseas atenci\xF3n personalizada con un agente humano, puedes comunicarte en horario laboral a nuestra l\xEDnea oficial: \u{1F4F2} *+57 316 656 9719*. \xBFEn qu\xE9 te puedo colaborar? \u{1F60A}`;
+Tambi\xE9n puedes comunicarte en horario laboral con nuestro equipo humano en el *+57 316 656 9719*.`;
     }
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", reply);
     return reply;
   } catch (err) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    const fallback = `\xA1Hola${nameGreeting}! \u{1F44B} Disculpa la demora. Soy *JanIA*, la asistente de *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F.
+    const fallback = `\xA1Hola${nameGreeting}! \u{1F44B} Qu\xE9 gusto saludarte. \xBFTe gustar\xEDa verificar antecedentes de una c\xE9dula o necesitas que te ayude a descargar una Factura Predial de Bogot\xE1?
 
-Conmigo puedes consultar gratis antecedentes de c\xE9dulas antes de tus visitas, o descargar la Factura Predial 2026 de Bogot\xE1 en PDF si est\xE1s cerrando una venta.
-
-Si deseas hablar directamente con un agente humano de VECY, puedes comunicarte en horario laboral a nuestra l\xEDnea oficial: \u{1F4F2} *+57 316 656 9719*. \xBFEn qu\xE9 te puedo servir? \u{1F60A}`;
+Si prefieres hablar con un agente humano de VECY, puedes comunicarte en horario laboral al *+57 316 656 9719*.`;
     return fallback;
   }
 }

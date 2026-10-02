@@ -6618,42 +6618,40 @@ export async function processPrivateDmConversationalMessage(
 
   const history = getDmHistory(userId);
 
-  // Si es un saludo inicial y no hay historial previo reciente, entregar la bienvenida estructurada
+  // Si es un saludo inicial y no hay historial previo reciente, entregar saludo corto y ameno (sin abrumar con texto largo)
   if (isGreetingOnly && history.length === 0) {
     const welcomeMsg =
-      `¡Hola${nameGreeting}! 👋 Mucho gusto.\n\n` +
-      `Soy *JanIA*, la asistente con Inteligencia Artificial de *VECY BIENES RAÍCES* 🏘️. Qué gusto saludarte.\n\n` +
-      `Estoy aquí para apoyarte de forma *100% gratuita* en tus gestiones inmobiliarias:\n\n` +
-      `🪪 *Verificar Identidad y Antecedentes:* Si vas a mostrar un inmueble o reunirte con alguien nuevo, envíame su número de cédula y te confirmo nombres oficiales y antecedentes en la Policía Nacional en 20 segundos.\n\n` +
-      `🏠 *Factura Predial Bogotá 2026:* Si estás cerrando una venta, envíame el CHIP del predio y la cédula/NIT del propietario y te entrego la factura oficial en PDF con código de barras listo para pagar o escriturar.\n\n` +
-      `💬 Si tienes alguna duda o pregunta, ¡escríbemela aquí mismo con toda confianza y te responderé!\n\n` +
-      `📞 *Atención Humana:* Si prefieres interactuar o hablar directamente con un agente humano de VECY, puedes escribir o llamar en horario laboral a nuestra línea oficial:\n` +
-      `📲 *+57 316 656 9719* (https://wa.me/573166569719).\n\n` +
-      `¿En qué te puedo colaborar hoy? 😊`;
+      `¡Hola${nameGreeting}! 👋 Soy *JanIA*, la asistente con Inteligencia Artificial de *VECY BIENES RAÍCES* 🏘️. Qué gusto saludarte.\n\n` +
+      `¿Dime qué servicio requieres? ¿Necesitas verificar un número de documento o solicitarme que te ayude con una Factura Predial de un inmueble de Bogotá?`;
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", welcomeMsg);
     return welcomeMsg;
   }
 
-  // 2. Si el usuario hace preguntas sobre Vecy, servicios, dudas o conversación general, invocar Gemini LLM
+  // 2. Si el usuario hace preguntas o continúa la conversación, guiarlo de forma amena y concisa con Gemini LLM
   try {
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       {
         role: "system",
         content:
           `Eres JanIA, la asistente virtual con Inteligencia Artificial de VECY BIENES RAÍCES (Colombia).\n` +
-          `Estás atendiendo en un CHAT PRIVADO DE WHATSAPP a un colega asesor inmobiliario o cliente.\n\n` +
-          `DIRECTRICES MANDATORIAS DE COMUNICACIÓN:\n` +
-          `1. PÚBLICO OBJETIVO: La mayoría de nuestros usuarios son personas tradicionales del gremio inmobiliario (50 a 70 años) que pueden sentir recelo o timidez al interactuar con tecnología o IA. Sé EXTREMADAMENTE cálida, paciente, empática, respetuosa y habla en español colombiano profesional pero sencillo y cotidiano. NUNCA uses tecnicismos como "algoritmos", "prompts", "machine learning", "APIs" ni lenguaje robótico.\n` +
-          `2. TRANSPARENCIA: Preséntate con orgullo como JanIA, la IA de VECY BIENES RAÍCES, pero siempre cercana como si fueras la mejor colega del gremio.\n` +
-          `3. SERVICIOS GRATUITOS DE VECY QUE PUEDES GESTIONAR AQUÍ:\n` +
-          `   - 🪪 Verificación oficial de identidad y antecedentes policiales: 100% gratuito. Solo deben enviarte el número de cédula (ej. "verificar CC: 12345678").\n` +
-          `   - 🏠 Descarga de Factura Predial oficial de Bogotá 2026 en PDF: 100% gratuito para ventas. Solo deben enviarte el CHIP del predio y el documento del propietario (ej. "predial: CHIP AAA... y CC 12345678").\n` +
-          `   - 🏘️ Red Colaborativa VECY: Una red inmobiliaria moderna que conecta ofertas y requerimientos con matching inteligente y sin cobrar comisiones abusivas como los portales tradicionales.\n` +
-          `4. CANAL HUMANO OFICIAL: Siempre aclara amablemente que si desean interactuar o hablar con un humano, pueden hacerlo en horario laboral escribiendo o llamando al teléfono oficial de VECY: +57 316 656 9719 (https://wa.me/573166569719), donde Eduardo y los agentes de VECY resolverán con gusto sus dudas o inquietudes.\n` +
-          `5. EXTENSIÓN: Sé CONCISA. Máximo 2 a 3 párrafos cortos para que el mensaje se lea completo en la pantalla de su celular sin que WhatsApp corte con el botón "Leer más".\n` +
-          `6. FORMATO: Usa negritas simples (*palabra*) y viñetas claras. No uses dobles asteriscos (**).\n`
+          `Estás conversando por MENSAJES DIRECTOS DE WHATSAPP con un colega asesor inmobiliario o cliente.\n\n` +
+          `OBJETIVO PRINCIPAL:\n` +
+          `Llevar una conversación amena, corta, natural y humana. NUNCA hables como "lora mojada" soltando párrafos largos o aburridos. Ve al grano, escucha lo que el usuario preguntó y guíalo paso a paso con calidez y sencillez.\n\n` +
+          `PERSONALIDAD Y TONO:\n` +
+          `- Súper cálida, atenta, empática y educada.\n` +
+          `- La mayoría de nuestros usuarios son personas tradicionales del gremio (50 a 70 años). Habla en español colombiano profesional, claro y cotidiano.\n` +
+          `- CERO tecnicismos complejos: nada de "machine learning", "algoritmos", "prompts", "APIs" ni lenguaje robótico.\n` +
+          `- Respuestas breves: 1 a 3 frases claras (máximo 2 párrafos muy cortos). Que se sienta como un chat fluido de WhatsApp, no un manual.\n\n` +
+          `CÓMO GUIAR AL USUARIO SEGÚN LO QUE RESPONDA:\n` +
+          `1. Si quiere verificar cédula o antecedentes: dile amablemente: "¡Claro que sí! Solo escríbeme el número de cédula (ej: 12345678) y en 20 segundos te confirmo nombres y antecedentes en la Policía."\n` +
+          `2. Si quiere la Factura Predial de Bogotá: dile: "¡Con gusto! Para descargarte la factura oficial en PDF con código de barras, solo envíame el código CHIP del predio y la cédula o NIT del propietario."\n` +
+          `3. Si pregunta "¿De qué se trata esto?", "¿Cómo funciona?", "¿Qué es Vecy?", "¿Qué debo hacer?": explícale en 2 frases amenas que en VECY BIENES RAÍCES creamos estas herramientas gratuitas para que los colegas cierren ventas más rápido y seguro sin filas ni trámites, y pregúntale cuál desea probar.\n` +
+          `4. Si pregunta si tiene costo: dile que estos dos servicios son 100% gratuitos para nuestra comunidad inmobiliaria.\n` +
+          `5. Si desea hablar con un humano o tratar temas comerciales/alianzas: indícale con gusto que en horario laboral puede escribir o llamar a nuestra línea oficial de atención humana: +57 316 656 9719 (https://wa.me/573166569719).\n` +
+          `6. Si ya envía los datos (cédula o CHIP): anímalo o dile que ya los estás revisando.\n` +
+          `FORMATO: Usa negritas simples (*palabra*), emojis sutiles y NUNCA uses dobles asteriscos (**).\n`
       }
     ];
 
@@ -6676,8 +6674,8 @@ export async function processPrivateDmConversationalMessage(
 
     if (!reply) {
       reply =
-        `¡Hola${nameGreeting}! 👋 Con gusto te ayudo. En VECY BIENES RAÍCES puedes verificar cédulas y antecedentes gratis antes de tus visitas, o descargar la Factura Predial 2026 de Bogotá en PDF si estás vendiendo un inmueble.\n\n` +
-        `Si deseas atención personalizada con un agente humano, puedes comunicarte en horario laboral a nuestra línea oficial: 📲 *+57 316 656 9719*. ¿En qué te puedo colaborar? 😊`;
+        `¡Hola${nameGreeting}! 👋 Con gusto te ayudo. ¿Deseas verificar una cédula antes de una visita o necesitas la Factura Predial 2026 de un inmueble en Bogotá?\n\n` +
+        `También puedes comunicarte en horario laboral con nuestro equipo humano en el *+57 316 656 9719*.`;
     }
 
     appendDmHistory(userId, "user", clean);
@@ -6686,9 +6684,8 @@ export async function processPrivateDmConversationalMessage(
   } catch (err: any) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
     const fallback =
-      `¡Hola${nameGreeting}! 👋 Disculpa la demora. Soy *JanIA*, la asistente de *VECY BIENES RAÍCES* 🏘️.\n\n` +
-      `Conmigo puedes consultar gratis antecedentes de cédulas antes de tus visitas, o descargar la Factura Predial 2026 de Bogotá en PDF si estás cerrando una venta.\n\n` +
-      `Si deseas hablar directamente con un agente humano de VECY, puedes comunicarte en horario laboral a nuestra línea oficial: 📲 *+57 316 656 9719*. ¿En qué te puedo servir? 😊`;
+      `¡Hola${nameGreeting}! 👋 Qué gusto saludarte. ¿Te gustaría verificar antecedentes de una cédula o necesitas que te ayude a descargar una Factura Predial de Bogotá?\n\n` +
+      `Si prefieres hablar con un agente humano de VECY, puedes comunicarte en horario laboral al *+57 316 656 9719*.`;
     return fallback;
   }
 }
