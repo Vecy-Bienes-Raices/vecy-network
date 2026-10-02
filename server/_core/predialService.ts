@@ -10,6 +10,12 @@
  * - Los links de descarga SIEMPRE apuntan al portal oficial real de la SDH.
  */
 
+export const VIRAL_LOOP_MESSAGE = 
+  `¿Conoces a algún colega, amigo o cliente al que le sirva esta herramienta? Reenvíale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrarás el tiempo, las filas y el estrés o dolor de cabeza de tener que lidiar con plataformas enredadas desde el celular o el computador 🤝✨`;
+
+export const GOOGLE_REVIEW_MESSAGE = 
+  `⭐ *¿Te gustó la atención y la rapidez?* Nos encantaría conocer tu opinión. Si puedes dejarnos tu calificación de 5 estrellas en nuestro perfil oficial de Google, significaría muchísimo para todo nuestro equipo:\n👉 https://g.page/r/CctNbwU6UpX5EBM/review`;
+
 export interface PredialDetectionResult {
   found: boolean;
   chip?: string;
@@ -803,22 +809,14 @@ export async function executePredialAssistanceFromWhatsApp(
             `🏠 *CHIP del predio:* ${chip}\n` +
             contribuyenteText +
             `🪪 *${docLabel}:* ${docNumber}\n\n` +
-            `✅ *Adjunto encuentras tu Certificado Oficial de Pago de Impuesto Predial expedido por la Secretaría de Hacienda de Bogotá.* Este documento certifica con plena validez legal que el inmueble se encuentra al día y a paz y salvo en su impuesto predial para la vigencia 2026.\n\n` +
-            `¿Conoces a algún colega, amigo o cliente al que le sirva esta herramienta? Reenvíale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrarás el tiempo, las filas y el dolor de cabeza de ingresar a plataformas enredadas desde el celular o el computador 🤝✨\n\n` +
-            `⭐ *¿Te fue de gran utilidad nuestro servicio?* Apóyanos con tu calificación de 5 estrellas en nuestro perfil oficial de Google:\n` +
-            `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n` +
-            `¡Significa muchísimo para todo nuestro equipo de Vecy Bienes Raíces!`
+            `✅ *Adjunto encuentras tu Certificado Oficial de Pago de Impuesto Predial expedido por la Secretaría de Hacienda de Bogotá.* Este documento certifica con plena validez legal que el inmueble se encuentra al día y a paz y salvo en su impuesto predial para la vigencia 2026.`
           )
         : (
             `🛡️ *FACTURA PREDIAL BOGOTÁ 2026 — VECY BIENES RAÍCES* 🇨🇴\n\n` +
             `🏠 *CHIP del predio:* ${chip}\n` +
             contribuyenteText +
             `🪪 *${docLabel}:* ${docNumber}\n\n` +
-            `✅ *Adjunto encuentras tu factura oficial en PDF emitida por la Secretaría de Hacienda.* Incluye los códigos de barras oficiales para pago en bancos autorizados (Bancolombia, Davivienda, Bogotá, etc.) o corresponsales (Éxito, Efecty).\n\n` +
-            `¿Conoces a algún colega, amigo o cliente al que le sirva esta herramienta? Reenvíale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrarás el tiempo, las filas y el dolor de cabeza de ingresar a plataformas enredadas desde el celular o el computador 🤝✨\n\n` +
-            `⭐ *¿Te fue de gran utilidad nuestro servicio?* Apóyanos con tu calificación de 5 estrellas en nuestro perfil oficial de Google:\n` +
-            `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n` +
-            `¡Significa muchísimo para todo nuestro equipo de Vecy Bienes Raíces!`
+            `✅ *Adjunto encuentras tu factura oficial en PDF emitida por la Secretaría de Hacienda.* Incluye los códigos de barras oficiales para pago en bancos autorizados (Bancolombia, Davivienda, Bogotá, etc.) o corresponsales (Éxito, Efecty).`
           );
 
       // Big Data: Registro persistente en base de datos para avalúos futuros e inteligencia inmobiliaria

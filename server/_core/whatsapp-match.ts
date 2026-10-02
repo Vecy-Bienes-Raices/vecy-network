@@ -1038,6 +1038,15 @@ export class JaniaMatchBot {
             caption: predialPendingCheck.reportText
           }, { quoted: mainMsg, allowDirectMessage: true });
           await this.sock.sendMessage(senderId, { react: { text: '📄', key: mainMsg.key } }).catch(() => {});
+
+          // Envío desacoplado de mensajes de bucle viral y reseña de Google (anti "Leer más")
+          const { VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+          setTimeout(async () => {
+            try { await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true }); } catch (_) {}
+          }, 1500);
+          setTimeout(async () => {
+            try { await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true }); } catch (_) {}
+          }, 3200);
         } else {
           await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
         }
@@ -1064,6 +1073,15 @@ export class JaniaMatchBot {
           caption: predialCheck.reportText
         }, { quoted: mainMsg, allowDirectMessage: true });
         await this.sock.sendMessage(senderId, { react: { text: '📄', key: mainMsg.key } }).catch(() => {});
+
+        // Envío desacoplado de mensajes de bucle viral y reseña de Google (anti "Leer más")
+        const { VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+        setTimeout(async () => {
+          try { await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true }); } catch (_) {}
+        }, 1500);
+        setTimeout(async () => {
+          try { await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true }); } catch (_) {}
+        }, 3200);
       } else {
         await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
       }
@@ -1081,6 +1099,17 @@ export class JaniaMatchBot {
       console.log(`[JANIA-MATCH] [DM] Verificación de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
       await this.queuedSend(senderId, idCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
       await this.logToDb(senderId, 'janIA', idCheck.reportText);
+
+      // Si la verificación fue exitosa, enviar desacoplados el bucle viral y la reseña de Google
+      if (idCheck.success) {
+        const { VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+        setTimeout(async () => {
+          try { await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true }); } catch (_) {}
+        }, 1500);
+        setTimeout(async () => {
+          try { await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true }); } catch (_) {}
+        }, 3200);
+      }
       return;
     }
 

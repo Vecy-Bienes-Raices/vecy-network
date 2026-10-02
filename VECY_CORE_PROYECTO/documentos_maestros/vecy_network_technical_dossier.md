@@ -322,6 +322,31 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.24 — Octubre 2026
+
+#### 📌 ATENCIÓN Y REACTIVACIÓN DE USUARIOS, BYPASS DE ANTI-BAN SHIELD EN API Y DOCTRINA ANTI "LEER MÁS" DESACOPLADA
+
+**Requerimiento y Objetivos:**
+1. Atender y disculparse cordialmente con **Miguel Arbeláez** (`+57 300 448 6520` / `120100371824659@lid`) y **León Andrés** (`+57 322 230 6512` / `188218469265461@lid`), quienes saludaron a JanIA antes de habilitarse el protocolo de DMs informales y no habían obtenido respuesta.
+2. Implementar la **Doctrina Anti "Leer más"**: para evitar el colapso de mensajes en WhatsApp móvil, desacoplar el reporte del servicio de los mensajes de bucle viral y reseña de Google, enviándolos secuencialmente en 3 mensajes separados.
+
+**Causas Raíz:**
+1. En `whatsapp-match.ts`, la guarda `JANIA-ANTI-BAN-SHIELD` en `queuedSend` bloqueaba despachos a terceros por API al no recibir `allowDirectMessage: true`.
+2. Incluir el reporte, bucle viral y link de Google en un solo bloque superaba los 500 caracteres, provocando el botón `... Leer más`.
+
+**Solución Aplicada:**
+- **`server/_core/index.ts`**:
+  - Habilitado `allowDirectMessage: true` en `/api/send-whatsapp-notification`.
+- **`server/_core/predialService.ts` e `identityVerificationService.ts`**:
+  - `reportText` condensado y exportación de constantes oficiales `VIRAL_LOOP_MESSAGE` y `GOOGLE_REVIEW_MESSAGE`.
+- **`server/_core/whatsapp-match.ts`**:
+  - Envío secuencial con timers (Reporte -> 1.5s -> Bucle Viral -> 1.7s -> Reseña de Google).
+- **Versión Oficial**: Incrementada a **v32.24** (`32.24.0`).
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅
+
+---
+
 ### 🔖 v32.23 — Octubre 2026
 
 #### 📌 CERTIFICADO OFICIAL DE PAGO PREDIAL BOGOTÁ, BUCLE VIRAL DE AHORRO DE TIEMPO Y ESTRÉS, RESEÑAS GOOGLE, REDES Y BIG DATA

@@ -132,11 +132,7 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
         `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
         `🆔 *El documento:* ${docPrefix} ${formattedCedula}\n` +
         `👤 *Pertenece a:* ${officialName}\n` +
-        `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.\n\n` +
-        `¿Conoces a algún colega inmobiliario al que le sirva esta herramienta? Reenvíale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrarás el tiempo, las filas y el dolor de cabeza de ingresar a plataformas enredadas desde el celular o el computador 🤝✨\n\n` +
-        `⭐ *¿Te fue de gran utilidad nuestro servicio?* Apóyanos con tu calificación de 5 estrellas en nuestro perfil oficial de Google:\n` +
-        `👉 https://g.page/r/CctNbwU6UpX5EBM/review\n` +
-        `¡Significa muchísimo para todo nuestro equipo de Vecy Bienes Raíces!`;
+        `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
 
       return {
         isVerificationRequest: true,

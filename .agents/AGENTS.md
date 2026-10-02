@@ -168,7 +168,22 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.23 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.24 — Octubre 2026
+
+### Novedades v32.24 (Atención y Reactivación de Usuarios, Bypass de Anti-Ban Shield en API y Doctrina Anti 'Leer más' Desacoplada):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo identificó que Miguel Arbeláez (`+57 300 448 6520` / `120100371824659@lid`) y León Andrés (`+57 322 230 6512` / `188218469265461@lid`) habían saludado antes de que JanIA tuviera el protocolo conversacional abierto para DMs informales y no habían recibido respuesta. Ordenó hablarles cordialmente, disculparse por la demora de ayer y ofrecerles los servicios de verificación y predial.
+  - Eduardo instruyó la **Doctrina Anti "Leer más"**: para que los usuarios lean y capten los mensajes sin pereza de abrir "Leer más", desacoplar el reporte del servicio, enviando por separado: 1) El bucle viral de ahorro de tiempo y estrés (+57 319 291 9978 / wa.me/...), 2) La invitación a calificar 5 estrellas en Google (g.page/r/...).
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Bypass de Anti-Ban Shield en API (`server/_core/index.ts`)**:
+     - `queuedSend` en `whatsapp-match.ts` bloqueaba mensajes salientes a terceros sin `allowDirectMessage: true`. Se incluyó la bandera en `/api/send-whatsapp-notification`.
+  2. **Entrega Escalonada en 3 Mensajes Independientes (`server/_core/whatsapp-match.ts`)**:
+     - Despacho secuencial del reporte limpio (con PDF si aplica), seguido a 1.5s del bucle viral y a 3.2s de la reseña en Google con previsualización de enlace.
+  3. **Limpieza de Textos en Servicios (`predialService.ts` e `identityVerificationService.ts`)**:
+     - `reportText` libre de textos redundantes y exportadas las constantes oficiales de mensajes.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.23 — Octubre 2026
 
 ### Novedades v32.23 (Certificado Oficial de Pago Predial Bogotá, Bucle Viral de Ahorro de Tiempo y Estrés, Reseñas Google, Redes y Big Data):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

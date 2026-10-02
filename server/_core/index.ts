@@ -396,7 +396,7 @@ async function startServer() {
           if (mentions && Array.isArray(mentions)) {
             options.mentions = mentions;
           }
-          await matchBot.queuedSend(targetPhone, text, options);
+          await matchBot.queuedSend(targetPhone, text, { ...options, allowDirectMessage: true });
         }
       }
 

@@ -7,6 +7,42 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.24 — 02 Octubre 2026
+
+### Solicitud de Eduardo
+Eduardo entregó dos directrices operativas y de experiencia de usuario (UX) cruciales:
+1. **Atención y Respuesta a Usuarios Previos Rezagados**:
+   - Observó que dos usuarios habían saludado antes de que JanIA tuviera el protocolo conversacional abierto para DMs informales y no habían recibido respuesta:
+     * **Miguel Arbeláez** (`+57 300 448 6520` / `120100371824659@lid`): Quien escribió: *"Hola @jania"*, *"Aja que paso 🤔"*, *"No vas a responder mi saludo 👋"*.
+     * **León Andrés** (`+57 322 230 6512` / `188218469265461@lid`): Quien saludó con *"Hola"*.
+   - Solicitó hablarles cordialmente, disculparse por la demora de ayer y ofrecerles los servicios de verificación de antecedentes y facturas/certificados de predial.
+2. **Doctrina Anti "Leer más" (Desacoplamiento de Bucle Viral y Reseña de Google)**:
+   - Eduardo ordenó expresamente: *"para que los usuarios entiendan muy bien nuestros mensajes, los capten y no les dé pereza hacer clic en leer más, procura enviar estos otros dos cada uno por separado despues de hacer efectivo sus servicios, si es posible: 1) Bucle viral (+57 319 291 9978 / wa.me/...) 2) Calificación en Google de 5 estrellas (g.page/r/...)"*.
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Bloqueo Inadvertido en Anti-Ban Shield de Baileys**:
+   - El método `queuedSend` en `whatsapp-match.ts` cuenta con un filtro de seguridad estricto que descarta cualquier mensaje saliente hacia números externos que no lleven explícitamente `allowDirectMessage: true` o `isTransactionalNotification: true`.
+   - El endpoint `/api/send-whatsapp-notification` en `index.ts` invocaba `queuedSend(targetPhone, text, options)` sin inyectar `allowDirectMessage: true`. Como resultado, los envíos a terceros por API eran silenciados con el log `[JANIA-ANTI-BAN-SHIELD] 🛡️ Bloqueado envío de mensaje directo...`.
+2. **Efecto Secundario de Truncamiento en WhatsApp ("Leer más")**:
+   - Al adjuntar el reporte técnico, el bucle viral y el link de Google en un solo bloque o pie de foto, el texto superaba los 500 caracteres, forzando a WhatsApp a colapsarlo bajo el botón `... Leer más`, el cual los asesores rara vez abren.
+   - Solución: Enviar el reporte del servicio limpio (~200 caracteres), seguido de dos disparos desacoplados a 1.5s y 3.2s respectivamente, garantizando lectura limpia y previsualización enriquecida del link de Google.
+
+### Acciones Ejecutadas
+1. **`server/_core/index.ts`**:
+   - Agregado `{ ...options, allowDirectMessage: true }` en `/api/send-whatsapp-notification`.
+2. **`server/_core/predialService.ts`**:
+   - Limpieza de `reportText` para entrega directa y concisa.
+   - Exportadas las constantes `VIRAL_LOOP_MESSAGE` y `GOOGLE_REVIEW_MESSAGE`.
+3. **`server/_core/identityVerificationService.ts`**:
+   - Limpieza de `reportText` en verificación oficial de cédula.
+4. **`server/_core/whatsapp-match.ts`**:
+   - En `processBufferedDmMessages`, despacho secuencial temporizado de los 3 mensajes (Reporte + PDF -> 1.5s -> Bucle Viral -> 1.7s -> Reseña Google).
+5. **Control de Versión y Despliegue**:
+   - Incremento a **v32.24** (`32.24.0`) en `shared/const.ts` y `package.json`.
+   - 126/126 tests Vitest superados al 100%. Typecheck y build limpios.
+
+---
+
 ## 📋 SESIÓN v32.23 — 02 Octubre 2026
 
 ### Solicitud de Eduardo

@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.23";
+    VECY_VERSION = "v32.24";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -8859,7 +8859,9 @@ var init_advisors = __esm({
 var predialService_exports = {};
 __export(predialService_exports, {
   CEDULA_HELP_TEXT: () => CEDULA_HELP_TEXT,
+  GOOGLE_REVIEW_MESSAGE: () => GOOGLE_REVIEW_MESSAGE,
   PREDIAL_HELP_TEXT: () => PREDIAL_HELP_TEXT,
+  VIRAL_LOOP_MESSAGE: () => VIRAL_LOOP_MESSAGE,
   clearPendingPredialSession: () => clearPendingPredialSession,
   downloadPredialInvoicePdf: () => downloadPredialInvoicePdf,
   executePredialAssistanceFromWhatsApp: () => executePredialAssistanceFromWhatsApp,
@@ -9415,24 +9417,12 @@ _(Puedes escribirlo con o sin puntos, comas o guiones \u2014 yo lo proceso autom
 \u{1F3E0} *CHIP del predio:* ${chip}
 ` + contribuyenteText + `\u{1FAAA} *${docLabel}:* ${docNumber}
 
-\u2705 *Adjunto encuentras tu Certificado Oficial de Pago de Impuesto Predial expedido por la Secretar\xEDa de Hacienda de Bogot\xE1.* Este documento certifica con plena validez legal que el inmueble se encuentra al d\xEDa y a paz y salvo en su impuesto predial para la vigencia 2026.
-
-\xBFConoces a alg\xFAn colega, amigo o cliente al que le sirva esta herramienta? Reenv\xEDale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrar\xE1s el tiempo, las filas y el dolor de cabeza de ingresar a plataformas enredadas desde el celular o el computador \u{1F91D}\u2728
-
-\u2B50 *\xBFTe fue de gran utilidad nuestro servicio?* Ap\xF3yanos con tu calificaci\xF3n de 5 estrellas en nuestro perfil oficial de Google:
-\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
-\xA1Significa much\xEDsimo para todo nuestro equipo de Vecy Bienes Ra\xEDces!` : `\u{1F6E1}\uFE0F *FACTURA PREDIAL BOGOT\xC1 2026 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+\u2705 *Adjunto encuentras tu Certificado Oficial de Pago de Impuesto Predial expedido por la Secretar\xEDa de Hacienda de Bogot\xE1.* Este documento certifica con plena validez legal que el inmueble se encuentra al d\xEDa y a paz y salvo en su impuesto predial para la vigencia 2026.` : `\u{1F6E1}\uFE0F *FACTURA PREDIAL BOGOT\xC1 2026 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 \u{1F3E0} *CHIP del predio:* ${chip}
 ` + contribuyenteText + `\u{1FAAA} *${docLabel}:* ${docNumber}
 
-\u2705 *Adjunto encuentras tu factura oficial en PDF emitida por la Secretar\xEDa de Hacienda.* Incluye los c\xF3digos de barras oficiales para pago en bancos autorizados (Bancolombia, Davivienda, Bogot\xE1, etc.) o corresponsales (\xC9xito, Efecty).
-
-\xBFConoces a alg\xFAn colega, amigo o cliente al que le sirva esta herramienta? Reenv\xEDale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrar\xE1s el tiempo, las filas y el dolor de cabeza de ingresar a plataformas enredadas desde el celular o el computador \u{1F91D}\u2728
-
-\u2B50 *\xBFTe fue de gran utilidad nuestro servicio?* Ap\xF3yanos con tu calificaci\xF3n de 5 estrellas en nuestro perfil oficial de Google:
-\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
-\xA1Significa much\xEDsimo para todo nuestro equipo de Vecy Bienes Ra\xEDces!`;
+\u2705 *Adjunto encuentras tu factura oficial en PDF emitida por la Secretar\xEDa de Hacienda.* Incluye los c\xF3digos de barras oficiales para pago en bancos autorizados (Bancolombia, Davivienda, Bogot\xE1, etc.) o corresponsales (\xC9xito, Efecty).`;
       try {
         const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
         const { predialConsultations: predialConsultations2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
@@ -9596,10 +9586,13 @@ function isServiceHelpRequest(text2) {
   if ((lower.includes("?") || lower.startsWith("y") || lower.startsWith("\xBF")) && hasCedula) return "cedula";
   return null;
 }
-var pendingPredialSessions, PREDIAL_HELP_TEXT, CEDULA_HELP_TEXT;
+var VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE, pendingPredialSessions, PREDIAL_HELP_TEXT, CEDULA_HELP_TEXT;
 var init_predialService = __esm({
   "server/_core/predialService.ts"() {
     "use strict";
+    VIRAL_LOOP_MESSAGE = `\xBFConoces a alg\xFAn colega, amigo o cliente al que le sirva esta herramienta? Reenv\xEDale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrar\xE1s el tiempo, las filas y el estr\xE9s o dolor de cabeza de tener que lidiar con plataformas enredadas desde el celular o el computador \u{1F91D}\u2728`;
+    GOOGLE_REVIEW_MESSAGE = `\u2B50 *\xBFTe gust\xF3 la atenci\xF3n y la rapidez?* Nos encantar\xEDa conocer tu opini\xF3n. Si puedes dejarnos tu calificaci\xF3n de 5 estrellas en nuestro perfil oficial de Google, significar\xEDa much\xEDsimo para todo nuestro equipo:
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review`;
     pendingPredialSessions = /* @__PURE__ */ new Map();
     PREDIAL_HELP_TEXT = `\u{1F3DB}\uFE0F *\xBFC\xF3mo solicitar tu Predial a JanIA?* Es muy sencillo:
 
@@ -11552,6 +11545,19 @@ ${quotedNote}` : quotedNote;
               }, { quoted: mainMsg, allowDirectMessage: true });
               await this.sock.sendMessage(senderId, { react: { text: "\u{1F4C4}", key: mainMsg.key } }).catch(() => {
               });
+              const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+              setTimeout(async () => {
+                try {
+                  await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true });
+                } catch (_) {
+                }
+              }, 1500);
+              setTimeout(async () => {
+                try {
+                  await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
+                } catch (_) {
+                }
+              }, 3200);
             } else {
               await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
             }
@@ -11579,6 +11585,19 @@ ${quotedNote}` : quotedNote;
             }, { quoted: mainMsg, allowDirectMessage: true });
             await this.sock.sendMessage(senderId, { react: { text: "\u{1F4C4}", key: mainMsg.key } }).catch(() => {
             });
+            const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+            setTimeout(async () => {
+              try {
+                await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true });
+              } catch (_) {
+              }
+            }, 1500);
+            setTimeout(async () => {
+              try {
+                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
+              } catch (_) {
+              }
+            }, 3200);
           } else {
             await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
           }
@@ -11595,6 +11614,21 @@ ${quotedNote}` : quotedNote;
           console.log(`[JANIA-MATCH] [DM] Verificaci\xF3n de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
           await this.queuedSend(senderId, idCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
           await this.logToDb(senderId, "janIA", idCheck.reportText);
+          if (idCheck.success) {
+            const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+            setTimeout(async () => {
+              try {
+                await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true });
+              } catch (_) {
+              }
+            }, 1500);
+            setTimeout(async () => {
+              try {
+                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
+              } catch (_) {
+              }
+            }, 3200);
+          }
           return;
         }
         if (!isAdmin && body.trim()) {
@@ -14352,13 +14386,7 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
 
 \u{1F194} *El documento:* ${docPrefix} ${formattedCedula}
 \u{1F464} *Pertenece a:* ${officialName}
-\u2705 *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.
-
-\xBFConoces a alg\xFAn colega inmobiliario al que le sirva esta herramienta? Reenv\xEDale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrar\xE1s el tiempo, las filas y el dolor de cabeza de ingresar a plataformas enredadas desde el celular o el computador \u{1F91D}\u2728
-
-\u2B50 *\xBFTe fue de gran utilidad nuestro servicio?* Ap\xF3yanos con tu calificaci\xF3n de 5 estrellas en nuestro perfil oficial de Google:
-\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
-\xA1Significa much\xEDsimo para todo nuestro equipo de Vecy Bienes Ra\xEDces!`;
+\u2705 *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
       return {
         isVerificationRequest: true,
         cedula,
@@ -26014,7 +26042,7 @@ async function startServer() {
           if (mentions && Array.isArray(mentions)) {
             options.mentions = mentions;
           }
-          await matchBot.queuedSend(targetPhone, text2, options);
+          await matchBot.queuedSend(targetPhone, text2, { ...options, allowDirectMessage: true });
         }
       }
       res.json({ ok: true, message: "Notification sent successfully." });
