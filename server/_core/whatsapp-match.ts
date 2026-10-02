@@ -1103,8 +1103,28 @@ export class JaniaMatchBot {
       return;
     }
 
-    // Si no es una solicitud de servicio oficial (verificación de cédula o predial),
-    // JanIA guarda silencio absoluto en DMs tanto para administradores como para terceros
+    // 🤖 PROTOCOLO DE INTERACCIÓN IA PURA EN CHAT PRIVADO (DMs TERCEROS):
+    // Si no es un chat de directores (isAdmin) y el usuario envió un mensaje,
+    // JanIA responde de forma cálida, humana e inteligente, guiando en el uso de los servicios
+    // y ofreciendo la línea humana de VECY (+57 316 656 9719).
+    if (!isAdmin && body.trim()) {
+      try {
+        await this.sock.sendPresenceUpdate('composing', senderId);
+        const { processPrivateDmConversationalMessage } = await import('./janIA');
+        const reply = await processPrivateDmConversationalMessage(body, senderId, userName);
+        if (reply && reply.trim()) {
+          console.log(`[JANIA-MATCH] [DM-AI] Respuesta de IA pura enviada a ${senderId} (${userName}): "${reply.substring(0, 60)}..."`);
+          await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
+          await this.logToDb(senderId, 'janIA', reply);
+          await this.sock.sendPresenceUpdate('paused', senderId);
+          return;
+        }
+      } catch (dmAiErr) {
+        console.error('[JANIA-MATCH] Error en protocolo de IA conversacional DM:', dmAiErr);
+      }
+    }
+
+    // Si es un chat de administración/directores y no es solicitud de servicio oficial, silencio absoluto.
     return;
   }
 

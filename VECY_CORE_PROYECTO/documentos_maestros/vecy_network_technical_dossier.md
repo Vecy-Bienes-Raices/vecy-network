@@ -322,6 +322,38 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.20 — Octubre 2026
+
+#### 📌 PROTOCOLO CONVERSACIONAL DE IA PURA EN DMs PRIVADOS, CANAL HUMANO 3166569719 Y REEMPLAZO DE IMAGEN OFICIAL PREDIAL
+
+**Requerimiento y Objetivos:**
+1. Atender la necesidad observada en producción: colegas del gremio tradicional (como León Andrés `+57 322 2306512`) entraban por mensaje directo saludando con *"Hola"*, pero JanIA guardaba silencio absoluto al no detectar comandos sintácticos formales.
+2. Reconocer la psicología del gremio inmobiliario: la mayoría de los asesores tienen más de 50 años, conciben a JanIA como una asistente de carne y hueso ("Jania Rivera") y se intimidan con términos tecnológicos.
+3. Evitar el recorte de "Leer más" en WhatsApp manteniendo mensajes estructurados por debajo de 450-500 caracteres.
+4. Conectar con el canal de atención humana oficial de VECY (**`+57 316 656 9719`**) para resolver dudas complejas en horario laboral.
+5. Reemplazar la imagen comercial oficial del servicio de Predial por la nueva gráfica de alta resolución de JanIA en su despacho ejecutivo con torre de facturas.
+
+**Causas Raíz:**
+1. `whatsapp-match.ts` ejecutaba `return;` en la línea 1108 ante cualquier DM que no contuviera prefijos específicos (`predial:` o `verificar CC:`).
+2. Ausencia de un motor conversacional adaptado a DMs privados con memoria de turnos y lenguaje cálido para personas mayores.
+
+**Solución aplicada:**
+- **`server/_core/janIA.ts`**:
+  - Implementada `processPrivateDmConversationalMessage(text, userId, userName)` con memoria conversacional per-user de las últimas 12 horas.
+  - Fast-path de bienvenida: ante saludos iniciales ("Hola", "Buenas", "¿Quién eres?"), saluda al colega por su nombre, explica los dos servicios gratuitos (Verificación de Cédula/Antecedentes y Factura Predial Bogotá 2026 en PDF) y ofrece el canal de atención humana.
+  - Invocación a Google Gemini Flash ante dudas abiertas sobre Vecy, comisiones, costos o trámites inmobiliarios, con tono respetuoso, sencillo y sin tecnicismos.
+- **`server/_core/whatsapp-match.ts`**:
+  - Conectado el despacho conversacional en `processBufferedDmMessages` para usuarios externos (`!isAdmin`) con simulación de presencia `composing`.
+  - Preservado el silencio estricto en chats propios de directores (`isAdmin`).
+- **Imagen y Broadcasts (`server/_core/index.ts` y assets)**:
+  - Reemplazada `jania_predial_comercial.jpg` en cliente, raíz, `dist/` y VPS.
+  - Actualizados los copys de broadcast con enfoque exclusivo en Venta y número de atención comercial `+57 316 656 9719`.
+- **Versión Oficial**: Bump a `v32.20` (`32.20.0`) en `shared/const.ts` y `package.json`.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅ | Despliegue en VPS PM2 activo ✅
+
+---
+
 ### 🔖 v32.19 — Octubre 2026
 
 #### 📌 DESCARGA AUTOMATIZADA OFICIAL DE FACTURA PREDIAL EN PDF CON 2CAPTCHA + SDH Y ENTREGA DIRECTA EN WHATSAPP

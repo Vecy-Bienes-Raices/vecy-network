@@ -7,6 +7,47 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.20 — 01 Octubre 2026
+
+### Solicitud de Eduardo
+Eduardo reportó mediante capturas de pantalla de la interacción real en el grupo "SeguridadInmobiliarios II" y un chat privado entrante:
+1. *"Cómo quedarían las nuevos post para promocionar nuestros servicios... quiero aprovechar esta conversación en el grupo de seguridad para ofrecer el servicio de verificación de documentos de identidad y reporte de antecedentes que ahora tenemos con JanIA."*
+2. *"Lo del predial no me gusta como lo dices pues debe ser ofrecido a colegas y si también a propietarios pero nosotros somos los que podemos ofrecer sacar este documento Predial a nuestros clientes y pues JanIA es una genial herramienta. Solo para venta más que todo, para arriendo no es importante el predial."*
+3. *"Me gusta la OPCIÓN B... quiero cambiar o remplazar la imagen actual que ya tienes guardada por esta que te dejo acá en el chat para su remplazo... enviar también el Número de VECY BIENES RAÍCES 3166569719 por si desean más información acerca de nuestros actuales servicios inmobiliarios con IA y proyectos futuros que beneficiarán y revolucionarán el gremio... anuncios enriquecidos pero tan cortos y claros como sea posible, recuerda que las personas del gremio actual no son jóvenes, la mayoría ya tienen su edad y a muchos les da miedito hablar con la IA... no saben ni darle en 'Leer más' en WhatsApp... toca un mensaje corto, claro y contundente que enganche y conecte personas."*
+4. *"SI te fijas arriba ese número sin nombre está intentando hablarle a JanIA [+57 322 2306512 envió 'Hola']. Si quieres activemos el protocolo de interacción para que JanIA se active como IA PURA y pueda responder preguntas por su chat privado en whatsapp... que les explique lo que sea necesario o que no entiendan acerca de nosotros o sus servicios de verificación de documentos y lo del predial. También que les diga que si quieren interactuar con un humano pueden hacerlo en horario laboral escribiendo o llamando al 3166569719 y allí los agentes de VECY le atenderán y resolverán sus dudas o inquietudes."*
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Silencio Total en DMs Privados no Formales (`whatsapp-match.ts` Línea 1108)**:
+   - El manejador de mensajes de WhatsApp (`processBufferedDmMessages`) solo contaba con interceptores rígidos para solicitudes formales con prefijos (`predial: CHIP...` o `verificar CC...`).
+   - Si un usuario externo (como el colega León Andrés `+57 322 2306512`) escribía un saludo natural como *"Hola"*, el código ejecutaba `return;` en la línea 1108, dejando al usuario en visto y perdiendo el contacto comercial.
+2. **Psicología del Gremio Tradicional y Barrera de "Leer más"**:
+   - El público objetivo promedio (50 a 70 años) concibe a JanIA como una asistente humana de carne y hueso ("Jania Rivera") y saluda con educación.
+   - Textos de más de 450-500 caracteres sufren el recorte automático de WhatsApp con el botón `... Leer más`, el cual muchos colegas mayores no abren.
+   - Es indispensable estructurar micro-bloques directos, cálidos, sin tecnicismos ("cero palabras como prompts o machine learning") y con alternativas de contacto humano.
+3. **Despliegue de Nueva Imagen Oficial de Predial y Canal Humano**:
+   - Reemplazo de la imagen previa por la nueva gráfica de alta resolución con JanIA en su despacho ejecutivo con torre de facturas prediales (`jania_predial_comercial.jpg`).
+   - Incorporación explícita del número oficial de atención comercial del bróker: **`+57 316 656 9719`**.
+
+### Acciones Ejecutadas
+1. **Reemplazo Integral de la Imagen Oficial de Predial**:
+   - Sustituida `jania_predial_comercial.jpg` en `client/public/images/`, `client/public/assets/jania/`, raíz del proyecto, `dist/` y sincronizada en el servidor VPS.
+2. **Implementación del Protocolo de IA Pura en DMs Privados (`server/_core/janIA.ts`)**:
+   - Creada la función `processPrivateDmConversationalMessage(text, userId, userName)` con memoria conversacional por usuario (turnos recientes de las últimas 12h).
+   - Fast-path de bienvenida: si el usuario envía un saludo inicial ("Hola", "Buenas", "¿Quién eres?"), JanIA lo saluda por su nombre, se presenta con calidez, le explica sus dos herramientas gratuitas (Cédula/Antecedentes y Predial Bogotá 2026) y le ofrece el canal humano en horario laboral: **`+57 316 656 9719`**.
+   - Motor conversacional con Google Gemini Flash: si el usuario hace preguntas sobre Vecy, comisiones, costos o trámites, JanIA responde con lenguaje profesional, sencillo, colombiano y sin tecnicismos.
+3. **Conexión en `whatsapp-match.ts`**:
+   - Reemplazado el silencio de la línea 1108 por el despacho del protocolo conversacional con simulación de presencia `composing` y entrega limpia por WhatsApp.
+   - Preservado el silencio absoluto en chats propios/administrativos de directores.
+4. **Actualización de Copys de Broadcast y Teléfono Comercial (`server/_core/index.ts`)**:
+   - Actualizados los endpoints `/api/admin/broadcast-identity-v2` y `/api/admin/broadcast-predial-promo` con los copys cortos, entrega directa de PDF y número de bróker `+57 316 656 9719`.
+5. **Verificación y Pruebas**:
+   - `npm run check` (`tsc --noEmit`): 0 errores ✅
+   - `vitest`: 126/126 tests pasando ✅
+   - Build Vite + esbuild limpio en local y en VPS ✅
+   - Incremento a versión oficial **v32.20** (`32.20.0`) en `shared/const.ts` y `package.json` ✅
+
+---
+
 ## 📋 SESIÓN v32.19 — 01 Octubre 2026
 
 ### Solicitud de Eduardo

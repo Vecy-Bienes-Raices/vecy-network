@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.19";
+    VECY_VERSION = "v32.20";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -11455,6 +11455,22 @@ ${quotedNote}` : quotedNote;
           await this.logToDb(senderId, "janIA", CEDULA_HELP_TEXT2);
           return;
         }
+        if (!isAdmin && body.trim()) {
+          try {
+            await this.sock.sendPresenceUpdate("composing", senderId);
+            const { processPrivateDmConversationalMessage: processPrivateDmConversationalMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+            const reply = await processPrivateDmConversationalMessage2(body, senderId, userName);
+            if (reply && reply.trim()) {
+              console.log(`[JANIA-MATCH] [DM-AI] Respuesta de IA pura enviada a ${senderId} (${userName}): "${reply.substring(0, 60)}..."`);
+              await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
+              await this.logToDb(senderId, "janIA", reply);
+              await this.sock.sendPresenceUpdate("paused", senderId);
+              return;
+            }
+          } catch (dmAiErr) {
+            console.error("[JANIA-MATCH] Error en protocolo de IA conversacional DM:", dmAiErr);
+          }
+        }
         return;
       }
       // --- REDIRECCIÓN DE CHATS PRIVADOS ---
@@ -14233,6 +14249,7 @@ __export(janIA_exports, {
   MSG_TIPS_CALIDAD_COBERTURA: () => MSG_TIPS_CALIDAD_COBERTURA,
   REPUTATION_HOOK: () => REPUTATION_HOOK,
   appendConsultingHistory: () => appendConsultingHistory,
+  appendDmHistory: () => appendDmHistory,
   brokerDirectoryCache: () => brokerDirectoryCache,
   buildFlyerBreakdownText: () => buildFlyerBreakdownText,
   buildSystemPrompt: () => buildSystemPrompt,
@@ -14251,6 +14268,7 @@ __export(janIA_exports, {
   generateWelcomeMessage: () => generateWelcomeMessage,
   getColombiaNow: () => getColombiaNow,
   getConsultingHistory: () => getConsultingHistory,
+  getDmHistory: () => getDmHistory,
   getEmojiForCalificacion: () => getEmojiForCalificacion,
   getLiveStats: () => getLiveStats,
   handleAmendmentUpdate: () => handleAmendmentUpdate,
@@ -14275,6 +14293,7 @@ __export(janIA_exports, {
   preserveVerifiedAdvisorContact: () => preserveVerifiedAdvisorContact,
   processCirculoMessage: () => processCirculoMessage,
   processConsultingMessage: () => processConsultingMessage,
+  processPrivateDmConversationalMessage: () => processPrivateDmConversationalMessage,
   processWhatsAppMessage: () => processWhatsAppMessage,
   propagateBrokerPhoneAcrossAllListings: () => propagateBrokerPhoneAcrossAllListings,
   repairJSON: () => repairJSON,
@@ -19080,7 +19099,98 @@ function sanitizeResponseMarkdown(text2) {
   if (!text2) return "";
   return text2.replace(/\*\*/g, "*");
 }
-var janiaResultSchema, COMMON_FIRST_NAMES, fallbackDataCache, KNOWN_BARRIOS_SORTED_ITEMS, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, promptCache, JANIA_PROMPT, splitMultiPropertyMessage, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, consultingConversationHistory, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
+function getDmHistory(userId) {
+  const history = dmConversationHistory.get(userId) || [];
+  const now = Date.now();
+  return history.filter((h) => now - h.ts < 12 * 3600 * 1e3);
+}
+function appendDmHistory(userId, role, content) {
+  const history = getDmHistory(userId);
+  history.push({ role, content, ts: Date.now() });
+  if (history.length > 8) history.shift();
+  dmConversationHistory.set(userId, history);
+}
+async function processPrivateDmConversationalMessage(text2, userId, userName) {
+  const clean = text2.trim();
+  if (!clean) return "";
+  const realName = await resolveRealName(userId, userName);
+  const firstName = extractFirstName2(realName) || "";
+  const nameGreeting = firstName ? ` ${firstName}` : "";
+  const cleanLower = clean.toLowerCase();
+  const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
+  const history = getDmHistory(userId);
+  if (isGreetingOnly && history.length === 0) {
+    const welcomeMsg = `\xA1Hola${nameGreeting}! \u{1F44B} Mucho gusto.
+
+Soy *JanIA*, la asistente con Inteligencia Artificial de *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
+
+Estoy aqu\xED para apoyarte de forma *100% gratuita* en tus gestiones inmobiliarias:
+
+\u{1FAAA} *Verificar Identidad y Antecedentes:* Si vas a mostrar un inmueble o reunirte con alguien nuevo, env\xEDame su n\xFAmero de c\xE9dula y te confirmo nombres oficiales y antecedentes en la Polic\xEDa Nacional en 20 segundos.
+
+\u{1F3E0} *Factura Predial Bogot\xE1 2026:* Si est\xE1s cerrando una venta, env\xEDame el CHIP del predio y la c\xE9dula/NIT del propietario y te entrego la factura oficial en PDF con c\xF3digo de barras listo para pagar o escriturar.
+
+\u{1F4AC} Si tienes alguna duda o pregunta, \xA1escr\xEDbemela aqu\xED mismo con toda confianza y te responder\xE9!
+
+\u{1F4DE} *Atenci\xF3n Humana:* Si prefieres interactuar o hablar directamente con un agente humano de VECY, puedes escribir o llamar en horario laboral a nuestra l\xEDnea oficial:
+\u{1F4F2} *+57 316 656 9719* (https://wa.me/573166569719).
+
+\xBFEn qu\xE9 te puedo colaborar hoy? \u{1F60A}`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", welcomeMsg);
+    return welcomeMsg;
+  }
+  try {
+    const messages2 = [
+      {
+        role: "system",
+        content: `Eres JanIA, la asistente virtual con Inteligencia Artificial de VECY BIENES RA\xCDCES (Colombia).
+Est\xE1s atendiendo en un CHAT PRIVADO DE WHATSAPP a un colega asesor inmobiliario o cliente.
+
+DIRECTRICES MANDATORIAS DE COMUNICACI\xD3N:
+1. P\xDABLICO OBJETIVO: La mayor\xEDa de nuestros usuarios son personas tradicionales del gremio inmobiliario (50 a 70 a\xF1os) que pueden sentir recelo o timidez al interactuar con tecnolog\xEDa o IA. S\xE9 EXTREMADAMENTE c\xE1lida, paciente, emp\xE1tica, respetuosa y habla en espa\xF1ol colombiano profesional pero sencillo y cotidiano. NUNCA uses tecnicismos como "algoritmos", "prompts", "machine learning", "APIs" ni lenguaje rob\xF3tico.
+2. TRANSPARENCIA: Pres\xE9ntate con orgullo como JanIA, la IA de VECY BIENES RA\xCDCES, pero siempre cercana como si fueras la mejor colega del gremio.
+3. SERVICIOS GRATUITOS DE VECY QUE PUEDES GESTIONAR AQU\xCD:
+   - \u{1FAAA} Verificaci\xF3n oficial de identidad y antecedentes policiales: 100% gratuito. Solo deben enviarte el n\xFAmero de c\xE9dula (ej. "verificar CC: 12345678").
+   - \u{1F3E0} Descarga de Factura Predial oficial de Bogot\xE1 2026 en PDF: 100% gratuito para ventas. Solo deben enviarte el CHIP del predio y el documento del propietario (ej. "predial: CHIP AAA... y CC 12345678").
+   - \u{1F3D8}\uFE0F Red Colaborativa VECY: Una red inmobiliaria moderna que conecta ofertas y requerimientos con matching inteligente y sin cobrar comisiones abusivas como los portales tradicionales.
+4. CANAL HUMANO OFICIAL: Siempre aclara amablemente que si desean interactuar o hablar con un humano, pueden hacerlo en horario laboral escribiendo o llamando al tel\xE9fono oficial de VECY: +57 316 656 9719 (https://wa.me/573166569719), donde Eduardo y los agentes de VECY resolver\xE1n con gusto sus dudas o inquietudes.
+5. EXTENSI\xD3N: S\xE9 CONCISA. M\xE1ximo 2 a 3 p\xE1rrafos cortos para que el mensaje se lea completo en la pantalla de su celular sin que WhatsApp corte con el bot\xF3n "Leer m\xE1s".
+6. FORMATO: Usa negritas simples (*palabra*) y vi\xF1etas claras. No uses dobles asteriscos (**).
+`
+      }
+    ];
+    for (const turn of history.slice(-4)) {
+      messages2.push({ role: turn.role, content: turn.content });
+    }
+    messages2.push({
+      role: "user",
+      content: `Mensaje de ${realName} (${userId}): "${clean}"`
+    });
+    const llmRes = await invokeLLM({
+      messages: messages2
+    });
+    let reply = llmRes.choices[0]?.message?.content || "";
+    reply = sanitizeResponseMarkdown(reply.trim());
+    if (!reply) {
+      reply = `\xA1Hola${nameGreeting}! \u{1F44B} Con gusto te ayudo. En VECY BIENES RA\xCDCES puedes verificar c\xE9dulas y antecedentes gratis antes de tus visitas, o descargar la Factura Predial 2026 de Bogot\xE1 en PDF si est\xE1s vendiendo un inmueble.
+
+Si deseas atenci\xF3n personalizada con un agente humano, puedes comunicarte en horario laboral a nuestra l\xEDnea oficial: \u{1F4F2} *+57 316 656 9719*. \xBFEn qu\xE9 te puedo colaborar? \u{1F60A}`;
+    }
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", reply);
+    return reply;
+  } catch (err) {
+    console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
+    const fallback = `\xA1Hola${nameGreeting}! \u{1F44B} Disculpa la demora. Soy *JanIA*, la asistente de *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F.
+
+Conmigo puedes consultar gratis antecedentes de c\xE9dulas antes de tus visitas, o descargar la Factura Predial 2026 de Bogot\xE1 en PDF si est\xE1s cerrando una venta.
+
+Si deseas hablar directamente con un agente humano de VECY, puedes comunicarte en horario laboral a nuestra l\xEDnea oficial: \u{1F4F2} *+57 316 656 9719*. \xBFEn qu\xE9 te puedo servir? \u{1F60A}`;
+    return fallback;
+  }
+}
+var janiaResultSchema, COMMON_FIRST_NAMES, fallbackDataCache, KNOWN_BARRIOS_SORTED_ITEMS, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, promptCache, JANIA_PROMPT, splitMultiPropertyMessage, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, consultingConversationHistory, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO, dmConversationHistory;
 var init_janIA = __esm({
   "server/_core/janIA.ts"() {
     "use strict";
@@ -19667,6 +19777,7 @@ JanIA ha dejado de ser un bot pasivo que solo publica alertas en el grupo. A par
 \u26A0\uFE0F IMPORTANTE: Recuerden que operamos en Etapa de Prueba Gratuita y SIN COMISIONES. Si consolidan un negocio real gracias a la conexi\xF3n privada de JanIA, es un compromiso de honor compartir su testimonio en este grupo y registrar su rese\xF1a oficial y calificaci\xF3n aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review
 
 \xA1Sigamos demostrando el poder de la colaboraci\xF3n inteligente en Colombia! \u{1F1E8}\u{1F1F4}\u{1F3AF}`;
+    dmConversationHistory = /* @__PURE__ */ new Map();
   }
 });
 
@@ -25923,6 +26034,9 @@ _(Tambi\xE9n acepta CE o Pasaporte)_
 3\uFE0F\u20E3 En segundos te entrega el nombre oficial y antecedentes \u2705
 
 \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F91D} _Tecnolog\xEDa gratuita para blindar tus ventas y captaciones en Colombia._
+
+\u{1F4DE} *Atenci\xF3n Br\xF3ker VECY:* +57 316 656 9719 (https://wa.me/573166569719)
 \u{1F4E2} *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
 \u{1F310} *Web oficial:* https://vecy-network.vercel.app/
 
@@ -25967,26 +26081,20 @@ _(Tambi\xE9n acepta CE o Pasaporte)_
       const predialImg = resolveBroadcastImagePath(["jania_predial_comercial.jpg", "jania_tributario.jpg"]);
       const imgPath = predialImg.path;
       const hasImage = predialImg.exists;
-      const promoText = `\u{1F3E0} *\xBFTIENES PREDIO EN BOGOT\xC1?* \u{1F1E8}\u{1F1F4}
+      const promoText = `\u{1F3E0}\u{1F4C4} *\xBFVAS A VENDER UN INMUEBLE O NECESITAS LA FACTURA PREDIAL 2026?* \u{1F1E8}\u{1F1F4}
 
-Con *JanIA* \u2014 la IA de *VECY BIENES RA\xCDCES* \u2014 obt\xE9n el enlace oficial de la Secretar\xEDa de Hacienda para descargar tu *factura del Impuesto Predial 2026* en PDF con c\xF3digo de barras para bancos y Efecty.
+En *VECY BIENES RA\xCDCES* le ahorramos filas y ca\xEDdas de la p\xE1gina de Hacienda a propietarios y colegas inmobiliarios.
 
-\u{1F3AF} _Gratis, r\xE1pido y sin filas ni registros complicados._
+Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con c\xF3digo de barras para bancos o Efecty) en 20 segundos por WhatsApp:
 
-\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
-\u26A1 *\xBFC\xF3mo solicitarla? (En 1 solo mensaje):*
-
-1\uFE0F\u20E3 Escr\xEDbele a JanIA por privado a su WhatsApp:
-\u{1F4F2} *+57 319 291 9978* (o toca aqu\xED: https://wa.me/573192919978)
-
-2\uFE0F\u20E3 Env\xEDale el CHIP y documento en un solo mensaje:
-\u{1F449} \`JanIA, predial: CHIP AAA0205AYFZ y CC 12345678\`
-_(Si es empresa, usa NIT en vez de CC)_
-
-3\uFE0F\u20E3 JanIA te entrega de inmediato el enlace directo y los pasos exactos para descargar tu PDF oficial \u2705
+1\uFE0F\u20E3 Escr\xEDbele al WhatsApp de JanIA: *+57 319 291 9978* (https://wa.me/573192919978)
+2\uFE0F\u20E3 Env\xEDale: \`JanIA, predial: CHIP AAA... y CC 12345678\` (o NIT)
+3\uFE0F\u20E3 \xA1Listo! Te entrega el archivo PDF oficial adjunto en tu chat. \u{1F4C4}\u2705
 
 \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
-\u2139\uFE0F *\xBFD\xF3nde est\xE1 el CHIP?* En cualquier factura o recibo predial anterior.
+\u{1F91D} _Tecnolog\xEDa gratuita para impulsar el corretaje y dejar en el pasado los portales obsoletos._
+
+\u{1F4DE} *Atenci\xF3n Br\xF3ker VECY:* +57 316 656 9719 (https://wa.me/573166569719)
 \u{1F4E2} *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
 \u{1F310} *Web oficial:* https://vecy-network.vercel.app/
 

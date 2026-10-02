@@ -168,7 +168,29 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.19 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.20 — Octubre 2026
+
+### Novedades v32.20 (Protocolo de Interacción IA Pura en DMs Privados, Canal Humano 3166569719 y Nueva Imagen Oficial de Predial):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo observó que colegas tradicionales del gremio (como León Andrés `+57 322 2306512`) entraban por mensaje directo saludando con *"Hola"*, pero JanIA guardaba silencio absoluto al no detectar prefijos sintácticos formales.
+  - La mayoría de los asesores tienen entre 50 y 70 años, conciben a JanIA como una asistente humana ("Jania Rivera") y se intimidan con términos tecnológicos ("IA", "algoritmos", "prompts").
+  - Si un texto supera los 450-500 caracteres, WhatsApp inserta el botón `... Leer más`, el cual los colegas mayores no abren.
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Protocolo Conversacional de IA Pura en DMs (`server/_core/janIA.ts`)**:
+     - Creada la función `processPrivateDmConversationalMessage(text, userId, userName)` con memoria conversacional per-user de las últimas 12 horas.
+     - Fast-path de bienvenida: si el mensaje es un saludo inicial corto ("Hola", "Buenas", "¿Quién eres?"), saluda cordialmente al colega por su nombre, explica los dos servicios gratuitos (Verificación de Cédula/Antecedentes y Factura Predial Bogotá 2026 en PDF) y ofrece el canal de atención humana.
+     - Motor conversacional Gemini Flash: ante dudas abiertas sobre cómo funciona Vecy, costos, comisiones o trámites, responde con lenguaje profesional, sencillo, colombiano y sin tecnicismos que asusten.
+  2. **Canal de Atención Humana Oficial de VECY (`+57 316 656 9719`)**:
+     - En todos los mensajes y flujos conversacionales se aclara que si desean interactuar o hablar directamente con un humano, pueden hacerlo en horario laboral llamando o escribiendo al **`+57 316 656 9719`** (atención de Eduardo y agentes humanos de VECY).
+  3. **Conexión en `server/_core/whatsapp-match.ts`**:
+     - En `processBufferedDmMessages`, si el remitente no es administrador (`!isAdmin`) y el mensaje no es comando estricto, despacha la respuesta de IA pura con simulación de presencia `composing`.
+     - Preservado el silencio estricto en chats propios de directores (`isAdmin`).
+  4. **Reemplazo de la Imagen Oficial de Predial Bogotá**:
+     - Actualizada `jania_predial_comercial.jpg` con la nueva gráfica de alta resolución de JanIA en su despacho ejecutivo con torre de facturas de predial.
+     - Actualizados los copys de broadcast en `server/_core/index.ts` con enfoque exclusivo en Venta y número de atención comercial.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅ | Despliegue en VPS PM2 activo ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.19 — Octubre 2026
 
 ### Novedades v32.19 (Descarga Automatizada Oficial de Factura Predial en PDF con 2Captcha + SDH y Entrega Directa en WhatsApp):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:
