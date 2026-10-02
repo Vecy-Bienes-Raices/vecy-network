@@ -168,7 +168,19 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Línea Baileys (JanIA Bot)**: Opera EXCLUSIVAMENTE con **`+573192919978`** (número de Eduardo).
 - **Línea Bróker (Atención Personalizada Humana)**: JanIA refiere a los usuarios al **`+573166569719`** para peritajes, cotizaciones y contratación personalizada con Eduardo y Jani en VECY BIENES RAÍCES.
 
-## 🔖 VERSIÓN ACTUAL: v32.21 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.22 — Octubre 2026
+
+### Novedades v32.22 (Calibración Doctrinal de Identidad como Bróker Virtual Inmobiliario Innovador en Camino 3):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo redefinió la respuesta de Camino 3 ante preguntas abiertas ("¿De qué se trata?", "¿Cómo funciona?", "¿Qué es Vecy?", "¿Qué debo hacer?"):
+    `JanIA explica en 2 frases amenas que VECY BIENES RAÍCES es un bróker virtual inmobiliario que investiga e innova a diario con tecnología para facilitarle la vida a los colegas inmobiliarios y acelerar sus ventas sin filas ni trámites costosos, ofreciendo gratis las dos herramientas en WhatsApp (Cédulas/Antecedentes y Predial Bogotá 2026 en PDF), y preguntando cuál le gustaría probar primero.`
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Alineación de Identidad Institucional (`server/_core/janIA.ts`)**:
+     - Se actualizó la regla #3 del prompt del LLM en `processPrivateDmConversationalMessage` con la definición exacta de bróker virtual inmobiliario e investigador tecnológico.
+     - Se actualizaron los fallbacks por timeout o captura de error para reflejar idéntica definición.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.21 — Octubre 2026
 
 ### Novedades v32.21 (Inclusión de Cédula de Extranjería y Pasaporte en Verificación y Priorización Conversacional en DMs):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

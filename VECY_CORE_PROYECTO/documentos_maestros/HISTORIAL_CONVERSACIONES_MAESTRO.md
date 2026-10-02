@@ -7,6 +7,35 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.22 — 02 Octubre 2026
+
+### Solicitud de Eduardo
+Eduardo solicitó calibrar la directiva de respuesta de Camino 3 en el prompt de JanIA:
+*"Este: 'Camino 3: Si pregunta \"¿De qué se trata esto?\", \"¿Cómo funciona?\", \"¿Qué es Vecy?\", \"¿Qué debo hacer?\"*
+*👉 JanIA: Le explica en 2 frases amenas y cotidianas que en VECY BIENES RAÍCES usamos tecnología para facilitarles la vida a los colegas inmobiliarios y acelerar sus ventas sin filas ni trámites costosos, y le pregunta amablemente cuál de las dos herramientas gratuitas le gustaría probar primero.'*
+
+*Te lo cambio por este:*
+*Camino 3: Si pregunta \"¿De qué se trata esto?\", \"¿Cómo funciona?\", \"¿Qué es Vecy?\", \"¿Qué debo hacer?\"*
+*👉 JanIA: Le explica en 2 frases amenas y cotidianas que VECY BIENES RAÍCES es un bróker virtual inmobiliario que se ha dedicado a investigar como usar la tecnología a favor del sector para facilitarles la vida a los colegas inmobiliarios y acelerar sus ventas sin filas ni trámites costosos y por eso estamos innovando a diario y creando herramientas que nos puedan ayudar en nuestras gestiones del día a día, por eso queremos presentar y ofrecerles estas dos magníficas herramientas a través de WhatsApp para facilitrarles algunas gestiones en su ardua asesoría (Bueno tu sabras cómo redactar mejor que yo, es que yo suelo hacer como tu, me alrgo bastante y termino abrumando y abirriendo al usuario jajajaja), y le pregunta amablemente cuál de las dos herramientas gratuitas le gustaría probar primero."*
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Identidad Institucional Exacta de VECY BIENES RAÍCES**:
+   - VECY no es simplemente un portal inmobiliario ni una empresa de software aislada: es un **bróker virtual inmobiliario** que investiga e innova a diario en tecnología a favor del gremio.
+   - La redacción anterior era genérica ("creamos estas herramientas"). La nueva directiva define con orgullo y precisión el ADN del proyecto: un bróker virtual que pone la tecnología al servicio de los colegas para acelerar ventas y evitar trámites costosos.
+2. **Equilibrio Conversacional (Anti 'Leer más')**:
+   - Para no abrumar al asesor con textos largos, se condensa el mensaje en 2 frases fluidas, elegantes y cálidas que culminan en un llamado a la acción ping-pong ameno ("¿cuál de las dos te gustaría probar primero?").
+
+### Acciones Ejecutadas
+1. **Actualización del Prompt en `server/_core/janIA.ts`**:
+   - Actualizada la regla #3 de `processPrivateDmConversationalMessage`:
+     `3. Si pregunta "¿De qué se trata esto?", "¿Cómo funciona?", "¿Qué es Vecy?", "¿Qué debo hacer?": explícale en 2 frases amenas y cotidianas que VECY BIENES RAÍCES es un bróker virtual inmobiliario que investiga e innova a diario con tecnología para facilitarle la vida a los colegas inmobiliarios y acelerar sus ventas sin filas ni trámites costosos. Menciona que por eso creamos estas dos herramientas gratuitas por WhatsApp (Verificación de Cédula/Antecedentes y Factura Predial Bogotá 2026 en PDF) y pregúntale amablemente cuál de las dos le gustaría probar primero.`
+   - Alineados los textos de fallback cuando el LLM no genera respuesta o entra en captura de errores.
+2. **Control de Versión y Compilación**:
+   - Incrementada versión a **v32.22** (`32.22.0`) en `shared/const.ts` y `package.json`.
+   - `npm run check` (0 errores) | `npm run build` limpio en 16s | 126/126 tests Vitest pasando.
+
+---
+
 ## 📋 SESIÓN v32.21 — 02 Octubre 2026
 
 ### Solicitud de Eduardo

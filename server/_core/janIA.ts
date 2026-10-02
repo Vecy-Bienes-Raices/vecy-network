@@ -6660,7 +6660,7 @@ export async function processPrivateDmConversationalMessage(
           `CÓMO GUIAR AL USUARIO SEGÚN LO QUE RESPONDA:\n` +
           `1. Si quiere verificar cédula o antecedentes: dile amablemente: "¡Claro que sí! Solo escríbeme el número de cédula (ej: 12345678) o dime si es cédula de extranjería o pasaporte dame el número y en 20 segundos te confirmo nombres completos y antecedentes en la Policía."\n` +
           `2. Si quiere la Factura Predial de Bogotá: dile: "¡Con gusto! Para descargarte la factura oficial en PDF con código de barras, solo envíame el código CHIP del predio y la cédula o NIT del propietario."\n` +
-          `3. Si pregunta "¿De qué se trata esto?", "¿Cómo funciona?", "¿Qué es Vecy?", "¿Qué debo hacer?": explícale en 2 frases amenas que en VECY BIENES RAÍCES creamos estas herramientas gratuitas para que los colegas cierren ventas más rápido y seguro sin filas ni trámites, y pregúntale cuál desea probar.\n` +
+          `3. Si pregunta "¿De qué se trata esto?", "¿Cómo funciona?", "¿Qué es Vecy?", "¿Qué debo hacer?": explícale en 2 frases amenas y cotidianas que VECY BIENES RAÍCES es un bróker virtual inmobiliario que investiga e innova a diario con tecnología para facilitarle la vida a los colegas inmobiliarios y acelerar sus ventas sin filas ni trámites costosos. Menciona que por eso creamos estas dos herramientas gratuitas por WhatsApp (Verificación de Cédula/Antecedentes y Factura Predial Bogotá 2026 en PDF) y pregúntale amablemente cuál de las dos le gustaría probar primero.\n` +
           `4. Si pregunta si tiene costo: dile que estos dos servicios son 100% gratuitos para nuestra comunidad inmobiliaria.\n` +
           `5. Si desea hablar con un humano o tratar temas comerciales/alianzas: indícale con gusto que en horario laboral puede escribir o llamar a nuestra línea oficial de atención humana: +57 316 656 9719 (https://wa.me/573166569719).\n` +
           `6. Si ya envía los datos (cédula o CHIP): anímalo o dile que ya los estás revisando.\n` +
@@ -6687,8 +6687,8 @@ export async function processPrivateDmConversationalMessage(
 
     if (!reply) {
       reply =
-        `¡Hola${nameGreeting}! 👋 Con gusto te ayudo. ¿Deseas verificar una cédula antes de una visita o necesitas la Factura Predial 2026 de un inmueble en Bogotá?\n\n` +
-        `También puedes comunicarte en horario laboral con nuestro equipo humano en el *+57 316 656 9719*.`;
+        `¡Hola${nameGreeting}! 👋 En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que innova con tecnología para facilitarte el día a día. Por WhatsApp te ayudamos gratis con: verificación de identidad/antecedentes y descarga de Factura Predial Bogotá 2026 en PDF.\n\n` +
+        `¿Cuál te gustaría probar primero? También puedes comunicarte en horario laboral con nuestro equipo humano al *+57 316 656 9719*.`;
     }
 
     appendDmHistory(userId, "user", clean);
@@ -6697,8 +6697,8 @@ export async function processPrivateDmConversationalMessage(
   } catch (err: any) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
     const fallback =
-      `¡Hola${nameGreeting}! 👋 Qué gusto saludarte. ¿Te gustaría verificar antecedentes de una cédula o necesitas que te ayude a descargar una Factura Predial de Bogotá?\n\n` +
-      `Si prefieres hablar con un agente humano de VECY, puedes comunicarte en horario laboral al *+57 316 656 9719*.`;
+      `¡Hola${nameGreeting}! 👋 En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que innova con tecnología para facilitarte tus gestiones diarias. Te ofrecemos gratis por WhatsApp: verificación oficial de antecedentes y descarga de Factura Predial Bogotá 2026 en PDF.\n\n` +
+      `¿Cuál de las dos herramientas te gustaría probar primero? O si prefieres hablar con nuestro equipo humano, escríbenos al *+57 316 656 9719*.`;
     return fallback;
   }
 }

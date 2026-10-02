@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.21";
+    VECY_VERSION = "v32.22";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -19153,7 +19153,7 @@ PERSONALIDAD Y TONO:
 C\xD3MO GUIAR AL USUARIO SEG\xDAN LO QUE RESPONDA:
 1. Si quiere verificar c\xE9dula o antecedentes: dile amablemente: "\xA1Claro que s\xED! Solo escr\xEDbeme el n\xFAmero de c\xE9dula (ej: 12345678) o dime si es c\xE9dula de extranjer\xEDa o pasaporte dame el n\xFAmero y en 20 segundos te confirmo nombres completos y antecedentes en la Polic\xEDa."
 2. Si quiere la Factura Predial de Bogot\xE1: dile: "\xA1Con gusto! Para descargarte la factura oficial en PDF con c\xF3digo de barras, solo env\xEDame el c\xF3digo CHIP del predio y la c\xE9dula o NIT del propietario."
-3. Si pregunta "\xBFDe qu\xE9 se trata esto?", "\xBFC\xF3mo funciona?", "\xBFQu\xE9 es Vecy?", "\xBFQu\xE9 debo hacer?": expl\xEDcale en 2 frases amenas que en VECY BIENES RA\xCDCES creamos estas herramientas gratuitas para que los colegas cierren ventas m\xE1s r\xE1pido y seguro sin filas ni tr\xE1mites, y preg\xFAntale cu\xE1l desea probar.
+3. Si pregunta "\xBFDe qu\xE9 se trata esto?", "\xBFC\xF3mo funciona?", "\xBFQu\xE9 es Vecy?", "\xBFQu\xE9 debo hacer?": expl\xEDcale en 2 frases amenas y cotidianas que VECY BIENES RA\xCDCES es un br\xF3ker virtual inmobiliario que investiga e innova a diario con tecnolog\xEDa para facilitarle la vida a los colegas inmobiliarios y acelerar sus ventas sin filas ni tr\xE1mites costosos. Menciona que por eso creamos estas dos herramientas gratuitas por WhatsApp (Verificaci\xF3n de C\xE9dula/Antecedentes y Factura Predial Bogot\xE1 2026 en PDF) y preg\xFAntale amablemente cu\xE1l de las dos le gustar\xEDa probar primero.
 4. Si pregunta si tiene costo: dile que estos dos servicios son 100% gratuitos para nuestra comunidad inmobiliaria.
 5. Si desea hablar con un humano o tratar temas comerciales/alianzas: ind\xEDcale con gusto que en horario laboral puede escribir o llamar a nuestra l\xEDnea oficial de atenci\xF3n humana: +57 316 656 9719 (https://wa.me/573166569719).
 6. Si ya env\xEDa los datos (c\xE9dula o CHIP): an\xEDmalo o dile que ya los est\xE1s revisando.
@@ -19174,18 +19174,18 @@ FORMATO: Usa negritas simples (*palabra*), emojis sutiles y NUNCA uses dobles as
     let reply = llmRes.choices[0]?.message?.content || "";
     reply = sanitizeResponseMarkdown(reply.trim());
     if (!reply) {
-      reply = `\xA1Hola${nameGreeting}! \u{1F44B} Con gusto te ayudo. \xBFDeseas verificar una c\xE9dula antes de una visita o necesitas la Factura Predial 2026 de un inmueble en Bogot\xE1?
+      reply = `\xA1Hola${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte el d\xEDa a d\xEDa. Por WhatsApp te ayudamos gratis con: verificaci\xF3n de identidad/antecedentes y descarga de Factura Predial Bogot\xE1 2026 en PDF.
 
-Tambi\xE9n puedes comunicarte en horario laboral con nuestro equipo humano en el *+57 316 656 9719*.`;
+\xBFCu\xE1l te gustar\xEDa probar primero? Tambi\xE9n puedes comunicarte en horario laboral con nuestro equipo humano al *+57 316 656 9719*.`;
     }
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", reply);
     return reply;
   } catch (err) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    const fallback = `\xA1Hola${nameGreeting}! \u{1F44B} Qu\xE9 gusto saludarte. \xBFTe gustar\xEDa verificar antecedentes de una c\xE9dula o necesitas que te ayude a descargar una Factura Predial de Bogot\xE1?
+    const fallback = `\xA1Hola${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Te ofrecemos gratis por WhatsApp: verificaci\xF3n oficial de antecedentes y descarga de Factura Predial Bogot\xE1 2026 en PDF.
 
-Si prefieres hablar con un agente humano de VECY, puedes comunicarte en horario laboral al *+57 316 656 9719*.`;
+\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero? O si prefieres hablar con nuestro equipo humano, escr\xEDbenos al *+57 316 656 9719*.`;
     return fallback;
   }
 }

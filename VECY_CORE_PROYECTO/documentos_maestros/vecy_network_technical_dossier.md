@@ -322,6 +322,28 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.22 — Octubre 2026
+
+#### 📌 CALIBRACIÓN DOCTRINAL DE IDENTIDAD COMO BRÓKER VIRTUAL INMOBILIARIO INNOVADOR EN CAMINO 3
+
+**Requerimiento y Objetivos:**
+1. Atender la solicitud de Eduardo para enriquecer el Camino 3 del prompt conversacional: ante preguntas abiertas ("¿De qué se trata esto?", "¿Cómo funciona?", "¿Qué es Vecy?", "¿Qué debo hacer?"), explicar con calidez que VECY BIENES RAÍCES es un bróker virtual inmobiliario dedicado a investigar e innovar en tecnología a favor del sector para facilitarle el trabajo a los colegas y acelerar sus ventas sin trámites engorrosos ni filas.
+2. Presentar con amabilidad las dos herramientas gratuitas disponibles por WhatsApp (Verificación de Identidad/Antecedentes y Factura Predial Bogotá 2026 en PDF) y preguntar cuál de las dos le gustaría probar primero.
+3. Preservar la regla de oro: lenguaje cotidiano, respetuoso, profesional y sin textos abrumadores para evitar el botón "Leer más".
+
+**Causas Raíz:**
+1. La redacción anterior de Camino 3 era genérica y no comunicaba la identidad central de VECY como bróker virtual inmobiliario enfocado en investigación tecnológica.
+
+**Solución aplicada:**
+- **`server/_core/janIA.ts`**:
+  - Actualizada la regla #3 de `processPrivateDmConversationalMessage` en el prompt del sistema de Gemini.
+  - Sincronizados los textos de fallback en caso de fallo del LLM para mantener idéntica calidad de respuesta.
+- **Versión Oficial**: Incrementada a `v32.22` (`32.22.0`) en `shared/const.ts` y `package.json`.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅
+
+---
+
 ### 🔖 v32.21 — Octubre 2026
 
 #### 📌 SOPORTE EXPLÍCITO DE CÉDULA DE EXTRANJERÍA Y PASAPORTE EN VERIFICACIÓN Y PRIORIZACIÓN CONVERSACIONAL EN DMs
