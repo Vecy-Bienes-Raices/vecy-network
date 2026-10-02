@@ -345,6 +345,9 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
   - Reemplazado `SERVER_BOOT_TIME` por ventana dinámica relativa a `Date.now()`: 180s en grupos y **1800s (30 minutos) en DMs privados**.
 - **`server/_core/index.ts`**:
   - Guardado automático de mensajes salientes de API en `matchBot.saveMessageToStore`.
+- **Doctrina Sagrada de Autonomía de JanIA como 'IA PURA'**:
+  - Prohibido terminantemente volver a forzar o reenviar manualmente un segundo saludo una vez emitido uno en una conversación. Lo que quedó, quedó.
+  - La conversación debe fluir de forma 100% autónoma y orgánica, esperando la respuesta del usuario para no delatar manipulación externa ni degradar a JanIA a un bot rígido.
 - **Versión Oficial**: Incrementada a **v32.25** (`32.25.0`) en `shared/const.ts` y `package.json`.
 
 **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅
