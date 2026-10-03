@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.27";
+    VECY_VERSION = "v32.28";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -11504,6 +11504,7 @@ ${quotedNote}` : quotedNote;
         let imageBuffer;
         let pdfBuffer;
         let pdfMimeType;
+        let isAudioPTT = false;
         for (const msg of messages2) {
           const rawMsg = unwrapMessage(msg.message);
           let body2 = "";
@@ -11512,6 +11513,23 @@ ${quotedNote}` : quotedNote;
           else if (rawMsg?.imageMessage) body2 = rawMsg.imageMessage.caption || "";
           else if (rawMsg?.documentMessage) body2 = rawMsg.documentMessage.caption || "";
           else if (rawMsg?.videoMessage) body2 = rawMsg.videoMessage.caption || "";
+          else if (rawMsg?.audioMessage) {
+            isAudioPTT = true;
+            try {
+              console.log(`[JANIA-MATCH] Transcribiendo nota de voz PTT de DM ${senderId}...`);
+              const audioBuffer = await downloadMediaSafely(msg, "audio");
+              if (audioBuffer && audioBuffer.length > 0) {
+                const mimeType = rawMsg.audioMessage.mimetype || "audio/ogg; codecs=opus";
+                const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
+                if (transcription && transcription.trim() !== "") {
+                  body2 = transcription.trim();
+                  console.log(`[JANIA-MATCH] Transcripci\xF3n exitosa de DM: "${body2.substring(0, 80)}..."`);
+                }
+              }
+            } catch (audioErr) {
+              console.error("[JANIA-MATCH] Error al transcribir nota de voz DM:", audioErr.message || audioErr);
+            }
+          }
           if (body2.trim()) {
             combinedBody += (combinedBody ? "\n" : "") + body2.trim();
           }
@@ -11632,7 +11650,30 @@ ${quotedNote}` : quotedNote;
             const { processPrivateDmConversationalMessage: processPrivateDmConversationalMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
             const reply = await processPrivateDmConversationalMessage2(body, senderId, userName);
             if (reply && reply.trim()) {
-              console.log(`[JANIA-MATCH] [DM-AI] Respuesta de IA pura enviada a ${senderId} (${userName}): "${reply.substring(0, 60)}..."`);
+              console.log(`[JANIA-MATCH] [DM-AI] Respuesta de IA pura para ${senderId} (${userName}): "${reply.substring(0, 60)}..."`);
+              const { detectaVoz: detectaVoz2, textToSpeechMedia: textToSpeechMedia2, cleanVoiceText: cleanVoiceText2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+              const wantsVoice = detectaVoz2(body);
+              const shouldSendVoice = wantsVoice || isAudioPTT;
+              if (shouldSendVoice) {
+                try {
+                  console.log(`[JANIA-MATCH] [DM-AI] Generando respuesta en nota de voz PTT para ${senderId}...`);
+                  await this.sock.sendPresenceUpdate("recording", senderId);
+                  const cleanText = cleanVoiceText2(reply);
+                  const media = await textToSpeechMedia2(cleanText);
+                  if (media && media.data) {
+                    const audioBuffer = Buffer.from(media.data, "base64");
+                    await this.queuedSend(senderId, {
+                      audio: audioBuffer,
+                      mimetype: media.mimetype || "audio/ogg; codecs=opus",
+                      ptt: true
+                    }, { quoted: mainMsg, allowDirectMessage: true });
+                    await this.logToDb(senderId, "janIA", `[Nota de Voz PTT]: ${reply}`);
+                    return;
+                  }
+                } catch (ttsErr) {
+                  console.warn("[JANIA-MATCH] [DM-AI] Error generando nota de voz, enviando texto como fallback:", ttsErr?.message);
+                }
+              }
               await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
               await this.logToDb(senderId, "janIA", reply);
               return;
@@ -19317,12 +19358,14 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
   const firstName = extractFirstName2(realName) || "";
   const nameGreeting = firstName ? ` ${firstName}` : "";
   const cleanLower = clean.toLowerCase();
+  const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+  const timeSalutation = getGreetingByTime4();
   const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
   const history = getDmHistory(userId);
   if (isGreetingOnly && history.length === 0) {
-    const welcomeMsg = `\xA1Hola${nameGreeting}! \u{1F44B} Soy *JanIA*, la asistente con Inteligencia Artificial de *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
+    const welcomeMsg = `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} Soy *JanIA*, la asistente de *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
 
-\xBFDime qu\xE9 tr\xE1mite requieres? \xBFDeseas verificar un n\xFAmero de documento o solicitarme una Factura o Certificado de Pago del Impuesto Predial en Bogot\xE1?`;
+\xBFEn qu\xE9 te puedo colaborar hoy? Puedes consultarme sobre cualquier tema de bienes ra\xEDces, peritajes, aval\xFAos, o si requieres verificar c\xE9dulas/antecedentes de clientes o descargar la Factura Predial y Certificado de Pago de Bogot\xE1 en PDF.`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", welcomeMsg);
     return welcomeMsg;
@@ -19335,33 +19378,32 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
     return docPromptMsg;
   }
   try {
+    const hasPriorHistory = history.length > 0;
     const messages2 = [
       {
         role: "system",
-        content: `Eres JanIA, la asistente virtual con Inteligencia Artificial de VECY BIENES RA\xCDCES (Colombia).
-Est\xE1s conversando por MENSAJES DIRECTOS DE WHATSAPP con un colega asesor inmobiliario o cliente.
+        content: `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
+Est\xE1s conversando por WHATSAPP con un colega asesor inmobiliario, cliente o aliado comercial.
 
-OBJETIVO PRINCIPAL:
-Llevar una conversaci\xF3n amena, corta, natural y humana. NUNCA hables como "lora mojada" soltando p\xE1rrafos largos o aburridos. Ve al grano, escucha lo que el usuario pregunt\xF3 y gu\xEDalo paso a paso con calidez y sencillez.
+REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA Y CONTINUIDAD:
+${hasPriorHistory ? '- YA EST\xC1S EN UNA CONVERSACI\xD3N ACTIVA CON EL USUARIO. Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo con "\xA1Hola!", "\xA1Buenos d\xEDas!", "\xA1Qu\xE9 gusto saludarte!" o anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana.' : '- Si es el primer mensaje, saluda cordialmente con "' + timeSalutation + '" y el nombre del usuario.'}
+- NUNCA repitas como un contestador autom\xE1tico "\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesor\xEDa, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario. Solo ofrece las herramientas de c\xE9dula o predial cuando sea relevante o el usuario est\xE9 buscando realizar ese tr\xE1mite espec\xEDfico.
+- Conversa como una profesional inmobiliaria colombiana experta, culta, amena y emp\xE1tica. CERO tecnicismos computacionales ni lenguaje de bot.
+- Mant\xE9n respuestas concisas y bien estructuradas (2 a 4 p\xE1rrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).
 
-PERSONALIDAD Y TONO:
-- S\xFAper c\xE1lida, atenta, emp\xE1tica y educada.
-- La mayor\xEDa de nuestros usuarios son personas tradicionales del gremio (50 a 70 a\xF1os). Habla en espa\xF1ol colombiano profesional, claro y cotidiano.
-- CERO tecnicismos complejos: nada de "machine learning", "algoritmos", "prompts", "APIs" ni lenguaje rob\xF3tico.
-- Respuestas breves: 1 a 3 frases claras (m\xE1ximo 2 p\xE1rrafos muy cortos). Que se sienta como un chat fluido de WhatsApp, no un manual.
-
-C\xD3MO GUIAR AL USUARIO SEG\xDAN LO QUE RESPONDA:
-1. Si quiere verificar c\xE9dula o antecedentes: dile amablemente: "\xA1Claro que s\xED! Solo escr\xEDbeme el n\xFAmero de c\xE9dula (ej: 12345678) o dime si es c\xE9dula de extranjer\xEDa o pasaporte dame el n\xFAmero y en 20 segundos te confirmo nombres completos y antecedentes en la Polic\xEDa."
-2. Si quiere la Factura Predial o Certificado de Pago de Bogot\xE1: dile: "\xA1Con gusto! Para entregarte la factura oficial o el certificado de pago en PDF expedido por la Secretar\xEDa de Hacienda, solo env\xEDame el c\xF3digo CHIP del predio y la c\xE9dula o NIT del propietario."
-3. Si pregunta "\xBFDe qu\xE9 se trata esto?", "\xBFC\xF3mo funciona?", "\xBFQu\xE9 es Vecy?", "\xBFQu\xE9 debo hacer?": expl\xEDcale en 2 frases amenas y cotidianas que VECY BIENES RA\xCDCES es un br\xF3ker virtual inmobiliario que investiga e innova a diario con tecnolog\xEDa para facilitarle la vida a los colegas inmobiliarios y acelerar sus ventas sin filas ni tr\xE1mites costosos. Menciona que por eso creamos estas herramientas gratuitas por WhatsApp (Verificaci\xF3n de C\xE9dula/Antecedentes y Predial/Certificados de Pago Bogot\xE1 2026 en PDF) y preg\xFAntale amablemente cu\xE1l de las dos le gustar\xEDa probar primero.
-4. Si pregunta si tiene costo: dile que estos servicios son 100% gratuitos para nuestra comunidad inmobiliaria.
-5. Si desea hablar con un humano o tratar temas comerciales/alianzas: ind\xEDcale con gusto que en horario laboral puede escribir o llamar a nuestra l\xEDnea oficial de atenci\xF3n humana: +57 316 656 9719 (https://wa.me/573166569719).
-6. Si ya env\xEDa los datos (c\xE9dula o CHIP): an\xEDmalo o dile que ya los est\xE1s revisando.
-FORMATO: Usa negritas simples (*palabra*), emojis sutiles y NUNCA uses dobles asteriscos (**).
+CONOCIMIENTO Y CAPACIDADES EXPERTAS DE JANIA Y VECY:
+1. QUI\xC9NES SOMOS: VECY BIENES RA\xCDCES es un br\xF3ker virtual inmobiliario y una red colaborativa para Colombia, fundada por Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones). Web oficial: https://vecy-network.vercel.app.
+2. NUESTRO PROP\xD3SITO: Investigamos e innovamos con tecnolog\xEDa e IA para facilitar la vida a los colegas inmobiliarios y propietarios, acelerando el cierre de negocios sin filas, sin burocracia ni tr\xE1mites engorrosos. Promovemos acuerdos \xE9ticos entre corredores compartiendo comisiones 50/50.
+3. CONOCIMIENTO INMOBILIARIO INTEGRAL:
+   - Contratos y normas: Promesas de compraventa (distinci\xF3n entre arras de retracto, confirmatorias y cl\xE1usula penal), contratos de arrendamiento bajo la Ley 820 de 2003 (reajustes con tope del IPC, causales de terminaci\xF3n), Ley 675 de 2001 de Propiedad Horizontal.
+   - Estudio de t\xEDtulos y notar\xEDas: Cadena de tradici\xF3n de 20 a\xF1os en el Certificado de Tradici\xF3n de la SNR, verificaci\xF3n de grav\xE1menes, embargos, hipotecas, afectaci\xF3n a vivienda familiar y patrimonio de familia inembargable. Gastos notariales: 50% comprador y 50% vendedor en derechos notariales; retenci\xF3n en la fuente (1% personas naturales, 2.5% personas jur\xEDdicas) pagada por el vendedor; impuesto de registro y beneficencia pagado por el comprador.
+   - Aval\xFAos y urbanismo: Asesor\xEDa en valor comercial y catastral, normas de planeaci\xF3n en Bogot\xE1 (SINUPOT, POT, edificabilidad y usos del suelo).
+4. HERRAMIENTAS GRATUITAS EN WHATSAPP: Verificaci\xF3n oficial de c\xE9dula y antecedentes en Polic\xEDa Nacional (en 20 segundos) y descarga oficial de Factura Predial Bogot\xE1 y Certificado de Pago en PDF.
+5. ATENCI\xD3N HUMANA Y ALIANZAS: Para peritajes presenciales, aval\xFAos comerciales formales, captaciones en exclusiva o hablar directamente con Eduardo y Jani, recomienda con gusto comunicarse en horario laboral con nuestra l\xEDnea oficial de atenci\xF3n humana: +57 316 656 9719 (https://wa.me/573166569719).
 `
       }
     ];
-    for (const turn of history.slice(-4)) {
+    for (const turn of history.slice(-6)) {
       messages2.push({ role: turn.role, content: turn.content });
     }
     messages2.push({
@@ -19373,19 +19415,20 @@ FORMATO: Usa negritas simples (*palabra*), emojis sutiles y NUNCA uses dobles as
     });
     let reply = llmRes.choices[0]?.message?.content || "";
     reply = sanitizeResponseMarkdown(reply.trim());
+    if (hasPriorHistory) {
+      reply = reply.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|saludos)[^!.,\n]*[!.,]?\s*(?:(?:¿?qu[eé]\s+gusto\s+saludarte|c[oó]mo\s+est[aá]s)[^!.,\n]*[!.,]?\s*)?/i, "");
+      reply = reply.trim();
+    }
     if (!reply) {
-      reply = `\xA1Hola${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte el d\xEDa a d\xEDa. Por WhatsApp te ayudamos gratis con: verificaci\xF3n de identidad/antecedentes y descarga de Factura Predial Bogot\xE1 2026 en PDF.
-
-\xBFCu\xE1l te gustar\xEDa probar primero? Tambi\xE9n puedes comunicarte en horario laboral con nuestro equipo humano al *+57 316 656 9719*.`;
+      reply = hasPriorHistory ? `Con mucho gusto. En *VECY BIENES RA\xCDCES* nos dedicamos a acelerar y proteger los negocios inmobiliarios con tecnolog\xEDa y asesor\xEDa especializada. Cu\xE9ntame en detalle qu\xE9 necesitas o qu\xE9 duda tienes y te oriento de inmediato.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Cu\xE9ntame en qu\xE9 te puedo colaborar hoy.`;
     }
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", reply);
     return reply;
   } catch (err) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    const fallback = `\xA1Hola${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Te ofrecemos gratis por WhatsApp: verificaci\xF3n oficial de antecedentes y descarga de Factura Predial Bogot\xE1 2026 en PDF.
-
-\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero? O si prefieres hablar con nuestro equipo humano, escr\xEDbenos al *+57 316 656 9719*.`;
+    const hasPriorHistory = history.length > 0;
+    const fallback = hasPriorHistory ? `Con mucho gusto te oriento. En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que investiga e innova con tecnolog\xEDa para conectar a colegas corredores al 50/50, brindar peritajes, aval\xFAos y herramientas gratuitas como verificaci\xF3n de antecedentes y facturas prediales. Si requieres atenci\xF3n personalizada de nuestros directores Eduardo y Jani, puedes escribirnos al *+57 316 656 9719*.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Cu\xE9ntame en qu\xE9 te puedo colaborar hoy.`;
     return fallback;
   }
 }

@@ -7,7 +7,49 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
-## 📋 SESIÓN v32.27 — 03 Octubre 2026
+## 📋 SESIÓN v32.28 — 03 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Erradicación de Respuestas Robotizadas y Repetición de Saludos en DMs**:
+   - Eduardo adjuntó captura de WhatsApp Web de una conversación de prueba con JanIA desde el dispositivo de Jani Alves, donde observó que JanIA repetía en cada turno: *"¡Hola Jani! 👋 Qué gusto saludarte..."*, haciéndola parecer un contestador autómata y no una verdadera **IA PURA**.
+2. **Restauración Doctrinal del Saludo Horario Contextual**:
+   - Eduardo recordó la regla doctrinal programada previamente: saludar con un solo *"Buenos Días"*, *"Buenas Tardes"* o *"Buenas Noches"* según la hora del día en Colombia, **una única vez al inicio** y continuar el hilo sin volver a saludar en los turnos posteriores.
+3. **Eliminación del Estribillo Rígido de las Dos Herramientas**:
+   - Eduardo evidenció que JanIA forzaba mecánicamente al final de cada mensaje la coletilla: *"¿Cuál de las dos te gustaría probar primero?"*, incluso cuando el usuario le preguntó a fondo sobre la identidad de VECY BIENES RAÍCES y para qué fue creada.
+4. **Despliegue de Sapiencia y Capacidad Experta Inmobiliaria**:
+   - Eduardo exigió que JanIA hable, resuelva y asesore con soltura sobre todos los temas inmobiliarios que se le han enseñado (contratos, corretaje, leyes, avalúos, alianzas 50/50), sin trabas que limiten su diálogo con el usuario.
+5. **Soporte Nativo de Notas de Voz / Audios (TTS y STT)**:
+   - Eduardo solicitó habilitar la capacidad de enviar notas de voz si un usuario le envía un audio o le pide expresamente que le responda por voz.
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Causa Raíz #1: Prompt Rígido y Encasillado en `processPrivateDmConversationalMessage`**:
+   - La regla #3 del system prompt obligaba al LLM a condensar la respuesta sobre VECY en solo 2 frases y terminar siempre preguntando *"cuál de las dos herramientas le gustaría probar primero"*. No existía directiva para explayarse en conocimientos inmobiliarios.
+2. **Causa Raíz #2: Inexistencia de Regla Anti-Resaludos en Hilos Activos**:
+   - El modelo no recibía la instrucción de continuidad, por lo que ante cada nuevo mensaje del usuario, generaba un nuevo saludo formal como si fuese el primer contacto.
+3. **Causa Raíz #3: Saludo Inicial Estático**:
+   - La bienvenida del fast-path utilizaba un *"¡Hola!"* genérico sin consultar la función de horario oficial de Bogotá [getGreetingByTime](file:///home/eddu/Proyectos/vecy-network/server/_core/whatsapp-utils.ts#L184).
+4. **Causa Raíz #4: Ausencia de Handler de Audio en DMs Privados**:
+   - En `processBufferedDmMessages`, los audios no eran descargados ni pasados a transcripción (`transcribeAudioBuffer`), y el despacho saliente no integraba la síntesis PTT de voz (`textToSpeechMedia`).
+
+### Acciones Ejecutadas
+1. **`server/_core/janIA.ts`**:
+   - **Saludo Horario Contextual**: Integrado [getGreetingByTime](file:///home/eddu/Proyectos/vecy-network/server/_core/whatsapp-utils.ts#L184) para saludar con *"Buenos días"*, *"Buenas tardes"* o *"Buenas noches"* en el primer turno de la sesión.
+   - **Regla de Oro de Continuidad Conversacional**: Si `hasPriorHistory` es verdadero, se prohíbe taxativamente saludar o anteponer el nombre del usuario en cada mensaje. La respuesta va directo al grano con naturalidad humana.
+   - **Filtro Post-LLM Anti-Saludos**: Implementada limpieza con regex para extirpar cualquier saludo residual generado por inercia del modelo en conversaciones en curso.
+   - **Cerebro Inmobiliario Completo**: Ampliado el system prompt con todo el conocimiento experto de VECY BIENES RAÍCES (fundadores Eduardo A. Rivera y Jani Alves, red colaborativa 50/50, promesas de compraventa, arras, Ley 820 de 2003, Ley 675 de 2001, estudio de títulos SNR a 20 años, gastos notariales, retención en la fuente, avalúos, SINUPOT y línea oficial de atención humana +57 316 656 9719).
+   - **Erradicación del Estribillo Mecánico**: JanIA responde preguntas reflexivas y de fondo sin forzar la mención de cédulas o prediales a menos que sea pertinente.
+2. **`server/_core/whatsapp-match.ts`**:
+   - **Transcripción de Audios Entrantes en DMs**: Integrado `downloadMediaSafely` y `transcribeAudioBuffer` en el buffer de DMs para que JanIA "escuche" las notas de voz recibidas.
+   - **Despacho Autónomo de Notas de Voz PTT**: Si el mensaje recibido fue una nota de voz (`isAudioPTT`) o el usuario solicita respuesta por audio (`detectaVoz(body)`), JanIA sintetiza la respuesta con [textToSpeechMedia](file:///home/eddu/Proyectos/vecy-network/server/_core/whatsapp-utils.ts#L465) y la despacha como Nota de Voz nativa de WhatsApp (`ptt: true`) con micrófono verde.
+3. **`shared/const.ts` y `package.json`**:
+   - Incrementada la versión oficial a **v32.28** (`32.28.0`).
+4. **Validación y Despliegue**:
+   - `npx tsc --noEmit`: 0 errores ✅.
+   - `npm run build`: Vite + esbuild 100% limpios ✅.
+   - `npx vitest run`: 126/126 tests superados ✅.
+   - Simulación local de 3 turnos idénticos al chat de Eduardo: Saludo horario *"Buenas tardes"* en T1, cero saludos en T2 y T3, explicación completa y humana de VECY y cierre conversacional empático ✅.
+
+---
 
 ### Solicitud de Eduardo
 1. **Auditoría de Inactividad en Línea de Pruebas (+57 318 809 6811)**:

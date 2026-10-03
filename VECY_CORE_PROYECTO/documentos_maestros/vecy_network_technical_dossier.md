@@ -322,6 +322,37 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.28 — Octubre 2026
+
+#### 📌 HUMANIZACIÓN TOTAL DE JANIA: SALUDO HORARIO CONTEXTUAL, CERO RE-SALUDOS EN HILOS ACTIVOS, CEREBRO INMOBILIARIO EXPERTO Y NOTAS DE VOZ PTT EN DMs
+
+**Requerimiento y Objetivos:**
+1. Desterrar el comportamiento robótico de contestador automático reportado por Eduardo en capturas de WhatsApp Web, donde JanIA repetía *"¡Hola Jani! 👋 Qué gusto saludarte..."* en cada turno de la charla.
+2. Restaurar la doctrina de saludo horario contextual (un solo *"Buenos Días"*, *"Buenas Tardes"* o *"Buenas Noches"* al inicio del día y continuar el hilo sin volver a saludar).
+3. Eliminar el estribillo mecánico de *"¿cuál de las dos herramientas te gustaría probar primero?"* ante preguntas reflexivas sobre la empresa o qué más hace.
+4. Desplegar todo el conocimiento experto de bienes raíces de JanIA (contratos, Ley 820 de 2003, Ley 675 de 2001, estudio de títulos SNR a 20 años, notarías, escrituración, avalúos, alianzas 50/50, fundadores Eduardo y Jani).
+5. Conectar soporte nativo de notas de voz / audios en DMs privados (transcripción de audio entrante y envío de Nota de Voz PTT nativa de WhatsApp con micrófono verde).
+
+**Causas Raíz:**
+1. Prompt de DM rígido y encasillado en una sola directiva que forzaba a preguntar por las dos herramientas al final de cada turno.
+2. Inexistencia de discriminación de historial activo (`hasPriorHistory`), induciendo al LLM a emitir saludos de bienvenida en cada mensaje.
+3. Fast-path con saludo genérico estático sin considerar el horario oficial de Bogotá.
+4. Inexistencia de handler de audio en DMs privados.
+
+**Solución Aplicada:**
+- **`server/_core/janIA.ts`**:
+  - Saludo horario contextual con `getGreetingByTime()`.
+  - Regla de oro de continuidad conversacional (prohibición estricta de re-saludos en hilo activo) y filtro post-LLM anti-saludos.
+  - Enriquecimiento masivo del cerebro inmobiliario de JanIA en el system prompt y supresión del estribillo mecánico.
+- **`server/_core/whatsapp-match.ts`**:
+  - Transcripción automática de audios entrantes en DMs con `downloadMediaSafely` y `transcribeAudioBuffer`.
+  - Despacho autónomo de Notas de Voz PTT (`textToSpeechMedia` + `cleanVoiceText` + `ptt: true`) ante audios recibidos o peticiones expresas de voz.
+- **Versión Oficial**: Incrementada a **v32.28** (`32.28.0`) en `shared/const.ts` y `package.json`.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅ | Simulación end-to-end de diálogo de 3 turnos con tono humano impecable ✅
+
+---
+
 ### 🔖 v32.27 — Octubre 2026
 
 #### 📌 MODELOS GEMINI DE ALTA DISPONIBILIDAD (FLASH-LITE), DESPACHO SECUENCIAL ESTRICTO DE RESEÑAS GOOGLE Y BLINDAJE ANTI-COLISIÓN 440

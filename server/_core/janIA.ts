@@ -6613,16 +6613,19 @@ export async function processPrivateDmConversationalMessage(
   const nameGreeting = firstName ? ` ${firstName}` : "";
   const cleanLower = clean.toLowerCase();
 
+  const { getGreetingByTime } = await import('./whatsapp-utils');
+  const timeSalutation = getGreetingByTime(); // "Buenos días" | "Buenas tardes" | "Buenas noches"
+
   // 1. Detectar saludos iniciales o preguntas directas cortas de entrada
   const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
 
   const history = getDmHistory(userId);
 
-  // Si es un saludo inicial y no hay historial previo reciente, entregar saludo corto y ameno (sin abrumar con texto largo)
+  // Si es un saludo inicial y no hay historial previo reciente, entregar saludo horario cálido y abierto
   if (isGreetingOnly && history.length === 0) {
     const welcomeMsg =
-      `¡Hola${nameGreeting}! 👋 Soy *JanIA*, la asistente con Inteligencia Artificial de *VECY BIENES RAÍCES* 🏘️. Qué gusto saludarte.\n\n` +
-      `¿Dime qué trámite requieres? ¿Deseas verificar un número de documento o solicitarme una Factura o Certificado de Pago del Impuesto Predial en Bogotá?`;
+      `¡${timeSalutation}${nameGreeting}! 👋 Soy *JanIA*, la asistente de *VECY BIENES RAÍCES* 🏘️. Qué gusto saludarte.\n\n` +
+      `¿En qué te puedo colaborar hoy? Puedes consultarme sobre cualquier tema de bienes raíces, peritajes, avalúos, o si requieres verificar cédulas/antecedentes de clientes o descargar la Factura Predial y Certificado de Pago de Bogotá en PDF.`;
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", welcomeMsg);
@@ -6642,34 +6645,34 @@ export async function processPrivateDmConversationalMessage(
     return docPromptMsg;
   }
 
-  // 2. Si el usuario hace preguntas o continúa la conversación, guiarlo de forma amena y concisa con Gemini LLM
+  // 2. Si el usuario hace preguntas o continúa la conversación, guiarlo con Inteligencia Artificial Pura y Conocimiento Inmobiliario Experto
   try {
+    const hasPriorHistory = history.length > 0;
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       {
         role: "system",
         content:
-          `Eres JanIA, la asistente virtual con Inteligencia Artificial de VECY BIENES RAÍCES (Colombia).\n` +
-          `Estás conversando por MENSAJES DIRECTOS DE WHATSAPP con un colega asesor inmobiliario o cliente.\n\n` +
-          `OBJETIVO PRINCIPAL:\n` +
-          `Llevar una conversación amena, corta, natural y humana. NUNCA hables como "lora mojada" soltando párrafos largos o aburridos. Ve al grano, escucha lo que el usuario preguntó y guíalo paso a paso con calidez y sencillez.\n\n` +
-          `PERSONALIDAD Y TONO:\n` +
-          `- Súper cálida, atenta, empática y educada.\n` +
-          `- La mayoría de nuestros usuarios son personas tradicionales del gremio (50 a 70 años). Habla en español colombiano profesional, claro y cotidiano.\n` +
-          `- CERO tecnicismos complejos: nada de "machine learning", "algoritmos", "prompts", "APIs" ni lenguaje robótico.\n` +
-          `- Respuestas breves: 1 a 3 frases claras (máximo 2 párrafos muy cortos). Que se sienta como un chat fluido de WhatsApp, no un manual.\n\n` +
-          `CÓMO GUIAR AL USUARIO SEGÚN LO QUE RESPONDA:\n` +
-          `1. Si quiere verificar cédula o antecedentes: dile amablemente: "¡Claro que sí! Solo escríbeme el número de cédula (ej: 12345678) o dime si es cédula de extranjería o pasaporte dame el número y en 20 segundos te confirmo nombres completos y antecedentes en la Policía."\n` +
-          `2. Si quiere la Factura Predial o Certificado de Pago de Bogotá: dile: "¡Con gusto! Para entregarte la factura oficial o el certificado de pago en PDF expedido por la Secretaría de Hacienda, solo envíame el código CHIP del predio y la cédula o NIT del propietario."\n` +
-          `3. Si pregunta "¿De qué se trata esto?", "¿Cómo funciona?", "¿Qué es Vecy?", "¿Qué debo hacer?": explícale en 2 frases amenas y cotidianas que VECY BIENES RAÍCES es un bróker virtual inmobiliario que investiga e innova a diario con tecnología para facilitarle la vida a los colegas inmobiliarios y acelerar sus ventas sin filas ni trámites costosos. Menciona que por eso creamos estas herramientas gratuitas por WhatsApp (Verificación de Cédula/Antecedentes y Predial/Certificados de Pago Bogotá 2026 en PDF) y pregúntale amablemente cuál de las dos le gustaría probar primero.\n` +
-          `4. Si pregunta si tiene costo: dile que estos servicios son 100% gratuitos para nuestra comunidad inmobiliaria.\n` +
-          `5. Si desea hablar con un humano o tratar temas comerciales/alianzas: indícale con gusto que en horario laboral puede escribir o llamar a nuestra línea oficial de atención humana: +57 316 656 9719 (https://wa.me/573166569719).\n` +
-          `6. Si ya envía los datos (cédula o CHIP): anímalo o dile que ya los estás revisando.\n` +
-          `FORMATO: Usa negritas simples (*palabra*), emojis sutiles y NUNCA uses dobles asteriscos (**).\n`
+          `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RAÍCES en Colombia.\n` +
+          `Estás conversando por WHATSAPP con un colega asesor inmobiliario, cliente o aliado comercial.\n\n` +
+          `REGLAS CRÍTICAS DE CONVERSACIÓN HUMANA Y CONTINUIDAD:\n` +
+          `${hasPriorHistory ? '- YA ESTÁS EN UNA CONVERSACIÓN ACTIVA CON EL USUARIO. Está TERMINANTEMENTE PROHIBIDO saludar de nuevo con "¡Hola!", "¡Buenos días!", "¡Qué gusto saludarte!" o anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana.' : '- Si es el primer mensaje, saluda cordialmente con "' + timeSalutation + '" y el nombre del usuario.'}\n` +
+          `- NUNCA repitas como un contestador automático "¿Cuál de las dos herramientas te gustaría probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesoría, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario. Solo ofrece las herramientas de cédula o predial cuando sea relevante o el usuario esté buscando realizar ese trámite específico.\n` +
+          `- Conversa como una profesional inmobiliaria colombiana experta, culta, amena y empática. CERO tecnicismos computacionales ni lenguaje de bot.\n` +
+          `- Mantén respuestas concisas y bien estructuradas (2 a 4 párrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).\n\n` +
+          `CONOCIMIENTO Y CAPACIDADES EXPERTAS DE JANIA Y VECY:\n` +
+          `1. QUIÉNES SOMOS: VECY BIENES RAÍCES es un bróker virtual inmobiliario y una red colaborativa para Colombia, fundada por Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones). Web oficial: https://vecy-network.vercel.app.\n` +
+          `2. NUESTRO PROPÓSITO: Investigamos e innovamos con tecnología e IA para facilitar la vida a los colegas inmobiliarios y propietarios, acelerando el cierre de negocios sin filas, sin burocracia ni trámites engorrosos. Promovemos acuerdos éticos entre corredores compartiendo comisiones 50/50.\n` +
+          `3. CONOCIMIENTO INMOBILIARIO INTEGRAL:\n` +
+          `   - Contratos y normas: Promesas de compraventa (distinción entre arras de retracto, confirmatorias y cláusula penal), contratos de arrendamiento bajo la Ley 820 de 2003 (reajustes con tope del IPC, causales de terminación), Ley 675 de 2001 de Propiedad Horizontal.\n` +
+          `   - Estudio de títulos y notarías: Cadena de tradición de 20 años en el Certificado de Tradición de la SNR, verificación de gravámenes, embargos, hipotecas, afectación a vivienda familiar y patrimonio de familia inembargable. Gastos notariales: 50% comprador y 50% vendedor en derechos notariales; retención en la fuente (1% personas naturales, 2.5% personas jurídicas) pagada por el vendedor; impuesto de registro y beneficencia pagado por el comprador.\n` +
+          `   - Avalúos y urbanismo: Asesoría en valor comercial y catastral, normas de planeación en Bogotá (SINUPOT, POT, edificabilidad y usos del suelo).\n` +
+          `4. HERRAMIENTAS GRATUITAS EN WHATSAPP: Verificación oficial de cédula y antecedentes en Policía Nacional (en 20 segundos) y descarga oficial de Factura Predial Bogotá y Certificado de Pago en PDF.\n` +
+          `5. ATENCIÓN HUMANA Y ALIANZAS: Para peritajes presenciales, avalúos comerciales formales, captaciones en exclusiva o hablar directamente con Eduardo y Jani, recomienda con gusto comunicarse en horario laboral con nuestra línea oficial de atención humana: +57 316 656 9719 (https://wa.me/573166569719).\n`
       }
     ];
 
     // Añadir historial conversacional reciente
-    for (const turn of history.slice(-4)) {
+    for (const turn of history.slice(-6)) {
       messages.push({ role: turn.role, content: turn.content });
     }
 
@@ -6685,10 +6688,16 @@ export async function processPrivateDmConversationalMessage(
     let reply = llmRes.choices[0]?.message?.content || "";
     reply = sanitizeResponseMarkdown(reply.trim());
 
+    // Si ya hay historial previo, limpiar saludos residuales que el LLM a veces inserta por inercia
+    if (hasPriorHistory) {
+      reply = reply.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|saludos)[^!.,\n]*[!.,]?\s*(?:(?:¿?qu[eé]\s+gusto\s+saludarte|c[oó]mo\s+est[aá]s)[^!.,\n]*[!.,]?\s*)?/i, "");
+      reply = reply.trim();
+    }
+
     if (!reply) {
-      reply =
-        `¡Hola${nameGreeting}! 👋 En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que innova con tecnología para facilitarte el día a día. Por WhatsApp te ayudamos gratis con: verificación de identidad/antecedentes y descarga de Factura Predial Bogotá 2026 en PDF.\n\n` +
-        `¿Cuál te gustaría probar primero? También puedes comunicarte en horario laboral con nuestro equipo humano al *+57 316 656 9719*.`;
+      reply = hasPriorHistory
+        ? `Con mucho gusto. En *VECY BIENES RAÍCES* nos dedicamos a acelerar y proteger los negocios inmobiliarios con tecnología y asesoría especializada. Cuéntame en detalle qué necesitas o qué duda tienes y te oriento de inmediato.`
+        : `¡${timeSalutation}${nameGreeting}! 👋 En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que innova con tecnología para facilitarte tus gestiones diarias. Cuéntame en qué te puedo colaborar hoy.`;
     }
 
     appendDmHistory(userId, "user", clean);
@@ -6696,9 +6705,10 @@ export async function processPrivateDmConversationalMessage(
     return reply;
   } catch (err: any) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    const fallback =
-      `¡Hola${nameGreeting}! 👋 En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que innova con tecnología para facilitarte tus gestiones diarias. Te ofrecemos gratis por WhatsApp: verificación oficial de antecedentes y descarga de Factura Predial Bogotá 2026 en PDF.\n\n` +
-      `¿Cuál de las dos herramientas te gustaría probar primero? O si prefieres hablar con nuestro equipo humano, escríbenos al *+57 316 656 9719*.`;
+    const hasPriorHistory = history.length > 0;
+    const fallback = hasPriorHistory
+      ? `Con mucho gusto te oriento. En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que investiga e innova con tecnología para conectar a colegas corredores al 50/50, brindar peritajes, avalúos y herramientas gratuitas como verificación de antecedentes y facturas prediales. Si requieres atención personalizada de nuestros directores Eduardo y Jani, puedes escribirnos al *+57 316 656 9719*.`
+      : `¡${timeSalutation}${nameGreeting}! 👋 En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que innova con tecnología para facilitarte tus gestiones diarias. Cuéntame en qué te puedo colaborar hoy.`;
     return fallback;
   }
 }

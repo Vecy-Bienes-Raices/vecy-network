@@ -172,7 +172,27 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.27 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.28 — Octubre 2026
+
+### Novedades v32.28 (Humanización Total de JanIA: Saludo Horario Contextual, Cero Re-Saludos en Hilos Activos, Cerebro Inmobiliario Experto y Notas de Voz PTT en DMs):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo auditó a JanIA desde el chat de pruebas y observó que seguía sintiéndose robotizada al saludar en cada turno (*"¡Hola Jani! 👋 Qué gusto saludarte..."*) y repetir al final el estribillo de las dos herramientas (*"¿Cuál de las dos te gustaría probar primero?"*).
+  - Recordó la regla doctrinal del saludo horario (un solo "Buenos Días", "Buenas Tardes" o "Buenas Noches" al inicio del día y continuar el hilo sin volver a saludar).
+  - Exigió que JanIA despliegue todo su conocimiento experto de bienes raíces (contratos, Ley 820, Ley 675, estudio de títulos SNR a 20 años, notarías, escrituración, avalúos, alianzas 50/50, fundadores Eduardo y Jani) con total soltura y libertad de IA Pura.
+  - Solicitó que JanIA sea capaz de enviar y recibir audios / notas de voz en DMs privados.
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Saludo Horario Contextual y Cero Re-Saludos (`server/_core/janIA.ts`)**:
+     - Integrado [getGreetingByTime](file:///home/eddu/Proyectos/vecy-network/server/_core/whatsapp-utils.ts#L184) para saludar según la hora oficial de Bogotá en el primer mensaje de la sesión.
+     - Implementada la Regla de Oro de Continuidad Conversacional: si `hasPriorHistory` es verdadero, se prohíbe taxativamente saludar o anteponer el nombre en cada turno; la respuesta va directo al grano con naturalidad humana.
+     - Implementada limpieza con regex post-LLM para eliminar cualquier saludo residual generado por inercia del modelo.
+  2. **Cerebro Inmobiliario Completo y Supresión del Estribillo Rígido**:
+     - System prompt de `processPrivateDmConversationalMessage` enriquecido con toda la doctrina y sapiencia inmobiliaria de VECY Network. JanIA responde preguntas reflexivas y de fondo con sabiduría y calidez sin forzar mecánicamente las herramientas de cédula o predial.
+  3. **Notas de Voz Nativas (PTT) y Transcripción de Audios en DMs (`server/_core/whatsapp-match.ts`)**:
+     - Conectado `downloadMediaSafely` y `transcribeAudioBuffer` en el buffer de DMs para transcribir audios entrantes.
+     - Si el mensaje entrante fue una nota de voz (`isAudioPTT`) o el usuario pide audio (`detectaVoz(body)`), JanIA sintetiza la respuesta con [textToSpeechMedia](file:///home/eddu/Proyectos/vecy-network/server/_core/whatsapp-utils.ts#L465) y la despacha como Nota de Voz nativa de WhatsApp (`ptt: true`) con micrófono verde.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build limpio ✅ | 126/126 tests Vitest ✅ | Simulación end-to-end de diálogo de 3 turnos con tono humano impecable ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.27 — Octubre 2026
 
 ### Novedades v32.27 (Modelos Gemini Alta Disponibilidad Flash-Lite, Despacho Secuencial Estricto de Google Reviews y Blindaje Anti-Colisión 440):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

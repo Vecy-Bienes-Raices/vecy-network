@@ -991,12 +991,13 @@ export class JaniaMatchBot {
     isAdmin: boolean,
     isSelfChat: boolean = false
   ) {
-    // 1. Combinar cuerpos de texto y buscar imágenes o documentos
+    // 1. Combinar cuerpos de texto y buscar imágenes, documentos o notas de voz
     let combinedBody = "";
     let mainMsg = messages[messages.length - 1]; // Usar el último mensaje como referencia para respuestas/reacciones
     let imageBuffer: string | undefined;
     let pdfBuffer: string | undefined;
     let pdfMimeType: string | undefined;
+    let isAudioPTT = false;
 
     for (const msg of messages) {
       const rawMsg = unwrapMessage(msg.message);
@@ -1006,6 +1007,23 @@ export class JaniaMatchBot {
       else if (rawMsg?.imageMessage) body = rawMsg.imageMessage.caption || '';
       else if (rawMsg?.documentMessage) body = rawMsg.documentMessage.caption || '';
       else if (rawMsg?.videoMessage) body = rawMsg.videoMessage.caption || '';
+      else if (rawMsg?.audioMessage) {
+        isAudioPTT = true;
+        try {
+          console.log(`[JANIA-MATCH] Transcribiendo nota de voz PTT de DM ${senderId}...`);
+          const audioBuffer = await downloadMediaSafely(msg as any, 'audio');
+          if (audioBuffer && audioBuffer.length > 0) {
+            const mimeType = rawMsg.audioMessage.mimetype || 'audio/ogg; codecs=opus';
+            const transcription = await transcribeAudioBuffer(audioBuffer, mimeType);
+            if (transcription && transcription.trim() !== '') {
+              body = transcription.trim();
+              console.log(`[JANIA-MATCH] Transcripción exitosa de DM: "${body.substring(0, 80)}..."`);
+            }
+          }
+        } catch (audioErr: any) {
+          console.error('[JANIA-MATCH] Error al transcribir nota de voz DM:', audioErr.message || audioErr);
+        }
+      }
 
       if (body.trim()) {
         combinedBody += (combinedBody ? "\n" : "") + body.trim();
@@ -1141,7 +1159,34 @@ export class JaniaMatchBot {
         const { processPrivateDmConversationalMessage } = await import('./janIA');
         const reply = await processPrivateDmConversationalMessage(body, senderId, userName);
         if (reply && reply.trim()) {
-          console.log(`[JANIA-MATCH] [DM-AI] Respuesta de IA pura enviada a ${senderId} (${userName}): "${reply.substring(0, 60)}..."`);
+          console.log(`[JANIA-MATCH] [DM-AI] Respuesta de IA pura para ${senderId} (${userName}): "${reply.substring(0, 60)}..."`);
+
+          // 🎙️ Soporte Nativo de Notas de Voz PTT en DMs (si el usuario envió audio o solicita respuesta por voz)
+          const { detectaVoz, textToSpeechMedia, cleanVoiceText } = await import('./whatsapp-utils');
+          const wantsVoice = detectaVoz(body);
+          const shouldSendVoice = wantsVoice || isAudioPTT;
+
+          if (shouldSendVoice) {
+            try {
+              console.log(`[JANIA-MATCH] [DM-AI] Generando respuesta en nota de voz PTT para ${senderId}...`);
+              await this.sock.sendPresenceUpdate('recording', senderId);
+              const cleanText = cleanVoiceText(reply);
+              const media = await textToSpeechMedia(cleanText);
+              if (media && media.data) {
+                const audioBuffer = Buffer.from(media.data, 'base64');
+                await this.queuedSend(senderId, {
+                  audio: audioBuffer,
+                  mimetype: media.mimetype || 'audio/ogg; codecs=opus',
+                  ptt: true
+                }, { quoted: mainMsg, allowDirectMessage: true });
+                await this.logToDb(senderId, 'janIA', `[Nota de Voz PTT]: ${reply}`);
+                return;
+              }
+            } catch (ttsErr: any) {
+              console.warn('[JANIA-MATCH] [DM-AI] Error generando nota de voz, enviando texto como fallback:', ttsErr?.message);
+            }
+          }
+
           await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
           await this.logToDb(senderId, 'janIA', reply);
           return;
