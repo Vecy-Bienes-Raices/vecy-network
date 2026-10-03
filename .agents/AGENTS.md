@@ -172,7 +172,26 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.25 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.26 — Octubre 2026
+
+### Novedades v32.26 (Atención Total en DMs a Líneas Directivas y de Prueba, Erradicación del Bug 'Tres Puntitos y Silencio', Cascada Oficial Gemini 3.8/3.6 Flash y Cooldown Inteligente de Cuota):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo auditó a JanIA esta madrugada desde un número alterno de pruebas (`182781141344345@lid` / `+57 318 809 6811` de Jani Alves) y reportó: *"hace el intento de escribir, porque sale el gesto de los tres puntitos, como si ella estuviese escribiendo pero finalmente no envía nada... no me gusta que pase esto pues perdemos credibilidad ante nuestros usuarios."*
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Apertura de Protocolo Conversacional para Directivos y Celulares de Prueba (`server/_core/whatsapp-match.ts`)**:
+     - Las líneas de directores (`ADMIN_IDENTIFIERS`) estaban excluidas del protocolo conversacional con `if (!isAdmin && body.trim())`, causando que cualquier saludo o consulta informal de prueba terminara en `return;` (silencio absoluto doctrinal de administradores).
+     - Se reemplazó la condición por `shouldEngageConversational = !isSelfChat || isExplicitJanIaCall`, de modo que los celulares directivos y números de prueba reciben siempre atención de IA Pura conversacional, rápida y cálida. El silencio solo se aplica al self-chat propio (`isSelfChat`) cuando Eduardo guarda notas personales.
+  2. **Erradicación de 'Tres Puntitos' Colgados con Failsafe de Presencia (`paused`)**:
+     - Si por cualquier motivo un mensaje de DM no genera despacho, el sistema ejecuta de inmediato `this.sock.sendPresenceUpdate('paused', senderId)`, cancelando cualquier indicador de escritura previo.
+     - En el buffer inicial, la activación de `composing` se condicionó a `!isSelfChat`.
+  3. **Cascada Oficial Gemini (`server/_core/llm.ts`) y Cooldown Inteligente de Cuota Diaria**:
+     - `FALLBACK_MODELS` actualizado con los modelos oficiales activos de Google: `gemini-3.8-flash` (primario), `gemini-3.6-flash` (secundario) y `gemini-flash-latest` (terciario).
+     - Implementada discriminación del error 429: si Google reporta cuota diaria agotada (`Quota Exceeded` / `RESOURCE_EXHAUSTED`), la clave se pausa por 1 hora (3600s), evitando que el sistema reintente inútilmente cada 60s mientras haya claves sanas en el pool.
+  4. **Rotación y Priorización de Claves Gemini (`.env` local y VPS)**:
+     - Posicionadas de primeras las claves 100% activas y verificadas con Status 200 OK (`...fJxEDQ` y `...4zA93Q`).
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅ | Simulación end-to-end con `tsx` exitosa ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.25 — Octubre 2026
 
 ### Novedades v32.25 (Resolución del Bug 'Esperando el mensaje' con messageStore en Baileys y Atención Blindada 24/7 en DMs sin Descarte por Reinicio):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

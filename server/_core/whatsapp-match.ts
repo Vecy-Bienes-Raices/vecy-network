@@ -954,10 +954,12 @@ export class JaniaMatchBot {
 
             buffer.messages.push(msg);
 
-            // ⚡ Simulación de presencia inmediata: Mostrar 'composing' (escribiendo...) al usuario
-            try {
-              await this.sock.sendPresenceUpdate('composing', senderId);
-            } catch (_) {}
+            // ⚡ Simulación de presencia inmediata: Mostrar 'composing' (escribiendo...) si no es self-chat
+            if (!isSelfChat) {
+              try {
+                await this.sock.sendPresenceUpdate('composing', senderId);
+              } catch (_) {}
+            }
 
             if (buffer.timer) {
               clearTimeout(buffer.timer);
@@ -966,7 +968,7 @@ export class JaniaMatchBot {
             buffer.timer = setTimeout(async () => {
               this.dmMessageBuffers.delete(senderId);
               try {
-                await this.processBufferedDmMessages(senderId, userName, rawPhone, buffer.messages, isAdmin);
+                await this.processBufferedDmMessages(senderId, userName, rawPhone, buffer.messages, isAdmin, isSelfChat);
               } catch (err) {
                 console.error("[JANIA-MATCH] Error al procesar mensajes de DM acumulados:", err);
               }
@@ -986,7 +988,8 @@ export class JaniaMatchBot {
     userName: string,
     rawPhone: string,
     messages: any[],
-    isAdmin: boolean
+    isAdmin: boolean,
+    isSelfChat: boolean = false
   ) {
     // 1. Combinar cuerpos de texto y buscar imágenes o documentos
     let combinedBody = "";
@@ -1136,11 +1139,15 @@ export class JaniaMatchBot {
       return;
     }
 
-    // 🤖 PROTOCOLO DE INTERACCIÓN IA PURA EN CHAT PRIVADO (DMs TERCEROS):
-    // Si no es un chat de directores (isAdmin) y el usuario envió un mensaje,
-    // JanIA responde de forma cálida, humana e inteligente, guiando en el uso de los servicios
-    // de forma amena, corta y paso a paso, y ofreciendo la línea humana de VECY (+57 316 656 9719).
-    if (!isAdmin && body.trim()) {
+    // 🤖 PROTOCOLO DE INTERACCIÓN IA PURA EN CHAT PRIVADO:
+    // Aplica para todos los usuarios externos, clientes, colegas y números de prueba/directivos (Jani, Eduardo).
+    // Solo se omite si es un self-chat estricto (la línea del bot consigo misma) que no contenga
+    // una invocación explícita o pregunta hacia JanIA ("jania", "hola", "?", etc.).
+    const cleanLower = body.trim().toLowerCase();
+    const isExplicitJanIaCall = isSelfChat && /^(jania|agente\s*jania|hola|ayuda|\?)/i.test(cleanLower);
+    const shouldEngageConversational = !isSelfChat || isExplicitJanIaCall;
+
+    if (shouldEngageConversational && body.trim()) {
       try {
         await this.sock.sendPresenceUpdate('composing', senderId);
         const { processPrivateDmConversationalMessage } = await import('./janIA');
@@ -1149,7 +1156,6 @@ export class JaniaMatchBot {
           console.log(`[JANIA-MATCH] [DM-AI] Respuesta de IA pura enviada a ${senderId} (${userName}): "${reply.substring(0, 60)}..."`);
           await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
           await this.logToDb(senderId, 'janIA', reply);
-          await this.sock.sendPresenceUpdate('paused', senderId);
           return;
         }
       } catch (dmAiErr) {
@@ -1176,7 +1182,11 @@ export class JaniaMatchBot {
       return;
     }
 
-    // Si es un chat de administración/directores y no es solicitud de servicio oficial, silencio absoluto.
+    // Failsafe de Presencia: Si ningún interceptor despachó un mensaje, limpiar el estado 'composing'
+    try {
+      await this.sock.sendPresenceUpdate('paused', senderId);
+    } catch (_) {}
+
     return;
   }
 

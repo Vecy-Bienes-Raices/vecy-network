@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.25";
+    VECY_VERSION = "v32.26";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -1008,7 +1008,10 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
           const status = error.response?.status;
           const errorMsg = error.response?.data?.error?.message || error.message;
           if (status === 429) {
-            markKeyCooldown(activeKey, 60, "Rate Limit 15 RPM / Cuota (429)");
+            const isDailyQuota = /exceeded your current quota|quota exceeded|resource_exhausted/i.test(errorMsg);
+            const pauseSeconds = isDailyQuota ? 3600 : 60;
+            const reason = isDailyQuota ? "Cuota Diaria Agotada en Google (429 Quota Exceeded)" : "Rate Limit 15 RPM / Cuota (429)";
+            markKeyCooldown(activeKey, pauseSeconds, reason);
             break;
           }
           if (status === 503) {
@@ -1047,9 +1050,9 @@ var init_llm = __esm({
     roundRobinIndex = 0;
     getActiveFailoverKey = getActiveRoundRobinKey;
     FALLBACK_MODELS = [
+      "gemini-3.8-flash",
       "gemini-3.6-flash",
-      "gemini-flash-latest",
-      "gemini-flash-lite-latest"
+      "gemini-flash-latest"
     ];
     lastCallTimestamp = 0;
     MIN_CALL_INTERVAL_MS = 600;
@@ -11472,9 +11475,11 @@ ${quotedNote}` : quotedNote;
                   this.dmMessageBuffers.set(senderId, buffer);
                 }
                 buffer.messages.push(msg);
-                try {
-                  await this.sock.sendPresenceUpdate("composing", senderId);
-                } catch (_) {
+                if (!isSelfChat) {
+                  try {
+                    await this.sock.sendPresenceUpdate("composing", senderId);
+                  } catch (_) {
+                  }
                 }
                 if (buffer.timer) {
                   clearTimeout(buffer.timer);
@@ -11482,7 +11487,7 @@ ${quotedNote}` : quotedNote;
                 buffer.timer = setTimeout(async () => {
                   this.dmMessageBuffers.delete(senderId);
                   try {
-                    await this.processBufferedDmMessages(senderId, userName, rawPhone, buffer.messages, isAdmin);
+                    await this.processBufferedDmMessages(senderId, userName, rawPhone, buffer.messages, isAdmin, isSelfChat);
                   } catch (err) {
                     console.error("[JANIA-MATCH] Error al procesar mensajes de DM acumulados:", err);
                   }
@@ -11495,7 +11500,7 @@ ${quotedNote}` : quotedNote;
           }
         });
       }
-      async processBufferedDmMessages(senderId, userName, rawPhone, messages2, isAdmin) {
+      async processBufferedDmMessages(senderId, userName, rawPhone, messages2, isAdmin, isSelfChat = false) {
         let combinedBody = "";
         let mainMsg = messages2[messages2.length - 1];
         let imageBuffer;
@@ -11650,7 +11655,10 @@ ${quotedNote}` : quotedNote;
           }
           return;
         }
-        if (!isAdmin && body.trim()) {
+        const cleanLower = body.trim().toLowerCase();
+        const isExplicitJanIaCall = isSelfChat && /^(jania|agente\s*jania|hola|ayuda|\?)/i.test(cleanLower);
+        const shouldEngageConversational = !isSelfChat || isExplicitJanIaCall;
+        if (shouldEngageConversational && body.trim()) {
           try {
             await this.sock.sendPresenceUpdate("composing", senderId);
             const { processPrivateDmConversationalMessage: processPrivateDmConversationalMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
@@ -11659,7 +11667,6 @@ ${quotedNote}` : quotedNote;
               console.log(`[JANIA-MATCH] [DM-AI] Respuesta de IA pura enviada a ${senderId} (${userName}): "${reply.substring(0, 60)}..."`);
               await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
               await this.logToDb(senderId, "janIA", reply);
-              await this.sock.sendPresenceUpdate("paused", senderId);
               return;
             }
           } catch (dmAiErr) {
@@ -11687,6 +11694,10 @@ ${quotedNote}` : quotedNote;
           await this.queuedSend(senderId, CEDULA_HELP_TEXT2, { quoted: mainMsg, allowDirectMessage: true });
           await this.logToDb(senderId, "janIA", CEDULA_HELP_TEXT2);
           return;
+        }
+        try {
+          await this.sock.sendPresenceUpdate("paused", senderId);
+        } catch (_) {
         }
         return;
       }

@@ -7,6 +7,49 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.26 — 03 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Auditoría Integral de Algoritmos, Sistemas y JanIA**:
+   - Eduardo solicitó una revisión minuciosa de todos los sistemas del proyecto para verificar que estén operando con máxima precisión y confiabilidad.
+2. **Diagnóstico y Solución de JanIA Sin Respuesta ("Tres Puntitos" Escribiendo y Silencio)**:
+   - Eduardo reportó: *"Esta madrugada le escribí a JanIA desde un número alterno que tengo para pruebas y no respondió se ve que ella hace el intento de escribir, porque sale el gesto de los tres puntitos, como si ella estuviese escribiendo pero finalmente no envía nada, esto ya nos había pasado un par de meses atrás y volvió a suceder, no me gusta que pase esto pues perdemos credibilidad ante nuestros usuarios."*
+   - Solicitó comparar con los commits previos cuando funcionaba, reactivar el servicio de inmediato y blindar la arquitectura para evitar que vuelva a suceder.
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Causa Raíz #1: Silenciamiento Involuntario de Líneas Directivas y de Prueba en DMs Privados (`isAdmin`)**:
+   - En `server/_core/whatsapp-match.ts`, el número alterno de pruebas de Eduardo (línea y dispositivo de Jani Alves: `573188096811` / `182781141344345@lid`) está registrado en `ADMIN_IDENTIFIERS`.
+   - Cuando Eduardo le escribió a JanIA esta madrugada desde ese dispositivo ("Hola", "Estás ahí?", "Jania"), el evento de mensaje ingresó al buffer y activó de inmediato la simulación de presencia: `this.sock.sendPresenceUpdate('composing', senderId)` (los "tres puntitos").
+   - 1.5 segundos después, al ejecutarse `processBufferedDmMessages`, el interceptor conversacional de IA Pura estaba condicionado a `if (!isAdmin && body.trim())`.
+   - Al ser evaluado como `isAdmin = true`, el código saltaba la IA conversacional y llegaba al final con `return;` (silencio absoluto doctrinal de directores de v32.12).
+   - **Efecto observado**: JanIA mostraba "escribiendo..." en WhatsApp Web/móvil por unos segundos y luego guardaba silencio absoluto sin enviar respuesta.
+2. **Causa Raíz #2: Modelo LLM Desactualizado y Cuota Agotada de Claves Gemini**:
+   - `server/_core/llm.ts` tenía configurado `FALLBACK_MODELS` con `gemini-flash-latest` (que Google responde con 429 Quota Exceeded), mientras que Google ha promovido oficialmente a **`gemini-3.8-flash`** y **`gemini-3.6-flash`**.
+   - Adicionalmente, las claves 1 y 4 del pool tenían agotada la cuota diaria en Google AI Studio (429 Quota Exceeded), pero el cooldown genérico era de solo 60 segundos, provocando que cada minuto volvieran a seleccionarse e hicieran fallar la llamada antes de saltar a las claves activas.
+   - Las claves #2 y #3 (`...fJxEDQ` y `...4zA93Q`) se verificaron empíricamente con **Status 200 OK**.
+3. **Causa Raíz #3: Ausencia de Limpieza de Presencia (`paused`)**:
+   - Si un mensaje no desembocaba en despacho saliente, el estado `composing` no era revocado explícitamente con `sendPresenceUpdate('paused', senderId)`, dejando la indicación de escritura flotando en el cliente de WhatsApp.
+
+### Acciones Ejecutadas
+1. **`server/_core/whatsapp-match.ts`**:
+   - **Desbloqueo de Protocolo Conversacional para Directivos y Pruebas**: Modificada la condición en `processBufferedDmMessages` para evaluar `shouldEngageConversational = !isSelfChat || isExplicitJanIaCall`. Ahora los números de directivos (`ADMIN_IDENTIFIERS`) y celulares de prueba reciben atención de IA pura cálida y profesional al saludar o consultar a JanIA. El silencio selectivo solo se reserva para el `isSelfChat` propio (notas personales de Eduardo consigo mismo) a menos que invoque explícitamente a JanIA.
+   - **Failsafe de Presencia (`paused`)**: Al final de `processBufferedDmMessages`, si ningún interceptor despacha un mensaje, se ejecuta inmediatamente `await this.sock.sendPresenceUpdate('paused', senderId)` para cancelar los "tres puntitos".
+   - **Composing Seguro**: En la recepción del buffer, se condicionó el `composing` inicial a que no sea `isSelfChat`.
+2. **`server/_core/llm.ts`**:
+   - **Cascada de Modelos Oficiales Actualizada**: `FALLBACK_MODELS` actualizado con `gemini-3.8-flash` (primario), `gemini-3.6-flash` (secundario) y `gemini-flash-latest` (terciario).
+   - **Cooldown Inteligente de Cuota Diaria (3600s)**: Detección de mensajes de cuota diaria agotada (`Quota Exceeded` / `RESOURCE_EXHAUSTED`), pausando la clave afectada por 1 hora (3600s) para que el pool opere limpio y fluido con las claves con cuota disponible.
+3. **`.env` (Local y VPS `/var/www/vecy-network/.env`)**:
+   - Rotadas las claves Gemini para posicionar de primeras las claves 100% operativas (Status 200 verificado).
+4. **`shared/const.ts` y `package.json`**:
+   - Incrementada la versión oficial a **v32.26** (`32.26.0`).
+5. **Validación y Despliegue**:
+   - `npx tsc --noEmit`: 0 errores ✅.
+   - `npm run build`: Vite client + esbuild server (`dist-server/index.js`) 100% limpios ✅.
+   - `npx vitest run`: 126 de 126 tests superados ✅.
+   - Test en vivo con `tsx` simulando "Hola", "Estás ahí?" y "De qué se trata Vecy?" para `182781141344345@lid` (Jani Alves) respondiendo con calidez y precisión doctrinal ✅.
+
+---
+
 ## 📋 SESIÓN v32.25 — 02 Octubre 2026
 
 ### Solicitud de Eduardo

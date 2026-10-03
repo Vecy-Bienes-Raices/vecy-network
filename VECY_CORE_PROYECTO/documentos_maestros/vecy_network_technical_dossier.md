@@ -322,6 +322,43 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.26 — Octubre 2026
+
+#### 📌 ATENCIÓN CONVERSACIONAL TOTAL EN DMs A LÍNEAS DIRECTIVAS Y DE PRUEBA, ERRADICACIÓN DE 'TRES PUNTITOS Y SILENCIO', CASCADA OFICIAL GEMINI 3.8/3.6 FLASH Y COOLDOWN INTELIGENTE DE CUOTA
+
+**Requerimiento y Objetivos:**
+1. Auditar minuciosamente todos los sistemas del proyecto, el motor de matching y el comportamiento de JanIA en WhatsApp.
+2. Resolver el problema reportado por Eduardo donde al escribir a JanIA desde un número alterno de pruebas (`182781141344345@lid` / `+57 318 809 6811` de Jani Alves) se visualizaban los "tres puntitos" de escritura (`composing`), pero finalmente no se emitía respuesta.
+3. Blindar el sistema para evitar que vuelva a ocurrir este silencio y asegurar que JanIA responda siempre con calidez, rapidez e inteligencia de IA Pura.
+
+**Causas Raíz:**
+1. **Silenciamiento Involuntario de Números Directivos y de Prueba (`isAdmin`)**:
+   - En `server/_core/whatsapp-match.ts`, el número alterno de pruebas de Eduardo está registrado en `ADMIN_IDENTIFIERS`.
+   - Al llegar el mensaje, el socket activaba `sendPresenceUpdate('composing', senderId)` (los "tres puntitos").
+   - Luego, `processBufferedDmMessages` evaluaba `if (!isAdmin && body.trim())`. Al ser `isAdmin = true`, saltaba el protocolo conversacional y llegaba al `return;` final (silencio doctrinal de directores de v32.12).
+   - El remitente veía "escribiendo..." y luego silencio total.
+2. **Modelo LLM Desactualizado y Cuota Agotada de Claves Gemini**:
+   - `server/_core/llm.ts` utilizaba `gemini-flash-latest` (que Google responde con 429 Quota Exceeded), mientras que Google ha promovido oficialmente a **`gemini-3.8-flash`** y **`gemini-3.6-flash`**.
+   - Adicionalmente, las claves 1 y 4 del pool tenían agotada la cuota diaria en Google AI Studio (429 Quota Exceeded), pero el cooldown genérico era de solo 60s, haciéndolas fallar repetidamente cada minuto.
+3. **Ausencia de Limpieza de Presencia (`paused`)**:
+   - Si un mensaje no generaba despacho, el socket no enviaba `sendPresenceUpdate('paused', senderId)`, dejando los 3 puntitos colgados.
+
+**Solución Aplicada:**
+- **`server/_core/whatsapp-match.ts`**:
+  - Reemplazado el filtro por `shouldEngageConversational = !isSelfChat || isExplicitJanIaCall`. Los celulares de prueba y directivos ahora reciben respuesta fluida y cálida de IA Pura al saludar o consultar a JanIA.
+  - Implementado failsafe de presencia al final de `processBufferedDmMessages` con `await this.sock.sendPresenceUpdate('paused', senderId)` si no hubo despacho de mensaje.
+  - Condicionado el composing inicial en el buffer a que no sea `isSelfChat`.
+- **`server/_core/llm.ts`**:
+  - `FALLBACK_MODELS` actualizado con `gemini-3.8-flash` (primario), `gemini-3.6-flash` (secundario) y `gemini-flash-latest` (terciario).
+  - Detección inteligente de error 429 por cuota diaria (`Quota Exceeded` / `RESOURCE_EXHAUSTED`) aplicando pausa de 1 hora (3600s).
+- **`.env` (Local y VPS `/var/www/vecy-network/.env`)**:
+  - Reordenadas las claves Gemini para posicionar de primeras las claves con Status 200 verificado (`...fJxEDQ` y `...4zA93Q`).
+- **Versión Oficial**: Incrementada a **v32.26** (`32.26.0`) en `shared/const.ts` y `package.json`.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅ | Simulación end-to-end con `tsx` exitosa ✅
+
+---
+
 ### 🔖 v32.25 — Octubre 2026
 
 #### 📌 RESOLUCIÓN DEL BUG 'ESPERANDO EL MENSAJE' CON MESSAGESTORE EN BAILEYS Y ATENCIÓN BLINDADA 24/7 EN DMs
