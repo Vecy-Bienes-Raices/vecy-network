@@ -7,7 +7,57 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
-## 📋 SESIÓN v32.26 — 03 Octubre 2026
+## 📋 SESIÓN v32.27 — 03 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Auditoría de Inactividad en Línea de Pruebas (+57 318 809 6811)**:
+   - Eduardo reportó que le escribió a JanIA a las 10:53 am ("Buenos días") desde su celular alterno de pruebas y no obtuvo respuesta.
+2. **Omisión de Reseña de Google en Chat de Luis Fernando García (@luifergarcia)**:
+   - Eduardo auditó que a las 7:37 am Luis Fernando García verificó la cédula `72254208` y JanIA le entregó el reporte de identidad y el bucle viral de recomendación (+57 319 291 9978), pero **NO** le envió la invitación a calificar el servicio en Google Review con enlace de 5 estrellas (`https://g.page/r/CctNbwU6UpX5EBM/review`).
+3. **Aclaración sobre Mensajes Pendientes en Chat de Camila Argaez**:
+   - Eduardo recordó que anoche a Camila le quedaron mensajes con *"Esperando el mensaje. Esto puede demorar un poco"*.
+4. **Consulta Doctrinal sobre la Identidad y Autonomía de JanIA**:
+   - Eduardo preguntó si JanIA actúa como una **"IA PURA" con libre albedrío** o como un simple bot rígido.
+   - Preguntó si es la misma JanIA de la Web (`/jania`) y de los grupos 2 y 3, o si se crearon sistemas separados con conflictos de personalidad ("cortocircuitos").
+   - Solicitó tener sumo cuidado con códigos duplicados y blindar el sistema contra posibles baneos de WhatsApp.
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Causa Raíz #1: Conflicto de Conexión Baileys (Código 440 connectionReplaced) por Instancia Local**:
+   - En el entorno de desarrollo local, un proceso en background (`PID 27182`) se encontraba corriendo con `ENABLE_WHATSAPP_BOT=true`.
+   - Al intentar autenticarse con la misma sesión `.baileys_auth`, WhatsApp Multi-Device expulsaba continuamente la sesión del VPS con código `440 connectionReplaced`.
+   - A las 10:53 am, cuando Eduardo envió "Buenos días", el socket del VPS estaba en pleno ciclo de reconexión forzada.
+2. **Causa Raíz #2: Colapso de Cuota en Modelos Gemini Flash y Bloqueo Prematuro de Claves**:
+   - `gemini-3.8-flash` y `gemini-3.6-flash` tienen un límite estricto de solo 20 requests/día en el Free Tier de Google AI Studio. Al consumirse en la ingesta de grupos masivos, Google retornaba `429 Too Many Requests (Quota Exceeded)`.
+   - La lógica de `llm.ts` marcaba la clave completa con una pausa de 3600 segundos (1 hora), impidiendo que los modelos con amplia cuota activa y de ultra alta velocidad (**`gemini-3.5-flash-lite`**, **`gemini-flash-lite-latest`**, **`gemini-3.5-flash`**) pudieran ser utilizados por las demás claves.
+3. **Causa Raíz #3: Pérdida del Mensaje de Google Review por `setTimeout` Flotantes**:
+   - En `server/_core/whatsapp-match.ts`, el reporte, el bucle viral y la reseña de Google se gestionaban con `setTimeout` (1.5s y 3.2s).
+   - La cola `outgoingQueue` ya implementa su propia secuencia asíncrona con pausas de tipeo humano de 2 a 4 segundos por mensaje. El segundo temporizador de 3.2s disparaba mientras la cola procesaba el mensaje anterior, provocando que si había un micro-delay de resolución de DNS o serialización de URL en Baileys, el mensaje se descartara en el bloque `catch (_)`.
+4. **Causa Raíz #4: Mensajes Antiguos de Camila Argaez**:
+   - Los mensajes de Camila datan de ayer a las 18:26 y 18:43, generados ANTES de la implementación de `messageStore` y el handler `getMessage` de Baileys en la versión v32.25.
+5. **Causa Raíz #5: Doctrinal: Arquitectura Unificada de JanIA**:
+   - JanIA es un **único sistema cerebro** centralizado en `server/_core/janIA.ts`. No existen dos JanIAs ni agentes paralelos en colisión. En DMs privados opera como **IA Pura conversacional** (con LLM adaptativo colombiano, memoria de contexto histórico y respuestas dinámicas con libre albedrío), complementada con fast-paths inmediatos para evitar demoras en saludos o verificaciones de cédula.
+
+### Acciones Ejecutadas
+1. **`server/_core/llm.ts`**:
+   - **Modelos de Alta Disponibilidad Activos**: `FALLBACK_MODELS` reconfigurado con `gemini-3.5-flash-lite` (primario), `gemini-flash-lite-latest` (secundario), `gemini-3.5-flash` (terciario) y `gemini-flash-latest` (cuaternario). Todos validados empíricamente con respuestas en <1.5s y 100% cuota operativa.
+   - **Cooldown Balanceado (60s)**: La pausa por saturación 429 se calibró a 60s, evitando que las claves se deshabiliten por 1 hora completa.
+2. **`server/_core/whatsapp-match.ts`**:
+   - **Despacho Secuencial Estricto (Anti-Pérdidas de Reseñas de Google)**: Eliminados todos los `setTimeout` flotantes en `predialPendingCheck`, `predialCheck` y `idCheck`. Reemplazados por llamadas secuenciales ordenadas:
+     `await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true });`
+     `await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true });`
+     Asegurando que el reporte oficial, el bucle viral y la reseña de 5 estrellas en Google se envíen siempre de manera escalonada, fluida y con simulación de tipeo humano.
+3. **Blindaje de Entorno Local**:
+   - Aniquilado el proceso residual local `PID 27182`.
+   - Fijado `ENABLE_WHATSAPP_BOT=false` en el `.env` local para garantizar que la conexión Baileys resida con exclusividad 100% en el VPS.
+4. **`shared/const.ts` y `package.json`**:
+   - Incrementada la versión oficial a **v32.27** (`32.27.0`).
+5. **Validación y Despliegue**:
+   - `npx tsc --noEmit`: 0 errores ✅.
+   - `npm run build`: Cliente Vite + servidor esbuild limpios ✅.
+   - `npx vitest run`: 126/126 tests superados ✅.
+   - Test en vivo con `tsx` de `processPrivateDmConversationalMessage` validando tono de IA Pura y respuestas naturales para Jani Alves ✅.
+
+---
 
 ### Solicitud de Eduardo
 1. **Auditoría Integral de Algoritmos, Sistemas y JanIA**:

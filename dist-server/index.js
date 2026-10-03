@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.26";
+    VECY_VERSION = "v32.27";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -1008,10 +1008,7 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
           const status = error.response?.status;
           const errorMsg = error.response?.data?.error?.message || error.message;
           if (status === 429) {
-            const isDailyQuota = /exceeded your current quota|quota exceeded|resource_exhausted/i.test(errorMsg);
-            const pauseSeconds = isDailyQuota ? 3600 : 60;
-            const reason = isDailyQuota ? "Cuota Diaria Agotada en Google (429 Quota Exceeded)" : "Rate Limit 15 RPM / Cuota (429)";
-            markKeyCooldown(activeKey, pauseSeconds, reason);
+            markKeyCooldown(activeKey, 60, "Rate Limit / Saturaci\xF3n de Modelo (429)");
             break;
           }
           if (status === 503) {
@@ -1050,8 +1047,9 @@ var init_llm = __esm({
     roundRobinIndex = 0;
     getActiveFailoverKey = getActiveRoundRobinKey;
     FALLBACK_MODELS = [
-      "gemini-3.8-flash",
-      "gemini-3.6-flash",
+      "gemini-3.5-flash-lite",
+      "gemini-flash-lite-latest",
+      "gemini-3.5-flash",
       "gemini-flash-latest"
     ];
     lastCallTimestamp = 0;
@@ -11570,18 +11568,8 @@ ${quotedNote}` : quotedNote;
               await this.sock.sendMessage(senderId, { react: { text: "\u{1F4C4}", key: mainMsg.key } }).catch(() => {
               });
               const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-              setTimeout(async () => {
-                try {
-                  await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true });
-                } catch (_) {
-                }
-              }, 1500);
-              setTimeout(async () => {
-                try {
-                  await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
-                } catch (_) {
-                }
-              }, 3200);
+              await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true });
+              await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
             } else {
               await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
             }
@@ -11610,18 +11598,8 @@ ${quotedNote}` : quotedNote;
             await this.sock.sendMessage(senderId, { react: { text: "\u{1F4C4}", key: mainMsg.key } }).catch(() => {
             });
             const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-            setTimeout(async () => {
-              try {
-                await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true });
-              } catch (_) {
-              }
-            }, 1500);
-            setTimeout(async () => {
-              try {
-                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
-              } catch (_) {
-              }
-            }, 3200);
+            await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true });
+            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
           } else {
             await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
           }
@@ -11640,18 +11618,8 @@ ${quotedNote}` : quotedNote;
           await this.logToDb(senderId, "janIA", idCheck.reportText);
           if (idCheck.success) {
             const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-            setTimeout(async () => {
-              try {
-                await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true });
-              } catch (_) {
-              }
-            }, 1500);
-            setTimeout(async () => {
-              try {
-                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
-              } catch (_) {
-              }
-            }, 3200);
+            await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true });
+            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
           }
           return;
         }

@@ -172,7 +172,25 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.26 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.27 — Octubre 2026
+
+### Novedades v32.27 (Modelos Gemini Alta Disponibilidad Flash-Lite, Despacho Secuencial Estricto de Google Reviews y Blindaje Anti-Colisión 440):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo auditó a JanIA desde el `3188096811` a las 10:53 am sin respuesta. Al mismo tiempo observó que Luis Fernando García (`@luifergarcia`) a las 7:37 am recibió verificación de cédula y bucle viral pero NO la invitación a calificar en Google Review (`https://g.page/r/CctNbwU6UpX5EBM/review`). Mencionó los mensajes congelados de Camila Argaez y consultó si JanIA opera como IA Pura o bot rígido, y si es la misma en la web y grupos.
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Anulación de Conflicto de Conexión 440 por Instancia Local**:
+     - Un proceso en background local con `ENABLE_WHATSAPP_BOT=true` desconectaba continuamente el VPS con código 440 (`connectionReplaced`). Proceso eliminado y blindado `.env` local con `ENABLE_WHATSAPP_BOT=false`.
+  2. **Modelos Gemini de Alta Disponibilidad y Cooldown Balanceado (`server/_core/llm.ts`)**:
+     - Google Free Tier limitó `gemini-3.8-flash` a solo 20 reqs/día, saturándolo en grupos.
+     - `FALLBACK_MODELS` reconfigurado con **`gemini-3.5-flash-lite`** (ultra rápido, amplia cuota), **`gemini-flash-lite-latest`**, **`gemini-3.5-flash`** y **`gemini-flash-latest`**.
+     - Cooldown de 429 balanceado a 60s (sin congelar claves durante 1 hora).
+  3. **Despacho Secuencial Estricto en WhatsApp (`server/_core/whatsapp-match.ts`)**:
+     - Eliminados los `setTimeout` flotantes. El bucle viral y la reseña en Google de 5 estrellas se encadenan secuencialmente con `await this.queuedSend(...)` en la cola asíncrona, garantizando entrega completa con simulación humana de tipeo.
+  4. **Unificación Doctrinal de IA Pura**:
+     - JanIA es un núcleo único centralizado (`server/_core/janIA.ts`) sin duplicados ni cortocircuitos. En DMs dialoga con libre albedrío, calidez colombiana y memoria contextual.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build limpio ✅ | 126/126 tests Vitest ✅ | Simulación end-to-end de IA Pura exitosa ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.26 — Octubre 2026
 
 ### Novedades v32.26 (Atención Total en DMs a Líneas Directivas y de Prueba, Erradicación del Bug 'Tres Puntitos y Silencio', Cascada Oficial Gemini 3.8/3.6 Flash y Cooldown Inteligente de Cuota):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

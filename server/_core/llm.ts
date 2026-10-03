@@ -104,8 +104,9 @@ function markKeyCooldown(key: string, seconds: number = 60, reason: string = "Ra
 
 // Modelos ordenados por prioridad de fallback (100% compatibles y activos en Google API)
 const FALLBACK_MODELS = [
-  "gemini-3.8-flash",
-  "gemini-3.6-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-flash-lite-latest",
+  "gemini-3.5-flash",
   "gemini-flash-latest",
 ];
 
@@ -267,12 +268,9 @@ async function invokeGemini(
           const status = error.response?.status;
           const errorMsg = error.response?.data?.error?.message || error.message;
 
-          // 429: Rate Limit (15 RPM) o Cuota en esta clave
+          // 429: Rate Limit (15 RPM) o Cuota saturada en este modelo/clave
           if (status === 429) {
-            const isDailyQuota = /exceeded your current quota|quota exceeded|resource_exhausted/i.test(errorMsg);
-            const pauseSeconds = isDailyQuota ? 3600 : 60;
-            const reason = isDailyQuota ? "Cuota Diaria Agotada en Google (429 Quota Exceeded)" : "Rate Limit 15 RPM / Cuota (429)";
-            markKeyCooldown(activeKey, pauseSeconds, reason);
+            markKeyCooldown(activeKey, 60, "Rate Limit / Saturación de Modelo (429)");
             break; // Saltar a la siguiente clave del Failover
           }
 

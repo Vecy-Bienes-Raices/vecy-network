@@ -322,6 +322,35 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.27 — Octubre 2026
+
+#### 📌 MODELOS GEMINI DE ALTA DISPONIBILIDAD (FLASH-LITE), DESPACHO SECUENCIAL ESTRICTO DE RESEÑAS GOOGLE Y BLINDAJE ANTI-COLISIÓN 440
+
+**Requerimiento y Objetivos:**
+1. Atender la auditoría de Eduardo desde el `3188096811` (10:53 am sin respuesta).
+2. Corregir la omisión de la reseña de Google detectada en la verificación de Luis Fernando García (`@luifergarcia`, 7:37 am), donde se envió el reporte y el bucle viral, pero no la invitación a calificar 5 estrellas en Google.
+3. Explicar los mensajes de Camila Argaez y responder con precisión doctrinal a las inquietudes de Eduardo sobre la autonomía de JanIA como "IA Pura" y la arquitectura unificada del proyecto sin cortocircuitos.
+
+**Causas Raíz:**
+1. **Conflicto de Conexión 440 por Instancia Local**: Proceso residual local (`PID 27182`) conectado a Baileys que expulsaba continuamente al VPS con `440 connectionReplaced`.
+2. **Saturación de Modelos Flash en Free Tier**: `gemini-3.8-flash` y `gemini-3.6-flash` cuentan con solo 20 reqs/día en Google Free Tier, saturándose en grupos e inhabilitando las claves por 3600s en cascada.
+3. **Pérdida de Google Review por `setTimeout`**: El despacho asíncrono con temporizadores de 1.5s y 3.2s generaba carreras contra la cola `outgoingQueue` (con delay de tipeo de 2-4s), silenciándose el segundo mensaje en el catch.
+
+**Solución Aplicada:**
+- **`server/_core/llm.ts`**:
+  - `FALLBACK_MODELS` configurado con **`gemini-3.5-flash-lite`** (ultra rápido, amplia cuota gratuita), **`gemini-flash-lite-latest`**, **`gemini-3.5-flash`** y **`gemini-flash-latest`**.
+  - Pausa de saturación 429 calibrada a 60s, permitiendo alternancia ágil entre claves sin congelar el pool.
+- **`server/_core/whatsapp-match.ts`**:
+  - Sustituidos los `setTimeout` en predial y cédula por encadenamiento secuencial en cola:
+    `await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true });`
+    `await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true });`
+- **Blindaje Local**: Terminado el proceso local y fijado `ENABLE_WHATSAPP_BOT=false`.
+- **Versión Oficial**: Incrementada a **v32.27** (`32.27.0`) en `shared/const.ts` y `package.json`.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | Build Vite + esbuild limpio ✅ | 126/126 tests Vitest ✅ | Simulación end-to-end de IA Pura exitosa ✅
+
+---
+
 ### 🔖 v32.26 — Octubre 2026
 
 #### 📌 ATENCIÓN CONVERSACIONAL TOTAL EN DMs A LÍNEAS DIRECTIVAS Y DE PRUEBA, ERRADICACIÓN DE 'TRES PUNTITOS Y SILENCIO', CASCADA OFICIAL GEMINI 3.8/3.6 FLASH Y COOLDOWN INTELIGENTE DE CUOTA
