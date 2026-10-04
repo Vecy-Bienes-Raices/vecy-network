@@ -172,7 +172,34 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.33 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.34 — Octubre 2026
+
+### Novedades v32.34 (Confirmación Eureka de PDF Predial, Presencia Continua de Puntitos Bailarines (...) y Grabando Audio (🎙️), Reacción Inmediata Fija 📄 y Aceleración del Servicio):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Eureka Confirmado con Entrega Real de PDF**:
+     - Eduardo y Jani Alves confirmaron con éxito rotundo la entrega del Certificado Oficial de Pago de Predial en archivo PDF real (`Certificado_Pago_AAA0185PUMR_2026.pdf`, 29 KB) a nombre de la titular real de Catastro `GILMA ESTELLA BOTERO GOMEZ` (`CC 43403545`).
+     - Quedó plenamente comprobado que el fallo inicial con NIT `860034594` se debió a que el inmueble en Catastro está registrado bajo persona natural (la propietaria real) y no bajo persona jurídica.
+  2. **Feedback Visual Continuo / Puntitos Bailarines (`...`) y Grabando Audio (`🎙️`)**:
+     - Eduardo instruyó que durante todo el procesamiento (incluso si Puppeteer y 2Captcha toman 20-30s en la SDH), los gestos de actividad de WhatsApp ("Escribiendo..." con los 3 puntitos bailarines o "Grabando audio..." con el micrófono) DEBEN mantenerse activos sin apagarse nunca para que el usuario no sienta abandono ni lentitud.
+  3. **Reacción Única Inmediata con Documento 📄 y Supresión de Cambios Redundantes**:
+     - Eduardo propuso no perder tiempo cambiando de reacciones (evitar transiciones ⏳ -> 🏛️ -> 📄 que traban o demoran el socket de Baileys).
+     - Dejar una sola reacción fija inmediata con el emoji de documento `📄` al recibir la solicitud y no volver a alterarla.
+  4. **Aceleración Drástica de Tiempos de Entrega**:
+     - En `queuedSend`, los delays artificiales de typing retenían hasta 15 segundos innecesarios en la cola al enviar el PDF, bucle viral y reseña.
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Presencia Continua (`startContinuousPresence` en `server/_core/whatsapp-utils.ts`)**:
+     - WhatsApp expira el estado de typing en 5 a 10s. Creada la función `startContinuousPresence(sock, jid, type, intervalMs)` que renueva periódicamente cada 3.5 segundos `sock.sendPresenceUpdate('composing' | 'recording', jid)` durante toda la llamada de Predial, Cédula, LLM o TTS, limpiando con `paused` al finalizar.
+  2. **Reacción Inmediata con Documento (`server/_core/whatsapp-utils.ts` y `server/_core/whatsapp-match.ts`)**:
+     - En `getEmpatheticReactionEmoji`: las consultas de Predial / CHIP / Hacienda reaccionan de inmediato con `📄`.
+     - Eliminadas todas las transiciones secundarias de reacción (`⏳`, `🏛️`, `📄` posteriores) para que el socket no sufra latencias ni colisiones.
+  3. **Aceleración Extrema de Cola (`queuedSend` en `server/_core/whatsapp-match.ts`)**:
+     - Reducido el delay artificial a rangos ultra ágiles (máx 1.2s en vez de 5s).
+     - Soportado el flag `skipDelay: true` (250ms) para que los mensajes de bucle viral y reseña tras la entrega del PDF se despachen al instante.
+  4. **Soporte Exhaustivo para las 10 Opciones de Documento SDH (`server/_core/predialService.ts`)**:
+     - Mapeadas y normalizadas las 10 opciones del select oficial de Hacienda: `CC`, `NIT`, `CE`, `PA` (Pasaporte), `TI`, `TIE`, `CD` (Carnet Diplomático), `NUIP`, `PPT` (Permiso Protección Temporal) y `NITE` (NIT Extranjero).
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | `npm run build` limpio en 32.7s ✅ | 109/109 tests Vitest aprobados al 100% ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.33 — Octubre 2026
 
 ### Novedades v32.33 (Decodificación Avanzada de Errores SAP Hybris SDH, Detección de Titular Registrado en Catastro/Leasing y Transparencia de Causas en WhatsApp):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

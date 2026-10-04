@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.33";
+    VECY_VERSION = "v32.34";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -9128,14 +9128,24 @@ async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip, options) {
     };
   }
   let tipoDoc = tipoDocInput.toUpperCase().trim();
-  if (tipoDoc.includes("NIT")) {
+  if (tipoDoc.includes("NIT") && (tipoDoc.includes("EXTRANJ") || tipoDoc.includes("NITE"))) {
+    tipoDoc = "NITE";
+  } else if (tipoDoc.includes("NIT")) {
     tipoDoc = "NIT";
   } else if (tipoDoc.includes("EXTRANJER") || tipoDoc === "CE") {
     tipoDoc = "CE";
-  } else if (tipoDoc.includes("PASAPORTE") || tipoDoc === "PAS") {
-    tipoDoc = "PAS";
+  } else if (tipoDoc.includes("PASAPORTE") || tipoDoc === "PA" || tipoDoc === "PAS") {
+    tipoDoc = "PA";
+  } else if (tipoDoc.includes("TARJETA") && (tipoDoc.includes("EXTRANJ") || tipoDoc === "TIE")) {
+    tipoDoc = "TIE";
   } else if (tipoDoc.includes("TARJETA") || tipoDoc === "TI") {
     tipoDoc = "TI";
+  } else if (tipoDoc.includes("NUIP")) {
+    tipoDoc = "NUIP";
+  } else if (tipoDoc.includes("DIPLOMAT") || tipoDoc === "CD") {
+    tipoDoc = "CD";
+  } else if (tipoDoc.includes("PPT") || tipoDoc.includes("PROTECCION") || tipoDoc.includes("PROTECCI\xD3N")) {
+    tipoDoc = "PPT";
   } else {
     tipoDoc = "CC";
   }
@@ -10283,6 +10293,7 @@ __export(whatsapp_utils_exports, {
   getEmpatheticReactionEmoji: () => getEmpatheticReactionEmoji,
   getGreetingByTime: () => getGreetingByTime,
   sendAdminNotification: () => sendAdminNotification,
+  startContinuousPresence: () => startContinuousPresence,
   textToSpeechMedia: () => textToSpeechMedia
 });
 import path5 from "path";
@@ -10727,7 +10738,7 @@ function getEmpatheticReactionEmoji(text2, options) {
   }
   const clean = (text2 || "").trim().toLowerCase();
   if (clean.includes("predial") || clean.includes("chip") || clean.includes("hacienda") || clean.includes("impuesto")) {
-    return "\u{1F3DB}\uFE0F";
+    return "\u{1F4C4}";
   }
   if (clean.includes("c\xE9dula") || clean.includes("cedula") || clean.includes("antecedente") || clean.includes("polic\xEDa") || clean.includes("policia") || clean.includes("verificar") || clean.includes("verificacion") || clean.includes("identidad")) {
     return "\u{1F6E1}\uFE0F";
@@ -10772,6 +10783,34 @@ function getEmpatheticReactionEmoji(text2, options) {
     return "\u{1F4A1}";
   }
   return "\u2728";
+}
+function startContinuousPresence(sock, jid, type = "composing", intervalMs = 3500) {
+  if (!sock || !jid) return () => {
+  };
+  let isAlive = true;
+  try {
+    sock.sendPresenceUpdate(type, jid).catch(() => {
+    });
+  } catch (_) {
+  }
+  const timer = setInterval(() => {
+    if (!isAlive) return;
+    try {
+      sock.sendPresenceUpdate(type, jid).catch(() => {
+      });
+    } catch (_) {
+    }
+  }, intervalMs);
+  return () => {
+    if (!isAlive) return;
+    isAlive = false;
+    clearInterval(timer);
+    try {
+      sock.sendPresenceUpdate("paused", jid).catch(() => {
+      });
+    } catch (_) {
+    }
+  };
 }
 var NICKNAMES_MAP, SONOROUS_COMPOUND_BLOCKS, NON_SONOROUS_FILLERS, CONNECTORS, cachedVertexToken;
 var init_whatsapp_utils = __esm({
@@ -11692,95 +11731,85 @@ ${quotedNote}` : quotedNote;
         }
         const { hasPendingPredialSession: hasPendingPredialSession2, executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
         if (senderId && hasPendingPredialSession2(senderId)) {
+          const stopPresence = startContinuousPresence(this.sock, senderId, "composing");
           try {
-            await this.sock.sendPresenceUpdate("composing", senderId);
-            await this.sock.sendMessage(senderId, { react: { text: "\u23F3", key: mainMsg.key } }).catch(() => {
-            });
-          } catch (_) {
-          }
-          const predialPendingCheck = await executePredialAssistanceFromWhatsApp2(body, senderId, true);
-          if (predialPendingCheck.isPredialRequest && predialPendingCheck.reportText) {
-            console.log(`[JANIA-MATCH] [DM] Asistencia de predial completada con c\xE9dula para ${senderId} (CHIP ${predialPendingCheck.chip})`);
-            if (predialPendingCheck.pdfBuffer) {
-              await this.queuedSend(senderId, {
-                document: predialPendingCheck.pdfBuffer,
-                mimetype: "application/pdf",
-                fileName: predialPendingCheck.pdfFileName || `Factura_Predial_${predialPendingCheck.chip}_2026.pdf`,
-                caption: predialPendingCheck.reportText
-              }, { quoted: mainMsg, allowDirectMessage: true });
-              await this.sock.sendMessage(senderId, { react: { text: "\u{1F4C4}", key: mainMsg.key } }).catch(() => {
-              });
-              const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-              await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true });
-              await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
-            } else {
-              await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
-              await this.sock.sendMessage(senderId, { react: { text: "\u{1F3DB}\uFE0F", key: mainMsg.key } }).catch(() => {
-              });
+            const predialPendingCheck = await executePredialAssistanceFromWhatsApp2(body, senderId, true);
+            if (predialPendingCheck.isPredialRequest && predialPendingCheck.reportText) {
+              console.log(`[JANIA-MATCH] [DM] Asistencia de predial completada con c\xE9dula para ${senderId} (CHIP ${predialPendingCheck.chip})`);
+              if (predialPendingCheck.pdfBuffer) {
+                await this.queuedSend(senderId, {
+                  document: predialPendingCheck.pdfBuffer,
+                  mimetype: "application/pdf",
+                  fileName: predialPendingCheck.pdfFileName || `Factura_Predial_${predialPendingCheck.chip}_2026.pdf`,
+                  caption: predialPendingCheck.reportText
+                }, { quoted: mainMsg, allowDirectMessage: true });
+                const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+                await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
+                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
+              } else {
+                await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+              }
+              await this.logToDb(senderId, "janIA", predialPendingCheck.reportText);
+              return;
             }
-            await this.logToDb(senderId, "janIA", predialPendingCheck.reportText);
-            return;
+          } finally {
+            stopPresence();
           }
         }
-        try {
-          await this.sock.sendPresenceUpdate("composing", senderId);
-          if (body.toLowerCase().includes("predial") || body.toLowerCase().includes("chip")) {
-            await this.sock.sendMessage(senderId, { react: { text: "\u23F3", key: mainMsg.key } }).catch(() => {
-            });
+        const isPredialContext = body.toLowerCase().includes("predial") || body.toLowerCase().includes("chip") || body.toLowerCase().includes("hacienda");
+        if (isPredialContext) {
+          const stopPresence = startContinuousPresence(this.sock, senderId, "composing");
+          try {
+            const predialCheck = await executePredialAssistanceFromWhatsApp2(body, senderId, true);
+            if (predialCheck.isPredialRequest && predialCheck.reportText) {
+              console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || "General"})`);
+              if (predialCheck.pdfBuffer) {
+                await this.queuedSend(senderId, {
+                  document: predialCheck.pdfBuffer,
+                  mimetype: "application/pdf",
+                  fileName: predialCheck.pdfFileName || `Factura_Predial_${predialCheck.chip}_2026.pdf`,
+                  caption: predialCheck.reportText
+                }, { quoted: mainMsg, allowDirectMessage: true });
+                const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+                await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
+                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
+              } else {
+                await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+              }
+              await this.logToDb(senderId, "janIA", predialCheck.reportText);
+              return;
+            }
+          } finally {
+            stopPresence();
           }
-        } catch (_) {
-        }
-        const predialCheck = await executePredialAssistanceFromWhatsApp2(body, senderId, true);
-        if (predialCheck.isPredialRequest && predialCheck.reportText) {
-          console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || "General"})`);
-          if (predialCheck.pdfBuffer) {
-            await this.queuedSend(senderId, {
-              document: predialCheck.pdfBuffer,
-              mimetype: "application/pdf",
-              fileName: predialCheck.pdfFileName || `Factura_Predial_${predialCheck.chip}_2026.pdf`,
-              caption: predialCheck.reportText
-            }, { quoted: mainMsg, allowDirectMessage: true });
-            await this.sock.sendMessage(senderId, { react: { text: "\u{1F4C4}", key: mainMsg.key } }).catch(() => {
-            });
-            const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-            await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true });
-            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
-          } else {
-            await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
-            await this.sock.sendMessage(senderId, { react: { text: "\u{1F3DB}\uFE0F", key: mainMsg.key } }).catch(() => {
-            });
-          }
-          await this.logToDb(senderId, "janIA", predialCheck.reportText);
-          return;
         }
         const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-        try {
-          await this.sock.sendPresenceUpdate("composing", senderId);
-        } catch (_) {
-        }
-        const idCheck = await executeIdentityVerificationFromWhatsApp2(body, true);
-        if (idCheck.isVerificationRequest && idCheck.reportText) {
-          console.log(`[JANIA-MATCH] [DM] Verificaci\xF3n de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
-          await this.queuedSend(senderId, idCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
-          await this.logToDb(senderId, "janIA", idCheck.reportText);
-          if (idCheck.success) {
-            await this.sock.sendMessage(senderId, { react: { text: "\u2705", key: mainMsg.key } }).catch(() => {
-            });
-            const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-            await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true });
-            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
-          } else {
-            await this.sock.sendMessage(senderId, { react: { text: "\u{1F6E1}\uFE0F", key: mainMsg.key } }).catch(() => {
-            });
+        const isIdCheckContext = body.toLowerCase().includes("c\xE9dula") || body.toLowerCase().includes("cedula") || body.toLowerCase().includes("antecedente") || body.toLowerCase().includes("polic\xEDa") || body.toLowerCase().includes("policia");
+        if (isIdCheckContext) {
+          const stopPresence = startContinuousPresence(this.sock, senderId, "composing");
+          try {
+            const idCheck = await executeIdentityVerificationFromWhatsApp2(body, true);
+            if (idCheck.isVerificationRequest && idCheck.reportText) {
+              console.log(`[JANIA-MATCH] [DM] Verificaci\xF3n de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
+              await this.queuedSend(senderId, idCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+              await this.logToDb(senderId, "janIA", idCheck.reportText);
+              if (idCheck.success) {
+                const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+                await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
+                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
+              }
+              return;
+            }
+          } finally {
+            stopPresence();
           }
-          return;
         }
         const cleanLower = body.trim().toLowerCase();
         const isExplicitJanIaCall = isSelfChat && /^(jania|agente\s*jania|hola|ayuda|\?)/i.test(cleanLower);
         const shouldEngageConversational = !isSelfChat || isExplicitJanIaCall;
         if (shouldEngageConversational && body.trim()) {
+          let stopPresence = startContinuousPresence(this.sock, senderId, "composing");
           try {
-            await this.sock.sendPresenceUpdate("composing", senderId);
             const { processPrivateDmConversationalMessage: processPrivateDmConversationalMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
             const reply = await processPrivateDmConversationalMessage2(body, senderId, userName);
             if (reply && reply.trim()) {
@@ -11791,7 +11820,8 @@ ${quotedNote}` : quotedNote;
               if (shouldSendVoice) {
                 try {
                   console.log(`[JANIA-MATCH] [DM-AI] Generando respuesta en nota de voz PTT para ${senderId}...`);
-                  await this.sock.sendPresenceUpdate("recording", senderId);
+                  stopPresence();
+                  stopPresence = startContinuousPresence(this.sock, senderId, "recording");
                   const cleanText = cleanVoiceText2(reply);
                   const media = await textToSpeechMedia2(cleanText);
                   if (media && media.data) {
@@ -11800,10 +11830,10 @@ ${quotedNote}` : quotedNote;
                       audio: audioBuffer,
                       mimetype: media.mimetype || "audio/ogg; codecs=opus",
                       ptt: true
-                    }, { quoted: mainMsg, allowDirectMessage: true });
+                    }, { quoted: mainMsg, allowDirectMessage: true, skipDelay: true });
                     await this.logToDb(senderId, "janIA", `[Nota de Voz PTT]: ${reply}`);
                     if (reply.includes("http")) {
-                      await this.queuedSend(senderId, reply, { allowDirectMessage: true });
+                      await this.queuedSend(senderId, reply, { allowDirectMessage: true, skipDelay: true });
                     }
                     const isGratitudeOrClosing2 = /^(gracias|muchas gracias|mil gracias|muy amable|hasta luego|chao|genial gracias|perfecto gracias|excelente|quedamos asi|quedamos así)\b/i.test(cleanLower);
                     const lastReviewSent2 = this.recentReviewPromptUsers.get(senderId) || 0;
@@ -11811,7 +11841,7 @@ ${quotedNote}` : quotedNote;
                     if (isGratitudeOrClosing2 && lastReviewSent2 < oneDayAgo2) {
                       this.recentReviewPromptUsers.set(senderId, Date.now());
                       const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-                      await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
+                      await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
                     }
                     return;
                   }
@@ -11827,12 +11857,14 @@ ${quotedNote}` : quotedNote;
               if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {
                 this.recentReviewPromptUsers.set(senderId, Date.now());
                 const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
+                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
               }
               return;
             }
           } catch (dmAiErr) {
             console.error("[JANIA-MATCH] Error en protocolo de IA conversacional DM:", dmAiErr);
+          } finally {
+            stopPresence();
           }
         }
         const { isServiceHelpRequest: isServiceHelpRequest2, PREDIAL_HELP_TEXT: PREDIAL_HELP_TEXT2, CEDULA_HELP_TEXT: CEDULA_HELP_TEXT2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
@@ -12922,17 +12954,19 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
             }
             if (!isNewsletter) {
               const textContent = messagePayload.text || messagePayload.caption;
-              if (textContent && typeof textContent === "string") {
+              if (options.skipDelay) {
+                await delay(250);
+              } else if (textContent && typeof textContent === "string") {
                 try {
                   await this.sock.sendPresenceUpdate("composing", targetJid);
-                  const typingDelay = Math.min(5e3, Math.max(2e3, textContent.length * 40));
+                  const typingDelay = Math.min(1200, Math.max(400, textContent.length * 10));
                   await delay(typingDelay);
                 } catch (_) {
                 }
               } else if (messagePayload.audio) {
                 try {
                   await this.sock.sendPresenceUpdate("recording", targetJid);
-                  const recordingDelay = Math.min(1500, Math.max(300, (options.voiceLength || 2) * 200));
+                  const recordingDelay = Math.min(1200, Math.max(300, (options.voiceLength || 2) * 150));
                   await delay(recordingDelay);
                 } catch (_) {
                 }

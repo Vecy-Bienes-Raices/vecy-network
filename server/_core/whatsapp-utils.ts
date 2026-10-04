@@ -721,9 +721,9 @@ export function getEmpatheticReactionEmoji(
 
   const clean = (text || '').trim().toLowerCase();
 
-  // 1. Predial / Impuesto Predial / Hacienda / CHIP
+  // 1. Predial / Impuesto Predial / Hacienda / CHIP / Factura (Doctrina v32.34: Reacción fija e inmediata con documento 📄 sin cambios posteriores)
   if (clean.includes('predial') || clean.includes('chip') || clean.includes('hacienda') || clean.includes('impuesto')) {
-    return '🏛️';
+    return '📄';
   }
 
   // 2. Cédula / Documento / Verificación / Antecedentes / Policía Nacional
@@ -843,4 +843,38 @@ export function getEmpatheticReactionEmoji(
 
   // Emoji empático por defecto
   return '✨';
+}
+
+/**
+ * Inicia una presencia continua ('composing' o 'recording') con refresco cada 3.5 segundos
+ * para que en WhatsApp Web y móvil nunca desaparezcan los puntitos bailarines (...) o el micrófono (🎙️)
+ * mientras JanIA procesa consultas de larga duración (2Captcha, Hacienda, Puppeteer, Gemini, TTS).
+ */
+export function startContinuousPresence(
+  sock: any,
+  jid: string,
+  type: 'composing' | 'recording' = 'composing',
+  intervalMs: number = 3500
+): () => void {
+  if (!sock || !jid) return () => {};
+  let isAlive = true;
+  try {
+    sock.sendPresenceUpdate(type, jid).catch(() => {});
+  } catch (_) {}
+
+  const timer = setInterval(() => {
+    if (!isAlive) return;
+    try {
+      sock.sendPresenceUpdate(type, jid).catch(() => {});
+    } catch (_) {}
+  }, intervalMs);
+
+  return () => {
+    if (!isAlive) return;
+    isAlive = false;
+    clearInterval(timer);
+    try {
+      sock.sendPresenceUpdate('paused', jid).catch(() => {});
+    } catch (_) {}
+  };
 }

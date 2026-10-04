@@ -2444,6 +2444,36 @@ Adriana Rebeca Orejuela`;
       expect(getEmpatheticReactionEmoji("Súper")).toBe("❤️");
     });
   });
+
+  describe("29. Doctrina v32.34: Reacción Inmediata con Documento 📄, Presencia Continua y Soporte Multidocumento SDH", () => {
+    it("Debe reaccionar con 📄 de forma fija ante consultas de predial o CHIP", async () => {
+      const { getEmpatheticReactionEmoji } = await import("../_core/whatsapp-utils");
+      
+      expect(getEmpatheticReactionEmoji("Hola JanIA! Necesito el predial de este inmueble. Chip: AAA0185PUMR CC: 43403545")).toBe("📄");
+      expect(getEmpatheticReactionEmoji("Me puedes ayudar con el impuesto predial?")).toBe("📄");
+      expect(getEmpatheticReactionEmoji("CHIP: AAA0198HCOM")).toBe("📄");
+    });
+
+    it("startContinuousPresence debe emitir presencia continua y limpiar el intervalo con paused al detenerse", async () => {
+      const { startContinuousPresence } = await import("../_core/whatsapp-utils");
+      const updates: Array<{ type: string; jid: string }> = [];
+      const fakeSock = {
+        sendPresenceUpdate: async (type: string, jid: string) => {
+          updates.push({ type, jid });
+        }
+      };
+
+      const stop = startContinuousPresence(fakeSock, "573192919978@s.whatsapp.net", "composing", 50);
+      expect(updates.length).toBeGreaterThanOrEqual(1);
+      expect(updates[0]).toEqual({ type: "composing", jid: "573192919978@s.whatsapp.net" });
+
+      await new Promise(r => setTimeout(r, 120));
+      stop();
+
+      const lastUpdate = updates[updates.length - 1];
+      expect(lastUpdate).toEqual({ type: "paused", jid: "573192919978@s.whatsapp.net" });
+    });
+  });
 });
 
 

@@ -33,7 +33,7 @@ import { conversations, messages as dbMessages, users, propertyMatches, properti
 import { eq, and } from 'drizzle-orm';
 import { esDominioPermitido, scrapePropertyLink } from './scraper';
 import QRCode from 'qrcode';
-import { extractFirstName, getGreetingByTime } from './whatsapp-utils';
+import { extractFirstName, getGreetingByTime, startContinuousPresence } from './whatsapp-utils';
 import { transcribeAudioBuffer } from './voiceTranscription';
 import { isNonRealEstateText } from './matching';
 
@@ -1083,87 +1083,88 @@ export class JaniaMatchBot {
     // 🏛️ INTERCEPTOR PRIORITARIO DM: COMPLETAR SESIÓN PENDIENTE PREDIAL BOGOTÁ (CÉDULA / NIT)
     const { hasPendingPredialSession, executePredialAssistanceFromWhatsApp } = await import('./predialService');
     if (senderId && hasPendingPredialSession(senderId)) {
+      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
       try {
-        await this.sock.sendPresenceUpdate('composing', senderId);
-        await this.sock.sendMessage(senderId, { react: { text: '⏳', key: mainMsg.key } }).catch(() => {});
-      } catch (_) {}
-      const predialPendingCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
-      if (predialPendingCheck.isPredialRequest && predialPendingCheck.reportText) {
-        console.log(`[JANIA-MATCH] [DM] Asistencia de predial completada con cédula para ${senderId} (CHIP ${predialPendingCheck.chip})`);
-        if (predialPendingCheck.pdfBuffer) {
-          await this.queuedSend(senderId, {
-            document: predialPendingCheck.pdfBuffer,
-            mimetype: 'application/pdf',
-            fileName: predialPendingCheck.pdfFileName || `Factura_Predial_${predialPendingCheck.chip}_2026.pdf`,
-            caption: predialPendingCheck.reportText
-          }, { quoted: mainMsg, allowDirectMessage: true });
-          await this.sock.sendMessage(senderId, { react: { text: '📄', key: mainMsg.key } }).catch(() => {});
+        const predialPendingCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
+        if (predialPendingCheck.isPredialRequest && predialPendingCheck.reportText) {
+          console.log(`[JANIA-MATCH] [DM] Asistencia de predial completada con cédula para ${senderId} (CHIP ${predialPendingCheck.chip})`);
+          if (predialPendingCheck.pdfBuffer) {
+            await this.queuedSend(senderId, {
+              document: predialPendingCheck.pdfBuffer,
+              mimetype: 'application/pdf',
+              fileName: predialPendingCheck.pdfFileName || `Factura_Predial_${predialPendingCheck.chip}_2026.pdf`,
+              caption: predialPendingCheck.reportText
+            }, { quoted: mainMsg, allowDirectMessage: true });
 
-          // Envío desacoplado de mensajes de bucle viral y reseña de Google (anti "Leer más")
-          const { VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
-          await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true });
-          await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true });
-        } else {
-          await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
-          await this.sock.sendMessage(senderId, { react: { text: '🏛️', key: mainMsg.key } }).catch(() => {});
+            // Envío desacoplado de mensajes de bucle viral y reseña de Google (anti "Leer más") sin demoras artificiales
+            const { VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+            await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+          } else {
+            await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+          }
+          await this.logToDb(senderId, 'janIA', predialPendingCheck.reportText);
+          return;
         }
-        await this.logToDb(senderId, 'janIA', predialPendingCheck.reportText);
-        return;
+      } finally {
+        stopPresence();
       }
     }
 
     // 🏛️ INTERCEPTOR PRIORITARIO DM: PREDIAL (va ANTES que cédula — si el texto menciona predial/chip, no debe caer en verificación de identidad)
-    try {
-      await this.sock.sendPresenceUpdate('composing', senderId);
-      if (body.toLowerCase().includes('predial') || body.toLowerCase().includes('chip')) {
-        await this.sock.sendMessage(senderId, { react: { text: '⏳', key: mainMsg.key } }).catch(() => {});
-      }
-    } catch (_) {}
-    const predialCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
-    if (predialCheck.isPredialRequest && predialCheck.reportText) {
-      console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || 'General'})`);
-      if (predialCheck.pdfBuffer) {
-        await this.queuedSend(senderId, {
-          document: predialCheck.pdfBuffer,
-          mimetype: 'application/pdf',
-          fileName: predialCheck.pdfFileName || `Factura_Predial_${predialCheck.chip}_2026.pdf`,
-          caption: predialCheck.reportText
-        }, { quoted: mainMsg, allowDirectMessage: true });
-        await this.sock.sendMessage(senderId, { react: { text: '📄', key: mainMsg.key } }).catch(() => {});
+    const isPredialContext = body.toLowerCase().includes('predial') || body.toLowerCase().includes('chip') || body.toLowerCase().includes('hacienda');
+    if (isPredialContext) {
+      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
+      try {
+        const predialCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
+        if (predialCheck.isPredialRequest && predialCheck.reportText) {
+          console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || 'General'})`);
+          if (predialCheck.pdfBuffer) {
+            await this.queuedSend(senderId, {
+              document: predialCheck.pdfBuffer,
+              mimetype: 'application/pdf',
+              fileName: predialCheck.pdfFileName || `Factura_Predial_${predialCheck.chip}_2026.pdf`,
+              caption: predialCheck.reportText
+            }, { quoted: mainMsg, allowDirectMessage: true });
 
-        // Envío desacoplado de mensajes de bucle viral y reseña de Google (anti "Leer más")
-        const { VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
-        await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true });
-        await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true });
-      } else {
-        await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
-        await this.sock.sendMessage(senderId, { react: { text: '🏛️', key: mainMsg.key } }).catch(() => {});
+            // Envío desacoplado de mensajes de bucle viral y reseña de Google (anti "Leer más") sin demoras artificiales
+            const { VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+            await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+          } else {
+            await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+          }
+          await this.logToDb(senderId, 'janIA', predialCheck.reportText);
+          return;
+        }
+      } finally {
+        stopPresence();
       }
-      await this.logToDb(senderId, 'janIA', predialCheck.reportText);
-      return;
     }
 
     // 🛡️ INTERCEPTOR DIRECTO DM: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
     const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
-    try {
-      await this.sock.sendPresenceUpdate('composing', senderId);
-    } catch (_) {}
-    const idCheck = await executeIdentityVerificationFromWhatsApp(body, true);
-    if (idCheck.isVerificationRequest && idCheck.reportText) {
-      console.log(`[JANIA-MATCH] [DM] Verificación de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
-      await this.queuedSend(senderId, idCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
-      await this.logToDb(senderId, 'janIA', idCheck.reportText);
+    const isIdCheckContext = body.toLowerCase().includes('cédula') || body.toLowerCase().includes('cedula') || body.toLowerCase().includes('antecedente') || body.toLowerCase().includes('policía') || body.toLowerCase().includes('policia');
+    if (isIdCheckContext) {
+      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
+      try {
+        const idCheck = await executeIdentityVerificationFromWhatsApp(body, true);
+        if (idCheck.isVerificationRequest && idCheck.reportText) {
+          console.log(`[JANIA-MATCH] [DM] Verificación de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
+          await this.queuedSend(senderId, idCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+          await this.logToDb(senderId, 'janIA', idCheck.reportText);
 
-      // Si la verificación fue exitosa, enviar desacoplados el bucle viral y la reseña de Google
-      if (idCheck.success) {
-        await this.sock.sendMessage(senderId, { react: { text: '✅', key: mainMsg.key } }).catch(() => {});
-        const { VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
-        await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true });
-        await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true });
-      } else {
-        await this.sock.sendMessage(senderId, { react: { text: '🛡️', key: mainMsg.key } }).catch(() => {});
+          // Si la verificación fue exitosa, enviar desacoplados el bucle viral y la reseña de Google
+          if (idCheck.success) {
+            const { VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+            await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+          }
+          return;
+        }
+      } finally {
+        stopPresence();
       }
-      return;
     }
 
     // 🤖 PROTOCOLO DE INTERACCIÓN IA PURA EN CHAT PRIVADO:
@@ -1175,8 +1176,8 @@ export class JaniaMatchBot {
     const shouldEngageConversational = !isSelfChat || isExplicitJanIaCall;
 
     if (shouldEngageConversational && body.trim()) {
+      let stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
       try {
-        await this.sock.sendPresenceUpdate('composing', senderId);
         const { processPrivateDmConversationalMessage } = await import('./janIA');
         const reply = await processPrivateDmConversationalMessage(body, senderId, userName);
         if (reply && reply.trim()) {
@@ -1190,7 +1191,9 @@ export class JaniaMatchBot {
           if (shouldSendVoice) {
             try {
               console.log(`[JANIA-MATCH] [DM-AI] Generando respuesta en nota de voz PTT para ${senderId}...`);
-              await this.sock.sendPresenceUpdate('recording', senderId);
+              // Detener 'composing' e iniciar 'recording' continuo ("Grabando audio... 🎙️")
+              stopPresence();
+              stopPresence = startContinuousPresence(this.sock, senderId, 'recording');
               const cleanText = cleanVoiceText(reply);
               const media = await textToSpeechMedia(cleanText);
               if (media && media.data) {
@@ -1199,13 +1202,13 @@ export class JaniaMatchBot {
                   audio: audioBuffer,
                   mimetype: media.mimetype || 'audio/ogg; codecs=opus',
                   ptt: true
-                }, { quoted: mainMsg, allowDirectMessage: true });
+                }, { quoted: mainMsg, allowDirectMessage: true, skipDelay: true });
                 await this.logToDb(senderId, 'janIA', `[Nota de Voz PTT]: ${reply}`);
 
                 // Si la respuesta contenía enlaces URLs (como el canal de WhatsApp o el bróker),
                 // despachar también el texto para que el usuario tenga el enlace clickable en su pantalla
                 if (reply.includes('http')) {
-                  await this.queuedSend(senderId, reply, { allowDirectMessage: true });
+                  await this.queuedSend(senderId, reply, { allowDirectMessage: true, skipDelay: true });
                 }
 
                 // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre
@@ -1216,7 +1219,7 @@ export class JaniaMatchBot {
                 if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {
                   this.recentReviewPromptUsers.set(senderId, Date.now());
                   const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
-                  await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true });
+                  await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
                 }
 
                 return;
@@ -1237,12 +1240,14 @@ export class JaniaMatchBot {
           if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {
             this.recentReviewPromptUsers.set(senderId, Date.now());
             const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
-            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true });
+            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
           }
           return;
         }
       } catch (dmAiErr) {
         console.error('[JANIA-MATCH] Error en protocolo de IA conversacional DM:', dmAiErr);
+      } finally {
+        stopPresence();
       }
     }
 
@@ -2584,16 +2589,18 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         // ── ESCUDO DE SIMULACIÓN HUMANA (Human-Like Delay & Presence Updates) ──
         if (!isNewsletter) {
           const textContent = messagePayload.text || messagePayload.caption;
-          if (textContent && typeof textContent === 'string') {
+          if (options.skipDelay) {
+            await delay(250);
+          } else if (textContent && typeof textContent === 'string') {
             try {
               await this.sock.sendPresenceUpdate('composing', targetJid);
-              const typingDelay = Math.min(5000, Math.max(2000, textContent.length * 40));
+              const typingDelay = Math.min(1200, Math.max(400, textContent.length * 10));
               await delay(typingDelay);
             } catch (_) {}
           } else if (messagePayload.audio) {
             try {
               await this.sock.sendPresenceUpdate('recording', targetJid);
-              const recordingDelay = Math.min(1500, Math.max(300, (options.voiceLength || 2) * 200));
+              const recordingDelay = Math.min(1200, Math.max(300, (options.voiceLength || 2) * 150));
               await delay(recordingDelay);
             } catch (_) {}
           }

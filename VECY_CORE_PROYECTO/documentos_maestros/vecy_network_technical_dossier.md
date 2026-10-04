@@ -322,6 +322,38 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.34 — Octubre 2026
+
+#### 📌 CONFIRMACIÓN EUREKA DE PDF PREDIAL, PRESENCIA CONTINUA DE PUNTITOS BAILARINES (...) Y GRABANDO AUDIO (🎙️), REACCIÓN INMEDIATA FIJA 📄 Y ACELERACIÓN DEL SERVICIO
+
+**Requerimiento y Objetivos:**
+1. **Confirmación de Eureka en Entrega de PDF**: Constatar la entrega exitosa del Certificado Oficial de Pago en PDF real (`Certificado_Pago_AAA0185PUMR_2026.pdf`, 29 KB) por parte de JanIA en WhatsApp Web con la cédula real de la propietaria en Catastro (`GILMA ESTELLA BOTERO GOMEZ`, `CC 43403545`).
+2. **Reactivación Continua de Gestos de Actividad**: Garantizar que los gestos de actividad de WhatsApp ("Escribiendo..." con los 3 puntitos bailarines o "Grabando audio..." con el micrófono) no se apaguen nunca durante los 20-30 segundos de procesamiento de servicios largos (Puppeteer, 2Captcha, Hacienda, Gemini, TTS).
+3. **Reacción Única y Fija con Emoji de Documento `📄`**: Eliminar los cambios secuenciales de reacción (`⏳` -> `🏛️` -> `📄`) que causaban latencias y sobrecarga en el socket de Baileys, estableciendo una sola reacción inmediata `📄` al recibir la solicitud sin alterar el mensaje posteriormente.
+4. **Aceleración Drástica de la Entrega**: Eliminar las demoras artificiales acumuladas en `queuedSend` (que retenían hasta 15 segundos al enviar el PDF, bucle viral y reseña).
+5. **Soporte Multidocumento**: Asegurar soporte exhaustivo para las 10 opciones de tipo de documento del formulario de la Secretaría Distrital de Hacienda.
+
+**Causas Raíz:**
+1. **Expiración de Presencia en Protocolo WhatsApp**: WhatsApp expira la indicación de `composing` tras 5-10 segundos si no recibe un nuevo paquete de presencia. En trámites de 25 segundos en la SDH, el usuario dejaba de ver los puntitos a mitad del proceso.
+2. **Delays Artificiales en `queuedSend`**: Los límites de delay de escritura estaban configurados en hasta 5.000 ms por mensaje, lo que sumaba 15 segundos de retención innecesaria tras la descarga del PDF.
+3. **Mapeo de Documentos en la SDH**: En el select de la SDH, Pasaporte es `'PA'` y existen 10 tipos de documentos reconocidos.
+
+**Solución Aplicada:**
+- **`server/_core/whatsapp-utils.ts`**:
+  - `startContinuousPresence(sock, jid, type, intervalMs)`: emite periódicamente cada 3.5 segundos `sendPresenceUpdate('composing' | 'recording', jid)` durante todo el ciclo de vida de la consulta, limpiando con `paused` al finalizar.
+  - `getEmpatheticReactionEmoji`: para predial o CHIP, devuelve de inmediato el emoji de documento oficial `📄`.
+- **`server/_core/whatsapp-match.ts`**:
+  - Eliminados todos los cambios posteriores de reacción (`⏳`, `🏛️`, `📄` redundantes) en las consultas de predial y cédula.
+  - En `queuedSend`: reducido el delay artificial a rangos ágiles (máx 1.200 ms) y añadido soporte para `skipDelay: true` (250 ms) en bucle viral y reseña, despachando la entrega completa en menos de 2 segundos tras la descarga del PDF.
+  - Integrado `startContinuousPresence` en las sesiones de predial, consultas de predial, cédula y generación de notas de voz PTT (`recording`).
+- **`server/_core/predialService.ts`**:
+  - Normalizadas las 10 opciones del select de la SDH: `CC`, `NIT`, `CE`, `PA` (Pasaporte), `TI`, `TIE`, `CD`, `NUIP`, `PPT` y `NITE`.
+- **Versión Oficial**: Incrementada a **v32.34** (`32.34.0`) en `shared/const.ts` y `package.json`.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | `npm run build` limpio en 32.7s ✅ | 109/109 tests Vitest aprobados al 100% ✅
+
+---
+
 ### 🔖 v32.33 — Octubre 2026
 
 #### 📌 DECODIFICACIÓN AVANZADA DE ERRORES SAP HYBRIS SDH, DETECCIÓN DE TITULAR REGISTRADO EN CATASTRO/LEASING Y TRANSPARENCIA DE CAUSAS EN WHATSAPP

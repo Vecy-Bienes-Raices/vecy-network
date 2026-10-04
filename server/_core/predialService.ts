@@ -452,16 +452,26 @@ export async function downloadPredialInvoicePdf(
     };
   }
 
-  // Normalizar tipo de documento para el select del portal SDH:
+  // Normalizar tipo de documento para el select del portal SDH (Doctrina v32.34: Soporte exhaustivo para las 10 opciones de la SDH):
   let tipoDoc = tipoDocInput.toUpperCase().trim();
-  if (tipoDoc.includes('NIT')) {
+  if (tipoDoc.includes('NIT') && (tipoDoc.includes('EXTRANJ') || tipoDoc.includes('NITE'))) {
+    tipoDoc = 'NITE';
+  } else if (tipoDoc.includes('NIT')) {
     tipoDoc = 'NIT';
   } else if (tipoDoc.includes('EXTRANJER') || tipoDoc === 'CE') {
     tipoDoc = 'CE';
-  } else if (tipoDoc.includes('PASAPORTE') || tipoDoc === 'PAS') {
-    tipoDoc = 'PAS';
+  } else if (tipoDoc.includes('PASAPORTE') || tipoDoc === 'PA' || tipoDoc === 'PAS') {
+    tipoDoc = 'PA';
+  } else if (tipoDoc.includes('TARJETA') && (tipoDoc.includes('EXTRANJ') || tipoDoc === 'TIE')) {
+    tipoDoc = 'TIE';
   } else if (tipoDoc.includes('TARJETA') || tipoDoc === 'TI') {
     tipoDoc = 'TI';
+  } else if (tipoDoc.includes('NUIP')) {
+    tipoDoc = 'NUIP';
+  } else if (tipoDoc.includes('DIPLOMAT') || tipoDoc === 'CD') {
+    tipoDoc = 'CD';
+  } else if (tipoDoc.includes('PPT') || tipoDoc.includes('PROTECCION') || tipoDoc.includes('PROTECCIÓN')) {
+    tipoDoc = 'PPT';
   } else {
     tipoDoc = 'CC';
   }

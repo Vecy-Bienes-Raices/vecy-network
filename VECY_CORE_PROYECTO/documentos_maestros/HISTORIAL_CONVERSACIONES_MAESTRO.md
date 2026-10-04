@@ -7,6 +7,51 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.34 — 03 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Eureka Confirmado con Entrega Real de PDF Predial**:
+   - Eduardo compartió con gran emoción y contundencia la captura de WhatsApp Web donde JanIA le entregó a Jani Alves el archivo binario PDF `Certificado_Pago_AAA0185PUMR_2026.pdf` (29 KB) con el reporte completo a nombre de la titular real de Catastro `GILMA ESTELLA BOTERO GOMEZ` (`CC 43403545`):
+     *"Eureca ya funcionó, pero lo que veo es que se está demorando bastante..."*
+   - Eduardo constató empíricamente que el fallo inicial con NIT `860034594` era porque Jani le estaba enviando un NIT, mientras que el predial en Hacienda y Catastro está a nombre de la cédula de la propietaria.
+2. **Reactivación Ininterrumpida de Gestos de Actividad (Puntitos Bailarines `...` y Grabando Audio `🎙️`)**:
+   - Eduardo reportó: *"YA NISIQUIERA SE VE SI ESCRIBE O NO, NO SALEN LOS PUNTITOS BAILARINES, ES DECIR EL GESTO DE QUE ESTÁ ESCRIBIENDO O TAL VEZ LE PUSISTE YA DEMASIADA DEMORA Y ESO ES MALO PORQUE EL USUARIO SE VA Y NUNCA VE SI LE HAN ESCRITO O SI JANIA ESTÁ ESCRIBIENDO O GRABANDO UN AUDIO... Pero me interesa que dejes todo muy bien corregido y con los gestos que tenía antes de (Escribiendo (...) y Grabando audio (🎙️)..."*
+3. **Reacción Única Inmediata con Documento 📄 y Supresión de Cambios Redundantes**:
+   - Eduardo propuso simplificar y no perder tiempo cambiando de reacciones en Baileys:
+     *"si crees que es por lo que tiene que cambiar de reaccion entonces elimina esa parte y de una que aparezca el reloj de arena solamente o el de la institución que es este si es que eso está quitando tiempo quizas, entonces déjalo como antes. O pon un emoji de documento, puede ser este (📄) y no cambies la reacción para evitar demoras y trabas en el servicio. Te parece??"*
+4. **Soporte Multidocumento**:
+   - Recordó que JanIA debe poder procesar y buscar con cualquier tipo de documento de la SDH, no solo cédulas o NITs.
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Expiración de Presencia en Protocolo WhatsApp Web / Baileys**:
+   - En WhatsApp, la actualización de presencia `sock.sendPresenceUpdate('composing', jid)` tiene un TTL efímero en los servidores de WhatsApp de 5 a 10 segundos. Si el bot no emite un nuevo heartbeat de presencia, WhatsApp oculta automáticamente los "puntitos bailarines" (`...`).
+   - Como la consulta con Puppeteer + 2Captcha en la SDH toma típicamente entre 20 y 30 segundos, a los 6-8 segundos los puntitos desaparecían, dejando la pantalla en blanco y generando la sensación de congelamiento o demora.
+2. **Retención Artificial Innecesaria en la Cola de Envío (`queuedSend`)**:
+   - `queuedSend` aplicaba un typingDelay de hasta 5.000 ms por mensaje (`Math.min(5000, Math.max(2000, textContent.length * 40))`). Al entregar el PDF con caption (5s) + bucle viral (5s) + reseña de Google (5s), se acumulaban **15 segundos adicionales de espera artificial** después de haber descargado el PDF.
+3. **Sobrecarga de Socket por Cambios Secuenciales de Reacción**:
+   - Para una sola consulta de predial se enviaban hasta 3 mensajes de reacción por socket (`🏛️` -> `⏳` -> `📄`), generando sobrecarga en Baileys y latencias innecesarias.
+4. **Mapeo de Tipos de Documento en el Formulario de la SDH**:
+   - En el select oficial de la SDH (`https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`), el valor para Pasaporte es `'PA'` (y no `'PAS'`). Además, el formulario cuenta con 10 opciones oficiales (`CC`, `CD`, `CE`, `NUIP`, `PA`, `TI`, `TIE`, `NIT`, `NITE`, `PPT`).
+
+### Acciones Ejecutadas
+1. **Presencia Continua Heartbeat (`startContinuousPresence` en `server/_core/whatsapp-utils.ts`)**:
+   - Creada función que renueva periódicamente `sendPresenceUpdate('composing' | 'recording', jid)` cada 3.5 segundos durante toda la operación de Predial, Cédula, LLM o TTS, garantizando que los puntitos bailarines (`...`) o el micrófono (`🎙️`) bailen ininterrumpidamente hasta enviar el mensaje o PDF, limpiando con `paused` en el bloque `finally`.
+2. **Reacción Única y Fija con Emoji de Documento `📄` (`server/_core/whatsapp-utils.ts` y `server/_core/whatsapp-match.ts`)**:
+   - `getEmpatheticReactionEmoji` reacciona de inmediato con `📄` ante consultas de predial o CHIP.
+   - Eliminados todos los cambios posteriores de reacción (`⏳`, `🏛️`, `📄` redundantes). Cero latencia y cero trabas en el socket de Baileys.
+3. **Aceleración Drástica de Entrega en `queuedSend` (`server/_core/whatsapp-match.ts`)**:
+   - Reducido el delay artificial a un rango fluido (máx 1.200 ms).
+   - Implementado el flag `skipDelay: true` (250 ms) para los mensajes de bucle viral y reseña de Google, ahorrando más de 12 segundos netos en la entrega del documento.
+4. **Soporte Exhaustivo para los 10 Tipos de Documento de la SDH (`server/_core/predialService.ts`)**:
+   - Normalizadas las 10 opciones oficiales del select: `CC`, `NIT`, `CE`, `PA` (Pasaporte), `TI`, `TIE`, `CD` (Carnet Diplomático), `NUIP`, `PPT` (Permiso Protección Temporal) y `NITE` (NIT Extranjero).
+5. **Incremento de Versión y Validación**:
+   - Elevada versión oficial a **v32.34** (`32.34.0`) en `shared/const.ts` y `package.json`.
+   - `npx vitest run server/__tests__/regression.test.ts`: 109/109 tests aprobados al 100% ✅.
+   - `npm run check` (`tsc --noEmit`): 0 errores ✅.
+   - `npm run build`: compilación limpia en 32.7 s ✅.
+
+---
+
 ## 📋 SESIÓN v32.33 — 03 Octubre 2026
 
 ### Solicitud de Eduardo
