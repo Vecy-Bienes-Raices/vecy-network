@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.38";
+    VECY_VERSION = "v32.39";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -11750,20 +11750,24 @@ ${quotedNote}` : quotedNote;
             const predialPendingCheck = await executePredialAssistanceFromWhatsApp2(body, senderId, true);
             if (predialPendingCheck.isPredialRequest && predialPendingCheck.reportText) {
               console.log(`[JANIA-MATCH] [DM] Asistencia de predial completada con c\xE9dula para ${senderId} (CHIP ${predialPendingCheck.chip})`);
+              const { formatPoliteToolDelivery: formatPoliteToolDelivery2, appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+              const deliveredText = await formatPoliteToolDelivery2(senderId, userName, "predial", predialPendingCheck.reportText, true);
               if (predialPendingCheck.pdfBuffer) {
                 await this.queuedSend(senderId, {
                   document: predialPendingCheck.pdfBuffer,
                   mimetype: "application/pdf",
                   fileName: predialPendingCheck.pdfFileName || `Factura_Predial_${predialPendingCheck.chip}_2026.pdf`,
-                  caption: predialPendingCheck.reportText
+                  caption: deliveredText
                 }, { quoted: mainMsg, allowDirectMessage: true });
                 const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
                 await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
                 await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
               } else {
-                await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+                await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
               }
-              await this.logToDb(senderId, "janIA", predialPendingCheck.reportText);
+              appendDmHistory2(senderId, "user", body);
+              appendDmHistory2(senderId, "assistant", deliveredText);
+              await this.logToDb(senderId, "janIA", deliveredText);
               return;
             }
           } finally {
@@ -11777,20 +11781,24 @@ ${quotedNote}` : quotedNote;
             const predialCheck = await executePredialAssistanceFromWhatsApp2(body, senderId, true);
             if (predialCheck.isPredialRequest && predialCheck.reportText) {
               console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || "General"})`);
+              const { formatPoliteToolDelivery: formatPoliteToolDelivery2, appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+              const deliveredText = await formatPoliteToolDelivery2(senderId, userName, "predial", predialCheck.reportText, true);
               if (predialCheck.pdfBuffer) {
                 await this.queuedSend(senderId, {
                   document: predialCheck.pdfBuffer,
                   mimetype: "application/pdf",
                   fileName: predialCheck.pdfFileName || `Factura_Predial_${predialCheck.chip}_2026.pdf`,
-                  caption: predialCheck.reportText
+                  caption: deliveredText
                 }, { quoted: mainMsg, allowDirectMessage: true });
                 const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
                 await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
                 await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
               } else {
-                await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+                await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
               }
-              await this.logToDb(senderId, "janIA", predialCheck.reportText);
+              appendDmHistory2(senderId, "user", body);
+              appendDmHistory2(senderId, "assistant", deliveredText);
+              await this.logToDb(senderId, "janIA", deliveredText);
               return;
             }
           } finally {
@@ -11805,8 +11813,12 @@ ${quotedNote}` : quotedNote;
             const idCheck = await executeIdentityVerificationFromWhatsApp2(body, true);
             if (idCheck.isVerificationRequest && idCheck.reportText) {
               console.log(`[JANIA-MATCH] [DM] Verificaci\xF3n de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
-              await this.queuedSend(senderId, idCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
-              await this.logToDb(senderId, "janIA", idCheck.reportText);
+              const { formatPoliteToolDelivery: formatPoliteToolDelivery2, appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+              const deliveredText = await formatPoliteToolDelivery2(senderId, userName, "cedula", idCheck.reportText, !!idCheck.success);
+              await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
+              appendDmHistory2(senderId, "user", body);
+              appendDmHistory2(senderId, "assistant", deliveredText);
+              await this.logToDb(senderId, "janIA", deliveredText);
               if (idCheck.success) {
                 const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
                 await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
@@ -14768,6 +14780,7 @@ __export(janIA_exports, {
   extractFallbackDataFromText: () => extractFallbackDataFromText,
   extractFirstName: () => extractFirstName2,
   extractFlyerVision: () => extractFlyerVision,
+  formatPoliteToolDelivery: () => formatPoliteToolDelivery,
   generarHashMensaje: () => generarHashMensaje,
   generateWelcomeMessage: () => generateWelcomeMessage,
   getColombiaNow: () => getColombiaNow,
@@ -19643,6 +19656,34 @@ function appendDmHistory(userId, role, content) {
   if (history.length > 8) history.shift();
   dmConversationHistory.set(userId, history);
 }
+async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, success = true) {
+  const realName = await resolveRealName(userId, rawName);
+  const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+  const timeSalutation = getGreetingByTime4();
+  const nameInfo = resolveNameAndGender(realName, timeSalutation);
+  const canonicalComposite = getCanonicalCompositeName(realName);
+  const compositeOrFirst = extractFirstName2(realName);
+  const displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
+  const welcomeGrammar = nameInfo.isFemale ? "bienvenida" : "bienvenido";
+  const history = await getOrLoadDmHistory(userId);
+  const isFirstTurn = history.length === 0;
+  if (!success) {
+    return `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude procesar tu solicitud en este intento. \xBFPodr\xEDas por favor confirmarme nuevamente los datos para ayudarte de inmediato? \u{1F91D}`;
+  }
+  if (isFirstTurn) {
+    const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
+
+Ya proces\xE9 con gusto tu consulta:
+
+`;
+    return greetingHeader + payloadText;
+  } else {
+    const politeHeader = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial:
+
+`;
+    return politeHeader + payloadText;
+  }
+}
 async function processPrivateDmConversationalMessage(text2, userId, userName) {
   const clean = text2.trim();
   if (!clean) return "";
@@ -19715,6 +19756,8 @@ REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA, G\xC9NERO Y NOMBRES COMPUESTOS:
 - G\xE9nero gramatical identificado: *${nameInfo.isFemale ? "Femenino (tratar como estimada, colega, bienvenida, atenta)" : "Masculino (tratar como estimado, colega, bienvenido, atento)"}*.
 - Si el usuario tiene un nombre compuesto (ej: Ana Mar\xEDa, Juan Jos\xE9, Mar\xEDa Fernanda, Jos\xE9 Manuel, Carlos Alberto, Luz Marina, Olga Luc\xEDa), NUNCA lo cortes al primer nombre (JAM\xC1S digas solo "Ana" o "Juan"); ll\xE1malo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercan\xEDa y respeto que se use su nombre compuesto completo.
 ${hasPriorHistory ? '- YA EST\xC1S EN UNA CONVERSACI\xD3N ACTIVA CON EL USUARIO. Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo con "\xA1Hola!", "\xA1Buenos d\xEDas!", "\xA1Qu\xE9 gusto saludarte!" o anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana.' : '- Si es el primer mensaje, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}
+- PEDAGOG\xCDA DE CORTES\xCDA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), sal\xFAdalo educadamente por su nombre y con calidez humana. Ense\xF1a con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.
+- MANEJO ELEGANTE DE DUDAS O AMBIG\xDCEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas gen\xE9ricas; dile con simpat\xEDa humana: "Qu\xE9 pena contigo, ${displayName || "colega"}. Debido a un peque\xF1o fallo en la matrix \u{1F916}\u{1F605} no alcanc\xE9 a captar bien lo que me pides hacer. \xBFPodr\xEDas por favor confirmarme o repetirme qu\xE9 necesitas para ayudarte de inmediato?".
 - NUNCA repitas como un contestador autom\xE1tico "\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesor\xEDa, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.
 - Conversa como una profesional inmobiliaria colombiana experta, culta, amena y emp\xE1tica. CERO tecnicismos computacionales ni lenguaje de bot.
 - Mant\xE9n respuestas concisas y bien estructuradas (2 a 4 p\xE1rrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).
@@ -19782,8 +19825,9 @@ QUI\xC9NES SOMOS:
     return reply;
   } catch (err) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    const hasPriorHistory = history.length > 0;
-    const fallback = hasPriorHistory ? `Con mucho gusto te oriento. En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que investiga e innova con tecnolog\xEDa para conectar a colegas corredores en nuestra bolsa 45/10/45, brindar peritajes, aval\xFAos y herramientas gratuitas como verificaci\xF3n de antecedentes y facturas prediales. Si requieres atenci\xF3n personalizada de nuestros directores Eduardo y Jani, puedes escribirnos al *+57 316 656 9719*.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Cu\xE9ntame en qu\xE9 te puedo colaborar hoy.`;
+    const fallback = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", fallback);
     return fallback;
   }
 }

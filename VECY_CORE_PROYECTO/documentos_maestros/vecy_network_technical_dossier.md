@@ -322,6 +322,38 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.39 — Octubre 2026
+
+#### 📌 PROTOCOLO MAESTRO DE CORTESÍA, SALUDO HUMANO POR NOMBRE/GÉNERO EN HERRAMIENTAS, MANEJO SIMPÁTICO DE FALLOS ("ERROR EN LA MATRIX") Y ARQUITECTURA DE RED SOCIAL FREEMIUM
+
+**Requerimiento y Objetivos:**
+1. **Elevación de la Interacción Humana y Pedagogía de Cortesía en WhatsApp**:
+   - Evitar que JanIA actúe como un robot frío o consola de comandos al procesar solicitudes automáticas (como *"verificar cc..."* o *"predial..."*).
+   - Saludar con elegancia y respeto: saludo según la hora (`Buenos días / tardes / noches`), nombre compuesto del usuario, concordancia de género (`bienvenido/a`) e identificación institucional (*"Soy JanIA tu asistente inmobiliaria con IA, creada por VECY BIENES RAÍCES"*).
+   - Con su educación y calidez, JanIA enseña a los usuarios del sector inmobiliario a ser más respetuosos y amables al interactuar.
+2. **Manejo Amable y Simpático de Fallos ("Error en la Matrix")**:
+   - Cero ghosting o respuestas vacías ante caídas de red, timeouts de scrapers o peticiones incomprensibles.
+   - Respuesta transparente y empática: *"Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar o procesar bien lo que me solicitaste. ¿Podrías por favor confirmarme nuevamente los datos para ayudarte de inmediato? 🤝"*.
+3. **Validación del Modelo Económico: Red Social Inmobiliaria y Matches 45/10/45**:
+   - Confirmación doctrinal de no cobrar por consultas de páginas públicas (Policía, Catastro/Hacienda) al ser gratuitas en origen.
+   - Estrategia Freemium / Lead Magnet: captura masiva de agentes a costo ínfimo (~$4.2 COP por consulta exitosa con 2Captcha).
+   - Monetización enfocada en el cierre real del Match (comisión de éxito 10% VECY / 45% punta captadora / 45% punta colocadora) y servicios profesionales de alto ticket (cobro de cartera de comisiones, avalúos certificados RAA, estudios de títulos de 20 años y firma electrónica).
+4. **Política de Respaldo de APIs de IA**:
+   - Preparación para incorporar nueva clave facturada de Google Gemini, preservando el pool de claves gratuitas existentes como respaldo y contingencia automática.
+
+**Decisiones de Arquitectura y Soluciones Aplicadas:**
+1. **Creación de `formatPoliteToolDelivery` en `server/_core/janIA.ts`**:
+   - Envoltura modular de reportes de autoservicio (Cédulas y Prediales).
+   - Primer mensaje del usuario: saludo formal horario, vocativo con nombre compuesto, bienvenida con género gramatical y presentación de JanIA / VECY BIENES RAÍCES.
+   - Mensajes posteriores en la misma conversación: saludo dinámico y ágil (*"¡Con mucho gusto, {{nombre}}! Ya procesé tu consulta:"*), evitando redundancias.
+2. **Integración en `server/_core/whatsapp-match.ts`**:
+   - Despachos de predial (pendiente y directo) y antecedentes de Policía envueltos con cortesía y guardados en PostgreSQL (`appendDmHistory`) para memoria persistente indestructible.
+3. **Manejo Resiliente de Fallos en `processPrivateDmConversationalMessage`**:
+   - Bloque `catch` humanizado con *"fallo en la matrix 🤖😅"* e inserción en el historial persistente.
+4. **Versión Oficial**: Incrementada a **v32.39** (`32.39.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 🔖 v32.38 — Octubre 2026
 
 #### 📌 CONCURRENCIA MULTI-USUARIO EN JANIA, BLINDAJE ANTI-AUTOMUTE POR REACCIONES, DES-SILENCIAMIENTO AUTOMÁTICO EN SOLICITUDES DE HERRAMIENTAS Y RESOLUCIÓN DE CASO LUZ ANGELA VARELA

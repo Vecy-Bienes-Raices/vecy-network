@@ -1100,12 +1100,14 @@ export class JaniaMatchBot {
         const predialPendingCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
         if (predialPendingCheck.isPredialRequest && predialPendingCheck.reportText) {
           console.log(`[JANIA-MATCH] [DM] Asistencia de predial completada con cédula para ${senderId} (CHIP ${predialPendingCheck.chip})`);
+          const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
+          const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'predial', predialPendingCheck.reportText, true);
           if (predialPendingCheck.pdfBuffer) {
             await this.queuedSend(senderId, {
               document: predialPendingCheck.pdfBuffer,
               mimetype: 'application/pdf',
               fileName: predialPendingCheck.pdfFileName || `Factura_Predial_${predialPendingCheck.chip}_2026.pdf`,
-              caption: predialPendingCheck.reportText
+              caption: deliveredText
             }, { quoted: mainMsg, allowDirectMessage: true });
 
             // Envío desacoplado de mensajes de bucle viral y reseña de Google (anti "Leer más") sin demoras artificiales
@@ -1113,9 +1115,11 @@ export class JaniaMatchBot {
             await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true, skipDelay: true });
             await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
           } else {
-            await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+            await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
           }
-          await this.logToDb(senderId, 'janIA', predialPendingCheck.reportText);
+          appendDmHistory(senderId, 'user', body);
+          appendDmHistory(senderId, 'assistant', deliveredText);
+          await this.logToDb(senderId, 'janIA', deliveredText);
           return;
         }
       } finally {
@@ -1131,12 +1135,14 @@ export class JaniaMatchBot {
         const predialCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
         if (predialCheck.isPredialRequest && predialCheck.reportText) {
           console.log(`[JANIA-MATCH] [DM] Asistencia de predial atendida para ${senderId} (CHIP ${predialCheck.chip || 'General'})`);
+          const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
+          const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'predial', predialCheck.reportText, true);
           if (predialCheck.pdfBuffer) {
             await this.queuedSend(senderId, {
               document: predialCheck.pdfBuffer,
               mimetype: 'application/pdf',
               fileName: predialCheck.pdfFileName || `Factura_Predial_${predialCheck.chip}_2026.pdf`,
-              caption: predialCheck.reportText
+              caption: deliveredText
             }, { quoted: mainMsg, allowDirectMessage: true });
 
             // Envío desacoplado de mensajes de bucle viral y reseña de Google (anti "Leer más") sin demoras artificiales
@@ -1144,9 +1150,11 @@ export class JaniaMatchBot {
             await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true, skipDelay: true });
             await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
           } else {
-            await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+            await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
           }
-          await this.logToDb(senderId, 'janIA', predialCheck.reportText);
+          appendDmHistory(senderId, 'user', body);
+          appendDmHistory(senderId, 'assistant', deliveredText);
+          await this.logToDb(senderId, 'janIA', deliveredText);
           return;
         }
       } finally {
@@ -1163,8 +1171,12 @@ export class JaniaMatchBot {
         const idCheck = await executeIdentityVerificationFromWhatsApp(body, true);
         if (idCheck.isVerificationRequest && idCheck.reportText) {
           console.log(`[JANIA-MATCH] [DM] Verificación de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
-          await this.queuedSend(senderId, idCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
-          await this.logToDb(senderId, 'janIA', idCheck.reportText);
+          const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
+          const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'cedula', idCheck.reportText, !!idCheck.success);
+          await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
+          appendDmHistory(senderId, 'user', body);
+          appendDmHistory(senderId, 'assistant', deliveredText);
+          await this.logToDb(senderId, 'janIA', deliveredText);
 
           // Si la verificación fue exitosa, enviar desacoplados el bucle viral y la reseña de Google
           if (idCheck.success) {

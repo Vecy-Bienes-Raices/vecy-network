@@ -7,6 +7,47 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.39 — 04 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Elevación de la Interacción Humana de JanIA y Pedagogía de Cortesía**:
+   - Eduardo reflexionó sobre la interacción de JanIA con los agentes inmobiliarios y clientes: ante cualquier mensaje que el usuario envíe en el chat, JanIA debe comprenderlo y ante todo **saludar por educación** con su nombre compuesto y saludo horario (*"Buenos días / tardes / noches {{nombre}}"*), adaptando el género gramatical (*"bienvenido / bienvenida a mi chat de servicios inmobiliarios. Soy JanIA tu asistente inmobiliaria con IA, creada por VECY BIENES RAÍCES"*).
+   - Eduardo señaló que con su ejemplo de decencia y educación, JanIA enseñará a los usuarios del gremio a solicitar servicios con amabilidad y respeto, superando comandos secos como *"verificar cc..."*.
+2. **Manejo Amable y Simpático de Fallos del Sistema ("Error en la Matrix")**:
+   - Si ocurre un bug, intermitencia de red, error de captcha o caída temporal de los portales de Hacienda o Policía, o si el mensaje es ambiguo, JanIA NUNCA debe quedarse callada ni abandonar al usuario.
+   - Debe responder con simpatía, empatía e inteligencia: *"Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar o procesar bien lo que me solicitaste. ¿Podrías por favor confirmarme nuevamente los datos para ayudarte de inmediato? 🤝"*.
+3. **Visión Estratégica: Red Social Inmobiliaria, Modelo Freemium y Matches por Éxito**:
+   - Eduardo analizó la viabilidad de cobrar suscripción mensual y concluyó acertadamente que las personas no pagarían solo por consultas de Policía o Predial porque saben que en origen son páginas públicas y gratuitas.
+   - Eduardo propuso evolucionar VECY Network hacia una **RED SOCIAL exclusiva para agentes inmobiliarios**, donde el acceso sea 100% gratuito (Lead Magnet y viralidad orgánica).
+   - El cobro se realiza cuando se materialice un verdadero **MATCH** (éxito en la negociación inmobiliaria cerrada: modelo 45% punta captadora / 10% VECY / 45% punta colocadora), respaldado por servicios de alto valor: asesoría jurídica, tributaria, avalúos certificados RAA, marketing digital, recuperación de comisiones (cobranza de cartera), consejos de negociación, guías de trámites paso a paso y firma electrónica con respaldo jurídico.
+4. **Respaldo de APIs y Facturación**:
+   - Eduardo indicó que tramitará una nueva API Key de Google Gemini con facturación para entregarla en la siguiente conversación, manteniendo intactas las API Keys gratuitas actuales como respaldo y pool de rotación automático en caso de costos altos, errores o bloqueos.
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Entrega Fría en Ejecución de Herramientas**:
+   - Las herramientas de autoservicio (`executeIdentityVerificationFromWhatsApp` y `executePredialQueryFromWhatsApp`) emitían reportes técnicos directos sin envoltura de cortesía ni identificación si el usuario enviaba un comando abreviado en su primer contacto.
+2. **Caída Silenciosa en Excepciones**:
+   - Si ocurría una excepción en `processPrivateDmConversationalMessage`, el bloque `catch` devolvía un mensaje estandarizado sin registrar la respuesta en el historial de conversación en PostgreSQL, perdiéndose el contexto en el siguiente turno.
+3. **Economía de APIs y Conversión a Red Social**:
+   - Las consultas a Policía y Catastro cuestan centavos de dólar en micro-servicios (~$4.2 COP por consulta exitosa con 2Captcha). Cobrar una suscripción mensual por esto generaría fricción innecesaria y mataría la viralidad. Mantenerlas 100% gratuitas permite capturar el número de WhatsApp de miles de agentes en Colombia a un costo de adquisición (CAC) casi nulo, canalizándolos hacia la Red Social de Matches y servicios de alto ticket.
+
+### Acciones Ejecutadas
+1. **Implementación de `formatPoliteToolDelivery` en `server/_core/janIA.ts`**:
+   - Función modular que examina el historial de conversación en PostgreSQL y RAM.
+   - **Primer Turno**: Saludo horario formal (`Buenos días / tardes / noches`), nombre compuesto canónico, concordancia gramatical (`bienvenido/bienvenida a mi chat de servicios inmobiliarios`), presentación de marca (*"Soy JanIA, tu asistente inmobiliaria con IA creada por VECY BIENES RAÍCES"*), seguido del reporte oficial.
+   - **Turnos Subsiguientes**: Saludo ágil y cordial (*"¡Con mucho gusto, {{nombre}}! Ya procesé tu consulta:"*) preservando la fluidez sin repetir saludos ceremoniales.
+2. **Integración en Despachos de Socket en `server/_core/whatsapp-match.ts`**:
+   - Enlace directo de `formatPoliteToolDelivery` en consultas pendientes de predial, consultas de predial directas y verificaciones de antecedentes de la Policía Nacional.
+   - Registro bidireccional (`appendDmHistory`) de la solicitud del usuario y el reporte emitido para garantizar memoria persistente indestructible.
+3. **Refinamiento de System Prompt y Manejo de Errores ("Fallo en la Matrix")**:
+   - Protocolo de cortesía y pedagogía integrado en el prompt conversacional de JanIA.
+   - Manejo simpático de excepciones con el mensaje de *"fallo en la matrix 🤖😅"* sin tecnicismos fríos ni silencios.
+4. **Actualización de Documentos Maestros y Control de Versión**:
+   - Incremento de versión oficial a **v32.39** en `shared/const.ts` y `package.json`.
+   - `tsc --noEmit` 0 errores ✅.
+   - `npm run build` limpio y optimizado en 27.7s ✅.
+   - 135/135 tests Vitest aprobados al 100% ✅.
+
 ## 📋 SESIÓN v32.38 — 04 Octubre 2026
 
 ### Solicitud de Eduardo

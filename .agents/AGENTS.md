@@ -172,7 +172,32 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.38 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.39 — Octubre 2026
+
+### Novedades v32.39 (Protocolo Maestro de Cortesía, Saludo Humano por Nombre/Género en Herramientas, Manejo Simpático de Fallos "Error en la Matrix" y Persistencia en DMs):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Elevación del Estándar Humano y Pedagogía de Cortesía**:
+     - Eduardo instruyó que ante cualquier interacción, JanIA no debe actuar como una consola fría de comandos ni soltar reportes secos.
+     - Debe saludar cordialmente por su nombre compuesto, dar la bienvenida adaptada a su género gramatical (`bienvenido/a`) e identificarse con orgullo como *"JanIA, tu asistente inmobiliaria con IA creada por VECY BIENES RAÍCES"*.
+     - Con su ejemplo de educación y calidez, JanIA enseñará a los usuarios del gremio a ser más decentes, amables y respetuosos al solicitar un servicio.
+  2. **Manejo Elegante y Simpático de Fallos ("Error en la Matrix")**:
+     - Cero ghosting o abandono silencioso. Si ocurre una intermitencia de red, timeout de scraper de Policía/Catastro o una orden incomprensible, JanIA responde con simpatía humana y empatía: *"Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar o procesar bien lo que me solicitaste. ¿Podrías por favor confirmarme nuevamente los datos para ayudarte de inmediato? 🤝"*.
+  3. **Visión Estratégica de Red Social Inmobiliaria y Monetización por Éxito (Matches 45/10/45)**:
+     - Ratificada la visión de VECY Network como la red social exclusiva de los agentes inmobiliarios en Colombia.
+     - Cero cobro por datos públicos de Hacienda o Policía (el caballo de Troya gratuito más potente del sector).
+     - La monetización real se produce en el cierre exitoso del Match (10% de comisión de plataforma) y en servicios de alto valor: cobro de cartera, peritajes/avalúos certificados RAA, estudios de títulos a 20 años en la SNR y firma electrónica con respaldo jurídico.
+- **Acciones Ejecutadas y Blindaje de Arquitectura**:
+  1. **Creación de `formatPoliteToolDelivery` en `server/_core/janIA.ts`**:
+     - Envoltura elegante de reportes de Cédula y Predial con saludo horario (`timeSalutation`), nombre compuesto (`displayName`), bienvenida de género (`welcomeGrammar`) y presentación institucional si es primer turno.
+     - Si ya hay conversación activa en el día, responde con cortesía fluida (*"¡Con mucho gusto, {{nombre}}! Ya procesé tu consulta:"*).
+  2. **Integración en Despachos de Socket en `server/_core/whatsapp-match.ts`**:
+     - Tanto en consultas de predial pendientes, consultas de predial directas, como en verificaciones de cédula, el reporte es formateado por `formatPoliteToolDelivery` y registrado en el historial persistente de DMs (`appendDmHistory`) para continuidad infinita de hilo.
+  3. **Refinamiento de System Prompt y Fallback en `janIA.ts`**:
+     - Inclusión de directrices de pedagogía de respeto y manejo simpático de ambigüedades.
+     - Fallback en bloque `catch` con el mensaje humano de *"error en la matrix 🤖😅"*.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | `npm run build` limpio en 27.7s ✅ | 135/135 tests Vitest aprobados al 100% ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.38 — Octubre 2026
 
 ### Novedades v32.38 (Concurrencia Multi-Usuario en JanIA, Blindaje Anti-AutoMute por Reacciones, Des-Silenciamiento Automático en Solicitudes de Herramientas y Resolución de Caso Luz Angela Varela):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

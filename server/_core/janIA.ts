@@ -6640,6 +6640,42 @@ export function appendDmHistory(userId: string, role: "user" | "assistant", cont
 }
 
 /**
+ * Envuelve la entrega de cualquier herramienta (cédula o predial) con cortesía,
+ * saludo personalizado por hora, nombre compuesto y género gramatical,
+ * evitando que JanIA suene como un bot frío o robótico y educando con el ejemplo.
+ */
+export async function formatPoliteToolDelivery(
+  userId: string,
+  rawName: string,
+  toolType: "cedula" | "predial",
+  payloadText: string,
+  success: boolean = true
+): Promise<string> {
+  const realName = await resolveRealName(userId, rawName);
+  const { getGreetingByTime } = await import('./whatsapp-utils');
+  const timeSalutation = getGreetingByTime(); // "Buenos días" | "Buenas tardes" | "Buenas noches"
+  const nameInfo = resolveNameAndGender(realName, timeSalutation);
+  const canonicalComposite = getCanonicalCompositeName(realName);
+  const compositeOrFirst = extractFirstName(realName);
+  const displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
+  const welcomeGrammar = nameInfo.isFemale ? "bienvenida" : "bienvenido";
+  const history = await getOrLoadDmHistory(userId);
+  const isFirstTurn = history.length === 0;
+
+  if (!success) {
+    return `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude procesar tu solicitud en este intento. ¿Podrías por favor confirmarme nuevamente los datos para ayudarte de inmediato? 🤝`;
+  }
+
+  if (isFirstTurn) {
+    const greetingHeader = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️✨.\n\nYa procesé con gusto tu consulta:\n\n`;
+    return greetingHeader + payloadText;
+  } else {
+    const politeHeader = `¡Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aquí tienes el reporte oficial:\n\n`;
+    return politeHeader + payloadText;
+  }
+}
+
+/**
  * Procesa mensajes conversacionales privados en WhatsApp (DMs) con IA Pura (Gemini).
  *
  * REGLA DOCTRINAL (v32.35):
@@ -6748,6 +6784,8 @@ export async function processPrivateDmConversationalMessage(
           `- Género gramatical identificado: *${nameInfo.isFemale ? "Femenino (tratar como estimada, colega, bienvenida, atenta)" : "Masculino (tratar como estimado, colega, bienvenido, atento)"}*.\n` +
           `- Si el usuario tiene un nombre compuesto (ej: Ana María, Juan José, María Fernanda, José Manuel, Carlos Alberto, Luz Marina, Olga Lucía), NUNCA lo cortes al primer nombre (JAMÁS digas solo "Ana" o "Juan"); llámalo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercanía y respeto que se use su nombre compuesto completo.\n` +
           `${hasPriorHistory ? '- YA ESTÁS EN UNA CONVERSACIÓN ACTIVA CON EL USUARIO. Está TERMINANTEMENTE PROHIBIDO saludar de nuevo con "¡Hola!", "¡Buenos días!", "¡Qué gusto saludarte!" o anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana.' : '- Si es el primer mensaje, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}\n` +
+          `- PEDAGOGÍA DE CORTESÍA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), salúdalo educadamente por su nombre y con calidez humana. Enseña con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.\n` +
+          `- MANEJO ELEGANTE DE DUDAS O AMBIGÜEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas genéricas; dile con simpatía humana: "Qué pena contigo, ${displayName || "colega"}. Debido a un pequeño fallo en la matrix 🤖😅 no alcancé a captar bien lo que me pides hacer. ¿Podrías por favor confirmarme o repetirme qué necesitas para ayudarte de inmediato?".\n` +
           `- NUNCA repitas como un contestador automático "¿Cuál de las dos herramientas te gustaría probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesoría, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.\n` +
           `- Conversa como una profesional inmobiliaria colombiana experta, culta, amena y empática. CERO tecnicismos computacionales ni lenguaje de bot.\n` +
           `- Mantén respuestas concisas y bien estructuradas (2 a 4 párrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).\n` +
@@ -6821,10 +6859,9 @@ export async function processPrivateDmConversationalMessage(
     return reply;
   } catch (err: any) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    const hasPriorHistory = history.length > 0;
-    const fallback = hasPriorHistory
-      ? `Con mucho gusto te oriento. En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que investiga e innova con tecnología para conectar a colegas corredores en nuestra bolsa 45/10/45, brindar peritajes, avalúos y herramientas gratuitas como verificación de antecedentes y facturas prediales. Si requieres atención personalizada de nuestros directores Eduardo y Jani, puedes escribirnos al *+57 316 656 9719*.`
-      : `¡${timeSalutation}${nameGreeting}! 👋 En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que innova con tecnología para facilitarte tus gestiones diarias. Cuéntame en qué te puedo colaborar hoy.`;
+    const fallback = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar o procesar bien lo que me solicitaste. ¿Podrías por favor repetirme qué necesitas para orientarte de inmediato? 🤝`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", fallback);
     return fallback;
   }
 }
