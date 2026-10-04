@@ -322,6 +322,36 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.40 — Octubre 2026
+
+#### 📌 DOCTRINA DE MARKETING CONVERSACIONAL, PROHIBICIÓN DE "45/10/45" TEMPRANO, PERFILAMIENTO DEL USUARIO, MENÚ ESTRUCTURADO DE CONSULTAS, CLARIDAD TAJANTE DE SERVICIOS GRATUITOS Y DESPEDIDA EN 2 MENSAJES SECUENCIALES
+
+**Requerimiento y Objetivos:**
+1. **Análisis Crítico de la Conversación con Reina Salazar (`+57 313 8323122`)**:
+   - Subsanar errores conversacionales donde JanIA enfrió la venta:
+     a) Mención prematura e incomprensible de la "bolsa colaborativa 45/10/45".
+     b) Suposición apresurada de que el usuario es colega inmobiliario sin perfilarlo previamente.
+     c) Monólogo largo y desbalanceado sobre antecedentes policiales cuando el usuario solo preguntó "¿Cómo es lo de las consultas?".
+     d) Respuesta ambigua sobre costos inventando "paquetes o planes según volumen" y mandando a llamar a Jani Alves en vez de responder de inmediato que la herramienta es 100% GRATIS.
+     e) Despedida sin solicitar la reseña de Google.
+2. **Implementación de las Soluciones Doctrinales**:
+   - Saludo con perfilamiento amigable (*"¿Cuéntame a qué te dedicas o qué haces actualmente?"*).
+   - Menú de consultas catalogado dividiendo las herramientas gratuitas (1 y 2) de las especializadas (3 al 9).
+   - Respuesta tajante e inmediata de que las herramientas son completamente GRATIS y llamado directo a la acción.
+   - Despedida secuencial en 2 mensajes: Mensaje 1 (Canal Oficial de WhatsApp) y Mensaje 2 (Google Review y deseos de éxito en cierres).
+
+**Decisiones de Arquitectura y Soluciones Aplicadas:**
+1. **Interceptores en `server/_core/janIA.ts`**:
+   - Supresión de "45/10/45" en el saludo inicial y bienvenida.
+   - Creación de detectores dedicados para preguntas sobre consultas (`isConsultasInquiry`) y preguntas sobre costos (`isCostInquiry`).
+   - System Prompt de Gemini LLM blindado con reglas de perfilamiento, prohibición de 45/10/45 temprano y respuesta tajante de costo cero.
+2. **Plantillas Desacopladas en `server/_core/predialService.ts` y `server/_core/whatsapp-match.ts`**:
+   - `GOOGLE_REVIEW_MESSAGE` actualizado con el texto persuasivo exacto de Eduardo.
+   - Despacho secuencial del Mensaje 2 con micro-pausa de 1.2 segundos y persistencia en base de datos.
+3. **Versión Oficial**: Incrementada a **v32.40** (`32.40.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 🔖 v32.39 — Octubre 2026
 
 #### 📌 PROTOCOLO MAESTRO DE CORTESÍA, SALUDO HUMANO POR NOMBRE/GÉNERO EN HERRAMIENTAS, MANEJO SIMPÁTICO DE FALLOS ("ERROR EN LA MATRIX") Y ARQUITECTURA DE RED SOCIAL FREEMIUM

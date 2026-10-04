@@ -2607,6 +2607,49 @@ Adriana Rebeca Orejuela`;
 
       spyPa.mockRestore();
     });
+
+    it("Doctrina v32.40: Saludo inicial sin 45/10/45 con perfilamiento, menú de consultas, costos 100% GRATIS y despedida secuencial", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/janIA");
+      const { GOOGLE_REVIEW_MESSAGE, getChannelInviteGoodbyeMessage } = await import("../_core/predialService");
+
+      // 1. Saludo inicial: No debe contener 45/10/45 y debe preguntar a qué se dedica el usuario
+      const testUserId = `test-user-${Date.now()}@s.whatsapp.net`;
+      const greetingRes = await processPrivateDmConversationalMessage("Hola", testUserId, "Reina Salazar");
+      expect(greetingRes).toContain("Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES*");
+      expect(greetingRes).toContain("Reina");
+      expect(greetingRes).toContain("¿a qué te dedicas o qué haces actualmente?");
+      expect(greetingRes).not.toContain("45/10/45");
+
+      // 2. Consulta genérica: "Como es lo de las consultas?"
+      const consultasRes = await processPrivateDmConversationalMessage("Como es lo de las consultas?", testUserId, "Reina Salazar");
+      expect(consultasRes).toContain("Primero cuéntame qué clase de consulta deseas hacer");
+      expect(consultasRes).toContain("Servicios 100% Gratuitos de Autoservicio");
+      expect(consultasRes).toContain("Verificación oficial de documentos");
+      expect(consultasRes).toContain("Factura Predial Bogotá y Certificados de Pago");
+      expect(consultasRes).toContain("Consultas Especializadas y Asesoría Profesional");
+      expect(consultasRes).toContain("Sondeos de mercado");
+      expect(consultasRes).toContain("Asesoría jurídica inmobiliaria");
+      expect(consultasRes).toContain("Recuperación de cartera");
+      expect(consultasRes).toContain("Avalúos digitales");
+      expect(consultasRes).toContain("Liquidaciones tributarias");
+      expect(consultasRes).toContain("Préstamos sobre hipoteca");
+
+      // 3. Pregunta de costos: "Los costos ?" -> Debe responder 100% GRATIS sin rodeos
+      const costosRes = await processPrivateDmConversationalMessage("Los costos ?", testUserId, "Reina Salazar");
+      expect(costosRes).toContain("completamente *GRATIS*");
+      expect(costosRes).not.toContain("diferentes esquemas según el volumen");
+      expect(costosRes).not.toContain("paquetes de consultas");
+      expect(costosRes).toContain("Envíame el número de cédula");
+
+      // 4. Agradecimiento o cierre: "Ok muchas gracias 🫂" -> Mensaje 1 Canal Oficial
+      const goodbyeRes = await processPrivateDmConversationalMessage("Ok muchas gracias 🫂", testUserId, "Reina Salazar");
+      expect(goodbyeRes).toContain("Con todo el gusto, Reina");
+      expect(goodbyeRes).toContain("Canal Oficial de WhatsApp (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b)");
+
+      // 5. Mensaje 2 (Google Review y despedida persuasiva)
+      expect(GOOGLE_REVIEW_MESSAGE).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+      expect(GOOGLE_REVIEW_MESSAGE).toContain("¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨");
+    });
   });
 });
 

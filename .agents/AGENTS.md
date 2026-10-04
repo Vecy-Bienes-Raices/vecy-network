@@ -172,7 +172,38 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.39 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.40 — Octubre 2026
+
+### Novedades v32.40 (Doctrina de Marketing Conversacional, Prohibición de "45/10/45" Temprano, Perfilamiento del Usuario, Menú Estructurado de Consultas, Claridad Tajante de Servicios Gratuitos y Despedida en 2 Mensajes Secuenciales):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo (Análisis Caso Reina Salazar `+57 313 8323122`)**:
+  1. **Prohibición Estricta de Mencionar "45/10/45" en Etapas Iniciales**:
+     - Eduardo detectó que hablar de "bolsa colaborativa 45/10/45" o esquemas de comisión al inicio asusta y confunde a los usuarios, ya que nadie en el mercado conoce ese término técnico interno.
+     - Solo los fundadores y el sistema conocen ese porcentaje; JAMÁS debe mencionarse en saludos ni en etapas tempranas.
+  2. **Perfilamiento Conversacional Amigable (Cero Suposiciones de Oficio)**:
+     - JanIA NO sabe a qué se dedica el usuario que escribe (puede ser propietario, comprador, arrendatario, inversionista o asesor).
+     - Al saludar, JanIA debe presentarse con orgullo (*"Soy JanIA, tu asistente inmobiliaria con IA creada por VECY BIENES RAÍCES"*) e indagar con una pregunta abierta cálida: *"¿Cuéntame a qué te dedicas o qué haces actualmente? Así podré orientarte de la mejor manera y contarte cómo podemos facilitarte la vida hoy 🤝✨"*. Esto permite conocer su contexto y aplicar marketing conversacional persuasivo.
+  3. **Manejo Estructurado de Preguntas sobre Consultas ("¿Cómo es lo de las consultas?")**:
+     - JanIA no debe volcar monólogos técnicos asumiendo que solo se trata de Policía Nacional.
+     - Debe preguntar: *"Primero cuéntame qué clase de consulta deseas hacer o sobre qué tema necesitas apoyo:"* y desplegar el catálogo dividido:
+       - **100% Gratuitas:** 1. Verificación oficial de documentos (CC, CE, Pasaportes) ante Policía Nacional y 2. Factura Predial Bogotá y Certificados oficiales de pago en PDF (SDH).
+       - **Consultas Especializadas y Asesoría Profesional:** 3. Sondeos de mercado m², 4. Asesoría jurídica en compraventa/arriendos, 5. Hábeas Data, 6. Recuperación de cartera de comisiones no pagadas, 7. Avalúos digitales certificados RAA, 8. Liquidaciones tributarias y 9. Préstamos sobre hipoteca y pacto de retroventa.
+     - En los temas 3 al 9, JanIA brinda conceptos básicos y tips breves gratuitos para despejar dudas, y para el análisis de fondo guía al usuario a contactar al bróker humano oficial (+57 316 656 9719).
+  4. **Respuesta Tajante y Sin Rodeos ante Preguntas de Costos ("Los costos ?", "¿cuánto cuesta?")**:
+     - Si el usuario pregunta por los costos de los servicios o herramientas de consulta que JanIA le acaba de nombrar (verificación de documentos o predial), JanIA responde con alegría, claridad y rapidez:
+       *"¡Este servicio es completamente GRATIS! 🎁✨ En VECY Bienes Raíces la verificación de documentos y la factura predial no tienen ningún costo para ti..."* y lo invita de inmediato a probarlo: *"Envíame el número de cédula y te lo entrego en segundos"*.
+     - **Prohibición Terminante**: JAMÁS enfriar la venta hablando de "planes o paquetes según volumen", ni "45/10/45", ni mandarlo a llamar a Jani Alves para averiguar precios de herramientas que son 100% gratuitas.
+  5. **Despedida Secuencial en 2 Mensajes Cortos y Persuasivos**:
+     - **Mensaje 1 (Canal Oficial)**: `Con todo el gusto, {{nombre}}. Para nosotros en VECY es un verdadero placer apoyarte en tus proyectos y gestiones inmobiliarias. Antes de que te vayas, te invito a unirte a nuestro Canal Oficial de WhatsApp (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b), donde compartimos cosas que te pueden interesar.`
+     - **Mensaje 2 (Google Review y Cierre Exitoso)**: `⭐ Tu opinión es muy importante para nosotros. La necesitamos muchísimo para seguir mejorando y logrando que más colegas y propietarios conozcan nuestro servicio. Si te gustó la atención y la rapidez, regálanos un comentario y calificación. Significaría un mundo para todo el equipo de Vecy Bienes Raíces:\n👉 https://g.page/r/CctNbwU6UpX5EBM/review ✨\n\n¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨`
+     - Detección tolerante para capturar agradecimientos como `"Ok muchas gracias 🫂"`, `"muchas gracias"`, etc.
+- **Acciones Ejecutadas y Blindaje de Arquitectura**:
+  1. `server/_core/janIA.ts`: Interceptores dedicados para saludo con perfilamiento, menú de consultas, costos 100% gratuitos y despedida con mensaje 1; System Prompt de Gemini enriquecido con directrices de ventas y marketing conversacional.
+  2. `server/_core/predialService.ts`: Actualizado `GOOGLE_REVIEW_MESSAGE` con el mensaje exacto de Eduardo y exportado `getChannelInviteGoodbyeMessage`.
+  3. `server/_core/whatsapp-match.ts`: Regex `isGratitudeOrClosing` robusta y tolerante a variaciones coloquiales ("ok muchas gracias", emojis) con despacho desacoplado y secuencial del Mensaje 2.
+  4. `server/__tests__/regression.test.ts`: Pruebas automatizadas cubriendo el ciclo completo de la doctrina v32.40.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | 136/136 tests Vitest aprobados al 100% ✅ | `npm run build` limpio en 21.1s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.39 — Octubre 2026
 
 ### Novedades v32.39 (Protocolo Maestro de Cortesía, Saludo Humano por Nombre/Género en Herramientas, Manejo Simpático de Fallos "Error en la Matrix" y Persistencia en DMs):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

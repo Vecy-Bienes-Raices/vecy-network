@@ -6723,22 +6723,79 @@ export async function processPrivateDmConversationalMessage(
 
   const history = await getOrLoadDmHistory(userId);
 
-  // Si es un saludo inicial y no hay historial previo reciente, entregar saludo horario cálido y abierto con catálogo completo
+  // Si es un saludo inicial y no hay historial previo reciente, entregar saludo horario cálido y abierto con perfilamiento amigable (Doctrina v32.40)
+  // PROHIBICIÓN ESTRICTA DE MENCIONAR "45/10/45" EN EL SALUDO INICIAL
   if (isGreetingOnly && history.length === 0) {
     const welcomeMsg =
-      `¡${timeSalutation}${nameGreeting}! 👋 Soy *JanIA*, la asesora experta con inteligencia artificial de *VECY BIENES RAÍCES* 🏘️. Qué gusto saludarte.\n\n` +
-      `Te puedo colaborar de inmediato en todo lo relacionado con finca raíz:\n` +
-      `• 📄 *Factura Predial Bogotá y Certificado de Pago en PDF* (al instante con Hacienda)\n` +
-      `• 🛡️ *Verificación de Cédula y Antecedentes en Policía Nacional* (en 20 segundos)\n` +
-      `• 🤝 *Bolsa Inmobiliaria Colaborativa y Matching Inteligente 45/10/45* (cruce algorítmico de Ofertas y Demandas: 80%-94% Match Aproximado y 95%-100% Match Perfecto a través de nuestra plataforma en toda Colombia)\n` +
-      `• ⚖️ *Asesoría Jurídica y Contractual* (Ley 820 de 2003, Ley 675 de 2001, promesas de compraventa, arras, estudio de títulos a 20 años en la SNR, cobro de comisiones pendientes)\n` +
-      `• 📊 *Avalúos y Análisis Comparativo de Mercado (ACM)*\n` +
-      `• 👤 *Atención Personalizada con nuestros Directores:* Eduardo Rivera y Jani Alves (+57 316 656 9719)\n\n` +
-      `¿En qué te puedo colaborar hoy? Cuéntame con total confianza 🤝`;
+      `¡${timeSalutation}${nameGreeting}! 👋 Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️. Qué gusto saludarte.\n\n` +
+      `Para nosotros en VECY es un verdadero placer apoyarte en tus gestiones y proyectos inmobiliarios.\n\n` +
+      `Cuéntame${displayName ? `, ${displayName}` : ""}: ¿a qué te dedicas o qué haces actualmente? Así podré orientarte de la mejor manera y contarte cómo podemos facilitarte la vida hoy 🤝✨`;
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", welcomeMsg);
     return welcomeMsg;
+  }
+
+  // Fast-path: Preguntas sobre el portafolio de consultas ("¿Cómo es lo de las consultas?", etc.)
+  const isConsultasInquiry = 
+    /(?:c[oó]mo\s+es\s+lo\s+de\s+las\s+consultas|qu[eé]\s+(?:tipo\s+de\s+)?consultas|cu[aá]les\s+consultas|de\s+qu[eé]\s+son\s+las\s+consultas|qu[eé]\s+consultas\s+(?:tienen|hacen|prestan|ofrecen)|informaci[oó]n\s+de\s+las\s+consultas|como\s+funcionan\s+las\s+consultas)\b/i.test(cleanLower);
+
+  if (isConsultasInquiry) {
+    const consultasMenuMsg =
+      `¡Con mucho gusto${vocativeGreeting}! Primero cuéntame qué clase de consulta deseas hacer o sobre qué tema necesitas apoyo:\n\n` +
+      `🎁 *Servicios 100% Gratuitos de Autoservicio:*\n` +
+      `1️⃣ *Verificación oficial de documentos:* Validación de identidad (Cédula de Ciudadanía, Extranjería, Pasaportes) y reporte de antecedentes con la Policía Nacional en 20 segundos.\n` +
+      `2️⃣ *Factura Predial Bogotá y Certificados de Pago:* Consulta y descarga oficial en PDF con código de barras y estado de cuenta al día con la Secretaría de Hacienda.\n\n` +
+      `💼 *Consultas Especializadas y Asesoría Profesional:*\n` +
+      `3️⃣ *Sondeos de mercado:* Valores aproximados del metro cuadrado en Bogotá según el barrio o sector.\n` +
+      `4️⃣ *Asesoría jurídica inmobiliaria:* Casos de negociación, promesas de compraventa y contratos de arrendamiento.\n` +
+      `5️⃣ *Tratamiento de datos y Hábeas Data inmobiliario.*\n` +
+      `6️⃣ *Recuperación de cartera:* Cobranza de comisiones inmobiliarias no pagadas.\n` +
+      `7️⃣ *Avalúos digitales y peritajes comerciales certificados RAA.*\n` +
+      `8️⃣ *Liquidaciones tributarias:* Ganancia ocasional, retención en la fuente e impuestos notariales.\n` +
+      `9️⃣ *Préstamos sobre hipoteca y pacto de retroventa.*\n\n` +
+      `Dime cuál de estos temas te interesa y te ayudo de inmediato. Si deseas probar las herramientas gratuitas (1 o 2), ¡solo dime el número de documento o el predio que quieres consultar! 🤝`;
+
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", consultasMenuMsg);
+    return consultasMenuMsg;
+  }
+
+  // Fast-path: Preguntas sobre costos de las herramientas ("Los costos ?", "¿cuánto vale?", "¿cuánto cuesta?", etc.)
+  const isCostInquiry = 
+    /^(?:los\s+)?costos?\s*\??$/i.test(cleanLower) ||
+    /(?:cu[aá]nto\s+(?:cuesta|vale|cobran)|qu[eé]\s+costo\s+tiene|qu[eé]\s+precio\s+tiene|tiene\s+alg[uú]n\s+costo|es\s+gratis|es\s+gratuito|cu[aá]nto\s+es|tarifas?)\b/i.test(cleanLower);
+
+  if (isCostInquiry) {
+    const isFreeToolsContext = 
+      history.some(h => /verificaci[oó]n|c[eé]dula|predial|antecedentes|polic[ií]a|documento|chip/i.test(h.content)) ||
+      !history.some(h => /aval[uú]o|jur[ií]dica|comisi[oó]n|hipoteca/i.test(h.content));
+
+    if (isFreeToolsContext) {
+      const freeCostMsg = 
+        `¡${displayName || "Hola"}! Este servicio es completamente *GRATIS* 🎁✨.\n\n` +
+        `En *VECY Bienes Raíces* la verificación oficial de documentos y antecedentes ante la Policía Nacional (Cédula de Ciudadanía, Extranjería, Pasaportes), así como la consulta y descarga de la Factura Predial y certificados de pago de Bogotá, *no tienen ningún costo para ti*.\n\n` +
+        `Las ofrecemos 100% gratuitas para apoyar a nuestra comunidad y garantizar total seguridad en las visitas y negocios inmobiliarios.\n\n` +
+        `Si quieres, ¡pongámoslo a prueba ahora mismo! Envíame el número de cédula (o documento) que deseas verificar, y en segundos te entrego el reporte oficial 🤝`;
+
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", freeCostMsg);
+      return freeCostMsg;
+    }
+  }
+
+  // Fast-path: Despedidas y agradecimientos (Doctrina v32.40 - Mensaje 1 Canal Oficial)
+  const isGratitudeOrClosingFastPath = 
+    /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) ||
+    (cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower));
+
+  if (isGratitudeOrClosingFastPath) {
+    const { getChannelInviteGoodbyeMessage } = await import('./predialService');
+    const goodbyeMsg = getChannelInviteGoodbyeMessage(displayName);
+
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", goodbyeMsg);
+    return goodbyeMsg;
   }
 
   // Fast-path: Si el usuario pide verificar documento o antecedentes sin dar aún el número
@@ -6778,12 +6835,17 @@ export async function processPrivateDmConversationalMessage(
         role: "system",
         content:
           `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RAÍCES en Colombia.\n` +
-          `Estás conversando por WHATSAPP con un colega asesor inmobiliario, cliente o aliado comercial.\n\n` +
+          `Estás conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.\n\n` +
           `REGLAS CRÍTICAS DE CONVERSACIÓN HUMANA, GÉNERO Y NOMBRES COMPUESTOS:\n` +
           `- El usuario se llama: *${displayName || realName || "Colega"}*.\n` +
           `- Género gramatical identificado: *${nameInfo.isFemale ? "Femenino (tratar como estimada, colega, bienvenida, atenta)" : "Masculino (tratar como estimado, colega, bienvenido, atento)"}*.\n` +
           `- Si el usuario tiene un nombre compuesto (ej: Ana María, Juan José, María Fernanda, José Manuel, Carlos Alberto, Luz Marina, Olga Lucía), NUNCA lo cortes al primer nombre (JAMÁS digas solo "Ana" o "Juan"); llámalo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercanía y respeto que se use su nombre compuesto completo.\n` +
           `${hasPriorHistory ? '- YA ESTÁS EN UNA CONVERSACIÓN ACTIVA CON EL USUARIO. Está TERMINANTEMENTE PROHIBIDO saludar de nuevo con "¡Hola!", "¡Buenos días!", "¡Qué gusto saludarte!" o anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana.' : '- Si es el primer mensaje, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}\n` +
+          `- PERFILAMIENTO CONVERSACIONAL Y MARKETING DE VENTAS: JanIA NO sabe a qué se dedica el usuario (no asumas de antemano que es colega inmobiliario; puede ser propietario, comprador o inversionista). Indaga amablemente sobre a qué se dedica o qué hace ("¿A qué te dedicas?", "¿Qué haces?", "¿En qué trabajas?") para comprender su perfil y enfocar la conversación con persuasión asertiva.\n` +
+          `- PROHIBICIÓN ESTRICTA DE MENCIONAR "45/10/45" AL INICIO: Bajo NINGUNA circunstancia menciones "45/10/45", "bolsa colaborativa 45/10/45" ni esquemas de comisión al inicio de la conversación o cuando pregunten por consultas. Nadie en el mercado conoce ese término aún y confunde a los usuarios. Solo se hablará de red colaborativa si el usuario pregunta expresamente sobre compartir inmuebles entre colegas.\n` +
+          `- CUANDO EL USUARIO PREGUNTE POR LAS CONSULTAS ("¿Cómo es lo de las consultas?", etc.): NO sueltes un monólogo solo de la Policía. Pregúntale amablemente qué clase de consulta desea realizar y dale el menú organizado: 1 y 2 Gratuitas (Verificación de documentos ante Policía Nacional y Factura Predial Bogotá con certificados de pago); 3 al 9 Especializadas (Sondeos de mercado m², Asesoría jurídica en compraventa/arriendos, Hábeas Data, Cobranza de comisiones no pagadas, Avalúos digitales RAA, Liquidaciones tributarias y Préstamos hipotecarios).\n` +
+          `- REGLA TAJANTE DE COSTOS (100% GRATIS): Si el usuario pregunta por los costos de los servicios o herramientas de consulta que le acabas de nombrar (verificación de documentos o predial), responde con total claridad y entusiasmo: "¡Este servicio es completamente GRATIS!". Explica que no tiene ningún costo para él y anímalo de inmediato a probarlo enviando el número de documento o CHIP. ESTÁ TERMINANTEMENTE PROHIBIDO hablar de "paquetes o planes de consultas según volumen", o mandarlo a llamar a Jani Alves para averiguar costos de herramientas que son gratuitas. Eso enfría la venta y espanta al cliente.\n` +
+          `- DOCTRINA EN SERVICIOS ESPECIALIZADOS (3 al 9): En temas especializados (sondeos de mercado, jurídica, cobranza de comisiones, avalúos, tributaria, hipotecas), JanIA puede ofrecer de forma completamente gratuita algunos conceptos breves, definiciones y consejos superficiales que despejen la duda general en la mente del usuario, pero SIN entregar la solución técnica o jurídica de fondo, guiándolo a contactar a los Directores de Vecy Bienes Raíces al +57 316 656 9719 para contratar el servicio profesional.\n` +
           `- PEDAGOGÍA DE CORTESÍA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), salúdalo educadamente por su nombre y con calidez humana. Enseña con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.\n` +
           `- MANEJO ELEGANTE DE DUDAS O AMBIGÜEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas genéricas; dile con simpatía humana: "Qué pena contigo, ${displayName || "colega"}. Debido a un pequeño fallo en la matrix 🤖😅 no alcancé a captar bien lo que me pides hacer. ¿Podrías por favor confirmarme o repetirme qué necesitas para ayudarte de inmediato?".\n` +
           `- NUNCA repitas como un contestador automático "¿Cuál de las dos herramientas te gustaría probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesoría, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.\n` +
@@ -6812,10 +6874,9 @@ export async function processPrivateDmConversationalMessage(
           `CATÁLOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:\n` +
           `1. FACTURA PREDIAL BOGOTÁ Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con código de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretaría Distrital de Hacienda.\n` +
           `2. VERIFICACIÓN OFICIAL DE IDENTIDAD Y ANTECEDENTES (POLICÍA NACIONAL): Validación de nombres completos y antecedentes en 20 segundos para Cédulas de Ciudadanía, Cédulas de Extranjería, Pasaportes y Documentos de País de Origen, blindando contratos de compraventa y arrendamiento.\n` +
-          `3. BOLSA INMOBILIARIA COLABORATIVA Y MATCHING INTELIGENTE 45/10/45: Cruce algorítmico de OFERTAS y DEMANDAS a través de nuestra plataforma entre colegas a nivel nacional con cualquier tipo de inmueble. Coincidencias entre el 80% al 94% ("MATCH APROXIMADO") y del 95% al 100% de compatibilidad ("MATCH PERFECTO"). Esquema de comisión compartida 45/10/45 (45% asesor captador de oferta, 10% plataforma Vecy Network, 45% asesor colocador de demanda).\n` +
-          `4. AVALÚOS Y ANÁLISIS COMPARATIVO DE MERCADO (ACM): Estimación comercial y catastral de inmuebles según estrato, metraje y zona.\n` +
-          `5. ASESORÍA JURÍDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, régimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa, arras de retracto y confirmatorias, escrituración, estudio de títulos a 20 años en la SNR (gravámenes, afectación familiar, patrimonio inembargable) y cobro de comisiones pendientes.\n` +
-          `6. ACOMPAÑAMIENTO BRÓKER PERSONALIZADO: Conexión directa con nuestros directores Eduardo A. Rivera y Jani Alves en el +57 316 656 9719 (https://wa.me/573166569719) para trámites notariales, peritajes presenciales y acompañamiento legal.\n\n` +
+          `3. SONDEOS DE MERCADO Y AVALÚOS: Estimación del valor del m² por barrio en Bogotá y avalúos certificados RAA.\n` +
+          `4. ASESORÍA JURÍDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, régimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa, arras de retracto y confirmatorias, escrituración, estudio de títulos a 20 años en la SNR (gravámenes, afectación familiar, patrimonio inembargable) y cobro de comisiones pendientes.\n` +
+          `5. ACOMPAÑAMIENTO BRÓKER PERSONALIZADO: Conexión directa con nuestros directores Eduardo A. Rivera y Jani Alves en el +57 316 656 9719 (https://wa.me/573166569719) para trámites notariales, peritajes presenciales y acompañamiento legal.\n\n` +
           `INVITACIÓN AL CANAL OFICIAL DE WHATSAPP AL DESPEDIRTE:\n` +
           `- Cuando el usuario indique que la conversación está concluyendo, dé las gracias o se despida (ej: "gracias", "muchas gracias", "hasta luego", "vale gracias", "chao", "muy amable", "quedamos así"), despídete con afecto y calidez e invítalo amablemente a seguir nuestro Canal Oficial de WhatsApp de VECY BIENES RAÍCES (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) donde compartimos oportunidades exclusivas, remates, tips y novedades del sector.\n\n` +
           `PAUTAS PARA MENSAJES DE VOZ / AUDIOS:\n` +

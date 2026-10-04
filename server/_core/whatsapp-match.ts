@@ -1235,15 +1235,19 @@ export class JaniaMatchBot {
                   await this.queuedSend(senderId, reply, { allowDirectMessage: true, skipDelay: true });
                 }
 
-                // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre
-                const isGratitudeOrClosing = /^(gracias|muchas gracias|mil gracias|muy amable|hasta luego|chao|genial gracias|perfecto gracias|excelente|quedamos asi|quedamos así)\b/i.test(cleanLower);
+                // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre (Doctrina v32.40)
+                const isGratitudeOrClosing = 
+                  /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) ||
+                  (cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower));
                 const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
                 const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
 
                 if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {
                   this.recentReviewPromptUsers.set(senderId, Date.now());
                   const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+                  await new Promise(r => setTimeout(r, 1200));
                   await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+                  await this.logToDb(senderId, 'janIA', GOOGLE_REVIEW_MESSAGE);
                 }
 
                 return;
@@ -1256,15 +1260,19 @@ export class JaniaMatchBot {
           await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
           await this.logToDb(senderId, 'janIA', reply);
 
-          // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre
-          const isGratitudeOrClosing = /^(gracias|muchas gracias|mil gracias|muy amable|hasta luego|chao|genial gracias|perfecto gracias|excelente|quedamos asi|quedamos así)\b/i.test(cleanLower);
+          // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre (Doctrina v32.40)
+          const isGratitudeOrClosing = 
+            /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) ||
+            (cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower));
           const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
           const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
 
           if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {
             this.recentReviewPromptUsers.set(senderId, Date.now());
             const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+            await new Promise(r => setTimeout(r, 1200));
             await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+            await this.logToDb(senderId, 'janIA', GOOGLE_REVIEW_MESSAGE);
           }
           return;
         }

@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.39";
+    VECY_VERSION = "v32.40";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -8873,6 +8873,7 @@ __export(predialService_exports, {
   downloadPredialInvoicePdf: () => downloadPredialInvoicePdf,
   executePredialAssistanceFromWhatsApp: () => executePredialAssistanceFromWhatsApp,
   extractChipAndCedulaForPredial: () => extractChipAndCedulaForPredial,
+  getChannelInviteGoodbyeMessage: () => getChannelInviteGoodbyeMessage,
   getPendingPredialSession: () => getPendingPredialSession,
   hasPendingPredialSession: () => hasPendingPredialSession,
   isServiceHelpRequest: () => isServiceHelpRequest,
@@ -8880,6 +8881,10 @@ __export(predialService_exports, {
   sanitizeDocumentNumber: () => sanitizeDocumentNumber,
   setPendingPredialSession: () => setPendingPredialSession
 });
+function getChannelInviteGoodbyeMessage(displayName) {
+  const namePart = displayName ? `, ${displayName}` : "";
+  return `Con todo el gusto${namePart}. Para nosotros en VECY es un verdadero placer apoyarte en tus proyectos y gestiones inmobiliarias. Antes de que te vayas, te invito a unirte a nuestro Canal Oficial de WhatsApp (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b), donde compartimos cosas que te pueden interesar.`;
+}
 function decodeSdhMessage(raw) {
   if (!raw) return "";
   let str = typeof raw === "string" ? raw.trim() : String(raw).trim();
@@ -9662,8 +9667,10 @@ var init_predialService = __esm({
   "server/_core/predialService.ts"() {
     "use strict";
     VIRAL_LOOP_MESSAGE = `\xBFConoces a alg\xFAn colega, amigo o cliente al que le sirva esta herramienta? Reenv\xEDale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrar\xE1s el tiempo, las filas y el estr\xE9s o dolor de cabeza de tener que lidiar con plataformas enredadas desde el celular o el computador \u{1F91D}\u2728`;
-    GOOGLE_REVIEW_MESSAGE = `\u2B50 *Tu opini\xF3n es muy importante para nosotros.* Nos ayuda much\xEDsimo a seguir mejorando y a que m\xE1s colegas y propietarios conozcan nuestro servicio. Si te gust\xF3 la atenci\xF3n y la rapidez, \xBFnos regalar\xEDas un momento para dejar tu calificaci\xF3n y comentario en Google? Significar\xEDa un mundo para todo el equipo de Vecy Bienes Ra\xEDces:
-\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u2728`;
+    GOOGLE_REVIEW_MESSAGE = `\u2B50 Tu opini\xF3n es muy importante para nosotros. La necesitamos much\xEDsimo para seguir mejorando y logrando que m\xE1s colegas y propietarios conozcan nuestro servicio. Si te gust\xF3 la atenci\xF3n y la rapidez, reg\xE1lanos un comentario y calificaci\xF3n. Significar\xEDa un mundo para todo el equipo de Vecy Bienes Ra\xEDces:
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u2728
+
+\xA1Que tengas una excelente jornada y muchos \xE9xitos en tus cierres! \u{1F3E2}\u2728`;
     pendingPredialSessions = /* @__PURE__ */ new Map();
     PREDIAL_HELP_TEXT = `\u{1F3DB}\uFE0F *\xBFC\xF3mo solicitar tu Predial a JanIA?* Es muy sencillo:
 
@@ -11861,13 +11868,15 @@ ${quotedNote}` : quotedNote;
                     if (reply.includes("http")) {
                       await this.queuedSend(senderId, reply, { allowDirectMessage: true, skipDelay: true });
                     }
-                    const isGratitudeOrClosing2 = /^(gracias|muchas gracias|mil gracias|muy amable|hasta luego|chao|genial gracias|perfecto gracias|excelente|quedamos asi|quedamos así)\b/i.test(cleanLower);
+                    const isGratitudeOrClosing2 = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
                     const lastReviewSent2 = this.recentReviewPromptUsers.get(senderId) || 0;
                     const oneDayAgo2 = Date.now() - 24 * 60 * 60 * 1e3;
                     if (isGratitudeOrClosing2 && lastReviewSent2 < oneDayAgo2) {
                       this.recentReviewPromptUsers.set(senderId, Date.now());
                       const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+                      await new Promise((r) => setTimeout(r, 1200));
                       await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
+                      await this.logToDb(senderId, "janIA", GOOGLE_REVIEW_MESSAGE2);
                     }
                     return;
                   }
@@ -11877,13 +11886,15 @@ ${quotedNote}` : quotedNote;
               }
               await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
               await this.logToDb(senderId, "janIA", reply);
-              const isGratitudeOrClosing = /^(gracias|muchas gracias|mil gracias|muy amable|hasta luego|chao|genial gracias|perfecto gracias|excelente|quedamos asi|quedamos así)\b/i.test(cleanLower);
+              const isGratitudeOrClosing = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
               const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
               const oneDayAgo = Date.now() - 24 * 60 * 60 * 1e3;
               if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {
                 this.recentReviewPromptUsers.set(senderId, Date.now());
                 const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+                await new Promise((r) => setTimeout(r, 1200));
                 await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
+                await this.logToDb(senderId, "janIA", GOOGLE_REVIEW_MESSAGE2);
               }
               return;
             }
@@ -19707,20 +19718,60 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
   const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
   const history = await getOrLoadDmHistory(userId);
   if (isGreetingOnly && history.length === 0) {
-    const welcomeMsg = `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} Soy *JanIA*, la asesora experta con inteligencia artificial de *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
+    const welcomeMsg = `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
 
-Te puedo colaborar de inmediato en todo lo relacionado con finca ra\xEDz:
-\u2022 \u{1F4C4} *Factura Predial Bogot\xE1 y Certificado de Pago en PDF* (al instante con Hacienda)
-\u2022 \u{1F6E1}\uFE0F *Verificaci\xF3n de C\xE9dula y Antecedentes en Polic\xEDa Nacional* (en 20 segundos)
-\u2022 \u{1F91D} *Bolsa Inmobiliaria Colaborativa y Matching Inteligente 45/10/45* (cruce algor\xEDtmico de Ofertas y Demandas: 80%-94% Match Aproximado y 95%-100% Match Perfecto a trav\xE9s de nuestra plataforma en toda Colombia)
-\u2022 \u2696\uFE0F *Asesor\xEDa Jur\xEDdica y Contractual* (Ley 820 de 2003, Ley 675 de 2001, promesas de compraventa, arras, estudio de t\xEDtulos a 20 a\xF1os en la SNR, cobro de comisiones pendientes)
-\u2022 \u{1F4CA} *Aval\xFAos y An\xE1lisis Comparativo de Mercado (ACM)*
-\u2022 \u{1F464} *Atenci\xF3n Personalizada con nuestros Directores:* Eduardo Rivera y Jani Alves (+57 316 656 9719)
+Para nosotros en VECY es un verdadero placer apoyarte en tus gestiones y proyectos inmobiliarios.
 
-\xBFEn qu\xE9 te puedo colaborar hoy? Cu\xE9ntame con total confianza \u{1F91D}`;
+Cu\xE9ntame${displayName ? `, ${displayName}` : ""}: \xBFa qu\xE9 te dedicas o qu\xE9 haces actualmente? As\xED podr\xE9 orientarte de la mejor manera y contarte c\xF3mo podemos facilitarte la vida hoy \u{1F91D}\u2728`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", welcomeMsg);
     return welcomeMsg;
+  }
+  const isConsultasInquiry = /(?:c[oó]mo\s+es\s+lo\s+de\s+las\s+consultas|qu[eé]\s+(?:tipo\s+de\s+)?consultas|cu[aá]les\s+consultas|de\s+qu[eé]\s+son\s+las\s+consultas|qu[eé]\s+consultas\s+(?:tienen|hacen|prestan|ofrecen)|informaci[oó]n\s+de\s+las\s+consultas|como\s+funcionan\s+las\s+consultas)\b/i.test(cleanLower);
+  if (isConsultasInquiry) {
+    const consultasMenuMsg = `\xA1Con mucho gusto${vocativeGreeting}! Primero cu\xE9ntame qu\xE9 clase de consulta deseas hacer o sobre qu\xE9 tema necesitas apoyo:
+
+\u{1F381} *Servicios 100% Gratuitos de Autoservicio:*
+1\uFE0F\u20E3 *Verificaci\xF3n oficial de documentos:* Validaci\xF3n de identidad (C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaportes) y reporte de antecedentes con la Polic\xEDa Nacional en 20 segundos.
+2\uFE0F\u20E3 *Factura Predial Bogot\xE1 y Certificados de Pago:* Consulta y descarga oficial en PDF con c\xF3digo de barras y estado de cuenta al d\xEDa con la Secretar\xEDa de Hacienda.
+
+\u{1F4BC} *Consultas Especializadas y Asesor\xEDa Profesional:*
+3\uFE0F\u20E3 *Sondeos de mercado:* Valores aproximados del metro cuadrado en Bogot\xE1 seg\xFAn el barrio o sector.
+4\uFE0F\u20E3 *Asesor\xEDa jur\xEDdica inmobiliaria:* Casos de negociaci\xF3n, promesas de compraventa y contratos de arrendamiento.
+5\uFE0F\u20E3 *Tratamiento de datos y H\xE1beas Data inmobiliario.*
+6\uFE0F\u20E3 *Recuperaci\xF3n de cartera:* Cobranza de comisiones inmobiliarias no pagadas.
+7\uFE0F\u20E3 *Aval\xFAos digitales y peritajes comerciales certificados RAA.*
+8\uFE0F\u20E3 *Liquidaciones tributarias:* Ganancia ocasional, retenci\xF3n en la fuente e impuestos notariales.
+9\uFE0F\u20E3 *Pr\xE9stamos sobre hipoteca y pacto de retroventa.*
+
+Dime cu\xE1l de estos temas te interesa y te ayudo de inmediato. Si deseas probar las herramientas gratuitas (1 o 2), \xA1solo dime el n\xFAmero de documento o el predio que quieres consultar! \u{1F91D}`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", consultasMenuMsg);
+    return consultasMenuMsg;
+  }
+  const isCostInquiry = /^(?:los\s+)?costos?\s*\??$/i.test(cleanLower) || /(?:cu[aá]nto\s+(?:cuesta|vale|cobran)|qu[eé]\s+costo\s+tiene|qu[eé]\s+precio\s+tiene|tiene\s+alg[uú]n\s+costo|es\s+gratis|es\s+gratuito|cu[aá]nto\s+es|tarifas?)\b/i.test(cleanLower);
+  if (isCostInquiry) {
+    const isFreeToolsContext = history.some((h) => /verificaci[oó]n|c[eé]dula|predial|antecedentes|polic[ií]a|documento|chip/i.test(h.content)) || !history.some((h) => /aval[uú]o|jur[ií]dica|comisi[oó]n|hipoteca/i.test(h.content));
+    if (isFreeToolsContext) {
+      const freeCostMsg = `\xA1${displayName || "Hola"}! Este servicio es completamente *GRATIS* \u{1F381}\u2728.
+
+En *VECY Bienes Ra\xEDces* la verificaci\xF3n oficial de documentos y antecedentes ante la Polic\xEDa Nacional (C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaportes), as\xED como la consulta y descarga de la Factura Predial y certificados de pago de Bogot\xE1, *no tienen ning\xFAn costo para ti*.
+
+Las ofrecemos 100% gratuitas para apoyar a nuestra comunidad y garantizar total seguridad en las visitas y negocios inmobiliarios.
+
+Si quieres, \xA1pong\xE1moslo a prueba ahora mismo! Env\xEDame el n\xFAmero de c\xE9dula (o documento) que deseas verificar, y en segundos te entrego el reporte oficial \u{1F91D}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", freeCostMsg);
+      return freeCostMsg;
+    }
+  }
+  const isGratitudeOrClosingFastPath = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
+  if (isGratitudeOrClosingFastPath) {
+    const { getChannelInviteGoodbyeMessage: getChannelInviteGoodbyeMessage2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+    const goodbyeMsg = getChannelInviteGoodbyeMessage2(displayName);
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", goodbyeMsg);
+    return goodbyeMsg;
   }
   const isDocVerificationIntent = /(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) && !/\b\d{6,11}\b/.test(clean);
   if (isDocVerificationIntent) {
@@ -19749,13 +19800,18 @@ P\xEDdele con toda tranquilidad a tu cliente o colega su n\xFAmero de documento 
       {
         role: "system",
         content: `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
-Est\xE1s conversando por WHATSAPP con un colega asesor inmobiliario, cliente o aliado comercial.
+Est\xE1s conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.
 
 REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA, G\xC9NERO Y NOMBRES COMPUESTOS:
 - El usuario se llama: *${displayName || realName || "Colega"}*.
 - G\xE9nero gramatical identificado: *${nameInfo.isFemale ? "Femenino (tratar como estimada, colega, bienvenida, atenta)" : "Masculino (tratar como estimado, colega, bienvenido, atento)"}*.
 - Si el usuario tiene un nombre compuesto (ej: Ana Mar\xEDa, Juan Jos\xE9, Mar\xEDa Fernanda, Jos\xE9 Manuel, Carlos Alberto, Luz Marina, Olga Luc\xEDa), NUNCA lo cortes al primer nombre (JAM\xC1S digas solo "Ana" o "Juan"); ll\xE1malo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercan\xEDa y respeto que se use su nombre compuesto completo.
 ${hasPriorHistory ? '- YA EST\xC1S EN UNA CONVERSACI\xD3N ACTIVA CON EL USUARIO. Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo con "\xA1Hola!", "\xA1Buenos d\xEDas!", "\xA1Qu\xE9 gusto saludarte!" o anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana.' : '- Si es el primer mensaje, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}
+- PERFILAMIENTO CONVERSACIONAL Y MARKETING DE VENTAS: JanIA NO sabe a qu\xE9 se dedica el usuario (no asumas de antemano que es colega inmobiliario; puede ser propietario, comprador o inversionista). Indaga amablemente sobre a qu\xE9 se dedica o qu\xE9 hace ("\xBFA qu\xE9 te dedicas?", "\xBFQu\xE9 haces?", "\xBFEn qu\xE9 trabajas?") para comprender su perfil y enfocar la conversaci\xF3n con persuasi\xF3n asertiva.
+- PROHIBICI\xD3N ESTRICTA DE MENCIONAR "45/10/45" AL INICIO: Bajo NINGUNA circunstancia menciones "45/10/45", "bolsa colaborativa 45/10/45" ni esquemas de comisi\xF3n al inicio de la conversaci\xF3n o cuando pregunten por consultas. Nadie en el mercado conoce ese t\xE9rmino a\xFAn y confunde a los usuarios. Solo se hablar\xE1 de red colaborativa si el usuario pregunta expresamente sobre compartir inmuebles entre colegas.
+- CUANDO EL USUARIO PREGUNTE POR LAS CONSULTAS ("\xBFC\xF3mo es lo de las consultas?", etc.): NO sueltes un mon\xF3logo solo de la Polic\xEDa. Preg\xFAntale amablemente qu\xE9 clase de consulta desea realizar y dale el men\xFA organizado: 1 y 2 Gratuitas (Verificaci\xF3n de documentos ante Polic\xEDa Nacional y Factura Predial Bogot\xE1 con certificados de pago); 3 al 9 Especializadas (Sondeos de mercado m\xB2, Asesor\xEDa jur\xEDdica en compraventa/arriendos, H\xE1beas Data, Cobranza de comisiones no pagadas, Aval\xFAos digitales RAA, Liquidaciones tributarias y Pr\xE9stamos hipotecarios).
+- REGLA TAJANTE DE COSTOS (100% GRATIS): Si el usuario pregunta por los costos de los servicios o herramientas de consulta que le acabas de nombrar (verificaci\xF3n de documentos o predial), responde con total claridad y entusiasmo: "\xA1Este servicio es completamente GRATIS!". Explica que no tiene ning\xFAn costo para \xE9l y an\xEDmalo de inmediato a probarlo enviando el n\xFAmero de documento o CHIP. EST\xC1 TERMINANTEMENTE PROHIBIDO hablar de "paquetes o planes de consultas seg\xFAn volumen", o mandarlo a llamar a Jani Alves para averiguar costos de herramientas que son gratuitas. Eso enfr\xEDa la venta y espanta al cliente.
+- DOCTRINA EN SERVICIOS ESPECIALIZADOS (3 al 9): En temas especializados (sondeos de mercado, jur\xEDdica, cobranza de comisiones, aval\xFAos, tributaria, hipotecas), JanIA puede ofrecer de forma completamente gratuita algunos conceptos breves, definiciones y consejos superficiales que despejen la duda general en la mente del usuario, pero SIN entregar la soluci\xF3n t\xE9cnica o jur\xEDdica de fondo, gui\xE1ndolo a contactar a los Directores de Vecy Bienes Ra\xEDces al +57 316 656 9719 para contratar el servicio profesional.
 - PEDAGOG\xCDA DE CORTES\xCDA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), sal\xFAdalo educadamente por su nombre y con calidez humana. Ense\xF1a con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.
 - MANEJO ELEGANTE DE DUDAS O AMBIG\xDCEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas gen\xE9ricas; dile con simpat\xEDa humana: "Qu\xE9 pena contigo, ${displayName || "colega"}. Debido a un peque\xF1o fallo en la matrix \u{1F916}\u{1F605} no alcanc\xE9 a captar bien lo que me pides hacer. \xBFPodr\xEDas por favor confirmarme o repetirme qu\xE9 necesitas para ayudarte de inmediato?".
 - NUNCA repitas como un contestador autom\xE1tico "\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesor\xEDa, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.
@@ -19786,10 +19842,9 @@ DOCTRINA OFICIAL VECY: PROTECCI\xD3N DE DATOS (LEY 1581 DE 2012), H\xC1BEAS DATA
 CAT\xC1LOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:
 1. FACTURA PREDIAL BOGOT\xC1 Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con c\xF3digo de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretar\xEDa Distrital de Hacienda.
 2. VERIFICACI\xD3N OFICIAL DE IDENTIDAD Y ANTECEDENTES (POLIC\xCDA NACIONAL): Validaci\xF3n de nombres completos y antecedentes en 20 segundos para C\xE9dulas de Ciudadan\xEDa, C\xE9dulas de Extranjer\xEDa, Pasaportes y Documentos de Pa\xEDs de Origen, blindando contratos de compraventa y arrendamiento.
-3. BOLSA INMOBILIARIA COLABORATIVA Y MATCHING INTELIGENTE 45/10/45: Cruce algor\xEDtmico de OFERTAS y DEMANDAS a trav\xE9s de nuestra plataforma entre colegas a nivel nacional con cualquier tipo de inmueble. Coincidencias entre el 80% al 94% ("MATCH APROXIMADO") y del 95% al 100% de compatibilidad ("MATCH PERFECTO"). Esquema de comisi\xF3n compartida 45/10/45 (45% asesor captador de oferta, 10% plataforma Vecy Network, 45% asesor colocador de demanda).
-4. AVAL\xDAOS Y AN\xC1LISIS COMPARATIVO DE MERCADO (ACM): Estimaci\xF3n comercial y catastral de inmuebles seg\xFAn estrato, metraje y zona.
-5. ASESOR\xCDA JUR\xCDDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, r\xE9gimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa, arras de retracto y confirmatorias, escrituraci\xF3n, estudio de t\xEDtulos a 20 a\xF1os en la SNR (grav\xE1menes, afectaci\xF3n familiar, patrimonio inembargable) y cobro de comisiones pendientes.
-6. ACOMPA\xD1AMIENTO BR\xD3KER PERSONALIZADO: Conexi\xF3n directa con nuestros directores Eduardo A. Rivera y Jani Alves en el +57 316 656 9719 (https://wa.me/573166569719) para tr\xE1mites notariales, peritajes presenciales y acompa\xF1amiento legal.
+3. SONDEOS DE MERCADO Y AVAL\xDAOS: Estimaci\xF3n del valor del m\xB2 por barrio en Bogot\xE1 y aval\xFAos certificados RAA.
+4. ASESOR\xCDA JUR\xCDDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, r\xE9gimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa, arras de retracto y confirmatorias, escrituraci\xF3n, estudio de t\xEDtulos a 20 a\xF1os en la SNR (grav\xE1menes, afectaci\xF3n familiar, patrimonio inembargable) y cobro de comisiones pendientes.
+5. ACOMPA\xD1AMIENTO BR\xD3KER PERSONALIZADO: Conexi\xF3n directa con nuestros directores Eduardo A. Rivera y Jani Alves en el +57 316 656 9719 (https://wa.me/573166569719) para tr\xE1mites notariales, peritajes presenciales y acompa\xF1amiento legal.
 
 INVITACI\xD3N AL CANAL OFICIAL DE WHATSAPP AL DESPEDIRTE:
 - Cuando el usuario indique que la conversaci\xF3n est\xE1 concluyendo, d\xE9 las gracias o se despida (ej: "gracias", "muchas gracias", "hasta luego", "vale gracias", "chao", "muy amable", "quedamos as\xED"), desp\xEDdete con afecto y calidez e inv\xEDtalo amablemente a seguir nuestro Canal Oficial de WhatsApp de VECY BIENES RA\xCDCES (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) donde compartimos oportunidades exclusivas, remates, tips y novedades del sector.
