@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.32";
+    VECY_VERSION = "v32.33";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -8876,19 +8876,29 @@ __export(predialService_exports, {
   setPendingPredialSession: () => setPendingPredialSession
 });
 function decodeSdhMessage(raw) {
-  if (!raw || typeof raw !== "string") return "";
-  const trimmed = raw.trim();
-  const isBase64Pattern = /^[A-Za-z0-9+/]+={0,2}$/.test(trimmed) && !trimmed.includes(" ") && trimmed.length % 4 === 0 && trimmed.length >= 4;
-  if (isBase64Pattern) {
+  if (!raw) return "";
+  let str = typeof raw === "string" ? raw.trim() : String(raw).trim();
+  if (str.startsWith("[") && str.endsWith("]")) {
     try {
-      const dec = Buffer.from(trimmed, "base64").toString("utf8");
-      if (/^[\x20-\x7E\xA0-\xFF\s\wáéíóúÁÉÍÓÚñÑ.,;:!¡?¿()\-–—]+$/.test(dec) && dec.trim().length > 0) {
-        return dec.replace(/<[^>]*>?/gm, "").trim();
+      const parsedArr = JSON.parse(str);
+      if (Array.isArray(parsedArr) && parsedArr.every((n) => typeof n === "number")) {
+        str = Buffer.from(parsedArr).toString("utf8");
       }
     } catch (_) {
     }
   }
-  return trimmed.replace(/<[^>]*>?/gm, "").trim();
+  const isBase64Pattern = /^[A-Za-z0-9+/]+={0,2}$/.test(str) && !str.includes(" ") && str.length % 4 === 0 && str.length >= 4;
+  if (isBase64Pattern) {
+    try {
+      const dec = Buffer.from(str, "base64").toString("utf8");
+      const unescaped = dec.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16))).replace(/&#([0-9]+);/g, (_, decCode) => String.fromCharCode(parseInt(decCode, 10))).replace(/&lt;[^&]*&gt;?/gi, "").replace(/<[^>]*>?/gm, "").replace(/&[a-z]+;/gi, " ");
+      if (/^[\x20-\x7E\xA0-\xFF\s\wáéíóúÁÉÍÓÚñÑ.,;:!¡?¿()\-–—]+$/.test(unescaped) && unescaped.trim().length > 0) {
+        return unescaped.trim();
+      }
+    } catch (_) {
+    }
+  }
+  return str.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16))).replace(/&#([0-9]+);/g, (_, decCode) => String.fromCharCode(parseInt(decCode, 10))).replace(/&lt;[^&]*&gt;?/gi, "").replace(/<[^>]*>?/gm, "").replace(/&[a-z]+;/gi, " ").trim();
 }
 function sanitizeDocumentNumber(raw, isNit = false) {
   if (!raw) return "";
@@ -9243,14 +9253,17 @@ async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip, options) {
       await new Promise((r) => setTimeout(r, 1e3));
     }
     let isAlreadyPaid = false;
+    let sdhInfoErrorMessage = "";
     if (buscarInfoData?.dataForm?.errores && Array.isArray(buscarInfoData.dataForm.errores)) {
       for (const err of buscarInfoData.dataForm.errores) {
         const rawMsg = err?.txt_msj || err?.txtmsj;
         if (rawMsg) {
-          const decoded = decodeSdhMessage(rawMsg).toLowerCase();
-          if (decoded.includes("pagada") || decoded.includes("pago") || decoded.includes("cancelad")) {
+          const decoded = decodeSdhMessage(rawMsg);
+          const lowerDec = decoded.toLowerCase();
+          if (lowerDec.includes("pagada") || lowerDec.includes("pago") || lowerDec.includes("cancelad")) {
             isAlreadyPaid = true;
-            break;
+          } else if (decoded.trim().length > 3) {
+            sdhInfoErrorMessage = decoded.trim();
           }
         }
       }
@@ -9351,7 +9364,9 @@ async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip, options) {
     if (!relativePdfUrl) {
       return {
         success: false,
-        errorMessage: errorMessage || "No se encontr\xF3 factura predial disponible en la Secretar\xEDa de Hacienda para estos datos. Verifica que el documento corresponda al propietario a 1 de enero de 2026."
+        errorMessage: sdhInfoErrorMessage || errorMessage || "No se encontr\xF3 factura predial disponible en la Secretar\xEDa de Hacienda para estos datos. Verifica que el documento corresponda al propietario a 1 de enero de 2026.",
+        nombreContribuyente: buscarInfoData?.nombreContribuyente ? buscarInfoData.nombreContribuyente.trim() : void 0,
+        numBP: buscarInfoData?.numBP || buscarInfoData?.dataForm?.numBP
       };
     }
     const fullPdfUrl = relativePdfUrl.startsWith("http") ? relativePdfUrl : new URL(relativePdfUrl, "https://nuevaoficinavirtual.shd.gov.co").href;
@@ -9516,7 +9531,11 @@ _(Puedes escribirlo con o sin puntos, comas o guiones \u2014 yo lo proceso autom
     const nitWarning = detection.tipoDoc === "NIT" ? `
 \u26A0\uFE0F *Nota sobre el NIT:* El portal de hacienda pide el NIT *sin el d\xEDgito de verificaci\xF3n*. Por ejemplo, si tu NIT es *${docNumber}-X*, debes ingresar solo *${docNumber}*. Si el resultado dice que no encuentra el predio, verifica que el NIT corresponda al propietario registrado a *1 de enero de 2026*.
 ` : "";
-    const errorPrefix = downloadResult?.errorMessage ? `\u26A0\uFE0F *Resultado de la consulta en Hacienda:* ${downloadResult.errorMessage}
+    const contribuyenteInfo = downloadResult?.nombreContribuyente ? `\u{1F3DB}\uFE0F *Titular registrado en Catastro/Hacienda:* ${downloadResult.nombreContribuyente}
+\u{1F4A1} _Si el predio est\xE1 en leasing habitacional o fiducia mercantil, se debe ingresar el NIT de la entidad bancaria o la c\xE9dula del locatario registrado._
+
+` : "";
+    const errorPrefix = downloadResult?.errorMessage ? `\u26A0\uFE0F *Respuesta oficial de la Secretar\xEDa de Hacienda:* ${downloadResult.errorMessage}
 
 ` : "";
     const reportText2 = `\u{1F6E1}\uFE0F *PREDIAL BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
@@ -9524,7 +9543,7 @@ _(Puedes escribirlo con o sin puntos, comas o guiones \u2014 yo lo proceso autom
 \u{1F3E0} *CHIP del predio:* ${chip}
 \u{1FAAA} *${docLabel}:* ${docNumber}
 ` + nitWarning + `
-` + errorPrefix + `\u{1F517} *Portal oficial Secretar\xEDa de Hacienda \u2014 Descarga tu factura predial aqu\xED:*
+` + contribuyenteInfo + errorPrefix + `\u{1F517} *Portal oficial Secretar\xEDa de Hacienda \u2014 Descarga tu factura predial aqu\xED:*
 ${urlOficialSdh}
 
 \u{1F4CB} *Instrucciones para descargar tu PDF:*

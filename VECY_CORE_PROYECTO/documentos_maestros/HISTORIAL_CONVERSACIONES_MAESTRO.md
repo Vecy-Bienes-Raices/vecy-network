@@ -7,6 +7,36 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.33 — 03 Octubre 2026
+
+### Solicitud de Eduardo
+- Eduardo alertó: *"NAda algo sigue mal. No lo logra hacer. Debe hacerlo como en la imagen 3, igual como lo hizo ayer. Qué pasa no puedes hacerlo. dime cómo te ayudo o qué sucede??"*
+- Comparó el chat de Jani Alves (CHIP `AAA0185PUMR`, `NIT 860034594`) que arrojó *"No se encontraron datos"* frente al caso de Andrés G (Imagen 3) donde JanIA entregó el PDF directamente.
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Inspección en Vivo de la Secretaría Distrital de Hacienda**:
+   - Se interceptó la respuesta real de la SDH con `AAA0185PUMR` y `NIT 860034594`.
+   - La SDH rechazó la consulta e informó textualmente: *"El tipo y el número de documento no coinciden con los registrados en el sistema del responsable del predio. Verifica la información del propietario del inmueble al 01 de enero de 2026..."*.
+   - Además, la SDH retornó en su JSON: `"nombreContribuyente": "BANCO DAVIBANK "`.
+   - Conclusión: El predio `AAA0185PUMR` NO está a nombre del NIT `860034594` en Catastro, sino que figura a nombre de `BANCO DAVIBANK` (inmueble bajo leasing habitacional o fiducia mercantil).
+   - Por eso, la SDH no entrega factura ni certificado de pago con ese NIT, independientemente de que se consulte por JanIA o manualmente desde el navegador.
+2. **Causa Raíz en JanIA: Falta de Transparencia de la Causa Real**:
+   - JanIA mostraba *"Resultado de la consulta en Hacienda: No se encontraron datos"*, lo que hacía creer al usuario que JanIA se había averiado o no descargaba PDFs.
+   - En la consulta del Certificado de Pago, SAP Hybris devuelve los errores como un array serializado de números ASCII (`"[83, 72, 86, ...]"`) que al decodificarse contiene base64 con entidades HTML (`&#x20;`). La decodificación anterior no desempaquetaba arrays ni entidades HTML escapadas (`&lt;a ...&gt;`).
+
+### Acciones Ejecutadas
+1. **Decodificación Avanzada de Respuestas SAP Hybris (`server/_core/predialService.ts`)**:
+   - `decodeSdhMessage` reescrita para manejar arrays de bytes serializados en string, base64 y limpieza total de tags HTML escapados (`&lt;a ...&gt;`), produciendo texto nítido en español.
+2. **Extracción y Notificación de Titular Registrado en Catastro**:
+   - Cuando Hacienda reporta que los datos no coinciden pero entrega el nombre del contribuyente catastral, JanIA se lo informa al usuario con absoluta claridad:
+     `🏛️ Titular registrado en Catastro/Hacienda: BANCO DAVIBANK`
+     `💡 Si el predio está en leasing habitacional o fiducia mercantil, se debe ingresar el NIT de la entidad bancaria o la cédula del locatario registrado.`
+     `⚠️ Respuesta oficial de la Secretaría de Hacienda: [Mensaje exacto de Hacienda]`
+3. **Incremento de Versión Oficial**:
+   - Elevada a **v32.33** (`32.33.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.32 — 03 Octubre 2026
 
 ### Solicitud de Eduardo

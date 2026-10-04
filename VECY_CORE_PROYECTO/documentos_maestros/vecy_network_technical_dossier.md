@@ -322,6 +322,38 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.33 — Octubre 2026
+
+#### 📌 DECODIFICACIÓN AVANZADA DE ERRORES SAP HYBRIS SDH, DETECCIÓN DE TITULAR REGISTRADO EN CATASTRO/LEASING Y TRANSPARENCIA DE CAUSAS EN WHATSAPP
+
+**Requerimiento y Objetivos:**
+1. Diagnosticar por qué JanIA no entregó el PDF de la factura predial ni certificado de pago en el chat de WhatsApp con Jani Alves (`AAA0185PUMR`, `NIT 860034594`), arrojando *"Resultado de la consulta en Hacienda: No se encontraron datos"*.
+2. Explicar a Eduardo de forma diáfana y respaldada con datos técnicos qué ocurre con ese predio y cómo proceder para que opere idéntico a la Imagen 3 con Andrés G.
+
+**Causas Raíz:**
+1. **Inconsistencia Catastral del Predio `AAA0185PUMR`**:
+   - Inspeccionado en vivo el endpoint `/bogota/es/descargaFacturaVA/buscarInfo` de la Secretaría Distrital de Hacienda con `AAA0185PUMR` y `NIT 860034594`.
+   - La SDH rechazó la consulta informando: *"El tipo y el número de documento no coinciden con los registrados en el sistema del responsable del predio..."*.
+   - Hacienda reporta en su base de datos que el predio `AAA0185PUMR` figura registrado a nombre de: **`"BANCO DAVIBANK "`** (inmueble bajo leasing habitacional o fiducia mercantil).
+2. **Serialización Críptica de SAP Hybris (`[83, 72, 86, ...]`)**:
+   - Al consultar el Certificado de Pago en la SDH, SAP Hybris empaqueta los errores como un string con array de números ASCII (`"[83, 72, 86, ...]"`) conteniendo base64 con entidades HTML (`&#x20;`, etc.). La función de decodificación no contemplaba arrays numéricos ni entidades HTML escapadas (`&lt;a ...&gt;`), provocando que el error apareciera como texto genérico o no legible.
+3. **Falta de Visibilidad del Titular Registrado en Catastro**:
+   - Si la consulta en Hacienda fallaba por no coincidir el NIT, JanIA no le informaba al usuario a nombre de quién figuraba el predio en Catastro/Hacienda (`BANCO DAVIBANK`), haciendo creer al usuario que el bot había fallado.
+
+**Solución Aplicada:**
+- **`server/_core/predialService.ts`**:
+  - `decodeSdhMessage(raw)`: reescrita con soporte integral para arrays numéricos serializados de SAP Hybris, base64 estándar y eliminación de entidades y tags HTML escapados (`&lt;a ...&gt;`).
+  - `downloadPredialInvoicePdf`: extrae `sdhInfoErrorMessage` directamente de `buscarInfoData.dataForm.errores` y retorna `nombreContribuyente` incluso ante respuestas no exitosas.
+  - `executePredialAssistanceFromWhatsApp`: ante inconsistencias en Hacienda, JanIA ahora informa con total transparencia:
+    `🏛️ Titular registrado en Catastro/Hacienda: BANCO DAVIBANK`
+    `💡 Si el predio está en leasing habitacional o fiducia mercantil, se debe ingresar el NIT de la entidad bancaria o la cédula del locatario registrado.`
+    `⚠️ Respuesta oficial de la Secretaría de Hacienda: [Texto oficial decodificado]`
+- **Versión Oficial**: Incrementada a **v32.33** (`32.33.0`) en `shared/const.ts` y `package.json`.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | `npm run build` limpio ✅ | 128/128 tests Vitest ✅ | Simulación end-to-end con `executePredialAssistanceFromWhatsApp` validada exitosamente ✅
+
+---
+
 ### 🔖 v32.32 — Octubre 2026
 
 #### 📌 ENTREGA NATIVA Y VERIFICADA DE PDF PREDIAL, SANITIZACIÓN INTELIGENTE DE NIT A 9 DÍGITOS, NOMENCLATURA MATCH APROXIMADO Y REACCIÓN CON CORAZÓN ❤️

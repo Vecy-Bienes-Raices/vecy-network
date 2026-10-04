@@ -58,20 +58,44 @@ export interface DownloadPredialPdfResult {
  * Soporta tanto cadenas en base64 nativo de la SDH como texto plano normal sin corromper el contenido.
  */
 export function decodeSdhMessage(raw: any): string {
-  if (!raw || typeof raw !== 'string') return '';
-  const trimmed = raw.trim();
-  // Verificar si es base64 estándar (sin espacios, longitud múltiplo de 4 o con padding)
-  const isBase64Pattern = /^[A-Za-z0-9+/]+={0,2}$/.test(trimmed) && !trimmed.includes(' ') && trimmed.length % 4 === 0 && trimmed.length >= 4;
-  if (isBase64Pattern) {
+  if (!raw) return '';
+  let str = typeof raw === 'string' ? raw.trim() : String(raw).trim();
+
+  // Caso A: Array serializado de números ASCII devuelto por SAP Hybris (ej: "[83, 72, 86, 105, ...]")
+  if (str.startsWith('[') && str.endsWith(']')) {
     try {
-      const dec = Buffer.from(trimmed, 'base64').toString('utf8');
-      // Solo aceptamos la decodificación si resulta en texto legible y no en bytes binarios
-      if (/^[\x20-\x7E\xA0-\xFF\s\wáéíóúÁÉÍÓÚñÑ.,;:!¡?¿()\-–—]+$/.test(dec) && dec.trim().length > 0) {
-        return dec.replace(/<[^>]*>?/gm, '').trim();
+      const parsedArr = JSON.parse(str);
+      if (Array.isArray(parsedArr) && parsedArr.every(n => typeof n === 'number')) {
+        str = Buffer.from(parsedArr).toString('utf8');
       }
     } catch (_) {}
   }
-  return trimmed.replace(/<[^>]*>?/gm, '').trim();
+
+  // Caso B: Base64 estándar (con o sin padding)
+  const isBase64Pattern = /^[A-Za-z0-9+/]+={0,2}$/.test(str) && !str.includes(' ') && str.length % 4 === 0 && str.length >= 4;
+  if (isBase64Pattern) {
+    try {
+      const dec = Buffer.from(str, 'base64').toString('utf8');
+      const unescaped = dec
+        .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+        .replace(/&#([0-9]+);/g, (_, decCode) => String.fromCharCode(parseInt(decCode, 10)))
+        .replace(/&lt;[^&]*&gt;?/gi, '')
+        .replace(/<[^>]*>?/gm, '')
+        .replace(/&[a-z]+;/gi, ' ');
+      if (/^[\x20-\x7E\xA0-\xFF\s\wáéíóúÁÉÍÓÚñÑ.,;:!¡?¿()\-–—]+$/.test(unescaped) && unescaped.trim().length > 0) {
+        return unescaped.trim();
+      }
+    } catch (_) {}
+  }
+
+  // Caso C: Texto plano o con entidades HTML
+  return str
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#([0-9]+);/g, (_, decCode) => String.fromCharCode(parseInt(decCode, 10)))
+    .replace(/&lt;[^&]*&gt;?/gi, '')
+    .replace(/<[^>]*>?/gm, '')
+    .replace(/&[a-z]+;/gi, ' ')
+    .trim();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -581,16 +605,19 @@ export async function downloadPredialInvoicePdf(
       await new Promise(r => setTimeout(r, 1000));
     }
 
-    // Detección de pago realizado o solicitud explícita de Certificado de Pago
+    // Detección de pago realizado, solicitud explícita de Certificado de Pago o error oficial de Hacienda
     let isAlreadyPaid = false;
+    let sdhInfoErrorMessage = '';
     if (buscarInfoData?.dataForm?.errores && Array.isArray(buscarInfoData.dataForm.errores)) {
       for (const err of buscarInfoData.dataForm.errores) {
         const rawMsg = err?.txt_msj || err?.txtmsj;
         if (rawMsg) {
-          const decoded = decodeSdhMessage(rawMsg).toLowerCase();
-          if (decoded.includes('pagada') || decoded.includes('pago') || decoded.includes('cancelad')) {
+          const decoded = decodeSdhMessage(rawMsg);
+          const lowerDec = decoded.toLowerCase();
+          if (lowerDec.includes('pagada') || lowerDec.includes('pago') || lowerDec.includes('cancelad')) {
             isAlreadyPaid = true;
-            break;
+          } else if (decoded.trim().length > 3) {
+            sdhInfoErrorMessage = decoded.trim();
           }
         }
       }
@@ -703,7 +730,9 @@ export async function downloadPredialInvoicePdf(
     if (!relativePdfUrl) {
       return {
         success: false,
-        errorMessage: errorMessage || 'No se encontró factura predial disponible en la Secretaría de Hacienda para estos datos. Verifica que el documento corresponda al propietario a 1 de enero de 2026.'
+        errorMessage: sdhInfoErrorMessage || errorMessage || 'No se encontró factura predial disponible en la Secretaría de Hacienda para estos datos. Verifica que el documento corresponda al propietario a 1 de enero de 2026.',
+        nombreContribuyente: buscarInfoData?.nombreContribuyente ? buscarInfoData.nombreContribuyente.trim() : undefined,
+        numBP: buscarInfoData?.numBP || buscarInfoData?.dataForm?.numBP
       };
     }
 
@@ -933,8 +962,13 @@ export async function executePredialAssistanceFromWhatsApp(
       ? `\n⚠️ *Nota sobre el NIT:* El portal de hacienda pide el NIT *sin el dígito de verificación*. Por ejemplo, si tu NIT es *${docNumber}-X*, debes ingresar solo *${docNumber}*. Si el resultado dice que no encuentra el predio, verifica que el NIT corresponda al propietario registrado a *1 de enero de 2026*.\n`
       : '';
 
+    const contribuyenteInfo = downloadResult?.nombreContribuyente
+      ? `🏛️ *Titular registrado en Catastro/Hacienda:* ${downloadResult.nombreContribuyente}\n` +
+        `💡 _Si el predio está en leasing habitacional o fiducia mercantil, se debe ingresar el NIT de la entidad bancaria o la cédula del locatario registrado._\n\n`
+      : '';
+
     const errorPrefix = downloadResult?.errorMessage
-      ? `⚠️ *Resultado de la consulta en Hacienda:* ${downloadResult.errorMessage}\n\n`
+      ? `⚠️ *Respuesta oficial de la Secretaría de Hacienda:* ${downloadResult.errorMessage}\n\n`
       : '';
 
     const reportText =
@@ -942,6 +976,7 @@ export async function executePredialAssistanceFromWhatsApp(
       `🏠 *CHIP del predio:* ${chip}\n` +
       `🪪 *${docLabel}:* ${docNumber}\n` +
       nitWarning + `\n` +
+      contribuyenteInfo +
       errorPrefix +
       `🔗 *Portal oficial Secretaría de Hacienda — Descarga tu factura predial aquí:*\n` +
       `${urlOficialSdh}\n\n` +

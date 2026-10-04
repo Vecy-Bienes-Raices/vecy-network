@@ -172,7 +172,25 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.32 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.33 — Octubre 2026
+
+### Novedades v32.33 (Decodificación Avanzada de Errores SAP Hybris SDH, Detección de Titular Registrado en Catastro/Leasing y Transparencia de Causas en WhatsApp):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo consultó por qué JanIA no entregó el PDF en el chat de Jani Alves con CHIP `AAA0185PUMR` y NIT `860034594`, arrojando *"Resultado de la consulta en Hacienda: No se encontraron datos"*.
+  - Solicitó explicar con exactitud qué sucede y cómo se le puede ayudar para que funcione como en la Imagen 3.
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Inspección en Vivo de la SDH**:
+     - Se auditó el endpoint interno de la SDH (`/bogota/es/descargaFacturaVA/buscarInfo`) con CHIP `AAA0185PUMR` y NIT `860034594`.
+     - La Secretaría de Hacienda rechazó la consulta informando: *"El tipo y el número de documento no coinciden con los registrados en el sistema del responsable del predio..."*.
+     - El inmueble está registrado en Catastro/Hacienda a nombre de: **`"BANCO DAVIBANK "`** (probablemente bajo leasing habitacional o fiducia mercantil).
+  2. **Decodificación de Errores Serializados SAP Hybris (`[83, 72, 86, ...]`)**:
+     - En el Certificado de Pago, la SDH responde errores serializados como arrays numéricos de bytes ASCII dentro de un string (`"[83, 72, 86, ...]"`) que al decodificarse revelan texto base64 con entidades HTML (`&#x20;`, etc.).
+     - Perfeccionada la función [decodeSdhMessage](file:///home/eddu/Proyectos/vecy-network/server/_core/predialService.ts#L60) para decodificar automáticamente arrays serializados, base64 y entidades HTML escapadas (`&lt;a ...&gt;`), produciendo texto en español limpio.
+  3. **Transparencia Total de Titular Catastral en WhatsApp**:
+     - Si la consulta en Hacienda no genera PDF por no coincidir el documento, JanIA extrae y le muestra al usuario el titular registrado en Catastro (`🏛️ Titular registrado en Catastro/Hacienda: BANCO DAVIBANK`) y el mensaje exacto de Hacienda, indicándole que si es leasing o fiducia ingrese el NIT de la entidad bancaria o el documento del locatario registrado.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | `npm run build` limpio ✅ | 128/128 tests Vitest ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.32 — Octubre 2026
 
 ### Novedades v32.32 (Entrega Nativa y Verificada de PDF Predial, Sanitización Inteligente de NIT a 9 Dígitos, Nomenclatura Match Aproximado y Reacción con Corazón ❤️):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:
