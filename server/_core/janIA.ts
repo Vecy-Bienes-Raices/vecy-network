@@ -6579,8 +6579,51 @@ const dmConversationHistory = new Map<string, DmTurn[]>();
 export function getDmHistory(userId: string): DmTurn[] {
   const history = dmConversationHistory.get(userId) || [];
   const now = Date.now();
-  // Conservar mensajes de las últimas 12 horas
-  return history.filter(h => now - h.ts < 12 * 3600 * 1000);
+  // Conservar mensajes de las últimas 24 horas
+  return history.filter(h => now - h.ts < 24 * 3600 * 1000);
+}
+
+/**
+ * Obtiene el historial reciente en memoria RAM o lo restaura automáticamente de la
+ * base de datos PostgreSQL nativa si el servidor o PM2 se han reiniciado (v32.35).
+ * Garantiza que JanIA JAMÁS pierda el hilo conversacional ni repita saludos iniciales.
+ */
+export async function getOrLoadDmHistory(userId: string): Promise<DmTurn[]> {
+  const inMemory = getDmHistory(userId);
+  if (inMemory.length > 0) {
+    return inMemory;
+  }
+
+  // Si la memoria RAM está vacía tras reinicio del proceso, recuperar de BD
+  try {
+    const db = await getDb();
+    if (db) {
+      const conv = await db.select().from(dbConversations).where(eq(dbConversations.sessionId, userId)).limit(1);
+      if (conv.length > 0) {
+        const recentMsgs = await db
+          .select()
+          .from(dbMessages)
+          .where(eq(dbMessages.conversationId, conv[0].id))
+          .orderBy(desc(dbMessages.createdAt))
+          .limit(8);
+
+        if (recentMsgs.length > 0) {
+          recentMsgs.reverse();
+          const restored: DmTurn[] = recentMsgs.map(m => ({
+            role: m.role === 'janIA' ? 'assistant' : 'user',
+            content: m.content.replace(/^\[(?:Nota de Voz PTT|SILENT-MATCH)\]:\s*/, ''),
+            ts: new Date(m.createdAt).getTime()
+          }));
+          dmConversationHistory.set(userId, restored);
+          return restored;
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn("[getOrLoadDmHistory] Error consultando historial en BD:", err?.message);
+  }
+
+  return [];
 }
 
 export function appendDmHistory(userId: string, role: "user" | "assistant", content: string) {
@@ -6593,11 +6636,12 @@ export function appendDmHistory(userId: string, role: "user" | "assistant", cont
 /**
  * Procesa mensajes conversacionales privados en WhatsApp (DMs) con IA Pura (Gemini).
  *
- * REGLA DOCTRINAL (v32.20):
+ * REGLA DOCTRINAL (v32.35):
  * - Dirigido a colegas inmobiliarios tradicionales (personas mayores / 50-70 años).
  * - Cero tecnicismos (nada de algoritmos, APIs, machine learning o prompts).
  * - Respuestas cortas, cálidas, humanas y contundentes (sin provocar botón "Leer más").
- * - Explica claramente los dos servicios gratuitos: Verificación de Cédula/Antecedentes y Factura Predial Bogotá 2026 en PDF.
+ * - Explica con claridad meridiana los servicios gratuitos: Verificación de Cédula/Antecedentes y Factura Predial Bogotá en PDF.
+ * - Conoce a fondo la Ley 1581 de 2012 (Protección de Datos Personales / Hábeas Data) y la doctrina VECY de Verificación Transparente vs Clandestinidad.
  * - Siempre brinda la alternativa de comunicarse con un agente humano de VECY en horario laboral: +57 316 656 9719.
  */
 export async function processPrivateDmConversationalMessage(
@@ -6619,7 +6663,7 @@ export async function processPrivateDmConversationalMessage(
   // 1. Detectar saludos iniciales o preguntas directas cortas de entrada
   const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
 
-  const history = getDmHistory(userId);
+  const history = await getOrLoadDmHistory(userId);
 
   // Si es un saludo inicial y no hay historial previo reciente, entregar saludo horario cálido y abierto con catálogo completo
   if (isGreetingOnly && history.length === 0) {
@@ -6640,13 +6684,16 @@ export async function processPrivateDmConversationalMessage(
   }
 
   // Fast-path: Si el usuario pide verificar documento o antecedentes sin dar aún el número
+  // Soporta errores tipográficos habituales en celular (ej: "quieto rrvisar sus antecedentes")
   const isDocVerificationIntent =
-    /(verificar\s*(c[eé]dula|documento|antecedentes|identidad|pasaporte|ce|extranjer[ií]a)|quiero\s*verificar|necesito\s*verificar|deseo\s*verificar|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) &&
+    /(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) &&
     !/\b\d{6,11}\b/.test(clean);
 
   if (isDocVerificationIntent) {
     const docPromptMsg =
-      `¡Claro que sí! Solo escríbeme el número de cédula (ej: 12345678) o dime si es cédula de extranjería o pasaporte dame el número y en 20 segundos te confirmo nombres completos y antecedentes en la Policía.`;
+      `¡Claro que sí! Para consultar los antecedentes y verificar la identidad en la Policía Nacional, es indispensable contar con el número de cédula exacto.\n\n` +
+      `📌 *Nota legal de seguridad y Hábeas Data (Ley 1581 de 2012):* En Colombia, las plataformas oficiales de seguridad y la Registraduría Nacional no permiten buscar números de documento usando únicamente nombres o apellidos para proteger la privacidad ciudadana. Solo se puede verificar a partir del número de cédula que el propio titular suministra.\n\n` +
+      `Pídele con toda tranquilidad a tu cliente su número de documento (o una fotito de la cédula por ambas caras) para agendar la visita. Escríbemelo aquí y en 20 segundos te entrego el reporte oficial de validación 🤝.`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", docPromptMsg);
     return docPromptMsg;
@@ -6666,6 +6713,21 @@ export async function processPrivateDmConversationalMessage(
           `- NUNCA repitas como un contestador automático "¿Cuál de las dos herramientas te gustaría probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesoría, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.\n` +
           `- Conversa como una profesional inmobiliaria colombiana experta, culta, amena y empática. CERO tecnicismos computacionales ni lenguaje de bot.\n` +
           `- Mantén respuestas concisas y bien estructuradas (2 a 4 párrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).\n\n` +
+          `DOCTRINA OFICIAL VECY: PROTECCIÓN DE DATOS (LEY 1581 DE 2012), HÁBEAS DATA Y SEGURIDAD EN VISITAS:\n` +
+          `- PRINCIPIO DE TRANSPARENCIA FRENTE A LA CLANDESTINIDAD:\n` +
+          `  En el gremio inmobiliario existen colegas (como Kelly Carvajal) que tienen la creencia errónea de que verificar la identidad de los clientes viola el Hábeas Data, y por temor o desinformación, cuando la cédula no coincide con el nombre en apps como Verifíquese, cancelan la visita inventando pretextos falsos ("los dueños desistieron", "ya no van a estar", "recibieron otra oferta").\n` +
+          `- POSTURA DOCTRINAL Y LEGAL DE VECY BIENES RAÍCES (100% LEGAL Y ÉTICA):\n` +
+          `  1. SUMINISTRO VOLUNTARIO POR EL TITULAR: El cliente interesado en visitar un inmueble privado habitado o desocupado suministra libre y voluntariamente sus datos (nombre y número de identificación) para solicitar el servicio y coordinar el ingreso. Jamás se investiga a nadie a sus espaldas.\n` +
+          `  2. FINALIDAD LEGÍTIMA DE SEGURIDAD (Art. 4 y 10 Ley 1581 de 2012 y Ley 675 de 2001 de Propiedad Horizontal): Validar la identidad de quien ingresa a una copropiedad o inmueble es una medida de debida diligencia indispensable para proteger la vida, la integridad física y el patrimonio de los propietarios, de los residentes del conjunto y del propio asesor inmobiliario frente a riesgos de suplantación, estafa o delincuencia común.\n` +
+          `  3. NO EXISTE BÚSQUEDA INVERSA EN COLOMBIA: La Registraduría Nacional no permite (por Hábeas Data) averiguar números de cédula a partir de nombres. Las consultas oficiales del Estado (Policía Nacional, Procuraduría SIRI, RUES) se efectúan de manera legítima partiendo del número que el propio ciudadano entregó.\n` +
+          `  4. ANTECEDENTES JUDICIALES Y DISCIPLINARIOS SON REGISTROS PÚBLICOS: El certificado de antecedentes de la Policía Nacional y la Procuraduría son de acceso público oficial por mandato legal (Decreto Ley 019 de 2012, Art. 93) para garantizar la seguridad en actos jurídicos y civiles.\n` +
+          `  5. CERO MENTIRAS Y TRANSPARENCIA TOTAL CON EL CLIENTE:\n` +
+          `     - Si el número suministrado no coincide con el nombre registrado en la base oficial de seguridad, el asesor NO debe mentir ni cancelar con falsos pretextos.\n` +
+          `     - Se le comunica con total amabilidad y respeto al cliente:\n` +
+          `       "Por protocolo estándar de seguridad para visitas a inmuebles privados y registro de portería, verificamos la identificación suministrada. El número de cédula que nos diste no coincide con el nombre registrado en la base oficial. Por favor facilítanos el documento correcto para poder coordinar la visita con total tranquilidad."\n` +
+          `     - EFECTO DISUASORIO Y PROTECCIÓN DEL GREMIO: Si se trata de un cliente honesto que digitó mal un número, rectifica de inmediato y la cita se concreta. Si se trata de un suplantador o persona inescrupulosa, el filtro transparente actúa como un disuasivo fulminante: al saberse descubierto, desiste y no vuelve a intentar vulnerar ese predio ni a los colegas de la red.\n` +
+          `- CUANDO UN ASESOR O COLEGA PREGUNTE O DEBATA SOBRE HÁBEAS DATA O EL MANEJO DE CLIENTES SOSPECHOSOS:\n` +
+          `  Explica esta doctrina con maestría jurídica, calidez y contundencia pedagógica, desmontando el mito del "miedo al Hábeas Data" y demostrando que la verificación transparente protege legalmente al asesor, al propietario y a la honestidad del negocio.\n\n` +
           `CATÁLOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:\n` +
           `1. FACTURA PREDIAL BOGOTÁ Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con código de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretaría Distrital de Hacienda.\n` +
           `2. VERIFICACIÓN OFICIAL DE CÉDULA Y ANTECEDENTES: Validación de nombres completos y antecedentes en Policía Nacional en 20 segundos para blindar contratos de compraventa y arrendamiento.\n` +

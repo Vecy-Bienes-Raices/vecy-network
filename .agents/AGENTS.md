@@ -172,7 +172,32 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.34 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.35 — Octubre 2026
+
+### Novedades v32.35 (Doctrina de Protección de Datos Personales / Ley 1581 de 2012, Hábeas Data, Verificación Preventiva vs. Clandestinidad, Persistencia Híbrida de DMs en PostgreSQL y Tolerancia a Erratas de Tipeo):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Debate Gremial sobre Verificación de Asistentes a Inmuebles y Hábeas Data**:
+     - Eduardo abordó un dilema cotidiano en el sector inmobiliario: personas inescrupulosas que agendan visitas a inmuebles con números de cédula errados o falsos que no coinciden con sus nombres.
+     - En un audio de WhatsApp (`WhatsApp Ptt 2026-10-03 at 17.24.34.ogg`), una colega inmobiliaria (Kelly Carvajal) sostiene que cuando en aplicaciones como *Verifíquese* no coincide la cédula con el nombre del cliente, ella cancela la visita inventando pretextos falsos (*"que los dueños ya no van a estar", "que desistieron", "que recibieron una oferta"*) porque según ella *"no se puede decir obviamente que no coincide el nombre con la cédula por el tema de Hábeas Data... no tenemos esa autorización entonces simplemente cancelamos"*.
+     - Eduardo ratificó la doctrina inquebrantable de VECY BIENES RAÍCES: **Cero clandestinidad, total transparencia y respaldo legal pleno**. En VECY decimos que **SÍ** hay que decirles con respeto, pues han sido ellos mismos quienes suministraron voluntariamente su documento para acceder al servicio de visita a una propiedad privada habitada o desocupada. No se viola la Ley 1581 de 2012 ni el Hábeas Data, y no se está buscando la cédula por el nombre a sus espaldas (lo cual en Colombia es legal y técnicamente imposible por las restricciones de la Registraduría Nacional).
+  2. **Instrucción Doctrinal para JanIA**:
+     - Enseñar a JanIA a fondo sobre la Ley 1581 de 2012 (Protección de Datos Personales), el derecho constitucional de Hábeas Data (Art. 15 C.P.) y la seguridad preventiva en visitas inmobiliarias, para que como IA PURA debata con solvencia jurídica frente a cualquier colega que plantee pretextos clandestinos.
+  3. **Optimización de Conversación Privada en DMs (Caso Consuelo Ronderos)**:
+     - Detección robusta tolerante a errores de tipeo de celular (*"Quieto rrvisar sus antecedentes"*) orientando con pedagogía y amabilidad sobre la necesidad del número de documento bajo la Ley 1581 de 2012.
+     - Persistencia del historial conversacional en PostgreSQL para que JanIA jamás pierda el hilo ni reinicie con saludos genéricos si el servidor o PM2 se reinician.
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Persistencia Híbrida de DMs en PostgreSQL (`getOrLoadDmHistory` en `server/_core/janIA.ts`)**:
+     - Si la memoria volátil en RAM está vacía tras un reinicio de PM2, JanIA consulta automáticamente las tablas `conversations` y `messages` en PostgreSQL, restaurando de inmediato los últimos turnos de la conversación (hasta 24 horas). Contexto indestructible y cero saludos repetidos.
+  2. **Detector de Intención Tolerante a Errores de Tipeo (`isDocVerificationIntent` en `server/_core/janIA.ts`)**:
+     - Admite variaciones ortográficas de celular ("quieto/quiero/deseo/necesito", "rrvisar/revisar/verificar/chequear/validar", "antecedentes/cédula/documento").
+     - Respuesta pedagógica y legal: explica amablemente que por Hábeas Data (Ley 1581 de 2012) las plataformas oficiales no permiten buscar por nombres o apellidos, e invita a solicitar la cédula para validar en 20 segundos.
+  3. **Doctrina Oficial de Hábeas Data en Prompts Maestros**:
+     - Incorporada sección de doctrina en `server/_core/janIA.ts` (system prompt de DMs), `server/_core/prompts/base.md`, `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` y `server/_core/prompts/grupos/PROYECTO_Vecy Network.md`.
+  4. **Reacción Empática Jurídica `⚖️` (`server/_core/whatsapp-utils.ts`)**:
+     - Menciones de Hábeas Data, protección de datos, Ley 1581 o privacidad reaccionan de inmediato con `⚖️`.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | `npm run build` limpio en 22.3s ✅ | 132/132 tests Vitest aprobados al 100% ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.34 — Octubre 2026
 
 ### Novedades v32.34 (Confirmación Eureka de PDF Predial, Presencia Continua de Puntitos Bailarines (...) y Grabando Audio (🎙️), Reacción Inmediata Fija 📄 y Aceleración del Servicio):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

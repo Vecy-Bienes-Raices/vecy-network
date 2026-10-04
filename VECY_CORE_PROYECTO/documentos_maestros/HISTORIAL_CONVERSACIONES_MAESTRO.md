@@ -2,10 +2,61 @@
 
 > **INSTRUCCIÓN MANDATORIA PARA LA IA (ANTIGRAVITY / CLAUDE / GEMINI)**:
 > 1. Este archivo es la **MEMORIA MAESTRA Y CONTEXTO ESTRATÉGICO PERSISTENTE** del proyecto VECY Network. 
-> 2. Léelo COMPLETAMENTE al inicio de CADA nueva conversación antes de proponer o ejecutar cualquier acción.
+> 2. Léelos COMPLETAMENTE al inicio de CADA nueva conversación antes de proponer o ejecutar cualquier acción.
 > 3. **REGISTRO DUAL EN CADA SESIÓN**: Registra siempre la solicitud de Eduardo, el diagnóstico técnico, las acciones ejecutadas en el código/DB y el resumen explícito de las respuestas y confirmaciones entregadas a Eduardo.
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
+
+## 📋 SESIÓN v32.35 — 03 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Debate Gremial sobre Verificación de Asistentes a Inmuebles y Hábeas Data**:
+   - Eduardo expuso un grave problema que enfrentan a diario los agentes inmobiliarios en Colombia: personas inescrupulosas que agendan visitas a inmuebles privados suministrando números de cédula errados o falsos que no coinciden con sus nombres.
+   - En un audio de WhatsApp (`WhatsApp Ptt 2026-10-03 at 17.24.34.ogg`), una colega inmobiliaria (Kelly Carvajal) sostiene que cuando en aplicaciones como *Verifíquese* no coincide la cédula con el nombre del cliente, ella cancela la visita inventando pretextos falsos (*"que los dueños ya no van a estar", "que desistieron", "que recibieron una oferta"*) porque según ella *"no se puede decir obviamente que no coincide el nombre con la cédula por el tema de Hábeas Data... no tenemos esa autorización entonces simplemente cancelamos"*.
+   - Eduardo ratificó la posición doctrinal inquebrantable de VECY BIENES RAÍCES: **Cero clandestinidad, total transparencia y respaldo legal pleno**. En VECY decimos que **SÍ** hay que decirles de frente y con total respeto, pues han sido ellos mismos quienes suministraron libre y voluntariamente su número de documento para acceder al servicio de visita a una propiedad privada. No se viola la Ley 1581 de 2012 ni el Hábeas Data, y no se está buscando la cédula por el nombre a sus espaldas (lo cual además en Colombia es legal y técnicamente imposible por las restricciones de la Registraduría Nacional).
+2. **Instrucción Doctrinal para JanIA**:
+   - Escuchar y analizar el audio de Kelly Carvajal.
+   - Enseñar a JanIA a fondo sobre la Ley 1581 de 2012 (Protección de Datos Personales), el derecho constitucional de Hábeas Data (Art. 15 C.P.) y la seguridad preventiva en visitas inmobiliarias, para que como IA PURA pueda debatir con solvencia jurídica cuando colegas planteen pretextos clandestinos.
+   - Brindarle a JanIA la capacidad de responder con claridad, cortesía y pedagogía a clientes y colegas sobre cómo opera nuestro servicio bajo el marco de protección de datos.
+3. **Optimización de Conversación Privada en DMs (Caso Consuelo Ronderos)**:
+   - Diagnosticar por qué en el chat con Consuelo Ronderos (capturas 4 y 5), al escribir ella *"Quieto rrvisar sus antecedentes / Para avanzar"*, JanIA no reconoció la intención y reinició con un saludo genérico (*"Buenas tardes Consuelo. ¡Qué gusto saludarte por este medio!"*).
+   - Resolver la tolerancia a errores de tipeo de celular y la persistencia del historial conversacional para que JanIA jamás pierda el hilo ni repita saludos.
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Transcripción y Análisis Forense del Audio de Kelly Carvajal**:
+   - Audio transcrito palabra por palabra:
+     > *"Bueno, más allá de si la persona de hoy es el ladrón que publicaron hace más de tres años y que salió a decir que fue a él al que robaron, bueno, en fin. Independiente, cuando a mí no me coinciden las cédulas usando también la aplicación de Verifíquese, yo cancelo la cita diciéndoles que los dueños ya no van a estar, que desistieron, que recibieron una oferta, cualquier cosa porque eh pues tú no puedes decir obviamente que es que no coincide el nombre con la cédula por el tema de Habeas Data. No tenemos como esa autorización entonces simplemente cancelamos y ya. En nuestro caso, pues."*
+   - Desmontaje jurídico de su postura:
+     a) *Falsa Infracción de Hábeas Data:* El Hábeas Data protege contra el tratamiento no autorizado o indebido de datos recolectados clandestinamente. En una cita inmobiliaria, el cliente suministra voluntariamente su nombre y cédula como requisito para ingresar a un domicilio o copropiedad privada (Art. 10 Ley 1581/2012).
+     b) *Imposibilidad de Búsqueda Inversa:* En Colombia la Registraduría Nacional no permite buscar cédulas por nombre. Las consultas de antecedentes (Policía Nacional - Decreto 019 de 2012, Procuraduría SIRI, RUES) son registros públicos oficiales donde se digita el número que el propio ciudadano suministró.
+     c) *Perjuicio de la Mentira Clandestina:* Mentir diciendo que "los dueños desistieron" arruina negocios con clientes reales (que quizás tuvieron un simple error de digitación en su celular) y no disuade al delincuente, quien al creerse no descubierto seguirá intentando atacar otros inmuebles del gremio.
+     d) *Doctrina VECY de Transparencia:* Informar al cliente con cordialidad que su documento no coincide en el sistema oficial actúa como un filtro disuasorio inmediato para el delincuente y permite al cliente honesto corregir el dato.
+2. **Causa Raíz de Pérdida de Historial y Saludo Repetido en DMs**:
+   - El historial de DMs `dmConversationHistory` se almacenaba en un `Map` volátil en la memoria RAM del proceso Node.js. Al reiniciar el servicio o recargar PM2 tras despliegues, el mapa se limpiaba (`history.length === 0`), provocando que JanIA tratara a Consuelo como un usuario nuevo y emitiera el saludo formal horario.
+3. **Causa Raíz de Incompatibilidad con Errores de Tipeo**:
+   - El regex `isDocVerificationIntent` requería términos ortográficamente exactos y no admitía erratas frecuentes de teclado móvil como *"quieto rrvisar"* (en vez de *"quiero revisar"*), provocando que cayera al flujo conversacional genérico.
+
+### Acciones Ejecutadas
+1. **Persistencia Híbrida de Historial Conversacional en PostgreSQL (`getOrLoadDmHistory` en `server/_core/janIA.ts`)**:
+   - Si la memoria volátil en RAM está vacía tras un reinicio de PM2, JanIA consulta automáticamente las tablas `conversations` y `messages` en la base de datos PostgreSQL nativa de VECY, restaurando de inmediato los últimos turnos de la conversación (hasta 24 horas). Contexto indestructible y cero saludos repetidos.
+2. **Detector de Intención de Verificación Tolerante a Typos (`isDocVerificationIntent` en `server/_core/janIA.ts`)**:
+   - Soporte para variaciones con erratas ("quieto/quiero/deseo/necesito", "rrvisar/revisar/verificar/chequear/validar", "antecedentes/cédula/documento").
+   - Respuesta pedagógica y legal estructurada: explica con cordialidad que por normas de Hábeas Data (Ley 1581 de 2012) y de la Registraduría Nacional las plataformas oficiales no permiten buscar por nombres o apellidos, e invita a solicitar el número de documento o foto de la cédula para validar en 20 segundos.
+3. **Doctrina Oficial de Hábeas Data y Verificación Preventiva en Prompts Maestros**:
+   - `server/_core/janIA.ts`: Enriquecido el system prompt conversacional de DMs con la doctrina de transparencia vs clandestinidad, argumentos jurídicos de la Ley 1581 de 2012, Decreto Ley 019 de 2012 y capacidad de debate con colegas.
+   - `server/_core/prompts/base.md`: Agregada sección maestra de Protección de Datos Personales, Hábeas Data y Seguridad Inmobiliaria.
+   - `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`: Incorporada la sección 8 de doctrina jurídica y debate sobre Hábeas Data en visitas inmobiliarias.
+   - `server/_core/prompts/grupos/PROYECTO_Vecy Network.md`: Incorporada la filosofía VECY de seguridad preventiva y erradicación de excusas falsas en el gremio.
+4. **Reacción Empática Jurídica `⚖️` (`server/_core/whatsapp-utils.ts`)**:
+   - `getEmpatheticReactionEmoji` ahora detecta menciones de Hábeas Data, protección de datos, Ley 1581 o privacidad y reacciona de inmediato con la balanza `⚖️`.
+5. **Incremento de Versión y Verificación Empírica**:
+   - Actualizada la versión oficial a **v32.35** (`32.35.0`) en `shared/const.ts` y `package.json`.
+   - Incorporada la suite 30 en `server/__tests__/regression.test.ts` con pruebas de reacción `⚖️` y tolerancia a typos.
+   - `npx vitest run`: 132/132 tests aprobados al 100% ✅.
+   - `npm run check` (`tsc --noEmit`): 0 errores ✅.
+   - `npm run build`: compilación limpia en 22.3 s ✅.
+
+---lidades previas validadas.
 
 ## 📋 SESIÓN v32.34 — 03 Octubre 2026
 

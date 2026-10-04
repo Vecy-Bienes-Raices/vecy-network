@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.34";
+    VECY_VERSION = "v32.35";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -10755,7 +10755,7 @@ function getEmpatheticReactionEmoji(text2, options) {
   if (clean.includes("excelente") || clean.includes("genial") || clean.includes("felicitaciones") || clean.includes("super") || clean.includes("s\xFAper") || clean.includes("maravill") || clean.includes("me encanta") || clean.includes("perfecto")) {
     return "\u2764\uFE0F";
   }
-  if (clean.includes("contrato") || clean.includes("ley 820") || clean.includes("ley 675") || clean.includes("arras") || clean.includes("promesa") || clean.includes("escritura") || clean.includes("notar") || clean.includes("estudio de t\xEDtulo") || clean.includes("estudio de titulo") || clean.includes("comision") || clean.includes("comisi\xF3n") || clean.includes("jur\xEDdic") || clean.includes("juridic") || clean.includes("abogad")) {
+  if (clean.includes("contrato") || clean.includes("ley 820") || clean.includes("ley 675") || clean.includes("arras") || clean.includes("promesa") || clean.includes("escritura") || clean.includes("notar") || clean.includes("estudio de t\xEDtulo") || clean.includes("estudio de titulo") || clean.includes("comision") || clean.includes("comisi\xF3n") || clean.includes("jur\xEDdic") || clean.includes("juridic") || clean.includes("abogad") || clean.includes("habeas data") || clean.includes("h\xE1beas data") || clean.includes("proteccion de datos") || clean.includes("protecci\xF3n de datos") || clean.includes("ley 1581") || clean.includes("privacidad")) {
     return "\u2696\uFE0F";
   }
   if (clean.includes("aval\xFAo") || clean.includes("avaluo") || clean.includes("peritaje") || clean.includes("acm") || clean.includes("cuanto vale") || clean.includes("cu\xE1nto vale") || clean.includes("precio de mercado")) {
@@ -14699,6 +14699,7 @@ __export(janIA_exports, {
   getDmHistory: () => getDmHistory,
   getEmojiForCalificacion: () => getEmojiForCalificacion,
   getLiveStats: () => getLiveStats,
+  getOrLoadDmHistory: () => getOrLoadDmHistory,
   handleAmendmentUpdate: () => handleAmendmentUpdate,
   handleDetectedMatches: () => handleDetectedMatches,
   hasRealEstateTextKeyword: () => hasRealEstateTextKeyword,
@@ -19530,7 +19531,35 @@ function sanitizeResponseMarkdown(text2) {
 function getDmHistory(userId) {
   const history = dmConversationHistory.get(userId) || [];
   const now = Date.now();
-  return history.filter((h) => now - h.ts < 12 * 3600 * 1e3);
+  return history.filter((h) => now - h.ts < 24 * 3600 * 1e3);
+}
+async function getOrLoadDmHistory(userId) {
+  const inMemory = getDmHistory(userId);
+  if (inMemory.length > 0) {
+    return inMemory;
+  }
+  try {
+    const db = await getDb();
+    if (db) {
+      const conv = await db.select().from(conversations).where(eq7(conversations.sessionId, userId)).limit(1);
+      if (conv.length > 0) {
+        const recentMsgs = await db.select().from(messages).where(eq7(messages.conversationId, conv[0].id)).orderBy(desc2(messages.createdAt)).limit(8);
+        if (recentMsgs.length > 0) {
+          recentMsgs.reverse();
+          const restored = recentMsgs.map((m) => ({
+            role: m.role === "janIA" ? "assistant" : "user",
+            content: m.content.replace(/^\[(?:Nota de Voz PTT|SILENT-MATCH)\]:\s*/, ""),
+            ts: new Date(m.createdAt).getTime()
+          }));
+          dmConversationHistory.set(userId, restored);
+          return restored;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[getOrLoadDmHistory] Error consultando historial en BD:", err?.message);
+  }
+  return [];
 }
 function appendDmHistory(userId, role, content) {
   const history = getDmHistory(userId);
@@ -19548,7 +19577,7 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
   const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
   const timeSalutation = getGreetingByTime4();
   const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
-  const history = getDmHistory(userId);
+  const history = await getOrLoadDmHistory(userId);
   if (isGreetingOnly && history.length === 0) {
     const welcomeMsg = `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} Soy *JanIA*, la asesora experta con inteligencia artificial de *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
 
@@ -19565,9 +19594,13 @@ Te puedo colaborar de inmediato en todo lo relacionado con finca ra\xEDz:
     appendDmHistory(userId, "assistant", welcomeMsg);
     return welcomeMsg;
   }
-  const isDocVerificationIntent = /(verificar\s*(c[eé]dula|documento|antecedentes|identidad|pasaporte|ce|extranjer[ií]a)|quiero\s*verificar|necesito\s*verificar|deseo\s*verificar|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) && !/\b\d{6,11}\b/.test(clean);
+  const isDocVerificationIntent = /(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) && !/\b\d{6,11}\b/.test(clean);
   if (isDocVerificationIntent) {
-    const docPromptMsg = `\xA1Claro que s\xED! Solo escr\xEDbeme el n\xFAmero de c\xE9dula (ej: 12345678) o dime si es c\xE9dula de extranjer\xEDa o pasaporte dame el n\xFAmero y en 20 segundos te confirmo nombres completos y antecedentes en la Polic\xEDa.`;
+    const docPromptMsg = `\xA1Claro que s\xED! Para consultar los antecedentes y verificar la identidad en la Polic\xEDa Nacional, es indispensable contar con el n\xFAmero de c\xE9dula exacto.
+
+\u{1F4CC} *Nota legal de seguridad y H\xE1beas Data (Ley 1581 de 2012):* En Colombia, las plataformas oficiales de seguridad y la Registradur\xEDa Nacional no permiten buscar n\xFAmeros de documento usando \xFAnicamente nombres o apellidos para proteger la privacidad ciudadana. Solo se puede verificar a partir del n\xFAmero de c\xE9dula que el propio titular suministra.
+
+P\xEDdele con toda tranquilidad a tu cliente su n\xFAmero de documento (o una fotito de la c\xE9dula por ambas caras) para agendar la visita. Escr\xEDbemelo aqu\xED y en 20 segundos te entrego el reporte oficial de validaci\xF3n \u{1F91D}.`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", docPromptMsg);
     return docPromptMsg;
@@ -19585,6 +19618,22 @@ ${hasPriorHistory ? '- YA EST\xC1S EN UNA CONVERSACI\xD3N ACTIVA CON EL USUARIO.
 - NUNCA repitas como un contestador autom\xE1tico "\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesor\xEDa, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.
 - Conversa como una profesional inmobiliaria colombiana experta, culta, amena y emp\xE1tica. CERO tecnicismos computacionales ni lenguaje de bot.
 - Mant\xE9n respuestas concisas y bien estructuradas (2 a 4 p\xE1rrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).
+
+DOCTRINA OFICIAL VECY: PROTECCI\xD3N DE DATOS (LEY 1581 DE 2012), H\xC1BEAS DATA Y SEGURIDAD EN VISITAS:
+- PRINCIPIO DE TRANSPARENCIA FRENTE A LA CLANDESTINIDAD:
+  En el gremio inmobiliario existen colegas (como Kelly Carvajal) que tienen la creencia err\xF3nea de que verificar la identidad de los clientes viola el H\xE1beas Data, y por temor o desinformaci\xF3n, cuando la c\xE9dula no coincide con el nombre en apps como Verif\xEDquese, cancelan la visita inventando pretextos falsos ("los due\xF1os desistieron", "ya no van a estar", "recibieron otra oferta").
+- POSTURA DOCTRINAL Y LEGAL DE VECY BIENES RA\xCDCES (100% LEGAL Y \xC9TICA):
+  1. SUMINISTRO VOLUNTARIO POR EL TITULAR: El cliente interesado en visitar un inmueble privado habitado o desocupado suministra libre y voluntariamente sus datos (nombre y n\xFAmero de identificaci\xF3n) para solicitar el servicio y coordinar el ingreso. Jam\xE1s se investiga a nadie a sus espaldas.
+  2. FINALIDAD LEG\xCDTIMA DE SEGURIDAD (Art. 4 y 10 Ley 1581 de 2012 y Ley 675 de 2001 de Propiedad Horizontal): Validar la identidad de quien ingresa a una copropiedad o inmueble es una medida de debida diligencia indispensable para proteger la vida, la integridad f\xEDsica y el patrimonio de los propietarios, de los residentes del conjunto y del propio asesor inmobiliario frente a riesgos de suplantaci\xF3n, estafa o delincuencia com\xFAn.
+  3. NO EXISTE B\xDASQUEDA INVERSA EN COLOMBIA: La Registradur\xEDa Nacional no permite (por H\xE1beas Data) averiguar n\xFAmeros de c\xE9dula a partir de nombres. Las consultas oficiales del Estado (Polic\xEDa Nacional, Procuradur\xEDa SIRI, RUES) se efect\xFAan de manera leg\xEDtima partiendo del n\xFAmero que el propio ciudadano entreg\xF3.
+  4. ANTECEDENTES JUDICIALES Y DISCIPLINARIOS SON REGISTROS P\xDABLICOS: El certificado de antecedentes de la Polic\xEDa Nacional y la Procuradur\xEDa son de acceso p\xFAblico oficial por mandato legal (Decreto Ley 019 de 2012, Art. 93) para garantizar la seguridad en actos jur\xEDdicos y civiles.
+  5. CERO MENTIRAS Y TRANSPARENCIA TOTAL CON EL CLIENTE:
+     - Si el n\xFAmero suministrado no coincide con el nombre registrado en la base oficial de seguridad, el asesor NO debe mentir ni cancelar con falsos pretextos.
+     - Se le comunica con total amabilidad y respeto al cliente:
+       "Por protocolo est\xE1ndar de seguridad para visitas a inmuebles privados y registro de porter\xEDa, verificamos la identificaci\xF3n suministrada. El n\xFAmero de c\xE9dula que nos diste no coincide con el nombre registrado en la base oficial. Por favor facil\xEDtanos el documento correcto para poder coordinar la visita con total tranquilidad."
+     - EFECTO DISUASORIO Y PROTECCI\xD3N DEL GREMIO: Si se trata de un cliente honesto que digit\xF3 mal un n\xFAmero, rectifica de inmediato y la cita se concreta. Si se trata de un suplantador o persona inescrupulosa, el filtro transparente act\xFAa como un disuasivo fulminante: al saberse descubierto, desiste y no vuelve a intentar vulnerar ese predio ni a los colegas de la red.
+- CUANDO UN ASESOR O COLEGA PREGUNTE O DEBATA SOBRE H\xC1BEAS DATA O EL MANEJO DE CLIENTES SOSPECHOSOS:
+  Explica esta doctrina con maestr\xEDa jur\xEDdica, calidez y contundencia pedag\xF3gica, desmontando el mito del "miedo al H\xE1beas Data" y demostrando que la verificaci\xF3n transparente protege legalmente al asesor, al propietario y a la honestidad del negocio.
 
 CAT\xC1LOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:
 1. FACTURA PREDIAL BOGOT\xC1 Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con c\xF3digo de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretar\xEDa Distrital de Hacienda.

@@ -322,6 +322,41 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.35 — Octubre 2026
+
+#### 📌 DOCTRINA DE PROTECCIÓN DE DATOS PERSONALES (LEY 1581 DE 2012), HÁBEAS DATA Y SEGURIDAD PREVENTIVA EN VISITAS VS. CLANDESTINIDAD, PERSISTENCIA HÍBRIDA DE HISTORIAL DM EN POSTGRESQL Y DETECCIÓN TOLERANTE A ERRATAS DE TECLADO
+
+**Requerimiento y Objetivos:**
+1. **Debate Gremial sobre Verificación de Asistentes y Hábeas Data**: Abordar la problemática diaria de personas inescrupulosas que agendan visitas a inmuebles con cédulas erradas o falsas que no coinciden con sus nombres. Desmontar la creencia errónea expuesta por colegas como Kelly Carvajal en su audio de WhatsApp (`WhatsApp Ptt 2026-10-03 at 17.24.34.ogg`), quien cancela visitas clandestinamente con mentiras ("los dueños desistieron", "recibieron otra oferta") por temor infundado a que advertir la discrepancia viole el Hábeas Data.
+2. **Doctrina Oficial VECY de Transparencia y Respaldo Legal**: Dotar a JanIA de criterio jurídico de vanguardia bajo la Ley 1581 de 2012 y el Decreto Ley 019 de 2012, demostrando que:
+   - El titular suministra voluntariamente sus datos para acceder al servicio de visita a una propiedad privada habitada o desocupada.
+   - La finalidad legítima es la seguridad colectiva de propietarios, residentes y asesores (Ley 675 de 2001).
+   - En Colombia no existe búsqueda inversa de cédula por nombre (restringida por la Registraduría Nacional).
+   - Los antecedentes de Policía y Procuraduría son de acceso público oficial.
+   - La verificación abierta permite rectificar al cliente honesto y neutraliza al delincuente con un efecto disuasorio fulminante.
+3. **Persistencia Híbrida del Historial de DMs en PostgreSQL**: Erradicar el problema evidenciado en el chat de Consuelo Ronderos, donde un reinicio del proceso en RAM reseteaba el historial y forzaba a JanIA a saludar de nuevo como si fuera el primer mensaje.
+4. **Detector Tolerante a Errores de Tipeo Móvil**: Reconocer solicitudes de antecedentes con erratas frecuentes de celular (ej: *"Quieto rrvisar sus antecedentes"*) y responder con amabilidad, pedagogía y solvencia legal.
+
+**Causas Raíz:**
+1. **Miedo Jurídico Injustificado en el Sector**: Confusión entre recolección clandestina de datos y validación de datos libremente suministrados por el titular para ingresar a un domicilio privado.
+2. **Volatilidad de la Memoria en DMs**: `dmConversationHistory` residía solo en memoria RAM; al reiniciar PM2 tras un despliegue, el mapa quedaba vacío (`history.length === 0`), perdiendo el hilo de conversaciones activas.
+3. **Regex Estricta de Intención**: Descartaba variaciones como "quieto rrvisar" o consultas de antecedentes sin número de cédula.
+
+**Solución Aplicada:**
+- **`server/_core/janIA.ts`**:
+  - `getOrLoadDmHistory(userId)`: consulta la tabla `conversations` y `messages` en PostgreSQL si la memoria RAM está vacía, restaurando turnos de las últimas 24 horas y garantizando continuidad indestructible.
+  - `isDocVerificationIntent`: ampliada con soporte a erratas de celular y respuesta pedagógica sobre Hábeas Data y la imposibilidad de buscar por nombre en plataformas oficiales.
+  - System prompt de DMs enriquecido con la doctrina completa de Protección de Datos (Ley 1581 de 2012), Hábeas Data y debate gremial de transparencia vs clandestinidad.
+- **`server/_core/whatsapp-utils.ts`**:
+  - `getEmpatheticReactionEmoji`: asigna la reacción jurídica `⚖️` ante términos de Hábeas Data, protección de datos, Ley 1581 y privacidad.
+- **Prompts Maestros de Grupos y Base**:
+  - Actualizados `server/_core/prompts/base.md`, `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` (Sección 8) y `server/_core/prompts/grupos/PROYECTO_Vecy Network.md` con la doctrina de seguridad preventiva y Hábeas Data.
+- **Versión Oficial**: Incrementada a **v32.35** (`32.35.0`) en `shared/const.ts` y `package.json`.
+
+**Verificación:** `tsc --noEmit` 0 errores ✅ | `npm run build` limpio en 22.3s ✅ | 132/132 tests Vitest aprobados al 100% ✅
+
+---
+
 ### 🔖 v32.34 — Octubre 2026
 
 #### 📌 CONFIRMACIÓN EUREKA DE PDF PREDIAL, PRESENCIA CONTINUA DE PUNTITOS BAILARINES (...) Y GRABANDO AUDIO (🎙️), REACCIÓN INMEDIATA FIJA 📄 Y ACELERACIÓN DEL SERVICIO

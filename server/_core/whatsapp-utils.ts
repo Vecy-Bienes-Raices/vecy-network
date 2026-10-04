@@ -765,7 +765,7 @@ export function getEmpatheticReactionEmoji(
     return '❤️';
   }
 
-  // 7. Asesoría Jurídica / Legal / Contratos / Estudio de Títulos / Comisiones pendientes / Ley 820 / Ley 675 / Arras
+  // 7. Asesoría Jurídica / Legal / Contratos / Estudio de Títulos / Comisiones pendientes / Ley 820 / Ley 675 / Arras / Hábeas Data / Protección de Datos
   if (
     clean.includes('contrato') || clean.includes('ley 820') ||
     clean.includes('ley 675') || clean.includes('arras') ||
@@ -773,7 +773,10 @@ export function getEmpatheticReactionEmoji(
     clean.includes('notar') || clean.includes('estudio de título') ||
     clean.includes('estudio de titulo') || clean.includes('comision') ||
     clean.includes('comisión') || clean.includes('jurídic') ||
-    clean.includes('juridic') || clean.includes('abogad')
+    clean.includes('juridic') || clean.includes('abogad') ||
+    clean.includes('habeas data') || clean.includes('hábeas data') ||
+    clean.includes('proteccion de datos') || clean.includes('protección de datos') ||
+    clean.includes('ley 1581') || clean.includes('privacidad')
   ) {
     return '⚖️';
   }

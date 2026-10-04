@@ -2474,6 +2474,30 @@ Adriana Rebeca Orejuela`;
       expect(lastUpdate).toEqual({ type: "paused", jid: "573192919978@s.whatsapp.net" });
     });
   });
+
+  describe("30. Doctrina v32.35: Protección de Datos (Ley 1581 de 2012), Hábeas Data y Verificación Preventiva", () => {
+    it("Debe reaccionar con ⚖️ ante menciones de Hábeas Data, protección de datos y privacidad", async () => {
+      const { getEmpatheticReactionEmoji } = await import("../_core/whatsapp-utils");
+
+      expect(getEmpatheticReactionEmoji("Eso no viola el habeas data?")).toBe("⚖️");
+      expect(getEmpatheticReactionEmoji("Pregunta sobre la ley 1581 de protección de datos")).toBe("⚖️");
+      expect(getEmpatheticReactionEmoji("Cómo manejan la privacidad de los clientes?")).toBe("⚖️");
+    });
+
+    it("Debe detectar intención de antecedentes incluso con errores de tipeo de celular (Quieto rrvisar sus antecedentes) y orientar sobre Hábeas Data", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/janIA");
+
+      const res = await processPrivateDmConversationalMessage(
+        "Quieto rrvisar sus antecedentes",
+        "573123456789@s.whatsapp.net",
+        "Consuelo Ronderos"
+      );
+
+      expect(res).toContain("Para consultar los antecedentes y verificar la identidad en la Policía Nacional, es indispensable contar con el número de cédula exacto");
+      expect(res).toContain("Hábeas Data (Ley 1581 de 2012)");
+      expect(res).toContain("no permiten buscar números de documento usando únicamente nombres o apellidos");
+    });
+  });
 });
 
 
