@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { parseColombianPriceOrBudget, extractFallbackDataFromText, extractFirstName, splitMultiItemMessage } from "../_core/janIA";
 import {
   checkTransactionCompatibility,
@@ -2534,6 +2534,39 @@ Adriana Rebeca Orejuela`;
         "Juan José Restrepo"
       );
       expect(resJuan).toContain("¡Claro que sí, Juan José!");
+    });
+
+    it("Debe interceptar consultas con 'JanIA verificar cc: 39786573' y ejecutar el reporte oficial de identidad sin alucinaciones de LLM", async () => {
+      const { extractCedulaForVerification } = await import("../_core/identityVerificationService");
+      const agendaRouter = await import("../routers/agenda");
+
+      const det = extractCedulaForVerification("JanIA verificar cc: 39786573", true);
+      expect(det.found).toBe(true);
+      expect(det.cedula).toBe("39786573");
+      expect(det.tipoDoc).toBe("cc");
+
+      // Espiar queryPoliciaNacional para resolver instantáneamente sin consumir 2Captcha
+      const spy = vi.spyOn(agendaRouter, "queryPoliciaNacional").mockResolvedValueOnce({
+        success: true,
+        cedula: "39786573",
+        tipoDoc: "cc",
+        officialName: "Miriam Alice Herz Gerbeth",
+        source: "Central Oficial de Seguridad Notarial VECY Bienes Raíces"
+      });
+
+      const { processPrivateDmConversationalMessage } = await import("../_core/janIA");
+      const res = await processPrivateDmConversationalMessage(
+        "JanIA verificar cc: 39786573",
+        "573102399598@s.whatsapp.net",
+        "Miriam Herz"
+      );
+
+      expect(res).toContain("VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES");
+      expect(res).toContain("39.786.573");
+      expect(res).toContain("Miriam Alice Herz Gerbeth");
+      expect(res).not.toContain("Buenas noches, Miriam. Con mucho gusto te ayudo a realizar esta validación");
+
+      spy.mockRestore();
     });
   });
 });

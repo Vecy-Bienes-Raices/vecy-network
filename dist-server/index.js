@@ -11788,9 +11788,9 @@ ${quotedNote}` : quotedNote;
             stopPresence();
           }
         }
-        const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-        const isIdCheckContext = body.toLowerCase().includes("c\xE9dula") || body.toLowerCase().includes("cedula") || body.toLowerCase().includes("antecedente") || body.toLowerCase().includes("polic\xEDa") || body.toLowerCase().includes("policia");
-        if (isIdCheckContext) {
+        const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2, extractCedulaForVerification: extractCedulaForVerification2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+        const idDetection = extractCedulaForVerification2(body, true);
+        if (idDetection.found) {
           const stopPresence = startContinuousPresence(this.sock, senderId, "composing");
           try {
             const idCheck = await executeIdentityVerificationFromWhatsApp2(body, true);
@@ -19621,6 +19621,16 @@ P\xEDdele con toda tranquilidad a tu cliente su n\xFAmero de documento (o una fo
     appendDmHistory(userId, "assistant", docPromptMsg);
     return docPromptMsg;
   }
+  const { extractCedulaForVerification: extractCedulaForVerification2, executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+  const idDetection = extractCedulaForVerification2(clean, true);
+  if (idDetection.found) {
+    const idCheck = await executeIdentityVerificationFromWhatsApp2(clean, true);
+    if (idCheck.isVerificationRequest && idCheck.reportText) {
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", idCheck.reportText);
+      return idCheck.reportText;
+    }
+  }
   try {
     const hasPriorHistory = history.length > 0;
     const messages2 = [
@@ -19637,6 +19647,7 @@ ${hasPriorHistory ? '- YA EST\xC1S EN UNA CONVERSACI\xD3N ACTIVA CON EL USUARIO.
 - NUNCA repitas como un contestador autom\xE1tico "\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesor\xEDa, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.
 - Conversa como una profesional inmobiliaria colombiana experta, culta, amena y emp\xE1tica. CERO tecnicismos computacionales ni lenguaje de bot.
 - Mant\xE9n respuestas concisas y bien estructuradas (2 a 4 p\xE1rrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).
+- PROHIBICI\xD3N ABSOLUTA DE SIMULAR O ALUCINAR VERIFICACIONES: NUNCA inventes, afirmes o simules que realizaste una consulta a la Polic\xEDa Nacional o antecedentes penales. Esas validaciones se ejecutan de manera certificada por el motor oficial del sistema.
 
 DOCTRINA OFICIAL VECY: PROTECCI\xD3N DE DATOS (LEY 1581 DE 2012), H\xC1BEAS DATA Y SEGURIDAD EN VISITAS:
 - PRINCIPIO DE TRANSPARENCIA FRENTE A LA CLANDESTINIDAD:

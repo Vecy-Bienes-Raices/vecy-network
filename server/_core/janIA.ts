@@ -6721,6 +6721,19 @@ export async function processPrivateDmConversationalMessage(
     return docPromptMsg;
   }
 
+  // 🛡️ INTERCEPTOR DIRECTO DM: VERIFICACIÓN OFICIAL DE CÉDULA (POLICÍA NACIONAL)
+  // Si el mensaje contiene una cédula para validar, ejecutar la verificación real oficial y jamás permitir alucinaciones del LLM
+  const { extractCedulaForVerification, executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
+  const idDetection = extractCedulaForVerification(clean, true);
+  if (idDetection.found) {
+    const idCheck = await executeIdentityVerificationFromWhatsApp(clean, true);
+    if (idCheck.isVerificationRequest && idCheck.reportText) {
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", idCheck.reportText);
+      return idCheck.reportText;
+    }
+  }
+
   // 2. Si el usuario hace preguntas o continúa la conversación, guiarlo con Inteligencia Artificial Pura y Conocimiento Inmobiliario Experto
   try {
     const hasPriorHistory = history.length > 0;
@@ -6737,7 +6750,8 @@ export async function processPrivateDmConversationalMessage(
           `${hasPriorHistory ? '- YA ESTÁS EN UNA CONVERSACIÓN ACTIVA CON EL USUARIO. Está TERMINANTEMENTE PROHIBIDO saludar de nuevo con "¡Hola!", "¡Buenos días!", "¡Qué gusto saludarte!" o anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana.' : '- Si es el primer mensaje, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}\n` +
           `- NUNCA repitas como un contestador automático "¿Cuál de las dos herramientas te gustaría probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesoría, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.\n` +
           `- Conversa como una profesional inmobiliaria colombiana experta, culta, amena y empática. CERO tecnicismos computacionales ni lenguaje de bot.\n` +
-          `- Mantén respuestas concisas y bien estructuradas (2 a 4 párrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).\n\n` +
+          `- Mantén respuestas concisas y bien estructuradas (2 a 4 párrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).\n` +
+          `- PROHIBICIÓN ABSOLUTA DE SIMULAR O ALUCINAR VERIFICACIONES: NUNCA inventes, afirmes o simules que realizaste una consulta a la Policía Nacional o antecedentes penales. Esas validaciones se ejecutan de manera certificada por el motor oficial del sistema.\n\n` +
           `DOCTRINA OFICIAL VECY: PROTECCIÓN DE DATOS (LEY 1581 DE 2012), HÁBEAS DATA Y SEGURIDAD EN VISITAS:\n` +
           `- PRINCIPIO DE TRANSPARENCIA FRENTE A LA CLANDESTINIDAD:\n` +
           `  En el gremio inmobiliario existen colegas (como Kelly Carvajal) que tienen la creencia errónea de que verificar la identidad de los clientes viola el Hábeas Data, y por temor o desinformación, cuando la cédula no coincide con el nombre en apps como Verifíquese, cancelan la visita inventando pretextos falsos ("los dueños desistieron", "ya no van a estar", "recibieron otra oferta").\n` +

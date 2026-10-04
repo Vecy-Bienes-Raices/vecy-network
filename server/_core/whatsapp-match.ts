@@ -1143,9 +1143,9 @@ export class JaniaMatchBot {
     }
 
     // 🛡️ INTERCEPTOR DIRECTO DM: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
-    const { executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
-    const isIdCheckContext = body.toLowerCase().includes('cédula') || body.toLowerCase().includes('cedula') || body.toLowerCase().includes('antecedente') || body.toLowerCase().includes('policía') || body.toLowerCase().includes('policia');
-    if (isIdCheckContext) {
+    const { executeIdentityVerificationFromWhatsApp, extractCedulaForVerification } = await import('./identityVerificationService');
+    const idDetection = extractCedulaForVerification(body, true);
+    if (idDetection.found) {
       const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
       try {
         const idCheck = await executeIdentityVerificationFromWhatsApp(body, true);
