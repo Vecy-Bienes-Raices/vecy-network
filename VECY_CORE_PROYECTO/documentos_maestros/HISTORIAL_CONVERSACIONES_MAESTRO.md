@@ -7,6 +7,69 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.31 — 03 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Diagnóstico y Corrección de Entrega de Factura Predial / Certificado de Pago en PDF**:
+   - Eduardo reportó: *"Parece que JanIA no está entregando la Factura Predial y/o el certificado de Pago del predial en archivo PDF cómo lo venía haciendo anteriormente. Algo cambiaste o rompiste... En la imagen 2 te muestro cómo JanIA podía entregar el archivo PDF correspondiente si era una Factura Predial o el certificado de pago, así lo hacía antes perfectamente y sin problema. Revisa y Corrigelo."*
+   - En la imagen 1: En el chat de WhatsApp con Jani Alves (`182781141344345@lid`), se consultó el predio con CHIP `AAA0185PUMR` y `nit: 860034594`, quedando solo la reacción de reloj de arena (⏳) sin respuesta.
+2. **Reacción con Emoji Contextual y Empático a TODO Mensaje Inicial en DMs**:
+   - Eduardo instruyó: *"TAmbién quiero que le hablen del servicio que le hablen o de cualquiera de los temas, que al mensaje inicial JanIA sepa ponerles siempre una reacción con emoji correspondiente y acorde a lo que le hayan dicho, esto con el fin de hacerla más humana cada vez."*
+3. **Nueva Doctrina de la Bolsa Inmobiliaria Colaborativa (45/10/45)**:
+   - Eduardo ordenó: *"Para el punto anterior corrige esto que ya no funciona 50/50: 'Bolsa Inmobiliaria Colaborativa y Matching Inteligente 50/50 (cruce algorítmico al 85%-100% entre colegas a nivel nacional).' o que tal vez tu aún no lo haz entendido. Si crees necesario obviar este punto por ahora pues haslo, si nó de una vez comenzaremos a corregir y enderezar el tema. También si quieres podemos dejarlo de manera correcta así: [Bolsa Inmobiliaria Colaborativa y Matching Inteligente 45/10/45 (cruce algorítmico de OFERTAS y DEMANDAS, con localización de coincidencias entre el 80% al 94% MATCH INTERMEDIO y del 95% al 100% de compatibilidad 'MATCH PERFECTO' entre colegas a nivel nacional y con cualquier tipo de inmueble). Todo a través de nuestra plataforma.]"*
+4. **Cobro de Comisiones Pendientes en Asesoría Jurídica y Contractual**:
+   - Eduardo solicitó: *"Y a este punto: Asesoría Jurídica y Contractual (Ley 820 de 2003, Ley 675 de 2001, promesas de compraventa, arras y estudio de títulos a 20 años en la SNR). AFGREGA dentro del paréntesis; Cobro de comisiones pendientes."*
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Causa Raíz #1: Mensajes Editados en WhatsApp Web (`protocolMessage.editedMessage`)**:
+   - Al inspeccionar los logs del VPS, Jani Alves inicialmente escribió `nit: 860034494` y a las 19:38 editó el mensaje corrigiendo a `nit: 860034594`.
+   - Baileys entrega los mensajes editados como un `protocolMessage` de tipo `MESSAGE_EDIT`. La función `unwrapMessage` no desenvolvía `protocolMessage.editedMessage`, provocando que el mensaje editado se procesara con `body = ''` y fuera descartado.
+   - En el intento original, la consulta con `860034494` quedó interrumpida por el reinicio de despliegue de PM2, dejando el emoji ⏳ colgado.
+2. **Causa Raíz #2: Decodificación Ingenua de Respuestas de la SDH**:
+   - La Secretaría Distrital de Hacienda en ocasiones devuelve sus mensajes de error en base64 y en otras en texto plano nativo.
+   - Aplicar ciegamente `Buffer.from(rawMsg, 'base64').toString('utf8')` sobre texto plano normal producía basura binaria corrupta (`6\x1Ezw(ڮj,`), impidiendo identificar si el predio estaba pagado o requería datos adicionales.
+3. **Causa Raíz #3: Congelamiento de Reacción ⏳ en Consultas con Inconsistencias**:
+   - En `server/_core/whatsapp-match.ts`, el cambio de reacción de ⏳ a 📄 solo se ejecutaba si `predialCheck.pdfBuffer` existía. Si Hacienda reportaba inconsistencias (por ejemplo que el NIT no coincidía con el propietario a 1 de enero de 2026), el bot enviaba el texto pero no actualizaba el emoji de reacción, haciendo parecer que seguía colgado.
+4. **Causa Raíz #4: Ausencia de Mapeo Semántico de Reacciones Inmediatas**:
+   - No existía una función de empatía que al primer mensaje recibido en un DM analizara el tema y enviara de inmediato una reacción humana acorde.
+
+### Acciones Ejecutadas
+1. **Desenvolvimiento Recursivo de Mensajes Editados (`server/_core/whatsapp-match.ts`)**:
+   - `unwrapMessage` actualizado para desenrollar `unwrapped.protocolMessage?.editedMessage`. Los mensajes editados se reciben ahora transparentemente en cualquier parte del pipeline.
+2. **Decodificación Inmune a Corrupción (`server/_core/predialService.ts`)**:
+   - Creada función `decodeSdhMessage(raw)` que valida si la cadena es base64 estándar y legible antes de decodificar; de lo contrario, preserva el texto plano limpio de etiquetas HTML.
+   - Conectada en la detección de estado pagado (`isAlreadyPaid`) y en la extracción del mensaje de la SDH (`sdhErrorMessage`).
+3. **Gestión Anti-Congelamiento de Reacciones en Predial y Cédula (`server/_core/whatsapp-match.ts`)**:
+   - En predial: si se genera PDF se reacciona con `📄`; si no hay PDF pero hay reporte de instrucciones o inconsistencia, se actualiza el ⏳ inmediatamente a `🏛️`.
+   - En cédula: al terminar la consulta, se actualiza el ⏳ a `✅` (si fue exitosa) o a `🛡️` (si hubo observación).
+4. **Motor de Reacciones Contextuales Empáticas (`server/_core/whatsapp-utils.ts`)**:
+   - Implementada función `getEmpatheticReactionEmoji` con mapeo temático completo:
+     - Predial / CHIP / Hacienda: `🏛️`
+     - Cédula / Antecedentes / Policía: `🛡️`
+     - Asesoría Jurídica / Contratos / Comisiones: `⚖️`
+     - Avalúos / Peritajes / ACM: `📊`
+     - Bolsa Colaborativa / Matching: `🤝`
+     - Oferta Inmobiliaria (apto, casa, lote, arriendo, venta): `🏡`
+     - Demanda / Búsqueda activa (busco, requiero): `🔎`
+     - Audios / Notas de voz: `🎧`
+     - Saludos cordiales: `👋`
+     - Agradecimiento: `🙏`
+     - Felicitaciones / Elogios: `⭐`
+     - General / Por defecto: `✨`
+   - Integrada en `processBufferedDmMessages` para dispararse en el primer milisegundo de interacción.
+5. **Doctrina Oficial Bolsa Inmobiliaria Colaborativa 45/10/45 y Cobro de Comisiones (`server/_core/janIA.ts`)**:
+   - `welcomeMsg`, system prompt de IA Pura y fallback conversacional actualizados:
+     - **Bolsa Inmobiliaria Colaborativa y Matching Inteligente 45/10/45**: Cruce algorítmico de OFERTAS y DEMANDAS a nivel nacional, coincidencias entre el 80% y 94% (*Match Intermedio*) y del 95% al 100% (*Match Perfecto*). Comisión compartida 45% Asesor Oferta, 10% Plataforma Vecy Network, 45% Asesor Demanda.
+     - **Asesoría Jurídica y Contractual**: Ley 820 de 2003, Ley 675 de 2001, promesas de compraventa, arras, estudio de títulos a 20 años en la SNR, notarías, escrituración y **cobro de comisiones pendientes**.
+6. **Incremento de Versión y Compilación**:
+   - Versión oficial actualizada a **v32.31** (`32.31.0`) en `shared/const.ts` y `package.json`.
+   - `npm run check` (`tsc --noEmit`) 0 errores ✅.
+   - `npm run build` (Vite + esbuild) limpio ✅.
+   - Vitest: 126/126 tests pasados ✅.
+   - Pruebas unitarias de emojis, bienvenida, consulta de bolsa 45/10/45 y consulta de comisiones pendientes 100% exitosas ✅.
+
+---
+
 ## 📋 SESIÓN v32.30 — 03 Octubre 2026
 
 ### Solicitud de Eduardo

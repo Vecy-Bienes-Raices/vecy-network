@@ -322,6 +322,41 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.31 — Octubre 2026
+
+#### 📌 ENTREGA ROBUSTA DE PDF PREDIAL, SOPORTE MENSAJES EDITADOS, REACCIÓN EMPÁTICA CONTEXTUAL INMEDIATA EN DMS, DOCTRINA BOLSA 45/10/45 Y COBRO DE COMISIONES PENDIENTES
+
+**Requerimiento y Objetivos:**
+1. Diagnosticar por qué JanIA no entregó la Factura Predial o Certificado de Pago en PDF en el chat de WhatsApp con Jani Alves (`AAA0185PUMR`, `nit: 860034594`), quedando solo la reacción de reloj de arena (⏳).
+2. Implementar que ante cualquier mensaje o servicio en DMs privados, JanIA reaccione de inmediato con un emoji correspondiente y acorde al tema de lo que le hayan dicho, aumentando la empatía y calidez humana.
+3. Actualizar la doctrina oficial de la Bolsa Inmobiliaria Colaborativa (dejar el antiguo 50/50 e incorporar el modelo 45/10/45 con Match Intermedio 80%-94% y Match Perfecto 95%-100%).
+4. En Asesoría Jurídica y Contractual: agregar formalmente el **"cobro de comisiones pendientes"**.
+
+**Causas Raíz:**
+1. **Mensajes Editados en WhatsApp (`protocolMessage.editedMessage`)**: Jani Alves corrigió un dígito del NIT en WhatsApp Web editando el mensaje (`nit: 860034594`). `unwrapMessage` en Baileys no contemplaba mensajes editados, por lo que el mensaje editado se procesaba con `body = ''`.
+2. **Decodificación de Errores SDH en Base64 vs Texto Plano**: La Secretaría de Hacienda responde errores a veces en base64 y a veces en texto plano. Aplicar `Buffer.from(raw, 'base64')` indiscriminadamente corrompía mensajes de texto plano produciendo basura binaria (`6\x1Ezw(ڮj,`).
+3. **Reacciones ⏳ Colgadas sin Transición**: Si una consulta de predial no lograba generar PDF (por inconsistencias en Hacienda o datos no coincidentes), el código despachaba el reporte pero dejaba el emoji ⏳ colgado porque solo si había `pdfBuffer` se emitía una reacción de reemplazo.
+4. **Falta de Reacción Empática Inmediata en DMs**: No existía un analizador semántico rápido para responder con un emoji contextual (🏛️, 🛡️, ⚖️, 📊, 🤝, 🏡, 🔎, 🎧, 👋, 🙏, ⭐) al mensaje entrante.
+
+**Solución Aplicada:**
+- **`server/_core/whatsapp-match.ts`**:
+  - `unwrapMessage` actualizado para desenvolver recursivamente `unwrapped.protocolMessage?.editedMessage`.
+  - En `processBufferedDmMessages`: disparo inmediato de reacción contextual empática sobre `mainMsg.key`.
+  - Transición de reacciones en predial: si hay PDF se coloca `📄`; si la SDH devuelve inconsistencias o guía, se actualiza de inmediato el ⏳ a `🏛️`.
+  - Transición de reacciones en cédula: actualización a `✅` o `🛡️`.
+- **`server/_core/whatsapp-utils.ts`**:
+  - Creada función `getEmpatheticReactionEmoji` con mapeo integral de temas, saludos, trámites, audios y cortesías.
+- **`server/_core/predialService.ts`**:
+  - Creada función `decodeSdhMessage(raw)` que discrimina base64 válido y preserva texto plano legible.
+- **`server/_core/janIA.ts`**:
+  - System prompt, `welcomeMsg` y fallback actualizados con la Bolsa 45/10/45 y rangos 80%-94% intermedio / 95%-100% perfecto.
+  - Asesoría jurídica complementada con el cobro de comisiones pendientes.
+- **Versión Oficial**: Incrementada a **v32.31** (`32.31.0`) en `shared/const.ts` y `package.json`.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | `npm run build` limpio ✅ | 126/126 tests Vitest ✅ | Pruebas empíricas de decodificación, emojis, bienvenida y diálogo 100% exitosas ✅
+
+---
+
 ### 🔖 v32.30 — Octubre 2026
 
 #### 📌 CATÁLOGO COMPLETO DE SERVICIOS JANIA, INVITACIÓN AL CANAL DE WHATSAPP, RESEÑA GOOGLE EN MENSAJE APARTE Y VOZ FLUIDA SIN DELETREO DE URLS

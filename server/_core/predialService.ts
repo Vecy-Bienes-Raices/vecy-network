@@ -53,6 +53,27 @@ export interface DownloadPredialPdfResult {
   errorMessage?: string;
 }
 
+/**
+ * Decodifica de forma segura los mensajes de error/estado devueltos por la Secretaría de Hacienda.
+ * Soporta tanto cadenas en base64 nativo de la SDH como texto plano normal sin corromper el contenido.
+ */
+export function decodeSdhMessage(raw: any): string {
+  if (!raw || typeof raw !== 'string') return '';
+  const trimmed = raw.trim();
+  // Verificar si es base64 estándar (sin espacios, longitud múltiplo de 4 o con padding)
+  const isBase64Pattern = /^[A-Za-z0-9+/]+={0,2}$/.test(trimmed) && !trimmed.includes(' ') && trimmed.length % 4 === 0 && trimmed.length >= 4;
+  if (isBase64Pattern) {
+    try {
+      const dec = Buffer.from(trimmed, 'base64').toString('utf8');
+      // Solo aceptamos la decodificación si resulta en texto legible y no en bytes binarios
+      if (/^[\x20-\x7E\xA0-\xFF\s\wáéíóúÁÉÍÓÚñÑ.,;:!¡?¿()\-–—]+$/.test(dec) && dec.trim().length > 0) {
+        return dec.replace(/<[^>]*>?/gm, '').trim();
+      }
+    } catch (_) {}
+  }
+  return trimmed.replace(/<[^>]*>?/gm, '').trim();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SANITIZACIÓN DE DOCUMENTOS — REGLA DOCTRINAL v32.14
 // ─────────────────────────────────────────────────────────────────────────────
@@ -561,14 +582,13 @@ export async function downloadPredialInvoicePdf(
     let isAlreadyPaid = false;
     if (buscarInfoData?.dataForm?.errores && Array.isArray(buscarInfoData.dataForm.errores)) {
       for (const err of buscarInfoData.dataForm.errores) {
-        if (err?.txt_msj) {
-          try {
-            const decoded = Buffer.from(err.txt_msj, 'base64').toString('utf8').toLowerCase();
-            if (decoded.includes('pagada') || decoded.includes('pago')) {
-              isAlreadyPaid = true;
-              break;
-            }
-          } catch (_) {}
+        const rawMsg = err?.txt_msj || err?.txtmsj;
+        if (rawMsg) {
+          const decoded = decodeSdhMessage(rawMsg).toLowerCase();
+          if (decoded.includes('pagada') || decoded.includes('pago') || decoded.includes('cancelad')) {
+            isAlreadyPaid = true;
+            break;
+          }
         }
       }
     }
@@ -652,12 +672,10 @@ export async function downloadPredialInvoicePdf(
           for (const err of certAjaxResp.resp.errores) {
             const rawMsg = err?.txt_msj || err?.txtmsj;
             if (rawMsg) {
-              try {
-                const dec = Buffer.from(rawMsg, 'base64').toString('utf8');
-                if (dec && dec.trim()) {
-                  sdhErrorMessage = dec.replace(/<[^>]*>?/gm, '').trim();
-                }
-              } catch (_) {}
+              const dec = decodeSdhMessage(rawMsg);
+              if (dec && dec.trim()) {
+                sdhErrorMessage = dec.trim();
+              }
             }
           }
         }

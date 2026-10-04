@@ -172,7 +172,30 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.30 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.31 — Octubre 2026
+
+### Novedades v32.31 (Entrega Robusta de PDF Predial, Soporte Mensajes Editados, Reacción Empática Contextual Inmediata en DMs, Doctrina Bolsa 45/10/45 y Cobro de Comisiones Pendientes):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. Eduardo alertó que JanIA parecía no estar entregando la Factura Predial o Certificado de Pago en PDF (chat de WhatsApp de Jani Alves con CHIP `AAA0185PUMR` y `nit: 860034594`), donde quedó solo la reacción ⏳.
+  2. Solicitó que ante cualquier mensaje o servicio en DMs, JanIA reaccione siempre con un emoji correspondiente y acorde al tema de lo que le hayan dicho, aumentando la empatía y calidez humana.
+  3. Instruyó actualizar la doctrina de la Bolsa Inmobiliaria Colaborativa (dejar el antiguo 50/50 y adoptar el modelo 45/10/45 con Match Intermedio 80%-94% y Match Perfecto 95%-100%).
+  4. En Asesoría Jurídica y Contractual: agregar formalmente el **"cobro de comisiones pendientes"**.
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Soporte de Mensajes Editados en Baileys (`unwrapMessage`)**:
+     - Jani Alves corrigió un dígito del NIT editando el mensaje en WhatsApp Web. `protocolMessage.editedMessage` no se desempaquetaba a nivel de mensaje raíz, dejando `body = ''`.
+     - `unwrapMessage` en `server/_core/whatsapp-match.ts` ahora desenvuelve recursivamente `protocolMessage.editedMessage`.
+  2. **Decodificación Inmune de Errores Base64 / Texto Plano SDH (`decodeSdhMessage`)**:
+     - La SDH a veces responde con texto plano en vez de base64. Al forzar `Buffer.from(raw, 'base64')`, se generaban caracteres corruptos binarios (`6\x1Ezw(ڮj,`). Creada función `decodeSdhMessage` en `server/_core/predialService.ts` que valida si es base64 antes de decodificar.
+  3. **Gestión Anti-Congelamiento de Reacciones en Predial y Cédula**:
+     - Si la consulta de predial entrega PDF, reacciona con `📄`. Si no hay PDF (Hacienda reporta inconsistencias o faltan datos), actualiza de inmediato el ⏳ a `🏛️` y envía las instrucciones y enlace oficial.
+  4. **Motor de Reacciones Contextuales Empáticas (`getEmpatheticReactionEmoji`)**:
+     - Creada en `server/_core/whatsapp-utils.ts` e integrada en `processBufferedDmMessages`: reacciona al instante en el DM según el tema (🏛️ predial, 🛡️ cédula, ⚖️ asesoría legal/comisiones, 📊 avalúos, 🤝 bolsa 45/10/45, 🏡 oferta, 🔎 demanda, 🎧 audio, 👋 saludo, 🙏 gratitud, ⭐ felicitación).
+  5. **Doctrina Oficial Bolsa Inmobiliaria Colaborativa 45/10/45 y Cobro de Comisiones (`server/_core/janIA.ts`)**:
+     - System prompt, `welcomeMsg` y fallback actualizados con el esquema 45/10/45 (45% asesor captador oferta, 10% plataforma Vecy, 45% asesor colocador demanda) y rangos 80-94% intermedio / 95-100% perfecto.
+     - Asesoría jurídica enriquecida con el cobro de comisiones pendientes.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | `npm run build` limpio ✅ | 126/126 tests Vitest ✅ | Pruebas unitarias de emojis, bienvenida, bolsa 45/10/45 y cobro de comisiones 100% exitosas ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.30 — Octubre 2026
 
 ### Novedades v32.30 (Catálogo Completo de Servicios JanIA, Invitación al Canal de WhatsApp, Reseña Google en Mensaje Aparte y Voz Fluida sin Deletreo de URLs):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

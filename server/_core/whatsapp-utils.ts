@@ -706,3 +706,141 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
 export async function sendAdminNotification(text: string): Promise<void> {
   console.log(`[WHATSAPP-UTILS] [Notificación Admin (WhatsApp Omitido)]: ${text}`);
 }
+
+/**
+ * Determina una reacción con emoji contextual, empática y afín al mensaje del usuario en WhatsApp.
+ * Diseñada para que JanIA transmita calidez humana inmediata al recibir cualquier consulta o mensaje.
+ */
+export function getEmpatheticReactionEmoji(
+  text: string,
+  options?: { isAudio?: boolean; hasImage?: boolean; hasPdf?: boolean }
+): string {
+  if (options?.isAudio) {
+    return '🎧';
+  }
+
+  const clean = (text || '').trim().toLowerCase();
+
+  // 1. Predial / Impuesto Predial / Hacienda / CHIP
+  if (clean.includes('predial') || clean.includes('chip') || clean.includes('hacienda') || clean.includes('impuesto')) {
+    return '🏛️';
+  }
+
+  // 2. Cédula / Documento / Verificación / Antecedentes / Policía Nacional
+  if (
+    clean.includes('cédula') || clean.includes('cedula') ||
+    clean.includes('antecedente') || clean.includes('policía') ||
+    clean.includes('policia') || clean.includes('verificar') ||
+    clean.includes('verificacion') || clean.includes('identidad')
+  ) {
+    return '🛡️';
+  }
+
+  // 3. Documento PDF adjunto o mención de PDF
+  if (options?.hasPdf || clean.includes('.pdf') || clean.includes('pdf')) {
+    return '📄';
+  }
+
+  // 4. Imagen o foto adjunta (flyer, fachada, etc.)
+  if (options?.hasImage || clean.includes('foto') || clean.includes('imagen')) {
+    return '📸';
+  }
+
+  // 5. Agradecimiento / Gratitud
+  if (
+    clean.includes('gracias') || clean.includes('agradecid') ||
+    clean.includes('muy amable') || clean.includes('mil gracias') ||
+    clean.includes('muchas gracias') || clean.includes('bendicion') || clean.includes('bendición')
+  ) {
+    return '🙏';
+  }
+
+  // 6. Felicitación / Elogio / Entusiasmo
+  if (
+    clean.includes('excelente') || clean.includes('genial') ||
+    clean.includes('felicitaciones') || clean.includes('super') ||
+    clean.includes('súper') || clean.includes('maravill') ||
+    clean.includes('me encanta') || clean.includes('perfecto')
+  ) {
+    return '⭐';
+  }
+
+  // 7. Asesoría Jurídica / Legal / Contratos / Estudio de Títulos / Comisiones pendientes / Ley 820 / Ley 675 / Arras
+  if (
+    clean.includes('contrato') || clean.includes('ley 820') ||
+    clean.includes('ley 675') || clean.includes('arras') ||
+    clean.includes('promesa') || clean.includes('escritura') ||
+    clean.includes('notar') || clean.includes('estudio de título') ||
+    clean.includes('estudio de titulo') || clean.includes('comision') ||
+    clean.includes('comisión') || clean.includes('jurídic') ||
+    clean.includes('juridic') || clean.includes('abogad')
+  ) {
+    return '⚖️';
+  }
+
+  // 8. Avalúo Comercial / Peritaje / ACM
+  if (
+    clean.includes('avalúo') || clean.includes('avaluo') ||
+    clean.includes('peritaje') || clean.includes('acm') ||
+    clean.includes('cuanto vale') || clean.includes('cuánto vale') ||
+    clean.includes('precio de mercado')
+  ) {
+    return '📊';
+  }
+
+  // 9. Requerimiento / Demanda / Búsqueda activa ("busco", "necesito cliente", etc.)
+  if (
+    clean.startsWith('busco') || clean.includes('busco ') ||
+    clean.includes('buscando') || clean.includes('necesito ') ||
+    clean.includes('requiero') || clean.includes('cliente busca') ||
+    clean.includes('presupuesto') || clean.includes('comprador')
+  ) {
+    return '🔎';
+  }
+
+  // 10. Oferta inmobiliaria (apto, casa, lote, arriendo, venta, local, bodega, etc.)
+  if (
+    clean.includes('vendo') || clean.includes('arriendo') ||
+    clean.includes('apartamento') || clean.includes('casa') ||
+    clean.includes('apto') || clean.includes('lote') ||
+    clean.includes('inmueble') || clean.includes('bodega') ||
+    clean.includes('finca') || clean.includes('oficina')
+  ) {
+    return '🏡';
+  }
+
+  // 11. Bolsa Inmobiliaria Colaborativa / Matching / Alianza 45/10/45 / Red
+  if (
+    clean.includes('bolsa') || clean.includes('matching') ||
+    clean.includes('alianza') || clean.includes('red') ||
+    clean.includes('45/10/45') || clean.includes('50/50') ||
+    clean.includes('colega') || clean.includes('punta')
+  ) {
+    return '🤝';
+  }
+
+  // 12. Canal de WhatsApp / Enlaces
+  if (clean.includes('canal') || clean.includes('grupo') || clean.includes('comunidad')) {
+    return '📢';
+  }
+
+  // 13. Saludos iniciales
+  if (
+    /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|que\s*mas|qu[eé]\s*m[aá]s|hola\s*jania)\b/i.test(clean)
+  ) {
+    return '👋';
+  }
+
+  // 14. Despedida
+  if (/^(chao|adi[oó]s|hasta\s*luego|hasta\s*pronto|nos\s*vemos|quedamos\s*as[ií])\b/i.test(clean)) {
+    return '👋';
+  }
+
+  // 15. Pregunta o inquietud
+  if (clean.includes('?') || clean.includes('¿') || clean.startsWith('como') || clean.startsWith('cómo')) {
+    return '💡';
+  }
+
+  // Emoji empático por defecto
+  return '✨';
+}

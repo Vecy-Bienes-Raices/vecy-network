@@ -6628,8 +6628,8 @@ export async function processPrivateDmConversationalMessage(
       `Te puedo colaborar de inmediato en todo lo relacionado con finca raíz:\n` +
       `• 📄 *Factura Predial Bogotá y Certificado de Pago en PDF* (al instante con Hacienda)\n` +
       `• 🛡️ *Verificación de Cédula y Antecedentes en Policía Nacional* (en 20 segundos)\n` +
-      `• 🤝 *Bolsa Inmobiliaria y Cruce de Negocios 50/50* (conectamos tus inmuebles o búsquedas con colegas en toda Colombia)\n` +
-      `• ⚖️ *Asesoría en Contratos, Estudio de Títulos SNR a 20 Años y Notarías*\n` +
+      `• 🤝 *Bolsa Inmobiliaria Colaborativa y Matching Inteligente 45/10/45* (cruce algorítmico de Ofertas y Demandas: 80%-94% Match Intermedio y 95%-100% Match Perfecto a través de nuestra plataforma en toda Colombia)\n` +
+      `• ⚖️ *Asesoría Jurídica y Contractual* (Ley 820 de 2003, Ley 675 de 2001, promesas de compraventa, arras, estudio de títulos a 20 años en la SNR, cobro de comisiones pendientes)\n` +
       `• 📊 *Avalúos y Análisis Comparativo de Mercado (ACM)*\n` +
       `• 👤 *Atención Personalizada con nuestros Directores:* Eduardo Rivera y Jani Alves (+57 316 656 9719)\n\n` +
       `¿En qué te puedo colaborar hoy? Cuéntame con total confianza 🤝`;
@@ -6669,9 +6669,9 @@ export async function processPrivateDmConversationalMessage(
           `CATÁLOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:\n` +
           `1. FACTURA PREDIAL BOGOTÁ Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con código de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretaría Distrital de Hacienda.\n` +
           `2. VERIFICACIÓN OFICIAL DE CÉDULA Y ANTECEDENTES: Validación de nombres completos y antecedentes en Policía Nacional en 20 segundos para blindar contratos de compraventa y arrendamiento.\n` +
-          `3. BOLSA INMOBILIARIA COLABORATIVA Y CRUCE AL 50/50: Publicación de inmuebles en venta o arriendo y cruce algorítmico con demandas y requerimientos de compradores calificados en toda Colombia (85% a 100% de match exacto).\n` +
+          `3. BOLSA INMOBILIARIA COLABORATIVA Y MATCHING INTELIGENTE 45/10/45: Cruce algorítmico de OFERTAS y DEMANDAS a través de nuestra plataforma entre colegas a nivel nacional con cualquier tipo de inmueble. Coincidencias entre el 80% al 94% ("MATCH INTERMEDIO") y del 95% al 100% de compatibilidad ("MATCH PERFECTO"). Esquema de comisión compartida 45/10/45 (45% asesor captador de oferta, 10% plataforma Vecy Network, 45% asesor colocador de demanda).\n` +
           `4. AVALÚOS Y ANÁLISIS COMPARATIVO DE MERCADO (ACM): Estimación comercial y catastral de inmuebles según estrato, metraje y zona.\n` +
-          `5. ASESORÍA JURÍDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, régimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa (arras de retracto y confirmatorias), escrituración y estudio de títulos de 20 años en la SNR (gravámenes, afectación familiar, patrimonio inembargable).\n` +
+          `5. ASESORÍA JURÍDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, régimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa, arras de retracto y confirmatorias, escrituración, estudio de títulos a 20 años en la SNR (gravámenes, afectación familiar, patrimonio inembargable) y cobro de comisiones pendientes.\n` +
           `6. ACOMPAÑAMIENTO BRÓKER PERSONALIZADO: Conexión directa con nuestros directores Eduardo A. Rivera y Jani Alves en el +57 316 656 9719 (https://wa.me/573166569719) para trámites notariales, peritajes presenciales y acompañamiento legal.\n\n` +
           `INVITACIÓN AL CANAL OFICIAL DE WHATSAPP AL DESPEDIRTE:\n` +
           `- Cuando el usuario indique que la conversación está concluyendo, dé las gracias o se despida (ej: "gracias", "muchas gracias", "hasta luego", "vale gracias", "chao", "muy amable", "quedamos así"), despídete con afecto y calidez e invítalo amablemente a seguir nuestro Canal Oficial de WhatsApp de VECY BIENES RAÍCES (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) donde compartimos oportunidades exclusivas, remates, tips y novedades del sector.\n\n` +
@@ -6718,7 +6718,7 @@ export async function processPrivateDmConversationalMessage(
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
     const hasPriorHistory = history.length > 0;
     const fallback = hasPriorHistory
-      ? `Con mucho gusto te oriento. En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que investiga e innova con tecnología para conectar a colegas corredores al 50/50, brindar peritajes, avalúos y herramientas gratuitas como verificación de antecedentes y facturas prediales. Si requieres atención personalizada de nuestros directores Eduardo y Jani, puedes escribirnos al *+57 316 656 9719*.`
+      ? `Con mucho gusto te oriento. En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que investiga e innova con tecnología para conectar a colegas corredores en nuestra bolsa 45/10/45, brindar peritajes, avalúos y herramientas gratuitas como verificación de antecedentes y facturas prediales. Si requieres atención personalizada de nuestros directores Eduardo y Jani, puedes escribirnos al *+57 316 656 9719*.`
       : `¡${timeSalutation}${nameGreeting}! 👋 En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que innova con tecnología para facilitarte tus gestiones diarias. Cuéntame en qué te puedo colaborar hoy.`;
     return fallback;
   }

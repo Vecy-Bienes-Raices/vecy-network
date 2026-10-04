@@ -52,7 +52,7 @@ const cleanJid = (jid: string) => {
   return jid.split(':')[0];
 };
 
-// Helper para desenrollar mensajes envueltos en ephemeral, viewOnce, etc.
+// Helper para desenrollar mensajes envueltos en ephemeral, viewOnce, editados, etc.
 export function unwrapMessage(msgObj: any): any {
   if (!msgObj) return msgObj;
   let unwrapped = msgObj;
@@ -61,14 +61,16 @@ export function unwrapMessage(msgObj: any): any {
     unwrapped.viewOnceMessage?.message ||
     unwrapped.viewOnceMessageV2?.message ||
     unwrapped.viewOnceMessageV2Extension?.message ||
-    unwrapped.documentWithCaptionMessage?.message
+    unwrapped.documentWithCaptionMessage?.message ||
+    unwrapped.protocolMessage?.editedMessage
   ) {
     unwrapped =
       unwrapped.ephemeralMessage?.message ||
       unwrapped.viewOnceMessage?.message ||
       unwrapped.viewOnceMessageV2?.message ||
       unwrapped.viewOnceMessageV2Extension?.message ||
-      unwrapped.documentWithCaptionMessage?.message;
+      unwrapped.documentWithCaptionMessage?.message ||
+      unwrapped.protocolMessage?.editedMessage;
   }
   return unwrapped;
 }
@@ -1055,6 +1057,19 @@ export class JaniaMatchBot {
     const body = combinedBody;
     console.log(`[JANIA-MATCH] [DM] Procesando buffer DM de ${messages.length} mensaje(s) de ${senderId} (${userName}, Tel: ${rawPhone}): "${body}"`);
 
+    // 🌟 REACCIÓN EMPÁTICA CONTEXTUAL INMEDIATA EN DMs:
+    // JanIA reacciona de inmediato con un emoji acorde al contenido exacto del mensaje (predial 🏛️, cédula 🛡️, asesoría ⚖️, saludo 👋, etc.)
+    // para sentirse viva, atenta y 100% humana ante cualquier interacción.
+    try {
+      const { getEmpatheticReactionEmoji } = await import('./whatsapp-utils');
+      const contextualEmoji = getEmpatheticReactionEmoji(body, {
+        isAudio: isAudioPTT,
+        hasImage: !!imageBuffer,
+        hasPdf: !!pdfBuffer
+      });
+      await this.sock.sendMessage(senderId, { react: { text: contextualEmoji, key: mainMsg.key } }).catch(() => {});
+    } catch (_) {}
+
     // Interceptar confirmaciones de Match (SÍ #M123 o NO #M123) para cualquier usuario (Double Opt-In)
     const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
     const matchConfirm = body.match(matchConfirmationRegex);
@@ -1090,6 +1105,7 @@ export class JaniaMatchBot {
           await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true });
         } else {
           await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+          await this.sock.sendMessage(senderId, { react: { text: '🏛️', key: mainMsg.key } }).catch(() => {});
         }
         await this.logToDb(senderId, 'janIA', predialPendingCheck.reportText);
         return;
@@ -1121,6 +1137,7 @@ export class JaniaMatchBot {
         await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true });
       } else {
         await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+        await this.sock.sendMessage(senderId, { react: { text: '🏛️', key: mainMsg.key } }).catch(() => {});
       }
       await this.logToDb(senderId, 'janIA', predialCheck.reportText);
       return;
@@ -1139,9 +1156,12 @@ export class JaniaMatchBot {
 
       // Si la verificación fue exitosa, enviar desacoplados el bucle viral y la reseña de Google
       if (idCheck.success) {
+        await this.sock.sendMessage(senderId, { react: { text: '✅', key: mainMsg.key } }).catch(() => {});
         const { VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
         await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true });
         await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true });
+      } else {
+        await this.sock.sendMessage(senderId, { react: { text: '🛡️', key: mainMsg.key } }).catch(() => {});
       }
       return;
     }

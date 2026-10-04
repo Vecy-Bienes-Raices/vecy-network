@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.30";
+    VECY_VERSION = "v32.31";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -8864,6 +8864,7 @@ __export(predialService_exports, {
   PREDIAL_HELP_TEXT: () => PREDIAL_HELP_TEXT,
   VIRAL_LOOP_MESSAGE: () => VIRAL_LOOP_MESSAGE,
   clearPendingPredialSession: () => clearPendingPredialSession,
+  decodeSdhMessage: () => decodeSdhMessage,
   downloadPredialInvoicePdf: () => downloadPredialInvoicePdf,
   executePredialAssistanceFromWhatsApp: () => executePredialAssistanceFromWhatsApp,
   extractChipAndCedulaForPredial: () => extractChipAndCedulaForPredial,
@@ -8874,6 +8875,21 @@ __export(predialService_exports, {
   sanitizeDocumentNumber: () => sanitizeDocumentNumber,
   setPendingPredialSession: () => setPendingPredialSession
 });
+function decodeSdhMessage(raw) {
+  if (!raw || typeof raw !== "string") return "";
+  const trimmed = raw.trim();
+  const isBase64Pattern = /^[A-Za-z0-9+/]+={0,2}$/.test(trimmed) && !trimmed.includes(" ") && trimmed.length % 4 === 0 && trimmed.length >= 4;
+  if (isBase64Pattern) {
+    try {
+      const dec = Buffer.from(trimmed, "base64").toString("utf8");
+      if (/^[\x20-\x7E\xA0-\xFF\s\wáéíóúÁÉÍÓÚñÑ.,;:!¡?¿()\-–—]+$/.test(dec) && dec.trim().length > 0) {
+        return dec.replace(/<[^>]*>?/gm, "").trim();
+      }
+    } catch (_) {
+    }
+  }
+  return trimmed.replace(/<[^>]*>?/gm, "").trim();
+}
 function sanitizeDocumentNumber(raw, isNit = false) {
   if (!raw) return "";
   let cleaned = raw.replace(/[\s.,]/g, "");
@@ -9227,14 +9243,12 @@ async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip, options) {
     let isAlreadyPaid = false;
     if (buscarInfoData?.dataForm?.errores && Array.isArray(buscarInfoData.dataForm.errores)) {
       for (const err of buscarInfoData.dataForm.errores) {
-        if (err?.txt_msj) {
-          try {
-            const decoded = Buffer.from(err.txt_msj, "base64").toString("utf8").toLowerCase();
-            if (decoded.includes("pagada") || decoded.includes("pago")) {
-              isAlreadyPaid = true;
-              break;
-            }
-          } catch (_) {
+        const rawMsg = err?.txt_msj || err?.txtmsj;
+        if (rawMsg) {
+          const decoded = decodeSdhMessage(rawMsg).toLowerCase();
+          if (decoded.includes("pagada") || decoded.includes("pago") || decoded.includes("cancelad")) {
+            isAlreadyPaid = true;
+            break;
           }
         }
       }
@@ -9309,12 +9323,9 @@ async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip, options) {
           for (const err of certAjaxResp.resp.errores) {
             const rawMsg = err?.txt_msj || err?.txtmsj;
             if (rawMsg) {
-              try {
-                const dec = Buffer.from(rawMsg, "base64").toString("utf8");
-                if (dec && dec.trim()) {
-                  sdhErrorMessage = dec.replace(/<[^>]*>?/gm, "").trim();
-                }
-              } catch (_) {
+              const dec = decodeSdhMessage(rawMsg);
+              if (dec && dec.trim()) {
+                sdhErrorMessage = dec.trim();
               }
             }
           }
@@ -10261,6 +10272,7 @@ __export(whatsapp_utils_exports, {
   cleanVoiceText: () => cleanVoiceText,
   detectaVoz: () => detectaVoz,
   extractFirstName: () => extractFirstName,
+  getEmpatheticReactionEmoji: () => getEmpatheticReactionEmoji,
   getGreetingByTime: () => getGreetingByTime,
   sendAdminNotification: () => sendAdminNotification,
   textToSpeechMedia: () => textToSpeechMedia
@@ -10701,6 +10713,58 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
 async function sendAdminNotification(text2) {
   console.log(`[WHATSAPP-UTILS] [Notificaci\xF3n Admin (WhatsApp Omitido)]: ${text2}`);
 }
+function getEmpatheticReactionEmoji(text2, options) {
+  if (options?.isAudio) {
+    return "\u{1F3A7}";
+  }
+  const clean = (text2 || "").trim().toLowerCase();
+  if (clean.includes("predial") || clean.includes("chip") || clean.includes("hacienda") || clean.includes("impuesto")) {
+    return "\u{1F3DB}\uFE0F";
+  }
+  if (clean.includes("c\xE9dula") || clean.includes("cedula") || clean.includes("antecedente") || clean.includes("polic\xEDa") || clean.includes("policia") || clean.includes("verificar") || clean.includes("verificacion") || clean.includes("identidad")) {
+    return "\u{1F6E1}\uFE0F";
+  }
+  if (options?.hasPdf || clean.includes(".pdf") || clean.includes("pdf")) {
+    return "\u{1F4C4}";
+  }
+  if (options?.hasImage || clean.includes("foto") || clean.includes("imagen")) {
+    return "\u{1F4F8}";
+  }
+  if (clean.includes("gracias") || clean.includes("agradecid") || clean.includes("muy amable") || clean.includes("mil gracias") || clean.includes("muchas gracias") || clean.includes("bendicion") || clean.includes("bendici\xF3n")) {
+    return "\u{1F64F}";
+  }
+  if (clean.includes("excelente") || clean.includes("genial") || clean.includes("felicitaciones") || clean.includes("super") || clean.includes("s\xFAper") || clean.includes("maravill") || clean.includes("me encanta") || clean.includes("perfecto")) {
+    return "\u2B50";
+  }
+  if (clean.includes("contrato") || clean.includes("ley 820") || clean.includes("ley 675") || clean.includes("arras") || clean.includes("promesa") || clean.includes("escritura") || clean.includes("notar") || clean.includes("estudio de t\xEDtulo") || clean.includes("estudio de titulo") || clean.includes("comision") || clean.includes("comisi\xF3n") || clean.includes("jur\xEDdic") || clean.includes("juridic") || clean.includes("abogad")) {
+    return "\u2696\uFE0F";
+  }
+  if (clean.includes("aval\xFAo") || clean.includes("avaluo") || clean.includes("peritaje") || clean.includes("acm") || clean.includes("cuanto vale") || clean.includes("cu\xE1nto vale") || clean.includes("precio de mercado")) {
+    return "\u{1F4CA}";
+  }
+  if (clean.startsWith("busco") || clean.includes("busco ") || clean.includes("buscando") || clean.includes("necesito ") || clean.includes("requiero") || clean.includes("cliente busca") || clean.includes("presupuesto") || clean.includes("comprador")) {
+    return "\u{1F50E}";
+  }
+  if (clean.includes("vendo") || clean.includes("arriendo") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("apto") || clean.includes("lote") || clean.includes("inmueble") || clean.includes("bodega") || clean.includes("finca") || clean.includes("oficina")) {
+    return "\u{1F3E1}";
+  }
+  if (clean.includes("bolsa") || clean.includes("matching") || clean.includes("alianza") || clean.includes("red") || clean.includes("45/10/45") || clean.includes("50/50") || clean.includes("colega") || clean.includes("punta")) {
+    return "\u{1F91D}";
+  }
+  if (clean.includes("canal") || clean.includes("grupo") || clean.includes("comunidad")) {
+    return "\u{1F4E2}";
+  }
+  if (/^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|que\s*mas|qu[eé]\s*m[aá]s|hola\s*jania)\b/i.test(clean)) {
+    return "\u{1F44B}";
+  }
+  if (/^(chao|adi[oó]s|hasta\s*luego|hasta\s*pronto|nos\s*vemos|quedamos\s*as[ií])\b/i.test(clean)) {
+    return "\u{1F44B}";
+  }
+  if (clean.includes("?") || clean.includes("\xBF") || clean.startsWith("como") || clean.startsWith("c\xF3mo")) {
+    return "\u{1F4A1}";
+  }
+  return "\u2728";
+}
 var NICKNAMES_MAP, SONOROUS_COMPOUND_BLOCKS, NON_SONOROUS_FILLERS, CONNECTORS, cachedVertexToken;
 var init_whatsapp_utils = __esm({
   "server/_core/whatsapp-utils.ts"() {
@@ -10856,8 +10920,8 @@ function getWASocket() {
 function unwrapMessage(msgObj) {
   if (!msgObj) return msgObj;
   let unwrapped = msgObj;
-  while (unwrapped.ephemeralMessage?.message || unwrapped.viewOnceMessage?.message || unwrapped.viewOnceMessageV2?.message || unwrapped.viewOnceMessageV2Extension?.message || unwrapped.documentWithCaptionMessage?.message) {
-    unwrapped = unwrapped.ephemeralMessage?.message || unwrapped.viewOnceMessage?.message || unwrapped.viewOnceMessageV2?.message || unwrapped.viewOnceMessageV2Extension?.message || unwrapped.documentWithCaptionMessage?.message;
+  while (unwrapped.ephemeralMessage?.message || unwrapped.viewOnceMessage?.message || unwrapped.viewOnceMessageV2?.message || unwrapped.viewOnceMessageV2Extension?.message || unwrapped.documentWithCaptionMessage?.message || unwrapped.protocolMessage?.editedMessage) {
+    unwrapped = unwrapped.ephemeralMessage?.message || unwrapped.viewOnceMessage?.message || unwrapped.viewOnceMessageV2?.message || unwrapped.viewOnceMessageV2Extension?.message || unwrapped.documentWithCaptionMessage?.message || unwrapped.protocolMessage?.editedMessage;
   }
   return unwrapped;
 }
@@ -11599,6 +11663,17 @@ ${quotedNote}` : quotedNote;
         const chatId = senderId;
         const body = combinedBody;
         console.log(`[JANIA-MATCH] [DM] Procesando buffer DM de ${messages2.length} mensaje(s) de ${senderId} (${userName}, Tel: ${rawPhone}): "${body}"`);
+        try {
+          const { getEmpatheticReactionEmoji: getEmpatheticReactionEmoji2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+          const contextualEmoji = getEmpatheticReactionEmoji2(body, {
+            isAudio: isAudioPTT,
+            hasImage: !!imageBuffer,
+            hasPdf: !!pdfBuffer
+          });
+          await this.sock.sendMessage(senderId, { react: { text: contextualEmoji, key: mainMsg.key } }).catch(() => {
+          });
+        } catch (_) {
+        }
         const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;
         const matchConfirm = body.match(matchConfirmationRegex);
         if (matchConfirm) {
@@ -11632,6 +11707,8 @@ ${quotedNote}` : quotedNote;
               await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
             } else {
               await this.queuedSend(senderId, predialPendingCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+              await this.sock.sendMessage(senderId, { react: { text: "\u{1F3DB}\uFE0F", key: mainMsg.key } }).catch(() => {
+              });
             }
             await this.logToDb(senderId, "janIA", predialPendingCheck.reportText);
             return;
@@ -11662,6 +11739,8 @@ ${quotedNote}` : quotedNote;
             await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
           } else {
             await this.queuedSend(senderId, predialCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
+            await this.sock.sendMessage(senderId, { react: { text: "\u{1F3DB}\uFE0F", key: mainMsg.key } }).catch(() => {
+            });
           }
           await this.logToDb(senderId, "janIA", predialCheck.reportText);
           return;
@@ -11677,9 +11756,14 @@ ${quotedNote}` : quotedNote;
           await this.queuedSend(senderId, idCheck.reportText, { quoted: mainMsg, allowDirectMessage: true });
           await this.logToDb(senderId, "janIA", idCheck.reportText);
           if (idCheck.success) {
+            await this.sock.sendMessage(senderId, { react: { text: "\u2705", key: mainMsg.key } }).catch(() => {
+            });
             const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
             await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true });
             await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
+          } else {
+            await this.sock.sendMessage(senderId, { react: { text: "\u{1F6E1}\uFE0F", key: mainMsg.key } }).catch(() => {
+            });
           }
           return;
         }
@@ -19429,8 +19513,8 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
 Te puedo colaborar de inmediato en todo lo relacionado con finca ra\xEDz:
 \u2022 \u{1F4C4} *Factura Predial Bogot\xE1 y Certificado de Pago en PDF* (al instante con Hacienda)
 \u2022 \u{1F6E1}\uFE0F *Verificaci\xF3n de C\xE9dula y Antecedentes en Polic\xEDa Nacional* (en 20 segundos)
-\u2022 \u{1F91D} *Bolsa Inmobiliaria y Cruce de Negocios 50/50* (conectamos tus inmuebles o b\xFAsquedas con colegas en toda Colombia)
-\u2022 \u2696\uFE0F *Asesor\xEDa en Contratos, Estudio de T\xEDtulos SNR a 20 A\xF1os y Notar\xEDas*
+\u2022 \u{1F91D} *Bolsa Inmobiliaria Colaborativa y Matching Inteligente 45/10/45* (cruce algor\xEDtmico de Ofertas y Demandas: 80%-94% Match Intermedio y 95%-100% Match Perfecto a trav\xE9s de nuestra plataforma en toda Colombia)
+\u2022 \u2696\uFE0F *Asesor\xEDa Jur\xEDdica y Contractual* (Ley 820 de 2003, Ley 675 de 2001, promesas de compraventa, arras, estudio de t\xEDtulos a 20 a\xF1os en la SNR, cobro de comisiones pendientes)
 \u2022 \u{1F4CA} *Aval\xFAos y An\xE1lisis Comparativo de Mercado (ACM)*
 \u2022 \u{1F464} *Atenci\xF3n Personalizada con nuestros Directores:* Eduardo Rivera y Jani Alves (+57 316 656 9719)
 
@@ -19463,9 +19547,9 @@ ${hasPriorHistory ? '- YA EST\xC1S EN UNA CONVERSACI\xD3N ACTIVA CON EL USUARIO.
 CAT\xC1LOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:
 1. FACTURA PREDIAL BOGOT\xC1 Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con c\xF3digo de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretar\xEDa Distrital de Hacienda.
 2. VERIFICACI\xD3N OFICIAL DE C\xC9DULA Y ANTECEDENTES: Validaci\xF3n de nombres completos y antecedentes en Polic\xEDa Nacional en 20 segundos para blindar contratos de compraventa y arrendamiento.
-3. BOLSA INMOBILIARIA COLABORATIVA Y CRUCE AL 50/50: Publicaci\xF3n de inmuebles en venta o arriendo y cruce algor\xEDtmico con demandas y requerimientos de compradores calificados en toda Colombia (85% a 100% de match exacto).
+3. BOLSA INMOBILIARIA COLABORATIVA Y MATCHING INTELIGENTE 45/10/45: Cruce algor\xEDtmico de OFERTAS y DEMANDAS a trav\xE9s de nuestra plataforma entre colegas a nivel nacional con cualquier tipo de inmueble. Coincidencias entre el 80% al 94% ("MATCH INTERMEDIO") y del 95% al 100% de compatibilidad ("MATCH PERFECTO"). Esquema de comisi\xF3n compartida 45/10/45 (45% asesor captador de oferta, 10% plataforma Vecy Network, 45% asesor colocador de demanda).
 4. AVAL\xDAOS Y AN\xC1LISIS COMPARATIVO DE MERCADO (ACM): Estimaci\xF3n comercial y catastral de inmuebles seg\xFAn estrato, metraje y zona.
-5. ASESOR\xCDA JUR\xCDDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, r\xE9gimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa (arras de retracto y confirmatorias), escrituraci\xF3n y estudio de t\xEDtulos de 20 a\xF1os en la SNR (grav\xE1menes, afectaci\xF3n familiar, patrimonio inembargable).
+5. ASESOR\xCDA JUR\xCDDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, r\xE9gimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa, arras de retracto y confirmatorias, escrituraci\xF3n, estudio de t\xEDtulos a 20 a\xF1os en la SNR (grav\xE1menes, afectaci\xF3n familiar, patrimonio inembargable) y cobro de comisiones pendientes.
 6. ACOMPA\xD1AMIENTO BR\xD3KER PERSONALIZADO: Conexi\xF3n directa con nuestros directores Eduardo A. Rivera y Jani Alves en el +57 316 656 9719 (https://wa.me/573166569719) para tr\xE1mites notariales, peritajes presenciales y acompa\xF1amiento legal.
 
 INVITACI\xD3N AL CANAL OFICIAL DE WHATSAPP AL DESPEDIRTE:
@@ -19503,7 +19587,7 @@ QUI\xC9NES SOMOS:
   } catch (err) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
     const hasPriorHistory = history.length > 0;
-    const fallback = hasPriorHistory ? `Con mucho gusto te oriento. En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que investiga e innova con tecnolog\xEDa para conectar a colegas corredores al 50/50, brindar peritajes, aval\xFAos y herramientas gratuitas como verificaci\xF3n de antecedentes y facturas prediales. Si requieres atenci\xF3n personalizada de nuestros directores Eduardo y Jani, puedes escribirnos al *+57 316 656 9719*.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Cu\xE9ntame en qu\xE9 te puedo colaborar hoy.`;
+    const fallback = hasPriorHistory ? `Con mucho gusto te oriento. En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que investiga e innova con tecnolog\xEDa para conectar a colegas corredores en nuestra bolsa 45/10/45, brindar peritajes, aval\xFAos y herramientas gratuitas como verificaci\xF3n de antecedentes y facturas prediales. Si requieres atenci\xF3n personalizada de nuestros directores Eduardo y Jani, puedes escribirnos al *+57 316 656 9719*.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Cu\xE9ntame en qu\xE9 te puedo colaborar hoy.`;
     return fallback;
   }
 }
