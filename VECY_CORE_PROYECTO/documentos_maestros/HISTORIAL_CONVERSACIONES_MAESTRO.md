@@ -22,6 +22,13 @@
    - Diagnosticar por qué en el chat con Consuelo Ronderos (capturas 4 y 5), al escribir ella *"Quieto rrvisar sus antecedentes / Para avanzar"*, JanIA no reconoció la intención y reinició con un saludo genérico (*"Buenas tardes Consuelo. ¡Qué gusto saludarte por este medio!"*).
    - Resolver la tolerancia a errores de tipeo de celular y la persistencia del historial conversacional para que JanIA jamás pierda el hilo ni repita saludos.
 
+4. **Protocolo Operativo VECY: Llamada Telefónica Directa de Jani Alves**:
+   - Eduardo ratificó que en caso de no coincidir el documento con el nombre suministrado por un cliente, propietario, visitante o colega (por ejemplo por un error de digitación o inversión de dígitos en WhatsApp), en VECY BIENES RAÍCES el protocolo humano de Jani Alves es llamar directamente por teléfono al cliente para que nos rectifiquen el número de documento de inmediato. En 30 segundos queda solucionado, salvando la venta y brindando total tranquilidad sin pretextos ni mentiras.
+5. **Resolución Inteligente de Nombres Compuestos y Género Gramatical**:
+   - En la respuesta de antecedentes (`isDocVerificationIntent`), incorporar el nombre y vocativo: `¡Claro que sí, {{nombre}}!`.
+   - Soporte y respeto absoluto por nombres compuestos colombianos (Ana María, Juan José, María Fernanda, José Manuel, Carlos Alberto, Luz Marina, Olga Lucía, etc.), garantizando que JanIA jamás los corte al primer nombre ("Ana" o "Juan") y respetando el género gramatical (`estimada`/`estimado`, `bienvenida`/`bienvenido`).
+   - Implementado `getCanonicalCompositeName` con normalización Unicode (`unaccent`) para evitar fallos de regex en letras acentuadas (ej: José, Inés, Andrés, Sebastián) y enriquecido el conjunto `COMMON_FIRST_NAMES`.
+
 ### Diagnóstico Técnico y Causas Raíz
 1. **Transcripción y Análisis Forense del Audio de Kelly Carvajal**:
    - Audio transcrito palabra por palabra:
@@ -30,33 +37,36 @@
      a) *Falsa Infracción de Hábeas Data:* El Hábeas Data protege contra el tratamiento no autorizado o indebido de datos recolectados clandestinamente. En una cita inmobiliaria, el cliente suministra voluntariamente su nombre y cédula como requisito para ingresar a un domicilio o copropiedad privada (Art. 10 Ley 1581/2012).
      b) *Imposibilidad de Búsqueda Inversa:* En Colombia la Registraduría Nacional no permite buscar cédulas por nombre. Las consultas de antecedentes (Policía Nacional - Decreto 019 de 2012, Procuraduría SIRI, RUES) son registros públicos oficiales donde se digita el número que el propio ciudadano suministró.
      c) *Perjuicio de la Mentira Clandestina:* Mentir diciendo que "los dueños desistieron" arruina negocios con clientes reales (que quizás tuvieron un simple error de digitación en su celular) y no disuade al delincuente, quien al creerse no descubierto seguirá intentando atacar otros inmuebles del gremio.
-     d) *Doctrina VECY de Transparencia:* Informar al cliente con cordialidad que su documento no coincide en el sistema oficial actúa como un filtro disuasorio inmediato para el delincuente y permite al cliente honesto corregir el dato.
+     d) *Doctrina VECY de Transparencia y Llamada Directa de Jani Alves:* Informar al cliente con cordialidad o llamarlo directamente por teléfono para rectificar el documento resuelve el problema al instante, protege la venta y disuade a los impostores.
 2. **Causa Raíz de Pérdida de Historial y Saludo Repetido en DMs**:
    - El historial de DMs `dmConversationHistory` se almacenaba en un `Map` volátil en la memoria RAM del proceso Node.js. Al reiniciar el servicio o recargar PM2 tras despliegues, el mapa se limpiaba (`history.length === 0`), provocando que JanIA tratara a Consuelo como un usuario nuevo y emitiera el saludo formal horario.
 3. **Causa Raíz de Incompatibilidad con Errores de Tipeo**:
    - El regex `isDocVerificationIntent` requería términos ortográficamente exactos y no admitía erratas frecuentes de teclado móvil como *"quieto rrvisar"* (en vez de *"quiero revisar"*), provocando que cayera al flujo conversacional genérico.
+4. **Causa Raíz de Regex en Nombres Acentuados**:
+   - En JavaScript sin flag `u`, las letras con tilde (`é`, `á`, `í`, `ó`, `ú`) son tratadas como caracteres no alfanuméricos por el ancla de límite de palabra `\b`. Al evaluar nombres como "Juan José Restrepo", `jos[eé]\b` fallaba frente al espacio posterior. Resuelto mediante normalización de diacritics (`unaccent`) en `getCanonicalCompositeName`.
 
 ### Acciones Ejecutadas
 1. **Persistencia Híbrida de Historial Conversacional en PostgreSQL (`getOrLoadDmHistory` en `server/_core/janIA.ts`)**:
    - Si la memoria volátil en RAM está vacía tras un reinicio de PM2, JanIA consulta automáticamente las tablas `conversations` y `messages` en la base de datos PostgreSQL nativa de VECY, restaurando de inmediato los últimos turnos de la conversación (hasta 24 horas). Contexto indestructible y cero saludos repetidos.
-2. **Detector de Intención de Verificación Tolerante a Typos (`isDocVerificationIntent` en `server/_core/janIA.ts`)**:
+2. **Detector de Intención de Verificación Tolerante a Typos y Vocativo Personalizado (`isDocVerificationIntent` en `server/_core/janIA.ts`)**:
    - Soporte para variaciones con erratas ("quieto/quiero/deseo/necesito", "rrvisar/revisar/verificar/chequear/validar", "antecedentes/cédula/documento").
-   - Respuesta pedagógica y legal estructurada: explica con cordialidad que por normas de Hábeas Data (Ley 1581 de 2012) y de la Registraduría Nacional las plataformas oficiales no permiten buscar por nombres o apellidos, e invita a solicitar el número de documento o foto de la cédula para validar en 20 segundos.
-3. **Doctrina Oficial de Hábeas Data y Verificación Preventiva en Prompts Maestros**:
-   - `server/_core/janIA.ts`: Enriquecido el system prompt conversacional de DMs con la doctrina de transparencia vs clandestinidad, argumentos jurídicos de la Ley 1581 de 2012, Decreto Ley 019 de 2012 y capacidad de debate con colegas.
-   - `server/_core/prompts/base.md`: Agregada sección maestra de Protección de Datos Personales, Hábeas Data y Seguridad Inmobiliaria.
-   - `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`: Incorporada la sección 8 de doctrina jurídica y debate sobre Hábeas Data en visitas inmobiliarias.
-   - `server/_core/prompts/grupos/PROYECTO_Vecy Network.md`: Incorporada la filosofía VECY de seguridad preventiva y erradicación de excusas falsas en el gremio.
-4. **Reacción Empática Jurídica `⚖️` (`server/_core/whatsapp-utils.ts`)**:
+   - Respuesta pedagógica y legal estructurada con vocativo respetuoso: `¡Claro que sí, {{nombre}}! Para consultar los antecedentes y verificar la identidad en la Policía Nacional, es indispensable contar con el número de cédula exacto...`.
+3. **Motor Maestro de Nombres Compuestos y Género Gramatical (`nameAndGenderResolver.ts` y `janIA.ts`)**:
+   - Creado y exportado `getCanonicalCompositeName(rawName)`.
+   - Soporte robusto y unaccent para nombres compuestos de Colombia (Ana María, Juan José, María Fernanda, José Manuel, Olga Lucía, Carlos Alberto, Luz Marina, etc.).
+   - Enriquecido `COMMON_FIRST_NAMES` en `janIA.ts` y `whatsapp-utils.ts` con nombres colombianos adicionales (Consuelo, Marina, Mery, Dary, Myriam, Marcela, Sonia, Astrid, Gladys, etc.).
+4. **Institucionalización Doctrinal de Llamada Telefónica de Jani Alves**:
+   - Incorporado en `server/_core/janIA.ts` (system prompt de DMs), `server/_core/prompts/base.md`, y `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` el protocolo oficial donde Jani Alves contacta telefónicamente a los clientes ante cualquier inconsistencia para rectificar el documento en 30 segundos.
+5. **Reacción Empática Jurídica `⚖️` (`server/_core/whatsapp-utils.ts`)**:
    - `getEmpatheticReactionEmoji` ahora detecta menciones de Hábeas Data, protección de datos, Ley 1581 o privacidad y reacciona de inmediato con la balanza `⚖️`.
-5. **Incremento de Versión y Verificación Empírica**:
-   - Actualizada la versión oficial a **v32.35** (`32.35.0`) en `shared/const.ts` y `package.json`.
-   - Incorporada la suite 30 en `server/__tests__/regression.test.ts` con pruebas de reacción `⚖️` y tolerancia a typos.
-   - `npx vitest run`: 132/132 tests aprobados al 100% ✅.
+6. **Incremento de Versión y Verificación Empírica**:
+   - Versión oficial: **v32.35** (`32.35.0`) en `shared/const.ts` y `package.json`.
+   - Incorporada la suite 30 en `server/__tests__/regression.test.ts` con pruebas de reacción `⚖️`, tolerancia a typos, nombres compuestos completos y género.
+   - `npx vitest run`: 133/133 tests aprobados al 100% ✅.
    - `npm run check` (`tsc --noEmit`): 0 errores ✅.
-   - `npm run build`: compilación limpia en 22.3 s ✅.
+   - `npm run build`: compilación limpia y bundles generados con éxito ✅.
 
----lidades previas validadas.
+---
 
 ## 📋 SESIÓN v32.34 — 03 Octubre 2026
 

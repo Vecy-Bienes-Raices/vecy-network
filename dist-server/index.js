@@ -7826,22 +7826,27 @@ var nameAndGenderResolver_exports = {};
 __export(nameAndGenderResolver_exports, {
   VECY_COMMERCIAL_INFO: () => VECY_COMMERCIAL_INFO,
   cleanRawUserName: () => cleanRawUserName,
+  getCanonicalCompositeName: () => getCanonicalCompositeName,
   resolveNameAndGender: () => resolveNameAndGender
 });
 function cleanRawUserName(name) {
   if (!name) return "";
   return name.replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
 }
+function getCanonicalCompositeName(rawName) {
+  const cleaned = cleanRawUserName(rawName);
+  const unaccented = cleaned.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  for (const comp of COMPOSITE_PATTERNS) {
+    if (comp.pattern.test(cleaned) || comp.pattern.test(unaccented)) {
+      return comp.canonical;
+    }
+  }
+  return null;
+}
 function resolveNameAndGender(rawName, timeGreeting) {
   const cleaned = cleanRawUserName(rawName);
   const normalizedLower = cleaned.toLowerCase();
-  let resolvedDisplayName = "";
-  for (const comp of COMPOSITE_PATTERNS) {
-    if (comp.pattern.test(cleaned)) {
-      resolvedDisplayName = comp.canonical;
-      break;
-    }
-  }
+  let resolvedDisplayName = getCanonicalCompositeName(cleaned) || "";
   if (!resolvedDisplayName) {
     const parts = cleaned.split(/\s+/).filter(Boolean);
     const genericPrefixes = ["inmobiliaria", "inmobiliario", "bienes", "raices", "ra\xEDces", "asesor", "asesora", "grupo", "propiedades", "finca", "ventas", "arriendos", "construcciones", "constructora", "consultores"];
@@ -19571,11 +19576,22 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
   const clean = text2.trim();
   if (!clean) return "";
   const realName = await resolveRealName(userId, userName);
-  const firstName = extractFirstName2(realName) || "";
-  const nameGreeting = firstName ? ` ${firstName}` : "";
-  const cleanLower = clean.toLowerCase();
   const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
   const timeSalutation = getGreetingByTime4();
+  const nameInfo = resolveNameAndGender(realName, timeSalutation);
+  const compositeOrFirst = extractFirstName2(realName);
+  let displayName = "";
+  const canonicalComposite = getCanonicalCompositeName(realName);
+  if (canonicalComposite) {
+    displayName = canonicalComposite;
+  } else if (compositeOrFirst) {
+    displayName = compositeOrFirst;
+  } else if (nameInfo.displayName && nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor")) {
+    displayName = nameInfo.displayName;
+  }
+  const nameGreeting = displayName ? `, ${displayName}` : "";
+  const vocativeGreeting = displayName ? `, ${displayName}` : "";
+  const cleanLower = clean.toLowerCase();
   const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
   const history = await getOrLoadDmHistory(userId);
   if (isGreetingOnly && history.length === 0) {
@@ -19596,7 +19612,7 @@ Te puedo colaborar de inmediato en todo lo relacionado con finca ra\xEDz:
   }
   const isDocVerificationIntent = /(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) && !/\b\d{6,11}\b/.test(clean);
   if (isDocVerificationIntent) {
-    const docPromptMsg = `\xA1Claro que s\xED! Para consultar los antecedentes y verificar la identidad en la Polic\xEDa Nacional, es indispensable contar con el n\xFAmero de c\xE9dula exacto.
+    const docPromptMsg = `\xA1Claro que s\xED${vocativeGreeting}! Para consultar los antecedentes y verificar la identidad en la Polic\xEDa Nacional, es indispensable contar con el n\xFAmero de c\xE9dula exacto.
 
 \u{1F4CC} *Nota legal de seguridad y H\xE1beas Data (Ley 1581 de 2012):* En Colombia, las plataformas oficiales de seguridad y la Registradur\xEDa Nacional no permiten buscar n\xFAmeros de documento usando \xFAnicamente nombres o apellidos para proteger la privacidad ciudadana. Solo se puede verificar a partir del n\xFAmero de c\xE9dula que el propio titular suministra.
 
@@ -19613,8 +19629,11 @@ P\xEDdele con toda tranquilidad a tu cliente su n\xFAmero de documento (o una fo
         content: `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
 Est\xE1s conversando por WHATSAPP con un colega asesor inmobiliario, cliente o aliado comercial.
 
-REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA Y CONTINUIDAD:
-${hasPriorHistory ? '- YA EST\xC1S EN UNA CONVERSACI\xD3N ACTIVA CON EL USUARIO. Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo con "\xA1Hola!", "\xA1Buenos d\xEDas!", "\xA1Qu\xE9 gusto saludarte!" o anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana.' : '- Si es el primer mensaje, saluda cordialmente con "' + timeSalutation + '" y el nombre del usuario.'}
+REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA, G\xC9NERO Y NOMBRES COMPUESTOS:
+- El usuario se llama: *${displayName || realName || "Colega"}*.
+- G\xE9nero gramatical identificado: *${nameInfo.isFemale ? "Femenino (tratar como estimada, colega, bienvenida, atenta)" : "Masculino (tratar como estimado, colega, bienvenido, atento)"}*.
+- Si el usuario tiene un nombre compuesto (ej: Ana Mar\xEDa, Juan Jos\xE9, Mar\xEDa Fernanda, Jos\xE9 Manuel, Carlos Alberto, Luz Marina, Olga Luc\xEDa), NUNCA lo cortes al primer nombre (JAM\xC1S digas solo "Ana" o "Juan"); ll\xE1malo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercan\xEDa y respeto que se use su nombre compuesto completo.
+${hasPriorHistory ? '- YA EST\xC1S EN UNA CONVERSACI\xD3N ACTIVA CON EL USUARIO. Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo con "\xA1Hola!", "\xA1Buenos d\xEDas!", "\xA1Qu\xE9 gusto saludarte!" o anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana.' : '- Si es el primer mensaje, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}
 - NUNCA repitas como un contestador autom\xE1tico "\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesor\xEDa, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.
 - Conversa como una profesional inmobiliaria colombiana experta, culta, amena y emp\xE1tica. CERO tecnicismos computacionales ni lenguaje de bot.
 - Mant\xE9n respuestas concisas y bien estructuradas (2 a 4 p\xE1rrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).
@@ -19632,8 +19651,11 @@ DOCTRINA OFICIAL VECY: PROTECCI\xD3N DE DATOS (LEY 1581 DE 2012), H\xC1BEAS DATA
      - Se le comunica con total amabilidad y respeto al cliente:
        "Por protocolo est\xE1ndar de seguridad para visitas a inmuebles privados y registro de porter\xEDa, verificamos la identificaci\xF3n suministrada. El n\xFAmero de c\xE9dula que nos diste no coincide con el nombre registrado en la base oficial. Por favor facil\xEDtanos el documento correcto para poder coordinar la visita con total tranquilidad."
      - EFECTO DISUASORIO Y PROTECCI\xD3N DEL GREMIO: Si se trata de un cliente honesto que digit\xF3 mal un n\xFAmero, rectifica de inmediato y la cita se concreta. Si se trata de un suplantador o persona inescrupulosa, el filtro transparente act\xFAa como un disuasivo fulminante: al saberse descubierto, desiste y no vuelve a intentar vulnerar ese predio ni a los colegas de la red.
+  6. PROTOCOLO OPERATIVO VECY: LLAMADA TELEF\xD3NICA PERSONALIZADA DE JANI ALVES:
+     - En caso de presentarse alguna inconsistencia o discrepancia en el documento de identidad de un cliente propietario, visitante o colega (por ejemplo, un d\xEDgito invertido o mal digitado en WhatsApp), en VECY BIENES RA\xCDCES nuestro protocolo humano es inmediato: Jani Alves siempre llama directamente por tel\xE9fono al cliente para que nos rectifiquen amablemente el n\xFAmero de documento.
+     - Una llamada cordial de 30 segundos resuelve cualquier duda, protege la negociaci\xF3n, brinda total seguridad a los propietarios y fideliza al cliente con calidez humana, evitando cancelar visitas por pretextos falsos o perder ventas millonarias.
 - CUANDO UN ASESOR O COLEGA PREGUNTE O DEBATA SOBRE H\xC1BEAS DATA O EL MANEJO DE CLIENTES SOSPECHOSOS:
-  Explica esta doctrina con maestr\xEDa jur\xEDdica, calidez y contundencia pedag\xF3gica, desmontando el mito del "miedo al H\xE1beas Data" y demostrando que la verificaci\xF3n transparente protege legalmente al asesor, al propietario y a la honestidad del negocio.
+  Explica esta doctrina con maestr\xEDa jur\xEDdica, calidez y contundencia pedag\xF3gica, desmontando el mito del "miedo al H\xE1beas Data" y demostrando que la verificaci\xF3n transparente y la llamada directa de Jani Alves protegen legalmente al asesor, al propietario y a la honestidad del negocio.
 
 CAT\xC1LOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:
 1. FACTURA PREDIAL BOGOT\xC1 Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con c\xF3digo de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretar\xEDa Distrital de Hacienda.
@@ -19975,7 +19997,44 @@ var init_janIA = __esm({
       "lorena",
       "viviana",
       "ximena",
-      "jimena"
+      "jimena",
+      // Nombres adicionales colombianos (femeninos y compuestos)
+      "consuelo",
+      "marina",
+      "mery",
+      "dary",
+      "myriam",
+      "miriam",
+      "marcela",
+      "sonia",
+      "astrid",
+      "gladys",
+      "nohora",
+      "raquel",
+      "karen",
+      "mabel",
+      "belen",
+      "bel\xE9n",
+      "rosario",
+      "socorro",
+      "fabiola",
+      "dora",
+      "lucero",
+      "yamile",
+      "leidy",
+      "leidys",
+      "yeimy",
+      "ingrid",
+      "katherine",
+      "catherine",
+      "stefany",
+      "stephanie",
+      "jeannette",
+      "jeanette",
+      "janeth",
+      "janet",
+      "jenny",
+      "jennifer"
     ]);
     fallbackDataCache = /* @__PURE__ */ new Map();
     KNOWN_BARRIOS_SORTED_ITEMS = [

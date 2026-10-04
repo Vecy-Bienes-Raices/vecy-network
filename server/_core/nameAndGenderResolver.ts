@@ -155,6 +155,20 @@ export function cleanRawUserName(name: string): string {
 }
 
 /**
+ * Detecta si el nombre contiene un nombre compuesto canónico colombiano (ej: "Ana María", "Juan José", "María Fernanda", "José Manuel", "Olga Lucía")
+ */
+export function getCanonicalCompositeName(rawName: string): string | null {
+  const cleaned = cleanRawUserName(rawName);
+  const unaccented = cleaned.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  for (const comp of COMPOSITE_PATTERNS) {
+    if (comp.pattern.test(cleaned) || comp.pattern.test(unaccented)) {
+      return comp.canonical;
+    }
+  }
+  return null;
+}
+
+/**
  * Resuelve el nombre canónico y género exacto con alta inteligencia y empatía humana
  */
 export function resolveNameAndGender(rawName: string, timeGreeting?: string): NameAndGenderResult {
@@ -162,13 +176,7 @@ export function resolveNameAndGender(rawName: string, timeGreeting?: string): Na
   const normalizedLower = cleaned.toLowerCase();
 
   // 1. Detectar si coincide con un nombre compuesto conocido
-  let resolvedDisplayName = "";
-  for (const comp of COMPOSITE_PATTERNS) {
-    if (comp.pattern.test(cleaned)) {
-      resolvedDisplayName = comp.canonical;
-      break;
-    }
-  }
+  let resolvedDisplayName = getCanonicalCompositeName(cleaned) || "";
 
   // Si no es compuesto clásico de la lista estática, analizar si son dos nombres propios
   if (!resolvedDisplayName) {

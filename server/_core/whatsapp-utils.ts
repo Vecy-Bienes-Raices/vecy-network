@@ -22,7 +22,12 @@ const COMMON_FIRST_NAMES = new Set([
   "verónica", "adriana", "liliana", "viviana", "pilar", "rocio", "rocío", "soraya",
   "johanna", "yudy", "judy", "tatiana", "mateo", "sebastian", "sebastián", "cristian",
   "gustavo", "hernando", "humberto", "jaime", "mauricio", "cesar", "césar", "nelson",
-  "ruben", "rubén", "ivan", "iván", "olga", "stella", "estela"
+  "ruben", "rubén", "ivan", "iván", "olga", "stella", "estela",
+  "consuelo", "marina", "mery", "dary", "myriam", "miriam", "marcela", "sonia",
+  "astrid", "gladys", "nohora", "raquel", "karen", "mabel", "belen", "belén",
+  "rosario", "socorro", "fabiola", "dora", "lucero", "yamile", "leidy", "leidys",
+  "yeimy", "ingrid", "katherine", "catherine", "stefany", "stephanie", "jeannette",
+  "jeanette", "janeth", "janet", "jenny", "jennifer"
 ]);
 
 // Mapas y conjuntos para el Motor Inteligente de Nombres y Apodos Colombianos

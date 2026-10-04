@@ -14,7 +14,7 @@ import { parseColombianListing, parseOutdoorAreas, isOutdoorAreaPreceding } from
 import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
 import { storagePut } from "../storage";
 import { esDominioPermitido, extractPortalAndListingId } from "./scraper";
-import { resolveNameAndGender, VECY_COMMERCIAL_INFO } from "./nameAndGenderResolver";
+import { resolveNameAndGender, getCanonicalCompositeName, VECY_COMMERCIAL_INFO } from "./nameAndGenderResolver";
 import fs from "fs";
 import path from "path";
 import axios from "axios";
@@ -229,7 +229,13 @@ const COMMON_FIRST_NAMES = new Set([
   "vicente", "francisco", "gerardo", "leonardo", "raul", "raúl", "rafael",
   "alonso", "alfonso", "mercedes", "eugenia", "victoria", "andrea", "daniela",
   "camila", "valentina", "gabriela", "catalina", "juliana", "luciana", "mariana",
-  "natalia", "vanessa", "lorena", "viviana", "ximena", "jimena"
+  "natalia", "vanessa", "lorena", "viviana", "ximena", "jimena",
+  // Nombres adicionales colombianos (femeninos y compuestos)
+  "consuelo", "marina", "mery", "dary", "myriam", "miriam", "marcela", "sonia",
+  "astrid", "gladys", "nohora", "raquel", "karen", "mabel", "belen", "belén",
+  "rosario", "socorro", "fabiola", "dora", "lucero", "yamile", "leidy", "leidys",
+  "yeimy", "ingrid", "katherine", "catherine", "stefany", "stephanie", "jeannette",
+  "jeanette", "janeth", "janet", "jenny", "jennifer"
 ]);
 
 export function extractFirstName(fullName: string): string {
@@ -6653,12 +6659,28 @@ export async function processPrivateDmConversationalMessage(
   if (!clean) return "";
 
   const realName = await resolveRealName(userId, userName);
-  const firstName = extractFirstName(realName) || "";
-  const nameGreeting = firstName ? ` ${firstName}` : "";
-  const cleanLower = clean.toLowerCase();
-
   const { getGreetingByTime } = await import('./whatsapp-utils');
   const timeSalutation = getGreetingByTime(); // "Buenos días" | "Buenas tardes" | "Buenas noches"
+
+  // 🧑‍💼 Resolución inteligente de nombres compuestos, género gramatical y cortesía (v32.35)
+  const nameInfo = resolveNameAndGender(realName, timeSalutation);
+  const compositeOrFirst = extractFirstName(realName);
+
+  let displayName = "";
+  // 1. Si coincide con un nombre compuesto canónico estricto colombiano (ej: "Ana María", "Juan José", "María Fernanda", "José Manuel", "Olga Lucía")
+  const canonicalComposite = getCanonicalCompositeName(realName);
+  if (canonicalComposite) {
+    displayName = canonicalComposite;
+  } else if (compositeOrFirst) {
+    // 2. Si extractFirstName extrajo un nombre compuesto común o el primer nombre de pila (ej: "Consuelo" para "Consuelo Ronderos")
+    displayName = compositeOrFirst;
+  } else if (nameInfo.displayName && nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor")) {
+    displayName = nameInfo.displayName;
+  }
+
+  const nameGreeting = displayName ? `, ${displayName}` : "";
+  const vocativeGreeting = displayName ? `, ${displayName}` : "";
+  const cleanLower = clean.toLowerCase();
 
   // 1. Detectar saludos iniciales o preguntas directas cortas de entrada
   const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
@@ -6691,7 +6713,7 @@ export async function processPrivateDmConversationalMessage(
 
   if (isDocVerificationIntent) {
     const docPromptMsg =
-      `¡Claro que sí! Para consultar los antecedentes y verificar la identidad en la Policía Nacional, es indispensable contar con el número de cédula exacto.\n\n` +
+      `¡Claro que sí${vocativeGreeting}! Para consultar los antecedentes y verificar la identidad en la Policía Nacional, es indispensable contar con el número de cédula exacto.\n\n` +
       `📌 *Nota legal de seguridad y Hábeas Data (Ley 1581 de 2012):* En Colombia, las plataformas oficiales de seguridad y la Registraduría Nacional no permiten buscar números de documento usando únicamente nombres o apellidos para proteger la privacidad ciudadana. Solo se puede verificar a partir del número de cédula que el propio titular suministra.\n\n` +
       `Pídele con toda tranquilidad a tu cliente su número de documento (o una fotito de la cédula por ambas caras) para agendar la visita. Escríbemelo aquí y en 20 segundos te entrego el reporte oficial de validación 🤝.`;
     appendDmHistory(userId, "user", clean);
@@ -6708,8 +6730,11 @@ export async function processPrivateDmConversationalMessage(
         content:
           `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RAÍCES en Colombia.\n` +
           `Estás conversando por WHATSAPP con un colega asesor inmobiliario, cliente o aliado comercial.\n\n` +
-          `REGLAS CRÍTICAS DE CONVERSACIÓN HUMANA Y CONTINUIDAD:\n` +
-          `${hasPriorHistory ? '- YA ESTÁS EN UNA CONVERSACIÓN ACTIVA CON EL USUARIO. Está TERMINANTEMENTE PROHIBIDO saludar de nuevo con "¡Hola!", "¡Buenos días!", "¡Qué gusto saludarte!" o anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana.' : '- Si es el primer mensaje, saluda cordialmente con "' + timeSalutation + '" y el nombre del usuario.'}\n` +
+          `REGLAS CRÍTICAS DE CONVERSACIÓN HUMANA, GÉNERO Y NOMBRES COMPUESTOS:\n` +
+          `- El usuario se llama: *${displayName || realName || "Colega"}*.\n` +
+          `- Género gramatical identificado: *${nameInfo.isFemale ? "Femenino (tratar como estimada, colega, bienvenida, atenta)" : "Masculino (tratar como estimado, colega, bienvenido, atento)"}*.\n` +
+          `- Si el usuario tiene un nombre compuesto (ej: Ana María, Juan José, María Fernanda, José Manuel, Carlos Alberto, Luz Marina, Olga Lucía), NUNCA lo cortes al primer nombre (JAMÁS digas solo "Ana" o "Juan"); llámalo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercanía y respeto que se use su nombre compuesto completo.\n` +
+          `${hasPriorHistory ? '- YA ESTÁS EN UNA CONVERSACIÓN ACTIVA CON EL USUARIO. Está TERMINANTEMENTE PROHIBIDO saludar de nuevo con "¡Hola!", "¡Buenos días!", "¡Qué gusto saludarte!" o anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana.' : '- Si es el primer mensaje, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}\n` +
           `- NUNCA repitas como un contestador automático "¿Cuál de las dos herramientas te gustaría probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesoría, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.\n` +
           `- Conversa como una profesional inmobiliaria colombiana experta, culta, amena y empática. CERO tecnicismos computacionales ni lenguaje de bot.\n` +
           `- Mantén respuestas concisas y bien estructuradas (2 a 4 párrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).\n\n` +
@@ -6726,8 +6751,11 @@ export async function processPrivateDmConversationalMessage(
           `     - Se le comunica con total amabilidad y respeto al cliente:\n` +
           `       "Por protocolo estándar de seguridad para visitas a inmuebles privados y registro de portería, verificamos la identificación suministrada. El número de cédula que nos diste no coincide con el nombre registrado en la base oficial. Por favor facilítanos el documento correcto para poder coordinar la visita con total tranquilidad."\n` +
           `     - EFECTO DISUASORIO Y PROTECCIÓN DEL GREMIO: Si se trata de un cliente honesto que digitó mal un número, rectifica de inmediato y la cita se concreta. Si se trata de un suplantador o persona inescrupulosa, el filtro transparente actúa como un disuasivo fulminante: al saberse descubierto, desiste y no vuelve a intentar vulnerar ese predio ni a los colegas de la red.\n` +
+          `  6. PROTOCOLO OPERATIVO VECY: LLAMADA TELEFÓNICA PERSONALIZADA DE JANI ALVES:\n` +
+          `     - En caso de presentarse alguna inconsistencia o discrepancia en el documento de identidad de un cliente propietario, visitante o colega (por ejemplo, un dígito invertido o mal digitado en WhatsApp), en VECY BIENES RAÍCES nuestro protocolo humano es inmediato: Jani Alves siempre llama directamente por teléfono al cliente para que nos rectifiquen amablemente el número de documento.\n` +
+          `     - Una llamada cordial de 30 segundos resuelve cualquier duda, protege la negociación, brinda total seguridad a los propietarios y fideliza al cliente con calidez humana, evitando cancelar visitas por pretextos falsos o perder ventas millonarias.\n` +
           `- CUANDO UN ASESOR O COLEGA PREGUNTE O DEBATA SOBRE HÁBEAS DATA O EL MANEJO DE CLIENTES SOSPECHOSOS:\n` +
-          `  Explica esta doctrina con maestría jurídica, calidez y contundencia pedagógica, desmontando el mito del "miedo al Hábeas Data" y demostrando que la verificación transparente protege legalmente al asesor, al propietario y a la honestidad del negocio.\n\n` +
+          `  Explica esta doctrina con maestría jurídica, calidez y contundencia pedagógica, desmontando el mito del "miedo al Hábeas Data" y demostrando que la verificación transparente y la llamada directa de Jani Alves protegen legalmente al asesor, al propietario y a la honestidad del negocio.\n\n` +
           `CATÁLOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:\n` +
           `1. FACTURA PREDIAL BOGOTÁ Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con código de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretaría Distrital de Hacienda.\n` +
           `2. VERIFICACIÓN OFICIAL DE CÉDULA Y ANTECEDENTES: Validación de nombres completos y antecedentes en Policía Nacional en 20 segundos para blindar contratos de compraventa y arrendamiento.\n` +

@@ -2484,7 +2484,7 @@ Adriana Rebeca Orejuela`;
       expect(getEmpatheticReactionEmoji("Cómo manejan la privacidad de los clientes?")).toBe("⚖️");
     });
 
-    it("Debe detectar intención de antecedentes incluso con errores de tipeo de celular (Quieto rrvisar sus antecedentes) y orientar sobre Hábeas Data", async () => {
+    it("Debe detectar intención de antecedentes incluso con errores de tipeo de celular (Quieto rrvisar sus antecedentes) y orientar sobre Hábeas Data con vocativo y nombre respetado", async () => {
       const { processPrivateDmConversationalMessage } = await import("../_core/janIA");
 
       const res = await processPrivateDmConversationalMessage(
@@ -2493,9 +2493,47 @@ Adriana Rebeca Orejuela`;
         "Consuelo Ronderos"
       );
 
+      expect(res).toContain("¡Claro que sí, Consuelo!");
       expect(res).toContain("Para consultar los antecedentes y verificar la identidad en la Policía Nacional, es indispensable contar con el número de cédula exacto");
       expect(res).toContain("Hábeas Data (Ley 1581 de 2012)");
       expect(res).toContain("no permiten buscar números de documento usando únicamente nombres o apellidos");
+    });
+
+    it("Debe respetar nombres compuestos completos (Ana María, Juan José, María Fernanda, José Manuel) sin cortarlos al primer nombre", async () => {
+      const { getCanonicalCompositeName, resolveNameAndGender } = await import("../_core/nameAndGenderResolver");
+      const { processPrivateDmConversationalMessage } = await import("../_core/janIA");
+
+      // Verificación directa en getCanonicalCompositeName
+      expect(getCanonicalCompositeName("Ana María Gómez")).toBe("Ana María");
+      expect(getCanonicalCompositeName("Juan José Restrepo")).toBe("Juan José");
+      expect(getCanonicalCompositeName("María Fernanda López")).toBe("María Fernanda");
+      expect(getCanonicalCompositeName("José Manuel Castillo")).toBe("José Manuel");
+      expect(getCanonicalCompositeName("Olga Lucía Morales")).toBe("Olga Lucía");
+      expect(getCanonicalCompositeName("Consuelo Ronderos")).toBeNull();
+
+      // Verificación de género y cortesía
+      const infoAna = resolveNameAndGender("Ana María Gómez");
+      expect(infoAna.isFemale).toBe(true);
+      expect(infoAna.displayName).toBe("Ana María");
+
+      const infoJuan = resolveNameAndGender("Juan José Restrepo");
+      expect(infoJuan.isFemale).toBe(false);
+      expect(infoJuan.displayName).toBe("Juan José");
+
+      // Verificación en respuesta conversacional
+      const resAna = await processPrivateDmConversationalMessage(
+        "quiero revisar antecedentes",
+        "573111111111@s.whatsapp.net",
+        "Ana María Gómez"
+      );
+      expect(resAna).toContain("¡Claro que sí, Ana María!");
+
+      const resJuan = await processPrivateDmConversationalMessage(
+        "consultar cédula",
+        "573222222222@s.whatsapp.net",
+        "Juan José Restrepo"
+      );
+      expect(resJuan).toContain("¡Claro que sí, Juan José!");
     });
   });
 });

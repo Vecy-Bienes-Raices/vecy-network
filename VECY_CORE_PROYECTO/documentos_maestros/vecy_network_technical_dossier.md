@@ -324,7 +324,7 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ### 🔖 v32.35 — Octubre 2026
 
-#### 📌 DOCTRINA DE PROTECCIÓN DE DATOS PERSONALES (LEY 1581 DE 2012), HÁBEAS DATA Y SEGURIDAD PREVENTIVA EN VISITAS VS. CLANDESTINIDAD, PERSISTENCIA HÍBRIDA DE HISTORIAL DM EN POSTGRESQL Y DETECCIÓN TOLERANTE A ERRATAS DE TECLADO
+#### 📌 DOCTRINA DE PROTECCIÓN DE DATOS PERSONALES (LEY 1581 DE 2012), HÁBEAS DATA, SEGURIDAD PREVENTIVA EN VISITAS VS. CLANDESTINIDAD, PROTOCOLO DE LLAMADA DIRECTA DE JANI ALVES, NOMBRES COMPUESTOS COLOMBIANOS Y PERSISTENCIA HÍBRIDA DE HISTORIAL DM EN POSTGRESQL
 
 **Requerimiento y Objetivos:**
 1. **Debate Gremial sobre Verificación de Asistentes y Hábeas Data**: Abordar la problemática diaria de personas inescrupulosas que agendan visitas a inmuebles con cédulas erradas o falsas que no coinciden con sus nombres. Desmontar la creencia errónea expuesta por colegas como Kelly Carvajal en su audio de WhatsApp (`WhatsApp Ptt 2026-10-03 at 17.24.34.ogg`), quien cancela visitas clandestinamente con mentiras ("los dueños desistieron", "recibieron otra oferta") por temor infundado a que advertir la discrepancia viole el Hábeas Data.
@@ -334,26 +334,34 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
    - En Colombia no existe búsqueda inversa de cédula por nombre (restringida por la Registraduría Nacional).
    - Los antecedentes de Policía y Procuraduría son de acceso público oficial.
    - La verificación abierta permite rectificar al cliente honesto y neutraliza al delincuente con un efecto disuasorio fulminante.
-3. **Persistencia Híbrida del Historial de DMs en PostgreSQL**: Erradicar el problema evidenciado en el chat de Consuelo Ronderos, donde un reinicio del proceso en RAM reseteaba el historial y forzaba a JanIA a saludar de nuevo como si fuera el primer mensaje.
-4. **Detector Tolerante a Errores de Tipeo Móvil**: Reconocer solicitudes de antecedentes con erratas frecuentes de celular (ej: *"Quieto rrvisar sus antecedentes"*) y responder con amabilidad, pedagogía y solvencia legal.
+3. **Protocolo Operativo VECY: Llamada Telefónica Directa de Jani Alves**: Institucionalizar el protocolo humano oficial donde Jani Alves contacta directamente por teléfono al cliente propietario, visitante o colega en caso de inconsistencia en el documento para rectificarlo en 30 segundos, manteniendo viva la negociación y salvando comisiones millonarias sin pretextos ni mentiras.
+4. **Resolución Inteligente de Nombres Compuestos y Género Gramatical**: Asegurar que JanIA en WhatsApp salude y trate a los usuarios respetando nombres compuestos completos (Ana María, Juan José, María Fernanda, José Manuel, Carlos Alberto, Luz Marina, Olga Lucía, etc.) sin truncarlos al primer nombre ("Ana" o "Juan"), adaptando el género gramatical (`estimada`/`estimado`, `bienvenida`/`bienvenido`) y utilizando vocativo respetuoso (`¡Claro que sí, {{nombre}}!`).
+5. **Persistencia Híbrida del Historial de DMs en PostgreSQL**: Erradicar el problema evidenciado en el chat de Consuelo Ronderos, donde un reinicio del proceso en RAM reseteaba el historial y forzaba a JanIA a saludar de nuevo como si fuera el primer mensaje.
+6. **Detector Tolerante a Errores de Tipeo Móvil**: Reconocer solicitudes de antecedentes con erratas frecuentes de celular (ej: *"Quieto rrvisar sus antecedentes"*) y responder con amabilidad, pedagogía y solvencia legal.
 
 **Causas Raíz:**
 1. **Miedo Jurídico Injustificado en el Sector**: Confusión entre recolección clandestina de datos y validación de datos libremente suministrados por el titular para ingresar a un domicilio privado.
 2. **Volatilidad de la Memoria en DMs**: `dmConversationHistory` residía solo en memoria RAM; al reiniciar PM2 tras un despliegue, el mapa quedaba vacío (`history.length === 0`), perdiendo el hilo de conversaciones activas.
 3. **Regex Estricta de Intención**: Descartaba variaciones como "quieto rrvisar" o consultas de antecedentes sin número de cédula.
+4. **Fallo de Ancla de Palabra `\b` en Nombres Acentuados**: En JS sin flag `u`, las letras con tilde (`é`, `á`, `í`, `ó`, `ú`) son tratadas como no-alfanuméricas por `\b`, haciendo que patrones como `jos[eé]\b` fallaran frente a espacios en "Juan José Restrepo".
 
 **Solución Aplicada:**
+- **`server/_core/nameAndGenderResolver.ts`**:
+  - Exportado `getCanonicalCompositeName(rawName)` con normalización Unicode (`unaccent`) para evitar fallos de regex en letras acentuadas.
+  - Resolución precisa de género gramatical y cortesía.
 - **`server/_core/janIA.ts`**:
   - `getOrLoadDmHistory(userId)`: consulta la tabla `conversations` y `messages` en PostgreSQL si la memoria RAM está vacía, restaurando turnos de las últimas 24 horas y garantizando continuidad indestructible.
-  - `isDocVerificationIntent`: ampliada con soporte a erratas de celular y respuesta pedagógica sobre Hábeas Data y la imposibilidad de buscar por nombre en plataformas oficiales.
-  - System prompt de DMs enriquecido con la doctrina completa de Protección de Datos (Ley 1581 de 2012), Hábeas Data y debate gremial de transparencia vs clandestinidad.
+  - `isDocVerificationIntent`: ampliada con soporte a erratas de celular y vocativo personalizado respetando nombres compuestos (`¡Claro que sí, {{nombre}}!`).
+  - System prompt de DMs enriquecido con las reglas de nombres compuestos, género gramatical, la doctrina de Hábeas Data (Ley 1581 de 2012) y el protocolo de llamada telefónica de Jani Alves.
+  - Enriquecido `COMMON_FIRST_NAMES` con nombres tradicionales colombianos (Consuelo, Marina, Mery, Dary, Myriam, Marcela, Sonia, Astrid, Gladys, etc.).
 - **`server/_core/whatsapp-utils.ts`**:
+  - Enriquecido `COMMON_FIRST_NAMES` en sincronía con `janIA.ts`.
   - `getEmpatheticReactionEmoji`: asigna la reacción jurídica `⚖️` ante términos de Hábeas Data, protección de datos, Ley 1581 y privacidad.
 - **Prompts Maestros de Grupos y Base**:
-  - Actualizados `server/_core/prompts/base.md`, `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` (Sección 8) y `server/_core/prompts/grupos/PROYECTO_Vecy Network.md` con la doctrina de seguridad preventiva y Hábeas Data.
+  - Actualizados `server/_core/prompts/base.md`, `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` (Sección 8) y `server/_core/prompts/grupos/PROYECTO_Vecy Network.md` con la doctrina de seguridad preventiva, Hábeas Data y el protocolo de llamada de Jani Alves.
 - **Versión Oficial**: Incrementada a **v32.35** (`32.35.0`) en `shared/const.ts` y `package.json`.
 
-**Verificación:** `tsc --noEmit` 0 errores ✅ | `npm run build` limpio en 22.3s ✅ | 132/132 tests Vitest aprobados al 100% ✅
+**Verificación:** `tsc --noEmit` 0 errores ✅ | `npm run build` limpio en 26.7s ✅ | 133/133 tests Vitest aprobados al 100% ✅
 
 ---
 
