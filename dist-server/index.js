@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.37";
+    VECY_VERSION = "v32.38";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -11601,6 +11601,9 @@ ${quotedNote}` : quotedNote;
                   if (this.botSentMessageIds.has(msgId)) {
                     return;
                   }
+                  if (rawMsg?.reactionMessage || rawMsg?.protocolMessage) {
+                    return;
+                  }
                   if (isSelfChat || isAdmin) {
                     console.log(`[JANIA-MATCH] Mensaje propio detectado en chat de administraci\xF3n/self-chat (${senderId}). Procediendo a procesar.`);
                   } else {
@@ -11619,10 +11622,13 @@ ${quotedNote}` : quotedNote;
                 const { isSessionMuted: isSessionMuted2, muteSession: muteSession2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
                 let isMuted = isSelfChat || isAdmin ? false : await isSessionMuted2(senderId);
                 if (isMuted) {
-                  if (cleanStart.startsWith("agente jania")) {
+                  const { extractCedulaForVerification: extractCedulaForVerification2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+                  const isCedulaReq = extractCedulaForVerification2(body, true).found;
+                  const isPredialReq = body.toLowerCase().includes("predial") || body.toLowerCase().includes("chip") || body.toLowerCase().includes("hacienda");
+                  if (cleanStart.startsWith("agente jania") || isCedulaReq || isPredialReq) {
                     await muteSession2(senderId, false).catch((err) => console.error("Error unmuting session:", err));
                     isMuted = false;
-                    console.log(`[JANIA-MATCH] Sesi\xF3n reactivada mediante comando de cliente para ${senderId}`);
+                    console.log(`[JANIA-MATCH] Sesi\xF3n reactivada autom\xE1ticamente mediante ${isCedulaReq ? "verificaci\xF3n de documento" : isPredialReq ? "asistencia de predial" : "comando de cliente"} para ${senderId}`);
                   }
                 }
                 let buffer = this.dmMessageBuffers.get(senderId);
@@ -11722,8 +11728,11 @@ ${quotedNote}` : quotedNote;
             hasImage: !!imageBuffer,
             hasPdf: !!pdfBuffer
           });
-          await this.sock.sendMessage(senderId, { react: { text: contextualEmoji, key: mainMsg.key } }).catch(() => {
+          const reactRes = await this.sock.sendMessage(senderId, { react: { text: contextualEmoji, key: mainMsg.key } }).catch(() => {
           });
+          if (reactRes?.key?.id) {
+            this.botSentMessageIds.add(reactRes.key.id);
+          }
         } catch (_) {
         }
         const matchConfirmationRegex = /^\s*(sí|si|no)\s+#m(\d+)\s*$/i;

@@ -7,6 +7,46 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.38 — 04 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Concurrencia Multi-Usuario en JanIA**:
+   - Eduardo consultó: *"Hola, ¿qué pasa si dos o más personas le hablan al tiempo a JanIA?"*
+2. **Caso Luz Angela Varela (`@luz_angela_varela_realtor` ~ `Luz Angela / Chiqui`, JID: `166400068989077@lid`)**:
+   - Eduardo expuso con capturas de pantalla de WhatsApp que Luz Angela escribió a las 11:50 AM: *"Verifica esta cédula 19278273"*, pero JanIA no le había contestado, mientras que a Miriam Herz sí le contestó de inmediato a las 11:51 AM (`"JanIA verificar cc: 73125798"`).
+   - Solicitó responder rápido explicando las causas y solucionando el caso de Luz Angela.
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Arquitectura de Concurrencia de JanIA**:
+   - JanIA corre sobre Node.js y maneja un modelo de I/O **100% asíncrono y no bloqueante**.
+   - Cada chat individual en DM tiene su propio buffer aislado (`dmMessageBuffers.set(senderId, ...)`).
+   - Las solicitudes de múltiples usuarios se procesan concurrentemente sin interferencias. De hecho, en los logs de las 11:51 AM se constató cómo Miriam Herz (C.C. 73125798) y Jani Alves ("Hola 👋" y "Gracias ☺️") fueron atendidas simultáneamente sin ningún cuello de botella.
+2. **Causa Raíz 1: Micro-pausa de Socket Baileys (Código 408) a las 11:51 AM**:
+   - A las 11:51 AM, los servidores de WhatsApp forzaron una pausa de conexión 408 (`[ANTI-BAN] Conexión Baileys pausada (código: 408) [Intento 1/3]`). Al reconectar a las 11:52 AM, WhatsApp envió como mensajes en vivo (`type: 'notify'`) los que estaban llegando en ese instante (Miriam), mientras que el mensaje enviado por Luz Angela a las 11:50 AM quedó retenido en WhatsApp sin emitir el evento en vivo (figurando como "1 unread message" en el celular).
+3. **Causa Raíz 2: Bug de Auto-Mute por Reacciones Contextuales**:
+   - Al investigar el historial en base de datos (`pendingSessions`), se descubrió que la sesión de Luz Angela estaba marcada con `isMuted = true` desde anoche a las 23:18.
+   - **Causa del Auto-Mute**: Cuando JanIA envía una reacción con emoji a un chat de cliente (`sock.sendMessage(senderId, { react: ... })`), WhatsApp refleja esa reacción como un evento saliente con `fromMe: true`. Al no estar el ID en `botSentMessageIds`, el sistema lo interpretó erróneamente como una "intervención humana manual de Eduardo", silenciando al bot en esa sesión.
+
+### Acciones Ejecutadas
+1. **Verificación Inmediata en Policía Nacional de C.C. 19.278.273**:
+   - Consulta ejecutada con éxito mediante 2Captcha y el portal oficial de la Policía Nacional:
+     - Documento: **Cédula de Ciudadanía 19.278.273**
+     - Titular Oficial: **Carlos Alfonso Varela Sarmiento** (`VARELA SARMIENTO CARLOS ALFONSO`).
+     - Estado: **Ciudadano verificado y habilitado** (sin antecedentes judiciales ni alertas restrictivas).
+2. **Despacho Inmediato del Reporte a Luz Angela Varela**:
+   - Enviado el reporte oficial institucional a través del endpoint `/api/send-whatsapp-notification` directamente al chat de Luz Angela (`166400068989077@lid`).
+   - Enviados desacoplados el mensaje de bucle viral y el enlace de reseña de Google.
+   - Des-silenciada la sesión en PostgreSQL (`DELETE FROM "pendingSessions"`).
+3. **Blindaje de Arquitectura en `server/_core/whatsapp-match.ts`**:
+   - **Filtro Anti-AutoMute**: En la detección `msg.key.fromMe`, se ignoran expresamente los paquetes `reactionMessage` y `protocolMessage` para que las reacciones emitidas por JanIA jamás silencien al bot.
+   - **Registro de Reacciones**: El ID devuelto por `sock.sendMessage(..., { react: ... })` se añade inmediatamente a `this.botSentMessageIds`.
+   - **Des-Silenciamiento Automático por Herramientas**: Si un chat está silenciado pero el cliente envía una solicitud de verificación de documento o consulta de impuesto predial/CHIP, JanIA reactiva automáticamente la sesión y atiende la herramienta sin requerir el comando "Agente JanIA".
+4. **Verificación y Compilación**:
+   - `tsc --noEmit` 0 errores ✅.
+   - 135/135 tests Vitest aprobados al 100% ✅.
+   - `npm run build` limpio y optimizado en 26.4s ✅.
+   - Incremento de versión oficial a **v32.38**.
+
 ## 📋 SESIÓN v32.37 — 04 Octubre 2026
 
 ### Solicitud de Eduardo

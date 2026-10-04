@@ -172,7 +172,30 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.37 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.38 — Octubre 2026
+
+### Novedades v32.38 (Concurrencia Multi-Usuario en JanIA, Blindaje Anti-AutoMute por Reacciones, Des-Silenciamiento Automático en Solicitudes de Herramientas y Resolución de Caso Luz Angela Varela):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Concurrencia Multi-Usuario en DMs y Grupos**:
+     - Eduardo consultó: *¿Qué pasa si dos o más personas le hablan al tiempo a JanIA?*
+     - Arquitectura 100% asíncrona no bloqueante: JanIA gestiona buffers individuales (`dmMessageBuffers`) independientes por cada `senderId`. Las solicitudes concurrentes de múltiples usuarios (como ocurrió simultáneamente entre Miriam Herz y Jani Alves a las 11:51 AM) se procesan en paralelo sin interferencias ni bloqueos.
+  2. **Caso Luz Angela Varela (`166400068989077@lid`) y Cédula 19.278.273**:
+     - A las 11:50 AM, Luz Angela envió `"Verifica esta cédula 19278273"`. JanIA no respondió de inmediato mientras que a Miriam sí.
+     - **Causa Raíz 1 (Micro-pausa de Socket Baileys 408)**: A las 11:51 AM, los servidores de WhatsApp forzaron una pausa de conexión 408 (`[ANTI-BAN] Conexión Baileys pausada (código: 408)`). Al reconectar a las 11:52, el mensaje de Miriam entró en vivo (`type: 'notify'`), pero el de Luz Angela quedó en cola de WhatsApp sin emitir el evento en vivo.
+     - **Causa Raíz 2 (Bug de Auto-Mute por Reacciones)**: Al enviar JanIA un emoji de reacción empática (`sock.sendMessage(senderId, { react: ... })`), WhatsApp reflejó el mensaje con `fromMe: true`. Al no estar el ID en `botSentMessageIds`, el sistema lo interpretó erróneamente como una "intervención humana manual" y marcó la sesión como `isMuted = true` en PostgreSQL (`mute:166400068989077`).
+  3. **Resolución y Entrega Inmediata a Luz Angela Varela**:
+     - Consulta ejecutada con éxito en la Policía Nacional: C.C. 19.278.273 pertenece a **`Carlos Alfonso Varela Sarmiento`** (ciudadano verificado y habilitado).
+     - Despachado el reporte oficial institucional, bucle viral y reseña de Google directamente al chat de Luz Angela Varela.
+     - Sesión des-silenciada (`DELETE FROM "pendingSessions"`).
+- **Acciones Ejecutadas y Blindaje de Arquitectura**:
+  1. **Inmunización contra Auto-Mute en Reacciones**:
+     - En `whatsapp-match.ts`, se filtran explícitamente los mensajes con `reactionMessage` y `protocolMessage` en la verificación `fromMe` para que JAMÁS se confundan con intervención humana manual.
+     - Se registran los IDs de las reacciones emitidas por el bot en `botSentMessageIds`.
+  2. **Des-Silenciamiento Automático en Invocación de Herramientas**:
+     - Si un chat estaba silenciado (`isMuted: true`), pero el usuario envía una solicitud de herramienta de autoservicio (Cédula de Ciudadanía/Extranjería/Pasaporte o Certificado Predial/CHIP), JanIA des-silencia automáticamente la sesión y procesa la herramienta de inmediato.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | `npm run build` limpio en 26.4s ✅ | 135/135 tests Vitest aprobados al 100% ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.37 — Octubre 2026
 
 ### Novedades v32.37 (Soporte Oficial Multidocumento en Policía Nacional: Cédula de Extranjería, Pasaporte y Documento País de Origen, Subsanación de Tipado TypeScript y Marco Legal Decreto 019 de 2012):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

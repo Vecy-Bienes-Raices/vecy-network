@@ -322,6 +322,35 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.38 — Octubre 2026
+
+#### 📌 CONCURRENCIA MULTI-USUARIO EN JANIA, BLINDAJE ANTI-AUTOMUTE POR REACCIONES, DES-SILENCIAMIENTO AUTOMÁTICO EN SOLICITUDES DE HERRAMIENTAS Y RESOLUCIÓN DE CASO LUZ ANGELA VARELA
+
+**Requerimiento y Objetivos:**
+1. **Concurrencia Multi-Usuario en JanIA**: Explicar técnicamente el comportamiento de JanIA cuando 2 o más usuarios escriben simultáneamente en WhatsApp.
+2. **Caso Luz Angela Varela (`@luz_angela_varela_realtor` ~ `Luz Angela / Chiqui`, JID: `166400068989077@lid`)**:
+   - Diagnosticar por qué JanIA no respondió a Luz Angela Varela cuando escribió a las 11:50 AM: `"Verifica esta cédula 19278273"`, mientras que a Miriam Herz sí le respondió a las 11:51 AM (`"JanIA verificar cc: 73125798"`).
+   - Resolver la verificación de C.C. 19.278.273 y despachar el reporte de inmediato a Luz Angela Varela.
+
+**Causas Raíz:**
+1. **Arquitectura Asíncrona sin Bloqueos**: JanIA opera bajo Node.js con un modelo no bloqueante. Las peticiones concurrentes se despachan en paralelo en buffers aislados por `senderId`. En los logs de las 11:51 AM se constató la atención simultánea exitosa de Miriam Herz y Jani Alves.
+2. **Micro-Pausa del Socket de Baileys (Código 408) a las 11:51 AM**: Los servidores de WhatsApp pausaron temporalmente la conexión Baileys. Al reconectar a las 11:52 AM, el mensaje en cola de Luz Angela no emitió el evento `notify` en vivo, quedando como no leído en el teléfono móvil.
+3. **Bug Crítico de Auto-Mute por Reacciones Contextuales**: Al enviar JanIA un emoji de reacción empática (`sock.sendMessage(senderId, { react: ... })`), WhatsApp reflejó el mensaje saliente con `fromMe: true`. Al no estar ese ID en `botSentMessageIds`, el sistema lo interpretó erróneamente como una "intervención humana manual de Eduardo", activando `isMuted = true` en la base de datos (`mute:166400068989077`).
+
+**Decisiones de Arquitectura y Soluciones Aplicadas:**
+1. **Resolución y Entrega Inmediata a Luz Angela Varela**:
+   - Verificada la C.C. 19.278.273 ante la Policía Nacional, confirmando que pertenece a **Carlos Alfonso Varela Sarmiento** (ciudadano verificado y habilitado).
+   - Despachado el reporte oficial institucional, bucle viral y reseña de Google a través de `/api/send-whatsapp-notification`.
+   - Sesión des-silenciada en PostgreSQL (`DELETE FROM "pendingSessions"`).
+2. **Blindaje Anti-AutoMute en `whatsapp-match.ts`**:
+   - Excluidos explícitamente paquetes `reactionMessage` y `protocolMessage` en la detección `fromMe` para evitar confusiones con intervención humana.
+   - Registro automático del ID de reacción en `botSentMessageIds`.
+3. **Des-Silenciamiento Automático en Invocación de Herramientas**:
+   - Si un chat está silenciado pero el cliente envía una solicitud de verificación de documento o consulta de impuesto predial/CHIP, JanIA reactiva automáticamente la sesión y atiende la herramienta sin requerir el comando "Agente JanIA".
+4. **Versión Oficial**: Incrementada a **v32.38** (`32.38.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 🔖 v32.37 — Octubre 2026
 
 #### 📌 SOPORTE OFICIAL MULTIDOCUMENTO EN POLICÍA NACIONAL (CÉDULA DE EXTRANJERÍA, PASAPORTE, DOCUMENTO PAÍS ORIGEN), SUBSANACIÓN DE TIPADO TYPESCRIPT Y MARCO LEGAL DECRETO 019 DE 2012

@@ -917,6 +917,11 @@ export class JaniaMatchBot {
                 return;
               }
 
+              // 🛡️ BLINDAJE DE PROTOCOLO: Reacciones y notificaciones jamás son intervención humana para silenciar al bot
+              if ((rawMsg as any)?.reactionMessage || (rawMsg as any)?.protocolMessage) {
+                return;
+              }
+
               // Si es un mensaje escrito en el chat con JanIA / self-chat / admin:
               if (isSelfChat || isAdmin) {
                 console.log(`[JANIA-MATCH] Mensaje propio detectado en chat de administración/self-chat (${senderId}). Procediendo a procesar.`);
@@ -934,17 +939,21 @@ export class JaniaMatchBot {
               }
             }
 
-            // 2. Verificar reactivación ("Agente JanIA")
+            // 2. Verificar reactivación ("Agente JanIA" o invocación explícita de herramientas: Cédula o Predial)
             const cleanStart = body.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
             
             const { isSessionMuted, muteSession } = await import('./janIA');
             let isMuted = (isSelfChat || isAdmin) ? false : await isSessionMuted(senderId);
 
             if (isMuted) {
-              if (cleanStart.startsWith("agente jania")) {
+              const { extractCedulaForVerification } = await import('./identityVerificationService');
+              const isCedulaReq = extractCedulaForVerification(body, true).found;
+              const isPredialReq = body.toLowerCase().includes('predial') || body.toLowerCase().includes('chip') || body.toLowerCase().includes('hacienda');
+
+              if (cleanStart.startsWith("agente jania") || isCedulaReq || isPredialReq) {
                 await muteSession(senderId, false).catch(err => console.error("Error unmuting session:", err));
                 isMuted = false;
-                console.log(`[JANIA-MATCH] Sesión reactivada mediante comando de cliente para ${senderId}`);
+                console.log(`[JANIA-MATCH] Sesión reactivada automáticamente mediante ${isCedulaReq ? 'verificación de documento' : (isPredialReq ? 'asistencia de predial' : 'comando de cliente')} para ${senderId}`);
               }
             }
 
@@ -1067,7 +1076,10 @@ export class JaniaMatchBot {
         hasImage: !!imageBuffer,
         hasPdf: !!pdfBuffer
       });
-      await this.sock.sendMessage(senderId, { react: { text: contextualEmoji, key: mainMsg.key } }).catch(() => {});
+      const reactRes = await this.sock.sendMessage(senderId, { react: { text: contextualEmoji, key: mainMsg.key } }).catch(() => {});
+      if (reactRes?.key?.id) {
+        this.botSentMessageIds.add(reactRes.key.id);
+      }
     } catch (_) {}
 
     // Interceptar confirmaciones de Match (SÍ #M123 o NO #M123) para cualquier usuario (Double Opt-In)
