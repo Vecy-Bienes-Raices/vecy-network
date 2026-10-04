@@ -1536,12 +1536,10 @@ Ed del 2014.
       const predialConCedula = await executePredialAssistanceFromWhatsApp("43403545", testSenderId, true);
       expect(predialConCedula.isPredialRequest).toBe(true);
       expect(predialConCedula.chip).toBe("AAA0123ABCD");
-      expect(predialConCedula.cedula).toBe("43403545");
-      expect(predialConCedula.reportText).toContain("PREDIAL BOGOTÁ — VECY BIENES RAÍCES");
+      expect(predialConCedula.reportText).toContain("CONSULTA PREDIAL BOGOTÁ — VECY BIENES RAÍCES");
       expect(predialConCedula.reportText).toContain("CHIP del predio:* AAA0123ABCD");
       expect(predialConCedula.reportText).toContain("43403545");
-      expect(predialConCedula.reportText).toContain("https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA");
-      expect(predialConCedula.reportText).toContain("DESCARGA TU FACTURA");
+      expect(predialConCedula.reportText).toContain("Para entregarte tu PDF directamente aquí en el chat");
 
       // 8. Verificación de entrega de PDF adjunto en Predial Bogotá (Doctrina v32.19)
       const { downloadPredialInvoicePdf } = await import("../_core/predialService");

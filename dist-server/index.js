@@ -9538,26 +9538,13 @@ _(Puedes escribirlo con o sin puntos, comas o guiones \u2014 yo lo proceso autom
     const errorPrefix = downloadResult?.errorMessage ? `\u26A0\uFE0F *Respuesta oficial de la Secretar\xEDa de Hacienda:* ${downloadResult.errorMessage}
 
 ` : "";
-    const reportText2 = `\u{1F6E1}\uFE0F *PREDIAL BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+    const reportText2 = `\u{1F6E1}\uFE0F *CONSULTA PREDIAL BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 \u{1F3E0} *CHIP del predio:* ${chip}
 \u{1FAAA} *${docLabel}:* ${docNumber}
 ` + nitWarning + `
-` + contribuyenteInfo + errorPrefix + `\u{1F517} *Portal oficial Secretar\xEDa de Hacienda \u2014 Descarga tu factura predial aqu\xED:*
-${urlOficialSdh}
-
-\u{1F4CB} *Instrucciones para descargar tu PDF:*
-1\uFE0F\u20E3 Abre el enlace de arriba
-2\uFE0F\u20E3 En *"Tipo de impuesto"* selecciona: *PREDIAL*
-3\uFE0F\u20E3 En *"Tipo de documento"* selecciona: *${tipoDocFormulario}*
-4\uFE0F\u20E3 En *"N\xFAmero de documento"* ingresa: *${docNumber}*
-5\uFE0F\u20E3 En *"CHIP"* ingresa: *${chip}*
-6\uFE0F\u20E3 Marca la casilla *"No soy un robot"* (CAPTCHA)
-7\uFE0F\u20E3 Haz clic en *BUSCAR* \u2192 aparecer\xE1 el bot\xF3n *"DESCARGA TU FACTURA"* \u2705
-
-\u{1F4C4} Descarga el PDF, tiene el c\xF3digo de barras para pago en bancos y Efecty.
-
-\xBFNecesitas que te ayude con otro tr\xE1mite? Estoy a tu disposici\xF3n \u{1F91D}`;
+` + contribuyenteInfo + errorPrefix + `\u{1F91D} *Para entregarte tu PDF directamente aqu\xED en el chat:*
+Por favor facil\xEDtame el documento del titular catastral o el NIT de la entidad financiera (si es leasing o fiducia). Con ese dato yo misma gestiono de inmediato el tr\xE1mite con 2Captcha y la Secretar\xEDa de Hacienda para entregarte el archivo PDF aqu\xED mismo. \u{1F4F2}\u2728`;
     return {
       isPredialRequest: true,
       chip,

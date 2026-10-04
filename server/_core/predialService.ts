@@ -972,24 +972,14 @@ export async function executePredialAssistanceFromWhatsApp(
       : '';
 
     const reportText =
-      `🛡️ *PREDIAL BOGOTÁ — VECY BIENES RAÍCES* 🇨🇴\n\n` +
+      `🛡️ *CONSULTA PREDIAL BOGOTÁ — VECY BIENES RAÍCES* 🇨🇴\n\n` +
       `🏠 *CHIP del predio:* ${chip}\n` +
       `🪪 *${docLabel}:* ${docNumber}\n` +
       nitWarning + `\n` +
       contribuyenteInfo +
       errorPrefix +
-      `🔗 *Portal oficial Secretaría de Hacienda — Descarga tu factura predial aquí:*\n` +
-      `${urlOficialSdh}\n\n` +
-      `📋 *Instrucciones para descargar tu PDF:*\n` +
-      `1️⃣ Abre el enlace de arriba\n` +
-      `2️⃣ En *"Tipo de impuesto"* selecciona: *PREDIAL*\n` +
-      `3️⃣ En *"Tipo de documento"* selecciona: *${tipoDocFormulario}*\n` +
-      `4️⃣ En *"Número de documento"* ingresa: *${docNumber}*\n` +
-      `5️⃣ En *"CHIP"* ingresa: *${chip}*\n` +
-      `6️⃣ Marca la casilla *"No soy un robot"* (CAPTCHA)\n` +
-      `7️⃣ Haz clic en *BUSCAR* → aparecerá el botón *"DESCARGA TU FACTURA"* ✅\n\n` +
-      `📄 Descarga el PDF, tiene el código de barras para pago en bancos y Efecty.\n\n` +
-      `¿Necesitas que te ayude con otro trámite? Estoy a tu disposición 🤝`;
+      `🤝 *Para entregarte tu PDF directamente aquí en el chat:*\n` +
+      `Por favor facilítame el documento del titular catastral o el NIT de la entidad financiera (si es leasing o fiducia). Con ese dato yo misma gestiono de inmediato el trámite con 2Captcha y la Secretaría de Hacienda para entregarte el archivo PDF aquí mismo. 📲✨`;
 
     return {
       isPredialRequest: true,
