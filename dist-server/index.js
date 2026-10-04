@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.31";
+    VECY_VERSION = "v32.32";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -8898,8 +8898,10 @@ function sanitizeDocumentNumber(raw, isNit = false) {
     cleaned = dvMatch[1];
   } else if (isNit) {
     const digitsOnly = cleaned.replace(/\D/g, "");
-    if (digitsOnly.length > 10) {
-      cleaned = digitsOnly.slice(0, -1);
+    if (digitsOnly.length === 10) {
+      cleaned = digitsOnly.slice(0, 9);
+    } else if (digitsOnly.length > 10) {
+      cleaned = digitsOnly.slice(0, 9);
     } else {
       cleaned = digitsOnly;
     }
@@ -10734,7 +10736,7 @@ function getEmpatheticReactionEmoji(text2, options) {
     return "\u{1F64F}";
   }
   if (clean.includes("excelente") || clean.includes("genial") || clean.includes("felicitaciones") || clean.includes("super") || clean.includes("s\xFAper") || clean.includes("maravill") || clean.includes("me encanta") || clean.includes("perfecto")) {
-    return "\u2B50";
+    return "\u2764\uFE0F";
   }
   if (clean.includes("contrato") || clean.includes("ley 820") || clean.includes("ley 675") || clean.includes("arras") || clean.includes("promesa") || clean.includes("escritura") || clean.includes("notar") || clean.includes("estudio de t\xEDtulo") || clean.includes("estudio de titulo") || clean.includes("comision") || clean.includes("comisi\xF3n") || clean.includes("jur\xEDdic") || clean.includes("juridic") || clean.includes("abogad")) {
     return "\u2696\uFE0F";
@@ -19513,7 +19515,7 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
 Te puedo colaborar de inmediato en todo lo relacionado con finca ra\xEDz:
 \u2022 \u{1F4C4} *Factura Predial Bogot\xE1 y Certificado de Pago en PDF* (al instante con Hacienda)
 \u2022 \u{1F6E1}\uFE0F *Verificaci\xF3n de C\xE9dula y Antecedentes en Polic\xEDa Nacional* (en 20 segundos)
-\u2022 \u{1F91D} *Bolsa Inmobiliaria Colaborativa y Matching Inteligente 45/10/45* (cruce algor\xEDtmico de Ofertas y Demandas: 80%-94% Match Intermedio y 95%-100% Match Perfecto a trav\xE9s de nuestra plataforma en toda Colombia)
+\u2022 \u{1F91D} *Bolsa Inmobiliaria Colaborativa y Matching Inteligente 45/10/45* (cruce algor\xEDtmico de Ofertas y Demandas: 80%-94% Match Aproximado y 95%-100% Match Perfecto a trav\xE9s de nuestra plataforma en toda Colombia)
 \u2022 \u2696\uFE0F *Asesor\xEDa Jur\xEDdica y Contractual* (Ley 820 de 2003, Ley 675 de 2001, promesas de compraventa, arras, estudio de t\xEDtulos a 20 a\xF1os en la SNR, cobro de comisiones pendientes)
 \u2022 \u{1F4CA} *Aval\xFAos y An\xE1lisis Comparativo de Mercado (ACM)*
 \u2022 \u{1F464} *Atenci\xF3n Personalizada con nuestros Directores:* Eduardo Rivera y Jani Alves (+57 316 656 9719)
@@ -19547,7 +19549,7 @@ ${hasPriorHistory ? '- YA EST\xC1S EN UNA CONVERSACI\xD3N ACTIVA CON EL USUARIO.
 CAT\xC1LOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:
 1. FACTURA PREDIAL BOGOT\xC1 Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con c\xF3digo de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretar\xEDa Distrital de Hacienda.
 2. VERIFICACI\xD3N OFICIAL DE C\xC9DULA Y ANTECEDENTES: Validaci\xF3n de nombres completos y antecedentes en Polic\xEDa Nacional en 20 segundos para blindar contratos de compraventa y arrendamiento.
-3. BOLSA INMOBILIARIA COLABORATIVA Y MATCHING INTELIGENTE 45/10/45: Cruce algor\xEDtmico de OFERTAS y DEMANDAS a trav\xE9s de nuestra plataforma entre colegas a nivel nacional con cualquier tipo de inmueble. Coincidencias entre el 80% al 94% ("MATCH INTERMEDIO") y del 95% al 100% de compatibilidad ("MATCH PERFECTO"). Esquema de comisi\xF3n compartida 45/10/45 (45% asesor captador de oferta, 10% plataforma Vecy Network, 45% asesor colocador de demanda).
+3. BOLSA INMOBILIARIA COLABORATIVA Y MATCHING INTELIGENTE 45/10/45: Cruce algor\xEDtmico de OFERTAS y DEMANDAS a trav\xE9s de nuestra plataforma entre colegas a nivel nacional con cualquier tipo de inmueble. Coincidencias entre el 80% al 94% ("MATCH APROXIMADO") y del 95% al 100% de compatibilidad ("MATCH PERFECTO"). Esquema de comisi\xF3n compartida 45/10/45 (45% asesor captador de oferta, 10% plataforma Vecy Network, 45% asesor colocador de demanda).
 4. AVAL\xDAOS Y AN\xC1LISIS COMPARATIVO DE MERCADO (ACM): Estimaci\xF3n comercial y catastral de inmuebles seg\xFAn estrato, metraje y zona.
 5. ASESOR\xCDA JUR\xCDDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, r\xE9gimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa, arras de retracto y confirmatorias, escrituraci\xF3n, estudio de t\xEDtulos a 20 a\xF1os en la SNR (grav\xE1menes, afectaci\xF3n familiar, patrimonio inembargable) y cobro de comisiones pendientes.
 6. ACOMPA\xD1AMIENTO BR\xD3KER PERSONALIZADO: Conexi\xF3n directa con nuestros directores Eduardo A. Rivera y Jani Alves en el +57 316 656 9719 (https://wa.me/573166569719) para tr\xE1mites notariales, peritajes presenciales y acompa\xF1amiento legal.

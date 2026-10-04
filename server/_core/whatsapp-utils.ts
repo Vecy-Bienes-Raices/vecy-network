@@ -762,7 +762,7 @@ export function getEmpatheticReactionEmoji(
     clean.includes('súper') || clean.includes('maravill') ||
     clean.includes('me encanta') || clean.includes('perfecto')
   ) {
-    return '⭐';
+    return '❤️';
   }
 
   // 7. Asesoría Jurídica / Legal / Contratos / Estudio de Títulos / Comisiones pendientes / Ley 820 / Ley 675 / Arras

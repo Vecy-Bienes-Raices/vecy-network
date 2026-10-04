@@ -322,6 +322,39 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.32 — Octubre 2026
+
+#### 📌 ENTREGA NATIVA Y VERIFICADA DE PDF PREDIAL, SANITIZACIÓN INTELIGENTE DE NIT A 9 DÍGITOS, NOMENCLATURA MATCH APROXIMADO Y REACCIÓN CON CORAZÓN ❤️
+
+**Requerimiento y Objetivos:**
+1. **Entrega de Archivos PDF Nativos en WhatsApp**: Confirmar y ratificar que JanIA entrega directamente el archivo PDF de la Factura Predial y del Certificado de Pago en WhatsApp como archivo binario descargable con peso en KB y vista previa nativa (tal como lo hizo en las capturas de Andrés G, CHIP `AAA0198HCOM` y `CC 79505340`).
+2. **Regla Doctrinal de Sanitización de NIT (9 Dígitos sin DV)**: En Colombia, ante la Secretaría Distrital de Hacienda (SDH), los NITs se consultan exclusivamente con los 9 dígitos base sin el dígito de verificación. Si el usuario se equivoca o entrega 10 dígitos (porque incluyó el dígito de verificación, guiones o puntos), JanIA como IA inteligente descarta automáticamente el último dígito y ejecuta el proceso con los 9 dígitos exactos.
+3. **Ajuste Doctrinal de Nomenclatura de Matching**: Corregir la denominación del rango 80% al 94%: cambiar *"MATCH INTERMEDIO"* por *"MATCH APROXIMADO"*.
+4. **Ajuste de Reacción de Felicitación / Elogio**: Cambiar la reacción ante felicitación / elogio ("excelente", "me encanta", "genial", "super", "perfecto") de ⭐ a ❤️.
+
+**Causas Raíz:**
+1. **Portal SDH y Formato de NIT**: En la plataforma de la Secretaría Distrital de Hacienda, el campo `#tipoDoc` exige *"NIT - Número de Identificacion Tributaria sin digito de Verificación"*. Si se envían 10 dígitos continuos (por error de digitación del usuario al incluir el DV), Hacienda rechaza la consulta con mensaje de datos no encontrados.
+2. **Nomenclatura Doctrinal de Matching**: El concepto de "Match Aproximado" define con mayor precisión técnica y comercial el rango 80%-94% en la Bolsa Colaborativa 45/10/45.
+3. **Calidez Humana y Vínculo Afectivo con ❤️**: La reacción de corazón ❤️ ante un elogio o felicitación genera una conexión mucho más genuina y cálida que la estrella ⭐.
+
+**Solución Aplicada:**
+- **`server/_core/predialService.ts`**:
+  - `sanitizeDocumentNumber(raw, isNit)`: ante `isNit = true`, si el número limpio tiene 10 o más dígitos, extrae exactamente los primeros 9 dígitos base (`digitsOnly.slice(0, 9)`), descartando el DV con precisión matemática.
+- **`server/_core/whatsapp-utils.ts`**:
+  - `getEmpatheticReactionEmoji`: expresiones de felicitación, elogio o entusiasmo ("excelente", "me encanta", "genial", "super", "maravill", "perfecto") ahora devuelven `❤️`.
+- **`server/_core/janIA.ts`**:
+  - Actualizado mensaje de bienvenida y prompt del sistema con *"80%-94% Match Aproximado"* y *"MATCH APROXIMADO"*.
+- **`server/__tests__/regression.test.ts`**:
+  - Creada sección 28 de pruebas doctrinales validando la sanitización de NIT a 9 dígitos y la asignación de `❤️`.
+- **Versión Oficial**: Incrementada a **v32.32** (`32.32.0`) en `shared/const.ts` y `package.json`.
+
+**Verificación**:
+- Test en vivo contra la Secretaría Distrital de Hacienda:
+  - CHIP: `AAA0198HCOM` | Cédula: `79505340` | Archivo: `Certificado_Pago_AAA0198HCOM_2026.pdf` (29.398 bytes) descargado y listo para despacho nativo en WhatsApp ✅
+- `tsc --noEmit` 0 errores ✅ | `npm run build` limpio ✅ | 128/128 tests Vitest ✅
+
+---
+
 ### 🔖 v32.31 — Octubre 2026
 
 #### 📌 ENTREGA ROBUSTA DE PDF PREDIAL, SOPORTE MENSAJES EDITADOS, REACCIÓN EMPÁTICA CONTEXTUAL INMEDIATA EN DMS, DOCTRINA BOLSA 45/10/45 Y COBRO DE COMISIONES PENDIENTES

@@ -2419,6 +2419,33 @@ Adriana Rebeca Orejuela`;
       expect(result.autoScore).toBeGreaterThanOrEqual(85);
     });
   });
+
+  describe("28. Doctrina v32.32: Sanitización de NIT a 9 Dígitos y Reacciones Empáticas", () => {
+    it("Debe recortar automáticamente el décimo dígito (DV) en NITs para la Secretaría de Hacienda", async () => {
+      const { sanitizeDocumentNumber } = await import("../_core/predialService");
+      
+      // NIT con guión explícito
+      expect(sanitizeDocumentNumber("860034594-1", true)).toBe("860034594");
+
+      // NIT con puntos y guión
+      expect(sanitizeDocumentNumber("860.034.594-1", true)).toBe("860034594");
+
+      // NIT ingresado por el usuario con 10 dígitos continuos (incluyendo el DV)
+      expect(sanitizeDocumentNumber("8600345941", true)).toBe("860034594");
+
+      // Cédula de 10 dígitos (isNit = false) NO debe recortarse
+      expect(sanitizeDocumentNumber("1018456789", false)).toBe("1018456789");
+    });
+
+    it("Debe reaccionar con ❤️ ante felicitaciones, elogios o expresiones de entusiasmo", async () => {
+      const { getEmpatheticReactionEmoji } = await import("../_core/whatsapp-utils");
+      
+      expect(getEmpatheticReactionEmoji("Excelente servicio")).toBe("❤️");
+      expect(getEmpatheticReactionEmoji("Me encanta JanIA")).toBe("❤️");
+      expect(getEmpatheticReactionEmoji("Genial, perfecto")).toBe("❤️");
+      expect(getEmpatheticReactionEmoji("Súper")).toBe("❤️");
+    });
+  });
 });
 
 

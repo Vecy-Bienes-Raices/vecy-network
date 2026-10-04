@@ -98,12 +98,15 @@ export function sanitizeDocumentNumber(raw: string, isNit = false): string {
     // Tiene dígito verificador explícito con guión → quitar el dígito verificador
     cleaned = dvMatch[1];
   } else if (isNit) {
-    // NIT sin guión explícito: si tiene 11 dígitos, el último puede ser el DV
-    // NITs colombianos tienen 9-10 dígitos sin DV (con DV serían 10-11)
-    // Estrategia: si tiene >10 dígitos, descartar el último como posible DV
+    // REGLA DOCTRINAL v32.32 (Eduardo Rivera):
+    // En Colombia, los NITs ante la Secretaría Distrital de Hacienda son siempre de 9 dígitos sin DV.
+    // Si el usuario entrega 10 dígitos (porque incluyó el dígito de verificación),
+    // JanIA es inteligente y le quita automáticamente el último dígito, procesando con los 9 dígitos exactos.
     const digitsOnly = cleaned.replace(/\D/g, '');
-    if (digitsOnly.length > 10) {
-      cleaned = digitsOnly.slice(0, -1);
+    if (digitsOnly.length === 10) {
+      cleaned = digitsOnly.slice(0, 9);
+    } else if (digitsOnly.length > 10) {
+      cleaned = digitsOnly.slice(0, 9);
     } else {
       cleaned = digitsOnly;
     }

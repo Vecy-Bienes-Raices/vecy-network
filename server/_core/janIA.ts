@@ -6628,7 +6628,7 @@ export async function processPrivateDmConversationalMessage(
       `Te puedo colaborar de inmediato en todo lo relacionado con finca raíz:\n` +
       `• 📄 *Factura Predial Bogotá y Certificado de Pago en PDF* (al instante con Hacienda)\n` +
       `• 🛡️ *Verificación de Cédula y Antecedentes en Policía Nacional* (en 20 segundos)\n` +
-      `• 🤝 *Bolsa Inmobiliaria Colaborativa y Matching Inteligente 45/10/45* (cruce algorítmico de Ofertas y Demandas: 80%-94% Match Intermedio y 95%-100% Match Perfecto a través de nuestra plataforma en toda Colombia)\n` +
+      `• 🤝 *Bolsa Inmobiliaria Colaborativa y Matching Inteligente 45/10/45* (cruce algorítmico de Ofertas y Demandas: 80%-94% Match Aproximado y 95%-100% Match Perfecto a través de nuestra plataforma en toda Colombia)\n` +
       `• ⚖️ *Asesoría Jurídica y Contractual* (Ley 820 de 2003, Ley 675 de 2001, promesas de compraventa, arras, estudio de títulos a 20 años en la SNR, cobro de comisiones pendientes)\n` +
       `• 📊 *Avalúos y Análisis Comparativo de Mercado (ACM)*\n` +
       `• 👤 *Atención Personalizada con nuestros Directores:* Eduardo Rivera y Jani Alves (+57 316 656 9719)\n\n` +
@@ -6669,7 +6669,7 @@ export async function processPrivateDmConversationalMessage(
           `CATÁLOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:\n` +
           `1. FACTURA PREDIAL BOGOTÁ Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con código de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretaría Distrital de Hacienda.\n` +
           `2. VERIFICACIÓN OFICIAL DE CÉDULA Y ANTECEDENTES: Validación de nombres completos y antecedentes en Policía Nacional en 20 segundos para blindar contratos de compraventa y arrendamiento.\n` +
-          `3. BOLSA INMOBILIARIA COLABORATIVA Y MATCHING INTELIGENTE 45/10/45: Cruce algorítmico de OFERTAS y DEMANDAS a través de nuestra plataforma entre colegas a nivel nacional con cualquier tipo de inmueble. Coincidencias entre el 80% al 94% ("MATCH INTERMEDIO") y del 95% al 100% de compatibilidad ("MATCH PERFECTO"). Esquema de comisión compartida 45/10/45 (45% asesor captador de oferta, 10% plataforma Vecy Network, 45% asesor colocador de demanda).\n` +
+          `3. BOLSA INMOBILIARIA COLABORATIVA Y MATCHING INTELIGENTE 45/10/45: Cruce algorítmico de OFERTAS y DEMANDAS a través de nuestra plataforma entre colegas a nivel nacional con cualquier tipo de inmueble. Coincidencias entre el 80% al 94% ("MATCH APROXIMADO") y del 95% al 100% de compatibilidad ("MATCH PERFECTO"). Esquema de comisión compartida 45/10/45 (45% asesor captador de oferta, 10% plataforma Vecy Network, 45% asesor colocador de demanda).\n` +
           `4. AVALÚOS Y ANÁLISIS COMPARATIVO DE MERCADO (ACM): Estimación comercial y catastral de inmuebles según estrato, metraje y zona.\n` +
           `5. ASESORÍA JURÍDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, régimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa, arras de retracto y confirmatorias, escrituración, estudio de títulos a 20 años en la SNR (gravámenes, afectación familiar, patrimonio inembargable) y cobro de comisiones pendientes.\n` +
           `6. ACOMPAÑAMIENTO BRÓKER PERSONALIZADO: Conexión directa con nuestros directores Eduardo A. Rivera y Jani Alves en el +57 316 656 9719 (https://wa.me/573166569719) para trámites notariales, peritajes presenciales y acompañamiento legal.\n\n` +

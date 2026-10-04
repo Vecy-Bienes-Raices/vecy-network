@@ -172,7 +172,35 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.31 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.32 — Octubre 2026
+
+### Novedades v32.32 (Entrega Nativa y Verificada de PDF Predial, Sanitización Inteligente de NIT a 9 Dígitos, Nomenclatura Match Aproximado y Reacción con Corazón ❤️):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Entrega de Archivos PDF Nativos en WhatsApp**: Eduardo reafirmó de forma contundente que JanIA **SÍ entrega el archivo PDF real de la Factura Predial y del Certificado de Pago** directamente en el chat de WhatsApp con archivo adjunto, nombre de archivo, peso en KB y vista previa (como se demostró empíricamente con Andrés G, CHIP `AAA0198HCOM` y `CC 79505340`). Si solo enviara el enlace web sería totalmente inútil. La descarga y entrega directa del documento en el chat es sagrada e innegociable.
+  2. **Regla Doctrinal de Sanitización de NIT (9 Dígitos sin DV)**:
+     - En Colombia, ante la Secretaría Distrital de Hacienda (SDH), los NITs se consultan exclusivamente con los 9 dígitos base sin dígito de verificación.
+     - Si el usuario se equivoca o entrega 10 dígitos (porque incluyó el dígito de verificación, guiones o puntos), JanIA como IA inteligente descarta automáticamente el último dígito y ejecuta el proceso con los 9 dígitos exactos. ¡Caso cerrado!
+  3. **Ajuste Doctrinal de Nomenclatura de Matching**:
+     - Modificado de: `80% al 94%: MATCH INTERMEDIO`
+     - A: `80% al 94%: MATCH APROXIMADO`.
+  4. **Ajuste de Reacción de Felicitación / Elogio**:
+     - Modificado de: `Felicitación / Elogio ("excelente", "me encanta") [⭐]`
+     - A: `Felicitación / Elogio ("excelente", "me encanta") [❤️]`.
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Sanitización Automática de NITs (`server/_core/predialService.ts`)**:
+     - Modificado `sanitizeDocumentNumber(raw, isNit)`: si `digitsOnly.length >= 10`, toma exactamente los primeros 9 dígitos (`digitsOnly.slice(0, 9)`), descartando el DV o dígitos sobrantes.
+  2. **Reacción Afectuosa con Corazón ❤️ (`server/_core/whatsapp-utils.ts`)**:
+     - Modificado `getEmpatheticReactionEmoji`: palabras de elogio, entusiasmo o agradecimiento profundo ("excelente", "me encanta", "genial", "super", "perfecto") devuelven `❤️`.
+  3. **Alineación Doctrinal de Matching (`server/_core/janIA.ts`)**:
+     - Actualizado mensaje de bienvenida y system prompt de DMs privados con `80%-94% Match Aproximado` y `MATCH APROXIMADO`.
+  4. **Suite de Tests de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**:
+     - Agregada sección 28 con tests unitarios para sanitización de NIT de 10 dígitos, preservación de cédulas de 10 dígitos y retorno de `❤️` ante elogios.
+- **Verificación Empírica**:
+  - Descarga oficial en vivo de Certificado de Pago en PDF ejecutada contra la Secretaría Distrital de Hacienda:
+    - CHIP: `AAA0198HCOM` | Cédula: `79505340` | Archivo: `Certificado_Pago_AAA0198HCOM_2026.pdf` (29.398 bytes) entregado con éxito ✅
+  - `tsc --noEmit` 0 errores ✅ | `npm run build` limpio ✅ | 128/128 tests Vitest ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.31 — Octubre 2026
 
 ### Novedades v32.31 (Entrega Robusta de PDF Predial, Soporte Mensajes Editados, Reacción Empática Contextual Inmediata en DMs, Doctrina Bolsa 45/10/45 y Cobro de Comisiones Pendientes):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

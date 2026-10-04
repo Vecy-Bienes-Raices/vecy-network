@@ -7,6 +7,45 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.32 — 03 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Entrega de Archivos PDF Nativos en WhatsApp**:
+   - Eduardo aclaró de forma enérgica y didáctica: *"¿Entendí o no que quisiste decir que JanIA ahora ya no puede entregar la factura predial ni certificado de pago en archivos PDF por el chat de Whatsapp? Es que si JanIA no entrega el PDF ya listo en Whatsapp como ya lo solía hacer antes, y si solo da el enlaces pues eso es como si JanIA sirviera para tres cosas: 1 Para nada, 2 Para NAda y 3 Para Nada. jajajajaja tu eres la verga. Ayer JanIA lo hizo de manera perfecta y sin excusa y es que por lógica si la factura o certificado de pago de un predial están a nombre de una persona jurídica, pues JanIA debe ir a la página de hacienda y buscar con ese número y si el usuario se equivoca y le entrega 10 números de un nit pero como son nueve pues fácil, JanIA ya sabe porque es inteligente y pues le quita el último digito y hace el proceso y punto. CAAso cerrado."*
+2. **Corrección Doctrinal de Nomenclatura de Matching**:
+   - Eduardo ordenó: *"Corrige esto: 80% al 94%: MATCH INTERMEDIO | por esto: 80% al 94%: MATCH APROXIMADO"*.
+3. **Corrección de Emoji de Reacción ante Felicitación / Elogio**:
+   - Eduardo ordenó: *"Corrige esto: Felicitación / Elogio ("excelente", "me encanta") [⭐] | Por esto: Felicitación / Elogio ("excelente", "me encanta")[❤️]"*.
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Confirmación Doctrinal de Entrega de Archivos PDF Nativos**:
+   - JanIA **SÍ entrega y continuará entregando siempre el archivo binario PDF real** directamente adjunto en el chat de WhatsApp (con nombre del archivo, tamaño en KB y vista previa), invocando `downloadPredialInvoicePdf` con Puppeteer y 2Captcha, y despachando el mensaje con `{ document: pdfBuffer, mimetype: 'application/pdf', fileName: ..., caption: ... }`.
+   - La aclaración previa se refería únicamente al caso en que la Secretaría Distrital de Hacienda arroje inconsistencias insubsanables (ej. cuando la persona no es la propietaria del predio en los registros catastrales), en cuyo caso se entrega la guía explicativa con el enlace directo; pero cuando los datos coinciden, el archivo PDF se entrega de inmediato en el chat.
+2. **Causa Raíz de Errores con NITs de 10 Dígitos en Hacienda**:
+   - En el portal de la Secretaría Distrital de Hacienda, el selector de tipo de documento para personas jurídicas es explícito: `NIT - Número de Identificacion Tributaria sin digito de Verificación`.
+   - Si un usuario ingresa un NIT de 10 dígitos (porque incluye el dígito de verificación al final sin separarlo con guion), Hacienda no encuentra el predio.
+   - Como JanIA es una IA inteligente dotada de razonamiento, ante cualquier NIT con 10 dígitos, debe descartar de forma automática el 10º dígito (el DV) y buscar en Hacienda con los 9 dígitos base exactos.
+3. **Nomenclatura y Reacción Afectuosa ❤️**:
+   - Cambiar "MATCH INTERMEDIO" por "MATCH APROXIMADO" en los mensajes institucionales y system prompts.
+   - Cambiar la reacción ante elogios ("excelente", "me encanta", "genial") de ⭐ al corazón ❤️ para mayor cercanía y calidez.
+
+### Acciones Ejecutadas
+1. **Sanitización Inteligente de NITs a 9 Dígitos (`server/_core/predialService.ts`)**:
+   - En `sanitizeDocumentNumber(raw, isNit)`: si `isNit = true` y el número limpio contiene 10 o más dígitos, se extraen automáticamente los primeros 9 dígitos base (`digitsOnly.slice(0, 9)`), descartando el DV o dígitos excedentes.
+2. **Reacción Empática con Corazón ❤️ (`server/_core/whatsapp-utils.ts`)**:
+   - En `getEmpatheticReactionEmoji`: ante felicitaciones, elogios o expresiones de entusiasmo ("excelente", "genial", "me encanta", "perfecto", "super"), JanIA reacciona con `❤️`.
+3. **Alineación Doctrinal de Matching a "MATCH APROXIMADO" (`server/_core/janIA.ts`)**:
+   - Actualizados `welcomeMsg` y el system prompt de DMs privados con `80%-94% Match Aproximado` y `MATCH APROXIMADO`.
+4. **Validación Empírica en Vivo de Descarga de PDF**:
+   - Ejecutado script de prueba en vivo contra la Secretaría Distrital de Hacienda con `AAA0198HCOM` y `CC 79505340`.
+   - Resultado: Descarga exitosa de `Certificado_Pago_AAA0198HCOM_2026.pdf` (29.398 bytes) expedido por la SDH a nombre de `JESUS GREGORIO CASTAÑO OROZCO` ✅
+5. **Suite de Pruebas de Regresión (`server/__tests__/regression.test.ts`)**:
+   - Agregada sección 28 con pruebas para sanitización de NIT de 10 dígitos a 9 dígitos, preservación de cédulas de 10 dígitos y asignación de `❤️`. 107/107 pruebas de regresión y 128/128 pruebas de Vitest pasando al 100%.
+6. **Incremento de Versión Oficial**:
+   - Elevada la versión a **v32.32** (`32.32.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.31 — 03 Octubre 2026
 
 ### Solicitud de Eduardo
