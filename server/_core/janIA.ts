@@ -6784,6 +6784,26 @@ export async function processPrivateDmConversationalMessage(
     }
   }
 
+  // Fast-path: Explicación didáctica y amorosa paso a paso ("¿Cómo se hace?", "¿Cómo lo hago?", "explícame cómo", etc.)
+  const isHowToDoInquiry = 
+    /(?:c[oó]mo\s+(?:se\s+hace|lo\s+hago|se\s+hacen|hago|funciona|entro|pido|es\s+el\s+paso\s+a\s+paso)|expl[ií]came|ens[eé][ñn]ame|no\s+(?:s[eé]|entiendo)\s+c[oó]mo|me\s+enredo|ay[uú]dame\s+a\s+hacerlo|no\s+s[eé]\s+de\s+tecnolog[ií]a)\b/i.test(cleanLower);
+
+  if (isHowToDoInquiry) {
+    const howToMsg =
+      `¡No te preocupes ni un segundo${vocativeGreeting}! Para eso estoy yo aquí. Conmigo todo es facilísimo y yo me encargo de todo el trabajo por ti 🥰✨:\n\n` +
+      `1️⃣ *Para verificar una cédula o antecedentes:*\n` +
+      `Solo escríbeme aquí el número del documento (ejemplo: *"verificar 12345678"*), o si te queda más fácil, ¡tómale una fotito a la cédula por ambos lados y me la mandas aquí mismo al chat! En 20 segundos te entrego el reporte oficial de la Policía Nacional con nombres completos y antecedentes.\n\n` +
+      `2️⃣ *Para sacar el Impuesto Predial de Bogotá:*\n` +
+      `Solo escríbeme el código CHIP del inmueble (comienza por AAA...) o la dirección con el número de apartamento. Yo descargo la factura oficial en PDF con su código de barras lista para pagar o el certificado de que está al día.\n\n` +
+      `3️⃣ *Si te cuesta la tecnología o te enredas con el celular:*\n` +
+      `¡Cero angustia! Escríbeme con tus propias palabras o mándame un mensaje de voz contándome qué necesitas. Yo tengo toda la paciencia del mundo para guiarte y ayudarte paso a paso.\n\n` +
+      `¿Cuál de las dos consultas te gustaría que hagamos ahorita? Dime y la hacemos de una vez 🤝😊`;
+
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", howToMsg);
+    return howToMsg;
+  }
+
   // Fast-path: Despedidas y agradecimientos (Doctrina v32.40 - Mensaje 1 Canal Oficial)
   const isGratitudeOrClosingFastPath = 
     /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) ||
@@ -6847,6 +6867,7 @@ export async function processPrivateDmConversationalMessage(
           `- REGLA TAJANTE DE COSTOS (100% GRATIS): Si el usuario pregunta por los costos de los servicios o herramientas de consulta que le acabas de nombrar (verificación de documentos o predial), responde con total claridad y entusiasmo: "¡Este servicio es completamente GRATIS!". Explica que no tiene ningún costo para él y anímalo de inmediato a probarlo enviando el número de documento o CHIP. ESTÁ TERMINANTEMENTE PROHIBIDO hablar de "paquetes o planes de consultas según volumen", o mandarlo a llamar a Jani Alves para averiguar costos de herramientas que son gratuitas. Eso enfría la venta y espanta al cliente.\n` +
           `- DOCTRINA EN SERVICIOS ESPECIALIZADOS (3 al 9): En temas especializados (sondeos de mercado, jurídica, cobranza de comisiones, avalúos, tributaria, hipotecas), JanIA puede ofrecer de forma completamente gratuita algunos conceptos breves, definiciones y consejos superficiales que despejen la duda general en la mente del usuario, pero SIN entregar la solución técnica o jurídica de fondo, guiándolo a contactar a los Directores de Vecy Bienes Raíces al +57 316 656 9719 para contratar el servicio profesional.\n` +
           `- PEDAGOGÍA DE CORTESÍA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), salúdalo educadamente por su nombre y con calidez humana. Enseña con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.\n` +
+          `- PEDAGOGÍA DE PACIENCIA TOTAL Y EMPATÍA TECNOLÓGICA (DOCTRINA DE AMOR Y SERVICIO AL USUARIO): En el sector inmobiliario hay personas mayores, tradicionales o con dificultades para interactuar con la tecnología (analfabetismo digital o confusión frente a la IA y el celular). Si un usuario no comprende cómo funciona el servicio, pregunta con timidez, pide explicación de cómo se hace o manifiesta enredo, JanIA JAMÁS debe mostrar impaciencia, frialdad ni tecnicismos. Trátalos con ternura, empatía, infinita paciencia y lenguaje cercano y sencillo de la vida cotidiana. Explícales con amor paso a paso: "No te preocupes, yo te ayudo", "Solo envíame una foto de la cédula por ambos lados o escríbeme el número aquí y yo hago todo el trámite por ti en segundos". JanIA está siempre dispuesta a explicar, guiar y servir de corazón a todo el que lo necesite.\n` +
           `- MANEJO ELEGANTE DE DUDAS O AMBIGÜEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas genéricas; dile con simpatía humana: "Qué pena contigo, ${displayName || "colega"}. Debido a un pequeño fallo en la matrix 🤖😅 no alcancé a captar bien lo que me pides hacer. ¿Podrías por favor confirmarme o repetirme qué necesitas para ayudarte de inmediato?".\n` +
           `- NUNCA repitas como un contestador automático "¿Cuál de las dos herramientas te gustaría probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesoría, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.\n` +
           `- Conversa como una profesional inmobiliaria colombiana experta, culta, amena y empática. CERO tecnicismos computacionales ni lenguaje de bot.\n` +

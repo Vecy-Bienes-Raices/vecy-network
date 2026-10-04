@@ -19765,6 +19765,24 @@ Si quieres, \xA1pong\xE1moslo a prueba ahora mismo! Env\xEDame el n\xFAmero de c
       return freeCostMsg;
     }
   }
+  const isHowToDoInquiry = /(?:c[oó]mo\s+(?:se\s+hace|lo\s+hago|se\s+hacen|hago|funciona|entro|pido|es\s+el\s+paso\s+a\s+paso)|expl[ií]came|ens[eé][ñn]ame|no\s+(?:s[eé]|entiendo)\s+c[oó]mo|me\s+enredo|ay[uú]dame\s+a\s+hacerlo|no\s+s[eé]\s+de\s+tecnolog[ií]a)\b/i.test(cleanLower);
+  if (isHowToDoInquiry) {
+    const howToMsg = `\xA1No te preocupes ni un segundo${vocativeGreeting}! Para eso estoy yo aqu\xED. Conmigo todo es facil\xEDsimo y yo me encargo de todo el trabajo por ti \u{1F970}\u2728:
+
+1\uFE0F\u20E3 *Para verificar una c\xE9dula o antecedentes:*
+Solo escr\xEDbeme aqu\xED el n\xFAmero del documento (ejemplo: *"verificar 12345678"*), o si te queda m\xE1s f\xE1cil, \xA1t\xF3male una fotito a la c\xE9dula por ambos lados y me la mandas aqu\xED mismo al chat! En 20 segundos te entrego el reporte oficial de la Polic\xEDa Nacional con nombres completos y antecedentes.
+
+2\uFE0F\u20E3 *Para sacar el Impuesto Predial de Bogot\xE1:*
+Solo escr\xEDbeme el c\xF3digo CHIP del inmueble (comienza por AAA...) o la direcci\xF3n con el n\xFAmero de apartamento. Yo descargo la factura oficial en PDF con su c\xF3digo de barras lista para pagar o el certificado de que est\xE1 al d\xEDa.
+
+3\uFE0F\u20E3 *Si te cuesta la tecnolog\xEDa o te enredas con el celular:*
+\xA1Cero angustia! Escr\xEDbeme con tus propias palabras o m\xE1ndame un mensaje de voz cont\xE1ndome qu\xE9 necesitas. Yo tengo toda la paciencia del mundo para guiarte y ayudarte paso a paso.
+
+\xBFCu\xE1l de las dos consultas te gustar\xEDa que hagamos ahorita? Dime y la hacemos de una vez \u{1F91D}\u{1F60A}`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", howToMsg);
+    return howToMsg;
+  }
   const isGratitudeOrClosingFastPath = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
   if (isGratitudeOrClosingFastPath) {
     const { getChannelInviteGoodbyeMessage: getChannelInviteGoodbyeMessage2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
@@ -19813,6 +19831,7 @@ ${hasPriorHistory ? '- YA EST\xC1S EN UNA CONVERSACI\xD3N ACTIVA CON EL USUARIO.
 - REGLA TAJANTE DE COSTOS (100% GRATIS): Si el usuario pregunta por los costos de los servicios o herramientas de consulta que le acabas de nombrar (verificaci\xF3n de documentos o predial), responde con total claridad y entusiasmo: "\xA1Este servicio es completamente GRATIS!". Explica que no tiene ning\xFAn costo para \xE9l y an\xEDmalo de inmediato a probarlo enviando el n\xFAmero de documento o CHIP. EST\xC1 TERMINANTEMENTE PROHIBIDO hablar de "paquetes o planes de consultas seg\xFAn volumen", o mandarlo a llamar a Jani Alves para averiguar costos de herramientas que son gratuitas. Eso enfr\xEDa la venta y espanta al cliente.
 - DOCTRINA EN SERVICIOS ESPECIALIZADOS (3 al 9): En temas especializados (sondeos de mercado, jur\xEDdica, cobranza de comisiones, aval\xFAos, tributaria, hipotecas), JanIA puede ofrecer de forma completamente gratuita algunos conceptos breves, definiciones y consejos superficiales que despejen la duda general en la mente del usuario, pero SIN entregar la soluci\xF3n t\xE9cnica o jur\xEDdica de fondo, gui\xE1ndolo a contactar a los Directores de Vecy Bienes Ra\xEDces al +57 316 656 9719 para contratar el servicio profesional.
 - PEDAGOG\xCDA DE CORTES\xCDA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), sal\xFAdalo educadamente por su nombre y con calidez humana. Ense\xF1a con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.
+- PEDAGOG\xCDA DE PACIENCIA TOTAL Y EMPAT\xCDA TECNOL\xD3GICA (DOCTRINA DE AMOR Y SERVICIO AL USUARIO): En el sector inmobiliario hay personas mayores, tradicionales o con dificultades para interactuar con la tecnolog\xEDa (analfabetismo digital o confusi\xF3n frente a la IA y el celular). Si un usuario no comprende c\xF3mo funciona el servicio, pregunta con timidez, pide explicaci\xF3n de c\xF3mo se hace o manifiesta enredo, JanIA JAM\xC1S debe mostrar impaciencia, frialdad ni tecnicismos. Tr\xE1talos con ternura, empat\xEDa, infinita paciencia y lenguaje cercano y sencillo de la vida cotidiana. Expl\xEDcales con amor paso a paso: "No te preocupes, yo te ayudo", "Solo env\xEDame una foto de la c\xE9dula por ambos lados o escr\xEDbeme el n\xFAmero aqu\xED y yo hago todo el tr\xE1mite por ti en segundos". JanIA est\xE1 siempre dispuesta a explicar, guiar y servir de coraz\xF3n a todo el que lo necesite.
 - MANEJO ELEGANTE DE DUDAS O AMBIG\xDCEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas gen\xE9ricas; dile con simpat\xEDa humana: "Qu\xE9 pena contigo, ${displayName || "colega"}. Debido a un peque\xF1o fallo en la matrix \u{1F916}\u{1F605} no alcanc\xE9 a captar bien lo que me pides hacer. \xBFPodr\xEDas por favor confirmarme o repetirme qu\xE9 necesitas para ayudarte de inmediato?".
 - NUNCA repitas como un contestador autom\xE1tico "\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesor\xEDa, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.
 - Conversa como una profesional inmobiliaria colombiana experta, culta, amena y emp\xE1tica. CERO tecnicismos computacionales ni lenguaje de bot.

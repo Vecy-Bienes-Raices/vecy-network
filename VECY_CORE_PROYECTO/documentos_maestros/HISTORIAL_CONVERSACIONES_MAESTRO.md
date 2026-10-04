@@ -15,14 +15,16 @@
      a) **Prohibición de "45/10/45" al Inicio**: JanIA soltó en su primer saludo la mención de la "bolsa colaborativa 45/10/45". Eso confunde a los usuarios porque nadie en el mercado conoce ese término técnico. Solo Eduardo, Jani y el sistema saben qué significa.
      b) **Perfilamiento Conversacional Amigable**: JanIA asumió que la usuaria era "colega" sin saber a qué se dedica. Eduardo indicó que JanIA debe presentarse con orgullo (*"Soy JanIA, tu asistente inmobiliaria con IA creada por VECY BIENES RAÍCES"*) e indagar con una pregunta abierta: *"¿Cuéntame a qué te dedicas o qué haces actualmente? Así podré orientarte de la mejor manera y contarte cómo podemos facilitarte la vida hoy 🤝✨"*. Esto permite comprender al usuario y aplicar marketing conversacional persuasivo.
      c) **Manejo Estructurado ante la Pregunta "¿Cómo es lo de las consultas?"**: JanIA soltó un monólogo largo asumiendo que solo se trataba de Policía y antecedentes. Eduardo instruyó que debe preguntar: *"Primero cuéntame qué clase de consulta deseas hacer o sobre qué tema necesitas apoyo:"* y desplegar el catálogo dividido: 1 y 2 Gratuitas (Verificación de documentos en Policía Nacional y Factura Predial Bogotá con certificados de pago); 3 al 9 Especializadas (Sondeos de mercado m², Asesoría jurídica, Hábeas Data, Recuperación de comisiones, Avalúos RAA, Liquidaciones tributarias y Préstamos hipotecarios).
-     d) **Respuesta Tajante de 100% GRATIS ante "¿Los costos ?"**: Cuando Reina preguntó *"Los costos ?"*, JanIA en lugar de decir de inmediato y con alegría *"¡Reina, este servicio es completamente GRATIS!"*, se puso a divagar sobre esquemas según volumen, paquetes de consultas y mandó a llamar a Jani Alves para averiguar planes inexistentes. Eso espantó a la clienta y enfrió la venta.
-     e) **Despedida en 2 Mensajes Secuenciales**: Cuando Reina dijo *"Ok muchas gracias 🫂"*, JanIA la dejó ir sin pedir la reseña en Google. Eduardo instruyó dividir la despedida en 2 mensajes cortos, elegantes y persuasivos: Mensaje 1 (Canal Oficial de WhatsApp) y Mensaje 2 (Google Review y despedida de muchos éxitos en sus cierres).
+     d) **Respuesta Tajante de 100% GRATIS ante "¿Los costos ?"**: Cuando Reina preguntó *"Los costos ?"*, JanIA en lugar de decir de inmediato y con alegría *"¡Reina, este servicio es completamente GRATIS!"*, se puso a divagar sobre esquemas según volumen, paquetes de consultas y mandó a llamar a Jani      e) **Despedida en 2 Mensajes Secuenciales**: Cuando Reina dijo *"Ok muchas gracias 🫂"*, JanIA la dejó ir sin pedir la reseña en Google. Eduardo instruyó dividir la despedida en 2 mensajes cortos, elegantes y persuasivos: Mensaje 1 (Canal Oficial de WhatsApp) y Mensaje 2 (Google Review y despedida de muchos éxitos en sus cierres).
+   - **Doctrina de Amor al Usuario, Paciencia Total y Empatía Tecnológica Paso a Paso**:
+     - Eduardo instruyó: *"Sí envíale y aparte si te llega a pedir explicación pues dásela a ella o a quien te pida, cómo se hace, debes entender que hay personas muy cortas o pobres de mente que no entienden o tal vez no están acorde con la tecnología y les cuesta entenderlo. Puede ser por la edad de algunos y otros por ignorancia digital o en general. Tenles paciencia y que JanIa siempre está dispuesta a explicarle y ayudarle y guiarle a todo el que lo necesite."*
+     - Enviar los 2 mensajes de rectificación y rescate a Reina Salazar y dejar a JanIA preparada para explicar de forma tierna, sencilla y paso a paso cómo se hace cada trámite sin tecnicismos ni frialdad.
 
 ### Diagnóstico Técnico y Causas Raíz
 1. **Inyección de "45/10/45" en el Prompt y Welcome Message**:
    - Tanto el fast-path inicial como el System Prompt de Gemini LLM incluían `Bolsa Inmobiliaria Colaborativa y Matching Inteligente 45/10/45`.
-2. **Falta de Interceptores Especializados de Marketing**:
-   - No existían detectores dedicados para preguntas genéricas sobre consultas (`"¿Cómo es lo de las consultas?"`) ni para preguntas sobre costos (`"Los costos ?"`), dejando que el LLM inventara planes comerciales inexistentes.
+2. **Falta de Interceptores Especializados de Marketing y Pedagogía**:
+   - No existían detectores dedicados para preguntas genéricas sobre consultas (`"¿Cómo es lo de las consultas?"`), ni sobre costos (`"Los costos ?"`), ni para solicitudes de explicación paso a paso de usuarios con dificultades técnicas (`"¿Cómo se hace?"`, `"no sé cómo"`, etc.), dejando que el LLM inventara planes comerciales o usara lenguaje técnico distante.
 3. **Fallo de la Regex `isGratitudeOrClosing` ante Variaciones como `"Ok muchas gracias 🫂"`**:
    - La regex previa estaba anclada con `^` y solo admitía palabras exactas al inicio sin considerar prefijos como `"Ok "`, `"bueno "`, emojis (`🫂`, `🙏`), ni saludos de cierre.
 
@@ -31,18 +33,21 @@
    - Saludo inicial cálido con saludo horario, nombre, presentación institucional y pregunta abierta de perfilamiento (*"¿a qué te dedicas o qué haces actualmente?"*), suprimiendo toda mención a "45/10/45".
    - Interceptor dedicado para consultas (`isConsultasInquiry`) con el menú catalogado de 1 a 9 separando las herramientas gratuitas de las especializadas.
    - Interceptor dedicado para costos (`isCostInquiry`) respondiendo categóricamente que el servicio es completamente GRATIS e invitando a probarlo de inmediato.
+   - Interceptor dedicado para explicación didáctica y amorosa paso a paso (`isHowToDoInquiry`): responde con ternura y sencillez guiando en 3 pasos claros (enviar número o foto del documento por ambos lados, o dar el CHIP del predio) para que cualquier persona mayor o sin experiencia digital pueda realizar su consulta sin frustración.
    - Interceptor de gratitud que devuelve el Mensaje 1 con invitación al Canal Oficial de WhatsApp.
-   - System prompt de Gemini LLM enriquecido con las doctrinas de perfilamiento, prohibición de 45/10/45 temprano, respuestas gratuitas directas y remisión al bróker humano (+57 316 656 9719) para casos profesionales especializados de fondo.
+   - System prompt de Gemini LLM enriquecido con las doctrinas de perfilamiento, prohibición de 45/10/45 temprano, respuestas gratuitas directas, pedagogía de paciencia total y remisión al bróker humano (+57 316 656 9719) para casos profesionales especializados de fondo.
 2. **Actualización de Mensajes y Bucle Viral en `server/_core/predialService.ts`**:
    - Actualizado `GOOGLE_REVIEW_MESSAGE` con el texto exacto persuasivo de Eduardo e incorporado el saludo final de éxitos en los cierres.
    - Exportado `getChannelInviteGoodbyeMessage`.
 3. **Despacho Desacoplado y Secuencial en `server/_core/whatsapp-match.ts`**:
    - Regex `isGratitudeOrClosing` robusta y tolerante a combinaciones coloquiales.
    - Despacho secuencial del Mensaje 2 (Google Review) con micro-pausa de 1.2 segundos y persistencia en la base de datos de PostgreSQL.
-4. **Pruebas de Regresión y Validación**:
-   - Creada suite de pruebas en `server/__tests__/regression.test.ts` validando el ciclo completo de la doctrina v32.40.
+4. **Rescate en Vivo de Reina Salazar (`154585050177761@lid`)**:
+   - Despachados con éxito al chat de Reina Salazar en WhatsApp el mensaje de aclaración con la invitación al Canal Oficial y el segundo mensaje con el enlace a la reseña de Google y buenos deseos para sus negocios.
+5. **Pruebas de Regresión y Validación**:
+   - Creada suite de pruebas en `server/__tests__/regression.test.ts` validando el ciclo completo de la doctrina v32.40 (incluyendo la explicación didáctica paso a paso).
    - 136/136 tests Vitest aprobados al 100%. `tsc --noEmit` 0 errores.
-   - Compilación limpia de producción en 21.1s.
+   - Compilación limpia de producción en 15.6s.
    - Incremento de versión oficial a **v32.40** (`32.40.0`).
 
 ## 📋 SESIÓN v32.39 — 04 Octubre 2026

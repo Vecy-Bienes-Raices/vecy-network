@@ -339,12 +339,13 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
    - Menú de consultas catalogado dividiendo las herramientas gratuitas (1 y 2) de las especializadas (3 al 9).
    - Respuesta tajante e inmediata de que las herramientas son completamente GRATIS y llamado directo a la acción.
    - Despedida secuencial en 2 mensajes: Mensaje 1 (Canal Oficial de WhatsApp) y Mensaje 2 (Google Review y deseos de éxito en cierres).
+   - **Doctrina de Amor al Usuario, Paciencia Total y Empatía Tecnológica Paso a Paso**: Guía tierna y desglosada para usuarios mayores o sin alfabetización digital ("¿Cómo se hace?", "no sé cómo"), explicando en 3 pasos sencillos cómo realizar sus consultas (enviar número o fotito de la cédula por ambos lados, o dar el CHIP).
 
 **Decisiones de Arquitectura y Soluciones Aplicadas:**
 1. **Interceptores en `server/_core/janIA.ts`**:
    - Supresión de "45/10/45" en el saludo inicial y bienvenida.
-   - Creación de detectores dedicados para preguntas sobre consultas (`isConsultasInquiry`) y preguntas sobre costos (`isCostInquiry`).
-   - System Prompt de Gemini LLM blindado con reglas de perfilamiento, prohibición de 45/10/45 temprano y respuesta tajante de costo cero.
+   - Creación de detectores dedicados para preguntas sobre consultas (`isConsultasInquiry`), costos (`isCostInquiry`) y guía paso a paso para personas con barreras tecnológicas (`isHowToDoInquiry`).
+   - System Prompt de Gemini LLM blindado con reglas de perfilamiento, prohibición de 45/10/45 temprano, respuesta tajante de costo cero y pedagogía de paciencia amorosa.
 2. **Plantillas Desacopladas en `server/_core/predialService.ts` y `server/_core/whatsapp-match.ts`**:
    - `GOOGLE_REVIEW_MESSAGE` actualizado con el texto persuasivo exacto de Eduardo.
    - Despacho secuencial del Mensaje 2 con micro-pausa de 1.2 segundos y persistencia en base de datos.

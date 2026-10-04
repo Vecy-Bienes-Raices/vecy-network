@@ -196,12 +196,15 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
      - **Mensaje 1 (Canal Oficial)**: `Con todo el gusto, {{nombre}}. Para nosotros en VECY es un verdadero placer apoyarte en tus proyectos y gestiones inmobiliarias. Antes de que te vayas, te invito a unirte a nuestro Canal Oficial de WhatsApp (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b), donde compartimos cosas que te pueden interesar.`
      - **Mensaje 2 (Google Review y Cierre Exitoso)**: `⭐ Tu opinión es muy importante para nosotros. La necesitamos muchísimo para seguir mejorando y logrando que más colegas y propietarios conozcan nuestro servicio. Si te gustó la atención y la rapidez, regálanos un comentario y calificación. Significaría un mundo para todo el equipo de Vecy Bienes Raíces:\n👉 https://g.page/r/CctNbwU6UpX5EBM/review ✨\n\n¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨`
      - Detección tolerante para capturar agradecimientos como `"Ok muchas gracias 🫂"`, `"muchas gracias"`, etc.
+  6. **Doctrina de Amor al Usuario, Paciencia Total y Empatía Tecnológica Paso a Paso**:
+     - Eduardo instruyó atender con profunda paciencia y cariño a las personas mayores, analfabetas digitales o que les cuesta la tecnología.
+     - Fast-path y prompt enriquecido para responder a *"¿cómo se hace?"*, *"no sé cómo"*, *"me enredo"*, etc., con ternura, sin tecnicismos y con una guía sencilla de 3 pasos (enviar número o fotito de la cédula por ambos lados, o dar el CHIP), reiterando que JanIA siempre está disponible para guiar con amor a todo el que lo necesite.
 - **Acciones Ejecutadas y Blindaje de Arquitectura**:
-  1. `server/_core/janIA.ts`: Interceptores dedicados para saludo con perfilamiento, menú de consultas, costos 100% gratuitos y despedida con mensaje 1; System Prompt de Gemini enriquecido con directrices de ventas y marketing conversacional.
+  1. `server/_core/janIA.ts`: Interceptores dedicados para saludo con perfilamiento, menú de consultas, costos 100% gratuitos, explicación didáctica paso a paso (`isHowToDoInquiry`) y despedida con mensaje 1; System Prompt de Gemini enriquecido con directrices de ventas, marketing conversacional y pedagogía de paciencia amorosa.
   2. `server/_core/predialService.ts`: Actualizado `GOOGLE_REVIEW_MESSAGE` con el mensaje exacto de Eduardo y exportado `getChannelInviteGoodbyeMessage`.
   3. `server/_core/whatsapp-match.ts`: Regex `isGratitudeOrClosing` robusta y tolerante a variaciones coloquiales ("ok muchas gracias", emojis) con despacho desacoplado y secuencial del Mensaje 2.
-  4. `server/__tests__/regression.test.ts`: Pruebas automatizadas cubriendo el ciclo completo de la doctrina v32.40.
-- **Verificación**: `tsc --noEmit` 0 errores ✅ | 136/136 tests Vitest aprobados al 100% ✅ | `npm run build` limpio en 21.1s ✅
+  4. `server/__tests__/regression.test.ts`: Pruebas automatizadas cubriendo el ciclo completo de la doctrina v32.40 (incluyendo la explicación didáctica paso a paso).
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | 136/136 tests Vitest aprobados al 100% ✅ | `npm run build` limpio en 15.6s ✅
 
 ## 🔖 VERSIÓN ANTERIOR: v32.39 — Octubre 2026
 

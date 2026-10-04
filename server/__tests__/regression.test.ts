@@ -2649,6 +2649,14 @@ Adriana Rebeca Orejuela`;
       // 5. Mensaje 2 (Google Review y despedida persuasiva)
       expect(GOOGLE_REVIEW_MESSAGE).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
       expect(GOOGLE_REVIEW_MESSAGE).toContain("¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨");
+
+      // 6. Doctrina de Paciencia y Explicación Didáctica Paso a Paso ("¿Cómo se hace?", etc.)
+      const howToRes = await processPrivateDmConversationalMessage("¿Cómo se hace? no sé cómo", testUserId, "Reina Salazar");
+      expect(howToRes).toContain("¡No te preocupes ni un segundo, Reina! Para eso estoy yo aquí");
+      expect(howToRes).toContain("Para verificar una cédula o antecedentes");
+      expect(howToRes).toContain("Para sacar el Impuesto Predial de Bogotá");
+      expect(howToRes).toContain("Si te cuesta la tecnología o te enredas con el celular");
+      expect(howToRes).toContain("tengo toda la paciencia del mundo");
     });
   });
 });
