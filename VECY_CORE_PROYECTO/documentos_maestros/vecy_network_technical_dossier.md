@@ -322,6 +322,23 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.37 — Octubre 2026
+
+#### 📌 SOPORTE OFICIAL MULTIDOCUMENTO EN POLICÍA NACIONAL (CÉDULA DE EXTRANJERÍA, PASAPORTE, DOCUMENTO PAÍS ORIGEN), SUBSANACIÓN DE TIPADO TYPESCRIPT Y MARCO LEGAL DECRETO 019 DE 2012
+
+**Requerimiento y Objetivos:**
+1. **Subsanación de Tipado TypeScript en Tests de Regresión**: Corregir el error TS2353 en `server/__tests__/regression.test.ts:2551` ampliando el tipo de retorno de `queryPoliciaNacional`.
+2. **Soporte Multidocumento Oficial en Policía Nacional**: Integrar las cuatro opciones oficiales del portal de Antecedentes Judiciales de la Policía Nacional: Cédula de Ciudadanía (`cc`), Cédula de Extranjería (`cx`), Pasaporte (`pa`) y Documento País de Origen (`dp`), permitiendo caracteres alfanuméricos en pasaportes y documentos internacionales.
+3. **Doctrina Legal Completa del Portal Oficial**: Consagrar en el sistema el marco normativo del Art. 94 del Decreto Ley 019 de 2012, Ley Estatutaria 1581 de 2012, Decreto 1377 de 2013 y Art. 15 C.P.
+
+**Decisiones de Arquitectura y Soluciones Aplicadas:**
+1. **Contrato de Tipado Robusto (`server/routers/agenda.ts`)**: Ampliado el retorno de `queryPoliciaNacional` para incluir `cedula` y `tipoDoc` de forma explícita y tipada.
+2. **Extracción y Sanitización Adaptativa (`server/_core/identityVerificationService.ts`)**: Soporte de formatos alfanuméricos para `pa` y `dp` (5 a 15 caracteres) y numéricos para `cc` y `cx`. Formateo condicional y etiquetas institucionales legibles (`Cédula de Extranjería (C.E.)`, `Pasaporte`, `Documento País de Origen (D.P.)`).
+3. **Doctrina Unificada**: Actualizados prompts maestros (`base.md`, `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`, `janIA.ts`) ratificando que la verificación ampara todos los documentos de identidad legales en Colombia sin discriminación y bajo estricto apego al Hábeas Data.
+4. **Versión Oficial**: Incrementada a **v32.37** (`32.37.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 🔖 v32.36 — Octubre 2026
 
 #### 📌 BLINDAJE ANTI-ALUCINACIONES EN VERIFICACIÓN DE IDENTIDAD EN DMs, DETECCIÓN EXHAUSTIVA DE "CC:" / "VERIFICAR", INTERCEPTOR DE SEGURIDAD NATIVO Y CASO MIRIAM HERZ

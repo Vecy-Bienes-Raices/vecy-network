@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.36";
+    VECY_VERSION = "v32.37";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -13663,14 +13663,22 @@ async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
   const t2 = (tipoDocInput || "").toLowerCase();
   if (t2.includes("extranjer") || t2 === "ce" || t2 === "cx") tipoDoc = "cx";
   else if (t2.includes("pasaporte") || t2 === "pa") tipoDoc = "pa";
-  else if (t2.includes("nit") || t2.includes("rut")) return { success: false };
-  const cacheKey = `POLICIA:${tipoDoc}:${cleanDoc}`;
+  else if (t2.includes("origen") || t2 === "dp" || t2 === "dpo") tipoDoc = "dp";
+  else if (t2.includes("nit") || t2.includes("rut")) return { success: false, cedula: cleanDoc, tipoDoc };
+  const sanitizedDoc = tipoDoc === "pa" || tipoDoc === "dp" ? (cleanDoc || "").replace(/[^0-9a-zA-Z]/g, "").toUpperCase() : (cleanDoc || "").replace(/\D/g, "");
+  const cacheKey = `POLICIA:${tipoDoc}:${sanitizedDoc}`;
   const cached = identityCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL) {
-    return { success: true, officialName: cached.fullName, source: "Central Oficial de Seguridad Notarial VECY Bienes Ra\xEDces (Cach\xE9)" };
+    return {
+      success: true,
+      officialName: cached.fullName,
+      source: "Central Oficial de Seguridad Notarial VECY Bienes Ra\xEDces (Cach\xE9)",
+      cedula: sanitizedDoc,
+      tipoDoc
+    };
   }
   const apiKey = process.env.TWOCAPTCHA_API_KEY || "673ddb810e9f700065ccbe6034f26629";
-  if (!apiKey) return { success: false };
+  if (!apiKey) return { success: false, cedula: sanitizedDoc, tipoDoc };
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       console.log(`[queryPoliciaNacional] Intento ${attempt}/2: Iniciando consulta para ${tipoDoc} ${cleanDoc}...`);
@@ -13783,25 +13791,31 @@ async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
         const rawFullName = matchNombres[1].trim();
         const officialName = parsePoliceAntecedentesFullName(rawFullName);
         identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
-        console.log(`[queryPoliciaNacional] \u2705 Identidad confirmada en intento ${attempt}: ${officialName} (${cleanDoc})`);
-        return { success: true, officialName, source: "Central Oficial de Seguridad Notarial VECY Bienes Ra\xEDces" };
+        console.log(`[queryPoliciaNacional] \u2705 Identidad confirmada en intento ${attempt}: ${officialName} (${sanitizedDoc})`);
+        return {
+          success: true,
+          officialName,
+          source: "Central Oficial de Seguridad Notarial VECY Bienes Ra\xEDces",
+          cedula: sanitizedDoc,
+          tipoDoc
+        };
       }
       console.warn(`[queryPoliciaNacional] Intento ${attempt}: No se detectaron nombres en la respuesta HTML. Texto: ${text2.substring(0, 300)}`);
       if (attempt < 2) {
         await new Promise((r) => setTimeout(r, 1500));
         continue;
       }
-      return { success: false };
+      return { success: false, cedula: sanitizedDoc, tipoDoc };
     } catch (err) {
       console.warn(`[queryPoliciaNacional] Error en intento ${attempt}:`, err?.message);
       if (attempt < 2) {
         await new Promise((r) => setTimeout(r, 1500));
         continue;
       }
-      return { success: false };
+      return { success: false, cedula: sanitizedDoc, tipoDoc };
     }
   }
-  return { success: false };
+  return { success: false, cedula: sanitizedDoc, tipoDoc };
 }
 function calcularDigitoVerificacionDIAN(nitStr) {
   const vpri = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71];
@@ -14538,7 +14552,8 @@ var identityVerificationService_exports = {};
 __export(identityVerificationService_exports, {
   executeIdentityVerificationFromWhatsApp: () => executeIdentityVerificationFromWhatsApp,
   extractCedulaForVerification: () => extractCedulaForVerification,
-  formatCedulaNumber: () => formatCedulaNumber
+  formatCedulaNumber: () => formatCedulaNumber,
+  getDocumentTypeLabel: () => getDocumentTypeLabel
 });
 function extractCedulaForVerification(text2, isPrivateDm = false) {
   if (!text2 || typeof text2 !== "string") return { found: false, cedula: "", tipoDoc: "cc" };
@@ -14550,54 +14565,106 @@ function extractCedulaForVerification(text2, isPrivateDm = false) {
   if (lower.includes("predial") || lower.includes("chip") || lower.includes("impuesto")) {
     return { found: false, cedula: "", tipoDoc: "cc" };
   }
-  const keywords = ["verificar", "verificacion", "verificaci\xF3n", "validar", "consultar", "revisar", "antecedentes", "c\xE9dula", "cedula", "documento"];
+  const keywords = ["verificar", "verificacion", "verificaci\xF3n", "validar", "consultar", "revisar", "chequear", "antecedentes", "c\xE9dula", "cedula", "documento", "extranjer\xEDa", "extranjeria", "pasaporte", "pasaportes"];
   const hasKeyword = keywords.some((kw) => lower.includes(kw));
   let tipoDoc = "cc";
-  if (lower.includes("ce") || lower.includes("extranjer")) tipoDoc = "ce";
-  else if (lower.includes("pasaporte") || lower.includes("pa")) tipoDoc = "pa";
-  const regexExplicit = /(?:verificar|verificaci[oó]n|validar|consultar|revisar|antecedentes|c[ée]dula|documento|cc)\s*(?:de\s+ciudadan[ií]a\s*)?(?:cc|ce|cx)?\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{6,10})/i;
+  if (lower.includes("extranjer") || /(?<!\p{L})(?:ce|cx)(?!\p{L})/iu.test(lower)) {
+    tipoDoc = "cx";
+  } else if (lower.includes("origen") || /(?<!\p{L})(?:dp|dpo)(?!\p{L})/iu.test(lower)) {
+    tipoDoc = "dp";
+  } else if (lower.includes("pasaporte") || /(?<!\p{L})pa(?!\p{L})/iu.test(lower)) {
+    tipoDoc = "pa";
+  }
+  if (tipoDoc === "dp") {
+    const regexDp = /(?:documento\s+pa[ií]s\s+(?:de\s+)?origen|dp|dpo)\s*[:#]?\s*([a-zA-Z0-9]{5,15})/i;
+    const matchDp = clean.match(regexDp);
+    if (matchDp && matchDp[1]) {
+      return { found: true, cedula: matchDp[1].toUpperCase(), tipoDoc: "dp" };
+    }
+  }
+  if (tipoDoc === "pa") {
+    const regexPa = /(?:pasaporte|pa)\s*[:#]?\s*([a-zA-Z0-9]{5,15})/i;
+    const matchPa = clean.match(regexPa);
+    if (matchPa && matchPa[1]) {
+      return { found: true, cedula: matchPa[1].toUpperCase(), tipoDoc: "pa" };
+    }
+  }
+  if (tipoDoc === "cx") {
+    const regexCe = /(?:verificar|validar|consultar|revisar|antecedentes|c[ée]dula)?\s*(?:de\s+extranjer[ií]a|ce|cx)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/i;
+    const matchCe = clean.match(regexCe);
+    if (matchCe && matchCe[1]) {
+      const rawNumber = matchCe[1].replace(/\D/g, "");
+      if (rawNumber.length >= 5 && rawNumber.length <= 10) {
+        return { found: true, cedula: rawNumber, tipoDoc: "cx" };
+      }
+    }
+  }
+  const regexExplicit = /(?:verificar|verificaci[oó]n|validar|consultar|revisar|antecedentes|c[ée]dula|documento|cc)\s*(?:de\s+ciudadan[ií]a\s*)?(?:cc|ce|cx)?\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/i;
   const matchExplicit = clean.match(regexExplicit);
   if (matchExplicit && matchExplicit[1]) {
     const rawNumber = matchExplicit[1].replace(/\D/g, "");
-    if (rawNumber.length >= 6 && rawNumber.length <= 10) {
+    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
       return { found: true, cedula: rawNumber, tipoDoc };
     }
   }
   if (hasKeyword) {
-    const numberMatches = clean.match(/\b([0-9]{6,10})\b/);
+    const numberMatches = clean.match(/\b([0-9]{5,10})\b/);
     if (numberMatches && numberMatches[1]) {
       return { found: true, cedula: numberMatches[1], tipoDoc };
     }
   }
-  const directCcMatch = clean.match(/\b(?:c\.?c\.?)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{6,10})\b/i);
+  const directCcMatch = clean.match(/\b(?:c\.?c\.?)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b/i);
   if (directCcMatch && directCcMatch[1]) {
     const rawNumber = directCcMatch[1].replace(/\D/g, "");
-    if (rawNumber.length >= 6 && rawNumber.length <= 10) {
+    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
       return { found: true, cedula: rawNumber, tipoDoc: "cc" };
     }
   }
-  const pureNumberMatch = clean.match(/^\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{6,10})\s*$/);
+  const directCeMatch = clean.match(/\b(?:c\.?e\.?|c\.?x\.?)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b/i);
+  if (directCeMatch && directCeMatch[1]) {
+    const rawNumber = directCeMatch[1].replace(/\D/g, "");
+    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
+      return { found: true, cedula: rawNumber, tipoDoc: "cx" };
+    }
+  }
+  const directPaMatch = clean.match(/\b(?:pasaporte|pa)\s*[:#]?\s*([a-zA-Z0-9]{5,15})\b/i);
+  if (directPaMatch && directPaMatch[1]) {
+    return { found: true, cedula: directPaMatch[1].toUpperCase(), tipoDoc: "pa" };
+  }
+  const pureNumberMatch = clean.match(/^\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\s*$/);
   if (pureNumberMatch && pureNumberMatch[1]) {
     const rawNumber = pureNumberMatch[1].replace(/\D/g, "");
-    if (rawNumber.length >= 6 && rawNumber.length <= 10) {
+    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
       if (isPrivateDm) {
         return { found: true, cedula: rawNumber, tipoDoc: "cc" };
       }
     }
   }
-  const janiaNumberMatch = clean.match(/(?:jania|@jania)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{6,10})/i);
+  const janiaNumberMatch = clean.match(/(?:jania|@jania)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/i);
   if (janiaNumberMatch && janiaNumberMatch[1]) {
     const rawNumber = janiaNumberMatch[1].replace(/\D/g, "");
-    if (rawNumber.length >= 6 && rawNumber.length <= 10) {
+    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
       return { found: true, cedula: rawNumber, tipoDoc: "cc" };
     }
   }
   return { found: false, cedula: "", tipoDoc: "cc" };
 }
-function formatCedulaNumber(cedula) {
-  const clean = (cedula || "").replace(/\D/g, "");
-  if (!clean) return cedula;
-  return Number(clean).toLocaleString("es-CO");
+function formatCedulaNumber(cedula, tipoDoc = "cc") {
+  if (!cedula) return "";
+  const clean = cedula.trim();
+  if (tipoDoc === "pa" || tipoDoc === "dp" || /[a-zA-Z]/.test(clean)) {
+    return clean.toUpperCase();
+  }
+  const onlyDigits = clean.replace(/\D/g, "");
+  if (!onlyDigits) return clean;
+  return Number(onlyDigits).toLocaleString("es-CO");
+}
+function getDocumentTypeLabel(tipoDoc = "cc") {
+  const t2 = (tipoDoc || "").toLowerCase();
+  if (t2 === "ce" || t2 === "cx") return "C\xE9dula de Extranjer\xEDa (C.E.)";
+  if (t2 === "pa") return "Pasaporte";
+  if (t2 === "dp" || t2 === "dpo") return "Documento Pa\xEDs de Origen (D.P.)";
+  return "C.C.";
 }
 async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = false) {
   const detection = extractCedulaForVerification(text2, isPrivateDm);
@@ -14605,20 +14672,15 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
     return { isVerificationRequest: false };
   }
   const { cedula, tipoDoc } = detection;
-  const formattedCedula = formatCedulaNumber(cedula);
-  const nowBogota = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", {
-    timeZone: "America/Bogota",
-    dateStyle: "long",
-    timeStyle: "short"
-  });
+  const formattedCedula = formatCedulaNumber(cedula, tipoDoc);
+  const docLabel = getDocumentTypeLabel(tipoDoc);
   try {
     const res = await queryPoliciaNacional(tipoDoc, cedula);
     if (res && res.success && res.officialName) {
       const officialName = formatTitleCase(res.officialName);
-      const docPrefix = tipoDoc.toUpperCase() === "CC" ? "C.C." : tipoDoc.toUpperCase();
       const reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
-\u{1F194} *El documento:* ${docPrefix} ${formattedCedula}
+\u{1F194} *El documento:* ${docLabel} ${formattedCedula}
 \u{1F464} *Pertenece a:* ${officialName}
 \u2705 *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
       return {
@@ -14633,14 +14695,14 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
     } else {
       const reportText = `\u26A0\uFE0F *CONSULTA DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
-No fue posible validar autom\xE1ticamente en este momento la C.C. *${formattedCedula}* en nuestra Central Oficial de Seguridad e Identidad.
+No fue posible validar autom\xE1ticamente en este momento el documento ${docLabel} *${formattedCedula}* en la Central Oficial de Antecedentes de la Polic\xEDa Nacional.
 
 \u{1F4CC} *Posibles motivos:*
-\u2022 El n\xFAmero de documento fue digitado con alg\xFAn d\xEDgito err\xF3neo o faltante.
-\u2022 El ciudadano corresponde a un documento de extranjer\xEDa o pasaporte que requiere verificaci\xF3n presencial.
-\u2022 Intermitencia temporal de enlace con las bases de datos oficiales de validaci\xF3n.
+\u2022 El n\xFAmero o caracteres del documento fueron digitados con alg\xFAn error.
+\u2022 Para documentos extranjeros (C\xE9dula de Extranjer\xEDa, Pasaporte o Documento Pa\xEDs de Origen), verificar que el titular cuente con registro migratorio activo en Colombia.
+\u2022 Intermitencia temporal de enlace con las bases de datos de la Polic\xEDa Nacional.
 
-\u{1F4A1} Por favor revisa el n\xFAmero e intenta nuevamente escribi\xE9ndome: *"JanIA, verifica la c\xE9dula ${cedula}"*.`;
+\u{1F4A1} Por favor revisa los datos e intenta nuevamente escribi\xE9ndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.`;
       return {
         isVerificationRequest: true,
         cedula,
@@ -14655,7 +14717,7 @@ No fue posible validar autom\xE1ticamente en este momento la C.C. *${formattedCe
       cedula,
       tipoDoc,
       success: false,
-      reportText: `\u26A0\uFE0F Ocurri\xF3 una intermitencia temporal de enlace en nuestra central de verificaci\xF3n para la c\xE9dula ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`
+      reportText: `\u26A0\uFE0F Ocurri\xF3 una intermitencia temporal de enlace en nuestra central de verificaci\xF3n para el documento ${docLabel} ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`
     };
   }
 }
@@ -19612,11 +19674,11 @@ Te puedo colaborar de inmediato en todo lo relacionado con finca ra\xEDz:
   }
   const isDocVerificationIntent = /(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) && !/\b\d{6,11}\b/.test(clean);
   if (isDocVerificationIntent) {
-    const docPromptMsg = `\xA1Claro que s\xED${vocativeGreeting}! Para consultar los antecedentes y verificar la identidad en la Polic\xEDa Nacional, es indispensable contar con el n\xFAmero de c\xE9dula exacto.
+    const docPromptMsg = `\xA1Claro que s\xED${vocativeGreeting}! Para consultar los antecedentes y verificar la identidad en la Polic\xEDa Nacional, es indispensable contar con el n\xFAmero de c\xE9dula exacto (o documento de identidad: C\xE9dula de Extranjer\xEDa, Pasaporte o Documento del Pa\xEDs de Origen).
 
-\u{1F4CC} *Nota legal de seguridad y H\xE1beas Data (Ley 1581 de 2012):* En Colombia, las plataformas oficiales de seguridad y la Registradur\xEDa Nacional no permiten buscar n\xFAmeros de documento usando \xFAnicamente nombres o apellidos para proteger la privacidad ciudadana. Solo se puede verificar a partir del n\xFAmero de c\xE9dula que el propio titular suministra.
+\u{1F4CC} *Nota legal de seguridad y H\xE1beas Data (Ley 1581 de 2012):* Conforme al art\xEDculo 94 del Decreto Ley 019 de 2012 y la Ley 1581 de 2012, en Colombia las plataformas oficiales de seguridad y la Registradur\xEDa Nacional no permiten buscar n\xFAmeros de documento usando \xFAnicamente nombres o apellidos para proteger la privacidad ciudadana. Solo se puede verificar a partir del n\xFAmero de documento que el propio titular suministra.
 
-P\xEDdele con toda tranquilidad a tu cliente su n\xFAmero de documento (o una fotito de la c\xE9dula por ambas caras) para agendar la visita. Escr\xEDbemelo aqu\xED y en 20 segundos te entrego el reporte oficial de validaci\xF3n \u{1F91D}.`;
+P\xEDdele con toda tranquilidad a tu cliente o colega su n\xFAmero de documento (o una fotito de la c\xE9dula por ambas caras) para agendar la visita con total seguridad. Escr\xEDbemelo aqu\xED (ej: *"verificar cc: XXXXXXXX"* o *"verificar pasaporte: XXXXXXXX"*) y en 20 segundos te entrego el reporte oficial de validaci\xF3n \u{1F91D}.`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", docPromptMsg);
     return docPromptMsg;
@@ -19654,15 +19716,16 @@ DOCTRINA OFICIAL VECY: PROTECCI\xD3N DE DATOS (LEY 1581 DE 2012), H\xC1BEAS DATA
   En el gremio inmobiliario existen colegas (como Kelly Carvajal) que tienen la creencia err\xF3nea de que verificar la identidad de los clientes viola el H\xE1beas Data, y por temor o desinformaci\xF3n, cuando la c\xE9dula no coincide con el nombre en apps como Verif\xEDquese, cancelan la visita inventando pretextos falsos ("los due\xF1os desistieron", "ya no van a estar", "recibieron otra oferta").
 - POSTURA DOCTRINAL Y LEGAL DE VECY BIENES RA\xCDCES (100% LEGAL Y \xC9TICA):
   1. SUMINISTRO VOLUNTARIO POR EL TITULAR: El cliente interesado en visitar un inmueble privado habitado o desocupado suministra libre y voluntariamente sus datos (nombre y n\xFAmero de identificaci\xF3n) para solicitar el servicio y coordinar el ingreso. Jam\xE1s se investiga a nadie a sus espaldas.
-  2. FINALIDAD LEG\xCDTIMA DE SEGURIDAD (Art. 4 y 10 Ley 1581 de 2012 y Ley 675 de 2001 de Propiedad Horizontal): Validar la identidad de quien ingresa a una copropiedad o inmueble es una medida de debida diligencia indispensable para proteger la vida, la integridad f\xEDsica y el patrimonio de los propietarios, de los residentes del conjunto y del propio asesor inmobiliario frente a riesgos de suplantaci\xF3n, estafa o delincuencia com\xFAn.
-  3. NO EXISTE B\xDASQUEDA INVERSA EN COLOMBIA: La Registradur\xEDa Nacional no permite (por H\xE1beas Data) averiguar n\xFAmeros de c\xE9dula a partir de nombres. Las consultas oficiales del Estado (Polic\xEDa Nacional, Procuradur\xEDa SIRI, RUES) se efect\xFAan de manera leg\xEDtima partiendo del n\xFAmero que el propio ciudadano entreg\xF3.
-  4. ANTECEDENTES JUDICIALES Y DISCIPLINARIOS SON REGISTROS P\xDABLICOS: El certificado de antecedentes de la Polic\xEDa Nacional y la Procuradur\xEDa son de acceso p\xFAblico oficial por mandato legal (Decreto Ley 019 de 2012, Art. 93) para garantizar la seguridad en actos jur\xEDdicos y civiles.
-  5. CERO MENTIRAS Y TRANSPARENCIA TOTAL CON EL CLIENTE:
+  2. DOCUMENTOS OFICIALES HABILITADOS EN POLIC\xCDA NACIONAL: El servicio permanente de la Polic\xEDa Nacional (Art. 94 Decreto Ley 019 de 2012) permite validar cuatro tipos de documentos oficiales: C\xE9dula de Ciudadan\xEDa (cc), C\xE9dula de Extranjer\xEDa (cx/ce), Pasaporte (pa) y Documento Pa\xEDs de Origen (dp).
+  3. FINALIDAD LEG\xCDTIMA DE SEGURIDAD (Art. 4 y 10 Ley 1581 de 2012, Decreto 1377 de 2013 y Ley 675 de 2001 de Propiedad Horizontal): Validar la identidad de quien ingresa a una copropiedad o inmueble es una medida de debida diligencia indispensable para proteger la vida, la integridad f\xEDsica y el patrimonio de los propietarios, de los residentes del conjunto y del propio asesor inmobiliario frente a riesgos de suplantaci\xF3n, estafa o delincuencia com\xFAn.
+  4. NO EXISTE B\xDASQUEDA INVERSA EN COLOMBIA: La Registradur\xEDa Nacional no permite (por H\xE1beas Data y Art. 15 C.P.) averiguar n\xFAmeros de documento a partir de nombres. Las consultas oficiales del Estado (Polic\xEDa Nacional, Procuradur\xEDa SIRI, RUES) se efect\xFAan de manera leg\xEDtima partiendo del n\xFAmero que el propio ciudadano entreg\xF3.
+  5. ANTECEDENTES JUDICIALES Y DISCIPLINARIOS SON REGISTROS P\xDABLICOS: El certificado de antecedentes de la Polic\xEDa Nacional y la Procuradur\xEDa son de acceso p\xFAblico oficial por mandato legal (Decreto Ley 019 de 2012, Art. 93 y 94) para garantizar la seguridad en actos jur\xEDdicos y civiles.
+  6. CERO MENTIRAS Y TRANSPARENCIA TOTAL CON EL CLIENTE:
      - Si el n\xFAmero suministrado no coincide con el nombre registrado en la base oficial de seguridad, el asesor NO debe mentir ni cancelar con falsos pretextos.
      - Se le comunica con total amabilidad y respeto al cliente:
-       "Por protocolo est\xE1ndar de seguridad para visitas a inmuebles privados y registro de porter\xEDa, verificamos la identificaci\xF3n suministrada. El n\xFAmero de c\xE9dula que nos diste no coincide con el nombre registrado en la base oficial. Por favor facil\xEDtanos el documento correcto para poder coordinar la visita con total tranquilidad."
+       "Por protocolo est\xE1ndar de seguridad para visitas a inmuebles privados y registro de porter\xEDa, verificamos la identificaci\xF3n suministrada. El n\xFAmero de documento que nos diste no coincide con el nombre registrado en la base oficial de la Polic\xEDa Nacional. Por favor facil\xEDtanos el documento correcto para poder coordinar la visita con total tranquilidad."
      - EFECTO DISUASORIO Y PROTECCI\xD3N DEL GREMIO: Si se trata de un cliente honesto que digit\xF3 mal un n\xFAmero, rectifica de inmediato y la cita se concreta. Si se trata de un suplantador o persona inescrupulosa, el filtro transparente act\xFAa como un disuasivo fulminante: al saberse descubierto, desiste y no vuelve a intentar vulnerar ese predio ni a los colegas de la red.
-  6. PROTOCOLO OPERATIVO VECY: LLAMADA TELEF\xD3NICA PERSONALIZADA DE JANI ALVES:
+  7. PROTOCOLO OPERATIVO VECY: LLAMADA TELEF\xD3NICA PERSONALIZADA DE JANI ALVES:
      - En caso de presentarse alguna inconsistencia o discrepancia en el documento de identidad de un cliente propietario, visitante o colega (por ejemplo, un d\xEDgito invertido o mal digitado en WhatsApp), en VECY BIENES RA\xCDCES nuestro protocolo humano es inmediato: Jani Alves siempre llama directamente por tel\xE9fono al cliente para que nos rectifiquen amablemente el n\xFAmero de documento.
      - Una llamada cordial de 30 segundos resuelve cualquier duda, protege la negociaci\xF3n, brinda total seguridad a los propietarios y fideliza al cliente con calidez humana, evitando cancelar visitas por pretextos falsos o perder ventas millonarias.
 - CUANDO UN ASESOR O COLEGA PREGUNTE O DEBATA SOBRE H\xC1BEAS DATA O EL MANEJO DE CLIENTES SOSPECHOSOS:
@@ -19670,7 +19733,7 @@ DOCTRINA OFICIAL VECY: PROTECCI\xD3N DE DATOS (LEY 1581 DE 2012), H\xC1BEAS DATA
 
 CAT\xC1LOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:
 1. FACTURA PREDIAL BOGOT\xC1 Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con c\xF3digo de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretar\xEDa Distrital de Hacienda.
-2. VERIFICACI\xD3N OFICIAL DE C\xC9DULA Y ANTECEDENTES: Validaci\xF3n de nombres completos y antecedentes en Polic\xEDa Nacional en 20 segundos para blindar contratos de compraventa y arrendamiento.
+2. VERIFICACI\xD3N OFICIAL DE IDENTIDAD Y ANTECEDENTES (POLIC\xCDA NACIONAL): Validaci\xF3n de nombres completos y antecedentes en 20 segundos para C\xE9dulas de Ciudadan\xEDa, C\xE9dulas de Extranjer\xEDa, Pasaportes y Documentos de Pa\xEDs de Origen, blindando contratos de compraventa y arrendamiento.
 3. BOLSA INMOBILIARIA COLABORATIVA Y MATCHING INTELIGENTE 45/10/45: Cruce algor\xEDtmico de OFERTAS y DEMANDAS a trav\xE9s de nuestra plataforma entre colegas a nivel nacional con cualquier tipo de inmueble. Coincidencias entre el 80% al 94% ("MATCH APROXIMADO") y del 95% al 100% de compatibilidad ("MATCH PERFECTO"). Esquema de comisi\xF3n compartida 45/10/45 (45% asesor captador de oferta, 10% plataforma Vecy Network, 45% asesor colocador de demanda).
 4. AVAL\xDAOS Y AN\xC1LISIS COMPARATIVO DE MERCADO (ACM): Estimaci\xF3n comercial y catastral de inmuebles seg\xFAn estrato, metraje y zona.
 5. ASESOR\xCDA JUR\xCDDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, r\xE9gimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa, arras de retracto y confirmatorias, escrituraci\xF3n, estudio de t\xEDtulos a 20 a\xF1os en la SNR (grav\xE1menes, afectaci\xF3n familiar, patrimonio inembargable) y cobro de comisiones pendientes.

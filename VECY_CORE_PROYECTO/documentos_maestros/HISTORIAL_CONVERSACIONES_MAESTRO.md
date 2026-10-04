@@ -7,6 +7,55 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.37 — 04 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Corrección de Error de Tipo TypeScript en Test de Regresión**:
+   - Se identificó un error de TypeScript en `server/__tests__/regression.test.ts:2551`:
+     `El literal de objeto solo puede especificar propiedades conocidas y 'cedula' no existe en el tipo '{ success: boolean; officialName?: string | undefined; source?: string | undefined; }'.`
+   - Corregir el tipado y el mock para mantener 0 errores estrictos de compilación en el IDE.
+2. **Soporte Oficial Multidocumento en Verificación de Policía Nacional**:
+   - Eduardo recordó y evidenció con captura del portal oficial de Antecedentes Judiciales de la Policía Nacional de Colombia (`https://antecedentes.policia.gov.co:7005/WebJudicial/antecedentes.xhtml`) que la Policía Nacional no solo verifica Cédulas de Ciudadanía, sino también:
+     - **Cédula de Extranjería** (`cx` / `ce`)
+     - **Pasaporte** (`pa`)
+     - **Documento País de Origen** (`dp` / `dpo`)
+   - Incorporar soporte completo para estos documentos tanto en la detección (`extractCedulaForVerification`), como en la consulta oficial (`queryPoliciaNacional`) y en el reporte (`executeIdentityVerificationFromWhatsApp`), manejando números y alfanuméricos apropiadamente.
+3. **Incorporación Doctrinal del Marco Legal del Portal de Antecedentes**:
+   - Integrar formalmente en los prompts y doctrina de JanIA el marco normativo del portal:
+     - Artículo 94 del Decreto Ley 019 de 2012 (servicio permanente para validar información judicial personal).
+     - Ley Estatutaria 1581 de 2012 y Decreto 1377 de 2013 (Protección de Datos Personales).
+     - Artículo 15 de la Constitución Política de Colombia (Hábeas Data).
+     - Inexistencia de búsqueda inversa por nombre o apellido.
+     - Finalidad preventiva para visitas y actos jurídicos inmobiliarios (Ley 675 de 2001).
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Causa del Error de TypeScript**:
+   - `queryPoliciaNacional` en `server/routers/agenda.ts` tenía una firma de retorno restringida: `Promise<{ success: boolean; officialName?: string; source?: string }>`. Al incluir en el spy mock de Vitest las propiedades `cedula` y `tipoDoc`, el compilador TypeScript marcaba error 2353.
+2. **Confirmación Empírica del Formulario de la Policía Nacional**:
+   - Al inspeccionar directamente el DOM de `antecedentes.xhtml` tras aceptar los términos AJAX en `index.xhtml`, se comprobó que el select `cedulaTipo` contiene exactamente cuatro opciones:
+     - `<option value="cc">Cédula de Ciudadanía</option>`
+     - `<option value="cx">Cédula de Extranjería</option>`
+     - `<option value="pa">Pasaporte</option>`
+     - `<option value="dp">Documento País Origen</option>`
+   - Se constató que los pasaportes y documentos de país de origen pueden contener caracteres alfanuméricos (letras y números), mientras que las cédulas colombianas y de extranjería son puramente numéricas.
+
+### Acciones Ejecutadas
+1. **Ampliación de Firma y Retorno en `server/routers/agenda.ts`**:
+   - Actualizada la firma de `queryPoliciaNacional` a: `Promise<{ success: boolean; officialName?: string; source?: string; cedula?: string; tipoDoc?: string }>`.
+   - Incorporada sanitización condicional: alfanumérica para `pa` y `dp`, numérica para `cc` y `cx`.
+   - Mapeo exacto de los 4 valores de `cedulaTipo` (`cc`, `cx`, `pa`, `dp`).
+2. **Enriquecimiento Multidocumento en `server/_core/identityVerificationService.ts`**:
+   - `extractCedulaForVerification`: Detecta de forma inteligente si la solicitud corresponde a Cédula de Extranjería (`ce`/`cx`), Pasaporte (`pa`), Documento País de Origen (`dp`) o Cédula de Ciudadanía (`cc`). Admite números alfanuméricos para pasaportes (5 a 15 caracteres) y formatea adecuadamente.
+   - `formatCedulaNumber`: Manejo diferenciado: conserva mayúsculas limpias para pasaportes y alfanuméricos, y formato con puntos de miles para cédulas numéricas.
+   - `getDocumentTypeLabel`: Etiquetas institucionales formales (`C.C.`, `Cédula de Extranjería (C.E.)`, `Pasaporte`, `Documento País de Origen (D.P.)`).
+   - `executeIdentityVerificationFromWhatsApp`: Reportes de éxito y advertencia personalizados por tipo de documento.
+3. **Actualización de Doctrina y Prompts Maestros**:
+   - Actualizados `server/_core/janIA.ts` (DM prompt y respuesta inicial `isDocVerificationIntent`), `server/_core/prompts/base.md` y `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` con el marco normativo del Decreto 019 de 2012 Art. 94 y la verificación multidocumento.
+4. **Validación en Tests de Regresión**:
+   - Corregido el spy mock en `server/__tests__/regression.test.ts:2549` eliminando el error TS2353.
+   - Agregada prueba específica validando la extracción y reporte para Cédula de Extranjería, Pasaporte y Documento País de Origen.
+   - 135/135 tests aprobados al 100%. `tsc --noEmit` impecable (0 errores).
+
 ## 📋 SESIÓN v32.36 — 04 Octubre 2026
 
 ### Solicitud de Eduardo

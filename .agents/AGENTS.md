@@ -172,7 +172,18 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.36 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.37 — Octubre 2026
+
+### Novedades v32.37 (Soporte Oficial Multidocumento en Policía Nacional: Cédula de Extranjería, Pasaporte y Documento País de Origen, Subsanación de Tipado TypeScript y Marco Legal Decreto 019 de 2012):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Tipado Estricto de TypeScript en Test de Regresión**: Subsanado el error TS2353 en `server/__tests__/regression.test.ts:2551` ampliando el contrato de `queryPoliciaNacional` para retornar `{ success, officialName, source, cedula, tipoDoc }`.
+  2. **Verificación Multidocumento Oficial en Policía Nacional**:
+     - Confirmada la estructura del formulario oficial `antecedentes.xhtml` de la Policía Nacional: `<select name="cedulaTipo">` soporta Cédula de Ciudadanía (`cc`), Cédula de Extranjería (`cx`), Pasaporte (`pa`) y Documento País de Origen (`dp`).
+     - Integración de extracción, sanitización alfanumérica y reportes diferenciados en `extractCedulaForVerification` y `executeIdentityVerificationFromWhatsApp`.
+  3. **Marco Legal Incorporado**: Art. 94 Decreto Ley 019 de 2012, Ley 1581 de 2012, Decreto 1377 de 2013 y Art. 15 C.P. en prompts y respuestas de JanIA.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | `npm run build` limpio ✅ | 135/135 tests Vitest aprobados al 100% ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.36 — Octubre 2026
 
 ### Novedades v32.36 (Blindaje Anti-Alucinaciones de Verificación de Cédula en DMs, Detección Exhaustiva de "cc:" / "verificar", Interceptor de Seguridad Nativo y Caso Miriam Herz):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

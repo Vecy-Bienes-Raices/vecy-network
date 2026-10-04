@@ -2568,6 +2568,45 @@ Adriana Rebeca Orejuela`;
 
       spy.mockRestore();
     });
+
+    it("Debe soportar Cédula de Extranjería, Pasaporte y Documento País de Origen según las opciones oficiales de la Policía Nacional", async () => {
+      const { extractCedulaForVerification, executeIdentityVerificationFromWhatsApp } = await import("../_core/identityVerificationService");
+      const agendaRouter = await import("../routers/agenda");
+
+      // 1. Cédula de Extranjería (cx / ce)
+      const detCe = extractCedulaForVerification("JanIA verificar cédula de extranjería 456789", true);
+      expect(detCe.found).toBe(true);
+      expect(detCe.cedula).toBe("456789");
+      expect(detCe.tipoDoc).toBe("cx");
+
+      // 2. Pasaporte (pa)
+      const detPa = extractCedulaForVerification("JanIA verificar pasaporte PA987654", true);
+      expect(detPa.found).toBe(true);
+      expect(detPa.cedula).toBe("PA987654");
+      expect(detPa.tipoDoc).toBe("pa");
+
+      // 3. Documento País de Origen (dp)
+      const detDp = extractCedulaForVerification("JanIA verificar documento país origen: DP123456", true);
+      expect(detDp.found).toBe(true);
+      expect(detDp.cedula).toBe("DP123456");
+      expect(detDp.tipoDoc).toBe("dp");
+
+      // Mock para ejecución completa con Pasaporte
+      const spyPa = vi.spyOn(agendaRouter, "queryPoliciaNacional").mockResolvedValueOnce({
+        success: true,
+        cedula: "PA987654",
+        tipoDoc: "pa",
+        officialName: "John William Smith",
+        source: "Central Oficial de Seguridad Notarial VECY Bienes Raíces"
+      });
+
+      const reportPa = await executeIdentityVerificationFromWhatsApp("verificar pasaporte PA987654", true);
+      expect(reportPa.success).toBe(true);
+      expect(reportPa.reportText).toContain("Pasaporte PA987654");
+      expect(reportPa.reportText).toContain("John William Smith");
+
+      spyPa.mockRestore();
+    });
   });
 });
 

@@ -189,23 +189,39 @@ export function parsePoliceAntecedentesFullName(rawFullName: string): string {
 
 /**
  * Consulta oficial de antecedentes penales e identidad en la Policía Nacional de Colombia
+ * Conforme al artículo 94 del Decreto 019 de 2012 y Ley 1581 de 2012.
+ * Soporta Cédula de Ciudadanía (cc), Cédula de Extranjería (cx), Pasaporte (pa) y Documento País Origen (dp).
  * Resuelve reCAPTCHA v2 de Google vía 2Captcha y extrae los nombres y apellidos reales del ciudadano.
  */
-export async function queryPoliciaNacional(tipoDocInput: string, cleanDoc: string): Promise<{ success: boolean; officialName?: string; source?: string }> {
+export async function queryPoliciaNacional(
+  tipoDocInput: string,
+  cleanDoc: string
+): Promise<{ success: boolean; officialName?: string; source?: string; cedula?: string; tipoDoc?: string }> {
   let tipoDoc = 'cc';
   const t = (tipoDocInput || '').toLowerCase();
   if (t.includes('extranjer') || t === 'ce' || t === 'cx') tipoDoc = 'cx';
   else if (t.includes('pasaporte') || t === 'pa') tipoDoc = 'pa';
-  else if (t.includes('nit') || t.includes('rut')) return { success: false };
+  else if (t.includes('origen') || t === 'dp' || t === 'dpo') tipoDoc = 'dp';
+  else if (t.includes('nit') || t.includes('rut')) return { success: false, cedula: cleanDoc, tipoDoc };
 
-  const cacheKey = `POLICIA:${tipoDoc}:${cleanDoc}`;
+  const sanitizedDoc = (tipoDoc === 'pa' || tipoDoc === 'dp')
+    ? (cleanDoc || '').replace(/[^0-9a-zA-Z]/g, '').toUpperCase()
+    : (cleanDoc || '').replace(/\D/g, '');
+
+  const cacheKey = `POLICIA:${tipoDoc}:${sanitizedDoc}`;
   const cached = identityCache.get(cacheKey);
   if (cached && (Date.now() - cached.timestamp < IDENTITY_CACHE_TTL)) {
-    return { success: true, officialName: cached.fullName, source: 'Central Oficial de Seguridad Notarial VECY Bienes Raíces (Caché)' };
+    return {
+      success: true,
+      officialName: cached.fullName,
+      source: 'Central Oficial de Seguridad Notarial VECY Bienes Raíces (Caché)',
+      cedula: sanitizedDoc,
+      tipoDoc
+    };
   }
 
   const apiKey = process.env.TWOCAPTCHA_API_KEY || '673ddb810e9f700065ccbe6034f26629';
-  if (!apiKey) return { success: false };
+  if (!apiKey) return { success: false, cedula: sanitizedDoc, tipoDoc };
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
@@ -331,21 +347,27 @@ export async function queryPoliciaNacional(tipoDocInput: string, cleanDoc: strin
         const rawFullName = matchNombres[1].trim();
         const officialName = parsePoliceAntecedentesFullName(rawFullName);
         identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
-        console.log(`[queryPoliciaNacional] ✅ Identidad confirmada en intento ${attempt}: ${officialName} (${cleanDoc})`);
-        return { success: true, officialName, source: 'Central Oficial de Seguridad Notarial VECY Bienes Raíces' };
+        console.log(`[queryPoliciaNacional] ✅ Identidad confirmada en intento ${attempt}: ${officialName} (${sanitizedDoc})`);
+        return {
+          success: true,
+          officialName,
+          source: 'Central Oficial de Seguridad Notarial VECY Bienes Raíces',
+          cedula: sanitizedDoc,
+          tipoDoc
+        };
       }
 
       console.warn(`[queryPoliciaNacional] Intento ${attempt}: No se detectaron nombres en la respuesta HTML. Texto: ${text.substring(0, 300)}`);
       if (attempt < 2) { await new Promise(r => setTimeout(r, 1500)); continue; }
-      return { success: false };
+      return { success: false, cedula: sanitizedDoc, tipoDoc };
     } catch (err: any) {
       console.warn(`[queryPoliciaNacional] Error en intento ${attempt}:`, err?.message);
       if (attempt < 2) { await new Promise(r => setTimeout(r, 1500)); continue; }
-      return { success: false };
+      return { success: false, cedula: sanitizedDoc, tipoDoc };
     }
   }
 
-  return { success: false };
+  return { success: false, cedula: sanitizedDoc, tipoDoc };
 }
 
 async function queryOfficialAdres(tipoDocInput: string, cleanDoc: string): Promise<{ success: boolean; officialName?: string }> {

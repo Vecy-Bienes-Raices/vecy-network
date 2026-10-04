@@ -17,7 +17,8 @@ export interface IdentityVerificationReport {
 }
 
 /**
- * Detecta si un mensaje textual corresponde a una solicitud de verificación de cédula/documento.
+ * Detecta si un mensaje textual corresponde a una solicitud de verificación de documento de identidad
+ * Soporta Cédula de Ciudadanía (cc), Cédula de Extranjería (ce/cx), Pasaporte (pa) y Documento País de Origen (dp).
  */
 export function extractCedulaForVerification(text: string, isPrivateDm: boolean = false): { found: boolean; cedula: string; tipoDoc: string } {
   if (!text || typeof text !== 'string') return { found: false, cedula: '', tipoDoc: 'cc' };
@@ -36,59 +37,107 @@ export function extractCedulaForVerification(text: string, isPrivateDm: boolean 
   }
 
   // Palabras clave de intención de verificación
-  const keywords = ['verificar', 'verificacion', 'verificación', 'validar', 'consultar', 'revisar', 'antecedentes', 'cédula', 'cedula', 'documento'];
+  const keywords = ['verificar', 'verificacion', 'verificación', 'validar', 'consultar', 'revisar', 'chequear', 'antecedentes', 'cédula', 'cedula', 'documento', 'extranjería', 'extranjeria', 'pasaporte', 'pasaportes'];
   const hasKeyword = keywords.some(kw => lower.includes(kw));
 
-  // Detectar tipo de documento
+  // 1. Detectar tipo de documento con prioridad específica
   let tipoDoc = 'cc';
-  if (lower.includes('ce') || lower.includes('extranjer')) tipoDoc = 'ce';
-  else if (lower.includes('pasaporte') || lower.includes('pa')) tipoDoc = 'pa';
+  if (lower.includes('extranjer') || /(?<!\p{L})(?:ce|cx)(?!\p{L})/iu.test(lower)) {
+    tipoDoc = 'cx';
+  } else if (lower.includes('origen') || /(?<!\p{L})(?:dp|dpo)(?!\p{L})/iu.test(lower)) {
+    tipoDoc = 'dp';
+  } else if (lower.includes('pasaporte') || /(?<!\p{L})pa(?!\p{L})/iu.test(lower)) {
+    tipoDoc = 'pa';
+  }
 
-  // Expresión regular para capturar la cédula (6 a 10 dígitos)
-  // Ejemplos: "verificar cédula 52432900", "CC 52.432.900", "consultar antecedentes 52803592", "cédula: 1018456789"
-  const regexExplicit = /(?:verificar|verificaci[oó]n|validar|consultar|revisar|antecedentes|c[ée]dula|documento|cc)\s*(?:de\s+ciudadan[ií]a\s*)?(?:cc|ce|cx)?\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{6,10})/i;
+  // 2. Patrón específico para Documento País de Origen
+  if (tipoDoc === 'dp') {
+    const regexDp = /(?:documento\s+pa[ií]s\s+(?:de\s+)?origen|dp|dpo)\s*[:#]?\s*([a-zA-Z0-9]{5,15})/i;
+    const matchDp = clean.match(regexDp);
+    if (matchDp && matchDp[1]) {
+      return { found: true, cedula: matchDp[1].toUpperCase(), tipoDoc: 'dp' };
+    }
+  }
+
+  // 3. Patrón específico para Pasaporte (permite alfanumérico de 5 a 15 caracteres)
+  if (tipoDoc === 'pa') {
+    const regexPa = /(?:pasaporte|pa)\s*[:#]?\s*([a-zA-Z0-9]{5,15})/i;
+    const matchPa = clean.match(regexPa);
+    if (matchPa && matchPa[1]) {
+      return { found: true, cedula: matchPa[1].toUpperCase(), tipoDoc: 'pa' };
+    }
+  }
+
+  // 4. Patrón específico para Cédula de Extranjería
+  if (tipoDoc === 'cx') {
+    const regexCe = /(?:verificar|validar|consultar|revisar|antecedentes|c[ée]dula)?\s*(?:de\s+extranjer[ií]a|ce|cx)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/i;
+    const matchCe = clean.match(regexCe);
+    if (matchCe && matchCe[1]) {
+      const rawNumber = matchCe[1].replace(/\D/g, '');
+      if (rawNumber.length >= 5 && rawNumber.length <= 10) {
+        return { found: true, cedula: rawNumber, tipoDoc: 'cx' };
+      }
+    }
+  }
+
+  // 5. Expresión regular explícita para Cédula de Ciudadanía u orden general
+  // Ejemplos: "verificar cédula 52432900", "CC 52.432.900", "JanIA verificar cc: 39786573", "cédula: 1018456789"
+  const regexExplicit = /(?:verificar|verificaci[oó]n|validar|consultar|revisar|antecedentes|c[ée]dula|documento|cc)\s*(?:de\s+ciudadan[ií]a\s*)?(?:cc|ce|cx)?\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/i;
   const matchExplicit = clean.match(regexExplicit);
 
   if (matchExplicit && matchExplicit[1]) {
     const rawNumber = matchExplicit[1].replace(/\D/g, '');
-    if (rawNumber.length >= 6 && rawNumber.length <= 10) {
+    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
       return { found: true, cedula: rawNumber, tipoDoc };
     }
   }
 
-  // Si tiene palabra clave y hay un número de cédula en el texto
+  // 6. Si tiene palabra clave de intención y hay un número en el texto
   if (hasKeyword) {
-    const numberMatches = clean.match(/\b([0-9]{6,10})\b/);
+    const numberMatches = clean.match(/\b([0-9]{5,10})\b/);
     if (numberMatches && numberMatches[1]) {
       return { found: true, cedula: numberMatches[1], tipoDoc };
     }
   }
 
-  // Formato directo tipo "CC 52432900" o "C.C. 52.432.900"
-  const directCcMatch = clean.match(/\b(?:c\.?c\.?)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{6,10})\b/i);
+  // 7. Formato directo tipo "CC 52432900", "C.C. 52.432.900", "CE 123456", "PA A1234567"
+  const directCcMatch = clean.match(/\b(?:c\.?c\.?)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b/i);
   if (directCcMatch && directCcMatch[1]) {
     const rawNumber = directCcMatch[1].replace(/\D/g, '');
-    if (rawNumber.length >= 6 && rawNumber.length <= 10) {
+    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
       return { found: true, cedula: rawNumber, tipoDoc: 'cc' };
     }
   }
 
-  // Detección directa de número de cédula puro en DM privado (ej: "52432900" o "52.432.900")
-  const pureNumberMatch = clean.match(/^\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{6,10})\s*$/);
+  const directCeMatch = clean.match(/\b(?:c\.?e\.?|c\.?x\.?)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b/i);
+  if (directCeMatch && directCeMatch[1]) {
+    const rawNumber = directCeMatch[1].replace(/\D/g, '');
+    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
+      return { found: true, cedula: rawNumber, tipoDoc: 'cx' };
+    }
+  }
+
+  const directPaMatch = clean.match(/\b(?:pasaporte|pa)\s*[:#]?\s*([a-zA-Z0-9]{5,15})\b/i);
+  if (directPaMatch && directPaMatch[1]) {
+    return { found: true, cedula: directPaMatch[1].toUpperCase(), tipoDoc: 'pa' };
+  }
+
+  // 8. Detección directa de número de cédula puro en DM privado (ej: "52432900" o "52.432.900")
+  const pureNumberMatch = clean.match(/^\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\s*$/);
   if (pureNumberMatch && pureNumberMatch[1]) {
     const rawNumber = pureNumberMatch[1].replace(/\D/g, '');
-    if (rawNumber.length >= 6 && rawNumber.length <= 10) {
+    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
       if (isPrivateDm) {
         return { found: true, cedula: rawNumber, tipoDoc: 'cc' };
       }
     }
   }
 
-  // Detección cuando se menciona o etiqueta a JanIA con un número de cédula (ej: "JanIA 52432900" o "@JanIA 52.432.900")
-  const janiaNumberMatch = clean.match(/(?:jania|@jania)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{6,10})/i);
+  // 9. Detección cuando se menciona o etiqueta a JanIA con un número (ej: "JanIA 52432900" o "@JanIA 52.432.900")
+  const janiaNumberMatch = clean.match(/(?:jania|@jania)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/i);
   if (janiaNumberMatch && janiaNumberMatch[1]) {
     const rawNumber = janiaNumberMatch[1].replace(/\D/g, '');
-    if (rawNumber.length >= 6 && rawNumber.length <= 10) {
+    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
       return { found: true, cedula: rawNumber, tipoDoc: 'cc' };
     }
   }
@@ -97,16 +146,32 @@ export function extractCedulaForVerification(text: string, isPrivateDm: boolean 
 }
 
 /**
- * Formatea un número de cédula con separadores de miles (ej: 52432900 -> 52.432.900).
+ * Formatea un número de documento con separadores de miles para CC/CE o mayúsculas para Pasaporte.
  */
-export function formatCedulaNumber(cedula: string): string {
-  const clean = (cedula || '').replace(/\D/g, '');
-  if (!clean) return cedula;
-  return Number(clean).toLocaleString('es-CO');
+export function formatCedulaNumber(cedula: string, tipoDoc: string = 'cc'): string {
+  if (!cedula) return '';
+  const clean = cedula.trim();
+  if (tipoDoc === 'pa' || tipoDoc === 'dp' || /[a-zA-Z]/.test(clean)) {
+    return clean.toUpperCase();
+  }
+  const onlyDigits = clean.replace(/\D/g, '');
+  if (!onlyDigits) return clean;
+  return Number(onlyDigits).toLocaleString('es-CO');
 }
 
 /**
- * Ejecuta la verificación oficial ante la central de seguridad y construye el reporte formal.
+ * Retorna el prefijo formal y legible según el tipo de documento.
+ */
+export function getDocumentTypeLabel(tipoDoc: string = 'cc'): string {
+  const t = (tipoDoc || '').toLowerCase();
+  if (t === 'ce' || t === 'cx') return 'Cédula de Extranjería (C.E.)';
+  if (t === 'pa') return 'Pasaporte';
+  if (t === 'dp' || t === 'dpo') return 'Documento País de Origen (D.P.)';
+  return 'C.C.';
+}
+
+/**
+ * Ejecuta la verificación oficial ante la central de seguridad de la Policía Nacional y construye el reporte formal.
  */
 export async function executeIdentityVerificationFromWhatsApp(text: string, isPrivateDm: boolean = false): Promise<IdentityVerificationReport> {
   const detection = extractCedulaForVerification(text, isPrivateDm);
@@ -115,22 +180,17 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
   }
 
   const { cedula, tipoDoc } = detection;
-  const formattedCedula = formatCedulaNumber(cedula);
-  const nowBogota = new Date().toLocaleString('es-CO', { 
-    timeZone: 'America/Bogota',
-    dateStyle: 'long',
-    timeStyle: 'short'
-  });
+  const formattedCedula = formatCedulaNumber(cedula, tipoDoc);
+  const docLabel = getDocumentTypeLabel(tipoDoc);
 
   try {
     const res = await queryPoliciaNacional(tipoDoc, cedula);
 
     if (res && res.success && res.officialName) {
       const officialName = formatTitleCase(res.officialName);
-      const docPrefix = tipoDoc.toUpperCase() === 'CC' ? 'C.C.' : tipoDoc.toUpperCase();
       const reportText = 
         `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
-        `🆔 *El documento:* ${docPrefix} ${formattedCedula}\n` +
+        `🆔 *El documento:* ${docLabel} ${formattedCedula}\n` +
         `👤 *Pertenece a:* ${officialName}\n` +
         `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
 
@@ -146,12 +206,12 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
     } else {
       const reportText = 
         `⚠️ *CONSULTA DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
-        `No fue posible validar automáticamente en este momento la C.C. *${formattedCedula}* en nuestra Central Oficial de Seguridad e Identidad.\n\n` +
+        `No fue posible validar automáticamente en este momento el documento ${docLabel} *${formattedCedula}* en la Central Oficial de Antecedentes de la Policía Nacional.\n\n` +
         `📌 *Posibles motivos:*\n` +
-        `• El número de documento fue digitado con algún dígito erróneo o faltante.\n` +
-        `• El ciudadano corresponde a un documento de extranjería o pasaporte que requiere verificación presencial.\n` +
-        `• Intermitencia temporal de enlace con las bases de datos oficiales de validación.\n\n` +
-        `💡 Por favor revisa el número e intenta nuevamente escribiéndome: *"JanIA, verifica la cédula ${cedula}"*.`;
+        `• El número o caracteres del documento fueron digitados con algún error.\n` +
+        `• Para documentos extranjeros (Cédula de Extranjería, Pasaporte o Documento País de Origen), verificar que el titular cuente con registro migratorio activo en Colombia.\n` +
+        `• Intermitencia temporal de enlace con las bases de datos de la Policía Nacional.\n\n` +
+        `💡 Por favor revisa los datos e intenta nuevamente escribiéndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.`;
 
       return {
         isVerificationRequest: true,
@@ -167,7 +227,7 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
       cedula,
       tipoDoc,
       success: false,
-      reportText: `⚠️ Ocurrió una intermitencia temporal de enlace en nuestra central de verificación para la cédula ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`
+      reportText: `⚠️ Ocurrió una intermitencia temporal de enlace en nuestra central de verificación para el documento ${docLabel} ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`
     };
   }
 }
