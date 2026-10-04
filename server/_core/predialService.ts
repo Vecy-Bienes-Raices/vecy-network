@@ -14,7 +14,7 @@ export const VIRAL_LOOP_MESSAGE =
   `¿Conoces a algún colega, amigo o cliente al que le sirva esta herramienta? Reenvíale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrarás el tiempo, las filas y el estrés o dolor de cabeza de tener que lidiar con plataformas enredadas desde el celular o el computador 🤝✨`;
 
 export const GOOGLE_REVIEW_MESSAGE = 
-  `⭐ *¿Te gustó la atención y la rapidez?* Nos encantaría conocer tu opinión. Si puedes dejarnos tu calificación de 5 estrellas en nuestro perfil oficial de Google, significaría muchísimo para todo nuestro equipo:\n👉 https://g.page/r/CctNbwU6UpX5EBM/review`;
+  `⭐ *Tu opinión es muy importante para nosotros.* Nos ayuda muchísimo a seguir mejorando y a que más colegas y propietarios conozcan nuestro servicio. Si te gustó la atención y la rapidez, ¿nos regalarías un momento para dejar tu calificación y comentario en Google? Significaría un mundo para todo el equipo de Vecy Bienes Raíces:\n👉 https://g.page/r/CctNbwU6UpX5EBM/review ✨`;
 
 export interface PredialDetectionResult {
   found: boolean;

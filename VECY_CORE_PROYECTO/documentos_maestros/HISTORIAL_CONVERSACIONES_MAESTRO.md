@@ -7,6 +7,36 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.30 — 03 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Catálogo Completo de Servicios de JanIA**: Nombrar el portafolio integral que ella puede realizar (predial/pago, antecedentes policiales, bolsa colaborativa 50/50, avalúos ACM, asesoría contractual y de títulos a 20 años en la SNR, y contacto directo con bróker).
+2. **Invitación al Canal de WhatsApp al Despedirse**: Antes de despedirse en una conversación normal, invitar amablemente al usuario/a a seguir nuestro canal oficial de WhatsApp (`https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`).
+3. **Calificación en Google Review Desacoplada**: Enviar la invitación a calificar 5 estrellas en Google (`https://g.page/r/CctNbwU6UpX5EBM/review`) **siempre en un mensaje aparte**, recordando con calidez que *"su opinión es muy importante para nosotros"*.
+4. **Naturalidad Fonética en Audios / Notas de Voz**: En audios, pronunciar los teléfonos con naturalidad colombiana y **no deletrear enlaces puntualmente**, expresando con fluidez: *"o en el enlace que te dejo a continuación"*.
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Causa Raíz #1: Catálogo Incompleto en el Prompt de DM**:
+   - El prompt previo solo destacaba las dos herramientas gratuitas (cédula y predial), omitiendo la bolsa colaborativa 50/50, avalúos ACM, contratos y acompañamiento legal presencial.
+2. **Causa Raíz #2: Deletreo Rígido de URLs en TTS (`cleanVoiceText`)**:
+   - `cleanVoiceText` no trataba las URLs ni los números telefónicos antes de pasarlos a Google Translate TTS (`tl=es-CO`), provocando que el sintetizador vocalizara "hache-te-te-pe-ese dos puntos..." y números dígito por dígito.
+3. **Causa Raíz #3: Falta de Enlace Clickable tras Enviar Audio**:
+   - Al enviar una nota de voz PTT que mencionaba un enlace, el handler retornaba inmediatamente, privando al usuario de recibir el link clickable en su pantalla.
+
+### Acciones Ejecutadas
+1. **`server/_core/janIA.ts`**:
+   - System prompt y mensaje de bienvenida enriquecidos con los 6 servicios completos del ecosistema VECY.
+   - Directiva conversacional para invitar al Canal Oficial de WhatsApp al concluir la interacción.
+   - Pautas de audio integradas en las instrucciones al LLM.
+2. **`server/_core/whatsapp-utils.ts`**:
+   - `cleanVoiceText` enriquecido con normalización de URLs (*"o en el enlace que te dejo a continuación"*), pronunciación fonética agrupada de teléfonos colombianos (+57 316 656 9719 -> *"tres dieciséis, seis cincuenta y seis, noventa y siete, diecinueve"*), y depuración de markdown/emojis.
+3. **`server/_core/predialService.ts`**:
+   - `GOOGLE_REVIEW_MESSAGE` refinado con: *"⭐ Tu opinión es muy importante para nosotros. Nos ayuda muchísimo a seguir mejorando..."*.
+4. **`server/_core/whatsapp-match.ts`**:
+   - Enlace clickable despachado tras notas de voz si la respuesta incluye URLs.
+   - Envío desacoplado de la reseña en Google en mensaje aparte tras agradecimiento o cierre de conversación, limitado a 1 vez cada 24 horas por usuario (`recentReviewPromptUsers`).
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build limpio ✅ | 126/126 tests Vitest ✅ | Simulación end-to-end de servicios, despedida y TTS exitosa ✅
+
 ## 📋 SESIÓN v32.29 — 03 Octubre 2026
 
 ### Solicitud de Eduardo

@@ -267,7 +267,34 @@ export function cleanVoiceText(text: string): string {
     .replace(/\bHab\b/gi, "Habitaciones")
     .replace(/\bhab\b/gi, "habitaciones");
 
-  return cleaned.trim();
+  // 4. Tratamiento Fonético Natural de Enlaces URLs (Doctrina v32.30)
+  // En lugar de deletrear "h-t-t-p-s dos puntos barra barra...", se expresa con fluidez
+  // Se procesa antes de los teléfonos para que las URLs tipo wa.me/573166569719 no colisionen
+  cleaned = cleaned
+    .replace(/(?:enlace\s+que\s+te\s+dejo\s+a\s+continuaci[oó]n[\s.:]*)(?:https?:\/\/[^\s)]+)/gi, "enlace que te dejo a continuación.")
+    .replace(/(?:o\s+en\s+|en\s+|o\s+)?https?:\/\/[^\s)]+/gi, "o en el enlace que te dejo a continuación")
+    .replace(/:\s*o en el enlace que te dejo a continuación/gi, ": en el enlace que te dejo a continuación")
+    .replace(/(?:o\s+en\s+el\s+enlace\s+que\s+te\s+dejo\s+a\s+continuaci[oó]n\s*){2,}/gi, "o en el enlace que te dejo a continuación");
+
+  // 5. Pronunciación Fonética Natural de Números Telefónicos Colombianos (Doctrina v32.30)
+  // En audio los números no se deletrean como dígitos aislados sino con cadencia natural:
+  // Línea Bróker Oficial (+57 316 656 9719 / Eduardo y Jani):
+  cleaned = cleaned.replace(/(?:\+57\s*)?316[\s\-.]?656[\s\-.]?9719\b/g, "tres dieciséis, seis cincuenta y seis, noventa y siete, diecinueve");
+  // Línea JanIA Bot (+57 319 291 9978):
+  cleaned = cleaned.replace(/(?:\+57\s*)?319[\s\-.]?291[\s\-.]?9978\b/g, "tres diecinueve, dos noventa y uno, noventa y nueve, setenta y ocho");
+  // Línea Directiva Jani Alves (+57 318 809 6811):
+  cleaned = cleaned.replace(/(?:\+57\s*)?318[\s\-.]?809[\s\-.]?6811\b/g, "tres dieciocho, ocho cero nueve, sesenta y ocho, once");
+
+  // 6. Limpieza de Formato Markdown y Emojis para Audio Limpio
+  cleaned = cleaned
+    .replace(/\*([^*]+)\*/g, "$1") // negrita *texto* -> texto
+    .replace(/_([^_]+)_/g, "$1")   // cursiva _texto_ -> texto
+    .replace(/~([^~]+)~/g, "$1")   // tachado ~texto~ -> texto
+    .replace(/`([^`]+)`/g, "$1")   // código `texto` -> texto
+    .replace(/[#*~`]/g, "")        // símbolos sueltos de markdown
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, ""); // emojis
+
+  return cleaned.replace(/\s+/g, " ").trim();
 }
 
 /**

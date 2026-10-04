@@ -233,6 +233,7 @@ export class JaniaMatchBot {
   public channelNewsletterId: string = process.env.WHATSAPP_CHANNEL_NEWSLETTER_ID || '';
   private cooldownMap: Map<string, any> = new Map();
   private cooldownFile: string = path.join(process.cwd(), '.cooldown_map.json');
+  private recentReviewPromptUsers: Map<string, number> = new Map();
 
   constructor(options?: JaniaBotOptions) {
     if (options) {
@@ -1180,6 +1181,24 @@ export class JaniaMatchBot {
                   ptt: true
                 }, { quoted: mainMsg, allowDirectMessage: true });
                 await this.logToDb(senderId, 'janIA', `[Nota de Voz PTT]: ${reply}`);
+
+                // Si la respuesta contenía enlaces URLs (como el canal de WhatsApp o el bróker),
+                // despachar también el texto para que el usuario tenga el enlace clickable en su pantalla
+                if (reply.includes('http')) {
+                  await this.queuedSend(senderId, reply, { allowDirectMessage: true });
+                }
+
+                // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre
+                const isGratitudeOrClosing = /^(gracias|muchas gracias|mil gracias|muy amable|hasta luego|chao|genial gracias|perfecto gracias|excelente|quedamos asi|quedamos así)\b/i.test(cleanLower);
+                const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
+                const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+
+                if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {
+                  this.recentReviewPromptUsers.set(senderId, Date.now());
+                  const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+                  await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true });
+                }
+
                 return;
               }
             } catch (ttsErr: any) {
@@ -1189,6 +1208,17 @@ export class JaniaMatchBot {
 
           await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
           await this.logToDb(senderId, 'janIA', reply);
+
+          // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre
+          const isGratitudeOrClosing = /^(gracias|muchas gracias|mil gracias|muy amable|hasta luego|chao|genial gracias|perfecto gracias|excelente|quedamos asi|quedamos así)\b/i.test(cleanLower);
+          const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
+          const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+
+          if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {
+            this.recentReviewPromptUsers.set(senderId, Date.now());
+            const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true });
+          }
           return;
         }
       } catch (dmAiErr) {

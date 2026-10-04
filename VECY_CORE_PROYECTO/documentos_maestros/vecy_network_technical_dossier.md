@@ -322,6 +322,37 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.30 — Octubre 2026
+
+#### 📌 CATÁLOGO COMPLETO DE SERVICIOS JANIA, INVITACIÓN AL CANAL DE WHATSAPP, RESEÑA GOOGLE EN MENSAJE APARTE Y VOZ FLUIDA SIN DELETREO DE URLS
+
+**Requerimiento y Objetivos:**
+1. Desplegar el catálogo completo de 6 servicios de JanIA y VECY (predial/pago, antecedentes policiales, bolsa colaborativa 50/50, avalúos ACM, asesoría contractual y de títulos a 20 años en la SNR, y contacto directo con bróker).
+2. Invitar con afecto y naturalidad a seguir el Canal Oficial de WhatsApp (`https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`) antes de despedirse en una conversación normal.
+3. Despachar la invitación a calificar en Google Review (`https://g.page/r/CctNbwU6UpX5EBM/review`) **siempre en un mensaje aparte**, recordando que *"su opinión es muy importante para nosotros"*.
+4. En notas de voz / audios (TTS), decir los números de teléfono con naturalidad colombiana y **no deletrear enlaces puntualmente**, expresando: *"o en el enlace que te dejo a continuación"*.
+
+**Causas Raíz:**
+1. System prompt acotado solo a dos herramientas, omitiendo la amplitud del ecosistema VECY.
+2. Inexistencia de tratamiento fonético de URLs y teléfonos en `cleanVoiceText`, provocando que Google Translate TTS deletreara enlaces y números dígito por dígito.
+3. Falta de envío de mensaje de texto complementario tras notas de voz con URLs para mantener los links clickables.
+
+**Solución Aplicada:**
+- **`server/_core/janIA.ts`**:
+  - Ampliación del catálogo integral de servicios en `welcomeMsg` y directivas de system prompt.
+  - Regla conversacional de despedida con invitación cálida al Canal Oficial de WhatsApp.
+  - Pautas para respuestas de voz y audios fluidos sin deletreo de enlaces.
+- **`server/_core/whatsapp-utils.ts`**:
+  - `cleanVoiceText` enriquecido con reemplazo fonético de URLs (*"o en el enlace que te dejo a continuación"*), pronunciación agrupada de teléfonos colombianos (+57 316 656 9719 -> *"tres dieciséis, seis cincuenta y seis, noventa y siete, diecinueve"*), y depuración de formato markdown/emojis.
+- **`server/_core/predialService.ts`**:
+  - `GOOGLE_REVIEW_MESSAGE` refinado con: *"⭐ Tu opinión es muy importante para nosotros. Nos ayuda muchísimo a seguir mejorando..."*.
+- **`server/_core/whatsapp-match.ts`**:
+  - Despacho de texto clickable tras notas de voz si la respuesta incluye enlaces web.
+  - Envío desacoplado de reseña en Google en mensaje aparte tras cierre o gratitud, limitado a 1 vez cada 24 horas por usuario (`recentReviewPromptUsers`).
+- **Versión Oficial**: Incrementada a **v32.30** (`32.30.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 🔖 v32.29 — Octubre 2026
 
 #### 📌 AUDITORÍA INTEGRAL Y BLINDAJE DE FACTURA PREDIAL Y CERTIFICADO OFICIAL DE PAGO SDH CON CAPTCHA DUAL

@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.29";
+    VECY_VERSION = "v32.30";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -9628,8 +9628,8 @@ var init_predialService = __esm({
   "server/_core/predialService.ts"() {
     "use strict";
     VIRAL_LOOP_MESSAGE = `\xBFConoces a alg\xFAn colega, amigo o cliente al que le sirva esta herramienta? Reenv\xEDale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrar\xE1s el tiempo, las filas y el estr\xE9s o dolor de cabeza de tener que lidiar con plataformas enredadas desde el celular o el computador \u{1F91D}\u2728`;
-    GOOGLE_REVIEW_MESSAGE = `\u2B50 *\xBFTe gust\xF3 la atenci\xF3n y la rapidez?* Nos encantar\xEDa conocer tu opini\xF3n. Si puedes dejarnos tu calificaci\xF3n de 5 estrellas en nuestro perfil oficial de Google, significar\xEDa much\xEDsimo para todo nuestro equipo:
-\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review`;
+    GOOGLE_REVIEW_MESSAGE = `\u2B50 *Tu opini\xF3n es muy importante para nosotros.* Nos ayuda much\xEDsimo a seguir mejorando y a que m\xE1s colegas y propietarios conozcan nuestro servicio. Si te gust\xF3 la atenci\xF3n y la rapidez, \xBFnos regalar\xEDas un momento para dejar tu calificaci\xF3n y comentario en Google? Significar\xEDa un mundo para todo el equipo de Vecy Bienes Ra\xEDces:
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u2728`;
     pendingPredialSessions = /* @__PURE__ */ new Map();
     PREDIAL_HELP_TEXT = `\u{1F3DB}\uFE0F *\xBFC\xF3mo solicitar tu Predial a JanIA?* Es muy sencillo:
 
@@ -10346,7 +10346,12 @@ function cleanVoiceText(text2) {
   cleaned = cleaned.replace(/^:\s*/, "").trim();
   cleaned = cleaned.replace(/^"|"$/g, "").trim();
   cleaned = cleaned.replace(/\bVecy\b/gi, "Vesi").replace(/\bVECY\b/g, "Vesi").replace(/\bJanIA\b/gi, "Yan\xEDa").replace(/\bJanIa\b/gi, "Yan\xEDa").replace(/\bjania\b/gi, "Yan\xEDa").replace(/\bm²\b/gi, "metros cuadrados").replace(/\bm2\b/gi, "metros cuadrados").replace(/\bUVT\b/gi, "U-V-T").replace(/\bDIAN\b/gi, "Dian").replace(/\bSINUPOT\b/gi, "Sinu-pot").replace(/\bIDU\b/gi, "I-D-U").replace(/\bPOT\b/g, "P-O-T").replace(/\bAdmon\b/gi, "Administraci\xF3n").replace(/\badmon\b/gi, "administraci\xF3n").replace(/\bApto\b/gi, "Apartamento").replace(/\bapto\b/gi, "apartamento").replace(/\bHab\b/gi, "Habitaciones").replace(/\bhab\b/gi, "habitaciones");
-  return cleaned.trim();
+  cleaned = cleaned.replace(/(?:enlace\s+que\s+te\s+dejo\s+a\s+continuaci[oó]n[\s.:]*)(?:https?:\/\/[^\s)]+)/gi, "enlace que te dejo a continuaci\xF3n.").replace(/(?:o\s+en\s+|en\s+|o\s+)?https?:\/\/[^\s)]+/gi, "o en el enlace que te dejo a continuaci\xF3n").replace(/:\s*o en el enlace que te dejo a continuación/gi, ": en el enlace que te dejo a continuaci\xF3n").replace(/(?:o\s+en\s+el\s+enlace\s+que\s+te\s+dejo\s+a\s+continuaci[oó]n\s*){2,}/gi, "o en el enlace que te dejo a continuaci\xF3n");
+  cleaned = cleaned.replace(/(?:\+57\s*)?316[\s\-.]?656[\s\-.]?9719\b/g, "tres diecis\xE9is, seis cincuenta y seis, noventa y siete, diecinueve");
+  cleaned = cleaned.replace(/(?:\+57\s*)?319[\s\-.]?291[\s\-.]?9978\b/g, "tres diecinueve, dos noventa y uno, noventa y nueve, setenta y ocho");
+  cleaned = cleaned.replace(/(?:\+57\s*)?318[\s\-.]?809[\s\-.]?6811\b/g, "tres dieciocho, ocho cero nueve, sesenta y ocho, once");
+  cleaned = cleaned.replace(/\*([^*]+)\*/g, "$1").replace(/_([^_]+)_/g, "$1").replace(/~([^~]+)~/g, "$1").replace(/`([^`]+)`/g, "$1").replace(/[#*~`]/g, "").replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "");
+  return cleaned.replace(/\s+/g, " ").trim();
 }
 function splitTextIntoVoiceChunks(text2, maxLen = 180) {
   const sentences = text2.match(/[^.!?]+[.!?]+/g) || [text2];
@@ -10998,6 +11003,7 @@ var init_whatsapp_match = __esm({
       channelNewsletterId = process.env.WHATSAPP_CHANNEL_NEWSLETTER_ID || "";
       cooldownMap = /* @__PURE__ */ new Map();
       cooldownFile = path6.join(process.cwd(), ".cooldown_map.json");
+      recentReviewPromptUsers = /* @__PURE__ */ new Map();
       constructor(options) {
         if (options) {
           if (options.sessionFolderName) this.sessionFolderName = options.sessionFolderName;
@@ -11704,6 +11710,17 @@ ${quotedNote}` : quotedNote;
                       ptt: true
                     }, { quoted: mainMsg, allowDirectMessage: true });
                     await this.logToDb(senderId, "janIA", `[Nota de Voz PTT]: ${reply}`);
+                    if (reply.includes("http")) {
+                      await this.queuedSend(senderId, reply, { allowDirectMessage: true });
+                    }
+                    const isGratitudeOrClosing2 = /^(gracias|muchas gracias|mil gracias|muy amable|hasta luego|chao|genial gracias|perfecto gracias|excelente|quedamos asi|quedamos así)\b/i.test(cleanLower);
+                    const lastReviewSent2 = this.recentReviewPromptUsers.get(senderId) || 0;
+                    const oneDayAgo2 = Date.now() - 24 * 60 * 60 * 1e3;
+                    if (isGratitudeOrClosing2 && lastReviewSent2 < oneDayAgo2) {
+                      this.recentReviewPromptUsers.set(senderId, Date.now());
+                      const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+                      await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
+                    }
                     return;
                   }
                 } catch (ttsErr) {
@@ -11712,6 +11729,14 @@ ${quotedNote}` : quotedNote;
               }
               await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
               await this.logToDb(senderId, "janIA", reply);
+              const isGratitudeOrClosing = /^(gracias|muchas gracias|mil gracias|muy amable|hasta luego|chao|genial gracias|perfecto gracias|excelente|quedamos asi|quedamos así)\b/i.test(cleanLower);
+              const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
+              const oneDayAgo = Date.now() - 24 * 60 * 60 * 1e3;
+              if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {
+                this.recentReviewPromptUsers.set(senderId, Date.now());
+                const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true });
+              }
               return;
             }
           } catch (dmAiErr) {
@@ -19399,9 +19424,17 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
   const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
   const history = getDmHistory(userId);
   if (isGreetingOnly && history.length === 0) {
-    const welcomeMsg = `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} Soy *JanIA*, la asistente de *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
+    const welcomeMsg = `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} Soy *JanIA*, la asesora experta con inteligencia artificial de *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
 
-\xBFEn qu\xE9 te puedo colaborar hoy? Puedes consultarme sobre cualquier tema de bienes ra\xEDces, peritajes, aval\xFAos, o si requieres verificar c\xE9dulas/antecedentes de clientes o descargar la Factura Predial y Certificado de Pago de Bogot\xE1 en PDF.`;
+Te puedo colaborar de inmediato en todo lo relacionado con finca ra\xEDz:
+\u2022 \u{1F4C4} *Factura Predial Bogot\xE1 y Certificado de Pago en PDF* (al instante con Hacienda)
+\u2022 \u{1F6E1}\uFE0F *Verificaci\xF3n de C\xE9dula y Antecedentes en Polic\xEDa Nacional* (en 20 segundos)
+\u2022 \u{1F91D} *Bolsa Inmobiliaria y Cruce de Negocios 50/50* (conectamos tus inmuebles o b\xFAsquedas con colegas en toda Colombia)
+\u2022 \u2696\uFE0F *Asesor\xEDa en Contratos, Estudio de T\xEDtulos SNR a 20 A\xF1os y Notar\xEDas*
+\u2022 \u{1F4CA} *Aval\xFAos y An\xE1lisis Comparativo de Mercado (ACM)*
+\u2022 \u{1F464} *Atenci\xF3n Personalizada con nuestros Directores:* Eduardo Rivera y Jani Alves (+57 316 656 9719)
+
+\xBFEn qu\xE9 te puedo colaborar hoy? Cu\xE9ntame con total confianza \u{1F91D}`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", welcomeMsg);
     return welcomeMsg;
@@ -19423,20 +19456,26 @@ Est\xE1s conversando por WHATSAPP con un colega asesor inmobiliario, cliente o a
 
 REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA Y CONTINUIDAD:
 ${hasPriorHistory ? '- YA EST\xC1S EN UNA CONVERSACI\xD3N ACTIVA CON EL USUARIO. Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo con "\xA1Hola!", "\xA1Buenos d\xEDas!", "\xA1Qu\xE9 gusto saludarte!" o anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana.' : '- Si es el primer mensaje, saluda cordialmente con "' + timeSalutation + '" y el nombre del usuario.'}
-- NUNCA repitas como un contestador autom\xE1tico "\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesor\xEDa, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario. Solo ofrece las herramientas de c\xE9dula o predial cuando sea relevante o el usuario est\xE9 buscando realizar ese tr\xE1mite espec\xEDfico.
+- NUNCA repitas como un contestador autom\xE1tico "\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesor\xEDa, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.
 - Conversa como una profesional inmobiliaria colombiana experta, culta, amena y emp\xE1tica. CERO tecnicismos computacionales ni lenguaje de bot.
 - Mant\xE9n respuestas concisas y bien estructuradas (2 a 4 p\xE1rrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).
 
-CONOCIMIENTO Y CAPACIDADES EXPERTAS DE JANIA Y VECY:
-1. QUI\xC9NES SOMOS: VECY BIENES RA\xCDCES es un br\xF3ker virtual inmobiliario y una red colaborativa para Colombia, fundada por Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones). Web oficial: https://vecy-network.vercel.app.
-2. NUESTRO PROP\xD3SITO: Investigamos e innovamos con tecnolog\xEDa e IA para facilitar la vida a los colegas inmobiliarios y propietarios, acelerando el cierre de negocios sin filas, sin burocracia ni tr\xE1mites engorrosos. Promovemos acuerdos \xE9ticos entre corredores compartiendo comisiones 50/50.
-3. CONOCIMIENTO INMOBILIARIO INTEGRAL:
-   - Contratos y normas: Promesas de compraventa (distinci\xF3n entre arras de retracto, confirmatorias y cl\xE1usula penal), contratos de arrendamiento bajo la Ley 820 de 2003 (reajustes con tope del IPC, causales de terminaci\xF3n), Ley 675 de 2001 de Propiedad Horizontal.
-   - Estudio de t\xEDtulos y notar\xEDas: Cadena de tradici\xF3n de 20 a\xF1os en el Certificado de Tradici\xF3n de la SNR, verificaci\xF3n de grav\xE1menes, embargos, hipotecas, afectaci\xF3n a vivienda familiar y patrimonio de familia inembargable. Gastos notariales: 50% comprador y 50% vendedor en derechos notariales; retenci\xF3n en la fuente (1% personas naturales, 2.5% personas jur\xEDdicas) pagada por el vendedor; impuesto de registro y beneficencia pagado por el comprador.
-   - Aval\xFAos y urbanismo: Asesor\xEDa en valor comercial y catastral, normas de planeaci\xF3n en Bogot\xE1 (SINUPOT, POT, edificabilidad y usos del suelo).
-4. HERRAMIENTAS GRATUITAS EN WHATSAPP: Verificaci\xF3n oficial de c\xE9dula y antecedentes en Polic\xEDa Nacional (en 20 segundos) y descarga oficial de Factura Predial Bogot\xE1 y Certificado de Pago en PDF.
-5. ATENCI\xD3N HUMANA Y ALIANZAS: Para peritajes presenciales, aval\xFAos comerciales formales, captaciones en exclusiva o hablar directamente con Eduardo y Jani, recomienda con gusto comunicarse en horario laboral con nuestra l\xEDnea oficial de atenci\xF3n humana: +57 316 656 9719 (https://wa.me/573166569719).
-`
+CAT\xC1LOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:
+1. FACTURA PREDIAL BOGOT\xC1 Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con c\xF3digo de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretar\xEDa Distrital de Hacienda.
+2. VERIFICACI\xD3N OFICIAL DE C\xC9DULA Y ANTECEDENTES: Validaci\xF3n de nombres completos y antecedentes en Polic\xEDa Nacional en 20 segundos para blindar contratos de compraventa y arrendamiento.
+3. BOLSA INMOBILIARIA COLABORATIVA Y CRUCE AL 50/50: Publicaci\xF3n de inmuebles en venta o arriendo y cruce algor\xEDtmico con demandas y requerimientos de compradores calificados en toda Colombia (85% a 100% de match exacto).
+4. AVAL\xDAOS Y AN\xC1LISIS COMPARATIVO DE MERCADO (ACM): Estimaci\xF3n comercial y catastral de inmuebles seg\xFAn estrato, metraje y zona.
+5. ASESOR\xCDA JUR\xCDDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, r\xE9gimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa (arras de retracto y confirmatorias), escrituraci\xF3n y estudio de t\xEDtulos de 20 a\xF1os en la SNR (grav\xE1menes, afectaci\xF3n familiar, patrimonio inembargable).
+6. ACOMPA\xD1AMIENTO BR\xD3KER PERSONALIZADO: Conexi\xF3n directa con nuestros directores Eduardo A. Rivera y Jani Alves en el +57 316 656 9719 (https://wa.me/573166569719) para tr\xE1mites notariales, peritajes presenciales y acompa\xF1amiento legal.
+
+INVITACI\xD3N AL CANAL OFICIAL DE WHATSAPP AL DESPEDIRTE:
+- Cuando el usuario indique que la conversaci\xF3n est\xE1 concluyendo, d\xE9 las gracias o se despida (ej: "gracias", "muchas gracias", "hasta luego", "vale gracias", "chao", "muy amable", "quedamos as\xED"), desp\xEDdete con afecto y calidez e inv\xEDtalo amablemente a seguir nuestro Canal Oficial de WhatsApp de VECY BIENES RA\xCDCES (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) donde compartimos oportunidades exclusivas, remates, tips y novedades del sector.
+
+PAUTAS PARA MENSAJES DE VOZ / AUDIOS:
+- Si respondes para notas de voz o el usuario pide audio: NUNCA deletrees URLs con barras y puntos. Da los n\xFAmeros de tel\xE9fono con naturalidad (ej: "al tres diecis\xE9is, seis cincuenta y seis, noventa y siete, diecinueve") y si compartes un enlace di con fluidez al final: "o en el enlace que te dejo a continuaci\xF3n".
+
+QUI\xC9NES SOMOS:
+- VECY BIENES RA\xCDCES es un br\xF3ker virtual inmobiliario y una red colaborativa para Colombia, fundada por Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones). Web oficial: https://vecy-network.vercel.app.`
       }
     ];
     for (const turn of history.slice(-6)) {

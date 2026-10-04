@@ -172,7 +172,30 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.29 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.30 — Octubre 2026
+
+### Novedades v32.30 (Catálogo Completo de Servicios JanIA, Invitación al Canal de WhatsApp, Reseña Google en Mensaje Aparte y Voz Fluida sin Deletreo de URLs):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  - Eduardo celebró el tono de IA Pura y espontaneidad de JanIA, pero instruyó:
+    1. Nombrar el **catálogo completo de servicios** que ella y VECY pueden realizar (predial/pago, antecedentes policiales, bolsa colaborativa 50/50, avalúos ACM, asesoría jurídica en contratos y estudio de títulos SNR a 20 años, y contacto directo con bróker).
+    2. Antes de despedirse en una conversación normal, invitar amablemente al usuario a seguir nuestro **Canal Oficial de WhatsApp de Vecy Bienes Raíces** (`https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`).
+    3. Enviar la **invitación a comentar y calificar en Google Review** (`https://g.page/r/CctNbwU6UpX5EBM/review`) **siempre en un mensaje aparte**, recordando con calidez humana que *"su opinión es muy importante para nosotros"*.
+    4. En notas de voz / audios (TTS), decir los números de teléfono con total naturalidad colombiana y **no deletrear enlaces puntualmente**, diciendo con fluidez al final: *"o en el enlace que te dejo a continuación"*.
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Catálogo Integral y Despedida con Canal (`server/_core/janIA.ts`)**:
+     - System prompt enriquecido con los 6 servicios integrales de JanIA. Mensaje de bienvenida inicial ampliado con el portafolio completo.
+     - Directiva conversacional de despedida: al concluir la interacción, invitar con calidez y naturalidad al Canal Oficial de WhatsApp.
+  2. **Voz Fonética Colombiana y URLs Suaves (`server/_core/whatsapp-utils.ts`)**:
+     - `cleanVoiceText` perfeccionado: las URLs (`https?://...`) se transforman automáticamente en *"o en el enlace que te dejo a continuación"*, evitando el deletreo de barras y puntos.
+     - Teléfonos oficiales normalizados fonéticamente en audio: Bróker (+57 316 656 9719) -> *"tres dieciséis, seis cincuenta y seis, noventa y siete, diecinueve"*; Bot (+57 319 291 9978) -> *"tres diecinueve, dos noventa y uno, noventa y nueve, setenta y ocho"*.
+     - Limpieza de asteriscos, formato markdown y emojis para que el motor de voz no los vocalice.
+  3. **Despacho Desacoplado de Reseña en Google (`server/_core/whatsapp-match.ts` y `predialService.ts`)**:
+     - `GOOGLE_REVIEW_MESSAGE` actualizado con el texto: *"⭐ Tu opinión es muy importante para nosotros. Nos ayuda muchísimo a seguir mejorando..."*.
+     - Al detectar gratitud o cierre en DMs, despacha la reseña en un mensaje independiente a los 2.5s, blindado para no repetirse más de una vez cada 24 horas por usuario (`recentReviewPromptUsers`).
+     - Al enviar notas de voz PTT, si el mensaje contiene URLs, se despacha también el texto para que el enlace quede clickable en la pantalla.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | Build limpio ✅ | 126/126 tests Vitest ✅ | Simulación end-to-end de servicios, despedida y TTS exitosa ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.29 — Octubre 2026
 
 ### Novedades v32.29 (Auditoría Integral y Blindaje de Factura Predial y Certificado Oficial de Pago SDH con Captcha Dual):
 - **Diagnóstico y Solicitud de Eduardo**:
