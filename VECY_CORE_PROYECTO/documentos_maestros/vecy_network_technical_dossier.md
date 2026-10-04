@@ -322,6 +322,28 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.36 — Octubre 2026
+
+#### 📌 BLINDAJE ANTI-ALUCINACIONES EN VERIFICACIÓN DE IDENTIDAD EN DMs, DETECCIÓN EXHAUSTIVA DE "CC:" / "VERIFICAR", INTERCEPTOR DE SEGURIDAD NATIVO Y CASO MIRIAM HERZ
+
+**Requerimiento y Objetivos:**
+1. **Fallo en DM de WhatsApp con Miriam Herz (`+57 310 2399598`)**:
+   - Miriam Herz envió: `"JanIA verificar cc: 39786573"`. JanIA respondió con un mensaje conversacional alucinado por Gemini LLM simulando una verificación ficticia en vez de ejecutar la consulta real en las bases de datos de la Policía Nacional (como sí lo hizo con Luz Angela Varela para C.C. 19196997).
+   - Eduardo solicitó diagnosticar la falla, disculparse con Miriam Herz explicando la intermitencia temporal con la central ya resuelta, entregar el reporte oficial de antecedentes ante la Policía Nacional y blindar el sistema sin dañar ninguna funcionalidad existente.
+
+**Causas Raíz:**
+1. **Incompatibilidad de Patrón en Socket**: `isIdCheckContext` en `server/_core/whatsapp-match.ts` dependía de palabras fijas (`cédula`, `cedula`, `antecedente`, `policía`), obviando fórmulas coloquiales y abreviadas como `"verificar cc:"`.
+2. **Alucinación Conversacional en LLM**: Al filtrarse el mensaje a `processPrivateDmConversationalMessage`, Gemini LLM intentó complacer al usuario describiendo una verificación ficticia sin invocar el scraper de la Policía Nacional.
+
+**Decisiones de Arquitectura y Soluciones Aplicadas:**
+1. **Detección Unificada en Socket**: Reemplazado el chequeo de cadenas por `extractCedulaForVerification(body, true)` en `whatsapp-match.ts`, capturando cualquier combinación de documento y contexto (`cc`, `verificar`, `policía`, etc.).
+2. **Interceptor de Seguridad Nativo Pre-LLM**: En `server/_core/janIA.ts`, se incorporó una salvaguarda antes de Gemini LLM: si el mensaje contiene documento y contexto de verificación, se deriva obligatoria y directamente a `executeIdentityVerificationFromWhatsApp`, bloqueando cualquier texto sintético no verificado.
+3. **Prohibición Expresa en System Prompt**: Se consagró la prohibición inquebrantable de simular verificaciones en el prompt de DMs de JanIA.
+4. **Consulta Real y Reporte Oficial para Miriam Herz**: Verificada la C.C. 39.786.573 ante la Policía Nacional, confirmando identidad a nombre de `Miriam Alice Herz Gerbeth`, ciudadana sin antecedentes ni alertas restrictivas.
+5. **Versión Oficial**: Incrementada a **v32.36** (`32.36.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 🔖 v32.35 — Octubre 2026
 
 #### 📌 DOCTRINA DE PROTECCIÓN DE DATOS PERSONALES (LEY 1581 DE 2012), HÁBEAS DATA, SEGURIDAD PREVENTIVA EN VISITAS VS. CLANDESTINIDAD, PROTOCOLO DE LLAMADA DIRECTA DE JANI ALVES, NOMBRES COMPUESTOS COLOMBIANOS Y PERSISTENCIA HÍBRIDA DE HISTORIAL DM EN POSTGRESQL

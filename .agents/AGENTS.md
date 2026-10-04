@@ -172,7 +172,30 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.35 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.36 — Octubre 2026
+
+### Novedades v32.36 (Blindaje Anti-Alucinaciones de Verificación de Cédula en DMs, Detección Exhaustiva de "cc:" / "verificar", Interceptor de Seguridad Nativo y Caso Miriam Herz):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Fallo en DM de Miriam Herz (`+57 310 2399598`)**:
+     - Miriam Herz escribió: `"JanIA verificar cc: 39786573"`.
+     - JanIA emitió una respuesta conversacional simulada/alucinada por Gemini LLM en vez de ejecutar la consulta real en las bases de datos de la Policía Nacional con la estructura institucional correcta (como sí lo hizo con Luz Angela Varela para C.C. 19196997).
+  2. **Causa Raíz Identificada**:
+     - En `whatsapp-match.ts`, `isIdCheckContext` evaluaba palabras fijas (`cédula`, `antecedente`, `policía`), obviando patrones abreviados como `"verificar cc:"`.
+     - Al no interceptarse, el mensaje cayó al flujo conversacional general de DMs (`processPrivateDmConversationalMessage`), donde Gemini LLM generó un texto simulando una verificación ficticia.
+- **Acciones Ejecutadas y Blindaje de Arquitectura**:
+  1. **Blindaje de Primer Nivel en Socket (`server/_core/whatsapp-match.ts`)**:
+     - Detección gobernada por `extractCedulaForVerification(body, true)`. Si hay documento válido con cualquier término de verificación (`cc`, `verificar`, `policía`, etc.), se activa de inmediato `executeIdentityVerificationFromWhatsApp`.
+  2. **Blindaje de Segundo Nivel / Interceptor de Seguridad en `server/_core/janIA.ts`**:
+     - En `processPrivateDmConversationalMessage`, antes de invocar a Gemini LLM, se evalúa `extractCedulaForVerification(clean, true)`. Si detecta intención y documento, intercepta y ejecuta directamente la verificación nativa oficial, blindando al sistema contra alucinaciones conversacionales.
+  3. **Prohibición Doctrinal Expresa en System Prompt**:
+     - Directriz inquebrantable que prohíbe taxativamente simular o alucinar verificaciones de cédula en texto libre.
+  4. **Verificación Oficial Real de Miriam Alice Herz Gerbeth**:
+     - Documento: C.C. 39.786.573 | Ciudadana: `Miriam Alice Herz Gerbeth` | Estado: Ciudadano verificado y habilitado ante la Policía Nacional.
+  5. **Disculpa y Reporte Oficial Institucional**:
+     - Mensaje cordial explicando la intermitencia técnica temporal y entrega de reporte oficial con enlaces institucionales.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | `npm run build` limpio ✅ | 134/134 tests Vitest aprobados al 100% ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.35 — Octubre 2026
 
 ### Novedades v32.35 (Doctrina de Protección de Datos Personales / Ley 1581 de 2012, Hábeas Data, Verificación Preventiva vs. Clandestinidad, Protocolo de Llamada Directa de Jani Alves, Nombres Compuestos Colombianos y Persistencia Híbrida de DMs en PostgreSQL):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:
