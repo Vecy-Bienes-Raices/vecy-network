@@ -322,6 +322,35 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.29 — Octubre 2026
+
+#### 📌 AUDITORÍA INTEGRAL Y BLINDAJE DE FACTURA PREDIAL Y CERTIFICADO OFICIAL DE PAGO SDH CON CAPTCHA DUAL
+
+**Requerimiento y Objetivos:**
+1. Auditar integralmente si el servicio de entrega de factura predial en PDF y el Certificado Oficial de Pago de la Secretaría Distrital de Hacienda de Bogotá (SDH) están funcionando al 100% con JanIA en WhatsApp.
+2. Identificar y resolver cualquier fallo o excepción en la ejecución real de extremo a extremo.
+
+**Causas Raíz:**
+1. **ReferenceError `__name is not defined` en Puppeteer**: En `server/_core/predialService.ts`, al solicitar el Certificado de Pago (para facturas ya canceladas de la vigencia 2026), esbuild/tsx envolvía las funciones callback con su helper interno `__name(fn, "name")`. Al ejecutarse dentro del contexto V8 de Chrome headless donde `__name` no estaba definido en `window`, Puppeteer arrojaba `ReferenceError: __name is not defined`.
+2. **Ausencia de Tabla DDL `predial_consultations` en Base de Datos**: La tabla requerida para el almacenamiento permanente y Big Data de avalúos catastrales no había sido inicializada con su DDL en PostgreSQL.
+
+**Solución Aplicada:**
+- **`server/_core/predialService.ts`**:
+  - Inyectado polyfill global `(window as any).__name = (target: any) => target;` mediante `page.evaluateOnNewDocument` al crear la página en Puppeteer.
+  - Reemplazada la llamada AJAX de `certAjaxResp` por evaluación mediante template literal string, ejecutada nativamente por Chrome sin que el compilador inyecte decoradores.
+  - Implementada decodificación de mensajes de error de la SDH (`txt_msj` en base64) para proveer retroalimentación exacta y amigable al usuario.
+- **Base de Datos PostgreSQL**:
+  - Ejecutado el DDL de `predial_consultations` con sus índices en `chip`, `document_number` y `requester_phone`.
+- **Verificación Empírica Real**:
+  - Ejecutada prueba real en vivo con CHIP `AAA0198HCOM` y CC `79505340`:
+    - Detección de factura 2026 ya pagada.
+    - Resolución de doble reCAPTCHA v2 con 2Captcha.
+    - Descarga del Certificado Oficial de Pago en binario PDF (`29398 bytes`, cabecera `%PDF-`, titular `JESUS GREGORIO CASTAÑO OROZCO`).
+    - Prueba exitosa con `executePredialAssistanceFromWhatsApp`.
+- **Versión Oficial**: Incrementada a **v32.29** (`32.29.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 🔖 v32.28 — Octubre 2026
 
 #### 📌 HUMANIZACIÓN TOTAL DE JANIA: SALUDO HORARIO CONTEXTUAL, CERO RE-SALUDOS EN HILOS ACTIVOS, CEREBRO INMOBILIARIO EXPERTO Y NOTAS DE VOZ PTT EN DMs

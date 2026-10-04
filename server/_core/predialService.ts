@@ -447,6 +447,11 @@ export async function downloadPredialInvoicePdf(
     const page = await browser.newPage();
     page.setDefaultTimeout(60000);
 
+    // Blindaje contra helper __name inyectado por transpiladores (esbuild/tsx) en funciones de evaluate
+    await page.evaluateOnNewDocument(() => {
+      (window as any).__name = (target: any) => target;
+    });
+
     let buscarInfoData: any = null;
     page.on('response', async (res: any) => {
       const url = res.url();
@@ -578,32 +583,44 @@ export async function downloadPredialInvoicePdf(
           pageurl: 'https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA'
         });
 
-        const certAjaxResp: any = await page.evaluate((token: string, bpParam?: string) => {
-          return new Promise((resolve) => {
-            const numBP = bpParam || (document.getElementById('numBP') as HTMLInputElement)?.value || (window as any).buscarInfoData?.numBP || '1005119715';
-            const numObjeto = (document.getElementById('claveObjeto') as HTMLInputElement)?.value?.toUpperCase() || '';
-            const year = (new Date()).getFullYear().toString();
-            const certUrl = (window as any).ACC?.descargaFacturaVADescargarCertificadoPagoURL || '/bogota/es/descargaFacturaVA/descargarCertificadoPago';
+        const tokenCert = captchaCert.data;
+        const bpParam = buscarInfoData?.numBP || buscarInfoData?.dataForm?.numBP || '';
 
-            (window as any).$.ajax({
-              url: certUrl,
-              data: {
-                numBP: numBP,
-                numObjeto: numObjeto,
-                tipoOperacion: '0001',
-                anoGravable: year,
-                recaptchaResponse: token
-              },
-              type: 'POST',
-              success: function(resp: any) {
-                resolve({ success: true, resp });
-              },
-              error: function(xhr: any, status: any, err: any) {
-                resolve({ success: false, status, err: err?.toString(), text: xhr?.responseText });
+        const certAjaxResp: any = await page.evaluate(`
+          new Promise((resolve) => {
+            try {
+              const numBP = ${JSON.stringify(bpParam)} || (document.getElementById('numBP') && document.getElementById('numBP').value) || (window.buscarInfoData && window.buscarInfoData.numBP) || '1005119715';
+              const numObjeto = (document.getElementById('claveObjeto') && document.getElementById('claveObjeto').value ? document.getElementById('claveObjeto').value.toUpperCase() : '');
+              const year = (new Date()).getFullYear().toString();
+              const certUrl = (window.ACC && window.ACC.descargaFacturaVADescargarCertificadoPagoURL) || '/bogota/es/descargaFacturaVA/descargarCertificadoPago';
+              const token = ${JSON.stringify(tokenCert)};
+
+              if (window.$ && window.$.ajax) {
+                window.$.ajax({
+                  url: certUrl,
+                  data: {
+                    numBP: numBP,
+                    numObjeto: numObjeto,
+                    tipoOperacion: '0001',
+                    anoGravable: year,
+                    recaptchaResponse: token
+                  },
+                  type: 'POST',
+                  success: function(resp) {
+                    resolve({ success: true, resp: resp });
+                  },
+                  error: function(xhr, status, err) {
+                    resolve({ success: false, status: status, err: err ? err.toString() : '', text: xhr ? xhr.responseText : '' });
+                  }
+                });
+              } else {
+                resolve({ success: false, err: 'jQuery not found' });
               }
-            });
-          });
-        }, captchaCert.data, buscarInfoData?.numBP || buscarInfoData?.dataForm?.numBP);
+            } catch (e) {
+              resolve({ success: false, err: e.message });
+            }
+          })
+        `);
 
         if (certAjaxResp?.success && certAjaxResp?.resp?.urlDownload) {
           const relCertUrl = certAjaxResp.resp.urlDownload;
@@ -627,6 +644,29 @@ export async function downloadPredialInvoicePdf(
               };
             }
           }
+        }
+
+        // Si la SDH devolvió un error específico decodificarlo
+        let sdhErrorMessage = '';
+        if (certAjaxResp?.resp?.errores && Array.isArray(certAjaxResp.resp.errores)) {
+          for (const err of certAjaxResp.resp.errores) {
+            const rawMsg = err?.txt_msj || err?.txtmsj;
+            if (rawMsg) {
+              try {
+                const dec = Buffer.from(rawMsg, 'base64').toString('utf8');
+                if (dec && dec.trim()) {
+                  sdhErrorMessage = dec.replace(/<[^>]*>?/gm, '').trim();
+                }
+              } catch (_) {}
+            }
+          }
+        }
+
+        if (options?.isCertificadoPago) {
+          return {
+            success: false,
+            errorMessage: sdhErrorMessage || 'No se pudo generar el Certificado de Pago en este momento. Es posible que el pago aún no esté asentado en la Secretaría de Hacienda o los datos no coincidan.'
+          };
         }
       } catch (certErr: any) {
         console.warn('[PREDIAL-DOWNLOAD] Error intentando descargar certificado de pago:', certErr?.message);

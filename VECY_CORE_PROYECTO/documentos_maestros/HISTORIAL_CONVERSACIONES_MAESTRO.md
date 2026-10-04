@@ -7,6 +7,36 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.29 — 03 Octubre 2026
+
+### Solicitud de Eduardo
+- Eduardo preguntó: *"Hola. Por favor puedes revisar si el servicio de entrega de predial en PDF y certificación de pago está funcionando con JanIA?"*
+
+### Diagnóstico Técnico y Causas Raíz
+1. **Auditoría del Servicio SDH y 2Captcha**:
+   - Saldo de 2Captcha verificado: `$2.76805 USD` (amplia solvencia).
+   - Portal SDH Bogotá (`https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`) activo: Status `200 OK`.
+2. **Causa Raíz #1: ReferenceError `__name is not defined` en `page.evaluate()`**:
+   - En la descarga del Certificado de Pago en `server/_core/predialService.ts`, Puppeteer evalúa código inyectado en Chrome. Los transpiladores de TypeScript (`esbuild`/`tsx`) decoran las funciones anónimas y de promesas con un helper interno `__name(fn, "name")`. Al ejecutarse en el contexto de la ventana del navegador donde `__name` no existe en `window`, Puppeteer arrojaba `ReferenceError: __name is not defined`, abortando la descarga del PDF del Certificado de Pago.
+3. **Causa Raíz #2: Tabla `predial_consultations` Pendiente de Migración DDL en BD**:
+   - La tabla definida en `drizzle/schema.ts` para persistencia y Big Data de avalúos no tenía su DDL ejecutado en PostgreSQL, lo que generaba advertencias al intentar registrar consultas finalizadas.
+
+### Acciones Ejecutadas
+1. **Blindaje de Puppeteer contra Decoradores de Bundler (`server/_core/predialService.ts`)**:
+   - Inyectado `window.__name = (target) => target;` mediante `page.evaluateOnNewDocument` desde el inicio de la navegación de Chrome headless.
+   - Reemplazada la función anónima en `certAjaxResp` por evaluación limpia mediante template literal string, ejecutada nativamente por el motor V8 del navegador sin intervención de transpiladores.
+2. **Decodificación de Respuestas de Error de la SDH**:
+   - Integrada la decodificación de `txt_msj` / `txtmsj` en base64 de la SDH para capturar y entregar mensajes transparentes al usuario en caso de inconvenientes catastrales.
+3. **Migración DDL en PostgreSQL**:
+   - Creada formalmente la tabla `predial_consultations` con sus índices en `chip`, `document_number` y `requester_phone`.
+4. **Verificación Empírica Real de Extremo a Extremo**:
+   - Ejecución en vivo de consulta real con CHIP `AAA0198HCOM` y CC `79505340`:
+     - Detección de pago previo en vigencia 2026 ✅
+     - Resolución de captcha dual con 2Captcha ✅
+     - Descarga del archivo binario oficial del Certificado de Pago de la SDH (`29398 bytes`, cabecera `%PDF-`, titular `JESUS GREGORIO CASTAÑO OROZCO`) ✅
+     - Prueba de `executePredialAssistanceFromWhatsApp` simulando mensaje real con resultado de éxito total ✅
+   - `tsc --noEmit` 0 errores ✅ | `npm run build` limpio ✅ | 126/126 tests Vitest ✅
+
 ## 📋 SESIÓN v32.28 — 03 Octubre 2026
 
 ### Solicitud de Eduardo

@@ -172,7 +172,27 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.28 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.29 — Octubre 2026
+
+### Novedades v32.29 (Auditoría Integral y Blindaje de Factura Predial y Certificado Oficial de Pago SDH con Captcha Dual):
+- **Diagnóstico y Solicitud de Eduardo**:
+  - Eduardo solicitó revisar si el servicio de entrega de predial en PDF y certificación de pago está funcionando con JanIA.
+- **Causas Raíz y Solución de Arquitectura**:
+  1. **Resolución del Bug `__name is not defined` en Puppeteer (`server/_core/predialService.ts`)**:
+     - Al invocar la descarga del Certificado de Pago en la Secretaría Distrital de Hacienda (SDH), esbuild/tsx envolvía las funciones anónimas dentro de `page.evaluate()` con el helper `__name(..., "...")`, el cual no existía en el scope global del navegador Chrome, arrojando `ReferenceError: __name is not defined`.
+     - Se blindó la instancia de Puppeteer inyectando `window.__name = (target) => target;` mediante `page.evaluateOnNewDocument` desde el primer milisegundo de navegación.
+     - Se reemplazó la función evaluada por template literal string puro ejecutado directamente por V8 en el navegador, inmune a transpiladores y minificadores.
+  2. **Decodificación Automática de Errores Base64 de la SDH**:
+     - Implementada la decodificación de `dataResponse.errores[i].txt_msj` (formato base64 de la SDH) para que si el predio no registra pago o existen inconsistencias en Hacienda, JanIA brinde el mensaje exacto oficial.
+  3. **Persistencia Activa en PostgreSQL (`predial_consultations`)**:
+     - Creada formalmente la tabla `predial_consultations` con índices en `chip`, `document_number` y `requester_phone` para auditoría y analítica de avalúos comerciales.
+- **Verificación Empírica**:
+  - Test real en vivo contra el portal oficial de la SDH (`https://nuevaoficinavirtual.shd.gov.co/bogota/es/descargaFacturaVA`) con 2Captcha:
+    - CHIP: `AAA0198HCOM` | Cédula: `79505340` | Contribuyente: `JESUS GREGORIO CASTAÑO OROZCO`
+    - Detección de pago vigencia 2026 ✅ | Resolución de doble reCAPTCHA v2 ✅ | Descarga de binario PDF real (`29398 bytes`, cabecera `%PDF-`) ✅
+  - `tsc --noEmit` 0 errores ✅ | `npm run build` limpio ✅ | 126/126 tests Vitest ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.28 — Octubre 2026
 
 ### Novedades v32.28 (Humanización Total de JanIA: Saludo Horario Contextual, Cero Re-Saludos en Hilos Activos, Cerebro Inmobiliario Experto y Notas de Voz PTT en DMs):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:
