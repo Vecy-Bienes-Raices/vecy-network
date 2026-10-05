@@ -322,6 +322,33 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.41 — Octubre 2026
+
+#### 📌 BLINDAJE ANTI BUCLE DE REINICIOS DE WATCHDOG, RESOLUCIÓN IPV4 LOCALHOST, TOLERANCIA DE ARRANQUE BAILEYS Y ENTREGA INFORMATIVA SIN FALSOS "FALLOS EN LA MATRIX"
+
+**Requerimiento y Objetivos:**
+1. **Diagnóstico Crítico de Intermitencia y Sensación de JanIA Desconectada**:
+   - Responder a la preocupación de Eduardo sobre la estabilidad de JanIA analizando dos incidentes en tiempo real en WhatsApp:
+     a) **Caso Andres Artunduaga (`+57 304 4010292`)**: Tres mensajes consecutivos pidiendo *"Verificar CE 498614"* respondidos con el mensaje de excepción *"un pequeño fallo en la matrix 🤖😅"*.
+     b) **Caso Maria Fernanda (`+57 316 4652482`)**: Solicitud enviada a las 10:24 AM para *"Verificar CE 8084608"* que quedó sin respuesta por apagado abrupto del socket.
+2. **Identificación de Causas Raíz en Servidor VPS y Código**:
+   - **Watchdog Death-Loop**: Descubierto que `/var/log/vecy-health-monitor.log` registraba 992 reinicios forzados ejecutados por el cron job cada 3 minutos debido a un curl a `localhost:3000` que resolvía a IPv6 y agotaba el timeout de 15s mientras Baileys leía 26.000 archivos de autenticación.
+   - **Enmascaramiento de Reportes Válidos**: `formatPoliteToolDelivery` en `janIA.ts` descartaba los reportes generados con `success: false` y emitía el mensaje genérico de error de sistema, engañando al usuario como si JanIA hubiera colapsado.
+
+**Decisiones de Arquitectura y Soluciones Aplicadas:**
+1. **Reestructuración de `scripts/health-monitor.sh`**:
+   - Endpoint apuntado explícitamente a `http://127.0.0.1:3000/api/health` con flag `--ipv4`.
+   - Timeout ampliado a 30s con 3 reintentos separados por 20 segundos antes de considerar fallo.
+   - Período de gracia tras reinicio extendido de 180s a 600s (10 minutos) para dar holgura a la inicialización de socket y lectura de credenciales.
+   - Frecuencia del cron job en VPS ajustada a cada 10 minutos.
+2. **Binding de Red en `server/_core/index.ts`**:
+   - `server.listen(port, "0.0.0.0", ...)` para garantizar escucha IPv4 universal.
+3. **Preservación de Reportes Informativos en `server/_core/janIA.ts`**:
+   - `formatPoliteToolDelivery` entrega el informe explicativo completo aunque `success` sea `false`, manteniendo el tono educado y reservando el mensaje de "fallo en la matrix" solo para errores catastróficos sin payload.
+4. **Versión Oficial**: Incrementada a **v32.41** (`32.41.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ### 🔖 v32.40 — Octubre 2026
 
 #### 📌 DOCTRINA DE MARKETING CONVERSACIONAL, PROHIBICIÓN DE "45/10/45" TEMPRANO, PERFILAMIENTO DEL USUARIO, MENÚ ESTRUCTURADO DE CONSULTAS, CLARIDAD TAJANTE DE SERVICIOS GRATUITOS Y DESPEDIDA EN 2 MENSAJES SECUENCIALES

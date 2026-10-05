@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.40";
+    VECY_VERSION = "v32.41";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -19679,6 +19679,17 @@ async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, 
   const history = await getOrLoadDmHistory(userId);
   const isFirstTurn = history.length === 0;
   if (!success) {
+    if (payloadText && payloadText.trim()) {
+      if (isFirstTurn) {
+        const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
+
+`;
+        return greetingHeader + payloadText;
+      } else {
+        const politeHeader = `\xA1Hola${displayName ? ` ${displayName}` : ""}! `;
+        return politeHeader + payloadText;
+      }
+    }
     return `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude procesar tu solicitud en este intento. \xBFPodr\xEDas por favor confirmarme nuevamente los datos para ayudarte de inmediato? \u{1F91D}`;
   }
   if (isFirstTurn) {
@@ -27313,7 +27324,7 @@ Direcci\xF3n obligatoria:
     serveStatic(app);
   }
   const port = parseInt(process.env.PORT || "3000");
-  server.listen(port, () => {
+  server.listen(port, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${port}/`);
     const isDev = process.env.NODE_ENV === "development";
     const shouldStartBot = isDev ? process.env.ENABLE_LOCAL_WHATSAPP === "true" || process.env.ENABLE_WHATSAPP_BOT === "true" : process.env.ENABLE_WHATSAPP_BOT !== "false" || process.env.ENABLE_JANIA_MATCH_BOT === "true";

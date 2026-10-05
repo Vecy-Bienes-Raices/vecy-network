@@ -2658,6 +2658,18 @@ Adriana Rebeca Orejuela`;
       expect(howToRes).toContain("Si te cuesta la tecnología o te enredas con el celular");
       expect(howToRes).toContain("tengo toda la paciencia del mundo");
     });
+
+    it("Doctrina v32.41: formatPoliteToolDelivery entrega el payload explicativo si la verificación no arrojó resultados en vez de inventar un fallo en la matrix", async () => {
+      const { formatPoliteToolDelivery } = await import("../_core/janIA");
+      const testUserId = `test-user-report-${Date.now()}@s.whatsapp.net`;
+      const informativeReport = "⚠️ *CONSULTA DE IDENTIDAD — VECY BIENES RAÍCES*\n\nNo fue posible validar automáticamente en este momento el documento Cédula de Extranjería (C.E.) *498.614* en la Central Oficial de Antecedentes de la Policía Nacional.";
+
+      const delivered = await formatPoliteToolDelivery(testUserId, "Andres Artunduaga", "cedula", informativeReport, false);
+      expect(delivered).toContain("Andres");
+      expect(delivered).toContain("No fue posible validar automáticamente");
+      expect(delivered).toContain("Cédula de Extranjería (C.E.) *498.614*");
+      expect(delivered).not.toContain("fallo en la matrix");
+    });
   });
 });
 

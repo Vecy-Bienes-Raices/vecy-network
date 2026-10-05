@@ -40,23 +40,27 @@ if [ "$PM2_STATUS" != "online" ]; then
     exit 0
 fi
 
-# 3. Periodo de gracia tras arranque (180 segundos)
-if [ -n "$PM2_UPTIME_SEC" ] && [ "$PM2_UPTIME_SEC" -lt 180 ]; then
-    # El servidor acaba de iniciar; darle tiempo para cargar índices y socket sin reiniciar prematuramente
+# 3. Periodo de gracia tras arranque (600 segundos / 10 minutos)
+if [ -n "$PM2_UPTIME_SEC" ] && [ "$PM2_UPTIME_SEC" -lt 600 ]; then
+    # El servidor requiere tiempo para cargar índices geográficos, Divipola y sincronizar 26k archivos de Baileys sin reiniciar prematuramente
     exit 0
 fi
 
-# 4. Verificar respuesta HTTP en endpoint /api/health (timeout 15s con doble verificación)
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "http://localhost:3000/api/health")
+# 4. Verificar respuesta HTTP en endpoint /api/health (IPv4 estricto 127.0.0.1, timeout 30s con triple verificación)
+HTTP_CODE=$(curl --ipv4 -s -o /dev/null -w "%{http_code}" --max-time 30 "http://127.0.0.1:3000/api/health")
 
 if [ "$HTTP_CODE" != "200" ]; then
-    # Primer intento falló, esperar 10 segundos y reintentar para descartar picos transitorios
-    sleep 10
-    RETRY_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "http://localhost:3000/api/health")
-    if [ "$RETRY_CODE" != "200" ]; then
-        log "⚠️ Endpoint /api/health no respondió tras 2 intentos (códigos: $HTTP_CODE, $RETRY_CODE). Posible asfixia de Event Loop. Reiniciando..."
-        pm2 restart jania-server
-        log "🔄 jania-server reiniciado por falla confirmada en sondeo HTTP."
-        exit 0
+    # Primer intento falló, esperar 20 segundos y reintentar para descartar picos de procesamiento de mensajes WhatsApp
+    sleep 20
+    RETRY_CODE_1=$(curl --ipv4 -s -o /dev/null -w "%{http_code}" --max-time 30 "http://127.0.0.1:3000/api/health")
+    if [ "$RETRY_CODE_1" != "200" ]; then
+        sleep 20
+        RETRY_CODE_2=$(curl --ipv4 -s -o /dev/null -w "%{http_code}" --max-time 30 "http://127.0.0.1:3000/api/health")
+        if [ "$RETRY_CODE_2" != "200" ]; then
+            log "⚠️ Endpoint /api/health no respondió tras 3 intentos espaciados (códigos: $HTTP_CODE, $RETRY_CODE_1, $RETRY_CODE_2). Reiniciando..."
+            pm2 restart jania-server
+            log "🔄 jania-server reiniciado por falla confirmada en sondeo HTTP."
+            exit 0
+        fi
     fi
 fi

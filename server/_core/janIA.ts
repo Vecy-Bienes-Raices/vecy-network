@@ -6663,6 +6663,15 @@ export async function formatPoliteToolDelivery(
   const isFirstTurn = history.length === 0;
 
   if (!success) {
+    if (payloadText && payloadText.trim()) {
+      if (isFirstTurn) {
+        const greetingHeader = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️✨.\n\n`;
+        return greetingHeader + payloadText;
+      } else {
+        const politeHeader = `¡Hola${displayName ? ` ${displayName}` : ""}! `;
+        return politeHeader + payloadText;
+      }
+    }
     return `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude procesar tu solicitud en este intento. ¿Podrías por favor confirmarme nuevamente los datos para ayudarte de inmediato? 🤝`;
   }
 

@@ -172,7 +172,35 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.40 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.41 — Octubre 2026
+
+### Novedades v32.41 (Blindaje Anti Bucle de Reinicios de Watchdog, Respaldo IPv4 Localhost, Tolerancia de Arranque Baileys y Entrega Informativa sin Falsos "Fallos en la Matrix"):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo (Análisis Caso Andres Artunduaga `+57 304 4010292` y Maria Fernanda `+57 316 4652482`)**:
+  1. **Causa Raíz 1: Bucle de Reinicios Prematuros del Watchdog (`scripts/health-monitor.sh`)**:
+     - El monitor de salud corría cada 3 minutos en crontab de VPS probando `http://localhost:3000/api/health` con un timeout corto de 15 segundos y gracia de solo 180s.
+     - En Ubuntu, `localhost` resuelve a IPv6 `::1:3000`, el cual quedaba colgado porque Node escuchaba en `0.0.0.0:3000`. Además, el socket Baileys tardaba 1 a 3 minutos sincronizando 26.108 archivos de credenciales (`.baileys_auth`), retrasando el endpoint.
+     - Esto provocó que el watchdog matara y reiniciara `jania-server` 992 veces en bucle infinito cada 6 minutos.
+     - **Caso Maria Fernanda**: A las 10:24 AM hora Bogotá, Maria Fernanda envió *"Verificar CE 8084608"*. En ese exacto segundo (`16:24:01 UTC`), el watchdog mató el proceso en el VPS, desconectando el socket y dejando su mensaje sin atender.
+  2. **Causa Raíz 2: Falso "Fallo en la Matrix" Ocultando Explicaciones Válidas en `formatPoliteToolDelivery`**:
+     - Andres Artunduaga envió *"Verificar CE 498614"* 3 veces seguidas.
+     - La consulta a Policía Nacional (`cedulaTipo: 'cx'`) no arrojó antecedentes judiciales ni nombre (el portal no lista ciudadanos extranjeros sin registro penal).
+     - El servicio `identityVerificationService` generó un reporte explicativo claro (`reportText`) indicando que el documento no pudo ser validado y detallando los motivos (registro migratorio, documento extranjero, error de digitación).
+     - Sin embargo, en `server/_core/janIA.ts`, la función `formatPoliteToolDelivery` contenía la condición `if (!success) { return "...un pequeño fallo en la matrix 🤖😅..." }`.
+     - Esto descartaba por completo el reporte explicativo y le decía erróneamente al usuario que el sistema de JanIA se había caído o roto, generando tres respuestas consecutivas idénticas de "fallo en la matrix".
+- **Acciones Ejecutadas y Blindaje de Arquitectura**:
+  1. `scripts/health-monitor.sh`:
+     - Reemplazado `localhost` por `127.0.0.1` explícito con bandera `--ipv4`.
+     - Aumentado timeout de curl a 30s con 3 reintentos espaciados por 20 segundos antes de declarar fallo.
+     - Período de gracia tras reinicio ampliado de 180s a 600s (10 minutos) para dar tiempo a la sincronización de archivos de Baileys.
+     - Crontab en VPS ajustado de `*/3` a `*/10` minutos.
+  2. `server/_core/index.ts`:
+     - Binding explícito a `"0.0.0.0"` en `server.listen(port, "0.0.0.0", ...)`.
+  3. `server/_core/janIA.ts`:
+     - Modificado `formatPoliteToolDelivery`: si existe un `payloadText` explicativo, se entrega al usuario con cortesía y cordialidad, reservando el mensaje de "fallo en la matrix" exclusivamente para fallos catastróficos o timeouts imprevistos sin reporte.
+  4. Limpieza de procesos huérfanos en VPS y despliegue del script corregido.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | 137/137 tests Vitest aprobados al 100% ✅ | `npm run build` limpio en 11.14s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.40 — Octubre 2026
 
 ### Novedades v32.40 (Doctrina de Marketing Conversacional, Prohibición de "45/10/45" Temprano, Perfilamiento del Usuario, Menú Estructurado de Consultas, Claridad Tajante de Servicios Gratuitos y Despedida en 2 Mensajes Secuenciales):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo (Análisis Caso Reina Salazar `+57 313 8323122`)**:

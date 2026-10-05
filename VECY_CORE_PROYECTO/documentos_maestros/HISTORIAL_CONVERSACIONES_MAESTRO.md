@@ -7,6 +7,58 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.41 — 05 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Reporte de Funcionamiento y Diagnóstico de Estado de JanIA**:
+   - Eduardo preguntó: *"Podrías revisar y darme un reporte de que todo está funcionando bien y al la perrfeción?"* seguido de *"Pero creo que JanIA está desconectada y no está funcionando. Por qué nos está sucediendo esto y qué podemos hacer?"*.
+   - Acompañó la consulta con dos capturas de pantalla de WhatsApp:
+     a) **Caso Andres Artunduaga (`+57 304 4010292`)**: El cliente escribió tres veces *"Verificar CE 498614"* (a las 10:39, 10:41 y 10:44 AM), y recibió tres respuestas consecutivas idénticas de JanIA diciendo: *"¡Buenos días Andres! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude procesar tu solicitud en este intento. ¿Podrías por favor confirmarme nuevamente los datos para ayudarte de inmediato? 🤝"*.
+     b) **Caso Maria Fernanda (`+57 316 4652482`)**: La cliente eliminó dos mensajes a las 10:22 y 10:23 AM, y a las 10:24 AM envió *"Verificar CE 8084608"* sin recibir ninguna respuesta de JanIA, dando la impresión de que el bot estaba desconectado.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Causa Raíz 1: Bucle de Reinicios Infinitos del Watchdog (`scripts/health-monitor.sh`)**:
+   - Al inspeccionar `/var/log/vecy-health-monitor.log` en el VPS, se descubrió un hallazgo crítico: **¡992 reinicios forzados por el monitor de salud!**
+   - El cron job corría cada 3 minutos (`*/3 * * * *`) ejecutando `health-monitor.sh`, el cual hacía `curl -s -f -m 15 http://localhost:3000/api/health`.
+   - **Fallo Dual de Red y Carga**:
+     - En Linux Ubuntu, `localhost` resuelve prioritariamente a IPv6 `[::1]:3000`. Como Node.js no tenía binding explícito a IPv6, la conexión quedaba esperando hasta que el timeout de 15 segundos expiraba.
+     - Durante el arranque de `jania-server`, la biblioteca Baileys inicializa y sincroniza 26.108 archivos de credenciales (`.baileys_auth` ~145 MB). Este proceso de lectura intensiva de disco toma entre 60 y 180 segundos.
+     - Como el período de gracia del monitor era de apenas 180 segundos, el watchdog interpretaba que el servidor no respondía, mataba el proceso con `pm2 restart jania-server` y reiniciaba el ciclo.
+     - **El caso de Maria Fernanda a las 10:24 AM**: En el log `/var/log/vecy-health-monitor.log` figura la entrada exacta `[2026-10-05 16:24:01] ⚠️ /api/health no respondió en 15s. Reiniciando servicio...`. Las 16:24 UTC corresponden exactamente a las **10:24 AM hora de Bogotá**. Justo en el segundo en que Maria Fernanda envió su mensaje, el watchdog mató a JanIA, desconectando el WebSocket de WhatsApp y perdiendo el mensaje en tránsito.
+2. **Causa Raíz 2: Falso "Fallo en la Matrix" Ocultando Explicaciones Válidas en `formatPoliteToolDelivery`**:
+   - En el caso de Andres Artunduaga, él solicitó la verificación de la Cédula de Extranjería `CE 498614`.
+   - La consulta fue ejecutada y la Policía Nacional respondió correctamente, pero como el titular no posee antecedentes judiciales registrados en el sistema penal colombiano, el portal oficial no arrojó nombre.
+   - El servicio `identityVerificationService.ts` generó un reporte explicativo impecable (`reportText`) indicando que el documento no pudo ser validado y detallando los motivos técnicos y normativos (registro migratorio, documento extranjero, error de digitación).
+   - Sin embargo, en `server/_core/janIA.ts`, la función `formatPoliteToolDelivery` tenía la condición:
+     `if (!success) { return "¡Buenos días...! Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅)..." }`.
+   - Esta condición **descartaba por completo el reporte explicativo** y enviaba el mensaje genérico de error de sistema, haciéndole creer al usuario que el bot se había roto cuando en realidad el servicio había procesado la consulta a la perfección.
+3. **Procesos Huérfanos Acumulados**:
+   - Debido a los 992 reinicios forzados por el watchdog, existían múltiples procesos Node.js huérfanos en memoria consumiendo recursos en el VPS.
+
+### Acciones Ejecutadas
+1. **Blindaje de `scripts/health-monitor.sh`**:
+   - Sustituido `localhost` por `127.0.0.1` explícito con el parámetro `--ipv4` para evitar resolución fallida de IPv6.
+   - Aumentado el timeout de curl de 15s a 30s y agregado un ciclo de **3 reintentos con 20 segundos de espera** antes de considerar que el servicio realmente falló.
+   - Ampliado el período de gracia tras un reinicio de 180 segundos a **600 segundos (10 minutos)**, permitiendo a Baileys sincronizar sus archivos auth sin ser interrumpido.
+   - Actualizado el crontab del VPS para correr cada 10 minutos (`*/10 * * * *`) en vez de cada 3 minutos.
+2. **Binding Explícito de Red en `server/_core/index.ts`**:
+   - Configurado `server.listen(port, "0.0.0.0", ...)` para garantizar que el servidor escuche inequívocamente en todas las interfaces IPv4 locales y remotas.
+3. **Corrección de Entrega Informativa en `server/_core/janIA.ts`**:
+   - Modificado `formatPoliteToolDelivery`: si existe un `payloadText` generado por el servicio (incluso con `success: false`), dicho reporte explicativo se preserva y se entrega al usuario con cortesía y calidez humana.
+   - La respuesta de "fallo en la matrix" se reserva estrictamente para cuando no haya reporte por error catastrófico no capturado.
+4. **Limpieza del VPS y Despliegue**:
+   - Terminados todos los procesos huérfanos en el VPS (`kill -9 1755550 1949335 2088307 ...`).
+   - Desplegado el script de monitoreo corregido en `/var/www/vecy-network/scripts/health-monitor.sh`.
+   - Verificado el estado activo de `jania-server` en PM2 con 0 reinicios anómalos.
+5. **Pruebas Automatizadas y Verificación**:
+   - Creada prueba de regresión en `server/__tests__/regression.test.ts` verificando que `formatPoliteToolDelivery` entregue explicaciones de documentos no encontrados sin activar el falso "fallo en la matrix".
+   - 137/137 tests de Vitest aprobados al 100% ✅.
+   - `tsc --noEmit` con 0 errores ✅.
+   - Compilación limpia de producción en 11.14s ✅.
+   - Incremento de versión oficial a **v32.41** (`32.41.0`).
+
+---
+
 ## 📋 SESIÓN v32.40 — 04 Octubre 2026
 
 ### Solicitud de Eduardo
