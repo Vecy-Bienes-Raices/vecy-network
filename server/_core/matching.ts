@@ -339,7 +339,8 @@ const boundariesCache = new Map<string, StreetCarreraBoundaries>();
 const MAX_BOUNDARIES_CACHE = 2500;
 
 export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundaries {
-  const norm = String(text || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (!text || typeof text !== "string") return {};
+  const norm = String(text || "").replace(/\s+/g, " ").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (!norm || norm.length < 5) return {};
 
   const cached = boundariesCache.get(norm);
@@ -347,14 +348,33 @@ export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundar
 
   const res: StreetCarreraBoundaries = {};
 
+  // Pre-filtro ultrarrápido: Si no contiene términos geográficos clave ni números, salir de inmediato sin tocar expresiones regulares
+  const hasGeographicWords = /(?:calle|calles|clle|cll|cna|carrera|carreras|cra|autopista|autonorte|circunvalar|septima|entre)/i.test(norm);
+  if (!hasGeographicWords || !/\d/.test(norm)) {
+    if (boundariesCache.size >= MAX_BOUNDARIES_CACHE) {
+      const firstKey = boundariesCache.keys().next().value;
+      if (firstKey) boundariesCache.delete(firstKey);
+    }
+    boundariesCache.set(norm, res);
+    return res;
+  }
+
   // 1. Rango de Calles:
   // Excluir terminantemente unidades de área (m2, mts), precio (millones, mdp), habitaciones, baños, etc.
-  // Caso 1A: Con prefijo explícito de calle (calle, calles, clle, cll, cna)
-  const explicitStreetRegex = /(?:entre|de)?\s*(?:la|las)?\s*(?:calle|calles|clle|cll|cna)\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(?:calle|calles|clle|cll|cna)?\s*(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano|alcoba|parqueadero))/i;
-  let streetMatch = norm.match(explicitStreetRegex);
+  let streetMatch: RegExpMatchArray | null = null;
 
-  // Caso 1B: 'de la 100 a la 127' o 'entre la 86 y la 92' en contexto geográfico sin unidades métricas
-  if (!streetMatch) {
+  if (norm.includes("calle") || norm.includes("calles") || norm.includes("clle") || norm.includes("cll") || norm.includes("cna")) {
+    // Caso 1A: Con prefijo explícito de calle (calle, calles, clle, cll, cna)
+    const explicitStreetRegex = /(?:entre|de)?\s*(?:la|las)?\s*(?:calle|calles|clle|cll|cna)\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(?:calle|calles|clle|cll|cna)?\s*(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano|alcoba|parqueadero))/i;
+    streetMatch = norm.match(explicitStreetRegex);
+
+    // Caso 1C: 'calle 100 a 127' o 'cll 86 a 92'
+    if (!streetMatch) {
+      const singlePrefixRegex = /(?:calle|calles|clle|cll)\s+(\d{1,3})\s*(?:a|y|-|hasta)\s*(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano))/i;
+      streetMatch = norm.match(singlePrefixRegex);
+    }
+  } else if (norm.includes("entre ") || norm.includes("de ")) {
+    // Caso 1B: 'de la 100 a la 127' o 'entre la 86 y la 92' en contexto geográfico sin unidades métricas
     const contextStreetRegex = /(?:entre|de)\s+(?:la|las)\s+(\d{1,3})\s+(?:a|y|-|hasta)\s+(?:la|las)\s+(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano|alcoba|parqueadero|garaje|piso|ano))/i;
     const candidate = norm.match(contextStreetRegex);
     if (candidate) {
@@ -363,15 +383,6 @@ export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundar
       if (!isNaN(n1) && !isNaN(n2) && n1 >= 20 && n1 <= 250 && n2 >= 20 && n2 <= 250) {
         streetMatch = candidate;
       }
-    }
-  }
-
-  // Caso 1C: 'calle 100 a 127' o 'cll 86 a 92'
-  if (!streetMatch) {
-    const singlePrefixRegex = /(?:calle|calles|clle|cll)\s+(\d{1,3})\s*(?:a|y|-|hasta)\s*(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano))/i;
-    const candidate = norm.match(singlePrefixRegex);
-    if (candidate) {
-      streetMatch = candidate;
     }
   }
 
@@ -386,40 +397,46 @@ export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundar
 
   // 2. Rango de Carreras:
   // Caso 2A: 'entre 7 y autopista' / 'séptima y autopista' / 'entre la 7 y la autopista'
-  const autoMatch = norm.match(/(?:entre|de)?\s*(?:la)?\s*(?:cra|carrera)?\s*(?:la)?\s*(7|septima)\s*(?:a|y|-|hasta)\s*(?:la)?\s*(?:autopista|autonorte)/i);
-  if (autoMatch) {
-    res.minCarrera = 7;
-    // Si la calle es < 100, la autopista en Chapinero es Carrera 20. Si es >= 100 en Usaquén, es Cra 45.
-    const isUnder100 = res.maxStreet && res.maxStreet <= 100;
-    res.maxCarrera = isUnder100 ? 20 : 45;
+  if ((norm.includes("autopista") || norm.includes("autonorte")) && (norm.includes("7") || norm.includes("septima"))) {
+    const autoMatch = norm.match(/(?:entre|de\s+la|de)?\s*(?:cra|carrera)?\s*(?:la)?\s*(?:7|septima)\s*(?:a|y|-|hasta)\s*(?:la\s+)?(?:autopista|autonorte)/i);
+    if (autoMatch) {
+      res.minCarrera = 7;
+      // Si la calle es < 100, la autopista en Chapinero es Carrera 20. Si es >= 100 en Usaquén, es Cra 45.
+      const isUnder100 = res.maxStreet && res.maxStreet <= 100;
+      res.maxCarrera = isUnder100 ? 20 : 45;
+    }
   }
 
   // Caso 2B: 'entre cra 7 y 15', 'entre carrera 9 y 15'
   if (!res.minCarrera || !res.maxCarrera) {
-    const carreraRangeMatch = norm.match(/(?:cra|carrera|carreras)\s*(?:la|las)?\s*(circunvalar|cerros|\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(\d{1,3})/i);
-    if (carreraRangeMatch) {
-      const rawN1 = carreraRangeMatch[1];
-      const n1 = (rawN1 === "circunvalar" || rawN1 === "cerros") ? 1 : parseInt(rawN1, 10);
-      const n2 = parseInt(carreraRangeMatch[2], 10);
-      if (!isNaN(n1) && !isNaN(n2)) {
-        res.minCarrera = Math.min(n1, n2);
-        res.maxCarrera = Math.max(n1, n2);
+    if (norm.includes("cra") || norm.includes("carrera") || norm.includes("carreras")) {
+      const carreraRangeMatch = norm.match(/(?:cra|carrera|carreras)\s*(?:la|las)?\s*(circunvalar|cerros|\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(\d{1,3})/i);
+      if (carreraRangeMatch) {
+        const rawN1 = carreraRangeMatch[1];
+        const n1 = (rawN1 === "circunvalar" || rawN1 === "cerros") ? 1 : parseInt(rawN1, 10);
+        const n2 = parseInt(carreraRangeMatch[2], 10);
+        if (!isNaN(n1) && !isNaN(n2)) {
+          res.minCarrera = Math.min(n1, n2);
+          res.maxCarrera = Math.max(n1, n2);
+        }
       }
     }
   }
 
   // Caso 2C: 'de la 13 a la 7ª', 'de la 13 a la 7', 'de 13 a 7', 'entre 7 y 15', 'de la 7 a la 15'
   if (!res.minCarrera || !res.maxCarrera) {
-    const contextCarreraRegex = /(?:de|entre)\s+(?:la\s+)?(\d{1,2}|septima|7a?)\s*(?:a|y|-|hasta)\s*(?:la\s+)?(\d{1,2}|septima|7a?)/i;
-    const match = norm.match(contextCarreraRegex);
-    if (match) {
-      const raw1 = match[1].replace(/7a?/i, "7").replace(/septima/i, "7");
-      const raw2 = match[2].replace(/7a?/i, "7").replace(/septima/i, "7");
-      const n1 = parseInt(raw1, 10);
-      const n2 = parseInt(raw2, 10);
-      if (!isNaN(n1) && !isNaN(n2) && n1 >= 1 && n1 <= 40 && n2 >= 1 && n2 <= 40 && (n1 !== res.minStreet || n2 !== res.maxStreet)) {
-        res.minCarrera = Math.min(n1, n2);
-        res.maxCarrera = Math.max(n1, n2);
+    if (norm.includes("entre ") || norm.includes("de ")) {
+      const contextCarreraRegex = /(?:de|entre)\s+(?:la\s+)?(\d{1,2}|septima|7a?)\s*(?:a|y|-|hasta)\s*(?:la\s+)?(\d{1,2}|septima|7a?)/i;
+      const match = norm.match(contextCarreraRegex);
+      if (match) {
+        const raw1 = match[1].replace(/7a?/i, "7").replace(/septima/i, "7");
+        const raw2 = match[2].replace(/7a?/i, "7").replace(/septima/i, "7");
+        const n1 = parseInt(raw1, 10);
+        const n2 = parseInt(raw2, 10);
+        if (!isNaN(n1) && !isNaN(n2) && n1 >= 1 && n1 <= 40 && n2 >= 1 && n2 <= 40 && (n1 !== res.minStreet || n2 !== res.maxStreet)) {
+          res.minCarrera = Math.min(n1, n2);
+          res.maxCarrera = Math.max(n1, n2);
+        }
       }
     }
   }

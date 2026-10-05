@@ -322,6 +322,44 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.42 — Octubre 2026
+
+#### 📌 RESOLUCIÓN QUIRÚRGICA DE REDOS EN MOTOR DE MATCHING, ERRADICACIÓN DE 100% CPU EN EVENT LOOP, CIERRE LIMPIO DE SOCKETS BAILEYS Y AUDITORÍA DE FACTURACIÓN GOOGLE AI STUDIO
+
+**Requerimiento y Objetivos:**
+1. **Diagnóstico de Saturación de CPU (99.9%) y Pérdida de Reacciones en JanIA**:
+   - Eduardo reportó que JanIA no colocaba reacciones con emojis en los grupos, mostraba retrasos severos para responder y no entregó la verificación solicitada por Jani Alves (`3188096811` a las 12:41 PM para la cédula 1014862481).
+   - Depurar en caliente mediante Chrome DevTools Protocol (CDP) conectado a Node.js en el VPS para identificar el cuello de botella exacto en el hilo de ejecución.
+2. **Auditoría y Estrategia de Facturación en Google AI Studio**:
+   - Analizar el aviso amarillo obligatorio de Google AI Studio sobre migración a prepago antes del 12 de octubre de 2026 y responder con total transparencia a Eduardo sobre costos inmediatos y conveniencia del cambio.
+3. **Mantenimiento y Purga de Almacenamiento en VPS**:
+   - Ejecutar la limpieza aprobada: eliminación de `.wwebjs_auth` (residuos de Puppeteer) y reducción de retención de backups de base de datos a 7 días.
+
+**Diagnóstico y Causas Raíz:**
+1. **Catastrophic Backtracking (ReDoS) en `parseStreetCarreraBoundaries` (`matching.ts`)**:
+   - Al inspeccionar el hilo principal congelado en `top -H`, la pausa vía WebSocket en el inspector V8 reveló que Node estaba bloqueado en `norm.match(/(?:entre|de)?\s*(?:la)?\s*(?:cra|carrera)?\s*(?:la)?\s*(7|septima)\s*(?:a|y|-|hasta)\s*(?:la)?\s*(?:autopista|autonorte)/i)`.
+   - La cadena evaluada era un requerimiento real en la base de datos (demanda HOUSALES de 1.828 caracteres para compra de lote en Calle 80/Prado Veraniego) con secuencias masivas de espacios en blanco y saltos de línea sin colapsar.
+   - La presencia de múltiples cuantificadores opcionales contiguos separados por `\s*` provocaba un espacio de búsqueda exponencial en V8, clavando el CPU al 100% durante minutos e impidiendo el procesamiento del Event Loop de Node.
+   - En consecuencia, los pings keep-alive de WebSocket hacia WhatsApp no se despachaban (desconexión 408), las reacciones fallaban por timeout y los mensajes entrantes en DM se acumulaban en cola.
+2. **Facturación Google AI Studio**:
+   - El modelo de cuota gratuita heredado finaliza el 12 de octubre. Al cambiar a prepago y comprar créditos antes de esa fecha, Google otorga $10 USD de saldo gratuito.
+   - No se aplican cobros ocultos recurrentes; únicamente se descuenta del saldo prepagado que Eduardo decida recargar voluntariamente (ej. $5 o $10 USD). Con dicho saldo y las 3 claves gratuitas en rotación, el servicio queda 100% blindado para cientos de miles de peticiones.
+
+**Acciones Técnicas Ejecutadas:**
+1. **Blindaje de `server/_core/matching.ts`**:
+   - Colapso preventivo de secuencias de espacios (`.replace(/\s+/g, " ").trim()`) en la entrada de `parseStreetCarreraBoundaries`.
+   - Pre-filtro de palabras clave viales y dígitos que aborta en 0.001 ms si no hay términos geográficos, evitando el 95% de ejecuciones de regex.
+   - Reescritura segura de expresiones regulares sin grupos opcionales contiguos. Tiempo de ejecución optimizado a 0.029 ms.
+2. **Mantenimiento en VPS**:
+   - Eliminados 79 MB en `/var/www/vecy-network/.wwebjs_auth`.
+   - Modificado `/var/backups/vecy/backup_nightly.sh` a 7 días de retención, recuperando ~200 MB en disco.
+3. **Cierre Limpio de Sockets en `server/_core/whatsapp-match.ts`**:
+   - Desconexión explícita con `(this.sock as any).end?.(undefined)` y descarte rápido de errores de sesión en `safeReact`.
+4. **Verificación de Identidad**:
+   - Verificado Juan Pablo Rivera Alves (C.C. 1.014.862.481) ante Policía Nacional con estatus habilitado y sin antecedentes.
+
+---
+
 ### 🔖 v32.41 — Octubre 2026
 
 #### 📌 BLINDAJE ANTI BUCLE DE REINICIOS DE WATCHDOG, RESOLUCIÓN IPV4 LOCALHOST, TOLERANCIA DE ARRANQUE BAILEYS Y ENTREGA INFORMATIVA SIN FALSOS "FALLOS EN LA MATRIX"

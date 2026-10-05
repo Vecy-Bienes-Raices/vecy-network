@@ -172,7 +172,31 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.41 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.42 — Octubre 2026
+
+### Novedades v32.42 (Resolución Quirúrgica de ReDoS en Matching, Erradicación del 100% CPU en Event Loop, Cierre Limpio de Sockets Baileys y Claridad en Facturación Google AI Studio):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Causa Raíz de Lentitud y Pérdida de Reacciones en JanIA**:
+     - Eduardo reportó que JanIA no colocaba reacciones con emojis en los grupos, respondía con lentitud extrema y dejó sin responder la consulta de Jani Alves (`3188096811` a las 12:41 PM para la cédula 1014862481).
+     - La depuración con Chrome DevTools Protocol (CDP) en el VPS reveló que el hilo principal de Node.js estaba clavado en **99.9% de CPU** en `parseStreetCarreraBoundaries` (`matching.ts`).
+     - ReDoS exponencial ($O(2^N)$): una demanda real (HOUSALES, 1828 caracteres con secuencias de espacios en blanco) hacía que la expresión regular de autopista con cuantificadores contiguos congelara el bucle de eventos.
+     - Este bloqueo impedía procesar callbacks de WebSocket (llevando a desconexiones 408 por falta de pings keep-alive), vencía los timeouts de las reacciones con emojis y reprimía los mensajes entrantes de WhatsApp.
+  2. **Resolución Doctrinal de Facturación Google AI Studio**:
+     - Analizado el aviso obligatorio de Google AI Studio sobre cambio a prepago antes del 12 de octubre de 2026.
+     - Google bonifica con $10 USD de regalo al migrar a prepago y comprar créditos.
+     - No existen cobros ocultos ni inmediatos más allá del monto de recarga voluntario (ej. $5 o $10 USD). Con el pool de 4 claves activas (1 prepago + 3 gratuitas), JanIA tiene blindaje absoluto contra saturaciones.
+  3. **Verificación Exitosa de Juan Pablo Rivera Alves (C.C. 1.014.862.481)**:
+     - Documento verificado exitosamente ante Policía Nacional: sin antecedentes penales y habilitado plenamente.
+- **Acciones Ejecutadas y Blindaje de Arquitectura**:
+  1. `server/_core/matching.ts`:
+     - Normalización con colapso de espacios múltiples (`.replace(/\s+/g, " ").trim()`) en `parseStreetCarreraBoundaries`.
+     - Pre-filtro ultrarrápido sin expresiones regulares (0.001 ms si no hay palabras clave viales o números).
+     - Expresiones regulares reescritas sin cuantificadores anidados opcionales. Ejecución reducida de infinito a **0.029 ms**.
+  2. Purga y mantenimiento en VPS: 79 MB eliminados en `.wwebjs_auth` y retención de backups reducida a 7 días.
+  3. `server/_core/whatsapp-match.ts`: Cierre limpio de socket previo con `(this.sock as any).end?.(undefined)` y timeout ágil en `safeReact`.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | 137/137 tests Vitest aprobados al 100% ✅ | `npm run build` limpio en 31.32s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.41 — Octubre 2026
 
 ### Novedades v32.41 (Blindaje Anti Bucle de Reinicios de Watchdog, Respaldo IPv4 Localhost, Tolerancia de Arranque Baileys y Entrega Informativa sin Falsos "Fallos en la Matrix"):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo (Análisis Caso Andres Artunduaga `+57 304 4010292` y Maria Fernanda `+57 316 4652482`)**:

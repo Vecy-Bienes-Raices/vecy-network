@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.41";
+    VECY_VERSION = "v32.42";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -4234,14 +4234,30 @@ function esFormatoCuadrante(texto) {
   return /(?:entre|calle|clle|cll|carrera|cra|autopista|circunvalar|septima)/i.test(norm2) && /\d/.test(norm2);
 }
 function parseStreetCarreraBoundaries(text2) {
-  const norm2 = String(text2 || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (!text2 || typeof text2 !== "string") return {};
+  const norm2 = String(text2 || "").replace(/\s+/g, " ").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   if (!norm2 || norm2.length < 5) return {};
   const cached = boundariesCache.get(norm2);
   if (cached) return cached;
   const res = {};
-  const explicitStreetRegex = /(?:entre|de)?\s*(?:la|las)?\s*(?:calle|calles|clle|cll|cna)\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(?:calle|calles|clle|cll|cna)?\s*(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano|alcoba|parqueadero))/i;
-  let streetMatch = norm2.match(explicitStreetRegex);
-  if (!streetMatch) {
+  const hasGeographicWords = /(?:calle|calles|clle|cll|cna|carrera|carreras|cra|autopista|autonorte|circunvalar|septima|entre)/i.test(norm2);
+  if (!hasGeographicWords || !/\d/.test(norm2)) {
+    if (boundariesCache.size >= MAX_BOUNDARIES_CACHE) {
+      const firstKey = boundariesCache.keys().next().value;
+      if (firstKey) boundariesCache.delete(firstKey);
+    }
+    boundariesCache.set(norm2, res);
+    return res;
+  }
+  let streetMatch = null;
+  if (norm2.includes("calle") || norm2.includes("calles") || norm2.includes("clle") || norm2.includes("cll") || norm2.includes("cna")) {
+    const explicitStreetRegex = /(?:entre|de)?\s*(?:la|las)?\s*(?:calle|calles|clle|cll|cna)\s*(\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(?:calle|calles|clle|cll|cna)?\s*(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano|alcoba|parqueadero))/i;
+    streetMatch = norm2.match(explicitStreetRegex);
+    if (!streetMatch) {
+      const singlePrefixRegex = /(?:calle|calles|clle|cll)\s+(\d{1,3})\s*(?:a|y|-|hasta)\s*(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano))/i;
+      streetMatch = norm2.match(singlePrefixRegex);
+    }
+  } else if (norm2.includes("entre ") || norm2.includes("de ")) {
     const contextStreetRegex = /(?:entre|de)\s+(?:la|las)\s+(\d{1,3})\s+(?:a|y|-|hasta)\s+(?:la|las)\s+(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano|alcoba|parqueadero|garaje|piso|ano))/i;
     const candidate = norm2.match(contextStreetRegex);
     if (candidate) {
@@ -4252,13 +4268,6 @@ function parseStreetCarreraBoundaries(text2) {
       }
     }
   }
-  if (!streetMatch) {
-    const singlePrefixRegex = /(?:calle|calles|clle|cll)\s+(\d{1,3})\s*(?:a|y|-|hasta)\s*(\d{1,3})(?!\s*(?:m2|mts|mt2|metros|millones|mdp|hab|bano))/i;
-    const candidate = norm2.match(singlePrefixRegex);
-    if (candidate) {
-      streetMatch = candidate;
-    }
-  }
   if (streetMatch) {
     const n1 = parseInt(streetMatch[1], 10);
     const n2 = parseInt(streetMatch[2], 10);
@@ -4267,35 +4276,41 @@ function parseStreetCarreraBoundaries(text2) {
       res.maxStreet = Math.max(n1, n2);
     }
   }
-  const autoMatch = norm2.match(/(?:entre|de)?\s*(?:la)?\s*(?:cra|carrera)?\s*(?:la)?\s*(7|septima)\s*(?:a|y|-|hasta)\s*(?:la)?\s*(?:autopista|autonorte)/i);
-  if (autoMatch) {
-    res.minCarrera = 7;
-    const isUnder100 = res.maxStreet && res.maxStreet <= 100;
-    res.maxCarrera = isUnder100 ? 20 : 45;
+  if ((norm2.includes("autopista") || norm2.includes("autonorte")) && (norm2.includes("7") || norm2.includes("septima"))) {
+    const autoMatch = norm2.match(/(?:entre|de\s+la|de)?\s*(?:cra|carrera)?\s*(?:la)?\s*(?:7|septima)\s*(?:a|y|-|hasta)\s*(?:la\s+)?(?:autopista|autonorte)/i);
+    if (autoMatch) {
+      res.minCarrera = 7;
+      const isUnder100 = res.maxStreet && res.maxStreet <= 100;
+      res.maxCarrera = isUnder100 ? 20 : 45;
+    }
   }
   if (!res.minCarrera || !res.maxCarrera) {
-    const carreraRangeMatch = norm2.match(/(?:cra|carrera|carreras)\s*(?:la|las)?\s*(circunvalar|cerros|\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(\d{1,3})/i);
-    if (carreraRangeMatch) {
-      const rawN1 = carreraRangeMatch[1];
-      const n1 = rawN1 === "circunvalar" || rawN1 === "cerros" ? 1 : parseInt(rawN1, 10);
-      const n2 = parseInt(carreraRangeMatch[2], 10);
-      if (!isNaN(n1) && !isNaN(n2)) {
-        res.minCarrera = Math.min(n1, n2);
-        res.maxCarrera = Math.max(n1, n2);
+    if (norm2.includes("cra") || norm2.includes("carrera") || norm2.includes("carreras")) {
+      const carreraRangeMatch = norm2.match(/(?:cra|carrera|carreras)\s*(?:la|las)?\s*(circunvalar|cerros|\d{1,3})\s*(?:a|y|-|hasta)\s*(?:la|las)?\s*(\d{1,3})/i);
+      if (carreraRangeMatch) {
+        const rawN1 = carreraRangeMatch[1];
+        const n1 = rawN1 === "circunvalar" || rawN1 === "cerros" ? 1 : parseInt(rawN1, 10);
+        const n2 = parseInt(carreraRangeMatch[2], 10);
+        if (!isNaN(n1) && !isNaN(n2)) {
+          res.minCarrera = Math.min(n1, n2);
+          res.maxCarrera = Math.max(n1, n2);
+        }
       }
     }
   }
   if (!res.minCarrera || !res.maxCarrera) {
-    const contextCarreraRegex = /(?:de|entre)\s+(?:la\s+)?(\d{1,2}|septima|7a?)\s*(?:a|y|-|hasta)\s*(?:la\s+)?(\d{1,2}|septima|7a?)/i;
-    const match = norm2.match(contextCarreraRegex);
-    if (match) {
-      const raw1 = match[1].replace(/7a?/i, "7").replace(/septima/i, "7");
-      const raw2 = match[2].replace(/7a?/i, "7").replace(/septima/i, "7");
-      const n1 = parseInt(raw1, 10);
-      const n2 = parseInt(raw2, 10);
-      if (!isNaN(n1) && !isNaN(n2) && n1 >= 1 && n1 <= 40 && n2 >= 1 && n2 <= 40 && (n1 !== res.minStreet || n2 !== res.maxStreet)) {
-        res.minCarrera = Math.min(n1, n2);
-        res.maxCarrera = Math.max(n1, n2);
+    if (norm2.includes("entre ") || norm2.includes("de ")) {
+      const contextCarreraRegex = /(?:de|entre)\s+(?:la\s+)?(\d{1,2}|septima|7a?)\s*(?:a|y|-|hasta)\s*(?:la\s+)?(\d{1,2}|septima|7a?)/i;
+      const match = norm2.match(contextCarreraRegex);
+      if (match) {
+        const raw1 = match[1].replace(/7a?/i, "7").replace(/septima/i, "7");
+        const raw2 = match[2].replace(/7a?/i, "7").replace(/septima/i, "7");
+        const n1 = parseInt(raw1, 10);
+        const n2 = parseInt(raw2, 10);
+        if (!isNaN(n1) && !isNaN(n2) && n1 >= 1 && n1 <= 40 && n2 >= 1 && n2 <= 40 && (n1 !== res.minStreet || n2 !== res.maxStreet)) {
+          res.minCarrera = Math.min(n1, n2);
+          res.maxCarrera = Math.max(n1, n2);
+        }
       }
     }
   }

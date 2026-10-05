@@ -7,6 +7,70 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.42 — 05 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Aprobación de Plan de Mantenimiento y Purga**:
+   - Eduardo aprobó la ejecución del plan de limpieza de disco: eliminación de `.wwebjs_auth` (residuos de Puppeteer) y optimización de retención de backups de PostgreSQL a 7 días.
+2. **Reporte de Lentitud, Pérdida de Reacciones y Atraso de Mensajes en WhatsApp**:
+   - Eduardo reportó: *"No veo que JanIA esté activa en su servicio de Match, me doy cuenta porque no está colocando reacciones con emojis, ni en todos los grupos externos que maneja, ni en el oficial #1 y Jania en general está muy lenta o tal vez desconectada porque le acabo de enviar un Hola desde el 3188096811 y se demoró bastante en responderme y le acabo de volver a escribir pero parece que no me va a responder"*.
+   - Acompañó la captura de WhatsApp Web con Jani Alves (`+57 318 809 6811`), donde a las 12:37 PM JanIA respondió a un "Hola" tras varios minutos de espera, y a las 12:41 PM Jani envió: *"Podrías verificarme este documento: 1014862481"* sin recibir respuesta inmediata.
+3. **Consulta Estratégica sobre Facturación de Google AI Studio**:
+   - Eduardo compartió captura de pantalla de la consola de Google AI Studio mostrando la alerta amarilla: *"Acción obligatoria: Obtén USD 10 en créditos gratuitos cuando cambies a prepago y compres créditos antes del 12 de octubre. Después de esa fecha, tu cuenta cambiará automáticamente a prepago y las solicitudes a la API fallarán hasta que compres créditos..."*.
+   - Preguntó con cautela: *"Por otro lado no se que hacer en este caso referente a lo que dice la imagen, por eso aún no te paso la API con facturación, ayúdame a descubrir si tomo o no esa acción y si me van a cobrar algo de una vez"*.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Causa Raíz Principal: Congelamiento del Event Loop al 100% de CPU por ReDoS en `matching.ts`**:
+   - Mediante inspección en vivo de los hilos de Node.js en el VPS (`top -H -p <pid>`), se constató que el hilo principal de JavaScript estaba clavado de forma permanente al **99.9% de CPU** en espacio de usuario (`us`).
+   - Conectando el protocolo de depuración de Node (Chrome DevTools Protocol - CDP) vía WebSocket en `127.0.0.1:9229`, se pausó la ejecución del hilo y se capturó la pila de llamadas exacta:
+     ```
+     #0 parseStreetCarreraBoundaries at matching.ts:4270
+     #1 extractFallbackDataFromText at janIA.ts:15679
+     #2 explicarMatch at matching.ts:5362
+     #3 findMatchesForRequirement at matching.ts:7144
+     ```
+   - Al inspeccionar las variables locales en memoria, se descubrió que `parseStreetCarreraBoundaries` estaba evaluando un requerimiento inmobiliario real (demanda HOUSALES de 1.828 caracteres para compra de lote/casa lote en Calle 80/Prado Veraniego) que contenía cientos de espacios en blanco consecutivos y saltos de línea sin colapsar.
+   - La expresión regular de carreras arteriales:
+     `/(?:entre|de)?\s*(?:la)?\s*(?:cra|carrera)?\s*(?:la)?\s*(7|septima)\s*(?:a|y|-|hasta)\s*(?:la)?\s*(?:autopista|autonorte)/i`
+     tenía múltiples grupos opcionales contiguos separados por `\s*`.
+   - Ante cadenas largas con espacios repetidos sin coincidencia de autopista, el motor V8 caía en **Catastrophic Backtracking (ReDoS)** exponencial ($O(2^N)$), consumiendo el 100% del procesador durante minutos enteros o indefinidamente.
+   - **Efectos Secundarios Masivos**:
+     - **Inanición del Bucle de Eventos (Event Loop Starvation)**: Node.js no podía procesar callbacks de I/O ni temporizadores.
+     - **Caída de Socket Baileys (Código 408)**: Los paquetes `keep-alive` (pings) de WebSocket hacia los servidores de WhatsApp no podían emitirse a tiempo, provocando desconexiones recurrentes.
+     - **Pérdida de Reacciones con Emojis**: Las llamadas a `safeReact` fallaban por timeout de 3-5 segundos sin recibir confirmación del socket.
+     - **Retraso de Mensajes de Jani Alves**: Los mensajes directos se encolaban o quedaban a la espera de que el hilo de ejecución se liberara momentáneamente, dando la impresión de que JanIA estaba desconectada o muda.
+2. **Análisis Técnico de la Facturación de Google AI Studio**:
+   - **Fecha Límite**: 12 de octubre de 2026.
+   - **Qué significa el aviso**: Google está retirando la modalidad de cuota gratuita ilimitada para proyectos que usan modelos avanzados de Gemini en Google AI Studio, migrándolos a un esquema "Pay-As-You-Go" (prepago/pospago).
+   - **La Promoción**: Si se asocia un método de pago y se realiza una compra de créditos antes del 12 de octubre, Google regala **$10 USD adicionales en créditos**.
+   - **¿Cobran algo de una vez?**: Al presionar "Cambiar a prepago", Google solicita registrar una tarjeta de crédito/débito y realizar una recarga mínima de saldo (típicamente $5 o $10 USD, aprox. $20.000 a $40.000 COP). No se realizan cobros automáticos imprevistos más allá del monto de recarga elegido. Con $10 USD de saldo más $10 USD de regalo ($20 USD en total), el modelo `gemini-2.5-flash-lite` puede procesar más de 250.000 consultas, lo que equivale a meses de operación ininterrumpida.
+   - **Seguridad Actual**: El sistema cuenta con 3 claves API adicionales en pool de rotación, por lo que no existe una emergencia crítica inmediata hoy, pero resulta muy conveniente aprovechar el bono antes del 12 de octubre.
+
+### Acciones Ejecutadas
+1. **Blindaje Integral contra ReDoS en `server/_core/matching.ts`**:
+   - Se añadió sanitización inicial en `parseStreetCarreraBoundaries`:
+     `const norm = String(text || "").replace(/\s+/g, " ").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");`
+     colapsando cualquier secuencia anómala de espacios o saltos de línea.
+   - Se implementó un **pre-filtro ultrarrápido sin expresiones regulares**: si el texto normalizado no contiene términos geográficos viales (`calle`, `carrera`, `autopista`, `septima`, `entre`, etc.) o carece de dígitos, retorna el objeto vacío en **0.001 ms** sin tocar ninguna expresión regular.
+   - Se protegieron todos los sub-casos con comprobaciones de inclusión (`norm.includes(...)`) antes de ejecutar los `match()`.
+   - Se reescribió la expresión de autopista eliminando los cuantificadores anidados problemáticos.
+   - **Resultado Empírico**: 1.000 iteraciones sobre el texto que antes congelaba el servidor se ejecutaron en solo **29 milisegundos** (0.029 ms por ejecución).
+2. **Ejecución del Plan de Limpieza en VPS**:
+   - Eliminados 79 MB de residuos de Puppeteer en `/var/www/vecy-network/.wwebjs_auth`.
+   - Configurada la retención de backups de PostgreSQL a 7 días en `/var/backups/vecy/backup_nightly.sh`, purgando 17 volcados obsoletos y reduciendo el almacenamiento de 329 MB a 131 MB.
+3. **Cierre Limpio de Sockets en `server/_core/whatsapp-match.ts`**:
+   - Ajustada la desconexión segura en `initialize()` con `(this.sock as any).end?.(undefined)`.
+   - Optimizado `safeReact` con descarte inmediato de errores no recuperables (`No open session`) para no trabar la cola de reacciones.
+4. **Verificación de Identidad de Juan Pablo Rivera Alves (C.C. 1.014.862.481)**:
+   - Consulta ejecutada con éxito ante Policía Nacional: Titular verificado, cédula válida y sin antecedentes judiciales.
+5. **Pruebas y Verificación**:
+   - **137/137 tests Vitest aprobados al 100%**.
+   - `tsc --noEmit` limpio con 0 errores.
+   - Compilación limpia de producción en 31.32s (`dist-server/index.js` 1.4 MB).
+   - Incremento de versión oficial a **v32.42** (`32.42.0`).
+
+---
+
 ## 📋 SESIÓN v32.41 — 05 Octubre 2026
 
 ### Solicitud de Eduardo
