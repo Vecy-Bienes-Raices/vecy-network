@@ -7,6 +7,7 @@
  */
 
 import https from 'https';
+import net from 'net';
 import querystring from 'querystring';
 import { queryPoliciaNacional, parsePoliceAntecedentesFullName, formatTitleCase, identityCache } from '../routers/agenda';
 
@@ -34,11 +35,51 @@ export interface IdentityVerificationReport {
   reportText?: string;
   procuraduria?: ProcuraduriaResult;
   policia?: {
-    valid: boolean;
-    match: boolean;
+    valid?: boolean;
+    match?: boolean;
+    success?: boolean;
     officialName?: string;
     message?: string;
     source?: string;
+  };
+}
+
+/**
+ * Endpoint dinámico para la Procuraduría General de la Nación.
+ * Detecta si existe un túnel inverso local activo (127.0.0.1:18443 hacia Colombia),
+ * un proxy configurado en env (PGN_PROXY_HOST / PGN_PROXY_PORT),
+ * o conexión directa nativa a apps.procuraduria.gov.co.
+ */
+let pgnEndpointCache: { host: string; port: number; lastChecked: number } | null = null;
+
+export async function getProcuraduriaEndpoint(): Promise<{ host: string; port: number }> {
+  if (process.env.PGN_PROXY_HOST) {
+    return {
+      host: process.env.PGN_PROXY_HOST,
+      port: Number(process.env.PGN_PROXY_PORT) || 443
+    };
+  }
+
+  if (!pgnEndpointCache || Date.now() - pgnEndpointCache.lastChecked > 30000) {
+    const isTunnelOpen = await new Promise<boolean>((resolve) => {
+      const sock = new net.Socket();
+      sock.setTimeout(400);
+      sock.once('connect', () => { sock.destroy(); resolve(true); });
+      sock.once('timeout', () => { sock.destroy(); resolve(false); });
+      sock.once('error', () => { sock.destroy(); resolve(false); });
+      sock.connect(18443, '127.0.0.1');
+    });
+
+    pgnEndpointCache = {
+      host: isTunnelOpen ? '127.0.0.1' : 'apps.procuraduria.gov.co',
+      port: isTunnelOpen ? 18443 : 443,
+      lastChecked: Date.now()
+    };
+  }
+
+  return {
+    host: pgnEndpointCache.host,
+    port: pgnEndpointCache.port
   };
 }
 
@@ -47,7 +88,7 @@ export interface IdentityVerificationReport {
  */
 function httpRequest(options: https.RequestOptions, data?: string): Promise<{ statusCode: number; headers: any; body: string }> {
   return new Promise((resolve, reject) => {
-    const req = https.request({ ...options, rejectUnauthorized: false }, (res) => {
+    const req = https.request({ servername: 'apps.procuraduria.gov.co', ...options, rejectUnauthorized: false }, (res) => {
       let body = '';
       res.on('data', chunk => body += chunk);
       res.on('end', () => resolve({ statusCode: res.statusCode || 200, headers: res.headers, body }));
@@ -154,13 +195,15 @@ export async function queryProcuraduria(tipoDoc: string, numDoc: string, maxAtte
   }
 
   try {
+    const ep = await getProcuraduriaEndpoint();
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       // 1. GET inicio.aspx?tpo=1 para generar token de sesión y redirección
       const r1 = await httpRequest({
-        hostname: "apps.procuraduria.gov.co",
-        port: 443,
+        hostname: ep.host,
+        port: ep.port,
         path: "/webcert/inicio.aspx?tpo=1",
-        method: "GET"
+        method: "GET",
+        headers: { Host: "apps.procuraduria.gov.co" }
       });
 
       const loc = r1.headers.location;
@@ -171,11 +214,11 @@ export async function queryProcuraduria(tipoDoc: string, numDoc: string, maxAtte
 
       // 2. GET formulario con reto de seguridad
       const r2 = await httpRequest({
-        hostname: "apps.procuraduria.gov.co",
-        port: 443,
+        hostname: ep.host,
+        port: ep.port,
         path: path2,
         method: "GET",
-        headers: { Cookie: cookie }
+        headers: { Cookie: cookie, Host: "apps.procuraduria.gov.co" }
       });
 
       const qMatch = r2.body.match(/<span id="lblPregunta">([\s\S]*?)<\/span>/i);
@@ -201,14 +244,15 @@ export async function queryProcuraduria(tipoDoc: string, numDoc: string, maxAtte
 
       // 3. POST formulario con respuesta
       const r3 = await httpRequest({
-        hostname: "apps.procuraduria.gov.co",
-        port: 443,
+        hostname: ep.host,
+        port: ep.port,
         path: path2,
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
           "Content-Length": Buffer.byteLength(postData),
           "Cookie": cookie,
+          "Host": "apps.procuraduria.gov.co",
           "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
       }, postData);
@@ -521,10 +565,10 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
     let ponalRes: any = null;
 
     if (tipoDoc.toLowerCase() === 'cc') {
-      // Para Cédula de Ciudadanía, consultar Policía Nacional primero (base Registraduría)
+      // Para Cédula de Ciudadanía, consultar Policía Nacional primero (base Registraduría con 2Captcha)
       ponalRes = await queryPoliciaNacional(tipoDoc, cedula);
       if (!ponalRes?.officialName && isProcuraduriaSupported) {
-        // Respaldo transparente en Procuraduría si PONAL no retornó nombre oficial
+        // Respaldo transparente en Procuraduría si PONAL no retornó nombre oficial o 2Captcha no respondió
         pgnRes = await queryProcuraduria(tipoDoc, cedula);
       }
     } else {

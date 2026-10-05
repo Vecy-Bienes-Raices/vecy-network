@@ -14636,15 +14636,53 @@ __export(identityVerificationService_exports, {
   extractCedulaForVerification: () => extractCedulaForVerification,
   formatCedulaNumber: () => formatCedulaNumber,
   getDocumentTypeLabel: () => getDocumentTypeLabel,
+  getProcuraduriaEndpoint: () => getProcuraduriaEndpoint,
   mapTipoDocToProcuraduria: () => mapTipoDocToProcuraduria,
   queryProcuraduria: () => queryProcuraduria,
   solveProcuraduriaQuestion: () => solveProcuraduriaQuestion
 });
 import https2 from "https";
+import net from "net";
 import querystring from "querystring";
+async function getProcuraduriaEndpoint() {
+  if (process.env.PGN_PROXY_HOST) {
+    return {
+      host: process.env.PGN_PROXY_HOST,
+      port: Number(process.env.PGN_PROXY_PORT) || 443
+    };
+  }
+  if (!pgnEndpointCache || Date.now() - pgnEndpointCache.lastChecked > 3e4) {
+    const isTunnelOpen = await new Promise((resolve) => {
+      const sock = new net.Socket();
+      sock.setTimeout(400);
+      sock.once("connect", () => {
+        sock.destroy();
+        resolve(true);
+      });
+      sock.once("timeout", () => {
+        sock.destroy();
+        resolve(false);
+      });
+      sock.once("error", () => {
+        sock.destroy();
+        resolve(false);
+      });
+      sock.connect(18443, "127.0.0.1");
+    });
+    pgnEndpointCache = {
+      host: isTunnelOpen ? "127.0.0.1" : "apps.procuraduria.gov.co",
+      port: isTunnelOpen ? 18443 : 443,
+      lastChecked: Date.now()
+    };
+  }
+  return {
+    host: pgnEndpointCache.host,
+    port: pgnEndpointCache.port
+  };
+}
 function httpRequest(options, data) {
   return new Promise((resolve, reject) => {
-    const req = https2.request({ ...options, rejectUnauthorized: false }, (res) => {
+    const req = https2.request({ servername: "apps.procuraduria.gov.co", ...options, rejectUnauthorized: false }, (res) => {
       let body = "";
       res.on("data", (chunk) => body += chunk);
       res.on("end", () => resolve({ statusCode: res.statusCode || 200, headers: res.headers, body }));
@@ -14724,23 +14762,25 @@ async function queryProcuraduria(tipoDoc, numDoc, maxAttempts = 6) {
     };
   }
   try {
+    const ep = await getProcuraduriaEndpoint();
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const r1 = await httpRequest({
-        hostname: "apps.procuraduria.gov.co",
-        port: 443,
+        hostname: ep.host,
+        port: ep.port,
         path: "/webcert/inicio.aspx?tpo=1",
-        method: "GET"
+        method: "GET",
+        headers: { Host: "apps.procuraduria.gov.co" }
       });
       const loc = r1.headers.location;
       const cookie = r1.headers["set-cookie"]?.map((c) => c.split(";")[0]).join("; ") || "";
       if (!loc) continue;
       const path22 = loc.startsWith("http") ? new URL(loc).pathname + new URL(loc).search : loc;
       const r2 = await httpRequest({
-        hostname: "apps.procuraduria.gov.co",
-        port: 443,
+        hostname: ep.host,
+        port: ep.port,
         path: path22,
         method: "GET",
-        headers: { Cookie: cookie }
+        headers: { Cookie: cookie, Host: "apps.procuraduria.gov.co" }
       });
       const qMatch = r2.body.match(/<span id="lblPregunta">([\s\S]*?)<\/span>/i);
       const question = qMatch ? qMatch[1].trim() : "";
@@ -14759,14 +14799,15 @@ async function queryProcuraduria(tipoDoc, numDoc, maxAttempts = 6) {
         btnConsultar: "Consultar"
       });
       const r3 = await httpRequest({
-        hostname: "apps.procuraduria.gov.co",
-        port: 443,
+        hostname: ep.host,
+        port: ep.port,
         path: path22,
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
           "Content-Length": Buffer.byteLength(postData),
           "Cookie": cookie,
+          "Host": "apps.procuraduria.gov.co",
           "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
       }, postData);
@@ -15073,12 +15114,13 @@ Consultamos las bases de datos oficiales de seguridad del Estado para el documen
     };
   }
 }
-var IDENTITY_CACHE_TTL2;
+var IDENTITY_CACHE_TTL2, pgnEndpointCache;
 var init_identityVerificationService = __esm({
   "server/_core/identityVerificationService.ts"() {
     "use strict";
     init_agenda();
     IDENTITY_CACHE_TTL2 = 24 * 60 * 60 * 1e3;
+    pgnEndpointCache = null;
   }
 });
 

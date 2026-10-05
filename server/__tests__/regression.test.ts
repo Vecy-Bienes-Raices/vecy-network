@@ -2657,9 +2657,9 @@ Adriana Rebeca Orejuela`;
       const agendaRouter = await import("../routers/agenda");
       const spyPonalCe = vi.spyOn(agendaRouter, "queryPoliciaNacional").mockResolvedValueOnce({
         success: true,
-        valid: true,
-        match: true,
-        message: "Sin antecedentes judiciales reportados."
+        source: "Policía Nacional de Colombia",
+        tipoDoc: "cx",
+        cedula: "498614"
       });
 
       agendaRouter.identityCache.set("PROCURADURIA:5:498614", { fullName: "Rodolfo Jesus Mendoza Rivas", timestamp: Date.now() });
