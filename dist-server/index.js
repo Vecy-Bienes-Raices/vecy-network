@@ -14181,6 +14181,18 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
     } catch (err) {
       console.warn("[verifyCedulaWithRegistraduria] PGN Extranjero:", err?.message || err);
     }
+    if (!officialFoundName && (isExtranjeria || isPep || isPpt || isPasaporte)) {
+      try {
+        const { queryAdres: queryAdres2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+        const adresResult = await queryAdres2(docTypeKey, clean);
+        if (adresResult && adresResult.success && adresResult.officialName) {
+          officialFoundName = adresResult.officialName;
+          verificationSource = "Base de Datos \xDAnica de Afiliados (ADRES - Ministerio de Salud)";
+        }
+      } catch (err) {
+        console.warn("[verifyCedulaWithRegistraduria] ADRES Extranjero:", err?.message || err);
+      }
+    }
     if (!officialFoundName && (isExtranjeria || isPasaporte)) {
       const policiaResult = await queryPoliciaNacional(tipoDocumento, clean);
       if (policiaResult && policiaResult.success && policiaResult.officialName) {
@@ -14189,7 +14201,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       }
     }
   }
-  if (!officialFoundName && (isCedula || isExtranjeria || isPep || isPpt || isPasaporte)) {
+  if (!officialFoundName && isCedula) {
     try {
       const { queryAdres: queryAdres2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
       const adresResult = await queryAdres2(docTypeKey, clean);
@@ -14198,7 +14210,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
         verificationSource = "Base de Datos \xDAnica de Afiliados (ADRES - Ministerio de Salud)";
       }
     } catch (err) {
-      console.warn("[verifyCedulaWithRegistraduria] ADRES:", err?.message || err);
+      console.warn("[verifyCedulaWithRegistraduria] ADRES CC:", err?.message || err);
     }
   }
   if (officialFoundName) {

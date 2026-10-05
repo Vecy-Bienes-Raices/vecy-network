@@ -879,7 +879,21 @@ export async function executeIdentityVerification(
       console.warn('[verifyCedulaWithRegistraduria] PGN Extranjero:', err?.message || err);
     }
 
-    // Si Procuraduría no tiene el nombre, intentar Policía Nacional para extranjeros
+    // Respaldo de alta velocidad en ADRES (BDUA - MinSalud) para extranjeros (1.2s, $0 COP, sin demoras de captcha)
+    if (!officialFoundName && (isExtranjeria || isPep || isPpt || isPasaporte)) {
+      try {
+        const { queryAdres } = await import('../_core/identityVerificationService');
+        const adresResult = await queryAdres(docTypeKey, clean);
+        if (adresResult && adresResult.success && adresResult.officialName) {
+          officialFoundName = adresResult.officialName;
+          verificationSource = 'Base de Datos Única de Afiliados (ADRES - Ministerio de Salud)';
+        }
+      } catch (err: any) {
+        console.warn('[verifyCedulaWithRegistraduria] ADRES Extranjero:', err?.message || err);
+      }
+    }
+
+    // Si ni Procuraduría ni ADRES tienen el nombre, intentar Policía Nacional para extranjeros
     if (!officialFoundName && (isExtranjeria || isPasaporte)) {
       const policiaResult = await queryPoliciaNacional(tipoDocumento, clean);
       if (policiaResult && policiaResult.success && policiaResult.officialName) {
@@ -889,8 +903,8 @@ export async function executeIdentityVerification(
     }
   }
 
-  // 4c. Respaldo complementario en ADRES (BDUA - Ministerio de Salud) para colombianos y extranjeros
-  if (!officialFoundName && (isCedula || isExtranjeria || isPep || isPpt || isPasaporte)) {
+  // 4c. Respaldo complementario en ADRES para Cédula de Ciudadanía si PONAL o PGN no resolvieron
+  if (!officialFoundName && isCedula) {
     try {
       const { queryAdres } = await import('../_core/identityVerificationService');
       const adresResult = await queryAdres(docTypeKey, clean);
@@ -899,7 +913,7 @@ export async function executeIdentityVerification(
         verificationSource = 'Base de Datos Única de Afiliados (ADRES - Ministerio de Salud)';
       }
     } catch (err: any) {
-      console.warn('[verifyCedulaWithRegistraduria] ADRES:', err?.message || err);
+      console.warn('[verifyCedulaWithRegistraduria] ADRES CC:', err?.message || err);
     }
   }
 
