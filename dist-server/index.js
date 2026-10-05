@@ -14811,16 +14811,40 @@ function httpRequest(options, data) {
       res.on("end", () => resolve({ statusCode: res.statusCode || 200, headers: res.headers, body }));
     });
     req.on("error", reject);
-    req.setTimeout(8e3, () => {
+    req.setTimeout(12e3, () => {
       req.destroy(new Error("Timeout de conexi\xF3n"));
     });
     if (data) req.write(data);
     req.end();
   });
 }
-function solveProcuraduriaQuestion(q) {
+function solveProcuraduriaQuestion(q, cleanNum) {
   if (!q || typeof q !== "string") return null;
   const norm2 = q.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  if (cleanNum && typeof cleanNum === "string") {
+    const digits = cleanNum.replace(/\D/g, "");
+    if (norm2.includes("tres primeros digitos") || norm2.includes("3 primeros digitos")) {
+      return digits.slice(0, 3) || null;
+    }
+    if (norm2.includes("dos primeros digitos") || norm2.includes("2 primeros digitos")) {
+      return digits.slice(0, 2) || null;
+    }
+    if (norm2.includes("cuatro primeros digitos") || norm2.includes("4 primeros digitos")) {
+      return digits.slice(0, 4) || null;
+    }
+    if (norm2.includes("primer digito")) {
+      return digits.slice(0, 1) || null;
+    }
+    if (norm2.includes("tres ultimos digitos") || norm2.includes("3 ultimos digitos")) {
+      return digits.slice(-3) || null;
+    }
+    if (norm2.includes("dos ultimos digitos") || norm2.includes("2 ultimos digitos")) {
+      return digits.slice(-2) || null;
+    }
+    if (norm2.includes("ultimo digito")) {
+      return digits.slice(-1) || null;
+    }
+  }
   const mMult = norm2.match(/cuanto\s+es\s+(\d+)\s*(?:x|\*|por)\s*(\d+)/i);
   if (mMult) return String(parseInt(mMult[1]) * parseInt(mMult[2]));
   const mSum = norm2.match(/cuanto\s+es\s+(\d+)\s*(?:\+|mas)\s*(\d+)/i);
@@ -14907,7 +14931,7 @@ async function queryProcuraduria(tipoDoc, numDoc, maxAttempts = 6) {
       });
       const qMatch = r2.body.match(/<span id="lblPregunta">([\s\S]*?)<\/span>/i);
       const question = qMatch ? qMatch[1].trim() : "";
-      const answer = solveProcuraduriaQuestion(question);
+      const answer = solveProcuraduriaQuestion(question, cleanNum);
       if (!answer) continue;
       const vs = r2.body.match(/id="__VIEWSTATE"\s+value="([^"]+)"/)?.[1] || "";
       const vsg = r2.body.match(/id="__VIEWSTATEGENERATOR"\s+value="([^"]+)"/)?.[1] || "";

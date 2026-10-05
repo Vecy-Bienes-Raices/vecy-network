@@ -94,7 +94,7 @@ function httpRequest(options: https.RequestOptions, data?: string): Promise<{ st
       res.on('end', () => resolve({ statusCode: res.statusCode || 200, headers: res.headers, body }));
     });
     req.on('error', reject);
-    req.setTimeout(8000, () => {
+    req.setTimeout(12000, () => {
       req.destroy(new Error('Timeout de conexión'));
     });
     if (data) req.write(data);
@@ -103,12 +103,38 @@ function httpRequest(options: https.RequestOptions, data?: string): Promise<{ st
 }
 
 /**
- * Resuelve preguntas de seguridad aritméticas o geográficas de la Procuraduría General de la Nación.
+ * Resuelve preguntas de seguridad aritméticas, geográficas o de dígitos de la Procuraduría General de la Nación.
  * Si la pregunta requiere saber el nombre previamente, retorna null para solicitar un nuevo reto limpio (ej. suma/resta).
  */
-export function solveProcuraduriaQuestion(q: string): string | null {
+export function solveProcuraduriaQuestion(q: string, cleanNum?: string): string | null {
   if (!q || typeof q !== 'string') return null;
   const norm = q.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+  // Preguntas sobre los dígitos del documento a consultar (Detectadas en las capturas de Eduardo)
+  if (cleanNum && typeof cleanNum === 'string') {
+    const digits = cleanNum.replace(/\D/g, '');
+    if (norm.includes("tres primeros digitos") || norm.includes("3 primeros digitos")) {
+      return digits.slice(0, 3) || null;
+    }
+    if (norm.includes("dos primeros digitos") || norm.includes("2 primeros digitos")) {
+      return digits.slice(0, 2) || null;
+    }
+    if (norm.includes("cuatro primeros digitos") || norm.includes("4 primeros digitos")) {
+      return digits.slice(0, 4) || null;
+    }
+    if (norm.includes("primer digito")) {
+      return digits.slice(0, 1) || null;
+    }
+    if (norm.includes("tres ultimos digitos") || norm.includes("3 ultimos digitos")) {
+      return digits.slice(-3) || null;
+    }
+    if (norm.includes("dos ultimos digitos") || norm.includes("2 ultimos digitos")) {
+      return digits.slice(-2) || null;
+    }
+    if (norm.includes("ultimo digito")) {
+      return digits.slice(-1) || null;
+    }
+  }
 
   // Multiplicación: "¿ Cuanto es 3 x 3 ?" / "¿ Cuanto es 4 * 2 ?" / "¿ Cuanto es 4 por 2 ?"
   const mMult = norm.match(/cuanto\s+es\s+(\d+)\s*(?:x|\*|por)\s*(\d+)/i);
@@ -223,7 +249,7 @@ export async function queryProcuraduria(tipoDoc: string, numDoc: string, maxAtte
 
       const qMatch = r2.body.match(/<span id="lblPregunta">([\s\S]*?)<\/span>/i);
       const question = qMatch ? qMatch[1].trim() : "";
-      const answer = solveProcuraduriaQuestion(question);
+      const answer = solveProcuraduriaQuestion(question, cleanNum);
 
       // Si la pregunta no es matemática ni geográfica (ej. solicita letras del nombre desconocido), refrescar
       if (!answer) continue;

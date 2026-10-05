@@ -2651,6 +2651,8 @@ Adriana Rebeca Orejuela`;
       expect(solveProcuraduriaQuestion("¿ Cuanto es 3 x 3 ?")).toBe("9");
       expect(solveProcuraduriaQuestion("¿ Cual es la Capital del Atlantico?")).toBe("barranquilla");
       expect(solveProcuraduriaQuestion("¿ Cual es la Capital de Antioquia (sin tilde)?")).toBe("medellin");
+      expect(solveProcuraduriaQuestion("¿Escriba los tres primeros digitos del documento a consultar?", "375202")).toBe("375");
+      expect(solveProcuraduriaQuestion("¿Escriba los dos ultimos digitos del documento a consultar?", "375202")).toBe("02");
       expect(solveProcuraduriaQuestion("¿Escriba la cantidad de letras del primer nombre de la persona...?")).toBeNull();
 
       // 4. Verificación con identidad en caché para CE 498614 (Rodolfo Jesús Mendoza Rivas)
