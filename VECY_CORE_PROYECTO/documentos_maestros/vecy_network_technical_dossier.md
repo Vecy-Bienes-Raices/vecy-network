@@ -322,6 +322,48 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.44 — Octubre 2026
+
+#### 📌 ACTUALIZACIÓN MULTIDOCUMENTO Y SOPORTE DUAL EN VECY AGENDA PRO, DOCTRINA DE LONGITUDES REGISTRALES Y ANÁLISIS DE C.E. 8.084.608
+
+**Requerimiento y Objetivos:**
+1. **Análisis de la C.E. 8.084.608 (Caso Maria Fernanda "Mafe")**:
+   - Eduardo analizó por qué para la C.E. 8.084.608 no se pudo entregar un nombre civil oficial como se hizo con la C.E. 498.614 de Rodolfo Mendoza entregada a Andrés Artunduaga.
+   - Indagó si el número 8.084.608 podría corresponder en realidad a una Cédula de Ciudadanía colombiana antigua y no a una Cédula de Extranjería.
+2. **Doctrina de Longitudes y Estructura de Documentos en Colombia**:
+   - Consolidar la doctrina de documentos colombianos: en Colombia **NUNCA existieron Cédulas de Ciudadanía de 9 dígitos** (la Registraduría saltó de series de 8 dígitos al NUIP de 10 dígitos iniciando por 1), y las Cédulas de Extranjería expedidas por Migración Colombia tienen entre 4 y 7 dígitos (nunca 8 ni 9).
+3. **Actualización Integral de Vecy Agenda Pro**:
+   - Eduardo solicitó garantizar que "Vecy Agenda Pro" cuente con todas estas nuevas implementaciones multidocumento (Cédula de Extranjería, Pasaporte, PEP, PPT, NIT) para que los agendamientos de citas nunca fallen cuando un cliente o solicitante suministre un documento no convencional o extranjero.
+
+**Diagnóstico y Causas Raíz:**
+1. **Cotejo Empírico en Vivo de 8.084.608**:
+   - **Como C.C.**: Se ejecutó prueba directa ante Policía Nacional (con 2Captcha) y en Procuraduría General (SIRI). Ambas bases confirmaron que no existe una Cédula de Ciudadanía registrada con ese número en el censo nacional ni en el sistema disciplinario.
+   - **Como C.E.**: Cumple formalmente la longitud de Migración Colombia (7 dígitos). Sin embargo, el titular no registra contratos públicos en la Procuraduría (SIRI) ni antecedentes penales en la Policía Nacional. Por ende, ninguna de las dos bases públicas del Estado indexa su nombre civil público (a diferencia de Rodolfo Mendoza, C.E. 498614, quien sí registraba contratos en SIRI).
+2. **Vulnerabilidades Detectadas y Corregidas en Vecy Agenda Pro (`agenda.ts` e `index.ts`)**:
+   - La condición `tDocLower.includes('cédula')` trataba a las Cédulas de Extranjería como Cédulas de Ciudadanía, disparando validaciones incompatibles de 10 dígitos o alertando erróneamente sobre C.E. cortas de 4 o 5 dígitos.
+   - Agenda Pro carecía de la integración con Procuraduría General (SIRI) en el Paso 4b, omitiendo la extracción de nombres de extranjeros registrados o el respaldo rápido a $0 COP.
+   - El fallback numérico `/^\d{6,10}$/` rechazaba pasaportes con caracteres alfanuméricos o C.E. cortas si los servidores gubernamentales tenían demoras de red.
+
+**Acciones Técnicas Ejecutadas:**
+1. **Refactorización Multidocumento en `server/routers/agenda.ts`**:
+   - Implementada clasificación unívoca: `isCedula`, `isExtranjeria`, `isPasaporte`, `isPep`, `isPpt`, `isNit`.
+   - Validaciones pedagógicas: rechazo de 9 dígitos en CC explicando la doctrina de la Registraduría, y rechazo de 8+ dígitos en CE explicando que las C.E. van de 4 a 7 dígitos.
+   - Consulta autoritativa dual integrada en `executeIdentityVerification`:
+     - C.C.: Policía Nacional (con 2Captcha) → Respaldo en Procuraduría General (SIRI).
+     - Extranjeros (CE, PEP, PPT, NIT): Procuraduría General (SIRI) primero → Policía Nacional para antecedentes judiciales.
+   - Fallback resiliente multiformato en el paso 6: admite C.E., Pasaportes, PPT y PEP permitiendo el agendamiento con nota de cotejo físico en sede.
+   - Fast-path en `startVerifyIdentity` optimizado para responder en 0 ms ante caché unificada o errores estructurales.
+2. **Sincronización en `server/_core/index.ts`**:
+   - Actualizado el endpoint tRPC `/api/trpc/agenda.verifyCedulaWithRegistraduria`.
+3. **Enriquecimiento en `identityVerificationService.ts`**:
+   - Reportes explicativos con avisos doctrinales sobre la cantidad de dígitos ingresados.
+4. **Validación y Suite de Pruebas**:
+   - Test unitario de regresión agregado para la Doctrina v32.44.
+   - 139/139 pruebas aprobadas al 100% en Vitest.
+   - `npm run check` (0 errores) y `npm run build` limpio en 30s.
+
+---
+
 ### 🔖 v32.43 — Octubre 2026
 
 #### 📌 INTEGRACIÓN DUAL PROCURADURÍA GENERAL DE LA NACIÓN + POLICÍA NACIONAL, SOPORTE MULTI-DOCUMENTO PEP/PPT/NIT Y BLINDAJE DE REACCIONES WHATSAPP ANTE IDENTIDADES @LID

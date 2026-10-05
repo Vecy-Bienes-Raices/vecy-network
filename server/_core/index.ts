@@ -101,7 +101,11 @@ async function startServer() {
 
       const tDocLower = (tipoDocumento || "").toLowerCase();
       const isNit = tDocLower.includes("nit") || tDocLower.includes("rut");
-      const isCedula = !isNit && (tDocLower.includes("cédula") || tDocLower.includes("cedula") || tDocLower === "" || tDocLower.includes("ciudadan"));
+      const isExtranjeria = tDocLower.includes("extranjer") || tDocLower === "ce" || tDocLower === "cx";
+      const isPasaporte = tDocLower.includes("pasaporte") || tDocLower === "pa";
+      const isPep = tDocLower.includes("pep");
+      const isPpt = tDocLower.includes("ppt") || tDocLower.includes("temporal");
+      const isCedula = !isNit && !isExtranjeria && !isPasaporte && !isPep && !isPpt && (tDocLower.includes("cédula") || tDocLower.includes("cedula") || tDocLower === "" || tDocLower.includes("ciudadan") || tDocLower === "cc");
       const normName = (nombreIngresado || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const isKnownFamilyName = normName.length >= 4 && (
         (normName.includes("daniel") && (normName.includes("rivera") || normName.includes("noguera") || normName.trim() === "daniel")) ||
@@ -111,10 +115,13 @@ async function startServer() {
         (normName.includes("jani") && normName.includes("alves"))
       );
 
-      // Fast-path (0ms): familia VECY, errores estructurales colombianos (ej. 9 dígitos), reverse checks o NIT
+      // Fast-path (0ms): familia VECY, errores estructurales colombianos (ej. 9 dígitos o CE de 8+ dígitos), reverse checks o NIT
       if (
         isNit ||
         (isCedula && (cleanDoc.length === 9 || cleanDoc.length < 6 || cleanDoc.length > 10 || (cleanDoc.length === 10 && !cleanDoc.startsWith("1")))) ||
+        (isExtranjeria && (cleanDoc.length < 4 || cleanDoc.length > 7)) ||
+        (isPep && cleanDoc.length !== 15) ||
+        (isPpt && (cleanDoc.length < 5 || cleanDoc.length > 10)) ||
         AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc] ||
         isKnownFamilyName
       ) {

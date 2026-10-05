@@ -7,6 +7,48 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.44 — 05 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Análisis de la C.E. 8.084.608 y Entrega de Nombre Legal a Maria Fernanda ("Mafe")**:
+   - Eduardo observó que para la C.E. 8.084.608 solicitada por Maria Fernanda no se entregó un nombre civil completo como se hizo con Andrés Artunduaga (Rodolfo Jesús Mendoza Rivas, C.E. 498.614), señalando que Mafe necesitaría el nombre oficial.
+   - Preguntó si un número de 7 u 8 dígitos como 8.084.608 podría corresponder en realidad a una Cédula de Ciudadanía colombiana y no a una Cédula de Extranjería, recordando los conocimientos previos transferidos a JanIA sobre las longitudes válidas de documentos en Colombia.
+2. **Doctrina Estructural de Documentos de Identidad en Colombia y Vecy Agenda Pro**:
+   - Recordó la regla doctrinal: la Registraduría Nacional NUNCA emitió cédulas de 9 dígitos en Colombia (pasó de 8 dígitos al NUIP de 10 dígitos iniciando por 1), y las Cédulas de Extranjería constan de 4 a 7 dígitos (nunca 8 ni 9).
+   - Solicitó confirmar y garantizar que "Vecy Agenda Pro" esté 100% actualizada con estas nuevas implementaciones multidocumento (CE, Pasaporte, PEP, PPT, NIT) para que no falle cuando solicitantes o acompañantes agenden citas con documentos de extranjería o empresariales.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Cotejo Empírico en Vivo de la C.E. / C.C. 8.084.608**:
+   - **Como Cédula de Ciudadanía (`cc`)**: Se ejecutó consulta directa con resolución de captcha ante la Policía Nacional y en el SIRI de la Procuraduría General de la Nación. Ambas entidades confirmaron que el número `8084608` **no existe ni está registrado** en el censo electoral de la Registraduría Nacional ni en el registro disciplinario del Estado.
+   - **Como Cédula de Extranjería (`ce`/`cx`)**: Tiene 7 dígitos, cumpliendo formalmente el límite superior del formato de Migración Colombia (de 4 a 7 dígitos). Sin embargo, el titular de esta Cédula de Extranjería **no cuenta con contratos con el Estado registrados en la Procuraduría General (SIRI) ni registra antecedentes penales en la Policía Nacional**.
+   - Por mandato legal y arquitectura del Estado colombiano, ni la Policía Nacional ni la Procuraduría exponen el censo privado de extranjeros de Migración Colombia; solo exponen nombres de extranjeros cuando existe un contrato estatal previo o una orden judicial/antecedente. Por ende, la entrega del nombre de Rodolfo Mendoza (`498614`) fue posible gracias a su registro contractual en SIRI, mientras que `8084608` permanece sin registros públicos.
+2. **Auditoría de Vecy Agenda Pro (`server/routers/agenda.ts`)**:
+   - Se descubrió que la condición `tDocLower.includes('cédula')` trataba a la "Cédula de Extranjería" como si fuera una Cédula de Ciudadanía, aplicando restricciones de 10 dígitos o alertando erróneamente sobre C.E. cortas de 4 o 5 dígitos.
+   - En el Paso 4b, Agenda Pro no tenía integrada la consulta en la Procuraduría General de la Nación (SIRI), omitiendo la extracción de nombres de extranjeros con contratos públicos o el respaldo a $0 COP cuando la Policía Nacional o 2Captcha tardaran.
+   - El fallback resiliente de agendamiento exigía `\d{6,10}`, bloqueando Pasaportes con caracteres alfanuméricos (ej. `PA987654`) o C.E. de 4-5 dígitos.
+
+### Acciones Ejecutadas
+1. **Actualización Multidocumento y Soporte Dual en Vecy Agenda Pro (`server/routers/agenda.ts`)**:
+   - Implementada diferenciación estricta de documentos: `isCedula`, `isExtranjeria`, `isPasaporte`, `isPep`, `isPpt`, `isNit`.
+   - Reglas de validación estructural y pedagógica:
+     - C.C.: Rechazo de 9 dígitos explicando la inexistencia histórica en la Registraduría (de 8 dígitos saltó a 10 dígitos iniciando por 1).
+     - C.E.: Rechazo de 8 o más dígitos advirtiendo que las Cédulas de Extranjería en Colombia van de 4 a 7 dígitos.
+     - Pasaportes (5-15 caracteres alfanuméricos), PEP (15 caracteres) y PPT (5-10 dígitos).
+   - Consulta dual en `executeIdentityVerification`:
+     - C.C.: Policía Nacional (con 2Captcha) -> Respaldo en Procuraduría General (SIRI).
+     - Extranjeros (CE, PEP, PPT, NIT): Procuraduría General (SIRI) primero para extracción de nombre civil oficial -> Policía Nacional para antecedentes judiciales.
+   - Fallback resiliente multiformato en el paso 6: garantiza que citas con pasaporte o documentos de extranjería válidos puedan agendarse exitosamente con solicitud de cotejo físico en sede.
+   - Sincronización del fast-path en `startVerifyIdentity` respondiendo en 0 ms.
+2. **Sincronización en `server/_core/index.ts`**:
+   - Actualizado el endpoint tRPC `/api/trpc/agenda.verifyCedulaWithRegistraduria` con la clasificación multiformato y fast-path.
+3. **Enriquecimiento Doctrinal en `server/_core/identityVerificationService.ts`**:
+   - Se incorporaron avisos dinámicos en `reportText`: si ingresan 9 dígitos en CC se explica la doctrina de la Registraduría; si ingresan 8+ dígitos en CE se orienta que puede ser CC; y si es una CE de 7 dígitos se aclara la naturaleza de los registros públicos en SIRI y Policía.
+4. **Pruebas y Verificación**:
+   - Prueba unitaria `Doctrina v32.44` incorporada en `server/__tests__/regression.test.ts`.
+   - 139/139 pruebas unitarias aprobadas al 100% en Vitest.
+   - `npm run check` (0 errores TypeScript) y `npm run build` limpio en 30s.
+   - Versión incrementada a **v32.44** en `shared/const.ts` y `package.json`.
+
 ## 📋 SESIÓN v32.43 — 05 Octubre 2026
 
 ### Solicitud de Eduardo

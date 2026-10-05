@@ -172,7 +172,33 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.43 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.44 — Octubre 2026
+
+### Novedades v32.44 (Actualización Multidocumento y Soporte Dual en Vecy Agenda Pro, Doctrina de Longitudes Registrales y Análisis de C.E. 8.084.608):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Análisis de la C.E. 8.084.608 y Entrega de Nombre Legal a Maria Fernanda ("Mafe")**:
+     - Eduardo preguntó por qué no se entregó un nombre civil a Mafe para la C.E. 8.084.608 como se hizo con Andrés Artunduaga (Rodolfo Jesús Mendoza Rivas, C.E. 498.614), e indagó si este número de 7 dígitos no sería una Cédula de Ciudadanía colombiana.
+     - **Verificación Empírica en Vivo**:
+       - Como C.C.: consultado ante Policía Nacional y Procuraduría General (SIRI), el documento `8084608` no figura en el censo electoral de la Registraduría ni en el registro disciplinario.
+       - Como C.E.: tiene 7 dígitos (rango válido de Migración Colombia de 4 a 7 dígitos). Sin embargo, el ciudadano titular no posee contratos con el Estado registrados en la Procuraduría General (SIRI) ni antecedentes penales en la Policía Nacional, por lo cual ninguna base pública abierta del Estado indexa su nombre civil.
+  2. **Doctrina de Longitudes y Estructura de Documentos en Colombia**:
+     - **Cédula de Ciudadanía (C.C.)**: Históricas de 1 a 8 dígitos (pre-2000) o NUIP de 10 dígitos iniciando en 1 (post-2000). **En Colombia NUNCA existieron cédulas de 9 dígitos** (la Registraduría saltó de 8 a 10 dígitos).
+     - **Cédula de Extranjería (C.E.)**: Emitidas por Migración Colombia (antes DAS), constan de 4 a 7 dígitos numéricos. **NO tienen 8, ni 9, ni 10 dígitos** (si tiene 8+ dígitos suele ser una CC).
+     - **Pasaporte**: 5 a 15 caracteres alfanuméricos.
+     - **PPT**: 5 a 10 dígitos numéricos.
+     - **PEP**: 15 caracteres alfanuméricos.
+  3. **Blindaje de Vecy Agenda Pro (`agenda.ts` e `index.ts`)**:
+     - Se erradicó la clasificación errónea donde `tDocLower.includes('cédula')` trataba a la "Cédula de extranjería" como Cédula de Ciudadanía.
+     - Se incorporó soporte autoritativo dual a Vecy Agenda Pro: para CC consulta Policía Nacional primero con respaldo en Procuraduría; para extranjeros (CE, PEP, PPT, NIT) consulta Procuraduría primero (SIRI) y Policía Nacional para antecedentes.
+     - Se flexibilizó el fallback resiliente multiformato en el paso 6 para permitir citas presenciales a titulares de Pasaportes, PPT, PEP y CEs cortas con solicitud de cotejo físico en sede.
+- **Acciones Ejecutadas y Blindaje de Arquitectura**:
+  1. `server/routers/agenda.ts`: Clasificación estricta de documentos, validaciones estructurales pedagógicas (CC 9 dígitos, CE 8+ dígitos), consulta dual integrada y fast-path en 0 ms.
+  2. `server/_core/index.ts`: Sincronización del endpoint tRPC `/api/trpc/agenda.verifyCedulaWithRegistraduria`.
+  3. `server/_core/identityVerificationService.ts`: Reportes orientativos contextuales según la cantidad de dígitos.
+  4. `server/__tests__/regression.test.ts`: Test unitario `Doctrina v32.44` aprobado.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | 139/139 tests Vitest aprobados al 100% ✅ | `npm run build` limpio en 30s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.43 — Octubre 2026
 
 ### Novedades v32.43 (Integración Dual Procuraduría General de la Nación + Policía Nacional, Soporte Multi-Documento PEP/PPT/NIT y Blindaje de Reacciones WhatsApp con @lid):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

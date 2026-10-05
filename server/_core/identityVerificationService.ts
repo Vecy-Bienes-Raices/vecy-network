@@ -610,13 +610,22 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
         policia: ponalRes || undefined
       };
     } else {
+      let customGuidance = '';
+      if (tipoDoc.toLowerCase() === 'cc' && cedula.length === 9) {
+        customGuidance = `\n• ⚠️ *Aviso Registraduría:* En Colombia nunca se emitieron Cédulas de Ciudadanía de 9 dígitos (las antiguas tienen entre 1 y 8 dígitos y las nuevas son de 10 dígitos iniciando por 1). Verifica si hubo un dígito omitido o añadido.`;
+      } else if (['ce', 'cx'].includes(tipoDoc.toLowerCase()) && cedula.length >= 8) {
+        customGuidance = `\n• ⚠️ *Aviso Migración:* Las Cédulas de Extranjería en Colombia constan de entre 4 y 7 dígitos numéricos. Un número de ${cedula.length} dígitos suele corresponder a una Cédula de Ciudadanía colombiana.`;
+      } else if (['ce', 'cx'].includes(tipoDoc.toLowerCase()) && cedula.length >= 5 && cedula.length <= 7) {
+        customGuidance = `\n• 📌 Las Cédulas de Extranjería (de 4 a 7 dígitos) son expedidas por Migración Colombia. Al ser un documento extranjero, las plataformas del Estado solo reflejan nombre público si el titular registra contratos estatales en la Procuraduría (SIRI) o historial penal en la Policía Nacional.`;
+      }
+
       const reportText =
         `⚠️ *CONSULTA DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
         `Consultamos las bases de datos oficiales de seguridad del Estado para el documento ${docLabel} *${formattedCedula}*:\n\n` +
         `🏛️ *Central de Control Notarial:* ${pgnRes?.statusText || 'No se encuentra registrado en el sistema de información SIRI o no disponible.'}\n` +
         `⚖️ *Central de Seguridad:* ${ponalRes?.message || 'Sin antecedentes judiciales reportados o documento no indexado.'}\n\n` +
-        `📌 *Orientación de Verificación:*\n` +
-        `• Si es un documento extranjero (Cédula de Extranjería, Pasaporte, PEP o PPT), es habitual que no registre nombre público si el titular no ha tenido contratos con entidades públicas ni antecedentes penales en Colombia.\n` +
+        `📌 *Orientación de Verificación:*${customGuidance}\n` +
+        `• Si es un documento extranjero (C.E., Pasaporte, PEP o PPT), es completamente habitual que no registre nombre público si el titular no ha tenido contratos con entidades públicas ni antecedentes penales en Colombia.\n` +
         `• Verifica que el número digitado coincida exactamente con el documento físico.\n\n` +
         `💡 Puedes verificar nuevamente o adjuntar los datos escribiéndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.`;
 

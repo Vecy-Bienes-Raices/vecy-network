@@ -2737,6 +2737,33 @@ Adriana Rebeca Orejuela`;
       expect(delivered).toContain("Cédula de Extranjería (C.E.) *498.614*");
       expect(delivered).not.toContain("fallo en la matrix");
     });
+
+    it("Doctrina v32.44: Validación Multidocumento y Soporte Dual en Vecy Agenda Pro (CC 9 dígitos, CE 4-7 dígitos, Pasaporte, PPT)", async () => {
+      const { executeIdentityVerification, identityCache } = await import("../routers/agenda");
+
+      // 1. C.C. con 9 dígitos: debe ser rechazada inmediatamente explicando la doctrina
+      const resCc9 = await executeIdentityVerification("Cédula de ciudadanía", "123456789", "Carlos Perez");
+      expect(resCc9.valid).toBe(false);
+      expect(resCc9.error).toContain("En Colombia no existen Cédulas de Ciudadanía de 9 dígitos");
+
+      // 2. C.E. con 8 o más dígitos: debe advertir que la longitud de CE es de 4 a 7 dígitos
+      const resCe8 = await executeIdentityVerification("Cédula de extranjería", "12345678", "John Doe");
+      expect(resCe8.valid).toBe(false);
+      expect(resCe8.error).toContain("Las Cédulas de Extranjería en Colombia constan de entre 4 y 7 dígitos");
+
+      // 3. C.E. válida (ej. 498614) con nombre oficial en caché de Procuraduría
+      identityCache.set("PROCURADURIA:ce:498614", { fullName: "Rodolfo Jesus Mendoza Rivas", timestamp: Date.now() });
+      const resCeVal = await executeIdentityVerification("Cédula de extranjería", "498614", "Rodolfo Mendoza");
+      expect(resCeVal.valid).toBe(true);
+      expect(resCeVal.match).toBe(true);
+      expect(resCeVal.officialName).toContain("Rodolfo Jesus Mendoza Rivas");
+
+      // 4. Pasaporte alfanumérico en fallback resiliente
+      const resPa = await executeIdentityVerification("Pasaporte", "PA987654", "Michael Smith");
+      expect(resPa.valid).toBe(true);
+      expect(resPa.match).toBe(true);
+      expect(resPa.message).toContain("Pasaporte en formato válido");
+    });
   });
 });
 

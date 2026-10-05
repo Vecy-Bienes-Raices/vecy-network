@@ -727,8 +727,13 @@ export async function executeIdentityVerification(
     };
   }
 
-  // 4. Validación estricta de Cédula de Ciudadanía colombiana
-  const isCedula = !isNit && (tDocLower.includes('cédula') || tDocLower.includes('cedula') || tDocLower === '' || tDocLower.includes('ciudadan'));
+  // 4. Clasificación y validación estricta por tipo de documento
+  const isExtranjeria = tDocLower.includes('extranjer') || tDocLower === 'ce' || tDocLower === 'cx';
+  const isPasaporte = tDocLower.includes('pasaporte') || tDocLower === 'pa';
+  const isPep = tDocLower.includes('pep');
+  const isPpt = tDocLower.includes('ppt') || tDocLower.includes('temporal');
+  const isCedula = !isNit && !isExtranjeria && !isPasaporte && !isPep && !isPpt && (tDocLower.includes('cédula') || tDocLower.includes('cedula') || tDocLower === '' || tDocLower.includes('ciudadan') || tDocLower === 'cc');
+
   if (isCedula) {
     if (!/^\d+$/.test(clean)) {
       return {
@@ -741,7 +746,7 @@ export async function executeIdentityVerification(
       return {
         valid: false,
         match: false,
-        error: '⚠️ En Colombia no existen Cédulas de Ciudadanía de 9 dígitos. Verifica si omitiste o agregaste algún número.',
+        error: '⚠️ En Colombia no existen Cédulas de Ciudadanía de 9 dígitos. La Registraduría Nacional nunca emitió cédulas de 9 dígitos (las antiguas van de 1 a 8 dígitos y las nuevas son de 10 dígitos iniciando por 1). Verifica si omitiste o agregaste algún número.',
       };
     }
     if (clean.length < 6 || clean.length > 10) {
@@ -760,9 +765,65 @@ export async function executeIdentityVerification(
     }
   }
 
-  // 3. Caché en memoria (0ms)
-  const cacheKey = `POLICIA:cc:${clean}`;
-  const cached = identityCache.get(cacheKey);
+  if (isExtranjeria) {
+    if (!/^\d+$/.test(clean)) {
+      return {
+        valid: false,
+        match: false,
+        error: 'La Cédula de Extranjería solo debe contener caracteres numéricos.',
+      };
+    }
+    if (clean.length >= 8) {
+      return {
+        valid: false,
+        match: false,
+        error: `⚠️ Las Cédulas de Extranjería en Colombia constan de entre 4 y 7 dígitos numéricos (habitualmente 5 a 7). Un número de ${clean.length} dígitos no corresponde a una C.E.; verifica si se trata de una Cédula de Ciudadanía colombiana o un error de digitación.`,
+      };
+    }
+    if (clean.length < 4) {
+      return {
+        valid: false,
+        match: false,
+        error: '⚠️ Las Cédulas de Extranjería en Colombia deben contener al menos 4 dígitos numéricos.',
+      };
+    }
+  }
+
+  if (isPasaporte) {
+    if (clean.length < 5 || clean.length > 15) {
+      return {
+        valid: false,
+        match: false,
+        error: 'El Pasaporte debe contener entre 5 y 15 caracteres alfanuméricos.',
+      };
+    }
+  }
+
+  if (isPep) {
+    if (clean.length !== 15) {
+      return {
+        valid: false,
+        match: false,
+        error: 'El Permiso Especial de Permanencia (PEP) consta exactamente de 15 caracteres alfanuméricos.',
+      };
+    }
+  }
+
+  if (isPpt) {
+    if (!/^\d{5,10}$/.test(clean)) {
+      return {
+        valid: false,
+        match: false,
+        error: 'El Permiso por Protección Temporal (PPT) consta de entre 5 y 10 dígitos numéricos.',
+      };
+    }
+  }
+
+  // 3. Caché unificada en memoria (0ms, $0 COP)
+  const docTypeKey = isNit ? 'nit' : (isExtranjeria ? 'ce' : (isPasaporte ? 'pa' : (isPep ? 'pep' : (isPpt ? 'ppt' : 'cc'))));
+  const ponalCacheKey = `POLICIA:${docTypeKey}:${clean}`;
+  const pgnCacheKey = `PROCURADURIA:${docTypeKey}:${clean}`;
+  const cached = identityCache.get(ponalCacheKey) || identityCache.get(pgnCacheKey);
   if (cached && (Date.now() - cached.timestamp < IDENTITY_CACHE_TTL)) {
     const officialFormatted = cached.fullName;
     const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
@@ -782,11 +843,55 @@ export async function executeIdentityVerification(
     };
   }
 
-  // 4. Scraper autoritativo de Policía Nacional con 2Captcha reCAPTCHA v2 (Obligatorio para Cédulas)
-  const policiaResult = await queryPoliciaNacional(tipoDocumento, clean);
-  if (policiaResult && policiaResult.success && policiaResult.officialName) {
-    const officialFormatted = policiaResult.officialName;
-    identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+  // 4. Verificación autoritativa gubernamental (Policía Nacional + Procuraduría General de la Nación)
+  let officialFoundName: string | null = null;
+  let verificationSource = '';
+
+  if (isCedula) {
+    // 4a. Para Cédula de Ciudadanía, consultar Policía Nacional primero (vía 2Captcha / Registraduría)
+    const policiaResult = await queryPoliciaNacional(tipoDocumento, clean);
+    if (policiaResult && policiaResult.success && policiaResult.officialName) {
+      officialFoundName = policiaResult.officialName;
+      verificationSource = 'Policía Nacional de Colombia';
+    } else {
+      // 4b. Respaldo transparente en Procuraduría General de la Nación (SIRI, $0 COP, 0.2s)
+      try {
+        const { queryProcuraduria } = await import('../_core/identityVerificationService');
+        const pgnResult = await queryProcuraduria('cc', clean);
+        if (pgnResult && pgnResult.success && pgnResult.officialName) {
+          officialFoundName = pgnResult.officialName;
+          verificationSource = 'Central de Control Notarial (Procuraduría General)';
+        }
+      } catch (err: any) {
+        console.warn('[verifyCedulaWithRegistraduria] Respaldo PGN CC:', err?.message || err);
+      }
+    }
+  } else if (isExtranjeria || isPep || isPpt || isNit) {
+    // Para extranjeros y empresas, consultar Procuraduría primero (SIRI registra nombres civiles de extranjeros y representantes)
+    try {
+      const { queryProcuraduria } = await import('../_core/identityVerificationService');
+      const pgnResult = await queryProcuraduria(docTypeKey, clean);
+      if (pgnResult && pgnResult.success && pgnResult.officialName) {
+        officialFoundName = pgnResult.officialName;
+        verificationSource = 'Central de Control Notarial (Procuraduría General)';
+      }
+    } catch (err: any) {
+      console.warn('[verifyCedulaWithRegistraduria] PGN Extranjero:', err?.message || err);
+    }
+
+    // Si Procuraduría no tiene el nombre, intentar Policía Nacional para extranjeros
+    if (!officialFoundName && (isExtranjeria || isPasaporte)) {
+      const policiaResult = await queryPoliciaNacional(tipoDocumento, clean);
+      if (policiaResult && policiaResult.success && policiaResult.officialName) {
+        officialFoundName = policiaResult.officialName;
+        verificationSource = 'Policía Nacional de Colombia';
+      }
+    }
+  }
+
+  if (officialFoundName) {
+    const officialFormatted = formatTitleCase(officialFoundName);
+    identityCache.set(ponalCacheKey, { fullName: officialFormatted, timestamp: Date.now() });
 
     const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
     if (!isMatch) {
@@ -802,7 +907,7 @@ export async function executeIdentityVerification(
       valid: true,
       match: true,
       officialName: officialFormatted,
-      message: `✓ Identidad verificada con la Policía Nacional: ${officialFormatted}`,
+      message: `✓ Identidad verificada con ${verificationSource}: ${officialFormatted}`,
     };
   }
 
@@ -825,7 +930,7 @@ export async function executeIdentityVerification(
           const officialFormatted = formatTitleCase(row.fullName.trim());
 
           if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
-            identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+            identityCache.set(ponalCacheKey, { fullName: officialFormatted, timestamp: Date.now() });
             return {
               valid: true,
               match: true,
@@ -865,7 +970,7 @@ export async function executeIdentityVerification(
           const officialFormatted = formatTitleCase(candidateName.trim());
 
           if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
-            identityCache.set(cacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+            identityCache.set(ponalCacheKey, { fullName: officialFormatted, timestamp: Date.now() });
             return {
               valid: true,
               match: true,
@@ -880,23 +985,52 @@ export async function executeIdentityVerification(
     console.warn('[DB Check warning]', dbErr?.message);
   }
 
-  // 6. Fallback resiliente para fallos de red o tiempos de espera gubernamentales
-  const isNumericDoc = /^\d{6,10}$/.test(clean) && clean.length !== 9;
-  if (isNumericDoc) {
-    if (clean.length === 10 && !clean.startsWith('1')) {
-      return {
-        valid: false,
-        match: false,
-        error: '⚠️ Las Cédulas de Ciudadanía de 10 dígitos en Colombia deben iniciar por 1.',
-      };
-    }
-    const cleanEntered = (nombreIngresado || '').trim();
-    const hasValidEnteredName = cleanEntered.length >= 3 && !/^\d+$/.test(cleanEntered.replace(/\s+/g, ''));
+  // 6. Fallback resiliente multiformato para agendamiento en sede
+  const cleanEntered = (nombreIngresado || '').trim();
+  const hasValidEnteredName = cleanEntered.length >= 3 && !/^\d+$/.test(cleanEntered.replace(/\s+/g, ''));
+
+  if (isCedula && /^\d{6,10}$/.test(clean) && clean.length !== 9) {
     return {
       valid: true,
       match: true,
       officialName: hasValidEnteredName ? cleanEntered : undefined,
-      message: '✓ Documento en formato válido (pendiente de cotejo en sede)',
+      message: '✓ Cédula de Ciudadanía en formato válido (pendiente de cotejo en sede)',
+    };
+  }
+
+  if (isExtranjeria && /^\d{4,7}$/.test(clean)) {
+    return {
+      valid: true,
+      match: true,
+      officialName: hasValidEnteredName ? cleanEntered : undefined,
+      message: '✓ Cédula de Extranjería en formato válido (requiere presentación de documento físico en sede)',
+    };
+  }
+
+  if (isPasaporte && /^[a-zA-Z0-9]{5,15}$/.test(clean)) {
+    return {
+      valid: true,
+      match: true,
+      officialName: hasValidEnteredName ? cleanEntered : undefined,
+      message: '✓ Pasaporte en formato válido (requiere presentación de documento físico en la cita)',
+    };
+  }
+
+  if (isPpt && /^\d{5,10}$/.test(clean)) {
+    return {
+      valid: true,
+      match: true,
+      officialName: hasValidEnteredName ? cleanEntered : undefined,
+      message: '✓ Permiso por Protección Temporal (PPT) en formato válido (pendiente de cotejo en sede)',
+    };
+  }
+
+  if (isPep && /^[a-zA-Z0-9]{15}$/.test(clean)) {
+    return {
+      valid: true,
+      match: true,
+      officialName: hasValidEnteredName ? cleanEntered : undefined,
+      message: '✓ Permiso Especial de Permanencia (PEP) en formato válido (pendiente de cotejo en sede)',
     };
   }
 
@@ -1048,7 +1182,11 @@ export const agendaRouter = router({
 
       const tDocLower = (tipoDocumento || '').toLowerCase();
       const isNit = tDocLower.includes('nit') || tDocLower.includes('rut');
-      const isCedula = !isNit && (tDocLower.includes('cédula') || tDocLower.includes('cedula') || tDocLower === '' || tDocLower.includes('ciudadan'));
+      const isExtranjeria = tDocLower.includes('extranjer') || tDocLower === 'ce' || tDocLower === 'cx';
+      const isPasaporte = tDocLower.includes('pasaporte') || tDocLower === 'pa';
+      const isPep = tDocLower.includes('pep');
+      const isPpt = tDocLower.includes('ppt') || tDocLower.includes('temporal');
+      const isCedula = !isNit && !isExtranjeria && !isPasaporte && !isPep && !isPpt && (tDocLower.includes('cédula') || tDocLower.includes('cedula') || tDocLower === '' || tDocLower.includes('ciudadan') || tDocLower === 'cc');
       const normName = (nombreIngresado || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       const isKnownFamilyName = normName.length >= 4 && (
         (normName.includes('natalia') && (normName.includes('rivera') || normName.trim() === 'natalia')) ||
@@ -1057,14 +1195,20 @@ export const agendaRouter = router({
         (normName.includes('jani') && normName.includes('alves'))
       );
 
-      // Fast-path instantáneo si es identidad autoritativa de Vecy, error estructural (ej. 9 dígitos), reverse check o está en caché (0 ms)
-      const cacheKey = `POLICIA:cc:${cleanDoc}`;
+      // Fast-path instantáneo si es identidad autoritativa de Vecy, error estructural (ej. 9 dígitos o CE de 8+ dígitos), reverse check o está en caché (0 ms)
+      const docTypeKey = isNit ? 'nit' : (isExtranjeria ? 'ce' : (isPasaporte ? 'pa' : (isPep ? 'pep' : (isPpt ? 'ppt' : 'cc'))));
+      const cacheKey = `POLICIA:${docTypeKey}:${cleanDoc}`;
+      const pgnCacheKey = `PROCURADURIA:${docTypeKey}:${cleanDoc}`;
       if (
         isNit ||
         (isCedula && (cleanDoc.length === 9 || cleanDoc.length < 6 || cleanDoc.length > 10 || (cleanDoc.length === 10 && !cleanDoc.startsWith('1')))) ||
+        (isExtranjeria && (cleanDoc.length < 4 || cleanDoc.length > 7)) ||
+        (isPep && cleanDoc.length !== 15) ||
+        (isPpt && (cleanDoc.length < 5 || cleanDoc.length > 10)) ||
         AUTHORITATIVE_FAMILY_IDENTITIES[cleanDoc] ||
         isKnownFamilyName ||
-        identityCache.has(cacheKey)
+        identityCache.has(cacheKey) ||
+        identityCache.has(pgnCacheKey)
       ) {
         const quickRes = await executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngresado);
         return {
