@@ -11193,7 +11193,9 @@ var init_whatsapp_match = __esm({
               this.sock.ev.removeAllListeners("connection.update");
               this.sock.ev.removeAllListeners("creds.update");
               this.sock.ev.removeAllListeners("messages.upsert");
-              if (this.sock.ws && typeof this.sock.ws.close === "function") {
+              if (typeof this.sock.end === "function") {
+                this.sock.end(void 0);
+              } else if (this.sock.ws && typeof this.sock.ws.close === "function") {
                 this.sock.ws.close();
               }
             } catch (cleanupErr) {
@@ -12377,7 +12379,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             console.log(`[JANIA-${reason}] \u{1F3AF} Despachando reacci\xF3n ${emoji} a ${chatId} (Msg ID: ${msgId})...`);
             await Promise.race([
               this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
-              new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 5s reacci\xF3n")), 5e3))
+              new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 3s reacci\xF3n")), 3e3))
             ]);
             this.lastReactionTimestamp = Date.now();
             console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
@@ -12388,13 +12390,19 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
               }
             }
           } catch (err) {
-            console.warn(`[JANIA-${reason}] \u26A0\uFE0F Primer intento de reacci\xF3n ${emoji} fall\xF3 (${err?.message || err}). Reintentando tras pausa segura...`);
-            await new Promise((r) => setTimeout(r, 2e3));
+            const errMsg = err?.message || String(err);
+            const isUnrecoverable = errMsg.includes("No open session") || errMsg.includes("not-authorized") || !this.isReady;
+            if (isUnrecoverable) {
+              console.warn(`[JANIA-${reason}] \u26A0\uFE0F Reacci\xF3n ${emoji} omitida por sesi\xF3n no disponible (${errMsg}).`);
+              return;
+            }
+            console.warn(`[JANIA-${reason}] \u26A0\uFE0F Primer intento de reacci\xF3n ${emoji} fall\xF3 (${errMsg}). Reintentando tras pausa \xE1gil...`);
+            await new Promise((r) => setTimeout(r, 1e3));
             try {
               if (this.sock && this.isReady) {
                 await Promise.race([
                   this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
-                  new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 5s reintento")), 5e3))
+                  new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 3s reintento")), 3e3))
                 ]);
                 this.lastReactionTimestamp = Date.now();
                 console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA en reintento secuencial`);

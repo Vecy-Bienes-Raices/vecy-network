@@ -318,7 +318,9 @@ export class JaniaMatchBot {
           this.sock.ev.removeAllListeners('connection.update');
           this.sock.ev.removeAllListeners('creds.update');
           this.sock.ev.removeAllListeners('messages.upsert');
-          if (this.sock.ws && typeof this.sock.ws.close === 'function') {
+          if (typeof (this.sock as any).end === 'function') {
+            (this.sock as any).end(undefined);
+          } else if (this.sock.ws && typeof this.sock.ws.close === 'function') {
             this.sock.ws.close();
           }
         } catch (cleanupErr) {
@@ -1878,7 +1880,7 @@ export class JaniaMatchBot {
         console.log(`[JANIA-${reason}] 🎯 Despachando reacción ${emoji} a ${chatId} (Msg ID: ${msgId})...`);
         await Promise.race([
           this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 5s reacción")), 5000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 3s reacción")), 3000))
         ]);
         this.lastReactionTimestamp = Date.now();
         console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
@@ -1890,13 +1892,19 @@ export class JaniaMatchBot {
           }
         }
       } catch (err: any) {
-        console.warn(`[JANIA-${reason}] ⚠️ Primer intento de reacción ${emoji} falló (${err?.message || err}). Reintentando tras pausa segura...`);
-        await new Promise(r => setTimeout(r, 2000));
+        const errMsg = err?.message || String(err);
+        const isUnrecoverable = errMsg.includes("No open session") || errMsg.includes("not-authorized") || !this.isReady;
+        if (isUnrecoverable) {
+          console.warn(`[JANIA-${reason}] ⚠️ Reacción ${emoji} omitida por sesión no disponible (${errMsg}).`);
+          return;
+        }
+        console.warn(`[JANIA-${reason}] ⚠️ Primer intento de reacción ${emoji} falló (${errMsg}). Reintentando tras pausa ágil...`);
+        await new Promise(r => setTimeout(r, 1000));
         try {
           if (this.sock && this.isReady) {
             await Promise.race([
               this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
-              new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 5s reintento")), 5000))
+              new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 3s reintento")), 3000))
             ]);
             this.lastReactionTimestamp = Date.now();
             console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA en reintento secuencial`);
