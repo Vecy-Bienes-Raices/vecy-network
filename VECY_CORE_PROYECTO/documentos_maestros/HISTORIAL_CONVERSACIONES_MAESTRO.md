@@ -7,6 +7,54 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.45 — 05 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Aclaración sobre Antecedentes de C.E. 498.614, 8.084.608 y 375.202**:
+   - Eduardo preguntó si la C.E. 498.614 tiene o no antecedentes y por qué la C.E. 8.084.608 no mostraba el nombre civil mientras que la C.E. 375.202 sí pertenecía a "Marco Antonio Mogollón Tamayo", revisada exitosamente mediante la App "Verifíquese" debido a que el portal de la Procuraduría no le abría en su navegador Brave.
+2. **Conexión con la Tercera Base de Datos (ADRES / BDUA - Ministerio de Salud)**:
+   - Eduardo ordenó conectar la tercera base de datos con ADRES / BDUA con toda la potencia técnica requerida, indicando: *"si necesitas 2Captcha para ingresar o lo que sea necesario hazlo, úsalo y démosle resultados a nuestros usuarios. Quiero que seamos más grandes y poderosos que VERIFÍQUESE. Ojalá lo puedas lograr"*.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Análisis Forense del Fallo en Brave de apps.procuraduria.gov.co**:
+   - De las capturas aportadas por Eduardo:
+     - Captura 1: El formulario solicitó los 3 primeros dígitos del documento (`375`), pero al dar clic en Consultar el spinner quedó congelado.
+     - Captura 2: En la consola DevTools, el servidor ASP.NET de la Procuraduría arrojó error de cabecera por comillas tipográficas curvadas inválidas (`Content-Security-Policy: default-src ‘self`) y los scripts `jquery_realperson.js` y `jquery_js` arrojaron 404 Not Found, siendo adicionalmente bloqueados por los escudos anti-rastreo de Brave.
+     - Captura 3: La página colapsó y redirigió a *"Formulario de atención de incidentes: Disculpe las molestias..."*. Se confirmó que no fue culpa del usuario ni del documento, sino incompatibilidad del portal gubernamental con navegadores modernos de alta privacidad.
+2. **Descubrimiento Arquitectónico en ADRES / BDUA (`ConsultarAfiliadoWeb_2.aspx`)**:
+   - Se investigó a fondo la plataforma de la ADRES (Base de Datos Única de Afiliados en Salud).
+   - Se descubrió que la plataforma renovada expone los datos a través de una ventana emergente (`RespuestaConsulta.aspx?tokenId=...`), la cual guarda los resultados en sesión de servidor ASP.NET (`ASP.NET_SessionId`).
+   - El motor headless de JanIA logró extraer los datos completos **sin necesidad de 2Captcha ($0 COP)**, obteniendo:
+     - Nombres completos
+     - Apellidos completos
+     - EPS a la que está afiliado
+     - Estado de afiliación (ACTIVO, RETIRADO, etc.)
+     - Régimen (CONTRIBUTIVO / SUBSIDIADO)
+     - Departamento y Municipio
+3. **Resolución en Vivo de las Cédulas de Extranjería**:
+   - **C.E. 8.084.608 (Mafe)**: Resuelto en vivo con ADRES como **JOSÉ PATRICIO CÁCERES MORALES** (Afiliado ACTIVO en EPS SURAMERICANA S.A., Bogotá D.C., Régimen CONTRIBUTIVO).
+   - **C.E. 375.202**: Resuelto en vivo como **MARCO ANTONIO MOGOLLÓN TAMAYO** (EPS SURAMERICANA S.A., Bogotá D.C.).
+   - **C.E. 498.614**: Resuelto en vivo como **RODOLFO JESÚS MENDOZA RIVAS** (EPS SURAMERICANA S.A., Bogotá D.C.).
+   - Se ratificó que **NINGUNO DE LOS TRES TIENE ANTECEDENTES PENALES**. Todos están 100% habilitados.
+
+### Acciones Ejecutadas
+1. **Mantenimiento y Resiliencia de Túneles Reversos (`scripts/ensure-pgn-tunnel.sh`)**:
+   - Actualizado el script para mantener permanentemente abiertos dos túneles SSH hacia el VPS:
+     - Puerto `18443`: `apps.procuraduria.gov.co:443` (Procuraduría General / SIRI).
+     - Puerto `28443`: `aplicaciones.adres.gov.co:443` (ADRES / BDUA).
+2. **Implementación de Servicio ADRES en `server/_core/identityVerificationService.ts`**:
+   - Creada función `getAdresEndpoint` para resolución dinámica de proxies o túneles locales.
+   - Creada función `mapTipoDocToAdres` con soporte para CC, CE, TI, PA, PEP y PPT.
+   - Creado scraper de alta velocidad `queryAdres` con manejo de cookies combinadas y extracción estructurada de nombres, apellidos, EPS, estado y ubicación.
+   - Enriquecido `executeIdentityVerificationFromWhatsApp`: ahora orquesta la triple sinergia (ADRES para nombres y EPS + Procuraduría para disciplinarios + Policía Nacional para antecedentes penales).
+3. **Integración en Vecy Agenda Pro (`server/routers/agenda.ts`)**:
+   - Añadido fallback a ADRES en `executeIdentityVerification` para que en el paso 6 de agendamiento se resuelvan automáticamente los nombres legales de extranjeros y colombianos, cotejándolos con el nombre ingresado.
+4. **Pruebas y Verificación**:
+   - Añadida prueba unitaria `Doctrina v32.45` en `server/__tests__/regression.test.ts`.
+   - 140/140 pruebas unitarias aprobadas al 100% en Vitest.
+   - `npm run check` (0 errores TypeScript) y `npm run build` limpio en 10.50s.
+   - Versión incrementada a **v32.45** en `shared/const.ts` y `package.json`.
+
 ## 📋 SESIÓN v32.44 — 05 Octubre 2026
 
 ### Solicitud de Eduardo

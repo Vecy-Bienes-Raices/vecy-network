@@ -889,6 +889,20 @@ export async function executeIdentityVerification(
     }
   }
 
+  // 4c. Respaldo complementario en ADRES (BDUA - Ministerio de Salud) para colombianos y extranjeros
+  if (!officialFoundName && (isCedula || isExtranjeria || isPep || isPpt || isPasaporte)) {
+    try {
+      const { queryAdres } = await import('../_core/identityVerificationService');
+      const adresResult = await queryAdres(docTypeKey, clean);
+      if (adresResult && adresResult.success && adresResult.officialName) {
+        officialFoundName = adresResult.officialName;
+        verificationSource = 'Base de Datos Única de Afiliados (ADRES - Ministerio de Salud)';
+      }
+    } catch (err: any) {
+      console.warn('[verifyCedulaWithRegistraduria] ADRES:', err?.message || err);
+    }
+  }
+
   if (officialFoundName) {
     const officialFormatted = formatTitleCase(officialFoundName);
     identityCache.set(ponalCacheKey, { fullName: officialFormatted, timestamp: Date.now() });

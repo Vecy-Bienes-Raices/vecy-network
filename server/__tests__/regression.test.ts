@@ -2677,6 +2677,46 @@ Adriana Rebeca Orejuela`;
       spyPonalCe.mockRestore();
     });
 
+    it("Doctrina v32.45: Conexión y sinergia triple con ADRES / BDUA para resolución de identidad civil y aseguramiento en salud", async () => {
+      const {
+        mapTipoDocToAdres,
+        executeIdentityVerificationFromWhatsApp
+      } = await import("../_core/identityVerificationService");
+      const agendaRouter = await import("../routers/agenda");
+
+      // 1. Mapeo a selectores oficiales de ADRES
+      expect(mapTipoDocToAdres("cc")).toBe("CC");
+      expect(mapTipoDocToAdres("ce")).toBe("CE");
+      expect(mapTipoDocToAdres("cx")).toBe("CE");
+      expect(mapTipoDocToAdres("ti")).toBe("TI");
+      expect(mapTipoDocToAdres("pa")).toBe("PA");
+      expect(mapTipoDocToAdres("pep")).toBe("PE");
+      expect(mapTipoDocToAdres("ppt")).toBe("PT");
+      expect(mapTipoDocToAdres("nit")).toBeNull();
+
+      // 2. Verificación de C.E. 8084608 (José Patricio Cáceres Morales) y enriquecimiento con EPS
+      agendaRouter.identityCache.set("ADRES:CE:8084608", {
+        fullName: "Jose Patricio Caceres Morales",
+        timestamp: Date.now()
+      });
+
+      const spyPonal = vi.spyOn(agendaRouter, "queryPoliciaNacional").mockResolvedValueOnce({
+        success: true,
+        source: "Policía Nacional de Colombia",
+        tipoDoc: "cx",
+        cedula: "8084608"
+      });
+
+      const reportMafe = await executeIdentityVerificationFromWhatsApp("Verificar CE 8084608", true);
+      expect(reportMafe.success).toBe(true);
+      expect(reportMafe.officialName).toBe("Jose Patricio Caceres Morales");
+      expect(reportMafe.reportText).toContain("Cédula de Extranjería (C.E.) 8.084.608");
+      expect(reportMafe.reportText).toContain("Jose Patricio Caceres Morales");
+      expect(reportMafe.source).toContain("ADRES BDUA");
+
+      spyPonal.mockRestore();
+    });
+
     it("Doctrina v32.40: Saludo inicial sin 45/10/45 con perfilamiento, menú de consultas, costos 100% GRATIS y despedida secuencial", async () => {
       const { processPrivateDmConversationalMessage } = await import("../_core/janIA");
       const { GOOGLE_REVIEW_MESSAGE, getChannelInviteGoodbyeMessage } = await import("../_core/predialService");

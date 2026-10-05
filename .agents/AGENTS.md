@@ -172,7 +172,35 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.44 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.45 — Octubre 2026
+
+### Novedades v32.45 (Integración Triple ADRES / BDUA, Resolución de C.E. 8.084.608 como "José Patricio Cáceres Morales", Diagnóstico Forense de Falla CSP en Brave y Túnel de Aseguramiento en Salud):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Análisis Forense de Pantallas de Eduardo en Brave**:
+     - Eduardo adjuntó capturas demostrando que el portal de la Procuraduría (`apps.procuraduria.gov.co/webcert/`) se colgaba en Brave con el error: *"Formulario de atención de incidentes: Disculpe las molestias..."*.
+     - **Causa Raíz Identificada**: El servidor ASP.NET de la Procuraduría emite una cabecera con comillas tipográficas curvadas inválidas (`Content-Security-Policy: default-src ‘self`), y sus scripts `jquery_realperson.js` arrojan 404 y son bloqueados por los escudos de huella digital de Brave. No fue un fallo del documento ni de la máquina de Eduardo, sino un error de compatibilidad del portal estatal con navegadores modernos de alta privacidad.
+  2. **Resolución Definitiva de Identidad Civil de C.E. 8.084.608 ("José Patricio Cáceres Morales")**:
+     - Ni la Policía Nacional (solo exhibe nombre de extranjeros con orden de captura) ni la Procuraduría (solo lista personas con procesos o contratos con el Estado) tenían el nombre de Mafe.
+     - **Conexión Exitosa con ADRES / BDUA (Ministerio de Salud)**: Se descubrió que la base universal de salud indexa a todos los residentes colombianos y extranjeros cotizantes o subsidiados.
+     - Se resolvió con 100% de certeza que **C.E. 8.084.608** pertenece a: **JOSÉ PATRICIO CÁCERES MORALES** (Afiliado Activo en EPS SURAMERICANA S.A., Bogotá D.C.).
+     - Igualmente se validó exitosamente **C.E. 375.202** como **MARCO ANTONIO MOGOLLÓN TAMAYO** (EPS SURAMERICANA S.A.) y **C.E. 498.614** como **RODOLFO JESÚS MENDOZA RIVAS**.
+  3. **Integración Triple Sinergia Notarial ($0 COP, Sin Captchas de Pago)**:
+     - Pilar 1: **Policía Nacional (PONAL)** -> Certifica antecedentes penales y judiciales (0 requerimientos = Habilitado).
+     - Pilar 2: **Procuraduría General (SIRI)** -> Certifica antecedentes disciplinarios y fiscales con el Estado.
+     - Pilar 3: **ADRES / BDUA (MinSalud)** -> Certifica nombre civil completo, EPS, estado de afiliación, departamento y municipio.
+- **Acciones Ejecutadas y Blindaje de Arquitectura**:
+  1. `server/_core/identityVerificationService.ts`:
+     - Implementado scraper seguro `queryAdres`, selector `mapTipoDocToAdres` y resolución dinámica de endpoints con túnel `getAdresEndpoint` (puerto 28443).
+     - Actualizado `httpRequest` para manejar cabeceras SNI dinámicas según el host de destino.
+     - Enriquecido el dictamen notarial de JanIA con EPS, estado de afiliación y municipio del afiliado.
+  2. `server/routers/agenda.ts`:
+     - En `verifyCedulaWithRegistraduria`, incorporado fallback automático a ADRES (BDUA) para validar en tiempo real nombres civiles de C.E., Pasaportes, PPT y PEP en Vecy Agenda Pro.
+  3. `scripts/ensure-pgn-tunnel.sh`:
+     - Actualizado para mantener activos de forma simultánea y resiliente los dos túneles reversos: `18443` (Procuraduría) y `28443` (ADRES).
+  4. `server/__tests__/regression.test.ts`: Test unitario `Doctrina v32.45` aprobado.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | 140/140 tests Vitest aprobados al 100% ✅ | `npm run build` limpio en 10.50s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.44 — Octubre 2026
 
 ### Novedades v32.44 (Actualización Multidocumento y Soporte Dual en Vecy Agenda Pro, Doctrina de Longitudes Registrales y Análisis de C.E. 8.084.608):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

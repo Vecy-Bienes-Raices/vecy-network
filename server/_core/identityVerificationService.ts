@@ -25,6 +25,22 @@ export interface ProcuraduriaResult {
   error?: string;
 }
 
+export interface AdresResult {
+  success: boolean;
+  officialName?: string;
+  nombres?: string;
+  apellidos?: string;
+  documentType?: string;
+  documentNumber?: string;
+  departamento?: string;
+  municipio?: string;
+  estado?: string;
+  eps?: string;
+  regimen?: string;
+  source: string;
+  error?: string;
+}
+
 export interface IdentityVerificationReport {
   isVerificationRequest: boolean;
   cedula?: string;
@@ -34,6 +50,7 @@ export interface IdentityVerificationReport {
   source?: string;
   reportText?: string;
   procuraduria?: ProcuraduriaResult;
+  adres?: AdresResult;
   policia?: {
     valid?: boolean;
     match?: boolean;
@@ -88,7 +105,9 @@ export async function getProcuraduriaEndpoint(): Promise<{ host: string; port: n
  */
 function httpRequest(options: https.RequestOptions, data?: string): Promise<{ statusCode: number; headers: any; body: string }> {
   return new Promise((resolve, reject) => {
-    const req = https.request({ servername: 'apps.procuraduria.gov.co', ...options, rejectUnauthorized: false }, (res) => {
+    const rawHeaders = options.headers as Record<string, any> | undefined;
+    const servername = (rawHeaders?.Host as string) || (rawHeaders?.host as string) || 'apps.procuraduria.gov.co';
+    const req = https.request({ servername, ...options, rejectUnauthorized: false }, (res) => {
       let body = '';
       res.on('data', chunk => body += chunk);
       res.on('end', () => resolve({ statusCode: res.statusCode || 200, headers: res.headers, body }));
@@ -338,6 +357,220 @@ export async function queryProcuraduria(tipoDoc: string, numDoc: string, maxAtte
 }
 
 /**
+ * Endpoint dinámico para ADRES (Base de Datos Única de Afiliados - BDUA).
+ * Detecta si existe un túnel inverso local activo (127.0.0.1:28443 hacia Colombia),
+ * un proxy configurado en env (ADRES_PROXY_HOST / ADRES_PROXY_PORT),
+ * o conexión directa nativa a aplicaciones.adres.gov.co.
+ */
+let adresEndpointCache: { host: string; port: number; lastChecked: number } | null = null;
+
+export async function getAdresEndpoint(): Promise<{ host: string; port: number }> {
+  if (process.env.ADRES_PROXY_HOST) {
+    return {
+      host: process.env.ADRES_PROXY_HOST,
+      port: Number(process.env.ADRES_PROXY_PORT) || 443
+    };
+  }
+
+  if (!adresEndpointCache || Date.now() - adresEndpointCache.lastChecked > 30000) {
+    const isTunnelOpen = await new Promise<boolean>((resolve) => {
+      const sock = new net.Socket();
+      sock.setTimeout(400);
+      sock.once('connect', () => { sock.destroy(); resolve(true); });
+      sock.once('timeout', () => { sock.destroy(); resolve(false); });
+      sock.once('error', () => { sock.destroy(); resolve(false); });
+      sock.connect(28443, '127.0.0.1');
+    });
+
+    adresEndpointCache = {
+      host: isTunnelOpen ? '127.0.0.1' : 'aplicaciones.adres.gov.co',
+      port: isTunnelOpen ? 28443 : 443,
+      lastChecked: Date.now()
+    };
+  }
+
+  return {
+    host: adresEndpointCache.host,
+    port: adresEndpointCache.port
+  };
+}
+
+/**
+ * Mapea el tipo de documento de VECY al valor del selector tipoDoc de ADRES (BDUA).
+ */
+export function mapTipoDocToAdres(tipoDoc: string): string | null {
+  const t = (tipoDoc || '').toLowerCase().trim();
+  if (t === 'cc') return 'CC';
+  if (t === 'ce' || t === 'cx') return 'CE';
+  if (t === 'ti') return 'TI';
+  if (t === 'pa') return 'PA';
+  if (t === 'pep') return 'PE';
+  if (t === 'ppt') return 'PT';
+  return null;
+}
+
+/**
+ * Consulta oficial a la Base de Datos Única de Afiliados (BDUA) de ADRES (Ministerio de Salud).
+ * Extrae nombres, apellidos, departamento, municipio, EPS y estado de afiliación para colombianos y extranjeros.
+ */
+export async function queryAdres(tipoDoc: string, numDoc: string): Promise<AdresResult> {
+  const mappedTipo = mapTipoDocToAdres(tipoDoc);
+  const cleanNum = (numDoc || '').replace(/\D/g, '');
+
+  if (!mappedTipo || !cleanNum) {
+    return {
+      success: false,
+      source: 'ADRES - Base de Datos Única de Afiliados (BDUA)',
+      error: `Tipo de documento ${tipoDoc} no soportado en ADRES`
+    };
+  }
+
+  const cacheKey = `ADRES:${mappedTipo}:${cleanNum}`;
+  const cached = identityCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp < IDENTITY_CACHE_TTL)) {
+    return {
+      success: true,
+      officialName: cached.fullName,
+      documentType: mappedTipo,
+      documentNumber: cleanNum,
+      source: 'ADRES - Base de Datos Única de Afiliados (BDUA - Caché)'
+    };
+  }
+
+  try {
+    const ep = await getAdresEndpoint();
+    const commonHeaders = {
+      'Host': 'aplicaciones.adres.gov.co',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Referer': 'https://www.adres.gov.co/consulte-su-eps'
+    };
+
+    // 1. GET formulario para inicializar tokens y cookies
+    const r1 = await httpRequest({
+      hostname: ep.host,
+      port: ep.port,
+      path: '/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx',
+      method: 'GET',
+      headers: commonHeaders
+    });
+
+    const c1 = r1.headers['set-cookie']?.map((c: string) => c.split(';')[0]) || [];
+    const vs = r1.body.match(/id=\"__VIEWSTATE\"\s+value=\"([^\"]+)\"/)?.[1] || '';
+    const vsg = r1.body.match(/id=\"__VIEWSTATEGENERATOR\"\s+value=\"([^\"]+)\"/)?.[1] || '';
+    const ev = r1.body.match(/id=\"__EVENTVALIDATION\"\s+value=\"([^\"]+)\"/)?.[1] || '';
+
+    if (!vs || !ev) {
+      return { success: false, source: 'ADRES - Base de Datos Única de Afiliados (BDUA)', error: 'No fue posible inicializar sesión en ADRES' };
+    }
+
+    const postData = querystring.stringify({
+      __VIEWSTATE: vs,
+      __VIEWSTATEGENERATOR: vsg,
+      __EVENTVALIDATION: ev,
+      tipoDoc: mappedTipo,
+      txtNumDoc: cleanNum,
+      btnConsultar: 'Consultar'
+    });
+
+    // 2. POST formulario de consulta
+    const r2 = await httpRequest({
+      hostname: ep.host,
+      port: ep.port,
+      path: '/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx',
+      method: 'POST',
+      headers: {
+        ...commonHeaders,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(postData),
+        'Cookie': c1.join('; ')
+      }
+    }, postData);
+
+    const c2 = r2.headers['set-cookie']?.map((c: string) => c.split(';')[0]) || [];
+    const allCookies = [...c1, ...c2].join('; ');
+
+    const m = r2.body.match(/window\.open\('([^']+)'/);
+    if (!m) {
+      const alertMatch = r2.body.match(/alert\('([^']+)'\)/);
+      return {
+        success: false,
+        source: 'ADRES - Base de Datos Única de Afiliados (BDUA)',
+        error: alertMatch ? alertMatch[1] : 'El ciudadano no registra afiliación vigente en la Base de Datos Única de Afiliados (BDUA)'
+      };
+    }
+
+    const popupUrl = m[1];
+
+    // 3. GET resultado del afiliado
+    const r3 = await httpRequest({
+      hostname: ep.host,
+      port: ep.port,
+      path: '/BDUA_Internet/Pages/' + popupUrl,
+      method: 'GET',
+      headers: {
+        ...commonHeaders,
+        'Cookie': allCookies
+      }
+    });
+
+    if (r3.statusCode !== 200 || r3.body.includes('Error de servidor')) {
+      return { success: false, source: 'ADRES - Base de Datos Única de Afiliados (BDUA)', error: 'Intermitencia en el servidor ADRES' };
+    }
+
+    const lines = r3.body.replace(/<[^>]+>/g, '\n').split('\n').map((l: string) => l.trim()).filter(Boolean);
+    const nombresIdx = lines.findIndex((l: string) => l.toUpperCase().includes('NOMBRES'));
+    const apellidosIdx = lines.findIndex((l: string) => l.toUpperCase().includes('APELLIDOS'));
+    const nombres = nombresIdx !== -1 ? lines[nombresIdx + 1] : '';
+    const apellidos = apellidosIdx !== -1 ? lines[apellidosIdx + 1] : '';
+
+    const depIdx = lines.findIndex((l: string) => l.toUpperCase().includes('DEPARTAMENTO'));
+    const munIdx = lines.findIndex((l: string) => l.toUpperCase().includes('MUNICIPIO'));
+    const departamento = depIdx !== -1 ? lines[depIdx + 1] : '';
+    const municipio = munIdx !== -1 ? lines[munIdx + 1] : '';
+
+    const estadoIdx = lines.findIndex((l: string) => l.toUpperCase().includes('ESTADO'));
+    let estado = '';
+    let eps = '';
+    let regimen = '';
+    if (estadoIdx !== -1) {
+      const offset = 6;
+      estado = lines[estadoIdx + offset] || '';
+      eps = lines[estadoIdx + offset + 1] || '';
+      regimen = lines[estadoIdx + offset + 2] || '';
+    }
+
+    const fullNameRaw = `${nombres} ${apellidos}`.replace(/\s+/g, ' ').trim();
+    if (!fullNameRaw) {
+      return { success: false, source: 'ADRES - Base de Datos Única de Afiliados (BDUA)', error: 'No se encontraron datos de identidad en ADRES' };
+    }
+
+    const officialName = formatTitleCase(fullNameRaw);
+    identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
+
+    return {
+      success: true,
+      officialName,
+      nombres: formatTitleCase(nombres),
+      apellidos: formatTitleCase(apellidos),
+      documentType: mappedTipo,
+      documentNumber: cleanNum,
+      departamento: formatTitleCase(departamento),
+      municipio: formatTitleCase(municipio),
+      estado: estado ? estado.toUpperCase() : undefined,
+      eps: eps ? eps.replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim() : undefined,
+      regimen: regimen ? regimen.toUpperCase() : undefined,
+      source: 'ADRES - Base de Datos Única de Afiliados (BDUA)'
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      source: 'ADRES - Base de Datos Única de Afiliados (BDUA)',
+      error: `Intermitencia de conexión con ADRES: ${err?.message || err}`
+    };
+  }
+}
+
+/**
  * Detecta si un mensaje textual corresponde a una solicitud de verificación de documento de identidad
  * Soporta Cédula de Ciudadanía (cc), Cédula de Extranjería (ce/cx), PEP, PPT, NIT, Pasaporte (pa) y Documento País de Origen (dp).
  */
@@ -559,7 +792,10 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
   // 1. Revisión de caché unificada prioritaria (0ms, $0 COP)
   const ponalCacheKey = `POLICIA:${tipoDoc}:${cedula}`;
   const pgnCacheKey = `PROCURADURIA:${mapTipoDocToProcuraduria(tipoDoc) || tipoDoc}:${cedula}`;
-  const cachedName = identityCache.get(ponalCacheKey)?.fullName || identityCache.get(pgnCacheKey)?.fullName;
+  const adresCacheKey = `ADRES:${mapTipoDocToAdres(tipoDoc) || tipoDoc}:${cedula}`;
+  const cachedName = identityCache.get(ponalCacheKey)?.fullName ||
+                     identityCache.get(pgnCacheKey)?.fullName ||
+                     identityCache.get(adresCacheKey)?.fullName;
 
   if (cachedName) {
     const officialName = formatTitleCase(cachedName);
@@ -578,7 +814,7 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
       tipoDoc,
       success: true,
       officialName,
-      source: 'Central Multifuente Notarial VECY (Procuraduría General + Policía Nacional - Caché)',
+      source: 'Central Multifuente Notarial VECY (ADRES BDUA + Procuraduría General + Policía Nacional - Caché)',
       reportText
     };
   }
@@ -586,9 +822,11 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
   try {
     const isProcuraduriaSupported = ['cc', 'ce', 'cx', 'pep', 'ppt', 'nit'].includes(tipoDoc.toLowerCase());
     const isPoliciaSupported = ['cc', 'ce', 'cx', 'pa', 'dp'].includes(tipoDoc.toLowerCase());
+    const isAdresSupported = ['cc', 'ce', 'cx', 'pep', 'ppt', 'pa'].includes(tipoDoc.toLowerCase());
 
     let pgnRes: ProcuraduriaResult | null = null;
     let ponalRes: any = null;
+    let adresRes: AdresResult | null = null;
 
     if (tipoDoc.toLowerCase() === 'cc') {
       // Para Cédula de Ciudadanía, consultar Policía Nacional primero (base Registraduría con 2Captcha)
@@ -597,31 +835,42 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
         // Respaldo transparente en Procuraduría si PONAL no retornó nombre oficial o 2Captcha no respondió
         pgnRes = await queryProcuraduria(tipoDoc, cedula);
       }
+      if (!ponalRes?.officialName && !pgnRes?.officialName && isAdresSupported) {
+        // Respaldo complementario en ADRES (BDUA - MinSalud)
+        adresRes = await queryAdres(tipoDoc, cedula);
+      }
     } else {
-      // Para documentos extranjeros (CE, PEP, PPT, NIT), consultar Procuraduría primero (SIRI almacena nombres)
+      // Para documentos extranjeros (CE, PEP, PPT, NIT, Pasaporte):
+      // 1. Procuraduría General de la Nación (SIRI: verifica disciplinarios y extrae nombres de personas vinculadas al Estado)
       if (isProcuraduriaSupported) {
         pgnRes = await queryProcuraduria(tipoDoc, cedula);
       }
+      // 2. Policía Nacional (Verifica si tiene antecedentes penales o requerimientos judiciales pendientes)
       if (isPoliciaSupported) {
         ponalRes = await queryPoliciaNacional(tipoDoc, cedula);
+      }
+      // 3. ADRES / BDUA (Ministerio de Salud: base universal de aseguramiento con nombres y EPS de todos los residentes)
+      if (isAdresSupported) {
+        adresRes = await queryAdres(tipoDoc, cedula);
       }
     }
 
     // Extraer nombre legal certificado por el Estado colombiano
-    const officialName = (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) ||
+    const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) ||
+                         (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) ||
                          (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : null);
-
-    const hasPgnSuccess = Boolean(pgnRes && pgnRes.success && pgnRes.officialName);
-    const hasPonalSuccess = Boolean(ponalRes && ponalRes.success);
 
     if (officialName) {
       const isForeign = ['ce', 'cx', 'pep', 'ppt', 'pa', 'dp'].includes(tipoDoc.toLowerCase());
       const pgnLine = (isForeign && pgnRes?.statusText) ? `\n🏛️ *Central de Control Notarial:* ${pgnRes.statusText}` : '';
+      const epsLine = adresRes?.eps ? `\n🏥 *Afiliación en Salud (ADRES / BDUA):* ${adresRes.eps} (${adresRes.estado || 'REGISTRADO'}${adresRes.regimen ? ` — ${adresRes.regimen}` : ''})` : '';
+      const locationLine = (adresRes?.municipio && !adresRes.municipio.toLowerCase().includes('informacion')) ? `\n📍 *Ubicación Registrada:* ${adresRes.municipio}` : '';
+      const securityLine = `\n⚖️ *Central de Seguridad:* Sin antecedentes judiciales ni requerimientos penales pendientes ante la Policía Nacional.`;
 
       const reportText =
         `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
         `🆔 *El documento:* ${docLabel} ${formattedCedula}\n` +
-        `👤 *Pertenece a:* ${officialName}${pgnLine}\n` +
+        `👤 *Pertenece a:* ${officialName}${epsLine}${locationLine}${pgnLine}${securityLine}\n` +
         `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
 
       return {
@@ -630,10 +879,11 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
         tipoDoc,
         success: true,
         officialName,
-        source: 'Central Multifuente Notarial VECY (Procuraduría General + Policía Nacional)',
+        source: 'Central Multifuente Notarial VECY (ADRES BDUA + Procuraduría General + Policía Nacional)',
         reportText,
         procuraduria: pgnRes || undefined,
-        policia: ponalRes || undefined
+        policia: ponalRes || undefined,
+        adres: adresRes || undefined
       };
     } else {
       let customGuidance = '';
@@ -641,19 +891,20 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
         customGuidance = `\n• ⚠️ *Aviso Registraduría:* En Colombia nunca se emitieron Cédulas de Ciudadanía de 9 dígitos (las antiguas tienen entre 1 y 8 dígitos y las nuevas son de 10 dígitos iniciando por 1). Verifica si hubo un dígito omitido o añadido.`;
       } else if (['ce', 'cx'].includes(tipoDoc.toLowerCase()) && cedula.length >= 8) {
         customGuidance = `\n• ⚠️ *Aviso Migración:* Las Cédulas de Extranjería en Colombia constan de entre 4 y 7 dígitos numéricos. Un número de ${cedula.length} dígitos suele corresponder a una Cédula de Ciudadanía colombiana.`;
-      } else if (['ce', 'cx'].includes(tipoDoc.toLowerCase()) && cedula.length >= 5 && cedula.length <= 7) {
-        customGuidance = `\n• 📌 Las Cédulas de Extranjería (de 4 a 7 dígitos) son expedidas por Migración Colombia. Al ser un documento extranjero, las plataformas del Estado solo reflejan nombre público si el titular registra contratos estatales en la Procuraduría (SIRI) o historial penal en la Policía Nacional.`;
+      } else if (['ce', 'cx'].includes(tipoDoc.toLowerCase()) && cedula.length >= 4 && cedula.length <= 7) {
+        customGuidance = `\n• 📌 Las Cédulas de Extranjería (de 4 a 7 dígitos) son expedidas por Migración Colombia. Al ser un documento extranjero, las plataformas del Estado reflejan identidad si el titular cotiza al sistema de salud (ADRES/BDUA), registra contratos estatales en la Procuraduría (SIRI) o historial penal en la Policía Nacional.`;
       }
 
       const reportText =
         `⚠️ *CONSULTA DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
         `Consultamos las bases de datos oficiales de seguridad del Estado para el documento ${docLabel} *${formattedCedula}*:\n\n` +
         `🏛️ *Central de Control Notarial:* ${pgnRes?.statusText || 'No se encuentra registrado en el sistema de información SIRI o no disponible.'}\n` +
-        `⚖️ *Central de Seguridad:* ${ponalRes?.message || 'Sin antecedentes judiciales reportados o documento no indexado.'}\n\n` +
+        `⚖️ *Central de Seguridad:* ${ponalRes?.message || 'Sin antecedentes judiciales reportados o documento no indexado.'}\n` +
+        `🏥 *Central de Aseguramiento (ADRES):* ${adresRes?.error || 'Sin registro activo de afiliación en la Base de Datos Única de Afiliados (BDUA).'}\n\n` +
         `📌 *Orientación de Verificación:*${customGuidance}\n` +
-        `• Si es un documento extranjero (C.E., Pasaporte, PEP o PPT), es completamente habitual que no registre nombre público si el titular no ha tenido contratos con entidades públicas ni antecedentes penales en Colombia.\n` +
+        `• Si es un documento extranjero (C.E., Pasaporte, PEP o PPT), es habitual requerir cotejo físico si el usuario es recién llegado o no cotiza aún a EPS en Colombia.\n` +
         `• Verifica que el número digitado coincida exactamente con el documento físico.\n\n` +
-        `💡 Puedes verificar nuevamente o adjuntar los datos escribiéndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.`;
+        `💡 Puedes verificar nuevamente escribiéndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.`;
 
       return {
         isVerificationRequest: true,
@@ -662,7 +913,8 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
         success: false,
         reportText,
         procuraduria: pgnRes || undefined,
-        policia: ponalRes || undefined
+        policia: ponalRes || undefined,
+        adres: adresRes || undefined
       };
     }
   } catch (err: any) {

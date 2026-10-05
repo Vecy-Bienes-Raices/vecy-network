@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.44";
+    VECY_VERSION = "v32.45";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -14189,6 +14189,18 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       }
     }
   }
+  if (!officialFoundName && (isCedula || isExtranjeria || isPep || isPpt || isPasaporte)) {
+    try {
+      const { queryAdres: queryAdres2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+      const adresResult = await queryAdres2(docTypeKey, clean);
+      if (adresResult && adresResult.success && adresResult.officialName) {
+        officialFoundName = adresResult.officialName;
+        verificationSource = "Base de Datos \xDAnica de Afiliados (ADRES - Ministerio de Salud)";
+      }
+    } catch (err) {
+      console.warn("[verifyCedulaWithRegistraduria] ADRES:", err?.message || err);
+    }
+  }
   if (officialFoundName) {
     const officialFormatted = formatTitleCase(officialFoundName);
     identityCache.set(ponalCacheKey, { fullName: officialFormatted, timestamp: Date.now() });
@@ -14758,9 +14770,12 @@ __export(identityVerificationService_exports, {
   executeIdentityVerificationFromWhatsApp: () => executeIdentityVerificationFromWhatsApp,
   extractCedulaForVerification: () => extractCedulaForVerification,
   formatCedulaNumber: () => formatCedulaNumber,
+  getAdresEndpoint: () => getAdresEndpoint,
   getDocumentTypeLabel: () => getDocumentTypeLabel,
   getProcuraduriaEndpoint: () => getProcuraduriaEndpoint,
+  mapTipoDocToAdres: () => mapTipoDocToAdres,
   mapTipoDocToProcuraduria: () => mapTipoDocToProcuraduria,
+  queryAdres: () => queryAdres,
   queryProcuraduria: () => queryProcuraduria,
   solveProcuraduriaQuestion: () => solveProcuraduriaQuestion
 });
@@ -14805,7 +14820,9 @@ async function getProcuraduriaEndpoint() {
 }
 function httpRequest(options, data) {
   return new Promise((resolve, reject) => {
-    const req = https2.request({ servername: "apps.procuraduria.gov.co", ...options, rejectUnauthorized: false }, (res) => {
+    const rawHeaders = options.headers;
+    const servername = rawHeaders?.Host || rawHeaders?.host || "apps.procuraduria.gov.co";
+    const req = https2.request({ servername, ...options, rejectUnauthorized: false }, (res) => {
       let body = "";
       res.on("data", (chunk) => body += chunk);
       res.on("end", () => resolve({ statusCode: res.statusCode || 200, headers: res.headers, body }));
@@ -15003,6 +15020,186 @@ async function queryProcuraduria(tipoDoc, numDoc, maxAttempts = 6) {
     error: "No fue posible completar la consulta en Procuradur\xEDa en los intentos permitidos"
   };
 }
+async function getAdresEndpoint() {
+  if (process.env.ADRES_PROXY_HOST) {
+    return {
+      host: process.env.ADRES_PROXY_HOST,
+      port: Number(process.env.ADRES_PROXY_PORT) || 443
+    };
+  }
+  if (!adresEndpointCache || Date.now() - adresEndpointCache.lastChecked > 3e4) {
+    const isTunnelOpen = await new Promise((resolve) => {
+      const sock = new net.Socket();
+      sock.setTimeout(400);
+      sock.once("connect", () => {
+        sock.destroy();
+        resolve(true);
+      });
+      sock.once("timeout", () => {
+        sock.destroy();
+        resolve(false);
+      });
+      sock.once("error", () => {
+        sock.destroy();
+        resolve(false);
+      });
+      sock.connect(28443, "127.0.0.1");
+    });
+    adresEndpointCache = {
+      host: isTunnelOpen ? "127.0.0.1" : "aplicaciones.adres.gov.co",
+      port: isTunnelOpen ? 28443 : 443,
+      lastChecked: Date.now()
+    };
+  }
+  return {
+    host: adresEndpointCache.host,
+    port: adresEndpointCache.port
+  };
+}
+function mapTipoDocToAdres(tipoDoc) {
+  const t2 = (tipoDoc || "").toLowerCase().trim();
+  if (t2 === "cc") return "CC";
+  if (t2 === "ce" || t2 === "cx") return "CE";
+  if (t2 === "ti") return "TI";
+  if (t2 === "pa") return "PA";
+  if (t2 === "pep") return "PE";
+  if (t2 === "ppt") return "PT";
+  return null;
+}
+async function queryAdres(tipoDoc, numDoc) {
+  const mappedTipo = mapTipoDocToAdres(tipoDoc);
+  const cleanNum = (numDoc || "").replace(/\D/g, "");
+  if (!mappedTipo || !cleanNum) {
+    return {
+      success: false,
+      source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)",
+      error: `Tipo de documento ${tipoDoc} no soportado en ADRES`
+    };
+  }
+  const cacheKey = `ADRES:${mappedTipo}:${cleanNum}`;
+  const cached = identityCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL2) {
+    return {
+      success: true,
+      officialName: cached.fullName,
+      documentType: mappedTipo,
+      documentNumber: cleanNum,
+      source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA - Cach\xE9)"
+    };
+  }
+  try {
+    const ep = await getAdresEndpoint();
+    const commonHeaders = {
+      "Host": "aplicaciones.adres.gov.co",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Referer": "https://www.adres.gov.co/consulte-su-eps"
+    };
+    const r1 = await httpRequest({
+      hostname: ep.host,
+      port: ep.port,
+      path: "/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx",
+      method: "GET",
+      headers: commonHeaders
+    });
+    const c1 = r1.headers["set-cookie"]?.map((c) => c.split(";")[0]) || [];
+    const vs = r1.body.match(/id=\"__VIEWSTATE\"\s+value=\"([^\"]+)\"/)?.[1] || "";
+    const vsg = r1.body.match(/id=\"__VIEWSTATEGENERATOR\"\s+value=\"([^\"]+)\"/)?.[1] || "";
+    const ev = r1.body.match(/id=\"__EVENTVALIDATION\"\s+value=\"([^\"]+)\"/)?.[1] || "";
+    if (!vs || !ev) {
+      return { success: false, source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)", error: "No fue posible inicializar sesi\xF3n en ADRES" };
+    }
+    const postData = querystring.stringify({
+      __VIEWSTATE: vs,
+      __VIEWSTATEGENERATOR: vsg,
+      __EVENTVALIDATION: ev,
+      tipoDoc: mappedTipo,
+      txtNumDoc: cleanNum,
+      btnConsultar: "Consultar"
+    });
+    const r2 = await httpRequest({
+      hostname: ep.host,
+      port: ep.port,
+      path: "/BDUA_Internet/Pages/ConsultarAfiliadoWeb_2.aspx",
+      method: "POST",
+      headers: {
+        ...commonHeaders,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Length": Buffer.byteLength(postData),
+        "Cookie": c1.join("; ")
+      }
+    }, postData);
+    const c2 = r2.headers["set-cookie"]?.map((c) => c.split(";")[0]) || [];
+    const allCookies = [...c1, ...c2].join("; ");
+    const m = r2.body.match(/window\.open\('([^']+)'/);
+    if (!m) {
+      const alertMatch = r2.body.match(/alert\('([^']+)'\)/);
+      return {
+        success: false,
+        source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)",
+        error: alertMatch ? alertMatch[1] : "El ciudadano no registra afiliaci\xF3n vigente en la Base de Datos \xDAnica de Afiliados (BDUA)"
+      };
+    }
+    const popupUrl = m[1];
+    const r3 = await httpRequest({
+      hostname: ep.host,
+      port: ep.port,
+      path: "/BDUA_Internet/Pages/" + popupUrl,
+      method: "GET",
+      headers: {
+        ...commonHeaders,
+        "Cookie": allCookies
+      }
+    });
+    if (r3.statusCode !== 200 || r3.body.includes("Error de servidor")) {
+      return { success: false, source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)", error: "Intermitencia en el servidor ADRES" };
+    }
+    const lines = r3.body.replace(/<[^>]+>/g, "\n").split("\n").map((l) => l.trim()).filter(Boolean);
+    const nombresIdx = lines.findIndex((l) => l.toUpperCase().includes("NOMBRES"));
+    const apellidosIdx = lines.findIndex((l) => l.toUpperCase().includes("APELLIDOS"));
+    const nombres = nombresIdx !== -1 ? lines[nombresIdx + 1] : "";
+    const apellidos = apellidosIdx !== -1 ? lines[apellidosIdx + 1] : "";
+    const depIdx = lines.findIndex((l) => l.toUpperCase().includes("DEPARTAMENTO"));
+    const munIdx = lines.findIndex((l) => l.toUpperCase().includes("MUNICIPIO"));
+    const departamento = depIdx !== -1 ? lines[depIdx + 1] : "";
+    const municipio = munIdx !== -1 ? lines[munIdx + 1] : "";
+    const estadoIdx = lines.findIndex((l) => l.toUpperCase().includes("ESTADO"));
+    let estado = "";
+    let eps = "";
+    let regimen = "";
+    if (estadoIdx !== -1) {
+      const offset = 6;
+      estado = lines[estadoIdx + offset] || "";
+      eps = lines[estadoIdx + offset + 1] || "";
+      regimen = lines[estadoIdx + offset + 2] || "";
+    }
+    const fullNameRaw = `${nombres} ${apellidos}`.replace(/\s+/g, " ").trim();
+    if (!fullNameRaw) {
+      return { success: false, source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)", error: "No se encontraron datos de identidad en ADRES" };
+    }
+    const officialName = formatTitleCase(fullNameRaw);
+    identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
+    return {
+      success: true,
+      officialName,
+      nombres: formatTitleCase(nombres),
+      apellidos: formatTitleCase(apellidos),
+      documentType: mappedTipo,
+      documentNumber: cleanNum,
+      departamento: formatTitleCase(departamento),
+      municipio: formatTitleCase(municipio),
+      estado: estado ? estado.toUpperCase() : void 0,
+      eps: eps ? eps.replace(/&quot;/g, '"').replace(/\s+/g, " ").trim() : void 0,
+      regimen: regimen ? regimen.toUpperCase() : void 0,
+      source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)"
+    };
+  } catch (err) {
+    return {
+      success: false,
+      source: "ADRES - Base de Datos \xDAnica de Afiliados (BDUA)",
+      error: `Intermitencia de conexi\xF3n con ADRES: ${err?.message || err}`
+    };
+  }
+}
 function extractCedulaForVerification(text2, isPrivateDm = false) {
   if (!text2 || typeof text2 !== "string") return { found: false, cedula: "", tipoDoc: "cc" };
   const clean = text2.trim();
@@ -15166,7 +15363,8 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
   const docLabel = getDocumentTypeLabel(tipoDoc);
   const ponalCacheKey = `POLICIA:${tipoDoc}:${cedula}`;
   const pgnCacheKey = `PROCURADURIA:${mapTipoDocToProcuraduria(tipoDoc) || tipoDoc}:${cedula}`;
-  const cachedName = identityCache.get(ponalCacheKey)?.fullName || identityCache.get(pgnCacheKey)?.fullName;
+  const adresCacheKey = `ADRES:${mapTipoDocToAdres(tipoDoc) || tipoDoc}:${cedula}`;
+  const cachedName = identityCache.get(ponalCacheKey)?.fullName || identityCache.get(pgnCacheKey)?.fullName || identityCache.get(adresCacheKey)?.fullName;
   if (cachedName) {
     const officialName = formatTitleCase(cachedName);
     const isForeign = ["ce", "cx", "pep", "ppt", "pa", "dp"].includes(tipoDoc.toLowerCase());
@@ -15183,19 +15381,24 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
       tipoDoc,
       success: true,
       officialName,
-      source: "Central Multifuente Notarial VECY (Procuradur\xEDa General + Polic\xEDa Nacional - Cach\xE9)",
+      source: "Central Multifuente Notarial VECY (ADRES BDUA + Procuradur\xEDa General + Polic\xEDa Nacional - Cach\xE9)",
       reportText
     };
   }
   try {
     const isProcuraduriaSupported = ["cc", "ce", "cx", "pep", "ppt", "nit"].includes(tipoDoc.toLowerCase());
     const isPoliciaSupported = ["cc", "ce", "cx", "pa", "dp"].includes(tipoDoc.toLowerCase());
+    const isAdresSupported = ["cc", "ce", "cx", "pep", "ppt", "pa"].includes(tipoDoc.toLowerCase());
     let pgnRes = null;
     let ponalRes = null;
+    let adresRes = null;
     if (tipoDoc.toLowerCase() === "cc") {
       ponalRes = await queryPoliciaNacional(tipoDoc, cedula);
       if (!ponalRes?.officialName && isProcuraduriaSupported) {
         pgnRes = await queryProcuraduria(tipoDoc, cedula);
+      }
+      if (!ponalRes?.officialName && !pgnRes?.officialName && isAdresSupported) {
+        adresRes = await queryAdres(tipoDoc, cedula);
       }
     } else {
       if (isProcuraduriaSupported) {
@@ -15204,18 +15407,25 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
       if (isPoliciaSupported) {
         ponalRes = await queryPoliciaNacional(tipoDoc, cedula);
       }
+      if (isAdresSupported) {
+        adresRes = await queryAdres(tipoDoc, cedula);
+      }
     }
-    const officialName = (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) || (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : null);
-    const hasPgnSuccess = Boolean(pgnRes && pgnRes.success && pgnRes.officialName);
-    const hasPonalSuccess = Boolean(ponalRes && ponalRes.success);
+    const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) || (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) || (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : null);
     if (officialName) {
       const isForeign = ["ce", "cx", "pep", "ppt", "pa", "dp"].includes(tipoDoc.toLowerCase());
       const pgnLine = isForeign && pgnRes?.statusText ? `
 \u{1F3DB}\uFE0F *Central de Control Notarial:* ${pgnRes.statusText}` : "";
+      const epsLine = adresRes?.eps ? `
+\u{1F3E5} *Afiliaci\xF3n en Salud (ADRES / BDUA):* ${adresRes.eps} (${adresRes.estado || "REGISTRADO"}${adresRes.regimen ? ` \u2014 ${adresRes.regimen}` : ""})` : "";
+      const locationLine = adresRes?.municipio && !adresRes.municipio.toLowerCase().includes("informacion") ? `
+\u{1F4CD} *Ubicaci\xF3n Registrada:* ${adresRes.municipio}` : "";
+      const securityLine = `
+\u2696\uFE0F *Central de Seguridad:* Sin antecedentes judiciales ni requerimientos penales pendientes ante la Polic\xEDa Nacional.`;
       const reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 \u{1F194} *El documento:* ${docLabel} ${formattedCedula}
-\u{1F464} *Pertenece a:* ${officialName}${pgnLine}
+\u{1F464} *Pertenece a:* ${officialName}${epsLine}${locationLine}${pgnLine}${securityLine}
 \u2705 *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
       return {
         isVerificationRequest: true,
@@ -15223,10 +15433,11 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
         tipoDoc,
         success: true,
         officialName,
-        source: "Central Multifuente Notarial VECY (Procuradur\xEDa General + Polic\xEDa Nacional)",
+        source: "Central Multifuente Notarial VECY (ADRES BDUA + Procuradur\xEDa General + Polic\xEDa Nacional)",
         reportText,
         procuraduria: pgnRes || void 0,
-        policia: ponalRes || void 0
+        policia: ponalRes || void 0,
+        adres: adresRes || void 0
       };
     } else {
       let customGuidance = "";
@@ -15236,9 +15447,9 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
       } else if (["ce", "cx"].includes(tipoDoc.toLowerCase()) && cedula.length >= 8) {
         customGuidance = `
 \u2022 \u26A0\uFE0F *Aviso Migraci\xF3n:* Las C\xE9dulas de Extranjer\xEDa en Colombia constan de entre 4 y 7 d\xEDgitos num\xE9ricos. Un n\xFAmero de ${cedula.length} d\xEDgitos suele corresponder a una C\xE9dula de Ciudadan\xEDa colombiana.`;
-      } else if (["ce", "cx"].includes(tipoDoc.toLowerCase()) && cedula.length >= 5 && cedula.length <= 7) {
+      } else if (["ce", "cx"].includes(tipoDoc.toLowerCase()) && cedula.length >= 4 && cedula.length <= 7) {
         customGuidance = `
-\u2022 \u{1F4CC} Las C\xE9dulas de Extranjer\xEDa (de 4 a 7 d\xEDgitos) son expedidas por Migraci\xF3n Colombia. Al ser un documento extranjero, las plataformas del Estado solo reflejan nombre p\xFAblico si el titular registra contratos estatales en la Procuradur\xEDa (SIRI) o historial penal en la Polic\xEDa Nacional.`;
+\u2022 \u{1F4CC} Las C\xE9dulas de Extranjer\xEDa (de 4 a 7 d\xEDgitos) son expedidas por Migraci\xF3n Colombia. Al ser un documento extranjero, las plataformas del Estado reflejan identidad si el titular cotiza al sistema de salud (ADRES/BDUA), registra contratos estatales en la Procuradur\xEDa (SIRI) o historial penal en la Polic\xEDa Nacional.`;
       }
       const reportText = `\u26A0\uFE0F *CONSULTA DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
@@ -15246,12 +15457,13 @@ Consultamos las bases de datos oficiales de seguridad del Estado para el documen
 
 \u{1F3DB}\uFE0F *Central de Control Notarial:* ${pgnRes?.statusText || "No se encuentra registrado en el sistema de informaci\xF3n SIRI o no disponible."}
 \u2696\uFE0F *Central de Seguridad:* ${ponalRes?.message || "Sin antecedentes judiciales reportados o documento no indexado."}
+\u{1F3E5} *Central de Aseguramiento (ADRES):* ${adresRes?.error || "Sin registro activo de afiliaci\xF3n en la Base de Datos \xDAnica de Afiliados (BDUA)."}
 
 \u{1F4CC} *Orientaci\xF3n de Verificaci\xF3n:*${customGuidance}
-\u2022 Si es un documento extranjero (C.E., Pasaporte, PEP o PPT), es completamente habitual que no registre nombre p\xFAblico si el titular no ha tenido contratos con entidades p\xFAblicas ni antecedentes penales en Colombia.
+\u2022 Si es un documento extranjero (C.E., Pasaporte, PEP o PPT), es habitual requerir cotejo f\xEDsico si el usuario es reci\xE9n llegado o no cotiza a\xFAn a EPS en Colombia.
 \u2022 Verifica que el n\xFAmero digitado coincida exactamente con el documento f\xEDsico.
 
-\u{1F4A1} Puedes verificar nuevamente o adjuntar los datos escribi\xE9ndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.`;
+\u{1F4A1} Puedes verificar nuevamente escribi\xE9ndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.`;
       return {
         isVerificationRequest: true,
         cedula,
@@ -15259,7 +15471,8 @@ Consultamos las bases de datos oficiales de seguridad del Estado para el documen
         success: false,
         reportText,
         procuraduria: pgnRes || void 0,
-        policia: ponalRes || void 0
+        policia: ponalRes || void 0,
+        adres: adresRes || void 0
       };
     }
   } catch (err) {
@@ -15272,13 +15485,14 @@ Consultamos las bases de datos oficiales de seguridad del Estado para el documen
     };
   }
 }
-var IDENTITY_CACHE_TTL2, pgnEndpointCache;
+var IDENTITY_CACHE_TTL2, pgnEndpointCache, adresEndpointCache;
 var init_identityVerificationService = __esm({
   "server/_core/identityVerificationService.ts"() {
     "use strict";
     init_agenda();
     IDENTITY_CACHE_TTL2 = 24 * 60 * 60 * 1e3;
     pgnEndpointCache = null;
+    adresEndpointCache = null;
   }
 });
 

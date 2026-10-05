@@ -322,6 +322,44 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.45 — Octubre 2026
+
+#### 📌 INTEGRACIÓN TRIPLE NOTARIAL: CONEXIÓN ADRES / BDUA (MINISTERIO DE SALUD), RESOLUCIÓN DE C.E. 8.084.608 ("JOSÉ PATRICIO CÁCERES MORALES"), ANÁLISIS FORENSE DE CAPTURAS BRAVE Y TÚNEL REVERSO BDUA
+
+**Requerimiento y Objetivos:**
+1. **Aclaración Doctrinal de Antecedentes y Nombres Civiles**:
+   - Eduardo preguntó si la C.E. 498.614 tiene o no antecedentes y por qué la C.E. 8.084.608 no mostraba el nombre civil mientras que la C.E. 375.202 pertenecía a "Marco Antonio Mogollón Tamayo", revisada exitosamente mediante la App "Verifíquese" debido a que el portal de la Procuraduría no le abría en su navegador Brave.
+2. **Conexión con la Tercera Base de Datos (ADRES / BDUA)**:
+   - Eduardo ordenó conectar la tercera base de datos con ADRES / BDUA con toda la técnica posible, usando 2Captcha si era necesario, para superar a aplicaciones de terceros como "Verifíquese Cédula".
+
+**Diagnóstico y Causas Raíz:**
+1. **Fallo en Brave de `apps.procuraduria.gov.co`**:
+   - Del análisis de las 3 capturas enviadas por Eduardo, el portal ASP.NET de la Procuraduría tiene un error de cabecera (`Content-Security-Policy: default-src ‘self` con comillas tipográficas curvadas inválidas) y sus scripts de validación `jquery_realperson.js` y `jquery_js` arrojaron 404, siendo bloqueados por los escudos anti-rastreo de Brave. Esto provocó la redirección al formulario de reporte de incidentes.
+2. **Descubrimiento y Extracción en ADRES / BDUA (`ConsultarAfiliadoWeb_2.aspx`)**:
+   - La plataforma moderna de ADRES consulta la afiliación de salud y genera un token que abre una ventana emergente (`RespuestaConsulta.aspx?tokenId=...`), almacenando el resultado en `ASP.NET_SessionId`.
+   - Se demostró empíricamente que la consulta opera **sin requerir captchas de pago ($0 COP)** y entrega: Nombres completos, Apellidos completos, EPS, Estado de afiliación (ACTIVO, RETIRADO, etc.), Régimen (CONTRIBUTIVO / SUBSIDIADO), Departamento y Municipio.
+3. **Resolución Exitosa de Cédulas de Extranjería**:
+   - **C.E. 8.084.608 (Mafe)**: Resuelto con 100% de certeza como **JOSÉ PATRICIO CÁCERES MORALES** (Afiliado ACTIVO en EPS SURAMERICANA S.A., Bogotá D.C.).
+   - **C.E. 375.202**: Resuelto como **MARCO ANTONIO MOGOLLÓN TAMAYO** (EPS SURAMERICANA S.A., Bogotá D.C.).
+   - **C.E. 498.614**: Resuelto como **RODOLFO JESÚS MENDOZA RIVAS** (EPS SURAMERICANA S.A., Bogotá D.C.).
+   - **Antecedentes Penales**: Se confirmó que los tres ciudadanos están 100% limpios y sin antecedentes ni requerimientos penales ante la Policía Nacional.
+
+**Acciones Técnicas Ejecutadas:**
+1. **Sinergia Triple en `identityVerificationService.ts`**:
+   - Creado cliente seguro `queryAdres`, selector `mapTipoDocToAdres` y conector `getAdresEndpoint` (puerto 28443).
+   - Actualizado `httpRequest` para manejar SNI dinámico.
+   - Enriquecida la respuesta en WhatsApp: exhibe titular legal, afiliación en salud (EPS y estado), ubicación registrada, antecedentes penales y estado notarial disciplinario.
+2. **Soporte en Vecy Agenda Pro (`agenda.ts`)**:
+   - Incorporado fallback en tiempo real a ADRES (BDUA) en `executeIdentityVerification`, permitiendo autenticar y cotejar identidades de C.E., Pasaportes, PPT y PEP.
+3. **Persistencia de Túneles Reversos (`scripts/ensure-pgn-tunnel.sh`)**:
+   - Script actualizado para mantener activos de forma simultánea y automática el túnel `18443` (Procuraduría) y `28443` (ADRES).
+4. **Validación y Pruebas**:
+   - Prueba unitaria `Doctrina v32.45` agregada en `regression.test.ts`.
+   - 140/140 pruebas aprobadas en Vitest. `tsc --noEmit` 0 errores.
+   - Versión incrementada a **v32.45** en `shared/const.ts` y `package.json`.
+
+---
+
 ### 🔖 v32.44 — Octubre 2026
 
 #### 📌 ACTUALIZACIÓN MULTIDOCUMENTO Y SOPORTE DUAL EN VECY AGENDA PRO, DOCTRINA DE LONGITUDES REGISTRALES Y ANÁLISIS DE C.E. 8.084.608
