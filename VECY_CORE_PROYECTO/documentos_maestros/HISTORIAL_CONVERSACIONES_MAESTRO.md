@@ -54,6 +54,8 @@
    - En `executeIdentityVerificationFromWhatsApp`, se verifica la caché en memoria antes de hacer peticiones de red, respondiendo en **0 ms**.
    - Agregada suite de pruebas en `server/__tests__/regression.test.ts` validando la resolución de retos, el mapeo de selectores y la verificación con CE 498614.
    - 138/138 pruebas unitarias aprobadas al 100% en Vitest.
+   - Corrección de tipo en mock de pruebas unitarias (`regression.test.ts`).
+   - Identificación de geobloqueo en Azure/MinTIC sobre la IP europea del VPS (Contabo AS51167 en Lauterbourg, Francia) y desarrollo del endpoint dinámico `getProcuraduriaEndpoint` con soporte de túnel local de salida colombiana (`127.0.0.1:18443`) y variables de entorno proxy.
    - Compilación limpia con `tsc --noEmit` y `npm run build`.
    - Versión incrementada a **v32.43** en `shared/const.ts` y `package.json`.
 
