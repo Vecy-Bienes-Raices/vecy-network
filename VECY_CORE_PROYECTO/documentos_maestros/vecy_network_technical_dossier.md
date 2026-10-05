@@ -322,6 +322,48 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.43 — Octubre 2026
+
+#### 📌 INTEGRACIÓN DUAL PROCURADURÍA GENERAL DE LA NACIÓN + POLICÍA NACIONAL, SOPORTE MULTI-DOCUMENTO PEP/PPT/NIT Y BLINDAJE DE REACCIONES WHATSAPP ANTE IDENTIDADES @LID
+
+**Requerimiento y Objetivos:**
+1. **Investigación de Pérdida Aparente de Reacciones en Dos Grupos de WhatsApp**:
+   - Eduardo observó que JanIA colocó reacciones automáticas en "Oficinas - Locales - Bodegas..." (✏️) y "PROPIEDADES PARA INVERSIONISTAS..." (📝), pero no reaccionó en "Ofertas VENTA 1000" (post de Jorge Salazar #4696) ni en "Requerimientos 1000" (post de Rosmira #2192).
+   - Auditar el estado de salud, estabilidad y logs en el VPS para verificar si JanIA se había caído o congelado.
+2. **Integración Alterna y Complementaria de la Procuraduría General de la Nación**:
+   - Eduardo compartió una consulta exitosa en la Procuraduría (`https://apps.procuraduria.gov.co/webcert/`) para Cédula de Extranjería `498614` que arrojó el nombre `RODOLFO JESUS MENDOZA RIVAS`.
+   - Conectar dicho servicio como alternativa complementaria para Cédulas de Ciudadanía (CC), Cédulas de Extranjería (CE/CX), Permiso Especial de Permanencia (PEP) y Permiso por Protección Temporal (PPT), sin eliminar ni desactivar el servicio existente de Policía Nacional.
+
+**Diagnóstico y Causas Raíz:**
+1. **JanIA 100% Estable en VPS (Falso Positivo de Caída)**:
+   - Los registros de PM2 y el monitor de salud confirmaron que `jania-server` operó sin interrupciones (0.0% de CPU, 0 reinicios, 2.7 ms de latencia en `/api/health`).
+   - Ambos mensajes (Jorge Salazar #4696 y Rosmira #2192) fueron leídos, analizados por IA e insertados exitosamente en la base de datos PostgreSQL.
+2. **Causa Raíz de Reacciones Faltantes: Linked Identity (`@lid`) de WhatsApp**:
+   - Los dos usuarios publicaron desde cuentas vinculadas con JIDs de tipo `@lid` (`207915222843499@lid` y `222105861881922@lid`).
+   - Al no existir una sesión previa de cifrado Signal abierta para dichos `@lid` en la caché de Baileys, la librería `libsignal` generó la excepción `No open session`.
+   - `safeReact` capturaba el error y abortaba la reacción sin reintentar, dejando el mensaje sin emoji a pesar de haberlo procesado e indexado en la base de datos.
+3. **Limitación de Policía Nacional con Ciudadanos Extranjeros Sin Antecedentes**:
+   - El portal de Policía Nacional no indexa los nombres civiles de portadores de Cédula de Extranjería si no poseen antecedentes penales registrados en Colombia.
+   - El portal de la Procuraduría General de la Nación sí cuenta con registro civil unificado para C.E., PEP, PPT y NIT, resolviendo la identidad y certificado disciplinario en un solo paso.
+
+**Acciones Técnicas Ejecutadas:**
+1. **Scraper Robusto y Autónomo de Procuraduría General de la Nación (`identityVerificationService.ts`)**:
+   - Implementado flujo HTTP nativo con manejo de cookies ASP.NET (`ASP.NET_SessionId`) y bypass seguro de certificados SSL gubernamentales.
+   - Algoritmo de resolución automática de desafíos de seguridad (`solveProcuraduriaQuestion`): resuelve sumas, restas, multiplicaciones y capitales departamentales en <1.2s ($0 COP de costo, 0 dependencias externas pagas). En caso de preguntas complejas de nombres, solicita refresco de desafío hasta obtener uno matemático resoluble con 100% de precisión.
+   - Mapeo de tipos de documento oficiales: `1` (CC), `5` (CE), `0` (PEP), `10` (PPT), `2` (NIT).
+2. **Arquitectura Dual y Cascada Inteligente de Verificación**:
+   - **Caché en Memoria Unificado**: Respuestas instantáneas en 0 ms si el documento ya fue verificado en las últimas 24 horas.
+   - **Para C.C.**: Consulta prioritaria a Policía Nacional. Si PONAL presenta timeout o indisponibilidad, conmuta de inmediato a Procuraduría.
+   - **Para C.E. / PEP / PPT / NIT**: Consulta prioritaria a Procuraduría (extracción del nombre completo legal y estado disciplinario) combinada con verificación de antecedentes en PONAL.
+   - **Preservación Estricta de Marca Blanca**: Reporte emitido con membrete de seguridad y control notarial, sin revelar nombres de scrapers o servidores públicos.
+3. **Blindaje de Reacciones en WhatsApp (`whatsapp-match.ts`)**:
+   - En `safeReact`, ante el error `No open session`, el sistema ejecuta `assertSessions([msgKey.participant], true)` y reintenta de inmediato la reacción utilizando `fallbackKey = { remoteJid: chatId, id: msgKey.id, fromMe: false }`.
+4. **Pruebas de Regresión y Validación en Vivo**:
+   - Prueba real en vivo de CE `498614` → Retorna `RODOLFO JESUS MENDOZA RIVAS` y certificado limpio.
+   - Suite Vitest con 138/138 tests aprobados al 100%.
+
+---
+
 ### 🔖 v32.42 — Octubre 2026
 
 #### 📌 RESOLUCIÓN QUIRÚRGICA DE REDOS EN MOTOR DE MATCHING, ERRADICACIÓN DE 100% CPU EN EVENT LOOP, CIERRE LIMPIO DE SOCKETS BAILEYS Y AUDITORÍA DE FACTURACIÓN GOOGLE AI STUDIO

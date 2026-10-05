@@ -7,6 +7,58 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.43 — 05 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Investigación de Reacciones Omitidas en Grupos de WhatsApp**:
+   - Eduardo observó que JanIA colocó reacciones con emojis en dos grupos ("Oficinas - Locales - Bodegas..." con ✏️ y "PROPIEDADES PARA INVERSIONISTAS..." con 📝), pero no reaccionó en "Ofertas VENTA 1000" (publicación de Jorge Salazar a las 14:01) ni en "Requerimientos 1000" (publicación de Rosmira a las 13:56).
+   - Preguntó con preocupación si JanIA se había vuelto a caer o desmayar y pidió analizar la causa en las capturas enviadas.
+2. **Integración Oficial del Portal de la Procuraduría General de la Nación (SIRI)**:
+   - Eduardo compartió captura de pantalla (imagen 3) con una consulta real en la Procuraduría (`apps.procuraduria.gov.co/webcert/`) para la Cédula de Extranjería 498614, donde el sistema arrojó el nombre completo oficial: *"RODOLFO JESUS MENDOZA RIVAS"*.
+   - Sugirió conectar dicho portal como servicio alterno y complementario para verificar Cédulas de Ciudadanía (CC), Cédulas de Extranjería (CE), Permisos Especiales de Permanencia (PEP) y Permisos por Protección Temporal (PPT), de modo que JanIA pueda brindar resultados contundentes a los usuarios sin eliminar ni cortar el servicio de la Policía Nacional.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Estado Operativo Real de JanIA (Cero Caídas)**:
+   - La inspección de procesos en el servidor VPS con PM2 reveló que JanIA ha permanecido **100% en línea de manera ininterrumpida**, con **0.0% de uso de CPU**, **0 reinicios**, tiempo de respuesta de **2.7 ms** en `/api/health` y el WebSocket de Baileys sincronizado.
+   - Las publicaciones de Jorge Salazar (Msg ID: `3EB09F6D1F965FEF81BF`) y Rosmira (Msg ID: `3EB0B039230554523B0F`) **fueron recibidas, parseadas y almacenadas con éxito en PostgreSQL** (`properties` ID 4696 y `requirements` ID 2192).
+2. **Causa Raíz de Reacciones Omitidas en esos dos Grupos**:
+   - Tanto Jorge Salazar como Rosmira emitieron sus publicaciones desde identidades tipo `@lid` de WhatsApp Multi-Device (`207915222843499@lid` y `222105861881922@lid`).
+   - Al despachar la reacción con la clave del mensaje que incluía `participant`, la librería criptográfica `libsignal` arrojó el error `No open session` por no contar con una sesión directa pre-establecida con ese dispositivo específico.
+   - En `server/_core/whatsapp-match.ts`, el bloque `safeReact` trataba `No open session` como un error irrecuperable y omitía la reacción.
+   - Adicionalmente, Rosmira copió y pegó el mismo texto de requerimiento en 4 grupos simultáneos en el mismo minuto. En los dos primeros JanIA reaccionó con éxito, y en los siguientes la ventana de deduplicación de 60 segundos suprimió la reacción duplicada.
+3. **Mecánica y Viabilidad del Portal de la Procuraduría General de la Nación**:
+   - Endpoint oficial: `https://apps.procuraduria.gov.co/webcert/inicio.aspx?tpo=1` (redirige 302 a `Certificado.aspx?t=...&tpo=1`).
+   - El formulario utiliza el selector `ddlTipoID`:
+     - `1`: Cédula de ciudadanía
+     - `5`: Cédula de extranjería
+     - `0`: PEP (Permiso Especial de Permanencia)
+     - `10`: PPT (Permiso por Protección Temporal)
+     - `2`: NIT
+   - **Reto de Seguridad (Captcha Alternativo)**: No utiliza reCAPTCHA de Google ni requiere saldo de 2Captcha. Presenta retos textuales dinámicos:
+     - Sumas (`X + Y`), restas (`X - Y`) y multiplicaciones (`X * Y` / `X por Y` / `X x Y`).
+     - Capitales departamentales colombianas (Atlántico -> Barranquilla, Antioquia -> Medellín, etc.).
+     - Cuando el reto indaga por datos desconocidos (ej. *"¿Escriba la cantidad de letras del primer nombre...?"*), un nuevo `GET` refresca el reto y entrega una operación matemática en menos de 400 ms.
+   - **Ventaja Magistral de Identidad**: Mientras la Policía Nacional no lista el nombre de extranjeros sin antecedentes penales, la Procuraduría **SÍ entrega el nombre completo legalmente registrado** en la base de datos de control (ej. *"Señor(a) RODOLFO JESUS MENDOZA RIVAS"* para la CE 498614).
+
+### Acciones Ejecutadas
+1. **Módulo de Consulta a Procuraduría en `server/_core/identityVerificationService.ts`**:
+   - Desarrollada la función `httpRequest`: cliente HTTP nativo con `rejectUnauthorized: false` para sortear incidencias de certificados intermedios en portales gubernamentales.
+   - Desarrollada `solveProcuraduriaQuestion`: solucionador determinista de retos aritméticos y geográficos, con refresco automático ante preguntas nominativas.
+   - Desarrollada `queryProcuraduria(tipoDoc, numDoc)`: automatización completa del ciclo de consulta, extracción de nombres en formato Title Case y evaluación de sanciones/inhabilidades vigentes.
+   - Ampliada `extractCedulaForVerification`: soporte nativo con expresiones regulares específicas para PEP (15 caracteres), PPT (6 a 8 dígitos), NIT (4 a 12 dígitos) y Cédulas de Extranjería cortas (desde 4 dígitos).
+   - Reestructurada `executeIdentityVerificationFromWhatsApp`: arquitectura dual coordinada. Para CC se prioriza Policía Nacional y se usa Procuraduría como respaldo; para extranjeros (CE, PEP, PPT, NIT) se prioriza Procuraduría para la extracción de nombre legal y se verifica Policía Nacional para antecedentes judiciales.
+   - Blindaje de marca blanca: se mantiene la doctrina de no mencionar proveedores técnicos ni entidades policiales en el reporte final para el usuario.
+2. **Blindaje de Reacciones en Grupos para Participantes `@lid` en `server/_core/whatsapp-match.ts`**:
+   - En `safeReact`, ante el error `No open session`, se invoca `assertSessions` para forzar la sincronización de claves y se reintenta el despacho con una clave simplificada de grupo (`fallbackKey` con `remoteJid` y `id` sin `participant`).
+3. **Optimización de Caché y Pruebas Unitarias**:
+   - En `executeIdentityVerificationFromWhatsApp`, se verifica la caché en memoria antes de hacer peticiones de red, respondiendo en **0 ms**.
+   - Agregada suite de pruebas en `server/__tests__/regression.test.ts` validando la resolución de retos, el mapeo de selectores y la verificación con CE 498614.
+   - 138/138 pruebas unitarias aprobadas al 100% en Vitest.
+   - Compilación limpia con `tsc --noEmit` y `npm run build`.
+   - Versión incrementada a **v32.43** en `shared/const.ts` y `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.42 — 05 Octubre 2026
 
 ### Solicitud de Eduardo

@@ -2608,6 +2608,73 @@ Adriana Rebeca Orejuela`;
       spyPa.mockRestore();
     });
 
+    it("Doctrina v32.43: Procuraduría General de la Nación + Policía Nacional dual, soporte PEP, PPT, NIT y CE corta", async () => {
+      const { 
+        extractCedulaForVerification, 
+        solveProcuraduriaQuestion, 
+        mapTipoDocToProcuraduria,
+        executeIdentityVerificationFromWhatsApp 
+      } = await import("../_core/identityVerificationService");
+
+      // 1. Detección de PEP, PPT, NIT y CE de 6 dígitos
+      const detPep = extractCedulaForVerification("JanIA verificar PEP 123456789012345", true);
+      expect(detPep.found).toBe(true);
+      expect(detPep.tipoDoc).toBe("pep");
+      expect(detPep.cedula).toBe("123456789012345");
+
+      const detPpt = extractCedulaForVerification("verificar PPT 8084608", true);
+      expect(detPpt.found).toBe(true);
+      expect(detPpt.tipoDoc).toBe("ppt");
+      expect(detPpt.cedula).toBe("8084608");
+
+      const detNit = extractCedulaForVerification("validar NIT 900123456", true);
+      expect(detNit.found).toBe(true);
+      expect(detNit.tipoDoc).toBe("nit");
+      expect(detNit.cedula).toBe("900123456");
+
+      const detCe = extractCedulaForVerification("Verificar CE 498614", true);
+      expect(detCe.found).toBe(true);
+      expect(detCe.tipoDoc).toBe("cx");
+      expect(detCe.cedula).toBe("498614");
+
+      // 2. Mapeo a selectores oficiales de la Procuraduría
+      expect(mapTipoDocToProcuraduria("cc")).toBe("1");
+      expect(mapTipoDocToProcuraduria("cx")).toBe("5");
+      expect(mapTipoDocToProcuraduria("ce")).toBe("5");
+      expect(mapTipoDocToProcuraduria("pep")).toBe("0");
+      expect(mapTipoDocToProcuraduria("ppt")).toBe("10");
+      expect(mapTipoDocToProcuraduria("nit")).toBe("2");
+
+      // 3. Resolución de retos aritméticos y geográficos
+      expect(solveProcuraduriaQuestion("¿ Cuanto es 4 + 3 ?")).toBe("7");
+      expect(solveProcuraduriaQuestion("¿ Cuanto es 5 - 2 ?")).toBe("3");
+      expect(solveProcuraduriaQuestion("¿ Cuanto es 3 x 3 ?")).toBe("9");
+      expect(solveProcuraduriaQuestion("¿ Cual es la Capital del Atlantico?")).toBe("barranquilla");
+      expect(solveProcuraduriaQuestion("¿ Cual es la Capital de Antioquia (sin tilde)?")).toBe("medellin");
+      expect(solveProcuraduriaQuestion("¿Escriba la cantidad de letras del primer nombre de la persona...?")).toBeNull();
+
+      // 4. Verificación con identidad en caché para CE 498614 (Rodolfo Jesús Mendoza Rivas)
+      const agendaRouter = await import("../routers/agenda");
+      const spyPonalCe = vi.spyOn(agendaRouter, "queryPoliciaNacional").mockResolvedValueOnce({
+        success: true,
+        valid: true,
+        match: true,
+        message: "Sin antecedentes judiciales reportados."
+      });
+
+      agendaRouter.identityCache.set("PROCURADURIA:5:498614", { fullName: "Rodolfo Jesus Mendoza Rivas", timestamp: Date.now() });
+
+      const reportCe = await executeIdentityVerificationFromWhatsApp("Verificar CE 498614", true);
+      expect(reportCe.success).toBe(true);
+      expect(reportCe.officialName).toContain("Rodolfo Jesus Mendoza Rivas");
+      expect(reportCe.reportText).toContain("Cédula de Extranjería (C.E.) 498.614");
+      expect(reportCe.reportText).toContain("Rodolfo Jesus Mendoza Rivas");
+      expect(reportCe.source).toContain("Procuraduría General");
+      expect(reportCe.reportText).toContain("Central de Control Notarial");
+
+      spyPonalCe.mockRestore();
+    });
+
     it("Doctrina v32.40: Saludo inicial sin 45/10/45 con perfilamiento, menú de consultas, costos 100% GRATIS y despedida secuencial", async () => {
       const { processPrivateDmConversationalMessage } = await import("../_core/janIA");
       const { GOOGLE_REVIEW_MESSAGE, getChannelInviteGoodbyeMessage } = await import("../_core/predialService");

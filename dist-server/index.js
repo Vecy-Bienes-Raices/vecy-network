@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.42";
+    VECY_VERSION = "v32.43";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -12406,10 +12406,37 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             }
           } catch (err) {
             const errMsg = err?.message || String(err);
-            const isUnrecoverable = errMsg.includes("No open session") || errMsg.includes("not-authorized") || !this.isReady;
-            if (isUnrecoverable) {
-              console.warn(`[JANIA-${reason}] \u26A0\uFE0F Reacci\xF3n ${emoji} omitida por sesi\xF3n no disponible (${errMsg}).`);
+            const isNotAuth = errMsg.includes("not-authorized") || !this.isReady;
+            if (isNotAuth) {
+              console.warn(`[JANIA-${reason}] \u26A0\uFE0F Reacci\xF3n ${emoji} omitida por estado no autorizado o socket desconectado (${errMsg}).`);
               return;
+            }
+            if (errMsg.includes("No open session")) {
+              console.warn(`[JANIA-${reason}] \u26A0\uFE0F Sesi\xF3n no disponible para participante ${msgKey.participant || "desconocido"}. Intentando resoluci\xF3n y reenv\xEDo limpio...`);
+              try {
+                if (msgKey.participant && typeof this.sock?.assertSessions === "function") {
+                  await this.sock.assertSessions([msgKey.participant], true).catch(() => {
+                  });
+                }
+                await new Promise((r) => setTimeout(r, 600));
+                const fallbackKey = {
+                  remoteJid: chatId,
+                  id: msgKey.id,
+                  fromMe: false
+                };
+                if (this.sock && this.isReady) {
+                  await Promise.race([
+                    this.sock.sendMessage(chatId, { react: { text: emoji, key: fallbackKey } }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 3s fallback reacci\xF3n")), 3e3))
+                  ]);
+                  this.lastReactionTimestamp = Date.now();
+                  console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA tras resolver sesi\xF3n @lid (fallback)`);
+                  return;
+                }
+              } catch (lidErr) {
+                console.warn(`[JANIA-${reason}] \u26A0\uFE0F Reintento fallback @lid fall\xF3:`, lidErr?.message || lidErr);
+                return;
+              }
             }
             console.warn(`[JANIA-${reason}] \u26A0\uFE0F Primer intento de reacci\xF3n ${emoji} fall\xF3 (${errMsg}). Reintentando tras pausa \xE1gil...`);
             await new Promise((r) => setTimeout(r, 1e3));
@@ -14608,8 +14635,186 @@ __export(identityVerificationService_exports, {
   executeIdentityVerificationFromWhatsApp: () => executeIdentityVerificationFromWhatsApp,
   extractCedulaForVerification: () => extractCedulaForVerification,
   formatCedulaNumber: () => formatCedulaNumber,
-  getDocumentTypeLabel: () => getDocumentTypeLabel
+  getDocumentTypeLabel: () => getDocumentTypeLabel,
+  mapTipoDocToProcuraduria: () => mapTipoDocToProcuraduria,
+  queryProcuraduria: () => queryProcuraduria,
+  solveProcuraduriaQuestion: () => solveProcuraduriaQuestion
 });
+import https2 from "https";
+import querystring from "querystring";
+function httpRequest(options, data) {
+  return new Promise((resolve, reject) => {
+    const req = https2.request({ ...options, rejectUnauthorized: false }, (res) => {
+      let body = "";
+      res.on("data", (chunk) => body += chunk);
+      res.on("end", () => resolve({ statusCode: res.statusCode || 200, headers: res.headers, body }));
+    });
+    req.on("error", reject);
+    req.setTimeout(8e3, () => {
+      req.destroy(new Error("Timeout de conexi\xF3n"));
+    });
+    if (data) req.write(data);
+    req.end();
+  });
+}
+function solveProcuraduriaQuestion(q) {
+  if (!q || typeof q !== "string") return null;
+  const norm2 = q.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const mMult = norm2.match(/cuanto\s+es\s+(\d+)\s*(?:x|\*|por)\s*(\d+)/i);
+  if (mMult) return String(parseInt(mMult[1]) * parseInt(mMult[2]));
+  const mSum = norm2.match(/cuanto\s+es\s+(\d+)\s*(?:\+|mas)\s*(\d+)/i);
+  if (mSum) return String(parseInt(mSum[1]) + parseInt(mSum[2]));
+  const mSub = norm2.match(/cuanto\s+es\s+(\d+)\s*(?:\-|menos)\s*(\d+)/i);
+  if (mSub) return String(parseInt(mSub[1]) - parseInt(mSub[2]));
+  if (norm2.includes("capital del atlantico")) return "barranquilla";
+  if (norm2.includes("capital de antioquia")) return "medellin";
+  if (norm2.includes("capital del valle")) return "cali";
+  if (norm2.includes("capital de cundinamarca")) return "bogota";
+  if (norm2.includes("capital de santander") && !norm2.includes("norte")) return "bucaramanga";
+  if (norm2.includes("capital de norte de santander")) return "cucuta";
+  if (norm2.includes("capital de bolivar")) return "cartagena";
+  if (norm2.includes("capital de caldas")) return "manizales";
+  if (norm2.includes("capital del quindio")) return "armenia";
+  if (norm2.includes("capital de risaralda")) return "pereira";
+  if (norm2.includes("capital de colombia")) return "bogota";
+  if (norm2.includes("capital del tolima")) return "ibague";
+  if (norm2.includes("capital del huila")) return "neiva";
+  if (norm2.includes("capital de boyaca")) return "tunja";
+  if (norm2.includes("capital del meta")) return "villavicencio";
+  if (norm2.includes("capital de narino")) return "pasto";
+  if (norm2.includes("capital del cesar")) return "valledupar";
+  if (norm2.includes("capital de cordoba")) return "monteria";
+  if (norm2.includes("capital de sucre")) return "sincelejo";
+  if (norm2.includes("capital de la guajira")) return "riohacha";
+  if (norm2.includes("capital de magdalena")) return "santa marta";
+  if (norm2.includes("capital del cauca")) return "popayan";
+  return null;
+}
+function mapTipoDocToProcuraduria(tipoDoc) {
+  const t2 = (tipoDoc || "").toLowerCase().trim();
+  if (t2 === "cc") return "1";
+  if (t2 === "ce" || t2 === "cx") return "5";
+  if (t2 === "pep") return "0";
+  if (t2 === "ppt") return "10";
+  if (t2 === "nit") return "2";
+  return null;
+}
+async function queryProcuraduria(tipoDoc, numDoc, maxAttempts = 6) {
+  const ddlTipoID = mapTipoDocToProcuraduria(tipoDoc);
+  const cleanNum = (numDoc || "").replace(/\D/g, "");
+  if (!ddlTipoID || !cleanNum) {
+    return {
+      success: false,
+      source: "Procuradur\xEDa General de la Naci\xF3n",
+      error: `Tipo de documento ${tipoDoc} no soportado en Procuradur\xEDa`
+    };
+  }
+  const cacheKey = `PROCURADURIA:${ddlTipoID}:${cleanNum}`;
+  const cached = identityCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL2) {
+    return {
+      success: true,
+      officialName: cached.fullName,
+      documentType: tipoDoc,
+      documentNumber: cleanNum,
+      isRegisteredInSiri: true,
+      hasSanctions: false,
+      statusText: "Sin sanciones disciplinarias ni inhabilidades vigentes ante la Procuradur\xEDa.",
+      source: "Procuradur\xEDa General de la Naci\xF3n (Cach\xE9 Oficial)"
+    };
+  }
+  try {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const r1 = await httpRequest({
+        hostname: "apps.procuraduria.gov.co",
+        port: 443,
+        path: "/webcert/inicio.aspx?tpo=1",
+        method: "GET"
+      });
+      const loc = r1.headers.location;
+      const cookie = r1.headers["set-cookie"]?.map((c) => c.split(";")[0]).join("; ") || "";
+      if (!loc) continue;
+      const path22 = loc.startsWith("http") ? new URL(loc).pathname + new URL(loc).search : loc;
+      const r2 = await httpRequest({
+        hostname: "apps.procuraduria.gov.co",
+        port: 443,
+        path: path22,
+        method: "GET",
+        headers: { Cookie: cookie }
+      });
+      const qMatch = r2.body.match(/<span id="lblPregunta">([\s\S]*?)<\/span>/i);
+      const question = qMatch ? qMatch[1].trim() : "";
+      const answer = solveProcuraduriaQuestion(question);
+      if (!answer) continue;
+      const vs = r2.body.match(/id="__VIEWSTATE"\s+value="([^"]+)"/)?.[1] || "";
+      const vsg = r2.body.match(/id="__VIEWSTATEGENERATOR"\s+value="([^"]+)"/)?.[1] || "";
+      const ev = r2.body.match(/id="__EVENTVALIDATION"\s+value="([^"]+)"/)?.[1] || "";
+      const postData = querystring.stringify({
+        __VIEWSTATE: vs,
+        __VIEWSTATEGENERATOR: vsg,
+        __EVENTVALIDATION: ev,
+        ddlTipoID,
+        txtNumID: cleanNum,
+        txtRespuestaPregunta: answer,
+        btnConsultar: "Consultar"
+      });
+      const r3 = await httpRequest({
+        hostname: "apps.procuraduria.gov.co",
+        port: 443,
+        path: path22,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Length": Buffer.byteLength(postData),
+          "Cookie": cookie,
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      }, postData);
+      const matchSenor = r3.body.match(/Señor\(a\)\s*([\s\S]*?)\s*identificado\(a\)[^<.]+/i);
+      if (matchSenor && matchSenor[1]) {
+        const rawName = matchSenor[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+        const officialName = formatTitleCase(rawName);
+        let statusText = "No registra sanciones ni inhabilidades vigentes ante la Procuradur\xEDa General de la Naci\xF3n.";
+        let hasSanctions = false;
+        if (r3.body.includes("NO REGISTRA SANCIONES")) {
+          statusText = "No registra sanciones ni inhabilidades vigentes ante la Procuradur\xEDa General de la Naci\xF3n.";
+        } else if (r3.body.includes("vigencia de su")) {
+          statusText = "Documento registrado a nombre del titular en el sistema oficial SIRI. (Certificado disciplinario en tr\xE1mite de actualizaci\xF3n por vigencia documental ante la entidad).";
+        }
+        identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
+        return {
+          success: true,
+          officialName,
+          documentType: tipoDoc,
+          documentNumber: cleanNum,
+          statusText,
+          isRegisteredInSiri: true,
+          hasSanctions,
+          source: "Procuradur\xEDa General de la Naci\xF3n"
+        };
+      }
+      if (r3.body.includes("NO SE ENCUENTRA REGISTRADO EN EL SISTEMA")) {
+        return {
+          success: false,
+          isRegisteredInSiri: false,
+          documentType: tipoDoc,
+          documentNumber: cleanNum,
+          statusText: "El documento no se encuentra registrado en el sistema de informaci\xF3n SIRI de la Procuradur\xEDa.",
+          source: "Procuradur\xEDa General de la Naci\xF3n"
+        };
+      }
+    }
+  } catch (err) {
+    console.warn(`[queryProcuraduria] Intermitencia al consultar Procuradur\xEDa:`, err?.message || err);
+  }
+  return {
+    success: false,
+    documentType: tipoDoc,
+    documentNumber: cleanNum,
+    source: "Procuradur\xEDa General de la Naci\xF3n",
+    error: "No fue posible completar la consulta en Procuradur\xEDa en los intentos permitidos"
+  };
+}
 function extractCedulaForVerification(text2, isPrivateDm = false) {
   if (!text2 || typeof text2 !== "string") return { found: false, cedula: "", tipoDoc: "cc" };
   const clean = text2.trim();
@@ -14620,15 +14825,42 @@ function extractCedulaForVerification(text2, isPrivateDm = false) {
   if (lower.includes("predial") || lower.includes("chip") || lower.includes("impuesto")) {
     return { found: false, cedula: "", tipoDoc: "cc" };
   }
-  const keywords = ["verificar", "verificacion", "verificaci\xF3n", "validar", "consultar", "revisar", "chequear", "antecedentes", "c\xE9dula", "cedula", "documento", "extranjer\xEDa", "extranjeria", "pasaporte", "pasaportes"];
+  const keywords = ["verificar", "verificacion", "verificaci\xF3n", "validar", "consultar", "revisar", "chequear", "antecedentes", "c\xE9dula", "cedula", "documento", "extranjer\xEDa", "extranjeria", "pasaporte", "pasaportes", "pep", "ppt", "nit"];
   const hasKeyword = keywords.some((kw) => lower.includes(kw));
   let tipoDoc = "cc";
-  if (lower.includes("extranjer") || /(?<!\p{L})(?:ce|cx)(?!\p{L})/iu.test(lower)) {
+  if (lower.includes("pep") || lower.includes("especial de permanencia")) {
+    tipoDoc = "pep";
+  } else if (lower.includes("ppt") || lower.includes("proteccion temporal") || lower.includes("protecci\xF3n temporal")) {
+    tipoDoc = "ppt";
+  } else if (lower.includes("nit")) {
+    tipoDoc = "nit";
+  } else if (lower.includes("extranjer") || /(?<!\p{L})(?:ce|cx)(?!\p{L})/iu.test(lower)) {
     tipoDoc = "cx";
   } else if (lower.includes("origen") || /(?<!\p{L})(?:dp|dpo)(?!\p{L})/iu.test(lower)) {
     tipoDoc = "dp";
   } else if (lower.includes("pasaporte") || /(?<!\p{L})pa(?!\p{L})/iu.test(lower)) {
     tipoDoc = "pa";
+  }
+  if (tipoDoc === "pep") {
+    const regexPep = /(?:pep|permiso\s+especial\s+de\s+permanencia)\s*[:#]?\s*([a-zA-Z0-9]{10,18})/i;
+    const matchPep = clean.match(regexPep);
+    if (matchPep && matchPep[1]) {
+      return { found: true, cedula: matchPep[1].toUpperCase(), tipoDoc: "pep" };
+    }
+  }
+  if (tipoDoc === "ppt") {
+    const regexPpt = /(?:ppt|permiso\s+(?:de|por)\s+protecci[oó]n\s+temporal)\s*[:#]?\s*([0-9]{5,10})/i;
+    const matchPpt = clean.match(regexPpt);
+    if (matchPpt && matchPpt[1]) {
+      return { found: true, cedula: matchPpt[1].replace(/\D/g, ""), tipoDoc: "ppt" };
+    }
+  }
+  if (tipoDoc === "nit") {
+    const regexNit = /(?:nit)\s*[:#]?\s*([0-9]{4,12})/i;
+    const matchNit = clean.match(regexNit);
+    if (matchNit && matchNit[1]) {
+      return { found: true, cedula: matchNit[1].replace(/\D/g, ""), tipoDoc: "nit" };
+    }
   }
   if (tipoDoc === "dp") {
     const regexDp = /(?:documento\s+pa[ií]s\s+(?:de\s+)?origen|dp|dpo)\s*[:#]?\s*([a-zA-Z0-9]{5,15})/i;
@@ -14645,11 +14877,11 @@ function extractCedulaForVerification(text2, isPrivateDm = false) {
     }
   }
   if (tipoDoc === "cx") {
-    const regexCe = /(?:verificar|validar|consultar|revisar|antecedentes|c[ée]dula)?\s*(?:de\s+extranjer[ií]a|ce|cx)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/i;
+    const regexCe = /(?:verificar|validar|consultar|revisar|antecedentes|c[ée]dula)?\s*(?:de\s+extranjer[ií]a|ce|cx)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{4,10})/i;
     const matchCe = clean.match(regexCe);
     if (matchCe && matchCe[1]) {
       const rawNumber = matchCe[1].replace(/\D/g, "");
-      if (rawNumber.length >= 5 && rawNumber.length <= 10) {
+      if (rawNumber.length >= 4 && rawNumber.length <= 10) {
         return { found: true, cedula: rawNumber, tipoDoc: "cx" };
       }
     }
@@ -14675,12 +14907,24 @@ function extractCedulaForVerification(text2, isPrivateDm = false) {
       return { found: true, cedula: rawNumber, tipoDoc: "cc" };
     }
   }
-  const directCeMatch = clean.match(/\b(?:c\.?e\.?|c\.?x\.?)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b/i);
+  const directCeMatch = clean.match(/\b(?:c\.?e\.?|c\.?x\.?)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{4,10})\b/i);
   if (directCeMatch && directCeMatch[1]) {
     const rawNumber = directCeMatch[1].replace(/\D/g, "");
-    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
+    if (rawNumber.length >= 4 && rawNumber.length <= 10) {
       return { found: true, cedula: rawNumber, tipoDoc: "cx" };
     }
+  }
+  const directPepMatch = clean.match(/\b(?:p\.?e\.?p\.?)\s*[:#]?\s*([a-zA-Z0-9]{10,18})\b/i);
+  if (directPepMatch && directPepMatch[1]) {
+    return { found: true, cedula: directPepMatch[1].toUpperCase(), tipoDoc: "pep" };
+  }
+  const directPptMatch = clean.match(/\b(?:p\.?p\.?t\.?)\s*[:#]?\s*([0-9]{5,10})\b/i);
+  if (directPptMatch && directPptMatch[1]) {
+    return { found: true, cedula: directPptMatch[1].replace(/\D/g, ""), tipoDoc: "ppt" };
+  }
+  const directNitMatch = clean.match(/\b(?:nit)\s*[:#]?\s*([0-9]{4,12})\b/i);
+  if (directNitMatch && directNitMatch[1]) {
+    return { found: true, cedula: directNitMatch[1].replace(/\D/g, ""), tipoDoc: "nit" };
   }
   const directPaMatch = clean.match(/\b(?:pasaporte|pa)\s*[:#]?\s*([a-zA-Z0-9]{5,15})\b/i);
   if (directPaMatch && directPaMatch[1]) {
@@ -14707,7 +14951,7 @@ function extractCedulaForVerification(text2, isPrivateDm = false) {
 function formatCedulaNumber(cedula, tipoDoc = "cc") {
   if (!cedula) return "";
   const clean = cedula.trim();
-  if (tipoDoc === "pa" || tipoDoc === "dp" || /[a-zA-Z]/.test(clean)) {
+  if (tipoDoc === "pa" || tipoDoc === "dp" || tipoDoc === "pep" || /[a-zA-Z]/.test(clean)) {
     return clean.toUpperCase();
   }
   const onlyDigits = clean.replace(/\D/g, "");
@@ -14717,6 +14961,9 @@ function formatCedulaNumber(cedula, tipoDoc = "cc") {
 function getDocumentTypeLabel(tipoDoc = "cc") {
   const t2 = (tipoDoc || "").toLowerCase();
   if (t2 === "ce" || t2 === "cx") return "C\xE9dula de Extranjer\xEDa (C.E.)";
+  if (t2 === "pep") return "Permiso Especial de Permanencia (P.E.P.)";
+  if (t2 === "ppt") return "Permiso por Protecci\xF3n Temporal (P.P.T.)";
+  if (t2 === "nit") return "NIT";
   if (t2 === "pa") return "Pasaporte";
   if (t2 === "dp" || t2 === "dpo") return "Documento Pa\xEDs de Origen (D.P.)";
   return "C.C.";
@@ -14729,14 +14976,58 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
   const { cedula, tipoDoc } = detection;
   const formattedCedula = formatCedulaNumber(cedula, tipoDoc);
   const docLabel = getDocumentTypeLabel(tipoDoc);
+  const ponalCacheKey = `POLICIA:${tipoDoc}:${cedula}`;
+  const pgnCacheKey = `PROCURADURIA:${mapTipoDocToProcuraduria(tipoDoc) || tipoDoc}:${cedula}`;
+  const cachedName = identityCache.get(ponalCacheKey)?.fullName || identityCache.get(pgnCacheKey)?.fullName;
+  if (cachedName) {
+    const officialName = formatTitleCase(cachedName);
+    const isForeign = ["ce", "cx", "pep", "ppt", "pa", "dp"].includes(tipoDoc.toLowerCase());
+    const pgnLine = isForeign ? `
+\u{1F3DB}\uFE0F *Central de Control Notarial:* Documento registrado en el sistema oficial a nombre del titular.` : "";
+    const reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+\u{1F194} *El documento:* ${docLabel} ${formattedCedula}
+\u{1F464} *Pertenece a:* ${officialName}${pgnLine}
+\u2705 *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
+    return {
+      isVerificationRequest: true,
+      cedula,
+      tipoDoc,
+      success: true,
+      officialName,
+      source: "Central Multifuente Notarial VECY (Procuradur\xEDa General + Polic\xEDa Nacional - Cach\xE9)",
+      reportText
+    };
+  }
   try {
-    const res = await queryPoliciaNacional(tipoDoc, cedula);
-    if (res && res.success && res.officialName) {
-      const officialName = formatTitleCase(res.officialName);
+    const isProcuraduriaSupported = ["cc", "ce", "cx", "pep", "ppt", "nit"].includes(tipoDoc.toLowerCase());
+    const isPoliciaSupported = ["cc", "ce", "cx", "pa", "dp"].includes(tipoDoc.toLowerCase());
+    let pgnRes = null;
+    let ponalRes = null;
+    if (tipoDoc.toLowerCase() === "cc") {
+      ponalRes = await queryPoliciaNacional(tipoDoc, cedula);
+      if (!ponalRes?.officialName && isProcuraduriaSupported) {
+        pgnRes = await queryProcuraduria(tipoDoc, cedula);
+      }
+    } else {
+      if (isProcuraduriaSupported) {
+        pgnRes = await queryProcuraduria(tipoDoc, cedula);
+      }
+      if (isPoliciaSupported) {
+        ponalRes = await queryPoliciaNacional(tipoDoc, cedula);
+      }
+    }
+    const officialName = (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) || (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : null);
+    const hasPgnSuccess = Boolean(pgnRes && pgnRes.success && pgnRes.officialName);
+    const hasPonalSuccess = Boolean(ponalRes && ponalRes.success);
+    if (officialName) {
+      const isForeign = ["ce", "cx", "pep", "ppt", "pa", "dp"].includes(tipoDoc.toLowerCase());
+      const pgnLine = isForeign && pgnRes?.statusText ? `
+\u{1F3DB}\uFE0F *Central de Control Notarial:* ${pgnRes.statusText}` : "";
       const reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 \u{1F194} *El documento:* ${docLabel} ${formattedCedula}
-\u{1F464} *Pertenece a:* ${officialName}
+\u{1F464} *Pertenece a:* ${officialName}${pgnLine}
 \u2705 *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
       return {
         isVerificationRequest: true,
@@ -14744,26 +15035,32 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
         tipoDoc,
         success: true,
         officialName,
-        source: res.source || "Central Oficial de Seguridad Notarial VECY Bienes Ra\xEDces",
-        reportText
+        source: "Central Multifuente Notarial VECY (Procuradur\xEDa General + Polic\xEDa Nacional)",
+        reportText,
+        procuraduria: pgnRes || void 0,
+        policia: ponalRes || void 0
       };
     } else {
       const reportText = `\u26A0\uFE0F *CONSULTA DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
-No fue posible validar autom\xE1ticamente en este momento el documento ${docLabel} *${formattedCedula}* en la Central Oficial de Antecedentes de la Polic\xEDa Nacional.
+Consultamos las bases de datos oficiales de seguridad del Estado para el documento ${docLabel} *${formattedCedula}*:
 
-\u{1F4CC} *Posibles motivos:*
-\u2022 El n\xFAmero o caracteres del documento fueron digitados con alg\xFAn error.
-\u2022 Para documentos extranjeros (C\xE9dula de Extranjer\xEDa, Pasaporte o Documento Pa\xEDs de Origen), verificar que el titular cuente con registro migratorio activo en Colombia.
-\u2022 Intermitencia temporal de enlace con las bases de datos de la Polic\xEDa Nacional.
+\u{1F3DB}\uFE0F *Central de Control Notarial:* ${pgnRes?.statusText || "No se encuentra registrado en el sistema de informaci\xF3n SIRI o no disponible."}
+\u2696\uFE0F *Central de Seguridad:* ${ponalRes?.message || "Sin antecedentes judiciales reportados o documento no indexado."}
 
-\u{1F4A1} Por favor revisa los datos e intenta nuevamente escribi\xE9ndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.`;
+\u{1F4CC} *Orientaci\xF3n de Verificaci\xF3n:*
+\u2022 Si es un documento extranjero (C\xE9dula de Extranjer\xEDa, Pasaporte, PEP o PPT), es habitual que no registre nombre p\xFAblico si el titular no ha tenido contratos con entidades p\xFAblicas ni antecedentes penales en Colombia.
+\u2022 Verifica que el n\xFAmero digitado coincida exactamente con el documento f\xEDsico.
+
+\u{1F4A1} Puedes verificar nuevamente o adjuntar los datos escribi\xE9ndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.`;
       return {
         isVerificationRequest: true,
         cedula,
         tipoDoc,
         success: false,
-        reportText
+        reportText,
+        procuraduria: pgnRes || void 0,
+        policia: ponalRes || void 0
       };
     }
   } catch (err) {
@@ -14772,14 +15069,16 @@ No fue posible validar autom\xE1ticamente en este momento el documento ${docLabe
       cedula,
       tipoDoc,
       success: false,
-      reportText: `\u26A0\uFE0F Ocurri\xF3 una intermitencia temporal de enlace en nuestra central de verificaci\xF3n para el documento ${docLabel} ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`
+      reportText: `\u26A0\uFE0F Ocurri\xF3 una intermitencia temporal de enlace con las centrales de verificaci\xF3n para el documento ${docLabel} ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`
     };
   }
 }
+var IDENTITY_CACHE_TTL2;
 var init_identityVerificationService = __esm({
   "server/_core/identityVerificationService.ts"() {
     "use strict";
     init_agenda();
+    IDENTITY_CACHE_TTL2 = 24 * 60 * 60 * 1e3;
   }
 });
 

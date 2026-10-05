@@ -1893,11 +1893,44 @@ export class JaniaMatchBot {
         }
       } catch (err: any) {
         const errMsg = err?.message || String(err);
-        const isUnrecoverable = errMsg.includes("No open session") || errMsg.includes("not-authorized") || !this.isReady;
-        if (isUnrecoverable) {
-          console.warn(`[JANIA-${reason}] ⚠️ Reacción ${emoji} omitida por sesión no disponible (${errMsg}).`);
+        const isNotAuth = errMsg.includes("not-authorized") || !this.isReady;
+        if (isNotAuth) {
+          console.warn(`[JANIA-${reason}] ⚠️ Reacción ${emoji} omitida por estado no autorizado o socket desconectado (${errMsg}).`);
           return;
         }
+
+        // Manejo resiliente de participantes @lid en grupos (error "No open session")
+        if (errMsg.includes("No open session")) {
+          console.warn(`[JANIA-${reason}] ⚠️ Sesión no disponible para participante ${msgKey.participant || 'desconocido'}. Intentando resolución y reenvío limpio...`);
+          try {
+            if (msgKey.participant && typeof (this.sock as any)?.assertSessions === 'function') {
+              await (this.sock as any).assertSessions([msgKey.participant], true).catch(() => {});
+            }
+            await new Promise(r => setTimeout(r, 600));
+
+            // En grupos de WhatsApp, si la sesión del participante @lid no está abierta,
+            // reintentar con clave limpia simplificada sin participant
+            const fallbackKey: proto.IMessageKey = {
+              remoteJid: chatId,
+              id: msgKey.id,
+              fromMe: false
+            };
+
+            if (this.sock && this.isReady) {
+              await Promise.race([
+                this.sock.sendMessage(chatId, { react: { text: emoji, key: fallbackKey } }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 3s fallback reacción")), 3000))
+              ]);
+              this.lastReactionTimestamp = Date.now();
+              console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA tras resolver sesión @lid (fallback)`);
+              return;
+            }
+          } catch (lidErr: any) {
+            console.warn(`[JANIA-${reason}] ⚠️ Reintento fallback @lid falló:`, lidErr?.message || lidErr);
+            return;
+          }
+        }
+
         console.warn(`[JANIA-${reason}] ⚠️ Primer intento de reacción ${emoji} falló (${errMsg}). Reintentando tras pausa ágil...`);
         await new Promise(r => setTimeout(r, 1000));
         try {

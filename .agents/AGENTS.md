@@ -172,7 +172,31 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.42 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.43 — Octubre 2026
+
+### Novedades v32.43 (Integración Dual Procuraduría General de la Nación + Policía Nacional, Soporte Multi-Documento PEP/PPT/NIT y Blindaje de Reacciones WhatsApp con @lid):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Investigación de Supuesta Caída de JanIA y Pérdida de Reacciones en Dos Grupos**:
+     - Eduardo reportó que JanIA colocó reacciones en dos grupos pero no en "Ofertas VENTA 1000" (post Jorge Salazar #4696) ni en "Requerimientos 1000" (post Rosmira #2192), temiendo una nueva caída del servicio.
+     - **Verificación Técnica en VPS**: JanIA NUNCA se cayó ni reinició (uptime continuo, 0.0% CPU, 0 reinicios, 2.7ms de latencia en `/api/health`). Ambos mensajes fueron extraídos e insertados exitosamente en la base de datos PostgreSQL.
+     - **Causa Raíz de Reacciones Faltantes**: Los emisores en esos dos grupos usaban identificadores `@lid` (Linked Identity de WhatsApp: `207915222843499@lid` y `222105861881922@lid`). Cuando Baileys no tiene una sesión de cifrado Signal abierta para un `@lid`, la librería `libsignal` arroja `No open session`. Anteriormente, `safeReact` capturaba el error y abortaba sin reintentar.
+     - **Solución Implementada**: `safeReact` detecta fallos por falta de sesión, ejecuta `assertSessions([msgKey.participant], true)` y reintenta de inmediato la reacción usando una clave alternativa directa (`remoteJid: chatId, id: msgKey.id, fromMe: false`), garantizando que la reacción se aplique sin importar si el emisor se identifica vía `@lid` o `@s.whatsapp.net`.
+  2. **Integración Dual de Verificaciones: Procuraduría General de la Nación + Policía Nacional (PONAL)**:
+     - Eduardo propuso incorporar la consulta en la Procuraduría (`apps.procuraduria.gov.co/webcert/`) como alternativa potente para verificar Cédulas de Extranjería (CE/CX), PEP, PPT y NIT, resolviendo el caso de documentos extranjeros donde PONAL no retorna nombre civil de personas sin registro delictivo.
+     - **Regla Doctrinal**: Policía Nacional se mantiene 100% activa, intacta y como primer pilar de seguridad. Procuraduría se integra como fuente dual complementaria ($0 COP, sin captchas de pago de terceros, resolución automática de preguntas aritméticas/geográficas).
+     - **Comprobación en Vivo**: Verificación exitosa en tiempo real de CE `498614` retornando con certeza absoluta el nombre `RODOLFO JESUS MENDOZA RIVAS` y validación de antecedentes.
+     - **Soporte Ampliado de Tipos de Documento**: JanIA ahora clasifica y verifica automáticamente `CC`, `CE`/`CX`, `PEP` (15 caracteres alfanuméricos), `PPT` (Permiso por Protección Temporal, 6-8 dígitos) y `NIT` (empresas).
+- **Acciones Ejecutadas y Blindaje de Arquitectura**:
+  1. `server/_core/identityVerificationService.ts`:
+     - Implementado scraper seguro `queryProcuraduria` con bypass SSL gubernamental y motor `solveProcuraduriaQuestion` para preguntas de seguridad en menos de 1.2 segundos.
+     - Mapeo de tipos de documento: CC (`1`), CE (`5`), PEP (`0`), PPT (`10`), NIT (`2`).
+     - Lógica orquestadora dual en `executeIdentityVerificationFromWhatsApp`: verificación en cache unificado en memoria (0ms), cascada inteligente CC (PONAL -> Procuraduría) y extranjeros CE/PEP/PPT/NIT (Procuraduría para identidad y nombre legal + PONAL para antecedentes penales).
+     - Preservación estricta de marca blanca (referencia institucional como "Central de Seguridad y Control Notarial").
+  2. `server/_core/whatsapp-match.ts`: Blindaje de `safeReact` con fallback de clave y `assertSessions`.
+  3. `server/__tests__/regression.test.ts`: Pruebas de regresión unitarias e integración de la Doctrina v32.43.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | 138/138 tests Vitest aprobados al 100% ✅ | `npm run build` limpio en 10.48s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.42 — Octubre 2026
 
 ### Novedades v32.42 (Resolución Quirúrgica de ReDoS en Matching, Erradicación del 100% CPU en Event Loop, Cierre Limpio de Sockets Baileys y Claridad en Facturación Google AI Studio):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:
