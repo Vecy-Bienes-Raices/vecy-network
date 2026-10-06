@@ -11,10 +11,10 @@
  */
 
 export const VIRAL_LOOP_MESSAGE = 
-  `¿Conoces a algún colega, amigo o cliente al que le sirva esta herramienta? Reenvíale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrarás el tiempo, las filas y el estrés o dolor de cabeza de tener que lidiar con plataformas enredadas desde el celular o el computador 🤝✨`;
+  `😃 ¿Qué tanto nos recomendarías?\n👎 | 👍 | ❤️`;
 
 export const GOOGLE_REVIEW_MESSAGE = 
-  `⭐ Tu opinión es muy importante para nosotros. La necesitamos muchísimo para seguir mejorando y logrando que más colegas y propietarios conozcan nuestro servicio. Si te gustó la atención y la rapidez, regálanos un comentario y calificación. Significaría un mundo para todo el equipo de Vecy Bienes Raíces:\n👉 https://g.page/r/CctNbwU6UpX5EBM/review ✨\n\n¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨`;
+  `⭐ ¿Podrías darnos "Tu Opinión" y "Calificar" nuestro servicio? Es muy importante para nosotros.\n*COMENTA Y CALIFICA AQUÍ:*\n👉 https://g.page/r/CctNbwU6UpX5EBM/review 👍 Gracias\n\n¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨`;
 
 export function getChannelInviteGoodbyeMessage(displayName?: string): string {
   const namePart = displayName ? `, ${displayName}` : "";

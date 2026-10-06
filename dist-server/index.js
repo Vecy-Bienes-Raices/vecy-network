@@ -9695,9 +9695,11 @@ var VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE, pendingPredialSessions, PREDIAL_H
 var init_predialService = __esm({
   "server/_core/predialService.ts"() {
     "use strict";
-    VIRAL_LOOP_MESSAGE = `\xBFConoces a alg\xFAn colega, amigo o cliente al que le sirva esta herramienta? Reenv\xEDale mi contacto (+57 319 291 9978 o wa.me/573192919978); le ahorrar\xE1s el tiempo, las filas y el estr\xE9s o dolor de cabeza de tener que lidiar con plataformas enredadas desde el celular o el computador \u{1F91D}\u2728`;
-    GOOGLE_REVIEW_MESSAGE = `\u2B50 Tu opini\xF3n es muy importante para nosotros. La necesitamos much\xEDsimo para seguir mejorando y logrando que m\xE1s colegas y propietarios conozcan nuestro servicio. Si te gust\xF3 la atenci\xF3n y la rapidez, reg\xE1lanos un comentario y calificaci\xF3n. Significar\xEDa un mundo para todo el equipo de Vecy Bienes Ra\xEDces:
-\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u2728
+    VIRAL_LOOP_MESSAGE = `\u{1F603} \xBFQu\xE9 tanto nos recomendar\xEDas?
+\u{1F44E} | \u{1F44D} | \u2764\uFE0F`;
+    GOOGLE_REVIEW_MESSAGE = `\u2B50 \xBFPodr\xEDas darnos "Tu Opini\xF3n" y "Calificar" nuestro servicio? Es muy importante para nosotros.
+*COMENTA Y CALIFICA AQU\xCD:*
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u{1F44D} Gracias
 
 \xA1Que tengas una excelente jornada y muchos \xE9xitos en tus cierres! \u{1F3E2}\u2728`;
     pendingPredialSessions = /* @__PURE__ */ new Map();
