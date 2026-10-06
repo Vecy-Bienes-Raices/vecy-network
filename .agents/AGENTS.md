@@ -179,20 +179,24 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
   1. **Ajuste de Presupuesto y Alertas Directas por Correo**:
      - Eduardo ajustó el presupuesto mensual en Google Cloud Billing a $30.000 COP (100%) y $45.000 COP (150%) para amparar el consumo de IA.
      - Se depuró la configuración descartando opciones innecesarias como Pub/Sub (temas programáticos) y canales avanzados de Monitoring, dejando activo el canal directo y seguro de alertas por correo electrónico hacia administradores y propietarios del proyecto.
-  2. **Reactivación de la Voz Humana de Estudio de JanIA (Google Cloud Text-to-Speech)**:
-     - Eduardo habilitó la API oficial `Cloud Text-to-Speech API` en el proyecto `Vecy APP` (`gen-lang-client-0137076503`).
-     - Creó la cuenta de servicio oficial `jania-759@gen-lang-client-0137076503.iam.gserviceaccount.com` y descargó la clave JSON (`gen-lang-client-0137076503-00b905fb5143.json`).
-     - Se integró como `server/_core/google-service-account.json` (protegida permanentemente en `.gitignore`).
-     - Se actualizó `server/_core/whatsapp-utils.ts` eliminando el filtro del proyecto anterior y priorizando como Motor #1 Oficial: **`es-US-Studio-B`** (Voz de Estudio Cristalina, Despierta y Enérgica de JanIA) autenticada mediante OAuth2 Bearer Token en 0 ms.
-     - Se validó empíricamente la síntesis tanto en local como en el servidor VPS, generando audios de WhatsApp con calidad de estudio cristalina.
-     - Se preservó el failover automático hacia Gemini 3.1 Flash TTS, Neural2-A y Dalia (Edge TTS $0 COP).
+  2. **Reactivación de la Voz Femenina Oficial de JanIA (Gemini 3.1 Flash TTS — Laomedeia)**:
+     - Eduardo confirmó la voz oficial femenina de JanIA visualizada en Google Cloud Console:
+       - **Modelo**: `Gemini 3.1 Flash TTS (preview)`
+       - **Idioma**: `Spanish (US)` (`es-us`)
+       - **Voz**: **`Laomedeia`** (Femenina, Cálida y Acogedora)
+       - **Instrucción de estilo**: `"Read aloud in a warm, welcoming tone."`
+       - **Endpoint**: `https://texttospeech.googleapis.com/v1beta1/text:synthesize`
+     - Se descartó `Studio-B` por ser una voz masculina.
+     - Se actualizó `server/_core/whatsapp-utils.ts` priorizando a `Laomedeia` como Motor #1 Oficial con OAuth2 Bearer Token.
+     - Se habilitó el soporte de notas de voz nativas PTT en el endpoint `/api/send-whatsapp-notification` y se despachó con éxito un audio de prueba al número oficial del bróker (+573166569719).
 - **Acciones Ejecutadas y Blindaje de Arquitectura**:
   1. `.gitignore`: Incorporado patrón `gen-lang-client*.json` para evitar filtraciones de credenciales.
   2. `server/_core/google-service-account.json`: Instalada la nueva cuenta de servicio de `Vecy APP` en local y sincronizada al VPS vía SCP.
-  3. `server/_core/whatsapp-utils.ts`: Priorizada la voz de estudio Studio-B con autenticación OAuth2 de cuenta de servicio.
-  4. `shared/const.ts` y `package.json`: Versión incrementada a `v32.48` (`32.48.0`).
-  5. `server/__tests__/regression.test.ts`: Test unitario `Doctrina v32.48` aprobado (122/122 tests Vitest al 100%).
-- **Verificación**: `tsc --noEmit` 0 errores ✅ | 122/122 tests Vitest aprobados al 100% ✅ | `npm run build` limpio en 13.59s ✅
+  3. `server/_core/whatsapp-utils.ts`: Priorizada la voz femenina oficial Laomedeia con autenticación OAuth2 de cuenta de servicio.
+  4. `server/_core/index.ts`: Añadido soporte para `sendAudio / isAudio` en `/api/send-whatsapp-notification`.
+  5. `shared/const.ts` y `package.json`: Versión incrementada a `v32.48` (`32.48.0`).
+  6. `server/__tests__/regression.test.ts`: Test unitario `Doctrina v32.48` aprobado (122/122 tests Vitest al 100%).
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | 122/122 tests Vitest aprobados al 100% ✅ | Audio entregado en vivo al 3166569719 ✅
 
 ## 🔖 VERSIÓN ANTERIOR: v32.47 — Octubre 2026
 
