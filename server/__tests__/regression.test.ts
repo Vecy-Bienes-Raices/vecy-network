@@ -2898,13 +2898,13 @@ Adriana Rebeca Orejuela`;
 
     it("Doctrina v32.49: Rediseño Visual de Admin & JanIA Console, Animación Neural Soundwave y Embudo de Marketing en Canal Oficial", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v32.52");
+      expect(VECY_VERSION).toMatch(/^v32\./);
     });
 
     it("Doctrina v32.50: Limpieza Defensiva de JSON, Tipeo en Vivo (Typewriter) y Aura Giratoria de Alta Velocidad con 3 Puntos Dorados en JanIA Console", async () => {
       const { sanitizeWebChatResponse } = await import("../routers/janIA");
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v32.52");
+      expect(VECY_VERSION).toMatch(/^v32\./);
 
       // Prueba con texto contaminado por JSON schema y escapes
       const dirtyRaw = `Esta redacción neutraliza las prácticas evasivas.\\n\\n### 4. ¿Qué debes hacer ante un juez?\\nSi un juez te dice \\"no hay contrato\\"... ¿Te ha pasado alguna situación?",
@@ -2926,7 +2926,7 @@ Adriana Rebeca Orejuela`;
 
     it("Doctrina v32.51: Resiliencia Signal E2E contra 'No open session', Descarte de Reacciones y Filtro Histórico de 15 Minutos en Grupos", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v32.52");
+      expect(VECY_VERSION).toMatch(/^v32\./);
 
       // Validar que un objeto de sesión cerrado sea identificado correctamente
       const testClosedSession = {
@@ -2964,7 +2964,7 @@ Adriana Rebeca Orejuela`;
       const { VIP_COMMUNITY_ADMIN_PHONES, isVipRealEstateGroup } = await import("../_core/whatsapp-match");
       const { VECY_VERSION } = await import("../../shared/const");
 
-      expect(VECY_VERSION).toBe("v32.52");
+      expect(VECY_VERSION).toBe("v32.53");
 
       // Validar presencia de administradores oficiales verificados por Eduardo
       expect(VIP_COMMUNITY_ADMIN_PHONES.has("573003600006")).toBe(true); // Armando Cortés
@@ -2993,6 +2993,51 @@ Adriana Rebeca Orejuela`;
       expect(isVipRealEstateGroup(null, "APARTAESTUDIOS BOGOTA")).toBe(true);
       expect(isVipRealEstateGroup(null, "OFERTAS ANDRÉS NIETO")).toBe(true);
       expect(isVipRealEstateGroup(null, "Rosales-Cabrera-Nogal-Virrey-Chico")).toBe(false); // Reconocido por sus admins Julieth/Victoria
+    });
+
+    it("Doctrina v32.53: Memoria del mismo día hasta 23:59 Bogotá, continuidad de hilo sin re-saludos ni re-perfilamiento y pedagogía de emojis", async () => {
+      const { getStartOfTodayBogota, getDmHistory, appendDmHistory } = await import("../_core/janIA");
+      const { VECY_VERSION } = await import("../../shared/const");
+
+      expect(VECY_VERSION).toBe("v32.53");
+
+      // 1. Validar que el inicio del día en curso en Bogotá sea un timestamp válido y menor o igual a now
+      const startOfToday = getStartOfTodayBogota();
+      const now = Date.now();
+      expect(startOfToday).toBeGreaterThan(0);
+      expect(startOfToday).toBeLessThanOrEqual(now);
+
+      // 2. Validar que la memoria retenga mensajes del mismo día y descarte mensajes de días anteriores
+      const testUserId = "573100000000@s.whatsapp.net";
+      const yesterday = startOfToday - (2 * 60 * 60 * 1000); // 2 horas antes de las 00:00 de hoy
+
+      // Inyectar mensaje de ayer y mensajes de hoy
+      appendDmHistory(testUserId, "user", "Mensaje de ayer");
+      // Forzar que el mensaje de ayer tenga timestamp anterior a startOfToday
+      const historyDirect = getDmHistory(testUserId);
+      if (historyDirect.length > 0) {
+        historyDirect[0].ts = yesterday;
+      }
+
+      // Añadir mensajes de hoy
+      appendDmHistory(testUserId, "user", "¿En cuál de los dos inmuebles profundizamos?");
+      appendDmHistory(testUserId, "assistant", "Tenemos opciones en Museo del Chico y en Santa Bárbara.");
+      appendDmHistory(testUserId, "user", "En el que ya tengan");
+
+      const activeTodayHistory = getDmHistory(testUserId);
+      // El mensaje de ayer debe haber sido filtrado por la ventana del día en curso
+      expect(activeTodayHistory.some(m => m.content === "Mensaje de ayer")).toBe(false);
+      // Los mensajes de hoy deben estar intactos
+      expect(activeTodayHistory.length).toBe(3);
+      expect(activeTodayHistory[2].content).toBe("En el que ya tengan");
+
+      // 3. Validar capacidad ampliada de hasta 24 turnos
+      for (let i = 1; i <= 20; i++) {
+        appendDmHistory(testUserId, "assistant", `Turno adicional ${i}`);
+      }
+      const expandedHistory = getDmHistory(testUserId);
+      expect(expandedHistory.length).toBeLessThanOrEqual(24);
+      expect(expandedHistory.length).toBeGreaterThan(15);
     });
   });
 });

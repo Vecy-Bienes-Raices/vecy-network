@@ -1062,11 +1062,12 @@ export class JaniaMatchBot {
               }
             }
 
-            // 3. Buffer de mensajes de DM privado
-            let buffer = this.dmMessageBuffers.get(senderId);
+            // 3. Buffer de mensajes de DM privado unificado por número de teléfono
+            const targetDmId = resolvedSenderId || senderId;
+            let buffer = this.dmMessageBuffers.get(targetDmId);
             if (!buffer) {
               buffer = { messages: [], timer: null };
-              this.dmMessageBuffers.set(senderId, buffer);
+              this.dmMessageBuffers.set(targetDmId, buffer);
             }
 
             buffer.messages.push(msg);
@@ -1074,7 +1075,7 @@ export class JaniaMatchBot {
             // ⚡ Simulación de presencia inmediata: Mostrar 'composing' (escribiendo...) si no es self-chat
             if (!isSelfChat) {
               try {
-                await this.sock.sendPresenceUpdate('composing', senderId);
+                await this.sock.sendPresenceUpdate('composing', targetDmId);
               } catch (_) {}
             }
 
@@ -1083,9 +1084,9 @@ export class JaniaMatchBot {
             }
 
             buffer.timer = setTimeout(async () => {
-              this.dmMessageBuffers.delete(senderId);
+              this.dmMessageBuffers.delete(targetDmId);
               try {
-                await this.processBufferedDmMessages(senderId, userName, rawPhone, buffer.messages, isAdmin, isSelfChat);
+                await this.processBufferedDmMessages(targetDmId, userName, rawPhone, buffer.messages, isAdmin, isSelfChat);
               } catch (err) {
                 console.error("[JANIA-MATCH] Error al procesar mensajes de DM acumulados:", err);
               }
@@ -1170,6 +1171,10 @@ export class JaniaMatchBot {
     const chatId = senderId;
     const body = combinedBody;
     console.log(`[JANIA-MATCH] [DM] Procesando buffer DM de ${messages.length} mensaje(s) de ${senderId} (${userName}, Tel: ${rawPhone}): "${body}"`);
+
+    // 💾 REGISTRO PERSISTENTE DEL MENSAJE DEL USUARIO EN POSTGRESQL (Doctrina v32.53):
+    // Garantiza que JanIA recuerde todo el contexto del día hasta las 23:59 incluso ante reinicios de PM2
+    await this.logToDb(senderId, 'user', body);
 
     // 🌟 REACCIÓN EMPÁTICA CONTEXTUAL INMEDIATA EN DMs:
     // JanIA reacciona de inmediato con un emoji acorde al contenido exacto del mensaje (predial 🏛️, cédula 🛡️, asesoría ⚖️, saludo 👋, etc.)

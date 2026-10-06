@@ -322,6 +322,51 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.53 — Octubre 2026
+
+#### 📌 MEMORIA TEMPORAL DEL DÍA EN CURSO (HASTA 23:59 BOGOTÁ), PERSISTENCIA TOTAL DE DMs EN POSTGRESQL, ERRADICACIÓN DE RE-SALUDOS/RE-PERFILAMIENTO Y PEDAGOGÍA DE EMOJIS INMOBILIARIOS
+
+**Requerimiento y Objetivos:**
+1. **Memoria Temporal del Mismo Día (hasta las 23:59)**:
+   - Eduardo solicitó que JanIA mantenga el contexto completo y no pierda el hilo de las conversaciones recordando lo hablado en el mismo día calendario (hasta las 23:59:59 hora Bogotá).
+   - En una conversación privada con Ricardo Castillo Fraiz, JanIA le había consultado por dos inmuebles específicos (Museo del Chicó y Santa Bárbara/Bella Suiza). Cuando Ricardo respondió *"En el que ya tengan"*, JanIA reseteó la conversación dándole la bienvenida de nuevo y preguntándole a qué se dedicaba.
+2. **Identidad Oficial de la Línea (+573192919978)**:
+   - Colegas que tenían el número guardado como personal de Eduardo preguntan quién está detrás. JanIA debe explicar que es la IA de Vecy Network y derivar a Eduardo y Jani al `+573166569719` para atención comercial humana.
+3. **Pedagogía de Emojis en Grupos Inmobiliarios**:
+   - Varios colegas no comprenden por qué JanIA reacciona con emojis distintos en sus publicaciones.
+   - JanIA debe explicarles pedagógicamente los 6 emojis según OFERTA / DEMANDA y si contemplan o no PERMUTA (👍 Oferta tradicional, 👌 Oferta con permuta, 🔀 Oferta permuta pura, 📝 Demanda tradicional, ✏️ Demanda con permuta, 🔄 Demanda permuta pura).
+   - Explicar el ciclo completo: Lectura -> Extracción -> Almacenamiento en BD -> Monitoreo de MATCH -> Reporte a Eduardo y Jani -> Contacto por asesor comercial.
+4. **Regla Sagrada sobre Comisiones y Tercería (DOCTRINA EDUARDO)**:
+   - En VECY se trabaja en tercería para compartir la comisión del 3% (1/1/1 o 40/20/40 sobre ese 3%).
+   - **REGLA DE ORO**: JanIA **JAMÁS** debe adelantarse a fijar ni mencionar estos esquemas ni porcentajes. Debe esperar a que el colega lo proponga o el asesor comercial lo concrete.
+
+**Acciones Técnicas Ejecutadas:**
+1. **Memoria Temporal Anclada al Día en Curso (Hasta las 23:59 Bogotá) (`server/_core/janIA.ts`)**:
+   - Función `getStartOfTodayBogota()` para fijar el corte en las 00:00:00 hora Bogotá (UTC-5).
+   - `getDmHistory()` conserva mensajes del día actual (`ts >= startOfTodayBogota`).
+   - Capacidad en RAM ampliada a **24 turnos completos**.
+   - `getOrLoadDmHistory()` restaura hasta 24 mensajes de PostgreSQL de la fecha actual tras reinicios de PM2.
+2. **Persistencia Total de Entrada y Salida en PostgreSQL (`server/_core/whatsapp-match.ts`)**:
+   - `await this.logToDb(senderId, 'user', body)` añadido en `processBufferedDmMessages`.
+   - Buffer de mensajes unificado por `targetDmId` (`resolvedSenderId`).
+3. **Continuidad del Hilo y Erradicación de Re-Saludos y Re-Perfilamiento (`server/_core/janIA.ts`)**:
+   - Si `hasPriorHistory` es verdadero:
+     - Bloqueo tajante de re-saludos ("Qué gusto saludarte de nuevo", "Hola", etc.).
+     - Bloqueo de re-perfilamiento ("¿a qué te dedicas?").
+     - Respuesta directa a las alternativas o inmuebles discutidos en el turno previo.
+   - Aumento del historial inyectado a Gemini de 6 a **14 turnos**.
+   - Regex reforzado de limpieza para erradicar saludos residuales generados por inercia del LLM.
+4. **Doctrina de Identidad Telefónica y Pedagogía de Emojis (`server/_core/janIA.ts`)**:
+   - Instrucciones doctrinales de identidad y derivación comercial al `+573166569719`.
+   - Taxonomía completa de los 6 emojis de negocio y regla de oro de silencio sobre esquemas de comisión.
+5. **Incremento de Versión, Pruebas y Despliegue**:
+   - Versión incrementada a **v32.53** (`32.53.0`) en `shared/const.ts` y `package.json`.
+   - Test unitario de regresión aprobado en `server/__tests__/regression.test.ts`.
+   - 148/148 pruebas Vitest aprobadas (100%).
+   - Compilación verificada con `tsc --noEmit` y `npm run build` en 10.75s.
+
+---
+
 ### 🔖 v32.52 — Octubre 2026
 
 #### 📌 SINCRONIZACIÓN EMPÍRICA DE COMUNIDADES VIP (80 GRUPOS), AMPLIACIÓN DE TIMEOUT A 10S Y LIBERACIÓN DEFENSIVA DE CACHÉ DE REACCIONES EN GRUPOS MASIVOS

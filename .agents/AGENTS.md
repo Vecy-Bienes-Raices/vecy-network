@@ -172,7 +172,42 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.52 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.53 — Octubre 2026
+
+### Novedades v32.53 (Memoria Temporal del Mismo Día hasta las 23:59 Bogotá, Erradicación de Re-Saludos/Re-Perfilamiento, Identidad de Línea +573192919978 y Pedagogía de Emojis de Grupos):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Memoria Temporal del Día en Curso (Hasta las 23:59 Bogotá)**:
+     - Eduardo instruyó que JanIA debe mantener el hilo conversacional recordando todo lo hablado en el mismo día calendario (hasta las 23:59:59 hora Bogotá).
+     - Se identificó que `appendDmHistory` limitaba la memoria a solo 8 turnos en RAM y no persistía inmediatamente los mensajes del usuario en la tabla `messages` de PostgreSQL.
+     - **Solución Doctrinal**:
+       - Creada función `getStartOfTodayBogota` para anclar el historial al inicio del día calendario en curso de Bogotá (UTC-5).
+       - Memoria en RAM ampliada a **24 turnos**.
+       - En `whatsapp-match.ts` se implementó `await this.logToDb(senderId, 'user', body)` de forma inmediata para que cada mensaje del usuario quede respaldado en PostgreSQL.
+       - En `getOrLoadDmHistory` se consulta la BD recuperando hasta 24 mensajes del día si PM2 se reinicia.
+  2. **Continuidad del Hilo y Erradicación de Re-Saludos y Re-Perfilamiento**:
+     - En conversaciones activas (como el caso de Ricardo Castillo Fraiz respondiendo *"En el que ya tengan"*), JanIA volvía a saludar formalmente y a preguntar a qué se dedicaba.
+     - **Solución Doctrinal**:
+       - Si `hasPriorHistory` es verdadero (hay historial previo hoy), queda **TERMINANTEMENTE PROHIBIDO saludar de nuevo** ("Hola", "Qué gusto saludarte", "Es un placer") y **TERMINANTEMENTE PROHIBIDO volver a preguntar a qué se dedica**.
+       - JanIA debe dar continuidad inmediata al contexto respondiendo directo sobre las alternativas o inmuebles discutidos.
+       - Se amplió el historial inyectado al LLM a **14 turnos** y se reforzó la regex de limpieza para barrer saludos residuales.
+  3. **Identidad Oficial de la Línea WhatsApp (`+573192919978`)**:
+     - Eduardo cambió el nombre de usuario a JanIA (`@JanIA_agente_IA_de_VECY`).
+     - Cuando los colegas pregunten si es Eduardo, JanIA aclara cordialmente que es JanIA, la Inteligencia Artificial de Vecy Bienes Raíces, y proporciona la línea oficial de atención bróker de los directores Eduardo A. Rivera y Jani Alves: **`+573166569719`**.
+  4. **Pedagogía Completa de Reacciones y Emojis en Grupos Inmobiliarios**:
+     - JanIA explica por qué reacciona: confirma visualmente que leyó la publicación, extrajo todos los datos, los guardó en la base de datos de VECY Network y los mantiene en monitoreo para MATCH.
+     - **Significado exacto de los 6 emojis**:
+       - 👍: OFERTA tradicional captada (Venta/Arriendo sin permuta).
+       - 👌: OFERTA con opción de PERMUTA (Venta/Permuta).
+       - 🔀: OFERTA en permuta pura o intercambio.
+       - 📝: DEMANDA tradicional captada (Compra/Arriendo sin permuta).
+       - ✏️: DEMANDA con opción de PERMUTA.
+       - 🔄: DEMANDA en permuta pura o intercambio.
+     - **Alerta de MATCH**: Si hay coincidencia, JanIA reporta internamente a Eduardo y Jani, y un asesor comercial de Vecy Bienes Raíces se contactará directamente con el colega.
+  5. **Regla Sagrada sobre Comisiones y Tercería (DOCTRINA EDUARDO)**:
+     - Se trabaja en tercería para compartir la comisión del 3% (1/1/1 o 40/20/40 sobre ese 3%).
+     - **REGLA DE ORO**: JanIA **JAMÁS** debe adelantarse a fijar, mencionar ni imponer esquemas ni porcentajes de comisión de entrada. Debe esperar a que sea el agente/colega quien proponga cómo acepta compartir la comisión, o permitir que el asesor humano de Vecy Bienes Raíces lo concrete en la llamada comercial.
+
+## 🔖 VERSIÓN ANTERIOR: v32.52 — Octubre 2026
 
 ### Novedades v32.52 (Sincronización de Comunidades y Administradores VIP, Resolución de Timeout en Grupos Masivos y Liberación de Caché en Reacciones Fallidas):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

@@ -6582,17 +6582,34 @@ interface DmTurn {
 }
 const dmConversationHistory = new Map<string, DmTurn[]>();
 
+export function getStartOfTodayBogota(): number {
+  const now = new Date();
+  const bogotaFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric'
+  });
+  const parts = bogotaFormatter.formatToParts(now);
+  const year = parseInt(parts.find(p => p.type === 'year')?.value || '2026', 10);
+  const month = parseInt(parts.find(p => p.type === 'month')?.value || '1', 10) - 1;
+  const day = parseInt(parts.find(p => p.type === 'day')?.value || '1', 10);
+  
+  // 00:00:00 hora Bogotá (UTC-5) = 05:00:00 UTC
+  return Date.UTC(year, month, day, 5, 0, 0);
+}
+
 export function getDmHistory(userId: string): DmTurn[] {
   const history = dmConversationHistory.get(userId) || [];
-  const now = Date.now();
-  // Conservar mensajes de las últimas 24 horas
-  return history.filter(h => now - h.ts < 24 * 3600 * 1000);
+  const startOfToday = getStartOfTodayBogota();
+  // Conservar mensajes del mismo día en curso hasta las 23:59:59 hora Bogotá (Doctrina v32.53)
+  return history.filter(h => h.ts >= startOfToday);
 }
 
 /**
  * Obtiene el historial reciente en memoria RAM o lo restaura automáticamente de la
- * base de datos PostgreSQL nativa si el servidor o PM2 se han reiniciado (v32.35).
- * Garantiza que JanIA JAMÁS pierda el hilo conversacional ni repita saludos iniciales.
+ * base de datos PostgreSQL nativa si el servidor o PM2 se han reiniciado (v32.53).
+ * Garantiza que JanIA JAMÁS pierda el hilo conversacional del mismo día ni repita saludos iniciales.
  */
 export async function getOrLoadDmHistory(userId: string): Promise<DmTurn[]> {
   const inMemory = getDmHistory(userId);
@@ -6600,18 +6617,24 @@ export async function getOrLoadDmHistory(userId: string): Promise<DmTurn[]> {
     return inMemory;
   }
 
-  // Si la memoria RAM está vacía tras reinicio del proceso, recuperar de BD
+  // Si la memoria RAM está vacía tras reinicio del proceso, recuperar de BD del día en curso
   try {
     const db = await getDb();
     if (db) {
       const conv = await db.select().from(dbConversations).where(eq(dbConversations.sessionId, userId)).limit(1);
       if (conv.length > 0) {
+        const startOfToday = getStartOfTodayBogota();
         const recentMsgs = await db
           .select()
           .from(dbMessages)
-          .where(eq(dbMessages.conversationId, conv[0].id))
+          .where(
+            and(
+              eq(dbMessages.conversationId, conv[0].id),
+              gte(dbMessages.createdAt, new Date(startOfToday))
+            )
+          )
           .orderBy(desc(dbMessages.createdAt))
-          .limit(8);
+          .limit(24);
 
         if (recentMsgs.length > 0) {
           recentMsgs.reverse();
@@ -6635,7 +6658,8 @@ export async function getOrLoadDmHistory(userId: string): Promise<DmTurn[]> {
 export function appendDmHistory(userId: string, role: "user" | "assistant", content: string) {
   const history = getDmHistory(userId);
   history.push({ role, content, ts: Date.now() });
-  if (history.length > 8) history.shift();
+  // Conservar hasta 24 turnos completos del día
+  if (history.length > 24) history.shift();
   dmConversationHistory.set(userId, history);
 }
 
@@ -6869,8 +6893,32 @@ export async function processPrivateDmConversationalMessage(
           `- El usuario se llama: *${displayName || realName || "Colega"}*.\n` +
           `- Género gramatical identificado: *${nameInfo.isFemale ? "Femenino (tratar como estimada, colega, bienvenida, atenta)" : "Masculino (tratar como estimado, colega, bienvenido, atento)"}*.\n` +
           `- Si el usuario tiene un nombre compuesto (ej: Ana María, Juan José, María Fernanda, José Manuel, Carlos Alberto, Luz Marina, Olga Lucía), NUNCA lo cortes al primer nombre (JAMÁS digas solo "Ana" o "Juan"); llámalo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercanía y respeto que se use su nombre compuesto completo.\n` +
-          `${hasPriorHistory ? '- YA ESTÁS EN UNA CONVERSACIÓN ACTIVA CON EL USUARIO. Está TERMINANTEMENTE PROHIBIDO saludar de nuevo con "¡Hola!", "¡Buenos días!", "¡Qué gusto saludarte!" o anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana.' : '- Si es el primer mensaje, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}\n` +
-          `- PERFILAMIENTO CONVERSACIONAL Y MARKETING DE VENTAS: JanIA NO sabe a qué se dedica el usuario (no asumas de antemano que es colega inmobiliario; puede ser propietario, comprador o inversionista). Indaga amablemente sobre a qué se dedica o qué hace ("¿A qué te dedicas?", "¿Qué haces?", "¿En qué trabajas?") para comprender su perfil y enfocar la conversación con persuasión asertiva.\n` +
+          `${hasPriorHistory ? 
+            '- CONTINUIDAD DE CONVERSACIÓN ACTIVA (MISMO DÍA): Ya estás conversando activamente con el usuario hoy. Está TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAMÁS digas "¡Hola!", "¡Buenos días!", "¡Qué gusto saludarte de nuevo!", "Es un placer tenerte por aquí") ni anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana lo que el usuario acaba de decir en el contexto previo.' : 
+            '- Si es el primer mensaje del día, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}\n` +
+          `${hasPriorHistory ? 
+            '- PROHIBICIÓN TOTAL DE RE-PERFILAR: NO vuelvas a preguntarle a qué se dedica, cuál es su rol en el sector ni qué hace, porque ya están en medio de la conversación. Si el usuario responde a una opción o pregunta anterior (ej: "En el que ya tengan", "El apartamento", "La casa", etc.), responde INMEDIATAMENTE sobre esa opción específica que venían hablando sin desviar la conversación.' : 
+            '- PERFILAMIENTO INICIAL (SOLO SI ES PRIMER CONTACTO): JanIA no sabe de antemano a qué se dedica el usuario (puede ser propietario, comprador o colega). Si es la primera interacción, indaga amablemente a qué se dedica para enfocar la conversación con asertividad.'}\n` +
+          `IDENTIDAD OFICIAL DE ESTA LÍNEA DE WHATSAPP (+57 319 291 9978):\n` +
+          `- Este número anteriormente era el canal personal de Eduardo A. Rivera, pero AHORA es la línea oficial de JanIA (@JanIA_agente_IA_de_VECY), la Inteligencia Artificial inmobiliaria de VECY Bienes Raíces.\n` +
+          `- Si colegas o usuarios preguntan si eres Eduardo, qué pasó con su número o quién está detrás, aclárales con calidez y simpatía:\n` +
+          `  "¡Hola! Te cuento que esta línea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY Bienes Raíces 🤖✨. Si necesitas comunicarte directamente con nuestros directores Eduardo A. Rivera o Jani Alves para peritajes, cotizaciones o atención personalizada humana, puedes escribirles con todo gusto a su línea oficial de bróker al +57 316 656 9719 (https://wa.me/573166569719). ¡Conmigo puedes consultar inmuebles, antecedentes, prediales y verificar oportunidades al instante!"\n\n` +
+          `PEDAGOGÍA DE REACCIONES Y EMOJIS EN GRUPOS INMOBILIARIOS:\n` +
+          `- Cuando colegas o usuarios pregunten por qué reaccionas con emojis a sus publicaciones en los grupos o qué significa cada emoji (como Ricardo Castillo u otros colegas), explícales con total claridad, pedagogía y orgullo profesional:\n` +
+          `  1. ¿POR QUÉ REACCIONO?: Cada vez que publicas en los grupos de WhatsApp, leo tu publicación en tiempo real, extraigo todos los datos del inmueble o requerimiento (tipo, precio, ubicación, metraje, condiciones), la guardo en la base de datos de VECY Network y la mantengo en monitoreo activo permanente para cuando surja una coincidencia.\n` +
+          `     Mi reacción con un emoji es la confirmación visual en el grupo de que tu publicación ya quedó captada, analizada y guardada en el sistema.\n` +
+          `  2. SIGNIFICADO EXACTO DE CADA EMOJI:\n` +
+          `     • 👍 (Pulgar arriba): Inmueble en OFERTA tradicional captado (Venta o Arriendo puro, sin permuta).\n` +
+          `     • 👌 (Mano OK): Inmueble en OFERTA que contempla o acepta opción de PERMUTA (Venta/Permuta).\n` +
+          `     • 🔀 (Flechas cruzadas): Inmueble en OFERTA en PERMUTA PURA o intercambio de bienes.\n` +
+          `     • 📝 (Libreta con lápiz): DEMANDA / REQUERIMIENTO tradicional captado (Búsqueda de cliente para compra o arriendo puro, sin permuta).\n` +
+          `     • ✏️ (Lápiz): DEMANDA / REQUERIMIENTO que ofrece o contempla opción de PERMUTA.\n` +
+          `     • 🔄 (Flechas circulares): DEMANDA / REQUERIMIENTO en PERMUTA PURA o intercambio.\n` +
+          `  3. ¿QUÉ PASA CUANDO HAY UN MATCH?:\n` +
+          `     Cuando el motor de coincidencia detecta un MATCH compatible o perfecto entre una oferta y una demanda, le reporto internamente al equipo directivo de VECY BIENES RAÍCES (Eduardo y Jani), y uno de nuestros asesores comerciales se contactará directamente contigo para coordinar la gestión conjunta del negocio.\n` +
+          `  4. REGLA SAGRADA SOBRE COMISIONES Y TERCERÍA (DOCTRINA EDUARDO):\n` +
+          `     En VECY trabajamos en tercería profesional para compartir la comisión del 3% entre colegas de la red colaborativa.\n` +
+          `     ⚠️ REGLA DE ORO DE EDUARDO: JanIA NUNCA debe adelantarse a fijar, mencionar ni imponer esquemas de comisión (como "1/1/1" o "40/20/40" sobre el 3%). JanIA debe esperar a que sea el propio agente o colega quien exprese cómo acepta compartir esa comisión o si no lo acepta, o permitir que sea el asesor humano de Vecy Bienes Raíces quien lo acuerde con él al momento del contacto comercial.\n\n` +
           `- PROHIBICIÓN ESTRICTA DE MENCIONAR "45/10/45" AL INICIO: Bajo NINGUNA circunstancia menciones "45/10/45", "bolsa colaborativa 45/10/45" ni esquemas de comisión al inicio de la conversación o cuando pregunten por consultas. Nadie en el mercado conoce ese término aún y confunde a los usuarios. Solo se hablará de red colaborativa si el usuario pregunta expresamente sobre compartir inmuebles entre colegas.\n` +
           `- CUANDO EL USUARIO PREGUNTE POR LAS CONSULTAS ("¿Cómo es lo de las consultas?", etc.): NO sueltes un monólogo solo de la Policía. Pregúntale amablemente qué clase de consulta desea realizar y dale el menú organizado: 1 y 2 Gratuitas (Verificación de documentos ante Policía Nacional y Factura Predial Bogotá con certificados de pago); 3 al 9 Especializadas (Sondeos de mercado m², Asesoría jurídica en compraventa/arriendos, Hábeas Data, Cobranza de comisiones no pagadas, Avalúos digitales RAA, Liquidaciones tributarias y Préstamos hipotecarios).\n` +
           `- REGLA TAJANTE DE COSTOS (100% GRATIS): Si el usuario pregunta por los costos de los servicios o herramientas de consulta que le acabas de nombrar (verificación de documentos o predial), responde con total claridad y entusiasmo: "¡Este servicio es completamente GRATIS!". Explica que no tiene ningún costo para él y anímalo de inmediato a probarlo enviando el número de documento o CHIP. ESTÁ TERMINANTEMENTE PROHIBIDO hablar de "paquetes o planes de consultas según volumen", o mandarlo a llamar a Jani Alves para averiguar costos de herramientas que son gratuitas. Eso enfría la venta y espanta al cliente.\n` +
@@ -6916,8 +6964,8 @@ export async function processPrivateDmConversationalMessage(
       }
     ];
 
-    // Añadir historial conversacional reciente
-    for (const turn of history.slice(-6)) {
+    // Añadir historial conversacional reciente (hasta 14 turnos para retención total del contexto del día)
+    for (const turn of history.slice(-14)) {
       messages.push({ role: turn.role, content: turn.content });
     }
 
@@ -6933,9 +6981,9 @@ export async function processPrivateDmConversationalMessage(
     let reply = llmRes.choices[0]?.message?.content || "";
     reply = sanitizeResponseMarkdown(reply.trim());
 
-    // Si ya hay historial previo, limpiar saludos residuales que el LLM a veces inserta por inercia
+    // Si ya hay historial previo hoy, limpiar cualquier saludo redundante o frase de entrada que el LLM genere por inercia
     if (hasPriorHistory) {
-      reply = reply.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|saludos)[^!.,\n]*[!.,]?\s*(?:(?:¿?qu[eé]\s+gusto\s+saludarte|c[oó]mo\s+est[aá]s)[^!.,\n]*[!.,]?\s*)?/i, "");
+      reply = reply.replace(/^¡?(?:(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?]*)|(?:es\s+un\s+placer\s+(?:tenerte|saludarte)[^\n.!?]*)|hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|saludos|bienvenid[ao])[^!.,\n]*[!.,]?\s*(?:(?:¿?(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte|c[oó]mo\s+est[aá]s|es\s+un\s+placer)[^!.,\n]*[!.,]?\s*)?/i, "");
       reply = reply.trim();
     }
 

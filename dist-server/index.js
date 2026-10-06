@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.52";
+    VECY_VERSION = "v32.53";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -11720,15 +11720,16 @@ ${quotedNote}` : quotedNote;
                     console.log(`[JANIA-MATCH] Sesi\xF3n reactivada autom\xE1ticamente mediante ${isCedulaReq ? "verificaci\xF3n de documento" : isPredialReq ? "asistencia de predial" : "comando de cliente"} para ${senderId}`);
                   }
                 }
-                let buffer = this.dmMessageBuffers.get(senderId);
+                const targetDmId = resolvedSenderId || senderId;
+                let buffer = this.dmMessageBuffers.get(targetDmId);
                 if (!buffer) {
                   buffer = { messages: [], timer: null };
-                  this.dmMessageBuffers.set(senderId, buffer);
+                  this.dmMessageBuffers.set(targetDmId, buffer);
                 }
                 buffer.messages.push(msg);
                 if (!isSelfChat) {
                   try {
-                    await this.sock.sendPresenceUpdate("composing", senderId);
+                    await this.sock.sendPresenceUpdate("composing", targetDmId);
                   } catch (_) {
                   }
                 }
@@ -11736,9 +11737,9 @@ ${quotedNote}` : quotedNote;
                   clearTimeout(buffer.timer);
                 }
                 buffer.timer = setTimeout(async () => {
-                  this.dmMessageBuffers.delete(senderId);
+                  this.dmMessageBuffers.delete(targetDmId);
                   try {
-                    await this.processBufferedDmMessages(senderId, userName, rawPhone, buffer.messages, isAdmin, isSelfChat);
+                    await this.processBufferedDmMessages(targetDmId, userName, rawPhone, buffer.messages, isAdmin, isSelfChat);
                   } catch (err) {
                     console.error("[JANIA-MATCH] Error al procesar mensajes de DM acumulados:", err);
                   }
@@ -11810,6 +11811,7 @@ ${quotedNote}` : quotedNote;
         const chatId = senderId;
         const body = combinedBody;
         console.log(`[JANIA-MATCH] [DM] Procesando buffer DM de ${messages2.length} mensaje(s) de ${senderId} (${userName}, Tel: ${rawPhone}): "${body}"`);
+        await this.logToDb(senderId, "user", body);
         try {
           const { getEmpatheticReactionEmoji: getEmpatheticReactionEmoji2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
           const contextualEmoji = getEmpatheticReactionEmoji2(body, {
@@ -15706,6 +15708,7 @@ __export(janIA_exports, {
   getEmojiForCalificacion: () => getEmojiForCalificacion,
   getLiveStats: () => getLiveStats,
   getOrLoadDmHistory: () => getOrLoadDmHistory,
+  getStartOfTodayBogota: () => getStartOfTodayBogota,
   handleAmendmentUpdate: () => handleAmendmentUpdate,
   handleDetectedMatches: () => handleDetectedMatches,
   hasRealEstateTextKeyword: () => hasRealEstateTextKeyword,
@@ -20534,10 +20537,24 @@ function sanitizeResponseMarkdown(text2) {
   if (!text2) return "";
   return text2.replace(/\*\*/g, "*");
 }
+function getStartOfTodayBogota() {
+  const now = /* @__PURE__ */ new Date();
+  const bogotaFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric"
+  });
+  const parts = bogotaFormatter.formatToParts(now);
+  const year = parseInt(parts.find((p) => p.type === "year")?.value || "2026", 10);
+  const month = parseInt(parts.find((p) => p.type === "month")?.value || "1", 10) - 1;
+  const day = parseInt(parts.find((p) => p.type === "day")?.value || "1", 10);
+  return Date.UTC(year, month, day, 5, 0, 0);
+}
 function getDmHistory(userId) {
   const history = dmConversationHistory.get(userId) || [];
-  const now = Date.now();
-  return history.filter((h) => now - h.ts < 24 * 3600 * 1e3);
+  const startOfToday = getStartOfTodayBogota();
+  return history.filter((h) => h.ts >= startOfToday);
 }
 async function getOrLoadDmHistory(userId) {
   const inMemory = getDmHistory(userId);
@@ -20549,7 +20566,13 @@ async function getOrLoadDmHistory(userId) {
     if (db) {
       const conv = await db.select().from(conversations).where(eq7(conversations.sessionId, userId)).limit(1);
       if (conv.length > 0) {
-        const recentMsgs = await db.select().from(messages).where(eq7(messages.conversationId, conv[0].id)).orderBy(desc2(messages.createdAt)).limit(8);
+        const startOfToday = getStartOfTodayBogota();
+        const recentMsgs = await db.select().from(messages).where(
+          and4(
+            eq7(messages.conversationId, conv[0].id),
+            gte(messages.createdAt, new Date(startOfToday))
+          )
+        ).orderBy(desc2(messages.createdAt)).limit(24);
         if (recentMsgs.length > 0) {
           recentMsgs.reverse();
           const restored = recentMsgs.map((m) => ({
@@ -20570,7 +20593,7 @@ async function getOrLoadDmHistory(userId) {
 function appendDmHistory(userId, role, content) {
   const history = getDmHistory(userId);
   history.push({ role, content, ts: Date.now() });
-  if (history.length > 8) history.shift();
+  if (history.length > 24) history.shift();
   dmConversationHistory.set(userId, history);
 }
 async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, success = true) {
@@ -20741,8 +20764,30 @@ REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA, G\xC9NERO Y NOMBRES COMPUESTOS:
 - El usuario se llama: *${displayName || realName || "Colega"}*.
 - G\xE9nero gramatical identificado: *${nameInfo.isFemale ? "Femenino (tratar como estimada, colega, bienvenida, atenta)" : "Masculino (tratar como estimado, colega, bienvenido, atento)"}*.
 - Si el usuario tiene un nombre compuesto (ej: Ana Mar\xEDa, Juan Jos\xE9, Mar\xEDa Fernanda, Jos\xE9 Manuel, Carlos Alberto, Luz Marina, Olga Luc\xEDa), NUNCA lo cortes al primer nombre (JAM\xC1S digas solo "Ana" o "Juan"); ll\xE1malo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercan\xEDa y respeto que se use su nombre compuesto completo.
-${hasPriorHistory ? '- YA EST\xC1S EN UNA CONVERSACI\xD3N ACTIVA CON EL USUARIO. Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo con "\xA1Hola!", "\xA1Buenos d\xEDas!", "\xA1Qu\xE9 gusto saludarte!" o anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana.' : '- Si es el primer mensaje, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}
-- PERFILAMIENTO CONVERSACIONAL Y MARKETING DE VENTAS: JanIA NO sabe a qu\xE9 se dedica el usuario (no asumas de antemano que es colega inmobiliario; puede ser propietario, comprador o inversionista). Indaga amablemente sobre a qu\xE9 se dedica o qu\xE9 hace ("\xBFA qu\xE9 te dedicas?", "\xBFQu\xE9 haces?", "\xBFEn qu\xE9 trabajas?") para comprender su perfil y enfocar la conversaci\xF3n con persuasi\xF3n asertiva.
+${hasPriorHistory ? '- CONTINUIDAD DE CONVERSACI\xD3N ACTIVA (MISMO D\xCDA): Ya est\xE1s conversando activamente con el usuario hoy. Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAM\xC1S digas "\xA1Hola!", "\xA1Buenos d\xEDas!", "\xA1Qu\xE9 gusto saludarte de nuevo!", "Es un placer tenerte por aqu\xED") ni anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana lo que el usuario acaba de decir en el contexto previo.' : '- Si es el primer mensaje del d\xEDa, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}
+${hasPriorHistory ? '- PROHIBICI\xD3N TOTAL DE RE-PERFILAR: NO vuelvas a preguntarle a qu\xE9 se dedica, cu\xE1l es su rol en el sector ni qu\xE9 hace, porque ya est\xE1n en medio de la conversaci\xF3n. Si el usuario responde a una opci\xF3n o pregunta anterior (ej: "En el que ya tengan", "El apartamento", "La casa", etc.), responde INMEDIATAMENTE sobre esa opci\xF3n espec\xEDfica que ven\xEDan hablando sin desviar la conversaci\xF3n.' : "- PERFILAMIENTO INICIAL (SOLO SI ES PRIMER CONTACTO): JanIA no sabe de antemano a qu\xE9 se dedica el usuario (puede ser propietario, comprador o colega). Si es la primera interacci\xF3n, indaga amablemente a qu\xE9 se dedica para enfocar la conversaci\xF3n con asertividad."}
+IDENTIDAD OFICIAL DE ESTA L\xCDNEA DE WHATSAPP (+57 319 291 9978):
+- Este n\xFAmero anteriormente era el canal personal de Eduardo A. Rivera, pero AHORA es la l\xEDnea oficial de JanIA (@JanIA_agente_IA_de_VECY), la Inteligencia Artificial inmobiliaria de VECY Bienes Ra\xEDces.
+- Si colegas o usuarios preguntan si eres Eduardo, qu\xE9 pas\xF3 con su n\xFAmero o qui\xE9n est\xE1 detr\xE1s, acl\xE1rales con calidez y simpat\xEDa:
+  "\xA1Hola! Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY Bienes Ra\xEDces \u{1F916}\u2728. Si necesitas comunicarte directamente con nuestros directores Eduardo A. Rivera o Jani Alves para peritajes, cotizaciones o atenci\xF3n personalizada humana, puedes escribirles con todo gusto a su l\xEDnea oficial de br\xF3ker al +57 316 656 9719 (https://wa.me/573166569719). \xA1Conmigo puedes consultar inmuebles, antecedentes, prediales y verificar oportunidades al instante!"
+
+PEDAGOG\xCDA DE REACCIONES Y EMOJIS EN GRUPOS INMOBILIARIOS:
+- Cuando colegas o usuarios pregunten por qu\xE9 reaccionas con emojis a sus publicaciones en los grupos o qu\xE9 significa cada emoji (como Ricardo Castillo u otros colegas), expl\xEDcales con total claridad, pedagog\xEDa y orgullo profesional:
+  1. \xBFPOR QU\xC9 REACCIONO?: Cada vez que publicas en los grupos de WhatsApp, leo tu publicaci\xF3n en tiempo real, extraigo todos los datos del inmueble o requerimiento (tipo, precio, ubicaci\xF3n, metraje, condiciones), la guardo en la base de datos de VECY Network y la mantengo en monitoreo activo permanente para cuando surja una coincidencia.
+     Mi reacci\xF3n con un emoji es la confirmaci\xF3n visual en el grupo de que tu publicaci\xF3n ya qued\xF3 captada, analizada y guardada en el sistema.
+  2. SIGNIFICADO EXACTO DE CADA EMOJI:
+     \u2022 \u{1F44D} (Pulgar arriba): Inmueble en OFERTA tradicional captado (Venta o Arriendo puro, sin permuta).
+     \u2022 \u{1F44C} (Mano OK): Inmueble en OFERTA que contempla o acepta opci\xF3n de PERMUTA (Venta/Permuta).
+     \u2022 \u{1F500} (Flechas cruzadas): Inmueble en OFERTA en PERMUTA PURA o intercambio de bienes.
+     \u2022 \u{1F4DD} (Libreta con l\xE1piz): DEMANDA / REQUERIMIENTO tradicional captado (B\xFAsqueda de cliente para compra o arriendo puro, sin permuta).
+     \u2022 \u270F\uFE0F (L\xE1piz): DEMANDA / REQUERIMIENTO que ofrece o contempla opci\xF3n de PERMUTA.
+     \u2022 \u{1F504} (Flechas circulares): DEMANDA / REQUERIMIENTO en PERMUTA PURA o intercambio.
+  3. \xBFQU\xC9 PASA CUANDO HAY UN MATCH?:
+     Cuando el motor de coincidencia detecta un MATCH compatible o perfecto entre una oferta y una demanda, le reporto internamente al equipo directivo de VECY BIENES RA\xCDCES (Eduardo y Jani), y uno de nuestros asesores comerciales se contactar\xE1 directamente contigo para coordinar la gesti\xF3n conjunta del negocio.
+  4. REGLA SAGRADA SOBRE COMISIONES Y TERCER\xCDA (DOCTRINA EDUARDO):
+     En VECY trabajamos en tercer\xEDa profesional para compartir la comisi\xF3n del 3% entre colegas de la red colaborativa.
+     \u26A0\uFE0F REGLA DE ORO DE EDUARDO: JanIA NUNCA debe adelantarse a fijar, mencionar ni imponer esquemas de comisi\xF3n (como "1/1/1" o "40/20/40" sobre el 3%). JanIA debe esperar a que sea el propio agente o colega quien exprese c\xF3mo acepta compartir esa comisi\xF3n o si no lo acepta, o permitir que sea el asesor humano de Vecy Bienes Ra\xEDces quien lo acuerde con \xE9l al momento del contacto comercial.
+
 - PROHIBICI\xD3N ESTRICTA DE MENCIONAR "45/10/45" AL INICIO: Bajo NINGUNA circunstancia menciones "45/10/45", "bolsa colaborativa 45/10/45" ni esquemas de comisi\xF3n al inicio de la conversaci\xF3n o cuando pregunten por consultas. Nadie en el mercado conoce ese t\xE9rmino a\xFAn y confunde a los usuarios. Solo se hablar\xE1 de red colaborativa si el usuario pregunta expresamente sobre compartir inmuebles entre colegas.
 - CUANDO EL USUARIO PREGUNTE POR LAS CONSULTAS ("\xBFC\xF3mo es lo de las consultas?", etc.): NO sueltes un mon\xF3logo solo de la Polic\xEDa. Preg\xFAntale amablemente qu\xE9 clase de consulta desea realizar y dale el men\xFA organizado: 1 y 2 Gratuitas (Verificaci\xF3n de documentos ante Polic\xEDa Nacional y Factura Predial Bogot\xE1 con certificados de pago); 3 al 9 Especializadas (Sondeos de mercado m\xB2, Asesor\xEDa jur\xEDdica en compraventa/arriendos, H\xE1beas Data, Cobranza de comisiones no pagadas, Aval\xFAos digitales RAA, Liquidaciones tributarias y Pr\xE9stamos hipotecarios).
 - REGLA TAJANTE DE COSTOS (100% GRATIS): Si el usuario pregunta por los costos de los servicios o herramientas de consulta que le acabas de nombrar (verificaci\xF3n de documentos o predial), responde con total claridad y entusiasmo: "\xA1Este servicio es completamente GRATIS!". Explica que no tiene ning\xFAn costo para \xE9l y an\xEDmalo de inmediato a probarlo enviando el n\xFAmero de documento o CHIP. EST\xC1 TERMINANTEMENTE PROHIBIDO hablar de "paquetes o planes de consultas seg\xFAn volumen", o mandarlo a llamar a Jani Alves para averiguar costos de herramientas que son gratuitas. Eso enfr\xEDa la venta y espanta al cliente.
@@ -20792,7 +20837,7 @@ QUI\xC9NES SOMOS:
 - VECY BIENES RA\xCDCES es un br\xF3ker virtual inmobiliario y una red colaborativa para Colombia, fundada por Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones). Web oficial: https://vecy-network.vercel.app.`
       }
     ];
-    for (const turn of history.slice(-6)) {
+    for (const turn of history.slice(-14)) {
       messages2.push({ role: turn.role, content: turn.content });
     }
     messages2.push({
@@ -20805,7 +20850,7 @@ QUI\xC9NES SOMOS:
     let reply = llmRes.choices[0]?.message?.content || "";
     reply = sanitizeResponseMarkdown(reply.trim());
     if (hasPriorHistory) {
-      reply = reply.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|saludos)[^!.,\n]*[!.,]?\s*(?:(?:¿?qu[eé]\s+gusto\s+saludarte|c[oó]mo\s+est[aá]s)[^!.,\n]*[!.,]?\s*)?/i, "");
+      reply = reply.replace(/^¡?(?:(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?]*)|(?:es\s+un\s+placer\s+(?:tenerte|saludarte)[^\n.!?]*)|hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|saludos|bienvenid[ao])[^!.,\n]*[!.,]?\s*(?:(?:¿?(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte|c[oó]mo\s+est[aá]s|es\s+un\s+placer)[^!.,\n]*[!.,]?\s*)?/i, "");
       reply = reply.trim();
     }
     if (!reply) {

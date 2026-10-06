@@ -7,6 +7,105 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.53 — 06 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Memoria Temporal del Hilo Conversacional del Mismo Día (hasta las 23:59)**:
+   - Eduardo señaló que JanIA ahora conversa muy bien, pero le falta meterse en contexto y no perder el hilo de las conversaciones, recordando todo lo que han hablado al menos en ese mismo día calendario hasta las 23:59:59.
+   - Adjuntó una captura de pantalla de conversación privada con el colega Ricardo Castillo Fraiz:
+     - Previamente JanIA le había preguntado a Ricardo sobre dos inmuebles concretos: el apartamento en Museo del Chicó o la compra en Santa Bárbara Occidental/Bella Suiza.
+     - Ricardo respondió: *"En el que ya tengan"*.
+     - JanIA, en vez de entender el contexto y responder sobre esos inmuebles, le volvió a dar la bienvenida formal (*"Qué gusto saludarte de nuevo, Ricardo Castillo Fraiz. Es un placer tenerte por aquí..."*) y le volvió a preguntar a qué se dedicaba (*"cuéntame un poco más, ¿a qué te dedicas o cuál es tu rol principal en el sector inmobiliario?"*).
+2. **Identidad de la Línea WhatsApp (+573192919978)**:
+   - Eduardo explicó que muchos colegas inmobiliarios van a preguntarle cosas porque creían que el número `+573192919978` seguía siendo el personal de Eduardo y ahora es la línea oficial de JanIA (`@JanIA_agente_IA_de_VECY`).
+3. **Pedagogía de Emojis y Reacciones en Grupos Inmobiliarios**:
+   - Varios colegas (como Ricardo) no entienden por qué JanIA reacciona siempre con un emoji distinto a sus publicaciones en los grupos.
+   - JanIA debe explicarles pedagógicamente por qué coloca un emoji según sea el tipo o clase de OFERTA o DEMANDA y si tienen o no opción con PERMUTA.
+   - Explicarles cómo capta, analiza, extrae los datos, los guarda en la base de datos de VECY Network y los mantiene pendientes para cuando surja un MATCH.
+   - Si sale un MATCH positivo, JanIA le reporta al equipo directivo de VECY BIENES RAÍCES (Eduardo y Jani), y uno de nuestros asesores comerciales se contactará directamente con el colega.
+4. **Regla Sagrada sobre Comisiones y Tercería**:
+   - En VECY se trabaja en TERCERÍA para compartir la comisión del 3% (1/1/1 o 40/20/40 sobre ese 3%).
+   - **REGLA DE ORO DE EDUARDO**: JanIA **NO DEBE** decirles estos porcentajes ni esquemas de comisión por iniciativa propia. Debe esperar a que sea el agente/colega quien proponga cómo acepta compartir la comisión o si no lo acepta, o permitir que el asesor humano de Vecy Bienes Raíces lo concrete en el contacto comercial.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Amputación de Historial en Memoria RAM a 8 Turnos y Falta de Persistencia en PostgreSQL**:
+   - En `server/_core/janIA.ts`, la memoria en RAM (`dmConversationHistory`) recortaba el historial a tan solo 8 turnos (`if (history.length > 8) history.shift()`). Tras 4 intercambios, los mensajes iniciales (donde se habían presentado los inmuebles) desaparecían de la memoria.
+   - En `server/_core/whatsapp-match.ts`, el mensaje entrante del usuario en DMs no se registraba de inmediato en la base de datos PostgreSQL (`messages` / `dbMessages`), por lo que al ocurrir cualquier reinicio de PM2 solo se recuperaban los mensajes de salida de JanIA, perdiendo el contexto de las respuestas del usuario.
+2. **Sobre-instrucción Rígida de Perfilamiento en el System Prompt de DMs**:
+   - El system prompt contenía la directriz: *"JanIA NO sabe a qué se dedica el usuario... Indaga amablemente sobre a qué se dedica o qué hace"*. Gemini interpretaba que en cada turno debía insistir con la pregunta de perfilamiento.
+   - La regla contra saludos redundantes solo contemplaba *"¡Hola!"* y no cubría expresiones como *"Qué gusto saludarte de nuevo"* o *"Es un placer tenerte por aquí"*.
+3. **Falta de Reglas Doctrinales sobre la Nueva Identidad Telefónica y los Emojis de Grupos**:
+   - JanIA no contaba con instrucciones explícitas sobre cómo responder a las dudas de colegas respecto al cambio de dueño del número `+573192919978`, ni sobre la taxonomía de los 6 emojis de negocio en los grupos y su vinculación con el motor de matching.
+
+### Acciones Técnicas Ejecutadas
+1. **Memoria Temporal Anclada al Día en Curso (Hasta las 23:59 Bogotá) (`server/_core/janIA.ts`)**:
+   - Creada función `getStartOfTodayBogota()` basada en la zona horaria `America/Bogota` (UTC-5) para determinar las 00:00:00 del día en curso.
+   - `getDmHistory()` conserva todos los mensajes del día en curso (`ts >= startOfTodayBogota`).
+   - Capacidad de memoria en RAM ampliada a **24 turnos completos**.
+   - `getOrLoadDmHistory()` sincronizado para restaurar hasta 24 mensajes de PostgreSQL de la fecha actual si la memoria RAM se reinicia.
+2. **Persistencia Garantizada de Entrada y Salida en PostgreSQL (`server/_core/whatsapp-match.ts`)**:
+   - En `processBufferedDmMessages`, se añadió `await this.logToDb(senderId, 'user', body)` inmediatamente al recibir el texto del usuario, garantizando persistencia bidireccional en tiempo real.
+   - Buffer de mensajes unificado por `targetDmId` (`resolvedSenderId`) para evitar dispersión entre LIDs y números `@s.whatsapp.net`.
+3. **Continuidad del Hilo y Erradicación de Re-Saludos y Re-Perfilamiento (`server/_core/janIA.ts`)**:
+   - Si `hasPriorHistory` es verdadero:
+     - Prohibición absoluta de re-saludar ("Qué gusto saludarte de nuevo", "Hola", etc.).
+     - Prohibición absoluta de re-perfilar ("¿a qué te dedicas?").
+     - Respuesta directa a las alternativas o inmuebles discutidos en el turno previo.
+   - Se aumentó el historial provisto a Gemini de 6 a **14 turnos**.
+   - Regex de limpieza reforzada para suprimir de raíz cualquier saludo residual generado por inercia del LLM.
+4. **Doctrina de Identidad Telefónica y Pedagogía de Emojis de Grupos (`server/_core/janIA.ts`)**:
+   - Explicación afectuosa de que la línea `+573192919978` es ahora el canal oficial de JanIA (@JanIA_agente_IA_de_VECY), y remisión a Eduardo A. Rivera y Jani Alves en el `+573166569719` para atención comercial personalizada.
+   - Pedagogía de los 6 emojis según OFERTA / DEMANDA y PERMUTA:
+     * 👍: Oferta tradicional (Venta/Arriendo sin permuta).
+     * 👌: Oferta con opción de permuta (Venta/Permuta).
+     * 🔀: Oferta permuta pura o intercambio.
+     * 📝: Demanda tradicional (Compra/Arriendo sin permuta).
+     * ✏️: Demanda con opción de permuta.
+     * 🔄: Demanda permuta pura o intercambio.
+   - Explicación del ciclo: Captación -> Extracción -> Almacenamiento en BD -> Monitoreo de MATCH -> Reporte a Eduardo y Jani -> Contacto por asesor comercial.
+   - **Regla Sagrada de Tercería**: Silencio sobre esquemas o porcentajes de comisión (1/1/1 o 40/20/40), esperando la iniciativa del colega o la llamada del asesor humano.
+5. **Incremento de Versión, Pruebas y Despliegue**:
+   - Versión oficial incrementada a **v32.53** (`32.53.0`) en `shared/const.ts` y `package.json`.
+   - Test unitario de regresión aprobado en `server/__tests__/regression.test.ts`.
+   - 148/148 pruebas Vitest aprobadas al 100%.
+   - Compilación limpia con `tsc --noEmit` (0 errores) y `npm run build` en 10.75s.
+
+---
+
+## 📋 SESIÓN v32.52 — 06 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Consulta sobre Categorías de Inmuebles y Grupos donde Actúa JanIA**:
+   - Eduardo preguntó en qué tipos de inmuebles se fija JanIA y en qué grupos está actuando, señalando que en capturas de comunidades masivas no se veían reacciones en varios grupos.
+   - Suministró el listado de administradores inmobiliarios y sus grupos: Armando Cortés (+573003600006), Julieth Martínez (+573123112205), Victoria Jiménez (+573132411598), Camilo Sanabria (+573115142754), Moisés Rojas (+573044233410), Dahianna Castro (+573156011720), Nancy Zamorano (+573177838635), Lia Janeth Rivas (+573103055109), Carolina Rodríguez (+573212857044), Caro Rodriguez (+14075096206), Andrés Nieto (+573208626787) y Nubia Hernández (+573124311307 con *SOLO ARRIENDOS 🏠🏠🏠*).
+   - Consultó si JanIA requería una lista explícita de grupos para operar.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Confirmación Arquitectónica: Cero Listas Manuales Requeridas**:
+   - JanIA escucha de forma nativa vía Baileys el 100% de los chats y grupos a los que la línea `+573192919978` pertenezca. No requiere ni utiliza whitelists manuales.
+2. **Auditoría Empírica en Vivo de los 80 Grupos Activos (`/api/inspect-groups`)**:
+   - Se certificó que 57 de los 58 grupos administrados por los contactos listados por Eduardo están 100% conectados y en la línea.
+   - Única excepción: *SOLO ARRIENDOS 🏠🏠🏠* de Nubia Hernández (inactivo desde julio 28 de 2026 en BD; la línea no forma parte actualmente del grupo y solo requiere ser agregada nuevamente).
+3. **Causa Raíz de Reacciones Faltantes en Grupos Masivos (>600 miembros)**:
+   - En grupos de 800 a 960 miembros, la distribución de claves Signal `senderKeyDistributionMessage` toma entre 4 y 7 segundos por WebSocket.
+   - El timeout previo de 3s en `safeReact` interrumpía la operación con `Timeout 3s reacción`.
+   - **Envenenamiento de Caché**: El ID del mensaje se marcaba como reaccionado en memoria antes del envío. Al fallar por timeout, no se eliminaba de la memoria, provocando que los posteriores reintentos del Buffer descartaran la reacción creyendo que ya se había emitido.
+
+### Acciones Técnicas Ejecutadas
+1. **Ampliación de Timeout a 10s en `safeReact`**:
+   - Adaptado a la latencia real de cifrado en grupos masivos de hasta 1.024 miembros.
+2. **Liberación Inmediata de Caché ante Error (`whatsapp-match.ts`)**:
+   - En el bloque `catch` de `safeReact`, se ejecuta `this.reactedMessageIds.delete(msgId)` para permitir reintentos limpios posteriores.
+3. **Reconocimiento Orgánico de Administradores VIP (`VIP_COMMUNITY_ADMIN_PHONES`)**:
+   - Inclusión de los 12 números de los administradores e inferencia inmediata de contexto 100% inmobiliario (`isVipRealEstateGroup`) en `FAST-REACT` (<200ms).
+4. **Documentación del Catálogo Inmobiliario**:
+   - 12 Tipos de inmuebles y 8 modalidades transaccionales documentadas.
+5. **Incremento de Versión, Pruebas y Despliegue**:
+   - Versión oficial incrementada a **v32.52** (`32.52.0`).
+   - 147/147 pruebas Vitest aprobadas al 100%.
+
+---
+
 ## 📋 SESIÓN v32.51 — 06 Octubre 2026
 
 ### Solicitud de Eduardo
