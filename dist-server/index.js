@@ -27487,6 +27487,20 @@ async function startServer() {
               matchBot.saveMessageToStore(sentDoc.key.id, sentDoc.message);
             }
           }
+        } else if (req.body.isAudio || req.body.sendAudio || req.body.isVoiceNote) {
+          console.log(`[NOTIFICACI\xD3N-API] Sintetizando y enviando nota de voz de estudio a ${targetPhone} v\xEDa JanIA Match Bot (Baileys)...`);
+          const { textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+          const media = await textToSpeechMedia2(text2);
+          if (media && media.data) {
+            const audioBuffer = Buffer.from(media.data, "base64");
+            await matchBot.queuedSend(targetPhone, {
+              audio: audioBuffer,
+              mimetype: media.mimetype || "audio/ogg; codecs=opus",
+              ptt: true
+            }, { allowDirectMessage: true, skipDelay: true });
+          } else {
+            throw new Error("No se pudo sintetizar el audio de la nota de voz.");
+          }
         } else {
           console.log(`[NOTIFICACI\xD3N-API] Retransmitiendo mensaje a ${targetPhone} v\xEDa JanIA Match Bot (Baileys)...`);
           const options = {};

@@ -401,6 +401,20 @@ async function startServer() {
               matchBot.saveMessageToStore(sentDoc.key.id, sentDoc.message);
             }
           }
+        } else if (req.body.isAudio || req.body.sendAudio || req.body.isVoiceNote) {
+          console.log(`[NOTIFICACIÓN-API] Sintetizando y enviando nota de voz de estudio a ${targetPhone} vía JanIA Match Bot (Baileys)...`);
+          const { textToSpeechMedia } = await import("./whatsapp-utils");
+          const media = await textToSpeechMedia(text);
+          if (media && media.data) {
+            const audioBuffer = Buffer.from(media.data, 'base64');
+            await matchBot.queuedSend(targetPhone, {
+              audio: audioBuffer,
+              mimetype: media.mimetype || 'audio/ogg; codecs=opus',
+              ptt: true
+            }, { allowDirectMessage: true, skipDelay: true });
+          } else {
+            throw new Error("No se pudo sintetizar el audio de la nota de voz.");
+          }
         } else {
           console.log(`[NOTIFICACIÓN-API] Retransmitiendo mensaje a ${targetPhone} vía JanIA Match Bot (Baileys)...`);
           const options: any = {};
