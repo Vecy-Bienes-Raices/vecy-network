@@ -22103,17 +22103,44 @@ async function publishDailyPoll(targetDateBogota, force = false) {
     return { success: false, reason: lock.reason };
   }
   try {
-    const targetGroup = janiaMatchBot.buzonGroupId || "120363417740040773@g.us";
-    const pollSent = await janiaMatchBot.sendPollToGroup(poll.question, poll.options, targetGroup, 1);
+    const channelUrl = "https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b";
     if (janiaMatchBot.channelNewsletterId) {
+      console.log(`[CRON-POLL] \u{1F4E2} Publicando encuesta matutina en Canal Oficial (${janiaMatchBot.channelNewsletterId})...`);
       const channelText = `\u{1F4CA} *ENCUESTA DE LA COMUNIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F4CA}
 
 ${poll.question}
 
 ` + poll.options.map((opt, i) => `${i + 1}\uFE0F\u20E3 ${opt}`).join("\n") + `
 
-\u{1F4AC} *\xA1Vota en vivo en nuestro Grupo Oficial de Soporte Legal o d\xE9janos tu reacci\xF3n!* \u{1F91D}\u2728`;
-      await janiaMatchBot.sendDirectMessage(janiaMatchBot.channelNewsletterId, channelText, { allowDirectMessage: true }).catch(() => {
+\u{1F4AC} *\xA1D\xE9janos tu reacci\xF3n y comenta aqu\xED en nuestro Canal Oficial de Vecy!* \u{1F91D}\u2728`;
+      await janiaMatchBot.sendDirectMessage(janiaMatchBot.channelNewsletterId, channelText, { allowDirectMessage: true }).catch((e) => {
+        console.warn("[CRON-POLL] Error enviando a canal:", e?.message);
+      });
+    }
+    const promoShareText = `\u{1F4CA} *NUEVA ENCUESTA EN NUESTRO CANAL OFICIAL \u2014 VECY BIENES RA\xCDCES* \u{1F4CA}
+
+${poll.question}
+
+` + poll.options.map((opt, i) => `${i + 1}\uFE0F\u20E3 ${opt}`).join("\n") + `
+
+\u{1F449} *Colegas, los invitamos a votar, comentar y participar directamente en nuestro Canal Oficial:*
+\u{1F517} ${channelUrl}
+
+\xA1S\xEDguenos en el canal oficial para ver los resultados en vivo, primicias del gremio y actualizaciones exclusivas de JanIA! \u{1F680}\u2728`;
+    let pollSent = false;
+    const targetGroup2 = janiaMatchBot.buzonGroupId || "120363417740040773@g.us";
+    if (targetGroup2) {
+      console.log(`[CRON-POLL] \u{1F4E4} Compartiendo encuesta y enlace de canal en Grupo 2 (${targetGroup2})...`);
+      await janiaMatchBot.queuedSend(targetGroup2, promoShareText, { allowGroupMessage: true }).catch((e) => {
+        console.warn("[CRON-POLL] Error enviando invitaci\xF3n a Grupo 2:", e?.message);
+      });
+      pollSent = await janiaMatchBot.sendPollToGroup(poll.question, poll.options, targetGroup2, 1);
+    }
+    const targetGroup3 = janiaMatchBot.circuloGroupId || "120363403507276533@g.us";
+    if (targetGroup3) {
+      console.log(`[CRON-POLL] \u{1F4E4} Compartiendo encuesta y enlace de canal en Grupo 3 (${targetGroup3})...`);
+      await janiaMatchBot.queuedSend(targetGroup3, promoShareText, { allowGroupMessage: true }).catch((e) => {
+        console.warn("[CRON-POLL] Error enviando invitaci\xF3n a Grupo 3:", e?.message);
       });
     }
     await completeBroadcast(lock.broadcastId, {
@@ -22122,7 +22149,7 @@ ${poll.question}
       voiceText: poll.question,
       captionText: poll.options.join(" | ")
     });
-    console.log(`[CRON-POLL] \u2705 Encuesta matutina despachada exitosamente a Grupo 2 y Canal.`);
+    console.log(`[CRON-POLL] \u2705 Encuesta matutina despachada exitosamente al Canal Oficial y compartida en Grupos 2 y 3.`);
     return { success: true, pollSent, question: poll.question };
   } catch (err) {
     await failBroadcast(lock.broadcastId, err?.message);

@@ -974,16 +974,48 @@ export async function publishDailyPoll(targetDateBogota?: string, force: boolean
   }
 
   try {
-    // 2. Despachar encuesta nativa a Grupo 2 (Soporte Legal)
-    const targetGroup = whatsappBot.buzonGroupId || "120363417740040773@g.us";
-    const pollSent = await whatsappBot.sendPollToGroup(poll.question, poll.options, targetGroup, 1);
+    const channelUrl = "https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b";
 
-    // 3. Despachar al Canal de WhatsApp (Newsletter) en formato interactivo
+    // 2. Despachar al Canal Oficial de WhatsApp (Newsletter) como centro de votación principal
     if (whatsappBot.channelNewsletterId) {
-      const channelText = `📊 *ENCUESTA DE LA COMUNIDAD — VECY BIENES RAÍCES* 📊\n\n${poll.question}\n\n` +
+      console.log(`[CRON-POLL] 📢 Publicando encuesta matutina en Canal Oficial (${whatsappBot.channelNewsletterId})...`);
+      const channelText = `📊 *ENCUESTA DE LA COMUNIDAD — VECY BIENES RAÍCES* 📊\n\n` +
+        `${poll.question}\n\n` +
         poll.options.map((opt, i) => `${i + 1}️⃣ ${opt}`).join('\n') +
-        `\n\n💬 *¡Vota en vivo en nuestro Grupo Oficial de Soporte Legal o déjanos tu reacción!* 🤝✨`;
-      await whatsappBot.sendDirectMessage(whatsappBot.channelNewsletterId, channelText, { allowDirectMessage: true }).catch(() => {});
+        `\n\n💬 *¡Déjanos tu reacción y comenta aquí en nuestro Canal Oficial de Vecy!* 🤝✨`;
+      await whatsappBot.sendDirectMessage(whatsappBot.channelNewsletterId, channelText, { allowDirectMessage: true }).catch((e) => {
+        console.warn('[CRON-POLL] Error enviando a canal:', e?.message);
+      });
+    }
+
+    // 3. Compartir en Grupos 2 y 3 con mención y embudo de marketing hacia el Canal Oficial
+    const promoShareText = `📊 *NUEVA ENCUESTA EN NUESTRO CANAL OFICIAL — VECY BIENES RAÍCES* 📊\n\n` +
+      `${poll.question}\n\n` +
+      poll.options.map((opt, i) => `${i + 1}️⃣ ${opt}`).join('\n') +
+      `\n\n👉 *Colegas, los invitamos a votar, comentar y participar directamente en nuestro Canal Oficial:*` +
+      `\n🔗 ${channelUrl}` +
+      `\n\n¡Síguenos en el canal oficial para ver los resultados en vivo, primicias del gremio y actualizaciones exclusivas de JanIA! 🚀✨`;
+
+    let pollSent = false;
+
+    // Grupo 2: Soporte Legal, Tributario y Avalúos
+    const targetGroup2 = whatsappBot.buzonGroupId || "120363417740040773@g.us";
+    if (targetGroup2) {
+      console.log(`[CRON-POLL] 📤 Compartiendo encuesta y enlace de canal en Grupo 2 (${targetGroup2})...`);
+      await whatsappBot.queuedSend(targetGroup2, promoShareText, { allowGroupMessage: true }).catch((e) => {
+        console.warn('[CRON-POLL] Error enviando invitación a Grupo 2:', e?.message);
+      });
+      // Despachar también encuesta nativa interactiva para votación directa
+      pollSent = await whatsappBot.sendPollToGroup(poll.question, poll.options, targetGroup2, 1);
+    }
+
+    // Grupo 3: Proyecto Vecy Network
+    const targetGroup3 = whatsappBot.circuloGroupId || "120363403507276533@g.us";
+    if (targetGroup3) {
+      console.log(`[CRON-POLL] 📤 Compartiendo encuesta y enlace de canal en Grupo 3 (${targetGroup3})...`);
+      await whatsappBot.queuedSend(targetGroup3, promoShareText, { allowGroupMessage: true }).catch((e) => {
+        console.warn('[CRON-POLL] Error enviando invitación a Grupo 3:', e?.message);
+      });
     }
 
     // 4. Asentar en PostgreSQL
@@ -994,7 +1026,7 @@ export async function publishDailyPoll(targetDateBogota?: string, force: boolean
       captionText: poll.options.join(' | ')
     });
 
-    console.log(`[CRON-POLL] ✅ Encuesta matutina despachada exitosamente a Grupo 2 y Canal.`);
+    console.log(`[CRON-POLL] ✅ Encuesta matutina despachada exitosamente al Canal Oficial y compartida en Grupos 2 y 3.`);
     return { success: true, pollSent, question: poll.question };
   } catch (err: any) {
     await failBroadcast(lock.broadcastId, err?.message);
