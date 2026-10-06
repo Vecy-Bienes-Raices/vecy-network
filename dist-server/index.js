@@ -13557,7 +13557,7 @@ function formatDateSpanish(rawDate) {
   }
   return str;
 }
-function buildBrokerCallMeBotMessage(data) {
+function buildBrokerNotificationMessage(data) {
   const numSolicitud = data.solicitudId || data.solicitud_id || data.id || "Pendiente";
   const perfil = data.solicitante_perfil || data.solicitantePerfil || "Cliente directo";
   const nombre = data.solicitante_nombre || data.solicitanteNombre || "Solicitante";
@@ -13695,8 +13695,8 @@ async function sendAgendaWhatsAppNotifications(payload) {
   let clientSent = false;
   const numSolicitud = payload.solicitudId || payload.solicitud_id || payload.id || "N/A";
   try {
-    const brokerMsg = buildBrokerCallMeBotMessage(payload);
-    console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u{1F4E4} Enviando notificaci\xF3n CallMeBot al Br\xF3ker (+57 316 6569719)...`);
+    const brokerMsg = buildBrokerNotificationMessage(payload);
+    console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] \u{1F4E4} Enviando notificaci\xF3n de JanIA al Br\xF3ker (+57 316 6569719)...`);
     try {
       await janiaMatchBot.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE, brokerMsg);
       brokerSent = true;
@@ -27342,6 +27342,7 @@ async function startServer() {
   };
   app.post("/api/agenda/submit", handleAgendaSubmit);
   app.post("/api/solicitudes/submit", handleAgendaSubmit);
+  app.post("/api/submit", handleAgendaSubmit);
   app.get("/api/list-chats", async (req, res) => {
     try {
       if (!janiaMatchBot.isReady) {

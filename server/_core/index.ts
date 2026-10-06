@@ -197,6 +197,7 @@ async function startServer() {
 
   app.post("/api/agenda/submit", handleAgendaSubmit);
   app.post("/api/solicitudes/submit", handleAgendaSubmit);
+  app.post("/api/submit", handleAgendaSubmit);
 
   app.get("/api/list-chats", async (req, res) => {
     try {

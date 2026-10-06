@@ -96,9 +96,10 @@ export function formatDateSpanish(rawDate?: string | null): string {
 }
 
 /**
- * Construye el mensaje de notificación al Bróker en el formato CallMeBot histórico exacto
+ * Construye el mensaje oficial de notificación al Bróker de Vecy Bienes Raíces (+57 316 6569719)
+ * Despachado 100% nativo por el socket de JanIA (Baileys), conservando la estructura visual histórica solicitada por Eduardo.
  */
-export function buildBrokerCallMeBotMessage(data: AgendaWhatsAppPayload): string {
+export function buildBrokerNotificationMessage(data: AgendaWhatsAppPayload): string {
   const numSolicitud = data.solicitudId || data.solicitud_id || data.id || "Pendiente";
   const perfil = data.solicitante_perfil || data.solicitantePerfil || "Cliente directo";
   const nombre = data.solicitante_nombre || data.solicitanteNombre || "Solicitante";
@@ -192,6 +193,11 @@ ${waContactUrl}`
 }
 
 /**
+ * Alias de retrocompatibilidad doctrinal con pruebas y módulos previos
+ */
+export const buildBrokerCallMeBotMessage = buildBrokerNotificationMessage;
+
+/**
  * Construye el mensaje de confirmación de JanIA dirigido al solicitante / cliente
  */
 export function buildClientConfirmationMessage(data: AgendaWhatsAppPayload): string {
@@ -258,9 +264,9 @@ Si deseas cancelar, reagendar, tienes alguna duda o requieres otro tipo de servi
 }
 
 /**
- * Despacha de forma asíncrona y segura ambas notificaciones de WhatsApp:
- * 1. Al Bróker Oficial de Vecy Bienes Raíces (+57 316 6569719) en formato CallMeBot.
- * 2. Al Solicitante/Cliente con la confirmación de JanIA.
+ * Despacha de forma asíncrona y segura ambas notificaciones de WhatsApp vía socket nativo JanIA (Baileys):
+ * 1. Al Bróker Oficial de Vecy Bienes Raíces (+57 316 6569719) con el reporte de la cita.
+ * 2. Al Solicitante/Cliente con la confirmación personalizada de JanIA.
  */
 export async function sendAgendaWhatsAppNotifications(payload: AgendaWhatsAppPayload): Promise<{ brokerSent: boolean; clientSent: boolean }> {
   let brokerSent = false;
@@ -268,9 +274,9 @@ export async function sendAgendaWhatsAppNotifications(payload: AgendaWhatsAppPay
   const numSolicitud = payload.solicitudId || payload.solicitud_id || payload.id || "N/A";
 
   try {
-    // 1. Notificación al Bróker Oficial (+57 316 6569719)
-    const brokerMsg = buildBrokerCallMeBotMessage(payload);
-    console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] 📤 Enviando notificación CallMeBot al Bróker (+57 316 6569719)...`);
+    // 1. Notificación oficial al Bróker (+57 316 6569719) vía socket JanIA (Baileys)
+    const brokerMsg = buildBrokerNotificationMessage(payload);
+    console.log(`[AGENDA-WHATSAPP-#${numSolicitud}] 📤 Enviando notificación de JanIA al Bróker (+57 316 6569719)...`);
     
     try {
       await janiaMatchBot.sendDirectMessage(VECY_BROKER_OFFICIAL_PHONE, brokerMsg);
