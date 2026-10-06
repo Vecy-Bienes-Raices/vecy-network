@@ -7,6 +7,49 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.48 — 06 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Configuración de Presupuestos y Alertas en Google Cloud Billing**:
+   - Consulta sobre si debía activar opciones avanzadas en Google Cloud Console como Pub/Sub ("Crear un tema JanIA") o vincular canales de notificación de Monitoring.
+   - Ajuste del presupuesto mensual a $30.000 COP (100%) y $45.000 COP (150%) para amparar el consumo de IA.
+   - Preferencia por alertas directas y limpias por correo electrónico sin configuraciones complejas.
+2. **Reactivación de la Voz Humana de Estudio de JanIA (Google Cloud Text-to-Speech)**:
+   - Eduardo solicitó reactivar la hermosa voz humana de estudio de JanIA mediante Text-to-Speech ahora que cuenta con facturación activa en `Vecy APP`.
+   - Guiar el proceso en Google Cloud Console para habilitar `Cloud Text-to-Speech API` y crear la cuenta de servicio oficial.
+   - Eduardo descargó la clave JSON oficial: `gen-lang-client-0137076503-00b905fb5143.json` y la depositó en la raíz del proyecto.
+   - Conectar la cuenta de servicio al backend y activar la síntesis de voz en WhatsApp.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Depuración de Opciones de Presupuesto en Google Cloud**:
+   - Pub/Sub es un bus de mensajería empresarial para programadores que deseen apagar infraestructura mediante código; resulta innecesario para notificaciones a usuarios.
+   - Monitoring añade dependencias de canales externos (Slack, PagerDuty).
+   - Se instruyó a Eduardo desmarcar ambas opciones y mantener las dos casillas nativas de correo: administradores de facturación y propietarios del proyecto, garantizando avisos transparentes en su bandeja de entrada.
+2. **Arquitectura de Autenticación de Google Cloud Text-to-Speech**:
+   - Google Cloud Text-to-Speech API no soporta claves de API simples (`HTTP 401: API keys are not supported by this API`), exigiendo tokens de acceso OAuth2 emitidos por una Cuenta de Servicio (Service Account).
+   - La cuenta de servicio anterior pertenecía a `jania-evaluadora-pro`, proyecto suspendido y eliminado.
+   - Eduardo generó la nueva cuenta de servicio autorizada `jania-759@gen-lang-client-0137076503.iam.gserviceaccount.com` en el proyecto oficial `Vecy APP`.
+3. **Optimización de Prioridad de Voces en `whatsapp-utils.ts`**:
+   - Se removió la restricción histórica `sa.project_id === "jania-evaluadora-pro"`.
+   - Se configuró como Motor Oficial #1: **`es-US-Studio-B`** (Voz Humana de Estudio Cristalina, Despierta y Enérgica de JanIA) con parámetros acústicos optimizados (`speakingRate: 1.08, pitch: 0.8`), generando notas de voz en menos de 1 segundo.
+   - Como respaldo #2 se mantuvo `Gemini 3.1 Flash TTS` (Laomedeia), respaldo #3 `Neural2-A`, y como colchón a $0 COP el motor de Edge TTS (Dalia / Salomé).
+
+### Acciones Técnicas Ejecutadas
+1. **Seguridad y `.gitignore`**:
+   - Incorporado el patrón `gen-lang-client*.json` a `.gitignore` para blindar la clave contra GitHub Push Protection.
+2. **Instalación de Credenciales y Sincronización en VPS**:
+   - Copiado `gen-lang-client-0137076503-00b905fb5143.json` a `server/_core/google-service-account.json`.
+   - Sincronizado el archivo al servidor de producción VPS (`root@13.140.149.144:/var/www/vecy-network/server/_core/google-service-account.json`) mediante SCP.
+3. **Actualización de Código en `server/_core/whatsapp-utils.ts`**:
+   - Enlace directo del token OAuth2 con `texttospeech.googleapis.com` para `Studio-B`.
+   - Validación empírica generando audios de prueba en local y en el VPS (HTTP 200 OK en ambas instancias).
+4. **Pruebas de Regresión y Compilación**:
+   - Incremento de versión a `v32.48` (`32.48.0`).
+   - Test unitario Vitest para `Doctrina v32.48` aprobado (122/122 pruebas pasando al 100%).
+   - Compilación limpia con `tsc --noEmit` (0 errores) y `npm run build` en 13.59s.
+
+---
+
 ## 📋 SESIÓN v32.47 — 06 Octubre 2026
 
 ### Solicitud de Eduardo

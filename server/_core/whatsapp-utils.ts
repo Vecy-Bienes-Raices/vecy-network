@@ -421,7 +421,7 @@ async function getVertexAIAccessToken(): Promise<string | null> {
     }
 
     const sa = JSON.parse(fs.readFileSync(credPath, "utf8"));
-    if (!sa.client_email || !sa.private_key || sa.project_id === "jania-evaluadora-pro") {
+    if (!sa.client_email || !sa.private_key) {
       return null;
     }
 
@@ -498,106 +498,18 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
   const cleaned = cleanVoiceText(text);
   if (!cleaned) return null;
 
-  // 1. Motor Oficial Prioritario: Gemini 3.1 Flash TTS (Preview) — Voz Laomedeia (es-us) con OAuth2 Vertex AI
+  // 1. Motor Oficial Prioritario: Google Cloud Studio HD (es-US-Studio-B) — Voz Humana de Estudio Cristalina de JanIA
   try {
     const accessToken = await getVertexAIAccessToken();
     if (accessToken) {
-      const response = await fetch("https://texttospeech.googleapis.com/v1beta1/text:synthesize", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          input: {
-            prompt: "Read aloud in a warm, welcoming tone.",
-            text: cleaned
-          },
-          voice: {
-            languageCode: "es-us",
-            modelName: "gemini-3.1-flash-tts-preview",
-            name: "Laomedeia"
-          },
-          audioConfig: {
-            audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-            speakingRate: 1.0,
-            pitch: 0.0
-          }
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.audioContent) {
-          console.log(`[TTS-Media] ✓ Gemini 3.1 Flash TTS (Laomedeia) — ${cleaned.length} chars → audio generado.`);
-          const buffer = Buffer.from(data.audioContent, "base64");
-          return {
-            mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-            data: buffer.toString("base64"),
-            buffer
-          };
-        }
-      } else {
-        const errText = await response.text();
-        console.warn(`[TTS-Media] Gemini 3.1 Flash TTS error ${response.status}: ${errText.substring(0, 200)}`);
-      }
-    }
-  } catch (err: any) {
-    console.warn("[TTS-Media] Gemini 3.1 Flash TTS no disponible:", err?.message || err);
-  }
-
-  const candidateKeys = [
-    process.env.GOOGLE_TTS_API_KEY,
-  ].filter(k => k && k.startsWith('AIzaSy') && !k.includes('AIzaSyCGQ0rQMn0c8DN4XX6Qyp0U6EzDCKEjOq0')) as string[];
-
-  // 2. Respaldo Google Cloud: Chirp3-HD Erinome (es-US)
-  try {
-    for (const googleApiKey of candidateKeys) {
+      // Intento 1: Studio-B (Voz de Estudio Humana, Despierta y Enérgica)
       try {
-        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
+        const response = await fetch("https://texttospeech.googleapis.com/v1/text:synthesize", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            input: { text: cleaned },
-            voice: {
-              languageCode: "es-US",
-              name: "es-US-Chirp3-HD-Erinome"
-            },
-            audioConfig: {
-              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1.0,
-              pitch: 0.0
-            }
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.audioContent) {
-            console.log(`[TTS-Media] ✓ Google Cloud Chirp3-HD Erinome — ${cleaned.length} chars → audio generado.`);
-            const buffer = Buffer.from(data.audioContent, "base64");
-            return {
-              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-              data: buffer.toString("base64"),
-              buffer
-            };
-          }
-        }
-      } catch (keyErr: any) {
-        // Continuar
-      }
-    }
-  } catch (err: any) {
-    console.warn("[TTS-Media] Google Cloud Chirp3-HD Erinome no disponible:", err?.message || err);
-  }
-
-  // 2. Motor Oficial Google Cloud Studio HD (es-US-Studio-B) — Voz de Estudio Cristalina, Despierta y Enérgica
-  try {
-    for (const googleApiKey of candidateKeys) {
-      try {
-        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`
+          },
           body: JSON.stringify({
             input: { text: cleaned },
             voice: {
@@ -615,7 +527,52 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
         if (response.ok) {
           const data = await response.json();
           if (data.audioContent) {
-            console.log(`[TTS-Media] ✓ Google Cloud Studio-B (Voz Clara y Despierta) — ${cleaned.length} chars → audio generado.`);
+            console.log(`[TTS-Media] ✓ Google Cloud Studio-B (Voz Humana de Estudio JanIA) — ${cleaned.length} chars → audio generado.`);
+            const buffer = Buffer.from(data.audioContent, "base64");
+            return {
+              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
+              data: buffer.toString("base64"),
+              buffer
+            };
+          }
+        } else {
+          const errText = await response.text();
+          console.warn(`[TTS-Media] Google Cloud Studio-B error ${response.status}: ${errText.substring(0, 200)}`);
+        }
+      } catch (studioErr: any) {
+        console.warn("[TTS-Media] Studio-B no disponible:", studioErr?.message || studioErr);
+      }
+
+      // Intento 2: Gemini 3.1 Flash TTS (Preview) — Voz Laomedeia (es-us)
+      try {
+        const response = await fetch("https://texttospeech.googleapis.com/v1beta1/text:synthesize", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            input: {
+              prompt: "Read aloud in a warm, welcoming tone.",
+              text: cleaned
+            },
+            voice: {
+              languageCode: "es-us",
+              modelName: "gemini-3.1-flash-tts-preview",
+              name: "Laomedeia"
+            },
+            audioConfig: {
+              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
+              speakingRate: 1.0,
+              pitch: 0.0
+            }
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.audioContent) {
+            console.log(`[TTS-Media] ✓ Gemini 3.1 Flash TTS (Laomedeia) — ${cleaned.length} chars → audio generado.`);
             const buffer = Buffer.from(data.audioContent, "base64");
             return {
               mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
@@ -624,21 +581,18 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
             };
           }
         }
-      } catch (keyErr: any) {
-        // Continuar
+      } catch (geminiErr: any) {
+        console.warn("[TTS-Media] Gemini 3.1 Flash TTS no disponible:", geminiErr?.message || geminiErr);
       }
-    }
-  } catch (err: any) {
-    console.warn("[TTS-Media] Google Cloud Studio-B no disponible:", err?.message || err);
-  }
 
-  // 3. Motor Oficial Google Cloud Neural2 (es-US-Neural2-A)
-  try {
-    for (const googleApiKey of candidateKeys) {
+      // Intento 3: Google Cloud Neural2 (es-US-Neural2-A)
       try {
-        const response = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleApiKey}`, {
+        const response = await fetch("https://texttospeech.googleapis.com/v1/text:synthesize", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`
+          },
           body: JSON.stringify({
             input: { text: cleaned },
             voice: {
@@ -665,12 +619,12 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
             };
           }
         }
-      } catch (keyErr: any) {
-        // Continuar
+      } catch (neuralErr: any) {
+        console.warn("[TTS-Media] Google Cloud Neural2-A no disponible:", neuralErr?.message || neuralErr);
       }
     }
   } catch (err: any) {
-    console.warn("[TTS-Media] Google Cloud Neural2-A no disponible:", err?.message || err);
+    console.warn("[TTS-Media] Google Cloud TTS OAuth2 no disponible:", err?.message || err);
   }
 
   // 4. Respaldo Neuronal Humano: Dalia (es-MX) / Salomé (es-CO) con prosodia viva y transcodificación OGG Opus

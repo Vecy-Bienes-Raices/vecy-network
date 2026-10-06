@@ -322,6 +322,43 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.48 — Octubre 2026
+
+#### 📌 REACTIVACIÓN DE LA VOZ HUMANA DE ESTUDIO GOOGLE CLOUD TTS (STUDIO-B), SERVICE ACCOUNT OFICIAL DE VECY APP Y BLINDAJE DE PRESUPUESTO MENSUAL
+
+**Requerimiento y Objetivos:**
+1. **Configuración de Presupuestos y Notificaciones en Google Cloud Billing**:
+   - Asesorar a Eduardo sobre las opciones de alertas para descartar componentes innecesarios (Pub/Sub topics, Cloud Monitoring channels) y consolidar el canal nativo directo de correo electrónico hacia administradores y propietarios.
+   - Ajustar el presupuesto mensual a $30.000 COP (100%) y $45.000 COP (150%) para respaldar el consumo de IA.
+2. **Reactivación Oficial de Google Cloud Text-to-Speech**:
+   - Reincorporar la voz humana de estudio de JanIA mediante Google Cloud TTS bajo la cuenta de facturación activa en el proyecto `Vecy APP` (`gen-lang-client-0137076503`).
+   - Crear y descargar la nueva Cuenta de Servicio oficial con rol `Cloud Text-to-Speech User`.
+   - Conectar la síntesis en el backend de Node.js y validar la entrega de audios en WhatsApp.
+
+**Diagnóstico y Causas Raíz:**
+1. **Incompatibilidad de API Keys con Cloud Text-to-Speech**:
+   - Google Cloud Text-to-Speech rechaza peticiones autenticadas únicamente con `key=API_KEY` (arrojando HTTP 401 `API keys are not supported by this API`). Exige tokens OAuth2 emitidos por una Cuenta de Servicio (*Service Account*).
+   - El archivo `google-service-account.json` previo pertenecía al proyecto suspendido y eliminado `jania-evaluadora-pro`.
+   - Eduardo generó la cuenta de servicio oficial `jania-759@gen-lang-client-0137076503.iam.gserviceaccount.com` y descargó la clave JSON `gen-lang-client-0137076503-00b905fb5143.json`.
+2. **Priorización de la Voz Humana de Estudio (Studio-B)**:
+   - Se configuró como Motor Oficial #1: **`es-US-Studio-B`** (Voz de Estudio Cristalina, Despierta y Enérgica de JanIA) con parámetros acústicos optimizados (`speakingRate: 1.08, pitch: 0.8`), garantizando notas de voz con calidez humana en WhatsApp en menos de 1 segundo.
+   - Se mantuvo arquitectura multi-capa: Fallback 2: `Gemini 3.1 Flash TTS` (Laomedeia); Fallback 3: `Neural2-A`; Fallback 4: `msedge-tts` (Dalia / Salomé $0 COP); Fallback 5: Google Translate TTS libre.
+
+**Acciones Técnicas Ejecutadas:**
+1. **Seguridad**:
+   - Se agregó `gen-lang-client*.json` a `.gitignore` para proteger las credenciales contra repositorios remotos.
+2. **Instalación de Credenciales**:
+   - Instalado `gen-lang-client-0137076503-00b905fb5143.json` como `server/_core/google-service-account.json` en local y sincronizado al VPS (`root@13.140.149.144:/var/www/vecy-network/server/_core/google-service-account.json`) mediante SCP.
+3. **Refactorización de `server/_core/whatsapp-utils.ts`**:
+   - Eliminado el bloqueo histórico de proyecto y vinculado el token OAuth2 directo para `Studio-B`.
+   - Pruebas empíricas de síntesis aprobadas en local y en producción (HTTP 200 OK, audio MP3/OGG Opus generado en 0.8s).
+4. **Validación, Versión y Compilación**:
+   - Versión incrementada a `v32.48` (`32.48.0`).
+   - 122/122 pruebas unitarias Vitest aprobadas al 100%.
+   - Compilación limpia con `tsc --noEmit` (0 errores) y `npm run build` en 13.59s.
+
+---
+
 ### 🔖 v32.47 — Octubre 2026
 
 #### 📌 INTEGRACIÓN OFICIAL DE CLAVE DE PAGO GEMINI EN VECY APP (GOOGLE CLOUD BILLING), POOL QUÍNTUPLE DE FAILOVER INDESTRUCTIBLE EN JANIA, Y PARIDAD TOTAL DE AUTENTICACIÓN MULTIDOMINIO SUPABASE/GOOGLE EN VECY AGENDA PRO

@@ -2867,7 +2867,7 @@ Adriana Rebeca Orejuela`;
 
     it("Doctrina v32.47: Integración Oficial de Clave de Pago Gemini (Vecy APP Google Cloud Billing) y Pool Quíntuple de Failover", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v32.47");
+      expect(VECY_VERSION).toBe("v32.48");
 
       const fs = await import("fs");
       const envContent = fs.readFileSync(".env", "utf8");
@@ -2880,6 +2880,20 @@ Adriana Rebeca Orejuela`;
       expect(keys.length).toBeGreaterThanOrEqual(5);
       expect(keys[0].startsWith("AQ.Ab8RN6Kik")).toBe(true);
       expect(keys[0].endsWith("c7ePwg")).toBe(true);
+    });
+
+    it("Doctrina v32.48: Reactivación de Voz Humana de Estudio Google Cloud TTS (Studio-B) con Service Account Oficial de Vecy APP", async () => {
+      const fs = await import("fs");
+      const saPath = "server/_core/google-service-account.json";
+      expect(fs.existsSync(saPath)).toBe(true);
+
+      const sa = JSON.parse(fs.readFileSync(saPath, "utf8"));
+      expect(sa.project_id).toBe("gen-lang-client-0137076503");
+      expect(sa.client_email).toContain("jania-759@gen-lang-client-0137076503.iam.gserviceaccount.com");
+      expect(sa.private_key).toBeDefined();
+
+      const { textToSpeechMedia } = await import("../_core/whatsapp-utils");
+      expect(typeof textToSpeechMedia).toBe("function");
     });
   });
 });
