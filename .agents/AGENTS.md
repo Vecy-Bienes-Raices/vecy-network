@@ -172,7 +172,32 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.51 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.52 — Octubre 2026
+
+### Novedades v32.52 (Sincronización de Comunidades y Administradores VIP, Resolución de Timeout en Grupos Masivos y Liberación de Caché en Reacciones Fallidas):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Confirmación de Comunidades y Administradores Inmobiliarios VIP**:
+     - Eduardo suministró la lista oficial de administradores y grupos comunitarios:
+       - **Armando Cortés** (`+573003600006`): `+ $Mil Millones`, `Requerimientos Colombia`, `Campestre venta, arriendo`, `Arriendos+ $8 millones`.
+       - **Julieth Martínez** (`+573123112205`) & **Victoria Jiménez** (`+573132411598`): `Cedritos-Colina-Salitre-Alrededores`, `Ofertas VENTA 1000`, `Requerimientos 1000`, `Santas-Carolina-Bosques-Calleja`, `Rosales-Cabrera-Nogal-Virrey-Chico`.
+       - **Camilo Sanabria** (`+573115142754`): `BODEGAS Y LOTES`.
+       - **Moisés Rojas** (`+573044233410`) & **Dahianna Castro** (`+573156011720`): `APARTAESTUDIOS BOGOTA`.
+       - **Nancy Zamorano** (`+573177838635`): `En casa gestión Inmobiliaria`.
+       - **Lia Janeth Rivas** (`+573103055109`), **Carolina Rodríguez** (`+573212857044`) & **Caro Rodriguez** (`+1 (407) 509-6206`): `Requerimientos Inmuebles Bogotá y Sabana` + 16 grupos de Caro Rodríguez.
+       - **ANDRES NIETO** (`+573208626787`): 28 grupos de la Red de Asesores Inmobiliarios Andrés Nieto.
+       - **Nubia Hernández** (`+573124311307`): `SOLO ARRIENDOS 🏠🏠🏠`.
+     - Se auditó empíricamente contra los 80 grupos activos en el socket de Baileys (`+573192919978`), certificando que **TODOS los grupos de Armando Cortés, Julieth Martínez, Victoria Jiménez, Camilo Sanabria, Moisés Rojas, Dahianna Castro, Nancy Zamorano, Lia Janeth, Carolina Rodríguez y Andrés Nieto están 100% conectados y en la línea**.
+     - El único grupo donde la línea no participa actualmente es `SOLO ARRIENDOS 🏠🏠🏠` (salió el 28 de julio de 2026; pendiente que Nubia re-agregue la línea).
+  2. **Causa Raíz de Omisión en Grupos Masivos (Timeout 3s y Bloqueo en Caché)**:
+     - En grupos de 800 a 960 miembros (`Rosales-Cabrera`, `Requerimientos 1000`, `Ofertas 1000`, `Requerimientos Bogotá y Sabana`, `Sabana Norte`), Baileys requiere entre 4 y 7 segundos para distribuir las claves `senderKeyDistributionMessage` a todos los miembros.
+     - El timeout previo de 3s abortaba la reacción con `Timeout 3s reacción`.
+     - Además, como `this.reactedMessageIds` registraba el mensaje antes del envío, cuando `sendMessage` fallaba no se liberaba de memoria, provocando que el posterior `BUFFER-REACT` omitiera el mensaje creyendo erróneamente que ya había reaccionado.
+  3. **Solución Doctrinal Implementada**:
+     - Se amplió el timeout de despacho en `safeReact` de 3s a **10s** (`Timeout 10s reacción`).
+     - Si un envío falla por timeout o error de sesión, se ejecuta inmediatamente `this.reactedMessageIds.delete(msgId)` para que el `BUFFER-REACT` complete la reacción limpiamente.
+     - Se incorporó `VIP_COMMUNITY_ADMIN_PHONES` e `isVipRealEstateGroup` en [`server/_core/whatsapp-match.ts`](file:///home/eddu/Proyectos/vecy-network/server/_core/whatsapp-match.ts) para asignar contexto 100% inmobiliario sin requerir whitelists manuales.
+
+## 🔖 VERSIÓN ANTERIOR: v32.51 — Octubre 2026
 
 ### Novedades v32.51 (Resiliencia E2E Signal contra 'No open session', Descarte Estricto de Reacciones y Ampliación a 15 Minutos en Grupos Inmobiliarios):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

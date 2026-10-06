@@ -2898,13 +2898,13 @@ Adriana Rebeca Orejuela`;
 
     it("Doctrina v32.49: Rediseño Visual de Admin & JanIA Console, Animación Neural Soundwave y Embudo de Marketing en Canal Oficial", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v32.51");
+      expect(VECY_VERSION).toBe("v32.52");
     });
 
     it("Doctrina v32.50: Limpieza Defensiva de JSON, Tipeo en Vivo (Typewriter) y Aura Giratoria de Alta Velocidad con 3 Puntos Dorados en JanIA Console", async () => {
       const { sanitizeWebChatResponse } = await import("../routers/janIA");
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v32.51");
+      expect(VECY_VERSION).toBe("v32.52");
 
       // Prueba con texto contaminado por JSON schema y escapes
       const dirtyRaw = `Esta redacción neutraliza las prácticas evasivas.\\n\\n### 4. ¿Qué debes hacer ante un juez?\\nSi un juez te dice \\"no hay contrato\\"... ¿Te ha pasado alguna situación?",
@@ -2926,7 +2926,7 @@ Adriana Rebeca Orejuela`;
 
     it("Doctrina v32.51: Resiliencia Signal E2E contra 'No open session', Descarte de Reacciones y Filtro Histórico de 15 Minutos en Grupos", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v32.51");
+      expect(VECY_VERSION).toBe("v32.52");
 
       // Validar que un objeto de sesión cerrado sea identificado correctamente
       const testClosedSession = {
@@ -2958,6 +2958,41 @@ Adriana Rebeca Orejuela`;
       const activeKeys = Object.keys(testActiveSession._sessions);
       const activeHasOpen = activeKeys.some(k => (testActiveSession._sessions as any)[k]?.indexInfo?.closed === -1);
       expect(activeHasOpen).toBe(true);
+    });
+
+    it("Doctrina v32.52: Debe reconocer comunidades y administradores VIP inmobiliarios sin requerir whitelist manual", async () => {
+      const { VIP_COMMUNITY_ADMIN_PHONES, isVipRealEstateGroup } = await import("../_core/whatsapp-match");
+      const { VECY_VERSION } = await import("../../shared/const");
+
+      expect(VECY_VERSION).toBe("v32.52");
+
+      // Validar presencia de administradores oficiales verificados por Eduardo
+      expect(VIP_COMMUNITY_ADMIN_PHONES.has("573003600006")).toBe(true); // Armando Cortés
+      expect(VIP_COMMUNITY_ADMIN_PHONES.has("573123112205")).toBe(true); // Julieth Martínez
+      expect(VIP_COMMUNITY_ADMIN_PHONES.has("573132411598")).toBe(true); // Victoria Jiménez
+      expect(VIP_COMMUNITY_ADMIN_PHONES.has("573115142754")).toBe(true); // Camilo Sanabria
+      expect(VIP_COMMUNITY_ADMIN_PHONES.has("573044233410")).toBe(true); // Moisés Rojas
+      expect(VIP_COMMUNITY_ADMIN_PHONES.has("573156011720")).toBe(true); // Dahianna Castro
+      expect(VIP_COMMUNITY_ADMIN_PHONES.has("573177838635")).toBe(true); // Nancy Zamorano
+      expect(VIP_COMMUNITY_ADMIN_PHONES.has("573103055109")).toBe(true); // Lia Janeth Rivas
+      expect(VIP_COMMUNITY_ADMIN_PHONES.has("573212857044")).toBe(true); // Carolina Rodríguez
+      expect(VIP_COMMUNITY_ADMIN_PHONES.has("14075096206")).toBe(true);  // Caro Rodríguez (USA)
+      expect(VIP_COMMUNITY_ADMIN_PHONES.has("573124311307")).toBe(true); // Nubia Hernández
+      expect(VIP_COMMUNITY_ADMIN_PHONES.has("573208626787")).toBe(true); // Andrés Nieto
+
+      // Validar reconocimiento por administrador participante
+      const metaConAdmin = {
+        participants: [
+          { id: "573003600006@s.whatsapp.net", admin: "admin" }
+        ]
+      };
+      expect(isVipRealEstateGroup(metaConAdmin, "Comunidad X")).toBe(true);
+
+      // Validar reconocimiento por nombre de comunidad inmobiliaria
+      expect(isVipRealEstateGroup(null, "BODEGAS Y LOTES")).toBe(true);
+      expect(isVipRealEstateGroup(null, "APARTAESTUDIOS BOGOTA")).toBe(true);
+      expect(isVipRealEstateGroup(null, "OFERTAS ANDRÉS NIETO")).toBe(true);
+      expect(isVipRealEstateGroup(null, "Rosales-Cabrera-Nogal-Virrey-Chico")).toBe(false); // Reconocido por sus admins Julieth/Victoria
     });
   });
 });

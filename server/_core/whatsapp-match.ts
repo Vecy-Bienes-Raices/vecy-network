@@ -126,6 +126,51 @@ export function isBlacklistedGroup(groupName: string | null | undefined, chatId:
   return blacklistPatterns.some(pattern => nameLower.includes(pattern));
 }
 
+// 🌟 COMUNIDADES Y ADMINISTRADORES INMOBILIARIOS VIP (v32.52)
+// Identificados formalmente por Eduardo: Armando Cortés, Julieth Martínez, Victoria Jiménez,
+// Camilo Sanabria, Moisés Rojas, Dahianna Castro, Nancy Zamorano, Lia Janeth Rivas, Carolina Rodríguez, Andrés Nieto, Nubia Hernández
+export const VIP_COMMUNITY_ADMIN_PHONES = new Set([
+  "573003600006", // Armando Cortés
+  "573123112205", // Julieth Martínez
+  "573132411598", // Victoria Jiménez
+  "573115142754", // Camilo Sanabria
+  "573044233410", // Moisés Rojas
+  "573156011720", // Dahianna Castro
+  "573177838635", // Nancy Zamorano
+  "573103055109", // Lia Janeth Rivas
+  "573212857044", // Carolina Rodríguez
+  "14075096206",  // Caro Rodríguez (USA)
+  "573124311307", // Nubia Hernández
+  "573208626787", // Andrés Nieto
+]);
+
+export function isVipRealEstateGroup(meta: any, groupSubject: string): boolean {
+  if (!meta && !groupSubject) return false;
+  if (meta?.participants) {
+    for (const p of meta.participants) {
+      if (p.admin) {
+        const phone = p.id ? p.id.split('@')[0].split(':')[0] : '';
+        if (VIP_COMMUNITY_ADMIN_PHONES.has(phone)) return true;
+      }
+    }
+  }
+  const s = (groupSubject || '').toLowerCase();
+  return (
+    s.includes("andres nieto") ||
+    s.includes("andrés nieto") ||
+    s.includes("caro rodriguez") ||
+    s.includes("caro rodríguez") ||
+    s.includes("apartaestudios bogota") ||
+    s.includes("bodegas y lotes") ||
+    s.includes("en casa gestión") ||
+    s.includes("santas-carolina") ||
+    s.includes("requerimientos colombia") ||
+    s.includes("campestre venta") ||
+    s.includes("mil millones") ||
+    s.includes("solo arriendos")
+  );
+}
+
 // Cola de despacho secuencial para evitar bloqueos
 let outgoingQueue: Promise<any> = Promise.resolve();
 
@@ -1771,15 +1816,20 @@ export class JaniaMatchBot {
       }
 
       let groupSubject = "";
+      let groupMeta: any = null;
       try {
         const meta = await this.getCachedGroupMetadata(chatId);
-        if (meta && meta.subject) groupSubject = meta.subject;
+        if (meta) {
+          groupMeta = meta;
+          if (meta.subject) groupSubject = meta.subject;
+        }
       } catch (_) {}
 
+      const isVipGroup = isVipRealEstateGroup(groupMeta, groupSubject);
       const isGroupRentContext = /arriend|alquil|renta/i.test(groupSubject);
 
-      const isGroupOfferContext = /ofert|venta|lotes?|casas?|fincas?|bodegas?|locales?|apto|apartamento|inversion/i.test(groupSubject);
-      const isGroupDemandContext = /requerimiento|busqueda|búsqueda|pedidos/i.test(groupSubject);
+      const isGroupOfferContext = isVipGroup || /ofert|venta|lotes?|casas?|fincas?|bodegas?|locales?|apto|apartamento|inversion/i.test(groupSubject);
+      const isGroupDemandContext = isVipGroup || /requerimiento|busqueda|búsqueda|pedidos/i.test(groupSubject);
 
       const hasPermuta = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanLower);
       const hasRentExplicit = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanLower)
@@ -1923,7 +1973,7 @@ export class JaniaMatchBot {
       return;
     }
 
-    // Registrar inmediatamente en memoria para evitar colisiones entre FAST-REACT y BUFFER-REACT
+    // Registrar provisionalmente en memoria para evitar colisiones simultáneas
     this.reactedMessageIds.set(msgId, { emoji, time: Date.now() });
 
     // Encolar de forma estrictamente secuencial con pacing seguro para blindar contra 'rate-overlimit' y desconexiones 408
@@ -1931,6 +1981,7 @@ export class JaniaMatchBot {
       try {
         if (!this.sock || !this.isReady) {
           console.warn(`[JANIA-${reason}] ⚠️ Socket no disponible o reconectando. Omitiendo reacción ${emoji} a ${chatId}`);
+          this.reactedMessageIds.delete(msgId);
           return;
         }
 
@@ -1942,9 +1993,10 @@ export class JaniaMatchBot {
         }
 
         console.log(`[JANIA-${reason}] 🎯 Despachando reacción ${emoji} a ${chatId} (Msg ID: ${msgId})...`);
+        // Timeout de 10s para permitir encriptación completa en grupos masivos de más de 900 miembros
         await Promise.race([
           this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 3s reacción")), 3000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 10s reacción")), 10000))
         ]);
         this.lastReactionTimestamp = Date.now();
         console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
@@ -1956,6 +2008,9 @@ export class JaniaMatchBot {
           }
         }
       } catch (err: any) {
+        // 🛡️ Si falló la entrega, liberar de reactedMessageIds para permitir reintento de BUFFER-REACT
+        this.reactedMessageIds.delete(msgId);
+
         const errMsg = err?.message || String(err);
         const isNotAuth = errMsg.includes("not-authorized") || !this.isReady;
         if (isNotAuth) {

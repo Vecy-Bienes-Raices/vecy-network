@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.51";
+    VECY_VERSION = "v32.52";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -10944,8 +10944,10 @@ var init_whatsapp_utils = __esm({
 var whatsapp_match_exports = {};
 __export(whatsapp_match_exports, {
   JaniaMatchBot: () => JaniaMatchBot,
+  VIP_COMMUNITY_ADMIN_PHONES: () => VIP_COMMUNITY_ADMIN_PHONES,
   downloadMediaSafely: () => downloadMediaSafely,
   isBlacklistedGroup: () => isBlacklistedGroup,
+  isVipRealEstateGroup: () => isVipRealEstateGroup,
   janiaCaptadorBot: () => janiaCaptadorBot,
   janiaMatchBot: () => janiaMatchBot,
   unwrapMessage: () => unwrapMessage
@@ -11021,7 +11023,20 @@ function isBlacklistedGroup(groupName, chatId) {
   ];
   return blacklistPatterns.some((pattern) => nameLower.includes(pattern));
 }
-var SERVER_BOOT_TIME, cleanJid, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot;
+function isVipRealEstateGroup(meta, groupSubject) {
+  if (!meta && !groupSubject) return false;
+  if (meta?.participants) {
+    for (const p of meta.participants) {
+      if (p.admin) {
+        const phone = p.id ? p.id.split("@")[0].split(":")[0] : "";
+        if (VIP_COMMUNITY_ADMIN_PHONES.has(phone)) return true;
+      }
+    }
+  }
+  const s = (groupSubject || "").toLowerCase();
+  return s.includes("andres nieto") || s.includes("andr\xE9s nieto") || s.includes("caro rodriguez") || s.includes("caro rodr\xEDguez") || s.includes("apartaestudios bogota") || s.includes("bodegas y lotes") || s.includes("en casa gesti\xF3n") || s.includes("santas-carolina") || s.includes("requerimientos colombia") || s.includes("campestre venta") || s.includes("mil millones") || s.includes("solo arriendos");
+}
+var SERVER_BOOT_TIME, cleanJid, VIP_COMMUNITY_ADMIN_PHONES, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot;
 var init_whatsapp_match = __esm({
   "server/_core/whatsapp-match.ts"() {
     "use strict";
@@ -11047,6 +11062,32 @@ var init_whatsapp_match = __esm({
       }
       return jid.split(":")[0];
     };
+    VIP_COMMUNITY_ADMIN_PHONES = /* @__PURE__ */ new Set([
+      "573003600006",
+      // Armando Cortés
+      "573123112205",
+      // Julieth Martínez
+      "573132411598",
+      // Victoria Jiménez
+      "573115142754",
+      // Camilo Sanabria
+      "573044233410",
+      // Moisés Rojas
+      "573156011720",
+      // Dahianna Castro
+      "573177838635",
+      // Nancy Zamorano
+      "573103055109",
+      // Lia Janeth Rivas
+      "573212857044",
+      // Carolina Rodríguez
+      "14075096206",
+      // Caro Rodríguez (USA)
+      "573124311307",
+      // Nubia Hernández
+      "573208626787"
+      // Andrés Nieto
+    ]);
     outgoingQueue = Promise.resolve();
     JaniaMatchBot = class {
       sock = null;
@@ -12290,14 +12331,19 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             }
           }
           let groupSubject = "";
+          let groupMeta = null;
           try {
             const meta = await this.getCachedGroupMetadata(chatId);
-            if (meta && meta.subject) groupSubject = meta.subject;
+            if (meta) {
+              groupMeta = meta;
+              if (meta.subject) groupSubject = meta.subject;
+            }
           } catch (_) {
           }
+          const isVipGroup = isVipRealEstateGroup(groupMeta, groupSubject);
           const isGroupRentContext = /arriend|alquil|renta/i.test(groupSubject);
-          const isGroupOfferContext = /ofert|venta|lotes?|casas?|fincas?|bodegas?|locales?|apto|apartamento|inversion/i.test(groupSubject);
-          const isGroupDemandContext = /requerimiento|busqueda|búsqueda|pedidos/i.test(groupSubject);
+          const isGroupOfferContext = isVipGroup || /ofert|venta|lotes?|casas?|fincas?|bodegas?|locales?|apto|apartamento|inversion/i.test(groupSubject);
+          const isGroupDemandContext = isVipGroup || /requerimiento|busqueda|búsqueda|pedidos/i.test(groupSubject);
           const hasPermuta = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanLower);
           const hasRentExplicit = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanLower) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanLower) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanLower) || /valor arriendo/i.test(cleanLower);
           const isRentOperation = hasRentExplicit || isGroupRentContext && !/\b(?:compro|comprar|en compra|para compra)\b/i.test(cleanLower) && !cleanLower.startsWith("vendo") && !cleanLower.startsWith("se vende");
@@ -12411,6 +12457,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           try {
             if (!this.sock || !this.isReady) {
               console.warn(`[JANIA-${reason}] \u26A0\uFE0F Socket no disponible o reconectando. Omitiendo reacci\xF3n ${emoji} a ${chatId}`);
+              this.reactedMessageIds.delete(msgId);
               return;
             }
             const now = Date.now();
@@ -12421,7 +12468,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
             console.log(`[JANIA-${reason}] \u{1F3AF} Despachando reacci\xF3n ${emoji} a ${chatId} (Msg ID: ${msgId})...`);
             await Promise.race([
               this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
-              new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 3s reacci\xF3n")), 3e3))
+              new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 10s reacci\xF3n")), 1e4))
             ]);
             this.lastReactionTimestamp = Date.now();
             console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA NATIVAMENTE en WhatsApp`);
@@ -12432,6 +12479,7 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
               }
             }
           } catch (err) {
+            this.reactedMessageIds.delete(msgId);
             const errMsg = err?.message || String(err);
             const isNotAuth = errMsg.includes("not-authorized") || !this.isReady;
             if (isNotAuth) {
@@ -27354,12 +27402,22 @@ async function startServer() {
   });
   app.get("/api/inspect-groups", async (req, res) => {
     try {
-      if (!janiaMatchBot.isReady) {
-        return res.status(503).send("El bot de WhatsApp (Baileys) no est\xE1 listo todav\xEDa.");
+      if (!janiaMatchBot.isReady || !janiaMatchBot.sock) {
+        return res.status(503).json({ error: "El bot de WhatsApp (Baileys) no est\xE1 listo todav\xEDa." });
       }
-      res.json({ isReady: true, status: "online" });
+      const participating = await janiaMatchBot.sock.groupFetchAllParticipating();
+      const groups = Object.values(participating).map((g) => ({
+        id: g.id,
+        subject: g.subject,
+        creation: g.creation,
+        owner: g.owner,
+        participantsCount: g.participants?.length || 0,
+        admins: g.participants?.filter((p) => p.admin === "admin" || p.admin === "superadmin").map((p) => p.id.split("@")[0]) || []
+      }));
+      groups.sort((a, b) => a.subject.localeCompare(b.subject));
+      res.json({ total: groups.length, groups });
     } catch (err) {
-      res.status(500).send(err.message);
+      res.status(500).json({ error: err.message });
     }
   });
   app.get("/api/screenshot-chat", async (req, res) => {

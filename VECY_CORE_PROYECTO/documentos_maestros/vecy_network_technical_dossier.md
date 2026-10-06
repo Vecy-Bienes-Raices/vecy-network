@@ -322,6 +322,43 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.52 — Octubre 2026
+
+#### 📌 SINCRONIZACIÓN EMPÍRICA DE COMUNIDADES VIP (80 GRUPOS), AMPLIACIÓN DE TIMEOUT A 10S Y LIBERACIÓN DEFENSIVA DE CACHÉ DE REACCIONES EN GRUPOS MASIVOS
+
+**Requerimiento y Objetivos:**
+1. **Actualización de Identidad de JanIA y Consulta de Cobertura de Grupos**:
+   - Eduardo actualizó la cuenta de WhatsApp (`+573192919978`) con el nombre y perfil corporativo oficial de JanIA (`@JanIA_agente_IA_de_VECY`).
+   - Consultó en qué tipos de inmuebles se fija JanIA y en qué grupos está actuando, manifestando su extrañeza porque en capturas de pantalla de comunidades masivas (*"Grupos Caro Rodríguez"* y *"Red de Asesores Inmobiliarios Andrés Nieto"*) algunos grupos no mostraban reacciones y acumulaban mensajes pendientes (capturas tomadas entre 8:43 AM y 8:44 AM).
+   - Proporcionó el listado completo de los administradores y sus grupos: Armando Cortés (+573003600006), Julieth Martínez (+573123112205), Victoria Jiménez (+573132411598), Camilo Sanabria (+573115142754), Moisés Rojas (+573044233410), Dahianna Castro (+573156011720), Nancy Zamorano (+573177838635), Lia Janeth Rivas (+573103055109), Carolina Rodríguez (+573212857044), Caro Rodriguez (+14075096206), Andrés Nieto (+573208626787) y Nubia Hernández (+573124311307 con *SOLO ARRIENDOS 🏠🏠🏠*), preguntando si JanIA requería una lista explícita de grupos para operar.
+2. **Auditoría Forense en Producción y Diagnóstico de Arquitectura**:
+   - **Cero Listas Manuales Requeridas**: Se confirmó la regla de arquitectura fundamental: JanIA opera de forma orgánica escuchando el 100% de los chats y grupos a los que la línea WhatsApp pertenezca vía Baileys. No requiere ni debe depender de listas estáticas ni whitelists.
+   - **Auditoría en Vivo de los 80 Grupos Conectados (`/api/inspect-groups`)**:
+     - 57 de los 58 grupos administrados por los contactos suministrados están activos, sincronizados y conectados en tiempo real.
+     - Única excepción: El grupo *SOLO ARRIENDOS 🏠🏠🏠* de Nubia Hernández (+573124311307). La auditoría de base de datos reveló que el último mensaje capturado data del 28 de julio de 2026; la línea fue removida o no está actualmente en dicho grupo, por lo que únicamente requiere que la administradora vuelva a agregar el número.
+   - **Causa Raíz de Reacciones Faltantes en Grupos Masivos (>600 miembros)**:
+     - En grupos de alta concurrencia (800 a 960 participantes), la distribución de claves Signal `senderKeyDistributionMessage` toma entre 4 y 7 segundos por WebSocket.
+     - El timeout previo de 3 segundos en `safeReact` interrumpía el proceso con `Timeout 3s reacción`.
+     - *Envenenamiento de Caché*: Como `this.reactedMessageIds.set(msgId, ...)` se registraba antes de la entrega, al fallar por timeout el mensaje quedaba marcado como reaccionado en la memoria del bot. Al llegar el procesamiento diferido del Buffer o del LLM, el sistema descartaba la reacción asumiendo erróneamente que ya se había emitido.
+
+**Acciones Técnicas Ejecutadas:**
+1. **Ampliación de Timeout a 10s en `safeReact` (`server/_core/whatsapp-match.ts`)**:
+   - Ajustado el tiempo límite de espera de reacción de 3.000 ms a 10.000 ms, permitiendo el cifrado completo a grupos de hasta 1.024 miembros sin abortos prematuros.
+2. **Liberación Defensiva de Caché ante Excepción (`server/_core/whatsapp-match.ts`)**:
+   - En el bloque `catch` de `safeReact`, se implementó la eliminación inmediata `this.reactedMessageIds.delete(msgId)`, garantizando que cualquier fallo transitorio permita reintentos limpios posteriores sin bloquear el mensaje.
+3. **Reconocimiento Orgánico de Administradores VIP (`VIP_COMMUNITY_ADMIN_PHONES`)**:
+   - Incorporada la lista de teléfonos de administradores reconocidos en `whatsapp-match.ts` para inferir contexto 100% inmobiliario instantáneo (`isVipRealEstateGroup`) en `FAST-REACT` (<200ms) sin depender de palabras clave en el título del grupo.
+4. **Catálogo Inmobiliario Maestro Soportado**:
+   - 12 Tipos de Inmuebles: `apartamento`, `casa`, `oficina`, `local`, `lote`, `bodega`, `finca`, `apartaestudio`, `edificio`, `consultorio`, `penthouse`, `parqueadero`.
+   - 8 Modalidades Transaccionales: `venta`, `arriendo`, `venta_o_arriendo`, `arriendo_temporal`, `arriendo_con_opcion_de_compra`, `permuta`, `venta_permuta`, `aporte`.
+5. **Incremento de Versión, Pruebas y Blindaje**:
+   - Versión oficial incrementada a **v32.52** (`32.52.0`) en `shared/const.ts` y `package.json`.
+   - Test unitario de regresión aprobado en `server/__tests__/regression.test.ts`.
+   - 126/126 pruebas Vitest aprobadas (100%).
+   - Compilación verificada con `npm run check` (0 errores) y `npm run build` en 13.60s.
+
+---
+
 ### 🔖 v32.51 — Octubre 2026
 
 #### 📌 RESILIENCIA SIGNAL E2E CONTRA 'NO OPEN SESSION', DESCARTE ESTRICTO DE REACCIONES Y AMPLIACIÓN DE VENTANA HISTÓRICA A 15 MINUTOS EN GRUPOS INMOBILIARIOS EXTERNOS

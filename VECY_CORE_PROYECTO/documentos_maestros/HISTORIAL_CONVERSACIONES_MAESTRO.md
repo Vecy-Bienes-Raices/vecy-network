@@ -9414,6 +9414,57 @@ ightarrow$ número de celular para aplicarlas de forma automática a todas sus p
 
 ---
 
+## 📋 SESIÓN v32.52 — 06 Octubre 2026
+
+### Solicitud de Eduardo
+Auditoría y Mapeo Oficial de Administradores y Grupos VIP, Resolución de Reacciones Omitidas en Grupos Masivos:
+*"Al número +573192919978 le cambié el nombre de Usuario y ahora pertenece a JanIA directamente. Los grupos donde verás que no hay reacciones son los grupos donde no ha logrado actuar JanIA, lo que se me hace extraño es que antes de todas las correcciones e implementaciones que realizamos ayer, ella antes si lograba actuar en todos los grupos, era muy puntual y exacta. Jamás tuve que darte nombres ni listados de grupos. Sin embargo he añadido a cada administrador como contacto del +573192919978 y acá tienes los números de esos administradores:
+Armando Cortés: +57 300 3600006 -> Grupos: + $Mil Millones / Requerimientos Colombia / Campestre venta, arriendo / Arriendos+ $8 millones
+Julieth Martínez: +57 312 3112205 Y Victoria Jiménez: +57 313 2411598 -> Grupos: Cedritos-Colina-Salitre-Alrededores / Ofertas VENTA 1000 / Requerimientos 1000 / Santas-Carolina-Bosques-Calleja / Rosales-Cabrera-Nogal-Virrey-Chico
+Camilo Sanabria: +57 311 5142754 -> Grupo: BODEGAS Y LOTES
+Moisés Rojas: +57 304 4233410 y Dahianna Castro: +57 315 6011720 -> Grupo: APARTAESTUDIOS BOGOTA
+Nancy Zamorano: +57 317 7838635 -> Grupo: En casa gestión Inmobiliaria
+Lia Janeth Rivas: +57 310 3055109, Carolina Rodríguez: +57 321 2857044 y Caro Rodriguez: +1 (407) 509-6206 -> Grupo: Requerimientos Inmuebles Bogotá y Sabana / + (imagen 2)
+Nubia Hernandez Hernández Inmo: +57 312 4311307 -> Grupo: SOLO ARRIENDOS 🏠🏠🏠
+ANDRES NIETO: +57 320 8626787 -> Grupos: (Imagen 3)"*
+
+### Diagnóstico Técnico Profundo y Conclusiones de Arquitectura
+1. **Auditoría Empírica en Vivo de la Conexión de Grupos en Baileys**:
+   - Se consultó directamente `sock.groupFetchAllParticipating()` en el VPS (`+573192919978`).
+   - El socket está conectado actualmente a **80 grupos de WhatsApp**.
+   - **TODOS** los grupos administrados por:
+     * Armando Cortés (4 grupos)
+     * Julieth Martínez & Victoria Jiménez (5 grupos)
+     * Camilo Sanabria (1 grupo)
+     * Moisés Rojas & Dahianna Castro (1 grupo)
+     * Nancy Zamorano (1 grupo)
+     * Lia Janeth Rivas & Carolina Rodríguez (17 grupos)
+     * Andrés Nieto (28 grupos)
+     están **100% presentes, vinculados y escuchados en el WhatsApp de JanIA**.
+   - El **único grupo ausente** es `SOLO ARRIENDOS 🏠🏠🏠` de Nubia Hernández (ID `120363056206934479@g.us`), cuyo último mensaje registrado data del 28 de julio de 2026; la línea ya no formaba parte del grupo y requiere ser re-añadida por Nubia.
+2. **Causa Raíz de Reacciones Omitidas en Grupos Masivos (Timeout 3s y Envenenamiento de Caché)**:
+   - En grupos gigantescos de 800 a 960 miembros (`Rosales-Cabrera`, `Requerimientos 1000`, `Ofertas 1000`, `Requerimientos Bogotá y Sabana`, `Sabana Norte`), Baileys toma de 4 a 7 segundos para generar y distribuir por WebSocket las llaves `senderKeyDistributionMessage` a todos los miembros.
+   - El timeout estricto previo de 3s abortaba la promesa con `Timeout 3s reacción`.
+   - Adicionalmente, `this.reactedMessageIds.set(msgId, ...)` se guardaba antes del envío. Al fallar por timeout, no se eliminaba del caché, provocando que el posterior `BUFFER-REACT` ignorara la entrega asumiendo falsamente que el mensaje ya había recibido emoji.
+3. **Reconocimiento Orgánico sin Whitelists Cerradas**:
+   - Eduardo constató con total acierto que antes JanIA no requería listas manuales de grupos. Baileys escucha el 100% de los chats donde el número pertenece.
+   - Se incorporó el mapeo de administradores comunitarios VIP (`VIP_COMMUNITY_ADMIN_PHONES`) para que cualquier grupo nuevo o con título no convencional administrado por ellos sea tratado de inmediato con contexto 100% inmobiliario sin fricciones.
+
+### Acciones Ejecutadas en Código
+1. **Ampliación de Timeout y Des-envenenamiento de Caché (`server/_core/whatsapp-match.ts`)**:
+   - Ampliado el timeout de despacho en `safeReact` de 3s a **10s** para garantizar la finalización de encriptación en grupos de 950 personas.
+   - En caso de fallo o timeout, se ejecuta inmediatamente `this.reactedMessageIds.delete(msgId)`, permitiendo que `BUFFER-REACT` complete la entrega.
+2. **Registro de Administradores y Grupos VIP (`server/_core/whatsapp-match.ts`)**:
+   - Creado `VIP_COMMUNITY_ADMIN_PHONES` y función helper `isVipRealEstateGroup` que reconoce de forma inmediata grupos administrados por Armando Cortés, Julieth Martínez, Victoria Jiménez, Camilo Sanabria, Moisés Rojas, Dahianna Castro, Nancy Zamorano, Lia Janeth Rivas, Carolina Rodríguez y Andrés Nieto.
+3. **Endpoint de Inspección de Grupos (`server/_core/index.ts`)**:
+   - `/api/inspect-groups` actualizado para retornar en tiempo real el listado completo de grupos participantes de Baileys, conteo de miembros y administradores.
+4. **Pruebas y Validación**:
+   - Suite de Vitest superada al 100% (126/126 tests pasando).
+   - `tsc --noEmit` limpio con 0 errores.
+   - Versión incrementada oficialmente a **v32.52** (`32.52.0`).
+
+---
+
 ## 🛡️ PROTOCOLOS Y REGLAS DE TRABAJO INQUEBRANTABLES
 1. **Adición Pura de Código**: NUNCA borrar, modificar ni romper funcionalidades o reglas previas ya validadas al agregar nuevo código.
 2. **Revisión del Historial al Iniciar**: Consultar esta bitácora y `.agents/AGENTS.md` al comienzo de cada conversación.

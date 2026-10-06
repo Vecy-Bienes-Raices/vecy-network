@@ -212,12 +212,25 @@ async function startServer() {
 
   app.get("/api/inspect-groups", async (req, res) => {
     try {
-      if (!janiaMatchBot.isReady) {
-        return res.status(503).send("El bot de WhatsApp (Baileys) no está listo todavía.");
+      if (!janiaMatchBot.isReady || !janiaMatchBot.sock) {
+        return res.status(503).json({ error: "El bot de WhatsApp (Baileys) no está listo todavía." });
       }
-      res.json({ isReady: true, status: "online" });
+      const participating = await janiaMatchBot.sock.groupFetchAllParticipating();
+      const groups = Object.values(participating).map((g: any) => ({
+        id: g.id,
+        subject: g.subject,
+        creation: g.creation,
+        owner: g.owner,
+        participantsCount: g.participants?.length || 0,
+        admins: g.participants
+          ?.filter((p: any) => p.admin === "admin" || p.admin === "superadmin")
+          .map((p: any) => p.id.split("@")[0]) || []
+      }));
+      // Ordenar alfabéticamente por nombre del grupo
+      groups.sort((a: any, b: any) => a.subject.localeCompare(b.subject));
+      res.json({ total: groups.length, groups });
     } catch (err: any) {
-      res.status(500).send(err.message);
+      res.status(500).json({ error: err.message });
     }
   });
 
