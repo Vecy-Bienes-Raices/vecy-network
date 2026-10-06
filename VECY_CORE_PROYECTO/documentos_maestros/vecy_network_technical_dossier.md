@@ -322,6 +322,42 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.51 — Octubre 2026
+
+#### 📌 RESILIENCIA SIGNAL E2E CONTRA 'NO OPEN SESSION', DESCARTE ESTRICTO DE REACCIONES Y AMPLIACIÓN DE VENTANA HISTÓRICA A 15 MINUTOS EN GRUPOS INMOBILIARIOS EXTERNOS
+
+**Requerimiento y Objetivos:**
+1. **Diagnóstico Integral sobre la Actividad de JanIA en Grupos Externos**:
+   - Eduardo consultó por qué JanIA parecía no estar logrando actuar en todos los grupos inmobiliarios externos como venía haciéndolo, enviando dos capturas de pantalla de comunidades masivas: *"Grupos Caro Rodríguez"* (22 grupos) y *"Red de Asesores Inmobiliarios Andrés Nieto"* (28 grupos).
+   - En las capturas se evidenciaba que en algunos grupos específicos JanIA sí reaccionó (ej: *"Agentes"*, *"Oficinas"*, *"Cali"*, *"Bodegas"*, *"Sabana"*), pero en otros grupos activos (como *"Sabana Norte Ofertas y Req"* con 251 mensajes, *"Rosales - Chapinero"* con 128 mensajes, *"Ofertas Andrés Nieto"* con 32 mensajes, etc.) no aparecía la reacción y se acumulaban mensajes.
+2. **Identificación Forense de Causas Raíz en Producción (VPS PM2)**:
+   - **Causa Raíz #1 (`No open session` en Signal / Baileys)**: En las comunidades masivas de WhatsApp, muchos participantes operan bajo identificadores anónimos `@lid` y con múltiples dispositivos asociados (teléfonos, WhatsApp Web, tablets). Cuando un dispositivo secundario tenía su sesión cerrada en disco, Baileys arrojaba `SessionError: No open session`. Al fallar un dispositivo en `createParticipantNodes`, el `Promise.all` de Baileys se caía y abortaba la reacción al grupo completo.
+   - **Causa Raíz #2 (Atascamiento en `reactionQueue`)**: En `safeReact`, ante el error `No open session`, el código realizaba múltiples reintentos con pausas acumulando más de 8 segundos por mensaje fallido. Esto congeló la cola secuencial de reacciones (`this.reactionQueue`), reteniendo decenas de reacciones pendientes durante minutos.
+   - **Causa Raíz #3 (Inundación de Cuotas LLM por `reactionMessage` y Auto-Eco)**: WhatsApp despacha un evento `messages.upsert` cada vez que cualquier miembro (o JanIA misma) reacciona con un emoji. En grupos externos (`!isOfficialGroup`), estas reacciones entraban al buffer catalogadas como inmuebles (`isListing = true`), forzando llamadas a Gemini con cadenas de emojis ("👍\n\n👌..."). Esto saturó las 5 claves de Gemini provocando errores 503 ("Google Server Saturation") y timeouts de 25 segundos continuos.
+   - **Causa Raíz #4 (Filtro Histórico de 180s Demasiado Estricto)**: Cuando la cola o el event-loop se demoraban procesando ráfagas o timeouts, las publicaciones legítimas con más de 3 minutos de antigüedad eran descartadas silenciosamente por la condición `msgAgeSeconds > 180`.
+
+**Acciones Técnicas Ejecutadas:**
+1. **Blindaje de Sesiones Signal en Baileys (`server/_core/whatsapp-match.ts`)**:
+   - **Interceptor en `state.keys.get`**: Si un registro de sesión leído de disco contiene únicamente ratchets cerrados (`closed !== -1`), se retorna `null` para obligar a Baileys a solicitar automáticamente pre-keys frescas a WhatsApp (`assertSessions`).
+   - **Interceptor en `signalRepository.encryptMessage`**: Si un dispositivo secundario lanza `No open session`, ejecuta de inmediato `assertSessions([params.jid], true)` para regenerar la sesión en vivo. Si aún no abre (dispositivo inactivo/zombi), omite ese nodo individual permitiendo que la entrega al resto de los participantes del grupo proceda con 100% de éxito.
+2. **Depuración de Reacciones y Filtro `isListing` (`server/_core/whatsapp-match.ts`)**:
+   - Descarte inmediato de `rawMsg.reactionMessage` en grupos antes de cualquier procesamiento (`continue;`).
+   - Descarte de mensajes propios (`fromMe`) en grupos externos para erradicar bucles de auto-eco.
+   - Exclusión explícita de monosílabos de cortesía (`isShortCourtesy`) y reacciones (`isReactionMessage`) de la condición `isListing`.
+3. **Resiliencia Ágil en `safeReact`**:
+   - Supresión de reintentos síncronos pesados de 8 segundos. Si ocurre un error de sesión, se dispara la auto-sanación en segundo plano y se libera inmediatamente la cola secuencial para no retrasar los demás grupos.
+4. **Ampliación de Ventana Histórica a 15 Minutos (900s)**:
+   - Modificado `maxAgeAllowed` para mensajes grupales de 180 a 900 segundos, evitando la pérdida de publicaciones en reinicios de PM2 o ráfagas masivas.
+5. **Enriquecimiento de Vocabulario y Contexto para FAST-REACT**:
+   - Ampliado `isExplicitOffer` con vocabulario inmobiliario ("lotes", "fincas", "bodegas", "casas", "aptos") y sinergia con el asunto del grupo (`isGroupOfferContext`), garantizando clasificación y reacción instantánea (<200ms) sin consumir cuota LLM.
+6. **Validación, Versión y Compilación**:
+   - Versión incrementada a **v32.51** (`32.51.0`) en `shared/const.ts` y `package.json`.
+   - Test unitario de `Doctrina v32.51` aprobado en `server/__tests__/regression.test.ts`.
+   - 146/146 pruebas Vitest superadas (100%).
+   - Compilación limpia con `tsc --noEmit` y `npm run build` en 20.32s.
+
+---
+
 ### 🔖 v32.50 — Octubre 2026
 
 #### 📌 LIMPIEZA DEFENSIVA DE JSON SCHEMA, EFECTO DE TIPEO EN VIVO (TYPEWRITER STREAMING), AURA GIRATORIA DE ALTA VELOCIDAD CON 3 PUNTOS DORADOS Y AJUSTE DE PADDING INFERIOR EN JANIA CONSOLE

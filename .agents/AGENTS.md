@@ -172,7 +172,29 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.50 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.51 — Octubre 2026
+
+### Novedades v32.51 (Resiliencia E2E Signal contra 'No open session', Descarte Estricto de Reacciones y Ampliación a 15 Minutos en Grupos Inmobiliarios):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Causa Raíz #1: Error 'No open session' de Signal en Comunidades de WhatsApp con LIDs y Multidispositivos**:
+     - En comunidades masivas como *"Grupos Caro Rodríguez"* (22 grupos) y *"Red de Asesores Inmobiliarios Andrés Nieto"* (28 grupos), WhatsApp asigna identificadores `@lid` y reporta múltiples dispositivos por asesor.
+     - Muchos archivos de sesión en disco (`.baileys_auth/session-*.json`) contenían exclusivamente entradas cerradas (`closed !== -1`). Baileys asumía que la sesión existía, omitía la solicitud de pre-keys a WhatsApp y `libsignal/session_cipher.js` arrojaba `SessionError: No open session`.
+     - **Solución Doctrinal**:
+       - Interceptor en `state.keys.get`: Si un registro de sesión leído en disco no tiene ninguna sesión abierta, se retorna `null` para forzar a Baileys a solicitar automáticamente pre-keys frescas a WhatsApp.
+       - Interceptor en `signalRepository.encryptMessage`: Si un dispositivo secundario o zombi lanza `No open session`, se ejecuta `assertSessions([jid], true)` inmediato. Si aún no abre, se omite ese nodo específico evitando el aborto masivo de la entrega al grupo.
+  2. **Causa Raíz #2: Descarte Total de Reacciones de Emojis (`reactionMessage`) y Bucle de Auto-Eco**:
+     - Las reacciones a mensajes ajenos generaban eventos `messages.upsert`. Al ser grupos externos (`!isOfficialGroup`), eran catalogadas erróneamente como publicaciones de inmuebles, inundando el buffer y llamando a Gemini LLM con secuencias de emojis ("👍\n\n👌...").
+     - Esto saturaba las 5 claves de Gemini provocando errores 503 ("Server Saturation") y timeouts de 25 segundos continuos.
+     - **Solución Doctrinal**: Descarte inmediato (`continue`) de `rawMsg.reactionMessage` y de mensajes propios (`fromMe`) en grupos externos, eliminando el 100% del consumo espurio de cuota LLM.
+  3. **Causa Raíz #3: Congelamiento Secuencial en la Cola de Reacciones (`safeReact`)**:
+     - Cuando una reacción fallaba, `safeReact` realizaba múltiples reintentos con pausas acumulando más de 8 segundos por mensaje fallido, bloqueando la promesa global `reactionQueue`.
+     - **Solución Doctrinal**: Si una reacción falla por sesión cerrada, dispara el refresh Signal en segundo plano y libera inmediatamente la cola para continuar con las demás publicaciones sin demoras.
+  4. **Causa Raíz #4: Ampliación del Filtro de Antigüedad Histórica de Grupos a 15 Minutos (900s)**:
+     - El umbral previo de 180 segundos (3 minutos) provocaba que cualquier retraso por ráfagas o reinicio descartara silenciosamente publicaciones legítimas. Se amplió a 900 segundos (15 minutos).
+  5. **Causa Raíz #5: Enriquecimiento de Vocabulario y Contexto de Grupos para FAST-REACT**:
+     - Inclusión de sustantivos inmobiliarios comunes ("lotes", "fincas", "bodegas", "casas", "aptos", etc.) combinados con el contexto del nombre del grupo ("OFERTAS", "VENTA", "REQUERIMIENTOS") para activar reacciones instantáneas de negocio (<200ms) sin depender de llamadas pesadas al LLM.
+
+## 🔖 VERSIÓN ANTERIOR: v32.50 — Octubre 2026
 
 ### Novedades v32.50 (Limpieza Defensiva de JSON, Tipeo en Vivo / Typewriter Streaming, Aura Giratoria de Alta Velocidad con 3 Puntos Dorados y Ajuste de Padding Inferior en JanIA Console):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.50";
+    VECY_VERSION = "v32.51";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -11201,6 +11201,25 @@ var init_whatsapp_match = __esm({
             fs6.mkdirSync(sessionDir, { recursive: true });
           }
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+          const originalKeysGet = state.keys.get;
+          state.keys.get = (async (type, ids) => {
+            const data = await originalKeysGet(type, ids);
+            if (type === "session") {
+              for (const id of ids) {
+                const sessRecord = data[id];
+                if (sessRecord && sessRecord._sessions) {
+                  const sessionKeys = Object.keys(sessRecord._sessions);
+                  if (sessionKeys.length > 0) {
+                    const hasOpen = sessionKeys.some((k) => sessRecord._sessions[k]?.indexInfo?.closed === -1);
+                    if (!hasOpen) {
+                      data[id] = null;
+                    }
+                  }
+                }
+              }
+            }
+            return data;
+          });
           if (!fs6.existsSync(path6.join(sessionDir, "creds.json"))) {
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
@@ -11255,6 +11274,25 @@ var init_whatsapp_match = __esm({
               return void 0;
             }
           });
+          if (this.sock?.signalRepository?.encryptMessage) {
+            const origEncryptMessage = this.sock.signalRepository.encryptMessage.bind(this.sock.signalRepository);
+            this.sock.signalRepository.encryptMessage = async (params) => {
+              try {
+                return await origEncryptMessage(params);
+              } catch (err) {
+                if (err?.message?.includes("No open session") && typeof this.sock?.assertSessions === "function") {
+                  try {
+                    await this.sock.assertSessions([params.jid], true);
+                    return await origEncryptMessage(params);
+                  } catch (retryErr) {
+                    console.warn(`[JanIA-Signal] \u26A0\uFE0F Dispositivo ${params.jid} sin sesi\xF3n abierta en WhatsApp. Omitiendo nodo para preservar la entrega al grupo.`);
+                    return { type: "pkmsg", ciphertext: Buffer.alloc(0) };
+                  }
+                }
+                throw err;
+              }
+            };
+          }
           this.setupEventListeners(saveCreds);
         } catch (err) {
           console.error(`[${this.botName}] Error cr\xEDtico al inicializar el cliente Baileys:`, err);
@@ -11350,7 +11388,7 @@ var init_whatsapp_match = __esm({
             const timestamp2 = msg.messageTimestamp;
             if (timestamp2) {
               const msgAgeSeconds = Math.floor(Date.now() / 1e3) - Number(timestamp2);
-              const maxAgeAllowed = isGroup ? 180 : 1800;
+              const maxAgeAllowed = isGroup ? 900 : 1800;
               if (msgAgeSeconds > maxAgeAllowed) {
                 continue;
               }
@@ -11371,6 +11409,12 @@ var init_whatsapp_match = __esm({
                   continue;
                 }
                 if (rawMsg?.stickerMessage) {
+                  continue;
+                }
+                if (rawMsg?.reactionMessage) {
+                  continue;
+                }
+                if (fromMe && chatId !== this.targetGroupId && chatId !== this.buzonGroupId && chatId !== this.circuloGroupId) {
                   continue;
                 }
                 let body = "";
@@ -11536,7 +11580,7 @@ ${quotedNote}` : quotedNote;
                 const isAudioFailed = body === "[audio-vac\xEDo]" || body === "[audio-sin-buffer]" || body === "[audio-error]";
                 const isShortCourtesy = !isAudioPTT && (textClean.length < 6 || ["ok", "listo", "vale", "claro", "gracias", "hola", "hola!", "jaja", "jajaja", "\u{1F44D}", "\u2705", "\u{1F44F}", "\u{1F60A}", "\u{1F64F}"].includes(textClean));
                 const isListingGroup = isMainGroup || !isBuzonGroup && !isCirculoGroup;
-                const isListing = isListingGroup && (isPossibleListing || !isOfficialGroup || hasRawMedia);
+                const isListing = isListingGroup && !isReactionMessage && !isShortCourtesy && (isPossibleListing || !isOfficialGroup || hasRawMedia);
                 const hasMeaningfulQuery = textClean.length >= 4 && !isShortCourtesy && !isReactionMessage || hasRawMedia;
                 const shouldRespond = isBuzonGroup || isCirculoGroup ? hasMeaningfulQuery : isOfficialGroup && hasDirectMention;
                 if (isListing) {
@@ -12252,12 +12296,15 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
           } catch (_) {
           }
           const isGroupRentContext = /arriend|alquil|renta/i.test(groupSubject);
+          const isGroupOfferContext = /ofert|venta|lotes?|casas?|fincas?|bodegas?|locales?|apto|apartamento|inversion/i.test(groupSubject);
+          const isGroupDemandContext = /requerimiento|busqueda|búsqueda|pedidos/i.test(groupSubject);
           const hasPermuta = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanLower);
           const hasRentExplicit = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanLower) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanLower) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(cleanLower) || /valor arriendo/i.test(cleanLower);
           const isRentOperation = hasRentExplicit || isGroupRentContext && !/\b(?:compro|comprar|en compra|para compra)\b/i.test(cleanLower) && !cleanLower.startsWith("vendo") && !cleanLower.startsWith("se vende");
+          const hasPropertyKeyword = /\b(?:apto|aptos|apartamento|apartamentos|casa|casas|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos|penthouse|duplex|dúplex|consultorio|consultorios)\b/i.test(cleanLower);
           const isExplicitDemand = /\b(?:req\b|requerimiento|requerimientos|requiero|se requiere|requerimos|busco|buscamos|se busca|buscando|en búsqueda|en busqueda|necesito|necesitamos|necesitando|solicito|solicitamos|solicitando|solicitud|solicitudes|compro|comprando|comprador|compradores|comprar|en compra|para compra|negocio compra|para cliente|para clientes|tengo cliente|tenemos cliente|busca cliente|cliente busca|clientes buscan|arrendatario|inquilino)\b/i.test(cleanLower);
-          const isExplicitOffer = !isExplicitDemand && (/\b(?:ofrezco|ofrecemos|vendo|vendemos|se vende|en venta|venta directa|arriendo|arriendos|arrendamos|arrendar|se arrienda|en arriendo|arriendo directo|pongo en arriendo|alquilo|alquilamos|alquilar|se alquila|en alquiler|alquiler directo|rento|rentamos|rentar|se renta|en renta|tengo para|disponible|nuevo inmueble|permuto|permutamos|se permuta)\b/i.test(cleanLower) || /(?:cuenta con|consta de|\d+\s*(?:m2|mts|m²)|alcobas|habitaciones|baños|parqueaderos?|cocina|sala|comedor|dep[oó]sito)/i.test(cleanLower));
-          const isExplicitSearch = isExplicitDemand && !isExplicitOffer;
+          const isExplicitOffer = !isExplicitDemand && (/\b(?:ofrezco|ofrecemos|vendo|vendemos|se vende|en venta|venta directa|arriendo|arriendos|arrendamos|arrendar|se arrienda|en arriendo|arriendo directo|pongo en arriendo|alquilo|alquilamos|alquilar|se alquila|en alquiler|alquiler directo|rento|rentamos|rentar|se renta|en renta|tengo para|disponible|disponibles|nuevo inmueble|permuto|permutamos|se permuta)\b/i.test(cleanLower) || /(?:cuenta con|consta de|\d+\s*(?:m2|mts|m²)|alcobas|habitaciones|baños|parqueaderos?|cocina|sala|comedor|dep[oó]sito)/i.test(cleanLower) || hasPropertyKeyword && (isGroupOfferContext || cleanLower.includes("$") || cleanLower.includes("millon") || cleanLower.includes("precio") || cleanLower.includes("canon")));
+          const isExplicitSearch = isExplicitDemand || !isExplicitOffer && isGroupDemandContext && hasPropertyKeyword;
           let fastEmoji = null;
           if (isExplicitOffer) {
             if (hasPermuta) {
@@ -12392,46 +12439,14 @@ Por favor elimina esta publicaci\xF3n. Te advertimos que la reincidencia dar\xE1
               return;
             }
             if (errMsg.includes("No open session")) {
-              console.warn(`[JANIA-${reason}] \u26A0\uFE0F Sesi\xF3n no disponible para participante ${msgKey.participant || "desconocido"}. Intentando resoluci\xF3n y reenv\xEDo limpio...`);
-              try {
-                if (msgKey.participant && typeof this.sock?.assertSessions === "function") {
-                  await this.sock.assertSessions([msgKey.participant], true).catch(() => {
-                  });
-                }
-                await new Promise((r) => setTimeout(r, 600));
-                const fallbackKey = {
-                  remoteJid: chatId,
-                  id: msgKey.id,
-                  fromMe: false
-                };
-                if (this.sock && this.isReady) {
-                  await Promise.race([
-                    this.sock.sendMessage(chatId, { react: { text: emoji, key: fallbackKey } }),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 3s fallback reacci\xF3n")), 3e3))
-                  ]);
-                  this.lastReactionTimestamp = Date.now();
-                  console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA tras resolver sesi\xF3n @lid (fallback)`);
-                  return;
-                }
-              } catch (lidErr) {
-                console.warn(`[JANIA-${reason}] \u26A0\uFE0F Reintento fallback @lid fall\xF3:`, lidErr?.message || lidErr);
-                return;
+              console.warn(`[JANIA-${reason}] \u26A0\uFE0F Sesi\xF3n cerrada detectada al reaccionar a ${chatId}. Forzando refresh Signal en background...`);
+              if (msgKey.participant && typeof this.sock?.assertSessions === "function") {
+                this.sock.assertSessions([msgKey.participant], true).catch(() => {
+                });
               }
+              return;
             }
-            console.warn(`[JANIA-${reason}] \u26A0\uFE0F Primer intento de reacci\xF3n ${emoji} fall\xF3 (${errMsg}). Reintentando tras pausa \xE1gil...`);
-            await new Promise((r) => setTimeout(r, 1e3));
-            try {
-              if (this.sock && this.isReady) {
-                await Promise.race([
-                  this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
-                  new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 3s reintento")), 3e3))
-                ]);
-                this.lastReactionTimestamp = Date.now();
-                console.log(`[JANIA-${reason}] \u2705 Reacci\xF3n ${emoji} ENTREGADA en reintento secuencial`);
-              }
-            } catch (retryErr) {
-              console.warn(`[JANIA-${reason}] \u274C Reintento de reacci\xF3n ${emoji} no pudo completarse:`, retryErr?.message || retryErr);
-            }
+            console.warn(`[JANIA-${reason}] \u26A0\uFE0F Reacci\xF3n ${emoji} a ${chatId} no pudo completarse (${errMsg}). Continuando cola.`);
           }
         }).catch(() => {
         });

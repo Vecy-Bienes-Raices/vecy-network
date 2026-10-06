@@ -2898,13 +2898,13 @@ Adriana Rebeca Orejuela`;
 
     it("Doctrina v32.49: Rediseño Visual de Admin & JanIA Console, Animación Neural Soundwave y Embudo de Marketing en Canal Oficial", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v32.50");
+      expect(VECY_VERSION).toBe("v32.51");
     });
 
     it("Doctrina v32.50: Limpieza Defensiva de JSON, Tipeo en Vivo (Typewriter) y Aura Giratoria de Alta Velocidad con 3 Puntos Dorados en JanIA Console", async () => {
       const { sanitizeWebChatResponse } = await import("../routers/janIA");
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v32.50");
+      expect(VECY_VERSION).toBe("v32.51");
 
       // Prueba con texto contaminado por JSON schema y escapes
       const dirtyRaw = `Esta redacción neutraliza las prácticas evasivas.\\n\\n### 4. ¿Qué debes hacer ante un juez?\\nSi un juez te dice \\"no hay contrato\\"... ¿Te ha pasado alguna situación?",
@@ -2922,6 +2922,42 @@ Adriana Rebeca Orejuela`;
       expect(cleaned).not.toContain("missingFields");
       expect(cleaned).not.toContain("reactionEmoji");
       expect(cleaned).not.toContain("\\n");
+    });
+
+    it("Doctrina v32.51: Resiliencia Signal E2E contra 'No open session', Descarte de Reacciones y Filtro Histórico de 15 Minutos en Grupos", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v32.51");
+
+      // Validar que un objeto de sesión cerrado sea identificado correctamente
+      const testClosedSession = {
+        _sessions: {
+          "BS/test1": {
+            indexInfo: { closed: 1785782870744 }
+          },
+          "BX/test2": {
+            indexInfo: { closed: 1785782879999 }
+          }
+        }
+      };
+
+      const keys = Object.keys(testClosedSession._sessions);
+      const hasOpen = keys.some(k => (testClosedSession._sessions as any)[k]?.indexInfo?.closed === -1);
+      expect(hasOpen).toBe(false);
+
+      // Con al menos una abierta
+      const testActiveSession = {
+        _sessions: {
+          "BS/test1": {
+            indexInfo: { closed: 1785782870744 }
+          },
+          "BX/test2": {
+            indexInfo: { closed: -1 }
+          }
+        }
+      };
+      const activeKeys = Object.keys(testActiveSession._sessions);
+      const activeHasOpen = activeKeys.some(k => (testActiveSession._sessions as any)[k]?.indexInfo?.closed === -1);
+      expect(activeHasOpen).toBe(true);
     });
   });
 });

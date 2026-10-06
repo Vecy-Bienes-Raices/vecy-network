@@ -7,6 +7,52 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.51 — 06 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Revisión de la Actividad de JanIA en Grupos Inmobiliarios Externos**:
+   - Eduardo consultó por qué JanIA parecía no estar logrando actuar en todos los grupos inmobiliarios externos como venía haciéndolo, adjuntando dos capturas de pantalla de WhatsApp:
+     - Captura 1: Comunidad *"Grupos Caro Rodríguez"* (22 grupos), donde se observaba actividad con reacción en *"Agentes"* y *"Oficinas"*, pero sin reacción y con acumulación de mensajes en *"Sabana Norte Ofertas y Req"* (251 msgs), *"Rosales - Chapinero"* (128 msgs), *"Zona Marlboro"*, *"Proyectos nuevos"*, *"Oferta inmuebles Bogotá y..."*, etc.
+     - Captura 2: Comunidad *"Red de Asesores Inmobiliarios Andrés Nieto"* (28 grupos), donde hubo reacción en *"Cali"*, *"Bodegas"*, *"Sabana"*, *"Antioquia"*, *"Fincas"*, *"Cedritos"*, pero sin reacción en *"Ofertas Andrés Nieto"* (32 msgs), *"Lotes Andrés Nieto"* (24 msgs), *"Usaquén"*, *"Rosales"* (150 msgs), *"Requerimientos"* (51 msgs), etc.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Fallo Críptico `SessionError: No open session` en Signal / Baileys**:
+   - En las comunidades masivas de WhatsApp, muchos participantes poseen identificadores anónimos `@lid` y WhatsApp reporta múltiples dispositivos por miembro (`devices.push(...additionalDevices)` en `messages-send.js`).
+   - Al inspeccionar los 26.359 archivos de `.baileys_auth` en el VPS, se identificaron miles de sesiones de dispositivos secundarios que estaban cerradas (`closed !== -1`).
+   - Cuando Baileys preparaba el mensaje de grupo, ejecutaba `createParticipantNodes(senderKeyJids)`. Si uno solo de los dispositivos secundarios de cualquier participante del grupo tenía su sesión cerrada, `signalRepository.encryptMessage` arrojaba `SessionError: No open session`. Al fallar un dispositivo en el `Promise.all`, Baileys abortaba la reacción al grupo entero.
+2. **Atascamiento Crítico en la Cola de Reacciones (`this.reactionQueue`)**:
+   - En `safeReact`, ante el error `No open session`, el código intentaba reintentar con `assertSessions` esperando 600ms, fallaba el fallback, y luego esperaba 1000ms más para intentar un tercer reenvío con timeouts de 3 segundos.
+   - Cada fallo retenía la promesa global de la cola secuencial durante más de 8 segundos. Con 10 publicaciones fallidas de comunidades masivas, la cola acumulaba más de 80 segundos de retraso, congelando las reacciones para los demás grupos.
+3. **Inundación Masiva del Buffer y Agotamiento de Gemini LLM por Reacciones (`reactionMessage`) y Auto-Eco**:
+   - WhatsApp emite un evento `messages.upsert` cada vez que cualquier usuario (o la propia cuenta de JanIA) reacciona con un emoji en un grupo.
+   - En grupos externos (`!isOfficialGroup === true`), la condición `isListing` evaluaba como verdadera cualquier reacción de emoji, introduciéndola al buffer como publicación de inmueble.
+   - `processGroupBuffer` convocaba a Google Gemini LLM para intentar extraer un inmueble a partir de secuencias de emojis (`"👍\n\n👌\n\n👍..."`).
+   - Los logs del VPS demostraron que las 5 claves de Gemini del pool sufrieron timeouts de 25 segundos continuos y pausas de 45-60 segundos por saturación de Google (error 503 "Server Saturation"), bloqueando la capacidad del bot de procesar ofertas reales.
+4. **Filtro Histórico de 180 Segundos Demasiado Estricto**:
+   - Debido a los retrasos acumulados en la cola de reacciones y los timeouts del LLM, los mensajes entrantes con más de 3 minutos de antigüedad eran descartados silenciosamente por la condición `msgAgeSeconds > 180`.
+
+### Acciones Técnicas Ejecutadas
+1. **Blindaje de Sesiones Signal en Baileys (`server/_core/whatsapp-match.ts`)**:
+   - **Interceptor en `state.keys.get`**: Si un registro de sesión leído de disco contiene exclusivamente entradas cerradas (`closed !== -1`), se retorna `null` para que Baileys entienda que no hay sesión activa y solicite pre-keys frescas a WhatsApp con `assertSessions`.
+   - **Interceptor en `signalRepository.encryptMessage`**: Si un dispositivo secundario lanza `No open session`, ejecuta de inmediato `assertSessions([params.jid], true)`. Si aún no abre (dispositivo zombi/inactivo), omite ese nodo individual evitando que un dispositivo secundario aborte la entrega al grupo completo.
+2. **Depuración de Reacciones y Filtro `isListing` (`server/_core/whatsapp-match.ts`)**:
+   - Descarte inmediato (`continue;`) de `rawMsg.reactionMessage` en grupos antes de ingresar al pipeline.
+   - Descarte de mensajes propios (`fromMe`) en grupos externos para erradicar bucles de auto-eco.
+   - Exclusión explícita de cortesías cortas (`isShortCourtesy`) y reacciones (`isReactionMessage`) en `isListing`.
+3. **Resiliencia Ágil en `safeReact`**:
+   - Eliminación de los reintentos síncronos pesados de 8 segundos. Si ocurre un fallo de sesión, se dispara la auto-sanación en segundo plano y se libera la cola de inmediato para continuar con los demás grupos sin demoras.
+4. **Ampliación de Ventana Histórica a 15 Minutos (900s)**:
+   - Modificado `maxAgeAllowed` para grupos de 180 a 900 segundos, blindando contra pérdidas por ráfagas o reinicios de PM2.
+5. **Enriquecimiento de Vocabulario y Contexto para FAST-REACT**:
+   - Ampliado `isExplicitOffer` con vocabulario inmobiliario ("lotes", "fincas", "bodegas", "casas", "aptos") y sinergia con el asunto del grupo (`isGroupOfferContext`), garantizando clasificación y reacción instantánea (<200ms) sin consumir cuota LLM.
+6. **Validación, Versión y Compilación**:
+   - Versión incrementada a **v32.51** (`32.51.0`) en `shared/const.ts` y `package.json`.
+   - Test unitario de `Doctrina v32.51` aprobado en `server/__tests__/regression.test.ts`.
+   - 146/146 pruebas Vitest superadas (100%).
+   - Compilación limpia con `tsc --noEmit` y `npm run build` en 20.32s.
+
+---
+
 ## 📋 SESIÓN v32.50 — 06 Octubre 2026
 
 ### Solicitud de Eduardo

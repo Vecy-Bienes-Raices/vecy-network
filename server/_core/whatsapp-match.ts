@@ -333,6 +333,30 @@ export class JaniaMatchBot {
         fs.mkdirSync(sessionDir, { recursive: true });
       }
       const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+
+      // 🛡️ DOCTRINA v32.51: Blindaje contra error "No open session" de Signal en Baileys
+      // Si un archivo de sesión en disco solo contiene sesiones cerradas (closed !== -1),
+      // retornamos null para que Baileys entienda que no hay sesión activa y solicite pre-keys frescas a WhatsApp.
+      const originalKeysGet = state.keys.get;
+      state.keys.get = (async (type: any, ids: string[]) => {
+        const data = await originalKeysGet(type, ids);
+        if (type === 'session') {
+          for (const id of ids) {
+            const sessRecord: any = (data as any)[id];
+            if (sessRecord && sessRecord._sessions) {
+              const sessionKeys = Object.keys(sessRecord._sessions);
+              if (sessionKeys.length > 0) {
+                const hasOpen = sessionKeys.some(k => sessRecord._sessions[k]?.indexInfo?.closed === -1);
+                if (!hasOpen) {
+                  // Toda sesión en este archivo está cerrada: forzar re-negociación Signal a Baileys
+                  (data as any)[id] = null;
+                }
+              }
+            }
+          }
+        }
+        return data;
+      }) as any;
       
       // Guardar las credenciales iniciales de inmediato en disco para evitar que se pierdan
       if (!fs.existsSync(path.join(sessionDir, 'creds.json'))) {
@@ -381,6 +405,28 @@ export class JaniaMatchBot {
           return undefined;
         },
       });
+
+      // 🛡️ DOCTRINA v32.51: Blindaje E2E Signal contra caídas por "No open session"
+      // Interceptamos encryptMessage para auto-sanar sesiones cerradas y evitar que un participante con sesión cerrada aborte la entrega a todo el grupo
+      if (this.sock?.signalRepository?.encryptMessage) {
+        const origEncryptMessage = this.sock.signalRepository.encryptMessage.bind(this.sock.signalRepository);
+        this.sock.signalRepository.encryptMessage = async (params: { jid: string; data: Buffer }) => {
+          try {
+            return await origEncryptMessage(params);
+          } catch (err: any) {
+            if (err?.message?.includes("No open session") && typeof (this.sock as any)?.assertSessions === 'function') {
+              try {
+                await (this.sock as any).assertSessions([params.jid], true);
+                return await origEncryptMessage(params);
+              } catch (retryErr) {
+                console.warn(`[JanIA-Signal] ⚠️ Dispositivo ${params.jid} sin sesión abierta en WhatsApp. Omitiendo nodo para preservar la entrega al grupo.`);
+                return { type: 'pkmsg', ciphertext: Buffer.alloc(0) };
+              }
+            }
+            throw err;
+          }
+        };
+      }
 
       this.setupEventListeners(saveCreds);
     } catch (err: any) {
@@ -501,13 +547,13 @@ export class JaniaMatchBot {
         }
 
         // 🛡️ FILTRO INTELIGENTE DE MENSAJES HISTÓRICOS:
-        // Para grupos masivos: descartar si tienen más de 180 segundos para evitar saturación de logs.
+        // Para grupos masivos: permitir hasta 900 segundos (15 minutos) para evitar descarte por ráfagas o reinicios.
         // Para DMs privados (!isGroup): PERMITIR hasta 1800 segundos (30 minutos) atrás para que JanIA
         // NUNCA ignore a un usuario que escribió mientras el socket se reconectaba o el servidor se actualizaba.
         const timestamp = msg.messageTimestamp;
         if (timestamp) {
           const msgAgeSeconds = Math.floor(Date.now() / 1000) - Number(timestamp);
-          const maxAgeAllowed = isGroup ? 180 : 1800; // 3 min en grupos, 30 min en DMs privados
+          const maxAgeAllowed = isGroup ? 900 : 1800; // 15 min en grupos, 30 min en DMs privados
           if (msgAgeSeconds > maxAgeAllowed) {
             continue;
           }
@@ -546,6 +592,18 @@ export class JaniaMatchBot {
 
             // Ignorar stickers
             if (rawMsg?.stickerMessage) {
+              continue;
+            }
+
+            // 🚫 IGNORAR REACCIONES DE EMOJIS EN GRUPOS (v32.51):
+            // Las reacciones a mensajes ajenos (reactionMessage) NUNCA son publicaciones inmobiliarias
+            // ni demandas. Ignorarlas de raíz erradica la saturación del buffer y consumo espurio de cuota LLM.
+            if (rawMsg?.reactionMessage) {
+              continue;
+            }
+
+            // 🛡️ Omitir mensajes propios en grupos externos (evitar eco y reprocesamiento de bot)
+            if (fromMe && chatId !== this.targetGroupId && chatId !== this.buzonGroupId && chatId !== this.circuloGroupId) {
               continue;
             }
 
@@ -835,9 +893,9 @@ export class JaniaMatchBot {
               );
 
             // En Soporte Legal (Buzón) y Círculo Cero, los mensajes son consultas e interacciones vivas, NO publicaciones estáticas.
-            // En grupos externos no oficiales, CAPTURAMOS EL 100% DE LOS MENSAJES (salvo monosílabos o stickers).
+            // En grupos externos no oficiales, CAPTURAMOS publicaciones comerciales e inmuebles (descartando cortesías cortas y reacciones).
             const isListingGroup = isMainGroup || (!isBuzonGroup && !isCirculoGroup);
-            const isListing = isListingGroup && (isPossibleListing || !isOfficialGroup || hasRawMedia);
+            const isListing = isListingGroup && !isReactionMessage && !isShortCourtesy && (isPossibleListing || !isOfficialGroup || hasRawMedia);
 
             // En Soporte Legal (Buzón) y Círculo Cero, solo responder a consultas o preguntas legítimas:
             // - NO responder a reacciones de emojis (reacciones a mensajes ajenos)
@@ -1720,6 +1778,9 @@ export class JaniaMatchBot {
 
       const isGroupRentContext = /arriend|alquil|renta/i.test(groupSubject);
 
+      const isGroupOfferContext = /ofert|venta|lotes?|casas?|fincas?|bodegas?|locales?|apto|apartamento|inversion/i.test(groupSubject);
+      const isGroupDemandContext = /requerimiento|busqueda|búsqueda|pedidos/i.test(groupSubject);
+
       const hasPermuta = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(cleanLower);
       const hasRentExplicit = /\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|renta|rentas|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(cleanLower)
         || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(cleanLower)
@@ -1729,12 +1790,15 @@ export class JaniaMatchBot {
       // Si el grupo es explícitamente de arriendos o el texto tiene señales de arriendo (administración incluida, canon, etc.)
       const isRentOperation = hasRentExplicit || (isGroupRentContext && !/\b(?:compro|comprar|en compra|para compra)\b/i.test(cleanLower) && !cleanLower.startsWith('vendo') && !cleanLower.startsWith('se vende'));
 
+      const hasPropertyKeyword = /\b(?:apto|aptos|apartamento|apartamentos|casa|casas|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos|penthouse|duplex|dúplex|consultorio|consultorios)\b/i.test(cleanLower);
+
       const isExplicitDemand = /\b(?:req\b|requerimiento|requerimientos|requiero|se requiere|requerimos|busco|buscamos|se busca|buscando|en búsqueda|en busqueda|necesito|necesitamos|necesitando|solicito|solicitamos|solicitando|solicitud|solicitudes|compro|comprando|comprador|compradores|comprar|en compra|para compra|negocio compra|para cliente|para clientes|tengo cliente|tenemos cliente|busca cliente|cliente busca|clientes buscan|arrendatario|inquilino)\b/i.test(cleanLower);
       const isExplicitOffer = !isExplicitDemand && (
-        /\b(?:ofrezco|ofrecemos|vendo|vendemos|se vende|en venta|venta directa|arriendo|arriendos|arrendamos|arrendar|se arrienda|en arriendo|arriendo directo|pongo en arriendo|alquilo|alquilamos|alquilar|se alquila|en alquiler|alquiler directo|rento|rentamos|rentar|se renta|en renta|tengo para|disponible|nuevo inmueble|permuto|permutamos|se permuta)\b/i.test(cleanLower)
+        /\b(?:ofrezco|ofrecemos|vendo|vendemos|se vende|en venta|venta directa|arriendo|arriendos|arrendamos|arrendar|se arrienda|en arriendo|arriendo directo|pongo en arriendo|alquilo|alquilamos|alquilar|se alquila|en alquiler|alquiler directo|rento|rentamos|rentar|se renta|en renta|tengo para|disponible|disponibles|nuevo inmueble|permuto|permutamos|se permuta)\b/i.test(cleanLower)
         || /(?:cuenta con|consta de|\d+\s*(?:m2|mts|m²)|alcobas|habitaciones|baños|parqueaderos?|cocina|sala|comedor|dep[oó]sito)/i.test(cleanLower)
+        || (hasPropertyKeyword && (isGroupOfferContext || cleanLower.includes("$") || cleanLower.includes("millon") || cleanLower.includes("precio") || cleanLower.includes("canon")))
       );
-      const isExplicitSearch = isExplicitDemand && !isExplicitOffer;
+      const isExplicitSearch = isExplicitDemand || (!isExplicitOffer && isGroupDemandContext && hasPropertyKeyword);
 
       let fastEmoji: string | null = null;
 
@@ -1899,52 +1963,16 @@ export class JaniaMatchBot {
           return;
         }
 
-        // Manejo resiliente de participantes @lid en grupos (error "No open session")
+        // Manejo ágil y no bloqueante de fallos de sesión o participantes en grupos (v32.51)
         if (errMsg.includes("No open session")) {
-          console.warn(`[JANIA-${reason}] ⚠️ Sesión no disponible para participante ${msgKey.participant || 'desconocido'}. Intentando resolución y reenvío limpio...`);
-          try {
-            if (msgKey.participant && typeof (this.sock as any)?.assertSessions === 'function') {
-              await (this.sock as any).assertSessions([msgKey.participant], true).catch(() => {});
-            }
-            await new Promise(r => setTimeout(r, 600));
-
-            // En grupos de WhatsApp, si la sesión del participante @lid no está abierta,
-            // reintentar con clave limpia simplificada sin participant
-            const fallbackKey: proto.IMessageKey = {
-              remoteJid: chatId,
-              id: msgKey.id,
-              fromMe: false
-            };
-
-            if (this.sock && this.isReady) {
-              await Promise.race([
-                this.sock.sendMessage(chatId, { react: { text: emoji, key: fallbackKey } }),
-                new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 3s fallback reacción")), 3000))
-              ]);
-              this.lastReactionTimestamp = Date.now();
-              console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA tras resolver sesión @lid (fallback)`);
-              return;
-            }
-          } catch (lidErr: any) {
-            console.warn(`[JANIA-${reason}] ⚠️ Reintento fallback @lid falló:`, lidErr?.message || lidErr);
-            return;
+          console.warn(`[JANIA-${reason}] ⚠️ Sesión cerrada detectada al reaccionar a ${chatId}. Forzando refresh Signal en background...`);
+          if (msgKey.participant && typeof (this.sock as any)?.assertSessions === 'function') {
+            (this.sock as any).assertSessions([msgKey.participant], true).catch(() => {});
           }
+          return; // Liberar inmediatamente la cola secuencial sin trabar otros grupos
         }
 
-        console.warn(`[JANIA-${reason}] ⚠️ Primer intento de reacción ${emoji} falló (${errMsg}). Reintentando tras pausa ágil...`);
-        await new Promise(r => setTimeout(r, 1000));
-        try {
-          if (this.sock && this.isReady) {
-            await Promise.race([
-              this.sock.sendMessage(chatId, { react: { text: emoji, key: msgKey } }),
-              new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout 3s reintento")), 3000))
-            ]);
-            this.lastReactionTimestamp = Date.now();
-            console.log(`[JANIA-${reason}] ✅ Reacción ${emoji} ENTREGADA en reintento secuencial`);
-          }
-        } catch (retryErr: any) {
-          console.warn(`[JANIA-${reason}] ❌ Reintento de reacción ${emoji} no pudo completarse:`, retryErr?.message || retryErr);
-        }
+        console.warn(`[JANIA-${reason}] ⚠️ Reacción ${emoji} a ${chatId} no pudo completarse (${errMsg}). Continuando cola.`);
       }
     }).catch(() => {});
 
