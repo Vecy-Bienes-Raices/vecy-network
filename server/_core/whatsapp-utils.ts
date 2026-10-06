@@ -498,52 +498,11 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
   const cleaned = cleanVoiceText(text);
   if (!cleaned) return null;
 
-  // 1. Motor Oficial Prioritario: Google Cloud Studio HD (es-US-Studio-B) — Voz Humana de Estudio Cristalina de JanIA
+  // 1. Motor Oficial Prioritario: Gemini 3.1 Flash TTS (Preview) — Voz Femenina Cálida Laomedeia (es-us)
   try {
     const accessToken = await getVertexAIAccessToken();
     if (accessToken) {
-      // Intento 1: Studio-B (Voz de Estudio Humana, Despierta y Enérgica)
-      try {
-        const response = await fetch("https://texttospeech.googleapis.com/v1/text:synthesize", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            input: { text: cleaned },
-            voice: {
-              languageCode: "es-US",
-              name: "es-US-Studio-B"
-            },
-            audioConfig: {
-              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1.08,
-              pitch: 0.8
-            }
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.audioContent) {
-            console.log(`[TTS-Media] ✓ Google Cloud Studio-B (Voz Humana de Estudio JanIA) — ${cleaned.length} chars → audio generado.`);
-            const buffer = Buffer.from(data.audioContent, "base64");
-            return {
-              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-              data: buffer.toString("base64"),
-              buffer
-            };
-          }
-        } else {
-          const errText = await response.text();
-          console.warn(`[TTS-Media] Google Cloud Studio-B error ${response.status}: ${errText.substring(0, 200)}`);
-        }
-      } catch (studioErr: any) {
-        console.warn("[TTS-Media] Studio-B no disponible:", studioErr?.message || studioErr);
-      }
-
-      // Intento 2: Gemini 3.1 Flash TTS (Preview) — Voz Laomedeia (es-us)
+      // Intento 1: Gemini 3.1 Flash TTS (Preview) — Voz Laomedeia Femenina Oficial de JanIA
       try {
         const response = await fetch("https://texttospeech.googleapis.com/v1beta1/text:synthesize", {
           method: "POST",
@@ -572,7 +531,7 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
         if (response.ok) {
           const data = await response.json();
           if (data.audioContent) {
-            console.log(`[TTS-Media] ✓ Gemini 3.1 Flash TTS (Laomedeia) — ${cleaned.length} chars → audio generado.`);
+            console.log(`[TTS-Media] ✓ Gemini 3.1 Flash TTS (Laomedeia Femenina) — ${cleaned.length} chars → audio generado.`);
             const buffer = Buffer.from(data.audioContent, "base64");
             return {
               mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
@@ -580,12 +539,15 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
               buffer
             };
           }
+        } else {
+          const errText = await response.text();
+          console.warn(`[TTS-Media] Gemini 3.1 Flash TTS error ${response.status}: ${errText.substring(0, 200)}`);
         }
       } catch (geminiErr: any) {
         console.warn("[TTS-Media] Gemini 3.1 Flash TTS no disponible:", geminiErr?.message || geminiErr);
       }
 
-      // Intento 3: Google Cloud Neural2 (es-US-Neural2-A)
+      // Intento 2: Google Cloud Neural2 Femenina (es-US-Neural2-A)
       try {
         const response = await fetch("https://texttospeech.googleapis.com/v1/text:synthesize", {
           method: "POST",
@@ -601,7 +563,7 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
             },
             audioConfig: {
               audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1.08,
+              speakingRate: 1.04,
               pitch: 0.5
             }
           })
@@ -610,7 +572,7 @@ export async function textToSpeechMedia(text: string, format: "OGG_OPUS" | "MP3"
         if (response.ok) {
           const data = await response.json();
           if (data.audioContent) {
-            console.log(`[TTS-Media] ✓ Google Cloud Neural2-A — ${cleaned.length} chars → audio generado.`);
+            console.log(`[TTS-Media] ✓ Google Cloud Neural2-A Femenina — ${cleaned.length} chars → audio generado.`);
             const buffer = Buffer.from(data.audioContent, "base64");
             return {
               mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",

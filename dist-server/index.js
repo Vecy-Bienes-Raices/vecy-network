@@ -10629,44 +10629,6 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
     const accessToken = await getVertexAIAccessToken();
     if (accessToken) {
       try {
-        const response = await fetch("https://texttospeech.googleapis.com/v1/text:synthesize", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            input: { text: cleaned },
-            voice: {
-              languageCode: "es-US",
-              name: "es-US-Studio-B"
-            },
-            audioConfig: {
-              audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1.08,
-              pitch: 0.8
-            }
-          })
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.audioContent) {
-            console.log(`[TTS-Media] \u2713 Google Cloud Studio-B (Voz Humana de Estudio JanIA) \u2014 ${cleaned.length} chars \u2192 audio generado.`);
-            const buffer = Buffer.from(data.audioContent, "base64");
-            return {
-              mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
-              data: buffer.toString("base64"),
-              buffer
-            };
-          }
-        } else {
-          const errText = await response.text();
-          console.warn(`[TTS-Media] Google Cloud Studio-B error ${response.status}: ${errText.substring(0, 200)}`);
-        }
-      } catch (studioErr) {
-        console.warn("[TTS-Media] Studio-B no disponible:", studioErr?.message || studioErr);
-      }
-      try {
         const response = await fetch("https://texttospeech.googleapis.com/v1beta1/text:synthesize", {
           method: "POST",
           headers: {
@@ -10693,7 +10655,7 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
         if (response.ok) {
           const data = await response.json();
           if (data.audioContent) {
-            console.log(`[TTS-Media] \u2713 Gemini 3.1 Flash TTS (Laomedeia) \u2014 ${cleaned.length} chars \u2192 audio generado.`);
+            console.log(`[TTS-Media] \u2713 Gemini 3.1 Flash TTS (Laomedeia Femenina) \u2014 ${cleaned.length} chars \u2192 audio generado.`);
             const buffer = Buffer.from(data.audioContent, "base64");
             return {
               mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
@@ -10701,6 +10663,9 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
               buffer
             };
           }
+        } else {
+          const errText = await response.text();
+          console.warn(`[TTS-Media] Gemini 3.1 Flash TTS error ${response.status}: ${errText.substring(0, 200)}`);
         }
       } catch (geminiErr) {
         console.warn("[TTS-Media] Gemini 3.1 Flash TTS no disponible:", geminiErr?.message || geminiErr);
@@ -10720,7 +10685,7 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
             },
             audioConfig: {
               audioEncoding: format === "OGG_OPUS" ? "OGG_OPUS" : "MP3",
-              speakingRate: 1.08,
+              speakingRate: 1.04,
               pitch: 0.5
             }
           })
@@ -10728,7 +10693,7 @@ async function textToSpeechMedia(text2, format = "OGG_OPUS") {
         if (response.ok) {
           const data = await response.json();
           if (data.audioContent) {
-            console.log(`[TTS-Media] \u2713 Google Cloud Neural2-A \u2014 ${cleaned.length} chars \u2192 audio generado.`);
+            console.log(`[TTS-Media] \u2713 Google Cloud Neural2-A Femenina \u2014 ${cleaned.length} chars \u2192 audio generado.`);
             const buffer = Buffer.from(data.audioContent, "base64");
             return {
               mimetype: format === "OGG_OPUS" ? "audio/ogg; codecs=opus" : "audio/mp3",
