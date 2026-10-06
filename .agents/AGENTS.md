@@ -172,7 +172,31 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.49 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.50 — Octubre 2026
+
+### Novedades v32.50 (Limpieza Defensiva de JSON, Tipeo en Vivo / Typewriter Streaming, Aura Giratoria de Alta Velocidad con 3 Puntos Dorados y Ajuste de Padding Inferior en JanIA Console):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Aura Giratoria de Alta Velocidad y Tres Puntos Dorados Bailando (`JanIARealtimeLoader`)**:
+     - Eliminados por completo los textos y letreros de estado ("Analizando tu consulta...", "Buscando coincidencias").
+     - Diseñado el avatar de JanIA con resplandor orbital giratorio a alta velocidad (`animate-[spin_1.2s_linear_infinite]`) con gradiente cónico de dorado intenso (`#bf953f`, `#ffd700`), azul eléctrico (`#00e5ff`) y verde eléctrico (`#00ff88`), acompañado de un halo de latencia pulsante suave.
+     - Al lado, micro-cápsula de cristal ahumado minimalista con los 3 puntitos dorados bailando suavemente (`animate-bounce` con sombra dorada), sin ningún texto ni ruido visual.
+  2. **Erradicación Total de Garabatos y Fuga de JSON Schema**:
+     - Identificada la causa raíz: cuando Gemini emitía una respuesta extensa con Markdown y comillas, el parser de JSON fallaba y el fallback por regex dejaba campos residuales (`shouldSendDM: false`, `missingFields: []`, etc.) con caracteres de escape literales `\n` y `\"`.
+     - Creada función `sanitizeWebChatResponse` en el servidor (`server/routers/janIA.ts`) que limpia cualquier JSON residual y decodifica escapes a texto Markdown puro y limpio.
+     - En el frontend (`JanIAConsole.tsx`), incorporada función defensiva `cleanClientMessageText` para limpiar tanto mensajes en vivo como históricos del usuario.
+     - En el prompt de chat web se suprimió la exigencia artificial de JSON, permitiendo a Gemini responder en lenguaje humano directo.
+  3. **Efecto de Tipeo en Vivo (Typewriter Streaming)**:
+     - Implementado componente `TypewriterMessage` que va escribiendo fluidamente la respuesta de JanIA a ritmo acelerado y natural (con cursor dorado palpitante), acompañando el tipeo con auto-scroll suave hacia abajo.
+  4. **Solución a Imagen Montada sobre la Burbuja de Escritura**:
+     - Se incrementó el padding inferior de la lista de conversaciones de `pb-32` (128px) a `pb-52` (208px) y se añadió espacio inferior a `messagesEndRef`, garantizando que la barra de input flotante inferior jamás tape el último mensaje ni el loader de JanIA.
+- **Acciones Ejecutadas y Blindaje de Arquitectura**:
+  1. `server/routers/janIA.ts`: Creada `sanitizeWebChatResponse`, actualizado prompt y suprimido `responseFormat: json_object`.
+  2. `client/src/pages/JanIAConsole.tsx`: Integrados `TypewriterMessage`, `cleanClientMessageText`, aura giratoria tricolor de alta velocidad con 3 puntos dorados, y `pb-52`.
+  3. `shared/const.ts` y `package.json`: Versión incrementada a `v32.50` (`32.50.0`).
+  4. `server/__tests__/regression.test.ts`: Test unitario `Doctrina v32.50` aprobado (124/124 tests Vitest al 100%).
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | 124/124 tests Vitest aprobados al 100% ✅ | `npm run build` limpio en 20.30s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.49 — Octubre 2026
 
 ### Novedades v32.49 (Rediseño de Sidebar Admin & JanIA Console, Animación Neural Soundwave Compacta, Tarjetas de Voz y Documento PDF en Web, y Embudo de Marketing en Canal Oficial):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

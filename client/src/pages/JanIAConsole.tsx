@@ -51,92 +51,130 @@ interface Message {
   timestamp: Date;
 }
 
-// // ─── JANIA COMPACT NEURAL THINKING & VOICE SYNTHESIS PILL (Gemini Live / Antigravity Style) ─
-function JanIARealtimeLoader() {
-  const [statusIndex, setStatusIndex] = useState(0);
-  const statuses = [
-    { text: "JanIA está pensando...", hint: "Razonando con Gemini 2.5 Flash" },
-    { text: "Analizando tu consulta...", hint: "Estructurando contexto legal y comercial" },
-    { text: "Rastreando base de datos...", hint: "Consultando red nacional en PostgreSQL" },
-    { text: "Buscando coincidencias y match...", hint: "Evaluando afinidad 85% - 100%" },
-    { text: "Generando síntesis...", hint: "Preparando respuesta y voz femenina de estudio" }
-  ];
+// ─── LIMPIEZA DEFENSIVA DE TEXTO CLIENTE (Cero Garabatos de JSON) ──────────────
+function cleanClientMessageText(raw: string): string {
+  if (!raw) return "";
+  let text = raw;
+
+  // Extraer únicamente el texto si vino envoltura {"response": "..."}
+  const responseMatch = text.match(/"response"\s*:\s*"([\s\S]*?)"\s*,\s*"(?:shouldSendDM|missingFields|reactionEmoji|wantsVoice|voiceResponse)/i);
+  if (responseMatch && responseMatch[1]) {
+    text = responseMatch[1];
+  } else {
+    text = text.replace(/",?\s*"(?:shouldSendDM|missingFields|reactionEmoji|wantsVoice|voiceResponse)"[\s\S]*$/i, '');
+    text = text.replace(/^\{[\s\S]*?"response"\s*:\s*"/i, '');
+    text = text.replace(/"\s*\}?\s*$/, '');
+  }
+
+  // Cortar remanentes de campos JSON sueltos
+  text = text.replace(/",\s*"shouldSendDM"[\s\S]*$/i, '');
+  text = text.replace(/",\s*"missingFields"[\s\S]*$/i, '');
+  text = text.replace(/",\s*"reactionEmoji"[\s\S]*$/i, '');
+  text = text.replace(/",\s*"voiceResponse"[\s\S]*$/i, '');
+  text = text.replace(/",\s*"wantsVoice"[\s\S]*$/i, '');
+  text = text.replace(/^\{[\s\S]*?"classification"[\s\S]*?"response"\s*:\s*"/i, '');
+
+  // Decodificar secuencias de escape literales
+  text = text
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, ' ')
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, '\\');
+
+  if (text.startsWith('"') && text.endsWith('"') && text.length > 2) {
+    text = text.slice(1, -1);
+  }
+
+  return text.trim();
+}
+
+// ─── EFECTO DE TIPEO EN VIVO (Typewriter Streaming) ───────────────────────────
+function TypewriterMessage({ 
+  content, 
+  isTyping, 
+  onTypingDone,
+  renderContent 
+}: { 
+  content: string; 
+  isTyping: boolean; 
+  onTypingDone: () => void;
+  renderContent: (text: string) => React.ReactNode;
+}) {
+  const [displayedLength, setDisplayedLength] = useState(isTyping ? 0 : content.length);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setStatusIndex((prev) => (prev + 1) % statuses.length);
-    }, 2200);
-    return () => clearInterval(timer);
-  }, []);
+    if (!isTyping) {
+      setDisplayedLength(content.length);
+      return;
+    }
 
-  const current = statuses[statusIndex];
+    if (displayedLength >= content.length) {
+      onTypingDone();
+      return;
+    }
+
+    // Tipeo dinámico acelerado: 3 a 12 caracteres por tick para naturalidad máxima
+    const step = Math.max(3, Math.min(12, Math.ceil(content.length / 70)));
+    const timer = setTimeout(() => {
+      setDisplayedLength(prev => Math.min(content.length, prev + step));
+    }, 14);
+
+    return () => clearTimeout(timer);
+  }, [displayedLength, content.length, isTyping, onTypingDone]);
+
+  const handleSkip = () => {
+    if (isTyping) {
+      setDisplayedLength(content.length);
+      onTypingDone();
+    }
+  };
+
+  const textToRender = isTyping ? content.slice(0, displayedLength) : content;
 
   return (
+    <div onClick={handleSkip} className={isTyping ? "cursor-pointer" : ""}>
+      {renderContent(textToRender)}
+      {isTyping && displayedLength < content.length && (
+        <span className="inline-block w-1.5 h-4 ml-1 bg-[#bf953f] animate-pulse align-middle rounded-sm shadow-[0_0_8px_rgba(191,149,63,0.8)]" />
+      )}
+    </div>
+  );
+}
+
+// ─── JANIA THINKING ANIMATION (Aura Giratoria de Alta Velocidad + Tres Puntos Dorados Bailando) ─
+function JanIARealtimeLoader() {
+  return (
     <motion.div 
-      initial={{ opacity: 0, y: 10, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -5, scale: 0.98 }}
-      transition={{ duration: 0.25, ease: "easeOut" }}
-      className="flex items-center gap-3.5 w-full max-w-xl py-1 my-1"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="flex items-center gap-4 py-2"
     >
-      {/* Avatar Container with subtle breathing golden halo */}
-      <div className="relative flex-shrink-0 w-9 h-9">
-        <motion.div 
-          animate={{ 
-            scale: [1, 1.15, 1],
-            opacity: [0.35, 0.75, 0.35],
-          }}
-          transition={{ 
-            duration: 2.4, 
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#00d2ff] blur-[3px]"
+      {/* Avatar con Resplandor Giratorio de Alta Velocidad (Dorado, Azul Eléctrico y Verde Eléctrico) */}
+      <div className="relative flex-shrink-0 w-11 h-11 flex items-center justify-center">
+        {/* Anillo de alta velocidad */}
+        <div 
+          className="absolute -inset-1 rounded-full bg-[conic-gradient(from_0deg,#bf953f,#ffd700,#00e5ff,#00ff88,#bf953f)] opacity-95 blur-[3px] animate-[spin_1.2s_linear_infinite]"
         />
-        <div className="relative w-full h-full rounded-full overflow-hidden border border-[#bf953f]/50 bg-black z-10 shadow-md">
+
+        {/* Segundo halo de latencia pulsante suave */}
+        <div 
+          className="absolute -inset-1.5 rounded-full bg-gradient-to-tr from-[#bf953f] via-[#00e5ff] to-[#00ff88] opacity-50 blur-[6px] animate-pulse"
+        />
+        
+        {/* Avatar Central Nítido */}
+        <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-[#bf953f]/80 bg-black z-10 shadow-xl">
           <img src="/jania_perfil.png" className="w-full h-full object-cover" alt="JanIA" />
         </div>
       </div>
 
-      {/* Compact Futuristic Thinking Pill */}
-      <div className="relative flex items-center gap-3.5 px-4 py-2.5 rounded-2xl bg-zinc-950/85 border border-[#bf953f]/25 shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur-md overflow-hidden">
-        {/* Shimmer line across top */}
-        <motion.div 
-          initial={{ x: "-100%" }}
-          animate={{ x: "200%" }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-0 left-0 right-0 h-[1.5px] w-1/3 bg-gradient-to-r from-transparent via-[#fcf6ba] to-transparent"
-        />
-
-        {/* Animated Voice/Thinking Waveform Bars (WhatsApp & Gemini Live Style) */}
-        <div className="flex items-center gap-[3px] h-4 shrink-0">
-          {[0.4, 0.85, 1, 0.6, 0.95, 0.5].map((scaleFactor, i) => (
-            <motion.span
-              key={i}
-              animate={{
-                height: ["4px", `${Math.round(scaleFactor * 16)}px`, "4px"],
-                opacity: [0.5, 1, 0.5],
-              }}
-              transition={{
-                duration: 0.9 + (i % 3) * 0.2,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: i * 0.12,
-              }}
-              className="w-[2.5px] rounded-full bg-gradient-to-t from-[#bf953f] to-[#fcf6ba]"
-            />
-          ))}
-        </div>
-
-        {/* Thinking Status Text */}
-        <div className="flex flex-col min-w-[170px]">
-          <span className="text-xs font-medium text-white tracking-wide flex items-center gap-1.5">
-            {current.text}
-          </span>
-          <span className="text-[10px] text-zinc-400 font-light tracking-normal truncate">
-            {current.hint}
-          </span>
-        </div>
+      {/* Micro-cápsula de cristal ahumado con los TRES PUNTITOS DORADOS BAILANDO (SIN LETREROS DE TEXTO) */}
+      <div className="flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-zinc-950/80 border border-white/10 shadow-[0_4px_25px_rgba(0,0,0,0.6)] backdrop-blur-md">
+        <span className="w-2 h-2 rounded-full bg-gradient-to-t from-[#bf953f] to-[#fcf6ba] animate-bounce [animation-delay:-0.32s] shadow-[0_0_8px_rgba(191,149,63,0.9)]" />
+        <span className="w-2 h-2 rounded-full bg-gradient-to-t from-[#bf953f] to-[#fcf6ba] animate-bounce [animation-delay:-0.16s] shadow-[0_0_8px_rgba(191,149,63,0.9)]" />
+        <span className="w-2 h-2 rounded-full bg-gradient-to-t from-[#bf953f] to-[#fcf6ba] animate-bounce shadow-[0_0_8px_rgba(191,149,63,0.9)]" />
       </div>
     </motion.div>
   );
@@ -167,6 +205,7 @@ export default function JanIAConsole() {
   const [selectedModel, setSelectedModel] = useState('pro'); // 'pro' | 'flash'
   const [sessionId, setSessionId] = useState(() => `session-${Date.now()}-${Math.random()}`);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
   const [isVoiceRecording, setIsVoiceRecording] = useState(false);
   const [isTaxModalOpen, setIsTaxModalOpen] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -290,6 +329,7 @@ export default function JanIAConsole() {
         timestamp: new Date(),
       };
       setMessages((prev: Message[]) => [...prev, janIAMessage]);
+      setTypingMessageId(janIAMsgId);
 
       // User sent voice → JanIA always responds with voice (conversational mode)
       const textToSpeak = (response as any).voiceResponse || response.content;
@@ -414,6 +454,7 @@ export default function JanIAConsole() {
       };
 
       setMessages((prev: Message[]) => [...prev, janIAMessage]);
+      setTypingMessageId(janIAMsgId);
 
       // Auto-play JanIA voice when the LLM signals it wants audio
       if ((response as any)?.wantsVoice) {
@@ -547,7 +588,8 @@ export default function JanIAConsole() {
 
   const renderMessageContent = (content: string) => {
     if (!content) return null;
-    const unifiedContent = content.replace(/\*\*/g, '*');
+    const cleanContent = cleanClientMessageText(content);
+    const unifiedContent = cleanContent.replace(/\*\*/g, '*');
     const parts = unifiedContent.split(/(\*[^*\n]+?\*)/g);
     return parts.map((part, index) => {
       if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
@@ -965,7 +1007,7 @@ export default function JanIAConsole() {
           /* Chatting/Conversational Layout */
           <div className="flex-1 flex flex-col h-full relative overflow-hidden">
             {/* Conversations list container */}
-            <div className="flex-1 overflow-y-auto scrollbar-hide pt-16 pb-32">
+            <div className="flex-1 overflow-y-auto scrollbar-hide pt-16 pb-52">
               <div className="max-w-3xl mx-auto px-6 space-y-8">
                 <AnimatePresence>
                   {messages.map((message) => (
@@ -987,9 +1029,19 @@ export default function JanIAConsole() {
                             ? 'bg-primary text-black font-bold shadow-gold-sm' 
                             : 'bg-white/[0.03] border border-white/5 text-gray-200'
                         }`}>
-                          <p className="text-sm md:text-base leading-relaxed whitespace-pre-wrap">
-                            {renderMessageContent(message.content)}
-                          </p>
+                          <div className="text-sm md:text-base leading-relaxed whitespace-pre-wrap">
+                            {message.role === 'janIA' ? (
+                              <TypewriterMessage
+                                content={message.content}
+                                isTyping={typingMessageId === message.id}
+                                onTypingDone={() => setTypingMessageId(null)}
+                                onTick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                                renderContent={(text) => renderMessageContent(text)}
+                              />
+                            ) : (
+                              renderMessageContent(message.content)
+                            )}
+                          </div>
 
                           {/* 📄 TARJETA DE DOCUMENTO OFICIAL DESCARGABLE (Factura Predial / Certificados / PDF) */}
                           {message.role === 'janIA' && /(?:factura\s*predial|certificado\s*de\s*pago|descargar\s*pdf|\.pdf\b|chip\s*aaa)/i.test(message.content) && (
@@ -1082,7 +1134,7 @@ export default function JanIAConsole() {
                 {isLoading && (
                   <JanIARealtimeLoader />
                 )}
-                <div ref={messagesEndRef} />
+                <div ref={messagesEndRef} className="h-8" />
               </div>
             </div>
 

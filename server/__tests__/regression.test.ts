@@ -2898,7 +2898,30 @@ Adriana Rebeca Orejuela`;
 
     it("Doctrina v32.49: Rediseño Visual de Admin & JanIA Console, Animación Neural Soundwave y Embudo de Marketing en Canal Oficial", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v32.49");
+      expect(VECY_VERSION).toBe("v32.50");
+    });
+
+    it("Doctrina v32.50: Limpieza Defensiva de JSON, Tipeo en Vivo (Typewriter) y Aura Giratoria de Alta Velocidad con 3 Puntos Dorados en JanIA Console", async () => {
+      const { sanitizeWebChatResponse } = await import("../routers/janIA");
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v32.50");
+
+      // Prueba con texto contaminado por JSON schema y escapes
+      const dirtyRaw = `Esta redacción neutraliza las prácticas evasivas.\\n\\n### 4. ¿Qué debes hacer ante un juez?\\nSi un juez te dice \\"no hay contrato\\"... ¿Te ha pasado alguna situación?",
+"shouldSendDM": false,
+"missingFields": [],
+"reactionEmoji": "",
+"wantsVoice": false,
+"voiceResponse": ""
+}`;
+      const cleaned = sanitizeWebChatResponse(dirtyRaw);
+      expect(cleaned).toContain("Esta redacción neutraliza las prácticas evasivas.");
+      expect(cleaned).toContain("### 4. ¿Qué debes hacer ante un juez?");
+      expect(cleaned).toContain('"no hay contrato"');
+      expect(cleaned).not.toContain("shouldSendDM");
+      expect(cleaned).not.toContain("missingFields");
+      expect(cleaned).not.toContain("reactionEmoji");
+      expect(cleaned).not.toContain("\\n");
     });
   });
 });

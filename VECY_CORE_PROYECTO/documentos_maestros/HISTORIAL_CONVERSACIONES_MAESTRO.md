@@ -7,6 +7,49 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.50 — 06 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Rediseño del Loader de JanIA**:
+   - Eliminar por completo los letreros y textos descriptivos de proceso ("JanIA está pensando...", "Analizando tu consulta...").
+   - Activar un resplandor dorado intenso con destellos azul y verde eléctrico girando a gran velocidad o con latencia detrás de la foto de perfil de JanIA, o con los tres puntos dorados bailando suavemente sin textos.
+2. **Eliminación Total de Garabatos y Fuga de JSON Schema**:
+   - Corregir de raíz el fallo visual evidenciado en capturas donde al final de la respuesta aparecían campos de metadatos técnicos en bruto:
+     `", "shouldSendDM": false, "missingFields": [], "reactionEmoji": "", "wantsVoice": false, "voiceResponse": ""` y saltos literales `\n` y comillas `\"`.
+3. **Efecto de Tipeo Progresivo (Typewriter Streaming)**:
+   - Hacer que JanIA escriba con tipeo en vivo palabra a palabra o carácter a carácter de manera fluida, en lugar de soltar todo el bloque de texto de golpe.
+4. **Corrección de Imagen Montada sobre la Burbuja de Escritura**:
+   - Corregir el solapamiento visual donde el avatar y la animación del loader quedaban montados o semitapados por la barra de entrada de texto inferior.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Falla en el Parser de JSON del Chat Web en `server/routers/janIA.ts`**:
+   - El prompt `buildSystemPrompt('web')` incluía la plantilla de WhatsApp que instruye al modelo a responder con un esquema JSON complejo (`classification`, `response`, `shouldSendDM`, `missingFields`, `reactionEmoji`, etc.).
+   - Cuando Gemini generaba una respuesta de asesoría jurídica o tributaria extensa con múltiples párrafos, encabezados Markdown y comillas internas, `JSON.parse` fallaba por sintaxis.
+   - El bloque `catch` ejecutaba un reemplazo con regex incompleto que cortaba el inicio pero dejaba los campos de cola (`shouldSendDM`, `missingFields`, etc.) adheridos al mensaje devuelto, además de conservar secuencias de escape literales (`\n`, `\"`).
+2. **Solapamiento Visual por Padding Inferior Insuficiente**:
+   - El contenedor de mensajes en `JanIAConsole.tsx` poseía `pb-32` (128px), mientras que la barra de entrada flotante fija ocupaba ~130px de altura con su margen y texto inferior. Al hacer scroll automático hacia el último elemento, el loader o la última burbuja quedaban físicamente debajo del borde superior de la barra de input.
+3. **Ruido Visual en la Animación**:
+   - Eduardo prefiere una experiencia minimalista y pura: sin etiquetas explicativas de terminal, solo el avatar con aura cuántica de alta velocidad y los 3 puntos dorados en cristal ahumado.
+
+### Acciones Técnicas Ejecutadas
+1. **Rutina de Sanitización Robusta en Backend (`server/routers/janIA.ts`)**:
+   - Creada función `sanitizeWebChatResponse` que elimina metadatos JSON técnicos (`shouldSendDM`, `missingFields`, `reactionEmoji`, `wantsVoice`, `voiceResponse`), remueve llaves envolventes y decodifica secuencias de escape literales a texto limpio en Markdown.
+   - Modificado el prompt de la consola web para prohibir la envoltura en JSON y suprimido `responseFormat: json_object`, permitiendo a Gemini generar Markdown conversacional directo y sin fricción.
+2. **Rutina de Limpieza Defensiva en Frontend (`client/src/pages/JanIAConsole.tsx`)**:
+   - Creada `cleanClientMessageText` dentro de `renderMessageContent`, limpiando en tiempo real tanto las respuestas nuevas como los mensajes antiguos guardados en la base de datos.
+3. **Componente de Tipeo Fluido (`TypewriterMessage`)**:
+   - Creado componente que simula la escritura en tiempo real de JanIA (3 a 12 caracteres por tick de 14ms con cursor dorado palpitante), acompañando el flujo con desplazamiento automático suave hacia abajo.
+4. **Nuevo Loader Minimalista de Alta Velocidad (`JanIARealtimeLoader`)**:
+   - Avatar de JanIA con anillo orbital giratorio de alta velocidad (`conic-gradient` de dorado intenso `#bf953f`, azul eléctrico `#00e5ff` y verde eléctrico `#00ff88` en giro de 1.2s), halo suave de latencia y micro-cápsula con 3 puntos dorados saltando suavemente, sin ningún texto ni etiqueta.
+5. **Corrección de Espaciado y Scroll**:
+   - Aumentado el padding inferior de `pb-32` a `pb-52` (208px) y dotado a `messagesEndRef` de altura `h-8`, garantizando separación limpia y sin solapamiento con la barra de texto.
+6. **Incremento de Versión, Tests y Despliegue**:
+   - Versión oficial incrementada a **v32.50** en `shared/const.ts` y `package.json`.
+   - Test unitario de regresión añadido en `server/__tests__/regression.test.ts` (124/124 tests Vitest aprobados al 100%).
+   - Compilación limpia con `tsc --noEmit` y `npm run build` (20.30s).
+
+---
+
 ## 📋 SESIÓN v32.49 — 06 Octubre 2026
 
 ### Solicitud de Eduardo

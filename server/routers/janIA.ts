@@ -82,6 +82,66 @@ async function processUnresolvedMatches() {
   }
 }
 
+/**
+ * Sanitiza a fondo las respuestas conversacionales de JanIA en la consola Web.
+ * Elimina cualquier filtración de JSON técnico (shouldSendDM, missingFields, reactionEmoji, etc.),
+ * decodifica escapes literales (\n, \", \t) y devuelve Markdown puro, limpio y elocuente.
+ */
+export function sanitizeWebChatResponse(raw: string): string {
+  if (!raw) return "";
+
+  let text = raw.trim();
+
+  // 1. Si vino envoltura JSON completa
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed.response && typeof parsed.response === "string") {
+      return sanitizeWebChatResponse(parsed.response);
+    }
+    if (parsed.respuesta && typeof parsed.respuesta === "string") {
+      return sanitizeWebChatResponse(parsed.respuesta);
+    }
+  } catch {
+    // No es JSON estricto válido, procesar limpieza regex profunda
+  }
+
+  // 2. Extraer el valor del campo "response" si el LLM emitió un objeto JSON
+  const responseMatch = text.match(/"response"\s*:\s*"([\s\S]*?)"\s*,\s*"(?:shouldSendDM|missingFields|reactionEmoji|wantsVoice|voiceResponse)/i);
+  if (responseMatch && responseMatch[1]) {
+    text = responseMatch[1];
+  } else {
+    // Eliminar campos de metadatos de cola si están presentes
+    text = text.replace(/",?\s*"(?:shouldSendDM|missingFields|reactionEmoji|wantsVoice|voiceResponse)"[\s\S]*$/i, '');
+    // Eliminar {"response": " al inicio
+    text = text.replace(/^\{[\s\S]*?"response"\s*:\s*"/i, '');
+    // Eliminar llaves de cierre
+    text = text.replace(/"\s*\}?\s*$/, '');
+  }
+
+  // 3. Cortar cualquier remanente residual de esquema
+  text = text.replace(/",\s*"shouldSendDM"[\s\S]*$/i, '');
+  text = text.replace(/",\s*"missingFields"[\s\S]*$/i, '');
+  text = text.replace(/",\s*"reactionEmoji"[\s\S]*$/i, '');
+  text = text.replace(/",\s*"voiceResponse"[\s\S]*$/i, '');
+  text = text.replace(/",\s*"wantsVoice"[\s\S]*$/i, '');
+  text = text.replace(/^\{[\s\S]*?"classification"[\s\S]*?"response"\s*:\s*"/i, '');
+
+  // 4. Decodificar caracteres de escape literales (\n -> salto real, \" -> comillas reales)
+  text = text
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, ' ')
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, '\\');
+
+  // 5. Retirar comillas envolventes accidentales al inicio y final
+  if (text.startsWith('"') && text.endsWith('"') && text.length > 2) {
+    text = text.slice(1, -1);
+  }
+
+  return text.trim();
+}
+
 export const janIARouter = router({
   // New: Extract property data from link
   extractFromLink: publicProcedure
@@ -238,7 +298,10 @@ export const janIARouter = router({
             ? `\n\n[INFORMACIÓN DEL USUARIO REGISTRADO]:\n- Estado: REGISTRADO EN LA PLATAFORMA VECY NETWORK ✅\n- Nombre: "${rawName}" (Nombre/Apodo: "${resolvedName}")\n- Saludo de hora actual en Bogotá (${hour}:00): "${timeGreeting}"\n- Trato respetuoso: "${genderTerm}"\n- INSTRUCCIÓN: Si es el primer mensaje de la sesión, salúdalo con "${timeGreeting}, ${genderTerm}". Si ya están interactuando, integra su nombre "${resolvedName}" naturalmente sin repetir saludos repetitivos.`
             : `\n\n[INFORMACIÓN DEL USUARIO NO REGISTRADO / ANÓNIMO]:\n- Estado: NO REGISTRADO (Navegante anónimo)\n- Saludo de hora actual en Bogotá (${hour}:00): "${timeGreeting}"\n- INSTRUCCIÓN DE INTERACCIÓN:\n  1. Si no te ha dicho su nombre en los mensajes previos, salúdalo cordialmente con "${timeGreeting}" y pregúntale amablemente: "¿Con quién tengo el gusto de interactuar?" para recordarlo en la conversación.\n  2. Invítalo amablemente a registrarse gratuitamente en la plataforma VECY Network (https://vecy-network.vercel.app/) para guardar su nombre, asociar su cuenta y acceder a su propio historial completo de conversaciones.`;
 
-          const systemPrompt = `${buildSystemPrompt('web')}\n\n${liveStats}${userContextInstruction}\n\n[INSTRUCCIÓN MAESTRA - CHAT WEB VECY 24/7]: Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento lógico, amplio criterio jurídico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa y estructurada. PROHIBIDO usar plantillas fijas o cierres/firmas con membretes. Responde en formato JSON estrictamente como: {"response": "tu respuesta viva y razonada"}`;
+          const systemPrompt = `${buildSystemPrompt('web')}\n\n${liveStats}${userContextInstruction}\n\n[INSTRUCCIÓN MAESTRA Y CRÍTICA DE SALIDA — CONSOLA WEB JANIA]:
+1. Eres JanIA Match, la consultora inmobiliaria senior e Inteligencia Artificial de VECY Network. Posees alto criterio legal, financiero y comercial inmobiliario en Colombia.
+2. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa, humana y estructurada en Markdown.
+3. FORMATO OBLIGATORIO: Responde DIRECTAMENTE con tu texto conversacional. ESTÁ ESTRICTAMENTE PROHIBIDO emitir objetos JSON, llaves {}, o campos como "shouldSendDM", "missingFields", "reactionEmoji", "wantsVoice" o "voiceResponse". Habla como un ser humano experto en bienes raíces.`;
 
           // Fetch recent 6 messages for conversation context
           const recentHistory = await db
@@ -262,16 +325,10 @@ export const janIARouter = router({
           try {
             const llmRes = await invokeLLM({
               messages: llmMessages,
-              responseFormat: { type: "json_object" }
             });
 
             const rawContent = (llmRes as any)?.choices?.[0]?.message?.content || "";
-            try {
-              const parsed = JSON.parse(rawContent);
-              janIAResponse = parsed.response || parsed.respuesta || rawContent;
-            } catch {
-              janIAResponse = rawContent.replace(/^\{[\s\S]*"response"\s*:\s*"/, '').replace(/"\s*\}$/, '').trim();
-            }
+            janIAResponse = sanitizeWebChatResponse(rawContent);
           } catch (llmErr: any) {
             console.warn("[JanIA-Chat] Fallback en LLM por congestión:", llmErr?.message);
             janIAResponse = `Hola, con gusto te asesoro. He recibido tu consulta: "${input.message.slice(0, 100)}". Nuestros servicios de inteligencia inmobiliaria están activos y cruzando oportunidades. ¿Deseas que busquemos detalles específicos en la base de datos nacional?`;

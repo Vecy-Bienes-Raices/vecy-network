@@ -322,6 +322,38 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.50 — Octubre 2026
+
+#### 📌 LIMPIEZA DEFENSIVA DE JSON SCHEMA, EFECTO DE TIPEO EN VIVO (TYPEWRITER STREAMING), AURA GIRATORIA DE ALTA VELOCIDAD CON 3 PUNTOS DORADOS Y AJUSTE DE PADDING INFERIOR EN JANIA CONSOLE
+
+**Requerimiento y Objetivos:**
+1. **Rediseño Radical del Loader de Pensamiento de JanIA (`JanIAConsole.tsx`)**:
+   - Eliminar los textos descriptivos de proceso ("Analizando tu consulta...", "Buscando coincidencias") que generaban ruido visual.
+   - Implementar un resplandor orbital giratorio a alta velocidad con gradiente cónico de dorado intenso (`#bf953f`, `#ffd700`), azul eléctrico (`#00e5ff`) y verde esmeralda eléctrico (`#00ff88`) detrás de la foto de perfil de JanIA, con latencia suave.
+   - Integrar al lado los 3 puntos dorados bailando suavemente dentro de una micro-cápsula de cristal ahumado minimalista.
+2. **Erradicación Total de Garabatos y Fuga de Metadatos JSON**:
+   - Resolver la causa raíz observada en capturas donde respuestas largas con comillas y Markdown hacían fallar el parseo JSON, provocando la fuga de campos como `shouldSendDM: false`, `missingFields: []`, etc., con escapes literales `\n` y `\"`.
+   - Crear una rutina estricta de sanitización en el backend (`sanitizeWebChatResponse`) y en el cliente (`cleanClientMessageText`).
+   - Modificar el prompt del chat web para solicitar directamente texto fluido conversacional en Markdown sin exigir envolturas artificiales en JSON.
+3. **Efecto de Tipeo en Vivo (Typewriter Streaming)**:
+   - Crear un componente de renderizado progresivo (`TypewriterMessage`) que escriba las respuestas de JanIA carácter a carácter a ritmo acelerado y natural, con cursor dorado pulsante y auto-scroll suave hacia abajo.
+4. **Corrección de Avatar Montado sobre la Barra de Entrada**:
+   - Incrementar el padding inferior del scroll de conversaciones de `pb-32` a `pb-52` (208px) y dotar a `messagesEndRef` de altura `h-8`, garantizando que la barra de input flotante inferior jamás eclipse o solape el último mensaje ni el loader.
+
+**Acciones Técnicas Ejecutadas:**
+1. **Backend (`server/routers/janIA.ts`)**:
+   - Creada función `sanitizeWebChatResponse` que elimina metadatos JSON técnicos y decodifica escapes.
+   - Refactorizado `systemPrompt` para la consola web e invocación de `invokeLLM` sin `responseFormat: json_object`.
+2. **Frontend (`client/src/pages/JanIAConsole.tsx`)**:
+   - Rediseñado `JanIARealtimeLoader` con aura giratoria tricolor y 3 puntos dorados sin texto.
+   - Integrados `TypewriterMessage`, `cleanClientMessageText`, y padding `pb-52`.
+3. **Validación, Versión y Compilación**:
+   - Versión incrementada a `v32.50` (`32.50.0`).
+   - 124/124 pruebas unitarias Vitest aprobadas al 100%.
+   - Compilación limpia con `tsc --noEmit` (0 errores) y `npm run build` en 20.30s.
+
+---
+
 ### 🔖 v32.49 — Octubre 2026
 
 #### 📌 REDISEÑO VISUAL DEL SIDEBAR ADMIN & JANIA CONSOLE, ANIMACIÓN NEURAL SOUNDWAVE COMPACTA, REPRODUCTOR DE NOTAS DE VOZ WEB Y EMBUDO DE MARKETING EN CANAL OFICIAL

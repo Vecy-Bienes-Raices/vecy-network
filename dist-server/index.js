@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.48";
+    VECY_VERSION = "v32.50";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -24329,6 +24329,39 @@ async function processUnresolvedMatches() {
     isProcessingUnresolved = false;
   }
 }
+function sanitizeWebChatResponse(raw) {
+  if (!raw) return "";
+  let text2 = raw.trim();
+  try {
+    const parsed = JSON.parse(text2);
+    if (parsed.response && typeof parsed.response === "string") {
+      return sanitizeWebChatResponse(parsed.response);
+    }
+    if (parsed.respuesta && typeof parsed.respuesta === "string") {
+      return sanitizeWebChatResponse(parsed.respuesta);
+    }
+  } catch {
+  }
+  const responseMatch = text2.match(/"response"\s*:\s*"([\s\S]*?)"\s*,\s*"(?:shouldSendDM|missingFields|reactionEmoji|wantsVoice|voiceResponse)/i);
+  if (responseMatch && responseMatch[1]) {
+    text2 = responseMatch[1];
+  } else {
+    text2 = text2.replace(/",?\s*"(?:shouldSendDM|missingFields|reactionEmoji|wantsVoice|voiceResponse)"[\s\S]*$/i, "");
+    text2 = text2.replace(/^\{[\s\S]*?"response"\s*:\s*"/i, "");
+    text2 = text2.replace(/"\s*\}?\s*$/, "");
+  }
+  text2 = text2.replace(/",\s*"shouldSendDM"[\s\S]*$/i, "");
+  text2 = text2.replace(/",\s*"missingFields"[\s\S]*$/i, "");
+  text2 = text2.replace(/",\s*"reactionEmoji"[\s\S]*$/i, "");
+  text2 = text2.replace(/",\s*"voiceResponse"[\s\S]*$/i, "");
+  text2 = text2.replace(/",\s*"wantsVoice"[\s\S]*$/i, "");
+  text2 = text2.replace(/^\{[\s\S]*?"classification"[\s\S]*?"response"\s*:\s*"/i, "");
+  text2 = text2.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n").replace(/\\t/g, " ").replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+  if (text2.startsWith('"') && text2.endsWith('"') && text2.length > 2) {
+    text2 = text2.slice(1, -1);
+  }
+  return text2.trim();
+}
 var janIARouter = router({
   // New: Extract property data from link
   extractFromLink: publicProcedure.input(z4.object({ url: z4.string().url() })).mutation(async ({ input }) => {
@@ -24464,7 +24497,10 @@ var janIARouter = router({
 
 ${liveStats}${userContextInstruction}
 
-[INSTRUCCI\xD3N MAESTRA - CHAT WEB VECY 24/7]: Eres JanIA Match, la Inteligencia Artificial viva y consultora inmobiliaria senior de VECY Network. Tienes razonamiento l\xF3gico, amplio criterio jur\xEDdico, financiero y de mercado inmobiliario. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa y estructurada. PROHIBIDO usar plantillas fijas o cierres/firmas con membretes. Responde en formato JSON estrictamente como: {"response": "tu respuesta viva y razonada"}`;
+[INSTRUCCI\xD3N MAESTRA Y CR\xCDTICA DE SALIDA \u2014 CONSOLA WEB JANIA]:
+1. Eres JanIA Match, la consultora inmobiliaria senior e Inteligencia Artificial de VECY Network. Posees alto criterio legal, financiero y comercial inmobiliario en Colombia.
+2. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa, humana y estructurada en Markdown.
+3. FORMATO OBLIGATORIO: Responde DIRECTAMENTE con tu texto conversacional. EST\xC1 ESTRICTAMENTE PROHIBIDO emitir objetos JSON, llaves {}, o campos como "shouldSendDM", "missingFields", "reactionEmoji", "wantsVoice" o "voiceResponse". Habla como un ser humano experto en bienes ra\xEDces.`;
         const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq11(messages.conversationId, conversationId)).orderBy(desc5(messages.createdAt)).limit(6);
         const formattedHistory = recentHistory.reverse().map((m) => ({
           role: m.role === "janIA" ? "assistant" : "user",
@@ -24477,16 +24513,10 @@ ${liveStats}${userContextInstruction}
         ];
         try {
           const llmRes = await invokeLLM2({
-            messages: llmMessages,
-            responseFormat: { type: "json_object" }
+            messages: llmMessages
           });
           const rawContent = llmRes?.choices?.[0]?.message?.content || "";
-          try {
-            const parsed = JSON.parse(rawContent);
-            janIAResponse = parsed.response || parsed.respuesta || rawContent;
-          } catch {
-            janIAResponse = rawContent.replace(/^\{[\s\S]*"response"\s*:\s*"/, "").replace(/"\s*\}$/, "").trim();
-          }
+          janIAResponse = sanitizeWebChatResponse(rawContent);
         } catch (llmErr) {
           console.warn("[JanIA-Chat] Fallback en LLM por congesti\xF3n:", llmErr?.message);
           janIAResponse = `Hola, con gusto te asesoro. He recibido tu consulta: "${input.message.slice(0, 100)}". Nuestros servicios de inteligencia inmobiliaria est\xE1n activos y cruzando oportunidades. \xBFDeseas que busquemos detalles espec\xEDficos en la base de datos nacional?`;
