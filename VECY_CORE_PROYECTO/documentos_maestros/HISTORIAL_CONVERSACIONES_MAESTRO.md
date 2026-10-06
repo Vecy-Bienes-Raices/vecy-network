@@ -7,6 +7,47 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.49 — 06 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Rediseño Proporcional del Sidebar de Admin (`Admin.tsx`)**:
+   - Agrandar el logo corporativo de Vecy en la cabecera del panel administrativo, ya que se apreciaba diminuto en comparación con los letreros `VECY`, `BIENES RAÍCES` y `Panel Admin`.
+2. **Reemplazo de la Estrella Parpadeante por el Logo Oficial en JanIA Console (`JanIAConsole.tsx`)**:
+   - Eliminar el ícono de estrella de 4 puntas (`VecySparkle`) en el menú lateral de JanIA y reemplazarlo por el logo oficial circular `/logo-vecy.png` con proporción y brillo dorado acorde al diseño.
+3. **Nueva Animación Neural de Pensamiento y Síntesis de Voz (Estilo Gemini Live / Antigravity)**:
+   - Eliminar la caja grande y tosca con textos de terminal falsos (`ENGINE: JANIA_GEMINI_CO`, `MODEL_STATUS: ONLINE`) y tres puntos saltarines.
+   - Crear una animación pequeña, estética, futurista y natural (estilo Gemini / Google AI Studio / Antigravity): una cápsula flotante con el avatar de JanIA en halo dorado respiratorio, un espectro de onda de audio neuronal (barras verticales animadas que simulan la síntesis de una nota de voz de WhatsApp) y textos de estado fluidos.
+4. **Reproductor de Notas de Voz Estilo WhatsApp y Tarjeta de Descarga de Documentos en Web**:
+   - Dotar a la web de las mismas facultades que JanIA posee en WhatsApp: reproducir audios con la voz femenina oficial (*Laomedeia*) mediante un reproductor con botón Play/Pause y ondas reactivas, e incorporar tarjetas descargables directas en PDF para facturas prediales y certificados.
+5. **Embudo de Marketing Matutino en Canal Oficial de Vecy (`cronService.ts`)**:
+   - Despachar las encuestas temáticas matutinas directamente al Canal Oficial de WhatsApp (`@newsletter`), y dinamizar el tráfico invitando a los miembros de los Grupos 2 y 3 a seguir el canal y votar mediante enlace directo.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Desequilibrio Visual en Cabeceras de Menús**:
+   - El logo en `Admin.tsx` estaba configurado con `h-8` (32px), quedando desproporcionado respecto al bloque de tres textos corporativos.
+   - En `JanIAConsole.tsx`, se utilizaba un SVG genérico de 4 puntas en lugar del isotipo oficial de Vecy.
+2. **Sobrecarga de Interfaz en el Loader de Pensamiento**:
+   - `JanIARealtimeLoader` ocupaba un contenedor de gran tamaño (`p-6` con altura superior a 200px) que desplazaba la conversación y mostraba metadatos simulados de depuración. Se requería una micro-animación compacta (menos de 45px de altura) con onda de sonido orgánica.
+3. **Consistencia de Capacidades Web ↔ WhatsApp**:
+   - En la consola web, las respuestas de predial y trámites no ofrecían un botón explícito de descarga de archivo PDF y el botón de voz era un ícono simple sin retroalimentación auditiva visual.
+
+### Acciones Técnicas Ejecutadas
+1. **Refactorización de `client/src/pages/Admin.tsx`**:
+   - Logo escalado a `h-11 w-11` (44px) con `drop-shadow-[0_0_10px_rgba(191,149,63,0.4)]` y tipografía corporativa equilibrada.
+2. **Refactorización de `client/src/pages/JanIAConsole.tsx`**:
+   - Reemplazo de `VecySparkle` por el logo oficial circular `/logo-vecy.png`.
+   - Rediseño de `JanIARealtimeLoader` como píldora neural compacta flotante con avatar en halo respiratorio, espectro de onda de audio de 6 barras con físicas orgánicas, textos de estado dinámicos y línea de shimmer láser superior.
+   - Integración de reproductor de nota de voz interactivo con botón Play/Pause y barras sonoras reactivas.
+   - Integración de tarjeta interactiva de descarga de documentos PDF (Facturas Prediales de Bogotá, Certificados de Pago).
+3. **Actualización de `server/_core/cronService.ts`**:
+   - Publicación centralizada de encuestas matutinas en el Canal Oficial de Vecy y anuncios con enlace de invitación cruzada en Grupos 2 y 3.
+4. **Validación, Versión y Compilación**:
+   - Versión incrementada a `v32.49` (`32.49.0`).
+   - 144/144 pruebas unitarias Vitest aprobadas al 100%.
+   - Compilación limpia con `tsc --noEmit` (0 errores) y `npm run build` en 21.77s.
+
+---
+
 ## 📋 SESIÓN v32.48 — 06 Octubre 2026
 
 ### Solicitud de Eduardo

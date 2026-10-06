@@ -236,20 +236,20 @@ export default function Admin() {
           <div className="hidden md:flex items-center justify-between w-full">
             {sidebarExpanded ? (
               <>
-                <div className="flex items-center gap-3 animate-fade-in overflow-hidden">
+                <div className="flex items-center gap-3.5 animate-fade-in overflow-hidden">
                   <img
                     src="/logo-vecy.png"
                     alt="Vecy Bienes Raíces"
-                    className="h-8 w-auto object-contain filter drop-shadow-[0_0_8px_rgba(191,149,63,0.3)] shrink-0"
+                    className="h-11 w-11 object-contain filter drop-shadow-[0_0_10px_rgba(191,149,63,0.4)] shrink-0 transition-transform duration-300 hover:scale-105"
                   />
-                  <div className="flex flex-col">
-                    <span className="font-['Audiowide'] text-white tracking-[0.16em] text-sm uppercase leading-none">
+                  <div className="flex flex-col justify-center">
+                    <span className="font-['Audiowide'] text-white tracking-[0.16em] text-[15px] uppercase leading-none">
                       VECY
                     </span>
-                    <span className="font-['Audiowide'] text-gradient-gold tracking-[0.14em] text-[9px] uppercase leading-tight mt-1">
+                    <span className="font-['Audiowide'] text-gradient-gold tracking-[0.14em] text-[10px] uppercase leading-tight mt-1">
                       BIENES RAÍCES
                     </span>
-                    <p className="text-muted-foreground text-[8px] uppercase tracking-[0.25em] whitespace-nowrap mt-1">
+                    <p className="text-muted-foreground text-[8.5px] uppercase tracking-[0.25em] whitespace-nowrap mt-1 font-semibold">
                       Panel Admin
                     </p>
                   </div>
@@ -272,7 +272,7 @@ export default function Admin() {
                   <img
                     src="/logo-vecy.png"
                     alt="Vecy"
-                    className="h-7 w-auto object-contain filter drop-shadow-[0_0_6px_rgba(191,149,63,0.4)] group-hover:scale-105 transition-transform"
+                    className="h-9 w-9 object-contain filter drop-shadow-[0_0_8px_rgba(191,149,63,0.45)] group-hover:scale-110 transition-transform"
                   />
                 </button>
               </div>
@@ -285,16 +285,16 @@ export default function Admin() {
               <img
                 src="/logo-vecy.png"
                 alt="Vecy Bienes Raíces"
-                className="h-8 w-auto object-contain"
+                className="h-10 w-10 object-contain filter drop-shadow-[0_0_8px_rgba(191,149,63,0.35)] shrink-0"
               />
-              <div className="flex flex-col">
+              <div className="flex flex-col justify-center">
                 <span className="font-['Audiowide'] text-white tracking-[0.16em] text-sm uppercase leading-none">
                   VECY
                 </span>
-                <span className="font-['Audiowide'] text-gradient-gold tracking-[0.14em] text-[9px] uppercase leading-tight mt-1">
+                <span className="font-['Audiowide'] text-gradient-gold tracking-[0.14em] text-[9.5px] uppercase leading-tight mt-1">
                   BIENES RAÍCES
                 </span>
-                <p className="text-muted-foreground text-[8px] uppercase tracking-[0.25em] mt-1">
+                <p className="text-muted-foreground text-[8px] uppercase tracking-[0.25em] mt-1 font-semibold">
                   Panel Admin
                 </p>
               </div>

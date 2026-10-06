@@ -29,7 +29,10 @@ import {
   LogOut,
   Sliders,
   HelpCircle,
-  Calculator
+  Calculator,
+  Play,
+  Pause,
+  Download
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { trpc } from '@/lib/trpc';
@@ -48,129 +51,105 @@ interface Message {
   timestamp: Date;
 }
 
-// ─── JANIA PROCESS LOADER (Gemini & Multi-task Style) ─────────────────────────
+// // ─── JANIA COMPACT NEURAL THINKING & VOICE SYNTHESIS PILL (Gemini Live / Antigravity Style) ─
 function JanIARealtimeLoader() {
-  const [step, setStep] = useState(0);
-  const steps = [
-    { text: "Pensando", detail: "Orquestando JanIA v2.5 (Gemini Engine)...", icon: Brain, color: "text-[#bf953f]" },
-    { text: "Analizando lenguaje natural", detail: "Procesando semántica del mensaje...", icon: Cpu, color: "text-blue-400" },
-    { text: "Rastreando inmuebles", detail: "Buscando en base de datos nacional...", icon: Database, color: "text-emerald-400" },
-    { text: "Rastreando requerimientos", detail: "Analizando demandas activas...", icon: Search, color: "text-cyan-400" },
-    { text: "Buscando posibilidades de Match", detail: "Cruzando coeficientes de afinidad...", icon: Sparkles, color: "text-amber-400" },
-    { text: "Generando informe técnico", detail: "Estructurando ficha Gold Edition...", icon: FileText, color: "text-[#bf953f]" },
-    { text: "Notificando a la red de contactos", detail: "Preparando cola de envíos directos...", icon: Bell, color: "text-red-400" }
+  const [statusIndex, setStatusIndex] = useState(0);
+  const statuses = [
+    { text: "JanIA está pensando...", hint: "Razonando con Gemini 2.5 Flash" },
+    { text: "Analizando tu consulta...", hint: "Estructurando contexto legal y comercial" },
+    { text: "Rastreando base de datos...", hint: "Consultando red nacional en PostgreSQL" },
+    { text: "Buscando coincidencias y match...", hint: "Evaluando afinidad 85% - 100%" },
+    { text: "Generando síntesis...", hint: "Preparando respuesta y voz femenina de estudio" }
   ];
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setStep((prev) => (prev + 1) % steps.length);
-    }, 1800);
-    return () => clearInterval(interval);
+    const timer = setInterval(() => {
+      setStatusIndex((prev) => (prev + 1) % statuses.length);
+    }, 2200);
+    return () => clearInterval(timer);
   }, []);
 
-  const currentStep = steps[step];
-  const Icon = currentStep.icon;
+  const current = statuses[statusIndex];
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      className="flex gap-6 items-start w-full"
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -5, scale: 0.98 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      className="flex items-center gap-3.5 w-full max-w-xl py-1 my-1"
     >
-      {/* Avatar Container with glowing rings */}
-      <div className="relative flex-shrink-0 w-10 h-10 mt-1">
-        {/* Animated glow halo */}
+      {/* Avatar Container with subtle breathing golden halo */}
+      <div className="relative flex-shrink-0 w-9 h-9">
         <motion.div 
           animate={{ 
-            scale: [1, 1.2, 1],
-            opacity: [0.4, 0.8, 0.4],
+            scale: [1, 1.15, 1],
+            opacity: [0.35, 0.75, 0.35],
           }}
           transition={{ 
-            duration: 2.5, 
+            duration: 2.4, 
             repeat: Infinity,
             ease: "easeInOut"
           }}
-          className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#00d2ff] opacity-60 blur-sm"
+          className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#00d2ff] blur-[3px]"
         />
-        
-        {/* Actual Avatar */}
-        <div className="relative w-full h-full rounded-full overflow-hidden border border-primary/30 bg-black z-10">
-          <img src="/jania_perfil.png" className="w-full h-full object-cover animate-pulse" alt="JanIA Profile" />
+        <div className="relative w-full h-full rounded-full overflow-hidden border border-[#bf953f]/50 bg-black z-10 shadow-md">
+          <img src="/jania_perfil.png" className="w-full h-full object-cover" alt="JanIA" />
         </div>
       </div>
 
-      {/* Main Processing Box */}
-      <div className="flex-1 max-w-[85%] space-y-2">
-        <div className="bg-[#0c0c0c] border border-white/5 rounded-3xl p-6 relative overflow-hidden shadow-2xl">
-          
-          {/* Gemini-like waving aura background */}
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-[#bf953f]/5 via-[#00d2ff]/5 to-pink-500/5 opacity-40 blur-xl" />
-          
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-2xl bg-white/5 border border-white/10 ${currentStep.color}`}>
-                <Icon className="w-5 h-5 animate-pulse" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-bold text-white uppercase tracking-wider">
-                    {currentStep.text}
-                  </h4>
-                  {/* Animated Ellipsis */}
-                  <span className="flex gap-1 items-center">
-                    <span className="h-1.5 w-1.5 rounded-full bg-accent animate-bounce [animation-delay:-0.3s]" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-accent animate-bounce [animation-delay:-0.15s]" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-accent animate-bounce" />
-                  </span>
-                </div>
-                <p className="text-xs text-gray-400 mt-1 font-light">
-                  {currentStep.detail}
-                </p>
-              </div>
-            </div>
-          </div>
+      {/* Compact Futuristic Thinking Pill */}
+      <div className="relative flex items-center gap-3.5 px-4 py-2.5 rounded-2xl bg-zinc-950/85 border border-[#bf953f]/25 shadow-[0_4px_20px_rgba(0,0,0,0.5)] backdrop-blur-md overflow-hidden">
+        {/* Shimmer line across top */}
+        <motion.div 
+          initial={{ x: "-100%" }}
+          animate={{ x: "200%" }}
+          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-0 left-0 right-0 h-[1.5px] w-1/3 bg-gradient-to-r from-transparent via-[#fcf6ba] to-transparent"
+        />
 
-          {/* Running Progress Bar (Gemini Style) */}
-          <div className="relative h-1 w-full bg-white/5 rounded-full overflow-hidden mt-6">
-            <motion.div 
-              initial={{ left: "-100%" }}
-              animate={{ left: "100%" }}
-              transition={{ 
-                duration: 2.2, 
-                repeat: Infinity,
-                ease: "linear"
+        {/* Animated Voice/Thinking Waveform Bars (WhatsApp & Gemini Live Style) */}
+        <div className="flex items-center gap-[3px] h-4 shrink-0">
+          {[0.4, 0.85, 1, 0.6, 0.95, 0.5].map((scaleFactor, i) => (
+            <motion.span
+              key={i}
+              animate={{
+                height: ["4px", `${Math.round(scaleFactor * 16)}px`, "4px"],
+                opacity: [0.5, 1, 0.5],
               }}
-              className="absolute top-0 bottom-0 w-1/2 bg-gradient-to-r from-transparent via-[#bf953f] via-[#fcf6ba] via-[#00d2ff] to-transparent"
+              transition={{
+                duration: 0.9 + (i % 3) * 0.2,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: i * 0.12,
+              }}
+              className="w-[2.5px] rounded-full bg-gradient-to-t from-[#bf953f] to-[#fcf6ba]"
             />
-          </div>
-
-          {/* Holographic terminal specs underneath */}
-          <div className="mt-4 pt-4 border-t border-white/5 flex flex-wrap gap-x-6 gap-y-2 text-[10px] text-zinc-500 font-mono">
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-ping" />
-              ENGINE: JANIA_GEMINI_CO
-            </span>
-            <span>MODEL_STATUS: ONLINE</span>
-            <span>NEURAL_RESOLVER: TRUE</span>
-          </div>
-
+          ))}
         </div>
-        
-        <p className="text-[9px] font-black uppercase tracking-widest opacity-30 text-left">
-          Procesamiento Neuronal en Curso
-        </p>
+
+        {/* Thinking Status Text */}
+        <div className="flex flex-col min-w-[170px]">
+          <span className="text-xs font-medium text-white tracking-wide flex items-center gap-1.5">
+            {current.text}
+          </span>
+          <span className="text-[10px] text-zinc-400 font-light tracking-normal truncate">
+            {current.hint}
+          </span>
+        </div>
       </div>
     </motion.div>
   );
 }
 
-// ─── BRAND SPARKLE COMPONENT ──────────────────────────────────────────────────
+// ─── BRAND OFFICIAL LOGO COMPONENT (Replaces Old Sparkle Star) ────────────────
 function VecySparkle() {
   return (
-    <svg className="w-5 h-5 text-primary filter drop-shadow-[0_0_8px_rgba(191,149,63,0.5)] animate-pulse shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12 0L14.6 9.4L24 12L14.6 14.6L12 24L9.4 14.6L0 12L9.4 9.4L12 0Z" fill="currentColor"/>
-    </svg>
+    <img
+      src="/logo-vecy.png"
+      alt="Vecy Bienes Raíces"
+      className="h-10 w-10 object-contain filter drop-shadow-[0_0_10px_rgba(191,149,63,0.4)] shrink-0 transition-transform duration-300 hover:scale-105"
+    />
   );
 }
 
@@ -1011,18 +990,81 @@ export default function JanIAConsole() {
                           <p className="text-sm md:text-base leading-relaxed whitespace-pre-wrap">
                             {renderMessageContent(message.content)}
                           </p>
+
+                          {/* 📄 TARJETA DE DOCUMENTO OFICIAL DESCARGABLE (Factura Predial / Certificados / PDF) */}
+                          {message.role === 'janIA' && /(?:factura\s*predial|certificado\s*de\s*pago|descargar\s*pdf|\.pdf\b|chip\s*aaa)/i.test(message.content) && (
+                            <div className="mt-4 p-3.5 rounded-2xl bg-zinc-950/80 border border-primary/30 flex items-center justify-between gap-3 shadow-lg hover:border-primary/60 transition-all">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center shrink-0">
+                                  <FileText className="w-5 h-5 text-red-400" />
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="text-xs font-bold text-white truncate">
+                                    Documento Oficial Tributario / Predial
+                                  </span>
+                                  <span className="text-[10px] text-zinc-400 truncate">
+                                    PDF Oficial Bogotá — Descarga directa generada por JanIA
+                                  </span>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const urlMatch = message.content.match(/https?:\/\/[^\s)]+/);
+                                  if (urlMatch) {
+                                    window.open(urlMatch[0], '_blank');
+                                  } else {
+                                    window.open(`https://wa.me/573166569719?text=${encodeURIComponent('Hola Eduardo y Jani, solicito copia oficial en PDF del trámite consultado con JanIA en la web.')}`, '_blank');
+                                  }
+                                }}
+                                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#bf953f] to-[#aa771c] text-black text-xs font-bold hover:brightness-110 transition-all flex items-center gap-1.5 shrink-0 shadow-sm"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                <span>Descargar PDF</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-3 mt-1">
+
+                        {/* Interactive Voice Note & Timestamp Bar */}
+                        <div className="flex items-center gap-3 mt-1.5">
                           <p className={`text-[9px] font-black uppercase tracking-widest opacity-30 ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
                             {message.timestamp.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
                           </p>
                           {message.role === 'janIA' && (
                             <button
                               onClick={() => playMessageVoice(message.id, message.content)}
-                              className="text-zinc-500 hover:text-primary transition-colors p-1 rounded-full hover:bg-white/5 flex items-center justify-center"
-                              title="Escuchar respuesta"
+                              className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs transition-all ${
+                                playingId === message.id
+                                  ? 'bg-primary/20 text-primary border border-primary/40 shadow-[0_0_12px_rgba(191,149,63,0.3)]'
+                                  : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 border border-white/5'
+                              }`}
+                              title={playingId === message.id ? "Pausar nota de voz" : "Escuchar nota de voz de JanIA"}
                             >
-                              <Volume2 className={`w-3.5 h-3.5 ${playingId === message.id ? 'text-primary animate-pulse' : ''}`} />
+                              {playingId === message.id ? (
+                                <Pause className="w-3.5 h-3.5 text-primary shrink-0" />
+                              ) : (
+                                <Play className="w-3.5 h-3.5 text-primary shrink-0" />
+                              )}
+                              <span className="text-[11px] font-medium">
+                                {playingId === message.id ? "Reproduciendo..." : "Nota de voz"}
+                              </span>
+                              {/* WhatsApp style waveform bars */}
+                              <div className="flex items-center gap-[2.5px] h-3 ml-0.5">
+                                {[0.4, 0.9, 0.6, 1, 0.5, 0.85].map((factor, i) => (
+                                  <span
+                                    key={i}
+                                    className={`w-[2px] rounded-full transition-all duration-200 ${
+                                      playingId === message.id 
+                                        ? 'bg-primary animate-pulse' 
+                                        : 'bg-zinc-600'
+                                    }`}
+                                    style={{
+                                      height: playingId === message.id ? `${Math.round(factor * 12)}px` : '4px',
+                                      animationDelay: `${i * 120}ms`
+                                    }}
+                                  />
+                                ))}
+                              </div>
                             </button>
                           )}
                         </div>

@@ -322,6 +322,38 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.49 — Octubre 2026
+
+#### 📌 REDISEÑO VISUAL DEL SIDEBAR ADMIN & JANIA CONSOLE, ANIMACIÓN NEURAL SOUNDWAVE COMPACTA, REPRODUCTOR DE NOTAS DE VOZ WEB Y EMBUDO DE MARKETING EN CANAL OFICIAL
+
+**Requerimiento y Objetivos:**
+1. **Rediseño del Sidebar del Panel Administrativo (`Admin.tsx`)**:
+   - Incrementar el tamaño del logo corporativo de Vecy para armonizar con las tres líneas de texto institucional (`VECY`, `BIENES RAÍCES` y `Panel Admin`), eliminando la apariencia reducida.
+2. **Sustitución de la Estrella Parpadeante por el Logo Oficial en JanIA Console (`JanIAConsole.tsx`)**:
+   - Reemplazar el ícono SVG de estrella de 4 puntas (`VecySparkle`) por el emblema circular oficial `/logo-vecy.png` en la cabecera del menú lateral.
+3. **Nueva Animación Neural de Pensamiento y Síntesis de Voz (Estilo Gemini Live / Antigravity)**:
+   - Suprimir la caja de proceso antigua con textos de terminal simulados (`ENGINE: JANIA_GEMINI_CO`, `MODEL_STATUS: ONLINE`) y tres puntos saltarines.
+   - Diseñar e implementar una cápsula compacta flotante (`JanIARealtimeLoader`) con halo respiratorio dorado en el avatar de JanIA, un espectro de audio dinámico (barras verticales orgánicas estilo WhatsApp) y estados tipográficos fluidos.
+4. **Reproductor de Notas de Voz Estilo WhatsApp y Descarga de Documentos en el Chat Web**:
+   - Incorporar reproductor interactivo con botón Play/Pause y barras de onda reactivas al escuchar las respuestas habladas de JanIA con su voz oficial (*Laomedeia*).
+   - Renderizar tarjetas interactivas de descarga oficial cuando las consultas involucren documentos (Facturas Prediales de Bogotá, Certificados de Pago y PDFs).
+5. **Embudo de Marketing Matutino en el Canal Oficial de Vecy (`cronService.ts`)**:
+   - Despachar la encuesta diaria matutina directamente al Canal Oficial de WhatsApp (`@newsletter`) y dinamizar el tráfico orgánico mediante anuncios de invitación en los Grupos 2 y 3.
+
+**Acciones Técnicas Ejecutadas:**
+1. **Frontend (`client/src/pages/Admin.tsx` y `JanIAConsole.tsx`)**:
+   - Logo de Admin escalado a `h-11 w-11` con filtro `drop-shadow-[0_0_10px_rgba(191,149,63,0.4)]` y tipografía re-equilibrada.
+   - Píldora neural compacta con soundwave interactivo, avatar con halo respiratorio y shimmer láser superior.
+   - Componentes interactivos de reproducción de audio y descarga de PDF agregados al renderizador de mensajes.
+2. **Backend / Crons (`server/_core/cronService.ts`)**:
+   - Publicación de encuestas en el canal oficial e invitaciones cruzadas con enlace directo en Grupos 2 y 3.
+3. **Validación, Versión y Compilación**:
+   - Versión incrementada a `v32.49` (`32.49.0`).
+   - 144/144 pruebas unitarias Vitest aprobadas al 100%.
+   - Compilación limpia con `tsc --noEmit` (0 errores) y `npm run build` en 21.77s.
+
+---
+
 ### 🔖 v32.48 — Octubre 2026
 
 #### 📌 REACTIVACIÓN DE LA VOZ HUMANA DE ESTUDIO GOOGLE CLOUD TTS (STUDIO-B), SERVICE ACCOUNT OFICIAL DE VECY APP Y BLINDAJE DE PRESUPUESTO MENSUAL

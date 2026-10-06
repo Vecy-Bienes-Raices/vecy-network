@@ -172,9 +172,38 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.48 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.49 — Octubre 2026
 
-### Novedades v32.48 (Reactivación de la Voz Humana de Estudio Google Cloud TTS Studio-B, Service Account de Vecy APP y Blindaje de Presupuesto Mensual):
+### Novedades v32.49 (Rediseño de Sidebar Admin & JanIA Console, Animación Neural Soundwave Compacta, Tarjetas de Voz y Documento PDF en Web, y Embudo de Marketing en Canal Oficial):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Rediseño Proporcional del Sidebar de Admin (`Admin.tsx`)**:
+     - El logo se amplió de `h-8` a `h-11 w-11` (`44x44px`) con resplandor dorado sutil (`drop-shadow-[0_0_10px_rgba(191,149,63,0.4)]`), compaginando armónicamente con las tres líneas de texto corporativo (`VECY`, `BIENES RAÍCES` y `Panel Admin`).
+     - En vistas colapsada y móvil se ajustó la escala para máxima nitidez y presencia de marca.
+  2. **Reemplazo de Estrella Parpadeante por Logo Oficial en JanIA Console (`JanIAConsole.tsx`)**:
+     - Se suprimió el ícono SVG de estrella de 4 puntas (`VecySparkle`) en la cabecera del menú lateral de JanIA, sustituyéndolo por el logo circular oficial `/logo-vecy.png` con proporción y brillo dorado uniforme.
+  3. **Nueva Animación Neural de Pensamiento y Síntesis de Voz (Estilo Gemini Live / Antigravity)**:
+     - Se eliminó el recuadro tosco y pesado con textos de terminal falsos y tres puntos saltarines.
+     - Se implementó una cápsula compacta flotante (`JanIARealtimeLoader`) con:
+       - Avatar de JanIA con halo respiratorio dorado (`breathing glow`).
+       - Espectro de onda de audio neuronal dinámico (5 barras doradas animadas con físicas orgánicas).
+       - Textos de estado fluidos ("JanIA está pensando...", "Analizando tu consulta...", "Buscando coincidencias y match...").
+       - Línea de shimmer láser superior en oro/cyan.
+  4. **Reproductor de Notas de Voz Estilo WhatsApp y Tarjeta de Descarga de Documentos en Web**:
+     - Al reproducir audios o cuando JanIA habla con su voz femenina (*Laomedeia*), se despliega una cápsula de audio con botón Play/Pause interactivo y barras de onda reactivas.
+     - Si la consulta involucra documentos oficiales (Facturas Prediales de Bogotá, Certificados de Pago o archivos PDF), se renderiza una tarjeta interactiva con botón directo de descarga.
+  5. **Embudo de Marketing Matutino en Canal Oficial de Vecy (`cronService.ts`)**:
+     - Publicación de encuestas matutinas (08:00 AM) directamente en el Canal Oficial de WhatsApp (`@newsletter`), y difusión cruzada en los Grupos 2 y 3 con enlaces de invitación directa (`https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`).
+- **Acciones Ejecutadas y Blindaje de Arquitectura**:
+  1. `client/src/pages/Admin.tsx`: Logo del sidebar escalado a `h-11 w-11` con tipografía alineada.
+  2. `client/src/pages/JanIAConsole.tsx`: Reemplazo de estrella por logo, píldora compacta de carga neural con soundwave, reproductor de voz interactivo y tarjeta de descarga de PDF.
+  3. `server/_core/cronService.ts`: Despacho centralizado de encuestas al canal y difusión cruzada a Grupos 2 y 3.
+  4. `shared/const.ts` y `package.json`: Versión incrementada a `v32.49` (`32.49.0`).
+  5. `server/__tests__/regression.test.ts`: Test unitario `Doctrina v32.49` aprobado (144/144 tests Vitest al 100%).
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | 144/144 tests Vitest aprobados al 100% ✅ | `npm run build` limpio en 21.77s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.48 — Octubre 2026
+
+### Novedades v32.48 (Reactivación de la Voz Humana de Estudio Google Cloud TTS Studio-B / Laomedeia, Service Account de Vecy APP y Blindaje de Presupuesto Mensual):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:
   1. **Ajuste de Presupuesto y Alertas Directas por Correo**:
      - Eduardo ajustó el presupuesto mensual en Google Cloud Billing a $30.000 COP (100%) y $45.000 COP (150%) para amparar el consumo de IA.
