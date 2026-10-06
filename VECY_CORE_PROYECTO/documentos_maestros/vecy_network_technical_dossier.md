@@ -322,6 +322,49 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.47 — Octubre 2026
+
+#### 📌 INTEGRACIÓN OFICIAL DE CLAVE DE PAGO GEMINI EN VECY APP (GOOGLE CLOUD BILLING), POOL QUÍNTUPLE DE FAILOVER INDESTRUCTIBLE EN JANIA, Y PARIDAD TOTAL DE AUTENTICACIÓN MULTIDOMINIO SUPABASE/GOOGLE EN VECY AGENDA PRO
+
+**Requerimiento y Objetivos:**
+1. **Auditoría Forense por Eliminación de Proyectos en Google Cloud**:
+   - Verificar si la eliminación voluntaria de los proyectos `"Vecy Agenda"` y `"Jania Evaluadora Pro"` en Google Cloud afectaba a `vecy-network` o a `vecy-agenda-pro`.
+2. **Diagnóstico y Reparación de Autenticación con Google en Vecy Agenda Pro**:
+   - Resolver el `Error 400: redirect_uri_mismatch` detectado al intentar iniciar sesión con Google en Vecy Agenda Pro contra el proyecto Supabase `iqmlenxldsdrxsbegkwf`.
+   - Garantizar paridad total de código entre ambas aplicaciones de agenda para el flujo de OAuth y recuperación de contraseñas.
+3. **Activación de Facturación Oficial y Blindaje Financiero de Gemini en Google Cloud**:
+   - Vincular la cuenta de facturación activa de Google Cloud (`01083F-48C83C-5C8BD4`) al proyecto principal `Vecy APP` (`gen-lang-client-0137076503`).
+   - Generar la clave de pago oficial directa en Google Cloud Console para evitar las restricciones de prepago de Google AI Studio.
+   - Definir alertas de presupuesto ($5 o $10 USD) y clarificar restricciones de API (manteniendo exclusivamente "Gemini API", sin "Agent Platform API").
+   - Configurar la nueva clave (`AQ.Ab8RN6Kik...c7ePwg`) como clave primaria #1 en el pool de failover de JanIA.
+
+**Diagnóstico y Causas Raíz:**
+1. **Inexistencia de Dependencias en Proyectos Eliminados**:
+   - `Jania Evaluadora Pro` pertenecía al motor viejo de Google TTS suspendido con 403 `BILLING_DISABLED`, reemplazado en `v31.65` por Edge TTS neuronal ($0 COP).
+   - `Vecy Agenda` pertenecía a Google Maps, reemplazado en `v31.65` por `geography.ts` y Leaflet ($0 COP).
+   - Las claves de Gemini previas y el cliente de OAuth de Supabase estaban intactos en otros proyectos (`Vecy APP`).
+2. **Causa Raíz de `Error 400: redirect_uri_mismatch`**:
+   - El cliente OAuth de Google Cloud (`Supabase Vecy Auth`, ID `747178664273-...`) únicamente tenía en su lista blanca la URI `https://knzmpoprlmbonejshfys.supabase.co/auth/v1/callback`.
+   - Al usar el proyecto de Supabase `iqmlenxldsdrxsbegkwf`, Google rechazaba la solicitud al no encontrar `https://iqmlenxldsdrxsbegkwf.supabase.co/auth/v1/callback`. La solución consiste en registrar ambas URIs en la consola de Google Cloud.
+3. **Sincronización en Vecy Agenda Pro**:
+   - En `AuthModal.jsx`, se cambió la redirección rígida a `${window.location.origin}/formulario` por `window.location.href`, permitiendo regresar a la vista actual tras autenticarse con Google.
+   - En `supabaseClient.js`, se añadieron credenciales de respaldo para evitar desconexiones si fallan las variables de Vite.
+4. **Validación de la Nueva Clave de Pago**:
+   - La nueva clave `AQ.Ab8RN6Kik...c7ePwg` fue verificada empíricamente en vivo respondiendo HTTP 200 OK contra `gemini-flash-latest`.
+   - Se configuró como la clave #1 principal (`GEMINI_API_KEY` y `GEMINI_API_KEY_1`) y se mantuvieron las 4 claves gratuitas existentes como respaldo (2, 3, 4, 5).
+
+**Acciones Técnicas Ejecutadas:**
+1. **Variables de Entorno (`.env`)**:
+   - Integrada la nueva clave de pago como Clave #1 y configurado el pool expandido de 5 claves (`GEMINI_API_KEY_1..5` y `GEMINI_API_KEYS`).
+2. **Repositorio Vecy Agenda Pro (`vecy-agenda-pro`)**:
+   - Actualizados `AuthModal.jsx` y `supabaseClient.js`. Compilación limpia y despliegue a GitHub (`origin/main`, commit `75b0648`).
+3. **Control de Calidad y Pruebas**:
+   - Test unitario `Doctrina v32.47` agregado en `server/__tests__/regression.test.ts`. 121/121 tests Vitest aprobados al 100%.
+   - TypeScript `tsc --noEmit` 0 errores.
+   - Compilación de producción limpia en 10.53s. Versión oficial incrementada a **v32.47** (`32.47.0`).
+
+---
+
 ### 🔖 v32.46 — Octubre 2026
 
 #### 📌 AUTO-ADOPCIÓN DE NOMBRE OFICIAL EN VECY AGENDAS PRO, GESTIÓN NOTARIAL DE ANTECEDENTES SIN BLOQUEO, NOTIFICACIONES DE DECLINACIÓN Y AUDITORÍA PERSISTENTE

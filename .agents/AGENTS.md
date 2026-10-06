@@ -172,7 +172,32 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.46 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.47 — Octubre 2026
+
+### Novedades v32.47 (Integración Oficial de Clave de Pago Gemini en Vecy APP Google Cloud Billing, Pool Quíntuple de Failover Indestructible en JanIA, y Paridad Total de Autenticación Multidominio Supabase/Google en Vecy Agenda Pro):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Auditoría Forense por Eliminación de Proyectos en Google Cloud**:
+     - Eduardo eliminó dos cuentas en Google Cloud: `"Vecy Agenda"` y `"Jania Evaluadora Pro"`.
+     - Se auditó empíricamente contra el código y producción, certificando 0% de impacto: `Jania Evaluadora Pro` pertenecía a Google TTS y cuenta de servicio bloqueada en `v31.65`, reemplazada por Edge TTS a $0 COP. `Vecy Agenda` pertenecía a Google Maps, reemplazado por `geography.ts` y Leaflet a $0 COP.
+  2. **Resolución de Autenticación de Google en Vecy Agenda Pro y Error 400 redirect_uri_mismatch**:
+     - El cliente de Google Cloud (`Supabase Vecy Auth`, ID `747178664273-...`) está vivo en el proyecto `Vecy APP`.
+     - Al configurar el proyecto de Supabase `iqmlenxldsdrxsbegkwf` para Vecy Agenda Pro, Google arrojaba `Error 400: redirect_uri_mismatch` porque solo estaba inscrita la URI de `knzmpoprlmbonejshfys`.
+     - **Solución Doctrinal**: Registro de la segunda URI autorizada `https://iqmlenxldsdrxsbegkwf.supabase.co/auth/v1/callback` en Google Cloud Console para autorizar ambos proyectos de Supabase en simultáneo.
+     - Paridad en `vecy-agenda-pro`: actualización de `src/components/AuthModal.jsx` a `window.location.href` y de `src/supabaseClient.js` con fallbacks seguros de Supabase.
+  3. **Activación de Facturación Oficial y Blindaje de Gemini en Google Cloud**:
+     - Eduardo vinculó exitosamente su cuenta de facturación (`01083F-48C83C-5C8BD4`) al proyecto oficial `Vecy APP` (`gen-lang-client-0137076503`).
+     - Creó la clave de pago oficial directa en Google Cloud Console (`AQ.Ab8RN6Kik...c7ePwg`), evitando las restricciones de prepago de Google AI Studio.
+     - Se clarificó que no se debe marcar "Agent Platform API", manteniendo únicamente "Gemini API" seleccionada.
+     - Se validó empíricamente la clave respondiendo 200 OK con `gemini-flash-latest`.
+     - Se integró al `.env` como la Clave #1 principal (`GEMINI_API_KEY` y `GEMINI_API_KEY_1`), expandiendo el pool a 5 claves con las 4 previas como failover automático.
+- **Acciones Ejecutadas y Blindaje de Arquitectura**:
+  1. `.env`: Configurada nueva clave oficial como #1 y 4 claves de reserva (2, 3, 4, 5).
+  2. `vecy-agenda-pro`: Sincronizados `AuthModal.jsx` y `supabaseClient.js`, compilación limpia y push a `origin/main` (commit `75b0648`).
+  3. `shared/const.ts` y `package.json`: Versión incrementada a `v32.47` (`32.47.0`).
+  4. `server/__tests__/regression.test.ts`: Test unitario `Doctrina v32.47` aprobado (121/121 tests Vitest al 100%).
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | 121/121 tests Vitest aprobados al 100% ✅ | `npm run build` limpio en 10.53s ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.46 — Octubre 2026
 
 ### Novedades v32.46 (Auto-adopción de Nombres Oficiales Verificados en Vecy Agendas Pro, Protocolo Notarial de Antecedentes sin Bloqueo, Notificaciones Formales de Declinación y Auditoría Persistente):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

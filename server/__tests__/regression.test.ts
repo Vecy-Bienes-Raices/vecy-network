@@ -2864,6 +2864,23 @@ Adriana Rebeca Orejuela`;
       // 6. Registro de identidad en auditoría interna (función exportada)
       expect(typeof registerSecurityFlaggedIdentity).toBe("function");
     });
+
+    it("Doctrina v32.47: Integración Oficial de Clave de Pago Gemini (Vecy APP Google Cloud Billing) y Pool Quíntuple de Failover", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v32.47");
+
+      const fs = await import("fs");
+      const envContent = fs.readFileSync(".env", "utf8");
+      expect(envContent).toContain("GEMINI_API_KEY_5=");
+      expect(envContent).toContain("GEMINI_API_KEYS=");
+
+      const keysMatch = envContent.match(/GEMINI_API_KEYS=(.+)/);
+      expect(keysMatch).not.toBeNull();
+      const keys = keysMatch![1].split(",");
+      expect(keys.length).toBeGreaterThanOrEqual(5);
+      expect(keys[0].startsWith("AQ.Ab8RN6Kik")).toBe(true);
+      expect(keys[0].endsWith("c7ePwg")).toBe(true);
+    });
   });
 });
 

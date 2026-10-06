@@ -7,6 +7,62 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.47 — 06 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Auditoría Forense por Eliminación de Proyectos en Google Cloud**:
+   - Eduardo eliminó dos cuentas/proyectos en Google Cloud llamadas `"Vecy Agenda"` y `"Jania Evaluadora Pro"`.
+   - Solicitó verificar si alguno de ellos estaba en uso en `vecy-network` o en `vecy-agenda-pro` y si algo se había roto o caído.
+2. **Diagnóstico del Inicio de Sesión de Google en Vecy Agenda Pro**:
+   - Eduardo detectó que el inicio de sesión con Google falló en `vecy-agenda-pro` pero seguía funcionando en `vecy-network`.
+   - Solicitó evaluar si podíamos ponerle a `vecy-agenda-pro` exactamente el mismo inicio de sesión oficial que tiene `vecy-network`.
+   - Al probar el inicio de sesión con el proyecto de Supabase `iqmlenxldsdrxsbegkwf`, Google arrojó `Error 400: redirect_uri_mismatch` con `redirect_uri=https://iqmlenxldsdrxsbegkwf.supabase.co/auth/v1/callback`.
+3. **Activación de Facturación Oficial y Blindaje Financiero de Gemini en Google Cloud**:
+   - Instrucciones precisas para vincular la cuenta de facturación activa de Google Cloud (`01083F-48C83C-5C8BD4`) al proyecto oficial `Vecy APP` (`gen-lang-client-0137076503`).
+   - Cómo establecer presupuestos y alertas de gastos ($5 o $10 USD) para evitar cobros sorpresa.
+   - Creación de la clave de pago oficial directamente en Google Cloud Console para evitar las restricciones de prepago de Google AI Studio.
+   - Consulta sobre si debía seleccionar "Agent Platform API" en la lista de restricciones de API.
+   - Establecer la nueva clave generada (`AQ.Ab8RN6Kik...c7ePwg`) como la clave de pago de respaldo/principal en el sistema.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Inexistencia de Dependencias en los Proyectos Eliminados**:
+   - `Jania Evaluadora Pro` (#553012000304): Pertenecía a Google TTS y la cuenta de servicio vieja bloqueada con 403 `BILLING_DISABLED`. Fue erradicada en `v31.65` al migrar la voz de JanIA al motor neuronal de Microsoft Edge TTS (Dalia/Salomé a $0 COP).
+   - `Vecy Agenda`: Contenía la antigua clave de Google Maps, sustituida en `v31.65` por el diccionario geográfico local `geography.ts` y mapas Leaflet/OSM a $0 COP.
+   - La eliminación de ambos proyectos tuvo impacto 0% en producción.
+2. **Causa Raíz de `Error 400: redirect_uri_mismatch` en Google OAuth**:
+   - El cliente de Google Cloud (`Supabase Vecy Auth`, ID `747178664273-...`) está alojado en el proyecto `Vecy APP`.
+   - En la lista de "URIs de redireccionamiento autorizados" solo estaba inscrita `https://knzmpoprlmbonejshfys.supabase.co/auth/v1/callback`.
+   - Cuando Eduardo configuró el proyecto de Supabase `iqmlenxldsdrxsbegkwf`, este despachaba al callback `https://iqmlenxldsdrxsbegkwf.supabase.co/auth/v1/callback`. Como esa URI no estaba en la lista blanca de Google Cloud, Google bloqueaba la solicitud con error 400.
+   - **Solución**: Agregar la segunda URI autorizada `https://iqmlenxldsdrxsbegkwf.supabase.co/auth/v1/callback` en Google Cloud Console para que Google acepte ambos proyectos de Supabase.
+3. **Paridad Total de Código en Vecy Agenda Pro**:
+   - `src/components/AuthModal.jsx` de `vecy-agenda-pro` forzaba una redirección estática a `${window.location.origin}/formulario`. Se actualizó para usar `window.location.href`, replicando la lógica probada de `vecy-network`.
+   - `src/supabaseClient.js` de `vecy-agenda-pro` carecía de fallback seguro de credenciales si fallaban las variables de entorno de Vite; se integraron los mismos fallbacks de `vecy-network`.
+4. **Validación Empírica de la Nueva Clave de Pago y Pool Quíntuple**:
+   - Eduardo generó directamente en Google Cloud Console la clave de API oficial `AQ.Ab8RN6Kik...c7ePwg` en el proyecto `Vecy APP` (con facturación Cloud Billing vinculada).
+   - Se probó en vivo mediante Node.js contra `generativelanguage.googleapis.com` con `gemini-flash-latest`, respondiendo 200 OK inmediatamente.
+   - Se integró al `.env` de `vecy-network` como la clave #1 principal (`GEMINI_API_KEY` y `GEMINI_API_KEY_1`), y las 4 claves gratuitas existentes se reorganizaron como claves 2, 3, 4 y 5 de failover automático.
+   - En caso de que la clave de pago alcance un tope de presupuesto, el gestor Round-Robin de `server/_core/llm.ts` conmuta de forma transparente a las claves de respaldo en 0 ms.
+   - Sobre "Agent Platform API": se clarificó que NO debe marcarse, dejando exclusivamente "Gemini API" seleccionada.
+
+### Acciones Ejecutadas
+1. **Configuración de Variables de Entorno (`.env`)**:
+   - Configurada `AQ.Ab8RN6Kik...c7ePwg` en `GEMINI_API_KEY` y `GEMINI_API_KEY_1`.
+   - Conservadas las 4 claves previas en `GEMINI_API_KEY_2`, `GEMINI_API_KEY_3`, `GEMINI_API_KEY_4` y `GEMINI_API_KEY_5`.
+   - Actualizada la lista `GEMINI_API_KEYS` con las 5 claves concatenadas.
+2. **Repositorio Vecy Agenda Pro (`/home/eddu/Proyectos/vecy-agenda-pro`)**:
+   - Sincronizados `src/components/AuthModal.jsx` (redirección a `window.location.href`) y `src/supabaseClient.js` (fallbacks seguros de Supabase).
+   - Compilación exitosa (`npm run build` en 11.24s) y envío a GitHub (`git push origin main`, commit `75b0648`).
+3. **Versión y Constantes (`shared/const.ts` y `package.json`)**:
+   - Incrementada versión a `v32.47` (`32.47.0`).
+4. **Pruebas de Regresión (`server/__tests__/regression.test.ts`)**:
+   - Añadida prueba `Doctrina v32.47` validando la presencia de las 5 claves en el pool y la versión oficial.
+   - Ejecutados 121/121 tests con 100% de éxito en Vitest.
+5. **Compilación Limpia del Core**:
+   - `tsc --noEmit`: 0 errores.
+   - `npm run build`: bundle cliente y servidor generado limpiamente en 10.53s.
+
+---
+
 ## 📋 SESIÓN v32.46 — 05 Octubre 2026
 
 ### Solicitud de Eduardo
