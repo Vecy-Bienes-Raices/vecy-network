@@ -322,6 +322,48 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.46 — Octubre 2026
+
+#### 📌 AUTO-ADOPCIÓN DE NOMBRE OFICIAL EN VECY AGENDAS PRO, GESTIÓN NOTARIAL DE ANTECEDENTES SIN BLOQUEO, NOTIFICACIONES DE DECLINACIÓN Y AUDITORÍA PERSISTENTE
+
+**Requerimiento y Objetivos:**
+1. **Paridad Total en Ambas Vecy Agendas Pro**:
+   - Mantener sincronización exacta entre `vecy-network` (`client/src/components/agenda-pro/AgendaForm.jsx`) y la aplicación satélite `vecy-agenda-pro` (`/home/eddu/Proyectos/vecy-agenda-pro/`).
+2. **Auto-adopción de Nombre Oficial (Cero Abstención por Discrepancia)**:
+   - Suprimir el bloqueo/error cuando el solicitante escribe un nombre distinto al del documento. En su lugar, el sistema autocompleta el campo de nombre con el correspondiente al verificado en las fuentes autoritativas (PONAL, Procuraduría SIRI, ADRES BDUA, Base de Datos Vecy).
+3. **Manejo de Antecedentes y Debida Diligencia Notarial**:
+   - Si se detectan antecedentes o reportes judiciales/disciplinarios:
+     - El formulario no bloquea al usuario; muestra una advertencia de seguridad notarial informativa y permite enviar la solicitud.
+     - En el servidor, se persiste la solicitud con `has_alerta_antecedentes = true` y el motivo detallado en `alerta_motivo`.
+     - Se registra permanentemente en la nueva tabla `security_flagged_identities` para monitoreo y prevención interna.
+     - Se envía una Alerta Crítica Inmediata al Bróker de Vecy (+573166569719) vía CallMeBot y correo.
+     - Al usuario solicitante se le envía mensaje de WhatsApp y correo formal indicando que **SU RESERVA HA SIDO DECLINADA** debido a dichos antecedentes.
+
+**Diagnóstico y Causas Raíz:**
+1. **Bloqueo Rígido Previo por Inconsistencia de Nombres**:
+   - La función `checkMatch` en `agenda.ts` arrojaba error HTTP 400 (`BAD_REQUEST`) cuando los nombres ingresados diferían de los registrados. Esto penalizaba a usuarios con nombres coloquiales o intermediarios. Se resolvió autocompletando y adoptando el nombre oficial (`officialName`) sin bloquear.
+2. **Doctrina Notarial de Antecedentes**:
+   - Los antecedentes no deben interrumpir silenciosamente la recolección de evidencia ni generar bloqueos confusos. Al permitir el envío pero marcar `has_alerta_antecedentes = true`, se asegura la trazabilidad legal, se informa con transparencia y diplomacia al usuario sobre la declinación formal y se notifica de inmediato a la administración.
+
+**Acciones Técnicas Ejecutadas:**
+1. **Esquema de Base de Datos y Tabla de Auditoría (`drizzle/schema.ts`)**:
+   - Columnas `hasAlertaAntecedentes` y `alertaMotivo` en tabla `solicitudes`.
+   - Tabla `security_flagged_identities` (`securityFlaggedIdentities`) con auto-creación DDL defensiva.
+2. **Servicio Backend de Identidad y Agendamiento (`server/routers/agenda.ts`)**:
+   - Interfaz `IdentityVerificationResult` con `nameAutoCorrected`, `hasAntecedentes`, `alertaSeguridad`, `advertenciaAntecedentes`.
+   - `executeIdentityVerification` adopta el nombre oficial y no rechaza por discrepancias.
+   - `processAndSaveSolicitud` sobreescribe nombres con el oficial verificado, detecta antecedentes y los inserta en `security_flagged_identities`.
+3. **Notificaciones de WhatsApp y Correo (`agendaWhatsAppService.ts` y `emailContractService.ts`)**:
+   - Despacho de alerta roja al Bróker de Vecy y plantilla formal de declinación al cliente.
+4. **Sincronización en Ambas Agendas**:
+   - Actualizados componentes en `vecy-network` y `vecy-agenda-pro`.
+5. **Validación y Pruebas**:
+   - Test `Doctrina v32.46` aprobado en `server/__tests__/regression.test.ts`.
+   - 141/141 pruebas Vitest superadas (100%).
+   - Compilación limpia en ambos proyectos. Versión incrementada a **v32.46**.
+
+---
+
 ### 🔖 v32.45 — Octubre 2026
 
 #### 📌 INTEGRACIÓN TRIPLE NOTARIAL: CONEXIÓN ADRES / BDUA (MINISTERIO DE SALUD), RESOLUCIÓN DE C.E. 8.084.608 ("JOSÉ PATRICIO CÁCERES MORALES"), ANÁLISIS FORENSE DE CAPTURAS BRAVE Y TÚNEL REVERSO BDUA

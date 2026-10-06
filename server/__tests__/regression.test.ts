@@ -1231,12 +1231,13 @@ Ed del 2014.
       expect(res.officialName).toContain("Salazar");
     });
 
-    it("Debe rechazar suplantación cuando el número no corresponde a los nombres", async () => {
+    it("Doctrina v32.46: Debe autocompletar con el nombre oficial verificado cuando el usuario coloca un nombre diferente (cero abstención)", async () => {
       const { executeIdentityVerification } = await import("../routers/agenda");
       const res = await executeIdentityVerification("Cédula de ciudadanía", "52432900", "Pedro Gomez Perez");
       expect(res.valid).toBe(true);
-      expect(res.match).toBe(false);
-      expect(res.error).toContain("no corresponde");
+      expect(res.match).toBe(true);
+      expect(res.officialName).toContain("Rojas");
+      expect(res.nameAutoCorrected).toBe(true);
     });
   });
 
@@ -2805,6 +2806,63 @@ Adriana Rebeca Orejuela`;
       expect(resPa.valid).toBe(true);
       expect(resPa.match).toBe(true);
       expect(resPa.message).toContain("Pasaporte en formato válido");
+    });
+
+    it("Doctrina v32.46: Auto-adopción de Nombre Oficial, Alerta Notarial de Antecedentes y Notificaciones de Declinación", async () => {
+      const { executeIdentityVerification, identityCache, registerSecurityFlaggedIdentity } = await import("../routers/agenda");
+      const { buildClientConfirmationMessage, buildBrokerCallMeBotMessage } = await import("../_core/agendaWhatsAppService");
+      const { getEmailContent } = await import("../_core/emailContractService");
+
+      // 1. Auto-adopción de nombre: si el usuario escribe un nombre diferente, se adopta el oficial sin bloquear
+      identityCache.set("POLICIA:cc:52803592", { fullName: "Juanita Sanchez Martinez", timestamp: Date.now() });
+      const resAutoName = await executeIdentityVerification("Cédula de ciudadanía", "52803592", "Pedro Gomez Perez");
+      expect(resAutoName.valid).toBe(true);
+      expect(resAutoName.match).toBe(true);
+      expect(resAutoName.officialName).toBe("Juanita Sanchez Martinez");
+      expect(resAutoName.nameAutoCorrected).toBe(true);
+
+      // 2. Familiares / corporativos autoritativos: adopción automática incluso si el nombre ingresado difiere
+      const resAuth = await executeIdentityVerification("Cédula de ciudadanía", "1233903423", "Nombre Desconocido");
+      expect(resAuth.valid).toBe(true);
+      expect(resAuth.match).toBe(true);
+      expect(resAuth.officialName).toBe("Daniel Eduardo Rivera Noguera");
+      expect(resAuth.nameAutoCorrected).toBe(true);
+
+      // 3. Notificación de WhatsApp al cliente con declinación cuando existen antecedentes
+      const mockPayload = {
+        solicitudId: 9999,
+        solicitanteNombre: "Persona Con Antecedente",
+        solicitanteTelefono: "3001234567",
+        interesadoNombre: "Interesado Prueba",
+        tipoServicio: "visita_inmueble",
+        fechaPropuesta: "2026-10-10",
+        horaPropuesta: "10:00",
+        direccionInmueble: "Calle 100 # 15-20",
+        codigoInmueble: "PROP-999",
+        requiereAcompanamiento: false,
+        totalEstimado: 0,
+        hasAlertaAntecedentes: true,
+        alertaMotivo: "Registra antecedentes judiciales activos en PONAL",
+      };
+
+      const msgCliente = buildClientConfirmationMessage(mockPayload as any);
+      expect(msgCliente).toContain("DECLINADA");
+      expect(msgCliente).toContain("INFORME DE CONTROL Y SEGURIDAD NOTARIAL");
+      expect(msgCliente).toContain("Registra antecedentes judiciales activos en PONAL");
+
+      // 4. Alerta crítica enviada al Bróker (+573166569719)
+      const msgBroker = buildBrokerCallMeBotMessage(mockPayload as any);
+      expect(msgBroker).toContain("🚨 ALERTA CRÍTICA DE SEGURIDAD NOTARIAL");
+      expect(msgBroker).toContain("RESERVA DECLINADA FORMALMENTE");
+
+      // 5. Correo electrónico formal al cliente notificando declinación
+      const emailResult = getEmailContent(mockPayload as any);
+      expect(emailResult.html).toContain("NOTIFICACIÓN FORMAL DE DECLINACIÓN DE RESERVA");
+      expect(emailResult.html).toContain("HA SIDO DECLINADA");
+      expect(emailResult.html).toContain("Registra antecedentes judiciales activos en PONAL");
+
+      // 6. Registro de identidad en auditoría interna (función exportada)
+      expect(typeof registerSecurityFlaggedIdentity).toBe("function");
     });
   });
 });

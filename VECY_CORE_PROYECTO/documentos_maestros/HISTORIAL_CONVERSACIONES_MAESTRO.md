@@ -7,6 +7,61 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.46 — 05 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Paridad Total en Ambas Vecy Agendas Pro**:
+   - Eduardo recordó que existen dos aplicaciones de agenda casi idénticas:
+     - `vecy-network` (componente integrado `client/src/components/agenda-pro/AgendaForm.jsx`).
+     - `vecy-agenda-pro` (aplicación web y PWA independiente en `/home/eddu/Proyectos/vecy-agenda-pro/`).
+2. **Auto-adopción del Nombre Oficial Verificado (Cero Abstención por Discrepancia)**:
+   - Eduardo solicitó eliminar la restricción/error cuando el usuario escribe un nombre diferente al que aparece con el documento:
+     *"me parecería mejor que cuando coloque el tipo y número de documento el nombre que se coloque en la casilla nombre sea el correspondiente al verificado y que no se abstenga si el usuario ha colocado uno diferente. ¿Me hago entender?"*.
+3. **Manejo Notarial de Antecedentes (No Bloqueo, Advertencia en Vivo, Notificaciones de Declinación y Auditoría Persistente)**:
+   - *"Tambien si llegan a haber antecedentes o algún reporte extraño contra ese individuo pues quedará la advertencia y deja pasar pero le advierte al usuario y al dejar pasar el formulario nos avisa con una notificación de alerta, de todas maneras necesitamos ir guardando esos documentos y nombres de personas con antecedentes para estar alerta nosotros también y pues los mensajes de correo y whatsapp que le hemos enviado al usuario tendrán dicha advertencia y la mención clara de que se declina la reserva debido a esos antecedentes. ¿Ok?"*.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Flujo Previo de Discrepancia de Nombres**:
+   - Anteriormente, tanto `executeIdentityVerification` como `processAndSaveSolicitud` en `agenda.ts` evaluaban `checkMatch(nombreIngresado, officialName)`. Si los tokens no coincidían, `checkMatch` arrojaba un error HTTP 400 (`BAD_REQUEST: El nombre ingresado no coincide con el registrado oficialmente`).
+   - Esto bloqueaba a usuarios que ingresaban abreviaturas, nombres de pila incompletos o nombres de terceros.
+   - **Solución Doctrinal**: En lugar de bloquear o rechazar la solicitud, el sistema adopta automáticamente el `officialName` certificado por las centrales estatales (PONAL / Procuraduría / ADRES / Base de datos interna) en los campos del formulario y en la persistencia de la BD, marcando `nameAutoCorrected = true` y garantizando `match: true`.
+2. **Doctrina Notarial de Antecedentes y Debida Diligencia**:
+   - Si la persona tiene registros penales o disciplinarios en el Estado:
+     - El formulario en pantalla muestra un banner de advertencia de seguridad notarial en vivo, pero **permite completar el envío** (no congela ni bloquea la experiencia del usuario).
+     - La solicitud se almacena en PostgreSQL con `has_alerta_antecedentes = true` y el detalle en `alerta_motivo`.
+     - Se registra permanentemente el documento, nombre completo, fuente oficial y motivo en la tabla de auditoría `security_flagged_identities`.
+     - Se envía una **Alerta Crítica Inmediata** al Bróker de Vecy Bienes Raíces (+573166569719) vía WhatsApp CallMeBot y correo electrónico con el reporte detallado del antecedente.
+     - Al usuario solicitante se le envía por WhatsApp y correo electrónico la notificación formal explicando que, por políticas estrictas de control notarial y protección jurídica de propietarios y agentes, **SU RESERVA HA SIDO DECLINADA**.
+
+### Acciones Ejecutadas
+1. **Esquema de Base de Datos y Tabla de Auditoría (`drizzle/schema.ts`)**:
+   - Agregadas las columnas `hasAlertaAntecedentes: boolean("has_alerta_antecedentes")` y `alertaMotivo: text("alerta_motivo")` a la tabla `solicitudes`.
+   - Creada y exportada la tabla `securityFlaggedIdentities` (`security_flagged_identities`) con campos: `id`, `tipoDocumento`, `numeroDocumento`, `nombreTitular`, `fuenteAlerta`, `motivoAlerta`, `solicitudId`, `createdAt`.
+2. **Servicio Backend de Identidad y Agendamiento (`server/routers/agenda.ts`)**:
+   - Exportada la interfaz `IdentityVerificationResult` con soporte para `nameAutoCorrected`, `hasAntecedentes`, `alertaSeguridad` y `advertenciaAntecedentes`.
+   - En `queryPoliciaNacional`: escaneo de respuestas HTML de la Policía Nacional para detectar novedades judiciales activas (`hasAntecedentes: true`).
+   - En `executeIdentityVerification`:
+     - Retorna siempre `match: true` y `officialName: officialFormatted`, marcando `nameAutoCorrected: !isMatch` sin bloquear al usuario.
+     - Agregada captura de antecedentes tanto de PONAL como de Procuraduría SIRI.
+   - En `processAndSaveSolicitud`:
+     - Si `res.officialName` existe, se adopta directamente en `solicitante_nombre`, `interesado_nombre` o `acomp.nombre`.
+     - Si hay antecedentes detectados, se inserta el registro en `security_flagged_identities` mediante `registerSecurityFlaggedIdentity` y se guardan las banderas en `solicitudes`.
+3. **Servicio de Notificaciones de WhatsApp (`server/_core/agendaWhatsAppService.ts`)**:
+   - En `buildBrokerCallMeBotMessage`: prepend de `🚨 ALERTA CRÍTICA DE SEGURIDAD NOTARIAL` indicando antecedentes y declinación formal.
+   - En `buildClientConfirmationMessage`: redactada la notificación formal con motivo de declinación por cotejo de seguridad notarial y contacto al +573166569719.
+4. **Servicio de Correo Electrónico (`server/_core/emailContractService.ts`)**:
+   - En `getEmailContent`: plantilla formal con recuadro carmesí de seguridad notarial informando al usuario que la reserva ha sido declinada debido a los antecedentes detectados.
+   - En `getAdminEmailContent`: banner de alerta de máxima prioridad para la dirección de Vecy.
+5. **Frontend Vecy Network (`client/src/components/agenda-pro/AgendaForm.jsx`)**:
+   - `handleVerifyIdentity`, `handleVerifyClientIdentity` y `handleVerifyAcompananteIdentity`: actualizados para adoptar automáticamente `officialName` en el estado del formulario, sin alertar falsos rechazos, y desplegar advertencia informativa de antecedentes sin bloquear el flujo.
+6. **Frontend y Backend Vecy Agenda Pro (`/home/eddu/Proyectos/vecy-agenda-pro`)**:
+   - Sincronizados `api/verify-identity.js` y `src/components/AgendaForm.jsx` para mantener paridad 100% simétrica con las mismas reglas de auto-adopción, advertencia y persistencia.
+7. **Pruebas de Regresión y Control de Calidad**:
+   - Test unitario exhaustivo `Doctrina v32.46` agregado en `server/__tests__/regression.test.ts`.
+   - 141/141 pruebas Vitest superadas con 100% de éxito.
+   - `tsc --noEmit` con 0 errores de tipado.
+   - Compilación de producción limpia en ambos proyectos (`vecy-network` y `vecy-agenda-pro`).
+
 ## 📋 SESIÓN v32.45 — 05 Octubre 2026
 
 ### Solicitud de Eduardo

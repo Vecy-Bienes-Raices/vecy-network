@@ -34,6 +34,11 @@ export interface AgendaWhatsAppPayload {
   interesado_documento?: string;
   interesadoDocumento?: string;
   acompanantes?: any;
+  alerta_antecedentes?: boolean;
+  alertaAntecedentes?: boolean;
+  hasAlertaAntecedentes?: boolean;
+  alerta_motivo?: string;
+  alertaMotivo?: string;
 }
 
 /** Teléfono de WhatsApp oficial de la Inmobiliaria Vecy Bienes Raíces (Atención Bróker) */
@@ -158,8 +163,14 @@ export function buildBrokerCallMeBotMessage(data: AgendaWhatsAppPayload): string
     ? `https://wa.me/${cleanCel}`
     : `(Sin número registrado)`;
 
+  const hasAlerta = Boolean(data.alerta_antecedentes || data.alertaAntecedentes || data.hasAlertaAntecedentes);
+  const motivoTexto = data.alerta_motivo || data.alertaMotivo || "Registro de antecedentes / requerimientos oficiales";
+  const headerAlerta = hasAlerta
+    ? `🚨🚨 ALERTA CRÍTICA DE SEGURIDAD NOTARIAL 🚨🚨\n⚠️ ATENCIÓN BRÓKER: Se recibió una solicitud con REGISTROS DE ANTECEDENTES O SANCIONES ante las autoridades del Estado.\n🛑 Titular: ${nombre} | 🪪 Doc: ${doc}\nMotivo: ${motivoTexto}\n📌 Estado: RESERVA DECLINADA FORMALMENTE AL USUARIO POR SEGURIDAD.\n--------------------------------------------------\n\n`
+    : "";
+
   return (
-`🔔 Solicitud No. ${numSolicitud} 🔔
+`${headerAlerta}🔔 Solicitud No. ${numSolicitud} 🔔
 
 👤 Solicitante
 ${perfil}
@@ -205,6 +216,26 @@ export function buildClientConfirmationMessage(data: AgendaWhatsAppPayload): str
   const lineaCliente = clienteNombre && clienteNombre !== nombre
     ? `\n👤 *Cliente presentado:* ${clienteNombre}`
     : "";
+
+  const hasAlerta = Boolean(data.alerta_antecedentes || data.alertaAntecedentes || data.hasAlertaAntecedentes);
+
+  if (hasAlerta) {
+    const motivo = data.alerta_motivo || data.alertaMotivo || "Registros preventivos en bases de seguridad del Estado";
+    return (
+`¡Hola, ${nombre}! 👋 Te saluda *JanIA* de *Vecy Bienes Raíces*. 🏢
+
+Hemos recibido tu solicitud de agendamiento *No. ${numSolicitud}* para el inmueble *${nombreInmueble}* (Cod: ${codigo}).
+
+⚠️ *INFORME DE CONTROL Y SEGURIDAD NOTARIAL:*
+Durante el cotejo preventivo y obligatorio ante las centrales oficiales de certificación y seguridad del Estado, se identificaron novedades o requerimientos asociados al documento de identidad registrado (${motivo}).
+
+🛑 *Por estrictas políticas de seguridad preventiva y protección jurídica de nuestros propietarios y agentes, te informamos que TU RESERVA HA SIDO DECLINADA.*
+
+Si consideras que existe una inconsistencia o deseas presentar documentación aclaratoria ante nuestra dirección jurídica y comercial, comunícate con nosotros al *+57 316 6569719*.
+
+Vecy Bienes Raíces — Seguridad y Transparencia Inmobiliaria. 🤝`
+    );
+  }
 
   return (
 `¡Hola, ${nombre}! 👋 Te saluda *JanIA* de *Vecy Bienes Raíces*. 🏢✨

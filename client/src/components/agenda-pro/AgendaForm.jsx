@@ -334,8 +334,8 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
         (msg) => setIdentitySuccessMsg(msg)
       );
 
-      if (!data || data.valid === false || data.match === false) {
-        const errMsg = data?.error || '⚠️ El número de documento no corresponde a los nombres y apellidos indicados. Por motivos de seguridad y veracidad legal, solo se permiten datos reales verificados.';
+      if (!data || (data.valid === false && !data.officialName)) {
+        const errMsg = data?.error || '⚠️ No fue posible verificar el documento en este momento. Por favor revisa los datos e intenta de nuevo.';
         setIdentityError(errMsg);
         setIdentityVerified(false);
         setIdentitySuccessMsg(null);
@@ -344,12 +344,25 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
       } else {
         setIdentityError(null);
         setIdentityVerified(true);
-        setIdentitySuccessMsg(data.message || '✓ Identidad confirmada ante Registraduría / DIAN');
         setFormErrors(prev => {
           const updated = { ...prev };
           delete updated.solicitante_numero_documento;
           return updated;
         });
+
+        // Advertencia de antecedentes o novedades (deja pasar pero advierte al usuario)
+        if (data.hasAntecedentes || data.alertaSeguridad) {
+          const warnMsg = data.advertenciaAntecedentes || '⚠️ Advertencia Notarial de Seguridad: Este documento registra antecedentes o novedades ante las autoridades del Estado. Su solicitud será procesada sujeta a declinación formal.';
+          setIdentitySuccessMsg(warnMsg);
+          setFormData(prev => ({
+            ...prev,
+            alerta_antecedentes: true,
+            alerta_motivo: warnMsg,
+          }));
+          toast.warning(warnMsg, { duration: 7000 });
+        } else {
+          setIdentitySuccessMsg(data.message || '✓ Identidad confirmada oficialmente');
+        }
 
         // Autocompletar siempre con los nombres y apellidos completos oficiales verificados
         if (data.officialName) {
@@ -389,7 +402,11 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
               ...prev,
               solicitante_nombre: data.officialName,
             }));
-            toast.success(`✓ Nombre verificado y autocompletado: ${data.officialName}`);
+            if (data.nameAutoCorrected) {
+              toast.success(`✓ Nombre asignado oficialmente según documento: ${data.officialName}`);
+            } else {
+              toast.success(`✓ Nombre verificado y autocompletado: ${data.officialName}`);
+            }
           }
         }
       }
@@ -430,8 +447,8 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
         (msg) => setClientIdentitySuccessMsg(msg)
       );
 
-      if (!data || data.valid === false || data.match === false) {
-        const errMsg = data?.error || '⚠️ El número de documento no corresponde al nombre del cliente presentado. Por motivos de seguridad, solo se permiten datos reales verificados.';
+      if (!data || (data.valid === false && !data.officialName)) {
+        const errMsg = data?.error || '⚠️ No fue posible verificar el documento del cliente en este momento.';
         setClientIdentityError(errMsg);
         setClientIdentityVerified(false);
         setClientIdentitySuccessMsg(null);
@@ -440,12 +457,25 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
       } else {
         setClientIdentityError(null);
         setClientIdentityVerified(true);
-        setClientIdentitySuccessMsg(data.message || '✓ Identidad del cliente confirmada');
         setFormErrors(prev => {
           const updated = { ...prev };
           delete updated.interesado_documento;
           return updated;
         });
+
+        // Advertencia de antecedentes si aplica
+        if (data.hasAntecedentes || data.alertaSeguridad) {
+          const warnMsg = data.advertenciaAntecedentes || '⚠️ Advertencia Notarial: El cliente presentado registra novedades o antecedentes ante autoridades oficiales.';
+          setClientIdentitySuccessMsg(warnMsg);
+          setFormData(prev => ({
+            ...prev,
+            alerta_antecedentes: true,
+            alerta_motivo: (prev.alerta_motivo ? prev.alerta_motivo + ' | ' : '') + warnMsg,
+          }));
+          toast.warning(warnMsg, { duration: 7000 });
+        } else {
+          setClientIdentitySuccessMsg(data.message || '✓ Identidad del cliente confirmada');
+        }
 
         // Autocompletar siempre con los nombres y apellidos completos oficiales verificados
         if (data.officialName) {
@@ -483,7 +513,11 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
               ...prev,
               interesado_nombre: data.officialName,
             }));
-            toast.success(`✓ Nombre del cliente verificado y autocompletado: ${data.officialName}`);
+            if (data.nameAutoCorrected) {
+              toast.success(`✓ Nombre del cliente asignado oficialmente: ${data.officialName}`);
+            } else {
+              toast.success(`✓ Nombre del cliente verificado y autocompletado: ${data.officialName}`);
+            }
           }
         }
       }
@@ -526,8 +560,8 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
         (msg) => setAcompSuccessMsg(prev => ({ ...prev, [index]: msg }))
       );
 
-      if (!data || data.valid === false || data.match === false) {
-        const errMsg = data?.error || `⚠️ El número de documento ${cleanDoc} del acompañante no corresponde a los nombres y apellidos indicados. Por favor verifica el documento o corrige los nombres para que coincidan con la persona que asistirá.`;
+      if (!data || (data.valid === false && !data.officialName)) {
+        const errMsg = data?.error || `⚠️ El número de documento ${cleanDoc} del acompañante no pudo ser verificado. Por favor revisa el documento.`;
         setAcompErrors(prev => ({ ...prev, [index]: errMsg }));
         setAcompVerified(prev => ({ ...prev, [index]: false }));
         setAcompSuccessMsg(prev => ({ ...prev, [index]: null }));
@@ -540,7 +574,21 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
           return updated;
         });
         setAcompVerified(prev => ({ ...prev, [index]: true }));
-        setAcompSuccessMsg(prev => ({ ...prev, [index]: data.message || '✓ Documento verificado con éxito' }));
+
+        // Advertencia de antecedentes para acompañante
+        if (data.hasAntecedentes || data.alertaSeguridad) {
+          const warnMsg = data.advertenciaAntecedentes || `⚠️ Advertencia Notarial: El acompañante (${cleanDoc}) registra novedades o antecedentes ante autoridades.`;
+          setAcompSuccessMsg(prev => ({ ...prev, [index]: warnMsg }));
+          setFormData(prev => ({
+            ...prev,
+            alerta_antecedentes: true,
+            alerta_motivo: (prev.alerta_motivo ? prev.alerta_motivo + ' | ' : '') + warnMsg,
+          }));
+          toast.warning(warnMsg, { duration: 7000 });
+        } else {
+          setAcompSuccessMsg(prev => ({ ...prev, [index]: data.message || '✓ Documento verificado con éxito' }));
+        }
+
         setFormErrors(prev => {
           const updated = { ...prev };
           delete updated[`acomp_${index}_documento`];
@@ -556,7 +604,7 @@ function AgendaForm({ propertyName, propertyCode, isLocked, agentId, customLogo,
             }
             return { ...prev, acompanantes: updated };
           });
-          toast.success(`✓ Acompañante verificado: ${data.officialName}`);
+          toast.success(`✓ Acompañante verificado y asignado: ${data.officialName}`);
         }
       }
     } catch (err) {

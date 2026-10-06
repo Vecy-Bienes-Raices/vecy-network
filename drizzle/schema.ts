@@ -414,7 +414,24 @@ export const solicitudes = pgTable("solicitudes", {
   solicitanteRepresentanteLegal: text("solicitante_representante_legal"),
   autorizacion: boolean("autorizacion"),
   agentId: text("agent_id"),
+  hasAlertaAntecedentes: boolean("has_alerta_antecedentes"),
+  alertaMotivo: text("alerta_motivo"),
 });
+
+export const securityFlaggedIdentities = pgTable("security_flagged_identities", {
+  id: serial("id").primaryKey(),
+  documento: varchar("documento", { length: 50 }).notNull(),
+  tipoDocumento: varchar("tipo_documento", { length: 50 }),
+  nombreCompleto: text("nombre_completo"),
+  motivoAlerta: text("motivo_alerta"),
+  fuente: varchar("fuente", { length: 100 }),
+  solicitudId: bigint("solicitud_id", { mode: "number" }),
+  detalles: jsonb("detalles"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+export type SecurityFlaggedIdentity = typeof securityFlaggedIdentities.$inferSelect;
+export type InsertSecurityFlaggedIdentity = typeof securityFlaggedIdentities.$inferInsert;
 
 export const propertyPublicationHistory = pgTable("property_publication_history", {
   id: serial("id").primaryKey(),

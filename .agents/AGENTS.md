@@ -172,7 +172,31 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.45 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.46 — Octubre 2026
+
+### Novedades v32.46 (Auto-adopción de Nombres Oficiales Verificados en Vecy Agendas Pro, Protocolo Notarial de Antecedentes sin Bloqueo, Notificaciones Formales de Declinación y Auditoría Persistente):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Paridad Total en Ambas Vecy Agendas Pro**:
+     - Sincronización exacta entre `vecy-network` (`client/src/components/agenda-pro/AgendaForm.jsx`) y `vecy-agenda-pro` (`/home/eddu/Proyectos/vecy-agenda-pro/`).
+  2. **Auto-adopción de Nombre Oficial (Cero Abstención por Discrepancia)**:
+     - Eliminada la restricción y error HTTP 400 cuando el solicitante ingresa un nombre distinto al del documento.
+     - El sistema adopta automáticamente el nombre oficial certificado (`officialName`) retornado por las centrales estatales (PONAL / Procuraduría SIRI / ADRES MinSalud / DB Vecy), completando los campos sin bloquear el flujo (`valid: true, match: true, nameAutoCorrected: true`).
+  3. **Manejo de Antecedentes y Auditoría de Seguridad Notarial**:
+     - Si el solicitante o titular registra antecedentes penales o disciplinarios, el sistema **no bloquea el formulario en pantalla**: despliega una advertencia de seguridad notarial informativa y permite enviar la solicitud.
+     - En el servidor, se persiste la solicitud con `has_alerta_antecedentes = true` y el motivo detallado en `alerta_motivo`.
+     - Se registra permanentemente en la nueva tabla `security_flagged_identities` (`tipoDocumento`, `numeroDocumento`, `nombreTitular`, `fuenteAlerta`, `motivoAlerta`).
+     - Se dispara una notificación crítica al Bróker de Vecy (+573166569719) vía CallMeBot y correo.
+     - Al solicitante se le despacha mensaje por WhatsApp y correo formal informándole que **SU RESERVA HA SIDO DECLINADA** por políticas de seguridad notarial.
+- **Acciones Ejecutadas y Blindaje de Arquitectura**:
+  1. `drizzle/schema.ts`: Agregadas columnas `hasAlertaAntecedentes` y `alertaMotivo` en `solicitudes`; creada tabla `security_flagged_identities`.
+  2. `server/routers/agenda.ts`: Exportada interfaz `IdentityVerificationResult`, auto-adopción de nombre en `executeIdentityVerification` y `processAndSaveSolicitud`, detección de antecedentes en PONAL/SIRI, función `registerSecurityFlaggedIdentity`.
+  3. `server/_core/agendaWhatsAppService.ts`: Alerta de máximo nivel en `buildBrokerCallMeBotMessage` y mensaje formal de declinación en `buildClientConfirmationMessage`.
+  4. `server/_core/emailContractService.ts`: Plantilla carmesí de declinación por antecedentes en `getEmailContent` y banner de alerta crítica para el bróker.
+  5. `client/src/components/agenda-pro/AgendaForm.jsx` y `/home/eddu/Proyectos/vecy-agenda-pro/src/components/AgendaForm.jsx`: Auto-adopción en campos de texto, banner de advertencia en vivo y tolerancia a antecedentes.
+  6. `server/__tests__/regression.test.ts`: Test unitario `Doctrina v32.46` aprobado.
+- **Verificación**: `tsc --noEmit` 0 errores ✅ | 141/141 tests Vitest aprobados al 100% ✅ | `npm run build` limpio en ambos repositorios ✅
+
+## 🔖 VERSIÓN ANTERIOR: v32.45 — Octubre 2026
 
 ### Novedades v32.45 (Integración Triple ADRES / BDUA, Resolución de C.E. 8.084.608 como "José Patricio Cáceres Morales", Diagnóstico Forense de Falla CSP en Brave y Túnel de Aseguramiento en Salud):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

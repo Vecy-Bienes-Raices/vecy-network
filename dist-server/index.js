@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.45";
+    VECY_VERSION = "v32.46";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -61,6 +61,7 @@ __export(schema_exports, {
   referralLinks: () => referralLinks,
   requirements: () => requirements,
   roleEnum: () => roleEnum,
+  securityFlaggedIdentities: () => securityFlaggedIdentities,
   shares: () => shares,
   solicitudes: () => solicitudes,
   statusEnum: () => statusEnum,
@@ -72,7 +73,7 @@ __export(schema_exports, {
   zoneAliases: () => zoneAliases
 });
 import { serial, integer, pgEnum, pgTable, text, timestamp, varchar, decimal, boolean, jsonb, bigint, uuid, index } from "drizzle-orm/pg-core";
-var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, notificationLogs, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes, propertyPublicationHistory, userBehavioralFingerprints, userPatterns, zoneAliases, inmobiliarioLexicon, matchFeedback, dailyBroadcasts, advisors, predialConsultations;
+var roleEnum, propertyTypeEnum, transactionTypeEnum, mandateStatusEnum, mandateTypeEnum, inquiryTypeEnum, leadStatusEnum, conversationStatusEnum, matchStatusEnum, statusEnum, messageTypeEnum, demandLevelEnum, supplyLevelEnum, marketTrendEnum, currencyEnum, users, properties, requirements, leads, conversations, messages, propertyMatches, notificationLogs, pendingSessions, referralLinks, shares, clientLedger, propertyImages, marketAnalysis, favorites, colombiaGeography, profiles, counters, solicitudes, securityFlaggedIdentities, propertyPublicationHistory, userBehavioralFingerprints, userPatterns, zoneAliases, inmobiliarioLexicon, matchFeedback, dailyBroadcasts, advisors, predialConsultations;
 var init_schema = __esm({
   "drizzle/schema.ts"() {
     "use strict";
@@ -443,7 +444,20 @@ var init_schema = __esm({
       createdAt: timestamp("created_at", { withTimezone: true }),
       solicitanteRepresentanteLegal: text("solicitante_representante_legal"),
       autorizacion: boolean("autorizacion"),
-      agentId: text("agent_id")
+      agentId: text("agent_id"),
+      hasAlertaAntecedentes: boolean("has_alerta_antecedentes"),
+      alertaMotivo: text("alerta_motivo")
+    });
+    securityFlaggedIdentities = pgTable("security_flagged_identities", {
+      id: serial("id").primaryKey(),
+      documento: varchar("documento", { length: 50 }).notNull(),
+      tipoDocumento: varchar("tipo_documento", { length: 50 }),
+      nombreCompleto: text("nombre_completo"),
+      motivoAlerta: text("motivo_alerta"),
+      fuente: varchar("fuente", { length: 100 }),
+      solicitudId: bigint("solicitud_id", { mode: "number" }),
+      detalles: jsonb("detalles"),
+      createdAt: timestamp("created_at", { withTimezone: true }).defaultNow()
     });
     propertyPublicationHistory = pgTable("property_publication_history", {
       id: serial("id").primaryKey(),
@@ -10027,6 +10041,34 @@ function getEmailContent(formData) {
   const fechaActual = new Intl.DateTimeFormat("es-CO", { year: "numeric", month: "long", day: "numeric", timeZone: "America/Bogota" }).format(now);
   const horaActual = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "America/Bogota" }).format(now);
   const baseHtml = (title2, bodyContent) => `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style> @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"); body { font-family: "Poppins", Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; } .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f33; } .header { background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #bf953f; } .header img { max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4)); } .content { padding: 35px 40px; color: #f0f0f0; } .content h2 { color: #bf953f; font-size: 22px; margin-top: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; } .content p { font-size: 16px; line-height: 1.7; margin-bottom: 20px; } .highlight { background-color: #1a1a1a; padding: 15px 20px; border-left: 4px solid #bf953f; margin-top: 25px; border-radius: 4px; } .highlight p { font-size: 15px; margin: 0; color: #bf953f; font-weight: 600; } .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #333; } .footer a { color: #bf953f; text-decoration: none; font-weight: 600; } </style></head><body><div class="container"><div class="header"><img src="${logoUrlParaEmail}" alt="Vecy Bienes Ra\xEDces Logo"></div><div class="content"><h2>${title2}</h2>${bodyContent}</div><div class="footer"><p>Vecy Bienes Ra\xEDces S.A.S. \xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} | Gold Edition</p><p><a href="https://vecy.co/" target="_blank">vecy.co</a> \u2014 <a href="https://vecy-network.vercel.app/" target="_blank">vecy-network.vercel.app</a></p></div></div></body></html>`;
+  const hasAlert = Boolean(formData.alerta_antecedentes || formData.alertaAntecedentes || formData.hasAlertaAntecedentes);
+  if (hasAlert) {
+    const subject2 = `\u26A0\uFE0F Notificaci\xF3n de Seguridad Notarial - Solicitud #${solicitud_id} Declinada | Vecy Agenda`;
+    const title2 = `Aviso de Seguridad Notarial \u2014 Solicitud #${solicitud_id} \u{1F6D1}`;
+    const motivo = formData.alerta_motivo || formData.alertaMotivo || "Registro de antecedentes o requerimientos ante autoridades oficiales";
+    const body2 = `
+      <div style="background-color: #2b0000; border: 2px solid #e53935; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <h3 style="color: #ff6b6b; margin-top: 0; font-size: 18px;">\u{1F6D1} NOTIFICACI\xD3N FORMAL DE DECLINACI\xD3N DE RESERVA</h3>
+        <p style="color: #ffcdd2; font-size: 14px; line-height: 1.6;">
+          Estimado(a) <strong>${solicitante_nombre}</strong>:
+        </p>
+        <p style="color: #ffcdd2; font-size: 14px; line-height: 1.6;">
+          En cumplimiento estricto de nuestras pol\xEDticas de seguridad notarial, debida diligencia y protecci\xF3n contractual de propietarios y agentes inmobiliarios, tu documento de identidad registrado (<strong>${formData.solicitante_numero_documento || "Doc"}</strong>) fue cotejado ante las centrales de control y certificaci\xF3n oficial del Estado.
+        </p>
+        <p style="color: #ffcdd2; font-size: 14px; line-height: 1.6;">
+          <strong>Detalle de la auditor\xEDa:</strong> ${motivo}.
+        </p>
+        <p style="color: #ffffff; font-weight: bold; font-size: 15px; margin-top: 15px;">
+          Por los motivos expuestos, te informamos formalmente que TU RESERVA PARA LA VISITA DEL INMUEBLE HA SIDO DECLINADA.
+        </p>
+        <p style="color: #ffcdd2; font-size: 13px; margin-top: 15px;">
+          Si consideras que existe un error de homonimia o deseas presentar documentaci\xF3n aclaratoria ante nuestra direcci\xF3n jur\xEDdica y comercial, puedes comunicarte directamente al tel\xE9fono <strong>+57 316 6569719</strong> o al correo <strong>vecybienesraices@gmail.com</strong>.
+        </p>
+      </div>
+      <div class="highlight" style="margin-top: 25px;"><p><strong>ID de Solicitud Auditada: ${solicitud_id}</strong></p></div>
+    `;
+    return { subject: subject2, html: baseHtml(title2, body2) };
+  }
   const subject = `\u2705 Solicitud #${solicitud_id} Recibida | Vecy Agenda`;
   const title = `\xA1Hola, ${solicitante_nombre}! Hemos recibido tu solicitud \u{1F3E0}\u2728`;
   let body = `
@@ -10095,6 +10137,14 @@ function getAdminEmailContent(formData) {
     });
     acompanantesHtml += "</tbody></table>";
   }
+  const hasAlert = Boolean(formData.alerta_antecedentes || formData.alertaAntecedentes || formData.hasAlertaAntecedentes);
+  const alertaBanner = hasAlert ? `
+      <div style="background-color: #660000; border: 2px solid #ff4444; border-radius: 6px; padding: 15px; margin-bottom: 20px; color: #fff;">
+        <h3 style="margin-top: 0; color: #ff8888; font-size: 16px;">\u{1F6A8} ALERTA CR\xCDTICA DE SEGURIDAD NOTARIAL</h3>
+        <p style="margin: 0; font-size: 13px;">El solicitante o asistente registra antecedentes o sanciones ante las autoridades: <strong>${formData.alerta_motivo || "Antecedentes vigentes"}</strong>.</p>
+        <p style="margin: 6px 0 0 0; font-size: 12px; color: #ffd0d0;">\u{1F4CC} La reserva ha sido DECLINADA formalmente y se ha remitido la advertencia al usuario.</p>
+      </div>
+    ` : "";
   const html = `
     <!DOCTYPE html>
     <html lang="es">
@@ -10116,6 +10166,7 @@ function getAdminEmailContent(formData) {
           <img src="${logoUrlParaEmail}" alt="Logo Vecy" style="max-width: 100px;">
         </div>
         <div class="content">
+          ${alertaBanner}
           <h2 style="color: #bf953f; text-align: center; margin-top: 0;">NUEVA SOLICITUD RECIBIDA #${formData.solicitud_id}</h2>
           <p style="color: #888; font-size: 13px;">Solicitante: ${formData.solicitante_nombre}</p>
           <p style="font-size: 13px; color: #aaa;">A continuaci\xF3n, el resumen de los datos ingresados en el formulario:</p>
@@ -10203,10 +10254,12 @@ async function sendContractAndConfirmationEmails(rawPayload) {
   }
   try {
     const adminContent = getAdminEmailContent(formData);
+    const hasAdminAlert = Boolean(formData.alerta_antecedentes || formData.alertaAntecedentes || formData.hasAlertaAntecedentes);
+    const adminSubject = hasAdminAlert ? `\u{1F6A8} ALERTA DE ANTECEDENTES: Solicitud #${solicitudId} - ${formData.solicitante_nombre || "Usuario"} (DECLINADA)` : `\u{1F514} Nueva Solicitud #${solicitudId} - ${formData.solicitante_perfil || "Usuario"}`;
     await transporter.sendMail({
       from: `"Vecy Agenda Pro" <${gmailUser}>`,
       to: adminTargetEmail,
-      subject: `\u{1F514} Nueva Solicitud #${solicitudId} - ${formData.solicitante_perfil || "Usuario"}`,
+      subject: adminSubject,
       html: adminContent.html,
       attachments
     });
@@ -13556,7 +13609,17 @@ function buildBrokerCallMeBotMessage(data) {
   }
   const bloqueSolicitud = lineasSolicitud.join("\n");
   const waContactUrl = cleanCel ? `https://wa.me/${cleanCel}` : `(Sin n\xFAmero registrado)`;
-  return `\u{1F514} Solicitud No. ${numSolicitud} \u{1F514}
+  const hasAlerta = Boolean(data.alerta_antecedentes || data.alertaAntecedentes || data.hasAlertaAntecedentes);
+  const motivoTexto = data.alerta_motivo || data.alertaMotivo || "Registro de antecedentes / requerimientos oficiales";
+  const headerAlerta = hasAlerta ? `\u{1F6A8}\u{1F6A8} ALERTA CR\xCDTICA DE SEGURIDAD NOTARIAL \u{1F6A8}\u{1F6A8}
+\u26A0\uFE0F ATENCI\xD3N BR\xD3KER: Se recibi\xF3 una solicitud con REGISTROS DE ANTECEDENTES O SANCIONES ante las autoridades del Estado.
+\u{1F6D1} Titular: ${nombre} | \u{1FAAA} Doc: ${doc}
+Motivo: ${motivoTexto}
+\u{1F4CC} Estado: RESERVA DECLINADA FORMALMENTE AL USUARIO POR SEGURIDAD.
+--------------------------------------------------
+
+` : "";
+  return `${headerAlerta}\u{1F514} Solicitud No. ${numSolicitud} \u{1F514}
 
 \u{1F464} Solicitante
 ${perfil}
@@ -13594,6 +13657,22 @@ function buildClientConfirmationMessage(data) {
   const clienteNombre = data.interesado_nombre || data.interesadoNombre || "";
   const lineaCliente = clienteNombre && clienteNombre !== nombre ? `
 \u{1F464} *Cliente presentado:* ${clienteNombre}` : "";
+  const hasAlerta = Boolean(data.alerta_antecedentes || data.alertaAntecedentes || data.hasAlertaAntecedentes);
+  if (hasAlerta) {
+    const motivo = data.alerta_motivo || data.alertaMotivo || "Registros preventivos en bases de seguridad del Estado";
+    return `\xA1Hola, ${nombre}! \u{1F44B} Te saluda *JanIA* de *Vecy Bienes Ra\xEDces*. \u{1F3E2}
+
+Hemos recibido tu solicitud de agendamiento *No. ${numSolicitud}* para el inmueble *${nombreInmueble}* (Cod: ${codigo}).
+
+\u26A0\uFE0F *INFORME DE CONTROL Y SEGURIDAD NOTARIAL:*
+Durante el cotejo preventivo y obligatorio ante las centrales oficiales de certificaci\xF3n y seguridad del Estado, se identificaron novedades o requerimientos asociados al documento de identidad registrado (${motivo}).
+
+\u{1F6D1} *Por estrictas pol\xEDticas de seguridad preventiva y protecci\xF3n jur\xEDdica de nuestros propietarios y agentes, te informamos que TU RESERVA HA SIDO DECLINADA.*
+
+Si consideras que existe una inconsistencia o deseas presentar documentaci\xF3n aclaratoria ante nuestra direcci\xF3n jur\xEDdica y comercial, comun\xEDcate con nosotros al *+57 316 6569719*.
+
+Vecy Bienes Ra\xEDces \u2014 Seguridad y Transparencia Inmobiliaria. \u{1F91D}`;
+  }
   return `\xA1Hola, ${nombre}! \u{1F44B} Te saluda *JanIA* de *Vecy Bienes Ra\xEDces*. \u{1F3E2}\u2728
 
 Hemos recibido tu solicitud de agendamiento *No. ${numSolicitud}*:
@@ -13874,12 +13953,17 @@ async function queryPoliciaNacional(tipoDocInput, cleanDoc) {
         const officialName = parsePoliceAntecedentesFullName(rawFullName);
         identityCache.set(cacheKey, { fullName: officialName, timestamp: Date.now() });
         console.log(`[queryPoliciaNacional] \u2705 Identidad confirmada en intento ${attempt}: ${officialName} (${sanitizedDoc})`);
+        const upperText = text2.toUpperCase();
+        const hasNoPending = upperText.includes("NO TIENE ASUNTOS PENDIENTES") || upperText.includes("NO REGISTRA ANTECEDENTES");
+        const hasPending = !hasNoPending && (upperText.includes("TIENE ASUNTOS PENDIENTES") || upperText.includes("TIENE REQUERIMIENTOS JUDICIALES") || upperText.includes("REGISTRA ANTECEDENTES") || upperText.includes("ASUNTOS PENDIENTES CON LAS AUTORIDADES"));
         return {
           success: true,
           officialName,
           source: "Central Oficial de Seguridad Notarial VECY Bienes Ra\xEDces",
           cedula: sanitizedDoc,
-          tipoDoc
+          tipoDoc,
+          hasAntecedentes: hasPending,
+          antecedentesDetalle: hasPending ? "Registra asuntos pendientes con las autoridades judiciales ante la Polic\xEDa Nacional" : void 0
         };
       }
       console.warn(`[queryPoliciaNacional] Intento ${attempt}: No se detectaron nombres en la respuesta HTML. Texto: ${text2.substring(0, 300)}`);
@@ -14010,9 +14094,10 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
     } else {
       return {
         valid: true,
-        match: false,
+        match: true,
         officialName: authEntry.canonicalName,
-        error: `\u26A0\uFE0F El n\xFAmero de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un n\xFAmero mal o corr\xEDgelo para continuar.`
+        nameAutoCorrected: true,
+        message: authEntry.message || `\u2713 Identidad verificada y autocompletada con \xE9xito: ${authEntry.canonicalName}`
       };
     }
   }
@@ -14136,35 +14221,42 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
   if (cached && Date.now() - cached.timestamp < IDENTITY_CACHE_TTL) {
     const officialFormatted = cached.fullName;
     const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
-    if (!isMatch) {
-      return {
-        valid: true,
-        match: false,
-        officialName: officialFormatted,
-        error: `\u26A0\uFE0F El n\xFAmero de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un n\xFAmero mal o corr\xEDgelo para continuar.`
-      };
-    }
     return {
       valid: true,
       match: true,
       officialName: officialFormatted,
+      nameAutoCorrected: !isMatch,
       message: `\u2713 Identidad verificada y autenticada con \xE9xito: ${officialFormatted}`
     };
   }
   let officialFoundName = null;
   let verificationSource = "";
+  let hasAntecedentes = false;
+  let antecedentesDetalle = void 0;
   if (isCedula) {
     const policiaResult = await queryPoliciaNacional(tipoDocumento, clean);
-    if (policiaResult && policiaResult.success && policiaResult.officialName) {
-      officialFoundName = policiaResult.officialName;
-      verificationSource = "Polic\xEDa Nacional de Colombia";
+    if (policiaResult && policiaResult.success) {
+      if (policiaResult.officialName) {
+        officialFoundName = policiaResult.officialName;
+        verificationSource = "Polic\xEDa Nacional de Colombia";
+      }
+      if (policiaResult.hasAntecedentes) {
+        hasAntecedentes = true;
+        antecedentesDetalle = policiaResult.antecedentesDetalle || "Registra antecedentes pendientes ante la Polic\xEDa Nacional";
+      }
     } else {
       try {
         const { queryProcuraduria: queryProcuraduria2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
         const pgnResult = await queryProcuraduria2("cc", clean);
-        if (pgnResult && pgnResult.success && pgnResult.officialName) {
-          officialFoundName = pgnResult.officialName;
-          verificationSource = "Central de Control Notarial (Procuradur\xEDa General)";
+        if (pgnResult && pgnResult.success) {
+          if (pgnResult.officialName) {
+            officialFoundName = pgnResult.officialName;
+            verificationSource = "Central de Control Notarial (Procuradur\xEDa General)";
+          }
+          if (pgnResult.hasSanctions) {
+            hasAntecedentes = true;
+            antecedentesDetalle = pgnResult.statusText || "Registra sanciones o inhabilidades ante la Procuradur\xEDa General de la Naci\xF3n";
+          }
         }
       } catch (err) {
         console.warn("[verifyCedulaWithRegistraduria] Respaldo PGN CC:", err?.message || err);
@@ -14174,9 +14266,15 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
     try {
       const { queryProcuraduria: queryProcuraduria2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
       const pgnResult = await queryProcuraduria2(docTypeKey, clean);
-      if (pgnResult && pgnResult.success && pgnResult.officialName) {
-        officialFoundName = pgnResult.officialName;
-        verificationSource = "Central de Control Notarial (Procuradur\xEDa General)";
+      if (pgnResult && pgnResult.success) {
+        if (pgnResult.officialName) {
+          officialFoundName = pgnResult.officialName;
+          verificationSource = "Central de Control Notarial (Procuradur\xEDa General)";
+        }
+        if (pgnResult.hasSanctions) {
+          hasAntecedentes = true;
+          antecedentesDetalle = pgnResult.statusText || "Registra sanciones o inhabilidades ante la Procuradur\xEDa General de la Naci\xF3n";
+        }
       }
     } catch (err) {
       console.warn("[verifyCedulaWithRegistraduria] PGN Extranjero:", err?.message || err);
@@ -14195,9 +14293,15 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
     }
     if (!officialFoundName && (isExtranjeria || isPasaporte)) {
       const policiaResult = await queryPoliciaNacional(tipoDocumento, clean);
-      if (policiaResult && policiaResult.success && policiaResult.officialName) {
-        officialFoundName = policiaResult.officialName;
-        verificationSource = "Polic\xEDa Nacional de Colombia";
+      if (policiaResult && policiaResult.success) {
+        if (policiaResult.officialName) {
+          officialFoundName = policiaResult.officialName;
+          verificationSource = "Polic\xEDa Nacional de Colombia";
+        }
+        if (policiaResult.hasAntecedentes) {
+          hasAntecedentes = true;
+          antecedentesDetalle = policiaResult.antecedentesDetalle || "Registra antecedentes pendientes ante la Polic\xEDa Nacional";
+        }
       }
     }
   }
@@ -14217,19 +14321,15 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
     const officialFormatted = formatTitleCase(officialFoundName);
     identityCache.set(ponalCacheKey, { fullName: officialFormatted, timestamp: Date.now() });
     const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
-    if (!isMatch) {
-      return {
-        valid: true,
-        match: false,
-        officialName: officialFormatted,
-        error: `\u26A0\uFE0F El n\xFAmero de documento ${clean} no corresponde a "${nombreIngresado}". Por favor verifica si digitaste un n\xFAmero mal o corr\xEDgelo para continuar.`
-      };
-    }
     return {
       valid: true,
       match: true,
       officialName: officialFormatted,
-      message: `\u2713 Identidad verificada con ${verificationSource}: ${officialFormatted}`
+      nameAutoCorrected: !isMatch,
+      hasAntecedentes,
+      alertaSeguridad: hasAntecedentes,
+      advertenciaAntecedentes: hasAntecedentes ? antecedentesDetalle || "\u26A0\uFE0F Advertencia Notarial de Seguridad: El titular presenta registros o antecedentes vigentes ante las autoridades estatales." : void 0,
+      message: hasAntecedentes ? `\u26A0\uFE0F ${officialFormatted} (Registra novedades de seguridad ante autoridades)` : `\u2713 Identidad verificada con ${verificationSource}: ${officialFormatted}`
     };
   }
   try {
@@ -14242,15 +14342,15 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       for (const row of profileRows) {
         if (row.fullName && row.fullName.trim().length >= 4) {
           const officialFormatted = formatTitleCase(row.fullName.trim());
-          if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
-            identityCache.set(ponalCacheKey, { fullName: officialFormatted, timestamp: Date.now() });
-            return {
-              valid: true,
-              match: true,
-              officialName: officialFormatted,
-              message: `\u2713 Identidad confirmada en el registro de Vecy: ${officialFormatted}`
-            };
-          }
+          const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
+          identityCache.set(ponalCacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+          return {
+            valid: true,
+            match: true,
+            officialName: officialFormatted,
+            nameAutoCorrected: !isMatch,
+            message: `\u2713 Identidad confirmada en el registro de Vecy: ${officialFormatted}`
+          };
         }
       }
       const solRows = await db.select({
@@ -14269,15 +14369,15 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
         const tokens = (candidateName || "").trim().split(/\s+/).filter(Boolean);
         if (candidateName && tokens.length >= 3) {
           const officialFormatted = formatTitleCase(candidateName.trim());
-          if (checkIdentityTokens(nombreIngresado, officialFormatted)) {
-            identityCache.set(ponalCacheKey, { fullName: officialFormatted, timestamp: Date.now() });
-            return {
-              valid: true,
-              match: true,
-              officialName: officialFormatted,
-              message: `\u2713 Identidad confirmada en base de datos de Vecy: ${officialFormatted}`
-            };
-          }
+          const isMatch = checkIdentityTokens(nombreIngresado, officialFormatted);
+          identityCache.set(ponalCacheKey, { fullName: officialFormatted, timestamp: Date.now() });
+          return {
+            valid: true,
+            match: true,
+            officialName: officialFormatted,
+            nameAutoCorrected: !isMatch,
+            message: `\u2713 Identidad confirmada en base de datos de Vecy: ${officialFormatted}`
+          };
         }
       }
     }
@@ -14332,28 +14432,61 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
     error: "No fue posible validar el documento en este momento. Por favor verifica los datos e intenta de nuevo."
   };
 }
+async function registerSecurityFlaggedIdentity(db, data) {
+  try {
+    if (!db) return;
+    const { getRawSql: getRawSql2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+    const rawSql = getRawSql2();
+    if (rawSql) {
+      await rawSql`
+        CREATE TABLE IF NOT EXISTS security_flagged_identities (
+          id SERIAL PRIMARY KEY,
+          documento VARCHAR(50) NOT NULL,
+          tipo_documento VARCHAR(50),
+          nombre_completo TEXT,
+          motivo_alerta TEXT,
+          fuente VARCHAR(100),
+          solicitud_id BIGINT,
+          detalles JSONB,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+      `;
+      await rawSql`
+        CREATE INDEX IF NOT EXISTS idx_flagged_identities_doc ON security_flagged_identities(documento);
+      `;
+      await rawSql`
+        INSERT INTO security_flagged_identities (documento, tipo_documento, nombre_completo, motivo_alerta, fuente, solicitud_id, detalles, created_at)
+        VALUES (${data.documento}, ${data.tipoDocumento || "CC"}, ${data.nombreCompleto || ""}, ${data.motivoAlerta || "Antecedentes registrados"}, ${data.fuente || "Polic\xEDa Nacional"}, ${data.solicitudId || null}, ${JSON.stringify(data.detalles || {})}, NOW());
+      `;
+      console.log(`[SECURITY-AUDIT] \u{1F6A8} Identidad con antecedentes registrada en base de datos: ${data.nombreCompleto} (${data.documento})`);
+    }
+  } catch (err) {
+    console.warn("[registerSecurityFlaggedIdentity warning]", err?.message || err);
+  }
+}
 async function processAndSaveSolicitud(input) {
   const db = await getDb();
   if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
-  const stopwords = ["de", "del", "la", "las", "los", "y", "el"];
-  const checkMatch = (entered, official) => {
-    const normEntered = entered.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
-    const normOfficial = official.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter((t2) => t2 && !stopwords.includes(t2));
-    const matches = normEntered.filter((token) => normOfficial.some((off) => off === token || off.startsWith(token) || token.startsWith(off)));
-    return matches.length >= Math.min(1, normEntered.length);
-  };
+  let hasAntecedentesFlag = Boolean(input.alerta_antecedentes || input.hasAlertaAntecedentes);
+  let antecedentesMotivo = input.alerta_motivo || input.alertaMotivo || "";
   if (input.solicitante_numero_documento && (input.solicitante_tipo_documento?.includes("ciudadan\xEDa") || input.solicitante_tipo_documento?.includes("cedula") || input.solicitante_tipo_documento === "CC" || !input.solicitante_tipo_documento)) {
     const cleanDoc = input.solicitante_numero_documento.replace(/\D/g, "");
     if (cleanDoc.length >= 5) {
       const res = await queryPoliciaNacional("cc", cleanDoc);
-      if (res.success && res.officialName && input.solicitante_nombre) {
-        if (!checkMatch(input.solicitante_nombre, res.officialName)) {
-          throw new TRPCError3({
-            code: "BAD_REQUEST",
-            message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del solicitante no corresponde a los nombres y apellidos indicados. Por seguridad, la solicitud fue rechazada.`
+      if (res.success && res.officialName) {
+        input.solicitante_nombre = res.officialName;
+        if (res.hasAntecedentes) {
+          hasAntecedentesFlag = true;
+          antecedentesMotivo = (antecedentesMotivo ? antecedentesMotivo + " | " : "") + `Solicitante (${cleanDoc}): ${res.antecedentesDetalle || "Registra antecedentes pendientes ante la Polic\xEDa Nacional"}`;
+          await registerSecurityFlaggedIdentity(db, {
+            documento: cleanDoc,
+            tipoDocumento: input.solicitante_tipo_documento || "CC",
+            nombreCompleto: res.officialName,
+            motivoAlerta: res.antecedentesDetalle || "Antecedentes judiciales ante la Polic\xEDa Nacional",
+            fuente: "Polic\xEDa Nacional",
+            detalles: { rol: "solicitante" }
           });
         }
-        input.solicitante_nombre = res.officialName;
       }
     }
   }
@@ -14361,35 +14494,58 @@ async function processAndSaveSolicitud(input) {
     const cleanDoc = input.interesado_documento.replace(/\D/g, "");
     if (cleanDoc.length >= 5) {
       const res = await queryPoliciaNacional("cc", cleanDoc);
-      if (res.success && res.officialName && input.interesado_nombre) {
-        if (!checkMatch(input.interesado_nombre, res.officialName)) {
-          throw new TRPCError3({
-            code: "BAD_REQUEST",
-            message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del cliente presentado no corresponde al nombre indicado. Por seguridad, la solicitud fue rechazada.`
+      if (res.success && res.officialName) {
+        input.interesado_nombre = res.officialName;
+        if (res.hasAntecedentes) {
+          hasAntecedentesFlag = true;
+          antecedentesMotivo = (antecedentesMotivo ? antecedentesMotivo + " | " : "") + `Cliente presentado (${cleanDoc}): ${res.antecedentesDetalle || "Registra antecedentes pendientes ante la Polic\xEDa Nacional"}`;
+          await registerSecurityFlaggedIdentity(db, {
+            documento: cleanDoc,
+            tipoDocumento: input.interesado_tipo_documento || "CC",
+            nombreCompleto: res.officialName,
+            motivoAlerta: res.antecedentesDetalle || "Antecedentes judiciales ante la Polic\xEDa Nacional",
+            fuente: "Polic\xEDa Nacional",
+            detalles: { rol: "cliente_presentado" }
           });
         }
-        input.interesado_nombre = res.officialName;
       }
     }
   }
   if (input.acompanantes && Array.isArray(input.acompanantes)) {
     for (const acomp of input.acompanantes) {
-      if (acomp && acomp.documento && acomp.nombre) {
+      if (acomp && acomp.documento) {
         const cleanDoc = String(acomp.documento).replace(/\D/g, "");
         if (cleanDoc.length >= 5) {
           const res = await queryPoliciaNacional("cc", cleanDoc);
           if (res.success && res.officialName) {
-            if (!checkMatch(String(acomp.nombre), res.officialName)) {
-              throw new TRPCError3({
-                code: "BAD_REQUEST",
-                message: `\u26A0\uFE0F Inconsistencia de identidad: El n\xFAmero de documento ${cleanDoc} del acompa\xF1ante "${acomp.nombre}" no corresponde con los registros de certificaci\xF3n. Por seguridad, la solicitud fue rechazada.`
+            acomp.nombre = res.officialName;
+            if (res.hasAntecedentes) {
+              hasAntecedentesFlag = true;
+              antecedentesMotivo = (antecedentesMotivo ? antecedentesMotivo + " | " : "") + `Acompa\xF1ante (${cleanDoc}): ${res.antecedentesDetalle || "Registra antecedentes pendientes ante la Polic\xEDa Nacional"}`;
+              await registerSecurityFlaggedIdentity(db, {
+                documento: cleanDoc,
+                tipoDocumento: "CC",
+                nombreCompleto: res.officialName,
+                motivoAlerta: res.antecedentesDetalle || "Antecedentes judiciales ante la Polic\xEDa Nacional",
+                fuente: "Polic\xEDa Nacional",
+                detalles: { rol: "acompanante" }
               });
             }
-            acomp.nombre = res.officialName;
           }
         }
       }
     }
+  }
+  try {
+    const { getRawSql: getRawSql2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+    const rawSql = getRawSql2();
+    if (rawSql) {
+      await rawSql`
+        ALTER TABLE solicitudes ADD COLUMN IF NOT EXISTS has_alerta_antecedentes BOOLEAN DEFAULT false;
+        ALTER TABLE solicitudes ADD COLUMN IF NOT EXISTS alerta_motivo TEXT;
+      `;
+    }
+  } catch (_) {
   }
   const maxRes = await db.select({ maxId: sql4`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
   const nextSolicitudId = Math.max(Number(maxRes[0]?.maxId || 0), 1144) + 1;
@@ -14420,14 +14576,19 @@ async function processAndSaveSolicitud(input) {
     createdAt: /* @__PURE__ */ new Date(),
     solicitanteRepresentanteLegal: input.solicitante_representante_legal || null,
     autorizacion: input.autorizacion ?? true,
-    agentId: input.agent_id || null
+    agentId: input.agent_id || null,
+    hasAlertaAntecedentes: hasAntecedentesFlag,
+    alertaMotivo: antecedentesMotivo || null
   }).returning();
   const newRow = inserted[0];
   sendContractAndConfirmationEmails({
     ...input,
     solicitud_id: nextSolicitudId,
     solicitudId: nextSolicitudId,
-    id: newRow?.id
+    id: newRow?.id,
+    alerta_antecedentes: hasAntecedentesFlag,
+    alerta_motivo: antecedentesMotivo,
+    hasAlertaAntecedentes: hasAntecedentesFlag
   }).catch((emailErr) => {
     console.error(`[AGENDA-CREATE] Error en despacho de correos para solicitud #${nextSolicitudId}:`, emailErr?.message);
   });
@@ -14435,7 +14596,10 @@ async function processAndSaveSolicitud(input) {
     ...input,
     solicitud_id: nextSolicitudId,
     solicitudId: nextSolicitudId,
-    id: newRow?.id
+    id: newRow?.id,
+    alerta_antecedentes: hasAntecedentesFlag,
+    alerta_motivo: antecedentesMotivo,
+    hasAlertaAntecedentes: hasAntecedentesFlag
   }).catch((waErr) => {
     console.error(`[AGENDA-CREATE] Error en despacho de WhatsApp para solicitud #${nextSolicitudId}:`, waErr?.message);
   });
@@ -14444,7 +14608,9 @@ async function processAndSaveSolicitud(input) {
     id: newRow?.id,
     solicitudId: nextSolicitudId,
     data: newRow,
-    message: `\u2713 Solicitud de agenda #${nextSolicitudId} registrada con \xE9xito.`
+    hasAntecedentes: hasAntecedentesFlag,
+    alertaMotivo: antecedentesMotivo || void 0,
+    message: hasAntecedentesFlag ? `\u26A0\uFE0F Solicitud #${nextSolicitudId} registrada con advertencia de seguridad notarial (Reserva sujeta a declinaci\xF3n).` : `\u2713 Solicitud de agenda #${nextSolicitudId} registrada con \xE9xito.`
   };
 }
 var httpsAgentInsecure, identityCache, IDENTITY_CACHE_TTL, identityJobs, CookieJar, AUTHORITATIVE_FAMILY_IDENTITIES, agendaRouter;
@@ -14767,7 +14933,9 @@ var init_agenda = __esm({
           firma_fechahora_audit: z2.string().nullable().optional(),
           solicitante_representante_legal: z2.string().nullable().optional(),
           autorizacion: z2.boolean().nullable().optional(),
-          agent_id: z2.string().nullable().optional()
+          agent_id: z2.string().nullable().optional(),
+          alerta_antecedentes: z2.boolean().nullable().optional(),
+          alerta_motivo: z2.string().nullable().optional()
         })
       ).mutation(async ({ input }) => {
         return await processAndSaveSolicitud(input);

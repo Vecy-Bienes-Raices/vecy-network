@@ -400,6 +400,36 @@ export function getEmailContent(formData: Record<string, any>) {
 
   const baseHtml = (title: string, bodyContent: string) => `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style> @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"); body { font-family: "Poppins", Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; } .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f33; } .header { background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #bf953f; } .header img { max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4)); } .content { padding: 35px 40px; color: #f0f0f0; } .content h2 { color: #bf953f; font-size: 22px; margin-top: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; } .content p { font-size: 16px; line-height: 1.7; margin-bottom: 20px; } .highlight { background-color: #1a1a1a; padding: 15px 20px; border-left: 4px solid #bf953f; margin-top: 25px; border-radius: 4px; } .highlight p { font-size: 15px; margin: 0; color: #bf953f; font-weight: 600; } .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #333; } .footer a { color: #bf953f; text-decoration: none; font-weight: 600; } </style></head><body><div class="container"><div class="header"><img src="${logoUrlParaEmail}" alt="Vecy Bienes Raíces Logo"></div><div class="content"><h2>${title}</h2>${bodyContent}</div><div class="footer"><p>Vecy Bienes Raíces S.A.S. © ${new Date().getFullYear()} | Gold Edition</p><p><a href="https://vecy.co/" target="_blank">vecy.co</a> — <a href="https://vecy-network.vercel.app/" target="_blank">vecy-network.vercel.app</a></p></div></div></body></html>`;
 
+  const hasAlert = Boolean(formData.alerta_antecedentes || formData.alertaAntecedentes || formData.hasAlertaAntecedentes);
+
+  if (hasAlert) {
+    const subject = `⚠️ Notificación de Seguridad Notarial - Solicitud #${solicitud_id} Declinada | Vecy Agenda`;
+    const title = `Aviso de Seguridad Notarial — Solicitud #${solicitud_id} 🛑`;
+    const motivo = formData.alerta_motivo || formData.alertaMotivo || "Registro de antecedentes o requerimientos ante autoridades oficiales";
+    const body = `
+      <div style="background-color: #2b0000; border: 2px solid #e53935; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <h3 style="color: #ff6b6b; margin-top: 0; font-size: 18px;">🛑 NOTIFICACIÓN FORMAL DE DECLINACIÓN DE RESERVA</h3>
+        <p style="color: #ffcdd2; font-size: 14px; line-height: 1.6;">
+          Estimado(a) <strong>${solicitante_nombre}</strong>:
+        </p>
+        <p style="color: #ffcdd2; font-size: 14px; line-height: 1.6;">
+          En cumplimiento estricto de nuestras políticas de seguridad notarial, debida diligencia y protección contractual de propietarios y agentes inmobiliarios, tu documento de identidad registrado (<strong>${formData.solicitante_numero_documento || "Doc"}</strong>) fue cotejado ante las centrales de control y certificación oficial del Estado.
+        </p>
+        <p style="color: #ffcdd2; font-size: 14px; line-height: 1.6;">
+          <strong>Detalle de la auditoría:</strong> ${motivo}.
+        </p>
+        <p style="color: #ffffff; font-weight: bold; font-size: 15px; margin-top: 15px;">
+          Por los motivos expuestos, te informamos formalmente que TU RESERVA PARA LA VISITA DEL INMUEBLE HA SIDO DECLINADA.
+        </p>
+        <p style="color: #ffcdd2; font-size: 13px; margin-top: 15px;">
+          Si consideras que existe un error de homonimia o deseas presentar documentación aclaratoria ante nuestra dirección jurídica y comercial, puedes comunicarte directamente al teléfono <strong>+57 316 6569719</strong> o al correo <strong>vecybienesraices@gmail.com</strong>.
+        </p>
+      </div>
+      <div class="highlight" style="margin-top: 25px;"><p><strong>ID de Solicitud Auditada: ${solicitud_id}</strong></p></div>
+    `;
+    return { subject, html: baseHtml(title, body) };
+  }
+
   const subject = `✅ Solicitud #${solicitud_id} Recibida | Vecy Agenda`;
   const title = `¡Hola, ${solicitante_nombre}! Hemos recibido tu solicitud 🏠✨`;
 
@@ -478,6 +508,17 @@ export function getAdminEmailContent(formData: Record<string, any>) {
     acompanantesHtml += "</tbody></table>";
   }
 
+  const hasAlert = Boolean(formData.alerta_antecedentes || formData.alertaAntecedentes || formData.hasAlertaAntecedentes);
+  const alertaBanner = hasAlert
+    ? `
+      <div style="background-color: #660000; border: 2px solid #ff4444; border-radius: 6px; padding: 15px; margin-bottom: 20px; color: #fff;">
+        <h3 style="margin-top: 0; color: #ff8888; font-size: 16px;">🚨 ALERTA CRÍTICA DE SEGURIDAD NOTARIAL</h3>
+        <p style="margin: 0; font-size: 13px;">El solicitante o asistente registra antecedentes o sanciones ante las autoridades: <strong>${formData.alerta_motivo || "Antecedentes vigentes"}</strong>.</p>
+        <p style="margin: 6px 0 0 0; font-size: 12px; color: #ffd0d0;">📌 La reserva ha sido DECLINADA formalmente y se ha remitido la advertencia al usuario.</p>
+      </div>
+    `
+    : "";
+
   const html = `
     <!DOCTYPE html>
     <html lang="es">
@@ -499,6 +540,7 @@ export function getAdminEmailContent(formData: Record<string, any>) {
           <img src="${logoUrlParaEmail}" alt="Logo Vecy" style="max-width: 100px;">
         </div>
         <div class="content">
+          ${alertaBanner}
           <h2 style="color: #bf953f; text-align: center; margin-top: 0;">NUEVA SOLICITUD RECIBIDA #${formData.solicitud_id}</h2>
           <p style="color: #888; font-size: 13px;">Solicitante: ${formData.solicitante_nombre}</p>
           <p style="font-size: 13px; color: #aaa;">A continuación, el resumen de los datos ingresados en el formulario:</p>
@@ -600,10 +642,15 @@ export async function sendContractAndConfirmationEmails(rawPayload: SolicitudEma
   // 2. Envío a Vecy Bienes Raíces
   try {
     const adminContent = getAdminEmailContent(formData);
+    const hasAdminAlert = Boolean(formData.alerta_antecedentes || formData.alertaAntecedentes || formData.hasAlertaAntecedentes);
+    const adminSubject = hasAdminAlert
+      ? `🚨 ALERTA DE ANTECEDENTES: Solicitud #${solicitudId} - ${formData.solicitante_nombre || "Usuario"} (DECLINADA)`
+      : `🔔 Nueva Solicitud #${solicitudId} - ${formData.solicitante_perfil || "Usuario"}`;
+
     await transporter.sendMail({
       from: `"Vecy Agenda Pro" <${gmailUser}>`,
       to: adminTargetEmail,
-      subject: `🔔 Nueva Solicitud #${solicitudId} - ${formData.solicitante_perfil || "Usuario"}`,
+      subject: adminSubject,
       html: adminContent.html,
       attachments,
     });
