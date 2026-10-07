@@ -7,6 +7,57 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.55 — 07 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Falso Positivo en la Mesa de Coincidencias con Casilla en "No Coincide"**:
+   - Eduardo detectó con alarma que en la mesa de coincidencias se listó el Match #15445 con 92% de afinidad comercial ("92% Match Afinidad por IA"), pero al abrir la tabla de cotejo técnico, la fila de "Valor admin" mostraba en rojo:
+     - Demanda (Génesis Cabarcas): `≤ $1.400.000 Max.`
+     - Oferta (Rosana Romero Angarita): `$1.800.000 / mes`
+     - Cumplimiento: `No cumple` (🔴 en rojo).
+   - Eduardo reclamó firmemente:
+     > *"Por favor revisa y corrigue esta parte que corresponde a la lógica condicional de MATCH en la mesa de coincidencias, veo que hay un daño allí pues se estan subiendo o permitiendo MATCH que tienen la mención 'No coincide' sin respetar las reglas o normas establecidas. No entiendo por qué se filtró este y me imagino que hay más por lo mismo. Sería que al gestionar otros procesos que hicimos estos días afectaste el código en esta parte y en otras y ha quedado nuevamnete fallando lo más importante que ya habíamos controlado y establecido.??"*
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Causa Raíz #1 en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+   - En una refactorización previa (v32.11), la guillotina absoluta en la función `scoreRows` fue restringida erróneamente a un set limitado de 10 etiquetas llamado `HARD_CRITERIA_LABELS`.
+   - Cuando una casilla fuera de ese set (como "Valor admin", "Habitaciones", "Baños", "Parqueaderos", "Estrato", "Tipología de Cocina", "Antigüedad", "Vista", "Piso", etc.) resultaba en `missing` ("No coincide" / "No cumple"), el código ejecutaba:
+     `totalDeduction += (r.weight || 3) * 0.90; // Deducción ponderada sin aniquilar el match completo a 0%`
+   - Esto deducía apenas 4.5 puntos sobre 100, dejando el match en 91.77% (92%) y permitiendo que se mostrara en la mesa de coincidencias a pesar de violar los requisitos del cliente.
+2. **Causa Raíz #2 en Backend (`server/_core/matching.ts`)**:
+   - La expresión regular utilizada para extraer el presupuesto de administración en `matching.ts`:
+     `/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*(?:m[aá]xima|max|...)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)/i`
+     exigía que los dos puntos `:` estuvieran DESPUÉS de `máxima/max` (ej. `Administración máxima:`).
+   - En el mensaje de WhatsApp de Génesis Cabarcas (Requerimiento 1229), el texto decía:
+     `🏢 Administración: Máximo $1.400.000` (los dos puntos `:` antes de `Máximo`).
+   - La regex retornaba `null`, `reqAdminMaxVal` quedaba en 0, la guillotina de administración en el backend no se activaba, y el backend calculó un score de 92.49% guardándolo en `propertyMatches`.
+3. **Causa Raíz #3 en Ingesta de JanIA (`server/_core/janIA.ts`)**:
+   - El extractor de `adminFeeMax` en la inserción de requerimientos adolecía del mismo defecto de orden de tokens, guardando `adminFeeMax = NULL` en PostgreSQL en lugar de `$1.400.000`.
+
+### Acciones Técnicas Ejecutadas
+1. **Restauración de la Guillotina Total Doctrinal (0.00%) en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Eliminado `HARD_CRITERIA_LABELS` y su deducción blanda de `(weight * 0.90)`.
+   - Implementada la regla doctrinal inflexible:
+     `const hasAnyMissingRow = evaluableRows.some(r => r.status === "missing");`
+     `if (!hasAnyMissingRow) { ... } else { autoScore = 0; }`
+   - Si CUALQUIER casilla evaluable de la tabla de cotejo técnico resulta en `missing` (🔴 "No Coincide" / "No Cumple"), el score colapsa inmediatamente al **0.00%**.
+   - Al ser 0.00%, el filtro `if (effectiveScore < 80) continue;` excluye al 100% la tarjeta de la mesa de coincidencias. Cero falsos positivos.
+2. **Extracción y Blindaje de Cuota de Administración en Backend (`server/_core/matching.ts`)**:
+   - Importado y aplicado `parseAdminFee` de `shared/colombianRealEstateParser.ts` para extraer `reqAdminMaxVal` y `effectivePropAdmin`.
+   - Regex de fallback enriquecida con soporte para dos puntos `:` tanto antes como después del calificador (`\s*:?\s*(?:máxima...)?\s*:?\s*`).
+   - Guillotina financiera ejecutada al 0.00% si `effectivePropAdmin > reqAdminMaxVal`.
+3. **Extracción Robusta de `adminFeeMax` en `janIA.ts`**:
+   - Inyectado `parseAdminFee(rawL).fee` como fallback certero en `janIA.ts` para que la columna `adminFeeMax` en la tabla `requirements` de PostgreSQL siempre contenga el valor numérico demandado.
+4. **Saneamiento Inmediato en la Base de Datos del Servidor VPS (`vecy_network`)**:
+   - Actualizado requerimiento #1229 con `adminFeeMax = 1400000.00`.
+   - Marcado Match #15445 como `status = 'rejected'` y `matchScore = 0.00` con motivo: *"Guillotina Financiera (Administración Incompatible): Cuota de oferta $1.800.000 supera máximo demandado $1.400.000"*.
+   - Verificado que ningún otro match activo en producción viole topes de administración.
+5. **Cobertura con Tests Unitarios en `perfect_100_match.test.ts`**:
+   - Agregados tests unitarios que certifican que si la administración supera el máximo, o las habitaciones son menores, o cualquier casilla evaluable marca `missing`, el resultado es fulminantemente `0.00%`.
+   - 151/151 tests vitest aprobados al 100%. `tsc --noEmit` y `npm run build` limpios sin errores.
+6. **Incremento de Versión**:
+   - Versión incrementada a **v32.55** (`32.55.0`) en `shared/const.ts` y `package.json`.
+
 ## 📋 SESIÓN v32.54 — 06 Octubre 2026
 
 ### Solicitud de Eduardo

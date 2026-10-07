@@ -304,4 +304,47 @@ ${amenitiesText}`;
     expect(demandaNoTerceria).toBeDefined();
     expect(demandaNoTerceria?.label).toContain("El colega Demanda No acepta tercería, ni referidos");
   });
+
+  it("debe aplicar guillotina total (0.00%) si la cuota de administración en oferta supera el máximo demandado", () => {
+    const reqAdminLimit = {
+      ...req,
+      id: 9991,
+      adminFeeMax: "1400000",
+      rawText: coreReqText.replace("Administración máxima $1.200.000.", "Administración máxima $1.400.000.")
+    };
+
+    const propAdminExceeded = {
+      ...prop,
+      id: 9992,
+      adminFee: "1800000",
+      rawText: corePropText.replace("Administración $1.200.000 / mes.", "Precio administración $1.800.000.")
+    };
+
+    const result = scoreRows(reqAdminLimit, propAdminExceeded);
+    const adminRow = result.rows.find(r => r.label.toLowerCase().includes("admin"));
+    expect(adminRow?.status).toBe("missing");
+    expect(result.autoScore).toBe(0); // 0.00% Guillotina Inmediata
+  });
+
+  it("debe aplicar guillotina total (0.00%) si las habitaciones ofertadas son menores a las mínimas solicitadas", () => {
+    const reqHabitaciones = {
+      ...req,
+      id: 9993,
+      habitacionesMin: 4,
+      rawText: coreReqText.replace("3 habitaciones", "4 habitaciones")
+    };
+
+    const propHabitaciones = {
+      ...prop,
+      id: 9994,
+      bedrooms: 3,
+      rawText: corePropText
+    };
+
+    const result = scoreRows(reqHabitaciones, propHabitaciones);
+    const bedRow = result.rows.find(r => r.label.toLowerCase().includes("hab"));
+    expect(bedRow?.status).toBe("missing");
+    expect(result.autoScore).toBe(0); // 0.00% Guillotina Inmediata
+  });
 });
+

@@ -10,7 +10,7 @@ import { validateCity } from "./divipola";
 import { findMatchesForProperty, findMatchesForRequirement, isNonRealEstateText, isHollowListing, parseStreetCarreraBoundaries } from "./matching";
 import { lookupBarriosByPerimeter } from "./geo-lookup";
 import { transcribeAudio } from "./voiceTranscription";
-import { parseColombianListing, parseOutdoorAreas, isOutdoorAreaPreceding } from "../../shared/colombianRealEstateParser";
+import { parseColombianListing, parseOutdoorAreas, isOutdoorAreaPreceding, parseAdminFee } from "../../shared/colombianRealEstateParser";
 import { eq, and, sql, gte, desc, or, isNotNull } from "drizzle-orm";
 import { storagePut } from "../storage";
 import { esDominioPermitido, extractPortalAndListingId } from "./scraper";
@@ -5536,9 +5536,13 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
           if (v >= 10_000 && v <= 30_000_000) return String(v);
         }
       }
-      // Fallback robusto: extraer desde rawText ("admon max $1.200.000", "administración hasta 800 mil", "admon no mayor a 1900")
+      // Fallback robusto: usar parseAdminFee de shared/colombianRealEstateParser
       const rawL = (data.rawText || data.name || "").toLowerCase();
-      const adminMatch = rawL.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|menor\s*a)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:\s*mil\b|\s*k\b|\s*millones\b|-|\s|\(|\/|\+|$|\n)/i);
+      const parsedAdminInfo = parseAdminFee(rawL);
+      if (parsedAdminInfo.fee && parsedAdminInfo.fee >= 10_000 && parsedAdminInfo.fee <= 30_000_000 && !isPhoneNumberNotPrice(parsedAdminInfo.fee, rawL)) {
+        return String(parsedAdminInfo.fee);
+      }
+      const adminMatch = rawL.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*:?\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|menor\s*a)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:\s*mil\b|\s*k\b|\s*millones\b|-|\s|\(|\/|\+|$|\n)/i);
       if (adminMatch) {
         const cleanNum = adminMatch[1].replace(/[.,\s]/g, '');
         let parsed = parseFloat(cleanNum);

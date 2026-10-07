@@ -172,7 +172,27 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.54 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.55 — Octubre 2026
+
+### Novedades v32.55 (Restauración de Guillotina Total Doctrinal al 0.00% ante Casillas en 'No Coincide' / 'No Cumple', Blindaje de Administración en Backend y Mesa de Coincidencias):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Causa Raíz de Falsos Positivos con Casilla "No Cumple" en la Mesa de Coincidencias**:
+     - Eduardo alertó que en la mesa de coincidencias se listó el Match #15445 (92% afinidad por IA) entre la demanda de Génesis Cabarcas (Requerimiento 1229) y la oferta de Rosana Romero (Propiedad 2929), pero al desplegar la tabla de cotejo técnico, la casilla "Valor admin" figuraba en rojo como `No cumple`:
+       - Demanda: `≤ $1.400.000 Max.`
+       - Oferta: `$1.800.000 / mes`
+     - Se diagnosticaron dos causas raíz críticas:
+       1. **Frontend (`AdminMatches.tsx`)**: En `scoreRows`, una refactorización previa había restringido la guillotina absoluta a un set parcial (`HARD_CRITERIA_LABELS`). Cuando casillas fuera de ese set (como "Valor admin", "Habitaciones", "Baños", "Parqueaderos", "Estrato", "Tipología de Cocina", "Antigüedad", "Vista", "Piso", etc.) marcaban `missing`, se aplicaba una deducción cosmética de `(weight * 0.90)` (apenas ~4.5 puntos), dejando el score en 91.77% y permitiendo que se mostrara en la mesa con 92%.
+       2. **Backend (`matching.ts` y `janIA.ts`)**: La expresión regular para extraer presupuestos de administración exigía que los dos puntos `:` estuvieran DESPUÉS de `máxima/max`. Como en el mensaje original decía `🏢 Administración: Máximo $1.400.000` (los `:` antes de `Máximo`), la regex retornó `null`, guardando `adminFeeMax = NULL` en PostgreSQL y evaluando el match en 92.49% en el backend.
+  2. **Soluciones Doctrinales Implementadas**:
+     - **Restauración de la Guillotina Total en Frontend (`AdminMatches.tsx`)**: Se erradicó `HARD_CRITERIA_LABELS` y su deducción blanda. Si CUALQUIER casilla evaluable del cotejo resulta en `missing` (🔴 "No Coincide" / "No Cumple"), el `autoScore` colapsa inmediatamente al **0.00%** (`hasAnyMissingRow`). El filtro `effectiveScore < 80` lo excluye de inmediato de la mesa de coincidencias. Cero falsos positivos.
+     - **Extracción Universal de Administración con `parseAdminFee` (`matching.ts` y `janIA.ts`)**: Se integró `parseAdminFee` de `shared/colombianRealEstateParser.ts` tanto en la extracción de requerimientos de JanIA como en el motor de matching, reconociendo topes de administración sin importar la posición de los dos puntos o emojis.
+     - **Guillotina Financiera en Backend**: Si la cuota de oferta supera el máximo demandado, el backend aplica guillotina fulminante al **0.00%** descartando el match antes de escribir en PostgreSQL.
+     - **Saneamiento en Producción**: Actualizado Requerimiento #1229 con `adminFeeMax = 1400000.00` y marcado Match #15445 como `rejected` con score `0.00%`.
+  3. **Verificación y Cobertura**:
+     - Agregados tests unitarios en `server/__tests__/perfect_100_match.test.ts`.
+     - Suite completa de 151/151 tests vitest aprobados al 100%. TypeScript y build limpios con 0 errores.
+
+## 🔖 VERSIÓN ANTERIOR: v32.54 — Octubre 2026
 
 ### Novedades v32.54 (Optimización Persuasiva de Google Review, Gatillo de Gratuidad, Micro-Esfuerzo 15s y Supresión de Emojis Competidores):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

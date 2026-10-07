@@ -2733,24 +2733,16 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
   // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY (v32.11) ──
   // Guillotina Absoluta reservada exclusivamente para los Filtros Duros Inquebrantables de VECY CORE:
   // Tipo Inmueble, Tipo Negocio, Ciudad, Barrio, Desborde de Precio, Metraje insuficiente, Ficha hueca o Auto-clon.
-  const HARD_CRITERIA_LABELS = new Set([
-    "Tipo de Inmueble",
-    "Tipo de Negocio",
-    "Ciudad",
-    "Barrio / Sector",
-    "Precio de Venta",
-    "Precio de Arriendo / Canon",
-    "Área Total",
-    "Ficha Técnica"
-  ]);
+  // Casillas evaluables (todas excepto la fila puramente informativa de Teléfono)
+  const evaluableRows = rows.filter(r => !r.label.includes("Teléfono"));
 
-  const hasHardBlocker = rows.some(r => HARD_CRITERIA_LABELS.has(r.label) && r.status === "missing");
+  // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY (Doctrina v32.55) ──
+  // 1. Guillotina Total Inflexible: Si CUALQUIER fila evaluable en todo el cotejo tiene estado "missing"
+  //    ("No Coincide" / "No Cumple" en rojo) -> 0% Inmediato (Guillotina Total). Cero falsos positivos en la mesa de coincidencias.
+  const hasAnyMissingRow = evaluableRows.some(r => r.status === "missing");
   let autoScore = 0;
 
-  if (!hasHardBlocker) {
-    // Casillas evaluables (todas excepto la fila puramente informativa de Teléfono)
-    const evaluableRows = rows.filter(r => !r.label.includes("Teléfono"));
-
+  if (!hasAnyMissingRow) {
     // Comprobar si todas las casillas son idénticas y exactas
     const isAllExact = evaluableRows.every(r => r.status === "exact" || r.status === "ok");
 
@@ -2762,11 +2754,6 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
       for (const r of evaluableRows) {
         if (r.status === "exact" || r.status === "ok") {
           continue; // Coincidencia 100% exacta: 0 deducción
-        }
-
-        if (r.status === "missing") {
-          totalDeduction += (r.weight || 3) * 0.90; // Deducción ponderada sin aniquilar el match completo a 0%
-          continue;
         }
 
         const lbl = r.label.toLowerCase();

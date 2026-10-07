@@ -9,7 +9,8 @@ import {
   parseSecurityType,
   demands24hSecurity,
   checkFinancialSegmentCoherence,
-  parseOutdoorAreas
+  parseOutdoorAreas,
+  parseAdminFee
 } from "../../shared/colombianRealEstateParser";
 
 /**
@@ -2665,24 +2666,34 @@ export function explicarMatch(
   // ── FILTRO DE ADMINISTRACIÓN MÁXIMA (Presupuesto de Administración) ──
   let reqAdminMaxVal = requirement.adminFeeMax ? parseFloat(String(requirement.adminFeeMax)) : 0;
   if (reqAdminMaxVal <= 0 && requirement.rawText) {
-    const rawReqLow = requirement.rawText.toLowerCase();
-    const adminMaxMatch = rawReqLow.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|\/|\+|$|\n)/i);
-    if (adminMaxMatch) {
-      const parsedAdmin = parseFloat(adminMaxMatch[1].replace(/[.,\s]/g, ''));
-      if (!isNaN(parsedAdmin) && parsedAdmin >= 10_000 && parsedAdmin <= 30_000_000 && !isPhoneNumberNotPrice(parsedAdmin, requirement.rawText)) {
-        reqAdminMaxVal = parsedAdmin;
+    const parsedFee = parseAdminFee(requirement.rawText);
+    if (parsedFee.fee && parsedFee.fee >= 10_000 && parsedFee.fee <= 30_000_000 && !isPhoneNumberNotPrice(parsedFee.fee, requirement.rawText)) {
+      reqAdminMaxVal = parsedFee.fee;
+    } else {
+      const rawReqLow = requirement.rawText.toLowerCase();
+      const adminMaxMatch = rawReqLow.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*:?\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|menor\s*a)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|\/|\+|$|\n)/i);
+      if (adminMaxMatch) {
+        const parsedAdmin = parseFloat(adminMaxMatch[1].replace(/[.,\s]/g, ''));
+        if (!isNaN(parsedAdmin) && parsedAdmin >= 10_000 && parsedAdmin <= 30_000_000 && !isPhoneNumberNotPrice(parsedAdmin, requirement.rawText)) {
+          reqAdminMaxVal = parsedAdmin;
+        }
       }
     }
   }
 
   let effectivePropAdmin = pAdminFee;
   if (effectivePropAdmin <= 0 && property.rawText) {
-    const rawPropLow = property.rawText.toLowerCase();
-    const adminPropMatch = rawPropLow.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|\/|\+|$|\n)/i);
-    if (adminPropMatch) {
-      const parsedAdmin = parseFloat(adminPropMatch[1].replace(/[.,\s]/g, ''));
-      if (!isNaN(parsedAdmin) && parsedAdmin >= 10_000 && parsedAdmin <= 30_000_000 && !isPhoneNumberNotPrice(parsedAdmin, property.rawText)) {
-        effectivePropAdmin = parsedAdmin;
+    const parsedPropFee = parseAdminFee(property.rawText);
+    if (parsedPropFee.fee && parsedPropFee.fee >= 10_000 && parsedPropFee.fee <= 30_000_000 && !isPhoneNumberNotPrice(parsedPropFee.fee, property.rawText)) {
+      effectivePropAdmin = parsedPropFee.fee;
+    } else {
+      const rawPropLow = property.rawText.toLowerCase();
+      const adminPropMatch = rawPropLow.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|\/|\+|$|\n)/i);
+      if (adminPropMatch) {
+        const parsedAdmin = parseFloat(adminPropMatch[1].replace(/[.,\s]/g, ''));
+        if (!isNaN(parsedAdmin) && parsedAdmin >= 10_000 && parsedAdmin <= 30_000_000 && !isPhoneNumberNotPrice(parsedAdmin, property.rawText)) {
+          effectivePropAdmin = parsedAdmin;
+        }
       }
     }
   }

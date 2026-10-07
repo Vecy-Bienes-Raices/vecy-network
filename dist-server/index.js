@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.54";
+    VECY_VERSION = "v32.55";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -3813,6 +3813,54 @@ function parseColombianListing(rawText) {
   result.isThirdPartyCommission = /en\s+tercer[ií]a|\btercer[ií]a\b/i.test(text2);
   return result;
 }
+function parseColombianCurrency(rawText) {
+  if (!rawText) return null;
+  const clean = rawText.toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[*_~]/g, "").replace(/[\u2013\u2014]/g, "-");
+  const fullMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,3}(?:[.'’]\d{3}){2,3})/);
+  if (fullMatch) {
+    const val = parseInt(fullMatch[1].replace(/[.'’]/g, ""), 10);
+    if (!isNaN(val) && val > 0) return val;
+  }
+  const millionMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,4}(?:[\s.'’,]\d{3})*|\d+(?:[.,]\d+)?)\s*(?:mil\s*millones?|millones|millón|mm|m\b)/i);
+  if (millionMatch) {
+    const rawNumber = millionMatch[1].replace(/[\s'’]/g, "");
+    if (clean.includes("mil millon")) {
+      const v = parseFloat(rawNumber.replace(",", "."));
+      return Math.round(v * 1e9);
+    }
+    if (/^\d{1,4}[.,]\d{3}$/.test(rawNumber)) {
+      const parsedThousands = parseInt(rawNumber.replace(/[.,]/g, ""), 10);
+      return parsedThousands * 1e6;
+    }
+    const value = parseFloat(rawNumber.replace(",", "."));
+    if (!isNaN(value)) {
+      return value < 1e4 ? Math.round(value * 1e6) : Math.round(value);
+    }
+  }
+  const thousandMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d+(?:[.,]\d+)?)\s*(?:mil|k\b)/i);
+  if (thousandMatch) {
+    const val = parseFloat(thousandMatch[1].replace(",", "."));
+    if (!isNaN(val)) return Math.round(val * 1e3);
+  }
+  const shortThousandMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,3})[.,](\d{3})\b/);
+  if (shortThousandMatch) {
+    const n = parseInt(shortThousandMatch[1] + shortThousandMatch[2], 10);
+    return n * 1e3;
+  }
+  return null;
+}
+function parseAdminFee(rawText) {
+  if (!rawText) return { fee: null, isIncluded: false, requiresInquiry: false };
+  const clean = rawText.toLowerCase().replace(/[*_~]/g, "");
+  const isIncluded = /(?:administraci[oó]n|admin|admon|adm)\s*(?:est[aá]|va)?\s*incluid[ao]|incluid[ao]\s*(?:la\s*)?(?:administraci[oó]n|admin|admon|adm)|(?:admi?n|adm[oó]n)\s*inc\b|con\s+(?:admi?n|adm[oó]n|adm\b)/i.test(clean);
+  const requiresInquiry = /\+\s*(?:admi?n|adm[oó]n|adm\b)|\b(?:mas|más)\s*(?:admi?n|adm[oó]n|adm\b)/i.test(clean);
+  const feeMatch = clean.match(/(?:max|máximo|hasta|tope|de|valor)?\s*(?:cop|\$)?\s*(\d+(?:[\s.'’]\d+)*)\s*(?:m|millones|millon|mil|k)?\s*(?:de\s+)?(?:admin|admon|admón|adm|administraci[oó]n|cuota)/i) || clean.match(/(?:admin|admon|admón|adm|administraci[oó]n|cuota)(?:[^\d\n]*?)\$?\s*(\d+(?:[\s.'’]\d+)*)\s*(?:m|millones|millon|mil|k)?/i);
+  let fee = null;
+  if (feeMatch) {
+    fee = parseColombianCurrency(feeMatch[0]);
+  }
+  return { fee, isIncluded, requiresInquiry };
+}
 function parseSecurityType(text2) {
   if (!text2) return "none";
   const lower = text2.toLowerCase();
@@ -6396,23 +6444,33 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
   }
   let reqAdminMaxVal = requirement.adminFeeMax ? parseFloat(String(requirement.adminFeeMax)) : 0;
   if (reqAdminMaxVal <= 0 && requirement.rawText) {
-    const rawReqLow = requirement.rawText.toLowerCase();
-    const adminMaxMatch = rawReqLow.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|\/|\+|$|\n)/i);
-    if (adminMaxMatch) {
-      const parsedAdmin = parseFloat(adminMaxMatch[1].replace(/[.,\s]/g, ""));
-      if (!isNaN(parsedAdmin) && parsedAdmin >= 1e4 && parsedAdmin <= 3e7 && !isPhoneNumberNotPrice2(parsedAdmin, requirement.rawText)) {
-        reqAdminMaxVal = parsedAdmin;
+    const parsedFee = parseAdminFee(requirement.rawText);
+    if (parsedFee.fee && parsedFee.fee >= 1e4 && parsedFee.fee <= 3e7 && !isPhoneNumberNotPrice2(parsedFee.fee, requirement.rawText)) {
+      reqAdminMaxVal = parsedFee.fee;
+    } else {
+      const rawReqLow = requirement.rawText.toLowerCase();
+      const adminMaxMatch = rawReqLow.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*:?\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|menor\s*a)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|\/|\+|$|\n)/i);
+      if (adminMaxMatch) {
+        const parsedAdmin = parseFloat(adminMaxMatch[1].replace(/[.,\s]/g, ""));
+        if (!isNaN(parsedAdmin) && parsedAdmin >= 1e4 && parsedAdmin <= 3e7 && !isPhoneNumberNotPrice2(parsedAdmin, requirement.rawText)) {
+          reqAdminMaxVal = parsedAdmin;
+        }
       }
     }
   }
   let effectivePropAdmin = pAdminFee;
   if (effectivePropAdmin <= 0 && property.rawText) {
-    const rawPropLow = property.rawText.toLowerCase();
-    const adminPropMatch = rawPropLow.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|\/|\+|$|\n)/i);
-    if (adminPropMatch) {
-      const parsedAdmin = parseFloat(adminPropMatch[1].replace(/[.,\s]/g, ""));
-      if (!isNaN(parsedAdmin) && parsedAdmin >= 1e4 && parsedAdmin <= 3e7 && !isPhoneNumberNotPrice2(parsedAdmin, property.rawText)) {
-        effectivePropAdmin = parsedAdmin;
+    const parsedPropFee = parseAdminFee(property.rawText);
+    if (parsedPropFee.fee && parsedPropFee.fee >= 1e4 && parsedPropFee.fee <= 3e7 && !isPhoneNumberNotPrice2(parsedPropFee.fee, property.rawText)) {
+      effectivePropAdmin = parsedPropFee.fee;
+    } else {
+      const rawPropLow = property.rawText.toLowerCase();
+      const adminPropMatch = rawPropLow.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:-|\s|\(|\/|\+|$|\n)/i);
+      if (adminPropMatch) {
+        const parsedAdmin = parseFloat(adminPropMatch[1].replace(/[.,\s]/g, ""));
+        if (!isNaN(parsedAdmin) && parsedAdmin >= 1e4 && parsedAdmin <= 3e7 && !isPhoneNumberNotPrice2(parsedAdmin, property.rawText)) {
+          effectivePropAdmin = parsedAdmin;
+        }
       }
     }
   }
@@ -19713,7 +19771,11 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
         }
       }
       const rawL = (data.rawText || data.name || "").toLowerCase();
-      const adminMatch = rawL.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|menor\s*a)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:\s*mil\b|\s*k\b|\s*millones\b|-|\s|\(|\/|\+|$|\n)/i);
+      const parsedAdminInfo = parseAdminFee(rawL);
+      if (parsedAdminInfo.fee && parsedAdminInfo.fee >= 1e4 && parsedAdminInfo.fee <= 3e7 && !isPhoneNumberNotPrice(parsedAdminInfo.fee, rawL)) {
+        return String(parsedAdminInfo.fee);
+      }
+      const adminMatch = rawL.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*:?\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|menor\s*a)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:\s*mil\b|\s*k\b|\s*millones\b|-|\s|\(|\/|\+|$|\n)/i);
       if (adminMatch) {
         const cleanNum = adminMatch[1].replace(/[.,\s]/g, "");
         let parsed = parseFloat(cleanNum);

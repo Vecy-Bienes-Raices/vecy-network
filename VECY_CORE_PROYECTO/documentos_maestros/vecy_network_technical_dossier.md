@@ -322,6 +322,30 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.55 — Octubre 2026
+
+#### 📌 RESTAURACIÓN DE GUILLOTINA TOTAL DOCTRINAL (0.00%) ANTE CASILLAS EN 'NO COINCIDE' / 'NO CUMPLE', BLINDAJE DE ADMINISTRACIÓN EN BACKEND Y PURIFICACIÓN DE LA MESA DE COINCIDENCIAS
+
+**Requerimiento y Objetivos:**
+1. **Falso Positivo en Mesa de Coincidencias con Casilla en "No Cumple"**:
+   - Eduardo constató que en la mesa de coincidencias se listó el Match #15445 (92% de afinidad) entre la demanda de Génesis Cabarcas (Req 1229) y la oferta de Rosana Romero (Prop 2929), pese a que al abrir el cotejo técnico, la fila de "Valor admin" figuraba en rojo como `No cumple` (Demanda: `≤ $1.400.000 Max.` vs Oferta: `$1.800.000 / mes`).
+   - Eduardo instruyó revisar y corregir de raíz la lógica condicional para asegurar que ningún match que tenga la mención "No coincide" o "No cumple" se suba o se muestre en la mesa de coincidencias.
+2. **Causas Raíz Identificadas**:
+   - **Frontend (`AdminMatches.tsx`)**: En `scoreRows`, una refactorización previa había limitado la guillotina absoluta a un set parcial (`HARD_CRITERIA_LABELS`). Cuando una casilla como "Valor admin", "Habitaciones", "Baños", "Parqueaderos", "Estrato", "Tipología de Cocina", etc. marcaba `missing`, el código aplicaba una deducción cosmética de `(weight * 0.90)` (~4.5 pts), otorgando 91.77% y dejando el match en la mesa.
+   - **Backend (`matching.ts` y `janIA.ts`)**: La expresión regular exigía los dos puntos `:` después de `máxima/max`. Como en el mensaje original decía `🏢 Administración: Máximo $1.400.000` (los `:` antes de `Máximo`), la regex retornó `null`, omitiendo la guillotina de administración en el backend y guardando el match en `propertyMatches`.
+3. **Soluciones Implementadas**:
+   - **Restauración de la Guillotina Total en Frontend**: Eliminado `HARD_CRITERIA_LABELS`. Si CUALQUIER casilla evaluable del cotejo resulta en `missing` (🔴 "No Coincide" / "No Cumple"), el `autoScore` colapsa inmediatamente al **0.00%** (`hasAnyMissingRow`). El filtro `effectiveScore < 80` lo excluye de inmediato de la mesa de coincidencias.
+   - **Extracción Robusta con `parseAdminFee` en Backend**: Se integró `parseAdminFee` en `matching.ts` y `janIA.ts`, garantizando la captura del tope de administración independientemente de la posición de dos puntos o emojis. Si la cuota de la oferta supera la demanda, el backend aplica guillotina al **0.00%**.
+   - **Saneamiento en VPS**: Actualizado Requerimiento #1229 (`adminFeeMax = 1400000.00`) y marcado Match #15445 como `rejected` con score `0.00%`.
+   - **Cobertura de Tests**: Incorporados tests en `perfect_100_match.test.ts` con 151/151 tests vitest aprobados al 100%.
+
+**Archivos Modificados:**
+- `client/src/components/admin/AdminMatches.tsx`: Restaurada guillotina total inflexible ante cualquier casilla evaluable en `missing`.
+- `server/_core/matching.ts`: Integrado `parseAdminFee` y blindada la guillotina de administración.
+- `server/_core/janIA.ts`: Extracción segura de `adminFeeMax` en inserción de requerimientos.
+- `server/__tests__/perfect_100_match.test.ts`: Tests unitarios de guillotina total ante topes de administración y casillas en `missing`.
+- `shared/const.ts` & `package.json`: Versión incrementada a `v32.55` (`32.55.0`).
+
 ### 🔖 v32.54 — Octubre 2026
 
 #### 📌 OPTIMIZACIÓN PERSUASIVA DE GOOGLE REVIEW, GATILLO DE GRATUIDAD, MICRO-ESFUERZO 15S Y SUPRESIÓN DE EMOJIS COMPETIDORES
