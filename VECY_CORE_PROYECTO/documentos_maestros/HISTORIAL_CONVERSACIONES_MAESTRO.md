@@ -7,6 +7,46 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.54 — 06 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Problema de Engagement y Conversión en Reseñas de Google**:
+   - Eduardo constató que el mensaje final de servicio que JanIA deja en WhatsApp no estaba generando comentarios ni calificaciones en Google Reviews (*"no esta creando Enganament ni Ligths porque no hemos recibido ningún comentario ni calificación en google"*).
+   - Mostró una captura de pantalla de su conversación directa en WhatsApp con María Fernanda Villegas, donde él personalmente le solicitó opinión y calificación explicando que es para mantener el servicio gratuito.
+   - Propuso reemplazar el copy por un mensaje corto pero que enganche y mueva a la acción, evaluando dos opciones:
+     ```
+     ⭐ ¿Podrías darnos "Tu Opinión" y "Calificar" nuestro servicio? Así nos ayudas para que siga siendo *GRATIS.*
+     *COMENTA Y CALIFICA AQUÍ:*
+     👉 https://g.page/r/CctNbwU6UpX5EBM/review 👍 Gracias
+
+     ¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨
+     ```
+2. **Aprobación de Estrategia**:
+   - Eduardo aprobó la **Opción 1 afinada** (gatillo de reciprocidad y aversión a la pérdida: *"para que siga siendo GRATIS"*, reducción de fricción mental con *"solo te toma 15 segundos"* y supresión de comillas innecesarias).
+   - Estuvo de acuerdo en **retirar el mensaje de emojis competidores (`VIRAL_LOOP_MESSAGE`: 👎 | 👍 | ❤️)** en los flujos de predial y verificación de cédula, para evitar la saturación de mensajes simultáneos y enfocar al usuario en un único Call-To-Action (CTA) irresistible.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Copy Institucional sin Incentivo Personal**:
+   - El mensaje anterior decía: *"Es muy importante para nosotros"*. Al cliente o asesor inmobiliario ocupado no le interesa lo que sea importante para la empresa. No existía incentivo de beneficio propio ni reciprocidad (WIIFM: *What's In It For Me*).
+2. **Conflicto de Atención por Doble Mensaje Simultáneo**:
+   - En `server/_core/whatsapp-match.ts`, tras entregar un reporte de predial o verificación de antecedentes, se enviaba `VIRAL_LOOP_MESSAGE` (`😃 ¿Qué tanto nos recomendarías? 👎 | 👍 | ❤️`) y de inmediato `GOOGLE_REVIEW_MESSAGE`. Dos llamados a la acción distintos al mismo tiempo saturan al usuario y anulan la tasa de conversión.
+3. **Fricción Cognitiva por Tiempo Desconocido**:
+   - El usuario asume que dejar una opinión le exigirá redactar un texto largo o diligenciar un formulario. Al no especificar que toma solo 15 segundos, la acción se posterga indefinidamente.
+
+### Acciones Técnicas Ejecutadas
+1. **Actualización Persuasiva de `GOOGLE_REVIEW_MESSAGE` (`server/_core/predialService.ts`)**:
+   - Se implementó la versión optimizada de la Opción 1:
+     `⭐ ¿Podrías darnos tu opinión y calificar nuestro servicio? Así nos ayudas para que siga siendo *GRATIS.*`
+     `*COMENTA Y CALIFICA AQUÍ (solo te toma 15 segundos):*`
+     `👉 https://g.page/r/CctNbwU6UpX5EBM/review 👍 Gracias`
+     `¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨`
+2. **Supresión de Envíos de `VIRAL_LOOP_MESSAGE` en DMs (`server/_core/whatsapp-match.ts`)**:
+   - Eliminadas las llamadas a `VIRAL_LOOP_MESSAGE` en los 3 flujos de entrega (predial con PDF, predial por CHIP/Hacienda y verificación de identidad exitosa).
+   - Introducida una pausa natural de 1.5 segundos (`await new Promise(r => setTimeout(r, 1500))`) tras entregar el reporte/PDF antes de despachar la invitación a calificar en Google Reviews, permitiendo una experiencia orgánica donde el usuario primero visualiza su documento.
+3. **Incremento de Versión y Suite de Pruebas**:
+   - Versión incrementada a **v32.54** (`32.54.0`) en `shared/const.ts` y `package.json`.
+   - Incorporado test `Doctrina v32.54` en `server/__tests__/regression.test.ts`. 128/128 tests vitest aprobados al 100%. `tsc --noEmit` y `npm run build` limpios sin advertencias bloqueantes.
+
 ## 📋 SESIÓN v32.53 — 06 Octubre 2026
 
 ### Solicitud de Eduardo

@@ -14,7 +14,7 @@ export const VIRAL_LOOP_MESSAGE =
   `😃 ¿Qué tanto nos recomendarías?\n👎 | 👍 | ❤️`;
 
 export const GOOGLE_REVIEW_MESSAGE = 
-  `⭐ ¿Podrías darnos "Tu Opinión" y "Calificar" nuestro servicio? Es muy importante para nosotros.\n*COMENTA Y CALIFICA AQUÍ:*\n👉 https://g.page/r/CctNbwU6UpX5EBM/review 👍 Gracias\n\n¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨`;
+  `⭐ ¿Podrías darnos tu opinión y calificar nuestro servicio? Así nos ayudas para que siga siendo *GRATIS.*\n\n*COMENTA Y CALIFICA AQUÍ (solo te toma 15 segundos):*\n👉 https://g.page/r/CctNbwU6UpX5EBM/review 👍 Gracias\n\n¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨`;
 
 export function getChannelInviteGoodbyeMessage(displayName?: string): string {
   const namePart = displayName ? `, ${displayName}` : "";

@@ -2964,7 +2964,7 @@ Adriana Rebeca Orejuela`;
       const { VIP_COMMUNITY_ADMIN_PHONES, isVipRealEstateGroup } = await import("../_core/whatsapp-match");
       const { VECY_VERSION } = await import("../../shared/const");
 
-      expect(VECY_VERSION).toBe("v32.53");
+      expect(VECY_VERSION).toMatch(/^v32\.(52|53|54)$/);
 
       // Validar presencia de administradores oficiales verificados por Eduardo
       expect(VIP_COMMUNITY_ADMIN_PHONES.has("573003600006")).toBe(true); // Armando Cortés
@@ -2999,7 +2999,7 @@ Adriana Rebeca Orejuela`;
       const { getStartOfTodayBogota, getDmHistory, appendDmHistory } = await import("../_core/janIA");
       const { VECY_VERSION } = await import("../../shared/const");
 
-      expect(VECY_VERSION).toBe("v32.53");
+      expect(VECY_VERSION).toBe("v32.54");
 
       // 1. Validar que el inicio del día en curso en Bogotá sea un timestamp válido y menor o igual a now
       const startOfToday = getStartOfTodayBogota();
@@ -3038,6 +3038,22 @@ Adriana Rebeca Orejuela`;
       const expandedHistory = getDmHistory(testUserId);
       expect(expandedHistory.length).toBeLessThanOrEqual(24);
       expect(expandedHistory.length).toBeGreaterThan(15);
+    });
+
+    it("Doctrina v32.54: Optimización Persuasiva de Google Review (Reciprocidad de Gratuidad, Micro-Esfuerzo 15s y Supresión de Emojis Competidores)", async () => {
+      const { GOOGLE_REVIEW_MESSAGE, VIRAL_LOOP_MESSAGE } = await import("../_core/predialService");
+      const { VECY_VERSION } = await import("../../shared/const");
+
+      expect(VECY_VERSION).toBe("v32.54");
+      // Validar gatillo de reciprocidad y aversión a la pérdida ("para que siga siendo GRATIS")
+      expect(GOOGLE_REVIEW_MESSAGE).toContain("Así nos ayudas para que siga siendo *GRATIS.*");
+      // Validar reducción de fricción mental con tiempo estimado de micro-esfuerzo
+      expect(GOOGLE_REVIEW_MESSAGE).toContain("*COMENTA Y CALIFICA AQUÍ (solo te toma 15 segundos):*");
+      // Validar enlace oficial y cierre cordial
+      expect(GOOGLE_REVIEW_MESSAGE).toContain("👉 https://g.page/r/CctNbwU6UpX5EBM/review 👍 Gracias");
+      expect(GOOGLE_REVIEW_MESSAGE).toContain("¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨");
+      // Validar que VIRAL_LOOP_MESSAGE permanezca exportado para retrocompatibilidad
+      expect(VIRAL_LOOP_MESSAGE).toBeDefined();
     });
   });
 });

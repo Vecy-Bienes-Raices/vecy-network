@@ -172,7 +172,29 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.53 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.54 — Octubre 2026
+
+### Novedades v32.54 (Optimización Persuasiva de Google Review, Gatillo de Gratuidad, Micro-Esfuerzo 15s y Supresión de Emojis Competidores):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo**:
+  1. **Causa Raíz de Cero Reseñas y Falta de Engagement en Google Reviews**:
+     - Eduardo detectó que el mensaje final de servicio de JanIA en WhatsApp no estaba generando comentarios ni calificaciones en Google Reviews.
+     - Se diagnosticaron tres causas de fondo:
+       1. **Copy institucional egocéntrico**: El texto anterior decía *"Es muy importante para nosotros"*, lo cual no ofrece ningún incentivo personal al usuario ocupado.
+       2. **Conflicto y saturación por doble llamado a la acción**: JanIA enviaba en ráfaga el mensaje de emojis de recomendación (`VIRAL_LOOP_MESSAGE`: `😃 ¿Qué tanto nos recomendarías? 👎 | 👍 | ❤️`) e inmediatamente después el de Google Reviews. Dos acciones distintas dividían la atención del usuario y paralizaban la conversión.
+       3. **Fricción cognitiva de tiempo**: No se comunicaba el tiempo requerido, haciendo pensar al usuario que calificar tomaría minutos de redacción.
+  2. **Solución Doctrinal Implementada (Opción 1 Afinada)**:
+     - Se adoptó el copy persuasivo validado por Eduardo con gatillo de reciprocidad y aversión a la pérdida:
+       `⭐ ¿Podrías darnos tu opinión y calificar nuestro servicio? Así nos ayudas para que siga siendo *GRATIS.*`
+       `*COMENTA Y CALIFICA AQUÍ (solo te toma 15 segundos):*`
+       `👉 https://g.page/r/CctNbwU6UpX5EBM/review 👍 Gracias`
+       `¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨`
+     - **Supresión de `VIRAL_LOOP_MESSAGE`**: Se eliminó el envío redundante de los emojis de recomendación en los flujos de predial y verificación de identidad en [`server/_core/whatsapp-match.ts`](file:///home/eddu/Proyectos/vecy-network/server/_core/whatsapp-match.ts), dejando un único llamado a la acción claro y sin competencia.
+     - **Pausa natural de despacho (1500ms)**: Se introdujo una pausa orgánica antes de enviar la invitación a calificar, permitiendo que el usuario primero reciba e inspeccione su PDF o reporte antes de recibir la invitación.
+  3. **Verificación y Cobertura**:
+     - Actualizadas constantes en [`server/_core/predialService.ts`](file:///home/eddu/Proyectos/vecy-network/server/_core/predialService.ts), [`shared/const.ts`](file:///home/eddu/Proyectos/vecy-network/shared/const.ts) y [`package.json`](file:///home/eddu/Proyectos/vecy-network/package.json).
+     - Suite de pruebas con 128/128 tests vitest aprobados al 100%.
+
+## 🔖 VERSIÓN ANTERIOR: v32.53 — Octubre 2026
 
 ### Novedades v32.53 (Memoria Temporal del Mismo Día hasta las 23:59 Bogotá, Erradicación de Re-Saludos/Re-Perfilamiento, Identidad de Línea +573192919978 y Pedagogía de Emojis de Grupos):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

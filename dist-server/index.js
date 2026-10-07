@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.53";
+    VECY_VERSION = "v32.54";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -9697,8 +9697,9 @@ var init_predialService = __esm({
     "use strict";
     VIRAL_LOOP_MESSAGE = `\u{1F603} \xBFQu\xE9 tanto nos recomendar\xEDas?
 \u{1F44E} | \u{1F44D} | \u2764\uFE0F`;
-    GOOGLE_REVIEW_MESSAGE = `\u2B50 \xBFPodr\xEDas darnos "Tu Opini\xF3n" y "Calificar" nuestro servicio? Es muy importante para nosotros.
-*COMENTA Y CALIFICA AQU\xCD:*
+    GOOGLE_REVIEW_MESSAGE = `\u2B50 \xBFPodr\xEDas darnos tu opini\xF3n y calificar nuestro servicio? As\xED nos ayudas para que siga siendo *GRATIS.*
+
+*COMENTA Y CALIFICA AQU\xCD (solo te toma 15 segundos):*
 \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u{1F44D} Gracias
 
 \xA1Que tengas una excelente jornada y muchos \xE9xitos en tus cierres! \u{1F3E2}\u2728`;
@@ -11850,8 +11851,8 @@ ${quotedNote}` : quotedNote;
                   fileName: predialPendingCheck.pdfFileName || `Factura_Predial_${predialPendingCheck.chip}_2026.pdf`,
                   caption: deliveredText
                 }, { quoted: mainMsg, allowDirectMessage: true });
-                const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-                await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
+                const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+                await new Promise((r) => setTimeout(r, 1500));
                 await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
               } else {
                 await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
@@ -11881,8 +11882,8 @@ ${quotedNote}` : quotedNote;
                   fileName: predialCheck.pdfFileName || `Factura_Predial_${predialCheck.chip}_2026.pdf`,
                   caption: deliveredText
                 }, { quoted: mainMsg, allowDirectMessage: true });
-                const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-                await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
+                const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+                await new Promise((r) => setTimeout(r, 1500));
                 await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
               } else {
                 await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
@@ -11911,8 +11912,8 @@ ${quotedNote}` : quotedNote;
               appendDmHistory2(senderId, "assistant", deliveredText);
               await this.logToDb(senderId, "janIA", deliveredText);
               if (idCheck.success) {
-                const { VIRAL_LOOP_MESSAGE: VIRAL_LOOP_MESSAGE2, GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-                await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
+                const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+                await new Promise((r) => setTimeout(r, 1500));
                 await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
               }
               return;

@@ -1220,9 +1220,9 @@ export class JaniaMatchBot {
               caption: deliveredText
             }, { quoted: mainMsg, allowDirectMessage: true });
 
-            // Envío desacoplado de mensajes de bucle viral y reseña de Google (anti "Leer más") sin demoras artificiales
-            const { VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
-            await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+            // Despacho desacoplado de reseña de Google Reviews (Doctrina v32.54: Sin emojis de recomendación competidores)
+            const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+            await new Promise(r => setTimeout(r, 1500));
             await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
           } else {
             await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
@@ -1255,9 +1255,9 @@ export class JaniaMatchBot {
               caption: deliveredText
             }, { quoted: mainMsg, allowDirectMessage: true });
 
-            // Envío desacoplado de mensajes de bucle viral y reseña de Google (anti "Leer más") sin demoras artificiales
-            const { VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
-            await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+            // Despacho desacoplado de reseña de Google Reviews (Doctrina v32.54: Sin emojis de recomendación competidores)
+            const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+            await new Promise(r => setTimeout(r, 1500));
             await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
           } else {
             await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
@@ -1288,10 +1288,10 @@ export class JaniaMatchBot {
           appendDmHistory(senderId, 'assistant', deliveredText);
           await this.logToDb(senderId, 'janIA', deliveredText);
 
-          // Si la verificación fue exitosa, enviar desacoplados el bucle viral y la reseña de Google
+          // Si la verificación fue exitosa, enviar desacoplada la reseña de Google Reviews (Doctrina v32.54)
           if (idCheck.success) {
-            const { VIRAL_LOOP_MESSAGE, GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
-            await this.queuedSend(senderId, VIRAL_LOOP_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+            const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+            await new Promise(r => setTimeout(r, 1500));
             await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
           }
           return;

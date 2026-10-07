@@ -322,6 +322,36 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.54 — Octubre 2026
+
+#### 📌 OPTIMIZACIÓN PERSUASIVA DE GOOGLE REVIEW, GATILLO DE GRATUIDAD, MICRO-ESFUERZO 15S Y SUPRESIÓN DE EMOJIS COMPETIDORES
+
+**Requerimiento y Objetivos:**
+1. **Problema de Engagement y Conversión en Reseñas de Google**:
+   - Eduardo identificó que el mensaje de cierre de servicio que JanIA enviaba por WhatsApp no generaba clics ni calificaciones en Google Reviews.
+   - Tras el análisis conjunto, se determinaron tres factores críticos:
+     - El texto anterior utilizaba una frase corporativa sin incentivo para el usuario (*"Es muy importante para nosotros"*).
+     - Se producía una saturación de mensajes simultáneos: al enviar un documento o liquidación, JanIA enviaba primero una encuesta con 3 emojis (`VIRAL_LOOP_MESSAGE`: `😃 ¿Qué tanto nos recomendarías? 👎 | 👍 | ❤️`) e inmediatamente después el enlace de Google Reviews, dividiendo la atención del usuario.
+     - Falta de referencia al tiempo requerido, lo que generaba fricción cognitiva por miedo a tener que llenar un formulario largo o escribir un texto extenso.
+2. **Solución Doctrinal Implementada**:
+   - **Adopción de Copy Persuasivo (Opción 1 Afinada)** con gatillos de reciprocidad y aversión a la pérdida:
+     ```
+     ⭐ ¿Podrías darnos tu opinión y calificar nuestro servicio? Así nos ayudas para que siga siendo *GRATIS.*
+
+     *COMENTA Y CALIFICA AQUÍ (solo te toma 15 segundos):*
+     👉 https://g.page/r/CctNbwU6UpX5EBM/review 👍 Gracias
+
+     ¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨
+     ```
+   - **Retiro Total de `VIRAL_LOOP_MESSAGE` en flujos de predial y cédula**: Se eliminó el envío redundante de los emojis de recomendación en `server/_core/whatsapp-match.ts`, dejando un único llamado a la acción enfocado al 100% en la reseña de Google.
+   - **Pausa de Despacho Orgánica (1500ms)**: Se introdujo un delay natural tras la entrega del PDF o reporte para que el usuario reciba primero su documento antes de recibir la invitación a calificar.
+
+**Archivos Modificados:**
+- `server/_core/predialService.ts`: Actualizada constante `GOOGLE_REVIEW_MESSAGE`.
+- `server/_core/whatsapp-match.ts`: Eliminado envío de `VIRAL_LOOP_MESSAGE` e incorporada pausa de 1.5s antes de `GOOGLE_REVIEW_MESSAGE`.
+- `shared/const.ts` & `package.json`: Versión incrementada a `v32.54` (`32.54.0`).
+- `server/__tests__/regression.test.ts`: Actualizados assertions y añadido test `Doctrina v32.54` (128/128 tests vitest aprobados al 100%).
+
 ### 🔖 v32.53 — Octubre 2026
 
 #### 📌 MEMORIA TEMPORAL DEL DÍA EN CURSO (HASTA 23:59 BOGOTÁ), PERSISTENCIA TOTAL DE DMs EN POSTGRESQL, ERRADICACIÓN DE RE-SALUDOS/RE-PERFILAMIENTO Y PEDAGOGÍA DE EMOJIS INMOBILIARIOS
