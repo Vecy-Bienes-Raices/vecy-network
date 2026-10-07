@@ -172,7 +172,52 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.55 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.56 — Octubre 2026
+
+### Novedades v32.56 (Regla Doctrinal Sagrada de Casillas 1 a 5 Núcleo Duro Innegociable, Erradicación de Nombres de Ciudad como Barrio y Guillotina Total al 0.00%):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:
+  1. **Causa Raíz de Falsos Matches Geográficos (Caso Match #15447 - 80% score)**:
+     - Eduardo alertó con indignación sobre el Match #15447 entre la Oferta de Kath (+57 305 300 1525, Propiedad #4867 "Apartment en Bogotá para venta") y la Demanda de German Tejada (+57 321 229 5348, Requerimiento #2222 "Requerimiento de inmueble en Bogotá para venta").
+     - Ninguna de las dos publicaciones mencionaba un barrio en su texto original.
+     - La lógica de fallback previa en `saveProperty` y `saveRequirement` asignaba `data.city || "Bogotá"` al campo `zone` o `zonaDeseada` cuando no se encontraba barrio, guardando `"Bogotá, D.C."` en PostgreSQL.
+     - En la mesa de coincidencias (`AdminMatches.tsx`), la fila *Barrio / Vereda / Caserío* mostraba `"Bogotá, D.C."` en oferta y demanda y marcaba `exact` ("Coincide" 🟢), y la fila *Localidad / Comuna* mostraba `N/E vs N/E` y también se marcaba como verde, inflando artificialmente el score al 80%.
+  2. **Doctrina Innegociable de Eduardo**:
+     - Un MATCH JAMÁS puede existir si las primeras 5 casillas del cotejo técnico:
+       1. *Tipo de Inmueble*
+       2. *Tipo de Negocio*
+       3. *Barrio / Vereda / Caserío*
+       4. *Localidad / Comuna*
+       5. *Ciudad / Municipio*
+       no están 100% llenas con sus respectivos nombres legítimos (NUNCA nombre de ciudad como barrio, NUNCA N/E) y coinciden al 100% (`status === "exact"` / "Coincide" 🟢).
+     - Si CUALQUIERA de estas 5 falla, tiene N/E o no coincide al 100%, **NO HAY MATCH DE NINGUNA CATEGORÍA O PORCENTAJE (Guillotina Total a 0.00%, bloqueo absoluto y exclusión de la mesa de coincidencias)**.
+     - Prohibición estricta de alterar cualquier otra fila (filas 6 en adelante) sin instrucción explícita.
+  3. **Soluciones Doctrinales Implementadas**:
+     - **Módulo Compartido de Purificación Geográfica (`shared/colombianRealEstateParser.ts`)**:
+       - Implementadas funciones unificadas `extractPureBarrio(zn)` e `isCityOrGenericZone(zn)`.
+       - Detectan y neutralizan estrictamente nombres de ciudades ("Bogotá", "Bogotá, D.C.", "Cali", "Medellín", etc.), departamentos, país y términos genéricos/cardinales ("Norte", "Sur", "Zona Norte", "N/E").
+       - Extraen barrios legítimos limpios cuando vienen acompañados de la ciudad (ej: `"Chicó, Bogotá"` -> `"Chicó"`).
+     - **Re-exportación y Blindaje en Backend (`server/_core/geography.ts` y `server/_core/matching.ts`)**:
+       - En `explicarMatch`: se exige `extractPureBarrio` tanto en oferta como en demanda. Si cualquiera carece de barrio legítimo o contiene nombre de ciudad, se emite blocker fulminante (*⛔ Inmueble/Requerimiento Incompleto: Barrio/Vereda no especificado o contiene nombre de ciudad (N/E)*) y se retorna `0.00%`.
+       - En `matchesGeography`: bloqueo absoluto inmediato a `{ matches: false, score: 0 }` si alguna zona es genérica o nombre de ciudad.
+     - **Ingesta Limpia en JanIA (`server/_core/janIA.ts`)**:
+       - Eliminado cualquier fallback de ciudad en `zone` y `zonaDeseada`. Si no hay barrio explícito, se guarda `"N/E"`, respetando constraints de BD y evitando contaminación.
+     - **Mesa de Coincidencias en Frontend (`AdminMatches.tsx`)**:
+       - Barrio sin especificar se muestra limpiamente como `"N/E (No especificado)"` (jamás "Bogotá, D.C." y jamás "Flexible / Bogotá").
+       - `barrioMatchStatus`: strictly requires both to have legitimate non-generic neighborhoods and match 100% -> `exact` 🟢, otherwise `missing` 🔴.
+       - `localityMatchStatus`: strictly requires both to be filled (non-N/E) and match 100% -> `exact` 🟢, otherwise `missing` 🔴. N/E vs N/E jamás es coincidencia.
+       - `cityMatchStatus`: strictly requires both to be non-N/E and match 100% -> `exact` 🟢, otherwise `missing` 🔴.
+       - En `scoreRows`: Regla Doctrinal de Casillas 1 a 5: si cualquiera de las 5 no está 100% llena o `status !== "exact"`, se marca `missing` y `autoScore` colapsa inmediatamente al **0.00%**.
+     - **Saneamiento en Base de Datos de Producción (VPS `13.140.149.144`)**:
+       - `ALTER TABLE properties ALTER COLUMN zone DROP NOT NULL; ALTER TABLE properties ALTER COLUMN zone SET DEFAULT 'N/E';`
+       - Actualizadas 1,185 propiedades con ciudad en `zone` a `'N/E'`.
+       - Actualizados 202 requerimientos con ciudad en `zonaDeseada` a `'N/E'`.
+       - Colapsados 31 matches inviables previos (incluyendo Match #15447) a `matchScore = 0.00` y `status = 'rejected'`.
+  4. **Verificación y Cobertura**:
+     - Agregado test específico `Doctrina v32.56` en `server/__tests__/regression.test.ts`.
+     - Suite completa de 152/152 tests vitest aprobados al 100%. `pnpm check` (tsc) limpio con 0 errores. `pnpm build` limpio.
+
+## 🔖 VERSIÓN ANTERIOR: v32.55 — Octubre 2026
+
 
 ### Novedades v32.55 (Restauración de Guillotina Total Doctrinal al 0.00% ante Casillas en 'No Coincide' / 'No Cumple', Blindaje de Administración en Backend y Mesa de Coincidencias):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo**:

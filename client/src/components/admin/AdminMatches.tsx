@@ -28,7 +28,9 @@ import {
   parseSecurityType,
   demands24hSecurity,
   checkFinancialSegmentCoherence,
-  parseOutdoorAreas
+  parseOutdoorAreas,
+  extractPureBarrio,
+  isCityOrGenericZone
 } from '@shared/colombianRealEstateParser';
 
 type MatchStatus = "exact" | "warn" | "missing" | "ok" | "neutral" | "plus";
@@ -939,10 +941,8 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
     return found;
   };
 
-  const isGenericZone = (zn: string | null | undefined) => {
-    if (!zn) return true;
-    const z = zn.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    return z === "" || z === "n/e" || z === "na" || z === "n/a" || z === "bogota" || z === "bogota d.c." || z === "bogota dc" || z === "colombia";
+  const isGenericZone = (zn: string | null | undefined): boolean => {
+    return isCityOrGenericZone(zn);
   };
 
   const propBarriosInText = extractAllBarriosFromText(prop.rawText || prop.description || prop.name || "");
@@ -950,11 +950,13 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
 
   // Prioridad Ground Truth del Texto: Si el texto del inmueble dice explícitamente "ALAMEDA 170", esa es la verdad
   // absoluta y anula cualquier zone fallback heredada del grupo de WhatsApp (ej: "Cedritos").
-  const propTrueBarrio = propBarriosInText[0] || (!isGenericZone(prop.zone) ? prop.zone : (!isGenericZone(prop.addressNeighborhood) ? prop.addressNeighborhood : "")) || "";
+  const propTrueBarrio = (propBarriosInText[0] && !isGenericZone(propBarriosInText[0])) 
+    ? (extractPureBarrio(propBarriosInText[0]) || propBarriosInText[0])
+    : (extractPureBarrio(prop.zone) || extractPureBarrio(prop.neighborhood) || extractPureBarrio(prop.addressNeighborhood) || "");
 
-  const reqTrueBarriosList = reqBarriosInText.length > 0 
-    ? reqBarriosInText 
-    : (!isGenericZone(req.zonaDeseada) ? [req.zonaDeseada!] : (!isGenericZone(req.addressNeighborhood) ? [req.addressNeighborhood!] : []));
+  const reqTrueBarriosList = (reqBarriosInText.length > 0 && !isGenericZone(reqBarriosInText[0]))
+    ? reqBarriosInText.map(b => extractPureBarrio(b) || b).filter(b => !isGenericZone(b))
+    : ([extractPureBarrio(req.zonaDeseada), extractPureBarrio(req.neighborhood), extractPureBarrio(req.addressNeighborhood)].filter(Boolean) as string[]);
 
   // Inserción perimetral: si no se nombró un barrio específico pero hay delimitación de calles en Bogotá
   if (reqTrueBarriosList.length === 0) {
@@ -1114,11 +1116,10 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
   const isNonRealEstateReq = isNonRealEstateText(req.rawText) || isNonRealEstateText(req.name);
   const isNonRealEstateProp = isNonRealEstateText(prop.rawText) || isNonRealEstateText(prop.name);
 
-  if (isNonRealEstateReq || isNonRealEstateProp) {
-    barrioMatchStatus = "missing";
-  } else if (reqTrueBarriosList.length === 0 && !propTrueBarrio) {
-    barrioMatchStatus = "neutral";
-  } else if (!propTrueBarrio) {
+  // REGLA DOCTRINAL SAGRADA (Eduardo A. Rivera): Casilla 3 (Barrio / Vereda / Caserío)
+  // AMBAS partes deben tener un barrio legítimo especificado (NUNCA nombre de ciudad).
+  // Si cualquiera no tiene barrio, o no coinciden al 100%: status = "missing" 🔴 (No Coincide).
+  if (isNonRealEstateReq || isNonRealEstateProp || !propTrueBarrio || reqTrueBarriosList.length === 0) {
     barrioMatchStatus = "missing";
   } else {
     for (const demandedBarrio of reqTrueBarriosList) {
@@ -1133,25 +1134,24 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
     }
   }
 
-  const propBarrioDisplay = propTrueBarrio || "N/E (Consultar)";
+  const propBarrioDisplay = propTrueBarrio || "N/E (No especificado)";
   const reqBarrioDisplay = matchedReqBarrio 
     ? matchedReqBarrio 
-    : (reqTrueBarriosList.length > 0 ? (reqTrueBarriosList.length > 2 ? `${reqTrueBarriosList.slice(0, 2).join(", ")} (+${reqTrueBarriosList.length - 2})` : reqTrueBarriosList.join(", ")) : "Flexible / Bogotá");
+    : (reqTrueBarriosList.length > 0 ? (reqTrueBarriosList.length > 2 ? `${reqTrueBarriosList.slice(0, 2).join(", ")} (+${reqTrueBarriosList.length - 2})` : reqTrueBarriosList.join(", ")) : "N/E (No especificado)");
 
-  let reqLocalityDisplay = (req.addressLocality && req.addressLocality !== "N/E") ? req.addressLocality : inferLocalityFromBarrio(matchedReqBarrio || reqBarriosInText[0] || req.zonaDeseada, req.rawText || req.name);
-  let propLocalityDisplay = (prop.addressLocality && prop.addressLocality !== "N/E") ? prop.addressLocality : inferLocalityFromBarrio(propTrueBarrio, prop.rawText || prop.description || prop.name);
+  let reqLocalityDisplay = (req.addressLocality && req.addressLocality !== "N/E" && !isGenericZone(req.addressLocality)) ? req.addressLocality : inferLocalityFromBarrio(matchedReqBarrio || reqBarriosInText[0], req.rawText || req.name);
+  let propLocalityDisplay = (prop.addressLocality && prop.addressLocality !== "N/E" && !isGenericZone(prop.addressLocality)) ? prop.addressLocality : inferLocalityFromBarrio(propTrueBarrio, prop.rawText || prop.description || prop.name);
 
-  const isSantasInvolved = (matchedReqBarrio || req.zonaDeseada || "").toLowerCase().includes("santas") ||
-    (propTrueBarrio || prop.zone || "").toLowerCase().includes("santas");
+  const isSantasInvolved = (matchedReqBarrio || "").toLowerCase().includes("santas") ||
+    (propTrueBarrio || "").toLowerCase().includes("santas");
 
   if (isSantasInvolved) {
     if (reqLocalityDisplay === "N/E" || !reqLocalityDisplay) reqLocalityDisplay = "Usaquén";
     if (propLocalityDisplay === "N/E" || !propLocalityDisplay) propLocalityDisplay = "Usaquén";
   }
 
-  // REGLA DOCTRINAL v31.76: Si el barrio coincidió exactamente o por macro-sector (ej: Las Santas ↔ Santa Bárbara),
-  // la localidad y ciudad son plenamente coincidentes sin datos pendientes.
-  if (barrioMatchStatus === "exact") {
+  // REGLA DOCTRINAL: Si el barrio coincidió exactamente y es legítimo, homologar localidad
+  if (barrioMatchStatus === "exact" && propTrueBarrio && matchedReqBarrio) {
     if ((reqLocalityDisplay === "N/E" || !reqLocalityDisplay) && propLocalityDisplay && propLocalityDisplay !== "N/E") {
       reqLocalityDisplay = propLocalityDisplay;
     } else if ((propLocalityDisplay === "N/E" || !propLocalityDisplay) && reqLocalityDisplay && reqLocalityDisplay !== "N/E") {
@@ -1159,32 +1159,39 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
     }
   }
 
-  const reqTrueCity = extractTrueCityFromText(req.rawText || req.name, req.addressCity || req.ciudadDeseada || "Bogotá");
-  const propTrueCity = extractTrueCityFromText(prop.rawText || prop.name, prop.addressCity || prop.city || "Bogotá");
+  const reqTrueCity = extractTrueCityFromText(req.rawText || req.name, req.addressCity || req.ciudadDeseada || "");
+  const propTrueCity = extractTrueCityFromText(prop.rawText || prop.name, prop.addressCity || prop.city || "");
 
-  const reqCityDisplay = reqTrueCity;
-  const propCityDisplay = propTrueCity;
+  const reqCityDisplay = reqTrueCity || "N/E";
+  const propCityDisplay = propTrueCity || "N/E";
 
   const isCityMatch =
-    normalizeBarrio(reqCityDisplay) === normalizeBarrio(propCityDisplay) ||
+    reqCityDisplay !== "N/E" &&
+    propCityDisplay !== "N/E" &&
+    (normalizeBarrio(reqCityDisplay) === normalizeBarrio(propCityDisplay) ||
     normalizeBarrio(reqCityDisplay).includes(normalizeBarrio(propCityDisplay)) ||
-    normalizeBarrio(propCityDisplay).includes(normalizeBarrio(reqCityDisplay));
+    normalizeBarrio(propCityDisplay).includes(normalizeBarrio(reqCityDisplay)));
 
-  let localityMatchStatus: MatchStatus = "neutral";
-  if (isNonRealEstateReq || isNonRealEstateProp) {
-    localityMatchStatus = "missing";
-  } else if (barrioMatchStatus === "exact") {
-    // BUG 7 fix: Si el barrio coincidió exactamente, la localidad se homologa automáticamente como exacta.
-    // El barrio es el identificador geográfico de mayor precisión; si coincide, la localidad es implícita.
-    localityMatchStatus = "exact";
-  } else if (reqLocalityDisplay === "N/E" || propLocalityDisplay === "N/E") {
-    localityMatchStatus = "neutral";
-  } else if (normalizeBarrio(reqLocalityDisplay) === normalizeBarrio(propLocalityDisplay)) {
-    localityMatchStatus = "exact";
-  } else {
-    localityMatchStatus = "missing"; // Localidades distintas cuando el barrio tampoco coincidió → Guillotina
+  // REGLA DOCTRINAL SAGRADA (Eduardo A. Rivera): Casilla 4 (Localidad / Comuna)
+  // SOLO puede ser "exact" ("Coincide" 🟢) si AMBAS partes están 100% llenas (distintas de "N/E")
+  // y coinciden en un 100%. N/E vs N/E jamás es Coincide.
+  let localityMatchStatus: MatchStatus = "missing";
+  if (!isNonRealEstateReq && !isNonRealEstateProp) {
+    if (
+      reqLocalityDisplay &&
+      propLocalityDisplay &&
+      reqLocalityDisplay !== "N/E" &&
+      propLocalityDisplay !== "N/E" &&
+      normalizeBarrio(reqLocalityDisplay) === normalizeBarrio(propLocalityDisplay)
+    ) {
+      localityMatchStatus = "exact";
+    } else {
+      localityMatchStatus = "missing";
+    }
   }
 
+  // REGLA DOCTRINAL SAGRADA (Eduardo A. Rivera): Casilla 5 (Ciudad / Municipio)
+  // SOLO puede ser "exact" ("Coincide" 🟢) si AMBAS partes están 100% llenas y coinciden al 100%.
   let cityMatchStatus: MatchStatus = (!isNonRealEstateReq && !isNonRealEstateProp && isCityMatch) ? "exact" : "missing";
 
   add("Barrio / Vereda / Caserío", reqBarrioDisplay, propBarrioDisplay, barrioMatchStatus, 10, <MapPin className="w-3.5 h-3.5" />);
@@ -2735,6 +2742,37 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
   // Tipo Inmueble, Tipo Negocio, Ciudad, Barrio, Desborde de Precio, Metraje insuficiente, Ficha hueca o Auto-clon.
   // Casillas evaluables (todas excepto la fila puramente informativa de Teléfono)
   const evaluableRows = rows.filter(r => !r.label.includes("Teléfono"));
+
+  // ── REGLA DOCTRINAL SAGRADA (Eduardo A. Rivera - Casillas 1 a 5 Núcleo Duro Innegociable) ──
+  // Las primeras cinco casillas del cotejo técnico:
+  // 1. Tipo de Inmueble
+  // 2. Tipo de Negocio
+  // 3. Barrio / Vereda / Caserío
+  // 4. Localidad / Comuna
+  // 5. Ciudad / Municipio
+  // DEBEN estar 100% llenas con sus respectivos nombres legítimos (tanto en Oferta como en Demanda)
+  // y coincidir al 100% (status === "exact" / "Coincide" 🟢).
+  // Si CUALQUIERA de las 5 no está llena, tiene N/E, o su status no es "exact" -> 0% MATCH IMPOSIBLE.
+  const firstFiveRows = rows.slice(0, 5);
+  const areFirstFivePerfect = firstFiveRows.length === 5 && firstFiveRows.every(r => {
+    const isReqFilled = r.reqVal && r.reqVal.trim() !== "" && !r.reqVal.includes("N/E");
+    const isPropFilled = r.propVal && r.propVal.trim() !== "" && !r.propVal.includes("N/E");
+    return (r.status === "exact" || r.status === "ok") && isReqFilled && isPropFilled;
+  });
+
+  if (!areFirstFivePerfect) {
+    for (const r of firstFiveRows) {
+      const isReqFilled = r.reqVal && r.reqVal.trim() !== "" && !r.reqVal.includes("N/E");
+      const isPropFilled = r.propVal && r.propVal.trim() !== "" && !r.propVal.includes("N/E");
+      if ((r.status !== "exact" && r.status !== "ok") || !isReqFilled || !isPropFilled) {
+        r.status = "missing";
+      }
+    }
+    const result = { rows, autoScore: 0, pts: 0, max };
+    if (scoreRowsCache.size > 2000) scoreRowsCache.clear();
+    scoreRowsCache.set(cacheKey, result);
+    return result;
+  }
 
   // ── ESTADÍSTICA Y TABULACIÓN DOCTRINAL DE MATCH VECY (Doctrina v32.55) ──
   // 1. Guillotina Total Inflexible: Si CUALQUIER fila evaluable en todo el cotejo tiene estado "missing"

@@ -5,7 +5,7 @@
 import { invokeLLM } from "./llm";
 import { getDb, getRawSql } from "../db";
 import { properties, requirements, users, propertyImages, InsertProperty, InsertRequirement, pendingSessions, propertyMatches, messages as dbMessages, conversations as dbConversations, propertyPublicationHistory, inmobiliarioLexicon, matchFeedback } from "../../drizzle/schema";
-import { validarZona, normalizarTextoGeografico, desambiguarBarriosCompuestos, deducirGeografiaTripartita, resolveIntersectionToBarrio } from "./geography";
+import { validarZona, normalizarTextoGeografico, desambiguarBarriosCompuestos, deducirGeografiaTripartita, resolveIntersectionToBarrio, isCityOrGenericZone, extractPureBarrio } from "./geography";
 import { validateCity } from "./divipola";
 import { findMatchesForProperty, findMatchesForRequirement, isNonRealEstateText, isHollowListing, parseStreetCarreraBoundaries } from "./matching";
 import { lookupBarriosByPerimeter } from "./geo-lookup";
@@ -5083,10 +5083,18 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     ...data,
     name: safeSlice(data.name || `Propiedad en ${data.city || data.zone || "Colombia"}`, 255) || "Propiedad",
     city: safeSlice(data.city || data.ciudadDeseada, 100) || null,
-    zone: safeSlice(data.zone || data.addressNeighborhood || data.addressLocality || data.location || data.city || data.ciudadDeseada || "Bogotá", 100) || "Bogotá",
+    zone: (() => {
+      const explicit = data.zone || data.addressNeighborhood;
+      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 100);
+      return "N/E";
+    })(),
     addressCity: safeSlice(data.addressCity || data.address_city || data.city, 100) || null,
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
-    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood || data.zone, 150) || null,
+    addressNeighborhood: (() => {
+      const explicit = data.addressNeighborhood || data.address_neighborhood || data.zone;
+      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 150);
+      return null;
+    })(),
     location: safeSlice(data.location, 255) || null,
     matriculaInmobiliaria: safeSlice(data.matriculaInmobiliaria, 100) || null,
     enlaceOrigen: safeSlice(data.enlaceOrigen, 1000) || null,
@@ -5458,20 +5466,22 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     name: safeSlice(data.name, 255) || null,
     ciudadDeseada: safeSlice(data.ciudadDeseada || data.city || fallbackReqD.city || "Bogotá", 100) || "Bogotá",
     zonaDeseada: (() => {
-      const explicit = data.zonaDeseada || data.zone || data.addressNeighborhood || data.addressLocality;
-      const explicitClean = (explicit || "").toLowerCase().trim();
-      const isGeneric = !explicit || explicitClean === "bogota" || explicitClean === "bogotá" || explicitClean === "colombia" || explicitClean === "n/e" || explicitClean === "na";
-      if (!isGeneric) {
-        return safeSlice(explicit, 100);
+      const explicit = data.zonaDeseada || data.zone || data.addressNeighborhood;
+      if (explicit && !isCityOrGenericZone(explicit)) {
+        return safeSlice(extractPureBarrio(explicit) || explicit, 100);
       }
-      if (fallbackReqD.zonaDeseada && fallbackReqD.zonaDeseada !== "Bogotá") {
-        return safeSlice(fallbackReqD.zonaDeseada, 100);
+      if (fallbackReqD.zonaDeseada && !isCityOrGenericZone(fallbackReqD.zonaDeseada)) {
+        return safeSlice(extractPureBarrio(fallbackReqD.zonaDeseada) || fallbackReqD.zonaDeseada, 100);
       }
-      return safeSlice(data.ciudadDeseada || fallbackReqD.city || "Bogotá", 100) || "Bogotá";
+      return null;
     })(),
     addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
-    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood || (fallbackReqD.zonaDeseada !== "Bogotá" ? fallbackReqD.zonaDeseada : null), 150) || null,
+    addressNeighborhood: (() => {
+      const explicit = data.addressNeighborhood || data.address_neighborhood || (fallbackReqD.zonaDeseada && !isCityOrGenericZone(fallbackReqD.zonaDeseada) ? fallbackReqD.zonaDeseada : null);
+      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 150);
+      return null;
+    })(),
     enlaceOrigen: safeSlice(data.enlaceOrigen, 1000) || null,
     idUsuarioWhatsapp: safeSlice(canonicalReqPhone, 100) || null,
     nombreUsuarioWhatsapp: safeSlice(finalEffectiveReqName, 255) || null,

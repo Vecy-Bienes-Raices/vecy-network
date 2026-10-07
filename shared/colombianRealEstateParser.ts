@@ -840,4 +840,92 @@ export function parseOutdoorAreas(rawText: string): ParsedOutdoorAreas {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// NORMALIZACIÓN DOCTRINAL DE BARRIOS Y PURIFICACIÓN GEOGRÁFICA (v32.56)
+// Casillas 1 a 5 Núcleo Duro Innegociable: Erradicación de Nombres de Ciudad
+// o Zonas Genéricas en el Campo Barrio/Vereda.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const CIUDADES_Y_DEPTOS_COLOMBIA = [
+  "bogota", "bogota d c", "bogota dc", "distrito capital", "cundinamarca",
+  "medellin", "cali", "barranquilla", "cartagena", "bucaramanga", "pereira",
+  "manizales", "cucuta", "ibague", "santa marta", "villavicencio", "pasto",
+  "monteria", "valledupar", "sincelejo", "armenia", "popayan", "neiva", "tunja",
+  "riohacha", "florencia", "yopal", "quibdo", "colombia"
+];
+
+export const GENERIC_ZONE_WORDS = new Set([
+  "norte", "sur", "oriente", "occidente", "centro", "nororiente", "noroccidente", "suroriente", "suroccidente",
+  "sabana", "sabana norte", "sabana occidente", "sabana centro", "toda la ciudad", "varias zonas", "varios barrios",
+  "zona", "zonas", "sector", "sectores", "barrio", "barrios", "ciudad", "ciudades", "alrededores",
+  "cualquiera", "por definir", "sin especificar", "indiferente", "flexible", "n e", "na", "n a", "null", "undefined",
+  "no especificado", "n e no especificado", "d c", "dc", "dto capital", "distrito capital",
+  "n", "e", "d", "c", "no", "especificado", "definir", "sin", "varias", "varios", "todos", "todas"
+]);
+
+const CIUDADES_Y_DEPTOS_REGEX = /\b(?:bogot[aá](?:\s*,?\s*d\.?\s*c\.?)?|distrito\s+capital|cundinamarca|medell[ií]n|cali|barranquilla|cartagena|bucaramanga|pereira|manizales|c[uú]cuta|ibagu[eé]|santa\s+marta|villavicencio|pasto|monter[ií]a|valledupar|sincelejo|armenia|popay[aá]n|neiva|tunja|riohacha|florencia|yopal|quibd[oó]|colombia)\b/gi;
+
+/**
+ * Extrae el nombre puro del barrio/vereda a partir de un texto de zona o ubicación,
+ * eliminando nombres de ciudades ("Bogotá, D.C.", "Cali"), países, departamentos y
+ * términos genéricos ("Norte", "Sur", etc.).
+ * Si el texto SOLO contiene una ciudad o zona genérica (ej: "Bogotá, D.C." o "Bogotá"), retorna null.
+ * Si el texto contiene un barrio legítimo (ej: "Chicó, Bogotá", "Cedritos"), retorna el barrio ("Chicó", "Cedritos").
+ */
+export function extractPureBarrio(zn: string | null | undefined): string | null {
+  if (!zn || typeof zn !== "string") return null;
+  const raw = zn.trim();
+  if (!raw) return null;
+
+  const normWhole = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+  if (!normWhole || GENERIC_ZONE_WORDS.has(normWhole)) return null;
+  if (CIUDADES_Y_DEPTOS_COLOMBIA.some(c => normWhole === c || normWhole === `${c} d c` || normWhole === `${c} dc`)) return null;
+
+  // Si todas las palabras que componen el texto son genéricas, ciudades o conectores, es genérico
+  const words = normWhole.split(/\s+/).filter(Boolean);
+  const isAllGeneric = words.length > 0 && words.every(w => 
+    GENERIC_ZONE_WORDS.has(w) || 
+    CIUDADES_Y_DEPTOS_COLOMBIA.includes(w) || 
+    w === "de" || w === "la" || w === "el" || w === "los" || w === "las" || w === "en" || w === "y" || w === "del"
+  );
+  if (isAllGeneric) return null;
+
+  // 1. Probar división por delimitadores habituales (coma, punto y coma, slash, barra vertical)
+  const parts = raw.split(/[,;/|]+/).map(p => p.trim()).filter(Boolean);
+  for (const part of parts) {
+    const norm = part.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+    if (!norm || norm.length < 2) continue;
+    if (GENERIC_ZONE_WORDS.has(norm)) continue;
+    if (CIUDADES_Y_DEPTOS_COLOMBIA.some(c => norm === c || norm === `${c} d c` || norm === `${c} dc`)) continue;
+    const stripped = norm.replace(CIUDADES_Y_DEPTOS_REGEX, "").trim();
+    if (!stripped || stripped.length < 2 || GENERIC_ZONE_WORDS.has(stripped)) continue;
+    
+    // Devolver la parte limpia sin ciudad residual
+    const cleanedPart = part.replace(CIUDADES_Y_DEPTOS_REGEX, "").replace(/^[\s,;/-]+|[\s,;/-]+$/g, "").trim();
+    if (cleanedPart && cleanedPart.length >= 2) {
+      return cleanedPart;
+    }
+  }
+
+  // 2. Si no hubo delimitadores o ninguna parte separada fue válida, limpiar la cadena completa
+  const strippedWhole = normWhole.replace(CIUDADES_Y_DEPTOS_REGEX, "").replace(/\s+/g, " ").trim();
+  if (!strippedWhole || strippedWhole.length < 2 || GENERIC_ZONE_WORDS.has(strippedWhole)) {
+    return null;
+  }
+
+  const cleaned = raw.replace(CIUDADES_Y_DEPTOS_REGEX, "").replace(/^[\s,;/-]+|[\s,;/-]+$/g, "").trim();
+  return (cleaned && cleaned.length >= 2) ? cleaned : null;
+}
+
+
+/**
+ * Determina si una zona dada es puramente un nombre de ciudad, departamento,
+ * país o cardinal genérico (sin un barrio o vereda legítimo específico).
+ */
+export function isCityOrGenericZone(zn: string | null | undefined): boolean {
+  if (!zn || typeof zn !== "string") return true;
+  return extractPureBarrio(zn) === null;
+}
+
+
 

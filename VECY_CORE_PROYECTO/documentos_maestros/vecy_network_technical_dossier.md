@@ -322,7 +322,46 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.56 — Octubre 2026
+
+#### 📌 REGLA DOCTRINAL SAGRADA DE CASILLAS 1 A 5 NÚCLEO DURO INNEGOCIABLE, ERRADICACIÓN DE NOMBRES DE CIUDAD COMO BARRIO Y GUILLOTINA TOTAL AL 0.00%
+
+**Requerimiento y Objetivos:**
+1. **Regla Doctrinal Innegociable de Casillas 1 a 5 (Eduardo A. Rivera)**:
+   - Eduardo constató con indignación el Match #15447 (score 80% / 85%) entre la Oferta de Kath (+57 305 300 1525, Propiedad #4867 *"Apartment en Bogotá para venta"*) y la Demanda de German Tejada (+57 321 229 5348, Requerimiento #2222 *"Requerimiento de inmueble en Bogotá para venta"*).
+   - Ninguna de las dos publicaciones mencionaba un barrio en su texto original. Sin embargo, la mesa de coincidencias colocó `"Bogotá, D.C."` en la fila *Barrio / Vereda / Caserío* y la marcó en verde ("Coincide" 🟢), e igualmente marcó la Localidad como verde (`N/E vs N/E`).
+   - Eduardo dictó la **Regla Doctrinal Innegociable**: Un MATCH JAMÁS puede existir si las primeras 5 casillas del cotejo técnico:
+     1. *Tipo de Inmueble*
+     2. *Tipo de Negocio*
+     3. *Barrio / Vereda / Caserío*
+     4. *Localidad / Comuna*
+     5. *Ciudad / Municipio*
+     no están 100% llenas con sus respectivos nombres legítimos (NUNCA nombres de ciudad como barrio, NUNCA N/E) y coinciden al 100% (`status === "exact"` / "Coincide" 🟢).
+   - Si CUALQUIERA de estas 5 casillas no está llena con su dato real o no coincide al 100%, **NO HAY MATCH DE NINGUNA CATEGORÍA O PORCENTAJE (Guillotina Total al 0.00% y exclusión total de la mesa de coincidencias)**.
+   - Prohibición estricta de alterar cualquier otra casilla (filas 6 en adelante) sin instrucción explícita.
+2. **Causas Raíz Identificadas**:
+   - **Ingesta en JanIA (`janIA.ts`)**: Fallbacks previos asignaban `data.city || "Bogotá"` a `zone` y `zonaDeseada` cuando no había barrio, persistiendo `"Bogotá, D.C."` en la columna de barrio de PostgreSQL.
+   - **Frontend (`AdminMatches.tsx`)**: `isGenericZone` no normalizaba la coma de `"bogota, d.c."`, por lo que `"Bogotá, D.C."` no era filtrado y se trataba como un barrio válido coincidente. Además, `N/E vs N/E` en Localidad se homologaba como coincidente.
+   - **Backend (`matching.ts`)**: `matchesGeography` consideraba compatible la zona al coincidir el texto `"Bogotá, D.C."`.
+3. **Soluciones Implementadas**:
+   - **Módulo Compartido de Purificación Geográfica (`shared/colombianRealEstateParser.ts`)**: Implementadas `extractPureBarrio(zn)` e `isCityOrGenericZone(zn)`, neutralizando estrictamente nombres de ciudad ("Bogotá", "Bogotá, D.C.", "Cali", "Medellín", etc.), departamentos, país y expresiones genéricas/cardinales ("Norte", "Sur", "Zona Norte", "N/E"). Si hay un barrio legítimo junto a la ciudad (ej: `"Chicó, Bogotá"`), extraen limpiamente `"Chicó"`.
+   - **Backend (`matching.ts` y `geography.ts`)**: En `explicarMatch`, se exige `extractPureBarrio` en oferta y demanda. Si falta barrio legítimo o hay nombre de ciudad, se emite blocker fulminante (*⛔ Inmueble/Requerimiento Incompleto: Barrio/Vereda no especificado o contiene nombre de ciudad (N/E)*) y se retorna `0.00%`.
+   - **Ingesta en JanIA (`janIA.ts`)**: Erradicado el fallback de ciudad. Si no hay barrio explícito, se guarda `"N/E"`.
+   - **Mesa de Coincidencias (`AdminMatches.tsx`)**: Barrio sin especificar se muestra como `"N/E (No especificado)"`. Las casillas 3, 4 y 5 solo marcan `exact` si ambas partes tienen datos legítimos y coinciden al 100%. En `scoreRows`, si cualquiera de las 5 primeras filas no está llena o no coincide, `autoScore` colapsa inmediatamente al **0.00%**.
+   - **Saneamiento en Producción (VPS `vecy_network`)**: Modificado constraint de `properties.zone` (`DROP NOT NULL; DEFAULT 'N/E'`). Actualizadas 1,185 propiedades y 202 requerimientos con ciudad en `zone` a `'N/E'`. Colapsados 31 matches inviables previos (incluyendo Match #15447) a `matchScore = 0.00` y `status = 'rejected'`.
+   - **Cobertura de Tests**: Agregado test específico `Doctrina v32.56` en `server/__tests__/regression.test.ts`. 152/152 tests vitest aprobados al 100%. `tsc --noEmit` y `npm run build` limpios sin errores.
+
+**Archivos Modificados:**
+- `shared/colombianRealEstateParser.ts`: Funciones universales `extractPureBarrio` e `isCityOrGenericZone`.
+- `server/_core/geography.ts`: Re-exportación y normalización geográfica.
+- `server/_core/matching.ts`: Blocker innegociable por falta de barrio legítimo o nombre de ciudad en casillas 1 a 5.
+- `server/_core/janIA.ts`: Guardado de barrio limpio o `'N/E'` en `saveProperty` y `saveRequirement`.
+- `client/src/components/admin/AdminMatches.tsx`: Regla doctrinal sagrada de casillas 1 a 5 con guillotina total al 0.00% y erradicación de ciudades como barrio.
+- `server/__tests__/regression.test.ts`: Test automatizado `Doctrina v32.56`.
+- `shared/const.ts` & `package.json`: Versión incrementada a `v32.56` (`32.56.0`).
+
 ### 🔖 v32.55 — Octubre 2026
+
 
 #### 📌 RESTAURACIÓN DE GUILLOTINA TOTAL DOCTRINAL (0.00%) ANTE CASILLAS EN 'NO COINCIDE' / 'NO CUMPLE', BLINDAJE DE ADMINISTRACIÓN EN BACKEND Y PURIFICACIÓN DE LA MESA DE COINCIDENCIAS
 

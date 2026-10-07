@@ -1,7 +1,7 @@
 import { getDb } from "../db";
 import { and, eq, sql } from "drizzle-orm";
 import { propertyMatches, properties, requirements, matchFeedback } from "../../drizzle/schema";
-import { normalizarTextoGeografico, isLasSantasZone, isBarrioInLasSantas, BARRIOS_LAS_SANTAS } from "./geography";
+import { normalizarTextoGeografico, isLasSantasZone, isBarrioInLasSantas, BARRIOS_LAS_SANTAS, isCityOrGenericZone } from "./geography";
 import { lookupBarriosByPerimeter } from "./geo-lookup";
 import { VECY_VERSION_LABEL } from "../../shared/const";
 import { extractFallbackDataFromText } from "./janIA";
@@ -10,7 +10,8 @@ import {
   demands24hSecurity,
   checkFinancialSegmentCoherence,
   parseOutdoorAreas,
-  parseAdminFee
+  parseAdminFee,
+  extractPureBarrio
 } from "../../shared/colombianRealEstateParser";
 
 /**
@@ -886,16 +887,12 @@ export function matchesGeography(
     "toda la ciudad", "sin especificar", "n/e", "na", "n/a", "por definir"
   ]);
 
-  const isReqGeneric = !reqZone || GENERIC_CARDINAL_TERMS.has(reqZone.toLowerCase().trim());
-  const isPropGeneric = !propZone || GENERIC_CARDINAL_TERMS.has(propZone.toLowerCase().trim());
+  const isReqGeneric = !reqZone || isCityOrGenericZone(reqZoneRaw) || isCityOrGenericZone(reqZone);
+  const isPropGeneric = !propZone || isCityOrGenericZone(propZoneRaw) || isCityOrGenericZone(propZone);
 
-  // Si la zona es genérica (ej: "Norte" o ciudad sin barrio) y NO hay delimitación vial de calles/carreras coincidentes ni barrio específico, BLOQUEAR (0%)
+  // Si la zona es genérica (ej: "Norte" o nombre de ciudad sin barrio legítimo), BLOQUEAR (0% MATCH INVIABLE)
   if (isReqGeneric || isPropGeneric) {
-    const hasStreetBoundaryMatch = (propNumbers.street && reqBoundaries.minStreet !== undefined && reqBoundaries.maxStreet !== undefined && propNumbers.street >= reqBoundaries.minStreet && propNumbers.street <= reqBoundaries.maxStreet)
-      || (propNumbers.carrera && reqBoundaries.minCarrera !== undefined && reqBoundaries.maxCarrera !== undefined && propNumbers.carrera >= reqBoundaries.minCarrera && propNumbers.carrera <= reqBoundaries.maxCarrera);
-    if (!hasStreetBoundaryMatch) {
-      return { matches: false, score: 0 };
-    }
+    return { matches: false, score: 0 };
   }
 
   // 1.5 Definimos las equivalencias de zonas coloquiales (F4)
@@ -1547,21 +1544,45 @@ export function explicarMatch(
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
-  // Barrio/Vereda/Caserío obligatorio en ambos
-  let propBarrioHard = property.zone || property.addressNeighborhood || (property as any).address_neighborhood || "";
-  let reqBarrioHard = requirement.zonaDeseada || requirement.addressNeighborhood || (requirement as any).address_neighborhood || "";
-  if (fbProp.zone && (!propBarrioHard || !property.rawText?.toLowerCase().includes(propBarrioHard.toLowerCase()))) {
-    propBarrioHard = fbProp.zone;
+  // Barrio/Vereda/Caserío obligatorio en ambos (DOCTRINA EDUARDO: NUNCA nombre de ciudad ni genérico)
+  let propBarrioHard = extractPureBarrio(property.zone) ||
+    extractPureBarrio((property as any).neighborhood) ||
+    extractPureBarrio(property.addressNeighborhood) ||
+    extractPureBarrio((property as any).address_neighborhood) ||
+    "";
+  let reqBarrioHard = extractPureBarrio(requirement.zonaDeseada) ||
+    extractPureBarrio((requirement as any).neighborhood) ||
+    extractPureBarrio(requirement.addressNeighborhood) ||
+    extractPureBarrio((requirement as any).address_neighborhood) ||
+    "";
+  if (!propBarrioHard && fbProp.zone) {
+    const pure = extractPureBarrio(fbProp.zone);
+    if (pure) propBarrioHard = pure;
   }
-  if (fbReq.zone && (!reqBarrioHard || !requirement.rawText?.toLowerCase().includes(reqBarrioHard.toLowerCase()))) {
-    reqBarrioHard = fbReq.zone;
+  if (!reqBarrioHard && fbReq.zone) {
+    const pure = extractPureBarrio(fbReq.zone);
+    if (pure) reqBarrioHard = pure;
   }
-  if (isNA(propBarrioHard)) {
-    blockers.push("⛔ Inmueble Incompleto: Barrio/Vereda no especificado (N/E). No puede participar en Matches.");
+  if (!propBarrioHard) {
+    const pBarrios = precomputedPropBarrios || extractAllBarriosFromText((property as any).rawText || (property as any).description || property.name || "");
+    if (pBarrios[0]) {
+      const pure = extractPureBarrio(pBarrios[0]);
+      if (pure) propBarrioHard = pure;
+    }
+  }
+  if (!reqBarrioHard) {
+    const rBarrios = precomputedReqBarrios || extractAllBarriosFromText((requirement as any).rawText || (requirement as any).description || requirement.name || "");
+    if (rBarrios[0]) {
+      const pure = extractPureBarrio(rBarrios[0]);
+      if (pure) reqBarrioHard = pure;
+    }
+  }
+  if (isNA(propBarrioHard) || isCityOrGenericZone(propBarrioHard)) {
+    blockers.push("⛔ Inmueble Incompleto: Barrio/Vereda no especificado o contiene nombre de ciudad (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  if (isNA(reqBarrioHard)) {
-    blockers.push("⛔ Requerimiento Incompleto: Barrio/Vereda deseado no especificado (N/E). No puede participar en Matches.");
+  if (isNA(reqBarrioHard) || isCityOrGenericZone(reqBarrioHard)) {
+    blockers.push("⛔ Requerimiento Incompleto: Barrio/Vereda deseado no especificado o contiene nombre de ciudad (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
@@ -1864,10 +1885,12 @@ export function explicarMatch(
   const propBarriosInText = precomputedPropBarrios || extractAllBarriosFromText((property as any).rawText || (property as any).description || property.name || "");
   const reqBarriosInText = precomputedReqBarrios || extractAllBarriosFromText((requirement as any).rawText || (requirement as any).description || requirement.name || "");
 
-  const rawPropBarrio = propBarriosInText[0] || property.zone || property.addressNeighborhood || "";
-  const rawReqBarriosList = reqBarriosInText.length > 0
-    ? reqBarriosInText
-    : [requirement.zonaDeseada || requirement.addressNeighborhood || ""].filter(Boolean);
+  const rawPropBarrio = (propBarriosInText[0] && !isCityOrGenericZone(propBarriosInText[0]))
+    ? (extractPureBarrio(propBarriosInText[0]) || propBarriosInText[0])
+    : (extractPureBarrio(property.zone) || extractPureBarrio((property as any).neighborhood) || extractPureBarrio(property.addressNeighborhood) || "");
+  const rawReqBarriosList = (reqBarriosInText.length > 0 && !isCityOrGenericZone(reqBarriosInText[0]))
+    ? reqBarriosInText.map(b => extractPureBarrio(b) || b).filter(b => !isCityOrGenericZone(b))
+    : ([extractPureBarrio(requirement.zonaDeseada), extractPureBarrio((requirement as any).neighborhood), extractPureBarrio(requirement.addressNeighborhood)].filter(Boolean) as string[]);
 
   const reqLocality = requirement.addressLocality || requirement.localidadDeseada || "";
   const propLocality = property.addressLocality || property.locality || "";

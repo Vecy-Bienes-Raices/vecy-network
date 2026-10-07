@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.55";
+    VECY_VERSION = "v32.56";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -2309,6 +2309,491 @@ var init_veredas_lookup = __esm({
   }
 });
 
+// shared/colombianRealEstateParser.ts
+function isOutdoorAreaPreceding(precedingText) {
+  if (!precedingText) return false;
+  const clean = precedingText.toLowerCase().trim();
+  return /\b(?:terraza|balc[oó]n|balcon|patio|jard[ií]n)(?:[^\w\n]+(?:privada|exclusiva|social|amplia|hermosa|espectacular|exterior|cubierta|descubierta))?(?:[^\w\n]+(?:de|con|desde|aprox|aproximadamente))?(?:[^\w\n]+(?:al\s+menos|m[ií]nimo|m[ií]n|min|por\s+lo\s+menos|m[aá]s\s+de|mas\s+de|superior\s+a|mayor\s+a|[>≥]=?))?$/i.test(clean) || /\+\s*(?:al\s+menos|m[ií]nimo|m[ií]n|min)?$/i.test(clean);
+}
+function parseColombianListing(rawText) {
+  if (!rawText) {
+    return {
+      adminIncluded: false,
+      adminNeedsInquiry: false,
+      hasCBS: false,
+      demandsCBSMandatory: false,
+      hasStudio: false,
+      demandsStudioMandatory: false,
+      demandsBalconyOrTerrace: false,
+      hasTerrace: false,
+      hasBalcony: false,
+      hasPatio: false,
+      isThirdPartyCommission: false,
+      prohibitsThirdPartyCommission: false
+    };
+  }
+  const text2 = rawText.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[*_~]/g, "");
+  const result = {
+    adminIncluded: false,
+    adminNeedsInquiry: false,
+    hasCBS: false,
+    demandsCBSMandatory: false,
+    hasStudio: false,
+    demandsStudioMandatory: false,
+    demandsBalconyOrTerrace: false,
+    hasTerrace: false,
+    hasBalcony: false,
+    hasPatio: false,
+    isThirdPartyCommission: false,
+    prohibitsThirdPartyCommission: false
+  };
+  const saleMatch = text2.match(/(?:presupuesto\s*(?:para\s*)?compra|precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|para\s*compra)[^$\d\n]*(?:\n[^$\d\n]*)?(?:max|hasta|tope)?\s*\$?\s*(\d{1,4}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i) || text2.match(/(?:venta|comprar|compra)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
+  if (saleMatch) {
+    const cleanNum = saleMatch[1].replace(/[\s.'’]/g, "");
+    result.salePriceCOP = parseInt(cleanNum, 10) * 1e6;
+  }
+  const rentMatch = text2.match(/(?:presupuesto\s*(?:para\s*)?(?:alquiler|arriendo)|canon|para\s*(?:alquiler|arriendo))[^\d\n]*(?:\n[^\d\n]*)?(?:max|hasta|tope)?\s*[:\s\-]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i) || text2.match(/(?:arriendo|arrendamiento|alquiler)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
+  if (rentMatch) {
+    const cleanNum = rentMatch[1].replace(/[\s.'’]/g, "");
+    result.rentPriceCOP = parseInt(cleanNum, 10) * 1e6;
+  }
+  if (/\b(?:con|incluida|incluye)\s+(?:la\s+)?admi?n/i.test(text2)) {
+    result.adminIncluded = true;
+  } else if (/\+\s*adm|\bmas\s+admi?n/i.test(text2)) {
+    result.adminNeedsInquiry = true;
+  }
+  const adminValMatch = text2.match(/(?:admin(?:istraci[oó]n)?|admon)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m|mil|k\b)?/i);
+  if (adminValMatch) {
+    const cleanNum = parseInt(adminValMatch[1].replace(/[\s.'’]/g, ""), 10);
+    const multiplier = /mill|m\b/i.test(adminValMatch[0]) ? 1e6 : /mil|k\b/i.test(adminValMatch[0]) ? 1e3 : 1;
+    result.adminFeeCOP = cleanNum * multiplier;
+  }
+  const outdoorInfo = parseOutdoorAreas(text2);
+  result.demandsBalconyOrTerrace = outdoorInfo.hasBalcony || outdoorInfo.hasTerrace;
+  result.hasTerrace = outdoorInfo.hasTerrace;
+  result.hasBalcony = outdoorInfo.hasBalcony;
+  result.hasPatio = outdoorInfo.hasPatio;
+  if (outdoorInfo.terraceArea) result.terraceAreaM2 = outdoorInfo.terraceArea;
+  if (outdoorInfo.balconyArea) result.balconyAreaM2 = outdoorInfo.balconyArea;
+  if (outdoorInfo.patioArea) result.patioAreaM2 = outdoorInfo.patioArea;
+  const allAreaMatches = Array.from(text2.matchAll(/(?:(?:m[ií]nimo|[\u00e1a]rea)[^\d\n]*(\d{2,4})\s*(?:m2|mts2|metros|m\b|mt|mts|m²))|(?:(?:^|[\s▪︎•\-])(\d{2,4})\s*(?:m2|mts2|m²|mt2|mts|metros))/gi));
+  for (const m of allAreaMatches) {
+    const numStr = m[1] || m[2];
+    if (!numStr) continue;
+    const parsedVal = parseInt(numStr, 10);
+    if (outdoorInfo.terraceArea && parsedVal === outdoorInfo.terraceArea) continue;
+    if (outdoorInfo.balconyArea && parsedVal === outdoorInfo.balconyArea) continue;
+    if (outdoorInfo.patioArea && parsedVal === outdoorInfo.patioArea) continue;
+    const mIdx = m.index ?? 0;
+    const preceding = text2.slice(Math.max(0, mIdx - 45), mIdx);
+    if (isOutdoorAreaPreceding(preceding)) continue;
+    result.areaM2 = parsedVal;
+    break;
+  }
+  const ageMatch = text2.match(/(?:m[aá]ximo\s+)?(\d{1,2})\s*a[ñn]os(?:\s+de\s+antig[uü]edad)?/i);
+  if (ageMatch) {
+    result.maxAgeYears = parseInt(ageMatch[1], 10);
+  }
+  const bedMatch = text2.match(/(\d+)\s*(?:habitaciones|alcobas|habs|cuartos|dormitorios)/i);
+  if (bedMatch) result.bedrooms = parseInt(bedMatch[1], 10);
+  result.hasCBS = /\bcbs\b|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio/i.test(text2);
+  result.demandsCBSMandatory = /(?:cbs|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio)[^\n]*(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente|exige)/i.test(text2) || /(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente)[^\n]*(?:cbs|cuarto\s+(?:de\s+)?servicio)/i.test(text2);
+  result.hasStudio = /\bestudio\b|star\s+de\s+tv|estar\s+tv/i.test(text2);
+  result.demandsStudioMandatory = /(?:estudio|star)[^\n]*(?:obligatorio|imprescindible|excluyente)/i.test(text2);
+  const minFloorMatch = text2.match(/piso\s+(\d+)\s+(?:hacia\s+arriba|en\s+adelante)/i);
+  if (minFloorMatch) result.minFloorRequired = parseInt(minFloorMatch[1], 10);
+  const exactFloorMatch = text2.match(/piso[:\s]+(\d+)/i);
+  if (exactFloorMatch) result.floor = parseInt(exactFloorMatch[1], 10);
+  result.prohibitsThirdPartyCommission = /no\s+tercer[ií]a|sin\s+terceros/i.test(text2);
+  result.isThirdPartyCommission = /en\s+tercer[ií]a|\btercer[ií]a\b/i.test(text2);
+  return result;
+}
+function parseColombianCurrency(rawText) {
+  if (!rawText) return null;
+  const clean = rawText.toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[*_~]/g, "").replace(/[\u2013\u2014]/g, "-");
+  const fullMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,3}(?:[.'’]\d{3}){2,3})/);
+  if (fullMatch) {
+    const val = parseInt(fullMatch[1].replace(/[.'’]/g, ""), 10);
+    if (!isNaN(val) && val > 0) return val;
+  }
+  const millionMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,4}(?:[\s.'’,]\d{3})*|\d+(?:[.,]\d+)?)\s*(?:mil\s*millones?|millones|millón|mm|m\b)/i);
+  if (millionMatch) {
+    const rawNumber = millionMatch[1].replace(/[\s'’]/g, "");
+    if (clean.includes("mil millon")) {
+      const v = parseFloat(rawNumber.replace(",", "."));
+      return Math.round(v * 1e9);
+    }
+    if (/^\d{1,4}[.,]\d{3}$/.test(rawNumber)) {
+      const parsedThousands = parseInt(rawNumber.replace(/[.,]/g, ""), 10);
+      return parsedThousands * 1e6;
+    }
+    const value = parseFloat(rawNumber.replace(",", "."));
+    if (!isNaN(value)) {
+      return value < 1e4 ? Math.round(value * 1e6) : Math.round(value);
+    }
+  }
+  const thousandMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d+(?:[.,]\d+)?)\s*(?:mil|k\b)/i);
+  if (thousandMatch) {
+    const val = parseFloat(thousandMatch[1].replace(",", "."));
+    if (!isNaN(val)) return Math.round(val * 1e3);
+  }
+  const shortThousandMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,3})[.,](\d{3})\b/);
+  if (shortThousandMatch) {
+    const n = parseInt(shortThousandMatch[1] + shortThousandMatch[2], 10);
+    return n * 1e3;
+  }
+  return null;
+}
+function parseAdminFee(rawText) {
+  if (!rawText) return { fee: null, isIncluded: false, requiresInquiry: false };
+  const clean = rawText.toLowerCase().replace(/[*_~]/g, "");
+  const isIncluded = /(?:administraci[oó]n|admin|admon|adm)\s*(?:est[aá]|va)?\s*incluid[ao]|incluid[ao]\s*(?:la\s*)?(?:administraci[oó]n|admin|admon|adm)|(?:admi?n|adm[oó]n)\s*inc\b|con\s+(?:admi?n|adm[oó]n|adm\b)/i.test(clean);
+  const requiresInquiry = /\+\s*(?:admi?n|adm[oó]n|adm\b)|\b(?:mas|más)\s*(?:admi?n|adm[oó]n|adm\b)/i.test(clean);
+  const feeMatch = clean.match(/(?:max|máximo|hasta|tope|de|valor)?\s*(?:cop|\$)?\s*(\d+(?:[\s.'’]\d+)*)\s*(?:m|millones|millon|mil|k)?\s*(?:de\s+)?(?:admin|admon|admón|adm|administraci[oó]n|cuota)/i) || clean.match(/(?:admin|admon|admón|adm|administraci[oó]n|cuota)(?:[^\d\n]*?)\$?\s*(\d+(?:[\s.'’]\d+)*)\s*(?:m|millones|millon|mil|k)?/i);
+  let fee = null;
+  if (feeMatch) {
+    fee = parseColombianCurrency(feeMatch[0]);
+  }
+  return { fee, isIncluded, requiresInquiry };
+}
+function parseSecurityType(text2) {
+  if (!text2) return "none";
+  const lower = text2.toLowerCase();
+  const isAutomatedOrConserje = /\b(?:ed(?:ificio)?\s*automatizado|automatizado|porter[ií]a\s*remota|porter[ií]a\s*virtual|porter[ií]a\s*inteligente|acceso\s*digital|acceso\s*inteligente|cerradura\s*digital|sin\s*porter[ií]a|sin\s*vigilancia|sin\s*celadur[ií]a|no\s*tiene\s*vigilancia|no\s*cuenta\s*con\s*vigilancia|porter[ií]a\s*(?:solo\s*)?de\s*d[ií]a|conserje\s*diurno|conserjer[ií]a\s*diurna|solo\s*conserje)\b/i.test(lower) || /\bconserje\b/i.test(lower) && !/\b(?:24\s*horas|24\/7|24h|permanente)\b/i.test(lower);
+  if (isAutomatedOrConserje) {
+    return "automated";
+  }
+  const has24h = /\b(?:seguridad\s*(?:las\s*)?24\s*(?:horas|h|hrs)|seguridad\s*24\/7|vigilancia\s*(?:las\s*)?24\s*(?:horas|h|hrs)|vigilancia\s*24\/7|porter[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|porter[ií]a\s*24\/7|celadur[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|celadur[ií]a\s*24\/7|porter[ií]a\s*permanente|vigilancia\s*permanente|seguridad\s*permanente|guardas?\s*24\s*horas|celador\s*24\s*horas)\b/i.test(lower) || /\b(?:24\s*horas|24\/7)\s*(?:de\s*)?(?:vigilancia|seguridad|porter[ií]a|celadur[ií]a)\b/i.test(lower);
+  if (has24h) {
+    return "24_7";
+  }
+  return "none";
+}
+function demands24hSecurity(text2) {
+  if (!text2) return false;
+  const lower = text2.toLowerCase();
+  return /\b(?:seguridad\s*(?:las\s*)?24\s*(?:horas|h|hrs)|seguridad\s*24\/7|vigilancia\s*(?:las\s*)?24\s*(?:horas|h|hrs)|vigilancia\s*24\/7|porter[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|porter[ií]a\s*24\/7|celadur[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|celadur[ií]a\s*24\/7|guarda\s*(?:de\s*seguridad)?\s*24\s*(?:horas|h|hrs)|portero\s*24\s*horas|celador\s*24\s*horas|exige\s*(?:seguridad|vigilancia|porter[ií]a)\s*24|seguridad\s*privada\s*24)\b/i.test(lower);
+}
+function checkFinancialSegmentCoherence(params) {
+  const { budgetMax, offeredPrice, isSale, budgetMin } = params;
+  if (!budgetMax || budgetMax <= 0 || !offeredPrice || offeredPrice <= 0) {
+    return { isCompatible: true };
+  }
+  if (budgetMin && budgetMin > 0) {
+    const minFloor = budgetMin * 0.9;
+    if (offeredPrice < minFloor) {
+      const minLabel = `$${(budgetMin / 1e6).toLocaleString("es-CO")}M`;
+      const offLabel = `$${(offeredPrice / 1e6).toLocaleString("es-CO")}M`;
+      return {
+        isCompatible: false,
+        reason: `Precio por Debajo del Piso Solicitado: La demanda exige expresamente un m\xEDnimo de ${minLabel} y la oferta tiene un valor de ${offLabel} (inferior al piso admisible de $${(minFloor / 1e6).toLocaleString("es-CO")}M). Choque de segmento.`
+      };
+    }
+  }
+  const floorRatio = 0.9;
+  const minAllowedPrice = budgetMax * floorRatio;
+  if (offeredPrice < minAllowedPrice) {
+    const pct = Math.round(offeredPrice / budgetMax * 100);
+    if (isSale) {
+      return {
+        isCompatible: false,
+        reason: `Desproporci\xF3n de Segmento Comercial: El demandante busca en el segmento de $${(budgetMax / 1e6).toLocaleString("es-CO")}M y la oferta cuesta apenas $${(offeredPrice / 1e6).toLocaleString("es-CO")}M (${pct}% del presupuesto). No corresponde a la gama ni confort esperado (piso m\xEDnimo admisible: 90% = $${(minAllowedPrice / 1e6).toLocaleString("es-CO")}M).`
+      };
+    } else {
+      return {
+        isCompatible: false,
+        reason: `Desproporci\xF3n de Segmento en Arriendo: El canon ofertado de $${(offeredPrice / 1e6).toLocaleString("es-CO")}M representa solo el ${pct}% del canon presupuestado ($${(budgetMax / 1e6).toLocaleString("es-CO")}M). No corresponde a la categor\xEDa solicitada (piso m\xEDnimo admisible: 90% = $${(minAllowedPrice / 1e6).toLocaleString("es-CO")}M).`
+      };
+    }
+  }
+  return { isCompatible: true };
+}
+function parseOutdoorAreas(rawText) {
+  if (!rawText) {
+    return {
+      terraceArea: null,
+      balconyArea: null,
+      patioArea: null,
+      hasTerrace: false,
+      hasBalcony: false,
+      hasPatio: false,
+      terraceCount: 0,
+      balconyCount: 0,
+      summaryOfferLabel: "Sin dato especificado",
+      summaryReqLabel: "Flexible / No exigido"
+    };
+  }
+  const clean = rawText.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, " ").replace(/[*_~]/g, " ").toLowerCase();
+  const hasTerrace = /\bterrazas?\b/i.test(clean);
+  const hasBalcony = /\bbalc[oó]n(?:es)?\b/i.test(clean);
+  const hasPatio = /\bpatio(?:s)?\b|\bjard[ií]n(?:es)?\b/i.test(clean);
+  let terraceArea = null;
+  let balconyArea = null;
+  let patioArea = null;
+  const plusTerraceMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros)?\s*(?:de\s+)?(?:hermosa\s+|amplia\s+|gran\s+|privada\s+)?terrazas?/i);
+  if (plusTerraceMatch) {
+    const val = parseFloat(plusTerraceMatch[1].replace(",", "."));
+    if (!isNaN(val) && val > 0 && val <= 2e3) {
+      terraceArea = val;
+    }
+  }
+  if (terraceArea === null) {
+    const phraseTerraceMatch = clean.match(/(?:terraza|terrazas)\s+(?:privada|exclusiva|social|amplia|hermosa|espectacular|cubierta|descubierta)?\s*(?:de\s+|con\s+|de\s*aprox(?:imadamente)?\s*|desde\s+)?(?:al\s+menos\s+|m[ií]nimo\s+|m[ií]n\s*[:.]?\s*|por\s+lo\s+menos\s+|m[aá]s\s+de\s+|superior\s+a\s+|mayor\s+a\s+|[>≥]=?\s*)?(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)/i);
+    if (phraseTerraceMatch) {
+      const val = parseFloat(phraseTerraceMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 2e3) {
+        terraceArea = val;
+      }
+    }
+  }
+  if (terraceArea === null) {
+    const invTerraceMatch = clean.match(/(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)\s*(?:de\s+)?(?:hermosa\s+|amplia\s+|gran\s+|privada\s+)?terrazas?/i);
+    if (invTerraceMatch) {
+      const val = parseFloat(invTerraceMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 2e3) {
+        terraceArea = val;
+      }
+    }
+  }
+  if (terraceArea === null) {
+    const colonTerraceMatch = clean.match(/(?:terraza|terrazas)\s*[:=-]\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?/i) || clean.match(/(?:terraza|terrazas)\s+(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i);
+    if (colonTerraceMatch) {
+      const val = parseFloat(colonTerraceMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 2e3) {
+        terraceArea = val;
+      }
+    }
+  }
+  const plusBalconyMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?\s*(?:de\s+)?(?:hermoso\s+|amplio\s+|privado\s+)?balc[oó]n(?:es)?/i);
+  if (plusBalconyMatch) {
+    const val = parseFloat(plusBalconyMatch[1].replace(",", "."));
+    if (!isNaN(val) && val > 0 && val <= 150) {
+      balconyArea = val;
+    }
+  }
+  if (balconyArea === null) {
+    const phraseBalconyMatch = clean.match(/(?:balc[oó]n|balcones)\s+(?:privado|exterior|social|amplio|hermoso|cubierto)?\s*(?:de\s+|con\s+|de\s*aprox(?:imadamente)?\s*|desde\s+)?(?:al\s+menos\s+|m[ií]nimo\s+|m[ií]n\s*[:.]?\s*|por\s+lo\s+menos\s+|m[aá]s\s+de\s+|superior\s+a\s+|mayor\s+a\s+|[>≥]=?\s*)?(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)/i);
+    if (phraseBalconyMatch) {
+      const val = parseFloat(phraseBalconyMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 150) {
+        balconyArea = val;
+      }
+    }
+  }
+  if (balconyArea === null) {
+    const invBalconyMatch = clean.match(/(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)\s*(?:de\s+)?(?:hermoso\s+|amplio\s+|privado\s+)?balc[oó]n(?:es)?/i);
+    if (invBalconyMatch) {
+      const val = parseFloat(invBalconyMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 150) {
+        balconyArea = val;
+      }
+    }
+  }
+  if (balconyArea === null) {
+    const colonBalconyMatch = clean.match(/(?:balc[oó]n|balcones)\s*[:=-]\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?/i) || clean.match(/(?:balc[oó]n|balcones)\s+(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i);
+    if (colonBalconyMatch) {
+      const val = parseFloat(colonBalconyMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 150) {
+        balconyArea = val;
+      }
+    }
+  }
+  const patioMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?\s*(?:de\s+)?patio/i) || clean.match(/patio\s+(?:privado\s+)?(?:de\s+|con\s+)?(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i) || clean.match(/(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)\s*(?:de\s+)?patio/i);
+  if (patioMatch) {
+    const val = parseFloat(patioMatch[1].replace(",", "."));
+    if (!isNaN(val) && val > 0 && val <= 1e3) {
+      patioArea = val;
+    }
+  }
+  let terraceCount = 0;
+  if (hasTerrace) {
+    if (/\b(?:2|dos)\s*terrazas\b/i.test(clean)) {
+      terraceCount = 2;
+    } else if (/\b(?:3|tres)\s*terrazas\b/i.test(clean)) {
+      terraceCount = 3;
+    } else {
+      terraceCount = 1;
+    }
+  }
+  let balconyCount = 0;
+  if (hasBalcony) {
+    if (/\b(?:2|dos)\s*balcones\b/i.test(clean)) {
+      balconyCount = 2;
+    } else if (/\b(?:3|tres)\s*balcones\b/i.test(clean)) {
+      balconyCount = 3;
+    } else {
+      balconyCount = 1;
+    }
+  }
+  let summaryOfferLabel = "Sin dato especificado";
+  if (hasBalcony && hasTerrace) {
+    if (balconyArea && terraceArea) {
+      summaryOfferLabel = `S\xED (Balc\xF3n ${balconyArea} m\xB2 + Terraza ${terraceArea} m\xB2)`;
+    } else if (terraceArea) {
+      summaryOfferLabel = `S\xED (Balc\xF3n + Terraza ${terraceArea} m\xB2)`;
+    } else if (balconyArea) {
+      summaryOfferLabel = `S\xED (Balc\xF3n ${balconyArea} m\xB2 + Terraza)`;
+    } else {
+      summaryOfferLabel = "S\xED (Balc\xF3n y Terraza)";
+    }
+  } else if (hasTerrace) {
+    summaryOfferLabel = terraceArea ? `S\xED (Terraza Privada ${terraceArea} m\xB2)` : "S\xED (Cuenta con Terraza)";
+  } else if (hasBalcony) {
+    summaryOfferLabel = balconyArea ? `S\xED (Balc\xF3n ${balconyArea} m\xB2)` : "S\xED (Cuenta con Balc\xF3n)";
+  } else if (hasPatio) {
+    summaryOfferLabel = patioArea ? `S\xED (Patio ${patioArea} m\xB2)` : "S\xED (Cuenta con Patio)";
+  }
+  let summaryReqLabel = "Flexible / No exigido";
+  if (hasTerrace) {
+    summaryReqLabel = terraceArea ? `Exige Terraza \u2265 ${terraceArea} m\xB2` : "Exige Terraza";
+  } else if (hasBalcony) {
+    summaryReqLabel = balconyArea ? `Exige Balc\xF3n \u2265 ${balconyArea} m\xB2` : "Exige Balc\xF3n";
+  } else if (hasPatio) {
+    summaryReqLabel = patioArea ? `Exige Patio \u2265 ${patioArea} m\xB2` : "Exige Patio";
+  }
+  return {
+    terraceArea,
+    balconyArea,
+    patioArea,
+    hasTerrace,
+    hasBalcony,
+    hasPatio,
+    terraceCount,
+    balconyCount,
+    summaryOfferLabel,
+    summaryReqLabel
+  };
+}
+function extractPureBarrio(zn) {
+  if (!zn || typeof zn !== "string") return null;
+  const raw = zn.trim();
+  if (!raw) return null;
+  const normWhole = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+  if (!normWhole || GENERIC_ZONE_WORDS.has(normWhole)) return null;
+  if (CIUDADES_Y_DEPTOS_COLOMBIA.some((c) => normWhole === c || normWhole === `${c} d c` || normWhole === `${c} dc`)) return null;
+  const words = normWhole.split(/\s+/).filter(Boolean);
+  const isAllGeneric = words.length > 0 && words.every(
+    (w) => GENERIC_ZONE_WORDS.has(w) || CIUDADES_Y_DEPTOS_COLOMBIA.includes(w) || w === "de" || w === "la" || w === "el" || w === "los" || w === "las" || w === "en" || w === "y" || w === "del"
+  );
+  if (isAllGeneric) return null;
+  const parts = raw.split(/[,;/|]+/).map((p) => p.trim()).filter(Boolean);
+  for (const part of parts) {
+    const norm2 = part.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+    if (!norm2 || norm2.length < 2) continue;
+    if (GENERIC_ZONE_WORDS.has(norm2)) continue;
+    if (CIUDADES_Y_DEPTOS_COLOMBIA.some((c) => norm2 === c || norm2 === `${c} d c` || norm2 === `${c} dc`)) continue;
+    const stripped = norm2.replace(CIUDADES_Y_DEPTOS_REGEX, "").trim();
+    if (!stripped || stripped.length < 2 || GENERIC_ZONE_WORDS.has(stripped)) continue;
+    const cleanedPart = part.replace(CIUDADES_Y_DEPTOS_REGEX, "").replace(/^[\s,;/-]+|[\s,;/-]+$/g, "").trim();
+    if (cleanedPart && cleanedPart.length >= 2) {
+      return cleanedPart;
+    }
+  }
+  const strippedWhole = normWhole.replace(CIUDADES_Y_DEPTOS_REGEX, "").replace(/\s+/g, " ").trim();
+  if (!strippedWhole || strippedWhole.length < 2 || GENERIC_ZONE_WORDS.has(strippedWhole)) {
+    return null;
+  }
+  const cleaned = raw.replace(CIUDADES_Y_DEPTOS_REGEX, "").replace(/^[\s,;/-]+|[\s,;/-]+$/g, "").trim();
+  return cleaned && cleaned.length >= 2 ? cleaned : null;
+}
+function isCityOrGenericZone(zn) {
+  if (!zn || typeof zn !== "string") return true;
+  return extractPureBarrio(zn) === null;
+}
+var CIUDADES_Y_DEPTOS_COLOMBIA, GENERIC_ZONE_WORDS, CIUDADES_Y_DEPTOS_REGEX;
+var init_colombianRealEstateParser = __esm({
+  "shared/colombianRealEstateParser.ts"() {
+    "use strict";
+    CIUDADES_Y_DEPTOS_COLOMBIA = [
+      "bogota",
+      "bogota d c",
+      "bogota dc",
+      "distrito capital",
+      "cundinamarca",
+      "medellin",
+      "cali",
+      "barranquilla",
+      "cartagena",
+      "bucaramanga",
+      "pereira",
+      "manizales",
+      "cucuta",
+      "ibague",
+      "santa marta",
+      "villavicencio",
+      "pasto",
+      "monteria",
+      "valledupar",
+      "sincelejo",
+      "armenia",
+      "popayan",
+      "neiva",
+      "tunja",
+      "riohacha",
+      "florencia",
+      "yopal",
+      "quibdo",
+      "colombia"
+    ];
+    GENERIC_ZONE_WORDS = /* @__PURE__ */ new Set([
+      "norte",
+      "sur",
+      "oriente",
+      "occidente",
+      "centro",
+      "nororiente",
+      "noroccidente",
+      "suroriente",
+      "suroccidente",
+      "sabana",
+      "sabana norte",
+      "sabana occidente",
+      "sabana centro",
+      "toda la ciudad",
+      "varias zonas",
+      "varios barrios",
+      "zona",
+      "zonas",
+      "sector",
+      "sectores",
+      "barrio",
+      "barrios",
+      "ciudad",
+      "ciudades",
+      "alrededores",
+      "cualquiera",
+      "por definir",
+      "sin especificar",
+      "indiferente",
+      "flexible",
+      "n e",
+      "na",
+      "n a",
+      "null",
+      "undefined",
+      "no especificado",
+      "n e no especificado",
+      "d c",
+      "dc",
+      "dto capital",
+      "distrito capital",
+      "n",
+      "e",
+      "d",
+      "c",
+      "no",
+      "especificado",
+      "definir",
+      "sin",
+      "varias",
+      "varios",
+      "todos",
+      "todas"
+    ]);
+    CIUDADES_Y_DEPTOS_REGEX = /\b(?:bogot[aá](?:\s*,?\s*d\.?\s*c\.?)?|distrito\s+capital|cundinamarca|medell[ií]n|cali|barranquilla|cartagena|bucaramanga|pereira|manizales|c[uú]cuta|ibagu[eé]|santa\s+marta|villavicencio|pasto|monter[ií]a|valledupar|sincelejo|armenia|popay[aá]n|neiva|tunja|riohacha|florencia|yopal|quibd[oó]|colombia)\b/gi;
+  }
+});
+
 // server/_core/geography.ts
 import { sql } from "drizzle-orm";
 function normalizarTextoGeografico(texto) {
@@ -3298,19 +3783,28 @@ var init_geography = __esm({
     init_schema();
     init_geo_lookup();
     init_veredas_lookup();
+    init_colombianRealEstateParser();
     GENERIC_ZONES_SET = /* @__PURE__ */ new Set([
       "bogota",
       "bogota d c",
       "bogota dc",
+      "bogota, d.c.",
+      "bogota d.c.",
       "medellin",
       "cali",
       "barranquilla",
       "colombia",
+      "cundinamarca",
       "norte",
       "sur",
       "centro",
+      "oriente",
+      "occidente",
+      "sabana",
+      "sabana norte",
       "n/e",
       "na",
+      "n/a",
       "null",
       "undefined",
       ""
@@ -3711,367 +4205,6 @@ var init_divipola = __esm({
       const normalized = cityName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
       return municipalitiesMap.get(normalized) || null;
     };
-  }
-});
-
-// shared/colombianRealEstateParser.ts
-function isOutdoorAreaPreceding(precedingText) {
-  if (!precedingText) return false;
-  const clean = precedingText.toLowerCase().trim();
-  return /\b(?:terraza|balc[oó]n|balcon|patio|jard[ií]n)(?:[^\w\n]+(?:privada|exclusiva|social|amplia|hermosa|espectacular|exterior|cubierta|descubierta))?(?:[^\w\n]+(?:de|con|desde|aprox|aproximadamente))?(?:[^\w\n]+(?:al\s+menos|m[ií]nimo|m[ií]n|min|por\s+lo\s+menos|m[aá]s\s+de|mas\s+de|superior\s+a|mayor\s+a|[>≥]=?))?$/i.test(clean) || /\+\s*(?:al\s+menos|m[ií]nimo|m[ií]n|min)?$/i.test(clean);
-}
-function parseColombianListing(rawText) {
-  if (!rawText) {
-    return {
-      adminIncluded: false,
-      adminNeedsInquiry: false,
-      hasCBS: false,
-      demandsCBSMandatory: false,
-      hasStudio: false,
-      demandsStudioMandatory: false,
-      demandsBalconyOrTerrace: false,
-      hasTerrace: false,
-      hasBalcony: false,
-      hasPatio: false,
-      isThirdPartyCommission: false,
-      prohibitsThirdPartyCommission: false
-    };
-  }
-  const text2 = rawText.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[*_~]/g, "");
-  const result = {
-    adminIncluded: false,
-    adminNeedsInquiry: false,
-    hasCBS: false,
-    demandsCBSMandatory: false,
-    hasStudio: false,
-    demandsStudioMandatory: false,
-    demandsBalconyOrTerrace: false,
-    hasTerrace: false,
-    hasBalcony: false,
-    hasPatio: false,
-    isThirdPartyCommission: false,
-    prohibitsThirdPartyCommission: false
-  };
-  const saleMatch = text2.match(/(?:presupuesto\s*(?:para\s*)?compra|precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|para\s*compra)[^$\d\n]*(?:\n[^$\d\n]*)?(?:max|hasta|tope)?\s*\$?\s*(\d{1,4}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i) || text2.match(/(?:venta|comprar|compra)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
-  if (saleMatch) {
-    const cleanNum = saleMatch[1].replace(/[\s.'’]/g, "");
-    result.salePriceCOP = parseInt(cleanNum, 10) * 1e6;
-  }
-  const rentMatch = text2.match(/(?:presupuesto\s*(?:para\s*)?(?:alquiler|arriendo)|canon|para\s*(?:alquiler|arriendo))[^\d\n]*(?:\n[^\d\n]*)?(?:max|hasta|tope)?\s*[:\s\-]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i) || text2.match(/(?:arriendo|arrendamiento|alquiler)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
-  if (rentMatch) {
-    const cleanNum = rentMatch[1].replace(/[\s.'’]/g, "");
-    result.rentPriceCOP = parseInt(cleanNum, 10) * 1e6;
-  }
-  if (/\b(?:con|incluida|incluye)\s+(?:la\s+)?admi?n/i.test(text2)) {
-    result.adminIncluded = true;
-  } else if (/\+\s*adm|\bmas\s+admi?n/i.test(text2)) {
-    result.adminNeedsInquiry = true;
-  }
-  const adminValMatch = text2.match(/(?:admin(?:istraci[oó]n)?|admon)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m|mil|k\b)?/i);
-  if (adminValMatch) {
-    const cleanNum = parseInt(adminValMatch[1].replace(/[\s.'’]/g, ""), 10);
-    const multiplier = /mill|m\b/i.test(adminValMatch[0]) ? 1e6 : /mil|k\b/i.test(adminValMatch[0]) ? 1e3 : 1;
-    result.adminFeeCOP = cleanNum * multiplier;
-  }
-  const outdoorInfo = parseOutdoorAreas(text2);
-  result.demandsBalconyOrTerrace = outdoorInfo.hasBalcony || outdoorInfo.hasTerrace;
-  result.hasTerrace = outdoorInfo.hasTerrace;
-  result.hasBalcony = outdoorInfo.hasBalcony;
-  result.hasPatio = outdoorInfo.hasPatio;
-  if (outdoorInfo.terraceArea) result.terraceAreaM2 = outdoorInfo.terraceArea;
-  if (outdoorInfo.balconyArea) result.balconyAreaM2 = outdoorInfo.balconyArea;
-  if (outdoorInfo.patioArea) result.patioAreaM2 = outdoorInfo.patioArea;
-  const allAreaMatches = Array.from(text2.matchAll(/(?:(?:m[ií]nimo|[\u00e1a]rea)[^\d\n]*(\d{2,4})\s*(?:m2|mts2|metros|m\b|mt|mts|m²))|(?:(?:^|[\s▪︎•\-])(\d{2,4})\s*(?:m2|mts2|m²|mt2|mts|metros))/gi));
-  for (const m of allAreaMatches) {
-    const numStr = m[1] || m[2];
-    if (!numStr) continue;
-    const parsedVal = parseInt(numStr, 10);
-    if (outdoorInfo.terraceArea && parsedVal === outdoorInfo.terraceArea) continue;
-    if (outdoorInfo.balconyArea && parsedVal === outdoorInfo.balconyArea) continue;
-    if (outdoorInfo.patioArea && parsedVal === outdoorInfo.patioArea) continue;
-    const mIdx = m.index ?? 0;
-    const preceding = text2.slice(Math.max(0, mIdx - 45), mIdx);
-    if (isOutdoorAreaPreceding(preceding)) continue;
-    result.areaM2 = parsedVal;
-    break;
-  }
-  const ageMatch = text2.match(/(?:m[aá]ximo\s+)?(\d{1,2})\s*a[ñn]os(?:\s+de\s+antig[uü]edad)?/i);
-  if (ageMatch) {
-    result.maxAgeYears = parseInt(ageMatch[1], 10);
-  }
-  const bedMatch = text2.match(/(\d+)\s*(?:habitaciones|alcobas|habs|cuartos|dormitorios)/i);
-  if (bedMatch) result.bedrooms = parseInt(bedMatch[1], 10);
-  result.hasCBS = /\bcbs\b|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio/i.test(text2);
-  result.demandsCBSMandatory = /(?:cbs|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio)[^\n]*(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente|exige)/i.test(text2) || /(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente)[^\n]*(?:cbs|cuarto\s+(?:de\s+)?servicio)/i.test(text2);
-  result.hasStudio = /\bestudio\b|star\s+de\s+tv|estar\s+tv/i.test(text2);
-  result.demandsStudioMandatory = /(?:estudio|star)[^\n]*(?:obligatorio|imprescindible|excluyente)/i.test(text2);
-  const minFloorMatch = text2.match(/piso\s+(\d+)\s+(?:hacia\s+arriba|en\s+adelante)/i);
-  if (minFloorMatch) result.minFloorRequired = parseInt(minFloorMatch[1], 10);
-  const exactFloorMatch = text2.match(/piso[:\s]+(\d+)/i);
-  if (exactFloorMatch) result.floor = parseInt(exactFloorMatch[1], 10);
-  result.prohibitsThirdPartyCommission = /no\s+tercer[ií]a|sin\s+terceros/i.test(text2);
-  result.isThirdPartyCommission = /en\s+tercer[ií]a|\btercer[ií]a\b/i.test(text2);
-  return result;
-}
-function parseColombianCurrency(rawText) {
-  if (!rawText) return null;
-  const clean = rawText.toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[*_~]/g, "").replace(/[\u2013\u2014]/g, "-");
-  const fullMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,3}(?:[.'’]\d{3}){2,3})/);
-  if (fullMatch) {
-    const val = parseInt(fullMatch[1].replace(/[.'’]/g, ""), 10);
-    if (!isNaN(val) && val > 0) return val;
-  }
-  const millionMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,4}(?:[\s.'’,]\d{3})*|\d+(?:[.,]\d+)?)\s*(?:mil\s*millones?|millones|millón|mm|m\b)/i);
-  if (millionMatch) {
-    const rawNumber = millionMatch[1].replace(/[\s'’]/g, "");
-    if (clean.includes("mil millon")) {
-      const v = parseFloat(rawNumber.replace(",", "."));
-      return Math.round(v * 1e9);
-    }
-    if (/^\d{1,4}[.,]\d{3}$/.test(rawNumber)) {
-      const parsedThousands = parseInt(rawNumber.replace(/[.,]/g, ""), 10);
-      return parsedThousands * 1e6;
-    }
-    const value = parseFloat(rawNumber.replace(",", "."));
-    if (!isNaN(value)) {
-      return value < 1e4 ? Math.round(value * 1e6) : Math.round(value);
-    }
-  }
-  const thousandMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d+(?:[.,]\d+)?)\s*(?:mil|k\b)/i);
-  if (thousandMatch) {
-    const val = parseFloat(thousandMatch[1].replace(",", "."));
-    if (!isNaN(val)) return Math.round(val * 1e3);
-  }
-  const shortThousandMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,3})[.,](\d{3})\b/);
-  if (shortThousandMatch) {
-    const n = parseInt(shortThousandMatch[1] + shortThousandMatch[2], 10);
-    return n * 1e3;
-  }
-  return null;
-}
-function parseAdminFee(rawText) {
-  if (!rawText) return { fee: null, isIncluded: false, requiresInquiry: false };
-  const clean = rawText.toLowerCase().replace(/[*_~]/g, "");
-  const isIncluded = /(?:administraci[oó]n|admin|admon|adm)\s*(?:est[aá]|va)?\s*incluid[ao]|incluid[ao]\s*(?:la\s*)?(?:administraci[oó]n|admin|admon|adm)|(?:admi?n|adm[oó]n)\s*inc\b|con\s+(?:admi?n|adm[oó]n|adm\b)/i.test(clean);
-  const requiresInquiry = /\+\s*(?:admi?n|adm[oó]n|adm\b)|\b(?:mas|más)\s*(?:admi?n|adm[oó]n|adm\b)/i.test(clean);
-  const feeMatch = clean.match(/(?:max|máximo|hasta|tope|de|valor)?\s*(?:cop|\$)?\s*(\d+(?:[\s.'’]\d+)*)\s*(?:m|millones|millon|mil|k)?\s*(?:de\s+)?(?:admin|admon|admón|adm|administraci[oó]n|cuota)/i) || clean.match(/(?:admin|admon|admón|adm|administraci[oó]n|cuota)(?:[^\d\n]*?)\$?\s*(\d+(?:[\s.'’]\d+)*)\s*(?:m|millones|millon|mil|k)?/i);
-  let fee = null;
-  if (feeMatch) {
-    fee = parseColombianCurrency(feeMatch[0]);
-  }
-  return { fee, isIncluded, requiresInquiry };
-}
-function parseSecurityType(text2) {
-  if (!text2) return "none";
-  const lower = text2.toLowerCase();
-  const isAutomatedOrConserje = /\b(?:ed(?:ificio)?\s*automatizado|automatizado|porter[ií]a\s*remota|porter[ií]a\s*virtual|porter[ií]a\s*inteligente|acceso\s*digital|acceso\s*inteligente|cerradura\s*digital|sin\s*porter[ií]a|sin\s*vigilancia|sin\s*celadur[ií]a|no\s*tiene\s*vigilancia|no\s*cuenta\s*con\s*vigilancia|porter[ií]a\s*(?:solo\s*)?de\s*d[ií]a|conserje\s*diurno|conserjer[ií]a\s*diurna|solo\s*conserje)\b/i.test(lower) || /\bconserje\b/i.test(lower) && !/\b(?:24\s*horas|24\/7|24h|permanente)\b/i.test(lower);
-  if (isAutomatedOrConserje) {
-    return "automated";
-  }
-  const has24h = /\b(?:seguridad\s*(?:las\s*)?24\s*(?:horas|h|hrs)|seguridad\s*24\/7|vigilancia\s*(?:las\s*)?24\s*(?:horas|h|hrs)|vigilancia\s*24\/7|porter[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|porter[ií]a\s*24\/7|celadur[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|celadur[ií]a\s*24\/7|porter[ií]a\s*permanente|vigilancia\s*permanente|seguridad\s*permanente|guardas?\s*24\s*horas|celador\s*24\s*horas)\b/i.test(lower) || /\b(?:24\s*horas|24\/7)\s*(?:de\s*)?(?:vigilancia|seguridad|porter[ií]a|celadur[ií]a)\b/i.test(lower);
-  if (has24h) {
-    return "24_7";
-  }
-  return "none";
-}
-function demands24hSecurity(text2) {
-  if (!text2) return false;
-  const lower = text2.toLowerCase();
-  return /\b(?:seguridad\s*(?:las\s*)?24\s*(?:horas|h|hrs)|seguridad\s*24\/7|vigilancia\s*(?:las\s*)?24\s*(?:horas|h|hrs)|vigilancia\s*24\/7|porter[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|porter[ií]a\s*24\/7|celadur[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|celadur[ií]a\s*24\/7|guarda\s*(?:de\s*seguridad)?\s*24\s*(?:horas|h|hrs)|portero\s*24\s*horas|celador\s*24\s*horas|exige\s*(?:seguridad|vigilancia|porter[ií]a)\s*24|seguridad\s*privada\s*24)\b/i.test(lower);
-}
-function checkFinancialSegmentCoherence(params) {
-  const { budgetMax, offeredPrice, isSale, budgetMin } = params;
-  if (!budgetMax || budgetMax <= 0 || !offeredPrice || offeredPrice <= 0) {
-    return { isCompatible: true };
-  }
-  if (budgetMin && budgetMin > 0) {
-    const minFloor = budgetMin * 0.9;
-    if (offeredPrice < minFloor) {
-      const minLabel = `$${(budgetMin / 1e6).toLocaleString("es-CO")}M`;
-      const offLabel = `$${(offeredPrice / 1e6).toLocaleString("es-CO")}M`;
-      return {
-        isCompatible: false,
-        reason: `Precio por Debajo del Piso Solicitado: La demanda exige expresamente un m\xEDnimo de ${minLabel} y la oferta tiene un valor de ${offLabel} (inferior al piso admisible de $${(minFloor / 1e6).toLocaleString("es-CO")}M). Choque de segmento.`
-      };
-    }
-  }
-  const floorRatio = 0.9;
-  const minAllowedPrice = budgetMax * floorRatio;
-  if (offeredPrice < minAllowedPrice) {
-    const pct = Math.round(offeredPrice / budgetMax * 100);
-    if (isSale) {
-      return {
-        isCompatible: false,
-        reason: `Desproporci\xF3n de Segmento Comercial: El demandante busca en el segmento de $${(budgetMax / 1e6).toLocaleString("es-CO")}M y la oferta cuesta apenas $${(offeredPrice / 1e6).toLocaleString("es-CO")}M (${pct}% del presupuesto). No corresponde a la gama ni confort esperado (piso m\xEDnimo admisible: 90% = $${(minAllowedPrice / 1e6).toLocaleString("es-CO")}M).`
-      };
-    } else {
-      return {
-        isCompatible: false,
-        reason: `Desproporci\xF3n de Segmento en Arriendo: El canon ofertado de $${(offeredPrice / 1e6).toLocaleString("es-CO")}M representa solo el ${pct}% del canon presupuestado ($${(budgetMax / 1e6).toLocaleString("es-CO")}M). No corresponde a la categor\xEDa solicitada (piso m\xEDnimo admisible: 90% = $${(minAllowedPrice / 1e6).toLocaleString("es-CO")}M).`
-      };
-    }
-  }
-  return { isCompatible: true };
-}
-function parseOutdoorAreas(rawText) {
-  if (!rawText) {
-    return {
-      terraceArea: null,
-      balconyArea: null,
-      patioArea: null,
-      hasTerrace: false,
-      hasBalcony: false,
-      hasPatio: false,
-      terraceCount: 0,
-      balconyCount: 0,
-      summaryOfferLabel: "Sin dato especificado",
-      summaryReqLabel: "Flexible / No exigido"
-    };
-  }
-  const clean = rawText.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, " ").replace(/[*_~]/g, " ").toLowerCase();
-  const hasTerrace = /\bterrazas?\b/i.test(clean);
-  const hasBalcony = /\bbalc[oó]n(?:es)?\b/i.test(clean);
-  const hasPatio = /\bpatio(?:s)?\b|\bjard[ií]n(?:es)?\b/i.test(clean);
-  let terraceArea = null;
-  let balconyArea = null;
-  let patioArea = null;
-  const plusTerraceMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros)?\s*(?:de\s+)?(?:hermosa\s+|amplia\s+|gran\s+|privada\s+)?terrazas?/i);
-  if (plusTerraceMatch) {
-    const val = parseFloat(plusTerraceMatch[1].replace(",", "."));
-    if (!isNaN(val) && val > 0 && val <= 2e3) {
-      terraceArea = val;
-    }
-  }
-  if (terraceArea === null) {
-    const phraseTerraceMatch = clean.match(/(?:terraza|terrazas)\s+(?:privada|exclusiva|social|amplia|hermosa|espectacular|cubierta|descubierta)?\s*(?:de\s+|con\s+|de\s*aprox(?:imadamente)?\s*|desde\s+)?(?:al\s+menos\s+|m[ií]nimo\s+|m[ií]n\s*[:.]?\s*|por\s+lo\s+menos\s+|m[aá]s\s+de\s+|superior\s+a\s+|mayor\s+a\s+|[>≥]=?\s*)?(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)/i);
-    if (phraseTerraceMatch) {
-      const val = parseFloat(phraseTerraceMatch[1].replace(",", "."));
-      if (!isNaN(val) && val > 0 && val <= 2e3) {
-        terraceArea = val;
-      }
-    }
-  }
-  if (terraceArea === null) {
-    const invTerraceMatch = clean.match(/(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)\s*(?:de\s+)?(?:hermosa\s+|amplia\s+|gran\s+|privada\s+)?terrazas?/i);
-    if (invTerraceMatch) {
-      const val = parseFloat(invTerraceMatch[1].replace(",", "."));
-      if (!isNaN(val) && val > 0 && val <= 2e3) {
-        terraceArea = val;
-      }
-    }
-  }
-  if (terraceArea === null) {
-    const colonTerraceMatch = clean.match(/(?:terraza|terrazas)\s*[:=-]\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?/i) || clean.match(/(?:terraza|terrazas)\s+(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i);
-    if (colonTerraceMatch) {
-      const val = parseFloat(colonTerraceMatch[1].replace(",", "."));
-      if (!isNaN(val) && val > 0 && val <= 2e3) {
-        terraceArea = val;
-      }
-    }
-  }
-  const plusBalconyMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?\s*(?:de\s+)?(?:hermoso\s+|amplio\s+|privado\s+)?balc[oó]n(?:es)?/i);
-  if (plusBalconyMatch) {
-    const val = parseFloat(plusBalconyMatch[1].replace(",", "."));
-    if (!isNaN(val) && val > 0 && val <= 150) {
-      balconyArea = val;
-    }
-  }
-  if (balconyArea === null) {
-    const phraseBalconyMatch = clean.match(/(?:balc[oó]n|balcones)\s+(?:privado|exterior|social|amplio|hermoso|cubierto)?\s*(?:de\s+|con\s+|de\s*aprox(?:imadamente)?\s*|desde\s+)?(?:al\s+menos\s+|m[ií]nimo\s+|m[ií]n\s*[:.]?\s*|por\s+lo\s+menos\s+|m[aá]s\s+de\s+|superior\s+a\s+|mayor\s+a\s+|[>≥]=?\s*)?(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)/i);
-    if (phraseBalconyMatch) {
-      const val = parseFloat(phraseBalconyMatch[1].replace(",", "."));
-      if (!isNaN(val) && val > 0 && val <= 150) {
-        balconyArea = val;
-      }
-    }
-  }
-  if (balconyArea === null) {
-    const invBalconyMatch = clean.match(/(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)\s*(?:de\s+)?(?:hermoso\s+|amplio\s+|privado\s+)?balc[oó]n(?:es)?/i);
-    if (invBalconyMatch) {
-      const val = parseFloat(invBalconyMatch[1].replace(",", "."));
-      if (!isNaN(val) && val > 0 && val <= 150) {
-        balconyArea = val;
-      }
-    }
-  }
-  if (balconyArea === null) {
-    const colonBalconyMatch = clean.match(/(?:balc[oó]n|balcones)\s*[:=-]\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?/i) || clean.match(/(?:balc[oó]n|balcones)\s+(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i);
-    if (colonBalconyMatch) {
-      const val = parseFloat(colonBalconyMatch[1].replace(",", "."));
-      if (!isNaN(val) && val > 0 && val <= 150) {
-        balconyArea = val;
-      }
-    }
-  }
-  const patioMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?\s*(?:de\s+)?patio/i) || clean.match(/patio\s+(?:privado\s+)?(?:de\s+|con\s+)?(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i) || clean.match(/(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)\s*(?:de\s+)?patio/i);
-  if (patioMatch) {
-    const val = parseFloat(patioMatch[1].replace(",", "."));
-    if (!isNaN(val) && val > 0 && val <= 1e3) {
-      patioArea = val;
-    }
-  }
-  let terraceCount = 0;
-  if (hasTerrace) {
-    if (/\b(?:2|dos)\s*terrazas\b/i.test(clean)) {
-      terraceCount = 2;
-    } else if (/\b(?:3|tres)\s*terrazas\b/i.test(clean)) {
-      terraceCount = 3;
-    } else {
-      terraceCount = 1;
-    }
-  }
-  let balconyCount = 0;
-  if (hasBalcony) {
-    if (/\b(?:2|dos)\s*balcones\b/i.test(clean)) {
-      balconyCount = 2;
-    } else if (/\b(?:3|tres)\s*balcones\b/i.test(clean)) {
-      balconyCount = 3;
-    } else {
-      balconyCount = 1;
-    }
-  }
-  let summaryOfferLabel = "Sin dato especificado";
-  if (hasBalcony && hasTerrace) {
-    if (balconyArea && terraceArea) {
-      summaryOfferLabel = `S\xED (Balc\xF3n ${balconyArea} m\xB2 + Terraza ${terraceArea} m\xB2)`;
-    } else if (terraceArea) {
-      summaryOfferLabel = `S\xED (Balc\xF3n + Terraza ${terraceArea} m\xB2)`;
-    } else if (balconyArea) {
-      summaryOfferLabel = `S\xED (Balc\xF3n ${balconyArea} m\xB2 + Terraza)`;
-    } else {
-      summaryOfferLabel = "S\xED (Balc\xF3n y Terraza)";
-    }
-  } else if (hasTerrace) {
-    summaryOfferLabel = terraceArea ? `S\xED (Terraza Privada ${terraceArea} m\xB2)` : "S\xED (Cuenta con Terraza)";
-  } else if (hasBalcony) {
-    summaryOfferLabel = balconyArea ? `S\xED (Balc\xF3n ${balconyArea} m\xB2)` : "S\xED (Cuenta con Balc\xF3n)";
-  } else if (hasPatio) {
-    summaryOfferLabel = patioArea ? `S\xED (Patio ${patioArea} m\xB2)` : "S\xED (Cuenta con Patio)";
-  }
-  let summaryReqLabel = "Flexible / No exigido";
-  if (hasTerrace) {
-    summaryReqLabel = terraceArea ? `Exige Terraza \u2265 ${terraceArea} m\xB2` : "Exige Terraza";
-  } else if (hasBalcony) {
-    summaryReqLabel = balconyArea ? `Exige Balc\xF3n \u2265 ${balconyArea} m\xB2` : "Exige Balc\xF3n";
-  } else if (hasPatio) {
-    summaryReqLabel = patioArea ? `Exige Patio \u2265 ${patioArea} m\xB2` : "Exige Patio";
-  }
-  return {
-    terraceArea,
-    balconyArea,
-    patioArea,
-    hasTerrace,
-    hasBalcony,
-    hasPatio,
-    terraceCount,
-    balconyCount,
-    summaryOfferLabel,
-    summaryReqLabel
-  };
-}
-var init_colombianRealEstateParser = __esm({
-  "shared/colombianRealEstateParser.ts"() {
-    "use strict";
   }
 });
 
@@ -4676,13 +4809,10 @@ function matchesGeography(reqZoneRaw, propZoneRaw, reqLocRaw, propLocRaw, reqCit
     "n/a",
     "por definir"
   ]);
-  const isReqGeneric = !reqZone || GENERIC_CARDINAL_TERMS.has(reqZone.toLowerCase().trim());
-  const isPropGeneric = !propZone || GENERIC_CARDINAL_TERMS.has(propZone.toLowerCase().trim());
+  const isReqGeneric = !reqZone || isCityOrGenericZone(reqZoneRaw) || isCityOrGenericZone(reqZone);
+  const isPropGeneric = !propZone || isCityOrGenericZone(propZoneRaw) || isCityOrGenericZone(propZone);
   if (isReqGeneric || isPropGeneric) {
-    const hasStreetBoundaryMatch = propNumbers.street && reqBoundaries.minStreet !== void 0 && reqBoundaries.maxStreet !== void 0 && propNumbers.street >= reqBoundaries.minStreet && propNumbers.street <= reqBoundaries.maxStreet || propNumbers.carrera && reqBoundaries.minCarrera !== void 0 && reqBoundaries.maxCarrera !== void 0 && propNumbers.carrera >= reqBoundaries.minCarrera && propNumbers.carrera <= reqBoundaries.maxCarrera;
-    if (!hasStreetBoundaryMatch) {
-      return { matches: false, score: 0 };
-    }
+    return { matches: false, score: 0 };
   }
   const equivalenciasZonas = {
     "las santas": [
@@ -5521,20 +5651,36 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     blockers.push("\u26D4 Requerimiento Incompleto: Ciudad/Municipio deseado no especificado (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  let propBarrioHard = property.zone || property.addressNeighborhood || property.address_neighborhood || "";
-  let reqBarrioHard = requirement.zonaDeseada || requirement.addressNeighborhood || requirement.address_neighborhood || "";
-  if (fbProp.zone && (!propBarrioHard || !property.rawText?.toLowerCase().includes(propBarrioHard.toLowerCase()))) {
-    propBarrioHard = fbProp.zone;
+  let propBarrioHard = extractPureBarrio(property.zone) || extractPureBarrio(property.neighborhood) || extractPureBarrio(property.addressNeighborhood) || extractPureBarrio(property.address_neighborhood) || "";
+  let reqBarrioHard = extractPureBarrio(requirement.zonaDeseada) || extractPureBarrio(requirement.neighborhood) || extractPureBarrio(requirement.addressNeighborhood) || extractPureBarrio(requirement.address_neighborhood) || "";
+  if (!propBarrioHard && fbProp.zone) {
+    const pure = extractPureBarrio(fbProp.zone);
+    if (pure) propBarrioHard = pure;
   }
-  if (fbReq.zone && (!reqBarrioHard || !requirement.rawText?.toLowerCase().includes(reqBarrioHard.toLowerCase()))) {
-    reqBarrioHard = fbReq.zone;
+  if (!reqBarrioHard && fbReq.zone) {
+    const pure = extractPureBarrio(fbReq.zone);
+    if (pure) reqBarrioHard = pure;
   }
-  if (isNA(propBarrioHard)) {
-    blockers.push("\u26D4 Inmueble Incompleto: Barrio/Vereda no especificado (N/E). No puede participar en Matches.");
+  if (!propBarrioHard) {
+    const pBarrios = precomputedPropBarrios || extractAllBarriosFromText(property.rawText || property.description || property.name || "");
+    if (pBarrios[0]) {
+      const pure = extractPureBarrio(pBarrios[0]);
+      if (pure) propBarrioHard = pure;
+    }
+  }
+  if (!reqBarrioHard) {
+    const rBarrios = precomputedReqBarrios || extractAllBarriosFromText(requirement.rawText || requirement.description || requirement.name || "");
+    if (rBarrios[0]) {
+      const pure = extractPureBarrio(rBarrios[0]);
+      if (pure) reqBarrioHard = pure;
+    }
+  }
+  if (isNA(propBarrioHard) || isCityOrGenericZone(propBarrioHard)) {
+    blockers.push("\u26D4 Inmueble Incompleto: Barrio/Vereda no especificado o contiene nombre de ciudad (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
-  if (isNA(reqBarrioHard)) {
-    blockers.push("\u26D4 Requerimiento Incompleto: Barrio/Vereda deseado no especificado (N/E). No puede participar en Matches.");
+  if (isNA(reqBarrioHard) || isCityOrGenericZone(reqBarrioHard)) {
+    blockers.push("\u26D4 Requerimiento Incompleto: Barrio/Vereda deseado no especificado o contiene nombre de ciudad (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
   const reqRawCheckText = (requirement.rawText || requirement.name || "").toLowerCase();
@@ -5846,8 +5992,8 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
   const propCityNorm = normalizarTextoGeografico(propCity);
   const propBarriosInText = precomputedPropBarrios || extractAllBarriosFromText(property.rawText || property.description || property.name || "");
   const reqBarriosInText = precomputedReqBarrios || extractAllBarriosFromText(requirement.rawText || requirement.description || requirement.name || "");
-  const rawPropBarrio = propBarriosInText[0] || property.zone || property.addressNeighborhood || "";
-  const rawReqBarriosList = reqBarriosInText.length > 0 ? reqBarriosInText : [requirement.zonaDeseada || requirement.addressNeighborhood || ""].filter(Boolean);
+  const rawPropBarrio = propBarriosInText[0] && !isCityOrGenericZone(propBarriosInText[0]) ? extractPureBarrio(propBarriosInText[0]) || propBarriosInText[0] : extractPureBarrio(property.zone) || extractPureBarrio(property.neighborhood) || extractPureBarrio(property.addressNeighborhood) || "";
+  const rawReqBarriosList = reqBarriosInText.length > 0 && !isCityOrGenericZone(reqBarriosInText[0]) ? reqBarriosInText.map((b) => extractPureBarrio(b) || b).filter((b) => !isCityOrGenericZone(b)) : [extractPureBarrio(requirement.zonaDeseada), extractPureBarrio(requirement.neighborhood), extractPureBarrio(requirement.addressNeighborhood)].filter(Boolean);
   const reqLocality = requirement.addressLocality || requirement.localidadDeseada || "";
   const propLocality = property.addressLocality || property.locality || "";
   let geoValidation = { matches: false, score: 0 };
@@ -19390,10 +19536,18 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
     ...data,
     name: safeSlice(data.name || `Propiedad en ${data.city || data.zone || "Colombia"}`, 255) || "Propiedad",
     city: safeSlice(data.city || data.ciudadDeseada, 100) || null,
-    zone: safeSlice(data.zone || data.addressNeighborhood || data.addressLocality || data.location || data.city || data.ciudadDeseada || "Bogot\xE1", 100) || "Bogot\xE1",
+    zone: (() => {
+      const explicit = data.zone || data.addressNeighborhood;
+      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 100);
+      return "N/E";
+    })(),
     addressCity: safeSlice(data.addressCity || data.address_city || data.city, 100) || null,
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
-    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood || data.zone, 150) || null,
+    addressNeighborhood: (() => {
+      const explicit = data.addressNeighborhood || data.address_neighborhood || data.zone;
+      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 150);
+      return null;
+    })(),
     location: safeSlice(data.location, 255) || null,
     matriculaInmobiliaria: safeSlice(data.matriculaInmobiliaria, 100) || null,
     enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
@@ -19694,20 +19848,22 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
     name: safeSlice(data.name, 255) || null,
     ciudadDeseada: safeSlice(data.ciudadDeseada || data.city || fallbackReqD.city || "Bogot\xE1", 100) || "Bogot\xE1",
     zonaDeseada: (() => {
-      const explicit = data.zonaDeseada || data.zone || data.addressNeighborhood || data.addressLocality;
-      const explicitClean = (explicit || "").toLowerCase().trim();
-      const isGeneric = !explicit || explicitClean === "bogota" || explicitClean === "bogot\xE1" || explicitClean === "colombia" || explicitClean === "n/e" || explicitClean === "na";
-      if (!isGeneric) {
-        return safeSlice(explicit, 100);
+      const explicit = data.zonaDeseada || data.zone || data.addressNeighborhood;
+      if (explicit && !isCityOrGenericZone(explicit)) {
+        return safeSlice(extractPureBarrio(explicit) || explicit, 100);
       }
-      if (fallbackReqD.zonaDeseada && fallbackReqD.zonaDeseada !== "Bogot\xE1") {
-        return safeSlice(fallbackReqD.zonaDeseada, 100);
+      if (fallbackReqD.zonaDeseada && !isCityOrGenericZone(fallbackReqD.zonaDeseada)) {
+        return safeSlice(extractPureBarrio(fallbackReqD.zonaDeseada) || fallbackReqD.zonaDeseada, 100);
       }
-      return safeSlice(data.ciudadDeseada || fallbackReqD.city || "Bogot\xE1", 100) || "Bogot\xE1";
+      return null;
     })(),
     addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
     addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
-    addressNeighborhood: safeSlice(data.addressNeighborhood || data.address_neighborhood || (fallbackReqD.zonaDeseada !== "Bogot\xE1" ? fallbackReqD.zonaDeseada : null), 150) || null,
+    addressNeighborhood: (() => {
+      const explicit = data.addressNeighborhood || data.address_neighborhood || (fallbackReqD.zonaDeseada && !isCityOrGenericZone(fallbackReqD.zonaDeseada) ? fallbackReqD.zonaDeseada : null);
+      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 150);
+      return null;
+    })(),
     enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
     idUsuarioWhatsapp: safeSlice(canonicalReqPhone, 100) || null,
     nombreUsuarioWhatsapp: safeSlice(finalEffectiveReqName, 255) || null,

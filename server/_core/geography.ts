@@ -33,10 +33,13 @@ export const BARRIOS_LAS_SANTAS = [
 ];
 
 export const GENERIC_ZONES_SET = new Set([
-  "bogota", "bogota d c", "bogota dc", "medellin", "cali", "barranquilla", 
-  "colombia", "norte", "sur", "centro", "n/e", "na", "null", "undefined", ""
+  "bogota", "bogota d c", "bogota dc", "bogota, d.c.", "bogota d.c.", "medellin", "cali", "barranquilla", 
+  "colombia", "cundinamarca", "norte", "sur", "centro", "oriente", "occidente", "sabana", "sabana norte",
+  "n/e", "na", "n/a", "null", "undefined", ""
 ]);
 
+import { extractPureBarrio, isCityOrGenericZone } from '../../shared/colombianRealEstateParser';
+export { extractPureBarrio, isCityOrGenericZone };
 
 export function isLasSantasZone(zoneStr: string | null | undefined): boolean {
   if (!zoneStr) return false;

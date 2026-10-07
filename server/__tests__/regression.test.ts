@@ -2964,7 +2964,7 @@ Adriana Rebeca Orejuela`;
       const { VIP_COMMUNITY_ADMIN_PHONES, isVipRealEstateGroup } = await import("../_core/whatsapp-match");
       const { VECY_VERSION } = await import("../../shared/const");
 
-      expect(VECY_VERSION).toMatch(/^v32\.(52|53|54)$/);
+      expect(VECY_VERSION).toMatch(/^v32\.(5[2-9]|[6-9]\d)/);
 
       // Validar presencia de administradores oficiales verificados por Eduardo
       expect(VIP_COMMUNITY_ADMIN_PHONES.has("573003600006")).toBe(true); // Armando Cortés
@@ -2999,7 +2999,7 @@ Adriana Rebeca Orejuela`;
       const { getStartOfTodayBogota, getDmHistory, appendDmHistory } = await import("../_core/janIA");
       const { VECY_VERSION } = await import("../../shared/const");
 
-      expect(VECY_VERSION).toBe("v32.54");
+      expect(VECY_VERSION).toMatch(/^v32\.(5[3-9]|[6-9]\d)/);
 
       // 1. Validar que el inicio del día en curso en Bogotá sea un timestamp válido y menor o igual a now
       const startOfToday = getStartOfTodayBogota();
@@ -3044,7 +3044,7 @@ Adriana Rebeca Orejuela`;
       const { GOOGLE_REVIEW_MESSAGE, VIRAL_LOOP_MESSAGE } = await import("../_core/predialService");
       const { VECY_VERSION } = await import("../../shared/const");
 
-      expect(VECY_VERSION).toBe("v32.54");
+      expect(VECY_VERSION).toMatch(/^v32\.(5[4-9]|[6-9]\d)/);
       // Validar gatillo de reciprocidad y aversión a la pérdida ("para que siga siendo GRATIS")
       expect(GOOGLE_REVIEW_MESSAGE).toContain("Así nos ayudas para que siga siendo *GRATIS.*");
       // Validar reducción de fricción mental con tiempo estimado de micro-esfuerzo
@@ -3054,6 +3054,66 @@ Adriana Rebeca Orejuela`;
       expect(GOOGLE_REVIEW_MESSAGE).toContain("¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨");
       // Validar que VIRAL_LOOP_MESSAGE permanezca exportado para retrocompatibilidad
       expect(VIRAL_LOOP_MESSAGE).toBeDefined();
+    });
+
+    it("Doctrina v32.56: Casillas 1 a 5 Núcleo Duro Innegociable, Erradicación de Nombres de Ciudad como Barrio y Guillotina Total al 0.00%", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      const { isCityOrGenericZone, extractPureBarrio } = await import("../../shared/colombianRealEstateParser");
+      const { explicarMatch } = await import("../_core/matching");
+
+      expect(VECY_VERSION).toBe("v32.56");
+
+      // 1. Validar que nombres de ciudad o genéricos sean detectados estrictamente
+      expect(isCityOrGenericZone("Bogotá, D.C.")).toBe(true);
+      expect(isCityOrGenericZone("Bogota D.C.")).toBe(true);
+      expect(isCityOrGenericZone("Bogotá")).toBe(true);
+      expect(isCityOrGenericZone("Bogota")).toBe(true);
+      expect(isCityOrGenericZone("Bogota Norte")).toBe(true);
+      expect(isCityOrGenericZone("Zona Norte")).toBe(true);
+      expect(isCityOrGenericZone("N/E")).toBe(true);
+      expect(isCityOrGenericZone("N/E (No especificado)")).toBe(true);
+
+      // 2. Validar que barrios legítimos sean reconocidos y purificados
+      expect(isCityOrGenericZone("Chicó")).toBe(false);
+      expect(isCityOrGenericZone("Chicó, Bogotá")).toBe(false);
+      expect(isCityOrGenericZone("Cedritos")).toBe(false);
+      expect(isCityOrGenericZone("Cedritos, Bogotá")).toBe(false);
+      expect(extractPureBarrio("Chicó, Bogotá")).toBe("Chicó");
+      expect(extractPureBarrio("Bogotá, Chicó")).toBe("Chicó");
+      expect(extractPureBarrio("Bogotá, D.C.")).toBe(null);
+
+      // 3. Validar Guillotina Doctrinal: Si falta barrio legítimo en oferta o demanda -> 0% Score y Blocker Innegociable
+      const reqSinBarrio = {
+        id: 2222,
+        propertyType: "apartment",
+        transactionType: "venta",
+        presupuestoMax: 1_000_000_000,
+        areaMin: 80,
+        habitacionesMin: 3,
+        banosMin: 2,
+        city: "Bogotá",
+        zonaDeseada: "Bogotá, D.C.", // Nombre de ciudad en campo de barrio
+        rawText: "Busco apartamento en venta en Bogotá, D.C. Presupuesto $1.000 millones, mínimo 80 m2, 3 alcobas, 2 baños.",
+        status: "active"
+      };
+
+      const propSinBarrio = {
+        id: 4867,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 900_000_000,
+        area: 90,
+        bedrooms: 3,
+        bathrooms: 2,
+        city: "Bogotá",
+        zone: "Bogotá, D.C.", // Nombre de ciudad en campo de barrio
+        rawText: "Vendo hermoso apartamento en Bogotá, D.C. 90 m2, 3 alcobas, 2 baños, 2 garajes. Precio: $900 millones.",
+        status: "active"
+      };
+
+      const matchRes = explicarMatch(reqSinBarrio, propSinBarrio);
+      expect(matchRes.score).toBe(0);
+      expect(matchRes.blockers.some(b => b.includes("Barrio/Vereda no especificado o contiene nombre de ciudad"))).toBe(true);
     });
   });
 });
