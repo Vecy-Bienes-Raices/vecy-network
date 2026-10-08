@@ -38,8 +38,8 @@ export const GENERIC_ZONES_SET = new Set([
   "n/e", "na", "n/a", "null", "undefined", ""
 ]);
 
-import { extractPureBarrio, isCityOrGenericZone } from '../../shared/colombianRealEstateParser';
-export { extractPureBarrio, isCityOrGenericZone };
+import { extractPureBarrio, isCityOrGenericZone, extractBuildingOrComplex } from '../../shared/colombianRealEstateParser';
+export { extractPureBarrio, isCityOrGenericZone, extractBuildingOrComplex };
 
 export function isLasSantasZone(zoneStr: string | null | undefined): boolean {
   if (!zoneStr) return false;

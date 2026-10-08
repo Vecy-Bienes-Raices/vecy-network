@@ -11,7 +11,8 @@ import {
   checkFinancialSegmentCoherence,
   parseOutdoorAreas,
   parseAdminFee,
-  extractPureBarrio
+  extractPureBarrio,
+  extractBuildingOrComplex
 } from "../../shared/colombianRealEstateParser";
 
 /**
@@ -1586,6 +1587,25 @@ export function explicarMatch(
     return buildExplanationResult(0, blockers, positives, negatives);
   }
 
+  // ── FILTRO / EVALUACIÓN DE CONDOMINIO, CONJUNTO O EDIFICIO (v32.57) ──
+  const reqComplex = extractBuildingOrComplex(requirement.rawText, requirement.name);
+  const propComplex = extractBuildingOrComplex((property as any).rawText || (property as any).description, property.name);
+
+  if (reqComplex && propComplex) {
+    const normR = reqComplex.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+    const normP = propComplex.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+    if (normR !== normP && !normR.includes(normP) && !normP.includes(normR)) {
+      blockers.push(`⛔ Incompatibilidad de Edificio/Condominio (Tolerancia Cero): La demanda exige '${reqComplex}' y la oferta es en '${propComplex}'. Match Inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    } else {
+      positives.push(`Condominio/Edificio idéntico: ${reqComplex} — Coincidencia 100%`);
+    }
+  } else if (reqComplex && !propComplex) {
+    positives.push(`Demanda solicita edificio ${reqComplex} — Oferta en el sector (${propBarrioHard}) sujeta a confirmación`);
+  } else if (!reqComplex && propComplex) {
+    positives.push(`Plus Ofertado: Edificio/Condominio ${propComplex}`);
+  }
+
   // ── FILTRO DURO 0A-BIS: DEMANDA CIEGA / SIN PARÁMETROS FÍSICOS O FINANCIEROS (Doctrinal v27.2) ──
   const reqRawCheckText = (requirement.rawText || requirement.name || "").toLowerCase();
   const hasBudgetSpec = (requirement.presupuestoMax != null && parseFloat(String(requirement.presupuestoMax)) > 0) ||
@@ -2016,6 +2036,16 @@ export function explicarMatch(
     if (pBedrooms <= 0 && fbProp.bedrooms) pBedrooms = fbProp.bedrooms;
     if (pBathrooms <= 0 && fbProp.bathrooms) pBathrooms = fbProp.bathrooms;
     if (pGarages <= 0 && fbProp.garages) pGarages = fbProp.garages;
+  }
+
+  // 🛡️ DOCTRINA v32.57: Fidelidad absoluta al texto original de la oferta para alcobas
+  const propTextToCheck = (property as any).rawText || (property as any).description || "";
+  if (propTextToCheck) {
+    const explicitBedMatchP = propTextToCheck.match(/(?:^|[\n\r\-•*#\s])(\d{1,2})\s*(?:alcobas?|hab(?:s|itaciones|itaci[oó]n)?|dormitorios?|cuartos?)\b/i);
+    if (explicitBedMatchP) {
+      const parsedExplicit = parseInt(explicitBedMatchP[1], 10);
+      if (parsedExplicit > 0) pBedrooms = parsedExplicit;
+    }
   }
 
   const pAdminFee = property.adminFee != null ? parseFloat(String(property.adminFee)) : -1;

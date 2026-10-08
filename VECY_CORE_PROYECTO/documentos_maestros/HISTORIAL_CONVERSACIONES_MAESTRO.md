@@ -7,6 +7,45 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.57 — 07 Octubre 2026
+
+### Solicitud de Eduardo
+1. **Extracción y Validación de Condominios/Conjuntos/Edificios Específicos y Fidelidad Textual Absoluta de Alcobas**:
+   - Detección de coincidencia espuria (Match #15449, 86.25% score) entre:
+     - Oferta #3715 (Rosales, 470m²): Publicación original textualmente decía `- 3 Alcobas - 4 Baños - 4 Garajes`, pero en la base de datos se guardó erróneamente `bedrooms = 4` por alucinación de extracción asociada a los 4 baños/garajes.
+     - Demanda #2054: Solicitaba textualmente `Apto en Peñas blancas 4 habitaciones. $6.000 millones maximo`.
+   - Se requería:
+     a) Extraer y comparar con exactitud nombres de Condominios, Conjuntos Residenciales y Edificios (ej. Peñas Blancas, Torres del Parque, Bosques de Bella Suiza).
+     b) Si la demanda exige un edificio o condominio específico y la oferta pertenece a otro edificio o no lo especifica, no puede haber compatibilidad absoluta.
+     c) Fidelidad textual estricta en el número de habitaciones: si el texto dice `- 3 Alcobas` y la demanda exige 4 habitaciones, la oferta tiene menos alcobas de las demandadas y debe recibir guillotina total al 0.00% (Doctrina v22.4 / v27.4: Oferta < Demanda = Bloqueo Inmediato).
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Causa Raíz #1 en Ingesta de JanIA (`server/_core/janIA.ts`)**:
+   - En `saveProperty`, si el LLM extraía un número de dormitorios incorrecto (ej. 4 en lugar de 3 por proximidad con 4 baños/garajes), el valor de `fallbackD.bedrooms` no sobreescribía el valor erróneo del LLM si éste ya venía como número positivo.
+2. **Causa Raíz #2 en Motor de Matching (`server/_core/matching.ts`)**:
+   - No existía una extracción ni validación específica para nombres de condominios o edificios insignes entre oferta y requerimiento.
+   - Si la demanda pedía "Peñas Blancas", se evaluaba únicamente por barrio (Rosales/Chapinero) y precio, generando falsos positivos.
+
+### Acciones Técnicas Ejecutadas
+1. **Módulo Compartido de Extracción de Edificios/Condominios (`shared/colombianRealEstateParser.ts`)**:
+   - Desarrollada la función `extractBuildingOrComplex(rawText, title)` con base de conocimiento de condominios y edificios insignia en Colombia (Peñas Blancas, Torres del Parque, Sierras del Este, Cerros de los Alpes, Ruitoque, Altos de Yerbabuena, Sindamanoy, Aposentos, Guaymaral, La Pradera de Potosí, El Peñón, Castillo Grande, Bosque Medina, etc.) y patrones arquitectónicos (`Edificio`, `Conjunto Residencial`, `Condominio Campestre`, `Torres`, etc.).
+   - Aplica formateo canónico (`formatTitleCase`) respetando conectores en minúscula (`Torres del Parque`, `Bosques de Bella Suiza`).
+2. **Mesa de Coincidencias en Frontend (`client/src/components/admin/AdminMatches.tsx`)**:
+   - Agregada fila de cotejo técnico: **Condominio / Conjunto / Edificio**.
+   - Si la demanda exige un edificio o condominio y la oferta coincide exactamente, marca `exact` 🟢 con 100% de afinidad; si difiere o falta, marca advertencia o penalidad.
+3. **Motor de Matching en Backend (`server/_core/matching.ts`)**:
+   - En `explicarMatch`: Si la demanda exige un edificio específico y la oferta tiene otro edificio incompatible, aplica guillotina fulminante a 0% (`⛔ Incompatibilidad de Edificio/Condominio (Tolerancia Cero)`).
+   - Fidelidad textual absoluta de alcobas: extrae directamente `- X Alcobas` del texto original de la propiedad para neutralizar cualquier alucinación en BD.
+4. **Ingesta Limpia en JanIA (`server/_core/janIA.ts`)**:
+   - En `saveProperty`: si el texto original declara explícitamente el número de alcobas (`- X Alcobas`), prevalece sobre cualquier conteo discordante del LLM.
+5. **Saneamiento en Base de Datos de Producción (VPS `13.140.149.144`)**:
+   - Corregida Propiedad #3715 a `bedrooms = 3` (alineada con su texto original `- 3 Alcobas`).
+   - Colapsado Match #15449 a `matchScore = 0.00` y `status = 'rejected'`.
+   - Verificado que no existen matches activos en PostgreSQL con `bedrooms < habitacionesMin`.
+6. **Verificación y Cobertura**:
+   - Nuevos tests doctrinales en `server/__tests__/regression.test.ts`.
+   - 154/154 tests Vitest aprobados al 100%. `pnpm check` (tsc) y `pnpm build` limpios con 0 errores.
+
 ## 📋 SESIÓN v32.56 — 07 Octubre 2026
 
 ### Solicitud de Eduardo

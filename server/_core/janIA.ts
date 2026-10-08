@@ -5047,8 +5047,10 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     if ((!data.areaTotal && !data.area) && fallbackD.area > 0) {
       data.areaTotal = fallbackD.area;
     }
-    if ((data.bedrooms === undefined || data.bedrooms === null || Number(data.bedrooms) <= 0) && fallbackD.bedrooms > 0) {
-      data.bedrooms = fallbackD.bedrooms;
+    if (fallbackD.bedrooms > 0) {
+      if (data.bedrooms === undefined || data.bedrooms === null || Number(data.bedrooms) <= 0 || (Number(data.bedrooms) !== fallbackD.bedrooms && /(?:^|[\n\r\-•*#\s])(\d{1,2})\s*(?:alcobas?|hab(?:s|itaciones|itaci[oó]n)?)\b/i.test(data.rawText || ""))) {
+        data.bedrooms = fallbackD.bedrooms;
+      }
     }
     if ((data.bathrooms === undefined || data.bathrooms === null || Number(data.bathrooms) <= 0) && fallbackD.bathrooms > 0) {
       data.bathrooms = fallbackD.bathrooms;

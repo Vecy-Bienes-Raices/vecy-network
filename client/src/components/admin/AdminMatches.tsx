@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  Phone, MapPin, Search, Download, Building2, Calendar, 
+  Phone, MapPin, Search, Download, Building2, Building, Calendar, 
   Sparkles, CheckCircle2, AlertTriangle, XCircle, SlidersHorizontal, 
   DollarSign, Ruler, Bed, Bath, Car, Shield, ExternalLink, Receipt, Box, Globe,
   Edit3, Save, Loader2, RotateCcw, Sun, Zap, Utensils, Home, Flame, ThumbsUp, ThumbsDown,
@@ -30,7 +30,8 @@ import {
   checkFinancialSegmentCoherence,
   parseOutdoorAreas,
   extractPureBarrio,
-  isCityOrGenericZone
+  isCityOrGenericZone,
+  extractBuildingOrComplex
 } from '@shared/colombianRealEstateParser';
 
 type MatchStatus = "exact" | "warn" | "missing" | "ok" | "neutral" | "plus";
@@ -1195,6 +1196,49 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
   let cityMatchStatus: MatchStatus = (!isNonRealEstateReq && !isNonRealEstateProp && isCityMatch) ? "exact" : "missing";
 
   add("Barrio / Vereda / Caserío", reqBarrioDisplay, propBarrioDisplay, barrioMatchStatus, 10, <MapPin className="w-3.5 h-3.5" />);
+
+  // ── CASILLA DINÁMICA: CONDOMINIO / CONJUNTO / EDIFICIO (v32.57) ──
+  // Se crea y despliega en automático únicamente cuando alguna de las dos publicaciones lo exija o lo mencione.
+  const reqComplex = extractBuildingOrComplex(req.rawText || "", req.name || "");
+  const propComplex = extractBuildingOrComplex(prop.rawText || "", prop.name || "");
+
+  if (reqComplex || propComplex) {
+    let complexMatchStatus: MatchStatus = "neutral";
+    let reqComplexDisplay = "Sin exigencia específica (Cualquier conjunto/edificio)";
+    let propComplexDisplay = "Sin especificar edificio";
+
+    if (reqComplex && propComplex) {
+      reqComplexDisplay = reqComplex;
+      propComplexDisplay = propComplex;
+      const normR = reqComplex.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+      const normP = propComplex.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+      if (normR === normP || normR.includes(normP) || normP.includes(normR)) {
+        complexMatchStatus = "exact"; // 🟢 Coincide al 100% en el mismo edificio
+      } else {
+        complexMatchStatus = "missing"; // 🔴 Edificios diferentes incompatibles
+      }
+    } else if (!reqComplex && propComplex) {
+      // Oferta menciona el edificio/condominio pero la demanda no lo exigió -> Plus Ofertado
+      reqComplexDisplay = "Sin exigencia específica (Cualquier conjunto/edificio)";
+      propComplexDisplay = propComplex;
+      complexMatchStatus = "plus"; // 🔵 Plus Ofertado
+    } else if (reqComplex && !propComplex) {
+      // Demanda exige edificio (ej: Peñas Blancas) y la oferta está en el mismo barrio pero no especifica el edificio
+      reqComplexDisplay = reqComplex;
+      propComplexDisplay = `No especificado (En ${propBarrioDisplay})`;
+      complexMatchStatus = "warn"; // 🟡 Aproximado / Consultar (Doctrina Eduardo)
+    }
+
+    add(
+      "Condominio / Conjunto / Edificio",
+      reqComplexDisplay,
+      propComplexDisplay,
+      complexMatchStatus,
+      5,
+      <Building className="w-3.5 h-3.5" />
+    );
+  }
+
   add("Localidad / Comuna", reqLocalityDisplay, propLocalityDisplay, localityMatchStatus, 5, <Compass className="w-3.5 h-3.5" />);
   add("Ciudad / Municipio", reqCityDisplay, propCityDisplay, cityMatchStatus, 5, <Building2 className="w-3.5 h-3.5" />);
 
@@ -1321,13 +1365,8 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
   }
 
   // 2. Extracción de Presupuesto de Venta en Demanda
-  // 🛡️ DOCTRINA v31.62 / v31.74: Presupuesto oficial de BD primero y extracción robusta
+  // 🛡️ DOCTRINA v31.62 / v31.74 / v32.57: Presupuesto oficial de BD primero y extracción robusta
   let reqSaleBudget = (!isReqRentMatch && !isPropPureRent) ? parseSafePrice(req.presupuestoMax, req.rawText) : 0;
-  
-  // Blindaje anti-edad: si el presupuesto guardado es desproporcionado pero el texto habla de millones reales o años
-  if (reqSaleBudget >= 5_000_000_000 && reqTextLower && !reqTextLower.includes("mil millones") && !reqTextLower.includes("billones")) {
-    reqSaleBudget = 0; // Forzar reevaluación limpia con el texto
-  }
 
   if (reqTextLower && !isReqRentMatch && !isPropPureRent && !isReqOpenBudget) {
     const buyMatch = reqTextLower.match(/(?:presupuesto\s*(?:para\s*)?compra|ppto\s*(?:para\s*)?compra|compra\s*:|inversi[oó]n|presupuesto(?:\s*m[aá]ximo)?)\s*:?\s*\*?\$?\s*([^\n•]+)/i);
@@ -1342,6 +1381,19 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
       if (singleMatch) {
         const parsed = parseColombianPriceOrBudget(singleMatch[1], singleMatch[2] || "millones", true);
         if (parsed >= 10_000_000) reqSaleBudget = parsed;
+      }
+    }
+    if (reqSaleBudget <= 0) {
+      // 🛡️ DOCTRINA v32.57: Formato directo colombiano en millones sin palabra clave previa (ej: "$6.000 millones máximo", "$6.000 millones", "hasta 4.500 millones")
+      const directMillionMatch = reqTextLower.match(/(?:(?:hasta|max|máximo|tope|techo|de)\s*)?\$?\s*(\d{1,4}(?:[.,\s']\d{1,3})*|\d+)\s*(?:mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b(?:\s*(?:m[aá]ximo|max|tope))?/i);
+      if (directMillionMatch && directMillionMatch.index !== undefined) {
+        const preceding = reqTextLower.slice(Math.max(0, directMillionMatch.index - 20), directMillionMatch.index);
+        if (!/admin|admon|canon|arriendo|alquiler|mes\b/i.test(preceding)) {
+          const parsed = parseColombianPriceOrBudget(directMillionMatch[1], "millones", true);
+          if (parsed >= 30_000_000 && !isPhoneNumberNotPrice(parsed, req.rawText)) {
+            reqSaleBudget = parsed;
+          }
+        }
       }
     }
     if (reqSaleBudget <= 0) {
@@ -1639,16 +1691,23 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
     }
   }
 
-  let bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
-  if (bedP <= 0 && propTextLower) {
-    const bedMatchP = propTextLower.match(/(\d+)\s*(?:alcoba|alcobas|hab|habs|habitacion|habitaciones|dormitorio|dormitorios|cuartos)/i);
-    if (bedMatchP) bedP = parseInt(bedMatchP[1], 10);
+  // 🛡️ DOCTRINA v32.57: Fidelidad absoluta al texto original de la oferta
+  // Si la publicación especifica explícitamente el número de alcobas (ej: "- 3 Alcobas"), priorizar el texto sobre discordancias de BD
+  let bedP = 0;
+  if (propTextLower) {
+    const explicitBedMatchP = propTextLower.match(/(?:^|[\n\r\-•*#\s])(\d{1,2})\s*(?:alcobas?|hab(?:s|itaciones|itaci[oó]n)?|dormitorios?|cuartos?)\b/i);
+    if (explicitBedMatchP) {
+      bedP = parseInt(explicitBedMatchP[1], 10);
+    }
+  }
+  if (bedP <= 0) {
+    bedP = prop.bedrooms ? Number(prop.bedrooms) : 0;
   }
 
   let bedS: MatchStatus = "neutral";
   if (bedR > 0 && bedP > 0) {
     if (bedP < bedR) {
-      bedS = "missing"; // Oferta < Demanda -> Bloqueo Doctrinal
+      bedS = "missing"; // 🔴 Oferta menor a demanda -> Bloqueo Doctrinal Inmediato (Doctrina v22.4 / v27.4)
     } else if (bedP === bedR) {
       bedS = "exact";
     } else {
@@ -2753,15 +2812,22 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
   // DEBEN estar 100% llenas con sus respectivos nombres legítimos (tanto en Oferta como en Demanda)
   // y coincidir al 100% (status === "exact" / "Coincide" 🟢).
   // Si CUALQUIERA de las 5 no está llena, tiene N/E, o su status no es "exact" -> 0% MATCH IMPOSIBLE.
-  const firstFiveRows = rows.slice(0, 5);
-  const areFirstFivePerfect = firstFiveRows.length === 5 && firstFiveRows.every(r => {
+  const CORE_FIVE_LABELS = [
+    "Tipo de Inmueble",
+    "Tipo de Negocio",
+    "Barrio / Vereda / Caserío",
+    "Localidad / Comuna",
+    "Ciudad / Municipio"
+  ];
+  const coreFiveRows = rows.filter(r => CORE_FIVE_LABELS.includes(r.label));
+  const areCoreFivePerfect = coreFiveRows.length === 5 && coreFiveRows.every(r => {
     const isReqFilled = r.reqVal && r.reqVal.trim() !== "" && !r.reqVal.includes("N/E");
     const isPropFilled = r.propVal && r.propVal.trim() !== "" && !r.propVal.includes("N/E");
     return (r.status === "exact" || r.status === "ok") && isReqFilled && isPropFilled;
   });
 
-  if (!areFirstFivePerfect) {
-    for (const r of firstFiveRows) {
+  if (!areCoreFivePerfect) {
+    for (const r of coreFiveRows) {
       const isReqFilled = r.reqVal && r.reqVal.trim() !== "" && !r.reqVal.includes("N/E");
       const isPropFilled = r.propVal && r.propVal.trim() !== "" && !r.propVal.includes("N/E");
       if ((r.status !== "exact" && r.status !== "ok") || !isReqFilled || !isPropFilled) {
@@ -2803,6 +2869,12 @@ export function scoreRows(req: any, prop: any, editFormData?: any) {
             totalDeduction += 16.50;
           } else if (r.status === "warn") {
             totalDeduction += 2.50;
+          }
+        }
+        // ── Nivel Condominio / Conjunto / Edificio (Doctrina v32.57)
+        else if (lbl.includes("condominio") || lbl.includes("edificio") || lbl.includes("conjunto")) {
+          if (r.status === "warn") {
+            totalDeduction += 3.50; // Deducción por requerir validación de exclusividad de edificio con el cliente
           }
         }
         // ── Nivel 2: Habitacional Duro (Área Total, Habitaciones, Baños, Parqueaderos)

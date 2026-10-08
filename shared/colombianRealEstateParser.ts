@@ -28,6 +28,7 @@ export interface ParsedListing {
   minFloorRequired?: number;
   isThirdPartyCommission: boolean;      // Es tercería
   prohibitsThirdPartyCommission: boolean; // No tercería
+  buildingOrComplex?: string;
 }
 
 /**
@@ -78,12 +79,25 @@ export function parseColombianListing(rawText: string): ParsedListing {
     prohibitsThirdPartyCommission: false,
   };
 
-  // 1. EXTRACCIÓN DE PRECIO DE VENTA (Soporta "$1 450 Millones", "$1.450M", "$1'450 Millones", "Presupuesto para compra:\n■ Max $1700M")
+  // 1. EXTRACCIÓN DE PRECIO DE VENTA (Soporta "$1 450 Millones", "$1.450M", "$1'450 Millones", "Presupuesto para compra:\n■ Max $1700M", "$6.000 millones máximo")
   const saleMatch = text.match(/(?:presupuesto\s*(?:para\s*)?compra|precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|para\s*compra)[^$\d\n]*(?:\n[^$\d\n]*)?(?:max|hasta|tope)?\s*\$?\s*(\d{1,4}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i)
     || text.match(/(?:venta|comprar|compra)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
   if (saleMatch) {
     const cleanNum = saleMatch[1].replace(/[\s.'’]/g, "");
     result.salePriceCOP = parseInt(cleanNum, 10) * 1_000_000;
+  } else {
+    // Rescate directo de cifras en millones sin prefijo explícito (ej: "$6.000 millones máximo", "6000 millones max", "hasta $2500M")
+    const directSaleMatch = text.match(/(?:(?:hasta|max|máximo|tope|techo|de)\s*)?\$?\s*(\d{1,4}(?:[.,\s']\d{1,3})*|\d+)\s*(?:mil\s*millones?|millones?|mill[oó]n|mm)\b(?:\s*(?:m[aá]ximo|max|tope))?/i);
+    if (directSaleMatch && directSaleMatch.index !== undefined) {
+      const preceding = text.slice(Math.max(0, directSaleMatch.index - 20), directSaleMatch.index);
+      if (!/admin|admon|canon|arriendo|alquiler|mes\b/i.test(preceding)) {
+        const cleanNum = directSaleMatch[1].replace(/[\s.'’]/g, "");
+        const parsedN = parseInt(cleanNum, 10);
+        if (!isNaN(parsedN) && parsedN > 0) {
+          result.salePriceCOP = parsedN * 1_000_000;
+        }
+      }
+    }
   }
 
   // 2. EXTRACCIÓN DE PRECIO DE ARRIENDO (Soporta "$11 millones", "$10M", "alquiler: $10M", "Presupuesto para alquiler:\n■: $10M")
@@ -168,6 +182,10 @@ export function parseColombianListing(rawText: string): ParsedListing {
   // 11. COMISIÓN / TERCERÍA (Regla de Guillotina)
   result.prohibitsThirdPartyCommission = /no\s+tercer[ií]a|sin\s+terceros/i.test(text);
   result.isThirdPartyCommission = /en\s+tercer[ií]a|\btercer[ií]a\b/i.test(text);
+
+  // 12. CONDOMINIO / CONJUNTO / EDIFICIO (v32.57)
+  const complexFound = extractBuildingOrComplex(text);
+  if (complexFound) result.buildingOrComplex = complexFound;
 
   return result;
 }
@@ -925,6 +943,115 @@ export function extractPureBarrio(zn: string | null | undefined): string | null 
 export function isCityOrGenericZone(zn: string | null | undefined): boolean {
   if (!zn || typeof zn !== "string") return true;
   return extractPureBarrio(zn) === null;
+}
+
+export const FAMOUS_EXCLUSIVE_COMPLEXES: string[] = [
+  "peñas blancas", "penas blancas",
+  "sierras del este",
+  "cerros de los alpes",
+  "torres del parque",
+  "torres de fenicia",
+  "bosque medina",
+  "altos de yerbabuena",
+  "ruitoque condominio", "ruitoque",
+  "sindamanoy",
+  "aposentos",
+  "hato grande", "hatogrande",
+  "san simon", "san simón",
+  "guaymaral",
+  "la pradera de potosi", "la pradera de potosí",
+  "el peñon", "el peñón",
+  "lakeside",
+  "la reserva",
+  "castillo grande", "castillogrande",
+  "palma real",
+  "teka",
+  "montearroyo",
+  "altos del retiro",
+  "bosques de la cañada",
+  "parque central bavaria",
+  "torres de atrio",
+  "torres del bosque",
+  "altos de la cabrera",
+  "bosque de los nogales",
+  "viscaya", "vizcaya",
+  "los alpes",
+  "santa helena",
+  "la floresta",
+  "el refugio"
+];
+
+/**
+ * Extrae el nombre del Condominio, Conjunto Residencial o Edificio a partir del
+ * texto de la publicación o su título.
+ * Detecta tanto prefijos explícitos (Edificio, Conjunto, Condominio, Torres, etc.)
+ * como condominios y edificios reconocidos / exclusivos del corretaje colombiano.
+ */
+export function extractBuildingOrComplex(rawText?: string | null, title?: string | null): string | null {
+  const combined = `${title || ""} ${rawText || ""}`.trim();
+  if (!combined) return null;
+
+  const LOWERCASE_CONNECTORS = new Set(["de", "del", "la", "las", "el", "los", "en", "y"]);
+  const formatTitleCase = (str: string): string => {
+    return str
+      .split(/\s+/)
+      .map((w, i) => {
+        const lower = w.toLowerCase();
+        if (i > 0 && LOWERCASE_CONNECTORS.has(lower)) return lower;
+        return lower.charAt(0).toUpperCase() + lower.slice(1);
+      })
+      .join(" ");
+  };
+
+  // 1. Búsqueda por edificios/condominios insignes o exclusivos
+  for (const famous of FAMOUS_EXCLUSIVE_COMPLEXES) {
+    const rx = new RegExp(`\\b${famous.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'i');
+    if (rx.test(combined)) {
+      if (famous.includes("peñas") || famous.includes("penas")) return "Edificio Peñas Blancas";
+      if (famous.includes("sierras del este")) return "Sierras del Este";
+      if (famous.includes("cerros de los alpes")) return "Cerros de los Alpes";
+      if (famous.includes("torres del parque")) return "Torres del Parque";
+      if (famous.includes("ruitoque")) return "Ruitoque Condominio";
+      if (famous.includes("altos de yerbabuena")) return "Altos de Yerbabuena";
+      if (famous.includes("sindamanoy")) return "Condominio Sindamanoy";
+      if (famous.includes("aposentos")) return "Condominio Aposentos";
+      if (famous.includes("hato grande") || famous.includes("hatogrande")) return "Hato Grande";
+      if (famous.includes("san simon") || famous.includes("san simón")) return "Condominio San Simón";
+      if (famous.includes("guaymaral")) return "Condominio Guaymaral";
+      if (famous.includes("pradera de potosi")) return "La Pradera de Potosí";
+      if (famous.includes("el peñon") || famous.includes("el peñón")) return "Condominio El Peñón";
+      if (famous.includes("castillo grande")) return "Castillo Grande";
+      if (famous.includes("bosque medina")) return "Bosque Medina";
+      
+      return formatTitleCase(famous);
+    }
+  }
+
+  // 2. Extracción mediante prefijo arquitectónico explícito
+  const prefixMatch = combined.match(/\b(?:edificio|ed\.|conjunto(?:\s*residencial|\s*cerrado)?|condominio(?:\s*campestre)?|torre[s]?(?:\s*(?:de|del|las|los))?|urbanizaci[oó]n|residencias?|complejo(?:\s*residencial)?)\s+([A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+(?:\s+(?:de\s+|del\s+|la\s+|las\s+|el\s+|los\s+|y\s+)?[A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+){0,3})/i);
+  if (prefixMatch) {
+    let captured = prefixMatch[1].trim();
+    // Limpiar palabras cortadas o sufijos que no pertenecen al nombre (números, metrajes, precios, habs)
+    captured = captured.replace(/\s+(?:con|\d+|en|para|piso|área|area|precio|valor|canon|apto|casa|venta|arriendo|hab|alcobas?).*$/i, '').trim();
+    if (captured.length >= 3 && !/^(?:inteligente|nuevo|antiguo|esquinero|campestre|residencial|comercial)$/i.test(captured) && !isCityOrGenericZone(captured)) {
+      return formatTitleCase(captured);
+    }
+  }
+
+  // 3. Patrón corto en demandas o avisos: "Apto en <Nombre>" donde Nombre no es ciudad ni barrio
+  const aptoEnMatch = combined.match(/\b(?:apto|apartamento|casa|ph|penthouse)\s+en\s+([A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+(?:\s+[A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+){0,2})/i);
+  if (aptoEnMatch) {
+    let nameCandidate = aptoEnMatch[1].trim();
+    nameCandidate = nameCandidate.replace(/\s+(?:con|\d+|en|para|piso|área|area|precio|valor|canon|hab|alcobas?).*$/i, '').trim();
+    if (nameCandidate.length >= 4 && !isCityOrGenericZone(nameCandidate)) {
+      const norm = nameCandidate.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (FAMOUS_EXCLUSIVE_COMPLEXES.some(f => norm.includes(f) || f.includes(norm))) {
+        return formatTitleCase(nameCandidate);
+      }
+    }
+  }
+
+  return null;
 }
 
 

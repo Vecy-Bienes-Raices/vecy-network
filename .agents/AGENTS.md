@@ -172,7 +172,37 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.56 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.57 — Octubre 2026
+
+### Novedades v32.57 (Extracción y Validación de Condominios/Conjuntos/Edificios Específicos, Fidelidad Textual Absoluta de Alcobas y Bloqueo Doctrinal de Escala):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:
+  1. **Causa Raíz de Falso Match #15449 (86.25% score)**:
+     - Oferta #3715 (Rosales, 470m²): Publicación original textualmente decía `- 3 Alcobas - 4 Baños - 4 Garajes`, pero en la base de datos se guardó erróneamente `bedrooms = 4` por alucinación de extracción asociada a los 4 baños/garajes.
+     - Demanda #2054: Solicitaba textualmente `Apto en Peñas blancas 4 habitaciones. $6.000 millones maximo`.
+     - Faltaban dos mecanismos doctrinales vitales:
+       a) Identificar el edificio/condominio específico ("Peñas Blancas") y cotejarlo contra la oferta.
+       b) Respetar estrictamente el número textual de alcobas (`- 3 Alcobas`) sobre cualquier alucinación en BD, y bloquear inmediatamente con 0% cuando la oferta tiene menos alcobas que las exigidas.
+  2. **Soluciones Doctrinales Implementadas**:
+     - **Módulo Compartido de Extracción de Edificios/Condominios (`shared/colombianRealEstateParser.ts`)**:
+       - Creada función `extractBuildingOrComplex(rawText, title)` con base de conocimiento de condominios y edificios insignes colombianos (Peñas Blancas, Torres del Parque, Sierras del Este, Cerros de los Alpes, Ruitoque, Bosque Medina, Sindamanoy, Aposentos, etc.) y patrones arquitectónicos (`Edificio`, `Conjunto Residencial`, `Condominio Campestre`, `Torres`, etc.).
+       - Normaliza títulos con conectores en minúscula (`Torres del Parque`, `Bosques de Bella Suiza`).
+     - **Cotejo en Mesa de Coincidencias (`AdminMatches.tsx`)**:
+       - Nueva fila de cotejo técnico: **Condominio / Conjunto / Edificio**.
+       - Si la demanda exige un edificio o condominio específico y la oferta está en un edificio diferente o no lo especifica, emite la advertencia o deducción de rigor; si ambos coinciden exactamente, marca `exact` 🟢 con 100% de afinidad.
+     - **Motor de Matching en Backend (`server/_core/matching.ts`)**:
+       - En `explicarMatch`: Si la demanda exige un edificio específico y la oferta tiene otro edificio incompatible, aplica guillotina fulminante a 0% (`⛔ Incompatibilidad de Edificio/Condominio (Tolerancia Cero)`).
+       - Fidelidad absoluta al texto original de la oferta para alcobas: extrae directamente `- X Alcobas` del texto de la propiedad para corregir alucinaciones numéricas.
+     - **Ingesta en JanIA (`server/_core/janIA.ts`)**:
+       - En `saveProperty`: si el texto original declara explícitamente el número de alcobas, prevalece sobre cualquier conteo discordante del LLM.
+     - **Saneamiento en Base de Datos de Producción (VPS `13.140.149.144`)**:
+       - Corregida Propiedad #3715 a `bedrooms = 3` (alineada con su texto `- 3 Alcobas`).
+       - Colapsado Match #15449 a `matchScore = 0.00` y `status = 'rejected'`.
+       - Verificado 0 matches espurios con `bedrooms < habitacionesMin` en producción.
+  3. **Verificación y Cobertura**:
+     - Nuevos tests doctrinales en `server/__tests__/regression.test.ts`.
+     - 154/154 tests Vitest pasando al 100%. TypeScript (`pnpm check`) y Vite/esbuild (`pnpm build`) 100% limpios.
+
+## 🔖 VERSIÓN ANTERIOR: v32.56 — Octubre 2026
 
 ### Novedades v32.56 (Regla Doctrinal Sagrada de Casillas 1 a 5 Núcleo Duro Innegociable, Erradicación de Nombres de Ciudad como Barrio y Guillotina Total al 0.00%):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:

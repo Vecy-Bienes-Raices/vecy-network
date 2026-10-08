@@ -3116,7 +3116,56 @@ Adriana Rebeca Orejuela`;
       expect(matchRes.blockers.some(b => b.includes("Barrio/Vereda no especificado o contiene nombre de ciudad"))).toBe(true);
     });
   });
+
+  describe("Doctrina v32.57: Extracción de Condominios/Conjuntos, Validación de Edificio Específico y Fidelidad Textual de Alcobas", () => {
+    it("Debe extraer correctamente el nombre propio del condominio, conjunto o edificio", async () => {
+      const { extractBuildingOrComplex } = await import("../../shared/colombianRealEstateParser");
+
+      expect(extractBuildingOrComplex("Vendo casa en condominio El Refugio de La Calera")).toBe("El Refugio");
+      expect(extractBuildingOrComplex("Busco apto en edificio Torres del Parque")).toBe("Torres del Parque");
+      expect(extractBuildingOrComplex("Conjunto Residencial Bosques de Bella Suiza")).toBe("Bosques de Bella Suiza");
+      // No debe capturar "edificio inteligente" como nombre propio
+      expect(extractBuildingOrComplex("Apto con acabados de lujo en edificio inteligente")).toBeNull();
+    });
+
+    it("Debe bloquear con 0% si la demanda exige un edificio específico y la oferta está en otro edificio", async () => {
+      const { explicarMatch } = await import("../_core/matching");
+
+      const reqEdificio = {
+        id: 3001,
+        propertyType: "apartment",
+        transactionType: "venta",
+        presupuestoMax: 1_200_000_000,
+        areaMin: 100,
+        habitacionesMin: 3,
+        banosMin: 2,
+        city: "Bogotá",
+        zonaDeseada: "Chicó Reservado",
+        rawText: "Busco apartamento en venta en Chicó Reservado en el edificio Torres del Parque. Presupuesto $1.200M.",
+        status: "active"
+      };
+
+      const propOtroEdificio = {
+        id: 4001,
+        propertyType: "apartment",
+        transactionType: "venta",
+        price: 1_100_000_000,
+        area: 110,
+        bedrooms: 3,
+        bathrooms: 3,
+        city: "Bogotá",
+        zone: "Chicó Reservado",
+        rawText: "Vendo hermoso apartamento en Chicó Reservado en el edificio Altos del Virrey. Precio $1.100 millones.",
+        status: "active"
+      };
+
+      const matchRes = explicarMatch(reqEdificio, propOtroEdificio);
+      expect(matchRes.score).toBe(0);
+      expect(matchRes.blockers.some(b => b.includes("Incompatibilidad de Edificio/Condominio"))).toBe(true);
+    });
+  });
 });
+
 
 
 

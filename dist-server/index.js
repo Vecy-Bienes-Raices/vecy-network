@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.56";
+    VECY_VERSION = "v32.57";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
   }
@@ -2351,6 +2351,18 @@ function parseColombianListing(rawText) {
   if (saleMatch) {
     const cleanNum = saleMatch[1].replace(/[\s.'’]/g, "");
     result.salePriceCOP = parseInt(cleanNum, 10) * 1e6;
+  } else {
+    const directSaleMatch = text2.match(/(?:(?:hasta|max|máximo|tope|techo|de)\s*)?\$?\s*(\d{1,4}(?:[.,\s']\d{1,3})*|\d+)\s*(?:mil\s*millones?|millones?|mill[oó]n|mm)\b(?:\s*(?:m[aá]ximo|max|tope))?/i);
+    if (directSaleMatch && directSaleMatch.index !== void 0) {
+      const preceding = text2.slice(Math.max(0, directSaleMatch.index - 20), directSaleMatch.index);
+      if (!/admin|admon|canon|arriendo|alquiler|mes\b/i.test(preceding)) {
+        const cleanNum = directSaleMatch[1].replace(/[\s.'’]/g, "");
+        const parsedN = parseInt(cleanNum, 10);
+        if (!isNaN(parsedN) && parsedN > 0) {
+          result.salePriceCOP = parsedN * 1e6;
+        }
+      }
+    }
   }
   const rentMatch = text2.match(/(?:presupuesto\s*(?:para\s*)?(?:alquiler|arriendo)|canon|para\s*(?:alquiler|arriendo))[^\d\n]*(?:\n[^\d\n]*)?(?:max|hasta|tope)?\s*[:\s\-]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i) || text2.match(/(?:arriendo|arrendamiento|alquiler)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
   if (rentMatch) {
@@ -2406,6 +2418,8 @@ function parseColombianListing(rawText) {
   if (exactFloorMatch) result.floor = parseInt(exactFloorMatch[1], 10);
   result.prohibitsThirdPartyCommission = /no\s+tercer[ií]a|sin\s+terceros/i.test(text2);
   result.isThirdPartyCommission = /en\s+tercer[ií]a|\btercer[ií]a\b/i.test(text2);
+  const complexFound = extractBuildingOrComplex(text2);
+  if (complexFound) result.buildingOrComplex = complexFound;
   return result;
 }
 function parseColombianCurrency(rawText) {
@@ -2700,7 +2714,60 @@ function isCityOrGenericZone(zn) {
   if (!zn || typeof zn !== "string") return true;
   return extractPureBarrio(zn) === null;
 }
-var CIUDADES_Y_DEPTOS_COLOMBIA, GENERIC_ZONE_WORDS, CIUDADES_Y_DEPTOS_REGEX;
+function extractBuildingOrComplex(rawText, title) {
+  const combined = `${title || ""} ${rawText || ""}`.trim();
+  if (!combined) return null;
+  const LOWERCASE_CONNECTORS = /* @__PURE__ */ new Set(["de", "del", "la", "las", "el", "los", "en", "y"]);
+  const formatTitleCase2 = (str) => {
+    return str.split(/\s+/).map((w, i) => {
+      const lower = w.toLowerCase();
+      if (i > 0 && LOWERCASE_CONNECTORS.has(lower)) return lower;
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    }).join(" ");
+  };
+  for (const famous of FAMOUS_EXCLUSIVE_COMPLEXES) {
+    const rx = new RegExp(`\\b${famous.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&")}\\b`, "i");
+    if (rx.test(combined)) {
+      if (famous.includes("pe\xF1as") || famous.includes("penas")) return "Edificio Pe\xF1as Blancas";
+      if (famous.includes("sierras del este")) return "Sierras del Este";
+      if (famous.includes("cerros de los alpes")) return "Cerros de los Alpes";
+      if (famous.includes("torres del parque")) return "Torres del Parque";
+      if (famous.includes("ruitoque")) return "Ruitoque Condominio";
+      if (famous.includes("altos de yerbabuena")) return "Altos de Yerbabuena";
+      if (famous.includes("sindamanoy")) return "Condominio Sindamanoy";
+      if (famous.includes("aposentos")) return "Condominio Aposentos";
+      if (famous.includes("hato grande") || famous.includes("hatogrande")) return "Hato Grande";
+      if (famous.includes("san simon") || famous.includes("san sim\xF3n")) return "Condominio San Sim\xF3n";
+      if (famous.includes("guaymaral")) return "Condominio Guaymaral";
+      if (famous.includes("pradera de potosi")) return "La Pradera de Potos\xED";
+      if (famous.includes("el pe\xF1on") || famous.includes("el pe\xF1\xF3n")) return "Condominio El Pe\xF1\xF3n";
+      if (famous.includes("castillo grande")) return "Castillo Grande";
+      if (famous.includes("bosque medina")) return "Bosque Medina";
+      return formatTitleCase2(famous);
+    }
+  }
+  const prefixMatch = combined.match(/\b(?:edificio|ed\.|conjunto(?:\s*residencial|\s*cerrado)?|condominio(?:\s*campestre)?|torre[s]?(?:\s*(?:de|del|las|los))?|urbanizaci[oó]n|residencias?|complejo(?:\s*residencial)?)\s+([A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+(?:\s+(?:de\s+|del\s+|la\s+|las\s+|el\s+|los\s+|y\s+)?[A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+){0,3})/i);
+  if (prefixMatch) {
+    let captured = prefixMatch[1].trim();
+    captured = captured.replace(/\s+(?:con|\d+|en|para|piso|área|area|precio|valor|canon|apto|casa|venta|arriendo|hab|alcobas?).*$/i, "").trim();
+    if (captured.length >= 3 && !/^(?:inteligente|nuevo|antiguo|esquinero|campestre|residencial|comercial)$/i.test(captured) && !isCityOrGenericZone(captured)) {
+      return formatTitleCase2(captured);
+    }
+  }
+  const aptoEnMatch = combined.match(/\b(?:apto|apartamento|casa|ph|penthouse)\s+en\s+([A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+(?:\s+[A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+){0,2})/i);
+  if (aptoEnMatch) {
+    let nameCandidate = aptoEnMatch[1].trim();
+    nameCandidate = nameCandidate.replace(/\s+(?:con|\d+|en|para|piso|área|area|precio|valor|canon|hab|alcobas?).*$/i, "").trim();
+    if (nameCandidate.length >= 4 && !isCityOrGenericZone(nameCandidate)) {
+      const norm2 = nameCandidate.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (FAMOUS_EXCLUSIVE_COMPLEXES.some((f) => norm2.includes(f) || f.includes(norm2))) {
+        return formatTitleCase2(nameCandidate);
+      }
+    }
+  }
+  return null;
+}
+var CIUDADES_Y_DEPTOS_COLOMBIA, GENERIC_ZONE_WORDS, CIUDADES_Y_DEPTOS_REGEX, FAMOUS_EXCLUSIVE_COMPLEXES;
 var init_colombianRealEstateParser = __esm({
   "shared/colombianRealEstateParser.ts"() {
     "use strict";
@@ -2791,6 +2858,49 @@ var init_colombianRealEstateParser = __esm({
       "todas"
     ]);
     CIUDADES_Y_DEPTOS_REGEX = /\b(?:bogot[aá](?:\s*,?\s*d\.?\s*c\.?)?|distrito\s+capital|cundinamarca|medell[ií]n|cali|barranquilla|cartagena|bucaramanga|pereira|manizales|c[uú]cuta|ibagu[eé]|santa\s+marta|villavicencio|pasto|monter[ií]a|valledupar|sincelejo|armenia|popay[aá]n|neiva|tunja|riohacha|florencia|yopal|quibd[oó]|colombia)\b/gi;
+    FAMOUS_EXCLUSIVE_COMPLEXES = [
+      "pe\xF1as blancas",
+      "penas blancas",
+      "sierras del este",
+      "cerros de los alpes",
+      "torres del parque",
+      "torres de fenicia",
+      "bosque medina",
+      "altos de yerbabuena",
+      "ruitoque condominio",
+      "ruitoque",
+      "sindamanoy",
+      "aposentos",
+      "hato grande",
+      "hatogrande",
+      "san simon",
+      "san sim\xF3n",
+      "guaymaral",
+      "la pradera de potosi",
+      "la pradera de potos\xED",
+      "el pe\xF1on",
+      "el pe\xF1\xF3n",
+      "lakeside",
+      "la reserva",
+      "castillo grande",
+      "castillogrande",
+      "palma real",
+      "teka",
+      "montearroyo",
+      "altos del retiro",
+      "bosques de la ca\xF1ada",
+      "parque central bavaria",
+      "torres de atrio",
+      "torres del bosque",
+      "altos de la cabrera",
+      "bosque de los nogales",
+      "viscaya",
+      "vizcaya",
+      "los alpes",
+      "santa helena",
+      "la floresta",
+      "el refugio"
+    ];
   }
 });
 
@@ -5683,6 +5793,22 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     blockers.push("\u26D4 Requerimiento Incompleto: Barrio/Vereda deseado no especificado o contiene nombre de ciudad (N/E). No puede participar en Matches.");
     return buildExplanationResult(0, blockers, positives, negatives);
   }
+  const reqComplex = extractBuildingOrComplex(requirement.rawText, requirement.name);
+  const propComplex = extractBuildingOrComplex(property.rawText || property.description, property.name);
+  if (reqComplex && propComplex) {
+    const normR = reqComplex.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+    const normP = propComplex.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+    if (normR !== normP && !normR.includes(normP) && !normP.includes(normR)) {
+      blockers.push(`\u26D4 Incompatibilidad de Edificio/Condominio (Tolerancia Cero): La demanda exige '${reqComplex}' y la oferta es en '${propComplex}'. Match Inviable (0%).`);
+      return buildExplanationResult(0, blockers, positives, negatives);
+    } else {
+      positives.push(`Condominio/Edificio id\xE9ntico: ${reqComplex} \u2014 Coincidencia 100%`);
+    }
+  } else if (reqComplex && !propComplex) {
+    positives.push(`Demanda solicita edificio ${reqComplex} \u2014 Oferta en el sector (${propBarrioHard}) sujeta a confirmaci\xF3n`);
+  } else if (!reqComplex && propComplex) {
+    positives.push(`Plus Ofertado: Edificio/Condominio ${propComplex}`);
+  }
   const reqRawCheckText = (requirement.rawText || requirement.name || "").toLowerCase();
   const hasBudgetSpec = requirement.presupuestoMax != null && parseFloat(String(requirement.presupuestoMax)) > 0 || /(?:ppto|presupuesto|hasta|valor|canon)\s*:?\s*\$?([\d.]+)/i.test(reqRawCheckText) || /\$?\s*([\d.]+)\s*(?:millones|millon|mll|mlls|mm|m)\b/i.test(reqRawCheckText) || /(?:abierto|sin\s*limite|ilimitado|negociable\s*sin\s*tope)/i.test(reqRawCheckText);
   const hasAreaSpec = requirement.areaMin != null && parseFloat(String(requirement.areaMin)) > 0 || /(?:m2|mts|m²|metros)/i.test(reqRawCheckText);
@@ -6099,6 +6225,14 @@ function explicarMatch(requirement, property, precomputedFbReq, precomputedFbPro
     if (pBedrooms <= 0 && fbProp.bedrooms) pBedrooms = fbProp.bedrooms;
     if (pBathrooms <= 0 && fbProp.bathrooms) pBathrooms = fbProp.bathrooms;
     if (pGarages <= 0 && fbProp.garages) pGarages = fbProp.garages;
+  }
+  const propTextToCheck = property.rawText || property.description || "";
+  if (propTextToCheck) {
+    const explicitBedMatchP = propTextToCheck.match(/(?:^|[\n\r\-•*#\s])(\d{1,2})\s*(?:alcobas?|hab(?:s|itaciones|itaci[oó]n)?|dormitorios?|cuartos?)\b/i);
+    if (explicitBedMatchP) {
+      const parsedExplicit = parseInt(explicitBedMatchP[1], 10);
+      if (parsedExplicit > 0) pBedrooms = parsedExplicit;
+    }
   }
   const pAdminFee = property.adminFee != null ? parseFloat(String(property.adminFee)) : -1;
   const reqAdminMax = requirement.adminFeeMax != null ? parseFloat(String(requirement.adminFeeMax)) : -1;
@@ -19512,8 +19646,10 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
     if (!data.areaTotal && !data.area && fallbackD.area > 0) {
       data.areaTotal = fallbackD.area;
     }
-    if ((data.bedrooms === void 0 || data.bedrooms === null || Number(data.bedrooms) <= 0) && fallbackD.bedrooms > 0) {
-      data.bedrooms = fallbackD.bedrooms;
+    if (fallbackD.bedrooms > 0) {
+      if (data.bedrooms === void 0 || data.bedrooms === null || Number(data.bedrooms) <= 0 || Number(data.bedrooms) !== fallbackD.bedrooms && /(?:^|[\n\r\-•*#\s])(\d{1,2})\s*(?:alcobas?|hab(?:s|itaciones|itaci[oó]n)?)\b/i.test(data.rawText || "")) {
+        data.bedrooms = fallbackD.bedrooms;
+      }
     }
     if ((data.bathrooms === void 0 || data.bathrooms === null || Number(data.bathrooms) <= 0) && fallbackD.bathrooms > 0) {
       data.bathrooms = fallbackD.bathrooms;

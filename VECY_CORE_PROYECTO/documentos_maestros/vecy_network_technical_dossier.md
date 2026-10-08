@@ -322,6 +322,34 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.57 — Octubre 2026
+
+#### 📌 EXTRACCIÓN Y VALIDACIÓN DE CONDOMINIOS/CONJUNTOS/EDIFICIOS ESPECÍFICOS, FIDELIDAD TEXTUAL ABSOLUTA DE ALCOBAS Y BLOQUEO DOCTRINAL DE ESCALA
+
+**Requerimiento y Objetivos:**
+1. **Detección de Coincidencia Espuria (Match #15449, 86.25% score)**:
+   - Oferta #3715 (Rosales, 470m²): Publicación original textualmente decía `- 3 Alcobas - 4 Baños - 4 Garajes`, pero en la base de datos se guardó erróneamente `bedrooms = 4` por alucinación de extracción asociada a los 4 baños/garajes.
+   - Demanda #2054: Solicitaba textualmente `Apto en Peñas blancas 4 habitaciones. $6.000 millones maximo`.
+   - Se requería:
+     a) Extraer y comparar con exactitud nombres de Condominios, Conjuntos Residenciales y Edificios (ej. Peñas Blancas, Torres del Parque, Bosques de Bella Suiza).
+     b) Si la demanda exige un edificio o condominio específico y la oferta pertenece a otro edificio o no lo especifica, no puede haber compatibilidad absoluta.
+     c) Fidelidad textual estricta en el número de habitaciones: si el texto dice `- 3 Alcobas` y la demanda exige 4 habitaciones, la oferta tiene menos alcobas de las demandadas y debe recibir guillotina total al 0.00% (Doctrina v22.4 / v27.4: Oferta < Demanda = Bloqueo Inmediato).
+2. **Soluciones Implementadas**:
+   - **Módulo Compartido de Extracción de Edificios/Condominios (`shared/colombianRealEstateParser.ts`)**: Creada función `extractBuildingOrComplex(rawText, title)` con base de conocimiento de condominios y edificios insignes colombianos (Peñas Blancas, Torres del Parque, Sierras del Este, Cerros de los Alpes, Ruitoque, Altos de Yerbabuena, Sindamanoy, Aposentos, Guaymaral, La Pradera de Potosí, El Peñón, Castillo Grande, Bosque Medina, etc.) y patrones arquitectónicos (`Edificio`, `Conjunto Residencial`, `Condominio Campestre`, `Torres`, etc.). Normaliza títulos con conectores en minúscula (`Torres del Parque`, `Bosques de Bella Suiza`).
+   - **Mesa de Coincidencias (`AdminMatches.tsx`)**: Nueva fila de cotejo técnico: **Condominio / Conjunto / Edificio**. Si la demanda exige un edificio o condominio y la oferta coincide exactamente, marca `exact` 🟢 con 100% de afinidad; si difiere o falta, marca advertencia o penalidad.
+   - **Motor de Matching en Backend (`server/_core/matching.ts`)**: En `explicarMatch`, si la demanda exige un edificio específico y la oferta tiene otro edificio incompatible, aplica guillotina fulminante a 0% (`⛔ Incompatibilidad de Edificio/Condominio (Tolerancia Cero)`). Fidelidad textual absoluta de alcobas: extrae directamente `- X Alcobas` del texto original de la propiedad para corregir cualquier alucinación en BD.
+   - **Ingesta en JanIA (`server/_core/janIA.ts`)**: En `saveProperty`, si el texto original declara explícitamente el número de alcobas (`- X Alcobas`), prevalece sobre cualquier conteo discordante del LLM.
+   - **Saneamiento en Base de Datos de Producción (VPS `13.140.149.144`)**: Corregida Propiedad #3715 a `bedrooms = 3` (alineada con su texto `- 3 Alcobas`). Colapsado Match #15449 a `matchScore = 0.00` y `status = 'rejected'`. Verificado 0 matches espurios con `bedrooms < habitacionesMin` en producción.
+   - **Cobertura de Tests**: Nuevos tests doctrinales en `server/__tests__/regression.test.ts`. 154/154 tests Vitest pasando al 100%. TypeScript (`pnpm check`) y build (`pnpm build`) 100% limpios.
+
+**Archivos Modificados:**
+- `shared/colombianRealEstateParser.ts`: Función `extractBuildingOrComplex`.
+- `client/src/components/admin/AdminMatches.tsx`: Fila de cotejo técnico para Condominio / Edificio.
+- `server/_core/matching.ts`: Guillotina por incompatibilidad de edificio y fidelidad de alcobas.
+- `server/_core/janIA.ts`: Prioridad textual para alcobas en ingesta.
+- `server/__tests__/regression.test.ts`: Tests automatizados `Doctrina v32.57`.
+- `shared/const.ts` & `package.json`: Versión incrementada a `v32.57` (`32.57.0`).
+
 ### 🔖 v32.56 — Octubre 2026
 
 #### 📌 REGLA DOCTRINAL SAGRADA DE CASILLAS 1 A 5 NÚCLEO DURO INNEGOCIABLE, ERRADICACIÓN DE NOMBRES DE CIUDAD COMO BARRIO Y GUILLOTINA TOTAL AL 0.00%
