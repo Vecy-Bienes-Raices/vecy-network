@@ -587,7 +587,7 @@ export const propertiesRouter = router({
 
       try {
         const { invokeLLM } = await import("../_core/llm");
-        const prompt = `Eres JanIA, arquitecta e ingeniera inmobiliaria senior de Vecy Network Colombia.
+        const prompt = `Eres JanIA, arquitecta e ingeniera inmobiliaria senior de VECY BIENES RAÍCES Colombia.
 Analiza minuciosamente este texto y/o documento PDF adjunto de un inmueble.
 Extrae de forma exhaustiva y precisa los datos clave en formato JSON con la siguiente estructura estricta:
 {

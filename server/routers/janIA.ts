@@ -231,7 +231,7 @@ export const janIARouter = router({
           );
           janIAResponse = (result.response && result.response.trim() !== "")
             ? result.response
-            : (result.dmResponse || result.response || "¡Entendido! He registrado la información en VECY Network.");
+            : (result.dmResponse || result.response || "¡Entendido! He registrado la información en VECY BIENES RAÍCES.");
           wantsVoice = result.wantsVoice || false;
           voiceResponse = result.voiceResponse || janIAResponse;
         } else {
@@ -295,11 +295,11 @@ export const janIARouter = router({
 
           const liveStats = await getLiveStats();
           const userContextInstruction = isRegistered
-            ? `\n\n[INFORMACIÓN DEL USUARIO REGISTRADO]:\n- Estado: REGISTRADO EN LA PLATAFORMA VECY NETWORK ✅\n- Nombre: "${rawName}" (Nombre/Apodo: "${resolvedName}")\n- Saludo de hora actual en Bogotá (${hour}:00): "${timeGreeting}"\n- Trato respetuoso: "${genderTerm}"\n- INSTRUCCIÓN: Si es el primer mensaje de la sesión, salúdalo con "${timeGreeting}, ${genderTerm}". Si ya están interactuando, integra su nombre "${resolvedName}" naturalmente sin repetir saludos repetitivos.`
-            : `\n\n[INFORMACIÓN DEL USUARIO NO REGISTRADO / ANÓNIMO]:\n- Estado: NO REGISTRADO (Navegante anónimo)\n- Saludo de hora actual en Bogotá (${hour}:00): "${timeGreeting}"\n- INSTRUCCIÓN DE INTERACCIÓN:\n  1. Si no te ha dicho su nombre en los mensajes previos, salúdalo cordialmente con "${timeGreeting}" y pregúntale amablemente: "¿Con quién tengo el gusto de interactuar?" para recordarlo en la conversación.\n  2. Invítalo amablemente a registrarse gratuitamente en la plataforma VECY Network (https://vecy-network.vercel.app/) para guardar su nombre, asociar su cuenta y acceder a su propio historial completo de conversaciones.`;
+            ? `\n\n[INFORMACIÓN DEL USUARIO REGISTRADO]:\n- Estado: REGISTRADO EN LA PLATAFORMA VECY BIENES RAÍCES ✅\n- Nombre: "${rawName}" (Nombre/Apodo: "${resolvedName}")\n- Saludo de hora actual en Bogotá (${hour}:00): "${timeGreeting}"\n- Trato respetuoso: "${genderTerm}"\n- INSTRUCCIÓN: Si es el primer mensaje de la sesión, salúdalo con "${timeGreeting}, ${genderTerm}". Si ya están interactuando, integra su nombre "${resolvedName}" naturalmente sin repetir saludos repetitivos.`
+            : `\n\n[INFORMACIÓN DEL USUARIO NO REGISTRADO / ANÓNIMO]:\n- Estado: NO REGISTRADO (Navegante anónimo)\n- Saludo de hora actual en Bogotá (${hour}:00): "${timeGreeting}"\n- INSTRUCCIÓN DE INTERACCIÓN:\n  1. Si no te ha dicho su nombre en los mensajes previos, salúdalo cordialmente con "${timeGreeting}" y pregúntale amablemente: "¿Con quién tengo el gusto de interactuar?" para recordarlo en la conversación.\n  2. Invítalo amablemente a registrarse gratuitamente en la plataforma VECY BIENES RAÍCES (https://vecy-network.vercel.app/) para guardar su nombre, asociar su cuenta y acceder a su propio historial completo de conversaciones.`;
 
           const systemPrompt = `${buildSystemPrompt('web')}\n\n${liveStats}${userContextInstruction}\n\n[INSTRUCCIÓN MAESTRA Y CRÍTICA DE SALIDA — CONSOLA WEB JANIA]:
-1. Eres JanIA Match, la consultora inmobiliaria senior e Inteligencia Artificial de VECY Network. Posees alto criterio legal, financiero y comercial inmobiliario en Colombia.
+1. Eres JanIA Match, la consultora inmobiliaria senior e Inteligencia Artificial de VECY BIENES RAÍCES. Posees alto criterio legal, financiero y comercial inmobiliario en Colombia.
 2. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa, humana y estructurada en Markdown.
 3. FORMATO OBLIGATORIO: Responde DIRECTAMENTE con tu texto conversacional. ESTÁ ESTRICTAMENTE PROHIBIDO emitir objetos JSON, llaves {}, o campos como "shouldSendDM", "missingFields", "reactionEmoji", "wantsVoice" o "voiceResponse". Habla como un ser humano experto en bienes raíces.`;
 
@@ -335,7 +335,7 @@ export const janIARouter = router({
           }
 
           if (!janIAResponse || janIAResponse.trim() === "") {
-            janIAResponse = `${timeGreeting}. ¡Bienvenido a VECY Network! ¿Con quién tengo el gusto de interactuar? Te invito a registrarte gratuitamente en nuestra plataforma para acceder a tu historial completo de conversaciones. ¿En qué consulta inmobiliaria puedo asesorarte hoy?`;
+            janIAResponse = `${timeGreeting}. ¡Bienvenido a VECY BIENES RAÍCES! ¿Con quién tengo el gusto de interactuar? Te invito a registrarte gratuitamente en nuestra plataforma para acceder a tu historial completo de conversaciones. ¿En qué consulta inmobiliaria puedo asesorarte hoy?`;
           }
         }
 
@@ -1979,7 +1979,7 @@ export const janIARouter = router({
     .input(z.object({ text: z.string() }))
     .mutation(async ({ input }) => {
       try {
-        const prompt = `Actúa como JanIA, el motor de inteligencia artificial de Vecy Network especializado en corretaje inmobiliario en Colombia.
+        const prompt = `Actúa como JanIA, el motor de inteligencia artificial de VECY BIENES RAÍCES especializado en corretaje inmobiliario en Colombia.
 Analiza este texto de requerimiento o solicitud de cliente/agente y extrae los datos estructurados en formato JSON con los siguientes campos:
 - name: Título breve y claro de la búsqueda (ej: "Apto arriendo Chapinero 2 habs")
 - tipoInmuebleDeseado: "apartment" | "house" | "building" | "warehouse" | "farm" | "hotel" | "office" | "land" | "commercial" | "loft" | "consultorio"
@@ -2113,7 +2113,7 @@ Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni explicaciones.\n\n
         const filename = `flyers/req_flyer_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
         const uploadResult = await storagePut(filename, cleanBase64, input.mimeType);
 
-        const prompt = `Actúa como JanIA, la Inteligencia Artificial de Vecy Network.
+        const prompt = `Actúa como JanIA, la Inteligencia Artificial de VECY BIENES RAÍCES.
 Analiza detenidamente esta imagen (flyer, afiche publicitario o captura de WhatsApp de un requerimiento o demanda inmobiliaria).
 1. Transcribe íntegramente todo el texto visible de la imagen en el campo "rawText".
 2. Extrae y estructura los siguientes datos clave en formato JSON:

@@ -6647,7 +6647,7 @@ export default function AdminMatches() {
                                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs">📍</span>
                                       <input
                                         type="text"
-                                        placeholder="Grupo WhatsApp (ej: VECY INMUEBLES NETWORK)"
+                                        placeholder="Grupo WhatsApp (ej: VECY INMO OFERTAS Y DEMANDAS)"
                                         value={editForm.reqOrigenNombre || ''}
                                         onChange={(e) => setEditForm(prev => ({ ...prev, reqOrigenNombre: e.target.value }))}
                                         className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs pl-6 pr-2 py-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400"
@@ -7147,7 +7147,7 @@ export default function AdminMatches() {
                               <div className="space-y-1.5 w-full">
                                 <input type="text" placeholder="👤 Nombre Asesor (ej: Erika Del Pilar)" value={editForm.reqSenderName || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqSenderName: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
                                 <input type="text" placeholder="📞 WhatsApp (ej: +57 310 123 4567)" value={editForm.reqPhone || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqPhone: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
-                                <input type="text" placeholder="📍 Grupo WhatsApp (ej: VECY INMUEBLES NETWORK)" value={editForm.reqOrigenNombre || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqOrigenNombre: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
+                                <input type="text" placeholder="📍 Grupo WhatsApp (ej: VECY INMO OFERTAS Y DEMANDAS)" value={editForm.reqOrigenNombre || ''} onChange={(e) => setEditForm(prev => ({ ...prev, reqOrigenNombre: e.target.value }))} className="w-full bg-black/80 border border-cyan-500 text-cyan-300 font-bold text-xs p-1.5 rounded-lg" />
                                 <button
                                   type="button"
                                   onClick={() => handleSaveAdvisorDirect(false, m)}

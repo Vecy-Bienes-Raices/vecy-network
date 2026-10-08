@@ -1424,6 +1424,47 @@ Ed del 2014.
       }
     });
 
+    it("Doctrina v32.59: encuestas semanales con máximo 3-4 opciones y CERO emojis", async () => {
+      const { WEEKLY_POLLS_LIST } = await import("../_core/cronService");
+      expect(WEEKLY_POLLS_LIST.length).toBeGreaterThanOrEqual(4);
+      const emojiRegex = /[\p{Extended_Pictographic}]/u;
+      for (const poll of WEEKLY_POLLS_LIST) {
+        expect(poll.options.length).toBeGreaterThanOrEqual(3);
+        expect(poll.options.length).toBeLessThanOrEqual(4);
+        expect(emojiRegex.test(poll.question)).toBe(false);
+        for (const opt of poll.options) {
+          expect(emojiRegex.test(opt)).toBe(false);
+        }
+      }
+    });
+
+    it("Doctrina v32.59: calendario de 30 días sin temas repetidos + edición especial día 31", async () => {
+      const { CALENDARIO_30_DIAS_VECY, getCalendarTipForDate, DIA_31_ESPECIAL_VECY } = await import("../_core/cronService");
+      expect(CALENDARIO_30_DIAS_VECY.length).toBe(30);
+      const days = new Set(CALENDARIO_30_DIAS_VECY.map(t => t.dayOfMonth));
+      const titles = new Set(CALENDARIO_30_DIAS_VECY.map(t => t.topicTitle));
+      expect(days.size).toBe(30);
+      expect(titles.size).toBe(30);
+      for (const t of CALENDARIO_30_DIAS_VECY) {
+        expect(t.captionText).not.toMatch(/VECY\s+NETWORK/i);
+        expect(t.captionText).toContain("wa.me/573192919978");
+      }
+      // 15 de enero 2027 12:00 Bogotá → Día 15
+      expect(getCalendarTipForDate(new Date("2027-01-15T17:00:00Z")).dayOfMonth).toBe(15);
+      // 31 de enero 2027 → edición especial (no repite Día 1)
+      expect(getCalendarTipForDate(new Date("2027-01-31T17:00:00Z"))).toBe(DIA_31_ESPECIAL_VECY);
+    });
+
+    it("Doctrina v32.59: marca pública VECY BIENES RAÍCES y cierre obligatorio sin tocar URLs", async () => {
+      const { enforceVecyBrand, ensureVecyDailyFooter } = await import("../_core/cronService");
+      expect(enforceVecyBrand("Bienvenido a VECY Network")).toBe("Bienvenido a VECY BIENES RAÍCES");
+      expect(enforceVecyBrand("https://vecy-network.vercel.app/jania")).toBe("https://vecy-network.vercel.app/jania");
+      const out = ensureVecyDailyFooter("Hola colegas");
+      expect(out).toContain("https://wa.me/573192919978");
+      expect(out).toContain("La evolución inevitable para el sector de los bienes raíces.");
+      expect(enforceJanIAIdentity("Soy JanIA de Vecy Network")).toBe("Soy JanIA de VECY BIENES RAÍCES");
+    });
+
     it("Debe verificar que un mensaje que contiene senderKeyDistributionMessage y texto NO sea descartado", async () => {
       const rawMsgWithSenderKey = {
         senderKeyDistributionMessage: {

@@ -11,10 +11,11 @@ import { gte, and, eq, sql, desc } from 'drizzle-orm';
 import { janiaMatchBot as whatsappBot } from './whatsapp-match';
 import { runNightlyRematch } from '../jobs/nightlyRematch';
 import { invokeLLM } from './llm';
+import { VECY_OFFICIAL_GROUPS } from '../../shared/const';
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
- * SERVICIO DE DIFUSIÓN DIARIA Y CRONS — VECY NETWORK v31.71
+ * SERVICIO DE DIFUSIÓN DIARIA Y CRONS — VECY BIENES RAÍCES v32.59
  * ═══════════════════════════════════════════════════════════════════════════
  * DOCTRINA DE DIFUSIÓN DE ALTO VALOR:
  * 1. CERO DUPLICADOS (Single Daily Execution):
@@ -25,11 +26,11 @@ import { invokeLLM } from './llm';
  *    - Lectura de los últimos 30 temas publicados para inyección en el prompt LLM.
  *    - Catálogo curricular de más de 60 especialidades inmobiliarias colombianas.
  *    - Banco rotativo multi-temático de contingencia (35 fallbacks indexados).
- * 3. FORMATO LIMPIO, ELEGANTE Y MULTIMODAL:
- *    - 1 sola ilustración 3D de JanIA (rotación sin repetir las últimas 3).
- *    - 1 redacción estructurada, cálida, colombiana y profesional para WhatsApp.
- *    - 1 nota de voz neuronal humana (Dalia TTS) de 45-60s sintetizando el mensaje.
- *    - Envío matutino único a las 10:00 AM hora Bogotá (máxima audiencia).
+ * 3. FORMATO LIMPIO EN TEXTO PURO (v32.59 — Doctrina Eduardo A. Rivera):
+ *    - Calendario de 30 días sin repetir (CALENDARIO_30_DIAS_VECY) + edición especial día 31.
+ *    - Redacción resumida, amena y profesional para WhatsApp. CERO audios TTS y CERO imágenes.
+ *    - Envío matutino único a las 10:00 AM hora Bogotá a Grupo 2, Grupo 3 y Canal Oficial.
+ *    - Encuesta SEMANAL (lunes 08:00 AM) EXCLUSIVA del Canal Oficial, máximo 3-4 opciones.
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -260,6 +261,8 @@ export function enforceJanIAIdentity(text: string): string {
   clean = clean.replace(/(?:te saluda|soy|les habla|habla|aquí)\s+Jani\s+Alves/gi, 'les habla JanIA, la inteligencia artificial de VECY Bienes Raíces');
   clean = clean.replace(/Jani Alves y yo/gi, 'Eduardo Rivera y Jani Alves');
   clean = clean.replace(/(?:te saluda|soy|les habla|habla|aquí)\s+Eduardo\s+Rivera/gi, 'les habla JanIA');
+  // v32.59: Marca pública exclusiva VECY BIENES RAÍCES (nunca "VECY Network")
+  clean = enforceVecyBrand(clean);
   return clean;
 }
 
@@ -709,6 +712,494 @@ export function getDynamicFallbackItem(tipoKey: string, d = new Date()): Fallbac
   return catalog[index];
 }
 
+// ── CALENDARIO DOCTRINAL DE 30 DÍAS SIN REPETIR — VECY BIENES RAÍCES ────────
+
+export interface DailyTipItem {
+  dayOfMonth: number;
+  topicTitle: string;
+  themeKey: string;
+  captionText: string;
+}
+
+export const CALENDARIO_30_DIAS_VECY: DailyTipItem[] = [
+  {
+    dayOfMonth: 1,
+    topicTitle: "El Modelo Colaborativo: 40-45% cada 3-4 días vs meses esperando solos",
+    themeKey: "modelo_colaborativo",
+    captionText: `🤝 *DÍA 1 — EL PODER DEL MODELO COLABORATIVO EN VECY BIENES RAÍCES* ⚡\n\n` +
+      `¡Buenos días, queridos colegas y aliados inmobiliarios! Soy JanIA.\n\n` +
+      `¿Alguna vez has calculado cuánto te cuesta esperar 3 o 4 meses para cerrar un negocio y ganarte el 100% o el 50% de comisión en solitario? En ese tiempo la vacancia, el desgaste y las cuentas por pagar no dan tregua.\n\n` +
+      `💡 *La Filosofía VECY BIENES RAÍCES:*\n` +
+      `• Con nuestra IA y red colaborativa, conectamos la punta de Oferta y Demanda en tiempo récord.\n` +
+      `• Es infinitamente más rentable ganar un **40% o 45% cada 3 o 4 días** cerrando negocios continuos en red, que agonizar meses enteros por una comisión solitaria.\n` +
+      `• El porcentaje restante (10% a 20%) se distribuye equitativamente (50/50) entre la plataforma VECY y los agentes de la red colaborativa que dinamizan y viralizan tu inmueble en todas las redes.\n\n` +
+      `💬 *¿Tienes una duda o caso privado?* Escríbeme a mi chat privado de JanIA 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Deseas debatir o compartir tu experiencia?* ¡Opina aquí en este grupo y construyamos gremio! 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 2,
+    topicTitle: "Política Cero Papel: Cuidado ambiental y agilidad contractual",
+    themeKey: "ecologia_cero_papel",
+    captionText: `🌱 *DÍA 2 — POLÍTICA CERO PAPEL: SALVAR ÁRBOLES Y FRENAR EL CALENTAMIENTO GLOBAL* 📄❌\n\n` +
+      `¡Buenos días a todos los corredores conscientes! Soy JanIA.\n\n` +
+      `En el sector inmobiliario tradicional se gastan millones de resmas de papel al año en promesas, minutas preliminares, copias de cédula y certificados de tradición. ¿El resultado? Deforestación, gasto innecesario de agua en la producción papelera y trámites lentos.\n\n` +
+      `🌿 *El Compromiso de VECY BIENES RAÍCES:*\n` +
+      `• **100% Digital y Cero Papel:** Promesas, órdenes de visita y contratos con firma electrónica y trazabilidad probatoria.\n` +
+      `• Cuidamos el medio ambiente, reducimos la huella de carbono y eliminamos el desplazamiento físico innecesario.\n` +
+      `• Un cliente firma desde su celular en 1 minuto mientras ayudas a preservar los bosques y fuentes hídricas de Colombia.\n\n` +
+      `💬 *¿Quieres redactar o revisar una minuta digital?* Consúltame por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Cómo implementas el cero papel en tu agencia?* Cuéntanos tu experiencia en este canal 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 3,
+    topicTitle: "Avisos en las Ventanas vs Marketing Digital y Estética Urbana",
+    themeKey: "ecologia_avisos",
+    captionText: `🪟 *DÍA 3 — ¿DEBEMOS SEGUIR PEGANDO AVISOS EN LAS VENTANAS?* 🚫🏙️\n\n` +
+      `¡Buenos días, colegas visionarios! Les habla JanIA.\n\n` +
+      `El tradicional aviso de vinilo o plástico pegado con cinta en la ventana de los apartamentos genera grave contaminación visual, se degrada al sol, mancha los vidrios y suele terminar en la basura contaminando nuestros ríos y vertederos.\n\n` +
+      `🎯 *La Alternativa Inteligente de VECY BIENES RAÍCES:*\n` +
+      `• Hoy más del **92% de los compradores** encuentran su inmueble a través de canales digitales y redes sociales.\n` +
+      `• Con la IA de VECY, en vez de esperar a que un transeúnte mire hacia el quinto piso, tu inmueble hace match instantáneo con clientes que ya están buscando activamente en esa zona.\n` +
+      `• Cuidamos la fachada de las ciudades, protegemos el medio ambiente y cerramos negocios con mayor elegancia y discreción.\n\n` +
+      `💬 *¿Tienes un inmueble para promover digitalmente?* Escríbeme a mi chat privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Qué opinas tú de los avisos físicos?* ¡Abre el debate aquí con los colegas! 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 4,
+    topicTitle: "Portal VECY: Tienda propia y publicación masiva de OFERTAS y DEMANDAS",
+    themeKey: "portal_vecy",
+    captionText: `🌐 *DÍA 4 — PORTAL VECY: PUBLICA OFERTAS Y DEMANDAS ILIMITADAS (SUPERANDO A WASI)* 🚀\n\n` +
+      `¡Buenos días a toda la red inmobiliaria! Soy JanIA.\n\n` +
+      `Muchos colegas usan plataformas tradicionales como Wasi.co. Son útiles, pero tienen una gran limitación: **solo te permiten publicar ofertas (inmuebles), ignorando por completo la otra mitad del negocio: las DEMANDAS y requerimientos de compra o arriendo**.\n\n` +
+      `🏆 *La Revolución de VECY BIENES RAÍCES:*\n` +
+      `• Ingreso al portal inmobiliario **totalmente gratuito**.\n` +
+      `• Cada agente tiene su propia tienda virtual y panel de administración.\n` +
+      `• Puedes publicar sin límites tanto tus **OFERTAS** como tus **REQUERIMIENTOS** (búsquedas de clientes con presupuesto en mano).\n` +
+      `• Nuestra IA monitorea ambas vitrinas y conecta las dos puntas de inmediato. ¡Aquí no se pierde un solo cliente!\n\n` +
+      `💬 *¿Quieres crear tu vitrina gratuita?* Escríbeme por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Qué herramientas te faltan en tu portal actual?* Comparte tu opinión aquí en el grupo 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 5,
+    topicTitle: "Rompiendo Tabús: 'Loro viejo sí aprende a hablar' y la IA como aliada",
+    themeKey: "mentalidad_ia",
+    captionText: `🧠 *DÍA 5 — ROMPIENDO TABÚS: 'LORO VIEJO SÍ APRENDE A HABLAR' Y LA IA NO VIENE A QUITAR TRABAJO* 💡\n\n` +
+      `¡Buenos días, queridos colegas! Soy JanIA.\n\n` +
+      `En el gremio escuchamos a menudo excusas como *"yo ya tengo más de 50 años, la tecnología no es para mí"*, o tabús como *"la Inteligencia Artificial nos va a quitar el empleo"*. ¡Nada más falso!\n\n` +
+      `🌟 *La Verdad sobre la Tecnología Inmobiliaria:*\n` +
+      `• La IA no reemplaza al agente empático, negociador y humano; lo **empodera con superpoderes**.\n` +
+      `• Lo que antes te tomaba 6 horas revisando chats y notas en cuadernos, JanIA lo resuelve en 2 segundos cruzando bases de datos.\n` +
+      `• Los asesores que aprenden a usar herramientas inteligentes son los que multiplicarán sus ingresos; los que se resistan por apatía quedarán rezagados.\n` +
+      `• Darse la oportunidad de aprender es el acto de mayor profesionalismo para tu futuro y el de tu familia.\n\n` +
+      `💬 *¿Quieres aprender a usarme paso a paso?* Háblame al privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Cómo ha sido tu experiencia adaptándote a la tecnología?* ¡Cuéntanos aquí! 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 6,
+    topicTitle: "Ahorro de Agua y Proyectos Eco-Eficientes en Propiedad Horizontal",
+    themeKey: "ecologia_agua",
+    captionText: `💧 *DÍA 6 — AHORRO DE AGUA Y EDIFICACIONES ECO-EFICIENTES EN COLOMBIA* 🏢🌿\n\n` +
+      `¡Buenos días a todos los corredores comprometidos con el planeta! Soy JanIA.\n\n` +
+      `Frente al cambio climático y las temporadas de sequía que afectan a nuestras ciudades, el ahorro de agua dejó de ser un adorno ecológico para convertirse en un factor financiero decisivo al tasar, vender y arrendar inmuebles.\n\n` +
+      `🚰 *Qué valoran hoy los compradores e inquilinos:*\n` +
+      `• Conjuntos residenciales con sistemas de recolección y reutilización de aguas lluvias para riego y zonas comunes.\n` +
+      `• Griferías y sanitarios de bajo consumo que reducen el recibo de acueducto hasta en un 35%.\n` +
+      `• Plantas de tratamiento y sensores de presión en motobombas que evitan fugas ocultas.\n` +
+      `• Destacar estas características ecológicas en tus fichas técnicas acelera la venta y enamora a las nuevas generaciones.\n\n` +
+      `💬 *¿Deseas evaluar el impacto eco-sostenible de un predio?* Háblame al privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿En tu ciudad ya exigen sellos de sostenibilidad?* Abre el debate aquí 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 7,
+    topicTitle: "Los 7 Pilares de una Publicación: Cómo vender sin quemar el inmueble",
+    themeKey: "tecnica_publicacion",
+    captionText: `📋 *DÍA 7 — LOS 7 PILARES PARA PUBLICAR SIN QUEMAR EL INMUEBLE* 🎯\n\n` +
+      `¡Buenos días, colegas! Soy JanIA.\n\n` +
+      `A diario vemos en grupos publicaciones como *"Vendo lindo apto bien ubicado, info al interno"*. Esa falta de rigor hace perder el 95% de los clientes y hace imposible que los motores de búsqueda encuentren comprador.\n\n` +
+      `🏆 *Los 7 Datos Indispensables en toda OFERTA:*\n` +
+      `1️⃣ **Tipo de Inmueble:** Apartamento, Casa, Lote, Local, Bodega.\n` +
+      `2️⃣ **Ubicación Exacta:** Ciudad y Barrio legítimo (sin nombres genéricos).\n` +
+      `3️⃣ **Precio y Administración:** Valor comercial real y cuota mensual.\n` +
+      `4️⃣ **Área Total:** Metros cuadrados construidos y privados.\n` +
+      `5️⃣ **Distribución:** Habitaciones y baños.\n` +
+      `6️⃣ **Parqueaderos:** Número y tipo (independiente o servidumbre/línea).\n` +
+      `7️⃣ **Contacto Directo:** Enlace de WhatsApp para comunicación fluida.\n\n` +
+      `💬 *¿Quieres que revise si tu ficha técnica está completa?* Escríbeme a mi privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Cuál error ves más seguido en las publicaciones del gremio?* Opina aquí 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 8,
+    topicTitle: "Redacción de Requerimientos Exactos: Cierra clientes con presupuesto en mano",
+    themeKey: "tecnica_demanda",
+    captionText: `📝 *DÍA 8 — CÓMO REDACTAR REQUERIMIENTOS EXACTOS PARA CERRAR EN TIEMPO RÉCORD* ⏱️\n\n` +
+      `¡Buenos días a toda la red! Les habla JanIA.\n\n` +
+      `Tener un cliente comprador o arrendatario calificado es un tesoro. Pero si pides *"Busco apto en el norte bonito y barato"*, recibirás 50 opciones que no le sirven a tu cliente y perderás días valiosos filtrando.\n\n` +
+      `🔍 *La Estructura de Oro para DEMANDAS:*\n` +
+      `• **Tipo y Operación:** Compra o arriendo de Apto / Casa / Local.\n` +
+      `• **Barrios de Interés:** Lista de 2 o 3 barrios específicos.\n` +
+      `• **Presupuesto Máximo Real:** Cifra techo en pesos colombianos (incluyendo administración si es arriendo).\n` +
+      `• **Filtros Innegociables:** Mínimo de alcobas, baños, garajes y si requiere balcón o ascensor.\n` +
+      `• Con estos parámetros exactos, el motor de VECY BIENES RAÍCES cruza contra miles de ofertas y te entrega el match perfecto.\n\n` +
+      `💬 *¿Tienes un requerimiento urgente por cruzar?* Envíamelo por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Cómo perfilas a tus clientes compradores?* Comparte tu método en el grupo 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 9,
+    topicTitle: "Retención en la Fuente en Notaría: Tarifas para Personas Naturales y Jurídicas",
+    themeKey: "tributario",
+    captionText: `💰 *DÍA 9 — RETENCIÓN EN LA FUENTE ANTE NOTARÍA: CLAVES FISCALES EN ENAJENACIÓN* 🏛️\n\n` +
+      `¡Buenos días a todos los corredores y asesores! Soy JanIA con tu tip tributario.\n\n` +
+      `El día de la firma de escrituras en notaría, los clientes no deben llevarse sorpresas desagradables con las liquidaciones de impuestos. La retención en la fuente es un anticipo de renta que el notario retiene obligatoriamente.\n\n` +
+      `📌 *Tarifas Oficiales (Estatuto Tributario):*\n` +
+      `• **Persona Natural:** Tarifa del **1%** sobre el valor total de la venta fijado en la escritura pública (Art. 398 E.T.).\n` +
+      `• **Persona Jurídica:** Tarifa general del **2.5%** a título de retención de renta.\n` +
+      `• **¿Quién la asume?:** Por disposición legal y costumbre mercantil, la retención en la fuente le corresponde al **100% al vendedor**.\n` +
+      `• Aclarar esto desde la promesa de compraventa evita disputas amargas en la notaría.\n\n` +
+      `💬 *¿Tienes una duda tributaria con un negocio?* Consúltame por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Te ha pasado que el vendedor no sabía de este costo?* Comparte tu anécdota aquí 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 10,
+    topicTitle: "Deducción de Mejoras ante la DIAN: Factura electrónica para bajar ganancia ocasional",
+    themeKey: "tributario",
+    captionText: `🧾 *DÍA 10 — DEDUCCIÓN LEGAL DE MEJORAS CON FACTURA ELECTRÓNICA ANTE LA DIAN* 🛠️\n\n` +
+      `¡Buenos días, queridos colegas! Les habla JanIA.\n\n` +
+      `Al vender un inmueble poseído por más de 2 años, el impuesto de Ganancia Ocasional del 15% puede costar decenas de millones de pesos. Muchos propietarios desconocen que las mejoras estructurales pueden elevar el costo fiscal para pagar menos impuesto de forma legal.\n\n` +
+      `💡 *Reglas Clave de la DIAN:*\n` +
+      `• **Mejoras Deducibles:** Remodelaciones completas de cocina, baños, ampliaciones, cambio de redes eléctricas o tuberías.\n` +
+      `• **Requisito Obligatorio:** Contar con **Facturas Electrónicas de Venta** válidas emitidas por los contratistas a nombre del propietario.\n` +
+      `• Recibos manuales o de caja menor NO son válidos ni deducibles ante la administración tributaria.\n` +
+      `• Asesorar a tus clientes en esto te posiciona como un verdadero consultor financiero de alto valor.\n\n` +
+      `💬 *¿Deseas calcular el costo fiscal de un predio?* Escríbeme por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Tus clientes suelen guardar facturas de remodelación?* Comenta aquí 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 11,
+    topicTitle: "Repartición Exacta de Gastos Notariales y de Registro en Colombia",
+    themeKey: "juridico_notarial",
+    captionText: `📊 *DÍA 11 — REPARTICIÓN DE GASTOS NOTARIALES Y DE REGISTRO EN COLOMBIA* ✍️\n\n` +
+      `¡Buenos días a toda la comunidad de VECY BIENES RAÍCES! Soy JanIA.\n\n` +
+      `Para que una promesa de compraventa esté blindada, debes desglosar con precisión matemática quién paga qué en la notaría y ante la Oficina de Registro de Instrumentos Públicos (ORIP).\n\n` +
+      `🤝 *Distribución Legal y Consuetudinaria:*\n` +
+      `1️⃣ **Derechos Notariales:** Se pagan por mitades: **50% Vendedor y 50% Comprador** (Aprox. 0.54% del valor del acto + IVA).\n` +
+      `2️⃣ **Retención en la Fuente:** Asumida **100% por el Vendedor** (1% persona natural).\n` +
+      `3️⃣ **Impuesto de Registro y Beneficencia:** Asumido **100% por el Comprador** (Gobernación + SNR, entre el 1.67% y 2.0% según el departamento).\n` +
+      `4️⃣ **Gastos de Copias de Escritura:** Cada parte paga las copias que solicita.\n\n` +
+      `💬 *¿Necesitas una liquidación previa para tu cliente?* Háblame por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Has tenido promesas donde intentaron cambiar este esquema?* Cuéntanos aquí 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 12,
+    topicTitle: "Estudios de Mercado del M²: Fijación de precios 100% virtual sin quemar predios",
+    themeKey: "avaluos_mercado",
+    captionText: `📐 *DÍA 12 — ESTUDIOS DE MERCADO DEL M²: CAPTA A PRECIO REAL SIN QUEMAR EL PREDIO* 🏙️\n\n` +
+      `¡Buenos días, colegas corredores! Soy JanIA.\n\n` +
+      `El principal motivo por el que un inmueble pasa 6, 8 o 12 meses sin venderse es porque se captó a un precio emocional inflado por el propietario. En VECY BIENES RAÍCES no hacemos peritajes presenciales costosos, sino estudios comparativos de mercado ágiles y 100% virtuales.\n\n` +
+      `📊 *Por qué sustentar con datos del M²:*\n` +
+      `• Analizamos transacciones reales y ofertas activas en el mismo barrio y estrato.\n` +
+      `• Entregamos un rango de valor por metro cuadrado sugerido para cierre rápido.\n` +
+      `• Le muestras al propietario una gráfica técnica en lugar de una opinión subjetiva, ganándote su respeto profesional y la exclusiva.\n\n` +
+      `💬 *¿Tienes una captación y necesitas el rango de M²?* Consúltame por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Cómo manejas tú a los propietarios con precio inflado?* ¡Abre el debate! 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 13,
+    topicTitle: "Fichas SINUPOT en Bogotá: Usos de suelo, alturas y edificabilidad al instante",
+    themeKey: "urbanismo_sinupot",
+    captionText: `🗺️ *DÍA 13 — FICHAS SINUPOT EN BOGOTÁ: ANÁLISIS URBANÍSTICO PARA LOTES Y CASAS* 🏗️\n\n` +
+      `¡Buenos días, visionarios inmobiliarios! Soy JanIA.\n\n` +
+      `Cuando captas una casa antigua, un lote o un inmueble con potencial comercial en Bogotá, el verdadero valor no está en los ladrillos, sino en **lo que el POT permite construir o desarrollar allí**.\n\n` +
+      `🏢 *Datos Clave en la Ficha SINUPOT:*\n` +
+      `• **Tratamiento Urbanístico:** Consolidación, renovación urbana o desarrollo.\n` +
+      `• **Área de Actividad:** Residencial neta, comercio vecinal o servicios empresariales.\n` +
+      `• **Usos del Suelo Permitidos:** Si se puede instalar oficina, restaurante, consultorio o bodega.\n` +
+      `• **Índices de Ocupación y Alturas:** Cuántos pisos y qué densidad permite la norma.\n` +
+      `• Envíame el PDF o CHIP de la ficha y te extraigo el resumen urbanístico en segundos.\n\n` +
+      `💬 *¿Tienes un predio para analizar en Bogotá?* Escríbeme por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Haces negocios con constructores?* Cuéntanos tu enfoque aquí 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 14,
+    topicTitle: "Cálculo Técnico del Canon de Arriendo: El rango 0.5% a 0.8% y el costo de la vacancia",
+    themeKey: "arrendamiento_canon",
+    captionText: `💵 *DÍA 14 — CÁLCULO TÉCNICO DEL CANON DE ARRIENDO Y EL COSTO OCULTO DE LA VACANCIA* 🏢\n\n` +
+      `¡Buenos días, aliados de arrendamientos! Soy JanIA.\n\n` +
+      `Fijar un canon de arriendo no es adivinar. La regla técnica en Colombia ubica el canon mensual promedio entre el **0.5% y el 0.8%** sobre el valor comercial real del predio, según estrato, amenidades y antigüedad.\n\n` +
+      `⚠️ *El Gran Error de los Propietarios:*\n` +
+      `• Si un inmueble de $400 millones se arrienda en $2.400.000 (0.6%), el propietario quiere pedir $2.800.000.\n` +
+      `• Por esos $400.000 de sobreprecio, el predio dura 4 meses desocupado, perdiendo $9.600.000 de arriendo y pagando 4 cuotas de administración del bolsillo.\n` +
+      `• La vacancia destruye la rentabilidad. Asesorar con números fríos te hace ganar al cliente para siempre.\n\n` +
+      `💬 *¿Deseas calcular el canon óptimo de un inmueble?* Pregúntame al privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Cómo convences a un dueño de no inflar el canon?* Comparte tu experiencia 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 15,
+    topicTitle: "Arras Confirmatorias vs de Retracto: Cómo blindar promesas de compraventa",
+    themeKey: "juridico_arras",
+    captionText: `⚖️ *DÍA 15 — ARRAS CONFIRMATORIAS VS ARRAS DE RETRACTO EN PROMESAS DE COMPRAVENTA* 🏛️\n\n` +
+      `¡Buenos días, colegas! Soy JanIA con una advertencia jurídica crucial.\n\n` +
+      `En muchas promesas de compraventa vemos que escriben la palabra "arras" sin especificar la tipología. Ese error permite que una parte se eche para atrás a última hora dejando al asesor sin comisión.\n\n` +
+      `📌 *Diferencias que debes dominar (Código Civil):*\n` +
+      `• **Arras de Retracto (Art. 1859 C.C.):** Autorizan a cualquiera de las partes a arrepentirse perdiendo las arras o pagándolas dobladas, extinguiendo el negocio sin obligación de firmar.\n` +
+      `• **Arras Confirmatorias (Art. 1861 C.C.):** Son parte de pago y prueba de ejecución del contrato; NO dan derecho a arrepentirse y permiten exigir el cumplimiento judicial forzoso.\n` +
+      `• **Cláusula Penal:** Fija la tasación anticipada de perjuicios por mora o incumplimiento.\n\n` +
+      `💬 *¿Tienes una promesa y quieres que la revise?* Envíamela al privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Te han intentado deshacer un negocio con arras de retracto?* Cuéntanos aquí 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 16,
+    topicTitle: "Ley 820 de 2003: Causales y procedimiento seguro para restitución de inmueble",
+    themeKey: "juridico_arrendamiento",
+    captionText: `📜 *DÍA 16 — LEY 820 DE 2003: CAUSALES LEGALES PARA RESTITUCIÓN DE INMUEBLE* 🏠\n\n` +
+      `¡Buenos días a toda la comunidad inmobiliaria! Les habla JanIA.\n\n` +
+      `El arrendamiento de vivienda urbana está estrictamente regulado en Colombia por la Ley 820 de 2003. Para pedir un inmueble arrendado no basta la voluntad del propietario; se deben cumplir causales legales exactas.\n\n` +
+      `⚖️ *Causales Especiales de Terminación con Indemnización o Preaviso:*\n` +
+      `• Necesidad del propietario de habitar el predio por término no menor a 1 año.\n` +
+      `• Demolición o reparación necesaria que impida la habitación.\n` +
+      `• Entrega en cumplimiento de obligación originada en contrato de compraventa.\n` +
+      `• Terminación unilateral con indemnización de 3 cánones y preaviso no menor a 3 meses.\n` +
+      `• Notificar por correo certificado con las formalidades legales es la única vía para evitar demandas de restitución fallidas.\n\n` +
+      `💬 *¿Dudas sobre restitución o preavisos?* Consúltame por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Cuál ha sido tu caso de arrendamiento más complejo?* Comenta aquí 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 17,
+    topicTitle: "Seguridad y Verificación de Cédula: Protege tu integridad antes de cada visita",
+    themeKey: "seguridad_identidad",
+    captionText: `🛡️ *DÍA 17 — SEGURIDAD PRIMERO: VERIFICACIÓN OFICIAL DE CÉDULA ANTES DE MOSTRAR UN PREDIO* 👮‍♂️\n\n` +
+      `¡Buenos días, colegas! Soy JanIA con un mensaje directo sobre tu seguridad personal.\n\n` +
+      `Ingresar a un apartamento desocupado o a una casa con personas desconocidas que contactaste por internet es un riesgo real para tu patrimonio y tu vida. Ninguna comisión vale tu seguridad.\n\n` +
+      `🔒 *El Servicio de Validación de JanIA y VECY BIENES RAÍCES:*\n` +
+      `• Antes de ir a la cita, pídele foto de la cédula al visitante con naturalidad: *"Por políticas de seguridad de la copropiedad y de la inmobiliaria, validamos identidad previa"*.\n` +
+      `• Envíame el número de cédula al chat y en segundos te verifico el nombre civil completo y consulta de antecedentes.\n` +
+      `• Dejas un registro digital probatorio de quién ingresó al predio, respaldando tu gestión ante el propietario.\n\n` +
+      `💬 *¿Quieres validar una cédula ahora mismo?* Escríbeme por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Qué protocolos de seguridad aplicas en tus visitas?* ¡Compartamos buenas prácticas! 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 18,
+    topicTitle: "Rentas Cortas y Vivienda Turística: RNT y reglamentos de Propiedad Horizontal",
+    themeKey: "rentas_cortas",
+    captionText: `🏖️ *DÍA 18 — RENTAS CORTAS Y TURÍSTICAS: RNT, ASAMBLEAS Y NORMATIVA DE P.H.* 🌇\n\n` +
+      `¡Buenos días a todos los aliados del corretaje! Soy JanIA.\n\n` +
+      `El modelo de rentas cortas (Airbnb, Booking) es muy codiciado por inversionistas. Pero vender un apartamento prometiendo que *"se puede rentar por días"* sin verificar el reglamento de propiedad horizontal es una trampa legal.\n\n` +
+      `📌 *Los 3 Requisitos Indispensables:*\n` +
+      `1️⃣ **Reglamento de Copropiedad:** Debe autorizar explícitamente la explotación de vivienda turística o contar con aprobación del 70% del coeficiente en asamblea.\n` +
+      `2️⃣ **Registro Nacional de Turismo (RNT):** Trámite gratuito y obligatorio ante el Ministerio de Comercio.\n` +
+      `3️⃣ **Tarjeta de Registro de Alojamiento (TRA):** Registro de huéspedes ante la Policía de Turismo.\n` +
+      `• Asesora con la verdad jurídica y evita que tu comprador enfrente multas y cerramientos policiales.\n\n` +
+      `💬 *¿Quieres revisar si un conjunto permite rentas cortas?* Pregúntame al privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿En tu ciudad cómo está el ambiente con las rentas cortas?* Opina aquí 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 19,
+    topicTitle: "Cuotas Extraordinarias de Administración: Quién las asume entre comprador y vendedor",
+    themeKey: "propiedad_horizontal",
+    captionText: `🏢 *DÍA 19 — CUOTAS EXTRAORDINARIAS DE ADMINISTRACIÓN: REGLAS CLARAS PARA NO FRUSTRAR FIRMAS* ✍️\n\n` +
+      `¡Buenos días, colegas! Soy JanIA.\n\n` +
+      `Llegar a la notaría y descubrir que la asamblea aprobó una cuota extraordinaria de $5.000.000 para pintar la fachada puede romper un negocio en el último minuto si no se pactó previamente en la promesa.\n\n` +
+      `⚖️ *El Criterio Doctrinal Inmobiliario:*\n` +
+      `• **Regla General:** Las cuotas extraordinarias causadas y aprobadas *antes* de la fecha de entrega real del inmueble son responsabilidad del **Vendedor**.\n` +
+      `• Las cuotas extraordinarias aprobadas *después* de la entrega o posesión corresponden al **Comprador**.\n` +
+      `• **Cláusula de Blindaje:** Exige siempre un paz y salvo expedido por la administración con fecha inferior a 15 días antes de la firma, donde se certifique si existen cuotas futuras ya votadas.\n\n` +
+      `💬 *¿Deseas incluir la cláusula de administración en tu promesa?* Pídemela por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Alguna vez se te ha complicado una firma por este motivo?* Cuéntanos aquí 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 20,
+    topicTitle: "Ética y Corretaje Compartido 50/50: Respeto a las puntas y la dignidad gremial",
+    themeKey: "etica_corretaje",
+    captionText: `🤝 *DÍA 20 — ÉTICA EN EL CORRETAJE COMPARTIDO: RESPETO A LAS PUNTAS Y DIGNIDAD GREMIAL* 🌟\n\n` +
+      `¡Buenos días a todos los aliados de la red! Les habla JanIA.\n\n` +
+      `El canibalismo y el salto de intermediarios le han hecho un daño enorme a la reputación del sector inmobiliario en Colombia. Corredores que intentan llamar al dueño a espaldas del colega o que niegan el corretaje 50/50 destruyen su carrera por una ganancia efímera.\n\n` +
+      `🏆 *Los Principios de VECY BIENES RAÍCES:*\n` +
+      `• Respeto absoluto a la hoja de presentación y al colega captador.\n` +
+      `• La reputación comercial es el único activo que no se puede recomprar.\n` +
+      `• Cuando aprendemos a compartir con lealtad, multiplicamos las recomendaciones y los negocios fluyen sin estrés.\n` +
+      `• La red de VECY nació precisamente para unir a los mejores agentes bajo un código de ética inquebrantable.\n\n` +
+      `💬 *¿Quieres conocer más sobre nuestras alianzas éticas?* Escríbeme al privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Qué valoras más al compartir negocio con otro colega?* ¡Opina en el grupo! 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 21,
+    topicTitle: "Fotografía Inmobiliaria con Smartphone: Encuadres, luz y técnicas que captan clientes",
+    themeKey: "marketing_fotografia",
+    captionText: `📸 *DÍA 21 — FOTOGRAFÍA INMOBILIARIA PROFESIONAL CON SMARTPHONE* 📱✨\n\n` +
+      `¡Buenos días, queridos colegas! Soy JanIA con tips de marketing visual.\n\n` +
+      `No necesitas una cámara réflex de $10 millones para tomar fotos que vendan. Con un teléfono moderno y técnica adecuada puedes duplicar los clics y visitas de cualquier publicación.\n\n` +
+      `💡 *5 Reglas Básicas de Fotografía:*\n` +
+      `1️⃣ **Limpieza y Orden:** Despeja mesones de cocina, baja la tapa del inodoro y retira elementos personales.\n` +
+      `2️⃣ **Luz Natural:** Abre cortinas de par en par y toma fotos en las horas de mayor iluminación (10 AM a 2 PM).\n` +
+      `3️⃣ **Lente Limpio:** Pasa un paño por la cámara antes de cada foto (la grasa del bolsillo arruina la nitidez).\n` +
+      `4️⃣ **Tomas a la Altura del Pecho:** Evita ángulos en picada; mantén las líneas de las paredes verticales y rectas.\n` +
+      `5️⃣ **Gran Angular Moderado (0.6x o 0.8x):** Muestra el espacio completo sin distorsionar en exceso como ojo de pez.\n\n` +
+      `💬 *¿Quieres recomendaciones de apps para editar fotos gratis?* Pídemelas por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Cuál es tu mayor desafío al tomar fotos de inmuebles?* Comenta aquí 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 22,
+    topicTitle: "Ganancia Ocasional del 15%: Cálculo exacto en inmuebles poseídos por más de 2 años",
+    themeKey: "tributario_ganancia",
+    captionText: `💰 *DÍA 22 — IMPUESTO DE GANANCIA OCASIONAL (15%): CÁLCULO EXACTO Y ESTRATEGIAS FISCALES* 📊\n\n` +
+      `¡Buenos días a toda la red! Soy JanIA con un tema tributario de máximo impacto.\n\n` +
+      `Desde la última reforma tributaria en Colombia, la tarifa del impuesto sobre la Ganancia Ocasional es del **15%** para inmuebles que hayan estado en el patrimonio del vendedor durante **2 años o más** (si es menos de 2 años, tributa como renta ordinaria).\n\n` +
+      `📝 *Fórmula Básica de Liquidación:*\n` +
+      `• **Ganancia Ocasional Bruta = Precio de Venta en Escritura - Costo Fiscal del Inmueble**.\n` +
+      `• El Costo Fiscal es el valor por el cual el predio figuraba en la última declaración de renta, más reajustes fiscales del Art. 73 E.T. o avalúo catastral.\n` +
+      `• Sobre esa diferencia neta se aplica el 15%.\n` +
+      `• Conocer este cálculo previo evita que el vendedor entre en pánico cuando el contador le entregue la liquidación de renta del año siguiente.\n\n` +
+      `💬 *¿Quieres proyectar la ganancia ocasional de un cliente?* Consúltame por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Tus clientes te preguntan por este impuesto antes de fijar precio?* Comparte tu experiencia 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 23,
+    topicTitle: "Inmuebles en Sucesión Ilíquida: Trámites notariales indispensables para prometer",
+    themeKey: "juridico_sucesion",
+    captionText: `⚖️ *DÍA 23 — INMUEBLES EN SUCESIÓN: TRÁMITES NOTARIALES INDISPENSABLES ANTES DE VENDER* 📜\n\n` +
+      `¡Buenos días, colegas! Les habla JanIA.\n\n` +
+      `Captar un inmueble donde uno de los cónyuges o padres falleció es muy común. Pero firmar promesas de compraventa o recibir arras sin que la sucesión esté radicada o resuelta puede terminar en un lío judicial y la devolución del dinero con sanciones.\n\n` +
+      `📌 *Pasos Jurídicos Previos:*\n` +
+      `1️⃣ Si hay común acuerdo entre todos los herederos, la sucesión se tramita ante **Notaría** de forma rápida.\n` +
+      `2️⃣ Si hay desacuerdo o herederos menores de edad sin apoderado, se tramita por vía **Judicial** (Juzgado de Familia).\n` +
+      `3️⃣ Los herederos pueden ceder sus derechos herenciales o esperar la expedición de la escritura pública de adjudicación y su respectivo registro en la ORIP.\n` +
+      `4️⃣ Nunca prometas venta sin verificar el inventario de bienes y la conformidad de todos los herederos legítimos.\n\n` +
+      `💬 *¿Tienes un inmueble en sucesión para vender?* Consúltame por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Has enfrentado complicaciones con herencias familiares?* Abre el foro aquí 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 24,
+    topicTitle: "Inspección de Humedades y Vicios Ocultos: Qué verificar para evitar litigios futuros",
+    themeKey: "tecnica_patologias",
+    captionText: `🔍 *DÍA 24 — HUMEDADES Y VICIOS OCULTOS: INSPECCIÓN CLAVE EN LA CAPTACIÓN* 🏠🛠️\n\n` +
+      `¡Buenos días, aliados! Soy JanIA.\n\n` +
+      `Un vicio oculto es aquel defecto grave en la estructura, tuberías o cubiertas del predio que no es perceptible a simple vista por un comprador diligente, pero que hace impropio el inmueble para su uso.\n\n` +
+      `⚠️ *Puntos Críticos a Revisar en tu Captación:*\n` +
+      `• Humedades por capilaridad en zócalos o por filtración de pisos superiores.\n` +
+      `• Estado de las cajas de inspección, sifones y presión de agua en baños.\n` +
+      `• Tableros eléctricos sin polos a tierra o sobrecargados.\n` +
+      `• Si el vendedor oculta un vicio con una mano de pintura fresca, el comprador puede demandar la resolución del contrato o la rebaja del precio más indemnización (Acción Redhibitoria, Art. 1914 C.C.). La honestidad técnica protege tu prestigio.\n\n` +
+      `💬 *¿Dudas sobre cómo redactar el estado del inmueble en la promesa?* Escríbeme por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Te ha tocado lidiar con reclamos de vicios ocultos posventa?* Cuéntanos aquí 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 25,
+    topicTitle: "Exención de Ganancia Ocasional en Vivienda de Habitación: Las primeras 5.000 UVT",
+    themeKey: "tributario_exencion",
+    captionText: `🏡 *DÍA 25 — EXENCIÓN DE GANANCIA OCASIONAL: BENEFICIO DE LAS PRIMERAS 5.000 UVT* 💰\n\n` +
+      `¡Buenos días a toda la red de corredores! Soy JanIA.\n\n` +
+      `Existe un gran beneficio tributario en Colombia que muchos propietarios desconocen al vender su casa o apartamento de habitación. El Estatuto Tributario (Art. 311-1) contempla una exención muy generosa.\n\n` +
+      `💡 *Requisitos para la Exención de 5.000 UVT:*\n` +
+      `• El predio vendido debe ser la **vivienda de habitación principal** del contribuyente.\n` +
+      `• El valor equivalente a las primeras **5.000 UVT** de utilidad está exento del impuesto del 15%.\n` +
+      `• **Condición Clave:** El producto de la venta debe ser consignado en una cuenta AFC o destinado totalmente a la adquisición de otra vivienda de habitación en un plazo no mayor a 1 año.\n` +
+      `• Dar este consejo tributario a un cliente puede ahorrarle millones de pesos y garantizar su fidelidad de por vida.\n\n` +
+      `💬 *¿Deseas liquidar este beneficio para tu cliente?* Háblame por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Tus clientes conocen este beneficio de ley?* ¡Comenta en el grupo! 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 26,
+    topicTitle: "Desenglobe y Venta de Garajes o Depósitos: Qué exige el reglamento de copropiedad",
+    themeKey: "propiedad_horizontal_desenglobe",
+    captionText: `🚗 *DÍA 26 — VENTA DE GARAJES O DEPÓSITOS INDEPENDIENTES: REGLAS EN PROPIEDAD HORIZONTAL* 📦\n\n` +
+      `¡Buenos días, colegas! Soy JanIA con un tip de propiedad horizontal.\n\n` +
+      `¿Se puede vender un parqueadero o un depósito sin vender el apartamento? Sí, pero no siempre ni a cualquiera.\n\n` +
+      `📌 *Reglas de la Ley 675 de 2001:*\n` +
+      `1️⃣ **Matrícula Inmobiliaria Propia:** El garaje o depósito debe ser una unidad privada desenglobada jurídicamente con su propio folio de matrícula en la ORIP.\n` +
+      `2️⃣ **Reglamento del Edificio:** Muchos reglamentos de PH prohíben expresamente que los parqueaderos sean enajenados a personas que no sean propietarios de apartamentos en la misma copropiedad (por seguridad y control de acceso).\n` +
+      `3️⃣ Si es parqueadero común de uso exclusivo, NO se puede vender por escritura; solo se puede ceder su asignación junto con la unidad principal.\n\n` +
+      `💬 *¿Quieres revisar el certificado de tradición de un garaje?* Envíamelo por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Has cerrado ventas de parqueaderos independientes?* Comparte tu experiencia 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 27,
+    topicTitle: "Negociación Asertiva y Manejo de Objeciones: Defiende el precio sin perder al comprador",
+    themeKey: "negociacion_asertiva",
+    captionText: `🎯 *DÍA 27 — NEGOCIACIÓN ASERTIVA: CÓMO DEFENDER EL PRECIO SIN PERDER AL COMPRADOR* 🤝\n\n` +
+      `¡Buenos días a todos los aliados negociadores! Soy JanIA.\n\n` +
+      `Cuando un comprador dice *"el inmueble está muy costoso"* o hace una contraoferta agresiva del 20% por debajo, el peor error del asesor es bajar la guardia o confrontar al cliente. La negociación profesional se basa en preguntas asertivas.\n\n` +
+      `💡 *3 Tácticas de Cierre Efectivas:*\n` +
+      `• **Validar antes de responder:** *"Entiendo tu punto de vista sobre el presupuesto. Aparte del valor, ¿la ubicación y la distribución cumplen al 100% lo que tu familia necesita?"*.\n` +
+      `• **Sustentar con Datos Reales:** Muestra el estudio del valor de metro cuadrado de VECY BIENES RAÍCES en la zona. Frente a los datos fríos, la emoción retrocede.\n` +
+      `• **Ceder con Condición:** Si el vendedor accede a un descuento pequeño, exige a cambio un cierre inmediato o un pago inicial más alto: *"Si el propietario aprueba ese ajuste, ¿estás listo para firmar la promesa hoy mismo?"*.\n\n` +
+      `💬 *¿Estás trabado en una negociación difícil?* Pídeme asesoría por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Cuál es tu objeción de precio favorita para rebatir?* ¡Comenta aquí! 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 28,
+    topicTitle: "Subsidios y Créditos Hipotecarios: Cómo guiar a compradores primerizos",
+    themeKey: "creditos_subsidios",
+    captionText: `🏦 *DÍA 28 — CRÉDITOS HIPOTECARIOS Y LEASING: ACOMPAÑAMIENTO AL COMPRADOR PRIMERIZO* 👨‍👩‍👧\n\n` +
+      `¡Buenos días, colegas! Soy JanIA.\n\n` +
+      `El comprador primerizo suele tener miedo, desconfianza y confusión ante los trámites bancarios. El asesor que lo lleva de la mano y le explica con paciencia se gana a un cliente de por vida y a toda su red familiar.\n\n` +
+      `📋 *Diferencias Clave para Explicarle al Cliente:*\n` +
+      `• **Crédito Hipotecario Tradicional:** Financia hasta el 70% del valor del inmueble en vivienda No VIS (hasta 80% en VIS). El bien queda a nombre del comprador con hipoteca en primer grado.\n` +
+      `• **Leasing Habitacional:** Financia hasta el 80% o incluso 85%. El inmueble queda jurídicamente a nombre del banco y el cliente tiene un contrato de arrendamiento con opción de compra, con ventajas tributarias en renta.\n` +
+      `• Perfila al comprador antes de mostrarle predios que superen su capacidad de endeudamiento.\n\n` +
+      `💬 *¿Quieres proyectar la cuota bancaria de un cliente?* Consúltame por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Tus compradores prefieren crédito o leasing?* Opina aquí en el grupo 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 29,
+    topicTitle: "Calificación Rápida del Arrendatario: Análisis de ingresos y codeudor sin fricciones",
+    themeKey: "arrendamiento_perfilamiento",
+    captionText: `📑 *DÍA 29 — CALIFICACIÓN EFICIENTE DEL ARRENDATARIO: INGRESOS Y CODEUDOR SIN PÉRDIDAS DE TIEMPO* ⚡\n\n` +
+      `¡Buenos días a toda la comunidad de arrendamientos! Soy JanIA.\n\n` +
+      `Mostrar un inmueble 10 veces para que al final la aseguradora o afianzadora rechace al interesado es una pérdida dolorosa de tiempo y combustible. Calificar al candidato desde la primera llamada es la marca de un profesional.\n\n` +
+      `🔍 *Filtros Básicos de Capacidad:*\n` +
+      `• **Regla del 3 a 1:** Los ingresos demostrables del arrendatario (o sumados con su núcleo familiar) deben ser equivalentes al menos a **3 veces el valor del canon mensual más administración**.\n` +
+      `• **Codeudor Solvente:** Exigir codeudor con ingresos similares o propiedad raíz libre de gravámenes y afectaciones familiares.\n` +
+      `• Si no cuenta con codeudor, orientarlo hacia pólizas de fianza digitales o depósitos autorizados según la norma.\n` +
+      `• Filtra con amabilidad antes de agendar la visita.\n\n` +
+      `💬 *¿Dudas sobre requisitos de aseguradoras?* Pregúntame por privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¿Qué aseguradora o afianzadora te da mejores resultados?* Comparte tus recomendaciones 🤝\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  },
+  {
+    dayOfMonth: 30,
+    topicTitle: "La Visión de VECY BIENES RAÍCES: Una red nacional imparable y próspera para todos",
+    themeKey: "vision_vecy",
+    captionText: `🚀 *DÍA 30 — LA VISIÓN DE VECY BIENES RAÍCES: UNIDOS SOMOS IMPARABLES* 🇨🇴✨\n\n` +
+      `¡Buenos días, queridos colegas, aliados y soñadores del corretaje! Soy JanIA.\n\n` +
+      `Completamos un ciclo de 30 días de aprendizaje, debate y crecimiento mutuo. Este proyecto fue concebido por nuestros directores **Eduardo A. Rivera** y **Jani Alves** con una misión sagrada: **dignificar el oficio inmobiliario en Colombia y erradicar el canibalismo comercial**.\n\n` +
+      `🌟 *Hacia Dónde Vamos:*\n` +
+      `• Hacia un mercado donde ningún asesor esté solo ni tenga que esperar meses para cobrar.\n` +
+      `• Una red inteligente donde la tecnología trabaja 24/7 para ti mientras tú te dedicas a negociar y construir relaciones humanas.\n` +
+      `• Un portal inmobiliario gratuito con tiendas virtuales completas para ofertas y demandas.\n` +
+      `• Cero papel, protección del medio ambiente, comisiones justas compartidas y prosperidad real para cada familia vinculada a nuestra red.\n\n` +
+      `💬 *¿Deseas atención personalizada con nuestros directores?* Escribe a nuestra línea comercial bróker: +57 316 656 9719 o háblame a mi chat privado 📲: https://wa.me/573192919978\n` +
+      `🗣️ *¡Gracias por ser parte activa de esta revolución!* Sigamos transformando el corretaje colombiano juntos. 🤝✨\n\n` +
+      `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+  }
+];
+
 // ── GENERADOR DINÁMICO DE GUIONES CON MEMORIA ANTI-REPETICIÓN ──────────────
 
 export async function generateDailyContent(
@@ -885,207 +1376,477 @@ Debes responder en formato JSON estricto con los siguientes cuatro campos:
   };
 }
 
-// ── ENCUESTAS INTERACTIVAS MATUTINAS (08:00 AM COLOMBIA) ─────────────────────
+// ── ENCUESTAS INTERACTIVAS SEMANALES (CANAL OFICIAL DE WHATSAPP EXCLUSIVO) ───
 
 export interface PollDefinition {
   question: string;
   options: string[];
 }
 
-export const DAILY_POLLS_MAP: Record<number, PollDefinition> = {
-  1: { // Lunes
-    question: "🤝 ¿Qué opinas de la repartición colaborativa 45/5/5/45 de VECY BIENES RAÍCES para negocios justos?",
+export const WEEKLY_POLLS_LIST: PollDefinition[] = [
+  {
+    // Semana 1: Ecológica - Avisos en Ventanas vs Medio Ambiente
+    question: "En pro del medio ambiente y la estética urbana: ¿Debemos dejar de pegar avisos físicos en las ventanas y migrar al 100% digital?",
     options: [
-      "Excelente: 45% Oferta, 45% Demanda y 10% red",
-      "Muy justa: dignifica el trabajo de ambas puntas",
-      "Mejor que el 50/50 cerrado o 40/20/40",
-      "Quiero conocer los términos y condiciones"
+      "Sí: Evita plástico contaminante y cuida la fachada",
+      "No: Siento que el aviso en ventana aún atrae vecinos",
+      "Modelo híbrido: Solo aviso temporal con código QR digital"
     ]
   },
-  2: { // Martes
-    question: "🛡️ ¿Cuál servicio de seguridad y blindaje jurídico consideras más urgente para tu gestión?",
+  {
+    // Semana 2: Ecológica - Cero Papel y Clima
+    question: "Política Cero Papel en promesas y contratos: ¿Qué beneficio ambiental y comercial consideras más valioso?",
     options: [
-      "Verificación de cédulas y antecedentes de visitantes",
-      "Identificación de colegas para presentación al dueño",
-      "Redacción de promesas y contratos de corretaje",
-      "Estudio de títulos y gravámenes SNR"
+      "Salvar árboles y frenar la huella de carbono",
+      "Cierre inmediato por firma digital sin desplazamientos",
+      "Seguridad jurídica total con trazabilidad electrónica"
     ]
   },
-  3: { // Miércoles
-    question: "🌐 ¿Qué funcionalidad te gustaría que tuviera primero la plataforma web de VECY BIENES RAÍCES?",
+  {
+    // Semana 3: Ecológica - Ahorro de Agua y Sostenibilidad
+    question: "Ahorro de agua y sostenibilidad: ¿Qué tanto influyen las tecnologías de ahorro hídrico al vender o arrendar un inmueble hoy?",
     options: [
-      "Matching automático de oferta y demanda con alertas",
-      "Verificación de identidad y seguridad de visitantes",
-      "Fichas técnicas en marca blanca para compartir",
-      "Generador de minutas de promesa y corretaje"
+      "Mucho: Los clientes buscan reducir costos y cuidar el planeta",
+      "Moderado: Es un plus atractivo pero no decisivo",
+      "Poco: La mayoría solo se fija en precio y ubicación"
     ]
   },
-  4: { // Jueves
-    question: "🤖 ¿Por cuál canal prefieres que JanIA te atienda y resuelva tus consultas inmobiliarias?",
+  {
+    // Semana 4: Modelo Colaborativo VECY - Velocidad vs Espera
+    question: "Modelo Colaborativo VECY: ¿Qué prefieres para tus ingresos como asesor inmobiliario?",
     options: [
-      "Por WhatsApp (mensajes y notas de voz)",
-      "Por el Chat Web de la plataforma",
-      "Por ambos canales integrados en tiempo real",
-      "Por llamadas y reportes ejecutivos semanales"
+      "Ganar 40%-45% cada 3-4 días con IA y red de aliados",
+      "Esperar 2 o 3 meses solo para ganar el 50% o 100%",
+      "Combinar ambos esquemas según la exclusividad del predio"
     ]
   },
-  5: { // Viernes
-    question: "📐 ¿Qué método consideras más confiable para sustentar el precio justo a un propietario?",
+  {
+    // Semana 5: Qué somos y qué hacemos en VECY BIENES RAÍCES
+    question: "¿Cuál de los pilares de VECY BIENES RAÍCES aporta más valor a tu gestión diaria?",
     options: [
-      "Estudio de mercado en VECY Bienes Raíces",
-      "Método comparativo de mercado y zona",
-      "Análisis de rentabilidad y canon de renta",
-      "Avalúo comercial corporativo (RND)"
+      "Cruce de ofertas y demandas con IA en segundos",
+      "Servicios 100% virtuales (estudios de m², contratos, tributario)",
+      "Red colaborativa de aliados para vender sin canibalismo"
     ]
   },
-  6: { // Sábado
-    question: "☕ Café Inmobiliario: ¿Cómo integras herramientas de Inteligencia Artificial en tu corretaje?",
+  {
+    // Semana 6: Portal Gratuito y Tienda Propia vs Portales Tradicionales (Wasi)
+    question: "Portal VECY Gratuito: Además de vitrina para inmuebles, ¿qué opinas de tener vitrina propia para publicar REQUERIMIENTOS?",
     options: [
-      "Asistentes como JanIA (matching y consultas)",
-      "Verificación de identidad de clientes y colegas",
-      "Redacción de fichas descriptivas y copys",
-      "Aún realizo todo el proceso tradicional"
+      "Revolucionario: Ningún portal tradicional (como Wasi) lo permite",
+      "Excelente: Agiliza la búsqueda para clientes compradores",
+      "Muy útil: Multiplica las probabilidades de cierre en red"
     ]
   },
-  0: { // Domingo
-    question: "✨ Proyección semanal: ¿En qué tipo de inmueble proyectas mayor dinamismo comercial?",
+  {
+    // Semana 7: Tecnología y Tabús - La IA como Aliada
+    question: "Frente al tabú de que 'la IA va a desplazar al asesor', ¿cuál es tu percepción real en VECY?",
     options: [
-      "Apartamentos residenciales",
-      "Casas en conjuntos campestres",
-      "Locales comerciales y bodegas",
-      "Oficinas y consultorios"
+      "Es una aliada: Nos ahorra tiempo y multiplica los ingresos",
+      "Loro viejo sí aprende: La tecnología nos hace más profesionales",
+      "Aún siento temor, pero quiero aprender a usarla"
+    ]
+  },
+  {
+    // Semana 8: Servicios que ofrecemos y cuáles les gustaría tener
+    question: "¿Qué nuevo servicio 100% virtual te gustaría que habilite VECY BIENES RAÍCES próximamente?",
+    options: [
+      "Simulador financiero de crédito hipotecario para clientes",
+      "Fichas técnicas interactivas en PDF con marca blanca",
+      "Calculadora automática de rentabilidad en rentas cortas",
+      "Capacitaciones semanales en vivo sobre marketing con IA"
     ]
   }
+];
+
+// Mapeo retrocompatible para pruebas unitarias de 7 días (días 0 a 6, max 3-4 opciones, cero emojis)
+export const DAILY_POLLS_MAP: Record<number, PollDefinition> = {
+  1: WEEKLY_POLLS_LIST[0], // Lunes
+  2: WEEKLY_POLLS_LIST[1], // Martes
+  3: WEEKLY_POLLS_LIST[2], // Miércoles
+  4: WEEKLY_POLLS_LIST[3], // Jueves
+  5: WEEKLY_POLLS_LIST[4], // Viernes
+  6: WEEKLY_POLLS_LIST[5], // Sábado
+  0: WEEKLY_POLLS_LIST[6], // Domingo
 };
 
-export async function publishDailyPoll(targetDateBogota?: string, force: boolean = false) {
+/**
+ * Publica la encuesta periódica EXCLUSIVAMENTE en el Canal Oficial de WhatsApp.
+ * Doctrina Eduardo A. Rivera:
+ * - Herramienta nativa de encuesta de WhatsApp (pollCreationMessage).
+ * - Modo de votación de UNA SOLA RESPUESTA (selectableCount: 1, no múltiple).
+ * - CERO EMOJIS en la pregunta ni en las opciones de votación.
+ * - NUNCA se envía a Grupo 1, Grupo 2 ni Grupo 3 para evitar saturación de la comunidad.
+ */
+export async function publishWeeklyPoll(targetDateBogota?: string, force: boolean = false) {
   const dateBogota = targetDateBogota || getBogotaDateString();
   const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
-  const dayOfWeek = d.getDay();
-  const poll = DAILY_POLLS_MAP[dayOfWeek] || DAILY_POLLS_MAP[6];
+  const startOfYear = new Date(d.getFullYear(), 0, 1);
+  const diffDays = Math.floor((d.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+  const weekNumber = Math.floor(diffDays / 7);
+  const pollIndex = weekNumber % WEEKLY_POLLS_LIST.length;
+  const poll = WEEKLY_POLLS_LIST[pollIndex] || WEEKLY_POLLS_LIST[0];
 
-  console.log(`[CRON-POLL] Evaluando despacho de encuesta matutina para ${dateBogota} (Día ${dayOfWeek})...`);
+  console.log(`[CRON-POLL] Evaluando despacho de encuesta semanal nativa para canal (Semana ${weekNumber}, Índice ${pollIndex})...`);
 
-  // 1. Bloqueo en PostgreSQL usando target_group 'grupo2_poll'
-  const lock = await acquireBroadcastLock('grupo2_poll', 'encuesta_matutina', dateBogota, force);
+  // 1. Bloqueo en PostgreSQL usando target_group 'canal_poll'
+  const lock = await acquireBroadcastLock('canal_poll', 'encuesta_semanal', dateBogota, force);
   if (!lock.allowed) {
-    console.log(`[CRON-POLL] ⏭️ Omitiendo encuesta matutina: ${lock.reason}`);
+    console.log(`[CRON-POLL] ⏭️ Omitiendo encuesta semanal: ${lock.reason}`);
     return { success: false, reason: lock.reason };
   }
 
   try {
-    const channelUrl = "https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b";
-
-    // 2. Despachar al Canal Oficial de WhatsApp (Newsletter) como centro de votación principal
+    // 2. Despachar EXCLUSIVAMENTE al Canal Oficial de WhatsApp (Newsletter) como encuesta nativa (1 sola respuesta)
     if (whatsappBot.channelNewsletterId) {
-      console.log(`[CRON-POLL] 📢 Publicando encuesta matutina en Canal Oficial (${whatsappBot.channelNewsletterId})...`);
-      const channelText = `📊 *ENCUESTA DE LA COMUNIDAD — VECY BIENES RAÍCES* 📊\n\n` +
-        `${poll.question}\n\n` +
-        poll.options.map((opt, i) => `${i + 1}️⃣ ${opt}`).join('\n') +
-        `\n\n💬 *¡Déjanos tu reacción y comenta aquí en nuestro Canal Oficial de Vecy!* 🤝✨`;
-      await whatsappBot.sendDirectMessage(whatsappBot.channelNewsletterId, channelText, { allowDirectMessage: true }).catch((e) => {
-        console.warn('[CRON-POLL] Error enviando a canal:', e?.message);
-      });
+      console.log(`[CRON-POLL] 📢 Despachando encuesta nativa (1 sola opción, 0 emojis) al Canal Oficial (${whatsappBot.channelNewsletterId})...`);
+      const sent = await whatsappBot.sendPoll(whatsappBot.channelNewsletterId, poll.question, poll.options, 1);
+      if (!sent) {
+        // Fallback defensivo sin emojis si la API de canal de WhatsApp no procesa poll interactivo:
+        const channelText = `*ENCUESTA SEMANAL — VECY BIENES RAÍCES*\n\n` +
+          `${poll.question}\n\n` +
+          poll.options.map((opt, i) => `${i + 1}. ${opt}`).join('\n') +
+          `\n\nVota respondiendo o dejando tu reacción directamente aquí en nuestro Canal Oficial.`;
+        await whatsappBot.sendDirectMessage(whatsappBot.channelNewsletterId, channelText, { allowDirectMessage: true });
+      }
+    } else {
+      console.warn('[CRON-POLL] Canal Oficial no configurado en este momento.');
     }
 
-    // 3. Compartir en Grupos 2 y 3 con mención y embudo de marketing hacia el Canal Oficial
-    const promoShareText = `📊 *NUEVA ENCUESTA EN NUESTRO CANAL OFICIAL — VECY BIENES RAÍCES* 📊\n\n` +
-      `${poll.question}\n\n` +
-      poll.options.map((opt, i) => `${i + 1}️⃣ ${opt}`).join('\n') +
-      `\n\n👉 *Colegas, los invitamos a votar, comentar y participar directamente en nuestro Canal Oficial:*` +
-      `\n🔗 ${channelUrl}` +
-      `\n\n¡Síguenos en el canal oficial para ver los resultados en vivo, primicias del gremio y actualizaciones exclusivas de JanIA! 🚀✨`;
-
-    let pollSent = false;
-
-    // Grupo 2: Soporte Legal, Tributario y Avalúos
-    const targetGroup2 = whatsappBot.buzonGroupId || "120363417740040773@g.us";
-    if (targetGroup2) {
-      console.log(`[CRON-POLL] 📤 Compartiendo encuesta y enlace de canal en Grupo 2 (${targetGroup2})...`);
-      await whatsappBot.queuedSend(targetGroup2, promoShareText, { allowGroupMessage: true }).catch((e) => {
-        console.warn('[CRON-POLL] Error enviando invitación a Grupo 2:', e?.message);
-      });
-      // Despachar también encuesta nativa interactiva para votación directa
-      pollSent = await whatsappBot.sendPollToGroup(poll.question, poll.options, targetGroup2, 1);
-    }
-
-    // Grupo 3: Proyecto Vecy Network
-    const targetGroup3 = whatsappBot.circuloGroupId || "120363403507276533@g.us";
-    if (targetGroup3) {
-      console.log(`[CRON-POLL] 📤 Compartiendo encuesta y enlace de canal en Grupo 3 (${targetGroup3})...`);
-      await whatsappBot.queuedSend(targetGroup3, promoShareText, { allowGroupMessage: true }).catch((e) => {
-        console.warn('[CRON-POLL] Error enviando invitación a Grupo 3:', e?.message);
-      });
-    }
-
-    // 4. Asentar en PostgreSQL
+    // 3. Asentar en PostgreSQL
     await completeBroadcast(lock.broadcastId, {
       topicTitle: poll.question,
-      themeKey: 'encuesta',
+      themeKey: 'encuesta_semanal',
       voiceText: poll.question,
       captionText: poll.options.join(' | ')
     });
 
-    console.log(`[CRON-POLL] ✅ Encuesta matutina despachada exitosamente al Canal Oficial y compartida en Grupos 2 y 3.`);
-    return { success: true, pollSent, question: poll.question };
+    console.log(`[CRON-POLL] ✅ Encuesta semanal nativa despachada exitosamente al Canal Oficial (0 mensajes a grupos).`);
+    return { success: true, question: poll.question };
   } catch (err: any) {
     await failBroadcast(lock.broadcastId, err?.message);
-    console.error(`[CRON-POLL] ❌ Error despachando encuesta matutina:`, err?.message || err);
+    console.error(`[CRON-POLL] ❌ Error despachando encuesta semanal:`, err?.message || err);
     return { success: false, error: err?.message };
   }
 }
 
+export const publishDailyPoll = publishWeeklyPoll;
+
 export async function publishDailyPollNow(force: boolean = false) {
   const dateBogota = getBogotaDateString();
-  return publishDailyPoll(dateBogota, force);
+  return publishWeeklyPoll(dateBogota, force);
 }
 
-// ── ORQUESTADOR PRINCIPAL DE CRONS (HORARIO 08:00 AM Y 10:00 AM COLOMBIA) ──
+/**
+ * 📢 INVITACIONES PERIÓDICAS DESDE EL CANAL HACIA LOS GRUPOS OFICIALES
+ * Doctrina Eduardo A. Rivera:
+ * - Publicadas de vez en cuando en el Canal Oficial.
+ * - En horarios y días DISTINTOS a la encuesta de los lunes a las 08:00 AM.
+ * - Mensajes y enlaces 100% SEPARADOS para no confundir a la audiencia.
+ */
+export async function publishChannelGroupInvitation(targetGroupKey: 'grupo1' | 'grupo2' | 'grupo3', force: boolean = false) {
+  const dateBogota = getBogotaDateString();
+  const lock = await acquireBroadcastLock(`canal_invitacion_${targetGroupKey}`, `invitacion_${targetGroupKey}`, dateBogota, force);
+  if (!lock.allowed) {
+    console.log(`[CRON-CANAL-INVITACION] ⏭️ Omitiendo invitación a ${targetGroupKey}: ${lock.reason}`);
+    return { success: false, reason: lock.reason };
+  }
+
+  if (!whatsappBot.channelNewsletterId) {
+    console.warn('[CRON-CANAL-INVITACION] Canal Oficial no configurado.');
+    return { success: false, reason: 'Canal no configurado' };
+  }
+
+  let text = "";
+  let groupTitle = "";
+
+  if (targetGroupKey === 'grupo1') {
+    groupTitle = VECY_OFFICIAL_GROUPS.grupo1.name;
+    text = `📢 *COMUNIDAD VECY BIENES RAÍCES — OFERTAS Y DEMANDAS NACIONALES* 🇨🇴\n\n` +
+      `¿Tienes propiedades disponibles para venta o arriendo, o estás buscando un inmueble específico para un cliente calificado con presupuesto en mano?\n\n` +
+      `📌 *Grupo Oficial de Operaciones Comerciales:*\n` +
+      `*${VECY_OFFICIAL_GROUPS.grupo1.name}*\n\n` +
+      `• Publicación exclusiva de inmuebles (Ofertas🏷️) y requerimientos de clientes (Demandas📝).\n` +
+      `• JanIA monitorea 24/7 y cruza las dos puntas en tiempo récord.\n` +
+      `• Cero chats de relleno ni conversaciones informales: canal 100% transaccional.\n\n` +
+      `👉 *Únete al grupo de Ofertas y Demandas aquí:* ${VECY_OFFICIAL_GROUPS.grupo1.inviteLink}\n\n` +
+      `${VECY_MOTTO_FOOTER}`;
+  } else if (targetGroupKey === 'grupo2') {
+    groupTitle = VECY_OFFICIAL_GROUPS.grupo2.name;
+    text = `💡 *CONSULTORIO INMOBILIARIO & NOTICIAS — VECY BIENES RAÍCES* 📰\n\n` +
+      `¿Tienes dudas sobre promesas de compraventa, arras, retención en la fuente DIAN, contratos de arrendamiento o necesitas conocer el valor aproximado del metro cuadrado?\n\n` +
+      `📌 *Foro Abierto de Consultas y Tips Diarios:*\n` +
+      `*${VECY_OFFICIAL_GROUPS.grupo2.name}*\n\n` +
+      `• Espacio abierto para resolver consultas jurídicas y tributarias con JanIA.\n` +
+      `• Recibe tips diarios, noticias inmobiliarias de Colombia y debates de mercado.\n` +
+      `• Comparte tus inquietudes profesionales con colegas de todo el país.\n\n` +
+      `👉 *Únete al grupo de Tips y Consultas aquí:* ${VECY_OFFICIAL_GROUPS.grupo2.inviteLink}\n\n` +
+      `${VECY_MOTTO_FOOTER}`;
+  } else if (targetGroupKey === 'grupo3') {
+    groupTitle = VECY_OFFICIAL_GROUPS.grupo3.name;
+    text = `🚀 *PROYECTO VECY BIENES RAÍCES — COMUNIDAD & MODELO COLABORATIVO* 🌐\n\n` +
+      `¿Quieres compartir tus experiencias del día a día en el corretaje, proponer nuevas herramientas para la plataforma o conocer cómo ganar el 40%-45% cada 3-4 días en red?\n\n` +
+      `📌 *Foro de Comunidad y Proyecto:*\n` +
+      `*${VECY_OFFICIAL_GROUPS.grupo3.name}*\n\n` +
+      `• Charlas libres del sector inmobiliario, foros y experiencias reales.\n` +
+      `• Conoce a los fundadores y aliados de la primera bolsa inmobiliaria colaborativa de Colombia.\n` +
+      `• Cero canibalismo comercial: uniendo al gremio con tecnología de punta.\n\n` +
+      `👉 *Únete al grupo de Proyecto y Comunidad aquí:* ${VECY_OFFICIAL_GROUPS.grupo3.inviteLink}\n\n` +
+      `${VECY_MOTTO_FOOTER}`;
+  }
+
+  try {
+    await whatsappBot.sendDirectMessage(whatsappBot.channelNewsletterId, text, { allowDirectMessage: true });
+    await completeBroadcast(lock.broadcastId, {
+      topicTitle: `Invitación Canal a ${groupTitle}`,
+      themeKey: `invitacion_${targetGroupKey}`,
+      captionText: text,
+    });
+    console.log(`[CRON-CANAL-INVITACION] ✅ Invitación a ${targetGroupKey} despachada al Canal Oficial.`);
+    return { success: true, targetGroupKey };
+  } catch (err: any) {
+    await failBroadcast(lock.broadcastId, err?.message);
+    console.error(`[CRON-CANAL-INVITACION] ❌ Error enviando invitación a ${targetGroupKey}:`, err?.message);
+    return { success: false, error: err?.message };
+  }
+}
+
+// ── CALENDARIO 30 DÍAS: SELECCIÓN Y ENRIQUECIMIENTO EN TEXTO PURO (v32.59) ──
+// Doctrina Eduardo A. Rivera: difusión diaria 100% TEXTO (cero audios TTS, cero imágenes),
+// resumida y amena, un tema distinto por cada día del mes, firmada por VECY BIENES RAÍCES.
+
+export const VECY_DM_LINK = 'https://wa.me/573192919978';
+export const VECY_MOTTO_FOOTER = `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`;
+
+/**
+ * Sustituye cualquier rastro público de la marca interna "VECY Network" por "VECY BIENES RAÍCES".
+ * No toca URLs (ej: vecy-network.vercel.app) porque exige espacio entre ambas palabras.
+ */
+export function enforceVecyBrand(text: string): string {
+  if (!text) return text;
+  return text.replace(/\bVECY\s+NETWORK\b/gi, 'VECY BIENES RAÍCES');
+}
+
+/** Edición especial del día 31 para no repetir ningún tema dentro del mismo mes */
+export const DIA_31_ESPECIAL_VECY: DailyTipItem = {
+  dayOfMonth: 31,
+  topicTitle: "Edición Especial Día 31: Balance del mes y la voz de la comunidad",
+  themeKey: "balance_mes",
+  captionText: `📆 *DÍA 31 — EDICIÓN ESPECIAL: BALANCE DEL MES Y LA VOZ DE LA COMUNIDAD* 🤝\n\n` +
+    `¡Buenos días, queridos colegas y aliados! Soy JanIA.\n\n` +
+    `Hoy cerramos el mes con una pausa para escucharlos a ustedes, que son el corazón de VECY BIENES RAÍCES.\n\n` +
+    `🗣️ *Queremos saber:*\n` +
+    `• ¿Qué tema de este mes te sirvió más en tu día a día?\n` +
+    `• ¿Qué servicio te gustaría que VECY BIENES RAÍCES habilite pronto?\n` +
+    `• ¿Qué tema quieres que tratemos el próximo mes?\n\n` +
+    `💬 *¿Prefieres contármelo en privado?* Escríbeme 📲: ${'https://wa.me/573192919978'}\n` +
+    `🗣️ *¿Quieres que lo debatamos entre colegas?* ¡Responde aquí en el grupo! 🤝\n\n` +
+    `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
+};
+
+/**
+ * Devuelve el tema del calendario correspondiente al día del mes en hora Bogotá.
+ * Días 1-30 → CALENDARIO_30_DIAS_VECY; día 31 → edición especial (sin repetir).
+ */
+export function getCalendarTipForDate(d = new Date()): DailyTipItem {
+  const bogota = new Date(d.toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+  const dayOfMonth = bogota.getDate();
+  if (dayOfMonth === 31) return DIA_31_ESPECIAL_VECY;
+  const found = CALENDARIO_30_DIAS_VECY.find(t => t.dayOfMonth === dayOfMonth);
+  return found || CALENDARIO_30_DIAS_VECY[(dayOfMonth - 1) % CALENDARIO_30_DIAS_VECY.length];
+}
+
+/**
+ * Garantiza el cierre doctrinal: invitación al privado de JanIA, invitación al debate
+ * en el grupo y lema oficial de VECY BIENES RAÍCES.
+ */
+export function ensureVecyDailyFooter(text: string): string {
+  let res = text.trim();
+  if (!res.includes('wa.me/573192919978')) {
+    res += `\n\n💬 *¿Tienes un caso privado?* Escríbeme a mi chat privado de JanIA 📲: ${VECY_DM_LINK}\n` +
+      `🗣️ *¿Quieres debatir o compartir tu experiencia?* ¡Opina aquí en el grupo! 🤝`;
+  }
+  if (!/La evoluci[oó]n inevitable/i.test(res)) {
+    res += `\n\n${VECY_MOTTO_FOOTER}`;
+  }
+  return res;
+}
+
+/**
+ * Enriquece (resume y actualiza) el tema del día con el LLM en TEXTO PURO.
+ * Si el LLM falla o devuelve algo inválido, se usa el texto curado del calendario.
+ */
+export async function generateCalendarDailyText(tip: DailyTipItem): Promise<{ topicTitle: string; captionText: string; themeKey: string }> {
+  const timeInfo = getBogotaTimeInfo();
+  const sanitize = (t: string) =>
+    ensureVecyDailyFooter(enforceVecyBrand(enforceGreetingAccuracy(enforceJanIAIdentity(t), timeInfo.period)));
+  const fallback = { topicTitle: tip.topicTitle, captionText: sanitize(tip.captionText), themeKey: tip.themeKey };
+
+  const systemPrompt = `Eres JanIA, la inteligencia artificial de VECY BIENES RAÍCES en Colombia. Tono femenino, cálido, colombiano, profesional y ameno.
+REGLAS INQUEBRANTABLES:
+- La marca pública es EXCLUSIVAMENTE "VECY BIENES RAÍCES". JAMÁS escribas "VECY Network".
+- Nunca te hagas pasar por Eduardo A. Rivera ni Jani Alves (son los fundadores humanos; menciónalos solo en tercera persona).
+- Inicia con "${timeInfo.greeting}" (hora Bogotá: ${timeInfo.hour}:${String(timeInfo.min).padStart(2, '0')}).
+- Mensaje RESUMIDO y AMENO para WhatsApp: máximo 170 palabras, títulos en *negrita*, 3-4 viñetas, emojis sobrios.
+- Respeta el tema base del día; puedes refrescarlo con un ángulo práctico del mercado colombiano actual.
+- PROHIBIDO inventar cifras, normas, fechas o noticias. Si no estás segura de un dato, omítelo.
+- Cierra invitando a escribir al chat privado de JanIA (${VECY_DM_LINK}) para casos privados y a debatir en el grupo.
+- Termina SIEMPRE con estas tres líneas exactas:
+_VECY_
+_BIENES RAÍCES_
+_La evolución inevitable para el sector de los bienes raíces._ 🚀
+Responde en JSON estricto: {"topicTitle": "título breve (máx. 70 caracteres)", "captionText": "mensaje final para WhatsApp"}`;
+
+  try {
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Tema base del Día ${tip.dayOfMonth}: "${tip.topicTitle}".\nTexto curado de referencia (resúmelo y refréscalo, sin perder su esencia):\n${tip.captionText}` }
+      ],
+      responseFormat: { type: "json_object" },
+      temperature: 0.7
+    });
+
+    const rawContent = (response as any)?.choices?.[0]?.message?.content?.trim();
+    if (rawContent) {
+      const parsed = JSON.parse(rawContent);
+      if (typeof parsed.captionText === 'string' && parsed.captionText.trim().length >= 120) {
+        return {
+          topicTitle: (typeof parsed.topicTitle === 'string' && parsed.topicTitle.trim()) || tip.topicTitle,
+          captionText: sanitize(parsed.captionText),
+          themeKey: tip.themeKey,
+        };
+      }
+    }
+    console.warn('[CRON-CALENDARIO] Respuesta LLM inválida o vacía. Usando texto curado del calendario.');
+  } catch (err: any) {
+    console.warn(`[CRON-CALENDARIO] Falló enriquecimiento LLM (${err?.message}). Usando texto curado del calendario.`);
+  }
+  return fallback;
+}
+
+// ── BÚSQUEDA DE IMÁGENES PÚBLICAS EN INTERNET (CC0 / COMERCIAL) — VECY BIENES RAÍCES ──
+// Doctrina Eduardo A. Rivera: búsqueda en la red de imágenes públicas acordes a cada tema
+// sin repetir en el mes y sin utilizar las ilustraciones 3D previas de JanIA.
+
+export const THEME_IMAGE_SEARCH_MAP: Record<string, string> = {
+  modelo_colaborativo: "modern real estate architecture building office",
+  ecologia_cero_papel: "digital tablet paperless contract business document",
+  ecologia_avisos: "modern residential apartment building facade windows",
+  portal_vecy: "modern house architecture property real estate",
+  mentalidad_ia: "smart city future modern architecture technology",
+  ecologia_agua: "sustainable green architecture building garden eco",
+  tecnica_publicacion: "luxury apartment living room modern interior",
+  tecnica_demanda: "modern office business negotiation real estate meeting",
+  tributario: "financial documents calculator office desk accounting",
+  tributario_ganancia: "financial investment growth real estate building",
+  tributario_exencion: "urban housing development construction city",
+  juridico_notarial: "notary deed signing legal documents contract",
+  juridico_arras: "house keys contract handshake real estate",
+  juridico_arrendamiento: "residential apartment building entrance keys",
+  juridico_sucesion: "heritage family estate legal papers law desk",
+  avaluos_mercado: "aerial city skyline architecture urban buildings",
+  urbanismo_sinupot: "urban planning architecture blueprints city",
+  arrendamiento_canon: "modern apartment building exterior rental",
+  arrendamiento_perfilamiento: "professional client meeting office documents",
+  seguridad_identidad: "security official verification identity certificate",
+  rentas_cortas: "vacation rental boutique tourist apartment luxury",
+  propiedad_horizontal: "condominium residential swimming pool building",
+  propiedad_horizontal_desenglobe: "cadastral map property deed land division",
+  etica_corretaje: "business professionals handshake partnership office",
+  marketing_fotografia: "architectural photography camera wide angle building",
+  tecnica_patologias: "building inspection engineering structure maintenance",
+  negociacion_asertiva: "business negotiation agreement closing handshake",
+  creditos_subsidios: "mortgage loan bank approval keys new home",
+  vision_vecy: "city skyline modern architecture sunrise buildings",
+  balance_mes: "community meeting discussion forum coffee table",
+};
+
+/**
+ * Busca y descarga una imagen pública relevante en internet (Openverse API) con licencia comercial/CC0.
+ * Retorna la ruta local de la imagen descargada o undefined si no está disponible (failsafe texto).
+ */
+export async function fetchPublicThemeImage(themeKey: string, dayOfMonth: number): Promise<string | undefined> {
+  const query = THEME_IMAGE_SEARCH_MAP[themeKey] || "modern architecture real estate building";
+  console.log(`[CRON-IMAGE-WEB] 🌐 Buscando imagen pública en internet para Día ${dayOfMonth} (${themeKey}): "${query}"...`);
+
+  try {
+    const searchUrl = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=8&license_type=commercial`;
+    const res = await fetch(searchUrl, {
+      headers: { "User-Agent": "VecyBienesRaices/1.0" },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!res.ok) {
+      console.warn(`[CRON-IMAGE-WEB] Openverse retornó status ${res.status}`);
+      return undefined;
+    }
+    const data: any = await res.json();
+    const results = data.results || [];
+    if (results.length === 0) {
+      console.warn(`[CRON-IMAGE-WEB] No se encontraron resultados para "${query}"`);
+      return undefined;
+    }
+
+    // Rotar según el día del mes para no usar siempre el primer resultado
+    const selected = results[(dayOfMonth - 1) % results.length] || results[0];
+    const imgUrl = selected?.url;
+    if (!imgUrl) return undefined;
+
+    console.log(`[CRON-IMAGE-WEB] 📥 Descargando imagen seleccionada: "${selected.title || 'Inmueble'}" (${imgUrl.substring(0, 60)}...)...`);
+    const imgRes = await fetch(imgUrl, { signal: AbortSignal.timeout(12000) });
+    if (!imgRes.ok) return undefined;
+
+    const buffer = Buffer.from(await imgRes.arrayBuffer());
+    if (buffer.length < 1000) return undefined;
+
+    const cacheDir = path.resolve(process.cwd(), 'client/public/assets/broadcast');
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+    const targetFile = path.join(cacheDir, `daily_tip_dia_${dayOfMonth}.jpg`);
+    fs.writeFileSync(targetFile, buffer);
+    console.log(`[CRON-IMAGE-WEB] ✅ Imagen guardada localmente (${buffer.length} bytes): ${targetFile}`);
+    return targetFile;
+  } catch (err: any) {
+    console.warn(`[CRON-IMAGE-WEB] Aviso: Búsqueda o descarga de imagen no completada (${err?.message}). Se despachará en texto puro.`);
+    return undefined;
+  }
+}
+
+// ── ORQUESTADOR PRINCIPAL DE CRONS (v32.59 — HORA BOGOTÁ) ───────────────────
 
 export function initCronScheduler() {
-  console.log('[CRON-SERVICE] Inicializando orquestador de agendas automatizadas v31.71 (PostgreSQL Lock, Anti-Duplicados, Memoria 30 Días e Identidad JanIA)...');
+  console.log('[CRON-SERVICE] Inicializando orquestador v32.59 (Encuesta SEMANAL nativa solo en Canal Oficial, Difusión diaria con imágenes públicas de internet, Invitaciones periódicas separadas, PostgreSQL Lock anti-duplicados)...');
 
-  // 📊 MAÑANA 08:00 AM — Encuesta Interactiva Diaria (Grupo 2 + Canal Oficial)
-  // Lunes a Domingo a las 08:00 AM en punto hora Bogotá (UTC-5)
-  cron.schedule('0 8 * * *', async () => {
-    console.log('[CRON-SERVICE] Disparando cron matutino de Encuesta Interactiva (08:00 AM)...');
-    await publishDailyPoll(undefined, false);
+  // 📊 LUNES 08:00 AM — Encuesta SEMANAL NATIVA (EXCLUSIVA del Canal Oficial de WhatsApp, 1 sola respuesta, cero emojis)
+  cron.schedule('0 8 * * 1', async () => {
+    console.log('[CRON-SERVICE] Disparando encuesta semanal del Canal Oficial (Lunes 08:00 AM)...');
+    await publishWeeklyPoll(undefined, false);
   }, { timezone: 'America/Bogota' });
 
-  // ☀️ MAÑANA 10:00 AM — Tip Temático Diario (Grupo 2 + Canal Oficial)
-  // Lunes a Domingo a las 10:00 AM en punto hora Bogotá (UTC-5)
-  cron.schedule('0 10 * * 1', async () => {
-    await publishDailyTipForDay('lunes_arranque', false);
+  // ☀️ 10:00 AM DIARIO — Tip del Calendario de 30 días (IMAGEN PÚBLICA DE INTERNET + TEXTO SIN AUDIO → Grupo 2 + Grupo 3 + Canal Oficial)
+  cron.schedule('0 10 * * *', async () => {
+    console.log('[CRON-SERVICE] Disparando difusión diaria (10:00 AM)...');
+    await publishTodayTipNow(false);
   }, { timezone: 'America/Bogota' });
 
-  cron.schedule('0 10 * * 2', async () => {
-    await publishDailyTipForDay('martes_juridico', false);
+  // 📢 INVITACIONES PERIÓDICAS DESDE EL CANAL HACIA LOS GRUPOS (Días y horas distintos a la encuesta de los Lunes 8am, con mensajes y enlaces separados)
+  // Miércoles 04:30 PM (16:30) -> Invitación al Grupo 1 (Ofertas y Demandas)
+  cron.schedule('30 16 * * 3', async () => {
+    console.log('[CRON-SERVICE] Disparando invitación del Canal al Grupo 1 (Miércoles 16:30)...');
+    await publishChannelGroupInvitation('grupo1', false);
   }, { timezone: 'America/Bogota' });
 
-  cron.schedule('0 10 * * 3', async () => {
-    await publishDailyTipForDay('miercoles_marketing', false);
+  // Jueves 04:30 PM (16:30) -> Invitación al Grupo 2 (Tips y Consultas)
+  cron.schedule('30 16 * * 4', async () => {
+    console.log('[CRON-SERVICE] Disparando invitación del Canal al Grupo 2 (Jueves 16:30)...');
+    await publishChannelGroupInvitation('grupo2', false);
   }, { timezone: 'America/Bogota' });
 
-  cron.schedule('0 10 * * 4', async () => {
-    await publishDailyTipForDay('jueves_tributario', false);
-  }, { timezone: 'America/Bogota' });
-
-  cron.schedule('0 10 * * 5', async () => {
-    await publishDailyTipForDay('viernes_avaluos', false);
-  }, { timezone: 'America/Bogota' });
-
-  cron.schedule('0 10 * * 6', async () => {
-    await publishDailyTipForDay('sabado_cafe', false);
-  }, { timezone: 'America/Bogota' });
-
-  cron.schedule('0 10 * * 0', async () => {
-    await publishDailyTipForDay('domingo_soporte', false);
-  }, { timezone: 'America/Bogota' });
-
-  // 🌆 TARDE 04:30 PM (16:30) — Grupo 3 (PROYECTO Vecy Network) + Canal Oficial (Miércoles y Sábados)
-  cron.schedule('30 16 * * 3,6', async () => {
-    console.log('[CRON-SERVICE] Disparando cron vespertino de Grupo 3 (PROYECTO Vecy Network)...');
-    await publishGrupo3TipNow(false);
+  // Viernes 04:30 PM (16:30) -> Invitación al Grupo 3 (Proyecto VECY)
+  cron.schedule('30 16 * * 5', async () => {
+    console.log('[CRON-SERVICE] Disparando invitación del Canal al Grupo 3 (Viernes 16:30)...');
+    await publishChannelGroupInvitation('grupo3', false);
   }, { timezone: 'America/Bogota' });
 
   // 🔄 RE-MATCHING MASIVO SILENCIOSO (Base de Datos): Madrugada profunda a las 03:45 AM (Ventana Inactiva)
@@ -1099,16 +1860,6 @@ export function initCronScheduler() {
   }, { timezone: 'America/Bogota' });
 
   // 🛡️ GUARDIA DE SEGURIDAD MINUTERA CON BLOQUEO POSTGRESQL Y VENTANA ESTRICTA
-  const DAY_TIP_MAP: Record<number, string> = {
-    1: 'lunes_arranque',
-    2: 'martes_juridico',
-    3: 'miercoles_marketing',
-    4: 'jueves_tributario',
-    5: 'viernes_avaluos',
-    6: 'sabado_cafe',
-    0: 'domingo_soporte',
-  };
-
   let isCheckingCatchUp = false;
   setInterval(async () => {
     if (isCheckingCatchUp) return;
@@ -1121,15 +1872,25 @@ export function initCronScheduler() {
       const min = parseInt(minStr, 10);
       const day = new Date(now.toLocaleString('en-US', { timeZone: 'America/Bogota' })).getDay();
 
-      // Ventana de seguridad matutina: Únicamente entre 10:00 y 10:15 AM
-      const tipoKey = DAY_TIP_MAP[day];
-      if (tipoKey && hour === 10 && min >= 1 && min <= 15) {
-        await publishDailyTipForDay(tipoKey, false);
+      // Ventana de seguridad de la encuesta semanal: Lunes entre 08:01 y 08:15 AM
+      if (day === 1 && hour === 8 && min >= 1 && min <= 15) {
+        await publishWeeklyPoll(undefined, false);
       }
 
-      // Ventana de seguridad vespertina: Únicamente entre 16:30 y 16:45 PM para Grupo 3 (Miércoles y Sábados)
-      if ((day === 3 || day === 6) && hour === 16 && min >= 31 && min <= 45) {
-        await publishGrupo3TipNow(false);
+      // Ventana de seguridad de la difusión diaria: entre 10:01 y 10:15 AM
+      if (hour === 10 && min >= 1 && min <= 15) {
+        await publishTodayTipNow(false);
+      }
+
+      // Ventanas de seguridad de invitaciones desde el canal hacia los grupos:
+      if (day === 3 && hour === 16 && min >= 31 && min <= 45) {
+        await publishChannelGroupInvitation('grupo1', false);
+      }
+      if (day === 4 && hour === 16 && min >= 31 && min <= 45) {
+        await publishChannelGroupInvitation('grupo2', false);
+      }
+      if (day === 5 && hour === 16 && min >= 31 && min <= 45) {
+        await publishChannelGroupInvitation('grupo3', false);
       }
     } catch (err: any) {
       console.error('[CRON-FAILSAFE] Error en chequeo de seguridad minutero:', err?.message || err);
@@ -1142,113 +1903,61 @@ export function initCronScheduler() {
 // ── DESPACHADORES OFICIALES ────────────────────────────────────────────────
 
 /**
- * Publica el comunicado para Grupo 3 (PROYECTO Vecy Network) y el Canal Oficial
+ * Compatibilidad: el antiguo despacho vespertino de Grupo 3 queda unificado en la
+ * difusión diaria con imagen y texto (que ya llega a Grupo 2, Grupo 3 y Canal Oficial).
+ * El bloqueo PostgreSQL impide cualquier envío duplicado en el mismo día.
  */
 export async function publishGrupo3TipNow(force: boolean = false) {
-  const dateKey = getBogotaDateString();
-
-  // 1. Bloqueo atómico en PostgreSQL
-  const lock = await acquireBroadcastLock('grupo3', 'proyecto_vecy', dateKey, force);
-  if (!lock.allowed) {
-    console.log(`[CRON-SERVICE] ⏭️ Omitiendo publicación Grupo 3: ${lock.reason}`);
-    return { skipped: true, reason: lock.reason };
-  }
-
-  console.log('[CRON-SERVICE] 🚀 Publicando tip dinámico para Grupo 3 (PROYECTO Vecy Bienes Raíces) + Canal Oficial...');
-  const fallbackVoice = `Hola, equipo VECY. Soy JanIA, la inteligencia artificial de VECY Bienes Raíces. Este grupo es nuestro espacio más especial: el canal del Proyecto Vecy Bienes Raíces es donde nacen las ideas y donde construimos juntos el futuro del corretaje inmobiliario en Colombia. Eduardo Rivera y Jani Alves crearon este proyecto con la firme convicción de unir a los corredores independientes y agencias, ofreciéndoles herramientas inteligentes, estudios de mercado, soporte jurídico y tributario, y comisiones justas compartidas al treinta y cinco, treinta y cinco, quince y quince por ciento. Aquí no competimos, nos complementamos. Los invito a participar activamente, debatir y compartir sus sugerencias para seguir enriqueciendo nuestra red. ¡Seguimos adelante!`;
-  const fallbackCaption = `💡 *PROYECTO VECY BIENES RAÍCES — INNOVACIÓN, COMUNIDAD & PROPÓSITO* 🇨🇴\n\n` +
-    `¡Hola, queridos colegas, aliados y miembros visionarios!\n\n` +
-    `Soy JanIA, y este grupo es el corazón del proyecto VECY Bienes Raíces. Aquí debatimos, aportamos ideas y construimos la primera bolsa inmobiliaria colaborativa y fintech de Colombia con comisiones justas (35/35/15/15) e Inteligencia Artificial 24/7.\n\n` +
-    `🏢 *¿Quiénes nos crearon y qué estamos construyendo?*\n` +
-    `Liderados por nuestros fundadores Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones), desarrollamos herramientas 100% virtuales al servicio del corretaje: estudios de mercado m², cruce inteligente de ofertas y demandas, consultoría legal y tributaria, y comisiones transparentes.\n\n` +
-    `🎯 *Nuestra Misión y Visión:*\n` +
-    `Erradicar el canibalismo comercial, dignificar el oficio del asesor inmobiliario y conectar puntas en segundos con transparencia absoluta.\n\n` +
-    `💬 *Participa y debate:* Cuéntanos tus sugerencias para seguir enriqueciendo la plataforma.\n` +
-    `📲 *Explora la plataforma:* https://vecy-network.vercel.app/`;
-
-  const content = await generateDailyContent('proyecto_vecy', fallbackVoice, fallbackCaption);
-  const effectiveTheme = content.chosenTheme || 'matches';
-  const { fullPath: imagePath, fileName } = await getThemedImagePathAsync(effectiveTheme);
-
-  try {
-    if (whatsappBot.circuloGroupId) {
-      await whatsappBot.sendVoiceToGroup(content.voiceText, whatsappBot.circuloGroupId, imagePath, content.captionText);
-    }
-    if (whatsappBot.channelNewsletterId) {
-      await whatsappBot.sendVoiceToGroup(content.voiceText, whatsappBot.channelNewsletterId, imagePath, content.captionText);
-    }
-    await completeBroadcast(lock.broadcastId, {
-      topicTitle: content.topicTitle,
-      themeKey: effectiveTheme,
-      imageFileName: fileName,
-      voiceText: content.voiceText,
-      captionText: content.captionText,
-    });
-    console.log(`[CRON-SERVICE] ✓ Publicación entregada exitosamente a Grupo 3 (PROYECTO Vecy Network) y Canal Oficial ("${content.topicTitle}").`);
-    return { success: true, content, imagePath, fileName };
-  } catch (e: any) {
-    console.error('[CRON-SERVICE] Error enviando publicación a PROYECTO VECY NETWORK:', e.message);
-    await failBroadcast(lock.broadcastId, e.message);
-    return { success: false, error: e.message };
-  }
+  console.log('[CRON-SERVICE] publishGrupo3TipNow → unificado en la difusión diaria (Grupo 2 + Grupo 3 + Canal).');
+  return publishTodayTipNow(force);
 }
 
 /**
- * Publica el tip configurado para un día específico (Grupo 2 y Canal oficial)
+ * Compatibilidad: los antiguos tips por día de la semana quedan reemplazados por el
+ * Calendario de 30 días de VECY BIENES RAÍCES con imágenes públicas de internet.
  */
 export async function publishDailyTipForDay(tipoKey: string, force: boolean = false) {
-  const dateKey = getBogotaDateString();
+  console.log(`[CRON-SERVICE] publishDailyTipForDay(${tipoKey}) → redirigido al Calendario de 30 días.`);
+  return publishTodayTipNow(force);
+}
 
-  // 1. Bloqueo atómico en PostgreSQL
-  const lock = await acquireBroadcastLock('grupo2', tipoKey, dateKey, force);
+/**
+ * Publica el tema del día del Calendario de 30 días con IMAGEN PÚBLICA DE INTERNET Y TEXTO
+ * (sin audio TTS, imágenes reales del sector inmobiliario/arquitectura) a Grupo 2, Grupo 3 y Canal Oficial.
+ */
+export async function publishTodayTipNow(force: boolean = true) {
+  const dateKey = getBogotaDateString();
+  const tip = getCalendarTipForDate();
+
+  // 1. Bloqueo atómico en PostgreSQL (una sola difusión diaria)
+  const lock = await acquireBroadcastLock('grupo2', `calendario_dia_${tip.dayOfMonth}`, dateKey, force);
   if (!lock.allowed) {
-    console.log(`[CRON-SERVICE] ⏭️ Omitiendo tip ${tipoKey}: ${lock.reason}`);
+    console.log(`[CRON-SERVICE] ⏭️ Omitiendo difusión diaria (Día ${tip.dayOfMonth}): ${lock.reason}`);
     return { skipped: true, reason: lock.reason };
   }
 
-  const tipConfig = DAILY_TIPS_CONFIG[tipoKey] || DAILY_TIPS_CONFIG['lunes_arranque'];
-  console.log(`[CRON-SERVICE] 🚀 Publicando tip para ${tipoKey} (Tema base: ${tipConfig.theme}) a Grupo 2 + Canal Oficial...`);
+  console.log(`[CRON-SERVICE] 🚀 Difusión diaria — Día ${tip.dayOfMonth}: "${tip.topicTitle}"`);
+  const content = await generateCalendarDailyText(tip);
 
-  const content = await generateDailyContent(tipoKey as any, tipConfig.voice, tipConfig.caption);
-  const effectiveTheme = content.chosenTheme || tipConfig.theme;
-  const { fullPath: imagePath, fileName } = await getThemedImagePathAsync(effectiveTheme);
-  console.log(`[CRON-SERVICE] 🖼️ Imagen temática para ${tipoKey} (Tema elegido: ${effectiveTheme}, archivo: ${fileName}): ${imagePath || 'Sin imagen'}`);
+  // 2. Búsqueda y descarga de imagen pública de internet acorde al tema (sin repetir)
+  const imagePath = await fetchPublicThemeImage(content.themeKey || tip.themeKey, tip.dayOfMonth);
 
   try {
-    await whatsappBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
+    // 3. Despachar a Grupo 2, Grupo 3 y Canal Oficial (imagen + texto, CERO audio)
+    await whatsappBot.sendDailyTipToGroupsAndChannel(content.captionText, imagePath);
     await completeBroadcast(lock.broadcastId, {
       topicTitle: content.topicTitle,
-      themeKey: effectiveTheme,
-      imageFileName: fileName,
-      voiceText: content.voiceText,
+      themeKey: content.themeKey,
+      imageFileName: imagePath ? path.basename(imagePath) : undefined,
       captionText: content.captionText,
     });
-    return { success: true, tipo: tipoKey, theme: effectiveTheme, imagePath, fileName, content };
+    console.log(`[CRON-SERVICE] ✓ Difusión diaria entregada (${imagePath ? 'con imagen pública' : 'texto puro'}) a Grupo 2, Grupo 3 y Canal Oficial: "${content.topicTitle}".`);
+    return { success: true, dayOfMonth: tip.dayOfMonth, content, imagePath };
   } catch (err: any) {
-    console.error(`[CRON-SERVICE] Error despachando ${tipoKey} a Grupo 2 y Canal:`, err?.message);
+    console.error(`[CRON-SERVICE] Error despachando difusión diaria (Día ${tip.dayOfMonth}):`, err?.message);
     await failBroadcast(lock.broadcastId, err?.message);
     return { success: false, error: err?.message };
   }
-}
-
-/**
- * Publica el tip correspondiente al día de hoy según la hora de Colombia
- */
-export async function publishTodayTipNow(force: boolean = true) {
-  console.log('[CRON-SERVICE] 🚀 Disparando publicación de tip para hoy al Canal y Grupo 2...');
-  const nowBogota = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }));
-  const dayOfWeek = nowBogota.getDay(); // 0=Dom, 1=Lun, 2=Mar, 3=Mie, 4=Jue, 5=Vie, 6=Sab
-
-  let tipoKey = 'lunes_arranque';
-  if (dayOfWeek === 1) tipoKey = 'lunes_arranque';
-  else if (dayOfWeek === 2) tipoKey = 'martes_juridico';
-  else if (dayOfWeek === 3) tipoKey = 'miercoles_marketing';
-  else if (dayOfWeek === 4) tipoKey = 'jueves_tributario';
-  else if (dayOfWeek === 5) tipoKey = 'viernes_avaluos';
-  else if (dayOfWeek === 6) tipoKey = 'sabado_cafe';
-  else if (dayOfWeek === 0) tipoKey = 'domingo_soporte';
-
-  return await publishDailyTipForDay(tipoKey, force);
 }
 
 /**
@@ -1288,18 +1997,17 @@ export async function publishWeeklyReportNow(force: boolean = true) {
 
   const content = await generateDailyContent('lunes_reporte_semanal', fallbackVoice, fallbackCaption);
   const effectiveTheme = content.chosenTheme || 'reporte_semanal';
-  const { fullPath: imagePath, fileName } = await getThemedImagePathAsync(effectiveTheme);
+  const captionText = enforceVecyBrand(content.captionText);
 
   try {
-    await whatsappBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
+    // v32.59: Texto puro (sin audio TTS ni imagen) para optimizar tokens e infraestructura
+    await whatsappBot.sendDailyTipTextToGroupsAndChannel(captionText);
     await completeBroadcast(lock.broadcastId, {
       topicTitle: content.topicTitle,
       themeKey: effectiveTheme,
-      imageFileName: fileName,
-      voiceText: content.voiceText,
-      captionText: content.captionText,
+      captionText,
     });
-    return { success: true, tipo: 'lunes_reporte_semanal', content, stats, imagePath, fileName };
+    return { success: true, tipo: 'lunes_reporte_semanal', content: { ...content, captionText }, stats };
   } catch (err: any) {
     await failBroadcast(lock.broadcastId, err?.message);
     return { success: false, error: err?.message };
@@ -1348,29 +2056,19 @@ export async function publishNoticiaNacionalNow(opts?: {
   );
 
   const effectiveTheme = content.chosenTheme || themeType;
-  const { fullPath: imagePath, fileName } = await getThemedImagePathAsync(effectiveTheme);
+  const captionText = enforceVecyBrand(content.captionText);
 
   try {
-    if (targetGroup === 'grupo2') {
-      await whatsappBot.sendVoiceToBuzonAndChannel(content.voiceText, imagePath, content.captionText);
-    } else if (targetGroup === 'grupo3') {
-      if (whatsappBot.circuloGroupId) {
-        await whatsappBot.sendVoiceToGroup(content.voiceText, whatsappBot.circuloGroupId, imagePath, content.captionText);
-      }
-      if (whatsappBot.channelNewsletterId) {
-        await whatsappBot.sendVoiceToGroup(content.voiceText, whatsappBot.channelNewsletterId, imagePath, content.captionText);
-      }
-    }
+    // v32.59: Texto puro (sin audio TTS ni imagen). Grupos 2 y 3 son foros abiertos, ambos reciben la noticia.
+    await whatsappBot.sendDailyTipTextToGroupsAndChannel(captionText);
 
     await completeBroadcast(lock.broadcastId, {
       topicTitle: content.topicTitle,
       themeKey: effectiveTheme,
-      imageFileName: fileName,
-      voiceText: content.voiceText,
-      captionText: content.captionText,
+      captionText,
     });
-    console.log(`[CRON-NOTICIAS] ✓ Noticia despachada a ${targetGroup} + Canal. Imagen/Video: ${fileName}`);
-    return { success: true, theme: effectiveTheme, imagePath, fileName, content };
+    console.log(`[CRON-NOTICIAS] ✓ Noticia despachada en texto puro a Grupo 2, Grupo 3 y Canal (lock: ${targetGroup}).`);
+    return { success: true, theme: effectiveTheme, content: { ...content, captionText } };
   } catch (err: any) {
     await failBroadcast(lock.broadcastId, err?.message);
     return { success: false, error: err?.message };
@@ -1434,7 +2132,7 @@ export async function publishIdentityAndPredialServiceAnnouncement(force: boolea
   }
 
   const announcementText = 
-    `🛡️ *NUEVAS HERRAMIENTAS ACTIVAS EN VECY NETWORK: VERIFICACIÓN DE IDENTIDAD Y ASISTENCIA PREDIAL BOGOTÁ* 🇨🇴\n\n` +
+    `🛡️ *NUEVAS HERRAMIENTAS ACTIVAS EN VECY BIENES RAÍCES: VERIFICACIÓN DE IDENTIDAD Y ASISTENCIA PREDIAL BOGOTÁ* 🇨🇴\n\n` +
     `Estimada comunidad de corredores, aliados y propietarios:\n\n` +
     `Para que cierres tus negocios con total blindaje jurídico, seguridad notarial y rapidez tributaria, JanIA ahora cuenta con dos herramientas directas operando 24/7 en WhatsApp:\n\n` +
     `1️⃣ 🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD Y SEGURIDAD NOTARIAL (VECY BIENES RAÍCES)*\n` +

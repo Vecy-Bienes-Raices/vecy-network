@@ -36,6 +36,7 @@ import QRCode from 'qrcode';
 import { extractFirstName, getGreetingByTime, startContinuousPresence } from './whatsapp-utils';
 import { transcribeAudioBuffer } from './voiceTranscription';
 import { isNonRealEstateText } from './matching';
+import { VECY_OFFICIAL_GROUPS, VECY_BRAND } from '../../shared/const';
 
 
 // Tiempo de arranque para omitir mensajes históricos (con 2 min de margen por desfase de reloj)
@@ -256,9 +257,9 @@ export class JaniaMatchBot {
 
   public async resolveGroupName(chatId: string): Promise<string> {
     const KNOWN_GROUPS: Record<string, string> = {
-      '120363260108880069@g.us': 'VECY INMUEBLES NETWORK',
-      '120363417740040773@g.us': 'VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS',
-      '120363403507276533@g.us': 'PROYECTO Vecy Network',
+      '120363260108880069@g.us': VECY_OFFICIAL_GROUPS.grupo1.name,
+      '120363417740040773@g.us': VECY_OFFICIAL_GROUPS.grupo2.name,
+      '120363403507276533@g.us': VECY_OFFICIAL_GROUPS.grupo3.name,
       '120363029834368375@g.us': 'Santas-Carolina-Bosques-Calleja',
     };
 
@@ -281,6 +282,55 @@ export class JaniaMatchBot {
   private cooldownMap: Map<string, any> = new Map();
   private cooldownFile: string = path.join(process.cwd(), '.cooldown_map.json');
   private recentReviewPromptUsers: Map<string, number> = new Map();
+  private postReviewInvitationTimers: Map<string, NodeJS.Timeout> = new Map();
+  private recentGroupInviteUsers: Map<string, number> = new Map();
+
+  /**
+   * Programa la invitación con los enlaces de los 3 grupos oficiales unos minutos después
+   * de haber enviado la solicitud de calificación en privado (Doctrina v32.59 de Eduardo A. Rivera).
+   */
+  public schedulePostReviewGroupInvitation(senderId: string, userName?: string) {
+    if (this.postReviewInvitationTimers.has(senderId)) return;
+
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const lastInviteSent = this.recentGroupInviteUsers.get(senderId) || 0;
+    if (Date.now() - lastInviteSent < SEVEN_DAYS_MS) return;
+
+    // "Unos minutos después de la calificación" -> 2.5 minutos (150 segundos)
+    const DELAY_MS = 2.5 * 60 * 1000;
+    console.log(`[JANIA-MATCH] ⏱️ Programando invitación a grupos post-calificación para ${senderId} en 2.5 minutos...`);
+
+    const timer = setTimeout(async () => {
+      this.postReviewInvitationTimers.delete(senderId);
+      try {
+        this.recentGroupInviteUsers.set(senderId, Date.now());
+        const realName = userName || "Colega";
+        const firstName = extractFirstName(realName);
+
+        const groupInviteMsg =
+          `Hola ${firstName} 👋😊 Por cierto, quería preguntarte: ¿ya haces parte de nuestros grupos oficiales de WhatsApp de *VECY BIENES RAÍCES*? 🇨🇴✨\n\n` +
+          `Para mantener el trabajo ordenado y ayudarte a cerrar negocios rápido, tenemos 3 espacios especializados para ti y toda la comunidad:\n\n` +
+          `1️⃣ 🏢 *${VECY_OFFICIAL_GROUPS.grupo1.name}*\n` +
+          `👉 ${VECY_OFFICIAL_GROUPS.grupo1.inviteLink}\n` +
+          `📌 *¿Para qué sirve?* Este grupo es sagrado y exclusivo para compartir tus **OFERTAS🏷️** (inmuebles en venta o arriendo) y **DEMANDAS📝** (requerimientos de clientes listos). Yo escaneo y cruzo los datos al instante para encontrarte MATCH comercial.\n\n` +
+          `2️⃣ 💡 *${VECY_OFFICIAL_GROUPS.grupo2.name}*\n` +
+          `👉 ${VECY_OFFICIAL_GROUPS.grupo2.inviteLink}\n` +
+          `📌 *¿Para qué sirve?* Espacio libre para consultas inmobiliarias públicas, tips del día, noticias del sector, valor de metro cuadrado, dudas jurídicas, tributarias y debates con colegas.\n\n` +
+          `3️⃣ 🌐 *${VECY_OFFICIAL_GROUPS.grupo3.name}*\n` +
+          `👉 ${VECY_OFFICIAL_GROUPS.grupo3.inviteLink}\n` +
+          `📌 *¿Para qué sirve?* Espacio de nuestra comunidad de aliados para compartir tus experiencias del día a día en los negocios, casos reales cotidianos que te hayan pasado a ti o a otros colegas, proponer foros inmobiliarios y construir juntos el futuro de nuestra red colaborativa.\n\n` +
+          `¡Y recuerda que para cualquier consulta privada o confidencial, me puedes escribir directamente aquí a mi chat privado! 🤝🚀 ¿Ya estás en todos o te gustaría que te oriente sobre alguno?`;
+
+        await this.queuedSend(senderId, groupInviteMsg, { allowDirectMessage: true });
+        await this.logToDb(senderId, 'janIA', groupInviteMsg);
+        console.log(`[JANIA-MATCH] ✓ Invitación a grupos post-calificación entregada a ${senderId}`);
+      } catch (err: any) {
+        console.error(`[JANIA-MATCH] Error enviando invitación a grupos post-calificación a ${senderId}:`, err?.message);
+      }
+    }, DELAY_MS);
+
+    this.postReviewInvitationTimers.set(senderId, timer);
+  }
 
   constructor(options?: JaniaBotOptions) {
     if (options) {
@@ -301,9 +351,9 @@ export class JaniaMatchBot {
       this.authorizedGroups = groupsEnv.split(',').map(g => g.trim());
     } else {
       this.authorizedGroups = [
-        '120363260108880069@g.us', // VECY INMUEBLES NETWORK
-        '120363417740040773@g.us', // VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS
-        '120363403507276533@g.us'  // PROYECTO "Vecy Network" 👌
+        '120363260108880069@g.us', // 1. 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴
+        '120363417740040773@g.us', // 2. 𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠
+        '120363403507276533@g.us'  // 3. 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀
       ];
     }
 
@@ -794,9 +844,9 @@ export class JaniaMatchBot {
                                      !!mentionsBot;
 
             // --- IDENTIFICACIÓN DE GRUPOS OFICIALES VECY ---
-            const isMainGroup = chatId === this.targetGroupId;     // VECY INMUEBLES NETWORK
-            const isBuzonGroup = chatId === this.buzonGroupId;     // VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING
-            const isCirculoGroup = chatId === this.circuloGroupId; // PROYECTO "Vecy Network" 👌
+            const isMainGroup = chatId === this.targetGroupId;     // 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴
+            const isBuzonGroup = chatId === this.buzonGroupId;     // 𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠
+            const isCirculoGroup = chatId === this.circuloGroupId; // 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀
             const isOfficialGroup = isMainGroup || isBuzonGroup || isCirculoGroup;
 
             // --- OBTENCIÓN DEL NOMBRE DEL GRUPO Y FILTRADO INMOBILIARIO ESTRICTO ---
@@ -1224,6 +1274,7 @@ export class JaniaMatchBot {
             const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
             await new Promise(r => setTimeout(r, 1500));
             await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+            this.schedulePostReviewGroupInvitation(senderId, userName);
           } else {
             await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
           }
@@ -1259,6 +1310,7 @@ export class JaniaMatchBot {
             const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
             await new Promise(r => setTimeout(r, 1500));
             await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+            this.schedulePostReviewGroupInvitation(senderId, userName);
           } else {
             await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
           }
@@ -1293,6 +1345,7 @@ export class JaniaMatchBot {
             const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
             await new Promise(r => setTimeout(r, 1500));
             await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+            this.schedulePostReviewGroupInvitation(senderId, userName);
           }
           return;
         }
@@ -1358,6 +1411,7 @@ export class JaniaMatchBot {
                   await new Promise(r => setTimeout(r, 1200));
                   await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
                   await this.logToDb(senderId, 'janIA', GOOGLE_REVIEW_MESSAGE);
+                  this.schedulePostReviewGroupInvitation(senderId, userName);
                 }
 
                 return;
@@ -1383,6 +1437,7 @@ export class JaniaMatchBot {
             await new Promise(r => setTimeout(r, 1200));
             await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
             await this.logToDb(senderId, 'janIA', GOOGLE_REVIEW_MESSAGE);
+            this.schedulePostReviewGroupInvitation(senderId, userName);
           }
           return;
         }
@@ -1442,12 +1497,12 @@ export class JaniaMatchBot {
       
       const realName = userName || "Asesor";
       const cleanName = extractFirstName(realName) || "colega";
-      const redirectText = `Hola ${cleanName} 👋😊. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente al canal oficial privado de soporte de JanIA de Meta haciendo clic aquí: ${redirectLink} para realizar tus consultas correspondientes o si estás en los grupos correspondientes según tu consulta puedes hacerlas allí de la siguiente manera:\n\n` +
-        `Mis grupos:\n\n` +
-        `Para publicar tus INMUEBLES y REQUERIMIENTOS tenemos el grupo de *𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗨𝗘𝗕𝗟𝗘𝗦 𝗡𝗘𝗧𝗪𝗢𝗥𝗞* : Si aún no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\n` +
-        `Para hacer tus consultas de casos inmobiliarios en temas jurídicos, tributarios, avalúos, ayuda en guía de procesos y redacción de contratos, tenemos el grupo de *𝗩𝗘𝗖𝗬: 𝗦𝗢𝗣𝗢𝗥𝗧𝗘 𝗟𝗘𝗚𝗔𝗟, 𝗧𝗥𝗜𝗕𝗨𝗧𝗔𝗥𝗜𝗢 𝗬 𝗔𝗩𝗔𝗟Ú𝗢𝗦* : Si aún no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n` +
-        `Para preguntar acerca de *VECY Bienes Raíces* y debatir acerca de nuestras funciones, red colaborativa, beneficios y competencias, tenemos el grupo de *𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢 "𝗩𝗲𝗰𝘆 𝗡𝗲𝘁𝘄𝗼𝗿𝗸"* : Si aún no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n` +
-        `Te espero. ¡Allí te atenderé con gusto! 🚀`;
+      const redirectText = `Hola ${cleanName} 👋😊. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente a mi chat privado de JanIA haciendo clic aquí: ${redirectLink} para atenderte de forma personalizada, o si lo prefieres, participar en nuestros grupos oficiales:\n\n` +
+        `Mis grupos oficiales:\n\n` +
+        `1️⃣ *Para publicar tus OFERTAS y DEMANDAS:* ${VECY_OFFICIAL_GROUPS.grupo1.name}\n🔗 Enlace: ${VECY_OFFICIAL_GROUPS.grupo1.inviteLink}\n\n` +
+        `2️⃣ *Para consultas públicas, tips y debates inmobiliarios:* ${VECY_OFFICIAL_GROUPS.grupo2.name}\n🔗 Enlace: ${VECY_OFFICIAL_GROUPS.grupo2.inviteLink}\n\n` +
+        `3️⃣ *Para conocer el proyecto, foros y alianzas:* ${VECY_OFFICIAL_GROUPS.grupo3.name}\n🔗 Enlace: ${VECY_OFFICIAL_GROUPS.grupo3.inviteLink}\n\n` +
+        `¡Allí te atenderé con todo el gusto! 🚀`;
       
       this.queuedSend(chatId, redirectText);
     }
@@ -1514,44 +1569,44 @@ export class JaniaMatchBot {
         return;
       }
 
-      // Detectar si el mensaje en VECY INMUEBLES NETWORK es off-topic (legal, tributario, círculo)
+      // 🛡️ MODERACIÓN ESTRICTA EN GRUPO 1: EXCLUSIVO PARA OFERTAS🏷️ Y DEMANDAS📝
       const isMainGroupChat = chatId === this.targetGroupId;
       if (isMainGroupChat) {
-        const textLower = bodyText.toLowerCase();
-        const isOffTopicLegal =
-          textLower.includes('contrato') || textLower.includes('arrendamiento') ||
-          textLower.includes('promesa') || textLower.includes('sucesión') ||
-          textLower.includes('sucesion') || textLower.includes('herencia') ||
-          textLower.includes('embargo') || textLower.includes('comisión') ||
-          textLower.includes('comision') || textLower.includes('tributar') ||
-          textLower.includes('impuesto') || textLower.includes('retención') ||
-          textLower.includes('retencion') || textLower.includes('ganancia ocasional') ||
-          textLower.includes('avalúo') || textLower.includes('avaluo') ||
-          textLower.includes('escritura') || textLower.includes('notaría') ||
-          textLower.includes('juridic') || textLower.includes('demandar') ||
-          textLower.includes('demanda') || textLower.includes('ley ') ||
-          textLower.includes('juzgado') || textLower.includes('abogado');
+        let isBotAdmin = false;
+        try {
+          const metadata = await this.getCachedGroupMetadata(chatId);
+          const me = this.sock.user?.id ? this.sock.user.id.split(':')[0] : '';
+          const myParticipant = metadata?.participants?.find((p: any) => p.id.split('@')[0] === me);
+          isBotAdmin = !!myParticipant && (myParticipant.admin === 'admin' || myParticipant.admin === 'superadmin');
+        } catch (_) {}
 
-        const isOffTopicCirculo =
-          textLower.includes('vecy network') || textLower.includes('proyecto') ||
-          textLower.includes('sugerencia') || textLower.includes('portal web') ||
-          textLower.includes('jania funciona') || textLower.includes('inteligencia artificial') ||
-          textLower.includes('cómo funciona la ia') || textLower.includes('como funciona la ia') ||
-          textLower.includes('competencia') || textLower.includes('testimonio') ||
-          textLower.includes('fundador') || textLower.includes('jani alves') ||
-          textLower.includes('eduardo');
+        const redirectMsg =
+          `⚠️ *AVISO DE MODERACIÓN — VECY BIENES RAÍCES* ⚠️\n\n` +
+          `Hola ${realName} 👋🏻, este grupo (*${VECY_OFFICIAL_GROUPS.grupo1.name}*) está reservado *EXCLUSIVAMENTE* para la publicación de *OFERTAS🏷️ y DEMANDAS📝 inmobiliarias*.\n\n` +
+          `Para mantener este canal 100% limpio y ágil para encontrar coincidencias sin saturar a los colegas, por favor comparte tus consultas o temas en nuestros canales autorizados:\n\n` +
+          `💡 *Grupo 2 (Tips, Noticias y Consultas Inmobiliarias):*\n👉 ${VECY_OFFICIAL_GROUPS.grupo2.inviteLink}\n\n` +
+          `🚀 *Grupo 3 (Proyecto VECY BIENES RAÍCES, Casos y Foros):*\n👉 ${VECY_OFFICIAL_GROUPS.grupo3.inviteLink}\n\n` +
+          `📲 *O escríbeme directamente a mi chat privado de JanIA:*\n👉 https://wa.me/573192919978\n\n` +
+          `_Para conservar el orden del grupo, procederé a eliminar tu mensaje en unos segundos. ¡Gracias por tu comprensión y apoyo mutuo!_ 🤝✨`;
 
-        if (isOffTopicLegal || isOffTopicCirculo) {
-          const groupName = isOffTopicLegal ? 'VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING' : (process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"');
-          const redirectMsg =
-            `Hola ${realName} 👋🏻, veo que tu consulta es sobre ${isOffTopicLegal ? 'temas jurídicos, tributarios, avalúos o marketing inmobiliario' : 'el funcionamiento de VECY Bienes Raíces y JanIA'}. ¡Perfecto! 🎯\n\n` +
-            `Ese tipo de preguntas las atiendo con más profundidad en el grupo *${groupName}* de nuestra comunidad de WhatsApp. 🏠\n\n` +
-            `También puedes consultarme directamente en mi chat privado de JanIA 📲: https://wa.me/573192919978\n\n` +
-            `¡Allí te atiendo con todo el detalle que mereces! 😊`;
-          await this.queuedSend(chatId, redirectMsg, { mentions: [senderId], quoted: msg });
-          await this.sock.sendPresenceUpdate('paused', chatId);
-          return;
+        await this.safeReact(chatId, msg.key, '🚫', 'WARNING-REACT');
+        await this.queuedSend(chatId, redirectMsg, { mentions: [senderId], quoted: msg });
+        await this.sock.sendPresenceUpdate('paused', chatId);
+        await this.logToDb(chatId, 'janIA', `[GRUPO1-MODERATION] ${redirectMsg}`);
+
+        if (isBotAdmin && msg.key?.id) {
+          setTimeout(async () => {
+            try {
+              if (this.sock) {
+                await this.sock.sendMessage(chatId, { delete: msg.key });
+                console.log(`[JANIA-MODERATION] 🗑️ Mensaje de consulta eliminado en Grupo 1: ${msg.key.id}`);
+              }
+            } catch (delErr) {
+              console.warn(`[JANIA-MODERATION] Error eliminando mensaje en Grupo 1:`, delErr);
+            }
+          }, 3500);
         }
+        return;
       }
 
       // 🛡️ INTERCEPTOR DIRECTO: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
@@ -1619,10 +1674,10 @@ export class JaniaMatchBot {
           msgTs,
           quotedContext
         );
-      } else if (chatId === this.circuloGroupId) { // PROYECTO "Vecy Network"
+      } else if (chatId === this.circuloGroupId) { // 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀
         result = await processCirculoMessage(bodyText, resolvedSenderId, realName);
-      } else if (isMainGroupChat) { // VECY INMUEBLES NETWORK — preguntas sobre el grupo/sistema
-        let groupName = "VECY INMUEBLES NETWORK";
+      } else if (isMainGroupChat) { // 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 — preguntas sobre el grupo/sistema
+        let groupName = "𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴";
         try {
           const metadata = await this.sock.groupMetadata(chatId);
           if (metadata && metadata.subject) {
@@ -2097,7 +2152,7 @@ export class JaniaMatchBot {
       }
     }
 
-    // ── SOLO EN EL GRUPO OFICIAL VECY INMUEBLES NETWORK: Reacciones de moderación ──
+    // ── SOLO EN EL GRUPO OFICIAL 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴: Reacciones de moderación ──
     if (isOfficialGroup) {
       if (classification === 'VIOLACION_DE_NORMAS' || classification.includes('SPAM') || classification.includes('INFRACCION')) {
         return '🚫';
@@ -2400,6 +2455,19 @@ export class JaniaMatchBot {
               await this.queuedSend(chatId, textToDeliver, { quoted: lastMsg });
               await this.logToDb(chatId, 'janIA', `[GROUP-WARNING] ${textToDeliver}`);
             }
+            // 3. Si ocurrió en Grupo 1 (Ofertas y Demandas) y el bot es admin, eliminar el mensaje indebido tras 3.5 segundos
+            if (chatId === this.targetGroupId && isBotAdmin && lastMsg?.key?.id) {
+              setTimeout(async () => {
+                try {
+                  if (this.sock) {
+                    await this.sock.sendMessage(chatId, { delete: lastMsg.key });
+                    console.log(`[JANIA-MODERATION] 🗑️ Mensaje indebido de buffer eliminado en Grupo 1: ${lastMsg.key.id}`);
+                  }
+                } catch (delErr) {
+                  console.warn(`[JANIA-MODERATION] Error eliminando mensaje de buffer en Grupo 1:`, delErr);
+                }
+              }, 3500);
+            }
           }
         }
 
@@ -2523,12 +2591,12 @@ export class JaniaMatchBot {
       await delay(2000);
 
       const redirectMsg = 
-        `Hola ${firstName} 👋😊. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente al canal oficial privado de soporte de JanIA de la Web haciendo clic aquí: https://vecy-network.vercel.app/jania para realizar tus consultas correspondientes o si estás en los grupos correspondientes según tu consulta puedes hacerlas allí de la siguiente manera:\n\n` +
-        `Mis grupos:\n\n` +
-        `Para publicar tus INMUEBLES y REQUERIMIENTOS tenemos el grupo de 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗨𝗘𝗕𝗟𝗘𝗦 𝗡𝗘𝗧𝗪𝗢𝗥𝗞 : Si aún no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\n` +
-        `Para hacer tus consultas de casos inmobiliarios en temas jurídicos, tributarios, avalúos, ayuda en guía de procesos y redacción de contratos, tenemos el grupo de 𝗩𝗘𝗖𝗬: 𝗦𝗢𝗣𝗢𝗥𝗧𝗘 𝗟𝗘𝗚𝗔𝗟, 𝗧𝗥𝗜𝗕𝗨𝗧𝗔𝗥𝗜𝗢 𝗬 𝗔𝗩𝗔𝗟Ú𝗢𝗦 : Si aún no eres miembro, puedes unirte desde este enlace: https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n` +
-        `Para preguntar acerca de VECY Bienes Raíces y debatir acerca de nuestras funciones, red colaborativa, beneficios y competencias, tenemos el grupo de 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢 "𝗩𝗲𝗰𝘆 𝗡𝗲𝘁𝘄𝗼𝗿𝗸" : Si aún no eres miembro puedes unirte desde este enlace: https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n` +
-        `Te espero. ¡Allí te atenderé con gusto! 🚀`;
+        `Hola ${firstName} 👋😊. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), puedes hacerlo directamente por aquí en este chat privado para atenderte de forma personalizada, o si lo prefieres, interactuar en nuestros grupos oficiales de WhatsApp:\n\n` +
+        `Mis grupos oficiales:\n\n` +
+        `1️⃣ *Para publicar tus OFERTAS y DEMANDAS:* ${VECY_OFFICIAL_GROUPS.grupo1.name}\n🔗 Enlace: ${VECY_OFFICIAL_GROUPS.grupo1.inviteLink}\n\n` +
+        `2️⃣ *Para consultas públicas, tips y debates inmobiliarios:* ${VECY_OFFICIAL_GROUPS.grupo2.name}\n🔗 Enlace: ${VECY_OFFICIAL_GROUPS.grupo2.inviteLink}\n\n` +
+        `3️⃣ *Para conocer el proyecto, foros y alianzas:* ${VECY_OFFICIAL_GROUPS.grupo3.name}\n🔗 Enlace: ${VECY_OFFICIAL_GROUPS.grupo3.inviteLink}\n\n` +
+        `¡Allí te atenderé con todo el gusto! 🚀`;
 
       await this.queuedSend(senderId, redirectMsg, { quoted: msg });
       await this.logToDb(senderId, 'janIA', redirectMsg);
@@ -2820,7 +2888,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         return false;
       }
       const targetJid = groupId || this.buzonGroupId;
-      console.log(`[JANIA-MATCH] 📊 Despachando encuesta nativa a ${targetJid}: "${name}" (${options.length} opciones)...`);
+      console.log(`[JANIA-MATCH] 📊 Despachando encuesta nativa a ${targetJid}: "${name}" (${options.length} opciones, selectableCount: ${selectableCount})...`);
       await this.sock.sendMessage(targetJid, {
         poll: {
           name,
@@ -2834,6 +2902,13 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
       console.error(`[JANIA-MATCH] ❌ Error enviando encuesta a ${groupId}:`, err?.message || err);
       return false;
     }
+  }
+
+  /**
+   * Envía una encuesta nativa a cualquier JID (grupo o canal de WhatsApp) con modo de votación configurable
+   */
+  public async sendPoll(targetJid: string, name: string, options: string[], selectableCount: number = 1): Promise<boolean> {
+    return this.sendPollToGroup(name, options, targetJid, selectableCount);
   }
 
   public async sendToGroup(text: string, mediaPath?: string, mentions?: string[], groupId?: string) {
@@ -2928,6 +3003,77 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     } catch (e: any) {
       console.error('[JANIA-MATCH] Error enviando nota de voz al destino:', e.message || e);
     }
+  }
+
+  /**
+   * 📰 Envío de Tip Diario con Imagen Temática Pública de Internet + Texto Formateado (SIN AUDIOS)
+   * Despacha a Grupo 2, Grupo 3 y Canal Oficial de WhatsApp
+   */
+  public async sendDailyTipToGroupsAndChannel(captionText: string, imagePath?: string) {
+    // Asegurar descubrimiento activo del canal de WhatsApp
+    if (!this.channelNewsletterId) {
+      await this.discoverAndSyncNewsletters().catch(() => {});
+    }
+
+    const fs = await import('fs');
+    const hasImage = imagePath && fs.existsSync(imagePath);
+
+    // 1. Despachar a Grupo 2 (Tips, Noticias y Consultas Inmobiliarias)
+    const targetGroup2 = this.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
+    if (targetGroup2) {
+      try {
+        if (hasImage) {
+          console.log(`[JANIA-MATCH] 📤 Despachando imagen pública + texto a Grupo 2 (${targetGroup2})...`);
+          await this.sendToGroup(captionText, imagePath, [], targetGroup2);
+        } else {
+          console.log(`[JANIA-MATCH] 📤 Despachando texto diario a Grupo 2 (${targetGroup2})...`);
+          await this.queuedSend(targetGroup2, captionText, { allowGroupMessage: true });
+        }
+        console.log(`[JANIA-MATCH] ✓ Contenido diario entregado a Grupo 2.`);
+      } catch (grpErr: any) {
+        console.error(`[JANIA-MATCH] Error despachando a Grupo 2:`, grpErr?.message);
+      }
+    }
+
+    // 2. Despachar a Grupo 3 (Proyecto VECY BIENES RAÍCES)
+    const targetGroup3 = this.circuloGroupId || VECY_OFFICIAL_GROUPS.grupo3.id;
+    if (targetGroup3) {
+      try {
+        if (hasImage) {
+          console.log(`[JANIA-MATCH] 📤 Despachando imagen pública + texto a Grupo 3 (${targetGroup3})...`);
+          await this.sendToGroup(captionText, imagePath, [], targetGroup3);
+        } else {
+          console.log(`[JANIA-MATCH] 📤 Despachando texto diario a Grupo 3 (${targetGroup3})...`);
+          await this.queuedSend(targetGroup3, captionText, { allowGroupMessage: true });
+        }
+        console.log(`[JANIA-MATCH] ✓ Contenido diario entregado a Grupo 3.`);
+      } catch (grpErr: any) {
+        console.error(`[JANIA-MATCH] Error despachando a Grupo 3:`, grpErr?.message);
+      }
+    }
+
+    // 3. Despachar a Canal Oficial de WhatsApp (Newsletter)
+    if (this.channelNewsletterId) {
+      try {
+        if (hasImage) {
+          console.log(`[JANIA-MATCH] 📢 Despachando imagen pública + texto a Canal Oficial (${this.channelNewsletterId})...`);
+          await this.sendToGroup(captionText, imagePath, [], this.channelNewsletterId);
+        } else {
+          console.log(`[JANIA-MATCH] 📢 Despachando texto diario a Canal Oficial (${this.channelNewsletterId})...`);
+          await this.queuedSend(this.channelNewsletterId, captionText, { allowDirectMessage: true });
+        }
+        console.log(`[JANIA-MATCH] ✓ Contenido diario entregado a Canal Oficial.`);
+      } catch (chanErr: any) {
+        console.error(`[JANIA-MATCH] Error despachando a Canal Oficial:`, chanErr?.message);
+      }
+    }
+  }
+
+  /**
+   * Compatibilidad: Despacho de texto puro delegando a sendDailyTipToGroupsAndChannel sin imagen
+   */
+  public async sendDailyTipTextToGroupsAndChannel(captionText: string) {
+    return this.sendDailyTipToGroupsAndChannel(captionText, undefined);
   }
 
   public async sendVoiceToBuzonAndChannel(text: string, imagePath?: string, captionText?: string) {
@@ -3060,9 +3206,9 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     console.log("[JANIA-MATCH] Generando y enviando audios de cierre manuales (Solo por hoy)...");
     const grupos = [
       {
-        nombre: "VECY INMUEBLES NETWORK",
+        nombre: "𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴",
         id: this.targetGroupId,
-        promptCierre: "Genera una nota de voz corta en español de despedida y cierre de jornada para el grupo de WhatsApp VECY INMUEBLES NETWORK. Agradece la actividad de hoy y despídete con calidez. Recuerda que no cobramos comisiones y que las ofertas y demandas cruzadas son el motor de la red."
+        promptCierre: "Genera una nota de voz corta en español de despedida y cierre de jornada para el grupo de WhatsApp 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴. Agradece la actividad de hoy y despídete con calidez. Recuerda que no cobramos comisiones y que las ofertas y demandas cruzadas son el motor de la red."
       },
       {
         nombre: "Buzón de Consultoría",

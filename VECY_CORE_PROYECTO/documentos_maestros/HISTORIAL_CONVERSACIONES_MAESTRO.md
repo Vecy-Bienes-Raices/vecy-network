@@ -7,6 +7,69 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.59 — 08 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Rebranding Integral de Marca a "VECY BIENES RAÍCES"**:
+   - Supresión de todo vestigio público de "VECY Network" en prompts, mensajes de WhatsApp, pies de firma y respuestas.
+   - Slogan Oficial Obligatorio:
+     *VECY*
+     *BIENES RAÍCES*
+     *La evolución inevitable para el sector de los bienes raíces.*
+2. **Nuevos Nombres Oficiales de Grupos de WhatsApp**:
+   - Grupo 1: `𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴`
+   - Grupo 2: `𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠`
+   - Grupo 3: `𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀`
+3. **Encuesta Semanal Exclusiva del Canal Oficial de WhatsApp**:
+   - Horario de publicación: Lunes a las 08:00 AM.
+   - Herramienta nativa de encuesta de WhatsApp (`pollCreationMessage`).
+   - Modo de votación de **UNA SOLA RESPUESTA** (`selectableCount: 1`, no múltiple).
+   - **CERO EMOJIS** tanto en la pregunta como en las opciones de votación.
+   - Jamás se envía a Grupo 1, Grupo 2 ni Grupo 3 para evitar saturación de la comunidad.
+4. **Invitaciones Periódicas desde el Canal Oficial hacia los Grupos**:
+   - En días y horarios separados de la encuesta de los lunes (Miércoles 16:30 Grupo 1, Jueves 16:30 Grupo 2, Viernes 16:30 Grupo 3).
+   - Con mensajes y enlaces de invitación separados para no confundir a la audiencia.
+5. **Difusión Diaria de Tips y Noticias (Calendario de 30 Días)**:
+   - Despacho diario a las 10:00 AM hora Bogotá hacia Grupo 2, Grupo 3 y Canal Oficial.
+   - **CERO AUDIOS** (sin audio TTS para proteger infraestructura y evitar saturación acústica).
+   - **CON IMÁGENES PÚBLICAS DE INTERNET**: Búsqueda automática en la red de fotografías reales de arquitectura, oficinas e inmuebles (Openverse API, licencia comercial/CC0), rotadas sin repetir en el mes y sin utilizar las ilustraciones 3D viejas de JanIA.
+6. **Aclaraciones y Textos Solicitados por Eduardo**:
+   - Explicar detalladamente qué es el **Calendario de 30 Días** (30 temas estructurados de corretaje, derecho, tributario, avalúos, patologías y modelo colaborativo sin repetir).
+   - Entregar los textos exactos y listos para copiar y pegar de las descripciones y normas de los Grupos 1, 2 y 3.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Riesgo de Saturación por Encuestas y Audios Masivos en Grupos**:
+   - Enviar encuestas o audios TTS masivos en grupos de transacciones (Grupo 1) generaba ruido innecesario en canales diseñados exclusivamente para negocios rápidos.
+   - Concentrar las encuestas interactivas de una sola opción exclusivamente en el Canal Oficial respeta la atención de los asesores y centraliza la medición de opinión.
+2. **Identidad Visual y Fotográfica Real vs. Ilustraciones Ficticias**:
+   - Las ilustraciones 3D generadas por IA restaban credibilidad institucional al contrastar con el rigor profesional de los temas legales y tributarios.
+   - Integrar un conector a la API pública de Openverse con filtrado por licencias comerciales y rotación por día del mes garantiza imágenes reales de alta calidad sin costo ni riesgo legal.
+3. **Coherencia de Marca Unificada**:
+   - La coexistencia de "VECY Network" y "VECY Bienes Raíces" generaba ambigüedad en los usuarios externos. Se unificó la identidad pública bajo "VECY BIENES RAÍCES".
+
+### Acciones Técnicas Ejecutadas
+1. **Configuración de Marca y Grupos (`shared/const.ts`)**:
+   - Incremento a `v32.59` (`32.59.0` en `package.json`).
+   - Definidas constantes `VECY_BRAND` y `VECY_OFFICIAL_GROUPS` con IDs, nombres con tipografía unicode y enlaces de invitación oficiales.
+2. **Soporte Nativo de Encuestas e Imágenes en Baileys (`server/_core/whatsapp-match.ts`)**:
+   - Implementado `sendPoll(targetJid, name, options, selectableCount = 1)`.
+   - Implementado `sendDailyTipToGroupsAndChannel(captionText, imagePath)`: despacha imagen pública + texto a Grupo 2, Grupo 3 y Canal Oficial (cero notas de voz).
+   - Moderación estricta de Grupo 1: amonestación cordial + eliminación administrativa tras 3.5s si el mensaje no es oferta ni demanda.
+3. **Servicio Cron, Búsqueda de Imágenes y Calendario (`server/_core/cronService.ts`)**:
+   - `WEEKLY_POLLS_LIST`: Totalmente sanitizada con **CERO EMOJIS** en preguntas ni opciones, con 8 semanas temáticas y 3-4 opciones concisas.
+   - `publishWeeklyPoll`: Envía encuesta interactiva nativa al Canal con `selectableCount: 1`, 0 emojis y bloqueo en PostgreSQL.
+   - `publishChannelGroupInvitation`: Mensajes estructurados separados para Grupo 1 (Miércoles 16:30), Grupo 2 (Jueves 16:30) y Grupo 3 (Viernes 16:30).
+   - `fetchPublicThemeImage`: Conector a la API de Openverse para buscar y descargar imágenes públicas CC0/comerciales según el tema del día (`client/public/assets/broadcast/daily_tip_dia_X.jpg`).
+   - `publishTodayTipNow`: Despacha imagen + texto a Grupo 2, Grupo 3 y Canal a las 10:00 AM (cero audios).
+   - Orquestador de crons y failsafes minuteros con bloqueo atómico en PostgreSQL para evitar duplicados.
+4. **Rebranding en Prompts y Routers (`janIA.ts`, prompts y routers)**:
+   - Más de 80 referencias de "VECY Network" migradas a "VECY BIENES RAÍCES", preservando las URLs técnicas del proyecto (`https://vecy-network.vercel.app/`).
+5. **Verificación y Cobertura (`server/__tests__/regression.test.ts`)**:
+   - Nuevos tests de regresión para encuestas con 3-4 opciones y cero emojis, calendario de 30 días sin duplicados y respeto de URLs.
+   - 157/157 tests Vitest aprobados al 100%. `pnpm check` (tsc) y `pnpm build` limpios sin errores.
+
+---
+
 ## 📋 SESIÓN v32.58 — 07 Octubre 2026
 
 ### Solicitud de Eduardo

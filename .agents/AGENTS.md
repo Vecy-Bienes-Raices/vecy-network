@@ -172,21 +172,40 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.58 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.59 — Octubre 2026
 
-### Novedades v32.58 (Regla Estricta de 15 Días Máximo de Vigencia, Supresión de la Excepción de 45 Días para Matches Calientes y Saneamiento del Pool de Búsqueda):
+### Novedades v32.59 (Rebranding Integral a VECY BIENES RAÍCES, Encuestas Nativas de 1 Opción al Canal sin Emojis, Difusión Diaria con Imágenes Públicas de Internet y Cero Audios):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:
   1. **Doctrina de Eduardo**:
-     - Implementada la **Opción A (Regla Estricta de 15 Días Máximo)**: Eliminada la excepción de 45 días para matches con score $\ge 90\%$.
-     - Si una oferta o demanda tiene más de 15 días desde su última publicación/republicación en WhatsApp, sale automáticamente de la mesa de Vigentes (permaneciendo únicamente consultable en la pestaña Histórico).
-     - Si el asesor republica la oferta o demanda en el grupo de WhatsApp, JanIA actualiza `fecha_ultima_publicacion` a HOY, y vuelve a entrar de inmediato a la mesa de Vigentes.
+     - **Rebranding Completo**: Se erradicó toda denominación pública de "VECY NETWORK" en favor de **VECY BIENES RAÍCES**, con el lema:
+       *VECY*
+       *BIENES RAÍCES*
+       *La evolución inevitable para el sector de los bienes raíces.*
+     - **Nombres Oficiales de Grupos de WhatsApp**:
+       - Grupo 1: `𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴` (100% transaccional de inmuebles y demandas, amonestación + borrado automático de off-topic).
+       - Grupo 2: `𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠` (Consultas públicas, tips, valor de m², debates libres).
+       - Grupo 3: `𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀` (Comunidad, foros, modelo colaborativo y alianzas).
+     - **Encuesta Semanal Nativa**:
+       - Exclusiva del Canal Oficial de WhatsApp los Lunes a las 08:00 AM.
+       - Herramienta nativa interactiva de WhatsApp (`pollCreationMessage`).
+       - Votación de UNA SOLA RESPUESTA (`selectableCount: 1`).
+       - **CERO EMOJIS** en preguntas ni opciones. Jamás se envía a los grupos.
+     - **Invitaciones Periódicas desde el Canal hacia los Grupos**:
+       - Días y horas separados de la encuesta: Miércoles 16:30 (Grupo 1), Jueves 16:30 (Grupo 2), Viernes 16:30 (Grupo 3).
+       - Mensajes estructurados y enlaces separados para no confundir a la audiencia.
+     - **Difusión Diaria de Tips / Noticias (10:00 AM)**:
+       - Hacia Grupo 2, Grupo 3 y Canal Oficial.
+       - **CERO AUDIOS** (sin notas de voz TTS).
+       - **CON IMÁGENES PÚBLICAS DE INTERNET**: Búsqueda en la red vía Openverse API de fotografías comerciales de arquitectura e inmuebles bajo licencia comercial/CC0, rotadas sin repetir.
   2. **Modificaciones Implementadas**:
-     - `AdminMatches.tsx`: `checkIsMatchActiveSmart` exige estrictamente que oferta y demanda tengan $\le 15$ días. Se retiró la insignia `🔥 Protegido (Ciclo 45d)`. Tratos en curso mantienen inmunidad.
-     - `janIA.ts` (Router): Consulta SQL en `getAllMatches` y conteos de KPI en `getBotStatus` unificados a `15 days`.
-     - `matching.ts`: Ventana del pool de búsqueda reducida de 30 a 15 días en `findMatchesForProperty` y `findMatchesForRequirement`.
-     - 154/154 tests Vitest pasando.
+     - `shared/const.ts`: `VECY_BRAND` y `VECY_OFFICIAL_GROUPS` centralizados, versión bump a `v32.59`.
+     - `package.json`: Versión actualizada a `32.59.0`.
+     - `server/_core/whatsapp-match.ts`: Implementados `sendPoll`, `sendDailyTipToGroupsAndChannel` y moderación de Grupo 1.
+     - `server/_core/cronService.ts`: `WEEKLY_POLLS_LIST` sanitizada sin emojis, `fetchPublicThemeImage` con Openverse API, `publishChannelGroupInvitation` y crons programados.
+     - Prompts y routers actualizados a "VECY BIENES RAÍCES".
+     - 157/157 tests Vitest pasando al 100%.
 
-## 🔖 VERSIÓN ANTERIOR: v32.57 — Octubre 2026
+## 🔖 VERSIÓN ANTERIOR: v32.58 — Octubre 2026
 
 ### Novedades v32.57 (Extracción y Validación de Condominios/Conjuntos/Edificios Específicos, Fidelidad Textual Absoluta de Alcobas y Bloqueo Doctrinal de Escala):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:

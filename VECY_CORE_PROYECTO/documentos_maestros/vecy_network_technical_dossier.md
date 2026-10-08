@@ -322,6 +322,45 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.59 — Octubre 2026
+
+#### 📌 REBRANDING INTEGRAL A "VECY BIENES RAÍCES", ENCUESTAS NATIVAS DE 1 OPCIÓN EN CANAL SIN EMOJIS, DIFUSIÓN DIARIA CON IMÁGENES PÚBLICAS DE INTERNET Y CERO AUDIOS
+
+**Requerimiento y Objetivos:**
+1. **Rebranding Integral de Marca a "VECY BIENES RAÍCES"**:
+   - Erradicar cualquier denominación pública de "VECY Network" en prompts, mensajes de WhatsApp, pies de firma y respuestas.
+   - Slogan oficial:
+     *VECY*
+     *BIENES RAÍCES*
+     *La evolución inevitable para el sector de los bienes raíces.*
+2. **Nuevos Nombres Oficiales de Grupos de WhatsApp**:
+   - Grupo 1: `𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴` (100% transaccional de ofertas y demandas; amonestación + eliminación automática de off-topic).
+   - Grupo 2: `𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠` (Consultas inmobiliarias públicas, tips del día, valor de m², debates libres).
+   - Grupo 3: `𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀` (Comunidad oficial de aliados, foros, modelo colaborativo y alianzas).
+3. **Encuesta Semanal Nativa Exclusiva del Canal Oficial de WhatsApp**:
+   - Despacho los lunes a las 08:00 AM exclusivamente al Canal de WhatsApp.
+   - Herramienta nativa de encuesta (`pollCreationMessage`) con **UNA SOLA RESPUESTA** (`selectableCount: 1`).
+   - **CERO EMOJIS** en preguntas ni opciones de votación. NUNCA se envía a los grupos.
+4. **Invitaciones Periódicas desde el Canal hacia los Grupos**:
+   - En días y horarios separados de la encuesta: Miércoles 16:30 (Grupo 1), Jueves 16:30 (Grupo 2), Viernes 16:30 (Grupo 3).
+   - Mensajes estructurados y enlaces separados para no confundir a la audiencia.
+5. **Difusión Diaria de Tips / Noticias (Calendario de 30 Días)**:
+   - Despacho diario a las 10:00 AM hacia Grupo 2, Grupo 3 y Canal Oficial.
+   - **CERO AUDIOS** (sin notas de voz TTS para optimizar costos de API y evitar saturación acústica).
+   - **CON IMÁGENES PÚBLICAS DE INTERNET**: Búsqueda en la red de fotografías reales bajo licencia comercial/CC0 (Openverse API) acordes a cada tema, rotadas sin repetir y sin usar ilustraciones 3D previas.
+
+**Archivos Modificados:**
+- `shared/const.ts`: `VECY_BRAND`, `VECY_OFFICIAL_GROUPS` y versión `v32.59`.
+- `package.json`: Versión `32.59.0`.
+- `server/_core/whatsapp-match.ts`: Implementados `sendPoll`, `sendDailyTipToGroupsAndChannel` y moderación de Grupo 1.
+- `server/_core/cronService.ts`: `WEEKLY_POLLS_LIST` sin emojis, `fetchPublicThemeImage` con Openverse API, `publishChannelGroupInvitation` y crons programados.
+- `server/_core/janIA.ts`, prompts y routers: Rebranding completo a "VECY BIENES RAÍCES".
+- `server/__tests__/regression.test.ts`: Tests de regresión para encuestas con 3-4 opciones y cero emojis, calendario sin duplicados y respeto de URLs.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | `pnpm build` limpio ✅ | 157/157 tests Vitest ✅
+
+---
+
 ### 🔖 v32.58 — Octubre 2026
 
 #### 📌 REGLA ESTRICTA DE 15 DÍAS MÁXIMO DE VIGENCIA, ERRADICACIÓN DE LA EXCEPCIÓN DE 45 DÍAS PARA MATCHES CALIENTES Y SANEAMIENTO DEL POOL DE BÚSQUEDA

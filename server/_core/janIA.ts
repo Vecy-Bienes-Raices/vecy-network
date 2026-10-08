@@ -1,5 +1,5 @@
 /**
- * JanIA Core Logic - VECY Network
+ * JanIA Core Logic - VECY BIENES RAÍCES
  * Version: 11.70.0 (JanIA v2.5 - Conversational Naturalness Edition)
  */
 import { invokeLLM } from "./llm";
@@ -3143,13 +3143,13 @@ export async function processWhatsAppMessage(
           let acceptedTopics = "publicar y buscar propiedades para hacer matching comercial de inmuebles y requerimientos";
           
           if (jid === '120363417740040773@g.us') {
-            groupRulesName = "VECY: SOPORTE LEGAL, TRIBUTARIO Y AVALÚOS";
-            acceptedTopics = "consultas jurídicas, contratos, arrendamientos, tributación y avalúos de inmuebles";
+            groupRulesName = "𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠";
+            acceptedTopics = "tips, noticias, debates y consultas inmobiliarias (jurídicas, contratos, arrendamientos, tributación y estudios de mercado)";
           } else if (jid === '120363403507276533@g.us') {
-            groupRulesName = process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"';
-            acceptedTopics = "temas de debate, soporte y sugerencias sobre el ecosistema VECY Network";
+            groupRulesName = process.env.GROUP_ZERO_NAME || '𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀';
+            acceptedTopics = "temas libres del sector inmobiliario, foros, debates, experiencias del negocio y sugerencias sobre VECY BIENES RAÍCES";
           } else {
-            groupRulesName = "VECY INMUEBLES NETWORK";
+            groupRulesName = "𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴";
             acceptedTopics = "publicación directa de ofertas (Inmuebles) y demandas (Requerimientos) comerciales";
           }
 
@@ -4234,7 +4234,7 @@ Por lo tanto, DEBES hacer lo siguiente:
           textLower.includes("competidor") || 
           textLower.includes("competencia");
           
-        const groupZeroName = process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"';
+        const groupZeroName = process.env.GROUP_ZERO_NAME || '𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀';
         if (isCompetitorQuery) {
           result.response = `👌 *${groupZeroName.toUpperCase()} — DEBATE Y COMUNIDAD* 👌\n\n${greetingPrefix}, detecté una mención a plataformas competidoras o comparativas de servicios. Para mantener este canal enfocado exclusivamente en ofertas y requerimientos, te invito a plantear tus preguntas, comparar beneficios o participar en el debate en nuestro canal oficial **${groupZeroName}**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Allí debatimos abiertamente con total transparencia y profesionalismo! 🤝✨`;
         } else {
@@ -4243,7 +4243,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         result.classification = "VIOLACION_DE_NORMAS";
         result.reactionEmoji = "🚫";
       } else {
-        result.response = `💡 *VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS* 💡\n\n${greetingPrefix}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS**:\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n\n¡Allí te responderé al instante con toda la información! 🚀🎯`;
+        result.response = `💡 *𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠* 💡\n\n${greetingPrefix}, veo que tienes una consulta jurídica, procedimental o de avalúo. Para darte una respuesta detallada con mis motores legales y de mercado sin saturar este canal de ofertas y requerimientos, te invito a realizar tu pregunta en nuestro grupo especializado **𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠**:\n👉 https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6\n\n¡Allí te responderé al instante con toda la información! 🚀🎯`;
         result.classification = "VIOLACION_DE_NORMAS";
         result.reactionEmoji = "🚫";
       }
@@ -5759,23 +5759,23 @@ export async function generateWelcomeMessage(count: number, chatId?: string): Pr
     let groupDescription = "";
     
     if (chatId === "120363417740040773@g.us") { // Soporte Legal, Tributario, Avalúos y Marketing
-      groupDescription = `el grupo de WhatsApp "VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING".
+      groupDescription = `el grupo de WhatsApp "𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠".
 Dirección obligatoria para redactar el saludo de bienvenida:
-- Dales una muy cálida bienvenida y menciónales que este es el canal oficial para resolver dudas jurídicas, procedimentales, liquidación tributaria, avalúos y Marketing Digital Inmobiliario (copys y estructuración de anuncios).
+- Dales una muy cálida bienvenida en nombre de VECY BIENES RAÍCES y menciónales que este es un foro abierto de tips, noticias, debates y consultas inmobiliarias (jurídicas, tributarias, estudios de mercado y marketing).
 - Explícales de manera clara y directa las Pautas del Grupo en viñetas bien organizadas con emojis:
-  * Qué SE PUEDE hacer: Realizar consultas de soporte legal inmobiliario, solicitar tips de marketing y copys de publicación, subir archivos o contratos en PDF para revisión, o enviar notas de voz detallando casos legales.
-  * Qué NO SE PUEDE hacer: Publicar listados de ofertas o requerimientos inmobiliarios (estos pertenecen única y exclusivamente al grupo principal de inmuebles).
-  * Cómo hacerlo bien: Escribir sus consultas de forma detallada o enviar notas de voz claras para que yo (JanIA) y el equipo de abogados podamos asistirles rápidamente.`;
-    } else if (chatId === "120363403507276533@g.us") { // PROYECTO "Vecy Network"
-      groupDescription = `el grupo de WhatsApp "PROYECTO \\"Vecy Network\\" 👌" (nuestro canal oficial de debate, modelo de negocio y comunidad de aliados).
+  * Qué SE PUEDE hacer: Hacer consultas públicas, debatir temas libres del sector, compartir casos y experiencias, comentar los tips y noticias diarias de JanIA.
+  * Qué NO SE PUEDE hacer: Publicar ofertas o demandas de inmuebles (esas van única y exclusivamente al grupo "𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴").
+  * Asuntos privados: Escribir al chat privado de JanIA (https://wa.me/573192919978).`;
+    } else if (chatId === "120363403507276533@g.us") { // 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀
+      groupDescription = `el grupo de WhatsApp "𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 \\"𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦\\"🚀" (nuestro canal oficial de debate, modelo de negocio y comunidad de aliados).
 Dirección obligatoria para redactar el saludo de bienvenida:
-- Dales una muy cálida bienvenida a la comunidad oficial del Proyecto Vecy Network.
+- Dales una muy cálida bienvenida a la comunidad oficial del Proyecto VECY BIENES RAÍCES.
 - Explícales de manera clara y directa las Pautas del Grupo en viñetas bien organizadas con emojis:
-  * Qué SE PUEDE hacer: Sugerir ideas de mejora tecnológica para VECY, comentar novedades sobre el portal web, debatir sobre el modelo fintech y comisiones del 3%, y compartir testimonios de éxito.
-  * Qué NO SE PUEDE hacer: Publicar listados de inmuebles ni realizar consultas jurídicas complejas (ya que para eso existen los otros grupos dedicados).
-  * Cómo hacerlo bien: Mantener un tono respetuoso, constructivo e interactuar con los otros aliados para fortalecer la comunidad.`;
-    } else { // VECY INMUEBLES NETWORK (targetGroupId)
-      groupDescription = `el grupo de WhatsApp principal "VECY INMUEBLES NETWORK" (nuestra red nacional de ofertas y requerimientos inmobiliarios).
+  * Qué SE PUEDE hacer: Temas libres del sector, foros, debates, experiencias del día a día del negocio, ideas para la plataforma, el modelo colaborativo y testimonios de éxito.
+  * Qué NO SE PUEDE hacer: Publicar ofertas o demandas de inmuebles (esas van única y exclusivamente al grupo de OFERTAS Y DEMANDAS).
+  * Asuntos privados: Escribir al chat privado de JanIA (https://wa.me/573192919978).`;
+    } else { // 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 (targetGroupId)
+      groupDescription = `el grupo de WhatsApp principal "𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴" (nuestra red nacional de ofertas y requerimientos inmobiliarios).
 Dirección obligatoria para redactar el saludo de bienvenida:
 - Dales una muy cálida bienvenida a la red y menciónales que ya estoy lista para cruzar sus ofertas y requerimientos en segundos sin comisiones.
 - Explícales de manera muy clara y directa las Pautas Obligatorias del Grupo para evitar advertencias o bloqueos en el sistema:
@@ -5797,7 +5797,7 @@ Dirección obligatoria para redactar el saludo de bienvenida:
       messages: [
         { 
           role: "system", 
-          content: "Eres JanIA, la asistente inteligente y experta de VECY Network. Hablas siempre en primera persona del singular, con un tono sumamente humano, profesional, elocuente y cercano." 
+          content: "Eres JanIA, la asistente inteligente y experta de VECY BIENES RAÍCES. Hablas siempre en primera persona del singular, con un tono sumamente humano, profesional, elocuente y cercano." 
         },
         { 
           role: "user", 
@@ -5810,15 +5810,15 @@ Dirección obligatoria para redactar el saludo de bienvenida:
     return llmRes.choices[0].message.content.trim();
   } catch (error) {
     if (chatId === "120363417740040773@g.us") {
-      return `✨ *¡Bienvenidos al grupo VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING!* 👋\n\n` +
-             `Aquí resolvemos sus dudas jurídicas, disputas de comisión, avalúos y tips de marketing inmobiliario. Podrán subir PDFs o audios de sus casos.\n` +
-             `⚠️ *Nota:* Por favor, eviten publicar inmuebles aquí; esos van en el grupo principal. ¡Estoy lista para responder! 🚀⚖️`;
+      return `✨ *¡Bienvenidos al grupo 𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠!* 👋\n\n` +
+             `Foro abierto de tips, noticias, debates y consultas inmobiliarias de VECY BIENES RAÍCES.\n` +
+             `⚠️ *Nota:* Las ofertas y demandas van solo al grupo de OFERTAS Y DEMANDAS. Asuntos privados: https://wa.me/573192919978 🚀`;
     } else if (chatId === "120363403507276533@g.us") {
-      return `✨ *¡Bienvenidos a PROYECTO "Vecy Network" 👌!* 👋\n\n` +
-             `Este es el canal oficial de comunidad, modelo de negocio y debate para sugerir mejoras y charlar de VECY.\n` +
-             `⚠️ *Nota:* Evitemos ofertas de inmuebles aquí. ¡Bienvenidos aliados! 🚀🤝`;
+      return `✨ *¡Bienvenidos a 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀!* 👋\n\n` +
+             `Espacio de comunidad: temas libres, foros, debates y experiencias del negocio inmobiliario.\n` +
+             `⚠️ *Nota:* Las ofertas y demandas van solo al grupo de OFERTAS Y DEMANDAS. ¡Bienvenidos aliados! 🚀🤝`;
     }
-    return `✨ *¡Bienvenidos a VECY INMUEBLES NETWORK!* 👋\n\n` +
+    return `✨ *¡Bienvenidos a 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴!* 👋\n\n` +
            `Ya estoy activa para cruzar sus ofertas sin comisiones.\n` +
            `📝 *Pautas rápidas de publicación*:\n` +
            `▸ *Permitido:* Texto técnico completo, PDFs, notas de voz, flyers con datos y enlaces públicos (Wasi, Fincaraiz, etc.).\n` +
@@ -5876,7 +5876,7 @@ export function obtenerCamposRequeridosYPreguntas(propertyType: string, isRequir
 export const MSG_PRESENTACION_INSTITUCIONAL = `🚀 **PRESENTACIÓN INSTITUCIONAL: JanIA v2.5** 🚀
 _Cerebro de Inteligencia Artificial para la Red VECY_
 
-¡Hola, colegas! 👋 Soy la Inteligencia Artificial oficial de **VECY Network** y estoy operativa las 24/7 para acelerar nuestros cierres inmobiliarios e intercambios en todo el país sin cobrar comisiones.
+¡Hola, colegas! 👋 Soy la Inteligencia Artificial oficial de **VECY BIENES RAÍCES** y estoy operativa las 24/7 para acelerar nuestros cierres inmobiliarios e intercambios en todo el país sin cobrar comisiones.
 
 🧠 **¿Cómo puedes interactuar conmigo en el grupo?**
 ▸ **Enlaces CRM/Portales:** Comparte el link público de tus inmuebles. Extraigo la ficha técnica automáticamente.
@@ -5890,7 +5890,7 @@ Si mis motores de scraping o visión profunda no logran extraer todos los datos 
 🔥 **¡No le temas al éxito!** He notado que cuando empiezo a hablar, algunos se quedan en silencio. Este es un ecosistema colaborativo: publica sin miedo tus ofertas y requerimientos, ¡mi único propósito es ayudarte a cerrar negocios rápido! 🚀🎯
 
 ⚖️ **Compromiso de Honor:** Si logras consolidar un negocio gracias a un MATCH presentado por mí, es obligatorio que califiques mi servicio aquí: https://g.page/r/CctNbwU6UpX5EBM/review 🚀🎯`;
-export const MSG_PAUTAS_FORMATOS = `🧠 *VECY INMUEBLES NETWORK* 🇨🇴
+export const MSG_PAUTAS_FORMATOS = `🧠 *𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴* 🇨🇴
 ¡Grupo inteligente para ofertas, requerimientos e intercambios!
 
 🤖 *CÓMO PUBLICAR PARA QUE JanIA REGISTRE TU PROPIEDAD Y BUSQUE MATCH:*
@@ -5937,13 +5937,13 @@ Si mis motores no extraen todos los datos de tu link o imagen, te enviaré un me
 ⚖️ *Compromiso de Honor:* Si cierras un negocio gracias a un MATCH, califica mi servicio aquí: https://g.page/r/CctNbwU6UpX5EBM/review 🚀🎯`;
 
 
-export const MSG_CIERRE_OPERACIONES = `🌙 *CIERRE DE OPERACIONES VECY NETWORK* 🌙
+export const MSG_CIERRE_OPERACIONES = `🌙 *CIERRE DE OPERACIONES VECY BIENES RAÍCES* 🌙
 
 Gracias a todos por el profesionalismo en sus publicaciones hoy. Mi motor de cruce sigue procesando datos en silencio para que mañana despierten con nuevas oportunidades de MATCH.
 
 La persistencia y el trabajo colaborativo sin comisiones es el camino al éxito en el Real Estate. ¡Que tengan un excelente descanso, colegas! 🌙🚀`;
 
-export const MSG_PROMO_INMUEBLES = `📢 *VECY INMUEBLES NETWORK — ¡ACTÍVATE Y CIERRA NEGOCIOS!* 📢
+export const MSG_PROMO_INMUEBLES = `📢 *𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 — ¡ACTÍVATE Y CIERRA NEGOCIOS!* 📢
 ━━━━━━━━━━━━━━━━━━━━━━
 ¡Colegas! El chat está 100% abierto y libre para enviar todas sus ofertas y requerimientos. 🚀
 
@@ -5951,7 +5951,7 @@ Estoy lista 24/7 para procesar tus links de CRM, flyers (con visión OCR) y nota
 
 ¡Publiquemos activamente hoy para arrancar con fuerza esta gran proeza inmobiliaria en Colombia! 💪🏆`;
 
-export const MSG_PROMO_CONSULTAS = `💡 *VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS — ¡EL CHAT ESTÁ ABIERTO!* 💡
+export const MSG_PROMO_CONSULTAS = `💡 *𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠 — ¡EL CHAT ESTÁ ABIERTO!* 💡
 ━━━━━━━━━━━━━━━━━━━━━━
 ¡Estimados aliados! Este espacio de asesoría está completamente abierto y libre. 🤝📚
 
@@ -5963,10 +5963,10 @@ Pueden preguntar todo lo que necesiten sobre:
 
 ¡No se queden con la duda! Aprovechen esta inteligencia a su servicio para elevar su profesionalismo y acelerar sus negocios. 🚀🎯`;
 
-export const MSG_PROMO_CIRCULO = `👌 *PROYECTO "Vecy Network" — ¡CHAT ABIERTO PARA CONECTAR!* 👌
+export const MSG_PROMO_CIRCULO = `👌 *𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀 — ¡CHAT ABIERTO PARA CONECTAR!* 👌
 
 Estimados aliados, recuerden que tenemos habilitado nuestro canal oficial:
-🚀 *PROYECTO "Vecy Network"* 🚀
+🚀 *𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀* 🚀
 👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
 
 Este es el espacio exclusivo de debate y comunidad para:
@@ -6066,7 +6066,7 @@ export async function processConsultingMessage(
     const strictOffTopic = checkStrictOffTopic(text);
     if (strictOffTopic.isOffTopic) {
       console.log(`[JanIA-Consulting-OffTopic] Mensaje prohibido en Soporte Legal para ${userId}: "${text.substring(0, 50)}...". (${strictOffTopic.reason})`);
-      const warningText = `Hola @${rawPhone} (${realName}) 👋🏻. El contenido relacionado con ${strictOffTopic.reason} está estrictamente prohibido en los grupos oficiales de VECY Network. 🚫\n\nNuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, asesoría legal, tributaria y avalúos inmobiliarios. ¡Te invitamos cordialmente a eliminar este mensaje de inmediato! 🤝`;
+      const warningText = `Hola @${rawPhone} (${realName}) 👋🏻. El contenido relacionado con ${strictOffTopic.reason} está estrictamente prohibido en los grupos oficiales de VECY BIENES RAÍCES. 🚫\n\nNuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, asesoría legal, tributaria y avalúos inmobiliarios. ¡Te invitamos cordialmente a eliminar este mensaje de inmediato! 🤝`;
       return {
         classification: "VIOLACION_DE_NORMAS",
         response: warningText,
@@ -6166,21 +6166,21 @@ export async function processConsultingMessage(
     }
 
     const systemPrompt = 
-      `Eres JanIA, la Inteligencia Artificial viva, empática y de máxima capacidad resolutiva de VECY Network. ` +
-      `Estás operando en el grupo "VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING". Tu objetivo es responder con precisión quirúrgica, rigor legal, calidez humana y alta competencia técnica, resolviendo de fondo las inquietudes de los inmobiliarios como una abogada senior, perita tasadora y estratega de marketing de élite.\n\n` +
+      `Eres JanIA, la Inteligencia Artificial viva, empática y de máxima capacidad resolutiva de VECY BIENES RAÍCES. ` +
+      `Estás operando en el grupo "𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠". Tu objetivo es responder con precisión quirúrgica, rigor legal, calidez humana y alta competencia técnica, resolviendo de fondo las inquietudes de los inmobiliarios como una abogada senior, perita tasadora y estratega de marketing de élite.\n\n` +
       `## LÓGICA DE CLASIFICACIÓN Y MODERACIÓN ESTRICTA:\n` +
       `1. **VIOLACION_DE_NORMAS (OFERTAS, DEMANDAS O FLYERS PUBLICITARIOS EN ESTE GRUPO)**:\n` +
       `   - Si el mensaje, la imagen adjunta o el documento PDF corresponde a una **OFERTA COMERCIAL O DEMANDA DE UN INMUEBLE** (venta, arriendo, canon, metraje, fotos de apto/casa/bodega, flyer o ficha de un predio como "ARRIENDO CARRERA 17 CON 91.pdf"):\n` +
       `     * DEBES clasificarlo OBLIGATORIAMENTE como "VIOLACION_DE_NORMAS".\n` +
       `     * Asignar estrictamente "reactionEmoji": "🚫".\n` +
       `     * Responder con amabilidad, educando y redireccionando al canal correcto:\n` +
-      `       "Hola, espero te encuentres muy bien. Has publicado esta oferta/demanda en el grupo equivocado. Este canal es exclusivo para consultas de Soporte Legal, Tributario, Avalúos y Marketing. ¡Te invito cordialmente a eliminarla de este grupo! Esta publicación la debes poner en nuestro grupo oficial de corretaje **VECY INMUEBLES NETWORK**. Acá tienes nuevamente el enlace del grupo:\n👉 https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\n\n¡Allí todos los corredores de la red podrán verla y la cruzaremos con las demandas activas! 🏠✨"\n` +
-      `2. **SOBRE_VECY**: Preguntas sobre JanIA (quién o qué es, para qué fue creada, qué hace 24/7, cuál es su finalidad y sus servicios 100% virtuales disponibles), sobre el proyecto VECY Network, sus fundadores (Eduardo A. Rivera - Director de Tecnología, y Jani Alves - Directora de Operaciones), comisiones 35/35/15/15 o agradecimientos cordiales (emoji 👌 o 🙌🏻). JanIA se presenta con calidez, cercanía, elocuencia y orgullo institucional.\n` +
+      `       "Hola, espero te encuentres muy bien. Has publicado esta oferta/demanda en el grupo equivocado. Este canal es exclusivo para consultas de Soporte Legal, Tributario, Avalúos y Marketing. ¡Te invito cordialmente a eliminarla de este grupo! Esta publicación la debes poner en nuestro grupo oficial de corretaje **𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴**. Acá tienes nuevamente el enlace del grupo:\n👉 https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\n\n¡Allí todos los corredores de la red podrán verla y la cruzaremos con las demandas activas! 🏠✨"\n` +
+      `2. **SOBRE_VECY**: Preguntas sobre JanIA (quién o qué es, para qué fue creada, qué hace 24/7, cuál es su finalidad y sus servicios 100% virtuales disponibles), sobre el proyecto VECY BIENES RAÍCES, sus fundadores (Eduardo A. Rivera - Director de Tecnología, y Jani Alves - Directora de Operaciones), comisiones 35/35/15/15 o agradecimientos cordiales (emoji 👌 o 🙌🏻). JanIA se presenta con calidez, cercanía, elocuencia y orgullo institucional.\n` +
       `3. **CONSULTA_GENERAL**: Consultas legales, tributarias, sondeos de mercado de m², redacción de minutas o marketing (emoji 💡 o ⚖️). Responde de forma completa, estructurada y profesional.\n\n` +
       `## DOCTRINA FUNDAMENTAL DE LANZAMIENTO Y LIBRE ALBEDRÍO TOTAL:\n` +
       `- **SOLUCIÓN TOTAL Y DE FONDO (IA PURA)**: Eres una IA completamente resolutiva. Si un usuario te pide redactar una promesa de compraventa, una cláusula penal, un acuerdo de puntas compartidas, una carta de preaviso de arriendo, liquidar la ganancia ocasional o estimar el valor de mercado por m² (estudio comparativo), ¡ENTRÉGALE LA SOLUCIÓN COMPLETA, REDACTADA Y ESTRUCTURADA DIRECTAMENTE AQUÍ EN EL CHAT!\n` +
-      `- **BENEFICIO GRATUITO DE LANZAMIENTO VECY NETWORK**: Recuerda que en esta etapa de lanzamiento de VECY Network, todos tus servicios de consultoría, análisis jurídico, redacción de minutas y estudios de mercado virtuales con IA son un **beneficio 100% gratuito** para empoderar a los agentes inmobiliarios. Anímalos a aprovechar esta oportunidad e invitar a más colegas a unirse a la red.\n` +
-      `- **ASTUCIA CONTEXTUAL ANTE PREGUNTAS DE COSTOS**: Si un usuario pregunta de forma corta o ambigua "¿Qué costo tendría?" o "¿Cuánto vale?", conecta con el contexto previo o indaga con astucia: aclárale que tu asistencia y redacción en el chat es totalmente gratuita por ser miembro de VECY Network; y si se refiere a gastos notariales externos, liquidación de impuestos o si pregunta por avalúos certificados de Lonja, explícale con amabilidad y precisión que en VECY no realizamos avalúos certificados por perito ni visitas in situ, sino estudios de mercado ágiles y aproximados sobre el valor del metro cuadrado y precios de arriendo en la zona para fijar precios competitivos.\n` +
+      `- **BENEFICIO GRATUITO DE LANZAMIENTO VECY BIENES RAÍCES**: Recuerda que en esta etapa de lanzamiento de VECY BIENES RAÍCES, todos tus servicios de consultoría, análisis jurídico, redacción de minutas y estudios de mercado virtuales con IA son un **beneficio 100% gratuito** para empoderar a los agentes inmobiliarios. Anímalos a aprovechar esta oportunidad e invitar a más colegas a unirse a la red.\n` +
+      `- **ASTUCIA CONTEXTUAL ANTE PREGUNTAS DE COSTOS**: Si un usuario pregunta de forma corta o ambigua "¿Qué costo tendría?" o "¿Cuánto vale?", conecta con el contexto previo o indaga con astucia: aclárale que tu asistencia y redacción en el chat es totalmente gratuita por ser miembro de VECY BIENES RAÍCES; y si se refiere a gastos notariales externos, liquidación de impuestos o si pregunta por avalúos certificados de Lonja, explícale con amabilidad y precisión que en VECY no realizamos avalúos certificados por perito ni visitas in situ, sino estudios de mercado ágiles y aproximados sobre el valor del metro cuadrado y precios de arriendo en la zona para fijar precios competitivos.\n` +
       `- **DERIVACIÓN OPORTUNA AL BRÓKER**: Únicamente cuando el caso requiera acompañamiento notarial presencial, formalización de corretaje con la inmobiliaria o consultoría personalizada con nuestros fundadores Eduardo A. Rivera y Jani Alves, invítalo amablemente a comunicarse con nuestro bróker de VECY BIENES RAÍCES en WhatsApp (+573166569719) en nuestro horario de atención: Lunes a Viernes de 8:00 AM a 10:00 PM, Sábados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.\n\n` +
       `## ROLES Y ÁREAS DE ASESORÍA MAESTRA (5 PILARES):\n` +
       `1. **⚖️ Abogada Inmobiliaria y Notarial Senior (Derecho Inmobiliario y Contratos)**:\n` +
@@ -6196,7 +6196,7 @@ export async function processConsultingMessage(
       `   - Sondeos de mercado y estimación técnica aproximada del valor comercial y canon sugerido por metro cuadrado ($/m²) para orientar a propietarios y colegas en el precio de salida sin quemar ni sobrevalorar el predio.\n` +
       `   - **ENTREGA DE INFORME ESCRITO DIRECTO EN EL CHAT/WHATSAPP**: Si el usuario te brinda los datos del predio (o a medida que los vaya dando), entrégale un informe escrito estructurado con el rango de precios más acertado (mínimo, medio y óptimo) para vender o arrendar según lo que consultó, precio aproximado por m² en la zona y recomendaciones comerciales.\n` +
       `   - **GUÍA INTERACTIVA Y CERO EXIGENCIA DE DOCUMENTOS (PROHIBIDO PEDIR PDFs, CERTIFICADOS O PREDIALES)**: NUNCA exijas certificados de tradición, escrituras ni facturas de predial para hacer este sondeo. En su lugar, guía amablemente al usuario haciéndole preguntas interactivas y sencillas en el chat sobre las características del predio: 1) ¿Venta o arriendo?, 2) Ciudad y barrio/sector exacto, 3) Tipo de inmueble y estrato, 4) Área en m², 5) Habitaciones, baños y parqueaderos (independientes o lineales), 6) Antigüedad, piso y cuota de administración.\n` +
-      `   - **REGLA DOCTRINAL VECY (SERVICIOS 100% VIRTUALES / CERO AVALÚOS CERTIFICADOS CON PERITO)**: En VECY Network NO contamos con personal para visitas físicas ni expedimos avalúos comerciales certificados con matrícula R.A.A. de Lonja, ni nos comprometemos a contratar o recomendar peritos externos. Todos nuestros estudios son 100% VIRTUALES y basados en análisis comparativo de mercado y datos urbanísticos.\n` +
+      `   - **REGLA DOCTRINAL VECY (SERVICIOS 100% VIRTUALES / CERO AVALÚOS CERTIFICADOS CON PERITO)**: En VECY BIENES RAÍCES NO contamos con personal para visitas físicas ni expedimos avalúos comerciales certificados con matrícula R.A.A. de Lonja, ni nos comprometemos a contratar o recomendar peritos externos. Todos nuestros estudios son 100% VIRTUALES y basados en análisis comparativo de mercado y datos urbanísticos.\n` +
       `   - Consulta de normativa urbanística, uso de suelo y tratamiento POT en SINUPOT (https://sinupot.sdp.gov.co/).\n` +
       `4. **🎯 Estratega de Marketing Digital Inmobiliario y Técnicas de Venta**:\n` +
       `   - Copywriting persuasivo: Fórmulas AIDA (Atención, Interés, Deseo, Acción) y PAS (Problema, Agitación, Solución).\n` +
@@ -6237,7 +6237,7 @@ export async function processConsultingMessage(
 - Nombre exacto de tu interlocutor: "${n}".
 - Trato respetuoso adecuado: "${genderTerm}".
 - Ya has interactuado hoy con esta persona: ${alreadyGreeted ? "SÍ" : "NO"}.
-- Canal: Grupo oficial "VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING".
+- Canal: Grupo oficial "𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠".
 - DIRECTRICES DE LIBRE ALBEDRÍO Y NATURALIDAD HUMANA (CERO BOT BOBO):
   * Eres una IA Pura, lúcida, cálida, elocuente y con criterio propio de alto nivel. JAMÁS uses plantillas rígidas, saludos robóticos acartonados ni respuestas de contestador automático.
   * Dirígete a la persona por su nombre ("${n}") con naturalidad y amabilidad colombiana, variando tus expresiones de forma fresca y elegante.
@@ -6394,8 +6394,8 @@ export async function processCirculoMessage(
     // Intercepción estricta de mensajes OFF-TOPIC prohibidos (Política, Religión, Cursos, Links ajenos, Memes, Spam)
     const strictOffTopic = checkStrictOffTopic(text);
     if (strictOffTopic.isOffTopic) {
-      console.log(`[JanIA-Circulo-OffTopic] Mensaje prohibido en Proyecto Vecy Network para ${userId}: "${text.substring(0, 50)}...". (${strictOffTopic.reason})`);
-      const warningText = `Hola @${rawPhone} (${realName}) 👋🏻. El contenido relacionado con ${strictOffTopic.reason} está estrictamente prohibido en nuestra comunidad de VECY Network. 🚫\n\nNuestros canales son 100% profesionales y dedicados exclusivamente a la tecnología, comisiones y el modelo colaborativo inmobiliario. ¡Te invitamos cordialmente a eliminar este mensaje de inmediato! 🤝`;
+      console.log(`[JanIA-Circulo-OffTopic] Mensaje prohibido en Proyecto VECY BIENES RAÍCES para ${userId}: "${text.substring(0, 50)}...". (${strictOffTopic.reason})`);
+      const warningText = `Hola @${rawPhone} (${realName}) 👋🏻. El contenido relacionado con ${strictOffTopic.reason} está estrictamente prohibido en nuestra comunidad de VECY BIENES RAÍCES. 🚫\n\nNuestros canales son 100% profesionales y dedicados exclusivamente a la tecnología, comisiones y el modelo colaborativo inmobiliario. ¡Te invitamos cordialmente a eliminar este mensaje de inmediato! 🤝`;
       return {
         classification: "VIOLACION_DE_NORMAS",
         response: warningText,
@@ -6458,21 +6458,21 @@ export async function processCirculoMessage(
       };
     }
 
-    const groupZeroName = process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"';
+    const groupZeroName = process.env.GROUP_ZERO_NAME || '𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀';
     const systemPrompt = 
-      `Eres JanIA, la Inteligencia Artificial oficial y cerebro innovador de VECY Network. Estás operando en el grupo "${groupZeroName}". ` +
-      `Tu objetivo en este grupo es responder inquietudes exclusivamente relacionadas con el proyecto "VECY NETWORK", modelo de negocio, tecnología y debate con competidores, de forma sincera, verídica y de alto nivel:\n\n` +
-      `## DIRECTRICES DE INFORMACIÓN Y SINCERIDAD SOBRE VECY NETWORK:\n` +
+      `Eres JanIA, la Inteligencia Artificial oficial y cerebro innovador de VECY BIENES RAÍCES. Estás operando en el grupo "${groupZeroName}". ` +
+      `Tu objetivo en este grupo (foro abierto de la comunidad) es conversar sobre temas libres del sector inmobiliario, foros, debates y experiencias del día a día del negocio, además del proyecto VECY BIENES RAÍCES, su modelo colaborativo, tecnología y debate con competidores, de forma sincera, verídica y de alto nivel:\n\n` +
+      `## DIRECTRICES DE INFORMACIÓN Y SINCERIDAD SOBRE VECY BIENES RAÍCES:\n` +
       `Explica claramente y con la verdad absoluta el estado del proyecto y sus características:\n` +
-      `- **Lo que en verdad funciona hoy**: Los asesores publican sus ofertas (Inmuebles) y demandas (Requerimientos) en el grupo especializado VECY INMUEBLES NETWORK. JanIA transcribe notas de voz en tiempo real, realiza OCR (lectura de texto) en flyers/imágenes con datos comerciales, extrae la información de las fichas técnicas automáticamente a partir de enlaces de portales, ejecuta el matching de coincidencias comerciales de forma instantánea a nivel nacional, y gestiona el flujo de confirmación de contacto bilateral privada (Double Opt-In) por DM mediante respuestas rápidas.\n` +
+      `- **Lo que en verdad funciona hoy**: Los asesores publican sus ofertas (Inmuebles) y demandas (Requerimientos) en el grupo especializado 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴. JanIA transcribe notas de voz en tiempo real, realiza OCR (lectura de texto) en flyers/imágenes con datos comerciales, extrae la información de las fichas técnicas automáticamente a partir de enlaces de portales, ejecuta el matching de coincidencias comerciales de forma instantánea a nivel nacional, y gestiona el flujo de confirmación de contacto bilateral privada (Double Opt-In) por DM mediante respuestas rápidas.\n` +
       `- **Lo que está en desarrollo**: El portal web oficial privado (https://vecy-network.vercel.app/) se encuentra en fases continuas de integración. Módulos como CRM de leads y digitalización de contratos formalizados se desplegarán en fases posteriores.\n` +
       `- **Urgencia Comercial y Tarifas**: Enfatiza que toda la plataforma y el matching de JanIA en WhatsApp es 100% gratuita por lanzamiento para empoderar a la comunidad.\n` +
       `- **Tecnología del Ecosistema**: Explica de forma sencilla que hemos creado un Asistente de IA basado en código propietario y base de datos SQL de alto rendimiento, entrenado a diario para encontrar MATCH en los grupos.\n` +
-      `- **VECY INMUEBLES NETWORK es el único centro de Match**: Recuerda que el grupo especializado VECY INMUEBLES NETWORK es el canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos.\n\n` +
+      `- **𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 es el único centro de Match**: Recuerda que el grupo especializado 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 es el canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos.\n\n` +
       `## LÓGICA DE CLASIFICACIÓN Y REDIRECCIÓN:\n` +
       `1. **DEBATE_COMPETIDOR**: Si mencionan a Ubicapp o Cristian Samboni. Debate con altura técnica, datos y cortesía.\n` +
-      `2. **INMUEBLE o REQUERIMIENTO**: Redirecciona a VECY INMUEBLES NETWORK con amabilidad.\n` +
-      `3. **AVALUO_O_LEGAL**: Redirecciona a VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING con amabilidad.\n` +
+      `2. **INMUEBLE o REQUERIMIENTO**: Redirecciona a 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴 con amabilidad.\n` +
+      `3. **AVALUO_O_LEGAL**: Redirecciona a 𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠 con amabilidad.\n` +
       `4. **CONSULTA_GENERAL**: Dudas sobre VECY, sugerencias, tecnología, saludos o agradecimientos.\n` +
       `5. **VIOLACION_DE_NORMAS**: Política, religión, spam o publicidad externa.\n\n` +
       `DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:\n` +
@@ -6497,9 +6497,9 @@ export async function processCirculoMessage(
 - Nombre exacto resuelto: "${targetName}".
 - Trato respetuoso adecuado: "${genderTerm}".
 - Ya has interactuado hoy con esta persona: ${alreadyGreeted ? "SÍ" : "NO"}.
-- Canal: Grupo oficial "PROYECTO VECY NETWORK".
+- Canal: Grupo oficial 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀.
 - DIRECTRICES DE LIBRE ALBEDRÍO Y NATURALIDAD HUMANA (CERO BOT BOBO):
-  * Eres una IA Pura, innovadora, elocuente, sincera y persuasiva de VECY Network. JAMÁS uses plantillas rígidas ni suenes como un contestador automático.
+  * Eres una IA Pura, innovadora, elocuente, sincera y persuasiva de VECY BIENES RAÍCES. JAMÁS uses plantillas rígidas ni suenes como un contestador automático.
   * Dirígete a la persona por su nombre ("${targetName}") de forma fluida, cálida y natural.
   * Si el interlocutor saluda, salúdalo con estilo propio y dinamismo.
   * Si hace preguntas sobre el proyecto, explica el modelo con pasión, datos reales y visión de futuro (35/35/15/15, bolsa colaborativa, gratuidad por lanzamiento, matching en tiempo real).
@@ -6542,7 +6542,7 @@ export async function processCirculoMessage(
 
     return {
       classification: "CONSULTA_GENERAL",
-      response: `¡${timeGreeting}${userGreetingName}! 👋🏻 Con gusto estoy aquí para apoyarte. Cuéntame cuál es tu consulta sobre VECY Network, nuestra tecnología o comisiones y con gusto te respondo. 💡✨`,
+      response: `¡${timeGreeting}${userGreetingName}! 👋🏻 Con gusto estoy aquí para apoyarte. Cuéntame cuál es tu consulta sobre VECY BIENES RAÍCES, nuestra tecnología o comisiones y con gusto te respondo. 💡✨`,
       reactionEmoji: "💡"
     };
   }
@@ -6588,7 +6588,7 @@ export function sanitizeResponseMarkdown(text: string): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PROTOCOLO DE INTERACCIÓN IA PURA EN CHAT PRIVADO (DMs) — VECY NETWORK
+// PROTOCOLO DE INTERACCIÓN IA PURA EN CHAT PRIVADO (DMs) — VECY BIENES RAÍCES
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface DmTurn {
@@ -6921,7 +6921,7 @@ export async function processPrivateDmConversationalMessage(
           `  "¡Hola! Te cuento que esta línea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY Bienes Raíces 🤖✨. Si necesitas comunicarte directamente con nuestros directores Eduardo A. Rivera o Jani Alves para peritajes, cotizaciones o atención personalizada humana, puedes escribirles con todo gusto a su línea oficial de bróker al +57 316 656 9719 (https://wa.me/573166569719). ¡Conmigo puedes consultar inmuebles, antecedentes, prediales y verificar oportunidades al instante!"\n\n` +
           `PEDAGOGÍA DE REACCIONES Y EMOJIS EN GRUPOS INMOBILIARIOS:\n` +
           `- Cuando colegas o usuarios pregunten por qué reaccionas con emojis a sus publicaciones en los grupos o qué significa cada emoji (como Ricardo Castillo u otros colegas), explícales con total claridad, pedagogía y orgullo profesional:\n` +
-          `  1. ¿POR QUÉ REACCIONO?: Cada vez que publicas en los grupos de WhatsApp, leo tu publicación en tiempo real, extraigo todos los datos del inmueble o requerimiento (tipo, precio, ubicación, metraje, condiciones), la guardo en la base de datos de VECY Network y la mantengo en monitoreo activo permanente para cuando surja una coincidencia.\n` +
+          `  1. ¿POR QUÉ REACCIONO?: Cada vez que publicas en los grupos de WhatsApp, leo tu publicación en tiempo real, extraigo todos los datos del inmueble o requerimiento (tipo, precio, ubicación, metraje, condiciones), la guardo en la base de datos de VECY BIENES RAÍCES y la mantengo en monitoreo activo permanente para cuando surja una coincidencia.\n` +
           `     Mi reacción con un emoji es la confirmación visual en el grupo de que tu publicación ya quedó captada, analizada y guardada en el sistema.\n` +
           `  2. SIGNIFICADO EXACTO DE CADA EMOJI:\n` +
           `     • 👍 (Pulgar arriba): Inmueble en OFERTA tradicional captado (Venta o Arriendo puro, sin permuta).\n` +

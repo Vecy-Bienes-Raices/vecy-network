@@ -499,7 +499,7 @@ async function startServer() {
         `Hola @573132547441 (Maria Claudia) 👋🏻, espero te encuentres muy bien.\n\n` +
         `🚫 *Has publicado esta oferta en el grupo equivocado.* Este canal es exclusivo para consultas de **Soporte Legal, Tributario, Avalúos y Marketing Inmobiliario**.\n\n` +
         `Te invitamos cordialmente a **eliminarla de este grupo** y publicarla en nuestro canal oficial de corretaje:\n` +
-        `👉 **VECY INMUEBLES NETWORK**: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\n\n` +
+        `👉 **𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴**: https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ\n\n` +
         `¡Allí todos los corredores de la red podrán verla y cruzaremos tu inmueble con las demandas activas! 🏠✨`;
 
       await whatsappBot.sendToGroup(warningText, undefined, ['573132547441@s.whatsapp.net'], whatsappBot.buzonGroupId);
@@ -572,7 +572,7 @@ async function startServer() {
 
       const results: any = {};
 
-      // 1. Grupo 2: VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS
+      // 1. Grupo 2: 𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠
       try {
         await whatsappBot.sendToGroup(promoTextGroups, hasImage ? imgPath : undefined, [], whatsappBot.buzonGroupId);
         results.grupo2 = "Despachado a Grupo 2 exitosamente";
@@ -582,7 +582,7 @@ async function startServer() {
         console.error("[BROADCAST-PROMO] Error en Grupo 2:", err2);
       }
 
-      // 2. Grupo 3: PROYECTO "Vecy Network" 👌
+      // 2. Grupo 3: 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀
       try {
         await whatsappBot.sendToGroup(promoTextGroups, hasImage ? imgPath : undefined, [], whatsappBot.circuloGroupId);
         results.grupo3 = "Despachado a Grupo 3 exitosamente";
@@ -669,7 +669,7 @@ async function startServer() {
       console.log(`[BROADCAST-IDENTITY-V2] Despachando a Grupo 2, Grupo 3 y Canal (Imagen: ${hasImage ? imgPath : 'Ninguna'})...`);
       const results: any = {};
 
-      // Grupo 2: VECY SOPORTE LEGAL, TRIBUTARIO, AVALÚOS
+      // Grupo 2: 𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠
       try {
         await whatsappBot.sendToGroup(promoText, hasImage ? imgPath : undefined, [], whatsappBot.buzonGroupId);
         results.grupo2 = "✓ Despachado";
@@ -678,7 +678,7 @@ async function startServer() {
 
       await new Promise(r => setTimeout(r, 3000));
 
-      // Grupo 3: PROYECTO Vecy Network
+      // Grupo 3: PROYECTO VECY BIENES RAÍCES
       try {
         await whatsappBot.sendToGroup(promoText, hasImage ? imgPath : undefined, [], whatsappBot.circuloGroupId);
         results.grupo3 = "✓ Despachado";
@@ -927,9 +927,9 @@ async function startServer() {
       const circuloGroupId = (whatsappBot as any).circuloGroupId;
 
       const groups = [
-        { name: "VECY INMUEBLES NETWORK", id: targetGroupId },
-        { name: "VECY: SOPORTE LEGAL, CONTRATOS Y AVALÚOS", id: buzonGroupId },
-        { name: process.env.GROUP_ZERO_NAME || 'PROYECTO "Vecy Network"', id: circuloGroupId }
+        { name: "𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴", id: targetGroupId },
+        { name: "𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠", id: buzonGroupId },
+        { name: process.env.GROUP_ZERO_NAME || '𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀', id: circuloGroupId }
       ];
 
       const results = [];
@@ -1132,15 +1132,15 @@ async function startServer() {
 
       if (groupType === 'consultoria') {
         targetId = whatsappBot.buzonGroupId;
-        nombreGrupo = "VECY: SOPORTE LEGAL, TRIBUTARIO, AVALÚOS Y MARKETING";
+        nombreGrupo = "𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠";
         promptExtra = "Enfócate en invitar a que consulten sobre temas jurídicos, liquidación tributaria, Marketing Digital Inmobiliario, contratos de corretaje o avalúos.";
       } else if (groupType === 'inmuebles') {
         targetId = whatsappBot.targetGroupId;
-        nombreGrupo = "VECY INMUEBLES NETWORK";
+        nombreGrupo = "𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴";
         promptExtra = "Enfócate en la publicación activa de ofertas y demandas de inmuebles, el cruce comercial rápido, y la colaboración nacional sin pagar comisiones.";
       } else if (groupType === 'circulo') {
         targetId = whatsappBot.circuloGroupId;
-        nombreGrupo = 'PROYECTO "Vecy Network"';
+        nombreGrupo = '𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀';
         promptExtra = "Enfócate en la comunidad, modelo de negocio, fintech inmobiliaria, sugerencias a los fundadores y el futuro de la red.";
       } else {
         return res.status(400).json({ error: 'groupType no válido. Debe ser consultoria, inmuebles o circulo.' });
@@ -1248,7 +1248,7 @@ Dirección obligatoria:
     // NOTA PROTECCIÓN SUPABASE EGRESS: El recálculo y limpieza se ejecuta en el cron diario (08:00 AM)
     // para evitar descargar miles de registros en cada reinicio del servidor PM2.
 
-    // Inicializar los Bots de WhatsApp de Vecy Network (Baileys)
+    // Inicializar los Bots de WhatsApp de VECY BIENES RAÍCES (Baileys)
     // Operación exclusiva del Bot Oficial JanIA (+573192919978).
     const isDev = process.env.NODE_ENV === "development";
     const shouldStartBot = isDev
