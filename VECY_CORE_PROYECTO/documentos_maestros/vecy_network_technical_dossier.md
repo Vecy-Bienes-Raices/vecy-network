@@ -322,6 +322,31 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.58 — Octubre 2026
+
+#### 📌 REGLA ESTRICTA DE 15 DÍAS MÁXIMO DE VIGENCIA, ERRADICACIÓN DE LA EXCEPCIÓN DE 45 DÍAS PARA MATCHES CALIENTES Y SANEAMIENTO DEL POOL DE BÚSQUEDA
+
+**Requerimiento y Objetivos:**
+1. **Regla Doctrinal de Eduardo A. Rivera (Opción A - Vigencia Estricta de 15 Días)**:
+   - Supresión de la regla previa que mantenía vigentes matches con score $\ge 90\%$ hasta por 45 días.
+   - En el corretaje colaborativo por WhatsApp en Colombia, un inmueble o requerimiento no republicado en 15 días tiene una probabilidad muy baja de estar disponible, generando ruido y desgaste operativo.
+   - Ambas partes (oferta y demanda) deben tener $\le 15$ días desde su última publicación o republicación.
+   - Si superan 15 días, salen de la mesa de Vigentes y pasan a la pestaña `Histórico`.
+   - Si el asesor republica el mensaje en WhatsApp, JanIA actualiza `fecha_ultima_publicacion` a HOY, y vuelve a entrar inmediatamente a la mesa de Vigentes.
+2. **Soluciones Implementadas**:
+   - **Frontend Mesa de Coincidencias (`AdminMatches.tsx`)**: En `checkIsMatchActiveSmart`, erradicada la condición de 45 días. Ahora evalúa estrictamente `propDaysAgo <= 15 && reqDaysAgo <= 15`. Eliminada la etiqueta `🔥 Protegido (Ciclo 45d)` de la UI. Tratos en curso mantienen inmunidad.
+   - **Backend Router JanIA (`server/routers/janIA.ts`)**: En `getAllMatches` y `getBotStatus`, unificadas las consultas SQL de 45 días a `15 days`.
+   - **Motor de Matching en Backend (`server/_core/matching.ts`)**: En `findMatchesForProperty` y `findMatchesForRequirement`, reducida la ventana de antigüedad de candidatos de 30 a 15 días.
+   - **Suite de Regresión Doctrinal (`server/__tests__/regression.test.ts`)**: Actualizado test de regresión para validar que matches calientes (>90%) con más de 15 días dan `false` en `checkIsMatchActiveSmart`.
+   - **Cobertura de Tests y Build**: 154/154 tests Vitest pasando (100%). TypeScript (`pnpm check`) y build (`pnpm build`) 100% limpios.
+
+**Archivos Modificados:**
+- `client/src/components/admin/AdminMatches.tsx`: Vigencia estricta de 15 días en `checkIsMatchActiveSmart` y `checkIsMatchDormant`.
+- `server/routers/janIA.ts`: Consultas SQL de `getAllMatches` y `getBotStatus` ajustadas a 15 días.
+- `server/_core/matching.ts`: Filtro de antigüedad del pool de matching reducido a 15 días.
+- `server/__tests__/regression.test.ts`: Actualizada prueba doctrinal de vigencia estricta.
+- `shared/const.ts` & `package.json`: Versión incrementada a `v32.58` (`32.58.0`).
+
 ### 🔖 v32.57 — Octubre 2026
 
 #### 📌 EXTRACCIÓN Y VALIDACIÓN DE CONDOMINIOS/CONJUNTOS/EDIFICIOS ESPECÍFICOS, FIDELIDAD TEXTUAL ABSOLUTA DE ALCOBAS Y BLOQUEO DOCTRINAL DE ESCALA

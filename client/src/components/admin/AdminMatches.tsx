@@ -428,12 +428,9 @@ export function checkIsMatchActiveSmart(match: any): boolean {
     return true;
   }
 
-  // Regla Doctrinal v31.101/v31.108: Matches Calientes y Perfectos (>=90%) protegidos por 45 días (ciclo real de compraventa en Colombia)
-  if (score >= 90) {
-    return propDaysAgo <= 45 && reqDaysAgo <= 45;
-  }
-
-  // La Mesa Principal Estándar: AMBAS partes con <= 15 días (o 45 días si score >= 90%)
+  // Regla Doctrinal v32.58: Vigencia Estricta de 15 Días Máximo (Doctrina Eduardo A. Rivera)
+  // Sin excepción de 45 días: si oferta o demanda tiene > 15 días sin republicación,
+  // sale automáticamente de la Mesa de Vigentes y solo se consulta en Histórico.
   return propDaysAgo <= 15 && reqDaysAgo <= 15;
 }
 
@@ -443,12 +440,9 @@ export function checkIsMatchDormant(match: any): boolean {
   const req = match._effectiveReq || match.requirement;
   const propDaysAgo = getPropertyEffectiveDaysAgo(prop);
   const reqDaysAgo = getRequirementEffectiveDaysAgo(req);
-  const score = match._precomputedScore !== undefined ? match._precomputedScore : parseFloat(match.matchScore?.toString() || "0");
 
-  const hasExpired10 = propDaysAgo > 10 || reqDaysAgo > 10;
-  const notCalienteProtected = score < 90 || (propDaysAgo > 45 || reqDaysAgo > 45);
-
-  return hasExpired10 && notCalienteProtected;
+  // En riesgo: supera 10 días sin republicación pero aún está dentro de los 15 días máximos
+  return (propDaysAgo > 10 && propDaysAgo <= 15) || (reqDaysAgo > 10 && reqDaysAgo <= 15);
 }
 
 export function checkIsPermutaMatch(prop: any, req: any): boolean {
@@ -5306,14 +5300,7 @@ export default function AdminMatches() {
                           ⚡ MATCH APROXIMADO (85% - 94%)
                         </span>
                       )}
-                      {score >= 90 ? (
-                        <span 
-                          className="text-[9px] bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 text-amber-300 px-2 py-0.5 rounded-full font-extrabold flex items-center gap-1 shadow-sm"
-                          title="Match Caliente protegido durante 45 días correspondientes al ciclo real de venta inmobiliaria en Colombia"
-                        >
-                          🔥 Protegido (Ciclo 45d)
-                        </span>
-                      ) : null}
+
                       {checkIsMatchDormant(m) ? (
                         <span 
                           className="text-[9px] bg-red-500/20 border border-red-500/40 text-red-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 animate-pulse"

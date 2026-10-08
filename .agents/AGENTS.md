@@ -172,7 +172,21 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.57 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.58 — Octubre 2026
+
+### Novedades v32.58 (Regla Estricta de 15 Días Máximo de Vigencia, Supresión de la Excepción de 45 Días para Matches Calientes y Saneamiento del Pool de Búsqueda):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:
+  1. **Doctrina de Eduardo**:
+     - Implementada la **Opción A (Regla Estricta de 15 Días Máximo)**: Eliminada la excepción de 45 días para matches con score $\ge 90\%$.
+     - Si una oferta o demanda tiene más de 15 días desde su última publicación/republicación en WhatsApp, sale automáticamente de la mesa de Vigentes (permaneciendo únicamente consultable en la pestaña Histórico).
+     - Si el asesor republica la oferta o demanda en el grupo de WhatsApp, JanIA actualiza `fecha_ultima_publicacion` a HOY, y vuelve a entrar de inmediato a la mesa de Vigentes.
+  2. **Modificaciones Implementadas**:
+     - `AdminMatches.tsx`: `checkIsMatchActiveSmart` exige estrictamente que oferta y demanda tengan $\le 15$ días. Se retiró la insignia `🔥 Protegido (Ciclo 45d)`. Tratos en curso mantienen inmunidad.
+     - `janIA.ts` (Router): Consulta SQL en `getAllMatches` y conteos de KPI en `getBotStatus` unificados a `15 days`.
+     - `matching.ts`: Ventana del pool de búsqueda reducida de 30 a 15 días en `findMatchesForProperty` y `findMatchesForRequirement`.
+     - 154/154 tests Vitest pasando.
+
+## 🔖 VERSIÓN ANTERIOR: v32.57 — Octubre 2026
 
 ### Novedades v32.57 (Extracción y Validación de Condominios/Conjuntos/Edificios Específicos, Fidelidad Textual Absoluta de Alcobas y Bloqueo Doctrinal de Escala):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:

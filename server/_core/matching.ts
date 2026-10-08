@@ -3643,14 +3643,14 @@ export async function findMatchesForProperty(propertyId: number) {
       return [];
     }
 
-    // REGLA DOCTRINAL v31.108: Sala de Espera de 30 días para Inmuebles. Si supera 30 días sin republicación activa, se omite de matching
+    // REGLA DOCTRINAL v32.58: Vigencia Estricta de 15 días para Inmuebles. Si supera 15 días sin republicación activa, se omite de matching
     const repCount = Number(property.republicacionesCount || 0);
     const propEffectiveDate = (repCount > 0 && property.fechaUltimaPublicacion)
       ? property.fechaUltimaPublicacion
       : (property.fechaUltimaPublicacion || property.createdAt);
     const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-    if (propAgeDays > 30) {
-      console.log(`[MATCHING-FILTER] ⏳ Propiedad #${propertyId} omitida por superar 30 días de antigüedad sin republicación activa.`);
+    if (propAgeDays > 15) {
+      console.log(`[MATCHING-FILTER] ⏳ Propiedad #${propertyId} omitida por superar 15 días de antigüedad sin republicación activa.`);
       return [];
     }
 
@@ -3681,7 +3681,7 @@ export async function findMatchesForProperty(propertyId: number) {
         await new Promise(r => setTimeout(r, 10));
       }
 
-      // Regla Doctrinal v31.108: Omitir requerimientos inactivos, vencidos, o de más de 30 días sin republicación
+      // Regla Doctrinal v32.58: Omitir requerimientos inactivos, vencidos, o de más de 15 días sin republicación
       if ((req as any).status === 'expired') {
         continue;
       }
@@ -3701,7 +3701,7 @@ export async function findMatchesForProperty(propertyId: number) {
         ? (req as any).fechaUltimaPublicacion
         : ((req as any).fechaUltimaPublicacion || req.createdAt || (req as any).fechaExtraccion);
       const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-      if (reqAgeDays > 30) {
+      if (reqAgeDays > 15) {
         continue;
       }
 
@@ -3797,7 +3797,7 @@ export async function findMatchesForRequirement(requirementId: number) {
       return [];
     }
 
-    // REGLA DOCTRINAL v31.108: Sala de Espera de 30 días para Demandas. Si supera 30 días sin republicación activa, se omite de matching
+    // REGLA DOCTRINAL v32.58: Vigencia Estricta de 15 días para Demandas. Si supera 15 días sin republicación activa, se omite de matching
     if ((req as any).status === 'expired') {
       console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por estar marcado como vencido.`);
       return [];
@@ -3816,8 +3816,8 @@ export async function findMatchesForRequirement(requirementId: number) {
       ? (req as any).fechaUltimaPublicacion
       : ((req as any).fechaUltimaPublicacion || req.createdAt || (req as any).fechaExtraccion);
     const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-    if (reqAgeDays > 30) {
-      console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por superar 30 días de antigüedad sin republicación activa.`);
+    if (reqAgeDays > 15) {
+      console.log(`[MATCHING-FILTER] ⏳ Requerimiento #${requirementId} omitido por superar 15 días de antigüedad sin republicación activa.`);
       return [];
     }
 
@@ -3848,13 +3848,13 @@ export async function findMatchesForRequirement(requirementId: number) {
         await new Promise(r => setTimeout(r, 10));
       }
 
-      // Regla Doctrinal v31.108: Omitir propiedades de más de 30 días sin republicación activa
+      // Regla Doctrinal v32.58: Omitir propiedades de más de 15 días sin republicación activa
       const propRepCount = Number(prop.republicacionesCount || 0);
       const propEffectiveDate = (propRepCount > 0 && prop.fechaUltimaPublicacion)
         ? prop.fechaUltimaPublicacion
         : (prop.fechaUltimaPublicacion || prop.createdAt);
       const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1000 * 60 * 60 * 24))) : 0;
-      if (propAgeDays > 30) {
+      if (propAgeDays > 15) {
         continue;
       }
 
