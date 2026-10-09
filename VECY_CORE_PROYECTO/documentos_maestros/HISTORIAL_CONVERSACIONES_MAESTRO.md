@@ -7,6 +7,92 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.69 — 09 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Estética de Títulos Limpios y Elegantes con Rayita 3D**:
+   - Eduardo instruyó: *"Me encantan los títulos de las páginas con esa rayita como en tercera dimensión allí debajo y sin tantas burbujas conteniendo cada palabra, entre menos adornos mejor impacto creo yo..."*
+2. **Documentos de Términos y Condiciones y Política de Privacidad Formato Membretado Oficial Imprimible/PDF**:
+   - *"lo mismo los documentos de término y políticas deben ser más tipo documento y hasta podersen descargar en PDF como un documento normal en hoja blanca y letra negra y logo impreso en el cabecero y nuestr marca y un pie de página bien sencillo y bueno. Es que sinceramente creo que estás exagerando con tantas cards sobre cards que ya resulta incómodo y cansa ver la página."*
+3. **Depuración y Eliminación Quirúrgica de Botones Sobrantes en `AdminMatches.tsx`**:
+   - *"Así como la de administración que tiene demasiados botones, incluso uno que no sirven para nada o son repetitivos y saturan la visión. Ahí te encierro lo que sobra en un cuadro rojo."* (Encerrados en la Imagen 2: Botón `🔍 Clave WA` en Oferta, Botón `🔍 Clave WA` en Demanda, y Botón `🔍 Sondeo` en Requiriente/Comprador).
+
+### Diagnóstico Técnico y Diseño
+1. **Supresión de Burbujas / Píldoras en Títulos y Unificación con Rayita 3D**:
+   - Se erradicaron todas las burbujas o contenedores ovalados que encerraban cada palabra en los cabeceros superiores. Se implementó el tag limpio `vecy-accent-tag` con sombra sutil de oro, título principal hero en blanco/dorado, y la rayita tridimensional con brillo central `line-electric` desplegada uniformemente en todas las páginas públicas (`Properties.tsx`, `RequirementsMarketplace.tsx`, `NuestraHistoria.tsx`, `Services.tsx`, `Contact.tsx`, `Investors.tsx`, `Blog.tsx`, `RedColaboracion.tsx`, `TerminosCondiciones.tsx` y `PoliticaPrivacidad.tsx`).
+2. **Rediseño Integral de Términos y Condiciones y Privacidad como Documentos Reales**:
+   - Se erradicó por completo el exceso de cards oscuras flotantes que sobrecargaban la lectura.
+   - Se construyó el formato de **Hoja Membretada Oficial Imprimible** (`print-document-sheet`): papel blanco de alta pulcritud, tipografía en negro/carbón (`text-zinc-900`), logo oficial impreso de VECY BIENES RAÍCES (`/logo-vecy.png`), datos legales de contacto en Bogotá D.C., caja notarial de metadatos probatorios (CUV, Hash SHA-256, Ley 527 de 1999, Decreto 2364 de 2012), cuerpo de lectura legal fluido y continuo con cláusulas/artículos nítidos, y pie de página membretado sobrio.
+   - **Descarga en PDF e Impresión en 1 Clic**: Botón destacado dorado 3D `Descargar PDF / Imprimir Documento` con `window.print()`, respaldado por reglas CSS `@media print` en `client/src/index.css` que ocultan automáticamente navbar, footer web, fondos de canvas y elementos interactivos para una impresión o guardado en PDF de hoja blanca inmaculada.
+3. **Eliminación Quirúrgica de Botones Redundantes en Coincidencias (`AdminMatches.tsx`)**:
+   - Se eliminaron exactamente los elementos señalados por Eduardo en sus cuadros rojos:
+     - Oferta: Botón redundante `🔍 Clave WA` eliminado (preservando el botón principal `📋 Copiar Publicación`).
+     - Demanda: Botón redundante `🔍 Clave WA` eliminado (preservando el botón principal `📋 Copiar Publicación`).
+     - Requiriente: Botón redundante `🔍 Sondeo` eliminado (preservando el botón de acción principal `Contactar WA`).
+
+### Acciones Técnicas Ejecutadas
+- `client/src/components/admin/AdminMatches.tsx`: Eliminados botones `🔍 Clave WA` en oferta y requerimiento, y botón `🔍 Sondeo` en contacto de requiriente.
+- `client/src/index.css`: Implementadas reglas completas `@media print` para hoja blanca A4/Carta sin elementos web de navegación ni canvas, y utilidades para documentos formales.
+- `client/src/pages/TerminosCondiciones.tsx`: Rediseñado 100% como documento formal membretado de hoja blanca y letra negra con logo impreso, CUV, Hash SHA-256, botón para descargar PDF/imprimir, lectura fluida sin cards y pie de página formal.
+- `client/src/pages/PoliticaPrivacidad.tsx`: Rediseñado 100% con idéntico estándar documental oficial membretado en hoja blanca y letra negra, régimen de Hábeas Data (Ley 1581 de 2012) y botón de impresión.
+- `client/src/pages/Properties.tsx`, `RequirementsMarketplace.tsx`, `NuestraHistoria.tsx`, `Services.tsx`, `Contact.tsx`, `Investors.tsx`, `Blog.tsx`, `RedColaboracion.tsx`: Títulos unificados con tag limpio sin burbujas y rayita 3D dorada.
+- Bump de versión oficial: `shared/const.ts` (`v32.69`) y `package.json` (`32.69.0`).
+- Validaciones completas: `npm run check` (0 errores TS), `npm test` (159/159 tests pasando al 100%) y `npm run build` (compilación limpia en 30s).
+
+---
+
+## 📋 SESIÓN v32.68 — 09 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Unificación Visual Global y Botones Dorados 3D Rectangulares-Redondeados**:
+   - Eduardo solicitó: *"Quiero que revises muy bien el diseño actual para que lo unifiques en todo el sitio y quiero que los botones dorados obtengan ese brillo central espectacular que le da impresión de 3D y me encantaría que sean más rectangulares con sus bordes un poco redondeados y no total como ahora lo están..."*
+2. **Fondo de Red en Movimiento (`NetworkBackground`) en Todo el Portal**:
+   - *"revisa que todas tengan el mismo fondo de red en movimiento en todas las páginas pues veo que hay unas que no lo tienen..."*
+3. **Página de Nuestra Historia (`NuestraHistoria.tsx`) Reescrita y Desplegada**:
+   - *"me parece que la página de historia tiene espacios y tamaños distintos le falta contexto a nuestra historia, lo que hemos construido, por ejemplo no hables de la herramienta Jot Form cámbialo a Formularios Web y elimina esos enlaces que dirigen a Wix eso ya es pasado. Habla más de VECY y esos colores demasiado tenues de los años en que hemos ido avanzando en esas cards casi no se notan, no se si así va el diseño pero casi no me gusta, en la segunda imagen cambia el título de las cards por algo más acorde a lo que ya conoces, en la uno deja 'DINOSAURIOS INMOBILIARIOS' y empieza diciendo: Los actuales portales inmobiliarios y cambia toda la historia en general ya que la acabas de conocer por completo y ya tienes un mejor contexto y conocimiento de todo lo que hacemos y cómo estamos avanzando."*
+4. **Simetría, Responsive Móvil y Proporciones Tipográficas**:
+   - *"Hay descuadres en tamaños de letras entre páginas a páginas, espacios distintos asimétricos entre el cabecero y el título, unas están bien otras demasiado espacio y debes ver que la simetría o responsive en pantallas móviles sea genial y acorde a cada dispositivo, que sea óptima y perfectamente adaptativa, los botones los títulos, subtítulos, centrados, medidas..."*
+5. **Ajustes en Botones Flotantes**:
+   - *"ha y un poquitico más grandecito los botones de volver arriba y el del widget de JanIA que su foto de perfil no se vea recortada, si es posible agrandas el círculo un poquito y achicas la foto para que se vea bien. Ok"*
+
+### Diagnóstico Técnico y Diseño
+1. **Botones Dorados 3D con Brillo Central y Forma Rectangular-Redondeada**:
+   - Diagnóstico: Los botones `.btn-gold` en `client/src/index.css` y `buttonVariants` en `client/src/components/ui/button.tsx` tenían `rounded-full` forzado (forma de píldora/óvalo extremo) y un degradado plano.
+   - Solución: Se actualizó la arquitectura de botones a `rounded-xl` (con variantes `rounded-lg` en `sm`), aplicando un gradiente vertical metálico multicapa con destello central de luz especular (`linear-gradient(180deg, #ffe89c 0%, #d4af37 22%, #fff6c4 48%, #f3c442 53%, #b38118 82%, #7f5405 100%)`), biseles tridimensionales (`border-t border-white/75 border-b border-black/55`), relieve interno (`inset 0 1px 1px rgba(255,255,255,0.8), inset 0 -2px 3px rgba(0,0,0,0.45)`) y texto grabado `#120e03` de alta visibilidad.
+2. **Despliegue Universal de `NetworkBackground`**:
+   - Se detectó que `Services.tsx`, `Contact.tsx`, `Investors.tsx`, `Blog.tsx` y `PropertyDetail.tsx` carecían de la red interactiva. Se integró `<NetworkBackground />` con su contenedor z-index y glow dorado ambiental en todas las páginas públicas.
+3. **Reescritura Magistral de `NuestraHistoria.tsx`**:
+   - Eliminados definitivamente todos los hipervínculos a Wix y la mención de JotForm (reemplazada por "Formularios Web Automatizados").
+   - Hitos históricos expandidos con la visión y liderazgo de Eduardo A. Rivera y Jani Alves: 2018 (Origen Broker Virtual), 2020 (Resiliencia Operativa), 2022 (Blindaje Legal Ley 527 de 1999), 2024 (Nacimiento de JanIA en WhatsApp), 2026 (VECY Gold y Súper Portal Colaborativo).
+   - Años en cards rediseñados con badges satinados de oro brillante (`text-2xl sm:text-3xl font-black text-gradient-gold`) en vez del tenue `text-primary/10`.
+   - Comparativa rediseñada: Tarjeta izquierda `"DINOSAURIOS INMOBILIARIOS"` comenzando con *"Los actuales portales inmobiliarios..."*, y tarjeta derecha `"VECY BIENES RAÍCES: EVOLUCIÓN INEVITABLE"`.
+4. **Simetría y Responsividad Universal**:
+   - Espaciado superior del Hero unificado con rigor milimétrico en `pt-36 pb-16` en todo el sitio, eliminando los saltos de `pt-40`, `pt-32` o `min-h-[90vh]` que provocaban desniveles con el Navbar fijo.
+   - `vecy-title-hero` y `vecy-title-section` adaptados dinámicamente con escalas responsivas para evitar desbordes en smartphones (`text-3xl sm:text-4xl md:text-5xl lg:text-6xl`).
+5. **Perfeccionamiento de Botones Flotantes**:
+   - `FloatingScrollToTop.tsx`: Agrandado a `w-13 h-13 sm:w-14 sm:h-14` con icono de 26px y acabado dorado 3D metálico.
+   - `JanIAFloatingButton.tsx`: Círculo exterior agrandado a `w-14 h-14 sm:w-16 sm:h-16 md:w-16 md:h-16` con aro dorado de lujo, y la imagen de perfil de JanIA fue reencuadrada en un subcontenedor con `scale-95` para erradicar cualquier recorte de cabello o rostro.
+
+### Acciones Técnicas Ejecutadas
+- `client/src/index.css`: Clases `.btn-gold`, `.btn-gold-outline`, `.btn-glass`, `.btn-electric` actualizadas con relieve 3D y `rounded-xl`; tipografía responsive ajustada.
+- `client/src/components/ui/button.tsx`: `buttonVariants` actualizado de `rounded-full` a `rounded-xl` y `rounded-lg`, incorporando gradiente 3D con brillo central.
+- `client/src/components/FloatingScrollToTop.tsx`: Agrandadas dimensiones a `w-13 h-13 sm:w-14 sm:h-14` con brillo 3D.
+- `client/src/components/JanIAFloatingButton.tsx`: Botón agrandado y avatar de JanIA protegido contra recortes.
+- `client/src/pages/NuestraHistoria.tsx`: Reescrito 100% con nueva narrativa histórica, Dinosaurios Inmobiliarios, años luminosos y hero simétrico `pt-36 pb-16`.
+- `client/src/pages/Services.tsx`: `<NetworkBackground />` añadido y hero unificado a `pt-36 pb-16`.
+- `client/src/pages/Contact.tsx`: `<NetworkBackground />` añadido y hero unificado a `pt-36 pb-16`.
+- `client/src/pages/Investors.tsx`: `<NetworkBackground />` añadido y hero unificado a `pt-36 pb-16`.
+- `client/src/pages/Blog.tsx`: `<NetworkBackground />` añadido y hero unificado a `pt-36 pb-16`.
+- `client/src/pages/PropertyDetail.tsx`: `<NetworkBackground />` añadido y espaciado de cabecera sincronizado.
+- `client/src/pages/RedColaboracion.tsx`: Hero unificado a `pt-36 pb-16` y botones adaptados a `btn-gold` 3D.
+- `client/src/pages/TerminosCondiciones.tsx` y `client/src/pages/PoliticaPrivacidad.tsx`: Hero unificado a `pt-36 pb-16`.
+- `client/src/components/admin/AdminMatches.tsx`: Botón Exportar CSV unificado con el nuevo estilo dorado 3D oficial.
+- `client/src/components/Navbar.tsx`: Navegación en botón Consultar móvil corregida.
+- Bump de versión: `shared/const.ts` (`v32.68`) y `package.json` (`32.68.0`).
+- Validaciones: `npm run check` (0 errores), `npm test` (159/159 tests pasando) y `npm run build` 100% limpio.
+
+---
+
 ## 📋 SESIÓN v32.67 — 09 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

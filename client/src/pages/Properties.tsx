@@ -123,20 +123,17 @@ export default function Properties() {
         {/* Glow de fondo */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[650px] h-[320px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
 
-        <div className="container relative z-10 text-center">
+        <div className="container relative z-10 text-center max-w-4xl mx-auto px-4">
           <ScrollReveal delay={0.1}>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-5 backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
-              <span className="text-[11px] font-black uppercase tracking-[0.25em] text-primary">
-                Red Colaborativa de Inmuebles Auditados
-              </span>
-            </div>
+            <p className="vecy-accent-tag text-center">RED COLABORATIVA DE INMUEBLES AUDITADOS</p>
 
             <h1 className="vecy-title-hero uppercase tracking-tight">
               TIENDA <span className="text-gradient-gold">OFERTAS</span>
             </h1>
 
-            <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-zinc-400">
+            <div className="line-electric w-36 sm:w-44 mx-auto my-5"></div>
+
+            <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-zinc-300">
               Explora inventario inmobiliario verificado en tiempo real. 
               Contacta captadores oficiales, coordina visitas y cierra negocios con respaldo legal.
             </p>

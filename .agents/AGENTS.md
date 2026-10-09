@@ -172,9 +172,35 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.67 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.69 — Octubre 2026
 
-### Novedades v32.67 (Rediseño Unificado de Pie de Página / Footer Institucional Oficial con Redes Sociales y GitHub, Eliminación de Menús Duplicados y Rutas Legales Optimizadas):
+### Novedades v32.69 (Títulos Limpios con Rayita 3D, Supresión de Botones Sobrantes en AdminMatches y Formato Documento Formal Imprimible/PDF en Hoja Blanca para Términos y Privacidad):
+- **Diagnóstico y Confirmación de Eduardo A. Rivera**:
+  1. **Títulos Limpios sin Burbujas con Rayita 3D**:
+     - Eduardo instruyó: *"Me encantan los títulos de las páginas con esa rayita como entercera dimensión allí debajo y sin tantas burbujas conteniendo cada palabra, entre menos adornos mejor impacto creo yo..."*
+     - Erradicadas todas las píldoras/chips sobre los títulos. Aplicado tag limpio `vecy-accent-tag`, título en blanco/dorado y rayita 3D con brillo central `line-electric` en todas las páginas públicas.
+  2. **Términos y Privacidad como Documentos Reales Imprimibles**:
+     - *"lo mismo los documentos de término y políticas deben ser más tipo documento y hasta podersen descargar en PDF como un documento normal en hoja blanca y letra negra y logo impreso en el cabecero y nuestr marca y un pie de página bien sencillo y bueno. Es que sinceramente creo que estás exagerando con tantas cards sobre cards que ya resulta incómodo y cansa ver la página."*
+     - Se eliminó el exceso de cards oscuras flotantes.
+     - Diseñado el formato de **Hoja Membretada Oficial Imprimible** (`print-document-sheet`): hoja blanca, letra negra/carbón (`text-zinc-900`), logo impreso oficial (`/logo-vecy.png`), CUV, Hash SHA-256, cláusulas jurídicas continuas y pie de página membretado sobrio.
+     - Botón `Descargar PDF / Imprimir Documento` con `window.print()` y reglas CSS `@media print` en `index.css` que ocultan navbars, footer web, fondos y elementos interactivos para una impresión o guardado en PDF de hoja blanca inmaculada.
+  3. **Eliminación Quirúrgica de Botones Sobrantes en Coincidencias (`AdminMatches.tsx`)**:
+     - *"Así como la de administración que tiene demasiados botones, incluso uno que no sirven para nada o son repetitivos y saturan la visión. Ahí te encierro lo que sobra en un cuadro rojo."*
+     - Eliminado botón `🔍 Clave WA` en Oferta (dejando solo `📋 Copiar Publicación`).
+     - Eliminado botón `🔍 Clave WA` en Demanda (dejando solo `📋 Copiar Publicación`).
+     - Eliminado botón `🔍 Sondeo` en Requiriente (dejando solo `Contactar WA`).
+  4. **Modificaciones Implementadas**:
+     - `client/src/components/admin/AdminMatches.tsx`: Botones redundantes eliminados quirúrgicamente.
+     - `client/src/index.css`: Soporte de impresión `@media print` para hoja blanca sin navegación web.
+     - `client/src/pages/TerminosCondiciones.tsx` y `client/src/pages/PoliticaPrivacidad.tsx`: Rediseñados como documentos formales membretados de hoja blanca y letra negra con botón de descarga PDF.
+     - `client/src/pages/Properties.tsx`, `RequirementsMarketplace.tsx`, `NuestraHistoria.tsx`, `Services.tsx`, `Contact.tsx`, `Investors.tsx`, `Blog.tsx`, `RedColaboracion.tsx`: Títulos limpios sin burbujas con rayita 3D.
+     - `shared/const.ts` (`v32.69`) y `package.json` (`32.69.0`).
+     - 159/159 tests Vitest pasando al 100%, build limpio en 30s.
+
+## 🔖 VERSIÓN ANTERIOR: v32.68 — Octubre 2026
+- Unificación de diseño global, botones dorados 3D rectangulares-redondeados (`rounded-xl` con destello especular), despliegue de fondo de red (`NetworkBackground`) en todo el portal, reescritura de `NuestraHistoria.tsx` (Dinosaurios Inmobiliarios y evolución VECY), y ajuste de botones flotantes (volver arriba y JanIA sin recortes).
+
+## 🔖 VERSIÓN ANTERIOR: v32.67 — Octubre 2026
 - **Diagnóstico y Confirmación de Eduardo A. Rivera**:
   1. **Nuevo Diseño Unificado de Pie de Página**:
      - Eduardo instruyó: *"Pongamos diseño. Quiero algo así para el pie de página que debe ser igual en todas nuestras páginas y subpáginas pero no quiero que repitas el mismo menú de arriba a bajo, mejor coloca los logos miniatura de todas nuestras redes sociales incluyendo github en reemplazo a ese menú repetido y eso sí deja lo de {{Términos y Condiciones}} y lo de {{Política de Privacidad}} pero reduce esos letreros tan grandes lo mismo para los enlaces solo deja: {{Condiciones}} / {{Privacidad}} o {{Política}} / {{términos}}..."*

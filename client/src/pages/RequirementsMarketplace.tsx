@@ -104,16 +104,17 @@ export default function RequirementsMarketplace() {
       {/* HERO SECTION */}
       <section className="relative pt-36 pb-16 overflow-hidden border-b border-white/5 bg-gradient-to-b from-black via-zinc-950 to-background">
         <NetworkBackground />
-        <div className="container relative z-10 text-center">
+        <div className="container relative z-10 text-center max-w-4xl mx-auto px-4">
           <ScrollReveal delay={0.1}>
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-5 backdrop-blur-md">
-              <Sparkles className="w-3.5 h-3.5 text-primary animate-pulse" />
-              <span className="text-[11px] font-black uppercase tracking-[0.25em] text-primary">Marketplace de Demandas Calificadas</span>
-            </div>
+            <p className="vecy-accent-tag text-center">MARKETPLACE DE DEMANDAS CALIFICADAS</p>
+
             <h1 className="vecy-title-hero uppercase tracking-tight">
               TIENDA <span className="text-gradient-gold">DEMANDAS</span>
             </h1>
-            <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-zinc-400">
+
+            <div className="line-electric w-36 sm:w-44 mx-auto my-5"></div>
+
+            <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-zinc-300">
               Conecta con asesores que ya tienen el comprador verificado. 
               Si tienes el inventario que coincide con el requerimiento, <span className="font-bold text-white">tienes el cierre asegurado</span>.
             </p>

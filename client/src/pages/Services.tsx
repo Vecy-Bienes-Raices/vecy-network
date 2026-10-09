@@ -1,7 +1,8 @@
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Shield, BarChart3, Gavel, Landmark, ArrowRight, Star } from 'lucide-react';
+import NetworkBackground from '@/components/NetworkBackground';
+import { Shield, BarChart3, Gavel, Landmark, ArrowRight, Star, Sparkles } from 'lucide-react';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { useLocation } from 'wouter';
 
@@ -39,19 +40,23 @@ export default function Services() {
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="pt-40 pb-20 bg-gradient-to-b from-black to-background overflow-hidden relative border-b border-white/5">
-        {/* Glow effect */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-white/5 blur-[120px] pointer-events-none"></div>
+      {/* Hero Section Unificado */}
+      <section className="relative pt-36 pb-16 bg-gradient-to-b from-black via-zinc-950 to-background overflow-hidden border-b border-white/5">
+        <NetworkBackground />
+        {/* Glow de fondo */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[650px] h-[320px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
         
-        <div className="container relative z-10 text-center">
-          <ScrollReveal delay={0.2}>
-            <p className="vecy-accent-tag">Excelencia Operativa</p>
-            <h1 className="vecy-title-hero">
+        <div className="container relative z-10 text-center max-w-4xl mx-auto px-4">
+          <ScrollReveal delay={0.1}>
+            <p className="vecy-accent-tag text-center">EXCELENCIA OPERATIVA</p>
+
+            <h1 className="vecy-title-hero uppercase tracking-tight">
               NUESTROS <span className="text-gradient-gold">SERVICIOS</span>
             </h1>
-            <div className="line-electric w-32 mx-auto mb-8"></div>
-            <p className="vecy-subtitle max-w-2xl mx-auto font-light leading-relaxed">
+
+            <div className="line-electric w-36 sm:w-44 mx-auto my-5"></div>
+
+            <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-zinc-300">
               Combinamos tecnología de punta con décadas de experiencia para ofrecerte una gestión inmobiliaria de élite.
             </p>
           </ScrollReveal>

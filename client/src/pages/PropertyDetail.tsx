@@ -3,6 +3,7 @@ import { useRoute, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import NetworkBackground from '@/components/NetworkBackground';
 import PropertyGallery from '@/components/PropertyGallery';
 import NeighborhoodMap from '@/components/NeighborhoodMap';
 import { 
@@ -129,7 +130,7 @@ export default function PropertyDetail() {
     (anyProp.externalUrl && typeof anyProp.externalUrl === 'string' && anyProp.externalUrl.toLowerCase().includes('.pdf') ? anyProp.externalUrl : null);
 
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 relative">
       <Navbar />
 
       {/* Indicador de Modo White-Label (Solo visible en Stealth) */}
@@ -141,14 +142,19 @@ export default function PropertyDetail() {
           </div>
           <button 
             onClick={() => window.print()}
-            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-full text-[10px] font-bold transition-all uppercase cursor-pointer"
+            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-xl text-[10px] font-bold transition-all uppercase cursor-pointer"
           >
             <Download className="w-3 h-3" /> Imprimir Ficha
           </button>
         </div>
       )}
 
-      <main className={`container py-8 ${isStealth ? 'mt-10' : 'mt-16'}`}>
+      {/* Fondo de red interactiva dinámico */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <NetworkBackground />
+      </div>
+
+      <main className={`container relative z-10 py-8 ${isStealth ? 'pt-16' : 'pt-28 sm:pt-32'}`}>
         
         {/* ══════════════════════════════════════════════════════════════════ */}
         {/* 1. CABECERA DOCTRINAL: TÍTULO, UBICACIÓN & BLOQUE DE PRECIO/NEGOCIO */}

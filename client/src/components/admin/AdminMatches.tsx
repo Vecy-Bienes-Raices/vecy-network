@@ -4909,7 +4909,7 @@ export default function AdminMatches() {
           <Button 
             disabled={filteredMatches.length === 0}
             onClick={exportData} 
-            className="flex-1 lg:flex-initial h-7 bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] hover:brightness-110 text-black font-extrabold flex items-center justify-center gap-1.5 text-xs px-2.5 rounded-xl shadow-[0_0_12px_rgba(191,149,63,0.3)] transition-all cursor-pointer"
+            className="flex-1 lg:flex-initial h-7 flex items-center justify-center gap-1.5 text-xs px-2.5 rounded-xl cursor-pointer"
             title="Descargar reporte en formato Excel (.CSV) con los datos, teléfonos y porcentajes de las coincidencias filtradas"
           >
             <Download className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -5523,31 +5523,6 @@ export default function AdminMatches() {
                                           </>
                                         )}
                                       </button>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleCopy(pText || fallbackText, `prop-search-${m.id}`, 'search', isPropDirect ? undefined : m.property?.origenNombre, propSender, propContact.cleanNumber);
-                                        }}
-                                        className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-lg transition-all duration-300 border shadow-sm ${
-                                          copiedId === `prop-search-${m.id}`
-                                            ? "bg-emerald-500/25 text-emerald-300 border-emerald-400/60 shadow-[0_0_15px_rgba(16,185,129,0.45)] scale-105"
-                                            : "text-emerald-400/90 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30 hover:border-emerald-400/50 active:scale-95"
-                                        }`}
-                                        title="Copiar clave optimizada de búsqueda (frase clave única o nombre) para encontrar el mensaje en WhatsApp en 1 segundo sin errores"
-                                      >
-                                        {copiedId === `prop-search-${m.id}` ? (
-                                          <>
-                                            <Check className="w-3.5 h-3.5 text-emerald-300 animate-in zoom-in-50 duration-200" />
-                                            <span className="text-emerald-200 font-extrabold">¡Clave Copiada!</span>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Search className="w-3.5 h-3.5 text-emerald-400" />
-                                            <span>🔍 Clave WA</span>
-                                          </>
-                                        )}
-                                      </button>
                                     </div>
                                   );
                                 })()}
@@ -5893,31 +5868,6 @@ export default function AdminMatches() {
                                           </>
                                         )}
                                       </button>
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleCopy(rText, `req-search-${m.id}`, 'search', isReqDirect ? undefined : m.requirement?.origenNombre, reqSender, reqContact.cleanNumber);
-                                        }}
-                                        className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-lg transition-all duration-300 border shadow-sm ${
-                                          copiedId === `req-search-${m.id}`
-                                            ? "bg-emerald-500/25 text-emerald-300 border-emerald-400/60 shadow-[0_0_15px_rgba(16,185,129,0.45)] scale-105"
-                                            : "text-emerald-400/90 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30 hover:border-emerald-400/50 active:scale-95"
-                                        }`}
-                                        title="Copiar clave optimizada de búsqueda (frase clave única o nombre) para encontrar el mensaje en WhatsApp en 1 segundo sin errores"
-                                      >
-                                        {copiedId === `req-search-${m.id}` ? (
-                                          <>
-                                            <Check className="w-3.5 h-3.5 text-emerald-300 animate-in zoom-in-50 duration-200" />
-                                            <span className="text-emerald-200 font-extrabold">¡Clave Copiada!</span>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Search className="w-3.5 h-3.5 text-emerald-400" />
-                                            <span>🔍 Clave WA</span>
-                                          </>
-                                        )}
-                                      </button>
                                     </div>
                                   );
                                 })()}
@@ -6081,15 +6031,6 @@ export default function AdminMatches() {
                                 >
                                   <span>Contactar WA</span>
                                   <ExternalLink className="w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                                </a>
-                                <a 
-                                  href={`https://wa.me/57${clean10}?text=${encodeURIComponent(`Hola ${senderName && !isGenericBrokerName(senderName) ? senderName : ''} 👋 Te contacto de VECY Bienes Raíces. Quería consultarte si tu cliente aún sigue buscando inmueble en ${m.requirement?.zonaDeseada || m.requirement?.ciudadDeseada || 'Bogotá'}. Tenemos una opción con coincidencia del ${score.toFixed(0)}% para compartir comisión.`)}`} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="group bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 hover:text-cyan-200 border border-cyan-500/40 text-xs font-bold px-3 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-300 shadow-sm hover:scale-105 active:scale-95 min-h-[38px] w-full sm:w-auto shrink-0"
-                                  title="Enviar mensaje rápido de sondeo para saber si el cliente sigue buscando y reactivar la demanda"
-                                >
-                                  <span>🔍 Sondeo</span>
                                 </a>
                               </div>
                             ) : (

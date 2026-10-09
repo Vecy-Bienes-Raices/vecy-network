@@ -41,38 +41,42 @@ export default function RedColaboracion() {
       <Navbar />
 
       {/* HERO SECTION — BOLSA INMOBILIARIA COLABORATIVA */}
-      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden pt-20">
+      <section className="relative pt-36 pb-16 bg-gradient-to-b from-black via-zinc-950 to-background overflow-hidden border-b border-white/5">
         <NetworkBackground />
-        <div className="container relative z-10 text-center">
-          <ScrollReveal delay={0.2}>
-            <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
-              <Zap className="w-4 h-4 text-primary animate-pulse" />
-              <span className="text-xs font-black uppercase tracking-widest text-primary">Economía Colaborativa Inmobiliaria 2.0</span>
-            </div>
-            <h1 className="vecy-title-hero">
+        {/* Glow de fondo */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[650px] h-[320px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+
+        <div className="container relative z-10 text-center max-w-4xl mx-auto px-4">
+          <ScrollReveal delay={0.1}>
+            <p className="vecy-accent-tag text-center">ECONOMÍA COLABORATIVA INMOBILIARIA 2.0</p>
+
+            <h1 className="vecy-title-hero uppercase tracking-tight">
               BOLSA INMOBILIARIA <span className="text-gradient-gold">COLABORATIVA</span>
             </h1>
-            <p className="vecy-subtitle max-w-3xl mx-auto text-base sm:text-lg">
+
+            <div className="line-electric w-36 sm:w-44 mx-auto my-5"></div>
+
+            <p className="vecy-subtitle max-w-3xl mx-auto text-sm sm:text-base text-zinc-300">
               En VECY BIENES RAÍCES erradicamos el gasto en publicidad tradicional. Convertimos a toda la comunidad 
               de agentes en el <span className="font-bold text-white uppercase">motor orgánico de marketing en red</span>. 
               Gana comisiones reales compartiendo inmuebles con <span className="font-bold text-gradient-gold uppercase">fichas de marca blanca</span> sin necesidad de tener un gran inventario propio.
             </p>
 
             {/* PESTAÑAS DE ACCESO DIRECTO A LA BOLSA */}
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <button 
                 onClick={() => navigate('/ofertas')}
-                className="px-8 py-4 rounded-2xl bg-gradient-to-r from-[#FFD700] via-[#FDB931] to-[#DAA520] text-black font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl cursor-pointer"
+                className="btn-gold px-8 py-4 text-xs font-black tracking-widest uppercase flex items-center gap-2.5 cursor-pointer shadow-lg"
               >
-                <Share2 className="w-4 h-4 text-black" />
-                Explorar Ofertas de la Bolsa (Inmuebles)
+                <Share2 className="w-4 h-4 text-[#120e03]" />
+                Explorar Ofertas de la Bolsa
               </button>
               <button 
                 onClick={() => navigate('/demandas')}
-                className="px-8 py-4 rounded-2xl bg-white/10 border border-white/20 text-white font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:bg-white/20 active:scale-95 transition-all shadow-xl cursor-pointer"
+                className="btn-gold-outline px-8 py-4 text-xs font-black tracking-widest uppercase flex items-center gap-2.5 cursor-pointer shadow-lg"
               >
                 <Target className="w-4 h-4 text-primary" />
-                Explorar Demandas de la Bolsa (Requerimientos)
+                Explorar Demandas de la Bolsa
               </button>
             </div>
           </ScrollReveal>

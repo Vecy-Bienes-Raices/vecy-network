@@ -331,6 +331,46 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.69 — Octubre 2026
+
+#### 📌 TÍTULOS LIMPIOS CON RAYITA 3D, SUPRESIÓN DE BOTONES SOBRANTES EN COINCIDENCIAS Y DOCUMENTOS FORMALES MEMBRETADOS (HOJA BLANCA CON LETRA NEGRA E IMPRESIÓN/PDF)
+
+**Requerimiento y Objetivos:**
+1. **Estética de Títulos Limpios y Elegantes con Rayita 3D**:
+   - Petición de Eduardo A. Rivera: Eliminar las burbujas y cápsulas que contenían las palabras sobre los títulos. Preservar y unificar la rayita tridimensional con brillo central (`line-electric`), con tags limpios sin adornos recargados.
+2. **Formato Documento Oficial Membretado en Términos y Privacidad**:
+   - Erradicar la sobrecarga visual de "cards sobre cards" oscuras flotantes.
+   - Diseñar ambas páginas como un **auténtico documento jurídico formal**: hoja de papel blanco membretado, texto en negro/carbón de alta legibilidad, logotipo impreso oficial de `VECY BIENES RAÍCES` (`/logo-vecy.png`), datos notariales (CUV, Hash SHA-256, Ley 527 de 1999, Decreto 2364 de 2012, Ley 1581 de 2012), cuerpo de lectura legal continuo con cláusulas/artículos nítidos y pie de página institucional sobrio.
+   - **Descarga en PDF e Impresión en 1 Clic**: Botón dorado 3D `Descargar PDF / Imprimir Documento` con `window.print()` y reglas `@media print` en `index.css` que ocultan menús, footers web y fondos interactivos para generar un PDF o impresión en papel limpio.
+3. **Depuración de Botones Sobrantes en `AdminMatches.tsx`**:
+   - Eliminados quirúrgicamente los botones encerrados en el cuadro rojo de Eduardo: `🔍 Clave WA` en Oferta, `🔍 Clave WA` en Demanda y `🔍 Sondeo` en Requiriente, dejando una interfaz limpia y directa.
+
+**Archivos Modificados:**
+- `client/src/components/admin/AdminMatches.tsx`
+- `client/src/index.css`
+- `client/src/pages/TerminosCondiciones.tsx`
+- `client/src/pages/PoliticaPrivacidad.tsx`
+- `client/src/pages/Properties.tsx`, `RequirementsMarketplace.tsx`, `NuestraHistoria.tsx`, `Services.tsx`, `Contact.tsx`, `Investors.tsx`, `Blog.tsx`, `RedColaboracion.tsx`
+- `shared/const.ts`: Versión bump a `v32.69`.
+- `package.json`: Versión `32.69.0`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 159/159 tests pasando al 100% ✅ | `npm run build` limpio en 30s ✅
+
+---
+
+### 🔖 v32.68 — Octubre 2026
+
+#### 📌 UNIFICACIÓN DE DISEÑO GLOBAL, BOTONES DORADOS 3D RECTANGULARES-REDONDEADOS, FONDO DE RED EN MOVIMIENTO Y REESCRITURA DE NUESTRA HISTORIA
+
+**Requerimiento y Objetivos:**
+- Botones dorados con relieve metálico 3D y brillo especular central (`rounded-xl` con destello especular).
+- Despliegue universal del fondo de red interactivo (`NetworkBackground`) en todo el portal.
+- Reescritura integral de `NuestraHistoria.tsx` (origen en 2018, resiliencia 2020, blindaje legal 2022, JanIA 2024, comparativa Dinosaurios Inmobiliarios y evolución inevitable).
+- Ampliación y ajuste visual del botón volver arriba y botón flotante de JanIA sin recortes.
+
+---
+
 ### 🔖 v32.67 — Octubre 2026
 
 #### 📌 REDISEÑO UNIFICADO DE PIE DE PÁGINA (FOOTER) INSTITUCIONAL OFICIAL CON LOGOS DE REDES SOCIALES, GITHUB Y ENLACES LEGALES OPTIMIZADOS

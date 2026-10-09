@@ -1,23 +1,35 @@
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { Mail, Phone, MapPin, Send, MessageSquare } from 'lucide-react';
+import NetworkBackground from '@/components/NetworkBackground';
+import { ScrollReveal } from '@/components/ScrollReveal';
+import { Mail, Phone, MapPin, Send, MessageSquare, Sparkles } from 'lucide-react';
 
 export default function Contact() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-12 bg-gradient-to-b from-black to-background">
-        <div className="container text-center">
-          <h1 className="text-5xl md:text-7xl font-display font-bold tracking-wider mb-6 animate-fade-in">
-            ESTAMOS EN <span className="text-gradient-gold">CONTACTO</span>
-          </h1>
-          <div className="line-electric w-24 mx-auto mb-6"></div>
-          <p className="vecy-subtitle max-w-2xl mx-auto font-medium text-lg lg:text-xl">
-            Tu próxima inversión inmobiliaria comienza con una conversación.
-          </p>
+      {/* Hero Section Unificado */}
+      <section className="relative pt-36 pb-16 bg-gradient-to-b from-black via-zinc-950 to-background overflow-hidden border-b border-white/5">
+        <NetworkBackground />
+        {/* Glow de fondo */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[650px] h-[320px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+
+        <div className="container relative z-10 text-center max-w-4xl mx-auto px-4">
+          <ScrollReveal delay={0.1}>
+            <p className="vecy-accent-tag text-center">ATENCIÓN INMOBILIARIA PERSONALIZADA</p>
+
+            <h1 className="vecy-title-hero uppercase tracking-tight">
+              ESTAMOS EN <span className="text-gradient-gold">CONTACTO</span>
+            </h1>
+
+            <div className="line-electric w-36 sm:w-44 mx-auto my-5"></div>
+
+            <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-zinc-300">
+              Tu próxima inversión o alianza inmobiliaria comienza con una conversación. Contáctanos por WhatsApp o formulario directo.
+            </p>
+          </ScrollReveal>
         </div>
       </section>
 

@@ -132,7 +132,12 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
                 {item.label}
               </a>
             ))}
-            <button className="btn-gold w-full text-sm mt-4">CONSULTAR</button>
+            <button 
+              onClick={() => { navigate('/jania'); setIsOpen(false); }} 
+              className="btn-gold w-full text-sm mt-4"
+            >
+              CONSULTAR JANIA
+            </button>
           </div>
         </div>
       )}
