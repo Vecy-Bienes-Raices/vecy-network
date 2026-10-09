@@ -172,27 +172,30 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.64 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.65 — Octubre 2026
 
-### Novedades v32.64 (Doctrina de Venta Directa Propia: 100% de la Comisión para el Agente y Cero Cobro $0 COP de VECY):
+### Novedades v32.65 (Doctrina 80 / 20 para Venta Directa con Infraestructura VECY, Período de Gracia de 5 Días ($0 COP), Telemetría Forense Anti-Bypass y Contratos Digitales con Sello Criptográfico y Código QR bajo la Ley 527 de 1999):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:
-  1. **Venta Directa Propia (100% para el Asesor)**:
-     - Si un asesor publica un inmueble en VECY BIENES RAÍCES y un cliente lo contacta directamente a través de su ficha pública o su enlace ("Link con Mi Perfil") y logra cerrar el negocio directamente sin la intermediación de un agente colocador de la red ni agendamiento en Vecy Agenda:
-     - **¡VECY NO LE COBRA ABSOLUTAMENTE NADA ($0 COP)!**
-     - El asesor conserva el **100% de la comisión pactada con el propietario**.
-  2. **Las 3 Preguntas Estratégicas Resueltas**:
-     - *¿Cómo hace VECY para darse cuenta si vendí por fuera o directo?*: VECY no es una policía secreta ni fiscaliza. Simplemente el asesor ingresa a su panel y marca el inmueble como "Vendido" o "Arrendado" para retirarlo del catálogo y evitar que le sigan escribiendo.
-     - *¿Me cobrarían algo si me contactaron a través del enlace generado por VECY?*: ¡Cero pesos ($0 COP)! El portal y los enlaces son herramientas gratuitas al servicio del agente.
-     - *¿Me van a cohibir de venderlo directamente o me obligan a pagar?*: ¡Jamás! No hay exclusividad obligatoria ni cláusulas de amarre. Si lo vendes directo, celebramos tu éxito.
-  3. **Convivencia Armónica entre Venta Directa y Red Colaborativa (40/20/40)**:
-     - El modelo 40/20/40 es una herramienta opcional para desbloquear inmuebles que llevan meses (3, 6, 12 meses) estancados en el mercado, moviéndolos a través de la Bolsa Colaborativa de Marca Blanca con cientos de colegas difusores.
-  4. **Modificaciones Implementadas**:
-     - `shared/const.ts`: Enriquecido `VECY_COMMISSION_MODEL` con `directSaleDoctrine` y versión bump a `v32.64`.
-     - `package.json`: Versión `32.64.0`.
-     - `server/_core/prompts/grupos/PROYECTO_Vecy Network.md` y `server/_core/cronService.ts`: System prompts actualizados con la doctrina de venta directa y cero cobro.
-     - 158/158 tests Vitest pasando al 100%. `tsc --noEmit` 0 errores y `pnpm build` 100% limpio.
+  1. **Dilema del "Criollo Vivo" (Anti-Bypass / No Elusión)**:
+     - Eduardo advirtió con agudeza sobre el riesgo moral del mercado: si un asesor usa la plataforma de VECY para crear su tienda, tener fichas con su contacto, usar JanIA, disfrutar de la difusión de la bolsa de colegas y agendar por Vecy Agenda, intentará saltarse a VECY para cerrar por fuera y dejar a la plataforma trabajando gratis.
+  2. **El Esquema Equitativo 80 / 20 (Venta Directa con Tecnología VECY)**:
+     - Si el asesor capta y cierra directamente con un cliente apoyándose en la infraestructura tecnológica y difusión de VECY tras los 5 días de gracia:
+     - **¡El asesor conserva un extraordinario 80% de la comisión total!** (muy superior al 50% de las franquicias tradicionales).
+     - **Aporta el 20% de aceleración y soporte:** 10% para la Bolsa Colaborativa de colegas que viralizó el inmueble + 10% para VECY BIENES RAÍCES.
+  3. **Período de Gracia Inmediata (Días 1 a 5 Calendario)**:
+     - Si el asesor acababa de subir el inmueble hace 1 a 5 días y lo cierra de inmediato (porque ya traía al cliente previamente o la negociación en marcha), **¡VECY NO LE COBRA ABSOLUTAMENTE NADA ($0 COP)!** Conserva el 100%.
+  4. **Telemetría Forense en Enlaces y Botones**:
+     - Mini-bots, tags y tokens registran cada clic en "Contactar por WhatsApp", llamada o agendamiento con IP, timestamp y código de inmueble, constituyendo plena prueba de nexo causal bajo los Artículos 1340 y 1341 del Código de Comercio.
+  5. **Contrato Digital con Sello Criptográfico, CUV, Hash SHA-256 y Código QR**:
+     - En `server/_core/emailContractService.ts`, cada contrato emitido incluye un Código Único de Validación (CUV), huella digital SHA-256 inmutable, código QR de validación pública en línea y estampa de tiempo bajo la Ley 527 de 1999 y Decreto 2364 de 2012.
+  6. **Modificaciones Implementadas**:
+     - `shared/const.ts`: Enriquecido `VECY_COMMISSION_MODEL` con `directSaleWithVecyTechPct: 80`, `gracePeriodDays: 5`, y doctrina `antiBypassTelemetry`; versión bump a `v32.65`.
+     - `package.json`: Versión `32.65.0`.
+     - `server/_core/emailContractService.ts`: Generación criptográfica con `qrcode` y `node:crypto`, caja de seguridad con QR en PDF y CUV en pie de página.
+     - `server/_core/prompts/grupos/PROYECTO_Vecy Network.md` y `server/_core/cronService.ts`: System prompts actualizados con la doctrina 80/20 y telemetría.
+     - `server/__tests__/emailContractService.test.ts`: Nuevo test unitario. 159/159 tests pasando al 100%. `tsc --noEmit` 0 errores y `pnpm build` limpio.
 
-## 🔖 VERSIÓN ANTERIOR: v32.63 — Octubre 2026
+## 🔖 VERSIÓN ANTERIOR: v32.64 — Octubre 2026
 
 ### Novedades v32.63 (Bolsa Inmobiliaria Colaborativa de Marca Blanca, Concisión Máxima de Grupos Oficiales, Doctrina Punta Colocadora en Vecy Agenda y los 6 Grandes Beneficios Oficiales):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:

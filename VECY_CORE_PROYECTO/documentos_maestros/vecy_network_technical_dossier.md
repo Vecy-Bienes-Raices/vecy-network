@@ -331,6 +331,34 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.65 — Octubre 2026
+
+#### 📌 DOCTRINA 80 / 20 PARA VENTA DIRECTA CON INFRAESTRUCTURA VECY, PERÍODO DE GRACIA DE 5 DÍAS ($0 COP), TELEMETRÍA FORENSE ANTI-BYPASS Y CONTRATOS DIGITALES CON SELLO CRIPTOGRÁFICO Y CÓDIGO QR (LEY 527 DE 1999)
+
+**Requerimiento y Objetivos:**
+1. **Dilema del Riesgo Moral y "Criollo Vivo" (Anti-Bypass / No Elusión)**:
+   - Si un asesor utiliza el portal gratuito de VECY BIENES RAÍCES, su tienda digital, enlaces de marca blanca, la atención 24/7 de JanIA y el sistema Vecy Agenda, pero luego intenta cerrar directamente con el cliente para evadir la plataforma y dejar a VECY trabajando gratis.
+2. **Doctrina Oficial del Modelo 80 / 20 y Gracia de 5 Días (Eduardo A. Rivera)**:
+   - **Esquema 80 / 20 para Venta Directa con Tecnología VECY**: Si el asesor vende a un cliente contactado a través de la infraestructura y difusión de VECY tras los 5 días de gracia, conserva el **80% de la comisión total** y aporta el **20% de aceleración y soporte** (10% para la Bolsa Colaborativa de colegas difusores + 10% para VECY BIENES RAÍCES).
+   - **Período de Gracia Inmediata (1 a 5 Días Calendario)**: Si el inmueble se vende en los primeros 5 días tras subirse (negociación o cliente previo), **¡VECY no cobra nada ($0 COP) y el asesor conserva el 100%!**.
+   - **Operaciones con Colocador**: Cuando interviene otro agente aportando la demanda y agendando por Vecy Agenda, rige el modelo **40 / 20 / 40**.
+3. **Telemetría Forense en Enlaces y Botones**:
+   - Seguimiento activo de clics en "Contactar por WhatsApp", llamadas y visitas con token de referencia, IP y timestamp inmutable, constituyendo plena prueba legal de corretaje bajo los Artículos 1340 y 1341 del Código de Comercio.
+4. **Contratos Digitales con Sello Criptográfico, CUV, Hash SHA-256 y Código QR**:
+   - Generación de PDF con Código Único de Validación (CUV), huella digital SHA-256, Código QR dinámico de verificación web y estampa de tiempo conforme a la Ley 527 de 1999 y Decreto 2364 de 2012.
+
+**Archivos Modificados:**
+- `shared/const.ts`: Enriquecido `VECY_COMMISSION_MODEL` con `directSaleWithVecyTechPct: 80`, `gracePeriodDays: 5`, y nodo `antiBypassTelemetry`. Versión bump a `v32.65`.
+- `package.json`: Versión actualizada a `32.65.0`.
+- `server/_core/emailContractService.ts`: Importados `qrcode` y `node:crypto`. Implementado el cálculo criptográfico del CUV, Hash SHA-256, caja de Sello de Seguridad Digital con Código QR e incrustación en PDF, y pie de página con CUV en cada hoja. Actualizado el Parágrafo Segundo de la Cláusula Quinta con valor probatorio de telemetría.
+- `server/_core/prompts/grupos/PROYECTO_Vecy Network.md` y `server/_core/cronService.ts`: System prompts actualizados con la doctrina 80/20 y telemetría.
+- `server/__tests__/emailContractService.test.ts`: Nuevo test unitario verificando la integridad del PDF con QR y CUV.
+- `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier Técnico.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | `pnpm build` limpio ✅ | 159/159 tests Vitest ✅
+
+---
+
 ### 🔖 v32.64 — Octubre 2026
 
 #### 📌 DOCTRINA DE VENTA DIRECTA PROPIA: 100% DE LA COMISIÓN PARA EL ASESOR Y CERO COBRO ($0 COP) DE VECY BIENES RAÍCES

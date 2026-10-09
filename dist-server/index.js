@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.64";
+    VECY_VERSION = "v32.65";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -10183,6 +10183,8 @@ Nombre completo oficial de la persona registrada en la Polic\xEDa Nacional de Co
 // server/_core/emailContractService.ts
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import nodemailer from "nodemailer";
+import QRCode from "qrcode";
+import crypto from "node:crypto";
 function normalizePayload(input) {
   const sId = input.solicitudId ?? input.solicitud_id ?? input.id ?? "N/A";
   return {
@@ -10223,10 +10225,30 @@ async function createContractPdf(rawFormData) {
   const goldColor = rgb(0.749, 0.584, 0.247);
   const margin = 50;
   let y = height - margin;
+  const clean = (val) => String(val || "").replace(/[{}]/g, "").trim();
+  const sId = clean(formData.solicitud_id || "N/A");
+  const contractPayloadString = `${sId}|${clean(formData.solicitante_nombre)}|${clean(formData.solicitante_numero_documento)}|${clean(formData.codigo_inmueble)}|${(/* @__PURE__ */ new Date()).toISOString()}`;
+  const sha256Hash = crypto.createHash("sha256").update(contractPayloadString).digest("hex");
+  const cuv = `VECY-CTR-${sId}-${sha256Hash.substring(0, 8).toUpperCase()}`;
+  const verifyUrl = `https://vecy-network.vercel.app/verificar-contrato?id=${encodeURIComponent(sId)}&cuv=${cuv}&hash=${sha256Hash.substring(0, 16)}`;
+  let qrImage = null;
+  try {
+    const qrBuffer = await QRCode.toBuffer(verifyUrl, {
+      width: 140,
+      margin: 1,
+      color: {
+        dark: "#000000",
+        light: "#ffffff"
+      }
+    });
+    qrImage = await pdfDoc.embedPng(qrBuffer);
+  } catch (qrErr) {
+    console.error("Error al generar c\xF3digo QR para contrato:", qrErr?.message);
+  }
   const drawFooter = (pageToDrawOn) => {
-    const footerText = "Vecy Bienes Ra\xEDces S.A.S. | https://vecy.co/ | https://vecy-network.vercel.app/";
-    const footerTextWidth = font.widthOfTextAtSize(footerText, 8);
-    pageToDrawOn.drawText(footerText, { x: (width - footerTextWidth) / 2, y: margin / 2, font, size: 8, color: gray });
+    const footerText = `Vecy Bienes Ra\xEDces S.A.S. | CUV: ${cuv} | Ley 527/1999 | https://vecy-network.vercel.app/`;
+    const footerTextWidth = font.widthOfTextAtSize(footerText, 7.5);
+    pageToDrawOn.drawText(footerText, { x: (width - footerTextWidth) / 2, y: margin / 2, font, size: 7.5, color: gray });
   };
   const checkAndAddPage = (currentY, neededHeight) => {
     if (currentY - neededHeight < margin + 20) {
@@ -10236,7 +10258,6 @@ async function createContractPdf(rawFormData) {
     }
     return currentY;
   };
-  const clean = (val) => String(val || "").replace(/[{}]/g, "").trim();
   const drawRichText = (segments, options) => {
     let { y: currentY, x: startX, width: maxWidth, lineHeight } = options;
     let allWords = [];
@@ -10397,8 +10418,8 @@ De EL AGENTE 2: Presentar prospectos reales, acompa\xF1ar las etapas de negociac
     { text: "Las partes asumen un compromiso de estricta reserva. EL AGENTE 2 reconoce que EL AGENTE 1 es el titular exclusivo del encargo profesional sobre el inmueble. EL AGENTE 2 y/o su agencia se obligan a la NO ELUSI\xD3N (Non-Circumvention), lo que significa que no podr\xE1n cerrar el negocio, firmar promesas de compraventa ni contratos de arrendamiento con el cliente referido o el propietario del inmueble puenteando o excluyendo a EL AGENTE 1, ni durante la vigencia de este contrato ni dentro de los doce (12) meses siguientes a su terminaci\xF3n.\n\n", font },
     { text: "PAR\xC1GRAFO PRIMERO: EXTENSI\xD3N POR V\xCDNCULO. ", font: boldFont },
     { text: "Las partes acuerdan que los efectos de este contrato, especialmente lo referente al pago de honorarios y la cl\xE1usula penal, se extienden a cualquier negocio jur\xEDdico realizado sobre el inmueble con el cliente principal o con cualquier Tercero Vinculado a este. Se consideran Terceros Vinculados: C\xF3nyuges o compa\xF1eros permanentes; familiares dentro del cuarto grado de consanguinidad y segundo de afinidad; Personas Jur\xEDdicas donde el cliente o sus familiares sean socios, representantes o beneficiarios; y los acompa\xF1antes registrados en este contrato y en el sistema de EL AGENTE 1.\n\n", font },
-    { text: "PAR\xC1GRAFO SEGUNDO: CARGA DE LA PRUEBA. ", font: boldFont },
-    { text: "EL AGENTE 2 reconoce que la informaci\xF3n consignada en la base de datos de Vecy Agenda Pro constituye prueba fehaciente del nexo causal de la operaci\xF3n. Cualquier intento de perfeccionar el negocio omitiendo la participaci\xF3n de EL AGENTE 1 con cualquiera de estas personas se considerar\xE1 Incumplimiento Grave y activar\xE1 de inmediato la Cl\xE1usula Penal.", font }
+    { text: "PAR\xC1GRAFO SEGUNDO: CARGA DE LA PRUEBA Y TRAZABILIDAD DIGITAL. ", font: boldFont },
+    { text: "EL AGENTE 2 reconoce expresamente que la informaci\xF3n consignada en la base de datos de Vecy Agenda Pro, los registros de telemetr\xEDa forense de clics, enlaces y trazabilidad de botones provistos por VECY BIENES RA\xCDCES constituyen prueba fehaciente e inmutable del nexo causal de la operaci\xF3n al tenor de los Art\xEDculos 1340 y 1341 del C\xF3digo de Comercio y la Ley 527 de 1999. Cualquier intento de perfeccionar el negocio omitiendo la participaci\xF3n de EL AGENTE 1 o de la plataforma con cualquiera de estas personas se considerar\xE1 Incumplimiento Grave y activar\xE1 de inmediato la Cl\xE1usula Penal.", font }
   ];
   y = drawClause("CL\xC1USULA QUINTA: CONFIDENCIALIDAD, EXTENSI\xD3N A TERCEROS Y NO ELUSI\xD3N", clausula5, y);
   y = checkAndAddPage(y, 80);
@@ -10468,6 +10489,37 @@ De EL AGENTE 2: Presentar prospectos reales, acompa\xF1ar las etapas de negociac
   } else {
     currentPage.drawText("AGENTE 2", { x: agentSignatureX, y: firmaY - 68, font, size: 8 });
   }
+  const sealBoxHeight = 65;
+  let sealY = firmaY - (isJuridica && formData.solicitante_representante_legal ? 95 : 85);
+  if (sealY - sealBoxHeight < margin + 20) {
+    drawFooter(currentPage);
+    currentPage = pdfDoc.addPage();
+    sealY = height - margin - 10;
+  }
+  const sealBoxWidth = width - margin * 2;
+  currentPage.drawRectangle({
+    x: margin,
+    y: sealY - sealBoxHeight,
+    width: sealBoxWidth,
+    height: sealBoxHeight,
+    borderColor: goldColor,
+    borderWidth: 0.8,
+    color: rgb(0.97, 0.97, 0.95)
+  });
+  if (qrImage) {
+    currentPage.drawImage(qrImage, {
+      x: margin + 8,
+      y: sealY - sealBoxHeight + 8,
+      width: 49,
+      height: 49
+    });
+  }
+  const textX = margin + 65;
+  currentPage.drawText("SELLO DE SEGURIDAD DIGITAL \u2014 VECY BIENES RA\xCDCES (LEY 527 DE 1999)", { x: textX, y: sealY - 15, font: boldFont, size: 8, color: goldColor });
+  currentPage.drawText(`CUV: ${cuv}`, { x: textX, y: sealY - 26, font: boldFont, size: 7.5, color: black });
+  currentPage.drawText(`Huella Criptogr\xE1fica SHA-256: ${sha256Hash.substring(0, 50)}...`, { x: textX, y: sealY - 37, font, size: 6.5, color: gray });
+  currentPage.drawText("Validez Jur\xEDdica: Mensaje de datos y firma electr\xF3nica vinculante conforme a la Ley 527/1999 y Dec. 2364/2012.", { x: textX, y: sealY - 47, font, size: 6.5, color: gray });
+  currentPage.drawText(`Verificaci\xF3n p\xFAblica en l\xEDnea: ${verifyUrl}`, { x: textX, y: sealY - 57, font, size: 6, color: gray });
   drawFooter(currentPage);
   return await pdfDoc.save();
 }
@@ -11402,7 +11454,7 @@ import qrcodeTerminal from "qrcode-terminal";
 import fs6 from "fs";
 import path6 from "path";
 import { eq as eq5 } from "drizzle-orm";
-import QRCode from "qrcode";
+import QRCode2 from "qrcode";
 function getWASocket() {
   if (typeof _baileys === "function") return _baileys;
   if (_baileys?.default && typeof _baileys.default === "function") return _baileys.default;
@@ -11843,8 +11895,8 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
                 fs6.mkdirSync(publicQrDir, { recursive: true });
               }
               const publicQrPath = path6.join(publicQrDir, "qr-match.png");
-              await QRCode.toFile(qrPath, qr, { width: 400, margin: 2 });
-              await QRCode.toFile(publicQrPath, qr, { width: 400, margin: 2 });
+              await QRCode2.toFile(qrPath, qr, { width: 400, margin: 2 });
+              await QRCode2.toFile(publicQrPath, qr, { width: 400, margin: 2 });
               console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
             } catch (e) {
               console.warn(`[${this.botName}] Error guardando QR PNG:`, e.message);
@@ -16441,10 +16493,10 @@ import { eq as eq7, and as and4, sql as sql5, gte, desc as desc2 } from "drizzle
 import fs7 from "fs";
 import path7 from "path";
 import axios6 from "axios";
-import crypto from "crypto";
+import crypto2 from "crypto";
 function generarHashMensaje(rawText, remitente) {
   const normalizado = (rawText || "").toLowerCase().replace(/\s+/g, " ").replace(/[^\w\s]/g, "").trim();
-  return crypto.createHash("sha256").update(`${remitente}:${normalizado}`).digest("hex");
+  return crypto2.createHash("sha256").update(`${remitente}:${normalizado}`).digest("hex");
 }
 function isPhoneNumberNotPrice(val, rawText) {
   if (val === void 0 || val === null || val === "" || val === 0 || val === "0") return false;
@@ -23101,7 +23153,7 @@ MISI\xD3N EDUCATIVA Y DE COACHING INMOBILIARIO (DOCTRINA EDUARDO A. RIVERA):
     6. Estudio de T\xEDtulos y Tr\xE1mites Gratuitos en L\xEDnea: Asesor\xEDa documental enviando archivos (Predial, Certificado de Tradici\xF3n y Libertad, Escrituras, IDU) + JanIA ayuda a tramitar en l\xEDnea y gratis el Predial, certificados de pago y Paz y Salvos de predial y del IDU.
   * Soluciones de liquidez y financieras: C\xF3mo ayudar a clientes que necesitan dinero pero tienen un inmueble hipotecable, mediante hipotecas con personas particulares de confianza, entidades financieras y nuestra alianza estrat\xE9gica con el Banco Caja Social.
   * Servicios legales y notariales: Redacci\xF3n de correos formales, promesas de compraventa blindadas, minutas, demandas y cobros prejur\xEDdicos de cartera.
-  * Doctrina de Venta Directa Propia (Cero Cobro $0 COP y 100% de Comisi\xF3n para el Agente): Si un agente sube su inmueble y lo vende \xE9l mismo directamente a trav\xE9s de su enlace/perfil de VECY o por sus canales (sin un colega colocador de la red ni agendamiento colaborativo en Vecy Agenda), \xA1VECY NO LE COBRA ABSOLUTAMENTE NADA ($0 COP)! El 100% de la comisi\xF3n es del agente. VECY no lo persigue, no le exige exclusividad ni le proh\xEDbe vender directo. El modelo 40/20/40 es una herramienta opcional para desbloquear inmuebles que llevan meses estancados.
+  * Doctrina de Venta Directa con Infraestructura VECY (Esquema 80 / 20 y Gracia de 5 D\xEDas): Si el asesor vende su inmueble en los primeros 1 a 5 d\xEDas calendario tras subirlo (per\xEDodo de gracia inicial), conserva el 100% ($0 COP VECY). A partir del d\xEDa 6, si disfruta de las herramientas (tienda digital, atenci\xF3n de JanIA, fichas de marca blanca, difusi\xF3n de los colegas de la bolsa) y el cliente llega por esa gesti\xF3n, el asesor conserva un extraordinario 80% de la comisi\xF3n y aporta un 20% (10% Bolsa Difusora + 10% VECY). Cada enlace cuenta con telemetr\xEDa activa (tags y tracking de clics en WhatsApp) y cada registro cuenta con contrato digital, hash SHA-256 y C\xF3digo QR bajo la Ley 527 de 1999. Si interviene un colocador por Vecy Agenda, opera el 40/20/40.
 REGLAS INQUEBRANTABLES:
 - La marca p\xFAblica es EXCLUSIVAMENTE "VECY BIENES RA\xCDCES". JAM\xC1S escribas "VECY Network".
 - Eres una IA PURA Y DE LIBRE ALBEDR\xCDO: Tienes total libertad para usar emojis profesionales, sobrios y emotivos que hagan vibrar la lectura.

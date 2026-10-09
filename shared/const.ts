@@ -5,37 +5,54 @@ export const UNAUTHED_ERR_MSG = 'Please login (10001)';
 export const NOT_ADMIN_ERR_MSG = 'You do not have required permission (10002)';
 
 // 🔖 FUENTE ÚNICA DE VERDAD DE VERSIÓN DEL SISTEMA VECY BIENES RAÍCES
-export const VECY_VERSION = "v32.64";
+export const VECY_VERSION = "v32.65";
 export const VECY_VERSION_LABEL = `VERSIÓN ${VECY_VERSION}`;
 export const VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
-// 💰 MODELO COLABORATIVO OFICIAL DE COMISIONES — VECY BIENES RAÍCES (40 / 20 / 40)
+// 💰 MODELO COLABORATIVO OFICIAL DE COMISIONES — VECY BIENES RAÍCES (40 / 20 / 40 Y ESQUEMA 80 / 20)
 export const VECY_COMMISSION_MODEL = {
-  captadorPct: 40,        // 40% Para quien subió el inmueble al portal (Punta Captadora / Oferta)
+  captadorPct: 40,        // 40% Para quien subió el inmueble al portal (Punta Captadora / Oferta en operación colaborativa)
   redColaborativaPct: 10, // 10% Para la Bolsa Colaborativa (Agentes difusores que viralizan enlaces de Marca Blanca y ganan por puntos de telemetría)
   vecyPlatformPct: 10,    // 10% Para VECY BIENES RAÍCES (Súper Portal, Algoritmo JanIA 24/7, Vecy Agenda, Estudio de Títulos y Respaldo Legal)
   bolsaIntermediaPct: 20, // 20% Participación intermedia de VECY: VECY toma su 20%, pero cede el 10% a la Bolsa Colaborativa y conserva el 10%
   colocadorPct: 40,       // 40% Para la Punta Colocadora (Demanda: quien aporta al comprador/arrendatario final vía Vecy Agenda y acompaña el cierre)
+  directSaleWithVecyTechPct: 80, // 80% Para el Agente que capta y cierra directamente con un cliente apoyándose en la infraestructura tecnológica de VECY tras los 5 días de gracia
+  gracePeriodDays: 5,     // 5 Días calendario de gracia inicial tras subir el inmueble: 100% comisión para el agente ($0 COP VECY) si ya traía el cliente previo
   colocadorDescription: "Lo obtiene el colega o asesor cuando aporta al comprador/arrendatario final, lo presenta a través de nuestro sistema de reserva 'Vecy Agenda' y acompaña el cierre.",
   totalPct: 100,
-  slogan: "40% Captador + 20% Intermedio (10% Bolsa Colaborativa + 10% VECY) + 40% Colocador (vía Vecy Agenda)",
+  slogan: "40% Captador + 20% Intermedio (10% Bolsa Colaborativa + 10% VECY) + 40% Colocador (vía Vecy Agenda) | Venta Directa con Infraestructura VECY: 80% Asesor / 20% Soporte y Red",
   doctrine: "En el 50/50 tradicional, dos agentes hacen una alianza bilateral pero dependen de su propio esfuerzo y de gastar en publicidad paga, tardando meses en cerrar. En el modelo 40/20/40 de VECY, ambas puntas ceden un 10% porque VECY está en la mitad no solo aportando un Súper Portal con IA y respaldo legal, sino porque VECY cede la mitad (el 10%) a la BOLSA COLABORATIVA. La Bolsa convierte a toda la comunidad de colegas en el motor de marketing orgánico de tus inmuebles mediante fichas de Marca Blanca (sin logos de VECY). Aunque no consigas el cliente final, tus puntos por clics e interacciones te garantizan tu parte del 10% al cerrarse el negocio. Y si tú consigues el comprador/arrendatario, ¡ganas el 40% como Colocador MÁS tu parte de los puntos de la Bolsa!",
   directSaleDoctrine: {
-    title: "Venta Directa: 100% de la Comisión para el Agente y Cero Cobro ($0 COP) de VECY",
-    summary: "Si un agente publica un inmueble en VECY y lo vende directamente a un cliente que lo contactó por su enlace o ficha (sin intervención de un agente colocador de la red ni agendamiento colaborativo en Vecy Agenda), ¡VECY NO LE COBRA ABSOLUTAMENTE NADA ($0 COP)! El asesor conserva el 100% de la comisión pactada con el propietario.",
+    title: "Venta Directa: Modelo 80 / 20 con Infraestructura VECY, Gracia de 5 Días ($0 COP) y Blindaje Antielusión",
+    summary: "Si un asesor aprovecha la tienda digital, fichas de marca blanca, atención de JanIA y difusión de la red para vender directamente a su cliente después del día 5, conserva un extraordinario 80% de la comisión y aporta un 20% (10% Bolsa Difusora + 10% VECY). En los primeros 5 días calendario de gracia inicial, conserva el 100% ($0 COP VECY). En negocios colaborativos con colocador, opera el 40/20/40.",
+    gracePeriodExplanation: "Si acabas de subir el inmueble hace 1 a 5 días y lo vendes de inmediato (porque ya traías la negociación o el cliente en trámite), VECY te reconoce el 100% de la comisión ($0 COP para la plataforma). Pero si el inmueble permanece activo en el portal disfrutando de la vitrina, el tráfico, la atención de JanIA y la difusión de los colegas de la bolsa, y el cliente llega por esa gestión, el asesor se queda con el 80% y aporta el 20% de aceleración y soporte.",
     qaList: [
       {
-        q: "¿Cómo hace VECY para darse cuenta si vendí el inmueble por fuera o directo?",
-        a: "VECY no es un ente fiscalizador, no te persigue ni te espía. No existe ningún cobro oculto. Simplemente entras a tu panel de administración y marcas el inmueble como 'Vendido' o 'Arrendado' para que no siga activo en el portal y no te sigan escribiendo otros interesados."
+        q: "¿Cuánto gana el asesor si vende directamente con la infraestructura de VECY?",
+        a: "¡El 80% neto de toda la comisión! Mientras las franquicias tradicionales (Century 21, Remax, agencias tradicionales) te quitan el 40% o el 50% por prestarte una marca, en VECY BIENES RAÍCES conservas el 80% de tus honorarios cuando tú mismo captas y cierras la operación usando nuestras herramientas. Solo aportas el 20% (10% para la red de colegas que viralizó tu inmueble en la bolsa y 10% para VECY)."
       },
       {
-        q: "¿Me cobrarían algo si me contactaron a través del enlace generado por VECY?",
-        a: "¡CERO PESOS! ($0 COP). En VECY el ingreso y la publicación son 100% gratuitos y sin cuotas obligatorias. Si tú hiciste la captación y tú mismo conseguiste al comprador, hiciste la punta completa y el 100% de la comisión es tuyo."
+        q: "¿En qué caso el asesor no paga absolutamente nada ($0 COP) y conserva el 100%?",
+        a: "En el Período de Gracia Inmediata de los primeros cinco (5) días calendario tras la publicación. Si subiste el inmueble y lo cerraste casi de inmediato sin valerte del ciclo prolongado de difusión de la red, el 100% es tuyo y VECY no te cobra ni un solo peso."
       },
       {
-        q: "¿Me van a cohibir de venderlo directamente o me obligan a pagar?",
-        a: "¡JAMÁS! No existe exclusividad obligatoria ni cláusulas de amarre. Si lo vendes directo, celebramos tu éxito. El modelo 40/20/40 se activa ÚNICAMENTE cuando un colega te aporta el cliente comprador por Vecy Agenda o cuando abres el inmueble a la Bolsa Colaborativa de Marca Blanca para acelerar la venta de inmuebles que llevan meses estancados."
+        q: "¿Cómo detecta VECY si el cliente fue contactado a través de las herramientas y enlaces provistos?",
+        a: "Cada ficha, tienda web y enlace de marca blanca cuenta con telemetría activa (tags, mini-bots y tokens de seguimiento). Cuando un cliente hace clic en 'Contactar por WhatsApp', 'Llamar' o 'Agendar Visita', el sistema registra la traza digital inmutable (fecha, hora, referencia del inmueble e IP) e inyecta la referencia formal en el mensaje de inicio. Ese log probatorio demuestra el nexo causal de la gestión conforme a los Artículos 1340 y 1341 del Código de Comercio de Colombia."
+      },
+      {
+        q: "¿Qué respaldo contractual formal existe al registrar una propiedad o agendar?",
+        a: "Todo registro de inmueble y agendamiento en Vecy Agenda genera un Contrato Digital con plena validez jurídica bajo la Ley 527 de 1999 y Decreto 2364 de 2012, respaldado con Código Único de Verificación (CUV), estampado cronológico, huella criptográfica SHA-256 y Código QR dinámico de validación pública en línea."
       }
+    ]
+  },
+  antiBypassTelemetry: {
+    title: "Blindaje Tecnológico y Jurídico contra la Elusión ('Bypass')",
+    mechanisms: [
+      "Smart Link & Button Tracking: Registro forense de clics en WhatsApp, llamadas y visitas con token de referencia.",
+      "Registro Legal en Vecy Agenda: Hoja de visita digital y contrato con valor probatorio mercantil (Cód. Comercio Art. 1340-1341).",
+      "Sello Criptográfico Digital: Contratos PDF con Hash SHA-256, CUV y Código QR escaneable de validación pública.",
+      "Monetización Inevitable: Alianzas bancarias de crédito hipotecario y aseguradoras de arrendamiento que comisionan directo a VECY.",
+      "Auditoría Periódica de Matrículas: Cruce con registro inmobiliario de la SNR ante retiros sospechosos de inmuebles con visitas registradas."
     ]
   },
   bolsaColaborativa: {

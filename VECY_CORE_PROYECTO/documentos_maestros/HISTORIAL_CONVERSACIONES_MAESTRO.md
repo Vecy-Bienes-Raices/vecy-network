@@ -7,6 +7,52 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.65 — 09 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Dilema Estratégico y de Blindaje contra el "Criollo Vivo" (Anti-Bypass / No Elusión)**:
+   - Si el asesor usa el portal de VECY para crear su tienda digital, obtener fichas de marca blanca con su contacto, usar la atención de JanIA en todo su potencial y usar Vecy Agenda; pero luego conociendo la idiosincrasia del mercado local ("viveza criolla"), el asesor intenta saltarse la plataforma ("puentear"), contactar la demanda por fuera, negociar y dejar a VECY trabajando gratis sin pagar nada:
+   - ¿Cómo blindar el sistema para evitar ese abuso y que no salgan con ese cuento?
+2. **Propuesta Visionaria de Eduardo A. Rivera**:
+   - **Esquema 80 / 20 para Venta Directa con Infraestructura VECY**:
+     * Si el asesor aprovecha las herramientas de VECY (tienda, JanIA, enlaces, fichas) y vende a un cliente contactado por esos canales, no se queda con el 100% como si VECY no existiera.
+     * El asesor conserva un extraordinario **80% de la comisión total** (¡mucho más que el 50% tradicional del mercado!), y aporta el **20% de aceleración y soporte** (10% para la Red Colaborativa de colegas difusores de la Bolsa + 10% para VECY BIENES RAÍCES).
+   - **Período de Gracia Inmediata (1 a 5 días)**:
+     * Solamente no pagaría nada ($0 COP / 100% para él) si el inmueble acababa de subirse hace 1 a 5 días calendario (gracia inicial por venta previa o trámite ya en curso).
+   - **Telemetría y Detección Activa en Enlaces y Botones**:
+     * Tags, mini-bots y tokens de seguimiento en los botones de "Contactar por WhatsApp", "Llamar" y "Agendar" para registrar traza forense inmutable con IP, fecha y referencia de inmueble.
+   - **Contrato Digital de Mandato y Corretaje al Registrar Propiedades**:
+     * Firma digital y generación de contrato con Código Único de Verificación (CUV), estampado cronológico, huella criptográfica SHA-256 y Código QR dinámico de validación pública (amparado en la Ley 527 de 1999 y Decreto 2364 de 2012).
+
+### Diagnóstico Técnico y Legal
+1. **Plena Legalidad en Colombia**:
+   - Autonomía de la voluntad privada (Código Civil Art. 1602) y contrato de corretaje mercantil (Código de Comercio Art. 1340-1341).
+   - Validez de los mensajes de datos y firma electrónica probatoria (Ley 527 de 1999 y Decreto 2364 de 2012).
+2. **Pentágono de Blindaje**:
+   - Registro Probatorio en Vecy Agenda y Email Contract.
+   - Lead Shielding en demandas.
+   - Monetización Inevitable (Comisiones de bancos aliados por créditos hipotecarios y de aseguradoras por pólizas).
+   - Sello Criptográfico Digital con QR escaneable en PDFs.
+   - Auditoría de matrículas inmobiliarias con JanIA.
+
+### Acciones Técnicas Ejecutadas
+- `shared/const.ts`:
+  * Enriquecido `VECY_COMMISSION_MODEL` incorporando el modelo **80 / 20** de Venta Directa con Infraestructura VECY, el **período de gracia de 5 días**, y la sección doctrinal `antiBypassTelemetry`.
+  * Incrementada la versión del sistema a `v32.65`.
+- `package.json`: Versión actualizada a `32.65.0`.
+- `server/_core/emailContractService.ts`:
+  * Importados `qrcode` y `node:crypto`.
+  * Implementado en `createContractPdf` el cálculo criptográfico del CUV (`VECY-CTR-...`), el hash SHA-256 inmutable y la URL de validación pública.
+  * Generación dinámica e incrustación de Código QR de 140x140 mediante `pdfDoc.embedPng(qrBuffer)`.
+  * Diseñado el Sello de Seguridad Digital oficial (Ley 527 de 1999) con borde dorado, código QR a la izquierda, metadatos criptográficos a la derecha y pie de página con CUV en cada hoja.
+  * Enriquecido el Parágrafo Segundo de la Cláusula Quinta con mención explícita a la telemetría forense de clics, enlaces y botones como prueba legal inmutable del corretaje.
+- `server/_core/prompts/grupos/PROYECTO_Vecy Network.md`: Actualizado el system prompt de JanIA con la doctrina del 80/20, gracia de 5 días y blindaje contra bypass.
+- `server/_core/cronService.ts`: Actualizada la directriz de JanIA Coach inmobiliaria para difundir pedagógicamente el modelo 80/20 y la trazabilidad digital.
+- `server/__tests__/emailContractService.test.ts`: Creado test unitario para verificar la generación íntegra del PDF con QR, CUV y sello digital (159/159 tests pasando al 100%).
+- Compilación y Build: `tsc --noEmit` con 0 errores y bundle de producción de Vite + esbuild generado exitosamente.
+
+---
+
 ## 📋 SESIÓN v32.64 — 08 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera
