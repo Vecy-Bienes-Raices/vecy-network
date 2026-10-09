@@ -647,7 +647,16 @@ export function getEmpatheticReactionEmoji(
     return '📄';
   }
 
-  // 2. Cédula / Documento / Verificación / Antecedentes / Policía Nacional
+  // 2. Liquidación Notarial / Escrituración / Gastos Notariales / Promesa de Compraventa / Figuras Jurídicas (Doctrina v32.74: ⚖️)
+  if (
+    clean.includes('notari') || clean.includes('escrituraci') ||
+    clean.includes('promesa') || clean.includes('gastos notariales') ||
+    clean.includes('afectaci') || clean.includes('patrimonio') || clean.includes('interés cultural') || clean.includes('interes cultural')
+  ) {
+    return '⚖️';
+  }
+
+  // 3. Cédula / Documento / Verificación / Antecedentes / Policía Nacional
   if (
     clean.includes('cédula') || clean.includes('cedula') ||
     clean.includes('antecedente') || clean.includes('policía') ||

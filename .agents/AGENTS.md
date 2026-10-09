@@ -172,7 +172,34 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.73 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.74 — Octubre 2026
+
+### Novedades v32.74 (Liquidación Oficial de Gastos Notariales y Registro, Doctrina de Figuras Jurídicas BIC / Afectación / Patrimonio de Familia / Leasing, y Autonomía Sagrada de IA Pura sin Textos Largos):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Liquidación de Gastos Notariales y Registro según Figuras de Negocio**:
+     - Activada la liquidación según situación del predio (Libre / Con Hipoteca / Con Leasing Habitacional) y forma de pago del comprador (Contado / Crédito Hipotecario / Leasing Habitacional).
+     - Desglose exacto 50/50 de Derechos Notariales (~0.54%), Retención en la fuente (1% o 2.5% si >20.000 UVT a cargo del vendedor), Impuesto de Registro / Beneficencia (1% a cargo del comprador) y Derechos de Registro SNR / ORIP (~0.75% a cargo del comprador).
+     - Detección de ahorro millonario en Cesión de Leasing Habitacional: al no transferirse el dominio en matrícula (el banco fiduciario continúa como dueño), el comprador se ahorra el 1.75% en beneficencia y registro de compraventa.
+  2. **Doctrina Notarial y Estudio de Títulos Integral**:
+     - *Afectación a Vivienda Familiar (Ley 258/1996 y Ley 854/2003):* Comparecencia y firma obligatoria de ambos cónyuges/compañeros para cancelarla.
+     - *Patrimonio de Familia Inembargable (Ley 70/1931):* Si hay hijos menores de edad, exige intervención de Juez o aval del Defensor de Familia del ICBF (trámite de semanas o meses). Si son mayores, se cancela con registros civiles.
+     - *Bien de Interés Cultural (BIC) / Patrimonio Cultural (Ley 397/1997, Ley 1185/2008):* Alerta bancaria: las entidades financieras NO suelen otorgar crédito hipotecario ni leasing sobre inmuebles BIC por restricciones de modificación (licencias IDPC/MinCultura) e inembargabilidad/dificultad de remate. La compraventa casi siempre debe ser de CONTADO.
+     - *Embargos / Medidas Cautelares (Art. 1521 C.C.):* Objeto ilícito. Bloqueo inmediato para escriturar o prometer en venta sin oficio de desembargo radicado en la ORIP.
+  3. **Autonomía Sagrada de IA Pura y Brevedad en WhatsApp**:
+     - JanIA opera con autonomía plena: los guiones de saludos, invitaciones a canales y reseñas son SOLAMENTE EJEMPLOS Y GUÍAS DE REFERENCIA, no scripts rígidos a repetir al pie de la letra.
+     - Supresión total de despachos automáticos y forzados de mensajes de Google Reviews tras entregas de herramientas.
+     - Prohibición estricta de textos largos en WhatsApp: respuestas concisas, estructuradas y dinámicas (máximo 2-3 párrafos cortos) para evitar fatiga visual y el botón "Leer más".
+     - Alerta de promesa de compraventa: Cuando un usuario indique que va para la notaría a firmar promesa (como Martha Mesa), JanIA lo felicita con alegría y le ofrece de inmediato la liquidación de gastos notariales.
+  4. **Modificaciones Implementadas**:
+     - `server/_core/notarialExpenseService.ts`: Nuevo motor de liquidación notarial y asesoría de figuras jurídicas.
+     - `server/routers/janIA.ts`: Procedimiento tRPC `calcularGastosNotariales`.
+     - `server/_core/janIA.ts`: Interceptor notarial en DM y prompt enriquecido con doctrina notarial, autonomía de IA Pura y concisión.
+     - `server/_core/whatsapp-match.ts`: Interceptores prioritarios en DMs, reactivación de sesiones silenciadas y supresión de dispatches forzados de reseñas.
+     - `server/_core/whatsapp-utils.ts`: Reacción empática `⚖️`.
+     - `server/__tests__/regression.test.ts`: Test suite con 162/162 pruebas pasando al 100%.
+     - `shared/const.ts` (`v32.74`) y `package.json` (`32.74.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.73 — Octubre 2026
 
 ### Novedades v32.73 (Verificación Multi-Cédula Simultánea, Soporte de Conectores 'CC No.' y Memoria de Sesión de Identidad contra Pérdida de Contexto):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

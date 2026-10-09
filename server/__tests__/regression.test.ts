@@ -3354,6 +3354,121 @@ Adriana Rebeca Orejuela`;
       expect(step2.chip).toBe("AAA0058EEXS");
       expect(hasPendingIduSession(testSender)).toBe(false);
     });
+
+    it("Doctrina v32.74: Motor de Liquidación Notarial, Figuras Jurídicas (BIC, Afectación, Patrimonio de Familia, Leasing y Crédito)", async () => {
+      const {
+        liquidarGastosNotariales,
+        extractNotarialExpenseParams,
+        explainNotarialFigures,
+        executeNotarialAssistanceFromWhatsApp,
+        hasPendingNotarialSession,
+        clearPendingNotarialSession
+      } = await import("../_core/notarialExpenseService");
+      const { getEmpatheticReactionEmoji } = await import("../_core/whatsapp-utils");
+
+      // 1. Reacción empática ⚖️
+      expect(getEmpatheticReactionEmoji("JanIA, cuánto se va en gastos notariales")).toBe("⚖️");
+      expect(getEmpatheticReactionEmoji("Vamos a firmar promesa en notaria")).toBe("⚖️");
+      expect(getEmpatheticReactionEmoji("Qué pasa si tiene afectación familiar")).toBe("⚖️");
+
+      // 2. Liquidación Contado ($400 MM libre de todo)
+      const resContado = liquidarGastosNotariales({
+        precioVenta: 400000000,
+        estadoPredio: "libre",
+        formaPago: "contado"
+      });
+      expect(resContado.gastosVendedor.derechosNotariales50Pct).toBe(1080000); // 400M * 0.0054 / 2
+      expect(resContado.gastosVendedor.retencionFuente).toBe(4000000); // 1%
+      expect(resContado.gastosComprador.impuestoRegistroBeneficencia).toBe(4000000); // 1%
+      expect(resContado.gastosComprador.derechosRegistroOrip).toBe(3000000); // 0.75%
+      expect(resContado.reportText).toContain("LIQUIDACIÓN ESTIMADA DE GASTOS NOTARIALES");
+
+      // 3. Liquidación con Hipoteca y Crédito Hipotecario ($600 MM)
+      const resHipotecas = liquidarGastosNotariales({
+        precioVenta: 600000000,
+        estadoPredio: "hipoteca",
+        formaPago: "hipoteca"
+      });
+      expect(resHipotecas.gastosVendedor.cancelacionHipoteca).toBeGreaterThan(500000);
+      expect(resHipotecas.gastosComprador.constitucionHipoteca).toBeGreaterThan(0);
+      expect(resHipotecas.advertenciasJuridicas.some(a => a.includes("Predio con Hipoteca"))).toBe(true);
+
+      // 4. Cesión de Leasing Habitacional ($800 MM) -> Detección de Ahorro Millonario
+      const resLeasing = liquidarGastosNotariales({
+        precioVenta: 800000000,
+        estadoPredio: "leasing",
+        formaPago: "leasing"
+      });
+      expect(resLeasing.ahorroLeasingDetectado).toBe(14000000); // 1% + 0.75% = 14 millones ahorrados
+      expect(resLeasing.gastosComprador.impuestoRegistroBeneficencia).toBe(0);
+      expect(resLeasing.reportText).toContain("Ahorro por Cesión de Leasing");
+
+      // 5. Afectación a Vivienda Familiar
+      const resAfectacion = liquidarGastosNotariales({
+        precioVenta: 350000000,
+        afectacionViviendaFamiliar: true
+      });
+      expect(resAfectacion.gastosVendedor.cancelacionAfectacionVivienda).toBe(220000);
+      expect(resAfectacion.advertenciasJuridicas.some(a => a.includes("Afectación a Vivienda Familiar"))).toBe(true);
+      expect(resAfectacion.advertenciasJuridicas.some(a => a.includes("ambos cónyuges"))).toBe(true);
+
+      // 6. Patrimonio de Familia Inembargable
+      const resPatrimonio = liquidarGastosNotariales({
+        precioVenta: 300000000,
+        patrimonioFamilia: true
+      });
+      expect(resPatrimonio.gastosVendedor.cancelacionPatrimonioFamilia).toBe(280000);
+      expect(resPatrimonio.advertenciasJuridicas.some(a => a.includes("ICBF") || a.includes("menores"))).toBe(true);
+
+      // 7. Bien de Interés Cultural (BIC) / Patrimonio Cultural -> Alerta Bancaria
+      const resBic = liquidarGastosNotariales({
+        precioVenta: 900000000,
+        bienInteresCultural: true
+      });
+      expect(resBic.advertenciasJuridicas.some(a => a.includes("Bien de Interés Cultural") && a.includes("NO aprueban crédito"))).toBe(true);
+
+      // 8. Medida Cautelar / Embargo -> Alerta Bloqueo
+      const resEmbargo = liquidarGastosNotariales({
+        precioVenta: 500000000,
+        embargoMedidaCautelar: true
+      });
+      expect(resEmbargo.esInviableJuridicamente).toBe(true);
+      expect(resEmbargo.advertenciasJuridicas.some(a => a.includes("EMBARGO") && a.includes("objeto ilícito"))).toBe(true);
+
+      // 9. Respuestas Explicativas Doctrinales (explainNotarialFigures)
+      const expBic = explainNotarialFigures("¿Qué pasa si el inmueble tiene patrimonio cultural o es de interés cultural?");
+      expect(expBic.isQuestion).toBe(true);
+      expect(expBic.answerText).toContain("Bien de Interés Cultural (BIC)");
+      expect(expBic.answerText).toContain("NO aprueban crédito hipotecario");
+      expect(expBic.answerText).toContain("CONTADO");
+
+      const expAfectacion = explainNotarialFigures("Qué sucede con afectación familiar o sin afectación");
+      expect(expAfectacion.isQuestion).toBe(true);
+      expect(expAfectacion.answerText).toContain("Afectación a Vivienda Familiar");
+      expect(expAfectacion.answerText).toContain("AMBOS cónyuges");
+
+      const expDiferencia = explainNotarialFigures("cuál es la diferencia entre patrimonio de familia y patrimonio cultural son anotaciones diferentes");
+      expect(expDiferencia.isQuestion).toBe(true);
+      expect(expDiferencia.answerText).toContain("Diferencia entre Patrimonio de Familia y Patrimonio Cultural");
+
+      // 10. Flujo interactivo en WhatsApp (Martha Mesa caso: "voy para la notaría a firmar promesa")
+      const testSenderNotaria = "martha-mesa@s.whatsapp.net";
+      clearPendingNotarialSession(testSenderNotaria);
+      expect(hasPendingNotarialSession(testSenderNotaria)).toBe(false);
+
+      // Paso 1: usuario avisa que va a firmar sin dar precio
+      const flowStep1 = await executeNotarialAssistanceFromWhatsApp("Hola JanIA, voy para la notaría a firmar promesa de compraventa", testSenderNotaria);
+      expect(flowStep1.isNotarialRequest).toBe(true);
+      expect(flowStep1.reportText).toContain("Valor de la compraventa");
+      expect(hasPendingNotarialSession(testSenderNotaria)).toBe(true);
+
+      // Paso 2: usuario da el valor y condiciones
+      const flowStep2 = await executeNotarialAssistanceFromWhatsApp("El valor es 450 millones, predio libre y compran con crédito", testSenderNotaria);
+      expect(flowStep2.isNotarialRequest).toBe(true);
+      expect(flowStep2.calculatedResult?.precioVenta).toBe(450000000);
+      expect(flowStep2.calculatedResult?.formaPago).toBe("hipoteca");
+      expect(hasPendingNotarialSession(testSenderNotaria)).toBe(false);
+    });
   });
 });
 

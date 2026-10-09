@@ -1952,6 +1952,24 @@ export const janIARouter = router({
       });
     }),
 
+  // Liquidación y cálculo de gastos notariales y de registro en Colombia (SNR 2026)
+  calcularGastosNotariales: publicProcedure
+    .input(
+      z.object({
+        precioVenta: z.number().min(0),
+        estadoPredio: z.enum(['libre', 'hipoteca', 'leasing']).default('libre'),
+        formaPago: z.enum(['contado', 'hipoteca', 'leasing']).default('contado'),
+        montoCredito: z.number().min(0).optional(),
+        saldoHipotecaVendedor: z.number().min(0).optional(),
+        ciudad: z.string().default('Bogotá'),
+        esCesionLeasing: z.boolean().default(false),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { liquidarGastosNotariales } = await import('../_core/notarialExpenseService');
+      return liquidarGastosNotariales(input);
+    }),
+
   // Disparo manual/inmediato del tip del día a Grupo 2 y Canal oficial
   triggerDailyTip: publicProcedure
     .mutation(async () => {

@@ -1123,14 +1123,16 @@ export class JaniaMatchBot {
 
             if (isMuted) {
               const { extractCedulaForVerification } = await import('./identityVerificationService');
+              const { extractNotarialExpenseParams, hasPendingNotarialSession } = await import('./notarialExpenseService');
               const isCedulaReq = extractCedulaForVerification(body, true).found;
               const isPredialReq = body.toLowerCase().includes('predial') || body.toLowerCase().includes('chip') || body.toLowerCase().includes('hacienda');
               const isIduReq = body.toLowerCase().includes('idu') || body.toLowerCase().includes('valorizacion') || body.toLowerCase().includes('valorización');
+              const isNotarialReq = hasPendingNotarialSession(senderId) || extractNotarialExpenseParams(body, senderId).found || /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*familiar|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural)/i.test(body);
 
-              if (cleanStart.startsWith("agente jania") || isCedulaReq || isPredialReq || isIduReq) {
+              if (cleanStart.startsWith("agente jania") || isCedulaReq || isPredialReq || isIduReq || isNotarialReq) {
                 await muteSession(senderId, false).catch(err => console.error("Error unmuting session:", err));
                 isMuted = false;
-                console.log(`[JANIA-MATCH] Sesión reactivada automáticamente mediante ${isCedulaReq ? 'verificación de documento' : (isPredialReq ? 'asistencia de predial' : (isIduReq ? 'paz y salvo de valorización IDU' : 'comando de cliente'))} para ${senderId}`);
+                console.log(`[JANIA-MATCH] Sesión reactivada automáticamente mediante ${isCedulaReq ? 'verificación de documento' : (isPredialReq ? 'asistencia de predial' : (isIduReq ? 'paz y salvo de valorización IDU' : (isNotarialReq ? 'liquidación notarial' : 'comando de cliente')))} para ${senderId}`);
               }
             }
 
@@ -1274,6 +1276,31 @@ export class JaniaMatchBot {
       return;
     }
 
+    // ⚖️ INTERCEPTOR PRIORITARIO DM: LIQUIDACIÓN DE GASTOS NOTARIALES Y ASESORÍA DE FIGURAS JURÍDICAS (v32.74)
+    const { executeNotarialAssistanceFromWhatsApp, hasPendingNotarialSession } = await import('./notarialExpenseService');
+    const isNotarialContext = 
+      (senderId && hasPendingNotarialSession(senderId)) ||
+      /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|afectaci[oó]n\s*familiar|sin\s*afectaci[oó]n|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural|bien\s*de\s*inter[eé]s|anotaci[oó]n\s*diferente)/i.test(body);
+
+    if (isNotarialContext) {
+      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
+      try {
+        const notarialCheck = await executeNotarialAssistanceFromWhatsApp(body, senderId, true);
+        if (notarialCheck.isNotarialRequest && notarialCheck.reportText) {
+          console.log(`[JANIA-MATCH] [DM] Liquidación o consulta notarial atendida para ${senderId}`);
+          const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
+          const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'notarial', notarialCheck.reportText, true);
+          await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
+          appendDmHistory(senderId, 'user', body);
+          appendDmHistory(senderId, 'assistant', deliveredText);
+          await this.logToDb(senderId, 'janIA', deliveredText);
+          return;
+        }
+      } finally {
+        stopPresence();
+      }
+    }
+
     // 🏛️ INTERCEPTOR PRIORITARIO DM: COMPLETAR SESIÓN PENDIENTE PAZ Y SALVO IDU (VALORIZACIÓN)
     const { hasPendingIduSession, executeIduAssistanceFromWhatsApp } = await import('./iduValorizacionService');
     if (senderId && hasPendingIduSession(senderId)) {
@@ -1291,11 +1318,6 @@ export class JaniaMatchBot {
               fileName: iduPendingCheck.pdfFileName || `Paz_y_Salvo_IDU_${iduPendingCheck.chip}_2026.pdf`,
               caption: deliveredText
             }, { quoted: mainMsg, allowDirectMessage: true });
-
-            const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
-            await new Promise(r => setTimeout(r, 1500));
-            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
-            this.schedulePostReviewGroupInvitation(senderId, userName);
           } else {
             await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
           }
@@ -1326,11 +1348,6 @@ export class JaniaMatchBot {
               fileName: iduCheck.pdfFileName || `Paz_y_Salvo_IDU_${iduCheck.chip}_2026.pdf`,
               caption: deliveredText
             }, { quoted: mainMsg, allowDirectMessage: true });
-
-            const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
-            await new Promise(r => setTimeout(r, 1500));
-            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
-            this.schedulePostReviewGroupInvitation(senderId, userName);
           } else {
             await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
           }
@@ -1361,12 +1378,6 @@ export class JaniaMatchBot {
               fileName: predialPendingCheck.pdfFileName || `Factura_Predial_${predialPendingCheck.chip}_2026.pdf`,
               caption: deliveredText
             }, { quoted: mainMsg, allowDirectMessage: true });
-
-            // Despacho desacoplado de reseña de Google Reviews (Doctrina v32.54: Sin emojis de recomendación competidores)
-            const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
-            await new Promise(r => setTimeout(r, 1500));
-            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
-            this.schedulePostReviewGroupInvitation(senderId, userName);
           } else {
             await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
           }
@@ -1397,12 +1408,6 @@ export class JaniaMatchBot {
               fileName: predialCheck.pdfFileName || `Factura_Predial_${predialCheck.chip}_2026.pdf`,
               caption: deliveredText
             }, { quoted: mainMsg, allowDirectMessage: true });
-
-            // Despacho desacoplado de reseña de Google Reviews (Doctrina v32.54: Sin emojis de recomendación competidores)
-            const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
-            await new Promise(r => setTimeout(r, 1500));
-            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
-            this.schedulePostReviewGroupInvitation(senderId, userName);
           } else {
             await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
           }
@@ -1431,14 +1436,6 @@ export class JaniaMatchBot {
           appendDmHistory(senderId, 'user', body);
           appendDmHistory(senderId, 'assistant', deliveredText);
           await this.logToDb(senderId, 'janIA', deliveredText);
-
-          // Si la verificación fue exitosa, enviar desacoplada la reseña de Google Reviews (Doctrina v32.54)
-          if (idCheck.success) {
-            const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
-            await new Promise(r => setTimeout(r, 1500));
-            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
-            this.schedulePostReviewGroupInvitation(senderId, userName);
-          }
           return;
         }
       } finally {
@@ -2710,6 +2707,26 @@ export class JaniaMatchBot {
   private async handlePrivateDmConversation(msg: proto.IWebMessageInfo, senderId: string, rawPhone: string, bodyText: string) {
     try {
       const realName = msg.pushName || `Asesor +${rawPhone}`;
+
+      // ⚖️ INTERCEPTOR ADMIN: LIQUIDACIÓN DE GASTOS NOTARIALES Y ASESORÍA DE FIGURAS JURÍDICAS (v32.74)
+      const { executeNotarialAssistanceFromWhatsApp, hasPendingNotarialSession } = await import('./notarialExpenseService');
+      const isNotarialReq = 
+        (senderId && hasPendingNotarialSession(senderId)) ||
+        /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|afectaci[oó]n\s*familiar|sin\s*afectaci[oó]n|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural|bien\s*de\s*inter[eé]s|anotaci[oó]n\s*diferente)/i.test(bodyText);
+
+      if (isNotarialReq) {
+        try {
+          await this.sock.sendPresenceUpdate('composing', senderId);
+          await this.sock.sendMessage(senderId, { react: { text: '⚖️', key: msg.key } }).catch(() => {});
+        } catch (_) {}
+        const notarialCheck = await executeNotarialAssistanceFromWhatsApp(bodyText, senderId, true);
+        if (notarialCheck.isNotarialRequest && notarialCheck.reportText) {
+          await this.queuedSend(senderId, notarialCheck.reportText, { quoted: msg, allowDirectMessage: true });
+          await this.logToDb(senderId, 'janIA', notarialCheck.reportText);
+          await this.sock.sendPresenceUpdate('paused', senderId);
+          return;
+        }
+      }
 
       // 🏛️ INTERCEPTOR ADMIN: ASISTENCIA PAZ Y SALVO IDU BOGOTÁ (VALORIZACIÓN)
       const isIduReq = bodyText.toLowerCase().includes('idu') || bodyText.toLowerCase().includes('valorizacion') || bodyText.toLowerCase().includes('valorización');

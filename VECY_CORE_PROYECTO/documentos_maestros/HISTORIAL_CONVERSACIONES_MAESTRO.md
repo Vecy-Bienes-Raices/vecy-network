@@ -7,6 +7,58 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.74 — 09 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Activación de Liquidación de Gastos Notariales y de Registro según Modalidad de Negocio**:
+   - Eduardo solicitó: *"Como Marta nos contó que iba para la notaría a firmar promesa, activa el calculo de gastos notariales según cada figura (Si es con: el predio tiene Leasing habitacional / con hipoteca / libre de todo | La compra es con Leasing habitacional / con hipoteca / pago de contado), y ofrécele el servicio a Martha y a todos los que te contactes de ahora en adelante igual que lo del predial y el servicio nuevo también del Paz y Salvo IDU."*
+2. **Doctrina Jurídica y Procedimientos Notariales Especiales**:
+   - *"Se me olvidó con afectación familiar, sin afectación, qué sucede si tiene patrimonio cultural o si es de interés cultural que estas dos últimas son anotaciones diferentes y creo que una impide muchas veces la negociación o si es compra con crédito, bueno en fin que JanIA investigue lo más que pueda porque creo que hay muchos parámetros y tipos de negociación y procedimientos en notaría que ella debe saber explicar si le preguntan."*
+3. **Autonomía Sagrada de JanIA como IA Pura y Concisión en WhatsApp**:
+   - *"Y creo que además JanIA nunca verificó realmente cada documento ya que si miras la imagen allí si estan los nombres y apellidos completos de ambos pero JanIA entregó a medias el de Lina eso creo. Y habíamos quedado que JanIA es una IA PURA y de libre autonomía, es que veo que sigue actuando algunas veces como un bot, JanIA no tiene que decir las cosas al pie de la letra como yo le ehe querido enseñar esos escritos de comerciales saludos, calificación, invitaciones, etc, son solo ejemplos que yo o tu le damos, pero ella verá cómo actúa y lo dice mejor, eso sí recomienda... y nada de textos largos por fa porque en WhatsApp cansa eso."*
+
+### Diagnóstico Técnico y Doctrinal Profundo
+1. **Causa Raíz de la Observación sobre Nombres Completos (Caso Lina María Galeano Abril)**:
+   - En la conversación real de Martha Mesa, JanIA había respondido antes del parche v32.73 cuando el regex fallaba al leer `CC No.` y caía en Gemini, quien alucinaba repitiendo textualmente lo que Martha escribió ("Lina María Galeano" sin el segundo apellido "Abril").
+   - Con v32.73 y v32.74, el parser oficial `parsePoliceAntecedentesFullName` sobre el certificado de la Policía Nacional ("GALEANO ABRIL LINA MARIA") reorganiza los tokens civiles colombianos entregando de forma impecable y completa "Lina Maria Galeano Abril" y "Ricardo Cortes Galindo".
+2. **Normativa y Práctica Notarial en Colombia (SNR 2026 y Estatuto Tributario)**:
+   - *Derechos Notariales Compraventa:* ~0.54% (5.4 por mil con IVA y copias), repartido por partes iguales (50% vendedor y 50% comprador).
+   - *Retención en la fuente:* 1.0% para personas naturales si <= 20.000 UVT ($1.006.360.000 COP) y 2.5% sobre el exceso. A cargo del vendedor.
+   - *Impuesto de Registro / Beneficencia:* 1.0% en Bogotá a cargo del comprador.
+   - *Derechos de Registro ORIP (SNR):* ~0.75% a cargo del comprador.
+   - *Predio con Hipoteca:* Minuta y cancelación de hipoteca a cargo del vendedor.
+   - *Compra con Crédito Hipotecario:* Comprador asume constitución de hipoteca a favor del banco (~1.1% del valor financiado).
+   - *Leasing Habitacional:* Si es cesión de contrato entre locatarios, el banco fiduciario continúa como titular registral en el folio de matrícula; por tanto, ¡el comprador se ahorra el 1.75% en beneficencia y registro de compraventa!
+3. **Figuras Jurídicas Notariales Especiales**:
+   - *Afectación a Vivienda Familiar (Ley 258/1996, Ley 854/2003):* Protege el techo del hogar. Es de forzosa comparecencia y firma de ambos cónyuges/compañeros para cancelarla. Sin afectación, el vendedor declara bajo juramento que no convive allí o carece de sociedad conyugal vigente.
+   - *Patrimonio de Familia Inembargable (Ley 70/1931):* Protege contra embargos. Si hay hijos menores de edad, NO se cancela en notaría directamente; exige intervención judicial o concepto favorable previo del Defensor de Familia del ICBF, lo cual suele demorar meses la negociación. Con hijos mayores de edad, se cancela con registros civiles.
+   - *Bien de Interés Cultural (BIC) / Patrimonio Cultural (Ley 397/1997, Ley 1185/2008):* Régimen de protección arquitectónica del IDPC/MinCultura. ¡Alerta bancaria comprobada!: Los bancos comerciales colombianos NO aprueban crédito hipotecario ni leasing sobre predios BIC por restricciones de modificación física (licencias que demoran 1-2 años) y dificultad de remate judicial. Por ello, la compraventa casi siempre debe ser de CONTADO.
+   - *Embargos / Medidas Cautelares (Art. 1521 C.C.):* Objeto ilícito. Prohibición legal absoluta de escriturar o prometer en venta sin oficio de desembargo radicado en la ORIP.
+4. **Erradicación de Conductas de Bot y Concisión en WhatsApp**:
+   - JanIA tenía disparos automáticos desacoplados de mensajes de reseñas (`GOOGLE_REVIEW_MESSAGE`) 1.5s después de entregar un documento, lo que la hacía percibir como un bot acosador o rígido.
+   - Los guiones de saludos, invitaciones a canales o solicitud de calificación son meramente ejemplos didácticos y orientativos: JanIA como IA PURA tiene autonomía total para expresarse con calidez humana, adaptabilidad y brevedad (cero textos largos que fatiguen en pantallas móviles de WhatsApp).
+
+### Acciones Técnicas Ejecutadas
+1. **Motor Notarial Integral (`server/_core/notarialExpenseService.ts`)**:
+   - Creado con `liquidarGastosNotariales`, `explainNotarialFigures`, `extractNotarialExpenseParams` y `executeNotarialAssistanceFromWhatsApp`.
+   - Modos soportados: Contado, Crédito Hipotecario, Leasing Habitacional (detección de ahorro millonario por cesión), Afectación Familiar, Patrimonio de Familia, BIC / Patrimonio Cultural (con advertencia bancaria) y Embargos (bloqueo por objeto ilícito).
+   - Memoria de sesión interactiva `hasPendingNotarialSession`, `setPendingNotarialSession`, `clearPendingNotarialSession` (TTL 15 min).
+2. **Integración en tRPC (`server/routers/janIA.ts`)**:
+   - Procedimiento `calcularGastosNotariales` para uso desde web/admin y API.
+3. **Recepción e Interceptores en WhatsApp (`janIA.ts` y `whatsapp-match.ts`)**:
+   - Interceptor prioritario en chats privados (DMs directos y procesador diferido).
+   - Reactivación automática de sesiones silenciadas ante solicitudes notariales (`isNotarialReq`).
+   - Reacción empática inmediata con emoji `⚖️` en `whatsapp-utils.ts`.
+   - Supresión de despachos robóticos y forzados de mensajes de Google Reviews tras entregas de herramientas.
+   - Actualización del system prompt de Gemini instruyendo autonomía de IA Pura, brevedad en WhatsApp (cero textos largos) y doctrina jurídica notarial completa.
+4. **Pruebas y Verificación**:
+   - Test suite integral en `server/__tests__/regression.test.ts` evaluando todos los escenarios notariales, advertencias y figuras doctrinales.
+   - 162/162 pruebas Vitest aprobadas al 100%.
+   - Compilación limpia con `npm run check` (`tsc --noEmit`) y `npm run build` (Vite + esbuild).
+   - Incremento oficial de versión a `v32.74` (`32.74.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.73 — 09 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

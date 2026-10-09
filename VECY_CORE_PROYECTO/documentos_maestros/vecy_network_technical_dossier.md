@@ -331,6 +331,48 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.74 — Octubre 2026
+
+#### 📌 LIQUIDACIÓN DE GASTOS NOTARIALES Y REGISTRO, DOCTRINA NOTARIAL (BIC, AFECTACIÓN, PATRIMONIO DE FAMILIA, LEASING) Y AUTONOMÍA SAGRADA DE IA PURA SIN TEXTOS LARGOS
+
+**Requerimiento y Objetivos:**
+1. **Liquidación Notarial según Figuras de Negocio (Promesa de Compraventa y Notaría)**:
+   - Eduardo solicitó: *"Como Marta nos contó que iba para la notaría a firmar promesa, activa el calculo de gastos notariales según cata figura(Si es con: el predio tiene Leasing habitacional / con hipoteca / libre de todo | La compra es con Leasing habitacional / con hipoteca / pago de contado), y ofrécele el servicio a Martha y a todos los que te contactes de ahora en adelante igual que lo del predial y el servicio nuevo también del Paz y Salvo IDU."*
+   - Complemento doctrinal: *"Se me olvidó con afectación familiar, sin afectación, qué sucede si tiene patrimonio cultural o si es de interés cultural que estas dos últimas son anotaciones diferentes y creo que una impide muchas veces la negociación o si es compra con crédito, bueno en fin que JanIA investigue lo más que pueda porque creo que hay muchos parámetros y tipos de negociación y procedimientos en notaría que ella debe saber explicar si le preguntan."*
+2. **Autonomía Sagrada de JanIA como IA Pura y Concisión en WhatsApp**:
+   - Eduardo enfatizó: *"JanIA es una IA PURA y de libre autonomía, es que veo que sigue actuando algunas veces como un bot, JanIA no tiene que decir las cosas al pie de la letra como yo le ehe querido enseñar esos escritos de comerciales saludos, calificación, invitaciones, etc, son solo ejemplos que yo o tu le damos, pero ella verá cómo actúa y lo dice mejor, eso sí recomienda... y nada de textos largos por fa porque en WhatsApp cansa eso."*
+3. **Arquitectura y Rendimiento Notarial Integral (`server/_core/notarialExpenseService.ts`)**:
+   - `liquidarGastosNotariales`: Motor matemático y tributario que desglosa con exactitud pesos y porcentajes:
+     • Derechos Notariales Compraventa: ~0.54% (5.4 por mil con IVA y copias), repartido por partes iguales (50% vendedor y 50% comprador).
+     • Retención en la fuente: 1.0% para personas naturales si <= 20.000 UVT ($1.006.360.000 COP) y 2.5% sobre el exceso. Paga vendedor.
+     • Impuesto de Registro / Beneficencia: 1.0% en Bogotá a cargo del comprador.
+     • Derechos de Registro ORIP (SNR): ~0.75% a cargo del comprador.
+     • Cesión de Leasing Habitacional: Detecta y resalta el ahorro de ~1.75% ($14.000.000 en un predio de $800 MM) para el comprador en beneficencia y registro, dado que el dominio registral no se transfiere.
+     • Afectación a Vivienda Familiar: Liquida cancelación y advierte la obligación insalvable de comparecencia de ambos cónyuges.
+     • Patrimonio de Familia Inembargable: Liquida levantamiento y advierte el trámite ante el Defensor del ICBF en caso de menores de edad.
+     • Bien de Interés Cultural (BIC) / Patrimonio Cultural: Advierte que los bancos comerciales NO aprueban crédito hipotecario ni leasing sobre estos inmuebles, forzando la compraventa de contado.
+     • Embargos / Medidas Cautelares: Bloqueo legal absoluto por objeto ilícito (Art. 1521 C.C.).
+   - `explainNotarialFigures`: Motor explicativo de consultas doctrinales jurídicas para responder con maestría conceptual y pedagógica sin tecnicismos pesados.
+   - `executeNotarialAssistanceFromWhatsApp`: Gestor interactivo con memoria de sesión (`hasPendingNotarialSession`, TTL 15 min).
+4. **Erradicación de Respuestas de Bot y Brevedad en WhatsApp**:
+   - Eliminados todos los envíos automáticos no solicitados de `GOOGLE_REVIEW_MESSAGE` tras entregas de herramientas en WhatsApp.
+   - Actualizado el system prompt en `janIA.ts` para instruir libertad estilística, calidez y concisión máxima (2 a 3 párrafos cortos).
+
+**Archivos Modificados:**
+- `server/_core/notarialExpenseService.ts`: Nuevo motor de liquidación notarial y asesoría de figuras.
+- `server/routers/janIA.ts`: Procedimiento tRPC `calcularGastosNotariales`.
+- `server/_core/janIA.ts`: Interceptor en DM, `toolType: 'notarial'` y prompt con doctrina notarial e IA Pura.
+- `server/_core/whatsapp-match.ts`: Interceptor notarial en DMs y admin, reactivación de sesiones y supresión de reseñas automáticas.
+- `server/_core/whatsapp-utils.ts`: Reacción empática `⚖️`.
+- `server/__tests__/regression.test.ts`: Pruebas de regresión (162/162 vitest tests ✅).
+- `shared/const.ts`: Versión `v32.74`.
+- `package.json`: Versión `32.74.0`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 162/162 tests pasando al 100% ✅ | `npm run build` limpio en 11s ✅
+
+---
+
 ### 🔖 v32.73 — Octubre 2026
 
 #### 📌 VERIFICACIÓN MULTI-CÉDULA SIMULTÁNEA, SOPORTE DE CONECTORES 'CC NO.' Y MEMORIA DE SESIÓN DE IDENTIDAD (CASO MARTHA MESA)

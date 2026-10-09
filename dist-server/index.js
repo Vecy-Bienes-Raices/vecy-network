@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.73";
+    VECY_VERSION = "v32.74";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -11234,6 +11234,9 @@ function getEmpatheticReactionEmoji(text2, options) {
   if (clean.includes("predial") || clean.includes("chip") || clean.includes("hacienda") || clean.includes("impuesto") || clean.includes("idu") || clean.includes("valorizaci")) {
     return "\u{1F4C4}";
   }
+  if (clean.includes("notari") || clean.includes("escrituraci") || clean.includes("promesa") || clean.includes("gastos notariales") || clean.includes("afectaci") || clean.includes("patrimonio") || clean.includes("inter\xE9s cultural") || clean.includes("interes cultural")) {
+    return "\u2696\uFE0F";
+  }
   if (clean.includes("c\xE9dula") || clean.includes("cedula") || clean.includes("antecedente") || clean.includes("polic\xEDa") || clean.includes("policia") || clean.includes("verificar") || clean.includes("verificacion") || clean.includes("identidad")) {
     return "\u{1F6E1}\uFE0F";
   }
@@ -11424,6 +11427,503 @@ var init_whatsapp_utils = __esm({
     ]);
     CONNECTORS = /* @__PURE__ */ new Set(["de", "del", "la", "las", "los", "el", "van", "von", "y", "di"]);
     cachedVertexToken = null;
+  }
+});
+
+// server/_core/taxEngine.ts
+function liquidarImpuestosVenta(params) {
+  const precioVenta = Math.max(0, params.precioVenta || 0);
+  const costoFiscal = Math.max(0, params.costoFiscal || 0);
+  const anosPosesion = Math.max(0, params.anosPosesion || 0);
+  const limiteUvtRetencion = 2e4 * VALOR_UVT_2026;
+  const esSupera20kUvt = precioVenta > limiteUvtRetencion;
+  const tarifaRetencion = esSupera20kUvt ? 0.025 : 0.01;
+  const retencionFuente = Math.round(precioVenta * tarifaRetencion);
+  const utilidadOriginal = Math.max(0, precioVenta - costoFiscal);
+  let utilidadGravable = utilidadOriginal;
+  let exencionViviendaAplicada = 0;
+  let gananciaOcasional = 0;
+  let esRentaOrdinaria = false;
+  let tarifaGananciaOcasionalPorcentaje = 15;
+  let notas = "";
+  if (anosPosesion < 2) {
+    esRentaOrdinaria = true;
+    tarifaGananciaOcasionalPorcentaje = 0;
+    gananciaOcasional = 0;
+    notas = "Al tener menos de 2 a\xF1os de posesi\xF3n, la utilidad califica como Renta L\xEDquida Ordinaria y se suma a la c\xE9dula general de la persona natural (Tarifa progresiva DIAN del 0% al 39%).";
+  } else {
+    if (params.esViviendaHabitacion) {
+      const exencionMaxima = 5e3 * VALOR_UVT_2026;
+      exencionViviendaAplicada = Math.min(utilidadOriginal, exencionMaxima);
+      utilidadGravable = Math.max(0, utilidadOriginal - exencionViviendaAplicada);
+      notas = `Se aplic\xF3 el beneficio de exenci\xF3n por vivienda de habitaci\xF3n (Hasta 5.000 UVT = $${exencionMaxima.toLocaleString("es-CO")} de utilidad exentas, Art. 311-1 E.T. abonando el producto a AFC/nueva vivienda). `;
+    }
+    gananciaOcasional = Math.round(utilidadGravable * 0.15);
+    notas += "Aplica tarifa \xFAnica del 15% por Ganancia Ocasional sobre la utilidad neta gravable.";
+  }
+  return {
+    valorUVT: VALOR_UVT_2026,
+    precioVenta,
+    costoFiscal,
+    utilidadCalculada: utilidadOriginal,
+    anosPosesion,
+    retencionFuente,
+    tarifaRetencionPorcentaje: tarifaRetencion * 100,
+    esSupera20kUvt,
+    exencionViviendaAplicada,
+    utilidadGravableGananciaOcasional: utilidadGravable,
+    gananciaOcasional,
+    tarifaGananciaOcasionalPorcentaje,
+    esRentaOrdinaria,
+    notas: notas.trim()
+  };
+}
+var VALOR_UVT_2026;
+var init_taxEngine = __esm({
+  "server/_core/taxEngine.ts"() {
+    "use strict";
+    VALOR_UVT_2026 = 50318;
+  }
+});
+
+// server/_core/notarialExpenseService.ts
+var notarialExpenseService_exports = {};
+__export(notarialExpenseService_exports, {
+  clearPendingNotarialSession: () => clearPendingNotarialSession,
+  executeNotarialAssistanceFromWhatsApp: () => executeNotarialAssistanceFromWhatsApp,
+  explainNotarialFigures: () => explainNotarialFigures,
+  extractNotarialExpenseParams: () => extractNotarialExpenseParams,
+  getPendingNotarialSession: () => getPendingNotarialSession,
+  hasPendingNotarialSession: () => hasPendingNotarialSession,
+  liquidarGastosNotariales: () => liquidarGastosNotariales,
+  setPendingNotarialSession: () => setPendingNotarialSession
+});
+function liquidarGastosNotariales(params) {
+  const precioVenta = Math.max(0, Number(params.precioVenta) || 0);
+  const estadoPredio = params.estadoPredio || "libre";
+  const formaPago = params.formaPago || "contado";
+  const ciudad = params.ciudad || "Bogot\xE1";
+  const advertenciasJuridicas = [];
+  if (params.embargoMedidaCautelar) {
+    advertenciasJuridicas.push(
+      "\u26D4 *ALERTA CR\xCDTICA DE EMBARGO:* El inmueble tiene una medida cautelar o embargo judicial vigente. La ley colombiana proh\xEDbe su venta (objeto il\xEDcito). Para firmar promesa o escritura se requiere radicar previamente el oficio de desembargo emitido por el juzgado ante la Oficina de Registro (ORIP)."
+    );
+  }
+  const limite20kUvt = 2e4 * VALOR_UVT_2026;
+  const tarifaRetencionPct = precioVenta > limite20kUvt ? 2.5 : 1;
+  const retencionFuente = Math.round(precioVenta * (tarifaRetencionPct / 100));
+  const derechosNotarialesTotales = Math.round(precioVenta * 54e-4);
+  const derechosNotariales50Pct = Math.round(derechosNotarialesTotales / 2);
+  let cancelacionHipotecaVendedor = 0;
+  if (estadoPredio === "hipoteca") {
+    cancelacionHipotecaVendedor = Math.round(Math.min(12e5, Math.max(55e4, precioVenta * 15e-4)));
+    advertenciasJuridicas.push(
+      "\u{1F3E6} *Predio con Hipoteca:* El banco acreedor debe expedir la minuta de cancelaci\xF3n de hipoteca y certificado de saldo a la fecha para anexar a la escritura p\xFAblica."
+    );
+  }
+  let cancelacionAfectacionVivienda = 0;
+  if (params.afectacionViviendaFamiliar) {
+    cancelacionAfectacionVivienda = 22e4;
+    advertenciasJuridicas.push(
+      "\u{1F48D} *Afectaci\xF3n a Vivienda Familiar (Ley 258/1996):* Es OBLIGATORIO que ambos c\xF3nyuges o compa\xF1eros permanentes firmen la escritura de cancelaci\xF3n. Si uno de los dos no comparece, la notar\xEDa no autoriza la venta."
+    );
+  }
+  let cancelacionPatrimonioFamilia = 0;
+  if (params.patrimonioFamilia) {
+    cancelacionPatrimonioFamilia = 28e4;
+    advertenciasJuridicas.push(
+      "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466} *Patrimonio de Familia Inembargable (Ley 70/1931):* Si hay hijos menores de edad, la cancelaci\xF3n requiere autorizaci\xF3n judicial o tr\xE1mite notarial con concepto del Defensor de Familia del ICBF. Si los hijos son mayores, ambos padres firman aportando los registros civiles."
+    );
+  }
+  const subtotalVendedor = derechosNotariales50Pct + retencionFuente + cancelacionHipotecaVendedor + cancelacionAfectacionVivienda + cancelacionPatrimonioFamilia;
+  let impuestoRegistro = Math.round(precioVenta * 0.01);
+  let derechosRegistroOrip = Math.round(precioVenta * 75e-4);
+  let constitucionHipotecaComprador = 0;
+  let ahorroLeasingDetectado = 0;
+  const esCesion = params.esCesionLeasing || estadoPredio === "leasing" && formaPago === "leasing";
+  if (esCesion) {
+    ahorroLeasingDetectado = impuestoRegistro + derechosRegistroOrip;
+    impuestoRegistro = 0;
+    derechosRegistroOrip = 0;
+    advertenciasJuridicas.push(
+      "\u{1F4D1} *Cesi\xF3n de Leasing Habitacional:* Se formaliza mediante cesi\xF3n de derechos con la entidad bancaria y reconocimiento de firmas en notar\xEDa, ahorrando el pago de impuesto de beneficencia y registro de matr\xEDcula."
+    );
+  } else if (formaPago === "hipoteca") {
+    const montoCredito = params.montoCredito && params.montoCredito > 0 ? params.montoCredito : Math.round(precioVenta * 0.7);
+    constitucionHipotecaComprador = Math.round(montoCredito * 0.011);
+  }
+  if (params.bienInteresCultural) {
+    advertenciasJuridicas.push(
+      "\u{1F3DB}\uFE0F *Bien de Inter\xE9s Cultural (BIC) / Conservaci\xF3n Patrimonial:* Los bancos comerciales generalmente NO aprueban cr\xE9dito hipotecario ni leasing sobre predios BIC por restricciones estructurales y de disposici\xF3n. Si el comprador va a financiar, debe consultar con su banco previamente o negociar pago de CONTADO. Asimismo, cualquier remodelaci\xF3n requiere licencia especial del IDPC o Ministerio de Cultura."
+    );
+  }
+  const subtotalComprador = derechosNotariales50Pct + impuestoRegistro + derechosRegistroOrip + constitucionHipotecaComprador;
+  const totalGastosAproximados = subtotalVendedor + subtotalComprador;
+  const reportText = formatNotarialExpenseText({
+    precioVenta,
+    estadoPredio,
+    formaPago,
+    ciudad,
+    derechosNotariales50Pct,
+    retencionFuente,
+    tarifaRetencionPct,
+    cancelacionHipotecaVendedor,
+    cancelacionAfectacionVivienda,
+    cancelacionPatrimonioFamilia,
+    subtotalVendedor,
+    impuestoRegistro,
+    derechosRegistroOrip,
+    constitucionHipotecaComprador,
+    subtotalComprador,
+    totalGastosAproximados,
+    ahorroLeasingDetectado,
+    esCesionLeasing: esCesion,
+    advertenciasJuridicas,
+    embargoMedidaCautelar: !!params.embargoMedidaCautelar
+  });
+  return {
+    precioVenta,
+    estadoPredio,
+    formaPago,
+    ciudad,
+    esInviableJuridicamente: !!params.embargoMedidaCautelar,
+    gastosVendedor: {
+      derechosNotariales50Pct,
+      retencionFuente,
+      tarifaRetencionPct,
+      cancelacionHipoteca: cancelacionHipotecaVendedor,
+      cancelacionAfectacionVivienda,
+      cancelacionPatrimonioFamilia,
+      subtotalVendedor
+    },
+    gastosComprador: {
+      derechosNotariales50Pct,
+      impuestoRegistroBeneficencia: impuestoRegistro,
+      derechosRegistroOrip,
+      constitucionHipoteca: constitucionHipotecaComprador,
+      subtotalComprador
+    },
+    totalGastosAproximados,
+    ahorroLeasingDetectado: ahorroLeasingDetectado > 0 ? ahorroLeasingDetectado : void 0,
+    advertenciasJuridicas,
+    reportText
+  };
+}
+function formatCurrency(val) {
+  return `$${Math.round(val).toLocaleString("es-CO")}`;
+}
+function formatNotarialExpenseText(p) {
+  const labelPredio = p.estadoPredio === "hipoteca" ? "Con Hipoteca" : p.estadoPredio === "leasing" ? "Con Leasing" : "Libre de grav\xE1menes";
+  const labelPago = p.formaPago === "hipoteca" ? "Cr\xE9dito Hipotecario" : p.formaPago === "leasing" ? "Leasing Habitacional" : "Contado";
+  let t2 = `\u2696\uFE0F *LIQUIDACI\xD3N ESTIMADA DE GASTOS NOTARIALES Y REGISTRO* \u{1F1E8}\u{1F1F4}
+`;
+  t2 += `\u{1F3E2} *Inmueble:* ${formatCurrency(p.precioVenta)} (${p.ciudad}) | *Figura:* ${labelPredio} / ${labelPago}
+
+`;
+  t2 += `\u{1F464} *A CARGO DEL VENDEDOR:*
+`;
+  t2 += `\u2022 50% Derechos Notariales: *${formatCurrency(p.derechosNotariales50Pct)}*
+`;
+  t2 += `\u2022 Retenci\xF3n en la fuente (${p.tarifaRetencionPct}%): *${formatCurrency(p.retencionFuente)}*
+`;
+  if (p.cancelacionHipotecaVendedor > 0) {
+    t2 += `\u2022 Cancelaci\xF3n de Hipoteca del banco: *${formatCurrency(p.cancelacionHipotecaVendedor)}*
+`;
+  }
+  if (p.cancelacionAfectacionVivienda > 0) {
+    t2 += `\u2022 Cancelaci\xF3n Afectaci\xF3n Familiar (Ley 258): *${formatCurrency(p.cancelacionAfectacionVivienda)}*
+`;
+  }
+  if (p.cancelacionPatrimonioFamilia > 0) {
+    t2 += `\u2022 Cancelaci\xF3n Patrimonio de Familia: *${formatCurrency(p.cancelacionPatrimonioFamilia)}*
+`;
+  }
+  t2 += `\u{1F449} *Subtotal Vendedor: ~${formatCurrency(p.subtotalVendedor)} COP*
+
+`;
+  t2 += `\u{1F464} *A CARGO DEL COMPRADOR:*
+`;
+  t2 += `\u2022 50% Derechos Notariales: *${formatCurrency(p.derechosNotariales50Pct)}*
+`;
+  if (p.impuestoRegistro > 0) {
+    t2 += `\u2022 Impuesto de Registro / Beneficencia (1%): *${formatCurrency(p.impuestoRegistro)}*
+`;
+  }
+  if (p.derechosRegistroOrip > 0) {
+    t2 += `\u2022 Derechos de Registro SNR / ORIP (~0.75%): *${formatCurrency(p.derechosRegistroOrip)}*
+`;
+  }
+  if (p.constitucionHipotecaComprador > 0) {
+    t2 += `\u2022 Registro de Cr\xE9dito Hipotecario (~1.1%): *${formatCurrency(p.constitucionHipotecaComprador)}*
+`;
+  }
+  t2 += `\u{1F449} *Subtotal Comprador: ~${formatCurrency(p.subtotalComprador)} COP*
+
+`;
+  if (p.ahorroLeasingDetectado > 0) {
+    t2 += `\u2728 *Ahorro por Cesi\xF3n de Leasing:* Al no haber cambio de due\xF1o en matr\xEDcula, el comprador se ahorra aproximadamente *${formatCurrency(p.ahorroLeasingDetectado)}* en impuestos y registro de compraventa.
+
+`;
+  }
+  if (p.advertenciasJuridicas.length > 0) {
+    t2 += `\u{1F50D} *Cl\xE1usulas y Consideraciones Especiales:*
+`;
+    p.advertenciasJuridicas.forEach((adv) => {
+      t2 += `${adv}
+`;
+    });
+    t2 += `
+`;
+  }
+  t2 += `\u{1F4A1} *Total aproximado escrituraci\xF3n:* ~${formatCurrency(p.totalGastosAproximados)} COP.
+`;
+  t2 += `_C\xE1lculo informativo conforme a tarifas vigentes SNR 2026. Si vas a firmar promesa de compraventa, podemos revisar las cl\xE1usulas para total tranquilidad de las partes \u{1F91D}\u2728_`;
+  return t2;
+}
+function hasPendingNotarialSession(senderId) {
+  const session = pendingNotarialSessions.get(senderId);
+  if (!session) return false;
+  if (Date.now() - session.timestamp > NOTARIAL_SESSION_TTL_MS) {
+    pendingNotarialSessions.delete(senderId);
+    return false;
+  }
+  return true;
+}
+function setPendingNotarialSession(senderId, partial) {
+  pendingNotarialSessions.set(senderId, {
+    timestamp: Date.now(),
+    partialParams: partial
+  });
+}
+function clearPendingNotarialSession(senderId) {
+  pendingNotarialSessions.delete(senderId);
+}
+function getPendingNotarialSession(senderId) {
+  if (!hasPendingNotarialSession(senderId)) return null;
+  return pendingNotarialSessions.get(senderId) || null;
+}
+function explainNotarialFigures(text2) {
+  if (!text2 || typeof text2 !== "string") return { isQuestion: false };
+  const lower = text2.trim().toLowerCase();
+  const isComparisonPatrimonio = /(?:patrimonio\s*cultural|inter[eé]s\s*cultural)/i.test(lower) && /(?:patrimonio\s*de\s*familia)/i.test(lower) || /(?:diferencia.*patrimonio|anotaciones\s*diferentes)/i.test(lower);
+  if (isComparisonPatrimonio) {
+    return {
+      isQuestion: true,
+      answerText: `\u2696\uFE0F *Diferencia entre Patrimonio de Familia y Patrimonio Cultural (BIC):*
+
+Son dos figuras totalmente distintas que aparecen en el folio de matr\xEDcula:
+
+1\uFE0F\u20E3 *Patrimonio de Familia Inembargable (Ley 70/1931):* Protege a la familia contra embargos. Si hay hijos menores, exige aval del ICBF para poder vender.
+2\uFE0F\u20E3 *Patrimonio Cultural / Bien de Inter\xE9s Cultural (Ley 397/1997):* Es una protecci\xF3n urban\xEDstica/arquitect\xF3nica del Estado. Hace que *los bancos NO aprueben cr\xE9dito hipotecario*, obligando casi siempre a comprar de contado.
+
+\xBFTienes la matr\xEDcula inmobiliaria del predio o quieres que liquidemos los gastos notariales? \u{1F91D}`
+    };
+  }
+  const isBicQuestion = /(?:inter[eé]s\s+cultural|patrimonio\s+cultural|patrimonio\s+hist[oó]rico|bic\b|conservaci[oó]n\s+arquitect[oó]nica)/i.test(lower) && /(?:qu[eé]\s+(?:sucede|pasa|implica|es|significa)|impide|afecta|banco|cr[eé]dito|leasing|prestan|vender|comprar|negociaci[oó]n|diferen|anotaci[oó]n|inconveniente)/i.test(lower);
+  if (isBicQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F3DB}\uFE0F *Bien de Inter\xE9s Cultural (BIC) o Patrimonio Cultural:*
+
+Es una anotaci\xF3n registral de conservaci\xF3n hist\xF3rica y arquitect\xF3nica (declarada por el IDPC en Bogot\xE1 o el Ministerio de Cultura a nivel nacional).
+
+\u26A0\uFE0F *\xBFPor qu\xE9 dificulta o impide la negociaci\xF3n con cr\xE9dito bancario?*
+Los bancos comerciales en Colombia (Bancolombia, Davivienda, BBVA, etc.) *generalmente NO aprueban cr\xE9dito hipotecario ni leasing habitacional* sobre predios catalogados como BIC, debido a:
+1\uFE0F\u20E3 *Restricciones estrictas de intervenci\xF3n:* No se pueden demoler ni hacer reformas estructurales o de fachada sin visto bueno y licencias del IDPC/MinCultura que demoran 1 a 2 a\xF1os.
+2\uFE0F\u20E3 *Dificultad de liquidaci\xF3n judicial:* Ante un eventual remate o ejecuci\xF3n por mora, estos bienes tienen un mercado muy restringido.
+
+\u{1F449} *Conclusi\xF3n pr\xE1ctica:* Si el inmueble es BIC, la compraventa casi siempre debe pactarse de *CONTADO (recursos propios)* o mediante cr\xE9dito de libre inversi\xF3n con otra garant\xEDa. Si quieres, \xA1podemos liquidarte los gastos de escrituraci\xF3n de contado de una vez! \u{1F91D}\u2728`
+    };
+  }
+  const isAfectacionQuestion = /(?:afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|afectaci[oó]n\s*familiar|sin\s*afectaci[oó]n)/i.test(lower) && /(?:qu[eé]\s+(?:sucede|pasa|implica|es|significa)|c[oó]mo\s+funciona|se\s*puede\s*vender|ambos|c[oó]nyuge|espos[oa]|firmar|cancelar|notar[ií]a|diferen)/i.test(lower);
+  if (isAfectacionQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F48D} *Afectaci\xF3n a Vivienda Familiar (Ley 258 de 1996 y Ley 854 de 2003):*
+
+Protege el inmueble donde reside la pareja casada o en uni\xF3n marital de hecho:
+
+\u2022 *Con afectaci\xF3n familiar:* No impide la venta, pero es *OBLIGATORIA la comparecencia y firma de AMBOS c\xF3nyuges o compa\xF1eros permanentes* para cancelarla en la misma escritura. Si uno de ellos no firma (por conflicto, separaci\xF3n de hecho o falta de poder notarial), la notar\xEDa *NO puede autorizar la venta*.
+\u2022 *Sin afectaci\xF3n familiar:* El vendedor comparece solo y declara bajo gravedad de juramento en la escritura que no tiene c\xF3nyuge con quien habite all\xED, que tiene otro predio afectado o que el bien no est\xE1 destinado a vivienda familiar.
+
+\xBFDeseas que te liquide los gastos de cancelaci\xF3n de la afectaci\xF3n y compraventa para este predio? \u{1F91D}`
+    };
+  }
+  const isPatrimonioFamiliaQuestion = /(?:patrimonio\s*de\s*familia|inembargable)/i.test(lower) && /(?:qu[eé]\s+(?:sucede|pasa|implica|es|significa)|c[oó]mo\s+funciona|hijos|menores|icbf|cancelar|vender|juez|notar[ií]a|diferen)/i.test(lower);
+  if (isPatrimonioFamiliaQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466} *Patrimonio de Familia Inembargable (Ley 70 de 1931):*
+
+Es una figura jur\xEDdica que protege el techo del hogar contra embargos de acreedores (hasta 250 SMMLV) a favor de c\xF3nyuges e hijos:
+
+\u26A0\uFE0F *\xBFCu\xE1ndo traba o impide la negociaci\xF3n?*
+\u2022 *Si hay hijos menores de edad:* \xA1NO se puede cancelar en notar\xEDa con una simple firma! Requiere tr\xE1mite judicial o notarial con intervenci\xF3n y *concepto favorable previo del Defensor de Familia del ICBF*, demostrando que se subrogar\xE1 en otro inmueble para no desproteger a los menores. Este tr\xE1mite toma semanas o meses.
+\u2022 *Si los hijos ya cumplieron 18 a\xF1os:* Los padres pueden cancelarlo voluntariamente en notar\xEDa aportando los registros civiles que acrediten la mayor\xEDa de edad.
+
+Es una anotaci\xF3n completamente distinta al Patrimonio Cultural/BIC. Si necesitas liquidar los costos de su levantamiento, con gusto te apoyo.`
+    };
+  }
+  const isCreditQuestion = /(?:compra\s*con\s*cr[eé]dito|cr[eé]dito\s*hipotecario|leasing\s*habitacional|cesi[oó]n\s*de\s*leasing)/i.test(lower) && /(?:qu[eé]\s+(?:sucede|pasa|implica|gastos?|cuesta)|c[oó]mo\s+funciona|diferencia|ahorro|notar[ií]a|procedimiento)/i.test(lower);
+  if (isCreditQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F4B3} *Compra con Cr\xE9dito vs Leasing vs Contado:* 
+
+\u2022 *De Contado:* El comprador paga el 50% de notar\xEDa (~0.27%), 1% de beneficencia y ~0.75% de registro ORIP.
+\u2022 *Con Cr\xE9dito Hipotecario:* El comprador asume adem\xE1s la constituci\xF3n de hipoteca a favor del banco (~1.1% del valor financiado). El desembolso se realiza tras registrar la escritura en la ORIP.
+\u2022 *Cesi\xF3n de Leasing:* \xA1Ahorro millonario! Al no haber cambio de due\xF1o registral (el banco fiduciario sigue en matr\xEDcula), el comprador se ahorra el 1.75% en beneficencia y registro de compraventa.
+
+Dime el valor del inmueble y te calculo los valores exactos para ambas partes \u{1F91D}\u2728`
+    };
+  }
+  const isEmbargoQuestion = /(?:embargo|medida\s*cautelar|embargado)/i.test(lower) && /(?:qu[eé]\s+(?:sucede|pasa|implica|es)|se\s*puede\s*vender|notar[ií]a|promesa|negociar)/i.test(lower);
+  if (isEmbargoQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u26D4 *Inmueble con Embargo Judicial (Art. 1521 C\xF3digo Civil):*
+
+Vender un predio embargado acarrea *objeto il\xEDcito*. Ninguna notar\xEDa puede autorizar la escritura ni es jur\xEDdicamente v\xE1lido firmar promesa de venta sin que el juzgado competente haya emitido el oficio de desembargo y este quede cancelado en la ORIP.
+
+Para avanzar con seguridad, primero debe radicarse y levantarse el embargo en la Oficina de Registro.`
+    };
+  }
+  return { isQuestion: false };
+}
+function extractNotarialExpenseParams(text2, senderId) {
+  if (!text2 || typeof text2 !== "string") return { found: false };
+  const clean = text2.trim();
+  const lower = clean.toLowerCase();
+  const keywords = [
+    "gastos notariales",
+    "gasto notarial",
+    "gastos de escrituraci\xF3n",
+    "gastos escrituraci\xF3n",
+    "gastos de escrituracion",
+    "escrituraci\xF3n",
+    "escrituracion",
+    "liquidar notaria",
+    "liquidar notar\xEDa",
+    "costo notaria",
+    "costos notaria",
+    "cu\xE1nto vale la notar\xEDa",
+    "cuanto vale la notaria",
+    "cuanto cobra la notaria",
+    "cu\xE1nto cobra la notar\xEDa",
+    "cuanto se va en notaria",
+    "cu\xE1nto se va en notar\xEDa",
+    "gastos de registro",
+    "firmar promesa",
+    "promesa de compraventa",
+    "promesa compraventa",
+    "voy para la notar\xEDa",
+    "voy a la notaria",
+    "voy a notaria",
+    "voy para notaria",
+    "firmar escrituras",
+    "gastos notariale",
+    "derechos notariales",
+    "liquidaci\xF3n notarial",
+    "impuesto de registro"
+  ];
+  const hasPending = senderId ? hasPendingNotarialSession(senderId) : false;
+  const hasNotarialIntent = keywords.some((kw) => lower.includes(kw));
+  if (!hasNotarialIntent && !hasPending) {
+    return { found: false };
+  }
+  let precio = 0;
+  const mMillones = clean.match(/(?:\$|\b)(\d+(?:[\.,]\d+)?)\s*(?:millones|millón|millon|m\b)/i);
+  if (mMillones) {
+    const rawNum = parseFloat(mMillones[1].replace(",", "."));
+    precio = rawNum * 1e6;
+  } else {
+    const mNum = clean.match(/(?:\$|\b)(\d{1,3}(?:\.\d{3}){2,3}|\d{7,11})\b/);
+    if (mNum) {
+      precio = parseInt(mNum[1].replace(/\./g, ""), 10);
+    }
+  }
+  if (precio < 1e7) {
+    return {
+      found: true,
+      needsMoreInfo: true
+    };
+  }
+  let estadoPredio = "libre";
+  if (/predio.*(?:leasing|locatario)|inmueble.*(?:leasing)|tiene\s+leasing/i.test(lower)) {
+    estadoPredio = "leasing";
+  } else if (/predio.*(?:hipoteca|gravamen)|inmueble.*(?:hipoteca)|tiene\s+hipoteca|con\s+hipoteca|hipotecado/i.test(lower)) {
+    estadoPredio = "hipoteca";
+  }
+  let formaPago = "contado";
+  if (/compra.*(?:leasing)|paga.*(?:leasing)|con\s+leasing\s+habitacional/i.test(lower)) {
+    formaPago = "leasing";
+  } else if (/compra.*(?:cr[eé]dito|hipoteca|banco|pr[eé]stamo)|con\s+cr[eé]dito|con\s+hipoteca/i.test(lower)) {
+    formaPago = "hipoteca";
+  } else if (/contado|recursos\s+propios|efectivo/i.test(lower)) {
+    formaPago = "contado";
+  }
+  const afectacionViviendaFamiliar = /afectaci[oó]n|vivienda\s+familiar/i.test(lower) && !/sin\s+afectaci[oó]n/i.test(lower);
+  const patrimonioFamilia = /patrimonio\s+de\s+familia|inembargable/i.test(lower);
+  const bienInteresCultural = /inter[eé]s\s+cultural|patrimonio\s+cultural|patrimonio\s+hist[oó]rico|bic\b/i.test(lower);
+  const embargoMedidaCautelar = /embargo|embargado|medida\s+cautelar/i.test(lower);
+  return {
+    found: true,
+    needsMoreInfo: false,
+    params: {
+      precioVenta: precio,
+      estadoPredio,
+      formaPago,
+      ciudad: "Bogot\xE1",
+      afectacionViviendaFamiliar,
+      patrimonioFamilia,
+      bienInteresCultural,
+      embargoMedidaCautelar
+    }
+  };
+}
+async function executeNotarialAssistanceFromWhatsApp(text2, senderId, isPrivateDm = true) {
+  const explanation = explainNotarialFigures(text2);
+  if (explanation.isQuestion && explanation.answerText) {
+    return {
+      isNotarialRequest: true,
+      isEducationalAnswer: true,
+      reportText: explanation.answerText
+    };
+  }
+  const detection = extractNotarialExpenseParams(text2, senderId);
+  if (!detection.found) {
+    return { isNotarialRequest: false };
+  }
+  if (detection.needsMoreInfo || !detection.params) {
+    setPendingNotarialSession(senderId);
+    const promptText = `\xA1Con mucho gusto te liquido los gastos de notar\xEDa y registro al centavo! \u2696\uFE0F\u{1F1E8}\u{1F1F4}
+
+Para darte el desglose exacto de cu\xE1nto paga el comprador y cu\xE1nto el vendedor, por favor conf\xEDrmame:
+1\uFE0F\u20E3 *Valor de la compraventa:* (Ej: 350 millones o el valor pactado).
+2\uFE0F\u20E3 *Estado del predio:* \xBFLibre de grav\xE1menes, con hipoteca activa o con leasing habitacional?
+3\uFE0F\u20E3 *Forma de pago:* \xBFDe contado, con cr\xE9dito hipotecario o con leasing?
+
+_(Si el predio tiene afectaci\xF3n a vivienda familiar, patrimonio de familia o es Bien de Inter\xE9s Cultural BIC, me avisas para calcular la figura exacta)_ \u{1F91D}\u2728`;
+    return {
+      isNotarialRequest: true,
+      reportText: promptText
+    };
+  }
+  clearPendingNotarialSession(senderId);
+  const calcResult = liquidarGastosNotariales(detection.params);
+  return {
+    isNotarialRequest: true,
+    reportText: calcResult.reportText,
+    calculatedResult: calcResult
+  };
+}
+var pendingNotarialSessions, NOTARIAL_SESSION_TTL_MS;
+var init_notarialExpenseService = __esm({
+  "server/_core/notarialExpenseService.ts"() {
+    "use strict";
+    init_taxEngine();
+    pendingNotarialSessions = /* @__PURE__ */ new Map();
+    NOTARIAL_SESSION_TTL_MS = 15 * 60 * 1e3;
   }
 });
 
@@ -12558,13 +13058,15 @@ ${quotedNote}` : quotedNote;
                 let isMuted = isSelfChat || isAdmin ? false : await isSessionMuted2(senderId);
                 if (isMuted) {
                   const { extractCedulaForVerification: extractCedulaForVerification2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+                  const { extractNotarialExpenseParams: extractNotarialExpenseParams2, hasPendingNotarialSession: hasPendingNotarialSession2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
                   const isCedulaReq = extractCedulaForVerification2(body, true).found;
                   const isPredialReq = body.toLowerCase().includes("predial") || body.toLowerCase().includes("chip") || body.toLowerCase().includes("hacienda");
                   const isIduReq = body.toLowerCase().includes("idu") || body.toLowerCase().includes("valorizacion") || body.toLowerCase().includes("valorizaci\xF3n");
-                  if (cleanStart.startsWith("agente jania") || isCedulaReq || isPredialReq || isIduReq) {
+                  const isNotarialReq = hasPendingNotarialSession2(senderId) || extractNotarialExpenseParams2(body, senderId).found || /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*familiar|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural)/i.test(body);
+                  if (cleanStart.startsWith("agente jania") || isCedulaReq || isPredialReq || isIduReq || isNotarialReq) {
                     await muteSession2(senderId, false).catch((err) => console.error("Error unmuting session:", err));
                     isMuted = false;
-                    console.log(`[JANIA-MATCH] Sesi\xF3n reactivada autom\xE1ticamente mediante ${isCedulaReq ? "verificaci\xF3n de documento" : isPredialReq ? "asistencia de predial" : isIduReq ? "paz y salvo de valorizaci\xF3n IDU" : "comando de cliente"} para ${senderId}`);
+                    console.log(`[JANIA-MATCH] Sesi\xF3n reactivada autom\xE1ticamente mediante ${isCedulaReq ? "verificaci\xF3n de documento" : isPredialReq ? "asistencia de predial" : isIduReq ? "paz y salvo de valorizaci\xF3n IDU" : isNotarialReq ? "liquidaci\xF3n notarial" : "comando de cliente"} para ${senderId}`);
                   }
                 }
                 const targetDmId = resolvedSenderId || senderId;
@@ -12681,6 +13183,26 @@ ${quotedNote}` : quotedNote;
           await this.processMatchConfirmation(senderId, userName, matchId, decision);
           return;
         }
+        const { executeNotarialAssistanceFromWhatsApp: executeNotarialAssistanceFromWhatsApp2, hasPendingNotarialSession: hasPendingNotarialSession2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
+        const isNotarialContext = senderId && hasPendingNotarialSession2(senderId) || /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|afectaci[oó]n\s*familiar|sin\s*afectaci[oó]n|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural|bien\s*de\s*inter[eé]s|anotaci[oó]n\s*diferente)/i.test(body);
+        if (isNotarialContext) {
+          const stopPresence = startContinuousPresence(this.sock, senderId, "composing");
+          try {
+            const notarialCheck = await executeNotarialAssistanceFromWhatsApp2(body, senderId, true);
+            if (notarialCheck.isNotarialRequest && notarialCheck.reportText) {
+              console.log(`[JANIA-MATCH] [DM] Liquidaci\xF3n o consulta notarial atendida para ${senderId}`);
+              const { formatPoliteToolDelivery: formatPoliteToolDelivery2, appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+              const deliveredText = await formatPoliteToolDelivery2(senderId, userName, "notarial", notarialCheck.reportText, true);
+              await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
+              appendDmHistory2(senderId, "user", body);
+              appendDmHistory2(senderId, "assistant", deliveredText);
+              await this.logToDb(senderId, "janIA", deliveredText);
+              return;
+            }
+          } finally {
+            stopPresence();
+          }
+        }
         const { hasPendingIduSession: hasPendingIduSession2, executeIduAssistanceFromWhatsApp: executeIduAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
         if (senderId && hasPendingIduSession2(senderId)) {
           const stopPresence = startContinuousPresence(this.sock, senderId, "composing");
@@ -12697,10 +13219,6 @@ ${quotedNote}` : quotedNote;
                   fileName: iduPendingCheck.pdfFileName || `Paz_y_Salvo_IDU_${iduPendingCheck.chip}_2026.pdf`,
                   caption: deliveredText
                 }, { quoted: mainMsg, allowDirectMessage: true });
-                const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-                await new Promise((r) => setTimeout(r, 1500));
-                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
-                this.schedulePostReviewGroupInvitation(senderId, userName);
               } else {
                 await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
               }
@@ -12729,10 +13247,6 @@ ${quotedNote}` : quotedNote;
                   fileName: iduCheck.pdfFileName || `Paz_y_Salvo_IDU_${iduCheck.chip}_2026.pdf`,
                   caption: deliveredText
                 }, { quoted: mainMsg, allowDirectMessage: true });
-                const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-                await new Promise((r) => setTimeout(r, 1500));
-                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
-                this.schedulePostReviewGroupInvitation(senderId, userName);
               } else {
                 await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
               }
@@ -12761,10 +13275,6 @@ ${quotedNote}` : quotedNote;
                   fileName: predialPendingCheck.pdfFileName || `Factura_Predial_${predialPendingCheck.chip}_2026.pdf`,
                   caption: deliveredText
                 }, { quoted: mainMsg, allowDirectMessage: true });
-                const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-                await new Promise((r) => setTimeout(r, 1500));
-                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
-                this.schedulePostReviewGroupInvitation(senderId, userName);
               } else {
                 await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
               }
@@ -12793,10 +13303,6 @@ ${quotedNote}` : quotedNote;
                   fileName: predialCheck.pdfFileName || `Factura_Predial_${predialCheck.chip}_2026.pdf`,
                   caption: deliveredText
                 }, { quoted: mainMsg, allowDirectMessage: true });
-                const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-                await new Promise((r) => setTimeout(r, 1500));
-                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
-                this.schedulePostReviewGroupInvitation(senderId, userName);
               } else {
                 await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
               }
@@ -12823,12 +13329,6 @@ ${quotedNote}` : quotedNote;
               appendDmHistory2(senderId, "user", body);
               appendDmHistory2(senderId, "assistant", deliveredText);
               await this.logToDb(senderId, "janIA", deliveredText);
-              if (idCheck.success) {
-                const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-                await new Promise((r) => setTimeout(r, 1500));
-                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
-                this.schedulePostReviewGroupInvitation(senderId, userName);
-              }
               return;
             }
           } finally {
@@ -13876,6 +14376,23 @@ ${result.response}`);
       async handlePrivateDmConversation(msg, senderId, rawPhone, bodyText) {
         try {
           const realName = msg.pushName || `Asesor +${rawPhone}`;
+          const { executeNotarialAssistanceFromWhatsApp: executeNotarialAssistanceFromWhatsApp2, hasPendingNotarialSession: hasPendingNotarialSession2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
+          const isNotarialReq = senderId && hasPendingNotarialSession2(senderId) || /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|afectaci[oó]n\s*familiar|sin\s*afectaci[oó]n|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural|bien\s*de\s*inter[eé]s|anotaci[oó]n\s*diferente)/i.test(bodyText);
+          if (isNotarialReq) {
+            try {
+              await this.sock.sendPresenceUpdate("composing", senderId);
+              await this.sock.sendMessage(senderId, { react: { text: "\u2696\uFE0F", key: msg.key } }).catch(() => {
+              });
+            } catch (_) {
+            }
+            const notarialCheck = await executeNotarialAssistanceFromWhatsApp2(bodyText, senderId, true);
+            if (notarialCheck.isNotarialRequest && notarialCheck.reportText) {
+              await this.queuedSend(senderId, notarialCheck.reportText, { quoted: msg, allowDirectMessage: true });
+              await this.logToDb(senderId, "janIA", notarialCheck.reportText);
+              await this.sock.sendPresenceUpdate("paused", senderId);
+              return;
+            }
+          }
           const isIduReq = bodyText.toLowerCase().includes("idu") || bodyText.toLowerCase().includes("valorizacion") || bodyText.toLowerCase().includes("valorizaci\xF3n");
           if (isIduReq) {
             const { executeIduAssistanceFromWhatsApp: executeIduAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
@@ -22169,6 +22686,17 @@ ${idCheck.reportText}`;
       }
     }
   }
+  const { executeNotarialAssistanceFromWhatsApp: executeNotarialAssistanceFromWhatsApp2, hasPendingNotarialSession: hasPendingNotarialSession2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
+  const isNotarialContext = hasPendingNotarialSession2(userId) || /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|afectaci[oó]n\s*familiar|sin\s*afectaci[oó]n|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural|bien\s*de\s*inter[eé]s|anotaci[oó]n\s*diferente)/i.test(cleanLower);
+  if (isNotarialContext) {
+    const notarialRes = await executeNotarialAssistanceFromWhatsApp2(clean, userId, true);
+    if (notarialRes.isNotarialRequest && notarialRes.reportText) {
+      const deliveredText = await formatPoliteToolDelivery(userId, userName || "", "notarial", notarialRes.reportText, true);
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", deliveredText);
+      return deliveredText;
+    }
+  }
   try {
     const hasPriorHistory = history.length > 0;
     const messages2 = [
@@ -22176,6 +22704,14 @@ ${idCheck.reportText}`;
         role: "system",
         content: `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
 Est\xE1s conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.
+
+AUTONOM\xCDA TOTAL DE IA PURA Y CERO BOT R\xCDGIDO (DOCTRINA DOCTRINAL EDUARDO A. RIVERA):
+- Eres una INTELIGENCIA ARTIFICIAL PURA con libre autonom\xEDa, criterio profesional y pensamiento profundo, NO un bot de opciones r\xEDgidas ni contestador autom\xE1tico.
+- Todos los ejemplos de saludos, agradecimientos, invitaciones o guiones comerciales que te hemos ense\xF1ado son SOLAMENTE GU\xCDAS DE REFERENCIA; JAM\xC1S los repitas al pie de la letra si no encajan con fluidez. Tienes plena libertad para decir las cosas con tus propias palabras, de forma natural, c\xE1lida, inteligente y atractiva.
+
+BREVEDAD Y CONCISI\xD3N ESTRICTA EN WHATSAPP (PROHIBIDOS LOS TEXTOS LARGOS):
+- En WhatsApp los usuarios leen en pantallas m\xF3viles de celular: LOS TEXTOS LARGOS CANSAN, ABURREN Y PROVOCAN EL BOT\xD3N 'Leer m\xE1s'.
+- S\xE9 siempre concisa, clara, din\xE1mica y directa al grano (m\xE1ximo 2 a 3 p\xE1rrafos cortos o vi\xF1etas puntuales). Entre menos adornos y m\xE1s claridad, mayor impacto.
 
 REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA, G\xC9NERO Y NOMBRES COMPUESTOS:
 - El usuario se llama: *${displayName || realName || "Colega"}*.
@@ -22206,9 +22742,18 @@ PEDAGOG\xCDA DE REACCIONES Y EMOJIS EN GRUPOS INMOBILIARIOS:
      \u26A0\uFE0F REGLA DE ORO DE EDUARDO: JanIA NUNCA debe adelantarse a fijar, mencionar ni imponer esquemas de comisi\xF3n (como "1/1/1" o "40/20/40" sobre el 3%). JanIA debe esperar a que sea el propio agente o colega quien exprese c\xF3mo acepta compartir esa comisi\xF3n o si no lo acepta, o permitir que sea el asesor humano de Vecy Bienes Ra\xEDces quien lo acuerde con \xE9l al momento del contacto comercial.
 
 - PROHIBICI\xD3N ESTRICTA DE MENCIONAR "45/10/45" AL INICIO: Bajo NINGUNA circunstancia menciones "45/10/45", "bolsa colaborativa 45/10/45" ni esquemas de comisi\xF3n al inicio de la conversaci\xF3n o cuando pregunten por consultas. Nadie en el mercado conoce ese t\xE9rmino a\xFAn y confunde a los usuarios. Solo se hablar\xE1 de red colaborativa si el usuario pregunta expresamente sobre compartir inmuebles entre colegas.
-- CUANDO EL USUARIO PREGUNTE POR LAS CONSULTAS ("\xBFC\xF3mo es lo de las consultas?", etc.): NO sueltes un mon\xF3logo solo de la Polic\xEDa. Preg\xFAntale amablemente qu\xE9 clase de consulta desea realizar y dale el men\xFA organizado: 1 y 2 Gratuitas (Verificaci\xF3n de documentos ante Polic\xEDa Nacional y Factura Predial Bogot\xE1 con certificados de pago); 3 al 9 Especializadas (Sondeos de mercado m\xB2, Asesor\xEDa jur\xEDdica en compraventa/arriendos, H\xE1beas Data, Cobranza de comisiones no pagadas, Aval\xFAos digitales RAA, Liquidaciones tributarias y Pr\xE9stamos hipotecarios).
-- REGLA TAJANTE DE COSTOS (100% GRATIS): Si el usuario pregunta por los costos de los servicios o herramientas de consulta que le acabas de nombrar (verificaci\xF3n de documentos o predial), responde con total claridad y entusiasmo: "\xA1Este servicio es completamente GRATIS!". Explica que no tiene ning\xFAn costo para \xE9l y an\xEDmalo de inmediato a probarlo enviando el n\xFAmero de documento o CHIP. EST\xC1 TERMINANTEMENTE PROHIBIDO hablar de "paquetes o planes de consultas seg\xFAn volumen", o mandarlo a llamar a Jani Alves para averiguar costos de herramientas que son gratuitas. Eso enfr\xEDa la venta y espanta al cliente.
-- DOCTRINA EN SERVICIOS ESPECIALIZADOS (3 al 9): En temas especializados (sondeos de mercado, jur\xEDdica, cobranza de comisiones, aval\xFAos, tributaria, hipotecas), JanIA puede ofrecer de forma completamente gratuita algunos conceptos breves, definiciones y consejos superficiales que despejen la duda general en la mente del usuario, pero SIN entregar la soluci\xF3n t\xE9cnica o jur\xEDdica de fondo, gui\xE1ndolo a contactar a los Directores de Vecy Bienes Ra\xEDces al +57 316 656 9719 para contratar el servicio profesional.
+- CUANDO EL USUARIO PREGUNTE POR LAS CONSULTAS ("\xBFC\xF3mo es lo de las consultas?", etc.): NO sueltes un mon\xF3logo solo de la Polic\xEDa. Preg\xFAntale amablemente qu\xE9 clase de consulta desea realizar y dale el men\xFA organizado: 1 al 4 Gratuitas (Verificaci\xF3n de documentos ante Polic\xEDa Nacional, Factura Predial Bogot\xE1, Paz y Salvo IDU en PDF y Liquidaci\xF3n de Gastos Notariales/Registro); 5 al 11 Especializadas (Sondeos de mercado m\xB2, Asesor\xEDa jur\xEDdica en compraventa/arriendos, H\xE1beas Data, Cobranza de comisiones no pagadas, Aval\xFAos digitales RAA, Liquidaciones tributarias y Pr\xE9stamos hipotecarios).
+- REGLA TAJANTE DE COSTOS (100% GRATIS): Si el usuario pregunta por los costos de los servicios o herramientas de consulta que le acabas de nombrar (verificaci\xF3n de documentos, predial, paz y salvo IDU o liquidaci\xF3n notarial), responde con total claridad y entusiasmo: "\xA1Este servicio es completamente GRATIS!". Explica que no tiene ning\xFAn costo para \xE9l y an\xEDmalo de inmediato a probarlo.
+- DOCTRINA NOTARIAL, ESTUDIO DE T\xCDTULOS Y TIPOS DE NEGOCIACI\xD3N (COLOMBIA):
+  \u2022 SI EL USUARIO INDICA QUE VA PARA LA NOTAR\xCDA O A FIRMAR PROMESA (como Martha Mesa u otros): Felic\xEDtalo con calidez y alegr\xEDa ("\xA1Qu\xE9 alegr\xEDa! Felicidades por ese paso tan importante \u{1F3E2}\u2728") y ofr\xE9cele proactivamente liquidarle con exactitud los gastos de notar\xEDa y registro para que ambas partes tengan total claridad de lo que paga el comprador y el vendedor.
+  \u2022 AFECTACI\xD3N A VIVIENDA FAMILIAR (Ley 258/1996 y Ley 854/2003): Protege el techo donde reside la familia. Es OBLIGATORIO que ambos c\xF3nyuges o compa\xF1eros permanentes firmen la escritura para cancelarla. Si el predio est\xE1 'sin afectaci\xF3n', el vendedor declara bajo juramento en la escritura que no tiene sociedad conyugal vigente ni reside all\xED con c\xF3nyuge.
+  \u2022 PATRIMONIO DE FAMILIA INEMBARGABLE (Ley 70/1931): Protege el predio contra embargos (hasta 250 SMMLV). \xA1Atenci\xF3n!: Si hay hijos MENORES de edad, la ley proh\xEDbe cancelarlo simplemente en notar\xEDa; exige autorizaci\xF3n judicial o aval previo del Defensor de Familia del ICBF (lo cual demora la negociaci\xF3n semanas o meses). Si los hijos ya son mayores (18+ a\xF1os), los padres lo cancelan en notar\xEDa con registros civiles.
+  \u2022 BIEN DE INTER\xC9S CULTURAL (BIC) O PATRIMONIO CULTURAL (Ley 397/1997, Ley 1185/2008): \xA1Anotaci\xF3n de alerta para cr\xE9dito! Los bancos comerciales colombianos generalmente NO aprueban cr\xE9dito hipotecario ni leasing sobre bienes BIC debido a restricciones de remodelaci\xF3n (licencias IDPC/MinCultura) e inembargabilidad/dificultad de remate. Por ello, estas compras casi siempre se deben pactar de CONTADO (recursos propios).
+  \u2022 PREDIO CON HIPOTECA (Vendedor): Minuta de cancelaci\xF3n y derechos notariales a cargo del vendedor.
+  \u2022 COMPRA CON CR\xC9DITO HIPOTECARIO (Comprador): Comprador asume constituci\xF3n de hipoteca a favor del banco (~1.1% del valor financiado).
+  \u2022 LEASING HABITACIONAL (Cesi\xF3n): Al no transferirse el dominio en matr\xEDcula (el banco fiduciario sigue como due\xF1o), el comprador se ahorra el 1.75% en beneficencia y registro de compraventa.
+  \u2022 EMBARGOS / MEDIDAS CAUTELARES (Art. 1521 C.C.): Objeto il\xEDcito. No se puede vender ni prometer venta sin que el juzgado competente haya emitido el oficio de desembargo radicado en la ORIP.
+- DOCTRINA EN SERVICIOS ESPECIALIZADOS (5 al 11): En temas especializados (sondeos de mercado, jur\xEDdica, cobranza de comisiones, aval\xFAos, tributaria, hipotecas), JanIA puede ofrecer de forma completamente gratuita algunos conceptos breves, definiciones y consejos superficiales que despejen la duda general en la mente del usuario, pero SIN entregar la soluci\xF3n t\xE9cnica o jur\xEDdica de fondo, gui\xE1ndolo a contactar a los Directores de Vecy Bienes Ra\xEDces al +57 316 656 9719 para contratar el servicio profesional.
 - PEDAGOG\xCDA DE CORTES\xCDA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), sal\xFAdalo educadamente por su nombre y con calidez humana. Ense\xF1a con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.
 - PEDAGOG\xCDA DE PACIENCIA TOTAL Y EMPAT\xCDA TECNOL\xD3GICA (DOCTRINA DE AMOR Y SERVICIO AL USUARIO): En el sector inmobiliario hay personas mayores, tradicionales o con dificultades para interactuar con la tecnolog\xEDa (analfabetismo digital o confusi\xF3n frente a la IA y el celular). Si un usuario no comprende c\xF3mo funciona el servicio, pregunta con timidez, pide explicaci\xF3n de c\xF3mo se hace o manifiesta enredo, JanIA JAM\xC1S debe mostrar impaciencia, frialdad ni tecnicismos. Tr\xE1talos con ternura, empat\xEDa, infinita paciencia y lenguaje cercano y sencillo de la vida cotidiana. Expl\xEDcales con amor paso a paso: "No te preocupes, yo te ayudo", "Solo env\xEDame una foto de la c\xE9dula por ambos lados o escr\xEDbeme el n\xFAmero aqu\xED y yo hago todo el tr\xE1mite por ti en segundos". JanIA est\xE1 siempre dispuesta a explicar, guiar y servir de coraz\xF3n a todo el que lo necesite.
 - MANEJO ELEGANTE DE DUDAS O AMBIG\xDCEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas gen\xE9ricas; dile con simpat\xEDa humana: "Qu\xE9 pena contigo, ${displayName || "colega"}. Debido a un peque\xF1o fallo en la matrix \u{1F916}\u{1F605} no alcanc\xE9 a captar bien lo que me pides hacer. \xBFPodr\xEDas por favor confirmarme o repetirme qu\xE9 necesitas para ayudarte de inmediato?".
@@ -26047,63 +26592,12 @@ init_db();
 init_schema();
 init_scraper();
 init_janIA();
-import { z as z4 } from "zod";
-import { eq as eq11, and as and8, desc as desc5, sql as sql9, inArray } from "drizzle-orm";
-
-// server/_core/taxEngine.ts
-var VALOR_UVT_2026 = 50318;
-function liquidarImpuestosVenta(params) {
-  const precioVenta = Math.max(0, params.precioVenta || 0);
-  const costoFiscal = Math.max(0, params.costoFiscal || 0);
-  const anosPosesion = Math.max(0, params.anosPosesion || 0);
-  const limiteUvtRetencion = 2e4 * VALOR_UVT_2026;
-  const esSupera20kUvt = precioVenta > limiteUvtRetencion;
-  const tarifaRetencion = esSupera20kUvt ? 0.025 : 0.01;
-  const retencionFuente = Math.round(precioVenta * tarifaRetencion);
-  const utilidadOriginal = Math.max(0, precioVenta - costoFiscal);
-  let utilidadGravable = utilidadOriginal;
-  let exencionViviendaAplicada = 0;
-  let gananciaOcasional = 0;
-  let esRentaOrdinaria = false;
-  let tarifaGananciaOcasionalPorcentaje = 15;
-  let notas = "";
-  if (anosPosesion < 2) {
-    esRentaOrdinaria = true;
-    tarifaGananciaOcasionalPorcentaje = 0;
-    gananciaOcasional = 0;
-    notas = "Al tener menos de 2 a\xF1os de posesi\xF3n, la utilidad califica como Renta L\xEDquida Ordinaria y se suma a la c\xE9dula general de la persona natural (Tarifa progresiva DIAN del 0% al 39%).";
-  } else {
-    if (params.esViviendaHabitacion) {
-      const exencionMaxima = 5e3 * VALOR_UVT_2026;
-      exencionViviendaAplicada = Math.min(utilidadOriginal, exencionMaxima);
-      utilidadGravable = Math.max(0, utilidadOriginal - exencionViviendaAplicada);
-      notas = `Se aplic\xF3 el beneficio de exenci\xF3n por vivienda de habitaci\xF3n (Hasta 5.000 UVT = $${exencionMaxima.toLocaleString("es-CO")} de utilidad exentas, Art. 311-1 E.T. abonando el producto a AFC/nueva vivienda). `;
-    }
-    gananciaOcasional = Math.round(utilidadGravable * 0.15);
-    notas += "Aplica tarifa \xFAnica del 15% por Ganancia Ocasional sobre la utilidad neta gravable.";
-  }
-  return {
-    valorUVT: VALOR_UVT_2026,
-    precioVenta,
-    costoFiscal,
-    utilidadCalculada: utilidadOriginal,
-    anosPosesion,
-    retencionFuente,
-    tarifaRetencionPorcentaje: tarifaRetencion * 100,
-    esSupera20kUvt,
-    exencionViviendaAplicada,
-    utilidadGravableGananciaOcasional: utilidadGravable,
-    gananciaOcasional,
-    tarifaGananciaOcasionalPorcentaje,
-    esRentaOrdinaria,
-    notas: notas.trim()
-  };
-}
-
-// server/routers/janIA.ts
+init_taxEngine();
 init_matching();
 init_voiceTranscription();
 init_storage();
+import { z as z4 } from "zod";
+import { eq as eq11, and as and8, desc as desc5, sql as sql9, inArray } from "drizzle-orm";
 import axios7 from "axios";
 import fs10 from "fs";
 import path10 from "path";
@@ -28271,6 +28765,21 @@ ${liveStats}${userContextInstruction}
       anosPosesion: input.anosPosesion,
       esViviendaHabitacion: input.esViviendaHabitacion
     });
+  }),
+  // Liquidación y cálculo de gastos notariales y de registro en Colombia (SNR 2026)
+  calcularGastosNotariales: publicProcedure.input(
+    z4.object({
+      precioVenta: z4.number().min(0),
+      estadoPredio: z4.enum(["libre", "hipoteca", "leasing"]).default("libre"),
+      formaPago: z4.enum(["contado", "hipoteca", "leasing"]).default("contado"),
+      montoCredito: z4.number().min(0).optional(),
+      saldoHipotecaVendedor: z4.number().min(0).optional(),
+      ciudad: z4.string().default("Bogot\xE1"),
+      esCesionLeasing: z4.boolean().default(false)
+    })
+  ).mutation(async ({ input }) => {
+    const { liquidarGastosNotariales: liquidarGastosNotariales2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
+    return liquidarGastosNotariales2(input);
   }),
   // Disparo manual/inmediato del tip del día a Grupo 2 y Canal oficial
   triggerDailyTip: publicProcedure.mutation(async () => {
