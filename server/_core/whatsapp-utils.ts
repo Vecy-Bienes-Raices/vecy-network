@@ -774,31 +774,77 @@ export function getEmpatheticReactionEmoji(
  * para que en WhatsApp Web y móvil nunca desaparezcan los puntitos bailarines (...) o el micrófono (🎙️)
  * mientras JanIA procesa consultas de larga duración (2Captcha, Hacienda, Puppeteer, Gemini, TTS).
  */
+export type ContinuousPresenceType = 'composing' | 'recording';
+
+export interface ContinuousPresenceHandle {
+  (): void;
+  stop: () => void;
+  setType: (newType: ContinuousPresenceType) => void;
+}
+
+/**
+ * Inicia una presencia continua ('composing' o 'recording') con refresco cada 3.0 segundos
+ * para que en WhatsApp Web y móvil NUNCA desaparezcan los tres puntitos bailarines (...) o el micrófono (🎙️)
+ * mientras JanIA procesa consultas de IA y sintetiza la voz humana de Laomedeia.
+ * Soporta un segundo JID opcional (ej. para emitir en simultáneo a LID y @s.whatsapp.net).
+ * Permite transición suave sin 'paused' intermedio mediante handle.setType('recording').
+ */
 export function startContinuousPresence(
   sock: any,
   jid: string,
-  type: 'composing' | 'recording' = 'composing',
-  intervalMs: number = 3500
-): () => void {
-  if (!sock || !jid) return () => {};
+  initialType: ContinuousPresenceType = 'composing',
+  intervalMs: number = 3000,
+  secondaryJid?: string
+): ContinuousPresenceHandle {
+  if (!sock || !jid) {
+    const noop: any = () => {};
+    noop.stop = () => {};
+    noop.setType = () => {};
+    return noop;
+  }
+
   let isAlive = true;
-  try {
-    sock.sendPresenceUpdate(type, jid).catch(() => {});
-  } catch (_) {}
+  let currentType: ContinuousPresenceType = initialType;
+
+  const emit = (t: ContinuousPresenceType) => {
+    if (!isAlive) return;
+    try {
+      sock.sendPresenceUpdate(t, jid).catch(() => {});
+      if (secondaryJid && secondaryJid !== jid) {
+        sock.sendPresenceUpdate(t, secondaryJid).catch(() => {});
+      }
+    } catch (_) {}
+  };
+
+  // Emisión inmediata al arrancar
+  emit(currentType);
 
   const timer = setInterval(() => {
     if (!isAlive) return;
-    try {
-      sock.sendPresenceUpdate(type, jid).catch(() => {});
-    } catch (_) {}
+    emit(currentType);
   }, intervalMs);
 
-  return () => {
+  const stop = () => {
     if (!isAlive) return;
     isAlive = false;
     clearInterval(timer);
     try {
       sock.sendPresenceUpdate('paused', jid).catch(() => {});
+      if (secondaryJid && secondaryJid !== jid) {
+        sock.sendPresenceUpdate('paused', secondaryJid).catch(() => {});
+      }
     } catch (_) {}
   };
+
+  const setType = (newType: ContinuousPresenceType) => {
+    if (!isAlive) return;
+    currentType = newType;
+    emit(newType); // Refresco inmediato del nuevo tipo sin emitir 'paused' intermedio
+  };
+
+  const handle: any = stop;
+  handle.stop = stop;
+  handle.setType = setType;
+
+  return handle;
 }

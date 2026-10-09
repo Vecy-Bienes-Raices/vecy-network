@@ -7,6 +7,51 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.70 — 09 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Auditoría Forense de Facturación Google Cloud y Claridad de Costos**:
+   - Eduardo consultó por el consumo en Google Cloud Billing ($7.2 K reflejado en consola tras 3 días de activación).
+   - Se aclaró la moneda oficial domiciliada en Colombia: **$7.200 COP (Pesos Colombianos)** (~$1,75 USD en total por los 3 días de corte, bajo el presupuesto de seguridad de $30.000 COP).
+   - Eduardo evaluó si existía alguna alternativa tan buena como Laomedeia pero más económica sin perder calidad humana.
+2. **Defensa Innegociable y Ratificación de la Voz de JanIA (Laomedeia)**:
+   - Eduardo corrigió con precisión quirúrgica: *"la mejor y que se siente más natural y humana es la de LAOMEDEIA, las que tu mencionas SI SON ROBÓTICAS COMPLETAMENTE y: 1. Studio-B es de Hombre y quedaría muy rara para JanIA y las otras dos Dalia / Salomé si son femeninas pero también robóticas. Debes autoanalizarte porque estas fallando en ese análisis."*
+   - Eduardo solicitó verificar que en el código de producción Laomedeia tenga activados exactamente los parámetros oficiales de la consola de Google:
+     * Model: `Gemini 3.1 Flash TTS (preview)`
+     * Voice: `Laomedeia`
+     * Language: `Spanish (US)` (`es-us`)
+     * Style Prompt: `"Read aloud in a warm, welcoming tone."`
+     * AudioConfig: `pitch: 0, speakingRate: 1`.
+3. **Restauración y Blindaje de Gestos de Presencia en WhatsApp (Puntitos (...) y Micrófono 🎙️)**:
+   - Eduardo advirtió: *"vi que ya no sale el gesto de los tres puntitos que indican que está escribiendo o el micro cuando está grabando un audio..."* y ordenó blindar esa presencia de inmediato: *"Si por favor."*
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Auditoría de Costo Real de Laomedeia**:
+   - Se demostró que la síntesis de voz con Laomedeia ($16 USD por 1 millón de caracteres) es extraordinariamente económica en WhatsApp: cada nota de voz de JanIA (250 caracteres) cuesta apenas ~$17 pesos colombianos. El gasto mayor provino del análisis de texto previo en el Round-Robin del LLM y de la consolidación a 48h de Google Cloud. No existe en el mercado ninguna alternativa que iguale la modulación emocional multimodal de Laomedeia a ese precio.
+2. **Verificación Paritaria de Parámetros en `server/_core/whatsapp-utils.ts`**:
+   - Se validó que las líneas 507-529 ejecutan exactamente la misma URL (`https://texttospeech.googleapis.com/v1beta1/text:synthesize`), el modelo `gemini-3.1-flash-tts-preview`, la voz `Laomedeia`, el prompt `"Read aloud in a warm, welcoming tone."`, `pitch: 0.0`, `speakingRate: 1.0` y la transcodificación nativa a `OGG_OPUS` para notas de voz de WhatsApp.
+3. **Causa Raíz de Desaparición de Gestos de Presencia**:
+   - En Grupos: El código enviaba un único pulso de presencia que el servidor de WhatsApp cancelaba automáticamente a los 3 segundos. Al tardar JanIA unos segundos pensando y generando audio, los puntitos desaparecían prematuramente.
+   - En Chats Privados: Con los identificadores de privacidad LID (`@lid`), si la señal no se envía simultáneamente al número telefónico normal (`@s.whatsapp.net`), la aplicación de WhatsApp móvil muchas veces descarta el indicador visual.
+   - En Transición de Texto a Audio: Se enviaba una señal intermedia de `paused` que cancelaba el micrófono antes de despachar el audio.
+
+### Acciones Técnicas Ejecutadas
+1. **Evolución de `startContinuousPresence` en `server/_core/whatsapp-utils.ts`**:
+   - Creación del tipo `ContinuousPresenceHandle` con capacidades dinámicas:
+     * Refresco activo cada 3.0 segundos para no permitir que WhatsApp borre el gesto.
+     * Despacho dual: emite la presencia simultáneamente a `jid` y a `secondaryJid` (amparando tanto LID como `@s.whatsapp.net`).
+     * Transición suave: método `setType('recording')` que conmuta inmediatamente de `composing` a `recording` sin emitir `paused` intermedio.
+2. **Blindaje de Presencia en `server/_core/whatsapp-match.ts`**:
+   - En `DirectGroupQuestion`: Envío de presencia continua durante toda la deliberación de JanIA y conmutación a `recording` durante la síntesis con Laomedeia.
+   - En `processBufferedDmMessages`: Envío dual al LID y al JID telefónico alterno (`alternateDmJid`), y conmutación fluida a `recording` antes de sintetizar voz.
+3. **Pruebas de Regresión y Compilación**:
+   - Nueva prueba unitaria para `startContinuousPresence` con `setType` y `secondaryJid` en `regression.test.ts`.
+   - 160/160 pruebas Vitest pasando al 100%.
+   - Compilación limpia con `tsc --noEmit` (0 errores) y `npm run build` en 25s.
+   - Incremento de versión oficial a `v32.70` (`32.70.0`).
+
+---
+
 ## 📋 SESIÓN v32.69 — 09 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

@@ -331,6 +331,40 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.70 — Octubre 2026
+
+#### 📌 RATIFICACIÓN DOCTRINAL DE LAOMEDEIA COMO VOZ OFICIAL FEMENINA DE JANIA, PARIDAD 1:1 CON CONSOLA GOOGLE CLOUD TTS Y BLINDAJE DE PRESENCIA CONTINUA EN WHATSAPP
+
+**Requerimiento y Objetivos:**
+1. **Auditoría Forense y Claridad de Costos Google Cloud**:
+   - Explicación del consumo reflejado en Google Cloud Billing ($7.2 K = $7.200 COP / ~$1,75 USD en 3 días de corte, bajo el presupuesto de seguridad de $30.000 COP).
+2. **Defensa Innegociable y Ratificación de la Voz de JanIA (Laomedeia)**:
+   - Eduardo A. Rivera ratificó que la voz oficial, natural, humana y con calidez es **Laomedeia** (Gemini 3.1 Flash TTS preview). Corrigió el juicio erróneo sobre Studio-B (masculina) y Dalia/Salomé (sintetizadores antiguos rígidos).
+   - Verificada la paridad 1:1 en el código de producción con la consola de Google:
+     * Endpoint: `https://texttospeech.googleapis.com/v1beta1/text:synthesize`
+     * Model: `gemini-3.1-flash-tts-preview`
+     * Voice: `Laomedeia`
+     * Language: `es-us`
+     * Style Prompt: `"Read aloud in a warm, welcoming tone."`
+     * AudioConfig: `pitch: 0.0, speakingRate: 1.0, audioEncoding: OGG_OPUS`.
+   - Se demostró que Laomedeia cuesta centavos (~$17 COP por nota de voz de 250 chars) y es insustituible por calidad y expresividad multimodal.
+3. **Restauración y Blindaje de Gestos de Presencia en WhatsApp (Puntitos (...) y Micrófono 🎙️)**:
+   - Eduardo advirtió que habían desaparecido los puntitos de escritura y el micrófono de grabación.
+   - Diagnóstico: WhatsApp cancelaba el estado a los 3 segundos al faltar refresco continuo en grupos; y en chats privados los identificadores LID no refrescaban la UI si no se enviaba también al JID telefónico `@s.whatsapp.net`, sumado a una señal prematura de `paused` al alternar estados.
+   - Solución: Creación de `ContinuousPresenceHandle` con refresco activo cada 3.0s, emisión dual a LID y número `@s.whatsapp.net`, y conmutación instantánea a `setType('recording')` sin pulso de pausa intermedio. Desplegado en grupos oficiales y chats privados.
+
+**Archivos Modificados:**
+- `server/_core/whatsapp-utils.ts`: `startContinuousPresence` con `ContinuousPresenceHandle`, dual dispatch y `setType`.
+- `server/_core/whatsapp-match.ts`: Presencia continua activa durante toda la deliberación y grabación de audio en grupos y DMs.
+- `server/__tests__/regression.test.ts`: Prueba unitaria para `ContinuousPresenceHandle`.
+- `shared/const.ts`: Versión bump a `v32.70`.
+- `package.json`: Versión `32.70.0`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 160/160 tests pasando al 100% ✅ | `npm run build` limpio en 25s ✅
+
+---
+
 ### 🔖 v32.69 — Octubre 2026
 
 #### 📌 TÍTULOS LIMPIOS CON RAYITA 3D, SUPRESIÓN DE BOTONES SOBRANTES EN COINCIDENCIAS Y DOCUMENTOS FORMALES MEMBRETADOS (HOJA BLANCA CON LETRA NEGRA E IMPRESIÓN/PDF)

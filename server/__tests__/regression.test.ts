@@ -2535,6 +2535,34 @@ Adriana Rebeca Orejuela`;
       const lastUpdate = updates[updates.length - 1];
       expect(lastUpdate).toEqual({ type: "paused", jid: "573192919978@s.whatsapp.net" });
     });
+
+    it("startContinuousPresence debe soportar secondaryJid y transicionar con setType sin paused intermedio", async () => {
+      const { startContinuousPresence } = await import("../_core/whatsapp-utils");
+      const updates: Array<{ type: string; jid: string }> = [];
+      const fakeSock = {
+        sendPresenceUpdate: async (type: string, jid: string) => {
+          updates.push({ type, jid });
+        }
+      };
+
+      const handle = startContinuousPresence(
+        fakeSock,
+        "182781141344345@lid",
+        "composing",
+        50,
+        "573188096811@s.whatsapp.net"
+      );
+
+      expect(updates.some(u => u.type === "composing" && u.jid === "182781141344345@lid")).toBe(true);
+      expect(updates.some(u => u.type === "composing" && u.jid === "573188096811@s.whatsapp.net")).toBe(true);
+
+      handle.setType("recording");
+      expect(updates.some(u => u.type === "recording" && u.jid === "182781141344345@lid")).toBe(true);
+      expect(updates.some(u => u.type === "recording" && u.jid === "573188096811@s.whatsapp.net")).toBe(true);
+
+      handle.stop();
+      expect(updates.filter(u => u.type === "paused").length).toBeGreaterThanOrEqual(2);
+    });
   });
 
   describe("30. Doctrina v32.35: Protección de Datos (Ley 1581 de 2012), Hábeas Data y Verificación Preventiva", () => {

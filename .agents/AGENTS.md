@@ -172,7 +172,26 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.69 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.70 — Octubre 2026
+
+### Novedades v32.70 (Ratificación Doctrinal de Laomedeia como Voz Oficial Femenina, Paridad Total con Consola Google Cloud TTS y Blindaje de Presencia Continua en WhatsApp):
+- **Diagnóstico y Confirmación de Eduardo A. Rivera**:
+  1. **Ratificación Innegociable de la Voz de JanIA (Laomedeia)**:
+     - Eduardo instruyó tajantemente: *"la mejor y que se siente más natural y humana es la de LAOMEDEIA, las que tu mencionas SI SON ROBÓTICAS COMPLETAMENTE y: 1. Studio-B es de Hombre y quedaría muy rara para JanIA y las otras dos Dalia / Salomé si son femeninas pero también robóticas. Debes autoanalizarte porque estas fallando en ese análisis."*
+     - Comprobada paridad 1:1 en `whatsapp-utils.ts`: endpoint `https://texttospeech.googleapis.com/v1beta1/text:synthesize`, modelo `gemini-3.1-flash-tts-preview`, voz `Laomedeia`, `es-us`, prompt `"Read aloud in a warm, welcoming tone."`, `pitch: 0.0`, `speakingRate: 1.0` y transcodificación nativa a `OGG_OPUS`.
+     - Aclaración financiera: Laomedeia cuesta centavos (~$17 COP por nota de voz). El aumento facturado derivó del LLM en Round-Robin y cortes a 48h de Google Cloud.
+  2. **Blindaje de Presencia Continua en WhatsApp (Tres Puntitos (...) y Micrófono 🎙️)**:
+     - Eduardo advirtió la desaparición de los gestos de escritura y grabación de audio.
+     - Causa identificada: WhatsApp expira el estado a los 3 segundos si no hay refresco continuo; en chats privados los identificadores LID descartan la presencia si no se envía también al JID telefónico `@s.whatsapp.net`; y la alternancia de estados enviaba un `paused` prematuro.
+     - Solución: `ContinuousPresenceHandle` en `whatsapp-utils.ts` con refresco cada 3.0s, emisión dual (LID y JID telefónico), y transición atómica sin pausa intermedia vía `setType('recording')`. Desplegado en grupos oficiales y chats privados de `whatsapp-match.ts`.
+  3. **Modificaciones Implementadas**:
+     - `server/_core/whatsapp-utils.ts`: `startContinuousPresence` con `ContinuousPresenceHandle`, dual dispatch y `setType`.
+     - `server/_core/whatsapp-match.ts`: Presencia continua activa durante toda la deliberación y grabación de audio en grupos y DMs.
+     - `server/__tests__/regression.test.ts`: Prueba unitaria para `ContinuousPresenceHandle`.
+     - `shared/const.ts` (`v32.70`) y `package.json` (`32.70.0`).
+     - 160/160 pruebas Vitest pasando al 100%, compilación limpia con `tsc --noEmit` y `npm run build` en 25s.
+
+## 🔖 VERSIÓN ANTERIOR: v32.69 — Octubre 2026
 
 ### Novedades v32.69 (Títulos Limpios con Rayita 3D, Supresión de Botones Sobrantes en AdminMatches y Formato Documento Formal Imprimible/PDF en Hoja Blanca para Términos y Privacidad):
 - **Diagnóstico y Confirmación de Eduardo A. Rivera**:
