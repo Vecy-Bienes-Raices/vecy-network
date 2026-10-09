@@ -1,5 +1,6 @@
 import React from 'react';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { Shield, BarChart3, Gavel, Landmark, ArrowRight, Star } from 'lucide-react';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { useLocation } from 'wouter';
@@ -112,36 +113,7 @@ export default function Services() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-black border-t border-white/10 py-20 relative z-10">
-        <div className="container">
-          <div className="grid md:grid-cols-4 gap-12">
-            <div className="col-span-2 text-center md:text-left">
-              <img src="/logo-vecy.png" alt="Vecy" className="h-10 mb-8 mx-auto md:mx-0 opacity-40 grayscale" />
-              <p className="vecy-paragraph max-w-md">
-                VECY es tu red inmobiliaria inteligente que está redefiniendo los estándares de eficiencia en Colombia. 
-              </p>
-            </div>
-            <div className="text-center md:text-left">
-              <h4 className="text-white font-bold tracking-[0.2em] uppercase mb-8 text-xs">Compañía</h4>
-              <ul className="space-y-4 text-xs text-gray-500 uppercase font-bold tracking-widest">
-                <li className="hover:text-primary cursor-pointer transition-colors" onClick={() => navigate('/historia')}>Nuestra Historia</li>
-                <li className="hover:text-primary cursor-pointer transition-colors" onClick={() => navigate('/properties')}>Propiedades</li>
-              </ul>
-            </div>
-            <div className="text-center md:text-left">
-              <h4 className="text-white font-bold tracking-[0.2em] uppercase mb-8 text-xs">Contacto</h4>
-              <p className="text-gray-500 text-xs mb-4 font-bold uppercase tracking-widest">Bogotá, Colombia</p>
-              <p className="text-primary text-xs font-bold tracking-widest">contacto@vecy.co</p>
-            </div>
-          </div>
-          <div className="border-t border-white/5 mt-20 pt-8 text-center">
-            <p className="text-[10px] text-gray-700 uppercase tracking-[0.5em]">
-              © 2026 VECY Bienes Raíces — Red Inmobiliaria Inteligente.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

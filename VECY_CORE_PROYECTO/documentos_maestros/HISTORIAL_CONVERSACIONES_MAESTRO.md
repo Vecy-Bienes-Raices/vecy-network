@@ -7,6 +7,36 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.67 — 09 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Rediseño Unificado de Pie de Página (Footer) para Todas las Páginas y Subpáginas**:
+   - Eduardo solicitó: *"Pongamos diseño. Quiero algo así para el pie de página que debe ser igual en todas nuestras páginas y subpáginas pero no quiero que repitas el mismo menú de arriba a bajo, mejor coloca los logos miniatura de todas nuestras redes sociales incluyendo github en reemplazo a ese menú repetido y eso sí deja lo de {{Términos y Condiciones}} y lo de {{Política de Privacidad}} pero reduce esos letreros tan grandes lo mismo para los enlaces solo deja: {{Condiciones}} / {{Privacidad}} o {{Política}} / {{términos}} y lo mismo los enlaces: /privacidad /condiciones o /política /términos tú que vas más avanzado cómo se debe colocar, completo será?? O dame opciones a ver cuál me gusta más."*
+2. **Estructura Requerida**:
+   - Logo dorado central con resplandor.
+   - Nombre de marca: **VECY BIENES RAÍCES** + Slogan oficial: *"La evolución inevitable para el sector de los bienes raíces en Colombia."*
+   - Miniaturas de todas las redes sociales oficiales de VECY (WhatsApp Canal, Instagram, Facebook, YouTube, TikTok, LinkedIn, X/Twitter y GitHub).
+   - Enlaces a Términos y Condiciones y Política de Privacidad de diseño sutil y elegante con soporte a todas las rutas alias (`/terminos-y-condiciones`, `/terminos`, `/condiciones`, `/politica-privacidad`, `/politica`, `/privacidad`).
+   - Copyright con espaciado expandido: `© 2026 VECY Bienes Raíces — Todos los derechos reservados.`
+
+### Diagnóstico Técnico y Diseño
+1. **Creación del Componente Unificado `<Footer />`**:
+   - Se creó [`client/src/components/Footer.tsx`](file:///home/eddu/Proyectos/vecy-network/client/src/components/Footer.tsx) con soporte dinámico para variantes de texto (`completo`, `corto` y `minimalista`).
+   - Iconos oficiales vectoriales de `react-icons/fa6` para cada red con micro-animaciones hover (efecto escala 110%, badges circulares, resplandores específicos de marca y enlaces oficiales desde `shared/const.ts`).
+2. **Eliminación de la Duplicación de Menús**:
+   - Se removieron los menús de navegación duplicados que existían en los footers individuales de `Home.tsx`, `Properties.tsx`, `Blog.tsx`, `Services.tsx`, etc., sustituyéndolos por el nuevo componente `<Footer />` en las 12 páginas públicas.
+3. **Rutas y Alias**:
+   - En `client/src/App.tsx` se aseguraron todas las variantes solicitadas: `/terminos-y-condiciones`, `/terminos`, `/condiciones`, `/politica-privacidad`, `/politica` y `/privacidad`.
+
+### Acciones Técnicas Ejecutadas
+- Creado [`client/src/components/Footer.tsx`](file:///home/eddu/Proyectos/vecy-network/client/src/components/Footer.tsx).
+- Actualizadas las 12 páginas del cliente: `Home.tsx`, `TerminosCondiciones.tsx`, `PoliticaPrivacidad.tsx`, `NuestraHistoria.tsx`, `RedColaboracion.tsx`, `Properties.tsx`, `PropertyDetail.tsx`, `RequirementsMarketplace.tsx`, `Blog.tsx`, `Services.tsx`, `Contact.tsx`, `Investors.tsx`.
+- Enrutador [`client/src/App.tsx`](file:///home/eddu/Proyectos/vecy-network/client/src/App.tsx) actualizado con aliases `/condiciones` y `/politica`.
+- Bump de versión: `shared/const.ts` (`v32.67`) y `package.json` (`32.67.0`).
+- Verificaciones: `tsc --noEmit` 0 errores, `pnpm run build` limpio y 159/159 tests Vitest pasando al 100%.
+
+---
+
 ## 📋 SESIÓN v32.66 — 09 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

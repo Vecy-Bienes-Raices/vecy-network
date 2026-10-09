@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import PropertyGallery from '@/components/PropertyGallery';
 import NeighborhoodMap from '@/components/NeighborhoodMap';
 import { 
@@ -637,12 +638,7 @@ export default function PropertyDetail() {
         />
       )}
 
-      <footer className="bg-black border-t border-white/10 py-16 mt-16">
-        <div className="container text-center">
-          <img src="/logo-vecy.png" alt="Vecy" className="h-8 mx-auto mb-6 opacity-40 grayscale" />
-          <p className="text-zinc-600 text-[10px] uppercase tracking-[0.3em]">VECY Bienes Raíces — Red Colaborativa de Corretaje Inmobiliario para Colombia.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

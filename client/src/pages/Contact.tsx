@@ -1,5 +1,6 @@
 import React from 'react';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { Mail, Phone, MapPin, Send, MessageSquare } from 'lucide-react';
 
 export default function Contact() {
@@ -134,12 +135,7 @@ export default function Contact() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-black border-t border-white/10 py-12">
-        <div className="container text-center text-gray-400 text-sm">
-          <p>&copy; 2026 Vecy. Todos los derechos reservados.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

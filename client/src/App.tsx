@@ -70,7 +70,9 @@ function Router() {
         <Route path={"/jania"} component={JanIAConsole} />
         <Route path={"/terminos-y-condiciones"} component={TerminosCondiciones} />
         <Route path={"/terminos"} component={TerminosCondiciones} />
+        <Route path={"/condiciones"} component={TerminosCondiciones} />
         <Route path={"/politica-privacidad"} component={PoliticaPrivacidad} />
+        <Route path={"/politica"} component={PoliticaPrivacidad} />
         <Route path={"/privacidad"} component={PoliticaPrivacidad} />
         <Route path={"/404"} component={NotFound} />
         {/* Final fallback route */}

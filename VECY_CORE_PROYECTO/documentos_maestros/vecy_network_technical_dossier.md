@@ -331,6 +331,25 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.67 — Octubre 2026
+
+#### 📌 REDISEÑO UNIFICADO DE PIE DE PÁGINA (FOOTER) INSTITUCIONAL OFICIAL CON LOGOS DE REDES SOCIALES, GITHUB Y ENLACES LEGALES OPTIMIZADOS
+
+**Requerimiento y Objetivos:**
+1. **Nuevo Pie de Página Unificado para Todas las Páginas y Subpáginas**:
+   - Petición de Eduardo A. Rivera: Sustituir los menús repetidos del footer por una botonera centralizada con las miniaturas de todas las redes sociales oficiales de VECY BIENES RAÍCES (WhatsApp Canal, Instagram, Facebook, YouTube, TikTok, LinkedIn, X/Twitter y GitHub).
+   - Mantener el logo dorado centralizado, marca oficial `VECY BIENES RAÍCES` y slogan: *"La evolución inevitable para el sector de los bienes raíces en Colombia."*
+   - Reducir el tamaño visual de los enlaces legales y soportar aliases cortos `/condiciones`, `/politica`, `/terminos` y `/privacidad`.
+2. **Implementación y Despliegue Global**:
+   - `client/src/components/Footer.tsx`: Creado componente maestro institucional con micro-interacciones hover, paleta de colores corporativos e integración de `VECY_SOCIAL_NETWORKS`.
+   - Adopción global en las 12 páginas públicas (`Home.tsx`, `TerminosCondiciones.tsx`, `PoliticaPrivacidad.tsx`, `NuestraHistoria.tsx`, `RedColaboracion.tsx`, `Properties.tsx`, `PropertyDetail.tsx`, `RequirementsMarketplace.tsx`, `Blog.tsx`, `Services.tsx`, `Contact.tsx`, `Investors.tsx`).
+   - `client/src/App.tsx`: Añadidas rutas alias `/condiciones` y `/politica`.
+   - Bump de versión a `v32.67` en `shared/const.ts` y `package.json` (`32.67.0`).
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | `pnpm build` limpio ✅ | 159/159 tests Vitest ✅
+
+---
+
 ### 🔖 v32.66 — Octubre 2026
 
 #### 📌 PÁGINAS WEB INSTITUCIONALES DE TÉRMINOS Y CONDICIONES Y POLÍTICA DE PRIVACIDAD / HÁBEAS DATA (LEY 1581 DE 2012 Y LEY 527 DE 1999)

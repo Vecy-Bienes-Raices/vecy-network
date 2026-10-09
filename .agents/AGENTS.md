@@ -172,11 +172,28 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.66 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.67 — Octubre 2026
 
-### Novedades v32.66 (Páginas Web Institucionales de Términos y Condiciones y Política de Privacidad / Hábeas Data Ley 1581 de 2012):
+### Novedades v32.67 (Rediseño Unificado de Pie de Página / Footer Institucional Oficial con Redes Sociales y GitHub, Eliminación de Menús Duplicados y Rutas Legales Optimizadas):
 - **Diagnóstico y Confirmación de Eduardo A. Rivera**:
-  1. **Consagración Web Pública de los Términos y Condiciones**:
+  1. **Nuevo Diseño Unificado de Pie de Página**:
+     - Eduardo instruyó: *"Pongamos diseño. Quiero algo así para el pie de página que debe ser igual en todas nuestras páginas y subpáginas pero no quiero que repitas el mismo menú de arriba a bajo, mejor coloca los logos miniatura de todas nuestras redes sociales incluyendo github en reemplazo a ese menú repetido y eso sí deja lo de {{Términos y Condiciones}} y lo de {{Política de Privacidad}} pero reduce esos letreros tan grandes lo mismo para los enlaces solo deja: {{Condiciones}} / {{Privacidad}} o {{Política}} / {{términos}}..."*
+  2. **Implementación del Componente Oficial `client/src/components/Footer.tsx`**:
+     - **Logo Dorado Central**: Isotipo oficial con resplandor dorado y animación hover suave.
+     - **Identidad de Marca**: `VECY BIENES RAÍCES` con slogan corporativo: *"La evolución inevitable para el sector de los bienes raíces en Colombia."*
+     - **Logos Miniatura de Redes Sociales**: WhatsApp Oficial (Canal), Instagram, Facebook, YouTube, TikTok, LinkedIn, X (Twitter) y GitHub Repositorio oficial, con micro-animaciones hover y efectos de color de cada marca.
+     - **Enlaces Legales Elegantes y Discretos**: Enlaces a Términos y Condiciones y Política de Privacidad en tipografía refinada (12px), sin sobrecargar visualmente la pantalla.
+     - **Enrutamiento Flexible**: Soporte para `/terminos-y-condiciones`, `/terminos`, `/condiciones`, `/politica-privacidad`, `/politica`, y `/privacidad`.
+  3. **Despliegue Global en las 12 Páginas**:
+     - Integrado en `Home.tsx`, `TerminosCondiciones.tsx`, `PoliticaPrivacidad.tsx`, `NuestraHistoria.tsx`, `RedColaboracion.tsx`, `Properties.tsx`, `PropertyDetail.tsx`, `RequirementsMarketplace.tsx`, `Blog.tsx`, `Services.tsx`, `Contact.tsx`, e `Investors.tsx`.
+  4. **Modificaciones Implementadas**:
+     - `client/src/components/Footer.tsx` creado.
+     - Todas las páginas actualizadas con el nuevo `<Footer />`.
+     - `client/src/App.tsx` enriquecido con rutas alias `/condiciones` y `/politica`.
+     - `shared/const.ts` (`v32.67`) y `package.json` (`32.67.0`).
+     - 159/159 tests Vitest pasando al 100%, build limpio.
+
+## 🔖 VERSIÓN ANTERIOR: v32.66 — Octubre 2026
      - Eduardo preguntó: *"¿Es decir que ya tenemos esa parte muy bien estipulada en nuestro archivo de Términos y condiciones? Adelante y si puedes de una vez vayamos construyendo la de privacidad."*
      - Aunque el contrato digital PDF con QR ya contenía las cláusulas blindadas, el portal web carecía de las páginas y rutas públicas `/terminos-y-condiciones` y `/politica-privacidad`.
   2. **Implementación de Términos y Condiciones (`TerminosCondiciones.tsx`)**:

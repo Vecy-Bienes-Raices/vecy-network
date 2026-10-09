@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { useLocation } from 'wouter';
 import { 
   MapPin, 
@@ -197,44 +198,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="bg-black border-t border-white/10 py-20 relative z-10">
-        <div className="container">
-          <div className="grid md:grid-cols-4 gap-12">
-            <div className="col-span-2">
-              <img src="/logo-vecy.png" alt="Vecy" className="h-12 mb-8" />
-              <p className="vecy-paragraph max-w-md">
-                VECY es tu red inmobiliaria inteligente que está redefiniendo los estándares de eficiencia en Colombia. 
-                Lideramos con tecnología y operamos con visión humana.
-              </p>
-            </div>
-            <div>
-              <h4 className="text-white font-bold tracking-[0.2em] uppercase mb-8">Compañía</h4>
-              <ul className="space-y-4 text-sm text-gray-500">
-                <li className="hover:text-primary cursor-pointer transition-colors" onClick={() => navigate('/historia')}>Nuestra Historia</li>
-                <li className="hover:text-primary cursor-pointer transition-colors" onClick={() => navigate('/red-colaboracion')}>Bolsa Colaborativa</li>
-                <li className="hover:text-primary cursor-pointer transition-colors" onClick={() => navigate('/terminos-y-condiciones')}>Términos y Condiciones</li>
-                <li className="hover:text-primary cursor-pointer transition-colors" onClick={() => navigate('/politica-privacidad')}>Política de Privacidad</li>
-                <li className="hover:text-primary cursor-pointer transition-colors" onClick={() => navigate('/properties')}>Propiedades</li>
-                <li className="hover:text-primary cursor-pointer transition-colors" onClick={() => navigate('/admin')}>Admin</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-bold tracking-[0.2em] uppercase mb-8">Contacto</h4>
-              <p className="text-gray-500 text-sm mb-4">Bogotá, Colombia</p>
-              <p className="text-primary text-sm font-bold">contacto@vecy.co</p>
-            </div>
-          </div>
-          <div className="border-t border-white/5 mt-20 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-center">
-            <p className="text-[10px] text-gray-700 uppercase tracking-[0.5em]">
-              © 2026 VECY Bienes Raíces — Todos los derechos reservados.
-            </p>
-            <div className="flex gap-6 text-xs text-gray-600">
-              <span className="hover:text-primary cursor-pointer transition-colors" onClick={() => navigate('/terminos-y-condiciones')}>Términos y Condiciones</span>
-              <span className="hover:text-primary cursor-pointer transition-colors" onClick={() => navigate('/politica-privacidad')}>Política de Privacidad</span>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

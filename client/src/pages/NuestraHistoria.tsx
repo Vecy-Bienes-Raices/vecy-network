@@ -1,5 +1,6 @@
 import React from 'react';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { 
   Leaf, 
   Wifi, 
@@ -213,14 +214,7 @@ export default function NuestraHistoria() {
         </div>
       </section>
 
-      <footer className="bg-black border-t border-white/10 py-12">
-        <div className="container text-center">
-          <img src="/logo-vecy.png" alt="Vecy" className="h-10 mx-auto mb-6 opacity-20" />
-          <p className="text-gray-600 text-[10px] uppercase tracking-[0.3em]">
-            VECY Bienes Raíces — Innovando desde 2018.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

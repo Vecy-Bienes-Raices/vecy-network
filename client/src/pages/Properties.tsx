@@ -10,6 +10,7 @@
  */
 
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import NetworkBackground from '@/components/NetworkBackground';
 import PropertyCard from '@/components/PropertyCard';
 import { useMemo, useState, useEffect } from 'react';
@@ -415,22 +416,7 @@ export default function Properties() {
         </div>
       </section>
 
-      {/* ── FOOTER MINIMALISTA ── */}
-      <footer className="bg-black border-t border-white/10 py-16">
-        <div className="container text-center">
-          <img src="/logo-vecy.png" alt="Vecy" className="h-10 mx-auto mb-6 opacity-60 hover:opacity-100 transition-opacity" />
-          <div className="flex justify-center gap-8 mb-8">
-            <button onClick={() => navigate('/')} className="text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-primary transition-colors cursor-pointer">Inicio</button>
-            <button onClick={() => navigate('/historia')} className="text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-primary transition-colors cursor-pointer">Historia</button>
-            <button onClick={() => navigate('/ofertas')} className="text-xs font-bold uppercase tracking-widest text-primary hover:text-white transition-colors cursor-pointer">Ofertas</button>
-            <button onClick={() => navigate('/demandas')} className="text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-primary transition-colors cursor-pointer">Demandas</button>
-            <button onClick={() => navigate('/services')} className="text-xs font-bold uppercase tracking-widest text-zinc-500 hover:text-primary transition-colors cursor-pointer">Servicios</button>
-          </div>
-          <p className="text-zinc-600 text-[10px] uppercase tracking-[0.3em]">
-            &copy; 2026 VECY BIENES RAÍCES. Red Colaborativa Inmobiliaria de Colombia.
-          </p>
-        </div>
-      </footer>
+      <Footer />
 
       {/* Modal Unificado de Publicación */}
       <UnifiedPublishModal

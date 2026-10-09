@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { 
   Users, 
   Search, 
@@ -287,15 +288,7 @@ export default function RequirementsMarketplace() {
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="bg-black border-t border-white/10 py-12">
-        <div className="container text-center">
-          <img src="/logo-vecy.png" alt="Vecy" className="h-10 mx-auto mb-6 opacity-30 grayscale" />
-          <p className="text-gray-600 text-[10px] uppercase tracking-[0.3em]">
-            &copy; 2026 VECY BIENES RAÍCES. El Futuro del Real Estate es Colaborativo.
-          </p>
-        </div>
-      </footer>
+      <Footer />
 
       {/* MODAL DE PUBLICACIÓN UNIFICADO */}
       <UnifiedPublishModal

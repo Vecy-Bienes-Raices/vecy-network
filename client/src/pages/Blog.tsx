@@ -6,6 +6,7 @@
 
 import { useState } from 'react';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { Calendar, User, ArrowRight } from 'lucide-react';
 
 interface BlogPost {
@@ -311,43 +312,7 @@ export default function Blog() {
         </div>
       )}
 
-      {/* Footer */}
-      <footer className="bg-black border-t border-white/10 py-12">
-        <div className="container">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h4 className="text-white font-bold mb-4 uppercase tracking-wider">Vecy</h4>
-              <p className="text-gray-300 text-sm">Liderazgo en tecnología inmobiliaria.</p>
-            </div>
-            <div>
-              <h4 className="text-white font-bold mb-4 uppercase tracking-wider">Navegación</h4>
-              <ul className="space-y-2 text-sm text-gray-300">
-                <li><a href="/" className="hover:text-accent transition-colors">Inicio</a></li>
-                <li><a href="/properties" className="hover:text-accent transition-colors">Propiedades</a></li>
-                <li><a href="/blog" className="hover:text-accent transition-colors">Blog</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-bold mb-4 uppercase tracking-wider">Legal</h4>
-              <ul className="space-y-2 text-sm text-gray-300">
-                <li><a href="#" className="hover:text-accent transition-colors">Términos</a></li>
-                <li><a href="#" className="hover:text-accent transition-colors">Privacidad</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="text-white font-bold mb-4 uppercase tracking-wider">Contacto</h4>
-              <p className="text-gray-300 text-sm">
-                +57 (1) 1234-5678<br />
-                vecybienesraices@gmail.com
-              </p>
-            </div>
-          </div>
-
-          <div className="border-t border-white/10 pt-8 text-center text-gray-400 text-sm">
-            <p>&copy; 2026 Vecy. Todos los derechos reservados.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

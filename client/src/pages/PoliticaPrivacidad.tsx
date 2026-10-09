@@ -1,5 +1,6 @@
 import React from 'react';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import NetworkBackground from '@/components/NetworkBackground';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { 
@@ -248,25 +249,7 @@ export default function PoliticaPrivacidad() {
 
       </main>
 
-      {/* FOOTER INSTITUCIONAL */}
-      <footer className="bg-black border-t border-white/10 py-16 relative z-10">
-        <div className="container max-w-5xl mx-auto px-4 text-center space-y-4">
-          <img src="/logo-vecy.png" alt="Vecy" className="h-10 mx-auto opacity-80" />
-          <p className="text-xs text-gray-500 max-w-lg mx-auto">
-            VECY BIENES RAÍCES — La evolución inevitable para el sector de los bienes raíces en Colombia.
-          </p>
-          <div className="flex flex-wrap justify-center gap-6 text-xs text-gray-400 pt-2">
-            <span className="hover:text-primary cursor-pointer transition-colors" onClick={() => navigate('/')}>Inicio</span>
-            <span className="hover:text-primary cursor-pointer transition-colors" onClick={() => navigate('/historia')}>Nuestra Historia</span>
-            <span className="hover:text-primary cursor-pointer transition-colors" onClick={() => navigate('/red-colaboracion')}>Bolsa Colaborativa</span>
-            <span className="hover:text-primary cursor-pointer transition-colors" onClick={() => navigate('/terminos-y-condiciones')}>Términos y Condiciones</span>
-            <span className="hover:text-primary cursor-pointer transition-colors text-primary font-bold" onClick={() => navigate('/politica-privacidad')}>Política de Privacidad</span>
-          </div>
-          <p className="text-[10px] text-gray-700 uppercase tracking-[0.4em] pt-4">
-            © 2026 VECY Bienes Raíces — Todos los derechos reservados.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
