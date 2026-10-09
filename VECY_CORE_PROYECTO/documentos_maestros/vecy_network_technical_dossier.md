@@ -331,6 +331,36 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.75 — Octubre 2026
+
+#### 📌 NUTRICIÓN DOCTRINAL DESDE NOTARÍA 19 DE BOGOTÁ, RANGOS EXACTOS SNR, EXENCIÓN DE RETENCIÓN PARA PERSONAS JURÍDICAS Y TARIFAS PREFERENCIALES VIS
+
+**Requerimiento y Objetivos:**
+1. **Ingeniería Inversa y Aprendizaje de la Calculadora de Notaría 19 Bogotá**:
+   - Eduardo instruyó: *"Aquí hay un ejemplo de la mejor calculadora de gastos notariales que hay hasta el momento, aunque según ellos mismos a veces tiene los valores notariales desactualizados: https://www.notaria19bogota.com/gastos-notariales/ Es más JanIa debería de aprender todo y nutrir su conocimiento ingresando a este sitio. También autorizo para que JanIA busque los sitios necesarios y tome de cada uno lo que necesite y ella vea que más le convenga o le sirva pero que antes revise que estén actualizados..."*
+2. **Implementación de Rangos Escalonados Oficiales (SNR 2026 / Notaría 19)**:
+   - Se analizaron y extrajeron las funciones exactas de la herramienta de Notaría 19 (`Calculated Fields Form`):
+     • *Derechos Notariales:* `< 100M` (0.59%), `100M-500M` (0.40%), `500M-1.000M` (0.38%), `> 1.000M` (0.36%). Dividido 50/50.
+     • *Derechos de Registro ORIP:* `< 136M` (0.632%), `136M-236M` (0.785%), `236M-350M` (0.874%), `> 350M` (0.924%), más sistematización (2%).
+     • *Otros Gastos Notariales:* Copias matriz, papelería y biometría en línea de la Registraduría ($100.000 comprador / $100.000 vendedor) e IVA del 19%.
+3. **Casos Especiales: Personas Jurídicas y Vivienda de Interés Social (VIS)**:
+   - *Personas Jurídicas:* Si la parte vendedora es empresa, constructora o sociedad comercial, la notaría retiene **$0 COP** (la empresa realiza autorretención periódica en su declaración de renta).
+   - *Vivienda de Interés Social (VIS / VIP - Ley 1537 de 2012):* 50% de reducción en derechos notariales y tarifas preferenciales de registro.
+4. **Respuestas Doctrinales Ampliadas (`explainNotarialFigures`)**:
+   - Incorporadas las dudas notariales más frecuentes: quién paga qué, cómo se liquida la retención en la fuente, diferencias en beneficencia y registro, VIS y constitución/cancelación de usufructo.
+
+**Archivos Modificados:**
+- `server/_core/notarialExpenseService.ts`: `getNotarialFeeRate`, `getRegistryFeeRate`, `vendedorEsPersonaJuridica`, `esViviendaInteresSocial`, FAQ Notaría 19.
+- `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`: Pilar 11 (Liquidación Notarial Integral).
+- `server/__tests__/regression.test.ts`: Pruebas ampliadas para PJ, VIS y doctrinas (162/162 tests Vitest ✅).
+- `shared/const.ts`: Versión `v32.75`.
+- `package.json`: Versión `32.75.0`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 162/162 tests pasando al 100% ✅ | `npm run build` limpio en 22s ✅
+
+---
+
 ### 🔖 v32.74 — Octubre 2026
 
 #### 📌 LIQUIDACIÓN DE GASTOS NOTARIALES Y REGISTRO, DOCTRINA NOTARIAL (BIC, AFECTACIÓN, PATRIMONIO DE FAMILIA, LEASING) Y AUTONOMÍA SAGRADA DE IA PURA SIN TEXTOS LARGOS

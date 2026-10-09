@@ -43,6 +43,20 @@ Este es el canal oficial de **Temas Libres, Consultas Inmobiliarias Públicas, T
      - Orientación y liquidación del Impuesto Predial Unificado de Bogotá: si el usuario envía el código CHIP del predio y la cédula del propietario (ej: *"JanIA, predial del CHIP AAA0123ABCD cédula XXXXXXXX"*), JanIA liquida la tarifa oficial por milaje (Acuerdo 648 de 2016 / 780 de 2020), calcula los descuentos por pronto pago y entrega la factura oficial en PDF emitida por la Secretaría Distrital de Hacienda.
   10. **🏛️ Certificado de Estado de Cuenta y Paz y Salvo de Valorización IDU (CHIP):**
      - Expedición oficial y entrega directa en archivo PDF del Certificado de Estado de Cuenta para Trámite Notarial (Paz y Salvo de Valorización) del Instituto de Desarrollo Urbano (IDU) bajo el Artículo 44 del Acuerdo Distrital 915 de 2023. Si el usuario solicita el paz y salvo del IDU e indica el código CHIP del predio (ej: *"JanIA, paz y salvo del IDU del predio AAA0058EEXS"*), JanIA se conecta en tiempo real al portal oficial del IDU, valida el predio, genera el documento oficial con PIN de seguridad y lo entrega adjunto en archivo PDF por WhatsApp listo para la notaría ($0 COP).
+  11. **⚖️ Liquidación Oficial de Gastos Notariales, Beneficencia y Registro (Promesa y Notaría):**
+     - Liquidación matemática y tributaria rigurosa basada en las tarifas actualizadas de la Superintendencia de Notariado y Registro (SNR 2026), Estatuto Tributario y estándares notariales de Bogotá (Notaría 19):
+       • *50% Derechos Notariales:* Repartido por mitades entre Vendedor y Comprador según rangos escalonados de cuantía, más copias y biometría en línea.
+       • *Retención en la Fuente:* 1.0% para personas naturales si <= 20.000 UVT ($1.006.360.000 COP en 2026) o 2.5% sobre el exceso (Art. 398 y 401 E.T.). Si el vendedor es persona jurídica, la retención en notaría es $0 COP (la sociedad autorretiene en su renta periódica).
+       • *Impuesto de Beneficencia:* 1.0% en Bogotá a cargo del Comprador.
+       • *Derechos de Registro ORIP (SNR):* Entre 0.63% y 0.92% más sistematización a cargo del Comprador.
+       • *Crédito Hipotecario Comprador:* Derechos notariales y registro de constitución de hipoteca (~1.1% del valor financiado).
+       • *Cancelación de Hipoteca Vendedor:* Minuta bancaria y acto sin cuantía (~$550.000 a $650.000 COP a cargo del vendedor).
+       • *Cesión de Leasing Habitacional:* Al mantenerse el banco fiduciario como propietario registral en la matrícula, el comprador se ahorra el ~1.75% de beneficencia y registro de compraventa.
+       • *Afectación a Vivienda Familiar (Ley 258/1996):* Exige comparecencia y firma obligatoria de ambos cónyuges.
+       • *Patrimonio de Familia Inembargable (Ley 70/1931):* Si hay menores de edad, exige trámite previo con Defensor del ICBF o Juez.
+       • *Bien de Interés Cultural (BIC):* Alerta bancaria: las entidades financieras NO prestan crédito ni leasing sobre inmuebles BIC; casi siempre se compran de CONTADO.
+       • *Embargos (Art. 1521 C.C.):* Objeto ilícito. Bloqueo legal hasta radicar el oficio de desembargo en la ORIP.
+       • *Vivienda de Interés Social (VIS / VIP - Ley 1537):* Descuento del 50% en derechos notariales y tarifas preferenciales de registro.
 
 ---
 

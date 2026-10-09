@@ -7,6 +7,52 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.75 — 09 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Aprendizaje y Nutrición Doctrinal desde la Notaría 19 de Bogotá**:
+   - Eduardo aportó: *"Aquí hay un ejemplo de la mejor calculadora de gastos notariales que hay hasta el momento, aunque según ellos mismos a veces tiene los valores notariales desactualizados: https://www.notaria19bogota.com/gastos-notariales/ Es más JanIa debería de aprender todo y nutrir su conocimiento ingresando a este sitio. También autorizo para que JanIA busque los sitios necesarios y tome de cada uno lo que necesite y ella vea que más le convenga o le sirva pero que antes revise que estén actualizados, si ve que necesita de mi ayuda en algo para poderse conectar o ingresar qe me diga cómo le ayudo."*
+   - Aportó dos capturas de pantalla del sitio web oficial de la Notaría 19 de Bogotá (`https://www.notaria19bogota.com/gastos-notariales/`), mostrando su simulador de gastos notariales, beneficencia y registro, los tipos de actos contemplados y su sección de preguntas frecuentes.
+
+### Diagnóstico Técnico Profundo e Ingeniería Inversa
+1. **Ingeniería Inversa del Simulador de Notaría 19 Bogotá**:
+   - Se descargó e inspeccionó la estructura interna de la calculadora (`form_structure_1` de WordPress Calculated Fields Form) en sus variantes de compraventa sin hipoteca, con hipoteca bancaria, entre particulares y cancelación de gravámenes.
+   - **Rangos de Derechos Notariales (SNR / Notaría 19):**
+     • `< $100.000.001`: 0.59% (0.0059)
+     • `$100.000.001 - $500.000.000`: 0.40% (0.0040)
+     • `$500.000.001 - $1.000.000.000`: 0.38% (0.0038)
+     • `> $1.000.000.000`: 0.36% (0.0036)
+     • Dividido en mitades iguales (50% comprador y 50% vendedor).
+   - **Rangos de Derechos de Registro ORIP (Superintendencia de Notariado y Registro):**
+     • `< $136.278.900`: 0.632% (0.00632)
+     • `$136.278.900 - $236.216.760`: 0.785% (0.00785)
+     • `$236.216.760 - $349.782.510`: 0.874% (0.00874)
+     • `> $349.782.510`: 0.924% (0.00924)
+     • Más sistematización (2%) y papelería registral a cargo del comprador.
+   - **Otros Gastos Notariales:** Copias de matriz, hojas notariales de protocolo y biometría en línea de la Registraduría (RNEC): ~$100.000 COP para el comprador y ~$100.000 COP para el vendedor, gravados con IVA del 19%.
+   - **Diagnóstico del desfase advertido por Eduardo:**
+     • La Notaría 19 cita en su texto explicativo que la retención en la fuente del 2.5% aplica a inmuebles superiores a $685.000.000, lo cual corresponde al valor de 20.000 UVT de años anteriores. En 2026, con la UVT oficial en $50.318 COP, el límite legal de 20.000 UVT es de **$1.006.360.000 COP**. JanIA aplica los topes actualizados exactos de 2026.
+   - **Diferenciación Persona Natural vs Persona Jurídica:**
+     • Si el vendedor es persona jurídica, la notaría retiene **$0 COP**, ya que la empresa aplica autorretención periódica en su declaración de renta.
+   - **Vivienda de Interés Social (VIS / VIP - Ley 1537 de 2012):**
+     • Descuento preferencial del 50% en derechos notariales y tarifas reducidas en la ORIP.
+
+### Acciones Técnicas Ejecutadas
+1. **Actualización del Motor Notarial (`server/_core/notarialExpenseService.ts`)**:
+   - Incorporadas las funciones matemáticas `getNotarialFeeRate` y `getRegistryFeeRate` con los escalones oficiales de la SNR y Notaría 19.
+   - Añadidos los parámetros `vendedorEsPersonaJuridica` y `esViviendaInteresSocial` a `NotarialExpenseParams` y al extractor `extractNotarialExpenseParams`.
+   - Incluidos rubros desglosados de papelería, foliatura, biometría en línea e IVA del 19%.
+   - Ampliado `explainNotarialFigures` con las preguntas doctrinales clave de Notaría 19: quién paga qué, cómo opera la retención en la fuente, impuesto de beneficencia y registro, beneficios VIS y cancelación/constitución de usufructo.
+2. **Actualización de Prompts Doctrinales**:
+   - Enriquecido `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` con el Pilar 11 (Liquidación Oficial de Gastos Notariales, Beneficencia y Registro).
+3. **Pruebas y Verificación**:
+   - Actualizados tests en `server/__tests__/regression.test.ts` con cobertura de Persona Jurídica, Vivienda VIS y preguntas doctrinales (162/162 pruebas Vitest aprobadas al 100%).
+   - Verificación de tipos `npm run check` con 0 errores.
+   - Compilación exitosa `npm run build` en 22s.
+   - Incremento oficial de versión a `v32.75` (`32.75.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.74 — 09 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

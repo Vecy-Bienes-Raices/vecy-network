@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.74";
+    VECY_VERSION = "v32.75";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -11493,16 +11493,34 @@ __export(notarialExpenseService_exports, {
   executeNotarialAssistanceFromWhatsApp: () => executeNotarialAssistanceFromWhatsApp,
   explainNotarialFigures: () => explainNotarialFigures,
   extractNotarialExpenseParams: () => extractNotarialExpenseParams,
+  getNotarialFeeRate: () => getNotarialFeeRate,
   getPendingNotarialSession: () => getPendingNotarialSession,
+  getRegistryFeeRate: () => getRegistryFeeRate,
   hasPendingNotarialSession: () => hasPendingNotarialSession,
   liquidarGastosNotariales: () => liquidarGastosNotariales,
   setPendingNotarialSession: () => setPendingNotarialSession
 });
+function getNotarialFeeRate(precio, esVis = false) {
+  if (esVis) return 27e-4;
+  if (precio < 100000001) return 59e-4;
+  if (precio < 500000001) return 4e-3;
+  if (precio < 1000000001) return 38e-4;
+  return 36e-4;
+}
+function getRegistryFeeRate(precio, esVis = false) {
+  if (esVis) return 35e-4;
+  if (precio < 136278900) return 632e-5;
+  if (precio < 236216760) return 785e-5;
+  if (precio < 349782510) return 874e-5;
+  return 924e-5;
+}
 function liquidarGastosNotariales(params) {
   const precioVenta = Math.max(0, Number(params.precioVenta) || 0);
   const estadoPredio = params.estadoPredio || "libre";
   const formaPago = params.formaPago || "contado";
   const ciudad = params.ciudad || "Bogot\xE1";
+  const vendedorEsPersonaJuridica = !!params.vendedorEsPersonaJuridica;
+  const esVis = !!params.esViviendaInteresSocial;
   const advertenciasJuridicas = [];
   if (params.embargoMedidaCautelar) {
     advertenciasJuridicas.push(
@@ -11510,10 +11528,25 @@ function liquidarGastosNotariales(params) {
     );
   }
   const limite20kUvt = 2e4 * VALOR_UVT_2026;
-  const tarifaRetencionPct = precioVenta > limite20kUvt ? 2.5 : 1;
-  const retencionFuente = Math.round(precioVenta * (tarifaRetencionPct / 100));
-  const derechosNotarialesTotales = Math.round(precioVenta * 54e-4);
+  let tarifaRetencionPct = 0;
+  let retencionFuente = 0;
+  if (vendedorEsPersonaJuridica) {
+    tarifaRetencionPct = 0;
+    retencionFuente = 0;
+    advertenciasJuridicas.push(
+      "\u{1F3E2} *Vendedor Persona Jur\xEDdica:* No causa retenci\xF3n en la fuente en notar\xEDa si la sociedad aporta RUT con condici\xF3n de autorretenedora o declara renta peri\xF3dica."
+    );
+  } else {
+    tarifaRetencionPct = precioVenta > limite20kUvt ? 2.5 : 1;
+    retencionFuente = Math.round(precioVenta * (tarifaRetencionPct / 100));
+  }
+  const notarialFeeRate = getNotarialFeeRate(precioVenta, esVis);
+  const derechosNotarialesTotales = Math.round(precioVenta * notarialFeeRate);
   const derechosNotariales50Pct = Math.round(derechosNotarialesTotales / 2);
+  const otrosGastosVendedor = esVis ? 5e4 : 1e5;
+  const otrosGastosComprador = esVis ? 5e4 : 1e5;
+  const ivaVendedor = Math.round((derechosNotariales50Pct + otrosGastosVendedor) * 0.19);
+  const ivaComprador = Math.round((derechosNotariales50Pct + otrosGastosComprador) * 0.19);
   let cancelacionHipotecaVendedor = 0;
   if (estadoPredio === "hipoteca") {
     cancelacionHipotecaVendedor = Math.round(Math.min(12e5, Math.max(55e4, precioVenta * 15e-4)));
@@ -11523,21 +11556,22 @@ function liquidarGastosNotariales(params) {
   }
   let cancelacionAfectacionVivienda = 0;
   if (params.afectacionViviendaFamiliar) {
-    cancelacionAfectacionVivienda = 22e4;
+    cancelacionAfectacionVivienda = 6e5;
     advertenciasJuridicas.push(
       "\u{1F48D} *Afectaci\xF3n a Vivienda Familiar (Ley 258/1996):* Es OBLIGATORIO que ambos c\xF3nyuges o compa\xF1eros permanentes firmen la escritura de cancelaci\xF3n. Si uno de los dos no comparece, la notar\xEDa no autoriza la venta."
     );
   }
   let cancelacionPatrimonioFamilia = 0;
   if (params.patrimonioFamilia) {
-    cancelacionPatrimonioFamilia = 28e4;
+    cancelacionPatrimonioFamilia = 6e5;
     advertenciasJuridicas.push(
       "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466} *Patrimonio de Familia Inembargable (Ley 70/1931):* Si hay hijos menores de edad, la cancelaci\xF3n requiere autorizaci\xF3n judicial o tr\xE1mite notarial con concepto del Defensor de Familia del ICBF. Si los hijos son mayores, ambos padres firman aportando los registros civiles."
     );
   }
-  const subtotalVendedor = derechosNotariales50Pct + retencionFuente + cancelacionHipotecaVendedor + cancelacionAfectacionVivienda + cancelacionPatrimonioFamilia;
+  const subtotalVendedor = derechosNotariales50Pct + otrosGastosVendedor + ivaVendedor + retencionFuente + cancelacionHipotecaVendedor + cancelacionAfectacionVivienda + cancelacionPatrimonioFamilia;
+  const registryRate = getRegistryFeeRate(precioVenta, esVis);
   let impuestoRegistro = Math.round(precioVenta * 0.01);
-  let derechosRegistroOrip = Math.round(precioVenta * 75e-4);
+  let derechosRegistroOrip = Math.round(precioVenta * registryRate * 1.02 + (esVis ? 3e4 : 1e5));
   let constitucionHipotecaComprador = 0;
   let ahorroLeasingDetectado = 0;
   const esCesion = params.esCesionLeasing || estadoPredio === "leasing" && formaPago === "leasing";
@@ -11557,14 +11591,20 @@ function liquidarGastosNotariales(params) {
       "\u{1F3DB}\uFE0F *Bien de Inter\xE9s Cultural (BIC) / Conservaci\xF3n Patrimonial:* Los bancos comerciales generalmente NO aprueban cr\xE9dito hipotecario ni leasing sobre predios BIC por restricciones estructurales y de disposici\xF3n. Si el comprador va a financiar, debe consultar con su banco previamente o negociar pago de CONTADO. Asimismo, cualquier remodelaci\xF3n requiere licencia especial del IDPC o Ministerio de Cultura."
     );
   }
-  const subtotalComprador = derechosNotariales50Pct + impuestoRegistro + derechosRegistroOrip + constitucionHipotecaComprador;
+  const subtotalComprador = derechosNotariales50Pct + otrosGastosComprador + ivaComprador + impuestoRegistro + derechosRegistroOrip + constitucionHipotecaComprador;
   const totalGastosAproximados = subtotalVendedor + subtotalComprador;
   const reportText = formatNotarialExpenseText({
     precioVenta,
     estadoPredio,
     formaPago,
     ciudad,
+    vendedorEsPersonaJuridica,
+    esViviendaInteresSocial: esVis,
     derechosNotariales50Pct,
+    otrosGastosVendedor,
+    otrosGastosComprador,
+    ivaVendedor,
+    ivaComprador,
     retencionFuente,
     tarifaRetencionPct,
     cancelacionHipotecaVendedor,
@@ -11587,8 +11627,12 @@ function liquidarGastosNotariales(params) {
     formaPago,
     ciudad,
     esInviableJuridicamente: !!params.embargoMedidaCautelar,
+    vendedorEsPersonaJuridica,
+    esViviendaInteresSocial: esVis,
     gastosVendedor: {
       derechosNotariales50Pct,
+      otrosGastosCopiasFolios: otrosGastosVendedor,
+      ivaNotarial: ivaVendedor,
       retencionFuente,
       tarifaRetencionPct,
       cancelacionHipoteca: cancelacionHipotecaVendedor,
@@ -11598,6 +11642,8 @@ function liquidarGastosNotariales(params) {
     },
     gastosComprador: {
       derechosNotariales50Pct,
+      otrosGastosCopiasFolios: otrosGastosComprador,
+      ivaNotarial: ivaComprador,
       impuestoRegistroBeneficencia: impuestoRegistro,
       derechosRegistroOrip,
       constitucionHipoteca: constitucionHipotecaComprador,
@@ -11618,14 +11664,28 @@ function formatNotarialExpenseText(p) {
   let t2 = `\u2696\uFE0F *LIQUIDACI\xD3N ESTIMADA DE GASTOS NOTARIALES Y REGISTRO* \u{1F1E8}\u{1F1F4}
 `;
   t2 += `\u{1F3E2} *Inmueble:* ${formatCurrency(p.precioVenta)} (${p.ciudad}) | *Figura:* ${labelPredio} / ${labelPago}
-
+`;
+  if (p.esViviendaInteresSocial) {
+    t2 += `\u{1F3F7}\uFE0F *Tipo:* Vivienda de Inter\xE9s Social (VIS - Tarifas preferenciales Ley 1537)
+`;
+  }
+  t2 += `
 `;
   t2 += `\u{1F464} *A CARGO DEL VENDEDOR:*
 `;
   t2 += `\u2022 50% Derechos Notariales: *${formatCurrency(p.derechosNotariales50Pct)}*
 `;
-  t2 += `\u2022 Retenci\xF3n en la fuente (${p.tarifaRetencionPct}%): *${formatCurrency(p.retencionFuente)}*
+  t2 += `\u2022 Papeler\xEDa, copias y biometr\xEDa: *${formatCurrency(p.otrosGastosVendedor)}*
 `;
+  t2 += `\u2022 IVA notarial (19%): *${formatCurrency(p.ivaVendedor)}*
+`;
+  if (p.vendedorEsPersonaJuridica) {
+    t2 += `\u2022 Retenci\xF3n en la fuente (0% - Persona Jur\xEDdica): *$0 COP* (autorretenci\xF3n en renta)
+`;
+  } else {
+    t2 += `\u2022 Retenci\xF3n en la fuente (${p.tarifaRetencionPct}%): *${formatCurrency(p.retencionFuente)}*
+`;
+  }
   if (p.cancelacionHipotecaVendedor > 0) {
     t2 += `\u2022 Cancelaci\xF3n de Hipoteca del banco: *${formatCurrency(p.cancelacionHipotecaVendedor)}*
 `;
@@ -11645,12 +11705,16 @@ function formatNotarialExpenseText(p) {
 `;
   t2 += `\u2022 50% Derechos Notariales: *${formatCurrency(p.derechosNotariales50Pct)}*
 `;
+  t2 += `\u2022 Papeler\xEDa, copias y biometr\xEDa: *${formatCurrency(p.otrosGastosComprador)}*
+`;
+  t2 += `\u2022 IVA notarial (19%): *${formatCurrency(p.ivaComprador)}*
+`;
   if (p.impuestoRegistro > 0) {
     t2 += `\u2022 Impuesto de Registro / Beneficencia (1%): *${formatCurrency(p.impuestoRegistro)}*
 `;
   }
   if (p.derechosRegistroOrip > 0) {
-    t2 += `\u2022 Derechos de Registro SNR / ORIP (~0.75%): *${formatCurrency(p.derechosRegistroOrip)}*
+    t2 += `\u2022 Derechos de Registro SNR / ORIP + sistematizaci\xF3n: *${formatCurrency(p.derechosRegistroOrip)}*
 `;
   }
   if (p.constitucionHipotecaComprador > 0) {
@@ -11661,7 +11725,7 @@ function formatNotarialExpenseText(p) {
 
 `;
   if (p.ahorroLeasingDetectado > 0) {
-    t2 += `\u2728 *Ahorro por Cesi\xF3n de Leasing:* Al no haber cambio de due\xF1o en matr\xEDcula, el comprador se ahorra aproximadamente *${formatCurrency(p.ahorroLeasingDetectado)}* en impuestos y registro de compraventa.
+    t2 += `\u2728 *Ahorro por Cesi\xF3n de Leasing:* Al no haber cambio de due\xF1o en matr\xEDcula, el comprador se ahorra aproximadamente *${formatCurrency(p.ahorroLeasingDetectado)}* en beneficencia y registro de compraventa.
 
 `;
   }
@@ -11677,7 +11741,7 @@ function formatNotarialExpenseText(p) {
   }
   t2 += `\u{1F4A1} *Total aproximado escrituraci\xF3n:* ~${formatCurrency(p.totalGastosAproximados)} COP.
 `;
-  t2 += `_C\xE1lculo informativo conforme a tarifas vigentes SNR 2026. Si vas a firmar promesa de compraventa, podemos revisar las cl\xE1usulas para total tranquilidad de las partes \u{1F91D}\u2728_`;
+  t2 += `_C\xE1lculo informativo conforme a tarifas vigentes SNR 2026 y est\xE1ndares notariales. Si vas a firmar promesa de compraventa, podemos revisar las cl\xE1usulas para total tranquilidad de las partes \u{1F91D}\u2728_`;
   return t2;
 }
 function hasPendingNotarialSession(senderId) {
@@ -11788,6 +11852,69 @@ Vender un predio embargado acarrea *objeto il\xEDcito*. Ninguna notar\xEDa puede
 Para avanzar con seguridad, primero debe radicarse y levantarse el embargo en la Oficina de Registro.`
     };
   }
+  const isQuienPagaQuestion = /(?:qui[eé]n\s+paga|le\s+corresponde\s+a\s+qui[eé]n|a\s+cargo\s+de\s+qui[eé]n)/i.test(lower) && /(?:gastos\s+notariales|escrituraci[oó]n|notar[ií]a|beneficencia|registro|retenci[oó]n)/i.test(lower);
+  if (isQuienPagaQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u2696\uFE0F *\xBFQui\xE9n paga qu\xE9 en la notar\xEDa y registro?* \u{1F1E8}\u{1F1F4}
+
+Por ley y costumbre comercial en Colombia:
+\u2022 *50% Derechos Notariales:* Comprador 50% y Vendedor 50% (~0.27% cada uno).
+\u2022 *Retenci\xF3n en la Fuente (1% o 2.5%):* La asume el *VENDEDOR* (si es persona natural; si es empresa, $0 en notar\xEDa).
+\u2022 *Impuesto de Beneficencia (1%):* Lo asume el *COMPRADOR*.
+\u2022 *Derechos de Registro ORIP (~0.75% a 0.92%):* Los asume el *COMPRADOR*.
+\u2022 *Constituci\xF3n de Hipoteca Bancaria:* La asume el *COMPRADOR*.
+\u2022 *Cancelaci\xF3n de Hipoteca Previa:* La asume el *VENDEDOR*.
+
+\xBFDeseas que te liquide los valores exactos para un inmueble? \u{1F91D}`
+    };
+  }
+  const isRetencionQuestion = /(?:retenci[oó]n\s+en\s+la\s+fuente|retenci[oó]n\s+notar[ií]a|cu[aá]nto\s+es\s+la\s+retenci[oó]n)/i.test(lower) && /(?:compraventa|inmueble|venta|porcentaje|cu[aá]nto|aplica)/i.test(lower);
+  if (isRetencionQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F4B0} *Retenci\xF3n en la Fuente en Compraventa de Inmuebles:* \u{1F1E8}\u{1F1F4}
+
+\u2022 *Persona Natural:* Paga el 1.0% sobre el precio de venta si el predio no supera 20.000 UVT ($1.006.360.000 COP en 2026). Si excede las 20.000 UVT, se aplica el 2.5% sobre el exceso.
+\u2022 *Persona Jur\xEDdica (Empresas/Constructoras):* La notar\xEDa *NO le retiene nada ($0)*, ya que las sociedades aplican autorretenci\xF3n en su declaraci\xF3n peri\xF3dica de renta.
+\u2022 *\xBFQui\xE9n la paga?:* Siempre el *VENDEDOR* al momento de firmar la escritura p\xFAblica.`
+    };
+  }
+  const isBeneficenciaQuestion = /(?:beneficencia|impuesto\s+de\s+registro|registro\s+orip)/i.test(lower) && /(?:qu[eé]\s+es|porcentaje|cu[aá]nto|qui[eé]n\s+paga|oficina\s+de\s+instrumentos)/i.test(lower);
+  if (isBeneficenciaQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F4DC} *Impuesto de Beneficencia y Derechos de Registro (ORIP):* \u{1F1E8}\u{1F1F4}
+
+Son los dos pagos requeridos para que la Oficina de Registro de Instrumentos P\xFAblicos asiente la nueva titularidad en el Certificado de Tradici\xF3n:
+\u2022 *Beneficencia (Gobernaci\xF3n / Bogot\xE1):* 1.0% sobre el valor del negocio.
+\u2022 *Derechos de Registro ORIP (SNR):* Entre 0.63% y 0.92% seg\xFAn la cuant\xEDa, m\xE1s gastos de sistematizaci\xF3n.
+\u2022 *Total aproximado de registro:* ~1.67% a 1.95% a cargo del *COMPRADOR*.
+_(En Cesi\xF3n de Leasing Habitacional no aplica, logrando un ahorro millonario)_ \u2728`
+    };
+  }
+  const isVisQuestion = /(?:vivienda\s+de\s+inter[eé]s\s+social|inmueble\s+vis|tarifa\s+vis)/i.test(lower) && /(?:gastos|notar[ií]a|descuento|beneficio|registro|cu[aá]nto)/i.test(lower);
+  if (isVisQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F3E1} *Gastos Notariales en Vivienda de Inter\xE9s Social (VIS / VIP):* \u{1F1E8}\u{1F1F4}
+
+Por ley (Ley 1537 de 2012 y decretos de la SNR), los inmuebles VIS gozan de tarifas preferenciales:
+\u2022 *Derechos Notariales:* Tienen un 50% de descuento sobre la tarifa ordinaria (~0.27% total repartido entre ambas partes).
+\u2022 *Derechos de Registro ORIP:* Tarifa reducida subsidiada.
+\u2022 Para compraventa nueva de constructora, las tarifas de escrituraci\xF3n de actos exentos o VIS se liquidan con topes preferenciales.`
+    };
+  }
+  const isUsufructoQuestion = /(?:usufructo)/i.test(lower) && /(?:cancelaci[oó]n|constituci[oó]n|qu[eé]\s+es|gastos|notar[ií]a|c[oó]mo\s+funciona)/i.test(lower);
+  if (isUsufructoQuestion) {
+    return {
+      isQuestion: true,
+      answerText: `\u{1F33F} *Cancelaci\xF3n o Constituci\xF3n de Usufructo:* \u{1F1E8}\u{1F1F4}
+
+\u2022 *Constituci\xF3n:* Desmembra la propiedad en nuda propiedad y derecho de uso/goce. Paga derechos notariales y registro.
+\u2022 *Cancelaci\xF3n (por fallecimiento o renuncia):* Se liquida como acto sin cuant\xEDa (~$107.814 de derechos notariales con IVA m\xE1s copias y registro en ORIP), consolidando la plena propiedad en el nudo propietario.`
+    };
+  }
   return { isQuestion: false };
 }
 function extractNotarialExpenseParams(text2, senderId) {
@@ -11866,6 +11993,8 @@ function extractNotarialExpenseParams(text2, senderId) {
   const patrimonioFamilia = /patrimonio\s+de\s+familia|inembargable/i.test(lower);
   const bienInteresCultural = /inter[eé]s\s+cultural|patrimonio\s+cultural|patrimonio\s+hist[oó]rico|bic\b/i.test(lower);
   const embargoMedidaCautelar = /embargo|embargado|medida\s+cautelar/i.test(lower);
+  const vendedorEsPersonaJuridica = /persona\s+jur[ií]dica|empresa|sociedad|constructora|inmobiliaria\s+vende/i.test(lower);
+  const esViviendaInteresSocial = /\bvis\b|inter[eé]s\s+social|\bvip\b/i.test(lower);
   return {
     found: true,
     needsMoreInfo: false,
@@ -11874,6 +12003,8 @@ function extractNotarialExpenseParams(text2, senderId) {
       estadoPredio,
       formaPago,
       ciudad: "Bogot\xE1",
+      vendedorEsPersonaJuridica,
+      esViviendaInteresSocial,
       afectacionViviendaFamiliar,
       patrimonioFamilia,
       bienInteresCultural,

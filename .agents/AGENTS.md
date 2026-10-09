@@ -172,7 +172,21 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.74 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.75 — Octubre 2026
+
+### Novedades v32.75 (Nutrición Doctrinal desde la Notaría 19 de Bogotá, Fórmulas Exactas SNR, Exención de Retención para Personas Jurídicas y Beneficios VIS):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Ingeniería Inversa y Aprendizaje de Notaría 19 Bogotá**:
+     - Eduardo instruyó: *"Aquí hay un ejemplo de la mejor calculadora de gastos notariales que hay hasta el momento, aunque según ellos mismos a veces tiene los valores notariales desactualizados: https://www.notaria19bogota.com/gastos-notariales/ Es más JanIa debería de aprender todo y nutrir su conocimiento ingresando a este sitio. También autorizo para que JanIA busque los sitios necesarios y tome de cada uno lo que necesite y ella vea que más le convenga o le sirva pero que antes revise que estén actualizados..."*
+     - Extracción e integración de la matemática oficial de la SNR y Notaría 19:
+       • Rangos de derechos notariales (0.59%, 0.40%, 0.38%, 0.36% según cuantía).
+       • Rangos de registro ORIP (0.632%, 0.785%, 0.874%, 0.924% más sistematización).
+       • Papelería, copias de matriz y biometría en línea ($100.000 comprador / $100.000 vendedor) e IVA del 19%.
+       • Exención de retención en la fuente en notaría para Personas Jurídicas ($0 COP, autorretención).
+       • Vivienda de Interés Social (VIS / VIP - Ley 1537 de 2012) con 50% de descuento en derechos notariales.
+       • Preguntas frecuentes notariales resueltas con rigor pedagógico.
+
+## 🔖 VERSIÓN ANTERIOR: v32.74 — Octubre 2026
 
 ### Novedades v32.74 (Liquidación Oficial de Gastos Notariales y Registro, Doctrina de Figuras Jurídicas BIC / Afectación / Patrimonio de Familia / Leasing, y Autonomía Sagrada de IA Pura sin Textos Largos):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
