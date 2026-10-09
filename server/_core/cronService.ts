@@ -423,19 +423,20 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `📲 *Revisión de Minutas con JanIA:* https://vecy-network.vercel.app/jania`
     },
     {
-      topicTitle: 'Modelo Colaborativo 45/5/5/45 vs Comisiones Excluyentes',
+      topicTitle: 'Modelo Colaborativo 40/20/40 de VECY BIENES RAÍCES vs Tercerías',
       themeKey: 'juridico',
-      voiceText: `Hola, queridos colegas. Soy JanIA. En VECY Bienes Raíces defendemos una repartición justa de honorarios: del tres por ciento de comisión, el cuarenta y cinco por ciento es para el captador de la Oferta, el cuarenta y cinco por ciento para quien trae la Demanda calificada, cinco por ciento para la red colaborativa que difunde y cinco por ciento para la plataforma VECY. Rechazamos los esquemas egoístas de cincuenta cincuenta cerrados o cuarenta veinte cuarenta que imponen terceros ocultos. La verdadera colaboración une a las partes con transparencia y respeto. ¡A cerrar en equipo!`,
-      captionText: `🤝 *MODELO COLABORATIVO 45/5/5/45 — VECY BIENES RAÍCES* 📜\n\n` +
-        `¡Buenos días a todos los aliados del corretaje inmobiliario!\n\n` +
-        `⚖️ *¿Por qué el modelo 45/5/5/45 dignifica a todos los corredores?*\n` +
-        `Del 3% de comisión total pactada sobre la venta o arriendo:\n` +
-        `• **45% Parte OFERTA:** Para el agente captador que tiene al propietario del inmueble.\n` +
-        `• **45% Parte DEMANDA:** Para el agente que representa al comprador o arrendatario calificado.\n` +
-        `• **5% Red Colaborativa:** Para los agentes que colaboran publicando y dinamizando el mercado.\n` +
-        `• **5% VECY BIENES RAÍCES:** Para el soporte tecnológico, blindaje legal y cruces de JanIA.\n\n` +
-        `🚫 *Cero intermediación desleal:* Los esquemas cerrados de "50/50" o "40/20/40" con terceros interpuestos impiden que la comisión sea justa. En VECY todos ganamos con equidad y contratos claros.\n\n` +
-        `📲 *Términos y Condiciones Colaborativos:* https://vecy.co`
+      voiceText: `Hola, queridos colegas. Soy JanIA. En VECY Bienes Raíces defendemos una repartición justa, transparente y altamente rentable de honorarios: del tres por ciento de comisión habitual, el cuarenta por ciento es para el captador que subió el inmueble al portal, el veinte por ciento se divide en dos: diez por ciento para toda la red colaborativa de agentes que viralizan el enlace y diez por ciento para VECY por la tecnología y soporte legal; y el otro cuarenta por ciento es para el colocador que consigue al comprador, agenda la visita y cierra el negocio. Erradicamos las tercerías deshonestas y multiplicamos los cierres en equipo.`,
+      captionText: `🤝 *MODELO COLABORATIVO 40/20/40 — VECY BIENES RAÍCES* 📜\n\n` +
+        `¡Buenos días a todos los aliados y colegas del corretaje inmobiliario! Soy JanIA.\n\n` +
+        `⚖️ *¿Por qué el modelo 40 / 20 / 40 supera al 50/50 y al 100% tradicional?*\n` +
+        `Sobre el 100% de la comisión cobrada (habitualmente 3% en venta o 1 canon en arriendo):\n` +
+        `• **40% Punta CAPTADORA:** Para quien subió el inmueble al portal (quien tenía el inmueble captado).\n` +
+        `• **20% Bolsa de Aceleración:**\n` +
+        `  - **10% Red Colaborativa:** Para todos los promotores de la red que viralizan el enlace de la propiedad y ganan por puntos de tráfico único.\n` +
+        `  - **10% VECY BIENES RAÍCES:** Para la plataforma tecnológica, el algoritmo de matches de JanIA y el blindaje contractual.\n` +
+        `• **40% Punta COLOCADORA:** Para quien consigue al comprador, lo presenta para agendamiento de visitas y logra el cierre del negocio.\n\n` +
+        `🚫 *Cero tercerías e intermediarios fantasma:* El 40/20/40 premia con equidad a quienes realmente trabajan, activa un ejército de promotores motivados y protege las puntas.\n\n` +
+        `🌐 *Portal Oficial:* https://vecy-network.vercel.app/`
     },
     {
       topicTitle: 'Verificación de Identidad de Visitantes y Antecedentes con JanIA',
@@ -724,15 +725,16 @@ export interface DailyTipItem {
 export const CALENDARIO_30_DIAS_VECY: DailyTipItem[] = [
   {
     dayOfMonth: 1,
-    topicTitle: "El Modelo Colaborativo: 40-45% cada 3-4 días vs meses esperando solos",
+    topicTitle: "El Modelo Colaborativo 40/20/40 de VECY BIENES RAÍCES: Ganar cada 3-4 días vs meses esperando solos",
     themeKey: "modelo_colaborativo",
-    captionText: `🤝 *DÍA 1 — EL PODER DEL MODELO COLABORATIVO EN VECY BIENES RAÍCES* ⚡\n\n` +
+    captionText: `🤝 *DÍA 1 — EL PODER DEL MODELO COLABORATIVO 40/20/40 EN VECY BIENES RAÍCES* ⚡\n\n` +
       `¡Buenos días, queridos colegas y aliados inmobiliarios! Soy JanIA.\n\n` +
       `¿Alguna vez has calculado cuánto te cuesta esperar 3 o 4 meses para cerrar un negocio y ganarte el 100% o el 50% de comisión en solitario? En ese tiempo la vacancia, el desgaste y las cuentas por pagar no dan tregua.\n\n` +
-      `💡 *La Filosofía VECY BIENES RAÍCES:*\n` +
-      `• Con nuestra IA y red colaborativa, conectamos la punta de Oferta y Demanda en tiempo récord.\n` +
-      `• Es infinitamente más rentable ganar un **40% o 45% cada 3 o 4 días** cerrando negocios continuos en red, que agonizar meses enteros por una comisión solitaria.\n` +
-      `• El porcentaje restante (10% a 20%) se distribuye equitativamente (50/50) entre la plataforma VECY y los agentes de la red colaborativa que dinamizan y viralizan tu inmueble en todas las redes.\n\n` +
+      `💡 *La Fórmula Colaborativa 40 / 20 / 40 de VECY BIENES RAÍCES:*\n` +
+      `• **40% para quien subió el inmueble al portal:** Quien tenía la propiedad captada tiene su 40% asegurado y respetado.\n` +
+      `• **20% de bolsa compartida:** 10% para toda la red colaborativa de agentes que viralizan el enlace con sus puntos de tráfico + 10% para VECY por la plataforma tecnológica, algoritmo de matches y soporte legal.\n` +
+      `• **40% para quien consiga el comprador:** Quien presenta al cliente calificado, agenda la visita y logra cerrar el negocio.\n\n` +
+      `⚡ *El Resultado:* Cero tercerías deshonestas, un ejército de promotores motivados y rotación constante ganando comisiones cada 3 o 4 días en red.\n\n` +
       `💬 *¿Tienes una duda o caso privado?* Escríbeme a mi chat privado de JanIA 📲: https://wa.me/573192919978\n` +
       `🗣️ *¿Deseas debatir o compartir tu experiencia?* ¡Opina aquí en este grupo y construyamos gremio! 🤝\n\n` +
       `_VECY_\n_BIENES RAÍCES_\n_La evolución inevitable para el sector de los bienes raíces._ 🚀`
@@ -1694,7 +1696,12 @@ MISIÓN EDUCATIVA Y DE COACHING INMOBILIARIO (DOCTRINA EDUARDO A. RIVERA):
     - La solución previa antes de desistir: proponer la solución del correo electrónico formal con validez de firma electrónica por contestación (tal como lo gestiona VECY).
     - Si se acepta una captación sin exclusividad: hacer presentaciones de cliente de altísimo nivel y elegancia profesional como en VECY.
   * Cómo perfilar al cliente comprador para encontrar la propiedad que verdaderamente busca (descubrir su motivación profunda, tiempos de mudanza y capacidad financiera real).
-  * Cómo tejer alianzas comerciales sólidas entre colegas (reparto 50/50 transparente, cero egos, cero cadenas de intermediarios fantasmas).
+  * El Revolucionario Modelo Colaborativo 40 / 20 / 40 de VECY BIENES RAÍCES:
+    - 40% Para quien subió el inmueble al portal (Punta Captadora / quien tenía el inmueble).
+    - 20% Bolsa compartida: 10% entre toda la Red Colaborativa (promotores que viralizan el enlace único por puntos de ranking) + 10% para VECY BIENES RAÍCES (plataforma tecnológica, algoritmo de matches organizado de JanIA y respaldo legal).
+    - 40% Para quien consigue al comprador, lo presenta para agendamiento de visitas y logra cerrar el negocio (Punta Colocadora).
+    - Enseñar por qué el 40/20/40 supera al tradicional 50/50 (erradica las tercerías deshonestas e intermediarios fantasma) y al egoísmo del 100% cerrado (demora meses o años en cerrar).
+    - Educar y preparar a la comunidad de agentes de cara al lanzamiento de nuestro SÚPER PORTAL INMOBILIARIO VECY BIENES RAÍCES, demostrando que venimos a potenciar sus recursos y organizar el corretaje en Colombia.
   * Soluciones de liquidez y financieras: Cómo ayudar a clientes que necesitan dinero pero tienen un inmueble hipotecable, mediante hipotecas con personas particulares de confianza, entidades financieras y nuestra alianza estratégica con el Banco Caja Social.
   * Servicios legales y notariales: Redacción de correos formales, promesas de compraventa blindadas, minutas, demandas y cobros prejurídicos de cartera.
 REGLAS INQUEBRANTABLES:

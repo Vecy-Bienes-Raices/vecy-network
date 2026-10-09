@@ -7,6 +7,61 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.61 — 08 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Establecimiento Doctrinal del Modelo Colaborativo de Comisiones (40% / 20% / 40%)**:
+   - Eduardo definió de forma innegociable el esquema de comisiones de **VECY BIENES RAÍCES** sobre el 100% de la comisión cobrada (3% en venta o 1 canon en arriendo):
+     - **40% Punta Captadora**: Para el asesor que aportó el inmueble y lo subió al portal.
+     - **20% Fondo de Aceleración y Soporte**:
+       * **10% Red Colaborativa**: Distribuido entre los agentes promotores de la red que viralizan y difunden el enlace único/marca blanca, remunerados por puntos de engagement y tráfico calificado.
+       * **10% Plataforma VECY BIENES RAÍCES**: Para infraestructura técnica, algoritmo de matches de JanIA, soporte legal y minutas contractuales.
+     - **40% Punta Colocadora**: Para el asesor que aporta al comprador/arrendatario final, lo presenta a través del sistema de agendamiento y acompaña el cierre.
+   - **Superación de las Falencias del 50/50 Tradicional y del 100% Individual**:
+     - El 100% individual aísla al asesor y demora las ventas meses o años.
+     - El 50/50 tradicional en Colombia sufre con frecuencia de **tercerías deshonestas** (cadenas de intermediarios fantasmas que exigen comisiones sin aportar valor ni tener exclusividad).
+     - El modelo 40/20/40 erradica las tercerías, asegura las dos puntas operativas y activa una fuerza de ventas masiva y colaborativa.
+   - **Pedagogía hacia el Súper Portal Inmobiliario**: JanIA debe educar a los asesores para que entiendan que VECY BIENES RAÍCES no llega para competir ni quitarles recursos, sino para protegerlos, potenciar sus ingresos y brindarles respaldo cuando el portal sea lanzado oficialmente.
+2. **Clarificación y Ampliación de Formatos Permitidos en Grupos Oficiales**:
+   - **Grupo 1 (`Ofertas y Demandas`)**:
+     * Se admiten y alientan: Ofertas, Demandas y **Permutas / Venpermutas** de inmuebles en Colombia.
+     * Se admiten y estimulan: **Flyers, banners publicitarios, pósters y fotos comerciales de inmuebles**.
+     * Se admiten y estimulan: **Documentos técnicos en PDF** (dossiers, brochures, fichas técnicas completas).
+     * Se admiten y estimulan: **Enlaces de todo tipo de contenido inmobiliario** (tours 360°, enlaces de Drive, portales o páginas web).
+     * Matriz de 6 emojis de JanIA en tiempo real: `👍` Venta | `👌` Arriendo | `🔀` Permuta oferta | `📝` Demanda venta | `✏️` Demanda arriendo | `🔄` Demanda permuta.
+     * Moderación estricta y eliminación inmediata únicamente de off-topic: memes, cadenas de texto, política, religión, pornografía o estafas.
+   - **Grupo 2 (`Tips, Noticias y Consultas`)**: Consultas públicas, valor de m², avalúos, derecho inmobiliario, tributario (DIAN), píldoras de JanIA Coach (10:00 AM) y debates del gremio.
+   - **Grupo 3 (`Proyecto Vecy Bienes Raíces`)**: Comunidad oficial para discutir el modelo colaborativo 40/20/40, alianzas transparentes sin tercerías, preparación para el súper portal y sugerencias de la red.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Evolución del Reparto de Comisiones**:
+   - El sistema previo contemplaba esquemas 35/35/15/15 o 45/45/10. La nueva doctrina de Eduardo fija de manera inquebrantable el modelo matemático **40 / 20 / 40**, otorgando la misma ponderación a ambas puntas (40% cada una) y un 20% central que combina un 10% para la red promotora y un 10% para la plataforma de VECY BIENES RAÍCES.
+   - Era necesario reflejar esto en `shared/const.ts`, en los prompts del LLM de JanIA (`server/_core/prompts/grupos/PROYECTO_Vecy Network.md`) y en el servicio de generación de contenido diario (`server/_core/cronService.ts`).
+2. **Equilibrio entre Moderación Estricta y Riqueza de Contenidos Inmobiliarios**:
+   - La regla de moderación en Grupo 1 corría el riesgo de interpretarse como bloqueo de fotos o PDFs. La aclaración doctrinal de Eduardo ratifica que todo material profesional relativo a inmuebles (flyers, banners, brochures PDF, links 360°, ofertas, demandas y permutas) es **altamente bienvenido y procesado por JanIA**. La censura aplica única y exclusivamente al spam ajeno al negocio inmobiliario (memes, política, etc.).
+
+### Acciones Técnicas Ejecutadas
+1. **Configuración Compartida (`shared/const.ts`)**:
+   - Incremento de versión oficial a `v32.61` (`32.61.0` en `package.json`).
+   - Declarada la constante doctrinal `VECY_COMMISSION_MODEL`:
+     * Captador: 40% (inmueble captado y subido al portal).
+     * Fondo Colaborativo y Soporte: 20% (10% Red Colaborativa viralizadora + 10% VECY BIENES RAÍCES plataforma).
+     * Colocador: 40% (comprador/arrendatario presentado con agendamiento y cierre).
+   - Descripciones oficiales de los 3 grupos actualizadas en `VECY_OFFICIAL_GROUPS` reflejando con exactitud los formatos permitidos (flyers, banners, PDFs, enlaces, permutas) y el rol de JanIA como administradora con IA y moderadora de spam.
+2. **Instrucciones Doctrinales de JanIA (`server/_core/prompts/grupos/PROYECTO_Vecy Network.md` y `server/_core/cronService.ts`)**:
+   - Actualizado el prompt del Grupo 3 con la doctrina del modelo 40/20/40, la erradicación de las tercerías deshonestas y la pedagogía hacia el futuro súper portal.
+   - Sincronizados los textos pedagógicos del calendario de 30 días en `cronService.ts` con el modelo 40/20/40.
+3. **Documentos Maestros y Triple Bitácora**:
+   - Actualizado `vecy_network_technical_dossier.md` (Secciones 4, 5 y Changelog en §10).
+   - Actualizado `.agents/AGENTS.md` a v32.61.
+   - Actualizado `HISTORIAL_CONVERSACIONES_MAESTRO.md`.
+4. **Validación y Despliegue**:
+   - `npx vitest run`: 158/158 tests superados al 100% ✅.
+   - `tsc --noEmit`: 0 errores de TypeScript ✅.
+   - `pnpm build`: Compilación limpia de cliente y servidor ✅.
+
+---
+
 ## 📋 SESIÓN v32.60 — 08 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

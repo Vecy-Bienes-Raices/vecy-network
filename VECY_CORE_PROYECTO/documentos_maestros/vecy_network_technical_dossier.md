@@ -170,54 +170,63 @@ Dentro del Catálogo, cada ficha de inmueble cuenta con dos opciones según la n
 
 ---
 
-## 4. ESQUEMA DE COMISIONES Y REPARTO DE REGALÍAS
+## 4. ESQUEMA DE COMISIONES Y REPARTO DE REGALÍAS: EL MODELO COLABORATIVO 40 / 20 / 40
 
-Para incentivar el "voz a voz humano" y la compartición masiva, VECY establece una distribución de comisiones transparente y altamente motivadora sobre el total de la comisión cobrada (habitualmente el **3% del valor final de venta** o **1 canon de arrendamiento mensual**):
+Para incentivar la cooperación masiva, erradicar las tercerías deshonestas y multiplicar la velocidad de cierre, VECY BIENES RAÍCES establece una distribución de comisiones transparente, matemática y altamente motivadora sobre el total de la comisión cobrada (habitualmente el **3% del valor final de venta** o **1 canon de arrendamiento mensual**):
 
 ```
        [ Comisión Total Cobrada (3% de Venta o 1 Canon de Arriendo) ]
                                       │
           ┌───────────────────────────┼───────────────────────────┐
           ▼                           ▼                           ▼
-[ Captador del Inmueble ]   [ Colocador del Cliente ]   [ Red Colaborativa ]  [ VECY Network ]
-        (35%)                       (35%)               (15% por Puntos)           (15%)
+[ Captador del Inmueble ]       [ Bolsa del 20% ]         [ Colocador del Cliente ]
+        (40%)                         │                         (40%)
+                         ┌────────────┴────────────┐
+                         ▼                         ▼
+               [ Red Colaborativa ]       [ VECY BIENES RAÍCES ]
+                      (10%)                      (10%)
 ```
 
-### 4.1 Desglose del Reparto
-1.  **35% - Punta de Captación**: Para el corredor que consiguió el inmueble y lo subió al catálogo de VECY.
-2.  **35% - Punta de Colocación**: Para el corredor de la red que consiguió al comprador final y coordinó el cierre del negocio.
-3.  **15% - Bolsa de la Red Colaborativa**: Un fondo que se limita a un máximo matemático de **7 cupos de agentes promotores** por inmueble (calculado dividiendo la bolsa del 15% entre la ganancia objetivo por cupo del 2% de la comisión total). La bolsa acumulada de la transacción se divide de forma proporcional y en orden descendente entre los agentes inscritos en la propiedad, según sus puntos de ranking de engagement.
-4.  **15% - Plataforma VECY Network**: Comisión de servicio que recibe VECY por la provisión tecnológica, pasarela de pagos y soporte legal.
+### 4.1 Desglose del Reparto Oficial 40 / 20 / 40
+1. **40% - Punta de Captación**: Para el corredor o agencia que consiguió el inmueble y lo subió al portal de VECY BIENES RAÍCES. Quien tiene la captación tiene asegurado y respetado su 40% sin riesgo de que se lo puenteen.
+2. **20% - Bolsa Intermedia de Aceleración y Soporte**:
+   - **10% - Bolsa de la Red Colaborativa**: Un fondo que se distribuye entre los agentes promotores de la red que viralizan el enlace parametrizado del inmueble (marca blanca) según sus puntos de engagement/clicks únicos. Esto motiva a decenas de agentes a compartir el inmueble sin pelearse la captación ni armar tercerías.
+   - **10% - Plataforma VECY BIENES RAÍCES**: Retribución por la provisión tecnológica, el algoritmo de Matches de JanIA, la pasarela de pagos, los contratos inteligentes y el respaldo jurídico y notarial.
+3. **40% - Punta de Colocación**: Para el corredor de la red que consiguió al comprador o arrendatario calificado, coordinó la presentación, agendó la visita a través de la plataforma y logró el cierre efectivo del negocio.
 
-### 4.2 El Bono de Descuento para el Comprador Directo
-*   **¿Qué pasa si el comprador llega solo (directamente por el portal sin un agente colocador)?**
-    *   La comisión se mantiene igual (VECY cobra el 3%).
-    *   El 35% de la captación va al agente que subió el inmueble, el 15% a la Bolsa de la Red Colaborativa de esa propiedad y el 15% a VECY.
-    *   El **35% correspondiente a la punta colocadora se le otorga directamente al comprador final como un descuento en el precio de compra del inmueble**. Esto incentiva de forma masiva a los compradores directos a buscar en VECY para ahorrarse dinero en la transacción.
+### 4.2 Por Qué el Modelo 40/20/40 Supera al 50/50 y al 100% Individual
+- **Frente al 100% individual**: El agente tradicional que no comparte tarda meses o años en cerrar un negocio; con el 40/20/40 multiplica su rotación y volumen mensual, cerrando negocios continuos cada 3-4 días con IA.
+- **Frente al 50/50 tradicional**: El esquema 50/50 suele verse contaminado por **tercerías** (intermediarios intermedios ocultos que no aportan valor pero exigen parte de la comisión, generando desconfianza y rompiendo negociaciones). En VECY BIENES RAÍCES, las dos puntas activas (Captación 40% y Colocación 40%) están blindadas, y los promotores externos ganan del 10% de la red sin meter las manos en la negociación directa.
+
+### 4.3 El Beneficio para el Comprador Directo en el Portal
+* **¿Qué pasa si el comprador llega solo (directamente por el portal sin un agente colocador)?**
+  * La comisión se mantiene igual (VECY cobra el 3%).
+  * El 40% de la captación va al agente que subió el inmueble, el 10% a la Bolsa de la Red Colaborativa de esa propiedad y el 10% a VECY.
+  * El **40% correspondiente a la punta colocadora se le otorga directamente al comprador final como un descuento en el precio de compra del inmueble**. Esto incentiva de forma masiva a los compradores directos a buscar en el portal de VECY BIENES RAÍCES para ahorrarse dinero en la transacción.
 
 ---
 
 ## 5. TECNOLOGÍA DE RASTREO DE ENLACES Y GAMIFICACIÓN
 
-Para distribuir justamente el **15% de la Bolsa de la Red Colaborativa**, el sistema implementa tecnología de rastreo de tráfico único y un modelo de puntuación de engagement:
+Para distribuir justamente el **10% de la Bolsa de la Red Colaborativa**, el sistema implementa tecnología de rastreo de tráfico único y un modelo de puntuación de engagement:
 
 ### 5.1 Ficha Técnica Web de Marca Blanca (Dossier Web) con SEO Potenciado
 Al hacer clic en "Participar", el agente de la red obtiene un link parametrizado (ej: `vecy.co/inmueble/apto-cedritos?ref=agente_juan`). 
-*   Este enlace cuenta con la marca blanca de VECY Network (protegiendo el negocio) y está optimizado con el más potente SEO dinámico (meta tags, títulos estructurados para Google) basado en los datos específicos de la propiedad.
-*   Esto garantiza que cuando múltiples agentes publiquen la propiedad en internet, los buscadores indexen masivamente el contenido, generando publicidad orgánica exponencial.
+* Este enlace cuenta con la marca blanca de VECY BIENES RAÍCES (protegiendo el negocio) y está optimizado con el más potente SEO dinámico (meta tags, títulos estructurados para Google) basado en los datos específicos de la propiedad.
+* Esto garantiza que cuando múltiples agentes publiquen la propiedad en internet, los buscadores indexen masivamente el contenido, generando publicidad orgánica exponencial.
 
 ### 5.2 Métrica de Interacción y Mitigación de Fraude
 El backend de VECY incorpora rastreadores de tráfico único:
-*   **Contador de Clicks/Tráfico**: El servidor registra cada click de visitante único que llega al link parametrizado.
-*   **Puntos de Ranking (Multiplicador, No Efectivo Directo)**: Para evitar fraudes por click-bots, los puntos acumulados actúan estrictamente como pesos relativos de ranking.
-*   **Liquidación Dinámica Post-Negociación**: Solo cuando el negocio se cierra y se firma la venta por el valor final acordado ($P_{final}$), la comisión real ($C_{real} = P_{final} \times 0.03$) es facturada y el 15% ($B_{real} = C_{real} \times 0.15$) ingresa a la plataforma. 
-*   **Fórmula de Conversión Dinámica**: El backend calcula el valor de cada punto dividiendo la bolsa real entre el total de clicks únicos ($S$) generados por los 7 promotores registrados: $V_{punto} = B_{real} / S$. Cada agente recibe $Pago_i = E_i \times V_{punto}$. Los puntos no respaldados por cierres reales no tienen valor monetario, eliminando el riesgo de caja para la startup y adaptándose a cualquier descuento acordado en la mesa de negociación.
-*   *Atracción Adicional*: Si un agente participante, al compartir en sus redes sociales, es contactado directamente por un interesado real que termina comprando la propiedad, ese agente **pasa automáticamente a ganar el 35% de la colocación (en vez de solo un pedazo del 15%)**, multiplicando exponencialmente su ganancia.
+* **Contador de Clicks/Tráfico**: El servidor registra cada click de visitante único que llega al link parametrizado.
+* **Puntos de Ranking (Multiplicador, No Efectivo Directo)**: Para evitar fraudes por click-bots, los puntos acumulados actúan estrictamente como pesos relativos de ranking.
+* **Liquidación Dinámica Post-Negociación**: Solo cuando el negocio se cierra y se firma la venta por el valor final acordado ($P_{final}$), la comisión real ($C_{real} = P_{final} \times 0.03$) es facturada y el 10% ($B_{real} = C_{real} \times 0.10$) ingresa a la bolsa de la red.
+* **Fórmula de Conversión Dinámica**: El backend calcula el valor de cada punto dividiendo la bolsa real entre el total de clicks únicos ($S$) generados por los promotores registrados: $V_{punto} = B_{real} / S$. Cada agente recibe $Pago_i = E_i \times V_{punto}$. Los puntos no respaldados por cierres reales no tienen valor monetario, eliminando el riesgo de caja para la startup y adaptándose a cualquier descuento acordado en la mesa de negociación.
+* *Atracción Adicional*: Si un agente participante, al compartir en sus redes sociales, es contactado directamente por un interesado real que termina comprando la propiedad, ese agente **pasa automáticamente a ganar el 40% de la colocación (en vez de solo un pedazo del 10%)**, multiplicando exponencialmente su ganancia.
 
 ### 5.3 Control de Cupos y UI/UX en el Catálogo Web
-*   **Límite de Cupos**: El backend restringe a un máximo de **7 registros de agentes promotores** por cada inmueble en la tabla de relaciones de Supabase para evitar dilución.
-*   **Indicador Visual (Progress Line)**: La interfaz de la tarjeta de inmueble incluye una barra de progreso que indica visualmente el estado de ocupación de los cupos (ej: `3/7 cupos tomados`).
-*   **Bloqueo de Acción**: Al completarse los 7 cupos, el frontend cambia la barra a estado inactivo (`CUPOS COMPLETADOS`) y bloquea/deshabilita el botón de "Participar en Promoción" para ese inmueble.
+* **Límite de Cupos**: El backend restringe a un máximo de **7 registros de agentes promotores** por cada inmueble en la tabla de relaciones de Supabase para evitar dilución.
+* **Indicador Visual (Progress Line)**: La interfaz de la tarjeta de inmueble incluye una barra de progreso que indica visualmente el estado de ocupación de los cupos (ej: `3/7 cupos tomados`).
+* **Bloqueo de Acción**: Al completarse los 7 cupos, el frontend cambia la barra a estado inactivo (`CUPOS COMPLETADOS`) y bloquea/deshabilita el botón de "Participar en Promoción" para ese inmueble.
 
 ---
 
@@ -5556,3 +5565,37 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   * Endpoint REST directo `POST /api/verify-identity` y `GET /api/verify-identity?jobId=...` en `server/_core/index.ts`.
   * Limpieza reactiva de errores al tipear, autocompletado del nombre oficial y bloqueo/desbloqueo dinámico del botón con copy exacto `⚠️ Bloqueado: Corrige el documento para agendar`.
   * Corrección visual de duplicación de títulos en `<legend>` pasando `.section-legend-gold` a color dorado sólido `#d4af37`.
+
+---
+
+### Versión v32.61 — Octubre 2026: Modelo Colaborativo Doctrinal 40/20/40 de VECY BIENES RAÍCES, Formatos Permitidos en Grupos Oficiales (Flyers, Banners, PDFs, Enlaces, Permutas) y Pedagogía hacia el Súper Portal
+
+#### 1. MODELO COLABORATIVO OFICIAL DE COMISIONES (40 / 20 / 40)
+- **Doctrina Innegociable de Eduardo A. Rivera**:
+  * Establecimiento formal del esquema colaborativo matemático de comisiones sobre el 100% de la comisión cobrada (3% venta / 1 canon arriendo):
+    - **40% Punta Captadora**: Para quien subió el inmueble al portal (quien tenía el inmueble captado). Blindado y asegurado al 100%.
+    - **20% Bolsa de Aceleración y Soporte**:
+      * **10% Red Colaborativa**: Para todos los agentes promotores de la red que viralizan y mueven el enlace único/marca blanca, remunerados proporcionalmente por puntos de engagement/tráfico único.
+      * **10% VECY BIENES RAÍCES**: Para la plataforma tecnológica, el algoritmo de matches de JanIA, los servidores y el respaldo legal/notarial.
+    - **40% Punta Colocadora**: Para quien consigue al comprador, lo presenta para agendamiento de visitas a través del sistema y cierra el negocio.
+  * **Superación del 50/50 Tradicional y del 100% Individual**:
+    - El 100% cerrado aísla al agente y toma meses en cerrar.
+    - El 50/50 tradicional suele verse empañado por **tercerías deshonestas** (cadenas de intermediarios fantasmas que exigen comisiones sin aportar valor).
+    - El modelo 40/20/40 erradica las tercerías, protege las dos puntas operativas y activa un ejército de promotores motivados financieramente.
+  * **Preparación para el Súper Portal Inmobiliario**: JanIA educa a los agentes para que comprendan que VECY BIENES RAÍCES no viene a quitarles sus recursos sino a protegerlos y potenciar sus ingresos cuando el portal sea lanzado oficialmente.
+  * Centralizado en `shared/const.ts` como `VECY_COMMISSION_MODEL`.
+
+#### 2. CLARIFICACIÓN Y ACTUALIZACIÓN DE FORMATOS EN LOS GRUPOS OFICIALES DE WHATSAPP
+- **Grupo 1 (`𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴`)**:
+  * **Se Admite y Estimula**:
+    - Ofertas, Demandas y **Permutas / Venpermutas** de inmuebles en Colombia.
+    - Material visual de enganche: Flyers, banners publicitarios, pósters y fotos comerciales de inmuebles.
+    - Documentos técnicos: Dossiers, brochures, memorandos de venta y fichas técnicas completas en PDF.
+    - Enlaces de todo tipo con contenido inmobiliario: Tours 360°, Google Drive, enlaces a portales y páginas web.
+    - Matriz interactiva de 6 emojis de JanIA en tiempo real: `👍` Venta | `👌` Arriendo | `🔀` Permuta oferta | `📝` Demanda venta | `✏️` Demanda arriendo | `🔄` Demanda permuta.
+  * **Moderación Estricta**: JanIA amonesta y elimina inmediatamente memes, cadenas de texto, política, religión, pornografía, estafas y publicidad ajena a raíces.
+- **Grupo 2 (`𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠`)**:
+  * Consultas inmobiliarias públicas, $/m², derecho inmobiliario, DIAN, avalúos, píldoras formativas de las 10:00 AM con JanIA Coach y noticias del gremio.
+- **Grupo 3 (`𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀`)**:
+  * Comunidad oficial para debatir el modelo colaborativo 40/20/40, alianzas transparentes sin tercerías, preparación para el lanzamiento del súper portal y feedback tecnológico.
+

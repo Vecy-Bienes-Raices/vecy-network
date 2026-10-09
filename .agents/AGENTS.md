@@ -172,7 +172,32 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.60 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.61 — Octubre 2026
+
+### Novedades v32.61 (Modelo Colaborativo Oficial 40/20/40 de VECY BIENES RAÍCES, Formatos Permitidos en Grupos Oficiales: Flyers, Banners, PDFs, Enlaces, Permutas y Pedagogía hacia el Súper Portal):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:
+  1. **Doctrina del Modelo Colaborativo 40 / 20 / 40**:
+     - **40% Punta Captadora**: Quien captó y subió el inmueble al portal tiene su 40% asegurado y respetado.
+     - **20% Bolsa de Aceleración y Soporte**: Dividido matemáticamente en:
+       - **10% para la Red Colaborativa**: Agentes promotores que viralizan el enlace único parametrizado (marca blanca) según sus puntos de engagement/clicks únicos.
+       - **10% para VECY BIENES RAÍCES**: Plataforma tecnológica, algoritmo de matches de JanIA, soporte legal, notarial y contratos.
+     - **40% Punta Colocadora**: Quien consigue al comprador, lo presenta para agendamiento de visitas por la plataforma y cierra el negocio.
+     - **Por qué supera al 50/50 y al 100%**: Erradica las **tercerías deshonestas** (intermediarios fantasmas que entorpecen negociaciones), protege a captador y colocador, y prepara pedagógicamente a los agentes de cara al futuro lanzamiento del SÚPER PORTAL INMOBILIARIO VECY BIENES RAÍCES.
+  2. **Formatos Permitidos y Alentados en Grupo 1**:
+     - Se admiten y estimulan: Ofertas, Demandas y **Permutas / Venpermutas**.
+     - Material publicitario: Flyers, banners publicitarios, pósters y fotos comerciales de inmuebles.
+     - Documentos técnicos: Brochures, dossiers y fichas técnicas completas en formato PDF.
+     - Enlaces inmobiliarios: Tours virtuales 360°, enlaces a portales, Google Drive o webs de inmuebles.
+     - JanIA reacciona en tiempo real con matriz de 6 emojis: `👍` Venta | `👌` Arriendo | `🔀` Permuta oferta | `📝` Demanda venta | `✏️` Demanda arriendo | `🔄` Demanda permuta.
+     - Moderación estricta de off-topic: memes, cadenas de texto, política, religión, pornografía o estafas son amonestados y eliminados inmediatamente.
+  3. **Modificaciones Implementadas**:
+     - `shared/const.ts`: Añadido `VECY_COMMISSION_MODEL` con el desglose exacto 40/20/40; descripciones oficiales de grupos enriquecidas; versión bump a `v32.61`.
+     - `package.json`: Versión actualizada a `32.61.0`.
+     - `server/_core/prompts/grupos/PROYECTO_Vecy Network.md` y `server/_core/cronService.ts`: Sistema de prompts del LLM actualizado con la doctrina del modelo 40/20/40 y pedagogía hacia el súper portal.
+     - `VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md`: Secciones 4 y 5 y Sección 10 (Changelog) actualizadas.
+     - 158/158 tests Vitest pasando al 100%. `tsc --noEmit` 0 errores y `pnpm build` 100% limpio.
+
+## 🔖 VERSIÓN ANTERIOR: v32.60 — Octubre 2026
 
 ### Novedades v32.60 (JanIA Coach y Docente Inmobiliaria de Élite, Encuestas Nativas Interactivas con Emojis, Auto-Aprobación de Grupos, Tarjetas VCard y Moderación Estricta):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:
