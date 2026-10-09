@@ -331,6 +331,30 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.71 — Octubre 2026
+
+#### 📌 REVERSIÓN PREVENTIVA DE PRESENCIA CONTINUA PARA PROTECCIÓN DE LA ELOQUENCIA Y MEMORIA CONTEXTUAL DE JANIA, PRESERVACIÓN INTACTA DE LAOMEDEIA
+
+**Requerimiento y Objetivos:**
+1. **Reversión Preventiva de Presencia Continua en WhatsApp**:
+   - Eduardo A. Rivera instruyó tajantemente: *"Yo creo que mejor lo dejes lo de los puntitos y el micro como estaba antes, parece que esto afectó la elocuencia y la memorización del contexto de la conversación con JanIA, antes estaba bien."*
+   - Al observar que la emisión intensiva de pulsos de presencia en el socket de Baileys podía competir con los hilos y memoria de conversación de JanIA en DMs, se aplicó la Regla #5 y #2 del proyecto ("Atención Estricta a las Órdenes del Usuario" y "No Hacer Daño / Code Safety").
+2. **Preservación Intacta de la Voz Oficial de JanIA (Laomedeia)**:
+   - Se mantiene inalterada la voz oficial de JanIA con **Laomedeia** (`gemini-3.1-flash-tts-preview`, `es-us`, `"Read aloud in a warm, welcoming tone."`).
+3. **Restablecimiento Quirúrgico de la Lógica Previa**:
+   - Revertidos `whatsapp-match.ts` y `whatsapp-utils.ts` a su estado comprobado previo, sin bucles de presencia paralelos que generen interferencia en el socket.
+
+**Archivos Modificados:**
+- `server/_core/whatsapp-match.ts`: Revertido a la versión previa estable.
+- `server/_core/whatsapp-utils.ts`: Restaurada función `startContinuousPresence` simple original.
+- `shared/const.ts`: Versión bump a `v32.71`.
+- `package.json`: Versión `32.71.0`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 159/159 tests pasando al 100% ✅ | `npm run build` limpio ✅
+
+---
+
 ### 🔖 v32.70 — Octubre 2026
 
 #### 📌 RATIFICACIÓN DOCTRINAL DE LAOMEDEIA COMO VOZ OFICIAL FEMENINA DE JANIA, PARIDAD 1:1 CON CONSOLA GOOGLE CLOUD TTS Y BLINDAJE DE PRESENCIA CONTINUA EN WHATSAPP

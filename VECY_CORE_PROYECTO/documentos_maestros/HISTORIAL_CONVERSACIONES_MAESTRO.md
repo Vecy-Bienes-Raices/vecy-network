@@ -7,6 +7,32 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.71 — 09 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Reversión Preventiva y Doctrinal de Presencia Continua en WhatsApp**:
+   - Eduardo instruyó tajantemente: *"Yo creo que mejor lo dejes lo de los puntitos y el micro como estaba antes, parece que esto afectó la elocuencia y la memorización del contexto de la conversación con JanIA, antes estaba bien."*
+   - Eduardo aportó captura de pantalla de WhatsApp donde se evidenció que los mensajes recurrentes de presencia o interacción podían interferir con la fluidez del hilo conversacional y la memoria contextual de JanIA.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Prioridad Absoluta de la Eloquencia y Memoria Contextual de JanIA**:
+   - La regla #5 y #2 de Vecy Network ("Atención Estricta a las Órdenes del Usuario" y "No Hacer Daño / Prohibida la Destrucción de Código") exige que si cualquier añadido experimental a la capa de sockets de WhatsApp afecta la percepción, elocuencia, fluidez o memoria conversacional, debe revertirse de inmediato a su estado previamente validado y funcional.
+   - El bucle de refresco continuo de presencia a intervalos cortos (`startContinuousPresence` con dual dispatch) añadía tráfico concurrente en el socket de Baileys que podía provocar colisiones en el procesamiento de eventos o afectar los timers de buffers en DMs privados.
+2. **Preservación Inmaculada de la Voz de JanIA (Laomedeia)**:
+   - La voz oficial de JanIA se mantiene 100% inalterada con **Laomedeia** (`gemini-3.1-flash-tts-preview`, `es-us`, `"Read aloud in a warm, welcoming tone."`), ratificada por Eduardo como la voz humana oficial insustituible.
+
+### Acciones Técnicas Ejecutadas
+1. **Restauración Quirúrgica del Código Previo**:
+   - `server/_core/whatsapp-match.ts`: Revertido a la versión previa comprobada de presencia y despacho de mensajes en grupos y DMs.
+   - `server/_core/whatsapp-utils.ts`: Revertida la función `startContinuousPresence` a su firma original simple de 3.5s.
+   - `server/__tests__/regression.test.ts`: Restaurada suite de regresión previa sin dependencias de `setType`.
+2. **Validación, Versión y Compilación**:
+   - Versión oficial incrementada a `v32.71` (`32.71.0`) en `shared/const.ts` y `package.json`.
+   - 159/159 pruebas Vitest aprobadas al 100%.
+   - Compilación limpia con `tsc --noEmit` (0 errores) y `npm run build`.
+
+---
+
 ## 📋 SESIÓN v32.70 — 09 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

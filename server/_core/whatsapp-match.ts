@@ -1241,7 +1241,6 @@ export class JaniaMatchBot {
 
     const chatId = senderId;
     const body = combinedBody;
-    const alternateDmJid = (mainMsg?.key?.remoteJid && mainMsg.key.remoteJid !== senderId) ? mainMsg.key.remoteJid : undefined;
     console.log(`[JANIA-MATCH] [DM] Procesando buffer DM de ${messages.length} mensaje(s) de ${senderId} (${userName}, Tel: ${rawPhone}): "${body}"`);
 
     // 💾 REGISTRO PERSISTENTE DEL MENSAJE DEL USUARIO EN POSTGRESQL (Doctrina v32.53):
@@ -1277,7 +1276,7 @@ export class JaniaMatchBot {
     // 🏛️ INTERCEPTOR PRIORITARIO DM: COMPLETAR SESIÓN PENDIENTE PREDIAL BOGOTÁ (CÉDULA / NIT)
     const { hasPendingPredialSession, executePredialAssistanceFromWhatsApp } = await import('./predialService');
     if (senderId && hasPendingPredialSession(senderId)) {
-      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing', 3000, alternateDmJid);
+      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
       try {
         const predialPendingCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
         if (predialPendingCheck.isPredialRequest && predialPendingCheck.reportText) {
@@ -1313,7 +1312,7 @@ export class JaniaMatchBot {
     // 🏛️ INTERCEPTOR PRIORITARIO DM: PREDIAL (va ANTES que cédula — si el texto menciona predial/chip, no debe caer en verificación de identidad)
     const isPredialContext = body.toLowerCase().includes('predial') || body.toLowerCase().includes('chip') || body.toLowerCase().includes('hacienda');
     if (isPredialContext) {
-      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing', 3000, alternateDmJid);
+      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
       try {
         const predialCheck = await executePredialAssistanceFromWhatsApp(body, senderId, true);
         if (predialCheck.isPredialRequest && predialCheck.reportText) {
@@ -1350,7 +1349,7 @@ export class JaniaMatchBot {
     const { executeIdentityVerificationFromWhatsApp, extractCedulaForVerification } = await import('./identityVerificationService');
     const idDetection = extractCedulaForVerification(body, true);
     if (idDetection.found) {
-      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing', 3000, alternateDmJid);
+      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
       try {
         const idCheck = await executeIdentityVerificationFromWhatsApp(body, true);
         if (idCheck.isVerificationRequest && idCheck.reportText) {
@@ -1401,7 +1400,7 @@ export class JaniaMatchBot {
         return;
       }
 
-      let stopPresence = startContinuousPresence(this.sock, senderId, 'composing', 3000, alternateDmJid);
+      let stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
       try {
         const { processPrivateDmConversationalMessage } = await import('./janIA');
         const reply = await processPrivateDmConversationalMessage(body, senderId, userName);
@@ -1416,13 +1415,9 @@ export class JaniaMatchBot {
           if (shouldSendVoice) {
             try {
               console.log(`[JANIA-MATCH] [DM-AI] Generando respuesta en nota de voz PTT para ${senderId}...`);
-              // Transición fluida a 'recording' continuo ("Grabando audio... 🎙️") sin emitir 'paused' intermedio
-              if (typeof (stopPresence as any)?.setType === 'function') {
-                (stopPresence as any).setType('recording');
-              } else {
-                stopPresence();
-                stopPresence = startContinuousPresence(this.sock, senderId, 'recording', 3000, alternateDmJid);
-              }
+              // Detener 'composing' e iniciar 'recording' continuo ("Grabando audio... 🎙️")
+              stopPresence();
+              stopPresence = startContinuousPresence(this.sock, senderId, 'recording');
               const cleanText = cleanVoiceText(reply);
               const media = await textToSpeechMedia(cleanText);
               if (media && media.data) {
@@ -1591,19 +1586,23 @@ export class JaniaMatchBot {
 
       const realName = msg.pushName || `Asesor +${resolvedSenderId.split('@')[0]}`;
 
-      const { detectaVoz, textToSpeechMedia, startContinuousPresence } = await import('./whatsapp-utils');
+      const { detectaVoz, textToSpeechMedia } = await import('./whatsapp-utils');
       const { processWhatsAppMessage, processConsultingMessage, processCirculoMessage } = await import('./janIA');
 
       const isAudioPTT = !!msg.message?.audioMessage;
       const wantsVoice = isAudioPTT || detectaVoz(textLower);
-      const groupPresenceHandle = startContinuousPresence(this.sock, chatId, wantsVoice ? 'recording' : 'composing');
+      if (wantsVoice) {
+        await this.sock.sendPresenceUpdate('recording', chatId);
+      } else {
+        await this.sock.sendPresenceUpdate('composing', chatId);
+      }
 
       // Si la transcripción del audio falló, respondemos con un mensaje específico
       const isAudioFailed = bodyText === '[audio-vacío]' || bodyText === '[audio-sin-buffer]' || bodyText === '[audio-error]';
       if (isAudioFailed) {
-        groupPresenceHandle();
         const failMsg = `Hola ${realName} 👋🏻, escuché que enviaste una nota de voz, pero hubo una interferencia al procesar el audio en este momento. 🙏\n\nPor favor escribe tu consulta o requerimiento por texto aquí en el grupo para atenderte de inmediato. ¡Estoy lista para responderte! 😊`;
         await this.queuedSend(chatId, failMsg, { mentions: [senderId], quoted: msg });
+        await this.sock.sendPresenceUpdate('paused', chatId);
         return;
       }
 
@@ -1629,7 +1628,7 @@ export class JaniaMatchBot {
 
         await this.safeReact(chatId, msg.key, '🚫', 'WARNING-REACT');
         await this.queuedSend(chatId, redirectMsg, { mentions: [senderId], quoted: msg });
-        groupPresenceHandle();
+        await this.sock.sendPresenceUpdate('paused', chatId);
         await this.logToDb(chatId, 'janIA', `[GRUPO1-MODERATION] ${redirectMsg}`);
 
         if (isBotAdmin && msg.key?.id) {
@@ -1653,7 +1652,7 @@ export class JaniaMatchBot {
       if (idCheck.isVerificationRequest && idCheck.reportText) {
         console.log(`[JANIA-MATCH] [Group ${chatId}] Verificación de identidad atendida para ${resolvedSenderId} (C.C. ${idCheck.cedula})`);
         await this.queuedSend(chatId, idCheck.reportText, { mentions: [senderId], quoted: msg });
-        groupPresenceHandle();
+        await this.sock.sendPresenceUpdate('paused', chatId);
         await this.logToDb(chatId, 'janIA', idCheck.reportText);
         return;
       }
@@ -1669,7 +1668,7 @@ export class JaniaMatchBot {
 
         await this.queuedSend(chatId, contactMsg, { mentions: [senderId], quoted: msg });
         await this.sendContactCard(chatId, contactType, msg);
-        groupPresenceHandle();
+        await this.sock.sendPresenceUpdate('paused', chatId);
         await this.logToDb(chatId, 'janIA', `[TARJETA-CONTACTO-${contactType.toUpperCase()}] ${contactMsg}`);
         return;
       }
@@ -1755,7 +1754,7 @@ export class JaniaMatchBot {
 
       } else {
         await this.handlePrivateDmRedirect(chatId, resolvedSenderId, realName);
-        groupPresenceHandle();
+        await this.sock.sendPresenceUpdate('paused', chatId);
         return;
       }
 
@@ -1779,9 +1778,6 @@ export class JaniaMatchBot {
 
           if (shouldSendVoice) {
             try {
-              if (typeof (groupPresenceHandle as any)?.setType === 'function') {
-                (groupPresenceHandle as any).setType('recording');
-              }
               const media = await textToSpeechMedia(voiceToDeliver);
               if (media && media.data) {
                 const audioBuffer = Buffer.from(media.data, 'base64');
@@ -1820,7 +1816,7 @@ export class JaniaMatchBot {
         await this.sock.sendMessage(chatId, { react: { text: result.reactionEmoji, key: msg.key } }).catch(() => {});
       }
 
-      groupPresenceHandle();
+      await this.sock.sendPresenceUpdate('paused', chatId);
     } catch (err) {
       console.error('[JANIA-MATCH] Error al responder pregunta directa en grupo:', err);
     }

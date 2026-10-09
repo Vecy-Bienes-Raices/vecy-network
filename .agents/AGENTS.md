@@ -172,7 +172,22 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.70 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.71 — Octubre 2026
+
+### Novedades v32.71 (Reversión Preventiva de Presencia Continua para Protección de la Eloquencia y Memoria Contextual de JanIA, Preservación Intacta de Laomedeia):
+- **Diagnóstico y Confirmación de Eduardo A. Rivera**:
+  1. **Reversión de Gestos de Presencia a su Estado Previo**:
+     - Eduardo instruyó tajantemente: *"Yo creo que mejor lo dejes lo de los puntitos y el micro como estaba antes, parece que esto afectó la elocuencia y la memorización del contexto de la conversación con JanIA, antes estaba bien."*
+     - Eduardo aportó captura de pantalla de WhatsApp donde se evidenció que los mensajes concurrentes de presencia o interacción en el socket de Baileys podían interferir con la fluidez del hilo conversacional y la memoria contextual de JanIA.
+  2. **Preservación Intacta de la Voz de JanIA (Laomedeia)**:
+     - La voz oficial de JanIA se mantiene 100% inalterada con **Laomedeia** (`gemini-3.1-flash-tts-preview`, `es-us`, `"Read aloud in a warm, welcoming tone."`), ratificada por Eduardo como la voz humana oficial insustituible.
+  3. **Modificaciones Implementadas**:
+     - `server/_core/whatsapp-match.ts`: Revertido a la lógica previa estable de presencia sin sobrecarga concurrente.
+     - `server/_core/whatsapp-utils.ts`: Restaurada función `startContinuousPresence` simple sin `setType`.
+     - `shared/const.ts` (`v32.71`) y `package.json` (`32.71.0`).
+     - 159/159 pruebas Vitest pasando al 100%, compilación limpia con `tsc --noEmit` y `npm run build`.
+
+## 🔖 VERSIÓN ANTERIOR: v32.70 — Octubre 2026
 
 ### Novedades v32.70 (Ratificación Doctrinal de Laomedeia como Voz Oficial Femenina, Paridad Total con Consola Google Cloud TTS y Blindaje de Presencia Continua en WhatsApp):
 - **Diagnóstico y Confirmación de Eduardo A. Rivera**:

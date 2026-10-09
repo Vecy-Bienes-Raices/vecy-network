@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.70";
+    VECY_VERSION = "v32.71";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -11278,58 +11278,33 @@ function getEmpatheticReactionEmoji(text2, options) {
   }
   return "\u2728";
 }
-function startContinuousPresence(sock, jid, initialType = "composing", intervalMs = 3e3, secondaryJid) {
-  if (!sock || !jid) {
-    const noop = () => {
-    };
-    noop.stop = () => {
-    };
-    noop.setType = () => {
-    };
-    return noop;
-  }
-  let isAlive = true;
-  let currentType = initialType;
-  const emit = (t2) => {
-    if (!isAlive) return;
-    try {
-      sock.sendPresenceUpdate(t2, jid).catch(() => {
-      });
-      if (secondaryJid && secondaryJid !== jid) {
-        sock.sendPresenceUpdate(t2, secondaryJid).catch(() => {
-        });
-      }
-    } catch (_) {
-    }
+function startContinuousPresence(sock, jid, type = "composing", intervalMs = 3500) {
+  if (!sock || !jid) return () => {
   };
-  emit(currentType);
+  let isAlive = true;
+  try {
+    sock.sendPresenceUpdate(type, jid).catch(() => {
+    });
+  } catch (_) {
+  }
   const timer = setInterval(() => {
     if (!isAlive) return;
-    emit(currentType);
+    try {
+      sock.sendPresenceUpdate(type, jid).catch(() => {
+      });
+    } catch (_) {
+    }
   }, intervalMs);
-  const stop = () => {
+  return () => {
     if (!isAlive) return;
     isAlive = false;
     clearInterval(timer);
     try {
       sock.sendPresenceUpdate("paused", jid).catch(() => {
       });
-      if (secondaryJid && secondaryJid !== jid) {
-        sock.sendPresenceUpdate("paused", secondaryJid).catch(() => {
-        });
-      }
     } catch (_) {
     }
   };
-  const setType = (newType) => {
-    if (!isAlive) return;
-    currentType = newType;
-    emit(newType);
-  };
-  const handle = stop;
-  handle.stop = stop;
-  handle.setType = setType;
-  return handle;
 }
 var NICKNAMES_MAP, SONOROUS_COMPOUND_BLOCKS, NON_SONOROUS_FILLERS, CONNECTORS, cachedVertexToken;
 var init_whatsapp_utils = __esm({
@@ -12385,7 +12360,6 @@ ${quotedNote}` : quotedNote;
         }
         const chatId = senderId;
         const body = combinedBody;
-        const alternateDmJid = mainMsg?.key?.remoteJid && mainMsg.key.remoteJid !== senderId ? mainMsg.key.remoteJid : void 0;
         console.log(`[JANIA-MATCH] [DM] Procesando buffer DM de ${messages2.length} mensaje(s) de ${senderId} (${userName}, Tel: ${rawPhone}): "${body}"`);
         await this.logToDb(senderId, "user", body);
         try {
@@ -12412,7 +12386,7 @@ ${quotedNote}` : quotedNote;
         }
         const { hasPendingPredialSession: hasPendingPredialSession2, executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
         if (senderId && hasPendingPredialSession2(senderId)) {
-          const stopPresence = startContinuousPresence(this.sock, senderId, "composing", 3e3, alternateDmJid);
+          const stopPresence = startContinuousPresence(this.sock, senderId, "composing");
           try {
             const predialPendingCheck = await executePredialAssistanceFromWhatsApp2(body, senderId, true);
             if (predialPendingCheck.isPredialRequest && predialPendingCheck.reportText) {
@@ -12444,7 +12418,7 @@ ${quotedNote}` : quotedNote;
         }
         const isPredialContext = body.toLowerCase().includes("predial") || body.toLowerCase().includes("chip") || body.toLowerCase().includes("hacienda");
         if (isPredialContext) {
-          const stopPresence = startContinuousPresence(this.sock, senderId, "composing", 3e3, alternateDmJid);
+          const stopPresence = startContinuousPresence(this.sock, senderId, "composing");
           try {
             const predialCheck = await executePredialAssistanceFromWhatsApp2(body, senderId, true);
             if (predialCheck.isPredialRequest && predialCheck.reportText) {
@@ -12477,7 +12451,7 @@ ${quotedNote}` : quotedNote;
         const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2, extractCedulaForVerification: extractCedulaForVerification2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
         const idDetection = extractCedulaForVerification2(body, true);
         if (idDetection.found) {
-          const stopPresence = startContinuousPresence(this.sock, senderId, "composing", 3e3, alternateDmJid);
+          const stopPresence = startContinuousPresence(this.sock, senderId, "composing");
           try {
             const idCheck = await executeIdentityVerificationFromWhatsApp2(body, true);
             if (idCheck.isVerificationRequest && idCheck.reportText) {
@@ -12515,7 +12489,7 @@ ${quotedNote}` : quotedNote;
             await this.logToDb(senderId, "janIA", `[TARJETA-CONTACTO-${contactType.toUpperCase()}] ${contactMsg}`);
             return;
           }
-          let stopPresence = startContinuousPresence(this.sock, senderId, "composing", 3e3, alternateDmJid);
+          let stopPresence = startContinuousPresence(this.sock, senderId, "composing");
           try {
             const { processPrivateDmConversationalMessage: processPrivateDmConversationalMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
             const reply = await processPrivateDmConversationalMessage2(body, senderId, userName);
@@ -12527,12 +12501,8 @@ ${quotedNote}` : quotedNote;
               if (shouldSendVoice) {
                 try {
                   console.log(`[JANIA-MATCH] [DM-AI] Generando respuesta en nota de voz PTT para ${senderId}...`);
-                  if (typeof stopPresence?.setType === "function") {
-                    stopPresence.setType("recording");
-                  } else {
-                    stopPresence();
-                    stopPresence = startContinuousPresence(this.sock, senderId, "recording", 3e3, alternateDmJid);
-                  }
+                  stopPresence();
+                  stopPresence = startContinuousPresence(this.sock, senderId, "recording");
                   const cleanText = cleanVoiceText2(reply);
                   const media = await textToSpeechMedia2(cleanText);
                   if (media && media.data) {
@@ -12677,18 +12647,22 @@ Mis grupos oficiales:
             }
           }
           const realName = msg.pushName || `Asesor +${resolvedSenderId.split("@")[0]}`;
-          const { detectaVoz: detectaVoz2, textToSpeechMedia: textToSpeechMedia2, startContinuousPresence: startContinuousPresence2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+          const { detectaVoz: detectaVoz2, textToSpeechMedia: textToSpeechMedia2 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
           const { processWhatsAppMessage: processWhatsAppMessage2, processConsultingMessage: processConsultingMessage2, processCirculoMessage: processCirculoMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
           const isAudioPTT = !!msg.message?.audioMessage;
           const wantsVoice = isAudioPTT || detectaVoz2(textLower);
-          const groupPresenceHandle = startContinuousPresence2(this.sock, chatId, wantsVoice ? "recording" : "composing");
+          if (wantsVoice) {
+            await this.sock.sendPresenceUpdate("recording", chatId);
+          } else {
+            await this.sock.sendPresenceUpdate("composing", chatId);
+          }
           const isAudioFailed = bodyText === "[audio-vac\xEDo]" || bodyText === "[audio-sin-buffer]" || bodyText === "[audio-error]";
           if (isAudioFailed) {
-            groupPresenceHandle();
             const failMsg = `Hola ${realName} \u{1F44B}\u{1F3FB}, escuch\xE9 que enviaste una nota de voz, pero hubo una interferencia al procesar el audio en este momento. \u{1F64F}
 
 Por favor escribe tu consulta o requerimiento por texto aqu\xED en el grupo para atenderte de inmediato. \xA1Estoy lista para responderte! \u{1F60A}`;
             await this.queuedSend(chatId, failMsg, { mentions: [senderId], quoted: msg });
+            await this.sock.sendPresenceUpdate("paused", chatId);
             return;
           }
           const isMainGroupChat = chatId === this.targetGroupId;
@@ -12719,7 +12693,7 @@ Para mantener este canal 100% limpio y \xE1gil para encontrar coincidencias sin 
 _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos segundos. \xA1Gracias por tu comprensi\xF3n y apoyo mutuo!_ \u{1F91D}\u2728`;
             await this.safeReact(chatId, msg.key, "\u{1F6AB}", "WARNING-REACT");
             await this.queuedSend(chatId, redirectMsg, { mentions: [senderId], quoted: msg });
-            groupPresenceHandle();
+            await this.sock.sendPresenceUpdate("paused", chatId);
             await this.logToDb(chatId, "janIA", `[GRUPO1-MODERATION] ${redirectMsg}`);
             if (isBotAdmin && msg.key?.id) {
               setTimeout(async () => {
@@ -12740,7 +12714,7 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
           if (idCheck.isVerificationRequest && idCheck.reportText) {
             console.log(`[JANIA-MATCH] [Group ${chatId}] Verificaci\xF3n de identidad atendida para ${resolvedSenderId} (C.C. ${idCheck.cedula})`);
             await this.queuedSend(chatId, idCheck.reportText, { mentions: [senderId], quoted: msg });
-            groupPresenceHandle();
+            await this.sock.sendPresenceUpdate("paused", chatId);
             await this.logToDb(chatId, "janIA", idCheck.reportText);
             return;
           }
@@ -12751,7 +12725,7 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
             const contactMsg = wantsBroker ? `\xA1Hola ${realName}! \u{1F44B} Claro que s\xED, aqu\xED tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atenci\xF3n comercial personalizada de VECY BIENES RA\xCDCES: \u{1F4F2}` : `\xA1Hola ${realName}! \u{1F44B} Con gusto, aqu\xED tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RA\xCDCES: \u{1F916}\u2728 Gu\xE1rdame en tus contactos para consultarme siempre que lo necesites.`;
             await this.queuedSend(chatId, contactMsg, { mentions: [senderId], quoted: msg });
             await this.sendContactCard(chatId, contactType, msg);
-            groupPresenceHandle();
+            await this.sock.sendPresenceUpdate("paused", chatId);
             await this.logToDb(chatId, "janIA", `[TARJETA-CONTACTO-${contactType.toUpperCase()}] ${contactMsg}`);
             return;
           }
@@ -12829,7 +12803,7 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
             );
           } else {
             await this.handlePrivateDmRedirect(chatId, resolvedSenderId, realName);
-            groupPresenceHandle();
+            await this.sock.sendPresenceUpdate("paused", chatId);
             return;
           }
           if (result && result.response && result.response.trim() !== "") {
@@ -12846,9 +12820,6 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
               const shouldSendVoice = (wantsVoice || isAudioPTT) && result.wantsVoice !== false;
               if (shouldSendVoice) {
                 try {
-                  if (typeof groupPresenceHandle?.setType === "function") {
-                    groupPresenceHandle.setType("recording");
-                  }
                   const media = await textToSpeechMedia2(voiceToDeliver);
                   if (media && media.data) {
                     const audioBuffer = Buffer.from(media.data, "base64");
@@ -12883,7 +12854,7 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
             await this.sock.sendMessage(chatId, { react: { text: result.reactionEmoji, key: msg.key } }).catch(() => {
             });
           }
-          groupPresenceHandle();
+          await this.sock.sendPresenceUpdate("paused", chatId);
         } catch (err) {
           console.error("[JANIA-MATCH] Error al responder pregunta directa en grupo:", err);
         }
