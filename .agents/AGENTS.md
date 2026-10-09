@@ -172,7 +172,26 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.59 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.60 — Octubre 2026
+
+### Novedades v32.60 (JanIA Coach y Docente Inmobiliaria de Élite, Encuestas Nativas Interactivas con Emojis, Auto-Aprobación de Grupos, Tarjetas VCard y Moderación Estricta):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:
+  1. **Doctrina y Aclaración de Eduardo**:
+     - **Encuestas Nativas Interactivas**: Eduardo aclaró que nunca pidió eliminar los emojis, sino erradicar para siempre el formato de texto plano con viñetas numéricas `1️⃣ 2️⃣ 3️⃣ 4️⃣` (como en la Imagen 1). Las encuestas deben enviarse exclusivamente con la herramienta nativa interactiva de WhatsApp (`pollCreationMessage`), con botones táctiles de selección (`selectableCount: 1`), y con emojis libres, profesionales y atractivos (como en la Imagen 2).
+     - **JanIA como Coach, Conferencista y Docente de Élite**: JanIA asume un rol protagónico de formación y liderazgo educativo para agentes inmobiliarios en Colombia. Sus difusiones de las 10:00 AM abordan con rigurosidad: marketing de video vertical (Reels/TikTok), narrativa emocional, doctrina sobre corretaje sin firma (no buscar pleitos + alternativa tecnológica de correo formal con valor probatorio de firma electrónica por contestación como en VECY, registro y presentación de cliente), perfilamiento de compradores, alianzas 50/50 transparentes, hipotecas con particulares y alianza estratégica con Banco Caja Social, minutas y cobro prejurídico de cartera.
+     - **Descripciones Oficiales de Grupos**: Declaradas con claridad que son grupos atendidos, controlados y administrados por nuestra IA (JanIA, agente IA de VECY BIENES RAÍCES), con advertencia categórica de moderación y eliminación inmediata de cualquier foto, meme, PDF, audio o enlace off-topic.
+     - **Nuevas Herramientas Interactivas**:
+       - Auto-aprobación periódica (cada 5 min) y en tiempo real de participantes que solicitan unirse a los grupos oficiales.
+       - Envío de tarjeta interactiva de contacto (VCard de WhatsApp) cuando un usuario solicita el contacto de JanIA o del Bróker Oficial (+57 316 656 9719).
+       - Promoción del agendamiento profesional y formularios interactivos.
+  2. **Modificaciones Implementadas**:
+     - `shared/const.ts`: `VECY_OFFICIAL_GROUPS` enriquecido con descripciones oficiales completas; versión bump a `v32.60`.
+     - `package.json`: Versión actualizada a `32.60.0`.
+     - `server/_core/whatsapp-match.ts`: Implementados `sendContactCard` (VCard interactiva), `approvePendingGroupRequests` (auto-aprobación en evento y cron), e interceptores de solicitud de contacto. Exportado alias `whatsappBot`.
+     - `server/_core/cronService.ts`: `WEEKLY_POLLS_LIST` con emojis interactivos (Semana 1 idéntica a la Imagen 2), `publishWeeklyPoll` 100% nativa sin fallback de texto, y `generateCalendarDailyText` con visión de Coach inmobiliaria de élite.
+     - 158/158 tests Vitest pasando al 100%. `tsc --noEmit` 0 errores y `pnpm build` 100% limpio.
+
+## 🔖 VERSIÓN ANTERIOR: v32.59 — Octubre 2026
 
 ### Novedades v32.59 (Rebranding Integral a VECY BIENES RAÍCES, Encuestas Nativas de 1 Opción al Canal sin Emojis, Difusión Diaria con Imágenes Públicas de Internet y Cero Audios):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:

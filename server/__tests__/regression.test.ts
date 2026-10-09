@@ -1424,18 +1424,29 @@ Ed del 2014.
       }
     });
 
-    it("Doctrina v32.59: encuestas semanales con máximo 3-4 opciones y CERO emojis", async () => {
+    it("Doctrina v32.60: encuestas semanales nativas con 3-4 opciones y emojis profesionales interactivos", async () => {
       const { WEEKLY_POLLS_LIST } = await import("../_core/cronService");
       expect(WEEKLY_POLLS_LIST.length).toBeGreaterThanOrEqual(4);
-      const emojiRegex = /[\p{Extended_Pictographic}]/u;
       for (const poll of WEEKLY_POLLS_LIST) {
         expect(poll.options.length).toBeGreaterThanOrEqual(3);
         expect(poll.options.length).toBeLessThanOrEqual(4);
-        expect(emojiRegex.test(poll.question)).toBe(false);
+        expect(poll.question.length).toBeGreaterThan(10);
         for (const opt of poll.options) {
-          expect(emojiRegex.test(opt)).toBe(false);
+          expect(opt.trim().length).toBeGreaterThan(3);
         }
       }
+    });
+
+    it("Doctrina v32.60: soporte de tarjetas de contacto y descripciones oficiales de grupos", async () => {
+      const { VECY_OFFICIAL_GROUPS } = await import("../../shared/const");
+      expect(VECY_OFFICIAL_GROUPS.grupo1.description).toContain("JanIA, agente IA de VECY BIENES RAÍCES");
+      expect(VECY_OFFICIAL_GROUPS.grupo1.description).toContain("ELIMINADO DE INMEDIATO");
+      expect(VECY_OFFICIAL_GROUPS.grupo2.description).toContain("JanIA, agente IA de VECY BIENES RAÍCES");
+      expect(VECY_OFFICIAL_GROUPS.grupo3.description).toContain("JanIA, agente IA de VECY BIENES RAÍCES");
+
+      const { whatsappBot } = await import("../_core/whatsapp-match");
+      expect(typeof whatsappBot.sendContactCard).toBe("function");
+      expect(typeof whatsappBot.approvePendingGroupRequests).toBe("function");
     });
 
     it("Doctrina v32.59: calendario de 30 días sin temas repetidos + edición especial día 31", async () => {

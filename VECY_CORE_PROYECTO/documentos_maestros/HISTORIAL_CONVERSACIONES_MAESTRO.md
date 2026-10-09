@@ -7,6 +7,53 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.60 — 08 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Aclaración Crítica de Encuestas Nativas de WhatsApp (Imágenes 1, 2 y 3)**:
+   - Eduardo clarificó categóricamente: *"Referente a la encuesta, no me refería a eliminar los emojis sino que no presentes en el canal nunca más las encuestas como se ve en la (imagen 1). Las debes generar, crear o hacer como se ven en la (imagen 2), es decir crear la encuesta directamente desde la herramienta encuestas de las opciones del canal (Imagen 3)."*
+   - JanIA tiene total libertad para usar emojis profesionales y atractivos. Lo prohibido era el texto plano con números `1️⃣ 2️⃣ 3️⃣ 4️⃣` simulando una encuesta.
+2. **Rol de JanIA como Docente, Conferencista y Coach de Élite Inmobiliaria**:
+   - Convertir a JanIA a través de los canales en una verdadera docente o coach para agentes inmobiliarios en Colombia, con rigor pedagógico y liderazgo formativo.
+   - Formación de vanguardia: marketing inmobiliario moderno (video vertical Reels/TikTok, narrativa emocional, adiós a fotos planas de fachada con precio), qué hacer si el propietario no firma corretaje (Doctrina de Eduardo de dejar ir en paz antes de buscar pleitos + alternativa tecnológica de correo formal con valor de firma electrónica por contestación como en VECY), perfilamiento del comprador para dar con la propiedad exacta, alianzas comerciales 50/50 transparentes sin intermediarios fantasmas, soluciones de liquidez (hipotecas con particulares y alianza estratégica con Banco Caja Social), y redacción de promesas de compraventa y cobros prejurídicos de cartera.
+   - Difusión de las 10:00 AM con fotografías reales de internet acordes al tema (cero audios).
+3. **Descripciones Oficiales de los 3 Grupos de WhatsApp**:
+   - Diseñar y entregar las descripciones definitivas listas para copiar y pegar en los 3 grupos oficiales.
+   - Especificar de forma transparente que son grupos **atendidos, controlados y administrados por nuestra IA (JanIA, agente IA de VECY BIENES RAÍCES)**.
+   - Advertencia categórica: cualquier imagen, foto, meme, archivo PDF, audio o enlace off-topic será amonestado y **eliminado de inmediato por nuestra IA**.
+4. **Nuevas Funcionalidades en Grupos y WhatsApp**:
+   - Auto-aprobación automática de solicitudes de ingreso a los grupos oficiales.
+   - Envío de tarjetas de contacto interactivas (VCard nativas de WhatsApp) de JanIA (+57 319 291 9978) o del bróker oficial (+57 316 656 9719) cuando los usuarios soliciten contacto.
+   - Enseñar a agendar clientes eficientemente con formularios y herramientas interactivas (Imágenes 4 y 5).
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Diferenciación entre Formato de Mensaje y Contenido Pictográfico**:
+   - En la versión v32.59 se interpretó erróneamente que "no más encuestas con números emoji" implicaba eliminar los emojis del contenido. La causa raíz del desagrado de Eduardo era que Baileys / el newsletter no estaba enviando el mensaje tipo `pollCreationMessage` nativo, sino un bloque de texto formateado con viñetas numéricas.
+   - Se erradicó cualquier fallback de texto plano en `publishWeeklyPoll`. Ahora se envía exclusivamente como mensaje nativo interactivo de encuesta de WhatsApp (`pollCreationMessageV3` / `pollCreationMessage`), con botones táctiles de selección (`selectableCount: 1`) y libertad de emojis.
+2. **Necesidad de Valor Agregado Docente para la Comunidad Inmobiliaria**:
+   - Un canal y grupos que solo publican avisos o tips genéricos pierden el engagement de los agentes. Integrar la experiencia práctica de corretaje de Eduardo Rivera en la instrucción de JanIA eleva el estatus de VECY BIENES RAÍCES a una autoridad formativa indispensable para el gremio en Colombia.
+3. **Automatización Administrativa de Grupos**:
+   - Los grupos con aprobación de miembros requerían intervención manual. La API de Baileys permite listar y aprobar solicitudes (`groupRequestParticipantsUpdate`) automáticamente para admitir nuevos miembros sin fricción operativa.
+
+### Acciones Técnicas Ejecutadas
+1. **Configuración Oficial y Descripciones de Grupos (`shared/const.ts`)**:
+   - Incremento de versión a `v32.60` (`32.60.0` en `package.json`).
+   - Actualizado `VECY_OFFICIAL_GROUPS` con descripciones completas e institucionales de Grupo 1, Grupo 2 y Grupo 3, indicando administración por JanIA y advertencia de moderación y eliminación inmediata de contenido fuera de tema.
+2. **Encuestas Nativas Interactivas y Pedagogía Docente (`server/_core/cronService.ts`)**:
+   - `WEEKLY_POLLS_LIST`: Restaurados y enriquecidos los emojis de las 8 encuestas semanales nativas. La Semana 1 reproduce con total fidelidad la encuesta de la Imagen 2.
+   - `publishWeeklyPoll`: Envía exclusivamente encuesta nativa de WhatsApp (`pollCreationMessage`) con botones de 1 opción y reintento resiliente.
+   - `generateCalendarDailyText`: Prompt enriquecido profundamente para que JanIA actúe como Docente y Coach de élite inmobiliaria (Reels/TikTok, gestión de corretaje sin firma con correo electrónico y presentación formal de cliente, perfilamiento de compradores, alianzas 50/50, hipotecas Banco Caja Social y particulares, minutas legales y cobro prejurídico).
+3. **Tarjetas de Contacto Interactivas y Auto-Aprobación de Grupos (`server/_core/whatsapp-match.ts`)**:
+   - Implementado `sendContactCard(targetJid, contactType, quoted)` enviando VCard nativa de WhatsApp para JanIA (`+573192919978`) o Bróker Oficial (`+573166569719`).
+   - Interceptores en grupos y mensajes privados para entregar la tarjeta interactiva cuando el usuario pregunte por teléfono, contacto o cómo comunicarse.
+   - Implementado `approvePendingGroupRequests()` con escucha en tiempo real de `group.join-request` y barrido periódico cada 5 minutos para auto-aprobar participantes en los 3 grupos oficiales.
+   - Exportado alias `whatsappBot = janiaMatchBot` para interoperabilidad universal.
+4. **Verificación y Cobertura (`server/__tests__/regression.test.ts`)**:
+   - Pruebas unitarias para validar encuestas interactivas con emojis, `sendContactCard`, `approvePendingGroupRequests` y descripciones oficiales de grupos.
+   - 158/158 tests Vitest aprobados al 100%. `tsc --noEmit` 0 errores. `pnpm build` 100% exitoso.
+
+---
+
 ## 📋 SESIÓN v32.59 — 08 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

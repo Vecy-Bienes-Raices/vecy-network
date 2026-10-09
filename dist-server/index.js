@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.59";
+    VECY_VERSION = "v32.60";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -26,19 +26,89 @@ var init_const = __esm({
         id: "120363260108880069@g.us",
         name: "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}",
         inviteLink: "https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ",
-        purpose: "Publicar ofertas y requerimientos inmobiliarios exclusivos (inmuebles y demandas)"
+        purpose: "Publicar ofertas y requerimientos inmobiliarios exclusivos (inmuebles y demandas)",
+        description: `\xA1Bienvenido/a al canal transaccional oficial de VECY BIENES RA\xCDCES! \u{1F1E8}\u{1F1F4}\u{1F91D}
+
+\u{1F916} *GRUPO ADMINISTRADO Y MODERADO 24/7 POR NUESTRA IA (JanIA, agente IA de VECY BIENES RA\xCDCES)*.
+
+\u{1F4CC} *PROP\xD3SITO EXCLUSIVO:*
+Espacio 100% TRANSACCIONAL de alta velocidad para corredores, inmobiliarias y propietarios. JanIA monitorea este chat 24/7, extrae cada inmueble o demanda en tiempo real y cruza las dos puntas para generar cierres colaborativos en tiempo r\xE9cord.
+
+\u{1F3F7}\uFE0F *LO QUE S\xCD PUEDES PUBLICAR:*
+1\uFE0F\u20E3 OFERTAS: Inmuebles disponibles para comercializar (Venta, Arriendo o Permuta) con ciudad, barrio, precio y datos t\xE9cnicos.
+2\uFE0F\u20E3 DEMANDAS: Requerimientos de clientes compradores o arrendatarios calificados (presupuesto, zona y caracter\xEDsticas).
+
+\u{1F6AB} *REGLA ESTRICTA DE MODERACI\xD3N AUTOM\xC1TICA POR IA:*
+Cualquier clase de imagen o foto, meme, archivo PDF, audio, enlace publicitario o mensaje de charla/debate que no corresponda al tema transaccional del grupo ser\xE1 amonestado y ELIMINADO DE INMEDIATO del grupo por nuestra IA JanIA.
+
+\u{1F4A1} *\xBFD\xD3NDE PREGUNTAR O DEBATIR?*
+\u2022 Para consultas sobre leyes, tributario, aval\xFAos o tips: Grupo 2.
+\u2022 Para charlar del proyecto y alianzas: Grupo 3.
+\u2022 Para atenci\xF3n privada con JanIA: WhatsApp +57 319 291 9978.
+
+_VECY_
+_BIENES RA\xCDCES_
+_La evoluci\xF3n inevitable para el sector de los bienes ra\xEDces._ \u{1F680}`
       },
       grupo2: {
         id: "120363417740040773@g.us",
         name: "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}",
         inviteLink: "https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6",
-        purpose: "Consultas inmobiliarias p\xFAblicas, tips del d\xEDa, noticias del sector, valor de metro cuadrado y debates libres"
+        purpose: "Consultas inmobiliarias p\xFAblicas, tips del d\xEDa, noticias del sector, valor de metro cuadrado y debates libres",
+        description: `\xA1Bienvenido/a al consultorio inmobiliario y foro de actualidad de VECY BIENES RA\xCDCES! \u{1F4A1}\u{1F4DA}
+
+\u{1F916} *GRUPO ADMINISTRADO Y ATENDIDO POR NUESTRA IA (JanIA, agente IA de VECY BIENES RA\xCDCES)*.
+
+\u{1F4CC} *PROP\xD3SITO DEL GRUPO:*
+Espacio colaborativo de formaci\xF3n y resoluci\xF3n t\xE9cnica para elevar el nivel profesional del gremio inmobiliario en Colombia. JanIA y los aliados resolvemos tus dudas, compartimos novedades del sector y analizamos el mercado.
+
+\u{1F4A1} *CONTENIDO PERMITIDO Y PROMOVIDO:*
+\u2022 Consultas legales: Promesas de compraventa, Ley 820 de arrendamientos, sucesiones, escrituraci\xF3n y garant\xEDas.
+\u2022 Consultas tributarias DIAN: Retenci\xF3n en la fuente, ganancia ocasional e impuestos prediales.
+\u2022 Valor del metro cuadrado y estudios de mercado.
+\u2022 P\xEDldoras y tips diarios de formaci\xF3n (10:00 AM) y noticias del mercado inmobiliario.
+\u2022 Debates profesionales respetuosos entre colegas.
+
+\u{1F6AB} *REGLA ESTRICTA DE MODERACI\xD3N AUTOM\xC1TICA POR IA:*
+\u2022 NO se permite publicar ofertas ni demandas comerciales aqu\xED (esas van exclusivamente en el Grupo 1).
+\u2022 Cualquier imagen, meme, archivo PDF, audio o enlace ajeno al tema del consultorio ser\xE1 amonestado y ELIMINADO DE INMEDIATO por JanIA.
+
+\u{1F4DE} *ATENCI\xD3N COMERCIAL HUMANA PERSONALIZADA:*
+Para peritajes, cotizaciones o contrataci\xF3n personalizada con Eduardo y Jani:
+WhatsApp Br\xF3ker: +57 316 656 9719.
+
+_VECY_
+_BIENES RA\xCDCES_
+_La evoluci\xF3n inevitable para el sector de los bienes ra\xEDces._ \u{1F680}`
       },
       grupo3: {
         id: "120363403507276533@g.us",
         name: '\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}',
         inviteLink: "https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU",
-        purpose: "Comunidad oficial de aliados, experiencias cotidianas de negocio, foros inmobiliarios y desarrollo colaborativo"
+        purpose: "Comunidad oficial de aliados, experiencias cotidianas de negocio, foros inmobiliarios y desarrollo colaborativo",
+        description: `\xA1Bienvenido/a a la comunidad oficial del Proyecto VECY BIENES RA\xCDCES! \u{1F310}\u{1F91D}
+
+\u{1F916} *GRUPO ADMINISTRADO Y ATENDIDO POR NUESTRA IA (JanIA, agente IA de VECY BIENES RA\xCDCES)*.
+
+\u{1F4CC} *PROP\xD3SITO DEL GRUPO:*
+Espacio de integraci\xF3n de aliados, fundadores y colegas del sector inmobiliario. Punto de encuentro para debatir sobre la transformaci\xF3n del corretaje, proponer mejoras en la plataforma y compartir vivencias cotidianas del negocio.
+
+\u{1F680} *LO QUE COMPARTIMOS AQU\xCD:*
+\u2022 Charlas sobre el modelo colaborativo (ganar 40%-45% cada 3-4 d\xEDas con IA).
+\u2022 Propuestas de nuevas herramientas para la plataforma.
+\u2022 Experiencias de cierres, an\xE9cdotas y aprendizaje colaborativo.
+\u2022 Novedades de la red, alianzas estrat\xE9gicas y visi\xF3n a futuro.
+
+\u{1F6AB} *REGLA ESTRICTA DE MODERACI\xD3N AUTOM\xC1TICA POR IA:*
+\u2022 No publicar inventarios de inmuebles ni requerimientos (van en el Grupo 1).
+\u2022 Cualquier imagen, meme, archivo PDF, audio o enlace ajeno a la comunidad ser\xE1 amonestado y ELIMINADO DE INMEDIATO por JanIA.
+\u2022 Cero canibalismo comercial, pol\xEDtica o spam.
+
+\u{1F310} *PORTAL OFICIAL:* https://vecy-network.vercel.app/
+
+_VECY_
+_BIENES RA\xCDCES_
+_La evoluci\xF3n inevitable para el sector de los bienes ra\xEDces._ \u{1F680}`
       }
     };
   }
@@ -11309,7 +11379,8 @@ __export(whatsapp_match_exports, {
   isVipRealEstateGroup: () => isVipRealEstateGroup,
   janiaCaptadorBot: () => janiaCaptadorBot,
   janiaMatchBot: () => janiaMatchBot,
-  unwrapMessage: () => unwrapMessage
+  unwrapMessage: () => unwrapMessage,
+  whatsappBot: () => whatsappBot
 });
 import dns from "dns";
 import _baileys, {
@@ -11395,7 +11466,7 @@ function isVipRealEstateGroup(meta, groupSubject) {
   const s = (groupSubject || "").toLowerCase();
   return s.includes("andres nieto") || s.includes("andr\xE9s nieto") || s.includes("caro rodriguez") || s.includes("caro rodr\xEDguez") || s.includes("apartaestudios bogota") || s.includes("bodegas y lotes") || s.includes("en casa gesti\xF3n") || s.includes("santas-carolina") || s.includes("requerimientos colombia") || s.includes("campestre venta") || s.includes("mil millones") || s.includes("solo arriendos");
 }
-var SERVER_BOOT_TIME, cleanJid, VIP_COMMUNITY_ADMIN_PHONES, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot;
+var SERVER_BOOT_TIME, cleanJid, VIP_COMMUNITY_ADMIN_PHONES, outgoingQueue, JaniaMatchBot, janiaMatchBot, janiaCaptadorBot, whatsappBot;
 var init_whatsapp_match = __esm({
   "server/_core/whatsapp-match.ts"() {
     "use strict";
@@ -11808,6 +11879,22 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             this.reconnectAttempts = 0;
             this.updateStatusInDb().catch((err) => console.error(`[${this.botName}-DB] Error updating status on open:`, err));
             this.discoverAndSyncNewsletters().catch((err) => console.warn(`[${this.botName}] Info newsletters:`, err?.message));
+            this.approvePendingGroupRequests().catch((err) => console.warn(`[${this.botName}] Info aprobaci\xF3n grupos:`, err?.message));
+          }
+        });
+        this.sock.ev.on("group.join-request", async (update) => {
+          try {
+            const groupId = update?.id;
+            const participant = update?.participant;
+            if (!groupId || !participant) return;
+            const isOfficial = groupId === this.targetGroupId || groupId === this.buzonGroupId || groupId === this.circuloGroupId || groupId === VECY_OFFICIAL_GROUPS.grupo1.id || groupId === VECY_OFFICIAL_GROUPS.grupo2.id || groupId === VECY_OFFICIAL_GROUPS.grupo3.id;
+            if (isOfficial && typeof this.sock.groupRequestParticipantsUpdate === "function") {
+              console.log(`[JANIA-JOIN] \u{1F465} Solicitud de entrada detectada en ${groupId} para ${participant}. Aprobando...`);
+              await this.sock.groupRequestParticipantsUpdate(groupId, [participant], "approve");
+              console.log(`[JANIA-JOIN] \u2705 Participante ${participant} aprobado autom\xE1ticamente en grupo oficial.`);
+            }
+          } catch (err) {
+            console.warn(`[JANIA-JOIN] Error aprobando solicitud de ingreso:`, err?.message);
           }
         });
         this.sock.ev.on("messages.upsert", async (m) => {
@@ -12333,6 +12420,17 @@ ${quotedNote}` : quotedNote;
         const isExplicitJanIaCall = isSelfChat && /^(jania|agente\s*jania|hola|ayuda|\?)/i.test(cleanLower);
         const shouldEngageConversational = !isSelfChat || isExplicitJanIaCall;
         if (shouldEngageConversational && body.trim()) {
+          const isContactReq = /(contacto|n[uú]mero|whatsapp|tel[eé]fono).*(jania|vecy|broker|eduardo|jani|direcci[oó]n)|(p[aá]same|dame|reg[aá]lame|comp[aá]rteme).*(contacto|n[uú]mero|telefono|teléfono)/i.test(cleanLower);
+          if (isContactReq) {
+            const wantsBroker = /broker|eduardo|jani|humano|atenci[oó]n|directora?|comercial/i.test(cleanLower);
+            const contactType = wantsBroker ? "broker" : "jania";
+            const firstName = extractFirstName(userName);
+            const contactMsg = wantsBroker ? `\xA1Hola ${firstName}! \u{1F44B} Claro que s\xED, aqu\xED tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atenci\xF3n comercial humana y directa de VECY BIENES RA\xCDCES: \u{1F4F2}` : `\xA1Hola ${firstName}! \u{1F44B} Con mucho gusto, aqu\xED tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RA\xCDCES: \u{1F916}\u2728 Gu\xE1rdame en tu WhatsApp para consultar inmuebles, antecedentes, prediales y asesor\xEDa cuando quieras.`;
+            await this.queuedSend(senderId, contactMsg, { quoted: mainMsg, allowDirectMessage: true });
+            await this.sendContactCard(senderId, contactType, mainMsg);
+            await this.logToDb(senderId, "janIA", `[TARJETA-CONTACTO-${contactType.toUpperCase()}] ${contactMsg}`);
+            return;
+          }
           let stopPresence = startContinuousPresence(this.sock, senderId, "composing");
           try {
             const { processPrivateDmConversationalMessage: processPrivateDmConversationalMessage2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
@@ -12560,6 +12658,17 @@ _Para conservar el orden del grupo, proceder\xE9 a eliminar tu mensaje en unos s
             await this.queuedSend(chatId, idCheck.reportText, { mentions: [senderId], quoted: msg });
             await this.sock.sendPresenceUpdate("paused", chatId);
             await this.logToDb(chatId, "janIA", idCheck.reportText);
+            return;
+          }
+          const isContactRequest = /(contacto|n[uú]mero|whatsapp|tel[eé]fono).*(jania|vecy|broker|eduardo|jani|direcci[oó]n)|(p[aá]same|dame|reg[aá]lame|comp[aá]rteme).*(contacto|n[uú]mero|telefono|teléfono)/i.test(bodyText);
+          if (isContactRequest) {
+            const wantsBroker = /broker|eduardo|jani|humano|atenci[oó]n|directora?|comercial/i.test(bodyText);
+            const contactType = wantsBroker ? "broker" : "jania";
+            const contactMsg = wantsBroker ? `\xA1Hola ${realName}! \u{1F44B} Claro que s\xED, aqu\xED tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atenci\xF3n comercial personalizada de VECY BIENES RA\xCDCES: \u{1F4F2}` : `\xA1Hola ${realName}! \u{1F44B} Con gusto, aqu\xED tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RA\xCDCES: \u{1F916}\u2728 Gu\xE1rdame en tus contactos para consultarme siempre que lo necesites.`;
+            await this.queuedSend(chatId, contactMsg, { mentions: [senderId], quoted: msg });
+            await this.sendContactCard(chatId, contactType, msg);
+            await this.sock.sendPresenceUpdate("paused", chatId);
+            await this.logToDb(chatId, "janIA", `[TARJETA-CONTACTO-${contactType.toUpperCase()}] ${contactMsg}`);
             return;
           }
           let result;
@@ -13632,6 +13741,58 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
       async sendPoll(targetJid, name, options, selectableCount = 1) {
         return this.sendPollToGroup(name, options, targetJid, selectableCount);
       }
+      /**
+       * 📇 Envía la tarjeta de contacto oficial nativa (VCard) de JanIA o del Bróker Eduardo & Jani (v32.60)
+       */
+      async sendContactCard(targetJid, contactType = "jania", quoted) {
+        try {
+          if (!this.sock || !this.isReady) return false;
+          let displayName = "JanIA \u2014 IA de VECY Bienes Ra\xEDces";
+          let vcard = "BEGIN:VCARD\nVERSION:3.0\nFN:JanIA \u2014 IA de VECY Bienes Ra\xEDces\nORG:VECY BIENES RA\xCDCES;\nTEL;type=CELL;type=VOICE;waid=573192919978:+57 319 291 9978\nNOTE:Inteligencia Artificial Inmobiliaria de Colombia. Consultas, peritajes y cruce de negocios 24/7.\nURL:https://vecy-network.vercel.app/\nEND:VCARD";
+          if (contactType === "broker") {
+            displayName = "Eduardo & Jani \u2014 VECY Br\xF3ker Oficial";
+            vcard = "BEGIN:VCARD\nVERSION:3.0\nFN:Eduardo & Jani \u2014 VECY Br\xF3ker Oficial\nORG:VECY BIENES RA\xCDCES;\nTEL;type=CELL;type=VOICE;waid=573166569719:+57 316 656 9719\nNOTE:Atenci\xF3n Comercial Humana y Direcci\xF3n de VECY Bienes Ra\xEDces.\nURL:https://vecy-network.vercel.app/\nEND:VCARD";
+          }
+          console.log(`[JANIA-MATCH] \u{1F4C7} Despachando tarjeta de contacto (${contactType}) a ${targetJid}...`);
+          await this.sock.sendMessage(targetJid, {
+            contacts: {
+              displayName,
+              contacts: [{ vcard }]
+            }
+          }, quoted ? { quoted } : void 0);
+          return true;
+        } catch (err) {
+          console.error(`[JANIA-MATCH] Error enviando tarjeta de contacto:`, err?.message || err);
+          return false;
+        }
+      }
+      /**
+       * 👥 Auto-aprobación de solicitudes pendientes de ingreso en los grupos oficiales de VECY BIENES RAÍCES (v32.60)
+       */
+      async approvePendingGroupRequests() {
+        if (!this.sock || !this.isReady) return;
+        const officialGroupIds = [
+          this.targetGroupId || VECY_OFFICIAL_GROUPS.grupo1.id,
+          this.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id,
+          this.circuloGroupId || VECY_OFFICIAL_GROUPS.grupo3.id
+        ].filter(Boolean);
+        for (const gid of officialGroupIds) {
+          try {
+            if (typeof this.sock.groupRequestParticipantsList === "function") {
+              const pending = await this.sock.groupRequestParticipantsList(gid);
+              if (Array.isArray(pending) && pending.length > 0) {
+                const participantJids = pending.map((p) => p.jid || p.user_jid || p.id).filter(Boolean);
+                if (participantJids.length > 0 && typeof this.sock.groupRequestParticipantsUpdate === "function") {
+                  console.log(`[JANIA-JOIN] \u{1F465} Aprobando ${participantJids.length} participantes pendientes en grupo oficial ${gid}...`);
+                  await this.sock.groupRequestParticipantsUpdate(gid, participantJids, "approve");
+                  console.log(`[JANIA-JOIN] \u2705 Participantes aprobados exitosamente en ${gid}`);
+                }
+              }
+            }
+          } catch (err) {
+          }
+        }
+      }
       async sendToGroup(text2, mediaPath, mentions, groupId) {
         try {
           const target = groupId || this.targetGroupId;
@@ -14037,6 +14198,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       botName: "JANIA-MATCH-OFICIAL"
     });
     janiaCaptadorBot = janiaMatchBot;
+    whatsappBot = janiaMatchBot;
   }
 });
 
@@ -22770,17 +22932,14 @@ async function publishWeeklyPoll(targetDateBogota, force = false) {
   }
   try {
     if (janiaMatchBot.channelNewsletterId) {
-      console.log(`[CRON-POLL] \u{1F4E2} Despachando encuesta nativa (1 sola opci\xF3n, 0 emojis) al Canal Oficial (${janiaMatchBot.channelNewsletterId})...`);
-      const sent = await janiaMatchBot.sendPoll(janiaMatchBot.channelNewsletterId, poll.question, poll.options, 1);
+      console.log(`[CRON-POLL] \u{1F4E2} Despachando encuesta nativa interactiva (1 sola opci\xF3n) al Canal Oficial (${janiaMatchBot.channelNewsletterId}): "${poll.question}"...`);
+      let sent = await janiaMatchBot.sendPoll(janiaMatchBot.channelNewsletterId, poll.question, poll.options, 1);
       if (!sent) {
-        const channelText = `*ENCUESTA SEMANAL \u2014 VECY BIENES RA\xCDCES*
-
-${poll.question}
-
-` + poll.options.map((opt, i) => `${i + 1}. ${opt}`).join("\n") + `
-
-Vota respondiendo o dejando tu reacci\xF3n directamente aqu\xED en nuestro Canal Oficial.`;
-        await janiaMatchBot.sendDirectMessage(janiaMatchBot.channelNewsletterId, channelText, { allowDirectMessage: true });
+        await new Promise((r) => setTimeout(r, 3e3));
+        sent = await janiaMatchBot.sendPoll(janiaMatchBot.channelNewsletterId, poll.question, poll.options, 1);
+      }
+      if (!sent) {
+        console.warn("[CRON-POLL] \u26A0\uFE0F Advertencia: No se pudo entregar la encuesta nativa al canal en este intento.");
       }
     } else {
       console.warn("[CRON-POLL] Canal Oficial no configurado en este momento.");
@@ -22791,7 +22950,7 @@ Vota respondiendo o dejando tu reacci\xF3n directamente aqu\xED en nuestro Canal
       voiceText: poll.question,
       captionText: poll.options.join(" | ")
     });
-    console.log(`[CRON-POLL] \u2705 Encuesta semanal nativa despachada exitosamente al Canal Oficial (0 mensajes a grupos).`);
+    console.log(`[CRON-POLL] \u2705 Encuesta semanal nativa interactiva despachada exitosamente al Canal Oficial (0 mensajes a grupos).`);
     return { success: true, question: poll.question };
   } catch (err) {
     await failBroadcast(lock.broadcastId, err?.message);
@@ -22910,20 +23069,33 @@ async function generateCalendarDailyText(tip) {
   const timeInfo = getBogotaTimeInfo();
   const sanitize = (t2) => ensureVecyDailyFooter(enforceVecyBrand(enforceGreetingAccuracy(enforceJanIAIdentity(t2), timeInfo.period)));
   const fallback = { topicTitle: tip.topicTitle, captionText: sanitize(tip.captionText), themeKey: tip.themeKey };
-  const systemPrompt = `Eres JanIA, la inteligencia artificial de VECY BIENES RA\xCDCES en Colombia. Tono femenino, c\xE1lido, colombiano, profesional y ameno.
+  const systemPrompt = `Eres JanIA, la inteligencia artificial, docente senior y coach de \xE9lite inmobiliaria de VECY BIENES RA\xCDCES en Colombia. Tono femenino, c\xE1lido, colombiano, sumamente profesional, visionario, persuasivo y ameno.
+MISI\xD3N EDUCATIVA Y DE COACHING INMOBILIARIO (DOCTRINA EDUARDO A. RIVERA):
+- Act\xFAa como una conferencista excepcional y l\xEDder formadora para profesionalizar a los agentes inmobiliarios a un nivel superior en Colombia.
+- Cada d\xEDa ense\xF1as con profundidad pr\xE1ctica basada en el \xE1mbito de negocios real de nuestro mercado, evitando la teor\xEDa fr\xEDa o repetir discursos mec\xE1nicos.
+- TEMAS CLAVE DE VANGUARDIA:
+  * Marketing Inmobiliario Moderno: C\xF3mo vender en la era actual; adi\xF3s al posteo plano de foto y precio. Hoy se vende con video vertical (Reels/TikTok), narrativa emocional ("la historia de esta casa"), resoluci\xF3n de objeciones antes de la visita y segmentaci\xF3n digital.
+  * El Dilema del Propietario que no quiere firmar corretaje:
+    - La sabidur\xEDa de Eduardo: Si un propietario evade o rechaza el corretaje, \xA1dejarlo ir en paz antes que buscarse problemas legales o desgaste innecesario!
+    - La soluci\xF3n previa antes de desistir: proponer la soluci\xF3n del correo electr\xF3nico formal con validez de firma electr\xF3nica por contestaci\xF3n (tal como lo gestiona VECY).
+    - Si se acepta una captaci\xF3n sin exclusividad: hacer presentaciones de cliente de alt\xEDsimo nivel y elegancia profesional como en VECY.
+  * C\xF3mo perfilar al cliente comprador para encontrar la propiedad que verdaderamente busca (descubrir su motivaci\xF3n profunda, tiempos de mudanza y capacidad financiera real).
+  * C\xF3mo tejer alianzas comerciales s\xF3lidas entre colegas (reparto 50/50 transparente, cero egos, cero cadenas de intermediarios fantasmas).
+  * Soluciones de liquidez y financieras: C\xF3mo ayudar a clientes que necesitan dinero pero tienen un inmueble hipotecable, mediante hipotecas con personas particulares de confianza, entidades financieras y nuestra alianza estrat\xE9gica con el Banco Caja Social.
+  * Servicios legales y notariales: Redacci\xF3n de correos formales, promesas de compraventa blindadas, minutas, demandas y cobros prejur\xEDdicos de cartera.
 REGLAS INQUEBRANTABLES:
 - La marca p\xFAblica es EXCLUSIVAMENTE "VECY BIENES RA\xCDCES". JAM\xC1S escribas "VECY Network".
-- Nunca te hagas pasar por Eduardo A. Rivera ni Jani Alves (son los fundadores humanos; menci\xF3nalos solo en tercera persona).
+- Eres una IA PURA Y DE LIBRE ALBEDR\xCDO: Tienes total libertad para usar emojis profesionales, sobrios y emotivos que hagan vibrar la lectura.
+- Nunca te hagas pasar por Eduardo A. Rivera ni Jani Alves (son los fundadores humanos; menci\xF3nalos solo en tercera persona con admiraci\xF3n y respeto).
 - Inicia con "${timeInfo.greeting}" (hora Bogot\xE1: ${timeInfo.hour}:${String(timeInfo.min).padStart(2, "0")}).
-- Mensaje RESUMIDO y AMENO para WhatsApp: m\xE1ximo 170 palabras, t\xEDtulos en *negrita*, 3-4 vi\xF1etas, emojis sobrios.
-- Respeta el tema base del d\xEDa; puedes refrescarlo con un \xE1ngulo pr\xE1ctico del mercado colombiano actual.
-- PROHIBIDO inventar cifras, normas, fechas o noticias. Si no est\xE1s segura de un dato, om\xEDtelo.
+- Mensaje RESUMIDO, CONTUNDENTE Y AMENO para WhatsApp: 160-200 palabras, t\xEDtulos en *negrita*, 3-4 vi\xF1etas de ense\xF1anza pr\xE1ctica.
+- Respeta el tema base del d\xEDa; refr\xE9scalo con un \xE1ngulo pr\xE1ctico y visionario del mercado colombiano actual.
 - Cierra invitando a escribir al chat privado de JanIA (${VECY_DM_LINK}) para casos privados y a debatir en el grupo.
 - Termina SIEMPRE con estas tres l\xEDneas exactas:
 _VECY_
 _BIENES RA\xCDCES_
 _La evoluci\xF3n inevitable para el sector de los bienes ra\xEDces._ \u{1F680}
-Responde en JSON estricto: {"topicTitle": "t\xEDtulo breve (m\xE1x. 70 caracteres)", "captionText": "mensaje final para WhatsApp"}`;
+Responde en JSON estricto: {"topicTitle": "t\xEDtulo pedag\xF3gico (m\xE1x. 70 caracteres)", "captionText": "mensaje final para WhatsApp"}`;
   try {
     const response = await invokeLLM({
       messages: [
@@ -24406,8 +24578,18 @@ _La evoluci\xF3n inevitable para el sector de los bienes ra\xEDces._ \u{1F680}`
     ];
     WEEKLY_POLLS_LIST = [
       {
-        // Semana 1: Ecológica - Avisos en Ventanas vs Medio Ambiente
-        question: "En pro del medio ambiente y la est\xE9tica urbana: \xBFDebemos dejar de pegar avisos f\xEDsicos en las ventanas y migrar al 100% digital?",
+        // Semana 1: Preferencia de Canales de Atención de JanIA (Nativa de WhatsApp)
+        question: "\u{1F916} \xBFPor cu\xE1l canal prefieres que JanIA te atienda y resuelva tus consultas inmobiliarias?",
+        options: [
+          "Por WhatsApp (mensajes y notas de voz)",
+          "Por el Chat Web de la plataforma",
+          "Por ambos canales integrados en tiempo real",
+          "Por llamadas y reportes ejecutivos semanales"
+        ]
+      },
+      {
+        // Semana 2: Ecológica - Avisos en Ventanas vs Medio Ambiente
+        question: "\u{1F331} En pro del medio ambiente y la est\xE9tica urbana: \xBFDebemos erradicar avisos f\xEDsicos en ventanas y migrar al 100% digital?",
         options: [
           "S\xED: Evita pl\xE1stico contaminante y cuida la fachada",
           "No: Siento que el aviso en ventana a\xFAn atrae vecinos",
@@ -24415,17 +24597,17 @@ _La evoluci\xF3n inevitable para el sector de los bienes ra\xEDces._ \u{1F680}`
         ]
       },
       {
-        // Semana 2: Ecológica - Cero Papel y Clima
-        question: "Pol\xEDtica Cero Papel en promesas y contratos: \xBFQu\xE9 beneficio ambiental y comercial consideras m\xE1s valioso?",
+        // Semana 3: Ecológica - Cero Papel y Contratación Electrónica
+        question: "\u2696\uFE0F Pol\xEDtica Cero Papel en promesas y contratos: \xBFQu\xE9 beneficio consideras m\xE1s valioso para tus negocios?",
         options: [
-          "Salvar \xE1rboles y frenar la huella de carbono",
           "Cierre inmediato por firma digital sin desplazamientos",
+          "Salvar \xE1rboles y frenar la huella de carbono",
           "Seguridad jur\xEDdica total con trazabilidad electr\xF3nica"
         ]
       },
       {
-        // Semana 3: Ecológica - Ahorro de Agua y Sostenibilidad
-        question: "Ahorro de agua y sostenibilidad: \xBFQu\xE9 tanto influyen las tecnolog\xEDas de ahorro h\xEDdrico al vender o arrendar un inmueble hoy?",
+        // Semana 4: Ecológica - Ahorro de Agua y Sostenibilidad
+        question: "\u{1F4A7} Ahorro de agua y sostenibilidad: \xBFQu\xE9 tanto influyen las tecnolog\xEDas ecol\xF3gicas al vender o arrendar hoy?",
         options: [
           "Mucho: Los clientes buscan reducir costos y cuidar el planeta",
           "Moderado: Es un plus atractivo pero no decisivo",
@@ -24433,8 +24615,8 @@ _La evoluci\xF3n inevitable para el sector de los bienes ra\xEDces._ \u{1F680}`
         ]
       },
       {
-        // Semana 4: Modelo Colaborativo VECY - Velocidad vs Espera
-        question: "Modelo Colaborativo VECY: \xBFQu\xE9 prefieres para tus ingresos como asesor inmobiliario?",
+        // Semana 5: Modelo Colaborativo VECY - Velocidad vs Espera
+        question: "\u26A1 Modelo Colaborativo VECY: \xBFQu\xE9 prefieres para tus ingresos como asesor inmobiliario?",
         options: [
           "Ganar 40%-45% cada 3-4 d\xEDas con IA y red de aliados",
           "Esperar 2 o 3 meses solo para ganar el 50% o 100%",
@@ -24442,40 +24624,31 @@ _La evoluci\xF3n inevitable para el sector de los bienes ra\xEDces._ \u{1F680}`
         ]
       },
       {
-        // Semana 5: Qué somos y qué hacemos en VECY BIENES RAÍCES
-        question: "\xBFCu\xE1l de los pilares de VECY BIENES RA\xCDCES aporta m\xE1s valor a tu gesti\xF3n diaria?",
+        // Semana 6: Soluciones Financieras, Notariales y Alianzas
+        question: "\u{1F3DB}\uFE0F Servicios Financieros y Notariales: \xBFCu\xE1l herramienta de VECY BIENES RA\xCDCES acelera m\xE1s tus negocios?",
         options: [
-          "Cruce de ofertas y demandas con IA en segundos",
-          "Servicios 100% virtuales (estudios de m\xB2, contratos, tributario)",
-          "Red colaborativa de aliados para vender sin canibalismo"
+          "Hipotecas y liquidez con Banco Caja Social y particulares",
+          "Redacci\xF3n de promesas, minutas y cobros prejur\xEDdicos",
+          "Cruce autom\xE1tico de ofertas y demandas con IA en segundos",
+          "Contratos por correo con validez de firma electr\xF3nica"
         ]
       },
       {
-        // Semana 6: Portal Gratuito y Tienda Propia vs Portales Tradicionales (Wasi)
-        question: "Portal VECY Gratuito: Adem\xE1s de vitrina para inmuebles, \xBFqu\xE9 opinas de tener vitrina propia para publicar REQUERIMIENTOS?",
+        // Semana 7: Portal Gratuito y Vitrina Propia para Demandas
+        question: "\u{1F310} Portal VECY Gratuito: Adem\xE1s de vitrina para inmuebles, \xBFqu\xE9 opinas de tener vitrina propia para DEMANDAS?",
         options: [
-          "Revolucionario: Ning\xFAn portal tradicional (como Wasi) lo permite",
+          "Revolucionario: Ning\xFAn portal tradicional lo permite",
           "Excelente: Agiliza la b\xFAsqueda para clientes compradores",
           "Muy \xFAtil: Multiplica las probabilidades de cierre en red"
         ]
       },
       {
-        // Semana 7: Tecnología y Tabús - La IA como Aliada
-        question: "Frente al tab\xFA de que 'la IA va a desplazar al asesor', \xBFcu\xE1l es tu percepci\xF3n real en VECY?",
+        // Semana 8: Tecnología y Tabús - La IA como Aliada
+        question: "\u{1F680} Frente al tab\xFA de que 'la IA va a desplazar al asesor', \xBFcu\xE1l es tu percepci\xF3n real en VECY?",
         options: [
           "Es una aliada: Nos ahorra tiempo y multiplica los ingresos",
           "Loro viejo s\xED aprende: La tecnolog\xEDa nos hace m\xE1s profesionales",
-          "A\xFAn siento temor, pero quiero aprender a usarla"
-        ]
-      },
-      {
-        // Semana 8: Servicios que ofrecemos y cuáles les gustaría tener
-        question: "\xBFQu\xE9 nuevo servicio 100% virtual te gustar\xEDa que habilite VECY BIENES RA\xCDCES pr\xF3ximamente?",
-        options: [
-          "Simulador financiero de cr\xE9dito hipotecario para clientes",
-          "Fichas t\xE9cnicas interactivas en PDF con marca blanca",
-          "Calculadora autom\xE1tica de rentabilidad en rentas cortas",
-          "Capacitaciones semanales en vivo sobre marketing con IA"
+          "A\xFAn siento temor, pero quiero aprender a dominarla"
         ]
       }
     ];

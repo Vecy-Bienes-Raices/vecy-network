@@ -322,6 +322,44 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.60 — Octubre 2026
+
+#### 📌 JANIA COACH Y DOCENTE INMOBILIARIA DE ÉLITE, ENCUESTAS NATIVAS INTERACTIVAS CON EMOJIS, AUTO-APROBACIÓN DE GRUPOS, TARJETAS VCARD Y MODERACIÓN ESTRICTA
+
+**Requerimiento y Objetivos:**
+1. **Aclaración Doctrinal de Encuestas Nativas de WhatsApp**:
+   - Corrección del malentendido previo: Eduardo confirmó que no pretendía eliminar los emojis, sino erradicar las encuestas simuladas en texto plano (`1️⃣ 2️⃣ 3️⃣ 4️⃣`).
+   - Las encuestas se despachan exclusivamente a través de la herramienta nativa de WhatsApp (`pollCreationMessage`), con botones interactivos táctiles (`selectableCount: 1`), y con emojis libres, llamativos y profesionales (Semana 1 idéntica a la Imagen 2).
+2. **Rol de JanIA como Docente, Conferencista y Coach Inmobiliaria de Élite**:
+   - JanIA asume el rol de mentora formativa de agentes en Colombia, enriqueciendo las difusiones de las 10:00 AM con temas de investigación y doctrina:
+     - Marketing inmobiliario moderno: video vertical (Reels y TikTok), narrativa emocional, adiós a fotos estáticas de fachada con precio.
+     - Doctrina cuando el propietario no firma corretaje: dejarlo ir en paz antes de buscar pleitos desgastantes + alternativa tecnológica de correo formal con validez de firma electrónica por contestación como en VECY, registro y presentación de cliente.
+     - Perfilamiento metódico de compradores para ubicar su propiedad ideal.
+     - Alianzas 50/50 transparentes entre colegas sin intermediarios fantasmas.
+     - Soluciones financieras y de liquidez: hipotecas con particulares y alianza estratégica con Banco Caja Social.
+     - Redacción de promesas de compraventa blindadas, minutas y cobro prejurídico de honorarios.
+   - Acompañamiento de fotografías comerciales de internet (Openverse API) acordes al tema y cero notas de voz audios.
+3. **Descripciones Oficiales de los 3 Grupos de WhatsApp**:
+   - Redacción oficial y centralización en `shared/const.ts`.
+   - Especificación expresa de que son grupos atendidos, controlados y administrados por JanIA (agente IA de VECY BIENES RAÍCES).
+   - Advertencia contundente: cualquier foto, meme, archivo PDF, audio o enlace off-topic será amonestado y eliminado de inmediato por la IA.
+4. **Nuevas Capacidades Interactivas de WhatsApp**:
+   - Auto-aprobación periódica (cada 5 min) y en tiempo real mediante evento `group.join-request` de participantes que solicitan unirse a los grupos oficiales.
+   - Tarjetas de contacto interactivas (VCard de WhatsApp) para JanIA (`+573192919978`) o el Bróker Oficial (`+573166569719`) cuando un usuario pide el número de contacto.
+   - Promoción y pedagogía del agendamiento mediante formularios y herramientas nativas.
+
+**Archivos Modificados:**
+- `shared/const.ts`: Versión `v32.60`, descripciones oficiales de grupos con moderación estricta y administración por JanIA.
+- `package.json`: Versión `32.60.0`.
+- `server/_core/whatsapp-match.ts`: Métodos `sendContactCard` y `approvePendingGroupRequests`, interceptores de contacto, auto-aprobación en evento y exportación de `whatsappBot`.
+- `server/_core/cronService.ts`: `WEEKLY_POLLS_LIST` con emojis interactivos, `publishWeeklyPoll` 100% nativa sin fallback de texto, y `generateCalendarDailyText` con rigor de Coach inmobiliaria de élite.
+- `server/__tests__/regression.test.ts`: Tests unitarios de regresión para polls interactivos, VCards, auto-aprobación y descripciones.
+- `.agents/AGENTS.md` y `HISTORIAL_CONVERSACIONES_MAESTRO.md`: Registro documental en bitácoras maestras.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | `pnpm build` limpio ✅ | 158/158 tests Vitest ✅
+
+---
+
 ### 🔖 v32.59 — Octubre 2026
 
 #### 📌 REBRANDING INTEGRAL A "VECY BIENES RAÍCES", ENCUESTAS NATIVAS DE 1 OPCIÓN EN CANAL SIN EMOJIS, DIFUSIÓN DIARIA CON IMÁGENES PÚBLICAS DE INTERNET Y CERO AUDIOS

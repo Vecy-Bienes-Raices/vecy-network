@@ -605,6 +605,27 @@ export class JaniaMatchBot {
         this.reconnectAttempts = 0; // Resetear intentos al conectar exitosamente
         this.updateStatusInDb().catch(err => console.error(`[${this.botName}-DB] Error updating status on open:`, err));
         this.discoverAndSyncNewsletters().catch(err => console.warn(`[${this.botName}] Info newsletters:`, err?.message));
+        // 👥 Auto-aprobación inmediata de solicitudes pendientes de ingreso a grupos oficiales
+        this.approvePendingGroupRequests().catch(err => console.warn(`[${this.botName}] Info aprobación grupos:`, err?.message));
+      }
+    });
+
+    // 👥 AUTO-APROBACIÓN DE SOLICITUDES DE INGRESO A GRUPOS OFICIALES (v32.60)
+    // JanIA aprueba inmediatamente a todo colega que solicite unirse a los grupos oficiales de VECY BIENES RAÍCES
+    this.sock.ev.on('group.join-request' as any, async (update: any) => {
+      try {
+        const groupId = update?.id;
+        const participant = update?.participant;
+        if (!groupId || !participant) return;
+        const isOfficial = groupId === this.targetGroupId || groupId === this.buzonGroupId || groupId === this.circuloGroupId ||
+          groupId === VECY_OFFICIAL_GROUPS.grupo1.id || groupId === VECY_OFFICIAL_GROUPS.grupo2.id || groupId === VECY_OFFICIAL_GROUPS.grupo3.id;
+        if (isOfficial && typeof (this.sock as any).groupRequestParticipantsUpdate === 'function') {
+          console.log(`[JANIA-JOIN] 👥 Solicitud de entrada detectada en ${groupId} para ${participant}. Aprobando...`);
+          await (this.sock as any).groupRequestParticipantsUpdate(groupId, [participant], 'approve');
+          console.log(`[JANIA-JOIN] ✅ Participante ${participant} aprobado automáticamente en grupo oficial.`);
+        }
+      } catch (err: any) {
+        console.warn(`[JANIA-JOIN] Error aprobando solicitud de ingreso:`, err?.message);
       }
     });
 
@@ -1363,6 +1384,22 @@ export class JaniaMatchBot {
     const shouldEngageConversational = !isSelfChat || isExplicitJanIaCall;
 
     if (shouldEngageConversational && body.trim()) {
+      // 📇 INTERCEPTOR DIRECTO: SOLICITUD DE CONTACTO EN DM PRIVADO (v32.60)
+      const isContactReq = /(contacto|n[uú]mero|whatsapp|tel[eé]fono).*(jania|vecy|broker|eduardo|jani|direcci[oó]n)|(p[aá]same|dame|reg[aá]lame|comp[aá]rteme).*(contacto|n[uú]mero|telefono|teléfono)/i.test(cleanLower);
+      if (isContactReq) {
+        const wantsBroker = /broker|eduardo|jani|humano|atenci[oó]n|directora?|comercial/i.test(cleanLower);
+        const contactType = wantsBroker ? 'broker' : 'jania';
+        const firstName = extractFirstName(userName);
+        const contactMsg = wantsBroker
+          ? `¡Hola ${firstName}! 👋 Claro que sí, aquí tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atención comercial humana y directa de VECY BIENES RAÍCES: 📲`
+          : `¡Hola ${firstName}! 👋 Con mucho gusto, aquí tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RAÍCES: 🤖✨ Guárdame en tu WhatsApp para consultar inmuebles, antecedentes, prediales y asesoría cuando quieras.`;
+
+        await this.queuedSend(senderId, contactMsg, { quoted: mainMsg, allowDirectMessage: true });
+        await this.sendContactCard(senderId, contactType, mainMsg);
+        await this.logToDb(senderId, 'janIA', `[TARJETA-CONTACTO-${contactType.toUpperCase()}] ${contactMsg}`);
+        return;
+      }
+
       let stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
       try {
         const { processPrivateDmConversationalMessage } = await import('./janIA');
@@ -1617,6 +1654,22 @@ export class JaniaMatchBot {
         await this.queuedSend(chatId, idCheck.reportText, { mentions: [senderId], quoted: msg });
         await this.sock.sendPresenceUpdate('paused', chatId);
         await this.logToDb(chatId, 'janIA', idCheck.reportText);
+        return;
+      }
+
+      // 📇 INTERCEPTOR DIRECTO: SOLICITUD DE CONTACTO / NÚMERO DE JANIA O DEL BRÓKER (v32.60)
+      const isContactRequest = /(contacto|n[uú]mero|whatsapp|tel[eé]fono).*(jania|vecy|broker|eduardo|jani|direcci[oó]n)|(p[aá]same|dame|reg[aá]lame|comp[aá]rteme).*(contacto|n[uú]mero|telefono|teléfono)/i.test(bodyText);
+      if (isContactRequest) {
+        const wantsBroker = /broker|eduardo|jani|humano|atenci[oó]n|directora?|comercial/i.test(bodyText);
+        const contactType = wantsBroker ? 'broker' : 'jania';
+        const contactMsg = wantsBroker
+          ? `¡Hola ${realName}! 👋 Claro que sí, aquí tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atención comercial personalizada de VECY BIENES RAÍCES: 📲`
+          : `¡Hola ${realName}! 👋 Con gusto, aquí tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RAÍCES: 🤖✨ Guárdame en tus contactos para consultarme siempre que lo necesites.`;
+
+        await this.queuedSend(chatId, contactMsg, { mentions: [senderId], quoted: msg });
+        await this.sendContactCard(chatId, contactType, msg);
+        await this.sock.sendPresenceUpdate('paused', chatId);
+        await this.logToDb(chatId, 'janIA', `[TARJETA-CONTACTO-${contactType.toUpperCase()}] ${contactMsg}`);
         return;
       }
 
@@ -2911,6 +2964,80 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
     return this.sendPollToGroup(name, options, targetJid, selectableCount);
   }
 
+  /**
+   * 📇 Envía la tarjeta de contacto oficial nativa (VCard) de JanIA o del Bróker Eduardo & Jani (v32.60)
+   */
+  public async sendContactCard(targetJid: string, contactType: 'jania' | 'broker' = 'jania', quoted?: any): Promise<boolean> {
+    try {
+      if (!this.sock || !this.isReady) return false;
+      let displayName = 'JanIA — IA de VECY Bienes Raíces';
+      let vcard = 
+        'BEGIN:VCARD\n' +
+        'VERSION:3.0\n' +
+        'FN:JanIA — IA de VECY Bienes Raíces\n' +
+        'ORG:VECY BIENES RAÍCES;\n' +
+        'TEL;type=CELL;type=VOICE;waid=573192919978:+57 319 291 9978\n' +
+        'NOTE:Inteligencia Artificial Inmobiliaria de Colombia. Consultas, peritajes y cruce de negocios 24/7.\n' +
+        'URL:https://vecy-network.vercel.app/\n' +
+        'END:VCARD';
+
+      if (contactType === 'broker') {
+        displayName = 'Eduardo & Jani — VECY Bróker Oficial';
+        vcard = 
+          'BEGIN:VCARD\n' +
+          'VERSION:3.0\n' +
+          'FN:Eduardo & Jani — VECY Bróker Oficial\n' +
+          'ORG:VECY BIENES RAÍCES;\n' +
+          'TEL;type=CELL;type=VOICE;waid=573166569719:+57 316 656 9719\n' +
+          'NOTE:Atención Comercial Humana y Dirección de VECY Bienes Raíces.\n' +
+          'URL:https://vecy-network.vercel.app/\n' +
+          'END:VCARD';
+      }
+
+      console.log(`[JANIA-MATCH] 📇 Despachando tarjeta de contacto (${contactType}) a ${targetJid}...`);
+      await this.sock.sendMessage(targetJid, {
+        contacts: {
+          displayName,
+          contacts: [{ vcard }]
+        }
+      }, quoted ? { quoted } : undefined);
+      return true;
+    } catch (err: any) {
+      console.error(`[JANIA-MATCH] Error enviando tarjeta de contacto:`, err?.message || err);
+      return false;
+    }
+  }
+
+  /**
+   * 👥 Auto-aprobación de solicitudes pendientes de ingreso en los grupos oficiales de VECY BIENES RAÍCES (v32.60)
+   */
+  public async approvePendingGroupRequests(): Promise<void> {
+    if (!this.sock || !this.isReady) return;
+    const officialGroupIds = [
+      this.targetGroupId || VECY_OFFICIAL_GROUPS.grupo1.id,
+      this.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id,
+      this.circuloGroupId || VECY_OFFICIAL_GROUPS.grupo3.id,
+    ].filter(Boolean);
+
+    for (const gid of officialGroupIds) {
+      try {
+        if (typeof (this.sock as any).groupRequestParticipantsList === 'function') {
+          const pending = await (this.sock as any).groupRequestParticipantsList(gid);
+          if (Array.isArray(pending) && pending.length > 0) {
+            const participantJids = pending.map((p: any) => p.jid || p.user_jid || p.id).filter(Boolean);
+            if (participantJids.length > 0 && typeof (this.sock as any).groupRequestParticipantsUpdate === 'function') {
+              console.log(`[JANIA-JOIN] 👥 Aprobando ${participantJids.length} participantes pendientes en grupo oficial ${gid}...`);
+              await (this.sock as any).groupRequestParticipantsUpdate(gid, participantJids, 'approve');
+              console.log(`[JANIA-JOIN] ✅ Participantes aprobados exitosamente en ${gid}`);
+            }
+          }
+        }
+      } catch (err: any) {
+        // Silencioso si no hay pendientes o no es admin en ese momento
+      }
+    }
+  }
+
   public async sendToGroup(text: string, mediaPath?: string, mentions?: string[], groupId?: string) {
     try {
       const target = groupId || this.targetGroupId;
@@ -3359,3 +3486,4 @@ export const janiaMatchBot = new JaniaMatchBot({
   botName: 'JANIA-MATCH-OFICIAL'
 });
 export const janiaCaptadorBot = janiaMatchBot;
+export const whatsappBot = janiaMatchBot;

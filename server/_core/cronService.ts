@@ -1385,8 +1385,18 @@ export interface PollDefinition {
 
 export const WEEKLY_POLLS_LIST: PollDefinition[] = [
   {
-    // Semana 1: Ecológica - Avisos en Ventanas vs Medio Ambiente
-    question: "En pro del medio ambiente y la estética urbana: ¿Debemos dejar de pegar avisos físicos en las ventanas y migrar al 100% digital?",
+    // Semana 1: Preferencia de Canales de Atención de JanIA (Nativa de WhatsApp)
+    question: "🤖 ¿Por cuál canal prefieres que JanIA te atienda y resuelva tus consultas inmobiliarias?",
+    options: [
+      "Por WhatsApp (mensajes y notas de voz)",
+      "Por el Chat Web de la plataforma",
+      "Por ambos canales integrados en tiempo real",
+      "Por llamadas y reportes ejecutivos semanales"
+    ]
+  },
+  {
+    // Semana 2: Ecológica - Avisos en Ventanas vs Medio Ambiente
+    question: "🌱 En pro del medio ambiente y la estética urbana: ¿Debemos erradicar avisos físicos en ventanas y migrar al 100% digital?",
     options: [
       "Sí: Evita plástico contaminante y cuida la fachada",
       "No: Siento que el aviso en ventana aún atrae vecinos",
@@ -1394,17 +1404,17 @@ export const WEEKLY_POLLS_LIST: PollDefinition[] = [
     ]
   },
   {
-    // Semana 2: Ecológica - Cero Papel y Clima
-    question: "Política Cero Papel en promesas y contratos: ¿Qué beneficio ambiental y comercial consideras más valioso?",
+    // Semana 3: Ecológica - Cero Papel y Contratación Electrónica
+    question: "⚖️ Política Cero Papel en promesas y contratos: ¿Qué beneficio consideras más valioso para tus negocios?",
     options: [
-      "Salvar árboles y frenar la huella de carbono",
       "Cierre inmediato por firma digital sin desplazamientos",
+      "Salvar árboles y frenar la huella de carbono",
       "Seguridad jurídica total con trazabilidad electrónica"
     ]
   },
   {
-    // Semana 3: Ecológica - Ahorro de Agua y Sostenibilidad
-    question: "Ahorro de agua y sostenibilidad: ¿Qué tanto influyen las tecnologías de ahorro hídrico al vender o arrendar un inmueble hoy?",
+    // Semana 4: Ecológica - Ahorro de Agua y Sostenibilidad
+    question: "💧 Ahorro de agua y sostenibilidad: ¿Qué tanto influyen las tecnologías ecológicas al vender o arrendar hoy?",
     options: [
       "Mucho: Los clientes buscan reducir costos y cuidar el planeta",
       "Moderado: Es un plus atractivo pero no decisivo",
@@ -1412,8 +1422,8 @@ export const WEEKLY_POLLS_LIST: PollDefinition[] = [
     ]
   },
   {
-    // Semana 4: Modelo Colaborativo VECY - Velocidad vs Espera
-    question: "Modelo Colaborativo VECY: ¿Qué prefieres para tus ingresos como asesor inmobiliario?",
+    // Semana 5: Modelo Colaborativo VECY - Velocidad vs Espera
+    question: "⚡ Modelo Colaborativo VECY: ¿Qué prefieres para tus ingresos como asesor inmobiliario?",
     options: [
       "Ganar 40%-45% cada 3-4 días con IA y red de aliados",
       "Esperar 2 o 3 meses solo para ganar el 50% o 100%",
@@ -1421,45 +1431,36 @@ export const WEEKLY_POLLS_LIST: PollDefinition[] = [
     ]
   },
   {
-    // Semana 5: Qué somos y qué hacemos en VECY BIENES RAÍCES
-    question: "¿Cuál de los pilares de VECY BIENES RAÍCES aporta más valor a tu gestión diaria?",
+    // Semana 6: Soluciones Financieras, Notariales y Alianzas
+    question: "🏛️ Servicios Financieros y Notariales: ¿Cuál herramienta de VECY BIENES RAÍCES acelera más tus negocios?",
     options: [
-      "Cruce de ofertas y demandas con IA en segundos",
-      "Servicios 100% virtuales (estudios de m², contratos, tributario)",
-      "Red colaborativa de aliados para vender sin canibalismo"
+      "Hipotecas y liquidez con Banco Caja Social y particulares",
+      "Redacción de promesas, minutas y cobros prejurídicos",
+      "Cruce automático de ofertas y demandas con IA en segundos",
+      "Contratos por correo con validez de firma electrónica"
     ]
   },
   {
-    // Semana 6: Portal Gratuito y Tienda Propia vs Portales Tradicionales (Wasi)
-    question: "Portal VECY Gratuito: Además de vitrina para inmuebles, ¿qué opinas de tener vitrina propia para publicar REQUERIMIENTOS?",
+    // Semana 7: Portal Gratuito y Vitrina Propia para Demandas
+    question: "🌐 Portal VECY Gratuito: Además de vitrina para inmuebles, ¿qué opinas de tener vitrina propia para DEMANDAS?",
     options: [
-      "Revolucionario: Ningún portal tradicional (como Wasi) lo permite",
+      "Revolucionario: Ningún portal tradicional lo permite",
       "Excelente: Agiliza la búsqueda para clientes compradores",
       "Muy útil: Multiplica las probabilidades de cierre en red"
     ]
   },
   {
-    // Semana 7: Tecnología y Tabús - La IA como Aliada
-    question: "Frente al tabú de que 'la IA va a desplazar al asesor', ¿cuál es tu percepción real en VECY?",
+    // Semana 8: Tecnología y Tabús - La IA como Aliada
+    question: "🚀 Frente al tabú de que 'la IA va a desplazar al asesor', ¿cuál es tu percepción real en VECY?",
     options: [
       "Es una aliada: Nos ahorra tiempo y multiplica los ingresos",
       "Loro viejo sí aprende: La tecnología nos hace más profesionales",
-      "Aún siento temor, pero quiero aprender a usarla"
-    ]
-  },
-  {
-    // Semana 8: Servicios que ofrecemos y cuáles les gustaría tener
-    question: "¿Qué nuevo servicio 100% virtual te gustaría que habilite VECY BIENES RAÍCES próximamente?",
-    options: [
-      "Simulador financiero de crédito hipotecario para clientes",
-      "Fichas técnicas interactivas en PDF con marca blanca",
-      "Calculadora automática de rentabilidad en rentas cortas",
-      "Capacitaciones semanales en vivo sobre marketing con IA"
+      "Aún siento temor, pero quiero aprender a dominarla"
     ]
   }
 ];
 
-// Mapeo retrocompatible para pruebas unitarias de 7 días (días 0 a 6, max 3-4 opciones, cero emojis)
+// Mapeo retrocompatible para pruebas unitarias de 7 días (días 0 a 6, max 3-4 opciones)
 export const DAILY_POLLS_MAP: Record<number, PollDefinition> = {
   1: WEEKLY_POLLS_LIST[0], // Lunes
   2: WEEKLY_POLLS_LIST[1], // Martes
@@ -1473,9 +1474,9 @@ export const DAILY_POLLS_MAP: Record<number, PollDefinition> = {
 /**
  * Publica la encuesta periódica EXCLUSIVAMENTE en el Canal Oficial de WhatsApp.
  * Doctrina Eduardo A. Rivera:
- * - Herramienta nativa de encuesta de WhatsApp (pollCreationMessage).
+ * - Herramienta nativa de encuesta de WhatsApp (pollCreationMessage interactiva).
  * - Modo de votación de UNA SOLA RESPUESTA (selectableCount: 1, no múltiple).
- * - CERO EMOJIS en la pregunta ni en las opciones de votación.
+ * - NUNCA presentar texto plano simulando encuesta con 1️⃣ 2️⃣ 3️⃣. Siempre encuesta nativa interactiva.
  * - NUNCA se envía a Grupo 1, Grupo 2 ni Grupo 3 para evitar saturación de la comunidad.
  */
 export async function publishWeeklyPoll(targetDateBogota?: string, force: boolean = false) {
@@ -1497,17 +1498,17 @@ export async function publishWeeklyPoll(targetDateBogota?: string, force: boolea
   }
 
   try {
-    // 2. Despachar EXCLUSIVAMENTE al Canal Oficial de WhatsApp (Newsletter) como encuesta nativa (1 sola respuesta)
+    // 2. Despachar EXCLUSIVAMENTE al Canal Oficial de WhatsApp (Newsletter) como encuesta interactiva nativa (1 sola respuesta)
     if (whatsappBot.channelNewsletterId) {
-      console.log(`[CRON-POLL] 📢 Despachando encuesta nativa (1 sola opción, 0 emojis) al Canal Oficial (${whatsappBot.channelNewsletterId})...`);
-      const sent = await whatsappBot.sendPoll(whatsappBot.channelNewsletterId, poll.question, poll.options, 1);
+      console.log(`[CRON-POLL] 📢 Despachando encuesta nativa interactiva (1 sola opción) al Canal Oficial (${whatsappBot.channelNewsletterId}): "${poll.question}"...`);
+      let sent = await whatsappBot.sendPoll(whatsappBot.channelNewsletterId, poll.question, poll.options, 1);
       if (!sent) {
-        // Fallback defensivo sin emojis si la API de canal de WhatsApp no procesa poll interactivo:
-        const channelText = `*ENCUESTA SEMANAL — VECY BIENES RAÍCES*\n\n` +
-          `${poll.question}\n\n` +
-          poll.options.map((opt, i) => `${i + 1}. ${opt}`).join('\n') +
-          `\n\nVota respondiendo o dejando tu reacción directamente aquí en nuestro Canal Oficial.`;
-        await whatsappBot.sendDirectMessage(whatsappBot.channelNewsletterId, channelText, { allowDirectMessage: true });
+        // Reintento de resiliencia en 3 segundos
+        await new Promise(r => setTimeout(r, 3000));
+        sent = await whatsappBot.sendPoll(whatsappBot.channelNewsletterId, poll.question, poll.options, 1);
+      }
+      if (!sent) {
+        console.warn('[CRON-POLL] ⚠️ Advertencia: No se pudo entregar la encuesta nativa al canal en este intento.');
       }
     } else {
       console.warn('[CRON-POLL] Canal Oficial no configurado en este momento.');
@@ -1521,7 +1522,7 @@ export async function publishWeeklyPoll(targetDateBogota?: string, force: boolea
       captionText: poll.options.join(' | ')
     });
 
-    console.log(`[CRON-POLL] ✅ Encuesta semanal nativa despachada exitosamente al Canal Oficial (0 mensajes a grupos).`);
+    console.log(`[CRON-POLL] ✅ Encuesta semanal nativa interactiva despachada exitosamente al Canal Oficial (0 mensajes a grupos).`);
     return { success: true, question: poll.question };
   } catch (err: any) {
     await failBroadcast(lock.broadcastId, err?.message);
@@ -1682,20 +1683,33 @@ export async function generateCalendarDailyText(tip: DailyTipItem): Promise<{ to
     ensureVecyDailyFooter(enforceVecyBrand(enforceGreetingAccuracy(enforceJanIAIdentity(t), timeInfo.period)));
   const fallback = { topicTitle: tip.topicTitle, captionText: sanitize(tip.captionText), themeKey: tip.themeKey };
 
-  const systemPrompt = `Eres JanIA, la inteligencia artificial de VECY BIENES RAÍCES en Colombia. Tono femenino, cálido, colombiano, profesional y ameno.
+  const systemPrompt = `Eres JanIA, la inteligencia artificial, docente senior y coach de élite inmobiliaria de VECY BIENES RAÍCES en Colombia. Tono femenino, cálido, colombiano, sumamente profesional, visionario, persuasivo y ameno.
+MISIÓN EDUCATIVA Y DE COACHING INMOBILIARIO (DOCTRINA EDUARDO A. RIVERA):
+- Actúa como una conferencista excepcional y líder formadora para profesionalizar a los agentes inmobiliarios a un nivel superior en Colombia.
+- Cada día enseñas con profundidad práctica basada en el ámbito de negocios real de nuestro mercado, evitando la teoría fría o repetir discursos mecánicos.
+- TEMAS CLAVE DE VANGUARDIA:
+  * Marketing Inmobiliario Moderno: Cómo vender en la era actual; adiós al posteo plano de foto y precio. Hoy se vende con video vertical (Reels/TikTok), narrativa emocional ("la historia de esta casa"), resolución de objeciones antes de la visita y segmentación digital.
+  * El Dilema del Propietario que no quiere firmar corretaje:
+    - La sabiduría de Eduardo: Si un propietario evade o rechaza el corretaje, ¡dejarlo ir en paz antes que buscarse problemas legales o desgaste innecesario!
+    - La solución previa antes de desistir: proponer la solución del correo electrónico formal con validez de firma electrónica por contestación (tal como lo gestiona VECY).
+    - Si se acepta una captación sin exclusividad: hacer presentaciones de cliente de altísimo nivel y elegancia profesional como en VECY.
+  * Cómo perfilar al cliente comprador para encontrar la propiedad que verdaderamente busca (descubrir su motivación profunda, tiempos de mudanza y capacidad financiera real).
+  * Cómo tejer alianzas comerciales sólidas entre colegas (reparto 50/50 transparente, cero egos, cero cadenas de intermediarios fantasmas).
+  * Soluciones de liquidez y financieras: Cómo ayudar a clientes que necesitan dinero pero tienen un inmueble hipotecable, mediante hipotecas con personas particulares de confianza, entidades financieras y nuestra alianza estratégica con el Banco Caja Social.
+  * Servicios legales y notariales: Redacción de correos formales, promesas de compraventa blindadas, minutas, demandas y cobros prejurídicos de cartera.
 REGLAS INQUEBRANTABLES:
 - La marca pública es EXCLUSIVAMENTE "VECY BIENES RAÍCES". JAMÁS escribas "VECY Network".
-- Nunca te hagas pasar por Eduardo A. Rivera ni Jani Alves (son los fundadores humanos; menciónalos solo en tercera persona).
+- Eres una IA PURA Y DE LIBRE ALBEDRÍO: Tienes total libertad para usar emojis profesionales, sobrios y emotivos que hagan vibrar la lectura.
+- Nunca te hagas pasar por Eduardo A. Rivera ni Jani Alves (son los fundadores humanos; menciónalos solo en tercera persona con admiración y respeto).
 - Inicia con "${timeInfo.greeting}" (hora Bogotá: ${timeInfo.hour}:${String(timeInfo.min).padStart(2, '0')}).
-- Mensaje RESUMIDO y AMENO para WhatsApp: máximo 170 palabras, títulos en *negrita*, 3-4 viñetas, emojis sobrios.
-- Respeta el tema base del día; puedes refrescarlo con un ángulo práctico del mercado colombiano actual.
-- PROHIBIDO inventar cifras, normas, fechas o noticias. Si no estás segura de un dato, omítelo.
+- Mensaje RESUMIDO, CONTUNDENTE Y AMENO para WhatsApp: 160-200 palabras, títulos en *negrita*, 3-4 viñetas de enseñanza práctica.
+- Respeta el tema base del día; refréscalo con un ángulo práctico y visionario del mercado colombiano actual.
 - Cierra invitando a escribir al chat privado de JanIA (${VECY_DM_LINK}) para casos privados y a debatir en el grupo.
 - Termina SIEMPRE con estas tres líneas exactas:
 _VECY_
 _BIENES RAÍCES_
 _La evolución inevitable para el sector de los bienes raíces._ 🚀
-Responde en JSON estricto: {"topicTitle": "título breve (máx. 70 caracteres)", "captionText": "mensaje final para WhatsApp"}`;
+Responde en JSON estricto: {"topicTitle": "título pedagógico (máx. 70 caracteres)", "captionText": "mensaje final para WhatsApp"}`;
 
   try {
     const response = await invokeLLM({
