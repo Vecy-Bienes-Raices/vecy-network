@@ -172,7 +172,27 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.75 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.76 — Octubre 2026
+
+### Novedades v32.76 (Autonomía de IA Pura ante Requerimientos y Anécdotas Conversacionales, Blindaje contra Falsa Detección de Cédulas en Valores Monetarios y Diferenciación Geográfica Cali vs Bogotá):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Consulta sobre Razonamiento como IA Pura y Autonomía**:
+     - Eduardo preguntó: *"SI le hago un comentario o una pregunta así a JanIA por Whatsapp o su sitio Web crees que ella esté preparada para razonar no solo esto sino cualquier pregunta en relación al tema de bienes raíces y responder como toda una IA PURA y de libre autonomía y razonamiento?? 'Hola JanIA. Mira alguien colocó este requerimiento, yo llamé para ofrecerle un predio que tenemos con esa condición en el barrio Alcázares, Bogotá y cuando me llama a preguntarme que donde quedaba exactamente, jajaja, resulta que su cliente busca pero en Cali jajaja. Esto puede servir como un caso excepcional y de claro ejemplo para enseñar a todos cómo deben publicar una DEMANDA o REQUERIMIENTO en los grupos. Deben ser claros, por qué es que tú muchas veces fallas tratando de encontrar los MATCH y realmente no eres tú es el factor mediocre humano. jajajajaja REQUERIMIENTO colocado en un grupo por la agente de Cali: Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y Oeste hasta $700.000.000'"*.
+  2. **Hallazgo Técnico Crítico y Causa Raíz Oculta**:
+     - En la simulación en caliente se descubrió un choque crítico de interceptores: en `server/_core/identityVerificationService.ts` (`extractAllCedulasForVerification`), el fallback de números en DM capturaba el precio `$700.000.000` (9 dígitos con puntos) como si fuera una cédula (`cc 700000000`).
+     - Esto provocaba que en vez de razonar como IA Pura, JanIA ejecutara una verificación ante la Policía y Procuraduría sobre `700.000.000`, devolviendo un reporte de antecedentes y omitiendo la conversación.
+  3. **Solución y Blindaje de IA Pura (WhatsApp y Web)**:
+     - Implementada la función `isMonetaryContext` que evalúa prefijos monetarios (`$`, `hasta $`, `precio`, `valor`, `canon`, `presupuesto`) y sufijos (`pesos`, `cop`, `usd`, `millones`, `mil`).
+     - Exclusión tajante de números de 9 dígitos en Colombia (la Registraduría pasó de 8 a 10 dígitos, por lo que 9 dígitos corresponden a precios en millones).
+     - Protección de párrafos conversacionales largos (>80 caracteres) sin palabras clave explícitas de verificación para que fluyan directamente al motor de razonamiento de Gemini Flash.
+  4. **Razonamiento Brillante de JanIA**:
+     - Al procesar el mensaje con el motor libre, JanIA responde con humor, simpatía y agudeza técnica: reconoce que si el factor humano omite la *ciudad*, ni la mejor IA puede adivinar que una casa en Los Alcázares (Bogotá) no le sirve a alguien en Cali, resalta la importancia de la Fórmula de Oro del Requerimiento Inmobiliario y agradece la lección con calidez.
+  5. **Modificaciones Implementadas**:
+     - `server/_core/identityVerificationService.ts`: Helper `isMonetaryContext` y discriminación de montos monetarios.
+     - `server/__tests__/regression.test.ts`: Nueva prueba doctrinal de exclusión de precios ($700.000.000) (163/163 tests passing al 100%).
+     - `shared/const.ts` (`v32.76`) y `package.json` (`32.76.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.75 — Octubre 2026
 
 ### Novedades v32.75 (Nutrición Doctrinal desde la Notaría 19 de Bogotá, Fórmulas Exactas SNR, Exención de Retención para Personas Jurídicas y Beneficios VIS):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

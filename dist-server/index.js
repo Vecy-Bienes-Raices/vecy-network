@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.75";
+    VECY_VERSION = "v32.76";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -17289,6 +17289,17 @@ function extractAllCedulasForVerification(text2, isPrivateDm = false) {
     { type: "cc", regex: /(?:c\.?c\.?|c[ée]dula(?:\s+de\s+ciudadan[ií]a)?|identificaci[oó]n|documento)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s) => s.replace(/\D/g, "") },
     { type: "cc", regex: /(?:verificar|verificaci[oó]n|validar|consultar|revisar|antecedentes)\s*(?:sus|los|el)?\s*(?:de\s+)?([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s) => s.replace(/\D/g, "") }
   ];
+  function isMonetaryContext(text3, matchIndex, matchLength) {
+    const prefix = text3.substring(Math.max(0, matchIndex - 25), matchIndex);
+    const suffix = text3.substring(matchIndex + matchLength, Math.min(text3.length, matchIndex + matchLength + 25));
+    if (/[\$]|(?:hasta\s*\$?|precio\s*(?:de\s*)?\$?|valor\s*(?:de\s*)?\$?|canon\s*(?:de\s*)?\$?|presupuesto\s*(?:de\s*)?\$?)\s*$/i.test(prefix)) {
+      return true;
+    }
+    if (/^\s*(?:pesos|cop|usd|millones|mill[oó]n|mdp|mil(?:\s+pesos)?)\b/i.test(suffix)) {
+      return true;
+    }
+    return false;
+  }
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     for (const pat of docPatterns) {
@@ -17296,6 +17307,7 @@ function extractAllCedulasForVerification(text2, isPrivateDm = false) {
       let m;
       let lastMatchEnd = 0;
       while ((m = pat.regex.exec(line)) !== null) {
+        if (isMonetaryContext(line, m.index, m[0].length)) continue;
         const raw = m[1];
         const ced = pat.sanitize(raw);
         if (pat.type === "cc" && (ced.length < 5 || ced.length > 10)) continue;
@@ -17314,13 +17326,18 @@ function extractAllCedulasForVerification(text2, isPrivateDm = false) {
   }
   const isJaniaMention = /(?:jania|@jania)/i.test(clean);
   if (items.length === 0 && (isPrivateDm || hasKeyword || isJaniaMention)) {
-    const numRegex = /\b([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b/g;
-    let m;
-    while ((m = numRegex.exec(clean)) !== null) {
-      const raw = m[1];
-      const ced = raw.replace(/\D/g, "");
-      if (ced.length >= 5 && ced.length <= 10) {
-        items.push({ cedula: ced, tipoDoc: "cc", rawNumber: raw });
+    const isConversationalParagraphWithoutKeywords = !hasKeyword && clean.length > 80;
+    if (!isConversationalParagraphWithoutKeywords) {
+      const numRegex = /\b([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b/g;
+      let m;
+      while ((m = numRegex.exec(clean)) !== null) {
+        if (isMonetaryContext(clean, m.index, m[0].length)) continue;
+        const raw = m[1];
+        const ced = raw.replace(/\D/g, "");
+        if (ced.length === 9) continue;
+        if (ced.length >= 5 && ced.length <= 10) {
+          items.push({ cedula: ced, tipoDoc: "cc", rawNumber: raw });
+        }
       }
     }
   }

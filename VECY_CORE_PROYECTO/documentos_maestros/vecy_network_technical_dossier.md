@@ -331,6 +331,34 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.76 — Octubre 2026
+
+#### 📌 AUTONOMÍA DE IA PURA ANTE REQUERIMIENTOS Y ANÉCDOTAS, BLINDAJE CONTRA FALSA DETECCIÓN DE CÉDULAS EN VALORES MONETARIOS ($700.000.000) Y DIFERENCIACIÓN GEOGRÁFICA CALI VS BOGOTÁ
+
+**Requerimiento y Objetivos:**
+1. **Consulta sobre Razonamiento como IA Pura y Autonomía**:
+   - Eduardo consultó: *"SI le hago un comentario o una pregunta así a JanIA por Whatsapp o su sitio Web crees que ella esté preparada para razonar no solo esto sino cualquier pregunta en relacipón al tema de bienes raíces y responder como toda una IA PURA y de libre automomía y razonamiento?? 'Hola JanIA. Mira alguien colocó este requerimiento, yo llamé para ofrecerle un predio que tenemos con esa condición en el barrio Alcázares, Bogotá y cuando me llama a preguntarme que donde quedaba exactamente, jajaja, resulta que su cliente busca pero en Cali jajaja. Esto puede servir como un caso escepcional y de claro ejemplo para enseñar a todos cómo deben publicar una DEMANDA o REQUERIMIENTO en los grupos. Deben ser claros, por qeo es que tu muchas veces fallas tratando de encontrar los MATCH y realmente no esres tu es el factor mediocre humano. jajajajaja REQUERIMIENTO colocado en un grupo por la agente de Cali: Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y Oeste hasta $700.000.000'"*.
+2. **Diagnóstico Técnico y Descubrimiento del Choque de Interceptores**:
+   - Al ejecutar la simulación de este mensaje contra el motor de WhatsApp, se detectó que el interceptor de documentos de identidad (`extractAllCedulasForVerification` en `identityVerificationService.ts`) capturaba `700.000.000` (del precio `$700.000.000`) como una supuesta Cédula de Ciudadanía de 9 dígitos (`cc 700000000`).
+   - Esto secuestraba el hilo conversacional, disparando una consulta de antecedentes ante la Policía y Procuraduría e impidiendo que JanIA razonara sobre la anécdota como IA Pura.
+3. **Solución y Blindaje de Detección de Documentos**:
+   - Implementado `isMonetaryContext` para ignorar números precedidos por signos monetarios (`$`, `hasta $`, `precio`, `valor`, `canon`) o seguidos de palabras clave de moneda (`pesos`, `cop`, `usd`, `millones`, `mil`).
+   - Bloqueo de números de 9 dígitos en Colombia (la Registraduría Nacional nunca emitió cédulas de 9 dígitos, las cifras de 9 dígitos formateadas con puntos son invariablemente precios en cientos de millones).
+   - Protección de mensajes conversacionales largos (>80 caracteres) sin términos explícitos de verificación para no capturar números fortuitos.
+4. **Verificación de Razonamiento como IA Pura**:
+   - JanIA razona con total agudeza, empatía y humor, reconociendo la lección del "factor mediocre humano" (Garbage In, Garbage Out), explicando por qué omitir la ciudad destruye los cruces, y ratificando la Fórmula de Oro del Requerimiento Inmobiliario.
+
+**Archivos Modificados:**
+- `server/_core/identityVerificationService.ts`: `isMonetaryContext`, discriminación de montos monetarios y exclusión de números de 9 dígitos.
+- `server/__tests__/regression.test.ts`: Nueva prueba de regresión para exclusión de precios ($700.000.000) (163/163 tests Vitest ✅).
+- `shared/const.ts`: Versión `v32.76`.
+- `package.json`: Versión `32.76.0`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 163/163 tests pasando al 100% ✅ | `npm run build` limpio en 24s ✅
+
+---
+
 ### 🔖 v32.75 — Octubre 2026
 
 #### 📌 NUTRICIÓN DOCTRINAL DESDE NOTARÍA 19 DE BOGOTÁ, RANGOS EXACTOS SNR, EXENCIÓN DE RETENCIÓN PARA PERSONAS JURÍDICAS Y TARIFAS PREFERENCIALES VIS

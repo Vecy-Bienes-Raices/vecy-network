@@ -3495,6 +3495,37 @@ Adriana Rebeca Orejuela`;
       expect(flowStep2.calculatedResult?.formaPago).toBe("hipoteca");
       expect(hasPendingNotarialSession(testSenderNotaria)).toBe(false);
     });
+
+    it("Doctrina v32.76: Exclusión de Valores Monetarios ($700.000.000) de la Detección de Cédulas y Autonomía de IA Pura", async () => {
+      const { extractCedulaForVerification, extractAllCedulasForVerification } = await import("../_core/identityVerificationService");
+
+      // 1. Mensaje con anécdota y requerimiento con precio en millones ($700.000.000)
+      const anecdotMsg = `Hola JanIA. Mira alguien colocó este requerimiento, yo llamé para ofrecerle un predio que tenemos con esa condición en el barrio Alcázares, Bogotá y cuando me llama a preguntarme que donde quedaba exactamente, jajaja, resulta que su cliente busca pero en Cali jajaja. Esto puede servir como un caso escepcional y de claro ejemplo para enseñar a todos cómo deben publicar una DEMANDA o REQUERIMIENTO en los grupos. Deben ser claros, por qeo es que tu muchas veces fallas tratando de encontrar los MATCH y realmente no esres tu es el factor mediocre humano. jajajajaja
+REQUERIMIENTO colocado en un grupo por la agente de Cali: 
+Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
+
+      const checkAnecdot = extractCedulaForVerification(anecdotMsg, true);
+      expect(checkAnecdot.found).toBe(false);
+
+      const allItems = extractAllCedulasForVerification(anecdotMsg, true);
+      expect(allItems.length).toBe(0);
+
+      // 2. Precios en pesos, millones o dólares no deben ser cédulas
+      const priceMsg1 = "La casa está en venta por un valor de $350.000.000 y el canon es $2.800.000 pesos";
+      expect(extractCedulaForVerification(priceMsg1, true).found).toBe(false);
+
+      // 3. Cédulas reales colombianas siguen siendo detectadas con total precisión
+      const realCedMsg = "Por favor verificar C.C. 52.805.482 de la compradora";
+      const checkReal = extractCedulaForVerification(realCedMsg, true);
+      expect(checkReal.found).toBe(true);
+      expect(checkReal.cedula).toBe("52805482");
+
+      // 4. Número puro en DM sigue siendo detectado
+      const pureNumMsg = "79.824.360";
+      const checkPure = extractCedulaForVerification(pureNumMsg, true);
+      expect(checkPure.found).toBe(true);
+      expect(checkPure.cedula).toBe("79824360");
+    });
   });
 });
 

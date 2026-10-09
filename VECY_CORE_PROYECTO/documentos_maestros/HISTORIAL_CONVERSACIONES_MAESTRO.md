@@ -7,6 +7,38 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.76 — 09 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Consulta sobre Razonamiento como IA Pura y Autonomía**:
+   - Eduardo preguntó: *"SI le hago un comentario o una pregunta así a JanIA por Whatsapp o su sitio Web crees que ella esté preparada para razonar no solo esto sino cualquier pregunta en relacipón al tema de bienes raíces y responder como toda una IA PURA y de libre automomía y razonamiento?? 'Hola JanIA. Mira alguien colocó este requerimiento, yo llamé para ofrecerle un predio que tenemos con esa condición en el barrio Alcázares, Bogotá y cuando me llama a preguntarme que donde quedaba exactamente, jajaja, resulta que su cliente busca pero en Cali jajaja. Esto puede servir como un caso escepcional y de claro ejemplo para enseñar a todos cómo deben publicar una DEMANDA o REQUERIMIENTO en los grupos. Deben ser claros, por qeo es que tu muchas veces fallas tratando de encontrar los MATCH y realmente no esres tu es el factor mediocre humano. jajajajaja REQUERIMIENTO colocado en un grupo por la agente de Cali: Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y Oeste hasta $700.000.000'"*.
+
+### Diagnóstico Técnico Profundo y Hallazgo Crítico
+1. **Choque de Interceptores Oculto (El Caso de los $700.000.000)**:
+   - Al simular el mensaje en caliente con el procesador conversacional de WhatsApp (`processPrivateDmConversationalMessage`), se descubrió un falso positivo grave en `server/_core/identityVerificationService.ts` (`extractAllCedulasForVerification`):
+   - El fallback de números en DM (`\b([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b`) capturó `700.000.000` (9 dígitos con puntos) como si fuera un número de documento de identidad (`cc 700000000`).
+   - Esto disparaba el scraper de la Policía Nacional y Procuraduría sobre `700000000`, interrumpiendo la conversación y devolviendo un reporte de antecedentes judiciales en lugar de permitir que JanIA razonara como IA Pura sobre la anécdota.
+2. **Causas Raíz Detectadas**:
+   - Falta de verificación de contexto monetario (`$`, `hasta $`, `precio`, `valor`, `canon`, `pesos`, `cop`, `millones`).
+   - En Colombia no existen cédulas de 9 dígitos (la Registraduría pasó de 8 a 10 dígitos iniciando en 1.xxx.xxx.xxx); los números de 9 dígitos formateados con puntos son invariablemente cifras de cientos de millones.
+   - Párrafos conversacionales largos sin palabras clave de verificación no deben interpretar números aislados como cédulas.
+
+### Acciones Técnicas Ejecutadas
+1. **Blindaje de Detección de Cédulas (`server/_core/identityVerificationService.ts`)**:
+   - Creada la función `isMonetaryContext(text, matchIndex, matchLength)` para descartar números precedidos por signos de moneda o palabras de precio/valor y seguidos por denominaciones monetarias.
+   - Agregada regla de exclusión para números de 9 dígitos (`ced.length === 9`).
+   - Agregado filtro para evitar captura de números en párrafos conversacionales largos (>80 caracteres) que no contengan palabras clave explícitas de verificación.
+2. **Validación de Razonamiento como IA Pura**:
+   - Con el bypass corregido, la simulación de JanIA con Gemini Flash produjo una respuesta brillante, concisa y empática:
+     *"¡Buenas tardes, Vecy! Qué anécdota tan perfecta y qué gran lección nos deja sobre la realidad del sector 🏢😅. Tienes toda la razón: a veces el motor analiza con toda la precisión del mundo, pero si el factor humano olvida un detalle tan vital como la ciudad, ni la mejor inteligencia artificial del planeta adivina que una casa en Los Alcázares de Bogotá no le sirve a un cliente que busca en Cali. Por eso es tan valioso tu llamado a la claridad en los grupos. Publicar una demanda bien hecha exige especificar la ciudad, la zona exacta, el presupuesto y las condiciones reales. Así evitamos despistar a colegas tan pilos como tú que llaman con la mejor energía a ofrecer un predio. Gracias por compartir este caso excepcional. ¡Seguimos trabajando de la mano para afinar cada match y hacer que nuestra red colaborativa sea cada vez más eficiente y profesional! 🤖✨"*.
+3. **Pruebas y Verificación**:
+   - Agregada prueba de regresión en `server/__tests__/regression.test.ts` cubriendo la exclusión de precios y la detección fiel de documentos reales (163/163 pruebas Vitest aprobadas al 100%).
+   - Verificación de tipos `npm run check` con 0 errores.
+   - Compilación exitosa `npm run build` en 24s.
+   - Incremento oficial de versión a `v32.76` (`32.76.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.75 — 09 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

@@ -691,6 +691,21 @@ export function extractAllCedulasForVerification(text: string, isPrivateDm: bool
     { type: 'cc', regex: /(?:verificar|verificaci[oó]n|validar|consultar|revisar|antecedentes)\s*(?:sus|los|el)?\s*(?:de\s+)?([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s: string) => s.replace(/\D/g, '') }
   ];
 
+/**
+ * Evalúa si un número dentro de un texto corresponde a un contexto monetario (precio, canon, presupuesto)
+ */
+function isMonetaryContext(text: string, matchIndex: number, matchLength: number): boolean {
+  const prefix = text.substring(Math.max(0, matchIndex - 25), matchIndex);
+  const suffix = text.substring(matchIndex + matchLength, Math.min(text.length, matchIndex + matchLength + 25));
+  if (/[\$]|(?:hasta\s*\$?|precio\s*(?:de\s*)?\$?|valor\s*(?:de\s*)?\$?|canon\s*(?:de\s*)?\$?|presupuesto\s*(?:de\s*)?\$?)\s*$/i.test(prefix)) {
+    return true;
+  }
+  if (/^\s*(?:pesos|cop|usd|millones|mill[oó]n|mdp|mil(?:\s+pesos)?)\b/i.test(suffix)) {
+    return true;
+  }
+  return false;
+}
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     for (const pat of docPatterns) {
@@ -698,6 +713,7 @@ export function extractAllCedulasForVerification(text: string, isPrivateDm: bool
       let m: RegExpExecArray | null;
       let lastMatchEnd = 0;
       while ((m = pat.regex.exec(line)) !== null) {
+        if (isMonetaryContext(line, m.index, m[0].length)) continue;
         const raw = m[1];
         const ced = pat.sanitize(raw);
         if (pat.type === 'cc' && (ced.length < 5 || ced.length > 10)) continue;
@@ -719,13 +735,22 @@ export function extractAllCedulasForVerification(text: string, isPrivateDm: bool
   // Detección directa de números puros en DM o si hay palabra clave o mención a @JanIA
   const isJaniaMention = /(?:jania|@jania)/i.test(clean);
   if (items.length === 0 && (isPrivateDm || hasKeyword || isJaniaMention)) {
-    const numRegex = /\b([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b/g;
-    let m: RegExpExecArray | null;
-    while ((m = numRegex.exec(clean)) !== null) {
-      const raw = m[1];
-      const ced = raw.replace(/\D/g, '');
-      if (ced.length >= 5 && ced.length <= 10) {
-        items.push({ cedula: ced, tipoDoc: 'cc', rawNumber: raw });
+    // Si no hay palabras clave de verificación y el mensaje es una conversación larga (>80 caracteres),
+    // no interpretar números aislados como cédulas a menos que el mensaje sea puramente numérico o con nombres
+    const isConversationalParagraphWithoutKeywords = !hasKeyword && clean.length > 80;
+    if (!isConversationalParagraphWithoutKeywords) {
+      const numRegex = /\b([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b/g;
+      let m: RegExpExecArray | null;
+      while ((m = numRegex.exec(clean)) !== null) {
+        if (isMonetaryContext(clean, m.index, m[0].length)) continue;
+        const raw = m[1];
+        const ced = raw.replace(/\D/g, '');
+        // Cédulas colombianas válidas: de 5 a 8 dígitos (antiguas) o 10 dígitos (nuevas)
+        // Cédulas de 9 dígitos nunca existieron en Colombia y casi siempre son precios de cientos de millones
+        if (ced.length === 9) continue;
+        if (ced.length >= 5 && ced.length <= 10) {
+          items.push({ cedula: ced, tipoDoc: 'cc', rawNumber: raw });
+        }
       }
     }
   }
