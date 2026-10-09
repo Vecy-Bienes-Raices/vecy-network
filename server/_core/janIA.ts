@@ -6883,16 +6883,59 @@ export async function processPrivateDmConversationalMessage(
     return docPromptMsg;
   }
 
-  // 🛡️ INTERCEPTOR DIRECTO DM: VERIFICACIÓN OFICIAL DE CÉDULA (POLICÍA NACIONAL)
-  // Si el mensaje contiene una cédula para validar, ejecutar la verificación real oficial y jamás permitir alucinaciones del LLM
-  const { extractCedulaForVerification, executeIdentityVerificationFromWhatsApp } = await import('./identityVerificationService');
+  // 🛡️ INTERCEPTOR DIRECTO DM: VERIFICACIÓN OFICIAL DE CÉDULA (POLICÍA NACIONAL + PROCURADURÍA + ADRES)
+  // Si el mensaje contiene una o más cédulas para validar, ejecutar la verificación real oficial y jamás permitir alucinaciones del LLM
+  const { extractCedulaForVerification, executeIdentityVerificationFromWhatsApp, getPendingCedulaSession, extractAllCedulasForVerification } = await import('./identityVerificationService');
   const idDetection = extractCedulaForVerification(clean, true);
   if (idDetection.found) {
-    const idCheck = await executeIdentityVerificationFromWhatsApp(clean, true);
+    const idCheck = await executeIdentityVerificationFromWhatsApp(clean, true, userId);
     if (idCheck.isVerificationRequest && idCheck.reportText) {
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", idCheck.reportText);
       return idCheck.reportText;
+    }
+  }
+
+  // 🛡️ INTERCEPTOR DE SEGUIMIENTO: CONSULTA SOBRE CÉDULAS / ANTECEDENTES PENDIENTES EN LA SESIÓN
+  // Si el usuario pregunta "pero me colaboras con las cédulas", "sólo las cédulas", "qué pasó con las cédulas", etc.
+  const isAskingPendingCedulas = 
+    /(?:colaboras|ayudas|revisaste|verificaste|consultaste|miraste|sabes|sabemos|qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|falta|pendiente|salieron|listo|listas|listos|novedad|noticia|informaci[oó]n|resultado|reporte).*(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores)/i.test(cleanLower) ||
+    /(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores).*(?:qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|colaboras|ayudas|revisaste|verificaste|consultaste|salieron|falta|pendiente|s[oó]lo|solo|ya|listo)/i.test(cleanLower) ||
+    /(?:pero|y|s[oó]lo|solo|entonces)\s*.*(?:c[eé]dula|c[eé]dulas|documentos?|antecedentes?)/i.test(cleanLower) ||
+    /(?:qu[eé]\s*pas[oó]\s*con|qu[eé]\s*hay\s*de|sabes\s*algo\s*de)\s*(?:las|los)?\s*(?:c[eé]dulas?|documentos?|antecedentes?|compradores)/i.test(cleanLower) ||
+    /^(?:s[oó]lo|solo|y)?\s*(?:las|los|mis)?\s*(?:c[eé]dulas?|documentos?|antecedentes?)[.?]?$/i.test(cleanLower) ||
+    ((getPendingCedulaSession(userId) !== null) && /(?:aqu[ií]\s*estoy|sigo\s*esperando|estoy\s*atenta|estoy\s*pendiente|quedo\s*atenta|alguna\s*respuesta|alguna\s*novedad|av[ií]same)/i.test(cleanLower));
+
+  if (isAskingPendingCedulas) {
+    const pendingSession = getPendingCedulaSession(userId);
+    if (pendingSession && pendingSession.reportText) {
+      const followUpMsg = `¡Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aquí tienes el reporte oficial de verificación que consultamos en las centrales de seguridad:\n\n${pendingSession.reportText}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", followUpMsg);
+      return followUpMsg;
+    }
+
+    // Buscar en el historial reciente si el usuario envió cédulas en mensajes previos
+    const history = await getOrLoadDmHistory(userId);
+    let historicalItems: any[] = [];
+    for (let i = history.length - 1; i >= 0; i--) {
+      if (history[i].role === 'user') {
+        const histCed = extractAllCedulasForVerification(history[i].content, true);
+        if (histCed.length > 0) {
+          historicalItems = histCed;
+          break;
+        }
+      }
+    }
+
+    if (historicalItems.length > 0) {
+      const idCheck = await executeIdentityVerificationFromWhatsApp(clean, true, userId, historicalItems);
+      if (idCheck.reportText) {
+        const followUpMsg = `¡Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aquí tienes el reporte oficial de verificación de los documentos que me compartiste:\n\n${idCheck.reportText}`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", followUpMsg);
+        return followUpMsg;
+      }
     }
   }
 
@@ -6945,7 +6988,7 @@ export async function processPrivateDmConversationalMessage(
           `- NUNCA repitas como un contestador automático "¿Cuál de las dos herramientas te gustaría probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesoría, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.\n` +
           `- Conversa como una profesional inmobiliaria colombiana experta, culta, amena y empática. CERO tecnicismos computacionales ni lenguaje de bot.\n` +
           `- Mantén respuestas concisas y bien estructuradas (2 a 4 párrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).\n` +
-          `- PROHIBICIÓN ABSOLUTA DE SIMULAR O ALUCINAR VERIFICACIONES: NUNCA inventes, afirmes o simules que realizaste una consulta a la Policía Nacional o antecedentes penales. Esas validaciones se ejecutan de manera certificada por el motor oficial del sistema.\n\n` +
+          `- PROHIBICIÓN ABSOLUTA DE SIMULAR O ALUCINAR VERIFICACIONES: NUNCA inventes, afirmes o simules que realizaste una consulta a la Policía Nacional, Procuraduría o ADRES si no cuentas con el reporte emitido por el sistema oficial. Jamás digas cosas como "lo importante es que ya quedaron verificadas esas dos identificaciones" o "en un momento te confirmo" dando falsas seguridades sin que el sistema haya emitido el reporte real. Esas validaciones se ejecutan de manera certificada por el motor oficial del sistema.\n\n` +
           `DOCTRINA OFICIAL VECY: PROTECCIÓN DE DATOS (LEY 1581 DE 2012), HÁBEAS DATA Y SEGURIDAD EN VISITAS:\n` +
           `- PRINCIPIO DE TRANSPARENCIA FRENTE A LA CLANDESTINIDAD:\n` +
           `  En el gremio inmobiliario existen colegas (como Kelly Carvajal) que tienen la creencia errónea de que verificar la identidad de los clientes viola el Hábeas Data, y por temor o desinformación, cuando la cédula no coincide con el nombre en apps como Verifíquese, cancelan la visita inventando pretextos falsos ("los dueños desistieron", "ya no van a estar", "recibieron otra oferta").\n` +

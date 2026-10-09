@@ -331,6 +331,45 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.73 — Octubre 2026
+
+#### 📌 VERIFICACIÓN MULTI-CÉDULA SIMULTÁNEA, SOPORTE DE CONECTORES 'CC NO.' Y MEMORIA DE SESIÓN DE IDENTIDAD (CASO MARTHA MESA)
+
+**Requerimiento y Objetivos:**
+1. **Verificación Multi-Cédula Simultánea y Prevención de Pérdida de Contexto**:
+   - Consulta y requerimiento de Eduardo A. Rivera: *"Si una persona envía dos cédulas al tiempo JanIA las puede verificar ambas o es mejor una por una para no confundirla, es que vi que un usuario llamado Martha Mesa, le envió dos números de cédula al mismo tiempo pero cuando JanIa posiblemente iba a ir a la procuraduría a verificarlas la persona le siguió hablando y JanIA perdió el contexto de la conversación y no verificó ninguna ni antecedentes. Mir eso, será que así JanIA se pierde y no puede verificar, tiene alguna limitación?? Ya estas bien?? Sí por favor por fa."*
+   - Diagnóstico forense del chat de Martha Mesa (`+573102871183`):
+     ```
+     Los compradores se llaman:
+     Lina María Galeano
+     CC No. 52.805.482
+     Ricardo Cortes Galindo
+     CC No. 79.824.360
+     ```
+   - Causa raíz: El regex anterior fallaba al no reconocer conectores como `CC No.`, `CC N°`, `CC #`, marcando `found: false` y desviando la solicitud al LLM conversacional. Ante mensajes de espera posteriores (*"aquí estoy"*, *"pero me colaboras con las cédulas"*), la falta de bidireccionalidad en la expresión regular provocaba que JanIA no recuperara la intención y alucinara que ya estaban verificadas sin haber consultado las centrales de seguridad.
+2. **Arquitectura y Rendimiento Multi-Documento**:
+   - `extractAllCedulasForVerification`: Extractor inteligente en `identityVerificationService.ts` con soporte para múltiples documentos en un solo mensaje, conectores variados (`No.`, `N°`, `#`, `:`, `-`, espacio), puntos de miles y extracción asociativa de nombres propios precedentes (`Lina María Galeano`, `Ricardo Cortes Galindo`).
+   - `verifySingleDocumentInternal`: Orquestador de verificación secuencial que valida individualmente cada documento ante la Policía Nacional, Procuraduría General (SIRI) y ADRES/BDUA con caché unificada de alta resolución.
+   - `buildConsolidatedReportText`: Generación de dictamen notarial consolidado con insignias numeradas (`1️⃣`, `2️⃣`, etc.) y dictamen notarial favorable conjunto para operaciones inmobiliarias seguras.
+   - `savePendingCedulaSession` y `getPendingCedulaSession`: Memoria persistente en RAM (TTL 24h) para conservar los documentos y reportes listos para entrega inmediata.
+3. **Blindaje de Interceptores y Resiliencia Conversacional en WhatsApp**:
+   - `whatsapp-match.ts`: Interceptor directo de DMs actualizado para despachar el reporte consolidado cuando existan dos o más documentos.
+   - Expresión regular `isAskingPendingCedulas` ampliada en `whatsapp-match.ts` y `janIA.ts` para reconocer de forma bidireccional solicitudes como *"pero me colaboras con las cédulas"*, *"colaboras con las cédulas"*, *"qué pasó con las cédulas"*, y responder de inmediato ante mensajes de espera (*"aquí estoy"*, *"estoy atenta"*) si existe una sesión activa.
+   - Recuperación de documentos desde el historial del día en PostgreSQL (`getOrLoadDmHistory`), garantizando que incluso ante reinicios de PM2 o mensajes intercalados, JanIA nunca pierda el hilo ni deje sin verificar los documentos.
+
+**Archivos Modificados:**
+- `server/_core/identityVerificationService.ts`: `extractAllCedulasForVerification`, `verifySingleDocumentInternal`, `buildConsolidatedReportText`, sesiones pendientes.
+- `server/_core/whatsapp-match.ts`: Interceptores de DMs multi-cédula, consulta bidireccional y fallback a historial.
+- `server/_core/janIA.ts`: `isAskingPendingCedulas` bidireccional y fallback a `getOrLoadDmHistory`.
+- `server/__tests__/regression.test.ts`: Pruebas completas del caso Martha Mesa y seguimiento sin dígitos (161/161 tests Vitest ✅).
+- `shared/const.ts`: Versión bump a `v32.73`.
+- `package.json`: Versión `32.73.0`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 161/161 tests pasando al 100% ✅ | `npm run build` limpio en 26s ✅
+
+---
+
 ### 🔖 v32.72 — Octubre 2026
 
 #### 📌 SERVICIO OFICIAL DE PAZ Y SALVO DE VALORIZACIÓN DEL IDU EN PDF POR WHATSAPP (SIN CAPTCHA, 7 SEGUNDOS, $0 COP)

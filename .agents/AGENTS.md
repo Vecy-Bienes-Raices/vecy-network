@@ -172,7 +172,36 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.72 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.73 — Octubre 2026
+
+### Novedades v32.73 (Verificación Multi-Cédula Simultánea, Soporte de Conectores 'CC No.' y Memoria de Sesión de Identidad contra Pérdida de Contexto):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Caso Real de Martha Mesa (`+573102871183`)**:
+     - Eduardo preguntó: *"Si una persona envía dos cédulas al tiempo JanIA las puede verificar ambas o es mejor una por una para no confundirla, es que vi que un usuario llamado Martha Mesa, le envió dos números de cédula al mismo tiempo pero cuando JanIa posiblemente iba a ir a la procuraduría a verificarlas la persona le siguió hablando y JanIA perdió el contexto de la conversación y no verificó ninguna ni antecedentes. Mir eso, será que así JanIA se pierde y no puede verificar, tiene alguna limitación?? Ya estas bien?? Sí por favor por fa."*
+     - En el mensaje real de Martha Mesa:
+       ```
+       Los compradores se llaman:
+       Lina María Galeano
+       CC No. 52.805.482
+       Ricardo Cortes Galindo
+       CC No. 79.824.360
+       ```
+     - Causa identificada: El regex anterior fallaba al no reconocer el conector `CC No.` (`found: false`), por lo que el mensaje bypassaba el interceptor de seguridad y caía en Gemini. Luego, al responder Martha *"aquí estoy"* o *"pero me colaboras con las cédulas"*, el interceptor de seguimiento no detectaba la consulta bidireccional y JanIA alucinaba que ya estaban verificadas sin haber consultado las bases estatales.
+  2. **Implementación Técnica de Alta Precisión Multi-Documento**:
+     - Creado `extractAllCedulasForVerification` en `server/_core/identityVerificationService.ts` con soporte para `CC No.`, `CC N°`, `CC #`, `C.C.`, `Cédula No.`, con puntos de miles y extracción asociativa de nombres de pila precedentes (`Lina María Galeano`, `Ricardo Cortes Galindo`).
+     - Verificación simultánea y coordinada de ambos documentos ante Policía Nacional, Procuraduría General (SIRI) y ADRES/BDUA.
+     - Generación de Reporte Notarial Consolidado numerado (`1️⃣`, `2️⃣`, etc.) con dictamen notarial favorable conjunto para operaciones inmobiliarias seguras.
+     - Memoria de sesión de identidad `savePendingCedulaSession` y `getPendingCedulaSession` con TTL de 24 horas.
+     - Blindaje bidireccional del regex `isAskingPendingCedulas` en `whatsapp-match.ts` y `janIA.ts` para reconocer frases como *"pero me colaboras con las cédulas"*, *"colaboras con las cédulas"*, y responder de inmediato ante mensajes de espera (*"aquí estoy"*, *"estoy atenta"*).
+     - Recuperación resiliente desde el historial persistente de PostgreSQL (`getOrLoadDmHistory`), garantizando que JanIA jamás pierda el contexto ni alucine.
+  3. **Modificaciones Implementadas**:
+     - `server/_core/identityVerificationService.ts`: `extractAllCedulasForVerification`, `verifySingleDocumentInternal`, `buildConsolidatedReportText`, sesiones pendientes.
+     - `server/_core/whatsapp-match.ts`: Interceptores directos y diferidos multi-cédula con recuperación de historial.
+     - `server/_core/janIA.ts`: `isAskingPendingCedulas` bidireccional y fallback a `getOrLoadDmHistory`.
+     - `server/__tests__/regression.test.ts`: Pruebas completas del caso Martha Mesa (161/161 tests passing al 100%).
+     - `shared/const.ts` (`v32.73`) y `package.json` (`32.73.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.72 — Octubre 2026
 
 ### Novedades v32.72 (Servicio Oficial de Paz y Salvo de Valorización IDU en PDF por WhatsApp — Cero Costo y Máxima Velocidad):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

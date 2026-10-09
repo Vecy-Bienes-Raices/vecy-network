@@ -1417,12 +1417,12 @@ export class JaniaMatchBot {
     }
 
     // 🛡️ INTERCEPTOR DIRECTO DM: VERIFICACIÓN OFICIAL DE CÉDULA (2CAPTCHA + POLICÍA NACIONAL)
-    const { executeIdentityVerificationFromWhatsApp, extractCedulaForVerification } = await import('./identityVerificationService');
+    const { executeIdentityVerificationFromWhatsApp, extractCedulaForVerification, getPendingCedulaSession } = await import('./identityVerificationService');
     const idDetection = extractCedulaForVerification(body, true);
     if (idDetection.found) {
       const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
       try {
-        const idCheck = await executeIdentityVerificationFromWhatsApp(body, true);
+        const idCheck = await executeIdentityVerificationFromWhatsApp(body, true, senderId);
         if (idCheck.isVerificationRequest && idCheck.reportText) {
           console.log(`[JANIA-MATCH] [DM] Verificación de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
           const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
@@ -1443,6 +1443,56 @@ export class JaniaMatchBot {
         }
       } finally {
         stopPresence();
+      }
+    }
+
+    // 🛡️ INTERCEPTOR DE CONSULTA SOBRE CÉDULAS PENDIENTES EN SESIÓN DM
+    const isAskingPendingCedulas = 
+      /(?:colaboras|ayudas|revisaste|verificaste|consultaste|miraste|sabes|sabemos|qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|falta|pendiente|salieron|listo|listas|listos|novedad|noticia|informaci[oó]n|resultado|reporte).*(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores)/i.test(body.trim().toLowerCase()) ||
+      /(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores).*(?:qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|colaboras|ayudas|revisaste|verificaste|consultaste|salieron|falta|pendiente|s[oó]lo|solo|ya|listo)/i.test(body.trim().toLowerCase()) ||
+      /(?:pero|y|s[oó]lo|solo|entonces)\s*.*(?:c[eé]dula|c[eé]dulas|documentos?|antecedentes?)/i.test(body.trim().toLowerCase()) ||
+      /(?:qu[eé]\s*pas[oó]\s*con|qu[eé]\s*hay\s*de|sabes\s*algo\s*de)\s*(?:las|los)?\s*(?:c[eé]dulas?|documentos?|antecedentes?|compradores)/i.test(body.trim().toLowerCase()) ||
+      /^(?:s[oó]lo|solo|y)?\s*(?:las|los|mis)?\s*(?:c[eé]dulas?|documentos?|antecedentes?)[.?]?$/i.test(body.trim().toLowerCase()) ||
+      ((getPendingCedulaSession(senderId) !== null) && /(?:aqu[ií]\s*estoy|sigo\s*esperando|estoy\s*atenta|estoy\s*pendiente|quedo\s*atenta|alguna\s*respuesta|alguna\s*novedad|av[ií]same)/i.test(body.trim().toLowerCase()));
+
+    if (isAskingPendingCedulas) {
+      const pendingSession = getPendingCedulaSession(senderId);
+      if (pendingSession && pendingSession.reportText) {
+        const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
+        const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'cedula', pendingSession.reportText, !!pendingSession.success);
+        await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
+        appendDmHistory(senderId, 'user', body);
+        appendDmHistory(senderId, 'assistant', deliveredText);
+        await this.logToDb(senderId, 'janIA', deliveredText);
+        return;
+      }
+
+      // Buscar en el historial reciente si el usuario envió cédulas en mensajes previos
+      const { getOrLoadDmHistory } = await import('./janIA');
+      const history = await getOrLoadDmHistory(senderId);
+      let historicalItems: any[] = [];
+      for (let i = history.length - 1; i >= 0; i--) {
+        if (history[i].role === 'user') {
+          const { extractAllCedulasForVerification } = await import('./identityVerificationService');
+          const histCed = extractAllCedulasForVerification(history[i].content, true);
+          if (histCed.length > 0) {
+            historicalItems = histCed;
+            break;
+          }
+        }
+      }
+
+      if (historicalItems.length > 0) {
+        const idCheck = await executeIdentityVerificationFromWhatsApp(body, true, senderId, historicalItems);
+        if (idCheck.reportText) {
+          const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
+          const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'cedula', idCheck.reportText, !!idCheck.success);
+          await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
+          appendDmHistory(senderId, 'user', body);
+          appendDmHistory(senderId, 'assistant', deliveredText);
+          await this.logToDb(senderId, 'janIA', deliveredText);
+          return;
+        }
       }
     }
 

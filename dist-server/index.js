@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.71";
+    VECY_VERSION = "v32.73";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -12809,12 +12809,12 @@ ${quotedNote}` : quotedNote;
             stopPresence();
           }
         }
-        const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2, extractCedulaForVerification: extractCedulaForVerification2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+        const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2, extractCedulaForVerification: extractCedulaForVerification2, getPendingCedulaSession: getPendingCedulaSession2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
         const idDetection = extractCedulaForVerification2(body, true);
         if (idDetection.found) {
           const stopPresence = startContinuousPresence(this.sock, senderId, "composing");
           try {
-            const idCheck = await executeIdentityVerificationFromWhatsApp2(body, true);
+            const idCheck = await executeIdentityVerificationFromWhatsApp2(body, true, senderId);
             if (idCheck.isVerificationRequest && idCheck.reportText) {
               console.log(`[JANIA-MATCH] [DM] Verificaci\xF3n de identidad atendida para ${senderId} (C.C. ${idCheck.cedula})`);
               const { formatPoliteToolDelivery: formatPoliteToolDelivery2, appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
@@ -12833,6 +12833,44 @@ ${quotedNote}` : quotedNote;
             }
           } finally {
             stopPresence();
+          }
+        }
+        const isAskingPendingCedulas = /(?:colaboras|ayudas|revisaste|verificaste|consultaste|miraste|sabes|sabemos|qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|falta|pendiente|salieron|listo|listas|listos|novedad|noticia|informaci[oó]n|resultado|reporte).*(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores)/i.test(body.trim().toLowerCase()) || /(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores).*(?:qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|colaboras|ayudas|revisaste|verificaste|consultaste|salieron|falta|pendiente|s[oó]lo|solo|ya|listo)/i.test(body.trim().toLowerCase()) || /(?:pero|y|s[oó]lo|solo|entonces)\s*.*(?:c[eé]dula|c[eé]dulas|documentos?|antecedentes?)/i.test(body.trim().toLowerCase()) || /(?:qu[eé]\s*pas[oó]\s*con|qu[eé]\s*hay\s*de|sabes\s*algo\s*de)\s*(?:las|los)?\s*(?:c[eé]dulas?|documentos?|antecedentes?|compradores)/i.test(body.trim().toLowerCase()) || /^(?:s[oó]lo|solo|y)?\s*(?:las|los|mis)?\s*(?:c[eé]dulas?|documentos?|antecedentes?)[.?]?$/i.test(body.trim().toLowerCase()) || getPendingCedulaSession2(senderId) !== null && /(?:aqu[ií]\s*estoy|sigo\s*esperando|estoy\s*atenta|estoy\s*pendiente|quedo\s*atenta|alguna\s*respuesta|alguna\s*novedad|av[ií]same)/i.test(body.trim().toLowerCase());
+        if (isAskingPendingCedulas) {
+          const pendingSession = getPendingCedulaSession2(senderId);
+          if (pendingSession && pendingSession.reportText) {
+            const { formatPoliteToolDelivery: formatPoliteToolDelivery2, appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+            const deliveredText = await formatPoliteToolDelivery2(senderId, userName, "cedula", pendingSession.reportText, !!pendingSession.success);
+            await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
+            appendDmHistory2(senderId, "user", body);
+            appendDmHistory2(senderId, "assistant", deliveredText);
+            await this.logToDb(senderId, "janIA", deliveredText);
+            return;
+          }
+          const { getOrLoadDmHistory: getOrLoadDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+          const history = await getOrLoadDmHistory2(senderId);
+          let historicalItems = [];
+          for (let i = history.length - 1; i >= 0; i--) {
+            if (history[i].role === "user") {
+              const { extractAllCedulasForVerification: extractAllCedulasForVerification2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+              const histCed = extractAllCedulasForVerification2(history[i].content, true);
+              if (histCed.length > 0) {
+                historicalItems = histCed;
+                break;
+              }
+            }
+          }
+          if (historicalItems.length > 0) {
+            const idCheck = await executeIdentityVerificationFromWhatsApp2(body, true, senderId, historicalItems);
+            if (idCheck.reportText) {
+              const { formatPoliteToolDelivery: formatPoliteToolDelivery2, appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+              const deliveredText = await formatPoliteToolDelivery2(senderId, userName, "cedula", idCheck.reportText, !!idCheck.success);
+              await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
+              appendDmHistory2(senderId, "user", body);
+              appendDmHistory2(senderId, "assistant", deliveredText);
+              await this.logToDb(senderId, "janIA", deliveredText);
+              return;
+            }
           }
         }
         const cleanLower = body.trim().toLowerCase();
@@ -16074,15 +16112,18 @@ var init_agenda = __esm({
 var identityVerificationService_exports = {};
 __export(identityVerificationService_exports, {
   executeIdentityVerificationFromWhatsApp: () => executeIdentityVerificationFromWhatsApp,
+  extractAllCedulasForVerification: () => extractAllCedulasForVerification,
   extractCedulaForVerification: () => extractCedulaForVerification,
   formatCedulaNumber: () => formatCedulaNumber,
   getAdresEndpoint: () => getAdresEndpoint,
   getDocumentTypeLabel: () => getDocumentTypeLabel,
+  getPendingCedulaSession: () => getPendingCedulaSession,
   getProcuraduriaEndpoint: () => getProcuraduriaEndpoint,
   mapTipoDocToAdres: () => mapTipoDocToAdres,
   mapTipoDocToProcuraduria: () => mapTipoDocToProcuraduria,
   queryAdres: () => queryAdres,
   queryProcuraduria: () => queryProcuraduria,
+  savePendingCedulaSession: () => savePendingCedulaSession,
   solveProcuraduriaQuestion: () => solveProcuraduriaQuestion
 });
 import https2 from "https";
@@ -16506,138 +16547,156 @@ async function queryAdres(tipoDoc, numDoc) {
     };
   }
 }
-function extractCedulaForVerification(text2, isPrivateDm = false) {
-  if (!text2 || typeof text2 !== "string") return { found: false, cedula: "", tipoDoc: "cc" };
+function savePendingCedulaSession(userId, items, reportText, success) {
+  if (!userId) return;
+  pendingCedulaSessions.set(userId, {
+    items,
+    reportText,
+    success,
+    timestamp: Date.now()
+  });
+}
+function getPendingCedulaSession(userId) {
+  if (!userId) return null;
+  const session = pendingCedulaSessions.get(userId);
+  if (!session) return null;
+  if (Date.now() - session.timestamp > 24 * 60 * 60 * 1e3) {
+    pendingCedulaSessions.delete(userId);
+    return null;
+  }
+  return session;
+}
+function cleanPotentialPersonName(str) {
+  if (!str) return void 0;
+  let s = str.replace(/^(?:los|las)?\s*(?:compradores|comprador|arrendatarios|arrendatario|codeudores|codeudor|clientes|cliente|titulares|titular|nombres|nombre)\s*(?:se\s*llaman|es|son)?\s*[:#-]?\s*/i, "");
+  s = s.replace(/^\s*(?:y|e|o)\s+/i, "");
+  s = s.replace(/^\d+[\.\)-]\s*/, "");
+  s = s.replace(/[-:]\s*$/, "").trim();
+  if (!s || s.length < 3 || s.length > 50) return void 0;
+  const sLower = s.toLowerCase();
+  if (sLower.includes("compradores se llaman") || sLower.includes("hola") || sLower.includes("buenos") || sLower.includes("gracias") || sLower.includes("buenas")) return void 0;
+  if (/\d/.test(s)) return void 0;
+  return s;
+}
+function extractAllCedulasForVerification(text2, isPrivateDm = false) {
+  if (!text2 || typeof text2 !== "string") return [];
   const clean = text2.trim();
   const lower = clean.toLowerCase();
   if (lower.includes("vendo") || lower.includes("arriendo") || lower.includes("busco apto") || lower.includes("presupuesto")) {
-    return { found: false, cedula: "", tipoDoc: "cc" };
+    return [];
   }
   if (lower.includes("predial") || lower.includes("chip") || lower.includes("impuesto")) {
-    return { found: false, cedula: "", tipoDoc: "cc" };
+    return [];
   }
-  const keywords = ["verificar", "verificacion", "verificaci\xF3n", "validar", "consultar", "revisar", "chequear", "antecedentes", "c\xE9dula", "cedula", "documento", "extranjer\xEDa", "extranjeria", "pasaporte", "pasaportes", "pep", "ppt", "nit"];
+  const keywords = [
+    "verificar",
+    "verificacion",
+    "verificaci\xF3n",
+    "validar",
+    "validaci\xF3n",
+    "validacion",
+    "consultar",
+    "consulta",
+    "revisar",
+    "rrvisar",
+    "chequear",
+    "mirar",
+    "antecedentes",
+    "c\xE9dula",
+    "cedula",
+    "c\xE9dulas",
+    "cedulas",
+    "documento",
+    "documentos",
+    "identificaci\xF3n",
+    "identificacion",
+    "extranjer\xEDa",
+    "extranjeria",
+    "pasaporte",
+    "pasaportes",
+    "pep",
+    "ppt",
+    "nit",
+    "comprador",
+    "compradores",
+    "arrendatario",
+    "arrendatarios",
+    "codeudor",
+    "codeudores",
+    "inquilino",
+    "inquilinos",
+    "titular",
+    "titulares"
+  ];
   const hasKeyword = keywords.some((kw) => lower.includes(kw));
-  let tipoDoc = "cc";
-  if (lower.includes("pep") || lower.includes("especial de permanencia")) {
-    tipoDoc = "pep";
-  } else if (lower.includes("ppt") || lower.includes("proteccion temporal") || lower.includes("protecci\xF3n temporal")) {
-    tipoDoc = "ppt";
-  } else if (lower.includes("nit")) {
-    tipoDoc = "nit";
-  } else if (lower.includes("extranjer") || /(?<!\p{L})(?:ce|cx)(?!\p{L})/iu.test(lower)) {
-    tipoDoc = "cx";
-  } else if (lower.includes("origen") || /(?<!\p{L})(?:dp|dpo)(?!\p{L})/iu.test(lower)) {
-    tipoDoc = "dp";
-  } else if (lower.includes("pasaporte") || /(?<!\p{L})pa(?!\p{L})/iu.test(lower)) {
-    tipoDoc = "pa";
-  }
-  if (tipoDoc === "pep") {
-    const regexPep = /(?:pep|permiso\s+especial\s+de\s+permanencia)\s*[:#]?\s*([a-zA-Z0-9]{10,18})/i;
-    const matchPep = clean.match(regexPep);
-    if (matchPep && matchPep[1]) {
-      return { found: true, cedula: matchPep[1].toUpperCase(), tipoDoc: "pep" };
-    }
-  }
-  if (tipoDoc === "ppt") {
-    const regexPpt = /(?:ppt|permiso\s+(?:de|por)\s+protecci[oó]n\s+temporal)\s*[:#]?\s*([0-9]{5,10})/i;
-    const matchPpt = clean.match(regexPpt);
-    if (matchPpt && matchPpt[1]) {
-      return { found: true, cedula: matchPpt[1].replace(/\D/g, ""), tipoDoc: "ppt" };
-    }
-  }
-  if (tipoDoc === "nit") {
-    const regexNit = /(?:nit)\s*[:#]?\s*([0-9]{4,12})/i;
-    const matchNit = clean.match(regexNit);
-    if (matchNit && matchNit[1]) {
-      return { found: true, cedula: matchNit[1].replace(/\D/g, ""), tipoDoc: "nit" };
-    }
-  }
-  if (tipoDoc === "dp") {
-    const regexDp = /(?:documento\s+pa[ií]s\s+(?:de\s+)?origen|dp|dpo)\s*[:#]?\s*([a-zA-Z0-9]{5,15})/i;
-    const matchDp = clean.match(regexDp);
-    if (matchDp && matchDp[1]) {
-      return { found: true, cedula: matchDp[1].toUpperCase(), tipoDoc: "dp" };
-    }
-  }
-  if (tipoDoc === "pa") {
-    const regexPa = /(?:pasaporte|pa)\s*[:#]?\s*([a-zA-Z0-9]{5,15})/i;
-    const matchPa = clean.match(regexPa);
-    if (matchPa && matchPa[1]) {
-      return { found: true, cedula: matchPa[1].toUpperCase(), tipoDoc: "pa" };
-    }
-  }
-  if (tipoDoc === "cx") {
-    const regexCe = /(?:verificar|validar|consultar|revisar|antecedentes|c[ée]dula)?\s*(?:de\s+extranjer[ií]a|ce|cx)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{4,10})/i;
-    const matchCe = clean.match(regexCe);
-    if (matchCe && matchCe[1]) {
-      const rawNumber = matchCe[1].replace(/\D/g, "");
-      if (rawNumber.length >= 4 && rawNumber.length <= 10) {
-        return { found: true, cedula: rawNumber, tipoDoc: "cx" };
+  const items = [];
+  const lines = clean.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const docPatterns = [
+    { type: "pep", regex: /(?:pep|permiso\s+especial\s+de\s+permanencia)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{10,18})/gi, sanitize: (s) => s.toUpperCase() },
+    { type: "ppt", regex: /(?:ppt|permiso\s+(?:de|por)\s+protecci[oó]n\s+temporal)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{5,10})/gi, sanitize: (s) => s.replace(/\D/g, "") },
+    { type: "nit", regex: /(?:nit)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{4,12})/gi, sanitize: (s) => s.replace(/\D/g, "") },
+    { type: "dp", regex: /(?:documento\s+pa[ií]s\s+(?:de\s+)?origen|dp|dpo)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{5,15})/gi, sanitize: (s) => s.toUpperCase() },
+    { type: "pa", regex: /(?:pasaporte|pa)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{5,15})/gi, sanitize: (s) => s.toUpperCase() },
+    { type: "cx", regex: /(?:c[ée]dula\s+de\s+extranjer[ií]a|extranjer[ií]a|c\.?e\.?|c\.?x\.?)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{4,10})/gi, sanitize: (s) => s.replace(/\D/g, "") },
+    { type: "cc", regex: /(?:c\.?c\.?|c[ée]dula(?:\s+de\s+ciudadan[ií]a)?|identificaci[oó]n|documento)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s) => s.replace(/\D/g, "") },
+    { type: "cc", regex: /(?:verificar|verificaci[oó]n|validar|consultar|revisar|antecedentes)\s*(?:sus|los|el)?\s*(?:de\s+)?([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s) => s.replace(/\D/g, "") }
+  ];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    for (const pat of docPatterns) {
+      pat.regex.lastIndex = 0;
+      let m;
+      let lastMatchEnd = 0;
+      while ((m = pat.regex.exec(line)) !== null) {
+        const raw = m[1];
+        const ced = pat.sanitize(raw);
+        if (pat.type === "cc" && (ced.length < 5 || ced.length > 10)) continue;
+        if (pat.type === "cx" && (ced.length < 4 || ced.length > 10)) continue;
+        let detectedName;
+        const lineBeforeDoc = line.substring(lastMatchEnd, m.index).trim();
+        if (lineBeforeDoc) {
+          detectedName = cleanPotentialPersonName(lineBeforeDoc);
+        } else if (i > 0) {
+          detectedName = cleanPotentialPersonName(lines[i - 1]);
+        }
+        items.push({ cedula: ced, tipoDoc: pat.type, rawNumber: raw, detectedName });
+        lastMatchEnd = pat.regex.lastIndex;
       }
     }
   }
-  const regexExplicit = /(?:verificar|verificaci[oó]n|validar|consultar|revisar|antecedentes|c[ée]dula|documento|cc)\s*(?:de\s+ciudadan[ií]a\s*)?(?:cc|ce|cx)?\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/i;
-  const matchExplicit = clean.match(regexExplicit);
-  if (matchExplicit && matchExplicit[1]) {
-    const rawNumber = matchExplicit[1].replace(/\D/g, "");
-    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
-      return { found: true, cedula: rawNumber, tipoDoc };
-    }
-  }
-  if (hasKeyword) {
-    const numberMatches = clean.match(/\b([0-9]{5,10})\b/);
-    if (numberMatches && numberMatches[1]) {
-      return { found: true, cedula: numberMatches[1], tipoDoc };
-    }
-  }
-  const directCcMatch = clean.match(/\b(?:c\.?c\.?)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b/i);
-  if (directCcMatch && directCcMatch[1]) {
-    const rawNumber = directCcMatch[1].replace(/\D/g, "");
-    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
-      return { found: true, cedula: rawNumber, tipoDoc: "cc" };
-    }
-  }
-  const directCeMatch = clean.match(/\b(?:c\.?e\.?|c\.?x\.?)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{4,10})\b/i);
-  if (directCeMatch && directCeMatch[1]) {
-    const rawNumber = directCeMatch[1].replace(/\D/g, "");
-    if (rawNumber.length >= 4 && rawNumber.length <= 10) {
-      return { found: true, cedula: rawNumber, tipoDoc: "cx" };
-    }
-  }
-  const directPepMatch = clean.match(/\b(?:p\.?e\.?p\.?)\s*[:#]?\s*([a-zA-Z0-9]{10,18})\b/i);
-  if (directPepMatch && directPepMatch[1]) {
-    return { found: true, cedula: directPepMatch[1].toUpperCase(), tipoDoc: "pep" };
-  }
-  const directPptMatch = clean.match(/\b(?:p\.?p\.?t\.?)\s*[:#]?\s*([0-9]{5,10})\b/i);
-  if (directPptMatch && directPptMatch[1]) {
-    return { found: true, cedula: directPptMatch[1].replace(/\D/g, ""), tipoDoc: "ppt" };
-  }
-  const directNitMatch = clean.match(/\b(?:nit)\s*[:#]?\s*([0-9]{4,12})\b/i);
-  if (directNitMatch && directNitMatch[1]) {
-    return { found: true, cedula: directNitMatch[1].replace(/\D/g, ""), tipoDoc: "nit" };
-  }
-  const directPaMatch = clean.match(/\b(?:pasaporte|pa)\s*[:#]?\s*([a-zA-Z0-9]{5,15})\b/i);
-  if (directPaMatch && directPaMatch[1]) {
-    return { found: true, cedula: directPaMatch[1].toUpperCase(), tipoDoc: "pa" };
-  }
-  const pureNumberMatch = clean.match(/^\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\s*$/);
-  if (pureNumberMatch && pureNumberMatch[1]) {
-    const rawNumber = pureNumberMatch[1].replace(/\D/g, "");
-    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
-      if (isPrivateDm) {
-        return { found: true, cedula: rawNumber, tipoDoc: "cc" };
+  const isJaniaMention = /(?:jania|@jania)/i.test(clean);
+  if (items.length === 0 && (isPrivateDm || hasKeyword || isJaniaMention)) {
+    const numRegex = /\b([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b/g;
+    let m;
+    while ((m = numRegex.exec(clean)) !== null) {
+      const raw = m[1];
+      const ced = raw.replace(/\D/g, "");
+      if (ced.length >= 5 && ced.length <= 10) {
+        items.push({ cedula: ced, tipoDoc: "cc", rawNumber: raw });
       }
     }
   }
-  const janiaNumberMatch = clean.match(/(?:jania|@jania)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/i);
-  if (janiaNumberMatch && janiaNumberMatch[1]) {
-    const rawNumber = janiaNumberMatch[1].replace(/\D/g, "");
-    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
-      return { found: true, cedula: rawNumber, tipoDoc: "cc" };
+  const seen = /* @__PURE__ */ new Set();
+  const deduped = [];
+  for (const it of items) {
+    if (!seen.has(it.cedula)) {
+      seen.add(it.cedula);
+      deduped.push(it);
     }
   }
-  return { found: false, cedula: "", tipoDoc: "cc" };
+  return deduped;
+}
+function extractCedulaForVerification(text2, isPrivateDm = false) {
+  const items = extractAllCedulasForVerification(text2, isPrivateDm);
+  if (items.length > 0) {
+    return {
+      found: true,
+      cedula: items[0].cedula,
+      tipoDoc: items[0].tipoDoc,
+      items
+    };
+  }
+  return { found: false, cedula: "", tipoDoc: "cc", items: [] };
 }
 function formatCedulaNumber(cedula, tipoDoc = "cc") {
   if (!cedula) return "";
@@ -16659,12 +16718,171 @@ function getDocumentTypeLabel(tipoDoc = "cc") {
   if (t2 === "dp" || t2 === "dpo") return "Documento Pa\xEDs de Origen (D.P.)";
   return "C.C.";
 }
-async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = false) {
-  const detection = extractCedulaForVerification(text2, isPrivateDm);
-  if (!detection.found) {
+async function verifySingleDocumentInternal(item) {
+  const { cedula, tipoDoc, detectedName } = item;
+  const ponalCacheKey = `POLICIA:${tipoDoc}:${cedula}`;
+  const pgnCacheKey = `PROCURADURIA:${mapTipoDocToProcuraduria(tipoDoc) || tipoDoc}:${cedula}`;
+  const adresCacheKey = `ADRES:${mapTipoDocToAdres(tipoDoc) || tipoDoc}:${cedula}`;
+  const cachedName = identityCache.get(ponalCacheKey)?.fullName || identityCache.get(pgnCacheKey)?.fullName || identityCache.get(adresCacheKey)?.fullName;
+  if (cachedName) {
+    const officialName = formatTitleCase(cachedName);
+    return {
+      cedula,
+      tipoDoc,
+      success: true,
+      officialName,
+      detectedName
+    };
+  }
+  const isProcuraduriaSupported = ["cc", "ce", "cx", "pep", "ppt", "nit"].includes(tipoDoc.toLowerCase());
+  const isPoliciaSupported = ["cc", "ce", "cx", "pa", "dp"].includes(tipoDoc.toLowerCase());
+  const isAdresSupported = ["cc", "ce", "cx", "pep", "ppt", "pa"].includes(tipoDoc.toLowerCase());
+  let pgnRes = null;
+  let ponalRes = null;
+  let adresRes = null;
+  try {
+    if (tipoDoc.toLowerCase() === "cc") {
+      ponalRes = await queryPoliciaNacional(tipoDoc, cedula).catch(() => null);
+      if (!ponalRes?.officialName && isProcuraduriaSupported) {
+        pgnRes = await queryProcuraduria(tipoDoc, cedula).catch(() => null);
+      }
+      if (!ponalRes?.officialName && !pgnRes?.officialName && isAdresSupported) {
+        adresRes = await queryAdres(tipoDoc, cedula).catch(() => null);
+      }
+    } else {
+      if (isProcuraduriaSupported) {
+        pgnRes = await queryProcuraduria(tipoDoc, cedula).catch(() => null);
+      }
+      if (isPoliciaSupported) {
+        ponalRes = await queryPoliciaNacional(tipoDoc, cedula).catch(() => null);
+      }
+      if (isAdresSupported) {
+        adresRes = await queryAdres(tipoDoc, cedula).catch(() => null);
+      }
+    }
+    const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) || (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) || (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : null);
+    if (officialName) {
+      identityCache.set(adresCacheKey, { fullName: officialName, timestamp: Date.now() });
+      return {
+        cedula,
+        tipoDoc,
+        success: true,
+        officialName,
+        detectedName,
+        procuraduria: pgnRes || void 0,
+        policia: ponalRes || void 0,
+        adres: adresRes || void 0
+      };
+    } else {
+      return {
+        cedula,
+        tipoDoc,
+        success: false,
+        detectedName,
+        procuraduria: pgnRes || void 0,
+        policia: ponalRes || void 0,
+        adres: adresRes || void 0
+      };
+    }
+  } catch (err) {
+    return {
+      cedula,
+      tipoDoc,
+      success: false,
+      detectedName
+    };
+  }
+}
+function buildConsolidatedReportText(results) {
+  const allSuccess = results.every((r) => r.success);
+  const someSuccess = results.some((r) => r.success);
+  let reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+`;
+  reportText += `Se consultaron las bases oficiales de seguridad y aseguramiento del Estado (Polic\xEDa Nacional, Procuradur\xEDa General y ADRES/BDUA):
+
+`;
+  results.forEach((r, idx) => {
+    const numBadge = idx === 0 ? "1\uFE0F\u20E3" : idx === 1 ? "2\uFE0F\u20E3" : idx === 2 ? "3\uFE0F\u20E3" : `${idx + 1}\uFE0F\u20E3`;
+    const formattedNum = formatCedulaNumber(r.cedula, r.tipoDoc);
+    const docLabel = getDocumentTypeLabel(r.tipoDoc);
+    const titleName = r.officialName || r.detectedName || `Documento ${formattedNum}`;
+    reportText += `${numBadge} *${titleName.toUpperCase()}*
+`;
+    reportText += `\u{1F194} *Documento:* ${docLabel} ${formattedNum}
+`;
+    if (r.officialName) {
+      reportText += `\u{1F464} *Titular Oficial:* ${r.officialName}
+`;
+    } else if (r.detectedName) {
+      reportText += `\u{1F464} *Nombre Suministrado:* ${r.detectedName}
+`;
+    }
+    if (r.adres?.eps) {
+      reportText += `\u{1F3E5} *Afiliaci\xF3n en Salud (ADRES / BDUA):* ${r.adres.eps} (${r.adres.estado || "REGISTRADO"}${r.adres.regimen ? ` \u2014 ${r.adres.regimen}` : ""})
+`;
+    }
+    if (r.adres?.municipio && !r.adres.municipio.toLowerCase().includes("informacion")) {
+      reportText += `\u{1F4CD} *Ubicaci\xF3n Registrada:* ${r.adres.municipio}
+`;
+    }
+    if (r.procuraduria?.statusText && ["ce", "cx", "pep", "ppt", "pa", "dp"].includes(r.tipoDoc.toLowerCase())) {
+      reportText += `\u{1F3DB}\uFE0F *Central de Control Notarial:* ${r.procuraduria.statusText}
+`;
+    }
+    if (r.success) {
+      reportText += `\u2696\uFE0F *Central de Seguridad:* Sin antecedentes judiciales ni requerimientos penales pendientes ante la Polic\xEDa Nacional.
+`;
+      reportText += `\u2705 *Estado:* Ciudadano(a) verificado(a) y habilitado(a) para operaciones inmobiliarias.
+
+`;
+    } else {
+      reportText += `\u2696\uFE0F *Central de Seguridad:* ${r.policia?.message || "Sin antecedentes registrados o documento pendiente de indexaci\xF3n."}
+`;
+      reportText += `\u26A0\uFE0F *Estado:* Documento sin registro de identidad certificado en l\xEDnea. Se recomienda cotejo del documento f\xEDsico.
+
+`;
+    }
+  });
+  if (allSuccess) {
+    reportText += `\u2705 *Dictamen Notarial Consolidado:* Todos los ciudadanos consultados cuentan con verificaci\xF3n oficial favorable sin alertas restrictivas para operaciones inmobiliarias.`;
+  } else if (someSuccess) {
+    reportText += `\u26A0\uFE0F *Dictamen Notarial Consolidado:* Verificaci\xF3n parcial completada. Revisa las orientaciones de los documentos que requieran cotejo f\xEDsico directo.`;
+  } else {
+    reportText += `\u26A0\uFE0F *Dictamen Notarial Consolidado:* Se sugiere solicitar fotocopia legible o documento f\xEDsico para cotejo directo ante notar\xEDas.`;
+  }
+  return reportText;
+}
+async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = false, userId, explicitItems) {
+  const items = explicitItems && explicitItems.length > 0 ? explicitItems : extractAllCedulasForVerification(text2, isPrivateDm);
+  if (items.length === 0) {
     return { isVerificationRequest: false };
   }
-  const { cedula, tipoDoc } = detection;
+  if (items.length > 1) {
+    const results = [];
+    for (const item2 of items) {
+      const res = await verifySingleDocumentInternal(item2);
+      results.push(res);
+    }
+    const allSuccess = results.every((r) => r.success);
+    const reportText = buildConsolidatedReportText(results);
+    if (userId) {
+      savePendingCedulaSession(userId, items, reportText, allSuccess);
+    }
+    return {
+      isVerificationRequest: true,
+      cedula: items.map((i) => i.cedula).join(", "),
+      tipoDoc: items[0].tipoDoc,
+      success: allSuccess,
+      officialName: results.map((r) => r.officialName || r.detectedName || r.cedula).join(" / "),
+      source: "Central Multifuente Notarial VECY (ADRES BDUA + Procuradur\xEDa General + Polic\xEDa Nacional)",
+      reportText,
+      results,
+      items
+    };
+  }
+  const item = items[0];
+  const { cedula, tipoDoc } = item;
   const formattedCedula = formatCedulaNumber(cedula, tipoDoc);
   const docLabel = getDocumentTypeLabel(tipoDoc);
   const ponalCacheKey = `POLICIA:${tipoDoc}:${cedula}`;
@@ -16681,6 +16899,9 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
 \u{1F194} *El documento:* ${docLabel} ${formattedCedula}
 \u{1F464} *Pertenece a:* ${officialName}${pgnLine}
 \u2705 *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
+    if (userId) {
+      savePendingCedulaSession(userId, items, reportText, true);
+    }
     return {
       isVerificationRequest: true,
       cedula,
@@ -16688,7 +16909,8 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
       success: true,
       officialName,
       source: "Central Multifuente Notarial VECY (ADRES BDUA + Procuradur\xEDa General + Polic\xEDa Nacional - Cach\xE9)",
-      reportText
+      reportText,
+      items
     };
   }
   try {
@@ -16733,6 +16955,9 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
 \u{1F194} *El documento:* ${docLabel} ${formattedCedula}
 \u{1F464} *Pertenece a:* ${officialName}${epsLine}${locationLine}${pgnLine}${securityLine}
 \u2705 *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
+      if (userId) {
+        savePendingCedulaSession(userId, items, reportText, true);
+      }
       return {
         isVerificationRequest: true,
         cedula,
@@ -16743,7 +16968,8 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
         reportText,
         procuraduria: pgnRes || void 0,
         policia: ponalRes || void 0,
-        adres: adresRes || void 0
+        adres: adresRes || void 0,
+        items
       };
     } else {
       let customGuidance = "";
@@ -16770,6 +16996,9 @@ Consultamos las bases de datos oficiales de seguridad del Estado para el documen
 \u2022 Verifica que el n\xFAmero digitado coincida exactamente con el documento f\xEDsico.
 
 \u{1F4A1} Puedes verificar nuevamente escribi\xE9ndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.`;
+      if (userId) {
+        savePendingCedulaSession(userId, items, reportText, false);
+      }
       return {
         isVerificationRequest: true,
         cedula,
@@ -16778,20 +17007,23 @@ Consultamos las bases de datos oficiales de seguridad del Estado para el documen
         reportText,
         procuraduria: pgnRes || void 0,
         policia: ponalRes || void 0,
-        adres: adresRes || void 0
+        adres: adresRes || void 0,
+        items
       };
     }
   } catch (err) {
+    const errorReport = `\u26A0\uFE0F Ocurri\xF3 una intermitencia temporal de enlace con las centrales de verificaci\xF3n para el documento ${docLabel} ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`;
     return {
       isVerificationRequest: true,
       cedula,
       tipoDoc,
       success: false,
-      reportText: `\u26A0\uFE0F Ocurri\xF3 una intermitencia temporal de enlace con las centrales de verificaci\xF3n para el documento ${docLabel} ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`
+      reportText: errorReport,
+      items
     };
   }
 }
-var IDENTITY_CACHE_TTL2, pgnEndpointCache, adresEndpointCache;
+var IDENTITY_CACHE_TTL2, pgnEndpointCache, adresEndpointCache, pendingCedulaSessions;
 var init_identityVerificationService = __esm({
   "server/_core/identityVerificationService.ts"() {
     "use strict";
@@ -16799,6 +17031,7 @@ var init_identityVerificationService = __esm({
     IDENTITY_CACHE_TTL2 = 24 * 60 * 60 * 1e3;
     pgnEndpointCache = null;
     adresEndpointCache = null;
+    pendingCedulaSessions = /* @__PURE__ */ new Map();
   }
 });
 
@@ -21892,14 +22125,48 @@ P\xEDdele con toda tranquilidad a tu cliente o colega su n\xFAmero de documento 
     appendDmHistory(userId, "assistant", docPromptMsg);
     return docPromptMsg;
   }
-  const { extractCedulaForVerification: extractCedulaForVerification2, executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+  const { extractCedulaForVerification: extractCedulaForVerification2, executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2, getPendingCedulaSession: getPendingCedulaSession2, extractAllCedulasForVerification: extractAllCedulasForVerification2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
   const idDetection = extractCedulaForVerification2(clean, true);
   if (idDetection.found) {
-    const idCheck = await executeIdentityVerificationFromWhatsApp2(clean, true);
+    const idCheck = await executeIdentityVerificationFromWhatsApp2(clean, true, userId);
     if (idCheck.isVerificationRequest && idCheck.reportText) {
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", idCheck.reportText);
       return idCheck.reportText;
+    }
+  }
+  const isAskingPendingCedulas = /(?:colaboras|ayudas|revisaste|verificaste|consultaste|miraste|sabes|sabemos|qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|falta|pendiente|salieron|listo|listas|listos|novedad|noticia|informaci[oó]n|resultado|reporte).*(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores)/i.test(cleanLower) || /(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores).*(?:qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|colaboras|ayudas|revisaste|verificaste|consultaste|salieron|falta|pendiente|s[oó]lo|solo|ya|listo)/i.test(cleanLower) || /(?:pero|y|s[oó]lo|solo|entonces)\s*.*(?:c[eé]dula|c[eé]dulas|documentos?|antecedentes?)/i.test(cleanLower) || /(?:qu[eé]\s*pas[oó]\s*con|qu[eé]\s*hay\s*de|sabes\s*algo\s*de)\s*(?:las|los)?\s*(?:c[eé]dulas?|documentos?|antecedentes?|compradores)/i.test(cleanLower) || /^(?:s[oó]lo|solo|y)?\s*(?:las|los|mis)?\s*(?:c[eé]dulas?|documentos?|antecedentes?)[.?]?$/i.test(cleanLower) || getPendingCedulaSession2(userId) !== null && /(?:aqu[ií]\s*estoy|sigo\s*esperando|estoy\s*atenta|estoy\s*pendiente|quedo\s*atenta|alguna\s*respuesta|alguna\s*novedad|av[ií]same)/i.test(cleanLower);
+  if (isAskingPendingCedulas) {
+    const pendingSession = getPendingCedulaSession2(userId);
+    if (pendingSession && pendingSession.reportText) {
+      const followUpMsg = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial de verificaci\xF3n que consultamos en las centrales de seguridad:
+
+${pendingSession.reportText}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", followUpMsg);
+      return followUpMsg;
+    }
+    const history2 = await getOrLoadDmHistory(userId);
+    let historicalItems = [];
+    for (let i = history2.length - 1; i >= 0; i--) {
+      if (history2[i].role === "user") {
+        const histCed = extractAllCedulasForVerification2(history2[i].content, true);
+        if (histCed.length > 0) {
+          historicalItems = histCed;
+          break;
+        }
+      }
+    }
+    if (historicalItems.length > 0) {
+      const idCheck = await executeIdentityVerificationFromWhatsApp2(clean, true, userId, historicalItems);
+      if (idCheck.reportText) {
+        const followUpMsg = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial de verificaci\xF3n de los documentos que me compartiste:
+
+${idCheck.reportText}`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", followUpMsg);
+        return followUpMsg;
+      }
     }
   }
   try {
@@ -21948,7 +22215,7 @@ PEDAGOG\xCDA DE REACCIONES Y EMOJIS EN GRUPOS INMOBILIARIOS:
 - NUNCA repitas como un contestador autom\xE1tico "\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesor\xEDa, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.
 - Conversa como una profesional inmobiliaria colombiana experta, culta, amena y emp\xE1tica. CERO tecnicismos computacionales ni lenguaje de bot.
 - Mant\xE9n respuestas concisas y bien estructuradas (2 a 4 p\xE1rrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).
-- PROHIBICI\xD3N ABSOLUTA DE SIMULAR O ALUCINAR VERIFICACIONES: NUNCA inventes, afirmes o simules que realizaste una consulta a la Polic\xEDa Nacional o antecedentes penales. Esas validaciones se ejecutan de manera certificada por el motor oficial del sistema.
+- PROHIBICI\xD3N ABSOLUTA DE SIMULAR O ALUCINAR VERIFICACIONES: NUNCA inventes, afirmes o simules que realizaste una consulta a la Polic\xEDa Nacional, Procuradur\xEDa o ADRES si no cuentas con el reporte emitido por el sistema oficial. Jam\xE1s digas cosas como "lo importante es que ya quedaron verificadas esas dos identificaciones" o "en un momento te confirmo" dando falsas seguridades sin que el sistema haya emitido el reporte real. Esas validaciones se ejecutan de manera certificada por el motor oficial del sistema.
 
 DOCTRINA OFICIAL VECY: PROTECCI\xD3N DE DATOS (LEY 1581 DE 2012), H\xC1BEAS DATA Y SEGURIDAD EN VISITAS:
 - PRINCIPIO DE TRANSPARENCIA FRENTE A LA CLANDESTINIDAD:

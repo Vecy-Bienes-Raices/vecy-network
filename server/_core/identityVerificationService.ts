@@ -41,6 +41,39 @@ export interface AdresResult {
   error?: string;
 }
 
+export interface ExtractedCedulaItem {
+  cedula: string;
+  tipoDoc: string;
+  rawNumber: string;
+  detectedName?: string;
+}
+
+export interface SingleIdentityReport {
+  cedula: string;
+  tipoDoc: string;
+  success: boolean;
+  officialName?: string;
+  detectedName?: string;
+  reportText?: string;
+  procuraduria?: ProcuraduriaResult;
+  adres?: AdresResult;
+  policia?: {
+    valid?: boolean;
+    match?: boolean;
+    success?: boolean;
+    officialName?: string;
+    message?: string;
+    source?: string;
+  };
+}
+
+export interface PendingCedulaSession {
+  items: ExtractedCedulaItem[];
+  reportText: string;
+  success: boolean;
+  timestamp: number;
+}
+
 export interface IdentityVerificationReport {
   isVerificationRequest: boolean;
   cedula?: string;
@@ -59,6 +92,8 @@ export interface IdentityVerificationReport {
     message?: string;
     source?: string;
   };
+  results?: SingleIdentityReport[];
+  items?: ExtractedCedulaItem[];
 }
 
 /**
@@ -570,181 +605,164 @@ export async function queryAdres(tipoDoc: string, numDoc: string): Promise<Adres
   }
 }
 
+// 🛡️ MEMORIA DE SESIÓN DE IDENTIDAD PENDIENTE
+const pendingCedulaSessions = new Map<string, PendingCedulaSession>();
+
+export function savePendingCedulaSession(userId: string, items: ExtractedCedulaItem[], reportText: string, success: boolean): void {
+  if (!userId) return;
+  pendingCedulaSessions.set(userId, {
+    items,
+    reportText,
+    success,
+    timestamp: Date.now()
+  });
+}
+
+export function getPendingCedulaSession(userId: string): PendingCedulaSession | null {
+  if (!userId) return null;
+  const session = pendingCedulaSessions.get(userId);
+  if (!session) return null;
+  // Expirar a las 24 horas
+  if (Date.now() - session.timestamp > 24 * 60 * 60 * 1000) {
+    pendingCedulaSessions.delete(userId);
+    return null;
+  }
+  return session;
+}
+
 /**
- * Detecta si un mensaje textual corresponde a una solicitud de verificación de documento de identidad
- * Soporta Cédula de Ciudadanía (cc), Cédula de Extranjería (ce/cx), PEP, PPT, NIT, Pasaporte (pa) y Documento País de Origen (dp).
+ * Limpia y evalúa si una cadena textual corresponde a un nombre de persona verosímil
  */
-export function extractCedulaForVerification(text: string, isPrivateDm: boolean = false): { found: boolean; cedula: string; tipoDoc: string } {
-  if (!text || typeof text !== 'string') return { found: false, cedula: '', tipoDoc: 'cc' };
+function cleanPotentialPersonName(str?: string): string | undefined {
+  if (!str) return undefined;
+  let s = str.replace(/^(?:los|las)?\s*(?:compradores|comprador|arrendatarios|arrendatario|codeudores|codeudor|clientes|cliente|titulares|titular|nombres|nombre)\s*(?:se\s*llaman|es|son)?\s*[:#-]?\s*/i, "");
+  s = s.replace(/^\s*(?:y|e|o)\s+/i, "");
+  s = s.replace(/^\d+[\.\)-]\s*/, "");
+  s = s.replace(/[-:]\s*$/, "").trim();
+  if (!s || s.length < 3 || s.length > 50) return undefined;
+  const sLower = s.toLowerCase();
+  if (sLower.includes("compradores se llaman") || sLower.includes("hola") || sLower.includes("buenos") || sLower.includes("gracias") || sLower.includes("buenas")) return undefined;
+  if (/\d/.test(s)) return undefined;
+  return s;
+}
+
+/**
+ * Extrae TODAS las cédulas y documentos de identidad presentes en un mensaje.
+ * Soporta 1, 2 o más documentos en una sola comunicación (ej. pareja de compradores, arrendatario + codeudor).
+ * Admite formatos como CC No., CC N°, CC #, CC:, C.C., con o sin puntos de miles.
+ */
+export function extractAllCedulasForVerification(text: string, isPrivateDm: boolean = false): ExtractedCedulaItem[] {
+  if (!text || typeof text !== 'string') return [];
 
   const clean = text.trim();
   const lower = clean.toLowerCase();
 
-  // Descartar si el texto es muy largo y claramente describe una oferta o demanda inmobiliaria
+  // Descartar si el texto es claramente una oferta o demanda inmobiliaria
   if (lower.includes('vendo') || lower.includes('arriendo') || lower.includes('busco apto') || lower.includes('presupuesto')) {
-    return { found: false, cedula: '', tipoDoc: 'cc' };
+    return [];
   }
 
   // Descartar si el mensaje es una consulta de impuesto predial o CHIP catastral
   if (lower.includes('predial') || lower.includes('chip') || lower.includes('impuesto')) {
-    return { found: false, cedula: '', tipoDoc: 'cc' };
+    return [];
   }
 
-  // Palabras clave de intención de verificación
-  const keywords = ['verificar', 'verificacion', 'verificación', 'validar', 'consultar', 'revisar', 'chequear', 'antecedentes', 'cédula', 'cedula', 'documento', 'extranjería', 'extranjeria', 'pasaporte', 'pasaportes', 'pep', 'ppt', 'nit'];
+  const keywords = [
+    'verificar', 'verificacion', 'verificación', 'validar', 'validación', 'validacion',
+    'consultar', 'consulta', 'revisar', 'rrvisar', 'chequear', 'mirar', 'antecedentes',
+    'cédula', 'cedula', 'cédulas', 'cedulas', 'documento', 'documentos', 'identificación', 'identificacion',
+    'extranjería', 'extranjeria', 'pasaporte', 'pasaportes', 'pep', 'ppt', 'nit',
+    'comprador', 'compradores', 'arrendatario', 'arrendatarios', 'codeudor', 'codeudores', 'inquilino', 'inquilinos', 'titular', 'titulares'
+  ];
   const hasKeyword = keywords.some(kw => lower.includes(kw));
 
-  // 1. Detectar tipo de documento con prioridad específica
-  let tipoDoc = 'cc';
-  if (lower.includes('pep') || lower.includes('especial de permanencia')) {
-    tipoDoc = 'pep';
-  } else if (lower.includes('ppt') || lower.includes('proteccion temporal') || lower.includes('protección temporal')) {
-    tipoDoc = 'ppt';
-  } else if (lower.includes('nit')) {
-    tipoDoc = 'nit';
-  } else if (lower.includes('extranjer') || /(?<!\p{L})(?:ce|cx)(?!\p{L})/iu.test(lower)) {
-    tipoDoc = 'cx';
-  } else if (lower.includes('origen') || /(?<!\p{L})(?:dp|dpo)(?!\p{L})/iu.test(lower)) {
-    tipoDoc = 'dp';
-  } else if (lower.includes('pasaporte') || /(?<!\p{L})pa(?!\p{L})/iu.test(lower)) {
-    tipoDoc = 'pa';
-  }
+  const items: ExtractedCedulaItem[] = [];
+  const lines = clean.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
-  // 2. Patrón específico para PEP (Permiso Especial de Permanencia)
-  if (tipoDoc === 'pep') {
-    const regexPep = /(?:pep|permiso\s+especial\s+de\s+permanencia)\s*[:#]?\s*([a-zA-Z0-9]{10,18})/i;
-    const matchPep = clean.match(regexPep);
-    if (matchPep && matchPep[1]) {
-      return { found: true, cedula: matchPep[1].toUpperCase(), tipoDoc: 'pep' };
-    }
-  }
+  // Patrones para cada tipo de documento con soporte de conectores (No., N°, #, :, -, espacio)
+  const docPatterns = [
+    { type: 'pep', regex: /(?:pep|permiso\s+especial\s+de\s+permanencia)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{10,18})/gi, sanitize: (s: string) => s.toUpperCase() },
+    { type: 'ppt', regex: /(?:ppt|permiso\s+(?:de|por)\s+protecci[oó]n\s+temporal)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{5,10})/gi, sanitize: (s: string) => s.replace(/\D/g, '') },
+    { type: 'nit', regex: /(?:nit)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{4,12})/gi, sanitize: (s: string) => s.replace(/\D/g, '') },
+    { type: 'dp', regex: /(?:documento\s+pa[ií]s\s+(?:de\s+)?origen|dp|dpo)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{5,15})/gi, sanitize: (s: string) => s.toUpperCase() },
+    { type: 'pa', regex: /(?:pasaporte|pa)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([a-zA-Z0-9]{5,15})/gi, sanitize: (s: string) => s.toUpperCase() },
+    { type: 'cx', regex: /(?:c[ée]dula\s+de\s+extranjer[ií]a|extranjer[ií]a|c\.?e\.?|c\.?x\.?)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{4,10})/gi, sanitize: (s: string) => s.replace(/\D/g, '') },
+    { type: 'cc', regex: /(?:c\.?c\.?|c[ée]dula(?:\s+de\s+ciudadan[ií]a)?|identificaci[oó]n|documento)(?:\s*(?:no\.?|n°|nro\.?|num\.?|n[uú]mero|#|:|-)\s*|\s+)([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s: string) => s.replace(/\D/g, '') },
+    { type: 'cc', regex: /(?:verificar|verificaci[oó]n|validar|consultar|revisar|antecedentes)\s*(?:sus|los|el)?\s*(?:de\s+)?([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s: string) => s.replace(/\D/g, '') }
+  ];
 
-  // 3. Patrón específico para PPT (Permiso por Protección Temporal)
-  if (tipoDoc === 'ppt') {
-    const regexPpt = /(?:ppt|permiso\s+(?:de|por)\s+protecci[oó]n\s+temporal)\s*[:#]?\s*([0-9]{5,10})/i;
-    const matchPpt = clean.match(regexPpt);
-    if (matchPpt && matchPpt[1]) {
-      return { found: true, cedula: matchPpt[1].replace(/\D/g, ''), tipoDoc: 'ppt' };
-    }
-  }
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    for (const pat of docPatterns) {
+      pat.regex.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      let lastMatchEnd = 0;
+      while ((m = pat.regex.exec(line)) !== null) {
+        const raw = m[1];
+        const ced = pat.sanitize(raw);
+        if (pat.type === 'cc' && (ced.length < 5 || ced.length > 10)) continue;
+        if (pat.type === 'cx' && (ced.length < 4 || ced.length > 10)) continue;
 
-  // 4. Patrón específico para NIT
-  if (tipoDoc === 'nit') {
-    const regexNit = /(?:nit)\s*[:#]?\s*([0-9]{4,12})/i;
-    const matchNit = clean.match(regexNit);
-    if (matchNit && matchNit[1]) {
-      return { found: true, cedula: matchNit[1].replace(/\D/g, ''), tipoDoc: 'nit' };
-    }
-  }
-
-  // 5. Patrón específico para Documento País de Origen
-  if (tipoDoc === 'dp') {
-    const regexDp = /(?:documento\s+pa[ií]s\s+(?:de\s+)?origen|dp|dpo)\s*[:#]?\s*([a-zA-Z0-9]{5,15})/i;
-    const matchDp = clean.match(regexDp);
-    if (matchDp && matchDp[1]) {
-      return { found: true, cedula: matchDp[1].toUpperCase(), tipoDoc: 'dp' };
-    }
-  }
-
-  // 6. Patrón específico para Pasaporte (permite alfanumérico de 5 a 15 caracteres)
-  if (tipoDoc === 'pa') {
-    const regexPa = /(?:pasaporte|pa)\s*[:#]?\s*([a-zA-Z0-9]{5,15})/i;
-    const matchPa = clean.match(regexPa);
-    if (matchPa && matchPa[1]) {
-      return { found: true, cedula: matchPa[1].toUpperCase(), tipoDoc: 'pa' };
-    }
-  }
-
-  // 7. Patrón específico para Cédula de Extranjería (4 a 10 dígitos)
-  if (tipoDoc === 'cx') {
-    const regexCe = /(?:verificar|validar|consultar|revisar|antecedentes|c[ée]dula)?\s*(?:de\s+extranjer[ií]a|ce|cx)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{4,10})/i;
-    const matchCe = clean.match(regexCe);
-    if (matchCe && matchCe[1]) {
-      const rawNumber = matchCe[1].replace(/\D/g, '');
-      if (rawNumber.length >= 4 && rawNumber.length <= 10) {
-        return { found: true, cedula: rawNumber, tipoDoc: 'cx' };
+        let detectedName: string | undefined;
+        const lineBeforeDoc = line.substring(lastMatchEnd, m.index).trim();
+        if (lineBeforeDoc) {
+          detectedName = cleanPotentialPersonName(lineBeforeDoc);
+        } else if (i > 0) {
+          detectedName = cleanPotentialPersonName(lines[i - 1]);
+        }
+        items.push({ cedula: ced, tipoDoc: pat.type, rawNumber: raw, detectedName });
+        lastMatchEnd = pat.regex.lastIndex;
       }
     }
   }
 
-  // 8. Expresión regular explícita para Cédula de Ciudadanía u orden general
-  // Ejemplos: "verificar cédula 52432900", "CC 52.432.900", "JanIA verificar cc: 39786573", "cédula: 1018456789"
-  const regexExplicit = /(?:verificar|verificaci[oó]n|validar|consultar|revisar|antecedentes|c[ée]dula|documento|cc)\s*(?:de\s+ciudadan[ií]a\s*)?(?:cc|ce|cx)?\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/i;
-  const matchExplicit = clean.match(regexExplicit);
-
-  if (matchExplicit && matchExplicit[1]) {
-    const rawNumber = matchExplicit[1].replace(/\D/g, '');
-    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
-      return { found: true, cedula: rawNumber, tipoDoc };
-    }
-  }
-
-  // 9. Si tiene palabra clave de intención y hay un número en el texto
-  if (hasKeyword) {
-    const numberMatches = clean.match(/\b([0-9]{5,10})\b/);
-    if (numberMatches && numberMatches[1]) {
-      return { found: true, cedula: numberMatches[1], tipoDoc };
-    }
-  }
-
-  // 10. Formato directo tipo "CC 52432900", "C.C. 52.432.900", "CE 123456", "PA A1234567", "PEP 123456789012345"
-  const directCcMatch = clean.match(/\b(?:c\.?c\.?)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b/i);
-  if (directCcMatch && directCcMatch[1]) {
-    const rawNumber = directCcMatch[1].replace(/\D/g, '');
-    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
-      return { found: true, cedula: rawNumber, tipoDoc: 'cc' };
-    }
-  }
-
-  const directCeMatch = clean.match(/\b(?:c\.?e\.?|c\.?x\.?)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{4,10})\b/i);
-  if (directCeMatch && directCeMatch[1]) {
-    const rawNumber = directCeMatch[1].replace(/\D/g, '');
-    if (rawNumber.length >= 4 && rawNumber.length <= 10) {
-      return { found: true, cedula: rawNumber, tipoDoc: 'cx' };
-    }
-  }
-
-  const directPepMatch = clean.match(/\b(?:p\.?e\.?p\.?)\s*[:#]?\s*([a-zA-Z0-9]{10,18})\b/i);
-  if (directPepMatch && directPepMatch[1]) {
-    return { found: true, cedula: directPepMatch[1].toUpperCase(), tipoDoc: 'pep' };
-  }
-
-  const directPptMatch = clean.match(/\b(?:p\.?p\.?t\.?)\s*[:#]?\s*([0-9]{5,10})\b/i);
-  if (directPptMatch && directPptMatch[1]) {
-    return { found: true, cedula: directPptMatch[1].replace(/\D/g, ''), tipoDoc: 'ppt' };
-  }
-
-  const directNitMatch = clean.match(/\b(?:nit)\s*[:#]?\s*([0-9]{4,12})\b/i);
-  if (directNitMatch && directNitMatch[1]) {
-    return { found: true, cedula: directNitMatch[1].replace(/\D/g, ''), tipoDoc: 'nit' };
-  }
-
-  const directPaMatch = clean.match(/\b(?:pasaporte|pa)\s*[:#]?\s*([a-zA-Z0-9]{5,15})\b/i);
-  if (directPaMatch && directPaMatch[1]) {
-    return { found: true, cedula: directPaMatch[1].toUpperCase(), tipoDoc: 'pa' };
-  }
-
-  // 11. Detección directa de número de cédula puro en DM privado (ej: "52432900" o "52.432.900")
-  const pureNumberMatch = clean.match(/^\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\s*$/);
-  if (pureNumberMatch && pureNumberMatch[1]) {
-    const rawNumber = pureNumberMatch[1].replace(/\D/g, '');
-    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
-      if (isPrivateDm) {
-        return { found: true, cedula: rawNumber, tipoDoc: 'cc' };
+  // Detección directa de números puros en DM o si hay palabra clave o mención a @JanIA
+  const isJaniaMention = /(?:jania|@jania)/i.test(clean);
+  if (items.length === 0 && (isPrivateDm || hasKeyword || isJaniaMention)) {
+    const numRegex = /\b([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})\b/g;
+    let m: RegExpExecArray | null;
+    while ((m = numRegex.exec(clean)) !== null) {
+      const raw = m[1];
+      const ced = raw.replace(/\D/g, '');
+      if (ced.length >= 5 && ced.length <= 10) {
+        items.push({ cedula: ced, tipoDoc: 'cc', rawNumber: raw });
       }
     }
   }
 
-  // 12. Detección cuando se menciona o etiqueta a JanIA con un número (ej: "JanIA 52432900" o "@JanIA 52.432.900")
-  const janiaNumberMatch = clean.match(/(?:jania|@jania)\s*[:#]?\s*([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/i);
-  if (janiaNumberMatch && janiaNumberMatch[1]) {
-    const rawNumber = janiaNumberMatch[1].replace(/\D/g, '');
-    if (rawNumber.length >= 5 && rawNumber.length <= 10) {
-      return { found: true, cedula: rawNumber, tipoDoc: 'cc' };
+  // Deduplicar por número de documento
+  const seen = new Set<string>();
+  const deduped: ExtractedCedulaItem[] = [];
+  for (const it of items) {
+    if (!seen.has(it.cedula)) {
+      seen.add(it.cedula);
+      deduped.push(it);
     }
   }
+  return deduped;
+}
 
-  return { found: false, cedula: '', tipoDoc: 'cc' };
+/**
+ * Detecta si un mensaje textual corresponde a una solicitud de verificación de documento de identidad
+ * Soporta Cédula de Ciudadanía (cc), Cédula de Extranjería (ce/cx), PEP, PPT, NIT, Pasaporte (pa) y Documento País de Origen (dp).
+ * Mantiene compatibilidad total devolviendo { found, cedula, tipoDoc, items }.
+ */
+export function extractCedulaForVerification(text: string, isPrivateDm: boolean = false): {
+  found: boolean;
+  cedula: string;
+  tipoDoc: string;
+  items?: ExtractedCedulaItem[];
+} {
+  const items = extractAllCedulasForVerification(text, isPrivateDm);
+  if (items.length > 0) {
+    return {
+      found: true,
+      cedula: items[0].cedula,
+      tipoDoc: items[0].tipoDoc,
+      items
+    };
+  }
+  return { found: false, cedula: '', tipoDoc: 'cc', items: [] };
 }
 
 /**
@@ -776,16 +794,195 @@ export function getDocumentTypeLabel(tipoDoc: string = 'cc'): string {
 }
 
 /**
- * Ejecuta la verificación oficial ante las centrales de seguridad del Estado (Procuraduría General + Policía Nacional)
- * y construye el dictamen notarial para operaciones inmobiliarias bajo estricta marca blanca de VECY Bienes Raíces.
+ * Ejecuta la verificación oficial de un documento individual
  */
-export async function executeIdentityVerificationFromWhatsApp(text: string, isPrivateDm: boolean = false): Promise<IdentityVerificationReport> {
-  const detection = extractCedulaForVerification(text, isPrivateDm);
-  if (!detection.found) {
+async function verifySingleDocumentInternal(item: ExtractedCedulaItem): Promise<SingleIdentityReport> {
+  const { cedula, tipoDoc, detectedName } = item;
+  const ponalCacheKey = `POLICIA:${tipoDoc}:${cedula}`;
+  const pgnCacheKey = `PROCURADURIA:${mapTipoDocToProcuraduria(tipoDoc) || tipoDoc}:${cedula}`;
+  const adresCacheKey = `ADRES:${mapTipoDocToAdres(tipoDoc) || tipoDoc}:${cedula}`;
+
+  const cachedName = identityCache.get(ponalCacheKey)?.fullName ||
+                     identityCache.get(pgnCacheKey)?.fullName ||
+                     identityCache.get(adresCacheKey)?.fullName;
+
+  if (cachedName) {
+    const officialName = formatTitleCase(cachedName);
+    return {
+      cedula,
+      tipoDoc,
+      success: true,
+      officialName,
+      detectedName
+    };
+  }
+
+  const isProcuraduriaSupported = ['cc', 'ce', 'cx', 'pep', 'ppt', 'nit'].includes(tipoDoc.toLowerCase());
+  const isPoliciaSupported = ['cc', 'ce', 'cx', 'pa', 'dp'].includes(tipoDoc.toLowerCase());
+  const isAdresSupported = ['cc', 'ce', 'cx', 'pep', 'ppt', 'pa'].includes(tipoDoc.toLowerCase());
+
+  let pgnRes: ProcuraduriaResult | null = null;
+  let ponalRes: any = null;
+  let adresRes: AdresResult | null = null;
+
+  try {
+    if (tipoDoc.toLowerCase() === 'cc') {
+      ponalRes = await queryPoliciaNacional(tipoDoc, cedula).catch(() => null);
+      if (!ponalRes?.officialName && isProcuraduriaSupported) {
+        pgnRes = await queryProcuraduria(tipoDoc, cedula).catch(() => null);
+      }
+      if (!ponalRes?.officialName && !pgnRes?.officialName && isAdresSupported) {
+        adresRes = await queryAdres(tipoDoc, cedula).catch(() => null);
+      }
+    } else {
+      if (isProcuraduriaSupported) {
+        pgnRes = await queryProcuraduria(tipoDoc, cedula).catch(() => null);
+      }
+      if (isPoliciaSupported) {
+        ponalRes = await queryPoliciaNacional(tipoDoc, cedula).catch(() => null);
+      }
+      if (isAdresSupported) {
+        adresRes = await queryAdres(tipoDoc, cedula).catch(() => null);
+      }
+    }
+
+    const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) ||
+                         (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) ||
+                         (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : null);
+
+    if (officialName) {
+      identityCache.set(adresCacheKey, { fullName: officialName, timestamp: Date.now() });
+      return {
+        cedula,
+        tipoDoc,
+        success: true,
+        officialName,
+        detectedName,
+        procuraduria: pgnRes || undefined,
+        policia: ponalRes || undefined,
+        adres: adresRes || undefined
+      };
+    } else {
+      return {
+        cedula,
+        tipoDoc,
+        success: false,
+        detectedName,
+        procuraduria: pgnRes || undefined,
+        policia: ponalRes || undefined,
+        adres: adresRes || undefined
+      };
+    }
+  } catch (err: any) {
+    return {
+      cedula,
+      tipoDoc,
+      success: false,
+      detectedName
+    };
+  }
+}
+
+/**
+ * Construye el reporte oficial consolidado para solicitudes con dos o más documentos
+ */
+function buildConsolidatedReportText(results: SingleIdentityReport[]): string {
+  const allSuccess = results.every(r => r.success);
+  const someSuccess = results.some(r => r.success);
+
+  let reportText = `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
+  reportText += `Se consultaron las bases oficiales de seguridad y aseguramiento del Estado (Policía Nacional, Procuraduría General y ADRES/BDUA):\n\n`;
+
+  results.forEach((r, idx) => {
+    const numBadge = idx === 0 ? '1️⃣' : idx === 1 ? '2️⃣' : idx === 2 ? '3️⃣' : `${idx + 1}️⃣`;
+    const formattedNum = formatCedulaNumber(r.cedula, r.tipoDoc);
+    const docLabel = getDocumentTypeLabel(r.tipoDoc);
+    const titleName = r.officialName || r.detectedName || `Documento ${formattedNum}`;
+
+    reportText += `${numBadge} *${titleName.toUpperCase()}*\n`;
+    reportText += `🆔 *Documento:* ${docLabel} ${formattedNum}\n`;
+    if (r.officialName) {
+      reportText += `👤 *Titular Oficial:* ${r.officialName}\n`;
+    } else if (r.detectedName) {
+      reportText += `👤 *Nombre Suministrado:* ${r.detectedName}\n`;
+    }
+    if (r.adres?.eps) {
+      reportText += `🏥 *Afiliación en Salud (ADRES / BDUA):* ${r.adres.eps} (${r.adres.estado || 'REGISTRADO'}${r.adres.regimen ? ` — ${r.adres.regimen}` : ''})\n`;
+    }
+    if (r.adres?.municipio && !r.adres.municipio.toLowerCase().includes('informacion')) {
+      reportText += `📍 *Ubicación Registrada:* ${r.adres.municipio}\n`;
+    }
+    if (r.procuraduria?.statusText && ['ce', 'cx', 'pep', 'ppt', 'pa', 'dp'].includes(r.tipoDoc.toLowerCase())) {
+      reportText += `🏛️ *Central de Control Notarial:* ${r.procuraduria.statusText}\n`;
+    }
+
+    if (r.success) {
+      reportText += `⚖️ *Central de Seguridad:* Sin antecedentes judiciales ni requerimientos penales pendientes ante la Policía Nacional.\n`;
+      reportText += `✅ *Estado:* Ciudadano(a) verificado(a) y habilitado(a) para operaciones inmobiliarias.\n\n`;
+    } else {
+      reportText += `⚖️ *Central de Seguridad:* ${r.policia?.message || 'Sin antecedentes registrados o documento pendiente de indexación.'}\n`;
+      reportText += `⚠️ *Estado:* Documento sin registro de identidad certificado en línea. Se recomienda cotejo del documento físico.\n\n`;
+    }
+  });
+
+  if (allSuccess) {
+    reportText += `✅ *Dictamen Notarial Consolidado:* Todos los ciudadanos consultados cuentan con verificación oficial favorable sin alertas restrictivas para operaciones inmobiliarias.`;
+  } else if (someSuccess) {
+    reportText += `⚠️ *Dictamen Notarial Consolidado:* Verificación parcial completada. Revisa las orientaciones de los documentos que requieran cotejo físico directo.`;
+  } else {
+    reportText += `⚠️ *Dictamen Notarial Consolidado:* Se sugiere solicitar fotocopia legible o documento físico para cotejo directo ante notarías.`;
+  }
+
+  return reportText;
+}
+
+/**
+ * Ejecuta la verificación oficial ante las centrales de seguridad del Estado (Procuraduría General + Policía Nacional + ADRES)
+ * y construye el dictamen notarial para operaciones inmobiliarias bajo estricta marca blanca de VECY Bienes Raíces.
+ * Soporta de manera nativa 1, 2 o más cédulas en el mismo mensaje, entregando un reporte consolidado.
+ */
+export async function executeIdentityVerificationFromWhatsApp(
+  text: string,
+  isPrivateDm: boolean = false,
+  userId?: string,
+  explicitItems?: ExtractedCedulaItem[]
+): Promise<IdentityVerificationReport> {
+  const items = explicitItems && explicitItems.length > 0 ? explicitItems : extractAllCedulasForVerification(text, isPrivateDm);
+  if (items.length === 0) {
     return { isVerificationRequest: false };
   }
 
-  const { cedula, tipoDoc } = detection;
+  // Si son 2 o más documentos: ejecutar verificación secuencial y consolidada
+  if (items.length > 1) {
+    const results: SingleIdentityReport[] = [];
+    for (const item of items) {
+      const res = await verifySingleDocumentInternal(item);
+      results.push(res);
+    }
+
+    const allSuccess = results.every(r => r.success);
+    const reportText = buildConsolidatedReportText(results);
+
+    if (userId) {
+      savePendingCedulaSession(userId, items, reportText, allSuccess);
+    }
+
+    return {
+      isVerificationRequest: true,
+      cedula: items.map(i => i.cedula).join(', '),
+      tipoDoc: items[0].tipoDoc,
+      success: allSuccess,
+      officialName: results.map(r => r.officialName || r.detectedName || r.cedula).join(' / '),
+      source: 'Central Multifuente Notarial VECY (ADRES BDUA + Procuraduría General + Policía Nacional)',
+      reportText,
+      results,
+      items
+    };
+  }
+
+  // Si es un único documento: mantener el formato clásico individual de alta resolución
+  const item = items[0];
+  const { cedula, tipoDoc } = item;
   const formattedCedula = formatCedulaNumber(cedula, tipoDoc);
   const docLabel = getDocumentTypeLabel(tipoDoc);
 
@@ -808,6 +1005,10 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
       `👤 *Pertenece a:* ${officialName}${pgnLine}\n` +
       `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
 
+    if (userId) {
+      savePendingCedulaSession(userId, items, reportText, true);
+    }
+
     return {
       isVerificationRequest: true,
       cedula,
@@ -815,7 +1016,8 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
       success: true,
       officialName,
       source: 'Central Multifuente Notarial VECY (ADRES BDUA + Procuraduría General + Policía Nacional - Caché)',
-      reportText
+      reportText,
+      items
     };
   }
 
@@ -829,33 +1031,25 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
     let adresRes: AdresResult | null = null;
 
     if (tipoDoc.toLowerCase() === 'cc') {
-      // Para Cédula de Ciudadanía, consultar Policía Nacional primero (base Registraduría con 2Captcha)
       ponalRes = await queryPoliciaNacional(tipoDoc, cedula);
       if (!ponalRes?.officialName && isProcuraduriaSupported) {
-        // Respaldo transparente en Procuraduría si PONAL no retornó nombre oficial o 2Captcha no respondió
         pgnRes = await queryProcuraduria(tipoDoc, cedula);
       }
       if (!ponalRes?.officialName && !pgnRes?.officialName && isAdresSupported) {
-        // Respaldo complementario en ADRES (BDUA - MinSalud)
         adresRes = await queryAdres(tipoDoc, cedula);
       }
     } else {
-      // Para documentos extranjeros (CE, PEP, PPT, NIT, Pasaporte):
-      // 1. Procuraduría General de la Nación (SIRI: verifica disciplinarios y extrae nombres de personas vinculadas al Estado)
       if (isProcuraduriaSupported) {
         pgnRes = await queryProcuraduria(tipoDoc, cedula);
       }
-      // 2. Policía Nacional (Verifica si tiene antecedentes penales o requerimientos judiciales pendientes)
       if (isPoliciaSupported) {
         ponalRes = await queryPoliciaNacional(tipoDoc, cedula);
       }
-      // 3. ADRES / BDUA (Ministerio de Salud: base universal de aseguramiento con nombres y EPS de todos los residentes)
       if (isAdresSupported) {
         adresRes = await queryAdres(tipoDoc, cedula);
       }
     }
 
-    // Extraer nombre legal certificado por el Estado colombiano
     const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) ||
                          (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) ||
                          (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : null);
@@ -873,6 +1067,10 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
         `👤 *Pertenece a:* ${officialName}${epsLine}${locationLine}${pgnLine}${securityLine}\n` +
         `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
 
+      if (userId) {
+        savePendingCedulaSession(userId, items, reportText, true);
+      }
+
       return {
         isVerificationRequest: true,
         cedula,
@@ -883,7 +1081,8 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
         reportText,
         procuraduria: pgnRes || undefined,
         policia: ponalRes || undefined,
-        adres: adresRes || undefined
+        adres: adresRes || undefined,
+        items
       };
     } else {
       let customGuidance = '';
@@ -906,6 +1105,10 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
         `• Verifica que el número digitado coincida exactamente con el documento físico.\n\n` +
         `💡 Puedes verificar nuevamente escribiéndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.`;
 
+      if (userId) {
+        savePendingCedulaSession(userId, items, reportText, false);
+      }
+
       return {
         isVerificationRequest: true,
         cedula,
@@ -914,16 +1117,19 @@ export async function executeIdentityVerificationFromWhatsApp(text: string, isPr
         reportText,
         procuraduria: pgnRes || undefined,
         policia: ponalRes || undefined,
-        adres: adresRes || undefined
+        adres: adresRes || undefined,
+        items
       };
     }
   } catch (err: any) {
+    const errorReport = `⚠️ Ocurrió una intermitencia temporal de enlace con las centrales de verificación para el documento ${docLabel} ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`;
     return {
       isVerificationRequest: true,
       cedula,
       tipoDoc,
       success: false,
-      reportText: `⚠️ Ocurrió una intermitencia temporal de enlace con las centrales de verificación para el documento ${docLabel} ${formattedCedula}. Por favor intenta de nuevo en unos minutos.`
+      reportText: errorReport,
+      items
     };
   }
 }

@@ -2779,6 +2779,91 @@ Adriana Rebeca Orejuela`;
       spyPonal.mockRestore();
     });
 
+    it("Doctrina v32.73: Verificación Multi-Cédula, Soporte 'CC No.' y Memoria de Sesión de Identidad (Caso Martha Mesa)", async () => {
+      const {
+        extractAllCedulasForVerification,
+        extractCedulaForVerification,
+        executeIdentityVerificationFromWhatsApp,
+        getPendingCedulaSession
+      } = await import("../_core/identityVerificationService");
+      const { processPrivateDmConversationalMessage } = await import("../_core/janIA");
+      const agendaRouter = await import("../routers/agenda");
+
+      const marthaMsg =
+        `Los compradores se llaman:\n` +
+        `Lina María Galeano\n` +
+        `CC No. 52.805.482\n` +
+        `Ricardo Cortes Galindo\n` +
+        `CC No. 79.824.360`;
+
+      // 1. Detección multi-cédula con prefijo 'CC No.' y extracción de nombres asociados
+      const items = extractAllCedulasForVerification(marthaMsg, true);
+      expect(items.length).toBe(2);
+      expect(items[0].cedula).toBe("52805482");
+      expect(items[0].tipoDoc).toBe("cc");
+      expect(items[0].detectedName).toBe("Lina María Galeano");
+      expect(items[1].cedula).toBe("79824360");
+      expect(items[1].tipoDoc).toBe("cc");
+      expect(items[1].detectedName).toBe("Ricardo Cortes Galindo");
+
+      const singleDet = extractCedulaForVerification(marthaMsg, true);
+      expect(singleDet.found).toBe(true);
+      expect(singleDet.cedula).toBe("52805482");
+
+      // 2. Ejecución con caché oficial y reporte consolidado
+      agendaRouter.identityCache.set("ADRES:CC:52805482", {
+        fullName: "Lina Maria Galeano Abril",
+        timestamp: Date.now()
+      });
+      agendaRouter.identityCache.set("ADRES:CC:79824360", {
+        fullName: "Ricardo Cortes Galindo",
+        timestamp: Date.now()
+      });
+
+      const testUserId = `martha-mesa-${Date.now()}@s.whatsapp.net`;
+      const reportConsolidado = await executeIdentityVerificationFromWhatsApp(marthaMsg, true, testUserId);
+
+      expect(reportConsolidado.isVerificationRequest).toBe(true);
+      expect(reportConsolidado.success).toBe(true);
+      expect(reportConsolidado.results?.length).toBe(2);
+      expect(reportConsolidado.reportText).toContain("1️⃣");
+      expect(reportConsolidado.reportText).toContain("52.805.482");
+      expect(reportConsolidado.reportText).toContain("Lina Maria Galeano Abril");
+      expect(reportConsolidado.reportText).toContain("2️⃣");
+      expect(reportConsolidado.reportText).toContain("79.824.360");
+      expect(reportConsolidado.reportText).toContain("Ricardo Cortes Galindo");
+      expect(reportConsolidado.reportText).toContain("Dictamen Notarial Consolidado");
+
+      // 3. Verificación de almacenamiento en memoria de sesión de identidad
+      const savedSession = getPendingCedulaSession(testUserId);
+      expect(savedSession).not.toBeNull();
+      expect(savedSession?.items.length).toBe(2);
+
+      // 4. Integración completa conversacional en DM privado
+      const dmUserId = `dm-martha-${Date.now()}@s.whatsapp.net`;
+      const dmReply1 = await processPrivateDmConversationalMessage(marthaMsg, dmUserId, "Martha Mesa");
+      expect(dmReply1).toContain("VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES");
+      expect(dmReply1).toContain("52.805.482");
+      expect(dmReply1).toContain("79.824.360");
+      expect(dmReply1).toContain("Lina Maria Galeano Abril");
+      expect(dmReply1).toContain("Ricardo Cortes Galindo");
+
+      // 5. Seguimiento sin dígitos ("sólo las cédulas", "pero me colaboras con las cédulas" o "aquí estoy"):
+      // JanIA debe recordar la verificación previa sin ir al LLM a alucinar
+      const dmFollowUp1 = await processPrivateDmConversationalMessage("sólo las cédulas", dmUserId, "Martha Mesa");
+      expect(dmFollowUp1).toContain("52.805.482");
+      expect(dmFollowUp1).toContain("79.824.360");
+      expect(dmFollowUp1).toContain("reporte oficial de verificación");
+
+      const dmFollowUp2 = await processPrivateDmConversationalMessage("pero me colaboras con las cédulas", dmUserId, "Martha Mesa");
+      expect(dmFollowUp2).toContain("52.805.482");
+      expect(dmFollowUp2).toContain("79.824.360");
+
+      const dmFollowUp3 = await processPrivateDmConversationalMessage("aquí estoy", dmUserId, "Martha Mesa");
+      expect(dmFollowUp3).toContain("52.805.482");
+      expect(dmFollowUp3).toContain("79.824.360");
+    });
+
     it("Doctrina v32.40: Saludo inicial sin 45/10/45 con perfilamiento, menú de consultas, costos 100% GRATIS y despedida secuencial", async () => {
       const { processPrivateDmConversationalMessage } = await import("../_core/janIA");
       const { GOOGLE_REVIEW_MESSAGE, getChannelInviteGoodbyeMessage } = await import("../_core/predialService");

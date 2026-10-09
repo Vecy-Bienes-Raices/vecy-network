@@ -7,6 +7,50 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.73 — 09 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Verificación Multi-Cédula Simultánea y Prevención de Pérdida de Contexto en JanIA**:
+   - Eduardo preguntó y solicitó: *"Si una persona envía dos cédulas al tiempo JanIA las puede verificar ambas o es mejor una por una para no confundirla, es que vi que un usuario llamado Martha Mesa, le envió dos números de cédula al mismo tiempo pero cuando JanIa posiblemente iba a ir a la procuraduría a verificarlas la persona le siguió hablando y JanIA perdió el contexto de la conversación y no verificó ninguna ni antecedentes. Mir eso, será que así JanIA se pierde y no puede verificar, tiene alguna limitación?? Ya estas bien?? Sí por favor por fa."*
+   - Contexto del caso real: En la conversación con Martha Mesa (`+573102871183`), la usuaria envió en un solo mensaje:
+     ```
+     Los compradores se llaman:
+     Lina María Galeano
+     CC No. 52.805.482
+     Ricardo Cortes Galindo
+     CC No. 79.824.360
+     ```
+     Posteriormente, mientras esperaba, Martha envió *"aquí estoy"* y *"pero me colaboras con las cédulas"*. JanIA no procesó las verificaciones, perdió el hilo y terminó respondiendo de forma conversacional alucinando que ya estaban validadas sin consultar las bases oficiales.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Fallo en la Expresión Regular de Detección de Cédula**:
+   - La función previa `extractCedulaForVerification` utilizaba un regex estricto que buscaba `CC:` o `CC ` seguido directamente de números o puntos, omitiendo conectores habituales como `CC No.`, `CC N°`, `CC #`, `Cédula No.`.
+   - Por esta razón, el mensaje de Martha Mesa retornó `found: false`, evitando el interceptor de seguridad oficial y cayendo al modelo de lenguaje (Gemini), que prometió verificar pero no contaba con la ejecución de herramientas activas en ese turno.
+2. **Falta de Detección Multi-Documento Consolidada**:
+   - El extractor anterior solo extraía un único número de documento (`items[0]`), sin procesar la lista completa de documentos si un cliente enviaba una pareja de compradores o arrendatario + codeudor.
+3. **Pérdida de Memoria Contextual ante Mensajes de Seguimiento**:
+   - Cuando Martha Mesa escribió *"aquí estoy"* o *"pero me colaboras con las cédulas"*, el interceptor de sesiones pendientes no se activó porque:
+     a) El regex previo solo contemplaba `cédulas.*colaboras` (orden inverso al mensaje real de Martha).
+     b) Mensajes de espera como *"aquí estoy"* o *"estoy atenta"* no revisaban si existía una sesión de verificación pendiente.
+     c) Si el proceso o PM2 se recargaba, la memoria volátil se perdía si no se consultaba el historial de la base de datos PostgreSQL nativa.
+
+### Acciones Técnicas Ejecutadas
+1. **Soporte Multi-Cédula Integral (`server/_core/identityVerificationService.ts`)**:
+   - Creada la función `extractAllCedulasForVerification` con soporte completo para conectores (`No.`, `N°`, `#`, `:`, `-`, espacio), puntos de miles y extracción asociativa de nombres propios precedentes (e.g., `Lina María Galeano` y `Ricardo Cortes Galindo`).
+   - Implementado `verifySingleDocumentInternal` que consulta de forma secuencial y coordinada Policía Nacional, Procuraduría General (SIRI) y ADRES/BDUA con caché unificada.
+   - Implementada la función `buildConsolidatedReportText` que genera un reporte oficial consolidado numerado (`1️⃣`, `2️⃣`, etc.) con dictamen notarial conjunto para operaciones inmobiliarias.
+   - Implementada la memoria de sesión de identidad `savePendingCedulaSession` y `getPendingCedulaSession` con TTL de 24 horas.
+2. **Blindaje de Interceptores y Memoria en WhatsApp (`whatsapp-match.ts` y `janIA.ts`)**:
+   - Enriquecido el interceptor directo de DMs para despachar el reporte consolidado cuando existan 2 o más documentos.
+   - Ampliado el regex `isAskingPendingCedulas` en ambos archivos para capturar frases bidireccionales (`"colaboras con las cédulas"`, `"pero me colaboras con las cédulas"`, `"qué pasó con las cédulas"`), y responder inmediatamente si el usuario envía mensajes de presencia (`"aquí estoy"`, `"estoy atenta"`) con una sesión pendiente.
+   - Implementada la recuperación resiliente desde el historial de mensajes de la conversación (`getOrLoadDmHistory`), garantizando que si el usuario hace seguimiento a un mensaje previo que contenía cédulas, JanIA extrae los documentos y genera el reporte oficial sin alucinaciones.
+3. **Verificación y Pruebas**:
+   - Pruebas añadidas a `server/__tests__/regression.test.ts` evaluando el caso exacto de Martha Mesa (161/161 tests aprobados al 100%).
+   - Compilación limpia con `tsc --noEmit` y `npm run build`.
+   - Incremento de versión oficial a `v32.73` (`32.73.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.72 — 09 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera
