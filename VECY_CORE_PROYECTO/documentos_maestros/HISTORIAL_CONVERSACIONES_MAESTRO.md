@@ -7,6 +7,41 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.72 — 09 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Servicio Oficial de Paz y Salvo de Valorización del IDU en PDF por WhatsApp**:
+   - Eduardo consultó y ordenó: *"Es posible hacer que JanIA ahora brinde el servicio de sacar el Paz y Salvo del IDÚ y entregarlo en archivo PDF por Whatsaap al igual como hace lo del predial? https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml"*
+   - Aportó captura de pantalla del navegador con el portal oficial del Instituto de Desarrollo Urbano (IDU) para la expedición de Certificados de Estado de Cuenta para trámites notariales (Paz y Salvo de Valorización).
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Viabilidad Absoluta y Cero Dependencia de Terceros**:
+   - Se inspeccionó el portal oficial del IDU (`https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/generateCert.xhtml`).
+   - Se comprobó empíricamente mediante Puppeteer que **NO tiene CAPTCHA ni reCAPTCHA**, a diferencia del portal de la Secretaría de Hacienda.
+   - El formulario oficial del IDU valida el código CHIP del predio en ~2 segundos, autocompleta la Matrícula Inmobiliaria y la Dirección, y genera un archivo PDF oficial (`report.pdf`, 69.6 KB) en menos de 7.5 segundos.
+   - El documento PDF expedido cuenta con PIN DE SEGURIDAD oficial, matrícula inmobiliaria, cédula catastral, vigencia legal de 90 días conforme al Artículo 44 del Acuerdo Distrital 915 de 2023, y la certificación expresa de que el predio no presenta deudas por concepto de contribución de valorización, con plena validez ejecutiva para notarías de Colombia.
+
+### Acciones Técnicas Ejecutadas
+1. **Creación del Servicio Oficial (`server/_core/iduValorizacionService.ts`)**:
+   - Detección inteligente de solicitudes de paz y salvo del IDU y extracción de CHIP (`extractChipForIduValorizacion`).
+   - Soporte para flujo conversacional en 2 pasos con memoria interactiva pendiente (`hasPendingIduSession`, `setPendingIduSession`, `clearPendingIduSession`, con TTL de 10 minutos).
+   - Generación y descarga automatizada por CDP (`Browser.setDownloadBehavior`) del archivo PDF oficial (`downloadIduCertificatePdf`).
+   - Orquestador de atención para WhatsApp (`executeIduAssistanceFromWhatsApp`), con registro analítico en base de datos PostgreSQL (`predial_consultations` con `queryType: 'paz_y_salvo_idu'`).
+2. **Integración en WhatsApp (`whatsapp-match.ts`, `whatsapp-utils.ts`, `janIA.ts`)**:
+   - Reactivación automática de sesiones silenciadas ante consultas de IDU / Valorización.
+   - Interceptor prioritario en mensajes privados (DMs) para sesiones pendientes y consultas directas con CHIP.
+   - Envío por WhatsApp del archivo PDF adjunto (`Paz_y_Salvo_IDU_${chip}_2026.pdf`) junto con la explicación legal institucional y el posterior envío de la reseña de Google y canal oficial.
+   - Interceptor en el procesamiento diferido de buffers de mensajes (`handlePrivateDmConversation`).
+   - Reacción empática inmediata con emoji `📄` en `getEmpatheticReactionEmoji`.
+   - Soporte para `toolType: 'idu'` en `formatPoliteToolDelivery` de `janIA.ts`.
+3. **Actualización de Prompts y Pruebas**:
+   - Actualizados prompts en `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` y `PROYECTO_Vecy Network.md`.
+   - Pruebas unitarias y de integración añadidas a `server/__tests__/regression.test.ts` (160/160 tests aprobados al 100%).
+   - Compilación limpia con `tsc --noEmit` y `npm run build`.
+   - Versión incrementada a `v32.72` (`32.72.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.71 — 09 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

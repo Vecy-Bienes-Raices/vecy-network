@@ -1125,11 +1125,12 @@ export class JaniaMatchBot {
               const { extractCedulaForVerification } = await import('./identityVerificationService');
               const isCedulaReq = extractCedulaForVerification(body, true).found;
               const isPredialReq = body.toLowerCase().includes('predial') || body.toLowerCase().includes('chip') || body.toLowerCase().includes('hacienda');
+              const isIduReq = body.toLowerCase().includes('idu') || body.toLowerCase().includes('valorizacion') || body.toLowerCase().includes('valorización');
 
-              if (cleanStart.startsWith("agente jania") || isCedulaReq || isPredialReq) {
+              if (cleanStart.startsWith("agente jania") || isCedulaReq || isPredialReq || isIduReq) {
                 await muteSession(senderId, false).catch(err => console.error("Error unmuting session:", err));
                 isMuted = false;
-                console.log(`[JANIA-MATCH] Sesión reactivada automáticamente mediante ${isCedulaReq ? 'verificación de documento' : (isPredialReq ? 'asistencia de predial' : 'comando de cliente')} para ${senderId}`);
+                console.log(`[JANIA-MATCH] Sesión reactivada automáticamente mediante ${isCedulaReq ? 'verificación de documento' : (isPredialReq ? 'asistencia de predial' : (isIduReq ? 'paz y salvo de valorización IDU' : 'comando de cliente'))} para ${senderId}`);
               }
             }
 
@@ -1271,6 +1272,76 @@ export class JaniaMatchBot {
       const matchId = parseInt(matchConfirm[2], 10);
       await this.processMatchConfirmation(senderId, userName, matchId, decision);
       return;
+    }
+
+    // 🏛️ INTERCEPTOR PRIORITARIO DM: COMPLETAR SESIÓN PENDIENTE PAZ Y SALVO IDU (VALORIZACIÓN)
+    const { hasPendingIduSession, executeIduAssistanceFromWhatsApp } = await import('./iduValorizacionService');
+    if (senderId && hasPendingIduSession(senderId)) {
+      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
+      try {
+        const iduPendingCheck = await executeIduAssistanceFromWhatsApp(body, senderId, true);
+        if (iduPendingCheck.isIduRequest && iduPendingCheck.reportText) {
+          console.log(`[JANIA-MATCH] [DM] Asistencia de Paz y Salvo IDU completada con CHIP para ${senderId} (${iduPendingCheck.chip})`);
+          const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
+          const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'idu', iduPendingCheck.reportText, true);
+          if (iduPendingCheck.pdfBuffer) {
+            await this.queuedSend(senderId, {
+              document: iduPendingCheck.pdfBuffer,
+              mimetype: 'application/pdf',
+              fileName: iduPendingCheck.pdfFileName || `Paz_y_Salvo_IDU_${iduPendingCheck.chip}_2026.pdf`,
+              caption: deliveredText
+            }, { quoted: mainMsg, allowDirectMessage: true });
+
+            const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+            await new Promise(r => setTimeout(r, 1500));
+            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+            this.schedulePostReviewGroupInvitation(senderId, userName);
+          } else {
+            await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
+          }
+          appendDmHistory(senderId, 'user', body);
+          appendDmHistory(senderId, 'assistant', deliveredText);
+          await this.logToDb(senderId, 'janIA', deliveredText);
+          return;
+        }
+      } finally {
+        stopPresence();
+      }
+    }
+
+    // 🏛️ INTERCEPTOR PRIORITARIO DM: PAZ Y SALVO IDU / VALORIZACIÓN (va antes de predial si menciona IDU)
+    const isIduContext = body.toLowerCase().includes('idu') || body.toLowerCase().includes('valorizacion') || body.toLowerCase().includes('valorización');
+    if (isIduContext) {
+      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
+      try {
+        const iduCheck = await executeIduAssistanceFromWhatsApp(body, senderId, true);
+        if (iduCheck.isIduRequest && iduCheck.reportText) {
+          console.log(`[JANIA-MATCH] [DM] Asistencia de Paz y Salvo IDU atendida para ${senderId} (CHIP ${iduCheck.chip || 'Pendiente'})`);
+          const { formatPoliteToolDelivery, appendDmHistory } = await import('./janIA');
+          const deliveredText = await formatPoliteToolDelivery(senderId, userName, 'idu', iduCheck.reportText, true);
+          if (iduCheck.pdfBuffer) {
+            await this.queuedSend(senderId, {
+              document: iduCheck.pdfBuffer,
+              mimetype: 'application/pdf',
+              fileName: iduCheck.pdfFileName || `Paz_y_Salvo_IDU_${iduCheck.chip}_2026.pdf`,
+              caption: deliveredText
+            }, { quoted: mainMsg, allowDirectMessage: true });
+
+            const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+            await new Promise(r => setTimeout(r, 1500));
+            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+            this.schedulePostReviewGroupInvitation(senderId, userName);
+          } else {
+            await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
+          }
+          appendDmHistory(senderId, 'user', body);
+          appendDmHistory(senderId, 'assistant', deliveredText);
+          await this.logToDb(senderId, 'janIA', deliveredText);
+          return;
+        }
+      } finally {
+        stopPresence();
+      }
     }
 
     // 🏛️ INTERCEPTOR PRIORITARIO DM: COMPLETAR SESIÓN PENDIENTE PREDIAL BOGOTÁ (CÉDULA / NIT)
@@ -2589,6 +2660,33 @@ export class JaniaMatchBot {
   private async handlePrivateDmConversation(msg: proto.IWebMessageInfo, senderId: string, rawPhone: string, bodyText: string) {
     try {
       const realName = msg.pushName || `Asesor +${rawPhone}`;
+
+      // 🏛️ INTERCEPTOR ADMIN: ASISTENCIA PAZ Y SALVO IDU BOGOTÁ (VALORIZACIÓN)
+      const isIduReq = bodyText.toLowerCase().includes('idu') || bodyText.toLowerCase().includes('valorizacion') || bodyText.toLowerCase().includes('valorización');
+      if (isIduReq) {
+        const { executeIduAssistanceFromWhatsApp } = await import('./iduValorizacionService');
+        try {
+          await this.sock.sendPresenceUpdate('composing', senderId);
+          await this.sock.sendMessage(senderId, { react: { text: '⏳', key: msg.key } }).catch(() => {});
+        } catch (_) {}
+        const iduCheck = await executeIduAssistanceFromWhatsApp(bodyText, senderId, true);
+        if (iduCheck.isIduRequest && iduCheck.reportText) {
+          if (iduCheck.pdfBuffer) {
+            await this.queuedSend(senderId, {
+              document: iduCheck.pdfBuffer,
+              mimetype: 'application/pdf',
+              fileName: iduCheck.pdfFileName || `Paz_y_Salvo_IDU_${iduCheck.chip}_2026.pdf`,
+              caption: iduCheck.reportText
+            }, { quoted: msg, allowDirectMessage: true });
+            await this.sock.sendMessage(senderId, { react: { text: '📄', key: msg.key } }).catch(() => {});
+          } else {
+            await this.queuedSend(senderId, iduCheck.reportText, { quoted: msg, allowDirectMessage: true });
+          }
+          await this.logToDb(senderId, 'janIA', iduCheck.reportText);
+          await this.sock.sendPresenceUpdate('paused', senderId);
+          return;
+        }
+      }
 
       // 🏛️ INTERCEPTOR ADMIN: ASISTENCIA PREDIAL BOGOTÁ — VA PRIMERO (prioridad sobre verificación de cédula)
       const { executePredialAssistanceFromWhatsApp } = await import('./predialService');

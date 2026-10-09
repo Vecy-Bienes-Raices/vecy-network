@@ -331,6 +331,39 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.72 — Octubre 2026
+
+#### 📌 SERVICIO OFICIAL DE PAZ Y SALVO DE VALORIZACIÓN DEL IDU EN PDF POR WHATSAPP (SIN CAPTCHA, 7 SEGUNDOS, $0 COP)
+
+**Requerimiento y Objetivos:**
+1. **Expedición Oficial del Certificado de Estado de Cuenta del IDU**:
+   - Petición de Eduardo A. Rivera: *"Es posible hacer que JanIA ahora brinde el servicio de sacar el Paz y Salvo del IDÚ y entregarlo en archivo PDF por Whatsaap al igual como hace lo del predial? https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml"*
+   - Integración directa con el portal del Instituto de Desarrollo Urbano (IDU) de la Alcaldía Mayor de Bogotá para la generación de Certificados de Estado de Cuenta para trámites notariales (Paz y Salvo de Valorización) bajo el Artículo 44 del Acuerdo Distrital 915 de 2023.
+2. **Arquitectura y Rendimiento de Alta Velocidad (7 Segundos, Cero Costo)**:
+   - Se evaluó el portal oficial y se constató que no requiere resolución de CAPTCHA, reduciendo el costo a $0 COP.
+   - Navegación headless directa a `https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/generateCert.xhtml` mediante Puppeteer y Google Chrome en VPS Linux.
+   - Validación instantánea del código CHIP del predio, autocompletado de la Matrícula Inmobiliaria y Dirección, y generación automática del PDF oficial (`report.pdf`, 69.6 KB) con PIN DE SEGURIDAD oficial y vigencia de 90 días.
+3. **Despacho Multicanal e Interactivo en WhatsApp**:
+   - Módulo `server/_core/iduValorizacionService.ts` con extractor `extractChipForIduValorizacion` y memoria de sesión pendiente interactiva en 2 pasos (`hasPendingIduSession`, TTL 10 min).
+   - Entrega adjunta del documento PDF con nombre institucional `Paz_y_Salvo_IDU_${chip}_2026.pdf` y reporte explicativo notarial en WhatsApp DMs y procesamiento diferido.
+   - Reactivación automática de sesiones silenciadas ante consultas del IDU y reacción empática instantánea con emoji `📄`.
+   - Registro analítico en base de datos PostgreSQL (`predial_consultations` con `queryType: 'paz_y_salvo_idu'`).
+
+**Archivos Modificados:**
+- `server/_core/iduValorizacionService.ts`: Nuevo servicio oficial de Paz y Salvo IDU.
+- `server/_core/whatsapp-match.ts`: Interceptores prioritarios en DMs y buffers, y reactivación automática.
+- `server/_core/whatsapp-utils.ts`: Detección de `idu` y `valorizac` en `getEmpatheticReactionEmoji`.
+- `server/_core/janIA.ts`: Soporte para `toolType: 'idu'` en `formatPoliteToolDelivery`.
+- `server/_core/prompts/`: Actualización de directrices en prompts de soporte legal y proyecto.
+- `server/__tests__/regression.test.ts`: Tests de detección, sesión y orquestador IDU (160/160 tests Vitest ✅).
+- `shared/const.ts`: Versión bump a `v32.72`.
+- `package.json`: Versión `32.72.0`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 160/160 tests pasando al 100% ✅ | `npm run build` limpio en 23s ✅
+
+---
+
 ### 🔖 v32.71 — Octubre 2026
 
 #### 📌 REVERSIÓN PREVENTIVA DE PRESENCIA CONTINUA PARA PROTECCIÓN DE LA ELOQUENCIA Y MEMORIA CONTEXTUAL DE JANIA, PRESERVACIÓN INTACTA DE LAOMEDEIA

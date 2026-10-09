@@ -642,8 +642,8 @@ export function getEmpatheticReactionEmoji(
 
   const clean = (text || '').trim().toLowerCase();
 
-  // 1. Predial / Impuesto Predial / Hacienda / CHIP / Factura (Doctrina v32.34: Reacción fija e inmediata con documento 📄 sin cambios posteriores)
-  if (clean.includes('predial') || clean.includes('chip') || clean.includes('hacienda') || clean.includes('impuesto')) {
+  // 1. Predial / Impuesto Predial / Hacienda / CHIP / Factura / IDU / Valorización (Doctrina v32.34/v32.72: Reacción fija e inmediata con documento 📄)
+  if (clean.includes('predial') || clean.includes('chip') || clean.includes('hacienda') || clean.includes('impuesto') || clean.includes('idu') || clean.includes('valorizaci')) {
     return '📄';
   }
 

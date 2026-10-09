@@ -3224,6 +3224,51 @@ Adriana Rebeca Orejuela`;
       expect(matchRes.score).toBe(0);
       expect(matchRes.blockers.some(b => b.includes("Incompatibilidad de Edificio/Condominio"))).toBe(true);
     });
+
+    it("Doctrina v32.72: Servicio Oficial de Paz y Salvo de Valorización IDU (CHIP, Interceptor y PDF)", async () => {
+      const { 
+        extractChipForIduValorizacion, 
+        hasPendingIduSession, 
+        setPendingIduSession, 
+        clearPendingIduSession, 
+        executeIduAssistanceFromWhatsApp 
+      } = await import("../_core/iduValorizacionService");
+      const { getEmpatheticReactionEmoji } = await import("../_core/whatsapp-utils");
+
+      // 1. Detección con CHIP
+      const det1 = extractChipForIduValorizacion("JanIA, me sacas el paz y salvo del IDU del predio AAA0058EEXS");
+      expect(det1.found).toBe(true);
+      expect(det1.isIduRequest).toBe(true);
+      expect(det1.chip).toBe("AAA0058EEXS");
+
+      // 2. Detección sin CHIP (solicitud inicial de usuario)
+      const det2 = extractChipForIduValorizacion("Necesito el paz y salvo de valorizacion");
+      expect(det2.found).toBe(true);
+      expect(det2.isIduRequest).toBe(true);
+      expect(det2.chip).toBeUndefined();
+
+      // 3. Reacción empática fija con 📄
+      expect(getEmpatheticReactionEmoji("Paz y salvo del IDU")).toBe("📄");
+      expect(getEmpatheticReactionEmoji("Valorizacion Bogotá")).toBe("📄");
+
+      // 4. Sesión interactiva pendiente
+      const testSender = "test-idu-session@s.whatsapp.net";
+      clearPendingIduSession(testSender);
+      expect(hasPendingIduSession(testSender)).toBe(false);
+
+      const step1 = await executeIduAssistanceFromWhatsApp("JanIA, sácame el paz y salvo del IDU", testSender);
+      expect(step1.isIduRequest).toBe(true);
+      expect(step1.chip).toBeUndefined();
+      expect(hasPendingIduSession(testSender)).toBe(true);
+      expect(step1.reportText).toContain("PAZ Y SALVO DE VALORIZACIÓN IDU");
+      expect(step1.reportText).toContain("Por favor indícame el código CHIP del predio");
+
+      // Paso 2 con skipDownload para prueba unitaria offline
+      const step2 = await executeIduAssistanceFromWhatsApp("AAA0058EEXS", testSender, true, { skipDownload: true });
+      expect(step2.isIduRequest).toBe(true);
+      expect(step2.chip).toBe("AAA0058EEXS");
+      expect(hasPendingIduSession(testSender)).toBe(false);
+    });
   });
 });
 

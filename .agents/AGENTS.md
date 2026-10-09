@@ -172,7 +172,35 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.71 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.72 — Octubre 2026
+
+### Novedades v32.72 (Servicio Oficial de Paz y Salvo de Valorización IDU en PDF por WhatsApp — Cero Costo y Máxima Velocidad):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Expedición Oficial de Paz y Salvo del IDU**:
+     - Eduardo instruyó: *"Es posible hacer que JanIA ahora brinde el servicio de sacar el Paz y Salvo del IDÚ y entregarlo en archivo PDF por Whatsaap al igual como hace lo del predial? https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml"*
+     - Aportó captura de pantalla del portal oficial del Instituto de Desarrollo Urbano (IDU) para la generación de Certificados de Estado de Cuenta para trámites notariales.
+  2. **Implementación Técnica de Alta Eficiencia (7 Segundos, Cero CAPTCHA, $0 COP)**:
+     - Diseñado y creado `server/_core/iduValorizacionService.ts` con integración Puppeteer headless navegando directamente a `https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/generateCert.xhtml`.
+     - Cero costo de resolución de CAPTCHA ($0 COP): a diferencia de la Secretaría de Hacienda, el portal del IDU no exige CAPTCHA.
+     - Extracción y validación automática del CHIP en menos de 7.5 segundos, completando Matrícula Inmobiliaria y Dirección del predio.
+     - Descarga automática por CDP del archivo PDF oficial (`report.pdf`), renombrado institucionalmente a `Paz_y_Salvo_IDU_${chip}_2026.pdf`.
+     - El documento contiene PIN DE SEGURIDAD oficial, matrícula inmobiliaria, cédula catastral, vigencia de 90 días conforme al Artículo 44 del Acuerdo Distrital 915 de 2023, y la certificación legal expresa de que el predio no presenta deudas de valorización.
+  3. **Despacho Multicanal e Interactivo en WhatsApp (`whatsapp-match.ts`)**:
+     - Detección de intención mediante `extractChipForIduValorizacion`.
+     - Soporte para flujo en 2 pasos con memoria de sesión pendiente (`hasPendingIduSession` con TTL de 10 minutos): si el usuario pide el paz y salvo sin dar el CHIP, JanIA solicita amablemente el código CHIP e inmediatamente al recibirlo despacha el PDF.
+     - Entrega adjunta del documento PDF con `mimetype: 'application/pdf'`, `fileName`, reporte institucional y posterior invitación desacoplada a calificar en Google Reviews y sumarse al canal oficial de Vecy.
+     - Reacción empática instantánea con emoji `📄` en `whatsapp-utils.ts`.
+     - Registro analítico en base de datos PostgreSQL (`predial_consultations` con `queryType: 'paz_y_salvo_idu'`).
+  4. **Modificaciones Implementadas**:
+     - `server/_core/iduValorizacionService.ts`: Nuevo servicio oficial.
+     - `server/_core/whatsapp-match.ts`: Interceptores en DMs directos y procesador de buffers diferidos.
+     - `server/_core/whatsapp-utils.ts`: Detección en `getEmpatheticReactionEmoji`.
+     - `server/_core/janIA.ts`: Soporte para `toolType: 'idu'` en `formatPoliteToolDelivery`.
+     - `server/_core/prompts/`: Actualizados prompts de soporte legal y proyecto.
+     - `server/__tests__/regression.test.ts`: Pruebas completas del flujo de IDU (160/160 tests passing al 100%).
+     - `shared/const.ts` (`v32.72`) y `package.json` (`32.72.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.71 — Octubre 2026
 
 ### Novedades v32.71 (Reversión Preventiva de Presencia Continua para Protección de la Eloquencia y Memoria Contextual de JanIA, Preservación Intacta de Laomedeia):
 - **Diagnóstico y Confirmación de Eduardo A. Rivera**:

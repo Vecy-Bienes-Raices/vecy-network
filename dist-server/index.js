@@ -9629,8 +9629,8 @@ async function downloadPredialInvoicePdf(tipoDocInput, numDoc, chip, options) {
     const { Solver: Solver2 } = await import("@2captcha/captcha-solver");
     const solver = new Solver2(apiKey);
     const puppeteer = (await import("puppeteer")).default;
-    const fs12 = await import("fs");
-    const executablePath = fs12.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
+    const fs13 = await import("fs");
+    const executablePath = fs13.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
     browser = await puppeteer.launch({
       executablePath,
       headless: true,
@@ -11231,7 +11231,7 @@ function getEmpatheticReactionEmoji(text2, options) {
     return "\u{1F3A7}";
   }
   const clean = (text2 || "").trim().toLowerCase();
-  if (clean.includes("predial") || clean.includes("chip") || clean.includes("hacienda") || clean.includes("impuesto")) {
+  if (clean.includes("predial") || clean.includes("chip") || clean.includes("hacienda") || clean.includes("impuesto") || clean.includes("idu") || clean.includes("valorizaci")) {
     return "\u{1F4C4}";
   }
   if (clean.includes("c\xE9dula") || clean.includes("cedula") || clean.includes("antecedente") || clean.includes("polic\xEDa") || clean.includes("policia") || clean.includes("verificar") || clean.includes("verificacion") || clean.includes("identidad")) {
@@ -11427,6 +11427,302 @@ var init_whatsapp_utils = __esm({
   }
 });
 
+// server/_core/iduValorizacionService.ts
+var iduValorizacionService_exports = {};
+__export(iduValorizacionService_exports, {
+  clearPendingIduSession: () => clearPendingIduSession,
+  downloadIduCertificatePdf: () => downloadIduCertificatePdf,
+  executeIduAssistanceFromWhatsApp: () => executeIduAssistanceFromWhatsApp,
+  extractChipForIduValorizacion: () => extractChipForIduValorizacion,
+  hasPendingIduSession: () => hasPendingIduSession,
+  setPendingIduSession: () => setPendingIduSession
+});
+import fs6 from "fs";
+import path6 from "path";
+import os2 from "os";
+function hasPendingIduSession(senderId) {
+  const session = pendingIduSessions.get(senderId);
+  if (!session) return false;
+  if (Date.now() - session.timestamp > IDU_SESSION_TTL_MS) {
+    pendingIduSessions.delete(senderId);
+    return false;
+  }
+  return true;
+}
+function setPendingIduSession(senderId) {
+  pendingIduSessions.set(senderId, { timestamp: Date.now() });
+}
+function clearPendingIduSession(senderId) {
+  pendingIduSessions.delete(senderId);
+}
+function extractChipForIduValorizacion(text2) {
+  if (!text2 || typeof text2 !== "string") return { found: false };
+  const clean = text2.trim();
+  const lower = clean.toLowerCase();
+  const iduKeywords = [
+    "idu",
+    "valorizacion",
+    "valorizaci\xF3n",
+    "webidu",
+    "paz y salvo idu",
+    "paz y salvo de valorizacion",
+    "paz y salvo de valorizaci\xF3n",
+    "certificado idu",
+    "estado de cuenta idu",
+    "paz y salvo de idu"
+  ];
+  const hasIduKeyword = iduKeywords.some((kw) => lower.includes(kw));
+  const chipMatch = clean.match(/\b(AAA[0-9]{4}[A-Z0-9]{4})\b/i);
+  if (hasIduKeyword) {
+    return {
+      found: true,
+      isIduRequest: true,
+      chip: chipMatch ? chipMatch[1].toUpperCase() : void 0
+    };
+  }
+  return { found: false };
+}
+async function downloadIduCertificatePdf(chip) {
+  const cleanChip = chip.toUpperCase().trim();
+  const downloadDir = path6.join(os2.tmpdir(), `vecy-idu-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
+  try {
+    fs6.mkdirSync(downloadDir, { recursive: true });
+  } catch (_) {
+  }
+  let browser = null;
+  try {
+    const puppeteer = (await import("puppeteer")).default;
+    const executablePath = fs6.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
+    browser = await puppeteer.launch({
+      executablePath,
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu"
+      ]
+    });
+    const page = await browser.newPage();
+    page.setDefaultTimeout(45e3);
+    const client = await page.target().createCDPSession();
+    await client.send("Browser.setDownloadBehavior", {
+      behavior: "allow",
+      downloadPath: downloadDir,
+      eventsEnabled: true
+    });
+    await page.goto("https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/generateCert.xhtml", {
+      waitUntil: "networkidle2",
+      timeout: 3e4
+    });
+    await page.waitForSelector('[id="validtaPin_form:pinNumber"]', { timeout: 15e3 });
+    await page.type('[id="validtaPin_form:pinNumber"]', cleanChip);
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: "networkidle2", timeout: 2e4 }).catch(() => {
+      }),
+      page.click('[id="validtaPin_form:pinNumberButton"]')
+    ]);
+    const portalMessages = await page.evaluate(() => {
+      const msgs = Array.from(
+        document.querySelectorAll(".ui-messages-error, .ui-messages-info, .ui-growl-message, .ui-message, .ui-messages-error-summary, .ui-messages-error-detail")
+      ).map((m) => m.innerText?.trim()).filter(Boolean);
+      return msgs;
+    });
+    const hasNotFoundError = portalMessages.some(
+      (m) => m.toLowerCase().includes("no se encuentra registrado") || m.toLowerCase().includes("invalido") || m.toLowerCase().includes("inv\xE1lido")
+    );
+    if (hasNotFoundError) {
+      return {
+        success: false,
+        errorMessage: `El c\xF3digo CHIP ${cleanChip} no se encuentra registrado en el sistema oficial del Instituto de Desarrollo Urbano (IDU). Por favor verifica que est\xE9 bien escrito seg\xFAn tu recibo predial o escritura.`
+      };
+    }
+    const predioData = await page.evaluate(() => {
+      const matEl = document.querySelector('[id="validtaPin_form:matInmo"]');
+      const dirEl = document.querySelector('[id="validtaPin_form:dirPred"]');
+      return {
+        matricula: matEl ? matEl.value.trim() : "",
+        direccion: dirEl ? dirEl.value.trim() : ""
+      };
+    });
+    await page.waitForSelector('[id="validtaPin_form:pinGenerateButton"]', { timeout: 1e4 });
+    await page.click('[id="validtaPin_form:pinGenerateButton"]');
+    let downloadedFilePath = null;
+    for (let i = 0; i < 20; i++) {
+      await new Promise((r) => setTimeout(r, 1e3));
+      if (fs6.existsSync(downloadDir)) {
+        const files = fs6.readdirSync(downloadDir);
+        const pdfFile = files.find((f) => f.toLowerCase().endsWith(".pdf") && !f.endsWith(".crdownload"));
+        if (pdfFile) {
+          downloadedFilePath = path6.join(downloadDir, pdfFile);
+          break;
+        }
+      }
+    }
+    if (!downloadedFilePath || !fs6.existsSync(downloadedFilePath)) {
+      return {
+        success: false,
+        errorMessage: "El portal del IDU no entreg\xF3 el archivo PDF en el tiempo esperado. Por favor intenta de nuevo en unos momentos.",
+        matricula: predioData.matricula,
+        direccion: predioData.direccion
+      };
+    }
+    const pdfBuffer = fs6.readFileSync(downloadedFilePath);
+    if (!pdfBuffer || pdfBuffer.length < 500) {
+      return {
+        success: false,
+        errorMessage: "El archivo descargado desde el IDU est\xE1 vac\xEDo o incompleto.",
+        matricula: predioData.matricula,
+        direccion: predioData.direccion
+      };
+    }
+    const pdfFileName = `Paz_y_Salvo_IDU_${cleanChip}_2026.pdf`;
+    return {
+      success: true,
+      pdfBuffer,
+      pdfFileName,
+      matricula: predioData.matricula || void 0,
+      direccion: predioData.direccion || void 0
+    };
+  } catch (err) {
+    console.error(`[IDU-SERVICE] Error descargando Paz y Salvo del IDU para ${cleanChip}:`, err);
+    return {
+      success: false,
+      errorMessage: `Error de conexi\xF3n con el portal oficial del IDU: ${err?.message || "Tiempo de espera agotado"}`
+    };
+  } finally {
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (_) {
+      }
+    }
+    try {
+      if (fs6.existsSync(downloadDir)) {
+        fs6.rmSync(downloadDir, { recursive: true, force: true });
+      }
+    } catch (_) {
+    }
+  }
+}
+async function executeIduAssistanceFromWhatsApp(body, senderId, isPrivateDm = true, options) {
+  const clean = (body || "").trim();
+  let detection = extractChipForIduValorizacion(clean);
+  if (!detection.chip && senderId && hasPendingIduSession(senderId)) {
+    const chipCandidate = clean.match(/\b(AAA[0-9]{4}[A-Z0-9]{4})\b/i);
+    if (chipCandidate) {
+      detection = {
+        found: true,
+        isIduRequest: true,
+        chip: chipCandidate[1].toUpperCase()
+      };
+      clearPendingIduSession(senderId);
+    }
+  }
+  if (!detection.found && !detection.isIduRequest) {
+    return { isIduRequest: false };
+  }
+  const chip = detection.chip;
+  if (!chip) {
+    if (senderId) {
+      setPendingIduSession(senderId);
+    }
+    const reportText2 = `\u{1F3DB}\uFE0F *PAZ Y SALVO DE VALORIZACI\xD3N IDU \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+\xA1Con el mayor gusto te expido tu Certificado de Estado de Cuenta y Paz y Salvo oficial del IDU en archivo PDF!
+
+\u{1F449} *Por favor ind\xEDcame el c\xF3digo CHIP del predio:*
+_(Inicia por AAA, ejemplo: AAA0058EEXS. Lo encuentras en la parte superior de tu recibo predial o escritura)_ \u{1F4C4}\u2728
+
+Una vez me lo des, me conecto al portal oficial del IDU y te entrego el PDF oficial listo para tu tr\xE1mite en notar\xEDa.`;
+    return {
+      isIduRequest: true,
+      reportText: reportText2
+    };
+  }
+  let downloadResult = null;
+  const shouldAttemptDownload = process.env.NODE_ENV !== "test" && !options?.skipDownload;
+  if (shouldAttemptDownload) {
+    downloadResult = await downloadIduCertificatePdf(chip);
+  }
+  if (downloadResult && downloadResult.success && downloadResult.pdfBuffer) {
+    const matText = downloadResult.matricula ? `\u{1F4DC} *Matr\xEDcula Inmobiliaria:* ${downloadResult.matricula}
+` : "";
+    const dirText = downloadResult.direccion ? `\u{1F4CD} *Direcci\xF3n del predio:* ${downloadResult.direccion}
+` : "";
+    const reportText2 = `\u{1F3DB}\uFE0F *PAZ Y SALVO DE VALORIZACI\xD3N IDU BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+\u{1F3E0} *Predio CHIP:* ${chip}
+` + matText + dirText + `
+\u2705 *Adjunto encuentras tu Certificado Oficial de Estado de Cuenta expedido por el Instituto de Desarrollo Urbano (IDU).* Este documento certifica con plena validez legal para tr\xE1mites notariales (Art\xEDculo 44 del Acuerdo Distrital 915 de 2023) que el inmueble *NO presenta deudas por concepto de Contribuci\xF3n de Valorizaci\xF3n* y se encuentra al d\xEDa con el Distrito.
+
+\xA1Listo para tu tr\xE1mite de escrituraci\xF3n, promesa o venta en notar\xEDa! \u{1F3E2}\u2728`;
+    try {
+      const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      const { predialConsultations: predialConsultations2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+      const db = await getDb2();
+      if (db) {
+        await db.insert(predialConsultations2).values({
+          chip: chip.toUpperCase(),
+          documentType: "CHIP",
+          documentNumber: chip.toUpperCase(),
+          nombreContribuyente: "PROPIETARIO / TITULAR IDU",
+          numBp: null,
+          anoGravable: "2026",
+          queryType: "paz_y_salvo_idu",
+          downloadUrl: "https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml",
+          requesterPhone: senderId ? senderId.replace(/@.*$/, "") : null,
+          source: isPrivateDm ? "whatsapp_dm" : "whatsapp_group",
+          status: "completed",
+          metadata: {
+            pdfFileName: downloadResult.pdfFileName,
+            matricula: downloadResult.matricula,
+            direccion: downloadResult.direccion,
+            date: (/* @__PURE__ */ new Date()).toISOString()
+          }
+        });
+      }
+    } catch (dbErr) {
+      console.warn("[IDU-SERVICE] No se pudo guardar la consulta en BD:", dbErr);
+    }
+    return {
+      isIduRequest: true,
+      chip,
+      reportText: reportText2,
+      pdfBuffer: downloadResult.pdfBuffer,
+      pdfFileName: downloadResult.pdfFileName,
+      matricula: downloadResult.matricula,
+      direccion: downloadResult.direccion
+    };
+  }
+  const errorMsg = downloadResult?.errorMessage || `No fue posible expedir el certificado de valorizaci\xF3n en este momento para el CHIP ${chip}.`;
+  const reportText = `\u{1F3DB}\uFE0F *PAZ Y SALVO DE VALORIZACI\xD3N IDU BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+\u{1F3E0} *Predio CHIP:* ${chip}
+
+\u26A0\uFE0F ${errorMsg}
+
+\u{1F310} *Puedes consultar directamente en el portal oficial del IDU:*
+\u{1F449} https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml
+
+Si tienes dudas o necesitas apoyo de nuestro equipo jur\xEDdico y catastral, escr\xEDbenos al canal oficial o cons\xFAltame de nuevo indicando el CHIP exacto. \u{1F44D}`;
+  return {
+    isIduRequest: true,
+    chip,
+    reportText,
+    matricula: downloadResult?.matricula,
+    direccion: downloadResult?.direccion
+  };
+}
+var pendingIduSessions, IDU_SESSION_TTL_MS;
+var init_iduValorizacionService = __esm({
+  "server/_core/iduValorizacionService.ts"() {
+    "use strict";
+    pendingIduSessions = /* @__PURE__ */ new Map();
+    IDU_SESSION_TTL_MS = 10 * 60 * 1e3;
+  }
+});
+
 // server/_core/whatsapp-match.ts
 var whatsapp_match_exports = {};
 __export(whatsapp_match_exports, {
@@ -11451,8 +11747,8 @@ import _baileys, {
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
-import fs6 from "fs";
-import path6 from "path";
+import fs7 from "fs";
+import path7 from "path";
 import { eq as eq5 } from "drizzle-orm";
 import QRCode2 from "qrcode";
 function getWASocket() {
@@ -11650,7 +11946,7 @@ var init_whatsapp_match = __esm({
       circuloGroupId = "120363403507276533@g.us";
       channelNewsletterId = process.env.WHATSAPP_CHANNEL_NEWSLETTER_ID || "";
       cooldownMap = /* @__PURE__ */ new Map();
-      cooldownFile = path6.join(process.cwd(), ".cooldown_map.json");
+      cooldownFile = path7.join(process.cwd(), ".cooldown_map.json");
       recentReviewPromptUsers = /* @__PURE__ */ new Map();
       postReviewInvitationTimers = /* @__PURE__ */ new Map();
       recentGroupInviteUsers = /* @__PURE__ */ new Map();
@@ -11771,9 +12067,9 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             } catch (cleanupErr) {
             }
           }
-          const sessionDir = path6.join(process.cwd(), this.sessionFolderName);
-          if (!fs6.existsSync(sessionDir)) {
-            fs6.mkdirSync(sessionDir, { recursive: true });
+          const sessionDir = path7.join(process.cwd(), this.sessionFolderName);
+          if (!fs7.existsSync(sessionDir)) {
+            fs7.mkdirSync(sessionDir, { recursive: true });
           }
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
           const originalKeysGet = state.keys.get;
@@ -11795,7 +12091,7 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             }
             return data;
           });
-          if (!fs6.existsSync(path6.join(sessionDir, "creds.json"))) {
+          if (!fs7.existsSync(path7.join(sessionDir, "creds.json"))) {
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
@@ -11889,12 +12185,12 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             qrcodeTerminal.generate(qr, { small: true });
             global.janiaBotQr = qr;
             try {
-              const qrPath = path6.join(process.cwd(), this.qrFileName);
-              const publicQrDir = path6.join(process.cwd(), "client", "public");
-              if (!fs6.existsSync(publicQrDir)) {
-                fs6.mkdirSync(publicQrDir, { recursive: true });
+              const qrPath = path7.join(process.cwd(), this.qrFileName);
+              const publicQrDir = path7.join(process.cwd(), "client", "public");
+              if (!fs7.existsSync(publicQrDir)) {
+                fs7.mkdirSync(publicQrDir, { recursive: true });
               }
-              const publicQrPath = path6.join(publicQrDir, "qr-match.png");
+              const publicQrPath = path7.join(publicQrDir, "qr-match.png");
               await QRCode2.toFile(qrPath, qr, { width: 400, margin: 2 });
               await QRCode2.toFile(publicQrPath, qr, { width: 400, margin: 2 });
               console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
@@ -12264,10 +12560,11 @@ ${quotedNote}` : quotedNote;
                   const { extractCedulaForVerification: extractCedulaForVerification2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
                   const isCedulaReq = extractCedulaForVerification2(body, true).found;
                   const isPredialReq = body.toLowerCase().includes("predial") || body.toLowerCase().includes("chip") || body.toLowerCase().includes("hacienda");
-                  if (cleanStart.startsWith("agente jania") || isCedulaReq || isPredialReq) {
+                  const isIduReq = body.toLowerCase().includes("idu") || body.toLowerCase().includes("valorizacion") || body.toLowerCase().includes("valorizaci\xF3n");
+                  if (cleanStart.startsWith("agente jania") || isCedulaReq || isPredialReq || isIduReq) {
                     await muteSession2(senderId, false).catch((err) => console.error("Error unmuting session:", err));
                     isMuted = false;
-                    console.log(`[JANIA-MATCH] Sesi\xF3n reactivada autom\xE1ticamente mediante ${isCedulaReq ? "verificaci\xF3n de documento" : isPredialReq ? "asistencia de predial" : "comando de cliente"} para ${senderId}`);
+                    console.log(`[JANIA-MATCH] Sesi\xF3n reactivada autom\xE1ticamente mediante ${isCedulaReq ? "verificaci\xF3n de documento" : isPredialReq ? "asistencia de predial" : isIduReq ? "paz y salvo de valorizaci\xF3n IDU" : "comando de cliente"} para ${senderId}`);
                   }
                 }
                 const targetDmId = resolvedSenderId || senderId;
@@ -12383,6 +12680,70 @@ ${quotedNote}` : quotedNote;
           const matchId = parseInt(matchConfirm[2], 10);
           await this.processMatchConfirmation(senderId, userName, matchId, decision);
           return;
+        }
+        const { hasPendingIduSession: hasPendingIduSession2, executeIduAssistanceFromWhatsApp: executeIduAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
+        if (senderId && hasPendingIduSession2(senderId)) {
+          const stopPresence = startContinuousPresence(this.sock, senderId, "composing");
+          try {
+            const iduPendingCheck = await executeIduAssistanceFromWhatsApp2(body, senderId, true);
+            if (iduPendingCheck.isIduRequest && iduPendingCheck.reportText) {
+              console.log(`[JANIA-MATCH] [DM] Asistencia de Paz y Salvo IDU completada con CHIP para ${senderId} (${iduPendingCheck.chip})`);
+              const { formatPoliteToolDelivery: formatPoliteToolDelivery2, appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+              const deliveredText = await formatPoliteToolDelivery2(senderId, userName, "idu", iduPendingCheck.reportText, true);
+              if (iduPendingCheck.pdfBuffer) {
+                await this.queuedSend(senderId, {
+                  document: iduPendingCheck.pdfBuffer,
+                  mimetype: "application/pdf",
+                  fileName: iduPendingCheck.pdfFileName || `Paz_y_Salvo_IDU_${iduPendingCheck.chip}_2026.pdf`,
+                  caption: deliveredText
+                }, { quoted: mainMsg, allowDirectMessage: true });
+                const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+                await new Promise((r) => setTimeout(r, 1500));
+                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
+                this.schedulePostReviewGroupInvitation(senderId, userName);
+              } else {
+                await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
+              }
+              appendDmHistory2(senderId, "user", body);
+              appendDmHistory2(senderId, "assistant", deliveredText);
+              await this.logToDb(senderId, "janIA", deliveredText);
+              return;
+            }
+          } finally {
+            stopPresence();
+          }
+        }
+        const isIduContext = body.toLowerCase().includes("idu") || body.toLowerCase().includes("valorizacion") || body.toLowerCase().includes("valorizaci\xF3n");
+        if (isIduContext) {
+          const stopPresence = startContinuousPresence(this.sock, senderId, "composing");
+          try {
+            const iduCheck = await executeIduAssistanceFromWhatsApp2(body, senderId, true);
+            if (iduCheck.isIduRequest && iduCheck.reportText) {
+              console.log(`[JANIA-MATCH] [DM] Asistencia de Paz y Salvo IDU atendida para ${senderId} (CHIP ${iduCheck.chip || "Pendiente"})`);
+              const { formatPoliteToolDelivery: formatPoliteToolDelivery2, appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+              const deliveredText = await formatPoliteToolDelivery2(senderId, userName, "idu", iduCheck.reportText, true);
+              if (iduCheck.pdfBuffer) {
+                await this.queuedSend(senderId, {
+                  document: iduCheck.pdfBuffer,
+                  mimetype: "application/pdf",
+                  fileName: iduCheck.pdfFileName || `Paz_y_Salvo_IDU_${iduCheck.chip}_2026.pdf`,
+                  caption: deliveredText
+                }, { quoted: mainMsg, allowDirectMessage: true });
+                const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+                await new Promise((r) => setTimeout(r, 1500));
+                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
+                this.schedulePostReviewGroupInvitation(senderId, userName);
+              } else {
+                await this.queuedSend(senderId, deliveredText, { quoted: mainMsg, allowDirectMessage: true });
+              }
+              appendDmHistory2(senderId, "user", body);
+              appendDmHistory2(senderId, "assistant", deliveredText);
+              await this.logToDb(senderId, "janIA", deliveredText);
+              return;
+            }
+          } finally {
+            stopPresence();
+          }
         }
         const { hasPendingPredialSession: hasPendingPredialSession2, executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
         if (senderId && hasPendingPredialSession2(senderId)) {
@@ -13477,6 +13838,34 @@ ${result.response}`);
       async handlePrivateDmConversation(msg, senderId, rawPhone, bodyText) {
         try {
           const realName = msg.pushName || `Asesor +${rawPhone}`;
+          const isIduReq = bodyText.toLowerCase().includes("idu") || bodyText.toLowerCase().includes("valorizacion") || bodyText.toLowerCase().includes("valorizaci\xF3n");
+          if (isIduReq) {
+            const { executeIduAssistanceFromWhatsApp: executeIduAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
+            try {
+              await this.sock.sendPresenceUpdate("composing", senderId);
+              await this.sock.sendMessage(senderId, { react: { text: "\u23F3", key: msg.key } }).catch(() => {
+              });
+            } catch (_) {
+            }
+            const iduCheck = await executeIduAssistanceFromWhatsApp2(bodyText, senderId, true);
+            if (iduCheck.isIduRequest && iduCheck.reportText) {
+              if (iduCheck.pdfBuffer) {
+                await this.queuedSend(senderId, {
+                  document: iduCheck.pdfBuffer,
+                  mimetype: "application/pdf",
+                  fileName: iduCheck.pdfFileName || `Paz_y_Salvo_IDU_${iduCheck.chip}_2026.pdf`,
+                  caption: iduCheck.reportText
+                }, { quoted: msg, allowDirectMessage: true });
+                await this.sock.sendMessage(senderId, { react: { text: "\u{1F4C4}", key: msg.key } }).catch(() => {
+                });
+              } else {
+                await this.queuedSend(senderId, iduCheck.reportText, { quoted: msg, allowDirectMessage: true });
+              }
+              await this.logToDb(senderId, "janIA", iduCheck.reportText);
+              await this.sock.sendPresenceUpdate("paused", senderId);
+              return;
+            }
+          }
           const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
           try {
             await this.sock.sendPresenceUpdate("composing", senderId);
@@ -13860,10 +14249,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           }
           let messagePayload = {};
           if (mediaPath) {
-            const fs12 = await import("fs");
-            const buffer = fs12.readFileSync(mediaPath);
-            const path13 = await import("path");
-            const ext = path13.extname(mediaPath).toLowerCase();
+            const fs13 = await import("fs");
+            const buffer = fs13.readFileSync(mediaPath);
+            const path14 = await import("path");
+            const ext = path14.extname(mediaPath).toLowerCase();
             if (ext === ".mp4") {
               messagePayload = {
                 video: buffer,
@@ -13881,7 +14270,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
                 document: buffer,
                 caption: text2,
                 mimetype: "application/octet-stream",
-                fileName: path13.basename(mediaPath)
+                fileName: path14.basename(mediaPath)
               };
             }
           } else {
@@ -13903,8 +14292,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           if (targetJid.endsWith("@c.us")) {
             targetJid = targetJid.replace("@c.us", "@s.whatsapp.net");
           }
-          const fs12 = await import("fs");
-          if (imagePath && fs12.existsSync(imagePath)) {
+          const fs13 = await import("fs");
+          if (imagePath && fs13.existsSync(imagePath)) {
             try {
               await this.sendToGroup(captionText || text2, imagePath, [], targetJid);
             } catch (imgErr) {
@@ -13943,8 +14332,8 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
           await this.discoverAndSyncNewsletters().catch(() => {
           });
         }
-        const fs12 = await import("fs");
-        const hasImage = imagePath && fs12.existsSync(imagePath);
+        const fs13 = await import("fs");
+        const hasImage = imagePath && fs13.existsSync(imagePath);
         const targetGroup2 = this.buzonGroupId || VECY_OFFICIAL_GROUPS.grupo2.id;
         if (targetGroup2) {
           try {
@@ -14007,11 +14396,11 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
         const voiceMedia = await textToSpeechMedia2(cleaned);
         const audioBuffer = voiceMedia && voiceMedia.data ? Buffer.from(voiceMedia.data, "base64") : null;
         const audioMimetype = voiceMedia?.mimetype || "audio/ogg; codecs=opus";
-        const fs12 = await import("fs");
+        const fs13 = await import("fs");
         if (this.buzonGroupId) {
           try {
             console.log(`[JANIA-MATCH] \u{1F4E4} Despachando publicaci\xF3n a Grupo 2 (${this.buzonGroupId})...`);
-            if (imagePath && fs12.existsSync(imagePath)) {
+            if (imagePath && fs13.existsSync(imagePath)) {
               await this.sendToGroup(captionText || text2, imagePath, [], this.buzonGroupId);
             }
             if (audioBuffer) {
@@ -14031,7 +14420,7 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
         if (this.channelNewsletterId) {
           try {
             console.log(`[JANIA-MATCH] \u{1F4E2} Despachando publicaci\xF3n tem\xE1tica al Canal de WhatsApp (${this.channelNewsletterId})...`);
-            if (imagePath && fs12.existsSync(imagePath)) {
+            if (imagePath && fs13.existsSync(imagePath)) {
               await this.sendToGroup(captionText || text2, imagePath, [], this.channelNewsletterId);
             }
             if (audioBuffer) {
@@ -14169,7 +14558,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
   * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
 \u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
         const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path6.resolve("./client/public/jania_perfil.png");
+        const imgPath = path7.resolve("./client/public/jania_perfil.png");
         for (const group of groups) {
           try {
             await this.sendToGroup(baseMsg, imgPath, [], group);
@@ -14200,10 +14589,10 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
           }
         } catch (e) {
         }
-        const sessionDir = path6.join(process.cwd(), ".baileys_auth");
-        if (fs6.existsSync(sessionDir)) {
+        const sessionDir = path7.join(process.cwd(), ".baileys_auth");
+        if (fs7.existsSync(sessionDir)) {
           try {
-            fs6.rmSync(sessionDir, { recursive: true, force: true });
+            fs7.rmSync(sessionDir, { recursive: true, force: true });
           } catch (err) {
             console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
           }
@@ -14222,8 +14611,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       }
       loadCooldowns() {
         try {
-          if (fs6.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs6.readFileSync(this.cooldownFile, "utf8"));
+          if (fs7.existsSync(this.cooldownFile)) {
+            const raw = JSON.parse(fs7.readFileSync(this.cooldownFile, "utf8"));
             this.cooldownMap = new Map(Object.entries(raw));
           }
         } catch (e) {
@@ -14232,7 +14621,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       saveCooldowns() {
         try {
           const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs6.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
+          fs7.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
         } catch (e) {
         }
       }
@@ -16490,8 +16879,8 @@ __export(janIA_exports, {
   translateTransactionType: () => translateTransactionType
 });
 import { eq as eq7, and as and4, sql as sql5, gte, desc as desc2 } from "drizzle-orm";
-import fs7 from "fs";
-import path7 from "path";
+import fs8 from "fs";
+import path8 from "path";
 import axios6 from "axios";
 import crypto2 from "crypto";
 function generarHashMensaje(rawText, remitente) {
@@ -17716,20 +18105,20 @@ function buildSystemPrompt(groupJid) {
     return promptCache[cacheKey];
   }
   try {
-    const baseDir = path7.resolve(process.cwd(), "server/_core/prompts");
-    const basePrompt = fs7.readFileSync(path7.join(baseDir, "base.md"), "utf-8");
+    const baseDir = path8.resolve(process.cwd(), "server/_core/prompts");
+    const basePrompt = fs8.readFileSync(path8.join(baseDir, "base.md"), "utf-8");
     let specificPrompt = "";
     if (groupJid === "120363260108880069@g.us") {
-      specificPrompt = fs7.readFileSync(path7.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+      specificPrompt = fs8.readFileSync(path8.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else if (groupJid === "120363417740040773@g.us") {
-      const legalPrompt = fs7.readFileSync(path7.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
+      const legalPrompt = fs8.readFileSync(path8.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
       specificPrompt = legalPrompt;
     } else if (groupJid === "120363403507276533@g.us") {
-      specificPrompt = fs7.readFileSync(path7.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
+      specificPrompt = fs8.readFileSync(path8.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
     } else if (groupJid && (groupJid.endsWith("@g.us") || groupJid.includes("@us"))) {
-      specificPrompt = fs7.readFileSync(path7.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+      specificPrompt = fs8.readFileSync(path8.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
     } else {
-      specificPrompt = fs7.readFileSync(path7.join(baseDir, "web/web_console.md"), "utf-8");
+      specificPrompt = fs8.readFileSync(path8.join(baseDir, "web/web_console.md"), "utf-8");
     }
     const fullPrompt = `${basePrompt}
 
@@ -22601,8 +22990,8 @@ __export(cronService_exports, {
   publishWeeklyReportNow: () => publishWeeklyReportNow
 });
 import cron from "node-cron";
-import path8 from "path";
-import fs8 from "fs";
+import path9 from "path";
+import fs9 from "fs";
 import { fileURLToPath } from "url";
 import { gte as gte2, and as and7, eq as eq10, sql as sql8, desc as desc4 } from "drizzle-orm";
 function getBogotaDateString(d = /* @__PURE__ */ new Date()) {
@@ -22766,16 +23155,16 @@ function enforceJanIAIdentity(text2) {
 async function getThemedImagePathAsync(tipo) {
   const recent = await getRecentImageFiles(3);
   const possibleDirs = [
-    path8.resolve(process.cwd(), "client/public/assets/jania"),
-    path8.resolve(process.cwd(), "dist/assets/jania"),
-    path8.resolve(__dirname, "../../client/public/assets/jania")
+    path9.resolve(process.cwd(), "client/public/assets/jania"),
+    path9.resolve(process.cwd(), "dist/assets/jania"),
+    path9.resolve(__dirname, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || [];
   for (const pref of preferences) {
     if (pref.endsWith(".mp4") || pref.endsWith(".mov")) {
       for (const dir of possibleDirs) {
-        const candidate = path8.join(dir, pref);
-        if (fs8.existsSync(candidate)) {
+        const candidate = path9.join(dir, pref);
+        if (fs9.existsSync(candidate)) {
           return { fullPath: candidate, fileName: pref };
         }
       }
@@ -22788,8 +23177,8 @@ async function getThemedImagePathAsync(tipo) {
     chosenFile = effectivePool[0];
   }
   for (const dir of possibleDirs) {
-    const candidatePath = path8.join(dir, chosenFile);
-    if (fs8.existsSync(candidatePath)) {
+    const candidatePath = path9.join(dir, chosenFile);
+    if (fs9.existsSync(candidatePath)) {
       return { fullPath: candidatePath, fileName: chosenFile };
     }
   }
@@ -22797,15 +23186,15 @@ async function getThemedImagePathAsync(tipo) {
 }
 function getThemedImagePath(tipo) {
   const possibleDirs = [
-    path8.resolve(process.cwd(), "client/public/assets/jania"),
-    path8.resolve(process.cwd(), "dist/assets/jania"),
-    path8.resolve(__dirname, "../../client/public/assets/jania")
+    path9.resolve(process.cwd(), "client/public/assets/jania"),
+    path9.resolve(process.cwd(), "dist/assets/jania"),
+    path9.resolve(__dirname, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || ALL_JANIA_IMAGES;
   const chosenFile = preferences[0] || "jania_marketing.jpg";
   for (const dir of possibleDirs) {
-    const candidatePath = path8.join(dir, chosenFile);
-    if (fs8.existsSync(candidatePath)) {
+    const candidatePath = path9.join(dir, chosenFile);
+    if (fs9.existsSync(candidatePath)) {
       return { fullPath: candidatePath, fileName: chosenFile };
     }
   }
@@ -23222,12 +23611,12 @@ async function fetchPublicThemeImage(themeKey, dayOfMonth) {
     if (!imgRes.ok) return void 0;
     const buffer = Buffer.from(await imgRes.arrayBuffer());
     if (buffer.length < 1e3) return void 0;
-    const cacheDir = path8.resolve(process.cwd(), "client/public/assets/broadcast");
-    if (!fs8.existsSync(cacheDir)) {
-      fs8.mkdirSync(cacheDir, { recursive: true });
+    const cacheDir = path9.resolve(process.cwd(), "client/public/assets/broadcast");
+    if (!fs9.existsSync(cacheDir)) {
+      fs9.mkdirSync(cacheDir, { recursive: true });
     }
-    const targetFile = path8.join(cacheDir, `daily_tip_dia_${dayOfMonth}.jpg`);
-    fs8.writeFileSync(targetFile, buffer);
+    const targetFile = path9.join(cacheDir, `daily_tip_dia_${dayOfMonth}.jpg`);
+    fs9.writeFileSync(targetFile, buffer);
     console.log(`[CRON-IMAGE-WEB] \u2705 Imagen guardada localmente (${buffer.length} bytes): ${targetFile}`);
     return targetFile;
   } catch (err) {
@@ -23322,7 +23711,7 @@ async function publishTodayTipNow(force = true) {
     await completeBroadcast(lock.broadcastId, {
       topicTitle: content.topicTitle,
       themeKey: content.themeKey,
-      imageFileName: imagePath ? path8.basename(imagePath) : void 0,
+      imageFileName: imagePath ? path9.basename(imagePath) : void 0,
       captionText: content.captionText
     });
     console.log(`[CRON-SERVICE] \u2713 Difusi\xF3n diaria entregada (${imagePath ? "con imagen p\xFAblica" : "texto puro"}) a Grupo 2, Grupo 3 y Canal Oficial: "${content.topicTitle}".`);
@@ -23522,7 +23911,7 @@ var init_cronService = __esm({
     init_llm();
     init_const();
     __filename = fileURLToPath(import.meta.url);
-    __dirname = path8.dirname(__filename);
+    __dirname = path9.dirname(__filename);
     ALL_JANIA_IMAGES = [
       "jania_marketing.jpg",
       "jania_juridico.jpg",
@@ -25449,8 +25838,8 @@ init_matching();
 init_voiceTranscription();
 init_storage();
 import axios7 from "axios";
-import fs9 from "fs";
-import path9 from "path";
+import fs10 from "fs";
+import path10 from "path";
 
 // server/routers/properties.ts
 init_trpc();
@@ -27486,11 +27875,11 @@ ${liveStats}${userContextInstruction}
   }),
   getQrCode: publicProcedure.query(async () => {
     try {
-      const qrPath = path9.join(process.cwd(), "qr-captador.png");
-      const qrMatchPath = path9.join(process.cwd(), "qr-match.png");
-      let targetPath = fs9.existsSync(qrPath) ? qrPath : fs9.existsSync(qrMatchPath) ? qrMatchPath : null;
+      const qrPath = path10.join(process.cwd(), "qr-captador.png");
+      const qrMatchPath = path10.join(process.cwd(), "qr-match.png");
+      let targetPath = fs10.existsSync(qrPath) ? qrPath : fs10.existsSync(qrMatchPath) ? qrMatchPath : null;
       if (targetPath) {
-        const fileData = fs9.readFileSync(targetPath);
+        const fileData = fs10.readFileSync(targetPath);
         return { hasQr: true, qrData: `data:image/png;base64,${fileData.toString("base64")}` };
       }
       return { hasQr: false, qrData: null };
@@ -28831,30 +29220,30 @@ async function createContext(opts) {
 
 // server/_core/vite.ts
 import express from "express";
-import fs10 from "fs";
+import fs11 from "fs";
 import { nanoid } from "nanoid";
-import path11 from "path";
+import path12 from "path";
 import { createServer as createViteServer } from "vite";
 
 // vite.config.ts
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import path10 from "node:path";
+import path11 from "node:path";
 import { defineConfig } from "vite";
 var vite_config_default = defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path10.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path10.resolve(import.meta.dirname, "shared"),
-      "@assets": path10.resolve(import.meta.dirname, "attached_assets")
+      "@": path11.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path11.resolve(import.meta.dirname, "shared"),
+      "@assets": path11.resolve(import.meta.dirname, "attached_assets")
     }
   },
-  envDir: path10.resolve(import.meta.dirname),
-  root: path10.resolve(import.meta.dirname, "client"),
-  publicDir: path10.resolve(import.meta.dirname, "client", "public"),
+  envDir: path11.resolve(import.meta.dirname),
+  root: path11.resolve(import.meta.dirname, "client"),
+  publicDir: path11.resolve(import.meta.dirname, "client", "public"),
   build: {
-    outDir: path10.resolve(import.meta.dirname, "dist"),
+    outDir: path11.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
@@ -28905,13 +29294,13 @@ async function setupVite(app, server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
     try {
-      const clientTemplate = path11.resolve(
+      const clientTemplate = path12.resolve(
         import.meta.dirname,
         "../..",
         "client",
         "index.html"
       );
-      let template = await fs10.promises.readFile(clientTemplate, "utf-8");
+      let template = await fs11.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`
@@ -28925,15 +29314,15 @@ async function setupVite(app, server) {
   });
 }
 function serveStatic(app) {
-  const distPath = path11.resolve(import.meta.dirname, "..", "dist");
-  if (!fs10.existsSync(distPath)) {
+  const distPath = path12.resolve(import.meta.dirname, "..", "dist");
+  if (!fs11.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
   app.use(express.static(distPath));
   app.use("*", (_req, res) => {
-    res.sendFile(path11.resolve(distPath, "index.html"));
+    res.sendFile(path12.resolve(distPath, "index.html"));
   });
 }
 
@@ -28945,8 +29334,8 @@ init_llm();
 init_whatsapp_utils();
 init_whatsapp_match();
 import multer from "multer";
-import fs11 from "fs";
-import path12 from "path";
+import fs12 from "fs";
+import path13 from "path";
 init_agenda();
 process.on("uncaughtException", (error) => {
   console.error("[SYSTEM-CRITICAL] Uncaught Exception detectada:", error);
@@ -29125,10 +29514,10 @@ async function startServer() {
   });
   app.get("/qr-match.png", (req, res) => {
     try {
-      const qrPath = path12.join(process.cwd(), "qr-match.png");
-      const distQrPath = path12.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs11.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs11.existsSync(activePath)) {
+      const qrPath = path13.join(process.cwd(), "qr-match.png");
+      const distQrPath = path13.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs12.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs12.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -29148,10 +29537,10 @@ async function startServer() {
         await janiaMatchBot2.initialize();
         await new Promise((resolve) => setTimeout(resolve, 3e3));
       }
-      const qrPath = path12.join(process.cwd(), "qr-match.png");
-      const distQrPath = path12.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs11.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs11.existsSync(activePath)) {
+      const qrPath = path13.join(process.cwd(), "qr-match.png");
+      const distQrPath = path13.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs12.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs12.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -29172,10 +29561,10 @@ async function startServer() {
       console.log("[ADMIN] Re-inicializando sesi\xF3n de Baileys para refrescar QR...");
       await janiaMatchBot2.initialize();
       await new Promise((resolve) => setTimeout(resolve, 4e3));
-      const qrPath = path12.join(process.cwd(), "qr-match.png");
-      const distQrPath = path12.join(process.cwd(), "dist", "qr-match.png");
-      const activePath = fs11.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs11.existsSync(activePath)) {
+      const qrPath = path13.join(process.cwd(), "qr-match.png");
+      const distQrPath = path13.join(process.cwd(), "dist", "qr-match.png");
+      const activePath = fs12.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs12.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         return res.sendFile(activePath);
       }
@@ -29202,10 +29591,10 @@ async function startServer() {
   });
   app.get("/qr-captador.png", (req, res) => {
     try {
-      const qrPath = path12.join(process.cwd(), "qr-captador.png");
-      const distQrPath = path12.join(process.cwd(), "dist", "qr-captador.png");
-      const activePath = fs11.existsSync(qrPath) ? qrPath : distQrPath;
-      if (fs11.existsSync(activePath)) {
+      const qrPath = path13.join(process.cwd(), "qr-captador.png");
+      const distQrPath = path13.join(process.cwd(), "dist", "qr-captador.png");
+      const activePath = fs12.existsSync(qrPath) ? qrPath : distQrPath;
+      if (fs12.existsSync(activePath)) {
         res.setHeader("Content-Type", "image/png");
         res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Pragma", "no-cache");
@@ -29256,8 +29645,8 @@ async function startServer() {
           let docBuffer;
           if (Buffer.isBuffer(document2)) {
             docBuffer = document2;
-          } else if (typeof document2 === "string" && fs11.existsSync(document2)) {
-            docBuffer = fs11.readFileSync(document2);
+          } else if (typeof document2 === "string" && fs12.existsSync(document2)) {
+            docBuffer = fs12.readFileSync(document2);
           } else if (typeof document2 === "string") {
             const cleanBase64 = document2.includes(",") ? document2.split(",")[1] : document2;
             docBuffer = Buffer.from(cleanBase64, "base64");
@@ -29460,23 +29849,23 @@ _(Si es empresa, usa NIT en vez de CC)_
   });
   function resolveBroadcastImagePath(filenames) {
     const searchDirs = [
-      path12.join(process.cwd(), "client/public/assets/jania"),
-      path12.join(process.cwd(), "client/public/images"),
-      path12.join(process.cwd(), "client/public"),
+      path13.join(process.cwd(), "client/public/assets/jania"),
+      path13.join(process.cwd(), "client/public/images"),
+      path13.join(process.cwd(), "client/public"),
       process.cwd(),
-      path12.join(process.cwd(), "dist/assets/jania"),
-      path12.join(process.cwd(), "dist/images"),
-      path12.join(process.cwd(), "dist")
+      path13.join(process.cwd(), "dist/assets/jania"),
+      path13.join(process.cwd(), "dist/images"),
+      path13.join(process.cwd(), "dist")
     ];
     for (const name of filenames) {
       for (const dir of searchDirs) {
-        const fullPath = path12.join(dir, name);
-        if (fs11.existsSync(fullPath)) {
+        const fullPath = path13.join(dir, name);
+        if (fs12.existsSync(fullPath)) {
           return { path: fullPath, exists: true };
         }
       }
     }
-    return { path: path12.join(process.cwd(), filenames[0]), exists: false };
+    return { path: path13.join(process.cwd(), filenames[0]), exists: false };
   }
   app.post("/api/admin/broadcast-identity-v2", async (req, res) => {
     try {
@@ -29645,9 +30034,9 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
       res.status(500).json({ error: err.message || "Error al procesar la transcripci\xF3n" });
     }
   });
-  const uploadsDir2 = path12.resolve(process.cwd(), "public/uploads");
-  if (!fs11.existsSync(uploadsDir2)) {
-    fs11.mkdirSync(uploadsDir2, { recursive: true });
+  const uploadsDir2 = path13.resolve(process.cwd(), "public/uploads");
+  if (!fs12.existsSync(uploadsDir2)) {
+    fs12.mkdirSync(uploadsDir2, { recursive: true });
   }
   app.use("/uploads", express2.static(uploadsDir2));
   const diskStorage = multer.diskStorage({
@@ -29656,7 +30045,7 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
     },
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path12.extname(file.originalname));
+      cb(null, uniqueSuffix + path13.extname(file.originalname));
     }
   });
   const uploadDisk = multer({

@@ -6687,7 +6687,7 @@ export function appendDmHistory(userId: string, role: "user" | "assistant", cont
 export async function formatPoliteToolDelivery(
   userId: string,
   rawName: string,
-  toolType: "cedula" | "predial",
+  toolType: "cedula" | "predial" | "idu",
   payloadText: string,
   success: boolean = true
 ): Promise<string> {
