@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.60";
+    VECY_VERSION = "v32.62";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -26,25 +26,31 @@ var init_const = __esm({
         id: "120363260108880069@g.us",
         name: "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}",
         inviteLink: "https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ",
-        purpose: "Publicar ofertas y requerimientos inmobiliarios exclusivos (inmuebles y demandas)",
-        description: `\xA1Bienvenido/a al canal transaccional oficial de VECY BIENES RA\xCDCES! \u{1F1E8}\u{1F1F4}\u{1F91D}
+        purpose: "Publicar ofertas, demandas y permutas inmobiliarias (fotos, flyers, banners, brochures PDF y enlaces)",
+        description: `\xA1Bienvenido/a al canal transaccional de VECY BIENES RA\xCDCES! \u{1F1E8}\u{1F1F4}\u{1F91D}
 
-\u{1F916} *GRUPO ADMINISTRADO Y MODERADO 24/7 POR NUESTRA IA (JanIA, agente IA de VECY BIENES RA\xCDCES)*.
+\u{1F916} *Grupo administrado y moderado 24/7 por nuestra IA (JanIA, agente IA de VECY BIENES RA\xCDCES).*
 
-\u{1F4CC} *PROP\xD3SITO EXCLUSIVO:*
-Espacio 100% TRANSACCIONAL de alta velocidad para corredores, inmobiliarias y propietarios. JanIA monitorea este chat 24/7, extrae cada inmueble o demanda en tiempo real y cruza las dos puntas para generar cierres colaborativos en tiempo r\xE9cord.
+\u{1F4CC} *PROP\xD3SITO:*
+Espacio 100% transaccional de alta velocidad. JanIA monitorea 24/7, extrae cada publicaci\xF3n y cruza oferta con demanda para cierres colaborativos en tiempo r\xE9cord.
 
-\u{1F3F7}\uFE0F *LO QUE S\xCD PUEDES PUBLICAR:*
-1\uFE0F\u20E3 OFERTAS: Inmuebles disponibles para comercializar (Venta, Arriendo o Permuta) con ciudad, barrio, precio y datos t\xE9cnicos.
-2\uFE0F\u20E3 DEMANDAS: Requerimientos de clientes compradores o arrendatarios calificados (presupuesto, zona y caracter\xEDsticas).
+\u{1F3F7}\uFE0F *LO QUE S\xCD ADMITIMOS (100% INMOBILIARIO):*
+1\uFE0F\u20E3 OFERTAS, DEMANDAS Y PERMUTAS: Inmuebles en venta, arriendo y permutas/venpermutas en Colombia con datos claros.
+2\uFE0F\u20E3 PUBLICIDAD VISUAL Y FLYERS: Se admiten im\xE1genes publicitarias como; flyers, banners comerciales, p\xF3sters y fotos con informaci\xF3n de la DEMANDA o la OFERTA.
+3\uFE0F\u20E3 BROCHURES Y DOSSIERS EN PDF: Fichas t\xE9cnicas y cat\xE1logos en PDF.
+4\uFE0F\u20E3 ENLACES DE TODO TIPO: Enlaces web, tours virtuales 360\xB0, videos de Youtube y Tiktok, carpetas en la nube y redes sociales que contengan publicidad de ofertas, demandas o permutas inmobiliarias. Siempre y cuando vengan acompa\xF1ados esos enlaces de la informaci\xF3n correspondiente.
 
-\u{1F6AB} *REGLA ESTRICTA DE MODERACI\xD3N AUTOM\xC1TICA POR IA:*
-Cualquier clase de imagen o foto, meme, archivo PDF, audio, enlace publicitario o mensaje de charla/debate que no corresponda al tema transaccional del grupo ser\xE1 amonestado y ELIMINADO DE INMEDIATO del grupo por nuestra IA JanIA.
+\u{1F916} *REACCIONES DE JANIA:*
+\u2022 \u{1F44D} Venta | \u{1F44C} Arriendo | \u{1F500} Permuta
+\u2022 \u{1F4DD} Demanda Venta | \u270F\uFE0F Demanda Arriendo | \u{1F504} Demanda Permuta
 
-\u{1F4A1} *\xBFD\xD3NDE PREGUNTAR O DEBATIR?*
-\u2022 Para consultas sobre leyes, tributario, aval\xFAos o tips: Grupo 2.
-\u2022 Para charlar del proyecto y alianzas: Grupo 3.
-\u2022 Para atenci\xF3n privada con JanIA: WhatsApp +57 319 291 9978.
+\u26D4 *MODERACI\xD3N ESTRICTA POR IA:*
+Cualquier meme, cadena, pol\xEDtica, religi\xF3n o contenido ajeno al sector inmobiliario ser\xE1 amonestado y ELIMINADO DE INMEDIATO por JanIA.
+
+\u{1F4A1} *\xBFD\xD3NDE DEBATIR O PREGUNTAR?*
+\u2022 Leyes, tributario, aval\xFAos o tips: Grupo 2.
+\u2022 Comunidad y modelo 40/20/40: Grupo 3.
+\u2022 Chat privado con JanIA: WhatsApp +57 319 291 9978.
 
 _VECY_
 _BIENES RA\xCDCES_
@@ -55,27 +61,26 @@ _La evoluci\xF3n inevitable para el sector de los bienes ra\xEDces._ \u{1F680}`
         name: "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}",
         inviteLink: "https://chat.whatsapp.com/J4u1h7NUL1i1B1wAIyTUN6",
         purpose: "Consultas inmobiliarias p\xFAblicas, tips del d\xEDa, noticias del sector, valor de metro cuadrado y debates libres",
-        description: `\xA1Bienvenido/a al consultorio inmobiliario y foro de actualidad de VECY BIENES RA\xCDCES! \u{1F4A1}\u{1F4DA}
+        description: `\xA1Bienvenido/a al consultorio inmobiliario de VECY BIENES RA\xCDCES! \u{1F4A1}\u{1F4DA}
 
-\u{1F916} *GRUPO ADMINISTRADO Y ATENDIDO POR NUESTRA IA (JanIA, agente IA de VECY BIENES RA\xCDCES)*.
+\u{1F916} *Grupo administrado y atendido por nuestra IA (JanIA, agente IA de VECY BIENES RA\xCDCES).*
 
-\u{1F4CC} *PROP\xD3SITO DEL GRUPO:*
-Espacio colaborativo de formaci\xF3n y resoluci\xF3n t\xE9cnica para elevar el nivel profesional del gremio inmobiliario en Colombia. JanIA y los aliados resolvemos tus dudas, compartimos novedades del sector y analizamos el mercado.
+\u{1F4CC} *PROP\xD3SITO:*
+Consultor\xEDa t\xE9cnica, formaci\xF3n y actualidad para elevar el nivel profesional del sector inmobiliario. JanIA y los aliados resolvemos tus dudas y analizamos el mercado.
 
-\u{1F4A1} *CONTENIDO PERMITIDO Y PROMOVIDO:*
-\u2022 Consultas legales: Promesas de compraventa, Ley 820 de arrendamientos, sucesiones, escrituraci\xF3n y garant\xEDas.
-\u2022 Consultas tributarias DIAN: Retenci\xF3n en la fuente, ganancia ocasional e impuestos prediales.
-\u2022 Valor del metro cuadrado y estudios de mercado.
-\u2022 P\xEDldoras y tips diarios de formaci\xF3n (10:00 AM) y noticias del mercado inmobiliario.
+\u{1F4A1} *CONTENIDO PERMITIDO:*
+\u2022 Consultas legales: Promesas, Ley 820 de arrendamientos, sucesiones y escrituraci\xF3n.
+\u2022 Consultas tributarias DIAN: Retenci\xF3n en la fuente y ganancia ocasional.
+\u2022 Estudios de mercado y valor del metro cuadrado ($/m\xB2).
+\u2022 Tips de formaci\xF3n diarios (10:00 AM) con JanIA Coach Inmobiliaria y noticias del sector.
 \u2022 Debates profesionales respetuosos entre colegas.
 
-\u{1F6AB} *REGLA ESTRICTA DE MODERACI\xD3N AUTOM\xC1TICA POR IA:*
-\u2022 NO se permite publicar ofertas ni demandas comerciales aqu\xED (esas van exclusivamente en el Grupo 1).
-\u2022 Cualquier imagen, meme, archivo PDF, audio o enlace ajeno al tema del consultorio ser\xE1 amonestado y ELIMINADO DE INMEDIATO por JanIA.
+\u26D4 *MODERACI\xD3N ESTRICTA POR IA:*
+\u2022 NO se publican ofertas ni demandas aqu\xED (van en el Grupo 1).
+\u2022 Memes, cadenas o contenido fuera de tema ser\xE1n amonestados y ELIMINADOS DE INMEDIATO por JanIA.
 
-\u{1F4DE} *ATENCI\xD3N COMERCIAL HUMANA PERSONALIZADA:*
-Para peritajes, cotizaciones o contrataci\xF3n personalizada con Eduardo y Jani:
-WhatsApp Br\xF3ker: +57 316 656 9719.
+\u{1F4DE} *ATENCI\xD3N BR\xD3KER PERSONALIZADA:*
+WhatsApp Br\xF3ker Oficial: +57 316 656 9719.
 
 _VECY_
 _BIENES RA\xCDCES_
@@ -85,24 +90,25 @@ _La evoluci\xF3n inevitable para el sector de los bienes ra\xEDces._ \u{1F680}`
         id: "120363403507276533@g.us",
         name: '\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}',
         inviteLink: "https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU",
-        purpose: "Comunidad oficial de aliados, experiencias cotidianas de negocio, foros inmobiliarios y desarrollo colaborativo",
+        purpose: "Comunidad oficial de aliados, experiencias cotidianas de negocio, modelo colaborativo 40/20/40 y desarrollo del s\xFAper portal",
         description: `\xA1Bienvenido/a a la comunidad oficial del Proyecto VECY BIENES RA\xCDCES! \u{1F310}\u{1F91D}
 
-\u{1F916} *GRUPO ADMINISTRADO Y ATENDIDO POR NUESTRA IA (JanIA, agente IA de VECY BIENES RA\xCDCES)*.
+\u{1F916} *Grupo administrado y atendido por nuestra IA (JanIA, agente IA de VECY BIENES RA\xCDCES).*
 
-\u{1F4CC} *PROP\xD3SITO DEL GRUPO:*
-Espacio de integraci\xF3n de aliados, fundadores y colegas del sector inmobiliario. Punto de encuentro para debatir sobre la transformaci\xF3n del corretaje, proponer mejoras en la plataforma y compartir vivencias cotidianas del negocio.
+\u{1F4CC} *PROP\xD3SITO:*
+Integraci\xF3n de colegas, vivencias cotidianas del negocio, foros de debate y novedades del S\xFAper Portal Inmobiliario.
 
 \u{1F680} *LO QUE COMPARTIMOS AQU\xCD:*
-\u2022 Charlas sobre el modelo colaborativo (ganar 40%-45% cada 3-4 d\xEDas con IA).
-\u2022 Propuestas de nuevas herramientas para la plataforma.
-\u2022 Experiencias de cierres, an\xE9cdotas y aprendizaje colaborativo.
-\u2022 Novedades de la red, alianzas estrat\xE9gicas y visi\xF3n a futuro.
+\u2022 El revolucionario MODELO COLABORATIVO 40 / 20 / 40:
+  - 40% Punta Captadora (quien aporta el inmueble al portal).
+  - 20% Bolsa (10% Red Colaborativa de promotores + 10% Plataforma VECY y soporte legal).
+  - 40% Punta Colocadora (quien aporta al cliente, lo agenda en Vecy Agenda y acompa\xF1a el cierre).
+\u2022 Resultados r\xE1pidos y seguidos: M\xE1s negocios y cierres continuos en lugar de meses estancados.
+\u2022 Foros, experiencias reales de negocios y propuestas para la plataforma.
 
-\u{1F6AB} *REGLA ESTRICTA DE MODERACI\xD3N AUTOM\xC1TICA POR IA:*
-\u2022 No publicar inventarios de inmuebles ni requerimientos (van en el Grupo 1).
-\u2022 Cualquier imagen, meme, archivo PDF, audio o enlace ajeno a la comunidad ser\xE1 amonestado y ELIMINADO DE INMEDIATO por JanIA.
-\u2022 Cero canibalismo comercial, pol\xEDtica o spam.
+\u26D4 *MODERACI\xD3N ESTRICTA POR IA:*
+\u2022 NO publicar inmuebles ni requerimientos aqu\xED (van en el Grupo 1).
+\u2022 Spam, memes o mensajes ajenos ser\xE1n amonestados y ELIMINADOS DE INMEDIATO por JanIA.
 
 \u{1F310} *PORTAL OFICIAL:* https://vecy-network.vercel.app/
 
@@ -23080,7 +23086,19 @@ MISI\xD3N EDUCATIVA Y DE COACHING INMOBILIARIO (DOCTRINA EDUARDO A. RIVERA):
     - La soluci\xF3n previa antes de desistir: proponer la soluci\xF3n del correo electr\xF3nico formal con validez de firma electr\xF3nica por contestaci\xF3n (tal como lo gestiona VECY).
     - Si se acepta una captaci\xF3n sin exclusividad: hacer presentaciones de cliente de alt\xEDsimo nivel y elegancia profesional como en VECY.
   * C\xF3mo perfilar al cliente comprador para encontrar la propiedad que verdaderamente busca (descubrir su motivaci\xF3n profunda, tiempos de mudanza y capacidad financiera real).
-  * C\xF3mo tejer alianzas comerciales s\xF3lidas entre colegas (reparto 50/50 transparente, cero egos, cero cadenas de intermediarios fantasmas).
+  * El Revolucionario Modelo Colaborativo 40 / 20 / 40 de VECY BIENES RA\xCDCES:
+    - 40% Para quien subi\xF3 el inmueble al portal (Punta Captadora / quien ten\xEDa el inmueble).
+    - 20% Bolsa compartida: 10% entre toda la Red Colaborativa (promotores que viralizan el enlace \xFAnico por puntos de ranking) + 10% para VECY BIENES RA\xCDCES (plataforma tecnol\xF3gica, algoritmo de matches organizado de JanIA y respaldo legal).
+    - 40% Para quien consigue al comprador, lo presenta a trav\xE9s del sistema de reserva "Vecy Agenda" y logra cerrar el negocio (Punta Colocadora).
+    - Ense\xF1ar por qu\xE9 el 40/20/40 supera al tradicional 50/50: En Colombia el 50/50 directo es bueno pero demorado en concretarse en solitario. Cualquier pr\xE1ctica es respetable y sabemos que a muchos de entrada les inquieta el 40/20/40, pero nuestra promesa de valor certera es que a trav\xE9s de este sistema adoptar\xE1n la figura porque ver\xE1n RESULTADOS R\xC1PIDOS Y SEGUIDOS, cerrando negocios continuos en lugar de pasar meses estancados.
+    - Educar y preparar a la comunidad de agentes de cara al lanzamiento de nuestro S\xDAPER PORTAL INMOBILIARIO VECY BIENES RA\xCDCES.
+  * Los 6 Grandes Beneficios Gratuitos para el Agente en VECY BIENES RA\xCDCES:
+    1. Ingreso 100% Gratuito: Cero mensualidades, trimestres, semestres ni anualidades obligatorias.
+    2. Publicaci\xF3n Ilimitada de Ofertas y Demandas: Con tienda de administraci\xF3n propia.
+    3. Motor de Inteligencia Artificial: Matches ultrarr\xE1pidos entre ofertas y demandas seg\xFAn el detalle publicado.
+    4. Acceso Pleno a "Vecy Agenda" con IA: Sistema inteligente que verifica en autom\xE1tico y al instante al visitante/comprador y contesta correos; el solicitante formal de la visita es el mismo agente colegiado que presenta a sus interesados.
+    5. Chat Web 24/7 con JanIA: Creaci\xF3n de documentos, correos, ofertas y promesas de compraventa blindadas en tiempo r\xE9cord.
+    6. Estudio de T\xEDtulos y Tr\xE1mites Gratuitos en L\xEDnea: Asesor\xEDa documental enviando archivos (Predial, Certificado de Tradici\xF3n y Libertad, Escrituras, IDU) + JanIA ayuda a tramitar en l\xEDnea y gratis el Predial, certificados de pago y Paz y Salvos de predial y del IDU.
   * Soluciones de liquidez y financieras: C\xF3mo ayudar a clientes que necesitan dinero pero tienen un inmueble hipotecable, mediante hipotecas con personas particulares de confianza, entidades financieras y nuestra alianza estrat\xE9gica con el Banco Caja Social.
   * Servicios legales y notariales: Redacci\xF3n de correos formales, promesas de compraventa blindadas, minutas, demandas y cobros prejur\xEDdicos de cartera.
 REGLAS INQUEBRANTABLES:
@@ -23552,23 +23570,24 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
 \u{1F4F2} *Revisi\xF3n de Minutas con JanIA:* https://vecy-network.vercel.app/jania`
         },
         {
-          topicTitle: "Modelo Colaborativo 45/5/5/45 vs Comisiones Excluyentes",
+          topicTitle: "Modelo Colaborativo 40/20/40 de VECY BIENES RA\xCDCES vs Tercer\xEDas",
           themeKey: "juridico",
-          voiceText: `Hola, queridos colegas. Soy JanIA. En VECY Bienes Ra\xEDces defendemos una repartici\xF3n justa de honorarios: del tres por ciento de comisi\xF3n, el cuarenta y cinco por ciento es para el captador de la Oferta, el cuarenta y cinco por ciento para quien trae la Demanda calificada, cinco por ciento para la red colaborativa que difunde y cinco por ciento para la plataforma VECY. Rechazamos los esquemas ego\xEDstas de cincuenta cincuenta cerrados o cuarenta veinte cuarenta que imponen terceros ocultos. La verdadera colaboraci\xF3n une a las partes con transparencia y respeto. \xA1A cerrar en equipo!`,
-          captionText: `\u{1F91D} *MODELO COLABORATIVO 45/5/5/45 \u2014 VECY BIENES RA\xCDCES* \u{1F4DC}
+          voiceText: `Hola, queridos colegas. Soy JanIA. En VECY Bienes Ra\xEDces defendemos una repartici\xF3n justa, transparente y altamente rentable de honorarios: del tres por ciento de comisi\xF3n habitual, el cuarenta por ciento es para el captador que subi\xF3 el inmueble al portal, el veinte por ciento se divide en dos: diez por ciento para toda la red colaborativa de agentes que viralizan el enlace y diez por ciento para VECY por la tecnolog\xEDa y soporte legal; y el otro cuarenta por ciento es para el colocador que consigue al comprador, agenda la visita y cierra el negocio. Erradicamos las tercer\xEDas deshonestas y multiplicamos los cierres en equipo.`,
+          captionText: `\u{1F91D} *MODELO COLABORATIVO 40/20/40 \u2014 VECY BIENES RA\xCDCES* \u{1F4DC}
 
-\xA1Buenos d\xEDas a todos los aliados del corretaje inmobiliario!
+\xA1Buenos d\xEDas a todos los aliados y colegas del corretaje inmobiliario! Soy JanIA.
 
-\u2696\uFE0F *\xBFPor qu\xE9 el modelo 45/5/5/45 dignifica a todos los corredores?*
-Del 3% de comisi\xF3n total pactada sobre la venta o arriendo:
-\u2022 **45% Parte OFERTA:** Para el agente captador que tiene al propietario del inmueble.
-\u2022 **45% Parte DEMANDA:** Para el agente que representa al comprador o arrendatario calificado.
-\u2022 **5% Red Colaborativa:** Para los agentes que colaboran publicando y dinamizando el mercado.
-\u2022 **5% VECY BIENES RA\xCDCES:** Para el soporte tecnol\xF3gico, blindaje legal y cruces de JanIA.
+\u2696\uFE0F *\xBFPor qu\xE9 el modelo 40 / 20 / 40 supera al 50/50 y al 100% tradicional?*
+Sobre el 100% de la comisi\xF3n cobrada (habitualmente 3% en venta o 1 canon en arriendo):
+\u2022 **40% Punta CAPTADORA:** Para quien subi\xF3 el inmueble al portal (quien ten\xEDa el inmueble captado).
+\u2022 **20% Bolsa de Aceleraci\xF3n:**
+  - **10% Red Colaborativa:** Para todos los promotores de la red que viralizan el enlace de la propiedad y ganan por puntos de tr\xE1fico \xFAnico.
+  - **10% VECY BIENES RA\xCDCES:** Para la plataforma tecnol\xF3gica, el algoritmo de matches de JanIA y el blindaje contractual.
+\u2022 **40% Punta COLOCADORA:** Para quien consigue al comprador, lo presenta para agendamiento de visitas y logra el cierre del negocio.
 
-\u{1F6AB} *Cero intermediaci\xF3n desleal:* Los esquemas cerrados de "50/50" o "40/20/40" con terceros interpuestos impiden que la comisi\xF3n sea justa. En VECY todos ganamos con equidad y contratos claros.
+\u{1F6AB} *Cero tercer\xEDas e intermediarios fantasma:* El 40/20/40 premia con equidad a quienes realmente trabajan, activa un ej\xE9rcito de promotores motivados y protege las puntas.
 
-\u{1F4F2} *T\xE9rminos y Condiciones Colaborativos:* https://vecy.co`
+\u{1F310} *Portal Oficial:* https://vecy-network.vercel.app/`
         },
         {
           topicTitle: "Verificaci\xF3n de Identidad de Visitantes y Antecedentes con JanIA",
@@ -23891,18 +23910,20 @@ En VECY cuentas con un respaldo permanente para impulsar tus operaciones en toda
     CALENDARIO_30_DIAS_VECY = [
       {
         dayOfMonth: 1,
-        topicTitle: "El Modelo Colaborativo: 40-45% cada 3-4 d\xEDas vs meses esperando solos",
+        topicTitle: "El Modelo Colaborativo 40/20/40 de VECY BIENES RA\xCDCES: Ganar cada 3-4 d\xEDas vs meses esperando solos",
         themeKey: "modelo_colaborativo",
-        captionText: `\u{1F91D} *D\xCDA 1 \u2014 EL PODER DEL MODELO COLABORATIVO EN VECY BIENES RA\xCDCES* \u26A1
+        captionText: `\u{1F91D} *D\xCDA 1 \u2014 EL PODER DEL MODELO COLABORATIVO 40/20/40 EN VECY BIENES RA\xCDCES* \u26A1
 
 \xA1Buenos d\xEDas, queridos colegas y aliados inmobiliarios! Soy JanIA.
 
 \xBFAlguna vez has calculado cu\xE1nto te cuesta esperar 3 o 4 meses para cerrar un negocio y ganarte el 100% o el 50% de comisi\xF3n en solitario? En ese tiempo la vacancia, el desgaste y las cuentas por pagar no dan tregua.
 
-\u{1F4A1} *La Filosof\xEDa VECY BIENES RA\xCDCES:*
-\u2022 Con nuestra IA y red colaborativa, conectamos la punta de Oferta y Demanda en tiempo r\xE9cord.
-\u2022 Es infinitamente m\xE1s rentable ganar un **40% o 45% cada 3 o 4 d\xEDas** cerrando negocios continuos en red, que agonizar meses enteros por una comisi\xF3n solitaria.
-\u2022 El porcentaje restante (10% a 20%) se distribuye equitativamente (50/50) entre la plataforma VECY y los agentes de la red colaborativa que dinamizan y viralizan tu inmueble en todas las redes.
+\u{1F4A1} *La F\xF3rmula Colaborativa 40 / 20 / 40 de VECY BIENES RA\xCDCES:*
+\u2022 **40% para quien subi\xF3 el inmueble al portal:** Quien ten\xEDa la propiedad captada tiene su 40% asegurado y respetado.
+\u2022 **20% de bolsa compartida:** 10% para toda la red colaborativa de agentes que viralizan el enlace con sus puntos de tr\xE1fico + 10% para VECY por la plataforma tecnol\xF3gica, algoritmo de matches y soporte legal.
+\u2022 **40% para quien consiga el comprador:** Quien presenta al cliente calificado, agenda la visita y logra cerrar el negocio.
+
+\u26A1 *El Resultado:* Cero tercer\xEDas deshonestas, un ej\xE9rcito de promotores motivados y rotaci\xF3n constante ganando comisiones cada 3 o 4 d\xEDas en red.
 
 \u{1F4AC} *\xBFTienes una duda o caso privado?* Escr\xEDbeme a mi chat privado de JanIA \u{1F4F2}: https://wa.me/573192919978
 \u{1F5E3}\uFE0F *\xBFDeseas debatir o compartir tu experiencia?* \xA1Opina aqu\xED en este grupo y construyamos gremio! \u{1F91D}

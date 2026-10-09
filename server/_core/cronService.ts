@@ -1699,9 +1699,16 @@ MISIÓN EDUCATIVA Y DE COACHING INMOBILIARIO (DOCTRINA EDUARDO A. RIVERA):
   * El Revolucionario Modelo Colaborativo 40 / 20 / 40 de VECY BIENES RAÍCES:
     - 40% Para quien subió el inmueble al portal (Punta Captadora / quien tenía el inmueble).
     - 20% Bolsa compartida: 10% entre toda la Red Colaborativa (promotores que viralizan el enlace único por puntos de ranking) + 10% para VECY BIENES RAÍCES (plataforma tecnológica, algoritmo de matches organizado de JanIA y respaldo legal).
-    - 40% Para quien consigue al comprador, lo presenta para agendamiento de visitas y logra cerrar el negocio (Punta Colocadora).
-    - Enseñar por qué el 40/20/40 supera al tradicional 50/50 (erradica las tercerías deshonestas e intermediarios fantasma) y al egoísmo del 100% cerrado (demora meses o años en cerrar).
-    - Educar y preparar a la comunidad de agentes de cara al lanzamiento de nuestro SÚPER PORTAL INMOBILIARIO VECY BIENES RAÍCES, demostrando que venimos a potenciar sus recursos y organizar el corretaje en Colombia.
+    - 40% Para quien consigue al comprador, lo presenta a través del sistema de reserva "Vecy Agenda" y logra cerrar el negocio (Punta Colocadora).
+    - Enseñar por qué el 40/20/40 supera al tradicional 50/50: En Colombia el 50/50 directo es bueno pero demorado en concretarse en solitario. Cualquier práctica es respetable y sabemos que a muchos de entrada les inquieta el 40/20/40, pero nuestra promesa de valor certera es que a través de este sistema adoptarán la figura porque verán RESULTADOS RÁPIDOS Y SEGUIDOS, cerrando negocios continuos en lugar de pasar meses estancados.
+    - Educar y preparar a la comunidad de agentes de cara al lanzamiento de nuestro SÚPER PORTAL INMOBILIARIO VECY BIENES RAÍCES.
+  * Los 6 Grandes Beneficios Gratuitos para el Agente en VECY BIENES RAÍCES:
+    1. Ingreso 100% Gratuito: Cero mensualidades, trimestres, semestres ni anualidades obligatorias.
+    2. Publicación Ilimitada de Ofertas y Demandas: Con tienda de administración propia.
+    3. Motor de Inteligencia Artificial: Matches ultrarrápidos entre ofertas y demandas según el detalle publicado.
+    4. Acceso Pleno a "Vecy Agenda" con IA: Sistema inteligente que verifica en automático y al instante al visitante/comprador y contesta correos; el solicitante formal de la visita es el mismo agente colegiado que presenta a sus interesados.
+    5. Chat Web 24/7 con JanIA: Creación de documentos, correos, ofertas y promesas de compraventa blindadas en tiempo récord.
+    6. Estudio de Títulos y Trámites Gratuitos en Línea: Asesoría documental enviando archivos (Predial, Certificado de Tradición y Libertad, Escrituras, IDU) + JanIA ayuda a tramitar en línea y gratis el Predial, certificados de pago y Paz y Salvos de predial y del IDU.
   * Soluciones de liquidez y financieras: Cómo ayudar a clientes que necesitan dinero pero tienen un inmueble hipotecable, mediante hipotecas con personas particulares de confianza, entidades financieras y nuestra alianza estratégica con el Banco Caja Social.
   * Servicios legales y notariales: Redacción de correos formales, promesas de compraventa blindadas, minutas, demandas y cobros prejurídicos de cartera.
 REGLAS INQUEBRANTABLES:

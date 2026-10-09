@@ -331,6 +331,58 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.62 — Octubre 2026
+
+#### 📌 CONCISIÓN MÁXIMA EN DESCRIPCIONES DE GRUPOS, PUBLICIDAD VISUAL Y ENLACES CON FICHA TÉCNICA, DOCTRINA PUNTA COLOCADORA EN VECY AGENDA Y LOS 6 GRANDES BENEFICIOS OFICIALES
+
+**Requerimiento y Objetivos:**
+1. **Descripciones Oficiales de Grupos Sintéticas, Elegantes y Móviles**:
+   - Ajustadas a un formato conciso, directo y legible en WhatsApp para smartphones.
+   - En Grupo 1 se especifica con precisión:
+     - `2️⃣ PUBLICIDAD VISUAL Y FLYERS`: Flyers, banners comerciales, pósters y fotos con información de la demanda o la oferta.
+     - `4️⃣ ENLACES DE TODO TIPO`: Enlaces web, tours virtuales 360°, videos de YouTube y TikTok, carpetas en la nube y redes sociales que contengan publicidad inmobiliaria, **siempre y cuando vengan acompañados de la información y ficha descriptiva correspondiente**. JanIA almacena la data de la ficha y anexa el enlace para inspección humana en la mesa de coincidencias.
+2. **Doctrina de la Punta Colocadora y Superación del Temor al 40%**:
+   - Aseguramiento transparente de la **Punta Colocadora (40%)** mediante presentación formal de clientes en **Vecy Agenda**.
+   - Pedagogía sobre resultados continuos: frente a la resistencia inicial al modelo 40/20/40, la certeza demostrable es que los asesores obtienen **resultados repetitivos y constantes**, cerrando múltiples negocios gracias a la velocidad del motor de IA y el tráfico en red.
+3. **Los 6 Grandes Beneficios Oficiales para el Agente Inmobiliario**:
+   1. **Ingreso 100% Gratuito y Cero Cuotas:** Sin pagos mensuales ni anualidades obligatorias.
+   2. **Publicación Ilimitada:** Ofertas y Demandas ilimitadas con tienda y panel de administración propio.
+   3. **Motor con Inteligencia Artificial:** Matches ultrarrápidos entre ofertas y requerimientos.
+   4. **Acceso Pleno a "Vecy Agenda" con IA:** Sistema de reserva con IA que verifica al visitante interesado al instante y contesta correos automáticamente.
+   5. **Chat Web 24/7 con JanIA:** Consultas en tiempo real, asesoría y redacción de documentos blindados en minutos.
+   6. **Estudio de Títulos y Trámites Gratuitos en Línea:** Asesoría documental y trámites gratuitos en línea de Predial, Paz y Salvos del Predial y del IDU.
+
+**Archivos Modificados:**
+- `shared/const.ts`: Declarado `VECY_AGENT_BENEFITS` (6 beneficios), enriquecido `VECY_COMMISSION_MODEL` con doctrina de Vecy Agenda y resultados seguidos, y condensadas las descripciones oficiales en `VECY_OFFICIAL_GROUPS`. Versión `v32.62`.
+- `package.json`: Versión `32.62.0`.
+- `server/_core/prompts/grupos/PROYECTO_Vecy Network.md` y `server/_core/cronService.ts`: Prompts de JanIA con la doctrina de los 6 beneficios gratuitos, Vecy Agenda y resultados constantes.
+- `VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md`: Sección 10 actualizada.
+- `.agents/AGENTS.md` y `HISTORIAL_CONVERSACIONES_MAESTRO.md`: Registro documental persistente.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | `pnpm build` limpio ✅ | 158/158 tests Vitest ✅
+
+---
+
+### 🔖 v32.61 — Octubre 2026
+
+#### 📌 MODELO COLABORATIVO OFICIAL 40/20/40 DE VECY BIENES RAÍCES, FORMATOS PERMITIDOS EN GRUPOS OFICIALES Y PEDAGOGÍA HACIA EL SÚPER PORTAL
+
+**Requerimiento y Objetivos:**
+1. **Doctrina Oficial del Modelo Colaborativo 40 / 20 / 40**:
+   - 40% Punta Captadora (asegurado y respetado a quien publica el inmueble).
+   - 20% Bolsa de Aceleración y Soporte (10% promotores virales en red colaborativa + 10% VECY plataforma y soporte legal/notarial).
+   - 40% Punta Colocadora (quien aporta el comprador y asiste al cierre).
+   - Erradicación de tercerías deshonestas y democratización de comisiones.
+2. **Formatos Permitidos y Alentados en Grupo 1**:
+   - Ofertas, Demandas y Permutas / Venpermutas.
+   - Flyers, banners publicitarios, pósters y fotos comerciales.
+   - Brochures, dossiers y fichas técnicas en PDF.
+   - Enlaces a tours 360°, portales y almacenamiento en la nube.
+   - Reacción inmediata de JanIA con 6 emojis: `👍` Venta | `👌` Arriendo | `🔀` Permuta oferta | `📝` Demanda venta | `✏️` Demanda arriendo | `🔄` Demanda permuta.
+   - Moderación y eliminación inmediata de off-topic.
+
+---
+
 ### 🔖 v32.60 — Octubre 2026
 
 #### 📌 JANIA COACH Y DOCENTE INMOBILIARIA DE ÉLITE, ENCUESTAS NATIVAS INTERACTIVAS CON EMOJIS, AUTO-APROBACIÓN DE GRUPOS, TARJETAS VCARD Y MODERACIÓN ESTRICTA

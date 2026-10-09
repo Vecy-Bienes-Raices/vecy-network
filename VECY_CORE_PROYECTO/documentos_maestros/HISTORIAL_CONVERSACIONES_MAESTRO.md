@@ -7,6 +7,53 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.62 — 08 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Concisión y Claridad Máxima en Descripciones de Grupos**:
+   - Eduardo solicitó hacer las descripciones de los grupos oficiales **mucho más cortas, concisas, directas y claras**, eliminando párrafos extensos y conservando la elegancia visual.
+   - **Corrección Crítica sobre Publicidad Visual y Enlaces en Grupo 1**:
+     * `2️⃣ PUBLICIDAD VISUAL Y FLYERS`: Se admiten imágenes publicitarias como; flyers, banners comerciales, pósters y fotos con información de la DEMANDA o la OFERTA.
+     * `4️⃣ ENLACES DE TODO TIPO`: Enlaces web, tours virtuales 360°, videos de Youtube y Tiktok, carpetas en la nube y redes sociales que contengan publicidad de ofertas, demandas o permutas inmobiliarias. **Siempre y cuando vengan acompañados esos enlaces de la información correspondiente**.
+     * **Razón técnica de Eduardo**: JanIA no puede ingresar a scrapear redes sociales externas directamente, pero si el mensaje incluye el texto descriptivo o meta descripción con las características del inmueble/demanda, JanIA extrae los datos, los almacena en la base de datos y adjunta el enlace a la mesa de coincidencias para que los agentes y el equipo de Vecy puedan abrirlo e inspeccionarlo.
+2. **Ajuste Doctrinal en la Punta Colocadora y el Sistema "Vecy Agenda"**:
+   - `40% Punta Colocadora`: Lo obtiene el colega o asesor cuando aporta al comprador/arrendatario final, lo presenta a través de nuestro sistema de reserva "Vecy Agenda" y acompaña el cierre.
+   - **Doctrina frente al 50/50 Tradicional vs 40/20/40 de VECY**:
+     * En Colombia el 50/50 directo es bueno pero demorado en concretarse en solitario.
+     * Cualquier práctica es respetable y sabemos que a muchos colegas de entrada les inquieta el 40/20/40; pero la promesa de valor 100% certera de VECY es que a través de este sistema adoptarán la figura con entusiasmo porque verán **resultados rápidos y seguidos**, cerrando operaciones cada pocos días en lugar de esperar meses estancados.
+3. **Los 6 Grandes Beneficios Oficiales para el Agente en VECY BIENES RAÍCES**:
+   1. **Ingreso 100% Gratuito y Cero Cuotas:** Sin pagos mensuales, trimestrales, semestrales ni anualidades obligatorias.
+   2. **Publicación Ilimitada:** Ofertas (inmuebles) y Demandas (requerimientos) ilimitadas con tienda y panel de administración propio.
+   3. **Motor con Inteligencia Artificial:** Matches ultrarrápidos entre ofertas y demandas según el nivel de detalle y especificación de las publicaciones.
+   4. **Acceso Pleno a "Vecy Agenda" con IA:** Sistema de reserva con IA que verifica en automático y al instante al visitante interesado/comprador y contesta correos automáticamente. El solicitante formal de la visita es el mismo agente colegiado que presenta a sus interesados.
+   5. **Chat Web 24/7 con JanIA:** Consultas en tiempo real, ayuda y creación de documentos, correos, ofertas y promesas de compraventa blindadas en tiempo récord.
+   6. **Estudio de Títulos y Trámites Gratuitos en Línea:** Asesoría documental enviando archivos (Predial, Certificado de Tradición y Libertad, Escrituras públicas, IDU) + JanIA ayuda a tramitar en línea y gratis el Predial, certificados de pago y Paz y Salvos de predial y del IDU.
+4. **Guía Estratégica para Continuar**:
+   - Eduardo solicitó una hoja de ruta ordenada para definir los próximos pasos de desarrollo e implementación técnica tras asentar esta base doctrinal.
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Brevedad y UX en Canales de WhatsApp**:
+   - Las descripciones previas eran demasiado extensas y podían saturar a los usuarios de WhatsApp móvil. Sintetizar las descripciones manteniendo los pilares innegociables (administración por JanIA, formatos admitidos, moderación estricta y lema de marca) maximiza la lectura y el cumplimiento de normas.
+2. **Relevancia del Texto Acompañante en Enlaces de Redes Sociales**:
+   - Como los algoritmos de extracción de JanIA operan sobre el texto del mensaje y no sobre el DOM dinámico de apps como TikTok, YouTube o Instagram, es vital instruir a los agentes a adjuntar la ficha técnica textual junto al enlace. De esta manera, JanIA ingestará y cruzará el inmueble en PostgreSQL y preservará el enlace para la visualización en la Mesa de Coincidencias (`AdminMatches.tsx`).
+3. **Formalización de los 6 Beneficios como Propuesta de Valor Irresistible**:
+   - Conectar la adopción del modelo 40/20/40 con 6 beneficios gratuitos e ilimitados desmonta la resistencia inicial del gremio y transforma la percepción de VECY BIENES RAÍCES en la mejor aliada tecnológica del corredor inmobiliario en Colombia.
+
+### Acciones Técnicas Ejecutadas
+1. **Módulo Compartido (`shared/const.ts`)**:
+   - Versión incrementada a `v32.62` (`32.62.0` en `package.json`).
+   - Creada la constante oficial `VECY_AGENT_BENEFITS` con los 6 beneficios desglosados textualmente.
+   - Actualizado `VECY_COMMISSION_MODEL`: añadido `colocadorDescription` con referencia explícita a la presentación por "Vecy Agenda" y refinada la doctrina del 50/50 vs 40/20/40 y resultados continuos.
+   - Sintetizadas y perfeccionadas las descripciones de los 3 grupos oficiales en `VECY_OFFICIAL_GROUPS`: mucho más cortas, directas y con las directrices exactas de Eduardo para imágenes publicitarias y enlaces con ficha descriptiva.
+2. **Prompts y Orquestación Educativa (`server/_core/prompts/grupos/PROYECTO_Vecy Network.md` y `server/_core/cronService.ts`)**:
+   - Actualizado el systemPrompt de JanIA en `generateCalendarDailyText` y en el prompt del Grupo 3 para incorporar los 6 beneficios gratuitos, el rol de Vecy Agenda y la pedagogía de resultados rápidos y seguidos.
+3. **Verificación y Pruebas**:
+   - Vitest: 158/158 tests aprobados al 100% ✅.
+   - `tsc --noEmit`: Cero errores de tipos ✅.
+   - `pnpm build`: Vite y esbuild limpios al 100% ✅.
+
+---
+
 ## 📋 SESIÓN v32.61 — 08 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera
