@@ -7,6 +7,46 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.64 — 08 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Consulta Estratégica y Doctrinal sobre Venta Directa del Inmueble**:
+   - Supongamos que un asesor publica un inmueble en VECY BIENES RAÍCES (para venta o arriendo).
+   - El asesor toma su propio enlace personalizado ("Link con Mi Perfil") con su botón de WhatsApp directo.
+   - Un cliente comprador/arrendatario lo contacta directamente a través de dicho enlace o por la ficha pública en VECY y el asesor logra venderlo/arrendarlo por su propia cuenta, sin requerir la intervención de ningún colega de la red colaborativa ni agendamiento de terceros.
+   - **Preguntas Fundamentales**:
+     1. *¿Cómo hace VECY para darse cuenta de que el asesor lo vendió por fuera o de forma directa?*
+     2. *¿VECY le cobraría algo al asesor por haberlo vendido así?*
+     3. *¿VECY lo va a cohibir de venderlo directamente? Si lo contactaron a través del enlace generado por VECY, ¿cómo se le cobra o cómo se le obliga a pagar?*
+
+### Diagnóstico Técnico y Doctrinal de Eduardo
+1. **Transparencia y Cero Fiscalización Coercitiva**:
+   - VECY no es una policía secreta ni espía al asesor. No hay cobros ocultos ni embargos morales.
+   - Cuando el asesor vende directo, lo único que hace en la plataforma es entrar a su panel y marcar el inmueble como **"Vendido" o "Arrendado"** para retirar el anuncio y evitar que otros usuarios o colegas le sigan escribiendo.
+2. **Cero Cobro ($0 COP) y 100% de Comisión para el Asesor**:
+   - En VECY el ingreso es 100% GRATUITO y la publicación es ilimitada y sin cuotas obligatorias.
+   - Si el asesor captó el inmueble y él mismo consiguió el comprador/arrendatario por su cuenta, hizo la **punta completa**.
+   - Por lo tanto, **el 100% de la comisión pactada con el propietario le pertenece en su totalidad al asesor**. VECY le cobra exactamente **$0 COP**.
+3. **Cero Cohibición y Libertad Plena**:
+   - VECY jamás cohíbe a nadie de vender directo, ni exige exclusividad, ni amarra con cláusulas leoninas.
+   - Todo lo contrario: nos alegra y enorgullece que el portal y el enlace generado sirvan como herramienta comercial para que el asesor cierre negocios y gane su dinero.
+4. **La Razón de Ser de la Red Colaborativa (40/20/40)**:
+   - Si un asesor puede vender todo solo y rápido, ¡fabuloso!
+   - Pero en la realidad inmobiliaria colombiana, el 70-80% de los inmuebles captados se quedan estancados durante meses (3, 6 o 12 meses) por falta de alcance individual.
+   - Para esos inmuebles pegados, el asesor activa la **Bolsa Colaborativa de Marca Blanca**: cientos de colegas los mueven en sus redes, JanIA cruza demandas y se vende en 20 días al 40/20/40.
+   - ¡Venta directa al 100% y red colaborativa al 40/20/40 son modelos armónicos, complementarios y 100% libres!
+
+### Acciones Técnicas Ejecutadas
+- `shared/const.ts`:
+  * Enriquecido `VECY_COMMISSION_MODEL` con el bloque `directSaleDoctrine` detallando la doctrina de venta directa al 100%, cero cobros ($0 COP) y las respuestas a las 3 preguntas clave.
+  * Versión del sistema incrementada a `v32.64`.
+- `package.json`: Versión actualizada a `32.64.0`.
+- `server/_core/prompts/grupos/PROYECTO_Vecy Network.md`: Incorporado el acápite doctrinario en el prompt de comunidad para que JanIA eduque con solvencia a cualquier agente sobre la libertad de venta directa y cero cobro de VECY.
+- `server/_core/cronService.ts`: Actualizado el system prompt de JanIA Coach inmobiliaria con la doctrina de venta directa propia al 100%.
+- Pruebas y Compilación: 158/158 tests Vitest pasando al 100%, `tsc --noEmit` 0 errores y bundle de producción de cliente y servidor verificado.
+
+---
+
 ## 📋 SESIÓN v32.63 — 08 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

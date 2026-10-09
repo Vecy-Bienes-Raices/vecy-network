@@ -172,7 +172,27 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.63 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.64 — Octubre 2026
+
+### Novedades v32.64 (Doctrina de Venta Directa Propia: 100% de la Comisión para el Agente y Cero Cobro $0 COP de VECY):
+- **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:
+  1. **Venta Directa Propia (100% para el Asesor)**:
+     - Si un asesor publica un inmueble en VECY BIENES RAÍCES y un cliente lo contacta directamente a través de su ficha pública o su enlace ("Link con Mi Perfil") y logra cerrar el negocio directamente sin la intermediación de un agente colocador de la red ni agendamiento en Vecy Agenda:
+     - **¡VECY NO LE COBRA ABSOLUTAMENTE NADA ($0 COP)!**
+     - El asesor conserva el **100% de la comisión pactada con el propietario**.
+  2. **Las 3 Preguntas Estratégicas Resueltas**:
+     - *¿Cómo hace VECY para darse cuenta si vendí por fuera o directo?*: VECY no es una policía secreta ni fiscaliza. Simplemente el asesor ingresa a su panel y marca el inmueble como "Vendido" o "Arrendado" para retirarlo del catálogo y evitar que le sigan escribiendo.
+     - *¿Me cobrarían algo si me contactaron a través del enlace generado por VECY?*: ¡Cero pesos ($0 COP)! El portal y los enlaces son herramientas gratuitas al servicio del agente.
+     - *¿Me van a cohibir de venderlo directamente o me obligan a pagar?*: ¡Jamás! No hay exclusividad obligatoria ni cláusulas de amarre. Si lo vendes directo, celebramos tu éxito.
+  3. **Convivencia Armónica entre Venta Directa y Red Colaborativa (40/20/40)**:
+     - El modelo 40/20/40 es una herramienta opcional para desbloquear inmuebles que llevan meses (3, 6, 12 meses) estancados en el mercado, moviéndolos a través de la Bolsa Colaborativa de Marca Blanca con cientos de colegas difusores.
+  4. **Modificaciones Implementadas**:
+     - `shared/const.ts`: Enriquecido `VECY_COMMISSION_MODEL` con `directSaleDoctrine` y versión bump a `v32.64`.
+     - `package.json`: Versión `32.64.0`.
+     - `server/_core/prompts/grupos/PROYECTO_Vecy Network.md` y `server/_core/cronService.ts`: System prompts actualizados con la doctrina de venta directa y cero cobro.
+     - 158/158 tests Vitest pasando al 100%. `tsc --noEmit` 0 errores y `pnpm build` 100% limpio.
+
+## 🔖 VERSIÓN ANTERIOR: v32.63 — Octubre 2026
 
 ### Novedades v32.63 (Bolsa Inmobiliaria Colaborativa de Marca Blanca, Concisión Máxima de Grupos Oficiales, Doctrina Punta Colocadora en Vecy Agenda y los 6 Grandes Beneficios Oficiales):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:

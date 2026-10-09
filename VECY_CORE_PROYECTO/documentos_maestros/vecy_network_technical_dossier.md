@@ -331,6 +331,33 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.64 — Octubre 2026
+
+#### 📌 DOCTRINA DE VENTA DIRECTA PROPIA: 100% DE LA COMISIÓN PARA EL ASESOR Y CERO COBRO ($0 COP) DE VECY BIENES RAÍCES
+
+**Requerimiento y Objetivos:**
+1. **Claridad Doctrinal sobre la Venta Directa de Inmuebles en el Portal**:
+   - Planteamiento: Si un asesor inmobiliario publica un inmueble en VECY BIENES RAÍCES y logra venderlo o arrendarlo por su propia cuenta (a través de su "Link con Mi Perfil", su ficha técnica o por fuera, sin la intervención de un agente colocador de la red ni agendamiento colaborativo en Vecy Agenda).
+   - **Doctrina Oficial Establecida**:
+     - **100% de la Comisión para el Asesor**: El asesor captó el inmueble y consiguió el cliente por sus propios medios; hizo la punta completa. VECY respeta y respalda el 100% de su honorario.
+     - **Cero Cobro de VECY ($0 COP)**: La plataforma no cobra un solo peso por ventas directas propias.
+2. **Resolución de las 3 Preguntas Estratégicas**:
+   - *¿Cómo hace VECY para darse cuenta si se vendió por fuera o directo?*: VECY no fiscaliza ni audita coactivamente a los agentes. El asesor simplemente ingresa a su panel y marca el estado como "Vendido" o "Arrendado" para retirarlo del catálogo público y evitar mensajes innecesarios.
+   - *¿Cobro por ventas a través del enlace generado por VECY?*: Cero pesos ($0 COP). En VECY el registro y la publicación son 100% gratuitos y sin cuotas obligatorias.
+   - *¿Cohibición o exclusividad forzada?*: En ningún caso. No hay cláusulas de exclusividad ni cobros sorpresa.
+3. **Complementariedad con el Modelo Colaborativo 40 / 20 / 40**:
+   - La red colaborativa y la Bolsa de Marca Blanca existen para acelerar la rotación de inmuebles que llevan meses estancados, no para restringir las ventas directas. Ambas modalidades conviven con total libertad.
+
+**Archivos Modificados:**
+- `shared/const.ts`: Enriquecido `VECY_COMMISSION_MODEL` con el nodo `directSaleDoctrine` y versión bump a `v32.64`.
+- `package.json`: Versión actualizada a `32.64.0`.
+- `server/_core/prompts/grupos/PROYECTO_Vecy Network.md` y `server/_core/cronService.ts`: System prompts actualizados con la doctrina de venta directa propia al 100%.
+- `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier Técnico.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | `pnpm build` limpio ✅ | 158/158 tests Vitest ✅
+
+---
+
 ### 🔖 v32.63 — Octubre 2026
 
 #### 📌 BOLSA INMOBILIARIA COLABORATIVA DE MARCA BLANCA, DOCTRINA 50/50 BILATERAL VS 40/20/40 TRIPARTITA, TELEMETRÍA DE VIRALIZACIÓN Y EXPERIENCIA DEL AGENTE EN PORTAL

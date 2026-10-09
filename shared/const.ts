@@ -5,7 +5,7 @@ export const UNAUTHED_ERR_MSG = 'Please login (10001)';
 export const NOT_ADMIN_ERR_MSG = 'You do not have required permission (10002)';
 
 // 🔖 FUENTE ÚNICA DE VERDAD DE VERSIÓN DEL SISTEMA VECY BIENES RAÍCES
-export const VECY_VERSION = "v32.63";
+export const VECY_VERSION = "v32.64";
 export const VECY_VERSION_LABEL = `VERSIÓN ${VECY_VERSION}`;
 export const VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
@@ -20,6 +20,24 @@ export const VECY_COMMISSION_MODEL = {
   totalPct: 100,
   slogan: "40% Captador + 20% Intermedio (10% Bolsa Colaborativa + 10% VECY) + 40% Colocador (vía Vecy Agenda)",
   doctrine: "En el 50/50 tradicional, dos agentes hacen una alianza bilateral pero dependen de su propio esfuerzo y de gastar en publicidad paga, tardando meses en cerrar. En el modelo 40/20/40 de VECY, ambas puntas ceden un 10% porque VECY está en la mitad no solo aportando un Súper Portal con IA y respaldo legal, sino porque VECY cede la mitad (el 10%) a la BOLSA COLABORATIVA. La Bolsa convierte a toda la comunidad de colegas en el motor de marketing orgánico de tus inmuebles mediante fichas de Marca Blanca (sin logos de VECY). Aunque no consigas el cliente final, tus puntos por clics e interacciones te garantizan tu parte del 10% al cerrarse el negocio. Y si tú consigues el comprador/arrendatario, ¡ganas el 40% como Colocador MÁS tu parte de los puntos de la Bolsa!",
+  directSaleDoctrine: {
+    title: "Venta Directa: 100% de la Comisión para el Agente y Cero Cobro ($0 COP) de VECY",
+    summary: "Si un agente publica un inmueble en VECY y lo vende directamente a un cliente que lo contactó por su enlace o ficha (sin intervención de un agente colocador de la red ni agendamiento colaborativo en Vecy Agenda), ¡VECY NO LE COBRA ABSOLUTAMENTE NADA ($0 COP)! El asesor conserva el 100% de la comisión pactada con el propietario.",
+    qaList: [
+      {
+        q: "¿Cómo hace VECY para darse cuenta si vendí el inmueble por fuera o directo?",
+        a: "VECY no es un ente fiscalizador, no te persigue ni te espía. No existe ningún cobro oculto. Simplemente entras a tu panel de administración y marcas el inmueble como 'Vendido' o 'Arrendado' para que no siga activo en el portal y no te sigan escribiendo otros interesados."
+      },
+      {
+        q: "¿Me cobrarían algo si me contactaron a través del enlace generado por VECY?",
+        a: "¡CERO PESOS! ($0 COP). En VECY el ingreso y la publicación son 100% gratuitos y sin cuotas obligatorias. Si tú hiciste la captación y tú mismo conseguiste al comprador, hiciste la punta completa y el 100% de la comisión es tuyo."
+      },
+      {
+        q: "¿Me van a cohibir de venderlo directamente o me obligan a pagar?",
+        a: "¡JAMÁS! No existe exclusividad obligatoria ni cláusulas de amarre. Si lo vendes directo, celebramos tu éxito. El modelo 40/20/40 se activa ÚNICAMENTE cuando un colega te aporta el cliente comprador por Vecy Agenda o cuando abres el inmueble a la Bolsa Colaborativa de Marca Blanca para acelerar la venta de inmuebles que llevan meses estancados."
+      }
+    ]
+  },
   bolsaColaborativa: {
     name: "Bolsa Inmobiliaria Colaborativa VECY",
     mechanics: "Cualquier agente registrado, incluso con pocos inmuebles propios, puede ingresar a la Bolsa y tomar las Ofertas o Demandas publicadas para viralizarlas en sus redes y grupos mediante enlaces de Marca Blanca limpios (sin logos ni números de VECY). Mini-bots y tags de telemetría registran el tráfico y asignan puntos. Al cerrarse la venta (3% de comisión) o arriendo (1er canon), el 10% de la Bolsa se reparte entre todos los difusores de mayor a menor y se consigna a su cuenta bancaria o billetera inscrita.",

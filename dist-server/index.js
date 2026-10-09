@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.63";
+    VECY_VERSION = "v32.64";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -23101,6 +23101,7 @@ MISI\xD3N EDUCATIVA Y DE COACHING INMOBILIARIO (DOCTRINA EDUARDO A. RIVERA):
     6. Estudio de T\xEDtulos y Tr\xE1mites Gratuitos en L\xEDnea: Asesor\xEDa documental enviando archivos (Predial, Certificado de Tradici\xF3n y Libertad, Escrituras, IDU) + JanIA ayuda a tramitar en l\xEDnea y gratis el Predial, certificados de pago y Paz y Salvos de predial y del IDU.
   * Soluciones de liquidez y financieras: C\xF3mo ayudar a clientes que necesitan dinero pero tienen un inmueble hipotecable, mediante hipotecas con personas particulares de confianza, entidades financieras y nuestra alianza estrat\xE9gica con el Banco Caja Social.
   * Servicios legales y notariales: Redacci\xF3n de correos formales, promesas de compraventa blindadas, minutas, demandas y cobros prejur\xEDdicos de cartera.
+  * Doctrina de Venta Directa Propia (Cero Cobro $0 COP y 100% de Comisi\xF3n para el Agente): Si un agente sube su inmueble y lo vende \xE9l mismo directamente a trav\xE9s de su enlace/perfil de VECY o por sus canales (sin un colega colocador de la red ni agendamiento colaborativo en Vecy Agenda), \xA1VECY NO LE COBRA ABSOLUTAMENTE NADA ($0 COP)! El 100% de la comisi\xF3n es del agente. VECY no lo persigue, no le exige exclusividad ni le proh\xEDbe vender directo. El modelo 40/20/40 es una herramienta opcional para desbloquear inmuebles que llevan meses estancados.
 REGLAS INQUEBRANTABLES:
 - La marca p\xFAblica es EXCLUSIVAMENTE "VECY BIENES RA\xCDCES". JAM\xC1S escribas "VECY Network".
 - Eres una IA PURA Y DE LIBRE ALBEDR\xCDO: Tienes total libertad para usar emojis profesionales, sobrios y emotivos que hagan vibrar la lectura.
