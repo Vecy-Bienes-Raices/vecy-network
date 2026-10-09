@@ -172,11 +172,30 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.65 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.66 — Octubre 2026
 
-### Novedades v32.65 (Doctrina 80 / 20 para Venta Directa con Infraestructura VECY, Período de Gracia de 5 Días ($0 COP), Telemetría Forense Anti-Bypass y Contratos Digitales con Sello Criptográfico y Código QR bajo la Ley 527 de 1999):
-- **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:
-  1. **Dilema del "Criollo Vivo" (Anti-Bypass / No Elusión)**:
+### Novedades v32.66 (Páginas Web Institucionales de Términos y Condiciones y Política de Privacidad / Hábeas Data Ley 1581 de 2012):
+- **Diagnóstico y Confirmación de Eduardo A. Rivera**:
+  1. **Consagración Web Pública de los Términos y Condiciones**:
+     - Eduardo preguntó: *"¿Es decir que ya tenemos esa parte muy bien estipulada en nuestro archivo de Términos y condiciones? Adelante y si puedes de una vez vayamos construyendo la de privacidad."*
+     - Aunque el contrato digital PDF con QR ya contenía las cláusulas blindadas, el portal web carecía de las páginas y rutas públicas `/terminos-y-condiciones` y `/politica-privacidad`.
+  2. **Implementación de Términos y Condiciones (`TerminosCondiciones.tsx`)**:
+     - Consagración del modelo **80/20** de venta directa con tecnología VECY, **período de gracia de 5 días ($0 COP)** y **bolsa colaborativa 40/20/40**.
+     - Telemetría forense como mensaje de datos con plena validez ejecutiva (Arts. 1340 y 1341 C.Co. y Ley 527 de 1999).
+     - Cláusula de no elusión (12 meses posteriores) y cláusula penal ejecutiva del 100%.
+     - Sello criptográfico digital con CUV, SHA-256 y QR (Decreto 2364 de 2012).
+  3. **Implementación de Política de Privacidad (`PoliticaPrivacidad.tsx`)**:
+     - Régimen de Hábeas Data conforme a la Ley 1581 de 2012 y Decreto 1377 de 2013.
+     - Finalidades legítimas (agendamiento seguro en Vecy Agenda, validación preventiva de identidad y antecedentes, contratos digitales).
+     - Derechos de los titulares y canal oficial `contacto@vecy.co`.
+     - Compromiso innegociable de cero venta o cesión de datos a terceros.
+  4. **Modificaciones Implementadas**:
+     - `client/src/pages/TerminosCondiciones.tsx` y `client/src/pages/PoliticaPrivacidad.tsx` creados.
+     - `client/src/App.tsx` y `client/src/pages/Home.tsx` actualizados con rutas y enlaces en footer.
+     - `shared/const.ts` (`v32.66`) y `package.json` (`32.66.0`).
+     - 159/159 tests pasando al 100%, build limpio.
+
+## 🔖 VERSIÓN ANTERIOR: v32.65 — Octubre 2026
      - Eduardo advirtió con agudeza sobre el riesgo moral del mercado: si un asesor usa la plataforma de VECY para crear su tienda, tener fichas con su contacto, usar JanIA, disfrutar de la difusión de la bolsa de colegas y agendar por Vecy Agenda, intentará saltarse a VECY para cerrar por fuera y dejar a la plataforma trabajando gratis.
   2. **El Esquema Equitativo 80 / 20 (Venta Directa con Tecnología VECY)**:
      - Si el asesor capta y cierra directamente con un cliente apoyándose en la infraestructura tecnológica y difusión de VECY tras los 5 días de gracia:

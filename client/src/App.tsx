@@ -30,6 +30,8 @@ const RedColaboracion = lazy(() => import("./pages/RedColaboracion"));
 const RequirementsMarketplace = lazy(() => import("./pages/RequirementsMarketplace"));
 const NuestraHistoria = lazy(() => import("./pages/NuestraHistoria"));
 const JanIAConsole = lazy(() => import("./pages/JanIAConsole"));
+const TerminosCondiciones = lazy(() => import("./pages/TerminosCondiciones"));
+const PoliticaPrivacidad = lazy(() => import("./pages/PoliticaPrivacidad"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 function PageLoadingFallback() {
@@ -66,6 +68,10 @@ function Router() {
         <Route path={"/red-colaboracion"} component={RedColaboracion} />
         <Route path={"/historia"} component={NuestraHistoria} />
         <Route path={"/jania"} component={JanIAConsole} />
+        <Route path={"/terminos-y-condiciones"} component={TerminosCondiciones} />
+        <Route path={"/terminos"} component={TerminosCondiciones} />
+        <Route path={"/politica-privacidad"} component={PoliticaPrivacidad} />
+        <Route path={"/privacidad"} component={PoliticaPrivacidad} />
         <Route path={"/404"} component={NotFound} />
         {/* Final fallback route */}
         <Route component={NotFound} />

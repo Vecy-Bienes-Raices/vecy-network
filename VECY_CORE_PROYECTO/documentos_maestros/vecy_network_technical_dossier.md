@@ -331,6 +331,33 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.66 — Octubre 2026
+
+#### 📌 PÁGINAS WEB INSTITUCIONALES DE TÉRMINOS Y CONDICIONES Y POLÍTICA DE PRIVACIDAD / HÁBEAS DATA (LEY 1581 DE 2012 Y LEY 527 DE 1999)
+
+**Requerimiento y Objetivos:**
+1. **Consagración Web Pública de Términos y Condiciones y Política de Privacidad**:
+   - Petición de Eduardo A. Rivera: Consagrar en el portal web público los Términos y Condiciones del Ecosistema VECY BIENES RAÍCES y la Política de Privacidad / Hábeas Data.
+   - En el backend y en la emisión de contratos PDF oficiales ya se encontraba estipulado el blindaje de no elusión y telemetría (Ley 527 de 1999, Decreto 2364 de 2012), pero el portal web carecía de las páginas dedicadas y rutas correspondientes (`/terminos-y-condiciones` y `/politica-privacidad`).
+2. **Despliegue Institucional**:
+   - `client/src/pages/TerminosCondiciones.tsx`: Consagración pública del modelo **80/20** de venta directa con tecnología VECY, **período de gracia de 5 días ($0 COP)** y **bolsa colaborativa 40/20/40**. Telemetría forense como mensaje de datos vinculante y plena prueba del nexo causal bajo los Arts. 1340 y 1341 del Código de Comercio. Cláusula de no elusión con 12 meses de vigencia posterior y Cláusula Penal ejecutiva del 100%. Sello criptográfico digital con CUV, Hash SHA-256 y Código QR.
+   - `client/src/pages/PoliticaPrivacidad.tsx`: Política de tratamiento de datos personales bajo la Ley 1581 de 2012 y Decreto 1377 de 2013. Finalidades legítimas (agendamiento seguro en Vecy Agenda, validación preventiva de identidad y antecedentes, contratos con firma electrónica). Derechos de los titulares y canal oficial `contacto@vecy.co`. Compromiso innegociable de cero venta o alquiler de bases de datos a terceros.
+   - `client/src/App.tsx`: Incorporación de rutas lazy-loaded `/terminos-y-condiciones`, `/terminos`, `/politica-privacidad` y `/privacidad`.
+   - `client/src/pages/Home.tsx`: Enlaces institucionales integrados en el footer corporativo.
+
+**Archivos Modificados:**
+- `client/src/pages/TerminosCondiciones.tsx` (Nuevo)
+- `client/src/pages/PoliticaPrivacidad.tsx` (Nuevo)
+- `client/src/App.tsx`
+- `client/src/pages/Home.tsx`
+- `shared/const.ts`: Versión bump a `v32.66`.
+- `package.json`: Versión actualizada a `32.66.0`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | `pnpm build` limpio ✅ | 159/159 tests Vitest ✅
+
+---
+
 ### 🔖 v32.65 — Octubre 2026
 
 #### 📌 DOCTRINA 80 / 20 PARA VENTA DIRECTA CON INFRAESTRUCTURA VECY, PERÍODO DE GRACIA DE 5 DÍAS ($0 COP), TELEMETRÍA FORENSE ANTI-BYPASS Y CONTRATOS DIGITALES CON SELLO CRIPTOGRÁFICO Y CÓDIGO QR (LEY 527 DE 1999)

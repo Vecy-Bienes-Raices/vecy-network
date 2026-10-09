@@ -7,6 +7,40 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.66 — 09 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Petición Directa sobre Términos y Condiciones y Política de Privacidad**:
+   - "¿Es decir que ya tenemos esa parte muy bien estipulada en nuestro archivo de Términos y condiciones?"
+   - "Adelante y si puedes de una vez vayamos construyendo la de privacidad."
+
+### Diagnóstico Técnico y Legal
+1. **Estado previo del sistema**:
+   - En el backend y en la emisión de contratos PDF oficiales ([`server/_core/emailContractService.ts`](file:///home/eddu/Proyectos/vecy-network/server/_core/emailContractService.ts)), las cláusulas de no elusión, telemetría probatoria de nexo causal (Arts. 1340 y 1341 C.Co.), penalidad del 100% y sello criptográfico con QR ya estaban 100% blindadas.
+   - Sin embargo, en el portal web público (`client/`), los enlaces de `<Link to="/terminos-y-condiciones">` y `<Link to="/politica-privacidad">` conducían a la página 404 (NotFound) porque carecían de componentes y rutas en React.
+   - Faltaba materializar en el portal web una página pública institucional y detallada con el marco legal colombiano (Ley 527 de 1999, Decreto 2364 de 2012, Ley 1581 de 2012 de Hábeas Data, y Decreto 1377 de 2013).
+
+### Acciones Técnicas Ejecutadas
+- `client/src/pages/TerminosCondiciones.tsx`:
+  * Creada página web institucional con diseño VECY Gold Edition.
+  * Consagra los 3 modelos de comisiones: **Venta Directa 80/20 con Tecnología VECY**, **Período de Gracia Incondicional de 5 Días ($0 COP)** y **Bolsa Colaborativa 40/20/40**.
+  * Capítulo de Telemetría Forense con tokens inmutables (IP, fecha UTC-5, User-Agent) y valor de mensaje de datos vinculante bajo la Ley 527 de 1999 y Arts. 1340-1341 del Código de Comercio.
+  * Cláusula de No Elusión (Non-Circumvention) con vigencia extendida de 12 meses y Cláusula Penal Ejecutiva del 100%.
+  * Capítulo de Sello Criptográfico, CUV, Hash SHA-256 y Código QR de verificación bajo Decreto 2364 de 2012.
+- `client/src/pages/PoliticaPrivacidad.tsx`:
+  * Creada página web institucional de Hábeas Data bajo la Ley Estatutaria 1581 de 2012 y Decreto 1377 de 2013.
+  * Detalle de finalidades legítimas (agendamiento seguro en Vecy Agenda, validación preventiva de identidad y antecedentes ante bases oficiales, matching con JanIA y emisión de contratos digitales).
+  * Derechos de los titulares (conocer, actualizar, rectificar y suprimir) y canal oficial `contacto@vecy.co`.
+  * Compromiso innegociable de cero venta o alquiler de bases de datos a terceros.
+- `client/src/App.tsx`:
+  * Registradas rutas lazy-loaded: `/terminos-y-condiciones`, `/terminos`, `/politica-privacidad` y `/privacidad`.
+- `client/src/pages/Home.tsx`:
+  * Añadidos enlaces directos a Términos y Condiciones y Política de Privacidad en la sección Compañía del footer y en la barra inferior de copyright.
+- `shared/const.ts` y `package.json`: Incrementada versión oficial a `v32.66` / `32.66.0`.
+- Verificaciones: `tsc --noEmit` con 0 errores, `pnpm run build` 100% limpio y suite Vitest con 159/159 tests pasando al 100%.
+
+---
+
 ## 📋 SESIÓN v32.65 — 09 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera
