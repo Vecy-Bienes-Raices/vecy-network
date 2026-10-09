@@ -39,39 +39,62 @@ export default function RedColaboracion() {
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
       <Navbar />
 
-      {/* HERO SECTION */}
-      <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
+      {/* HERO SECTION — BOLSA INMOBILIARIA COLABORATIVA */}
+      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden pt-20">
         <NetworkBackground />
         <div className="container relative z-10 text-center">
           <ScrollReveal delay={0.2}>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
+            <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
               <Zap className="w-4 h-4 text-primary animate-pulse" />
-              <span className="text-xs font-bold uppercase tracking-widest text-primary">Economía Colaborativa 2.0</span>
+              <span className="text-xs font-black uppercase tracking-widest text-primary">Economía Colaborativa Inmobiliaria 2.0</span>
             </div>
             <h1 className="vecy-title-hero">
-              RED DE <span className="text-gradient-gold">COLABORACIÓN</span>
+              BOLSA INMOBILIARIA <span className="text-gradient-gold">COLABORATIVA</span>
             </h1>
-            <p className="vecy-subtitle max-w-3xl mx-auto">
-              En VECY BIENES RAÍCES no gastamos en publicidad tradicional. Premiamos tu influencia. 
-              Ayuda a tus colegas a vender y <span className="font-bold text-white uppercase">gana una parte de la comisión</span> sin ser el captador ni el comprador.
+            <p className="vecy-subtitle max-w-3xl mx-auto text-base sm:text-lg">
+              En VECY BIENES RAÍCES erradicamos el gasto en publicidad tradicional. Convertimos a toda la comunidad 
+              de agentes en el <span className="font-bold text-white uppercase">motor orgánico de marketing en red</span>. 
+              Gana comisiones reales compartiendo inmuebles con <span className="font-bold text-gradient-gold uppercase">fichas de marca blanca</span> sin necesidad de tener un gran inventario propio.
             </p>
+
+            {/* PESTAÑAS DE ACCESO DIRECTO A LA BOLSA */}
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+              <button 
+                onClick={() => navigate('/ofertas')}
+                className="px-8 py-4 rounded-2xl bg-gradient-to-r from-[#FFD700] via-[#FDB931] to-[#DAA520] text-black font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl cursor-pointer"
+              >
+                <Share2 className="w-4 h-4 text-black" />
+                Explorar Ofertas de la Bolsa (Inmuebles)
+              </button>
+              <button 
+                onClick={() => navigate('/demandas')}
+                className="px-8 py-4 rounded-2xl bg-white/10 border border-white/20 text-white font-black text-xs uppercase tracking-widest flex items-center gap-3 hover:bg-white/20 active:scale-95 transition-all shadow-xl cursor-pointer"
+              >
+                <Target className="w-4 h-4 text-primary" />
+                Explorar Demandas de la Bolsa (Requerimientos)
+              </button>
+            </div>
           </ScrollReveal>
         </div>
       </section>
 
-      {/* ¿CÓMO FUNCIONA EL GANA-GANA? */}
-      <section className="py-24 bg-gradient-dark">
+      {/* ¿CÓMO FUNCIONA LA BOLSA COLABORATIVA? */}
+      <section className="py-24 bg-gradient-dark border-t border-white/5">
         <div className="container">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8">
               <ScrollReveal direction="left">
+                <div className="inline-block px-3.5 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest mb-3">
+                  Apalancamiento Masivo para Agentes
+                </div>
                 <h2 className="vecy-title-section">
-                  La Evolución <span className="text-gradient-gold uppercase">Inevitable</span>.
+                  ¿Cómo Funciona la <span className="text-gradient-gold uppercase">Bolsa Colaborativa</span>?
                 </h2>
                 <div className="line-electric w-24 mb-6"></div>
-                <p className="vecy-paragraph text-lg">
-                  Los portales tradicionales te cobran por publicar y se quedan con tu dinero. En VECY, 
-                  creamos un motor de <span className="font-bold text-white uppercase">viralidad humana</span> donde todos los engranajes ganan.
+                <p className="vecy-paragraph text-base leading-relaxed">
+                  ¿Te acabas de registrar en VECY y solo tienes 1 o 2 inmuebles? <strong>¡No importa!</strong> La Bolsa 
+                  Inmobiliaria te permite comercializar el portafolio completo de la red. Tomas cualquier propiedad, 
+                  generas tu enlace con <strong>Ficha de Marca Blanca (sin logos ni contactos de VECY)</strong> y lo viralizas en tus redes sociales.
                 </p>
               </ScrollReveal>
               
@@ -83,7 +106,7 @@ export default function RedColaboracion() {
                         {step.icon}
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
+                        <h3 className="text-lg font-bold text-white mb-2">{step.title}</h3>
                         <p className="vecy-paragraph text-sm mb-0 leading-relaxed">{step.description}</p>
                       </div>
                     </div>
@@ -92,50 +115,73 @@ export default function RedColaboracion() {
               </div>
             </div>
 
-            {/* ESQUEMA VISUAL DE COMISIÓN */}
+            {/* ESQUEMA VISUAL DE COMISIÓN 40 / 20 / 40 */}
             <ScrollReveal direction="right" delay={0.3}>
-              <div className="vecy-card-apple p-10 relative overflow-hidden bg-white/[0.02]">
+              <div className="vecy-card-apple p-10 relative overflow-hidden bg-white/[0.02] border border-white/10 shadow-2xl">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] -z-10" />
-                <h3 className="text-2xl font-bold text-center text-white mb-10 tracking-widest uppercase text-balance">Reparto de Comisión: La Evolución Inevitable</h3>
+                <h3 className="text-xl font-bold text-center text-white mb-2 tracking-widest uppercase text-balance">
+                  Modelo Oficial 40 / 20 / 40
+                </h3>
+                <p className="text-xs text-center text-gray-400 mb-8 uppercase tracking-wider">
+                  Reparto Transparente sobre la Comisión Total (3% Venta / 1er Canon Arriendo)
+                </p>
                 
                 <div className="space-y-4">
-                  {/* VECY SHARE */}
-                  <div className="relative h-12 bg-white/5 rounded-lg border border-white/10 flex items-center px-4 overflow-hidden group">
-                    <div className="absolute inset-0 bg-primary/20 w-[15%] transition-all group-hover:bg-primary/30" />
-                    <span className="relative text-xs font-bold text-primary uppercase">VECY BIENES RAÍCES (Plataforma + IA)</span>
-                    <span className="ml-auto relative text-xs font-black">15%</span>
-                  </div>
-
-                  {/* BOLSAS DE DIFUSORES */}
-                  <div className="relative h-16 bg-white/5 rounded-lg border border-primary/40 flex items-center px-4 overflow-hidden group glow-gold-sm">
-                    <div className="absolute inset-0 bg-primary/40 w-[15%] animate-pulse" />
+                  {/* PUNTA CAPTADORA */}
+                  <div className="relative h-16 bg-white/5 rounded-xl border border-white/15 flex items-center px-5 overflow-hidden group">
+                    <div className="absolute inset-0 bg-white/10 w-[40%] transition-all" />
                     <div className="flex flex-col relative">
-                      <span className="text-xs font-black text-white uppercase">RED DE DIFUSORES (PUNTOS)</span>
-                      <span className="text-[10px] text-gray-300">Agentes que compartieron el activo</span>
+                      <span className="text-xs font-black text-white uppercase tracking-wider">PUNTA CAPTADORA (OFERTA)</span>
+                      <span className="text-[10px] text-gray-400">Dueño del mandato que sube el inmueble</span>
                     </div>
-                    <span className="ml-auto relative text-lg font-black text-primary">15%</span>
+                    <span className="ml-auto relative text-xl font-black text-white">40%</span>
                   </div>
 
-                  {/* VENDEDOR Y COMPRADOR */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="relative h-24 bg-white/5 rounded-lg border border-white/10 flex flex-col justify-center items-center group">
-                      <div className="absolute inset-0 bg-primary/10 h-1/2 bottom-0 w-full" />
-                      <Users className="w-6 h-6 text-gray-400 mb-2" />
-                      <span className="text-[10px] font-bold text-gray-300 uppercase tracking-tighter">Captador</span>
-                      <span className="text-xl font-black text-white">35%</span>
+                  {/* BOLSA INTERMEDIA (20%) = 10% BOLSA COLABORATIVA + 10% VECY */}
+                  <div className="relative p-4 bg-primary/5 rounded-2xl border-2 border-primary/40 space-y-3 glow-gold-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1.5">
+                        <Coins className="w-3.5 h-3.5 text-primary" /> Participación Intermedia (20%)
+                      </span>
+                      <span className="text-xs font-black text-primary">20% Total</span>
                     </div>
-                    <div className="relative h-24 bg-white/5 rounded-lg border border-white/10 flex flex-col justify-center items-center group">
-                      <div className="absolute inset-0 bg-primary/10 h-1/2 bottom-0 w-full" />
-                      <Target className="w-6 h-6 text-gray-400 mb-2" />
-                      <span className="text-[10px] font-bold text-gray-300 uppercase tracking-tighter">Comprador</span>
-                      <span className="text-xl font-black text-white">35%</span>
+
+                    {/* 10% BOLSA COLABORATIVA */}
+                    <div className="relative h-12 bg-black/50 rounded-lg border border-primary/30 flex items-center px-4 overflow-hidden">
+                      <div className="absolute inset-0 bg-primary/20 w-[50%] animate-pulse" />
+                      <div className="flex flex-col relative">
+                        <span className="text-xs font-black text-amber-300 uppercase">BOLSA COLABORATIVA (RED)</span>
+                        <span className="text-[9px] text-gray-400">Difusores que viralizan con Marca Blanca (Reparto por puntos)</span>
+                      </div>
+                      <span className="ml-auto relative text-base font-black text-primary">10%</span>
                     </div>
+
+                    {/* 10% VECY PLATAFORMA */}
+                    <div className="relative h-12 bg-black/50 rounded-lg border border-white/10 flex items-center px-4 overflow-hidden">
+                      <div className="absolute inset-0 bg-white/5 w-[50%]" />
+                      <div className="flex flex-col relative">
+                        <span className="text-xs font-black text-white uppercase">VECY BIENES RAÍCES</span>
+                        <span className="text-[9px] text-gray-400">Súper Portal, IA JanIA 24/7, Vecy Agenda y Respaldo Legal</span>
+                      </div>
+                      <span className="ml-auto relative text-base font-black text-gray-300">10%</span>
+                    </div>
+                  </div>
+
+                  {/* PUNTA COLOCADORA */}
+                  <div className="relative h-16 bg-white/5 rounded-xl border border-white/15 flex items-center px-5 overflow-hidden group">
+                    <div className="absolute inset-0 bg-primary/10 w-[40%] transition-all" />
+                    <div className="flex flex-col relative">
+                      <span className="text-xs font-black text-white uppercase tracking-wider">PUNTA COLOCADORA (DEMANDA)</span>
+                      <span className="text-[10px] text-gray-400">Quien aporta al cliente comprador/arrendatario vía Vecy Agenda</span>
+                    </div>
+                    <span className="ml-auto relative text-xl font-black text-primary">40%</span>
                   </div>
                 </div>
 
-                <div className="mt-8 pt-8 border-t border-white/10 text-center">
-                  <p className="text-xs text-gray-500 uppercase tracking-tighter">
-                    * Ejemplo basado en un reparto estándar de comisión del 3% o 5% del valor del inmueble.
+                <div className="mt-6 pt-6 border-t border-white/10 text-center">
+                  <p className="text-[11px] text-amber-300/80 uppercase tracking-tight leading-relaxed">
+                    🌟 <strong>¡Premio Doble Eureka!</strong> Si difundiste en la Bolsa y además conseguiste al cliente, 
+                    ¡te llevas el <strong>40% como Colocador MÁS tu liquidación en dinero por los puntos de la Bolsa (10%)</strong>!
                   </p>
                 </div>
               </div>
@@ -149,34 +195,36 @@ export default function RedColaboracion() {
         <div className="container relative z-10">
           <div className="text-center mb-16">
             <h2 className="vecy-title-section uppercase tracking-tighter">MATRIZ DE <span className="text-primary">GANANCIAS</span></h2>
-            <p className="vecy-subtitle max-w-2xl mx-auto uppercase tracking-widest text-xs font-bold mt-4">Ganas por viralizar, ganas por captar, ganas por cerrar.</p>
+            <p className="vecy-subtitle max-w-2xl mx-auto uppercase tracking-widest text-xs font-bold mt-4">
+              Ganas por viralizar en la bolsa, ganas por captar, ganas por colocar.
+            </p>
             <div className="line-gold w-32 mx-auto mt-6"></div>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-            {/* ESCENARIO A: VIRALIZACIÓN */}
+            {/* ESCENARIO A: VIRALIZACIÓN EN LA BOLSA */}
             <ScrollReveal direction="up" delay={0.1}>
               <div className="vecy-card-apple border-primary/20 bg-primary/5 p-10 h-full relative group flex flex-col">
-                <div className="absolute top-4 right-4 bg-primary/10 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Opción Red</div>
+                <div className="absolute top-4 right-4 bg-primary/10 text-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Opción Bolsa</div>
                 <div className="flex items-center gap-4 mb-8">
                   <Share2 className="w-10 h-10 text-primary" />
                   <h3 className="text-xl font-bold text-white uppercase leading-tight">Solo <br/>Viralizas</h3>
                 </div>
-                <p className="vecy-paragraph text-sm mb-8 flex-1">
-                  Compartes el enlace de "Red de Apoyo" (Sin Marca) en tus redes. Acumulas puntos por cada clic y visualización.
+                <p className="vecy-paragraph text-sm mb-8 flex-1 leading-relaxed">
+                  Compartes la <strong>Ficha de Marca Blanca</strong> (sin logos de VECY) en tus redes y estados. Tags y mini-bots registran tus clics. Si no consigues el cliente, <strong>no perdiste tu tiempo</strong>: al cerrarse la venta, te consignamos tu parte del 10%.
                 </p>
-                <div className="space-y-4 mb-10">
-                  <div className="flex justify-between items-center py-3 border-b border-white/5">
+                <div className="space-y-4 mb-8">
+                  <div className="flex justify-between items-center py-2.5 border-b border-white/5">
                     <span className="text-gray-400 text-[10px] uppercase font-bold">Tu Tarea</span>
-                    <span className="text-white text-[10px] font-black uppercase">Difundir la Red</span>
+                    <span className="text-white text-[10px] font-black uppercase">Viralizar con Marca Blanca</span>
                   </div>
-                  <div className="flex justify-between items-center py-3 border-b border-white/5">
+                  <div className="flex justify-between items-center py-2.5 border-b border-white/5">
                     <span className="text-gray-400 text-[10px] uppercase font-bold">Tu Recompensa</span>
-                    <span className="text-primary text-base font-black uppercase">15% Global</span>
+                    <span className="text-primary text-base font-black uppercase">Reparto de la Bolsa (10%)</span>
                   </div>
                 </div>
-                <div className="bg-black/40 p-5 rounded-2xl border border-white/5 italic text-gray-500 text-[10px] leading-relaxed">
-                  "Participas en la bolsa de puntos junto a otros difusores. Ganas por el simple hecho de ayudar a que el negocio sea visible."
+                <div className="bg-black/40 p-4 rounded-xl border border-white/5 italic text-gray-400 text-[10px] leading-relaxed">
+                  "Monetizas tus redes sociales y tu tiempo ayudando a que los inmuebles se vendan volando."
                 </div>
               </div>
             </ScrollReveal>
@@ -189,48 +237,48 @@ export default function RedColaboracion() {
                   <ShieldCheck className="w-10 h-10 text-primary" />
                   <h3 className="text-xl font-bold text-white uppercase leading-tight">Tú <br/>Captas</h3>
                 </div>
-                <p className="vecy-paragraph text-sm mb-8 flex-1">
-                  Tienes el inmueble bajo mandato directo. Lo subes a VECY y dejas que nuestra red de cientos de agentes lo viralice.
+                <p className="vecy-paragraph text-sm mb-8 flex-1 leading-relaxed">
+                  Tienes el mandato del inmueble. Lo subes al portal y te ahorras millones en pauta de Facebook/Google. Decenas de colegas en la Bolsa lo difunden por ti.
                 </p>
-                <div className="space-y-4 mb-10">
-                  <div className="flex justify-between items-center py-3 border-b border-white/5">
+                <div className="space-y-4 mb-8">
+                  <div className="flex justify-between items-center py-2.5 border-b border-white/5">
                     <span className="text-gray-400 text-[10px] uppercase font-bold">Tu Tarea</span>
                     <span className="text-white text-[10px] font-black uppercase">Captación y Gestión</span>
                   </div>
-                  <div className="flex justify-between items-center py-3 border-b border-white/5">
+                  <div className="flex justify-between items-center py-2.5 border-b border-white/5">
                     <span className="text-gray-400 text-[10px] uppercase font-bold">Tu Recompensa</span>
-                    <span className="text-white text-base font-black uppercase">35% Íntegro</span>
+                    <span className="text-white text-base font-black uppercase">40% Asegurado</span>
                   </div>
                 </div>
-                <div className="bg-black/40 p-5 rounded-2xl border border-white/5 italic text-gray-500 text-[10px] leading-relaxed text-center">
-                  Aseguras tu comisión por haber traído el inventario de calidad al ecosistema.
+                <div className="bg-black/40 p-4 rounded-xl border border-white/5 italic text-gray-400 text-[10px] leading-relaxed text-center">
+                  Vendes mucho más rápido gracias a un ejército de difusores moviendo tu propiedad.
                 </div>
               </div>
             </ScrollReveal>
 
-            {/* ESCENARIO C: CIERRE */}
+            {/* ESCENARIO C: COLOCACIÓN Y CIERRE */}
             <ScrollReveal direction="up" delay={0.3}>
               <div className="vecy-card-apple border-accent/40 bg-accent/5 p-10 h-full relative group shadow-[0_0_50px_rgba(191,149,63,0.1)] flex flex-col">
-                <div className="absolute top-4 right-4 bg-accent/20 text-accent px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Cerrador Pro</div>
+                <div className="absolute top-4 right-4 bg-accent/20 text-accent px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">Colocador Pro</div>
                 <div className="flex items-center gap-4 mb-8">
                   <Target className="w-10 h-10 text-accent" />
-                  <h3 className="text-xl font-bold text-white uppercase leading-tight">Tú Traes al <br/>Comprador</h3>
+                  <h3 className="text-xl font-bold text-white uppercase leading-tight">Tú Traes al <br/>Cliente</h3>
                 </div>
-                <p className="vecy-paragraph text-sm mb-8 flex-1">
-                  Viralizaste el inmueble y un cliente te contactó. Gestionas la visita y cierras el negocio con éxito.
+                <p className="vecy-paragraph text-sm mb-8 flex-1 leading-relaxed">
+                  Presentas al cliente formalmente a través del sistema <strong>Vecy Agenda</strong>, asistes a la visita y acompañas el cierre.
                 </p>
-                <div className="space-y-4 mb-10">
-                  <div className="flex justify-between items-center py-3 border-b border-white/5">
+                <div className="space-y-4 mb-8">
+                  <div className="flex justify-between items-center py-2.5 border-b border-white/5">
                     <span className="text-gray-400 text-[10px] uppercase font-bold">Tu Tarea</span>
-                    <span className="text-white text-[10px] font-black uppercase">Cierre de Negocio</span>
+                    <span className="text-white text-[10px] font-black uppercase">Presentar vía Vecy Agenda y Cerrar</span>
                   </div>
-                  <div className="flex justify-between items-center py-3 border-b border-white/5">
+                  <div className="flex justify-between items-center py-2.5 border-b border-white/5">
                     <span className="text-gray-400 text-[10px] uppercase font-bold">Tu Recompensa</span>
-                    <span className="text-accent text-2xl font-black uppercase tracking-tighter">35% Íntegro</span>
+                    <span className="text-accent text-2xl font-black uppercase tracking-tighter">40% Íntegro</span>
                   </div>
                 </div>
-                <div className="bg-black/40 p-5 rounded-2xl border border-accent/20 text-accent text-[10px] font-bold uppercase tracking-widest text-center">
-                  ¡Premio máximo por cerrar la operación!
+                <div className="bg-black/40 p-4 rounded-xl border border-accent/20 text-accent text-[10px] font-bold uppercase tracking-widest text-center">
+                  ¡Premio máximo garantizado por presentar al cliente y cerrar!
                 </div>
               </div>
             </ScrollReveal>

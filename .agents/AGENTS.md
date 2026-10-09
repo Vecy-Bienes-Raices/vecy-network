@@ -172,9 +172,9 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.62 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.63 — Octubre 2026
 
-### Novedades v32.62 (Concisión Máxima de Grupos Oficiales, Publicidad Visual y Enlaces con Ficha Descriptiva, Doctrina Punta Colocadora en Vecy Agenda y los 6 Grandes Beneficios Oficiales):
+### Novedades v32.63 (Bolsa Inmobiliaria Colaborativa de Marca Blanca, Concisión Máxima de Grupos Oficiales, Doctrina Punta Colocadora en Vecy Agenda y los 6 Grandes Beneficios Oficiales):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:
   1. **Descripciones Sintéticas, Elegantes y Directas en WhatsApp**:
      - Adaptadas para lectura rápida en teléfonos móviles sin perder ningún principio institucional.
@@ -184,20 +184,23 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
   2. **Doctrina de la Punta Colocadora y Resultados Seguidos**:
      - El **40% de la Punta Colocadora** se asegura al presentar formalmente al comprador a través de **Vecy Agenda** y acompañar el cierre.
      - Superación del 50/50 tradicional: frente al temor inicial del gremio, la promesa innegociable de VECY BIENES RAÍCES es que adoptarán el modelo con entusiasmo porque generará **resultados rápidos y seguidos**, cerrando negocios continuamente en lugar de esperar meses.
-  3. **Los 6 Grandes Beneficios Oficiales del Agente Inmobiliario**:
+  3. **Bolsa Inmobiliaria Colaborativa VECY y Marca Blanca**:
+     - El 10% de la bolsa intermedia se reparte entre los agentes difusores según métricas de telemetría por compartir enlaces limpios de Marca Blanca (sin logos ni teléfonos de VECY).
+     - Si el agente difusor además coloca al cliente final, gana el 40% de la colocación MÁS su liquidación en dinero por puntos de la Bolsa.
+  4. **Los 6 Grandes Beneficios Oficiales del Agente Inmobiliario**:
      1. **Ingreso 100% Gratuito y Cero Cuotas:** Sin pagos mensuales ni anualidades obligatorias.
      2. **Publicación Ilimitada:** Ofertas y Demandas ilimitadas con tienda y panel de administración propio.
      3. **Motor con Inteligencia Artificial:** Matches ultrarrápidos entre ofertas y requerimientos.
      4. **Acceso Pleno a "Vecy Agenda" con IA:** Sistema de reserva con IA que verifica al visitante interesado al instante y contesta correos automáticamente.
      5. **Chat Web 24/7 con JanIA:** Consultas en tiempo real, asesoría y redacción de documentos blindados en minutos.
      6. **Estudio de Títulos y Trámites Gratuitos en Línea:** Asesoría documental y trámites gratuitos en línea de Predial, Paz y Salvos del Predial y del IDU.
-  4. **Modificaciones Implementadas**:
-     - `shared/const.ts`: Declarado `VECY_AGENT_BENEFITS` con los 6 beneficios; enriquecido `VECY_COMMISSION_MODEL` con doctrina de Vecy Agenda y resultados continuos; descripciones de grupos en `VECY_OFFICIAL_GROUPS` condensadas, concisas y directas; versión bump a `v32.62`.
-     - `package.json`: Versión actualizada a `32.62.0`.
+  5. **Modificaciones Implementadas**:
+     - `shared/const.ts`: Declarado `VECY_AGENT_BENEFITS` con los 6 beneficios; enriquecido `VECY_COMMISSION_MODEL` con la Bolsa Colaborativa de Marca Blanca; descripciones de grupos en `VECY_OFFICIAL_GROUPS` condensadas, concisas y directas; versión bump a `v32.63`.
+     - `package.json`: Versión actualizada a `32.63.0`.
      - `server/_core/prompts/grupos/PROYECTO_Vecy Network.md` y `server/_core/cronService.ts`: System prompts actualizados con los 6 beneficios gratuitos, el rol de Vecy Agenda y la pedagogía hacia resultados ágiles y repetitivos.
      - 158/158 tests Vitest pasando al 100%. `tsc --noEmit` 0 errores y `pnpm build` 100% limpio.
 
-## 🔖 VERSIÓN ANTERIOR: v32.61 — Octubre 2026
+## 🔖 VERSIÓN ANTERIOR: v32.62 — Octubre 2026
 
 ### Novedades v32.61 (Modelo Colaborativo Oficial 40/20/40 de VECY BIENES RAÍCES, Formatos Permitidos en Grupos Oficiales: Flyers, Banners, PDFs, Enlaces, Permutas y Pedagogía hacia el Súper Portal):
 - **Diagnóstico y Confirmación Doctrinal de Eduardo A. Rivera**:

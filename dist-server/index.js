@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.62";
+    VECY_VERSION = "v32.63";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -23087,10 +23087,10 @@ MISI\xD3N EDUCATIVA Y DE COACHING INMOBILIARIO (DOCTRINA EDUARDO A. RIVERA):
     - Si se acepta una captaci\xF3n sin exclusividad: hacer presentaciones de cliente de alt\xEDsimo nivel y elegancia profesional como en VECY.
   * C\xF3mo perfilar al cliente comprador para encontrar la propiedad que verdaderamente busca (descubrir su motivaci\xF3n profunda, tiempos de mudanza y capacidad financiera real).
   * El Revolucionario Modelo Colaborativo 40 / 20 / 40 de VECY BIENES RA\xCDCES:
-    - 40% Para quien subi\xF3 el inmueble al portal (Punta Captadora / quien ten\xEDa el inmueble).
-    - 20% Bolsa compartida: 10% entre toda la Red Colaborativa (promotores que viralizan el enlace \xFAnico por puntos de ranking) + 10% para VECY BIENES RA\xCDCES (plataforma tecnol\xF3gica, algoritmo de matches organizado de JanIA y respaldo legal).
-    - 40% Para quien consigue al comprador, lo presenta a trav\xE9s del sistema de reserva "Vecy Agenda" y logra cerrar el negocio (Punta Colocadora).
-    - Ense\xF1ar por qu\xE9 el 40/20/40 supera al tradicional 50/50: En Colombia el 50/50 directo es bueno pero demorado en concretarse en solitario. Cualquier pr\xE1ctica es respetable y sabemos que a muchos de entrada les inquieta el 40/20/40, pero nuestra promesa de valor certera es que a trav\xE9s de este sistema adoptar\xE1n la figura porque ver\xE1n RESULTADOS R\xC1PIDOS Y SEGUIDOS, cerrando negocios continuos en lugar de pasar meses estancados.
+    - 40% Para quien subi\xF3 el inmueble al portal (Punta Captadora / Oferta).
+    - 20% Bolsa compartida: 10% para la BOLSA COLABORATIVA (red de difusores que viralizan con fichas de Marca Blanca limpias y ganan por puntos de telemetr\xEDa de clics/tr\xE1fico) + 10% para VECY BIENES RA\xCDCES (S\xFAper Portal, IA JanIA 24/7, Vecy Agenda, Estudio de T\xEDtulos y Respaldo Legal).
+    - 40% Para quien consigue al comprador/arrendatario final, lo presenta por "Vecy Agenda" y acompa\xF1a el cierre (Punta Colocadora).
+    - Ense\xF1ar por qu\xE9 el 40/20/40 supera al tradicional 50/50: En el 50/50 tradicional dos agentes hacen una alianza bilateral pero est\xE1n solos frente al mercado: o gastan millones en pauta de Meta/Google o esperan 6 a 12 meses estancados a que por casualidad aparezca un comprador. En el 40/20/40 de VECY, ambas puntas ceden un 10% porque VECY est\xE1 en la mitad y CEDE EL 10% A LA BOLSA COLABORATIVA. La Bolsa convierte a decenas de colegas en el motor de marketing org\xE1nico que mueve el inmueble gratis por todo internet con Marca Blanca. Si no consigues el comprador, no perdiste tu tiempo: tus puntos te aseguran tu parte del 10% al cerrarse la venta (3% comisi\xF3n) o arriendo (1er canon). \xA1Y si t\xFA consigues al cliente, ganas el 40% como Colocador M\xC1S tu dinero por puntos de la Bolsa! El resultado: negocios cerrados en semanas y ganancias continuas.
     - Educar y preparar a la comunidad de agentes de cara al lanzamiento de nuestro S\xDAPER PORTAL INMOBILIARIO VECY BIENES RA\xCDCES.
   * Los 6 Grandes Beneficios Gratuitos para el Agente en VECY BIENES RA\xCDCES:
     1. Ingreso 100% Gratuito: Cero mensualidades, trimestres, semestres ni anualidades obligatorias.

@@ -37,7 +37,7 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
     { label: 'HISTORIA', href: '/historia' },
     { label: 'OFERTAS', href: '/ofertas' },
     { label: 'DEMANDAS', href: '/demandas' },
-    { label: 'RED GANA-GANA', href: '/red-colaboracion' },
+    { label: 'BOLSA', href: '/red-colaboracion' },
     { label: 'SERVICIOS', href: '/services' },
     { label: 'AGENTES', href: '/agent-dashboard' },
   ];

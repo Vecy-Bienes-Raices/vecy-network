@@ -7,6 +7,59 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.63 — 08 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Aclaración y Enfoque Real del 50/50 Tradicional vs el Modelo 40/20/40 de VECY**:
+   - Eduardo aclaró que el 50/50 tradicional **no es solitario**: es una alianza bilateral directa entre dos partes (uno tiene la oferta y el otro la demanda).
+   - El reto psicológico: en el modelo 40/20/40 son tres partes y a primera vista parece que las puntas ganan un 10% menos (40% en lugar de 50%).
+   - **El verdadero enfoque y la razón por la que VECY está en la mitad con el 20%**:
+     * VECY pone toda la infraestructura tecnológica (Súper Portal, IA JanIA 24/7, Vecy Agenda con verificación, estudio de títulos y trámites de paz y salvo).
+     * Pero lo más revolucionario: **VECY NO SE QUEDA CON EL 20% COMPLETO**. VECY cede la mitad (el 10%) a la **BOLSA INMOBILIARIA COLABORATIVA**.
+2. **¿Qué es la Bolsa Colaborativa y cómo funciona la experiencia del agente?**:
+   - **El motor de marketing orgánico en red**: Convierte a todos los agentes en el voz a voz masivo de todas las ofertas y demandas, ahorrándole a todos tener que pagar publicidad en Meta/Google.
+   - **El flujo del agente**:
+     * Un agente recién registrado con solo 1 o 2 inmuebles propios no necesita un gran inventario para ganar dinero.
+     * En el menú principal ve **BOLSA** (con pestañas claras para "Ofertas de la Bolsa" y "Demandas de la Bolsa").
+     * En cada inmueble, en lugar de botones confusos como "Link con marca" o "Red de Apoyo (Limpio)", encuentra botones claros: **"Ficha Marca Blanca (Sin Logos)"** y **"Link con Mi Perfil"**.
+     * Al hacer clic en Marca Blanca, se genera un enlace limpio e independiente (como `https://apto-san-patricio-bog.netlify.app/`), sin logos ni teléfonos de VECY, listo para compartir en sus redes sociales, WhatsApp, TikTok, Facebook y estados.
+   - **Telemetría Inteligente (Mini-bots y Tags de Rastreo)**:
+     * Cada enlace tiene parámetros de rastreo que miden clics únicos, tráfico e interacción en comentarios de redes.
+     * Si el agente **no consigue el comprador**: ¡NO perdió su tiempo! Al cerrarse la venta (3% de comisión) o el arriendo (1er canon), el 10% de la Bolsa Colaborativa se reparte entre todos los difusores según sus puntos, con listado transparente de mayor a menor y consignación directa a su cuenta bancaria o billetera registrada.
+     * **El Premio Doble (EUREKA)**: Si el agente que viralizó en la Bolsa es quien además consigue al cliente final, gana el **40% de la comisión como Punta Colocadora MÁS su parte proporcional de los puntos de la Bolsa Colaborativa**. ¡Y el captador recibe su 40%, y VECY su 10%!
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **Término "Solitario" Desacertado en Versiones Previas**:
+   - Se utilizaba incorrectamente para referirse al 50/50, cuando en realidad el 50/50 ya es una alianza entre dos. Lo que faltaba era explicar que el 50/50 es lento y costoso porque obliga a pagar pauta o esperar meses, mientras que el 40/20/40 de VECY incorpora la Bolsa Colaborativa como motor masivo de difusión orgánica.
+2. **Confusión en los Botones de Viralización de la Tarjeta de Inmueble (`PropertyCard.tsx`)**:
+   - Los textos anteriores ("Link con Mi Marca", "Red de Apoyo (Limpio)") eran poco intuitivos. Se renovaron a **"Ficha Marca Blanca (Sin Logos)"** y **"Link con Mi Perfil"**, con tooltip explicativo de la Bolsa Colaborativa.
+3. **Página de Red Colaborativa Desactualizada (`RedColaboracion.tsx`)**:
+   - Tenía vestigios de un modelo 15/15/35/35 obsoleto. Se modernizó completamente al 40/20/40 oficial, incorporando las pestañas de acceso a la Bolsa y la leyenda explicativa detallada para agentes noveles.
+
+### Acciones Técnicas Ejecutadas
+1. **Módulo Compartido (`shared/const.ts`)**:
+   - Versión incrementada a `v32.63` (`32.63.0` en `package.json`).
+   - `VECY_COMMISSION_MODEL`: Redactada la doctrina profunda de la Bolsa Colaborativa, la comparación rigurosa 50/50 bilateral vs 40/20/40 tripartita, la cesión del 10% de VECY para marketing orgánico y la doble recompensa al traer el cliente.
+2. **Navegación Web (`client/src/components/Navbar.tsx`)**:
+   - Renombrado el ítem `'RED GANA-GANA'` por `'BOLSA'` hacia `/red-colaboracion`.
+3. **Página de la Bolsa Colaborativa (`client/src/pages/RedColaboracion.tsx`)**:
+   - Encabezado reorientado a **BOLSA INMOBILIARIA COLABORATIVA**.
+   - Pestañas directas a **Ofertas de la Bolsa** (`/ofertas`) y **Demandas de la Bolsa** (`/demandas`).
+   - Explicación didáctica completa para nuevos agentes: cómo comercializar el inventario de la red con fichas de marca blanca, acumular puntos y monetizar sin inventario propio.
+   - Gráfico oficial del modelo **40 / 20 / 40** (40% Captador | 10% Bolsa Colaborativa | 10% VECY | 40% Colocador) y Matriz de Ganancias con el escenario Eureka.
+4. **Tarjetas de Inmueble (`client/src/components/PropertyCard.tsx`)**:
+   - Botones del overlay renovados: **"Ficha Marca Blanca (Sin Logos)"** (dorado primario) y **"Link con Mi Perfil"** (secundario), con leyenda clara de la Bolsa Colaborativa.
+5. **Base de Datos Local de Propiedades (`client/src/lib/properties.ts`)**:
+   - Registrado el activo de San Patricio con su enlace real de Netlify: `https://apto-san-patricio-bog.netlify.app/`.
+6. **Prompts del Sistema (`server/_core/prompts/grupos/PROYECTO_Vecy Network.md` y `server/_core/cronService.ts`)**:
+   - Enriquecidos los system prompts con la pedagogía exacta de Eduardo sobre el 50/50 y la Bolsa Colaborativa.
+7. **Verificación y Pruebas**:
+   - 158/158 tests Vitest aprobados al 100% ✅.
+   - `tsc --noEmit`: 0 errores de tipos ✅.
+   - `pnpm build`: Compilación limpia de cliente y servidor ✅.
+
+---
+
 ## 📋 SESIÓN v32.62 — 08 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

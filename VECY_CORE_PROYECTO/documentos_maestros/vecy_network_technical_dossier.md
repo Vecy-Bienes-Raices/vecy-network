@@ -331,6 +331,43 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.63 — Octubre 2026
+
+#### 📌 BOLSA INMOBILIARIA COLABORATIVA DE MARCA BLANCA, DOCTRINA 50/50 BILATERAL VS 40/20/40 TRIPARTITA, TELEMETRÍA DE VIRALIZACIÓN Y EXPERIENCIA DEL AGENTE EN PORTAL
+
+**Requerimiento y Objetivos:**
+1. **Aclaración y Enfoque Real del 50/50 Tradicional vs el Modelo 40/20/40 de VECY**:
+   - Corrección conceptual: el 50/50 tradicional no es una labor en solitario, sino una alianza bilateral directa entre captador y colocador.
+   - La disyuntiva del gremio: en el 40/20/40 son tres partes y a primera vista parece que las puntas ganan 10% menos.
+   - El valor de VECY en el centro: VECY cede la mitad de su participación (10%) a la **Bolsa Inmobiliaria Colaborativa** para recompensar el marketing orgánico en red y acelerar los cierres.
+2. **Experiencia del Agente y Flujo de la Bolsa Colaborativa**:
+   - Un agente con 1 o 2 inmuebles accede a **BOLSA** en el menú web y encuentra las pestañas de **Ofertas de la Bolsa** y **Demandas de la Bolsa**.
+   - Cada activo cuenta con los botones **"Ficha Marca Blanca (Sin Logos)"** y **"Link con Mi Perfil"**.
+   - La Ficha de Marca Blanca genera un enlace limpio e independiente (ej. `https://apto-san-patricio-bog.netlify.app/`) sin logos ni teléfonos de VECY, permitiendo que el agente lo promocione como propio en sus estados y redes.
+3. **Telemetría Inteligente y Reparto Transparente de la Bolsa (10%)**:
+   - Rastreo de clics únicos e interacciones.
+   - Si no consigue el comprador, el agente recibe una liquidación en dinero por sus puntos de la Bolsa al cerrarse el negocio.
+   - **Escenario Eureka (Premio Doble)**: Si además consigue y presenta al comprador final por Vecy Agenda, cobra el **40% como Punta Colocadora MÁS su parte proporcional de la Bolsa Colaborativa**.
+4. **Actualizaciones en el Portal Web**:
+   - Menú de navegación: ítem renombreado a `'BOLSA'`.
+   - Página `/red-colaboracion`: modernizada a **BOLSA INMOBILIARIA COLABORATIVA** con pestañas de ofertas/demandas, gráfico 40/20/40 y explicación para nuevos agentes.
+   - `PropertyCard.tsx`: botones optimizados a "Ficha Marca Blanca (Sin Logos)" y "Link con Mi Perfil".
+   - `properties.ts`: activo de San Patricio indexado con enlace de Netlify.
+
+**Archivos Modificados:**
+- `shared/const.ts`: Versión bump a `v32.63`, enriquecida la doctrina de la Bolsa Colaborativa y 40/20/40 en `VECY_COMMISSION_MODEL`.
+- `package.json`: Versión `32.63.0`.
+- `client/src/components/Navbar.tsx`: Ítem renombrado a `'BOLSA'`.
+- `client/src/pages/RedColaboracion.tsx`: Rediseño completo con pestañas de Ofertas/Demandas de la Bolsa y matriz de comisiones.
+- `client/src/components/PropertyCard.tsx`: Botones con semántica clara de Marca Blanca y enlace con perfil.
+- `client/src/lib/properties.ts`: Enlace de Netlify para Apto San Patricio.
+- `server/_core/prompts/grupos/PROYECTO_Vecy Network.md` y `server/_core/cronService.ts`: Prompts del LLM sincronizados con la doctrina de la Bolsa Colaborativa.
+- `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `tsc --noEmit` 0 errores ✅ | `pnpm build` limpio ✅ | 158/158 tests Vitest ✅
+
+---
+
 ### 🔖 v32.62 — Octubre 2026
 
 #### 📌 CONCISIÓN MÁXIMA EN DESCRIPCIONES DE GRUPOS, PUBLICIDAD VISUAL Y ENLACES CON FICHA TÉCNICA, DOCTRINA PUNTA COLOCADORA EN VECY AGENDA Y LOS 6 GRANDES BENEFICIOS OFICIALES
@@ -5650,4 +5687,36 @@ El matching es bidireccional: cuando entra un nuevo inmueble, se buscan requerim
   * Consultas inmobiliarias públicas, $/m², derecho inmobiliario, DIAN, avalúos, píldoras formativas de las 10:00 AM con JanIA Coach y noticias del gremio.
 - **Grupo 3 (`𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀`)**:
   * Comunidad oficial para debatir el modelo colaborativo 40/20/40, alianzas transparentes sin tercerías, preparación para el lanzamiento del súper portal y feedback tecnológico.
+
+---
+
+### Versión v32.62 & v32.63 — Octubre 2026: Concisión de Grupos Oficiales, Formatos Enriquecidos, Doctrina de la Punta Colocadora con Vecy Agenda, Bolsa Colaborativa de Marca Blanca y los 6 Grandes Beneficios Oficiales
+
+#### 1. DESCRIPCIONES SINTÉTICAS, ELEGANTES Y DIRECTAS DE LOS GRUPOS OFICIALES
+- **Optimización para Móviles**: Textos de descripción condensados para lectura rápida sin sacrificar rigurosidad técnica ni autoridad de la marca.
+- **Grupo 1 (`𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴`)**:
+  * `2️⃣ PUBLICIDAD VISUAL Y FLYERS`: Flyers, banners comerciales, pósters y fotos con información de la oferta o la demanda.
+  * `4️⃣ ENLACES DE TODO TIPO`: Tours virtuales 360°, videos de YouTube/TikTok, carpetas en la nube y redes sociales que contengan publicidad inmobiliaria, siempre y cuando vengan acompañados de la información o ficha correspondiente. JanIA almacena la data y adjunta el enlace para inspección humana en la mesa de coincidencias.
+- **Grupo 2 (`𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠`)**:
+  * Consultoría legal (promesas, Ley 820, escrituración), tributaria DIAN (retención, ganancia ocasional), avalúos y valor $/m².
+  * Tips diarios formativos (10:00 AM) con JanIA Coach Inmobiliaria.
+- **Grupo 3 (`𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀`)**:
+  * Integración de aliados, foros cotidianos de negocio, modelo 40/20/40 y novedades del Súper Portal.
+
+#### 2. DOCTRINA DE LA PUNTA COLOCADORA Y RESULTADOS CONTINUOS EN VECY AGENDA
+- **40% de la Punta Colocadora**: Se consolida al aportar al comprador o arrendatario final, presentarlo formalmente a través del sistema de reserva inteligente **Vecy Agenda** y acompañar el proceso de cierre.
+- **Superación del Estancamiento**: Frente al recelo histórico de los agentes hacia esquemas distintos al 50/50, VECY BIENES RAÍCES demuestra que el modelo colaborativo genera **resultados ágiles, repetitivos y frecuentes**, cerrando negocios de manera continua en lugar de esperar meses con transacciones estancadas.
+
+#### 3. BOLSA INMOBILIARIA COLABORATIVA Y MARCA BLANCA
+- **Mecanismo de la Bolsa (10% de la Comisión Total)**: Los agentes pueden tomar ofertas o demandas del portal y difundirlas en sus redes con enlaces únicos de Marca Blanca (sin logotipos ni teléfonos de VECY). La telemetría de engagement asigna puntos que se liquidan y consignan en dinero al cerrarse la transacción.
+- **Doble Recompensa**: Si el agente que difunde en la bolsa además aporta al cliente final, recibe el 40% de la colocación más el valor de sus puntos en la bolsa.
+
+#### 4. LOS 6 GRANDES BENEFICIOS OFICIALES PARA EL AGENTE INMOBILIARIO
+1. **Ingreso Gratuito y Cero Cuotas Obligatorias**: Sin mensualidades, cuotas de afiliación ni anualidades.
+2. **Publicación Ilimitada de Ofertas y Demandas**: Espacio sin restricciones para subir inventario y solicitudes.
+3. **Motor con Inteligencia Artificial**: Matches y cruces algorítmicos instantáneos entre requerimientos y propiedades.
+4. **Acceso Pleno a "Vecy Agenda" con IA**: Verificación automática de identidad de visitantes, agendamiento transparente y respuesta automatizada de correos.
+5. **Chat Web 24/7 con JanIA**: Consultas especializadas y redacción inmediata de promesas de compraventa y correos formales.
+6. **Estudio de Títulos y Trámites Gratuitos en Línea**: Asesoría documental, revisión de certificados de tradición y trámite sin costo de paz y salvos de Predial e IDU.
+
 

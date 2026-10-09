@@ -83,5 +83,30 @@ export const propertiesDatabase: { [key: string]: any } = {
     },
     description: 'Amplio apartamento clásico con un gran potencial para ser remodelado y revalorizado. Su distribución tradicional garantiza excelente iluminación natural y confort.',
     stealthFichaUrl: 'https://ap-cedritos-bog-ce01.netlify.app/'
+  },
+  'apto-san-patricio': {
+    id: 'apto-san-patricio',
+    name: 'Apartamento en San Patricio',
+    location: 'Bogotá, Usaquén',
+    price: 1000000000,
+    rentPrice: 4000000,
+    bedrooms: 3,
+    bathrooms: 3,
+    area: 147,
+    propertyType: 'Apartamento',
+    yearBuilt: 1989,
+    images: Array.from({ length: 15 }, (_, i) => `https://apto-san-patricio-bog.netlify.app/assets/${i + 1}.jpeg`),
+    amenities: ['Vigilancia 24/7', 'Ascensor', 'Salón Social', 'Parqueadero de Visitantes', 'Cerca a Parque'],
+    internalFeatures: ['3 Alcobas con Iluminación Natural', '3 Baños', 'Sala Comedor Amplia', 'Cocina Integral', 'Zona de Ropas Independiente', '2 Parqueaderos'],
+    latitude: 4.698,
+    longitude: -74.053,
+    propertyDetails: {
+      administrationFee: 1000000,
+      parking: '2',
+      estrato: 6,
+      estado: 'Libre de Gravámenes'
+    },
+    description: 'Espectacular apartamento en San Patricio, estrato 6. Amplios espacios sociales, iluminación excepcional y acabados de primera calidad en uno de los sectores más exclusivos del norte de Bogotá.',
+    stealthFichaUrl: 'https://apto-san-patricio-bog.netlify.app/'
   }
 };

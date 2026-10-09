@@ -5,21 +5,26 @@ export const UNAUTHED_ERR_MSG = 'Please login (10001)';
 export const NOT_ADMIN_ERR_MSG = 'You do not have required permission (10002)';
 
 // 🔖 FUENTE ÚNICA DE VERDAD DE VERSIÓN DEL SISTEMA VECY BIENES RAÍCES
-export const VECY_VERSION = "v32.62";
+export const VECY_VERSION = "v32.63";
 export const VECY_VERSION_LABEL = `VERSIÓN ${VECY_VERSION}`;
 export const VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
 
 // 💰 MODELO COLABORATIVO OFICIAL DE COMISIONES — VECY BIENES RAÍCES (40 / 20 / 40)
 export const VECY_COMMISSION_MODEL = {
-  captadorPct: 40,        // 40% Para quien subió el inmueble al portal (Punta Captadora / quien tenía el inmueble)
-  redColaborativaPct: 10, // 10% Para toda la Red Colaborativa (Promotores que viralizan el enlace y ganan por puntos)
-  vecyPlatformPct: 10,    // 10% Para VECY BIENES RAÍCES (Plataforma tecnológica, Algoritmo JanIA, Respaldo legal)
-  bolsaIntermediaPct: 20, // 20% Bolsa compartida (10% Red Colaborativa + 10% VECY)
-  colocadorPct: 40,       // 40% Para quien consigue al comprador, lo presenta a través del sistema de reserva 'Vecy Agenda' y acompaña el cierre
+  captadorPct: 40,        // 40% Para quien subió el inmueble al portal (Punta Captadora / Oferta)
+  redColaborativaPct: 10, // 10% Para la Bolsa Colaborativa (Agentes difusores que viralizan enlaces de Marca Blanca y ganan por puntos de telemetría)
+  vecyPlatformPct: 10,    // 10% Para VECY BIENES RAÍCES (Súper Portal, Algoritmo JanIA 24/7, Vecy Agenda, Estudio de Títulos y Respaldo Legal)
+  bolsaIntermediaPct: 20, // 20% Participación intermedia de VECY: VECY toma su 20%, pero cede el 10% a la Bolsa Colaborativa y conserva el 10%
+  colocadorPct: 40,       // 40% Para la Punta Colocadora (Demanda: quien aporta al comprador/arrendatario final vía Vecy Agenda y acompaña el cierre)
   colocadorDescription: "Lo obtiene el colega o asesor cuando aporta al comprador/arrendatario final, lo presenta a través de nuestro sistema de reserva 'Vecy Agenda' y acompaña el cierre.",
   totalPct: 100,
-  slogan: "40% Captador + 20% Bolsa (10% Red Colaborativa + 10% VECY) + 40% Colocador (vía Vecy Agenda)",
-  doctrine: "En Colombia el 50/50 directo es bueno pero demorado. En VECY sabemos que a muchos de entrada les inquieta el 40/20/40, pero nuestra promesa de valor es que gracias a la IA y a nuestra red verán resultados rápidos y seguidos, cerrando negocios continuos con 6 grandes beneficios gratuitos."
+  slogan: "40% Captador + 20% Intermedio (10% Bolsa Colaborativa + 10% VECY) + 40% Colocador (vía Vecy Agenda)",
+  doctrine: "En el 50/50 tradicional, dos agentes hacen una alianza bilateral pero dependen de su propio esfuerzo y de gastar en publicidad paga, tardando meses en cerrar. En el modelo 40/20/40 de VECY, ambas puntas ceden un 10% porque VECY está en la mitad no solo aportando un Súper Portal con IA y respaldo legal, sino porque VECY cede la mitad (el 10%) a la BOLSA COLABORATIVA. La Bolsa convierte a toda la comunidad de colegas en el motor de marketing orgánico de tus inmuebles mediante fichas de Marca Blanca (sin logos de VECY). Aunque no consigas el cliente final, tus puntos por clics e interacciones te garantizan tu parte del 10% al cerrarse el negocio. Y si tú consigues el comprador/arrendatario, ¡ganas el 40% como Colocador MÁS tu parte de los puntos de la Bolsa!",
+  bolsaColaborativa: {
+    name: "Bolsa Inmobiliaria Colaborativa VECY",
+    mechanics: "Cualquier agente registrado, incluso con pocos inmuebles propios, puede ingresar a la Bolsa y tomar las Ofertas o Demandas publicadas para viralizarlas en sus redes y grupos mediante enlaces de Marca Blanca limpios (sin logos ni números de VECY). Mini-bots y tags de telemetría registran el tráfico y asignan puntos. Al cerrarse la venta (3% de comisión) o arriendo (1er canon), el 10% de la Bolsa se reparte entre todos los difusores de mayor a menor y se consigna a su cuenta bancaria o billetera inscrita.",
+    doubleReward: "Si el agente que viralizó en la Bolsa es quien además consigue el cliente final comprador o arrendatario, gana el 40% íntegro de la Punta Colocadora MÁS su liquidación en dinero por los puntos acumulados en la Bolsa Colaborativa."
+  }
 };
 
 // 🎁 LOS 6 GRANDES BENEFICIOS OFICIALES PARA EL AGENTE — VECY BIENES RAÍCES

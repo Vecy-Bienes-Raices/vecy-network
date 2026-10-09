@@ -278,27 +278,33 @@ export default function PropertyCard({
           </span>
         </div>
 
-        {/* Overlays de Viralización Pro */}
-        <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-6 text-center z-20">
-          <div className="space-y-3 w-full">
-            <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] mb-4 flex items-center justify-center gap-2">
-              <Zap className="w-3 h-3 animate-pulse" /> Viralización Pro
+        {/* Overlays de Viralización Pro — Bolsa Inmobiliaria Colaborativa */}
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-6 text-center z-20">
+          <div className="space-y-2.5 w-full">
+            <p className="text-[10px] text-primary font-black uppercase tracking-[0.2em] mb-3 flex items-center justify-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-primary animate-pulse" /> Bolsa Colaborativa
             </p>
-            <button 
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopyLink('branded'); }}
-              className="w-full py-2.5 bg-primary text-black rounded-xl font-bold text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all"
-            >
-              {copied === 'branded' ? <Check className="w-3 h-3" /> : <Share2 className="w-3 h-3" />}
-              {copied === 'branded' ? 'Copiado' : 'Link con Mi Marca'}
-            </button>
+            {/* 🌐 Botón 1: Ficha Marca Blanca (Sin Logos de Vecy para Redes Sociales) */}
             <button 
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopyLink('stealth'); }}
-              className="w-full py-2.5 bg-white/10 border border-white/20 text-white rounded-xl font-bold text-[9px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/20 active:scale-95 transition-all"
+              className="w-full py-2.5 bg-gradient-to-r from-[#FFD700] via-[#FDB931] to-[#DAA520] text-black rounded-xl font-black text-[9px] uppercase tracking-wider flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-md"
+              title="Copia el enlace de marca blanca limpio (sin logos ni contactos de VECY) listo para publicar en tus redes y grupos"
             >
-              {copied === 'stealth' ? <Check className="w-3 h-3" /> : <Users className="w-3 h-3" />}
-              {copied === 'stealth' ? 'Copiado' : 'Red de Apoyo (Limpio)'}
+              {copied === 'stealth' ? <Check className="w-3.5 h-3.5 text-black" /> : <Users className="w-3.5 h-3.5 text-black" />}
+              {copied === 'stealth' ? '¡Enlace Limpio Copiado!' : 'Ficha Marca Blanca (Sin Logos)'}
             </button>
-            <p className="text-[8px] text-gray-400 font-bold uppercase tracking-tighter mt-2">Gana Puntos al compartir</p>
+            {/* 🔗 Botón 2: Link con Perfil del Agente */}
+            <button 
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleCopyLink('branded'); }}
+              className="w-full py-2 bg-white/10 border border-white/20 text-white rounded-xl font-bold text-[9px] uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-white/20 active:scale-95 transition-all"
+              title="Enlace oficial con tus datos de contacto registrados como asesor"
+            >
+              {copied === 'branded' ? <Check className="w-3.5 h-3.5" /> : <Share2 className="w-3.5 h-3.5" />}
+              {copied === 'branded' ? '¡Link Copiado!' : 'Link con Mi Perfil'}
+            </button>
+            <p className="text-[8px] text-amber-300/90 font-bold uppercase tracking-tight mt-1.5 flex items-center justify-center gap-1">
+              ✨ Suma puntos por clics y gana tu parte del 10%
+            </p>
           </div>
         </div>
 
