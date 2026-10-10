@@ -58,7 +58,7 @@ export async function queryGoogleAiStudio(
   const model = options.model || DEFAULT_MODEL;
   const systemInstruction = options.systemInstruction;
   const temperature = options.temperature ?? 0.7;
-  const maxOutputTokens = options.maxOutputTokens ?? 2048;
+  const maxOutputTokens = options.maxOutputTokens ?? 8192;
   const sanitizeOutput = options.sanitizeOutput ?? true;
 
   const payload: any = {
@@ -88,8 +88,9 @@ export async function queryGoogleAiStudio(
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
 
     try {
-      const response = await axios.post(url, payload, { timeout: 15000 });
-      const rawText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const response = await axios.post(url, payload, { timeout: 30000 });
+      const parts = response.data?.candidates?.[0]?.content?.parts || [];
+      const rawText = parts.map((p: any) => p.text || "").filter(Boolean).join("\n");
 
       if (rawText && typeof rawText === "string") {
         if (sanitizeOutput) {
@@ -165,13 +166,17 @@ if (process.argv[1]?.endsWith("googleAiStudioBridge.ts") || process.argv[1]?.end
     console.log("Modelos Insignia destacados:", health.sampleModels);
 
     if (health.healthy) {
-      console.log("\n--- PRUEBA DE CONSULTA SEGURA CON SANITIZACIÓN (GEMINI 3.8 FLASH) ---");
-      const res = await queryGoogleAiStudio("Explica en dos líneas la regla de oro del requerimiento inmobiliario en Colombia.", {
+      const customPrompt = process.argv.slice(2).join(" ").trim();
+      const promptToUse = customPrompt || "Explica en dos líneas la regla de oro del requerimiento inmobiliario en Colombia.";
+      console.log(`\n--- CONSULTANDO GOOGLE AI STUDIO (GEMINI 3.8 FLASH) ---`);
+      console.log(`Pregunta enviada: "${promptToUse}"\n`);
+      const res = await queryGoogleAiStudio(promptToUse, {
         model: "gemini-3.8-flash"
       });
-      console.log("Respuesta:", res.content);
-      console.log("Modelo usado:", res.modelUsed);
-      console.log("Sanitización:", res.sanitizationSummary);
+      console.log("Respuesta de Gemini 3.8:");
+      console.log(res.content);
+      console.log("\nModelo usado:", res.modelUsed);
+      console.log("Filtro de Privacidad:", res.sanitizationSummary);
     }
   })().catch(console.error);
 }
