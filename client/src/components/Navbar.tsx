@@ -111,16 +111,17 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
         </button>
       </div>
 
-      {/* Mobile Navigation */}
+      {/* Mobile Navigation (Optimizado para móviles, tablets y pantallas compactas) */}
       {isOpen && (
-        <div className="md:hidden glass border-t border-white/10">
+        <div className="lg:hidden glass border-t border-white/10 bg-black/95 backdrop-blur-2xl">
           <div className="container py-6 space-y-4">
             {navItems.map((item) => (
               <a
                 key={item.label}
                 href={item.href}
-                className="block text-sm font-semibold uppercase tracking-wider text-foreground/80 hover:text-accent transition-colors py-2"
-                onClick={() => {
+                className="block text-sm font-semibold uppercase tracking-wider text-foreground/80 hover:text-accent transition-colors py-2 border-b border-white/5"
+                onClick={(e) => {
+                  e.preventDefault();
                   if (item.href.startsWith('/')) {
                     navigate(item.href);
                   } else {
@@ -132,9 +133,17 @@ export default function Navbar({ logoUrl, brandName, brandSubtitle }: NavbarProp
                 {item.label}
               </a>
             ))}
+            {!user && (
+              <button 
+                onClick={() => { navigate('/login'); setIsOpen(false); }} 
+                className="btn-gold-outline w-full text-xs font-bold uppercase tracking-wider py-3 mt-2"
+              >
+                ACCEDER AL PANEL
+              </button>
+            )}
             <button 
               onClick={() => { navigate('/jania'); setIsOpen(false); }} 
-              className="btn-gold w-full text-sm mt-4"
+              className="btn-gold w-full text-sm mt-2"
             >
               CONSULTAR JANIA
             </button>

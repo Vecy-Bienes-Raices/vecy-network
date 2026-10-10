@@ -7,6 +7,52 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.82 — 10 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Restauración de Metadatos Jurídicos Libres sin Card (Imagen 1)**:
+   - Eduardo aclaró: *"Pero cometiste un error era borrar las cards no la info que tenía adentro, es que vi que elimminaste también los datos de: Instrumentyo Jurídico, código único de validación, etc, o crees que eso no debería llevarlo ??, no entiendo por qué eliminaste todos esos datos, repito solo era la card y dejar allí los datos"*.
+2. **Corrección de Cards de Propiedades en Página de Inicio (Home — Imagen 2)**:
+   - Eduardo solicitó: *"También quiero que corrijas las cards de la página de inicio mejor las dejes con el mismo estilo de la tienda de Ofertas pues cómo las dejaste se ven muy raras y descuadradas"*.
+3. **Paginación Dinámica y Selector de Inmuebles en Ofertas y Demandas**:
+   - Eduardo solicitó: *"y también quiero que en las páginas de OFERTAS y DEMANDAS se puedan mostrar o elegir mostrar ciertos números de inmuebles por página y no todos al tiempo. Ok"*.
+4. **Optimización Responsive Universal y Rendimiento de Carga**:
+   - Eduardo solicitó: *"Revisa la optimización de cada página y que todo el sitio esté cargando rápido y en las mejores condiciones, tanto en ordenadores de mesa o escritorio como en pantallas móviles, tables y laptops, que todos los menús y siitios segmentos, secciones y demás carguen super bien"*.
+
+### Diagnóstico Técnico y Arquitectura de Solución
+1. **Preservación Total de Información Legal**:
+   - En `TerminosCondiciones.tsx` y `PoliticaPrivacidad.tsx`, se restablecieron al 100% los cuatro campos legales solicitados: *Instrumento Jurídico* (Contrato de Adhesión Mercantil), *Marco Legal Aplicable* (Ley 527 de 1999, Decreto 2364 de 2012, Arts. 1340-1346 C.Co.), *Código Único de Validación (CUV)* (VECY-TERMS-2026-BOG-9978 / VECY-PRIVACY-2026-BOG-9978) y la *Huella Digital (SHA-256)*.
+   - Se diseñaron fluidos, sin contenedor ni bordes de tarjeta (`mt-5 pt-4 border-t border-[#bf953f]/20 grid sm:grid-cols-2 gap-x-6 gap-y-2`), y con el logo flotando libre sin marcos cuadrados.
+2. **Sincronización Canónica de Cards en Home con la Tienda de Ofertas**:
+   - En `Home.tsx`, la sección "PROPIEDADES DE AUTOR" tenía un markup custom con tarjetas alargadas verticales tipo póster que desentonaban visualmente.
+   - Se integró el componente oficial `<PropertyCard />` de la tienda de Ofertas con proporciones 4:3, carrusel con swipe de imágenes, badges dorados/esmeralda según tipo de transacción, formato monetario colombiano en COP, desglose de cuartos, baños, garajes y doble botón de acción ergonómica (`AGENDAR` + `VER DETALLES`).
+3. **Motor de Paginación Inteligente con Selector en Ofertas y Demandas**:
+   - En `Properties.tsx` y `RequirementsMarketplace.tsx`, se implementó selector de cantidad (`6, 9, 12, 24, Todas`) y barra de paginación con navegación (`← Anterior`, botones numerados con elipsis `...`, `Siguiente →`).
+   - Scroll suave automático (`scrollIntoView({ behavior: 'smooth' })`) hacia el encabezado del catálogo al cambiar de página o tamaño.
+4. **Optimización de Rendimiento y Adaptabilidad Móvil/Tablet**:
+   - En `Navbar.tsx`, el menú colapsable móvil se ajustó con `lg:hidden` (antes `md:hidden`), permitiendo que tablets en orientación vertical u horizontal y pantallas medianas (768px - 1023px) tengan acceso ergonómico al menú hamburguesa completo.
+   - La paginación evita renderizar 150 nodos DOM de golpe con sus imágenes pesadas, optimizando drásticamente la memoria y la velocidad de carga en teléfonos móviles y conexiones celulares.
+
+### Acciones Técnicas Ejecutadas
+1. **`client/src/pages/TerminosCondiciones.tsx` y `client/src/pages/PoliticaPrivacidad.tsx`**:
+   - Restaurados íntegros los campos de *Instrumento Jurídico*, *Marco Legal*, *CUV* y *SHA-256* flotando libres bajo el cabecero institucional.
+2. **`client/src/pages/Home.tsx`**:
+   - Reemplazada la grilla desfasada de "PROPIEDADES DE AUTOR" por `<PropertyCard />`, exactamente idéntica a la tienda de Ofertas.
+   - Corregido el enlace del botón de inventario hacia `/ofertas`.
+3. **`client/src/pages/Properties.tsx` y `client/src/pages/RequirementsMarketplace.tsx`**:
+   - Incorporado estado de paginación (`pageSize`, `currentPage`, `paginatedProperties`, `paginatedRequirements`).
+   - Añadido selector de elementos y barra de paginación interactiva con elipsis y scroll suave.
+4. **`client/src/components/Navbar.tsx`**:
+   - Expandido breakpoint del drawer móvil de `md:hidden` a `lg:hidden` para soporte total en tablets y móviles.
+5. **Verificación y Pruebas**:
+   - `npm run check` con 0 errores de TypeScript.
+   - `npx vitest run` con 170/170 tests passing (100%).
+   - `npm run build` limpio y optimizado en 23.95s.
+6. **Incremento de Versión Oficial**:
+   - `shared/const.ts` (`v32.82`) y `package.json` (`32.82.0`).
+
+---
+
 ## 📋 SESIÓN v32.81 — 10 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

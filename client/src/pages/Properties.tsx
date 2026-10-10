@@ -13,7 +13,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import NetworkBackground from '@/components/NetworkBackground';
 import PropertyCard from '@/components/PropertyCard';
-import { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { trpc } from '@/lib/trpc';
 import { 
@@ -112,6 +112,23 @@ export default function Properties() {
 
     return list;
   }, [propertiesData, sortBy]);
+
+  // Paginación Doctrinal y Selector de Lotes por Página
+  const [pageSize, setPageSize] = useState<number>(9);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter, transactionFilter, debouncedSearch, sortBy, pageSize]);
+
+  const totalItems = displayProperties.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+  const paginatedProperties = useMemo(() => {
+    if (pageSize >= totalItems) return displayProperties;
+    const startIndex = (currentPage - 1) * pageSize;
+    return displayProperties.slice(startIndex, startIndex + pageSize);
+  }, [displayProperties, currentPage, pageSize, totalItems]);
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
@@ -281,12 +298,12 @@ export default function Properties() {
       </section>
 
       {/* ── LISTADO DE INMUEBLES AUDITADOS ── */}
-      <section className="py-14 bg-background">
+      <section className="py-14 bg-background" id="ofertas-grid-anchor">
         <div className="container">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-4 border-b border-white/5">
             <div>
               <h2 className="vecy-title-section text-xl sm:text-2xl font-black uppercase tracking-tight flex items-center gap-3">
-                <span>{displayProperties.length} {displayProperties.length === 1 ? 'Oferta Disponible' : 'Ofertas Disponibles'}</span>
+                <span>{totalItems} {totalItems === 1 ? 'Oferta Disponible' : 'Ofertas Disponibles'}</span>
                 {activeFilter !== 'all' && (
                   <span className="text-xs px-2.5 py-1 rounded-full bg-primary/20 text-primary border border-primary/30 font-bold uppercase">
                     {FILTER_CONFIG.find(f => f.id === activeFilter)?.label}
@@ -300,21 +317,51 @@ export default function Properties() {
               </h2>
               <p className="text-xs text-zinc-500 mt-1 uppercase tracking-widest font-semibold">
                 Inventario verificado con captadores directos y fotos de alta resolución
+                {totalItems > 0 && pageSize < totalItems && (
+                  <span className="text-primary font-bold ml-2">
+                    · Página {currentPage} de {totalPages} (Mostrando {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalItems)})
+                  </span>
+                )}
               </p>
             </div>
 
-            {(debouncedSearch || activeFilter !== 'all' || transactionFilter !== 'all') && (
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setActiveFilter('all');
-                  setTransactionFilter('all');
-                }}
-                className="text-xs font-bold uppercase tracking-wider text-primary hover:underline self-start sm:self-auto cursor-pointer"
-              >
-                Restablecer todos los filtros
-              </button>
-            )}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Selector de Inmuebles por Página */}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                  Mostrar:
+                </span>
+                <div className="inline-flex rounded-xl bg-zinc-900/90 border border-white/10 p-1">
+                  {[6, 9, 12, 24, 150].map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setPageSize(size)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        pageSize === size 
+                          ? 'bg-primary text-black font-black shadow-sm' 
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                      title={size === 150 ? 'Mostrar todo el inventario auditado' : `Mostrar ${size} inmuebles por página`}
+                    >
+                      {size === 150 ? 'Todos' : size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {(debouncedSearch || activeFilter !== 'all' || transactionFilter !== 'all') && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setActiveFilter('all');
+                    setTransactionFilter('all');
+                  }}
+                  className="text-xs font-bold uppercase tracking-wider text-primary hover:underline cursor-pointer"
+                >
+                  Restablecer filtros
+                </button>
+              )}
+            </div>
           </div>
 
           {isLoading ? (
@@ -345,39 +392,105 @@ export default function Properties() {
               </button>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {displayProperties.map((prop, idx) => {
-                const images = prop.images as string[] | null;
-                const area = prop.areaTotal ? Number(prop.areaTotal) : 0;
-                const piso = (prop as any).floorDetail || (prop.amenities as any)?.pisoEdificio || undefined;
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {paginatedProperties.map((prop, idx) => {
+                  const images = prop.images as string[] | null;
+                  const area = prop.areaTotal ? Number(prop.areaTotal) : 0;
+                  const piso = (prop as any).floorDetail || (prop.amenities as any)?.pisoEdificio || undefined;
 
-                return (
-                  <ScrollReveal key={prop.id} delay={(idx % 3) * 0.08} direction="up">
-                    <PropertyCard 
-                      id={prop.id}
-                      name={prop.name}
-                      propertyType={prop.propertyType as any}
-                      transactionType={prop.transactionType || undefined}
-                      price={Number(prop.price)}
-                      location={prop.location || ''}
-                      zone={prop.zone}
-                      neighborhood={prop.addressNeighborhood || undefined}
-                      locality={prop.addressLocality || undefined}
-                      city={prop.addressCity || prop.city || 'Bogotá'}
-                      bedrooms={prop.bedrooms || 0}
-                      bathrooms={prop.bathrooms || 0}
-                      area={area}
-                      parking={prop.garages || 0}
-                      piso={piso}
-                      yearBuilt={prop.yearBuilt || undefined}
-                      image={images?.[0] || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop'}
-                      gallery={images || []}
-                      featured={prop.featured || false}
-                    />
-                  </ScrollReveal>
-                );
-              })}
-            </div>
+                  return (
+                    <ScrollReveal key={prop.id} delay={(idx % 3) * 0.08} direction="up">
+                      <PropertyCard 
+                        id={prop.id}
+                        name={prop.name}
+                        propertyType={prop.propertyType as any}
+                        transactionType={prop.transactionType || undefined}
+                        price={Number(prop.price)}
+                        location={prop.location || ''}
+                        zone={prop.zone}
+                        neighborhood={prop.addressNeighborhood || undefined}
+                        locality={prop.addressLocality || undefined}
+                        city={prop.addressCity || prop.city || 'Bogotá'}
+                        bedrooms={prop.bedrooms || 0}
+                        bathrooms={prop.bathrooms || 0}
+                        area={area}
+                        parking={prop.garages || 0}
+                        piso={piso}
+                        yearBuilt={prop.yearBuilt || undefined}
+                        image={images?.[0] || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop'}
+                        gallery={images || []}
+                        featured={prop.featured || false}
+                      />
+                    </ScrollReveal>
+                  );
+                })}
+              </div>
+
+              {/* ── BARRA DE PAGINACIÓN FLUIDA & SELECTOR DE PÁGINAS ── */}
+              {totalPages > 1 && (
+                <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-white/10">
+                  <div className="text-xs text-zinc-400 font-mono">
+                    Mostrando <strong className="text-white">{(currentPage - 1) * pageSize + 1}</strong> - <strong className="text-white">{Math.min(currentPage * pageSize, totalItems)}</strong> de <strong className="text-primary">{totalItems}</strong> ofertas auditadas
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                    <button
+                      onClick={() => {
+                        setCurrentPage(prev => Math.max(prev - 1, 1));
+                        const el = document.getElementById('ofertas-grid-anchor');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      disabled={currentPage === 1}
+                      className="btn-gold-outline px-3 py-2 text-xs rounded-xl disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                      title="Página Anterior"
+                    >
+                      ← Anterior
+                    </button>
+
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                      .map((pageNum, i, arr) => {
+                        const prev = arr[i - 1];
+                        return (
+                          <React.Fragment key={pageNum}>
+                            {prev && pageNum - prev > 1 && (
+                              <span className="px-1.5 text-zinc-500 font-mono">...</span>
+                            )}
+                            <button
+                              onClick={() => {
+                                setCurrentPage(pageNum);
+                                const el = document.getElementById('ofertas-grid-anchor');
+                                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                              }}
+                              className={`min-w-[36px] h-9 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                currentPage === pageNum
+                                  ? 'btn-gold shadow-md text-black font-black'
+                                  : 'btn-gold-outline text-zinc-300 hover:text-white'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          </React.Fragment>
+                        );
+                      })}
+
+                    <button
+                      onClick={() => {
+                        setCurrentPage(prev => Math.min(prev + 1, totalPages));
+                        const el = document.getElementById('ofertas-grid-anchor');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      disabled={currentPage === totalPages}
+                      className="btn-gold-outline px-3 py-2 text-xs rounded-xl disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                      title="Página Siguiente"
+                    >
+                      Siguiente →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

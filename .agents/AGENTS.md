@@ -172,7 +172,26 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.81 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.82 — Octubre 2026
+
+### Novedades v32.82 (Restauración de Metadatos Jurídicos Libres, Simetría Absoluta en Home con PropertyCard, Paginación Inteligente y Optimización Responsive Universal):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Restauración de Datos Notariales sin Contenedor de Card (Imagen 1)**:
+     - Eduardo aclaró: *"Pero cometiste un error era borrar las cards no la info que tenía adentro, es que vi que elimminaste también los datos de: Instrumentyo Jurídico, código único de validación, etc, o crees que eso no debería llevarlo ??, no entiendo por qué eliminaste todos esos datos, repito solo era la card y dejar allí los datos"*.
+     - Se restauraron íntegros los 4 metadatos esenciales en `TerminosCondiciones.tsx` y `PoliticaPrivacidad.tsx`: *Instrumento Jurídico*, *Marco Legal Aplicable*, *Código Único de Validación (CUV)* y *Huella Digital (SHA-256)*, mostrándolos de forma fluida, elegante y libre sin cajas secundarias ni recuadros alrededor del logo.
+  2. **Estandarización de Cards en Página de Inicio (Home — Imagen 2)**:
+     - Eduardo indicó: *"También quiero que corrijas las cards de la página de inicio mejor las dejes con el mismo estilo de la tienda de Ofertas pues cómo las dejaste se ven muy raras y descuadradas"*.
+     - Se reemplazó el bloque personalizado anterior por el componente canónico `<PropertyCard />` de la tienda de Ofertas. Ahora "PROPIEDADES DE AUTOR" exhibe fotos horizontales 4:3 con swipe, badges dorados/esmeralda, precios en COP, métricas físicas y doble botón táctil (`AGENDAR` + `VER DETALLES`).
+  3. **Paginación Dinámica y Selector de Inmuebles en Ofertas y Demandas**:
+     - Eduardo instruyó: *"y también quiero que en las páginas de OFERTAS y DEMANDAS se puedan mostrar o elegir mostrar ciertos números de inmuebles por página y no todos al tiempo. Ok"*.
+     - Se implementó selector ergonómico de cantidad por página (`6, 9, 12, 24, Todas`) y barra de paginación fluida (`← Anterior`, números interactivos con elipsis, `Siguiente →`) en `/ofertas` (`Properties.tsx`) y `/demandas` (`RequirementsMarketplace.tsx`), con scroll suave automático al cambiar de página.
+  4. **Optimización Responsive y Velocidad de Carga Universal**:
+     - En `Navbar.tsx`, el menú móvil/tablet se expandió de `md:hidden` a `lg:hidden`, asegurando que en tablets (768px a 1023px) y móviles el menú hamburguesa funcione fluidamente.
+     - La paginación evita renderizar 150 tarjetas pesadas de una sola vez, acelerando radicalmente la carga en dispositivos móviles, tablets y laptops.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 170/170 tests passing ✅ | `npm run build` limpio en 23.95s ✅
+- `shared/const.ts` (`v32.82`) y `package.json` (`32.82.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.81 — Octubre 2026
 
 ### Novedades v32.81 (Vidrio Esmerilado Universal en Cards, Botones Secundarios con Cuerpo y Despeje de Logos y Sub-Cards Legales):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

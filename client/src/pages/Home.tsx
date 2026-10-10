@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useLocation } from 'wouter';
@@ -9,42 +9,74 @@ import {
 } from 'lucide-react';
 import NetworkBackground from '@/components/NetworkBackground';
 import { ScrollReveal } from '@/components/ScrollReveal';
+import PropertyCard from '@/components/PropertyCard';
+import { trpc } from '@/lib/trpc';
 
-const mockProperties = [
+const fallbackAuthorProperties = [
   {
     id: 1,
-    title: "Edificio de Conservación Teusaquillo",
-    price: "$2.800.000.000",
+    name: "Edificio de Conservación Teusaquillo",
+    propertyType: "edificio" as const,
+    transactionType: "venta",
+    price: 2800000000,
     location: "Teusaquillo, Bogotá",
-    beds: 12,
-    baths: 8,
-    sqft: 450,
-    image: "https://images.unsplash.com/photo-1577495508048-b635879837f1?q=80&w=2000&auto=format&fit=crop"
+    zone: "Norte",
+    neighborhood: "Teusaquillo",
+    city: "Bogotá",
+    bedrooms: 12,
+    bathrooms: 8,
+    area: 450,
+    parking: 4,
+    images: ["https://images.unsplash.com/photo-1577495508048-b635879837f1?q=80&w=2000&auto=format&fit=crop"],
+    featured: true
   },
   {
     id: 2,
-    title: "Apartamento de Lujo Santa Bárbara",
-    price: "$1.450.000.000",
+    name: "Apartamento de Lujo Santa Bárbara",
+    propertyType: "apartamento" as const,
+    transactionType: "venta",
+    price: 1450000000,
     location: "Santa Bárbara, Bogotá",
-    beds: 3,
-    baths: 4,
-    sqft: 185,
-    image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=2000&auto=format&fit=crop"
+    zone: "Norte",
+    neighborhood: "Santa Bárbara",
+    city: "Bogotá",
+    bedrooms: 3,
+    bathrooms: 4,
+    area: 185,
+    parking: 2,
+    images: ["https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=2000&auto=format&fit=crop"],
+    featured: true
   },
   {
     id: 3,
-    title: "Casa Moderna en Chicó Alto",
-    price: "$5.200.000.000",
+    name: "Casa Moderna en Chicó Alto",
+    propertyType: "casa" as const,
+    transactionType: "venta",
+    price: 5200000000,
     location: "Chicó Alto, Bogotá",
-    beds: 4,
-    baths: 5,
-    sqft: 320,
-    image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2000&auto=format&fit=crop"
+    zone: "Norte",
+    neighborhood: "Chicó Alto",
+    city: "Bogotá",
+    bedrooms: 4,
+    bathrooms: 5,
+    area: 320,
+    parking: 3,
+    images: ["https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2000&auto=format&fit=crop"],
+    featured: true
   }
 ];
 
 export default function Home() {
   const [, navigate] = useLocation();
+
+  const { data: serverProperties } = trpc.properties.list.useQuery({ limit: 6 });
+
+  const authorProperties = useMemo(() => {
+    if (serverProperties && serverProperties.length >= 3) {
+      return serverProperties.slice(0, 3);
+    }
+    return fallbackAuthorProperties;
+  }, [serverProperties]);
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
@@ -119,9 +151,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FEATURED PROPERTIES */}
-      <section className="py-32 bg-background relative z-10">
-        <div className="container">
+      {/* FEATURED PROPERTIES — CON EL MISMO ESTILO EXACTO DE LA TIENDA DE OFERTAS */}
+      <section className="py-24 bg-background relative z-10">
+        <div className="container px-4 md:px-6">
           <ScrollReveal>
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
               <div>
@@ -129,49 +161,46 @@ export default function Home() {
                 <h2 className="vecy-title-section text-left">PROPIEDADES <span className="text-gradient-gold">DE AUTOR</span></h2>
               </div>
               <button 
-                onClick={() => navigate('/properties')}
-                className="text-[12px] font-black text-white hover:text-primary transition-colors flex items-center gap-2 group tracking-[0.2em]"
+                onClick={() => navigate('/ofertas')}
+                className="text-[12px] font-black text-white hover:text-primary transition-colors flex items-center gap-2 group tracking-[0.2em] cursor-pointer"
               >
                 VER TODO EL INVENTARIO <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </ScrollReveal>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
-            {mockProperties.map((prop, index) => (
-              <ScrollReveal key={prop.id} delay={index * 0.1}>
-                <div className="group cursor-pointer">
-                  <div className="vecy-card-apple p-0 overflow-hidden bg-[#12161f]/85 backdrop-blur-2xl border border-[#bf953f]/30 rounded-3xl shadow-[0_0_50px_rgba(191,149,63,0.12)] group-hover:border-[#bf953f]/60 group-hover:shadow-[0_0_60px_rgba(191,149,63,0.25)] transition-all duration-500">
-                    <div className="relative aspect-[4/5] overflow-hidden">
-                      <img 
-                        src={prop.image} 
-                        alt={prop.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-60"></div>
-                      <div className="absolute bottom-0 left-0 p-8 w-full">
-                        <div className="flex items-center gap-2 mb-3">
-                          <MapPin className="w-4 h-4 text-primary" />
-                          <span className="text-[10px] font-bold text-white tracking-[0.2em] uppercase">{prop.location}</span>
-                        </div>
-                        <h3 className="text-2xl font-display font-black text-white group-hover:text-primary transition-colors mb-4">{prop.title}</h3>
-                        <div className="text-primary text-2xl font-display font-black tracking-tighter mb-4">{prop.price}</div>
-                        
-                        <div className="flex items-center gap-6 border-t border-white/10 pt-6 mt-4">
-                          <span className="text-xs text-gray-300 font-bold uppercase">{prop.beds} HAB</span>
-                          <span className="text-xs text-gray-300 font-bold uppercase">{prop.baths} BAÑOS</span>
-                          <span className="text-xs text-gray-300 font-bold uppercase">{prop.sqft} m²</span>
-                        </div>
-                      </div>
-                    </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {authorProperties.map((prop: any, index: number) => {
+              const images = prop.images as string[] | null;
+              const area = prop.areaTotal ? Number(prop.areaTotal) : (prop.area || 0);
+              const piso = prop.floorDetail || prop.amenities?.pisoEdificio || undefined;
 
-                    <button className="btn-gold-outline w-full text-sm py-3 tracking-widest uppercase" onClick={() => navigate(`/property/${prop.id}`)}>
-                      VER DETALLES
-                    </button>
-                  </div>
-                </div>
-              </ScrollReveal>
-            ))}
+              return (
+                <ScrollReveal key={prop.id} delay={index * 0.1} direction="up">
+                  <PropertyCard
+                    id={prop.id}
+                    name={prop.name}
+                    propertyType={prop.propertyType as any}
+                    transactionType={prop.transactionType || 'venta'}
+                    price={Number(prop.price)}
+                    location={prop.location || ''}
+                    zone={prop.zone}
+                    neighborhood={prop.addressNeighborhood || prop.neighborhood}
+                    locality={prop.addressLocality}
+                    city={prop.addressCity || prop.city || 'Bogotá'}
+                    bedrooms={prop.bedrooms || 0}
+                    bathrooms={prop.bathrooms || 0}
+                    area={area}
+                    parking={prop.garages || prop.parking || 0}
+                    piso={piso}
+                    yearBuilt={prop.yearBuilt}
+                    image={images?.[0] || prop.image || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop'}
+                    gallery={images || (prop.image ? [prop.image] : [])}
+                    featured={prop.featured || false}
+                  />
+                </ScrollReveal>
+              );
+            })}
           </div>
         </div>
       </section>

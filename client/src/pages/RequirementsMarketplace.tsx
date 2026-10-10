@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { 
@@ -83,6 +83,23 @@ export default function RequirementsMarketplace() {
     req.tipoInmuebleDeseado.toLowerCase().includes(filter.toLowerCase()) ||
     (req.addressNeighborhood || req.zonaDeseada || '').toLowerCase().includes(filter.toLowerCase())
   );
+
+  // Paginación Doctrinal y Selector de Lotes por Página
+  const [pageSize, setPageSize] = useState<number>(9);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, pageSize]);
+
+  const totalItems = filteredRequirements.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+
+  const paginatedRequirements = useMemo(() => {
+    if (pageSize >= totalItems) return filteredRequirements;
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredRequirements.slice(startIndex, startIndex + pageSize);
+  }, [filteredRequirements, currentPage, pageSize, totalItems]);
 
   const formatPrice = (price: number | string) => {
     return new Intl.NumberFormat('es-CO', {
@@ -170,8 +187,62 @@ export default function RequirementsMarketplace() {
       </section>
 
       {/* GRID DE REQUERIMIENTOS */}
-      <section className="py-20 bg-background relative">
+      <section className="py-14 bg-background relative" id="demandas-grid-anchor">
         <div className="container">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-4 border-b border-white/5">
+            <div>
+              <h2 className="vecy-title-section text-xl sm:text-2xl font-black uppercase tracking-tight flex items-center gap-3">
+                <span>{totalItems} {totalItems === 1 ? 'Demanda Activa' : 'Demandas Activas'}</span>
+                {filter && (
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-300 border border-white/10 font-bold">
+                    "{filter}"
+                  </span>
+                )}
+              </h2>
+              <p className="text-xs text-zinc-500 mt-1 uppercase tracking-widest font-semibold">
+                Requerimientos verificados con presupuesto y comprador real
+                {totalItems > 0 && pageSize < totalItems && (
+                  <span className="text-primary font-bold ml-2">
+                    · Página {currentPage} de {totalPages} (Mostrando {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalItems)})
+                  </span>
+                )}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Selector de Demandas por Página */}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+                  Mostrar:
+                </span>
+                <div className="inline-flex rounded-xl bg-zinc-900/90 border border-white/10 p-1">
+                  {[6, 9, 12, 24, 150].map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setPageSize(size)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        pageSize === size 
+                          ? 'bg-primary text-black font-black shadow-sm' 
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                      title={size === 150 ? 'Mostrar todas las demandas' : `Mostrar ${size} demandas por página`}
+                    >
+                      {size === 150 ? 'Todas' : size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {filter && (
+                <button
+                  onClick={() => setFilter('')}
+                  className="text-xs font-bold uppercase tracking-wider text-primary hover:underline cursor-pointer"
+                >
+                  Limpiar búsqueda
+                </button>
+              )}
+            </div>
+          </div>
           {loading ? (
             <div className="flex flex-col items-center justify-center py-40 gap-4">
               <Loader2 className="w-10 h-10 text-primary animate-spin" />
@@ -183,8 +254,9 @@ export default function RequirementsMarketplace() {
               <p className="text-gray-500 uppercase tracking-widest font-bold">No se encontraron requerimientos activos.</p>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {filteredRequirements.map((req, idx) => (
+            <>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {paginatedRequirements.map((req, idx) => (
                 <ScrollReveal key={req.id} delay={0.1 * (idx % 3)} direction="up">
                   <div className="vecy-card-apple group hover:glow-gold transition-all duration-500 border-primary/10">
                     {/* Header: Tipo de Inmueble */}
@@ -266,7 +338,72 @@ export default function RequirementsMarketplace() {
                 </ScrollReveal>
               ))}
             </div>
-          )}
+
+            {/* ── BARRA DE PAGINACIÓN FLUIDA & SELECTOR DE PÁGINAS ── */}
+            {totalPages > 1 && (
+              <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-white/10">
+                <div className="text-xs text-zinc-400 font-mono">
+                  Mostrando <strong className="text-white">{(currentPage - 1) * pageSize + 1}</strong> - <strong className="text-white">{Math.min(currentPage * pageSize, totalItems)}</strong> de <strong className="text-primary">{totalItems}</strong> requerimientos
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                  <button
+                    onClick={() => {
+                      setCurrentPage(prev => Math.max(prev - 1, 1));
+                      const el = document.getElementById('demandas-grid-anchor');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    disabled={currentPage === 1}
+                    className="btn-gold-outline px-3 py-2 text-xs rounded-xl disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                    title="Página Anterior"
+                  >
+                    ← Anterior
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                    .map((pageNum, i, arr) => {
+                      const prev = arr[i - 1];
+                      return (
+                        <React.Fragment key={pageNum}>
+                          {prev && pageNum - prev > 1 && (
+                            <span className="px-1.5 text-zinc-500 font-mono">...</span>
+                          )}
+                          <button
+                            onClick={() => {
+                              setCurrentPage(pageNum);
+                              const el = document.getElementById('demandas-grid-anchor');
+                              if (el) el.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            className={`min-w-[36px] h-9 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                              currentPage === pageNum
+                                ? 'btn-gold shadow-md text-black font-black'
+                                : 'btn-gold-outline text-zinc-300 hover:text-white'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+
+                  <button
+                    onClick={() => {
+                      setCurrentPage(prev => Math.min(prev + 1, totalPages));
+                      const el = document.getElementById('demandas-grid-anchor');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    disabled={currentPage === totalPages}
+                    className="btn-gold-outline px-3 py-2 text-xs rounded-xl disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                    title="Página Siguiente"
+                  >
+                    Siguiente →
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
         </div>
       </section>
 

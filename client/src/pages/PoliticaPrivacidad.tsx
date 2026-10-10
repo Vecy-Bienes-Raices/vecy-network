@@ -125,9 +125,28 @@ export default function PoliticaPrivacidad() {
               </div>
               <div className="sm:text-right text-[11px] font-mono text-zinc-300">
                 <div><strong>FOLIO:</strong> <span className="text-[#bf953f] font-bold print:text-black">VECY-PRIV-2026-COL</span></div>
-                <div><strong>CUV:</strong> <span className="text-zinc-400 font-bold print:text-black">VECY-PRIVACY-2026-BOG-9978</span></div>
                 <div><strong>FECHA:</strong> Octubre de 2026</div>
                 <div><strong>ESTADO:</strong> <span className="text-emerald-400 font-bold print:text-black">Vigente Oficial</span></div>
+              </div>
+            </div>
+
+            {/* Metadatos Jurídicos y Validez Digital (Libres sin contenedor de card) */}
+            <div className="mt-5 pt-4 border-t border-[#bf953f]/20 grid sm:grid-cols-2 gap-x-6 gap-y-2 text-xs print:border-t print:border-black print:mt-4 print:pt-2">
+              <div>
+                <span className="font-bold text-zinc-300 block print:text-black">Instrumento Jurídico:</span>
+                <span className="text-zinc-400 print:text-gray-700">Manual y Política de Tratamiento de Datos Personales (Hábeas Data)</span>
+              </div>
+              <div>
+                <span className="font-bold text-zinc-300 block print:text-black">Marco Legal Aplicable:</span>
+                <span className="text-zinc-400 print:text-gray-700">Ley 1581 de 2012, Decreto 1377 de 2013 y Art. 15 C.P.</span>
+              </div>
+              <div>
+                <span className="font-bold text-zinc-300 block print:text-black">Código Único de Validación (CUV):</span>
+                <span className="font-mono text-[#bf953f] font-bold print:text-black">VECY-PRIVACY-2026-BOG-9978</span>
+              </div>
+              <div>
+                <span className="font-bold text-zinc-300 block print:text-black">Huella Digital (SHA-256):</span>
+                <span className="font-mono text-[10px] text-zinc-400 break-all print:text-gray-700">f7c13b5e408892d1847c21008745ea98711823901bcae528471029381948ba12</span>
               </div>
             </div>
           </header>

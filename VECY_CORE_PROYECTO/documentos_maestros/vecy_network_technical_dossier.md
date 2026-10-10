@@ -331,6 +331,38 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.82 — Octubre 2026
+
+#### 📌 RESTAURACIÓN DE METADATOS JURÍDICOS LIBRES, SIMETRÍA CANÓNICA EN HOME CON PROPERTYCARD, PAGINACIÓN INTELIGENTE Y OPTIMIZACIÓN RESPONSIVE UNIVERSAL
+
+**Requerimiento y Objetivos:**
+1. **Restauración de Datos Notariales Libres sin Contenedor de Card (Imagen 1)**:
+   - Eduardo aclaró: *"Pero cometiste un error era borrar las cards no la info que tenía adentro, es que vi que elimminaste también los datos de: Instrumentyo Jurídico, código único de validación, etc, o crees que eso no debería llevarlo ??, no entiendo por qué eliminaste todos esos datos, repito solo era la card y dejar allí los datos"*.
+   - Solución: Se restablecieron al 100% los 4 metadatos esenciales en `TerminosCondiciones.tsx` y `PoliticaPrivacidad.tsx`: *Instrumento Jurídico* (Contrato de Adhesión Mercantil y Términos Generales de Uso), *Marco Legal Aplicable* (Ley 527 de 1999, Decreto 2364 de 2012, Arts. 1340-1346 C.Co.), *Código Único de Validación (CUV)* (`VECY-TERMS-2026-BOG-9978` / `VECY-PRIVACY-2026-BOG-9978`) y *Huella Digital (SHA-256)* (`a04f6e8b2c45d19087ea71f49033e21008bfcd45701a2938475060ab3e89c1df`). Se presentan con tipografía limpia, sin recuadros ni cajas secundarias, y con el logo oficial flotando libre.
+2. **Estandarización de Cards en Página de Inicio (Home — Imagen 2)**:
+   - Eduardo solicitó: *"También quiero que corrijas las cards de la página de inicio mejor las dejes con el mismo estilo de la tienda de Ofertas pues cómo las dejaste se ven muy raras y descuadradas"*.
+   - Solución: Se sustituyó el diseño alargado y desalineado previo por el componente canónico `<PropertyCard />` de la tienda de Ofertas (`Properties.tsx`). Ahora la sección "PROPIEDADES DE AUTOR" exhibe fotos 4:3 con navegación interactiva, badges oficiales, precios en COP, especificaciones físicas simétricas y doble botón táctil (`AGENDAR` + `VER DETALLES`).
+3. **Paginación Inteligente y Selector de Inmuebles en Ofertas y Demandas**:
+   - Eduardo solicitó: *"y también quiero que en las páginas de OFERTAS y DEMANDAS se puedan mostrar o elegir mostrar ciertos números de inmuebles por página y no todos al tiempo. Ok"*.
+   - Solución: Se implementó un selector ergonómico de cantidad (`6, 9, 12, 24, Todas`) y barra de paginación fluida (`← Anterior`, botones numerados con elipsis `...`, `Siguiente →`) en `/ofertas` (`Properties.tsx`) y `/demandas` (`RequirementsMarketplace.tsx`), con desplazamiento suave automático hacia el catálogo al cambiar de página.
+4. **Optimización Responsive Universal y Rendimiento de Carga**:
+   - Eduardo solicitó: *"Revisa la optimización de cada página y que todo el sitio esté cargando rápido y en las mejores condiciones, tanto en ordenadores de mesa o escritorio como en pantallas móviles, tables y laptops, que todos los menús y siitios segmentos, secciones y demás carguen super bien"*.
+   - Solución: En `Navbar.tsx`, el drawer móvil se extendió a `lg:hidden` (antes `md:hidden`), permitiendo que tablets y pantallas táctiles medianas (768px a 1023px) tengan un menú hamburguesa desplegable funcional sin cortes de texto. La paginación evita renderizar 150 tarjetas simultáneas con imágenes pesadas, acelerando exponencialmente los tiempos de carga (FCP y LCP) en dispositivos móviles.
+
+**Archivos Modificados:**
+- `client/src/pages/TerminosCondiciones.tsx` y `client/src/pages/PoliticaPrivacidad.tsx`: Metadatos jurídicos restaurados al 100% de forma limpia y sin contenedor envolvente.
+- `client/src/pages/Home.tsx`: "PROPIEDADES DE AUTOR" sincronizada con `<PropertyCard />`.
+- `client/src/pages/Properties.tsx`: Selector y barra de paginación interactiva de ofertas auditadas.
+- `client/src/pages/RequirementsMarketplace.tsx`: Selector y barra de paginación interactiva de requerimientos.
+- `client/src/components/Navbar.tsx`: Breakpoint responsive ampliado a `lg:hidden` para tablets y móviles.
+- `shared/const.ts`: Versión `v32.82`.
+- `package.json`: Versión `32.82.0`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 170/170 tests passing ✅ | `npm run build` limpio en 23.95s ✅
+
+---
+
 ### 🔖 v32.81 — Octubre 2026
 
 #### 📌 VIDRIO ESMERILADO UNIVERSAL EN CARDS, BOTONES SECUNDARIOS CON CUERPO Y DESPEJE DE LOGOS Y SUB-CARDS LEGALES
