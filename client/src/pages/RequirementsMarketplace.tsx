@@ -13,6 +13,7 @@ import {
   Filter,
   Loader2,
   Plus,
+  PlusCircle,
   Home,
   Briefcase,
   Sparkles
@@ -257,83 +258,87 @@ export default function RequirementsMarketplace() {
             <>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               {paginatedRequirements.map((req, idx) => (
-                <ScrollReveal key={req.id} delay={0.1 * (idx % 3)} direction="up">
-                  <div className="vecy-card-apple group hover:glow-gold transition-all duration-500 border-primary/10">
-                    {/* Header: Tipo de Inmueble */}
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="bg-primary/10 border border-primary/20 px-3 py-1 rounded-full">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">
-                          {req.tipoInmuebleDeseado}
-                        </span>
-                      </div>
-                      <div className="text-[10px] font-bold text-gray-500 uppercase">
-                        {new Date(req.createdAt).toLocaleDateString('es-CO')}
-                      </div>
-                    </div>
-
-                    {/* Ubicación */}
-                    <div className="space-y-4 mb-8">
-                      <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
-                          <MapPin className="w-5 h-5 text-primary" />
+                <ScrollReveal key={req.id} delay={0.08 * (idx % 3)} direction="up" className="h-full">
+                  <div className="vecy-card-apple p-6 sm:p-7 flex flex-col justify-between h-full group hover:glow-gold transition-all duration-500 border-primary/20">
+                    <div className="flex-1 flex flex-col">
+                      {/* Header: Tipo de Inmueble */}
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="bg-primary/10 border border-primary/25 px-3 py-1 rounded-full">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-primary">
+                            {req.tipoInmuebleDeseado}
+                          </span>
                         </div>
-                        <div>
-                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Barrios de Interés</p>
-                          <p className="text-white font-bold leading-tight">
-                            {req.addressNeighborhood || req.zonaDeseada || 'Cualquier zona'}
-                          </p>
-                          <p className="text-gray-400 text-xs mt-1">{req.ciudadDeseada}</p>
+                        <div className="text-[10px] font-bold text-gray-500 uppercase font-mono">
+                          {new Date(req.createdAt).toLocaleDateString('es-CO')}
                         </div>
                       </div>
 
-                      {/* Presupuesto */}
-                      <div className="flex items-start gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
-                          <DollarSign className="w-5 h-5 text-primary" />
+                      {/* Ubicación */}
+                      <div className="space-y-4 mb-6">
+                        <div className="flex items-start gap-3.5">
+                          <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors border border-white/5">
+                            <MapPin className="w-4 h-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Barrios de Interés</p>
+                            <p className="text-white font-bold leading-snug text-sm">
+                              {req.addressNeighborhood || req.zonaDeseada || 'Cualquier zona'}
+                            </p>
+                            <p className="text-gray-400 text-xs mt-0.5">{req.ciudadDeseada}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Presupuesto Máximo</p>
-                          <p className="text-primary text-xl font-black">
-                            {req.presupuestoMax ? formatPrice(req.presupuestoMax) : 'A convenir'}
-                          </p>
+
+                        {/* Presupuesto */}
+                        <div className="flex items-start gap-3.5 bg-black/40 border border-white/5 rounded-2xl p-3.5">
+                          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 border border-primary/20">
+                            <DollarSign className="w-4 h-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Presupuesto Máximo</p>
+                            <p className="text-primary text-lg sm:text-xl font-black font-mono">
+                              {req.presupuestoMax ? formatPrice(req.presupuestoMax) : 'A convenir'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Distribución */}
+                        <div className="flex gap-6 pt-4 border-t border-white/5">
+                          <div className="flex items-center gap-2">
+                            <Bed className="w-4 h-4 text-gray-500" />
+                            <span className="text-xs font-bold text-white">{req.habitacionesMin || 0}+ Hab</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Bath className="w-4 h-4 text-gray-500" />
+                            <span className="text-xs font-bold text-white">{req.banosMin || 0}+ Baños</span>
+                          </div>
                         </div>
                       </div>
 
-                      {/* Distribución */}
-                      <div className="flex gap-6 mt-6 pt-6 border-t border-white/5">
-                        <div className="flex items-center gap-2">
-                          <Bed className="w-4 h-4 text-gray-500" />
-                          <span className="text-xs font-bold text-white">{req.habitacionesMin || 0}+ Hab</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Bath className="w-4 h-4 text-gray-500" />
-                          <span className="text-xs font-bold text-white">{req.banosMin || 0}+ Baños</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Perfil del Asesor */}
-                    <div className="bg-black/40 rounded-2xl p-5 border border-white/5 mb-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20">
-                          <Users className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Asesor a Cargo</p>
-                          <p className="text-white text-sm font-bold">{req.user?.name || 'Agente VECY'}</p>
+                      {/* Perfil del Asesor */}
+                      <div className="bg-white/[0.02] rounded-2xl p-4 border border-white/5 mt-auto mb-4">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20 flex-shrink-0">
+                            <Users className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">Asesor a Cargo</p>
+                            <p className="text-white text-xs sm:text-sm font-bold truncate">{req.user?.name || 'Agente VECY'}</p>
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     {/* Botón de Match Ergonómico Táctil */}
-                    <button 
-                      onClick={() => req.user?.phone && handleWhatsAppClick(req.user.phone, req)}
-                      disabled={!req.user?.phone}
-                      className="btn-gold w-full min-h-[44px] py-3.5 text-[10px] tracking-[0.2em] font-black group-hover:glow-gold-sm disabled:opacity-50 active:scale-95 touch-manipulation transition-all cursor-pointer"
-                    >
-                      <Zap className="w-3.5 h-3.5 mr-2 inline-block" />
-                      TENGO EL INMUEBLE MATCH
-                    </button>
+                    <div className="mt-2 pt-3 border-t border-white/5">
+                      <button 
+                        onClick={() => req.user?.phone && handleWhatsAppClick(req.user.phone, req)}
+                        disabled={!req.user?.phone}
+                        className="btn-gold w-full min-h-[46px] py-3.5 px-4 rounded-xl text-[10px] tracking-[0.18em] font-black group-hover:glow-gold-sm disabled:opacity-50 active:scale-[0.98] touch-manipulation transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
+                      >
+                        <Zap className="w-3.5 h-3.5 inline-block shrink-0" />
+                        <span>TENGO EL INMUEBLE MATCH</span>
+                      </button>
+                    </div>
                   </div>
                 </ScrollReveal>
               ))}
@@ -418,8 +423,9 @@ export default function RequirementsMarketplace() {
             </p>
             <button 
               onClick={() => setIsPublishOpen(true)}
-              className="btn-gold-outline px-12 py-5 text-lg tracking-widest uppercase hover:scale-105 transition-transform"
+              className="btn-gold px-10 sm:px-14 py-4 sm:py-5 text-sm sm:text-base font-black tracking-widest uppercase hover:scale-105 transition-all shadow-[0_0_35px_rgba(191,149,63,0.35)] hover:shadow-[0_0_55px_rgba(191,149,63,0.6)] cursor-pointer rounded-2xl inline-flex items-center justify-center gap-3"
             >
+              <PlusCircle className="w-5 h-5 shrink-0" />
               PUBLICAR MI REQUERIMIENTO
             </button>
           </ScrollReveal>

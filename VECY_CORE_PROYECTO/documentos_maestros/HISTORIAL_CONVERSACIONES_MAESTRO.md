@@ -7,6 +7,37 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.83 — 10 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Descuadre del Botón en Cards de Requerimientos**:
+   - Eduardo señaló: *"Quédo descuadrado el botón en cada card de cada requerimiento y el botón de abajo el que dice: 'PUBLICAR MI REQUERIMIENTO', creo que debería ir en dorado. No lo sé tu eres el experto en diseño, así que dime, o si en otro color, no lo sé tu eres el que sabe más del tema de diseño."*
+2. **Jerarquía Cromática y Contraste del Call-to-Action (CTA) Principal**:
+   - Consulta sobre el color del botón final "PUBLICAR MI REQUERIMIENTO".
+
+### Diagnóstico Técnico y Arquitectura de Solución
+1. **Causa Raíz del Descuadre en Tarjetas de Requerimientos**:
+   - En `RequirementsMarketplace.tsx`, la tarjeta no tenía clases de padding explícito (`p-6 sm:p-7`) ni `flex flex-col justify-between h-full`. El botón inferior `"TENGO EL INMUEBLE MATCH"` (`w-full`) se expandía contra los límites de la card sin margen perimetral, proyectándose como una barra deformada pegada al fondo y cortada por el `overflow-hidden`. Además, la falta de altura uniforme (`h-full`) provocaba que los botones de distintas tarjetas de una misma fila no compartieran la misma línea base visual.
+   - Solución: Se asignó `vecy-card-apple p-6 sm:p-7 flex flex-col justify-between h-full group hover:glow-gold transition-all duration-500 border-primary/20` junto con `className="h-full"` en el wrapper de `ScrollReveal`. El botón ahora reposa en su propio contenedor inferior con borde sutil superior, esquinas curvadas `rounded-xl`, sombra áurica y espaciado simétrico respecto a los márgenes de la tarjeta.
+2. **Consagración del Botón Dorado Protagonista en el CTA de Cierre**:
+   - A nivel de diseño UI y psicología de conversión, los botones secundarios (filtros, paginación, navegación) deben mantenerse en estilo `outline`/`glass` discreto, pero los **Call-to-Action (CTA) primarios de conversión** (como publicar un requerimiento o captación de compradores) deben contrastar fuertemente sobre el fondo negro para atraer el clic del usuario.
+   - Se transformó el botón "PUBLICAR MI REQUERIMIENTO" a `btn-gold` metálico con halo luminoso (`shadow-[0_0_35px_rgba(191,149,63,0.35)]`), icono `PlusCircle` y tipografía negra de alta legibilidad sobre gradiente de oro puro.
+
+### Acciones Técnicas Ejecutadas
+1. **`client/src/pages/RequirementsMarketplace.tsx`**:
+   - Importado icono `PlusCircle` desde `lucide-react`.
+   - Reestructurado el grid de requerimientos con `ScrollReveal className="h-full"` y `.vecy-card-apple` con `p-6 sm:p-7 flex flex-col justify-between h-full`.
+   - Botón `"TENGO EL INMUEBLE MATCH"` encapsulado con margen interno, padding ergonómico y alineación simétrica.
+   - Botón final `"PUBLICAR MI REQUERIMIENTO"` actualizado a `btn-gold` con aura dorada.
+2. **Verificación y Pruebas**:
+   - `npm run check` con 0 errores TypeScript.
+   - `npx vitest run` con 170/170 tests passing (100%).
+   - `npm run build` generado limpiamente en 26.24s.
+3. **Incremento de Versión Oficial**:
+   - `shared/const.ts` (`v32.83`) y `package.json` (`32.83.0`).
+
+---
+
 ## 📋 SESIÓN v32.82 — 10 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

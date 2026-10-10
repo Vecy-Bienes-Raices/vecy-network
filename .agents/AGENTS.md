@@ -172,7 +172,21 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.82 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.83 — Octubre 2026
+
+### Novedades v32.83 (Encuadre Simétrico y Padding en Cards de Demandas y Botón Dorado Protagonista en CTA de Requerimientos):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Encuadre y Padding en Cards de Demandas (Requerimientos)**:
+     - Eduardo señaló: *"Quédo descuadrado el botón en cada card de cada requerimiento y el botón de abajo el que dice: 'PUBLICAR MI REQUERIMIENTO', creo que debería ir en dorado. No lo sé tu eres el experto en diseño, así que dime, o si en otro color, no lo sé tu eres el que sabe más del tema de diseño."*
+     - Causa identificada: Al estandarizar `.vecy-card-apple`, se había omitido el padding perimetral en la vista de `RequirementsMarketplace.tsx`, haciendo que el contenido colisionara con las paredes y que el botón *"TENGO EL INMUEBLE MATCH"* se desbordara de borde a borde abajo como una barra cortada y desalineada.
+     - Solución: Se asignó `className="vecy-card-apple p-6 sm:p-7 flex flex-col justify-between h-full group hover:glow-gold transition-all duration-500 border-primary/20"` y `ScrollReveal` con `className="h-full"`. El botón inferior cuenta con su propio contenedor superior con divisor tenue, padding simétrico, bordes redondeados `rounded-xl` y sombra áurica, alineándose perfectamente en la misma línea base en todo el grid.
+  2. **CTA Principal Dorado (`btn-gold`) en "PUBLICAR MI REQUERIMIENTO"**:
+     - Eduardo sugirió acertadamente cambiar el botón de abajo a dorado. En diseño UI, los Call-to-Action (CTA) de conversión máxima en fondos oscuros deben ser dorados sólidos para orientar inmediatamente la vista del usuario.
+     - Se transformó el botón de `btn-gold-outline` a `btn-gold` con aura luminosa (`shadow-[0_0_35px_rgba(191,149,63,0.35)]`), icono `PlusCircle` y texto de alto contraste negro sobre dorado.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 170/170 tests passing ✅ | `npm run build` limpio en 26.24s ✅
+- `shared/const.ts` (`v32.83`) y `package.json` (`32.83.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.82 — Octubre 2026
 
 ### Novedades v32.82 (Restauración de Metadatos Jurídicos Libres, Simetría Absoluta en Home con PropertyCard, Paginación Inteligente y Optimización Responsive Universal):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

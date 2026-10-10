@@ -331,6 +331,29 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.83 — Octubre 2026
+
+#### 📌 ENCUADRE SIMÉTRICO Y PADDING EN CARDS DE DEMANDAS Y BOTÓN DORADO PROTAGONISTA EN CTA DE REQUERIMIENTOS
+
+**Requerimiento y Objetivos:**
+1. **Encuadre y Padding en Cards de Demandas (Requerimientos)**:
+   - Eduardo señaló: *"Quédo descuadrado el botón en cada card de cada requerimiento y el botón de abajo el que dice: 'PUBLICAR MI REQUERIMIENTO', creo que debería ir en dorado. No lo sé tu eres el experto en diseño, así que dime, o si en otro color, no lo sé tu eres el que sabe más del tema de diseño."*
+   - Diagnóstico: Al unificar `.vecy-card-apple`, se omitió el padding en `RequirementsMarketplace.tsx`, haciendo que el botón `"TENGO EL INMUEBLE MATCH"` quedara deformado, sin márgenes laterales y cortado por el borde inferior.
+   - Solución: Se asignó `vecy-card-apple p-6 sm:p-7 flex flex-col justify-between h-full group hover:glow-gold transition-all duration-500 border-primary/20` y `ScrollReveal className="h-full"`. El botón ahora reposa en su propio compartimiento con divisor superior, padding simétrico, bordes `rounded-xl` y alineación horizontal uniforme.
+2. **Botón Dorado Protagonista en el CTA Final de Cierre**:
+   - En diseño de interfaces de alto impacto, el CTA principal de conversión no debe ser un botón secundario discreto (`btn-gold-outline`), sino un botón con jerarquía máxima de oro pulido (`btn-gold`).
+   - Se transformó el botón "PUBLICAR MI REQUERIMIENTO" a `btn-gold` con aura luminosa (`shadow-[0_0_35px_rgba(191,149,63,0.35)]`), icono `PlusCircle` y texto de alto contraste negro sobre dorado.
+
+**Archivos Modificados:**
+- `client/src/pages/RequirementsMarketplace.tsx`: Padding, simetría flex en cards de requerimientos, alineación de botones de match y CTA final dorado.
+- `shared/const.ts`: Versión `v32.83`.
+- `package.json`: Versión `32.83.0`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 170/170 tests passing ✅ | `npm run build` limpio en 26.24s ✅
+
+---
+
 ### 🔖 v32.82 — Octubre 2026
 
 #### 📌 RESTAURACIÓN DE METADATOS JURÍDICOS LIBRES, SIMETRÍA CANÓNICA EN HOME CON PROPERTYCARD, PAGINACIÓN INTELIGENTE Y OPTIMIZACIÓN RESPONSIVE UNIVERSAL
