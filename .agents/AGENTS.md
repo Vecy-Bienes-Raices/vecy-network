@@ -172,7 +172,28 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.79 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.80 — Octubre 2026
+
+### Novedades v32.80 (Blindaje de Impresión PDF 100% Monocromático, Erradicación del Bloque Negro, Despeje de Cajas Anidadas y Alineación a la Izquierda en Web):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Error Crítico de Impresión / Descarga PDF**:
+     - Al previsualizar la descarga o impresión en Chrome (`window.print()`), aparecía un gigantesco bloque negro sólido cubriendo la hoja y texto negro sobre fondo negro, haciendo imposible leer o imprimir el contrato.
+     - Causa identificada: El contenedor padre (`bg-background`) proyectaba el fondo oscuro de la app bajo el motor de Blink, y el banner superior (hero con botones) se imprimía en la página 1 desplazando el inicio del contrato.
+  2. **Justificación de Textos en Pantalla vs Impresión**:
+     - Eduardo señaló acertadamente que los textos justificados en web generan "ríos de espacios vacíos" antiestéticos y que solo deben justificarse en documentos impresos.
+  3. **Sobrecarga Visual y Cajas Negras Anidadas**:
+     - Existían cajas oscuras pesadas (`bg-zinc-950/80`, `bg-black/40`) dentro de la tarjeta, que recargaban el diseño y hacían ver el contenido encajonado. Los encabezados tenían números y títulos en una sola línea que se descuadraban al quebrar la línea.
+  4. **Modificaciones Implementadas**:
+     - `client/src/index.css`: Reseteo universal absoluto en `@media print` (`* { background: #fff !important; color: #111827 !important; }`), reseteo en toda la jerarquía DOM (`html, body, #root, #root > div, main, article, section, div`), justificación tipográfica formal exclusiva para impresión, y ocultamiento riguroso de todo elemento web interactivo (`.no-print print:hidden`).
+     - `client/src/pages/TerminosCondiciones.tsx` y `client/src/pages/PoliticaPrivacidad.tsx`:
+       • Textos pasados de `text-justify` a `text-left` para lectura natural en pantalla.
+       • Encabezados jerarquizados con badges de cláusula/artículo dedicados y títulos limpios sin descuadres.
+       • Eliminadas las cajas negras internas redundantes; el texto fluye sobre cristal esmerilado translúcido (`bg-[#12161f]/85 backdrop-blur-2xl border border-[#bf953f]/30`) con sutiles divisores luminosos.
+       • `document.title` dinámico agregado para asignación de nombre oficial al guardar como PDF.
+     - Pruebas y compilación: `npm run check` (0 errores TS), 170/170 tests Vitest passing al 100%, y `npm run build` completado exitosamente en 20.95s.
+     - `shared/const.ts` (`v32.80`) y `package.json` (`32.80.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.79 — Octubre 2026
 
 ### Novedades v32.79 (Diseño Glassmorphism / Frosted Glass UI en Términos y Privacidad, Impresión PDF Monocromática Legal Estricta, Erradicación Absoluta de 45/10/45 y Consagración del Modelo Institucional 40/20/40):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

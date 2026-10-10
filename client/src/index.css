@@ -669,12 +669,42 @@
   }
 }
 
-/* ── SOPORTE DE IMPRESIÓN Y DESCARGA EN PDF (DOCUMENTOS FORMALES) ─────────────── */
+/* ── SOPORTE DE IMPRESIÓN Y DESCARGA EN PDF (DOCUMENTOS FORMALES 100% BLANCO Y NEGRO) ─────────────── */
 @media print {
-  html, body {
+  /* Reseteo universal absoluto para eliminar cualquier fondo oscuro o degradé en toda la jerarquía */
+  *,
+  *::before,
+  *::after {
     background: #ffffff !important;
+    background-color: #ffffff !important;
+    background-image: none !important;
     color: #111827 !important;
-    font-size: 10.5pt !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+  }
+
+  html,
+  body,
+  #root,
+  #root > div,
+  main,
+  article,
+  header,
+  footer,
+  section,
+  div {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    background-image: none !important;
+    color: #111827 !important;
+    border-radius: 0 !important;
+  }
+
+  html, body {
+    font-size: 10pt !important;
     line-height: 1.5 !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -684,17 +714,20 @@
 
   /* Ocultar elementos web interactivos, fondos oscuros y navegación */
   nav,
-  footer,
+  footer:not(.print-document-sheet footer),
   .no-print,
   .network-background-canvas,
   canvas,
   [role="tooltip"],
   .fixed,
-  button:not(.allow-print) {
+  button,
+  .vecy-accent-tag,
+  .line-electric,
+  .line-gold {
     display: none !important;
   }
 
-  /* Ajustar contenedor del documento formal para hoja blanca continua y tipografía legal en blanco y negro */
+  /* Contenedor del documento formal: hoja blanca continua legal */
   .print-document-sheet {
     box-shadow: none !important;
     border: none !important;
@@ -703,51 +736,74 @@
     max-width: 100% !important;
     width: 100% !important;
     background: #ffffff !important;
-    color: #000000 !important;
-  }
-
-  /* Forzar aspecto legal monocromático (blanco y negro estricto) en impresión/PDF */
-  .print-document-sheet,
-  .print-document-sheet * {
-    background: transparent !important;
-    color: #000000 !important;
-    text-shadow: none !important;
-    box-shadow: none !important;
+    background-color: #ffffff !important;
+    color: #111827 !important;
   }
 
   .print-document-sheet header {
     border-bottom: 2px solid #000000 !important;
+    padding-bottom: 14px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .print-document-sheet header * {
+    color: #000000 !important;
   }
 
   .print-document-sheet footer {
-    border-top: 1px solid #000000 !important;
-    color: #333333 !important;
+    border-top: 1.5px solid #000000 !important;
+    padding-top: 10px !important;
+    margin-top: 24px !important;
+    color: #374151 !important;
   }
 
-  .print-document-sheet .border-b,
-  .print-document-sheet .border-t,
-  .print-document-sheet .border {
-    border-color: #d1d5db !important;
+  .print-document-sheet section {
+    border: 1px solid #e5e7eb !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    padding: 12px 16px !important;
+    margin-bottom: 14px !important;
+    border-radius: 4px !important;
   }
 
-  .print-document-sheet .border-l-4 {
-    border-left: 3.5px solid #000000 !important;
-    border-top: none !important;
-    border-right: none !important;
-    border-bottom: none !important;
-    background: transparent !important;
-    padding-left: 14px !important;
+  .print-document-sheet p,
+  .print-document-sheet li {
+    color: #1f2937 !important;
+    text-align: justify !important;
+    font-size: 9.5pt !important;
+    line-height: 1.55 !important;
+  }
+
+  .print-document-sheet strong {
+    color: #000000 !important;
+    font-weight: 700 !important;
+  }
+
+  .print-document-sheet h1,
+  .print-document-sheet h2,
+  .print-document-sheet h3,
+  .print-document-sheet h4 {
+    color: #000000 !important;
+    font-weight: 800 !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .print-document-sheet .border-l-4,
+  .print-document-sheet .border-l-2 {
+    border-left: 3px solid #000000 !important;
+    border-top: 1px solid #e5e7eb !important;
+    border-right: 1px solid #e5e7eb !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    padding: 8px 12px !important;
+    margin-bottom: 8px !important;
   }
 
   .print-document-sheet img {
-    filter: grayscale(100%) contrast(120%) !important;
-  }
-
-  /* Evitar saltos de página huérfanos en títulos de cláusulas */
-  h1, h2, h3, h4, .clause-header {
-    color: #000000 !important;
-    page-break-after: avoid;
-    break-after: avoid;
+    filter: grayscale(100%) contrast(150%) !important;
+    max-height: 60px !important;
   }
 
   p, li, .legal-block {
@@ -756,7 +812,7 @@
   }
 
   @page {
-    margin: 18mm 15mm 18mm 15mm;
+    margin: 15mm 12mm 15mm 12mm;
     size: letter portrait;
   }
 }

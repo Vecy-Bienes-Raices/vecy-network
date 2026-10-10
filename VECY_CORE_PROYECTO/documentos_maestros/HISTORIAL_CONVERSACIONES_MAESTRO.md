@@ -7,6 +7,45 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.80 — 10 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+- Eduardo reportó con capturas de pantalla de la previsualización de impresión en Chrome:
+  *"No sé creo que hay unos errorcitos y como diferente diseño en algo, no se como en la iluminación o no se si es que se ve muy recargado, títulos muy largos y complejos, cláusulas con números descuadrados y textos jsutificados que si no estoy mal en sitios web no se deben justificar lso textos en un documento a la hora de imprimir si, preo esos fondos negros que no dejan ver la letra se ven raros en los documentos, no se hay algo que no me cuadra. Pero si me gusta un poco, y al intentar descargarlo creo que está mal algo."*
+
+### Diagnóstico Técnico y Causas Raíz Identificadas
+1. **Causa Raíz del Bloque Negro en Impresión / Descarga PDF**:
+   - En Chrome Print dialog (`window.print()`), el contenedor padre de la página (`<div className="min-h-screen bg-background ...">`) tenía el fondo oscuro institucional de la app (`hsl(var(--background))` ≈ `#090d16`).
+   - Aunque la regla `.print-document-sheet` tenía fondo blanco o transparente, el motor de renderizado de impresión de Blink proyectaba el fondo oscuro del padre y, sumado al texto forzado a negro (`#000`), producía **texto negro sobre fondo negro**, tapando el contenido e inutilizando el documento impreso.
+   - Además, la cabecera superior web (Hero Banner con los botones interactivos de "Descargar PDF" y "Ver Política de Privacidad") se renderizaba en la página 1 de la impresión, desplazando el inicio del contrato formal y dejando espacios huérfanos.
+2. **Justificación de Texto en Web vs Impresión**:
+   - En diseño web responsive, el uso de `text-justify` genera espaciados erráticos entre palabras ("ríos tipográficos de espacio en blanco") cuando el ancho de pantalla varía.
+   - En documentos formales impresos sobre papel (`@media print`), la justificación (`text-align: justify`) sí es el estándar legal esperado.
+3. **Sobrecarga Visual y Cuadros Negros Anidados en Web**:
+   - Las cláusulas estaban encerradas en cajas internas oscuras `bg-zinc-950/80` dentro de un marco que ya era oscuro, creando un efecto de "cajas negras dentro de cajas negras" que oscurecía la lectura.
+   - Los títulos tenían esquemas inline con números y guiones largos en una sola línea que, al reducirse la pantalla o tener textos extensos, rompían la línea descuadrando la numeración de las cláusulas.
+
+### Acciones Técnicas Ejecutadas
+1. **Hoja Legal 100% Monocromática Impecable (`client/src/index.css`)**:
+   - Implementado reseteo universal estricto en `@media print`:
+     `*, *::before, *::after { background: #ffffff !important; background-color: #ffffff !important; background-image: none !important; color: #111827 !important; box-shadow: none !important; text-shadow: none !important; backdrop-filter: none !important; }`
+   - Reset completo para `html, body, #root, #root > div, main, article, section, div` a fondo blanco `#fff` sin bordes redondeados ni fondos oscuros residuales.
+   - Ocultamiento garantizado del Hero Banner interactivo y botones web en impresión mediante `.no-print print:hidden`.
+   - Justificación tipográfica formal reservada estrictamente a la impresión (`.print-document-sheet p, li { text-align: justify !important; }`).
+2. **Alineación a la Izquierda y Despeje Visual en Web (`client/src/pages/TerminosCondiciones.tsx` y `PoliticaPrivacidad.tsx`)**:
+   - Reemplazado `text-justify` por `text-left` para lectura natural, fluida y ergonómica en pantalla.
+   - Jerarquía clara en los encabezados con badges dedicados (`Cláusula Primera`, etc.) y títulos limpios sin guiones descuadrados.
+   - Eliminados los bloques negros pesados anidados (`bg-black/40`, `bg-zinc-950`); el texto fluye de manera limpia sobre una superficie continua de vidrio esmerilado translúcido (`bg-[#12161f]/85 backdrop-blur-2xl border border-[#bf953f]/30`) con sutiles divisores luminosos.
+   - Agregado efecto `React.useEffect` para asignar títulos descriptivos al documento (`document.title = "VECY Bienes Raíces — Términos y Condiciones"` / `"Política de Privacidad"`) para que las descargas de PDF guarden con nombre oficial.
+3. **Validación, Tests y Compilación**:
+   - Chequeo de TypeScript: `npm run check` completado con 0 errores (`tsc --noEmit`).
+   - Pruebas automatizadas: `npx vitest run` con 170/170 tests passing (5/5 archivos de test al 100%).
+   - Compilación de producción: `npm run build` completado exitosamente en 20.95s sin advertencias.
+4. **Incremento de Versión Oficial**:
+   - `shared/const.ts` (`v32.80`) y `package.json` (`32.80.0`).
+
+---
+
 ## 📋 SESIÓN v32.79 — 10 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

@@ -331,6 +331,33 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.80 — Octubre 2026
+
+#### 📌 BLINDAJE DE IMPRESIÓN PDF 100% MONOCROMÁTICO, ERRADICACIÓN DEL BLOQUE NEGRO, DESPEJE DE CAJAS ANIDADAS Y ALINEACIÓN A LA IZQUIERDA EN WEB
+
+**Requerimiento y Objetivos:**
+1. **Solución Radical al Bloque Negro en Impresión / Descarga PDF**:
+   - Petición y reporte de Eduardo A. Rivera: Al intentar imprimir o descargar en PDF (`window.print()`), Chrome previsualizaba un bloque negro gigante cubriendo la hoja y texto negro sobre negro, inutilizando la descarga.
+   - Causa técnica identificada: El contenedor padre (`bg-background`) proyectaba el fondo oscuro de la aplicación bajo el motor de Blink, mientras que `.print-document-sheet` tenía fondo transparente/claro con texto forzado a negro (`#000`), produciendo texto negro sobre fondo negro. Adicionalmente, el banner superior web se imprimía en la página 1 desplazando el inicio del contrato formal.
+2. **Justificación de Textos en Web vs Impresión Formal**:
+   - Corrección de usabilidad: En páginas web responsive, los textos justificados generan "ríos de espacios vacíos" antiestéticos. Se adoptó `text-left` para lectura limpia en pantalla, reservando la justificación estricta (`text-align: justify`) para documentos impresos sobre papel.
+3. **Despeje de Cajas Negras Anidadas y Numeración Limpia de Cláusulas**:
+   - Se suprimieron las cajas oscuras internas redundantes (`bg-zinc-950/80`, `bg-black/40`) que causaban pesadez visual.
+   - Se crearon encabezados ordenados con badges dedicados (`Cláusula Primera`, etc.) y títulos limpios sin guiones descuadrados, fluyendo el contenido sobre cristal esmerilado translúcido continuo con divisores sutiles.
+   - Se incorporó `document.title` dinámico (`VECY Bienes Raíces — Términos y Condiciones` / `Política de Privacidad`) para que la descarga asigne el nombre institucional adecuado.
+
+**Archivos Modificados:**
+- `client/src/index.css`: Reseteo universal absoluto en `@media print` (`* { background: #fff !important; color: #111827 !important; }`), reset para toda la jerarquía de nodos a fondo blanco, tipografía legal justificada exclusiva para papel y ocultamiento garantizado de componentes web no imprimibles.
+- `client/src/pages/TerminosCondiciones.tsx`: Alineación a la izquierda, badges de cláusula ordenados, eliminación de cajas negras pesadas y cristal translúcido continuo.
+- `client/src/pages/PoliticaPrivacidad.tsx`: Alineación a la izquierda, badges de artículo ordenados, bloques de datos cristalinos y pie de página integrado.
+- `package.json`: Versión `32.80.0`.
+- `shared/const.ts`: Versión `v32.80`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 170/170 tests pasando al 100% ✅ | `npm run build` limpio en 20.95s ✅
+
+---
+
 ### 🔖 v32.79 — Octubre 2026
 
 #### 📌 DISEÑO GLASSMORPHISM / FROSTED GLASS UI EN TÉRMINOS Y PRIVACIDAD, IMPRESIÓN PDF MONOCROMÁTICA LEGAL ESTRICTA, ERRADICACIÓN ABSOLUTA DE 45/10/45 Y RATIFICACIÓN INSTITUCIONAL DEL MODELO 40/20/40
