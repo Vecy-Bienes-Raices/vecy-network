@@ -256,7 +256,7 @@ export default function PropertyCard({
   };
 
   return (
-    <div className="vecy-card-apple group overflow-hidden hover:glow-gold transition-all duration-500 p-0 flex flex-col h-full bg-zinc-950/90 border border-white/10 shadow-2xl hover:border-primary/40">
+    <div className="vecy-card-apple group overflow-hidden hover:glow-gold transition-all duration-500 p-0 flex flex-col h-full bg-[#12161f]/85 backdrop-blur-2xl border border-[#bf953f]/30 rounded-3xl shadow-[0_0_50px_rgba(191,149,63,0.12)] hover:border-[#bf953f]/60 hover:shadow-[0_0_60px_rgba(191,149,63,0.25)]">
       {/* ── Imagen / Carousel Táctil en Formato 4:3 Natural (No Panorámico) ── */}
       <div 
         className="relative aspect-[4/3] w-full overflow-hidden bg-white/5 select-none touch-pan-y"
@@ -446,7 +446,7 @@ export default function PropertyCard({
             <Calendar size={14} className="text-black shrink-0" /> Agendar
           </button>
           <button 
-            className="btn-gold-outline text-[10px] min-h-[44px] py-2.5 tracking-widest font-black uppercase flex items-center justify-center hover:bg-white/10 active:scale-95 touch-manipulation transition-all cursor-pointer" 
+            className="btn-gold-outline text-[10px] min-h-[44px] py-2.5 tracking-widest font-black uppercase flex items-center justify-center active:scale-95 touch-manipulation transition-all cursor-pointer" 
             onClick={() => navigate(`/property/${id}`)}
           >
             Ver Detalles

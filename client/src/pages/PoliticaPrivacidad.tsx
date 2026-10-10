@@ -73,7 +73,7 @@ export default function PoliticaPrivacidad() {
 
               <button
                 onClick={() => navigate('/terminos-y-condiciones')}
-                className="px-5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-gray-300 hover:text-white hover:border-primary/40 text-xs sm:text-sm font-medium flex items-center gap-2 transition-all cursor-pointer"
+                className="btn-gold-outline px-5 py-2.5 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-2 transition-all cursor-pointer"
               >
                 <span>Ver Términos y Condiciones</span>
                 <ArrowRight className="w-3.5 h-3.5 text-primary" />
@@ -101,13 +101,11 @@ export default function PoliticaPrivacidad() {
           <header className="bg-white/[0.03] border-b border-[#bf953f]/20 p-6 sm:p-8 print:bg-white print:border-b-2 print:border-black print:p-0 print:mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-[#bf953f]/10 border border-[#bf953f]/30 p-2 flex items-center justify-center flex-shrink-0 shadow-[0_0_20px_rgba(191,149,63,0.2)] print:border-none print:shadow-none print:p-0">
-                  <img
-                    src="/logo-vecy.png"
-                    alt="VECY BIENES RAÍCES"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
+                <img
+                  src="/logo-vecy.png"
+                  alt="VECY BIENES RAÍCES"
+                  className="w-14 h-14 sm:w-16 sm:h-16 object-contain flex-shrink-0"
+                />
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white uppercase print:text-black">
@@ -125,30 +123,11 @@ export default function PoliticaPrivacidad() {
                   </p>
                 </div>
               </div>
-              <div className="sm:text-right text-[11px] font-mono text-zinc-300 bg-white/[0.03] sm:bg-transparent p-3 sm:p-0 rounded-xl border border-white/5 sm:border-none print:text-black print:bg-transparent print:border-none">
+              <div className="sm:text-right text-[11px] font-mono text-zinc-300">
                 <div><strong>FOLIO:</strong> <span className="text-[#bf953f] font-bold print:text-black">VECY-PRIV-2026-COL</span></div>
+                <div><strong>CUV:</strong> <span className="text-zinc-400 font-bold print:text-black">VECY-PRIVACY-2026-BOG-9978</span></div>
                 <div><strong>FECHA:</strong> Octubre de 2026</div>
                 <div><strong>ESTADO:</strong> <span className="text-emerald-400 font-bold print:text-black">Vigente Oficial</span></div>
-              </div>
-            </div>
-
-            {/* Cuadro notarial y de validez digital (Estilo Sub-Card Vidrio Esmerilado Luminoso) */}
-            <div className="mt-6 pt-5 border-t border-white/5 grid sm:grid-cols-2 gap-3 text-xs bg-white/[0.03] p-4 sm:p-5 rounded-2xl border border-white/10 print:bg-white print:border-gray-300 print:text-black print:p-2">
-              <div>
-                <span className="font-bold text-zinc-200 block print:text-black">Instrumento Jurídico:</span>
-                <span className="text-zinc-400 print:text-gray-700">Manual y Política de Tratamiento de Datos Personales (Hábeas Data)</span>
-              </div>
-              <div>
-                <span className="font-bold text-zinc-200 block print:text-black">Marco Legal Aplicable:</span>
-                <span className="text-zinc-400 print:text-gray-700">Ley 1581 de 2012, Decreto 1377 de 2013 y Art. 15 C.P.</span>
-              </div>
-              <div>
-                <span className="font-bold text-zinc-200 block print:text-black">Código Único de Validación (CUV):</span>
-                <span className="font-mono text-[#bf953f] font-bold print:text-black">VECY-PRIVACY-2026-BOG-9978</span>
-              </div>
-              <div>
-                <span className="font-bold text-zinc-200 block print:text-black">Huella Digital (SHA-256):</span>
-                <span className="font-mono text-[10px] text-zinc-400 break-all print:text-gray-700">f7c13b5e408892d1847c21008745ea98711823901bcae528471029381948ba12</span>
               </div>
             </div>
           </header>

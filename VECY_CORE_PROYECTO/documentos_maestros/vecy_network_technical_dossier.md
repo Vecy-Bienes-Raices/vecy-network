@@ -331,6 +331,36 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.81 — Octubre 2026
+
+#### 📌 VIDRIO ESMERILADO UNIVERSAL EN CARDS, BOTONES SECUNDARIOS CON CUERPO Y DESPEJE DE LOGOS Y SUB-CARDS LEGALES
+
+**Requerimiento y Objetivos:**
+1. **Opacidad y Cuerpo de Botones Secundarios (Imagen 1)**:
+   - Petición de Eduardo: Botones como "Nuestra Visión", "Ver Detalles" y "Ver Política" se percibían huecos/invisibles al tener fondos transparentes o `bg-white/5` sobre fondos oscuros.
+   - Solución: Se les dotó de cuerpo de vidrio esmerilado carbón (`rgba(22, 28, 38, 0.88)`), blur de 20px, borde dorado tenue y aura luminosa (`shadow-[0_0_18px_rgba(191,149,63,0.15)]`).
+2. **Logo Libre y Eliminación de Sub-Cards en Páginas Legales (Imagen 2)**:
+   - Petición de Eduardo: Dejar el logo de Vecy libre sin marco ni tarjeta envolvente, y retirar la sub-tarjeta que contenía los datos notariales/CUV para evitar encajonamientos innecesarios en la cabecera.
+   - Solución: Logo flotante libre directamente junto al nombre institucional; CUV integrado limpiamente en la columna de metadatos oficial derecha.
+3. **Estandarización Universal de Tarjetas Frosted Glass (Imágenes 3 y 4)**:
+   - Petición de Eduardo: Que todas las tarjetas de todo el sitio, páginas y subpáginas adopten el diseño de vidrio esmerilado con iluminación trasera y halo áurico de Términos y Condiciones.
+   - Solución: Se promovieron `.vecy-card-apple`, `.card-float`, `.panel-card` y `Card` de shadcn UI al diseño canónico (`bg-[#12161f]/85 backdrop-blur-2xl border border-[#bf953f]/30 shadow-[0_0_50px_rgba(191,149,63,0.12)]`).
+
+**Archivos Modificados:**
+- `client/src/index.css`: Botones `.btn-gold-outline`/`.btn-glass` con cuerpo de vidrio esmerilado; clases de tarjetas `.vecy-card-apple`, `.card-float`, `.panel-card` unificadas al estilo oficial.
+- `client/src/components/ui/button.tsx`: Variantes `outline` y `glass` con fondo de cristal esmerilado.
+- `client/src/components/ui/card.tsx`: Componente `Card` con vidrio esmerilado y halo dorado.
+- `client/src/components/PropertyCard.tsx`: Tarjetas de inmuebles (/ofertas) con vidrio esmerilado y botones con cuerpo.
+- `client/src/pages/Home.tsx`: Botón "Nuestra Visión" y tarjetas de "Propiedades de Autor" estandarizadas.
+- `client/src/pages/TerminosCondiciones.tsx` y `client/src/pages/PoliticaPrivacidad.tsx`: Logo liberado sin card y sub-card notarial removida.
+- `package.json`: Versión `32.81.0`.
+- `shared/const.ts`: Versión `v32.81`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 170/170 tests pasando al 100% ✅ | `npm run build` limpio en 15.79s ✅
+
+---
+
 ### 🔖 v32.80 — Octubre 2026
 
 #### 📌 BLINDAJE DE IMPRESIÓN PDF 100% MONOCROMÁTICO, ERRADICACIÓN DEL BLOQUE NEGRO, DESPEJE DE CAJAS ANIDADAS Y ALINEACIÓN A LA IZQUIERDA EN WEB

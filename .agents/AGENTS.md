@@ -172,7 +172,23 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.80 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.81 — Octubre 2026
+
+### Novedades v32.81 (Vidrio Esmerilado Universal en Cards, Botones Secundarios con Cuerpo y Despeje de Logos y Sub-Cards Legales):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Opacidad y Cuerpo de Botones Secundarios (Imagen 1)**:
+     - Eduardo solicitó: *"1. Es posible dejar con menos opacidad, los botónes que actulmente estén en opacidad o% en todo el sitio como el de la (imagen 1)"*.
+     - Los botones como "Nuestra Visión", "Ver Detalles" y "Ver Política" se percibían huecos/invisibles al tener `bg-white/5` sobre fondos negros. Se les dotó de cuerpo de vidrio esmerilado carbón (`rgba(22, 28, 38, 0.88)`), blur de 20px, borde dorado tenue y aura luminosa (`shadow-[0_0_18px_rgba(191,149,63,0.15)]`).
+  2. **Logo Libre y Eliminación de Sub-Cards en Páginas Legales (Imagen 2)**:
+     - Eduardo solicitó: *"2. Podrías eliminar las siguientes cards en las páginas legales: Te las señalo en la (Imagen 2) y son: la que está conteniendo el logo, para que quede libre sin card y la que conrtiene"*.
+     - Se eliminó el marco cuadrado alrededor del logo para que flote libre junto al nombre oficial. Se eliminó la sub-tarjeta notarial interior, trasladando el CUV a la columna de metadatos oficial.
+  3. **Estandarización Universal de Tarjetas Frosted Glass (Imágenes 3 y 4)**:
+     - Eduardo solicitó: *"3. Es posible que todas las cards que hay en todo el sitio, paginas y subpáginas tengan los mismos colores y diseño como las de las páginas legales (Término y Política)?? (Imagenes 3 y 4)"*.
+     - Todas las cards del sitio (`.vecy-card-apple`, `.card-float`, `.panel-card` y `Card` de shadcn UI) ahora lucen el diseño canónico de vidrio esmerilado (`bg-[#12161f]/85 backdrop-blur-2xl border border-[#bf953f]/30 shadow-[0_0_50px_rgba(191,149,63,0.12)]`).
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 170/170 tests passing ✅ | `npm run build` limpio en 15.79s ✅
+- `shared/const.ts` (`v32.81`) y `package.json` (`32.81.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.80 — Octubre 2026
 
 ### Novedades v32.80 (Blindaje de Impresión PDF 100% Monocromático, Erradicación del Bloque Negro, Despeje de Cajas Anidadas y Alineación a la Izquierda en Web):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

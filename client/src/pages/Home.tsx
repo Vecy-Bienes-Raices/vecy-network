@@ -87,7 +87,7 @@ export default function Home() {
                   </button>
                   <button 
                     onClick={() => navigate('/historia')}
-                    className="btn-gold-outline px-10 py-5 text-lg tracking-[0.2em] font-bold hover:bg-white/5"
+                    className="btn-gold-outline px-10 py-5 text-lg tracking-[0.2em] font-bold"
                   >
                     NUESTRA VISIÓN
                   </button>
@@ -141,7 +141,7 @@ export default function Home() {
             {mockProperties.map((prop, index) => (
               <ScrollReveal key={prop.id} delay={index * 0.1}>
                 <div className="group cursor-pointer">
-                  <div className="vecy-card-apple p-0 overflow-hidden border-white/5 group-hover:border-primary/40 transition-all duration-500">
+                  <div className="vecy-card-apple p-0 overflow-hidden bg-[#12161f]/85 backdrop-blur-2xl border border-[#bf953f]/30 rounded-3xl shadow-[0_0_50px_rgba(191,149,63,0.12)] group-hover:border-[#bf953f]/60 group-hover:shadow-[0_0_60px_rgba(191,149,63,0.25)] transition-all duration-500">
                     <div className="relative aspect-[4/5] overflow-hidden">
                       <img 
                         src={prop.image} 

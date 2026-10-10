@@ -7,6 +7,50 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.81 — 10 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Opacidad y Cuerpo de Botones Secundarios en Todo el Sitio (Imagen 1)**:
+   - Eduardo solicitó: *"1. Es posible dejar con menos opacidad, los botónes que actulmente estén en opacidad o% en todo el sitio como el de la (imagen 1)"*.
+   - Se identificó que botones secundarios como *"NUESTRA VISIÓN"* (Home Hero), *"VER DETALLES"* (Cards de Ofertas e Inmuebles de Autor) y *"Ver Política de Privacidad"* tenían fondos `bg-white/5` o `bg-transparent`, percibiéndose huecos o invisibles (0% opacidad).
+2. **Liberación del Logo y Eliminación de Cards Anidadas en Páginas Legales (Imagen 2)**:
+   - Eduardo solicitó con capturas marcadas en rojo: *"2. Podrías eliminar las siguientes cards en las páginas legales: Te las señalo en la (Imagen 2) y son: la que está conteniendo el logo, para que quede libre sin card y la que conrtiene"*.
+   - Se eliminó el contenedor/borde cuadrado alrededor del logo para que flote libre y limpio junto al nombre oficial.
+   - Se eliminó la sub-tarjeta notarial redundante ("Instrumento Jurídico / Marco Legal / CUV / SHA-256") en la cabecera, integrando el CUV de manera limpia y sobria en la columna derecha de metadatos (Folio, CUV, Fecha y Estado).
+3. **Unificación Global del Diseño Frosted Glass / Vidrio Esmerilado en Todas las Cards del Sitio (Imágenes 3 y 4)**:
+   - Eduardo solicitó: *"3. Es posible que todas las cards que hay en todo el sitio, paginas y subpáginas tengan los mismos colores y diseño como las de las páginas legales (Término y Política)?? (Imagenes 3 y 4)"*.
+   - Se unificó el sistema de tarjetas en toda la aplicación: fondo de cristal translúcido carbón (`bg-[#12161f]/85 backdrop-blur-2xl`), borde fino dorado luminoso (`border border-[#bf953f]/30`), aura de iluminación trasera (`shadow-[0_0_50px_rgba(191,149,63,0.12)]`) y efecto hover vibrante (`hover:border-[#bf953f]/60 hover:shadow-[0_0_60px_rgba(191,149,63,0.25)]`).
+
+### Diagnóstico Técnico y Arquitectura de Solución
+1. **Erradicación de Botones Huecos (0% Opacidad)**:
+   - Se rediseñaron `.btn-gold-outline` y `.btn-glass` en `client/src/index.css` y las variantes `outline`/`glass` en `client/src/components/ui/button.tsx`.
+   - Ahora cuentan con cuerpo visible de cristal esmerilado carbón (`rgba(22, 28, 38, 0.88)`), filtro de desenfoque de 20px, borde perimetral dorado tenue (`border-[#bf953f]/40`) con luz superior (`border-t-[#ffe89c]/50`) y sutil aura dorada (`shadow-[0_0_18px_rgba(191,149,63,0.15)]`).
+2. **Despeje Minimalista de Cabeceros Legales**:
+   - En `TerminosCondiciones.tsx` y `PoliticaPrivacidad.tsx`, se retiró el `div` con bordes y fondo que encerraba el logo (`/logo-vecy.png`), dejándolo libre y nítido.
+   - Se retiró la tarjeta interior que contenía la tabla notarial; el CUV se incorporó limpiamente en la columna de metadatos oficial superior, eliminando toda sensación de encajonamiento.
+3. **Estandarización Universal de Tarjetas**:
+   - Se promovieron las clases `.vecy-card-apple`, `.card-float`, `.panel-card` y el componente `Card` de shadcn UI para usar el diseño canónico de vidrio esmerilado con iluminación trasera y halo áurico.
+   - Se aplicó en `PropertyCard.tsx` (/ofertas), `Home.tsx` (Propiedades de Autor), `RequirementsMarketplace.tsx` (/demandas), `RedColaboracion.tsx` (/bolsa), `PropertyDetail.tsx` y paneles administrativos.
+
+### Acciones Técnicas Ejecutadas
+1. **Frontend Global (`client/src/index.css`)**:
+   - Actualizados `.btn-gold-outline` y `.btn-glass` con cuerpo de vidrio esmerilado visible.
+   - Actualizados `.vecy-card-apple`, `.card-float` y `.panel-card` al estándar de vidrio esmerilado con halo dorado de Términos y Condiciones.
+2. **Componentes y Páginas**:
+   - `client/src/components/ui/button.tsx`: Variantes `outline` y `glass` con fondo de cristal esmerilado y borde dorado.
+   - `client/src/components/ui/card.tsx`: `Card` estandarizado con fondo `#12161f/85`, `backdrop-blur-2xl` y borde `#bf953f/30`.
+   - `client/src/components/PropertyCard.tsx`: Tarjetas de inmuebles actualizadas con vidrio esmerilado y botones con cuerpo.
+   - `client/src/pages/Home.tsx`: "Nuestra Visión" y tarjetas de "Propiedades de Autor" estandarizadas.
+   - `client/src/pages/TerminosCondiciones.tsx` y `client/src/pages/PoliticaPrivacidad.tsx`: Logo liberado sin card y tarjeta notarial removida.
+3. **Verificación y Pruebas**:
+   - `npm run check` con 0 errores TypeScript.
+   - `npx vitest run` con 170/170 tests passing (100%).
+   - `npm run build` generado limpiamente en 15.79s.
+4. **Incremento de Versión Oficial**:
+   - `shared/const.ts` (`v32.81`) y `package.json` (`32.81.0`).
+
+---
+
 ## 📋 SESIÓN v32.80 — 10 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera
