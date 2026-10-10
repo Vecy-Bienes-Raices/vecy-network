@@ -7039,6 +7039,15 @@ export async function processPrivateDmConversationalMessage(
           `     - Una llamada cordial de 30 segundos resuelve cualquier duda, protege la negociación, brinda total seguridad a los propietarios y fideliza al cliente con calidez humana, evitando cancelar visitas por pretextos falsos o perder ventas millonarias.\n` +
           `- CUANDO UN ASESOR O COLEGA PREGUNTE O DEBATA SOBRE HÁBEAS DATA O EL MANEJO DE CLIENTES SOSPECHOSOS:\n` +
           `  Explica esta doctrina con maestría jurídica, calidez y contundencia pedagógica, desmontando el mito del "miedo al Hábeas Data" y demostrando que la verificación transparente y la llamada directa de Jani Alves protegen legalmente al asesor, al propietario y a la honestidad del negocio.\n\n` +
+          `DOCTRINA OFICIAL VECY: TRATAMIENTO DE PASAPORTES EXTRANJEROS EN OPERACIONES INMOBILIARIAS:\n` +
+          `- NATURALEZA Y ESTRUCTURA:\n` +
+          `  1. Los pasaportes son documentos expedidos por Estados soberanos extranjeros y casi siempre son alfanuméricos (combinan letras y números según el país emisor, como una o dos letras iniciales).\n` +
+          `  2. BASES DE DATOS DEL ESTADO COLOMBIANO: Ni la Policía Nacional de Colombia, ni la Procuraduría (SIRI), ni la Registraduría ni el ADRES cuentan con los registros de identidad civil o penales de ciudadanos extranjeros en sus países de origen. Únicamente indexan Cédulas de Ciudadanía (C.C.) y Cédulas de Extranjería (C.E.) radicadas en Colombia.\n` +
+          `  3. CÓMO SE VALIDA UN EXTRANJERO CON PASAPORTE EN BIENES RAÍCES (PROTOCOLO NOTARIAL):\n` +
+          `     - Para promesas de compraventa, visitas o contratos, el procedimiento legalmente válido es el *cotejo físico del pasaporte original vigente*.\n` +
+          `     - Se revisa la fecha de vencimiento y el sello o visa de ingreso estampado por Migración Colombia (estatus de turista o visa de permanencia).\n` +
+          `  4. CUANDO UN ASESOR (COMO AIDDE INMO) PREGUNTE POR UN PASAPORTE EXTRANJERO O DIGA QUE NO APARECE:\n` +
+          `     - Explícale de forma sutil, empática, clara y sin tanto texto (máximo 2 a 3 párrafos cortos) por qué las plataformas locales no tienen acceso a registros de otros países, que los pasaportes suelen llevar letras y que el camino notarial estándar es solicitar la foto o copia física del pasaporte original con su sello de entrada a Colombia.\n\n` +
           `CATÁLOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:\n` +
           `1. FACTURA PREDIAL BOGOTÁ Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con código de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretaría Distrital de Hacienda.\n` +
           `2. VERIFICACIÓN OFICIAL DE IDENTIDAD Y ANTECEDENTES (POLICÍA NACIONAL): Validación de nombres completos y antecedentes en 20 segundos para Cédulas de Ciudadanía, Cédulas de Extranjería, Pasaportes y Documentos de País de Origen, blindando contratos de compraventa y arrendamiento.\n` +

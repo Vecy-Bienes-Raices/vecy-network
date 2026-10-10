@@ -7,6 +7,44 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.78 — 09 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Atención a Caso Real de Aidde Inmo (`+57 315 760 5978`) y Verificación de Pasaportes Extranjeros**:
+   - Eduardo solicitó: *"Ayúdame con esta conversación rápidamente y alimenta a JanIA enseñandole que todo pasaporte lleva letras y números creo, entonces así jamás va a poder verificarlo. Creo, no lo se la verdad!! Y has que JanIa le explique sutilmente y de manera clara y sin tanto texto, el por que no puede encontar el número de pasaporte en ningún lado ni verificar a quien pertenece y si tiene o no antecedentes. Gracias, es urgente que le respondamos y le enseñemos. A este número es que hay que enseñarle +57 315 7605978 qué le debe pasar a JanIa y explicarle que un número de pasaporte tiene letras y números y colocarle ejemplos prácticos. Pero primero comprueba que JanIa si es capaz de comprobar pasaportes en alguna de las páginas conectadas, no recuerdo con cual es que lo logra hacer. !? Y luego si pídele el número de pasaporte a ver si si se puede o no, creo que es de un señor de China. Ella le había compartido a JanIA esta tarde esa imagen."*
+
+### Diagnóstico Técnico y Descubrimiento Documental
+1. **Inspección de la Imagen Compartida por Aidde Inmo**:
+   - La imagen compartida por Aidde Inmo **NO es un pasaporte**, sino una **Cédula de Identidad de Residente de la República Popular China (中华人民共和国居民身份证)**.
+   - Datos reales del documento:
+     • Nombre oficial: **刘星杰 (Liu Xingjie)** (no "Honda Liu", Honda probablemente es su nombre comercial o empresa).
+     • Fecha de nacimiento: 24 de junio de 2002 (Gansu, China).
+     • Número de Cédula Nacional China: **`622102200206241814`** (18 dígitos estándar de China).
+   - El número digitado por Aidde (*"4043035"*) no existe en esa cédula, tiene 7 dígitos y no corresponde a la estructura de un pasaporte chino.
+2. **Capacidad Real de Comprobación de Pasaportes en Plataformas Conectadas**:
+   - En la página de la **Policía Nacional de Colombia (Web Judicial - Antecedentes Penales)** existe el selector `cedulaTipo: "pa"` (Pasaporte) y `"dp"` (Documento País de Origen).
+   - Sin embargo, la Policía Nacional de Colombia **SOLO registra antecedentes penales por delitos cometidos o investigados DENTRO del territorio colombiano**.
+   - Ninguna plataforma estatal colombiana (Policía, Procuraduría SIRI, ADRES, Registraduría) tiene acceso a los registros civiles ni penales del gobierno de China ni de ningún otro país soberano.
+   - Si un ciudadano extranjero no tiene requerimientos judiciales en Colombia, la consulta en línea jamás arrojará su identidad ni antecedentes foráneos.
+   - Protocolo Notarial Oficial en Colombia: Para extranjeros portadores de pasaporte, las Notarías y aseguradoras exigen **cotejo físico presencial del pasaporte original vigente** (con su número alfanumérico que en China inicia con `E` o `G` seguido de 8 dígitos) y el **sello de ingreso de Migración Colombia** o visa correspondiente.
+
+### Acciones Técnicas Ejecutadas
+1. **Blindaje y Respuesta Pedagógica Especializada en `identityVerificationService.ts`**:
+   - Cuando un usuario consulta un Pasaporte (`tipoDoc === 'pa'`) y este no registra antecedentes penales en Colombia, JanIA emite una respuesta sutil, concisa, elegante y pedagógica (sin tanto texto) explicando:
+     • Las bases de datos estatales de Colombia solo indexan registros locales (C.C. y C.E.).
+     • La mayoría de pasaportes son alfanuméricos (letras y números).
+     • El protocolo notarial seguro es el cotejo físico del pasaporte original vigente con el sello de Migración Colombia.
+   - Eliminada la frase que provocaba bucle infinito (*"Puedes verificar nuevamente escribiéndome 'JanIA, verificar Pasaporte...'"*).
+2. **Capítulo Doctrinal Maestro (`VECY_CORE_PROYECTO/doctrina_gemini/05_verificacion_pasaportes_extranjeros.md`)**:
+   - Redactado manual integral de protocolo notarial, estándar internacional OACI (Doc 9303) y debida diligencia inmobiliaria.
+3. **Actualización de Prompt de JanIA (`server/_core/janIA.ts`)**:
+   - Inyectada la doctrina de pasaportes extranjeros para responder con empatía, brevedad y claridad a asesores y colegas.
+4. **Pruebas y Verificación**:
+   - Agregada prueba doctrinal en `server/__tests__/regression.test.ts` (169/169 tests Vitest pasando al 100%).
+   - Compilación limpia con `npm run check` (0 errores) y bundle de producción en `npm run build`.
+
+---
+
 ## 📋 SESIÓN v32.77 — 09 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

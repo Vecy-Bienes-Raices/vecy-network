@@ -3526,6 +3526,32 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(checkPure.found).toBe(true);
       expect(checkPure.cedula).toBe("79824360");
     });
+
+    it("Doctrina v32.78: Tratamiento Pedagógico de Pasaportes Extranjeros (Honda Liu / Aidde Inmo)", async () => {
+      const { executeIdentityVerificationFromWhatsApp } = await import("../_core/identityVerificationService");
+      const agendaRouter = await import("../routers/agenda");
+
+      const spy = vi.spyOn(agendaRouter, "queryPoliciaNacional").mockResolvedValueOnce({
+        success: false,
+        cedula: "4043035",
+        tipoDoc: "pa"
+      });
+
+      const passportMsg = "pasaporte 4043035";
+      const res = await executeIdentityVerificationFromWhatsApp(passportMsg, true, "test-aidde-user");
+
+      expect(res.isVerificationRequest).toBe(true);
+      expect(res.tipoDoc).toBe("pa");
+      expect(res.cedula).toBe("4043035");
+      expect(res.reportText).toContain("CONSULTA DE PASAPORTE EXTRANJERO");
+      expect(res.reportText).toContain("Bases Estatales");
+      expect(res.reportText).toContain("alfanuméricos");
+      expect(res.reportText).toContain("Migración Colombia");
+      // Blindaje contra bucle infinito: no debe invitar a volver a escribir para verificar pasaporte
+      expect(res.reportText).not.toContain("Puedes verificar nuevamente escribiéndome");
+
+      spy.mockRestore();
+    });
   });
 });
 

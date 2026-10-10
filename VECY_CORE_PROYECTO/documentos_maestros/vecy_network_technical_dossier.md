@@ -331,6 +331,36 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.78 — Octubre 2026
+
+#### 📌 DOCTRINA DE PASAPORTES EXTRANJEROS, CÉDULA CHINA DE LIU XINGJIE VS PASAPORTE OACI Y PROTOCOLO NOTARIAL SEGURO
+
+**Requerimiento y Objetivos:**
+1. **Caso Real de Aidde Inmo (`+57 315 760 5978`)**:
+   - Aidde compartió una imagen de un documento chino y escribió: *"Honda liu, pasaporte 4043035"*.
+   - JanIA emitió un reporte con timeouts y le sugirió volver a escribir *"JanIA verificar pasaporte 4043035"*, provocando un bucle infinito.
+   - Eduardo solicitó enseñar a Aidde y entrenar a JanIA explicando de forma sutil, clara y concisa por qué un pasaporte no arroja antecedentes en bases de Colombia, cómo se estructuran y qué pedirle al cliente.
+2. **Descubrimiento Documental**:
+   - La imagen compartida por Aidde corresponde a la **Cédula de Identidad de Residente de China (中华人民共和国居民身份证)** de **刘星杰 (Liu Xingjie)**, nacido en 2002 en Gansu, China, con número nacional de 18 dígitos `622102200206241814`.
+   - No es un pasaporte. Los pasaportes chinos inician con letras como `E` o `G` seguidas de 8 dígitos.
+3. **Delimitación de Plataformas del Estado Colombiano**:
+   - La Policía Nacional de Colombia (Web Judicial) tiene selector `PA` y `DP`, pero **únicamente registra antecedentes por hechos ocurridos o investigados en Colombia**.
+   - Ninguna base pública local (Policía, Procuraduría SIRI, Registraduría, ADRES) tiene acceso a registros de identidad o penales de la República Popular China ni de gobiernos foráneos.
+   - Para negocios inmobiliarios y notariales en Colombia, la debida diligencia se realiza mediante **cotejo físico presencial del pasaporte original vigente** junto con el **sello de ingreso de Migración Colombia** o visa.
+
+**Archivos Modificados:**
+- `server/_core/identityVerificationService.ts`: Respuesta pedagógica sutil, clara y concisa para pasaportes extranjeros; eliminación del bucle de re-verificación.
+- `server/_core/janIA.ts`: Inyección de la doctrina de pasaportes extranjeros en el prompt maestro.
+- `VECY_CORE_PROYECTO/doctrina_gemini/05_verificacion_pasaportes_extranjeros.md`: Manual maestro de doctrina notarial para pasaportes extranjeros.
+- `server/__tests__/regression.test.ts`: Prueba unitaria doctrinal v32.78 (169/169 tests pasando al 100%).
+- `package.json`: Versión `32.78.0`.
+- `shared/const.ts`: Versión `v32.78`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 169/169 tests pasando al 100% ✅ | `npm run build` limpio ✅
+
+---
+
 ### 🔖 v32.77 — Octubre 2026
 
 #### 📌 CORTAFUEGOS DE PRIVACIDAD DOCTRINAL, INTEGRACIÓN SEGURA CON GOOGLE AI STUDIO Y REPOSITORIO DE KNOW-HOW INMOBILIARIO

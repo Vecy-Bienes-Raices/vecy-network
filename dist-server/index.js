@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.77";
+    VECY_VERSION = "v32.78";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -17502,11 +17502,17 @@ function buildConsolidatedReportText(results) {
 
 `;
     } else {
-      reportText += `\u2696\uFE0F *Central de Seguridad:* ${r.policia?.message || "Sin antecedentes registrados o documento pendiente de indexaci\xF3n."}
-`;
-      reportText += `\u26A0\uFE0F *Estado:* Documento sin registro de identidad certificado en l\xEDnea. Se recomienda cotejo del documento f\xEDsico.
+      if (r.tipoDoc.toLowerCase() === "pa") {
+        reportText += `\u{1F6C2} *Pasaporte Extranjero:* Documento internacional no indexado en bases penales colombianas (usualmente alfanum\xE9rico). Se valida mediante cotejo f\xEDsico presencial del pasaporte original vigente y sello de Migraci\xF3n Colombia.
 
 `;
+      } else {
+        reportText += `\u2696\uFE0F *Central de Seguridad:* ${r.policia?.message || "Sin antecedentes registrados o documento pendiente de indexaci\xF3n."}
+`;
+        reportText += `\u26A0\uFE0F *Estado:* Documento sin registro de identidad certificado en l\xEDnea. Se recomienda cotejo del documento f\xEDsico.
+
+`;
+      }
     }
   });
   if (allSuccess) {
@@ -17637,18 +17643,30 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
         items
       };
     } else {
-      let customGuidance = "";
-      if (tipoDoc.toLowerCase() === "cc" && cedula.length === 9) {
-        customGuidance = `
+      let reportText = "";
+      if (tipoDoc.toLowerCase() === "pa") {
+        reportText = `\u{1F6C2} *CONSULTA DE PASAPORTE EXTRANJERO \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+
+El documento *Pasaporte ${formattedCedula}* no arroja antecedentes ni identidad en las plataformas p\xFAblicas del Estado colombiano por lo siguiente:
+
+1\uFE0F\u20E3 *Bases Estatales:* La Polic\xEDa Nacional y la Procuradur\xEDa de Colombia \xFAnicamente indexan C\xE9dulas locales (C.C. y C.E.). No tienen acceso a los registros de identidad ni antecedentes de otros pa\xEDses.
+2\uFE0F\u20E3 *Estructura:* Casi todos los pasaportes internacionales son alfanum\xE9ricos (llevan letras y n\xFAmeros, com\xFAnmente una o dos letras iniciales seg\xFAn el pa\xEDs emisor).
+3\uFE0F\u20E3 *Protocolo Notarial Seguro:* Para personas extranjeras, el procedimiento legal v\xE1lido para promesas de compraventa y contratos es el *cotejo f\xEDsico del pasaporte original vigente*, comprobando su fecha de vencimiento y el sello o visa de ingreso de Migraci\xF3n Colombia.
+
+\u{1F4CC} Para operaciones inmobiliarias o contratos con extranjeros, este cotejo documental presencial es el camino legal y aceptado en notar\xEDas y aseguradoras.`;
+      } else {
+        let customGuidance = "";
+        if (tipoDoc.toLowerCase() === "cc" && cedula.length === 9) {
+          customGuidance = `
 \u2022 \u26A0\uFE0F *Aviso Registradur\xEDa:* En Colombia nunca se emitieron C\xE9dulas de Ciudadan\xEDa de 9 d\xEDgitos (las antiguas tienen entre 1 y 8 d\xEDgitos y las nuevas son de 10 d\xEDgitos iniciando por 1). Verifica si hubo un d\xEDgito omitido o a\xF1adido.`;
-      } else if (["ce", "cx"].includes(tipoDoc.toLowerCase()) && cedula.length >= 8) {
-        customGuidance = `
+        } else if (["ce", "cx"].includes(tipoDoc.toLowerCase()) && cedula.length >= 8) {
+          customGuidance = `
 \u2022 \u26A0\uFE0F *Aviso Migraci\xF3n:* Las C\xE9dulas de Extranjer\xEDa en Colombia constan de entre 4 y 7 d\xEDgitos num\xE9ricos. Un n\xFAmero de ${cedula.length} d\xEDgitos suele corresponder a una C\xE9dula de Ciudadan\xEDa colombiana.`;
-      } else if (["ce", "cx"].includes(tipoDoc.toLowerCase()) && cedula.length >= 4 && cedula.length <= 7) {
-        customGuidance = `
+        } else if (["ce", "cx"].includes(tipoDoc.toLowerCase()) && cedula.length >= 4 && cedula.length <= 7) {
+          customGuidance = `
 \u2022 \u{1F4CC} Las C\xE9dulas de Extranjer\xEDa (de 4 a 7 d\xEDgitos) son expedidas por Migraci\xF3n Colombia. Al ser un documento extranjero, las plataformas del Estado reflejan identidad si el titular cotiza al sistema de salud (ADRES/BDUA), registra contratos estatales en la Procuradur\xEDa (SIRI) o historial penal en la Polic\xEDa Nacional.`;
-      }
-      const reportText = `\u26A0\uFE0F *CONSULTA DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
+        }
+        reportText = `\u26A0\uFE0F *CONSULTA DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 Consultamos las bases de datos oficiales de seguridad del Estado para el documento ${docLabel} *${formattedCedula}*:
 
@@ -17661,6 +17679,7 @@ Consultamos las bases de datos oficiales de seguridad del Estado para el documen
 \u2022 Verifica que el n\xFAmero digitado coincida exactamente con el documento f\xEDsico.
 
 \u{1F4A1} Puedes verificar nuevamente escribi\xE9ndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.`;
+      }
       if (userId) {
         savePendingCedulaSession(userId, items, reportText, false);
       }
@@ -22929,6 +22948,16 @@ DOCTRINA OFICIAL VECY: PROTECCI\xD3N DE DATOS (LEY 1581 DE 2012), H\xC1BEAS DATA
      - Una llamada cordial de 30 segundos resuelve cualquier duda, protege la negociaci\xF3n, brinda total seguridad a los propietarios y fideliza al cliente con calidez humana, evitando cancelar visitas por pretextos falsos o perder ventas millonarias.
 - CUANDO UN ASESOR O COLEGA PREGUNTE O DEBATA SOBRE H\xC1BEAS DATA O EL MANEJO DE CLIENTES SOSPECHOSOS:
   Explica esta doctrina con maestr\xEDa jur\xEDdica, calidez y contundencia pedag\xF3gica, desmontando el mito del "miedo al H\xE1beas Data" y demostrando que la verificaci\xF3n transparente y la llamada directa de Jani Alves protegen legalmente al asesor, al propietario y a la honestidad del negocio.
+
+DOCTRINA OFICIAL VECY: TRATAMIENTO DE PASAPORTES EXTRANJEROS EN OPERACIONES INMOBILIARIAS:
+- NATURALEZA Y ESTRUCTURA:
+  1. Los pasaportes son documentos expedidos por Estados soberanos extranjeros y casi siempre son alfanum\xE9ricos (combinan letras y n\xFAmeros seg\xFAn el pa\xEDs emisor, como una o dos letras iniciales).
+  2. BASES DE DATOS DEL ESTADO COLOMBIANO: Ni la Polic\xEDa Nacional de Colombia, ni la Procuradur\xEDa (SIRI), ni la Registradur\xEDa ni el ADRES cuentan con los registros de identidad civil o penales de ciudadanos extranjeros en sus pa\xEDses de origen. \xDAnicamente indexan C\xE9dulas de Ciudadan\xEDa (C.C.) y C\xE9dulas de Extranjer\xEDa (C.E.) radicadas en Colombia.
+  3. C\xD3MO SE VALIDA UN EXTRANJERO CON PASAPORTE EN BIENES RA\xCDCES (PROTOCOLO NOTARIAL):
+     - Para promesas de compraventa, visitas o contratos, el procedimiento legalmente v\xE1lido es el *cotejo f\xEDsico del pasaporte original vigente*.
+     - Se revisa la fecha de vencimiento y el sello o visa de ingreso estampado por Migraci\xF3n Colombia (estatus de turista o visa de permanencia).
+  4. CUANDO UN ASESOR (COMO AIDDE INMO) PREGUNTE POR UN PASAPORTE EXTRANJERO O DIGA QUE NO APARECE:
+     - Expl\xEDcale de forma sutil, emp\xE1tica, clara y sin tanto texto (m\xE1ximo 2 a 3 p\xE1rrafos cortos) por qu\xE9 las plataformas locales no tienen acceso a registros de otros pa\xEDses, que los pasaportes suelen llevar letras y que el camino notarial est\xE1ndar es solicitar la foto o copia f\xEDsica del pasaporte original con su sello de entrada a Colombia.
 
 CAT\xC1LOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:
 1. FACTURA PREDIAL BOGOT\xC1 Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con c\xF3digo de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretar\xEDa Distrital de Hacienda.

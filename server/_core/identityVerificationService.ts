@@ -945,8 +945,12 @@ function buildConsolidatedReportText(results: SingleIdentityReport[]): string {
       reportText += `⚖️ *Central de Seguridad:* Sin antecedentes judiciales ni requerimientos penales pendientes ante la Policía Nacional.\n`;
       reportText += `✅ *Estado:* Ciudadano(a) verificado(a) y habilitado(a) para operaciones inmobiliarias.\n\n`;
     } else {
-      reportText += `⚖️ *Central de Seguridad:* ${r.policia?.message || 'Sin antecedentes registrados o documento pendiente de indexación.'}\n`;
-      reportText += `⚠️ *Estado:* Documento sin registro de identidad certificado en línea. Se recomienda cotejo del documento físico.\n\n`;
+      if (r.tipoDoc.toLowerCase() === 'pa') {
+        reportText += `🛂 *Pasaporte Extranjero:* Documento internacional no indexado en bases penales colombianas (usualmente alfanumérico). Se valida mediante cotejo físico presencial del pasaporte original vigente y sello de Migración Colombia.\n\n`;
+      } else {
+        reportText += `⚖️ *Central de Seguridad:* ${r.policia?.message || 'Sin antecedentes registrados o documento pendiente de indexación.'}\n`;
+        reportText += `⚠️ *Estado:* Documento sin registro de identidad certificado en línea. Se recomienda cotejo del documento físico.\n\n`;
+      }
     }
   });
 
@@ -1110,25 +1114,37 @@ export async function executeIdentityVerificationFromWhatsApp(
         items
       };
     } else {
-      let customGuidance = '';
-      if (tipoDoc.toLowerCase() === 'cc' && cedula.length === 9) {
-        customGuidance = `\n• ⚠️ *Aviso Registraduría:* En Colombia nunca se emitieron Cédulas de Ciudadanía de 9 dígitos (las antiguas tienen entre 1 y 8 dígitos y las nuevas son de 10 dígitos iniciando por 1). Verifica si hubo un dígito omitido o añadido.`;
-      } else if (['ce', 'cx'].includes(tipoDoc.toLowerCase()) && cedula.length >= 8) {
-        customGuidance = `\n• ⚠️ *Aviso Migración:* Las Cédulas de Extranjería en Colombia constan de entre 4 y 7 dígitos numéricos. Un número de ${cedula.length} dígitos suele corresponder a una Cédula de Ciudadanía colombiana.`;
-      } else if (['ce', 'cx'].includes(tipoDoc.toLowerCase()) && cedula.length >= 4 && cedula.length <= 7) {
-        customGuidance = `\n• 📌 Las Cédulas de Extranjería (de 4 a 7 dígitos) son expedidas por Migración Colombia. Al ser un documento extranjero, las plataformas del Estado reflejan identidad si el titular cotiza al sistema de salud (ADRES/BDUA), registra contratos estatales en la Procuraduría (SIRI) o historial penal en la Policía Nacional.`;
-      }
+      let reportText = '';
 
-      const reportText =
-        `⚠️ *CONSULTA DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
-        `Consultamos las bases de datos oficiales de seguridad del Estado para el documento ${docLabel} *${formattedCedula}*:\n\n` +
-        `🏛️ *Central de Control Notarial:* ${pgnRes?.statusText || 'No se encuentra registrado en el sistema de información SIRI o no disponible.'}\n` +
-        `⚖️ *Central de Seguridad:* ${ponalRes?.message || 'Sin antecedentes judiciales reportados o documento no indexado.'}\n` +
-        `🏥 *Central de Aseguramiento (ADRES):* ${adresRes?.error || 'Sin registro activo de afiliación en la Base de Datos Única de Afiliados (BDUA).'}\n\n` +
-        `📌 *Orientación de Verificación:*${customGuidance}\n` +
-        `• Si es un documento extranjero (C.E., Pasaporte, PEP o PPT), es habitual requerir cotejo físico si el usuario es recién llegado o no cotiza aún a EPS en Colombia.\n` +
-        `• Verifica que el número digitado coincida exactamente con el documento físico.\n\n` +
-        `💡 Puedes verificar nuevamente escribiéndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.`;
+      if (tipoDoc.toLowerCase() === 'pa') {
+        reportText =
+          `🛂 *CONSULTA DE PASAPORTE EXTRANJERO — VECY BIENES RAÍCES* 🇨🇴\n\n` +
+          `El documento *Pasaporte ${formattedCedula}* no arroja antecedentes ni identidad en las plataformas públicas del Estado colombiano por lo siguiente:\n\n` +
+          `1️⃣ *Bases Estatales:* La Policía Nacional y la Procuraduría de Colombia únicamente indexan Cédulas locales (C.C. y C.E.). No tienen acceso a los registros de identidad ni antecedentes de otros países.\n` +
+          `2️⃣ *Estructura:* Casi todos los pasaportes internacionales son alfanuméricos (llevan letras y números, comúnmente una o dos letras iniciales según el país emisor).\n` +
+          `3️⃣ *Protocolo Notarial Seguro:* Para personas extranjeras, el procedimiento legal válido para promesas de compraventa y contratos es el *cotejo físico del pasaporte original vigente*, comprobando su fecha de vencimiento y el sello o visa de ingreso de Migración Colombia.\n\n` +
+          `📌 Para operaciones inmobiliarias o contratos con extranjeros, este cotejo documental presencial es el camino legal y aceptado en notarías y aseguradoras.`;
+      } else {
+        let customGuidance = '';
+        if (tipoDoc.toLowerCase() === 'cc' && cedula.length === 9) {
+          customGuidance = `\n• ⚠️ *Aviso Registraduría:* En Colombia nunca se emitieron Cédulas de Ciudadanía de 9 dígitos (las antiguas tienen entre 1 y 8 dígitos y las nuevas son de 10 dígitos iniciando por 1). Verifica si hubo un dígito omitido o añadido.`;
+        } else if (['ce', 'cx'].includes(tipoDoc.toLowerCase()) && cedula.length >= 8) {
+          customGuidance = `\n• ⚠️ *Aviso Migración:* Las Cédulas de Extranjería en Colombia constan de entre 4 y 7 dígitos numéricos. Un número de ${cedula.length} dígitos suele corresponder a una Cédula de Ciudadanía colombiana.`;
+        } else if (['ce', 'cx'].includes(tipoDoc.toLowerCase()) && cedula.length >= 4 && cedula.length <= 7) {
+          customGuidance = `\n• 📌 Las Cédulas de Extranjería (de 4 a 7 dígitos) son expedidas por Migración Colombia. Al ser un documento extranjero, las plataformas del Estado reflejan identidad si el titular cotiza al sistema de salud (ADRES/BDUA), registra contratos estatales en la Procuraduría (SIRI) o historial penal en la Policía Nacional.`;
+        }
+
+        reportText =
+          `⚠️ *CONSULTA DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
+          `Consultamos las bases de datos oficiales de seguridad del Estado para el documento ${docLabel} *${formattedCedula}*:\n\n` +
+          `🏛️ *Central de Control Notarial:* ${pgnRes?.statusText || 'No se encuentra registrado en el sistema de información SIRI o no disponible.'}\n` +
+          `⚖️ *Central de Seguridad:* ${ponalRes?.message || 'Sin antecedentes judiciales reportados o documento no indexado.'}\n` +
+          `🏥 *Central de Aseguramiento (ADRES):* ${adresRes?.error || 'Sin registro activo de afiliación en la Base de Datos Única de Afiliados (BDUA).'}\n\n` +
+          `📌 *Orientación de Verificación:*${customGuidance}\n` +
+          `• Si es un documento extranjero (C.E., Pasaporte, PEP o PPT), es habitual requerir cotejo físico si el usuario es recién llegado o no cotiza aún a EPS en Colombia.\n` +
+          `• Verifica que el número digitado coincida exactamente con el documento físico.\n\n` +
+          `💡 Puedes verificar nuevamente escribiéndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.`;
+      }
 
       if (userId) {
         savePendingCedulaSession(userId, items, reportText, false);

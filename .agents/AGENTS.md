@@ -172,7 +172,27 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.77 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.78 — Octubre 2026
+
+### Novedades v32.78 (Doctrina de Pasaportes Extranjeros, Cédula China de Liu Xingjie vs Pasaporte OACI, Desmitificación de Antecedentes y Protocolo Notarial):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Caso Real de Aidde Inmo (`+57 315 760 5978`)**:
+     - Aidde compartió una imagen de un documento chino y escribió: *"Honda liu, pasaporte 4043035"*.
+     - JanIA emitió un reporte con timeouts y le sugirió volver a escribir *"JanIA verificar pasaporte 4043035"*, provocando un bucle infinito.
+     - Eduardo instruyó: *"Ayúdame con esta conversación rápidamente y alimenta a JanIA enseñandole que todo pasaporte lleva letras y números creo, entonces así jamás va a poder verificarlo. Y has que JanIa le explique sutilmente y de manera clara y sin tanto texto, el por que no puede encontar el número de pasaporte en ningún lado ni verificar a quien pertenece y si tiene o no antecedentes..."*
+  2. **Descubrimiento Documental Técnico y Notarial**:
+     - La imagen enviada por Aidde **NO era un pasaporte**, sino la **Cédula de Identidad de Residente de China (居民身份证)** de **刘星杰 (Liu Xingjie)**, nacido en 2002 en Gansu, con número de 18 dígitos `622102200206241814`.
+     - El número "4043035" enviado por Aidde no corresponde a esa cédula ni a un pasaporte chino (los cuales inician con letras como `E` o `G` seguidas de 8 números).
+     - **Bases del Estado Colombiano**: La Policía Nacional (Web Judicial) tiene el selector `PA` y `DP`, pero **solo registra antecedentes penales por delitos cometidos dentro de Colombia**. La Policía colombiana NO tiene acceso a registros civiles ni penales de China ni de otros países soberanos.
+     - **Protocolo Notarial Seguro**: Para negocios inmobiliarios con extranjeros con pasaporte, se realiza **cotejo físico presencial del pasaporte original vigente** con su **sello o visa de Migración Colombia**.
+  3. **Modificaciones Implementadas**:
+     - `server/_core/identityVerificationService.ts`: Respuesta pedagógica sutil, clara y concisa para pasaportes extranjeros; eliminación del bucle de re-verificación.
+     - `server/_core/janIA.ts`: Inyección de la doctrina de pasaportes extranjeros en el prompt maestro.
+     - `VECY_CORE_PROYECTO/doctrina_gemini/05_verificacion_pasaportes_extranjeros.md`: Manual maestro de doctrina notarial para pasaportes extranjeros.
+     - `server/__tests__/regression.test.ts`: Prueba unitaria doctrinal v32.78 (169/169 tests pasando al 100%).
+     - `shared/const.ts` (`v32.78`) y `package.json` (`32.78.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.77 — Octubre 2026
 
 ### Novedades v32.77 (Cortafuegos de Privacidad Doctrinal, Integración Segura con Google AI Studio y Banco de Know-How Inmobiliario):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
