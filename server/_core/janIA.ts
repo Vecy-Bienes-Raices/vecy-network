@@ -209,13 +209,13 @@ export const janiaResultSchema = {
 };
 
 const COMMON_FIRST_NAMES = new Set([
-  "juan", "ana", "maria", "maría", "jose", "josé", "luis", "carlos", "jorge", 
-  "victor", "víctor", "sandra", "diana", "laura", "gloria", "eduardo", "flor", 
-  "esteban", "pedro", "julio", "oscar", "óscar", "angela", "ángela", "pablo", 
-  "arturo", "alba", "fernanda", "alberto", "david", "manuel", "fernando", 
-  "alejandro", "andres", "andrés", "felipe", "milena", "patricia", "cristina", 
-  "beatriz", "isabel", "helena", "elena", "sofia", "sofía", "lucia", "lucía", 
-  "carolina", "claudia", "marta", "martha", "adriana", "diego", "javier", 
+  "juan", "ana", "maria", "maría", "jose", "josé", "luis", "carlos", "jorge",
+  "victor", "víctor", "sandra", "diana", "laura", "gloria", "eduardo", "flor",
+  "esteban", "pedro", "julio", "oscar", "óscar", "angela", "ángela", "pablo",
+  "arturo", "alba", "fernanda", "alberto", "david", "manuel", "fernando",
+  "alejandro", "andres", "andrés", "felipe", "milena", "patricia", "cristina",
+  "beatriz", "isabel", "helena", "elena", "sofia", "sofía", "lucia", "lucía",
+  "carolina", "claudia", "marta", "martha", "adriana", "diego", "javier",
   "camilo", "santiago", "alejandra", "paola", "liliana", "elizabeth", "esperanza",
   "yolanda", "blanca", "rosa", "carmen", "teresa", "cecilia", "ines", "inés", "amparo",
   "pilar", "rocio", "rocío", "soraya", "johanna", "yudy", "judy", "tatiana",
@@ -253,14 +253,14 @@ export function extractFirstName(fullName: string): string {
   // Quitar números
   clean = clean.replace(/[0-9]/g, "");
   if (!clean.trim()) return "";
-  
+
   const words = clean.split(/\s+/).map(w => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
   const filteredWords = words.filter(w => w.length > 0);
   if (filteredWords.length === 0 || !filteredWords[0]) return "";
-  
+
   const w1 = filteredWords[0].toLowerCase();
   const w2 = filteredWords[1] ? filteredWords[1].toLowerCase() : "";
-  
+
   // Si hay al menos dos palabras y ambas están en la lista de nombres comunes, es un nombre compuesto
   if (w2 && COMMON_FIRST_NAMES.has(w1) && COMMON_FIRST_NAMES.has(w2)) {
     const first = filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
@@ -276,7 +276,7 @@ export function extractFirstName(fullName: string): string {
       return commonName.charAt(0).toUpperCase() + commonName.slice(1).toLowerCase();
     }
   }
-  
+
   return filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
 }
 
@@ -337,31 +337,31 @@ export function parseSafeJSON(content: string): any {
   // 1. Intentar parseo directo
   const start = text.indexOf("{");
   if (start === -1) throw new Error("No JSON object found in content");
-  
+
   const lastClose = text.lastIndexOf("}");
-  
+
   // 2. Si hay llaves de cierre, intentar parseo normal
   if (lastClose > start) {
     const extracted = text.substring(start, lastClose + 1);
-    try { return JSON.parse(extracted); } catch (_) {}
+    try { return JSON.parse(extracted); } catch (_) { }
 
     // 2.5 Reparar comillas internas sin escapar en valores de texto generados por el LLM
     try {
       const cleaned = cleanUnescapedQuotesInJSON(extracted);
       return JSON.parse(cleaned);
-    } catch (_) {}
+    } catch (_) { }
   }
-  
+
   // 3. JSON truncado — reparar usando máquina de estados
   const partial = text.substring(start);
   const repaired = repairJSON(partial);
-  try { return JSON.parse(repaired); } catch (_) {}
+  try { return JSON.parse(repaired); } catch (_) { }
 
   // 3.5 Intentar reparar con limpieza de comillas sobre el JSON reparado
   try {
     const cleanedRepaired = cleanUnescapedQuotesInJSON(repaired);
     return JSON.parse(cleanedRepaired);
-  } catch (_) {}
+  } catch (_) { }
 
   throw new Error("Could not parse or repair JSON from LLM output");
 }
@@ -432,28 +432,28 @@ export function getColombiaNow(): Date {
 
 export function hasRealEstateTextKeyword(cleanText: string): boolean {
   const text = cleanText.toLowerCase();
-  return text.includes("apto") || 
-         text.includes("apartamento") || 
-         text.includes("casa") || 
-         text.includes("bodega") || 
-         text.includes("oficina") || 
-         text.includes("local") ||
-         text.includes("locales") ||
-         text.includes("cabaña") ||
-         text.includes("cabañas") ||
-         text.includes("lote") || 
-         text.includes("finca") || 
-         text.includes("habs") || 
-         text.includes("alcoba") ||
-         text.includes("m2") || 
-         text.includes("mts") ||
-         text.includes("requerimiento");
+  return text.includes("apto") ||
+    text.includes("apartamento") ||
+    text.includes("casa") ||
+    text.includes("bodega") ||
+    text.includes("oficina") ||
+    text.includes("local") ||
+    text.includes("locales") ||
+    text.includes("cabaña") ||
+    text.includes("cabañas") ||
+    text.includes("lote") ||
+    text.includes("finca") ||
+    text.includes("habs") ||
+    text.includes("alcoba") ||
+    text.includes("m2") ||
+    text.includes("mts") ||
+    text.includes("requerimiento");
 }
 
 export function buildFlyerBreakdownText(extracted: any, fallbackText?: string): string {
   if (!extracted) return fallbackText || "";
   const parts: string[] = [];
-  
+
   // 1. Encabezado o texto transcrito del flyer
   if (fallbackText && fallbackText.trim() !== "" && !fallbackText.includes("[Publicación de Imagen")) {
     parts.push(fallbackText.trim());
@@ -515,12 +515,12 @@ export function parseColombianPriceOrBudget(numStr: string, unit: string, isSale
   if (!numStr) return 0;
   const cleanStr = (numStr || "").trim().replace(/[$COPcop'´`’‘\u00B4\u2019\u2018*\s\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "");
   const cleanUnit = (unit || "").toLowerCase();
-  
+
   if (cleanUnit.includes("mil millon")) {
     const v = parseFloat(cleanStr.replace(",", "."));
     return Math.round(v * 1_000_000_000);
   }
-  
+
   // Si tiene formato de número completo colombiano con puntos (ej: "3.800.000", "2.900.000", "1.390.000.000", "1450.000.000")
   if (/^\d{1,4}(?:\.\d{3}){2,4}$/.test(cleanStr)) {
     const parsed = parseInt(cleanStr.replace(/\./g, ""), 10);
@@ -535,10 +535,10 @@ export function parseColombianPriceOrBudget(numStr: string, unit: string, isSale
     }
     return n * 1_000_000; // 1800 * 1M = 1.800.000.000 COP en venta
   }
-  
+
   let val = parseFloat(cleanStr.replace(",", "."));
   if (isNaN(val)) return 0;
-  
+
   if (cleanUnit.includes("millon") || cleanUnit.includes("millón") || cleanUnit.includes("mll") || cleanUnit.includes("mill") || cleanUnit.includes("mm") || cleanUnit === "m") {
     if (!isSale) {
       if (val <= 100 && val > 0) {
@@ -561,7 +561,7 @@ export function parseColombianPriceOrBudget(numStr: string, unit: string, isSale
     }
     return Math.round(val * 1_000_000);
   }
-  
+
   if (val < 10000) {
     if (!isSale) return Math.round(val * 1_000);
     if (val >= 100) return Math.round(val * 1_000_000);
@@ -611,7 +611,7 @@ export function extractFallbackDataFromText(text: string): any {
     .replace(/['´`’‘\u00B4\u2019\u2018]/g, ".")
     .replace(/[*_~]/g, "")
     .replace(/[\t ]+/g, " ");
-  
+
   let transactionType = "venta";
   const isInvestorPurchase = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|para compra|compro|compra ya|busco para compra)\b/i.test(clean);
   const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(clean);
@@ -728,7 +728,7 @@ export function extractFallbackDataFromText(text: string): any {
   // 4. Rango de Presupuesto en Demanda (ej: "Presupuesto 1.300 - 1.400", "de 14 o 15 millones", "entre 800 y 900 millones", "ppto 1200 a 1400", "800 a 1.200 millones")
   if (price === 0 && rentPrice === 0) {
     const rangeMatch = clean.match(/(?:presupuesto|prespuesto|ppto|inversi[oó]n|compra)\s*:?\s*(?:entre\s+)?\$?\s*([\d][\d.,\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.,\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i)
-                    || clean.match(/(?:entre|de)\s+\$?\s*([\d][\d.,\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.,\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
+      || clean.match(/(?:entre|de)\s+\$?\s*([\d][\d.,\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.,\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
     if (rangeMatch) {
       const isSale = transactionType !== "arriendo";
       presupuestoMin = parseColombianPriceOrBudget(rangeMatch[1], rangeMatch[3] || "", isSale);
@@ -988,7 +988,7 @@ export function extractFallbackDataFromText(text: string): any {
   } else {
     // B. Formato Estándar
     const garMatch = clean.match(/(?:🚙|🚗|🚘)?[^\S\r\n]*(?:con\s+)?(?<!24[\/\-])(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})(?:[^\S\r\n]*(?:\([0-9]+\)|[a-záéíóúñ]+))?[^\S\r\n]*(?:amplios?|cubiertos?|privados?|independientes?|en\s*l[ií]nea|lineales?)?[^\S\r\n]*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)/i)
-                  || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)[^\S\r\n]*:?[^\S\r\n]*(\d{1,2}|un|una|uno|dos|tres|cuatro|cinco)/i);
+      || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)[^\S\r\n]*:?[^\S\r\n]*(\d{1,2}|un|una|uno|dos|tres|cuatro|cinco)/i);
     if (garMatch) {
       const val = parseWordOrDigit(garMatch[1]);
       if (val >= 1900 && val <= 2100) {
@@ -1012,7 +1012,7 @@ export function extractFallbackDataFromText(text: string): any {
 
   let antiguedadAnos: number | null = null;
   const ageMatch = clean.match(/(?:🏢|⏳|⏱️|edificio|antigüedad|antiguedad|tiene|\||,|\.)\s*(\d{1,3})\s*a[ñn]os\b/i)
-                || clean.match(/(\d{1,3})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)?\b/i);
+    || clean.match(/(\d{1,3})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)?\b/i);
   if (ageMatch) {
     antiguedadAnos = parseInt(ageMatch[1], 10);
   }
@@ -1039,13 +1039,13 @@ export function extractFallbackDataFromText(text: string): any {
   else if (clean.includes("cocina abierta")) kitchenType = "Abierta";
   else if (clean.includes("cocina tipo isla") || clean.includes("isla")) kitchenType = "Abierta tipo Isla";
 
-  const hasServiceRoom = clean.includes("cbs") || 
-                         clean.includes("cuarto de servicio") || 
-                         clean.includes("alcoba de servicio") || 
-                         clean.includes("cuarto y baño de servicio") || 
-                         clean.includes("cuarto y bano de servicio") || 
-                         clean.includes("cuarto de empleada") || 
-                         clean.includes("alcoba para el servicio");
+  const hasServiceRoom = clean.includes("cbs") ||
+    clean.includes("cuarto de servicio") ||
+    clean.includes("alcoba de servicio") ||
+    clean.includes("cuarto y baño de servicio") ||
+    clean.includes("cuarto y bano de servicio") ||
+    clean.includes("cuarto de empleada") ||
+    clean.includes("alcoba para el servicio");
 
   let floorType = null;
   if (clean.includes("madera maciza") || clean.includes("madera natural") || clean.includes("granadillo")) floorType = "Madera Maciza";
@@ -1868,13 +1868,13 @@ function analyzeSender(name: string, userId: string, alreadyGreeted: boolean): {
   const n = (name || "Colega").trim();
   const normalizedFull = n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
   const firstWord = n.split(/\s+/)[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
-  
+
   const todayStr = new Date().toISOString().split("T")[0];
   if (!alreadyGreeted) GREETED_TODAY.set(userId, todayStr);
 
   const femaleNames = ["maria", "ana", "claudia", "martha", "adriana", "sandra", "jani", "natalia", "paola", "diana", "laura", "sofia", "valentina", "andrea", "milena", "patricia", "marcela", "liliana", "elena", "monica", "beatriz", "gloria", "carmen", "lucia", "angela", "isabel", "clara", "rosa", "teresa", "yolanda", "esperanza", "blanca", "pilar", "carolina", "juliana", "catalina", "viviana", "lizeth", "daniela", "camila"];
   const maleNames = ["juan", "carlos", "jose", "luis", "jorge", "andres", "felipe", "david", "mateo", "santiago", "daniel", "alejandro", "ricardo", "fernando", "eduardo", "pablo", "sergio", "javier", "alberto", "rafael", "mauricio", "german", "gustavo", "ramiro", "gabriel", "julio", "oscar", "ivan", "hugo", "diego", "wilson", "edgar", "mario", "hector", "victor"];
-  
+
   const corporateKeywords = ["inmo", "bienes", "raices", "propiedades", "network", "group", "asesores", "servicios", "soluciones", "comercial", "ventas", "vecy", "sas", "ltda", "vende", "arrienda", "inmobiliaria", "finca", "raiz", "realestate"];
 
   let baseGreeting = `¡Hola, qué gusto tenerte aquí, ${n}!`;
@@ -1907,10 +1907,10 @@ function analyzeSender(name: string, userId: string, alreadyGreeted: boolean): {
     }
   }
 
-  return { 
-    greeting: alreadyGreeted ? "" : baseGreeting, 
-    adj, 
-    courtesy 
+  return {
+    greeting: alreadyGreeted ? "" : baseGreeting,
+    adj,
+    courtesy
   };
 }
 
@@ -1987,7 +1987,7 @@ export function buildSystemPrompt(groupJid?: string): string {
   try {
     const baseDir = path.resolve(process.cwd(), "server/_core/prompts");
     const basePrompt = fs.readFileSync(path.join(baseDir, "base.md"), "utf-8");
-    
+
     let specificPrompt = "";
     if (groupJid === '120363260108880069@g.us') {
       specificPrompt = fs.readFileSync(path.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
@@ -2093,21 +2093,21 @@ function formatColombiaDateTime(dateVal: any) {
   const d = new Date(dateVal);
   const bogotaStr = d.toLocaleString('en-US', { timeZone: 'America/Bogota' });
   const bogotaDate = new Date(bogotaStr);
-  
+
   const day = String(bogotaDate.getDate()).padStart(2, '0');
   const month = String(bogotaDate.getMonth() + 1).padStart(2, '0');
   const year = bogotaDate.getFullYear();
-  
+
   const daysOfWeek = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
   const dayName = daysOfWeek[bogotaDate.getDay()];
-  
+
   let hours = bogotaDate.getHours();
   const minutes = String(bogotaDate.getMinutes()).padStart(2, '0');
   const ampm = hours >= 12 ? 'PM' : 'AM';
   hours = hours % 12;
   hours = hours ? hours : 12;
   const hourStr = String(hours).padStart(2, '0');
-  
+
   return {
     dateStr: `${day}/${month}/${year}`,
     timeStr: `${hourStr}:${minutes} ${ampm}`,
@@ -2202,7 +2202,7 @@ export async function handleDetectedMatches(
         if (su && su.name && su.name.trim() !== "") {
           savedUserName = su.name;
         }
-        
+
         const [mu] = await db.select().from(users).where(eq(users.phone, matchedRawPhone)).limit(1);
         if (mu && mu.name && mu.name.trim() !== "") {
           matchedUserName = mu.name;
@@ -2242,7 +2242,7 @@ export async function handleDetectedMatches(
 • Teléfono: +${isProperty ? savedRawPhone : matchedRawPhone}
 • Detalle: ${getPropText(propItem)}
 • Precio: ${propItem.price ? Number(propItem.price).toLocaleString('es-CO') + ' COP' : 'N/A'}`;
-    
+
     // Notificación al admin: usar el bot principal (whatsapp-web.js) para garantizar entrega
     extraDMs.push({ jid: adminJid, message: adminMessage, viaMainBot: true });
   }
@@ -2575,11 +2575,11 @@ export function splitMultiItemMessage(text: string): string[] {
       const textWithoutUrls = cleanP.replace(/https?:\/\/[^\s]+/gi, "").replace(/[\r\n\t]+/g, " ").trim();
 
       // Si el párrafo es predominantemente enlaces, contacto o texto corto de referencia, JAMÁS es un nuevo item
-      const isContactOrLinkOnly = !textWithoutUrls || textWithoutUrls.length < 35 || 
+      const isContactOrLinkOnly = !textWithoutUrls || textWithoutUrls.length < 35 ||
         /^(?:contacto|info|galer[ií]a|fotos?|m[aá]s\s+info|link|enlace|agendar|visitas?|escr[ií]beme|ll[aá]mame|whatsapp|asesor)\b/i.test(textWithoutUrls);
 
-      const isNewItem = !isContactOrLinkOnly && 
-        /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|APTO|CASA|BUSCO|SOLICITO|ATL|REQUERIMIENTO|CLIENTE|CLIENTA|COMPRADOR|VARIOS CLIENTES)\b/i.test(textWithoutUrls) && 
+      const isNewItem = !isContactOrLinkOnly &&
+        /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|APTO|CASA|BUSCO|SOLICITO|ATL|REQUERIMIENTO|CLIENTE|CLIENTA|COMPRADOR|VARIOS CLIENTES)\b/i.test(textWithoutUrls) &&
         (/\$|\b\d{3,}\b|\bm2\b|\bhab\b|\bbaños\b|\balcobas\b|\bmm\b|\bmillon/i.test(textWithoutUrls));
 
       if (currentBlock && isNewItem) {
@@ -2599,7 +2599,7 @@ export function splitMultiItemMessage(text: string): string[] {
   // 4. Detección por saltos de línea simples cuando cada línea representa un requerimiento de cliente independiente
   const clientLines = text.split(/(?:\r?\n)+/).map(l => l.trim()).filter(Boolean);
   if (clientLines.length >= 2) {
-    const multiClientItems = clientLines.filter(l => 
+    const multiClientItems = clientLines.filter(l =>
       /^(?:\*?(?:cliente|clienta|comprador|compradora|varios\s+clientes|tengo\s+cliente)\s+(?:compra|compran|busca|buscan|requiere|necesita|solicita)|(?:busco|buscan|se\s+busca)\s+(?:apto|apartamento|casa|oficina))\b/i.test(l) &&
       l.length >= 35
     );
@@ -2770,8 +2770,8 @@ export const splitMultiPropertyMessage = splitMultiItemMessage;
  * Procesa un mensaje de WhatsApp con inteligencia multimodal y humanización avanzada.
  */
 export async function processWhatsAppMessage(
-  text: string, 
-  userId: string, 
+  text: string,
+  userId: string,
   userName?: string,
   hasMedia: boolean = false,
   scrapedData: any[] = [],
@@ -2899,7 +2899,7 @@ export async function processWhatsAppMessage(
     // También recupera el nombre del grupo (origen_nombre) si faltaba.
     const trimmedTextForUrl = text.trim();
     const urlLineOnly = trimmedTextForUrl.split('\n').find(l => /^https?:\/\/\S+$/.test(l.trim()));
-    const isSoloUrlMsg = !!urlLineOnly && trimmedTextForUrl.replace(/\s+/g, '').length <= urlLineOnly.replace(/\s+/g,'').length + 5;
+    const isSoloUrlMsg = !!urlLineOnly && trimmedTextForUrl.replace(/\s+/g, '').length <= urlLineOnly.replace(/\s+/g, '').length + 5;
     if (isSoloUrlMsg && urlLineOnly && esDominioPermitido(urlLineOnly.trim())) {
       const soloUrl = urlLineOnly.trim();
       const TEN_MIN_AGO = new Date(Date.now() - 10 * 60 * 1000);
@@ -3135,13 +3135,13 @@ export async function processWhatsAppMessage(
       const hasOnTopicKeyword = onTopicKeywords.some(keyword => cleanText.includes(keyword));
       if (!hasOnTopicKeyword) {
         console.log(`[JanIA-OffTopic] Mensaje fuera de tema detectado para ${userId} en ${groupJid || 'DM'}: "${text.substring(0, 50)}...".`);
-        
+
         let staticText = "";
         if (isGroup || groupJid) {
           const jid = groupJid || "";
           let groupRulesName = "el grupo";
           let acceptedTopics = "publicar y buscar propiedades para hacer matching comercial de inmuebles y requerimientos";
-          
+
           if (jid === '120363417740040773@g.us') {
             groupRulesName = "𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠";
             acceptedTopics = "tips, noticias, debates y consultas inmobiliarias (jurídicas, contratos, arrendamientos, tributación y estudios de mercado)";
@@ -3275,7 +3275,7 @@ Redacta esta bienvenida integrada con tu respuesta a su pregunta, usando emojis 
     }
 
     const textLower = messageToProcess.toLowerCase();
-    const isReplicationRequest = 
+    const isReplicationRequest =
       textLower.includes("replica") ||
       textLower.includes("repite") ||
       textLower.includes("lee este") ||
@@ -3293,31 +3293,31 @@ Por lo tanto, DEBES hacer lo siguiente:
 4. NUNCA respondas con confirmaciones conversacionales como "¡Entendido, colega! He procesado el comunicado...", ni agregues discursos tuyos. Tu respuesta "response" y "voiceResponse" debe ser únicamente el texto que te pidieron leer de forma exacta y literal.`;
     }
 
-    const isValuationQuery = 
-      textLower.includes("valuar") || 
-      textLower.includes("avaluo") || 
-      textLower.includes("avalúo") || 
-      textLower.includes("cuanto vale") || 
-      textLower.includes("cuánto vale") || 
-      textLower.includes("valor metro cuadrado") || 
-      textLower.includes("valor m2") || 
-      textLower.includes("precio metro cuadrado") || 
-      textLower.includes("precio m2") || 
-      textLower.includes("cuanto puedo cobrar") || 
-      textLower.includes("cuánto puedo cobrar") || 
-      textLower.includes("en que valor") || 
-      textLower.includes("en qué valor") || 
+    const isValuationQuery =
+      textLower.includes("valuar") ||
+      textLower.includes("avaluo") ||
+      textLower.includes("avalúo") ||
+      textLower.includes("cuanto vale") ||
+      textLower.includes("cuánto vale") ||
+      textLower.includes("valor metro cuadrado") ||
+      textLower.includes("valor m2") ||
+      textLower.includes("precio metro cuadrado") ||
+      textLower.includes("precio m2") ||
+      textLower.includes("cuanto puedo cobrar") ||
+      textLower.includes("cuánto puedo cobrar") ||
+      textLower.includes("en que valor") ||
+      textLower.includes("en qué valor") ||
       textLower.includes("estimar precio");
 
     const isLegalQuery =
       (textLower.includes("sucesión") || textLower.includes("sucesion") ||
-      textLower.includes("herencia") || textLower.includes("divorcio") ||
-      textLower.includes("embargo") || textLower.includes("saneamiento") ||
-      textLower.includes("compraventa") || textLower.includes("arrendamiento") ||
-      textLower.includes("ley 820") || textLower.includes("ley 675") ||
-      textLower.includes("no me pago") || textLower.includes("no me pagó") ||
-      textLower.includes("robo de comision") || textLower.includes("robo de comisión") ||
-      textLower.includes("disputa") || textLower.includes("notaría") || textLower.includes("notaria")) &&
+        textLower.includes("herencia") || textLower.includes("divorcio") ||
+        textLower.includes("embargo") || textLower.includes("saneamiento") ||
+        textLower.includes("compraventa") || textLower.includes("arrendamiento") ||
+        textLower.includes("ley 820") || textLower.includes("ley 675") ||
+        textLower.includes("no me pago") || textLower.includes("no me pagó") ||
+        textLower.includes("robo de comision") || textLower.includes("robo de comisión") ||
+        textLower.includes("disputa") || textLower.includes("notaría") || textLower.includes("notaria")) &&
       !textLower.includes("50/50") && !textLower.includes("50-50");
 
     const isListingOrReq = hasRealEstateTextKeyword(textLower);
@@ -3465,13 +3465,13 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       const llmRes = response as any;
       if (!llmRes || !llmRes.choices || !llmRes.choices[0]) throw new Error("Fallo de comunicación con el LLM");
-      
+
       const rawContent = llmRes.choices[0].message.content;
       try {
         result = parseSafeJSON(rawContent) as JanIAResult;
       } catch (parseErr: any) {
         console.error("[JanIA-Parser-Error] Error al deserializar JSON de JanIA:", parseErr.message);
-        
+
         // Intentar extraer la clasificación real original mediante regex
         const classMatch = rawContent.match(/"classification"\s*:\s*"([^"]+)"/i);
         const extractedClass = classMatch ? classMatch[1].toUpperCase() : null;
@@ -3513,7 +3513,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         }
       }
     }
-    
+
     result.mentions = result.mentions || [];
 
     // Inyectar datos del flyer detectado por visión documental
@@ -3605,10 +3605,10 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       const _extTmp = result.extractedData || {};
       const hasTechnicalSpecs = (_extTmp.price && Number(_extTmp.price) > 0) ||
-                                (_extTmp.presupuestoMax && Number(_extTmp.presupuestoMax) > 0) ||
-                                (_extTmp.area && Number(_extTmp.area) > 0) ||
-                                (_extTmp.bedrooms && Number(_extTmp.bedrooms) > 0) ||
-                                (cleanText.includes("$") || /\b\d{2,4}\s*(?:m2|mts|millones|mm|mlls)\b/i.test(cleanText));
+        (_extTmp.presupuestoMax && Number(_extTmp.presupuestoMax) > 0) ||
+        (_extTmp.area && Number(_extTmp.area) > 0) ||
+        (_extTmp.bedrooms && Number(_extTmp.bedrooms) > 0) ||
+        (cleanText.includes("$") || /\b\d{2,4}\s*(?:m2|mts|millones|mm|mlls)\b/i.test(cleanText));
 
       // Detectar comentarios cortos de seguimiento, correcciones o ruido de chat (ej: "Corrección: 3 parqueaderos", "Bajo de precio", "Disponible?")
       const isChatNoisePhrase = (
@@ -3695,7 +3695,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       // Doctrina v31.5: Descarte estricto de frases sueltas, teasers o saludos clasificados erróneamente
       const hollowEarlyCheck = isHollowListing(cleanText, null, (urls && urls.length > 0 ? urls[0] : null));
       const hasRealPropertyCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanText) &&
-                                  /\b(?:renta|arriendo|alquiler|alquilo|canon|venta|vendo|se vende|se arrienda|se renta|se alquila|compro|comprar|busco|buscamos|requiero|requerimiento)\b/i.test(cleanText);
+        /\b(?:renta|arriendo|alquiler|alquilo|canon|venta|vendo|se vende|se arrienda|se renta|se alquila|compro|comprar|busco|buscamos|requiero|requerimiento)\b/i.test(cleanText);
 
       if ((result.classification === "INMUEBLE" || result.classification === "REQUERIMIENTO") && hollowEarlyCheck.isHollow && !imageBuffer && !result.isFlyerOrBanner && !hasRealPropertyCore) {
         console.log(`[JANIA-FILTER] ⛔ Descartando publicación hueca o frase suelta (${hollowEarlyCheck.reason}): "${cleanText.substring(0, 60)}...". Degenerado a CONSULTA_GENERAL.`);
@@ -3725,7 +3725,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       const fallbackData = extractFallbackDataFromText(messageToProcess);
       if (!extracted.transactionType) extracted.transactionType = fallbackData.transactionType;
       if (!extracted.propertyType) extracted.propertyType = fallbackData.propertyType;
-      
+
       // Sanitizar price en Venta (si venía < 100M pero en fallbackData es >= 100M)
       const currentPriceNum = Number(extracted.price || 0);
       if (isProperty) {
@@ -3733,7 +3733,7 @@ Por lo tanto, DEBES hacer lo siguiente:
           extracted.price = fallbackData.price;
         }
       }
-      
+
       if (isRequirement) {
         const curPresupuesto = Number(extracted.presupuestoMax || 0);
         if (!curPresupuesto || curPresupuesto === 0 || (curPresupuesto < 100_000_000 && fallbackData.presupuestoMax >= 100_000_000)) {
@@ -3845,10 +3845,10 @@ Por lo tanto, DEBES hacer lo siguiente:
       }
 
       const zoneToValidate = isProperty ? extracted?.zone : (extracted?.zonaDeseada || extracted?.zone);
-      
+
       let isValidGeo = false;
       let geoValidation: any = null;
-      
+
       if (zoneToValidate && zoneToValidate.trim() !== "") {
         let inferredCity = extracted?.city || extracted?.ciudadDeseada;
         if (!inferredCity || inferredCity.trim() === "" || inferredCity.toLowerCase() === "na") {
@@ -3886,7 +3886,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         geoValidation = await validarZona(zoneToValidate, inferredCity, messageToProcess);
         isValidGeo = geoValidation.isValid;
       }
-      
+
       if (!isValidGeo) {
         // En modo sensor silencioso, se admite la geografía no validada marcándola en missingFields y continuando
         isValidGeo = true;
@@ -3967,7 +3967,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       const isFlyerWithText = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
       const hollowCheckProp = isHollowListing(cleanCheckText, propertyTitle, (urls && urls.length > 0 ? urls[0] : undefined));
       const hasRealPropertyCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanCheckText) &&
-                                  /\b(?:renta|arriendo|alquiler|alquilo|canon|venta|vendo|se vende|se arrienda|se renta|se alquila)\b/i.test(cleanCheckText);
+        /\b(?:renta|arriendo|alquiler|alquilo|canon|venta|vendo|se vende|se arrienda|se renta|se alquila)\b/i.test(cleanCheckText);
       if (hollowCheckProp.isHollow && !isFlyerWithText && !hasRealPropertyCore) {
         console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado de propiedad en BD (${hollowCheckProp.reason}): "${cleanCheckText.substring(0, 60)}..."`);
         result.inserted = false;
@@ -3987,12 +3987,12 @@ Por lo tanto, DEBES hacer lo siguiente:
       const isFlyerDetected = result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true;
       const flyerVerbatim = result.flyerVerbatimText || extracted.flyerVerbatimText || "";
       const isImageOnlyProp = (!rawUserText || rawUserText.trim() === '' || rawUserText.includes('[Publicación de Imagen')) && !!imageBuffer;
-      
+
       // DOCTRINA v23.9: Si es solo una imagen sin texto del usuario
       if (isImageOnlyProp) {
-        const hasPropSpecs = (Number(extracted.price || 0) > 0) || 
-                             (Number(extracted.area || 0) > 0 && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.garages || 0) > 0)) ||
-                             (!!extracted.zone && Number(extracted.bedrooms || 0) > 0);
+        const hasPropSpecs = (Number(extracted.price || 0) > 0) ||
+          (Number(extracted.area || 0) > 0 && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.garages || 0) > 0)) ||
+          (!!extracted.zone && Number(extracted.bedrooms || 0) > 0);
         if (!hasPropSpecs && !isFlyerDetected) {
           console.log(`[JANIA-FILTER] ⛔ Descartando imagen fotográfica ambiental pura: no contiene ficha técnica ni datos comerciales legibles sobreimpresos.`);
           result.inserted = false;
@@ -4005,8 +4005,8 @@ Por lo tanto, DEBES hacer lo siguiente:
       // Si fue una foto ambiental que acompañaba a un texto, no se sube como flyer
       const flyerBufferToSave = (isImageOnlyProp || isFlyerDetected) ? imageBuffer : undefined;
 
-      const effectivePropRawText = (isImageOnlyProp || isFlyerDetected) 
-        ? (flyerVerbatim ? buildFlyerBreakdownText(extracted, flyerVerbatim) : buildFlyerBreakdownText(extracted, rawUserText || text)) 
+      const effectivePropRawText = (isImageOnlyProp || isFlyerDetected)
+        ? (flyerVerbatim ? buildFlyerBreakdownText(extracted, flyerVerbatim) : buildFlyerBreakdownText(extracted, rawUserText || text))
         : (rawUserText || text);
 
       const saved = await saveProperty({
@@ -4024,7 +4024,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         enlaceOrigen: sourceUrl,
         fechaExtraccion: new Date()
       }, userId, realName, flyerBufferToSave, pdfBuffer, pdfMimeType);
-      
+
       if (saved) {
         result.inserted = true;
         result.shouldSendDM = false;
@@ -4085,7 +4085,7 @@ Por lo tanto, DEBES hacer lo siguiente:
       const isFlyerWithTextReq = (result.isFlyerOrBanner === true || extracted.isFlyerOrBanner === true) && !!(result.flyerVerbatimText && result.flyerVerbatimText.trim().length >= 15);
       const hollowCheckReq = isHollowListing(cleanCheckReqText, reqTitle, (urls && urls.length > 0 ? urls[0] : undefined));
       const hasRealReqCore = /\b(?:casa|casas|apto|aptos|apartamento|apartamentos|bodega|bodegas|oficina|oficinas|lote|lotes|finca|fincas|local|locales|edificio|edificios|terreno|terrenos)\b/i.test(cleanCheckReqText) &&
-                             /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprar)\b/i.test(cleanCheckReqText);
+        /\b(?:busco|buscamos|se busca|se requiere|requiero|requerimiento|necesito|necesitamos|solicito|solicitamos|compro|comprar)\b/i.test(cleanCheckReqText);
       if (hollowCheckReq.isHollow && !isFlyerWithTextReq && !hasRealReqCore) {
         console.log(`[JANIA-FILTER] ⛔ Omitiendo guardado de requerimiento en BD (${hollowCheckReq.reason}): "${cleanCheckReqText.substring(0, 60)}..."`);
         result.inserted = false;
@@ -4102,8 +4102,8 @@ Por lo tanto, DEBES hacer lo siguiente:
       // DOCTRINA v23.9: Si es solo una imagen sin texto del usuario
       if (isImageOnlyReq) {
         const hasReqSpecs = (Number(extracted.presupuestoMax || extracted.price || 0) > 0) ||
-                            (!!(extracted.zonaDeseada || extracted.zone) && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.area || 0) > 0)) ||
-                            (extracted.title && /compra|busco|requerimiento|solicitud|presupuesto/i.test(extracted.title));
+          (!!(extracted.zonaDeseada || extracted.zone) && (Number(extracted.bedrooms || 0) > 0 || Number(extracted.area || 0) > 0)) ||
+          (extracted.title && /compra|busco|requerimiento|solicitud|presupuesto/i.test(extracted.title));
         if (!hasReqSpecs && !isFlyerDetectedReq) {
           console.log(`[JANIA-FILTER] ⛔ Descartando imagen fotográfica ambiental pura: no contiene criterios de requerimiento legibles sobreimpresos.`);
           result.inserted = false;
@@ -4114,8 +4114,8 @@ Por lo tanto, DEBES hacer lo siguiente:
 
       const flyerBufferToSaveReq = (isImageOnlyReq || isFlyerDetectedReq) ? imageBuffer : undefined;
 
-      const effectiveReqRawText = (isImageOnlyReq || isFlyerDetectedReq) 
-        ? (flyerVerbatimReq ? buildFlyerBreakdownText(extracted, flyerVerbatimReq) : buildFlyerBreakdownText(extracted, messageToProcess)) 
+      const effectiveReqRawText = (isImageOnlyReq || isFlyerDetectedReq)
+        ? (flyerVerbatimReq ? buildFlyerBreakdownText(extracted, flyerVerbatimReq) : buildFlyerBreakdownText(extracted, messageToProcess))
         : messageToProcess;
 
       const saved = await saveRequirement({
@@ -4163,42 +4163,42 @@ Por lo tanto, DEBES hacer lo siguiente:
       const textLower = messageToProcess.toLowerCase();
 
       // A. Consultas sobre cómo publicar o subir inmuebles o cómo funciona el grupo
-      const isAboutPublishing = 
-        textLower.includes("subir") || 
-        textLower.includes("cómo subo") || 
+      const isAboutPublishing =
+        textLower.includes("subir") ||
+        textLower.includes("cómo subo") ||
         textLower.includes("como subo") ||
-        textLower.includes("publicar") || 
-        textLower.includes("cómo publico") || 
+        textLower.includes("publicar") ||
+        textLower.includes("cómo publico") ||
         textLower.includes("como publico") ||
-        textLower.includes("cómo se publica") || 
+        textLower.includes("cómo se publica") ||
         textLower.includes("como se publica") ||
-        textLower.includes("cómo registrar") || 
+        textLower.includes("cómo registrar") ||
         textLower.includes("como registrar") ||
-        textLower.includes("cómo funciona") || 
+        textLower.includes("cómo funciona") ||
         textLower.includes("como funciona") ||
-        textLower.includes("de qué consiste") || 
+        textLower.includes("de qué consiste") ||
         textLower.includes("de que consiste") ||
-        textLower.includes("en qué consiste") || 
+        textLower.includes("en qué consiste") ||
         textLower.includes("en que consiste") ||
-        textLower.includes("cómo hago para") || 
+        textLower.includes("cómo hago para") ||
         textLower.includes("como hago para") ||
-        textLower.includes("cómo buscar") || 
+        textLower.includes("cómo buscar") ||
         textLower.includes("como buscar") ||
-        textLower.includes("cómo encontrar") || 
+        textLower.includes("cómo encontrar") ||
         textLower.includes("como encontrar") ||
         textLower.includes("instrucciones") ||
         textLower.includes("ayuda") ||
-        textLower.includes("explicar") || 
-        textLower.includes("explicame") || 
+        textLower.includes("explicar") ||
+        textLower.includes("explicame") ||
         textLower.includes("explícame");
 
-      const isAboutVecy = 
-        textLower.includes("vecy") || 
-        textLower.includes("proyecto") || 
-        textLower.includes("quien creo") || 
-        textLower.includes("quién creó") || 
-        textLower.includes("creadores") || 
-        textLower.includes("quien es jania") || 
+      const isAboutVecy =
+        textLower.includes("vecy") ||
+        textLower.includes("proyecto") ||
+        textLower.includes("quien creo") ||
+        textLower.includes("quién creó") ||
+        textLower.includes("creadores") ||
+        textLower.includes("quien es jania") ||
         textLower.includes("quién es jania") ||
         textLower.includes("circulo cero") ||
         textLower.includes("círculo cero") ||
@@ -4228,12 +4228,12 @@ Por lo tanto, DEBES hacer lo siguiente:
           `Si tienes dudas o prefieres usar mi menú de soporte y búsqueda de propiedades privado, escríbeme directamente en nuestra Consola Web:\n👉 https://vecy-network.vercel.app/jania`;
         result.classification = "CONSULTA_GENERAL";
       } else if (isAboutVecy) {
-        const isCompetitorQuery = 
-          textLower.includes("ubicapp") || 
-          textLower.includes("samboni") || 
-          textLower.includes("competidor") || 
+        const isCompetitorQuery =
+          textLower.includes("ubicapp") ||
+          textLower.includes("samboni") ||
+          textLower.includes("competidor") ||
           textLower.includes("competencia");
-          
+
         const groupZeroName = process.env.GROUP_ZERO_NAME || '𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀';
         if (isCompetitorQuery) {
           result.response = `👌 *${groupZeroName.toUpperCase()} — DEBATE Y COMUNIDAD* 👌\n\n${greetingPrefix}, detecté una mención a plataformas competidoras o comparativas de servicios. Para mantener este canal enfocado exclusivamente en ofertas y requerimientos, te invito a plantear tus preguntas, comparar beneficios o participar en el debate en nuestro canal oficial **${groupZeroName}**:\n👉 https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU\n\n¡Allí debatimos abiertamente con total transparencia y profesionalismo! 🤝✨`;
@@ -4274,7 +4274,7 @@ Por lo tanto, DEBES hacer lo siguiente:
     return result;
   } catch (error: any) {
     console.warn(`[JanIA-Fallback] 🛡️ LLM no disponible o cuota 429 (${error?.message || error}). Activando Fallback Determinista Autónomo $0 COP...`);
-    
+
     try {
       const rawMsg = text || "";
       const cleanLower = rawMsg.toLowerCase().trim();
@@ -4321,7 +4321,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         if (savedReq) {
           const { executeMatchEngine } = await import("./matching");
           setImmediate(() => {
-            executeMatchEngine(null, savedReq.id).catch(() => {});
+            executeMatchEngine(null, savedReq.id).catch(() => { });
           });
         }
 
@@ -4359,7 +4359,7 @@ Por lo tanto, DEBES hacer lo siguiente:
         if (savedProp) {
           const { executeMatchEngine } = await import("./matching");
           setImmediate(() => {
-            executeMatchEngine(savedProp.id, null).catch(() => {});
+            executeMatchEngine(savedProp.id, null).catch(() => { });
           });
         }
 
@@ -4464,7 +4464,7 @@ export async function propagateBrokerPhoneAcrossAllListings(params: {
 
 // Inicialización automática diferida del directorio permanente de asesores
 setTimeout(() => {
-  initBrokerDirectory().catch(() => {});
+  initBrokerDirectory().catch(() => { });
 }, 3000);
 
 async function findOrCreateUserByPhone(phone: string, realName: string) {
@@ -4567,11 +4567,11 @@ function sanitizeTransactionTypes(raw: string | string[] | undefined): string[] 
   if (n.includes("temporal") || n.includes("vacacional") || n.includes("vacaciones")) result.push("arriendo_temporal");
   if (!hasVentaPermuta) {
     if (n.includes("permuta") || n.includes("permuto") ||
-        n.includes("recibo propiedad") || n.includes("recibo vehiculo") || n.includes("parte de pago") ||
-        n.includes("cambio de inmueble")) result.push("permuta");
+      n.includes("recibo propiedad") || n.includes("recibo vehiculo") || n.includes("parte de pago") ||
+      n.includes("cambio de inmueble")) result.push("permuta");
   }
   if (n.includes("aporte") || n.includes("participo en proyecto") || n.includes("constructora") ||
-      n.includes("unidades a cambio") || n.includes("utilidades")) result.push("aporte");
+    n.includes("unidades a cambio") || n.includes("utilidades")) result.push("aporte");
   return result.length > 0 ? result : [sanitizeTransactionType(input)];
 }
 
@@ -4766,7 +4766,7 @@ export async function handleAmendmentUpdate(userId: string, text: string): Promi
       updates.updatedAt = new Date();
       await db.update(requirements).set(updates).where(eq(requirements.id, req.id));
       console.log(`[JANIA-AMENDMENT] ✅ Requerimiento #${req.id} actualizado silenciosamente en BD (Ventana 2h):`, updates);
-      
+
       const { executeMatchEngine } = await import("./matching");
       setImmediate(() => {
         executeMatchEngine(null, req.id).catch(err => console.error("Error executing match engine on amendment:", err));
@@ -4931,8 +4931,8 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
   }
 
   if (txTypeForSplit === "venta_o_arriendo" || txTypeForSplit === "arriendo_con_opcion_de_compra") {
-    const currentPrice   = data.price     ? parseFloat(String(data.price))     : 0;
-    const currentRentP   = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
+    const currentPrice = data.price ? parseFloat(String(data.price)) : 0;
+    const currentRentP = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
     const priceSaleField = data.priceSale ? parseFloat(String(data.priceSale)) : 0;
     const priceRentField = data.priceRent ? parseFloat(String(data.priceRent)) : 0;
 
@@ -5069,17 +5069,17 @@ async function saveProperty(data: any, userId: string, realName: string, imageBu
     }
   }
 
-  const canonicalPropPhone = normalizeAdvisorPhone(rawPhone) || 
-                             normalizeAdvisorPhone(data.idUsuarioWhatsapp) || 
-                             (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : (data.idUsuarioWhatsapp || rawPhone));
+  const canonicalPropPhone = normalizeAdvisorPhone(rawPhone) ||
+    normalizeAdvisorPhone(data.idUsuarioWhatsapp) ||
+    (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : (data.idUsuarioWhatsapp || rawPhone));
   const knownPropAdvisor = lookupAdvisorSync(canonicalPropPhone || data.idUsuarioWhatsapp, realName || data.nombreUsuarioWhatsapp);
   const finalEffectivePropName = (realName && !isGenericName(realName))
     ? realName.trim()
     : (data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp))
-    ? data.nombreUsuarioWhatsapp.trim()
-    : (knownPropAdvisor?.name && !isGenericName(knownPropAdvisor.name))
-    ? knownPropAdvisor.name
-    : realName || null;
+      ? data.nombreUsuarioWhatsapp.trim()
+      : (knownPropAdvisor?.name && !isGenericName(knownPropAdvisor.name))
+        ? knownPropAdvisor.name
+        : realName || null;
 
   const insertData = {
     ...data,
@@ -5448,17 +5448,17 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
     }
   }
 
-  const canonicalReqPhone = normalizeAdvisorPhone(rawPhone) || 
-                            normalizeAdvisorPhone(data.idUsuarioWhatsapp) || 
-                            (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : (data.idUsuarioWhatsapp || rawPhone));
+  const canonicalReqPhone = normalizeAdvisorPhone(rawPhone) ||
+    normalizeAdvisorPhone(data.idUsuarioWhatsapp) ||
+    (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : (data.idUsuarioWhatsapp || rawPhone));
   const knownReqAdvisor = lookupAdvisorSync(canonicalReqPhone || data.idUsuarioWhatsapp, realName || data.nombreUsuarioWhatsapp);
   const finalEffectiveReqName = (realName && !isGenericName(realName))
     ? realName.trim()
     : (data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp))
-    ? data.nombreUsuarioWhatsapp.trim()
-    : (knownReqAdvisor?.name && !isGenericName(knownReqAdvisor.name))
-    ? knownReqAdvisor.name
-    : realName || null;
+      ? data.nombreUsuarioWhatsapp.trim()
+      : (knownReqAdvisor?.name && !isGenericName(knownReqAdvisor.name))
+        ? knownReqAdvisor.name
+        : realName || null;
 
   const rawCombinedReqText = `${data.rawText || ""} ${data.name || ""}`;
   const fallbackReqD = extractFallbackDataFromText(rawCombinedReqText);
@@ -5620,7 +5620,7 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
       }
       const rawL = (data.rawText || "").toLowerCase();
       const m = rawL.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i)
-             || rawL.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
+        || rawL.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
       return m ? parseInt(m[1], 10) : null;
     })(),
     estratoDeseado: (() => {
@@ -5757,7 +5757,7 @@ async function saveRequirement(data: any, userId: string, realName: string, imag
 export async function generateWelcomeMessage(count: number, chatId?: string): Promise<string> {
   try {
     let groupDescription = "";
-    
+
     if (chatId === "120363417740040773@g.us") { // Soporte Legal, Tributario, Avalúos y Marketing
       groupDescription = `el grupo de WhatsApp "𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠".
 Dirección obligatoria para redactar el saludo de bienvenida:
@@ -5795,14 +5795,14 @@ Dirección obligatoria para redactar el saludo de bienvenida:
 
     const response = await invokeLLM({
       messages: [
-        { 
-          role: "system", 
-          content: "Eres JanIA, la asistente inteligente y experta de VECY BIENES RAÍCES. Hablas siempre en primera persona del singular, con un tono sumamente humano, profesional, elocuente y cercano." 
+        {
+          role: "system",
+          content: "Eres JanIA, la asistente inteligente y experta de VECY BIENES RAÍCES. Hablas siempre en primera persona del singular, con un tono sumamente humano, profesional, elocuente y cercano."
         },
-        { 
-          role: "user", 
+        {
+          role: "user",
           content: `Han ingresado ${count} nuevos integrantes a ${groupDescription}. 
-          Redacta el mensaje de bienvenida usando viñetas claras y emojis llamativos. Asegúrate de que las reglas se lean organizadas, directas y fáciles de entender para que no cometan infracciones.` 
+          Redacta el mensaje de bienvenida usando viñetas claras y emojis llamativos. Asegúrate de que las reglas se lean organizadas, directas y fáciles de entender para que no cometan infracciones.`
         }
       ]
     });
@@ -5811,19 +5811,19 @@ Dirección obligatoria para redactar el saludo de bienvenida:
   } catch (error) {
     if (chatId === "120363417740040773@g.us") {
       return `✨ *¡Bienvenidos al grupo 𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠!* 👋\n\n` +
-             `Foro abierto de tips, noticias, debates y consultas inmobiliarias de VECY BIENES RAÍCES.\n` +
-             `⚠️ *Nota:* Las ofertas y demandas van solo al grupo de OFERTAS Y DEMANDAS. Asuntos privados: https://wa.me/573192919978 🚀`;
+        `Foro abierto de tips, noticias, debates y consultas inmobiliarias de VECY BIENES RAÍCES.\n` +
+        `⚠️ *Nota:* Las ofertas y demandas van solo al grupo de OFERTAS Y DEMANDAS. Asuntos privados: https://wa.me/573192919978 🚀`;
     } else if (chatId === "120363403507276533@g.us") {
       return `✨ *¡Bienvenidos a 𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀!* 👋\n\n` +
-             `Espacio de comunidad: temas libres, foros, debates y experiencias del negocio inmobiliario.\n` +
-             `⚠️ *Nota:* Las ofertas y demandas van solo al grupo de OFERTAS Y DEMANDAS. ¡Bienvenidos aliados! 🚀🤝`;
+        `Espacio de comunidad: temas libres, foros, debates y experiencias del negocio inmobiliario.\n` +
+        `⚠️ *Nota:* Las ofertas y demandas van solo al grupo de OFERTAS Y DEMANDAS. ¡Bienvenidos aliados! 🚀🤝`;
     }
     return `✨ *¡Bienvenidos a 𝗩𝗘𝗖𝗬 𝗜𝗡𝗠𝗢🏠 𝗢𝗙𝗘𝗥𝗧𝗔𝗦🏷️ 𝗬 𝗗𝗘𝗠𝗔𝗡𝗗𝗔𝗦📝 𝗖𝗢𝗟𝗢𝗠𝗕𝗜𝗔🇨🇴!* 👋\n\n` +
-           `Ya estoy activa para cruzar sus ofertas sin comisiones.\n` +
-           `📝 *Pautas rápidas de publicación*:\n` +
-           `▸ *Permitido:* Texto técnico completo, PDFs, notas de voz, flyers con datos y enlaces públicos (Wasi, Fincaraiz, etc.).\n` +
-           `▸ *No permitido:* Enlaces de Redes Sociales, publicaciones repetidas, datos incompletos (sin precio/ciudad) o envíos seguidos en menos de 5 minutos.\n\n` +
-           `¡Publiquen correctamente para encontrarles un MATCH inmediato! 🚀🎯`;
+      `Ya estoy activa para cruzar sus ofertas sin comisiones.\n` +
+      `📝 *Pautas rápidas de publicación*:\n` +
+      `▸ *Permitido:* Texto técnico completo, PDFs, notas de voz, flyers con datos y enlaces públicos (Wasi, Fincaraiz, etc.).\n` +
+      `▸ *No permitido:* Enlaces de Redes Sociales, publicaciones repetidas, datos incompletos (sin precio/ciudad) o envíos seguidos en menos de 5 minutos.\n\n` +
+      `¡Publiquen correctamente para encontrarles un MATCH inmediato! 🚀🎯`;
   }
 }
 
@@ -5982,10 +5982,10 @@ export function checkStrictOffTopic(text: string): { isOffTopic: boolean; reason
 
   // 1. Invitación a grupos ajenos de WhatsApp
   if (clean.includes('chat.whatsapp.com/')) {
-    const isOfficialVecyLink = 
-      clean.includes('gzmbjns1p2thi7d0v4h8wz') || 
-      clean.includes('j4u1h7nul1i1b1waiytun6') || 
-      clean.includes('cszrkr6cr56haiehheauqyu') || 
+    const isOfficialVecyLink =
+      clean.includes('gzmbjns1p2thi7d0v4h8wz') ||
+      clean.includes('j4u1h7nul1i1b1waiytun6') ||
+      clean.includes('cszrkr6cr56haiehheauqyu') ||
       clean.includes('0029vb5iyuycmy0a94zqti1b');
     if (!isOfficialVecyLink) {
       return { isOffTopic: true, reason: 'enlaces de invitación a grupos externos' };
@@ -6048,8 +6048,8 @@ export function appendConsultingHistory(userId: string, role: "user" | "assistan
 }
 
 export async function processConsultingMessage(
-  text: string, 
-  userId: string, 
+  text: string,
+  userId: string,
   userName?: string,
   imageBuffer?: string,
   pdfBuffer?: string,
@@ -6165,7 +6165,7 @@ export async function processConsultingMessage(
       };
     }
 
-    const systemPrompt = 
+    const systemPrompt =
       `Eres JanIA, la Inteligencia Artificial viva, empática y de máxima capacidad resolutiva de VECY BIENES RAÍCES. ` +
       `Estás operando en el grupo "𝗩𝗘𝗖𝗬 𝗧𝗜𝗣𝗦💡/𝗡𝗢𝗧𝗜𝗖𝗜𝗔𝗦📰/𝗖𝗢𝗡𝗦𝗨𝗟𝗧𝗔𝗦 𝗜𝗡𝗠𝗢𝗕𝗜𝗟𝗜𝗔𝗥𝗜𝗔𝗦⁉️🏠". Tu objetivo es responder con precisión quirúrgica, rigor legal, calidez humana y alta competencia técnica, resolviendo de fondo las inquietudes de los inmobiliarios como una abogada senior, perita tasadora y estratega de marketing de élite.\n\n` +
       `## LÓGICA DE CLASIFICACIÓN Y MODERACIÓN ESTRICTA:\n` +
@@ -6381,8 +6381,8 @@ ${lateReplyNote}`;
 }
 
 export async function processCirculoMessage(
-  text: string, 
-  userId: string, 
+  text: string,
+  userId: string,
   userName?: string
 ): Promise<JanIAResult> {
   try {
@@ -6459,7 +6459,7 @@ export async function processCirculoMessage(
     }
 
     const groupZeroName = process.env.GROUP_ZERO_NAME || '𝗣𝗥𝗢𝗬𝗘𝗖𝗧𝗢: 🌐 "𝗩𝗘𝗖𝗬𝗕𝗜𝗘𝗡𝗘𝗦𝗥𝗔𝗜𝗖𝗘𝗦"🚀';
-    const systemPrompt = 
+    const systemPrompt =
       `Eres JanIA, la Inteligencia Artificial oficial y cerebro innovador de VECY BIENES RAÍCES. Estás operando en el grupo "${groupZeroName}". ` +
       `Tu objetivo en este grupo (foro abierto de la comunidad) es conversar sobre temas libres del sector inmobiliario, foros, debates y experiencias del día a día del negocio, además del proyecto VECY BIENES RAÍCES, su modelo colaborativo, tecnología y debate con competidores, de forma sincera, verídica y de alto nivel:\n\n` +
       `## DIRECTRICES DE INFORMACIÓN Y SINCERIDAD SOBRE VECY BIENES RAÍCES:\n` +
@@ -6610,7 +6610,7 @@ export function getStartOfTodayBogota(): number {
   const year = parseInt(parts.find(p => p.type === 'year')?.value || '2026', 10);
   const month = parseInt(parts.find(p => p.type === 'month')?.value || '1', 10) - 1;
   const day = parseInt(parts.find(p => p.type === 'day')?.value || '1', 10);
-  
+
   // 00:00:00 hora Bogotá (UTC-5) = 05:00:00 UTC
   return Date.UTC(year, month, day, 5, 0, 0);
 }
@@ -6786,7 +6786,7 @@ export async function processPrivateDmConversationalMessage(
   }
 
   // Fast-path: Preguntas sobre el portafolio de consultas ("¿Cómo es lo de las consultas?", etc.)
-  const isConsultasInquiry = 
+  const isConsultasInquiry =
     /(?:c[oó]mo\s+es\s+lo\s+de\s+las\s+consultas|qu[eé]\s+(?:tipo\s+de\s+)?consultas|cu[aá]les\s+consultas|de\s+qu[eé]\s+son\s+las\s+consultas|qu[eé]\s+consultas\s+(?:tienen|hacen|prestan|ofrecen)|informaci[oó]n\s+de\s+las\s+consultas|como\s+funcionan\s+las\s+consultas)\b/i.test(cleanLower);
 
   if (isConsultasInquiry) {
@@ -6811,17 +6811,17 @@ export async function processPrivateDmConversationalMessage(
   }
 
   // Fast-path: Preguntas sobre costos de las herramientas ("Los costos ?", "¿cuánto vale?", "¿cuánto cuesta?", etc.)
-  const isCostInquiry = 
+  const isCostInquiry =
     /^(?:los\s+)?costos?\s*\??$/i.test(cleanLower) ||
     /(?:cu[aá]nto\s+(?:cuesta|vale|cobran)|qu[eé]\s+costo\s+tiene|qu[eé]\s+precio\s+tiene|tiene\s+alg[uú]n\s+costo|es\s+gratis|es\s+gratuito|cu[aá]nto\s+es|tarifas?)\b/i.test(cleanLower);
 
   if (isCostInquiry) {
-    const isFreeToolsContext = 
+    const isFreeToolsContext =
       history.some(h => /verificaci[oó]n|c[eé]dula|predial|antecedentes|polic[ií]a|documento|chip/i.test(h.content)) ||
       !history.some(h => /aval[uú]o|jur[ií]dica|comisi[oó]n|hipoteca/i.test(h.content));
 
     if (isFreeToolsContext) {
-      const freeCostMsg = 
+      const freeCostMsg =
         `¡${displayName || "Hola"}! Este servicio es completamente *GRATIS* 🎁✨.\n\n` +
         `En *VECY Bienes Raíces* la verificación oficial de documentos y antecedentes ante la Policía Nacional (Cédula de Ciudadanía, Extranjería, Pasaportes), así como la consulta y descarga de la Factura Predial y certificados de pago de Bogotá, *no tienen ningún costo para ti*.\n\n` +
         `Las ofrecemos 100% gratuitas para apoyar a nuestra comunidad y garantizar total seguridad en las visitas y negocios inmobiliarios.\n\n` +
@@ -6834,7 +6834,7 @@ export async function processPrivateDmConversationalMessage(
   }
 
   // Fast-path: Explicación didáctica y amorosa paso a paso ("¿Cómo se hace?", "¿Cómo lo hago?", "explícame cómo", etc.)
-  const isHowToDoInquiry = 
+  const isHowToDoInquiry =
     /(?:c[oó]mo\s+(?:se\s+hace|lo\s+hago|se\s+hacen|hago|funciona|entro|pido|es\s+el\s+paso\s+a\s+paso)|expl[ií]came|ens[eé][ñn]ame|no\s+(?:s[eé]|entiendo)\s+c[oó]mo|me\s+enredo|ay[uú]dame\s+a\s+hacerlo|no\s+s[eé]\s+de\s+tecnolog[ií]a)\b/i.test(cleanLower);
 
   if (isHowToDoInquiry) {
@@ -6854,7 +6854,7 @@ export async function processPrivateDmConversationalMessage(
   }
 
   // Fast-path: Despedidas y agradecimientos (Doctrina v32.40 - Mensaje 1 Canal Oficial)
-  const isGratitudeOrClosingFastPath = 
+  const isGratitudeOrClosingFastPath =
     /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) ||
     (cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower));
 
@@ -6898,7 +6898,7 @@ export async function processPrivateDmConversationalMessage(
 
   // 🛡️ INTERCEPTOR DE SEGUIMIENTO: CONSULTA SOBRE CÉDULAS / ANTECEDENTES PENDIENTES EN LA SESIÓN
   // Si el usuario pregunta "pero me colaboras con las cédulas", "sólo las cédulas", "qué pasó con las cédulas", etc.
-  const isAskingPendingCedulas = 
+  const isAskingPendingCedulas =
     /(?:colaboras|ayudas|revisaste|verificaste|consultaste|miraste|sabes|sabemos|qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|falta|pendiente|salieron|listo|listas|listos|novedad|noticia|informaci[oó]n|resultado|reporte).*(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores)/i.test(cleanLower) ||
     /(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores).*(?:qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|colaboras|ayudas|revisaste|verificaste|consultaste|salieron|falta|pendiente|s[oó]lo|solo|ya|listo)/i.test(cleanLower) ||
     /(?:pero|y|s[oó]lo|solo|entonces)\s*.*(?:c[eé]dula|c[eé]dulas|documentos?|antecedentes?)/i.test(cleanLower) ||
@@ -6941,7 +6941,7 @@ export async function processPrivateDmConversationalMessage(
 
   // 🛡️ INTERCEPTOR DIRECTO DM: LIQUIDACIÓN DE GASTOS NOTARIALES, REGISTRO Y DOCTRINA JURÍDICA (v32.74)
   const { executeNotarialAssistanceFromWhatsApp, hasPendingNotarialSession } = await import('./notarialExpenseService');
-  const isNotarialContext = 
+  const isNotarialContext =
     hasPendingNotarialSession(userId) ||
     /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|afectaci[oó]n\s*familiar|sin\s*afectaci[oó]n|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural|bien\s*de\s*inter[eé]s|anotaci[oó]n\s*diferente)/i.test(cleanLower);
 
@@ -6974,11 +6974,11 @@ export async function processPrivateDmConversationalMessage(
           `- El usuario se llama: *${displayName || realName || "Colega"}*.\n` +
           `- Género gramatical identificado: *${nameInfo.isFemale ? "Femenino (tratar como estimada, colega, bienvenida, atenta)" : "Masculino (tratar como estimado, colega, bienvenido, atento)"}*.\n` +
           `- Si el usuario tiene un nombre compuesto (ej: Ana María, Juan José, María Fernanda, José Manuel, Carlos Alberto, Luz Marina, Olga Lucía), NUNCA lo cortes al primer nombre (JAMÁS digas solo "Ana" o "Juan"); llámalo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercanía y respeto que se use su nombre compuesto completo.\n` +
-          `${hasPriorHistory ? 
-            '- CONTINUIDAD DE CONVERSACIÓN ACTIVA (MISMO DÍA): Ya estás conversando activamente con el usuario hoy. Está TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAMÁS digas "¡Hola!", "¡Buenos días!", "¡Qué gusto saludarte de nuevo!", "Es un placer tenerte por aquí") ni anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana lo que el usuario acaba de decir en el contexto previo.' : 
+          `${hasPriorHistory ?
+            '- CONTINUIDAD DE CONVERSACIÓN ACTIVA (MISMO DÍA): Ya estás conversando activamente con el usuario hoy. Está TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAMÁS digas "¡Hola!", "¡Buenos días!", "¡Qué gusto saludarte de nuevo!", "Es un placer tenerte por aquí") ni anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana lo que el usuario acaba de decir en el contexto previo.' :
             '- Si es el primer mensaje del día, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}\n` +
-          `${hasPriorHistory ? 
-            '- PROHIBICIÓN TOTAL DE RE-PERFILAR: NO vuelvas a preguntarle a qué se dedica, cuál es su rol en el sector ni qué hace, porque ya están en medio de la conversación. Si el usuario responde a una opción o pregunta anterior (ej: "En el que ya tengan", "El apartamento", "La casa", etc.), responde INMEDIATAMENTE sobre esa opción específica que venían hablando sin desviar la conversación.' : 
+          `${hasPriorHistory ?
+            '- PROHIBICIÓN TOTAL DE RE-PERFILAR: NO vuelvas a preguntarle a qué se dedica, cuál es su rol en el sector ni qué hace, porque ya están en medio de la conversación. Si el usuario responde a una opción o pregunta anterior (ej: "En el que ya tengan", "El apartamento", "La casa", etc.), responde INMEDIATAMENTE sobre esa opción específica que venían hablando sin desviar la conversación.' :
             '- PERFILAMIENTO INICIAL (SOLO SI ES PRIMER CONTACTO): JanIA no sabe de antemano a qué se dedica el usuario (puede ser propietario, comprador o colega). Si es la primera interacción, indaga amablemente a qué se dedica para enfocar la conversación con asertividad.'}\n` +
           `IDENTIDAD OFICIAL DE ESTA LÍNEA DE WHATSAPP (+57 319 291 9978):\n` +
           `- Este número anteriormente era el canal personal de Eduardo A. Rivera, pero AHORA es la línea oficial de JanIA (@JanIA_agente_IA_de_VECY), la Inteligencia Artificial inmobiliaria de VECY Bienes Raíces.\n` +
