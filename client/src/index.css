@@ -694,7 +694,7 @@
     display: none !important;
   }
 
-  /* Ajustar contenedor del documento formal para hoja blanca continua */
+  /* Ajustar contenedor del documento formal para hoja blanca continua y tipografía legal en blanco y negro */
   .print-document-sheet {
     box-shadow: none !important;
     border: none !important;
@@ -703,11 +703,49 @@
     max-width: 100% !important;
     width: 100% !important;
     background: #ffffff !important;
-    color: #111827 !important;
+    color: #000000 !important;
+  }
+
+  /* Forzar aspecto legal monocromático (blanco y negro estricto) en impresión/PDF */
+  .print-document-sheet,
+  .print-document-sheet * {
+    background: transparent !important;
+    color: #000000 !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  .print-document-sheet header {
+    border-bottom: 2px solid #000000 !important;
+  }
+
+  .print-document-sheet footer {
+    border-top: 1px solid #000000 !important;
+    color: #333333 !important;
+  }
+
+  .print-document-sheet .border-b,
+  .print-document-sheet .border-t,
+  .print-document-sheet .border {
+    border-color: #d1d5db !important;
+  }
+
+  .print-document-sheet .border-l-4 {
+    border-left: 3.5px solid #000000 !important;
+    border-top: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    background: transparent !important;
+    padding-left: 14px !important;
+  }
+
+  .print-document-sheet img {
+    filter: grayscale(100%) contrast(120%) !important;
   }
 
   /* Evitar saltos de página huérfanos en títulos de cláusulas */
   h1, h2, h3, h4, .clause-header {
+    color: #000000 !important;
     page-break-after: avoid;
     break-after: avoid;
   }

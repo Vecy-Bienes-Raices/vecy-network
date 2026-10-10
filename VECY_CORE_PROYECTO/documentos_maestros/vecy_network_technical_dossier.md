@@ -331,6 +331,43 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.79 — Octubre 2026
+
+#### 📌 DISEÑO GLASSMORPHISM / FROSTED GLASS UI EN TÉRMINOS Y PRIVACIDAD, IMPRESIÓN PDF MONOCROMÁTICA LEGAL ESTRICTA, ERRADICACIÓN ABSOLUTA DE 45/10/45 Y RATIFICACIÓN INSTITUCIONAL DEL MODELO 40/20/40
+
+**Requerimiento y Objetivos:**
+1. **Diseño Web Glassmorphism (Frosted Glass UI) con Iluminación Trasera**:
+   - Petición de Eduardo A. Rivera: Rediseñar las páginas de Términos y Condiciones y Política de Privacidad inspiradas en la tarjeta de cristal esmerilado con iluminación trasera y degradé de la Calculadora Tributaria Predial DIAN.
+   - En la web: Contenedores con `backdrop-blur-xl`, fondos translúcidos `bg-[#161c24]/85`, bordes dorados tenues `border-amber-500/20`, iluminación trasera en degradé `shadow-[0_0_60px_rgba(191,149,63,0.12)]`, sub-tarjetas con bordes cromáticos temáticos (Esmeralda para Período de Gracia, Dorado para Cierre Directo 80/20 y Cyan para Alianza 40/20/40) y badges institucionales de vigencia.
+2. **Impresión / Descarga PDF Legal Formal Monocromática (`@media print`)**:
+   - Petición de Eduardo A. Rivera: Garantizar que al imprimir o guardar como PDF mediante `window.print()`, el documento se genere como una hoja legal formal en blanco y negro puro, con fondo blanco limpio, tipografía negra nítida (`#000`), sin fondos oscuros pesados que consuman tinta innecesariamente.
+3. **Erradicación Absoluta de Esquemas 45/10/45 y Consagración del Modelo 40/20/40**:
+   - Doctrina de Eduardo: *"NO ES CUALQUIER PLATAFORMA NI CUALQUIER SIN NÚMERO DE SERVICIOS LOS QUE VAMOS A OFRECER, ESTO NO LO TIENE NI LO OFRECERÁ NADIE NUNCA"*.
+   - Se eliminaron de raíz todas las menciones a 45/10/45, 45/45/10 y 45/5/5/45 en los prompts del sistema y código fuente.
+   - Se ratificó el Modelo Doctrinal Sagrado de VECY BIENES RAÍCES:
+     * **40% Asesor Captador** (aporta la propiedad verificada).
+     * **40% Asesor Colocador** (aporta el cliente calificado y agenda la visita por Vecy Agenda).
+     * **20% VECY y Red Colaborativa** (10% Bolsa de Agentes Difusores + 10% VECY BIENES RAÍCES para soporte, servidores, blindaje jurídico e IA JanIA 24/7).
+     * **Período de Gracia Inmediata (Días 1 a 5 Calendario)**: 100% Asesor / $0 COP VECY.
+     * **Cierre Directo con Tecnología VECY (Día 6+ Calendario)**: 80% Asesor / 20% VECY BIENES RAÍCES.
+
+**Archivos Modificados:**
+- `client/src/index.css`: Reglas `@media print` perfeccionadas para renderizado legal monocromático estricto.
+- `client/src/pages/TerminosCondiciones.tsx`: Rediseño Glassmorphism / Frosted Glass UI con sub-tarjetas temáticas.
+- `client/src/pages/PoliticaPrivacidad.tsx`: Rediseño Glassmorphism / Frosted Glass UI con módulos temáticos.
+- `server/_core/prompts/base.md`: Sustitución de 45/45/10 y 45/5/5/45 por el modelo 40/20/40.
+- `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`: Eliminado 45/5/5/45 y ratificado 40/20/40.
+- `server/_core/janIA.ts`: Directivas de comisiones y prohibición de mención prematura de tecnicismos.
+- `server/_core/whatsapp-utils.ts` y `server/_core/cronService.ts`: Menciones erradicadas y unificadas a 40/20/40.
+- `server/__tests__/regression.test.ts`: Nueva prueba doctrinal de regresión v32.79 (170/170 tests passing al 100%).
+- `package.json`: Versión `32.79.0`.
+- `shared/const.ts`: Versión `v32.79`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 170/170 tests pasando al 100% ✅ | `npm run build` limpio ✅
+
+---
+
 ### 🔖 v32.78 — Octubre 2026
 
 #### 📌 DOCTRINA DE PASAPORTES EXTRANJEROS, CÉDULA CHINA DE LIU XINGJIE VS PASAPORTE OACI Y PROTOCOLO NOTARIAL SEGURO

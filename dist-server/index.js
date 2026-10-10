@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.78";
+    VECY_VERSION = "v32.79";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -11264,7 +11264,7 @@ function getEmpatheticReactionEmoji(text2, options) {
   if (clean.includes("vendo") || clean.includes("arriendo") || clean.includes("apartamento") || clean.includes("casa") || clean.includes("apto") || clean.includes("lote") || clean.includes("inmueble") || clean.includes("bodega") || clean.includes("finca") || clean.includes("oficina")) {
     return "\u{1F3E1}";
   }
-  if (clean.includes("bolsa") || clean.includes("matching") || clean.includes("alianza") || clean.includes("red") || clean.includes("45/10/45") || clean.includes("50/50") || clean.includes("colega") || clean.includes("punta")) {
+  if (clean.includes("bolsa") || clean.includes("matching") || clean.includes("alianza") || clean.includes("red") || clean.includes("40/20/40") || clean.includes("50/50") || clean.includes("colega") || clean.includes("punta")) {
     return "\u{1F91D}";
   }
   if (clean.includes("canal") || clean.includes("grupo") || clean.includes("comunidad")) {
@@ -22904,11 +22904,11 @@ PEDAGOG\xCDA DE REACCIONES Y EMOJIS EN GRUPOS INMOBILIARIOS:
      \u2022 \u{1F504} (Flechas circulares): DEMANDA / REQUERIMIENTO en PERMUTA PURA o intercambio.
   3. \xBFQU\xC9 PASA CUANDO HAY UN MATCH?:
      Cuando el motor de coincidencia detecta un MATCH compatible o perfecto entre una oferta y una demanda, le reporto internamente al equipo directivo de VECY BIENES RA\xCDCES (Eduardo y Jani), y uno de nuestros asesores comerciales se contactar\xE1 directamente contigo para coordinar la gesti\xF3n conjunta del negocio.
-  4. REGLA SAGRADA SOBRE COMISIONES Y TERCER\xCDA (DOCTRINA EDUARDO):
-     En VECY trabajamos en tercer\xEDa profesional para compartir la comisi\xF3n del 3% entre colegas de la red colaborativa.
-     \u26A0\uFE0F REGLA DE ORO DE EDUARDO: JanIA NUNCA debe adelantarse a fijar, mencionar ni imponer esquemas de comisi\xF3n (como "1/1/1" o "40/20/40" sobre el 3%). JanIA debe esperar a que sea el propio agente o colega quien exprese c\xF3mo acepta compartir esa comisi\xF3n o si no lo acepta, o permitir que sea el asesor humano de Vecy Bienes Ra\xEDces quien lo acuerde con \xE9l al momento del contacto comercial.
+  4. REGLA SAGRADA SOBRE COMISIONES Y RED COLABORATIVA (DOCTRINA EDUARDO):
+     En VECY operamos bajo el Modelo Institucional Doctrinal 40/20/40 (40% Asesor Captador, 40% Asesor Colocador agendado por Vecy Agenda, 10% Bolsa de Agentes Difusores y 10% VECY BIENES RA\xCDCES), adem\xE1s del Per\xEDodo de Gracia Inmediata (D\xEDas 1 a 5 al 100% Asesor / $0 COP VECY) y Cierres Directos al 80%/20%.
+     \u26A0\uFE0F REGLA DE ORO DE EDUARDO: JanIA NUNCA debe adelantarse a fijar, mencionar ni imponer esquemas t\xE9cnicos de comisi\xF3n en conversaciones iniciales. JanIA debe esperar a que sea el propio agente o colega quien exprese o pregunte c\xF3mo opera el modelo o permitir que sea el asesor humano de Vecy Bienes Ra\xEDces quien lo coordine con \xE9l al momento del contacto comercial.
 
-- PROHIBICI\xD3N ESTRICTA DE MENCIONAR "45/10/45" AL INICIO: Bajo NINGUNA circunstancia menciones "45/10/45", "bolsa colaborativa 45/10/45" ni esquemas de comisi\xF3n al inicio de la conversaci\xF3n o cuando pregunten por consultas. Nadie en el mercado conoce ese t\xE9rmino a\xFAn y confunde a los usuarios. Solo se hablar\xE1 de red colaborativa si el usuario pregunta expresamente sobre compartir inmuebles entre colegas.
+- PROHIBICI\xD3N ESTRICTA DE MENCIONAR ESQUEMAS DE COMISI\xD3N AL INICIO: Bajo NINGUNA circunstancia menciones esquemas de comisi\xF3n, porcentajes t\xE9cnicos ni tecnicismos de repartici\xF3n al inicio de la conversaci\xF3n o cuando pregunten por consultas. Confunde a los usuarios. Solo se hablar\xE1 del modelo colaborativo institucional 40/20/40 si el usuario pregunta expresamente sobre c\xF3mo se comparten comisiones entre colegas o sobre los T\xE9rminos y Condiciones.
 - CUANDO EL USUARIO PREGUNTE POR LAS CONSULTAS ("\xBFC\xF3mo es lo de las consultas?", etc.): NO sueltes un mon\xF3logo solo de la Polic\xEDa. Preg\xFAntale amablemente qu\xE9 clase de consulta desea realizar y dale el men\xFA organizado: 1 al 4 Gratuitas (Verificaci\xF3n de documentos ante Polic\xEDa Nacional, Factura Predial Bogot\xE1, Paz y Salvo IDU en PDF y Liquidaci\xF3n de Gastos Notariales/Registro); 5 al 11 Especializadas (Sondeos de mercado m\xB2, Asesor\xEDa jur\xEDdica en compraventa/arriendos, H\xE1beas Data, Cobranza de comisiones no pagadas, Aval\xFAos digitales RAA, Liquidaciones tributarias y Pr\xE9stamos hipotecarios).
 - REGLA TAJANTE DE COSTOS (100% GRATIS): Si el usuario pregunta por los costos de los servicios o herramientas de consulta que le acabas de nombrar (verificaci\xF3n de documentos, predial, paz y salvo IDU o liquidaci\xF3n notarial), responde con total claridad y entusiasmo: "\xA1Este servicio es completamente GRATIS!". Explica que no tiene ning\xFAn costo para \xE9l y an\xEDmalo de inmediato a probarlo.
 - DOCTRINA NOTARIAL, ESTUDIO DE T\xCDTULOS Y TIPOS DE NEGOCIACI\xD3N (COLOMBIA):
@@ -24447,7 +24447,7 @@ ${VECY_MOTTO_FOOTER}`;
     groupTitle = VECY_OFFICIAL_GROUPS.grupo3.name;
     text2 = `\u{1F680} *PROYECTO VECY BIENES RA\xCDCES \u2014 COMUNIDAD & MODELO COLABORATIVO* \u{1F310}
 
-\xBFQuieres compartir tus experiencias del d\xEDa a d\xEDa en el corretaje, proponer nuevas herramientas para la plataforma o conocer c\xF3mo ganar el 40%-45% cada 3-4 d\xEDas en red?
+\xBFQuieres compartir tus experiencias del d\xEDa a d\xEDa en el corretaje, proponer nuevas herramientas para la plataforma o conocer c\xF3mo ganar el 40% recurrente cada 3-4 d\xEDas bajo el modelo 40/20/40 en red?
 
 \u{1F4CC} *Foro de Comunidad y Proyecto:*
 *${VECY_OFFICIAL_GROUPS.grupo3.name}*
@@ -26070,7 +26070,7 @@ _La evoluci\xF3n inevitable para el sector de los bienes ra\xEDces._ \u{1F680}`
         // Semana 5: Modelo Colaborativo VECY - Velocidad vs Espera
         question: "\u26A1 Modelo Colaborativo VECY: \xBFQu\xE9 prefieres para tus ingresos como asesor inmobiliario?",
         options: [
-          "Ganar 40%-45% cada 3-4 d\xEDas con IA y red de aliados",
+          "Ganar 40% recurrente cada 3-4 d\xEDas en red (Modelo 40/20/40)",
           "Esperar 2 o 3 meses solo para ganar el 50% o 100%",
           "Combinar ambos esquemas seg\xFAn la exclusividad del predio"
         ]

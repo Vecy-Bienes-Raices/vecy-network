@@ -3552,6 +3552,30 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
       spy.mockRestore();
     });
+
+    it("Doctrina v32.79: Erradicación Absoluta de 45/10/45 y Consagración del Modelo Institucional 40/20/40", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+
+      const basePath = path.resolve(__dirname, "../_core/prompts/base.md");
+      const baseContent = fs.readFileSync(basePath, "utf-8");
+
+      const soporteLegalPath = path.resolve(__dirname, "../_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md");
+      const soporteContent = fs.readFileSync(soporteLegalPath, "utf-8");
+
+      // Verificación en base.md
+      expect(baseContent).toContain("40/20/40");
+      expect(baseContent).toContain("40% Asesor Captador");
+      expect(baseContent).toContain("40% Asesor Colocador");
+      expect(baseContent).not.toContain("45/10/45");
+      expect(baseContent).not.toContain("45/45/10");
+      expect(baseContent).not.toContain("45/5/5/45");
+
+      // Verificación en SOPORTE_LEGAL
+      expect(soporteContent).toContain("40/20/40");
+      expect(soporteContent).not.toContain("45/5/5/45");
+      expect(soporteContent).not.toContain("45/10/45");
+    });
   });
 });
 

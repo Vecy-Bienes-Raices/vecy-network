@@ -742,11 +742,11 @@ export function getEmpatheticReactionEmoji(
     return '🏡';
   }
 
-  // 11. Bolsa Inmobiliaria Colaborativa / Matching / Alianza 45/10/45 / Red
+  // 11. Bolsa Inmobiliaria Colaborativa / Matching / Alianza 40/20/40 / Red
   if (
     clean.includes('bolsa') || clean.includes('matching') ||
     clean.includes('alianza') || clean.includes('red') ||
-    clean.includes('45/10/45') || clean.includes('50/50') ||
+    clean.includes('40/20/40') || clean.includes('50/50') ||
     clean.includes('colega') || clean.includes('punta')
   ) {
     return '🤝';

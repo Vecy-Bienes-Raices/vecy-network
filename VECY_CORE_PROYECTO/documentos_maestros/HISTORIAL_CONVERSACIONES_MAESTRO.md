@@ -7,6 +7,45 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.79 — 10 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Diseño Web Glassmorphism (Frosted Glass UI) vs Impresión / Descarga PDF Legal Monocromático**:
+   - Eduardo solicitó: *"1. Revisa los términos y condiciones y la política de privacidad. Yo me refería era a que al descargarlos como documentos en el archivo PDF se vean como documento legal en blanco y negro, pero en la web deben tener su diseño y colores acorde al sitio... Me encantaría un diseño así para las páginas o al menos donde van los términos y políticas dentro de un tipo de card con este estilo tipo vidrio esmerilado y colores, se ve super genial. Me encantó, lo mismo deberias instituir para todas en todo el sitio, me encanta como que se ve que es un vidrio gris o blanco transparentosos no lo se como en degradé o iluminado desde atrás, no sé describirlo pero se ve genialísimo, no lo conocía."*
+2. **Erradicación Absoluta de 45/10/45 y Consagración del Modelo Institucional 40/20/40**:
+   - Eduardo instruyó tajantemente: *"En base a los términos y condiciones compara lo que JanIA debe saber al respecto del 40/20/40 porque parece que ella habla de un 45/10/45 hacia el cual intentamos migrar e imponer alguna vez, pero que realmente debe quedar como lo instituímos y nombramos en los términos y así debe quedar en todo lado, ya no debe haber en ninguna parte del código o del proyecto, en ningún archivo en relación esta mención, fue una locura intentar bajarle a VECY y a la Bolsa por darle más ganancia a los usuarios y vimos que eso no debe ser así, 'NO ES CUALQUIER PLATAFORMA NI CUALQUIER SIN NÚMERO DE SERVICIOS LOS QUE VAMOS A OFRECER, ESTO NO LO TIENE NI LO OFRECERÁ NADIE NUNCA'. Entonces por favor corrige y alinea a JanIA y su conocimiento con todo lo actual..."*
+3. **Explicación y Potenciación de la Calculadora de Liquidación Tributaria Predial (DIAN)**:
+   - Eduardo preguntó: *"Woow ni se como se usa esta herramienta o para que sirve, me cuentas cómo uso yo esa calculadora o si le hace falta algo más por implementarle. ??"*
+
+### Diagnóstico Técnico y Arquitectura de Solución
+1. **Diferenciación Visual Web vs Impresión PDF**:
+   - En pantalla web: Se adoptó la estética de **vidrio esmerilado (Frosted Glass / Glassmorphism)** con `backdrop-blur-xl`, fondos translúcidos carbón `bg-[#161c24]/85`, bordes dorados tenues `border-amber-500/20`, iluminación trasera en degradé difuso `shadow-[0_0_60px_rgba(191,149,63,0.12)]`, sub-tarjetas con acentos luminosos (Esmeralda para Período de Gracia, Dorado para Cierre Directo 80/20 y Cyan para Alianza 40/20/40), badges de vigencia y sellos institucionales.
+   - En descarga e impresión PDF (`window.print()`): Se aislaron las reglas `@media print` en `index.css` de modo que cualquier contenedor `.print-document-sheet` fuerce fondo blanco puro (`#fff`), texto negro formal (`#000`), sin fondos oscuros que gasten tinta, con bordes sobrios y membrete formal.
+2. **Origen de la Desalineación de Comisiones y Erradicación Total**:
+   - Se detectó que vestigios de un experimento anterior donde se propuso `45/10/45` o `45/5/5/45` permanecían en `base.md` (líneas 17-18, 232, 238-241), `VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` (líneas 66 y 68), `janIA.ts`, `whatsapp-utils.ts` y `cronService.ts`.
+   - Siguiendo la orden innegociable de Eduardo, se erradicó toda mención a `45/10/45`, `45/45/10` y `45/5/5/45` en todo el código y prompts.
+   - Se ratificó el Modelo Institucional Consagrado en los Términos y Condiciones:
+     • **40% Asesor Captador** (aporta la propiedad).
+     • **40% Asesor Colocador** (aporta el cliente calificado agendado por Vecy Agenda).
+     • **20% VECY y Bolsa Colaborativa** (10% Bolsa de Agentes Difusores + 10% VECY BIENES RAÍCES para soporte, servidores, blindaje jurídico e IA JanIA 24/7).
+     • **Período de Gracia Inmediata (Días 1 a 5 Calendario)**: 100% Asesor / $0 COP VECY.
+     • **Cierre Directo con Tecnología VECY (Día 6+ Calendario)**: 80% Asesor / 20% VECY BIENES RAÍCES.
+
+### Acciones Técnicas Ejecutadas
+1. **Frontend (`client/src/index.css`)**:
+   - Reforzado `@media print` para forzar hoja legal blanca con texto negro puro y ocultamiento de elementos interactivos.
+2. **Frontend (`client/src/pages/TerminosCondiciones.tsx` y `PoliticaPrivacidad.tsx`)**:
+   - Transformados completamente a tarjetas de vidrio esmerilado con iluminación trasera, degradé, badges oficiales y estructura por módulos temáticos.
+3. **Backend Prompts y Servicios (`server/_core/prompts/base.md`, `grupos/`, `janIA.ts`, `whatsapp-utils.ts`, `cronService.ts`)**:
+   - Unificación doctrinal absoluta al modelo 40/20/40 y supresión total de cifras deprecadas.
+4. **Pruebas Automatizadas**:
+   - Agregada prueba doctrinal en `server/__tests__/regression.test.ts` (170/170 tests Vitest pasando al 100%).
+   - Validación estricta con `npm run check` (0 errores de TypeScript).
+5. **Incremento de Versión Oficial**:
+   - `shared/const.ts` (`v32.79`) y `package.json` (`32.79.0`).
+
+---
+
 ## 📋 SESIÓN v32.78 — 09 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

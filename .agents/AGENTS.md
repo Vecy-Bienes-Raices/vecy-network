@@ -172,7 +172,25 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.78 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.79 — Octubre 2026
+
+### Novedades v32.79 (Diseño Glassmorphism / Frosted Glass UI en Términos y Privacidad, Impresión PDF Monocromática Legal Estricta, Erradicación Absoluta de 45/10/45 y Consagración del Modelo Institucional 40/20/40):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Diseño Web vs Impresión PDF Formal**:
+     - Eduardo solicitó: *"Revisa los términos y condiciones y la política de privacidad. Yo me refería era a que al descargarlos como documentos en el archivo PDF se vean como documento legal en blanco y negro, pero en la web deben tener su diseño y colores acorde al sitio... Me encantaría un diseño así para las páginas o al menos donde van los términos y políticas dentro de un tipo de card con este estilo tipo vidrio esmerilado y colores, se ve super genial. Me encantó, lo mismo deberias instituir para todas en todo el sitio, me encanta como que se ve que es un vidrio gris o blanco transparentosos no lo se como en degradé o iluminado desde atrás, no sé describirlo pero se ve genialísimo..."*
+  2. **Erradicación de 45/10/45 y Ratificación Doctrinal del 40/20/40**:
+     - Eduardo instruyó: *"En base a los términos y condiciones compara lo que JanIA debe saber al respecto del 40/20/40 porque parece que ella habla de un 45/10/45 hacia el cual intentamos migrar e imponer alguna vez, pero que realmente debe quedar como lo instituímos y nombramos en los términos y así debe quedar en todo lado, ya no debe haber en ninguna parte del código o del proyecto, en ningún archivo en relación esta mención, fue una locura intentar bajarle a VECY y a la Bolsa por darle más ganancia a los usuarios y vimos que eso no debe ser así, 'NO ES CUALQUIER PLATAFORMA NI CUALQUIER SIN NÚMERO DE SERVICIOS LOS QUE VAMOS A OFRECER, ESTO NO LO TIENE NI LO OFRECERÁ NADIE NUNCA'. Entonces por favor corrige y alinea a JanIA y su conocimiento con todo lo actual..."*
+  3. **Modificaciones Implementadas**:
+     - `client/src/index.css`: Reglas `@media print` perfeccionadas para que todo hijo de `.print-document-sheet` se renderice estrictamente monocromático (hoja legal blanca, tipografía negra `#000`, sin fondos pesados que gasten tinta).
+     - `client/src/pages/TerminosCondiciones.tsx` y `client/src/pages/PoliticaPrivacidad.tsx`: Rediseñados como tarjetas de vidrio esmerilado (`bg-[#161c24]/85 backdrop-blur-xl`), iluminación trasera dorada suave (`shadow-[0_0_60px_rgba(191,149,63,0.12)]`), degradé perimetral, sellos de vigencia y sub-tarjetas con bordes luminosos por figura contractual.
+     - `server/_core/prompts/base.md`: Reemplazo de 45/45/10 y 45/5/5/45 por el Modelo Institucional Doctrinal **40/20/40** (40% Captador + 40% Colocador + 20% VECY y Red: 10% Bolsa Difusores y 10% VECY BIENES RAÍCES), Período de Gracia Inmediata (Días 1 a 5 al 100% Asesor / $0 COP VECY) y Cierre Directo (Día 6+ al 80%/20%).
+     - `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`: Eliminado 45/5/5/45 y ratificado el Modelo 40/20/40.
+     - `server/_core/janIA.ts`: Directivas de comisión actualizadas al modelo 40/20/40 y prohibición de mención prematura de tecnicismos.
+     - `server/_core/whatsapp-utils.ts` y `server/_core/cronService.ts`: Menciones erradicadas y alineadas a 40/20/40.
+     - `server/__tests__/regression.test.ts`: Nueva prueba doctrinal de regresión v32.79 con 170/170 tests passing al 100%.
+     - `shared/const.ts` (`v32.79`) y `package.json` (`32.79.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.78 — Octubre 2026
 
 ### Novedades v32.78 (Doctrina de Pasaportes Extranjeros, Cédula China de Liu Xingjie vs Pasaporte OACI, Desmitificación de Antecedentes y Protocolo Notarial):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

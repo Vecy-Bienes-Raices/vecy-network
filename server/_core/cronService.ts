@@ -1427,7 +1427,7 @@ export const WEEKLY_POLLS_LIST: PollDefinition[] = [
     // Semana 5: Modelo Colaborativo VECY - Velocidad vs Espera
     question: "⚡ Modelo Colaborativo VECY: ¿Qué prefieres para tus ingresos como asesor inmobiliario?",
     options: [
-      "Ganar 40%-45% cada 3-4 días con IA y red de aliados",
+      "Ganar 40% recurrente cada 3-4 días en red (Modelo 40/20/40)",
       "Esperar 2 o 3 meses solo para ganar el 50% o 100%",
       "Combinar ambos esquemas según la exclusividad del predio"
     ]
@@ -1588,7 +1588,7 @@ export async function publishChannelGroupInvitation(targetGroupKey: 'grupo1' | '
   } else if (targetGroupKey === 'grupo3') {
     groupTitle = VECY_OFFICIAL_GROUPS.grupo3.name;
     text = `🚀 *PROYECTO VECY BIENES RAÍCES — COMUNIDAD & MODELO COLABORATIVO* 🌐\n\n` +
-      `¿Quieres compartir tus experiencias del día a día en el corretaje, proponer nuevas herramientas para la plataforma o conocer cómo ganar el 40%-45% cada 3-4 días en red?\n\n` +
+      `¿Quieres compartir tus experiencias del día a día en el corretaje, proponer nuevas herramientas para la plataforma o conocer cómo ganar el 40% recurrente cada 3-4 días bajo el modelo 40/20/40 en red?\n\n` +
       `📌 *Foro de Comunidad y Proyecto:*\n` +
       `*${VECY_OFFICIAL_GROUPS.grupo3.name}*\n\n` +
       `• Charlas libres del sector inmobiliario, foros y experiencias reales.\n` +
