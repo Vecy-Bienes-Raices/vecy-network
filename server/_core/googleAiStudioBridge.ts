@@ -26,7 +26,7 @@ export interface AiStudioResponse {
   error?: string;
 }
 
-const DEFAULT_MODEL = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-3.8-flash";
 
 /**
  * Obtiene el pool de claves de Google AI Studio configuradas en el entorno
@@ -135,11 +135,15 @@ export async function checkAiStudioHealth(): Promise<{ healthy: boolean; modelsC
   try {
     const res = await axios.get(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`, { timeout: 10000 });
     const models = res.data?.models || [];
-    const names = models.map((m: any) => m.name.replace("models/", "")).slice(0, 8);
+    const names: string[] = models.map((m: any) => m.name.replace("models/", ""));
+    // Filtrar y destacar los modelos insignia de vanguardia
+    const flagshipList = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.1-pro-preview", "gemini-2.5-pro", "gemini-2.5-flash", "antigravity-preview-latest", "deep-research-max-preview-04-2026"];
+    const highlighted = names.filter(n => flagshipList.includes(n));
+    const finalSamples = Array.from(new Set([...highlighted, ...names])).slice(0, 10);
     return {
       healthy: true,
       modelsCount: models.length,
-      sampleModels: names
+      sampleModels: finalSamples
     };
   } catch (err: any) {
     return {
@@ -158,11 +162,13 @@ if (process.argv[1]?.endsWith("googleAiStudioBridge.ts") || process.argv[1]?.end
     const health = await checkAiStudioHealth();
     console.log("Estado de conexión:", health.healthy ? "✅ CONECTADO EXITOSAMENTE" : "❌ FALLIDO");
     console.log("Modelos disponibles:", health.modelsCount);
-    console.log("Modelos de muestra:", health.sampleModels);
+    console.log("Modelos Insignia destacados:", health.sampleModels);
 
     if (health.healthy) {
-      console.log("\n--- PRUEBA DE CONSULTA SEGURA CON SANITIZACIÓN ---");
-      const res = await queryGoogleAiStudio("Explica en dos líneas la regla de oro del requerimiento inmobiliario en Colombia.");
+      console.log("\n--- PRUEBA DE CONSULTA SEGURA CON SANITIZACIÓN (GEMINI 3.8 FLASH) ---");
+      const res = await queryGoogleAiStudio("Explica en dos líneas la regla de oro del requerimiento inmobiliario en Colombia.", {
+        model: "gemini-3.8-flash"
+      });
       console.log("Respuesta:", res.content);
       console.log("Modelo usado:", res.modelUsed);
       console.log("Sanitización:", res.sanitizationSummary);
