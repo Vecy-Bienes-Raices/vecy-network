@@ -331,6 +331,42 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.77 — Octubre 2026
+
+#### 📌 CORTAFUEGOS DE PRIVACIDAD DOCTRINAL, INTEGRACIÓN SEGURA CON GOOGLE AI STUDIO Y REPOSITORIO DE KNOW-HOW INMOBILIARIO
+
+**Requerimiento y Objetivos:**
+1. **Implementación de Seguridad y Privacidad Doctrinal**:
+   - Eduardo autorizó: *"Entonces adelante ponle la seguridad y privacidad correspondiente"*, para permitir conectar Antigravity con Gemini Web y Google AI Studio protegiendo al 100% los secretos comerciales y datos personales de clientes y colegas.
+2. **Arquitectura de Cortafuegos de Privacidad**:
+   - Creado `server/_core/doctrinalSanitizer.ts`: Motor que intercepta, anonimiza y purifica cualquier conocimiento derivado de Gemini Web o AI Studio.
+   - Enmascara números telefónicos privados (`[TELÉFONO_PROTEGIDO]`) preservando únicamente las líneas oficiales de Vecy (+573192919978 y +573166569719).
+   - Anonimiza nombres de personas en disputas comerciales por roles genéricos (*"el colega renuente"*, etc.).
+   - Oculta direcciones exactas residenciales (`[PREDIO_EN_SECTOR_RESIDENCIAL]`) y protege cédulas.
+   - Validador `validatePromptSafety` para certificar la inocuidad de textos antes de incorporarlos a JanIA.
+3. **Conector Oficial a Google AI Studio (`server/_core/googleAiStudioBridge.ts`)**:
+   - Integración directa con la API gratuita de desarrolladores de Google AI Studio (`GEMINI_API_KEY`).
+   - Función `queryGoogleAiStudio` con sanitización forzosa y `checkAiStudioHealth` (50 modelos confirmados en vivo).
+   - Comando `npm run studio:check` integrado en `package.json`.
+4. **Repositorio Doctrinal Maestro (`VECY_CORE_PROYECTO/doctrina_gemini/`)**:
+   - `01_procedimiento_cobro_comisiones.md` (Código de Comercio Art. 1340-1346, acervo probatorio y proceso monitorio).
+   - `02_validez_firma_electronica_contratos.md` (Ley 527/1999, Decreto 2364/2012, promesa digital vs escritura pública).
+   - `03_calidad_de_demandas_y_geografia.md` (Geografía Cali Norte/Oeste vs Bogotá, Garbage In Garbage Out y Fórmula de Oro).
+   - `04_estudio_titulos_y_autenticidad_documental.md` (SNR tradición a 20 años, falsa tradición y medidas cautelares).
+
+**Archivos Modificados:**
+- `server/_core/doctrinalSanitizer.ts`: Módulo de sanitización y privacidad doctrinal.
+- `server/_core/googleAiStudioBridge.ts`: Conector y verificador de salud para Google AI Studio.
+- `VECY_CORE_PROYECTO/doctrina_gemini/`: 4 capítulos doctrinales y README.
+- `server/__tests__/doctrinalSanitizer.test.ts`: Pruebas de cortafuegos (168/168 tests Vitest ✅).
+- `package.json`: Script `studio:check` y versión `32.77.0`.
+- `shared/const.ts`: Versión `v32.77`.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 168/168 tests pasando al 100% ✅ | `npm run build` limpio en 11s ✅
+
+---
+
 ### 🔖 v32.76 — Octubre 2026
 
 #### 📌 AUTONOMÍA DE IA PURA ANTE REQUERIMIENTOS Y ANÉCDOTAS, BLINDAJE CONTRA FALSA DETECCIÓN DE CÉDULAS EN VALORES MONETARIOS ($700.000.000) Y DIFERENCIACIÓN GEOGRÁFICA CALI VS BOGOTÁ

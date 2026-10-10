@@ -7,6 +7,45 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.77 — 09 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Implementación de Seguridad y Privacidad Doctrinal para Conectar Antigravity con Gemini Web y Google AI Studio**:
+   - Eduardo autorizó: *"Entonces adelante ponle la seguridad y privacidad correspondiente"*, tras evaluar el análisis de riesgos de fuga de información privada (Data Leakage) y la arquitectura de 3 capas propuesta.
+
+### Diagnóstico Técnico y Arquitectura de Cortafuegos
+1. **Riesgo de Data Leakage Mitigado**:
+   - En las sesiones de trabajo de Eduardo en Gemini Web y AI Studio existen casos con nombres propios de colegas y clientes en litigio (ej: Orlando Bermúdez, disputas de comisiones, predios privados y proyectos no públicos).
+   - Inyectar dichos textos crudos en JanIA expondría información sensible a los usuarios de WhatsApp o la Web.
+   - Solución: Aislar el know-how técnico (principios jurídicos del Código de Comercio, leyes notariales y métodos operativos) del dato personal o comercial privado.
+
+### Acciones Técnicas Ejecutadas
+1. **Motor de Sanitización Doctrinal (`server/_core/doctrinalSanitizer.ts`)**:
+   - Implementada función `sanitizeDoctrinalText`:
+     • Oculta teléfonos privados mediante máscara `[TELÉFONO_PROTEGIDO]`, preservando exclusivamente las líneas oficiales de Vecy (`+573192919978` y `+573166569719`).
+     • Protege correos electrónicos personales y documentos de identidad.
+     • Anonimiza nombres de personas en disputas por roles genéricos (*"el colega renuente al pago"*, *"la compradora titular"*, etc.).
+     • Enmascara direcciones residenciales exactas (`[PREDIO_EN_SECTOR_RESIDENCIAL]`).
+     • Alerta sobre marcadores de confidencialidad interna.
+   - Implementado validador `validatePromptSafety` para auditar fragmentos antes de su inyección a prompts públicos.
+2. **Conector Oficial a Google AI Studio (`server/_core/googleAiStudioBridge.ts`)**:
+   - Implementado conector `queryGoogleAiStudio` con soporte de modelos de frontera (`gemini-2.5-flash`, `gemini-2.5-pro`) y sanitización obligatoria.
+   - Función de diagnóstico `checkAiStudioHealth` (50 modelos disponibles confirmados en tiempo real).
+   - Comando `npm run studio:check` integrado en `package.json`.
+3. **Repositorio de Doctrina y Know-How Inmobiliario (`VECY_CORE_PROYECTO/doctrina_gemini/`)**:
+   - `README.md`: Protocolo de seguridad y privacidad doctrinal.
+   - `01_procedimiento_cobro_comisiones.md`: Protocolo legal de corretaje (Art. 1340-1346 C.Co., tercería 50/50, acervo probatorio y proceso monitorio).
+   - `02_validez_firma_electronica_contratos.md`: Equivalencia funcional (Ley 527/1999, Decreto 2364/2012, promesa digital vs escritura pública).
+   - `03_calidad_de_demandas_y_geografia.md`: Geografía Cali vs Bogotá, Garbage In Garbage Out y Fórmula de Oro de Requerimientos.
+   - `04_estudio_titulos_y_autenticidad_documental.md`: Estudio de títulos a 20 años en la SNR, falsa tradición y medidas cautelares.
+4. **Pruebas y Verificación**:
+   - Creado `server/__tests__/doctrinalSanitizer.test.ts` con 5 pruebas unitarias exhaustivas (168/168 pruebas Vitest aprobadas al 100%).
+   - Verificación de tipos `npm run check` con 0 errores.
+   - Compilación exitosa `npm run build` en 11s.
+   - Versión incrementada a `v32.77` (`32.77.0`) en `shared/const.ts` y `package.json`.
+
+---
+
 ## 📋 SESIÓN v32.76 — 09 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

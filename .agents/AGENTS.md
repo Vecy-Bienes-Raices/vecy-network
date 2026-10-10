@@ -172,7 +172,35 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.76 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.77 — Octubre 2026
+
+### Novedades v32.77 (Cortafuegos de Privacidad Doctrinal, Integración Segura con Google AI Studio y Banco de Know-How Inmobiliario):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Orden de Implementación de Seguridad y Privacidad**:
+     - Eduardo autorizó: *"Entonces adelante ponle la seguridad y privacidad correspondiente"*, tras evaluar el protocolo de 3 capas para conectar Antigravity con Gemini Web y Google AI Studio protegiendo al 100% los secretos comerciales y datos personales.
+  2. **Arquitectura de Cortafuegos y Privacidad Implementada**:
+     - Creado `server/_core/doctrinalSanitizer.ts`: Motor que intercepta, anonimiza y purifica cualquier conocimiento derivado de Gemini Web o AI Studio.
+     - Protege teléfonos personales (preservando solo las líneas oficiales de Vecy +573192919978 y +573166569719), cédulas, direcciones exactas de domicilios privados y sustituye nombres de terceros en disputas por roles genéricos (*"el colega renuente"*, etc.).
+     - Validador estricto `validatePromptSafety` que impide inyectar fragmentos inseguros a los prompts públicos de WhatsApp o Web.
+  3. **Conector Oficial a Google AI Studio (`server/_core/googleAiStudioBridge.ts`)**:
+     - Módulo de integración directa con la API gratuita de desarrolladores de Google AI Studio (`GEMINI_API_KEY`).
+     - Función `queryGoogleAiStudio` con sanitización obligatoria y health check `checkAiStudioHealth` (50 modelos disponibles validados en tiempo real).
+     - Comando `npm run studio:check` integrado en `package.json`.
+  4. **Repositorio de Doctrina y Know-How Inmobiliario (`VECY_CORE_PROYECTO/doctrina_gemini/`)**:
+     - Creados los 4 capítulos doctrinales maestros 100% anonimizados:
+       • `01_procedimiento_cobro_comisiones.md` (Código de Comercio Art. 1340-1346, acervo probatorio y proceso monitorio).
+       • `02_validez_firma_electronica_contratos.md` (Ley 527/1999, equivalencia funcional de promesa de compraventa vs escritura pública).
+       • `03_calidad_de_demandas_y_geografia.md` (Geografía Cali Norte/Oeste vs Bogotá, Garbage In Garbage Out y Fórmula de Oro).
+       • `04_estudio_titulos_y_autenticidad_documental.md` (SNR tradición a 20 años, falsa tradición y prevención de fraudes).
+  5. **Modificaciones Implementadas**:
+     - `server/_core/doctrinalSanitizer.ts`: Cortafuegos de anonimización y privacidad.
+     - `server/_core/googleAiStudioBridge.ts`: Conector directo a Google AI Studio.
+     - `VECY_CORE_PROYECTO/doctrina_gemini/`: Directorio doctrinal con 4 capítulos y README maestro.
+     - `server/__tests__/doctrinalSanitizer.test.ts`: Pruebas de cortafuegos (168/168 pruebas Vitest passing al 100%).
+     - `package.json`: Script `studio:check` y versión `32.77.0`.
+     - `shared/const.ts`: Versión `v32.77`.
+
+## 🔖 VERSIÓN ANTERIOR: v32.76 — Octubre 2026
 
 ### Novedades v32.76 (Autonomía de IA Pura ante Requerimientos y Anécdotas Conversacionales, Blindaje contra Falsa Detección de Cédulas en Valores Monetarios y Diferenciación Geográfica Cali vs Bogotá):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
