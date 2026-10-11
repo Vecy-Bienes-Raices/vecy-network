@@ -172,7 +172,34 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.85 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.86 — Octubre 2026
+
+### Novedades v32.86 (Bóveda JanIA Express de Trámites Gratuitos 24/7, Portafolio Integral de Negocio y Protección de Dirección Familiar):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Portafolio Real y Diversificado de Servicios de Vecy Bienes Raíces**:
+     - Eduardo detalló el alcance integral de las líneas de negocio de Vecy:
+       • Gestión de liquidez patrimonial y créditos de libre inversión respaldados con garantía hipotecaria a través de particulares y fondos privados (sin intermediación bancaria tradicional; con prohibición estricta de mencionar nombres de entidades particulares a terceros).
+       • Blindaje jurídico, redacción profesional de contratos, cobro pre-jurídico y recuperación efectiva de comisiones inmobiliarias impagas, resolución de incumplimientos y saneamiento crediticio (Hábeas Data / Ley 2157).
+       • Avalúos comerciales y estudios de mercado con Inteligencia Artificial (JanIA) para venta y arriendo en Bogotá y Colombia.
+       • Soluciones PropTech: desarrollo de sitios web y tiendas inmobiliarias para agentes, formulario inteligente de agendamiento y reserva con verificación documental (*Vecy Agenda*) y ciberseguridad.
+       • Trámites notariales, estudios de títulos de tradición de 20 años, sucesiones, desenglobes y conciliación inmobiliaria.
+  2. **Bóveda JanIA Express de Trámites y Certificados 100% Gratuitos ($0 COP en WhatsApp)**:
+     - Eduardo instruyó: *"Pon todo lo que le estamos enseñando a JanIA para que ofrezca y gestione esos servicios gratuitos de Verificación de documentos y reportes de antecedentes a los visitantes de propiedades, entrega de factura predial y paz y salvo predial en tiempo record, entrega de paz y salvo de Idu y lo que creas que podemos acabarle de poner a JanIA... etc..."*
+     - En `client/src/pages/Services.tsx` se integró la sección estelar *"JANIA EXPRESS: TRÁMITES Y CERTIFICADOS SIN COSTO 24/7"*:
+       • 🛡️ *Verificación de Identidad & Antecedentes (KYC)*: Consulta preventiva ante Policía Nacional de visitantes y compradores para blindaje y seguridad de propietarios y agentes.
+       • 📄 *Factura Predial & Paz y Salvo Distrital en PDF*: Conexión directa con la Secretaría Distrital de Hacienda de Bogotá mediante código CHIP.
+       • 🏛️ *Paz y Salvo de Valorización IDU Bogotá en PDF*: Certificado oficial notarial con PIN de seguridad bajo el Acuerdo Distrital 915.
+       • ⚖️ *Simulador Notarial & Liquidación de Escrituración*: Cálculo exacto de derechos notariales, impuesto de registro (beneficencia), retención en la fuente y gastos compartidos (SNR).
+     - Se vinculó el socket oficial de Baileys (`+573192919978`) para los trámites automatizados de JanIA y el número de atención bróker (`+573166569719`) para los servicios comerciales de consultoría.
+  3. **Blindaje de Privacidad y Retiro de Dirección Residencial Familiar**:
+     - Se eliminó la dirección de la calle (`Cra. 14a #118-21`) de `client/index.html` (Schema.org) y `client/src/pages/Contact.tsx`.
+     - La presencia se consagró como *Ecosistema 100% Digital con Cobertura Metropolitana en Bogotá D.C. y Sabana Norte*.
+  4. **Doctrina JanIA en `server/_core/prompts/base.md`**:
+     - Se incorporó la sección oficial *"CATÁLOGO OFICIAL DE SERVICIOS GRATUITOS Y ESPECIALIZADOS DE VECY BIENES RAÍCES (DOCTRINA JANIA)"*, instruyendo a JanIA a promover con calidez y entusiasmo los trámites gratuitos y remitir los casos comerciales al bróker.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 173/173 tests passing ✅ | `npm run build` limpio en 24.70s ✅
+- `shared/const.ts` (`v32.86`) y `package.json` (`32.86.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.85 — Octubre 2026
 
 ### Novedades v32.85 (Infraestructura SEO On-Page, Google Search Console Verification, robots.txt, sitemap.xml Oficial y Schema RealEstateAgent):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

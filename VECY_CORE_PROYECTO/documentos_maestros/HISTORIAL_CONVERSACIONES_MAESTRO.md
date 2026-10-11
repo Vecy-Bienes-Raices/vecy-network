@@ -7,6 +7,49 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.86 — 11 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Clarificación y Alcance del Portafolio Real de Vecy Bienes Raíces**:
+   - Eduardo explicó detalladamente todas las líneas de negocio de la empresa:
+     • Préstamos y consecución de liquidez con garantía hipotecaria de libre inversión a través de particulares y fondos privados para libre inversión, emprendimientos o deudas (sin intermediación bancaria tradicional; prohibición estricta de mencionar nombres de entidades particulares a clientes).
+     • Redacción profesional de promesas de compraventa y contratos de arriendo; cobro pre-jurídico y recuperación efectiva de comisiones no pagadas, solución de incumplimientos y saneamiento crediticio (Hábeas Data / Ley 2157 de borrón y cuenta nueva).
+     • Avalúos comerciales y estudios de mercado m² con IA en Bogotá y Colombia.
+     • PropTech: desarrollo web de portales y tiendas inmobiliarias para agentes, formulario inteligente *Vecy Agenda* con verificación documental y ciberseguridad.
+     • Trámites notariales, estudios de títulos de 20 años, desenglobes, cancelaciones de patrimonio de familia y sucesiones.
+2. **Instrucción de Bóveda JanIA Express de Trámites Gratuitos ($0 COP)**:
+   - Eduardo instruyó: *"Pon todo lo que le estamos enseñando a JanIA para que ofrezca y gestione esos servicios gratuitos de Verificación de documentos y reportes de antecedentes a los visitantes de propiedades, entrega de factura predial y paz y salvo predial en tiempo record, entrega de paz y salvo de Idu y lo que creas que podemos acabarle de poner a JanIA... etc..."*
+3. **Protección y Retiro de Dirección Residencial Familiar**:
+   - Consulta de Eduardo sobre la conveniencia de retirar la dirección de su hogar para no exponer a su familia ante personas inescrupulosas.
+
+### Diagnóstico Técnico y Arquitectura de Solución
+1. **Protección de Datos y Modelo 100% Virtual**:
+   - Se evaluó el riesgo de seguridad física y familiar. Se confirmó que Google Perfil de Empresa y Schema.org permiten y fomentan operar como "Empresa de Servicios / Cobertura Metropolitana" (Service Area Business) sin local visible. Se erradicó la dirección residencial (`Cra. 14a #118-21`) de `client/index.html` y `client/src/pages/Contact.tsx`.
+2. **Arquitectura del Portafolio en `client/src/pages/Services.tsx`**:
+   - Se dividió la experiencia en dos grandes secciones:
+     • **JANIA EXPRESS: Trámites Cívicos Gratuitos 24/7 en WhatsApp** (`+573192919978`): 1) Verificación KYC y antecedentes ante Policía Nacional de visitantes; 2) Factura Predial Bogotá y Certificado Oficial de Pago SDH en PDF; 3) Paz y Salvo de Valorización IDU en PDF con PIN notarial oficial; 4) Calculadora Notarial y Liquidación de Gastos de Escrituración y Registro (SNR).
+     • **Servicios Estratégicos & Bróker** (`+573166569719`): Inmuebles de Autor (40/20/40), Préstamos con Garantía Hipotecaria (Libre Inversión), Blindaje Jurídico y Cobro Prejurídico, Avalúos con IA, Soluciones PropTech y Saneamiento Notarial.
+3. **Doctrina JanIA en `server/_core/prompts/base.md`**:
+   - Se incluyó la sección oficial del catálogo de servicios para que JanIA conozca su oferta gratuita y especializada, guiando y derivando asertivamente a los usuarios.
+
+### Acciones Técnicas Ejecutadas
+1. **Actualización de `client/src/pages/Services.tsx`**:
+   - Rediseñado completamente con badges esmeralda para JanIA Express ($0 COP) y badges dorados para los servicios estratégicos de autor, botones inteligentes a WhatsApp con mensajes pre-redactados y animaciones `ScrollReveal`.
+2. **Actualización de `client/src/pages/Contact.tsx`**:
+   - Eliminada la dirección física familiar; redefinida la sede como *Operación 100% Digital con Cobertura Metropolitana en Bogotá D.C. y Sabana Norte*; actualizado el enlace de WhatsApp al bróker oficial `+573166569719`.
+3. **Actualización de `client/index.html`**:
+   - Eliminado `streetAddress` en Schema.org JSON-LD para proteger la privacidad familiar.
+4. **Actualización de `server/_core/prompts/base.md`**:
+   - Añadida la sección *"CATÁLOGO OFICIAL DE SERVICIOS GRATUITOS Y ESPECIALIZADOS DE VECY BIENES RAÍCES (DOCTRINA JANIA)"*.
+5. **Pruebas y Verificación**:
+   - `npm run check`: 0 errores TypeScript.
+   - `npm test`: 173/173 tests passing al 100% (incluyendo nuevo test suite de Doctrina v32.86).
+   - `npm run build`: Compilación limpia completada en 24.70s.
+6. **Incremento de Versión Oficial**:
+   - `shared/const.ts` (`v32.86`) y `package.json` (`32.86.0`).
+
+---
+
 ## 📋 SESIÓN v32.85 — 10 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

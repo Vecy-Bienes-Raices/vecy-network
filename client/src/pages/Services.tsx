@@ -2,96 +2,317 @@ import React from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import NetworkBackground from '@/components/NetworkBackground';
-import { Shield, BarChart3, Gavel, Landmark, ArrowRight, Star, Sparkles } from 'lucide-react';
+import { 
+  Building2, 
+  Coins, 
+  Scale, 
+  BrainCircuit, 
+  Laptop, 
+  FileCheck2, 
+  ArrowRight, 
+  Star, 
+  Sparkles, 
+  ShieldCheck, 
+  CheckCircle2, 
+  MessageSquare,
+  Bot,
+  FileText,
+  BadgeCheck,
+  Calculator,
+  Landmark,
+  Zap
+} from 'lucide-react';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { useLocation } from 'wouter';
 
-const services = [
+interface FreeJanIAService {
+  id: string;
+  badge: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  features: string[];
+  ctaText: string;
+  waMessage: string;
+}
+
+interface CommercialService {
+  id: string;
+  badge: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  features: string[];
+  ctaText: string;
+  waMessage: string;
+}
+
+// 🤖 BÓVEDA DE TRÁMITES Y CERTIFICADOS GRATUITOS 24/7 CON JANIA BOT (SOCKET BAILEYS: +573192919978)
+const freeJanIAServices: FreeJanIAService[] = [
   {
-    title: "Asesoramiento Inmobiliario Premium",
-    description: "Consultoría experta para encontrar la propiedad perfecta. Analizamos tus necesidades y presupuesto para ofrecerte opciones exclusivas que no están en el mercado abierto.",
-    icon: <Shield className="w-12 h-12 text-accent" />,
-    features: ["Búsqueda personalizada", "Visitas VIP", "Negociación de contratos"]
+    id: "verificacion-kyc",
+    badge: "100% GRATUITO • SEGURIDAD PREVENTIVA",
+    title: "Verificación de Identidad & Antecedentes (KYC)",
+    description: "Protegemos la seguridad e integridad de propietarios y asesores. JanIA consulta antecedentes en la Policía Nacional y valida la autenticidad de la cédula de cualquier visitante o comprador antes de ingresar a la propiedad.",
+    icon: <BadgeCheck className="w-9 h-9 text-emerald-400" />,
+    features: [
+      "Consulta preventiva de antecedentes ante Policía Nacional",
+      "Validación de cédulas de visitantes y compradores",
+      "Blindaje preventivo para propietarios y colegas",
+      "Reporte instantáneo por chat en 15 segundos"
+    ],
+    ctaText: "Verificar Cédula con JanIA",
+    waMessage: "JanIA, quiero verificar los antecedentes y documento de un visitante para una propiedad."
   },
   {
-    title: "Análisis de Mercado Avanzado",
-    description: "Utilizamos Big Data e Inteligencia Artificial (JanIA) para proyectar rentabilidades, plusvalías y tendencias en los barrios más exclusivos de Bogotá.",
-    icon: <BarChart3 className="w-12 h-12 text-accent" />,
-    features: ["Reportes de ROI", "Estudios de gentrificación", "Análisis comparativo"]
+    id: "predial-sdh",
+    badge: "100% GRATUITO • TIEMPO RÉCORD",
+    title: "Factura Predial & Paz y Salvo Distrital en PDF",
+    description: "Conexión directa con la Secretaría Distrital de Hacienda de Bogotá. Descarga en segundos tu factura con código de barras para pago en bancos/Efecty o el certificado oficial de pago y paz y salvo vigencia 2026. Solo envía el código CHIP.",
+    icon: <FileText className="w-9 h-9 text-emerald-400" />,
+    features: [
+      "Descarga inmediata de factura con código de barras",
+      "Certificado oficial de pago y paz y salvo distrital",
+      "Válido para trámites notariales y bancarios",
+      "Solo requiere el código CHIP del inmueble"
+    ],
+    ctaText: "Pedir Predial con CHIP",
+    waMessage: "JanIA, sácame la factura y paz y salvo del impuesto predial de Bogotá con el código CHIP."
   },
   {
-    title: "Gestión Legal y Notarial",
-    description: "Apoyo legal completo para asegurar que tu inversión sea segura y transparente. Nos encargamos de todo el papeleo y la validación jurídica.",
-    icon: <Gavel className="w-12 h-12 text-accent" />,
-    features: ["Estudio de títulos", "Promesas de compraventa", "Escrituración rápida"]
+    id: "idu-valorizacion",
+    badge: "100% GRATUITO • TRÁMITE NOTARIAL",
+    title: "Paz y Salvo de Valorización IDU Bogotá en PDF",
+    description: "Expedición oficial y entrega directa en archivo PDF del Certificado de Estado de Cuenta para Trámite Notarial (Paz y Salvo de Valorización) del Instituto de Desarrollo Urbano (IDU) con PIN de seguridad oficial bajo el Acuerdo Distrital 915.",
+    icon: <Landmark className="w-9 h-9 text-emerald-400" />,
+    features: [
+      "Certificado oficial en PDF con PIN de seguridad",
+      "Exigido obligatoriamente en Notarías para escrituración",
+      "Validación inmediata de gravámenes por valorización",
+      "Descarga 100% gratuita y sin intermediarios"
+    ],
+    ctaText: "Obtener Paz y Salvo IDU",
+    waMessage: "JanIA, sácame el paz y salvo de valorización del IDU con el CHIP."
   },
   {
-    title: "Estructuración Financiera",
-    description: "Te conectamos con las mejores opciones de financiamiento y optimizamos tu carga impositiva para maximizar el retorno neto de tu inversión.",
-    icon: <Landmark className="w-12 h-12 text-accent" />,
-    features: ["Créditos hipotecarios", "Leasing habitacional", "Optimización tributaria"]
+    id: "simulador-notarial",
+    badge: "100% GRATUITO • SIMULACIÓN EXACTA",
+    title: "Calculadora de Gastos Notariales y Registro",
+    description: "Calcula con precisión matemática los derechos notariales, impuesto de registro (beneficencia), retención en la fuente y gastos de escrituración para compraventas, hipotecas o cancelaciones según tarifas oficiales SNR.",
+    icon: <Calculator className="w-9 h-9 text-emerald-400" />,
+    features: [
+      "Liquidación exacta de derechos notariales y retención",
+      "Impuesto de registro y beneficencia departamental",
+      "Desglose transparente de lo que paga comprador y vendedor",
+      "Soporte para figuras: Afectación, Patrimonio y Leasing"
+    ],
+    ctaText: "Simular Gastos de Escritura",
+    waMessage: "JanIA, ayúdame a liquidar los gastos notariales y de registro para una compraventa."
+  }
+];
+
+// 💎 PORTAFOLIO DE SERVICIOS ESTRATÉGICOS & BRÓKER (ATENCIÓN HUMANA: +573166569719)
+const commercialServices: CommercialService[] = [
+  {
+    id: "inmuebles-autor",
+    badge: "CORRETAJE DE ALTA GAMA",
+    title: "Red Colaborativa & Inmuebles de Autor",
+    description: "Comercialización de propiedades exclusivas mediante nuestra red de más de 300 asesores y el modelo institucional 40/20/40. Difusión sin letreros invasivos y fichas de Marca Blanca que aceleran las ventas hasta 3 veces más rápido.",
+    icon: <Building2 className="w-10 h-10 text-primary" />,
+    features: [
+      "Comercialización discreta de inmuebles prémium",
+      "Modelo colaborativo institucional 40 / 20 / 40",
+      "Fichas de Marca Blanca para colegas aliados",
+      "Cierre asistido y acompañamiento de punta a punta"
+    ],
+    ctaText: "Consignar o Buscar Inmueble",
+    waMessage: "¡Hola Eduardo y Jani! Me interesa conocer más sobre la comercialización de inmuebles y la red colaborativa 40/20/40 de Vecy Bienes Raíces."
+  },
+  {
+    id: "garantia-hipotecaria",
+    badge: "LIQUIDEZ PATRIMONIAL",
+    title: "Préstamos con Garantía Hipotecaria (Libre Inversión)",
+    description: "Gestionamos soluciones de liquidez y créditos de libre inversión respaldados sobre activos inmobiliarios propios (residenciales y comerciales) a través de particulares y fondos privados. Ideal para capital de trabajo, proyectos o consolidación de pasivos.",
+    icon: <Coins className="w-10 h-10 text-primary" />,
+    features: [
+      "Créditos de libre inversión con respaldo inmobiliario",
+      "Financiación a través de particulares y fondos privados",
+      "Evaluación técnica y ágil de la garantía real",
+      "Asesoría sin las trabas de la banca tradicional"
+    ],
+    ctaText: "Consultar Opciones de Liquidez",
+    waMessage: "¡Hola Vecy Bienes Raíces! Quisiera información y asesoría sobre préstamos de libre inversión con garantía hipotecaria sobre inmuebles propios."
+  },
+  {
+    id: "blindaje-juridico",
+    badge: "DEFENSA Y RECUPERACIÓN",
+    title: "Blindaje Jurídico & Recuperación de Comisiones",
+    description: "Especialistas en derecho inmobiliario operativo. Redactamos promesas y contratos blindados, gestionamos cobros pre-jurídicos para recuperación efectiva de comisiones impagas e incumplimientos, y asesoramos en saneamiento de historial crediticio (Hábeas Data).",
+    icon: <Scale className="w-10 h-10 text-primary" />,
+    features: [
+      "Redacción profesional de promesas y contratos de arriendo",
+      "Cobro pre-jurídico y recuperación de comisiones impagas",
+      "Gestión de incumplimientos contractuales y mediación",
+      "Asesoría de Hábeas Data y saneamiento crediticio"
+    ],
+    ctaText: "Agendar Asesoría Legal",
+    waMessage: "¡Hola equipo Vecy! Necesito asesoría jurídica inmobiliaria (redacción de contratos / recuperación de comisiones / resolución de conflicto)."
+  },
+  {
+    id: "avaluos-ia",
+    badge: "BIG DATA & VALUACIÓN",
+    title: "Avalúos Comerciales & Estudios de Mercado con IA",
+    description: "Desarrollado con nuestra inteligencia JanIA. Analizamos miles de puntos de datos de mercado en Bogotá y las principales ciudades de Colombia para fijar el precio técnico exacto de venta o canon de arriendo, eliminando meses de incertidumbre comercial.",
+    icon: <BrainCircuit className="w-10 h-10 text-primary" />,
+    features: [
+      "Estimación algorítmica de precio de venta y canon de arriendo",
+      "Análisis comparativo de mercado y plusvalía sectorial",
+      "Reportes ejecutivos de viabilidad y rentabilidad",
+      "Soporte documental técnico para negociaciones justas"
+    ],
+    ctaText: "Solicitar Avalúo con IA",
+    waMessage: "¡Hola JanIA y equipo Vecy! Quisiera solicitar un estudio de mercado y avalúo técnico con IA para un inmueble en Bogotá/Colombia."
+  },
+  {
+    id: "proptech-soluciones",
+    badge: "TECNOLOGÍA COMO SERVICIO",
+    title: "Soluciones PropTech & Desarrollo Web para Agentes",
+    description: "Empoderamos a agentes inmobiliarios e inmobiliarias independientes con infraestructura digital de vanguardia: páginas web personalizadas, tiendas inmobiliarias, formularios inteligentes de reserva con verificación documental (como Vecy Agenda) y ciberseguridad.",
+    icon: <Laptop className="w-10 h-10 text-primary" />,
+    features: [
+      "Desarrollo de páginas web y tiendas inmobiliarias modernas",
+      "Implementación de Vecy Agenda con verificación de identidad",
+      "Bots conversacionales y automatización inmobiliaria con IA",
+      "Ciberseguridad y protección de datos para agentes"
+    ],
+    ctaText: "Cotizar Solución Digital",
+    waMessage: "¡Hola Eduardo! Me interesa desarrollar mi sitio web / tienda inmobiliaria o implementar Vecy Agenda y tecnología para mi marca inmobiliaria."
+  },
+  {
+    id: "tramites-notariales",
+    badge: "SANEAMIENTO Y TRÁMITES",
+    title: "Saneamiento Notarial & Conciliación Inmobiliaria",
+    description: "Acompañamiento y radicación en Notarías y Oficinas de Registro (ORIP). Gestionamos desenglobes, sucesiones, levantamiento de patrimonio de familia, afectación a vivienda familiar, estudios de tradición de 20 años y radicación oportuna de escrituras.",
+    icon: <FileCheck2 className="w-10 h-10 text-primary" />,
+    features: [
+      "Estudio de títulos con trazabilidad de 20 años",
+      "Cancelación de afectación familiar y patrimonio de familia",
+      "Gestión de desenglobes, hipotecas y sucesiones notariales",
+      "Radicación y seguimiento en Registro de Instrumentos Públicos"
+    ],
+    ctaText: "Consultar Trámite Notarial",
+    waMessage: "¡Hola Vecy! Requiero apoyo y gestión en un trámite notarial / estudio de títulos / registro de instrumentos públicos."
   }
 ];
 
 export default function Services() {
   const [, navigate] = useLocation();
 
+  // Contacto con JanIA Bot en WhatsApp (+573192919978)
+  const handleJanIAContact = (customMessage: string) => {
+    const encoded = encodeURIComponent(customMessage);
+    window.open(`https://wa.me/573192919978?text=${encoded}`, '_blank');
+  };
+
+  // Contacto Comercial con Bróker Humano (+573166569719)
+  const handleBrokerContact = (customMessage: string) => {
+    const encoded = encodeURIComponent(customMessage);
+    window.open(`https://wa.me/573166569719?text=${encoded}`, '_blank');
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
       <Navbar />
 
-      {/* Hero Section Unificado */}
-      <section className="relative pt-36 pb-16 bg-gradient-to-b from-black via-zinc-950 to-background overflow-hidden border-b border-white/5">
+      {/* Hero Section */}
+      <section className="relative pt-36 pb-20 bg-gradient-to-b from-black via-zinc-950 to-background overflow-hidden border-b border-white/5">
         <NetworkBackground />
-        {/* Glow de fondo */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[650px] h-[320px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+        {/* Glow de fondo áurico */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[650px] h-[320px] bg-primary/10 rounded-full blur-[140px] pointer-events-none" />
         
         <div className="container relative z-10 text-center max-w-4xl mx-auto px-4">
           <ScrollReveal delay={0.1}>
-            <p className="vecy-accent-tag text-center">EXCELENCIA OPERATIVA</p>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-accent text-xs font-bold tracking-widest uppercase mb-4 shadow-[0_0_20px_rgba(191,149,63,0.15)]">
+              <Sparkles size={14} className="text-primary animate-pulse" />
+              PORTAFOLIO INTEGRAL VECY BIENES RAÍCES
+            </div>
 
-            <h1 className="vecy-title-hero uppercase tracking-tight">
-              NUESTROS <span className="text-gradient-gold">SERVICIOS</span>
+            <h1 className="vecy-title-hero uppercase tracking-tight text-3xl sm:text-5xl font-extrabold text-white">
+              NUESTROS <span className="text-gradient-gold">SERVICIOS Y SOLUCIONES</span>
             </h1>
 
-            <div className="line-electric w-36 sm:w-44 mx-auto my-5"></div>
+            <div className="line-electric w-36 sm:w-48 mx-auto my-6"></div>
 
-            <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-zinc-300">
-              Combinamos tecnología de punta con décadas de experiencia para ofrecerte una gestión inmobiliaria de élite.
+            <p className="vecy-subtitle max-w-3xl mx-auto text-sm sm:text-base text-zinc-300 leading-relaxed font-medium">
+              Ecosistema integral que fusiona corretaje de alta gama, liquidez respaldada con garantía hipotecaria, blindaje jurídico especializado, avalúos con IA, trámites cívicos gratuitos 24/7 y transformación tecnológica para el sector inmobiliario.
             </p>
           </ScrollReveal>
         </div>
       </section>
 
-      {/* Services Grid */}
-      <section className="py-24 bg-background">
-        <div className="container">
-          <div className="grid md:grid-cols-2 gap-12">
-            {services.map((service, idx) => (
-              <ScrollReveal key={idx} delay={idx * 0.1} direction="up">
-                <div 
-                  className="card-float p-10 group hover:glow-gold transition-all duration-500"
-                >
-                  <div className="mb-6 transform group-hover:scale-110 transition-transform duration-500">
-                    {service.icon}
+      {/* 🚀 SECCIÓN DESTACADA: TRÁMITES Y CERTIFICADOS GRATUITOS 24/7 CON JANIA */}
+      <section className="py-20 bg-gradient-to-b from-[#0e121a] to-background border-b border-primary/20 relative">
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6">
+          <ScrollReveal delay={0.1}>
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-extrabold tracking-widest uppercase mb-3 shadow-[0_0_25px_rgba(16,185,129,0.2)]">
+                <Bot size={14} className="text-emerald-400" />
+                JANIA EXPRESS • 100% GRATUITO • TIEMPO RÉCORD EN WHATSAPP
+              </div>
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-white uppercase tracking-tight">
+                TRÁMITES Y CERTIFICADOS <span className="text-gradient-gold">SIN COSTO 24/7</span>
+              </h2>
+              <p className="text-zinc-400 text-xs sm:text-sm mt-3 font-medium">
+                Nuestra Inteligencia Artificial JanIA resuelve en segundos los trámites y certificaciones que antes tomaban días de filas y costos innecesarios. Directo a tu WhatsApp.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          {/* Grid de Servicios Gratuitos de JanIA */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {freeJanIAServices.map((item, idx) => (
+              <ScrollReveal key={item.id} delay={idx * 0.08} direction="up" className="h-full">
+                <div className="vecy-card-apple p-6 flex flex-col justify-between h-full group hover:border-emerald-500/40 hover:shadow-[0_0_30px_rgba(16,185,129,0.15)] transition-all duration-500 relative bg-[#10141d]/90 border-emerald-500/20">
+                  
+                  <div>
+                    {/* Header con Icono y Badge */}
+                    <div className="flex items-center justify-between gap-3 mb-5">
+                      <div className="w-14 h-14 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.15)] group-hover:scale-105 transition-transform">
+                        {item.icon}
+                      </div>
+                      <span className="text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                        {item.badge}
+                      </span>
+                    </div>
+
+                    <h3 className="text-base sm:text-lg font-bold text-white mb-2.5 uppercase tracking-wide group-hover:text-emerald-400 transition-colors">
+                      {item.title}
+                    </h3>
+
+                    <p className="text-zinc-300 text-xs mb-5 leading-relaxed">
+                      {item.description}
+                    </p>
+
+                    <div className="space-y-2 mb-6 border-t border-white/5 pt-4">
+                      {item.features.map((feat, fIdx) => (
+                        <div key={fIdx} className="flex items-start gap-2 text-[11px] text-zinc-300 font-medium">
+                          <CheckCircle2 size={13} className="text-emerald-400 mt-0.5 shrink-0" />
+                          <span>{feat}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <h3 className="text-2xl font-bold text-white mb-4 uppercase tracking-wide group-hover:text-accent transition-colors">
-                    {service.title}
-                  </h3>
-                  <p className="vecy-paragraph text-sm mb-8 leading-relaxed">
-                    {service.description}
-                  </p>
-                  <ul className="space-y-3 mb-8">
-                    {service.features.map((feature, fIdx) => (
-                      <li key={fIdx} className="flex items-center gap-3 text-sm text-gray-400 font-bold uppercase tracking-wider">
-                        <Star size={14} className="text-accent" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <button className="flex items-center gap-2 text-accent font-bold hover:gap-4 transition-all uppercase tracking-widest text-[10px]">
-                    Saber más <ArrowRight size={16} />
-                  </button>
+
+                  <div className="pt-3 border-t border-emerald-500/15">
+                    <button 
+                      onClick={() => handleJanIAContact(item.waMessage)}
+                      className="w-full py-3 px-3 rounded-xl flex items-center justify-center gap-2 text-[11px] font-extrabold uppercase tracking-wider bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500 hover:text-black transition-all duration-300 shadow-sm"
+                    >
+                      <Bot size={14} />
+                      <span>{item.ctaText}</span>
+                    </button>
+                  </div>
+
                 </div>
               </ScrollReveal>
             ))}
@@ -99,20 +320,110 @@ export default function Services() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-32 bg-gradient-to-t from-black to-background">
-        <div className="container">
+      {/* 💼 SERVICIOS ESTRATÉGICOS Y DE NEGOCIO (ASESORÍA INTEGRAL & PROPTECH) */}
+      <section className="py-24 bg-background">
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6">
+          <ScrollReveal delay={0.1}>
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <span className="vecy-accent-tag text-center">SOLUCIONES INTEGRALES</span>
+              <h2 className="vecy-title-section uppercase tracking-tight text-2xl sm:text-4xl font-extrabold text-white mt-2">
+                SERVICIOS <span className="text-gradient-gold">ESTRATÉGICOS Y DE AUTOR</span>
+              </h2>
+              <div className="line-electric w-28 mx-auto my-4"></div>
+              <p className="text-zinc-400 text-xs sm:text-sm font-medium">
+                Acompañamiento especializado por parte de Eduardo Rivera y Jani Alves para inversionistas, propietarios, agencias y agentes inmobiliarios.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {commercialServices.map((service, idx) => (
+              <ScrollReveal key={service.id} delay={idx * 0.08} direction="up" className="h-full">
+                <div className="vecy-card-apple p-7 sm:p-8 flex flex-col justify-between h-full group hover:glow-gold transition-all duration-500 border-primary/25 relative">
+                  
+                  {/* Contenido Superior */}
+                  <div>
+                    {/* Badge & Icono */}
+                    <div className="flex items-center justify-between gap-4 mb-6">
+                      <div className="w-16 h-16 rounded-2xl bg-[#1a202c]/90 border border-primary/30 flex items-center justify-center shadow-[0_0_25px_rgba(191,149,63,0.15)] group-hover:scale-105 transition-transform duration-300">
+                        {service.icon}
+                      </div>
+                      <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-accent">
+                        {service.badge}
+                      </span>
+                    </div>
+
+                    {/* Título */}
+                    <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 uppercase tracking-wide group-hover:text-accent transition-colors leading-snug">
+                      {service.title}
+                    </h3>
+
+                    {/* Descripción */}
+                    <p className="text-zinc-300 text-xs sm:text-sm mb-6 leading-relaxed font-normal">
+                      {service.description}
+                    </p>
+
+                    {/* Lista de Características */}
+                    <div className="space-y-2.5 mb-8 border-t border-white/5 pt-5">
+                      {service.features.map((feature, fIdx) => (
+                        <div key={fIdx} className="flex items-start gap-2.5 text-xs text-zinc-300 font-medium">
+                          <CheckCircle2 size={15} className="text-primary mt-0.5 shrink-0" />
+                          <span>{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Botón de Acción a WhatsApp Bróker */}
+                  <div className="pt-4 border-t border-primary/15">
+                    <button 
+                      onClick={() => handleBrokerContact(service.waMessage)}
+                      className="btn-gold-subtle w-full py-3.5 px-4 rounded-xl flex items-center justify-center gap-2.5 text-xs font-bold uppercase tracking-wider group-hover:btn-gold transition-all duration-300 shadow-md"
+                    >
+                      <MessageSquare size={15} />
+                      <span>{service.ctaText}</span>
+                    </button>
+                  </div>
+
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section Principal */}
+      <section className="py-24 bg-gradient-to-t from-black to-background border-t border-white/5">
+        <div className="container max-w-5xl mx-auto px-4">
           <ScrollReveal>
-            <div className="vecy-card-apple p-16 text-center border-white/10 max-w-5xl mx-auto overflow-hidden relative">
-               <h2 className="vecy-title-section uppercase mb-6">
-                 ¿LISTO PARA TU <span className="text-primary">PRÓXIMA INVERSIÓN</span>?
+            <div className="vecy-card-apple p-10 sm:p-16 text-center border-primary/30 max-w-4xl mx-auto overflow-hidden relative shadow-[0_0_60px_rgba(191,149,63,0.15)]">
+               
+               <div className="w-16 h-16 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center mx-auto mb-6 text-primary shadow-[0_0_30px_rgba(191,149,63,0.3)]">
+                 <ShieldCheck className="w-8 h-8" />
+               </div>
+
+               <h2 className="vecy-title-section uppercase text-2xl sm:text-4xl font-extrabold text-white mb-4">
+                 ¿TIENES UN CASO O <span className="text-gradient-gold">REQUERIMIENTO ESPECIAL</span>?
                </h2>
-               <p className="vecy-subtitle mb-10 max-w-2xl mx-auto">
-                 Agenda una consultoría privada con nuestros expertos y descubre cómo podemos ayudarte a construir un portafolio de rentas reales.
+               
+               <p className="vecy-subtitle mb-8 max-w-2xl mx-auto text-sm sm:text-base text-zinc-300 font-medium">
+                 Ya sea que necesites liquidez sobre tu inmueble, recuperar comisiones impagas, realizar un avalúo con IA o implementar tecnología en tu negocio inmobiliario, nuestro equipo directivo te atiende directamente.
                </p>
-               <button onClick={() => navigate('/contact')} className="btn-gold px-12 py-5 text-lg tracking-widest uppercase">
-                 AGENDAR CONSULTORÍA GRATUITA
-               </button>
+
+               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                 <button 
+                   onClick={() => handleBrokerContact("¡Hola Eduardo y Jani! Me gustaría agendar una asesoría privada con la dirección de Vecy Bienes Raíces.")} 
+                   className="btn-gold px-8 py-4 text-xs sm:text-sm font-bold tracking-widest uppercase shadow-[0_0_35px_rgba(191,149,63,0.35)] w-full sm:w-auto"
+                 >
+                   HABLAR CON NUESTRO BRÓKER
+                 </button>
+                 <button 
+                   onClick={() => navigate('/contact')} 
+                   className="btn-gold-subtle px-8 py-4 text-xs sm:text-sm font-bold tracking-widest uppercase w-full sm:w-auto"
+                 >
+                   FORMULARIO DE CONTACTO
+                 </button>
+               </div>
             </div>
           </ScrollReveal>
         </div>

@@ -3578,10 +3578,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(soporteContent).not.toContain("45/10/45");
     });
 
-    it("Doctrina v32.84 / v32.85: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
+    it("Doctrina v32.84 / v32.86: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
       const { VECY_ACTIVE_DOMAIN, VECY_VERSION } = await import("../../shared/const");
       expect(VECY_ACTIVE_DOMAIN).toBe("https://vecy-bienes-raices.vercel.app");
-      expect(VECY_VERSION).toBe("v32.85");
+      expect(VECY_VERSION).toBe("v32.86");
 
       const fs = await import("fs");
       const path = await import("path");
@@ -3617,6 +3617,38 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(sitemapContent).toContain("https://vecy-bienes-raices.vercel.app/");
       expect(sitemapContent).toContain("https://vecy-bienes-raices.vercel.app/ofertas");
       expect(sitemapContent).toContain("https://vecy-bienes-raices.vercel.app/demandas");
+    });
+
+    it("Doctrina v32.86: Portafolio de Servicios de Autor, Bóveda JanIA Express y Protección de Dirección", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+
+      // Validar Services.tsx con los 4 trámites gratuitos de JanIA y servicios comerciales
+      const servicesPath = path.resolve(__dirname, "../../client/src/pages/Services.tsx");
+      const servicesContent = fs.readFileSync(servicesPath, "utf-8");
+      expect(servicesContent).toContain("Verificación de Identidad & Antecedentes (KYC)");
+      expect(servicesContent).toContain("Factura Predial & Paz y Salvo Distrital en PDF");
+      expect(servicesContent).toContain("Paz y Salvo de Valorización IDU Bogotá en PDF");
+      expect(servicesContent).toContain("Calculadora de Gastos Notariales y Registro");
+      expect(servicesContent).toContain("Préstamos con Garantía Hipotecaria (Libre Inversión)");
+      expect(servicesContent).toContain("Soluciones PropTech & Desarrollo Web para Agentes");
+      expect(servicesContent).toContain("+573192919978"); // Socket JanIA
+      expect(servicesContent).toContain("+573166569719"); // Bróker oficial
+
+      // Validar base.md con la doctrina de servicios JanIA
+      const basePath = path.resolve(__dirname, "../_core/prompts/base.md");
+      const baseContent = fs.readFileSync(basePath, "utf-8");
+      expect(baseContent).toContain("CATÁLOGO OFICIAL DE SERVICIOS GRATUITOS Y ESPECIALIZADOS DE VECY BIENES RAÍCES");
+
+      // Validar index.html y Contact.tsx protegidos sin dirección residencial privada
+      const indexPath = path.resolve(__dirname, "../../client/index.html");
+      const indexHtml = fs.readFileSync(indexPath, "utf-8");
+      expect(indexHtml).not.toContain("Cra. 14a #118-21");
+
+      const contactPath = path.resolve(__dirname, "../../client/src/pages/Contact.tsx");
+      const contactHtml = fs.readFileSync(contactPath, "utf-8");
+      expect(contactHtml).not.toContain("Cra. 14a #118-21");
+      expect(contactHtml).toContain("Ecosistema 100% Digital");
     });
   });
 });

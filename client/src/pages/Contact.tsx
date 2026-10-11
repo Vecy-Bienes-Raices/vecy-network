@@ -40,20 +40,20 @@ export default function Contact() {
             
             {/* Contact Info Chips */}
             <div className="animate-slide-in-left">
-              <h2 className="text-3xl font-bold text-white mb-8 tracking-wider uppercase">Sede Administrativa</h2>
+              <h2 className="text-3xl font-bold text-white mb-8 tracking-wider uppercase">Operación y Cobertura</h2>
               <div className="space-y-8">
                 <div className="flex items-center gap-6 p-6 glass rounded-2xl border-white/10 hover:glow-gold-sm transition-all">
                   <div className="bg-white/5 p-4 rounded-xl">
                     <MapPin className="text-accent w-8 h-8" />
                   </div>
                   <div>
-                    <h4 className="text-white font-bold text-lg">Ubicación Estratégica</h4>
-                    <p className="text-gray-400">Cra. 14a #118-21, Usaquén, Bogotá</p>
+                    <h4 className="text-white font-bold text-lg">Ecosistema 100% Digital</h4>
+                    <p className="text-gray-400">Bogotá D.C. y Sabana Norte, Colombia (Cobertura Nacional)</p>
                   </div>
                 </div>
 
                 <a 
-                  href="https://wa.me/573192919978?text=%C2%A1Hola%20Vecy!%20%F0%9F%91%8B%20Estoy%20interesado%20en%20conocer%20m%C3%A1s%20sobre%20las%20oportunidades%20de%20inversi%C3%B3n%20inmobiliaria%20inteligente.%20%F0%9F%8F%A2%20%C2%BFPodr%C3%ADan%20asesorarme?"
+                  href="https://wa.me/573166569719?text=%C2%A1Hola%20Vecy!%20%F0%9F%91%8B%20Estoy%20interesado%20en%20conocer%20m%C3%A1s%20sobre%20sus%20servicios%20inmobiliarios%20y%20tecnol%C3%B3gicos.%20%F0%9F%8F%A2%20%C2%BFPodr%C3%ADan%20asesorarme?"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-6 p-6 glass rounded-2xl border-white/10 hover:glow-gold-sm transition-all group"
@@ -62,7 +62,7 @@ export default function Contact() {
                     <Phone className="text-accent w-8 h-8" />
                   </div>
                   <div>
-                    <h4 className="text-white font-bold text-lg uppercase">WhatsApp Concierge</h4>
+                    <h4 className="text-white font-bold text-lg uppercase">WhatsApp Bróker Oficial</h4>
                     <p className="text-gray-400">+57 316 656 9719</p>
                   </div>
                 </a>
@@ -88,10 +88,10 @@ export default function Contact() {
                 </a>
               </div>
 
-              {/* Map Embed - Updated to Cra 14a #118 */}
+              {/* Map Embed - Cobertura Metropolitana Bogotá D.C. */}
               <div className="mt-12 rounded-3xl overflow-hidden glass border-white/10 h-64 hover:glow-gold transition-all duration-500">
                 <iframe 
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3976.241315802319!2d-74.0435422!3d4.7001402!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e3f9a94e1d1d1d1%3A0x1d1d1d1d1d1d1d1d!2sCra.%2014a%20%23118-21%2C%20Bogot%C3%A1!5e0!3m2!1ses!2sco!4v1711920000000!5m2!1ses!2sco" 
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d127246.54148419632!2d-74.1531818!3d4.6482837!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e3f9bfd2da6cb29%3A0x239d635520a33914!2zQm9nb3TDoQ!5e0!3m2!1ses!2sco!4v1711920000000!5m2!1ses!2sco" 
                   width="100%" 
                   height="100%" 
                   frameBorder="0" 

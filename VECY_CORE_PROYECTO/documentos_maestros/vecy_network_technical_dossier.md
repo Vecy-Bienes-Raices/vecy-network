@@ -331,6 +331,43 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.86 — Octubre 2026
+
+#### 📌 BÓVEDA JANIA EXPRESS DE TRÁMITES GRATUITOS 24/7, PORTAFOLIO INTEGRAL DE NEGOCIO Y PROTECCIÓN DE DIRECCIÓN RESIDENCIAL FAMILIAR
+
+**Requerimiento y Objetivos:**
+1. **Consagración del Portafolio Real y Multidisciplinario de Vecy Bienes Raíces**:
+   - Eduardo describió todas las líneas de negocio activas:
+     • Préstamos de libre inversión con garantía hipotecaria sobre inmuebles propios a través de particulares y fondos privados.
+     • Blindaje jurídico, redacción de contratos, cobro pre-jurídico y recuperación de comisiones inmobiliarias impagas, saneamiento crediticio (Hábeas Data / Ley 2157).
+     • Avalúos comerciales y estudios de mercado con IA.
+     • Soluciones PropTech: desarrollo web, tiendas inmobiliarias para agentes, reservas inteligentes con verificación documental (Vecy Agenda) y ciberseguridad.
+     • Saneamiento notarial y trámites integrales en Notarías y Registro de Instrumentos Públicos.
+2. **Bóveda JanIA Express de Trámites Gratuitos en `client/src/pages/Services.tsx`**:
+   - Incorporación de los 4 servicios cívicos automatizados de JanIA ($0 COP en WhatsApp):
+     • Verificación de Identidad & Antecedentes Policiales (KYC preventivo de visitantes a propiedades).
+     • Factura Predial & Paz y Salvo Distrital en PDF (Secretaría Distrital de Hacienda con código CHIP).
+     • Paz y Salvo de Valorización IDU Bogotá en PDF (PIN notarial oficial bajo Acuerdo Distrital 915).
+     • Calculadora Notarial & Liquidación de Gastos de Escrituración y Registro (SNR).
+   - Enrutamiento dual inteligente: Trámites automatizados dirigidos a JanIA Bot (`+573192919978`) y servicios comerciales de consultoría dirigidos al Bróker Oficial (`+573166569719`).
+3. **Protección de Privacidad de la Familia de Eduardo**:
+   - Eliminada la dirección física residencial (`Cra. 14a #118-21`) de `client/index.html` (Schema.org) y `client/src/pages/Contact.tsx`.
+   - Se consagró la operación como *Ecosistema 100% Digital con Cobertura Metropolitana en Bogotá D.C. y Sabana Norte*.
+4. **Actualización de Doctrina JanIA en `server/_core/prompts/base.md`**:
+   - Añadida la sección *"CATÁLOGO OFICIAL DE SERVICIOS GRATUITOS Y ESPECIALIZADOS DE VECY BIENES RAÍCES (DOCTRINA JANIA)"*.
+
+**Archivos Modificados:**
+- `client/src/pages/Services.tsx`: Rediseño completo con Bóveda JanIA Express y los 6 pilares de negocio.
+- `client/src/pages/Contact.tsx`: Retiro de dirección de vivienda familiar y actualización de WhatsApp oficial.
+- `client/index.html`: Retiro de `streetAddress` en Schema.org.
+- `server/_core/prompts/base.md`: Doctrina del catálogo de servicios de JanIA.
+- `shared/const.ts`: Versión `v32.86`.
+- `package.json`: Versión `32.86.0`.
+- `server/__tests__/regression.test.ts`: Test doctrinal v32.86.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+---
+
 ### 🔖 v32.85 — Octubre 2026
 
 #### 📌 INFRAESTRUCTURA SEO ON-PAGE, GOOGLE SEARCH CONSOLE VERIFICATION, ROBOTS.TXT, SITEMAP.XML OFICIAL Y SCHEMA REALESTATEAGENT
