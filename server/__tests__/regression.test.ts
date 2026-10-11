@@ -3578,10 +3578,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(soporteContent).not.toContain("45/10/45");
     });
 
-    it("Doctrina v32.84 / v32.89: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
+    it("Doctrina v32.84 / v32.90: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
       const { VECY_ACTIVE_DOMAIN, VECY_VERSION } = await import("../../shared/const");
       expect(VECY_ACTIVE_DOMAIN).toBe("https://vecy-bienes-raices.vercel.app");
-      expect(VECY_VERSION).toBe("v32.89");
+      expect(VECY_VERSION).toBe("v32.90");
 
       const fs = await import("fs");
       const path = await import("path");
@@ -3651,7 +3651,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(contactHtml).toContain("Ecosistema 100% Digital");
     });
 
-    it("Doctrina v32.87: Primer Portal Inmobiliario con IA en Colombia y Motor de Match como Protagonista", async () => {
+    it("Doctrina v32.87: Primer Portal Inmobiliario con IA en Colombia y Desaturación Elegante de Home", async () => {
       const fs = await import("fs");
       const path = await import("path");
 
@@ -3661,15 +3661,15 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(indexHtml).toContain("Primer Portal Inmobiliario con IA en Colombia");
       expect(indexHtml).toContain("Motor de Match");
 
-      // Validar Home.tsx con el Motor de Match de JanIA y Primer Portal con IA
+      // Validar Home.tsx desaturado y elegante sin cards anidadas invasivas
       const homePath = path.resolve(__dirname, "../../client/src/pages/Home.tsx");
       const homeContent = fs.readFileSync(homePath, "utf-8");
-      expect(homeContent).toContain("PRIMER PORTAL INMOBILIARIO CON VERDADERA IA EN COLOMBIA");
-      expect(homeContent).toContain("JanIA Match Engine 24/7");
-      expect(homeContent).toContain("EL PRIMER PORTAL QUE");
-      expect(homeContent).toContain("USA IA EN REALIDAD");
-      expect(homeContent).toContain("JanIA Match Engine v32");
-      expect(homeContent).toContain("match-ia-section");
+      expect(homeContent).toContain("EXPLORAR ACTIVOS");
+      expect(homeContent).toContain("NUESTRA HISTORIA");
+      expect(homeContent).toContain("INMUEBLES DESTACADOS");
+      expect(homeContent).not.toContain("match-ia-section");
+      expect(homeContent).not.toContain("EL SANTO GRIAL PROPTECH");
+      expect(homeContent).not.toContain("PRIMER PORTAL INMOBILIARIO CON VERDADERA IA EN COLOMBIA");
 
       // Validar Services.tsx con sección estelar protagonista de Match con IA
       const servicesPath = path.resolve(__dirname, "../../client/src/pages/Services.tsx");
@@ -3740,6 +3740,30 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(servicesContent).toContain("Paz y Salvo del IDU en PDF para Notaría");
       expect(servicesContent).toContain("Cálculo Rápido de Gastos de Notaría y Escrituras");
       expect(servicesContent).not.toContain("SDH");
+    });
+
+    it("Doctrina v32.90: Desaturación de Home, Inmuebles Destacados y Erradicación de Cards Anidadas", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+
+      // Validar Home.tsx sin títulos extraños ni cards saturadas
+      const homePath = path.resolve(__dirname, "../../client/src/pages/Home.tsx");
+      const homeContent = fs.readFileSync(homePath, "utf-8");
+      expect(homeContent).toContain("INMUEBLES DESTACADOS");
+      expect(homeContent).toContain("VER TODAS LAS PROPIEDADES");
+      expect(homeContent).not.toContain("PROPIEDADES DE AUTOR");
+      expect(homeContent).not.toContain("Portafolio Curado");
+      expect(homeContent).not.toContain("Audiowide");
+      expect(homeContent).not.toContain("match-ia-section");
+      expect(homeContent).not.toContain("EL SANTO GRIAL PROPTECH");
+      expect(homeContent).not.toContain("PRIMER PORTAL INMOBILIARIO CON VERDADERA IA EN COLOMBIA");
+
+      // Validar Services.tsx limpio de términos incomprensibles
+      const servicesPath = path.resolve(__dirname, "../../client/src/pages/Services.tsx");
+      const servicesContent = fs.readFileSync(servicesPath, "utf-8");
+      expect(servicesContent).toContain("Red Colaborativa & Venta de Inmuebles");
+      expect(servicesContent).toContain("ESTRATÉGICOS Y CONSULTORÍA");
+      expect(servicesContent).not.toContain("ESTRATÉGICOS Y DE AUTOR");
     });
   });
 });

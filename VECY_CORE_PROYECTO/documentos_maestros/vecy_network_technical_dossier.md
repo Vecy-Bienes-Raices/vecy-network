@@ -331,6 +331,41 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.90 — Octubre 2026
+
+#### 📌 DESATURACIÓN VISUAL DE HOME, ERRADICACIÓN DE CARDS ANIDADAS E INMUEBLES DESTACADOS
+
+**Requerimiento y Objetivos:**
+1. **Desaturación Visual y Erradicación de Cards Anidadas**:
+   - Eliminación estricta de la sección `#match-ia-section` ("EL SANTO GRIAL PROPTECH • TECNOLOGÍA PROPIETARIA ÚNICA EN COLOMBIA", sus 4 sub-cards y la card de simulación interactiva), restaurando el aire visual, la elegancia sobria y el minimalismo de la plataforma.
+2. **Corrección Tipográfica del Hero**:
+   - Supresión de la fuente no estándar `Audiowide` en tamaño desproporcionado (`text-9xl`) que rompía la identidad estética con el resto del sitio.
+   - Restitución de la clase oficial `vecy-title-hero` con balance visual perfecto (`text-white text-5xl ... lg:text-8xl` y `text-gradient-gold text-xl ... lg:text-4xl`).
+3. **Limpieza del Hero Section**:
+   - Eliminación del badge intrusivo "PRIMER PORTAL INMOBILIARIO CON VERDADERA IA EN COLOMBIA".
+   - Restitución del tag refinado `<span className="vecy-accent-tag">Tecnología de Vanguardia</span>` y reducción a dos botones de acción con amplio espaciado: `EXPLORAR ACTIVOS` y `NUESTRA HISTORIA`.
+4. **Erradicación de Términos Rebuscados y Adopción de Vocabulario Claro**:
+   - Eliminación definitiva de expresiones pedantes que confunden a clientes y agentes: *"Propiedades de Autor"* y *"Portafolio Curado"*.
+   - Renombramiento a **`INMUEBLES DESTACADOS`**, con tag de cabecera `Oportunidades Seleccionadas` y botón `VER TODAS LAS PROPIEDADES →`.
+   - Limpieza complementaria en `Services.tsx` ("Venta de Inmuebles", "Servicios Estratégicos y Consultoría") y en `base.md` ("propiedades destacadas").
+
+**Archivos Modificados:**
+- `client/src/pages/Home.tsx`: Hero depurado, tipografía restaurada, eliminación de `#match-ia-section` y renombrado a Inmuebles Destacados.
+- `client/src/pages/Services.tsx`: Retiro de "Inmuebles de Autor".
+- `server/_core/prompts/base.md`: Normalización a "propiedades destacadas".
+- `server/__tests__/regression.test.ts`: Actualización del suite de pruebas v32.90.
+- `shared/const.ts`: Versión oficial `v32.90`.
+- `package.json`: Versión `32.90.0`.
+- `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`: Registro de bitácora exhaustiva.
+- `.agents/AGENTS.md`: Registro en memoria persistente.
+
+**Verificación:**
+- `npm run check`: 0 errores TypeScript ✅
+- `npm test`: 177 de 177 pruebas aprobadas al 100% ✅
+- `npm run build`: Compilación limpia completada en 24.92s ✅
+
+---
+
 ### 🔖 v32.89 — Octubre 2026
 
 #### 📌 MISIÓN, VISIÓN 2026-2030, MANIFIESTO 'EL FIN DE LOS PORTALES INMOBILIARIOS' Y DOCTRINA DE LENGUAJE CLARO SIN TECNICISMOS

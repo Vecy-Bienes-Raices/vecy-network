@@ -7,6 +7,35 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.90 — 11 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Desaturación Visual de la Página de Inicio (`Home.tsx`) y Erradicación de Cards Anidadas**:
+   - Eduardo ordenó con firmeza y criterio estético: *"Mejora el diseño está muy apiñuscado o SATURADO y otra vez volviste a colocar demasiadas cards dentro de cards, no se por qué tienes esa manía y veo que el título de inicio tiene un tipo de letra y tamaño que no tienen las demás páginas ni secciones, haz roto la elegancia e impacto que tenía la página y elimina por favor esa card que contiene esto, eso ya te dije que no me gusta para nada: PRIMER PORTAL INMOBILIARIO CON VERDADERA IA EN COLOMBIA"*
+   - Y complementó de inmediato: *"eLIMINA LA CARD QUE CONTIENE ESTE AVISO TAMBIÉN: EL SANTO GRIAL PROPTECH • TECNOLOGÍA PROPIETARIA ÚNICA EN COLOMBIA"*
+2. **Corrección de Terminología Pedante: 'Inmuebles Destacados' en vez de 'Propiedades de Autor' o 'Portafolio Curado'**:
+   - Eduardo instruyó: *"Esta sección debe ser para los destacados. Qué es eso de propiedades de Autor eso no lo entiende el público y menos disque 'Portafolio Curado', ni yo entiendo qué putas es eso o de que se trata."*
+
+### Diagnóstico Técnico y Solución Aplicada
+1. **Eliminación Total de la Sección Saturada (`#match-ia-section`)**:
+   - Se extirpó por completo la card macro y sus sub-cards anidadas (que contenían "EL SANTO GRIAL PROPTECH", "EL PRIMER PORTAL QUE USA IA EN REALIDAD" y la simulación interactiva con exceso de bordes y tarjetas), devolviendo la respiración visual y la pureza minimalista al diseño oscuro de Vecy.
+2. **Restauración de la Tipografía, Jerarquía y Elegancia en el Hero de Inicio**:
+   - Se eliminó la fuente extraña `Audiowide` en tamaño desproporcionado (`text-9xl`) y el badge invasivo `PRIMER PORTAL INMOBILIARIO CON VERDADERA IA EN COLOMBIA`.
+   - Se restituyó la clase maestra del diseño de Vecy (`vecy-title-hero`) con proporciones visuales armónicas con el resto del portal, el tag sobrio `Tecnología de Vanguardia`, dos botones principales amplios y bien espaciados (`EXPLORAR ACTIVOS` y `NUESTRA HISTORIA`), y tres métricas elegantes y discretas.
+3. **Erradicación de 'Propiedades de Autor' y 'Portafolio Curado'**:
+   - Se reemplazaron por títulos directos, humanos y comercialmente comprensibles para todo público:
+     • Encabezado principal: **INMUEBLES DESTACADOS** (con tag superior *Oportunidades Seleccionadas*).
+     • Enlace de navegación: **VER TODAS LAS PROPIEDADES →**.
+     • En `Services.tsx` y `base.md`: reemplazo de "Inmuebles de autor" por "Venta de Inmuebles" y "SERVICIOS ESTRATÉGICOS Y CONSULTORÍA".
+
+### Verificación y Validación
+- `npm run check`: 0 errores TypeScript ✅.
+- `npm test`: 177/177 tests aprobados al 100% (incluyendo nuevo test suite de Doctrina v32.90) ✅.
+- `npm run build`: Compilación limpia en 24.92s ✅.
+- Versión oficial elevada a **v32.90** (`32.90.0`).
+
+---
+
 ## 📋 SESIÓN v32.89 — 11 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

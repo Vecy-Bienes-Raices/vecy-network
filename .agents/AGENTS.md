@@ -172,7 +172,26 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.89 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.90 — Octubre 2026
+
+### Novedades v32.90 (Desaturación Visual de Home, Erradicación de Cards Anidadas e Inmuebles Destacados):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Desaturación Visual y Erradicación de Cards Dentro de Cards**:
+     - Eduardo instruyó tajantemente: *"Mejora el diseño está muy apiñuscado o SATURADO y otra vez volviste a colocar demasiadas cards dentro de cards, no se por qué tienes esa manía y veo que el título de inicio tiene un tipo de letra y tamaño que no tienen las demás páginas ni secciones, haz roto la elegancia e impacto que tenía la página y elimina por favor esa card que contiene esto, eso ya te dije que no me gusta para nada: PRIMER PORTAL INMOBILIARIO CON VERDADERA IA EN COLOMBIA... eLIMINA LA CARD QUE CONTIENE ESTE AVISO TAMBIÉN EL SANTO GRIAL PROPTECH • TECNOLOGÍA PROPIETARIA ÚNICA EN COLOMBIA... Esta sección debe ser para los destacados. Qué es eso de propiedades de Autor eso no lo entiende el público y menos disque 'Portafolio Curado', ni yo entiendo qué putas es eso o de que se trata."*
+  2. **Acciones Técnicas Ejecutadas en `client/src/pages/Home.tsx`**:
+     - **Erradicación Total de Cards Anidadas**: Se eliminó la sección completa `#match-ia-section` ("EL SANTO GRIAL PROPTECH", sus 4 sub-cards y la card de simulación interactiva), devolviendo la amplitud, respiración visual y minimalismo elegante a la landing principal.
+     - **Corrección Tipográfica del Hero**: Se eliminó la fuente intrusiva `Audiowide` en tamaño desmedido (`text-9xl`) y se restituyó la jerarquía armónica oficial con `vecy-title-hero` (`text-white text-5xl ... lg:text-8xl` y `text-gradient-gold text-xl ... lg:text-4xl`).
+     - **Limpieza del Hero**: Se retiró el badge invasivo *"PRIMER PORTAL INMOBILIARIO CON VERDADERA IA EN COLOMBIA"*, restaurando el tag sutil `<span className="vecy-accent-tag">Tecnología de Vanguardia</span>`. Se limpió el subtítulo y se dejaron 2 botones principales con amplio espaciado: `EXPLORAR ACTIVOS` y `NUESTRA HISTORIA`.
+     - **Reemplazo de Términos Rebuscados por Vocabulario Claro**:
+       • *"Propiedades de Autor"* y *"Portafolio Curado"* eliminados por completo.
+       • Sección renombrada a **`INMUEBLES DESTACADOS`**, con el tag sutil `Oportunidades Seleccionadas` y botón `VER TODAS LAS PROPIEDADES →`.
+     - **Limpieza en Servicios y Prompts**:
+       • En `client/src/pages/Services.tsx`: *"Red Colaborativa & Inmuebles de Autor"* → *"Red Colaborativa & Venta de Inmuebles"* y *"SERVICIOS ESTRATÉGICOS Y DE AUTOR"* → *"SERVICIOS ESTRATÉGICOS Y CONSULTORÍA"*.
+       • En `server/_core/prompts/base.md`: Sustituido *"Inmuebles de Autor"* por *"propiedades destacadas"*.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 177/177 tests passing ✅ | `npm run build` limpio en 24.92s ✅
+- `shared/const.ts` (`v32.90`) y `package.json` (`32.90.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.89 — Octubre 2026
 
 ### Novedades v32.89 (Misión, Visión 2026-2030, Manifiesto 'El Fin de los Portales Inmobiliarios' y Doctrina de Lenguaje Claro sin Tecnicismos):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

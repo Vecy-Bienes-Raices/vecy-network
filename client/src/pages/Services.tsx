@@ -120,13 +120,13 @@ const freeJanIAServices: FreeJanIAService[] = [
 // 💎 PORTAFOLIO DE SERVICIOS ESTRATÉGICOS & BRÓKER (ATENCIÓN HUMANA: +573166569719)
 const commercialServices: CommercialService[] = [
   {
-    id: "inmuebles-autor",
-    badge: "CORRETAJE DE ALTA GAMA",
-    title: "Red Colaborativa & Inmuebles de Autor",
-    description: "Comercialización de propiedades exclusivas mediante nuestra red de más de 300 asesores y el modelo institucional 40/20/40. Difusión sin letreros invasivos y fichas de Marca Blanca que aceleran las ventas hasta 3 veces más rápido.",
+    id: "inmuebles-destacados",
+    badge: "CORRETAJE PROFESIONAL",
+    title: "Red Colaborativa & Venta de Inmuebles",
+    description: "Comercialización de propiedades mediante nuestra red de más de 300 asesores y el modelo 40/20/40. Difusión sin letreros invasivos y fichas de Marca Blanca que aceleran las ventas hasta 3 veces más rápido.",
     icon: <Building2 className="w-10 h-10 text-primary" />,
     features: [
-      "Comercialización discreta de inmuebles prémium",
+      "Comercialización discreta de propiedades",
       "Modelo colaborativo institucional 40 / 20 / 40",
       "Fichas de Marca Blanca para colegas aliados",
       "Cierre asistido y acompañamiento de punta a punta"
@@ -476,7 +476,7 @@ export default function Services() {
             <div className="text-center max-w-3xl mx-auto mb-16">
               <span className="vecy-accent-tag text-center">SOLUCIONES INTEGRALES</span>
               <h2 className="vecy-title-section uppercase tracking-tight text-2xl sm:text-4xl font-extrabold text-white mt-2">
-                SERVICIOS <span className="text-gradient-gold">ESTRATÉGICOS Y DE AUTOR</span>
+                SERVICIOS <span className="text-gradient-gold">ESTRATÉGICOS Y CONSULTORÍA</span>
               </h2>
               <div className="line-electric w-28 mx-auto my-4"></div>
               <p className="text-zinc-400 text-xs sm:text-sm font-medium">
