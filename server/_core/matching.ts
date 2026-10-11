@@ -4003,5 +4003,5 @@ export function buildBigTechAdminReport(prop: any, req: any, score: number): str
 ⚖️ *TÉCNICO:* ${techDetails}.
 💰 *ESTRATEGIA:* Eduardo / Jani, coincidencia de alta probabilidad validada. ¡Vayan por esa comisión! 🚀
 
-👉 Ver en el panel web: https://vecy-network.vercel.app/admin`;
+👉 Ver en el panel web: https://vecy-bienes-raices.vercel.app/admin`;
 }

@@ -3143,7 +3143,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
         'ORG:VECY BIENES RAÍCES;\n' +
         'TEL;type=CELL;type=VOICE;waid=573192919978:+57 319 291 9978\n' +
         'NOTE:Inteligencia Artificial Inmobiliaria de Colombia. Consultas, peritajes y cruce de negocios 24/7.\n' +
-        'URL:https://vecy-network.vercel.app/\n' +
+        'URL:https://vecy-bienes-raices.vercel.app/\n' +
         'END:VCARD';
 
       if (contactType === 'broker') {
@@ -3155,7 +3155,7 @@ Aquí tienes el contacto directo del aliado que ofrece la propiedad:
           'ORG:VECY BIENES RAÍCES;\n' +
           'TEL;type=CELL;type=VOICE;waid=573166569719:+57 316 656 9719\n' +
           'NOTE:Atención Comercial Humana y Dirección de VECY Bienes Raíces.\n' +
-          'URL:https://vecy-network.vercel.app/\n' +
+          'URL:https://vecy-bienes-raices.vercel.app/\n' +
           'END:VCARD';
       }
 

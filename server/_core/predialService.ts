@@ -414,7 +414,7 @@ export const PREDIAL_HELP_TEXT =
   `• CC con o sin puntos (ej: 19.386.159 o 19386159)\n` +
   `• NIT con o sin dígito de verificación (ej: 860.030.201-2 o 8600030201)\n` +
   `• Cédula de Extranjería (CE)\n\n` +
-  `📲 *Chat directo con JanIA:* https://vecy-network.vercel.app/jania\n\n` +
+  `📲 *Chat directo con JanIA:* https://vecy-bienes-raices.vercel.app/jania\n\n` +
   `📢 *Síguenos para más herramientas gratuitas:*\n` +
   `👉 https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
 
@@ -430,7 +430,7 @@ export const CEDULA_HELP_TEXT =
   `🔍 *¿Qué información recibirás?*\n` +
   `Nombre completo oficial de la persona registrada en la Policía Nacional de Colombia.\n\n` +
   `🛡️ *Este servicio es 100% gratuito* y consulta directamente la base oficial de la Policía Nacional.\n\n` +
-  `📲 *Chat directo con JanIA:* https://vecy-network.vercel.app/jania\n\n` +
+  `📲 *Chat directo con JanIA:* https://vecy-bienes-raices.vercel.app/jania\n\n` +
   `📢 *Síguenos para más herramientas gratuitas:*\n` +
   `👉 https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
 

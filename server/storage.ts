@@ -22,10 +22,10 @@ function normalizeKey(relKey: string): string {
 
 /**
  * Construye la URL absoluta de fallback local.
- * Usa VPS_BASE_URL del entorno o por defecto el dominio HTTPS de producción (vecy-network.vercel.app).
+ * Usa VPS_BASE_URL del entorno o por defecto el dominio HTTPS de producción (vecy-bienes-raices.vercel.app).
  */
 function buildAbsoluteLocalUrl(key: string): string {
-  const base = (process.env.VPS_BASE_URL || 'https://vecy-network.vercel.app').replace(/\/+$/, '');
+  const base = (process.env.VPS_BASE_URL || 'https://vecy-bienes-raices.vercel.app').replace(/\/+$/, '');
   return `${base}/uploads/${key}`;
 }
 

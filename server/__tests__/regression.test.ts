@@ -1470,6 +1470,7 @@ Ed del 2014.
       const { enforceVecyBrand, ensureVecyDailyFooter } = await import("../_core/cronService");
       expect(enforceVecyBrand("Bienvenido a VECY Network")).toBe("Bienvenido a VECY BIENES RAÍCES");
       expect(enforceVecyBrand("https://vecy-network.vercel.app/jania")).toBe("https://vecy-network.vercel.app/jania");
+      expect(enforceVecyBrand("https://vecy-bienes-raices.vercel.app/jania")).toBe("https://vecy-bienes-raices.vercel.app/jania");
       const out = ensureVecyDailyFooter("Hola colegas");
       expect(out).toContain("https://wa.me/573192919978");
       expect(out).toContain("La evolución inevitable para el sector de los bienes raíces.");
@@ -3575,6 +3576,19 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(soporteContent).toContain("40/20/40");
       expect(soporteContent).not.toContain("45/5/5/45");
       expect(soporteContent).not.toContain("45/10/45");
+    });
+
+    it("Doctrina v32.84: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
+      const { VECY_ACTIVE_DOMAIN, VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_ACTIVE_DOMAIN).toBe("https://vecy-bienes-raices.vercel.app");
+      expect(VECY_VERSION).toBe("v32.84");
+
+      const fs = await import("fs");
+      const path = await import("path");
+      const basePath = path.resolve(__dirname, "../_core/prompts/base.md");
+      const baseContent = fs.readFileSync(basePath, "utf-8");
+      expect(baseContent).toContain("https://vecy-bienes-raices.vercel.app/jania");
+      expect(baseContent).toContain("https://vecy-bienes-raices.vercel.app");
     });
   });
 });

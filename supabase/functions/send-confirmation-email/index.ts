@@ -172,7 +172,7 @@ function getEmailContent(formData: any) {
   const fechaActual = new Intl.DateTimeFormat('es-CO', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Bogota' }).format(now);
   const horaActual = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Bogota' }).format(now);
 
-  const baseHtml = (title: any, bodyContent: any) => `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style> @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap'); body { font-family: 'Poppins', Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; } .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f33; } .header { background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #bf953f; } .header img { max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4)); } .content { padding: 35px 40px; color: #f0f0f0; } .content h2 { color: #bf953f; font-size: 22px; margin-top: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; } .content p { font-size: 16px; line-height: 1.7; margin-bottom: 20px; } .highlight { background-color: #1a1a1a; padding: 15px 20px; border-left: 4px solid #bf953f; margin-top: 25px; border-radius: 4px; } .highlight p { font-size: 15px; margin: 0; color: #bf953f; font-weight: 600; } .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #333; } .footer a { color: #bf953f; text-decoration: none; font-weight: 600; } </style></head><body><div class="container"><div class="header"><img src="${logoUrlParaEmail}" alt="Vecy Bienes Raíces Logo"></div><div class="content"><h2>${title}</h2>${bodyContent}</div><div class="footer"><p>Vecy Bienes Raíces S.A.S. © ${new Date().getFullYear()} | Gold Edition</p><p><a href="https://vecy-network.vercel.app/" target="_blank">vecy-network.vercel.app</a></p></div></div></body></html>`;
+  const baseHtml = (title: any, bodyContent: any) => `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style> @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap'); body { font-family: 'Poppins', Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; } .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f33; } .header { background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #bf953f; } .header img { max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4)); } .content { padding: 35px 40px; color: #f0f0f0; } .content h2 { color: #bf953f; font-size: 22px; margin-top: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; } .content p { font-size: 16px; line-height: 1.7; margin-bottom: 20px; } .highlight { background-color: #1a1a1a; padding: 15px 20px; border-left: 4px solid #bf953f; margin-top: 25px; border-radius: 4px; } .highlight p { font-size: 15px; margin: 0; color: #bf953f; font-weight: 600; } .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #333; } .footer a { color: #bf953f; text-decoration: none; font-weight: 600; } </style></head><body><div class="container"><div class="header"><img src="${logoUrlParaEmail}" alt="Vecy Bienes Raíces Logo"></div><div class="content"><h2>${title}</h2>${bodyContent}</div><div class="footer"><p>Vecy Bienes Raíces S.A.S. © ${new Date().getFullYear()} | Gold Edition</p><p><a href="https://vecy-bienes-raices.vercel.app/" target="_blank">vecy-bienes-raices.vercel.app</a></p></div></div></body></html>`;
 
   const subject = `✅ Solicitud #${solicitud_id} Recibida | Vecy Agenda`;
   const title = `¡Hola, ${solicitante_nombre}! Hemos recibido tu solicitud 🏠✨`;
@@ -417,7 +417,7 @@ ${waLink}`;
 
   console.log(`[${displayId}] Enviando notificación de WhatsApp nativa al backend...`);
   const cleanPhone = phone.replace(/\D/g, "");
-  const backendUrl = formData.backend_url || 'https://vecy-network.vercel.app';
+  const backendUrl = formData.backend_url || 'https://vecy-bienes-raices.vercel.app';
   const notificationUrl = `${backendUrl.trim()}/api/send-whatsapp-notification`;
 
   try {
@@ -511,7 +511,7 @@ async function createContractPdf(formData: any) {
   let y = height - margin;
 
   const drawFooter = (pageToDrawOn: any) => {
-    const footerText = 'Vecy Bienes Raíces S.A.S. | https://vecy-network.vercel.app/';
+    const footerText = 'Vecy Bienes Raíces S.A.S. | https://vecy-bienes-raices.vercel.app/';
     const footerTextWidth = font.widthOfTextAtSize(footerText, 8);
     pageToDrawOn.drawText(footerText, { x: (width - footerTextWidth) / 2, y: margin / 2, font, size: 8, color: gray });
   };

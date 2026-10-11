@@ -331,6 +331,42 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.84 — Octubre 2026
+
+#### 📌 CONSAGRACIÓN DEL NUEVO DOMINIO OFICIAL VECY-BIENES-RAICES.VERCEL.APP, REDIRECCIÓN PERMANENTE 308 EN VERCEL Y BLINDAJE DE INFRAESTRUCTURA
+
+**Requerimiento y Objetivos:**
+1. **Factibilidad y Transición del Dominio en Vercel**:
+   - Eduardo preguntó: *"Agente, ¿Qué tan fáctible y fácil ves cambiar nuestro actual dominio de vercel: https://vecy-network.vercel.app/ po este: https://vecy-bienes-raices.vercel.app/ y si lo ves factible ya que tenemos un proyecto tan pero tan avanzado que tan fácil o dificil lo ves y si no se daña nada dame los pasos."*
+   - Eduardo consultó además si convenía cambiar nombres internos en GitHub, Vercel, Supabase y el VPS.
+2. **Decisión Doctrinal de Infraestructura**:
+   - **Desacoplamiento Absoluto**: El frontend opera con rutas relativas y toma su origen dinámicamente (`window.location.origin`). Las reescrituras de `vercel.json` apuntan a la IP fija del VPS (`http://13.140.149.144`). El backend Express admite cualquier origen entrante mediante CORS dinámico.
+   - **Regla de Oro de Nombres Técnicos**: Se determinó que los nombres de infraestructura interna (`vecy-network` en GitHub, Vercel Project Name, servicio PM2 en VPS y base de datos local `vecy_network`) **NO deben modificarse jamás** para blindar los webhooks de despliegue continuo (CI/CD) y estabilidad del servidor. La marca pública y dominio de producción se consagran bajo `https://vecy-bienes-raices.vercel.app/`.
+3. **Estrategia Zero-Downtime y Cero Enlaces Rotos**:
+   - Se configuró el dominio anterior `vecy-network.vercel.app` como **308 Permanent Redirect** hacia `vecy-bienes-raices.vercel.app`. De este modo, todo enlace compartido previamente en WhatsApp o correos electrónicos redirige instantáneamente al nuevo dominio.
+   - En Supabase Dashboard (*Authentication -> URL Configuration*), se configuró `https://vecy-bienes-raices.vercel.app` como *Site URL* y se añadió `https://vecy-bienes-raices.vercel.app/**` en *Redirect URLs* para blindar el inicio de sesión con Google OAuth.
+
+**Archivos Modificados:**
+- `shared/const.ts`: Versión `v32.84` y `VECY_ACTIVE_DOMAIN = "https://vecy-bienes-raices.vercel.app"`.
+- `package.json`: Versión `32.84.0`.
+- `server/_core/janIA.ts`: Actualizadas URLs del portal oficial y consola web de JanIA.
+- `server/_core/whatsapp-match.ts`: Actualizadas vCards electrónicas (JanIA y Bróker Oficial).
+- `server/_core/predialService.ts`: Actualizados enlaces en textos de ayuda y consulta de documentos.
+- `server/_core/matching.ts`: Actualizado enlace al panel web `/admin`.
+- `server/_core/index.ts`: Actualizada Web oficial en broadcasts de WhatsApp.
+- `server/_core/emailContractService.ts`: Actualizada URL de QR, CUV y pie de página en contratos.
+- `server/routers/janIA.ts`: Actualizada URL en invitación de registro para navegantes anónimos.
+- `server/storage.ts`: Actualizado fallback de almacenamiento local.
+- `server/_core/cronService.ts`: Actualizadas todas las URLs de difusión del cron diario.
+- `server/_core/prompts/base.md`: Consagrado el nuevo dominio oficial y registro KYC.
+- `supabase/functions/send-confirmation-email/index.ts`: Actualizadas URLs de notificación y pie de PDF.
+- `server/__tests__/regression.test.ts`: Nuevo test doctrinal de verificación de dominio v32.84.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+**Verificación**: `npm run check` 0 errores ✅ | `npm test` 171/171 tests passing ✅ | `npm run build` limpio en 18.00s ✅
+
+---
+
 ### 🔖 v32.83 — Octubre 2026
 
 #### 📌 ENCUADRE SIMÉTRICO Y PADDING EN CARDS DE DEMANDAS Y BOTÓN DORADO PROTAGONISTA EN CTA DE REQUERIMIENTOS

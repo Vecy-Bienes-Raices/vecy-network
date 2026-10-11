@@ -19,11 +19,11 @@
 - **Número WhatsApp JanIA Socket/Baileys ACTIVO**: **+573192919978** (Línea donde corre el bot en el VPS)
 - **Número Comercial Oficial VECY BIENES RAÍCES (Atención Bróker)**: **+573166569719** (Línea oficial de la inmobiliaria para llamadas y cotizaciones de clientes)
 - **Base de datos**: PostgreSQL 17.11 + PostGIS 3.6.4 (Nativo en VPS — 0% Cuotas Supabase)
-- **Dominio Activo Oficial del Proyecto**: **https://vecy-network.vercel.app/** (Web oficial pública activa por ahora, panel admin: `https://vecy-network.vercel.app/admin`, JanIA landing: `https://vecy-network.vercel.app/jania`)
-- **Dominio Secundario / Transición**: `https://vecy.co`
+- **Dominio Activo Oficial del Proyecto**: **https://vecy-bienes-raices.vercel.app/** (Web oficial pública activa, panel admin: `https://vecy-bienes-raices.vercel.app/admin`, JanIA landing: `https://vecy-bienes-raices.vercel.app/jania`)
+- **Dominio Secundario / Transición**: `https://vecy-network.vercel.app` (Redirección 308 automática activa hacia el dominio oficial) / `https://vecy.co`
 
-> 🌐 **DOCTRINA DE DOMINIO OFICIAL VECY (v32.17)**:
-> El dominio principal activo del proyecto por ahora es OBLIGATORIAMENTE **`https://vecy-network.vercel.app/`**. NINGÚN agente debe olvidar este dominio ni omitirlo en comunicaciones o bitácoras.
+> 🌐 **DOCTRINA DE DOMINIO OFICIAL VECY (v32.84)**:
+> El dominio principal activo del proyecto es OBLIGATORIAMENTE **`https://vecy-bienes-raices.vercel.app/`**. NINGÚN agente debe olvidar este dominio ni omitirlo en comunicaciones o bitácoras. El dominio anterior `vecy-network.vercel.app` opera con redirección permanente HTTP 308 en Vercel para garantizar cero enlaces rotos.
 
 > 📞 **DISTINCIÓN DOCTRINAL TELEFÓNICA OFICIAL (v31.28)**:
 > - **JanIA Bot en Baileys**: Opera EXCLUSIVAMENTE conectada al socket mediante la línea **`+573192919978`**.
@@ -172,7 +172,24 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.83 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.84 — Octubre 2026
+
+### Novedades v32.84 (Consagración del Nuevo Dominio Oficial `https://vecy-bienes-raices.vercel.app/`, Redirección Permanente 308 en Vercel, Autorización en Supabase y Blindaje de Infraestructura):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Factibilidad y Transición de Dominio**:
+     - Eduardo preguntó: *"Agente, ¿Qué tan fáctible y fácil ves cambiar nuestro actual dominio de vercel: https://vecy-network.vercel.app/ po este: https://vecy-bienes-raices.vercel.app/ y si lo ves factible ya que tenemos un proyecto tan pero tan avanzado que tan fácil o dificil lo ves y si no se daña nada dame los pasos."*
+     - Eduardo consultó además si debía cambiar nombres de proyecto en Vercel, Supabase, VPS o repositorios.
+  2. **Decisión Doctrinal de Arquitectura**:
+     - **Dominio Público vs Nombres de Infraestructura**: Se consagró la regla de oro: la identidad pública de cara al usuario y los buscadores se unifica bajo `https://vecy-bienes-raices.vercel.app/` (coherente con la marca oficial Vecy Bienes Raíces S.A.S. y redes `@vecybienesraices`), mientras que los nombres técnicos internos (`vecy-network` en GitHub, Vercel, VPS PM2 y base de datos PostgreSQL) se mantienen intactos para preservar webhooks de CI/CD, despliegues automáticos y scripts de demonios sin riesgo de caídas.
+  3. **Acciones Implementadas**:
+     - **Vercel**: Se asoció `vecy-bienes-raices.vercel.app` al entorno de producción con validación DNS/SSL inmediata. Se configuró `vecy-network.vercel.app` con **308 Permanent Redirect** hacia `vecy-bienes-raices.vercel.app`, garantizando que ningún enlace previo compartido en WhatsApp o correo se rompa.
+     - **Supabase**: Se inscribió `https://vecy-bienes-raices.vercel.app` como *Site URL* y `https://vecy-bienes-raices.vercel.app/**` en *Redirect URLs* autorizadas para Google OAuth y autenticación de usuarios.
+     - **Código del Proyecto**: Se actualizó la constante única de verdad `VECY_ACTIVE_DOMAIN = "https://vecy-bienes-raices.vercel.app"` en `shared/const.ts`. Se actualizaron todas las URLs de WhatsApp, chat de JanIA, reportes de cruces de matches, verificador notarial de contratos con CUV, correos transaccionales y cron diarios en `server/_core/` y `supabase/functions/`.
+     - **Pruebas de Regresión**: Se agregó test unitario de la Doctrina de Dominio v32.84 en `server/__tests__/regression.test.ts`.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 171/171 tests passing ✅ | `npm run build` limpio en 18.00s ✅
+- `shared/const.ts` (`v32.84`) y `package.json` (`32.84.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.83 — Octubre 2026
 
 ### Novedades v32.83 (Encuadre Simétrico y Padding en Cards de Demandas y Botón Dorado Protagonista en CTA de Requerimientos):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

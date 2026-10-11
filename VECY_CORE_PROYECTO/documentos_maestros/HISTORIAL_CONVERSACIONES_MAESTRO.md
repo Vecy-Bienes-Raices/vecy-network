@@ -7,6 +7,48 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.84 — 10 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Factibilidad y Pasos para Cambio de Dominio en Vercel**:
+   - Eduardo preguntó: *"Agente, ¿Qué tan fáctible y fácil ves cambiar nuestro actual dominio de vercel: https://vecy-network.vercel.app/ po este: https://vecy-bienes-raices.vercel.app/ y si lo ves factible ya que tenemos un proyecto tan pero tan avanzado que tan fácil o dificil lo ves y si no se daña nada dame los pasos."*
+2. **Consulta sobre Nombres de Proyecto en Infraestructura**:
+   - Eduardo consultó: *"Listo. Tienes luz verde, pero antes dime si cambio también el nombre del proyecto en cada sitio, en vercel, en supabase, en el VPS, no se donde más... Dime!!"*
+
+### Diagnóstico Técnico y Arquitectura de Solución
+1. **Factibilidad y Cero Riesgo de Daño**:
+   - Se evaluó el desacoplamiento del sistema: el frontend en React/Vite opera con enrutamiento relativo y orígenes dinámicos (`window.location.origin` y `window.location.href`). Las reescrituras de `vercel.json` apuntan directamente a la IP pública del VPS (`http://13.140.149.144`). El backend Express maneja CORS dinámico (`res.header("Access-Control-Allow-Origin", origin)`).
+   - Para garantizar continuidad del 100% sin enlaces rotos en WhatsApp o correos previos, se instruyó la estrategia de **308 Permanent Redirect** en Vercel desde `vecy-network.vercel.app` hacia `vecy-bienes-raices.vercel.app`.
+2. **Doctrina Infranqueable de Nombres de Infraestructura**:
+   - Se determinó categóricamente **NO modificar los nombres técnicos internos** (`Vecy-Bienes-Raices/vecy-network` en GitHub, `vecy-network` en Vercel, `vecy-network` en PM2 VPS, base de datos `vecy_network` en PostgreSQL). En la industria del software, los nombres de infraestructura interna se preservan intactos para proteger los webhooks de CI/CD, scripts de despliegue y demonios, mientras que la marca pública (`https://vecy-bienes-raices.vercel.app/`) se consagra ante clientes, buscadores y WhatsApp.
+
+### Acciones Técnicas Ejecutadas
+1. **Configuración en Vercel y Supabase (por Eduardo A. Rivera guiado en vivo)**:
+   - Añadido dominio `vecy-bienes-raices.vercel.app` en Vercel con asignación a `Production` (Valid Configuration ✅).
+   - Configurado `vecy-network.vercel.app` como **308 Permanent Redirect** hacia `vecy-bienes-raices.vercel.app` (probado y validado vía curl HTTP/2 308 ✅).
+   - Actualizado Supabase Authentication: `https://vecy-bienes-raices.vercel.app` configurado como *Site URL* y `https://vecy-bienes-raices.vercel.app/**` agregado a *Redirect URLs* permitidas para Google OAuth.
+2. **Actualización Integral del Código Fuente**:
+   - `shared/const.ts`: `VECY_ACTIVE_DOMAIN` actualizado a `"https://vecy-bienes-raices.vercel.app"`.
+   - `server/_core/janIA.ts`: Actualizadas 4 referencias de portal, consola web de JanIA y descripción oficial.
+   - `server/_core/whatsapp-match.ts`: Actualizadas las vCards electrónicas enviadas por WhatsApp (JanIA y Bróker).
+   - `server/_core/predialService.ts`: Actualizados enlaces en textos de ayuda de predial y consulta de cédulas.
+   - `server/_core/matching.ts`: Actualizado enlace del panel web `/admin`.
+   - `server/_core/index.ts`: Actualizadas 4 ocurrencias de Web oficial en broadcasts de WhatsApp.
+   - `server/_core/emailContractService.ts`: Actualizado generador de QR, CUV y pie de página de correos y contratos.
+   - `server/routers/janIA.ts`: Actualizado enlace en invitación de registro para navegantes anónimos.
+   - `server/storage.ts`: Actualizada URL base de fallback de almacenamiento.
+   - `server/_core/cronService.ts`: Actualizadas todas las URLs de difusión matutina y nocturna a `https://vecy-bienes-raices.vercel.app`.
+   - `server/_core/prompts/base.md`: Consagrado el nuevo mapa de enlaces y URL de registro KYC.
+   - `supabase/functions/send-confirmation-email/index.ts`: Actualizadas 3 menciones en notificaciones y PDFs.
+3. **Pruebas y Verificación**:
+   - `npm run check`: 0 errores TypeScript.
+   - `npm test`: 171/171 tests passing (incluyendo nuevo test suite de Doctrina v32.84).
+   - `npm run build`: Vite + esbuild completado limpiamente en 18.00s.
+4. **Incremento de Versión Oficial**:
+   - `shared/const.ts` (`v32.84`) y `package.json` (`32.84.0`).
+
+---
+
 ## 📋 SESIÓN v32.83 — 10 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

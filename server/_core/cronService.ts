@@ -378,7 +378,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `📊 *Capacidad de Compra & Crédito Hipotecario:*\n` +
         `El comportamiento de las tasas de interés de colocación hipotecaria impacta de forma directa el poder adquisitivo de los compradores. Una variación del 1% en la tasa representa hasta un 10% más de presupuesto disponible para adquirir vivienda.\n\n` +
         `💡 *Consejo de Cierre:* Perfila a tus compradores con preaprobados vigentes antes de negociar precios de venta.\n\n` +
-        `📲 *Consultas de Mercado con JanIA:* https://vecy-network.vercel.app/jania`
+        `📲 *Consultas de Mercado con JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     },
     {
       topicTitle: 'Tope Legal de Incremento de Arriendos bajo Ley 820',
@@ -391,7 +391,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `• El incremento no puede superar el porcentaje del IPC acumulado del año previo fijado por el DANE.\n` +
         `• El canon mensual resultante nunca podrá exceder el 1% del valor comercial real del inmueble.\n\n` +
         `💡 *Asesora con rigor:* Comunica el reajuste por escrito con antelación reglamentaria.\n\n` +
-        `📲 *Consultas Jurídicas JanIA:* https://vecy-network.vercel.app/jania`
+        `📲 *Consultas Jurídicas JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     },
     {
       topicTitle: 'Rentas Cortas y Registro Nacional de Turismo (RNT)',
@@ -404,7 +404,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `2. Inscripción activa en el Registro Nacional de Turismo (RNT) del Ministerio de Comercio.\n` +
         `3. Cumplimiento de normas de policía y registro de huéspedes (TRA).\n\n` +
         `💡 *Evita sanciones:* Asesora a tus inversionistas antes de comprar predios para Airbnb.\n\n` +
-        `📲 *Consultorio JanIA:* https://vecy-network.vercel.app/jania`
+        `📲 *Consultorio JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     }
   ],
 
@@ -420,7 +420,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `• *Arras Confirmatorias Penales (Art. 1861 C.C.):* Sirven como prueba de celebración del contrato y garantía de cumplimiento; facultan a exigir judicialmente la firma de la escritura.\n` +
         `• *Cláusula Penal:* Fija de antemano el monto indemnizatorio ante mora o incumplimiento contractual.\n\n` +
         `💡 *Consejo de Blindaje:* Especifica siempre la fecha, hora exacta y notaría determinada para la firma de la escritura pública.\n\n` +
-        `📲 *Revisión de Minutas con JanIA:* https://vecy-network.vercel.app/jania`
+        `📲 *Revisión de Minutas con JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     },
     {
       topicTitle: 'Modelo Colaborativo 40/20/40 de VECY BIENES RAÍCES vs Tercerías',
@@ -436,7 +436,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `  - **10% VECY BIENES RAÍCES:** Para la plataforma tecnológica, el algoritmo de matches de JanIA y el blindaje contractual.\n` +
         `• **40% Punta COLOCADORA:** Para quien consigue al comprador, lo presenta para agendamiento de visitas y logra el cierre del negocio.\n\n` +
         `🚫 *Cero tercerías e intermediarios fantasma:* El 40/20/40 premia con equidad a quienes realmente trabajan, activa un ejército de promotores motivados y protege las puntas.\n\n` +
-        `🌐 *Portal Oficial:* https://vecy-network.vercel.app/`
+        `🌐 *Portal Oficial:* https://vecy-bienes-raices.vercel.app/`
     },
     {
       topicTitle: 'Verificación de Identidad de Visitantes y Antecedentes con JanIA',
@@ -463,7 +463,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `2️⃣ **Gravámenes y Limitaciones:** Identificar hipotecas, embargos, patrimonios de familia o afectaciones a vivienda familiar vigentes.\n` +
         `3️⃣ **Notas Devolutivas Recientes:** Alerta roja si la Oficina de Registro rechazó un trámite notarial previo por inconsistencias.\n\n` +
         `💡 *Asesora con seguridad notarial:* Si tienes dudas con un certificado SNR, consúltame.\n\n` +
-        `📲 *Soporte Legal JanIA:* https://vecy-network.vercel.app/jania`
+        `📲 *Soporte Legal JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     }
   ],
 
@@ -480,7 +480,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `• **Despersonalización:** Retira fotos familiares, toallas y tapetes desgastados antes de capturar el espacio.\n` +
         `• **Enfoque Horizontal:** Permite que los portales y redes muestren la amplitud real de la habitación.\n\n` +
         `💡 *Una imagen profesional duplica el interés de colegas y clientes compradores.*\n\n` +
-        `📲 *Marketing & Copys con JanIA:* https://vecy-network.vercel.app/jania`
+        `📲 *Marketing & Copys con JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     },
     {
       topicTitle: 'Viralización Orgánica en Redes Sociales para Inmuebles',
@@ -493,7 +493,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `2️⃣ **Recorrido Ágil (Segundos 4 a 35):** Planos continuos de 3 segundos por área sin movimientos bruscos.\n` +
         `3️⃣ **Llamado a la Acción (Segundos 36 a 45):** Menciona la ciudad, barrio exacto y link directo de contacto.\n\n` +
         `💡 *El contenido educativo y transparente atrae compradores calificados sin gastar en publicidad.*\n\n` +
-        `📲 *Prueba redactar copys con JanIA:* https://vecy-network.vercel.app/jania`
+        `📲 *Prueba redactar copys con JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     },
     {
       topicTitle: 'Los 7 Pilares Obligatorios de una Publicación Exitosa',
@@ -511,7 +511,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `6️⃣ Parqueaderos (Independientes o Servidumbre/Línea)\n` +
         `7️⃣ Enlace directo de contacto de WhatsApp\n\n` +
         `💡 *Cuando publicas con rigor, JanIA cruza datos en tiempo real y encuentra la otra punta al instante.*\n\n` +
-        `📲 *Cruce Inteligente JanIA:* https://vecy-network.vercel.app/admin`
+        `📲 *Cruce Inteligente JanIA:* https://vecy-bienes-raices.vercel.app/admin`
     }
   ],
 
@@ -527,7 +527,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `• **Persona Jurídica:** Tarifa general del **2.5%** a título de renta retenida en notaría.\n` +
         `• **¿Quién la asume?:** Por disposición legal y costumbre comercial, la retención en la fuente es asumida exclusivamente por el vendedor.\n\n` +
         `💡 *Consejo Contable:* Solicita al vendedor su última declaración de renta para verificar el costo fiscal antes de prometer.\n\n` +
-        `📲 *Liquidaciones Tributarias JanIA:* https://vecy-network.vercel.app/jania`
+        `📲 *Liquidaciones Tributarias JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     },
     {
       topicTitle: 'Deducción de Mejoras y Refacciones con Facturación Electrónica',
@@ -540,7 +540,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `✅ **Mejoras y Adiciones:** Remodelaciones de cocinas, baños, ampliaciones y cambio de tuberías.\n` +
         `✅ **Requisito Obligatorio DIAN:** Contar con Facturas Electrónicas de Venta válidas emitidas por los contratistas a nombre del titular.\n` +
         `❌ Recibos de caja menor o notas manuales NO son deducibles fiscalmente.\n\n` +
-        `📲 *Consultas Financieras JanIA:* https://vecy-network.vercel.app/jania`
+        `📲 *Consultas Financieras JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     },
     {
       topicTitle: 'Desglose Exacto de Gastos Notariales y de Registro en Colombia',
@@ -553,7 +553,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `💰 **Vendedor Exclusivo:** Retención en la fuente (1% Personas Naturales).\n` +
         `📝 **Comprador Exclusivo:** Impuesto de Registro y Beneficencia (Gobernación + SNR, aprox. 1.67% al 2.0% según el departamento).\n\n` +
         `💡 *Claridad previa evita discrepancias en el despacho notarial.*\n\n` +
-        `📲 *Asistencia Inmobiliaria JanIA:* https://vecy-network.vercel.app/jania`
+        `📲 *Asistencia Inmobiliaria JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     }
   ],
 
@@ -570,7 +570,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `• Rango sugerido de valor por metro cuadrado para venta rápida.\n` +
         `• Estimación de canon de arrendamiento según oferta y demanda.\n\n` +
         `💡 *Servicio 100% virtual, ágil y sin necesidad de trámites engorrosos ni peritajes presenciales.*\n\n` +
-        `📲 *Sondeos de Mercado JanIA:* https://vecy-network.vercel.app/jania`
+        `📲 *Sondeos de Mercado JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     },
     {
       topicTitle: 'Interpretación de Fichas Normativas SINUPOT en Bogotá',
@@ -584,7 +584,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `• **Área de Actividad:** Residencial neta, comercio vecinal o servicios empresariales.\n` +
         `• **Usos Permitidos y Restringidos:** Qué actividades comerciales pueden operar legalmente en el inmueble.\n` +
         `• **Índices de Ocupación y Alturas:** Pisos permitidos según el perfil vial.\n\n` +
-        `📲 *Envía tu ficha a JanIA:* https://vecy-network.vercel.app/jania`
+        `📲 *Envía tu ficha a JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     },
     {
       topicTitle: 'Cálculo de Cánones de Arrendamiento Sugeridos',
@@ -596,7 +596,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `• **Rango Promedio en Colombia:** Entre el **0.5% y el 0.8%** mensual sobre el valor comercial real del inmueble.\n` +
         `• **Factores de Valor:** Amenidades (club house, piscina, gimnasio), garajes independientes y estrato socioeconómico.\n` +
         `• **Riesgo de Vacancia:** Un sobreprecio de apenas el 10% puede prolongar el tiempo de colocación en 3 a 5 meses, generando mayores pérdidas en cuotas de administración que la rebaja inicial.\n\n` +
-        `📲 *Sondeos de Arriendo con JanIA:* https://vecy-network.vercel.app/jania`
+        `📲 *Sondeos de Arriendo con JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     }
   ],
 
@@ -611,7 +611,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `🌟 **La Reputación Comercial:** En un mercado competitivo, los corredores que cumplen su palabra y respetan los acuerdos de corretaje compartido multiplican sus negocios por recomendación natural.\n` +
         `🤝 **El Poder de la Red:** Nadie tiene todos los clientes ni todos los inmuebles; colaborar en red permite cerrar el doble de negocios en la mitad del tiempo.\n\n` +
         `📞 *Atención Personalizada Bróker (Eduardo y Jani):* WhatsApp +57 316 656 9719\n` +
-        `📲 *Consola Web JanIA:* https://vecy-network.vercel.app/jania`
+        `📲 *Consola Web JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     },
     {
       topicTitle: 'Identidad de JanIA: Creada para Empoderar al Asesor',
@@ -625,7 +625,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `• Diseñada para empoderar al agente independiente y a la agencia, brindándoles herramientas que antes solo tenían las multinacionales.\n` +
         `• **Qué hace 24/7:** Monitorea solicitudes, empata ofertas y demandas al instante, revisa minutas y analiza normativas fiscales.\n\n` +
         `🤝 *VECY Bienes Raíces es tu aliado tecnológico permanente.*\n\n` +
-        `📲 *Interactúa con JanIA:* https://vecy-network.vercel.app/jania`
+        `📲 *Interactúa con JanIA:* https://vecy-bienes-raices.vercel.app/jania`
     }
   ],
 
@@ -642,7 +642,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `📊 *Estudios de Mercado y M²:* Fijación de precios competitivos sin quemar predios.\n` +
         `📐 *Fichas SINUPOT:* Usos de suelo, alturas y edificabilidad al instante.\n` +
         `📢 *Marketing Inmobiliario:* Técnicas de fotografía y los 7 pilares de publicación.\n\n` +
-        `📲 *Consola Web JanIA:* https://vecy-network.vercel.app/jania\n` +
+        `📲 *Consola Web JanIA:* https://vecy-bienes-raices.vercel.app/jania\n` +
         `📞 *Línea Comercial Bróker:* WhatsApp +57 316 656 9719`
     },
     {
@@ -657,7 +657,7 @@ export const ROTATING_FALLBACK_CATALOG: Record<string, FallbackTipItem[]> = {
         `• **15% Fondo de Bolsa Colaborativa:** Para los agentes que colaboran difundiendo y viralizando.\n` +
         `• **15% Plataforma y Tecnología VECY:** Para mantener la IA, servidores, soporte legal y peritajes.\n\n` +
         `💡 *Cero canibalismo, máxima transparencia y cierres compartidos.*\n\n` +
-        `📲 *Únete a la Red:* https://vecy-network.vercel.app/`
+        `📲 *Únete a la Red:* https://vecy-bienes-raices.vercel.app/`
     }
   ]
 };
@@ -1328,7 +1328,7 @@ ${forbiddenTopicsPrompt}
 - ESTRUCTURA DEL MENSAJE:
   1. Saludo inicial: Iniciando con "${timeInfo.greeting}" y presentándote siempre como JanIA.
   2. Desarrollo temático: Didáctico, conciso y con ejemplos reales de Colombia.
-  3. Cierre y Venta de la Idea (Llamado a la Acción): Invita a invitar a más colegas a la red y a interactuar con JanIA en https://vecy-network.vercel.app/jania o por WhatsApp.
+  3. Cierre y Venta de la Idea (Llamado a la Acción): Invita a invitar a más colegas a la red y a interactuar con JanIA en https://vecy-bienes-raices.vercel.app/jania o por WhatsApp.
 
 Debes responder en formato JSON estricto con los siguientes cuatro campos:
 {
@@ -2022,7 +2022,7 @@ export async function publishWeeklyReportNow(force: boolean = true) {
     `✅ **Presupuesto Máximo Real:** (Ej: Hasta $750 Millones)\n` +
     `✅ **Área Mínima:** (Ej: Mínimo 85 m²)\n` +
     `✅ **Distribución:** (Ej: 3 Alcobas, 2 Baños, 1 Garaje)\n\n` +
-    `📲 *Revisa tus coincidencias activas en:* https://vecy-network.vercel.app/admin`;
+    `📲 *Revisa tus coincidencias activas en:* https://vecy-bienes-raices.vercel.app/admin`;
 
   const content = await generateDailyContent('lunes_reporte_semanal', fallbackVoice, fallbackCaption);
   const effectiveTheme = content.chosenTheme || 'reporte_semanal';
@@ -2075,7 +2075,7 @@ export async function publishNoticiaNacionalNow(opts?: {
     `📌 *Titular:* ${opts?.headline || 'Dinámica del Mercado Inmobiliario y Proyecciones en Colombia'}\n\n` +
     `${opts?.details || 'El mercado inmobiliario en Colombia continúa mostrando movimientos estratégicos en colocación de créditos, valorización de metro cuadrado y demanda de arrendamientos urbanos y turísticos.'}\n\n` +
     `💡 *Impacto Comercial:* Recuerda que un corredor informado cierra más y mejor. Utiliza esta información para orientar a tus propietarios compradores y arrendatarios con bases sólidas.\n\n` +
-    `📲 *Consultas con JanIA:* https://vecy-network.vercel.app/jania`;
+    `📲 *Consultas con JanIA:* https://vecy-bienes-raices.vercel.app/jania`;
 
   const content = await generateDailyContent(
     'noticias_nacionales' as any,

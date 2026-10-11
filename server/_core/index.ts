@@ -541,7 +541,7 @@ async function startServer() {
         `3️⃣ En segundos te entrega el nombre oficial y antecedentes ✅\n\n` +
         `━━━━━━━━━━━━━━━\n` +
         `📢 *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
-        `🌐 *Web oficial:* https://vecy-network.vercel.app/\n\n` +
+        `🌐 *Web oficial:* https://vecy-bienes-raices.vercel.app/\n\n` +
         `*VECY BIENES RAÍCES 🏘️*`
       );
 
@@ -560,7 +560,7 @@ async function startServer() {
         `━━━━━━━━━━━━━━━\n` +
         `ℹ️ *¿Dónde está el CHIP?* En cualquier factura o recibo predial anterior.\n` +
         `📢 *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
-        `🌐 *Web oficial:* https://vecy-network.vercel.app/\n\n` +
+        `🌐 *Web oficial:* https://vecy-bienes-raices.vercel.app/\n\n` +
         `*VECY BIENES RAÍCES 🏘️*`
       );
 
@@ -663,7 +663,7 @@ async function startServer() {
         `🤝 _Tecnología gratuita para blindar tus ventas y captaciones en Colombia._\n\n` +
         `📞 *Atención Bróker VECY:* +57 316 656 9719 (https://wa.me/573166569719)\n` +
         `📢 *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
-        `🌐 *Web oficial:* https://vecy-network.vercel.app/\n\n` +
+        `🌐 *Web oficial:* https://vecy-bienes-raices.vercel.app/\n\n` +
         `*VECY BIENES RAÍCES 🏘️*`;
 
       console.log(`[BROADCAST-IDENTITY-V2] Despachando a Grupo 2, Grupo 3 y Canal (Imagen: ${hasImage ? imgPath : 'Ninguna'})...`);
@@ -724,7 +724,7 @@ async function startServer() {
         `🤝 _Tecnología gratuita para impulsar el corretaje y dejar en el pasado los portales obsoletos._\n\n` +
         `📞 *Atención Bróker VECY:* +57 316 656 9719 (https://wa.me/573166569719)\n` +
         `📢 *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
-        `🌐 *Web oficial:* https://vecy-network.vercel.app/\n\n` +
+        `🌐 *Web oficial:* https://vecy-bienes-raices.vercel.app/\n\n` +
         `*VECY BIENES RAÍCES 🏘️*`;
 
       console.log(`[BROADCAST-PREDIAL] Despachando a Grupo 2, Grupo 3 y Canal (Imagen: ${hasImage ? imgPath : 'Ninguna'})...`);

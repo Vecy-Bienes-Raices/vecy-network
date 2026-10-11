@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.82";
+    VECY_VERSION = "v32.84";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -110,7 +110,7 @@ Integraci\xF3n de colegas, vivencias cotidianas del negocio, foros de debate y n
 \u2022 NO publicar inmuebles ni requerimientos aqu\xED (van en el Grupo 1).
 \u2022 Spam, memes o mensajes ajenos ser\xE1n amonestados y ELIMINADOS DE INMEDIATO por JanIA.
 
-\u{1F310} *PORTAL OFICIAL:* https://vecy-network.vercel.app/
+\u{1F310} *PORTAL OFICIAL:* https://vecy-bienes-raices.vercel.app/
 
 _VECY_
 _BIENES RA\xCDCES_
@@ -7714,7 +7714,7 @@ function buildBigTechAdminReport(prop, req, score) {
 \u2696\uFE0F *T\xC9CNICO:* ${techDetails}.
 \u{1F4B0} *ESTRATEGIA:* Eduardo / Jani, coincidencia de alta probabilidad validada. \xA1Vayan por esa comisi\xF3n! \u{1F680}
 
-\u{1F449} Ver en el panel web: https://vecy-network.vercel.app/admin`;
+\u{1F449} Ver en el panel web: https://vecy-bienes-raices.vercel.app/admin`;
 }
 var cachedRejectedPairs, lastRejectedPairsFetch, REJECTED_PAIRS_TTL_MS, TRANSACTION_COMPATIBILITY_MATRIX, boundariesCache, MAX_BOUNDARIES_CACHE, propertyAddressNumbersCache, MAX_ADDRESS_NUMBERS_CACHE, KNOWN_BARRIOS_CANONICAL, COMPILED_BARRIOS, extractBarriosCache, MAX_BARRIOS_CACHE, BOGOTA_BARRIO_STREET_BOUNDS, activeMatchingReqs, activeMatchingProps, lastMatchingTimeReqs, lastMatchingTimeProps;
 var init_matching = __esm({
@@ -8250,7 +8250,7 @@ function normalizeKey(relKey) {
   return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
 }
 function buildAbsoluteLocalUrl(key) {
-  const base = (process.env.VPS_BASE_URL || "https://vecy-network.vercel.app").replace(/\/+$/, "");
+  const base = (process.env.VPS_BASE_URL || "https://vecy-bienes-raices.vercel.app").replace(/\/+$/, "");
   return `${base}/uploads/${key}`;
 }
 async function storagePut(relKey, data, contentType = "application/octet-stream") {
@@ -10152,7 +10152,7 @@ _JanIA, predial: CHIP AAA0205AYFZ y NIT 8600030201_
 \u2022 NIT con o sin d\xEDgito de verificaci\xF3n (ej: 860.030.201-2 o 8600030201)
 \u2022 C\xE9dula de Extranjer\xEDa (CE)
 
-\u{1F4F2} *Chat directo con JanIA:* https://vecy-network.vercel.app/jania
+\u{1F4F2} *Chat directo con JanIA:* https://vecy-bienes-raices.vercel.app/jania
 
 \u{1F4E2} *S\xEDguenos para m\xE1s herramientas gratuitas:*
 \u{1F449} https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
@@ -10173,7 +10173,7 @@ Nombre completo oficial de la persona registrada en la Polic\xEDa Nacional de Co
 
 \u{1F6E1}\uFE0F *Este servicio es 100% gratuito* y consulta directamente la base oficial de la Polic\xEDa Nacional.
 
-\u{1F4F2} *Chat directo con JanIA:* https://vecy-network.vercel.app/jania
+\u{1F4F2} *Chat directo con JanIA:* https://vecy-bienes-raices.vercel.app/jania
 
 \u{1F4E2} *S\xEDguenos para m\xE1s herramientas gratuitas:*
 \u{1F449} https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`;
@@ -10230,7 +10230,7 @@ async function createContractPdf(rawFormData) {
   const contractPayloadString = `${sId}|${clean(formData.solicitante_nombre)}|${clean(formData.solicitante_numero_documento)}|${clean(formData.codigo_inmueble)}|${(/* @__PURE__ */ new Date()).toISOString()}`;
   const sha256Hash = crypto.createHash("sha256").update(contractPayloadString).digest("hex");
   const cuv = `VECY-CTR-${sId}-${sha256Hash.substring(0, 8).toUpperCase()}`;
-  const verifyUrl = `https://vecy-network.vercel.app/verificar-contrato?id=${encodeURIComponent(sId)}&cuv=${cuv}&hash=${sha256Hash.substring(0, 16)}`;
+  const verifyUrl = `https://vecy-bienes-raices.vercel.app/verificar-contrato?id=${encodeURIComponent(sId)}&cuv=${cuv}&hash=${sha256Hash.substring(0, 16)}`;
   let qrImage = null;
   try {
     const qrBuffer = await QRCode.toBuffer(verifyUrl, {
@@ -10246,7 +10246,7 @@ async function createContractPdf(rawFormData) {
     console.error("Error al generar c\xF3digo QR para contrato:", qrErr?.message);
   }
   const drawFooter = (pageToDrawOn) => {
-    const footerText = `Vecy Bienes Ra\xEDces S.A.S. | CUV: ${cuv} | Ley 527/1999 | https://vecy-network.vercel.app/`;
+    const footerText = `Vecy Bienes Ra\xEDces S.A.S. | CUV: ${cuv} | Ley 527/1999 | https://vecy-bienes-raices.vercel.app/`;
     const footerTextWidth = font.widthOfTextAtSize(footerText, 7.5);
     pageToDrawOn.drawText(footerText, { x: (width - footerTextWidth) / 2, y: margin / 2, font, size: 7.5, color: gray });
   };
@@ -10529,7 +10529,7 @@ function getEmailContent(formData) {
   const now = /* @__PURE__ */ new Date();
   const fechaActual = new Intl.DateTimeFormat("es-CO", { year: "numeric", month: "long", day: "numeric", timeZone: "America/Bogota" }).format(now);
   const horaActual = new Intl.DateTimeFormat("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "America/Bogota" }).format(now);
-  const baseHtml = (title2, bodyContent) => `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style> @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"); body { font-family: "Poppins", Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; } .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f33; } .header { background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #bf953f; } .header img { max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4)); } .content { padding: 35px 40px; color: #f0f0f0; } .content h2 { color: #bf953f; font-size: 22px; margin-top: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; } .content p { font-size: 16px; line-height: 1.7; margin-bottom: 20px; } .highlight { background-color: #1a1a1a; padding: 15px 20px; border-left: 4px solid #bf953f; margin-top: 25px; border-radius: 4px; } .highlight p { font-size: 15px; margin: 0; color: #bf953f; font-weight: 600; } .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #333; } .footer a { color: #bf953f; text-decoration: none; font-weight: 600; } </style></head><body><div class="container"><div class="header"><img src="${logoUrlParaEmail}" alt="Vecy Bienes Ra\xEDces Logo"></div><div class="content"><h2>${title2}</h2>${bodyContent}</div><div class="footer"><p>Vecy Bienes Ra\xEDces S.A.S. \xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} | Gold Edition</p><p><a href="https://vecy.co/" target="_blank">vecy.co</a> \u2014 <a href="https://vecy-network.vercel.app/" target="_blank">vecy-network.vercel.app</a></p></div></div></body></html>`;
+  const baseHtml = (title2, bodyContent) => `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><style> @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"); body { font-family: "Poppins", Arial, sans-serif; margin: 0; padding: 0; background-color: #0a0a0a; } .container { max-width: 600px; margin: 20px auto; background-color: #121212; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #bf953f33; } .header { background-color: #000000; padding: 30px; text-align: center; border-bottom: 2px solid #bf953f; } .header img { max-width: 120px; filter: drop-shadow(0 0 8px rgba(191, 149, 63, 0.4)); } .content { padding: 35px 40px; color: #f0f0f0; } .content h2 { color: #bf953f; font-size: 22px; margin-top: 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; } .content p { font-size: 16px; line-height: 1.7; margin-bottom: 20px; } .highlight { background-color: #1a1a1a; padding: 15px 20px; border-left: 4px solid #bf953f; margin-top: 25px; border-radius: 4px; } .highlight p { font-size: 15px; margin: 0; color: #bf953f; font-weight: 600; } .footer { background-color: #000000; padding: 20px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #333; } .footer a { color: #bf953f; text-decoration: none; font-weight: 600; } </style></head><body><div class="container"><div class="header"><img src="${logoUrlParaEmail}" alt="Vecy Bienes Ra\xEDces Logo"></div><div class="content"><h2>${title2}</h2>${bodyContent}</div><div class="footer"><p>Vecy Bienes Ra\xEDces S.A.S. \xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} | Gold Edition</p><p><a href="https://vecy.co/" target="_blank">vecy.co</a> \u2014 <a href="https://vecy-bienes-raices.vercel.app/" target="_blank">vecy-bienes-raices.vercel.app</a></p></div></div></body></html>`;
   const hasAlert = Boolean(formData.alerta_antecedentes || formData.alertaAntecedentes || formData.hasAlertaAntecedentes);
   if (hasAlert) {
     const subject2 = `\u26A0\uFE0F Notificaci\xF3n de Seguridad Notarial - Solicitud #${solicitud_id} Declinada | Vecy Agenda`;
@@ -14881,10 +14881,10 @@ En cuanto la otra parte tambi\xE9n confirme, les compartir\xE9 mutuamente sus da
         try {
           if (!this.sock || !this.isReady) return false;
           let displayName = "JanIA \u2014 IA de VECY Bienes Ra\xEDces";
-          let vcard = "BEGIN:VCARD\nVERSION:3.0\nFN:JanIA \u2014 IA de VECY Bienes Ra\xEDces\nORG:VECY BIENES RA\xCDCES;\nTEL;type=CELL;type=VOICE;waid=573192919978:+57 319 291 9978\nNOTE:Inteligencia Artificial Inmobiliaria de Colombia. Consultas, peritajes y cruce de negocios 24/7.\nURL:https://vecy-network.vercel.app/\nEND:VCARD";
+          let vcard = "BEGIN:VCARD\nVERSION:3.0\nFN:JanIA \u2014 IA de VECY Bienes Ra\xEDces\nORG:VECY BIENES RA\xCDCES;\nTEL;type=CELL;type=VOICE;waid=573192919978:+57 319 291 9978\nNOTE:Inteligencia Artificial Inmobiliaria de Colombia. Consultas, peritajes y cruce de negocios 24/7.\nURL:https://vecy-bienes-raices.vercel.app/\nEND:VCARD";
           if (contactType === "broker") {
             displayName = "Eduardo & Jani \u2014 VECY Br\xF3ker Oficial";
-            vcard = "BEGIN:VCARD\nVERSION:3.0\nFN:Eduardo & Jani \u2014 VECY Br\xF3ker Oficial\nORG:VECY BIENES RA\xCDCES;\nTEL;type=CELL;type=VOICE;waid=573166569719:+57 316 656 9719\nNOTE:Atenci\xF3n Comercial Humana y Direcci\xF3n de VECY Bienes Ra\xEDces.\nURL:https://vecy-network.vercel.app/\nEND:VCARD";
+            vcard = "BEGIN:VCARD\nVERSION:3.0\nFN:Eduardo & Jani \u2014 VECY Br\xF3ker Oficial\nORG:VECY BIENES RA\xCDCES;\nTEL;type=CELL;type=VOICE;waid=573166569719:+57 316 656 9719\nNOTE:Atenci\xF3n Comercial Humana y Direcci\xF3n de VECY Bienes Ra\xEDces.\nURL:https://vecy-bienes-raices.vercel.app/\nEND:VCARD";
           }
           console.log(`[JANIA-MATCH] \u{1F4C7} Despachando tarjeta de contacto (${contactType}) a ${targetJid}...`);
           await this.sock.sendMessage(targetJid, {
@@ -20700,7 +20700,7 @@ ${greetingPrefix},${welcomePart} es muy sencillo y totalmente gratuito. Puedes p
 3\uFE0F\u20E3 Si ambos aliados confirman inter\xE9s en privado, les entregar\xE9 sus contactos directos para que cierren el negocio. \u{1F91D}\u{1F680}
 
 Si tienes dudas o prefieres usar mi men\xFA de soporte y b\xFAsqueda de propiedades privado, escr\xEDbeme directamente en nuestra Consola Web:
-\u{1F449} https://vecy-network.vercel.app/jania`;
+\u{1F449} https://vecy-bienes-raices.vercel.app/jania`;
         result.classification = "CONSULTA_GENERAL";
       } else if (isAboutVecy) {
         const isCompetitorQuery = textLower2.includes("ubicapp") || textLower2.includes("samboni") || textLower2.includes("competidor") || textLower2.includes("competencia");
@@ -22522,7 +22522,7 @@ Nuestros canales son 100% profesionales y dedicados exclusivamente a la tecnolog
 ## DIRECTRICES DE INFORMACI\xD3N Y SINCERIDAD SOBRE VECY BIENES RA\xCDCES:
 Explica claramente y con la verdad absoluta el estado del proyecto y sus caracter\xEDsticas:
 - **Lo que en verdad funciona hoy**: Los asesores publican sus ofertas (Inmuebles) y demandas (Requerimientos) en el grupo especializado \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}. JanIA transcribe notas de voz en tiempo real, realiza OCR (lectura de texto) en flyers/im\xE1genes con datos comerciales, extrae la informaci\xF3n de las fichas t\xE9cnicas autom\xE1ticamente a partir de enlaces de portales, ejecuta el matching de coincidencias comerciales de forma instant\xE1nea a nivel nacional, y gestiona el flujo de confirmaci\xF3n de contacto bilateral privada (Double Opt-In) por DM mediante respuestas r\xE1pidas.
-- **Lo que est\xE1 en desarrollo**: El portal web oficial privado (https://vecy-network.vercel.app/) se encuentra en fases continuas de integraci\xF3n. M\xF3dulos como CRM de leads y digitalizaci\xF3n de contratos formalizados se desplegar\xE1n en fases posteriores.
+- **Lo que est\xE1 en desarrollo**: El portal web oficial privado (https://vecy-bienes-raices.vercel.app/) se encuentra en fases continuas de integraci\xF3n. M\xF3dulos como CRM de leads y digitalizaci\xF3n de contratos formalizados se desplegar\xE1n en fases posteriores.
 - **Urgencia Comercial y Tarifas**: Enfatiza que toda la plataforma y el matching de JanIA en WhatsApp es 100% gratuita por lanzamiento para empoderar a la comunidad.
 - **Tecnolog\xEDa del Ecosistema**: Explica de forma sencilla que hemos creado un Asistente de IA basado en c\xF3digo propietario y base de datos SQL de alto rendimiento, entrenado a diario para encontrar MATCH en los grupos.
 - **\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} es el \xFAnico centro de Match**: Recuerda que el grupo especializado \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} es el canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos.
@@ -22973,7 +22973,7 @@ PAUTAS PARA MENSAJES DE VOZ / AUDIOS:
 - Si respondes para notas de voz o el usuario pide audio: NUNCA deletrees URLs con barras y puntos. Da los n\xFAmeros de tel\xE9fono con naturalidad (ej: "al tres diecis\xE9is, seis cincuenta y seis, noventa y siete, diecinueve") y si compartes un enlace di con fluidez al final: "o en el enlace que te dejo a continuaci\xF3n".
 
 QUI\xC9NES SOMOS:
-- VECY BIENES RA\xCDCES es un br\xF3ker virtual inmobiliario y una red colaborativa para Colombia, fundada por Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones). Web oficial: https://vecy-network.vercel.app.`
+- VECY BIENES RA\xCDCES es un br\xF3ker virtual inmobiliario y una red colaborativa para Colombia, fundada por Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones). Web oficial: https://vecy-bienes-raices.vercel.app.`
       }
     ];
     for (const turn of history.slice(-14)) {
@@ -24305,7 +24305,7 @@ ${forbiddenTopicsPrompt}
 - ESTRUCTURA DEL MENSAJE:
   1. Saludo inicial: Iniciando con "${timeInfo.greeting}" y present\xE1ndote siempre como JanIA.
   2. Desarrollo tem\xE1tico: Did\xE1ctico, conciso y con ejemplos reales de Colombia.
-  3. Cierre y Venta de la Idea (Llamado a la Acci\xF3n): Invita a invitar a m\xE1s colegas a la red y a interactuar con JanIA en https://vecy-network.vercel.app/jania o por WhatsApp.
+  3. Cierre y Venta de la Idea (Llamado a la Acci\xF3n): Invita a invitar a m\xE1s colegas a la red y a interactuar con JanIA en https://vecy-bienes-raices.vercel.app/jania o por WhatsApp.
 
 Debes responder en formato JSON estricto con los siguientes cuatro campos:
 {
@@ -24743,7 +24743,7 @@ Al cierre de esta jornada, presentamos el balance de nuestra bolsa inmobiliaria 
 \u2705 **\xC1rea M\xEDnima:** (Ej: M\xEDnimo 85 m\xB2)
 \u2705 **Distribuci\xF3n:** (Ej: 3 Alcobas, 2 Ba\xF1os, 1 Garaje)
 
-\u{1F4F2} *Revisa tus coincidencias activas en:* https://vecy-network.vercel.app/admin`;
+\u{1F4F2} *Revisa tus coincidencias activas en:* https://vecy-bienes-raices.vercel.app/admin`;
   const content = await generateDailyContent("lunes_reporte_semanal", fallbackVoice, fallbackCaption);
   const effectiveTheme = content.chosenTheme || "reporte_semanal";
   const captionText = enforceVecyBrand(content.captionText);
@@ -24784,7 +24784,7 @@ ${opts?.details || "El mercado inmobiliario en Colombia contin\xFAa mostrando mo
 
 \u{1F4A1} *Impacto Comercial:* Recuerda que un corredor informado cierra m\xE1s y mejor. Utiliza esta informaci\xF3n para orientar a tus propietarios compradores y arrendatarios con bases s\xF3lidas.
 
-\u{1F4F2} *Consultas con JanIA:* https://vecy-network.vercel.app/jania`;
+\u{1F4F2} *Consultas con JanIA:* https://vecy-bienes-raices.vercel.app/jania`;
   const content = await generateDailyContent(
     "noticias_nacionales",
     fallbackVoice,
@@ -24945,7 +24945,7 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
 
 \u{1F4A1} *Consejo de Cierre:* Perfila a tus compradores con preaprobados vigentes antes de negociar precios de venta.
 
-\u{1F4F2} *Consultas de Mercado con JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Consultas de Mercado con JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         },
         {
           topicTitle: "Tope Legal de Incremento de Arriendos bajo Ley 820",
@@ -24962,7 +24962,7 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
 
 \u{1F4A1} *Asesora con rigor:* Comunica el reajuste por escrito con antelaci\xF3n reglamentaria.
 
-\u{1F4F2} *Consultas Jur\xEDdicas JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Consultas Jur\xEDdicas JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         },
         {
           topicTitle: "Rentas Cortas y Registro Nacional de Turismo (RNT)",
@@ -24979,7 +24979,7 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
 
 \u{1F4A1} *Evita sanciones:* Asesora a tus inversionistas antes de comprar predios para Airbnb.
 
-\u{1F4F2} *Consultorio JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Consultorio JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         }
       ],
       martes_juridico: [
@@ -24998,7 +24998,7 @@ El comportamiento de las tasas de inter\xE9s de colocaci\xF3n hipotecaria impact
 
 \u{1F4A1} *Consejo de Blindaje:* Especifica siempre la fecha, hora exacta y notar\xEDa determinada para la firma de la escritura p\xFAblica.
 
-\u{1F4F2} *Revisi\xF3n de Minutas con JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Revisi\xF3n de Minutas con JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         },
         {
           topicTitle: "Modelo Colaborativo 40/20/40 de VECY BIENES RA\xCDCES vs Tercer\xEDas",
@@ -25018,7 +25018,7 @@ Sobre el 100% de la comisi\xF3n cobrada (habitualmente 3% en venta o 1 canon en 
 
 \u{1F6AB} *Cero tercer\xEDas e intermediarios fantasma:* El 40/20/40 premia con equidad a quienes realmente trabajan, activa un ej\xE9rcito de promotores motivados y protege las puntas.
 
-\u{1F310} *Portal Oficial:* https://vecy-network.vercel.app/`
+\u{1F310} *Portal Oficial:* https://vecy-bienes-raices.vercel.app/`
         },
         {
           topicTitle: "Verificaci\xF3n de Identidad de Visitantes y Antecedentes con JanIA",
@@ -25053,7 +25053,7 @@ Ahora a trav\xE9s del WhatsApp de JanIA (+57 319 291 9978) o de nuestra l\xEDnea
 
 \u{1F4A1} *Asesora con seguridad notarial:* Si tienes dudas con un certificado SNR, cons\xFAltame.
 
-\u{1F4F2} *Soporte Legal JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Soporte Legal JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         }
       ],
       miercoles_marketing: [
@@ -25073,7 +25073,7 @@ Ahora a trav\xE9s del WhatsApp de JanIA (+57 319 291 9978) o de nuestra l\xEDnea
 
 \u{1F4A1} *Una imagen profesional duplica el inter\xE9s de colegas y clientes compradores.*
 
-\u{1F4F2} *Marketing & Copys con JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Marketing & Copys con JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         },
         {
           topicTitle: "Viralizaci\xF3n Org\xE1nica en Redes Sociales para Inmuebles",
@@ -25090,7 +25090,7 @@ Ahora a trav\xE9s del WhatsApp de JanIA (+57 319 291 9978) o de nuestra l\xEDnea
 
 \u{1F4A1} *El contenido educativo y transparente atrae compradores calificados sin gastar en publicidad.*
 
-\u{1F4F2} *Prueba redactar copys con JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Prueba redactar copys con JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         },
         {
           topicTitle: "Los 7 Pilares Obligatorios de una Publicaci\xF3n Exitosa",
@@ -25113,7 +25113,7 @@ Ahora a trav\xE9s del WhatsApp de JanIA (+57 319 291 9978) o de nuestra l\xEDnea
 
 \u{1F4A1} *Cuando publicas con rigor, JanIA cruza datos en tiempo real y encuentra la otra punta al instante.*
 
-\u{1F4F2} *Cruce Inteligente JanIA:* https://vecy-network.vercel.app/admin`
+\u{1F4F2} *Cruce Inteligente JanIA:* https://vecy-bienes-raices.vercel.app/admin`
         }
       ],
       jueves_tributario: [
@@ -25132,7 +25132,7 @@ Ahora a trav\xE9s del WhatsApp de JanIA (+57 319 291 9978) o de nuestra l\xEDnea
 
 \u{1F4A1} *Consejo Contable:* Solicita al vendedor su \xFAltima declaraci\xF3n de renta para verificar el costo fiscal antes de prometer.
 
-\u{1F4F2} *Liquidaciones Tributarias JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Liquidaciones Tributarias JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         },
         {
           topicTitle: "Deducci\xF3n de Mejoras y Refacciones con Facturaci\xF3n Electr\xF3nica",
@@ -25149,7 +25149,7 @@ Al vender un inmueble, el impuesto del 15% se calcula sobre la diferencia entre 
 \u2705 **Requisito Obligatorio DIAN:** Contar con Facturas Electr\xF3nicas de Venta v\xE1lidas emitidas por los contratistas a nombre del titular.
 \u274C Recibos de caja menor o notas manuales NO son deducibles fiscalmente.
 
-\u{1F4F2} *Consultas Financieras JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Consultas Financieras JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         },
         {
           topicTitle: "Desglose Exacto de Gastos Notariales y de Registro en Colombia",
@@ -25167,7 +25167,7 @@ Para que tu promesa de compraventa est\xE9 completamente blindada, ten clara la 
 
 \u{1F4A1} *Claridad previa evita discrepancias en el despacho notarial.*
 
-\u{1F4F2} *Asistencia Inmobiliaria JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Asistencia Inmobiliaria JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         }
       ],
       viernes_avaluos: [
@@ -25188,7 +25188,7 @@ Para que tu promesa de compraventa est\xE9 completamente blindada, ten clara la 
 
 \u{1F4A1} *Servicio 100% virtual, \xE1gil y sin necesidad de tr\xE1mites engorrosos ni peritajes presenciales.*
 
-\u{1F4F2} *Sondeos de Mercado JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Sondeos de Mercado JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         },
         {
           topicTitle: "Interpretaci\xF3n de Fichas Normativas SINUPOT en Bogot\xE1",
@@ -25206,7 +25206,7 @@ Para que tu promesa de compraventa est\xE9 completamente blindada, ten clara la 
 \u2022 **Usos Permitidos y Restringidos:** Qu\xE9 actividades comerciales pueden operar legalmente en el inmueble.
 \u2022 **\xCDndices de Ocupaci\xF3n y Alturas:** Pisos permitidos seg\xFAn el perfil vial.
 
-\u{1F4F2} *Env\xEDa tu ficha a JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Env\xEDa tu ficha a JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         },
         {
           topicTitle: "C\xE1lculo de C\xE1nones de Arrendamiento Sugeridos",
@@ -25221,7 +25221,7 @@ Para que tu promesa de compraventa est\xE9 completamente blindada, ten clara la 
 \u2022 **Factores de Valor:** Amenidades (club house, piscina, gimnasio), garajes independientes y estrato socioecon\xF3mico.
 \u2022 **Riesgo de Vacancia:** Un sobreprecio de apenas el 10% puede prolongar el tiempo de colocaci\xF3n en 3 a 5 meses, generando mayores p\xE9rdidas en cuotas de administraci\xF3n que la rebaja inicial.
 
-\u{1F4F2} *Sondeos de Arriendo con JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Sondeos de Arriendo con JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         }
       ],
       sabado_cafe: [
@@ -25239,7 +25239,7 @@ Culminamos una semana muy productiva en nuestra comunidad. Hoy reflexionamos sob
 \u{1F91D} **El Poder de la Red:** Nadie tiene todos los clientes ni todos los inmuebles; colaborar en red permite cerrar el doble de negocios en la mitad del tiempo.
 
 \u{1F4DE} *Atenci\xF3n Personalizada Br\xF3ker (Eduardo y Jani):* WhatsApp +57 316 656 9719
-\u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Consola Web JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         },
         {
           topicTitle: "Identidad de JanIA: Creada para Empoderar al Asesor",
@@ -25258,7 +25258,7 @@ Hoy en nuestro caf\xE9 inmobiliario queremos compartir el coraz\xF3n de esta inn
 
 \u{1F91D} *VECY Bienes Ra\xEDces es tu aliado tecnol\xF3gico permanente.*
 
-\u{1F4F2} *Interact\xFAa con JanIA:* https://vecy-network.vercel.app/jania`
+\u{1F4F2} *Interact\xFAa con JanIA:* https://vecy-bienes-raices.vercel.app/jania`
         }
       ],
       domingo_soporte: [
@@ -25278,7 +25278,7 @@ En VECY cuentas con un respaldo permanente para impulsar tus operaciones en toda
 \u{1F4D0} *Fichas SINUPOT:* Usos de suelo, alturas y edificabilidad al instante.
 \u{1F4E2} *Marketing Inmobiliario:* T\xE9cnicas de fotograf\xEDa y los 7 pilares de publicaci\xF3n.
 
-\u{1F4F2} *Consola Web JanIA:* https://vecy-network.vercel.app/jania
+\u{1F4F2} *Consola Web JanIA:* https://vecy-bienes-raices.vercel.app/jania
 \u{1F4DE} *L\xEDnea Comercial Br\xF3ker:* WhatsApp +57 316 656 9719`
         },
         {
@@ -25297,7 +25297,7 @@ En VECY cuentas con un respaldo permanente para impulsar tus operaciones en toda
 
 \u{1F4A1} *Cero canibalismo, m\xE1xima transparencia y cierres compartidos.*
 
-\u{1F4F2} *\xDAnete a la Red:* https://vecy-network.vercel.app/`
+\u{1F4F2} *\xDAnete a la Red:* https://vecy-bienes-raices.vercel.app/`
         }
       ]
     };
@@ -27585,7 +27585,7 @@ var janIARouter = router({
 - Saludo de hora actual en Bogot\xE1 (${hour}:00): "${timeGreeting}"
 - INSTRUCCI\xD3N DE INTERACCI\xD3N:
   1. Si no te ha dicho su nombre en los mensajes previos, sal\xFAdalo cordialmente con "${timeGreeting}" y preg\xFAntale amablemente: "\xBFCon qui\xE9n tengo el gusto de interactuar?" para recordarlo en la conversaci\xF3n.
-  2. Inv\xEDtalo amablemente a registrarse gratuitamente en la plataforma VECY BIENES RA\xCDCES (https://vecy-network.vercel.app/) para guardar su nombre, asociar su cuenta y acceder a su propio historial completo de conversaciones.`;
+  2. Inv\xEDtalo amablemente a registrarse gratuitamente en la plataforma VECY BIENES RA\xCDCES (https://vecy-bienes-raices.vercel.app/) para guardar su nombre, asociar su cuenta y acceder a su propio historial completo de conversaciones.`;
         const systemPrompt = `${buildSystemPrompt2("web")}
 
 ${liveStats}${userContextInstruction}
@@ -30737,7 +30737,7 @@ _(Tambi\xE9n acepta CE o Pasaporte)_
 
 \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
 \u{1F4E2} *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
-\u{1F310} *Web oficial:* https://vecy-network.vercel.app/
+\u{1F310} *Web oficial:* https://vecy-bienes-raices.vercel.app/
 
 *VECY BIENES RA\xCDCES \u{1F3D8}\uFE0F*`;
       const defaultPromoPredial = `\u{1F3E0} *\xBFTIENES PREDIO EN BOGOT\xC1?* \u{1F1E8}\u{1F1F4}
@@ -30761,7 +30761,7 @@ _(Si es empresa, usa NIT en vez de CC)_
 \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
 \u2139\uFE0F *\xBFD\xF3nde est\xE1 el CHIP?* En cualquier factura o recibo predial anterior.
 \u{1F4E2} *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
-\u{1F310} *Web oficial:* https://vecy-network.vercel.app/
+\u{1F310} *Web oficial:* https://vecy-bienes-raices.vercel.app/
 
 *VECY BIENES RA\xCDCES \u{1F3D8}\uFE0F*`;
       const baseDefaultPromo = serviceType === "predial" ? defaultPromoPredial : defaultPromoIdentity;
@@ -30854,7 +30854,7 @@ _(Tambi\xE9n acepta CE o Pasaporte)_
 
 \u{1F4DE} *Atenci\xF3n Br\xF3ker VECY:* +57 316 656 9719 (https://wa.me/573166569719)
 \u{1F4E2} *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
-\u{1F310} *Web oficial:* https://vecy-network.vercel.app/
+\u{1F310} *Web oficial:* https://vecy-bienes-raices.vercel.app/
 
 *VECY BIENES RA\xCDCES \u{1F3D8}\uFE0F*`;
       console.log(`[BROADCAST-IDENTITY-V2] Despachando a Grupo 2, Grupo 3 y Canal (Imagen: ${hasImage ? imgPath : "Ninguna"})...`);
@@ -30912,7 +30912,7 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
 
 \u{1F4DE} *Atenci\xF3n Br\xF3ker VECY:* +57 316 656 9719 (https://wa.me/573166569719)
 \u{1F4E2} *Canal oficial:* https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
-\u{1F310} *Web oficial:* https://vecy-network.vercel.app/
+\u{1F310} *Web oficial:* https://vecy-bienes-raices.vercel.app/
 
 *VECY BIENES RA\xCDCES \u{1F3D8}\uFE0F*`;
       console.log(`[BROADCAST-PREDIAL] Despachando a Grupo 2, Grupo 3 y Canal (Imagen: ${hasImage ? imgPath : "Ninguna"})...`);
