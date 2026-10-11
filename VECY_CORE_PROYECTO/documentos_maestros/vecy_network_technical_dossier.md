@@ -331,6 +331,33 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.85 — Octubre 2026
+
+#### 📌 INFRAESTRUCTURA SEO ON-PAGE, GOOGLE SEARCH CONSOLE VERIFICATION, ROBOTS.TXT, SITEMAP.XML OFICIAL Y SCHEMA REALESTATEAGENT
+
+**Requerimiento y Objetivos:**
+1. **Posicionamiento de Marca en Google y Redes Sociales**:
+   - Eduardo solicitó: *"Quiero darle posicionamiento a nuestra marca en Google y Redes sociales, me podrías ayudar con eso haciéndolo tu desde acá o mguiándome en el pasoa paso??"*
+   - Eduardo proporcionó la etiqueta HTML oficial de verificación de Google Search Console: `<meta name="google-site-verification" content="k2GZoVOfwT26BtxH5lFwOt38KbO4NBHCBM3Lrb4wutE" />`.
+2. **Implementación de SEO Técnico Integral**:
+   - **Verificación de Google Search Console**: Inserción de la etiqueta de verificación en el `<head>` de `client/index.html`.
+   - **`robots.txt`**: Creado en `client/public/robots.txt` permitiendo indexación abierta para motores de búsqueda y redes sociales, excluyendo rutas privadas (`/admin`, `/api`, `/trpc`) y señalando el sitemap oficial.
+   - **`sitemap.xml`**: Creado en `client/public/sitemap.xml` con todas las rutas oficiales (`/`, `/ofertas`, `/demandas`, `/jania`, `/terminos-y-condiciones`, `/politica-de-privacidad`) bajo el dominio activo `https://vecy-bienes-raices.vercel.app/`.
+   - **Metadatos y Schema.org**: Corrección de `<html lang="es">`, enlaces canónicos, Open Graph y Twitter Cards actualizados al nuevo dominio y portada, y estructuración de datos JSON-LD con `RealEstateAgent` y `Organization` (teléfono de bróker `+573166569719`, dirección Bogotá y geolocalización).
+3. **Validación y Pruebas**:
+   - Se incorporó test doctrinal automatizado en `server/__tests__/regression.test.ts`.
+
+**Archivos Modificados:**
+- `client/index.html`: Etiqueta Google verification, `lang="es"`, Open Graph/Twitter con dominio activo y Schema `RealEstateAgent`.
+- `client/public/robots.txt`: Nuevo archivo robots oficial apuntando al sitemap.
+- `client/public/sitemap.xml`: Nuevo archivo de mapa del sitio con URLs y prioridades.
+- `shared/const.ts`: Versión `v32.85`.
+- `package.json`: Versión `32.85.0`.
+- `server/__tests__/regression.test.ts`: Actualizada versión esperada y nuevo test doctrinal de SEO v32.85.
+- Documentos Maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y este Dossier.
+
+---
+
 ### 🔖 v32.84 — Octubre 2026
 
 #### 📌 CONSAGRACIÓN DEL NUEVO DOMINIO OFICIAL VECY-BIENES-RAICES.VERCEL.APP, REDIRECCIÓN PERMANENTE 308 EN VERCEL Y BLINDAJE DE INFRAESTRUCTURA

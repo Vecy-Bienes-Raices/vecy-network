@@ -7,6 +7,42 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.85 — 10 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Estrategia y Posicionamiento de Marca en Google y Redes Sociales**:
+   - Eduardo solicitó: *"Quiero darle posicionamiento a nuestra marca en Google y Redes sociales, me podrías ayudar con eso haciéndolo tu desde acá o mguiándome en el pasoa paso??"*
+   - Eduardo consultó: *"Ahi oy bien o qué hago?? y adelante con el resto pero vamos paso a paso por favor."* (adjuntando captura de pantalla del modal de Google Search Console solicitando registro DNS TXT para `vecy-bienes-raices.vercel.app`).
+   - Eduardo proporcionó la etiqueta HTML oficial de verificación de Search Console: `<meta name="google-site-verification" content="k2GZoVOfwT26BtxH5lFwOt38KbO4NBHCBM3Lrb4wutE" />`.
+
+### Diagnóstico Técnico y Arquitectura de Solución
+1. **Método de Verificación en Search Console para Subdominios de Vercel**:
+   - Se identificó que la opción "Dominio" exige crear registros DNS TXT en el proveedor del dominio raíz (`vercel.app`), lo cual es inaccesible. La alternativa canónica es "Prefijo de la URL" (`https://vecy-bienes-raices.vercel.app/`), la cual permite verificación instantánea por **Etiqueta HTML** en el `<head>`.
+2. **Arquitectura SEO On-Page Integral para Motores y Redes**:
+   - **`robots.txt`**: Creado en `client/public/robots.txt` para otorgar acceso irrestricto a los agentes de búsqueda (Googlebot, Bing, Meta), salvaguardar rutas privadas (`/admin`, `/api`, `/trpc`) y conectar de forma directa con el sitemap oficial.
+   - **`sitemap.xml`**: Creado en `client/public/sitemap.xml` indexando las 6 rutas públicas neurálgicas del portal (`/`, `/ofertas`, `/demandas`, `/jania`, `/terminos-y-condiciones`, `/politica-de-privacidad`) con frecuencia y prioridad SEO.
+   - **Metadatos y Schema.org**: Corrección del idioma a `<html lang="es">`, enlaces canónicos, actualización de URLs en Open Graph y Twitter Cards hacia el dominio oficial `https://vecy-bienes-raices.vercel.app/` y estructuración JSON-LD enriquecida con `RealEstateAgent` y `Organization` (teléfono bróker oficial `+573166569719`, dirección Cra. 14a #118-21, Bogotá D.C.).
+
+### Acciones Técnicas Ejecutadas
+1. **Actualización de `client/index.html`**:
+   - Agregada etiqueta `<meta name="google-site-verification" content="k2GZoVOfwT26BtxH5lFwOt38KbO4NBHCBM3Lrb4wutE" />`.
+   - Modificado `<html lang="en">` a `<html lang="es">`.
+   - Agregado `<link rel="canonical" href="https://vecy-bienes-raices.vercel.app/" />` y `<link rel="sitemap" type="application/xml" title="Sitemap" href="https://vecy-bienes-raices.vercel.app/sitemap.xml" />`.
+   - Actualizados metadatos Open Graph y Twitter Cards al dominio activo.
+   - Enriquecido Schema.org JSON-LD como `RealEstateAgent` y `Organization`.
+2. **Generación de Archivos Estáticos de Indexación**:
+   - Creado `client/public/robots.txt`.
+   - Creado `client/public/sitemap.xml`.
+3. **Pruebas Automatizadas de Regresión**:
+   - `server/__tests__/regression.test.ts`: Actualizada versión y agregado test suite "Doctrina v32.85: Google Search Console, robots.txt, sitemap.xml y SEO On-Page".
+   - `npm run check`: 0 errores TypeScript.
+   - `npm test`: 172/172 tests passing al 100%.
+   - `npm run build`: Compilación limpia de Vite + esbuild completada en 29.93s.
+4. **Incremento de Versión Oficial**:
+   - `shared/const.ts` (`v32.85`) y `package.json` (`32.85.0`).
+
+---
+
 ## 📋 SESIÓN v32.84 — 10 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

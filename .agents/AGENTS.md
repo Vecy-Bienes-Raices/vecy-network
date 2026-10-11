@@ -172,7 +172,27 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.84 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.85 — Octubre 2026
+
+### Novedades v32.85 (Infraestructura SEO On-Page, Google Search Console Verification, robots.txt, sitemap.xml Oficial y Schema RealEstateAgent):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Estrategia y Posicionamiento de Marca en Google y Redes Sociales**:
+     - Eduardo solicitó: *"Quiero darle posicionamiento a nuestra marca en Google y Redes sociales, me podrías ayudar con eso haciéndolo tu desde acá o mguiándome en el pasoa paso??"*
+     - Eduardo proporcionó la etiqueta oficial de verificación de Google Search Console: `<meta name="google-site-verification" content="k2GZoVOfwT26BtxH5lFwOt38KbO4NBHCBM3Lrb4wutE" />`.
+  2. **Acciones Técnicas Implementadas**:
+     - **Google Search Console**: Inserción de la etiqueta de verificación oficial en el `<head>` de `client/index.html`.
+     - **robots.txt**: Creación de `client/public/robots.txt` permitiendo indexación general a robots rastreadores (Googlebot, Bing, Meta), protegiendo rutas privadas (`/admin`, `/api`, `/trpc`) y vinculando el sitemap oficial.
+     - **sitemap.xml**: Creación de `client/public/sitemap.xml` con todas las rutas oficiales (`/`, `/ofertas`, `/demandas`, `/jania`, `/terminos-y-condiciones`, `/politica-de-privacidad`) bajo el dominio activo `https://vecy-bienes-raices.vercel.app/`.
+     - **SEO On-Page & Redes Sociales en `index.html`**:
+       • Corrección de idioma a `<html lang="es">`.
+       • Etiqueta canónica `<link rel="canonical" href="https://vecy-bienes-raices.vercel.app/" />` y `<link rel="sitemap" ... />`.
+       • Metadatos Open Graph y Twitter Cards actualizados con el nuevo dominio y portada oficial.
+       • Schema.org JSON-LD enriquecido con tipos `RealEstateAgent` y `Organization`, geolocalización en Bogotá, teléfono oficial bróker `+573166569719`.
+     - **Pruebas de Regresión**: Incorporación de test doctrinal de SEO en `server/__tests__/regression.test.ts`.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 172/172 tests passing ✅ | `npm run build` limpio en 29.93s ✅
+- `shared/const.ts` (`v32.85`) y `package.json` (`32.85.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.84 — Octubre 2026
 
 ### Novedades v32.84 (Consagración del Nuevo Dominio Oficial `https://vecy-bienes-raices.vercel.app/`, Redirección Permanente 308 en Vercel, Autorización en Supabase y Blindaje de Infraestructura):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

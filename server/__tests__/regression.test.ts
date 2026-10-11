@@ -3578,10 +3578,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(soporteContent).not.toContain("45/10/45");
     });
 
-    it("Doctrina v32.84: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
+    it("Doctrina v32.84 / v32.85: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
       const { VECY_ACTIVE_DOMAIN, VECY_VERSION } = await import("../../shared/const");
       expect(VECY_ACTIVE_DOMAIN).toBe("https://vecy-bienes-raices.vercel.app");
-      expect(VECY_VERSION).toBe("v32.84");
+      expect(VECY_VERSION).toBe("v32.85");
 
       const fs = await import("fs");
       const path = await import("path");
@@ -3589,6 +3589,34 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const baseContent = fs.readFileSync(basePath, "utf-8");
       expect(baseContent).toContain("https://vecy-bienes-raices.vercel.app/jania");
       expect(baseContent).toContain("https://vecy-bienes-raices.vercel.app");
+    });
+
+    it("Doctrina v32.85: Google Search Console, robots.txt, sitemap.xml y SEO On-Page", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+
+      // Validar index.html con Google Verification tag y Schema.org
+      const indexPath = path.resolve(__dirname, "../../client/index.html");
+      const indexHtml = fs.readFileSync(indexPath, "utf-8");
+      expect(indexHtml).toContain('<html lang="es">');
+      expect(indexHtml).toContain('name="google-site-verification" content="k2GZoVOfwT26BtxH5lFwOt38KbO4NBHCBM3Lrb4wutE"');
+      expect(indexHtml).toContain('https://vecy-bienes-raices.vercel.app/sitemap.xml');
+      expect(indexHtml).toContain('"@type": ["RealEstateAgent", "Organization"]');
+      expect(indexHtml).toContain('+573166569719');
+
+      // Validar robots.txt
+      const robotsPath = path.resolve(__dirname, "../../client/public/robots.txt");
+      expect(fs.existsSync(robotsPath)).toBe(true);
+      const robotsContent = fs.readFileSync(robotsPath, "utf-8");
+      expect(robotsContent).toContain("Sitemap: https://vecy-bienes-raices.vercel.app/sitemap.xml");
+
+      // Validar sitemap.xml
+      const sitemapPath = path.resolve(__dirname, "../../client/public/sitemap.xml");
+      expect(fs.existsSync(sitemapPath)).toBe(true);
+      const sitemapContent = fs.readFileSync(sitemapPath, "utf-8");
+      expect(sitemapContent).toContain("https://vecy-bienes-raices.vercel.app/");
+      expect(sitemapContent).toContain("https://vecy-bienes-raices.vercel.app/ofertas");
+      expect(sitemapContent).toContain("https://vecy-bienes-raices.vercel.app/demandas");
     });
   });
 });

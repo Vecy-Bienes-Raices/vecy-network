@@ -1,0 +1,12 @@
+# VECY BIENES RAÍCES — robots.txt
+User-agent: *
+Allow: /
+
+# Rutas privadas o administrativas
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
+Disallow: /trpc/
+
+# Mapa del sitio oficial para Google y motores de búsqueda
+Sitemap: https://vecy-bienes-raices.vercel.app/sitemap.xml
