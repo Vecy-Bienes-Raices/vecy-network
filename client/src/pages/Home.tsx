@@ -110,26 +110,30 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
                   <button 
                     onClick={() => navigate('/ofertas')}
-                    className="btn-gold px-10 py-5 text-base sm:text-lg tracking-[0.2em] font-bold group w-full sm:w-auto shadow-[0_0_30px_rgba(191,149,63,0.25)]"
+                    title="EXPLORAR ACTIVOS"
+                    className="btn-gold px-10 py-4 text-base sm:text-lg tracking-[0.25em] font-bold group w-full sm:w-auto shadow-[0_0_30px_rgba(191,149,63,0.25)] cursor-pointer"
                   >
-                    EXPLORAR ACTIVOS
+                    ACTIVOS
                     <ArrowRight className="inline-block ml-3 group-hover:translate-x-2 transition-transform" />
                   </button>
                   <button 
                     onClick={() => navigate('/services')}
-                    className="btn-gold-outline px-10 py-5 text-base sm:text-lg tracking-[0.2em] font-bold w-full sm:w-auto"
+                    aria-label="CÓMO FUNCIONA EL MATCH"
+                    title="CÓMO FUNCIONA EL MATCH"
+                    className="btn-gold-outline px-10 py-4 text-base sm:text-lg tracking-[0.25em] font-bold w-full sm:w-auto cursor-pointer"
                   >
-                    CÓMO FUNCIONA EL MATCH
+                    MATCH
                   </button>
                   <button 
                     onClick={() => navigate('/historia')}
-                    className="btn-gold-outline px-10 py-5 text-base sm:text-lg tracking-[0.2em] font-bold w-full sm:w-auto"
+                    title="NUESTRA HISTORIA"
+                    className="btn-gold-outline px-10 py-4 text-base sm:text-lg tracking-[0.25em] font-bold w-full sm:w-auto cursor-pointer"
                   >
-                    NUESTRA HISTORIA
+                    HISTORIA
                   </button>
                 </div>
 
-                <div className="mt-16 flex justify-center gap-10 sm:gap-16 border-t border-white/5 pt-12">
+                <div className="mt-14 flex justify-center gap-10 sm:gap-16 border-t border-white/5 pt-10">
                   <div>
                     <p className="text-primary text-2xl sm:text-3xl font-display font-black mb-1 tracking-tighter">8+</p>
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">Años de Trayectoria</p>
@@ -143,20 +147,20 @@ export default function Home() {
                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">Red Colaborativa</p>
                   </div>
                 </div>
+
+                {/* Scroll Indicator en el flujo normal para evitar cualquier colisión visual */}
+                <div 
+                  onClick={() => {
+                    window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
+                  }}
+                  className="mt-10 flex flex-col items-center gap-3 opacity-40 hover:opacity-100 transition-opacity cursor-pointer pb-4"
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-white">Explorar</span>
+                  <div className="w-px h-8 bg-gradient-to-b from-primary to-transparent"></div>
+                </div>
               </div>
             </ScrollReveal>
           </div>
-        </div>
-        
-        {/* Scroll Indicator */}
-        <div 
-          onClick={() => {
-            window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
-          }}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-4 opacity-40 hover:opacity-100 transition-opacity cursor-pointer"
-        >
-          <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-white">Explorar</span>
-          <div className="w-px h-12 bg-gradient-to-b from-primary to-transparent"></div>
         </div>
       </section>
 

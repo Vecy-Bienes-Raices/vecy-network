@@ -58,8 +58,8 @@ const freeJanIAServices: FreeJanIAService[] = [
   {
     id: "seguridad-visitas",
     badge: "100% GRATUITO • CERO RIESGOS",
-    title: "Filtro de Seguridad para Visitas a Inmuebles",
-    description: "Protege tu tranquilidad y la de tu familia. Antes de mostrar una propiedad o asistir a una cita, JanIA valida de manera fácil y confidencial los documentos de los visitantes por WhatsApp para que sepas con certeza a quién le abres la puerta.",
+    title: "Filtro de Seguridad",
+    description: "Filtro de Seguridad para Visitas a Inmuebles: Protege tu tranquilidad y la de tu familia. Antes de mostrar una propiedad o asistir a una cita, JanIA valida de manera fácil y confidencial los documentos de los visitantes por WhatsApp.",
     icon: <BadgeCheck className="w-9 h-9 text-emerald-400" />,
     features: [
       "Filtro de seguridad antes de mostrar cualquier inmueble",
@@ -73,8 +73,8 @@ const freeJanIAServices: FreeJanIAService[] = [
   {
     id: "predial-pdf",
     badge: "100% GRATUITO • EN 1 MINUTO",
-    title: "Factura Predial y Certificado de Pago en PDF por WhatsApp",
-    description: "Te enviamos la factura del impuesto predial lista para pagar en bancos y su paz y salvo o certificado de pago al día en archivo PDF directo a tu WhatsApp. Sin filas ni páginas lentas, solo envíanos el código de tu inmueble.",
+    title: "Factura Predial en PDF",
+    description: "Factura Predial y Certificado de Pago en PDF por WhatsApp: Te enviamos la factura del impuesto predial lista para pagar en bancos y su paz y salvo o certificado de pago al día en archivo PDF directo a tu WhatsApp. Sin filas ni páginas lentas.",
     icon: <FileText className="w-9 h-9 text-emerald-400" />,
     features: [
       "Factura lista con código de barras para pagar en bancos",
@@ -88,8 +88,8 @@ const freeJanIAServices: FreeJanIAService[] = [
   {
     id: "idu-valorizacion",
     badge: "100% GRATUITO • PARA ESCRITURAS",
-    title: "Paz y Salvo del IDU en PDF para Notaría",
-    description: "El documento oficial que te exigen obligatoriamente en la notaría para firmar escrituras y vender tu inmueble en Bogotá. Te lo entregamos en PDF oficial por WhatsApp al instante, gratis y sin intermediarios.",
+    title: "Paz y Salvo del IDU",
+    description: "Paz y Salvo del IDU en PDF para Notaría: El documento oficial que te exigen obligatoriamente en la notaría para firmar escrituras y vender tu inmueble en Bogotá. Te lo entregamos en PDF oficial por WhatsApp al instante, gratis y sin intermediarios.",
     icon: <Landmark className="w-9 h-9 text-emerald-400" />,
     features: [
       "Documento oficial en PDF con número de radicado",
@@ -103,8 +103,8 @@ const freeJanIAServices: FreeJanIAService[] = [
   {
     id: "simulador-notarial",
     badge: "100% GRATUITO • FÁCIL Y AL GRANO",
-    title: "Cálculo Rápido de Gastos de Notaría y Escrituras",
-    description: "¿Quieres saber cuánto dinero necesitas para escriturar? Te calculamos en segundos los gastos exactos de notaría, impuestos y registro, explicándote en español claro y sin enredos cuánto le corresponde pagar al comprador y cuánto al vendedor.",
+    title: "Gastos de Notaría",
+    description: "Cálculo Rápido de Gastos de Notaría y Escrituras: ¿Quieres saber cuánto dinero necesitas para escriturar? Te calculamos en segundos los gastos exactos de notaría, impuestos y registro, explicándote en español claro y sin enredos.",
     icon: <Calculator className="w-9 h-9 text-emerald-400" />,
     features: [
       "Cálculo exacto de derechos notariales e impuestos",
@@ -122,8 +122,8 @@ const commercialServices: CommercialService[] = [
   {
     id: "inmuebles-destacados",
     badge: "CORRETAJE PROFESIONAL",
-    title: "Red Colaborativa & Venta de Inmuebles",
-    description: "Comercialización de propiedades mediante nuestra red de más de 300 asesores y el modelo 40/20/40. Difusión sin letreros invasivos y fichas de Marca Blanca que aceleran las ventas hasta 3 veces más rápido.",
+    title: "Red Colaborativa 40/20/40",
+    description: "Red Colaborativa & Venta de Inmuebles: Comercialización de propiedades mediante nuestra red de más de 300 asesores y el modelo 40/20/40. Difusión sin letreros invasivos y fichas de Marca Blanca que aceleran las ventas.",
     icon: <Building2 className="w-10 h-10 text-primary" />,
     features: [
       "Comercialización discreta de propiedades",
@@ -137,8 +137,8 @@ const commercialServices: CommercialService[] = [
   {
     id: "garantia-hipotecaria",
     badge: "LIQUIDEZ PATRIMONIAL",
-    title: "Préstamos con Garantía Hipotecaria (Libre Inversión)",
-    description: "Gestionamos soluciones de liquidez y créditos de libre inversión respaldados sobre activos inmobiliarios propios (residenciales y comerciales) a través de particulares y fondos privados. Ideal para capital de trabajo, proyectos o consolidación de pasivos.",
+    title: "Garantía Hipotecaria",
+    description: "Préstamos con Garantía Hipotecaria (Libre Inversión): Gestionamos soluciones de liquidez y créditos de libre inversión respaldados sobre activos inmobiliarios propios a través de particulares y fondos privados.",
     icon: <Coins className="w-10 h-10 text-primary" />,
     features: [
       "Créditos de libre inversión con respaldo inmobiliario",
@@ -152,8 +152,8 @@ const commercialServices: CommercialService[] = [
   {
     id: "blindaje-juridico",
     badge: "DEFENSA Y RECUPERACIÓN",
-    title: "Blindaje Jurídico & Recuperación de Comisiones",
-    description: "Especialistas en derecho inmobiliario operativo. Redactamos promesas y contratos blindados, gestionamos cobros pre-jurídicos para recuperación efectiva de comisiones impagas e incumplimientos, y asesoramos en saneamiento de historial crediticio (Hábeas Data).",
+    title: "Blindaje Jurídico",
+    description: "Blindaje Jurídico & Recuperación de Comisiones: Especialistas en derecho inmobiliario operativo. Redactamos promesas y contratos blindados, gestionamos cobros pre-jurídicos para recuperación efectiva de comisiones impagas y saneamiento de Hábeas Data.",
     icon: <Scale className="w-10 h-10 text-primary" />,
     features: [
       "Redacción profesional de promesas y contratos de arriendo",
@@ -167,8 +167,8 @@ const commercialServices: CommercialService[] = [
   {
     id: "avaluos-ia",
     badge: "BIG DATA & VALUACIÓN",
-    title: "Avalúos Comerciales & Estudios de Mercado con IA",
-    description: "Desarrollado con nuestra inteligencia JanIA. Analizamos miles de puntos de datos de mercado en Bogotá y las principales ciudades de Colombia para fijar el precio técnico exacto de venta o canon de arriendo, eliminando meses de incertidumbre comercial.",
+    title: "Avalúos Comerciales IA",
+    description: "Avalúos Comerciales & Estudios de Mercado con IA: Desarrollado con nuestra inteligencia JanIA. Analizamos miles de puntos de datos de mercado en Bogotá y Colombia para fijar el precio técnico exacto de venta o arriendo.",
     icon: <BrainCircuit className="w-10 h-10 text-primary" />,
     features: [
       "Estimación algorítmica de precio de venta y canon de arriendo",
@@ -182,8 +182,8 @@ const commercialServices: CommercialService[] = [
   {
     id: "proptech-soluciones",
     badge: "TECNOLOGÍA COMO SERVICIO",
-    title: "Soluciones PropTech & Desarrollo Web para Agentes",
-    description: "Empoderamos a agentes inmobiliarios e inmobiliarias independientes con infraestructura digital de vanguardia: páginas web personalizadas, tiendas inmobiliarias, formularios inteligentes de reserva con verificación documental (como Vecy Agenda) y ciberseguridad.",
+    title: "Tecnología PropTech",
+    description: "Soluciones PropTech & Desarrollo Web para Agentes: Empoderamos a agentes inmobiliarios e inmobiliarias independientes con infraestructura digital de vanguardia: páginas web personalizadas, tiendas inmobiliarias y Vecy Agenda.",
     icon: <Laptop className="w-10 h-10 text-primary" />,
     features: [
       "Desarrollo de páginas web y tiendas inmobiliarias modernas",
@@ -197,8 +197,8 @@ const commercialServices: CommercialService[] = [
   {
     id: "tramites-notariales",
     badge: "SANEAMIENTO Y TRÁMITES",
-    title: "Saneamiento Notarial & Conciliación Inmobiliaria",
-    description: "Acompañamiento y radicación en Notarías y Oficinas de Registro (ORIP). Gestionamos desenglobes, sucesiones, levantamiento de patrimonio de familia, afectación a vivienda familiar, estudios de tradición de 20 años y radicación oportuna de escrituras.",
+    title: "Saneamiento Notarial",
+    description: "Saneamiento Notarial & Conciliación Inmobiliaria: Acompañamiento y radicación en Notarías y Oficinas de Registro (ORIP). Gestionamos desenglobes, sucesiones, levantamiento de patrimonio de familia y estudios de títulos de 20 años.",
     icon: <FileCheck2 className="w-10 h-10 text-primary" />,
     features: [
       "Estudio de títulos con trazabilidad de 20 años",
@@ -327,9 +327,9 @@ export default function Services() {
                   <div className="w-12 h-12 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center text-accent mb-4">
                     <BellRing size={20} />
                   </div>
-                  <h3 className="text-white font-display font-bold text-sm uppercase mb-2">Alertas y Match Proactivo</h3>
+                  <h3 className="text-white font-display font-bold text-sm uppercase mb-2">Alertas de Match</h3>
                   <p className="text-zinc-400 text-xs leading-relaxed">
-                    Al producirse una coincidencia, el sistema notifica de inmediato al Captador y Colocador para coordinar visita y cerrar en días.
+                    Alertas y Match Proactivo: Al producirse una coincidencia, el sistema notifica de inmediato al Captador y Colocador para coordinar visita y cerrar en días.
                   </p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-white/5 text-[10px] text-accent font-bold uppercase tracking-wider">
@@ -344,9 +344,9 @@ export default function Services() {
                   <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-4">
                     <Layers size={20} />
                   </div>
-                  <h3 className="text-white font-display font-bold text-sm uppercase mb-2">Modelo Justo 40 / 20 / 40</h3>
+                  <h3 className="text-white font-display font-bold text-sm uppercase mb-2">Modelo 40 / 20 / 40</h3>
                   <p className="text-zinc-400 text-xs leading-relaxed">
-                    Alianzas transparentes entre colegas para vender y arrendar con fichas de Marca Blanca y bolsa colaborativa para agentes.
+                    Modelo Justo 40 / 20 / 40: Alianzas transparentes entre colegas para vender y arrendar con fichas de Marca Blanca y bolsa colaborativa para agentes.
                   </p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-white/5 text-[10px] text-amber-400 font-bold uppercase tracking-wider">

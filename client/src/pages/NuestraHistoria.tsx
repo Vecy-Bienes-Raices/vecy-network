@@ -474,9 +474,9 @@ export default function NuestraHistoria() {
                     <EyeOff className="w-6 h-6" />
                   </div>
                   <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest block mb-1">Pilar 01</span>
-                  <h3 className="text-lg font-bold text-white mb-3">Belleza Estética & Cero Contaminación Visual</h3>
+                  <h3 className="text-lg font-bold text-white mb-3">Belleza & Cero Avisos</h3>
                   <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
-                    No afeamos las fachadas ni balcones con avisos de plástico, lonas o carteles invasivos. Preservamos la arquitectura, el entorno urbano y la plusvalía del inmueble comercializándolo con elegancia y discreción digital.
+                    Belleza Estética & Cero Contaminación Visual: No afeamos las fachadas ni balcones con avisos de plástico, lonas o carteles invasivos. Preservamos la arquitectura, el entorno urbano y la plusvalía del inmueble comercializándolo con elegancia y discreción digital.
                   </p>
                 </div>
                 <div className="mt-6 pt-4 border-t border-emerald-500/15 text-[11px] font-semibold text-emerald-400">
@@ -491,9 +491,9 @@ export default function NuestraHistoria() {
                     <ShieldCheck className="w-6 h-6" />
                   </div>
                   <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest block mb-1">Pilar 02</span>
-                  <h3 className="text-lg font-bold text-white mb-3">Seguridad y Privacidad Absoluta</h3>
+                  <h3 className="text-lg font-bold text-white mb-3">Seguridad & Privacidad</h3>
                   <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
-                    Un letrero en ventana es una diana para la delincuencia y extorsionistas. Protegemos a las familias utilizando enlaces privados cifrados y verificación preventiva de antecedentes e identidad (KYC) antes de ingresar a la propiedad.
+                    Seguridad y Privacidad Absoluta: Un letrero en ventana es una diana para la delincuencia y extorsionistas. Protegemos a las familias utilizando enlaces privados cifrados y verificación preventiva de antecedentes e identidad (KYC) antes de ingresar a la propiedad.
                   </p>
                 </div>
                 <div className="mt-6 pt-4 border-t border-emerald-500/15 text-[11px] font-semibold text-emerald-400">
@@ -508,9 +508,9 @@ export default function NuestraHistoria() {
                     <Droplets className="w-6 h-6" />
                   </div>
                   <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest block mb-1">Pilar 03</span>
-                  <h3 className="text-lg font-bold text-white mb-3">Cero Papel & Firma Virtual Inmediata</h3>
+                  <h3 className="text-lg font-bold text-white mb-3">Cero Papel & Firma Digital</h3>
                   <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
-                    Para fabricar 1 tonelada de papel se requieren más de 50.000 litros de agua limpia. Erradicamos el papel implementando firma virtual en promesas de compraventa y contratos con CUV y QR (Ley 527/1999), cerrando acuerdos en minutos.
+                    Cero Papel & Firma Virtual Inmediata: Para fabricar 1 tonelada de papel se requieren más de 50.000 litros de agua limpia. Erradicamos el papel implementando firma virtual en promesas de compraventa y contratos con CUV y QR (Ley 527/1999), cerrando acuerdos en minutos.
                   </p>
                 </div>
                 <div className="mt-6 pt-4 border-t border-emerald-500/15 text-[11px] font-semibold text-emerald-400">
