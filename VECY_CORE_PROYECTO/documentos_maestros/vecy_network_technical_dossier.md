@@ -331,6 +331,40 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.89 — Octubre 2026
+
+#### 📌 MISIÓN, VISIÓN 2026-2030, MANIFIESTO 'EL FIN DE LOS PORTALES INMOBILIARIOS' Y DOCTRINA DE LENGUAJE CLARO SIN TECNICISMOS
+
+**Requerimiento y Objetivos:**
+1. **Sanitización y Blindaje Legal de Trámites Gratuitos**:
+   - Corrección inmediata instruida por Eduardo A. Rivera: erradicar siglas incomprensibles ("KYC", "SDH", "SHA-256") y retirar cualquier mención a entidades de control o policiales para evitar riesgos legales y confusión.
+   - Términos oficiales 100% en español claro:
+     • *Filtro de Seguridad para Visitas a Inmuebles*
+     • *Factura Predial y Certificado de Pago en PDF por WhatsApp*
+     • *Paz y Salvo del IDU en PDF para Notaría*
+     • *Cálculo Rápido de Gastos de Notaría y Escrituras*
+2. **Consagración de Misión, Visión 2026-2030 y Valores Agregados**:
+   - En `client/src/pages/NuestraHistoria.tsx`: Creación de la sección estelar de Misión, Visión 2026-2030 y 4 Valores Agregados (Unión Automática / Match, Contratos y Firma Virtual, Comisiones Claras y Justas, y Cuidado del Planeta) con lenguaje cercano, cálido y sin tecnicismos.
+3. **Rescate del Lema de Impacto Doctrinal**:
+   - Reincorporación estelar de: `✦ EL FIN DE LOS PORTALES INMOBILIARIOS COMO LOS CONOCEMOS HASTA HOY` en `NuestraHistoria.tsx` y en el prompt base de JanIA (`server/_core/prompts/base.md`).
+4. **Regla Sagrada de Comunicación: Español Claro, Cercano y Cero Tecnicismos (Doctrina Eduardo A. Rivera)**:
+   - Enseñanza e interiorización activa en JanIA: al 80% de las personas les intimida la IA si se les habla difícil; JanIA debe conversar con amabilidad, sencillez y utilidad inmediata, resolviendo por WhatsApp como una aliada experta.
+
+**Archivos Modificados:**
+- `client/src/pages/Services.tsx`: Títulos claros y sin siglas para los 4 trámites gratuitos.
+- `client/src/pages/NuestraHistoria.tsx`: Nueva sección de Misión, Visión 2026-2030 y Valores Agregados; badge de impacto "EL FIN DE LOS PORTALES INMOBILIARIOS COMO LOS CONOCEMOS HASTA HOY".
+- `server/_core/prompts/base.md`: Incorporación de memoria corporativa, Misión, Visión, catálogo en español claro y regla de cero tecnicismos para JanIA.
+- `server/__tests__/regression.test.ts`: Actualización de aserciones y nuevo test suite v32.89.
+- `shared/const.ts`: Versión oficial `v32.89`.
+- `package.json`: Versión `32.89.0`.
+
+**Verificación:**
+- `npm run check`: 0 errores TypeScript ✅
+- `npm test`: 176 de 176 pruebas aprobadas al 100% ✅
+- `npm run build`: Compilación limpia completada en 16.76s ✅
+
+---
+
 ### 🔖 v32.88 — Octubre 2026
 
 #### 📌 LOGO OFICIAL EN LOGIN/ADMIN, MANIFIESTO PERSUASIVO COMERCIAL Y COMPROMISO VERDE TRI-PILAR

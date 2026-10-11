@@ -15,7 +15,9 @@ import {
   TrendingUp,
   Cpu,
   Droplets,
-  EyeOff
+  EyeOff,
+  Target,
+  Compass
 } from 'lucide-react';
 import NetworkBackground from '@/components/NetworkBackground';
 import { useLocation } from 'wouter';
@@ -99,7 +101,10 @@ export default function NuestraHistoria() {
         <div className="container px-4 sm:px-6">
           <ScrollReveal delay={0.1}>
             <div className="text-center mb-14">
-              <p className="vecy-accent-tag">La Brecha de la Industria</p>
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400 text-xs font-bold tracking-widest uppercase mb-4 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
+                <Skull size={14} className="text-red-400 animate-pulse" />
+                EL FIN DE LOS PORTALES INMOBILIARIOS COMO LOS CONOCEMOS HASTA HOY
+              </div>
               <h2 className="vecy-title-section">
                 PARADIGMAS DEL <span className="text-gradient-gold">SECTOR</span>
               </h2>
@@ -194,6 +199,150 @@ export default function NuestraHistoria() {
               </div>
             </ScrollReveal>
           </div>
+        </div>
+      </section>
+
+      {/* ── MISIÓN, VISIÓN 2026-2030 Y VALORES AGREGADOS ── */}
+      <section className="py-20 sm:py-28 bg-background relative overflow-hidden border-b border-white/5">
+        <div className="container px-4 sm:px-6 max-w-6xl mx-auto">
+          <ScrollReveal delay={0.1}>
+            <div className="text-center mb-16">
+              <p className="vecy-accent-tag">Propósito & Destino Corporativo</p>
+              <h2 className="vecy-title-section">
+                MISIÓN, VISIÓN & <span className="text-gradient-gold uppercase">FUTURO</span>
+              </h2>
+              <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-gray-300 mt-3">
+                Qué somos, qué hacemos cada día, hacia dónde vamos y cómo nos vemos en el futuro conquistando el mercado inmobiliario junto a nuestros agentes y clientes.
+              </p>
+              <div className="line-gold w-28 mx-auto mt-4"></div>
+            </div>
+          </ScrollReveal>
+
+          {/* Cards Misión y Visión */}
+          <div className="grid md:grid-cols-2 gap-8 mb-16">
+            {/* MISIÓN */}
+            <ScrollReveal direction="left" delay={0.15}>
+              <div className="vecy-card-apple border-[#d4af37]/30 bg-primary/5 hover:border-[#d4af37]/60 transition-all p-7 sm:p-9 h-full flex flex-col justify-between group">
+                <div>
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(212,175,55,0.3)] group-hover:scale-105 transition-transform">
+                      <Target className="w-7 h-7 text-primary" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary block">Lo Que Hacemos Cada Día</span>
+                      <h3 className="text-xl sm:text-2xl font-display font-bold text-white uppercase tracking-wider">
+                        NUESTRA MISIÓN
+                      </h3>
+                    </div>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed mb-6">
+                    Hacer que comprar, vender o arrendar una propiedad en Colombia sea <strong className="text-white">fácil, rápido y sin dolores de cabeza</strong>. Con la ayuda de <strong className="text-white">JanIA</strong>, nuestra asistente inteligente, unimos a compradores y vendedores al instante, protegemos a las familias con contratos digitales seguros y garantizamos un trato justo y transparente para todos los colegas del gremio.
+                  </p>
+
+                  <ul className="space-y-3 text-xs sm:text-sm text-zinc-300">
+                    <li className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>Unimos a quien busca con quien vende al instante, sin esperar meses a que alguien vea un anuncio.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>Contratos digitales y firmas desde el celular con total validez legal ante cualquier notaría.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>Cero letreros invasivos en tus ventanas y cero desperdicio de papel para cuidar el planeta.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="mt-8 pt-4 border-t border-primary/20 flex items-center justify-between text-[11px] text-primary font-bold uppercase tracking-wider">
+                  <span>Acción Diaria</span>
+                  <span>Soluciones Claras y Rápidas</span>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            {/* VISIÓN */}
+            <ScrollReveal direction="right" delay={0.2}>
+              <div className="vecy-card-apple border-[#d4af37]/30 bg-primary/5 hover:border-[#d4af37]/60 transition-all p-7 sm:p-9 h-full flex flex-col justify-between group">
+                <div>
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-14 h-14 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(212,175,55,0.3)] group-hover:scale-105 transition-transform">
+                      <Compass className="w-7 h-7 text-primary" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary block">Hacia Dónde Vamos</span>
+                      <h3 className="text-xl sm:text-2xl font-display font-bold text-white uppercase tracking-wider">
+                        VISIÓN 2026 – 2030
+                      </h3>
+                    </div>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed mb-6">
+                    Convertirnos en la <strong className="text-white">red inmobiliaria más confiable, querida y utilizada de Colombia</strong>. Soñamos con un país donde nadie pierda meses buscando casa en páginas viejas y desactualizadas, y donde cualquier negocio de finca raíz se cierre con la misma sencillez, rapidez y tranquilidad con la que envías un mensaje por WhatsApp.
+                  </p>
+
+                  <ul className="space-y-3 text-xs sm:text-sm text-zinc-300">
+                    <li className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>El primer portal donde la Inteligencia Artificial trabaja para ti las 24 horas del día.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>Una comunidad unida de asesores inmobiliarios que comparten negocios con respeto y cuentas claras.</span>
+                    </li>
+                    <li className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span>Negocios 100% digitales que ahorran tiempo, evitan trancones y protegen el agua de Colombia.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="mt-8 pt-4 border-t border-primary/20 flex items-center justify-between text-[11px] text-primary font-bold uppercase tracking-wider">
+                  <span>Destino 2030</span>
+                  <span>La Red Que Todos Prefieren</span>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+
+          {/* 4 Valores Agregados de Vecy Bienes Raíces */}
+          <ScrollReveal delay={0.25}>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="vecy-card-apple p-5 border-white/10 hover:border-primary/40 transition-all">
+                <span className="text-[10px] font-bold text-primary uppercase tracking-wider block mb-1">01 / Inteligencia</span>
+                <h4 className="text-base font-bold text-white mb-2">Unión Automática (Match)</h4>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  JanIA encuentra a la persona que busca exactamente lo que tú vendes en segundos, sin anuncios muertos ni pérdidas de tiempo.
+                </p>
+              </div>
+
+              <div className="vecy-card-apple p-5 border-white/10 hover:border-primary/40 transition-all">
+                <span className="text-[10px] font-bold text-primary uppercase tracking-wider block mb-1">02 / Tranquilidad</span>
+                <h4 className="text-base font-bold text-white mb-2">Contratos y Firma Virtual</h4>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Firma promesas y contratos desde tu teléfono con validez legal completa, sin filas en notarías ni desplazamientos pesados.
+                </p>
+              </div>
+
+              <div className="vecy-card-apple p-5 border-white/10 hover:border-primary/40 transition-all">
+                <span className="text-[10px] font-bold text-primary uppercase tracking-wider block mb-1">03 / Honestidad</span>
+                <h4 className="text-base font-bold text-white mb-2">Comisiones Claras y Justas</h4>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Reglas de juego limpias para todos los asesores inmobiliarios: aquí nadie le quita la comisión a nadie y las cuentas son claras.
+                </p>
+              </div>
+
+              <div className="vecy-card-apple p-5 border-white/10 hover:border-primary/40 transition-all">
+                <span className="text-[10px] font-bold text-primary uppercase tracking-wider block mb-1">04 / Naturaleza</span>
+                <h4 className="text-base font-bold text-white mb-2">Cero Avisos y Cero Papel</h4>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  No colgamos letreros feos en tus ventanas (protegemos tu seguridad) y salvamos más de 50.000 litros de agua por cada tonelada de papel ahorrada.
+                </p>
+              </div>
+            </div>
+          </ScrollReveal>
         </div>
       </section>
 

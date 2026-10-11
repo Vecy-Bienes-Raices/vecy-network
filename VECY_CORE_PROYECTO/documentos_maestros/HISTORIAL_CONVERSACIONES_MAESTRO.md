@@ -7,6 +7,43 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.89 — 11 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+1. **Sanitización y Blindaje Legal de Trámites Gratuitos**:
+   - Eduardo corrigió: *"SI le pusiste esop a la web o a nuestra metadescripción y SEO, acá te hago un a corrección: Trámites y certificados 100% gratuitos ($0 COP) en WhatsApp: Verificación de antecedentes KYC ante Policía y Procuraduría (SI lo puedes reemplazar sería mejor ya que nos podemos meter en problemas y creo que es mejor no mencionar estas instituciones o nombrar esta verificación de antecedentes de otra manera, no se como), Factura Predial SDH (No se que es SHD y para mi sería: Factura Predial y su Certificado de pago por whatsapp en archivo PDF), Paz y Salvo IDU con PIN oficial y liquidación de gastos notariales en segundos."*
+2. **Doctrina Integral en JanIA (Misión, Visión, Objetivos y Valores Agregados)**:
+   - Eduardo instruyó: *"Y todo eso no solamente debe quedar en nuestro sitio web en la pestaña Historia, también debes enseñarselo a JanIA o que ella tenga la capacidad de ingresar a nuestra web y absorver y contar todo al respecto sobre nosotros, lo que hacemos, cómo lo hacemos, para donde vamos y cómo nois vemos en el futuro pieso que es nuestra Misión Visión, objetivos, valores agregados, finalidad..."*
+3. **Rescate de la Frase Doctrinal de Impacto Inmobiliario**:
+   - Eduardo rescató: *"...hay algo que me gustó una vez como lo dijiste y se me quedó, pero jamás lo volví a ver y aplica para la parte en la web donde hablamos de Dinosaurios Inmobiliarios y vemos a Vecy como l evoluvión, ese algo que decías sonaba algo así como: 'EL FIN DE LOS PORTALES INMOBILIARIOS COMO LOS CONOCEMOS HASTA HOY', No lo recuerdo bien pero sonaba impactante y dejaba qué pensar. No sé dime tu."*
+4. **Regla Suprema de Lenguaje Claro, Humano y Cero Tecnicismos**:
+   - Eduardo remató con contundencia y sabiduría: *"No se que era SHD pero se me olvidó decirte que a las personas de mi medio y de cualquier medio hay que hablarles en español jejeje me refiero claramente para que lo entiendan si les hablas con tecnicismos y palabras rebusacadas ni siquiera se van a tomar el tiempo de quedarsen en nuestro sitio, las personas hoy en día lo que no entienden se les hace difiucil simplemente lo desechan así que no tendríamos público que abogue por nosotros, si imagínate que a más del 80% les da miedo hablar con JanIa, entonces imagínate si les hablas enredado. Ahhh!??"*
+
+### Diagnóstico Técnico y Solución Aplicada
+1. **Erradicación de Siglas Incomprensibles y Mención a Entidades Públicas**:
+   - Se eliminaron por completo siglas como "KYC", "SDH", "SHA-256" o referencias a Policía/Procuraduría de cara al cliente y colega.
+   - Denominaciones finales en `client/src/pages/Services.tsx`, `client/src/pages/NuestraHistoria.tsx` y en el prompt base de JanIA:
+     • 🛡️ **Filtro de Seguridad para Visitas a Inmuebles**: Para saber con certeza quién entra a la propiedad antes de abrir la puerta y proteger a las familias.
+     • 📄 **Factura Predial y Certificado de Pago en PDF por WhatsApp**: Entrega en menos de un minuto de la factura del impuesto predial lista para pagar y el paz y salvo oficial en PDF.
+     • 🏛️ **Paz y Salvo del IDU en PDF para Notaría**: Certificado obligatorio para escrituración en Bogotá entregado gratis en PDF sin filas.
+     • ⚖️ **Cálculo Rápido de Gastos de Notaría y Escrituras**: Liquidación transparente de lo que paga el comprador y lo que paga el vendedor sin sorpresas.
+2. **Consagración de Misión, Visión 2026-2030 y Valores en `NuestraHistoria.tsx`**:
+   - Redactados en español claro, cálido, directo y cercano (cero términos como "infraestructura neural" o "telemetría probatoria").
+   - Integración visual prémium con tarjetas interactivas de Misión, Visión y 4 pilares: Unión Automática (Match), Tranquilidad Legal con Firma Virtual, Ganancias Claras y Justas (40/20/40), y Cuidado del Planeta (Cero Avisos y Cero Papel).
+3. **Rescate del Lema Doctrinal de Impacto**:
+   - Se consagró en `NuestraHistoria.tsx` y en `server/_core/prompts/base.md`:
+     `✦ EL FIN DE LOS PORTALES INMOBILIARIOS COMO LOS CONOCEMOS HASTA HOY`.
+4. **Enseñanza Activa y Doctrina de Lenguaje Sencillo a JanIA (`base.md`)**:
+   - Se incorporó la **Regla Sagrada de Comunicación: Español Claro, Cálido y Cero Tecnicismos (Doctrina Eduardo A. Rivera)**. JanIA habla con sencillez, empatía y cercanía de confianza, desmitificando la IA para el 80% de usuarios que sienten recelo hacia la tecnología.
+
+### Verificación y Validación
+- `npm run check`: 0 errores TypeScript ✅.
+- `npm test`: 176/176 tests aprobados al 100% (incluyendo nuevo test suite de Doctrina v32.89) ✅.
+- `npm run build`: Compilación limpia en 16.76s ✅.
+- Versión oficial elevada a **v32.89** (`32.89.0`).
+
+---
+
 ## 📋 SESIÓN v32.88 — 11 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

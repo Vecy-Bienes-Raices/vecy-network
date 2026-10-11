@@ -56,64 +56,64 @@ interface CommercialService {
 // 🤖 BÓVEDA DE TRÁMITES Y CERTIFICADOS GRATUITOS 24/7 CON JANIA BOT (SOCKET BAILEYS: +573192919978)
 const freeJanIAServices: FreeJanIAService[] = [
   {
-    id: "verificacion-kyc",
-    badge: "100% GRATUITO • SEGURIDAD PREVENTIVA",
-    title: "Verificación de Identidad & Antecedentes (KYC)",
-    description: "Protegemos la seguridad e integridad de propietarios y asesores. JanIA consulta antecedentes en la Policía Nacional y valida la autenticidad de la cédula de cualquier visitante o comprador antes de ingresar a la propiedad.",
+    id: "seguridad-visitas",
+    badge: "100% GRATUITO • CERO RIESGOS",
+    title: "Filtro de Seguridad para Visitas a Inmuebles",
+    description: "Protege tu tranquilidad y la de tu familia. Antes de mostrar una propiedad o asistir a una cita, JanIA valida de manera fácil y confidencial los documentos de los visitantes por WhatsApp para que sepas con certeza a quién le abres la puerta.",
     icon: <BadgeCheck className="w-9 h-9 text-emerald-400" />,
     features: [
-      "Consulta preventiva de antecedentes ante Policía Nacional",
-      "Validación de cédulas de visitantes y compradores",
-      "Blindaje preventivo para propietarios y colegas",
-      "Reporte instantáneo por chat en 15 segundos"
+      "Filtro de seguridad antes de mostrar cualquier inmueble",
+      "Validación de documentos de visitantes y compradores",
+      "Protección para propietarios, familias y asesores",
+      "Respuesta en segundos directamente por WhatsApp"
     ],
-    ctaText: "Verificar Cédula con JanIA",
-    waMessage: "JanIA, quiero verificar los antecedentes y documento de un visitante para una propiedad."
+    ctaText: "Pedir Filtro de Seguridad por WhatsApp",
+    waMessage: "Hola JanIA, quiero validar la identidad de un visitante para mostrar una propiedad de manera segura."
   },
   {
-    id: "predial-sdh",
-    badge: "100% GRATUITO • TIEMPO RÉCORD",
-    title: "Factura Predial & Paz y Salvo Distrital en PDF",
-    description: "Conexión directa con la Secretaría Distrital de Hacienda de Bogotá. Descarga en segundos tu factura con código de barras para pago en bancos/Efecty o el certificado oficial de pago y paz y salvo vigencia 2026. Solo envía el código CHIP.",
+    id: "predial-pdf",
+    badge: "100% GRATUITO • EN 1 MINUTO",
+    title: "Factura Predial y Certificado de Pago en PDF por WhatsApp",
+    description: "Te enviamos la factura del impuesto predial lista para pagar en bancos y su paz y salvo o certificado de pago al día en archivo PDF directo a tu WhatsApp. Sin filas ni páginas lentas, solo envíanos el código de tu inmueble.",
     icon: <FileText className="w-9 h-9 text-emerald-400" />,
     features: [
-      "Descarga inmediata de factura con código de barras",
-      "Certificado oficial de pago y paz y salvo distrital",
-      "Válido para trámites notariales y bancarios",
-      "Solo requiere el código CHIP del inmueble"
+      "Factura lista con código de barras para pagar en bancos",
+      "Certificado oficial de pago y paz y salvo en PDF",
+      "Válido para trámites de compraventa y bancos",
+      "Entrega inmediata a tu chat de WhatsApp"
     ],
-    ctaText: "Pedir Predial con CHIP",
-    waMessage: "JanIA, sácame la factura y paz y salvo del impuesto predial de Bogotá con el código CHIP."
+    ctaText: "Pedir Predial por WhatsApp",
+    waMessage: "Hola JanIA, por favor sácame la factura y certificado de pago del impuesto predial en PDF."
   },
   {
     id: "idu-valorizacion",
-    badge: "100% GRATUITO • TRÁMITE NOTARIAL",
-    title: "Paz y Salvo de Valorización IDU Bogotá en PDF",
-    description: "Expedición oficial y entrega directa en archivo PDF del Certificado de Estado de Cuenta para Trámite Notarial (Paz y Salvo de Valorización) del Instituto de Desarrollo Urbano (IDU) con PIN de seguridad oficial bajo el Acuerdo Distrital 915.",
+    badge: "100% GRATUITO • PARA ESCRITURAS",
+    title: "Paz y Salvo del IDU en PDF para Notaría",
+    description: "El documento oficial que te exigen obligatoriamente en la notaría para firmar escrituras y vender tu inmueble en Bogotá. Te lo entregamos en PDF oficial por WhatsApp al instante, gratis y sin intermediarios.",
     icon: <Landmark className="w-9 h-9 text-emerald-400" />,
     features: [
-      "Certificado oficial en PDF con PIN de seguridad",
-      "Exigido obligatoriamente en Notarías para escrituración",
-      "Validación inmediata de gravámenes por valorización",
-      "Descarga 100% gratuita y sin intermediarios"
+      "Documento oficial en PDF con número de radicado",
+      "Exigido en notaría para firmar escrituras de venta",
+      "Verificación rápida de estado de cuenta",
+      "Entrega 100% gratuita y sin filas"
     ],
-    ctaText: "Obtener Paz y Salvo IDU",
-    waMessage: "JanIA, sácame el paz y salvo de valorización del IDU con el CHIP."
+    ctaText: "Pedir Paz y Salvo IDU por WhatsApp",
+    waMessage: "Hola JanIA, por favor sácame el paz y salvo de valorización del IDU para escriturar."
   },
   {
     id: "simulador-notarial",
-    badge: "100% GRATUITO • SIMULACIÓN EXACTA",
-    title: "Calculadora de Gastos Notariales y Registro",
-    description: "Calcula con precisión matemática los derechos notariales, impuesto de registro (beneficencia), retención en la fuente y gastos de escrituración para compraventas, hipotecas o cancelaciones según tarifas oficiales SNR.",
+    badge: "100% GRATUITO • FÁCIL Y AL GRANO",
+    title: "Cálculo Rápido de Gastos de Notaría y Escrituras",
+    description: "¿Quieres saber cuánto dinero necesitas para escriturar? Te calculamos en segundos los gastos exactos de notaría, impuestos y registro, explicándote en español claro y sin enredos cuánto le corresponde pagar al comprador y cuánto al vendedor.",
     icon: <Calculator className="w-9 h-9 text-emerald-400" />,
     features: [
-      "Liquidación exacta de derechos notariales y retención",
-      "Impuesto de registro y beneficencia departamental",
-      "Desglose transparente de lo que paga comprador y vendedor",
-      "Soporte para figuras: Afectación, Patrimonio y Leasing"
+      "Cálculo exacto de derechos notariales e impuestos",
+      "Cuentas claras: cuánto paga el comprador y cuánto el vendedor",
+      "Evita sorpresas y cobros inesperados el día de la firma",
+      "Respuestas sencillas y comprensibles en segundos"
     ],
-    ctaText: "Simular Gastos de Escritura",
-    waMessage: "JanIA, ayúdame a liquidar los gastos notariales y de registro para una compraventa."
+    ctaText: "Calcular Gastos de Notaría",
+    waMessage: "Hola JanIA, ayúdame a calcular cuánto se paga de notaría y registro para comprar o vender un inmueble."
   }
 ];
 

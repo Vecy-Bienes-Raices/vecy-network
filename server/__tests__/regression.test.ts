@@ -3578,10 +3578,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(soporteContent).not.toContain("45/10/45");
     });
 
-    it("Doctrina v32.84 / v32.88: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
+    it("Doctrina v32.84 / v32.89: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
       const { VECY_ACTIVE_DOMAIN, VECY_VERSION } = await import("../../shared/const");
       expect(VECY_ACTIVE_DOMAIN).toBe("https://vecy-bienes-raices.vercel.app");
-      expect(VECY_VERSION).toBe("v32.88");
+      expect(VECY_VERSION).toBe("v32.89");
 
       const fs = await import("fs");
       const path = await import("path");
@@ -3626,10 +3626,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       // Validar Services.tsx con los 4 trámites gratuitos de JanIA y servicios comerciales
       const servicesPath = path.resolve(__dirname, "../../client/src/pages/Services.tsx");
       const servicesContent = fs.readFileSync(servicesPath, "utf-8");
-      expect(servicesContent).toContain("Verificación de Identidad & Antecedentes (KYC)");
-      expect(servicesContent).toContain("Factura Predial & Paz y Salvo Distrital en PDF");
-      expect(servicesContent).toContain("Paz y Salvo de Valorización IDU Bogotá en PDF");
-      expect(servicesContent).toContain("Calculadora de Gastos Notariales y Registro");
+      expect(servicesContent).toContain("Filtro de Seguridad para Visitas a Inmuebles");
+      expect(servicesContent).toContain("Factura Predial y Certificado de Pago en PDF por WhatsApp");
+      expect(servicesContent).toContain("Paz y Salvo del IDU en PDF para Notaría");
+      expect(servicesContent).toContain("Cálculo Rápido de Gastos de Notaría y Escrituras");
       expect(servicesContent).toContain("Préstamos con Garantía Hipotecaria (Libre Inversión)");
       expect(servicesContent).toContain("Soluciones PropTech & Desarrollo Web para Agentes");
       expect(servicesContent).toContain("+573192919978"); // Socket JanIA
@@ -3703,6 +3703,43 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(historiaContent).toContain("Belleza Estética & Cero Contaminación Visual");
       expect(historiaContent).toContain("Seguridad y Privacidad Absoluta");
       expect(historiaContent).toContain("Cero Papel & Firma Virtual Inmediata");
+    });
+
+    it("Doctrina v32.89: Misión, Visión 2026-2030, Manifiesto 'El Fin de los Portales Inmobiliarios' y Doctrina de Lenguaje Claro sin Tecnicismos", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+
+      // Validar NuestraHistoria.tsx con Misión, Visión 2026-2030 y Manifiesto de impacto
+      const historiaPath = path.resolve(__dirname, "../../client/src/pages/NuestraHistoria.tsx");
+      const historiaContent = fs.readFileSync(historiaPath, "utf-8");
+      expect(historiaContent).toContain("EL FIN DE LOS PORTALES INMOBILIARIOS COMO LOS CONOCEMOS HASTA HOY");
+      expect(historiaContent).toContain("MISIÓN, VISIÓN &");
+      expect(historiaContent).toContain("NUESTRA MISIÓN");
+      expect(historiaContent).toContain("VISIÓN 2026 – 2030");
+      expect(historiaContent).toContain("Unión Automática (Match)");
+      expect(historiaContent).toContain("Contratos y Firma Virtual");
+      expect(historiaContent).toContain("Comisiones Claras y Justas");
+      expect(historiaContent).toContain("Cero Avisos y Cero Papel");
+
+      // Validar base.md con la doctrina de hablar en español claro y cero tecnicismos
+      const basePath = path.resolve(__dirname, "../_core/prompts/base.md");
+      const baseContent = fs.readFileSync(basePath, "utf-8");
+      expect(baseContent).toContain("EL FIN DE LOS PORTALES INMOBILIARIOS COMO LOS CONOCEMOS HASTA HOY");
+      expect(baseContent).toContain("MEMORIA CORPORATIVA, MISIÓN, VISIÓN Y EL FIN DE LOS PORTALES TRADICIONALES");
+      expect(baseContent).toContain("REGLA SAGRADA DE COMUNICACIÓN: ESPAÑOL CLARO, CÁLIDO Y CERO TECNICISMOS (DOCTRINA EDUARDO A. RIVERA)");
+      expect(baseContent).toContain("Filtro de Seguridad para Visitas a Inmuebles");
+      expect(baseContent).toContain("Factura Predial y Certificado de Pago en PDF por WhatsApp");
+      expect(baseContent).toContain("Paz y Salvo del IDU en PDF para Notaría");
+      expect(baseContent).toContain("Cálculo Rápido de Gastos de Notaría y Escrituras");
+
+      // Validar Services.tsx con títulos accesibles sin siglas
+      const servicesPath = path.resolve(__dirname, "../../client/src/pages/Services.tsx");
+      const servicesContent = fs.readFileSync(servicesPath, "utf-8");
+      expect(servicesContent).toContain("Filtro de Seguridad para Visitas a Inmuebles");
+      expect(servicesContent).toContain("Factura Predial y Certificado de Pago en PDF por WhatsApp");
+      expect(servicesContent).toContain("Paz y Salvo del IDU en PDF para Notaría");
+      expect(servicesContent).toContain("Cálculo Rápido de Gastos de Notaría y Escrituras");
+      expect(servicesContent).not.toContain("SDH");
     });
   });
 });

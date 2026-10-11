@@ -172,7 +172,29 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.88 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.89 — Octubre 2026
+
+### Novedades v32.89 (Misión, Visión 2026-2030, Manifiesto 'El Fin de los Portales Inmobiliarios' y Doctrina de Lenguaje Claro sin Tecnicismos):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Sanitización y Blindaje Legal de Trámites Gratuitos**:
+     - Eduardo instruyó reemplazar cualquier mención a entidades policiales o de control y siglas como "KYC" o "SDH" por explicaciones en español claro que no expongan legalmente al proyecto ni confundan a clientes.
+     - Nombres definitivos en `Services.tsx` y `base.md`:
+       • *Filtro de Seguridad para Visitas a Inmuebles*
+       • *Factura Predial y Certificado de Pago en PDF por WhatsApp*
+       • *Paz y Salvo del IDU en PDF para Notaría*
+       • *Cálculo Rápido de Gastos de Notaría y Escrituras*
+  2. **Doctrina Integral en JanIA (Misión, Visión, Objetivos y Valores Agregados)**:
+     - En `server/_core/prompts/base.md` se enseñó a JanIA toda la historia de los fundadores, su Misión, Visión 2026-2030, y sus 4 valores agregados.
+  3. **Rescate de la Frase Doctrinal de Impacto**:
+     - Se consagró en `NuestraHistoria.tsx` y `base.md`:
+       `✦ EL FIN DE LOS PORTALES INMOBILIARIOS COMO LOS CONOCEMOS HASTA HOY`.
+  4. **Regla Suprema de Lenguaje Sencillo (Doctrina Eduardo A. Rivera)**:
+     - Eduardo enfatizó que al 80% de las personas les da temor o desconfianza la IA si se les habla enredado o con palabras técnicas. Se instruyó a JanIA a hablar con calidez, cercanía, sencillez y utilidad inmediata.
+     - En `client/src/pages/NuestraHistoria.tsx` se diseñó la sección de Misión, Visión 2026-2030 y Valores Agregados con lenguaje 100% humano, comprensible y sin tecnicismos.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 176/176 tests passing ✅ | `npm run build` limpio en 16.76s ✅
+- `shared/const.ts` (`v32.89`) y `package.json` (`32.89.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.88 — Octubre 2026
 
 ### Novedades v32.88 (Logo Oficial en Login/Admin, Manifiesto Persuasivo de Marketing y Compromiso Verde Tri-Pilar):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
