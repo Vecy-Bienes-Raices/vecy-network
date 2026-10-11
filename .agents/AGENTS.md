@@ -172,7 +172,25 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.87 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.88 — Octubre 2026
+
+### Novedades v32.88 (Logo Oficial en Login/Admin, Manifiesto Persuasivo de Marketing y Compromiso Verde Tri-Pilar):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Logo Oficial en Inicio de Sesión y Panel Administrativo**:
+     - Eduardo reportó: *"Vi que en nuestro modal de inicio de cesión en la página de administración creo, no tiene nuestro logo oficial sino uno común, que es ese descuido."*
+     - Causa identificada: En `client/src/pages/Login.tsx` (línea 192) y `client/src/pages/Admin.tsx` (línea 148), se renderizaba un icono genérico de escudo (`<Shield className="..." />`) en lugar de la imagen oficial del logotipo corporativo de la marca.
+     - Solución ejecutada: Se sustituyó el escudo por `<img src="/logo-vecy.png" alt="Logo Vecy Bienes Raíces" ... />` con efectos de brillo áurico y escala interactiva en hover, garantizando coherencia absoluta con el branding oficial.
+  2. **Doctrina Ambiental y Estética: Compromiso Verde Tri-Pilar en [`NuestraHistoria.tsx`](file:///home/eddu/Proyectos/vecy-network/client/src/pages/NuestraHistoria.tsx)**:
+     - Eduardo instruyó estructurar la propuesta de valor y contribución ambiental de Vecy:
+       • *Pilar 1: Belleza Estética y Cero Contaminación Visual*: No colocamos letreros, lonas ni carteles en fachadas, balcones ni ventanas, preservando la arquitectura, la dignidad del espacio público y la plusvalía del inmueble.
+       • *Pilar 2: Seguridad Patrimonial y Privacidad Familiar*: Un aviso en ventana expone la propiedad ante delincuentes, invasores y extorsionistas; en Vecy comercializamos mediante enlaces discretos cifrados (Stealth Links) y validación preventiva de identidad (KYC ante Policía Nacional).
+       • *Pilar 3: Huella Hídrica y Cero Desperdicio de Papel*: Para fabricar 1 tonelada de papel se requieren más de 50.000 litros de agua limpia. Erradicamos el papel implementando firma virtual en promesas de compraventa y contratos legales con CUV y QR (Ley 527 de 1999 y Código de Comercio), cerrando negocios en minutos.
+  3. **Manifiesto Persuasivo Comercial de Vecy Bienes Raíces**:
+     - Redacción de un copy supremo de marketing y persuasión que sintetiza qué somos, qué hacemos, para dónde vamos, cómo nos vemos en el futuro y por qué somos la evolución inevitable del corretaje inmobiliario en Colombia.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 175/175 tests passing ✅ | `npm run build` limpio en 28.48s ✅
+- `shared/const.ts` (`v32.88`) y `package.json` (`32.88.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.87 — Octubre 2026
 
 ### Novedades v32.87 (Primer Portal Inmobiliario con Verdadera IA en Colombia y Consagración del Motor de MATCH 24/7):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

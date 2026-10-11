@@ -3578,10 +3578,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(soporteContent).not.toContain("45/10/45");
     });
 
-    it("Doctrina v32.84 / v32.87: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
+    it("Doctrina v32.84 / v32.88: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
       const { VECY_ACTIVE_DOMAIN, VECY_VERSION } = await import("../../shared/const");
       expect(VECY_ACTIVE_DOMAIN).toBe("https://vecy-bienes-raices.vercel.app");
-      expect(VECY_VERSION).toBe("v32.87");
+      expect(VECY_VERSION).toBe("v32.88");
 
       const fs = await import("fs");
       const path = await import("path");
@@ -3679,6 +3679,30 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(servicesContent).toContain("JanIA Match Engine v32");
       expect(servicesContent).toContain("Cruce Oferta ↔ Demanda");
       expect(servicesContent).toContain("Umbral Riguroso (85%-100%)");
+    });
+
+    it("Doctrina v32.88: Logo Oficial en Login/Admin y Compromiso Verde Tri-Pilar en Historia", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+
+      // Validar Login.tsx con logo oficial de Vecy
+      const loginPath = path.resolve(__dirname, "../../client/src/pages/Login.tsx");
+      const loginContent = fs.readFileSync(loginPath, "utf-8");
+      expect(loginContent).toContain("/logo-vecy.png");
+      expect(loginContent).not.toContain('<Shield className="w-8 h-8 text-accent animate-pulse" />');
+
+      // Validar Admin.tsx con logo oficial de Vecy
+      const adminPath = path.resolve(__dirname, "../../client/src/pages/Admin.tsx");
+      const adminContent = fs.readFileSync(adminPath, "utf-8");
+      expect(adminContent).toContain("/logo-vecy.png");
+
+      // Validar NuestraHistoria.tsx con los 3 pilares verdes
+      const historiaPath = path.resolve(__dirname, "../../client/src/pages/NuestraHistoria.tsx");
+      const historiaContent = fs.readFileSync(historiaPath, "utf-8");
+      expect(historiaContent).toContain("CERO AVISOS & CERO PAPEL");
+      expect(historiaContent).toContain("Belleza Estética & Cero Contaminación Visual");
+      expect(historiaContent).toContain("Seguridad y Privacidad Absoluta");
+      expect(historiaContent).toContain("Cero Papel & Firma Virtual Inmediata");
     });
   });
 });

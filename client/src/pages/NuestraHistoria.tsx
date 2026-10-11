@@ -13,7 +13,9 @@ import {
   ShieldCheck,
   CheckCircle2,
   TrendingUp,
-  Cpu
+  Cpu,
+  Droplets,
+  EyeOff
 } from 'lucide-react';
 import NetworkBackground from '@/components/NetworkBackground';
 import { useLocation } from 'wouter';
@@ -289,20 +291,75 @@ export default function NuestraHistoria() {
         </div>
       </section>
 
-      {/* ── COMPROMISO VERDE & DEFENSORÍA AMBIENTAL ── */}
-      <section className="py-20 sm:py-24 bg-gradient-dark border-y border-white/5 relative overflow-hidden">
-        <div className="container text-center relative z-10 max-w-4xl mx-auto px-4">
+      {/* ── COMPROMISO VERDE & DEFENSORÍA AMBIENTAL: LA DOCTRINA CERO AVISOS Y CERO PAPEL ── */}
+      <section className="py-20 sm:py-28 bg-gradient-dark border-y border-white/5 relative overflow-hidden">
+        <div className="container relative z-10 max-w-6xl mx-auto px-4">
           <ScrollReveal delay={0.15}>
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto mb-6 shadow-[0_0_25px_rgba(16,185,129,0.25)]">
-              <Leaf className="w-8 h-8 text-emerald-400" />
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto mb-6 shadow-[0_0_25px_rgba(16,185,129,0.25)]">
+                <Leaf className="w-8 h-8 text-emerald-400" />
+              </div>
+              <p className="text-emerald-400 uppercase tracking-[0.25em] text-xs font-bold mb-3">Sostenibilidad & Seguridad Inmobiliaria</p>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-black text-white mb-6">
+                COMPROMISO VERDE: <span className="text-emerald-400 uppercase">CERO AVISOS & CERO PAPEL</span>
+              </h2>
+              <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-gray-300">
+                Nuestra esencia es digital porque protegemos el mundo físico. Erradicamos los letreros en fachadas y el desperdicio masivo de papel con tres propósitos innegociables:
+              </p>
             </div>
-            <p className="text-emerald-400 uppercase tracking-[0.25em] text-xs font-bold mb-3">Sostenibilidad Inmobiliaria</p>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-black text-white mb-6">
-              COMPROMISO <span className="text-emerald-400 uppercase">Verde Innegociable</span>
-            </h2>
-            <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-gray-300">
-              Nuestra esencia es digital porque amamos el planeta físico. Desde 2018 hemos evitado miles de avisos de plástico en ventanas y toneladas de papel en contratos impresos, reduciendo drásticamente la huella de carbono y dignificando las fachadas de las ciudades.
-            </p>
+
+            <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
+              {/* Pilar 1: Belleza Estética */}
+              <div className="vecy-card-apple p-7 border-emerald-500/20 bg-emerald-950/10 hover:border-emerald-500/40 transition-all flex flex-col justify-between">
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mb-5 text-emerald-400">
+                    <EyeOff className="w-6 h-6" />
+                  </div>
+                  <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest block mb-1">Pilar 01</span>
+                  <h3 className="text-lg font-bold text-white mb-3">Belleza Estética & Cero Contaminación Visual</h3>
+                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                    No afeamos las fachadas ni balcones con avisos de plástico, lonas o carteles invasivos. Preservamos la arquitectura, el entorno urbano y la plusvalía del inmueble comercializándolo con elegancia y discreción digital.
+                  </p>
+                </div>
+                <div className="mt-6 pt-4 border-t border-emerald-500/15 text-[11px] font-semibold text-emerald-400">
+                  ✓ Entorno digno y sin contaminación
+                </div>
+              </div>
+
+              {/* Pilar 2: Seguridad Patrimonial */}
+              <div className="vecy-card-apple p-7 border-emerald-500/20 bg-emerald-950/10 hover:border-emerald-500/40 transition-all flex flex-col justify-between">
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mb-5 text-emerald-400">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest block mb-1">Pilar 02</span>
+                  <h3 className="text-lg font-bold text-white mb-3">Seguridad y Privacidad Absoluta</h3>
+                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                    Un letrero en ventana es una diana para la delincuencia y extorsionistas. Protegemos a las familias utilizando enlaces privados cifrados y verificación preventiva de antecedentes e identidad (KYC) antes de ingresar a la propiedad.
+                  </p>
+                </div>
+                <div className="mt-6 pt-4 border-t border-emerald-500/15 text-[11px] font-semibold text-emerald-400">
+                  ✓ Blindaje contra delincuencia y marcas
+                </div>
+              </div>
+
+              {/* Pilar 3: Ahorro de Agua y Firma Virtual */}
+              <div className="vecy-card-apple p-7 border-emerald-500/20 bg-emerald-950/10 hover:border-emerald-500/40 transition-all flex flex-col justify-between">
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mb-5 text-emerald-400">
+                    <Droplets className="w-6 h-6" />
+                  </div>
+                  <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest block mb-1">Pilar 03</span>
+                  <h3 className="text-lg font-bold text-white mb-3">Cero Papel & Firma Virtual Inmediata</h3>
+                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                    Para fabricar 1 tonelada de papel se requieren más de 50.000 litros de agua limpia. Erradicamos el papel implementando firma virtual en promesas de compraventa y contratos con CUV y QR (Ley 527/1999), cerrando acuerdos en minutos.
+                  </p>
+                </div>
+                <div className="mt-6 pt-4 border-t border-emerald-500/15 text-[11px] font-semibold text-emerald-400">
+                  ✓ Miles de litros de agua salvados
+                </div>
+              </div>
+            </div>
           </ScrollReveal>
         </div>
       </section>

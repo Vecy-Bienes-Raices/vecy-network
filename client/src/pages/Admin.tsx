@@ -145,7 +145,13 @@ export default function Admin() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="panel-card p-10 text-center max-w-sm">
-          <Shield className="w-12 h-12 text-accent mx-auto mb-4 opacity-70" />
+          <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <img 
+              src="/logo-vecy.png" 
+              alt="Logo Vecy Bienes Raíces" 
+              className="w-full h-full object-contain filter drop-shadow-[0_0_15px_rgba(191,149,63,0.3)]"
+            />
+          </div>
           <h1 className="text-xl font-bold text-foreground mb-2">Iniciar Sesión</h1>
           <p className="text-muted-foreground text-sm mb-6">Debes iniciar sesión con una cuenta autorizada para acceder al panel.</p>
           <button onClick={() => { window.location.href = getLoginUrl(); }} className="btn-gold w-full">

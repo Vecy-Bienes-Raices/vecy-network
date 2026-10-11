@@ -331,6 +331,36 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.88 — Octubre 2026
+
+#### 📌 LOGO OFICIAL EN LOGIN/ADMIN, MANIFIESTO PERSUASIVO COMERCIAL Y COMPROMISO VERDE TRI-PILAR
+
+**Requerimiento y Objetivos:**
+1. **Logo Oficial en Inicio de Sesión y Panel Administrativo**:
+   - Corrección inmediata del icono de escudo provisional `<Shield />` en la tarjeta de login (`client/src/pages/Login.tsx`) y en el acceso denegado/login de administración (`client/src/pages/Admin.tsx`), sustituyéndolo por el logotipo oficial de Vecy (`/logo-vecy.png`).
+2. **Doctrina Ambiental y Estética en Historia (`client/src/pages/NuestraHistoria.tsx`)**:
+   - Estructuración de los 3 pilares del Compromiso Verde:
+     • *Pilar 1: Belleza Estética y Cero Contaminación Visual*: Dignidad arquitectónica en fachadas y balcones sin letreros ni carteles de plástico invasivos.
+     • *Pilar 2: Seguridad Patrimonial*: Protección familiar y blindaje contra delincuencia y extorsionistas mediante enlaces discretos de marca blanca (Stealth Links) y verificación KYC de visitantes ante Policía Nacional.
+     • *Pilar 3: Huella Hídrica y Cero Desperdicio de Papel*: Ahorro de miles de litros de agua y cero tala de árboles mediante Firma Virtual en promesas de compraventa y contratos con CUV y QR (Ley 527 de 1999).
+3. **Manifiesto Persuasivo de Marketing**:
+   - Formulación de un copy comercial de respuesta directa que sintetiza qué es Vecy, qué ofrece hoy, para dónde va y cómo revoluciona el corretaje tradicional.
+
+**Archivos Modificados:**
+- `client/src/pages/Login.tsx`: Sustitución de icono escudo por `/logo-vecy.png`.
+- `client/src/pages/Admin.tsx`: Sustitución de icono escudo por `/logo-vecy.png`.
+- `client/src/pages/NuestraHistoria.tsx`: Desglose del Compromiso Verde en 3 pilares con nuevos iconos.
+- `server/__tests__/regression.test.ts`: Pruebas de regresión v32.88.
+- `shared/const.ts`: Versión `v32.88`.
+- `package.json`: Versión `32.88.0`.
+
+**Verificación:**
+- `npm run check`: 0 errores TypeScript ✅
+- `npm test`: 175 de 175 pruebas aprobadas al 100% ✅
+- `npm run build`: Compilación limpia completada en 28.48s ✅
+
+---
+
 ### 🔖 v32.87 — Octubre 2026
 
 #### 📌 PRIMER PORTAL INMOBILIARIO CON VERDADERA INTELIGENCIA ARTIFICIAL EN COLOMBIA Y CONSAGRACIÓN DEL MOTOR DE MATCH 24/7

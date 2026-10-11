@@ -188,8 +188,12 @@ export default function Login() {
         <div className="panel-card p-8 border border-white/10 shadow-2xl backdrop-blur-md">
           {/* Logo & Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center rounded-full bg-accent/10 border border-accent/20">
-              <Shield className="w-8 h-8 text-accent animate-pulse" />
+            <div className="w-20 h-20 mx-auto mb-4 flex items-center justify-center transition-all hover:scale-105">
+              <img 
+                src="/logo-vecy.png" 
+                alt="Logo Vecy Bienes Raíces" 
+                className="w-full h-full object-contain filter drop-shadow-[0_0_20px_rgba(191,149,63,0.35)]"
+              />
             </div>
             <h1 className="text-2xl font-display font-bold text-accent uppercase tracking-wider">
               VECY BIENES RAÍCES
