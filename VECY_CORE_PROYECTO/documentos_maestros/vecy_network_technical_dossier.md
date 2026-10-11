@@ -331,6 +331,49 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.87 — Octubre 2026
+
+#### 📌 PRIMER PORTAL INMOBILIARIO CON VERDADERA INTELIGENCIA ARTIFICIAL EN COLOMBIA Y CONSAGRACIÓN DEL MOTOR DE MATCH 24/7
+
+**Requerimiento y Objetivos:**
+1. **Consagración y Protagonismo Supremo del Motor de MATCH Inmobiliario con IA**:
+   - Eduardo A. Rivera reclamó el protagonismo indiscutible del activo tecnológico central del proyecto: *"Bueno ahora le diste auge a todo menos a nuestro sistema más preciado que comenzará a funcionar muy pronto. Nuestro sistema inteligente de busqueda o encuentro de MATCH con IA. No se pero lo estas dejando atrás, yo te nombré fue los servicios normales. Ahonda en que somos el primer portal que usa IA en realidad. Imposible que tu no sepas lo que tenemos en las manos si eres el arquitecto de este proyecto, entonces no sabes de qué se trata??"*
+   - Diagnóstico: Se había reforzado la vitrina de servicios cívicos y comerciales en `/servicios`, pero la Página de Inicio (`Home.tsx`) y los metadatos carecían del grito de victoria y la explicación contundente de que **VECY ES EL PRIMER PORTAL EN COLOMBIA QUE USA IA EN TIEMPO REAL**.
+   - Los portales tradicionales (Metrocuadrado, FincaRaíz, Ciencuadras) son "cementerios pasivos de inmuebles" (clasificados estáticos donde una propiedad duerme meses esperando a que un usuario filtre manualmente). En cambio, Vecy es un **ecosistema cognitivo activo donde JanIA cruza ofertas con demandas en milisegundos**.
+2. **Transformación de la Página de Inicio (`client/src/pages/Home.tsx`)**:
+   - *Hero Section*: Inserción del badge de distinción `✦ PRIMER PORTAL INMOBILIARIO CON VERDADERA IA EN COLOMBIA`.
+   - Subtítulo estelar: *"Erradicamos los clasificados pasivos. Nuestro motor cognitivo JanIA cruza activamente Ofertas y Demandas en tiempo real: encuentra compradores y propiedades con precisión matemática y jurídica del 85% al 100%."*
+   - Métricas de impacto del motor: `85% - 100% Umbral de Match` | `10 Variables con IA` | `24/7 Cruce en Tiempo Real` | `100% Ecosistema Digital`.
+   - Botones de acción directa: `EXPLORAR ACTIVOS`, `CÓMO FUNCIONA EL MATCH` (scroll interactivo) y `VER DEMANDAS`.
+   - **Sección Protagonista Exclusiva (`#match-ia-section`)**: *"EL PRIMER PORTAL QUE USA IA EN REALIDAD: CÓMO FUNCIONA EL MOTOR DE MATCH CRUZADO 24/7"*, desglosando los 4 pilares:
+     • *1. Ingesta Semántica Multicanal*: Comprensión profunda de lenguaje natural en WhatsApp y web.
+     • *2. Matriz de Cruce de 10 Variables Matemáticas*: Ponderación estricta sobre 100 puntos (Tipo, Negocio, Ubicación, Presupuesto, Área, Habitaciones, Baños, Garajes independientes/lineales, Estrato y Antigüedad).
+     • *3. Filtros Duros Inquebrantables*: Tolerancia cero en metrajes inferiores o presupuestos desbordados (umbral estricto 85%-100%).
+     • *4. Alerta Proactiva Instantánea 24/7*: Notificación automática en segundos al Captador y Colocador vía WhatsApp.
+   - *Card de Simulación en Vivo (JanIA Match Engine v32)*: Comparador visual en tiempo real de Oferta vs Demanda con barra de compatibilidad al 96% y desglose de puntos.
+3. **Página de Servicios (`client/src/pages/Services.tsx`)**:
+   - Encabezado y sección superior consagrados al Corazón PropTech: *"¿POR QUÉ SOMOS EL PRIMER PORTAL QUE USA IA EN REALIDAD?"*, antes de la Bóveda de Trámites Gratuitos y Servicios Comerciales.
+4. **Metadatos y SEO (`client/index.html`)**:
+   - Título oficial: `Vecy Bienes Raíces | Primer Portal Inmobiliario con IA en Colombia`.
+   - Schema JSON-LD y Open Graph configurados con la propuesta de valor del Motor de Match activo 24/7.
+5. **Pruebas de Regresión (`server/__tests__/regression.test.ts`)**:
+   - Incorporación de pruebas automatizadas para validar la presencia de la doctrina del Primer Portal con IA y el Match Engine.
+
+**Archivos Modificados:**
+- `client/src/pages/Home.tsx`: Hero enriquecido y nueva sección protagónica del Motor de Match con IA.
+- `client/src/pages/Services.tsx`: Sección superior destacando el cruce de ofertas y demandas con JanIA.
+- `client/index.html`: SEO y Schema JSON-LD actualizados.
+- `server/__tests__/regression.test.ts`: Pruebas de regresión v32.87.
+- `shared/const.ts`: Versión `v32.87`.
+- `package.json`: Versión `32.87.0`.
+
+**Verificación:**
+- `npm run check`: 0 errores de TypeScript ✅
+- `npm test`: 174 de 174 pruebas unitarias y doctrinales pasando al 100% ✅
+- `npm run build`: Compilación limpia de cliente Vite y servidor esbuild en 24.20s ✅
+
+---
+
 ### 🔖 v32.86 — Octubre 2026
 
 #### 📌 BÓVEDA JANIA EXPRESS DE TRÁMITES GRATUITOS 24/7, PORTAFOLIO INTEGRAL DE NEGOCIO Y PROTECCIÓN DE DIRECCIÓN RESIDENCIAL FAMILIAR

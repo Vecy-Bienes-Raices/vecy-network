@@ -20,7 +20,13 @@ import {
   BadgeCheck,
   Calculator,
   Landmark,
-  Zap
+  Zap,
+  Cpu,
+  Search,
+  BellRing,
+  GitCompare,
+  TrendingUp,
+  Layers
 } from 'lucide-react';
 import { ScrollReveal } from '@/components/ScrollReveal';
 import { useLocation } from 'wouter';
@@ -234,18 +240,161 @@ export default function Services() {
           <ScrollReveal delay={0.1}>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/30 text-accent text-xs font-bold tracking-widest uppercase mb-4 shadow-[0_0_20px_rgba(191,149,63,0.15)]">
               <Sparkles size={14} className="text-primary animate-pulse" />
-              PORTAFOLIO INTEGRAL VECY BIENES RAÍCES
+              PRIMER PORTAL CON INTELIGENCIA ARTIFICIAL EN COLOMBIA
             </div>
 
             <h1 className="vecy-title-hero uppercase tracking-tight text-3xl sm:text-5xl font-extrabold text-white">
-              NUESTROS <span className="text-gradient-gold">SERVICIOS Y SOLUCIONES</span>
+              EL CORAZÓN PROPTECH: <span className="text-gradient-gold">MATCH INMOBILIARIO CON IA</span>
             </h1>
 
             <div className="line-electric w-36 sm:w-48 mx-auto my-6"></div>
 
             <p className="vecy-subtitle max-w-3xl mx-auto text-sm sm:text-base text-zinc-300 leading-relaxed font-medium">
-              Ecosistema integral que fusiona corretaje de alta gama, liquidez respaldada con garantía hipotecaria, blindaje jurídico especializado, avalúos con IA, trámites cívicos gratuitos 24/7 y transformación tecnológica para el sector inmobiliario.
+              Erradicamos los clasificados pasivos donde los inmuebles tardan 9 meses en venderse. Vecy es el primer portal en Colombia con un cerebro cognitivo activo (JanIA) que cruza Ofertas con Demandas en milisegundos, cerrando negocios en tiempo récord.
             </p>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* 🧠 SECCIÓN PROTAGONISTA: EL MOTOR DE MATCH CRUZADO CON IA (EL SANTO GRIAL DE VECY) */}
+      <section className="py-20 bg-gradient-to-b from-black via-[#0d111a] to-background border-b border-primary/30 relative overflow-hidden">
+        {/* Luces neurales de fondo */}
+        <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-96 h-96 bg-primary/15 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none" />
+
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
+          <ScrollReveal delay={0.1}>
+            <div className="vecy-card-apple p-8 sm:p-14 border-primary/40 bg-gradient-to-br from-[#121622]/95 via-[#0e121b]/95 to-black/95 shadow-[0_0_80px_rgba(191,149,63,0.2)] relative">
+              
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-10">
+                {/* Texto Explicativo del Santo Grial */}
+                <div className="lg:w-7/12">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-primary/15 border border-primary/30 text-accent text-[11px] font-extrabold tracking-widest uppercase mb-4 shadow-[0_0_20px_rgba(191,149,63,0.2)]">
+                    <Cpu size={14} className="text-primary animate-pulse" />
+                    TECNOLOGÍA PROPIETARIA ÚNICA EN LATINOAMÉRICA
+                  </div>
+
+                  <h2 className="text-2xl sm:text-4xl font-extrabold text-white uppercase tracking-tight mb-5 leading-tight">
+                    ¿POR QUÉ SOMOS EL PRIMER PORTAL QUE <span className="text-gradient-gold">USA IA EN REALIDAD</span>?
+                  </h2>
+
+                  <p className="text-zinc-300 text-sm sm:text-base leading-relaxed mb-6 font-normal">
+                    Los portales inmobiliarios tradicionales (Metrocuadrado, FincaRaíz, Ciencuadras) son <strong>directorios pasivos</strong>: tú publicas un aviso y te sientas a rezar para que alguien filtre entre 50.000 fotos. En <strong>VECY BIENES RAÍCES</strong>, el portal trabaja activamente para ti las 24 horas del día.
+                  </p>
+
+                  <div className="grid sm:grid-cols-2 gap-4 mb-8">
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-primary/30 transition-colors">
+                      <div className="flex items-center gap-2.5 text-primary font-bold text-sm mb-1.5 uppercase tracking-wider">
+                        <GitCompare size={17} />
+                        <span>Cruce Oferta ↔ Demanda</span>
+                      </div>
+                      <p className="text-zinc-400 text-xs leading-relaxed">
+                        El único portal donde los clientes publican lo que <strong>buscan</strong>. JanIA coteja 11 atributos prediales y conecta oferta con demanda en milisegundos.
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-primary/30 transition-colors">
+                      <div className="flex items-center gap-2.5 text-emerald-400 font-bold text-sm mb-1.5 uppercase tracking-wider">
+                        <ShieldCheck size={17} />
+                        <span>Umbral Riguroso (85%-100%)</span>
+                      </div>
+                      <p className="text-zinc-400 text-xs leading-relaxed">
+                        Cero falsos positivos. Filtros duros inquebrantables de tipología, ubicación, presupuesto y especificaciones para garantizar negocios viables.
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-primary/30 transition-colors">
+                      <div className="flex items-center gap-2.5 text-accent font-bold text-sm mb-1.5 uppercase tracking-wider">
+                        <BellRing size={17} />
+                        <span>Alertas y Match Proactivo</span>
+                      </div>
+                      <p className="text-zinc-400 text-xs leading-relaxed">
+                        Al producirse una coincidencia, el sistema notifica de inmediato al Captador y Colocador para coordinar visita y cerrar en días.
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-primary/30 transition-colors">
+                      <div className="flex items-center gap-2.5 text-amber-400 font-bold text-sm mb-1.5 uppercase tracking-wider">
+                        <Layers size={17} />
+                        <span>Modelo Justo 40 / 20 / 40</span>
+                      </div>
+                      <p className="text-zinc-400 text-xs leading-relaxed">
+                        Alianzas transparentes entre colegas para vender y arrendar con fichas de Marca Blanca y bolsa colaborativa para agentes.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <button 
+                      onClick={() => navigate('/ofertas')}
+                      className="btn-gold px-7 py-3.5 text-xs font-extrabold tracking-widest uppercase shadow-[0_0_30px_rgba(191,149,63,0.3)] w-full sm:w-auto"
+                    >
+                      EXPLORAR OFERTAS ACTIVAS
+                    </button>
+                    <button 
+                      onClick={() => navigate('/demandas')}
+                      className="btn-gold-subtle px-7 py-3.5 text-xs font-extrabold tracking-widest uppercase w-full sm:w-auto"
+                    >
+                      MERCADO DE DEMANDAS
+                    </button>
+                    <button 
+                      onClick={() => handleJanIAContact("JanIA, explícame cómo funciona el algoritmo de MATCH inmobiliario y cómo encuentro compradores para mis inmuebles.")}
+                      className="w-full sm:w-auto px-5 py-3.5 rounded-xl border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500 hover:text-black transition-all text-xs font-extrabold uppercase flex items-center justify-center gap-2"
+                    >
+                      <Bot size={15} />
+                      PROBAR MATCH CON JANIA
+                    </button>
+                  </div>
+                </div>
+
+                {/* Diagrama Visual Interactivo del Cerebro de JanIA */}
+                <div className="lg:w-5/12 w-full">
+                  <div className="p-6 sm:p-8 rounded-2xl bg-black/60 border border-primary/30 backdrop-blur-md shadow-2xl relative">
+                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary">
+                          <Cpu size={20} />
+                        </div>
+                        <div>
+                          <h4 className="text-white font-bold text-sm uppercase">JanIA Match Engine v32</h4>
+                          <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                            Algoritmo Activo 24/7
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-xs font-extrabold px-2.5 py-1 rounded bg-primary/10 text-primary border border-primary/30">
+                        100 PTS
+                      </span>
+                    </div>
+
+                    <div className="space-y-3 font-mono text-xs">
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
+                        <span className="text-zinc-300 font-sans">🏠 Oferta: Inmueble de Autor</span>
+                        <span className="text-accent font-semibold">Captador 40%</span>
+                      </div>
+                      
+                      <div className="text-center py-1">
+                        <span className="text-[10px] font-sans px-3 py-1 rounded-full bg-primary/20 text-accent border border-primary/30">
+                          ⚡ Cruce Multidimensional 85% - 100% ⚡
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
+                        <span className="text-zinc-300 font-sans">📝 Demanda: Requerimiento de Cliente</span>
+                        <span className="text-emerald-400 font-semibold">Colocador 40%</span>
+                      </div>
+
+                      <div className="p-3.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 font-sans text-xs flex items-center gap-2 mt-4">
+                        <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                        <span><strong>¡MATCH PERFECTO DETECTADO!</strong> Notificación inmediata por WhatsApp y cita agendada en Vecy Agenda.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </ScrollReveal>
         </div>
       </section>
@@ -407,7 +556,7 @@ export default function Services() {
                </h2>
                
                <p className="vecy-subtitle mb-8 max-w-2xl mx-auto text-sm sm:text-base text-zinc-300 font-medium">
-                 Ya sea que necesites liquidez sobre tu inmueble, recuperar comisiones impagas, realizar un avalúo con IA o implementar tecnología en tu negocio inmobiliario, nuestro equipo directivo te atiende directamente.
+                 Ya sea que quieras conectar tu inmueble con nuestro motor de MATCH con IA, conseguir liquidez hipotecaria, recuperar comisiones impagas o crear tu propia tienda inmobiliaria, nuestro equipo directivo te atiende directamente.
                </p>
 
                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

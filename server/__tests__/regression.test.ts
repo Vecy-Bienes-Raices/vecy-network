@@ -3578,10 +3578,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(soporteContent).not.toContain("45/10/45");
     });
 
-    it("Doctrina v32.84 / v32.86: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
+    it("Doctrina v32.84 / v32.87: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
       const { VECY_ACTIVE_DOMAIN, VECY_VERSION } = await import("../../shared/const");
       expect(VECY_ACTIVE_DOMAIN).toBe("https://vecy-bienes-raices.vercel.app");
-      expect(VECY_VERSION).toBe("v32.86");
+      expect(VECY_VERSION).toBe("v32.87");
 
       const fs = await import("fs");
       const path = await import("path");
@@ -3649,6 +3649,36 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const contactHtml = fs.readFileSync(contactPath, "utf-8");
       expect(contactHtml).not.toContain("Cra. 14a #118-21");
       expect(contactHtml).toContain("Ecosistema 100% Digital");
+    });
+
+    it("Doctrina v32.87: Primer Portal Inmobiliario con IA en Colombia y Motor de Match como Protagonista", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+
+      // Validar index.html consagrado como Primer Portal con IA
+      const indexPath = path.resolve(__dirname, "../../client/index.html");
+      const indexHtml = fs.readFileSync(indexPath, "utf-8");
+      expect(indexHtml).toContain("Primer Portal Inmobiliario con IA en Colombia");
+      expect(indexHtml).toContain("Motor de Match");
+
+      // Validar Home.tsx con el Motor de Match de JanIA y Primer Portal con IA
+      const homePath = path.resolve(__dirname, "../../client/src/pages/Home.tsx");
+      const homeContent = fs.readFileSync(homePath, "utf-8");
+      expect(homeContent).toContain("PRIMER PORTAL INMOBILIARIO CON VERDADERA IA EN COLOMBIA");
+      expect(homeContent).toContain("JanIA Match Engine 24/7");
+      expect(homeContent).toContain("EL PRIMER PORTAL QUE");
+      expect(homeContent).toContain("USA IA EN REALIDAD");
+      expect(homeContent).toContain("JanIA Match Engine v32");
+      expect(homeContent).toContain("match-ia-section");
+
+      // Validar Services.tsx con sección estelar protagonista de Match con IA
+      const servicesPath = path.resolve(__dirname, "../../client/src/pages/Services.tsx");
+      const servicesContent = fs.readFileSync(servicesPath, "utf-8");
+      expect(servicesContent).toContain("PRIMER PORTAL CON INTELIGENCIA ARTIFICIAL EN COLOMBIA");
+      expect(servicesContent).toContain("USA IA EN REALIDAD");
+      expect(servicesContent).toContain("JanIA Match Engine v32");
+      expect(servicesContent).toContain("Cruce Oferta ↔ Demanda");
+      expect(servicesContent).toContain("Umbral Riguroso (85%-100%)");
     });
   });
 });
