@@ -3168,6 +3168,31 @@ export default function AdminMatches() {
   const [customAttributesByMatch, setCustomAttributesByMatch] = React.useState<Record<number, { key: string; label: string }[]>>({});
   const [localUpdateTick, setLocalUpdateTick] = React.useState(0);
 
+  // 🤖 Estados y mutación para Asistente JanIA Match Finder (Doctrina v32.93)
+  const [isJanIAFinderOpen, setIsJanIAFinderOpen] = React.useState(false);
+  const [janiaFinderQuery, setJaniaFinderQuery] = React.useState('');
+  const [janiaFinderResults, setJaniaFinderResults] = React.useState<any>(null);
+  const adminMatchSearchMutation = trpc.janIA.adminMatchSearch.useMutation();
+
+  const handleRunJanIAFinder = async (queryToRun?: string) => {
+    const q = (queryToRun || janiaFinderQuery).trim();
+    if (!q) {
+      toast.info("Por favor ingresa un requerimiento, oferta o ID para buscar matches.");
+      return;
+    }
+    try {
+      const res = await adminMatchSearchMutation.mutateAsync({ query: q });
+      setJaniaFinderResults(res);
+      if (res.matches && res.matches.length > 0) {
+        toast.success(`JanIA encontró ${res.matches.length} coincidencia(s)`);
+      } else {
+        toast.info("JanIA no encontró coincidencias inmediatas con score ≥ 80%");
+      }
+    } catch (err: any) {
+      toast.error("Error al consultar JanIA Match Finder: " + (err.message || 'Error'));
+    }
+  };
+
   const scrollToTop = () => {
     const mainEl = document.querySelector('main');
     if (mainEl) {
@@ -4916,6 +4941,212 @@ export default function AdminMatches() {
             <span>Exportar CSV</span>
           </Button>
         </div>
+      </div>
+
+      {/* ===== ASISTENTE INTELIGENTE JANIA MATCH FINDER (v32.93) ===== */}
+      <div className="mb-6 bg-gradient-to-r from-[#181308] via-black to-[#131108] border border-[#bf953f]/40 rounded-2xl p-4 sm:p-5 shadow-[0_10px_30px_rgba(0,0,0,0.8)] relative overflow-hidden">
+        {/* Glow de fondo */}
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#bf953f]/10 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#bf953f] to-[#aa771c] flex items-center justify-center text-black font-black shadow-lg shadow-[#bf953f]/20 shrink-0">
+              <Sparkles className="w-5 h-5 text-black" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-black font-['Audiowide'] text-white tracking-wider flex items-center gap-2">
+                  JanIA Match Finder
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    Búsqueda IA Activa 24/7
+                  </span>
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-400">
+                Pasa un requerimiento para encontrar inmuebles, o una oferta para encontrar clientes (con teléfonos y número de Match).
+              </p>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            onClick={() => setIsJanIAFinderOpen(prev => !prev)}
+            variant="outline"
+            className="h-8 border-[#bf953f]/40 bg-black/60 hover:bg-[#bf953f]/20 text-[#bf953f] text-xs px-3 rounded-xl font-bold transition-all shrink-0 cursor-pointer"
+          >
+            {isJanIAFinderOpen ? "Minimizar Asistente ▲" : "Abrir Asistente ▼"}
+          </Button>
+        </div>
+
+        {/* Panel desplegable cuando está abierto */}
+        {isJanIAFinderOpen && (
+          <div className="mt-4 pt-4 border-t border-white/10 space-y-4">
+            <div className="relative">
+              <textarea
+                value={janiaFinderQuery}
+                onChange={(e) => setJaniaFinderQuery(e.target.value)}
+                placeholder="Pega aquí el requerimiento o la oferta (ej: 'Busco apto en Chicó 3 habs hasta 1.200M' o 'Vendo casa en Cedritos $850M' o ID '#M1420')..."
+                className="w-full h-24 sm:h-20 bg-black/80 border border-white/20 focus:border-[#bf953f] text-white placeholder-zinc-500 text-xs p-3 rounded-xl resize-none outline-none transition-all shadow-inner"
+              />
+            </div>
+
+            {/* Botones de sugerencias rápidas y acción */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-400">
+                <span className="text-zinc-500 text-[10px] uppercase tracking-wider font-mono">Ejemplos:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sample = "Busco apartamento en Chicó 3 habitaciones hasta 1.200 MM";
+                    setJaniaFinderQuery(sample);
+                    handleRunJanIAFinder(sample);
+                  }}
+                  className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
+                >
+                  🎯 Demanda Chicó 3 Hab
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sample = "Vendo apartamento en Rosales 140 m2 3 alcobas 2 garajes $1.350M";
+                    setJaniaFinderQuery(sample);
+                    handleRunJanIAFinder(sample);
+                  }}
+                  className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
+                >
+                  🏠 Oferta Rosales 140m²
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {janiaFinderQuery && (
+                  <Button
+                    type="button"
+                    onClick={() => { setJaniaFinderQuery(''); setJaniaFinderResults(null); }}
+                    variant="ghost"
+                    className="h-8 text-zinc-400 hover:text-white text-xs px-2.5 rounded-xl cursor-pointer"
+                  >
+                    Limpiar
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  disabled={adminMatchSearchMutation.isPending || !janiaFinderQuery.trim()}
+                  onClick={() => handleRunJanIAFinder()}
+                  className="h-8 bg-gradient-to-r from-amber-500 via-[#bf953f] to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black text-xs px-4 rounded-xl font-black shadow-md shadow-amber-500/20 cursor-pointer flex items-center gap-2"
+                >
+                  {adminMatchSearchMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-black" />
+                      <span>Analizando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 text-black" />
+                      <span>BUSCAR MATCHES CON JANIA</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Resultados de Búsqueda */}
+            {janiaFinderResults && (
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-bold text-[#bf953f] flex items-center gap-1.5">
+                    <span>🎯</span>
+                    <span>Resultados: {janiaFinderResults.totalFound} coincidencia(s) encontrada(s) (Score ≥ 80%)</span>
+                  </p>
+                  <span className="text-[10px] text-zinc-400 font-mono">
+                    {janiaFinderResults.querySummary}
+                  </span>
+                </div>
+
+                {janiaFinderResults.matches && janiaFinderResults.matches.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {janiaFinderResults.matches.map((item: any, idx: number) => (
+                      <div
+                        key={idx}
+                        className="bg-black/90 border border-amber-500/30 hover:border-amber-400/60 p-3.5 rounded-xl shadow-lg transition-all flex flex-col justify-between gap-3 relative group"
+                      >
+                        <div>
+                          {/* Header de la tarjeta */}
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className="text-[11px] font-black px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                              🏅 {item.score?.toFixed(1)}% AFINIDAD
+                            </span>
+                            {item.matchId && (
+                              <span className="text-[11px] font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded-md">
+                                MATCH #M{item.matchId}
+                              </span>
+                            )}
+                          </div>
+
+                          <h4 className="text-xs font-bold text-white line-clamp-1 mb-1">
+                            {item.targetType === 'inmueble' ? `🏠 Inmueble #P${item.targetId}: ` : `📋 Demanda #R${item.targetId}: `}
+                            {item.title}
+                          </h4>
+
+                          <p className="text-[11px] text-zinc-300 mb-1">
+                            <span className="text-amber-400 font-bold">{item.priceOrBudgetFormatted}</span> • {item.neighborhood || item.city}
+                          </p>
+
+                          <p className="text-[10px] text-zinc-400 mb-2">
+                            {item.areaFormatted} • {item.bedroomsFormatted} • {item.bathroomsFormatted} • {item.parkingFormatted}
+                          </p>
+
+                          <div className="p-2 bg-white/5 rounded-lg border border-white/5 text-[11px] text-zinc-300 mb-2">
+                            <p className="text-zinc-400 text-[10px] font-mono">Contacto Asesor:</p>
+                            <p className="font-bold text-white truncate">{item.contactName}</p>
+                            <p className="text-emerald-400 font-mono font-bold">{item.contactPhone ? `+${item.contactPhone}` : 'Sin teléfono'}</p>
+                          </div>
+                        </div>
+
+                        {/* Botones de acción directa */}
+                        <div className="flex items-center gap-2 pt-2 border-t border-white/10">
+                          {item.contactWhatsAppLink ? (
+                            <a
+                              href={item.contactWhatsAppLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 h-7 bg-emerald-600/90 hover:bg-emerald-500 text-white text-[11px] font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                            >
+                              <span>💬 WhatsApp</span>
+                            </a>
+                          ) : (
+                            <span className="flex-1 text-center text-[10px] text-zinc-500">Sin WhatsApp</span>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const searchVal = String(item.matchId || item.targetId);
+                              setSearchTerm(searchVal);
+                              toast.success(`Filtrando mesa por: #${searchVal}`);
+                              const tableEl = document.getElementById('matches-report-table-section');
+                              if (tableEl) tableEl.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            className="px-2.5 h-7 bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold rounded-lg flex items-center justify-center gap-1 transition-all border border-white/10 cursor-pointer"
+                            title="Filtrar y visualizar en la mesa de coincidencias"
+                          >
+                            <span>🔍 Ver en Mesa</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 bg-black/60 rounded-xl border border-white/10 text-center">
+                    <p className="text-xs text-zinc-400">
+                      No se encontraron coincidencias inmediatas con score ≥ 80% en el catálogo activo para estos criterios.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ===== BARRA DE BÚSQUEDA Y FILTROS FIJA (STICKY COMMAND TOOLBAR) ===== */}

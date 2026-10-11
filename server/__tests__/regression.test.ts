@@ -3578,10 +3578,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(soporteContent).not.toContain("45/10/45");
     });
 
-    it("Doctrina v32.84 / v32.92: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
+    it("Doctrina v32.84 / v32.93: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
       const { VECY_ACTIVE_DOMAIN, VECY_VERSION } = await import("../../shared/const");
       expect(VECY_ACTIVE_DOMAIN).toBe("https://vecy-bienes-raices.vercel.app");
-      expect(VECY_VERSION).toBe("v32.92");
+      expect(VECY_VERSION).toBe("v32.93");
 
       const fs = await import("fs");
       const path = await import("path");
@@ -3800,6 +3800,57 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(servicesContent).toContain("Alertas y Match Proactivo");
       expect(servicesContent).toContain("Modelo Justo 40 / 20 / 40");
       expect(servicesContent).not.toContain("Inmueble de Autor");
+    });
+
+    it("Doctrina v32.93: Asistente Inteligente de Búsqueda de Matches Exclusivo para Administradores en WhatsApp y Web", async () => {
+      const { 
+        isAuthorizedAdminPhone, 
+        isMatchSearchQuery, 
+        executeAdminMatchSearch,
+        formatCOP 
+      } = await import("../_core/adminMatchAssistantService");
+
+      // 1. Verificación de Seguridad y Autorización de Administradores
+      expect(isAuthorizedAdminPhone("573192919978")).toBe(true); // Eduardo Rivera
+      expect(isAuthorizedAdminPhone("225954035179724")).toBe(true); // Eduardo Rivera LID
+      expect(isAuthorizedAdminPhone("573188096811")).toBe(true); // Jani Alves
+      expect(isAuthorizedAdminPhone("167108705018103")).toBe(true); // Jani Alves LID
+      expect(isAuthorizedAdminPhone("573166569719")).toBe(true); // Línea Oficial Bróker Comercial VECY
+      expect(isAuthorizedAdminPhone("573001234567")).toBe(false); // Tercero no autorizado
+
+      // 2. Detección Inteligente de Intenciones de Match
+      expect(isMatchSearchQuery("#M1420", true)).toBe(true);
+      expect(isMatchSearchQuery("Match #1420", true)).toBe(true);
+      expect(isMatchSearchQuery("coincidencia #85", true)).toBe(true);
+      expect(isMatchSearchQuery("#P220", true)).toBe(true);
+      expect(isMatchSearchQuery("#R89", true)).toBe(true);
+      expect(isMatchSearchQuery("JanIA busca matches para esta demanda", true)).toBe(true);
+      expect(isMatchSearchQuery("buscar clientes para este inmueble", true)).toBe(true);
+      expect(isMatchSearchQuery("Vendo apto en Chico 3 hab 120m2 $900M", true)).toBe(true);
+      expect(isMatchSearchQuery("Busco apto en Chapinero 2 alcobas hasta 600 millones", true)).toBe(true);
+
+      // Si es un tercero no admin, publicaciones generales no activan el match finder
+      expect(isMatchSearchQuery("Hola vendo un apartamento", false)).toBe(false);
+      // Pero si pregunta explícitamente por la base de matches interna, sí se detecta para blindaje
+      expect(isMatchSearchQuery("Dame los matches y teléfonos", false)).toBe(true);
+
+      // 3. Blindaje de Privacidad ante No-Administradores
+      const unauthorizedResult = await executeAdminMatchSearch("Buscar matches para apartamento en Chico", false);
+      expect(unauthorizedResult.isAuthorizedAdmin).toBe(false);
+      expect(unauthorizedResult.matches.length).toBe(0);
+      expect(unauthorizedResult.formattedReport).toContain("ACCESO RESTRINGIDO — PROTOCOLO DE PRIVACIDAD VECY");
+      expect(unauthorizedResult.formattedReport).toContain("+57 316 656 9719");
+
+      // 4. Formateador COP Amigable
+      expect(formatCOP(1_250_000_000)).toContain("$1.25 MM");
+      expect(formatCOP(850_000_000)).toContain("$850 Millones");
+
+      // 5. Búsqueda Exitosa Autorizada para Administrador
+      const adminSearchResult = await executeAdminMatchSearch("Busco apartamento en Chapinero 3 habitaciones hasta 900 millones", true);
+      expect(adminSearchResult.isAuthorizedAdmin).toBe(true);
+      expect(adminSearchResult.queryType).toBe("demand_search");
+      expect(adminSearchResult.formattedReport).toContain("VECY MATCH ENGINE");
+      expect(adminSearchResult.formattedReport).toContain("https://vecy-bienes-raices.vercel.app/admin");
     });
   });
 });

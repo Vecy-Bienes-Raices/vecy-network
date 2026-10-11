@@ -172,7 +172,28 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.92 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.93 — Octubre 2026
+
+### Novedades v32.93 (Asistente Inteligente de Búsqueda de Matches con JanIA en WhatsApp y Web Exclusivo para Administradores):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. Eduardo solicitó habilitar una funcionalidad operativa de alto impacto:
+     - *"Quiero que JanIA nos ayude en la búsqueda de MATCHES por su chat en whatsapp o en la web pero solo a los adminiostradores. Por ejemplo: Le pasamos un requerimiento y que ella nos encuentre el/los inmueble/s compatible/s o viceversa, le pasamos la OFERTA y nos envía la DEMANDA/s precisas/s, con datos de teléfono y todos o simplemente nos da el número de MATCH y vamos a buscarlo a la mesa de coincidencias como mejor se le fascilite."*
+  2. **Acciones Técnicas Ejecutadas**:
+     - **Servicio Central `adminMatchAssistantService.ts`**:
+       • Filtro de seguridad exclusivo para administradores: verifica teléfonos oficiales de Eduardo Rivera (`573192919978`, LID `225954035179724`), Jani Alves (`573188096811`, LIDs `167108705018103`, `182781141344345`, `218820279050385`), Línea Bróker (`573166569719`) y sesiones con rol `admin` en la web.
+       • Bloqueo y protección de datos para terceros no autorizados bajo Ley 1581 de 2012 (Hábeas Data).
+       • Detección flexible de consultas: por ID de Match (`#M123`, `match 123`), por ID de Inmueble (`#P456`, `inmueble 456`), por ID de Requerimiento (`#R789`, `demanda 789`), o por texto libre de Oferta/Demanda calculando scores en tiempo real con `explicarMatch`.
+       • Formateo de respuesta ejecutiva: Score %, ID de Match `#M...`, datos del inmueble/demanda, contacto completo, enlace directo a WhatsApp (`https://wa.me/...`) y enlace de gestión en la Mesa de Coincidencias (`/admin`).
+     - **Integración con WhatsApp Socket (Baileys)** en `server/_core/whatsapp-match.ts`:
+       • Interceptor en DMs (`isMatchSearchQuery`) que atiende a administradores 24/7 y resguarda datos ante terceros.
+     - **Integración con Web y tRPC** en `server/routers/janIA.ts`:
+       • Procedimiento `adminMatchSearch` protegido por rol admin y soporte en el chat de JanIA.
+     - **Mesa de Coincidencias con Asistente "JanIA Match Finder"** en `client/src/components/admin/AdminMatches.tsx`:
+       • Panel interactivo con sugerencias rápidas, búsqueda asistida, visualización de afinidad, enlaces directos a WhatsApp y botón para filtrar y gestionar de inmediato en la Mesa de Coincidencias.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 179/179 tests passing ✅ | `npm run build` limpio en 20.34s ✅
+- `shared/const.ts` (`v32.93`) y `package.json` (`32.93.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.92 — Octubre 2026
 
 ### Novedades v32.92 (Diseño Senior Simétrico, Icono Dinosaurio Doctrinal y Supresión de Cards Envolventes):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

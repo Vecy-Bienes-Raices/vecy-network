@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.92";
+    VECY_VERSION = "v32.93";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -7683,13 +7683,13 @@ async function executeMatchEngine(propertyId, requirementId) {
   }
 }
 function buildBigTechAdminReport(prop, req, score) {
-  const formatCOP = (val) => {
+  const formatCOP2 = (val) => {
     const num = parseFloat(String(val));
     if (isNaN(num) || num === 0) return "N/E";
     return `$${num.toLocaleString("es-CO")}`;
   };
-  const propPriceStr = prop.price ? formatCOP(prop.price) : "N/E";
-  const reqBudgetStr = req.presupuestoMax ? formatCOP(req.presupuestoMax) : "N/E";
+  const propPriceStr = prop.price ? formatCOP2(prop.price) : "N/E";
+  const reqBudgetStr = req.presupuestoMax ? formatCOP2(req.presupuestoMax) : "N/E";
   const propBroker = (prop.idUsuarioWhatsapp || "Captador").replace(/\D/g, "");
   const reqBroker = (req.idUsuarioWhatsapp || "Requiriente").replace(/\D/g, "");
   let intentReason = `El cliente busca inmueble en ${req.zonaDeseada || prop.zone || "Bogot\xE1"}`;
@@ -12058,6 +12058,646 @@ var init_notarialExpenseService = __esm({
   }
 });
 
+// server/_core/adminMatchAssistantService.ts
+var adminMatchAssistantService_exports = {};
+__export(adminMatchAssistantService_exports, {
+  ADMIN_IDENTIFIERS: () => ADMIN_IDENTIFIERS,
+  executeAdminMatchSearch: () => executeAdminMatchSearch,
+  formatCOP: () => formatCOP,
+  getPropArea: () => getPropArea,
+  getPropGarages: () => getPropGarages,
+  getPropNeighborhood: () => getPropNeighborhood,
+  isAuthorizedAdminPhone: () => isAuthorizedAdminPhone,
+  isMatchSearchQuery: () => isMatchSearchQuery
+});
+import { eq as eq5, desc } from "drizzle-orm";
+function isAuthorizedAdminPhone(phoneOrId) {
+  if (!phoneOrId) return false;
+  const clean = String(phoneOrId).split("@")[0].replace(/\D/g, "");
+  const raw = String(phoneOrId);
+  return ADMIN_IDENTIFIERS.some((id) => clean === id || clean.includes(id) || raw.includes(id));
+}
+function formatCOP(num) {
+  if (!num) return "N/E";
+  const val = Number(num);
+  if (isNaN(val) || val <= 0) return "N/E";
+  if (val >= 1e9) {
+    const mm = (val / 1e9).toFixed(val % 1e9 === 0 ? 0 : 2);
+    return `$${mm} MM ($${val.toLocaleString("es-CO")} COP)`;
+  }
+  if (val >= 1e6) {
+    const m = (val / 1e6).toFixed(val % 1e6 === 0 ? 0 : 1);
+    return `$${m} Millones ($${val.toLocaleString("es-CO")} COP)`;
+  }
+  return `$${val.toLocaleString("es-CO")} COP`;
+}
+function getPropNeighborhood(p) {
+  if (!p) return "";
+  return p.addressNeighborhood || p.zone || p.neighborhood || "";
+}
+function getPropArea(p) {
+  if (!p) return null;
+  return p.areaTotal || p.areaPrivate || p.area || null;
+}
+function getPropGarages(p) {
+  if (!p) return null;
+  return p.garages ?? p.parkingSpaces ?? null;
+}
+function isMatchSearchQuery(text2, isAdmin = false) {
+  if (!text2 || typeof text2 !== "string") return false;
+  const lower = text2.toLowerCase().trim();
+  if (/(?:^|\s)(?:#?m\d+|match\s*#?\d+|coincidencia\s*#?\d+)(?:$|\s|[.,;:])/i.test(lower)) return true;
+  if (/(?:^|\s)(?:#?p\d+|inmueble\s*#?\d+|propiedad\s*#?\d+)(?:$|\s|[.,;:])/i.test(lower)) return true;
+  if (/(?:^|\s)(?:#?r\d+|requerimiento\s*#?\d+|demanda\s*#?\d+)(?:$|\s|[.,;:])/i.test(lower)) return true;
+  if (/\b(?:match|matches|coincidencias?|mesa de coincidencias)\b/i.test(lower)) return true;
+  if (/\b(?:buscar?|buscame|búscame|encuentra|encuentrame|encuéntrame|cruzame|crúzame|cruzar|cotejar|coteja)\s+(?:inmuebles?|propiedades?|clientes?|demandas?|requerimientos?|matches?|ofertas?)\b/i.test(lower)) {
+    return true;
+  }
+  if (/\b(?:qu[eé]\s+(?:inmuebles?|clientes?|demandas?)\s+(?:hay|tenemos|hacen\s+match)|hay\s+clientes\s+para|hay\s+inmuebles\s+para)\b/i.test(lower)) {
+    return true;
+  }
+  if (isAdmin) {
+    const isRealEstateListing = lower.includes("apto") || lower.includes("apartamento") || lower.includes("casa") || lower.includes("oficina") || lower.includes("bodega") || lower.includes("local") || lower.includes("lote") || lower.includes("finca") || lower.includes("consultorio") || lower.includes("alcoba") || lower.includes("habitacion") || lower.includes("habitaci\xF3n");
+    const hasOfferSignal = /\b(?:vendo|se vende|ofrezco|arriendo|se arrienda|alquilo|se alquila|tengo en arriendo|tengo en venta|disponible)\b/i.test(lower);
+    const hasDemandSignal = /\b(?:busco|se busca|necesito|requiero|cliente busca|comprador busca|para cliente|solicito|compro)\b/i.test(lower);
+    if (isRealEstateListing && (hasOfferSignal || hasDemandSignal)) {
+      return true;
+    }
+  }
+  return false;
+}
+async function executeAdminMatchSearch(queryText, isAdmin, injectedDb) {
+  const adminDashboardUrl = "https://vecy-bienes-raices.vercel.app/admin";
+  const clean = queryText.trim();
+  const lower = clean.toLowerCase();
+  const matchIdRegex = /(?:#?m|match\s*#?|coincidencia\s*#?)\s*(\d+)/i;
+  const matchIdMatch = clean.match(matchIdRegex);
+  const propIdRegex = /(?:#?p|inmueble\s*#?|propiedad\s*#?)\s*(\d+)/i;
+  const propIdMatch = clean.match(propIdRegex);
+  const reqIdRegex = /(?:#?r|requerimiento\s*#?|demanda\s*#?)\s*(\d+)/i;
+  const reqIdMatch = clean.match(reqIdRegex);
+  const isDemand = lower.includes("busco") || lower.includes("necesito") || lower.includes("requiero") || lower.includes("se busca") || lower.includes("demanda") || lower.includes("cliente busca") || lower.includes("comprador busca") || lower.includes("para cliente") || lower.includes("solicito") || lower.includes("para compra") || lower.includes("para arriendo") || lower.includes("compro") || lower.includes("requerimiento");
+  const resolvedQueryType = matchIdMatch ? "match_id" : propIdMatch ? "property_id" : reqIdMatch ? "requirement_id" : isDemand ? "demand_search" : "offer_search";
+  if (!isAdmin) {
+    const safeDenialReport = `\u{1F512} *ACCESO RESTRINGIDO \u2014 PROTOCOLO DE PRIVACIDAD VECY*
+
+Estimado colega: Por pol\xEDticas de seguridad patrimonial, H\xE1beas Data (Ley 1581 de 2012) y doctrina de confidencialidad de *VECY BIENES RA\xCDCES*, la consulta interna de la mesa de coincidencias y los datos de contacto directo de captadores y demandantes est\xE1n reservados exclusivamente para los administradores del sistema.
+
+\u{1F91D} *\xBFC\xF3mo podemos ayudarte?*
+\u2022 Con gusto podemos recibir tu requerimiento o inmueble para registrarlo y cruzarlo autom\xE1ticamente en la red.
+\u2022 Para gesti\xF3n directa, peritajes o citas de negocios, comun\xEDcate con nuestros directores *Eduardo A. Rivera y Jani Alves* al WhatsApp oficial: *+57 316 656 9719* \u{1F4F2}`;
+    return {
+      isMatchQuery: true,
+      isAuthorizedAdmin: false,
+      queryType: "unrecognized",
+      querySummary: "Consulta denegada por permisos de usuario",
+      totalFound: 0,
+      matches: [],
+      formattedReport: safeDenialReport,
+      adminDashboardUrl
+    };
+  }
+  const db = injectedDb || await getDb();
+  if (!db) {
+    return {
+      isMatchQuery: true,
+      isAuthorizedAdmin: true,
+      queryType: resolvedQueryType,
+      querySummary: "Base de datos no disponible temporalmente",
+      totalFound: 0,
+      matches: [],
+      formattedReport: `\u{1F3AF} *VECY MATCH ENGINE \u2014 B\xDASQUEDA DE COINCIDENCIAS*
+
+Criterio analizado (${resolvedQueryType}): *${clean}*.
+\u26A0\uFE0F La base de datos no est\xE1 disponible en este momento. Intenta nuevamente en unos instantes.
+\u{1F449} *Ver en Mesa de Coincidencias:*
+${adminDashboardUrl}`,
+      adminDashboardUrl
+    };
+  }
+  if (matchIdMatch) {
+    const matchIdNum = parseInt(matchIdMatch[1], 10);
+    const existingMatchRows = await db.select().from(propertyMatches).where(eq5(propertyMatches.id, matchIdNum)).limit(1);
+    if (existingMatchRows.length > 0) {
+      const pm = existingMatchRows[0];
+      const [prop] = await db.select().from(properties).where(eq5(properties.id, pm.propertyId)).limit(1);
+      const [req] = await db.select().from(requirements).where(eq5(requirements.id, pm.requirementId)).limit(1);
+      if (prop && req) {
+        const propPhone = extractRealPhone(prop);
+        const reqPhone = extractRealPhone(req);
+        const scoreNum = parseFloat(String(pm.matchScore || "0"));
+        const propWaLink = propPhone ? `https://wa.me/${propPhone}` : null;
+        const reqWaLink = reqPhone ? `https://wa.me/${reqPhone}` : null;
+        const report = `\u{1F3AF} *DETALLE DE COINCIDENCIA \u2014 MATCH #M${pm.id}*
+
+\u{1F3C5} *Score de Afinidad:* *${scoreNum.toFixed(1)}%* ${scoreNum >= 90 ? "\u{1F525} (Alta Compatibilidad)" : "\u2705"}
+\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F3E0} *INMUEBLE OFERTADO (#P${prop.id}):*
+\u2022 *Tipo / Negocio:* ${prop.propertyType || "Inmueble"} en ${prop.transactionType || "Venta"}
+\u2022 *Ubicaci\xF3n:* ${getPropNeighborhood(prop) || "Sector"}, ${prop.city || "Bogot\xE1"}
+\u2022 *Precio:* ${formatCOP(prop.price || prop.rentPrice)}
+\u2022 *\xC1rea / Distribuci\xF3n:* ${getPropArea(prop) ? getPropArea(prop) + " m\xB2" : "N/E"} \u2022 ${prop.bedrooms ? prop.bedrooms + " Hab(s)" : ""} \u2022 ${prop.bathrooms ? prop.bathrooms + " Ba\xF1o(s)" : ""} \u2022 ${getPropGarages(prop) ? getPropGarages(prop) + " Garaje(s)" : ""}
+\u2022 *Captador:* ${prop.nombreUsuarioWhatsapp || "Asesor Captador"}
+\u2022 *Tel\xE9fono:* ${propPhone ? "+" + propPhone : "Sin registrar"}
+${propWaLink ? `\u2022 *WhatsApp Captador:* ${propWaLink}
+` : ""}\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F4CB} *DEMANDA COINCIDENTE (#R${req.id}):*
+\u2022 *Buscado:* ${req.tipoInmuebleDeseado || "Inmueble"} en ${req.tipoNegocioDeseado || "Venta"}
+\u2022 *Sector Deseado:* ${req.zonaDeseada || req.addressNeighborhood || "Bogot\xE1"}
+\u2022 *Presupuesto M\xE1x:* ${formatCOP(req.presupuestoMax)}
+\u2022 *Exigencias:* ${req.areaMin ? "M\xEDn " + req.areaMin + " m\xB2" : ""} \u2022 ${req.habitacionesMin ? "M\xEDn " + req.habitacionesMin + " Hab(s)" : ""}
+\u2022 *Asesor con Cliente:* ${req.nombreUsuarioWhatsapp || "Asesor con Demanda"}
+\u2022 *Tel\xE9fono:* ${reqPhone ? "+" + reqPhone : "Sin registrar"}
+${reqWaLink ? `\u2022 *WhatsApp Asesor:* ${reqWaLink}
+` : ""}\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F449} *Gestionar en Mesa de Coincidencias:*
+${adminDashboardUrl}?search=${pm.id}`;
+        const item = {
+          matchId: pm.id,
+          score: scoreNum,
+          matchType: "existing_match",
+          targetType: "inmueble",
+          targetId: prop.id,
+          title: prop.name || `Inmueble #${prop.id}`,
+          transactionType: prop.transactionType || "venta",
+          propertyType: prop.propertyType || "apartment",
+          city: prop.city || "Bogot\xE1",
+          neighborhood: getPropNeighborhood(prop),
+          priceOrBudgetFormatted: formatCOP(prop.price || prop.rentPrice),
+          areaFormatted: getPropArea(prop) ? `${getPropArea(prop)} m\xB2` : "N/E",
+          bedroomsFormatted: prop.bedrooms ? `${prop.bedrooms} Hab` : "N/E",
+          bathroomsFormatted: prop.bathrooms ? `${prop.bathrooms} Ba\xF1os` : "N/E",
+          parkingFormatted: getPropGarages(prop) ? `${getPropGarages(prop)} Pq` : "N/E",
+          contactName: prop.nombreUsuarioWhatsapp || "Asesor Captador",
+          contactPhone: propPhone,
+          contactWhatsAppLink: propWaLink,
+          matchSummary: `Coincidencia bilateral de ${scoreNum.toFixed(1)}%`,
+          positives: [],
+          blockers: []
+        };
+        return {
+          isMatchQuery: true,
+          isAuthorizedAdmin: true,
+          queryType: "match_id",
+          querySummary: `Match #${pm.id} (Inmueble #P${prop.id} \u2194 Demanda #R${req.id})`,
+          totalFound: 1,
+          matches: [item],
+          formattedReport: report,
+          adminDashboardUrl: `${adminDashboardUrl}?search=${pm.id}`
+        };
+      }
+    }
+  }
+  if (propIdMatch) {
+    const propIdNum = parseInt(propIdMatch[1], 10);
+    const [prop] = await db.select().from(properties).where(eq5(properties.id, propIdNum)).limit(1);
+    if (prop) {
+      const existingMatches = await db.select().from(propertyMatches).where(eq5(propertyMatches.propertyId, propIdNum)).orderBy(desc(propertyMatches.matchScore));
+      const matchItems = [];
+      if (existingMatches.length > 0) {
+        for (const pm of existingMatches) {
+          const scoreNum = parseFloat(String(pm.matchScore || "0"));
+          if (scoreNum < 80) continue;
+          const [req] = await db.select().from(requirements).where(eq5(requirements.id, pm.requirementId)).limit(1);
+          if (!req) continue;
+          const reqPhone = extractRealPhone(req);
+          const reqWaLink = reqPhone ? `https://wa.me/${reqPhone}` : null;
+          matchItems.push({
+            matchId: pm.id,
+            score: scoreNum,
+            matchType: "property_to_requirements",
+            targetType: "demanda",
+            targetId: req.id,
+            title: req.name || `Demanda #${req.id}`,
+            transactionType: req.tipoNegocioDeseado || "venta",
+            propertyType: req.tipoInmuebleDeseado || "apartment",
+            city: req.ciudadDeseada || "Bogot\xE1",
+            neighborhood: req.zonaDeseada || req.addressNeighborhood || "",
+            priceOrBudgetFormatted: formatCOP(req.presupuestoMax),
+            areaFormatted: req.areaMin ? `M\xEDn ${req.areaMin} m\xB2` : "N/E",
+            bedroomsFormatted: req.habitacionesMin ? `M\xEDn ${req.habitacionesMin} Hab` : "N/E",
+            bathroomsFormatted: req.banosMin ? `M\xEDn ${req.banosMin} Ba\xF1os` : "N/E",
+            parkingFormatted: req.parqueaderosMin ? `M\xEDn ${req.parqueaderosMin} Pq` : "N/E",
+            contactName: req.nombreUsuarioWhatsapp || "Asesor con Demanda",
+            contactPhone: reqPhone,
+            contactWhatsAppLink: reqWaLink,
+            matchSummary: `Presupuesto m\xE1x ${formatCOP(req.presupuestoMax)} cubre inmueble`,
+            positives: [],
+            blockers: []
+          });
+        }
+      }
+      if (matchItems.length === 0) {
+        const freshMatches = await findMatchesForProperty(propIdNum);
+        for (const fm of freshMatches) {
+          const scoreNum = Number(fm.score || 0);
+          if (scoreNum < 80) continue;
+          const reqPhone = extractRealPhone(fm);
+          const reqWaLink = reqPhone ? `https://wa.me/${reqPhone}` : null;
+          matchItems.push({
+            matchId: fm.matchId || null,
+            score: scoreNum,
+            matchType: "property_to_requirements",
+            targetType: "demanda",
+            targetId: fm.id,
+            title: fm.name || `Demanda #${fm.id}`,
+            transactionType: fm.tipoNegocioDeseado || "venta",
+            propertyType: fm.tipoInmuebleDeseado || "apartment",
+            city: fm.ciudadDeseada || "Bogot\xE1",
+            neighborhood: fm.zonaDeseada || fm.addressNeighborhood || "",
+            priceOrBudgetFormatted: formatCOP(fm.presupuestoMax),
+            areaFormatted: fm.areaMin ? `M\xEDn ${fm.areaMin} m\xB2` : "N/E",
+            bedroomsFormatted: fm.habitacionesMin ? `M\xEDn ${fm.habitacionesMin} Hab` : "N/E",
+            bathroomsFormatted: fm.banosMin ? `M\xEDn ${fm.banosMin} Ba\xF1os` : "N/E",
+            parkingFormatted: fm.parqueaderosMin ? `M\xEDn ${fm.parqueaderosMin} Pq` : "N/E",
+            contactName: fm.nombreUsuarioWhatsapp || "Asesor con Demanda",
+            contactPhone: reqPhone,
+            contactWhatsAppLink: reqWaLink,
+            matchSummary: `Score de compatibilidad: ${scoreNum.toFixed(1)}%`,
+            positives: [],
+            blockers: []
+          });
+        }
+      }
+      matchItems.sort((a, b) => b.score - a.score);
+      const propPhone = extractRealPhone(prop);
+      let reportText2 = `\u{1F3AF} *VECY MATCH ENGINE \u2014 DEMANDAS COMPATIBLES PARA INMUEBLE #P${prop.id}*
+
+\u{1F3E0} *Inmueble Consultado:* ${prop.propertyType} en ${prop.transactionType} \u2022 ${getPropNeighborhood(prop) || prop.city} \u2022 ${formatCOP(prop.price || prop.rentPrice)}
+\u{1F464} *Captador:* ${prop.nombreUsuarioWhatsapp || "Asesor"} (${propPhone ? "+" + propPhone : "Sin tel"})
+
+`;
+      if (matchItems.length === 0) {
+        reportText2 += `\u{1F50D} *Sin coincidencias inmediatas (Score \u2265 80%)*
+Actualmente no hay demandas activas que alcancen el 80% de compatibilidad para este inmueble.
+\u{1F4A1} El inmueble permanece activo en el cat\xE1logo y te notificar\xE9 autom\xE1ticamente cuando ingrese un cliente compatible.`;
+      } else {
+        reportText2 += `\u2728 *Se encontraron ${matchItems.length} demanda(s) compatible(s):*
+
+`;
+        matchItems.slice(0, 5).forEach((item, idx) => {
+          reportText2 += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F3C5} *OPCI\xD3N #${idx + 1} \u2014 AFINIDAD: ${item.score.toFixed(1)}%* ${item.score >= 90 ? "\u{1F525}" : "\u2705"}
+\u{1F522} *MATCH #M${item.matchId || "Sugerido"}* | *Demanda #R${item.targetId}*
+\u{1F4CD} *Sector Buscado:* ${item.neighborhood || item.city}
+\u{1F4B0} *Presupuesto M\xE1x:* ${item.priceOrBudgetFormatted}
+\u{1F4D0} *Requerimientos:* ${item.areaFormatted} \u2022 ${item.bedroomsFormatted}
+\u{1F464} *Asesor con Cliente:* ${item.contactName}
+\u{1F4F1} *Tel\xE9fono:* ${item.contactPhone ? "+" + item.contactPhone : "Sin registrar"}
+${item.contactWhatsAppLink ? `\u{1F4AC} *WhatsApp Directo:* ${item.contactWhatsAppLink}
+` : ""}`;
+        });
+        reportText2 += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F449} *Ver en Mesa de Coincidencias:*
+${adminDashboardUrl}?search=${prop.id}`;
+      }
+      return {
+        isMatchQuery: true,
+        isAuthorizedAdmin: true,
+        queryType: "property_id",
+        querySummary: `Inmueble #P${prop.id} (${prop.propertyType} en ${getPropNeighborhood(prop) || prop.city})`,
+        totalFound: matchItems.length,
+        matches: matchItems,
+        formattedReport: reportText2,
+        adminDashboardUrl: `${adminDashboardUrl}?search=${prop.id}`
+      };
+    }
+  }
+  if (reqIdMatch) {
+    const reqIdNum = parseInt(reqIdMatch[1], 10);
+    const [req] = await db.select().from(requirements).where(eq5(requirements.id, reqIdNum)).limit(1);
+    if (req) {
+      const existingMatches = await db.select().from(propertyMatches).where(eq5(propertyMatches.requirementId, reqIdNum)).orderBy(desc(propertyMatches.matchScore));
+      const matchItems = [];
+      if (existingMatches.length > 0) {
+        for (const pm of existingMatches) {
+          const scoreNum = parseFloat(String(pm.matchScore || "0"));
+          if (scoreNum < 80) continue;
+          const [prop] = await db.select().from(properties).where(eq5(properties.id, pm.propertyId)).limit(1);
+          if (!prop || !prop.available) continue;
+          const propPhone = extractRealPhone(prop);
+          const propWaLink = propPhone ? `https://wa.me/${propPhone}` : null;
+          matchItems.push({
+            matchId: pm.id,
+            score: scoreNum,
+            matchType: "requirement_to_properties",
+            targetType: "inmueble",
+            targetId: prop.id,
+            title: prop.name || `Inmueble #${prop.id}`,
+            transactionType: prop.transactionType || "venta",
+            propertyType: prop.propertyType || "apartment",
+            city: prop.city || "Bogot\xE1",
+            neighborhood: getPropNeighborhood(prop),
+            priceOrBudgetFormatted: formatCOP(prop.price || prop.rentPrice),
+            areaFormatted: getPropArea(prop) ? `${getPropArea(prop)} m\xB2` : "N/E",
+            bedroomsFormatted: prop.bedrooms ? `${prop.bedrooms} Hab` : "N/E",
+            bathroomsFormatted: prop.bathrooms ? `${prop.bathrooms} Ba\xF1os` : "N/E",
+            parkingFormatted: getPropGarages(prop) ? `${getPropGarages(prop)} Pq` : "N/E",
+            contactName: prop.nombreUsuarioWhatsapp || "Asesor Captador",
+            contactPhone: propPhone,
+            contactWhatsAppLink: propWaLink,
+            matchSummary: `Precio ${formatCOP(prop.price || prop.rentPrice)} dentro de presupuesto`,
+            positives: [],
+            blockers: []
+          });
+        }
+      }
+      if (matchItems.length === 0) {
+        const freshMatches = await findMatchesForRequirement(reqIdNum);
+        for (const fm of freshMatches) {
+          const scoreNum = Number(fm.score || 0);
+          if (scoreNum < 80) continue;
+          const propPhone = extractRealPhone(fm);
+          const propWaLink = propPhone ? `https://wa.me/${propPhone}` : null;
+          matchItems.push({
+            matchId: fm.matchId || null,
+            score: scoreNum,
+            matchType: "requirement_to_properties",
+            targetType: "inmueble",
+            targetId: fm.id,
+            title: fm.name || `Inmueble #${fm.id}`,
+            transactionType: fm.transactionType || "venta",
+            propertyType: fm.propertyType || "apartment",
+            city: fm.city || "Bogot\xE1",
+            neighborhood: getPropNeighborhood(fm),
+            priceOrBudgetFormatted: formatCOP(fm.price || fm.rentPrice),
+            areaFormatted: getPropArea(fm) ? `${getPropArea(fm)} m\xB2` : "N/E",
+            bedroomsFormatted: fm.bedrooms ? `${fm.bedrooms} Hab` : "N/E",
+            bathroomsFormatted: fm.bathrooms ? `${fm.bathrooms} Ba\xF1os` : "N/E",
+            parkingFormatted: getPropGarages(fm) ? `${getPropGarages(fm)} Pq` : "N/E",
+            contactName: fm.nombreUsuarioWhatsapp || "Asesor Captador",
+            contactPhone: propPhone,
+            contactWhatsAppLink: propWaLink,
+            matchSummary: `Score de compatibilidad: ${scoreNum.toFixed(1)}%`,
+            positives: [],
+            blockers: []
+          });
+        }
+      }
+      matchItems.sort((a, b) => b.score - a.score);
+      const reqPhone = extractRealPhone(req);
+      let reportText2 = `\u{1F3AF} *VECY MATCH ENGINE \u2014 INMUEBLES COMPATIBLES PARA DEMANDA #R${req.id}*
+
+\u{1F4CB} *Demanda Consultada:* ${req.tipoInmuebleDeseado} en ${req.tipoNegocioDeseado} \u2022 ${req.zonaDeseada || req.ciudadDeseada} \u2022 Presupuesto m\xE1x: ${formatCOP(req.presupuestoMax)}
+\u{1F464} *Asesor Solicitante:* ${req.nombreUsuarioWhatsapp || "Asesor"} (${reqPhone ? "+" + reqPhone : "Sin tel"})
+
+`;
+      if (matchItems.length === 0) {
+        reportText2 += `\u{1F50D} *Sin coincidencias inmediatas (Score \u2265 80%)*
+Actualmente no hay inmuebles en cat\xE1logo que alcancen el 80% de compatibilidad para esta demanda.
+\u{1F4A1} Te avisar\xE9 tan pronto un captador ingrese una propiedad compatible a la red.`;
+      } else {
+        reportText2 += `\u2728 *Se encontraron ${matchItems.length} inmueble(s) compatible(s):*
+
+`;
+        matchItems.slice(0, 5).forEach((item, idx) => {
+          reportText2 += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F3C5} *OPCI\xD3N #${idx + 1} \u2014 AFINIDAD: ${item.score.toFixed(1)}%* ${item.score >= 90 ? "\u{1F525}" : "\u2705"}
+\u{1F522} *MATCH #M${item.matchId || "Sugerido"}* | *Inmueble #P${item.targetId}*
+\u{1F4CD} *Ubicaci\xF3n:* ${item.neighborhood || item.city}
+\u{1F4B0} *Precio / Canon:* ${item.priceOrBudgetFormatted}
+\u{1F4D0} *Detalles:* ${item.areaFormatted} \u2022 ${item.bedroomsFormatted} \u2022 ${item.bathroomsFormatted} \u2022 ${item.parkingFormatted}
+\u{1F464} *Asesor Captador:* ${item.contactName}
+\u{1F4F1} *Tel\xE9fono:* ${item.contactPhone ? "+" + item.contactPhone : "Sin registrar"}
+${item.contactWhatsAppLink ? `\u{1F4AC} *WhatsApp Directo:* ${item.contactWhatsAppLink}
+` : ""}`;
+        });
+        reportText2 += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F449} *Ver en Mesa de Coincidencias:*
+${adminDashboardUrl}?search=${req.id}`;
+      }
+      return {
+        isMatchQuery: true,
+        isAuthorizedAdmin: true,
+        queryType: "requirement_id",
+        querySummary: `Demanda #R${req.id} (${req.tipoInmuebleDeseado} en ${req.zonaDeseada || req.ciudadDeseada})`,
+        totalFound: matchItems.length,
+        matches: matchItems,
+        formattedReport: reportText2,
+        adminDashboardUrl: `${adminDashboardUrl}?search=${req.id}`
+      };
+    }
+  }
+  const fb = extractFallbackDataFromText(clean);
+  if (isDemand) {
+    const candidateReq = {
+      id: 0,
+      rawText: clean,
+      name: `Demanda de Asesor (${fb.barrio || fb.city || "Bogot\xE1"})`,
+      tipoInmuebleDeseado: fb.propertyType || "apartment",
+      tipoNegocioDeseado: fb.transactionType || "venta",
+      ciudadDeseada: fb.city || "Bogot\xE1",
+      zonaDeseada: fb.barrio || "",
+      addressNeighborhood: fb.barrio || "",
+      presupuestoMax: fb.presupuestoMax ? String(fb.presupuestoMax) : "0",
+      presupuestoMin: "0",
+      areaMin: fb.areaMin ? String(fb.areaMin) : null,
+      habitacionesMin: fb.bedroomsMin || null,
+      banosMin: fb.bathroomsMin || null,
+      parqueaderosMin: fb.parkingMin || null,
+      status: "active"
+    };
+    const availableProps = await db.select().from(properties).where(eq5(properties.available, true));
+    const matchedItems2 = [];
+    for (const prop of availableProps) {
+      const repCount = Number(prop.republicacionesCount || 0);
+      const propEffectiveDate = repCount > 0 && prop.fechaUltimaPublicacion ? prop.fechaUltimaPublicacion : prop.fechaUltimaPublicacion || prop.createdAt;
+      const propAgeDays = propEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(propEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
+      if (propAgeDays > 15) continue;
+      const explanation = explicarMatch(candidateReq, prop, fb);
+      if (explanation.score >= 80) {
+        const propPhone = extractRealPhone(prop);
+        const propWaLink = propPhone ? `https://wa.me/${propPhone}` : null;
+        const existingPm = await db.select({ id: propertyMatches.id }).from(propertyMatches).where(eq5(propertyMatches.propertyId, prop.id)).limit(1);
+        matchedItems2.push({
+          matchId: existingPm[0]?.id || null,
+          score: explanation.score,
+          matchType: "requirement_to_properties",
+          targetType: "inmueble",
+          targetId: prop.id,
+          title: prop.name || `Inmueble #${prop.id}`,
+          transactionType: prop.transactionType || "venta",
+          propertyType: prop.propertyType || "apartment",
+          city: prop.city || "Bogot\xE1",
+          neighborhood: getPropNeighborhood(prop),
+          priceOrBudgetFormatted: formatCOP(prop.price || prop.rentPrice),
+          areaFormatted: getPropArea(prop) ? `${getPropArea(prop)} m\xB2` : "N/E",
+          bedroomsFormatted: prop.bedrooms ? `${prop.bedrooms} Hab` : "N/E",
+          bathroomsFormatted: prop.bathrooms ? `${prop.bathrooms} Ba\xF1os` : "N/E",
+          parkingFormatted: getPropGarages(prop) ? `${getPropGarages(prop)} Pq` : "N/E",
+          contactName: prop.nombreUsuarioWhatsapp || "Asesor Captador",
+          contactPhone: propPhone,
+          contactWhatsAppLink: propWaLink,
+          matchSummary: explanation.positives[0] || `Score: ${explanation.score.toFixed(1)}%`,
+          positives: explanation.positives,
+          blockers: explanation.blockers
+        });
+      }
+    }
+    matchedItems2.sort((a, b) => b.score - a.score);
+    let reportText2 = `\u{1F3AF} *VECY MATCH ENGINE \u2014 INMUEBLES ENCONTRADOS PARA TU DEMANDA*
+
+\u{1F4CB} *Criterios Analizados:* ${candidateReq.tipoInmuebleDeseado} en ${candidateReq.tipoNegocioDeseado} \u2022 ${candidateReq.zonaDeseada || candidateReq.ciudadDeseada} \u2022 Presupuesto: ${formatCOP(candidateReq.presupuestoMax)}
+
+`;
+    if (matchedItems2.length === 0) {
+      reportText2 += `\u{1F50D} *Sin coincidencias inmediatas (Score \u2265 80%)*
+Para estos criterios no encontramos inmuebles activos en cat\xE1logo que cumplan el umbral de 80%.
+\u{1F4A1} *Sugerencia de JanIA:* Si se ampl\xEDa el presupuesto o se contemplan sectores vecinos a ${candidateReq.zonaDeseada || "la zona"}, podremos evaluar nuevos prospectos.`;
+    } else {
+      reportText2 += `\u2728 *Se encontraron ${matchedItems2.length} inmueble(s) compatible(s):*
+
+`;
+      matchedItems2.slice(0, 5).forEach((item, idx) => {
+        reportText2 += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F3C5} *OPCI\xD3N #${idx + 1} \u2014 AFINIDAD: ${item.score.toFixed(1)}%* ${item.score >= 90 ? "\u{1F525}" : "\u2705"}
+\u{1F522} *Inmueble #P${item.targetId}* ${item.matchId ? `| *MATCH #M${item.matchId}*` : ""}
+\u{1F4CD} *Ubicaci\xF3n:* ${item.neighborhood || item.city}
+\u{1F4B0} *Precio / Canon:* ${item.priceOrBudgetFormatted}
+\u{1F4D0} *Detalles:* ${item.areaFormatted} \u2022 ${item.bedroomsFormatted} \u2022 ${item.bathroomsFormatted} \u2022 ${item.parkingFormatted}
+\u{1F464} *Asesor Captador:* ${item.contactName}
+\u{1F4F1} *Tel\xE9fono:* ${item.contactPhone ? "+" + item.contactPhone : "Sin registrar"}
+${item.contactWhatsAppLink ? `\u{1F4AC} *WhatsApp Directo:* ${item.contactWhatsAppLink}
+` : ""}`;
+      });
+      reportText2 += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F449} *Gestionar en Mesa de Coincidencias:*
+${adminDashboardUrl}`;
+    }
+    return {
+      isMatchQuery: true,
+      isAuthorizedAdmin: true,
+      queryType: "demand_search",
+      querySummary: `Demanda: ${candidateReq.tipoInmuebleDeseado} en ${candidateReq.zonaDeseada || candidateReq.ciudadDeseada} (${formatCOP(candidateReq.presupuestoMax)})`,
+      totalFound: matchedItems2.length,
+      matches: matchedItems2,
+      formattedReport: reportText2,
+      adminDashboardUrl
+    };
+  }
+  const candidateProp = {
+    id: 0,
+    rawText: clean,
+    name: `Inmueble de Asesor (${fb.barrio || fb.city || "Bogot\xE1"})`,
+    propertyType: fb.propertyType || "apartment",
+    transactionType: fb.transactionType || "venta",
+    city: fb.city || "Bogot\xE1",
+    neighborhood: fb.barrio || "",
+    price: fb.price ? String(fb.price) : null,
+    rentPrice: fb.rentPrice ? String(fb.rentPrice) : null,
+    area: fb.area ? String(fb.area) : null,
+    bedrooms: fb.bedrooms || null,
+    bathrooms: fb.bathrooms || null,
+    parkingSpaces: fb.parking || null,
+    available: true
+  };
+  const activeReqs = await db.select().from(requirements).where(eq5(requirements.status, "active"));
+  const matchedItems = [];
+  for (const req of activeReqs) {
+    if (req.status === "expired") continue;
+    const reqRepCount = Number(req.republicacionesCount || 0);
+    const reqEffectiveDate = reqRepCount > 0 && req.fechaUltimaPublicacion ? req.fechaUltimaPublicacion : req.fechaUltimaPublicacion || req.createdAt;
+    const reqAgeDays = reqEffectiveDate ? Math.max(0, Math.floor((Date.now() - new Date(reqEffectiveDate).getTime()) / (1e3 * 60 * 60 * 24))) : 0;
+    if (reqAgeDays > 15) continue;
+    const explanation = explicarMatch(req, candidateProp, void 0, fb);
+    if (explanation.score >= 80) {
+      const reqPhone = extractRealPhone(req);
+      const reqWaLink = reqPhone ? `https://wa.me/${reqPhone}` : null;
+      const existingPm = await db.select({ id: propertyMatches.id }).from(propertyMatches).where(eq5(propertyMatches.requirementId, req.id)).limit(1);
+      matchedItems.push({
+        matchId: existingPm[0]?.id || null,
+        score: explanation.score,
+        matchType: "property_to_requirements",
+        targetType: "demanda",
+        targetId: req.id,
+        title: req.name || `Demanda #${req.id}`,
+        transactionType: req.tipoNegocioDeseado || "venta",
+        propertyType: req.tipoInmuebleDeseado || "apartment",
+        city: req.ciudadDeseada || "Bogot\xE1",
+        neighborhood: req.zonaDeseada || req.addressNeighborhood || "",
+        priceOrBudgetFormatted: formatCOP(req.presupuestoMax),
+        areaFormatted: req.areaMin ? `M\xEDn ${req.areaMin} m\xB2` : "N/E",
+        bedroomsFormatted: req.habitacionesMin ? `M\xEDn ${req.habitacionesMin} Hab` : "N/E",
+        bathroomsFormatted: req.banosMin ? `M\xEDn ${req.banosMin} Ba\xF1os` : "N/E",
+        parkingFormatted: req.parqueaderosMin ? `M\xEDn ${req.parqueaderosMin} Pq` : "N/E",
+        contactName: req.nombreUsuarioWhatsapp || "Asesor con Demanda",
+        contactPhone: reqPhone,
+        contactWhatsAppLink: reqWaLink,
+        matchSummary: explanation.positives[0] || `Score: ${explanation.score.toFixed(1)}%`,
+        positives: explanation.positives,
+        blockers: explanation.blockers
+      });
+    }
+  }
+  matchedItems.sort((a, b) => b.score - a.score);
+  let reportText = `\u{1F3AF} *VECY MATCH ENGINE \u2014 DEMANDAS / CLIENTES PARA TU INMUEBLE*
+
+\u{1F3E0} *Inmueble Analizado:* ${candidateProp.propertyType} en ${candidateProp.transactionType} \u2022 ${candidateProp.neighborhood || candidateProp.city} \u2022 Precio: ${formatCOP(candidateProp.price || candidateProp.rentPrice)}
+
+`;
+  if (matchedItems.length === 0) {
+    reportText += `\u{1F50D} *Sin coincidencias inmediatas (Score \u2265 80%)*
+Para las caracter\xEDsticas de este inmueble no hay demandas activas que superen el 80% de afinidad en este instante.
+\u{1F4A1} El inmueble queda en seguimiento activo y te enviar\xE9 la alerta tan pronto se registre un comprador o arrendatario af\xEDn.`;
+  } else {
+    reportText += `\u2728 *Se encontraron ${matchedItems.length} demanda(s) de clientes compatibles:*
+
+`;
+    matchedItems.slice(0, 5).forEach((item, idx) => {
+      reportText += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F3C5} *OPCI\xD3N #${idx + 1} \u2014 AFINIDAD: ${item.score.toFixed(1)}%* ${item.score >= 90 ? "\u{1F525}" : "\u2705"}
+\u{1F522} *Demanda #R${item.targetId}* ${item.matchId ? `| *MATCH #M${item.matchId}*` : ""}
+\u{1F4CD} *Sector Deseado:* ${item.neighborhood || item.city}
+\u{1F4B0} *Presupuesto M\xE1x:* ${item.priceOrBudgetFormatted}
+\u{1F4D0} *Requerimientos:* ${item.areaFormatted} \u2022 ${item.bedroomsFormatted}
+\u{1F464} *Asesor con Cliente:* ${item.contactName}
+\u{1F4F1} *Tel\xE9fono:* ${item.contactPhone ? "+" + item.contactPhone : "Sin registrar"}
+${item.contactWhatsAppLink ? `\u{1F4AC} *WhatsApp Directo:* ${item.contactWhatsAppLink}
+` : ""}`;
+    });
+    reportText += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\u{1F449} *Gestionar en Mesa de Coincidencias:*
+${adminDashboardUrl}`;
+  }
+  return {
+    isMatchQuery: true,
+    isAuthorizedAdmin: true,
+    queryType: "offer_search",
+    querySummary: `Oferta: ${candidateProp.propertyType} en ${candidateProp.neighborhood || candidateProp.city} (${formatCOP(candidateProp.price || candidateProp.rentPrice)})`,
+    totalFound: matchedItems.length,
+    matches: matchedItems,
+    formattedReport: reportText,
+    adminDashboardUrl
+  };
+}
+var ADMIN_IDENTIFIERS;
+var init_adminMatchAssistantService = __esm({
+  "server/_core/adminMatchAssistantService.ts"() {
+    "use strict";
+    init_db();
+    init_schema();
+    init_matching();
+    init_janIA();
+    ADMIN_IDENTIFIERS = [
+      "573192919978",
+      // Eduardo Rivera (Línea Socket / Baileys)
+      "573166569719",
+      // Línea Oficial Bróker Comercial VECY
+      "573188096811",
+      // Línea Directiva Jani Alves
+      "167108705018103",
+      // LID Directivo Jani Alves
+      "182781141344345",
+      // LID Directivo Activo Jani Alves
+      "225954035179724",
+      // LID Directivo Eduardo Rivera
+      "218820279050385",
+      // LID Directivo Alterno Jani Alves
+      process.env.ADMIN_PHONE || "573192919978"
+    ];
+  }
+});
+
 // server/_core/iduValorizacionService.ts
 var iduValorizacionService_exports = {};
 __export(iduValorizacionService_exports, {
@@ -12380,7 +13020,7 @@ import _baileys, {
 import qrcodeTerminal from "qrcode-terminal";
 import fs7 from "fs";
 import path7 from "path";
-import { eq as eq5 } from "drizzle-orm";
+import { eq as eq6 } from "drizzle-orm";
 import QRCode2 from "qrcode";
 function getWASocket() {
   if (typeof _baileys === "function") return _baileys;
@@ -13137,7 +13777,7 @@ ${quotedNote}` : quotedNote;
                 const ADMIN_PHONE = process.env.ADMIN_PHONE || "573192919978";
                 const botJid = this.sock?.user?.id ? cleanJid(this.sock.user.id) : "";
                 const botPhone = botJid ? botJid.split("@")[0] : "573192919978";
-                const ADMIN_IDENTIFIERS = [
+                const ADMIN_IDENTIFIERS2 = [
                   "573192919978",
                   "573166569719",
                   "573188096811",
@@ -13153,7 +13793,7 @@ ${quotedNote}` : quotedNote;
                   ADMIN_PHONE
                 ];
                 const isSelfChat = senderId === botJid || rawPhone === botPhone || rawPhone === ADMIN_PHONE || rawPhone === "573192919978" || rawPhone === "225954035179724";
-                const isAdmin = isSelfChat || ADMIN_IDENTIFIERS.some((id) => rawPhone.includes(id) || rawPhone === id || senderId.includes(id));
+                const isAdmin = isSelfChat || ADMIN_IDENTIFIERS2.some((id) => rawPhone.includes(id) || rawPhone === id || senderId.includes(id));
                 const userName = msg.pushName || (rawPhone === "167108705018103" || rawPhone === "182781141344345" || rawPhone === "573188096811" || rawPhone === "573166569719" || rawPhone === "218820279050385" ? "Jani Alves" : rawPhone === "225954035179724" || rawPhone === "573192919978" ? "Eduardo Rivera" : `Asesor +${rawPhone}`);
                 const rawMsg = unwrapMessage(msg.message);
                 let body = "";
@@ -13313,6 +13953,25 @@ ${quotedNote}` : quotedNote;
           const matchId = parseInt(matchConfirm[2], 10);
           await this.processMatchConfirmation(senderId, userName, matchId, decision);
           return;
+        }
+        const { isMatchSearchQuery: isMatchSearchQuery2, executeAdminMatchSearch: executeAdminMatchSearch2 } = await Promise.resolve().then(() => (init_adminMatchAssistantService(), adminMatchAssistantService_exports));
+        const isMatchIntent = isMatchSearchQuery2(body, isAdmin);
+        if (isMatchIntent) {
+          const stopPresence = startContinuousPresence(this.sock, senderId, "composing");
+          try {
+            const matchResult = await executeAdminMatchSearch2(body, isAdmin);
+            if (matchResult.isMatchQuery && matchResult.formattedReport) {
+              console.log(`[JANIA-MATCH] [DM] Asistente de Matches atendido para ${senderId} (Admin: ${isAdmin}, Matches: ${matchResult.totalFound})`);
+              await this.queuedSend(senderId, matchResult.formattedReport, { quoted: mainMsg, allowDirectMessage: true });
+              const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+              appendDmHistory2(senderId, "user", body);
+              appendDmHistory2(senderId, "assistant", matchResult.formattedReport);
+              await this.logToDb(senderId, "janIA", matchResult.formattedReport);
+              return;
+            }
+          } finally {
+            stopPresence();
+          }
         }
         const { executeNotarialAssistanceFromWhatsApp: executeNotarialAssistanceFromWhatsApp2, hasPendingNotarialSession: hasPendingNotarialSession2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
         const isNotarialContext = senderId && hasPendingNotarialSession2(senderId) || /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|afectaci[oó]n\s*familiar|sin\s*afectaci[oó]n|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural|bien\s*de\s*inter[eé]s|anotaci[oó]n\s*diferente)/i.test(body);
@@ -14478,7 +15137,7 @@ ${result.response}`);
         try {
           const db = await getDb();
           if (!db) return;
-          let conv = await db.select().from(conversations).where(eq5(conversations.sessionId, senderId)).limit(1);
+          let conv = await db.select().from(conversations).where(eq6(conversations.sessionId, senderId)).limit(1);
           let conversationId;
           if (conv.length === 0) {
             const [newConv] = await db.insert(conversations).values({
@@ -14492,7 +15151,7 @@ ${result.response}`);
             await db.update(conversations).set({
               lastMessage: content.slice(0, 150),
               updatedAt: /* @__PURE__ */ new Date()
-            }).where(eq5(conversations.id, conversationId));
+            }).where(eq6(conversations.id, conversationId));
           }
           await db.insert(messages).values({
             conversationId,
@@ -14630,13 +15289,13 @@ Mis grupos oficiales:
             await this.queuedSend(senderId, "\u26A0\uFE0F El sistema de base de datos no est\xE1 disponible en este momento. Int\xE9ntalo m\xE1s tarde.");
             return;
           }
-          const [match] = await db.select().from(propertyMatches).where(eq5(propertyMatches.id, matchId)).limit(1);
+          const [match] = await db.select().from(propertyMatches).where(eq6(propertyMatches.id, matchId)).limit(1);
           if (!match) {
             await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ninguna coincidencia registrada con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
             return;
           }
-          const [prop] = await db.select().from(properties).where(eq5(properties.id, match.propertyId)).limit(1);
-          const [req] = await db.select().from(requirements).where(eq5(requirements.id, match.requirementId)).limit(1);
+          const [prop] = await db.select().from(properties).where(eq6(properties.id, match.propertyId)).limit(1);
+          const [req] = await db.select().from(requirements).where(eq6(requirements.id, match.requirementId)).limit(1);
           if (!prop || !req) {
             await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de esta coincidencia.");
             return;
@@ -14651,7 +15310,7 @@ Mis grupos oficiales:
             return;
           }
           if (decision === "no") {
-            await db.update(propertyMatches).set({ status: "rejected" }).where(eq5(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq6(propertyMatches.id, matchId));
             await this.queuedSend(senderId, `Entendido. He marcado la coincidencia *#M${matchId}* como cancelada. No se compartir\xE1n tus datos de contacto.`);
             await this.logToDb(senderId, "janIA", `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
             const otherJid = isOwner ? seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@s.whatsapp.net` : ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@s.whatsapp.net`;
@@ -14665,19 +15324,19 @@ Mis grupos oficiales:
           if (isSeeker) {
             updateFields.seekerConfirmed = true;
           }
-          await db.update(propertyMatches).set(updateFields).where(eq5(propertyMatches.id, matchId));
-          const [updatedMatch] = await db.select().from(propertyMatches).where(eq5(propertyMatches.id, matchId)).limit(1);
+          await db.update(propertyMatches).set(updateFields).where(eq6(propertyMatches.id, matchId));
+          const [updatedMatch] = await db.select().from(propertyMatches).where(eq6(propertyMatches.id, matchId)).limit(1);
           if (updatedMatch.ownerConfirmed && updatedMatch.seekerConfirmed) {
-            await db.update(propertyMatches).set({ status: "interested" }).where(eq5(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "interested" }).where(eq6(propertyMatches.id, matchId));
             let ownerName = "Oferente";
             let seekerName = "Interesado";
             try {
-              const [ownerUser] = await db.select().from(users).where(eq5(users.phone, ownerPhone)).limit(1);
+              const [ownerUser] = await db.select().from(users).where(eq6(users.phone, ownerPhone)).limit(1);
               if (ownerUser && ownerUser.name) ownerName = ownerUser.name;
             } catch {
             }
             try {
-              const [seekerUser] = await db.select().from(users).where(eq5(users.phone, seekerPhone)).limit(1);
+              const [seekerUser] = await db.select().from(users).where(eq6(users.phone, seekerPhone)).limit(1);
               if (seekerUser && seekerUser.name) seekerName = seekerUser.name;
             } catch {
             }
@@ -15547,7 +16206,7 @@ var init_agendaWhatsAppService = __esm({
 
 // server/routers/agenda.ts
 import { z as z2 } from "zod";
-import { desc, ilike, or as or2, sql as sql4, eq as eq6 } from "drizzle-orm";
+import { desc as desc2, ilike, or as or2, sql as sql5, eq as eq7 } from "drizzle-orm";
 import { TRPCError as TRPCError3 } from "@trpc/server";
 import { Solver } from "@2captcha/captcha-solver";
 import https from "https";
@@ -16150,7 +16809,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       const profileRows = await db.select({
         fullName: profiles.fullName,
         numeroDocumento: profiles.numeroDocumento
-      }).from(profiles).where(eq6(profiles.numeroDocumento, clean)).limit(5);
+      }).from(profiles).where(eq7(profiles.numeroDocumento, clean)).limit(5);
       for (const row of profileRows) {
         if (row.fullName && row.fullName.trim().length >= 4) {
           const officialFormatted = formatTitleCase(row.fullName.trim());
@@ -16172,10 +16831,10 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
         interesadoNombre: solicitudes.interesadoNombre
       }).from(solicitudes).where(
         or2(
-          eq6(solicitudes.solicitanteNumeroDocumento, clean),
-          eq6(solicitudes.interesadoDocumento, clean)
+          eq7(solicitudes.solicitanteNumeroDocumento, clean),
+          eq7(solicitudes.interesadoDocumento, clean)
         )
-      ).orderBy(desc(solicitudes.id)).limit(10);
+      ).orderBy(desc2(solicitudes.id)).limit(10);
       for (const row of solRows) {
         const candidateName = (row.solicitanteNumeroDocumento || "").replace(/\D/g, "") === clean ? row.solicitanteNombre : row.interesadoNombre;
         const tokens = (candidateName || "").trim().split(/\s+/).filter(Boolean);
@@ -16359,10 +17018,10 @@ async function processAndSaveSolicitud(input) {
     }
   } catch (_) {
   }
-  const maxRes = await db.select({ maxId: sql4`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
+  const maxRes = await db.select({ maxId: sql5`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
   const nextSolicitudId = Math.max(Number(maxRes[0]?.maxId || 0), 1144) + 1;
   const inserted = await db.insert(solicitudes).values({
-    id: sql4`nextval('solicitudes_id_seq')`,
+    id: sql5`nextval('solicitudes_id_seq')`,
     solicitudId: nextSolicitudId,
     solicitanteNombre: input.solicitante_nombre,
     solicitanteTipoPersona: input.solicitante_tipo_persona || "Persona Natural",
@@ -16546,7 +17205,7 @@ var init_agenda = __esm({
             ilike(solicitudes.interesadoNombre, searchPattern)
           ];
           if (!isNaN(numSearch)) {
-            searchConditions.push(eq6(solicitudes.solicitudId, numSearch));
+            searchConditions.push(eq7(solicitudes.solicitudId, numSearch));
           }
           whereConditions.push(or2(...searchConditions));
         }
@@ -16569,9 +17228,9 @@ var init_agenda = __esm({
             );
           }
         }
-        const finalWhere = whereConditions.length > 0 ? sql4.join(whereConditions, sql4` AND `) : void 0;
-        const items = await db.select().from(solicitudes).where(finalWhere).orderBy(sql4`${solicitudes.solicitudId} DESC NULLS LAST`, desc(solicitudes.id)).limit(limit).offset(offset);
-        const totalRes = await db.select({ count: sql4`count(*)` }).from(solicitudes).where(finalWhere);
+        const finalWhere = whereConditions.length > 0 ? sql5.join(whereConditions, sql5` AND `) : void 0;
+        const items = await db.select().from(solicitudes).where(finalWhere).orderBy(sql5`${solicitudes.solicitudId} DESC NULLS LAST`, desc2(solicitudes.id)).limit(limit).offset(offset);
+        const totalRes = await db.select({ count: sql5`count(*)` }).from(solicitudes).where(finalWhere);
         return {
           items,
           total: Number(totalRes[0]?.count || 0)
@@ -16580,9 +17239,9 @@ var init_agenda = __esm({
       getStats: publicProcedure.query(async () => {
         const db = await getDb();
         if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
-        const totalRes = await db.select({ count: sql4`count(*)` }).from(solicitudes);
+        const totalRes = await db.select({ count: sql5`count(*)` }).from(solicitudes);
         const total = Number(totalRes[0]?.count || 0);
-        const agentesRes = await db.select({ count: sql4`count(*)` }).from(solicitudes).where(
+        const agentesRes = await db.select({ count: sql5`count(*)` }).from(solicitudes).where(
           or2(
             ilike(solicitudes.solicitantePerfil, "%agente%"),
             ilike(solicitudes.solicitantePerfil, "%inmobiliaria%"),
@@ -16591,7 +17250,7 @@ var init_agenda = __esm({
           )
         );
         const agentes = Number(agentesRes[0]?.count || 0);
-        const conFirmaRes = await db.select({ count: sql4`count(*)` }).from(solicitudes).where(sql4`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
+        const conFirmaRes = await db.select({ count: sql5`count(*)` }).from(solicitudes).where(sql5`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
         const conFirma = Number(conFirmaRes[0]?.count || 0);
         const directos = Math.max(0, total - agentes);
         return {
@@ -16714,7 +17373,7 @@ var init_agenda = __esm({
         const db = await getDb();
         if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
         const { id, ...dataToUpdate } = input;
-        const updated = await db.update(solicitudes).set(dataToUpdate).where(eq6(solicitudes.id, id)).returning();
+        const updated = await db.update(solicitudes).set(dataToUpdate).where(eq7(solicitudes.id, id)).returning();
         return {
           success: true,
           item: updated[0] || null
@@ -17795,7 +18454,7 @@ __export(janIA_exports, {
   translatePropertyType: () => translatePropertyType,
   translateTransactionType: () => translateTransactionType
 });
-import { eq as eq7, and as and4, sql as sql5, gte, desc as desc2 } from "drizzle-orm";
+import { eq as eq8, and as and5, sql as sql6, gte, desc as desc3 } from "drizzle-orm";
 import fs8 from "fs";
 import path8 from "path";
 import axios6 from "axios";
@@ -18747,7 +19406,7 @@ async function enrichLexiconFromText(rawText) {
         }).onConflictDoUpdate({
           target: inmobiliarioLexicon.terminoColoquial,
           set: {
-            frecuenciaUso: sql5`${inmobiliarioLexicon.frecuenciaUso} + 1`,
+            frecuenciaUso: sql6`${inmobiliarioLexicon.frecuenciaUso} + 1`,
             updatedAt: /* @__PURE__ */ new Date()
           }
         });
@@ -18767,7 +19426,7 @@ async function muteSession(userId, isMuted) {
     const cleanJid2 = cleanSessionJid(userId);
     const muteJid = `mute:${cleanJid2}`;
     if (!isMuted) {
-      await db.delete(pendingSessions).where(eq7(pendingSessions.jid, muteJid));
+      await db.delete(pendingSessions).where(eq8(pendingSessions.jid, muteJid));
       console.log(`[JanIA-Mute] Sesi\xF3n ${cleanJid2} desmarcada (eliminada de BD)`);
       return;
     }
@@ -18793,7 +19452,7 @@ async function isSessionMuted(userId) {
     const db = await getDb();
     if (!db) return false;
     const cleanJid2 = cleanSessionJid(userId);
-    const [existing] = await db.select().from(pendingSessions).where(eq7(pendingSessions.jid, `mute:${cleanJid2}`)).limit(1);
+    const [existing] = await db.select().from(pendingSessions).where(eq8(pendingSessions.jid, `mute:${cleanJid2}`)).limit(1);
     if (!existing) return false;
     return !!existing.sessionData?.isMuted;
   } catch (err) {
@@ -18806,7 +19465,7 @@ async function getPendingSession(userId) {
     const db = await getDb();
     if (!db) return null;
     const cleanJid2 = cleanSessionJid(userId);
-    const [session] = await db.select().from(pendingSessions).where(eq7(pendingSessions.jid, cleanJid2)).limit(1);
+    const [session] = await db.select().from(pendingSessions).where(eq8(pendingSessions.jid, cleanJid2)).limit(1);
     if (!session) return null;
     return session.sessionData;
   } catch (err) {
@@ -18819,7 +19478,7 @@ async function deletePendingSession(userId) {
     const db = await getDb();
     if (!db) return;
     const cleanJid2 = cleanSessionJid(userId);
-    await db.delete(pendingSessions).where(eq7(pendingSessions.jid, cleanJid2));
+    await db.delete(pendingSessions).where(eq8(pendingSessions.jid, cleanJid2));
   } catch (err) {
     console.error("[Database] Error deleting pending session:", err);
   }
@@ -18830,7 +19489,7 @@ async function resolveRealName(userId, userName) {
   try {
     const db = await getDb();
     if (db) {
-      const [u] = await db.select().from(users).where(eq7(users.phone, rawPhone)).limit(1);
+      const [u] = await db.select().from(users).where(eq8(users.phone, rawPhone)).limit(1);
       if (u && u.name && u.name.trim() !== "") {
         name = u.name;
       }
@@ -18846,10 +19505,10 @@ async function hasGreetedUserToday(userId) {
     if (!db) return false;
     const startOfToday = /* @__PURE__ */ new Date();
     startOfToday.setHours(0, 0, 0, 0);
-    const recentMsgs = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq7(messages.conversationId, conversations.id)).where(
-      and4(
-        eq7(conversations.sessionId, userId),
-        eq7(messages.role, "janIA"),
+    const recentMsgs = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq8(messages.conversationId, conversations.id)).where(
+      and5(
+        eq8(conversations.sessionId, userId),
+        eq8(messages.role, "janIA"),
         gte(messages.createdAt, startOfToday)
       )
     ).limit(1);
@@ -18881,12 +19540,12 @@ async function getRecentChatHistory(userId, limit = 20) {
       role: messages.role,
       content: messages.content,
       createdAt: messages.createdAt
-    }).from(messages).innerJoin(conversations, eq7(messages.conversationId, conversations.id)).where(
-      and4(
-        eq7(conversations.sessionId, userId),
+    }).from(messages).innerJoin(conversations, eq8(messages.conversationId, conversations.id)).where(
+      and5(
+        eq8(conversations.sessionId, userId),
         gte(messages.createdAt, fourDaysAgo)
       )
-    ).orderBy(desc2(messages.createdAt)).limit(limit);
+    ).orderBy(desc3(messages.createdAt)).limit(limit);
     return history.reverse().map((h) => ({
       role: h.role === "janIA" ? "assistant" : "user",
       content: h.content
@@ -18991,8 +19650,8 @@ async function getLiveStats() {
     } else {
       const db = await getDb();
       if (!db) return cachedLiveStatsText || "";
-      const [propCount] = await db.select({ total: sql5`count(*)::int` }).from(properties);
-      const [reqCount] = await db.select({ total: sql5`count(*)::int` }).from(requirements);
+      const [propCount] = await db.select({ total: sql6`count(*)::int` }).from(properties);
+      const [reqCount] = await db.select({ total: sql6`count(*)::int` }).from(requirements);
       stats = { prop_count: propCount?.total ?? 0, req_count: reqCount?.total ?? 0, match_count: 0, prop_today: 0, req_today: 0, match_today: 0 };
     }
     const now = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" });
@@ -19135,11 +19794,11 @@ async function handleDetectedMatches(matches, isProperty, savedRecord, userId, r
     try {
       const db = await getDb();
       if (db) {
-        const [su] = await db.select().from(users).where(eq7(users.phone, savedRawPhone)).limit(1);
+        const [su] = await db.select().from(users).where(eq8(users.phone, savedRawPhone)).limit(1);
         if (su && su.name && su.name.trim() !== "") {
           savedUserName = su.name;
         }
-        const [mu] = await db.select().from(users).where(eq7(users.phone, matchedRawPhone)).limit(1);
+        const [mu] = await db.select().from(users).where(eq8(users.phone, matchedRawPhone)).limit(1);
         if (mu && mu.name && mu.name.trim() !== "") {
           matchedUserName = mu.name;
         }
@@ -19223,7 +19882,7 @@ async function getTimeOfDayGreetingForUser(phone, realName, alreadyGreeted, isGr
   try {
     const db = await getDb();
     if (db) {
-      const [u] = await db.select().from(users).where(eq7(users.phone, phone)).limit(1);
+      const [u] = await db.select().from(users).where(eq8(users.phone, phone)).limit(1);
       if (u && u.name && u.name.trim() !== "") {
         nameToUse = u.name;
       }
@@ -19640,11 +20299,11 @@ __is_sub_message__`,
       try {
         const db = await getDb();
         if (!db) throw new Error("DB no disponible");
-        const recentProps = await db.select({ id: properties.id, rawText: properties.rawText, origenNombre: properties.origenNombre }).from(properties).where(and4(
-          eq7(properties.idUsuarioWhatsapp, userId.split("@")[0]),
+        const recentProps = await db.select({ id: properties.id, rawText: properties.rawText, origenNombre: properties.origenNombre }).from(properties).where(and5(
+          eq8(properties.idUsuarioWhatsapp, userId.split("@")[0]),
           gte(properties.createdAt, TEN_MIN_AGO),
-          eq7(properties.available, true)
-        )).orderBy(desc2(properties.createdAt)).limit(1);
+          eq8(properties.available, true)
+        )).orderBy(desc3(properties.createdAt)).limit(1);
         if (recentProps.length > 0) {
           const prop = recentProps[0];
           const portalInfo = extractPortalAndListingId(soloUrl);
@@ -19660,7 +20319,7 @@ ${soloUrl}`;
             origenId: groupJid || void 0,
             ...portalInfo?.portal ? { portal: portalInfo.portal } : {},
             ...portalInfo?.listingId ? { externalListingId: portalInfo.listingId } : {}
-          }).where(eq7(properties.id, prop.id));
+          }).where(eq8(properties.id, prop.id));
           console.log(`[JanIA-URLDiferida] \u2705 URL de portal enlazada retroactivamente a Prop #${prop.id} de ${userId}: ${soloUrl}`);
           return { classification: "INMUEBLE", response: "", reactionEmoji: "\u{1F517}", inserted: false };
         }
@@ -20908,9 +21567,9 @@ async function findOrCreateUserByPhone(phone, realName) {
   const db = await getDb();
   if (!db) return null;
   const cleanPhone = phone.split(":")[0];
-  let user = await db.select().from(users).where(eq7(users.phone, cleanPhone)).limit(1).then((r) => r[0]);
+  let user = await db.select().from(users).where(eq8(users.phone, cleanPhone)).limit(1).then((r) => r[0]);
   if (!user) {
-    user = await db.select().from(users).where(eq7(users.openId, `wa-${cleanPhone}`)).limit(1).then((r) => r[0]);
+    user = await db.select().from(users).where(eq8(users.openId, `wa-${cleanPhone}`)).limit(1).then((r) => r[0]);
   }
   if (!user) {
     const openId = `wa-${cleanPhone}`;
@@ -20927,7 +21586,7 @@ async function findOrCreateUserByPhone(phone, realName) {
     } catch (insertErr) {
       if (insertErr.code === "23505" || String(insertErr).includes("unique constraint")) {
         console.log(`[JanIA-findOrCreateUserByPhone] Colisi\xF3n concurrente detectada para ${cleanPhone}. Re-buscando usuario...`);
-        user = await db.select().from(users).where(eq7(users.openId, openId)).limit(1).then((r) => r[0]);
+        user = await db.select().from(users).where(eq8(users.openId, openId)).limit(1).then((r) => r[0]);
       } else {
         throw insertErr;
       }
@@ -20935,7 +21594,7 @@ async function findOrCreateUserByPhone(phone, realName) {
   } else {
     if (realName && !isGenericName(realName) && isGenericName(user.name)) {
       console.log(`[JanIA-findOrCreateUserByPhone] Actualizando nombre de usuario para ID ${user.id} a ${realName}`);
-      const [updatedUser] = await db.update(users).set({ name: realName }).where(eq7(users.id, user.id)).returning();
+      const [updatedUser] = await db.update(users).set({ name: realName }).where(eq8(users.id, user.id)).returning();
       user = updatedUser;
     }
   }
@@ -21111,10 +21770,10 @@ async function handleAmendmentUpdate(userId, text2) {
   const isAmendmentTrigger = cleanTextLower.startsWith("correccion") || cleanTextLower.startsWith("correcci\xF3n") || cleanTextLower.startsWith("fe de erratas") || cleanTextLower.startsWith("fe de errata") || cleanTextLower.startsWith("rectificacion") || cleanTextLower.startsWith("rectificaci\xF3n") || cleanTextLower.startsWith("ajuste:") || cleanTextLower.startsWith("ajuste ") || cleanTextLower.startsWith("disculpen");
   if (!isAmendmentTrigger) return false;
   const fallbackData = extractFallbackDataFromText(text2);
-  const lastReqs = await db.select().from(requirements).where(and4(
-    eq7(requirements.idUsuarioWhatsapp, rawPhone),
+  const lastReqs = await db.select().from(requirements).where(and5(
+    eq8(requirements.idUsuarioWhatsapp, rawPhone),
     gte(requirements.createdAt, twoHoursAgo)
-  )).orderBy(desc2(requirements.createdAt)).limit(1);
+  )).orderBy(desc3(requirements.createdAt)).limit(1);
   if (lastReqs.length > 0) {
     const req = lastReqs[0];
     const updates = {};
@@ -21135,7 +21794,7 @@ async function handleAmendmentUpdate(userId, text2) {
     }
     if (Object.keys(updates).length > 0) {
       updates.updatedAt = /* @__PURE__ */ new Date();
-      await db.update(requirements).set(updates).where(eq7(requirements.id, req.id));
+      await db.update(requirements).set(updates).where(eq8(requirements.id, req.id));
       console.log(`[JANIA-AMENDMENT] \u2705 Requerimiento #${req.id} actualizado silenciosamente en BD (Ventana 2h):`, updates);
       const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
       setImmediate(() => {
@@ -21144,10 +21803,10 @@ async function handleAmendmentUpdate(userId, text2) {
       return true;
     }
   }
-  const lastProps = await db.select().from(properties).where(and4(
-    eq7(properties.idUsuarioWhatsapp, rawPhone),
+  const lastProps = await db.select().from(properties).where(and5(
+    eq8(properties.idUsuarioWhatsapp, rawPhone),
     gte(properties.createdAt, twoHoursAgo)
-  )).orderBy(desc2(properties.createdAt)).limit(1);
+  )).orderBy(desc3(properties.createdAt)).limit(1);
   if (lastProps.length > 0) {
     const prop = lastProps[0];
     const updates = {};
@@ -21168,7 +21827,7 @@ async function handleAmendmentUpdate(userId, text2) {
     }
     if (Object.keys(updates).length > 0) {
       updates.updatedAt = /* @__PURE__ */ new Date();
-      await db.update(properties).set(updates).where(eq7(properties.id, prop.id));
+      await db.update(properties).set(updates).where(eq8(properties.id, prop.id));
       console.log(`[JANIA-AMENDMENT] \u2705 Propiedad #${prop.id} actualizada silenciosamente en BD (Ventana 2h):`, updates);
       const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
       setImmediate(() => {
@@ -21499,37 +22158,37 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
   let existing = [];
   if (canonicalExternalId) {
     existing = await db.select().from(properties).where(
-      and4(
-        eq7(properties.canonicalExternalId, canonicalExternalId),
-        eq7(properties.available, true)
+      and5(
+        eq8(properties.canonicalExternalId, canonicalExternalId),
+        eq8(properties.available, true)
       )
     ).limit(1);
   }
   if (existing.length === 0 && finalInsertData.matriculaInmobiliaria) {
     existing = await db.select().from(properties).where(
-      and4(
-        eq7(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
-        eq7(properties.available, true)
+      and5(
+        eq8(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
+        eq8(properties.available, true)
       )
     ).limit(1);
   }
   if (existing.length === 0 && finalInsertData.rawText && finalInsertData.rawText.trim().length > 25) {
     existing = await db.select().from(properties).where(
-      and4(
-        eq7(properties.rawText, finalInsertData.rawText.trim()),
-        eq7(properties.available, true)
+      and5(
+        eq8(properties.rawText, finalInsertData.rawText.trim()),
+        eq8(properties.available, true)
       )
     ).limit(1);
   }
   if (existing.length === 0) {
     existing = await db.select().from(properties).where(
-      and4(
-        eq7(properties.idUsuarioWhatsapp, rawPhone),
-        eq7(properties.propertyType, finalInsertData.propertyType),
-        eq7(properties.transactionType, finalInsertData.transactionType),
-        eq7(properties.city, finalInsertData.city),
-        eq7(properties.zone, finalInsertData.zone),
-        eq7(properties.available, true)
+      and5(
+        eq8(properties.idUsuarioWhatsapp, rawPhone),
+        eq8(properties.propertyType, finalInsertData.propertyType),
+        eq8(properties.transactionType, finalInsertData.transactionType),
+        eq8(properties.city, finalInsertData.city),
+        eq8(properties.zone, finalInsertData.zone),
+        eq8(properties.available, true)
       )
     ).limit(1);
   }
@@ -21564,7 +22223,7 @@ async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfM
       estadoComercial: "REPUBLICADO",
       ultimaActividad: "REPUBLICACI\xD3N",
       vigenciaIa: "VIGENTE"
-    }).where(eq7(properties.id, existing[0].id)).returning();
+    }).where(eq8(properties.id, existing[0].id)).returning();
     console.log(`[Deduplication] Propiedad existente detectada (${canonicalExternalId || "Comercial"}). Actualizando datos (ID: ${updated.id}, Republicado: ${updatedCount}, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
     try {
       await db.insert(propertyPublicationHistory).values({
@@ -21900,17 +22559,17 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
   let existing = [];
   if (insertData.rawText && insertData.rawText.trim().length > 25) {
     existing = await db.select().from(requirements).where(
-      eq7(requirements.rawText, insertData.rawText.trim())
+      eq8(requirements.rawText, insertData.rawText.trim())
     ).limit(1);
   }
   if (existing.length === 0) {
     existing = await db.select().from(requirements).where(
-      and4(
-        eq7(requirements.idUsuarioWhatsapp, rawPhone),
-        eq7(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
-        eq7(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
-        eq7(requirements.ciudadDeseada, insertData.ciudadDeseada),
-        eq7(requirements.zonaDeseada, insertData.zonaDeseada)
+      and5(
+        eq8(requirements.idUsuarioWhatsapp, rawPhone),
+        eq8(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
+        eq8(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
+        eq8(requirements.ciudadDeseada, insertData.ciudadDeseada),
+        eq8(requirements.zonaDeseada, insertData.zonaDeseada)
       )
     ).limit(1);
   }
@@ -21937,7 +22596,7 @@ async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, p
       fechaUltimaPublicacion: getColombiaNow(),
       republicacionesCount: repCount,
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq7(requirements.id, existing[0].id)).returning();
+    }).where(eq8(requirements.id, existing[0].id)).returning();
     console.log(`[Deduplication] Requerimiento existente detectado y reactivado (ID: ${updated.id}, Republicaciones: ${repCount}, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
     findMatchesForRequirement(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
     return updated;
@@ -22631,15 +23290,15 @@ async function getOrLoadDmHistory(userId) {
   try {
     const db = await getDb();
     if (db) {
-      const conv = await db.select().from(conversations).where(eq7(conversations.sessionId, userId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq8(conversations.sessionId, userId)).limit(1);
       if (conv.length > 0) {
         const startOfToday = getStartOfTodayBogota();
         const recentMsgs = await db.select().from(messages).where(
-          and4(
-            eq7(messages.conversationId, conv[0].id),
+          and5(
+            eq8(messages.conversationId, conv[0].id),
             gte(messages.createdAt, new Date(startOfToday))
           )
-        ).orderBy(desc2(messages.createdAt)).limit(24);
+        ).orderBy(desc3(messages.createdAt)).limit(24);
         if (recentMsgs.length > 0) {
           recentMsgs.reverse();
           const restored = recentMsgs.map((m) => ({
@@ -23640,7 +24299,7 @@ __export(nightlyRematch_exports, {
   recalculateAndCleanupMatches: () => recalculateAndCleanupMatches,
   runNightlyRematch: () => runNightlyRematch
 });
-import { and as and6, eq as eq9, sql as sql7 } from "drizzle-orm";
+import { and as and7, eq as eq10, sql as sql8 } from "drizzle-orm";
 async function runNightlyRematch() {
   if (isRematchRunning) {
     console.log("[NIGHTLY-REMATCH] Ya hay una ejecuci\xF3n en curso, saltando...");
@@ -23655,11 +24314,11 @@ async function runNightlyRematch() {
     return;
   }
   try {
-    await db.execute(sql7`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND "createdAt" < NOW() - INTERVAL '10 days'`);
-    await db.execute(sql7`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE "createdAt" < NOW() - INTERVAL '10 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '10 days')`);
+    await db.execute(sql8`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND "createdAt" < NOW() - INTERVAL '10 days'`);
+    await db.execute(sql8`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE "createdAt" < NOW() - INTERVAL '10 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '10 days')`);
     const [activeReqs, availProps] = await Promise.all([
-      db.select().from(requirements).where(eq9(requirements.status, "active")),
-      db.select().from(properties).where(eq9(properties.available, true))
+      db.select().from(requirements).where(eq10(requirements.status, "active")),
+      db.select().from(properties).where(eq10(properties.available, true))
     ]);
     console.log(
       `[NIGHTLY-REMATCH] ${activeReqs.length} reqs \xD7 ${availProps.length} props = ${activeReqs.length * availProps.length} pares a evaluar`
@@ -23718,9 +24377,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and6(
-                  eq9(propertyMatches.requirementId, req.id),
-                  eq9(propertyMatches.propertyId, prop.id)
+                and7(
+                  eq10(propertyMatches.requirementId, req.id),
+                  eq10(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -23734,9 +24393,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and6(
-                  eq9(propertyMatches.requirementId, req.id),
-                  eq9(propertyMatches.propertyId, prop.id)
+                and7(
+                  eq10(propertyMatches.requirementId, req.id),
+                  eq10(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -23749,9 +24408,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and6(
-                  eq9(propertyMatches.requirementId, req.id),
-                  eq9(propertyMatches.propertyId, prop.id)
+                and7(
+                  eq10(propertyMatches.requirementId, req.id),
+                  eq10(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -23762,9 +24421,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and6(
-                  eq9(propertyMatches.requirementId, req.id),
-                  eq9(propertyMatches.propertyId, prop.id)
+                and7(
+                  eq10(propertyMatches.requirementId, req.id),
+                  eq10(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -23775,9 +24434,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and6(
-                  eq9(propertyMatches.requirementId, req.id),
-                  eq9(propertyMatches.propertyId, prop.id)
+                and7(
+                  eq10(propertyMatches.requirementId, req.id),
+                  eq10(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -23804,9 +24463,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and6(
-                  eq9(propertyMatches.requirementId, req.id),
-                  eq9(propertyMatches.propertyId, prop.id)
+                and7(
+                  eq10(propertyMatches.requirementId, req.id),
+                  eq10(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -23815,9 +24474,9 @@ async function runNightlyRematch() {
           }
           seenPairs.add(pairKey);
           const existing = await db.select({ id: propertyMatches.id, matchScore: propertyMatches.matchScore }).from(propertyMatches).where(
-            and6(
-              eq9(propertyMatches.requirementId, req.id),
-              eq9(propertyMatches.propertyId, prop.id)
+            and7(
+              eq10(propertyMatches.requirementId, req.id),
+              eq10(propertyMatches.propertyId, prop.id)
             )
           ).limit(1);
           if (existing.length === 0) {
@@ -23837,7 +24496,7 @@ async function runNightlyRematch() {
               await db.update(propertyMatches).set({
                 matchScore: exp.score.toFixed(2),
                 matchReason: `VECY DOCTRINAL v28.0: ${exp.score.toFixed(0)}/100`
-              }).where(eq9(propertyMatches.id, existing[0].id));
+              }).where(eq10(propertyMatches.id, existing[0].id));
               updatedCount++;
             }
           }
@@ -23884,14 +24543,14 @@ async function recalculateAndCleanupMatches() {
     let updatedCount = 0;
     for (const m of allMatches) {
       if (rejectedPairsSet.has(`${m.propertyId}_${m.requirementId}`)) {
-        await db.delete(propertyMatches).where(eq9(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq10(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
-      const [prop] = await db.select().from(properties).where(eq9(properties.id, m.propertyId)).limit(1);
-      const [req] = await db.select().from(requirements).where(eq9(requirements.id, m.requirementId)).limit(1);
+      const [prop] = await db.select().from(properties).where(eq10(properties.id, m.propertyId)).limit(1);
+      const [req] = await db.select().from(requirements).where(eq10(requirements.id, m.requirementId)).limit(1);
       if (!prop || !req) {
-        await db.delete(propertyMatches).where(eq9(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq10(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
@@ -23904,12 +24563,12 @@ async function recalculateAndCleanupMatches() {
       const newScore = exp ? exp.score : 0;
       const hasBlockers = exp ? exp.blockers.length > 0 : true;
       if (newScore < 80 || hasBlockers) {
-        await db.delete(propertyMatches).where(eq9(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq10(propertyMatches.id, m.id));
         deletedCount++;
       } else {
         const storedScore = parseFloat(String(m.matchScore));
         if (Math.abs(storedScore - newScore) > 0.5) {
-          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado v28.0: ${newScore.toFixed(0)}/100` }).where(eq9(propertyMatches.id, m.id));
+          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado v28.0: ${newScore.toFixed(0)}/100` }).where(eq10(propertyMatches.id, m.id));
           updatedCount++;
         }
       }
@@ -23982,7 +24641,7 @@ import cron from "node-cron";
 import path9 from "path";
 import fs9 from "fs";
 import { fileURLToPath } from "url";
-import { gte as gte2, and as and7, eq as eq10, sql as sql8, desc as desc4 } from "drizzle-orm";
+import { gte as gte2, and as and8, eq as eq11, sql as sql9, desc as desc5 } from "drizzle-orm";
 function getBogotaDateString(d = /* @__PURE__ */ new Date()) {
   return d.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
 }
@@ -23995,9 +24654,9 @@ async function acquireBroadcastLock(targetGroup, tipCategory, dateBogota, force 
     }
     if (!force) {
       const existing = await db.select().from(dailyBroadcasts).where(
-        and7(
-          eq10(dailyBroadcasts.dateBogota, dateBogota),
-          eq10(dailyBroadcasts.targetGroup, targetGroup)
+        and8(
+          eq11(dailyBroadcasts.dateBogota, dateBogota),
+          eq11(dailyBroadcasts.targetGroup, targetGroup)
         )
       ).limit(1);
       if (existing.length > 0) {
@@ -24029,7 +24688,7 @@ async function acquireBroadcastLock(targetGroup, tipCategory, dateBogota, force 
       set: {
         tipCategory,
         status: "in_progress",
-        createdAt: sql8`NOW()`
+        createdAt: sql9`NOW()`
       }
     }).returning();
     return { allowed: true, broadcastId: inserted?.id };
@@ -24053,7 +24712,7 @@ async function completeBroadcast(broadcastId, data) {
       voiceText: data.voiceText,
       captionText: data.captionText,
       status: "completed"
-    }).where(eq10(dailyBroadcasts.id, broadcastId));
+    }).where(eq11(dailyBroadcasts.id, broadcastId));
     console.log(`[CRON-PERSISTENCE] \u2705 Difusi\xF3n #${broadcastId} asentada con \xE9xito en PostgreSQL: "${data.topicTitle}".`);
   } catch (err) {
     console.error(`[CRON-PERSISTENCE] Error completando difusi\xF3n #${broadcastId}:`, err?.message || err);
@@ -24067,7 +24726,7 @@ async function failBroadcast(broadcastId, reason) {
     await db.update(dailyBroadcasts).set({
       topicTitle: `Error: ${reason}`,
       status: "failed"
-    }).where(eq10(dailyBroadcasts.id, broadcastId));
+    }).where(eq11(dailyBroadcasts.id, broadcastId));
   } catch (err) {
     console.warn(`[CRON-PERSISTENCE] Error marcando fallo en difusi\xF3n #${broadcastId}:`, err?.message);
   }
@@ -24079,7 +24738,7 @@ async function getRecentBroadcastTopics(limit = 30) {
     const rows = await db.select({
       dateBogota: dailyBroadcasts.dateBogota,
       topicTitle: dailyBroadcasts.topicTitle
-    }).from(dailyBroadcasts).where(eq10(dailyBroadcasts.status, "completed")).orderBy(desc4(dailyBroadcasts.createdAt)).limit(limit);
+    }).from(dailyBroadcasts).where(eq11(dailyBroadcasts.status, "completed")).orderBy(desc5(dailyBroadcasts.createdAt)).limit(limit);
     return rows;
   } catch (err) {
     console.warn("[CRON-TOPICS] Error leyendo historial de temas de PostgreSQL:", err?.message);
@@ -24092,7 +24751,7 @@ async function getRecentImageFiles(limit = 3) {
     if (!db) return [];
     const rows = await db.select({
       imageFileName: dailyBroadcasts.imageFileName
-    }).from(dailyBroadcasts).where(and7(eq10(dailyBroadcasts.status, "completed"), sql8`image_file_name IS NOT NULL`)).orderBy(desc4(dailyBroadcasts.createdAt)).limit(limit);
+    }).from(dailyBroadcasts).where(and8(eq11(dailyBroadcasts.status, "completed"), sql9`image_file_name IS NOT NULL`)).orderBy(desc5(dailyBroadcasts.createdAt)).limit(limit);
     return rows.map((r) => r.imageFileName).filter(Boolean);
   } catch {
     return [];
@@ -24812,9 +25471,9 @@ async function getLiveMarketStats() {
     const db = await getDb();
     if (!db) throw new Error("Database not connected");
     const [propCountRes, reqCountRes, matchCountRes] = await Promise.all([
-      db.select({ count: sql8`count(*)::int` }).from(properties).where(eq10(properties.available, true)),
-      db.select({ count: sql8`count(*)::int` }).from(requirements).where(eq10(requirements.status, "active")),
-      db.select({ count: sql8`count(*)::int` }).from(propertyMatches).where(gte2(propertyMatches.matchScore, "80"))
+      db.select({ count: sql9`count(*)::int` }).from(properties).where(eq11(properties.available, true)),
+      db.select({ count: sql9`count(*)::int` }).from(requirements).where(eq11(requirements.status, "active")),
+      db.select({ count: sql9`count(*)::int` }).from(propertyMatches).where(gte2(propertyMatches.matchScore, "80"))
     ]);
     const totalProps = propCountRes[0]?.count || 0;
     const totalReqs = reqCountRes[0]?.count || 0;
@@ -26774,7 +27433,7 @@ init_matching();
 init_voiceTranscription();
 init_storage();
 import { z as z4 } from "zod";
-import { eq as eq11, and as and8, desc as desc5, sql as sql9, inArray } from "drizzle-orm";
+import { eq as eq12, and as and9, desc as desc6, sql as sql10, inArray as inArray2 } from "drizzle-orm";
 import axios7 from "axios";
 import fs10 from "fs";
 import path10 from "path";
@@ -26784,7 +27443,7 @@ init_trpc();
 init_db();
 init_schema();
 import { z as z3 } from "zod";
-import { eq as eq8, desc as desc3, ilike as ilike2, or as or4, and as and5 } from "drizzle-orm";
+import { eq as eq9, desc as desc4, ilike as ilike2, or as or4, and as and6 } from "drizzle-orm";
 import { TRPCError as TRPCError4 } from "@trpc/server";
 var propertyInputSchema = z3.object({
   name: z3.string().min(2),
@@ -27193,13 +27852,13 @@ var propertiesRouter = router({
       );
     }
     if (input?.type) {
-      whereConditions.push(eq8(properties.propertyType, input.type));
+      whereConditions.push(eq9(properties.propertyType, input.type));
     }
     if (input?.transactionType) {
-      whereConditions.push(eq8(properties.transactionType, input.transactionType));
+      whereConditions.push(eq9(properties.transactionType, input.transactionType));
     }
-    whereConditions.push(eq8(properties.available, true));
-    const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and5(...whereConditions) : void 0).orderBy(desc3(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
+    whereConditions.push(eq9(properties.available, true));
+    const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and6(...whereConditions) : void 0).orderBy(desc4(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
     const items = await query;
     return items;
   }),
@@ -27211,9 +27870,9 @@ var propertiesRouter = router({
     }
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const item = await db.select().from(properties).where(eq8(properties.id, input.id)).limit(1);
+    const item = await db.select().from(properties).where(eq9(properties.id, input.id)).limit(1);
     if (item.length === 0) throw new TRPCError4({ code: "NOT_FOUND" });
-    const images = await db.select().from(propertyImages).where(eq8(propertyImages.propertyId, input.id)).orderBy(propertyImages.displayOrder);
+    const images = await db.select().from(propertyImages).where(eq9(propertyImages.propertyId, input.id)).orderBy(propertyImages.displayOrder);
     const result = {
       ...item[0],
       imagesList: images
@@ -27342,24 +28001,24 @@ ${input.text || "Ver documento PDF adjunto"}`;
   })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq8(properties.id, input.id)).limit(1);
+    const existing = await db.select().from(properties).where(eq9(properties.id, input.id)).limit(1);
     if (existing.length === 0) throw new TRPCError4({ code: "NOT_FOUND" });
     if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
       throw new TRPCError4({ code: "FORBIDDEN" });
     }
-    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq8(properties.id, input.id)).returning();
+    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq9(properties.id, input.id)).returning();
     invalidatePropertiesListCache();
     return updated[0];
   }),
   delete: publicProcedure.input(z3.object({ id: z3.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq8(properties.id, input.id)).limit(1);
+    const existing = await db.select().from(properties).where(eq9(properties.id, input.id)).limit(1);
     if (existing.length === 0) throw new TRPCError4({ code: "NOT_FOUND" });
     if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
       throw new TRPCError4({ code: "FORBIDDEN" });
     }
-    await db.delete(properties).where(eq8(properties.id, input.id));
+    await db.delete(properties).where(eq9(properties.id, input.id));
     invalidatePropertiesListCache();
     return { success: true };
   }),
@@ -27373,12 +28032,12 @@ ${input.text || "Ver documento PDF adjunto"}`;
       if (cachedAdminMyList && now - cachedAdminMyListTime < 18e4) {
         return cachedAdminMyList;
       }
-      const data = await db.select(propertyFields).from(properties).orderBy(desc3(properties.id));
+      const data = await db.select(propertyFields).from(properties).orderBy(desc4(properties.id));
       cachedAdminMyList = data;
       cachedAdminMyListTime = now;
       return data;
     }
-    return await db.select(propertyFields).from(properties).where(eq8(properties.agentId, user.id)).orderBy(desc3(properties.id));
+    return await db.select(propertyFields).from(properties).where(eq9(properties.agentId, user.id)).orderBy(desc4(properties.id));
   })
 });
 
@@ -27412,7 +28071,7 @@ async function processUnresolvedMatches() {
       try {
         const exp = explicarMatch(task.requirement, task.property);
         if (db) {
-          await db.update(propertyMatches).set({ matchExplanation: exp }).where(eq11(propertyMatches.id, task.id));
+          await db.update(propertyMatches).set({ matchExplanation: exp }).where(eq12(propertyMatches.id, task.id));
         }
       } catch (err) {
       }
@@ -27481,7 +28140,7 @@ var janIARouter = router({
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      let conversation = await db.select().from(conversations).where(eq11(conversations.sessionId, input.sessionId)).limit(1);
+      let conversation = await db.select().from(conversations).where(eq12(conversations.sessionId, input.sessionId)).limit(1);
       let conversationId;
       if (conversation.length === 0) {
         const insertData = {
@@ -27496,11 +28155,32 @@ var janIARouter = router({
       } else {
         conversationId = conversation[0].id;
         if (ctx.user && !conversation[0].userId) {
-          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq11(conversations.id, conversationId));
+          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq12(conversations.id, conversationId));
         }
       }
       const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
       const mockUserName = ctx.user ? ctx.user.name ?? void 0 : "Usuario Web";
+      const isAdmin = !!ctx.user && (ctx.user.role === "admin" || ctx.user.isAdmin === true);
+      const { isMatchSearchQuery: isMatchSearchQuery2, executeAdminMatchSearch: executeAdminMatchSearch2 } = await Promise.resolve().then(() => (init_adminMatchAssistantService(), adminMatchAssistantService_exports));
+      if (isMatchSearchQuery2(input.message, isAdmin)) {
+        const matchResult = await executeAdminMatchSearch2(input.message, isAdmin);
+        if (matchResult.formattedReport) {
+          await db.insert(messages).values({
+            conversationId,
+            role: "janIA",
+            content: matchResult.formattedReport
+          });
+          return {
+            response: matchResult.formattedReport,
+            conversationId,
+            wantsVoice: false,
+            voiceResponse: matchResult.formattedReport,
+            matches: matchResult.matches,
+            totalFound: matchResult.totalFound,
+            queryType: matchResult.queryType
+          };
+        }
+      }
       const lowerMsg = input.message.toLowerCase();
       const isListingData = (lowerMsg.includes("vendo") || lowerMsg.includes("busco") || lowerMsg.includes("ofrezco") || lowerMsg.includes("necesito")) && (lowerMsg.includes("apto") || lowerMsg.includes("apartamento") || lowerMsg.includes("casa") || lowerMsg.includes("lote") || lowerMsg.includes("local") || lowerMsg.includes("bodega") || lowerMsg.includes("oficina") || lowerMsg.includes("finca"));
       let janIAResponse = "";
@@ -27594,7 +28274,7 @@ ${liveStats}${userContextInstruction}
 1. Eres JanIA Match, la consultora inmobiliaria senior e Inteligencia Artificial de VECY BIENES RA\xCDCES. Posees alto criterio legal, financiero y comercial inmobiliario en Colombia.
 2. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa, humana y estructurada en Markdown.
 3. FORMATO OBLIGATORIO: Responde DIRECTAMENTE con tu texto conversacional. EST\xC1 ESTRICTAMENTE PROHIBIDO emitir objetos JSON, llaves {}, o campos como "shouldSendDM", "missingFields", "reactionEmoji", "wantsVoice" o "voiceResponse". Habla como un ser humano experto en bienes ra\xEDces.`;
-        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq11(messages.conversationId, conversationId)).orderBy(desc5(messages.createdAt)).limit(6);
+        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq12(messages.conversationId, conversationId)).orderBy(desc6(messages.createdAt)).limit(6);
         const formattedHistory = recentHistory.reverse().map((m) => ({
           role: m.role === "janIA" ? "assistant" : "user",
           content: m.content
@@ -27633,7 +28313,7 @@ ${liveStats}${userContextInstruction}
       await db.update(conversations).set({
         lastMessage: janIAResponse,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq11(conversations.id, conversationId));
+      }).where(eq12(conversations.id, conversationId));
       return {
         content: janIAResponse,
         wantsVoice,
@@ -27651,7 +28331,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).where(eq11(conversations.userId, String(ctx.user.id))).orderBy(desc5(conversations.updatedAt));
+      return await db.select().from(conversations).where(eq12(conversations.userId, String(ctx.user.id))).orderBy(desc6(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting user conversations:", error);
       return [];
@@ -27662,7 +28342,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).orderBy(desc5(conversations.updatedAt));
+      return await db.select().from(conversations).orderBy(desc6(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting all conversations:", error);
       return [];
@@ -27673,9 +28353,9 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      const conv = await db.select().from(conversations).where(eq11(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq12(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length === 0) return [];
-      return await db.select().from(messages).where(eq11(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
+      return await db.select().from(messages).where(eq12(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
     } catch (error) {
       console.error("Error getting conversation messages:", error);
       return [];
@@ -27686,10 +28366,10 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const conv = await db.select().from(conversations).where(eq11(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq12(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length > 0) {
-        await db.delete(messages).where(eq11(messages.conversationId, conv[0].id));
-        await db.delete(conversations).where(eq11(conversations.id, conv[0].id));
+        await db.delete(messages).where(eq12(messages.conversationId, conv[0].id));
+        await db.delete(conversations).where(eq12(conversations.id, conv[0].id));
       }
       return { success: true };
     } catch (error) {
@@ -27764,7 +28444,7 @@ ${liveStats}${userContextInstruction}
         pdfMimeType
       );
       const analysis = result.response && result.response.trim() !== "" ? (result.dmResponse ? result.dmResponse + "\n\n" : "") + result.response : result.dmResponse || result.response;
-      const conversation = await db.select().from(conversations).where(eq11(conversations.sessionId, input.sessionId)).limit(1);
+      const conversation = await db.select().from(conversations).where(eq12(conversations.sessionId, input.sessionId)).limit(1);
       if (conversation.length > 0) {
         const conversationId = conversation[0].id;
         await db.insert(messages).values({
@@ -27783,7 +28463,7 @@ ${liveStats}${userContextInstruction}
         await db.update(conversations).set({
           lastMessage: analysis,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq11(conversations.id, conversationId));
+        }).where(eq12(conversations.id, conversationId));
       }
       return {
         analysis
@@ -27803,7 +28483,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const matches = await db.select().from(propertyMatches).where(eq11(propertyMatches.requirementId, input.requirementId)).orderBy(desc5(propertyMatches.matchScore)).limit(input.limit);
+      const matches = await db.select().from(propertyMatches).where(eq12(propertyMatches.requirementId, input.requirementId)).orderBy(desc6(propertyMatches.matchScore)).limit(input.limit);
       return matches;
     } catch (error) {
       console.error("Error getting property matches:", error);
@@ -27916,7 +28596,7 @@ ${liveStats}${userContextInstruction}
           status: requirements.status,
           createdAt: requirements.createdAt
         }
-      }).from(propertyMatches).innerJoin(properties, eq11(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq11(propertyMatches.requirementId, requirements.id)).where(sql9`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
+      }).from(propertyMatches).innerJoin(properties, eq12(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq12(propertyMatches.requirementId, requirements.id)).where(sql10`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
             AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) 
             AND (${properties.available} IS NULL OR ${properties.available} = true)
             AND (${requirements.status} IS NULL OR CAST(${requirements.status} AS TEXT) != 'expired')
@@ -27926,14 +28606,14 @@ ${liveStats}${userContextInstruction}
               COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt}) >= NOW() - INTERVAL '15 days'
               AND COALESCE(${requirements.fechaUltimaPublicacion}, ${requirements.createdAt}) >= NOW() - INTERVAL '15 days'
             )
-            AND NOT (${properties.rawText} ~* '(\\m(busco|buscamos|se busca|estoy buscando|para compra ya)\\M)')`).orderBy(desc5(propertyMatches.id)).limit(800);
+            AND NOT (${properties.rawText} ~* '(\\m(busco|buscamos|se busca|estoy buscando|para compra ya)\\M)')`).orderBy(desc6(propertyMatches.id)).limit(800);
       const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
       const imagesMap = {};
       if (propIds.length > 0) {
         const imgs = await db.select({
           propertyId: propertyImages.propertyId,
           imageUrl: propertyImages.imageUrl
-        }).from(propertyImages).where(inArray(propertyImages.propertyId, propIds));
+        }).from(propertyImages).where(inArray2(propertyImages.propertyId, propIds));
         for (const img of imgs) {
           if (!imagesMap[img.propertyId]) imagesMap[img.propertyId] = [];
           imagesMap[img.propertyId].push(img.imageUrl);
@@ -27991,7 +28671,7 @@ ${liveStats}${userContextInstruction}
           broker: propertyPublicationHistory.broker,
           portal: propertyPublicationHistory.portal,
           grupo: propertyPublicationHistory.grupo
-        }).from(propertyPublicationHistory).where(inArray(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc5(propertyPublicationHistory.fecha));
+        }).from(propertyPublicationHistory).where(inArray2(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc6(propertyPublicationHistory.fecha));
         const historyMap = /* @__PURE__ */ new Map();
         for (const h of histories) {
           let list = historyMap.get(h.propertyId);
@@ -28081,7 +28761,7 @@ ${liveStats}${userContextInstruction}
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const existingProp = await db.select().from(properties).where(eq11(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
+    const existingProp = await db.select().from(properties).where(eq12(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
     const sanitizeNumeric = (val) => {
       if (val === void 0 || val === null) return null;
       let s = String(val).trim();
@@ -28203,7 +28883,7 @@ ${liveStats}${userContextInstruction}
     if (hasAmenitiesChange) {
       updateData.amenities = mergedAmenities;
     }
-    await db.update(properties).set(updateData).where(eq11(properties.id, input.propertyId));
+    await db.update(properties).set(updateData).where(eq12(properties.id, input.propertyId));
     console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const hasPhone = Boolean(input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp);
     const hasName = Boolean(input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp);
@@ -28265,7 +28945,7 @@ ${liveStats}${userContextInstruction}
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const existingReq = await db.select().from(requirements).where(eq11(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
+    const existingReq = await db.select().from(requirements).where(eq12(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
     const sanitizeNumeric = (val) => {
       if (val === void 0 || val === null) return null;
       let s = String(val).trim();
@@ -28359,7 +29039,7 @@ ${liveStats}${userContextInstruction}
     if (hasCaractChange) {
       updateData.caracteristicasDeseadas = mergedCaract;
     }
-    await db.update(requirements).set(updateData).where(eq11(requirements.id, input.requirementId));
+    await db.update(requirements).set(updateData).where(eq12(requirements.id, input.requirementId));
     console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const hasPhone = Boolean(input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp);
     const hasName = Boolean(input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp);
@@ -28452,7 +29132,7 @@ ${liveStats}${userContextInstruction}
       if (input.action === "exitoso" || input.action === "en_negociacion") {
         if (input.matchId) {
           try {
-            await db.update(propertyMatches).set({ status: "interested" }).where(eq11(propertyMatches.id, input.matchId));
+            await db.update(propertyMatches).set({ status: "interested" }).where(eq12(propertyMatches.id, input.matchId));
           } catch (updErr) {
             console.warn(`[JanIA-Feedback] Match #${input.matchId} error al marcar interested:`, updErr.message);
           }
@@ -28460,9 +29140,9 @@ ${liveStats}${userContextInstruction}
         if (input.propertyId && input.requirementId) {
           try {
             await db.update(propertyMatches).set({ status: "interested" }).where(
-              and8(
-                eq11(propertyMatches.propertyId, input.propertyId),
-                eq11(propertyMatches.requirementId, input.requirementId)
+              and9(
+                eq12(propertyMatches.propertyId, input.propertyId),
+                eq12(propertyMatches.requirementId, input.requirementId)
               )
             );
           } catch (updErrPair) {
@@ -28473,7 +29153,7 @@ ${liveStats}${userContextInstruction}
       if (input.action === "rechazado") {
         if (input.matchId) {
           try {
-            await db.update(propertyMatches).set({ status: "rejected" }).where(eq11(propertyMatches.id, input.matchId));
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq12(propertyMatches.id, input.matchId));
           } catch (delErr) {
             console.warn(`[JanIA-Feedback] Match #${input.matchId} error al marcar rejected:`, delErr.message);
           }
@@ -28481,9 +29161,9 @@ ${liveStats}${userContextInstruction}
         if (input.propertyId && input.requirementId) {
           try {
             await db.update(propertyMatches).set({ status: "rejected" }).where(
-              and8(
-                eq11(propertyMatches.propertyId, input.propertyId),
-                eq11(propertyMatches.requirementId, input.requirementId)
+              and9(
+                eq12(propertyMatches.propertyId, input.propertyId),
+                eq12(propertyMatches.requirementId, input.requirementId)
               )
             );
           } catch (delErrPair) {
@@ -28499,8 +29179,8 @@ ${liveStats}${userContextInstruction}
             estadoComercial: nuevoEstado,
             vigenciaIa: "NO_DISPONIBLE",
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq11(properties.id, input.propertyId));
-          await db.delete(propertyMatches).where(eq11(propertyMatches.propertyId, input.propertyId));
+          }).where(eq12(properties.id, input.propertyId));
+          await db.delete(propertyMatches).where(eq12(propertyMatches.propertyId, input.propertyId));
           invalidatePropertiesListCache();
           console.log(`[JanIA-Feedback] Propiedad #${input.propertyId} marcada como ${nuevoEstado} y purgada de matches`);
         }
@@ -28511,8 +29191,8 @@ ${liveStats}${userContextInstruction}
             standByDirectoVecy: true,
             estadoComercial: "STANDBY",
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq11(properties.id, input.propertyId));
-          await db.delete(propertyMatches).where(eq11(propertyMatches.propertyId, input.propertyId));
+          }).where(eq12(properties.id, input.propertyId));
+          await db.delete(propertyMatches).where(eq12(propertyMatches.propertyId, input.propertyId));
           invalidatePropertiesListCache();
           console.log(`[JanIA-Feedback] Inmueble #${input.propertyId} enviado a secci\xF3n Inmuebles StandBy (No Tercer\xEDa / No Referidos)`);
         }
@@ -28522,8 +29202,8 @@ ${liveStats}${userContextInstruction}
             aceptaTerceria: false,
             standByDirectoVecy: true,
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq11(requirements.id, input.requirementId));
-          await db.delete(propertyMatches).where(eq11(propertyMatches.requirementId, input.requirementId));
+          }).where(eq12(requirements.id, input.requirementId));
+          await db.delete(propertyMatches).where(eq12(propertyMatches.requirementId, input.requirementId));
           cachedRequirementsData = null;
           cachedRequirementsTime = 0;
           console.log(`[JanIA-Feedback] Demanda #${input.requirementId} enviada a Standby Directo Vecy (No Tercer\xEDa / No Referidos)`);
@@ -28554,8 +29234,8 @@ ${liveStats}${userContextInstruction}
       estadoComercial: nuevoEstado,
       vigenciaIa: "NO_DISPONIBLE",
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq11(properties.id, input.propertyId));
-    await db.delete(propertyMatches).where(eq11(propertyMatches.propertyId, input.propertyId));
+    }).where(eq12(properties.id, input.propertyId));
+    await db.delete(propertyMatches).where(eq12(propertyMatches.propertyId, input.propertyId));
     try {
       await db.insert(matchFeedback).values({
         matchId: input.matchId || null,
@@ -28588,7 +29268,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      const terms = await db.select().from(inmobiliarioLexicon).orderBy(desc5(inmobiliarioLexicon.frecuenciaUso)).limit(100);
+      const terms = await db.select().from(inmobiliarioLexicon).orderBy(desc6(inmobiliarioLexicon.frecuenciaUso)).limit(100);
       return terms;
     } catch (e) {
       console.error("[JanIA-Lexicon] Error obteniendo l\xE9xico:", e.message);
@@ -28615,7 +29295,7 @@ ${liveStats}${userContextInstruction}
       }).onConflictDoUpdate({
         target: inmobiliarioLexicon.terminoColoquial,
         set: {
-          frecuenciaUso: sql9`${inmobiliarioLexicon.frecuenciaUso} + 1`,
+          frecuenciaUso: sql10`${inmobiliarioLexicon.frecuenciaUso} + 1`,
           updatedAt: /* @__PURE__ */ new Date()
         }
       }).returning();
@@ -28668,7 +29348,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const zoneProperties = await db.select().from(properties).where(eq11(properties.zone, input.zone));
+      const zoneProperties = await db.select().from(properties).where(eq12(properties.zone, input.zone));
       if (zoneProperties.length === 0) {
         return {
           zone: input.zone,
@@ -28763,13 +29443,13 @@ ${liveStats}${userContextInstruction}
       } else {
         const db = await getDb();
         if (db) {
-          const [statusRow] = await db.select().from(pendingSessions).where(eq11(pendingSessions.jid, "system:bot_status")).limit(1);
+          const [statusRow] = await db.select().from(pendingSessions).where(eq12(pendingSessions.jid, "system:bot_status")).limit(1);
           const sessionData = statusRow?.sessionData;
           if (sessionData?.phone) phone = sessionData.phone;
-          const [tp] = await db.select({ count: sql9`count(*)::int` }).from(properties);
-          const [tr] = await db.select({ count: sql9`count(*)::int` }).from(requirements);
-          const [tm] = await db.select({ count: sql9`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql9`CAST("matchScore" AS NUMERIC) >= 80`);
-          const [pm] = await db.select({ count: sql9`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql9`CAST("matchScore" AS NUMERIC) >= 95`);
+          const [tp] = await db.select({ count: sql10`count(*)::int` }).from(properties);
+          const [tr] = await db.select({ count: sql10`count(*)::int` }).from(requirements);
+          const [tm] = await db.select({ count: sql10`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql10`CAST("matchScore" AS NUMERIC) >= 80`);
+          const [pm] = await db.select({ count: sql10`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql10`CAST("matchScore" AS NUMERIC) >= 95`);
           totalProps = tp?.count || 0;
           totalReqs = tr?.count || 0;
           totalMatches = tm?.count || 0;
@@ -28850,7 +29530,7 @@ ${liveStats}${userContextInstruction}
         areaMin: requirements.areaMin,
         status: requirements.status,
         createdAt: requirements.createdAt
-      }).from(requirements).orderBy(desc5(requirements.id));
+      }).from(requirements).orderBy(desc6(requirements.id));
       const enrichedData = data.map((r) => {
         let phone = r.idUsuarioWhatsapp;
         let name = r.nombreUsuarioWhatsapp;
@@ -28894,20 +29574,20 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const [propTotal] = await db.select({ count: sql9`count(*)::int` }).from(properties);
-      const [propActive] = await db.select({ count: sql9`count(*)::int` }).from(properties).where(sql9`${properties.available} = true`);
-      const [reqTotal] = await db.select({ count: sql9`count(*)::int` }).from(requirements);
-      const [reqActive] = await db.select({ count: sql9`count(*)::int` }).from(requirements).where(eq11(requirements.status, "active"));
-      const [matchTotal] = await db.select({ count: sql9`count(*)::int` }).from(propertyMatches);
-      const [convTotal] = await db.select({ count: sql9`count(*)::int` }).from(conversations);
-      const monthlyProps = await db.execute(sql9`
+      const [propTotal] = await db.select({ count: sql10`count(*)::int` }).from(properties);
+      const [propActive] = await db.select({ count: sql10`count(*)::int` }).from(properties).where(sql10`${properties.available} = true`);
+      const [reqTotal] = await db.select({ count: sql10`count(*)::int` }).from(requirements);
+      const [reqActive] = await db.select({ count: sql10`count(*)::int` }).from(requirements).where(eq12(requirements.status, "active"));
+      const [matchTotal] = await db.select({ count: sql10`count(*)::int` }).from(propertyMatches);
+      const [convTotal] = await db.select({ count: sql10`count(*)::int` }).from(conversations);
+      const monthlyProps = await db.execute(sql10`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM properties
         WHERE "createdAt" >= now() - interval '6 months'
         GROUP BY 1 ORDER BY 1
       `);
-      const monthlyReqs = await db.execute(sql9`
+      const monthlyReqs = await db.execute(sql10`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM requirements
@@ -29239,6 +29919,17 @@ Devuelve \xDANICAMENTE el objeto JSON sin bloques de c\xF3digo ni comentarios.`;
     }).returning();
     invalidateRequirementsCache();
     return inserted[0];
+  }),
+  /**
+   * Búsqueda inteligente de MATCHES exclusiva para administradores (Web & API) (v32.93)
+   */
+  adminMatchSearch: publicProcedure.input(z4.object({
+    query: z4.string(),
+    secretKey: z4.string().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const isAdmin = !!ctx.user && (ctx.user.role === "admin" || ctx.user.isAdmin === true) || input.secretKey === "vecy-admin-secret-2026";
+    const { executeAdminMatchSearch: executeAdminMatchSearch2 } = await Promise.resolve().then(() => (init_adminMatchAssistantService(), adminMatchAssistantService_exports));
+    return await executeAdminMatchSearch2(input.query, isAdmin);
   })
 });
 
@@ -29247,7 +29938,7 @@ init_trpc();
 init_db();
 init_schema();
 import { z as z5 } from "zod";
-import { eq as eq12 } from "drizzle-orm";
+import { eq as eq13 } from "drizzle-orm";
 
 // server/github-integration.ts
 import { Octokit } from "@octokit/rest";
@@ -29623,7 +30314,7 @@ var githubRouter = router({
     if (!db) throw new Error("Database not available");
     try {
       const { octokit, user } = await initializeGitHubIntegration(GITHUB_TOKEN);
-      const adminUser = await db.select().from(users).where(eq12(users.email, "vecybienesraices@gmail.com")).limit(1);
+      const adminUser = await db.select().from(users).where(eq13(users.email, "vecybienesraices@gmail.com")).limit(1);
       const adminId = adminUser.length > 0 ? adminUser[0].id : 1;
       let reposToSync = input.repositories || [];
       if (reposToSync.length === 0) {
@@ -29640,14 +30331,14 @@ var githubRouter = router({
             repoName
           );
           if (propertyData) {
-            const existing = await db.select().from(properties).where(eq12(properties.sourceRepository, repoName)).limit(1);
+            const existing = await db.select().from(properties).where(eq13(properties.sourceRepository, repoName)).limit(1);
             if (existing.length > 0) {
               await db.update(properties).set({
                 ...propertyData,
                 agentId: adminId,
                 sourceRepository: repoName,
                 lastSyncedAt: /* @__PURE__ */ new Date()
-              }).where(eq12(properties.id, existing[0].id));
+              }).where(eq13(properties.id, existing[0].id));
             } else {
               await db.insert(properties).values({
                 ...propertyData,
@@ -29737,7 +30428,7 @@ init_db();
 init_db();
 init_schema();
 import { z as z6 } from "zod";
-import { eq as eq13 } from "drizzle-orm";
+import { eq as eq14 } from "drizzle-orm";
 var imagesRouter = {
   /**
    * Upload image to S3 and save to database
@@ -29762,7 +30453,7 @@ var imagesRouter = {
       if (input.isMainImage) {
         const db = await getDb();
         if (db) {
-          await db.update(propertyImages).set({ isMainImage: false }).where(eq13(propertyImages.propertyId, input.propertyId));
+          await db.update(propertyImages).set({ isMainImage: false }).where(eq14(propertyImages.propertyId, input.propertyId));
         }
       }
       const images = await getPropertyImages(input.propertyId);
@@ -29827,7 +30518,7 @@ var imagesRouter = {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq13(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq14(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Image order updated successfully"
@@ -29848,8 +30539,8 @@ var imagesRouter = {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ isMainImage: false }).where(eq13(propertyImages.propertyId, input.propertyId));
-      await db.update(propertyImages).set({ isMainImage: true }).where(eq13(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ isMainImage: false }).where(eq14(propertyImages.propertyId, input.propertyId));
+      await db.update(propertyImages).set({ isMainImage: true }).where(eq14(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Main image updated successfully"
@@ -29865,7 +30556,7 @@ init_trpc();
 init_db();
 init_schema();
 import { z as z7 } from "zod";
-import { eq as eq14, and as and9, desc as desc6, isNull as isNull2 } from "drizzle-orm";
+import { eq as eq15, and as and10, desc as desc7, isNull as isNull2 } from "drizzle-orm";
 import { TRPCError as TRPCError5 } from "@trpc/server";
 var agentRouter = router({
   // Public: Get agent profile for branding (Agenda Pro, Personal Shops)
@@ -29878,42 +30569,42 @@ var agentRouter = router({
       customLogoUrl: users.customLogoUrl,
       themeConfig: users.themeConfig,
       subdomain: users.subdomain
-    }).from(users).where(eq14(users.id, input.id)).limit(1);
+    }).from(users).where(eq15(users.id, input.id)).limit(1);
     if (agent.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Agent not found" });
     return agent[0];
   }),
   getMyProperties: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(eq14(properties.agentId, ctx.user.id)).orderBy(desc6(properties.createdAt));
+    return await db.select().from(properties).where(eq15(properties.agentId, ctx.user.id)).orderBy(desc7(properties.createdAt));
   }),
   // For testing: Allows an agent to claim a property that has no agent assigned
   claimProperty: protectedProcedure.input(z7.object({ propertyId: z7.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq14(properties.id, input.propertyId)).limit(1);
+    const property = await db.select().from(properties).where(eq15(properties.id, input.propertyId)).limit(1);
     if (property.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Property not found" });
     if (property[0].agentId) throw new TRPCError5({ code: "FORBIDDEN", message: "Property already has an agent" });
-    await db.update(properties).set({ agentId: ctx.user.id }).where(eq14(properties.id, input.propertyId));
+    await db.update(properties).set({ agentId: ctx.user.id }).where(eq15(properties.id, input.propertyId));
     return { success: true };
   }),
   getAvailablePropertiesToClaim: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(isNull2(properties.agentId)).orderBy(desc6(properties.createdAt));
+    return await db.select().from(properties).where(isNull2(properties.agentId)).orderBy(desc7(properties.createdAt));
   }),
   generateStealthLink: protectedProcedure.input(z7.object({ propertyId: z7.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq14(properties.id, input.propertyId)).limit(1);
+    const property = await db.select().from(properties).where(eq15(properties.id, input.propertyId)).limit(1);
     if (property.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Property not found" });
     if (property[0].agentId !== ctx.user.id && ctx.user.role !== "admin") {
       throw new TRPCError5({ code: "FORBIDDEN", message: "You don't own this property" });
     }
     const existingLink = await db.select().from(referralLinks).where(
-      and9(
-        eq14(referralLinks.propertyId, input.propertyId),
-        eq14(referralLinks.agentId, ctx.user.id)
+      and10(
+        eq15(referralLinks.propertyId, input.propertyId),
+        eq15(referralLinks.agentId, ctx.user.id)
       )
     ).limit(1);
     if (existingLink.length > 0) {
@@ -29938,7 +30629,7 @@ var agentRouter = router({
         matriculaInmobiliaria: properties.matriculaInmobiliaria,
         location: properties.location
       }
-    }).from(referralLinks).innerJoin(properties, eq14(referralLinks.propertyId, properties.id)).where(eq14(referralLinks.agentId, ctx.user.id)).orderBy(desc6(referralLinks.createdAt));
+    }).from(referralLinks).innerJoin(properties, eq15(referralLinks.propertyId, properties.id)).where(eq15(referralLinks.agentId, ctx.user.id)).orderBy(desc7(referralLinks.createdAt));
   })
 });
 
@@ -29947,18 +30638,18 @@ init_trpc();
 init_db();
 init_schema();
 import { z as z8 } from "zod";
-import { eq as eq15, sql as sql10 } from "drizzle-orm";
+import { eq as eq16, sql as sql11 } from "drizzle-orm";
 import { TRPCError as TRPCError6 } from "@trpc/server";
 var leadsRouter = router({
   resolveStealthLink: publicProcedure.input(z8.object({ token: z8.string() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq15(referralLinks.token, input.token)).limit(1);
+    const linkRecord = await db.select().from(referralLinks).where(eq16(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
       throw new TRPCError6({ code: "NOT_FOUND", message: "Stealth Link invalido o expirado." });
     }
     const link = linkRecord[0];
-    await db.update(referralLinks).set({ clicks: sql10`${referralLinks.clicks} + 1` }).where(eq15(referralLinks.id, link.id));
+    await db.update(referralLinks).set({ clicks: sql11`${referralLinks.clicks} + 1` }).where(eq16(referralLinks.id, link.id));
     const prop = await db.select({
       id: properties.id,
       name: properties.name,
@@ -29969,7 +30660,7 @@ var leadsRouter = router({
       zone: properties.zone,
       // specifically NOT returning full location/latitude/longitude/matricula
       images: properties.images
-    }).from(properties).where(eq15(properties.id, link.propertyId)).limit(1);
+    }).from(properties).where(eq16(properties.id, link.propertyId)).limit(1);
     if (prop.length === 0) {
       throw new TRPCError6({ code: "NOT_FOUND", message: "Inmueble no disponible." });
     }
@@ -29986,7 +30677,7 @@ var leadsRouter = router({
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq15(referralLinks.token, input.token)).limit(1);
+    const linkRecord = await db.select().from(referralLinks).where(eq16(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
       throw new TRPCError6({ code: "BAD_REQUEST", message: "Token invalido." });
     }
@@ -30118,10 +30809,10 @@ async function createContext(opts) {
         try {
           const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
           const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-          const { eq: eq16 } = await import("drizzle-orm");
+          const { eq: eq17 } = await import("drizzle-orm");
           const db = await getDb2();
           if (db) {
-            await db.update(users2).set({ role: "admin" }).where(eq16(users2.id, user.id));
+            await db.update(users2).set({ role: "admin" }).where(eq17(users2.id, user.id));
             user = { ...user, role: "admin" };
             console.log(`[Auth] \u2705 Admin auto-promocionado: ${user.email}`);
           }
@@ -30135,10 +30826,10 @@ async function createContext(opts) {
       try {
         const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
         const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        const { eq: eq16 } = await import("drizzle-orm");
+        const { eq: eq17 } = await import("drizzle-orm");
         const db = await getDb2();
         if (db) {
-          const existingUser = await db.select().from(users2).where(eq16(users2.openId, "mock-local-user")).limit(1);
+          const existingUser = await db.select().from(users2).where(eq17(users2.openId, "mock-local-user")).limit(1);
           if (existingUser.length > 0) {
             user = existingUser[0];
           } else {
@@ -31135,7 +31826,7 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
     try {
       const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
       const { propertyMatches: propertyMatches3, requirements: requirements2, properties: properties2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq16, gte: gte4 } = await import("drizzle-orm");
+      const { eq: eq17, gte: gte4 } = await import("drizzle-orm");
       const { handleDetectedMatches: handleDetectedMatches2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
       const db = await getDb2();
       if (!db) return res.status(500).send("No DB connection");
@@ -31157,8 +31848,8 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
         let count = 0;
         for (const match of uniqueMatches) {
           try {
-            const [reqRec] = await db.select().from(requirements2).where(eq16(requirements2.id, match.requirementId)).limit(1);
-            const [propRec] = await db.select().from(properties2).where(eq16(properties2.id, match.propertyId)).limit(1);
+            const [reqRec] = await db.select().from(requirements2).where(eq17(requirements2.id, match.requirementId)).limit(1);
+            const [propRec] = await db.select().from(properties2).where(eq17(properties2.id, match.propertyId)).limit(1);
             if (reqRec && propRec) {
               const score = Number(match.matchScore);
               const matchedItem = {

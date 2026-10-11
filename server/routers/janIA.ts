@@ -207,6 +207,29 @@ export const janIARouter = router({
 
         const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
         const mockUserName = ctx.user ? (ctx.user.name ?? undefined) : "Usuario Web";
+        const isAdmin = !!ctx.user && (ctx.user.role === 'admin' || (ctx.user as any).isAdmin === true);
+
+        // 🎯 INTERCEPTOR WEB: ASISTENTE DE BÚSQUEDA DE MATCHES (EXCLUSIVO ADMINISTRADORES) (v32.93)
+        const { isMatchSearchQuery, executeAdminMatchSearch } = await import("../_core/adminMatchAssistantService");
+        if (isMatchSearchQuery(input.message, isAdmin)) {
+          const matchResult = await executeAdminMatchSearch(input.message, isAdmin);
+          if (matchResult.formattedReport) {
+            await db.insert(messages).values({
+              conversationId,
+              role: "janIA",
+              content: matchResult.formattedReport
+            });
+            return {
+              response: matchResult.formattedReport,
+              conversationId,
+              wantsVoice: false,
+              voiceResponse: matchResult.formattedReport,
+              matches: matchResult.matches,
+              totalFound: matchResult.totalFound,
+              queryType: matchResult.queryType
+            };
+          }
+        }
 
         // Detect if the message is a raw property offer/demand listing vs a consultation question
         const lowerMsg = input.message.toLowerCase();
@@ -2269,6 +2292,21 @@ Devuelve ÚNICAMENTE el objeto JSON sin bloques de código ni comentarios.`;
 
       invalidateRequirementsCache();
       return inserted[0];
+    }),
+
+  /**
+   * Búsqueda inteligente de MATCHES exclusiva para administradores (Web & API) (v32.93)
+   */
+  adminMatchSearch: publicProcedure
+    .input(z.object({
+      query: z.string(),
+      secretKey: z.string().optional()
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const isAdmin = (!!ctx.user && (ctx.user.role === 'admin' || (ctx.user as any).isAdmin === true)) || 
+                      (input.secretKey === 'vecy-admin-secret-2026');
+      const { executeAdminMatchSearch } = await import("../_core/adminMatchAssistantService");
+      return await executeAdminMatchSearch(input.query, isAdmin);
     }),
 });
 

@@ -7,6 +7,39 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.93 — 11 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+- **Asistente Inteligente de Búsqueda de Matches con JanIA en WhatsApp y Web Exclusivo para Administradores**:
+  - Eduardo instruyó: *"Quiero que JanIA nos ayude en la búsqueda de MATCHES por su chat en whatsapp o en la web pero solo a los adminiostradores. Por ejemplo: Le pasamos un requerimiento y que ella nos encuentre el/los inmueble/s compatible/s o viceversa, le pasamos la OFERTA y nos envía la DEMANDA/s precisas/s, con datos de teléfono y todos o simplemente nos da el número de MATCH y vamos a buscarlo a la mesa de coincidencias como mejor se le fascilite."*
+
+### Diagnóstico Técnico y Solución Aplicada
+1. **Creación del Servicio Maestro `adminMatchAssistantService.ts`**:
+   - En `server/_core/adminMatchAssistantService.ts`: Implementado el motor cognitivo de asistencia de matches con validación de administradores autorizados (`isAuthorizedAdminPhone` para teléfonos de Eduardo Rivera `573192919978`, Jani Alves `573188096811`, línea bróker `573166569719` y sus respectivos LIDs).
+   - Bloqueo y protección de datos para terceros no autorizados con remisión cordial según Ley 1581 de 2012 (Hábeas Data).
+   - Soporte inteligente para 4 tipos de consultas:
+     • Por ID de Match directo (`#M123`, `match 123`).
+     • Por ID de Inmueble (`#P456`, `inmueble 456`).
+     • Por ID de Requerimiento (`#R789`, `demanda 789`).
+     • Por texto libre descriptivo de Oferta o Requerimiento (p. ej. "Apto en Cedritos hasta 500M con 3 habitaciones"), ejecutando cruce con `explicarMatch` y ranking por score de afinidad (85% a 100%).
+   - Generación de respuestas con Score %, ID de Match `#M...`, datos del inmueble/demanda, contacto completo, enlace directo a WhatsApp (`https://wa.me/...`) y enlace de gestión en la Mesa de Coincidencias (`/admin`).
+2. **Integración en WhatsApp Socket (Baileys)**:
+   - En `server/_core/whatsapp-match.ts`: Interceptor en mensajes directos (DMs) de WhatsApp (`isMatchSearchQuery(body)`). Si el remitente es administrador, JanIA procesa la consulta y responde de inmediato con el informe detallado de matches; si no lo es, responde protegiendo la confidencialidad de la red.
+3. **Integración en la Web (tRPC & JanIA Chat)**:
+   - En `server/routers/janIA.ts`: Agregado el procedimiento `adminMatchSearch` protegido por rol de administración y soporte de interceptación dentro de `janIA.chat` para sesiones autenticadas de administradores.
+4. **Mesa de Coincidencias Interactiva en el Frontend**:
+   - En `client/src/components/admin/AdminMatches.tsx`: Agregado el asistente interactivo "JanIA Match Finder" con mutación en tiempo real, botones de consulta rápida de ejemplo, visualización de afinidad, enlaces directos a WhatsApp de los contactos y botón para filtrar y abrir el match en la Mesa de Coincidencias.
+5. **Suite de Pruebas Unitarias de Regresión**:
+   - En `server/__tests__/regression.test.ts`: Añadido test exhaustivo "Doctrina v32.93: Asistente Inteligente de Búsqueda de Matches Exclusivo para Administradores en WhatsApp y Web" validando detección de administradores, parsing de consultas, cruce y formato de salida.
+
+### Verificación y Validación Empírica
+- `npm run check`: 0 errores TypeScript ✅.
+- `npm test`: 179/179 tests aprobados al 100% ✅.
+- `npm run build`: Compilación limpia de cliente y servidor en 20.34s ✅.
+- Versión oficial incrementada a **v32.93** (`32.93.0`).
+
+---
+
 ## 📋 SESIÓN v32.92 — 11 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

@@ -331,6 +331,46 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.93 — Octubre 2026
+
+#### 📌 ASISTENTE INTELIGENTE DE BÚSQUEDA DE MATCHES CON JANIA EN WHATSAPP Y WEB EXCLUSIVO PARA ADMINISTRADORES
+
+**Requerimiento y Objetivos:**
+1. **Asistencia Ejecutiva de Matches para Administradores (Eduardo A. Rivera)**:
+   - Instrucción de Eduardo: *"Quiero que JanIA nos ayude en la búsqueda de MATCHES por su chat en whatsapp o en la web pero solo a los adminiostradores. Por ejemplo: Le pasamos un requerimiento y que ella nos encuentre el/los inmueble/s compatible/s o viceversa, le pasamos la OFERTA y nos envía la DEMANDA/s precisas/s, con datos de teléfono y todos o simplemente nos da el número de MATCH y vamos a buscarlo a la mesa de coincidencias como mejor se le fascilite."*
+2. **Soluciones Implementadas**:
+   - **Servicio Central `adminMatchAssistantService.ts`**:
+     • Filtro de seguridad exclusivo para administradores: verifica teléfonos de Eduardo Rivera (`573192919978`, LID `225954035179724`), Jani Alves (`573188096811`, LIDs `167108705018103`, `182781141344345`, `218820279050385`), Línea Bróker (`573166569719`) y contexto web de rol `admin`.
+     • Bloqueo cortés de seguridad y protección de datos para terceros no autorizados (Ley 1581 / Hábeas Data).
+     • Reconocimiento semántico de 4 tipos de consulta: ID de Match (`#M...`), ID de Inmueble (`#P...`), ID de Requerimiento (`#R...`) y descripción libre en lenguaje natural de oferta o demanda cruzando contra la base de datos con `explicarMatch`.
+     • Salida ejecutiva con Score %, ID de Match `#M...`, datos clave, contacto completo con enlace directo de WhatsApp (`https://wa.me/...`) y enlace de acceso rápido a la Mesa de Coincidencias (`/admin`).
+   - **Integración con WhatsApp Socket (Baileys)**:
+     • En `server/_core/whatsapp-match.ts`: Interceptor en mensajes directos (DMs) que atiende a administradores de forma instantánea.
+   - **Integración Web (tRPC & JanIA Chat)**:
+     • En `server/routers/janIA.ts`: Nuevo procedimiento `adminMatchSearch` protegido por rol administrativo y soporte dentro del procedimiento `janIA.chat`.
+   - **Mesa de Coincidencias Interactiva con JanIA Finder**:
+     • En `client/src/components/admin/AdminMatches.tsx`: Panel asistido con sugerencias rápidas, cálculo de compatibilidad, tarjetas con score y teléfonos, enlaces directos a WhatsApp y botón para filtrar y gestionar directamente en la Mesa de Coincidencias.
+   - **Suite de Pruebas Unitarias de Regresión**:
+     • En `server/__tests__/regression.test.ts`: Test exhaustivo doctrinal validando el flujo completo de consulta y seguridad para administradores.
+
+**Archivos Modificados / Creados:**
+- `server/_core/adminMatchAssistantService.ts`: Servicio maestro del asistente de matches para administradores.
+- `server/_core/whatsapp-match.ts`: Interceptor de WhatsApp en DMs para administradores.
+- `server/routers/janIA.ts`: Procedimiento tRPC `adminMatchSearch` e interceptor web en chat de JanIA.
+- `client/src/components/admin/AdminMatches.tsx`: Asistente interactivo "JanIA Match Finder" en panel admin.
+- `server/__tests__/regression.test.ts`: Pruebas de regresión unitarias de la Doctrina v32.93.
+- `shared/const.ts` & `package.json`: Versión oficial `v32.93` (`32.93.0`).
+- `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`: Registro en bitácora maestra.
+- `.agents/AGENTS.md`: Registro en memoria persistente.
+- `VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md`: Registro en changelog técnico.
+
+**Verificación:**
+- `npm run check`: 0 errores TypeScript ✅
+- `npm test`: 179 de 179 pruebas aprobadas al 100% ✅
+- `npm run build`: Compilación limpia completada con éxito ✅
+
+---
+
 ### 🔖 v32.92 — Octubre 2026
 
 #### 📌 DISEÑO SENIOR SIMÉTRICO, UNIFICACIÓN AUDIOWIDE, ERRADICACIÓN DE CALAVERAS POR DINOSAURIO Y SUPRESIÓN DE CARDS CON SUBTÍTULOS

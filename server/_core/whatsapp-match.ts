@@ -1276,6 +1276,27 @@ export class JaniaMatchBot {
       return;
     }
 
+    // 🎯 INTERCEPTOR ADMIN: ASISTENTE DE BÚSQUEDA DE MATCHES (EXCLUSIVO ADMINISTRADORES) (v32.93)
+    const { isMatchSearchQuery, executeAdminMatchSearch } = await import('./adminMatchAssistantService');
+    const isMatchIntent = isMatchSearchQuery(body, isAdmin);
+    if (isMatchIntent) {
+      const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
+      try {
+        const matchResult = await executeAdminMatchSearch(body, isAdmin);
+        if (matchResult.isMatchQuery && matchResult.formattedReport) {
+          console.log(`[JANIA-MATCH] [DM] Asistente de Matches atendido para ${senderId} (Admin: ${isAdmin}, Matches: ${matchResult.totalFound})`);
+          await this.queuedSend(senderId, matchResult.formattedReport, { quoted: mainMsg, allowDirectMessage: true });
+          const { appendDmHistory } = await import('./janIA');
+          appendDmHistory(senderId, 'user', body);
+          appendDmHistory(senderId, 'assistant', matchResult.formattedReport);
+          await this.logToDb(senderId, 'janIA', matchResult.formattedReport);
+          return;
+        }
+      } finally {
+        stopPresence();
+      }
+    }
+
     // ⚖️ INTERCEPTOR PRIORITARIO DM: LIQUIDACIÓN DE GASTOS NOTARIALES Y ASESORÍA DE FIGURAS JURÍDICAS (v32.74)
     const { executeNotarialAssistanceFromWhatsApp, hasPendingNotarialSession } = await import('./notarialExpenseService');
     const isNotarialContext = 
