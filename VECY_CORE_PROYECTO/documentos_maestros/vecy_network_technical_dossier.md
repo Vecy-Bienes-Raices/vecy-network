@@ -331,6 +331,52 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.94 — Octubre 2026
+
+#### 📌 DIAGNÓSTICO SINCERO E INMEDIATO DE MATCHES EN 15 DÍAS PARA ADMINISTRADORES (CERO FALSAS EXPECTATIVAS)
+
+**Requerimiento y Objetivos:**
+1. **Atención Instantánea y Transparencia sin Dilaciones (Eduardo A. Rivera)**:
+   - Eduardo aportó captura y texto de WhatsApp donde Jani Alves envió un requerimiento de compra de $1.000 MM en efectivo (150-170 m², 3 alcobas, 1-2 parqueaderos, depósito, seguridad 24/7, admin máx $1.300.000, zonas Calle 45 a 116: San Patricio, Chicó Navarra y Rosales) y JanIA respondió con un saludo genérico prometiendo avisar luego sin entregar el resultado en el acto.
+   - Instrucción estricta de Eduardo:
+     *"La idea es que cualquiera de nosotros los administradores podamos pasar una OFERTA o una DEMANDA... y que en los últimos 15 días ella busque en base de datos. Si no hay nada con el 80% que diga que no hay en los últimos 15 días pero que ya quedó en el radar. Cero mentiras."*
+     *"JanIA debe ser sincera y decir si lo encontró en el momento o no y listo pero responder de inmediato y no decir mentiras y dejar esperando el usuario con falsas expectativas. Ok."*
+2. **Soluciones Implementadas**:
+   - **Reconocimiento Integral de Administradores (`isAuthorizedAdminPhone`)**:
+     • Identifica no solo por números telefónicos y LIDs estáticos, sino también por nombre de perfil de WhatsApp (`userName` con "Jani", "Eduardo", "Vecy", "Bróker"), eliminando falsos negativos por rotación dinámica de LIDs de WhatsApp.
+   - **Detección Flexible de Demandas y Ofertas (`isMatchSearchQuery`)**:
+     • Incorporadas expresiones para captar requerimientos complejos (`requerimiento de compra`, `cliente directo`, `buscamos`, `necesitan`, `recursos hasta`, `presupuesto`, etc.) exclusivas para administradores.
+   - **Prevención de Falsos IDs**:
+     • Textos largos (> 50 chars) con atributos inmobiliarios se enrutan a búsqueda libre semántica, evitando que "KR 7" o "CL 100" sean interpretados como IDs de requerimiento o propiedad.
+   - **Soporte Multi-Zona en Demandas**:
+     • El extractor de sectores (`extractAllBarriosFromText`) transfiere todos los barrios encontrados a `explicarMatch`, evaluando afinidad espacial sin falsos bloqueos.
+   - **Filtro de 15 Días y Respuesta Honesta Inmediata**:
+     • Filtro de fecha en PostgreSQL (`propAgeDays <= 15`).
+     • Si no hay coincidencias con score >= 80%, JanIA es **100% sincera de inmediato**: confirma los criterios interpretados, informa con claridad que en los últimos 15 días no hay ofertas con al menos 80% de compatibilidad, certifica que el requerimiento quedó registrado en el radar activo de VECY y entrega el enlace a la Mesa de Coincidencias.
+     • Si hay coincidencias, las entrega al instante con porcentaje de afinidad, detalles, contacto y enlace directo a WhatsApp.
+   - **Failsafe Interceptor en DM y Prompt Blindado (`janIA.ts`)**:
+     • Interceptor de seguridad en `processPrivateDmConversationalMessage` antes de llamar a Gemini para asegurar que ninguna consulta administrativa de match quede desatendida.
+     • Prohibición explícita en el prompt del LLM contra respuestas evasivas o falsas promesas.
+   - **Pruebas Automatizadas de Regresión**:
+     • Suite con el caso real de Jani Alves probando el diagnóstico honesto con 0 inmuebles en 15 días y con inmueble coincidente.
+
+**Archivos Modificados:**
+- `server/_core/adminMatchAssistantService.ts`: Lógica ampliada de reconocimiento admin, parsing de demanda/oferta, multi-zona, filtro de 15 días y diagnóstico honesto.
+- `server/_core/whatsapp-match.ts`: Validación unificada de administrador en el socket de Baileys.
+- `server/_core/janIA.ts`: Failsafe interceptor en DMs y regla doctrinal anti-falsas expectativas.
+- `server/__tests__/regression.test.ts`: Pruebas de regresión unitarias v32.94.
+- `shared/const.ts` & `package.json`: Versión oficial `v32.94` (`32.94.0`).
+- `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`: Registro en bitácora maestra.
+- `.agents/AGENTS.md`: Registro en memoria persistente.
+- `VECY_CORE_PROYECTO/documentos_maestros/vecy_network_technical_dossier.md`: Registro en changelog técnico.
+
+**Verificación:**
+- `npm run check`: 0 errores TypeScript ✅
+- `npm test`: 179 de 179 pruebas aprobadas al 100% ✅
+- `npm run build`: Compilación limpia completada con éxito en 19.33s ✅
+
+---
+
 ### 🔖 v32.93 — Octubre 2026
 
 #### 📌 ASISTENTE INTELIGENTE DE BÚSQUEDA DE MATCHES CON JANIA EN WHATSAPP Y WEB EXCLUSIVO PARA ADMINISTRADORES

@@ -3851,6 +3851,89 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(adminSearchResult.queryType).toBe("demand_search");
       expect(adminSearchResult.formattedReport).toContain("VECY MATCH ENGINE");
       expect(adminSearchResult.formattedReport).toContain("https://vecy-bienes-raices.vercel.app/admin");
+
+      // 6. Doctrina v32.94: Caso Real Jani Alves (Texto Completo de Requerimiento de Compra)
+      const janiRequirementText =
+        "🏡 REQUERIMIENTO DE COMPRA\n\n" +
+        "Cliente directo con recursos hasta $1.000 MM, en EFECTIVO.\n\n" +
+        "Buscamos apartamento con:\n" +
+        "📐 150–170 m² con 3 habitaciones obligatorias; ideal si las 3 tienen baño privado, pero se aceptan opciones donde mínimo 2 de las 3 habitaciones tengan baño privado y closets amplios o vestier.\n" +
+        "🛏️ Necesitan que las 3 habitaciones muy amplias, cada una con espacio para cama grande y escritorio.\n" +
+        "🍳 Cocina amplia y con buen almacenamiento.\n" +
+        "🚗 1–2 parqueaderos\n" +
+        "📦 Depósito indispensable.\n" +
+        "🔐 Seguridad 24/7 indispensable.\n" +
+        "💵 Administración máximo $1.300.000.\n\n" +
+        "📍 ZONAS: Entre Calle 45 y Calle 116 así: Entre calles 45 a 80 arriba de Av. Caracas hasta KR 7, entre calles 100 a 116 desde Auto Norte hasta KR 7. Sectores de especial interés: San Patricio, Chicó Navarra y Rosales.\n\n" +
+        "Vecy Bienes Raíces";
+
+      // Debe reconocerse como consulta de match válida
+      expect(isMatchSearchQuery(janiRequirementText, true)).toBe(true);
+      expect(isAuthorizedAdminPhone(undefined, "Jani A. S.")).toBe(true);
+
+      // Mock DB sin inmuebles en los últimos 15 días
+      const mockEmptyDb = {
+        select: () => ({
+          from: () => ({
+            where: () => Promise.resolve([]),
+            orderBy: () => Promise.resolve([]),
+            limit: () => Promise.resolve([])
+          })
+        })
+      };
+
+      // Debe ejecutarse con diagnóstico honesto inmediato (sin promesas ficticias de 'ya mismo lo busco y te aviso')
+      const janiEmptyResult = await executeAdminMatchSearch(janiRequirementText, true, mockEmptyDb);
+      expect(janiEmptyResult.isAuthorizedAdmin).toBe(true);
+      expect(janiEmptyResult.queryType).toBe("demand_search");
+      expect(janiEmptyResult.formattedReport).toContain("VECY MATCH ENGINE — RESULTADO DE BÚSQUEDA (ÚLTIMOS 15 DÍAS)");
+      expect(janiEmptyResult.formattedReport).toContain("$1 MM ($1.000.000.000 COP)");
+      expect(janiEmptyResult.formattedReport).toContain("150 m²");
+      expect(janiEmptyResult.formattedReport).toContain("3 Hab");
+      expect(janiEmptyResult.formattedReport).toContain("No se encontraron ofertas compatibles");
+      expect(janiEmptyResult.formattedReport).not.toContain("pondré a correr el motor");
+      expect(janiEmptyResult.formattedReport).not.toContain("te estaré avisando al instante");
+
+      // Mock DB con inmueble real compatible captado hace 2 días
+      const mockMatchedDb = {
+        select: () => ({
+          from: () => ({
+            where: () => Promise.resolve([
+              {
+                id: 101,
+                name: "Apartamento San Patricio Remodelado",
+                propertyType: "apartment",
+                transactionType: "venta",
+                addressNeighborhood: "San Patricio",
+                city: "Bogotá",
+                price: "980000000",
+                areaTotal: "165",
+                bedrooms: 3,
+                bathrooms: 3,
+                garages: 2,
+                available: true,
+                createdAt: new Date(),
+                security247: true,
+                zone: "San Patricio",
+                rawText: "Vendo hermoso apartamento en San Patricio 165 m2 3 alcobas 3 baños 2 parqueaderos remodelado vigilancia 24/7 porteria permanente $980.000.000 excelente ubicación Carlos Bróker 573101234567",
+                nombreUsuarioWhatsapp: "Carlos Bróker",
+                telefonoContacto: "573101234567"
+              }
+            ]),
+            orderBy: () => ({
+              limit: () => Promise.resolve([])
+            }),
+            limit: () => Promise.resolve([])
+          })
+        })
+      };
+
+      const janiMatchResult = await executeAdminMatchSearch(janiRequirementText, true, mockMatchedDb);
+      expect(janiMatchResult.isAuthorizedAdmin).toBe(true);
+      expect(janiMatchResult.totalFound).toBeGreaterThanOrEqual(1);
+      expect(janiMatchResult.formattedReport).toContain("Inmueble #P101");
+      expect(janiMatchResult.formattedReport).toContain("Carlos Bróker");
+      expect(janiMatchResult.formattedReport).toContain("https://wa.me/573101234567");
     });
   });
 });

@@ -1276,15 +1276,16 @@ export class JaniaMatchBot {
       return;
     }
 
-    // 🎯 INTERCEPTOR ADMIN: ASISTENTE DE BÚSQUEDA DE MATCHES (EXCLUSIVO ADMINISTRADORES) (v32.93)
-    const { isMatchSearchQuery, executeAdminMatchSearch } = await import('./adminMatchAssistantService');
-    const isMatchIntent = isMatchSearchQuery(body, isAdmin);
+    // 🎯 INTERCEPTOR ADMIN: ASISTENTE DE BÚSQUEDA DE MATCHES (EXCLUSIVO ADMINISTRADORES) (v32.94)
+    const { isMatchSearchQuery, executeAdminMatchSearch, isAuthorizedAdminPhone } = await import('./adminMatchAssistantService');
+    const isAdminUser = isAdmin || isAuthorizedAdminPhone(senderId, userName) || isAuthorizedAdminPhone(rawPhone, userName);
+    const isMatchIntent = isMatchSearchQuery(body, isAdminUser);
     if (isMatchIntent) {
       const stopPresence = startContinuousPresence(this.sock, senderId, 'composing');
       try {
-        const matchResult = await executeAdminMatchSearch(body, isAdmin);
+        const matchResult = await executeAdminMatchSearch(body, isAdminUser);
         if (matchResult.isMatchQuery && matchResult.formattedReport) {
-          console.log(`[JANIA-MATCH] [DM] Asistente de Matches atendido para ${senderId} (Admin: ${isAdmin}, Matches: ${matchResult.totalFound})`);
+          console.log(`[JANIA-MATCH] [DM] Asistente de Matches atendido para ${senderId} (Admin: ${isAdminUser}, Matches: ${matchResult.totalFound})`);
           await this.queuedSend(senderId, matchResult.formattedReport, { quoted: mainMsg, allowDirectMessage: true });
           const { appendDmHistory } = await import('./janIA');
           appendDmHistory(senderId, 'user', body);

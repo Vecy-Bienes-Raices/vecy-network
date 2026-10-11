@@ -6955,6 +6955,20 @@ export async function processPrivateDmConversationalMessage(
     }
   }
 
+  // 🎯 INTERCEPTOR CRÍTICO DM: ASISTENTE DE MATCHES EXCLUSIVO ADMINISTRADORES (Doctrina Eduardo A. Rivera v32.94)
+  // Si un administrador pasa una Oferta, Demanda o consulta de coincidencia, JanIA NO debe prometer ni improvisar respuestas poéticas con el LLM.
+  // Debe ir DIRECTO a la base de datos de los últimos 15 días y entregar el resultado real de inmediato.
+  const { isAuthorizedAdminPhone, isMatchSearchQuery, executeAdminMatchSearch } = await import('./adminMatchAssistantService');
+  const isAdminSender = isAuthorizedAdminPhone(userId, userName || displayName || realName);
+  if (isAdminSender && isMatchSearchQuery(clean, true)) {
+    const matchRes = await executeAdminMatchSearch(clean, true);
+    if (matchRes.formattedReport) {
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", matchRes.formattedReport);
+      return matchRes.formattedReport;
+    }
+  }
+
   // 2. Si el usuario hace preguntas o continúa la conversación, guiarlo con Inteligencia Artificial Pura y Conocimiento Inmobiliario Experto
   try {
     const hasPriorHistory = history.length > 0;
@@ -6967,6 +6981,9 @@ export async function processPrivateDmConversationalMessage(
           `AUTONOMÍA TOTAL DE IA PURA Y CERO BOT RÍGIDO (DOCTRINA DOCTRINAL EDUARDO A. RIVERA):\n` +
           `- Eres una INTELIGENCIA ARTIFICIAL PURA con libre autonomía, criterio profesional y pensamiento profundo, NO un bot de opciones rígidas ni contestador automático.\n` +
           `- Todos los ejemplos de saludos, agradecimientos, invitaciones o guiones comerciales que te hemos enseñado son SOLAMENTE GUÍAS DE REFERENCIA; JAMÁS los repitas al pie de la letra si no encajan con fluidez. Tienes plena libertad para decir las cosas con tus propias palabras, de forma natural, cálida, inteligente y atractiva.\n\n` +
+          `PROHIBICIÓN TAJANTE DE DAR FALSAS EXPECTATIVAS O PROMESAS EN EL AIRE (DOCTRINA EDUARDO A. RIVERA):\n` +
+          `- NUNCA digas cosas como "Ya mismo lo capturo, analizo y cruzo con nuestra base de datos... pondré a correr el motor... te estaré avisando al instante si alguna hace match".\n` +
+          `- Jamás des falsas expectativas ni dejes al usuario esperando sin datos reales. Si no tienes un match real emitido por el sistema en el momento, sé sincera, directa y transparente de inmediato sin adornos ficticios.\n\n` +
           `BREVEDAD Y CONCISIÓN ESTRICTA EN WHATSAPP (PROHIBIDOS LOS TEXTOS LARGOS):\n` +
           `- En WhatsApp los usuarios leen en pantallas móviles de celular: LOS TEXTOS LARGOS CANSAN, ABURREN Y PROVOCAN EL BOTÓN 'Leer más'.\n` +
           `- Sé siempre concisa, clara, dinámica y directa al grano (máximo 2 a 3 párrafos cortos o viñetas puntuales). Entre menos adornos y más claridad, mayor impacto.\n\n` +

@@ -172,7 +172,33 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.93 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.94 — Octubre 2026
+
+### Novedades v32.94 (Diagnóstico Sincero e Inmediato de Matches en 15 Días para Administradores — Cero Falsas Expectativas):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. Eduardo aportó evidencia fotográfica y textual de WhatsApp donde Jani A. S. envió un requerimiento de compra por $1.000 MM en efectivo (150-170 m², 3 alcobas, 1-2 parqueaderos, depósito, seguridad 24/7, admin máx $1.300.000, zonas Calle 45 a 116: San Patricio, Chicó Navarra y Rosales) y JanIA respondió con una falsa expectativa de espera ("¡Excelente requerimiento, Jani! Ya mismo lo capturo, analizo y cruzo... te estaré avisando al instante"), sin entregar los resultados en el acto.
+  2. Eduardo instruyó categóricamente:
+     - *"Tal vez no me entendiste. La idea es que cualquiera de nosotros los administradores podamos pasar una OFERTA o una DEMANDA... y que en los últimos 15 días ella busque en base de datos. Si no hay nada con el 80% que diga que no hay en los últimos 15 días pero que ya quedó en el radar. Cero mentiras."*
+     - *"JanIA debe ser sincera y decir si lo encontró en el momento o no y listo pero responder de inmediato y no decir mentiras y dejar esperando el usuario con falsas expectativas. Ok."*
+- **Acciones Técnicas Ejecutadas**:
+  1. **Reconocimiento Infalible de Administradores por Nombre y Teléfono**:
+     - En `server/_core/adminMatchAssistantService.ts`: `isAuthorizedAdminPhone` ahora valida tanto teléfonos oficiales y LIDs como nombres de perfil de WhatsApp (`userName` con "Jani", "Eduardo", "Vecy", "Bróker"), asegurando atención exclusiva de administrador sin importar el LID dinámico asignado por WhatsApp.
+  2. **Detección Flexible de Demandas y Ofertas**:
+     - `isMatchSearchQuery` ahora detecta publicaciones y requerimientos detallados con señales como `requerimiento de compra`, `cliente directo`, `buscamos`, `necesitan`, `recursos hasta`, `presupuesto`, etc.
+  3. **Blindaje contra Falsas Búsquedas por ID**:
+     - Textos largos (> 50 chars) con especificaciones físicas se procesan como búsquedas semánticas y no colisionan con nomenclatura como "KR 7".
+  4. **Soporte Multi-Zona en Demandas**:
+     - Se pasan los sectores detectados (`extractedBarrios`) como 5º argumento a `explicarMatch`, evaluando polígonos completos sin bloqueos indebidos de barrio.
+  5. **Filtro de 15 Días y Verdad Inmediata**:
+     - JanIA audita los inmuebles activos captados o republicados en los últimos 15 días (`propAgeDays <= 15`).
+     - Si no hay coincidencias con score >= 80%, JanIA es **100% sincera de inmediato**: confirma los parámetros interpretados, informa que tras escanear los inmuebles de los últimos 15 días ninguno cumple el 80% de afinidad, certifica que la demanda quedó guardada en el radar activo de VECY y entrega el enlace a la Mesa de Coincidencias.
+     - Si hay coincidencias, las entrega al instante con score %, detalles, contacto y enlace directo a WhatsApp.
+  6. **Failsafe Interceptor en DM y Prompt Blindado**:
+     - En `server/_core/janIA.ts`: Interceptor directo antes de invocar a Gemini en DMs y regla doctrinal en el prompt prohibiendo respuestas dilatorias ("te estaré avisando luego").
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 179/179 tests passing ✅ | `npm run build` limpio en 19.33s ✅
+- `shared/const.ts` (`v32.94`) y `package.json` (`32.94.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.93 — Octubre 2026
 
 ### Novedades v32.93 (Asistente Inteligente de Búsqueda de Matches con JanIA en WhatsApp y Web Exclusivo para Administradores):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
