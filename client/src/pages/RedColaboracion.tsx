@@ -48,18 +48,25 @@ export default function RedColaboracion() {
 
         <div className="container relative z-10 text-center max-w-4xl mx-auto px-4">
           <ScrollReveal delay={0.1}>
-            <p className="vecy-accent-tag text-center">ECONOMÍA COLABORATIVA INMOBILIARIA 2.0</p>
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <span className="vecy-accent-tag">Economía Colaborativa Inmobiliaria 2.0</span>
+              <div className="h-px w-12 bg-primary/40"></div>
+            </div>
 
-            <h1 className="vecy-title-hero uppercase tracking-tight">
-              BOLSA INMOBILIARIA <span className="text-gradient-gold">COLABORATIVA</span>
+            <h1 className="flex flex-col items-center mb-6">
+              <span className="font-['Audiowide'] text-white text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-[0.16em] uppercase leading-none drop-shadow-[0_4px_30px_rgba(255,255,255,0.2)]">
+                BOLSA INMOBILIARIA
+              </span>
+              <span className="font-['Audiowide'] text-gradient-gold text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-[0.25em] uppercase leading-tight mt-3">
+                COLABORATIVA
+              </span>
             </h1>
 
-            <div className="line-electric w-36 sm:w-44 mx-auto my-5"></div>
-
-            <p className="vecy-subtitle max-w-3xl mx-auto text-sm sm:text-base text-zinc-300">
-              En VECY BIENES RAÍCES erradicamos el gasto en publicidad tradicional. Convertimos a toda la comunidad 
-              de agentes en el <span className="font-bold text-white uppercase">motor orgánico de marketing en red</span>. 
-              Gana comisiones reales compartiendo inmuebles con <span className="font-bold text-gradient-gold uppercase">fichas de marca blanca</span> sin necesidad de tener un gran inventario propio.
+            <p className="vecy-subtitle max-w-2xl mx-auto mb-10 text-lg sm:text-xl md:text-2xl leading-relaxed text-zinc-300">
+              Erradicamos el gasto en publicidad pasiva. Comercializa todo el portafolio de la red con fichas de marca blanca, gana comisiones justas y cierra negocios con respaldo legal.
+              <span className="text-white font-bold block mt-3 uppercase tracking-widest text-xs sm:text-sm">
+                Modelo 40 / 20 / 40 • Fichas de Marca Blanca Sin Intermediarios
+              </span>
             </p>
 
             {/* PESTAÑAS DE ACCESO DIRECTO A LA BOLSA */}

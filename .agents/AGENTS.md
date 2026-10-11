@@ -172,7 +172,26 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.91 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.92 — Octubre 2026
+
+### Novedades v32.92 (Diseño Senior Simétrico, Icono Dinosaurio Doctrinal y Supresión de Cards Envolventes):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. **Diseño Senior Simétrico y Medidas Armónicas**:
+     - Eduardo instruyó: *"NECESITO QUE ACTÚES COMO EL MEJOR DISEÑADOR SENIOR Y CORRIJAS EL DISEÑO DEJÁNDOLO SIMÉTRICO, ACORDE AL TEMA, CON MEDIDAS Y ESPACIOS CORRECTOS, ALGO ATRACTIVO COMO LO TIENEN ALGUNAS SECCIONES QUE DISEÑASTE ANTERIORMENTE, NO PONGAS CALAVERAS, MEJOR UN DINOSAURIO EN LA PARTE ROJA DE LOS DINOSAURIOS, ELIMINA LAS CARDS QUE CONTENGAN SUBTÍTULOS. TE PONGO COMO EJEMPLO ALGUNAS DE LAS MEJORES SECCIONES PARA QUE EN BASE AELLAS DISEÑES EL RESTO DEL SITIO: (IMAGENES 1, 2, 3 Y 4)"*
+  2. **Acciones Técnicas Ejecutadas**:
+     - **Unificación Tipográfica y Espacial Absoluta con Audiowide**:
+       • En `client/src/index.css`: `--font-heading: "Audiowide"` y `--font-display: "Audiowide"`. Clases `.vecy-title-hero`, `.vecy-title-section` y `.page-header-gold` unificadas.
+       • Todos los Heroes del portal (`Properties`, `RequirementsMarketplace`, `Services`, `NuestraHistoria`, `RedColaboracion`, `Contact`, `Investors`, `Blog`, `Login`, `Admin`, `JanIAConsole`, `TerminosCondiciones`, `PoliticaPrivacidad`) estandarizados con el mismo padding superior (`pt-36`), tag con línea dorada, título en dos líneas con `font-['Audiowide']` y subtítulo libre sobre el fondo oscuro.
+     - **Erradicación de Calaveras y Consagración del Dinosaurio (`GiDinosaurRex`)**:
+       • En `client/src/pages/NuestraHistoria.tsx`: Eliminado todo rastro de `Skull`. Incorporado `GiDinosaurRex` en el badge rojo `EL FIN DE LOS PORTALES INMOBILIARIOS COMO LOS CONOCEMOS HASTA HOY` y en la tarjeta roja `LOS DINOSAURIOS INMOBILIARIOS`.
+       • Títulos doctrinales exactos: `LOS DINOSAURIOS INMOBILIARIOS` y `VECY LA EVOLUCIÓN INEVITABLE`.
+     - **Erradicación de Macro-Cards Envolventes de Subtítulos**:
+       • En `client/src/pages/Services.tsx`: Desempaquetada la sección `#match-ia-section`, dejando el encabezado libre sobre el fondo, organizando los 4 pilares en cards simétricas independientes y ubicando la consola interactiva centrada con botones de acceso directo.
+       • En `client/src/pages/Home.tsx`: Acceso directo mediante el botón estelar `CÓMO FUNCIONA EL MATCH` en el Hero.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 178/178 tests passing ✅ | `npm run build` limpio en 22.77s ✅
+- `shared/const.ts` (`v32.92`) y `package.json` (`32.92.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.91 — Octubre 2026
 
 ### Novedades v32.91 (Restauración de Tipografía Oficial Audiowide en Hero de Vecy Bienes Raíces):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

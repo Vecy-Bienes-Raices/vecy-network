@@ -41,22 +41,25 @@ export default function TerminosCondiciones() {
 
         <div className="container relative z-10 text-center max-w-4xl mx-auto px-4">
           <ScrollReveal delay={0.1}>
-            {/* Tag limpio sin burbujas */}
-            <div className="vecy-accent-tag">
-              MARCO JURÍDICO INSTITUCIONAL
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <span className="vecy-accent-tag">Marco Jurídico Institucional</span>
+              <div className="h-px w-12 bg-primary/40"></div>
             </div>
 
-            {/* Título de la página con rayita 3D */}
-            <h1 className="vecy-title-hero text-3xl sm:text-5xl font-black">
-              TÉRMINOS Y <span className="text-gradient-gold">CONDICIONES</span>
+            <h1 className="flex flex-col items-center mb-6">
+              <span className="font-['Audiowide'] text-white text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-[0.16em] uppercase leading-none drop-shadow-[0_4px_30px_rgba(255,255,255,0.2)]">
+                TÉRMINOS &
+              </span>
+              <span className="font-['Audiowide'] text-gradient-gold text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-[0.25em] uppercase leading-tight mt-3">
+                CONDICIONES
+              </span>
             </h1>
 
-            {/* Rayita tridimensional debajo del título */}
-            <div className="line-electric w-32 sm:w-48 mx-auto my-3" />
-
-            {/* Subtítulo limpio y fluido */}
-            <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-gray-300 mt-2">
-              Régimen General de Uso del Ecosistema Tecnológico, Corretaje Inmobiliario, Aceleración en Red y Contratación Digital de <span className="text-white font-bold">VECY BIENES RAÍCES</span>.
+            <p className="vecy-subtitle max-w-2xl mx-auto mb-10 text-lg sm:text-xl md:text-2xl leading-relaxed text-zinc-300">
+              Régimen General de Uso del Ecosistema Tecnológico, Corretaje Inmobiliario, Aceleración en Red y Contratación Digital de VECY BIENES RAÍCES.
+              <span className="text-white font-bold block mt-3 uppercase tracking-widest text-xs sm:text-sm">
+                Ley 527 de 1999 • Código de Comercio de Colombia
+              </span>
             </p>
 
             {/* Barra de herramientas para descargar/imprimir */}

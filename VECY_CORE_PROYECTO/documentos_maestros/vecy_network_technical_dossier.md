@@ -331,6 +331,44 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.92 — Octubre 2026
+
+#### 📌 DISEÑO SENIOR SIMÉTRICO, UNIFICACIÓN AUDIOWIDE, ERRADICACIÓN DE CALAVERAS POR DINOSAURIO Y SUPRESIÓN DE CARDS CON SUBTÍTULOS
+
+**Requerimiento y Objetivos:**
+1. **Diseño Senior Simétrico y Medidas Armónicas (Eduardo A. Rivera)**:
+   - Instrucción de Eduardo: *"NECESITO QUE ACTÚES COMO EL MEJOR DISEÑADOR SENIOR Y CORRIJAS EL DISEÑO DEJÁNDOLO SIMÉTRICO, ACORDE AL TEMA, CON MEDIDAS Y ESPACIOS CORRECTOS, ALGO ATRACTIVO COMO LO TIENEN ALGUNAS SECCIONES QUE DISEÑASTE ANTERIORMENTE, NO PONGAS CALAVERAS, MEJOR UN DINOSAURIO EN LA PARTE ROJA DE LOS DINOSAURIOS, ELIMINA LAS CARDS QUE CONTENGAN SUBTÍTULOS. TE PONGO COMO EJEMPLO ALGUNAS DE LAS MEJORES SECCIONES PARA QUE EN BASE AELLAS DISEÑES EL RESTO DEL SITIO: (IMAGENES 1, 2, 3 Y 4)"*
+2. **Soluciones Implementadas**:
+   - **Unificación de Fuentes y Espacios en Todos los Heroes**:
+     • En `client/src/index.css`: `--font-heading: "Audiowide"` y `--font-display: "Audiowide"`.
+     • Estandarizados los Heroes de todas las páginas del proyecto con el mismo espaciado superior (`pt-36`), tag con línea dorada, título en dos líneas con `font-['Audiowide']` y subtítulo libre sobre fondo oscuro sin macro-cards envolventes.
+   - **Erradicación de Calaveras y Consagración del Dinosaurio (`GiDinosaurRex`)**:
+     • En `client/src/pages/NuestraHistoria.tsx`: Eliminado `Skull`. Incorporado `GiDinosaurRex` de `react-icons/gi` en el badge rojo `EL FIN DE LOS PORTALES INMOBILIARIOS COMO LOS CONOCEMOS HASTA HOY` y en la tarjeta roja de dinosaurios.
+     • Títulos doctrinales exactos: `LOS DINOSAURIOS INMOBILIARIOS` y `VECY LA EVOLUCIÓN INEVITABLE`.
+   - **Erradicación de Macro-Cards Envolventes de Subtítulos y Rediseño de Match**:
+     • En `client/src/pages/Services.tsx`: Desempaquetada la sección `#match-ia-section`, dejando el encabezado libre sobre el fondo (como en las capturas 1 y 4 de Eduardo), organizando los 4 pilares en cards simétricas independientes y ubicando la consola interactiva centrada con botones de acceso directo.
+     • En `client/src/pages/Home.tsx`: Acceso directo al motor mediante el botón `CÓMO FUNCIONA EL MATCH` en el Hero.
+   - **Pruebas de Regresión y Validación**:
+     • En `server/__tests__/regression.test.ts`: Nuevo test doctrinal validando la erradicación de `Skull`, la presencia de `GiDinosaurRex` y los textos doctrinales.
+
+**Archivos Modificados:**
+- `client/src/index.css`: Definición global de `--font-heading` y `--font-display` con Audiowide.
+- `client/src/pages/NuestraHistoria.tsx`: Reemplazo de Skull por GiDinosaurRex y títulos doctrinales.
+- `client/src/pages/Services.tsx`: Rediseño simétrico sin macro-card envolvente en Match.
+- `client/src/pages/Home.tsx`: Botón `CÓMO FUNCIONA EL MATCH` en Hero.
+- `client/src/pages/Properties.tsx`, `RequirementsMarketplace.tsx`, `RedColaboracion.tsx`, `Contact.tsx`, `Investors.tsx`, `Blog.tsx`, `Login.tsx`, `Admin.tsx`, `JanIAConsole.tsx`, `TerminosCondiciones.tsx`, `PoliticaPrivacidad.tsx`: Heroes estandarizados en simetría y tipografía Audiowide.
+- `server/__tests__/regression.test.ts`: Actualización del suite de pruebas de regresión v32.92.
+- `shared/const.ts` & `package.json`: Versión oficial `v32.92` (`32.92.0`).
+- `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`: Registro en bitácora maestra.
+- `.agents/AGENTS.md`: Registro en memoria persistente.
+
+**Verificación:**
+- `npm run check`: 0 errores TypeScript ✅
+- `npm test`: 178 de 178 pruebas aprobadas al 100% ✅
+- `npm run build`: Compilación limpia completada en 22.77s ✅
+
+---
+
 ### 🔖 v32.91 — Octubre 2026
 
 #### 📌 RESTAURACIÓN DE TIPOGRAFÍA OFICIAL AUDIOWIDE EN HERO DE VECY BIENES RAÍCES

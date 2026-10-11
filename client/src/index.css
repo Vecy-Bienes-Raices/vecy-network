@@ -62,9 +62,9 @@
   --shadow-luminous-gold: 0 0 20px rgba(212, 175, 55, 0.5), 0 0 40px rgba(212, 175, 55, 0.2);
   
   /* Fonts */
-  --font-display: "Mina", "Plus Jakarta Sans", sans-serif;
+  --font-display: "Audiowide", cursive, sans-serif;
   --font-sans: "Mina", "Plus Jakarta Sans", "Inter", sans-serif;
-  --font-heading: "Mina", "Plus Jakarta Sans", sans-serif;
+  --font-heading: "Audiowide", cursive, sans-serif;
   --font-brand: "Audiowide", cursive, sans-serif;
 }
 
@@ -151,8 +151,8 @@
     font-family: var(--font-sans, "Mina", "Plus Jakarta Sans", "Inter", sans-serif);
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading, "Mina", "Plus Jakarta Sans", sans-serif);
-    letter-spacing: 0.01em;
+    font-family: var(--font-heading, "Audiowide", cursive, sans-serif);
+    letter-spacing: 0.03em;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -545,10 +545,10 @@
 
   /* PAGE HEADER PATTERN */
   .page-header-gold {
-    font-family: var(--font-heading, "Mina", sans-serif);
+    font-family: var(--font-brand, "Audiowide", cursive, sans-serif);
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.08em;
     background: linear-gradient(135deg, #fdf6d8 0%, #eed580 30%, #d4af37 60%, #b8860b 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -592,13 +592,13 @@
   /* ── VECY GLOBAL TYPOGRAPHY UTILITIES ───────────────────────────────────────── */
   
   .vecy-title-hero {
-    @apply text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold uppercase tracking-tight text-white mb-4 leading-tight;
-    font-family: var(--font-heading, "Mina", sans-serif);
+    @apply text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold uppercase tracking-[0.14em] text-white mb-6 leading-tight;
+    font-family: var(--font-brand, "Audiowide", cursive, sans-serif);
   }
 
   .vecy-title-section {
-    @apply text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold uppercase tracking-wide text-white mb-3;
-    font-family: var(--font-heading, "Mina", sans-serif);
+    @apply text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold uppercase tracking-[0.12em] text-white mb-4;
+    font-family: var(--font-brand, "Audiowide", cursive, sans-serif);
   }
 
   /* ── DEGRADADO DORADO ELEGANTE, PLANO, BRILLANTE & 0% 3D ── */

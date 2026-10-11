@@ -195,7 +195,7 @@ export default function Login() {
                 className="w-full h-full object-contain filter drop-shadow-[0_0_20px_rgba(191,149,63,0.35)]"
               />
             </div>
-            <h1 className="text-2xl font-display font-bold text-accent uppercase tracking-wider">
+            <h1 className="font-['Audiowide'] text-xl sm:text-2xl font-bold text-accent uppercase tracking-wider">
               VECY BIENES RAÍCES
             </h1>
             <p className="text-xs text-muted-foreground uppercase tracking-widest mt-1">

@@ -7,6 +7,43 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.92 — 11 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+- **Diseño Senior Simétrico, Armonía de Espacios, Erradicación de Calaveras por Dinosaurio y Supresión de Cards con Subtítulos**:
+  1. Eduardo ordenó con criterio estético senior: *"NECESITO QUE ACTÚES COMO EL MEJOR DISEÑADOR SENIOR Y CORRIJAS EL DISEÑO DEJÁNDOLO SIMÉTRICO, ACORDE AL TEMA, CON MEDIDAS Y ESPACIOS CORRECTOS, ALGO ATRACTIVO COMO LO TIENEN ALGUNAS SECCIONES QUE DISEÑASTE ANTERIORMENTE, NO PONGAS CALAVERAS, MEJOR UN DINOSAURIO EN LA PARTE ROJA DE LOS DINOSAURIOS, ELIMINA LAS CARDS QUE CONTENGAN SUBTÍTULOS. TE PONGO COMO EJEMPLO ALGUNAS DE LAS MEJORES SECCIONES PARA QUE EN BASE AELLAS DISEÑES EL RESTO DEL SITIO: (IMAGENES 1, 2, 3 Y 4)"*
+  2. Y especificó los cambios textuales exactos:
+     - *"ESTO: DINOSAURIOS INMOBILIARIOS / POR: LOS DINOSAURIOS INMOBILIARIOS"*
+     - *"ESTO: VECY BIENES RAÍCES: EVOLUCIÓN INEVITABLE / POR: VECY LA EVOLUCIÓN INEVITABLE"*
+     - *"ESTO: EL FIN DE LOS PORTALES INMOBILIARIOS COMO LOS CONOCEMOS HASTA HOY (QUEDA IGUAL PERO SIN CALAVERA, CAMBIA ESA CALABERA DE MAL GUSTO POR UN DINOSAURIO PUEDE SER)"*
+  3. Y consultó sobre el sistema de Match: *"Y DIME DONDE O QUÉ HICISTE TODO ESO QUE HABÍAS COLOCADO ANTES SOBRE EL MATCH, LO ENVIASTE A DONDE O DONDE QUEDÓ HA??"*
+
+### Diagnóstico Técnico y Solución Aplicada
+1. **Unificación Tipográfica y Espacial Absoluta con Audiowide en Todos los Heroes**:
+   - En `client/src/index.css`: Definidas las variables oficiales `--font-heading: "Audiowide", cursive, sans-serif;` y `--font-display: "Audiowide", cursive, sans-serif;`. Estandarizados `h1, h2, h3, h4, h5, h6`, `.vecy-title-hero`, `.vecy-title-section` y `.page-header-gold`.
+   - Estandarizados los Heroes de todas las páginas (`Properties.tsx`, `RequirementsMarketplace.tsx`, `Services.tsx`, `NuestraHistoria.tsx`, `RedColaboracion.tsx`, `Contact.tsx`, `Investors.tsx`, `Blog.tsx`, `TerminosCondiciones.tsx`, `PoliticaPrivacidad.tsx`, `Login.tsx`, `Admin.tsx` y `JanIAConsole.tsx`): todos con el tag de contexto con línea dorada, título en dos líneas con `font-['Audiowide']` (blanco y degradado oro), y subtítulo libre sobre el fondo oscuro sin macro-cards envolventes.
+2. **Erradicación de Calaveras y Consagración del Icono de Dinosaurio (`GiDinosaurRex`)**:
+   - En `client/src/pages/NuestraHistoria.tsx`:
+     • Erradicado por completo el icono `Skull` de `lucide-react`.
+     • Incorporado `GiDinosaurRex` de `react-icons/gi` en el badge rojo `EL FIN DE LOS PORTALES INMOBILIARIOS COMO LOS CONOCEMOS HASTA HOY`.
+     • En la card roja: reemplazado el icono por `GiDinosaurRex` y ajustado el título exacto a **`LOS DINOSAURIOS INMOBILIARIOS`**.
+     • En la card dorada: ajustado el título exacto a **`VECY LA EVOLUCIÓN INEVITABLE`**.
+3. **Eliminación de Cards que Contengan Subtítulos y Rediseño Simétrico Senior del Match en `/services`**:
+   - En `client/src/pages/Services.tsx`: Se eliminó la macro-card `vecy-card-apple` que envolvía el título, subtítulo y sub-tarjetas.
+   - Ahora el encabezado está libre sobre el fondo (como en las imágenes 1 y 4 enviadas por Eduardo): tag superior, título `¿POR QUÉ SOMOS EL PRIMER PORTAL QUE USA IA EN REALIDAD?`, línea dorada y subtítulo libre.
+   - Debajo se organizó un grid simétrico de 4 pilares independientes (`vecy-card-apple`) y un panel de simulación interactiva centrado, equilibrado y con botones de acceso directo.
+   - En `client/src/pages/Home.tsx`: Se mantuvo el botón limpio en el Hero `CÓMO FUNCIONA EL MATCH` que redirige a `/services#match-ia-section`, garantizando que la portada permanezca sobria y elegante sin tarjetas anidadas.
+4. **Validación y Pruebas Unitarias de Regresión**:
+   - En `server/__tests__/regression.test.ts`: Agregado test específico que valida la presencia de `GiDinosaurRex`, ausencia total de `Skull`, títulos doctrinales y la estructura simétrica sin cards envolventes en `Services.tsx` y `NuestraHistoria.tsx`.
+
+### Verificación y Validación Empírica
+- `npm run check`: 0 errores TypeScript ✅.
+- `npm test`: 178/178 tests aprobados al 100% ✅.
+- `npm run build`: Compilación limpia en 22.77s sin errores ✅.
+- Versión oficial incrementada a **v32.92** (`32.92.0`).
+
+---
+
 ## 📋 SESIÓN v32.91 — 11 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

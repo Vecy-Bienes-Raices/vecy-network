@@ -3578,10 +3578,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(soporteContent).not.toContain("45/10/45");
     });
 
-    it("Doctrina v32.84 / v32.91: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
+    it("Doctrina v32.84 / v32.92: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
       const { VECY_ACTIVE_DOMAIN, VECY_VERSION } = await import("../../shared/const");
       expect(VECY_ACTIVE_DOMAIN).toBe("https://vecy-bienes-raices.vercel.app");
-      expect(VECY_VERSION).toBe("v32.91");
+      expect(VECY_VERSION).toBe("v32.92");
 
       const fs = await import("fs");
       const path = await import("path");
@@ -3742,28 +3742,64 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(servicesContent).not.toContain("SDH");
     });
 
-    it("Doctrina v32.91: Restauración de Tipografía Oficial Audiowide en Hero de Vecy Bienes Raíces", async () => {
+    it("Doctrina v32.92: Unificación Absoluta de Tipografía Audiowide y Estilo de Heroes en Todas las Páginas", async () => {
       const fs = await import("fs");
       const path = await import("path");
 
-      // Validar Home.tsx con la tipografía oficial Audiowide elegida por Eduardo
+      // Validar Home.tsx con la tipografía oficial Audiowide y botón de Match
       const homePath = path.resolve(__dirname, "../../client/src/pages/Home.tsx");
       const homeContent = fs.readFileSync(homePath, "utf-8");
-      expect(homeContent).toContain("INMUEBLES DESTACADOS");
-      expect(homeContent).toContain("VER TODAS LAS PROPIEDADES");
-      expect(homeContent).not.toContain("PROPIEDADES DE AUTOR");
-      expect(homeContent).not.toContain("Portafolio Curado");
       expect(homeContent).toContain("font-['Audiowide']");
-      expect(homeContent).not.toContain("match-ia-section");
-      expect(homeContent).not.toContain("EL SANTO GRIAL PROPTECH");
-      expect(homeContent).not.toContain("PRIMER PORTAL INMOBILIARIO CON VERDADERA IA EN COLOMBIA");
+      expect(homeContent).toContain("CÓMO FUNCIONA EL MATCH");
 
-      // Validar Services.tsx limpio de términos incomprensibles
+      // Validar páginas principales con font-['Audiowide'] unificado en sus heroes
+      const pagesToCheck = [
+        "Properties.tsx",
+        "RequirementsMarketplace.tsx",
+        "Services.tsx",
+        "NuestraHistoria.tsx",
+        "RedColaboracion.tsx",
+        "Contact.tsx",
+        "Investors.tsx",
+        "Blog.tsx",
+      ];
+
+      for (const pageFile of pagesToCheck) {
+        const pagePath = path.resolve(__dirname, `../../client/src/pages/${pageFile}`);
+        const content = fs.readFileSync(pagePath, "utf-8");
+        expect(content).toContain("font-['Audiowide']");
+      }
+
+      // Validar que index.css use Audiowide para heading y display
+      const cssPath = path.resolve(__dirname, "../../client/src/index.css");
+      const cssContent = fs.readFileSync(cssPath, "utf-8");
+      expect(cssContent).toContain('--font-heading: "Audiowide"');
+      expect(cssContent).toContain('--font-display: "Audiowide"');
+    });
+
+    it("Doctrina v32.92: Erradicación de Skull, Dinosaurio Doctrinal y Simetría Senior Sin Cards Anidadas", async () => {
+      const fs = await import("fs");
+      const path = await import("path");
+
+      // Validar NuestraHistoria.tsx
+      const historiaPath = path.resolve(__dirname, "../../client/src/pages/NuestraHistoria.tsx");
+      const historiaContent = fs.readFileSync(historiaPath, "utf-8");
+      expect(historiaContent).toContain("GiDinosaurRex");
+      expect(historiaContent).not.toContain("Skull");
+      expect(historiaContent).toContain("LOS DINOSAURIOS INMOBILIARIOS");
+      expect(historiaContent).toContain("VECY LA EVOLUCIÓN INEVITABLE");
+      expect(historiaContent).toContain("EL FIN DE LOS PORTALES INMOBILIARIOS COMO LOS CONOCEMOS HASTA HOY");
+
+      // Validar Services.tsx sin cards envolviendo subtítulos ni encabezados en Match
       const servicesPath = path.resolve(__dirname, "../../client/src/pages/Services.tsx");
       const servicesContent = fs.readFileSync(servicesPath, "utf-8");
-      expect(servicesContent).toContain("Red Colaborativa & Venta de Inmuebles");
-      expect(servicesContent).toContain("ESTRATÉGICOS Y CONSULTORÍA");
-      expect(servicesContent).not.toContain("ESTRATÉGICOS Y DE AUTOR");
+      expect(servicesContent).toContain("¿POR QUÉ SOMOS EL PRIMER PORTAL QUE");
+      expect(servicesContent).toContain("USA IA EN REALIDAD");
+      expect(servicesContent).toContain("Cruce Oferta ↔ Demanda");
+      expect(servicesContent).toContain("Umbral Riguroso (85%-100%)");
+      expect(servicesContent).toContain("Alertas y Match Proactivo");
+      expect(servicesContent).toContain("Modelo Justo 40 / 20 / 40");
+      expect(servicesContent).not.toContain("Inmueble de Autor");
     });
   });
 });

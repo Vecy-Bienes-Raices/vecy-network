@@ -8,7 +8,6 @@ import {
   Zap, 
   Globe, 
   ExternalLink, 
-  Skull,
   Sparkles,
   ShieldCheck,
   CheckCircle2,
@@ -19,6 +18,7 @@ import {
   Target,
   Compass
 } from 'lucide-react';
+import { GiDinosaurRex } from 'react-icons/gi';
 import NetworkBackground from '@/components/NetworkBackground';
 import { useLocation } from 'wouter';
 import { ScrollReveal } from '@/components/ScrollReveal';
@@ -81,16 +81,25 @@ export default function NuestraHistoria() {
 
         <div className="container relative z-10 text-center max-w-4xl mx-auto px-4">
           <ScrollReveal delay={0.1}>
-            <p className="vecy-accent-tag text-center">IDENTIDAD CORPORATIVA & TRAYECTORIA</p>
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <span className="vecy-accent-tag">Identidad Corporativa & Trayectoria</span>
+              <div className="h-px w-12 bg-primary/40"></div>
+            </div>
 
-            <h1 className="vecy-title-hero uppercase tracking-tight">
-              SOMOS <span className="text-gradient-gold">VECY BIENES RAÍCES</span>
+            <h1 className="flex flex-col items-center mb-6">
+              <span className="font-['Audiowide'] text-white text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-[0.16em] uppercase leading-none drop-shadow-[0_4px_30px_rgba(255,255,255,0.2)]">
+                NUESTRA
+              </span>
+              <span className="font-['Audiowide'] text-gradient-gold text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-[0.25em] uppercase leading-tight mt-3">
+                HISTORIA
+              </span>
             </h1>
 
-            <div className="line-electric w-36 sm:w-44 mx-auto my-5"></div>
-
-            <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-zinc-300">
+            <p className="vecy-subtitle max-w-2xl mx-auto mb-10 text-lg sm:text-xl md:text-2xl leading-relaxed text-zinc-300">
               Liderando la evolución inmobiliaria en Colombia con 8 años de visión tecnológica, corretaje virtual de élite y un compromiso inquebrantable con la transparencia y el medio ambiente.
+              <span className="text-white font-bold block mt-3 uppercase tracking-widest text-xs sm:text-sm">
+                8+ Años de Trayectoria • 100% Digital y Sostenible
+              </span>
             </p>
           </ScrollReveal>
         </div>
@@ -102,7 +111,7 @@ export default function NuestraHistoria() {
           <ScrollReveal delay={0.1}>
             <div className="text-center mb-14">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400 text-xs font-bold tracking-widest uppercase mb-4 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
-                <Skull size={14} className="text-red-400 animate-pulse" />
+                <GiDinosaurRex size={16} className="text-red-400" />
                 EL FIN DE LOS PORTALES INMOBILIARIOS COMO LOS CONOCEMOS HASTA HOY
               </div>
               <h2 className="vecy-title-section">
@@ -113,18 +122,18 @@ export default function NuestraHistoria() {
           </ScrollReveal>
 
           <div className="grid md:grid-cols-2 gap-8 lg:gap-12 max-w-6xl mx-auto">
-            {/* CARD 1: DINOSAURIOS INMOBILIARIOS */}
+            {/* CARD 1: LOS DINOSAURIOS INMOBILIARIOS */}
             <ScrollReveal direction="left" delay={0.15}>
               <div className="vecy-card-apple border-red-500/20 bg-red-950/10 group hover:border-red-500/40 transition-all p-6 sm:p-8 md:p-10 h-full flex flex-col justify-between">
                 <div>
                   <div className="flex items-center gap-4 mb-6">
                     <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
-                      <Skull className="w-8 h-8 text-red-500 group-hover:scale-110 transition-transform" />
+                      <GiDinosaurRex className="w-8 h-8 text-red-500 group-hover:scale-110 transition-transform" />
                     </div>
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400 block">El Pasado Ineficiente</span>
                       <h3 className="text-xl sm:text-2xl font-display font-bold text-white uppercase tracking-wider">
-                        DINOSAURIOS INMOBILIARIOS
+                        LOS DINOSAURIOS INMOBILIARIOS
                       </h3>
                     </div>
                   </div>
@@ -156,7 +165,7 @@ export default function NuestraHistoria() {
               </div>
             </ScrollReveal>
 
-            {/* CARD 2: VECY BIENES RAÍCES: EVOLUCIÓN INEVITABLE */}
+            {/* CARD 2: VECY LA EVOLUCIÓN INEVITABLE */}
             <ScrollReveal direction="right" delay={0.15}>
               <div className="vecy-card-apple border-[#d4af37]/30 bg-primary/5 group hover:border-[#d4af37]/60 shadow-[0_0_35px_rgba(191,149,63,0.1)] transition-all p-6 sm:p-8 md:p-10 h-full flex flex-col justify-between">
                 <div>
@@ -167,7 +176,7 @@ export default function NuestraHistoria() {
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary block">El Nuevo Estándar</span>
                       <h3 className="text-xl sm:text-2xl font-display font-bold text-white uppercase tracking-wider">
-                        VECY BIENES RAÍCES: EVOLUCIÓN INEVITABLE
+                        VECY LA EVOLUCIÓN INEVITABLE
                       </h3>
                     </div>
                   </div>

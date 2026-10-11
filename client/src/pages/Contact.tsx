@@ -18,16 +18,25 @@ export default function Contact() {
 
         <div className="container relative z-10 text-center max-w-4xl mx-auto px-4">
           <ScrollReveal delay={0.1}>
-            <p className="vecy-accent-tag text-center">ATENCIÓN INMOBILIARIA PERSONALIZADA</p>
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <span className="vecy-accent-tag">Atención Inmobiliaria Personalizada</span>
+              <div className="h-px w-12 bg-primary/40"></div>
+            </div>
 
-            <h1 className="vecy-title-hero uppercase tracking-tight">
-              ESTAMOS EN <span className="text-gradient-gold">CONTACTO</span>
+            <h1 className="flex flex-col items-center mb-6">
+              <span className="font-['Audiowide'] text-white text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-[0.16em] uppercase leading-none drop-shadow-[0_4px_30px_rgba(255,255,255,0.2)]">
+                CANALES DE
+              </span>
+              <span className="font-['Audiowide'] text-gradient-gold text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-[0.25em] uppercase leading-tight mt-3">
+                CONTACTO
+              </span>
             </h1>
 
-            <div className="line-electric w-36 sm:w-44 mx-auto my-5"></div>
-
-            <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-zinc-300">
-              Tu próxima inversión o alianza inmobiliaria comienza con una conversación. Contáctanos por WhatsApp o formulario directo.
+            <p className="vecy-subtitle max-w-2xl mx-auto mb-10 text-lg sm:text-xl md:text-2xl leading-relaxed text-zinc-300">
+              Tu próxima inversión o alianza inmobiliaria comienza con una conversación. Contáctanos por WhatsApp oficial o correo directo.
+              <span className="text-white font-bold block mt-3 uppercase tracking-widest text-xs sm:text-sm">
+                Atención Directa con Eduardo & Jani • Asistente Virtual 24/7
+              </span>
             </p>
           </ScrollReveal>
         </div>

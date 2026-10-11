@@ -124,17 +124,25 @@ export default function RequirementsMarketplace() {
         <NetworkBackground />
         <div className="container relative z-10 text-center max-w-4xl mx-auto px-4">
           <ScrollReveal delay={0.1}>
-            <p className="vecy-accent-tag text-center">MARKETPLACE DE DEMANDAS CALIFICADAS</p>
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <span className="vecy-accent-tag">Marketplace de Demandas Calificadas</span>
+              <div className="h-px w-12 bg-primary/40"></div>
+            </div>
 
-            <h1 className="vecy-title-hero uppercase tracking-tight">
-              TIENDA <span className="text-gradient-gold">DEMANDAS</span>
+            <h1 className="flex flex-col items-center mb-6">
+              <span className="font-['Audiowide'] text-white text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-[0.16em] uppercase leading-none drop-shadow-[0_4px_30px_rgba(255,255,255,0.2)]">
+                TIENDA DE
+              </span>
+              <span className="font-['Audiowide'] text-gradient-gold text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-[0.25em] uppercase leading-tight mt-3">
+                DEMANDAS
+              </span>
             </h1>
 
-            <div className="line-electric w-36 sm:w-44 mx-auto my-5"></div>
-
-            <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-zinc-300">
-              Conecta con asesores que ya tienen el comprador verificado. 
-              Si tienes el inventario que coincide con el requerimiento, <span className="font-bold text-white">tienes el cierre asegurado</span>.
+            <p className="vecy-subtitle max-w-2xl mx-auto mb-10 text-lg sm:text-xl md:text-2xl leading-relaxed text-zinc-300">
+              Conecta con asesores que ya tienen el comprador verificado. Si tienes el inventario que coincide con el requerimiento, tienes el cierre asegurado.
+              <span className="text-white font-bold block mt-3 uppercase tracking-widest text-xs sm:text-sm">
+                Compradores Reales y Filtro de Seguridad
+              </span>
             </p>
 
             {/* ── Contador de Demandas Calificadas y Acción Principal Contextual Única ── */}

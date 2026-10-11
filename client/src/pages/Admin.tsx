@@ -152,7 +152,7 @@ export default function Admin() {
               className="w-full h-full object-contain filter drop-shadow-[0_0_15px_rgba(191,149,63,0.3)]"
             />
           </div>
-          <h1 className="text-xl font-bold text-foreground mb-2">Iniciar Sesión</h1>
+          <h1 className="font-['Audiowide'] text-xl font-bold text-foreground uppercase tracking-wider mb-2">Iniciar Sesión</h1>
           <p className="text-muted-foreground text-sm mb-6">Debes iniciar sesión con una cuenta autorizada para acceder al panel.</p>
           <button onClick={() => { window.location.href = getLoginUrl(); }} className="btn-gold w-full">
             Iniciar Sesión

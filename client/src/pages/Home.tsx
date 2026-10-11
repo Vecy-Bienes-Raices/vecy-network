@@ -116,6 +116,12 @@ export default function Home() {
                     <ArrowRight className="inline-block ml-3 group-hover:translate-x-2 transition-transform" />
                   </button>
                   <button 
+                    onClick={() => navigate('/services')}
+                    className="btn-gold-outline px-10 py-5 text-base sm:text-lg tracking-[0.2em] font-bold w-full sm:w-auto"
+                  >
+                    CÓMO FUNCIONA EL MATCH
+                  </button>
+                  <button 
                     onClick={() => navigate('/historia')}
                     className="btn-gold-outline px-10 py-5 text-base sm:text-lg tracking-[0.2em] font-bold w-full sm:w-auto"
                   >

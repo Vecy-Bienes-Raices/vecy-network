@@ -142,17 +142,25 @@ export default function Properties() {
 
         <div className="container relative z-10 text-center max-w-4xl mx-auto px-4">
           <ScrollReveal delay={0.1}>
-            <p className="vecy-accent-tag text-center">RED COLABORATIVA DE INMUEBLES AUDITADOS</p>
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <span className="vecy-accent-tag">Red Colaborativa de Inmuebles Auditados</span>
+              <div className="h-px w-12 bg-primary/40"></div>
+            </div>
 
-            <h1 className="vecy-title-hero uppercase tracking-tight">
-              TIENDA <span className="text-gradient-gold">OFERTAS</span>
+            <h1 className="flex flex-col items-center mb-6">
+              <span className="font-['Audiowide'] text-white text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-[0.16em] uppercase leading-none drop-shadow-[0_4px_30px_rgba(255,255,255,0.2)]">
+                TIENDA DE
+              </span>
+              <span className="font-['Audiowide'] text-gradient-gold text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-[0.25em] uppercase leading-tight mt-3">
+                OFERTAS
+              </span>
             </h1>
 
-            <div className="line-electric w-36 sm:w-44 mx-auto my-5"></div>
-
-            <p className="vecy-subtitle max-w-2xl mx-auto text-sm sm:text-base text-zinc-300">
-              Explora inventario inmobiliario verificado en tiempo real. 
-              Contacta captadores oficiales, coordina visitas y cierra negocios con respaldo legal.
+            <p className="vecy-subtitle max-w-2xl mx-auto mb-10 text-lg sm:text-xl md:text-2xl leading-relaxed text-zinc-300">
+              Explora inventario inmobiliario verificado en tiempo real. Contacta captadores oficiales, coordina visitas y cierra negocios con respaldo legal.
+              <span className="text-white font-bold block mt-3 uppercase tracking-widest text-xs sm:text-sm">
+                Inmuebles Auditados con Respaldo Jurídico
+              </span>
             </p>
 
             {/* ── Contador de Ofertas Auditadas y Acción Principal Contextual Única ── */}

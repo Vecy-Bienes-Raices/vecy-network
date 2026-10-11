@@ -992,8 +992,8 @@ export default function JanIAConsole() {
             </div>
 
             <div className="w-full max-w-2xl text-center space-y-8 z-10">
-              <h1 className="text-4xl md:text-5xl font-medium tracking-tight text-white/90 font-sans leading-tight">
-                Manos a la obra, <span className="bg-gradient-to-r from-[#bf953f] via-[#fcf6ba] to-[#bf953f] bg-clip-text text-transparent font-bold">
+              <h1 className="font-['Audiowide'] text-3xl sm:text-4xl md:text-5xl uppercase tracking-wider text-white/90 leading-tight">
+                Manos a la obra, <span className="text-gradient-gold">
                   {user?.name ? user.name.split(' ')[0] : 'Vecy'}
                 </span>
               </h1>
