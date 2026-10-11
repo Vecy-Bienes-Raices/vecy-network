@@ -91,11 +91,11 @@ export default function Home() {
                   <div className="h-px w-12 bg-primary/40"></div>
                 </div>
                 
-                <h1 className="vecy-title-hero flex flex-col items-center mb-6">
-                  <span className="text-white text-5xl sm:text-6xl md:text-7xl lg:text-8xl tracking-[0.14em] font-black uppercase leading-none drop-shadow-[0_4px_30px_rgba(255,255,255,0.15)]">
+                <h1 className="flex flex-col items-center mb-6">
+                  <span className="font-['Audiowide'] text-white text-6xl sm:text-7xl md:text-8xl lg:text-9xl tracking-[0.16em] uppercase leading-none drop-shadow-[0_4px_30px_rgba(255,255,255,0.2)]">
                     VECY
                   </span>
-                  <span className="text-gradient-gold text-xl sm:text-2xl md:text-3xl lg:text-4xl tracking-[0.22em] font-extrabold uppercase leading-tight mt-3">
+                  <span className="font-['Audiowide'] text-gradient-gold text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-[0.25em] uppercase leading-tight mt-3">
                     BIENES RAÍCES
                   </span>
                 </h1>

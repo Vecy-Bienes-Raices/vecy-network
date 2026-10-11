@@ -172,7 +172,19 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.90 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.91 — Octubre 2026
+
+### Novedades v32.91 (Restauración de Tipografía Oficial Audiowide en Hero de Vecy Bienes Raíces):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  - Eduardo aclaró: *"No laa letra era la anterior que tenía Vecy Bienes Raíces, esa es la que yo elegí esta que pusiste es la que no me gusta."*
+  - Se confirmó que la tipografía distintiva del Hero para **`VECY BIENES RAÍCES`** elegida por Eduardo es **`Audiowide`** (blanco y degradado oro), la cual otorga carácter imponente, vanguardista y cinematográfico a la plataforma.
+- **Acciones Ejecutadas**:
+  - En `client/src/pages/Home.tsx`: Restituida `font-['Audiowide']` en el `h1` del Hero con tamaños `text-6xl sm:text-7xl md:text-8xl lg:text-9xl` (VECY) y `text-2xl sm:text-3xl md:text-4xl lg:text-5xl` (BIENES RAÍCES en degradado oro).
+  - Mantenimiento estricto del resto del diseño: sin cards saturadas, sin badges invasivos, y con el catálogo renombrado a **`INMUEBLES DESTACADOS`**.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 177/177 tests passing ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v32.91`) y `package.json` (`32.91.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.90 — Octubre 2026
 
 ### Novedades v32.90 (Desaturación Visual de Home, Erradicación de Cards Anidadas e Inmuebles Destacados):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

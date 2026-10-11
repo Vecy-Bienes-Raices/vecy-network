@@ -3578,10 +3578,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(soporteContent).not.toContain("45/10/45");
     });
 
-    it("Doctrina v32.84 / v32.90: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
+    it("Doctrina v32.84 / v32.91: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
       const { VECY_ACTIVE_DOMAIN, VECY_VERSION } = await import("../../shared/const");
       expect(VECY_ACTIVE_DOMAIN).toBe("https://vecy-bienes-raices.vercel.app");
-      expect(VECY_VERSION).toBe("v32.90");
+      expect(VECY_VERSION).toBe("v32.91");
 
       const fs = await import("fs");
       const path = await import("path");
@@ -3742,18 +3742,18 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(servicesContent).not.toContain("SDH");
     });
 
-    it("Doctrina v32.90: Desaturación de Home, Inmuebles Destacados y Erradicación de Cards Anidadas", async () => {
+    it("Doctrina v32.91: Restauración de Tipografía Oficial Audiowide en Hero de Vecy Bienes Raíces", async () => {
       const fs = await import("fs");
       const path = await import("path");
 
-      // Validar Home.tsx sin títulos extraños ni cards saturadas
+      // Validar Home.tsx con la tipografía oficial Audiowide elegida por Eduardo
       const homePath = path.resolve(__dirname, "../../client/src/pages/Home.tsx");
       const homeContent = fs.readFileSync(homePath, "utf-8");
       expect(homeContent).toContain("INMUEBLES DESTACADOS");
       expect(homeContent).toContain("VER TODAS LAS PROPIEDADES");
       expect(homeContent).not.toContain("PROPIEDADES DE AUTOR");
       expect(homeContent).not.toContain("Portafolio Curado");
-      expect(homeContent).not.toContain("Audiowide");
+      expect(homeContent).toContain("font-['Audiowide']");
       expect(homeContent).not.toContain("match-ia-section");
       expect(homeContent).not.toContain("EL SANTO GRIAL PROPTECH");
       expect(homeContent).not.toContain("PRIMER PORTAL INMOBILIARIO CON VERDADERA IA EN COLOMBIA");

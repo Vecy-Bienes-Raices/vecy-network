@@ -331,6 +331,33 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.91 — Octubre 2026
+
+#### 📌 RESTAURACIÓN DE TIPOGRAFÍA OFICIAL AUDIOWIDE EN HERO DE VECY BIENES RAÍCES
+
+**Requerimiento y Objetivos:**
+1. **Restauración de Tipografía Oficial Elegida por Eduardo**:
+   - Corrección inmediata a partir de la instrucción de Eduardo: *"No laa letra era la anterior que tenía Vecy Bienes Raíces, esa es la que yo elegí esta que pusiste es la que no me gusta."*
+   - Restitución de la fuente distintiva de marca **`Audiowide`** en el Hero de Inicio (`client/src/pages/Home.tsx`), garantizando el impacto visual cinematográfico, futurista y de alta gama ("VECY" en blanco puro y "BIENES RAÍCES" en degradado oro multicapa).
+2. **Preservación Integral de Mejoras Previas**:
+   - Se mantiene la estructura desaturada sin cards anidadas ni avisos invasivos.
+   - Se conserva el catálogo renombrado a **`INMUEBLES DESTACADOS`** y el enlace **`VER TODAS LAS PROPIEDADES →`**.
+
+**Archivos Modificados:**
+- `client/src/pages/Home.tsx`: Restitución de `font-['Audiowide']` en el título del Hero.
+- `server/__tests__/regression.test.ts`: Actualización del suite de pruebas de regresión v32.91.
+- `shared/const.ts`: Versión oficial `v32.91`.
+- `package.json`: Versión `32.91.0`.
+- `VECY_CORE_PROYECTO/documentos_maestros/HISTORIAL_CONVERSACIONES_MAESTRO.md`: Registro en bitácora maestra.
+- `.agents/AGENTS.md`: Actualización en memoria persistente.
+
+**Verificación:**
+- `npm run check`: 0 errores TypeScript ✅
+- `npm test`: 177 de 177 pruebas aprobadas al 100% ✅
+- `npm run build`: Compilación limpia completada ✅
+
+---
+
 ### 🔖 v32.90 — Octubre 2026
 
 #### 📌 DESATURACIÓN VISUAL DE HOME, ERRADICACIÓN DE CARDS ANIDADAS E INMUEBLES DESTACADOS

@@ -7,6 +7,28 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.91 — 11 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+- **Restauración Inmediata de la Tipografía Oficial Elegida por Eduardo**:
+  - Eduardo aclaró de forma contundente: *"No laa letra era la anterior que tenía Vecy Bienes Raíces, esa es la que yo elegí esta que pusiste es la que no me gusta."*
+  - Eduardo clarificó que la tipografía distintiva del Hero para **`VECY BIENES RAÍCES`** es precisamente la fuente futurista **`Audiowide`** (blanco y degradado oro) que él mismo eligió y estableció en la versión v32.4 por su imponencia, carácter cinematográfico y vanguardia de marca.
+
+### Diagnóstico Técnico y Solución Aplicada
+1. **Restitución de `font-['Audiowide']` en el Título Principal**:
+   - En `client/src/pages/Home.tsx`, se reincorporó `font-['Audiowide']` con los tamaños estelares oficiales (`text-6xl sm:text-7xl md:text-8xl lg:text-9xl` para "VECY" y `text-2xl sm:text-3xl md:text-4xl lg:text-5xl` con `text-gradient-gold` para "BIENES RAÍCES").
+   - Se mantiene intacto el resto del diseño desaturado: cero cards anidadas, cero badges invasivos, y el encabezado claro de **`INMUEBLES DESTACADOS`** con **`VER TODAS LAS PROPIEDADES →`**.
+2. **Actualización de la Suite de Pruebas**:
+   - En `server/__tests__/regression.test.ts`, se actualizó la aserción para verificar la presencia obligatoria de `font-['Audiowide']` en `Home.tsx`.
+
+### Verificación y Validación
+- `npm run check`: 0 errores TypeScript ✅.
+- `npm test`: 177/177 tests aprobados al 100% ✅.
+- `npm run build`: Compilación limpia en producción ✅.
+- Versión oficial incrementada a **v32.91** (`32.91.0`).
+
+---
+
 ## 📋 SESIÓN v32.90 — 11 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera
