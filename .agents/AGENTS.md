@@ -172,7 +172,34 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.96 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.97 — Octubre 2026
+
+### Novedades v32.97 (Auditoría Integral de Servicios Activos 24/7, Presentación Institucional y Estocada de Reseñas en Conversaciones Amenas):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. *"hola mi hermano revisa que jania tenga activos todos sus servicios, que no olvide si es una conversación amena o alguien pregunta sobre nosotros que jania le cuente muy bien y detalladamente todo, que lo invite a seguirnos en nuestras redes y al final la estocada con lo de la opinión y comentarios."*
+- **Auditoría Técnica de Servicios de JanIA**:
+  - Se auditó la matriz completa de servicios:
+    1. Verificación Oficial de Documentos y Antecedentes (Policía Nacional, Procuraduría SIRI, ADRES BDUA) → 100% GRATIS y activo 24/7.
+    2. Factura Predial Bogotá y Certificados de Pago en PDF oficial con código de barras → 100% GRATIS y activo 24/7.
+    3. Paz y Salvo Notarial IDU de Valorización en PDF oficial ($0 COP) → 100% Activo 24/7.
+    4. Liquidación Notarial y de Registro con desglose tributario exacto → 100% Activo 24/7.
+    5. Motor de Coincidencias Cruzadas Inteligentes de Oferta ↔ Demanda (JanIA Match v20.0) → 100% Activo 24/7.
+    6. Asistente Exclusivo de Matches para Administradores en WhatsApp y Web → 100% Activo 24/7.
+    7. Protocolo de Urbanidad de Carreño y Solicitud de Reseñas en Google Reviews → 100% Activo 24/7.
+    8. Red Colaborativa de Corretaje 50/50 y Asesoría con Bróker (+57 316 656 9719) → 100% Activo 24/7.
+- **Acciones Técnicas Ejecutadas**:
+  - En `server/_core/politenessService.ts`:
+    - Incorporación de `formatDetailedCompanyAndSocialMediaPresentation(userName)`: presentación cálida y detallada de la compañía fundada en 2018, los directores Eduardo A. Rivera y Jani Alves, el fin de los dinosaurios inmobiliarios, el catálogo de servicios 100% activos 24/7, enlaces directos a todas las redes oficiales (Instagram, TikTok, Facebook, YouTube, LinkedIn, Canal Oficial de WhatsApp) y "la estocada final": solicitud persuasiva y elegante de calificación y opinión de 5 estrellas en Google Reviews (`https://g.page/r/CctNbwU6UpX5EBM/review`).
+    - Detección precisa con `isCompanyInquiryOrAboutUs(text)` para consultas sobre quiénes somos, la historia de Vecy, fundadores y redes sociales.
+  - En `server/_core/janIA.ts`:
+    - Fast-path interceptor en DMs privados que entrega de inmediato la presentación detallada.
+    - System Prompt enriquecido para el modelo generativo (Gemini) instruyendo que ante charlas amenas o preguntas sobre la empresa detalle todo con orgullo, invite a las redes y aplique la estocada final de Google Reviews.
+  - En `server/_core/prompts/base.md`:
+    - Consagración doctrinal de los canales oficiales, redes sociales y protocolo de conversación amena en el prompt base de JanIA.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 182/182 tests passing ✅ | `npm run build` limpio en 33.65s ✅
+- `shared/const.ts` (`v32.97`) y `package.json` (`32.97.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.96 — Octubre 2026
 
 ### Novedades v32.96 (Protocolo de Urbanidad de Carreño y Persuasión Emocional de Calificación):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

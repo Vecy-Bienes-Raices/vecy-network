@@ -3581,7 +3581,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
     it("Doctrina v32.84 / v32.93: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
       const { VECY_ACTIVE_DOMAIN, VECY_VERSION } = await import("../../shared/const");
       expect(VECY_ACTIVE_DOMAIN).toBe("https://vecy-bienes-raices.vercel.app");
-      expect(VECY_VERSION).toBe("v32.95");
+      expect(VECY_VERSION).toBe("v32.97");
 
       const fs = await import("fs");
       const path = await import("path");
@@ -3963,6 +3963,9 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
       const spyPonal = vi.spyOn(agendaRouter, "queryPoliciaNacional").mockResolvedValue({
         success: false,
+        cedula: testDoc,
+        tipoDoc: "cc",
+        antecedentesDetalle: "Sin antecedentes judiciales reportados o documento no indexado.",
         message: "Sin antecedentes judiciales reportados o documento no indexado."
       });
       const spyPgn = vi.spyOn(idService, "queryProcuraduria").mockResolvedValue({
@@ -4040,6 +4043,59 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(isPoliteGratitudeOrClosing("mil gracias")).toBe(true);
       expect(isPoliteGratitudeOrClosing("muy amable")).toBe(true);
       expect(isPoliteGratitudeOrClosing("chao")).toBe(true);
+    });
+
+    it("v32.97 — Presentación institucional de VECY, fundadores, redes sociales y estocada de calificación Google Reviews", async () => {
+      const {
+        isCompanyInquiryOrAboutUs,
+        formatDetailedCompanyAndSocialMediaPresentation
+      } = await import("../_core/politenessService");
+
+      // 1. Detectar preguntas sobre la empresa, fundadores o redes sociales
+      expect(isCompanyInquiryOrAboutUs("¿Quiénes son ustedes?")).toBe(true);
+      expect(isCompanyInquiryOrAboutUs("Cuéntame de ustedes")).toBe(true);
+      expect(isCompanyInquiryOrAboutUs("¿Qué es Vecy?")).toBe(true);
+      expect(isCompanyInquiryOrAboutUs("¿Quiénes son los fundadores?")).toBe(true);
+      expect(isCompanyInquiryOrAboutUs("¿Cuáles son sus redes sociales?")).toBe(true);
+      expect(isCompanyInquiryOrAboutUs("¿Tienen Instagram?")).toBe(true);
+      expect(isCompanyInquiryOrAboutUs("A qué se dedican")).toBe(true);
+
+      // No confundir con consultas operativas de cédula o predial
+      expect(isCompanyInquiryOrAboutUs("Verificar cédula 123456")).toBe(false);
+      expect(isCompanyInquiryOrAboutUs("Sacar predial AAA0101")).toBe(false);
+
+      // 2. Formato del mensaje institucional detallado
+      const presentation = formatDetailedCompanyAndSocialMediaPresentation("Carlos");
+      expect(presentation).toContain("Carlos");
+      expect(presentation).toContain("VECY BIENES RAÍCES");
+      expect(presentation).toContain("Eduardo A. Rivera");
+      expect(presentation).toContain("Jani Alves");
+      expect(presentation).toContain("100% digital desde 2018");
+      expect(presentation).toContain("dinosaurios inmobiliarios");
+      expect(presentation).toContain("https://vecy-bienes-raices.vercel.app");
+      expect(presentation).toContain("+57 316 656 9719");
+      expect(presentation).toContain("https://www.instagram.com/vecybienesraices/");
+      expect(presentation).toContain("https://www.tiktok.com/@vecybienesraices");
+      expect(presentation).toContain("https://www.facebook.com/vecybienesraices");
+      expect(presentation).toContain("https://www.youtube.com/@VecyBienesRaices");
+      expect(presentation).toContain("https://www.linkedin.com/in/vecy-bienes-raices");
+      expect(presentation).toContain("https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b");
+      // Estocada final con Google Reviews
+      expect(presentation).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+      expect(presentation).toContain("⭐⭐⭐⭐⭐");
+
+      // 3. Integración en processPrivateDmConversationalMessage
+      const { processPrivateDmConversationalMessage } = await import("../_core/janIA");
+      const dmResponse = await processPrivateDmConversationalMessage(
+        "¿Quiénes son ustedes y a qué se dedican?",
+        "573001112233@s.whatsapp.net",
+        "Carlos Mendoza"
+      );
+      expect(dmResponse).toContain("VECY BIENES RAÍCES");
+      expect(dmResponse).toContain("Eduardo A. Rivera");
+      expect(dmResponse).toContain("Jani Alves");
+      expect(dmResponse).toContain("https://www.instagram.com/vecybienesraices/");
+      expect(dmResponse).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
     });
   });
 });

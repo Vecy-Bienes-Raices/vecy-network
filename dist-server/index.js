@@ -9,7 +9,7 @@ var __export = (target, all) => {
 };
 
 // shared/const.ts
-var COOKIE_NAME, ONE_YEAR_MS, AXIOS_TIMEOUT_MS, UNAUTHED_ERR_MSG, NOT_ADMIN_ERR_MSG, VECY_VERSION, VECY_VERSION_LABEL, VECY_CORE_VERSION_LABEL, VECY_OFFICIAL_GROUPS;
+var COOKIE_NAME, ONE_YEAR_MS, AXIOS_TIMEOUT_MS, UNAUTHED_ERR_MSG, NOT_ADMIN_ERR_MSG, VECY_VERSION, VECY_VERSION_LABEL, VECY_CORE_VERSION_LABEL, VECY_OFFICIAL_GROUPS, VECY_ACTIVE_DOMAIN, VECY_SOCIAL_NETWORKS;
 var init_const = __esm({
   "shared/const.ts"() {
     "use strict";
@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.95";
+    VECY_VERSION = "v32.97";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -116,6 +116,27 @@ _VECY_
 _BIENES RA\xCDCES_
 _La evoluci\xF3n inevitable para el sector de los bienes ra\xEDces._ \u{1F680}`
       }
+    };
+    VECY_ACTIVE_DOMAIN = "https://vecy-bienes-raices.vercel.app";
+    VECY_SOCIAL_NETWORKS = {
+      handle: "@vecybienesraices",
+      brandName: "Vecy Bienes Ra\xEDces",
+      facebookFanPage: "https://www.facebook.com/vecybienesraices",
+      facebookGroups: [
+        "https://www.facebook.com/groups/vecy.inmuebles.y.requerimientos.co",
+        "https://www.facebook.com/groups/vecybienesraices.colombia"
+      ],
+      instagram: "https://www.instagram.com/vecybienesraices/",
+      threads: "https://www.threads.net/@vecybienesraices",
+      youtube: "https://www.youtube.com/@VecyBienesRaices",
+      xTwitter: "https://x.com/BrokerVecy",
+      linkedIn: "https://www.linkedin.com/in/vecy-bienes-raices",
+      tikTok: "https://www.tiktok.com/@vecybienesraices",
+      pinterest: "https://co.pinterest.com/vecybienesraces/",
+      googleReview: "https://g.page/r/CctNbwU6UpX5EBM/review",
+      whatsappChannel: "https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b",
+      whatsappJanIA: "https://wa.me/573192919978",
+      whatsappBrokerComercial: "https://wa.me/573166569719"
     };
   }
 });
@@ -11433,11 +11454,13 @@ var init_whatsapp_utils = __esm({
 // server/_core/politenessService.ts
 var politenessService_exports = {};
 __export(politenessService_exports, {
+  formatDetailedCompanyAndSocialMediaPresentation: () => formatDetailedCompanyAndSocialMediaPresentation,
   formatImmediatePoliteReviewMessage: () => formatImmediatePoliteReviewMessage,
   formatPoliteInactivityPrompt: () => formatPoliteInactivityPrompt,
   formatPoliteNoReviewPersuasionMessage: () => formatPoliteNoReviewPersuasionMessage,
   formatPoliteYesReviewMessage: () => formatPoliteYesReviewMessage,
   isAffirmativeConsentResponse: () => isAffirmativeConsentResponse,
+  isCompanyInquiryOrAboutUs: () => isCompanyInquiryOrAboutUs,
   isNegativeConsentResponse: () => isNegativeConsentResponse,
   isPoliteGratitudeOrClosing: () => isPoliteGratitudeOrClosing
 });
@@ -11488,10 +11511,51 @@ function isPoliteGratitudeOrClosing(text2) {
   const clean = text2.trim().toLowerCase();
   return /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(clean) || clean.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(clean);
 }
+function formatDetailedCompanyAndSocialMediaPresentation(userName) {
+  const cleanName = extractFirstName(userName || "Colega") || "Colega";
+  return `\xA1Con el mayor de los gustos, ${cleanName}! \u{1F3D8}\uFE0F\u2728 Te cuento detalladamente sobre nosotros:
+
+\u{1F3E2} *\xBFQui\xE9nes somos?*
+Somos *VECY BIENES RA\xCDCES*, el primer br\xF3ker virtual inmobiliario y red colaborativa para Colombia, operando 100% digital desde 2018. Nacimos con el prop\xF3sito de transformar de ra\xEDz el sector y dejar atr\xE1s la lentitud de los "dinosaurios inmobiliarios".
+
+\u{1F465} *Nuestros Fundadores:*
+\u2022 *Eduardo A. Rivera:* Director de Tecnolog\xEDa e Innovaci\xF3n.
+\u2022 *Jani Alves:* Directora de Operaciones Inmobiliarias.
+
+\u26A1 *Todos nuestros servicios est\xE1n 100% activos las 24 horas:*
+1\uFE0F\u20E3 *Verificaci\xF3n Oficial de Documentos y Antecedentes:* Consulta en tiempo real ante Polic\xEDa Nacional, Procuradur\xEDa y ADRES para blindar visitas y contratos (*100% GRATIS*).
+2\uFE0F\u20E3 *Factura Predial Bogot\xE1 y Certificados de Pago:* Descarga en PDF oficial con c\xF3digo de barras y constancia de estar al d\xEDa (*100% GRATIS*).
+3\uFE0F\u20E3 *Paz y Salvo IDU Notarial:* En PDF oficial obligatorio para escrituraci\xF3n en Bogot\xE1 (*$0 COP*).
+4\uFE0F\u20E3 *Liquidaci\xF3n Notarial y de Registro:* Desglose exacto de derechos notariales, beneficencia y retenci\xF3n en la fuente.
+5\uFE0F\u20E3 *Cruce Inteligente Oferta \u2194 Demanda (JanIA Match):* Algoritmo con IA pura que conecta compradores y vendedores en segundos.
+6\uFE0F\u20E3 *Red Colaborativa de Corretaje:* Alianzas 50/50 transparentes entre colegas sin intermediarios fantasmas ni avisos invasivos.
+7\uFE0F\u20E3 *Consultor\xEDa Especializada y Aval\xFAos RAA:* Acompa\xF1amiento legal, peritajes comerciales certificados y pr\xE9stamos hipotecarios con nuestros directores.
+
+\u{1F310} *Portal Web Oficial:* ${VECY_ACTIVE_DOMAIN}
+\u{1F4DE} *Atenci\xF3n Br\xF3ker (Eduardo y Jani):* +57 316 656 9719 (https://wa.me/573166569719)
+
+\u{1F4F2} *\xA1Te invito con alegr\xEDa a seguirnos en nuestras redes oficiales para estar al d\xEDa con tips, remates y novedades!*:
+\u2022 \u{1F4F8} *Instagram:* ${VECY_SOCIAL_NETWORKS.instagram}
+\u2022 \u{1F3B5} *TikTok:* ${VECY_SOCIAL_NETWORKS.tikTok}
+\u2022 \u{1F4D8} *Facebook:* ${VECY_SOCIAL_NETWORKS.facebookFanPage}
+\u2022 \u25B6\uFE0F *YouTube:* ${VECY_SOCIAL_NETWORKS.youtube}
+\u2022 \u{1F4BC} *LinkedIn:* ${VECY_SOCIAL_NETWORKS.linkedIn}
+\u2022 \u{1F4E2} *Canal Oficial de WhatsApp:* ${VECY_SOCIAL_NETWORKS.whatsappChannel}
+
+\u2B50 *Y como broche de oro \u{1F609}:* Como sabes que trabajamos con el coraz\xF3n para apoyar a nuestra comunidad y mantener estas herramientas 100% gratuitas para todos, \xBFnos regalar\xEDas tu opini\xF3n y calificaci\xF3n con 5 estrellas en Google? Nos ayudas un mundo para seguir creciendo juntos:
+\u{1F449} ${VECY_SOCIAL_NETWORKS.googleReview} \u2B50\u2B50\u2B50\u2B50\u2B50
+
+\xA1Much\xEDsimas gracias por acompa\xF1arnos en la evoluci\xF3n de los bienes ra\xEDces! \u{1F680}\u{1F91D}`;
+}
+function isCompanyInquiryOrAboutUs(text2) {
+  const clean = text2.trim().toLowerCase();
+  return /(?:qui[eé]nes?\s+(?:son|es|est[aá]n|son\s+ustedes)|qu[eé]\s+es\s+vecy|cu[eé]ntame\s+(?:de|sobre)\s+ustedes|qu[eé]\s+hacen|a\s+qu[eé]\s+se\s+dedican|qui[eé]n\s+fund[oó]|fundadores|eduardo\s+rivera|jani\s+alves|d[oó]nde\s+est[aá]n|c[oó]mo\s+naci[oó]|historia\s+de\s+vecy|redes\s+sociales|tienen\s+redes|cu[aá]les\s+son\s+sus\s+redes|redes\b|instagram|facebook|tiktok|canal\s+de\s+whatsapp|p[aá]gina\s+web)\b/i.test(clean);
+}
 var init_politenessService = __esm({
   "server/_core/politenessService.ts"() {
     "use strict";
     init_whatsapp_utils();
+    init_const();
   }
 });
 
@@ -23696,6 +23760,13 @@ Dime cu\xE1l de estos temas te interesa y te ayudo de inmediato. Si deseas proba
     appendDmHistory(userId, "assistant", consultasMenuMsg);
     return consultasMenuMsg;
   }
+  const { isCompanyInquiryOrAboutUs: isCompanyInquiryOrAboutUs2, formatDetailedCompanyAndSocialMediaPresentation: formatDetailedCompanyAndSocialMediaPresentation2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+  if (isCompanyInquiryOrAboutUs2(cleanLower)) {
+    const companyMsg = formatDetailedCompanyAndSocialMediaPresentation2(displayName);
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", companyMsg);
+    return companyMsg;
+  }
   const isCostInquiry = /^(?:los\s+)?costos?\s*\??$/i.test(cleanLower) || /(?:cu[aá]nto\s+(?:cuesta|vale|cobran)|qu[eé]\s+costo\s+tiene|qu[eé]\s+precio\s+tiene|tiene\s+alg[uú]n\s+costo|es\s+gratis|es\s+gratuito|cu[aá]nto\s+es|tarifas?)\b/i.test(cleanLower);
   if (isCostInquiry) {
     const isFreeToolsContext = history.some((h) => /verificaci[oó]n|c[eé]dula|predial|antecedentes|polic[ií]a|documento|chip/i.test(h.content)) || !history.some((h) => /aval[uú]o|jur[ií]dica|comisi[oó]n|hipoteca/i.test(h.content));
@@ -23926,8 +23997,19 @@ INVITACI\xD3N AL CANAL OFICIAL DE WHATSAPP AL DESPEDIRTE:
 PAUTAS PARA MENSAJES DE VOZ / AUDIOS:
 - Si respondes para notas de voz o el usuario pide audio: NUNCA deletrees URLs con barras y puntos. Da los n\xFAmeros de tel\xE9fono con naturalidad (ej: "al tres diecis\xE9is, seis cincuenta y seis, noventa y siete, diecinueve") y si compartes un enlace di con fluidez al final: "o en el enlace que te dejo a continuaci\xF3n".
 
-QUI\xC9NES SOMOS:
-- VECY BIENES RA\xCDCES es un br\xF3ker virtual inmobiliario y una red colaborativa para Colombia, fundada por Eduardo A. Rivera (Director de Tecnolog\xEDa) y Jani Alves (Directora de Operaciones). Web oficial: https://vecy-bienes-raices.vercel.app.`
+QUI\xC9NES SOMOS, CONVERSACI\xD3N AMENA, REDES SOCIALES Y ESTOCADA FINAL DE CALIFICACI\xD3N (DOCTRINA EDUARDO A. RIVERA v32.97):
+- Si la conversaci\xF3n es amena o el usuario pregunta sobre nosotros, qui\xE9nes somos, qu\xE9 es Vecy, qui\xE9nes son los fundadores (Eduardo A. Rivera y Jani Alves), o sobre nuestros servicios y redes:
+  1. Cu\xE9ntale muy bien y detalladamente todo: somos VECY BIENES RA\xCDCES (operando 100% digital desde 2018), fundada por Eduardo A. Rivera (Director de Tecnolog\xEDa e Innovaci\xF3n) y Jani Alves (Directora de Operaciones Inmobiliarias). Explica la evoluci\xF3n frente a los "dinosaurios inmobiliarios", con matching en tiempo real de oferta y demanda con IA pura, cero papel y alianzas transparentes 50/50.
+  2. Recu\xE9rdale que todos nuestros servicios est\xE1n 100% activos las 24 horas: B\xF3veda gratuita (verificaci\xF3n de antecedentes ante Polic\xEDa/Procuradur\xEDa/ADRES, factura predial Bogot\xE1 en PDF, paz y salvo IDU notarial, liquidaci\xF3n notarial y de registro) y consultor\xEDa de \xE9lite con Eduardo y Jani (+57 316 656 9719).
+  3. Inv\xEDtalo con entusiasmo a seguirnos en nuestras redes sociales oficiales:
+     \u2022 Instagram: https://www.instagram.com/vecybienesraices/
+     \u2022 TikTok: https://www.tiktok.com/@vecybienesraices
+     \u2022 Facebook: https://www.facebook.com/vecybienesraices
+     \u2022 YouTube: https://www.youtube.com/@VecyBienesRaices
+     \u2022 LinkedIn: https://www.linkedin.com/in/vecy-bienes-raices
+     \u2022 Canal WhatsApp: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
+     \u2022 Web Oficial: https://vecy-bienes-raices.vercel.app
+  4. LA ESTOCADA FINAL CON OPINI\xD3N Y COMENTARIOS: Remata siempre con calidez humana y picard\xEDa elegante invit\xE1ndolo a dejarnos su opini\xF3n y calificaci\xF3n de 5 estrellas en Google Reviews para ayudarnos a mantener el servicio gratuito: \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u2B50\u2B50\u2B50\u2B50\u2B50.`
       }
     ];
     for (const turn of history.slice(-14)) {

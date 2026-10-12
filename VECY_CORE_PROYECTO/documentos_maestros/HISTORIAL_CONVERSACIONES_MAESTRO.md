@@ -7,6 +7,55 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.97 — 11 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+- **Auditoría Integral de Servicios Activos 24/7, Presentación Institucional y Estocada de Reseñas en Conversaciones Amenas**:
+  1. *"hola mi hermano revisa que jania tenga activos todos sus servicios, que no olvide si es una conversación amena o alguien pregunta sobre nosotros que jania le cuente muy bien y detalladamente todo, que lo invite a seguirnos en nuestras redes y al final la estocada con lo de la opinión y comentarios."*
+
+### Diagnóstico Técnico Profundo
+- **Matriz de Servicios de JanIA**:
+  Todos los microservicios operativos desarrollados a lo largo de las versiones (Verificación de Documentos en Policía/Procuraduría/ADRES, Factura Predial Bogotá, Paz y Salvo IDU de Valorización, Liquidación Notarial, Motor de Matching Oferta ↔ Demanda, Asistente de Matches para Administradores, Protocolo de Urbanidad de Carreño y Red Colaborativa) están completamente vigentes y funcionales en el código fuente.
+- **Identidad Institucional y Redes Sociales en Conversaciones Orgánicas**:
+  Cuando un usuario preguntaba "¿quiénes son ustedes?" o la conversación se tornaba amena, JanIA generaba respuestas breves a través de Gemini sin un desglose exhaustivo de las redes sociales oficiales ni de los fundadores, y no aplicaba de forma contundente "la estocada final" de invitar a calificar en Google Reviews con 5 estrellas.
+
+### Acciones Técnicas Ejecutadas
+1. **Auditoría y Blindaje de Microservicios Operativos 24/7**:
+   - `identityVerificationService.ts`: 100% operativo con fallback CC/CE ante Policía, Procuraduría SIRI y ADRES.
+   - `bogotaPredialService.ts`: 100% operativo con descarga oficial de recibo PDF y certificados con código de barras.
+   - `iduValorizacionService.ts`: 100% operativo para paz y salvo notarial en PDF.
+   - `notarialCalculatorService.ts`: 100% operativo con desglose notarial, beneficencia y registro.
+   - `matching.ts`: Motor v20.0 con scoring multi-criterio y campana de tolerancia de áreas.
+   - `adminMatchAssistantService.ts`: 100% operativo para administradores en WhatsApp y Web.
+   - `politenessService.ts`: Protocolo de Urbanidad de Carreño con temporizadores de 60s.
+2. **Servicio Enriquecido de Presentación Institucional y Redes (`politenessService.ts`)**:
+   - `formatDetailedCompanyAndSocialMediaPresentation(userName)`:
+     • Historia de VECY BIENES RAÍCES (100% digital desde 2018).
+     • Fundadores Eduardo A. Rivera (Tecnología) y Jani Alves (Operaciones).
+     • Misión contra los "dinosaurios inmobiliarios" y su catálogo de servicios gratuitos y activos 24/7.
+     • Canales y redes sociales oficiales:
+       - Web Oficial: `https://vecy-bienes-raices.vercel.app`
+       - WhatsApp Bróker: `+57 316 656 9719`
+       - Instagram: `https://www.instagram.com/vecybienesraices/`
+       - TikTok: `https://www.tiktok.com/@vecybienesraices`
+       - Facebook: `https://www.facebook.com/vecybienesraices`
+       - YouTube: `https://www.youtube.com/@VecyBienesRaices`
+       - LinkedIn: `https://www.linkedin.com/in/vecy-bienes-raices`
+       - Canal de WhatsApp: `https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b`
+     • **La Estocada Final**: Solicitud persuasiva y cariñosa de reseña en Google Reviews (`https://g.page/r/CctNbwU6UpX5EBM/review`) destacando calificación de 5 estrellas ⭐⭐⭐⭐⭐.
+   - Detector semántico: `isCompanyInquiryOrAboutUs(text)`.
+3. **Integración en DM y Prompt Base**:
+   - `server/_core/janIA.ts`: Interceptor inmediato en `processPrivateDmConversationalMessage` ante preguntas institucionales + inyección en el prompt de Gemini para conversaciones amenas.
+   - `server/_core/prompts/base.md`: Inclusión doctrinal de los canales, redes y directriz de la estocada final.
+4. **Pruebas Automatizadas de Regresión**:
+   - `server/__tests__/regression.test.ts`: Nueva prueba validando detección, enlaces de redes sociales y estocada final de calificación en DM.
+
+### Verificación y Validación Empírica
+- `npm run check`: 0 errores TypeScript ✅.
+- `npm test`: 182/182 tests vitest aprobados al 100% ✅.
+- `npm run build`: Compilación limpia de cliente y servidor en 33.65s ✅.
+- Versión oficial incrementada a **v32.97** (`32.97.0`).
+
 ## 📋 SESIÓN v32.96 — 11 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

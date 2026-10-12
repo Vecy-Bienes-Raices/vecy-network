@@ -331,6 +331,46 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.97 — Octubre 2026
+
+#### 📌 AUDITORÍA INTEGRAL DE SERVICIOS ACTIVOS 24/7, IDENTIDAD INSTITUCIONAL, REDES SOCIALES Y ESTOCADA FINAL DE RESEÑAS EN CONVERSACIONES AMENAS
+
+**Requerimiento y Objetivos:**
+1. **Auditoría de Microservicios 24/7 (Eduardo A. Rivera)**:
+   - Verificar que todos los servicios de JanIA estén plenamente activos y operando sin fisuras.
+2. **Presentación Institucional y Enlaces de Redes Sociales**:
+   - Que si la conversación es amena o alguien pregunta sobre Vecy Network / Vecy Bienes Raíces, JanIA cuente detalladamente la historia (100% digital desde 2018), los fundadores Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones), y los servicios contra la intermediación tradicional.
+   - Entregar de forma atractiva todos los canales y redes oficiales: Web Oficial (`https://vecy-bienes-raices.vercel.app`), WhatsApp Bróker (`+57 316 656 9719`), Instagram, TikTok, Facebook, YouTube, LinkedIn y Canal Oficial de WhatsApp.
+3. **La Estocada Final con Opinión y Comentarios**:
+   - Cerrar siempre con persuasión amorosa invitando a calificar con 5 estrellas ⭐⭐⭐⭐⭐ en Google Reviews (`https://g.page/r/CctNbwU6UpX5EBM/review`) para sostener el servicio gratuito.
+
+**Soluciones Técnicas Implementadas:**
+- **Auditoría de Servicios**:
+  • Verificación y ratificación de funcionamiento íntegro de `identityVerificationService.ts`, `bogotaPredialService.ts`, `iduValorizacionService.ts`, `notarialCalculatorService.ts`, `matching.ts` y `adminMatchAssistantService.ts`.
+- **Servicio `politenessService.ts`**:
+  • Función `formatDetailedCompanyAndSocialMediaPresentation(userName)`: redacta la presentación corporativa exhaustiva, lista de servicios 24/7, catálogo de redes sociales e incorpora la estocada final de Google Reviews.
+  • Evaluador `isCompanyInquiryOrAboutUs(text)`: detecta preguntas institucionales ("quiénes son", "de qué se trata", "cómo nació", "redes sociales", etc.).
+- **Integración en WhatsApp Socket y LLM (`janIA.ts` & `prompts/base.md`)**:
+  • Interceptor prioritario en `processPrivateDmConversationalMessage` ante consultas sobre la empresa.
+  • Inyección doctrinal en las directrices de Gemini para conversaciones amenas, exigiendo presentar la historia, los canales oficiales y cerrar con la estocada de la reseña en Google.
+- **Pruebas de Regresión**:
+  • Añadido test unitario validando detección de preguntas de empresa, enlaces de redes sociales y estocada final de calificación en DM.
+
+**Archivos Modificados:**
+- `server/_core/politenessService.ts`: Módulo de presentación corporativa, enlaces de redes y estocada final.
+- `server/_core/janIA.ts`: Interceptor de consultas sobre la empresa e inyección de reglas doctrinales en el prompt dinámico.
+- `server/_core/prompts/base.md`: Inclusión doctrinal de redes y estocada final en el prompt base de JanIA.
+- `server/__tests__/regression.test.ts`: Pruebas de regresión unitarias v32.97.
+- `shared/const.ts` & `package.json`: Incremento a versión oficial `v32.97` (`32.97.0`).
+- Documentos maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y `vecy_network_technical_dossier.md`.
+
+**Verificación:**
+- `npm run check`: 0 errores TypeScript ✅
+- `npm test`: 182/182 tests passing ✅
+- `npm run build`: compilación limpia en 33.65s ✅
+
+---
+
 ### 🔖 v32.96 — Octubre 2026
 
 #### 📌 PROTOCOLO DE URBANIDAD DE CARREÑO Y PERSUASIÓN EMOCIONAL DE CALIFICACIÓN PARA JANIA

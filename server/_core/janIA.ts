@@ -6810,6 +6810,15 @@ export async function processPrivateDmConversationalMessage(
     return consultasMenuMsg;
   }
 
+  // Fast-path: Presentación de la empresa, fundadores, redes sociales y estocada de calificación (Doctrina v32.97)
+  const { isCompanyInquiryOrAboutUs, formatDetailedCompanyAndSocialMediaPresentation } = await import('./politenessService');
+  if (isCompanyInquiryOrAboutUs(cleanLower)) {
+    const companyMsg = formatDetailedCompanyAndSocialMediaPresentation(displayName);
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", companyMsg);
+    return companyMsg;
+  }
+
   // Fast-path: Preguntas sobre costos de las herramientas ("Los costos ?", "¿cuánto vale?", "¿cuánto cuesta?", etc.)
   const isCostInquiry =
     /^(?:los\s+)?costos?\s*\??$/i.test(cleanLower) ||
@@ -7075,8 +7084,19 @@ export async function processPrivateDmConversationalMessage(
           `- Cuando el usuario indique que la conversación está concluyendo, dé las gracias o se despida (ej: "gracias", "muchas gracias", "hasta luego", "vale gracias", "chao", "muy amable", "quedamos así"), despídete con afecto y calidez e invítalo amablemente a seguir nuestro Canal Oficial de WhatsApp de VECY BIENES RAÍCES (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) donde compartimos oportunidades exclusivas, remates, tips y novedades del sector.\n\n` +
           `PAUTAS PARA MENSAJES DE VOZ / AUDIOS:\n` +
           `- Si respondes para notas de voz o el usuario pide audio: NUNCA deletrees URLs con barras y puntos. Da los números de teléfono con naturalidad (ej: "al tres dieciséis, seis cincuenta y seis, noventa y siete, diecinueve") y si compartes un enlace di con fluidez al final: "o en el enlace que te dejo a continuación".\n\n` +
-          `QUIÉNES SOMOS:\n` +
-          `- VECY BIENES RAÍCES es un bróker virtual inmobiliario y una red colaborativa para Colombia, fundada por Eduardo A. Rivera (Director de Tecnología) y Jani Alves (Directora de Operaciones). Web oficial: https://vecy-bienes-raices.vercel.app.`
+          `QUIÉNES SOMOS, CONVERSACIÓN AMENA, REDES SOCIALES Y ESTOCADA FINAL DE CALIFICACIÓN (DOCTRINA EDUARDO A. RIVERA v32.97):\n` +
+          `- Si la conversación es amena o el usuario pregunta sobre nosotros, quiénes somos, qué es Vecy, quiénes son los fundadores (Eduardo A. Rivera y Jani Alves), o sobre nuestros servicios y redes:\n` +
+          `  1. Cuéntale muy bien y detalladamente todo: somos VECY BIENES RAÍCES (operando 100% digital desde 2018), fundada por Eduardo A. Rivera (Director de Tecnología e Innovación) y Jani Alves (Directora de Operaciones Inmobiliarias). Explica la evolución frente a los "dinosaurios inmobiliarios", con matching en tiempo real de oferta y demanda con IA pura, cero papel y alianzas transparentes 50/50.\n` +
+          `  2. Recuérdale que todos nuestros servicios están 100% activos las 24 horas: Bóveda gratuita (verificación de antecedentes ante Policía/Procuraduría/ADRES, factura predial Bogotá en PDF, paz y salvo IDU notarial, liquidación notarial y de registro) y consultoría de élite con Eduardo y Jani (+57 316 656 9719).\n` +
+          `  3. Invítalo con entusiasmo a seguirnos en nuestras redes sociales oficiales:\n` +
+          `     • Instagram: https://www.instagram.com/vecybienesraices/\n` +
+          `     • TikTok: https://www.tiktok.com/@vecybienesraices\n` +
+          `     • Facebook: https://www.facebook.com/vecybienesraices\n` +
+          `     • YouTube: https://www.youtube.com/@VecyBienesRaices\n` +
+          `     • LinkedIn: https://www.linkedin.com/in/vecy-bienes-raices\n` +
+          `     • Canal WhatsApp: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
+          `     • Web Oficial: https://vecy-bienes-raices.vercel.app\n` +
+          `  4. LA ESTOCADA FINAL CON OPINIÓN Y COMENTARIOS: Remata siempre con calidez humana y picardía elegante invitándolo a dejarnos su opinión y calificación de 5 estrellas en Google Reviews para ayudarnos a mantener el servicio gratuito: 👉 https://g.page/r/CctNbwU6UpX5EBM/review ⭐⭐⭐⭐⭐.`
       }
     ];
 

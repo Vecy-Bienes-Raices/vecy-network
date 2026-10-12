@@ -200,7 +200,7 @@ export function parsePoliceAntecedentesFullName(rawFullName: string): string {
 export async function queryPoliciaNacional(
   tipoDocInput: string,
   cleanDoc: string
-): Promise<{ success: boolean; officialName?: string; source?: string; cedula?: string; tipoDoc?: string; hasAntecedentes?: boolean; antecedentesDetalle?: string }> {
+): Promise<{ success: boolean; officialName?: string; source?: string; cedula?: string; tipoDoc?: string; hasAntecedentes?: boolean; antecedentesDetalle?: string; message?: string }> {
   let tipoDoc = 'cc';
   const t = (tipoDocInput || '').toLowerCase();
   if (t.includes('extranjer') || t === 'ce' || t === 'cx') tipoDoc = 'cx';
