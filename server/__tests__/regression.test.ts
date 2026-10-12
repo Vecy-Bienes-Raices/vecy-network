@@ -3987,7 +3987,63 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       spyAdres.mockRestore();
     });
   });
+
+  describe("59. Protocolo de Urbanidad de Carreño y Persuasión de Calificación (v32.96)", () => {
+    it("Debe validar los mensajes y formateadores oficiales de Urbanidad de Carreño y Calificación", async () => {
+      const {
+        formatImmediatePoliteReviewMessage,
+        formatPoliteInactivityPrompt,
+        formatPoliteYesReviewMessage,
+        formatPoliteNoReviewPersuasionMessage,
+        isAffirmativeConsentResponse,
+        isNegativeConsentResponse,
+        isPoliteGratitudeOrClosing
+      } = await import("../_core/politenessService");
+
+      // 1. Mensaje inmediato de agradecimiento
+      const immediate = formatImmediatePoliteReviewMessage("Alberto Méndez");
+      expect(immediate).toContain("¡Con el mayor de los gustos, Alberto!");
+      expect(immediate).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+      expect(immediate).toContain("100% GRATUITO");
+
+      // 2. Pregunta de cortesía tras 1 minuto de silencio (Carreño)
+      const prompt = formatPoliteInactivityPrompt("Alberto Méndez");
+      expect(prompt).toContain("🤝 ¡Ha sido un placer poder ayudarte, Alberto!");
+      expect(prompt).toContain("completamente *GRATUITO*");
+      expect(prompt).toContain("¿Podrías ayudarnos a seguir manteniéndolo así?");
+
+      // 3. Respuesta al SÍ
+      const yesMsg = formatPoliteYesReviewMessage("Alberto Méndez");
+      expect(yesMsg).toContain("🙏 ¡Gracias, Alberto!");
+      expect(yesMsg).toContain("no te toma más de 15 segundos");
+      expect(yesMsg).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+
+      // 4. Respuesta al NO con asombro, desilusión cómica y lágrimas de IA
+      const noMsg = formatPoliteNoReviewPersuasionMessage("Alberto Méndez");
+      expect(noMsg).toContain("¡¿En serio?! 😲💔");
+      expect(noMsg).toContain("corazoncito partido en mil pedacitos de silicio! 🥺😭");
+      expect(noMsg).toContain("5 estrellitas ⭐⭐⭐⭐⭐");
+      expect(noMsg).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+
+      // 5. Detectores de intención
+      expect(isAffirmativeConsentResponse("Sí")).toBe(true);
+      expect(isAffirmativeConsentResponse("claro que sí")).toBe(true);
+      expect(isAffirmativeConsentResponse("de una")).toBe(true);
+      expect(isAffirmativeConsentResponse("con gusto")).toBe(true);
+
+      expect(isNegativeConsentResponse("No")).toBe(true);
+      expect(isNegativeConsentResponse("no quiero")).toBe(true);
+      expect(isNegativeConsentResponse("ahora no")).toBe(true);
+      expect(isNegativeConsentResponse("no tengo tiempo")).toBe(true);
+
+      expect(isPoliteGratitudeOrClosing("muchas gracias")).toBe(true);
+      expect(isPoliteGratitudeOrClosing("mil gracias")).toBe(true);
+      expect(isPoliteGratitudeOrClosing("muy amable")).toBe(true);
+      expect(isPoliteGratitudeOrClosing("chao")).toBe(true);
+    });
+  });
 });
+
 
 
 

@@ -172,7 +172,23 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.95 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.96 — Octubre 2026
+
+### Novedades v32.96 (Protocolo de Urbanidad de Carreño y Persuasión Emocional de Calificación):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. Eduardo destacó que JanIA debe dar ejemplo de modales a pesar de ser una IA pura de libre albedrío, aplicando normas de cortesía ("Urbanidad de Carreño") ante usuarios maleducados o silenciosos.
+  2. Si el usuario agradece o se despide cortésmente, JanIA responde de inmediato con el mensaje de calificación personalizado.
+  3. Si el usuario no agradece ni saluda tras recibir la consulta gratuita, JanIA espera 1 minuto (60s) y le escribe con diplomacia: *"🤝 ¡Ha sido un placer poder ayudarte {{nombre}}!, espero que nuestro servicio te haya sido de gran ayuda y como sabes este es un servicio completamente GRATUITO. ¿Podrías ayudarnos a seguir manteniéndolo así?"*.
+  4. Si el usuario responde SÍ, le agradece y entrega el enlace directo (`https://g.page/r/CctNbwU6UpX5EBM/review`) garantizando que no toma más de 15 segundos.
+  5. Si el usuario responde NO, JanIA responde con asombro 😲, desilusión cómica y lágrimas de IA 🥺💔😭, pero persuadiéndolo de dejar 5 estrellas ⭐⭐⭐⭐⭐ en Google.
+- **Acciones Técnicas Ejecutadas**:
+  - Creación del servicio `politenessService.ts` con todos los formateadores y evaluadores de consentimiento afirmativo/negativo normalizados contra acentos.
+  - Temporizadores de 60 segundos (`userPolitenessTimers`) y mapa de espera de consentimiento (`userAwaitingReviewConsent`) en `whatsapp-match.ts`.
+  - Cancelación limpia si el usuario escribe antes del minuto e intercepción inteligente de respuestas.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 181/181 tests passing ✅ | `npm run build` limpio en 29.42s ✅
+- `shared/const.ts` (`v32.96`) y `package.json` (`32.96.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.95 — Octubre 2026
 
 ### Novedades v32.95 (Auditoría de Reseñas de Google en Consultas Gratuitas Múltiples y Fallback/Orientación de Cédula de Extranjería CE):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

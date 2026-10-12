@@ -285,35 +285,60 @@ export class JaniaMatchBot {
   private postReviewInvitationTimers: Map<string, NodeJS.Timeout> = new Map();
   private recentGroupInviteUsers: Map<string, number> = new Map();
   private userFreeToolConsultationsCount: Map<string, number> = new Map();
+  private userPolitenessTimers: Map<string, NodeJS.Timeout> = new Map();
+  private userAwaitingReviewConsent: Map<string, { timestamp: number; userName?: string }> = new Map();
 
   /**
-   * Dispara de forma desacoplada y elegante la invitación a calificar en Google Review
-   * para mantener el servicio gratuito cuando un usuario realiza múltiples consultas (≥ 2) en DM.
+   * PROTOCOLO DE URBANIDAD DE CARREÑO Y CALIFICACIÓN (v32.96 — Eduardo A. Rivera):
+   * Registra la entrega de un servicio gratuito (Cédula, Predial, IDU, Notarial).
+   * Si el usuario fue maleducado y no dice ni gracias tras recibir el reporte,
+   * JanIA espera un tiempo prudencial de 1 minuto (60s) tras la última interacción
+   * y amablemente le pregunta si puede ayudar a mantener el servicio gratuito.
    */
-  public maybeTriggerFreeServiceReviewPrompt(senderId: string, userName?: string) {
+  public onFreeToolServiceDelivered(senderId: string, userName?: string) {
     const currentCount = (this.userFreeToolConsultationsCount.get(senderId) || 0) + 1;
     this.userFreeToolConsultationsCount.set(senderId, currentCount);
 
     const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
     const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    if (lastReviewSent >= oneDayAgo) return;
 
-    // Si el usuario ya lleva 2 o más consultas gratuitas (cédulas o prediales) y no ha recibido invitación en 24h
-    if (currentCount >= 2 && lastReviewSent < oneDayAgo) {
-      this.recentReviewPromptUsers.set(senderId, Date.now());
-      console.log(`[JANIA-MATCH] ⭐ Programando solicitud de calificación de servicio gratuito para ${senderId} tras ${currentCount} consultas...`);
-
-      setTimeout(async () => {
-        try {
-          const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
-          await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
-          await this.logToDb(senderId, 'janIA', GOOGLE_REVIEW_MESSAGE);
-          console.log(`[JANIA-MATCH] ⭐ Invitación a calificar servicio gratuito entregada a ${senderId}`);
-          this.schedulePostReviewGroupInvitation(senderId, userName);
-        } catch (err: any) {
-          console.error('[JANIA-MATCH] Error enviando invitación a calificar servicio gratuito:', err?.message);
-        }
-      }, 2500);
+    // Cancelar cualquier temporizador previo pendiente (espera de 1 minuto desde la ÚLTIMA interacción)
+    const existingTimer = this.userPolitenessTimers.get(senderId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      this.userPolitenessTimers.delete(senderId);
     }
+
+    console.log(`[JANIA-MATCH] ⏱️ Programando protocolo de Urbanidad de Carreño para ${senderId} (1 min de espera post-servicio)...`);
+    const timer = setTimeout(async () => {
+      this.userPolitenessTimers.delete(senderId);
+      const recentSent = this.recentReviewPromptUsers.get(senderId) || 0;
+      if (Date.now() - recentSent < 24 * 60 * 60 * 1000) return;
+
+      try {
+        const { formatPoliteInactivityPrompt } = await import('./politenessService');
+        const promptText = formatPoliteInactivityPrompt(userName);
+        await this.queuedSend(senderId, promptText, { allowDirectMessage: true, skipDelay: true });
+        await this.logToDb(senderId, 'janIA', promptText);
+        const { appendDmHistory } = await import('./janIA');
+        appendDmHistory(senderId, 'assistant', promptText);
+
+        this.userAwaitingReviewConsent.set(senderId, {
+          timestamp: Date.now(),
+          userName
+        });
+        console.log(`[JANIA-MATCH] 🤝 Pregunta de cortesía de Carreño entregada a ${senderId} tras 1 min de silencio.`);
+      } catch (err: any) {
+        console.error('[JANIA-MATCH] Error enviando pregunta de cortesía tras 1 min de silencio:', err?.message);
+      }
+    }, 60 * 1000);
+
+    this.userPolitenessTimers.set(senderId, timer);
+  }
+
+  public maybeTriggerFreeServiceReviewPrompt(senderId: string, userName?: string) {
+    this.onFreeToolServiceDelivered(senderId, userName);
   }
 
   /**
@@ -1307,6 +1332,82 @@ export class JaniaMatchBot {
       return;
     }
 
+    // ⏱️ PROTOCOLO DE URBANIDAD DE CARREÑO Y CALIFICACIÓN (v32.96 — Eduardo A. Rivera):
+    // 1. Si el usuario escribe antes de que se cumpla el minuto de silencio, cancelamos el timer pendiente
+    const pendingPoliteTimer = this.userPolitenessTimers.get(senderId);
+    if (pendingPoliteTimer) {
+      clearTimeout(pendingPoliteTimer);
+      this.userPolitenessTimers.delete(senderId);
+    }
+
+    // 2. Si el usuario estaba en espera de responder a la pregunta de cortesía ("¿Podrías ayudarnos a seguir manteniéndolo así?")
+    if (this.userAwaitingReviewConsent.has(senderId)) {
+      const consentData = this.userAwaitingReviewConsent.get(senderId)!;
+      const {
+        isAffirmativeConsentResponse,
+        isNegativeConsentResponse,
+        formatPoliteYesReviewMessage,
+        formatPoliteNoReviewPersuasionMessage
+      } = await import('./politenessService');
+
+      const isRecentPrompt = (Date.now() - consentData.timestamp) < 4 * 60 * 60 * 1000;
+      if (isRecentPrompt) {
+        if (isAffirmativeConsentResponse(body)) {
+          this.userAwaitingReviewConsent.delete(senderId);
+          this.recentReviewPromptUsers.set(senderId, Date.now());
+
+          const replyText = formatPoliteYesReviewMessage(userName || consentData.userName);
+          await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
+          await this.logToDb(senderId, 'janIA', replyText);
+          const { appendDmHistory } = await import('./janIA');
+          appendDmHistory(senderId, 'user', body);
+          appendDmHistory(senderId, 'assistant', replyText);
+
+          this.schedulePostReviewGroupInvitation(senderId, userName || consentData.userName);
+          console.log(`[JANIA-MATCH] ⭐ Usuario ${senderId} respondió SÍ a la cortesía -> Enlace entregado.`);
+          return;
+        } else if (isNegativeConsentResponse(body)) {
+          this.userAwaitingReviewConsent.delete(senderId);
+          this.recentReviewPromptUsers.set(senderId, Date.now());
+
+          const replyText = formatPoliteNoReviewPersuasionMessage(userName || consentData.userName);
+          await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
+          await this.logToDb(senderId, 'janIA', replyText);
+          const { appendDmHistory } = await import('./janIA');
+          appendDmHistory(senderId, 'user', body);
+          appendDmHistory(senderId, 'assistant', replyText);
+
+          this.schedulePostReviewGroupInvitation(senderId, userName || consentData.userName);
+          console.log(`[JANIA-MATCH] ⭐ Usuario ${senderId} respondió NO a la cortesía -> Mensaje persuasivo entregado.`);
+          return;
+        }
+      }
+      // Si el usuario envió otra consulta o un número, limpiamos el estado de espera para permitir el flujo normal
+      this.userAwaitingReviewConsent.delete(senderId);
+    }
+
+    // 3. Si la persona contesta, agradece o se despide amablemente tras recibir el servicio:
+    // JanIA reacciona de inmediato con el mensaje de calificación personalizado (Doctrina v32.96)
+    const { isPoliteGratitudeOrClosing, formatImmediatePoliteReviewMessage } = await import('./politenessService');
+    const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
+    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+
+    if (isPoliteGratitudeOrClosing(body) && lastReviewSent < oneDayAgo) {
+      this.recentReviewPromptUsers.set(senderId, Date.now());
+      this.userAwaitingReviewConsent.delete(senderId);
+
+      const replyText = formatImmediatePoliteReviewMessage(userName);
+      await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
+      await this.logToDb(senderId, 'janIA', replyText);
+      const { appendDmHistory } = await import('./janIA');
+      appendDmHistory(senderId, 'user', body);
+      appendDmHistory(senderId, 'assistant', replyText);
+
+      this.schedulePostReviewGroupInvitation(senderId, userName);
+      console.log(`[JANIA-MATCH] ⭐ Usuario ${senderId} agradeció amablemente -> Calificación inmediata entregada.`);
+      return;
+    }
+
     // 🎯 INTERCEPTOR ADMIN: ASISTENTE DE BÚSQUEDA DE MATCHES (EXCLUSIVO ADMINISTRADORES) (v32.94)
     const { isMatchSearchQuery, executeAdminMatchSearch, isAuthorizedAdminPhone } = await import('./adminMatchAssistantService');
     const isAdminUser = isAdmin || isAuthorizedAdminPhone(senderId, userName) || isAuthorizedAdminPhone(rawPhone, userName);
@@ -1347,6 +1448,7 @@ export class JaniaMatchBot {
           appendDmHistory(senderId, 'user', body);
           appendDmHistory(senderId, 'assistant', deliveredText);
           await this.logToDb(senderId, 'janIA', deliveredText);
+          this.onFreeToolServiceDelivered(senderId, userName);
           return;
         }
       } finally {
@@ -1377,6 +1479,7 @@ export class JaniaMatchBot {
           appendDmHistory(senderId, 'user', body);
           appendDmHistory(senderId, 'assistant', deliveredText);
           await this.logToDb(senderId, 'janIA', deliveredText);
+          this.onFreeToolServiceDelivered(senderId, userName);
           return;
         }
       } finally {
@@ -1407,6 +1510,7 @@ export class JaniaMatchBot {
           appendDmHistory(senderId, 'user', body);
           appendDmHistory(senderId, 'assistant', deliveredText);
           await this.logToDb(senderId, 'janIA', deliveredText);
+          this.onFreeToolServiceDelivered(senderId, userName);
           return;
         }
       } finally {
@@ -1437,6 +1541,7 @@ export class JaniaMatchBot {
           appendDmHistory(senderId, 'user', body);
           appendDmHistory(senderId, 'assistant', deliveredText);
           await this.logToDb(senderId, 'janIA', deliveredText);
+          this.onFreeToolServiceDelivered(senderId, userName);
           return;
         }
       } finally {
@@ -1619,10 +1724,11 @@ export class JaniaMatchBot {
 
                 if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {
                   this.recentReviewPromptUsers.set(senderId, Date.now());
-                  const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+                  const { formatImmediatePoliteReviewMessage } = await import('./politenessService');
+                  const politeMsg = formatImmediatePoliteReviewMessage(userName);
                   await new Promise(r => setTimeout(r, 1200));
-                  await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
-                  await this.logToDb(senderId, 'janIA', GOOGLE_REVIEW_MESSAGE);
+                  await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
+                  await this.logToDb(senderId, 'janIA', politeMsg);
                   this.schedulePostReviewGroupInvitation(senderId, userName);
                 }
 
@@ -1636,7 +1742,7 @@ export class JaniaMatchBot {
           await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
           await this.logToDb(senderId, 'janIA', reply);
 
-          // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre (Doctrina v32.40)
+          // Despacho desacoplado de reseña de Google en mensaje aparte siempre si hay gratitud o cierre (Doctrina v32.40 / v32.96)
           const isGratitudeOrClosing = 
             /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) ||
             (cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower));
@@ -1645,10 +1751,11 @@ export class JaniaMatchBot {
 
           if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {
             this.recentReviewPromptUsers.set(senderId, Date.now());
-            const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+            const { formatImmediatePoliteReviewMessage } = await import('./politenessService');
+            const politeMsg = formatImmediatePoliteReviewMessage(userName);
             await new Promise(r => setTimeout(r, 1200));
-            await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
-            await this.logToDb(senderId, 'janIA', GOOGLE_REVIEW_MESSAGE);
+            await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
+            await this.logToDb(senderId, 'janIA', politeMsg);
             this.schedulePostReviewGroupInvitation(senderId, userName);
           }
           return;

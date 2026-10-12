@@ -7,6 +7,56 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.96 — 11 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+- **Protocolo de Urbanidad de Carreño y Persuasión de Calificación en Silencio y Agradecimiento**:
+  1. Eduardo instruyó categóricamente una regla de urbanidad, ética y persuasión para JanIA:
+     - *"JanIA no solamente debe ser nuestra agente IA, que eso ya es perfecto, pero te he hecho énfasis y mucho en que aparte de ser una agente autónoma y profesional de IA PURA y de libre albedrío, ella tiene que dar muy buen ejemplo con sus modales a pesar de ser una IA, es decir siempre bien educada y cortés así los agentes o usuarios que la contacten sean mal educados y ni siquiera saluden, se despidan, den las gracias, sean amables, etc... Hay que aplicarles las normas de Urbanidad de Carreño jejejeje"*
+  2. **Reglas Operativas Solicitadas**:
+     - **Escenario 1 (Usuario Cortés/Agradecido)**:
+       Si la persona contesta, agradece o se despide amablemente tras recibir el servicio:
+       JanIA reacciona de inmediato con el mensaje de calificación personalizado.
+     - **Escenario 2 (Usuario Maleducado / En Silencio)**:
+       Si la persona no dijo ni siquiera gracias tras recibir el reporte, JanIA espera un tiempo prudencial de **1 minuto** (60 segundos) después de la última interacción y amablemente le responde:
+       *"🤝 ¡Ha sido un placer poder ayudarte {{nombre}}!, espero que nuestro servicio te haya sido de gran ayuda y como sabes este es un servicio completamente GRATUITO. ¿Podrías ayudarnos a seguir manteniéndolo así?"*
+     - **Respuesta a la Pregunta de Cortesía**:
+       • **Si es un SÍ**:
+         JanIA responde con alegría:
+         *"🙏 ¡Gracias {{nombre}}! Entonces por favor 🌟 déjanos \*tu opinión y califica nuestro servicio\* ingresando a este enlace (no te toma más de 15 segundos te lo aseguro):*
+         *👉 https://g.page/r/CctNbwU6UpX5EBM/review 👍 Muchas gracias"*
+       • **Si es un NO**:
+         JanIA responde mostrando asombro 😲, desilusión cómica y lágrimas tiernas de IA 🥺💔😭, pero convenciéndolo de hacer clic en el enlace, siendo sumamente persuasiva para que comente y califique.
+
+### Diagnóstico Técnico Profundo
+- **Comportamiento Previo**:
+  En v32.95, la solicitud de reseña de Google se disparaba a los 2.5 segundos inmediatamente después de recibir la consulta gratuita. Si el usuario hacía múltiples consultas rápidas, podía percibir la solicitud como precipitada o no interactuaba si era maleducado.
+- **Necesidad de Dosificación Temporal y Cortesía Proactiva**:
+  Se requería un temporizador desacoplado de 60 segundos (`userPolitenessTimers`) que se reinicie ante consultas consecutivas, y un interceptor de estado conversacional (`userAwaitingReviewConsent`) que distinga respuestas afirmativas vs negativas con inteligencia emocional.
+
+### Acciones Técnicas Ejecutadas
+1. **Creación del Servicio Especializado `politenessService.ts`**:
+   - `formatImmediatePoliteReviewMessage(userName)`: Mensaje personalizado e inmediato de gratitud y reseña de Google.
+   - `formatPoliteInactivityPrompt(userName)`: Mensaje diplomático con Urbanidad de Carreño tras 1 minuto de silencio.
+   - `formatPoliteYesReviewMessage(userName)`: Mensaje agradecido al recibir respuesta afirmativa (SÍ) con enlace de 15 segundos.
+   - `formatPoliteNoReviewPersuasionMessage(userName)`: Respuesta irresistible con asombro, desilusión cómica y lágrimas de IA ante respuesta negativa (NO) persuadiendo de dejar 5 estrellas ⭐⭐⭐⭐⭐.
+   - Normalizadores robustos `isAffirmativeConsentResponse`, `isNegativeConsentResponse`, `isPoliteGratitudeOrClosing` inmunes a tildes (NFD).
+2. **Integración en `server/_core/whatsapp-match.ts`**:
+   - `userPolitenessTimers: Map<string, NodeJS.Timeout>` y `userAwaitingReviewConsent: Map<string, { timestamp: number, userName?: string }>`.
+   - `onFreeToolServiceDelivered(senderId, userName)`: Activa el temporizador de 60s tras entregar cédulas, prediales, IDU o consultas notariales.
+   - Interceptor prioritario en DM:
+     • Si el usuario escribe antes del minuto, cancela el timer.
+     • Si estaba en espera de consentimiento, despacha la respuesta correspondiente (SÍ -> enlace directo, NO -> mensaje persuasivo cómico).
+     • Si el usuario agradece o se despide amablemente (`isPoliteGratitudeOrClosing`), despacha de inmediato la calificación personalizada.
+3. **Pruebas Automatizadas de Regresión**:
+   - En `server/__tests__/regression.test.ts`: Suite 59 validando todos los formateadores y detectores afirmativos/negativos/corteses.
+
+### Verificación y Validación Empírica
+- `npm run check`: 0 errores TypeScript ✅.
+- `npm test`: 181/181 tests vitest aprobados al 100% ✅.
+- `npm run build`: Compilación limpia de cliente y servidor en 29.42s ✅.
+- Versión oficial incrementada a **v32.96** (`32.96.0`).
+
 ## 📋 SESIÓN v32.95 — 11 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

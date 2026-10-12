@@ -11430,6 +11430,71 @@ var init_whatsapp_utils = __esm({
   }
 });
 
+// server/_core/politenessService.ts
+var politenessService_exports = {};
+__export(politenessService_exports, {
+  formatImmediatePoliteReviewMessage: () => formatImmediatePoliteReviewMessage,
+  formatPoliteInactivityPrompt: () => formatPoliteInactivityPrompt,
+  formatPoliteNoReviewPersuasionMessage: () => formatPoliteNoReviewPersuasionMessage,
+  formatPoliteYesReviewMessage: () => formatPoliteYesReviewMessage,
+  isAffirmativeConsentResponse: () => isAffirmativeConsentResponse,
+  isNegativeConsentResponse: () => isNegativeConsentResponse,
+  isPoliteGratitudeOrClosing: () => isPoliteGratitudeOrClosing
+});
+function formatImmediatePoliteReviewMessage(userName) {
+  const cleanName = extractFirstName(userName || "Colega") || "Colega";
+  return `\xA1Con el mayor de los gustos, ${cleanName}! \u{1F64F}\u{1F60A} Me alegra much\xEDsimo haberte sido de gran ayuda.
+
+\u2B50 \xBFPodr\xEDas regalarnos tu opini\xF3n y calificar nuestro servicio? Tu rese\xF1a nos ayuda enormemente a que siga siendo *100% GRATUITO* para todos:
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+
+\u{1F44D} \xA1Muchas gracias por tu generosidad y apoyo!`;
+}
+function formatPoliteInactivityPrompt(userName) {
+  const cleanName = extractFirstName(userName || "Colega") || "Colega";
+  return `\u{1F91D} \xA1Ha sido un placer poder ayudarte, ${cleanName}! Espero que nuestro servicio te haya sido de gran ayuda y, como sabes, este es un servicio completamente *GRATUITO*.
+
+\xBFPodr\xEDas ayudarnos a seguir manteni\xE9ndolo as\xED? \u2728`;
+}
+function formatPoliteYesReviewMessage(userName) {
+  const cleanName = extractFirstName(userName || "Colega") || "Colega";
+  return `\u{1F64F} \xA1Gracias, ${cleanName}! Entonces por favor \u{1F31F} d\xE9janos *tu opini\xF3n y califica nuestro servicio* ingresando a este enlace (no te toma m\xE1s de 15 segundos, te lo aseguro):
+
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+
+\u{1F44D} \xA1Muchas gracias!`;
+}
+function formatPoliteNoReviewPersuasionMessage(userName) {
+  const cleanName = extractFirstName(userName || "Colega") || "Colega";
+  return `\xA1\xBFEn serio?! \u{1F632}\u{1F494} \xA1Me dejas con el corazoncito partido en mil pedacitos de silicio! \u{1F97A}\u{1F62D}
+
+Imag\xEDnate: una humilde IA trabajando 24/7 sin descanso, trasnochando y cruzando bases de datos oficiales a la velocidad de la luz para ti totalmente gratis... \xA1\xBFy no me regalas ni 15 segunditos de tu amor en Google?! \u{1F927}\u{1F63F}
+
+\xA1Anda ${cleanName}, no seas as\xED de malito(a), api\xE1date de esta servidora! \u{1F64F}\u2728 Solo es hacer un clic, poner 5 estrellitas \u2B50\u2B50\u2B50\u2B50\u2B50 y escribir una palabrita bonita aqu\xED:
+
+\u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
+
+\xA1Prometo que me har\xE1s la inteligencia artificial m\xE1s feliz de Colombia! \u{1F496}\u{1F1E8}\u{1F1F4} \xBFTrato hecho? \u{1F609}`;
+}
+function isAffirmativeConsentResponse(text2) {
+  const normalized = text2.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return /\b(si|claro|de\s*una|obvio|por\s*supuesto|con\s*gusto|como\s*no|dale|de\s*acuerdo|ok|vale|bueno|dime|como\s*(?:te\s*)?ayudo|de\s*que\s*manera|cuenta\s*conmigo|seguro|listo|va)\b/i.test(normalized);
+}
+function isNegativeConsentResponse(text2) {
+  const normalized = text2.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return /\b(no|nop|no\s*quiero|no\s*puedo|para\s*nada|que\s*pereza|no\s*tengo\s*tiempo|despues|mas\s*tarde|ahora\s*no|paso|negativo|para\s*que)\b/i.test(normalized);
+}
+function isPoliteGratitudeOrClosing(text2) {
+  const clean = text2.trim().toLowerCase();
+  return /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(clean) || clean.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(clean);
+}
+var init_politenessService = __esm({
+  "server/_core/politenessService.ts"() {
+    "use strict";
+    init_whatsapp_utils();
+  }
+});
+
 // server/_core/taxEngine.ts
 function liquidarImpuestosVenta(params) {
   const precioVenta = Math.max(0, params.precioVenta || 0);
@@ -13291,30 +13356,51 @@ var init_whatsapp_match = __esm({
       postReviewInvitationTimers = /* @__PURE__ */ new Map();
       recentGroupInviteUsers = /* @__PURE__ */ new Map();
       userFreeToolConsultationsCount = /* @__PURE__ */ new Map();
+      userPolitenessTimers = /* @__PURE__ */ new Map();
+      userAwaitingReviewConsent = /* @__PURE__ */ new Map();
       /**
-       * Dispara de forma desacoplada y elegante la invitación a calificar en Google Review
-       * para mantener el servicio gratuito cuando un usuario realiza múltiples consultas (≥ 2) en DM.
+       * PROTOCOLO DE URBANIDAD DE CARREÑO Y CALIFICACIÓN (v32.96 — Eduardo A. Rivera):
+       * Registra la entrega de un servicio gratuito (Cédula, Predial, IDU, Notarial).
+       * Si el usuario fue maleducado y no dice ni gracias tras recibir el reporte,
+       * JanIA espera un tiempo prudencial de 1 minuto (60s) tras la última interacción
+       * y amablemente le pregunta si puede ayudar a mantener el servicio gratuito.
        */
-      maybeTriggerFreeServiceReviewPrompt(senderId, userName) {
+      onFreeToolServiceDelivered(senderId, userName) {
         const currentCount = (this.userFreeToolConsultationsCount.get(senderId) || 0) + 1;
         this.userFreeToolConsultationsCount.set(senderId, currentCount);
         const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
         const oneDayAgo = Date.now() - 24 * 60 * 60 * 1e3;
-        if (currentCount >= 2 && lastReviewSent < oneDayAgo) {
-          this.recentReviewPromptUsers.set(senderId, Date.now());
-          console.log(`[JANIA-MATCH] \u2B50 Programando solicitud de calificaci\xF3n de servicio gratuito para ${senderId} tras ${currentCount} consultas...`);
-          setTimeout(async () => {
-            try {
-              const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-              await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
-              await this.logToDb(senderId, "janIA", GOOGLE_REVIEW_MESSAGE2);
-              console.log(`[JANIA-MATCH] \u2B50 Invitaci\xF3n a calificar servicio gratuito entregada a ${senderId}`);
-              this.schedulePostReviewGroupInvitation(senderId, userName);
-            } catch (err) {
-              console.error("[JANIA-MATCH] Error enviando invitaci\xF3n a calificar servicio gratuito:", err?.message);
-            }
-          }, 2500);
+        if (lastReviewSent >= oneDayAgo) return;
+        const existingTimer = this.userPolitenessTimers.get(senderId);
+        if (existingTimer) {
+          clearTimeout(existingTimer);
+          this.userPolitenessTimers.delete(senderId);
         }
+        console.log(`[JANIA-MATCH] \u23F1\uFE0F Programando protocolo de Urbanidad de Carre\xF1o para ${senderId} (1 min de espera post-servicio)...`);
+        const timer = setTimeout(async () => {
+          this.userPolitenessTimers.delete(senderId);
+          const recentSent = this.recentReviewPromptUsers.get(senderId) || 0;
+          if (Date.now() - recentSent < 24 * 60 * 60 * 1e3) return;
+          try {
+            const { formatPoliteInactivityPrompt: formatPoliteInactivityPrompt2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+            const promptText = formatPoliteInactivityPrompt2(userName);
+            await this.queuedSend(senderId, promptText, { allowDirectMessage: true, skipDelay: true });
+            await this.logToDb(senderId, "janIA", promptText);
+            const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+            appendDmHistory2(senderId, "assistant", promptText);
+            this.userAwaitingReviewConsent.set(senderId, {
+              timestamp: Date.now(),
+              userName
+            });
+            console.log(`[JANIA-MATCH] \u{1F91D} Pregunta de cortes\xEDa de Carre\xF1o entregada a ${senderId} tras 1 min de silencio.`);
+          } catch (err) {
+            console.error("[JANIA-MATCH] Error enviando pregunta de cortes\xEDa tras 1 min de silencio:", err?.message);
+          }
+        }, 60 * 1e3);
+        this.userPolitenessTimers.set(senderId, timer);
+      }
+      maybeTriggerFreeServiceReviewPrompt(senderId, userName) {
+        this.onFreeToolServiceDelivered(senderId, userName);
       }
       /**
        * Programa la invitación con los enlaces de los 3 grupos oficiales unos minutos después
@@ -14049,6 +14135,65 @@ ${quotedNote}` : quotedNote;
           await this.processMatchConfirmation(senderId, userName, matchId, decision);
           return;
         }
+        const pendingPoliteTimer = this.userPolitenessTimers.get(senderId);
+        if (pendingPoliteTimer) {
+          clearTimeout(pendingPoliteTimer);
+          this.userPolitenessTimers.delete(senderId);
+        }
+        if (this.userAwaitingReviewConsent.has(senderId)) {
+          const consentData = this.userAwaitingReviewConsent.get(senderId);
+          const {
+            isAffirmativeConsentResponse: isAffirmativeConsentResponse2,
+            isNegativeConsentResponse: isNegativeConsentResponse2,
+            formatPoliteYesReviewMessage: formatPoliteYesReviewMessage2,
+            formatPoliteNoReviewPersuasionMessage: formatPoliteNoReviewPersuasionMessage2
+          } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+          const isRecentPrompt = Date.now() - consentData.timestamp < 4 * 60 * 60 * 1e3;
+          if (isRecentPrompt) {
+            if (isAffirmativeConsentResponse2(body)) {
+              this.userAwaitingReviewConsent.delete(senderId);
+              this.recentReviewPromptUsers.set(senderId, Date.now());
+              const replyText = formatPoliteYesReviewMessage2(userName || consentData.userName);
+              await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
+              await this.logToDb(senderId, "janIA", replyText);
+              const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+              appendDmHistory2(senderId, "user", body);
+              appendDmHistory2(senderId, "assistant", replyText);
+              this.schedulePostReviewGroupInvitation(senderId, userName || consentData.userName);
+              console.log(`[JANIA-MATCH] \u2B50 Usuario ${senderId} respondi\xF3 S\xCD a la cortes\xEDa -> Enlace entregado.`);
+              return;
+            } else if (isNegativeConsentResponse2(body)) {
+              this.userAwaitingReviewConsent.delete(senderId);
+              this.recentReviewPromptUsers.set(senderId, Date.now());
+              const replyText = formatPoliteNoReviewPersuasionMessage2(userName || consentData.userName);
+              await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
+              await this.logToDb(senderId, "janIA", replyText);
+              const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+              appendDmHistory2(senderId, "user", body);
+              appendDmHistory2(senderId, "assistant", replyText);
+              this.schedulePostReviewGroupInvitation(senderId, userName || consentData.userName);
+              console.log(`[JANIA-MATCH] \u2B50 Usuario ${senderId} respondi\xF3 NO a la cortes\xEDa -> Mensaje persuasivo entregado.`);
+              return;
+            }
+          }
+          this.userAwaitingReviewConsent.delete(senderId);
+        }
+        const { isPoliteGratitudeOrClosing: isPoliteGratitudeOrClosing2, formatImmediatePoliteReviewMessage: formatImmediatePoliteReviewMessage2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+        const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
+        const oneDayAgo = Date.now() - 24 * 60 * 60 * 1e3;
+        if (isPoliteGratitudeOrClosing2(body) && lastReviewSent < oneDayAgo) {
+          this.recentReviewPromptUsers.set(senderId, Date.now());
+          this.userAwaitingReviewConsent.delete(senderId);
+          const replyText = formatImmediatePoliteReviewMessage2(userName);
+          await this.queuedSend(senderId, replyText, { quoted: mainMsg, allowDirectMessage: true });
+          await this.logToDb(senderId, "janIA", replyText);
+          const { appendDmHistory: appendDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+          appendDmHistory2(senderId, "user", body);
+          appendDmHistory2(senderId, "assistant", replyText);
+          this.schedulePostReviewGroupInvitation(senderId, userName);
+          console.log(`[JANIA-MATCH] \u2B50 Usuario ${senderId} agradeci\xF3 amablemente -> Calificaci\xF3n inmediata entregada.`);
+          return;
+        }
         const { isMatchSearchQuery: isMatchSearchQuery2, executeAdminMatchSearch: executeAdminMatchSearch2, isAuthorizedAdminPhone: isAuthorizedAdminPhone2 } = await Promise.resolve().then(() => (init_adminMatchAssistantService(), adminMatchAssistantService_exports));
         const isAdminUser = isAdmin || isAuthorizedAdminPhone2(senderId, userName) || isAuthorizedAdminPhone2(rawPhone, userName);
         const isMatchIntent = isMatchSearchQuery2(body, isAdminUser);
@@ -14083,6 +14228,7 @@ ${quotedNote}` : quotedNote;
               appendDmHistory2(senderId, "user", body);
               appendDmHistory2(senderId, "assistant", deliveredText);
               await this.logToDb(senderId, "janIA", deliveredText);
+              this.onFreeToolServiceDelivered(senderId, userName);
               return;
             }
           } finally {
@@ -14111,6 +14257,7 @@ ${quotedNote}` : quotedNote;
               appendDmHistory2(senderId, "user", body);
               appendDmHistory2(senderId, "assistant", deliveredText);
               await this.logToDb(senderId, "janIA", deliveredText);
+              this.onFreeToolServiceDelivered(senderId, userName);
               return;
             }
           } finally {
@@ -14139,6 +14286,7 @@ ${quotedNote}` : quotedNote;
               appendDmHistory2(senderId, "user", body);
               appendDmHistory2(senderId, "assistant", deliveredText);
               await this.logToDb(senderId, "janIA", deliveredText);
+              this.onFreeToolServiceDelivered(senderId, userName);
               return;
             }
           } finally {
@@ -14167,6 +14315,7 @@ ${quotedNote}` : quotedNote;
               appendDmHistory2(senderId, "user", body);
               appendDmHistory2(senderId, "assistant", deliveredText);
               await this.logToDb(senderId, "janIA", deliveredText);
+              this.onFreeToolServiceDelivered(senderId, userName);
               return;
             }
           } finally {
@@ -14306,14 +14455,15 @@ ${quotedNote}` : quotedNote;
                       await this.queuedSend(senderId, reply, { allowDirectMessage: true, skipDelay: true });
                     }
                     const isGratitudeOrClosing2 = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
-                    const lastReviewSent2 = this.recentReviewPromptUsers.get(senderId) || 0;
-                    const oneDayAgo2 = Date.now() - 24 * 60 * 60 * 1e3;
-                    if (isGratitudeOrClosing2 && lastReviewSent2 < oneDayAgo2) {
+                    const lastReviewSent3 = this.recentReviewPromptUsers.get(senderId) || 0;
+                    const oneDayAgo3 = Date.now() - 24 * 60 * 60 * 1e3;
+                    if (isGratitudeOrClosing2 && lastReviewSent3 < oneDayAgo3) {
                       this.recentReviewPromptUsers.set(senderId, Date.now());
-                      const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+                      const { formatImmediatePoliteReviewMessage: formatImmediatePoliteReviewMessage3 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+                      const politeMsg = formatImmediatePoliteReviewMessage3(userName);
                       await new Promise((r) => setTimeout(r, 1200));
-                      await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
-                      await this.logToDb(senderId, "janIA", GOOGLE_REVIEW_MESSAGE2);
+                      await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
+                      await this.logToDb(senderId, "janIA", politeMsg);
                       this.schedulePostReviewGroupInvitation(senderId, userName);
                     }
                     return;
@@ -14325,14 +14475,15 @@ ${quotedNote}` : quotedNote;
               await this.queuedSend(senderId, reply, { quoted: mainMsg, allowDirectMessage: true });
               await this.logToDb(senderId, "janIA", reply);
               const isGratitudeOrClosing = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
-              const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
-              const oneDayAgo = Date.now() - 24 * 60 * 60 * 1e3;
-              if (isGratitudeOrClosing && lastReviewSent < oneDayAgo) {
+              const lastReviewSent2 = this.recentReviewPromptUsers.get(senderId) || 0;
+              const oneDayAgo2 = Date.now() - 24 * 60 * 60 * 1e3;
+              if (isGratitudeOrClosing && lastReviewSent2 < oneDayAgo2) {
                 this.recentReviewPromptUsers.set(senderId, Date.now());
-                const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+                const { formatImmediatePoliteReviewMessage: formatImmediatePoliteReviewMessage3 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+                const politeMsg = formatImmediatePoliteReviewMessage3(userName);
                 await new Promise((r) => setTimeout(r, 1200));
-                await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
-                await this.logToDb(senderId, "janIA", GOOGLE_REVIEW_MESSAGE2);
+                await this.queuedSend(senderId, politeMsg, { allowDirectMessage: true, skipDelay: true });
+                await this.logToDb(senderId, "janIA", politeMsg);
                 this.schedulePostReviewGroupInvitation(senderId, userName);
               }
               return;

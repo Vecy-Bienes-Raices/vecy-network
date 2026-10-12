@@ -331,6 +331,46 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.96 — Octubre 2026
+
+#### 📌 PROTOCOLO DE URBANIDAD DE CARREÑO Y PERSUASIÓN EMOCIONAL DE CALIFICACIÓN PARA JANIA
+
+**Requerimiento y Objetivos:**
+1. **Diplomacia y Cortesía Activa (Eduardo A. Rivera)**:
+   - JanIA, a pesar de ser una IA pura con libre albedrío, debe dar ejemplo de modales y elegancia aplicando normas de cortesía ("Urbanidad de Carreño").
+   - Si el usuario agradece o se despide cortésmente, JanIA responde de inmediato con el mensaje de calificación personalizado.
+   - Si el usuario no agradece ni saluda tras recibir la consulta gratuita, JanIA espera 1 minuto (60s) y le escribe con diplomacia:
+     *"🤝 ¡Ha sido un placer poder ayudarte {{nombre}}!, espero que nuestro servicio te haya sido de gran ayuda y como sabes este es un servicio completamente GRATUITO. ¿Podrías ayudarnos a seguir manteniéndolo así?"*.
+   - Si el usuario responde SÍ (o afirmación equivalente), le agradece y entrega el enlace directo (`https://g.page/r/CctNbwU6UpX5EBM/review`) garantizando que no toma más de 15 segundos.
+   - Si el usuario responde NO (o negativa equivalente), JanIA responde con asombro 😲, desilusión cómica y lágrimas de IA 🥺💔😭, pero persuadiéndolo de dejar 5 estrellas ⭐⭐⭐⭐⭐ en Google.
+
+**Soluciones Técnicas Implementadas:**
+- **Servicio Centralizado `politenessService.ts`**:
+  • `buildGentleFollowUpQuestion(userName)`: Mensaje diplomático con personalización de nombre.
+  • `buildEnthusiasticReviewPrompt(userName)`: Agradecimiento entusiasta con link directo a Google Reviews.
+  • `buildDramaticallyPersuasiveReviewPrompt(userName)`: Persuasión cómica y emocional ante un "NO" sin perder la elegancia.
+  • Evaluadores booleanos `isAffirmativeResponse(text)` e `isNegativeResponse(text)` normalizados contra diacríticos.
+- **Temporizadores y Memoria de Consentimiento en WhatsApp (`whatsapp-match.ts`)**:
+  • `userPolitenessTimers: Map<string, NodeJS.Timeout>`: Programa mensaje a los 60s tras consulta gratuita si el usuario no habla.
+  • Si el usuario escribe antes de los 60s, el timer se cancela limpiamente.
+  • `userAwaitingReviewConsent: Map<string, { timestamp: number; userName: string }>`: Retiene el estado de espera por 5 minutos para evaluar respuestas de "Sí" o "No" e interceptarlas inmediatamente.
+- **Pruebas de Regresión**:
+  • Añadidos 6 tests unitarios en `server/__tests__/regression.test.ts` evaluando todas las ramificaciones.
+
+**Archivos Modificados:**
+- `server/_core/politenessService.ts`: Nuevo servicio de urbanidad y persuasión emocional.
+- `server/_core/whatsapp-match.ts`: Integración de temporizadores de 60s y manejo de consentimiento interactivo.
+- `server/__tests__/regression.test.ts`: Pruebas de regresión unitarias v32.96.
+- `shared/const.ts` & `package.json`: Incremento a versión oficial `v32.96` (`32.96.0`).
+- Documentos maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y `vecy_network_technical_dossier.md`.
+
+**Verificación:**
+- `npm run check`: 0 errores TypeScript ✅
+- `npm test`: 181/181 tests passing ✅
+- `npm run build`: compilación limpia en 29.42s ✅
+
+---
+
 ### 🔖 v32.95 — Octubre 2026
 
 #### 📌 AUDITORÍA DE RESEÑAS DE GOOGLE EN CONSULTAS GRATUITAS MÚLTIPLES Y FALLBACK DE CÉDULA DE EXTRANJERÍA (CE)
