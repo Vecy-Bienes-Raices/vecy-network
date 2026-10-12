@@ -284,6 +284,37 @@ export class JaniaMatchBot {
   private recentReviewPromptUsers: Map<string, number> = new Map();
   private postReviewInvitationTimers: Map<string, NodeJS.Timeout> = new Map();
   private recentGroupInviteUsers: Map<string, number> = new Map();
+  private userFreeToolConsultationsCount: Map<string, number> = new Map();
+
+  /**
+   * Dispara de forma desacoplada y elegante la invitación a calificar en Google Review
+   * para mantener el servicio gratuito cuando un usuario realiza múltiples consultas (≥ 2) en DM.
+   */
+  public maybeTriggerFreeServiceReviewPrompt(senderId: string, userName?: string) {
+    const currentCount = (this.userFreeToolConsultationsCount.get(senderId) || 0) + 1;
+    this.userFreeToolConsultationsCount.set(senderId, currentCount);
+
+    const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
+    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+
+    // Si el usuario ya lleva 2 o más consultas gratuitas (cédulas o prediales) y no ha recibido invitación en 24h
+    if (currentCount >= 2 && lastReviewSent < oneDayAgo) {
+      this.recentReviewPromptUsers.set(senderId, Date.now());
+      console.log(`[JANIA-MATCH] ⭐ Programando solicitud de calificación de servicio gratuito para ${senderId} tras ${currentCount} consultas...`);
+
+      setTimeout(async () => {
+        try {
+          const { GOOGLE_REVIEW_MESSAGE } = await import('./predialService');
+          await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE, { allowDirectMessage: true, skipDelay: true });
+          await this.logToDb(senderId, 'janIA', GOOGLE_REVIEW_MESSAGE);
+          console.log(`[JANIA-MATCH] ⭐ Invitación a calificar servicio gratuito entregada a ${senderId}`);
+          this.schedulePostReviewGroupInvitation(senderId, userName);
+        } catch (err: any) {
+          console.error('[JANIA-MATCH] Error enviando invitación a calificar servicio gratuito:', err?.message);
+        }
+      }, 2500);
+    }
+  }
 
   /**
    * Programa la invitación con los enlaces de los 3 grupos oficiales unos minutos después
@@ -1436,6 +1467,7 @@ export class JaniaMatchBot {
           appendDmHistory(senderId, 'user', body);
           appendDmHistory(senderId, 'assistant', deliveredText);
           await this.logToDb(senderId, 'janIA', deliveredText);
+          this.maybeTriggerFreeServiceReviewPrompt(senderId, userName);
           return;
         }
       } finally {
@@ -1458,6 +1490,7 @@ export class JaniaMatchBot {
           appendDmHistory(senderId, 'user', body);
           appendDmHistory(senderId, 'assistant', deliveredText);
           await this.logToDb(senderId, 'janIA', deliveredText);
+          this.maybeTriggerFreeServiceReviewPrompt(senderId, userName);
           return;
         }
       } finally {
@@ -1483,6 +1516,7 @@ export class JaniaMatchBot {
         appendDmHistory(senderId, 'user', body);
         appendDmHistory(senderId, 'assistant', deliveredText);
         await this.logToDb(senderId, 'janIA', deliveredText);
+        this.maybeTriggerFreeServiceReviewPrompt(senderId, userName);
         return;
       }
 
@@ -1510,6 +1544,7 @@ export class JaniaMatchBot {
           appendDmHistory(senderId, 'user', body);
           appendDmHistory(senderId, 'assistant', deliveredText);
           await this.logToDb(senderId, 'janIA', deliveredText);
+          this.maybeTriggerFreeServiceReviewPrompt(senderId, userName);
           return;
         }
       }

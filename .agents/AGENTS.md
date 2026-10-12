@@ -172,7 +172,30 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.94 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.95 — Octubre 2026
+
+### Novedades v32.95 (Auditoría de Reseñas de Google en Consultas Gratuitas Múltiples y Fallback/Orientación de Cédula de Extranjería CE):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. Eduardo compartió captura de pantalla real de WhatsApp donde el usuario `+57 310 2134698` (~Alberto Méndez) realizó 3 consultas seguidas enviando únicamente números (`Consultar 79249255`, `Verificar CC 79249755`, etc.) y JanIA nunca le despachó el mensaje de reseña en Google.
+  2. Eduardo cuestionó:
+     - *"Listo, Jania ho hizo tres consultas a este usuario y no le envió al final el mensaje de calificación y comentario para poder seguir ofreciendo el servicio gratuito, ¿¿Qué pasó?? Por qué??."*
+     - *"También veo que la gente pasa solo el número, entonces dime que ubiese pasado si es una CE y no una CC, JanIA lo detecta y le explica o cómo actúa??"*
+- **Acciones Técnicas Ejecutadas**:
+  1. **Disparador Desacoplado de Calificación por Consultas Gratuitas Acumuladas**:
+     - En `server/_core/whatsapp-match.ts`: Se implementó `userFreeToolConsultationsCount: Map<string, number>` y `maybeTriggerFreeServiceReviewPrompt(senderId, userName)`.
+     - Cada vez que un usuario consulta cédulas o prediales exitosamente, se incrementa su contador.
+     - A partir de la segunda consulta (o si el usuario no califica tras varias consultas), JanIA despacha de forma desacoplada y elegante tras 2.5 segundos el mensaje oficial de Google Reviews:
+       `⭐ ¿Podrías darnos tu opinión y calificar nuestro servicio? Así nos ayudas para que siga siendo *GRATIS.*`
+       `👉 https://g.page/r/CctNbwU6UpX5EBM/review 👍 Gracias`
+     - Y tras 2.5 minutos, programa la invitación a los grupos de WhatsApp de VECY Network.
+  2. **Fallback Inteligente y Detección Automática de Cédula de Extranjería (CE)**:
+     - En `server/_core/identityVerificationService.ts`: Si un usuario envía un documento numérico sin prefijo (4-8 dígitos) que no aparece como CC, JanIA ejecuta un **fallback automático e invisible consultando como C.E.** ante la Procuraduría (SIRI tipo 5) y ADRES (BDUA tipo CE).
+     - Si aparece como CE, actualiza el tipo, formatea el reporte bajo `Cédula de Extranjería (C.E.)` e incluye la aclaración: `📌 Identificamos que este documento corresponde a una Cédula de Extranjería (C.E.).`
+     - Si no aparece en ninguna base oficial, en la orientación de verificación se incluye la guía didáctica para que el usuario conozca cómo consultar Cédula de Extranjería (`Verificar CE [número]`) o Pasaporte.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 180/180 tests passing ✅ | `npm run build` limpio en 19.59s ✅
+- `shared/const.ts` (`v32.95`) y `package.json` (`32.95.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.94 — Octubre 2026
 
 ### Novedades v32.94 (Diagnóstico Sincero e Inmediato de Matches en 15 Días para Administradores — Cero Falsas Expectativas):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

@@ -7,6 +7,59 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.95 — 11 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+- **Auditoría de Reseñas de Google en Consultas Gratuitas Múltiples y Detección de Cédula de Extranjería (CE vs CC)**:
+  1. Eduardo compartió una captura de pantalla real de WhatsApp del chat de JanIA con el usuario `+57 310 2134698` (~Alberto Méndez) donde el usuario realizó 3 consultas seguidas enviando únicamente los números de documento (`Consultar 79249255`, `Verificar CC 79249755`, y un tercer número), y JanIA le entregó los reportes de identidad oficiales pero nunca le despachó la solicitud de calificación.
+  2. Eduardo preguntó textualmente:
+     - *"Listo, Jania ho hizo tres consultas a este usuario y no le envió al final el mensaje de calificación y comentario para poder seguir ofreciendo el servicio gratuito, ¿¿Qué pasó?? Por qué??."*
+     - *"También veo que la gente pasa solo el número, entonces dime que ubiese pasado si es una CE y no una CC, JanIA lo detecta y le explica o cómo actúa??"*
+
+### Diagnóstico Técnico Profundo y Causas Raíz
+1. **¿Por qué JanIA no envió el mensaje de calificación a este usuario?**:
+   - **Retorno Prematuro en Interceptores Directos de Herramientas (`whatsapp-match.ts`)**:
+     Tanto en el interceptor de verificación de cédula (líneas 1448-1466) como en el de predial (líneas 1420-1440), tras enviar `deliveredText`, el código ejecutaba un `return;` inmediato.
+   - **Condicionamiento Erróneo a Mensajes de Agradecimiento**:
+     En la sesión v32.74, para evitar que JanIA se percibiera como un bot rígido o invasivo que enviaba una reseña forzada a los 1.5s de cada documento, el despacho de `GOOGLE_REVIEW_MESSAGE` quedó restringido exclusivamente a mensajes donde el usuario expresaba gratitud o despedida (`isGratitudeOrClosing`: *"gracias", "muchas gracias", "hasta luego"*).
+   - **Comportamiento del Usuario**:
+     Alberto Méndez nunca escribió "gracias" ni se despidió; únicamente envió números directos uno tras otro. Al ser interceptados de forma directa y terminar con `return;`, el flujo conversacional general nunca se alcanzó y no existía un acumulador de consultas que detectara que el usuario ya había recibido múltiples servicios gratuitos sin calificar.
+2. **¿Qué hubiese pasado si es una CE y el usuario pasa solo el número?**:
+   - **Asunción por Defecto de Cédula de Ciudadanía (`CC`)**:
+     En `extractAllCedulasForVerification`, si un mensaje contiene únicamente dígitos (ej. `79249255`), por regla estadística colombiana el sistema asignaba `tipoDoc: 'cc'`.
+   - **Fallo Silencioso si es Extranjero**:
+     Al consultar un número de CE como CC en Policía Nacional, Procuraduría y ADRES, las bases de datos no lo encontraban porque los extranjeros están indexados bajo tipo de documento 5 (CE) en SIRI y CE en BDUA.
+   - **Ausencia de Fallback**:
+     JanIA reportaba "documento no encontrado" con una orientación genérica, pero no realizaba una consulta de segunda vuelta como `ce` en Procuraduría ni ADRES si el número tenía entre 4 y 8 dígitos.
+
+### Acciones Técnicas Ejecutadas
+1. **Disparador Desacoplado de Calificación por Consultas Gratuitas Acumuladas (`whatsapp-match.ts`)**:
+   - Se implementó `userFreeToolConsultationsCount: Map<string, number>` y el método `maybeTriggerFreeServiceReviewPrompt(senderId, userName)`.
+   - Cada vez que un usuario recibe un reporte exitoso de servicio gratuito (cédula o predial), se incrementa su contador.
+   - Si el usuario acumula 2 o más consultas gratuitas y no ha recibido la invitación en las últimas 24 horas, JanIA programa de forma desacoplada (tras una pausa orgánica de 2.5 segundos) el despacho del mensaje persuasivo oficial:
+     `⭐ ¿Podrías darnos tu opinión y calificar nuestro servicio? Así nos ayudas para que siga siendo *GRATIS.*`
+     `*COMENTA Y CALIFICA AQUÍ (solo te toma 15 segundos):*`
+     `👉 https://g.page/r/CctNbwU6UpX5EBM/review 👍 Gracias`
+     `¡Que tengas una excelente jornada y muchos éxitos en tus cierres! 🏢✨`
+   - Y 2.5 minutos después, programa la invitación a los grupos oficiales de WhatsApp de VECY Network (`schedulePostReviewGroupInvitation`).
+2. **Fallback Inteligente y Detección Automática de Cédulas de Extranjería (`identityVerificationService.ts`)**:
+   - En `verifySingleDocumentInternal` y `executeIdentityVerificationFromWhatsApp`:
+     • Si un documento se consulta como `cc` y no arroja nombre oficial en ninguna central, pero su longitud está en el rango típico de extranjería expedida por Migración Colombia (entre 4 y 8 dígitos), JanIA ejecuta un **fallback automático e invisible consultando como `ce` en Procuraduría General (SIRI) y ADRES (BDUA)**.
+     • Si lo encuentra bajo `ce`: muta el tipo a `ce`, extrae el nombre oficial, formatea el reporte bajo `Cédula de Extranjería (C.E.)` y le añade la nota informativa:
+       `📌 *Validación Automática:* Identificamos que este documento corresponde a una Cédula de Extranjería (C.E.).`
+     • Si no lo encuentra ni como CC ni como CE: en la guía orientativa se le explica con total empatía:
+       `• 🌐 *¿Es un documento de extranjería?:* Si este número corresponde a una persona extranjera con Cédula de Extranjería (C.E.) o Pasaporte, puedes verificarlo indicando *"Verificar CE [número]"* o *"Verificar Pasaporte [número]"*.`
+3. **Suite de Pruebas Unitarias de Regresión**:
+   - En `server/__tests__/regression.test.ts`: Añadido test exhaustivo "Doctrina v32.95" validando el copy oficial de `GOOGLE_REVIEW_MESSAGE`, la extracción de CE con prefijo (`cx`), el fallback y la orientación didáctica sobre extranjería.
+
+### Verificación y Validación Empírica
+- `npm run check`: 0 errores TypeScript ✅.
+- `npm test`: 180/180 tests vitest aprobados al 100% ✅.
+- `npm run build`: Compilación limpia de cliente y servidor en 19.59s ✅.
+- Versión oficial incrementada a **v32.95** (`32.95.0`).
+
+---
+
 ## 📋 SESIÓN v32.94 — 11 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

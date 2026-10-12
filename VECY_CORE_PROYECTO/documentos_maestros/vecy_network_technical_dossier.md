@@ -331,6 +331,48 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.95 — Octubre 2026
+
+#### 📌 AUDITORÍA DE RESEÑAS DE GOOGLE EN CONSULTAS GRATUITAS MÚLTIPLES Y FALLBACK DE CÉDULA DE EXTRANJERÍA (CE)
+
+**Requerimiento y Objetivos:**
+1. **Auditoría de Reseñas de Google para Servicios Gratuitos (Eduardo A. Rivera)**:
+   - Eduardo aportó evidencia de WhatsApp con el usuario `+57 310 2134698` (~Alberto Méndez) donde se realizaron 3 consultas directas consecutivas de verificación de cédula y JanIA nunca despachó el mensaje de calificación para mantener la gratuidad del servicio.
+   - Pregunta de Eduardo: *"Listo, Jania ho hizo tres consultas a este usuario y no le envió al final el mensaje de calificación y comentario para poder seguir ofreciendo el servicio gratuito, ¿¿Qué pasó?? Por qué??."*
+2. **Tratamiento y Detección de Cédula de Extranjería (CE vs CC)**:
+   - Pregunta de Eduardo: *"También veo que la gente pasa solo el número, entonces dime que ubiese pasado si es una CE y no una CC, JanIA lo detecta y le explica o cómo actúa??"*
+
+**Causas Raíz Identificadas:**
+1. **Retorno Prematuro en Interceptor de Herramientas**: El flujo de verificación de antecedentes ejecutaba `return;` inmediato tras despachar el reporte, saltándose cualquier paso conversacional posterior.
+2. **Condicionamiento a Mensajes de Agradecimiento**: La solicitud de reseñas estaba condicionada a que el usuario dijera "gracias" o se despidiera. Si un usuario enviaba solo números sin saludar ni agradecer, nunca se activaba.
+3. **Omisión de Fallback de Extranjería**: Sin prefijo, los números se consultaban exclusivamente como `cc`. Si correspondían a una cédula de extranjería de 4-8 dígitos, arrojaban "no encontrado" sin verificar en las bases de extranjeros de Procuraduría o ADRES.
+
+**Soluciones Técnicas Implementadas:**
+- **Disparador Desacoplado de Calificación (`whatsapp-match.ts`)**:
+  • Implementado contador en memoria por usuario (`userFreeToolConsultationsCount`).
+  • Cada consulta exitosa de herramientas gratuitas (cédula o predial) incrementa el contador.
+  • A partir de la segunda consulta, JanIA programa de forma desacoplada tras 2.5 segundos el envío del mensaje oficial de Google Review (`https://g.page/r/CctNbwU6UpX5EBM/review`), y 2.5 minutos después la invitación a los grupos oficiales de VECY Network.
+- **Fallback Automático e Inteligente de Extranjería (`identityVerificationService.ts`)**:
+  • Si un documento enviado solo con dígitos no arroja datos como `cc` y tiene longitud de 4 a 8 dígitos, el sistema ejecuta de forma automática un fallback de segunda vuelta consultando como `ce` en Procuraduría General (SIRI tipo 5) y ADRES (BDUA tipo CE).
+  • Si lo encuentra bajo `ce`, actualiza el tipo a Cédula de Extranjería, extrae el nombre oficial y le notifica al usuario la identificación automática.
+  • Si no existe en ningún registro, en la guía de orientación final incluye instrucciones claras y empáticas para verificar extranjeros (`Verificar CE [número]`).
+- **Pruebas de Regresión**:
+  • Añadido test unitario en `regression.test.ts` validando el copy de calificación, la extracción de extranjería y el fallback.
+
+**Archivos Modificados:**
+- `server/_core/whatsapp-match.ts`: Contador de servicios gratuitos y disparador desacoplado `maybeTriggerFreeServiceReviewPrompt`.
+- `server/_core/identityVerificationService.ts`: Fallback automático CE para documentos numéricos en Procuraduría y ADRES, y orientación didáctica para extranjeros.
+- `server/__tests__/regression.test.ts`: Pruebas de regresión unitarias v32.95.
+- `shared/const.ts` & `package.json`: Incremento a versión oficial `v32.95` (`32.95.0`).
+- Documentos maestros actualizados: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y `vecy_network_technical_dossier.md`.
+
+**Verificación:**
+- `npm run check`: 0 errores TypeScript ✅
+- `npm test`: 180 de 180 pruebas aprobadas al 100% ✅
+- `npm run build`: Compilación limpia completada con éxito en 19.59s ✅
+
+---
+
 ### 🔖 v32.94 — Octubre 2026
 
 #### 📌 DIAGNÓSTICO SINCERO E INMEDIATO DE MATCHES EN 15 DÍAS PARA ADMINISTRADORES (CERO FALSAS EXPECTATIVAS)

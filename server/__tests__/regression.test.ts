@@ -3581,7 +3581,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
     it("Doctrina v32.84 / v32.93: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
       const { VECY_ACTIVE_DOMAIN, VECY_VERSION } = await import("../../shared/const");
       expect(VECY_ACTIVE_DOMAIN).toBe("https://vecy-bienes-raices.vercel.app");
-      expect(VECY_VERSION).toBe("v32.93");
+      expect(VECY_VERSION).toBe("v32.95");
 
       const fs = await import("fs");
       const path = await import("path");
@@ -3934,6 +3934,57 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(janiMatchResult.formattedReport).toContain("Inmueble #P101");
       expect(janiMatchResult.formattedReport).toContain("Carlos Bróker");
       expect(janiMatchResult.formattedReport).toContain("https://wa.me/573101234567");
+    });
+
+    it("Doctrina v32.95: Disparador de Calificación de Servicio Gratuito en DM y Fallback/Orientación de Cédula de Extranjería (CE)", async () => {
+      const idService = await import("../_core/identityVerificationService");
+      const { GOOGLE_REVIEW_MESSAGE } = await import("../_core/predialService");
+      const agendaRouter = await import("../routers/agenda");
+
+      // 1. Validar contenido oficial y persuasivo de GOOGLE_REVIEW_MESSAGE
+      expect(GOOGLE_REVIEW_MESSAGE).toContain("Así nos ayudas para que siga siendo *GRATIS.*");
+      expect(GOOGLE_REVIEW_MESSAGE).toContain("COMENTA Y CALIFICA AQUÍ");
+      expect(GOOGLE_REVIEW_MESSAGE).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
+
+      // 2. Validar detección de Cédula de Extranjería cuando se envía con prefijo
+      const detCe1 = idService.extractCedulaForVerification("Verificar CE 79249255", true);
+      expect(detCe1.found).toBe(true);
+      expect(detCe1.tipoDoc).toBe("cx");
+
+      const detCe2 = idService.extractCedulaForVerification("Consultar cédula de extranjería 498614", true);
+      expect(detCe2.found).toBe(true);
+      expect(detCe2.tipoDoc).toBe("cx");
+
+      // 3. Validar orientación transparente sobre Extranjería cuando se consulta un documento no indexado
+      const testDoc = "8887776655";
+      agendaRouter.identityCache.delete(`POLICIA:cc:${testDoc}`);
+      agendaRouter.identityCache.delete(`PROCURADURIA:1:${testDoc}`);
+      agendaRouter.identityCache.delete(`ADRES:CC:${testDoc}`);
+
+      const spyPonal = vi.spyOn(agendaRouter, "queryPoliciaNacional").mockResolvedValue({
+        success: false,
+        message: "Sin antecedentes judiciales reportados o documento no indexado."
+      });
+      const spyPgn = vi.spyOn(idService, "queryProcuraduria").mockResolvedValue({
+        success: false,
+        source: "Procuraduría General",
+        statusText: "No se encuentra registrado en el sistema de información SIRI o no disponible."
+      });
+      const spyAdres = vi.spyOn(idService, "queryAdres").mockResolvedValue({
+        success: false,
+        source: "ADRES",
+        error: "Sin registro activo de afiliación en la Base de Datos Única de Afiliados (BDUA)."
+      });
+
+      const notFoundRes = await idService.executeIdentityVerificationFromWhatsApp(`Consultar ${testDoc}`, true);
+      expect(notFoundRes.isVerificationRequest).toBe(true);
+      expect(notFoundRes.reportText).toContain("Orientación de Verificación");
+      expect(notFoundRes.reportText).toContain("¿Es un documento de extranjería?:");
+      expect(notFoundRes.reportText).toContain("Verificar CE");
+
+      spyPonal.mockRestore();
+      spyPgn.mockRestore();
+      spyAdres.mockRestore();
     });
   });
 });

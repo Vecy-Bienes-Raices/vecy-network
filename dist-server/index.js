@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.93";
+    VECY_VERSION = "v32.95";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -13290,6 +13290,32 @@ var init_whatsapp_match = __esm({
       recentReviewPromptUsers = /* @__PURE__ */ new Map();
       postReviewInvitationTimers = /* @__PURE__ */ new Map();
       recentGroupInviteUsers = /* @__PURE__ */ new Map();
+      userFreeToolConsultationsCount = /* @__PURE__ */ new Map();
+      /**
+       * Dispara de forma desacoplada y elegante la invitación a calificar en Google Review
+       * para mantener el servicio gratuito cuando un usuario realiza múltiples consultas (≥ 2) en DM.
+       */
+      maybeTriggerFreeServiceReviewPrompt(senderId, userName) {
+        const currentCount = (this.userFreeToolConsultationsCount.get(senderId) || 0) + 1;
+        this.userFreeToolConsultationsCount.set(senderId, currentCount);
+        const lastReviewSent = this.recentReviewPromptUsers.get(senderId) || 0;
+        const oneDayAgo = Date.now() - 24 * 60 * 60 * 1e3;
+        if (currentCount >= 2 && lastReviewSent < oneDayAgo) {
+          this.recentReviewPromptUsers.set(senderId, Date.now());
+          console.log(`[JANIA-MATCH] \u2B50 Programando solicitud de calificaci\xF3n de servicio gratuito para ${senderId} tras ${currentCount} consultas...`);
+          setTimeout(async () => {
+            try {
+              const { GOOGLE_REVIEW_MESSAGE: GOOGLE_REVIEW_MESSAGE2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+              await this.queuedSend(senderId, GOOGLE_REVIEW_MESSAGE2, { allowDirectMessage: true, skipDelay: true });
+              await this.logToDb(senderId, "janIA", GOOGLE_REVIEW_MESSAGE2);
+              console.log(`[JANIA-MATCH] \u2B50 Invitaci\xF3n a calificar servicio gratuito entregada a ${senderId}`);
+              this.schedulePostReviewGroupInvitation(senderId, userName);
+            } catch (err) {
+              console.error("[JANIA-MATCH] Error enviando invitaci\xF3n a calificar servicio gratuito:", err?.message);
+            }
+          }, 2500);
+        }
+      }
       /**
        * Programa la invitación con los enlaces de los 3 grupos oficiales unos minutos después
        * de haber enviado la solicitud de calificación en privado (Doctrina v32.59 de Eduardo A. Rivera).
@@ -14169,6 +14195,7 @@ ${quotedNote}` : quotedNote;
               appendDmHistory2(senderId, "user", body);
               appendDmHistory2(senderId, "assistant", deliveredText);
               await this.logToDb(senderId, "janIA", deliveredText);
+              this.maybeTriggerFreeServiceReviewPrompt(senderId, userName);
               return;
             }
           } finally {
@@ -14189,6 +14216,7 @@ ${quotedNote}` : quotedNote;
               appendDmHistory2(senderId, "user", body);
               appendDmHistory2(senderId, "assistant", deliveredText);
               await this.logToDb(senderId, "janIA", deliveredText);
+              this.maybeTriggerFreeServiceReviewPrompt(senderId, userName);
               return;
             }
           } finally {
@@ -14205,6 +14233,7 @@ ${quotedNote}` : quotedNote;
             appendDmHistory2(senderId, "user", body);
             appendDmHistory2(senderId, "assistant", deliveredText);
             await this.logToDb(senderId, "janIA", deliveredText);
+            this.maybeTriggerFreeServiceReviewPrompt(senderId, userName);
             return;
           }
           const { getOrLoadDmHistory: getOrLoadDmHistory2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
@@ -14229,6 +14258,7 @@ ${quotedNote}` : quotedNote;
               appendDmHistory2(senderId, "user", body);
               appendDmHistory2(senderId, "assistant", deliveredText);
               await this.logToDb(senderId, "janIA", deliveredText);
+              this.maybeTriggerFreeServiceReviewPrompt(senderId, userName);
               return;
             }
           }
@@ -18135,6 +18165,7 @@ async function verifySingleDocumentInternal(item) {
   let ponalRes = null;
   let adresRes = null;
   try {
+    let effectiveTipoDoc = tipoDoc;
     if (tipoDoc.toLowerCase() === "cc") {
       ponalRes = await queryPoliciaNacional(tipoDoc, cedula).catch(() => null);
       if (!ponalRes?.officialName && isProcuraduriaSupported) {
@@ -18142,6 +18173,16 @@ async function verifySingleDocumentInternal(item) {
       }
       if (!ponalRes?.officialName && !pgnRes?.officialName && isAdresSupported) {
         adresRes = await queryAdres(tipoDoc, cedula).catch(() => null);
+      }
+      if (!ponalRes?.officialName && !pgnRes?.officialName && !adresRes?.officialName && cedula.length >= 4 && cedula.length <= 8) {
+        const cePgn = await queryProcuraduria("ce", cedula).catch(() => null);
+        const ceAdres = !cePgn?.officialName ? await queryAdres("ce", cedula).catch(() => null) : null;
+        if (cePgn?.officialName || ceAdres?.officialName) {
+          effectiveTipoDoc = "ce";
+          item.tipoDoc = "ce";
+          pgnRes = cePgn;
+          adresRes = ceAdres;
+        }
       }
     } else {
       if (isProcuraduriaSupported) {
@@ -18159,7 +18200,7 @@ async function verifySingleDocumentInternal(item) {
       identityCache.set(adresCacheKey, { fullName: officialName, timestamp: Date.now() });
       return {
         cedula,
-        tipoDoc,
+        tipoDoc: effectiveTipoDoc,
         success: true,
         officialName,
         detectedName,
@@ -18320,6 +18361,8 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
     let pgnRes = null;
     let ponalRes = null;
     let adresRes = null;
+    let currentTipoDoc = tipoDoc;
+    let isAutoDetectedCe = false;
     if (tipoDoc.toLowerCase() === "cc") {
       ponalRes = await queryPoliciaNacional(tipoDoc, cedula);
       if (!ponalRes?.officialName && isProcuraduriaSupported) {
@@ -18327,6 +18370,17 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
       }
       if (!ponalRes?.officialName && !pgnRes?.officialName && isAdresSupported) {
         adresRes = await queryAdres(tipoDoc, cedula);
+      }
+      if (!ponalRes?.officialName && !pgnRes?.officialName && !adresRes?.officialName && cedula.length >= 4 && cedula.length <= 8) {
+        const cePgn = await queryProcuraduria("ce", cedula).catch(() => null);
+        const ceAdres = !cePgn?.officialName ? await queryAdres("ce", cedula).catch(() => null) : null;
+        if (cePgn?.officialName || ceAdres?.officialName) {
+          currentTipoDoc = "ce";
+          item.tipoDoc = "ce";
+          isAutoDetectedCe = true;
+          pgnRes = cePgn;
+          adresRes = ceAdres;
+        }
       }
     } else {
       if (isProcuraduriaSupported) {
@@ -18340,8 +18394,9 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
       }
     }
     const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) || (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) || (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : null);
+    const activeDocLabel = getDocumentTypeLabel(currentTipoDoc);
     if (officialName) {
-      const isForeign = ["ce", "cx", "pep", "ppt", "pa", "dp"].includes(tipoDoc.toLowerCase());
+      const isForeign = ["ce", "cx", "pep", "ppt", "pa", "dp"].includes(currentTipoDoc.toLowerCase());
       const pgnLine = isForeign && pgnRes?.statusText ? `
 \u{1F3DB}\uFE0F *Central de Control Notarial:* ${pgnRes.statusText}` : "";
       const epsLine = adresRes?.eps ? `
@@ -18350,10 +18405,12 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
 \u{1F4CD} *Ubicaci\xF3n Registrada:* ${adresRes.municipio}` : "";
       const securityLine = `
 \u2696\uFE0F *Central de Seguridad:* Sin antecedentes judiciales ni requerimientos penales pendientes ante la Polic\xEDa Nacional.`;
+      const autoCeNotice = isAutoDetectedCe ? `
+\u{1F4CC} *Validaci\xF3n Autom\xE1tica:* Identificamos que este documento corresponde a una C\xE9dula de Extranjer\xEDa (C.E.).` : "";
       const reportText = `\u{1F6E1}\uFE0F *VERIFICACI\xD3N OFICIAL DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
-\u{1F194} *El documento:* ${docLabel} ${formattedCedula}
-\u{1F464} *Pertenece a:* ${officialName}${epsLine}${locationLine}${pgnLine}${securityLine}
+\u{1F194} *El documento:* ${activeDocLabel} ${formattedCedula}
+\u{1F464} *Pertenece a:* ${officialName}${epsLine}${locationLine}${pgnLine}${securityLine}${autoCeNotice}
 \u2705 *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
       if (userId) {
         savePendingCedulaSession(userId, items, reportText, true);
@@ -18361,7 +18418,7 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
       return {
         isVerificationRequest: true,
         cedula,
-        tipoDoc,
+        tipoDoc: currentTipoDoc,
         success: true,
         officialName,
         source: "Central Multifuente Notarial VECY (ADRES BDUA + Procuradur\xEDa General + Polic\xEDa Nacional)",
@@ -18373,7 +18430,7 @@ async function executeIdentityVerificationFromWhatsApp(text2, isPrivateDm = fals
       };
     } else {
       let reportText = "";
-      if (tipoDoc.toLowerCase() === "pa") {
+      if (currentTipoDoc.toLowerCase() === "pa") {
         reportText = `\u{1F6C2} *CONSULTA DE PASAPORTE EXTRANJERO \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 El documento *Pasaporte ${formattedCedula}* no arroja antecedentes ni identidad en las plataformas p\xFAblicas del Estado colombiano por lo siguiente:
@@ -18385,15 +18442,18 @@ El documento *Pasaporte ${formattedCedula}* no arroja antecedentes ni identidad 
 \u{1F4CC} Para operaciones inmobiliarias o contratos con extranjeros, este cotejo documental presencial es el camino legal y aceptado en notar\xEDas y aseguradoras.`;
       } else {
         let customGuidance = "";
-        if (tipoDoc.toLowerCase() === "cc" && cedula.length === 9) {
+        if (currentTipoDoc.toLowerCase() === "cc" && cedula.length === 9) {
           customGuidance = `
 \u2022 \u26A0\uFE0F *Aviso Registradur\xEDa:* En Colombia nunca se emitieron C\xE9dulas de Ciudadan\xEDa de 9 d\xEDgitos (las antiguas tienen entre 1 y 8 d\xEDgitos y las nuevas son de 10 d\xEDgitos iniciando por 1). Verifica si hubo un d\xEDgito omitido o a\xF1adido.`;
-        } else if (["ce", "cx"].includes(tipoDoc.toLowerCase()) && cedula.length >= 8) {
+        } else if (["ce", "cx"].includes(currentTipoDoc.toLowerCase()) && cedula.length >= 8) {
           customGuidance = `
 \u2022 \u26A0\uFE0F *Aviso Migraci\xF3n:* Las C\xE9dulas de Extranjer\xEDa en Colombia constan de entre 4 y 7 d\xEDgitos num\xE9ricos. Un n\xFAmero de ${cedula.length} d\xEDgitos suele corresponder a una C\xE9dula de Ciudadan\xEDa colombiana.`;
-        } else if (["ce", "cx"].includes(tipoDoc.toLowerCase()) && cedula.length >= 4 && cedula.length <= 7) {
+        } else if (["ce", "cx"].includes(currentTipoDoc.toLowerCase()) && cedula.length >= 4 && cedula.length <= 7) {
           customGuidance = `
 \u2022 \u{1F4CC} Las C\xE9dulas de Extranjer\xEDa (de 4 a 7 d\xEDgitos) son expedidas por Migraci\xF3n Colombia. Al ser un documento extranjero, las plataformas del Estado reflejan identidad si el titular cotiza al sistema de salud (ADRES/BDUA), registra contratos estatales en la Procuradur\xEDa (SIRI) o historial penal en la Polic\xEDa Nacional.`;
+        } else if (currentTipoDoc.toLowerCase() === "cc") {
+          customGuidance = `
+\u2022 \u{1F310} *\xBFEs un documento de extranjer\xEDa?:* Si este n\xFAmero corresponde a una persona extranjera con C\xE9dula de Extranjer\xEDa (C.E.) o Pasaporte, puedes verificarlo indicando *"Verificar CE ${formattedCedula}"* o *"Verificar Pasaporte ${formattedCedula}"*.`;
         }
         reportText = `\u26A0\uFE0F *CONSULTA DE IDENTIDAD \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 

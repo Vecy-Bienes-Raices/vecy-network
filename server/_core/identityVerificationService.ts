@@ -851,6 +851,7 @@ async function verifySingleDocumentInternal(item: ExtractedCedulaItem): Promise<
   let adresRes: AdresResult | null = null;
 
   try {
+    let effectiveTipoDoc = tipoDoc;
     if (tipoDoc.toLowerCase() === 'cc') {
       ponalRes = await queryPoliciaNacional(tipoDoc, cedula).catch(() => null);
       if (!ponalRes?.officialName && isProcuraduriaSupported) {
@@ -858,6 +859,18 @@ async function verifySingleDocumentInternal(item: ExtractedCedulaItem): Promise<
       }
       if (!ponalRes?.officialName && !pgnRes?.officialName && isAdresSupported) {
         adresRes = await queryAdres(tipoDoc, cedula).catch(() => null);
+      }
+
+      // 🔍 Fallback automático a Cédula de Extranjería (CE) si no aparece como CC
+      if (!ponalRes?.officialName && !pgnRes?.officialName && !adresRes?.officialName && cedula.length >= 4 && cedula.length <= 8) {
+        const cePgn = await queryProcuraduria('ce', cedula).catch(() => null);
+        const ceAdres = (!cePgn?.officialName) ? await queryAdres('ce', cedula).catch(() => null) : null;
+        if (cePgn?.officialName || ceAdres?.officialName) {
+          effectiveTipoDoc = 'ce';
+          item.tipoDoc = 'ce';
+          pgnRes = cePgn;
+          adresRes = ceAdres;
+        }
       }
     } else {
       if (isProcuraduriaSupported) {
@@ -879,7 +892,7 @@ async function verifySingleDocumentInternal(item: ExtractedCedulaItem): Promise<
       identityCache.set(adresCacheKey, { fullName: officialName, timestamp: Date.now() });
       return {
         cedula,
-        tipoDoc,
+        tipoDoc: effectiveTipoDoc,
         success: true,
         officialName,
         detectedName,
@@ -1059,6 +1072,9 @@ export async function executeIdentityVerificationFromWhatsApp(
     let ponalRes: any = null;
     let adresRes: AdresResult | null = null;
 
+    let currentTipoDoc = tipoDoc;
+    let isAutoDetectedCe = false;
+
     if (tipoDoc.toLowerCase() === 'cc') {
       ponalRes = await queryPoliciaNacional(tipoDoc, cedula);
       if (!ponalRes?.officialName && isProcuraduriaSupported) {
@@ -1066,6 +1082,19 @@ export async function executeIdentityVerificationFromWhatsApp(
       }
       if (!ponalRes?.officialName && !pgnRes?.officialName && isAdresSupported) {
         adresRes = await queryAdres(tipoDoc, cedula);
+      }
+
+      // 🔍 Fallback automático a Cédula de Extranjería (CE) si no aparece como CC
+      if (!ponalRes?.officialName && !pgnRes?.officialName && !adresRes?.officialName && cedula.length >= 4 && cedula.length <= 8) {
+        const cePgn = await queryProcuraduria('ce', cedula).catch(() => null);
+        const ceAdres = (!cePgn?.officialName) ? await queryAdres('ce', cedula).catch(() => null) : null;
+        if (cePgn?.officialName || ceAdres?.officialName) {
+          currentTipoDoc = 'ce';
+          item.tipoDoc = 'ce';
+          isAutoDetectedCe = true;
+          pgnRes = cePgn;
+          adresRes = ceAdres;
+        }
       }
     } else {
       if (isProcuraduriaSupported) {
@@ -1083,17 +1112,20 @@ export async function executeIdentityVerificationFromWhatsApp(
                          (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) ||
                          (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : null);
 
+    const activeDocLabel = getDocumentTypeLabel(currentTipoDoc);
+
     if (officialName) {
-      const isForeign = ['ce', 'cx', 'pep', 'ppt', 'pa', 'dp'].includes(tipoDoc.toLowerCase());
+      const isForeign = ['ce', 'cx', 'pep', 'ppt', 'pa', 'dp'].includes(currentTipoDoc.toLowerCase());
       const pgnLine = (isForeign && pgnRes?.statusText) ? `\n🏛️ *Central de Control Notarial:* ${pgnRes.statusText}` : '';
       const epsLine = adresRes?.eps ? `\n🏥 *Afiliación en Salud (ADRES / BDUA):* ${adresRes.eps} (${adresRes.estado || 'REGISTRADO'}${adresRes.regimen ? ` — ${adresRes.regimen}` : ''})` : '';
       const locationLine = (adresRes?.municipio && !adresRes.municipio.toLowerCase().includes('informacion')) ? `\n📍 *Ubicación Registrada:* ${adresRes.municipio}` : '';
       const securityLine = `\n⚖️ *Central de Seguridad:* Sin antecedentes judiciales ni requerimientos penales pendientes ante la Policía Nacional.`;
+      const autoCeNotice = isAutoDetectedCe ? `\n📌 *Validación Automática:* Identificamos que este documento corresponde a una Cédula de Extranjería (C.E.).` : '';
 
       const reportText =
         `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
-        `🆔 *El documento:* ${docLabel} ${formattedCedula}\n` +
-        `👤 *Pertenece a:* ${officialName}${epsLine}${locationLine}${pgnLine}${securityLine}\n` +
+        `🆔 *El documento:* ${activeDocLabel} ${formattedCedula}\n` +
+        `👤 *Pertenece a:* ${officialName}${epsLine}${locationLine}${pgnLine}${securityLine}${autoCeNotice}\n` +
         `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
 
       if (userId) {
@@ -1103,7 +1135,7 @@ export async function executeIdentityVerificationFromWhatsApp(
       return {
         isVerificationRequest: true,
         cedula,
-        tipoDoc,
+        tipoDoc: currentTipoDoc,
         success: true,
         officialName,
         source: 'Central Multifuente Notarial VECY (ADRES BDUA + Procuraduría General + Policía Nacional)',
@@ -1116,7 +1148,7 @@ export async function executeIdentityVerificationFromWhatsApp(
     } else {
       let reportText = '';
 
-      if (tipoDoc.toLowerCase() === 'pa') {
+      if (currentTipoDoc.toLowerCase() === 'pa') {
         reportText =
           `🛂 *CONSULTA DE PASAPORTE EXTRANJERO — VECY BIENES RAÍCES* 🇨🇴\n\n` +
           `El documento *Pasaporte ${formattedCedula}* no arroja antecedentes ni identidad en las plataformas públicas del Estado colombiano por lo siguiente:\n\n` +
@@ -1126,12 +1158,14 @@ export async function executeIdentityVerificationFromWhatsApp(
           `📌 Para operaciones inmobiliarias o contratos con extranjeros, este cotejo documental presencial es el camino legal y aceptado en notarías y aseguradoras.`;
       } else {
         let customGuidance = '';
-        if (tipoDoc.toLowerCase() === 'cc' && cedula.length === 9) {
+        if (currentTipoDoc.toLowerCase() === 'cc' && cedula.length === 9) {
           customGuidance = `\n• ⚠️ *Aviso Registraduría:* En Colombia nunca se emitieron Cédulas de Ciudadanía de 9 dígitos (las antiguas tienen entre 1 y 8 dígitos y las nuevas son de 10 dígitos iniciando por 1). Verifica si hubo un dígito omitido o añadido.`;
-        } else if (['ce', 'cx'].includes(tipoDoc.toLowerCase()) && cedula.length >= 8) {
+        } else if (['ce', 'cx'].includes(currentTipoDoc.toLowerCase()) && cedula.length >= 8) {
           customGuidance = `\n• ⚠️ *Aviso Migración:* Las Cédulas de Extranjería en Colombia constan de entre 4 y 7 dígitos numéricos. Un número de ${cedula.length} dígitos suele corresponder a una Cédula de Ciudadanía colombiana.`;
-        } else if (['ce', 'cx'].includes(tipoDoc.toLowerCase()) && cedula.length >= 4 && cedula.length <= 7) {
+        } else if (['ce', 'cx'].includes(currentTipoDoc.toLowerCase()) && cedula.length >= 4 && cedula.length <= 7) {
           customGuidance = `\n• 📌 Las Cédulas de Extranjería (de 4 a 7 dígitos) son expedidas por Migración Colombia. Al ser un documento extranjero, las plataformas del Estado reflejan identidad si el titular cotiza al sistema de salud (ADRES/BDUA), registra contratos estatales en la Procuraduría (SIRI) o historial penal en la Policía Nacional.`;
+        } else if (currentTipoDoc.toLowerCase() === 'cc') {
+          customGuidance = `\n• 🌐 *¿Es un documento de extranjería?:* Si este número corresponde a una persona extranjera con Cédula de Extranjería (C.E.) o Pasaporte, puedes verificarlo indicando *"Verificar CE ${formattedCedula}"* o *"Verificar Pasaporte ${formattedCedula}"*.`;
         }
 
         reportText =
