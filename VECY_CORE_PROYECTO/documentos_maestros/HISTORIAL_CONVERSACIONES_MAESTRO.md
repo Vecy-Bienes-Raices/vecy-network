@@ -59,11 +59,18 @@
 6. **Incremento de Versión**:
    - `shared/const.ts`: `VECY_VERSION = "v33.01"`.
    - `package.json`: `"version": "33.1.0"`.
+7. **Despliegue en Vivo a Contabo VPS y Auto-Despliegue CI/CD (`origin/main` -> VPS)**:
+   - Verificación de acceso SSH directo mediante `~/.ssh/id_vps` hacia `root@13.140.149.144:22`.
+   - Despliegue en vivo en `/var/www/vecy-network`: `git pull origin main`, `pnpm install`, `npm run build`, y recarga en caliente `pm2 reload jania-server --update-env`.
+   - Confirmación en tiempo real: proceso PM2 `jania-server` online en versión `33.1.0` con 0 errores y WebSocket Baileys activo.
+   - Creación de `.github/workflows/deploy.yml` para continuous deployment automático ante cada push a `main`.
+   - Creación de script asistido `scripts/deploy-vps.sh` y comando `npm run deploy:vps` en `package.json`.
 
 ### Verificación y Validación Empírica
 - `npm run check`: 0 errores TypeScript ✅.
 - `npm test`: 5 suites pasando, 197/197 tests vitest aprobados al 100% ✅.
 - `npm run build`: Compilación limpia de cliente y servidor ✅.
+- `npm run deploy:vps`: Ejecución limpia y confirmación de `pm2 status` con `jania-server` (v33.1.0) en línea ✅.
 
 ---
 

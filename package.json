@@ -13,7 +13,8 @@
     "test": "vitest run",
     "studio:check": "tsx server/_core/googleAiStudioBridge.ts",
     "studio:ask": "tsx server/_core/googleAiStudioBridge.ts",
-    "db:push": "drizzle-kit generate && drizzle-kit migrate"
+    "db:push": "drizzle-kit generate && drizzle-kit migrate",
+    "deploy:vps": "bash scripts/deploy-vps.sh"
   },
   "dependencies": {
     "@2captcha/captcha-solver": "^1.3.9",

@@ -374,13 +374,16 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 - `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`
 - `server/_core/jania/prompts.ts`
 - `server/__tests__/regression.test.ts`
-- `shared/const.ts` (`v33.01`) y `package.json` (`33.1.0`)
+- `.github/workflows/deploy.yml` (Nuevo: CI/CD GitHub Actions hacia Contabo VPS)
+- `scripts/deploy-vps.sh` (Nuevo: script asistido de despliegue directo)
+- `shared/const.ts` (`v33.01`) y `package.json` (`33.1.0` con script `deploy:vps`)
 - Documentos maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y `vecy_network_technical_dossier.md`
 
 **Verificación:**
 - `npm run check`: 0 errores TypeScript ✅
 - `npm test`: 197/197 tests passing al 100% ✅
 - `npm run build`: Compilación limpia en Vite y esbuild ✅
+- `npm run deploy:vps`: Despliegue asistido validado en Contabo VPS con `jania-server` online en PM2 ✅
 
 ---
 

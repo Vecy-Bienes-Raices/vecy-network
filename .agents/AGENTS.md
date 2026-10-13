@@ -192,7 +192,10 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
   - `server/_core/jania/handlers/dmHandler.ts`: Posicionamiento explícito de cortesía en herramientas gratuitas, prompt enriquecido y cierre comercial hacia Eduardo A. Rivera y Jani Alves (+57 316 656 9719).
   - Prompts maestros (`VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` y `prompts.ts`): Calibrados con el embudo comercial y canal oficial.
   - `server/__tests__/regression.test.ts`: Suite 62 con 6 pruebas automatizadas aprobadas.
-- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 197/197 tests passing ✅ | `npm run build` limpio ✅
+  - `.github/workflows/deploy.yml`: Auto-despliegue continuo hacia el VPS Contabo vía SSH con PM2 ante cada push a `main`.
+  - `scripts/deploy-vps.sh` & script `"deploy:vps"` en `package.json`: Despliegue asistido directo de 1 solo comando.
+  - **Despliegue en Vivo a Contabo VPS**: `jania-server` activo y corriendo v33.01 (33.1.0) en vivo en PM2 sin caídas.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 197/197 tests passing ✅ | `npm run build` limpio ✅ | `npm run deploy:vps` validado en vivo ✅
 - `shared/const.ts` (`v33.01`) y `package.json` (`33.1.0`).
 
 ## 🔖 VERSIÓN ANTERIOR: v33.00 — Octubre 2026
