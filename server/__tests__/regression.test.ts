@@ -4331,12 +4331,113 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("5. Regla Doctrinal de Versionamiento (.99 -> .00): v32.99 + implementación salta a v33.00, prohibido .100", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.00");
+      expect(VECY_VERSION).toMatch(/^v33\./);
       expect(VECY_VERSION).not.toContain("100");
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.0.0");
+      expect(pkg.version).toMatch(/^33\./);
+    });
+  });
+
+  describe("62. Doctrina v33.01: Inyección del Embudo Comercial y Persuasión Ejecutiva en JanIA", () => {
+    it("1. Detección precisa de Consultas de Alto Valor: comisiones adeudadas, contratos, tributario y títulos", async () => {
+      const { isHighValueLegalOrTaxInquiry } = await import("../_core/commercialFunnelService");
+      
+      // a) Comisiones y by-passing
+      expect(isHighValueLegalOrTaxInquiry("No me quieren pagar la comisión de corretaje del apartamento")).toBe(true);
+      expect(isHighValueLegalOrTaxInquiry("El captador me hizo by-passing y se saltó al asesor")).toBe(true);
+      
+      // b) Contratos, promesas, arras, hipotecas, retroventa
+      expect(isHighValueLegalOrTaxInquiry("Necesito redactar una promesa de compraventa con arras de retracto")).toBe(true);
+      expect(isHighValueLegalOrTaxInquiry("Cómo estructurar un contrato de hipoteca abierta con límite de cuantía")).toBe(true);
+      expect(isHighValueLegalOrTaxInquiry("Qué es y cómo opera el pacto de retroventa")).toBe(true);
+
+      // c) Liquidaciones tributarias y notariales
+      expect(isHighValueLegalOrTaxInquiry("Cuánto se paga de ganancia ocasional según la ley 2277 y cómo aplica la exención de 5000 UVT")).toBe(true);
+      expect(isHighValueLegalOrTaxInquiry("Cómo se liquida la retención en la fuente notarial del 1% y derechos notariales 50/50")).toBe(true);
+
+      // d) Estudios de títulos y saneamiento predial
+      expect(isHighValueLegalOrTaxInquiry("Cómo hacer el estudio de títulos a 20 años y qué pasa con un embargo según el artículo 1521")).toBe(true);
+
+      // No es de alto valor (saludos simples o agradecimientos)
+      expect(isHighValueLegalOrTaxInquiry("Hola buenos días JanIA")).toBe(false);
+      expect(isHighValueLegalOrTaxInquiry("Gracias por la información")).toBe(false);
+    });
+
+    it("2. Estructura Persuasiva Obligatoria (3 Pasos): Marco normativo, alerta patrimonial y llamado a la acción comercial", async () => {
+      const { enhanceResponseWithCommercialFunnel, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } = await import("../_core/commercialFunnelService");
+
+      const rawQuery = "El cliente no me quiere pagar la comisión del negocio que cerró directamente";
+      const baseResponse = "El corretaje te da derecho al cobro.";
+      const enhanced = enhanceResponseWithCommercialFunnel(baseResponse, rawQuery);
+
+      // Paso 1: Solvencia y diagnóstico normativo (Código de Comercio / Ley 527)
+      expect(enhanced).toMatch(/Código de Comercio|Artículos? 134[0-6]|Ley 527/i);
+
+      // Paso 2: Alerta de Riesgo Patrimonial
+      expect(enhanced).toContain(PATRIMONIAL_RISK_ALERT);
+      expect(enhanced).toMatch(/formatos genéricos de internet/i);
+
+      // Paso 3: Llamado a la Acción y Cierre Comercial con Eduardo y Jani (+57 316 656 9719)
+      expect(enhanced).toContain(COMMERCIAL_CLOSING_CTA);
+      expect(enhanced).toContain("+57 316 656 9719");
+      expect(enhanced).toContain("https://wa.me/573166569719");
+      expect(enhanced).toContain("Eduardo A. Rivera y Jani Alves");
+    });
+
+    it("3. Enriquecimiento en consultingHandler: Respuestas a consultas de alto valor incluyen cierre hacia +57 316 656 9719", async () => {
+      const { processConsultingMessage } = await import("../_core/jania/handlers/consultingHandler");
+      
+      const res = await processConsultingMessage(
+        "Tengo un problema con una promesa de compraventa y cláusula penal de arras",
+        "573001234567@s.whatsapp.net",
+        "Carlos Mendoza"
+      );
+
+      expect(res.response).toContain("+57 316 656 9719");
+      expect(res.response).toMatch(/Eduardo A\. Rivera|Jani Alves/);
+      expect(res.response).toMatch(/Art[ií]culo 1611|arras|promesa/i);
+      expect(res.response).toMatch(/formatos genéricos de internet|riesgo patrimonial/i);
+    });
+
+    it("4. Enriquecimiento en dmHandler: Conversaciones privadas sobre impuestos/comisiones integran marco normativo y cierre", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/jania/handlers/dmHandler");
+
+      const dmReply = await processPrivateDmConversationalMessage(
+        "¿Cómo se liquida la ganancia ocasional con la exención de 5000 UVT por venta de casa de habitación?",
+        "573159876543@s.whatsapp.net",
+        "Beatriz Gómez"
+      );
+
+      expect(dmReply).toContain("+57 316 656 9719");
+      expect(dmReply).toMatch(/Eduardo A\. Rivera|Jani Alves/);
+      expect(dmReply).toMatch(/Ley 2277|311-1|UVT|ganancia ocasional/i);
+      expect(dmReply).toMatch(/formatos genéricos de internet|riesgo patrimonial/i);
+    });
+
+    it("5. Servicios gratuitos de autoservicio posicionados como beneficio de cortesía de Vecy Bienes Raíces", async () => {
+      const { formatPoliteToolDelivery } = await import("../_core/jania/handlers/dmHandler");
+      
+      const delivered = await formatPoliteToolDelivery(
+        "573105556677@s.whatsapp.net",
+        "Mauricio Silva",
+        "cedula",
+        "Reporte de antecedentes limpio.",
+        true
+      );
+
+      expect(delivered).toMatch(/beneficio de cortesía/i);
+      expect(delivered).toMatch(/VECY BIENES RAÍCES/);
+    });
+
+    it("6. Consagración doctrinal de versionamiento v33.01", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.01");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.1.0");
     });
   });
 });

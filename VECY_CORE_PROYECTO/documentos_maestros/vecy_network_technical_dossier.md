@@ -331,6 +331,59 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.01 — Octubre 2026
+
+#### 📌 INYECCIÓN DEL EMBUDO COMERCIAL Y PERSUASIÓN EJECUTIVA EN JanIA (DOCTRINA VECY)
+
+**Requerimiento y Objetivos:**
+1. **Calibración de la Máquina de Cierre de Alto Nivel**:
+   - Calibrar `consultingHandler.ts`, `dmHandler.ts` y `prompts.ts` para que JanIA actúe con máxima autoridad jurídica y comercial.
+2. **Matriz de Servicios y Enrutamiento**:
+   - **Autoservicio Gratuito (Gancho de Confianza)**: Verificación de identidad (ADRES, PGN, CGR, PONAL), Predial Bogotá y guías IDU entregados con cortesía de Carreño como beneficio de cortesía de Vecy Bienes Raíces.
+   - **Consultas de Alto Valor (Autoridad + Estocada de Cierre)**:
+     a) Comisiones adeudadas y by-passing (Arts. 1340-1346 C.Co, Ley 527 de 1999).
+     b) Contratos: corretaje, promesas (Art. 1611 C.C., arras y penalidades), hipotecas abiertas (Art. 2432 C.C.), retroventa (Art. 1939 C.C.).
+     c) Liquidaciones tributarias y notariales: ganancia ocasional (Ley 2277/2022 - 15%), exención 5.000 UVT (Art. 311-1 E.T.), retención 1% notarial, derechos notariales 50/50 y registro.
+     d) Estudios de títulos, sucesiones ilíquidas, embargos y saneamiento predial.
+3. **Estructura Persuasiva Obligatoria (3 Pasos Doctrinales)**:
+   - 1° Solvencia y Diagnóstico Normativo: Citar la ley, decreto o código colombiano aplicable.
+   - 2° Alerta de Riesgo Patrimonial: Advertir que los contratos no son formatos genéricos de internet; un vacío en arras o retenciones acarrea glosas de la DIAN o litigios costosos.
+   - 3° Llamado a la Acción y Cierre Comercial: Invitar con la firma obligatoria a formalizar la asesoría con la Dirección de Operaciones y Estrategia Legal: Eduardo A. Rivera y Jani Alves en la línea oficial de bróker: `+57 316 656 9719` (`https://wa.me/573166569719`).
+
+**Soluciones Técnicas Implementadas:**
+- `server/_core/commercialFunnelService.ts` (Nuevo):
+  • Detección exhaustiva de consultas de alto valor mediante `isHighValueLegalOrTaxInquiry`.
+  • Snippets diagnósticos determinísticos por categoría (`getNormativeFrameworkDiagnosis`).
+  • Garantizador de 3 pasos persuasivos (`enhanceResponseWithCommercialFunnel`).
+  • Constantes oficiales `COMMERCIAL_CLOSING_CTA` y `PATRIMONIAL_RISK_ALERT`.
+- `server/_core/jania/handlers/consultingHandler.ts`:
+  • System Prompt enriquecido con la doctrina persuasiva de 3 pasos.
+  • Respuestas y fallbacks enriquecidos automáticamente con el embudo comercial.
+- `server/_core/jania/handlers/dmHandler.ts`:
+  • `formatPoliteToolDelivery` posiciona herramientas gratuitas como beneficio de cortesía de Vecy Bienes Raíces.
+  • Conversación en DMs protegida y enriquecida con marco legal y cierre comercial.
+- `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` & `server/_core/jania/prompts.ts`:
+  • Inyección doctrinal de la estructura persuasiva de 3 pasos y canal oficial.
+- `server/__tests__/regression.test.ts`:
+  • Suite 62 con 6 pruebas automatizadas aprobadas al 100%.
+
+**Archivos Modificados:**
+- `server/_core/commercialFunnelService.ts` (Nuevo)
+- `server/_core/jania/handlers/consultingHandler.ts`
+- `server/_core/jania/handlers/dmHandler.ts`
+- `server/_core/prompts/grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md`
+- `server/_core/jania/prompts.ts`
+- `server/__tests__/regression.test.ts`
+- `shared/const.ts` (`v33.01`) y `package.json` (`33.1.0`)
+- Documentos maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y `vecy_network_technical_dossier.md`
+
+**Verificación:**
+- `npm run check`: 0 errores TypeScript ✅
+- `npm test`: 197/197 tests passing al 100% ✅
+- `npm run build`: Compilación limpia en Vite y esbuild ✅
+
+---
+
 ### 🔖 v33.00 — Octubre 2026
 
 #### 📌 CONFIGURACIÓN DE SEGURIDAD Y BLINDAJE DE CLAVES GEMINI (PRODUCCIÓN VS TESTS) Y REGLA DOCTRINAL DE VERSIONAMIENTO (.99 -> .00)

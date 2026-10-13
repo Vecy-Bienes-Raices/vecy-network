@@ -173,7 +173,29 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.00 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.01 — Octubre 2026
+
+### Novedades v33.01 (Inyección del Embudo Comercial y Persuasión Ejecutiva en JanIA: Autoridad Legal, Alerta Patrimonial y Cierre Hacia la Línea Oficial de Bróker):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. *"Actúa como estratega legal inmobiliario y arquitecto de software en TypeScript."*
+  2. Inyección del embudo comercial y persuasión ejecutiva en `consultingHandler.ts`, `dmHandler.ts` y `prompts.ts` para que JanIA actúe con máxima autoridad jurídica y comercial, funcionando como una máquina de cierre y captación de clientes de alto nivel.
+  3. Matriz de Servicios y Enrutamiento:
+     - Autoservicio Gratuito (Gancho de Confianza): Validación de identidad (ADRES, PGN, CGR, PONAL) y prediales/IDU entregados con cortesía como beneficio de cortesía de Vecy Bienes Raíces.
+     - Consultas de Alto Valor: a) Comisiones adeudadas o by-passing (Arts. 1340-1346 C.Co, Ley 527/1999), b) Contratos: corretaje, promesas (Art. 1611 C.C., arras y penalidades), hipotecas abiertas (Art. 2432 C.C.), retroventa (Art. 1939 C.C.), c) Impuestos: ganancia ocasional (Ley 2277/2022 - 15%), exención 5.000 UVT (Art. 311-1 E.T.), retención 1% notarial, derechos notariales 50/50 y registro, d) Estudios de títulos, sucesiones, embargos y saneamiento.
+  4. Estructura Persuasiva Obligatoria (3 Pasos):
+     - 1° Solvencia y Diagnóstico Normativo: Citar la ley, decreto o código colombiano aplicable.
+     - 2° Alerta de Riesgo Patrimonial: Recordar que los contratos y liquidaciones no son formatos genéricos de internet; un vacío en arras o retenciones acarrea glosas de la DIAN o litigios costosos.
+     - 3° Llamado a la Acción y Cierre Comercial con la firma oficial: *"Para estructurar esta minuta a la medida de tu negocio, liquidar tus impuestos o gestionar la recuperación de tu comisión con nuestro acompañamiento directo, comunícate con nuestra Dirección de Operaciones y Estrategia Legal: Eduardo A. Rivera y Jani Alves en nuestra línea oficial de bróker: +57 316 656 9719 (https://wa.me/573166569719)."*
+- **Acciones Técnicas Ejecutadas**:
+  - `server/_core/commercialFunnelService.ts`: Creación del módulo central con detección precisa de consultas de alto valor, marco normativo por categoría, alerta patrimonial y garantizador de los 3 pasos persuasivos.
+  - `server/_core/jania/handlers/consultingHandler.ts`: System prompt calibrado, integración en outputs y fallbacks con `enhanceResponseWithCommercialFunnel()`.
+  - `server/_core/jania/handlers/dmHandler.ts`: Posicionamiento explícito de cortesía en herramientas gratuitas, prompt enriquecido y cierre comercial hacia Eduardo A. Rivera y Jani Alves (+57 316 656 9719).
+  - Prompts maestros (`VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` y `prompts.ts`): Calibrados con el embudo comercial y canal oficial.
+  - `server/__tests__/regression.test.ts`: Suite 62 con 6 pruebas automatizadas aprobadas.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 197/197 tests passing ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.01`) y `package.json` (`33.1.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.00 — Octubre 2026
 
 ### Novedades v33.00 (Configuración de Seguridad y Blindaje de Claves Gemini: Producción vs Tests, Nivel 1 Gratis, Nivel 2 Pago Emergencia, Retorno Automático y Regla Doctrinal de Versionamiento .99 -> .00):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

@@ -7,6 +7,66 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v33.01 — 12 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+- **Inyección del Embudo Comercial y Persuasión Ejecutiva en JanIA (v33.01)**:
+  1. *"Actúa como estratega legal inmobiliario y arquitecto de software en TypeScript.*
+  2. *OBJETIVO: INYECCIÓN DEL EMBUDO COMERCIAL Y PERSUASIÓN EXECUTIVA EN JanIA (v33.01)*
+  3. *Debemos calibrar `server/_core/jania/handlers/consultingHandler.ts`, `dmHandler.ts` y `prompts.ts` para que JanIA actúe con máxima autoridad jurídica y comercial, funcionando como una máquina de cierre y captación de clientes de alto nivel.*
+  4. *MATRIZ DE SERVICIOS Y ENRUTAMIENTO:*
+     - *SERVICIOS DE AUTOSERVICIO GRATUITO (GANCHO DE CONFIANZA):*
+       * *Verificación de identidad y antecedentes (ADRES, Procuraduría, Contraloría, Policía).*
+       * *Factura Predial Bogotá y guías de Paz y Salvo IDU.*
+       * *JanIA los entrega ágilmente con cortesía ("Urbanidad de Carreño"), posicionándolos como beneficio de cortesía de Vecy Bienes Raíces.*
+     - *CONSULTAS DE ALTO VALOR (AUTORIDAD TÉCNICA + ESTOCADA DE CIERRE):*
+       *Aplica cuando el usuario plantee consultas sobre:*
+       *a) Recuperación de comisiones inmobiliarias adeudadas o "by-passing" (Arts. 1340-1346 C.Co, validez de mensajes de datos Ley 527 de 1999).*
+       *b) Redacción y estructuración de contratos: Corretaje (exclusivo/no exclusivo), Promesas de compraventa (Art. 1611 C.C., arras y penalidades), Minutas notariales, Hipotecas abiertas con límite de cuantía (Art. 2432 C.C.), Pactos de retroventa (Art. 1939 C.C.).*
+       *c) Liquidaciones tributarias y notariales: Ganancia ocasional (Ley 2277 de 2022 - tarifa 15%), exención de las primeras 5.000 UVT por venta de casa de habitación (Art. 311-1 E.T.), Retención en la fuente (1% notarial), derechos notariales (50/50) y registro.*
+       *d) Estudios de títulos, sucesiones ilíquidas, embargos y saneamiento predial.*
+  5. *ESTRUCTURA PERSUASIVA OBLIGATORIA (DOCTRINA VECY):*
+     *Toda respuesta ante estos casos debe seguir estrictamente 3 pasos:*
+     *1° Solvencia y Diagnóstico Normativo: Citar la ley, decreto o código colombiano aplicable con rigor de abogado senior y consultor tributario.*
+     *2° Alerta de Riesgo Patrimonial: Recordar con elegancia que los contratos y liquidaciones no son formatos genéricos de internet; un vacío en arras, plazos o retenciones acarrea glosas de la DIAN o litigios costosos.*
+     *3° Llamado a la Acción y Cierre Comercial: Invitar al usuario a formalizar la asesoría especializada o la redacción contractual con la firma:*
+     *"Para estructurar esta minuta a la medida de tu negocio, liquidar tus impuestos o gestionar la recuperación de tu comisión con nuestro acompañamiento directo, comunícate con nuestra Dirección de Operaciones y Estrategia Legal: Eduardo A. Rivera y Jani Alves en nuestra línea oficial de bróker: +57 316 656 9719 (https://wa.me/573166569719)."*
+  6. *REGLAS DE ENTREGA: Añadir tests de regresión que certifiquen que ante preguntas de comisiones, contratos o impuestos, JanIA incluya el marco legal y el llamado a la acción hacia la línea +57 316 656 9719. Respetar la regla doctrinal de versionamiento (v33.00 -> v33.01). Validar con npm run check (0 errores) y npm test (100% verde).*
+
+### Diagnóstico Técnico Profundo
+- **Oportunidad de Monetización y Cierre de Clientes de Alto Nivel**: JanIA cuenta con sólida solvencia legal y tributaria, pero previamente sus respuestas técnicas en Grupo 2 y DMs podían percibirse como un mero consultor académico o un generador de formatos gratuitos. Hacía falta inyectar un embudo persuasivo sistemático que, tras resolver la duda con autoridad senior, alerte sobre el peligro patrimonial de usar plantillas de internet y aplique una estocada de cierre comercial dirigiendo al usuario a la Dirección de Operaciones y Estrategia Legal (Eduardo A. Rivera y Jani Alves, +57 316 656 9719).
+- **Distinción Doctrinal entre Autoservicio Gratuito y Consultas de Alto Valor**: Los servicios de autoservicio (cédula, antecedentes, predial, paz y salvo IDU) operan como gancho de confianza y cortesía institucional. Las consultas de comisiones, contratos, liquidaciones y saneamiento son servicios especializados de alto valor patrimonial que demandan acompañamiento humano remunerado.
+
+### Acciones Técnicas Ejecutadas
+1. **Creación del Módulo Central (`server/_core/commercialFunnelService.ts`)**:
+   - `COMMERCIAL_CLOSING_CTA`: Firma oficial institucional que deriva a Eduardo A. Rivera y Jani Alves (+57 316 656 9719).
+   - `PATRIMONIAL_RISK_ALERT`: Alerta formal de riesgo contra minutas genéricas de internet y glosas de la DIAN.
+   - `isHighValueLegalOrTaxInquiry(text)`: Detección exhaustiva de las 4 categorías: a) Comisiones/bypassing (Arts. 1340-1346 C.Co, Ley 527), b) Contratos/promesas/arras/hipotecas (Art. 1611, 2432, 1939 C.C.), c) Impuestos/notarial (Ley 2277, Art. 311-1, 398, 401 E.T.), d) Títulos/sucesiones/embargos (Art. 1521 C.C., Ley 258, Ley 70).
+   - `getNormativeFrameworkDiagnosis(text)`: Snippets jurídicos determinísticos por categoría.
+   - `enhanceResponseWithCommercialFunnel(response, userQuery)`: Garante infalible de los 3 pasos doctrinales tanto en respuestas generadas por LLM como en fallbacks.
+2. **Calibración de `server/_core/jania/handlers/consultingHandler.ts` (Grupo 2)**:
+   - System Prompt enriquecido con la doctrina persuasiva de 3 pasos obligatorios.
+   - Salidas del modelo y respuestas de contingencia envueltas en `enhanceResponseWithCommercialFunnel()`.
+3. **Calibración de `server/_core/jania/handlers/dmHandler.ts` (DMs Privados)**:
+   - `formatPoliteToolDelivery()` posiciona explícitamente los reportes de identidad y predial como beneficio de cortesía de Vecy Bienes Raíces.
+   - System Prompt calibrado con el embudo comercial v33.01.
+   - Salidas del modelo y respuestas de contingencia envueltas en `enhanceResponseWithCommercialFunnel()`.
+4. **Calibración de Prompts Maestros (`VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` y `prompts.ts`)**:
+   - Actualizada la línea de contacto a `+57 316 656 9719` para Eduardo A. Rivera y Jani Alves.
+   - Inyectada la sección doctrinal de 3 pasos en los prompts de consultoría y JanIA.
+5. **Suite de Regresión 62 (`server/__tests__/regression.test.ts`)**:
+   - 6 pruebas automatizadas validando: detección de consultas de alto valor, estructura de 3 pasos, respuestas en consultingHandler con derivación al +57 316 656 9719, respuestas en dmHandler, posicionamiento de cortesía en herramientas gratuitas y versionamiento v33.01.
+6. **Incremento de Versión**:
+   - `shared/const.ts`: `VECY_VERSION = "v33.01"`.
+   - `package.json`: `"version": "33.1.0"`.
+
+### Verificación y Validación Empírica
+- `npm run check`: 0 errores TypeScript ✅.
+- `npm test`: 5 suites pasando, 197/197 tests vitest aprobados al 100% ✅.
+- `npm run build`: Compilación limpia de cliente y servidor ✅.
+
+---
+
 ## 📋 SESIÓN v33.00 — 12 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

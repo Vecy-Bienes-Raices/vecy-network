@@ -2,6 +2,7 @@ import { resolveRealName, getOrLoadDmHistory, appendDmHistory } from "../session
 import { extractFirstName, sanitizeResponseMarkdown } from "../parsers";
 import { resolveNameAndGender, getCanonicalCompositeName } from "../../nameAndGenderResolver";
 import { invokeLLM } from "../../llm";
+import { enhanceResponseWithCommercialFunnel, isHighValueLegalOrTaxInquiry, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
 
 /**
  * Envuelve la entrega de cualquier herramienta (cédula o predial) con cortesía,
@@ -40,10 +41,10 @@ export async function formatPoliteToolDelivery(
   }
 
   if (isFirstTurn) {
-    const greetingHeader = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️✨.\n\nYa procesé con gusto tu consulta:\n\n`;
+    const greetingHeader = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️✨.\n\nYa procesé con gusto tu consulta como un beneficio de cortesía 100% gratuito de nuestra inmobiliaria:\n\n`;
     return greetingHeader + payloadText;
   } else {
-    const politeHeader = `¡Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aquí tienes el reporte oficial:\n\n`;
+    const politeHeader = `¡Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aquí tienes el reporte oficial como un beneficio de cortesía de *VECY BIENES RAÍCES*:\n\n`;
     return politeHeader + payloadText;
   }
 }
@@ -437,7 +438,13 @@ export async function processPrivateDmConversationalMessage(
           `  • COMPRA CON CRÉDITO HIPOTECARIO (Comprador): Comprador asume constitución de hipoteca a favor del banco (~1.1% del valor financiado).\n` +
           `  • LEASING HABITACIONAL (Cesión): Al no transferirse el dominio en matrícula (el banco fiduciario sigue como dueño), el comprador se ahorra el 1.75% en beneficencia y registro de compraventa.\n` +
           `  • EMBARGOS / MEDIDAS CAUTELARES (Art. 1521 C.C.): Objeto ilícito. No se puede vender ni prometer venta sin que el juzgado competente haya emitido el oficio de desembargo radicado en la ORIP.\n` +
-          `  • DOCTRINA EN SERVICIOS ESPECIALIZADOS (5 al 11): En temas especializados (sondeos de mercado, jurídica, cobranza de comisiones, avalúos, tributaria, hipotecas), JanIA puede ofrecer de forma completamente gratuita algunos conceptos breves, definiciones y consejos superficiales que despejen la duda general en la mente del usuario, pero SIN entregar la solución técnica o jurídica de fondo, guiándolo a contactar a los Directores de Vecy Bienes Raíces al +57 316 656 9719 para contratar el servicio profesional.\n` +
+          `  • DOCTRINA EN CONSULTAS DE ALTO VALOR Y EMBUDO COMERCIAL (DOCTRINA VECY v33.01):\n` +
+          `    Aplica ante consultas sobre: a) Recuperación de comisiones o by-passing (Arts. 1340-1346 C.Co, Ley 527 de 1999), b) Redacción de contratos: corretaje, promesas (Art. 1611 C.C., arras y penalidades), hipotecas abiertas (Art. 2432 C.C.), retroventa (Art. 1939 C.C.), c) Liquidaciones tributarias/notariales: ganancia ocasional (Ley 2277/2022 - 15%), exención 5.000 UVT casa de habitación (Art. 311-1 E.T.), retención 1% notarial, derechos notariales 50/50 y registro, d) Estudios de títulos, sucesiones ilíquidas, embargos y saneamiento predial.\n` +
+          `    Toda respuesta ante estos casos DEBE seguir estrictamente 3 pasos:\n` +
+          `    1° Solvencia y Diagnóstico Normativo: Cita la ley, código o decreto aplicable con autoridad de abogada senior.\n` +
+          `    2° Alerta de Riesgo Patrimonial: Recuerda con elegancia que los contratos y liquidaciones no son formatos genéricos de internet; un vacío en arras, plazos o retenciones acarrea glosas de la DIAN o litigios costosos.\n` +
+          `    3° Llamado a la Acción y Cierre Comercial: Invita obligatoriamente a formalizar la asesoría con la firma exacta:\n` +
+          `       "Para estructurar esta minuta a la medida de tu negocio, liquidar tus impuestos o gestionar la recuperación de tu comisión con nuestro acompañamiento directo, comunícate con nuestra Dirección de Operaciones y Estrategia Legal: Eduardo A. Rivera y Jani Alves en nuestra línea oficial de bróker: +57 316 656 9719 (https://wa.me/573166569719)."\n` +
           `- PEDAGOGÍA DE CORTESÍA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), salúdalo educadamente por su nombre y con calidez humana. Enseña con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.\n` +
           `- PEDAGOGÍA DE PACIENCIA TOTAL Y EMPATÍA TECNOLÓGICA (DOCTRINA DE AMOR Y SERVICIO AL USUARIO): En el sector inmobiliario hay personas mayores, tradicionales o con dificultades para interactuar con la tecnología (analfabetismo digital o confusión frente a la IA y el celular). Si un usuario no comprende cómo funciona el servicio, pregunta con timidez, pide explicación de cómo se hace o manifiesta enredo, JanIA JAMÁS debe mostrar impaciencia, frialdad ni tecnicismos. Trátalos con ternura, empatía, infinita paciencia y lenguaje cercano y sencillo de la vida cotidiana. Explícales con amor paso a paso: "No te preocupes, yo te ayudo", "Solo facilítame el nombre completo y número de documento que solicitas para el registro formal de portería y yo hago todo el trámite por ti en segundos". JanIA está siempre dispuesta a explicar, guiar y servir de corazón a todo el que lo necesite.\n` +
           `- MANEJO ELEGANTE DE DUDAS O AMBIGÜEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas genéricas; dile con simpatía humana: "Qué pena contigo, ${displayName || "colega"}. Debido a un pequeño fallo en la matrix 🤖😅 no alcancé a captar bien lo que me pides hacer. ¿Podrías por favor confirmarme o repetirme qué necesitas para ayudarte de inmediato?".\n` +
@@ -528,12 +535,18 @@ export async function processPrivateDmConversationalMessage(
         : `¡${timeSalutation}${nameGreeting}! 👋 En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que innova con tecnología para facilitarte tus gestiones diarias. Cuéntame en qué te puedo colaborar hoy.`;
     }
 
+    // Inyección del embudo comercial si la consulta es de alto valor (Doctrina v33.01)
+    reply = enhanceResponseWithCommercialFunnel(reply, clean);
+
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", reply);
     return reply;
   } catch (err: any) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    const fallback = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar o procesar bien lo que me solicitaste. ¿Podrías por favor repetirme qué necesitas para orientarte de inmediato? 🤝`;
+    let fallback = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar o procesar bien lo que me solicitaste. ¿Podrías por favor repetirme qué necesitas para orientarte de inmediato? 🤝`;
+    if (isHighValueLegalOrTaxInquiry(clean)) {
+      fallback = enhanceResponseWithCommercialFunnel(fallback, clean);
+    }
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", fallback);
     return fallback;

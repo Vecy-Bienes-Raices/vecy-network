@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.00";
+    VECY_VERSION = "v33.01";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -11174,7 +11174,7 @@ Tienes dominio absoluto sobre 4 pilares fundamentales. Usa este conocimiento par
 
 3. **AVAL\xDAOS Y TASACIONES COMERCIALES:** Tienes capacidad anal\xEDtica para guiar sobre la valoraci\xF3n de un inmueble. Entiendes factores de depreciaci\xF3n, valor por metro cuadrado en el norte de Bogot\xE1, estratificaci\xF3n y an\xE1lisis comparativo de mercado (ACM).
 
-4. **ASESOR\xCDA LEGAL Y TRIBUTARIA:** Resuelves con m\xE1ximo rigor normativo temas de promesas de compraventa, reportes en Datacr\xE9dito, cobros de comisi\xF3n, escrituraci\xF3n y saneamiento de predios.
+4. **ASESOR\xCDA LEGAL Y TRIBUTARIA (EMBUDO COMERCIAL v33.01):** Resuelves con m\xE1ximo rigor normativo temas de promesas de compraventa (Art. 1611 C.C.), cobros de comisi\xF3n y by-passing (Arts. 1340-1346 C.Co, Ley 527 de 1999), liquidaci\xF3n de ganancia ocasional (Ley 2277/2022) y exenci\xF3n 5.000 UVT (Art. 311-1 E.T.), retenci\xF3n en la fuente (Art. 398/401 E.T.), escrituraci\xF3n y saneamiento de predios. En toda consulta de alto valor aplicas estrictamente los 3 pasos doctrinales: 1\xB0 Solvencia y diagn\xF3stico normativo, 2\xB0 Alerta de riesgo patrimonial contra formatos gen\xE9ricos, y 3\xB0 Cierre comercial invitando a formalizar con la Direcci\xF3n de Operaciones y Estrategia Legal: Eduardo A. Rivera y Jani Alves en la l\xEDnea de br\xF3ker +57 316 656 9719 (https://wa.me/573166569719).
 
 # MOTOR DE EXTRACCI\xD3N Y MATCHING (Tu Funci\xF3n Operativa)
 Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales como Wasi, FincaRaiz, Mercado Libre, y PDFs).
@@ -12269,6 +12269,77 @@ var init_nameAndGenderResolver = __esm({
         saturday: "S\xE1bados de 8:00 AM a 8:00 PM (08:00 - 20:00)",
         sunday: "Domingos de 10:00 AM a 4:00 PM (10:00 - 16:00)"
       }
+    };
+  }
+});
+
+// server/_core/commercialFunnelService.ts
+function isHighValueLegalOrTaxInquiry(text2) {
+  if (!text2 || typeof text2 !== "string") return false;
+  const clean = text2.trim();
+  return HIGH_VALUE_PATTERNS.commissions.test(clean) || HIGH_VALUE_PATTERNS.contracts.test(clean) || HIGH_VALUE_PATTERNS.taxes.test(clean) || HIGH_VALUE_PATTERNS.titles.test(clean);
+}
+function getNormativeFrameworkDiagnosis(text2) {
+  const clean = text2.trim();
+  if (HIGH_VALUE_PATTERNS.commissions.test(clean)) {
+    return "\u{1F3DB}\uFE0F *Marco Normativo y Diagn\xF3stico Jur\xEDdico:*\nConforme a los Art\xEDculos 1340 a 1346 del C\xF3digo de Comercio, el corretaje genera el derecho irrenunciable al pago de la comisi\xF3n una vez perfeccionado el negocio mediado. Asimismo, bajo la Ley 527 de 1999 (Principio de Equivalencia Funcional y No Repudio de Mensajes de Datos) y el Decreto 2364 de 2012, las solicitudes de visita y acuerdos de comisi\xF3n remitidos por canales electr\xF3nicos certificados (tales como correos con logs SMTP/MailSuite) constituyen prueba plena e inalterable ante la jurisdicci\xF3n civil y comercial frente a maniobras de by-passing.";
+  }
+  if (HIGH_VALUE_PATTERNS.contracts.test(clean)) {
+    return "\u{1F3DB}\uFE0F *Marco Normativo y Diagn\xF3stico Jur\xEDdico:*\nBajo el Art\xEDculo 1611 del C\xF3digo Civil (subrogado por la Ley 153 de 1887), la promesa de compraventa exige para su plena validez: constar por escrito, que el negocio no est\xE9 prohibido por las leyes, que contenga plazo o condici\xF3n que fije la \xE9poca de otorgamiento (fecha, hora y notar\xEDa exacta), y la determinaci\xF3n cabal del inmueble con linderos y folio de matr\xEDcula SNR. Respecto a garant\xEDas, las arras confirmatorias y de retracto exigen redacci\xF3n expresa para no confundirse con la cl\xE1usula penal compensatoria. Trat\xE1ndose de garant\xEDas reales, la hipoteca abierta con l\xEDmite de cuant\xEDa (Art. 2432 C.C.) y el pacto de retroventa (Art. 1939 C.C.) requieren escritura p\xFAblica formal y estricta reserva temporal.";
+  }
+  if (HIGH_VALUE_PATTERNS.taxes.test(clean)) {
+    return "\u{1F3DB}\uFE0F *Marco Normativo y Diagn\xF3stico Tributario:*\nDe conformidad con la Reforma Tributaria (Ley 2277 de 2022), la tarifa de Ganancia Ocasional para personas naturales es del 15% sobre la utilidad fiscal depurada. El Art\xEDculo 311-1 del Estatuto Tributario otorga la exenci\xF3n de las primeras 5.000 UVT en la venta de la casa o apartamento de habitaci\xF3n del contribuyente, sujeta a la consignaci\xF3n en cuentas AFC o destino exclusivo a nueva vivienda. En notar\xEDa, opera la Retenci\xF3n en la Fuente del 1% por enajenaci\xF3n de activos fijos (Arts. 398 y 401 E.T., elev\xE1ndose al 2.5% sobre excedentes de 20.000 UVT), y los Derechos Notariales se sufragan en proporci\xF3n 50% vendedor y 50% comprador.";
+  }
+  if (HIGH_VALUE_PATTERNS.titles.test(clean)) {
+    return "\u{1F3DB}\uFE0F *Marco Normativo y Diagn\xF3stico Inmobiliario:*\nEl estudio de t\xEDtulos exige la auditor\xEDa de tradici\xF3n registral ininterrumpida de al menos 20 a\xF1os en el folio de matr\xEDcula inmobiliaria (ORIP/SNR). El Art\xEDculo 1521 del C\xF3digo Civil sanciona con objeto il\xEDcito la enajenaci\xF3n de bienes embargados o sujetos a medidas cautelares sin autorizaci\xF3n judicial. Adicionalmente, grav\xE1menes como la Afectaci\xF3n a Vivienda Familiar (Ley 258 de 1996) demandan comparecencia de ambos c\xF3nyuges, y el Patrimonio de Familia Inembargable (Ley 70 de 1931) con menores impone pronunciamiento vinculante del Defensor de Familia del ICBF.";
+  }
+  return "\u{1F3DB}\uFE0F *Marco Normativo y Diagn\xF3stico Jur\xEDdico:*\nEl ordenamiento civil y comercial colombiano exige rigurosa solemnidad en la estructuraci\xF3n de actos inmobiliarios y cumplimiento de directrices notariales y tributarias vigentes.";
+}
+function enhanceResponseWithCommercialFunnel(responseText, userQuery) {
+  if (!responseText || typeof responseText !== "string") {
+    return responseText;
+  }
+  const isHighValue = isHighValueLegalOrTaxInquiry(userQuery) || isHighValueLegalOrTaxInquiry(responseText);
+  if (!isHighValue) {
+    return responseText;
+  }
+  let enriched = responseText.trim();
+  const hasLawCitation = /(?:art[ií]culos?|ley\s*\d+|c[oó]digo\s*(?:civil|de\s*comercio)|estatuto\s*tributario|uvt|decreto)/i.test(enriched);
+  if (!hasLawCitation) {
+    const diagnosis = getNormativeFrameworkDiagnosis(userQuery || responseText);
+    enriched = `${diagnosis}
+
+${enriched}`;
+  }
+  const hasRiskAlert = /(?:alerta\s*de\s*riesgo|riesgo\s*patrimonial|formatos?\s*gen[eé]ricos?|glosas?\s*de\s*la\s*dian|litigios?\s*costosos?)/i.test(enriched);
+  if (!hasRiskAlert) {
+    enriched += `
+
+${PATRIMONIAL_RISK_ALERT}`;
+  }
+  const hasClosingCTA = /(?:316\s*656\s*9719|wa\.me\/573166569719)/.test(enriched) && /(?:Eduardo\s*A\.?\s*Rivera|Jani\s*Alves|Direcci[oó]n\s*de\s*Operaciones|br[oó]ker)/i.test(enriched);
+  if (!hasClosingCTA) {
+    enriched += `
+
+${COMMERCIAL_CLOSING_CTA}`;
+  }
+  return enriched;
+}
+var COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT, HIGH_VALUE_PATTERNS;
+var init_commercialFunnelService = __esm({
+  "server/_core/commercialFunnelService.ts"() {
+    "use strict";
+    COMMERCIAL_CLOSING_CTA = "Para estructurar esta minuta a la medida de tu negocio, liquidar tus impuestos o gestionar la recuperaci\xF3n de tu comisi\xF3n con nuestro acompa\xF1amiento directo, comun\xEDcate con nuestra Direcci\xF3n de Operaciones y Estrategia Legal: Eduardo A. Rivera y Jani Alves en nuestra l\xEDnea oficial de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719).";
+    PATRIMONIAL_RISK_ALERT = "\u26A0\uFE0F *Alerta de Riesgo Patrimonial:* Recuerda que los contratos y liquidaciones no son formatos gen\xE9ricos de internet; un vac\xEDo en arras, plazos o retenciones acarrea glosas de la DIAN o litigios costosos.";
+    HIGH_VALUE_PATTERNS = {
+      // a) Comisiones y by-passing
+      commissions: /(?:comisi[oó]n|comisiones|honorarios?\s*(?:de\s*)?corretaje|by-?passing|saltar(?:se)?\s*al\s*(?:asesor|agente|captador)|no\s*(?:me\s*)?pagaron\s*(?:la\s*)?comisi[oó]n|cobro\s*de\s*comisi[oó]n|recuperar\s*(?:la\s*)?comisi[oó]n|comisi[oó]n\s*adeudada|acuerdo\s*de\s*puntas|puntas\s*compartidas|correo\s*certificado|mailsuite|ley\s*527|no\s*repudio|art[ií]culos?\s*134[0-6]|c[oó]digo\s*de\s*comercio.*corretaje)/i,
+      // b) Contratos, promesas, arras, hipotecas, retroventa
+      contracts: /(?:contrato\s*(?:de\s*)?corretaje|promesa\s*(?:de\s*)?compraventa|art[ií]culo\s*1611|arras\s*(?:de\s*retracto|confirmatorias)?|cl[aá]usula\s*penal|minuta\s*notarial|hipoteca\s*abierta|l[ií]mite\s*de\s*cuant[ií]a|art[ií]culo\s*2432|pacto\s*(?:de\s*)?retroventa|art[ií]culo\s*1939|redacci[oó]n\s*de\s*contrato|redactar\s*(?:la\s*)?promesa|estructurar\s*contrato|minuta\s*de\s*compraventa)/i,
+      // c) Tributario, ganancia ocasional, 5.000 UVT, retención en la fuente, notarial
+      taxes: /(?:ganancia\s*ocasional|ley\s*2277|tarifa\s*15%|5\.?000\s*uvt|art[ií]culo\s*311-1|casa\s*de\s*habitaci[oó]n|retenci[oó]n\s*en\s*la\s*fuente|art[ií]culo\s*398|art[ií]culo\s*401|derechos\s*notariales|gastos\s*notariales|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|notar[ií]a\s*y\s*registro)/i,
+      // d) Estudio de títulos, sucesiones, embargos, saneamiento
+      titles: /(?:estudio\s*de\s*t[ií]tulos|sucesi[oó]n\s*il[ií]quida|sucesi[oó]n|embargo|art[ií]culo\s*1521|saneamiento\s*predial|tradici[oó]n\s*(?:de\s*)?(?:10|20)\s*a[ñn]os|cancelaci[oó]n\s*de\s*hipoteca|afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|ley\s*258|patrimonio\s*de\s*familia|ley\s*70)/i
     };
   }
 });
@@ -21938,7 +22009,17 @@ Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, as
 - **SOLUCI\xD3N TOTAL Y DE FONDO (IA PURA)**: Eres una IA completamente resolutiva. Si un usuario te pide redactar una promesa de compraventa, una cl\xE1usula penal, un acuerdo de puntas compartidas, una carta de preaviso de arriendo, liquidar la ganancia ocasional o estimar el valor de mercado por m\xB2 (estudio comparativo), \xA1ENTR\xC9GALE LA SOLUCI\xD3N COMPLETA, REDACTADA Y ESTRUCTURADA DIRECTAMENTE AQU\xCD EN EL CHAT!
 - **BENEFICIO GRATUITO DE LANZAMIENTO VECY BIENES RA\xCDCES**: Recuerda que en esta etapa de lanzamiento de VECY BIENES RA\xCDCES, todos tus servicios de consultor\xEDa, an\xE1lisis jur\xEDdico, redacci\xF3n de minutas y estudios de mercado virtuales con IA son un **beneficio 100% gratuito** para empoderar a los agentes inmobiliarios. An\xEDmalos a aprovechar esta oportunidad e invitar a m\xE1s colegas a unirse a la red.
 - **ASTUCIA CONTEXTUAL ANTE PREGUNTAS DE COSTOS**: Si un usuario pregunta de forma corta o ambigua "\xBFQu\xE9 costo tendr\xEDa?" o "\xBFCu\xE1nto vale?", conecta con el contexto previo o indaga con astucia: acl\xE1rale que tu asistencia y redacci\xF3n en el chat es totalmente gratuita por ser miembro de VECY BIENES RA\xCDCES; y si se refiere a gastos notariales externos, liquidaci\xF3n de impuestos o si pregunta por aval\xFAos certificados de Lonja, expl\xEDcale con amabilidad y precisi\xF3n que en VECY no realizamos aval\xFAos certificados por perito ni visitas in situ, sino estudios de mercado \xE1giles y aproximados sobre el valor del metro cuadrado y precios de arriendo en la zona para fijar precios competitivos.
-- **DERIVACI\xD3N OPORTUNA AL BR\xD3KER**: \xDAnicamente cuando el caso requiera acompa\xF1amiento notarial presencial, formalizaci\xF3n de corretaje con la inmobiliaria o consultor\xEDa personalizada con nuestros fundadores Eduardo A. Rivera y Jani Alves, inv\xEDtalo amablemente a comunicarse con nuestro br\xF3ker de VECY BIENES RA\xCDCES en WhatsApp (+573166569719) en nuestro horario de atenci\xF3n: Lunes a Viernes de 8:00 AM a 10:00 PM, S\xE1bados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.
+- **ESTRUCTURA PERSUASIVA OBLIGATORIA PARA CONSULTAS DE ALTO VALOR (DOCTRINA VECY v33.01)**:
+  Aplica cuando el usuario plantee consultas sobre:
+  a) Recuperaci\xF3n de comisiones inmobiliarias adeudadas o "by-passing" (Arts. 1340-1346 C.Co, validez de mensajes de datos Ley 527 de 1999).
+  b) Redacci\xF3n y estructuraci\xF3n de contratos: Corretaje (exclusivo/no exclusivo), Promesas de compraventa (Art. 1611 C.C., arras y penalidades), Minutas notariales, Hipotecas abiertas con l\xEDmite de cuant\xEDa (Art. 2432 C.C.), Pactos de retroventa (Art. 1939 C.C.).
+  c) Liquidaciones tributarias y notariales: Ganancia ocasional (Ley 2277 de 2022 - tarifa 15%), exenci\xF3n de las primeras 5.000 UVT por venta de casa de habitaci\xF3n (Art. 311-1 E.T.), Retenci\xF3n en la fuente (1% notarial), derechos notariales (50/50) y registro.
+  d) Estudios de t\xEDtulos, sucesiones il\xEDquidas, embargos y saneamiento predial.
+  Toda respuesta ante estos casos DEBE seguir estrictamente 3 pasos:
+  1\xB0 Solvencia y Diagn\xF3stico Normativo: Citar la ley, decreto o c\xF3digo colombiano aplicable con rigor de abogada senior y consultora tributaria.
+  2\xB0 Alerta de Riesgo Patrimonial: Recordar con elegancia que los contratos y liquidaciones no son formatos gen\xE9ricos de internet; un vac\xEDo en arras, plazos o retenciones acarrea glosas de la DIAN o litigios costosos.
+  3\xB0 Llamado a la Acci\xF3n y Cierre Comercial: Invitar obligatoriamente a formalizar la asesor\xEDa o estructuraci\xF3n con la firma exacta:
+     "Para estructurar esta minuta a la medida de tu negocio, liquidar tus impuestos o gestionar la recuperaci\xF3n de tu comisi\xF3n con nuestro acompa\xF1amiento directo, comun\xEDcate con nuestra Direcci\xF3n de Operaciones y Estrategia Legal: Eduardo A. Rivera y Jani Alves en nuestra l\xEDnea oficial de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719)."
 
 ## ROLES Y \xC1REAS DE ASESOR\xCDA MAESTRA (5 PILARES):
 1. **\u2696\uFE0F Abogada Inmobiliaria y Notarial Senior (Derecho Inmobiliario y Contratos)**:
@@ -22046,7 +22127,9 @@ Consulta: ${messageToProcess}`;
     });
     try {
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
-      const finalResp = sanitizeResponseMarkdown(parsed.response || "");
+      const rawResp = parsed.response || "";
+      const enrichedResp = enhanceResponseWithCommercialFunnel(rawResp, messageToProcess);
+      const finalResp = sanitizeResponseMarkdown(enrichedResp);
       appendConsultingHistory(userId, "user", text2);
       appendConsultingHistory(userId, "assistant", finalResp);
       return {
@@ -22058,7 +22141,8 @@ Consulta: ${messageToProcess}`;
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo m\xE1s tarde.";
-      const finalResp = sanitizeResponseMarkdown(replyContent);
+      const enrichedResp = enhanceResponseWithCommercialFunnel(replyContent, messageToProcess);
+      const finalResp = sanitizeResponseMarkdown(enrichedResp);
       appendConsultingHistory(userId, "user", text2);
       appendConsultingHistory(userId, "assistant", finalResp);
       return {
@@ -22096,10 +22180,9 @@ Para entregarte un informe escrito muy acertado sobre en cu\xE1nto puedes vender
         reactionEmoji: "\u{1F4D0}"
       };
     }
-    if (cleanLower.includes("contrato") || cleanLower.includes("arriend") || cleanLower.includes("canon") || cleanLower.includes("ley 820") || cleanLower.includes("promesa")) {
-      const legalFallback = `\xA1${timeGreeting}, ${firstName}! \u{1F44B}\u{1F3FB} Con gusto te asesoro. En materia de contratos inmobiliarios (arrendamiento Ley 820 de 2003 o promesa de compraventa), recuerda que los elementos esenciales son la determinaci\xF3n clara de las partes, la identificaci\xF3n del predio con matr\xEDcula inmobiliaria y linderos, el canon/precio exacto y las cl\xE1usulas penales y de pr\xF3rroga.
-
-\xBFTienes alguna cl\xE1usula o situaci\xF3n espec\xEDfica que desees que revisemos o redactemos? \xA1Ind\xEDcame el detalle y con gusto te estructuro la respuesta completa! \u2696\uFE0F\u{1F91D}`;
+    if (cleanLower.includes("contrato") || cleanLower.includes("arriend") || cleanLower.includes("canon") || cleanLower.includes("ley 820") || cleanLower.includes("promesa") || cleanLower.includes("comisi") || cleanLower.includes("tribut") || cleanLower.includes("impuesto") || cleanLower.includes("arras") || cleanLower.includes("t\xEDtulo") || cleanLower.includes("titulo")) {
+      const legalBase = `\xA1${timeGreeting}, ${firstName}! \u{1F44B}\u{1F3FB} Con gusto te asesoro. En materia de contratos inmobiliarios (arrendamiento Ley 820 de 2003 o promesa de compraventa Art. 1611 C.C.), corretaje comercial (Arts. 1340-1346 C.Co) y aspectos tributarios/notariales, los elementos esenciales son la determinaci\xF3n clara de las partes, la identificaci\xF3n del predio con matr\xEDcula inmobiliaria y linderos, el precio o canon exacto, las arras y las cl\xE1usulas penales y de pr\xF3rroga.`;
+      const legalFallback = enhanceResponseWithCommercialFunnel(legalBase, cleanLower);
       appendConsultingHistory(userId, "user", text2);
       appendConsultingHistory(userId, "assistant", legalFallback);
       return {
@@ -22135,6 +22218,7 @@ var init_consultingHandler = __esm({
     init_nameAndGenderResolver();
     init_parsers();
     init_llm();
+    init_commercialFunnelService();
   }
 });
 
@@ -22329,12 +22413,12 @@ async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, 
   if (isFirstTurn) {
     const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
 
-Ya proces\xE9 con gusto tu consulta:
+Ya proces\xE9 con gusto tu consulta como un beneficio de cortes\xEDa 100% gratuito de nuestra inmobiliaria:
 
 `;
     return greetingHeader + payloadText;
   } else {
-    const politeHeader = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial:
+    const politeHeader = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial como un beneficio de cortes\xEDa de *VECY BIENES RA\xCDCES*:
 
 `;
     return politeHeader + payloadText;
@@ -22644,7 +22728,13 @@ PEDAGOG\xCDA DE REACCIONES Y EMOJIS EN GRUPOS INMOBILIARIOS:
   \u2022 COMPRA CON CR\xC9DITO HIPOTECARIO (Comprador): Comprador asume constituci\xF3n de hipoteca a favor del banco (~1.1% del valor financiado).
   \u2022 LEASING HABITACIONAL (Cesi\xF3n): Al no transferirse el dominio en matr\xEDcula (el banco fiduciario sigue como due\xF1o), el comprador se ahorra el 1.75% en beneficencia y registro de compraventa.
   \u2022 EMBARGOS / MEDIDAS CAUTELARES (Art. 1521 C.C.): Objeto il\xEDcito. No se puede vender ni prometer venta sin que el juzgado competente haya emitido el oficio de desembargo radicado en la ORIP.
-  \u2022 DOCTRINA EN SERVICIOS ESPECIALIZADOS (5 al 11): En temas especializados (sondeos de mercado, jur\xEDdica, cobranza de comisiones, aval\xFAos, tributaria, hipotecas), JanIA puede ofrecer de forma completamente gratuita algunos conceptos breves, definiciones y consejos superficiales que despejen la duda general en la mente del usuario, pero SIN entregar la soluci\xF3n t\xE9cnica o jur\xEDdica de fondo, gui\xE1ndolo a contactar a los Directores de Vecy Bienes Ra\xEDces al +57 316 656 9719 para contratar el servicio profesional.
+  \u2022 DOCTRINA EN CONSULTAS DE ALTO VALOR Y EMBUDO COMERCIAL (DOCTRINA VECY v33.01):
+    Aplica ante consultas sobre: a) Recuperaci\xF3n de comisiones o by-passing (Arts. 1340-1346 C.Co, Ley 527 de 1999), b) Redacci\xF3n de contratos: corretaje, promesas (Art. 1611 C.C., arras y penalidades), hipotecas abiertas (Art. 2432 C.C.), retroventa (Art. 1939 C.C.), c) Liquidaciones tributarias/notariales: ganancia ocasional (Ley 2277/2022 - 15%), exenci\xF3n 5.000 UVT casa de habitaci\xF3n (Art. 311-1 E.T.), retenci\xF3n 1% notarial, derechos notariales 50/50 y registro, d) Estudios de t\xEDtulos, sucesiones il\xEDquidas, embargos y saneamiento predial.
+    Toda respuesta ante estos casos DEBE seguir estrictamente 3 pasos:
+    1\xB0 Solvencia y Diagn\xF3stico Normativo: Cita la ley, c\xF3digo o decreto aplicable con autoridad de abogada senior.
+    2\xB0 Alerta de Riesgo Patrimonial: Recuerda con elegancia que los contratos y liquidaciones no son formatos gen\xE9ricos de internet; un vac\xEDo en arras, plazos o retenciones acarrea glosas de la DIAN o litigios costosos.
+    3\xB0 Llamado a la Acci\xF3n y Cierre Comercial: Invita obligatoriamente a formalizar la asesor\xEDa con la firma exacta:
+       "Para estructurar esta minuta a la medida de tu negocio, liquidar tus impuestos o gestionar la recuperaci\xF3n de tu comisi\xF3n con nuestro acompa\xF1amiento directo, comun\xEDcate con nuestra Direcci\xF3n de Operaciones y Estrategia Legal: Eduardo A. Rivera y Jani Alves en nuestra l\xEDnea oficial de br\xF3ker: +57 316 656 9719 (https://wa.me/573166569719)."
 - PEDAGOG\xCDA DE CORTES\xCDA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), sal\xFAdalo educadamente por su nombre y con calidez humana. Ense\xF1a con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.
 - PEDAGOG\xCDA DE PACIENCIA TOTAL Y EMPAT\xCDA TECNOL\xD3GICA (DOCTRINA DE AMOR Y SERVICIO AL USUARIO): En el sector inmobiliario hay personas mayores, tradicionales o con dificultades para interactuar con la tecnolog\xEDa (analfabetismo digital o confusi\xF3n frente a la IA y el celular). Si un usuario no comprende c\xF3mo funciona el servicio, pregunta con timidez, pide explicaci\xF3n de c\xF3mo se hace o manifiesta enredo, JanIA JAM\xC1S debe mostrar impaciencia, frialdad ni tecnicismos. Tr\xE1talos con ternura, empat\xEDa, infinita paciencia y lenguaje cercano y sencillo de la vida cotidiana. Expl\xEDcales con amor paso a paso: "No te preocupes, yo te ayudo", "Solo facil\xEDtame el nombre completo y n\xFAmero de documento que solicitas para el registro formal de porter\xEDa y yo hago todo el tr\xE1mite por ti en segundos". JanIA est\xE1 siempre dispuesta a explicar, guiar y servir de coraz\xF3n a todo el que lo necesite.
 - MANEJO ELEGANTE DE DUDAS O AMBIG\xDCEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas gen\xE9ricas; dile con simpat\xEDa humana: "Qu\xE9 pena contigo, ${displayName || "colega"}. Debido a un peque\xF1o fallo en la matrix \u{1F916}\u{1F605} no alcanc\xE9 a captar bien lo que me pides hacer. \xBFPodr\xEDas por favor confirmarme o repetirme qu\xE9 necesitas para ayudarte de inmediato?".
@@ -22730,12 +22820,16 @@ QUI\xC9NES SOMOS, CONVERSACI\xD3N AMENA, REDES SOCIALES Y ESTOCADA FINAL DE CALI
     if (!reply) {
       reply = hasPriorHistory ? `Con mucho gusto. En *VECY BIENES RA\xCDCES* nos dedicamos a acelerar y proteger los negocios inmobiliarios con tecnolog\xEDa y asesor\xEDa especializada. Cu\xE9ntame en detalle qu\xE9 necesitas o qu\xE9 duda tienes y te oriento de inmediato.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Cu\xE9ntame en qu\xE9 te puedo colaborar hoy.`;
     }
+    reply = enhanceResponseWithCommercialFunnel(reply, clean);
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", reply);
     return reply;
   } catch (err) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    const fallback = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
+    let fallback = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
+    if (isHighValueLegalOrTaxInquiry(clean)) {
+      fallback = enhanceResponseWithCommercialFunnel(fallback, clean);
+    }
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", fallback);
     return fallback;
@@ -22748,6 +22842,7 @@ var init_dmHandler = __esm({
     init_parsers();
     init_nameAndGenderResolver();
     init_llm();
+    init_commercialFunnelService();
   }
 });
 

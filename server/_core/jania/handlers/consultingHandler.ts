@@ -9,6 +9,7 @@ import { resolveNameAndGender } from "../../nameAndGenderResolver";
 import { getGreetingByTime, extractFirstName, sanitizeResponseMarkdown, parseSafeJSON } from "../parsers";
 import { invokeLLM } from "../../llm";
 import { JanIAResult } from "../types";
+import { enhanceResponseWithCommercialFunnel, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
 
 export async function processConsultingMessage(
   text: string,
@@ -144,7 +145,17 @@ export async function processConsultingMessage(
       `- **SOLUCIÓN TOTAL Y DE FONDO (IA PURA)**: Eres una IA completamente resolutiva. Si un usuario te pide redactar una promesa de compraventa, una cláusula penal, un acuerdo de puntas compartidas, una carta de preaviso de arriendo, liquidar la ganancia ocasional o estimar el valor de mercado por m² (estudio comparativo), ¡ENTRÉGALE LA SOLUCIÓN COMPLETA, REDACTADA Y ESTRUCTURADA DIRECTAMENTE AQUÍ EN EL CHAT!\n` +
       `- **BENEFICIO GRATUITO DE LANZAMIENTO VECY BIENES RAÍCES**: Recuerda que en esta etapa de lanzamiento de VECY BIENES RAÍCES, todos tus servicios de consultoría, análisis jurídico, redacción de minutas y estudios de mercado virtuales con IA son un **beneficio 100% gratuito** para empoderar a los agentes inmobiliarios. Anímalos a aprovechar esta oportunidad e invitar a más colegas a unirse a la red.\n` +
       `- **ASTUCIA CONTEXTUAL ANTE PREGUNTAS DE COSTOS**: Si un usuario pregunta de forma corta o ambigua "¿Qué costo tendría?" o "¿Cuánto vale?", conecta con el contexto previo o indaga con astucia: aclárale que tu asistencia y redacción en el chat es totalmente gratuita por ser miembro de VECY BIENES RAÍCES; y si se refiere a gastos notariales externos, liquidación de impuestos o si pregunta por avalúos certificados de Lonja, explícale con amabilidad y precisión que en VECY no realizamos avalúos certificados por perito ni visitas in situ, sino estudios de mercado ágiles y aproximados sobre el valor del metro cuadrado y precios de arriendo en la zona para fijar precios competitivos.\n` +
-      `- **DERIVACIÓN OPORTUNA AL BRÓKER**: Únicamente cuando el caso requiera acompañamiento notarial presencial, formalización de corretaje con la inmobiliaria o consultoría personalizada con nuestros fundadores Eduardo A. Rivera y Jani Alves, invítalo amablemente a comunicarse con nuestro bróker de VECY BIENES RAÍCES en WhatsApp (+573166569719) en nuestro horario de atención: Lunes a Viernes de 8:00 AM a 10:00 PM, Sábados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.\n\n` +
+      `- **ESTRUCTURA PERSUASIVA OBLIGATORIA PARA CONSULTAS DE ALTO VALOR (DOCTRINA VECY v33.01)**:\n` +
+      `  Aplica cuando el usuario plantee consultas sobre:\n` +
+      `  a) Recuperación de comisiones inmobiliarias adeudadas o "by-passing" (Arts. 1340-1346 C.Co, validez de mensajes de datos Ley 527 de 1999).\n` +
+      `  b) Redacción y estructuración de contratos: Corretaje (exclusivo/no exclusivo), Promesas de compraventa (Art. 1611 C.C., arras y penalidades), Minutas notariales, Hipotecas abiertas con límite de cuantía (Art. 2432 C.C.), Pactos de retroventa (Art. 1939 C.C.).\n` +
+      `  c) Liquidaciones tributarias y notariales: Ganancia ocasional (Ley 2277 de 2022 - tarifa 15%), exención de las primeras 5.000 UVT por venta de casa de habitación (Art. 311-1 E.T.), Retención en la fuente (1% notarial), derechos notariales (50/50) y registro.\n` +
+      `  d) Estudios de títulos, sucesiones ilíquidas, embargos y saneamiento predial.\n` +
+      `  Toda respuesta ante estos casos DEBE seguir estrictamente 3 pasos:\n` +
+      `  1° Solvencia y Diagnóstico Normativo: Citar la ley, decreto o código colombiano aplicable con rigor de abogada senior y consultora tributaria.\n` +
+      `  2° Alerta de Riesgo Patrimonial: Recordar con elegancia que los contratos y liquidaciones no son formatos genéricos de internet; un vacío en arras, plazos o retenciones acarrea glosas de la DIAN o litigios costosos.\n` +
+      `  3° Llamado a la Acción y Cierre Comercial: Invitar obligatoriamente a formalizar la asesoría o estructuración con la firma exacta:\n` +
+      `     "Para estructurar esta minuta a la medida de tu negocio, liquidar tus impuestos o gestionar la recuperación de tu comisión con nuestro acompañamiento directo, comunícate con nuestra Dirección de Operaciones y Estrategia Legal: Eduardo A. Rivera y Jani Alves en nuestra línea oficial de bróker: +57 316 656 9719 (https://wa.me/573166569719)."\n\n` +
       `## ROLES Y ÁREAS DE ASESORÍA MAESTRA (5 PILARES):\n` +
       `1. **⚖️ Abogada Inmobiliaria y Notarial Senior (Derecho Inmobiliario y Contratos)**:\n` +
       `   - Experta en Código Civil, Código de Comercio, Ley 820 de 2003 (Arrendamientos), Ley 675 de 2001 (Propiedad Horizontal) y jurisprudencia colombiana.\n` +
@@ -261,7 +272,9 @@ ${lateReplyNote}`;
 
     try {
       const parsed = parseSafeJSON(llmRes.choices[0].message.content);
-      const finalResp = sanitizeResponseMarkdown(parsed.response || "");
+      const rawResp = parsed.response || "";
+      const enrichedResp = enhanceResponseWithCommercialFunnel(rawResp, messageToProcess);
+      const finalResp = sanitizeResponseMarkdown(enrichedResp);
       // Guardar turno en memoria conversacional de Grupo 2
       appendConsultingHistory(userId, "user", text);
       appendConsultingHistory(userId, "assistant", finalResp);
@@ -275,7 +288,8 @@ ${lateReplyNote}`;
       };
     } catch (e) {
       const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo más tarde.";
-      const finalResp = sanitizeResponseMarkdown(replyContent);
+      const enrichedResp = enhanceResponseWithCommercialFunnel(replyContent, messageToProcess);
+      const finalResp = sanitizeResponseMarkdown(enrichedResp);
       appendConsultingHistory(userId, "user", text);
       appendConsultingHistory(userId, "assistant", finalResp);
 
@@ -307,9 +321,10 @@ ${lateReplyNote}`;
       };
     }
 
-    // Fallback si preguntó por contratos o arrendamientos
-    if (cleanLower.includes("contrato") || cleanLower.includes("arriend") || cleanLower.includes("canon") || cleanLower.includes("ley 820") || cleanLower.includes("promesa")) {
-      const legalFallback = `¡${timeGreeting}, ${firstName}! 👋🏻 Con gusto te asesoro. En materia de contratos inmobiliarios (arrendamiento Ley 820 de 2003 o promesa de compraventa), recuerda que los elementos esenciales son la determinación clara de las partes, la identificación del predio con matrícula inmobiliaria y linderos, el canon/precio exacto y las cláusulas penales y de prórroga.\n\n¿Tienes alguna cláusula o situación específica que desees que revisemos o redactemos? ¡Indícame el detalle y con gusto te estructuro la respuesta completa! ⚖️🤝`;
+    // Fallback si preguntó por comisiones, contratos, tributario o saneamiento (Consultas de Alto Valor)
+    if (cleanLower.includes("contrato") || cleanLower.includes("arriend") || cleanLower.includes("canon") || cleanLower.includes("ley 820") || cleanLower.includes("promesa") || cleanLower.includes("comisi") || cleanLower.includes("tribut") || cleanLower.includes("impuesto") || cleanLower.includes("arras") || cleanLower.includes("título") || cleanLower.includes("titulo")) {
+      const legalBase = `¡${timeGreeting}, ${firstName}! 👋🏻 Con gusto te asesoro. En materia de contratos inmobiliarios (arrendamiento Ley 820 de 2003 o promesa de compraventa Art. 1611 C.C.), corretaje comercial (Arts. 1340-1346 C.Co) y aspectos tributarios/notariales, los elementos esenciales son la determinación clara de las partes, la identificación del predio con matrícula inmobiliaria y linderos, el precio o canon exacto, las arras y las cláusulas penales y de prórroga.`;
+      const legalFallback = enhanceResponseWithCommercialFunnel(legalBase, cleanLower);
       appendConsultingHistory(userId, "user", text);
       appendConsultingHistory(userId, "assistant", legalFallback);
       return {
