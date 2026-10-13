@@ -266,10 +266,9 @@ export function getVecyInstitutionalKnowledge(): string {
   if (vecyKnowledgeCache) return vecyKnowledgeCache;
   try {
     const candidates = [
-      path.resolve(__dirname, "prompts/conocimiento_vecy.md"),
-      path.resolve(__dirname, "./prompts/conocimiento_vecy.md"),
       path.resolve(process.cwd(), "server/_core/jania/prompts/conocimiento_vecy.md"),
-      path.resolve(process.cwd(), "dist-server/_core/jania/prompts/conocimiento_vecy.md")
+      path.resolve(process.cwd(), "dist-server/_core/jania/prompts/conocimiento_vecy.md"),
+      path.resolve(process.cwd(), "conocimiento_vecy.md")
     ];
     for (const p of candidates) {
       if (fs.existsSync(p)) {

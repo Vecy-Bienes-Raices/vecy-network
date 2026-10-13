@@ -734,25 +734,25 @@ export function detectDocTypeConfirmation(text: string): { isConfirmation: boole
 
   // 2. Cédula de Ciudadanía
   if (/^(?:(?:es\s+)?(?:una\s+)?c[eé]dula(?:\s+de\s+ciudadan[ií]a)?|c\.?c\.?|cc|colombiana)$/i.test(clean) ||
-      /(?:(?:es\s+)?c[eé]dula\s+de\s+ciudadan[ií]a|es\s+cc\b|la\s+cc\b)/i.test(clean)) {
+    /(?:(?:es\s+)?c[eé]dula\s+de\s+ciudadan[ií]a|es\s+cc\b|la\s+cc\b)/i.test(clean)) {
     return { isConfirmation: true, tipoDoc: 'cc' };
   }
 
   // 3. Cédula de Extranjería
   if (/^(?:(?:es\s+)?(?:una\s+)?c[eé]dula\s+de\s+extranjer[ií]a|c\.?e\.?|ce|cx|extranjer[ií]a|extranjera)$/i.test(clean) ||
-      /(?:(?:es\s+)?c[eé]dula\s+de\s+extranjer[ií]a|es\s+ce\b|la\s+ce\b)/i.test(clean)) {
+    /(?:(?:es\s+)?c[eé]dula\s+de\s+extranjer[ií]a|es\s+ce\b|la\s+ce\b)/i.test(clean)) {
     return { isConfirmation: true, tipoDoc: 'ce' };
   }
 
   // 4. Pasaporte
   if (/^(?:(?:es\s+)?(?:un\s+)?pasaporte|pa)$/i.test(clean) ||
-      /(?:(?:es\s+)?pasaporte)/i.test(clean)) {
+    /(?:(?:es\s+)?pasaporte)/i.test(clean)) {
     return { isConfirmation: true, tipoDoc: 'pa' };
   }
 
   // 5. NIT
   if (/^(?:(?:es\s+)?(?:un\s+)?nit|empresa|tributario)$/i.test(clean) ||
-      /(?:(?:es\s+)?nit\b)/i.test(clean)) {
+    /(?:(?:es\s+)?nit\b)/i.test(clean)) {
     return { isConfirmation: true, tipoDoc: 'nit' };
   }
 
@@ -828,20 +828,20 @@ export function extractAllCedulasForVerification(text: string, isPrivateDm: bool
     { type: 'cc', regex: /(?:verificar|verificaci[oó]n|validar|consultar|revisar|antecedentes)\s*(?:sus|los|el)?\s*(?:de\s+)?([0-9]{1,3}(?:\.[0-9]{3}){1,3}|[0-9]{5,10})/gi, sanitize: (s: string) => s.replace(/\D/g, '') }
   ];
 
-/**
- * Evalúa si un número dentro de un texto corresponde a un contexto monetario (precio, canon, presupuesto)
- */
-function isMonetaryContext(text: string, matchIndex: number, matchLength: number): boolean {
-  const prefix = text.substring(Math.max(0, matchIndex - 25), matchIndex);
-  const suffix = text.substring(matchIndex + matchLength, Math.min(text.length, matchIndex + matchLength + 25));
-  if (/[\$]|(?:hasta\s*\$?|precio\s*(?:de\s*)?\$?|valor\s*(?:de\s*)?\$?|canon\s*(?:de\s*)?\$?|presupuesto\s*(?:de\s*)?\$?)\s*$/i.test(prefix)) {
-    return true;
+  /**
+   * Evalúa si un número dentro de un texto corresponde a un contexto monetario (precio, canon, presupuesto)
+   */
+  function isMonetaryContext(text: string, matchIndex: number, matchLength: number): boolean {
+    const prefix = text.substring(Math.max(0, matchIndex - 25), matchIndex);
+    const suffix = text.substring(matchIndex + matchLength, Math.min(text.length, matchIndex + matchLength + 25));
+    if (/[\$]|(?:hasta\s*\$?|precio\s*(?:de\s*)?\$?|valor\s*(?:de\s*)?\$?|canon\s*(?:de\s*)?\$?|presupuesto\s*(?:de\s*)?\$?)\s*$/i.test(prefix)) {
+      return true;
+    }
+    if (/^\s*(?:pesos|cop|usd|millones|mill[oó]n|mdp|mil(?:\s+pesos)?)\b/i.test(suffix)) {
+      return true;
+    }
+    return false;
   }
-  if (/^\s*(?:pesos|cop|usd|millones|mill[oó]n|mdp|mil(?:\s+pesos)?)\b/i.test(suffix)) {
-    return true;
-  }
-  return false;
-}
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -915,6 +915,11 @@ export function extractCedulaForVerification(text: string, isPrivateDm: boolean 
   tipoDoc: string;
   items?: ExtractedCedulaItem[];
 } {
+  // Si el mensaje contiene un código CHIP (AAA...), predial o impuesto, NO es una verificación de cédula
+  if (/AAA[A-Z0-9]{8,14}|predial|chip|impuesto/i.test(text)) {
+    return { found: false, cedula: '', tipoDoc: 'cc', items: [] };
+  }
+
   const items = extractAllCedulasForVerification(text, isPrivateDm);
   if (items.length > 0) {
     return {
@@ -924,6 +929,7 @@ export function extractCedulaForVerification(text: string, isPrivateDm: boolean 
       items
     };
   }
+
   return { found: false, cedula: '', tipoDoc: 'cc', items: [] };
 }
 
@@ -970,8 +976,8 @@ async function verifySingleDocumentInternal(item: ExtractedCedulaItem): Promise<
   const adresCacheKey = `ADRES:${mapTipoDocToAdres(tipoDoc) || tipoDoc}:${cedula}`;
 
   const cachedName = identityCache.get(ponalCacheKey)?.fullName ||
-                     identityCache.get(pgnCacheKey)?.fullName ||
-                     identityCache.get(adresCacheKey)?.fullName;
+    identityCache.get(pgnCacheKey)?.fullName ||
+    identityCache.get(adresCacheKey)?.fullName;
 
   if (cachedName) {
     const officialName = formatTitleCase(cachedName);
@@ -1018,7 +1024,7 @@ async function verifySingleDocumentInternal(item: ExtractedCedulaItem): Promise<
     }
 
     const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) ||
-                         (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null);
+      (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null);
 
     // 🛡️ ESTRATEGIA FAIL-FAST:
     // Para Cédula de Ciudadanía (CC), si el documento NO existe en las bases censales (ni ADRES ni PGN):
@@ -1202,8 +1208,8 @@ export async function executeIdentityVerificationFromWhatsApp(
   const pgnCacheKey = `PROCURADURIA:${mapTipoDocToProcuraduria(tipoDoc) || tipoDoc}:${cedula}`;
   const adresCacheKey = `ADRES:${mapTipoDocToAdres(tipoDoc) || tipoDoc}:${cedula}`;
   const cachedName = identityCache.get(ponalCacheKey)?.fullName ||
-                     identityCache.get(pgnCacheKey)?.fullName ||
-                     identityCache.get(adresCacheKey)?.fullName;
+    identityCache.get(pgnCacheKey)?.fullName ||
+    identityCache.get(adresCacheKey)?.fullName;
 
   if (cachedName) {
     const officialName = formatTitleCase(cachedName);
@@ -1282,7 +1288,7 @@ export async function executeIdentityVerificationFromWhatsApp(
     }
 
     const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) ||
-                         (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null);
+      (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null);
 
     // 🛡️ ESTRATEGIA FAIL-FAST:
     // Para Cédula de Ciudadanía (CC), si el documento NO existe en las bases censales (ni ADRES ni PGN):
@@ -1405,17 +1411,16 @@ export async function executeIdentityVerificationFromWhatsApp(
           `🆔 *Documento:* ${docLabel} ${formattedCedula}\n` +
           `⚠️ *Estado:* Documento no localizado en las bases censales en línea.\n\n` +
           `2️⃣ *SEGURIDAD SOCIAL (EPS / RÉGIMEN)*\n` +
-          `🏥 *Central de Aseguramiento (ADRES):* ${
-            (!adresRes || (adresRes.error && (
-              adresRes.error.toLowerCase().includes('intermitencia') ||
-              adresRes.error.toLowerCase().includes('conexión') ||
-              adresRes.error.toLowerCase().includes('conexion') ||
-              adresRes.error.toLowerCase().includes('inicializar') ||
-              adresRes.error.toLowerCase().includes('timeout') ||
-              adresRes.error.toLowerCase().includes('servidor')
-            )))
-              ? '⚠️ El portal oficial de la ADRES presenta intermitencia o mantenimiento temporal en este momento. Puedes consultar directamente en adres.gov.co'
-              : (adresRes?.error || 'Sin registro activo de afiliación en la Base de Datos Única de Afiliados (BDUA).')
+          `🏥 *Central de Aseguramiento (ADRES):* ${(!adresRes || (adresRes.error && (
+            adresRes.error.toLowerCase().includes('intermitencia') ||
+            adresRes.error.toLowerCase().includes('conexión') ||
+            adresRes.error.toLowerCase().includes('conexion') ||
+            adresRes.error.toLowerCase().includes('inicializar') ||
+            adresRes.error.toLowerCase().includes('timeout') ||
+            adresRes.error.toLowerCase().includes('servidor')
+          )))
+            ? '⚠️ El portal oficial de la ADRES presenta intermitencia o mantenimiento temporal en este momento. Puedes consultar directamente en adres.gov.co'
+            : (adresRes?.error || 'Sin registro activo de afiliación en la Base de Datos Única de Afiliados (BDUA).')
           }\n\n` +
           `3️⃣ *ENTIDADES DE CONTROL (DISCIPLINARIO Y FISCAL)*\n` +
           `🏛️ *Central de Control Notarial (Procuraduría SIRI):* ${pgnRes?.statusText || 'No se encuentra registrado en el sistema de información SIRI o no disponible.'}\n` +

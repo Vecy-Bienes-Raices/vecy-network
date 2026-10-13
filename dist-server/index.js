@@ -10985,10 +10985,9 @@ function getVecyInstitutionalKnowledge() {
   if (vecyKnowledgeCache) return vecyKnowledgeCache;
   try {
     const candidates = [
-      path3.resolve(__dirname, "prompts/conocimiento_vecy.md"),
-      path3.resolve(__dirname, "./prompts/conocimiento_vecy.md"),
       path3.resolve(process.cwd(), "server/_core/jania/prompts/conocimiento_vecy.md"),
-      path3.resolve(process.cwd(), "dist-server/_core/jania/prompts/conocimiento_vecy.md")
+      path3.resolve(process.cwd(), "dist-server/_core/jania/prompts/conocimiento_vecy.md"),
+      path3.resolve(process.cwd(), "conocimiento_vecy.md")
     ];
     for (const p of candidates) {
       if (fs3.existsSync(p)) {
@@ -21464,6 +21463,9 @@ function extractAllCedulasForVerification(text2, isPrivateDm = false) {
   return deduped;
 }
 function extractCedulaForVerification(text2, isPrivateDm = false) {
+  if (/AAA[A-Z0-9]{8,14}|predial|chip|impuesto/i.test(text2)) {
+    return { found: false, cedula: "", tipoDoc: "cc", items: [] };
+  }
   const items = extractAllCedulasForVerification(text2, isPrivateDm);
   if (items.length > 0) {
     return {
@@ -26583,7 +26585,7 @@ async function getThemedImagePathAsync(tipo) {
   const possibleDirs = [
     path9.resolve(process.cwd(), "client/public/assets/jania"),
     path9.resolve(process.cwd(), "dist/assets/jania"),
-    path9.resolve(__dirname2, "../../client/public/assets/jania")
+    path9.resolve(__dirname, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || [];
   for (const pref of preferences) {
@@ -26614,7 +26616,7 @@ function getThemedImagePath(tipo) {
   const possibleDirs = [
     path9.resolve(process.cwd(), "client/public/assets/jania"),
     path9.resolve(process.cwd(), "dist/assets/jania"),
-    path9.resolve(__dirname2, "../../client/public/assets/jania")
+    path9.resolve(__dirname, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || ALL_JANIA_IMAGES;
   const chosenFile = preferences[0] || "jania_marketing.jpg";
@@ -27326,7 +27328,7 @@ Cualquier duda, nuestro br\xF3ker y directores Eduardo y Jani est\xE1n a tu disp
     return { success: false, error: err?.message };
   }
 }
-var __filename, __dirname2, ALL_JANIA_IMAGES, THEME_IMAGE_PREFERENCES, ROTATING_FALLBACK_CATALOG, DAILY_TIPS_CONFIG, CALENDARIO_30_DIAS_VECY, WEEKLY_POLLS_LIST, DAILY_POLLS_MAP, publishDailyPoll, VECY_DM_LINK, VECY_MOTTO_FOOTER, DIA_31_ESPECIAL_VECY, THEME_IMAGE_SEARCH_MAP;
+var __filename, __dirname, ALL_JANIA_IMAGES, THEME_IMAGE_PREFERENCES, ROTATING_FALLBACK_CATALOG, DAILY_TIPS_CONFIG, CALENDARIO_30_DIAS_VECY, WEEKLY_POLLS_LIST, DAILY_POLLS_MAP, publishDailyPoll, VECY_DM_LINK, VECY_MOTTO_FOOTER, DIA_31_ESPECIAL_VECY, THEME_IMAGE_SEARCH_MAP;
 var init_cronService = __esm({
   "server/_core/cronService.ts"() {
     "use strict";
@@ -27337,7 +27339,7 @@ var init_cronService = __esm({
     init_llm();
     init_const();
     __filename = fileURLToPath(import.meta.url);
-    __dirname2 = path9.dirname(__filename);
+    __dirname = path9.dirname(__filename);
     ALL_JANIA_IMAGES = [
       "jania_marketing.jpg",
       "jania_juridico.jpg",
