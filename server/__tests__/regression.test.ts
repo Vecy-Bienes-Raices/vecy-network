@@ -4009,11 +4009,10 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(immediate).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
       expect(immediate).toContain("100% GRATUITO");
 
-      // 2. Pregunta de cortesía tras 1 minuto de silencio (Carreño)
+      // 2. Extirpación de donaciones: entrega de cortesía (Doctrina v33.03)
       const prompt = formatPoliteInactivityPrompt("Alberto Méndez");
-      expect(prompt).toContain("🤝 ¡Ha sido un placer poder ayudarte, Alberto!");
-      expect(prompt).toContain("completamente *GRATUITO*");
-      expect(prompt).toContain("¿Podrías ayudarnos a seguir manteniéndolo así?");
+      expect(prompt).toContain("Un servicio de cortesía de VECY BIENES RAÍCES 🤝.");
+      expect(prompt).not.toContain("¿Podrías ayudarnos a seguir manteniéndolo así?");
 
       // 3. Respuesta al SÍ
       const yesMsg = formatPoliteYesReviewMessage("Alberto Méndez");
@@ -4541,13 +4540,85 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       }
     });
 
-    it("6. Consagración doctrinal de versionamiento v33.02 y package.json 33.2.0", async () => {
+    it("6. Consagración doctrinal de versionamiento v33.02/v33.03 y package.json", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.02");
+      expect(VECY_VERSION).toMatch(/^v33\.0[23]$/);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.2.0");
+      expect(pkg.version).toMatch(/^33\.[23]\.0$/);
+    });
+  });
+
+  describe("64. Doctrina v33.03: Limpieza de Código Legado, Trato Directivo y Match con Alianza 40/20/40 Obligatoria", () => {
+    it("1. Extirpación de plantilla de donaciones: entrega de herramientas gratuitas cierra únicamente con cortesía VECY", async () => {
+      const { formatPoliteInactivityPrompt } = await import("../_core/politenessService");
+      const prompt = formatPoliteInactivityPrompt();
+      expect(prompt).toBe("Un servicio de cortesía de VECY BIENES RAÍCES 🤝.");
+      expect(prompt).not.toContain("manteniéndolo así");
+      expect(prompt).not.toContain("servicio completamente GRATUITO");
+
+      const { formatPoliteToolDelivery } = await import("../_core/jania/handlers/dmHandler");
+      const delivered = await formatPoliteToolDelivery("573001234567", "Carlos Pérez", "predial", "Reporte Predial Bogotá", true);
+      expect(delivered).toContain("Un servicio de cortesía de VECY BIENES RAÍCES 🤝.");
+      expect(delivered).not.toContain("manteniéndolo así");
+      expect(delivered).not.toContain("100% gratuito");
+    });
+
+    it("2. Trato directivo para Eduardo A. Rivera y Jani Alves en DMs", async () => {
+      const { formatPoliteToolDelivery, sanitizeDmOrthographyAndGreeting } = await import("../_core/jania/handlers/dmHandler");
+      
+      const eduardoDelivery = await formatPoliteToolDelivery("573192919978", "Eduardo Rivera", "cedula", "Reporte de antecedentes", true);
+      expect(eduardoDelivery).toContain("¡Hola, Eduardo!");
+
+      const janiDelivery = await formatPoliteToolDelivery("573188096811", "Jani Alves", "cedula", "Reporte de antecedentes", true);
+      expect(janiDelivery).toContain("¡Hola, Jani!");
+
+      const sanitizedEduardo = sanitizeDmOrthographyAndGreeting("estimado colega, reporte listo", true, false, "Eduardo");
+      expect(sanitizedEduardo).toContain("¡Hola, Eduardo!");
+
+      const sanitizedJani = sanitizeDmOrthographyAndGreeting("estimada colega, reporte listo", false, true, "Jani");
+      expect(sanitizedJani).toContain("¡Hola, Jani!");
+    });
+
+    it("3. Ortografía estricta en español: corrección de minúsculas y apertura obligatoria de signos ¡ y ¿", async () => {
+      const { sanitizeDmOrthographyAndGreeting } = await import("../_core/jania/handlers/dmHandler");
+
+      const fixedLower = sanitizeDmOrthographyAndGreeting("estimada colega, te confirmo el requerimiento.", false, false, "Ana");
+      expect(fixedLower).toMatch(/^Estimada colega/);
+
+      const fixedQuestion = sanitizeDmOrthographyAndGreeting("cómo puedo consultar el predial?", false, false, "Pedro");
+      expect(fixedQuestion).toContain("¿Cómo puedo consultar el predial?");
+
+      const fixedGreeting = sanitizeDmOrthographyAndGreeting("hola pedro, cómo estás?", false, false, "Pedro");
+      expect(fixedGreeting).toMatch(/^¡Hola/);
+      expect(fixedGreeting).toContain("¿Cómo estás?");
+    });
+
+    it("4. Motor de Match: Respuesta obligatoria con radicado y alianza 40/20/40 aun con score < 80%", async () => {
+      const { executeAdHocMatch } = await import("../_core/matchAdHocService");
+
+      // Búsqueda con criterio restringido que no alcanza el 80%
+      const resultPublic = await executeAdHocMatch("Busco castillo medieval en Marte por $50 MM", "public");
+      expect(resultPublic.formattedText).toContain("Radicado:");
+      expect(resultPublic.formattedText).toContain("alianza 40/20/40 sobre el 3% de comisión comercial");
+      expect(resultPublic.formattedText).toContain("+57 316 656 9719");
+      expect(resultPublic.formattedText).toContain("Jani o Eduardo");
+
+      const resultAdmin = await executeAdHocMatch("Busco castillo medieval en Marte por $50 MM", "admin");
+      expect(resultAdmin.formattedText).toContain("PANEL ADMINISTRADOR");
+      expect(resultAdmin.formattedText).toContain("Radicado #");
+      expect(resultAdmin.formattedText).toContain("alianza 40/20/40 sobre el 3% de comisión comercial");
+      expect(resultAdmin.formattedText).toContain("+57 316 656 9719");
+    });
+
+    it("5. Consagración de versión v33.03 y package.json 33.3.0", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.03");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.3.0");
     });
   });
 });

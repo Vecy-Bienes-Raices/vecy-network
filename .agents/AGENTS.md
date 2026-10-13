@@ -182,7 +182,24 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.02 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.03 — Octubre 2026
+
+### Novedades v33.03 (Limpieza de Código Legado, Trato Directivo en DMs y Match con Alianza 40/20/40 Obligatoria):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. *"Actúa como Auditor de Software Senior.*
+  2. *OBJETIVO: LIMPIEZA DE CÓDIGO LEGADO Y CORRECCIÓN DE EXPERIENCIA EN JanIA (v33.03)*
+  3. Extirpar plantilla de donaciones: eliminar 'manteniéndolo así' y 'servicio completamente GRATUITO'. Entrega de herramientas gratuitas (IDU, predial, cédulas, notarial) cierra únicamente con: 'Un servicio de cortesía de VECY BIENES RAÍCES 🤝.'.
+  4. Corregir saludos y ortografía en DMs (`dmHandler.ts`): erradicar inicio en minúscula ('estimada...'), aplicar ortografía estricta en español (apertura de signos `¡`, `¿` y mayúscula inicial), y dar trato directivo a Jani y Eduardo ('¡Hola, Jani!', '¡Hola, Eduardo!').
+  5. Motor de Match (`matchAdHocService.ts`): Si ninguna oferta alcanza el 80%, listar las 2 o 3 opciones más recientes o cercanas con su ID de radicado para revisión manual e incluir SIEMPRE la propuesta comercial de la alianza 40/20/40 sobre el 3% de comisión y contacto a Jani o Eduardo (+57 316 656 9719).
+- **Acciones Técnicas Ejecutadas**:
+  - `server/_core/politenessService.ts` & `whatsapp-match.ts`: Extirpación completa del copy de donación, retorno exclusivo del cierre de cortesía VECY.
+  - `server/_core/jania/handlers/dmHandler.ts`: Trato directivo para fundadores, sanitizador `sanitizeDmOrthographyAndGreeting` y cierre único en `formatPoliteToolDelivery`.
+  - `server/_core/matchAdHocService.ts`: Umbral del 80%, listado de radicados para revisión manual e inyección 100% garantizada de la propuesta de Alianza 40/20/40.
+  - `server/__tests__/regression.test.ts`: Suite 64 con 5 tests nuevos aprobados.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 208/208 tests passing ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.03`) y `package.json` (`33.3.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.02 — Octubre 2026
 
 ### Novedades v33.02 (Gobernanza Inmutable, Parser Doctrinal de Demandas y Motor de Coincidencias Dual: Admin vs Colega Externo 40/20/40):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

@@ -331,6 +331,35 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.03 — Octubre 2026
+
+#### 📌 LIMPIEZA DE CÓDIGO LEGADO, TRATO DIRECTIVO Y MATCH CON ALIANZA 40/20/40 OBLIGATORIA
+
+**Requerimiento y Objetivos:**
+1. **Extirpación de la Plantilla de Donaciones**:
+   - Purgar cadenas "manteniéndolo así" y "servicio completamente GRATUITO".
+   - Todo servicio de consulta y herramientas gratuitas (Policía Nacional, Predial Bogotá, Paz y Salvo IDU, gastos notariales) debe cerrar única y exclusivamente con:
+     `Un servicio de cortesía de VECY BIENES RAÍCES 🤝.`
+2. **Corrección de Ortografía y Trato Directivo en DMs (`dmHandler.ts`)**:
+   - Erradicar inicios de saludo en minúscula ("estimada...", "estimado...").
+   - Aplicar ortografía estricta en español (apertura formal de signos `¡`, `¿` y mayúscula inicial obligatoria).
+   - Trato directivo para directores fundadores (Eduardo A. Rivera y Jani Alves): "¡Hola, Eduardo!" y "¡Hola, Jani!".
+3. **Motor de Match: Respuesta Obligatoria con Radicados y Alianza 40/20/40 aun con Score < 80% (`matchAdHocService.ts`)**:
+   - Si ninguna oferta alcanza el 80% de score matemático estricto:
+     * Listar los 2 o 3 inmuebles más recientes o cercanos con su ID de radicado (`Radicado #${m.id}` / `Ref-P${m.id}`) para revisión manual en equipo.
+     * Incluir SIEMPRE la propuesta comercial de la alianza 40/20/40 sobre el 3% de comisión comercial y el llamado a contactar a Jani o Eduardo al +57 316 656 9719.
+
+**Soluciones Técnicas Implementadas:**
+- `server/_core/politenessService.ts`: `formatPoliteInactivityPrompt` retorna exclusivamente el cierre de cortesía sin solicitud de donación o mantención.
+- `server/_core/whatsapp-match.ts`: Inactivado el despachador de inactividad que enviaba prompts de donación; comentarios limpios.
+- `server/_core/jania/handlers/dmHandler.ts`:
+  * `formatPoliteToolDelivery`: Entrega de herramientas cierra siempre con `Un servicio de cortesía de VECY BIENES RAÍCES 🤝.`.
+  * Trato directivo en saludo de bienvenida e interacción para Eduardo y Jani.
+  * Función `sanitizeDmOrthographyAndGreeting`: Asegura mayúscula inicial, corrige vocativos en minúscula y antepone signos de apertura `¡` y `¿`.
+- `server/_core/matchAdHocService.ts`: Coincidencias con umbral del 80% y fallback a 2-3 radicados más recientes con gancho incondicional de Alianza 40/20/40.
+- `server/__tests__/regression.test.ts`: Suite 64 con 5 tests aprobados (208/208 tests passing en verde al 100%).
+- Versionamiento: `shared/const.ts` (`v33.03`) y `package.json` (`33.3.0`).
+
 ### 🔖 v33.02 — Octubre 2026
 
 #### 📌 GOBERNANZA INMUTABLE, PARSER DOCTRINAL DE DEMANDAS Y MOTOR DE COINCIDENCIAS DUAL (ADMIN VS COLEGA EXTERNO 40/20/40)

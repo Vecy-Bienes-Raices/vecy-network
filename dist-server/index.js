@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.02";
+    VECY_VERSION = "v33.03";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -14472,11 +14472,8 @@ function formatImmediatePoliteReviewMessage(userName) {
 
 \u{1F44D} \xA1Muchas gracias por tu generosidad y apoyo!`;
 }
-function formatPoliteInactivityPrompt(userName) {
-  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
-  return `\u{1F91D} \xA1Ha sido un placer poder ayudarte, ${cleanName}! Espero que nuestro servicio te haya sido de gran ayuda y, como sabes, este es un servicio completamente *GRATUITO*.
-
-\xBFPodr\xEDas ayudarnos a seguir manteni\xE9ndolo as\xED? \u2728`;
+function formatPoliteInactivityPrompt(_userName) {
+  return `Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.`;
 }
 function formatPoliteYesReviewMessage(userName) {
   const cleanName = extractFirstName2(userName || "Colega") || "Colega";
@@ -16491,8 +16488,8 @@ var init_whatsapp_match = __esm({
         }, 60 * 1e3);
         this.userPolitenessTimers.set(senderId, timer);
       }
-      maybeTriggerFreeServiceReviewPrompt(senderId, userName) {
-        this.onFreeToolServiceDelivered(senderId, userName);
+      maybeTriggerFreeServiceReviewPrompt(_senderId, _userName) {
+        return;
       }
       /**
        * Programa la invitación con los enlaces de los 3 grupos oficiales unos minutos después
@@ -22392,37 +22389,107 @@ async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, 
   const nameInfo = resolveNameAndGender(realName, timeSalutation);
   const canonicalComposite = getCanonicalCompositeName(realName);
   const compositeOrFirst = extractFirstName(realName);
-  const displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
+  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(rawName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
+  const isJani = /jani/i.test(realName || "") || /jani/i.test(rawName || "") || userId.includes("3188096811") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
+  let displayName = "";
+  if (isEduardo) {
+    displayName = "Eduardo";
+  } else if (isJani) {
+    displayName = "Jani";
+  } else {
+    displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
+  }
   const welcomeGrammar = nameInfo.isFemale ? "bienvenida" : "bienvenido";
   const history = await getOrLoadDmHistory(userId);
   const isFirstTurn = history.length === 0;
+  const cleanPayload = (payloadText || "").trim();
+  const closingTag = "Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.";
+  const payloadWithClosing = cleanPayload.endsWith(closingTag) ? cleanPayload : `${cleanPayload}
+
+${closingTag}`;
   if (!success) {
     if (payloadText && payloadText.trim()) {
+      if (isEduardo) {
+        return `\xA1Hola, Eduardo! Aqu\xED tienes el detalle del reporte solicitado:
+
+${payloadWithClosing}`;
+      }
+      if (isJani) {
+        return `\xA1Hola, Jani! Aqu\xED tienes el detalle del reporte solicitado:
+
+${payloadWithClosing}`;
+      }
       if (isFirstTurn) {
         const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
 
 `;
-        return greetingHeader + payloadText;
+        return greetingHeader + payloadWithClosing;
       } else {
         const politeHeader = `\xA1Hola${displayName ? ` ${displayName}` : ""}! `;
-        return politeHeader + payloadText;
+        return politeHeader + payloadWithClosing;
       }
     }
+    if (isEduardo) {
+      return `\xA1Hola, Eduardo! Qu\xE9 pena contigo. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
+    }
+    if (isJani) {
+      return `\xA1Hola, Jani! Qu\xE9 pena contigo. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
+    }
     return `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude procesar tu solicitud en este intento. \xBFPodr\xEDas por favor confirmarme nuevamente los datos para ayudarte de inmediato? \u{1F91D}`;
+  }
+  if (isEduardo) {
+    return `\xA1Hola, Eduardo! Aqu\xED tienes el reporte oficial solicitado de inmediato:
+
+${payloadWithClosing}`;
+  }
+  if (isJani) {
+    return `\xA1Hola, Jani! Aqu\xED tienes el reporte oficial solicitado de inmediato:
+
+${payloadWithClosing}`;
   }
   if (isFirstTurn) {
     const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
 
-Ya proces\xE9 con gusto tu consulta como un beneficio de cortes\xEDa 100% gratuito de nuestra inmobiliaria:
+Ya proces\xE9 con gusto tu consulta como un beneficio de cortes\xEDa de nuestra inmobiliaria:
 
 `;
-    return greetingHeader + payloadText;
+    return greetingHeader + payloadWithClosing;
   } else {
     const politeHeader = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial como un beneficio de cortes\xEDa de *VECY BIENES RA\xCDCES*:
 
 `;
-    return politeHeader + payloadText;
+    return politeHeader + payloadWithClosing;
   }
+}
+function sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, _displayName, hasPriorHistory = false) {
+  let cleaned = (text2 || "").trim();
+  if (!cleaned) return cleaned;
+  cleaned = cleaned.replace(/^estimad([ao]s?)\b/i, "Estimad$1");
+  cleaned = cleaned.replace(/^hola\s+([a-záéíóúñ]+)[,!.\s]+/i, (_m, name) => `\xA1Hola, ${name.charAt(0).toUpperCase() + name.slice(1)}! `);
+  cleaned = cleaned.replace(/^hola\b/i, "\xA1Hola!");
+  cleaned = cleaned.replace(/^buen([ao]s?\s+(?:d[ií]as|tardes|noches))\b/i, (m) => `\xA1${m.charAt(0).toUpperCase() + m.slice(1)}!`);
+  if (isEduardo) {
+    if (!hasPriorHistory || /^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|estimad[ao])/i.test(cleaned)) {
+      cleaned = cleaned.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|estimad[ao]|saludos)[^!.\n]*[!.\n]?\s*/i, "");
+      cleaned = `\xA1Hola, Eduardo! ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
+    }
+  } else if (isJani) {
+    if (!hasPriorHistory || /^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|estimad[ao])/i.test(cleaned)) {
+      cleaned = cleaned.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|estimad[ao]|saludos)[^!.\n]*[!.\n]?\s*/i, "");
+      cleaned = `\xA1Hola, Jani! ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
+    }
+  }
+  if (cleaned.length > 0) {
+    const firstChar = cleaned.charAt(0);
+    if (firstChar >= "a" && firstChar <= "z") {
+      cleaned = firstChar.toUpperCase() + cleaned.slice(1);
+    }
+  }
+  cleaned = cleaned.replace(/(^|\n|[.!?]\s*|,\s*)(qu[eé]|c[oó]mo|cu[aá]ndo|d[oó]nde|por\s+qu[eé]|cu[aá]l(?:es)?|qui[eé]n(?:es)?|acaso)\b([^?\n]+)\?/gi, (_match, prefix, qWord, rest) => {
+    const cleanPrefix = prefix.endsWith(", ") ? prefix.slice(0, -2) + ". " : prefix;
+    return `${cleanPrefix}\xBF${qWord.charAt(0).toUpperCase() + qWord.slice(1)}${rest}?`;
+  });
+  return cleaned.trim();
 }
 async function processPrivateDmConversationalMessage(text2, userId, userName) {
   const clean = text2.trim();
@@ -22430,23 +22497,44 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
   const realName = await resolveRealName(userId, userName);
   const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
   const timeSalutation = getGreetingByTime4();
+  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
+  const isJani = /jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
   const nameInfo = resolveNameAndGender(realName, timeSalutation);
   const compositeOrFirst = extractFirstName(realName);
   let displayName = "";
-  const canonicalComposite = getCanonicalCompositeName(realName);
-  if (canonicalComposite) {
-    displayName = canonicalComposite;
-  } else if (compositeOrFirst) {
-    displayName = compositeOrFirst;
-  } else if (nameInfo.displayName && nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor")) {
-    displayName = nameInfo.displayName;
+  if (isEduardo) {
+    displayName = "Eduardo";
+  } else if (isJani) {
+    displayName = "Jani";
+  } else {
+    const canonicalComposite = getCanonicalCompositeName(realName);
+    if (canonicalComposite) {
+      displayName = canonicalComposite;
+    } else if (compositeOrFirst) {
+      displayName = compositeOrFirst;
+    } else if (nameInfo.displayName && nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor")) {
+      displayName = nameInfo.displayName;
+    }
   }
   const nameGreeting = displayName ? `, ${displayName}` : "";
   const vocativeGreeting = displayName ? `, ${displayName}` : "";
   const cleanLower = clean.toLowerCase();
   const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
   const history = await getOrLoadDmHistory(userId);
+  const hasPriorHistory = history.length > 0;
   if (isGreetingOnly && history.length === 0) {
+    if (isEduardo) {
+      const welcomeMsg2 = `\xA1Hola, Eduardo! \u{1F44B} Estoy 100% activa, atenta y a tu entera disposici\xF3n directiva en VECY BIENES RA\xCDCES. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}\u2728`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", welcomeMsg2);
+      return welcomeMsg2;
+    }
+    if (isJani) {
+      const welcomeMsg2 = `\xA1Hola, Jani! \u{1F44B} Estoy 100% activa, atenta y a tu entera disposici\xF3n directiva en VECY BIENES RA\xCDCES. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}\u2728`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", welcomeMsg2);
+      return welcomeMsg2;
+    }
     const welcomeMsg = `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
 
 Para nosotros en VECY es un verdadero placer apoyarte en tus gestiones y proyectos inmobiliarios.
@@ -22669,7 +22757,6 @@ ${idCheck.reportText}`;
     }
   }
   try {
-    const hasPriorHistory = history.length > 0;
     const messages2 = [
       {
         role: "system",
@@ -22688,9 +22775,11 @@ BREVEDAD Y CONCISI\xD3N ESTRICTA EN WHATSAPP (PROHIBIDOS LOS TEXTOS LARGOS):
 - En WhatsApp los usuarios leen en pantallas m\xF3viles de celular: LOS TEXTOS LARGOS CANSAN, ABURREN Y PROVOCAN EL BOT\xD3N 'Leer m\xE1s'.
 - S\xE9 siempre concisa, clara, din\xE1mica y directa al grano (m\xE1ximo 2 a 3 p\xE1rrafos cortos o vi\xF1etas puntuales). Entre menos adornos y m\xE1s claridad, mayor impacto.
 
-REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA, G\xC9NERO Y NOMBRES COMPUESTOS:
-- El usuario se llama: *${displayName || realName || "Colega"}*.
-- G\xE9nero gramatical identificado: *${nameInfo.isFemale ? "Femenino (tratar como estimada, colega, bienvenida, atenta)" : "Masculino (tratar como estimado, colega, bienvenido, atento)"}*.
+REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA, G\xC9NERO, ORTOGRAF\xCDA Y TRATO DIRECTIVO (DOCTRINA v33.03):
+${isEduardo ? '- TRATO DIRECTIVO OBLIGATORIO: Est\xE1s hablando con EDUARDO A. RIVERA, fundador y Director de Tecnolog\xEDa de VECY BIENES RA\xCDCES. Tu saludo o trato es DIRECTIVO: "\xA1Hola, Eduardo!". S\xE9 ejecutiva, r\xE1pida y precisa.\n' : isJani ? '- TRATO DIRECTIVO OBLIGATORIO: Est\xE1s hablando con JANI ALVES, fundadora y Directora de Operaciones de VECY BIENES RA\xCDCES. Tu saludo o trato es DIRECTIVO: "\xA1Hola, Jani!". S\xE9 ejecutiva, c\xE1lida y operativa.\n' : `- El usuario se llama: *${displayName || realName || "Colega"}*.
+- G\xE9nero gramatical identificado: *${nameInfo.isFemale ? "Femenino" : "Masculino"}*.
+`}- ORTOGRAF\xCDA ESTRICTA EN ESPA\xD1OL: PROHIBIDO iniciar saludos o mensajes en min\xFAscula ("estimada...", "estimado...", "hola..."). Todo inicio de mensaje DEBE llevar May\xFAscula inicial y signos de apertura formales.
+- SIGNOS DE APERTURA OBLIGATORIOS: Toda pregunta DEBE iniciar con '\xBF' y toda exclamaci\xF3n con '\xA1'. En espa\xF1ol es un error omitir los signos de apertura.
 - Si el usuario tiene un nombre compuesto (ej: Ana Mar\xEDa, Juan Jos\xE9, Mar\xEDa Fernanda, Jos\xE9 Manuel, Carlos Alberto, Luz Marina, Olga Luc\xEDa), NUNCA lo cortes al primer nombre (JAM\xC1S digas solo "Ana" o "Juan"); ll\xE1malo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercan\xEDa y respeto que se use su nombre compuesto completo.
 ${hasPriorHistory ? '- CONTINUIDAD DE CONVERSACI\xD3N ACTIVA (MISMO D\xCDA): Ya est\xE1s conversando activamente con el usuario hoy. Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAM\xC1S digas "\xA1Hola!", "\xA1Buenos d\xEDas!", "\xA1Qu\xE9 gusto saludarte de nuevo!", "Es un placer tenerte por aqu\xED") ni anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana lo que el usuario acaba de decir en el contexto previo.' : '- Si es el primer mensaje del d\xEDa, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}
 ${hasPriorHistory ? '- PROHIBICI\xD3N TOTAL DE RE-PERFILAR: NO vuelvas a preguntarle a qu\xE9 se dedica, cu\xE1l es su rol en el sector ni qu\xE9 hace, porque ya est\xE1n en medio de la conversaci\xF3n. Si el usuario responde a una opci\xF3n o pregunta anterior (ej: "En el que ya tengan", "El apartamento", "La casa", etc.), responde INMEDIATAMENTE sobre esa opci\xF3n espec\xEDfica que ven\xEDan hablando sin desviar la conversaci\xF3n.' : "- PERFILAMIENTO INICIAL (SOLO SI ES PRIMER CONTACTO): JanIA no sabe de antemano a qu\xE9 se dedica el usuario (puede ser propietario, comprador o colega). Si es la primera interacci\xF3n, indaga amablemente a qu\xE9 se dedica para enfocar la conversaci\xF3n con asertividad."}
@@ -22818,18 +22907,26 @@ QUI\xC9NES SOMOS, CONVERSACI\xD3N AMENA, REDES SOCIALES Y ESTOCADA FINAL DE CALI
       reply = reply.trim();
     }
     if (!reply) {
-      reply = hasPriorHistory ? `Con mucho gusto. En *VECY BIENES RA\xCDCES* nos dedicamos a acelerar y proteger los negocios inmobiliarios con tecnolog\xEDa y asesor\xEDa especializada. Cu\xE9ntame en detalle qu\xE9 necesitas o qu\xE9 duda tienes y te oriento de inmediato.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Cu\xE9ntame en qu\xE9 te puedo colaborar hoy.`;
+      if (isEduardo) {
+        reply = `\xA1Hola, Eduardo! A tu completa disposici\xF3n. Cu\xE9ntame en qu\xE9 te colaboro hoy.`;
+      } else if (isJani) {
+        reply = `\xA1Hola, Jani! A tu completa disposici\xF3n. Cu\xE9ntame en qu\xE9 te colaboro hoy.`;
+      } else {
+        reply = hasPriorHistory ? `Con mucho gusto. En *VECY BIENES RA\xCDCES* nos dedicamos a acelerar y proteger los negocios inmobiliarios con tecnolog\xEDa y asesor\xEDa especializada. Cu\xE9ntame en detalle qu\xE9 necesitas o qu\xE9 duda tienes y te oriento de inmediato.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Cu\xE9ntame en qu\xE9 te puedo colaborar hoy.`;
+      }
     }
     reply = enhanceResponseWithCommercialFunnel(reply, clean);
+    reply = sanitizeDmOrthographyAndGreeting(reply, isEduardo, isJani, displayName, hasPriorHistory);
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", reply);
     return reply;
   } catch (err) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    let fallback = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
+    let fallback = isEduardo ? `\xA1Hola, Eduardo! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para procesarlo de inmediato? \u{1F91D}` : isJani ? `\xA1Hola, Jani! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para procesarlo de inmediato? \u{1F91D}` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
     if (isHighValueLegalOrTaxInquiry(clean)) {
       fallback = enhanceResponseWithCommercialFunnel(fallback, clean);
     }
+    fallback = sanitizeDmOrthographyAndGreeting(fallback, isEduardo, isJani, displayName, hasPriorHistory);
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", fallback);
     return fallback;
@@ -25457,6 +25554,7 @@ __export(janIA_exports, {
   repairJSON: () => repairJSON,
   resolveContactPhone: () => resolveContactPhone,
   resolveRealName: () => resolveRealName,
+  sanitizeDmOrthographyAndGreeting: () => sanitizeDmOrthographyAndGreeting,
   sanitizeGeoString: () => sanitizeGeoString,
   sanitizeResponseMarkdown: () => sanitizeResponseMarkdown,
   saveOrUpdateAdvisor: () => saveOrUpdateAdvisor,
@@ -28606,10 +28704,14 @@ async function executeAdHocMatch(rawText, channel = "admin", options = {}) {
     }
   }
   allScoredItems.sort((a, b) => b.score - a.score);
-  const validMatches = allScoredItems.filter((item) => item.score >= minScore).slice(0, limit);
+  const eightyThreshold = 80;
+  const highMatches = allScoredItems.filter((item) => item.score >= eightyThreshold).slice(0, limit);
+  const hasEightyMatch = highMatches.length > 0;
+  const fallbackCandidates = allScoredItems.slice(0, 3);
+  const activeDisplayMatches = hasEightyMatch ? highMatches : fallbackCandidates;
   let closestCandidate = null;
-  if (allScoredItems.length > 0 && validMatches.length === 0) {
-    const top = allScoredItems[0];
+  if (fallbackCandidates.length > 0) {
+    const top = fallbackCandidates[0];
     closestCandidate = {
       id: top.id,
       type: top.type,
@@ -28627,16 +28729,16 @@ async function executeAdHocMatch(rawText, channel = "admin", options = {}) {
     formattedText += `\u{1F50D} *Consulta:* ${inputSummary}
 
 `;
-    if (validMatches.length > 0) {
-      formattedText += `\u{1F389} *\xA1Se encontraron ${validMatches.length} coincidencia(s) directa(s)!*
+    if (hasEightyMatch) {
+      formattedText += `\u{1F389} *\xA1Se encontraron ${highMatches.length} coincidencia(s) directa(s) (Score \u2265 80%)!*
 
 `;
-      validMatches.forEach((m, idx) => {
+      highMatches.forEach((m, idx) => {
         formattedText += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
 `;
         formattedText += `\u{1F3C5} *OPCI\xD3N #${idx + 1} \u2014 AFINIDAD: ${m.score.toFixed(1)}%* ${m.score >= 90 ? "\u{1F525}" : "\u2705"}
 `;
-        formattedText += `\u{1F194} *${m.type === "inmueble" ? "Inmueble" : "Demanda"} #${m.id}* ${m.isRecent15Days ? "(\xDAltimos 15 d\xEDas \u{1F7E2})" : ""}
+        formattedText += `\u{1F194} *Radicado #${m.id} (${m.type === "inmueble" ? "Inmueble" : "Demanda"})* ${m.isRecent15Days ? "(\xDAltimos 15 d\xEDas \u{1F7E2})" : ""}
 `;
         formattedText += `\u{1F4CD} *Sector:* ${m.neighborhood || m.city}
 `;
@@ -28654,61 +28756,91 @@ async function executeAdHocMatch(rawText, channel = "admin", options = {}) {
         }
       });
     } else {
-      formattedText += `\u26A0\uFE0F *Sin coincidencias directas (Score \u2265 ${minScore}%).*
+      formattedText += `\u26A0\uFE0F *Ninguna oferta alcanza el 80% de afinidad estricta.*
 `;
-      if (closestCandidate) {
-        formattedText += `\u{1F3AF} *Candidato m\xE1s cercano para auditor\xEDa manual:* #${closestCandidate.id} (${closestCandidate.type}) con *${closestCandidate.score.toFixed(1)}%* de afinidad.
+      formattedText += `\u{1F4CB} *Listado de opciones m\xE1s recientes o cercanas para revisi\xF3n manual (Radicados):*
+
 `;
-        formattedText += `Detalle: ${closestCandidate.summary}
+      fallbackCandidates.forEach((m, idx) => {
+        formattedText += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
 `;
-      } else {
-        formattedText += `No se encontraron registros evaluables en el cat\xE1logo actual.
+        formattedText += `\u{1F50D} *OPCI\xD3N #${idx + 1} PARA REVISI\xD3N MANUAL \u2014 AFINIDAD: ${m.score.toFixed(1)}%*
 `;
-      }
+        formattedText += `\u{1F194} *Radicado #${m.id} (${m.type === "inmueble" ? "Inmueble" : "Demanda"})* ${m.isRecent15Days ? "(\xDAltimos 15 d\xEDas \u{1F7E2})" : ""}
+`;
+        formattedText += `\u{1F4CD} *Sector:* ${m.neighborhood || m.city}
+`;
+        formattedText += `\u{1F4B0} *${m.type === "inmueble" ? "Precio" : "Presupuesto"}:* ${m.priceOrBudgetFormatted}
+`;
+        formattedText += `\u{1F4D0} *Caracter\xEDsticas:* ${m.areaFormatted} \u2022 ${m.bedroomsFormatted} \u2022 ${m.bathroomsFormatted} \u2022 ${m.garagesFormatted}
+`;
+        formattedText += `\u{1F464} *Colega / Contacto:* ${m.contactName}
+`;
+        formattedText += `\u{1F4F1} *Tel\xE9fono:* ${m.contactPhone ? "+" + m.contactPhone : "Sin registrar"}
+`;
+        if (m.contactWhatsAppLink) {
+          formattedText += `\u{1F4AC} *Chat WhatsApp:* ${m.contactWhatsAppLink}
+`;
+        }
+      });
     }
+    formattedText += `
+\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+`;
+    formattedText += `${commercialClosingCTA}
+`;
   } else {
     formattedText = `\u26A1 *RESULTADO DE COINCIDENCIAS VECY NETWORK*
 
 `;
-    if (validMatches.length > 0) {
-      const topMatch = validMatches[0];
-      formattedText += `\u{1F389} *\xA1Encontramos una opci\xF3n altamente compatible para ti!*
+    if (hasEightyMatch) {
+      formattedText += `\u{1F389} *\xA1Encontramos opciones altamente compatibles para tu b\xFAsqueda!*
 
 `;
-      formattedText += `\u{1F3F7}\uFE0F *Referencia:* Ref-${topMatch.type === "inmueble" ? "P" : "R"}${topMatch.id}
+      highMatches.forEach((topMatch) => {
+        formattedText += `\u{1F3F7}\uFE0F *Radicado:* Ref-${topMatch.type === "inmueble" ? "P" : "R"}${topMatch.id}
 `;
-      formattedText += `\u{1F4CD} *Zona:* ${topMatch.neighborhood || topMatch.city}
+        formattedText += `\u{1F4CD} *Zona:* ${topMatch.neighborhood || topMatch.city}
 `;
-      formattedText += `\u{1F4D0} *Especificaciones:* ${topMatch.bedroomsFormatted} \u2022 ${topMatch.bathroomsFormatted} \u2022 ${topMatch.areaFormatted} \u2022 ${topMatch.garagesFormatted}
+        formattedText += `\u{1F4D0} *Especificaciones:* ${topMatch.bedroomsFormatted} \u2022 ${topMatch.bathroomsFormatted} \u2022 ${topMatch.areaFormatted} \u2022 ${topMatch.garagesFormatted}
 `;
-      formattedText += `\u{1F4B0} *Rango:* ${topMatch.priceOrBudgetFormatted}
+        formattedText += `\u{1F4B0} *Rango:* ${topMatch.priceOrBudgetFormatted}
 `;
-      formattedText += `\u2B50 *Afinidad T\xE9cnica:* ${topMatch.score.toFixed(0)}%
+        formattedText += `\u2B50 *Afinidad T\xE9cnica:* ${topMatch.score.toFixed(0)}%
 
 `;
-      formattedText += `${commercialClosingCTA}`;
+      });
     } else {
-      formattedText += `\u{1F50D} Recibimos tu consulta: "${inputSummary}".
+      formattedText += `\u{1F50D} *Opciones disponibles para revisi\xF3n manual:*
+`;
+      formattedText += `Actualmente ninguna oferta alcanza el 80% de afinidad matem\xE1tica directa, pero estas son las ${fallbackCandidates.length} opciones m\xE1s cercanas y recientes en nuestra red para revisar en equipo:
 
 `;
-      formattedText += `En este momento estamos validando nuevas propiedades ingresadas en las \xFAltimas horas en nuestra red de corretaje.
+      fallbackCandidates.forEach((m) => {
+        formattedText += `\u{1F3F7}\uFE0F *Radicado:* Ref-${m.type === "inmueble" ? "P" : "R"}${m.id}
+`;
+        formattedText += `\u{1F4CD} *Zona:* ${m.neighborhood || m.city}
+`;
+        formattedText += `\u{1F4D0} *Especificaciones:* ${m.bedroomsFormatted} \u2022 ${m.bathroomsFormatted} \u2022 ${m.areaFormatted} \u2022 ${m.garagesFormatted}
+`;
+        formattedText += `\u{1F4B0} *Rango:* ${m.priceOrBudgetFormatted}
+`;
+        formattedText += `\u2B50 *Afinidad T\xE9cnica:* ${m.score.toFixed(0)}%
 
 `;
-      formattedText += `Tan pronto se complete la auditor\xEDa de un inmueble compatible, te conectaremos de inmediato con la contraparte para cerrar negocio.
-
-`;
-      formattedText += `L\xEDnea directa de coordinaci\xF3n: *+57 316 656 9719* (Eduardo A. Rivera y Jani Alves).`;
+      });
     }
+    formattedText += `${commercialClosingCTA}`;
   }
   return {
     inputType,
     channel,
     inputSummary,
-    totalFound: validMatches.length,
-    matches: validMatches,
+    totalFound: activeDisplayMatches.length,
+    matches: activeDisplayMatches,
     closestCandidate,
     formattedText,
-    commercialClosingCTA: channel === "public" ? commercialClosingCTA : void 0
+    commercialClosingCTA
   };
 }
 var COMMERCIAL_40_20_40_CLOSING_TEMPLATE;

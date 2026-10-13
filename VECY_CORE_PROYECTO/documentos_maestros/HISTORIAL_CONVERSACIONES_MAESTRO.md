@@ -7,6 +7,53 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v33.03 — 13 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+- **Limpieza de Código Legado y Corrección de Experiencia en JanIA (v33.03)**:
+  1. *"Actúa como Auditor de Software Senior.*
+  2. *OBJETIVO: LIMPIEZA DE CÓDIGO LEGADO Y CORRECCIÓN DE EXPERIENCIA EN JanIA (v33.03).*
+  3. *El motor nuevo está corriendo en producción, pero hay textos y plantillas legadas que dañan la experiencia. Corrige de forma directa estos 4 puntos en el código:*
+     - *1. EXTIRPAR PLANTILLA DE DONACIONES: Busca en todo el proyecto la cadena 'manteniéndolo así' o 'servicio completamente GRATUITO' y bórrala por completo. La entrega de herramientas gratuitas (IDU, predial, etc.) debe cerrar únicamente con: 'Un servicio de cortesía de VECY BIENES RAÍCES 🤝.'.*
+     - *2. CORREGIR SALUDOS Y ORTOGRAFÍA EN DMs: En `dmHandler.ts`: Corregir el saludo que inicia en minúscula ('estimada...'). Aplicar ortografía estricta en español (apertura de signos `¡`, `¿` y mayúscula inicial). Si el remitente es Jani o Eduardo, dar trato directivo ('¡Hola, Jani!', '¡Hola, Eduardo!').*
+     - *3. MOTOR DE MATCH: RESPUESTA OBLIGATORIA CON ALIANZA 40/20/40 AUNQUE EL SCORE SEA BAJO: En `matchAdHocService.ts`: Si ninguna oferta alcanza el 80%: Listar los 2 o 3 inmuebles más recientes o cercanos con su ID de radicado para revisión manual. Incluir SIEMPRE la propuesta comercial de la alianza 40/20/40 sobre el 3% de comisión y el llamado a contactar a Jani o Eduardo al +57 316 656 9719.*
+     - *4. DESPLIEGUE: Validar con `npm run check` y `npm test`. Compilar con `npm run build`. Ejecutar `git commit -am "fix(jania): limpieza de plantillas legadas y ajuste de match v33.03" && git push origin main`. Ejecutar `npm run deploy:vps` para reiniciar el proceso en Contabo."*
+
+### Diagnóstico Técnico Profundo
+- **Extirpación de la Plantilla de Donaciones**: La plantilla legada (`formatPoliteInactivityPrompt`) enviaba una consulta automática tras 1 minuto de inactividad que preguntaba *"este es un servicio completamente GRATUITO. ¿Podrías ayudarnos a seguir manteniéndolo así? ✨"*, transmitiendo erróneamente un tono de donación o mendicidad. La doctrina VECY exige que todas las herramientas gratuitas (verificación de antecedentes, Predial Bogotá, Paz y Salvo IDU, liquidaciones) se entreguen como un valor agregado institucional sin pedir favores, rematando únicamente con *"Un servicio de cortesía de VECY BIENES RAÍCES 🤝."*.
+- **Ortografía y Trato Directivo en DMs**:
+  * Respuestas del LLM generaban vocativos en minúscula (*"estimada colega..."* o *"estimado..."*) y omitían los signos de apertura reglamentarios en español (`¡` y `¿`).
+  * Cuando los directores y fundadores (Eduardo A. Rivera y Jani Alves) interactuaban por DM, JanIA los trataba como clientes nuevos indagando a qué se dedicaban. Se requería trato directivo y ejecutivo directo (*"¡Hola, Eduardo!"* y *"¡Hola, Jani!"*).
+- **Consistencia en el Motor de Cruce Ad-Hoc**:
+  * Si ninguna oferta o demanda alcanzaba el 80% de score matemático estricto, el reporte público quedaba vacío o informativo. Se requería exponer siempre las 2 o 3 opciones más cercanas y recientes con su respectivo ID de radicado para revisión manual en equipo, e incluir de forma ineludible la propuesta comercial de la alianza 40/20/40 sobre el 3% de comisión comercial con Eduardo A. Rivera y Jani Alves (+57 316 656 9719).
+
+### Acciones Técnicas Ejecutadas
+1. **Extirpación de Plantillas Legadas de Donación**:
+   - `server/_core/politenessService.ts`: `formatPoliteInactivityPrompt` purgada de "manteniéndolo así" y "servicio completamente GRATUITO", retornando únicamente *"Un servicio de cortesía de VECY BIENES RAÍCES 🤝."*.
+   - `server/_core/whatsapp-match.ts`: Inactivado el despachador retardado de preguntas de donación; comentarios limpiados.
+   - `server/_core/jania/handlers/dmHandler.ts`: `formatPoliteToolDelivery` garantiza el cierre doctrinal *"Un servicio de cortesía de VECY BIENES RAÍCES 🤝."* en cualquier entrega de herramienta (cédula, predial, IDU o notarial).
+2. **Corrección de Ortografía y Trato Directivo en DMs**:
+   - `server/_core/jania/handlers/dmHandler.ts`:
+     * Detección directiva para Eduardo Rivera (`3192919978`, `225954035179724`, nombre) y Jani Alves (`3188096811`, LIDs asociados, nombre).
+     * Saludo inicial para directores: *"¡Hola, Eduardo! 👋 Estoy 100% activa, atenta y a tu entera disposición directiva en VECY BIENES RAÍCES. ¿En qué te colaboro hoy? 🤝✨"* (y análogo para Jani).
+     * System prompt enriquecido prohibiendo terminantemente saludos en minúscula y ordenando el uso obligatorio de signos de apertura (`¡`, `¿`).
+     * Función `sanitizeDmOrthographyAndGreeting`: Corrige minúsculas iniciales (`Estimad$1`), capitaliza inicios de frase y garantiza apertura de interrogaciones (`¿`) ante palabras interrogativas.
+3. **Motor de Match con Alianza 40/20/40 Obligatoria y Radicados**:
+   - `server/_core/matchAdHocService.ts`:
+     * Evaluación de umbral del 80%: Si ninguna oferta/demanda alcanza el 80%, extrae las 2-3 opciones más recientes y cercanas.
+     * Listado con ID de Radicado tanto en Canal Admin (`Radicado #${m.id}`) como en Canal Público (`Ref-P${m.id}` / `Ref-R${m.id}`).
+     * Inclusión obligatoria del gancho comercial de la alianza 40/20/40 sobre el 3% de comisión y enlace directo a Eduardo y Jani (+57 316 656 9719) en el 100% de los escenarios.
+4. **Suite de Regresión 64 (`server/__tests__/regression.test.ts`)**:
+   - 5 pruebas automatizadas aprobadas certificando extirpación de donaciones, trato directivo a Eduardo y Jani, ortografía estricta, alianza 40/20/40 obligatoria aun con score bajo, y versionamiento oficial v33.03.
+5. **Versionamiento y Build**:
+   - `shared/const.ts`: `VECY_VERSION = "v33.03"`.
+   - `package.json`: `"version": "33.3.0"`.
+   - `npm run check`: 0 errores.
+   - `npm test`: 208/208 tests passing (100% verde a $0 COP).
+   - `npm run build`: Compilación limpia en 21.41s.
+
+---
+
 ## 📋 SESIÓN v33.02 — 13 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

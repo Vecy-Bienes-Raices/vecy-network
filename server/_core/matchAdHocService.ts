@@ -312,13 +312,19 @@ export async function executeAdHocMatch(
   // Ordenar por afinidad descendente
   allScoredItems.sort((a, b) => b.score - a.score);
 
-  // Filtrar matches que superan el umbral
-  const validMatches = allScoredItems.filter(item => item.score >= minScore).slice(0, limit);
+  // Filtrar matches que superan el 80% (umbral doctrinal para coincidencia alta)
+  const eightyThreshold = 80;
+  const highMatches = allScoredItems.filter(item => item.score >= eightyThreshold).slice(0, limit);
+  const hasEightyMatch = highMatches.length > 0;
 
-  // Obtener el candidato más cercano en caso de no haber match
+  // Si ninguna oferta alcanza el 80%, tomar los 2 o 3 inmuebles más recientes o cercanos con su ID de radicado
+  const fallbackCandidates = allScoredItems.slice(0, 3);
+  const activeDisplayMatches = hasEightyMatch ? highMatches : fallbackCandidates;
+
+  // Obtener el candidato más cercano en caso de no haber match >= 80%
   let closestCandidate: AdHocMatchResult['closestCandidate'] = null;
-  if (allScoredItems.length > 0 && validMatches.length === 0) {
-    const top = allScoredItems[0];
+  if (fallbackCandidates.length > 0) {
+    const top = fallbackCandidates[0];
     closestCandidate = {
       id: top.id,
       type: top.type,
@@ -339,12 +345,12 @@ export async function executeAdHocMatch(
     formattedText = `⚡ *VECY MATCH AD-HOC (PANEL ADMINISTRADOR)*\n`;
     formattedText += `🔍 *Consulta:* ${inputSummary}\n\n`;
 
-    if (validMatches.length > 0) {
-      formattedText += `🎉 *¡Se encontraron ${validMatches.length} coincidencia(s) directa(s)!*\n\n`;
-      validMatches.forEach((m, idx) => {
+    if (hasEightyMatch) {
+      formattedText += `🎉 *¡Se encontraron ${highMatches.length} coincidencia(s) directa(s) (Score ≥ 80%)!*\n\n`;
+      highMatches.forEach((m, idx) => {
         formattedText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
         formattedText += `🏅 *OPCIÓN #${idx + 1} — AFINIDAD: ${m.score.toFixed(1)}%* ${m.score >= 90 ? '🔥' : '✅'}\n`;
-        formattedText += `🆔 *${m.type === 'inmueble' ? 'Inmueble' : 'Demanda'} #${m.id}* ${m.isRecent15Days ? '(Últimos 15 días 🟢)' : ''}\n`;
+        formattedText += `🆔 *Radicado #${m.id} (${m.type === 'inmueble' ? 'Inmueble' : 'Demanda'})* ${m.isRecent15Days ? '(Últimos 15 días 🟢)' : ''}\n`;
         formattedText += `📍 *Sector:* ${m.neighborhood || m.city}\n`;
         formattedText += `💰 *${m.type === 'inmueble' ? 'Precio' : 'Presupuesto'}:* ${m.priceOrBudgetFormatted}\n`;
         formattedText += `📐 *Características:* ${m.areaFormatted} • ${m.bedroomsFormatted} • ${m.bathroomsFormatted} • ${m.garagesFormatted}\n`;
@@ -355,43 +361,63 @@ export async function executeAdHocMatch(
         }
       });
     } else {
-      formattedText += `⚠️ *Sin coincidencias directas (Score ≥ ${minScore}%).*\n`;
-      if (closestCandidate) {
-        formattedText += `🎯 *Candidato más cercano para auditoría manual:* #${closestCandidate.id} (${closestCandidate.type}) con *${closestCandidate.score.toFixed(1)}%* de afinidad.\n`;
-        formattedText += `Detalle: ${closestCandidate.summary}\n`;
-      } else {
-        formattedText += `No se encontraron registros evaluables en el catálogo actual.\n`;
-      }
+      formattedText += `⚠️ *Ninguna oferta alcanza el 80% de afinidad estricta.*\n`;
+      formattedText += `📋 *Listado de opciones más recientes o cercanas para revisión manual (Radicados):*\n\n`;
+      fallbackCandidates.forEach((m, idx) => {
+        formattedText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+        formattedText += `🔍 *OPCIÓN #${idx + 1} PARA REVISIÓN MANUAL — AFINIDAD: ${m.score.toFixed(1)}%*\n`;
+        formattedText += `🆔 *Radicado #${m.id} (${m.type === 'inmueble' ? 'Inmueble' : 'Demanda'})* ${m.isRecent15Days ? '(Últimos 15 días 🟢)' : ''}\n`;
+        formattedText += `📍 *Sector:* ${m.neighborhood || m.city}\n`;
+        formattedText += `💰 *${m.type === 'inmueble' ? 'Precio' : 'Presupuesto'}:* ${m.priceOrBudgetFormatted}\n`;
+        formattedText += `📐 *Características:* ${m.areaFormatted} • ${m.bedroomsFormatted} • ${m.bathroomsFormatted} • ${m.garagesFormatted}\n`;
+        formattedText += `👤 *Colega / Contacto:* ${m.contactName}\n`;
+        formattedText += `📱 *Teléfono:* ${m.contactPhone ? '+' + m.contactPhone : 'Sin registrar'}\n`;
+        if (m.contactWhatsAppLink) {
+          formattedText += `💬 *Chat WhatsApp:* ${m.contactWhatsAppLink}\n`;
+        }
+      });
     }
+
+    // Incluir SIEMPRE la propuesta comercial de alianza 40/20/40 y contacto a directores
+    formattedText += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+    formattedText += `${commercialClosingCTA}\n`;
   } else {
     // 🌐 REPORTE PARA COLEGA EXTERNO / USUARIO PÚBLICO (Anonimizado + Alianza 40/20/40)
     formattedText = `⚡ *RESULTADO DE COINCIDENCIAS VECY NETWORK*\n\n`;
 
-    if (validMatches.length > 0) {
-      const topMatch = validMatches[0];
-      formattedText += `🎉 *¡Encontramos una opción altamente compatible para ti!*\n\n`;
-      formattedText += `🏷️ *Referencia:* Ref-${topMatch.type === 'inmueble' ? 'P' : 'R'}${topMatch.id}\n`;
-      formattedText += `📍 *Zona:* ${topMatch.neighborhood || topMatch.city}\n`;
-      formattedText += `📐 *Especificaciones:* ${topMatch.bedroomsFormatted} • ${topMatch.bathroomsFormatted} • ${topMatch.areaFormatted} • ${topMatch.garagesFormatted}\n`;
-      formattedText += `💰 *Rango:* ${topMatch.priceOrBudgetFormatted}\n`;
-      formattedText += `⭐ *Afinidad Técnica:* ${topMatch.score.toFixed(0)}%\n\n`;
-      formattedText += `${commercialClosingCTA}`;
+    if (hasEightyMatch) {
+      formattedText += `🎉 *¡Encontramos opciones altamente compatibles para tu búsqueda!*\n\n`;
+      highMatches.forEach((topMatch) => {
+        formattedText += `🏷️ *Radicado:* Ref-${topMatch.type === 'inmueble' ? 'P' : 'R'}${topMatch.id}\n`;
+        formattedText += `📍 *Zona:* ${topMatch.neighborhood || topMatch.city}\n`;
+        formattedText += `📐 *Especificaciones:* ${topMatch.bedroomsFormatted} • ${topMatch.bathroomsFormatted} • ${topMatch.areaFormatted} • ${topMatch.garagesFormatted}\n`;
+        formattedText += `💰 *Rango:* ${topMatch.priceOrBudgetFormatted}\n`;
+        formattedText += `⭐ *Afinidad Técnica:* ${topMatch.score.toFixed(0)}%\n\n`;
+      });
     } else {
-      formattedText += `🔍 Recibimos tu consulta: "${inputSummary}".\n\n`;
-      formattedText += `En este momento estamos validando nuevas propiedades ingresadas en las últimas horas en nuestra red de corretaje.\n\n`;
-      formattedText += `Tan pronto se complete la auditoría de un inmueble compatible, te conectaremos de inmediato con la contraparte para cerrar negocio.\n\n`;
-      formattedText += `Línea directa de coordinación: *+57 316 656 9719* (Eduardo A. Rivera y Jani Alves).`;
+      formattedText += `🔍 *Opciones disponibles para revisión manual:*\n`;
+      formattedText += `Actualmente ninguna oferta alcanza el 80% de afinidad matemática directa, pero estas son las ${fallbackCandidates.length} opciones más cercanas y recientes en nuestra red para revisar en equipo:\n\n`;
+      fallbackCandidates.forEach((m) => {
+        formattedText += `🏷️ *Radicado:* Ref-${m.type === 'inmueble' ? 'P' : 'R'}${m.id}\n`;
+        formattedText += `📍 *Zona:* ${m.neighborhood || m.city}\n`;
+        formattedText += `📐 *Especificaciones:* ${m.bedroomsFormatted} • ${m.bathroomsFormatted} • ${m.areaFormatted} • ${m.garagesFormatted}\n`;
+        formattedText += `💰 *Rango:* ${m.priceOrBudgetFormatted}\n`;
+        formattedText += `⭐ *Afinidad Técnica:* ${m.score.toFixed(0)}%\n\n`;
+      });
     }
+
+    // Incluir SIEMPRE la propuesta comercial de la alianza 40/20/40 sobre el 3% de comisión y llamado a Jani o Eduardo al +57 316 656 9719
+    formattedText += `${commercialClosingCTA}`;
   }
 
   return {
     inputType,
     channel,
     inputSummary,
-    totalFound: validMatches.length,
-    matches: validMatches,
+    totalFound: activeDisplayMatches.length,
+    matches: activeDisplayMatches,
     closestCandidate,
     formattedText,
-    commercialClosingCTA: channel === 'public' ? commercialClosingCTA : undefined
+    commercialClosingCTA: commercialClosingCTA
   };
 }

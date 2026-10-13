@@ -28,12 +28,8 @@ export function formatImmediatePoliteReviewMessage(userName?: string): string {
  * 2. Pregunta de cortesía y Urbanidad de Carreño enviada tras 1 minuto de silencio
  * si el usuario no dio las gracias ni interactuó tras recibir el servicio gratuito.
  */
-export function formatPoliteInactivityPrompt(userName?: string): string {
-  const cleanName = extractFirstName(userName || 'Colega') || 'Colega';
-  return (
-    `🤝 ¡Ha sido un placer poder ayudarte, ${cleanName}! Espero que nuestro servicio te haya sido de gran ayuda y, como sabes, este es un servicio completamente *GRATUITO*.\n\n` +
-    `¿Podrías ayudarnos a seguir manteniéndolo así? ✨`
-  );
+export function formatPoliteInactivityPrompt(_userName?: string): string {
+  return `Un servicio de cortesía de VECY BIENES RAÍCES 🤝.`;
 }
 
 /**

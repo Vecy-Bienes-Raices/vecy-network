@@ -337,8 +337,10 @@ export class JaniaMatchBot {
     this.userPolitenessTimers.set(senderId, timer);
   }
 
-  public maybeTriggerFreeServiceReviewPrompt(senderId: string, userName?: string) {
-    this.onFreeToolServiceDelivered(senderId, userName);
+  public maybeTriggerFreeServiceReviewPrompt(_senderId: string, _userName?: string) {
+    // Extirpada la plantilla de donaciones (Doctrina v33.03)
+    // La entrega de herramientas gratuitas ya cierra con: "Un servicio de cortesía de VECY BIENES RAÍCES 🤝."
+    return;
   }
 
   /**
@@ -1340,7 +1342,7 @@ export class JaniaMatchBot {
       this.userPolitenessTimers.delete(senderId);
     }
 
-    // 2. Si el usuario estaba en espera de responder a la pregunta de cortesía ("¿Podrías ayudarnos a seguir manteniéndolo así?")
+    // 2. Si el usuario estaba en espera de responder a la pregunta de cortesía de Urbanidad de Carreño
     if (this.userAwaitingReviewConsent.has(senderId)) {
       const consentData = this.userAwaitingReviewConsent.get(senderId)!;
       const {

@@ -22,31 +22,120 @@ export async function formatPoliteToolDelivery(
   const nameInfo = resolveNameAndGender(realName, timeSalutation);
   const canonicalComposite = getCanonicalCompositeName(realName);
   const compositeOrFirst = extractFirstName(realName);
-  const displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
+
+  // Detección directiva de Eduardo y Jani
+  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(rawName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
+  const isJani = /jani/i.test(realName || "") || /jani/i.test(rawName || "") || userId.includes("3188096811") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
+
+  let displayName = "";
+  if (isEduardo) {
+    displayName = "Eduardo";
+  } else if (isJani) {
+    displayName = "Jani";
+  } else {
+    displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
+  }
+
   const welcomeGrammar = nameInfo.isFemale ? "bienvenida" : "bienvenido";
   const history = await getOrLoadDmHistory(userId);
   const isFirstTurn = history.length === 0;
 
+  // Cierre doctrinal estricto para herramientas gratuitas (Doctrina v33.03)
+  const cleanPayload = (payloadText || "").trim();
+  const closingTag = "Un servicio de cortesía de VECY BIENES RAÍCES 🤝.";
+  const payloadWithClosing = cleanPayload.endsWith(closingTag)
+    ? cleanPayload
+    : `${cleanPayload}\n\n${closingTag}`;
+
   if (!success) {
     if (payloadText && payloadText.trim()) {
+      if (isEduardo) {
+        return `¡Hola, Eduardo! Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`;
+      }
+      if (isJani) {
+        return `¡Hola, Jani! Aquí tienes el detalle del reporte solicitado:\n\n${payloadWithClosing}`;
+      }
       if (isFirstTurn) {
         const greetingHeader = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️✨.\n\n`;
-        return greetingHeader + payloadText;
+        return greetingHeader + payloadWithClosing;
       } else {
         const politeHeader = `¡Hola${displayName ? ` ${displayName}` : ""}! `;
-        return politeHeader + payloadText;
+        return politeHeader + payloadWithClosing;
       }
+    }
+    if (isEduardo) {
+      return `¡Hola, Eduardo! Qué pena contigo. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
+    }
+    if (isJani) {
+      return `¡Hola, Jani! Qué pena contigo. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`;
     }
     return `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude procesar tu solicitud en este intento. ¿Podrías por favor confirmarme nuevamente los datos para ayudarte de inmediato? 🤝`;
   }
 
+  if (isEduardo) {
+    return `¡Hola, Eduardo! Aquí tienes el reporte oficial solicitado de inmediato:\n\n${payloadWithClosing}`;
+  }
+  if (isJani) {
+    return `¡Hola, Jani! Aquí tienes el reporte oficial solicitado de inmediato:\n\n${payloadWithClosing}`;
+  }
+
   if (isFirstTurn) {
-    const greetingHeader = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️✨.\n\nYa procesé con gusto tu consulta como un beneficio de cortesía 100% gratuito de nuestra inmobiliaria:\n\n`;
-    return greetingHeader + payloadText;
+    const greetingHeader = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️✨.\n\nYa procesé con gusto tu consulta como un beneficio de cortesía de nuestra inmobiliaria:\n\n`;
+    return greetingHeader + payloadWithClosing;
   } else {
     const politeHeader = `¡Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aquí tienes el reporte oficial como un beneficio de cortesía de *VECY BIENES RAÍCES*:\n\n`;
-    return politeHeader + payloadText;
+    return politeHeader + payloadWithClosing;
   }
+}
+
+/**
+ * Sanitiza ortografía estricta en español (apertura de signos ¡, ¿, mayúscula inicial)
+ * y garantiza trato directivo para Eduardo y Jani (Doctrina v33.03).
+ */
+export function sanitizeDmOrthographyAndGreeting(
+  text: string,
+  isEduardo: boolean,
+  isJani: boolean,
+  _displayName?: string,
+  hasPriorHistory: boolean = false
+): string {
+  let cleaned = (text || "").trim();
+  if (!cleaned) return cleaned;
+
+  // 1. Corregir cualquier saludo o vocativo que inicie en minúscula ("estimada...", "estimado...", "hola...")
+  cleaned = cleaned.replace(/^estimad([ao]s?)\b/i, "Estimad$1");
+  cleaned = cleaned.replace(/^hola\s+([a-záéíóúñ]+)[,!.\s]+/i, (_m, name) => `¡Hola, ${name.charAt(0).toUpperCase() + name.slice(1)}! `);
+  cleaned = cleaned.replace(/^hola\b/i, "¡Hola!");
+  cleaned = cleaned.replace(/^buen([ao]s?\s+(?:d[ií]as|tardes|noches))\b/i, (m) => `¡${m.charAt(0).toUpperCase() + m.slice(1)}!`);
+
+  // 2. Trato directivo para directores
+  if (isEduardo) {
+    if (!hasPriorHistory || /^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|estimad[ao])/i.test(cleaned)) {
+      cleaned = cleaned.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|estimad[ao]|saludos)[^!.\n]*[!.\n]?\s*/i, "");
+      cleaned = `¡Hola, Eduardo! ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
+    }
+  } else if (isJani) {
+    if (!hasPriorHistory || /^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|estimad[ao])/i.test(cleaned)) {
+      cleaned = cleaned.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|estimad[ao]|saludos)[^!.\n]*[!.\n]?\s*/i, "");
+      cleaned = `¡Hola, Jani! ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
+    }
+  }
+
+  // 3. Mayúscula inicial ineludible al inicio del texto
+  if (cleaned.length > 0) {
+    const firstChar = cleaned.charAt(0);
+    if (firstChar >= 'a' && firstChar <= 'z') {
+      cleaned = firstChar.toUpperCase() + cleaned.slice(1);
+    }
+  }
+
+  // 4. Apertura obligatoria de signos de interrogación ¿ ante preguntas
+  cleaned = cleaned.replace(/(^|\n|[.!?]\s*|,\s*)(qu[eé]|c[oó]mo|cu[aá]ndo|d[oó]nde|por\s+qu[eé]|cu[aá]l(?:es)?|qui[eé]n(?:es)?|acaso)\b([^?\n]+)\?/gi, (_match, prefix, qWord, rest) => {
+    const cleanPrefix = prefix.endsWith(", ") ? prefix.slice(0, -2) + ". " : prefix;
+    return `${cleanPrefix}¿${qWord.charAt(0).toUpperCase() + qWord.slice(1)}${rest}?`;
+  });
+
+  return cleaned.trim();
 }
 
 /**
@@ -72,20 +161,30 @@ export async function processPrivateDmConversationalMessage(
   const { getGreetingByTime } = await import('../../whatsapp-utils');
   const timeSalutation = getGreetingByTime(); // "Buenos días" | "Buenas tardes" | "Buenas noches"
 
+  // Detección directiva de Eduardo y Jani
+  const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
+  const isJani = /jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
+
   // 🧑‍💼 Resolución inteligente de nombres compuestos, género gramatical y cortesía (v32.35)
   const nameInfo = resolveNameAndGender(realName, timeSalutation);
   const compositeOrFirst = extractFirstName(realName);
 
   let displayName = "";
-  // 1. Si coincide con un nombre compuesto canónico estricto colombiano (ej: "Ana María", "Juan José", "María Fernanda", "José Manuel", "Olga Lucía")
-  const canonicalComposite = getCanonicalCompositeName(realName);
-  if (canonicalComposite) {
-    displayName = canonicalComposite;
-  } else if (compositeOrFirst) {
-    // 2. Si extractFirstName extrajo un nombre compuesto común o el primer nombre de pila (ej: "Consuelo" para "Consuelo Ronderos")
-    displayName = compositeOrFirst;
-  } else if (nameInfo.displayName && nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor")) {
-    displayName = nameInfo.displayName;
+  if (isEduardo) {
+    displayName = "Eduardo";
+  } else if (isJani) {
+    displayName = "Jani";
+  } else {
+    // 1. Si coincide con un nombre compuesto canónico estricto colombiano (ej: "Ana María", "Juan José", "María Fernanda", "José Manuel", "Olga Lucía")
+    const canonicalComposite = getCanonicalCompositeName(realName);
+    if (canonicalComposite) {
+      displayName = canonicalComposite;
+    } else if (compositeOrFirst) {
+      // 2. Si extractFirstName extrajo un nombre compuesto común o el primer nombre de pila (ej: "Consuelo" para "Consuelo Ronderos")
+      displayName = compositeOrFirst;
+    } else if (nameInfo.displayName && nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor")) {
+      displayName = nameInfo.displayName;
+    }
   }
 
   const nameGreeting = displayName ? `, ${displayName}` : "";
@@ -96,10 +195,22 @@ export async function processPrivateDmConversationalMessage(
   const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
 
   const history = await getOrLoadDmHistory(userId);
+  const hasPriorHistory = history.length > 0;
 
-  // Si es un saludo inicial y no hay historial previo reciente, entregar saludo horario cálido y abierto con perfilamiento amigable (Doctrina v32.40)
-  // PROHIBICIÓN ESTRICTA DE MENCIONAR ESQUEMAS DE COMISIÓN EN EL SALUDO INICIAL
+  // Si es un saludo inicial y no hay historial previo reciente:
   if (isGreetingOnly && history.length === 0) {
+    if (isEduardo) {
+      const welcomeMsg = `¡Hola, Eduardo! 👋 Estoy 100% activa, atenta y a tu entera disposición directiva en VECY BIENES RAÍCES. ¿En qué te colaboro hoy? 🤝✨`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", welcomeMsg);
+      return welcomeMsg;
+    }
+    if (isJani) {
+      const welcomeMsg = `¡Hola, Jani! 👋 Estoy 100% activa, atenta y a tu entera disposición directiva en VECY BIENES RAÍCES. ¿En qué te colaboro hoy? 🤝✨`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", welcomeMsg);
+      return welcomeMsg;
+    }
     const welcomeMsg =
       `¡${timeSalutation}${nameGreeting}! 👋 Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RAÍCES* 🏘️. Qué gusto saludarte.\n\n` +
       `Para nosotros en VECY es un verdadero placer apoyarte en tus gestiones y proyectos inmobiliarios.\n\n` +
@@ -380,7 +491,6 @@ export async function processPrivateDmConversationalMessage(
 
   // 2. Si el usuario hace preguntas o continúa la conversación, guiarlo con Inteligencia Artificial Pura y Conocimiento Inmobiliario Experto
   try {
-    const hasPriorHistory = history.length > 0;
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       {
         role: "system",
@@ -396,9 +506,15 @@ export async function processPrivateDmConversationalMessage(
           `BREVEDAD Y CONCISIÓN ESTRICTA EN WHATSAPP (PROHIBIDOS LOS TEXTOS LARGOS):\n` +
           `- En WhatsApp los usuarios leen en pantallas móviles de celular: LOS TEXTOS LARGOS CANSAN, ABURREN Y PROVOCAN EL BOTÓN 'Leer más'.\n` +
           `- Sé siempre concisa, clara, dinámica y directa al grano (máximo 2 a 3 párrafos cortos o viñetas puntuales). Entre menos adornos y más claridad, mayor impacto.\n\n` +
-          `REGLAS CRÍTICAS DE CONVERSACIÓN HUMANA, GÉNERO Y NOMBRES COMPUESTOS:\n` +
-          `- El usuario se llama: *${displayName || realName || "Colega"}*.\n` +
-          `- Género gramatical identificado: *${nameInfo.isFemale ? "Femenino (tratar como estimada, colega, bienvenida, atenta)" : "Masculino (tratar como estimado, colega, bienvenido, atento)"}*.\n` +
+          `REGLAS CRÍTICAS DE CONVERSACIÓN HUMANA, GÉNERO, ORTOGRAFÍA Y TRATO DIRECTIVO (DOCTRINA v33.03):\n` +
+          `${isEduardo ?
+            '- TRATO DIRECTIVO OBLIGATORIO: Estás hablando con EDUARDO A. RIVERA, fundador y Director de Tecnología de VECY BIENES RAÍCES. Tu saludo o trato es DIRECTIVO: "¡Hola, Eduardo!". Sé ejecutiva, rápida y precisa.\n' :
+            isJani ?
+            '- TRATO DIRECTIVO OBLIGATORIO: Estás hablando con JANI ALVES, fundadora y Directora de Operaciones de VECY BIENES RAÍCES. Tu saludo o trato es DIRECTIVO: "¡Hola, Jani!". Sé ejecutiva, cálida y operativa.\n' :
+            `- El usuario se llama: *${displayName || realName || "Colega"}*.\n- Género gramatical identificado: *${nameInfo.isFemale ? "Femenino" : "Masculino"}*.\n`
+          }` +
+          `- ORTOGRAFÍA ESTRICTA EN ESPAÑOL: PROHIBIDO iniciar saludos o mensajes en minúscula ("estimada...", "estimado...", "hola..."). Todo inicio de mensaje DEBE llevar Mayúscula inicial y signos de apertura formales.\n` +
+          `- SIGNOS DE APERTURA OBLIGATORIOS: Toda pregunta DEBE iniciar con '¿' y toda exclamación con '¡'. En español es un error omitir los signos de apertura.\n` +
           `- Si el usuario tiene un nombre compuesto (ej: Ana María, Juan José, María Fernanda, José Manuel, Carlos Alberto, Luz Marina, Olga Lucía), NUNCA lo cortes al primer nombre (JAMÁS digas solo "Ana" o "Juan"); llámalo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercanía y respeto que se use su nombre compuesto completo.\n` +
           `${hasPriorHistory ?
             '- CONTINUIDAD DE CONVERSACIÓN ACTIVA (MISMO DÍA): Ya estás conversando activamente con el usuario hoy. Está TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAMÁS digas "¡Hola!", "¡Buenos días!", "¡Qué gusto saludarte de nuevo!", "Es un placer tenerte por aquí") ni anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana lo que el usuario acaba de decir en el contexto previo.' :
@@ -530,23 +646,37 @@ export async function processPrivateDmConversationalMessage(
     }
 
     if (!reply) {
-      reply = hasPriorHistory
-        ? `Con mucho gusto. En *VECY BIENES RAÍCES* nos dedicamos a acelerar y proteger los negocios inmobiliarios con tecnología y asesoría especializada. Cuéntame en detalle qué necesitas o qué duda tienes y te oriento de inmediato.`
-        : `¡${timeSalutation}${nameGreeting}! 👋 En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que innova con tecnología para facilitarte tus gestiones diarias. Cuéntame en qué te puedo colaborar hoy.`;
+      if (isEduardo) {
+        reply = `¡Hola, Eduardo! A tu completa disposición. Cuéntame en qué te colaboro hoy.`;
+      } else if (isJani) {
+        reply = `¡Hola, Jani! A tu completa disposición. Cuéntame en qué te colaboro hoy.`;
+      } else {
+        reply = hasPriorHistory
+          ? `Con mucho gusto. En *VECY BIENES RAÍCES* nos dedicamos a acelerar y proteger los negocios inmobiliarios con tecnología y asesoría especializada. Cuéntame en detalle qué necesitas o qué duda tienes y te oriento de inmediato.`
+          : `¡${timeSalutation}${nameGreeting}! 👋 En *VECY BIENES RAÍCES* somos un bróker virtual inmobiliario que innova con tecnología para facilitarte tus gestiones diarias. Cuéntame en qué te puedo colaborar hoy.`;
+      }
     }
 
     // Inyección del embudo comercial si la consulta es de alto valor (Doctrina v33.01)
     reply = enhanceResponseWithCommercialFunnel(reply, clean);
+
+    // Sanitizar ortografía estricta en español y trato directivo (Doctrina v33.03)
+    reply = sanitizeDmOrthographyAndGreeting(reply, isEduardo, isJani, displayName, hasPriorHistory);
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", reply);
     return reply;
   } catch (err: any) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    let fallback = `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar o procesar bien lo que me solicitaste. ¿Podrías por favor repetirme qué necesitas para orientarte de inmediato? 🤝`;
+    let fallback = isEduardo
+      ? `¡Hola, Eduardo! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar o procesar bien lo que me solicitaste. ¿Podrías por favor repetirme qué necesitas para procesarlo de inmediato? 🤝`
+      : isJani
+      ? `¡Hola, Jani! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar o procesar bien lo que me solicitaste. ¿Podrías por favor repetirme qué necesitas para procesarlo de inmediato? 🤝`
+      : `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar o procesar bien lo que me solicitaste. ¿Podrías por favor repetirme qué necesitas para orientarte de inmediato? 🤝`;
     if (isHighValueLegalOrTaxInquiry(clean)) {
       fallback = enhanceResponseWithCommercialFunnel(fallback, clean);
     }
+    fallback = sanitizeDmOrthographyAndGreeting(fallback, isEduardo, isJani, displayName, hasPriorHistory);
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", fallback);
     return fallback;
