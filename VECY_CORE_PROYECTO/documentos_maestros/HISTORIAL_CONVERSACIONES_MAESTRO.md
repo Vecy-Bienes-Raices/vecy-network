@@ -7,6 +7,58 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v33.04 — 13 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+- **Restauración Cognitiva Pura, Base Doctrinal de VECY BIENES RAÍCES y Sombreros Expertos de JanIA (v33.04)**:
+  1. *"Actúa como Lead AI Architect y Principal Engineer de VECY BIENES RAÍCES.*
+  2. *OBJETIVO CRÍTICO (v33.04): RESTAURACIÓN COGNITIVA PURA, BASE DOCTRINAL DE VECY BIENES RAÍCES Y SOMBREROS EXPERTOS DE JanIA.*
+  3. *Ahorro extremo de cuota: directo a los archivos especificados, cero exploraciones globales.*
+  4. *NO tocar `matching.ts` (la Mesa de Coincidencias tradicional se mantiene intacta).*
+  5. *Reemplazar las respuestas estáticas de texto por Function Calling / Tools en JSON. La redacción total la asume el modelo (Gemini).*
+  6. *En `dmHandler.ts`, preservar obligatoriamente la entrega del enlace de Google Opiniones para usuarios externos al finalizar trámites gratuitos.*
+  7. *Creación del Dossier Doctrinal Local: `server/_core/jania/prompts/conocimiento_vecy.md` con la verdad institucional de VECY BIENES RAÍCES a $0 COP.*
+  8. *Carga de Conocimiento y Protocolo de Urbanidad de Carreño en `prompts.ts`: inyectar `conocimiento_vecy.md` y la fricción educativa ante datos en frío.*
+  9. *Integración de Herramientas y Roles Expertos en `dmHandler.ts`: 6 sombreros activos (Abogada Contractual Senior, Liquidadora Notarial y Tributaria, Mentora Comercial, Perita Avaluadora, Embajadora Proptech, Conectora Comercial 40/20/40), y cableado de herramientas de consulta y sondeo de mercado comparativo (Metrocuadrado, FincaRaíz, CienCuadras).*
+  10. *Actualizar versión a `v33.04` en `shared/const.ts` y `33.4.0` en `package.json`, validar tipos con `npm run check` (0 errores), `npm test` (100% verde a $0 COP), `npm run build`, commit/push y auto-despliegue al VPS Contabo con `npm run deploy:vps` verificando PM2 online en `33.4.0`."*
+
+### Diagnóstico Técnico Profundo
+- **Doctrina Institucional y Restauración Cognitiva**:
+  * JanIA cargaba fragmentos dispersos en el prompt sobre la identidad corporativa. Se unificó en un documento Markdown autoritativo local (`server/_core/jania/prompts/conocimiento_vecy.md`) que se lee en memoria en Node.js a $0 COP.
+  * Preservación rigurosa de la denominación: "VECY BIENES RAÍCES" para público externo, nombres directivos de Eduardo Rivera ("Eddu" / "Colega Eduardo") y Jani Alves ("Mi niña" / "Jani"), enfoque Proptech 100% digital "Cero Papel" bajo Ley 527 de 1999, y la Alianza Colegiada 40/20/40 sobre el 3% de comisión.
+  * Incorporación de las soluciones estrella: **Vecy Agenda Pro** (coordinación de visitas y verificación de visitantes para seguridad en porterías) y la **Fábrica de Software Proptech a la Medida** (desarrollo de herramientas, scrapers y liquidadores por Eduardo Rivera al +57 316 656 9719).
+- **Fricción Educativa y Urbanidad de Carreño**:
+  * Intercepción de envíos de datos en frío (CHIP o número de documento sin saludo ni fórmula de cortesía), respondiendo con saludo horario personalizado y la repregunta didáctica oficial sin procesar la herramienta a ciegas.
+- **Function Calling Estructurado en JSON y 6 Sombreros Expertos**:
+  * Catálogo de 5 herramientas declaradas para Gemini (`JANIA_DM_TOOLS`): `consultar_identidad_y_antecedentes`, `consultar_paz_y_salvo_idu`, `consultar_factura_predial_bogota`, `liquidar_gastos_notariales_y_registro` y `sondeo_mercado_inmobiliario`.
+  * La herramienta ejecuta la consulta a los servicios subyacentes, devuelve el JSON estructurado al modelo y Gemini asume la redacción fluida, cálida y profesional bajo el sombrero experto respectivo.
+  * Preservación del cierre de cortesía y Google Reviews (`https://g.page/r/CUxVzG_vecy/review`) para usuarios externos.
+
+### Acciones Técnicas Ejecutadas
+1. `server/_core/jania/prompts/conocimiento_vecy.md`:
+   - Creación del Dossier Institucional y Portafolio de Soluciones con los 4 capítulos (Identidad y Filosofía, Portafolio de Servicios, Vecy Agenda Pro y Fábrica de Software a la Medida, Comunidad y Redes).
+2. `server/_core/jania/prompts.ts`:
+   - Implementación de `getVecyInstitutionalKnowledge()` con caché en memoria.
+   - Declaración de `PROTOCOLO_URBANIDAD_CARRENO_PROMPT` e inyección de ambos en `buildSystemPrompt`.
+3. `server/_core/valuation.ts`:
+   - Implementación y exportación de `executeMarketValuationSurvey` con homologación ACM, zonas del norte de Bogotá (Cabrera, Rosales, Chicó, San Patricio, Santa Bárbara, Chapinero Alto, Usaquén, Cedritos, Suba), portales comparables (Metrocuadrado, FincaRaíz, CienCuadras) y Política de Cero Alucinación.
+4. `server/_core/jania/handlers/dmHandler.ts`:
+   - Declaración de `JANIA_DM_TOOLS` (5 tools en esquema JSON para Gemini).
+   - Implementación del ejecutor `executeJaniaDmTool` y sintetizador `synthesizeToolResponseWithGemini`.
+   - Inyección en el system prompt de DMs del dossier `getVecyInstitutionalKnowledge()` y los 6 roles activos expertos de JanIA.
+   - Preservación de la entrega del enlace de Google Opiniones (`https://g.page/r/CUxVzG_vecy/review`) en reportes de autoservicio de cortesía para usuarios externos.
+5. `shared/const.ts` & `package.json`:
+   - Incremento a `v33.04` y `33.4.0`.
+6. `server/__tests__/regression.test.ts`:
+   - Incorporación de la **SUITE 65** con 6 pruebas automatizadas aprobadas (217/217 passing al 100% a $0 COP).
+
+### Verificación y Certificación
+- `npm run check`: 0 errores de tipado ✅
+- `npm test`: 217 tests passing (5 suites completas en verde) ✅
+- `npm run build`: Compilación limpia de producción en 16.04s ✅
+
+---
+
 ## 📋 SESIÓN v33.03 — 13 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

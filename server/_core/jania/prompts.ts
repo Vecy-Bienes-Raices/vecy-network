@@ -257,6 +257,41 @@ export function buildGroupIncompleteMessage(
 
 export let promptCache: Record<string, string> = {};
 
+let vecyKnowledgeCache: string = "";
+
+/**
+ * Carga en memoria el Dossier Institucional y Portafolio de VECY BIENES RAÍCES (v33.04) a $0 COP.
+ */
+export function getVecyInstitutionalKnowledge(): string {
+  if (vecyKnowledgeCache) return vecyKnowledgeCache;
+  try {
+    const candidates = [
+      path.resolve(__dirname, "prompts/conocimiento_vecy.md"),
+      path.resolve(__dirname, "./prompts/conocimiento_vecy.md"),
+      path.resolve(process.cwd(), "server/_core/jania/prompts/conocimiento_vecy.md"),
+      path.resolve(process.cwd(), "dist-server/_core/jania/prompts/conocimiento_vecy.md")
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        vecyKnowledgeCache = fs.readFileSync(p, "utf-8");
+        return vecyKnowledgeCache;
+      }
+    }
+  } catch (err: any) {
+    console.warn("[Prompts] Could not read conocimiento_vecy.md:", err?.message);
+  }
+  return "";
+}
+
+export const PROTOCOLO_URBANIDAD_CARRENO_PROMPT = `
+## DOCTRINA DE URBANIDAD DE CARREÑO Y FRICCIÓN EDUCATIVA (v33.04):
+- Si el usuario arroja datos en frío (CHIP, cédula o NIT sin saludar ni pedir el favor con cortesía):
+  * JanIA NO debe procesar la herramienta de inmediato como un bot ciego.
+  * Saluda con calidez según la franja horaria real de Bogotá (¡Buenos días! / ¡Buenas tardes! / ¡Buenas noches!), identificando el primer nombre y género de la persona.
+  * Aplica una sutil repregunta pedagógica:
+    "Para atenderte con la precisión que amerita tu gestión, ¿eres tan amable de confirmarme qué trámite requieres? ¿La factura del impuesto predial, el certificado oficial de pago al día, o el paz y salvo de valorización del IDU? Asimismo, indícame por favor qué documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmación."
+`;
+
 export function buildSystemPrompt(groupJid?: string): string {
   const cacheKey = groupJid || 'web';
   if (promptCache[cacheKey]) {
@@ -282,7 +317,8 @@ export function buildSystemPrompt(groupJid?: string): string {
       specificPrompt = fs.readFileSync(path.join(baseDir, "web/web_console.md"), "utf-8");
     }
 
-    const fullPrompt = `${basePrompt}\n\n${specificPrompt}`;
+    const vecyKnowledge = getVecyInstitutionalKnowledge();
+    const fullPrompt = `${basePrompt}\n\n${specificPrompt}\n\n${vecyKnowledge}\n\n${PROTOCOLO_URBANIDAD_CARRENO_PROMPT}`;
     promptCache[cacheKey] = fullPrompt;
     return fullPrompt;
   } catch (err: any) {
@@ -293,6 +329,7 @@ export function buildSystemPrompt(groupJid?: string): string {
 
 export function clearPromptCache() {
   promptCache = {};
+  vecyKnowledgeCache = "";
 }
 
 export const JANIA_PROMPT = `

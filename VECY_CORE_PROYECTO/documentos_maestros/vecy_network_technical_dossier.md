@@ -331,6 +331,35 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.04 — Octubre 2026
+
+#### 📌 RESTAURACIÓN COGNITIVA PURA, BASE DOCTRINAL DE VECY BIENES RAÍCES Y SOMBREROS EXPERTOS DE JanIA
+
+**Requerimiento y Objetivos:**
+1. **Creación del Dossier Doctrinal Local (`server/_core/jania/prompts/conocimiento_vecy.md`)**:
+   - Compilar la verdad institucional autoritativa de VECY BIENES RAÍCES para carga en memoria en Node.js a $0 COP.
+   - 4 capítulos esenciales: Identidad y Filosofía, Portafolio de Servicios, Vecy Agenda Pro y Fábrica de Software Proptech a la Medida, Comunidad y Redes.
+   - Denominación oficial estricta: "VECY BIENES RAÍCES" para público externo, nombres directivos de Eduardo Rivera y Jani Alves, modelo colaborativo Alianza 40/20/40 sobre el 3% de comisión, filosofía 100% digital "Cero Papel" bajo Ley 527 de 1999.
+2. **Carga de Conocimiento y Protocolo de Urbanidad de Carreño (`prompts.ts`)**:
+   - Inyectar el dossier `conocimiento_vecy.md` en el System Prompt principal de JanIA.
+   - Fricción pedagógica ante datos en frío: si un usuario envía un CHIP o cédula sin saludar ni pedir el favor con cortesía, JanIA saluda según franja horaria de Bogotá (Buenos días/tardes/noches), identifica nombre y género, y formula la repregunta didáctica oficial antes de ejecutar la herramienta.
+3. **Integración de Herramientas y Roles Expertos (`dmHandler.ts`)**:
+   - Reemplazar respuestas de texto rígido por Function Calling / Tools en JSON con catálogo oficial `JANIA_DM_TOOLS` (5 tools: `consultar_identidad_y_antecedentes`, `consultar_paz_y_salvo_idu`, `consultar_factura_predial_bogota`, `liquidar_gastos_notariales_y_registro`, `sondeo_mercado_inmobiliario`).
+   - 6 sombreros expertos activos: Abogada Contractual Senior, Liquidadora Notarial y Tributaria, Mentora Comercial, Perita Avaluadora, Embajadora Proptech, Conectora Comercial 40/20/40.
+   - Sondeos de mercado comparativo en zonas del norte de Bogotá (Cabrera, Rosales, Chicó, San Patricio, Santa Bárbara, Usaquén, Suba) con coeficientes ACM homologados, portales comparables (Metrocuadrado, FincaRaíz, CienCuadras) y Política de Cero Alucinación.
+   - Preservación obligatoria de Google Opiniones (`https://g.page/r/CUxVzG_vecy/review`) y "Un servicio de cortesía de VECY BIENES RAÍCES 🤝." para usuarios externos.
+4. **Verificación y Despliegue Oficial**:
+   - Versionamiento a `v33.04` (`33.4.0` en `package.json`), verificación `npm run check` (0 errores), `npm test` (217/217 tests passing al 100% en verde a $0 COP), compilación `npm run build` en 16.04s, commit/push y auto-despliegue al VPS Contabo con `npm run deploy:vps`.
+
+**Soluciones Técnicas Implementadas:**
+- `server/_core/jania/prompts/conocimiento_vecy.md`: Documento institucional Markdown cargado en memoria.
+- `server/_core/jania/prompts.ts`: `getVecyInstitutionalKnowledge()` con caché en memoria y `PROTOCOLO_URBANIDAD_CARRENO_PROMPT`.
+- `server/_core/valuation.ts`: `executeMarketValuationSurvey` con homologación ACM y Política de Cero Alucinación.
+- `server/_core/jania/handlers/dmHandler.ts`: Catálogo `JANIA_DM_TOOLS`, ejecutor `executeJaniaDmTool`, sintetizador `synthesizeToolResponseWithGemini` y los 6 roles expertos.
+- `server/__tests__/regression.test.ts`: SUITE 65 agregada con 6 pruebas automatizadas aprobadas.
+
+---
+
 ### 🔖 v33.03 — Octubre 2026
 
 #### 📌 CALIBRACIÓN QUIRÚRGICA EN UN SOLO PASE: ORTOGRAFÍA ESTRICTA, TRATO VIP DIRECTIVO, GOOGLE OPINIONES, SCRAPERS RESILIENTES Y MATCH 40/20/40

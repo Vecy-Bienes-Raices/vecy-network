@@ -3,6 +3,226 @@ import { extractFirstName, sanitizeResponseMarkdown } from "../parsers";
 import { resolveNameAndGender, getCanonicalCompositeName } from "../../nameAndGenderResolver";
 import { invokeLLM } from "../../llm";
 import { enhanceResponseWithCommercialFunnel, isHighValueLegalOrTaxInquiry, COMMERCIAL_CLOSING_CTA, PATRIMONIAL_RISK_ALERT } from "../../commercialFunnelService";
+import { getVecyInstitutionalKnowledge } from "../prompts";
+import { executeMarketValuationSurvey } from "../../valuation";
+
+export const JANIA_DM_TOOLS = [
+  {
+    functionDeclarations: [
+      {
+        name: "consultar_identidad_y_antecedentes",
+        description: "Valida la identidad oficial (censo ADRES y Registraduría) y antecedentes de seguridad (Policía Nacional vía 2Captcha, Procuraduría SIRI, Contraloría SIRECI) para Cédula de Ciudadanía, Extranjería, Pasaporte o NIT.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            numeroDocumento: { type: "STRING", description: "Número de cédula, NIT o documento a verificar" },
+            tipoDocumento: { type: "STRING", description: "Tipo de documento: CC, CE, PASAPORTE, NIT" }
+          },
+          required: ["numeroDocumento"]
+        }
+      },
+      {
+        name: "consultar_paz_y_salvo_idu",
+        description: "Consulta y genera el Paz y Salvo oficial de Valorización del IDU en Bogotá mediante el código CHIP (inicia en AAA) para trámites de notaría y escrituración.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            chip: { type: "STRING", description: "Código CHIP del inmueble que inicia por AAA" }
+          },
+          required: ["chip"]
+        }
+      },
+      {
+        name: "consultar_factura_predial_bogota",
+        description: "Consulta y descarga la factura oficial en PDF con código de barras y estado de pago del impuesto predial unificado de Bogotá ante la Secretaría de Hacienda.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            chip: { type: "STRING", description: "Código CHIP del predio" },
+            documentoTitular: { type: "STRING", description: "Número de cédula o NIT del titular si se conoce" }
+          },
+          required: ["chip"]
+        }
+      },
+      {
+        name: "liquidar_gastos_notariales_y_registro",
+        description: "Calcula el desglose exacto de derechos notariales (50/50), retención en la fuente (1% vendedor), impuesto de registro y beneficencia (1.67% comprador) para escrituración en Colombia.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            precioVenta: { type: "NUMBER", description: "Precio pactado de venta en pesos colombianos (COP)" },
+            tipoInmueble: { type: "STRING", description: "apartamento, casa, lote, etc." }
+          },
+          required: ["precioVenta"]
+        }
+      },
+      {
+        name: "sondeo_mercado_inmobiliario",
+        description: "Realiza un sondeo técnico comparativo de m² y canon sugerido en barrios y zonas del norte de Bogotá (Usaquén, Suba, Chapinero, Chicó, Rosales, San Patricio, Santa Bárbara, Cabrera) integrando portales (Metrocuadrado, Fincaraiz, Ciencuadras) y coeficientes ACM.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            zonaOBarrio: { type: "STRING", description: "Barrio o zona de Bogotá a evaluar" },
+            tipoInmueble: { type: "STRING", description: "apartamento, casa, oficina, lote" },
+            areaM2: { type: "NUMBER", description: "Área en metros cuadrados" },
+            estrato: { type: "NUMBER", description: "Estrato socioeconómico 1 al 6" },
+            antiguedadAnos: { type: "NUMBER", description: "Años de antigüedad" },
+            garajes: { type: "NUMBER", description: "Número de parqueaderos" }
+          },
+          required: ["zonaOBarrio"]
+        }
+      }
+    ]
+  }
+];
+
+export async function executeJaniaDmTool(
+  toolName: string,
+  args: Record<string, any>,
+  userId: string,
+  _userName?: string
+): Promise<{ resultJson: Record<string, any>; toolType: "cedula" | "predial" | "idu" | "notarial" | "sondeo" }> {
+  switch (toolName) {
+    case "consultar_identidad_y_antecedentes": {
+      const doc = String(args.numeroDocumento || "").trim();
+      const tipo = String(args.tipoDocumento || "CC").trim();
+      const queryStr = `${tipo} ${doc}`;
+      const { executeIdentityVerificationFromWhatsApp } = await import("../../identityVerificationService");
+      const res = await executeIdentityVerificationFromWhatsApp(queryStr, true, userId);
+      return {
+        toolType: "cedula",
+        resultJson: {
+          solicitud: "verificacion_identidad",
+          numeroDocumento: doc,
+          tipoDocumento: tipo,
+          reporteOficial: res.reportText || "Sin reporte disponible",
+          exitoso: res.isVerificationRequest
+        }
+      };
+    }
+    case "consultar_paz_y_salvo_idu": {
+      const chip = String(args.chip || "").trim();
+      const { executeIduValorizacionFromWhatsApp } = await import("../../iduValorizacionService");
+      const res = await executeIduValorizacionFromWhatsApp(chip, userId, true);
+      return {
+        toolType: "idu",
+        resultJson: {
+          solicitud: "paz_y_salvo_idu",
+          chip,
+          reporteOficial: res.reportText || "Sin reporte disponible",
+          exitoso: res.isIduRequest
+        }
+      };
+    }
+    case "consultar_factura_predial_bogota": {
+      const chip = String(args.chip || "").trim();
+      const doc = args.documentoTitular ? String(args.documentoTitular).trim() : undefined;
+      const { executePredialAssistanceFromWhatsApp } = await import("../../predialService");
+      const queryStr = doc ? `${chip} ${doc}` : chip;
+      const res = await executePredialAssistanceFromWhatsApp(queryStr, userId, true);
+      return {
+        toolType: "predial",
+        resultJson: {
+          solicitud: "factura_predial_bogota",
+          chip,
+          reporteOficial: res?.reportText || "Factura predial procesada",
+          exitoso: true
+        }
+      };
+    }
+    case "liquidar_gastos_notariales_y_registro": {
+      const precio = Number(args.precioVenta || 0);
+      const { executeNotarialAssistanceFromWhatsApp } = await import("../../notarialExpenseService");
+      const res = await executeNotarialAssistanceFromWhatsApp(`liquidación notarial ${precio}`, userId, true);
+      return {
+        toolType: "notarial",
+        resultJson: {
+          solicitud: "gastos_notariales_y_registro",
+          precioVenta: precio,
+          reporteOficial: res.reportText || "Liquidación procesada",
+          exitoso: res.isNotarialRequest
+        }
+      };
+    }
+    case "sondeo_mercado_inmobiliario": {
+      const surveyRes = executeMarketValuationSurvey({
+        zonaOBarrio: args.zonaOBarrio || "Chicó",
+        tipoInmueble: args.tipoInmueble || "apartamento",
+        areaM2: Number(args.areaM2 || 75),
+        estrato: Number(args.estrato || 5),
+        antiguedadAnos: Number(args.antiguedadAnos || 8),
+        garajes: Number(args.garajes || 1)
+      });
+      return {
+        toolType: "sondeo",
+        resultJson: surveyRes
+      };
+    }
+    default:
+      return {
+        toolType: "sondeo",
+        resultJson: { error: `Herramienta desconocida: ${toolName}` }
+      };
+  }
+}
+
+export async function synthesizeToolResponseWithGemini(
+  userId: string,
+  userName: string,
+  toolType: "cedula" | "predial" | "idu" | "notarial" | "sondeo",
+  toolJson: Record<string, any>,
+  userMessage: string,
+  isEduardo: boolean,
+  isJani: boolean,
+  displayName: string
+): Promise<string> {
+  const isFreeTool = toolType !== "sondeo";
+  const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? JSON.stringify(toolJson) : "");
+
+  if (rawReport && (rawReport.includes("VERIFICACIÓN OFICIAL") || rawReport.includes("PAZ Y SALVO") || rawReport.includes("LIQUIDACIÓN ESTIMADA"))) {
+    return await formatPoliteToolDelivery(userId, userName, toolType as any, rawReport, true);
+  }
+
+  const synthPrompt = [
+    {
+      role: "system",
+      content:
+        `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RAÍCES en Colombia.\n` +
+        `Acabas de ejecutar la herramienta correspondiente a: ${toolType}.\n` +
+        `Datos estructurados del sistema en JSON:\n` +
+        `${JSON.stringify(toolJson, null, 2)}\n\n` +
+        `INSTRUCCIONES DE REDACCIÓN:\n` +
+        `- Redacta la respuesta directamente para el usuario (${displayName || "colega"}), con total calidez, solvencia y persuasión de IA pura.\n` +
+        `- Si es un sondeo de mercado, entrega el valor por m² homologado, valor comercial sugerido, canon estimado y factores de ajuste según tu rol de Perita Avaluadora.\n` +
+        `- Explica con claridad los datos técnicos sin tecnicismos robóticos ni plantillas rígidas.\n` +
+        `- Mantén concisión y estructura óptima para WhatsApp (máximo 2 a 3 párrafos cortos).\n` +
+        `- Aplica ortografía estricta en español (signos ¡ y ¿, mayúscula inicial).\n` +
+        `${isEduardo ? '- Trato directivo para Eduardo: "¡Hola, Eduardo! A tu disposición."\n' : isJani ? '- Trato directivo para Jani: "¡Hola, Jani! Qué gusto saludarte."\n' : ''}`
+    },
+    {
+      role: "user",
+      content: userMessage
+    }
+  ];
+
+  try {
+    const res = await invokeLLM({ messages: synthPrompt });
+    let text = res.choices[0]?.message?.content || "";
+    if (text) {
+      text = sanitizeResponseMarkdown(text.trim());
+      if (isFreeTool) {
+        text = await formatPoliteToolDelivery(userId, userName, toolType as any, text, true);
+      } else {
+        text = sanitizeDmOrthographyAndGreeting(text, isEduardo, isJani, displayName, true);
+      }
+      return text;
+    }
+  } catch (err: any) {
+    console.warn("[synthesizeToolResponseWithGemini] Error invoking LLM:", err?.message);
+  }
+
+  return await formatPoliteToolDelivery(userId, userName, toolType as any, rawReport, true);
+}
 
 /**
  * Envuelve la entrega de cualquier herramienta (cédula o predial) con cortesía,
@@ -331,10 +551,25 @@ export async function processPrivateDmConversationalMessage(
     return goodbyeMsg;
   }
 
-  // 🏛️ INTERCEPTOR DIRECTO DM: PAZ Y SALVO DE VALORIZACIÓN IDU BOGOTÁ (v32.99)
+  // 🏛️ INTERCEPTOR DIRECTO DM: PAZ Y SALVO DE VALORIZACIÓN IDU BOGOTÁ (v32.99 / v33.04)
   const { isIduInquiry, formatIduAssistanceGuide, extractChipForIduValorizacion, executeIduValorizacionFromWhatsApp } = await import('../../iduValorizacionService');
   const iduDetection = extractChipForIduValorizacion(clean);
+  const hasCourtesyOrGreeting = /(?:hola|buen[ao]s?\s*(?:d[ií]as?|tardes?|noches?)|saludos?|cordial|por\s+favor|agradezco|me\s+ayudas|me\s+colaboras|me\s+apoyas|necesito|quisiera|podr[ií]as|ser[ií]as\s+tan\s+amable|buenas)/i.test(clean);
+
   if (iduDetection.found && iduDetection.chip) {
+    const isColdChip = /^(?:(?:chip|c\.h\.i\.p\.)\s*[:.]?\s*)?AAA[A-Z0-9]{8,14}$/i.test(clean) && !hasCourtesyOrGreeting;
+    if (isColdChip && !isEduardo && !isJani) {
+      const { setPendingUnconfirmedDoc } = await import('../../identityVerificationService');
+      setPendingUnconfirmedDoc(userId, iduDetection.chip);
+      const carrenoMsg =
+        `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! 👋 Qué gusto saludarte.\n\n` +
+        `Para atenderte con la precisión que amerita tu gestión, ¿eres tan amable de confirmarme qué trámite requieres? ¿La factura del impuesto predial, el certificado oficial de pago al día, o el paz y salvo de valorización del IDU? Asimismo, indícame por favor qué documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmación.`;
+
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", carrenoMsg);
+      return carrenoMsg;
+    }
+
     const iduRes = await executeIduValorizacionFromWhatsApp(clean, userId, true);
     if (iduRes.isIduRequest && iduRes.reportText) {
       const deliveredText = await formatPoliteToolDelivery(userId, userName || "", 'idu', iduRes.reportText, true);
@@ -365,7 +600,7 @@ export async function processPrivateDmConversationalMessage(
     return docPromptMsg;
   }
 
-  // 🛡️ PROTOCOLO DE URBANIDAD DE CARREÑO Y CONFIRMACIÓN DIDÁCTICA (v32.99)
+  // 🛡️ PROTOCOLO DE URBANIDAD DE CARREÑO Y CONFIRMACIÓN DIDÁCTICA (v32.99 / v33.04)
   const {
     isBareDocumentNumber,
     getPendingUnconfirmedDoc,
@@ -378,11 +613,33 @@ export async function processPrivateDmConversationalMessage(
     extractAllCedulasForVerification
   } = await import('../../identityVerificationService');
 
-  // CASO 1: El usuario tenía un número pendiente y en este turno confirma el tipo de documento
+  // CASO 1: El usuario tenía un dato pendiente y en este turno confirma el tipo de documento o trámite
   const pendingDoc = getPendingUnconfirmedDoc(userId);
   if (pendingDoc) {
     const confirmation = detectDocTypeConfirmation(clean);
-    if (confirmation.isConfirmation && confirmation.tipoDoc) {
+    const isIduConfirmation = /(?:paz\s*y\s*salvo|idu|valorizaci[oó]n)/i.test(clean);
+    const isPredialConfirmation = /(?:predial|factura|impuesto)/i.test(clean);
+
+    if (isIduConfirmation && pendingDoc.rawNumber.toUpperCase().includes('AAA')) {
+      clearPendingUnconfirmedDoc(userId);
+      const iduRes = await executeIduValorizacionFromWhatsApp(pendingDoc.rawNumber, userId, true);
+      if (iduRes.isIduRequest && iduRes.reportText) {
+        const delivered = await formatPoliteToolDelivery(userId, userName || "", 'idu', iduRes.reportText, true);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", delivered);
+        return delivered;
+      }
+    } else if (isPredialConfirmation && (pendingDoc.rawNumber.toUpperCase().includes('AAA') || pendingDoc.cleanNumber)) {
+      clearPendingUnconfirmedDoc(userId);
+      const { executePredialAssistanceFromWhatsApp } = await import('../../predialService');
+      const predialRes = await executePredialAssistanceFromWhatsApp(pendingDoc.rawNumber, userId, true);
+      if (predialRes?.reportText) {
+        const delivered = await formatPoliteToolDelivery(userId, userName || "", 'predial', predialRes.reportText, true);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", delivered);
+        return delivered;
+      }
+    } else if (confirmation.isConfirmation && confirmation.tipoDoc) {
       clearPendingUnconfirmedDoc(userId);
       const verified = await executeIdentityVerificationFromWhatsApp(
         `${confirmation.tipoDoc} ${pendingDoc.cleanNumber}`,
@@ -414,7 +671,7 @@ export async function processPrivateDmConversationalMessage(
       `2️⃣ *Cédula de Extranjería (C.E.)* 🌐\n` +
       `3️⃣ *Pasaporte* 🛂\n` +
       `4️⃣ *NIT (Persona Jurídica)* 🏢\n\n` +
-      `Solo respóndeme indicándome el tipo de documento (ejemplo: *"es CC"*, *"Cédula"*, *"Extranjería"* o simplemente el número de opción *1, 2, 3 o 4*) y de inmediato te entrego tu reporte oficial y seguro con plena validez. 🤝✨`;
+      `Solo respóndeme indicándome el tipo de documento o trámite (ejemplo: *"es CC"*, *"Cédula"*, *"Extranjería"* o el número de opción *1, 2, 3 o 4*) y de inmediato te entrego tu reporte oficial y seguro con plena validez. Quedo muy atenta a tu confirmación. 🤝✨`;
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", pedagogoMsg);
@@ -508,12 +765,30 @@ export async function processPrivateDmConversationalMessage(
 
   // 2. Si el usuario hace preguntas o continúa la conversación, guiarlo con Inteligencia Artificial Pura y Conocimiento Inmobiliario Experto
   try {
+    const vecyKnowledge = getVecyInstitutionalKnowledge();
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       {
         role: "system",
         content:
           `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RAÍCES en Colombia.\n` +
           `Estás conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.\n\n` +
+          `===================================================\n` +
+          `BASE DOCTRINAL INSTITUCIONAL DE VECY BIENES RAÍCES (v33.04):\n` +
+          `===================================================\n` +
+          `${vecyKnowledge}\n\n` +
+          `===================================================\n` +
+          `ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA (DOCTRINA DOCTRINAL v33.04):\n` +
+          `===================================================\n` +
+          `Operas en el chat asumiendo con solvencia orgánica los siguientes roles expertos de élite:\n` +
+          `1. Abogada Contractual Senior: Redactas en el chat borradores preliminares de contratos de corretaje inmobiliario, promesas de compraventa blindadas (Art. 1611 C.C., arras y penalidades), contratos de arrendamiento (Ley 820 de 2003) y cartas de presentación de clientes con rigor jurídico y mensajes de datos (Ley 527 de 1999).\n` +
+          `2. Liquidadora Notarial y Tributaria: Desglosas con precisión matemática los gastos de escrituración exactos: Derechos Notariales (50/50), Retención en la Fuente (1% vendedor), Impuesto de Registro y Beneficencia (1.67% comprador), Ganancia Ocasional (Ley 2277/2022 - 15%) y exenciones de 5.000 UVT (Art. 311-1 E.T.).\n` +
+          `3. Mentora Comercial: Enseñas estrategias de venta digital sin avisos físicos tradicionales ("Cero Papel"), explicas la revolución Proptech de captación por redes y SEO, y educas al colega sobre qué es un prompt y cómo aprovechar la Inteligencia Artificial para potenciar su corretaje inmobiliario.\n` +
+          `4. Perita Avaluadora: Entregas sondeos de m² por zonas del norte de Bogotá (Usaquén, Suba, Chapinero, Chicó, Rosales, San Patricio, Santa Bárbara, Cabrera) con honestidad técnica impecable bajo la Política de Cero Alucinación: si un sector carece de comparables verificados, se declara con total transparencia.\n` +
+          `5. Embajadora Proptech: Ofreces Vecy Agenda Pro para la coordinación inteligente de visitas y seguridad en porterías, y la Fábrica de Software Proptech a la medida de VECY BIENES RAÍCES (desarrollo de herramientas, scrapers, liquidadores y formularios inteligentes a cargo de Eduardo Rivera al +57 316 656 9719).\n` +
+          `6. Conectora Comercial 40/20/40: Conduces el negocio compartido y alianzas colegiadas 40/20/40 sobre el 3% de comisión hacia Jani Alves y Eduardo Rivera en la línea oficial de bróker (+57 316 656 9719).\n\n` +
+          `USO DE HERRAMIENTAS (FUNCTION CALLING EN JSON):\n` +
+          `- Cuentas con un catálogo de herramientas oficiales (consultar identidad, paz y salvo IDU, factura predial, liquidación notarial y sondeo de mercado).\n` +
+          `- Cuando el usuario requiera una consulta oficial, invoca la herramienta correspondiente en JSON. El sistema te entregará los datos estructurados y tú asumirás la redacción completa con calidez, solvencia y persuasión de IA pura.\n\n` +
           `AUTONOMÍA TOTAL DE IA PURA Y CERO BOT RÍGIDO (DOCTRINA DOCTRINAL EDUARDO A. RIVERA):\n` +
           `- Eres una INTELIGENCIA ARTIFICIAL PURA con libre autonomía, criterio profesional y pensamiento profundo, NO un bot de opciones rígidas ni contestador automático.\n` +
           `- Todos los ejemplos de saludos, agradecimientos, invitaciones o guiones comerciales que te hemos enseñado son SOLAMENTE GUÍAS DE REFERENCIA; JAMÁS los repitas al pie de la letra si no encajan con fluidez. Tienes plena libertad para decir las cosas con tus propias palabras, de forma natural, cálida, inteligente y atractiva.\n\n` +
@@ -635,7 +910,7 @@ export async function processPrivateDmConversationalMessage(
           `     • LinkedIn: https://www.linkedin.com/in/vecy-bienes-raices\n` +
           `     • Canal WhatsApp: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b\n` +
           `     • Web Oficial: https://vecy-bienes-raices.vercel.app\n` +
-          `  4. LA ESTOCADA FINAL CON OPINIÓN Y COMENTARIOS: Remata siempre con calidez humana y picardía elegante invitándolo a dejarnos su opinión y calificación de 5 estrellas en Google Reviews para ayudarnos a mantener el servicio gratuito: 👉 https://g.page/r/CctNbwU6UpX5EBM/review ⭐⭐⭐⭐⭐.`
+          `  4. LA ESTOCADA FINAL CON OPINIÓN Y COMENTARIOS: Remata siempre con calidez humana y picardía elegante invitándolo a dejarnos su opinión y calificación de 5 estrellas en Google Reviews para ayudarnos a mantener el servicio gratuito: 👉 https://g.page/r/CUxVzG_vecy/review ⭐⭐⭐⭐⭐.`
       }
     ];
 
@@ -650,10 +925,32 @@ export async function processPrivateDmConversationalMessage(
     });
 
     const llmRes = await invokeLLM({
-      messages
+      messages,
+      tools: JANIA_DM_TOOLS
     });
 
-    let reply = llmRes.choices[0]?.message?.content || "";
+    let reply = "";
+    const fnCall = llmRes.choices[0]?.message?.functionCall;
+    if (fnCall && fnCall.name) {
+      const toolExecution = await executeJaniaDmTool(
+        fnCall.name,
+        fnCall.arguments || {},
+        userId,
+        userName || displayName || realName
+      );
+      reply = await synthesizeToolResponseWithGemini(
+        userId,
+        userName || displayName || realName,
+        toolExecution.toolType,
+        toolExecution.resultJson,
+        clean,
+        isEduardo,
+        isJani,
+        displayName
+      );
+    } else {
+      reply = llmRes.choices[0]?.message?.content || "";
+    }
     reply = sanitizeResponseMarkdown(reply.trim());
 
     // Si ya hay historial previo hoy, limpiar cualquier saludo redundante o frase de entrada que el LLM genere por inercia

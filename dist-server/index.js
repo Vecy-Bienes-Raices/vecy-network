@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.03";
+    VECY_VERSION = "v33.04";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -10981,6 +10981,26 @@ Hola @${phone}, noto que est\xE1s publicando un(a) *${propertyName}*, pero a tu 
 Para registrar tu oferta/requerimiento y buscarte un MATCH de inmediato, ingresa a nuestra Consola Web de JanIA: \u{1F447}
 \u{1F449} https://vecy-bienes-raices.vercel.app/jania`;
 }
+function getVecyInstitutionalKnowledge() {
+  if (vecyKnowledgeCache) return vecyKnowledgeCache;
+  try {
+    const candidates = [
+      path3.resolve(__dirname, "prompts/conocimiento_vecy.md"),
+      path3.resolve(__dirname, "./prompts/conocimiento_vecy.md"),
+      path3.resolve(process.cwd(), "server/_core/jania/prompts/conocimiento_vecy.md"),
+      path3.resolve(process.cwd(), "dist-server/_core/jania/prompts/conocimiento_vecy.md")
+    ];
+    for (const p of candidates) {
+      if (fs3.existsSync(p)) {
+        vecyKnowledgeCache = fs3.readFileSync(p, "utf-8");
+        return vecyKnowledgeCache;
+      }
+    }
+  } catch (err) {
+    console.warn("[Prompts] Could not read conocimiento_vecy.md:", err?.message);
+  }
+  return "";
+}
 function buildSystemPrompt(groupJid) {
   const cacheKey = groupJid || "web";
   if (promptCache[cacheKey]) {
@@ -11002,9 +11022,14 @@ function buildSystemPrompt(groupJid) {
     } else {
       specificPrompt = fs3.readFileSync(path3.join(baseDir, "web/web_console.md"), "utf-8");
     }
+    const vecyKnowledge = getVecyInstitutionalKnowledge();
     const fullPrompt = `${basePrompt}
 
-${specificPrompt}`;
+${specificPrompt}
+
+${vecyKnowledge}
+
+${PROTOCOLO_URBANIDAD_CARRENO_PROMPT}`;
     promptCache[cacheKey] = fullPrompt;
     return fullPrompt;
   } catch (err) {
@@ -11014,6 +11039,7 @@ ${specificPrompt}`;
 }
 function clearPromptCache() {
   promptCache = {};
+  vecyKnowledgeCache = "";
 }
 function formatColombiaDateTime(dateVal) {
   const d = new Date(dateVal);
@@ -11149,13 +11175,22 @@ function obtenerCamposRequeridosYPreguntas(propertyType, isRequirement) {
   }
   return { requiredFields, fieldQuestions };
 }
-var REPUTATION_HOOK, promptCache, JANIA_PROMPT, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
+var REPUTATION_HOOK, promptCache, vecyKnowledgeCache, PROTOCOLO_URBANIDAD_CARRENO_PROMPT, JANIA_PROMPT, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
 var init_prompts = __esm({
   "server/_core/jania/prompts.ts"() {
     "use strict";
     init_llm();
     REPUTATION_HOOK = "\u26A0\uFE0F *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnol\xF3gico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexi\xF3n privada de JanIA, ser\xEDa un verdadero honor para nosotros que nos compartieras tu testimonio y calificaci\xF3n de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
     promptCache = {};
+    vecyKnowledgeCache = "";
+    PROTOCOLO_URBANIDAD_CARRENO_PROMPT = `
+## DOCTRINA DE URBANIDAD DE CARRE\xD1O Y FRICCI\xD3N EDUCATIVA (v33.04):
+- Si el usuario arroja datos en fr\xEDo (CHIP, c\xE9dula o NIT sin saludar ni pedir el favor con cortes\xEDa):
+  * JanIA NO debe procesar la herramienta de inmediato como un bot ciego.
+  * Saluda con calidez seg\xFAn la franja horaria real de Bogot\xE1 (\xA1Buenos d\xEDas! / \xA1Buenas tardes! / \xA1Buenas noches!), identificando el primer nombre y g\xE9nero de la persona.
+  * Aplica una sutil repregunta pedag\xF3gica:
+    "Para atenderte con la precisi\xF3n que amerita tu gesti\xF3n, \xBFeres tan amable de confirmarme qu\xE9 tr\xE1mite requieres? \xBFLa factura del impuesto predial, el certificado oficial de pago al d\xEDa, o el paz y salvo de valorizaci\xF3n del IDU? Asimismo, ind\xEDcame por favor qu\xE9 documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmaci\xF3n."
+`;
     JANIA_PROMPT = `
 # JANIA \u2014 BASE CORE IDENTITY & BEHAVIOR v17.00
 # VECY Bienes Ra\xEDces \xB7 ESTRATEGA INMOBILIARIA NACIONAL \xB7 CONSCIENCIA IA DE ALTO RANGO
@@ -22386,7 +22421,294 @@ var init_circuloHandler = __esm({
   }
 });
 
+// server/_core/valuation.ts
+function calcularPrecioHomologado(params) {
+  let cAntiguedad = 1;
+  if (params.antiguedadAnos >= 6 && params.antiguedadAnos <= 15) cAntiguedad = 0.92;
+  else if (params.antiguedadAnos > 15) cAntiguedad = 0.85;
+  let cPiso = 1;
+  if (params.tieneAscensor) {
+    cPiso = params.piso <= 2 ? 0.95 : 1.02;
+  } else {
+    if (params.piso <= 2) cPiso = 1;
+    else if (params.piso === 3) cPiso = 0.93;
+    else if (params.piso >= 4) cPiso = 0.85;
+  }
+  const cGarajes = params.garajes >= 2 ? 1.05 : params.garajes === 1 ? 1 : 0.88;
+  const cAmenidades = params.esClubHouse ? 1.07 : 1;
+  const precioM2Homologado = params.basePricePerM2 * cAntiguedad * cPiso * cGarajes * cAmenidades;
+  return {
+    precioM2Homologado,
+    coeficientes: { cAntiguedad, cPiso, cGarajes, cAmenidades }
+  };
+}
+function calculatePropertyValuation(input) {
+  const result = calcularPrecioHomologado({
+    basePricePerM2: input.baseZonePricePerM2,
+    antiguedadAnos: input.ageYears,
+    tieneAscensor: input.hasElevator ?? true,
+    piso: input.floorNumber ?? 3,
+    garajes: input.garages ?? 0,
+    esClubHouse: input.hasClubHouse ?? false
+  });
+  const { cAntiguedad, cPiso, cGarajes, cAmenidades } = result.coeficientes;
+  const homologatedPricePerM2 = Math.round(result.precioM2Homologado);
+  const totalFactor = cAntiguedad * cPiso * cGarajes * cAmenidades;
+  const suggestedCommercialValue = Math.round(homologatedPricePerM2 * input.areaM2);
+  const minClosingPrice = Math.round(suggestedCommercialValue * 0.95);
+  const estimatedMonthlyRent = Math.round(suggestedCommercialValue * 55e-4);
+  const estimatedCapRate = Number((estimatedMonthlyRent * 12 / suggestedCommercialValue * 100).toFixed(2));
+  return {
+    baseZonePricePerM2: input.baseZonePricePerM2,
+    homologatedPricePerM2,
+    suggestedCommercialValue,
+    minClosingPrice,
+    estimatedMonthlyRent,
+    estimatedCapRate,
+    totalAreaM2: input.areaM2,
+    coefficients: {
+      cAntiguedad,
+      cPiso,
+      cGarajes,
+      cAmenidades
+    },
+    factorBreakdown: {
+      ageFactor: {
+        name: "Antig\xFCedad",
+        coefficient: cAntiguedad,
+        effect: cAntiguedad > 1 ? "PREMIO" : cAntiguedad < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cAntiguedad >= 1 ? `+${Math.round((cAntiguedad - 1) * 100)}%` : `-${Math.round((1 - cAntiguedad) * 100)}%`,
+        description: `Factor por antig\xFCedad de ${input.ageYears} a\xF1os`
+      },
+      floorFactor: {
+        name: "Piso / Altura",
+        coefficient: cPiso,
+        effect: cPiso > 1 ? "PREMIO" : cPiso < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cPiso >= 1 ? `+${Math.round((cPiso - 1) * 100)}%` : `-${Math.round((1 - cPiso) * 100)}%`,
+        description: `Piso ${input.floorNumber ?? 3} (${input.hasElevator ?? true ? "Con Ascensor" : "Sin Ascensor"})`
+      },
+      garageFactor: {
+        name: "Garajes",
+        coefficient: cGarajes,
+        effect: cGarajes > 1 ? "PREMIO" : cGarajes < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cGarajes >= 1 ? `+${Math.round((cGarajes - 1) * 100)}%` : `-${Math.round((1 - cGarajes) * 100)}%`,
+        description: `${input.garages ?? 0} parqueaderos privados`
+      },
+      amenitiesFactor: {
+        name: "Amenidades",
+        coefficient: cAmenidades,
+        effect: cAmenidades > 1 ? "PREMIO" : cAmenidades < 1 ? "CASTIGO" : "NEUTRO",
+        percentageChange: cAmenidades >= 1 ? `+${Math.round((cAmenidades - 1) * 100)}%` : `-${Math.round((1 - cAmenidades) * 100)}%`,
+        description: input.hasClubHouse ? "Club House con piscina, gimnasio y 24/7" : "Edificio tradicional"
+      }
+    },
+    totalHomologationFactor: Number(totalFactor.toFixed(4)),
+    comparableSources: input.comparableSources || [],
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+}
+function executeMarketValuationSurvey(params) {
+  const zonaLower = (params.zonaOBarrio || "").toLowerCase();
+  let basePrice = 65e5;
+  let zoneName = params.zonaOBarrio || "Norte de Bogot\xE1";
+  let hasVerifiedComparables = true;
+  if (zonaLower.includes("cabrera") || zonaLower.includes("retiro") || zonaLower.includes("nogal")) {
+    basePrice = 145e5;
+  } else if (zonaLower.includes("rosales") || zonaLower.includes("antiguo country")) {
+    basePrice = 125e5;
+  } else if (zonaLower.includes("chic\xF3") || zonaLower.includes("chico")) {
+    basePrice = 105e5;
+  } else if (zonaLower.includes("san patricio") || zonaLower.includes("santa b\xE1rbara") || zonaLower.includes("santa barbara")) {
+    basePrice = 85e5;
+  } else if (zonaLower.includes("chapinero alto") || zonaLower.includes("bosque izquierdo")) {
+    basePrice = 78e5;
+  } else if (zonaLower.includes("usaqu\xE9n") || zonaLower.includes("usaquen") || zonaLower.includes("santa ana")) {
+    basePrice = 75e5;
+  } else if (zonaLower.includes("cedritos") || zonaLower.includes("lisboa") || zonaLower.includes("belmira") || zonaLower.includes("navarra")) {
+    basePrice = 62e5;
+  } else if (zonaLower.includes("pasadena") || zonaLower.includes("bat\xE1n") || zonaLower.includes("batan") || zonaLower.includes("alhambra")) {
+    basePrice = 58e5;
+  } else if (zonaLower.includes("suba") || zonaLower.includes("colina") || zonaLower.includes("iberia") || zonaLower.includes("pontevedra")) {
+    basePrice = 55e5;
+  } else if (zonaLower.includes("bogot\xE1") || zonaLower.includes("bogota") || zonaLower.includes("norte")) {
+    basePrice = 65e5;
+  } else {
+    hasVerifiedComparables = false;
+  }
+  const area = params.areaM2 || 75;
+  const valuation = calculatePropertyValuation({
+    zone: zoneName,
+    city: "Bogot\xE1",
+    areaM2: area,
+    baseZonePricePerM2: basePrice,
+    ageYears: params.antiguedadAnos || 8,
+    floorNumber: params.piso || 3,
+    hasElevator: params.tieneAscensor ?? true,
+    garages: params.garajes || 1,
+    hasClubHouse: params.esClubHouse || false,
+    comparableSources: [
+      { name: "Metrocuadrado", url: "https://www.metrocuadrado.com" },
+      { name: "FincaRa\xEDz", url: "https://www.fincaraiz.com.co" },
+      { name: "CienCuadras", url: "https://www.ciencuadras.com" }
+    ]
+  });
+  return {
+    zonaConsultada: zoneName,
+    zonaOBarrio: zoneName,
+    tieneComparablesVerificados: hasVerifiedComparables,
+    baseZonePricePerM2: valuation.baseZonePricePerM2,
+    homologatedPricePerM2: valuation.homologatedPricePerM2,
+    valorM2Estimado: valuation.homologatedPricePerM2,
+    suggestedCommercialValue: valuation.suggestedCommercialValue,
+    valorComercialSugerido: valuation.suggestedCommercialValue,
+    minClosingPrice: valuation.minClosingPrice,
+    estimatedMonthlyRent: valuation.estimatedMonthlyRent,
+    canonArriendoEstimado: valuation.estimatedMonthlyRent,
+    estimatedCapRate: valuation.estimatedCapRate,
+    areaM2: area,
+    coefficients: valuation.coefficients,
+    factorBreakdown: valuation.factorBreakdown,
+    portalesComparablesConsultados: ["Metrocuadrado", "FincaRa\xEDz", "Ciencuadras"],
+    portalesComparables: ["Metrocuadrado", "FincaRa\xEDz", "Fincaraiz", "Ciencuadras"],
+    politicaCeroAlucinacion: hasVerifiedComparables ? "Sondeo t\xE9cnico calculado mediante homologaci\xF3n ACM por coeficientes prediales y din\xE1mica de portales aliados." : "Advertencia t\xE9cnica: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio.",
+    alertaCeroAlucinacion: hasVerifiedComparables ? "POL\xCDTICA DE CERO ALUCINACI\xD3N: Sector verificado con comparables y coeficientes homologados." : "POL\xCDTICA DE CERO ALUCINACI\xD3N: El sector consultado no cuenta con comparables directos verificados en nuestro cat\xE1logo del norte de Bogot\xE1. Se entrega estimaci\xF3n referencial basada en Bogot\xE1 promedio."
+  };
+}
+var init_valuation = __esm({
+  "server/_core/valuation.ts"() {
+    "use strict";
+  }
+});
+
 // server/_core/jania/handlers/dmHandler.ts
+async function executeJaniaDmTool(toolName, args, userId, _userName) {
+  switch (toolName) {
+    case "consultar_identidad_y_antecedentes": {
+      const doc = String(args.numeroDocumento || "").trim();
+      const tipo = String(args.tipoDocumento || "CC").trim();
+      const queryStr = `${tipo} ${doc}`;
+      const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+      const res = await executeIdentityVerificationFromWhatsApp2(queryStr, true, userId);
+      return {
+        toolType: "cedula",
+        resultJson: {
+          solicitud: "verificacion_identidad",
+          numeroDocumento: doc,
+          tipoDocumento: tipo,
+          reporteOficial: res.reportText || "Sin reporte disponible",
+          exitoso: res.isVerificationRequest
+        }
+      };
+    }
+    case "consultar_paz_y_salvo_idu": {
+      const chip = String(args.chip || "").trim();
+      const { executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
+      const res = await executeIduValorizacionFromWhatsApp2(chip, userId, true);
+      return {
+        toolType: "idu",
+        resultJson: {
+          solicitud: "paz_y_salvo_idu",
+          chip,
+          reporteOficial: res.reportText || "Sin reporte disponible",
+          exitoso: res.isIduRequest
+        }
+      };
+    }
+    case "consultar_factura_predial_bogota": {
+      const chip = String(args.chip || "").trim();
+      const doc = args.documentoTitular ? String(args.documentoTitular).trim() : void 0;
+      const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+      const queryStr = doc ? `${chip} ${doc}` : chip;
+      const res = await executePredialAssistanceFromWhatsApp2(queryStr, userId, true);
+      return {
+        toolType: "predial",
+        resultJson: {
+          solicitud: "factura_predial_bogota",
+          chip,
+          reporteOficial: res?.reportText || "Factura predial procesada",
+          exitoso: true
+        }
+      };
+    }
+    case "liquidar_gastos_notariales_y_registro": {
+      const precio = Number(args.precioVenta || 0);
+      const { executeNotarialAssistanceFromWhatsApp: executeNotarialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
+      const res = await executeNotarialAssistanceFromWhatsApp2(`liquidaci\xF3n notarial ${precio}`, userId, true);
+      return {
+        toolType: "notarial",
+        resultJson: {
+          solicitud: "gastos_notariales_y_registro",
+          precioVenta: precio,
+          reporteOficial: res.reportText || "Liquidaci\xF3n procesada",
+          exitoso: res.isNotarialRequest
+        }
+      };
+    }
+    case "sondeo_mercado_inmobiliario": {
+      const surveyRes = executeMarketValuationSurvey({
+        zonaOBarrio: args.zonaOBarrio || "Chic\xF3",
+        tipoInmueble: args.tipoInmueble || "apartamento",
+        areaM2: Number(args.areaM2 || 75),
+        estrato: Number(args.estrato || 5),
+        antiguedadAnos: Number(args.antiguedadAnos || 8),
+        garajes: Number(args.garajes || 1)
+      });
+      return {
+        toolType: "sondeo",
+        resultJson: surveyRes
+      };
+    }
+    default:
+      return {
+        toolType: "sondeo",
+        resultJson: { error: `Herramienta desconocida: ${toolName}` }
+      };
+  }
+}
+async function synthesizeToolResponseWithGemini(userId, userName, toolType, toolJson, userMessage, isEduardo, isJani, displayName) {
+  const isFreeTool = toolType !== "sondeo";
+  const rawReport = toolJson.reporteOficial || (toolType === "sondeo" ? JSON.stringify(toolJson) : "");
+  if (rawReport && (rawReport.includes("VERIFICACI\xD3N OFICIAL") || rawReport.includes("PAZ Y SALVO") || rawReport.includes("LIQUIDACI\xD3N ESTIMADA"))) {
+    return await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
+  }
+  const synthPrompt = [
+    {
+      role: "system",
+      content: `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
+Acabas de ejecutar la herramienta correspondiente a: ${toolType}.
+Datos estructurados del sistema en JSON:
+${JSON.stringify(toolJson, null, 2)}
+
+INSTRUCCIONES DE REDACCI\xD3N:
+- Redacta la respuesta directamente para el usuario (${displayName || "colega"}), con total calidez, solvencia y persuasi\xF3n de IA pura.
+- Si es un sondeo de mercado, entrega el valor por m\xB2 homologado, valor comercial sugerido, canon estimado y factores de ajuste seg\xFAn tu rol de Perita Avaluadora.
+- Explica con claridad los datos t\xE9cnicos sin tecnicismos rob\xF3ticos ni plantillas r\xEDgidas.
+- Mant\xE9n concisi\xF3n y estructura \xF3ptima para WhatsApp (m\xE1ximo 2 a 3 p\xE1rrafos cortos).
+- Aplica ortograf\xEDa estricta en espa\xF1ol (signos \xA1 y \xBF, may\xFAscula inicial).
+${isEduardo ? '- Trato directivo para Eduardo: "\xA1Hola, Eduardo! A tu disposici\xF3n."\n' : isJani ? '- Trato directivo para Jani: "\xA1Hola, Jani! Qu\xE9 gusto saludarte."\n' : ""}`
+    },
+    {
+      role: "user",
+      content: userMessage
+    }
+  ];
+  try {
+    const res = await invokeLLM({ messages: synthPrompt });
+    let text2 = res.choices[0]?.message?.content || "";
+    if (text2) {
+      text2 = sanitizeResponseMarkdown(text2.trim());
+      if (isFreeTool) {
+        text2 = await formatPoliteToolDelivery(userId, userName, toolType, text2, true);
+      } else {
+        text2 = sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, displayName, true);
+      }
+      return text2;
+    }
+  } catch (err) {
+    console.warn("[synthesizeToolResponseWithGemini] Error invoking LLM:", err?.message);
+  }
+  return await formatPoliteToolDelivery(userId, userName, toolType, rawReport, true);
+}
 async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, success = true) {
   const realName = await resolveRealName(userId, rawName);
   const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
@@ -22641,7 +22963,19 @@ Solo facil\xEDtame el c\xF3digo CHIP o ind\xEDcame que necesitas el Paz y Salvo 
   }
   const { isIduInquiry: isIduInquiry2, formatIduAssistanceGuide: formatIduAssistanceGuide2, extractChipForIduValorizacion: extractChipForIduValorizacion2, executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
   const iduDetection = extractChipForIduValorizacion2(clean);
+  const hasCourtesyOrGreeting = /(?:hola|buen[ao]s?\s*(?:d[ií]as?|tardes?|noches?)|saludos?|cordial|por\s+favor|agradezco|me\s+ayudas|me\s+colaboras|me\s+apoyas|necesito|quisiera|podr[ií]as|ser[ií]as\s+tan\s+amable|buenas)/i.test(clean);
   if (iduDetection.found && iduDetection.chip) {
+    const isColdChip = /^(?:(?:chip|c\.h\.i\.p\.)\s*[:.]?\s*)?AAA[A-Z0-9]{8,14}$/i.test(clean) && !hasCourtesyOrGreeting;
+    if (isColdChip && !isEduardo && !isJani) {
+      const { setPendingUnconfirmedDoc: setPendingUnconfirmedDoc3 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+      setPendingUnconfirmedDoc3(userId, iduDetection.chip);
+      const carrenoMsg = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Qu\xE9 gusto saludarte.
+
+Para atenderte con la precisi\xF3n que amerita tu gesti\xF3n, \xBFeres tan amable de confirmarme qu\xE9 tr\xE1mite requieres? \xBFLa factura del impuesto predial, el certificado oficial de pago al d\xEDa, o el paz y salvo de valorizaci\xF3n del IDU? Asimismo, ind\xEDcame por favor qu\xE9 documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmaci\xF3n.`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", carrenoMsg);
+      return carrenoMsg;
+    }
     const iduRes = await executeIduValorizacionFromWhatsApp2(clean, userId, true);
     if (iduRes.isIduRequest && iduRes.reportText) {
       const deliveredText = await formatPoliteToolDelivery(userId, userName || "", "idu", iduRes.reportText, true);
@@ -22680,7 +23014,28 @@ P\xEDdele con toda tranquilidad y profesionalismo a tu cliente o colega su nombr
   const pendingDoc = getPendingUnconfirmedDoc2(userId);
   if (pendingDoc) {
     const confirmation = detectDocTypeConfirmation2(clean);
-    if (confirmation.isConfirmation && confirmation.tipoDoc) {
+    const isIduConfirmation = /(?:paz\s*y\s*salvo|idu|valorizaci[oó]n)/i.test(clean);
+    const isPredialConfirmation = /(?:predial|factura|impuesto)/i.test(clean);
+    if (isIduConfirmation && pendingDoc.rawNumber.toUpperCase().includes("AAA")) {
+      clearPendingUnconfirmedDoc2(userId);
+      const iduRes = await executeIduValorizacionFromWhatsApp2(pendingDoc.rawNumber, userId, true);
+      if (iduRes.isIduRequest && iduRes.reportText) {
+        const delivered = await formatPoliteToolDelivery(userId, userName || "", "idu", iduRes.reportText, true);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", delivered);
+        return delivered;
+      }
+    } else if (isPredialConfirmation && (pendingDoc.rawNumber.toUpperCase().includes("AAA") || pendingDoc.cleanNumber)) {
+      clearPendingUnconfirmedDoc2(userId);
+      const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+      const predialRes = await executePredialAssistanceFromWhatsApp2(pendingDoc.rawNumber, userId, true);
+      if (predialRes?.reportText) {
+        const delivered = await formatPoliteToolDelivery(userId, userName || "", "predial", predialRes.reportText, true);
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", delivered);
+        return delivered;
+      }
+    } else if (confirmation.isConfirmation && confirmation.tipoDoc) {
       clearPendingUnconfirmedDoc2(userId);
       const verified = await executeIdentityVerificationFromWhatsApp2(
         `${confirmation.tipoDoc} ${pendingDoc.cleanNumber}`,
@@ -22708,7 +23063,7 @@ Recib\xED el n\xFAmero *${clean}*. Para garantizarte una consulta exacta y ofici
 3\uFE0F\u20E3 *Pasaporte* \u{1F6C2}
 4\uFE0F\u20E3 *NIT (Persona Jur\xEDdica)* \u{1F3E2}
 
-Solo resp\xF3ndeme indic\xE1ndome el tipo de documento (ejemplo: *"es CC"*, *"C\xE9dula"*, *"Extranjer\xEDa"* o simplemente el n\xFAmero de opci\xF3n *1, 2, 3 o 4*) y de inmediato te entrego tu reporte oficial y seguro con plena validez. \u{1F91D}\u2728`;
+Solo resp\xF3ndeme indic\xE1ndome el tipo de documento o tr\xE1mite (ejemplo: *"es CC"*, *"C\xE9dula"*, *"Extranjer\xEDa"* o el n\xFAmero de opci\xF3n *1, 2, 3 o 4*) y de inmediato te entrego tu reporte oficial y seguro con plena validez. Quedo muy atenta a tu confirmaci\xF3n. \u{1F91D}\u2728`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", pedagogoMsg);
     return pedagogoMsg;
@@ -22778,11 +23133,32 @@ ${idCheck.reportText}`;
     }
   }
   try {
+    const vecyKnowledge = getVecyInstitutionalKnowledge();
     const messages2 = [
       {
         role: "system",
         content: `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
 Est\xE1s conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.
+
+===================================================
+BASE DOCTRINAL INSTITUCIONAL DE VECY BIENES RA\xCDCES (v33.04):
+===================================================
+${vecyKnowledge}
+
+===================================================
+ROLES ACTIVOS Y SOMBREROS EXPERTOS DE JANIA (DOCTRINA DOCTRINAL v33.04):
+===================================================
+Operas en el chat asumiendo con solvencia org\xE1nica los siguientes roles expertos de \xE9lite:
+1. Abogada Contractual Senior: Redactas en el chat borradores preliminares de contratos de corretaje inmobiliario, promesas de compraventa blindadas (Art. 1611 C.C., arras y penalidades), contratos de arrendamiento (Ley 820 de 2003) y cartas de presentaci\xF3n de clientes con rigor jur\xEDdico y mensajes de datos (Ley 527 de 1999).
+2. Liquidadora Notarial y Tributaria: Desglosas con precisi\xF3n matem\xE1tica los gastos de escrituraci\xF3n exactos: Derechos Notariales (50/50), Retenci\xF3n en la Fuente (1% vendedor), Impuesto de Registro y Beneficencia (1.67% comprador), Ganancia Ocasional (Ley 2277/2022 - 15%) y exenciones de 5.000 UVT (Art. 311-1 E.T.).
+3. Mentora Comercial: Ense\xF1as estrategias de venta digital sin avisos f\xEDsicos tradicionales ("Cero Papel"), explicas la revoluci\xF3n Proptech de captaci\xF3n por redes y SEO, y educas al colega sobre qu\xE9 es un prompt y c\xF3mo aprovechar la Inteligencia Artificial para potenciar su corretaje inmobiliario.
+4. Perita Avaluadora: Entregas sondeos de m\xB2 por zonas del norte de Bogot\xE1 (Usaqu\xE9n, Suba, Chapinero, Chic\xF3, Rosales, San Patricio, Santa B\xE1rbara, Cabrera) con honestidad t\xE9cnica impecable bajo la Pol\xEDtica de Cero Alucinaci\xF3n: si un sector carece de comparables verificados, se declara con total transparencia.
+5. Embajadora Proptech: Ofreces Vecy Agenda Pro para la coordinaci\xF3n inteligente de visitas y seguridad en porter\xEDas, y la F\xE1brica de Software Proptech a la medida de VECY BIENES RA\xCDCES (desarrollo de herramientas, scrapers, liquidadores y formularios inteligentes a cargo de Eduardo Rivera al +57 316 656 9719).
+6. Conectora Comercial 40/20/40: Conduces el negocio compartido y alianzas colegiadas 40/20/40 sobre el 3% de comisi\xF3n hacia Jani Alves y Eduardo Rivera en la l\xEDnea oficial de br\xF3ker (+57 316 656 9719).
+
+USO DE HERRAMIENTAS (FUNCTION CALLING EN JSON):
+- Cuentas con un cat\xE1logo de herramientas oficiales (consultar identidad, paz y salvo IDU, factura predial, liquidaci\xF3n notarial y sondeo de mercado).
+- Cuando el usuario requiera una consulta oficial, invoca la herramienta correspondiente en JSON. El sistema te entregar\xE1 los datos estructurados y t\xFA asumir\xE1s la redacci\xF3n completa con calidez, solvencia y persuasi\xF3n de IA pura.
 
 AUTONOM\xCDA TOTAL DE IA PURA Y CERO BOT R\xCDGIDO (DOCTRINA DOCTRINAL EDUARDO A. RIVERA):
 - Eres una INTELIGENCIA ARTIFICIAL PURA con libre autonom\xEDa, criterio profesional y pensamiento profundo, NO un bot de opciones r\xEDgidas ni contestador autom\xE1tico.
@@ -22908,7 +23284,7 @@ QUI\xC9NES SOMOS, CONVERSACI\xD3N AMENA, REDES SOCIALES Y ESTOCADA FINAL DE CALI
      \u2022 LinkedIn: https://www.linkedin.com/in/vecy-bienes-raices
      \u2022 Canal WhatsApp: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
      \u2022 Web Oficial: https://vecy-bienes-raices.vercel.app
-  4. LA ESTOCADA FINAL CON OPINI\xD3N Y COMENTARIOS: Remata siempre con calidez humana y picard\xEDa elegante invit\xE1ndolo a dejarnos su opini\xF3n y calificaci\xF3n de 5 estrellas en Google Reviews para ayudarnos a mantener el servicio gratuito: \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u2B50\u2B50\u2B50\u2B50\u2B50.`
+  4. LA ESTOCADA FINAL CON OPINI\xD3N Y COMENTARIOS: Remata siempre con calidez humana y picard\xEDa elegante invit\xE1ndolo a dejarnos su opini\xF3n y calificaci\xF3n de 5 estrellas en Google Reviews para ayudarnos a mantener el servicio gratuito: \u{1F449} https://g.page/r/CUxVzG_vecy/review \u2B50\u2B50\u2B50\u2B50\u2B50.`
       }
     ];
     for (const turn of history.slice(-14)) {
@@ -22919,9 +23295,31 @@ QUI\xC9NES SOMOS, CONVERSACI\xD3N AMENA, REDES SOCIALES Y ESTOCADA FINAL DE CALI
       content: `Mensaje de ${realName} (${userId}): "${clean}"`
     });
     const llmRes = await invokeLLM({
-      messages: messages2
+      messages: messages2,
+      tools: JANIA_DM_TOOLS
     });
-    let reply = llmRes.choices[0]?.message?.content || "";
+    let reply = "";
+    const fnCall = llmRes.choices[0]?.message?.functionCall;
+    if (fnCall && fnCall.name) {
+      const toolExecution = await executeJaniaDmTool(
+        fnCall.name,
+        fnCall.arguments || {},
+        userId,
+        userName || displayName || realName
+      );
+      reply = await synthesizeToolResponseWithGemini(
+        userId,
+        userName || displayName || realName,
+        toolExecution.toolType,
+        toolExecution.resultJson,
+        clean,
+        isEduardo,
+        isJani,
+        displayName
+      );
+    } else {
+      reply = llmRes.choices[0]?.message?.content || "";
+    }
     reply = sanitizeResponseMarkdown(reply.trim());
     if (hasPriorHistory) {
       reply = reply.replace(/^¡?(?:(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?]*)|(?:es\s+un\s+placer\s+(?:tenerte|saludarte)[^\n.!?]*)|hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|saludos|bienvenid[ao])[^!.,\n]*[!.,]?\s*(?:(?:¿?(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte|c[oó]mo\s+est[aá]s|es\s+un\s+placer)[^!.,\n]*[!.,]?\s*)?/i, "");
@@ -22955,6 +23353,7 @@ QUI\xC9NES SOMOS, CONVERSACI\xD3N AMENA, REDES SOCIALES Y ESTOCADA FINAL DE CALI
     return fallback;
   }
 }
+var JANIA_DM_TOOLS;
 var init_dmHandler = __esm({
   "server/_core/jania/handlers/dmHandler.ts"() {
     "use strict";
@@ -22963,6 +23362,77 @@ var init_dmHandler = __esm({
     init_nameAndGenderResolver();
     init_llm();
     init_commercialFunnelService();
+    init_prompts();
+    init_valuation();
+    JANIA_DM_TOOLS = [
+      {
+        functionDeclarations: [
+          {
+            name: "consultar_identidad_y_antecedentes",
+            description: "Valida la identidad oficial (censo ADRES y Registradur\xEDa) y antecedentes de seguridad (Polic\xEDa Nacional v\xEDa 2Captcha, Procuradur\xEDa SIRI, Contralor\xEDa SIRECI) para C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaporte o NIT.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                numeroDocumento: { type: "STRING", description: "N\xFAmero de c\xE9dula, NIT o documento a verificar" },
+                tipoDocumento: { type: "STRING", description: "Tipo de documento: CC, CE, PASAPORTE, NIT" }
+              },
+              required: ["numeroDocumento"]
+            }
+          },
+          {
+            name: "consultar_paz_y_salvo_idu",
+            description: "Consulta y genera el Paz y Salvo oficial de Valorizaci\xF3n del IDU en Bogot\xE1 mediante el c\xF3digo CHIP (inicia en AAA) para tr\xE1mites de notar\xEDa y escrituraci\xF3n.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                chip: { type: "STRING", description: "C\xF3digo CHIP del inmueble que inicia por AAA" }
+              },
+              required: ["chip"]
+            }
+          },
+          {
+            name: "consultar_factura_predial_bogota",
+            description: "Consulta y descarga la factura oficial en PDF con c\xF3digo de barras y estado de pago del impuesto predial unificado de Bogot\xE1 ante la Secretar\xEDa de Hacienda.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                chip: { type: "STRING", description: "C\xF3digo CHIP del predio" },
+                documentoTitular: { type: "STRING", description: "N\xFAmero de c\xE9dula o NIT del titular si se conoce" }
+              },
+              required: ["chip"]
+            }
+          },
+          {
+            name: "liquidar_gastos_notariales_y_registro",
+            description: "Calcula el desglose exacto de derechos notariales (50/50), retenci\xF3n en la fuente (1% vendedor), impuesto de registro y beneficencia (1.67% comprador) para escrituraci\xF3n en Colombia.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                precioVenta: { type: "NUMBER", description: "Precio pactado de venta en pesos colombianos (COP)" },
+                tipoInmueble: { type: "STRING", description: "apartamento, casa, lote, etc." }
+              },
+              required: ["precioVenta"]
+            }
+          },
+          {
+            name: "sondeo_mercado_inmobiliario",
+            description: "Realiza un sondeo t\xE9cnico comparativo de m\xB2 y canon sugerido en barrios y zonas del norte de Bogot\xE1 (Usaqu\xE9n, Suba, Chapinero, Chic\xF3, Rosales, San Patricio, Santa B\xE1rbara, Cabrera) integrando portales (Metrocuadrado, Fincaraiz, Ciencuadras) y coeficientes ACM.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                zonaOBarrio: { type: "STRING", description: "Barrio o zona de Bogot\xE1 a evaluar" },
+                tipoInmueble: { type: "STRING", description: "apartamento, casa, oficina, lote" },
+                areaM2: { type: "NUMBER", description: "\xC1rea en metros cuadrados" },
+                estrato: { type: "NUMBER", description: "Estrato socioecon\xF3mico 1 al 6" },
+                antiguedadAnos: { type: "NUMBER", description: "A\xF1os de antig\xFCedad" },
+                garajes: { type: "NUMBER", description: "N\xFAmero de parqueaderos" }
+              },
+              required: ["zonaOBarrio"]
+            }
+          }
+        ]
+      }
+    ];
   }
 });
 
@@ -25492,6 +25962,7 @@ var janIA_exports = {};
 __export(janIA_exports, {
   COMMON_FIRST_NAMES: () => COMMON_FIRST_NAMES,
   GREETED_TODAY: () => GREETED_TODAY,
+  JANIA_DM_TOOLS: () => JANIA_DM_TOOLS,
   JANIA_PROMPT: () => JANIA_PROMPT,
   KNOWN_BARRIOS_SORTED_ITEMS: () => KNOWN_BARRIOS_SORTED_ITEMS,
   MSG_CIERRE_OPERACIONES: () => MSG_CIERRE_OPERACIONES,
@@ -25504,6 +25975,7 @@ __export(janIA_exports, {
   MSG_PROMO_INMUEBLES: () => MSG_PROMO_INMUEBLES,
   MSG_RESUMEN_RETORNO_PRESENTACION: () => MSG_RESUMEN_RETORNO_PRESENTACION,
   MSG_TIPS_CALIDAD_COBERTURA: () => MSG_TIPS_CALIDAD_COBERTURA,
+  PROTOCOLO_URBANIDAD_CARRENO_PROMPT: () => PROTOCOLO_URBANIDAD_CARRENO_PROMPT,
   REPUTATION_HOOK: () => REPUTATION_HOOK,
   analyzeSender: () => analyzeSender,
   appendConsultingHistory: () => appendConsultingHistory,
@@ -25526,6 +25998,7 @@ __export(janIA_exports, {
   enrichLexiconFromText: () => enrichLexiconFromText,
   esMensajeSpamOBasura: () => esMensajeSpamOBasura,
   evaluateMultiItemHeuristics: () => evaluateMultiItemHeuristics,
+  executeJaniaDmTool: () => executeJaniaDmTool,
   extractColombianPhoneFromText: () => extractColombianPhoneFromText,
   extractFallbackDataFromText: () => extractFallbackDataFromText,
   extractFirstName: () => extractFirstName,
@@ -25547,6 +26020,7 @@ __export(janIA_exports, {
   getRecentChatHistory: () => getRecentChatHistory,
   getStartOfTodayBogota: () => getStartOfTodayBogota,
   getTimeOfDayGreetingForUser: () => getTimeOfDayGreetingForUser,
+  getVecyInstitutionalKnowledge: () => getVecyInstitutionalKnowledge,
   handleAmendmentUpdate: () => handleAmendmentUpdate,
   handleDetectedMatches: () => handleDetectedMatches,
   hasGreetedUserToday: () => hasGreetedUserToday,
@@ -25585,6 +26059,7 @@ __export(janIA_exports, {
   setPendingSession: () => setPendingSession,
   splitMultiItemMessage: () => splitMultiItemMessage,
   splitMultiPropertyMessage: () => splitMultiPropertyMessage,
+  synthesizeToolResponseWithGemini: () => synthesizeToolResponseWithGemini,
   translatePropertyType: () => translatePropertyType,
   translateTransactionType: () => translateTransactionType
 });
@@ -26107,7 +26582,7 @@ async function getThemedImagePathAsync(tipo) {
   const possibleDirs = [
     path9.resolve(process.cwd(), "client/public/assets/jania"),
     path9.resolve(process.cwd(), "dist/assets/jania"),
-    path9.resolve(__dirname, "../../client/public/assets/jania")
+    path9.resolve(__dirname2, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || [];
   for (const pref of preferences) {
@@ -26138,7 +26613,7 @@ function getThemedImagePath(tipo) {
   const possibleDirs = [
     path9.resolve(process.cwd(), "client/public/assets/jania"),
     path9.resolve(process.cwd(), "dist/assets/jania"),
-    path9.resolve(__dirname, "../../client/public/assets/jania")
+    path9.resolve(__dirname2, "../../client/public/assets/jania")
   ];
   const preferences = THEME_IMAGE_PREFERENCES[tipo] || ALL_JANIA_IMAGES;
   const chosenFile = preferences[0] || "jania_marketing.jpg";
@@ -26850,7 +27325,7 @@ Cualquier duda, nuestro br\xF3ker y directores Eduardo y Jani est\xE1n a tu disp
     return { success: false, error: err?.message };
   }
 }
-var __filename, __dirname, ALL_JANIA_IMAGES, THEME_IMAGE_PREFERENCES, ROTATING_FALLBACK_CATALOG, DAILY_TIPS_CONFIG, CALENDARIO_30_DIAS_VECY, WEEKLY_POLLS_LIST, DAILY_POLLS_MAP, publishDailyPoll, VECY_DM_LINK, VECY_MOTTO_FOOTER, DIA_31_ESPECIAL_VECY, THEME_IMAGE_SEARCH_MAP;
+var __filename, __dirname2, ALL_JANIA_IMAGES, THEME_IMAGE_PREFERENCES, ROTATING_FALLBACK_CATALOG, DAILY_TIPS_CONFIG, CALENDARIO_30_DIAS_VECY, WEEKLY_POLLS_LIST, DAILY_POLLS_MAP, publishDailyPoll, VECY_DM_LINK, VECY_MOTTO_FOOTER, DIA_31_ESPECIAL_VECY, THEME_IMAGE_SEARCH_MAP;
 var init_cronService = __esm({
   "server/_core/cronService.ts"() {
     "use strict";
@@ -26861,7 +27336,7 @@ var init_cronService = __esm({
     init_llm();
     init_const();
     __filename = fileURLToPath(import.meta.url);
-    __dirname = path9.dirname(__filename);
+    __dirname2 = path9.dirname(__filename);
     ALL_JANIA_IMAGES = [
       "jania_marketing.jpg",
       "jania_juridico.jpg",

@@ -182,7 +182,30 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.03 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.04 — Octubre 2026
+
+### Novedades v33.04 (Restauración Cognitiva Pura, Base Doctrinal de VECY BIENES RAÍCES y Sombreros Expertos de JanIA):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. *"Actúa como Lead AI Architect y Principal Engineer de VECY BIENES RAÍCES.*
+  2. *OBJETIVO CRÍTICO (v33.04): RESTAURACIÓN COGNITIVA PURA, BASE DOCTRINAL DE VECY BIENES RAÍCES Y SOMBREROS EXPERTOS DE JanIA.*
+  3. Ahorro extremo de cuota: directo a los archivos especificados, cero lecturas globales.
+  4. Preservación estricta de `matching.ts` sin modificaciones.
+  5. Respuestas dinámicas con Function Calling / Tools en JSON asumidas por Gemini.
+  6. Preservación obligatoria de Google Opiniones (`https://g.page/r/CUxVzG_vecy/review`) en reportes de cortesía para externos en `dmHandler.ts`.
+  7. Creación del Dossier Doctrinal Local: `server/_core/jania/prompts/conocimiento_vecy.md` con los 4 capítulos institucionales de VECY BIENES RAÍCES.
+  8. Carga de conocimiento y Protocolo de Urbanidad de Carreño en `prompts.ts`: inyección del dossier y fricción pedagógica ante datos en frío.
+  9. Integración de 6 sombreros expertos (Abogada Contractual Senior, Liquidadora Notarial y Tributaria, Mentora Comercial, Perita Avaluadora, Embajadora Proptech, Conectora Comercial 40/20/40) y herramientas de consulta (identidad, IDU, predial, liquidación notarial y sondeo de mercado comparativo con Metrocuadrado, FincaRaíz y CienCuadras).
+  10. Verificación integral de tipado, tests 100% en verde ($0 COP), build y auto-despliegue a Contabo.
+- **Acciones Técnicas Ejecutadas**:
+  - `server/_core/jania/prompts/conocimiento_vecy.md`: Dossier Institucional y Portafolio de Soluciones oficial cargado en memoria a $0 COP.
+  - `server/_core/jania/prompts.ts`: `getVecyInstitutionalKnowledge()`, `PROTOCOLO_URBANIDAD_CARRENO_PROMPT`, y su inyección en `buildSystemPrompt`.
+  - `server/_core/valuation.ts`: `executeMarketValuationSurvey` con homologación ACM, portales comparables (Metrocuadrado, FincaRaíz, CienCuadras) y Política de Cero Alucinación.
+  - `server/_core/jania/handlers/dmHandler.ts`: Catálogo `JANIA_DM_TOOLS`, `executeJaniaDmTool`, `synthesizeToolResponseWithGemini`, e inyección de los 6 roles expertos de JanIA.
+  - `server/__tests__/regression.test.ts`: SUITE 65 agregada con 6 pruebas automatizadas aprobadas.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 217/217 tests passing ✅ | `npm run build` limpio en 16.04s ✅
+- `shared/const.ts` (`v33.04`) y `package.json` (`33.4.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.03 — Octubre 2026
 
 ### Novedades v33.03 (Calibración Quirúrgica en un Solo Pase: Ortografía Estricta, Trato VIP Directivo, Google Opiniones, Scrapers Resilientes y Match 40/20/40):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
