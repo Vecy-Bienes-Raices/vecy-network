@@ -174,12 +174,14 @@ export async function processPrivateDmConversationalMessage(
     const howToMsg =
       `¡No te preocupes ni un segundo${vocativeGreeting}! Para eso estoy yo aquí. Conmigo todo es facilísimo y yo me encargo de todo el trabajo por ti 🥰✨:\n\n` +
       `1️⃣ *Para verificar una cédula o antecedentes:*\n` +
-      `Solo escríbeme aquí el número del documento (ejemplo: *"verificar 12345678"*), o si te queda más fácil, ¡tómale una fotito a la cédula por ambos lados y me la mandas aquí mismo al chat! En 20 segundos te entrego el reporte oficial de la Policía Nacional con nombres completos y antecedentes.\n\n` +
+      `Solo escríbeme aquí el nombre completo y número de documento (ejemplo: *"verificar 12345678"* o *"CC 12345678"*), tal como se lo solicitas formalmente para el registro de portería previo a la visita. En segundos te entrego el reporte oficial de las centrales de seguridad con nombres completos, antecedentes y afiliación en salud.\n\n` +
       `2️⃣ *Para sacar el Impuesto Predial de Bogotá:*\n` +
       `Solo escríbeme el código CHIP del inmueble (comienza por AAA...) o la dirección con el número de apartamento. Yo descargo la factura oficial en PDF con su código de barras lista para pagar o el certificado de que está al día.\n\n` +
-      `3️⃣ *Si te cuesta la tecnología o te enredas con el celular:*\n` +
+      `3️⃣ *Para el Paz y Salvo de Valorización IDU:*\n` +
+      `Solo facilítame el código CHIP o indícame que necesitas el Paz y Salvo del IDU y te genero el certificado oficial en PDF para tu trámite en notaría.\n\n` +
+      `4️⃣ *Si te cuesta la tecnología o te enredas con el celular:*\n` +
       `¡Cero angustia! Escríbeme con tus propias palabras o mándame un mensaje de voz contándome qué necesitas. Yo tengo toda la paciencia del mundo para guiarte y ayudarte paso a paso.\n\n` +
-      `¿Cuál de las dos consultas te gustaría que hagamos ahorita? Dime y la hacemos de una vez 🤝😊`;
+      `¿Cuál de las consultas te gustaría que hagamos ahorita? Dime y la hacemos de una vez 🤝😊`;
 
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", howToMsg);
@@ -200,6 +202,24 @@ export async function processPrivateDmConversationalMessage(
     return goodbyeMsg;
   }
 
+  // 🏛️ INTERCEPTOR DIRECTO DM: PAZ Y SALVO DE VALORIZACIÓN IDU BOGOTÁ (v32.99)
+  const { isIduInquiry, formatIduAssistanceGuide, extractChipForIduValorizacion, executeIduValorizacionFromWhatsApp } = await import('../../iduValorizacionService');
+  const iduDetection = extractChipForIduValorizacion(clean);
+  if (iduDetection.found && iduDetection.chip) {
+    const iduRes = await executeIduValorizacionFromWhatsApp(clean, userId, true);
+    if (iduRes.isIduRequest && iduRes.reportText) {
+      const deliveredText = await formatPoliteToolDelivery(userId, userName || "", 'idu', iduRes.reportText, true);
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", deliveredText);
+      return deliveredText;
+    }
+  } else if (isIduInquiry(clean)) {
+    const iduGuide = formatIduAssistanceGuide(displayName);
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", iduGuide);
+    return iduGuide;
+  }
+
   // Fast-path: Si el usuario pide verificar documento o antecedentes sin dar aún el número
   // Soporta errores tipográficos habituales en celular (ej: "quieto rrvisar sus antecedentes")
   const isDocVerificationIntent =
@@ -209,16 +229,71 @@ export async function processPrivateDmConversationalMessage(
   if (isDocVerificationIntent) {
     const docPromptMsg =
       `¡Claro que sí${vocativeGreeting}! Para consultar los antecedentes y verificar la identidad en la Policía Nacional, es indispensable contar con el número de cédula exacto (o documento de identidad: Cédula de Extranjería, Pasaporte o Documento del País de Origen).\n\n` +
-      `📌 *Nota legal de seguridad y Hábeas Data (Ley 1581 de 2012):* Conforme al artículo 94 del Decreto Ley 019 de 2012 y la Ley 1581 de 2012, en Colombia las plataformas oficiales de seguridad y la Registraduría Nacional no permiten buscar números de documento usando únicamente nombres o apellidos para proteger la privacidad ciudadana. Solo se puede verificar a partir del número de documento que el propio titular suministra.\n\n` +
-      `Pídele con toda tranquilidad a tu cliente o colega su número de documento (o una fotito de la cédula por ambas caras) para agendar la visita con total seguridad. Escríbemelo aquí (ej: *"verificar cc: XXXXXXXX"* o *"verificar pasaporte: XXXXXXXX"*) y en 20 segundos te entrego el reporte oficial de validación 🤝.`;
+      `📌 *Nota legal de seguridad y Hábeas Data (Ley 1581 de 2012):* Conforme al artículo 94 del Decreto Ley 019 de 2012 y la Ley 1581 de 2012, en Colombia las plataformas oficiales de seguridad y la Registraduría Nacional no permiten buscar números de documento usando únicamente nombres o apellidos para proteger la privacidad ciudadana. Solo se puede verificar a partir del número de documento que el propio titular suministra voluntariamente.\n\n` +
+      `Pídele con toda tranquilidad y profesionalismo a tu cliente o colega su nombre completo y número de documento, explicándole con total transparencia que es el requisito formal estándar para el registro de portería y control de acceso de la visita al inmueble. Escríbemelo aquí (ej: *"verificar cc: XXXXXXXX"* o *"verificar pasaporte: XXXXXXXX"*) y en segundos te entrego el reporte oficial de validación 🤝.`;
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", docPromptMsg);
     return docPromptMsg;
   }
 
+  // 🛡️ PROTOCOLO DE URBANIDAD DE CARREÑO Y CONFIRMACIÓN DIDÁCTICA (v32.99)
+  const {
+    isBareDocumentNumber,
+    getPendingUnconfirmedDoc,
+    setPendingUnconfirmedDoc,
+    clearPendingUnconfirmedDoc,
+    detectDocTypeConfirmation,
+    extractCedulaForVerification,
+    executeIdentityVerificationFromWhatsApp,
+    getPendingCedulaSession,
+    extractAllCedulasForVerification
+  } = await import('../../identityVerificationService');
+
+  // CASO 1: El usuario tenía un número pendiente y en este turno confirma el tipo de documento
+  const pendingDoc = getPendingUnconfirmedDoc(userId);
+  if (pendingDoc) {
+    const confirmation = detectDocTypeConfirmation(clean);
+    if (confirmation.isConfirmation && confirmation.tipoDoc) {
+      clearPendingUnconfirmedDoc(userId);
+      const verified = await executeIdentityVerificationFromWhatsApp(
+        `${confirmation.tipoDoc} ${pendingDoc.cleanNumber}`,
+        true,
+        userId
+      );
+      if (verified.isVerificationRequest && verified.reportText) {
+        // En el segundo turno se entrega directamente SIN repetir saludos horarios
+        const followUpResponse =
+          `¡Confirmado${displayName ? `, ${displayName}` : ""}! Procedí con la verificación oficial del documento:\n\n` +
+          verified.reportText;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", followUpResponse);
+        return followUpResponse;
+      }
+    }
+  }
+
+  // CASO 2: El usuario envía únicamente un número suelto sin tipo de documento ni prefijo de consulta
+  if (isBareDocumentNumber(clean)) {
+    // Guardar número en memoria de sesión
+    setPendingUnconfirmedDoc(userId, clean);
+
+    // Saludar cordialmente con saludo horario y nombre resuelto, y responder pedagógicamente
+    const pedagogoMsg =
+      `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! 👋 Qué gusto saludarte.\n\n` +
+      `Recibí el número *${clean}*. Para garantizarte una consulta exacta y oficial en la base de datos correspondiente del Estado, por favor confírmame a qué tipo de documento pertenece:\n\n` +
+      `1️⃣ *Cédula de Ciudadanía (C.C.)* 🇨🇴\n` +
+      `2️⃣ *Cédula de Extranjería (C.E.)* 🌐\n` +
+      `3️⃣ *Pasaporte* 🛂\n` +
+      `4️⃣ *NIT (Persona Jurídica)* 🏢\n\n` +
+      `Solo respóndeme indicándome el tipo de documento (ejemplo: *"es CC"*, *"Cédula"*, *"Extranjería"* o simplemente el número de opción *1, 2, 3 o 4*) y de inmediato te entrego tu reporte oficial y seguro con plena validez. 🤝✨`;
+
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", pedagogoMsg);
+    return pedagogoMsg;
+  }
+
   // 🛡️ INTERCEPTOR DIRECTO DM: VERIFICACIÓN OFICIAL DE CÉDULA (POLICÍA NACIONAL + PROCURADURÍA + ADRES)
-  // Si el mensaje contiene una o más cédulas para validar, ejecutar la verificación real oficial y jamás permitir alucinaciones del LLM
-  const { extractCedulaForVerification, executeIdentityVerificationFromWhatsApp, getPendingCedulaSession, extractAllCedulasForVerification } = await import('../../identityVerificationService');
+  // Si el mensaje contiene una o más cédulas con especificación o prefijo, ejecutar la verificación real oficial
   const idDetection = extractCedulaForVerification(clean, true);
   if (idDetection.found) {
     const idCheck = await executeIdentityVerificationFromWhatsApp(clean, true, userId);
@@ -364,7 +439,7 @@ export async function processPrivateDmConversationalMessage(
           `  • EMBARGOS / MEDIDAS CAUTELARES (Art. 1521 C.C.): Objeto ilícito. No se puede vender ni prometer venta sin que el juzgado competente haya emitido el oficio de desembargo radicado en la ORIP.\n` +
           `  • DOCTRINA EN SERVICIOS ESPECIALIZADOS (5 al 11): En temas especializados (sondeos de mercado, jurídica, cobranza de comisiones, avalúos, tributaria, hipotecas), JanIA puede ofrecer de forma completamente gratuita algunos conceptos breves, definiciones y consejos superficiales que despejen la duda general en la mente del usuario, pero SIN entregar la solución técnica o jurídica de fondo, guiándolo a contactar a los Directores de Vecy Bienes Raíces al +57 316 656 9719 para contratar el servicio profesional.\n` +
           `- PEDAGOGÍA DE CORTESÍA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), salúdalo educadamente por su nombre y con calidez humana. Enseña con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.\n` +
-          `- PEDAGOGÍA DE PACIENCIA TOTAL Y EMPATÍA TECNOLÓGICA (DOCTRINA DE AMOR Y SERVICIO AL USUARIO): En el sector inmobiliario hay personas mayores, tradicionales o con dificultades para interactuar con la tecnología (analfabetismo digital o confusión frente a la IA y el celular). Si un usuario no comprende cómo funciona el servicio, pregunta con timidez, pide explicación de cómo se hace o manifiesta enredo, JanIA JAMÁS debe mostrar impaciencia, frialdad ni tecnicismos. Trátalos con ternura, empatía, infinita paciencia y lenguaje cercano y sencillo de la vida cotidiana. Explícales con amor paso a paso: "No te preocupes, yo te ayudo", "Solo envíame una foto de la cédula por ambos lados o escríbeme el número aquí y yo hago todo el trámite por ti en segundos". JanIA está siempre dispuesta a explicar, guiar y servir de corazón a todo el que lo necesite.\n` +
+          `- PEDAGOGÍA DE PACIENCIA TOTAL Y EMPATÍA TECNOLÓGICA (DOCTRINA DE AMOR Y SERVICIO AL USUARIO): En el sector inmobiliario hay personas mayores, tradicionales o con dificultades para interactuar con la tecnología (analfabetismo digital o confusión frente a la IA y el celular). Si un usuario no comprende cómo funciona el servicio, pregunta con timidez, pide explicación de cómo se hace o manifiesta enredo, JanIA JAMÁS debe mostrar impaciencia, frialdad ni tecnicismos. Trátalos con ternura, empatía, infinita paciencia y lenguaje cercano y sencillo de la vida cotidiana. Explícales con amor paso a paso: "No te preocupes, yo te ayudo", "Solo facilítame el nombre completo y número de documento que solicitas para el registro formal de portería y yo hago todo el trámite por ti en segundos". JanIA está siempre dispuesta a explicar, guiar y servir de corazón a todo el que lo necesite.\n` +
           `- MANEJO ELEGANTE DE DUDAS O AMBIGÜEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas genéricas; dile con simpatía humana: "Qué pena contigo, ${displayName || "colega"}. Debido a un pequeño fallo en la matrix 🤖😅 no alcancé a captar bien lo que me pides hacer. ¿Podrías por favor confirmarme o repetirme qué necesitas para ayudarte de inmediato?".\n` +
           `- NUNCA repitas como un contestador automático "¿Cuál de las dos herramientas te gustaría probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesoría, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.\n` +
           `- Conversa como una profesional inmobiliaria colombiana experta, culta, amena y empática. CERO tecnicismos computacionales ni lenguaje de bot.\n` +

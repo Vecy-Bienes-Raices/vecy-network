@@ -7,6 +7,53 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.99 — 12 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+- **Protocolo de Urbanidad de Carreño, Confirmación Didáctica de Documentos, Reporte en 4 Sectores con Fail-Fast y Guía Oficial de Paz y Salvo IDU**:
+  1. *"Actúa como arquitecto de software senior en TypeScript. Necesitamos actualizar y enriquecer la lógica de servicios y DMs privados en `server/_core/jania/handlers/dmHandler.ts` y sus servicios asociados (`identityVerificationService.ts`):*
+  2. *PROTOCOLO DE URBANIDAD DE CARREÑO Y CONFIRMACIÓN DIDÁCTICA:*
+     - *Desactivar el disparo directo e inmediato ante números sueltos si el usuario no ha especificado el tipo de documento o no ha saludado en la sesión del día.*
+     - *Si el usuario envía únicamente un número: saludar cordialmente usando el saludo horario (Buenos días/tardes/noches) y su nombre canónico resuelto, responder de forma pedagógica indicando que se recibió un número y pidiendo confirmación de si es CC, CE, Pasaporte o NIT, y guardar el número pendiente en memoria de sesión sin botones rígidos.*
+     - *Al confirmar el tipo (Turno 2): ejecutar la verificación y entregar el reporte directamente sin repetir saludos horarios.*
+  3. *CORRECCIÓN DE COPIES EN ASISTENCIA:*
+     - *Erradicar por completo cualquier solicitud de 'fotitos de la cédula por ambas caras'. Solicitar nombre completo y número de documento para registro estándar de portería y control de acceso.*
+  4. *PIPELINE FAIL-FAST Y REPORTE EN 4 SECTORES:*
+     - *Flujo ordenado: 1° ADRES (BDUA), 2° Procuraduría General (SIRI), 3° Contraloría General (SIRECI), 4° Policía Nacional (PONAL).*
+     - *Fail-Fast: Para CC, si no existe en censo civil (ADRES/PGN), abortar antes de consumir saldo de 2Captcha en Policía Nacional.*
+     - *Reporte claramente discriminado en 4 sectores: (1) Datos de Identidad, (2) Seguridad Social, (3) Entidades de Control (Disciplinario y Fiscal), (4) Policía Nacional, con cláusula obligatoria de Hábeas Data (Ley 1581 de 2012).*
+  5. *PAZ Y SALVO IDU (VALORIZACIÓN BOGOTÁ):*
+     - *Detectar intenciones sobre IDU y entregar guía con CHIP, Matrícula Inmobiliaria, enlace en línea oficial de WebIDU y enlace de contingencia del chat de Valorización con su horario oficial (Lunes a Viernes 7:00 a.m. a 4:30 p.m.)."*
+
+### Diagnóstico Técnico Profundo
+- **Disparo Intempestivo de Verificación**: Usuarios que enviaban un número suelto sin contexto recibían de golpe un reporte de cédula sin haber cruzado un saludo cordial, violando la urbanidad de Carreño y asumiendo erróneamente que todo número es Cédula de Ciudadanía.
+- **Consumo Innecesario de Saldo 2Captcha**: La verificación consultaba a la Policía Nacional incluso para números ficticios o inexistentes en las bases del Estado colombiano. Al implementar un Fail-Fast que valida primero contra ADRES (BDUA) y Procuraduría (SIRI), se ahorra el 100% de captchas en números no indexados.
+- **Inconsistencia de Copias Antiguos**: Existían menciones residuales a "fotitos de la cédula" que no se alineaban con las mejores prácticas de privacidad y seguridad física inmobiliaria.
+- **Ausencia de Contraloría y Formato Desordenado**: El reporte de verificación carecía de la auditoría de responsabilidad fiscal ante la Contraloría General (SIRECI) y requería una estructuración visual impecable en 4 sectores cerrando con Hábeas Data.
+- **Canal de Contingencia IDU**: La orientación para Paz y Salvo de Valorización carecía de la referencia al chat de atención virtual con su horario distrital.
+
+### Acciones Técnicas Ejecutadas
+1. **Control de Sesiones de Números Sueltos y Confirmación Didáctica**:
+   - En `server/_core/identityVerificationService.ts`: Implementación de `PendingUnconfirmedDocSession`, `isBareDocumentNumber()`, `setPendingUnconfirmedDoc()`, `getPendingUnconfirmedDoc()`, `clearPendingUnconfirmedDoc()`, y `detectDocTypeConfirmation()`.
+   - En `server/_core/jania/handlers/dmHandler.ts`: Intercepción en Turno 1 ante números puros con saludo horario personalizado y solicitud pedagógica conversacional del tipo de documento. En Turno 2, ante confirmación afirmativa, se ejecuta la verificación entregando el reporte de 4 sectores de inmediato sin repetir saludos.
+2. **Erradicación de "Fotitos de la Cédula"**:
+   - Actualización de `docPromptMsg`, `howToMsg` y el system prompt de JanIA en `dmHandler.ts`, solicitando exclusivamente nombre completo y número de documento para registro preventivo de portería y control de acceso.
+3. **Pipeline Fail-Fast y Reporte Multisectorial de 4 Sectores con Hábeas Data**:
+   - Integración de `queryContraloria()` con verificación de boletín de responsables fiscales en SIRECI.
+   - Fail-Fast en `verifySingleDocumentInternal()` y `executeIdentityVerificationFromWhatsApp()`: Se valida 1° ADRES y 2° Procuraduría. Si el documento CC no existe en censo, se descarta la consulta a PONAL (ahorro total de saldo 2Captcha). Para documentos de origen extranjero (CE, Pasaporte), se preserva la consulta directa.
+   - Formateo estricto del reporte en 4 sectores: (1) Datos de Identidad, (2) Seguridad Social (ADRES/BDUA), (3) Entidades de Control (Procuraduría SIRI y Contraloría SIRECI), y (4) Policía Nacional de Colombia, cerrando con `HABEAS_DATA_CLAUSE` (Ley 1581 de 2012 y Decreto 1377 de 2013).
+4. **Servicio Oficial y Guía Pedagógica de Paz y Salvo IDU**:
+   - En `server/_core/iduValorizacionService.ts`: Creación de `isIduInquiry()`, `formatIduAssistanceGuide()` con explicación de CHIP / Matrícula Inmobiliaria, enlace WebIDU oficial (`https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml`), y canal de chat de contingencia (`https://webidu.idu.gov.co/chat_valorizacion/chat`) con horario distrital de Lunes a Viernes de 7:00 a.m. a 4:30 p.m.
+   - Enlace e integración transparente en `dmHandler.ts`.
+5. **Alineación de Regresiones**:
+   - Suite 60 creada en `regression.test.ts`. Todos los 186 tests pasando sin advertencias ni regresiones.
+
+### Verificación y Validación Empírica
+- `npm run check`: 0 errores TypeScript ✅.
+- `npm test`: 5 suites pasando, 186/186 tests vitest aprobados al 100% ✅.
+- `npm run build`: Compilación limpia de cliente (Vite en 23.91s) y servidor (esbuild en 133ms) ✅.
+- Versión oficial incrementada a **v32.99** (`32.99.0`).
+
 ## 📋 SESIÓN v32.98 — 12 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

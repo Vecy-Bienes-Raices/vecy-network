@@ -74,6 +74,41 @@ export function clearPendingIduSession(senderId: string): void {
 }
 
 /**
+ * Detecta si un texto contiene una intención de consulta sobre Paz y Salvo IDU,
+ * Valorización IDU, Estado de cuenta IDU o enlaces del portal webidu.
+ */
+export function isIduInquiry(text: string): boolean {
+  if (!text || typeof text !== 'string') return false;
+  const lower = text.trim().toLowerCase();
+  return (
+    /(?:paz\s*y\s*salvo\s*(?:del?\s*)?idu|valorizaci[oó]n\s*(?:del?\s*)?idu|estado\s*de\s*cuenta\s*(?:del?\s*)?idu|certificado\s*(?:del?\s*)?idu|webidu|chat_valorizacion|tramite\s*idu|paz\s*y\s*salvo\s*de\s*valorizaci[oó]n)\b/i.test(lower) ||
+    (/\b(?:idu|valorizaci[oó]n)\b/i.test(lower) && /(?:paz\s*y\s*salvo|certificado|estado\s*de\s*cuenta|notar[ií]a|escritura|inmueble|predio|chip|matr[ií]cula)/i.test(lower))
+  );
+}
+
+/**
+ * Guía oficial didáctica de asistencia para Paz y Salvo de Valorización IDU en Bogotá,
+ * con enlaces directos al trámite en línea y canal de contingencia con horario oficial distrital.
+ */
+export function formatIduAssistanceGuide(displayName?: string): string {
+  const greeting = displayName ? `¡Con gusto, ${displayName}! ` : '¡Con el mayor gusto! ';
+  return (
+    `🏛️ *PAZ Y SALVO DE VALORIZACIÓN IDU — VECY BIENES RAÍCES* 🇨🇴\n\n` +
+    `${greeting}Para la venta, promesa o escrituración en notaría en Bogotá, el *Certificado de Estado de Cuenta y Paz y Salvo de Valorización* del IDU (Artículo 44 del Acuerdo Distrital 915 de 2023) certifica que el inmueble no registra deudas por obras distritales.\n\n` +
+    `📋 *¿Cómo se realiza el trámite?*\n` +
+    `Se consulta fácilmente con el *código CHIP* del predio (inicia por AAA, visible en la parte superior de tu factura predial) o con el número de *Matrícula Inmobiliaria* de la Oficina de Registro (ORIP).\n\n` +
+    `🌐 *Trámite oficial en línea ($0 COP):*\n` +
+    `Puedes expedir tu certificado oficial en PDF en el portal web institucional del IDU:\n` +
+    `👉 https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml\n\n` +
+    `💬 *Canal de Contingencia (Chat de Valorización):*\n` +
+    `Si el portal web presenta intermitencias o necesitas validar acuerdos de pago previos, el IDU dispone del Chat de Valorización directo:\n` +
+    `👉 https://webidu.idu.gov.co/chat_valorizacion/chat\n` +
+    `⏰ *Horario de atención distrital:* Lunes a Viernes de 7:00 a.m. a 4:30 p.m. _(no disponible fines de semana ni festivos)_.\n\n` +
+    `💡 *O si prefieres:* Envíame aquí mismo el código CHIP de tu predio (ej: *AAA0058EEXS*) y yo me conecto automáticamente para generarte y descargarte el PDF oficial listo para tu notaría. 🤝📄`
+  );
+}
+
+/**
  * Detecta si un texto contiene una solicitud de paz y salvo del IDU / Valorización
  * y extrae el código CHIP si viene especificado.
  */
@@ -95,7 +130,7 @@ export function extractChipForIduValorizacion(text: string): IduDetectionResult 
   // Buscar código CHIP de Bogotá: "AAA" + 4 dígitos + 4 caracteres alfanuméricos
   const chipMatch = clean.match(/\b(AAA[0-9]{4}[A-Z0-9]{4})\b/i);
 
-  if (hasIduKeyword) {
+  if (hasIduKeyword || isIduInquiry(clean)) {
     return {
       found: true,
       isIduRequest: true,
@@ -395,3 +430,5 @@ export async function executeIduAssistanceFromWhatsApp(
     direccion: downloadResult?.direccion
   };
 }
+
+export const executeIduValorizacionFromWhatsApp = executeIduAssistanceFromWhatsApp;

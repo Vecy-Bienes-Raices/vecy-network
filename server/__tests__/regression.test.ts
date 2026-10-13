@@ -4098,6 +4098,132 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(dmResponse).toContain("https://g.page/r/CctNbwU6UpX5EBM/review");
     });
   });
+
+  describe("60. Doctrina v32.99: Urbanidad de Carreño, Confirmación Didáctica, Reporte Multisectorial y Asistencia IDU", () => {
+    it("Debe pausar el disparo inmediato ante números sueltos y exigir confirmación pedagógica de tipo de documento", async () => {
+      const {
+        isBareDocumentNumber,
+        detectDocTypeConfirmation
+      } = await import("../_core/identityVerificationService");
+      const { processPrivateDmConversationalMessage } = await import("../_core/janIA");
+
+      // 1. Clasificación estricta de números sueltos
+      expect(isBareDocumentNumber("79249255")).toBe(true);
+      expect(isBareDocumentNumber("1.023.456.789")).toBe(true);
+      expect(isBareDocumentNumber("43403545")).toBe(true);
+      expect(isBareDocumentNumber("Verificar CC 79249255")).toBe(false);
+      expect(isBareDocumentNumber("Consultar cédula 43403545")).toBe(false);
+      expect(isBareDocumentNumber("precio 500000000")).toBe(false);
+
+      // 2. Detección de confirmaciones conversacionales (sin botones de WhatsApp)
+      expect(detectDocTypeConfirmation("1").tipoDoc).toBe("cc");
+      expect(detectDocTypeConfirmation("es cc").tipoDoc).toBe("cc");
+      expect(detectDocTypeConfirmation("cédula de ciudadanía").tipoDoc).toBe("cc");
+      expect(detectDocTypeConfirmation("2").tipoDoc).toBe("ce");
+      expect(detectDocTypeConfirmation("extranjería").tipoDoc).toBe("ce");
+      expect(detectDocTypeConfirmation("3").tipoDoc).toBe("pa");
+      expect(detectDocTypeConfirmation("pasaporte").tipoDoc).toBe("pa");
+      expect(detectDocTypeConfirmation("4").tipoDoc).toBe("nit");
+
+      // 3. Flujo conversacional en 2 turnos con DM privado
+      const testUser = "573159998877@s.whatsapp.net";
+      const turno1 = await processPrivateDmConversationalMessage("79249255", testUser, "Germán Duque");
+
+      // Turno 1: Saludo cordial y pedagogía de opciones
+      expect(turno1).toContain("Germán");
+      expect(turno1).toContain("Recibí el número *79249255*");
+      expect(turno1).toContain("1️⃣ *Cédula de Ciudadanía (C.C.)*");
+      expect(turno1).toContain("2️⃣ *Cédula de Extranjería (C.E.)*");
+      expect(turno1).toContain("3️⃣ *Pasaporte*");
+      expect(turno1).toContain("4️⃣ *NIT (Persona Jurídica)*");
+
+      // Turno 2: El usuario confirma "Es CC"
+      const turno2 = await processPrivateDmConversationalMessage("Es CC", testUser, "Germán Duque");
+      expect(turno2).toContain("¡Confirmado, Germán!");
+      expect(turno2).toContain("VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES");
+      expect(turno2).toContain("Hábeas Data — Ley 1581 de 2012");
+      // Cero re-saludos horarios en el turno 2
+      expect(turno2).not.toMatch(/^¡?(?:buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches)/i);
+    });
+
+    it("Debe erradicar la solicitud de 'fotitos de la cédula' en los copies de dmHandler", async () => {
+      const { processPrivateDmConversationalMessage } = await import("../_core/janIA");
+
+      // 1. Consulta de cómo se hace
+      const howTo = await processPrivateDmConversationalMessage("¿Cómo se hace la verificación?", "573112223344@s.whatsapp.net", "Beatriz Pinzón");
+      expect(howTo).not.toContain("fotito");
+      expect(howTo).not.toContain("fotitos");
+      expect(howTo).toContain("registro de portería previo a la visita");
+
+      // 2. Intención de antecedentes sin número
+      const docIntent = await processPrivateDmConversationalMessage("Quiero revisar los antecedentes de un cliente", "573112223344@s.whatsapp.net", "Beatriz Pinzón");
+      expect(docIntent).not.toContain("fotito");
+      expect(docIntent).not.toContain("fotitos");
+      expect(docIntent).toContain("registro de portería y control de acceso");
+    });
+
+    it("Debe estructurar el reporte de identidad en 4 sectores discriminados y certificar Contraloría", async () => {
+      const {
+        executeIdentityVerificationFromWhatsApp,
+        queryContraloria,
+        HABEAS_DATA_CLAUSE
+      } = await import("../_core/identityVerificationService");
+
+      // 1. Contraloría General (SIRECI)
+      const cgr = await queryContraloria("cc", "79249255");
+      expect(cgr.success).toBe(true);
+      expect(cgr.statusText).toContain("Boletín de Responsables Fiscales (SIRECI)");
+
+      // 2. Cláusula de Hábeas Data
+      expect(HABEAS_DATA_CLAUSE).toContain("Ley 1581 de 2012");
+      expect(HABEAS_DATA_CLAUSE).toContain("Artículo 15 de la Constitución Política de Colombia");
+
+      // 3. Reporte multisectorial de 4 sectores
+      const rep = await executeIdentityVerificationFromWhatsApp("Verificar CC 79249255", true);
+      expect(rep.isVerificationRequest).toBe(true);
+      expect(rep.reportText).toContain("1️⃣ *DATOS DE IDENTIDAD*");
+      expect(rep.reportText).toContain("2️⃣ *SEGURIDAD SOCIAL (EPS / RÉGIMEN)*");
+      expect(rep.reportText).toContain("3️⃣ *ENTIDADES DE CONTROL (DISCIPLINARIO Y FISCAL)*");
+      expect(rep.reportText).toContain("4️⃣ *POLICÍA NACIONAL DE COLOMBIA*");
+      expect(rep.reportText).toContain("Ley 1581 de 2012");
+    });
+
+    it("Debe suministrar la guía oficial de Paz y Salvo IDU con enlace en línea y chat de contingencia con horario", async () => {
+      const {
+        isIduInquiry,
+        formatIduAssistanceGuide
+      } = await import("../_core/iduValorizacionService");
+      const { processPrivateDmConversationalMessage } = await import("../_core/janIA");
+
+      // 1. Detección de intenciones sobre Paz y Salvo IDU / Valorización
+      expect(isIduInquiry("Necesito el paz y salvo del IDU para la notaría")).toBe(true);
+      expect(isIduInquiry("Cómo tramito el certificado de valorización IDU")).toBe(true);
+      expect(isIduInquiry("Enlace de webidu")).toBe(true);
+      expect(isIduInquiry("Hola buenas tardes")).toBe(false);
+
+      // 2. Contenido pedagógico de formatIduAssistanceGuide
+      const guide = formatIduAssistanceGuide("Mauricio Gómez");
+      expect(guide).toContain("Mauricio Gómez");
+      expect(guide).toContain("código CHIP");
+      expect(guide).toContain("Matrícula Inmobiliaria");
+      expect(guide).toContain("https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml");
+      // Chat de Valorización como canal de contingencia con horario
+      expect(guide).toContain("https://webidu.idu.gov.co/chat_valorizacion/chat");
+      expect(guide).toContain("Lunes a Viernes de 7:00 a.m. a 4:30 p.m.");
+      expect(guide).toContain("no disponible fines de semana ni festivos");
+
+      // 3. Integración en DM privado
+      const dmIdu = await processPrivateDmConversationalMessage(
+        "Por favor me orientas con el Paz y Salvo de Valorización IDU",
+        "573187776655@s.whatsapp.net",
+        "Mauricio Gómez"
+      );
+      expect(dmIdu).toContain("PAZ Y SALVO DE VALORIZACIÓN IDU");
+      expect(dmIdu).toContain("https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml");
+      expect(dmIdu).toContain("https://webidu.idu.gov.co/chat_valorizacion/chat");
+      expect(dmIdu).toContain("7:00 a.m. a 4:30 p.m.");
+    });
+  });
 });
 
 

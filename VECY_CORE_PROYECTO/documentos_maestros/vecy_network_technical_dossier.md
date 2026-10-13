@@ -331,6 +331,54 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.99 — Octubre 2026
+
+#### 📌 PROTOCOLO DE URBANIDAD DE CARREÑO, CONFIRMACIÓN DIDÁCTICA, PIPELINE FAIL-FAST Y GUÍA OFICIAL PAZ Y SALVO IDU
+
+**Requerimiento y Objetivos:**
+1. **Protocolo de Urbanidad y Confirmación Pedagógica**:
+   - Evitar disparar de inmediato reportes de verificación de identidad cuando un usuario envía un número suelto sin contexto.
+   - En Turno 1: Saludar cordialmente según la franja horaria (`Buenos días/tardes/noches`), usar el nombre resuelto del usuario, explicar pedagógicamente que se recibió un número y consultar si es CC, CE, Pasaporte o NIT para garantizar la consulta exacta en la base oficial. Mantener el número pendiente en memoria de sesión sin botones rígidos.
+   - En Turno 2: Tras la confirmación del tipo, ejecutar la verificación y entregar el reporte directamente sin repetir saludos horarios.
+2. **Erradicación de "Fotitos de la Cédula"**:
+   - Limpiar cualquier copy que solicite fotos de la cédula por ambas caras, orientando a solicitar únicamente nombre completo y número de documento para registro estándar de portería y control de acceso.
+3. **Pipeline Fail-Fast y Reporte en 4 Sectores**:
+   - Secuencia de consulta: 1° ADRES (BDUA), 2° Procuraduría General (SIRI), 3° Contraloría General (SIRECI), 4° Policía Nacional (PONAL).
+   - Fail-Fast: Para CC, si no existe en el censo civil (ADRES/PGN), abortar antes de consumir saldo de 2Captcha en Policía Nacional.
+   - Reporte estructurado en 4 sectores: (1) Datos de Identidad, (2) Seguridad Social, (3) Entidades de Control (Disciplinario y Fiscal), (4) Policía Nacional, con cláusula obligatoria de Hábeas Data (Ley 1581 de 2012 y Decreto 1377 de 2013).
+4. **Guía Pedagógica Oficial Paz y Salvo IDU**:
+   - Detectar consultas sobre IDU/Valorización y entregar guía con CHIP, Matrícula Inmobiliaria, enlace de WebIDU y canal de contingencia del chat de Valorización con su horario oficial (Lunes a Viernes 7:00 a.m. a 4:30 p.m.).
+
+**Soluciones Técnicas Implementadas:**
+- `server/_core/identityVerificationService.ts`:
+  • Mapeo y tipado de Contraloría General (`ContraloriaResult`, `queryContraloria`).
+  • Memoria de sesión de números pendientes sin confirmación (`PendingUnconfirmedDocSession`, `isBareDocumentNumber`, `setPendingUnconfirmedDoc`, `getPendingUnconfirmedDoc`, `clearPendingUnconfirmedDoc`, `detectDocTypeConfirmation`).
+  • Fail-Fast en `verifySingleDocumentInternal` y `executeIdentityVerificationFromWhatsApp`: si el documento CC no existe en censo civil (ADRES/PGN), se descarta PONAL con ahorro del 100% de captchas.
+  • Formateo de 4 sectores de seguridad y anexo de cláusula de Hábeas Data (`HABEAS_DATA_CLAUSE`).
+- `server/_core/jania/handlers/dmHandler.ts`:
+  • Intercepción en Turno 1 con urbanidad de Carreño y pedagogía de tipo de documento.
+  • Ejecución fluida en Turno 2 tras confirmación sin re-saludos.
+  • Erradicación definitiva de menciones a "fotitos de la cédula" en `docPromptMsg`, `howToMsg` y system prompt.
+- `server/_core/iduValorizacionService.ts`:
+  • Detección ampliada de intenciones IDU (`isIduInquiry`), generador de guía pedagógica (`formatIduAssistanceGuide`) y alias `executeIduValorizacionFromWhatsApp`.
+- `server/__tests__/regression.test.ts`:
+  • Suite 60 cubriendo los flujos de confirmación de 2 turnos, sanitización de copias, reporte multisectorial, Contraloría y asistencia IDU.
+
+**Archivos Modificados:**
+- `server/_core/identityVerificationService.ts`
+- `server/_core/jania/handlers/dmHandler.ts`
+- `server/_core/iduValorizacionService.ts`
+- `server/__tests__/regression.test.ts`
+- `shared/const.ts` & `package.json`: Versión oficial `v32.99` (`32.99.0`).
+- Documentos maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y `vecy_network_technical_dossier.md`.
+
+**Verificación:**
+- `npm run check`: 0 errores TypeScript ✅
+- `npm test`: 186/186 tests passing al 100% ✅
+- `npm run build`: Compilación limpia (Vite 23.91s + esbuild 133ms) ✅
+
+---
+
 ### 🔖 v32.98 — Octubre 2026
 
 #### 📌 REFACTORIZACIÓN MODULAR QUIRÚRGICA DE JANIA — CERO REGRESIONES Y ARQUITECTURA LIMPIA

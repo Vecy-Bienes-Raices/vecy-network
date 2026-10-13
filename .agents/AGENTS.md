@@ -172,7 +172,25 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.98 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.99 — Octubre 2026
+
+### Novedades v32.99 (Protocolo de Urbanidad de Carreño, Confirmación Didáctica, Pipeline Fail-Fast y Guía Oficial Paz y Salvo IDU):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. No disparar inmediatamente verificaciones de identidad ante números sueltos si el usuario no ha saludado o indicado el tipo de documento.
+  2. Protocolo de Urbanidad: En Turno 1, saludar con vocativo horario (`Buenos días/tardes/noches`), nombre respetado resuelto, y consultar pedagógicamente el tipo de documento (CC, CE, Pasaporte, NIT) guardando el número en memoria de sesión sin botones rígidos.
+  3. Turno 2: Ante confirmación afirmativa, entregar el reporte de inmediato sin repetir saludos horarios.
+  4. Erradicación total en copias de asistencia de cualquier mención a "fotitos de la cédula por ambas caras", solicitando únicamente nombre y número para registro estándar de portería y control de acceso.
+  5. Pipeline Fail-Fast: 1° ADRES (BDUA), 2° Procuraduría (SIRI), 3° Contraloría (SIRECI), 4° Policía Nacional (PONAL). En CC, abortar antes de consumir saldo de 2Captcha si no existe en censo civil (ADRES/PGN).
+  6. Reporte en 4 sectores claramente discriminados con cláusula obligatoria de Hábeas Data (Ley 1581 de 2012 y Decreto 1377 de 2013).
+  7. Guía pedagógica oficial de Paz y Salvo IDU con enlace en línea y canal de contingencia del chat de Valorización con horario distrital oficial.
+- **Acciones Técnicas Ejecutadas**:
+  - `identityVerificationService.ts`: Implementación de sesiones temporales de números sueltos (`PendingUnconfirmedDocSession`), confirmación pedagógica de tipo de documento (`detectDocTypeConfirmation`), integración de Contraloría General (`queryContraloria`), estrategia Fail-Fast para ahorro del 100% de captchas en CCs inexistentes, reporte de 4 sectores y cláusula de Hábeas Data.
+  - `jania/handlers/dmHandler.ts`: Intercepción en 2 turnos con urbanidad de Carreño y erradicación definitiva de copies de "fotitos de la cédula".
+  - `iduValorizacionService.ts`: Enriquecimiento de detección (`isIduInquiry`), formateador de guía de asistencia (`formatIduAssistanceGuide`) y alias `executeIduValorizacionFromWhatsApp`.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 186/186 tests passing ✅ | `npm run build` limpio en 23.91s ✅
+- `shared/const.ts` (`v32.99`) y `package.json` (`32.99.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.98 — Octubre 2026
 
 ### Novedades v32.98 (Refactorización Modular Quirúrgica de JanIA — Cero Regresiones y Arquitectura Limpia):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

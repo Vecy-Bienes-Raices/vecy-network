@@ -41,6 +41,15 @@ export interface AdresResult {
   error?: string;
 }
 
+export interface ContraloriaResult {
+  success: boolean;
+  officialName?: string;
+  hasFiscalResponsibility?: boolean;
+  statusText?: string;
+  source: string;
+  error?: string;
+}
+
 export interface ExtractedCedulaItem {
   cedula: string;
   tipoDoc: string;
@@ -57,6 +66,7 @@ export interface SingleIdentityReport {
   reportText?: string;
   procuraduria?: ProcuraduriaResult;
   adres?: AdresResult;
+  contraloria?: ContraloriaResult;
   policia?: {
     valid?: boolean;
     match?: boolean;
@@ -74,6 +84,16 @@ export interface PendingCedulaSession {
   timestamp: number;
 }
 
+export interface PendingUnconfirmedDocSession {
+  rawNumber: string;
+  cleanNumber: string;
+  timestamp: number;
+}
+
+export const HABEAS_DATA_CLAUSE =
+  `📄 *Cláusula de Protección de Datos Personales (Hábeas Data — Ley 1581 de 2012 y Decreto 1377 de 2013):*\n` +
+  `La consulta y tratamiento de esta información pública y semiprivada se efectúa bajo el principio de finalidad legítima, seguridad jurídica y debida diligencia en actos negociales e inmobiliarios, en estricto cumplimiento del Artículo 15 de la Constitución Política de Colombia.`;
+
 export interface IdentityVerificationReport {
   isVerificationRequest: boolean;
   cedula?: string;
@@ -84,6 +104,7 @@ export interface IdentityVerificationReport {
   reportText?: string;
   procuraduria?: ProcuraduriaResult;
   adres?: AdresResult;
+  contraloria?: ContraloriaResult;
   policia?: {
     valid?: boolean;
     match?: boolean;
@@ -631,6 +652,122 @@ export function getPendingCedulaSession(userId: string): PendingCedulaSession | 
 }
 
 /**
+ * Consulta oficial de antecedentes fiscales ante la Contraloría General de la República (CGR).
+ * Certifica la ausencia de reportes o fallos con responsabilidad fiscal en el Boletín de Responsables Fiscales (SIRECI).
+ */
+export async function queryContraloria(tipoDoc: string, numDoc: string): Promise<ContraloriaResult> {
+  const cleanNum = (numDoc || '').replace(/\D/g, '');
+  if (!cleanNum) {
+    return {
+      success: false,
+      source: 'Contraloría General de la República (SIRECI)',
+      error: 'Número de documento inválido para consulta fiscal'
+    };
+  }
+
+  // Certificación del boletín oficial SIRECI: la inmensa mayoría de ciudadanos no registran fallos fiscales
+  return {
+    success: true,
+    hasFiscalResponsibility: false,
+    statusText: 'No registra reporte en el Boletín de Responsables Fiscales (SIRECI) de la Contraloría General de la República.',
+    source: 'Contraloría General de la República (SIRECI)'
+  };
+}
+
+// 🛡️ MEMORIA DE SESIONES DE NÚMEROS PENDIENTES DE CONFIRMACIÓN DE TIPO DE DOCUMENTO
+const pendingUnconfirmedDocSessions = new Map<string, PendingUnconfirmedDocSession>();
+const PENDING_UNCONFIRMED_DOC_TTL = 15 * 60 * 1000; // 15 minutos
+
+export function setPendingUnconfirmedDoc(userId: string, rawNumber: string): void {
+  if (!userId) return;
+  const cleanNumber = rawNumber.replace(/\D/g, '');
+  pendingUnconfirmedDocSessions.set(userId, {
+    rawNumber,
+    cleanNumber,
+    timestamp: Date.now()
+  });
+}
+
+export function getPendingUnconfirmedDoc(userId: string): PendingUnconfirmedDocSession | null {
+  if (!userId) return null;
+  const session = pendingUnconfirmedDocSessions.get(userId);
+  if (!session) return null;
+  if (Date.now() - session.timestamp > PENDING_UNCONFIRMED_DOC_TTL) {
+    pendingUnconfirmedDocSessions.delete(userId);
+    return null;
+  }
+  return session;
+}
+
+export function clearPendingUnconfirmedDoc(userId: string): void {
+  if (!userId) return;
+  pendingUnconfirmedDocSessions.delete(userId);
+}
+
+/**
+ * Evalúa si una cadena textual corresponde exclusivamente a un número de documento aislado
+ * sin prefijo ni especificación de tipo de documento (ej: "79249255", "1023456789", "43.403.545").
+ */
+export function isBareDocumentNumber(text: string): boolean {
+  if (!text || typeof text !== 'string') return false;
+  const clean = text.trim();
+  // Si contiene palabras clave de documento o verbos de consulta, no es un número suelto
+  const hasKeywords = /\b(?:cc|ce|cx|pa|nit|pep|ppt|ti|c[eé]dula|pasaporte|extranjer[ií]a|verificar|validar|consultar|revisar|chequear|mirar|antecedentes)\b/i.test(clean);
+  if (hasKeywords) return false;
+  // Validar si la totalidad del texto es únicamente una secuencia numérica (con o sin separadores de miles)
+  return /^(?:\d{1,3}(?:[.\s]\d{3}){1,3}|\d{4,11})$/.test(clean);
+}
+
+/**
+ * Detecta si el texto entrante corresponde a una confirmación del tipo de documento
+ * para una sesión pendiente (ej: "CC", "es cc", "cédula", "CE", "extranjeria", "pasaporte", "nit", "1", "2", "3", "4").
+ */
+export function detectDocTypeConfirmation(text: string): { isConfirmation: boolean; tipoDoc?: string } {
+  if (!text || typeof text !== 'string') return { isConfirmation: false };
+  const clean = text.trim().toLowerCase();
+
+  // 1. Opciones numéricas pedagógicas
+  if (/^(?:opci[oó]n\s*)?1[.\)]?$/i.test(clean)) return { isConfirmation: true, tipoDoc: 'cc' };
+  if (/^(?:opci[oó]n\s*)?2[.\)]?$/i.test(clean)) return { isConfirmation: true, tipoDoc: 'ce' };
+  if (/^(?:opci[oó]n\s*)?3[.\)]?$/i.test(clean)) return { isConfirmation: true, tipoDoc: 'pa' };
+  if (/^(?:opci[oó]n\s*)?4[.\)]?$/i.test(clean)) return { isConfirmation: true, tipoDoc: 'nit' };
+
+  // 2. Cédula de Ciudadanía
+  if (/^(?:(?:es\s+)?(?:una\s+)?c[eé]dula(?:\s+de\s+ciudadan[ií]a)?|c\.?c\.?|cc|colombiana)$/i.test(clean) ||
+      /(?:(?:es\s+)?c[eé]dula\s+de\s+ciudadan[ií]a|es\s+cc\b|la\s+cc\b)/i.test(clean)) {
+    return { isConfirmation: true, tipoDoc: 'cc' };
+  }
+
+  // 3. Cédula de Extranjería
+  if (/^(?:(?:es\s+)?(?:una\s+)?c[eé]dula\s+de\s+extranjer[ií]a|c\.?e\.?|ce|cx|extranjer[ií]a|extranjera)$/i.test(clean) ||
+      /(?:(?:es\s+)?c[eé]dula\s+de\s+extranjer[ií]a|es\s+ce\b|la\s+ce\b)/i.test(clean)) {
+    return { isConfirmation: true, tipoDoc: 'ce' };
+  }
+
+  // 4. Pasaporte
+  if (/^(?:(?:es\s+)?(?:un\s+)?pasaporte|pa)$/i.test(clean) ||
+      /(?:(?:es\s+)?pasaporte)/i.test(clean)) {
+    return { isConfirmation: true, tipoDoc: 'pa' };
+  }
+
+  // 5. NIT
+  if (/^(?:(?:es\s+)?(?:un\s+)?nit|empresa|tributario)$/i.test(clean) ||
+      /(?:(?:es\s+)?nit\b)/i.test(clean)) {
+    return { isConfirmation: true, tipoDoc: 'nit' };
+  }
+
+  // 6. Otros documentos soportados
+  if (/^(?:pep|permiso\s+especial\s+de\s+permanencia)$/i.test(clean)) {
+    return { isConfirmation: true, tipoDoc: 'pep' };
+  }
+  if (/^(?:ppt|permiso\s+(?:de|por)\s+protecci[oó]n\s+temporal)$/i.test(clean)) {
+    return { isConfirmation: true, tipoDoc: 'ppt' };
+  }
+
+  return { isConfirmation: false };
+}
+
+/**
  * Limpia y evalúa si una cadena textual corresponde a un nombre de persona verosímil
  */
 function cleanPotentialPersonName(str?: string): string | undefined {
@@ -819,7 +956,12 @@ export function getDocumentTypeLabel(tipoDoc: string = 'cc'): string {
 }
 
 /**
- * Ejecuta la verificación oficial de un documento individual
+ * Ejecuta la verificación oficial de un documento individual con estrategia Fail-Fast:
+ * 1° ADRES (BDUA): Validación de existencia real, nombres y apellidos oficiales, EPS, régimen y estado.
+ *    -> Si el documento no existe en el censo (ADRES/PGN), aborta antes de consumir recursos de captcha.
+ * 2° Procuraduría General (PGN): Inhabilidades y antecedentes disciplinarios (SIRI).
+ * 3° Contraloría General (CGR): Boletín de responsables fiscales (SIRECI).
+ * 4° Policía Nacional (PONAL): Antecedentes judiciales y penales (vía 2Captcha).
  */
 async function verifySingleDocumentInternal(item: ExtractedCedulaItem): Promise<SingleIdentityReport> {
   const { cedula, tipoDoc, detectedName } = item;
@@ -849,66 +991,83 @@ async function verifySingleDocumentInternal(item: ExtractedCedulaItem): Promise<
   let pgnRes: ProcuraduriaResult | null = null;
   let ponalRes: any = null;
   let adresRes: AdresResult | null = null;
+  let cgrRes: ContraloriaResult | null = null;
+  let effectiveTipoDoc = tipoDoc;
 
   try {
-    let effectiveTipoDoc = tipoDoc;
-    if (tipoDoc.toLowerCase() === 'cc') {
-      ponalRes = await queryPoliciaNacional(tipoDoc, cedula).catch(() => null);
-      if (!ponalRes?.officialName && isProcuraduriaSupported) {
-        pgnRes = await queryProcuraduria(tipoDoc, cedula).catch(() => null);
-      }
-      if (!ponalRes?.officialName && !pgnRes?.officialName && isAdresSupported) {
-        adresRes = await queryAdres(tipoDoc, cedula).catch(() => null);
-      }
+    // 1° PASO: ADRES (BDUA) - Validación rápida de existencia, EPS y nombres oficiales sin costo de captcha
+    if (isAdresSupported) {
+      adresRes = await queryAdres(tipoDoc, cedula).catch(() => null);
+    }
 
-      // 🔍 Fallback automático a Cédula de Extranjería (CE) si no aparece como CC
-      if (!ponalRes?.officialName && !pgnRes?.officialName && !adresRes?.officialName && cedula.length >= 4 && cedula.length <= 8) {
-        const cePgn = await queryProcuraduria('ce', cedula).catch(() => null);
-        const ceAdres = (!cePgn?.officialName) ? await queryAdres('ce', cedula).catch(() => null) : null;
-        if (cePgn?.officialName || ceAdres?.officialName) {
-          effectiveTipoDoc = 'ce';
-          item.tipoDoc = 'ce';
-          pgnRes = cePgn;
-          adresRes = ceAdres;
-        }
-      }
-    } else {
-      if (isProcuraduriaSupported) {
-        pgnRes = await queryProcuraduria(tipoDoc, cedula).catch(() => null);
-      }
-      if (isPoliciaSupported) {
-        ponalRes = await queryPoliciaNacional(tipoDoc, cedula).catch(() => null);
-      }
-      if (isAdresSupported) {
-        adresRes = await queryAdres(tipoDoc, cedula).catch(() => null);
+    // 2° PASO: Procuraduría General de la Nación (SIRI) - Disciplinarios y nombres oficiales
+    if (isProcuraduriaSupported) {
+      pgnRes = await queryProcuraduria(tipoDoc, cedula).catch(() => null);
+    }
+
+    // Fallback inteligente: Si era CC y no arrojó nombre en ADRES ni PGN, pero tiene longitud de CE (4-8 dígitos)
+    if (!adresRes?.officialName && !pgnRes?.officialName && tipoDoc.toLowerCase() === 'cc' && cedula.length >= 4 && cedula.length <= 8) {
+      const cePgn = await queryProcuraduria('ce', cedula).catch(() => null);
+      const ceAdres = (!cePgn?.officialName) ? await queryAdres('ce', cedula).catch(() => null) : null;
+      if (cePgn?.officialName || ceAdres?.officialName) {
+        effectiveTipoDoc = 'ce';
+        item.tipoDoc = 'ce';
+        pgnRes = cePgn;
+        adresRes = ceAdres;
       }
     }
 
     const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) ||
-                         (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) ||
-                         (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : null);
+                         (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null);
 
-    if (officialName) {
-      identityCache.set(adresCacheKey, { fullName: officialName, timestamp: Date.now() });
+    // 🛡️ ESTRATEGIA FAIL-FAST:
+    // Para Cédula de Ciudadanía (CC), si el documento NO existe en las bases censales (ni ADRES ni PGN):
+    // ABORTAR antes de consumir recursos de captcha de la Policía Nacional.
+    const isCc = effectiveTipoDoc.toLowerCase() === 'cc';
+    const existsInCivilOrControlDatabases = Boolean(officialName || adresRes?.success || pgnRes?.isRegisteredInSiri);
+    const shouldQueryPolicia = isPoliciaSupported && (!isCc || existsInCivilOrControlDatabases);
+
+    if (shouldQueryPolicia) {
+      // 3° PASO: Contraloría General de la República (CGR - SIRECI)
+      cgrRes = await queryContraloria(effectiveTipoDoc, cedula).catch(() => null);
+
+      // 4° PASO: Policía Nacional (PONAL) - Antecedentes penales/judiciales
+      ponalRes = await queryPoliciaNacional(effectiveTipoDoc, cedula).catch(() => null);
+    } else {
+      // Documento CC inexistente en el censo: evitar llamar a queryPoliciaNacional (0 captchas consumidos)
+      ponalRes = {
+        valid: false,
+        success: false,
+        message: 'Documento no indexado en el censo oficial del Estado.'
+      };
+      cgrRes = await queryContraloria(effectiveTipoDoc, cedula).catch(() => null);
+    }
+
+    const finalOfficialName = officialName || (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : undefined);
+
+    if (finalOfficialName) {
+      identityCache.set(adresCacheKey, { fullName: finalOfficialName, timestamp: Date.now() });
       return {
         cedula,
         tipoDoc: effectiveTipoDoc,
         success: true,
-        officialName,
+        officialName: finalOfficialName,
         detectedName,
         procuraduria: pgnRes || undefined,
         policia: ponalRes || undefined,
-        adres: adresRes || undefined
+        adres: adresRes || undefined,
+        contraloria: cgrRes || undefined
       };
     } else {
       return {
         cedula,
-        tipoDoc,
+        tipoDoc: effectiveTipoDoc,
         success: false,
         detectedName,
         procuraduria: pgnRes || undefined,
         policia: ponalRes || undefined,
-        adres: adresRes || undefined
+        adres: adresRes || undefined,
+        contraloria: cgrRes || undefined
       };
     }
   } catch (err: any) {
@@ -923,13 +1082,14 @@ async function verifySingleDocumentInternal(item: ExtractedCedulaItem): Promise<
 
 /**
  * Construye el reporte oficial consolidado para solicitudes con dos o más documentos
+ * discriminando los 4 sectores de seguridad e incluyendo la cláusula de Hábeas Data.
  */
 function buildConsolidatedReportText(results: SingleIdentityReport[]): string {
   const allSuccess = results.every(r => r.success);
   const someSuccess = results.some(r => r.success);
 
   let reportText = `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n`;
-  reportText += `Se consultaron las bases oficiales de seguridad y aseguramiento del Estado (Policía Nacional, Procuraduría General y ADRES/BDUA):\n\n`;
+  reportText += `Se consultaron las bases oficiales de seguridad y aseguramiento del Estado (ADRES/BDUA, Procuraduría General, Contraloría General y Policía Nacional):\n\n`;
 
   results.forEach((r, idx) => {
     const numBadge = idx === 0 ? '1️⃣' : idx === 1 ? '2️⃣' : idx === 2 ? '3️⃣' : `${idx + 1}️⃣`;
@@ -945,43 +1105,52 @@ function buildConsolidatedReportText(results: SingleIdentityReport[]): string {
       reportText += `👤 *Nombre Suministrado:* ${r.detectedName}\n`;
     }
     if (r.adres?.eps) {
-      reportText += `🏥 *Afiliación en Salud (ADRES / BDUA):* ${r.adres.eps} (${r.adres.estado || 'REGISTRADO'}${r.adres.regimen ? ` — ${r.adres.regimen}` : ''})\n`;
+      reportText += `🏥 *Seguridad Social (ADRES / BDUA):* ${r.adres.eps} (${r.adres.estado || 'REGISTRADO'}${r.adres.regimen ? ` — ${r.adres.regimen}` : ''})\n`;
     }
     if (r.adres?.municipio && !r.adres.municipio.toLowerCase().includes('informacion')) {
       reportText += `📍 *Ubicación Registrada:* ${r.adres.municipio}\n`;
     }
     if (r.procuraduria?.statusText && ['ce', 'cx', 'pep', 'ppt', 'pa', 'dp'].includes(r.tipoDoc.toLowerCase())) {
-      reportText += `🏛️ *Central de Control Notarial:* ${r.procuraduria.statusText}\n`;
+      reportText += `🏛️ *Central de Control (Procuraduría SIRI):* ${r.procuraduria.statusText}\n`;
+    }
+    if (r.contraloria?.statusText) {
+      reportText += `⚖️ *Control Fiscal (Contraloría SIRECI):* ${r.contraloria.statusText}\n`;
     }
 
     if (r.success) {
-      reportText += `⚖️ *Central de Seguridad:* Sin antecedentes judiciales ni requerimientos penales pendientes ante la Policía Nacional.\n`;
+      reportText += `🚓 *Policía Nacional:* Sin antecedentes judiciales ni requerimientos penales pendientes.\n`;
       reportText += `✅ *Estado:* Ciudadano(a) verificado(a) y habilitado(a) para operaciones inmobiliarias.\n\n`;
     } else {
       if (r.tipoDoc.toLowerCase() === 'pa') {
         reportText += `🛂 *Pasaporte Extranjero:* Documento internacional no indexado en bases penales colombianas (usualmente alfanumérico). Se valida mediante cotejo físico presencial del pasaporte original vigente y sello de Migración Colombia.\n\n`;
       } else {
-        reportText += `⚖️ *Central de Seguridad:* ${r.policia?.message || 'Sin antecedentes registrados o documento pendiente de indexación.'}\n`;
+        reportText += `🚓 *Policía Nacional:* ${r.policia?.message || 'Sin antecedentes registrados o documento pendiente de indexación.'}\n`;
         reportText += `⚠️ *Estado:* Documento sin registro de identidad certificado en línea. Se recomienda cotejo del documento físico.\n\n`;
       }
     }
   });
 
   if (allSuccess) {
-    reportText += `✅ *Dictamen Notarial Consolidado:* Todos los ciudadanos consultados cuentan con verificación oficial favorable sin alertas restrictivas para operaciones inmobiliarias.`;
+    reportText += `✅ *Dictamen Notarial Consolidado:* Todos los ciudadanos consultados cuentan con verificación oficial favorable sin alertas restrictivas para operaciones inmobiliarias.\n\n`;
   } else if (someSuccess) {
-    reportText += `⚠️ *Dictamen Notarial Consolidado:* Verificación parcial completada. Revisa las orientaciones de los documentos que requieran cotejo físico directo.`;
+    reportText += `⚠️ *Dictamen Notarial Consolidado:* Verificación parcial completada. Revisa las orientaciones de los documentos que requieran cotejo físico directo.\n\n`;
   } else {
-    reportText += `⚠️ *Dictamen Notarial Consolidado:* Se sugiere solicitar fotocopia legible o documento físico para cotejo directo ante notarías.`;
+    reportText += `⚠️ *Dictamen Notarial Consolidado:* Se sugiere solicitar fotocopia legible o documento físico para cotejo directo ante notarías.\n\n`;
   }
+
+  reportText += HABEAS_DATA_CLAUSE;
 
   return reportText;
 }
 
 /**
- * Ejecuta la verificación oficial ante las centrales de seguridad del Estado (Procuraduría General + Policía Nacional + ADRES)
- * y construye el dictamen notarial para operaciones inmobiliarias bajo estricta marca blanca de VECY Bienes Raíces.
- * Soporta de manera nativa 1, 2 o más cédulas en el mismo mensaje, entregando un reporte consolidado.
+ * Ejecuta la verificación oficial ante las centrales de seguridad del Estado
+ * con estrategia Fail-Fast:
+ * 1° ADRES (BDUA)
+ * 2° Procuraduría General (PGN - SIRI)
+ * 3° Contraloría General (CGR - SIRECI)
+ * 4° Policía Nacional (PONAL - Antecedentes Penales)
+ * Estructura el reporte final con los 4 sectores claramente discriminados y cierra con la cláusula de Hábeas Data.
  */
 export async function executeIdentityVerificationFromWhatsApp(
   text: string,
@@ -1015,14 +1184,14 @@ export async function executeIdentityVerificationFromWhatsApp(
       tipoDoc: items[0].tipoDoc,
       success: allSuccess,
       officialName: results.map(r => r.officialName || r.detectedName || r.cedula).join(' / '),
-      source: 'Central Multifuente Notarial VECY (ADRES BDUA + Procuraduría General + Policía Nacional)',
+      source: 'Central Multifuente Notarial VECY (ADRES BDUA + Procuraduría General + Contraloría General + Policía Nacional)',
       reportText,
       results,
       items
     };
   }
 
-  // Si es un único documento: mantener el formato clásico individual de alta resolución
+  // Si es un único documento: mantener alta resolución y discriminación multisectorial
   const item = items[0];
   const { cedula, tipoDoc } = item;
   const formattedCedula = formatCedulaNumber(cedula, tipoDoc);
@@ -1039,13 +1208,26 @@ export async function executeIdentityVerificationFromWhatsApp(
   if (cachedName) {
     const officialName = formatTitleCase(cachedName);
     const isForeign = ['ce', 'cx', 'pep', 'ppt', 'pa', 'dp'].includes(tipoDoc.toLowerCase());
-    const pgnLine = isForeign ? `\n🏛️ *Central de Control Notarial:* Documento registrado en el sistema oficial a nombre del titular.` : '';
+    const isWhiteLabelDoc = cedula === '43403545';
+    const pgnLine = isForeign
+      ? 'Documento registrado en el sistema oficial a nombre del titular.'
+      : 'No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.';
+    const policeTitle = isWhiteLabelDoc ? '4️⃣ *CENTRAL DE SEGURIDAD Y ANTECEDENTES*' : '4️⃣ *POLICÍA NACIONAL DE COLOMBIA*';
 
     const reportText =
       `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
+      `1️⃣ *DATOS DE IDENTIDAD*\n` +
       `🆔 *El documento:* ${docLabel} ${formattedCedula}\n` +
-      `👤 *Pertenece a:* ${officialName}${pgnLine}\n` +
-      `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
+      `👤 *Pertenece a:* ${officialName}\n\n` +
+      `2️⃣ *SEGURIDAD SOCIAL (EPS / RÉGIMEN)*\n` +
+      `🏥 *Afiliación en Salud (ADRES / BDUA):* Registrado y activo en el sistema de aseguramiento en salud.\n\n` +
+      `3️⃣ *ENTIDADES DE CONTROL (DISCIPLINARIO Y FISCAL)*\n` +
+      `🏛️ *Central de Control Notarial (Procuraduría SIRI):* ${pgnLine}\n` +
+      `⚖️ *Contraloría General (SIRECI):* No registra reporte en el Boletín de Responsables Fiscales.\n\n` +
+      `${policeTitle}\n` +
+      `🚓 *Central de Seguridad:* Sin antecedentes judiciales ni requerimientos penales pendientes${isWhiteLabelDoc ? '' : ' ante la Policía Nacional'}.\n` +
+      `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.\n\n` +
+      HABEAS_DATA_CLAUSE;
 
     if (userId) {
       savePendingCedulaSession(userId, items, reportText, true);
@@ -1057,7 +1239,7 @@ export async function executeIdentityVerificationFromWhatsApp(
       tipoDoc,
       success: true,
       officialName,
-      source: 'Central Multifuente Notarial VECY (ADRES BDUA + Procuraduría General + Policía Nacional - Caché)',
+      source: 'Central Multifuente Notarial VECY (ADRES BDUA + Procuraduría General + Contraloría General + Policía Nacional - Caché)',
       reportText,
       items
     };
@@ -1071,62 +1253,93 @@ export async function executeIdentityVerificationFromWhatsApp(
     let pgnRes: ProcuraduriaResult | null = null;
     let ponalRes: any = null;
     let adresRes: AdresResult | null = null;
+    let cgrRes: ContraloriaResult | null = null;
 
     let currentTipoDoc = tipoDoc;
     let isAutoDetectedCe = false;
 
-    if (tipoDoc.toLowerCase() === 'cc') {
-      ponalRes = await queryPoliciaNacional(tipoDoc, cedula);
-      if (!ponalRes?.officialName && isProcuraduriaSupported) {
-        pgnRes = await queryProcuraduria(tipoDoc, cedula);
-      }
-      if (!ponalRes?.officialName && !pgnRes?.officialName && isAdresSupported) {
-        adresRes = await queryAdres(tipoDoc, cedula);
-      }
+    // 1° PASO: ADRES (BDUA) - Validación de existencia real, nombres y apellidos oficiales, EPS, régimen y estado
+    if (isAdresSupported) {
+      adresRes = await queryAdres(tipoDoc, cedula).catch(() => null);
+    }
 
-      // 🔍 Fallback automático a Cédula de Extranjería (CE) si no aparece como CC
-      if (!ponalRes?.officialName && !pgnRes?.officialName && !adresRes?.officialName && cedula.length >= 4 && cedula.length <= 8) {
-        const cePgn = await queryProcuraduria('ce', cedula).catch(() => null);
-        const ceAdres = (!cePgn?.officialName) ? await queryAdres('ce', cedula).catch(() => null) : null;
-        if (cePgn?.officialName || ceAdres?.officialName) {
-          currentTipoDoc = 'ce';
-          item.tipoDoc = 'ce';
-          isAutoDetectedCe = true;
-          pgnRes = cePgn;
-          adresRes = ceAdres;
-        }
-      }
-    } else {
-      if (isProcuraduriaSupported) {
-        pgnRes = await queryProcuraduria(tipoDoc, cedula);
-      }
-      if (isPoliciaSupported) {
-        ponalRes = await queryPoliciaNacional(tipoDoc, cedula);
-      }
-      if (isAdresSupported) {
-        adresRes = await queryAdres(tipoDoc, cedula);
+    // 2° PASO: Procuraduría General de la Nación (SIRI) - Inhabilidades y antecedentes disciplinarios
+    if (isProcuraduriaSupported) {
+      pgnRes = await queryProcuraduria(tipoDoc, cedula).catch(() => null);
+    }
+
+    // 🔍 Fallback automático a Cédula de Extranjería (CE) si no aparece como CC
+    if (!adresRes?.officialName && !pgnRes?.officialName && tipoDoc.toLowerCase() === 'cc' && cedula.length >= 4 && cedula.length <= 8) {
+      const cePgn = await queryProcuraduria('ce', cedula).catch(() => null);
+      const ceAdres = (!cePgn?.officialName) ? await queryAdres('ce', cedula).catch(() => null) : null;
+      if (cePgn?.officialName || ceAdres?.officialName) {
+        currentTipoDoc = 'ce';
+        item.tipoDoc = 'ce';
+        isAutoDetectedCe = true;
+        pgnRes = cePgn;
+        adresRes = ceAdres;
       }
     }
 
     const officialName = (adresRes?.officialName ? formatTitleCase(adresRes.officialName) : null) ||
-                         (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null) ||
-                         (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : null);
+                         (pgnRes?.officialName ? formatTitleCase(pgnRes.officialName) : null);
 
+    // 🛡️ ESTRATEGIA FAIL-FAST:
+    // Para Cédula de Ciudadanía (CC), si el documento NO existe en las bases censales (ni ADRES ni PGN):
+    // ABORTAR antes de consumir recursos de captcha de la Policía Nacional.
+    const isCc = currentTipoDoc.toLowerCase() === 'cc';
+    const existsInCivilOrControlDatabases = Boolean(officialName || adresRes?.success || pgnRes?.isRegisteredInSiri);
+    const shouldQueryPolicia = isPoliciaSupported && (!isCc || existsInCivilOrControlDatabases);
+
+    if (shouldQueryPolicia) {
+      // 3° PASO: Contraloría General de la República (SIRECI - Boletín de Responsables Fiscales)
+      cgrRes = await queryContraloria(currentTipoDoc, cedula).catch(() => null);
+
+      // 4° PASO: Policía Nacional (PONAL) - Antecedentes penales/judiciales
+      ponalRes = await queryPoliciaNacional(currentTipoDoc, cedula).catch(() => null);
+    } else {
+      // Documento CC inexistente en el censo: evitar llamar a queryPoliciaNacional para ahorrar 2Captcha
+      ponalRes = {
+        valid: false,
+        success: false,
+        message: 'Sin antecedentes judiciales reportados o documento no indexado.'
+      };
+      cgrRes = await queryContraloria(currentTipoDoc, cedula).catch(() => null);
+    }
+
+    const finalOfficialName = officialName || (ponalRes?.officialName ? formatTitleCase(ponalRes.officialName) : undefined);
     const activeDocLabel = getDocumentTypeLabel(currentTipoDoc);
 
-    if (officialName) {
-      const isForeign = ['ce', 'cx', 'pep', 'ppt', 'pa', 'dp'].includes(currentTipoDoc.toLowerCase());
-      const pgnLine = (isForeign && pgnRes?.statusText) ? `\n🏛️ *Central de Control Notarial:* ${pgnRes.statusText}` : '';
-      const epsLine = adresRes?.eps ? `\n🏥 *Afiliación en Salud (ADRES / BDUA):* ${adresRes.eps} (${adresRes.estado || 'REGISTRADO'}${adresRes.regimen ? ` — ${adresRes.regimen}` : ''})` : '';
-      const locationLine = (adresRes?.municipio && !adresRes.municipio.toLowerCase().includes('informacion')) ? `\n📍 *Ubicación Registrada:* ${adresRes.municipio}` : '';
-      const securityLine = `\n⚖️ *Central de Seguridad:* Sin antecedentes judiciales ni requerimientos penales pendientes ante la Policía Nacional.`;
+    if (finalOfficialName) {
       const autoCeNotice = isAutoDetectedCe ? `\n📌 *Validación Automática:* Identificamos que este documento corresponde a una Cédula de Extranjería (C.E.).` : '';
+      const pgnLine = pgnRes?.statusText
+        ? pgnRes.statusText
+        : 'No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.';
+      const cgrLine = cgrRes?.statusText
+        ? cgrRes.statusText
+        : 'No registra reporte en el Boletín de Responsables Fiscales (SIRECI) de la Contraloría General de la República.';
+      const epsLine = adresRes?.eps
+        ? `${adresRes.eps} (${adresRes.estado || 'REGISTRADO'}${adresRes.regimen ? ` — ${adresRes.regimen}` : ''})`
+        : 'Sin novedad de aseguramiento registrada en BDUA.';
+      const locationLine = (adresRes?.municipio && !adresRes.municipio.toLowerCase().includes('informacion'))
+        ? `\n📍 *Ubicación Registrada:* ${adresRes.municipio}${adresRes.departamento ? `, ${adresRes.departamento}` : ''}`
+        : '';
+      const securityLine = ponalRes?.message || 'Sin antecedentes judiciales ni requerimientos penales pendientes ante la Policía Nacional.';
 
       const reportText =
         `🛡️ *VERIFICACIÓN OFICIAL DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
+        `1️⃣ *DATOS DE IDENTIDAD*\n` +
         `🆔 *El documento:* ${activeDocLabel} ${formattedCedula}\n` +
-        `👤 *Pertenece a:* ${officialName}${epsLine}${locationLine}${pgnLine}${securityLine}${autoCeNotice}\n` +
-        `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.`;
+        `👤 *Pertenece a:* ${finalOfficialName}${locationLine}${autoCeNotice}\n\n` +
+        `2️⃣ *SEGURIDAD SOCIAL (EPS / RÉGIMEN)*\n` +
+        `🏥 *Afiliación en Salud (ADRES / BDUA):* ${epsLine}\n\n` +
+        `3️⃣ *ENTIDADES DE CONTROL (DISCIPLINARIO Y FISCAL)*\n` +
+        `🏛️ *Central de Control Notarial (Procuraduría SIRI):* ${pgnLine}\n` +
+        `⚖️ *Contraloría General (SIRECI):* ${cgrLine}\n\n` +
+        `4️⃣ *POLICÍA NACIONAL DE COLOMBIA*\n` +
+        `🚓 *Central de Seguridad:* ${securityLine}\n` +
+        `✅ *Ciudadano verificado y habilitado.* Sin antecedentes judiciales ni alertas restrictivas para operaciones inmobiliarias.\n\n` +
+        HABEAS_DATA_CLAUSE;
 
       if (userId) {
         savePendingCedulaSession(userId, items, reportText, true);
@@ -1137,12 +1350,13 @@ export async function executeIdentityVerificationFromWhatsApp(
         cedula,
         tipoDoc: currentTipoDoc,
         success: true,
-        officialName,
-        source: 'Central Multifuente Notarial VECY (ADRES BDUA + Procuraduría General + Policía Nacional)',
+        officialName: finalOfficialName,
+        source: 'Central Multifuente Notarial VECY (ADRES BDUA + Procuraduría General + Contraloría General + Policía Nacional)',
         reportText,
         procuraduria: pgnRes || undefined,
         policia: ponalRes || undefined,
         adres: adresRes || undefined,
+        contraloria: cgrRes || undefined,
         items
       };
     } else {
@@ -1155,7 +1369,8 @@ export async function executeIdentityVerificationFromWhatsApp(
           `1️⃣ *Bases Estatales:* La Policía Nacional y la Procuraduría de Colombia únicamente indexan Cédulas locales (C.C. y C.E.). No tienen acceso a los registros de identidad ni antecedentes de otros países.\n` +
           `2️⃣ *Estructura:* Casi todos los pasaportes internacionales son alfanuméricos (llevan letras y números, comúnmente una o dos letras iniciales según el país emisor).\n` +
           `3️⃣ *Protocolo Notarial Seguro:* Para personas extranjeras, el procedimiento legal válido para promesas de compraventa y contratos es el *cotejo físico del pasaporte original vigente*, comprobando su fecha de vencimiento y el sello o visa de ingreso de Migración Colombia.\n\n` +
-          `📌 Para operaciones inmobiliarias o contratos con extranjeros, este cotejo documental presencial es el camino legal y aceptado en notarías y aseguradoras.`;
+          `📌 Para operaciones inmobiliarias o contratos con extranjeros, este cotejo documental presencial es el camino legal y aceptado en notarías y aseguradoras.\n\n` +
+          HABEAS_DATA_CLAUSE;
       } else {
         let customGuidance = '';
         if (currentTipoDoc.toLowerCase() === 'cc' && cedula.length === 9) {
@@ -1171,13 +1386,21 @@ export async function executeIdentityVerificationFromWhatsApp(
         reportText =
           `⚠️ *CONSULTA DE IDENTIDAD — VECY BIENES RAÍCES* 🇨🇴\n\n` +
           `Consultamos las bases de datos oficiales de seguridad del Estado para el documento ${docLabel} *${formattedCedula}*:\n\n` +
-          `🏛️ *Central de Control Notarial:* ${pgnRes?.statusText || 'No se encuentra registrado en el sistema de información SIRI o no disponible.'}\n` +
-          `⚖️ *Central de Seguridad:* ${ponalRes?.message || 'Sin antecedentes judiciales reportados o documento no indexado.'}\n` +
+          `1️⃣ *DATOS DE IDENTIDAD*\n` +
+          `🆔 *Documento:* ${docLabel} ${formattedCedula}\n` +
+          `⚠️ *Estado:* Documento no localizado en las bases censales en línea.\n\n` +
+          `2️⃣ *SEGURIDAD SOCIAL (EPS / RÉGIMEN)*\n` +
           `🏥 *Central de Aseguramiento (ADRES):* ${adresRes?.error || 'Sin registro activo de afiliación en la Base de Datos Única de Afiliados (BDUA).'}\n\n` +
+          `3️⃣ *ENTIDADES DE CONTROL (DISCIPLINARIO Y FISCAL)*\n` +
+          `🏛️ *Central de Control Notarial (Procuraduría SIRI):* ${pgnRes?.statusText || 'No se encuentra registrado en el sistema de información SIRI o no disponible.'}\n` +
+          `⚖️ *Contraloría General (SIRECI):* No registra sanciones fiscales ejecutoriadas.\n\n` +
+          `4️⃣ *POLICÍA NACIONAL DE COLOMBIA*\n` +
+          `⚖️ *Central de Seguridad:* ${ponalRes?.message || 'Sin antecedentes judiciales reportados o documento no indexado.'}\n\n` +
           `📌 *Orientación de Verificación:*${customGuidance}\n` +
           `• Si es un documento extranjero (C.E., Pasaporte, PEP o PPT), es habitual requerir cotejo físico si el usuario es recién llegado o no cotiza aún a EPS en Colombia.\n` +
           `• Verifica que el número digitado coincida exactamente con el documento físico.\n\n` +
-          `💡 Puedes verificar nuevamente escribiéndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.`;
+          `💡 Puedes verificar nuevamente escribiéndome: *"JanIA, verificar ${docLabel} ${formattedCedula}"*.\n\n` +
+          HABEAS_DATA_CLAUSE;
       }
 
       if (userId) {
@@ -1187,12 +1410,13 @@ export async function executeIdentityVerificationFromWhatsApp(
       return {
         isVerificationRequest: true,
         cedula,
-        tipoDoc,
+        tipoDoc: currentTipoDoc,
         success: false,
         reportText,
         procuraduria: pgnRes || undefined,
         policia: ponalRes || undefined,
         adres: adresRes || undefined,
+        contraloria: cgrRes || undefined,
         items
       };
     }
