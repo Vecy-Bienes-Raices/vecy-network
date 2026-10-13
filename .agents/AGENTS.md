@@ -6,6 +6,7 @@
 > 2. Léelos COMPLETOS al inicio de CADA nueva conversación antes de proponer o ejecutar cualquier acción.
 > 3. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 > 4. **INCREMENTO OBLIGATORIO DE VERSIÓN**: Cada sesión finalizada debe incrementar la versión oficial e inscribirse en el historial.
+> 5. **REGLA DOCTRINAL DE VERSIONAMIENTO (.99 -> .00)**: Las versiones menores van de `.00` a `.99` (ej. `v32.99`). Al alcanzar `.99`, el siguiente incremento salta OBLIGATORIAMENTE al siguiente número entero mayor con `.00` (ej. `v31.99` + implementación => `v32.00`; `v32.99` + implementación => `v33.00`). JAMÁS usar `.100` ni romper esta regla.
 
 ---
 
@@ -172,22 +173,24 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.100 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.00 — Octubre 2026
 
-### Novedades v32.100 (Configuración de Seguridad y Blindaje de Claves Gemini: Producción vs Tests, Nivel 1 Gratis, Nivel 2 Pago Emergencia y Retorno Automático):
+### Novedades v33.00 (Configuración de Seguridad y Blindaje de Claves Gemini: Producción vs Tests, Nivel 1 Gratis, Nivel 2 Pago Emergencia, Retorno Automático y Regla Doctrinal de Versionamiento .99 -> .00):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
-  1. Mantener la API de pago activa para la operación 24/7 de WhatsApp como respaldo de emergencia, pero BLOQUEARLA ESTRICTAMENTE en cualquier entorno de pruebas (`npm test`) para evitar consumos de desarrollo.
-  2. Blindaje Inmutable en Pruebas: Excluir/anular `GEMINI_PAID_KEY`, usar exclusivamente pool de claves gratuitas (`GEMINI_FREE_KEYS`), y lanzar excepción local si algún test intenta invocar la clave de pago.
-  3. Gestor en Producción: Nivel 1 (Prioridad 100% Gratuita en Round-Robin activo), Nivel 2 (Respaldo de Emergencia de Pago ante 429 simultáneo en las 4 gratuitas), y Retorno Automático a Nivel 1 tan pronto expira el cooldown de 60s.
-  4. Documentación en `.env.example` con `GEMINI_FREE_KEYS` y `GEMINI_PAID_KEY`.
+  1. *"Mantener la API de pago activa para la operación 24/7 de WhatsApp como respaldo de emergencia, pero BLOQUEARLA ESTRICTAMENTE en cualquier entorno de pruebas (npm test) para evitar consumos de desarrollo."*
+  2. *"Las versiones están mal deben llegar a al .99 y cambiar ala siguiente: Ejemplo 31.99 + implementación => 32.00"*
+  3. Blindaje Inmutable en Pruebas: Excluir/anular `GEMINI_PAID_KEY`, usar exclusivamente pool de claves gratuitas (`GEMINI_FREE_KEYS`), y lanzar excepción local si algún test intenta invocar la clave de pago.
+  4. Gestor en Producción: Nivel 1 (Prioridad 100% Gratuita en Round-Robin activo), Nivel 2 (Respaldo de Emergencia de Pago ante 429 simultáneo en las 4 gratuitas), y Retorno Automático a Nivel 1 tan pronto expira el cooldown de 60s.
+  5. Documentación en `.env.example` con `GEMINI_FREE_KEYS` y `GEMINI_PAID_KEY`.
 - **Acciones Técnicas Ejecutadas**:
   - `server/_core/geminiKeyManager.ts`: Creación del gestor central con detección inmutable de pruebas (`isTestEnvironment`), aislamiento de claves gratuitas (`getFreeKeys`), veto estricto de pago (`getPaidKey`), barrera local (`assertKeyAllowedForExecution`), cooldowns individuales y retorno automático.
   - `server/__tests__/setupTests.ts` & `vitest.config.ts`: Configuración global de pruebas anulando `GEMINI_PAID_KEY` e instalando interceptor Axios de red contra peticiones con clave de pago.
   - `server/_core/llm.ts`, `jania/vision.ts`, `voiceTranscription.ts`: Conectados al gestor central con protección estricta.
   - `.env.example` & `.env`: Documentación y estructuración de `GEMINI_FREE_KEYS` y `GEMINI_PAID_KEY` preservando retrocompatibilidad total.
-  - `server/__tests__/regression.test.ts`: Suite 61 añadida (4 tests).
-- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 190/190 tests passing ✅ | `npm run build` limpio en 20.92s ✅
-- `shared/const.ts` (`v32.100`) y `package.json` (`32.100.0`).
+  - `server/__tests__/regression.test.ts`: Suite 61 ampliada a 5 tests, cubriendo el blindaje y la regla doctrinal de versionamiento (`.99` -> `.00`).
+  - Consagración de la Regla Doctrinal de Versionamiento: `v32.99` + implementación salta a `v33.00` (`33.0.0`), quedando prohibido `.100`.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 191/191 tests passing ✅ | `npm run build` limpio en 20.92s ✅
+- `shared/const.ts` (`v33.00`) y `package.json` (`33.0.0`).
 
 ## 🔖 VERSIÓN ANTERIOR: v32.99 — Octubre 2026
 

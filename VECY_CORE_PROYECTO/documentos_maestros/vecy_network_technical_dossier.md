@@ -331,9 +331,9 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
-### 🔖 v32.100 — Octubre 2026
+### 🔖 v33.00 — Octubre 2026
 
-#### 📌 CONFIGURACIÓN DE SEGURIDAD Y BLINDAJE DE CLAVES GEMINI (PRODUCCIÓN VS TESTS)
+#### 📌 CONFIGURACIÓN DE SEGURIDAD Y BLINDAJE DE CLAVES GEMINI (PRODUCCIÓN VS TESTS) Y REGLA DOCTRINAL DE VERSIONAMIENTO (.99 -> .00)
 
 **Requerimiento y Objetivos:**
 1. **Blindaje Inmutable en Pruebas (`NODE_ENV=test` / `npm test`)**:
@@ -346,6 +346,8 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
    - Retorno Automático: Tan pronto una clave gratuita supere los 60 segundos de cooldown, el flujo retorna inmediatamente al Nivel 1 a costo $0 COP.
 3. **Documentación en `.env.example` y Retrocompatibilidad en `.env`**:
    - Estructuración transparente de `GEMINI_FREE_KEYS` y `GEMINI_PAID_KEY` con comentarios didácticos.
+4. **Regla Doctrinal de Versionamiento (.99 -> .00)**:
+   - Dictaminado por Eduardo A. Rivera: las versiones menores alcanzan hasta `.99`. Al completar `.99`, la versión debe saltar obligatoriamente al siguiente número entero con `.00` (ej. `v31.99` + implementación => `v32.00`; `v32.99` + implementación => `v33.00`), quedando estrictamente prohibido usar `.100`.
 
 **Soluciones Técnicas Implementadas:**
 - `server/_core/geminiKeyManager.ts`:
@@ -363,7 +365,7 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 - `.env.example` & `.env`:
   • Actualización de variables de entorno y documentación.
 - `server/__tests__/regression.test.ts`:
-  • Suite 61 con 4 pruebas automatizadas cubriendo la anulación en tests, el interceptor de red, la conmutación Nivel 1 -> Nivel 2 -> Retorno Automático y la documentación de `.env.example`.
+  • Suite 61 con 5 pruebas automatizadas cubriendo la anulación en tests, el interceptor de red, la conmutación Nivel 1 -> Nivel 2 -> Retorno Automático, la documentación de `.env.example` y la regla doctrinal de versionamiento `.99 -> .00` (`v33.00`).
 
 **Archivos Modificados:**
 - `server/_core/geminiKeyManager.ts` (Nuevo)
@@ -374,12 +376,12 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 - `server/_core/voiceTranscription.ts`
 - `.env.example` & `.env`
 - `server/__tests__/regression.test.ts`
-- `shared/const.ts` & `package.json`: Versión oficial `v32.100` (`32.100.0`).
-- Documentos maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y `vecy_network_technical_dossier.md`.
+- `shared/const.ts` & `package.json`: Versión oficial `v33.00` (`33.0.0`).
+- Documentos maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md`, `GEMINI.md` y `vecy_network_technical_dossier.md`.
 
 **Verificación:**
 - `npm run check`: 0 errores TypeScript ✅
-- `npm test`: 190/190 tests passing al 100% ✅
+- `npm test`: 191/191 tests passing al 100% ✅
 - `npm run build`: Compilación limpia (Vite 20.92s + esbuild 143ms) ✅
 
 ---

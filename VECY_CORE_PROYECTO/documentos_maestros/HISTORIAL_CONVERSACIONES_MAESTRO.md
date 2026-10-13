@@ -7,10 +7,10 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
-## 📋 SESIÓN v32.100 — 12 Octubre 2026
+## 📋 SESIÓN v33.00 — 12 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera
-- **Configuración de Seguridad y Blindaje de Claves Gemini (Producción vs Tests)**:
+- **Configuración de Seguridad y Blindaje de Claves Gemini (Producción vs Tests) y Regla Doctrinal de Versionamiento (.99 -> .00)**:
   1. *"Actúa como DevOps y arquitecto de software senior en TypeScript.*
   2. *CONFIGURACIÓN DE SEGURIDAD Y BLINDAJE DE CLAVES GEMINI (PRODUCCIÓN VS TESTS):*
      - *Objetivo: Mantener la API de pago activa para la operación 24/7 de WhatsApp como respaldo de emergencia, pero BLOQUEARLA ESTRICTAMENTE en cualquier entorno de pruebas (npm test) para evitar consumos de desarrollo.*
@@ -29,11 +29,13 @@
        `GEMINI_FREE_KEYS="key_gratis_1,key_gratis_2,key_gratis_3,key_gratis_4"`
        `# Clave de pago (Exclusiva para failover en producción 24/7, vetada en tests)`
        `GEMINI_PAID_KEY="AIzaSy..."`"*
+  6. *"Las versiones están mal deben llegar a al .99 y cambiar ala siguiente: Ejemplo 31.99 + implementación => 32.00"*
 
 ### Diagnóstico Técnico Profundo
 - **Riesgo Financiero de Consumo en Desarrollo**: En versiones previas, la rotación de claves en `llm.ts` y `vision.ts` mezclaba la clave de facturación de Google Cloud con las claves gratuitas en un solo array plano. Cualquier prueba automática o iteración local podía despachar peticiones consumiendo saldo de pago.
 - **Necesidad de Priorización Estricta 100% Gratuita**: JanIA debe priorizar el costo $0 COP utilizando las 4 claves gratuitas en Round-Robin activo (hasta 60 RPM combinadas), relegando la clave de pago exclusivamente como failover de último recurso si las 4 claves gratuitas colapsan por 429 en un pico masivo de WhatsApp.
 - **Retorno Automático sin Intervención Humana**: El sistema requería un mecanismo de des-escalamiento automático que, al cumplirse los 60 segundos de cooldown de cualquier clave gratuita, vuelva inmediatamente al Nivel 1 gratuito.
+- **Corrección de la Regla Doctrinal de Versionamiento**: El salto desde `.99` (en este caso `v32.99`) debe avanzar obligatoriamente al siguiente número entero con `.00` (es decir, `v33.00`, package.json `33.0.0`), quedando estrictamente prohibido usar `.100`.
 
 ### Acciones Técnicas Ejecutadas
 1. **Creación del Gestor Central de Claves (`server/_core/geminiKeyManager.ts`)**:
@@ -52,14 +54,18 @@
 4. **Documentación Oficial en `.env.example` y Configuración en `.env`**:
    - Sección de credenciales de IA añadida a `.env.example` con comentarios explicativos.
    - Variables añadidas a `.env` manteniendo 100% retrocompatibles `GEMINI_API_KEYS` y `GEMINI_API_KEY_1..5`.
-5. **Suite de Regresión 61 (`server/__tests__/regression.test.ts`)**:
-   - 4 tests automatizados validando: (1) Anulación de clave de pago en tests, (2) Interceptor Axios, (3) Transición Nivel 1 -> Nivel 2 -> Retorno Automático, y (4) Documentación de `.env.example`.
+5. **Consagración Doctrinal de Versionamiento (.99 -> .00)**:
+   - Inscrita la regla en `GEMINI.md` y `.agents/AGENTS.md`.
+   - `shared/const.ts`: `VECY_VERSION = "v33.00"`.
+   - `package.json`: `"version": "33.0.0"`.
+6. **Suite de Regresión 61 (`server/__tests__/regression.test.ts`)**:
+   - 5 tests automatizados validando: (1) Anulación de clave de pago en tests, (2) Interceptor Axios, (3) Transición Nivel 1 -> Nivel 2 -> Retorno Automático, (4) Documentación de `.env.example`, y (5) Cumplimiento inmutable de la regla doctrinal de versionamiento `.99 -> .00` (`v33.00`, prohibido `.100`).
 
 ### Verificación y Validación Empírica
 - `npm run check`: 0 errores TypeScript ✅.
-- `npm test`: 5 suites pasando, 190/190 tests vitest aprobados al 100% ✅.
+- `npm test`: 5 suites pasando, 191/191 tests vitest aprobados al 100% ✅.
 - `npm run build`: Compilación limpia de cliente (Vite en 20.92s) y servidor (esbuild en 143ms) ✅.
-- Versión oficial incrementada a **v32.100** (`32.100.0`).
+- Versión oficial incrementada a **v33.00** (`33.0.0`).
 
 ## 📋 SESIÓN v32.99 — 12 Octubre 2026
 

@@ -13,7 +13,7 @@ import {
 export type LLMProvider = "google" | "anthropic";
 
 /**
- * Gestor Inteligente de Claves y Modelos de Google Gemini (v32.100)
+ * Gestor Inteligente de Claves y Modelos de Google Gemini (v33.00)
  * - Nivel 1: Pool Round-Robin Activo de 4 Claves Gratuitas ($0 COP)
  * - Nivel 2: Respaldo de Emergencia de Pago 24/7 (GEMINI_PAID_KEY) solo ante 429 simultáneo en las 4 gratuitas
  * - Retorno Automático: Retorna a Nivel 1 tan pronto expira el cooldown de 60s

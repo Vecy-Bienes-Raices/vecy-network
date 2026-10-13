@@ -1,5 +1,5 @@
 /**
- * Setup Global de Pruebas para Vitest (v32.100)
+ * Setup Global de Pruebas para Vitest (v33.00)
  * Blindaje Inmutable de Claves de Pago en Entorno de Pruebas (NODE_ENV=test / npm test)
  */
 import axios from "axios";

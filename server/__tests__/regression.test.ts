@@ -3014,7 +3014,7 @@ Adriana Rebeca Orejuela`;
 
     it("Doctrina v32.47: Integración Oficial de Clave de Pago Gemini (Vecy APP Google Cloud Billing) y Pool Quíntuple de Failover", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v32\.\d+$/);
+      expect(VECY_VERSION).toMatch(/^v(32\.\d+|33\.\d+)$/);
 
       const fs = await import("fs");
       const envContent = fs.readFileSync(".env", "utf8");
@@ -3045,13 +3045,13 @@ Adriana Rebeca Orejuela`;
 
     it("Doctrina v32.49: Rediseño Visual de Admin & JanIA Console, Animación Neural Soundwave y Embudo de Marketing en Canal Oficial", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v32\./);
+      expect(VECY_VERSION).toMatch(/^v(32|33)\./);
     });
 
     it("Doctrina v32.50: Limpieza Defensiva de JSON, Tipeo en Vivo (Typewriter) y Aura Giratoria de Alta Velocidad con 3 Puntos Dorados en JanIA Console", async () => {
       const { sanitizeWebChatResponse } = await import("../routers/janIA");
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v32\./);
+      expect(VECY_VERSION).toMatch(/^v(32|33)\./);
 
       // Prueba con texto contaminado por JSON schema y escapes
       const dirtyRaw = `Esta redacción neutraliza las prácticas evasivas.\\n\\n### 4. ¿Qué debes hacer ante un juez?\\nSi un juez te dice \\"no hay contrato\\"... ¿Te ha pasado alguna situación?",
@@ -3073,7 +3073,7 @@ Adriana Rebeca Orejuela`;
 
     it("Doctrina v32.51: Resiliencia Signal E2E contra 'No open session', Descarte de Reacciones y Filtro Histórico de 15 Minutos en Grupos", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toMatch(/^v32\./);
+      expect(VECY_VERSION).toMatch(/^v(32|33)\./);
 
       // Validar que un objeto de sesión cerrado sea identificado correctamente
       const testClosedSession = {
@@ -3111,7 +3111,7 @@ Adriana Rebeca Orejuela`;
       const { VIP_COMMUNITY_ADMIN_PHONES, isVipRealEstateGroup } = await import("../_core/whatsapp-match");
       const { VECY_VERSION } = await import("../../shared/const");
 
-      expect(VECY_VERSION).toMatch(/^v32\.(5[2-9]|[6-9]\d|1\d{2})/);
+      expect(VECY_VERSION).toMatch(/^v(32\.(5[2-9]|[6-9]\d)|33\.\d+)/);
 
       // Validar presencia de administradores oficiales verificados por Eduardo
       expect(VIP_COMMUNITY_ADMIN_PHONES.has("573003600006")).toBe(true); // Armando Cortés
@@ -3146,7 +3146,7 @@ Adriana Rebeca Orejuela`;
       const { getStartOfTodayBogota, getDmHistory, appendDmHistory } = await import("../_core/janIA");
       const { VECY_VERSION } = await import("../../shared/const");
 
-      expect(VECY_VERSION).toMatch(/^v32\.(5[3-9]|[6-9]\d|1\d{2})/);
+      expect(VECY_VERSION).toMatch(/^v(32\.(5[3-9]|[6-9]\d)|33\.\d+)/);
 
       // 1. Validar que el inicio del día en curso en Bogotá sea un timestamp válido y menor o igual a now
       const startOfToday = getStartOfTodayBogota();
@@ -3191,7 +3191,7 @@ Adriana Rebeca Orejuela`;
       const { GOOGLE_REVIEW_MESSAGE, VIRAL_LOOP_MESSAGE } = await import("../_core/predialService");
       const { VECY_VERSION } = await import("../../shared/const");
 
-      expect(VECY_VERSION).toMatch(/^v32\.(5[4-9]|[6-9]\d|1\d{2})/);
+      expect(VECY_VERSION).toMatch(/^v(32\.(5[4-9]|[6-9]\d)|33\.\d+)/);
       // Validar gatillo de reciprocidad y aversión a la pérdida ("para que siga siendo GRATIS")
       expect(GOOGLE_REVIEW_MESSAGE).toContain("Así nos ayudas para que siga siendo *GRATIS.*");
       // Validar reducción de fricción mental con tiempo estimado de micro-esfuerzo
@@ -3208,7 +3208,7 @@ Adriana Rebeca Orejuela`;
       const { isCityOrGenericZone, extractPureBarrio } = await import("../../shared/colombianRealEstateParser");
       const { explicarMatch } = await import("../_core/matching");
 
-      expect(VECY_VERSION).toMatch(/^v32\./);
+      expect(VECY_VERSION).toMatch(/^v(32|33)\./);
 
       // 1. Validar que nombres de ciudad o genéricos sean detectados estrictamente
       expect(isCityOrGenericZone("Bogotá, D.C.")).toBe(true);
@@ -3581,7 +3581,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
     it("Doctrina v32.84 / v32.93: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
       const { VECY_ACTIVE_DOMAIN, VECY_VERSION } = await import("../../shared/const");
       expect(VECY_ACTIVE_DOMAIN).toBe("https://vecy-bienes-raices.vercel.app");
-      expect(VECY_VERSION).toMatch(/^v32\.(9[8-9]|1\d{2})/);
+      expect(VECY_VERSION).toMatch(/^v(32\.9[8-9]|33\.\d+)/);
 
       const fs = await import("fs");
       const path = await import("path");
@@ -4236,7 +4236,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
     });
   });
 
-  describe("61. Doctrina v32.100: Blindaje Inmutable de Claves Gemini (Producción vs Tests), Nivel 1 (Gratis), Nivel 2 (Pago Emergencia) y Retorno Automático", () => {
+  describe("61. Doctrina v33.00: Blindaje Inmutable de Claves Gemini (Producción vs Tests), Nivel 1 (Gratis), Nivel 2 (Pago Emergencia), Retorno Automático y Regla Doctrinal de Versionamiento (.99 -> .00)", () => {
     it("1. Blindaje inmutable en tests: GEMINI_PAID_KEY vetada y anulada al 100%, lanzando excepción ante intento de invocación", async () => {
       const { geminiKeyManager, isPaidKey, isTestEnvironment, assertKeyAllowedForExecution } = await import("../_core/geminiKeyManager");
 
@@ -4327,6 +4327,16 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(exampleContent).toContain("GEMINI_PAID_KEY=");
       expect(exampleContent).toContain("Claves gratuitas para pruebas y producción diaria (Costo $0)");
       expect(exampleContent).toContain("Clave de pago (Exclusiva para failover en producción 24/7, vetada en tests)");
+    });
+
+    it("5. Regla Doctrinal de Versionamiento (.99 -> .00): v32.99 + implementación salta a v33.00, prohibido .100", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.00");
+      expect(VECY_VERSION).not.toContain("100");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.0.0");
     });
   });
 });
