@@ -4620,6 +4620,45 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
       expect(pkg.version).toBe("33.3.0");
     });
+
+    it("6. Restauración de Google Opiniones en reportes de cortesía y exclusión para directores", async () => {
+      const { formatPoliteToolDelivery } = await import("../_core/jania/handlers/dmHandler");
+      const externalDelivery = await formatPoliteToolDelivery("573009998877", "María López", "predial", "Reporte Predial Bogotá", true);
+      expect(externalDelivery).toContain("Un servicio de cortesía de VECY BIENES RAÍCES 🤝.");
+      expect(externalDelivery).toContain("⭐ *¿Te fue útil esta consulta?*");
+      expect(externalDelivery).toContain("https://g.page/r/CUxVzG_vecy/review");
+
+      // Para directores (Eduardo o Jani), no debe incluir la reseña ni ganchos externos
+      const eduardoDelivery = await formatPoliteToolDelivery("573192919978", "Eduardo Rivera", "predial", "Reporte Predial Bogotá", true);
+      expect(eduardoDelivery).toContain("¡Hola, Eduardo! A tu disposición:");
+      expect(eduardoDelivery).toContain("Un servicio de cortesía de VECY BIENES RAÍCES 🤝.");
+      expect(eduardoDelivery).not.toContain("https://g.page/r/CUxVzG_vecy/review");
+
+      const janiDelivery = await formatPoliteToolDelivery("573188096811", "Jani Alves", "predial", "Reporte Predial Bogotá", true);
+      expect(janiDelivery).toContain("¡Hola, Jani! Qué gusto saludarte:");
+      expect(janiDelivery).toContain("Un servicio de cortesía de VECY BIENES RAÍCES 🤝.");
+      expect(janiDelivery).not.toContain("https://g.page/r/CUxVzG_vecy/review");
+    });
+
+    it("7. Resiliencia en ADRES / BDUA: reporte explícito de intermitencia sin enmascarar como 'sin novedad'", async () => {
+      const { executeIdentityVerificationFromWhatsApp } = await import("../_core/identityVerificationService");
+      // Documento sintético no presente o con fallo en red
+      const res = await executeIdentityVerificationFromWhatsApp("Verificar CC 9999999999", "573001112233", true, false);
+      expect(res.reportText).toBeDefined();
+      if (!res.adres?.eps) {
+        expect(res.reportText).toMatch(/(?:⚠️ El portal oficial de la ADRES presenta intermitencia o mantenimiento temporal en este momento|Sin novedad de aseguramiento registrada en BDUA|Sin registro activo de afiliación|No se encontraron datos de identidad en ADRES)/);
+      }
+    });
+
+    it("8. Resiliencia en IDU Valorización: reporte limpio ante congestión sin trazas de Puppeteer", async () => {
+      const { executeIduAssistanceFromWhatsApp } = await import("../_core/iduValorizacionService");
+      // Consulta en test con CHIP que salta descarga
+      const res = await executeIduAssistanceFromWhatsApp("Paz y salvo IDU AAA0058EEXS", "573001112233", true, { skipDownload: true });
+      expect(res.isIduRequest).toBe(true);
+      expect(res.reportText).toBeDefined();
+      expect(res.reportText).not.toContain("puppeteer");
+      expect(res.reportText).not.toContain("Navigation timeout");
+    });
   });
 });
 

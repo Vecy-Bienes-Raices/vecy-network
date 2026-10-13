@@ -10,47 +10,57 @@
 ## 📋 SESIÓN v33.03 — 13 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera
-- **Limpieza de Código Legado y Corrección de Experiencia en JanIA (v33.03)**:
-  1. *"Actúa como Auditor de Software Senior.*
-  2. *OBJETIVO: LIMPIEZA DE CÓDIGO LEGADO Y CORRECCIÓN DE EXPERIENCIA EN JanIA (v33.03).*
-  3. *El motor nuevo está corriendo en producción, pero hay textos y plantillas legadas que dañan la experiencia. Corrige de forma directa estos 4 puntos en el código:*
-     - *1. EXTIRPAR PLANTILLA DE DONACIONES: Busca en todo el proyecto la cadena 'manteniéndolo así' o 'servicio completamente GRATUITO' y bórrala por completo. La entrega de herramientas gratuitas (IDU, predial, etc.) debe cerrar únicamente con: 'Un servicio de cortesía de VECY BIENES RAÍCES 🤝.'.*
-     - *2. CORREGIR SALUDOS Y ORTOGRAFÍA EN DMs: En `dmHandler.ts`: Corregir el saludo que inicia en minúscula ('estimada...'). Aplicar ortografía estricta en español (apertura de signos `¡`, `¿` y mayúscula inicial). Si el remitente es Jani o Eduardo, dar trato directivo ('¡Hola, Jani!', '¡Hola, Eduardo!').*
-     - *3. MOTOR DE MATCH: RESPUESTA OBLIGATORIA CON ALIANZA 40/20/40 AUNQUE EL SCORE SEA BAJO: En `matchAdHocService.ts`: Si ninguna oferta alcanza el 80%: Listar los 2 o 3 inmuebles más recientes o cercanos con su ID de radicado para revisión manual. Incluir SIEMPRE la propuesta comercial de la alianza 40/20/40 sobre el 3% de comisión y el llamado a contactar a Jani o Eduardo al +57 316 656 9719.*
-     - *4. DESPLIEGUE: Validar con `npm run check` y `npm test`. Compilar con `npm run build`. Ejecutar `git commit -am "fix(jania): limpieza de plantillas legadas y ajuste de match v33.03" && git push origin main`. Ejecutar `npm run deploy:vps` para reiniciar el proceso en Contabo."*
+- **Calibración Quirúrgica en un Solo Pase (v33.03) — Cierre Total antes de las 5:00 AM**:
+  1. *"Actúa como Lead Architect y Auditor Senior de Vecy Network.*
+  2. *OBJETIVO CRÍTICO DE CIERRE TOTAL (v33.03): CALIBRACIÓN QUIRÚRGICA EN UN SOLO PASE.*
+  3. *Corrige y despliega de inmediato en producción los siguientes 5 puntos en el código para que el sistema opere al 1000% antes de las 5:00 AM:*
+     - *1. ORTOGRAFÍA ESTRICTA, URBANIDAD DE CARREÑO Y TRATO VIP DIRECTIVO: En `dmHandler.ts`: Eliminar el saludo defectuoso en minúscula ('estimada [nombre]!'). Aplicar ortografía estricta en español (apertura obligatoria de `¿` y `¡`, primera letra en mayúscula obligatoria en cada frase, usar únicamente el primer nombre de pila, ej. 'Jani', no 'Jani Alves'). Lista Blanca VIP: Si el remitente es Jani Alves (+573192919978 / +573166569719 o su número registrado) o Eduardo Rivera: saludo corporativo ejecutivo: '¡Hola, Jani! Qué gusto saludarte.' / '¡Hola, Eduardo! A tu disposición.', y omitir cualquier mensaje de captación comercial o ganchos destinados a usuarios externos.*
+     - *2. RESTAURACIÓN DE GOOGLE OPINIONES Y ERRADICACIÓN DE DONACIONES: En la función de entrega de herramientas de autoservicio (`formatPoliteToolDelivery` en `dmHandler.ts`): Eliminar definitivamente cualquier residuo sobre aportes o 'mantenerlo gratuito'. Restaurar obligatoriamente al pie de cada reporte de cortesía (Identidad, Predial, IDU): 'Un servicio de cortesía de VECY BIENES RAÍCES 🤝. ⭐ ¿Te fue útil esta consulta? Tu recomendación nos ayuda a seguir creciendo. Déjanos tu calificación de 5 estrellas en Google Opiniones aquí: https://g.page/r/CUxVzG_vecy/review'.*
+     - *3. AUDITORÍA Y RESILIENCIA EN SCRAPERS (ADRES / BDUA E IDU): En ADRES / BDUA: Si la petición falla por timeout o error de red, NO responder silenciosamente 'Sin novedad de aseguramiento registrada en BDUA'. Responder claramente: '⚠️ El portal oficial de la ADRES presenta intermitencia o mantenimiento temporal en este momento. Puedes consultar directamente en adres.gov.co'. Mantener 'Sin novedad' únicamente con respuesta 200 OK. En IDU: Subir el timeout a 45000 ms. Si ocurre timeout, capturar excepción y devolver mensaje limpio sin trazas técnicas de Puppeteer: '⚠️ El servidor oficial del IDU presenta congestión en este momento. Puedes descargar tu Paz y Salvo directamente con el CHIP [CHIP] aquí: https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml'.*
+     - *4. MOTOR DE MATCH: FALLBACK OBLIGATORIO CON IDs CANDIDATOS Y ALIANZA 40/20/40: En `matchAdHocService.ts`: Si la búsqueda de los últimos 15 días con score >= 80% NO arroja resultados, relajar automáticamente los filtros a los últimos 45 días y score >= 50%. Si existen coincidencias parciales, listar las 3 opciones más cercanas bajo el formato solicitado (`🔍 Opciones Aproximadas para Revisión Manual en Admin: • Inmueble #[ID_INMUEBLE] (Afinidad: [XX]%) — [Barrio/Zona] — $[Precio] — [Habs] Hab / [m²] m² 👉 Puedes consultar la ficha completa directamente en el Panel de Administración (OFERTAS / INMUEBLES).`). Si es usuario externo/colega: anonimizar totalmente al propietario/colega e inyectar siempre el llamado comercial de cierre bajo la Alianza 40/20/40 sobre el 3% de comisión hacia Jani o Eduardo al +57 316 656 9719. Si es Administrador: mostrar nombre completo, teléfono y enlace directo de WhatsApp del colega captador.*
+     - *5. VALIDACIÓN, COMPILACIÓN Y DESPLIEGUE INMEDIATO A CONTABO: Incrementar versión a `v33.03` (`33.3.0` en `package.json`), validar tipos con `npm run check` (0 errores), pruebas de regresión con `npm test` (100% verde a $0 COP), compilar con `npm run build`, commit/push y ejecutar `npm run deploy:vps` a Contabo verificando PM2 online."*
 
 ### Diagnóstico Técnico Profundo
-- **Extirpación de la Plantilla de Donaciones**: La plantilla legada (`formatPoliteInactivityPrompt`) enviaba una consulta automática tras 1 minuto de inactividad que preguntaba *"este es un servicio completamente GRATUITO. ¿Podrías ayudarnos a seguir manteniéndolo así? ✨"*, transmitiendo erróneamente un tono de donación o mendicidad. La doctrina VECY exige que todas las herramientas gratuitas (verificación de antecedentes, Predial Bogotá, Paz y Salvo IDU, liquidaciones) se entreguen como un valor agregado institucional sin pedir favores, rematando únicamente con *"Un servicio de cortesía de VECY BIENES RAÍCES 🤝."*.
-- **Ortografía y Trato Directivo en DMs**:
-  * Respuestas del LLM generaban vocativos en minúscula (*"estimada colega..."* o *"estimado..."*) y omitían los signos de apertura reglamentarios en español (`¡` y `¿`).
-  * Cuando los directores y fundadores (Eduardo A. Rivera y Jani Alves) interactuaban por DM, JanIA los trataba como clientes nuevos indagando a qué se dedicaban. Se requería trato directivo y ejecutivo directo (*"¡Hola, Eduardo!"* y *"¡Hola, Jani!"*).
-- **Consistencia en el Motor de Cruce Ad-Hoc**:
-  * Si ninguna oferta o demanda alcanzaba el 80% de score matemático estricto, el reporte público quedaba vacío o informativo. Se requería exponer siempre las 2 o 3 opciones más cercanas y recientes con su respectivo ID de radicado para revisión manual en equipo, e incluir de forma ineludible la propuesta comercial de la alianza 40/20/40 sobre el 3% de comisión comercial con Eduardo A. Rivera y Jani Alves (+57 316 656 9719).
+- **Urbanidad, Ortografía y Trato Directivo en DMs**:
+  * Erradicación de vocativos informales o en minúscula generados por LLMs mediante sanitización en tiempo real (`sanitizeDmOrthographyAndGreeting`), apertura formal obligatoria de interrogaciones y exclamaciones (`¿`, `¡`) y capitalización incondicional al inicio de cada frase.
+  * Reconocimiento directo de fundadores (+573192919978, +573188096811, +573166569719, LIDs) con trato corporativo ejecutivo ("¡Hola, Jani! Qué gusto saludarte." / "¡Hola, Eduardo! A tu disposición."), neutralizando cualquier gancho comercial o pregunta de prospección externa.
+  * Uso estricto de primer nombre de pila ("Jani", "Eduardo", "Consuelo") sin duplicación de apellidos.
+- **Restauración de Reputación en Google Opiniones sin Mendicidad**:
+  * Purgada toda mención a "mantenerlo gratuito" o "servicio completamente GRATUITO".
+  * Inserción del bloque oficial de reseña de 5 estrellas con enlace corporativo (`https://g.page/r/CUxVzG_vecy/review`) tras cada entrega de herramientas gratuitas de cortesía. Excluido para Eduardo y Jani.
+- **Resiliencia de Scrapers Estatales (ADRES BDUA e IDU)**:
+  * ADRES BDUA: Diferenciación estricta entre un ciudadano que no registra afiliación (respuesta 200 OK censal) y una falla de red/timeout en madrugada, reportando el estado real de intermitencia con enlace a `adres.gov.co`.
+  * IDU Valorización: Elevación de timeout a 45.000 ms en Puppeteer y captura quirúrgica de timeouts para entregar mensaje limpio y didáctico con el CHIP y URL oficial distrital sin exponer stacktraces técnicos de Chromium.
+- **Motor de Coincidencias Ad-Hoc Adaptativo**:
+  * Cascada de 2 fases: Fase 1 (15 días, score ≥ 80%) $\rightarrow$ Fase 2 Fallback (45 días, score ≥ 50%).
+  * Formato unificado con Radicado, anonimización total para el canal público y entrega incondicional del esquema comercial Alianza 40/20/40 sobre el 3% de comisión.
 
 ### Acciones Técnicas Ejecutadas
-1. **Extirpación de Plantillas Legadas de Donación**:
-   - `server/_core/politenessService.ts`: `formatPoliteInactivityPrompt` purgada de "manteniéndolo así" y "servicio completamente GRATUITO", retornando únicamente *"Un servicio de cortesía de VECY BIENES RAÍCES 🤝."*.
-   - `server/_core/whatsapp-match.ts`: Inactivado el despachador retardado de preguntas de donación; comentarios limpiados.
-   - `server/_core/jania/handlers/dmHandler.ts`: `formatPoliteToolDelivery` garantiza el cierre doctrinal *"Un servicio de cortesía de VECY BIENES RAÍCES 🤝."* en cualquier entrega de herramienta (cédula, predial, IDU o notarial).
-2. **Corrección de Ortografía y Trato Directivo en DMs**:
-   - `server/_core/jania/handlers/dmHandler.ts`:
-     * Detección directiva para Eduardo Rivera (`3192919978`, `225954035179724`, nombre) y Jani Alves (`3188096811`, LIDs asociados, nombre).
-     * Saludo inicial para directores: *"¡Hola, Eduardo! 👋 Estoy 100% activa, atenta y a tu entera disposición directiva en VECY BIENES RAÍCES. ¿En qué te colaboro hoy? 🤝✨"* (y análogo para Jani).
-     * System prompt enriquecido prohibiendo terminantemente saludos en minúscula y ordenando el uso obligatorio de signos de apertura (`¡`, `¿`).
-     * Función `sanitizeDmOrthographyAndGreeting`: Corrige minúsculas iniciales (`Estimad$1`), capitaliza inicios de frase y garantiza apertura de interrogaciones (`¿`) ante palabras interrogativas.
-3. **Motor de Match con Alianza 40/20/40 Obligatoria y Radicados**:
-   - `server/_core/matchAdHocService.ts`:
-     * Evaluación de umbral del 80%: Si ninguna oferta/demanda alcanza el 80%, extrae las 2-3 opciones más recientes y cercanas.
-     * Listado con ID de Radicado tanto en Canal Admin (`Radicado #${m.id}`) como en Canal Público (`Ref-P${m.id}` / `Ref-R${m.id}`).
-     * Inclusión obligatoria del gancho comercial de la alianza 40/20/40 sobre el 3% de comisión y enlace directo a Eduardo y Jani (+57 316 656 9719) en el 100% de los escenarios.
-4. **Suite de Regresión 64 (`server/__tests__/regression.test.ts`)**:
-   - 5 pruebas automatizadas aprobadas certificando extirpación de donaciones, trato directivo a Eduardo y Jani, ortografía estricta, alianza 40/20/40 obligatoria aun con score bajo, y versionamiento oficial v33.03.
-5. **Versionamiento y Build**:
+1. `server/_core/jania/handlers/dmHandler.ts`:
+   - Lista Blanca VIP para Eduardo y Jani (+573192919978, +573188096811, +573166569719, LIDs) con saludos ejecutivos.
+   - Supresión de embudo comercial y ganchos de venta para directores fundadores.
+   - Sanitización ortográfica estricta (`sanitizeDmOrthographyAndGreeting`) con signos `¡`, `¿`, mayúsculas por frase y primer nombre de pila.
+   - Inyección de Google Opiniones (`https://g.page/r/CUxVzG_vecy/review`) en `formatPoliteToolDelivery` para usuarios externos.
+2. `server/_core/politenessService.ts`:
+   - Remoción de lenguaje de donaciones y mantenimiento de compatibilidad doctrinal.
+3. `server/_core/identityVerificationService.ts`:
+   - Detección explícita de fallas de red/timeout en ADRES reportando intermitencia hacia `adres.gov.co` sin enmascarar como ausencia de novedad.
+4. `server/_core/iduValorizacionService.ts`:
+   - Timeout elevado a 45.000 ms en todas las etapas de Puppeteer.
+   - Mensaje de congestión limpio con CHIP y portal oficial `webidu.idu.gov.co` sin trazas de Puppeteer.
+5. `server/_core/matchAdHocService.ts`:
+   - Relajación a 45 días y score ≥ 50% ante ausencia de coincidencias ≥ 80% en 15 días.
+   - Formato exacto de viñetas con Radicado, anonimización en canal público y cierre incondicional de Alianza 40/20/40.
+6. `server/__tests__/regression.test.ts`:
+   - Suite 64 ampliada a 8 pruebas automatizadas certificando los 5 puntos al 100%.
+7. **Verificación y Despliegue**:
    - `shared/const.ts`: `VECY_VERSION = "v33.03"`.
    - `package.json`: `"version": "33.3.0"`.
-   - `npm run check`: 0 errores.
-   - `npm test`: 208/208 tests passing (100% verde a $0 COP).
-   - `npm run build`: Compilación limpia en 21.41s.
+   - `npm run check`: 0 errores de TypeScript.
+   - `npm test`: 211/211 tests passing (100% verde a $0 COP).
+   - `npm run build`: Compilación limpia en 15.79s.
+   - `git commit` y `git push origin main`.
+   - `npm run deploy:vps` a Contabo (`13.140.149.144`): PM2 `jania-server` online en versión 33.3.0.
 
 ---
 

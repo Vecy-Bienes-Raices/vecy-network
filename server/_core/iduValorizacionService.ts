@@ -185,16 +185,16 @@ export async function downloadIduCertificatePdf(chip: string): Promise<DownloadI
     // 1. Navegar directamente al formulario oficial de generación de certificados del IDU
     await page.goto('https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/generateCert.xhtml', {
       waitUntil: 'networkidle2',
-      timeout: 30000
+      timeout: 45000
     });
 
     // 3. Escribir el CHIP en el input oficial
-    await page.waitForSelector('[id="validtaPin_form:pinNumber"]', { timeout: 15000 });
+    await page.waitForSelector('[id="validtaPin_form:pinNumber"]', { timeout: 45000 });
     await page.type('[id="validtaPin_form:pinNumber"]', cleanChip);
 
     // 4. Hacer clic en "Validar"
     await Promise.all([
-      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => {}),
+      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 45000 }).catch(() => {}),
       page.click('[id="validtaPin_form:pinNumberButton"]')
     ]);
 
@@ -230,7 +230,7 @@ export async function downloadIduCertificatePdf(chip: string): Promise<DownloadI
     });
 
     // 7. Hacer clic en "Generar Certificado"
-    await page.waitForSelector('[id="validtaPin_form:pinGenerateButton"]', { timeout: 10000 });
+    await page.waitForSelector('[id="validtaPin_form:pinGenerateButton"]', { timeout: 45000 });
     await page.click('[id="validtaPin_form:pinGenerateButton"]');
 
     // 8. Esperar la descarga del archivo report.pdf
@@ -250,7 +250,7 @@ export async function downloadIduCertificatePdf(chip: string): Promise<DownloadI
     if (!downloadedFilePath || !fs.existsSync(downloadedFilePath)) {
       return {
         success: false,
-        errorMessage: 'El portal del IDU no entregó el archivo PDF en el tiempo esperado. Por favor intenta de nuevo en unos momentos.',
+        errorMessage: `⚠️ El servidor oficial del IDU presenta congestión en este momento. Puedes descargar tu Paz y Salvo directamente con el CHIP ${cleanChip} aquí: https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml`,
         matricula: predioData.matricula,
         direccion: predioData.direccion
       };
@@ -276,10 +276,10 @@ export async function downloadIduCertificatePdf(chip: string): Promise<DownloadI
       direccion: predioData.direccion || undefined
     };
   } catch (err: any) {
-    console.error(`[IDU-SERVICE] Error descargando Paz y Salvo del IDU para ${cleanChip}:`, err);
+    console.error(`[IDU-SERVICE] Error descargando Paz y Salvo del IDU para ${cleanChip}:`, err?.message || err);
     return {
       success: false,
-      errorMessage: `Error de conexión con el portal oficial del IDU: ${err?.message || 'Tiempo de espera agotado'}`
+      errorMessage: `⚠️ El servidor oficial del IDU presenta congestión en este momento. Puedes descargar tu Paz y Salvo directamente con el CHIP ${cleanChip} aquí: https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml`
     };
   } finally {
     if (browser) {
@@ -410,16 +410,15 @@ export async function executeIduAssistanceFromWhatsApp(
     };
   }
 
-  // CASO 3: Error del portal (CHIP inválido o no registrado)
-  const errorMsg = downloadResult?.errorMessage ||
-    `No fue posible expedir el certificado de valorización en este momento para el CHIP ${chip}.`;
+  // CASO 3: Error del portal (CHIP inválido o no registrado o congestión)
+  const rawError = downloadResult?.errorMessage ||
+    `⚠️ El servidor oficial del IDU presenta congestión en este momento. Puedes descargar tu Paz y Salvo directamente con el CHIP ${chip} aquí: https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml`;
+  const formattedErrorLine = rawError.startsWith('⚠️') ? rawError : `⚠️ ${rawError}`;
 
   const reportText =
     `🏛️ *PAZ Y SALVO DE VALORIZACIÓN IDU BOGOTÁ — VECY BIENES RAÍCES* 🇨🇴\n\n` +
     `🏠 *Predio CHIP:* ${chip}\n\n` +
-    `⚠️ ${errorMsg}\n\n` +
-    `🌐 *Puedes consultar directamente en el portal oficial del IDU:*\n` +
-    `👉 https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml\n\n` +
+    `${formattedErrorLine}\n\n` +
     `Si tienes dudas o necesitas apoyo de nuestro equipo jurídico y catastral, escríbenos al canal oficial o consúltame de nuevo indicando el CHIP exacto. 👍`;
 
   return {

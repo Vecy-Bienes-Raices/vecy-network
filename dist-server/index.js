@@ -16006,12 +16006,12 @@ async function downloadIduCertificatePdf(chip) {
     });
     await page.goto("https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/generateCert.xhtml", {
       waitUntil: "networkidle2",
-      timeout: 3e4
+      timeout: 45e3
     });
-    await page.waitForSelector('[id="validtaPin_form:pinNumber"]', { timeout: 15e3 });
+    await page.waitForSelector('[id="validtaPin_form:pinNumber"]', { timeout: 45e3 });
     await page.type('[id="validtaPin_form:pinNumber"]', cleanChip);
     await Promise.all([
-      page.waitForNavigation({ waitUntil: "networkidle2", timeout: 2e4 }).catch(() => {
+      page.waitForNavigation({ waitUntil: "networkidle2", timeout: 45e3 }).catch(() => {
       }),
       page.click('[id="validtaPin_form:pinNumberButton"]')
     ]);
@@ -16038,7 +16038,7 @@ async function downloadIduCertificatePdf(chip) {
         direccion: dirEl ? dirEl.value.trim() : ""
       };
     });
-    await page.waitForSelector('[id="validtaPin_form:pinGenerateButton"]', { timeout: 1e4 });
+    await page.waitForSelector('[id="validtaPin_form:pinGenerateButton"]', { timeout: 45e3 });
     await page.click('[id="validtaPin_form:pinGenerateButton"]');
     let downloadedFilePath = null;
     for (let i = 0; i < 20; i++) {
@@ -16055,7 +16055,7 @@ async function downloadIduCertificatePdf(chip) {
     if (!downloadedFilePath || !fs5.existsSync(downloadedFilePath)) {
       return {
         success: false,
-        errorMessage: "El portal del IDU no entreg\xF3 el archivo PDF en el tiempo esperado. Por favor intenta de nuevo en unos momentos.",
+        errorMessage: `\u26A0\uFE0F El servidor oficial del IDU presenta congesti\xF3n en este momento. Puedes descargar tu Paz y Salvo directamente con el CHIP ${cleanChip} aqu\xED: https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml`,
         matricula: predioData.matricula,
         direccion: predioData.direccion
       };
@@ -16078,10 +16078,10 @@ async function downloadIduCertificatePdf(chip) {
       direccion: predioData.direccion || void 0
     };
   } catch (err) {
-    console.error(`[IDU-SERVICE] Error descargando Paz y Salvo del IDU para ${cleanChip}:`, err);
+    console.error(`[IDU-SERVICE] Error descargando Paz y Salvo del IDU para ${cleanChip}:`, err?.message || err);
     return {
       success: false,
-      errorMessage: `Error de conexi\xF3n con el portal oficial del IDU: ${err?.message || "Tiempo de espera agotado"}`
+      errorMessage: `\u26A0\uFE0F El servidor oficial del IDU presenta congesti\xF3n en este momento. Puedes descargar tu Paz y Salvo directamente con el CHIP ${cleanChip} aqu\xED: https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml`
     };
   } finally {
     if (browser) {
@@ -16188,15 +16188,13 @@ Una vez me lo des, me conecto al portal oficial del IDU y te entrego el PDF ofic
       direccion: downloadResult.direccion
     };
   }
-  const errorMsg = downloadResult?.errorMessage || `No fue posible expedir el certificado de valorizaci\xF3n en este momento para el CHIP ${chip}.`;
+  const rawError = downloadResult?.errorMessage || `\u26A0\uFE0F El servidor oficial del IDU presenta congesti\xF3n en este momento. Puedes descargar tu Paz y Salvo directamente con el CHIP ${chip} aqu\xED: https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml`;
+  const formattedErrorLine = rawError.startsWith("\u26A0\uFE0F") ? rawError : `\u26A0\uFE0F ${rawError}`;
   const reportText = `\u{1F3DB}\uFE0F *PAZ Y SALVO DE VALORIZACI\xD3N IDU BOGOT\xC1 \u2014 VECY BIENES RA\xCDCES* \u{1F1E8}\u{1F1F4}
 
 \u{1F3E0} *Predio CHIP:* ${chip}
 
-\u26A0\uFE0F ${errorMsg}
-
-\u{1F310} *Puedes consultar directamente en el portal oficial del IDU:*
-\u{1F449} https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml
+${formattedErrorLine}
 
 Si tienes dudas o necesitas apoyo de nuestro equipo jur\xEDdico y catastral, escr\xEDbenos al canal oficial o cons\xFAltame de nuevo indicando el CHIP exacto. \u{1F44D}`;
   return {
@@ -21753,7 +21751,14 @@ ${policeTitle}
 \u{1F4CC} *Validaci\xF3n Autom\xE1tica:* Identificamos que este documento corresponde a una C\xE9dula de Extranjer\xEDa (C.E.).` : "";
       const pgnLine = pgnRes?.statusText ? pgnRes.statusText : "No presenta antecedentes disciplinarios ni inhabilidades vigentes en el sistema SIRI.";
       const cgrLine = cgrRes?.statusText ? cgrRes.statusText : "No registra reporte en el Bolet\xEDn de Responsables Fiscales (SIRECI) de la Contralor\xEDa General de la Rep\xFAblica.";
-      const epsLine = adresRes?.eps ? `${adresRes.eps} (${adresRes.estado || "REGISTRADO"}${adresRes.regimen ? ` \u2014 ${adresRes.regimen}` : ""})` : "Sin novedad de aseguramiento registrada en BDUA.";
+      let epsLine = "";
+      if (adresRes?.eps) {
+        epsLine = `${adresRes.eps} (${adresRes.estado || "REGISTRADO"}${adresRes.regimen ? ` \u2014 ${adresRes.regimen}` : ""})`;
+      } else if (!adresRes || adresRes.error && (adresRes.error.toLowerCase().includes("intermitencia") || adresRes.error.toLowerCase().includes("conexi\xF3n") || adresRes.error.toLowerCase().includes("conexion") || adresRes.error.toLowerCase().includes("inicializar") || adresRes.error.toLowerCase().includes("timeout") || adresRes.error.toLowerCase().includes("servidor") || adresRes.error.toLowerCase().includes("fallo") || adresRes.error.toLowerCase().includes("ca\xEDdo") || adresRes.error.toLowerCase().includes("caido"))) {
+        epsLine = "\u26A0\uFE0F El portal oficial de la ADRES presenta intermitencia o mantenimiento temporal en este momento. Puedes consultar directamente en adres.gov.co";
+      } else {
+        epsLine = "Sin novedad de aseguramiento registrada en BDUA.";
+      }
       const locationLine = adresRes?.municipio && !adresRes.municipio.toLowerCase().includes("informacion") ? `
 \u{1F4CD} *Ubicaci\xF3n Registrada:* ${adresRes.municipio}${adresRes.departamento ? `, ${adresRes.departamento}` : ""}` : "";
       const securityLine = ponalRes?.message || "Sin antecedentes judiciales ni requerimientos penales pendientes ante la Polic\xEDa Nacional.";
@@ -21830,7 +21835,7 @@ Consultamos las bases de datos oficiales de seguridad del Estado para el documen
 \u26A0\uFE0F *Estado:* Documento no localizado en las bases censales en l\xEDnea.
 
 2\uFE0F\u20E3 *SEGURIDAD SOCIAL (EPS / R\xC9GIMEN)*
-\u{1F3E5} *Central de Aseguramiento (ADRES):* ${adresRes?.error || "Sin registro activo de afiliaci\xF3n en la Base de Datos \xDAnica de Afiliados (BDUA)."}
+\u{1F3E5} *Central de Aseguramiento (ADRES):* ${!adresRes || adresRes.error && (adresRes.error.toLowerCase().includes("intermitencia") || adresRes.error.toLowerCase().includes("conexi\xF3n") || adresRes.error.toLowerCase().includes("conexion") || adresRes.error.toLowerCase().includes("inicializar") || adresRes.error.toLowerCase().includes("timeout") || adresRes.error.toLowerCase().includes("servidor")) ? "\u26A0\uFE0F El portal oficial de la ADRES presenta intermitencia o mantenimiento temporal en este momento. Puedes consultar directamente en adres.gov.co" : adresRes?.error || "Sin registro activo de afiliaci\xF3n en la Base de Datos \xDAnica de Afiliados (BDUA)."}
 
 3\uFE0F\u20E3 *ENTIDADES DE CONTROL (DISCIPLINARIO Y FISCAL)*
 \u{1F3DB}\uFE0F *Central de Control Notarial (Procuradur\xEDa SIRI):* ${pgnRes?.statusText || "No se encuentra registrado en el sistema de informaci\xF3n SIRI o no disponible."}
@@ -22390,7 +22395,7 @@ async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, 
   const canonicalComposite = getCanonicalCompositeName(realName);
   const compositeOrFirst = extractFirstName(realName);
   const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(rawName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
-  const isJani = /jani/i.test(realName || "") || /jani/i.test(rawName || "") || userId.includes("3188096811") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
+  const isJani = /jani/i.test(realName || "") || /jani/i.test(rawName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
   let displayName = "";
   if (isEduardo) {
     displayName = "Eduardo";
@@ -22398,24 +22403,37 @@ async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, 
     displayName = "Jani";
   } else {
     displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
+    if (!canonicalComposite && displayName.includes(" ")) {
+      displayName = displayName.split(" ")[0];
+    }
   }
   const welcomeGrammar = nameInfo.isFemale ? "bienvenida" : "bienvenido";
   const history = await getOrLoadDmHistory(userId);
   const isFirstTurn = history.length === 0;
   const cleanPayload = (payloadText || "").trim();
-  const closingTag = "Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.";
-  const payloadWithClosing = cleanPayload.endsWith(closingTag) ? cleanPayload : `${cleanPayload}
+  const reviewSection = isEduardo || isJani ? "" : `
 
-${closingTag}`;
+\u2B50 *\xBFTe fue \xFAtil esta consulta?*
+Tu recomendaci\xF3n nos ayuda a seguir creciendo. D\xE9janos tu calificaci\xF3n de 5 estrellas en Google Opiniones aqu\xED:
+https://g.page/r/CUxVzG_vecy/review`;
+  const closingTag = "Un servicio de cortes\xEDa de VECY BIENES RA\xCDCES \u{1F91D}.";
+  let payloadWithClosing = cleanPayload;
+  if (!payloadWithClosing.includes(closingTag)) {
+    payloadWithClosing = `${payloadWithClosing}
+
+${closingTag}${reviewSection}`;
+  } else if (!isEduardo && !isJani && !payloadWithClosing.includes("CUxVzG_vecy/review")) {
+    payloadWithClosing = `${payloadWithClosing}${reviewSection}`;
+  }
   if (!success) {
     if (payloadText && payloadText.trim()) {
       if (isEduardo) {
-        return `\xA1Hola, Eduardo! Aqu\xED tienes el detalle del reporte solicitado:
+        return `\xA1Hola, Eduardo! A tu disposici\xF3n. Aqu\xED tienes el detalle del reporte solicitado:
 
 ${payloadWithClosing}`;
       }
       if (isJani) {
-        return `\xA1Hola, Jani! Aqu\xED tienes el detalle del reporte solicitado:
+        return `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Aqu\xED tienes el detalle del reporte solicitado:
 
 ${payloadWithClosing}`;
       }
@@ -22430,20 +22448,20 @@ ${payloadWithClosing}`;
       }
     }
     if (isEduardo) {
-      return `\xA1Hola, Eduardo! Qu\xE9 pena contigo. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
+      return `\xA1Hola, Eduardo! A tu disposici\xF3n. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
     }
     if (isJani) {
-      return `\xA1Hola, Jani! Qu\xE9 pena contigo. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
+      return `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}`;
     }
     return `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude procesar tu solicitud en este intento. \xBFPodr\xEDas por favor confirmarme nuevamente los datos para ayudarte de inmediato? \u{1F91D}`;
   }
   if (isEduardo) {
-    return `\xA1Hola, Eduardo! Aqu\xED tienes el reporte oficial solicitado de inmediato:
+    return `\xA1Hola, Eduardo! A tu disposici\xF3n:
 
 ${payloadWithClosing}`;
   }
   if (isJani) {
-    return `\xA1Hola, Jani! Aqu\xED tienes el reporte oficial solicitado de inmediato:
+    return `\xA1Hola, Jani! Qu\xE9 gusto saludarte:
 
 ${payloadWithClosing}`;
   }
@@ -22464,27 +22482,27 @@ Ya proces\xE9 con gusto tu consulta como un beneficio de cortes\xEDa de nuestra 
 function sanitizeDmOrthographyAndGreeting(text2, isEduardo, isJani, _displayName, hasPriorHistory = false) {
   let cleaned = (text2 || "").trim();
   if (!cleaned) return cleaned;
+  cleaned = cleaned.replace(/^estimad([ao]s?)\s+([a-záéíóúñ]+)!/i, (_m, ending, name) => {
+    return `\xA1Estimad${ending.toLowerCase()} ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}!`;
+  });
   cleaned = cleaned.replace(/^estimad([ao]s?)\b/i, "Estimad$1");
-  cleaned = cleaned.replace(/^hola\s+([a-záéíóúñ]+)[,!.\s]+/i, (_m, name) => `\xA1Hola, ${name.charAt(0).toUpperCase() + name.slice(1)}! `);
+  cleaned = cleaned.replace(/^hola\s+([a-záéíóúñ]+)[,!.\s]+/i, (_m, name) => `\xA1Hola, ${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()}! `);
   cleaned = cleaned.replace(/^hola\b/i, "\xA1Hola!");
   cleaned = cleaned.replace(/^buen([ao]s?\s+(?:d[ií]as|tardes|noches))\b/i, (m) => `\xA1${m.charAt(0).toUpperCase() + m.slice(1)}!`);
+  cleaned = cleaned.replace(/\b(Jani)\s+Alves\b/gi, "Jani");
+  cleaned = cleaned.replace(/\b(Eduardo)\s+Rivera\b/gi, "Eduardo");
   if (isEduardo) {
     if (!hasPriorHistory || /^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|estimad[ao])/i.test(cleaned)) {
       cleaned = cleaned.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|estimad[ao]|saludos)[^!.\n]*[!.\n]?\s*/i, "");
-      cleaned = `\xA1Hola, Eduardo! ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
+      cleaned = `\xA1Hola, Eduardo! A tu disposici\xF3n. ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
     }
   } else if (isJani) {
     if (!hasPriorHistory || /^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|estimad[ao])/i.test(cleaned)) {
       cleaned = cleaned.replace(/^¡?(?:hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|estimad[ao]|saludos)[^!.\n]*[!.\n]?\s*/i, "");
-      cleaned = `\xA1Hola, Jani! ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
+      cleaned = `\xA1Hola, Jani! Qu\xE9 gusto saludarte. ${cleaned.charAt(0).toUpperCase() + cleaned.slice(1)}`.trim();
     }
   }
-  if (cleaned.length > 0) {
-    const firstChar = cleaned.charAt(0);
-    if (firstChar >= "a" && firstChar <= "z") {
-      cleaned = firstChar.toUpperCase() + cleaned.slice(1);
-    }
-  }
+  cleaned = cleaned.replace(/(^|[.!?]\s+)([a-záéíóúñ])/g, (_m, prefix, letter) => prefix + letter.toUpperCase());
   cleaned = cleaned.replace(/(^|\n|[.!?]\s*|,\s*)(qu[eé]|c[oó]mo|cu[aá]ndo|d[oó]nde|por\s+qu[eé]|cu[aá]l(?:es)?|qui[eé]n(?:es)?|acaso)\b([^?\n]+)\?/gi, (_match, prefix, qWord, rest) => {
     const cleanPrefix = prefix.endsWith(", ") ? prefix.slice(0, -2) + ". " : prefix;
     return `${cleanPrefix}\xBF${qWord.charAt(0).toUpperCase() + qWord.slice(1)}${rest}?`;
@@ -22498,7 +22516,7 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
   const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
   const timeSalutation = getGreetingByTime4();
   const isEduardo = /eduardo/i.test(realName || "") || /eduardo/i.test(userName || "") || userId.includes("3192919978") || userId.includes("225954035179724");
-  const isJani = /jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
+  const isJani = /jani/i.test(realName || "") || /jani/i.test(userName || "") || userId.includes("3188096811") || userId.includes("3166569719") || userId.includes("167108705018103") || userId.includes("182781141344345") || userId.includes("218820279050385");
   const nameInfo = resolveNameAndGender(realName, timeSalutation);
   const compositeOrFirst = extractFirstName(realName);
   let displayName = "";
@@ -22515,6 +22533,9 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
     } else if (nameInfo.displayName && nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor")) {
       displayName = nameInfo.displayName;
     }
+    if (!canonicalComposite && displayName.includes(" ")) {
+      displayName = displayName.split(" ")[0];
+    }
   }
   const nameGreeting = displayName ? `, ${displayName}` : "";
   const vocativeGreeting = displayName ? `, ${displayName}` : "";
@@ -22524,13 +22545,13 @@ async function processPrivateDmConversationalMessage(text2, userId, userName) {
   const hasPriorHistory = history.length > 0;
   if (isGreetingOnly && history.length === 0) {
     if (isEduardo) {
-      const welcomeMsg2 = `\xA1Hola, Eduardo! \u{1F44B} Estoy 100% activa, atenta y a tu entera disposici\xF3n directiva en VECY BIENES RA\xCDCES. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}\u2728`;
+      const welcomeMsg2 = `\xA1Hola, Eduardo! A tu disposici\xF3n. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}\u2728`;
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", welcomeMsg2);
       return welcomeMsg2;
     }
     if (isJani) {
-      const welcomeMsg2 = `\xA1Hola, Jani! \u{1F44B} Estoy 100% activa, atenta y a tu entera disposici\xF3n directiva en VECY BIENES RA\xCDCES. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}\u2728`;
+      const welcomeMsg2 = `\xA1Hola, Jani! Qu\xE9 gusto saludarte. \xBFEn qu\xE9 te colaboro hoy? \u{1F91D}\u2728`;
       appendDmHistory(userId, "user", clean);
       appendDmHistory(userId, "assistant", welcomeMsg2);
       return welcomeMsg2;
@@ -22908,22 +22929,24 @@ QUI\xC9NES SOMOS, CONVERSACI\xD3N AMENA, REDES SOCIALES Y ESTOCADA FINAL DE CALI
     }
     if (!reply) {
       if (isEduardo) {
-        reply = `\xA1Hola, Eduardo! A tu completa disposici\xF3n. Cu\xE9ntame en qu\xE9 te colaboro hoy.`;
+        reply = `\xA1Hola, Eduardo! A tu disposici\xF3n. Cu\xE9ntame en qu\xE9 te colaboro hoy.`;
       } else if (isJani) {
-        reply = `\xA1Hola, Jani! A tu completa disposici\xF3n. Cu\xE9ntame en qu\xE9 te colaboro hoy.`;
+        reply = `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Cu\xE9ntame en qu\xE9 te colaboro hoy.`;
       } else {
         reply = hasPriorHistory ? `Con mucho gusto. En *VECY BIENES RA\xCDCES* nos dedicamos a acelerar y proteger los negocios inmobiliarios con tecnolog\xEDa y asesor\xEDa especializada. Cu\xE9ntame en detalle qu\xE9 necesitas o qu\xE9 duda tienes y te oriento de inmediato.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Cu\xE9ntame en qu\xE9 te puedo colaborar hoy.`;
       }
     }
-    reply = enhanceResponseWithCommercialFunnel(reply, clean);
+    if (!isEduardo && !isJani) {
+      reply = enhanceResponseWithCommercialFunnel(reply, clean);
+    }
     reply = sanitizeDmOrthographyAndGreeting(reply, isEduardo, isJani, displayName, hasPriorHistory);
     appendDmHistory(userId, "user", clean);
     appendDmHistory(userId, "assistant", reply);
     return reply;
   } catch (err) {
     console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    let fallback = isEduardo ? `\xA1Hola, Eduardo! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para procesarlo de inmediato? \u{1F91D}` : isJani ? `\xA1Hola, Jani! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para procesarlo de inmediato? \u{1F91D}` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
-    if (isHighValueLegalOrTaxInquiry(clean)) {
+    let fallback = isEduardo ? `\xA1Hola, Eduardo! A tu disposici\xF3n. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : isJani ? `\xA1Hola, Jani! Qu\xE9 gusto saludarte. Ocurri\xF3 una intermitencia temporal en el sistema de consulta. \xBFMe confirmas nuevamente el dato para procesarlo de inmediato? \u{1F91D}` : `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
+    if (!isEduardo && !isJani && isHighValueLegalOrTaxInquiry(clean)) {
       fallback = enhanceResponseWithCommercialFunnel(fallback, clean);
     }
     fallback = sanitizeDmOrthographyAndGreeting(fallback, isEduardo, isJani, displayName, hasPriorHistory);
@@ -28653,6 +28676,7 @@ async function executeAdHocMatch(rawText, channel = "admin", options = {}) {
         contactPhone: channel === "admin" ? realPhone : null,
         contactWhatsAppLink: channel === "admin" && realPhone ? `https://wa.me/${realPhone}` : null,
         isRecent15Days,
+        createdAt: prop.createdAt,
         rawTextPreview: prop.rawText?.slice(0, 140)
       });
     }
@@ -28699,15 +28723,23 @@ async function executeAdHocMatch(rawText, channel = "admin", options = {}) {
         contactPhone: channel === "admin" ? realPhone : null,
         contactWhatsAppLink: channel === "admin" && realPhone ? `https://wa.me/${realPhone}` : null,
         isRecent15Days,
+        createdAt: req.createdAt,
         rawTextPreview: req.rawText?.slice(0, 140)
       });
     }
   }
   allScoredItems.sort((a, b) => b.score - a.score);
   const eightyThreshold = 80;
-  const highMatches = allScoredItems.filter((item) => item.score >= eightyThreshold).slice(0, limit);
+  const highMatches = allScoredItems.filter((item) => item.score >= eightyThreshold && item.isRecent15Days).slice(0, limit);
   const hasEightyMatch = highMatches.length > 0;
-  const fallbackCandidates = allScoredItems.slice(0, 3);
+  const fortyFiveDaysAgo = new Date(Date.now() - 45 * 24 * 60 * 60 * 1e3);
+  let fallbackCandidates = allScoredItems.filter((item) => {
+    const isRecent45 = item.createdAt ? new Date(item.createdAt) >= fortyFiveDaysAgo : true;
+    return item.score >= 50 && isRecent45;
+  }).slice(0, 3);
+  if (fallbackCandidates.length === 0) {
+    fallbackCandidates = allScoredItems.slice(0, 3);
+  }
   const activeDisplayMatches = hasEightyMatch ? highMatches : fallbackCandidates;
   let closestCandidate = null;
   if (fallbackCandidates.length > 0) {
@@ -28756,33 +28788,25 @@ async function executeAdHocMatch(rawText, channel = "admin", options = {}) {
         }
       });
     } else {
-      formattedText += `\u26A0\uFE0F *Ninguna oferta alcanza el 80% de afinidad estricta.*
+      formattedText += `\u{1F50D} *Opciones Aproximadas para Revisi\xF3n Manual en Admin:*
 `;
-      formattedText += `\u{1F4CB} *Listado de opciones m\xE1s recientes o cercanas para revisi\xF3n manual (Radicados):*
-
+      fallbackCandidates.forEach((m) => {
+        const itemTypeLabel = m.type === "inmueble" ? "Inmueble" : "Demanda";
+        formattedText += `\u2022 ${itemTypeLabel} #${m.id} (Afinidad: ${m.score.toFixed(0)}%) \u2014 ${m.neighborhood || m.city} \u2014 ${m.priceOrBudgetFormatted} \u2014 ${m.bedroomsFormatted} / ${m.areaFormatted}
 `;
-      fallbackCandidates.forEach((m, idx) => {
-        formattedText += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+        formattedText += `  \u{1F194} *Radicado #${m.id}*
 `;
-        formattedText += `\u{1F50D} *OPCI\xD3N #${idx + 1} PARA REVISI\xD3N MANUAL \u2014 AFINIDAD: ${m.score.toFixed(1)}%*
+        formattedText += `  \u{1F464} *Colega / Contacto:* ${m.contactName}
 `;
-        formattedText += `\u{1F194} *Radicado #${m.id} (${m.type === "inmueble" ? "Inmueble" : "Demanda"})* ${m.isRecent15Days ? "(\xDAltimos 15 d\xEDas \u{1F7E2})" : ""}
-`;
-        formattedText += `\u{1F4CD} *Sector:* ${m.neighborhood || m.city}
-`;
-        formattedText += `\u{1F4B0} *${m.type === "inmueble" ? "Precio" : "Presupuesto"}:* ${m.priceOrBudgetFormatted}
-`;
-        formattedText += `\u{1F4D0} *Caracter\xEDsticas:* ${m.areaFormatted} \u2022 ${m.bedroomsFormatted} \u2022 ${m.bathroomsFormatted} \u2022 ${m.garagesFormatted}
-`;
-        formattedText += `\u{1F464} *Colega / Contacto:* ${m.contactName}
-`;
-        formattedText += `\u{1F4F1} *Tel\xE9fono:* ${m.contactPhone ? "+" + m.contactPhone : "Sin registrar"}
+        formattedText += `  \u{1F4F1} *Tel\xE9fono:* ${m.contactPhone ? "+" + m.contactPhone : "Sin registrar"}
 `;
         if (m.contactWhatsAppLink) {
-          formattedText += `\u{1F4AC} *Chat WhatsApp:* ${m.contactWhatsAppLink}
+          formattedText += `  \u{1F4AC} *Chat WhatsApp:* ${m.contactWhatsAppLink}
 `;
         }
       });
+      formattedText += `\u{1F449} Puedes consultar la ficha completa directamente en el Panel de Administraci\xF3n (OFERTAS / INMUEBLES).
+`;
     }
     formattedText += `
 \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
@@ -28811,24 +28835,15 @@ async function executeAdHocMatch(rawText, channel = "admin", options = {}) {
 `;
       });
     } else {
-      formattedText += `\u{1F50D} *Opciones disponibles para revisi\xF3n manual:*
-`;
-      formattedText += `Actualmente ninguna oferta alcanza el 80% de afinidad matem\xE1tica directa, pero estas son las ${fallbackCandidates.length} opciones m\xE1s cercanas y recientes en nuestra red para revisar en equipo:
-
+      formattedText += `\u{1F50D} *Opciones Aproximadas para Revisi\xF3n:*
 `;
       fallbackCandidates.forEach((m) => {
-        formattedText += `\u{1F3F7}\uFE0F *Radicado:* Ref-${m.type === "inmueble" ? "P" : "R"}${m.id}
-`;
-        formattedText += `\u{1F4CD} *Zona:* ${m.neighborhood || m.city}
-`;
-        formattedText += `\u{1F4D0} *Especificaciones:* ${m.bedroomsFormatted} \u2022 ${m.bathroomsFormatted} \u2022 ${m.areaFormatted} \u2022 ${m.garagesFormatted}
-`;
-        formattedText += `\u{1F4B0} *Rango:* ${m.priceOrBudgetFormatted}
-`;
-        formattedText += `\u2B50 *Afinidad T\xE9cnica:* ${m.score.toFixed(0)}%
-
+        const itemTypeLabel = m.type === "inmueble" ? "Inmueble" : "Demanda";
+        formattedText += `\u2022 ${itemTypeLabel} #${m.id} (Afinidad: ${m.score.toFixed(0)}%) \u2014 ${m.neighborhood || m.city} \u2014 ${m.priceOrBudgetFormatted} \u2014 ${m.bedroomsFormatted} / ${m.areaFormatted} (Radicado: Ref-${m.type === "inmueble" ? "P" : "R"}${m.id})
 `;
       });
+      formattedText += `
+`;
     }
     formattedText += `${commercialClosingCTA}`;
   }

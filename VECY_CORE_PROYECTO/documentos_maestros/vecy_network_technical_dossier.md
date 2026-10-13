@@ -333,31 +333,43 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ### 🔖 v33.03 — Octubre 2026
 
-#### 📌 LIMPIEZA DE CÓDIGO LEGADO, TRATO DIRECTIVO Y MATCH CON ALIANZA 40/20/40 OBLIGATORIA
+#### 📌 CALIBRACIÓN QUIRÚRGICA EN UN SOLO PASE: ORTOGRAFÍA ESTRICTA, TRATO VIP DIRECTIVO, GOOGLE OPINIONES, SCRAPERS RESILIENTES Y MATCH 40/20/40
 
 **Requerimiento y Objetivos:**
-1. **Extirpación de la Plantilla de Donaciones**:
+1. **Ortografía Estricta, Urbanidad de Carreño y Trato VIP Directivo (`dmHandler.ts`)**:
+   - Eliminar saludos defectuosos en minúscula ("estimada...", "estimado...").
+   - Aplicar ortografía estricta en español (apertura formal de signos `¡`, `¿` y mayúscula inicial obligatoria en cada frase).
+   - Usar estrictamente el primer nombre de pila (ej. "Jani", no "Jani Alves").
+   - Lista Blanca VIP para directores fundadores (Jani Alves y Eduardo Rivera en +573192919978 / +573188096811 / +573166569719 / LIDs): saludo corporativo ejecutivo ("¡Hola, Jani! Qué gusto saludarte." / "¡Hola, Eduardo! A tu disposición."), neutralizando cualquier gancho comercial o pregunta de prospección externa.
+2. **Restauración de Google Opiniones y Erradicación de Donaciones**:
    - Purgar cadenas "manteniéndolo así" y "servicio completamente GRATUITO".
-   - Todo servicio de consulta y herramientas gratuitas (Policía Nacional, Predial Bogotá, Paz y Salvo IDU, gastos notariales) debe cerrar única y exclusivamente con:
+   - Restaurar al pie de cada reporte de cortesía entregado a usuarios externos (Policía Nacional, Predial Bogotá, Paz y Salvo IDU, gastos notariales):
      `Un servicio de cortesía de VECY BIENES RAÍCES 🤝.`
-2. **Corrección de Ortografía y Trato Directivo en DMs (`dmHandler.ts`)**:
-   - Erradicar inicios de saludo en minúscula ("estimada...", "estimado...").
-   - Aplicar ortografía estricta en español (apertura formal de signos `¡`, `¿` y mayúscula inicial obligatoria).
-   - Trato directivo para directores fundadores (Eduardo A. Rivera y Jani Alves): "¡Hola, Eduardo!" y "¡Hola, Jani!".
-3. **Motor de Match: Respuesta Obligatoria con Radicados y Alianza 40/20/40 aun con Score < 80% (`matchAdHocService.ts`)**:
-   - Si ninguna oferta alcanza el 80% de score matemático estricto:
-     * Listar los 2 o 3 inmuebles más recientes o cercanos con su ID de radicado (`Radicado #${m.id}` / `Ref-P${m.id}`) para revisión manual en equipo.
-     * Incluir SIEMPRE la propuesta comercial de la alianza 40/20/40 sobre el 3% de comisión comercial y el llamado a contactar a Jani o Eduardo al +57 316 656 9719.
+     `⭐ *¿Te fue útil esta consulta?*`
+     `Tu recomendación nos ayuda a seguir creciendo. Déjanos tu calificación de 5 estrellas en Google Opiniones aquí:`
+     `https://g.page/r/CUxVzG_vecy/review`
+3. **Auditoría y Resiliencia en Scrapers Estatales (ADRES / BDUA e IDU)**:
+   - ADRES / BDUA: Si la petición falla por timeout o error de red (portal caído en madrugada), NO responder silenciosamente "Sin novedad de aseguramiento registrada en BDUA". Responder con claridad:
+     `⚠️ El portal oficial de la ADRES presenta intermitencia o mantenimiento temporal en este momento. Puedes consultar directamente en adres.gov.co`
+     Mantener "Sin novedad" únicamente cuando la respuesta oficial de la API/web sea 200 OK y certifique que el documento no registra novedad.
+   - IDU Valorización: Elevar el timeout a 45.000 ms. Si ocurre timeout o congestión, capturar la excepción y devolver un mensaje limpio sin trazas técnicas de Puppeteer:
+     `⚠️ El servidor oficial del IDU presenta congestión en este momento. Puedes descargar tu Paz y Salvo directamente con el CHIP [CHIP] aquí: https://webidu.idu.gov.co/ServiciosValorizacion/faces/site/index.xhtml`
+4. **Motor de Match: Fallback Obligatorio con Radicados y Alianza 40/20/40 (`matchAdHocService.ts`)**:
+   - Si la búsqueda de los últimos 15 días con score >= 80% NO arroja resultados:
+     * Relajar automáticamente los filtros a los últimos 45 días y score >= 50%.
+     * Si existen coincidencias parciales, listar las 3 opciones más cercanas bajo el formato de viñetas con Radicado.
+     * Si el solicitante es usuario externo/colega: anonimizar totalmente al propietario/colega de la contraparte e inyectar incondicionalmente el cierre bajo la Alianza 40/20/40 sobre el 3% de comisión comercial hacia Jani o Eduardo (+57 316 656 9719).
+     * Si el solicitante es Administrador: mostrar nombre completo, teléfono y enlace directo de WhatsApp del colega captador.
+5. **Despliegue y Validación Oficial**:
+   - Versionamiento a `v33.03` (`33.3.0` en `package.json`), verificación `npm run check` (0 errores), `npm test` (211/211 tests passing), compilación limpia `npm run build`, commit/push y despliegue al VPS Contabo con `npm run deploy:vps`.
 
 **Soluciones Técnicas Implementadas:**
-- `server/_core/politenessService.ts`: `formatPoliteInactivityPrompt` retorna exclusivamente el cierre de cortesía sin solicitud de donación o mantención.
-- `server/_core/whatsapp-match.ts`: Inactivado el despachador de inactividad que enviaba prompts de donación; comentarios limpios.
-- `server/_core/jania/handlers/dmHandler.ts`:
-  * `formatPoliteToolDelivery`: Entrega de herramientas cierra siempre con `Un servicio de cortesía de VECY BIENES RAÍCES 🤝.`.
-  * Trato directivo en saludo de bienvenida e interacción para Eduardo y Jani.
-  * Función `sanitizeDmOrthographyAndGreeting`: Asegura mayúscula inicial, corrige vocativos en minúscula y antepone signos de apertura `¡` y `¿`.
-- `server/_core/matchAdHocService.ts`: Coincidencias con umbral del 80% y fallback a 2-3 radicados más recientes con gancho incondicional de Alianza 40/20/40.
-- `server/__tests__/regression.test.ts`: Suite 64 con 5 tests aprobados (208/208 tests passing en verde al 100%).
+- `server/_core/jania/handlers/dmHandler.ts`: Lista Blanca VIP, sanitizador ortográfico `sanitizeDmOrthographyAndGreeting`, `formatPoliteToolDelivery` con Google Opiniones.
+- `server/_core/politenessService.ts`: Extirpación completa del copy de donación preservando compatibilidad.
+- `server/_core/identityVerificationService.ts`: Reporte explícito de intermitencia de red/servidor para ADRES con enlace a `adres.gov.co`.
+- `server/_core/iduValorizacionService.ts`: Timeout de 45.000 ms en Puppeteer y manejo limpio de congestión con enlace a `webidu.idu.gov.co`.
+- `server/_core/matchAdHocService.ts`: Cascada de 15 a 45 días (score ≥ 50%), listado con Radicado y propuesta 40/20/40 garantizada.
+- `server/__tests__/regression.test.ts`: Suite 64 ampliada a 8 tests aprobados (211/211 tests passing en verde al 100%).
 - Versionamiento: `shared/const.ts` (`v33.03`) y `package.json` (`33.3.0`).
 
 ### 🔖 v33.02 — Octubre 2026

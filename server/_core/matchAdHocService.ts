@@ -30,6 +30,7 @@ export interface AdHocMatchItem {
   contactPhone: string | null;
   contactWhatsAppLink: string | null;
   isRecent15Days: boolean;
+  createdAt?: Date | string | null;
   rawTextPreview?: string;
 }
 
@@ -253,6 +254,7 @@ export async function executeAdHocMatch(
         contactPhone: channel === 'admin' ? realPhone : null,
         contactWhatsAppLink: channel === 'admin' && realPhone ? `https://wa.me/${realPhone}` : null,
         isRecent15Days,
+        createdAt: prop.createdAt,
         rawTextPreview: prop.rawText?.slice(0, 140)
       });
     }
@@ -304,6 +306,7 @@ export async function executeAdHocMatch(
         contactPhone: channel === 'admin' ? realPhone : null,
         contactWhatsAppLink: channel === 'admin' && realPhone ? `https://wa.me/${realPhone}` : null,
         isRecent15Days,
+        createdAt: req.createdAt,
         rawTextPreview: req.rawText?.slice(0, 140)
       });
     }
@@ -312,13 +315,23 @@ export async function executeAdHocMatch(
   // Ordenar por afinidad descendente
   allScoredItems.sort((a, b) => b.score - a.score);
 
-  // Filtrar matches que superan el 80% (umbral doctrinal para coincidencia alta)
+  // 1. Filtrar matches que superan el 80% en los últimos 15 días
   const eightyThreshold = 80;
-  const highMatches = allScoredItems.filter(item => item.score >= eightyThreshold).slice(0, limit);
+  const highMatches = allScoredItems.filter(item => item.score >= eightyThreshold && item.isRecent15Days).slice(0, limit);
   const hasEightyMatch = highMatches.length > 0;
 
-  // Si ninguna oferta alcanza el 80%, tomar los 2 o 3 inmuebles más recientes o cercanos con su ID de radicado
-  const fallbackCandidates = allScoredItems.slice(0, 3);
+  // 2. Fallback si no hay matches >= 80% en 15 días: Relajar a los últimos 45 días y score >= 50%
+  const fortyFiveDaysAgo = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000);
+  let fallbackCandidates = allScoredItems.filter(item => {
+    const isRecent45 = item.createdAt ? new Date(item.createdAt) >= fortyFiveDaysAgo : true;
+    return item.score >= 50 && isRecent45;
+  }).slice(0, 3);
+
+  // Si no hay candidatos con score >= 50% en 45 días, tomar los 3 más cercanos disponibles
+  if (fallbackCandidates.length === 0) {
+    fallbackCandidates = allScoredItems.slice(0, 3);
+  }
+
   const activeDisplayMatches = hasEightyMatch ? highMatches : fallbackCandidates;
 
   // Obtener el candidato más cercano en caso de no haber match >= 80%
@@ -361,21 +374,18 @@ export async function executeAdHocMatch(
         }
       });
     } else {
-      formattedText += `⚠️ *Ninguna oferta alcanza el 80% de afinidad estricta.*\n`;
-      formattedText += `📋 *Listado de opciones más recientes o cercanas para revisión manual (Radicados):*\n\n`;
-      fallbackCandidates.forEach((m, idx) => {
-        formattedText += `━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-        formattedText += `🔍 *OPCIÓN #${idx + 1} PARA REVISIÓN MANUAL — AFINIDAD: ${m.score.toFixed(1)}%*\n`;
-        formattedText += `🆔 *Radicado #${m.id} (${m.type === 'inmueble' ? 'Inmueble' : 'Demanda'})* ${m.isRecent15Days ? '(Últimos 15 días 🟢)' : ''}\n`;
-        formattedText += `📍 *Sector:* ${m.neighborhood || m.city}\n`;
-        formattedText += `💰 *${m.type === 'inmueble' ? 'Precio' : 'Presupuesto'}:* ${m.priceOrBudgetFormatted}\n`;
-        formattedText += `📐 *Características:* ${m.areaFormatted} • ${m.bedroomsFormatted} • ${m.bathroomsFormatted} • ${m.garagesFormatted}\n`;
-        formattedText += `👤 *Colega / Contacto:* ${m.contactName}\n`;
-        formattedText += `📱 *Teléfono:* ${m.contactPhone ? '+' + m.contactPhone : 'Sin registrar'}\n`;
+      formattedText += `🔍 *Opciones Aproximadas para Revisión Manual en Admin:*\n`;
+      fallbackCandidates.forEach((m) => {
+        const itemTypeLabel = m.type === 'inmueble' ? 'Inmueble' : 'Demanda';
+        formattedText += `• ${itemTypeLabel} #${m.id} (Afinidad: ${m.score.toFixed(0)}%) — ${m.neighborhood || m.city} — ${m.priceOrBudgetFormatted} — ${m.bedroomsFormatted} / ${m.areaFormatted}\n`;
+        formattedText += `  🆔 *Radicado #${m.id}*\n`;
+        formattedText += `  👤 *Colega / Contacto:* ${m.contactName}\n`;
+        formattedText += `  📱 *Teléfono:* ${m.contactPhone ? '+' + m.contactPhone : 'Sin registrar'}\n`;
         if (m.contactWhatsAppLink) {
-          formattedText += `💬 *Chat WhatsApp:* ${m.contactWhatsAppLink}\n`;
+          formattedText += `  💬 *Chat WhatsApp:* ${m.contactWhatsAppLink}\n`;
         }
       });
+      formattedText += `👉 Puedes consultar la ficha completa directamente en el Panel de Administración (OFERTAS / INMUEBLES).\n`;
     }
 
     // Incluir SIEMPRE la propuesta comercial de alianza 40/20/40 y contacto a directores
@@ -395,15 +405,12 @@ export async function executeAdHocMatch(
         formattedText += `⭐ *Afinidad Técnica:* ${topMatch.score.toFixed(0)}%\n\n`;
       });
     } else {
-      formattedText += `🔍 *Opciones disponibles para revisión manual:*\n`;
-      formattedText += `Actualmente ninguna oferta alcanza el 80% de afinidad matemática directa, pero estas son las ${fallbackCandidates.length} opciones más cercanas y recientes en nuestra red para revisar en equipo:\n\n`;
+      formattedText += `🔍 *Opciones Aproximadas para Revisión:*\n`;
       fallbackCandidates.forEach((m) => {
-        formattedText += `🏷️ *Radicado:* Ref-${m.type === 'inmueble' ? 'P' : 'R'}${m.id}\n`;
-        formattedText += `📍 *Zona:* ${m.neighborhood || m.city}\n`;
-        formattedText += `📐 *Especificaciones:* ${m.bedroomsFormatted} • ${m.bathroomsFormatted} • ${m.areaFormatted} • ${m.garagesFormatted}\n`;
-        formattedText += `💰 *Rango:* ${m.priceOrBudgetFormatted}\n`;
-        formattedText += `⭐ *Afinidad Técnica:* ${m.score.toFixed(0)}%\n\n`;
+        const itemTypeLabel = m.type === 'inmueble' ? 'Inmueble' : 'Demanda';
+        formattedText += `• ${itemTypeLabel} #${m.id} (Afinidad: ${m.score.toFixed(0)}%) — ${m.neighborhood || m.city} — ${m.priceOrBudgetFormatted} — ${m.bedroomsFormatted} / ${m.areaFormatted} (Radicado: Ref-${m.type === 'inmueble' ? 'P' : 'R'}${m.id})\n`;
       });
+      formattedText += `\n`;
     }
 
     // Incluir SIEMPRE la propuesta comercial de la alianza 40/20/40 sobre el 3% de comisión y llamado a Jani o Eduardo al +57 316 656 9719

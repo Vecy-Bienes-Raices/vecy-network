@@ -1318,9 +1318,24 @@ export async function executeIdentityVerificationFromWhatsApp(
       const cgrLine = cgrRes?.statusText
         ? cgrRes.statusText
         : 'No registra reporte en el Boletín de Responsables Fiscales (SIRECI) de la Contraloría General de la República.';
-      const epsLine = adresRes?.eps
-        ? `${adresRes.eps} (${adresRes.estado || 'REGISTRADO'}${adresRes.regimen ? ` — ${adresRes.regimen}` : ''})`
-        : 'Sin novedad de aseguramiento registrada en BDUA.';
+      let epsLine = '';
+      if (adresRes?.eps) {
+        epsLine = `${adresRes.eps} (${adresRes.estado || 'REGISTRADO'}${adresRes.regimen ? ` — ${adresRes.regimen}` : ''})`;
+      } else if (!adresRes || (adresRes.error && (
+        adresRes.error.toLowerCase().includes('intermitencia') ||
+        adresRes.error.toLowerCase().includes('conexión') ||
+        adresRes.error.toLowerCase().includes('conexion') ||
+        adresRes.error.toLowerCase().includes('inicializar') ||
+        adresRes.error.toLowerCase().includes('timeout') ||
+        adresRes.error.toLowerCase().includes('servidor') ||
+        adresRes.error.toLowerCase().includes('fallo') ||
+        adresRes.error.toLowerCase().includes('caído') ||
+        adresRes.error.toLowerCase().includes('caido')
+      ))) {
+        epsLine = '⚠️ El portal oficial de la ADRES presenta intermitencia o mantenimiento temporal en este momento. Puedes consultar directamente en adres.gov.co';
+      } else {
+        epsLine = 'Sin novedad de aseguramiento registrada en BDUA.';
+      }
       const locationLine = (adresRes?.municipio && !adresRes.municipio.toLowerCase().includes('informacion'))
         ? `\n📍 *Ubicación Registrada:* ${adresRes.municipio}${adresRes.departamento ? `, ${adresRes.departamento}` : ''}`
         : '';
@@ -1390,7 +1405,18 @@ export async function executeIdentityVerificationFromWhatsApp(
           `🆔 *Documento:* ${docLabel} ${formattedCedula}\n` +
           `⚠️ *Estado:* Documento no localizado en las bases censales en línea.\n\n` +
           `2️⃣ *SEGURIDAD SOCIAL (EPS / RÉGIMEN)*\n` +
-          `🏥 *Central de Aseguramiento (ADRES):* ${adresRes?.error || 'Sin registro activo de afiliación en la Base de Datos Única de Afiliados (BDUA).'}\n\n` +
+          `🏥 *Central de Aseguramiento (ADRES):* ${
+            (!adresRes || (adresRes.error && (
+              adresRes.error.toLowerCase().includes('intermitencia') ||
+              adresRes.error.toLowerCase().includes('conexión') ||
+              adresRes.error.toLowerCase().includes('conexion') ||
+              adresRes.error.toLowerCase().includes('inicializar') ||
+              adresRes.error.toLowerCase().includes('timeout') ||
+              adresRes.error.toLowerCase().includes('servidor')
+            )))
+              ? '⚠️ El portal oficial de la ADRES presenta intermitencia o mantenimiento temporal en este momento. Puedes consultar directamente en adres.gov.co'
+              : (adresRes?.error || 'Sin registro activo de afiliación en la Base de Datos Única de Afiliados (BDUA).')
+          }\n\n` +
           `3️⃣ *ENTIDADES DE CONTROL (DISCIPLINARIO Y FISCAL)*\n` +
           `🏛️ *Central de Control Notarial (Procuraduría SIRI):* ${pgnRes?.statusText || 'No se encuentra registrado en el sistema de información SIRI o no disponible.'}\n` +
           `⚖️ *Contraloría General (SIRECI):* No registra sanciones fiscales ejecutoriadas.\n\n` +

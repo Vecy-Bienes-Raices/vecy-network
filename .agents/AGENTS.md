@@ -10,7 +10,7 @@
 
 ---
 
-## 🛡️ LAS 5 DIRECTIVAS MANDATORIAS DE GOBERNANZA (VECY DOCTRINE v33.02)
+## 🛡️ LAS 5 DIRECTIVAS MANDATORIAS DE GOBERNANZA (VECY DOCTRINE v33.03)
 1. **CONSULTA Y ACTUALIZACIÓN DE BITÁCORAS (.md):** Obligatorio registrar cada sesión en `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `AGENTS.md`, `GEMINI.md` y `vecy_network_technical_dossier.md`.
 2. **CI/CD Y AUTO-DESPLIEGUE A CONTABO:** Tras verificar `npm test`, `npm run check` y `npm run build`, realizar `git push origin main`. El workflow de GitHub Actions (`.github/workflows/deploy.yml`) se encarga del despliegue en el VPS (`13.140.149.144`).
 3. **VIGILANCIA DE COSTOS Y BLINDAJE DE APIS:** Prohibido usar claves de pago en tests (`NODE_ENV=test`). En producción, prioridad absoluta a las 4 claves gratuitas; la de pago solo actúa como failover temporal ante 429 masivo y regresa a costo $0 COP tras el cooldown.
@@ -184,19 +184,22 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 
 ## 🔖 VERSIÓN ACTUAL: v33.03 — Octubre 2026
 
-### Novedades v33.03 (Limpieza de Código Legado, Trato Directivo en DMs y Match con Alianza 40/20/40 Obligatoria):
+### Novedades v33.03 (Calibración Quirúrgica en un Solo Pase: Ortografía Estricta, Trato VIP Directivo, Google Opiniones, Scrapers Resilientes y Match 40/20/40):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
-  1. *"Actúa como Auditor de Software Senior.*
-  2. *OBJETIVO: LIMPIEZA DE CÓDIGO LEGADO Y CORRECCIÓN DE EXPERIENCIA EN JanIA (v33.03)*
-  3. Extirpar plantilla de donaciones: eliminar 'manteniéndolo así' y 'servicio completamente GRATUITO'. Entrega de herramientas gratuitas (IDU, predial, cédulas, notarial) cierra únicamente con: 'Un servicio de cortesía de VECY BIENES RAÍCES 🤝.'.
-  4. Corregir saludos y ortografía en DMs (`dmHandler.ts`): erradicar inicio en minúscula ('estimada...'), aplicar ortografía estricta en español (apertura de signos `¡`, `¿` y mayúscula inicial), y dar trato directivo a Jani y Eduardo ('¡Hola, Jani!', '¡Hola, Eduardo!').
-  5. Motor de Match (`matchAdHocService.ts`): Si ninguna oferta alcanza el 80%, listar las 2 o 3 opciones más recientes o cercanas con su ID de radicado para revisión manual e incluir SIEMPRE la propuesta comercial de la alianza 40/20/40 sobre el 3% de comisión y contacto a Jani o Eduardo (+57 316 656 9719).
+  1. *"Actúa como Lead Architect y Auditor Senior de Vecy Network.*
+  2. *OBJETIVO CRÍTICO DE CIERRE TOTAL (v33.03): CALIBRACIÓN QUIRÚRGICA EN UN SOLO PASE.*
+  3. Ortografía estricta en español (signos `¡`, `¿`, mayúscula inicial por frase y primer nombre de pila ej. 'Jani', no 'Jani Alves') y Trato VIP Directivo a Jani (+573192919978 / +573166569719 o su número) y Eduardo ('¡Hola, Jani! Qué gusto saludarte.' / '¡Hola, Eduardo! A tu disposición.') con supresión de captación externa.
+  4. Restauración obligatoria de Google Opiniones (`https://g.page/r/CUxVzG_vecy/review`) tras reportes de cortesía en `formatPoliteToolDelivery` y erradicación definitiva de cualquier texto de aportes/donaciones.
+  5. Auditoría y resiliencia en scrapers: ADRES BDUA reporta explícitamente intermitencia con enlace a `adres.gov.co` sin enmascarar como 'sin novedad' ante timeout/falla de red; IDU Valorización eleva timeout a 45000 ms y entrega mensaje limpio ante congestión con CHIP y portal oficial distrital sin trazas de Puppeteer.
+  6. Motor de Match: Fallback automático a 45 días y score ≥ 50% ante falta de match ≥ 80% en 15 días, con formato de viñetas aproximadas, anonimización total en canal público y cierre incondicional de Alianza 40/20/40 sobre el 3% hacia Jani y Eduardo.
+  7. Despliegue inmediato al VPS Contabo con `npm run deploy:vps` y verificación de PM2 online.
 - **Acciones Técnicas Ejecutadas**:
-  - `server/_core/politenessService.ts` & `whatsapp-match.ts`: Extirpación completa del copy de donación, retorno exclusivo del cierre de cortesía VECY.
-  - `server/_core/jania/handlers/dmHandler.ts`: Trato directivo para fundadores, sanitizador `sanitizeDmOrthographyAndGreeting` y cierre único en `formatPoliteToolDelivery`.
-  - `server/_core/matchAdHocService.ts`: Umbral del 80%, listado de radicados para revisión manual e inyección 100% garantizada de la propuesta de Alianza 40/20/40.
-  - `server/__tests__/regression.test.ts`: Suite 64 con 5 tests nuevos aprobados.
-- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 208/208 tests passing ✅ | `npm run build` limpio ✅
+  - `server/_core/jania/handlers/dmHandler.ts`: Lista blanca VIP (+573192919978, +573188096811, +573166569719, LIDs), `sanitizeDmOrthographyAndGreeting`, `formatPoliteToolDelivery` con Google Opiniones.
+  - `server/_core/identityVerificationService.ts`: Diferenciación estricta de fallas en ADRES BDUA reportando intermitencia hacia `adres.gov.co`.
+  - `server/_core/iduValorizacionService.ts`: Timeout de 45.000 ms y manejo limpio de congestión sin trazas de Puppeteer.
+  - `server/_core/matchAdHocService.ts`: Cascada de 15 a 45 días (score ≥ 50%), listado con Radicado y propuesta 40/20/40 garantizada.
+  - `server/__tests__/regression.test.ts`: Suite 64 ampliada a 8 tests passing al 100%.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 211/211 tests passing ✅ | `npm run build` limpio ✅
 - `shared/const.ts` (`v33.03`) y `package.json` (`33.3.0`).
 
 ## 🔖 VERSIÓN ANTERIOR: v33.02 — Octubre 2026
