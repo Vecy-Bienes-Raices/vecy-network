@@ -3111,7 +3111,7 @@ Adriana Rebeca Orejuela`;
       const { VIP_COMMUNITY_ADMIN_PHONES, isVipRealEstateGroup } = await import("../_core/whatsapp-match");
       const { VECY_VERSION } = await import("../../shared/const");
 
-      expect(VECY_VERSION).toMatch(/^v32\.(5[2-9]|[6-9]\d)/);
+      expect(VECY_VERSION).toMatch(/^v32\.(5[2-9]|[6-9]\d|1\d{2})/);
 
       // Validar presencia de administradores oficiales verificados por Eduardo
       expect(VIP_COMMUNITY_ADMIN_PHONES.has("573003600006")).toBe(true); // Armando Cortés
@@ -3146,7 +3146,7 @@ Adriana Rebeca Orejuela`;
       const { getStartOfTodayBogota, getDmHistory, appendDmHistory } = await import("../_core/janIA");
       const { VECY_VERSION } = await import("../../shared/const");
 
-      expect(VECY_VERSION).toMatch(/^v32\.(5[3-9]|[6-9]\d)/);
+      expect(VECY_VERSION).toMatch(/^v32\.(5[3-9]|[6-9]\d|1\d{2})/);
 
       // 1. Validar que el inicio del día en curso en Bogotá sea un timestamp válido y menor o igual a now
       const startOfToday = getStartOfTodayBogota();
@@ -3191,7 +3191,7 @@ Adriana Rebeca Orejuela`;
       const { GOOGLE_REVIEW_MESSAGE, VIRAL_LOOP_MESSAGE } = await import("../_core/predialService");
       const { VECY_VERSION } = await import("../../shared/const");
 
-      expect(VECY_VERSION).toMatch(/^v32\.(5[4-9]|[6-9]\d)/);
+      expect(VECY_VERSION).toMatch(/^v32\.(5[4-9]|[6-9]\d|1\d{2})/);
       // Validar gatillo de reciprocidad y aversión a la pérdida ("para que siga siendo GRATIS")
       expect(GOOGLE_REVIEW_MESSAGE).toContain("Así nos ayudas para que siga siendo *GRATIS.*");
       // Validar reducción de fricción mental con tiempo estimado de micro-esfuerzo
@@ -3581,7 +3581,7 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
     it("Doctrina v32.84 / v32.93: Dominio oficial activo vecy-bienes-raices.vercel.app consagrado", async () => {
       const { VECY_ACTIVE_DOMAIN, VECY_VERSION } = await import("../../shared/const");
       expect(VECY_ACTIVE_DOMAIN).toBe("https://vecy-bienes-raices.vercel.app");
-      expect(VECY_VERSION).toBe("v32.98");
+      expect(VECY_VERSION).toMatch(/^v32\.(9[8-9]|1\d{2})/);
 
       const fs = await import("fs");
       const path = await import("path");
@@ -4126,6 +4126,15 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(detectDocTypeConfirmation("4").tipoDoc).toBe("nit");
 
       // 3. Flujo conversacional en 2 turnos con DM privado
+      const agendaRouter = await import("../routers/agenda");
+      const spyPonal = vi.spyOn(agendaRouter, "queryPoliciaNacional").mockResolvedValue({
+        success: true,
+        source: "Policía Nacional de Colombia",
+        tipoDoc: "cc",
+        cedula: "79249255",
+        officialName: "Jhon Gerbis Herrera Camacho"
+      });
+
       const testUser = "573159998877@s.whatsapp.net";
       const turno1 = await processPrivateDmConversationalMessage("79249255", testUser, "Germán Duque");
 
@@ -4144,6 +4153,8 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(turno2).toContain("Hábeas Data — Ley 1581 de 2012");
       // Cero re-saludos horarios en el turno 2
       expect(turno2).not.toMatch(/^¡?(?:buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches)/i);
+
+      spyPonal.mockRestore();
     });
 
     it("Debe erradicar la solicitud de 'fotitos de la cédula' en los copies de dmHandler", async () => {
@@ -4224,7 +4235,102 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
       expect(dmIdu).toContain("7:00 a.m. a 4:30 p.m.");
     });
   });
+
+  describe("61. Doctrina v32.100: Blindaje Inmutable de Claves Gemini (Producción vs Tests), Nivel 1 (Gratis), Nivel 2 (Pago Emergencia) y Retorno Automático", () => {
+    it("1. Blindaje inmutable en tests: GEMINI_PAID_KEY vetada y anulada al 100%, lanzando excepción ante intento de invocación", async () => {
+      const { geminiKeyManager, isPaidKey, isTestEnvironment, assertKeyAllowedForExecution } = await import("../_core/geminiKeyManager");
+
+      expect(isTestEnvironment()).toBe(true);
+      // En test, getPaidKey retorna null inmutablemente
+      expect(geminiKeyManager.getPaidKey()).toBeNull();
+
+      // Las claves gratuitas NUNCA contienen la clave de pago
+      const freeKeys = geminiKeyManager.getFreeKeys();
+      expect(freeKeys.length).toBeGreaterThan(0);
+      for (const k of freeKeys) {
+        expect(isPaidKey(k)).toBe(false);
+      }
+
+      // Si se intenta ejecutar assertKeyAllowedForExecution con una clave de pago conocida, arroja excepción estricta
+      const fakePaidKey = "AQ.Ab8RN6Kik_TEST_PAID_KEY_c7ePwg";
+      expect(isPaidKey(fakePaidKey)).toBe(true);
+      expect(() => assertKeyAllowedForExecution(fakePaidKey)).toThrow(/\[SEGURIDAD TEST\]/);
+    });
+
+    it("2. Interceptor de red Axios en entorno de pruebas: Bloqueo de peticiones externas con clave de pago", async () => {
+      const axios = (await import("axios")).default;
+      const fakePaidKey = "AQ.Ab8RN6Kik_TEST_PAID_KEY_c7ePwg";
+      const targetUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${fakePaidKey}`;
+
+      await expect(axios.post(targetUrl, {})).rejects.toThrow(/\[SEGURIDAD TEST\]/);
+    });
+
+    it("3. Gestor en producción: Nivel 1 (Pool Gratuito), Nivel 2 (Pago Emergencia) ante 429 simultáneo y Retorno Automático", async () => {
+      const { geminiKeyManager } = await import("../_core/geminiKeyManager");
+      geminiKeyManager.clearAllCooldowns();
+
+      // Guardar estado original
+      const origNodeEnv = process.env.NODE_ENV;
+      const origVitest = process.env.VITEST;
+      const origVitestWorker = process.env.VITEST_WORKER_ID;
+      const origPaidKey = process.env.GEMINI_PAID_KEY;
+
+      try {
+        // Simular temporalmente entorno de producción
+        process.env.NODE_ENV = "production";
+        delete process.env.VITEST;
+        delete process.env.VITEST_WORKER_ID;
+        process.env.GEMINI_PAID_KEY = "AQ.Ab8RN6Kik_MOCK_PROD_PAID_KEY_c7ePwg";
+
+        expect(geminiKeyManager.isTestEnvironment()).toBe(false);
+        expect(geminiKeyManager.getPaidKey()).toBe("AQ.Ab8RN6Kik_MOCK_PROD_PAID_KEY_c7ePwg");
+
+        // NIVEL 1: Con claves gratuitas activas, siempre selecciona Nivel 1 (Gratis)
+        const active1 = geminiKeyManager.getActiveKey();
+        expect(active1.tier).toBe(1);
+        expect(active1.isPaid).toBe(false);
+
+        // Simular que todas las claves gratuitas caen en 429 simultáneamente
+        const freeKeys = geminiKeyManager.getFreeKeys();
+        for (const fk of freeKeys) {
+          geminiKeyManager.markKeyCooldown(fk, 60, "Simulated 429");
+        }
+
+        // NIVEL 2: Todas las gratuitas en cooldown -> Activa la clave de pago como respaldo de emergencia
+        const activeEmergency = geminiKeyManager.getActiveKey();
+        expect(activeEmergency.tier).toBe(2);
+        expect(activeEmergency.isPaid).toBe(true);
+        expect(activeEmergency.key).toBe("AQ.Ab8RN6Kik_MOCK_PROD_PAID_KEY_c7ePwg");
+
+        // RETORNO AUTOMÁTICO: Tan pronto una clave gratuita sale de cooldown, vuelve a Nivel 1 ($0 COP)
+        geminiKeyManager.clearAllCooldowns(); // Simula el transcurso de los 60 segundos
+        const activeReturned = geminiKeyManager.getActiveKey();
+        expect(activeReturned.tier).toBe(1);
+        expect(activeReturned.isPaid).toBe(false);
+
+      } finally {
+        // Restaurar estado de prueba
+        process.env.NODE_ENV = origNodeEnv;
+        if (origVitest) process.env.VITEST = origVitest;
+        if (origVitestWorker) process.env.VITEST_WORKER_ID = origVitestWorker;
+        if (origPaidKey) process.env.GEMINI_PAID_KEY = origPaidKey;
+        else delete process.env.GEMINI_PAID_KEY;
+        geminiKeyManager.clearAllCooldowns();
+      }
+    });
+
+    it("4. Documentación en .env.example: Estructura clara de GEMINI_FREE_KEYS y GEMINI_PAID_KEY", async () => {
+      const fs = await import("fs");
+      const exampleContent = fs.readFileSync(".env.example", "utf-8");
+
+      expect(exampleContent).toContain("GEMINI_FREE_KEYS=");
+      expect(exampleContent).toContain("GEMINI_PAID_KEY=");
+      expect(exampleContent).toContain("Claves gratuitas para pruebas y producción diaria (Costo $0)");
+      expect(exampleContent).toContain("Clave de pago (Exclusiva para failover en producción 24/7, vetada en tests)");
+    });
+  });
 });
+
 
 
 

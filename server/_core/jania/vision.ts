@@ -4,6 +4,10 @@
  */
 import axios from "axios";
 import { FlyerVisionResult } from "./types";
+import { 
+  geminiKeyManager, 
+  assertKeyAllowedForExecution 
+} from "../geminiKeyManager";
 
 /**
  * Extractor visual especializado y ultraligero para Flyers y Afiches Inmobiliarios (v31.22).
@@ -13,21 +17,12 @@ import { FlyerVisionResult } from "./types";
 export async function extractFlyerVision(imageBufferBase64: string): Promise<FlyerVisionResult | null> {
   if (!imageBufferBase64 || imageBufferBase64.trim() === '') return null;
 
-  const allKeys = (process.env.GEMINI_API_KEYS || "")
-    .split(",")
-    .map(k => k.replace(/^["']|["']$/g, "").trim())
-    .filter(Boolean);
-  for (let idx = 1; idx <= 10; idx++) {
-    const k = (process.env[`GEMINI_API_KEY_${idx}`] || "").replace(/^["']|["']$/g, "").trim();
-    if (k) allKeys.push(k);
-  }
-  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.replace(/^["']|["']$/g, "").trim());
-  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.replace(/^["']|["']$/g, "").trim());
-  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.replace(/^["']|["']$/g, "").trim());
+  const freeKeys = geminiKeyManager.getFreeKeys();
+  const paidKey = geminiKeyManager.getPaidKey();
+  const candidateKeys = paidKey ? [...freeKeys, paidKey] : freeKeys;
 
-  const uniqueKeys = Array.from(new Set(allKeys.filter(Boolean)));
-  if (uniqueKeys.length === 0) {
-    console.warn("[JanIA-Vision] ⚠️ No hay GEMINI_API_KEY configurada para análisis visual.");
+  if (candidateKeys.length === 0) {
+    console.warn("[JanIA-Vision] ⚠️ No hay claves de Gemini configuradas para análisis visual.");
     return null;
   }
 
@@ -88,8 +83,9 @@ Devuelve EXCLUSIVAMENTE un JSON válido con esta estructura.`;
   };
 
   for (const model of models) {
-    for (let i = 0; i < uniqueKeys.length; i++) {
-      const apiKey = uniqueKeys[i];
+    for (let i = 0; i < candidateKeys.length; i++) {
+      const apiKey = candidateKeys[i];
+      assertKeyAllowedForExecution(apiKey); // Blindaje inmutable: nunca ejecutar clave de pago en tests
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
       try {

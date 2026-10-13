@@ -28,6 +28,7 @@
 import { ENV } from "./env";
 import axios from "axios";
 import { spawn } from "child_process";
+import { geminiKeyManager, assertKeyAllowedForExecution } from "./geminiKeyManager";
 
 export type TranscribeOptions = {
   audioUrl: string; // URL to the audio file (e.g., S3 URL)
@@ -116,21 +117,10 @@ async function transcodeWebmToWav(inputBuffer: Buffer): Promise<Buffer> {
  * Transcribe audio to text using Google Gemini with multi-key rotation, model fallback cascade and 60s timeout
  */
 async function transcribeAudioWithGemini(audioBuffer: Buffer, mimeType: string): Promise<string> {
-  const allKeys = (process.env.GEMINI_API_KEYS || "")
-    .split(",")
-    .map(k => k.replace(/^["']|["']$/g, "").trim())
-    .filter(Boolean);
-  
-  for (let idx = 1; idx <= 10; idx++) {
-    const k = (process.env[`GEMINI_API_KEY_${idx}`] || "").replace(/^["']|["']$/g, "").trim();
-    if (k) allKeys.push(k);
-  }
-  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.replace(/^["']|["']$/g, "").trim());
-  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.replace(/^["']|["']$/g, "").trim());
-  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.replace(/^["']|["']$/g, "").trim());
-  if (ENV.forgeApiKey) allKeys.push(ENV.forgeApiKey.replace(/^["']|["']$/g, "").trim());
+  const freeKeys = geminiKeyManager.getFreeKeys();
+  const paidKey = geminiKeyManager.getPaidKey();
+  const uniqueKeys = paidKey ? [...freeKeys, paidKey] : freeKeys;
 
-  const uniqueKeys = Array.from(new Set(allKeys.filter(Boolean)));
   if (uniqueKeys.length === 0) {
     throw new Error("No hay ninguna GEMINI_API_KEY configurada para la transcripción de voz.");
   }
@@ -187,6 +177,7 @@ async function transcribeAudioWithGemini(audioBuffer: Buffer, mimeType: string):
   for (const model of models) {
     for (let i = 0; i < uniqueKeys.length; i++) {
       const apiKey = uniqueKeys[i];
+      assertKeyAllowedForExecution(apiKey); // Bloqueo inmutable contra clave de pago en tests
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
       try {

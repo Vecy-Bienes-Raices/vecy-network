@@ -1,106 +1,31 @@
 import axios from "axios";
 import { ENV } from "./env";
+import { 
+  geminiKeyManager, 
+  assertKeyAllowedForExecution, 
+  markKeyCooldown, 
+  getActiveKey, 
+  getFreeKeys, 
+  getPaidKey, 
+  getAllAvailableKeys 
+} from "./geminiKeyManager";
 
 export type LLMProvider = "google" | "anthropic";
 
 /**
- * Gestor Inteligente de Claves y Modelos de Google Gemini (v22.7)
- * - Pool de Claves con rotación automática ante errores 429 / Rate Limit
- * - Cascada de Modelos (gemini-2.5-flash -> gemini-2.0-flash -> gemini-1.5-flash)
+ * Gestor Inteligente de Claves y Modelos de Google Gemini (v32.100)
+ * - Nivel 1: Pool Round-Robin Activo de 4 Claves Gratuitas ($0 COP)
+ * - Nivel 2: Respaldo de Emergencia de Pago 24/7 (GEMINI_PAID_KEY) solo ante 429 simultáneo en las 4 gratuitas
+ * - Retorno Automático: Retorna a Nivel 1 tan pronto expira el cooldown de 60s
+ * - Blindaje en Tests: Bloqueo inmutable de GEMINI_PAID_KEY en entorno de pruebas
+ * - Cascada de Modelos (gemini-3.5-flash-lite -> gemini-flash-lite-latest -> gemini-3.5-flash -> gemini-flash-latest)
  * - Control de Concurrencia y Cola de Pacing para evitar saturar el RPM
  */
 
-const keyCooldowns = new Map<string, number>();
-
-function sanitizeKey(k: string): string {
-  if (!k) return "";
-  return k.replace(/^["']|["']$/g, "").trim();
-}
-
-function getGeminiKeys(): string[] {
-  const keysSet = new Set<string>();
-  
-  // Claves múltiples separadas por coma
-  const multiKeys = (process.env.GEMINI_API_KEYS || "").split(",").map(sanitizeKey).filter(Boolean);
-  multiKeys.forEach(k => keysSet.add(k));
-
-  // Claves individuales numeradas (GEMINI_API_KEY_1, GEMINI_API_KEY_2, ...)
-  for (let i = 1; i <= 10; i++) {
-    const k = sanitizeKey(process.env[`GEMINI_API_KEY_${i}`] || "");
-    if (k) keysSet.add(k);
-  }
-
-  if (process.env.GEMINI_API_KEY) {
-    const k = sanitizeKey(process.env.GEMINI_API_KEY);
-    if (k) keysSet.add(k);
-  }
-  if (process.env.GOOGLE_API_KEY) {
-    const k = sanitizeKey(process.env.GOOGLE_API_KEY);
-    if (k) keysSet.add(k);
-  }
-  if (process.env.GEMINI_BACKUP_KEY) {
-    const k = sanitizeKey(process.env.GEMINI_BACKUP_KEY);
-    if (k) keysSet.add(k);
-  }
-  if (ENV.forgeApiKey) {
-    const k = sanitizeKey(ENV.forgeApiKey);
-    if (k) keysSet.add(k);
-  }
-
-  return Array.from(keysSet);
-}
-
-/**
- * POOL ROUND-ROBIN ACTIVO BALANCEADO (v31.67):
- * - Rota equitativamente entre las 4 claves gratuitas disponibles (GEMINI_API_KEY_1..4).
- * - Multiplica por 4 el rendimiento (hasta 60 RPM combinadas a $0 COP).
- * - Si una clave topa cuota (429), entra en cooldown de 60s mientras las otras 3 siguen a máxima velocidad.
- */
-let roundRobinIndex = 0;
-
-function getActiveRoundRobinKey(): { key: string; index: number } {
-  const allKeys = getGeminiKeys();
-  if (allKeys.length === 0) {
-    throw new Error("No hay ninguna GEMINI_API_KEY configurada en el entorno.");
-  }
-
-  const now = Date.now();
-  const total = allKeys.length;
-
-  // Buscar en ciclo Round-Robin la siguiente clave que NO esté en cooldown
-  for (let offset = 0; offset < total; offset++) {
-    const idx = (roundRobinIndex + offset) % total;
-    const key = allKeys[idx];
-    const cooldownUntil = keyCooldowns.get(key) || 0;
-    if (now > cooldownUntil) {
-      roundRobinIndex = (idx + 1) % total; // Avanzar el puntero para la siguiente consulta
-      return { key, index: idx + 1 };
-    }
-  }
-
-  // Si todas las claves están temporalmente en cooldown, seleccionar la que más pronto se descongele
-  let bestKey = allKeys[0];
-  let minCooldown = keyCooldowns.get(bestKey) || Infinity;
-  let bestIdx = 1;
-  for (let i = 0; i < total; i++) {
-    const k = allKeys[i];
-    const cd = keyCooldowns.get(k) || Infinity;
-    if (cd < minCooldown) {
-      minCooldown = cd;
-      bestKey = k;
-      bestIdx = i + 1;
-    }
-  }
-  return { key: bestKey, index: bestIdx };
-}
-
-// Alias para mantener compatibilidad
-const getActiveFailoverKey = getActiveRoundRobinKey;
-
-function markKeyCooldown(key: string, seconds: number = 60, reason: string = "Rate Limit (429)") {
-  keyCooldowns.set(key, Date.now() + seconds * 1000);
-  console.warn(`[JanIA-LLM] 🛡️ Clave Gemini (...${key.slice(-6)}) en pausa por ${seconds}s debido a ${reason}. Saltando a siguiente clave.`);
-}
+// Aliases para retrocompatibilidad
+export const getGeminiKeys = getAllAvailableKeys;
+export const getActiveRoundRobinKey = getActiveKey;
+export const getActiveFailoverKey = getActiveKey;
 
 // Modelos ordenados por prioridad de fallback (100% compatibles y activos en Google API)
 const FALLBACK_MODELS = [
@@ -225,17 +150,25 @@ async function invokeGemini(
 
   let lastError: any = null;
   const targetModels = modelsToTry; // Cascada completa de modelos (gemini-3.6-flash → gemini-flash-latest → gemini-flash-lite-latest)
+  const totalAttempts = Math.max(allKeys.length, 5);
 
   for (const currentModel of targetModels) {
-    // Intentar a través de TODAS las claves del Pool en Round-Robin antes de rendirse con este modelo
-    for (let keyAttempt = 0; keyAttempt < allKeys.length; keyAttempt++) {
-      const { key: activeKey, index: keyNum } = getActiveFailoverKey();
+    // Intentar a través de las claves del Pool (Nivel 1 Gratis -> Nivel 2 Pago de Emergencia)
+    for (let keyAttempt = 0; keyAttempt < totalAttempts; keyAttempt++) {
+      const activeKeyInfo = geminiKeyManager.getActiveKey();
+      const activeKey = activeKeyInfo.key;
+      const keyNum = activeKeyInfo.index;
+      const tierTag = activeKeyInfo.isPaid ? "Nivel 2 Pago 🚨" : `Nivel 1 Gratis #${keyNum}`;
+
+      // Blindaje de seguridad en pruebas: Si intenta usar la clave de pago en test, abortar localmente
+      assertKeyAllowedForExecution(activeKey);
+
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${activeKey}`;
 
       for (let attempt = 1; attempt <= 1; attempt++) {
         try {
           await paceRequest();
-          console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (Clave #${keyNum}: ...${activeKey.slice(-6)})...`);
+          console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (${tierTag}: ...${activeKey.slice(-6)})...`);
           
           // Timeout seguro de 12 segundos: si Google tarda, no bloquea el servidor ni causa 504 a la web
           const response = await axios.post(apiUrl, payload, { timeout: 12000 });
@@ -270,20 +203,20 @@ async function invokeGemini(
 
           // 429: Rate Limit (15 RPM) o Cuota saturada en este modelo/clave
           if (status === 429) {
-            markKeyCooldown(activeKey, 60, "Rate Limit / Saturación de Modelo (429)");
+            geminiKeyManager.markKeyCooldown(activeKey, 60, "Rate Limit / Saturación de Modelo (429)");
             break; // Saltar a la siguiente clave del Failover
           }
 
           // 503: Servidor saturado en Google -> Pausar esta clave por 45s y pasar a la siguiente
           if (status === 503) {
-            markKeyCooldown(activeKey, 45, "Google Server Saturation (503 UNAVAILABLE)");
+            geminiKeyManager.markKeyCooldown(activeKey, 45, "Google Server Saturation (503 UNAVAILABLE)");
             break; // Saltar a la siguiente clave del Failover
           }
 
           // Timeout de Axios (>25s) -> Pausar esta clave por 60s para no retrasar los sockets de WhatsApp
           if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-            markKeyCooldown(activeKey, 60, "Timeout > 25s");
-            console.warn(`[JanIA-LLM] ⏱️ Timeout de 25s excedido en Clave #${keyNum}. Conmutando a siguiente clave de inmediato.`);
+            geminiKeyManager.markKeyCooldown(activeKey, 60, "Timeout > 25s");
+            console.warn(`[JanIA-LLM] ⏱️ Timeout de 25s excedido en Clave (${tierTag}). Conmutando a siguiente clave de inmediato.`);
             break;
           }
 

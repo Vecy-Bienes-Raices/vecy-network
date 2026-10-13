@@ -331,6 +331,59 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.100 — Octubre 2026
+
+#### 📌 CONFIGURACIÓN DE SEGURIDAD Y BLINDAJE DE CLAVES GEMINI (PRODUCCIÓN VS TESTS)
+
+**Requerimiento y Objetivos:**
+1. **Blindaje Inmutable en Pruebas (`NODE_ENV=test` / `npm test`)**:
+   - Bloqueo y anulación absoluta de `GEMINI_PAID_KEY` (Google Cloud Billing) en cualquier entorno de pruebas para evitar consumos de desarrollo.
+   - Uso exclusivo del pool de 4 claves gratuitas (`GEMINI_FREE_KEYS` / `GEMINI_FREE_KEY_1..4`) o mocks.
+   - Si un test intenta invocar la clave de pago, debe arrojar una excepción local sin realizar peticiones de red externas.
+2. **Gestor en Producción (WhatsApp y Consola Web en Vivo)**:
+   - Nivel 1 (Prioridad 100% Gratuita): Toda petición de producción se atiende primero mediante las 4 claves gratuitas en rotación Round-Robin activa ($0 COP).
+   - Nivel 2 (Respaldo de Emergencia de Pago 24/7): `GEMINI_PAID_KEY` solo se ejecuta si las 4 claves gratuitas devuelven error 429 simultáneamente.
+   - Retorno Automático: Tan pronto una clave gratuita supere los 60 segundos de cooldown, el flujo retorna inmediatamente al Nivel 1 a costo $0 COP.
+3. **Documentación en `.env.example` y Retrocompatibilidad en `.env`**:
+   - Estructuración transparente de `GEMINI_FREE_KEYS` y `GEMINI_PAID_KEY` con comentarios didácticos.
+
+**Soluciones Técnicas Implementadas:**
+- `server/_core/geminiKeyManager.ts`:
+  • Módulo central de gestión de claves y estados de enfriamiento.
+  • `isTestEnvironment()`: Detección estricta de entornos de test.
+  • `isPaidKey()`: Identificación segura de claves de facturación (configurada o por firma `AQ.Ab8RN6Kik...c7ePwg`).
+  • `getPaidKey()`: Retorna `null` inmutablemente en tests.
+  • `getFreeKeys()`: Pool limpio que garantiza 0% presencia de claves de facturación.
+  • `assertKeyAllowedForExecution()`: Barrera de intercepción local que aborta intentos de pago en tests.
+  • `getActiveKey()`: Selección jerárquica Nivel 1 -> Nivel 2 -> Retorno Automático.
+- `server/__tests__/setupTests.ts` & `vitest.config.ts`:
+  • Loader global de Vitest que anula `GEMINI_PAID_KEY` y registra un interceptor Axios para bloquear llamadas salientes a `generativelanguage.googleapis.com` con claves de pago.
+- Refactorización de Clientes:
+  • `server/_core/llm.ts`, `server/_core/jania/vision.ts` y `server/_core/voiceTranscription.ts` integrados con `geminiKeyManager`.
+- `.env.example` & `.env`:
+  • Actualización de variables de entorno y documentación.
+- `server/__tests__/regression.test.ts`:
+  • Suite 61 con 4 pruebas automatizadas cubriendo la anulación en tests, el interceptor de red, la conmutación Nivel 1 -> Nivel 2 -> Retorno Automático y la documentación de `.env.example`.
+
+**Archivos Modificados:**
+- `server/_core/geminiKeyManager.ts` (Nuevo)
+- `server/__tests__/setupTests.ts` (Nuevo)
+- `vitest.config.ts`
+- `server/_core/llm.ts`
+- `server/_core/jania/vision.ts`
+- `server/_core/voiceTranscription.ts`
+- `.env.example` & `.env`
+- `server/__tests__/regression.test.ts`
+- `shared/const.ts` & `package.json`: Versión oficial `v32.100` (`32.100.0`).
+- Documentos maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y `vecy_network_technical_dossier.md`.
+
+**Verificación:**
+- `npm run check`: 0 errores TypeScript ✅
+- `npm test`: 190/190 tests passing al 100% ✅
+- `npm run build`: Compilación limpia (Vite 20.92s + esbuild 143ms) ✅
+
+---
+
 ### 🔖 v32.99 — Octubre 2026
 
 #### 📌 PROTOCOLO DE URBANIDAD DE CARREÑO, CONFIRMACIÓN DIDÁCTICA, PIPELINE FAIL-FAST Y GUÍA OFICIAL PAZ Y SALVO IDU

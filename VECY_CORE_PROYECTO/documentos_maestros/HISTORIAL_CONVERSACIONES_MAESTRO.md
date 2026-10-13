@@ -7,6 +7,60 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.100 — 12 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+- **Configuración de Seguridad y Blindaje de Claves Gemini (Producción vs Tests)**:
+  1. *"Actúa como DevOps y arquitecto de software senior en TypeScript.*
+  2. *CONFIGURACIÓN DE SEGURIDAD Y BLINDAJE DE CLAVES GEMINI (PRODUCCIÓN VS TESTS):*
+     - *Objetivo: Mantener la API de pago activa para la operación 24/7 de WhatsApp como respaldo de emergencia, pero BLOQUEARLA ESTRICTAMENTE en cualquier entorno de pruebas (npm test) para evitar consumos de desarrollo.*
+  3. *BLINDAJE INMUTABLE EN ENTORNO DE PRUEBAS (NODE_ENV=test / npm test):*
+     - *En la configuración de pruebas (`setupTests.ts`, `vitest.config.ts`, etc.): La variable `GEMINI_PAID_KEY` (clave de pago de Google Cloud) debe quedar EXCLUIDA / ANULADA.*
+     - *Para las pruebas que requieran llamadas a LLM o visión, utilizar EXCLUSIVAMENTE el pool de claves gratuitas (`GEMINI_FREE_KEYS` / `GEMINI_FREE_KEY_1..4`) con throttling o respuestas simuladas (mocks).*
+     - *Si un test intenta invocar la clave de pago, debe arrojar una excepción local sin realizar la petición externa.*
+  4. *GESTOR EN PRODUCCIÓN (WHATSAPP Y CONSOLA WEB EN VIVO):*
+     - *En `server/_core/jania/vision.ts`, `llm.ts` o el gestor central de claves:*
+     - *Nivel 1 (Prioridad 100% Gratuita): Toda petición de producción va primero a las 4 claves gratuitas en rotación.*
+     - *Nivel 2 (Respaldo de Emergencia de Pago): `GEMINI_PAID_KEY` solo se ejecuta si las 4 claves gratuitas devuelven error 429 simultáneamente.*
+     - *Retorno Automático: Tan pronto una clave gratuita supere los 60 segundos de cooldown, el flujo vuelve al Nivel 1 a costo $0 COP.*
+  5. *DOCUMENTACIÓN EN `.env.example`:*
+     - *Estructurar claramente las variables:*
+       `# Claves gratuitas para pruebas y producción diaria (Costo $0)`
+       `GEMINI_FREE_KEYS="key_gratis_1,key_gratis_2,key_gratis_3,key_gratis_4"`
+       `# Clave de pago (Exclusiva para failover en producción 24/7, vetada en tests)`
+       `GEMINI_PAID_KEY="AIzaSy..."`"*
+
+### Diagnóstico Técnico Profundo
+- **Riesgo Financiero de Consumo en Desarrollo**: En versiones previas, la rotación de claves en `llm.ts` y `vision.ts` mezclaba la clave de facturación de Google Cloud con las claves gratuitas en un solo array plano. Cualquier prueba automática o iteración local podía despachar peticiones consumiendo saldo de pago.
+- **Necesidad de Priorización Estricta 100% Gratuita**: JanIA debe priorizar el costo $0 COP utilizando las 4 claves gratuitas en Round-Robin activo (hasta 60 RPM combinadas), relegando la clave de pago exclusivamente como failover de último recurso si las 4 claves gratuitas colapsan por 429 en un pico masivo de WhatsApp.
+- **Retorno Automático sin Intervención Humana**: El sistema requería un mecanismo de des-escalamiento automático que, al cumplirse los 60 segundos de cooldown de cualquier clave gratuita, vuelva inmediatamente al Nivel 1 gratuito.
+
+### Acciones Técnicas Ejecutadas
+1. **Creación del Gestor Central de Claves (`server/_core/geminiKeyManager.ts`)**:
+   - `getFreeKeys()`: Recopila y deduplica las 4 claves gratuitas desde `GEMINI_FREE_KEYS`, `GEMINI_FREE_KEY_1..4` y `GEMINI_API_KEY_2..5`, garantizando exclusión absoluta de cualquier clave de pago.
+   - `getPaidKey()`: Retorna `null` inmutablemente en tests (`isTestEnvironment()`). En producción, resuelve la clave de facturación oficial de Google Cloud Billing.
+   - `assertKeyAllowedForExecution(key)`: Barrera local que lanza `🚨 [SEGURIDAD TEST]: Intento de invocar la clave de pago GEMINI_PAID_KEY en entorno de pruebas bloqueado estrictamente.` si se detecta uso de la clave de pago en tests.
+   - `getActiveKey()`: Implementa la jerarquía Nivel 1 (Round-Robin gratuito) -> Nivel 2 (Failover de emergencia de pago ante 429 simultáneo en las 4 gratuitas) -> Retorno Automático a Nivel 1 tan pronto expira el cooldown de 60s.
+2. **Configuración Global de Tests (`server/__tests__/setupTests.ts` y `vitest.config.ts`)**:
+   - `setupFiles: ["server/__tests__/setupTests.ts"]` configurado en `vitest.config.ts`.
+   - `delete process.env.GEMINI_PAID_KEY` forzado en el arranque de Vitest.
+   - Interceptor de red Axios global que bloquea cualquier petición a Google API con la clave de pago antes de salir a la red.
+3. **Refactorización de Consumidores Core**:
+   - `server/_core/llm.ts`: Conectado a `geminiKeyManager.getActiveKey()` y protegido con `assertKeyAllowedForExecution()`.
+   - `server/_core/jania/vision.ts`: Conectado a `geminiKeyManager` con protección estricta por clave.
+   - `server/_core/voiceTranscription.ts`: Conectado a `geminiKeyManager` con protección estricta por clave.
+4. **Documentación Oficial en `.env.example` y Configuración en `.env`**:
+   - Sección de credenciales de IA añadida a `.env.example` con comentarios explicativos.
+   - Variables añadidas a `.env` manteniendo 100% retrocompatibles `GEMINI_API_KEYS` y `GEMINI_API_KEY_1..5`.
+5. **Suite de Regresión 61 (`server/__tests__/regression.test.ts`)**:
+   - 4 tests automatizados validando: (1) Anulación de clave de pago en tests, (2) Interceptor Axios, (3) Transición Nivel 1 -> Nivel 2 -> Retorno Automático, y (4) Documentación de `.env.example`.
+
+### Verificación y Validación Empírica
+- `npm run check`: 0 errores TypeScript ✅.
+- `npm test`: 5 suites pasando, 190/190 tests vitest aprobados al 100% ✅.
+- `npm run build`: Compilación limpia de cliente (Vite en 20.92s) y servidor (esbuild en 143ms) ✅.
+- Versión oficial incrementada a **v32.100** (`32.100.0`).
+
 ## 📋 SESIÓN v32.99 — 12 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

@@ -172,7 +172,24 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.99 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.100 — Octubre 2026
+
+### Novedades v32.100 (Configuración de Seguridad y Blindaje de Claves Gemini: Producción vs Tests, Nivel 1 Gratis, Nivel 2 Pago Emergencia y Retorno Automático):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. Mantener la API de pago activa para la operación 24/7 de WhatsApp como respaldo de emergencia, pero BLOQUEARLA ESTRICTAMENTE en cualquier entorno de pruebas (`npm test`) para evitar consumos de desarrollo.
+  2. Blindaje Inmutable en Pruebas: Excluir/anular `GEMINI_PAID_KEY`, usar exclusivamente pool de claves gratuitas (`GEMINI_FREE_KEYS`), y lanzar excepción local si algún test intenta invocar la clave de pago.
+  3. Gestor en Producción: Nivel 1 (Prioridad 100% Gratuita en Round-Robin activo), Nivel 2 (Respaldo de Emergencia de Pago ante 429 simultáneo en las 4 gratuitas), y Retorno Automático a Nivel 1 tan pronto expira el cooldown de 60s.
+  4. Documentación en `.env.example` con `GEMINI_FREE_KEYS` y `GEMINI_PAID_KEY`.
+- **Acciones Técnicas Ejecutadas**:
+  - `server/_core/geminiKeyManager.ts`: Creación del gestor central con detección inmutable de pruebas (`isTestEnvironment`), aislamiento de claves gratuitas (`getFreeKeys`), veto estricto de pago (`getPaidKey`), barrera local (`assertKeyAllowedForExecution`), cooldowns individuales y retorno automático.
+  - `server/__tests__/setupTests.ts` & `vitest.config.ts`: Configuración global de pruebas anulando `GEMINI_PAID_KEY` e instalando interceptor Axios de red contra peticiones con clave de pago.
+  - `server/_core/llm.ts`, `jania/vision.ts`, `voiceTranscription.ts`: Conectados al gestor central con protección estricta.
+  - `.env.example` & `.env`: Documentación y estructuración de `GEMINI_FREE_KEYS` y `GEMINI_PAID_KEY` preservando retrocompatibilidad total.
+  - `server/__tests__/regression.test.ts`: Suite 61 añadida (4 tests).
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 190/190 tests passing ✅ | `npm run build` limpio en 20.92s ✅
+- `shared/const.ts` (`v32.100`) y `package.json` (`32.100.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.99 — Octubre 2026
 
 ### Novedades v32.99 (Protocolo de Urbanidad de Carreño, Confirmación Didáctica, Pipeline Fail-Fast y Guía Oficial Paz y Salvo IDU):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

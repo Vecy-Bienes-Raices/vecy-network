@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.98";
+    VECY_VERSION = "v32.100";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -959,76 +959,185 @@ var init_trpc = __esm({
   }
 });
 
-// server/_core/llm.ts
-var llm_exports = {};
-__export(llm_exports, {
-  invokeLLM: () => invokeLLM
-});
-import axios2 from "axios";
-function sanitizeKey(k) {
+// server/_core/geminiKeyManager.ts
+function sanitizeKey(k = "") {
   if (!k) return "";
   return k.replace(/^["']|["']$/g, "").trim();
 }
-function getGeminiKeys() {
+function isTestEnvironment() {
+  return process.env.NODE_ENV === "test" || process.env.VITEST === "true" || typeof process.env.VITEST_WORKER_ID !== "undefined";
+}
+function isPaidKey(k) {
+  if (!k) return false;
+  const clean = sanitizeKey(k);
+  if (!clean) return false;
+  const envPaid = sanitizeKey(process.env.GEMINI_PAID_KEY || "");
+  if (envPaid && clean === envPaid) return true;
+  if (clean.startsWith("AQ.Ab8RN6Kik") && clean.endsWith("c7ePwg")) return true;
+  return false;
+}
+function getPaidKey() {
+  if (isTestEnvironment()) {
+    return null;
+  }
+  const explicitPaid = sanitizeKey(process.env.GEMINI_PAID_KEY || "");
+  if (explicitPaid) return explicitPaid;
+  const key1 = sanitizeKey(process.env.GEMINI_API_KEY_1 || process.env.GEMINI_API_KEY || "");
+  if (key1 && isPaidKey(key1)) return key1;
+  const multi = (process.env.GEMINI_API_KEYS || "").split(",").map(sanitizeKey).filter(Boolean);
+  const found = multi.find((k) => isPaidKey(k));
+  if (found) return found;
+  return null;
+}
+function getFreeKeys() {
   const keysSet = /* @__PURE__ */ new Set();
-  const multiKeys = (process.env.GEMINI_API_KEYS || "").split(",").map(sanitizeKey).filter(Boolean);
-  multiKeys.forEach((k) => keysSet.add(k));
+  const freeMulti = (process.env.GEMINI_FREE_KEYS || "").split(",").map(sanitizeKey).filter(Boolean);
+  freeMulti.forEach((k) => {
+    if (!isPaidKey(k)) keysSet.add(k);
+  });
   for (let i = 1; i <= 10; i++) {
+    const k = sanitizeKey(process.env[`GEMINI_FREE_KEY_${i}`] || "");
+    if (k && !isPaidKey(k)) keysSet.add(k);
+  }
+  for (let i = 2; i <= 10; i++) {
     const k = sanitizeKey(process.env[`GEMINI_API_KEY_${i}`] || "");
-    if (k) keysSet.add(k);
+    if (k && !isPaidKey(k)) keysSet.add(k);
+  }
+  const allMulti = (process.env.GEMINI_API_KEYS || "").split(",").map(sanitizeKey).filter(Boolean);
+  allMulti.forEach((k) => {
+    if (!isPaidKey(k)) keysSet.add(k);
+  });
+  if (process.env.GEMINI_BACKUP_KEY) {
+    const k = sanitizeKey(process.env.GEMINI_BACKUP_KEY);
+    if (k && !isPaidKey(k)) keysSet.add(k);
+  }
+  if (process.env.GEMINI_API_KEY_1) {
+    const k = sanitizeKey(process.env.GEMINI_API_KEY_1);
+    if (k && !isPaidKey(k)) keysSet.add(k);
   }
   if (process.env.GEMINI_API_KEY) {
     const k = sanitizeKey(process.env.GEMINI_API_KEY);
-    if (k) keysSet.add(k);
-  }
-  if (process.env.GOOGLE_API_KEY) {
-    const k = sanitizeKey(process.env.GOOGLE_API_KEY);
-    if (k) keysSet.add(k);
-  }
-  if (process.env.GEMINI_BACKUP_KEY) {
-    const k = sanitizeKey(process.env.GEMINI_BACKUP_KEY);
-    if (k) keysSet.add(k);
-  }
-  if (ENV.forgeApiKey) {
-    const k = sanitizeKey(ENV.forgeApiKey);
-    if (k) keysSet.add(k);
+    if (k && !isPaidKey(k)) keysSet.add(k);
   }
   return Array.from(keysSet);
 }
-function getActiveRoundRobinKey() {
-  const allKeys = getGeminiKeys();
-  if (allKeys.length === 0) {
-    throw new Error("No hay ninguna GEMINI_API_KEY configurada en el entorno.");
+function assertKeyAllowedForExecution(key) {
+  if (isTestEnvironment() && isPaidKey(key)) {
+    throw new Error("\u{1F6A8} [SEGURIDAD TEST]: Intento de invocar la clave de pago GEMINI_PAID_KEY en entorno de pruebas bloqueado estrictamente.");
   }
+}
+function markKeyCooldown(key, seconds = 60, reason = "Rate Limit (429)") {
+  const clean = sanitizeKey(key);
+  if (!clean) return;
+  keyCooldowns.set(clean, Date.now() + seconds * 1e3);
+  const isPaid = isPaidKey(clean);
+  const keyLabel = isPaid ? "Nivel 2 Pago \u{1F6A8}" : "Nivel 1 Gratis";
+  console.warn(`[JanIA-GeminiManager] \u{1F6E1}\uFE0F Clave Gemini ${keyLabel} (...${clean.slice(-6)}) en cooldown por ${seconds}s debido a ${reason}.`);
+}
+function isKeyInCooldown(key) {
+  const clean = sanitizeKey(key);
+  const cd = keyCooldowns.get(clean);
+  if (!cd) return false;
+  return Date.now() < cd;
+}
+function clearAllCooldowns() {
+  keyCooldowns.clear();
+}
+function getActiveKey() {
+  const freeKeys = getFreeKeys();
   const now = Date.now();
-  const total = allKeys.length;
-  for (let offset = 0; offset < total; offset++) {
-    const idx = (roundRobinIndex + offset) % total;
-    const key = allKeys[idx];
-    const cooldownUntil = keyCooldowns.get(key) || 0;
-    if (now > cooldownUntil) {
-      roundRobinIndex = (idx + 1) % total;
-      return { key, index: idx + 1 };
+  const availableFree = [];
+  for (let i = 0; i < freeKeys.length; i++) {
+    const k = freeKeys[i];
+    const cd = keyCooldowns.get(k) || 0;
+    if (now >= cd) {
+      availableFree.push({ key: k, index: i + 1 });
     }
   }
-  let bestKey = allKeys[0];
-  let minCooldown = keyCooldowns.get(bestKey) || Infinity;
+  if (availableFree.length > 0) {
+    const chosen = availableFree[roundRobinFreeIndex % availableFree.length];
+    roundRobinFreeIndex = (roundRobinFreeIndex + 1) % availableFree.length;
+    return {
+      key: chosen.key,
+      isPaid: false,
+      tier: 1,
+      index: chosen.index
+    };
+  }
+  if (isTestEnvironment()) {
+    throw new Error("\u{1F6A8} [SEGURIDAD TEST]: Todas las claves gratuitas est\xE1n en cooldown y la clave de pago GEMINI_PAID_KEY est\xE1 estrictamente vetada en entorno de pruebas.");
+  }
+  const paidKey = getPaidKey();
+  if (paidKey) {
+    const paidCooldown = keyCooldowns.get(paidKey) || 0;
+    if (now >= paidCooldown) {
+      console.warn("[JanIA-GeminiManager] \u{1F6A8} Nivel 2 de Emergencia: Todas las claves gratuitas (4/4) en cooldown (429). Activando GEMINI_PAID_KEY como respaldo...");
+      return {
+        key: paidKey,
+        isPaid: true,
+        tier: 2,
+        index: 99
+      };
+    }
+  }
+  if (freeKeys.length === 0) {
+    throw new Error("No hay ninguna clave de Gemini configurada en el entorno.");
+  }
+  let bestKey = freeKeys[0];
+  let minCooldown = Infinity;
   let bestIdx = 1;
-  for (let i = 0; i < total; i++) {
-    const k = allKeys[i];
-    const cd = keyCooldowns.get(k) || Infinity;
+  for (let i = 0; i < freeKeys.length; i++) {
+    const k = freeKeys[i];
+    const cd = keyCooldowns.get(k) || 0;
     if (cd < minCooldown) {
       minCooldown = cd;
       bestKey = k;
       bestIdx = i + 1;
     }
   }
-  return { key: bestKey, index: bestIdx };
+  return {
+    key: bestKey,
+    isPaid: false,
+    tier: 1,
+    index: bestIdx
+  };
 }
-function markKeyCooldown(key, seconds = 60, reason = "Rate Limit (429)") {
-  keyCooldowns.set(key, Date.now() + seconds * 1e3);
-  console.warn(`[JanIA-LLM] \u{1F6E1}\uFE0F Clave Gemini (...${key.slice(-6)}) en pausa por ${seconds}s debido a ${reason}. Saltando a siguiente clave.`);
+function getAllAvailableKeys() {
+  const free = getFreeKeys();
+  const paid = getPaidKey();
+  return paid ? [...free, paid] : free;
 }
+var keyCooldowns, roundRobinFreeIndex, geminiKeyManager;
+var init_geminiKeyManager = __esm({
+  "server/_core/geminiKeyManager.ts"() {
+    "use strict";
+    keyCooldowns = /* @__PURE__ */ new Map();
+    roundRobinFreeIndex = 0;
+    geminiKeyManager = {
+      sanitizeKey,
+      isTestEnvironment,
+      isPaidKey,
+      getPaidKey,
+      getFreeKeys,
+      assertKeyAllowedForExecution,
+      markKeyCooldown,
+      isKeyInCooldown,
+      clearAllCooldowns,
+      getActiveKey,
+      getAllAvailableKeys
+    };
+  }
+});
+
+// server/_core/llm.ts
+var llm_exports = {};
+__export(llm_exports, {
+  getActiveFailoverKey: () => getActiveFailoverKey,
+  getActiveRoundRobinKey: () => getActiveRoundRobinKey,
+  getGeminiKeys: () => getGeminiKeys,
+  invokeLLM: () => invokeLLM
+});
+import axios2 from "axios";
 async function paceRequest() {
   const now = Date.now();
   const elapsed = now - lastCallTimestamp;
@@ -1104,14 +1213,19 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
   }
   let lastError = null;
   const targetModels = modelsToTry;
+  const totalAttempts = Math.max(allKeys.length, 5);
   for (const currentModel of targetModels) {
-    for (let keyAttempt = 0; keyAttempt < allKeys.length; keyAttempt++) {
-      const { key: activeKey, index: keyNum } = getActiveFailoverKey();
+    for (let keyAttempt = 0; keyAttempt < totalAttempts; keyAttempt++) {
+      const activeKeyInfo = geminiKeyManager.getActiveKey();
+      const activeKey = activeKeyInfo.key;
+      const keyNum = activeKeyInfo.index;
+      const tierTag = activeKeyInfo.isPaid ? "Nivel 2 Pago \u{1F6A8}" : `Nivel 1 Gratis #${keyNum}`;
+      assertKeyAllowedForExecution(activeKey);
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${activeKey}`;
       for (let attempt = 1; attempt <= 1; attempt++) {
         try {
           await paceRequest();
-          console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (Clave #${keyNum}: ...${activeKey.slice(-6)})...`);
+          console.log(`[JanIA-LLM] Ejecutando IA con ${currentModel} (${tierTag}: ...${activeKey.slice(-6)})...`);
           const response = await axios2.post(apiUrl, payload, { timeout: 12e3 });
           if (response.data.candidates && response.data.candidates[0]) {
             const firstPart = response.data.candidates[0].content?.parts?.[0];
@@ -1139,16 +1253,16 @@ async function invokeGemini(messages2, responseFormat, customModel, imageBuffer,
           const status = error.response?.status;
           const errorMsg = error.response?.data?.error?.message || error.message;
           if (status === 429) {
-            markKeyCooldown(activeKey, 60, "Rate Limit / Saturaci\xF3n de Modelo (429)");
+            geminiKeyManager.markKeyCooldown(activeKey, 60, "Rate Limit / Saturaci\xF3n de Modelo (429)");
             break;
           }
           if (status === 503) {
-            markKeyCooldown(activeKey, 45, "Google Server Saturation (503 UNAVAILABLE)");
+            geminiKeyManager.markKeyCooldown(activeKey, 45, "Google Server Saturation (503 UNAVAILABLE)");
             break;
           }
           if (error.code === "ECONNABORTED" || error.message?.includes("timeout")) {
-            markKeyCooldown(activeKey, 60, "Timeout > 25s");
-            console.warn(`[JanIA-LLM] \u23F1\uFE0F Timeout de 25s excedido en Clave #${keyNum}. Conmutando a siguiente clave de inmediato.`);
+            geminiKeyManager.markKeyCooldown(activeKey, 60, "Timeout > 25s");
+            console.warn(`[JanIA-LLM] \u23F1\uFE0F Timeout de 25s excedido en Clave (${tierTag}). Conmutando a siguiente clave de inmediato.`);
             break;
           }
           if (status === 500 || status === 502) {
@@ -1169,14 +1283,14 @@ async function invokeClaude(messages2, responseFormat) {
   console.log("[JanIA-LLM] Intentando procesar con Claude (Anthropic)...");
   throw new Error("El proveedor Anthropic est\xE1 preparado en c\xF3digo pero requiere API KEY y activaci\xF3n financiera.");
 }
-var keyCooldowns, roundRobinIndex, getActiveFailoverKey, FALLBACK_MODELS, lastCallTimestamp, MIN_CALL_INTERVAL_MS;
+var getGeminiKeys, getActiveRoundRobinKey, getActiveFailoverKey, FALLBACK_MODELS, lastCallTimestamp, MIN_CALL_INTERVAL_MS;
 var init_llm = __esm({
   "server/_core/llm.ts"() {
     "use strict";
-    init_env();
-    keyCooldowns = /* @__PURE__ */ new Map();
-    roundRobinIndex = 0;
-    getActiveFailoverKey = getActiveRoundRobinKey;
+    init_geminiKeyManager();
+    getGeminiKeys = getAllAvailableKeys;
+    getActiveRoundRobinKey = getActiveKey;
+    getActiveFailoverKey = getActiveKey;
     FALLBACK_MODELS = [
       "gemini-3.5-flash-lite",
       "gemini-flash-lite-latest",
@@ -10552,17 +10666,11 @@ var init_heuristics = __esm({
 import axios6 from "axios";
 async function extractFlyerVision(imageBufferBase64) {
   if (!imageBufferBase64 || imageBufferBase64.trim() === "") return null;
-  const allKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.replace(/^["']|["']$/g, "").trim()).filter(Boolean);
-  for (let idx = 1; idx <= 10; idx++) {
-    const k = (process.env[`GEMINI_API_KEY_${idx}`] || "").replace(/^["']|["']$/g, "").trim();
-    if (k) allKeys.push(k);
-  }
-  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.replace(/^["']|["']$/g, "").trim());
-  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.replace(/^["']|["']$/g, "").trim());
-  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.replace(/^["']|["']$/g, "").trim());
-  const uniqueKeys = Array.from(new Set(allKeys.filter(Boolean)));
-  if (uniqueKeys.length === 0) {
-    console.warn("[JanIA-Vision] \u26A0\uFE0F No hay GEMINI_API_KEY configurada para an\xE1lisis visual.");
+  const freeKeys = geminiKeyManager.getFreeKeys();
+  const paidKey = geminiKeyManager.getPaidKey();
+  const candidateKeys = paidKey ? [...freeKeys, paidKey] : freeKeys;
+  if (candidateKeys.length === 0) {
+    console.warn("[JanIA-Vision] \u26A0\uFE0F No hay claves de Gemini configuradas para an\xE1lisis visual.");
     return null;
   }
   const models = [
@@ -10619,8 +10727,9 @@ Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
     }
   };
   for (const model of models) {
-    for (let i = 0; i < uniqueKeys.length; i++) {
-      const apiKey = uniqueKeys[i];
+    for (let i = 0; i < candidateKeys.length; i++) {
+      const apiKey = candidateKeys[i];
+      assertKeyAllowedForExecution(apiKey);
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       try {
         console.log(`[JanIA-Vision] \u{1F441}\uFE0F Analizando flyer con ${model} (Key #${i + 1})...`);
@@ -10664,6 +10773,7 @@ Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
 var init_vision = __esm({
   "server/_core/jania/vision.ts"() {
     "use strict";
+    init_geminiKeyManager();
   }
 });
 
@@ -11634,16 +11744,9 @@ async function transcodeWebmToWav(inputBuffer) {
   });
 }
 async function transcribeAudioWithGemini(audioBuffer, mimeType) {
-  const allKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.replace(/^["']|["']$/g, "").trim()).filter(Boolean);
-  for (let idx = 1; idx <= 10; idx++) {
-    const k = (process.env[`GEMINI_API_KEY_${idx}`] || "").replace(/^["']|["']$/g, "").trim();
-    if (k) allKeys.push(k);
-  }
-  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.replace(/^["']|["']$/g, "").trim());
-  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.replace(/^["']|["']$/g, "").trim());
-  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.replace(/^["']|["']$/g, "").trim());
-  if (ENV.forgeApiKey) allKeys.push(ENV.forgeApiKey.replace(/^["']|["']$/g, "").trim());
-  const uniqueKeys = Array.from(new Set(allKeys.filter(Boolean)));
+  const freeKeys = geminiKeyManager.getFreeKeys();
+  const paidKey = geminiKeyManager.getPaidKey();
+  const uniqueKeys = paidKey ? [...freeKeys, paidKey] : freeKeys;
   if (uniqueKeys.length === 0) {
     throw new Error("No hay ninguna GEMINI_API_KEY configurada para la transcripci\xF3n de voz.");
   }
@@ -11692,6 +11795,7 @@ async function transcribeAudioWithGemini(audioBuffer, mimeType) {
   for (const model of models) {
     for (let i = 0; i < uniqueKeys.length; i++) {
       const apiKey = uniqueKeys[i];
+      assertKeyAllowedForExecution(apiKey);
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       try {
         console.log(`[STT-Gemini] Transcribiendo audio (${(audioBuffer.length / 1024).toFixed(1)} KB) con ${model} (Key #${i + 1})...`);
@@ -11814,6 +11918,7 @@ var init_voiceTranscription = __esm({
   "server/_core/voiceTranscription.ts"() {
     "use strict";
     init_env();
+    init_geminiKeyManager();
   }
 });
 
