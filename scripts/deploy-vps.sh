@@ -34,7 +34,8 @@ $SSH_CMD bash -c "'
   set -e
   echo \"📥 [1/4] Descargando últimos cambios desde origin/main...\"
   cd \"${VPS_DIR}\"
-  git pull origin main
+  git fetch origin main
+  git reset --hard origin/main
 
   echo \"📦 [2/4] Verificando dependencias (pnpm / npm)...\"
   if command -v pnpm &> /dev/null; then
