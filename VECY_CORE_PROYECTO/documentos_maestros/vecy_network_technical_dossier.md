@@ -331,6 +331,49 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v32.98 — Octubre 2026
+
+#### 📌 REFACTORIZACIÓN MODULAR QUIRÚRGICA DE JANIA — CERO REGRESIONES Y ARQUITECTURA LIMPIA
+
+**Requerimiento y Objetivos:**
+1. **Refactorización Arquitectónica de `janIA.ts` (Eduardo A. Rivera)**:
+   - Desacoplar el archivo monolítico `janIA.ts` (7,144 líneas de código) en submódulos atómicos, altamente legibles y mantenibles bajo `server/_core/jania/`.
+   - Garantizar CERO REGRESIONES en reglas de negocio, expresiones regulares, lógica de deduplicación, cálculos financieros, esquemas Drizzle ORM y llamadas a base de datos.
+2. **Reglas de Ejecución Estrictas**:
+   - Evitar dependencias circulares: los submódulos importan directamente de sus pares (`../types`, `../parsers`, etc.) y nunca desde `index.ts` o `janIA.ts`.
+   - Preservar mapas y cachés en memoria (`fallbackDataCache`, `promptCache`, `dmConversationHistory`, `GREETED_TODAY`) como singletons estrictos en sus respectivos archivos.
+   - Verificación de tipado (`npm run check`) paso a paso certificando cero errores.
+
+**Soluciones Técnicas Implementadas:**
+- **Submódulos Especializados en `server/_core/jania/`**:
+  • `types.ts`: Tipos, interfaces y esquemas Zod (`JanIAResult`, `janiaResultSchema`, `FlyerVisionResult`, etc.).
+  • `parsers.ts`: Parsers de moneda COP (`parseColombianPriceOrBudget`), extractor determinista de fallback (`fallbackDataCache`), nombres, teléfonos, completitud y emojis.
+  • `heuristics.ts`: Detección de spam/basura (`esMensajeSpamOBasura`), horario laboral (`isOutsideWorkingHours`), multi-item splitter (`splitMultiItemMessage`), scraper con bypass.
+  • `vision.ts`: OCR multimodal con Gemini para lectura de flyers (`extractFlyerVision`).
+  • `prompts.ts`: Generación de system prompt (`buildSystemPrompt`), `promptCache` singleton, copys institucionales y hooks.
+  • `sessionManager.ts`: Gestión de sesiones, control de saludos diarios (`GREETED_TODAY`), historiales de DM/consultoría con persistencia en PostgreSQL nativo, estadísticas en vivo con caché de 5 minutos.
+  • `handlers/consultingHandler.ts`: Manejador de Grupo 2 (Soporte legal, tributario y avalúos).
+  • `handlers/circuloHandler.ts`: Manejador de Grupo 3 (Proyecto VECY / Foro abierto).
+  • `handlers/dmHandler.ts`: Manejador de DMs privados con IA Pura, entrega cortés de herramientas y estocada de Google Reviews.
+  • `handlers/propertiesHandler.ts`: Manejador de Grupo 1 (Ofertas y demandas, deduplicación, guardado en BD, matching instantáneo y directorio de asesores).
+  • `index.ts`: Barrel centralizado limpio.
+- **Fachada Retrocompatible (`server/_core/janIA.ts`)**:
+  • Reducida a 24 líneas, re-exportando explícitamente `./jania/index` para evitar ambigüedades de case-sensitivity en sistemas de archivos Linux con esbuild.
+  • Cero cambios requeridos en consumidores (`whatsapp-match.ts`, `routers/janIA.ts`, scripts, tests).
+
+**Archivos Modificados:**
+- `server/_core/jania/`: Suite modular completa creada (11 archivos).
+- `server/_core/janIA.ts`: Fachada retrocompatible de 24 líneas.
+- `shared/const.ts` & `package.json`: Incremento a versión oficial `v32.98` (`32.98.0`).
+- Documentos maestros: `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `.agents/AGENTS.md` y `vecy_network_technical_dossier.md`.
+
+**Verificación:**
+- `npm run check`: 0 errores TypeScript ✅
+- `npm test`: 182/182 tests passing al 100% ✅
+- `npm run build`: Compilación limpia (Vite 19.11s + esbuild 66ms) ✅
+
+---
+
 ### 🔖 v32.97 — Octubre 2026
 
 #### 📌 AUDITORÍA INTEGRAL DE SERVICIOS ACTIVOS 24/7, IDENTIDAD INSTITUCIONAL, REDES SOCIALES Y ESTOCADA FINAL DE RESEÑAS EN CONVERSACIONES AMENAS

@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v32.97";
+    VECY_VERSION = "v32.98";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -1373,6 +1373,735 @@ var init_scraper = __esm({
   }
 });
 
+// server/_core/jania/types.ts
+var janiaResultSchema;
+var init_types = __esm({
+  "server/_core/jania/types.ts"() {
+    "use strict";
+    janiaResultSchema = {
+      type: "OBJECT",
+      properties: {
+        classification: {
+          type: "STRING",
+          enum: [
+            "INMUEBLE",
+            "REQUERIMIENTO",
+            "CONSULTA_GENERAL",
+            "RESPUESTA_A_PREGUNTA_IA",
+            "DATOS_INCOMPLETOS",
+            "VIOLACION_DE_NORMAS",
+            "ANALISIS_DE_MERCADO",
+            "RESPUESTA_A_BURLA",
+            "SOBRE_VECY"
+          ]
+        },
+        response: { type: "STRING" },
+        dmResponse: { type: "STRING" },
+        shouldSendDM: { type: "BOOLEAN" },
+        dmShouldReply: { type: "BOOLEAN" },
+        reactionEmoji: { type: "STRING" },
+        wantsVoice: { type: "BOOLEAN" },
+        voiceResponse: { type: "STRING" },
+        isFlyerOrBanner: { type: "BOOLEAN" },
+        flyerVerbatimText: { type: "STRING" },
+        missingFields: {
+          type: "ARRAY",
+          items: { type: "STRING" }
+        },
+        extractedData: {
+          type: "OBJECT",
+          properties: {
+            title: { type: "STRING" },
+            isFlyerOrBanner: { type: "BOOLEAN" },
+            flyerVerbatimText: { type: "STRING" },
+            gives: {
+              type: "OBJECT",
+              properties: {
+                item: { type: "STRING" },
+                details: { type: "STRING" }
+              }
+            },
+            wants: {
+              type: "OBJECT",
+              properties: {
+                item: { type: "STRING" },
+                details: { type: "STRING" }
+              }
+            },
+            price: { type: "NUMBER" },
+            zone: { type: "STRING" },
+            city: { type: "STRING" },
+            propertyType: {
+              type: "STRING",
+              enum: [
+                "apartment",
+                "house",
+                "building",
+                "warehouse",
+                "office",
+                "farm",
+                "land",
+                "commercial",
+                "loft",
+                "consultorio",
+                "cabin",
+                "hotel"
+              ]
+            },
+            transactionType: {
+              type: "STRING",
+              enum: [
+                "venta",
+                "arriendo",
+                "venta_o_arriendo",
+                "arriendo_temporal",
+                "arriendo_con_opcion_de_compra",
+                "permuta",
+                "venta_permuta",
+                "aporte"
+              ]
+            },
+            transactionTypes: {
+              type: "ARRAY",
+              items: { type: "STRING" }
+            },
+            area: { type: "NUMBER" },
+            bedrooms: { type: "NUMBER" },
+            bathrooms: { type: "NUMBER" },
+            garages: { type: "NUMBER" },
+            stratum: { type: "NUMBER" },
+            adminFee: { type: "NUMBER" },
+            isCollaborativePool: { type: "BOOLEAN" },
+            interiorExterior: {
+              type: "STRING",
+              enum: ["interior", "exterior", "NA"]
+            },
+            cuartoBanoServicio: {
+              type: "STRING",
+              enum: ["Si", "No", "NA"]
+            },
+            cocina: {
+              type: "STRING",
+              enum: ["cerrada", "abierta", "americana", "NA"]
+            },
+            lavanderiaIndependiente: {
+              type: "STRING",
+              enum: ["Si", "No", "NA"]
+            },
+            tipoPisos: {
+              type: "ARRAY",
+              items: { type: "STRING" }
+            },
+            depositos: { type: "NUMBER" },
+            comisiones: { type: "STRING" },
+            antiguedad: {
+              type: "STRING",
+              enum: ["nuevo", "1-5", "5-10", "10+", "NA"]
+            },
+            floorDetail: { type: "STRING" }
+          }
+        }
+      },
+      required: ["classification", "response"]
+    };
+  }
+});
+
+// shared/colombianRealEstateParser.ts
+function isOutdoorAreaPreceding(precedingText) {
+  if (!precedingText) return false;
+  const clean = precedingText.toLowerCase().trim();
+  return /\b(?:terraza|balc[oó]n|balcon|patio|jard[ií]n)(?:[^\w\n]+(?:privada|exclusiva|social|amplia|hermosa|espectacular|exterior|cubierta|descubierta))?(?:[^\w\n]+(?:de|con|desde|aprox|aproximadamente))?(?:[^\w\n]+(?:al\s+menos|m[ií]nimo|m[ií]n|min|por\s+lo\s+menos|m[aá]s\s+de|mas\s+de|superior\s+a|mayor\s+a|[>≥]=?))?$/i.test(clean) || /\+\s*(?:al\s+menos|m[ií]nimo|m[ií]n|min)?$/i.test(clean);
+}
+function parseColombianListing(rawText) {
+  if (!rawText) {
+    return {
+      adminIncluded: false,
+      adminNeedsInquiry: false,
+      hasCBS: false,
+      demandsCBSMandatory: false,
+      hasStudio: false,
+      demandsStudioMandatory: false,
+      demandsBalconyOrTerrace: false,
+      hasTerrace: false,
+      hasBalcony: false,
+      hasPatio: false,
+      isThirdPartyCommission: false,
+      prohibitsThirdPartyCommission: false
+    };
+  }
+  const text2 = rawText.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[*_~]/g, "");
+  const result = {
+    adminIncluded: false,
+    adminNeedsInquiry: false,
+    hasCBS: false,
+    demandsCBSMandatory: false,
+    hasStudio: false,
+    demandsStudioMandatory: false,
+    demandsBalconyOrTerrace: false,
+    hasTerrace: false,
+    hasBalcony: false,
+    hasPatio: false,
+    isThirdPartyCommission: false,
+    prohibitsThirdPartyCommission: false
+  };
+  const saleMatch = text2.match(/(?:presupuesto\s*(?:para\s*)?compra|precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|para\s*compra)[^$\d\n]*(?:\n[^$\d\n]*)?(?:max|hasta|tope)?\s*\$?\s*(\d{1,4}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i) || text2.match(/(?:venta|comprar|compra)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
+  if (saleMatch) {
+    const cleanNum = saleMatch[1].replace(/[\s.'’]/g, "");
+    result.salePriceCOP = parseInt(cleanNum, 10) * 1e6;
+  } else {
+    const directSaleMatch = text2.match(/(?:(?:hasta|max|máximo|tope|techo|de)\s*)?\$?\s*(\d{1,4}(?:[.,\s']\d{1,3})*|\d+)\s*(?:mil\s*millones?|millones?|mill[oó]n|mm)\b(?:\s*(?:m[aá]ximo|max|tope))?/i);
+    if (directSaleMatch && directSaleMatch.index !== void 0) {
+      const preceding = text2.slice(Math.max(0, directSaleMatch.index - 20), directSaleMatch.index);
+      if (!/admin|admon|canon|arriendo|alquiler|mes\b/i.test(preceding)) {
+        const cleanNum = directSaleMatch[1].replace(/[\s.'’]/g, "");
+        const parsedN = parseInt(cleanNum, 10);
+        if (!isNaN(parsedN) && parsedN > 0) {
+          result.salePriceCOP = parsedN * 1e6;
+        }
+      }
+    }
+  }
+  const rentMatch = text2.match(/(?:presupuesto\s*(?:para\s*)?(?:alquiler|arriendo)|canon|para\s*(?:alquiler|arriendo))[^\d\n]*(?:\n[^\d\n]*)?(?:max|hasta|tope)?\s*[:\s\-]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i) || text2.match(/(?:arriendo|arrendamiento|alquiler)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
+  if (rentMatch) {
+    const cleanNum = rentMatch[1].replace(/[\s.'’]/g, "");
+    result.rentPriceCOP = parseInt(cleanNum, 10) * 1e6;
+  }
+  if (/\b(?:con|incluida|incluye)\s+(?:la\s+)?admi?n/i.test(text2)) {
+    result.adminIncluded = true;
+  } else if (/\+\s*adm|\bmas\s+admi?n/i.test(text2)) {
+    result.adminNeedsInquiry = true;
+  }
+  const adminValMatch = text2.match(/(?:admin(?:istraci[oó]n)?|admon)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m|mil|k\b)?/i);
+  if (adminValMatch) {
+    const cleanNum = parseInt(adminValMatch[1].replace(/[\s.'’]/g, ""), 10);
+    const multiplier = /mill|m\b/i.test(adminValMatch[0]) ? 1e6 : /mil|k\b/i.test(adminValMatch[0]) ? 1e3 : 1;
+    result.adminFeeCOP = cleanNum * multiplier;
+  }
+  const outdoorInfo = parseOutdoorAreas(text2);
+  result.demandsBalconyOrTerrace = outdoorInfo.hasBalcony || outdoorInfo.hasTerrace;
+  result.hasTerrace = outdoorInfo.hasTerrace;
+  result.hasBalcony = outdoorInfo.hasBalcony;
+  result.hasPatio = outdoorInfo.hasPatio;
+  if (outdoorInfo.terraceArea) result.terraceAreaM2 = outdoorInfo.terraceArea;
+  if (outdoorInfo.balconyArea) result.balconyAreaM2 = outdoorInfo.balconyArea;
+  if (outdoorInfo.patioArea) result.patioAreaM2 = outdoorInfo.patioArea;
+  const allAreaMatches = Array.from(text2.matchAll(/(?:(?:m[ií]nimo|[\u00e1a]rea)[^\d\n]*(\d{2,4})\s*(?:m2|mts2|metros|m\b|mt|mts|m²))|(?:(?:^|[\s▪︎•\-])(\d{2,4})\s*(?:m2|mts2|m²|mt2|mts|metros))/gi));
+  for (const m of allAreaMatches) {
+    const numStr = m[1] || m[2];
+    if (!numStr) continue;
+    const parsedVal = parseInt(numStr, 10);
+    if (outdoorInfo.terraceArea && parsedVal === outdoorInfo.terraceArea) continue;
+    if (outdoorInfo.balconyArea && parsedVal === outdoorInfo.balconyArea) continue;
+    if (outdoorInfo.patioArea && parsedVal === outdoorInfo.patioArea) continue;
+    const mIdx = m.index ?? 0;
+    const preceding = text2.slice(Math.max(0, mIdx - 45), mIdx);
+    if (isOutdoorAreaPreceding(preceding)) continue;
+    result.areaM2 = parsedVal;
+    break;
+  }
+  const ageMatch = text2.match(/(?:m[aá]ximo\s+)?(\d{1,2})\s*a[ñn]os(?:\s+de\s+antig[uü]edad)?/i);
+  if (ageMatch) {
+    result.maxAgeYears = parseInt(ageMatch[1], 10);
+  }
+  const bedMatch = text2.match(/(\d+)\s*(?:habitaciones|alcobas|habs|cuartos|dormitorios)/i);
+  if (bedMatch) result.bedrooms = parseInt(bedMatch[1], 10);
+  result.hasCBS = /\bcbs\b|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio/i.test(text2);
+  result.demandsCBSMandatory = /(?:cbs|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio)[^\n]*(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente|exige)/i.test(text2) || /(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente)[^\n]*(?:cbs|cuarto\s+(?:de\s+)?servicio)/i.test(text2);
+  result.hasStudio = /\bestudio\b|star\s+de\s+tv|estar\s+tv/i.test(text2);
+  result.demandsStudioMandatory = /(?:estudio|star)[^\n]*(?:obligatorio|imprescindible|excluyente)/i.test(text2);
+  const minFloorMatch = text2.match(/piso\s+(\d+)\s+(?:hacia\s+arriba|en\s+adelante)/i);
+  if (minFloorMatch) result.minFloorRequired = parseInt(minFloorMatch[1], 10);
+  const exactFloorMatch = text2.match(/piso[:\s]+(\d+)/i);
+  if (exactFloorMatch) result.floor = parseInt(exactFloorMatch[1], 10);
+  result.prohibitsThirdPartyCommission = /no\s+tercer[ií]a|sin\s+terceros/i.test(text2);
+  result.isThirdPartyCommission = /en\s+tercer[ií]a|\btercer[ií]a\b/i.test(text2);
+  const complexFound = extractBuildingOrComplex(text2);
+  if (complexFound) result.buildingOrComplex = complexFound;
+  return result;
+}
+function parseColombianCurrency(rawText) {
+  if (!rawText) return null;
+  const clean = rawText.toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[*_~]/g, "").replace(/[\u2013\u2014]/g, "-");
+  const fullMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,3}(?:[.'’]\d{3}){2,3})/);
+  if (fullMatch) {
+    const val = parseInt(fullMatch[1].replace(/[.'’]/g, ""), 10);
+    if (!isNaN(val) && val > 0) return val;
+  }
+  const millionMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,4}(?:[\s.'’,]\d{3})*|\d+(?:[.,]\d+)?)\s*(?:mil\s*millones?|millones|millón|mm|m\b)/i);
+  if (millionMatch) {
+    const rawNumber = millionMatch[1].replace(/[\s'’]/g, "");
+    if (clean.includes("mil millon")) {
+      const v = parseFloat(rawNumber.replace(",", "."));
+      return Math.round(v * 1e9);
+    }
+    if (/^\d{1,4}[.,]\d{3}$/.test(rawNumber)) {
+      const parsedThousands = parseInt(rawNumber.replace(/[.,]/g, ""), 10);
+      return parsedThousands * 1e6;
+    }
+    const value = parseFloat(rawNumber.replace(",", "."));
+    if (!isNaN(value)) {
+      return value < 1e4 ? Math.round(value * 1e6) : Math.round(value);
+    }
+  }
+  const thousandMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d+(?:[.,]\d+)?)\s*(?:mil|k\b)/i);
+  if (thousandMatch) {
+    const val = parseFloat(thousandMatch[1].replace(",", "."));
+    if (!isNaN(val)) return Math.round(val * 1e3);
+  }
+  const shortThousandMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,3})[.,](\d{3})\b/);
+  if (shortThousandMatch) {
+    const n = parseInt(shortThousandMatch[1] + shortThousandMatch[2], 10);
+    return n * 1e3;
+  }
+  return null;
+}
+function parseAdminFee(rawText) {
+  if (!rawText) return { fee: null, isIncluded: false, requiresInquiry: false };
+  const clean = rawText.toLowerCase().replace(/[*_~]/g, "");
+  const isIncluded = /(?:administraci[oó]n|admin|admon|adm)\s*(?:est[aá]|va)?\s*incluid[ao]|incluid[ao]\s*(?:la\s*)?(?:administraci[oó]n|admin|admon|adm)|(?:admi?n|adm[oó]n)\s*inc\b|con\s+(?:admi?n|adm[oó]n|adm\b)/i.test(clean);
+  const requiresInquiry = /\+\s*(?:admi?n|adm[oó]n|adm\b)|\b(?:mas|más)\s*(?:admi?n|adm[oó]n|adm\b)/i.test(clean);
+  const feeMatch = clean.match(/(?:max|máximo|hasta|tope|de|valor)?\s*(?:cop|\$)?\s*(\d+(?:[\s.'’]\d+)*)\s*(?:m|millones|millon|mil|k)?\s*(?:de\s+)?(?:admin|admon|admón|adm|administraci[oó]n|cuota)/i) || clean.match(/(?:admin|admon|admón|adm|administraci[oó]n|cuota)(?:[^\d\n]*?)\$?\s*(\d+(?:[\s.'’]\d+)*)\s*(?:m|millones|millon|mil|k)?/i);
+  let fee = null;
+  if (feeMatch) {
+    fee = parseColombianCurrency(feeMatch[0]);
+  }
+  return { fee, isIncluded, requiresInquiry };
+}
+function parseSecurityType(text2) {
+  if (!text2) return "none";
+  const lower = text2.toLowerCase();
+  const isAutomatedOrConserje = /\b(?:ed(?:ificio)?\s*automatizado|automatizado|porter[ií]a\s*remota|porter[ií]a\s*virtual|porter[ií]a\s*inteligente|acceso\s*digital|acceso\s*inteligente|cerradura\s*digital|sin\s*porter[ií]a|sin\s*vigilancia|sin\s*celadur[ií]a|no\s*tiene\s*vigilancia|no\s*cuenta\s*con\s*vigilancia|porter[ií]a\s*(?:solo\s*)?de\s*d[ií]a|conserje\s*diurno|conserjer[ií]a\s*diurna|solo\s*conserje)\b/i.test(lower) || /\bconserje\b/i.test(lower) && !/\b(?:24\s*horas|24\/7|24h|permanente)\b/i.test(lower);
+  if (isAutomatedOrConserje) {
+    return "automated";
+  }
+  const has24h = /\b(?:seguridad\s*(?:las\s*)?24\s*(?:horas|h|hrs)|seguridad\s*24\/7|vigilancia\s*(?:las\s*)?24\s*(?:horas|h|hrs)|vigilancia\s*24\/7|porter[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|porter[ií]a\s*24\/7|celadur[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|celadur[ií]a\s*24\/7|porter[ií]a\s*permanente|vigilancia\s*permanente|seguridad\s*permanente|guardas?\s*24\s*horas|celador\s*24\s*horas)\b/i.test(lower) || /\b(?:24\s*horas|24\/7)\s*(?:de\s*)?(?:vigilancia|seguridad|porter[ií]a|celadur[ií]a)\b/i.test(lower);
+  if (has24h) {
+    return "24_7";
+  }
+  return "none";
+}
+function demands24hSecurity(text2) {
+  if (!text2) return false;
+  const lower = text2.toLowerCase();
+  return /\b(?:seguridad\s*(?:las\s*)?24\s*(?:horas|h|hrs)|seguridad\s*24\/7|vigilancia\s*(?:las\s*)?24\s*(?:horas|h|hrs)|vigilancia\s*24\/7|porter[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|porter[ií]a\s*24\/7|celadur[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|celadur[ií]a\s*24\/7|guarda\s*(?:de\s*seguridad)?\s*24\s*(?:horas|h|hrs)|portero\s*24\s*horas|celador\s*24\s*horas|exige\s*(?:seguridad|vigilancia|porter[ií]a)\s*24|seguridad\s*privada\s*24)\b/i.test(lower);
+}
+function checkFinancialSegmentCoherence(params) {
+  const { budgetMax, offeredPrice, isSale, budgetMin } = params;
+  if (!budgetMax || budgetMax <= 0 || !offeredPrice || offeredPrice <= 0) {
+    return { isCompatible: true };
+  }
+  if (budgetMin && budgetMin > 0) {
+    const minFloor = budgetMin * 0.9;
+    if (offeredPrice < minFloor) {
+      const minLabel = `$${(budgetMin / 1e6).toLocaleString("es-CO")}M`;
+      const offLabel = `$${(offeredPrice / 1e6).toLocaleString("es-CO")}M`;
+      return {
+        isCompatible: false,
+        reason: `Precio por Debajo del Piso Solicitado: La demanda exige expresamente un m\xEDnimo de ${minLabel} y la oferta tiene un valor de ${offLabel} (inferior al piso admisible de $${(minFloor / 1e6).toLocaleString("es-CO")}M). Choque de segmento.`
+      };
+    }
+  }
+  const floorRatio = 0.9;
+  const minAllowedPrice = budgetMax * floorRatio;
+  if (offeredPrice < minAllowedPrice) {
+    const pct = Math.round(offeredPrice / budgetMax * 100);
+    if (isSale) {
+      return {
+        isCompatible: false,
+        reason: `Desproporci\xF3n de Segmento Comercial: El demandante busca en el segmento de $${(budgetMax / 1e6).toLocaleString("es-CO")}M y la oferta cuesta apenas $${(offeredPrice / 1e6).toLocaleString("es-CO")}M (${pct}% del presupuesto). No corresponde a la gama ni confort esperado (piso m\xEDnimo admisible: 90% = $${(minAllowedPrice / 1e6).toLocaleString("es-CO")}M).`
+      };
+    } else {
+      return {
+        isCompatible: false,
+        reason: `Desproporci\xF3n de Segmento en Arriendo: El canon ofertado de $${(offeredPrice / 1e6).toLocaleString("es-CO")}M representa solo el ${pct}% del canon presupuestado ($${(budgetMax / 1e6).toLocaleString("es-CO")}M). No corresponde a la categor\xEDa solicitada (piso m\xEDnimo admisible: 90% = $${(minAllowedPrice / 1e6).toLocaleString("es-CO")}M).`
+      };
+    }
+  }
+  return { isCompatible: true };
+}
+function parseOutdoorAreas(rawText) {
+  if (!rawText) {
+    return {
+      terraceArea: null,
+      balconyArea: null,
+      patioArea: null,
+      hasTerrace: false,
+      hasBalcony: false,
+      hasPatio: false,
+      terraceCount: 0,
+      balconyCount: 0,
+      summaryOfferLabel: "Sin dato especificado",
+      summaryReqLabel: "Flexible / No exigido"
+    };
+  }
+  const clean = rawText.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, " ").replace(/[*_~]/g, " ").toLowerCase();
+  const hasTerrace = /\bterrazas?\b/i.test(clean);
+  const hasBalcony = /\bbalc[oó]n(?:es)?\b/i.test(clean);
+  const hasPatio = /\bpatio(?:s)?\b|\bjard[ií]n(?:es)?\b/i.test(clean);
+  let terraceArea = null;
+  let balconyArea = null;
+  let patioArea = null;
+  const plusTerraceMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros)?\s*(?:de\s+)?(?:hermosa\s+|amplia\s+|gran\s+|privada\s+)?terrazas?/i);
+  if (plusTerraceMatch) {
+    const val = parseFloat(plusTerraceMatch[1].replace(",", "."));
+    if (!isNaN(val) && val > 0 && val <= 2e3) {
+      terraceArea = val;
+    }
+  }
+  if (terraceArea === null) {
+    const phraseTerraceMatch = clean.match(/(?:terraza|terrazas)\s+(?:privada|exclusiva|social|amplia|hermosa|espectacular|cubierta|descubierta)?\s*(?:de\s+|con\s+|de\s*aprox(?:imadamente)?\s*|desde\s+)?(?:al\s+menos\s+|m[ií]nimo\s+|m[ií]n\s*[:.]?\s*|por\s+lo\s+menos\s+|m[aá]s\s+de\s+|superior\s+a\s+|mayor\s+a\s+|[>≥]=?\s*)?(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)/i);
+    if (phraseTerraceMatch) {
+      const val = parseFloat(phraseTerraceMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 2e3) {
+        terraceArea = val;
+      }
+    }
+  }
+  if (terraceArea === null) {
+    const invTerraceMatch = clean.match(/(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)\s*(?:de\s+)?(?:hermosa\s+|amplia\s+|gran\s+|privada\s+)?terrazas?/i);
+    if (invTerraceMatch) {
+      const val = parseFloat(invTerraceMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 2e3) {
+        terraceArea = val;
+      }
+    }
+  }
+  if (terraceArea === null) {
+    const colonTerraceMatch = clean.match(/(?:terraza|terrazas)\s*[:=-]\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?/i) || clean.match(/(?:terraza|terrazas)\s+(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i);
+    if (colonTerraceMatch) {
+      const val = parseFloat(colonTerraceMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 2e3) {
+        terraceArea = val;
+      }
+    }
+  }
+  const plusBalconyMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?\s*(?:de\s+)?(?:hermoso\s+|amplio\s+|privado\s+)?balc[oó]n(?:es)?/i);
+  if (plusBalconyMatch) {
+    const val = parseFloat(plusBalconyMatch[1].replace(",", "."));
+    if (!isNaN(val) && val > 0 && val <= 150) {
+      balconyArea = val;
+    }
+  }
+  if (balconyArea === null) {
+    const phraseBalconyMatch = clean.match(/(?:balc[oó]n|balcones)\s+(?:privado|exterior|social|amplio|hermoso|cubierto)?\s*(?:de\s+|con\s+|de\s*aprox(?:imadamente)?\s*|desde\s+)?(?:al\s+menos\s+|m[ií]nimo\s+|m[ií]n\s*[:.]?\s*|por\s+lo\s+menos\s+|m[aá]s\s+de\s+|superior\s+a\s+|mayor\s+a\s+|[>≥]=?\s*)?(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)/i);
+    if (phraseBalconyMatch) {
+      const val = parseFloat(phraseBalconyMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 150) {
+        balconyArea = val;
+      }
+    }
+  }
+  if (balconyArea === null) {
+    const invBalconyMatch = clean.match(/(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)\s*(?:de\s+)?(?:hermoso\s+|amplio\s+|privado\s+)?balc[oó]n(?:es)?/i);
+    if (invBalconyMatch) {
+      const val = parseFloat(invBalconyMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 150) {
+        balconyArea = val;
+      }
+    }
+  }
+  if (balconyArea === null) {
+    const colonBalconyMatch = clean.match(/(?:balc[oó]n|balcones)\s*[:=-]\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?/i) || clean.match(/(?:balc[oó]n|balcones)\s+(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i);
+    if (colonBalconyMatch) {
+      const val = parseFloat(colonBalconyMatch[1].replace(",", "."));
+      if (!isNaN(val) && val > 0 && val <= 150) {
+        balconyArea = val;
+      }
+    }
+  }
+  const patioMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?\s*(?:de\s+)?patio/i) || clean.match(/patio\s+(?:privado\s+)?(?:de\s+|con\s+)?(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i) || clean.match(/(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)\s*(?:de\s+)?patio/i);
+  if (patioMatch) {
+    const val = parseFloat(patioMatch[1].replace(",", "."));
+    if (!isNaN(val) && val > 0 && val <= 1e3) {
+      patioArea = val;
+    }
+  }
+  let terraceCount = 0;
+  if (hasTerrace) {
+    if (/\b(?:2|dos)\s*terrazas\b/i.test(clean)) {
+      terraceCount = 2;
+    } else if (/\b(?:3|tres)\s*terrazas\b/i.test(clean)) {
+      terraceCount = 3;
+    } else {
+      terraceCount = 1;
+    }
+  }
+  let balconyCount = 0;
+  if (hasBalcony) {
+    if (/\b(?:2|dos)\s*balcones\b/i.test(clean)) {
+      balconyCount = 2;
+    } else if (/\b(?:3|tres)\s*balcones\b/i.test(clean)) {
+      balconyCount = 3;
+    } else {
+      balconyCount = 1;
+    }
+  }
+  let summaryOfferLabel = "Sin dato especificado";
+  if (hasBalcony && hasTerrace) {
+    if (balconyArea && terraceArea) {
+      summaryOfferLabel = `S\xED (Balc\xF3n ${balconyArea} m\xB2 + Terraza ${terraceArea} m\xB2)`;
+    } else if (terraceArea) {
+      summaryOfferLabel = `S\xED (Balc\xF3n + Terraza ${terraceArea} m\xB2)`;
+    } else if (balconyArea) {
+      summaryOfferLabel = `S\xED (Balc\xF3n ${balconyArea} m\xB2 + Terraza)`;
+    } else {
+      summaryOfferLabel = "S\xED (Balc\xF3n y Terraza)";
+    }
+  } else if (hasTerrace) {
+    summaryOfferLabel = terraceArea ? `S\xED (Terraza Privada ${terraceArea} m\xB2)` : "S\xED (Cuenta con Terraza)";
+  } else if (hasBalcony) {
+    summaryOfferLabel = balconyArea ? `S\xED (Balc\xF3n ${balconyArea} m\xB2)` : "S\xED (Cuenta con Balc\xF3n)";
+  } else if (hasPatio) {
+    summaryOfferLabel = patioArea ? `S\xED (Patio ${patioArea} m\xB2)` : "S\xED (Cuenta con Patio)";
+  }
+  let summaryReqLabel = "Flexible / No exigido";
+  if (hasTerrace) {
+    summaryReqLabel = terraceArea ? `Exige Terraza \u2265 ${terraceArea} m\xB2` : "Exige Terraza";
+  } else if (hasBalcony) {
+    summaryReqLabel = balconyArea ? `Exige Balc\xF3n \u2265 ${balconyArea} m\xB2` : "Exige Balc\xF3n";
+  } else if (hasPatio) {
+    summaryReqLabel = patioArea ? `Exige Patio \u2265 ${patioArea} m\xB2` : "Exige Patio";
+  }
+  return {
+    terraceArea,
+    balconyArea,
+    patioArea,
+    hasTerrace,
+    hasBalcony,
+    hasPatio,
+    terraceCount,
+    balconyCount,
+    summaryOfferLabel,
+    summaryReqLabel
+  };
+}
+function extractPureBarrio(zn) {
+  if (!zn || typeof zn !== "string") return null;
+  const raw = zn.trim();
+  if (!raw) return null;
+  const normWhole = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+  if (!normWhole || GENERIC_ZONE_WORDS.has(normWhole)) return null;
+  if (CIUDADES_Y_DEPTOS_COLOMBIA.some((c) => normWhole === c || normWhole === `${c} d c` || normWhole === `${c} dc`)) return null;
+  const words = normWhole.split(/\s+/).filter(Boolean);
+  const isAllGeneric = words.length > 0 && words.every(
+    (w) => GENERIC_ZONE_WORDS.has(w) || CIUDADES_Y_DEPTOS_COLOMBIA.includes(w) || w === "de" || w === "la" || w === "el" || w === "los" || w === "las" || w === "en" || w === "y" || w === "del"
+  );
+  if (isAllGeneric) return null;
+  const parts = raw.split(/[,;/|]+/).map((p) => p.trim()).filter(Boolean);
+  for (const part of parts) {
+    const norm2 = part.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
+    if (!norm2 || norm2.length < 2) continue;
+    if (GENERIC_ZONE_WORDS.has(norm2)) continue;
+    if (CIUDADES_Y_DEPTOS_COLOMBIA.some((c) => norm2 === c || norm2 === `${c} d c` || norm2 === `${c} dc`)) continue;
+    const stripped = norm2.replace(CIUDADES_Y_DEPTOS_REGEX, "").trim();
+    if (!stripped || stripped.length < 2 || GENERIC_ZONE_WORDS.has(stripped)) continue;
+    const cleanedPart = part.replace(CIUDADES_Y_DEPTOS_REGEX, "").replace(/^[\s,;/-]+|[\s,;/-]+$/g, "").trim();
+    if (cleanedPart && cleanedPart.length >= 2) {
+      return cleanedPart;
+    }
+  }
+  const strippedWhole = normWhole.replace(CIUDADES_Y_DEPTOS_REGEX, "").replace(/\s+/g, " ").trim();
+  if (!strippedWhole || strippedWhole.length < 2 || GENERIC_ZONE_WORDS.has(strippedWhole)) {
+    return null;
+  }
+  const cleaned = raw.replace(CIUDADES_Y_DEPTOS_REGEX, "").replace(/^[\s,;/-]+|[\s,;/-]+$/g, "").trim();
+  return cleaned && cleaned.length >= 2 ? cleaned : null;
+}
+function isCityOrGenericZone(zn) {
+  if (!zn || typeof zn !== "string") return true;
+  return extractPureBarrio(zn) === null;
+}
+function extractBuildingOrComplex(rawText, title) {
+  const combined = `${title || ""} ${rawText || ""}`.trim();
+  if (!combined) return null;
+  const LOWERCASE_CONNECTORS = /* @__PURE__ */ new Set(["de", "del", "la", "las", "el", "los", "en", "y"]);
+  const formatTitleCase2 = (str) => {
+    return str.split(/\s+/).map((w, i) => {
+      const lower = w.toLowerCase();
+      if (i > 0 && LOWERCASE_CONNECTORS.has(lower)) return lower;
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    }).join(" ");
+  };
+  for (const famous of FAMOUS_EXCLUSIVE_COMPLEXES) {
+    const rx = new RegExp(`\\b${famous.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&")}\\b`, "i");
+    if (rx.test(combined)) {
+      if (famous.includes("pe\xF1as") || famous.includes("penas")) return "Edificio Pe\xF1as Blancas";
+      if (famous.includes("sierras del este")) return "Sierras del Este";
+      if (famous.includes("cerros de los alpes")) return "Cerros de los Alpes";
+      if (famous.includes("torres del parque")) return "Torres del Parque";
+      if (famous.includes("ruitoque")) return "Ruitoque Condominio";
+      if (famous.includes("altos de yerbabuena")) return "Altos de Yerbabuena";
+      if (famous.includes("sindamanoy")) return "Condominio Sindamanoy";
+      if (famous.includes("aposentos")) return "Condominio Aposentos";
+      if (famous.includes("hato grande") || famous.includes("hatogrande")) return "Hato Grande";
+      if (famous.includes("san simon") || famous.includes("san sim\xF3n")) return "Condominio San Sim\xF3n";
+      if (famous.includes("guaymaral")) return "Condominio Guaymaral";
+      if (famous.includes("pradera de potosi")) return "La Pradera de Potos\xED";
+      if (famous.includes("el pe\xF1on") || famous.includes("el pe\xF1\xF3n")) return "Condominio El Pe\xF1\xF3n";
+      if (famous.includes("castillo grande")) return "Castillo Grande";
+      if (famous.includes("bosque medina")) return "Bosque Medina";
+      return formatTitleCase2(famous);
+    }
+  }
+  const prefixMatch = combined.match(/\b(?:edificio|ed\.|conjunto(?:\s*residencial|\s*cerrado)?|condominio(?:\s*campestre)?|torre[s]?(?:\s*(?:de|del|las|los))?|urbanizaci[oó]n|residencias?|complejo(?:\s*residencial)?)\s+([A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+(?:\s+(?:de\s+|del\s+|la\s+|las\s+|el\s+|los\s+|y\s+)?[A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+){0,3})/i);
+  if (prefixMatch) {
+    let captured = prefixMatch[1].trim();
+    captured = captured.replace(/\s+(?:con|\d+|en|para|piso|área|area|precio|valor|canon|apto|casa|venta|arriendo|hab|alcobas?).*$/i, "").trim();
+    if (captured.length >= 3 && !/^(?:inteligente|nuevo|antiguo|esquinero|campestre|residencial|comercial)$/i.test(captured) && !isCityOrGenericZone(captured)) {
+      return formatTitleCase2(captured);
+    }
+  }
+  const aptoEnMatch = combined.match(/\b(?:apto|apartamento|casa|ph|penthouse)\s+en\s+([A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+(?:\s+[A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+){0,2})/i);
+  if (aptoEnMatch) {
+    let nameCandidate = aptoEnMatch[1].trim();
+    nameCandidate = nameCandidate.replace(/\s+(?:con|\d+|en|para|piso|área|area|precio|valor|canon|hab|alcobas?).*$/i, "").trim();
+    if (nameCandidate.length >= 4 && !isCityOrGenericZone(nameCandidate)) {
+      const norm2 = nameCandidate.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      if (FAMOUS_EXCLUSIVE_COMPLEXES.some((f) => norm2.includes(f) || f.includes(norm2))) {
+        return formatTitleCase2(nameCandidate);
+      }
+    }
+  }
+  return null;
+}
+var CIUDADES_Y_DEPTOS_COLOMBIA, GENERIC_ZONE_WORDS, CIUDADES_Y_DEPTOS_REGEX, FAMOUS_EXCLUSIVE_COMPLEXES;
+var init_colombianRealEstateParser = __esm({
+  "shared/colombianRealEstateParser.ts"() {
+    "use strict";
+    CIUDADES_Y_DEPTOS_COLOMBIA = [
+      "bogota",
+      "bogota d c",
+      "bogota dc",
+      "distrito capital",
+      "cundinamarca",
+      "medellin",
+      "cali",
+      "barranquilla",
+      "cartagena",
+      "bucaramanga",
+      "pereira",
+      "manizales",
+      "cucuta",
+      "ibague",
+      "santa marta",
+      "villavicencio",
+      "pasto",
+      "monteria",
+      "valledupar",
+      "sincelejo",
+      "armenia",
+      "popayan",
+      "neiva",
+      "tunja",
+      "riohacha",
+      "florencia",
+      "yopal",
+      "quibdo",
+      "colombia"
+    ];
+    GENERIC_ZONE_WORDS = /* @__PURE__ */ new Set([
+      "norte",
+      "sur",
+      "oriente",
+      "occidente",
+      "centro",
+      "nororiente",
+      "noroccidente",
+      "suroriente",
+      "suroccidente",
+      "sabana",
+      "sabana norte",
+      "sabana occidente",
+      "sabana centro",
+      "toda la ciudad",
+      "varias zonas",
+      "varios barrios",
+      "zona",
+      "zonas",
+      "sector",
+      "sectores",
+      "barrio",
+      "barrios",
+      "ciudad",
+      "ciudades",
+      "alrededores",
+      "cualquiera",
+      "por definir",
+      "sin especificar",
+      "indiferente",
+      "flexible",
+      "n e",
+      "na",
+      "n a",
+      "null",
+      "undefined",
+      "no especificado",
+      "n e no especificado",
+      "d c",
+      "dc",
+      "dto capital",
+      "distrito capital",
+      "n",
+      "e",
+      "d",
+      "c",
+      "no",
+      "especificado",
+      "definir",
+      "sin",
+      "varias",
+      "varios",
+      "todos",
+      "todas"
+    ]);
+    CIUDADES_Y_DEPTOS_REGEX = /\b(?:bogot[aá](?:\s*,?\s*d\.?\s*c\.?)?|distrito\s+capital|cundinamarca|medell[ií]n|cali|barranquilla|cartagena|bucaramanga|pereira|manizales|c[uú]cuta|ibagu[eé]|santa\s+marta|villavicencio|pasto|monter[ií]a|valledupar|sincelejo|armenia|popay[aá]n|neiva|tunja|riohacha|florencia|yopal|quibd[oó]|colombia)\b/gi;
+    FAMOUS_EXCLUSIVE_COMPLEXES = [
+      "pe\xF1as blancas",
+      "penas blancas",
+      "sierras del este",
+      "cerros de los alpes",
+      "torres del parque",
+      "torres de fenicia",
+      "bosque medina",
+      "altos de yerbabuena",
+      "ruitoque condominio",
+      "ruitoque",
+      "sindamanoy",
+      "aposentos",
+      "hato grande",
+      "hatogrande",
+      "san simon",
+      "san sim\xF3n",
+      "guaymaral",
+      "la pradera de potosi",
+      "la pradera de potos\xED",
+      "el pe\xF1on",
+      "el pe\xF1\xF3n",
+      "lakeside",
+      "la reserva",
+      "castillo grande",
+      "castillogrande",
+      "palma real",
+      "teka",
+      "montearroyo",
+      "altos del retiro",
+      "bosques de la ca\xF1ada",
+      "parque central bavaria",
+      "torres de atrio",
+      "torres del bosque",
+      "altos de la cabrera",
+      "bosque de los nogales",
+      "viscaya",
+      "vizcaya",
+      "los alpes",
+      "santa helena",
+      "la floresta",
+      "el refugio"
+    ];
+  }
+});
+
 // server/_core/colombia-geography.ts
 function norm(txt) {
   return txt.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
@@ -2423,601 +3152,6 @@ var init_veredas_lookup = __esm({
     veredasByNameMap = /* @__PURE__ */ new Map();
     veredasByMpioMap = /* @__PURE__ */ new Map();
     isInitialized = false;
-  }
-});
-
-// shared/colombianRealEstateParser.ts
-function isOutdoorAreaPreceding(precedingText) {
-  if (!precedingText) return false;
-  const clean = precedingText.toLowerCase().trim();
-  return /\b(?:terraza|balc[oó]n|balcon|patio|jard[ií]n)(?:[^\w\n]+(?:privada|exclusiva|social|amplia|hermosa|espectacular|exterior|cubierta|descubierta))?(?:[^\w\n]+(?:de|con|desde|aprox|aproximadamente))?(?:[^\w\n]+(?:al\s+menos|m[ií]nimo|m[ií]n|min|por\s+lo\s+menos|m[aá]s\s+de|mas\s+de|superior\s+a|mayor\s+a|[>≥]=?))?$/i.test(clean) || /\+\s*(?:al\s+menos|m[ií]nimo|m[ií]n|min)?$/i.test(clean);
-}
-function parseColombianListing(rawText) {
-  if (!rawText) {
-    return {
-      adminIncluded: false,
-      adminNeedsInquiry: false,
-      hasCBS: false,
-      demandsCBSMandatory: false,
-      hasStudio: false,
-      demandsStudioMandatory: false,
-      demandsBalconyOrTerrace: false,
-      hasTerrace: false,
-      hasBalcony: false,
-      hasPatio: false,
-      isThirdPartyCommission: false,
-      prohibitsThirdPartyCommission: false
-    };
-  }
-  const text2 = rawText.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[*_~]/g, "");
-  const result = {
-    adminIncluded: false,
-    adminNeedsInquiry: false,
-    hasCBS: false,
-    demandsCBSMandatory: false,
-    hasStudio: false,
-    demandsStudioMandatory: false,
-    demandsBalconyOrTerrace: false,
-    hasTerrace: false,
-    hasBalcony: false,
-    hasPatio: false,
-    isThirdPartyCommission: false,
-    prohibitsThirdPartyCommission: false
-  };
-  const saleMatch = text2.match(/(?:presupuesto\s*(?:para\s*)?compra|precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|para\s*compra)[^$\d\n]*(?:\n[^$\d\n]*)?(?:max|hasta|tope)?\s*\$?\s*(\d{1,4}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i) || text2.match(/(?:venta|comprar|compra)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
-  if (saleMatch) {
-    const cleanNum = saleMatch[1].replace(/[\s.'’]/g, "");
-    result.salePriceCOP = parseInt(cleanNum, 10) * 1e6;
-  } else {
-    const directSaleMatch = text2.match(/(?:(?:hasta|max|máximo|tope|techo|de)\s*)?\$?\s*(\d{1,4}(?:[.,\s']\d{1,3})*|\d+)\s*(?:mil\s*millones?|millones?|mill[oó]n|mm)\b(?:\s*(?:m[aá]ximo|max|tope))?/i);
-    if (directSaleMatch && directSaleMatch.index !== void 0) {
-      const preceding = text2.slice(Math.max(0, directSaleMatch.index - 20), directSaleMatch.index);
-      if (!/admin|admon|canon|arriendo|alquiler|mes\b/i.test(preceding)) {
-        const cleanNum = directSaleMatch[1].replace(/[\s.'’]/g, "");
-        const parsedN = parseInt(cleanNum, 10);
-        if (!isNaN(parsedN) && parsedN > 0) {
-          result.salePriceCOP = parsedN * 1e6;
-        }
-      }
-    }
-  }
-  const rentMatch = text2.match(/(?:presupuesto\s*(?:para\s*)?(?:alquiler|arriendo)|canon|para\s*(?:alquiler|arriendo))[^\d\n]*(?:\n[^\d\n]*)?(?:max|hasta|tope)?\s*[:\s\-]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones?|mill[oó]n|mm|m\b)/i) || text2.match(/(?:arriendo|arrendamiento|alquiler)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m\b)/i);
-  if (rentMatch) {
-    const cleanNum = rentMatch[1].replace(/[\s.'’]/g, "");
-    result.rentPriceCOP = parseInt(cleanNum, 10) * 1e6;
-  }
-  if (/\b(?:con|incluida|incluye)\s+(?:la\s+)?admi?n/i.test(text2)) {
-    result.adminIncluded = true;
-  } else if (/\+\s*adm|\bmas\s+admi?n/i.test(text2)) {
-    result.adminNeedsInquiry = true;
-  }
-  const adminValMatch = text2.match(/(?:admin(?:istraci[oó]n)?|admon)[^\d\n]*\$?\s*(\d{1,3}(?:[\s.'’]\d{3})*|\d+)\s*(?:millones|mill[oó]n|m|mil|k\b)?/i);
-  if (adminValMatch) {
-    const cleanNum = parseInt(adminValMatch[1].replace(/[\s.'’]/g, ""), 10);
-    const multiplier = /mill|m\b/i.test(adminValMatch[0]) ? 1e6 : /mil|k\b/i.test(adminValMatch[0]) ? 1e3 : 1;
-    result.adminFeeCOP = cleanNum * multiplier;
-  }
-  const outdoorInfo = parseOutdoorAreas(text2);
-  result.demandsBalconyOrTerrace = outdoorInfo.hasBalcony || outdoorInfo.hasTerrace;
-  result.hasTerrace = outdoorInfo.hasTerrace;
-  result.hasBalcony = outdoorInfo.hasBalcony;
-  result.hasPatio = outdoorInfo.hasPatio;
-  if (outdoorInfo.terraceArea) result.terraceAreaM2 = outdoorInfo.terraceArea;
-  if (outdoorInfo.balconyArea) result.balconyAreaM2 = outdoorInfo.balconyArea;
-  if (outdoorInfo.patioArea) result.patioAreaM2 = outdoorInfo.patioArea;
-  const allAreaMatches = Array.from(text2.matchAll(/(?:(?:m[ií]nimo|[\u00e1a]rea)[^\d\n]*(\d{2,4})\s*(?:m2|mts2|metros|m\b|mt|mts|m²))|(?:(?:^|[\s▪︎•\-])(\d{2,4})\s*(?:m2|mts2|m²|mt2|mts|metros))/gi));
-  for (const m of allAreaMatches) {
-    const numStr = m[1] || m[2];
-    if (!numStr) continue;
-    const parsedVal = parseInt(numStr, 10);
-    if (outdoorInfo.terraceArea && parsedVal === outdoorInfo.terraceArea) continue;
-    if (outdoorInfo.balconyArea && parsedVal === outdoorInfo.balconyArea) continue;
-    if (outdoorInfo.patioArea && parsedVal === outdoorInfo.patioArea) continue;
-    const mIdx = m.index ?? 0;
-    const preceding = text2.slice(Math.max(0, mIdx - 45), mIdx);
-    if (isOutdoorAreaPreceding(preceding)) continue;
-    result.areaM2 = parsedVal;
-    break;
-  }
-  const ageMatch = text2.match(/(?:m[aá]ximo\s+)?(\d{1,2})\s*a[ñn]os(?:\s+de\s+antig[uü]edad)?/i);
-  if (ageMatch) {
-    result.maxAgeYears = parseInt(ageMatch[1], 10);
-  }
-  const bedMatch = text2.match(/(\d+)\s*(?:habitaciones|alcobas|habs|cuartos|dormitorios)/i);
-  if (bedMatch) result.bedrooms = parseInt(bedMatch[1], 10);
-  result.hasCBS = /\bcbs\b|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio/i.test(text2);
-  result.demandsCBSMandatory = /(?:cbs|cuarto\s+(?:de\s+)?servicio|alcoba\s+(?:de\s+)?servicio)[^\n]*(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente|exige)/i.test(text2) || /(?:indispensable|imprescindible|obligatorio|si\s*o\s*si|innegociable|excluyente)[^\n]*(?:cbs|cuarto\s+(?:de\s+)?servicio)/i.test(text2);
-  result.hasStudio = /\bestudio\b|star\s+de\s+tv|estar\s+tv/i.test(text2);
-  result.demandsStudioMandatory = /(?:estudio|star)[^\n]*(?:obligatorio|imprescindible|excluyente)/i.test(text2);
-  const minFloorMatch = text2.match(/piso\s+(\d+)\s+(?:hacia\s+arriba|en\s+adelante)/i);
-  if (minFloorMatch) result.minFloorRequired = parseInt(minFloorMatch[1], 10);
-  const exactFloorMatch = text2.match(/piso[:\s]+(\d+)/i);
-  if (exactFloorMatch) result.floor = parseInt(exactFloorMatch[1], 10);
-  result.prohibitsThirdPartyCommission = /no\s+tercer[ií]a|sin\s+terceros/i.test(text2);
-  result.isThirdPartyCommission = /en\s+tercer[ií]a|\btercer[ií]a\b/i.test(text2);
-  const complexFound = extractBuildingOrComplex(text2);
-  if (complexFound) result.buildingOrComplex = complexFound;
-  return result;
-}
-function parseColombianCurrency(rawText) {
-  if (!rawText) return null;
-  const clean = rawText.toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[*_~]/g, "").replace(/[\u2013\u2014]/g, "-");
-  const fullMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,3}(?:[.'’]\d{3}){2,3})/);
-  if (fullMatch) {
-    const val = parseInt(fullMatch[1].replace(/[.'’]/g, ""), 10);
-    if (!isNaN(val) && val > 0) return val;
-  }
-  const millionMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,4}(?:[\s.'’,]\d{3})*|\d+(?:[.,]\d+)?)\s*(?:mil\s*millones?|millones|millón|mm|m\b)/i);
-  if (millionMatch) {
-    const rawNumber = millionMatch[1].replace(/[\s'’]/g, "");
-    if (clean.includes("mil millon")) {
-      const v = parseFloat(rawNumber.replace(",", "."));
-      return Math.round(v * 1e9);
-    }
-    if (/^\d{1,4}[.,]\d{3}$/.test(rawNumber)) {
-      const parsedThousands = parseInt(rawNumber.replace(/[.,]/g, ""), 10);
-      return parsedThousands * 1e6;
-    }
-    const value = parseFloat(rawNumber.replace(",", "."));
-    if (!isNaN(value)) {
-      return value < 1e4 ? Math.round(value * 1e6) : Math.round(value);
-    }
-  }
-  const thousandMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d+(?:[.,]\d+)?)\s*(?:mil|k\b)/i);
-  if (thousandMatch) {
-    const val = parseFloat(thousandMatch[1].replace(",", "."));
-    if (!isNaN(val)) return Math.round(val * 1e3);
-  }
-  const shortThousandMatch = clean.match(/(?:(?:cop|\$)\s*)?(\d{1,3})[.,](\d{3})\b/);
-  if (shortThousandMatch) {
-    const n = parseInt(shortThousandMatch[1] + shortThousandMatch[2], 10);
-    return n * 1e3;
-  }
-  return null;
-}
-function parseAdminFee(rawText) {
-  if (!rawText) return { fee: null, isIncluded: false, requiresInquiry: false };
-  const clean = rawText.toLowerCase().replace(/[*_~]/g, "");
-  const isIncluded = /(?:administraci[oó]n|admin|admon|adm)\s*(?:est[aá]|va)?\s*incluid[ao]|incluid[ao]\s*(?:la\s*)?(?:administraci[oó]n|admin|admon|adm)|(?:admi?n|adm[oó]n)\s*inc\b|con\s+(?:admi?n|adm[oó]n|adm\b)/i.test(clean);
-  const requiresInquiry = /\+\s*(?:admi?n|adm[oó]n|adm\b)|\b(?:mas|más)\s*(?:admi?n|adm[oó]n|adm\b)/i.test(clean);
-  const feeMatch = clean.match(/(?:max|máximo|hasta|tope|de|valor)?\s*(?:cop|\$)?\s*(\d+(?:[\s.'’]\d+)*)\s*(?:m|millones|millon|mil|k)?\s*(?:de\s+)?(?:admin|admon|admón|adm|administraci[oó]n|cuota)/i) || clean.match(/(?:admin|admon|admón|adm|administraci[oó]n|cuota)(?:[^\d\n]*?)\$?\s*(\d+(?:[\s.'’]\d+)*)\s*(?:m|millones|millon|mil|k)?/i);
-  let fee = null;
-  if (feeMatch) {
-    fee = parseColombianCurrency(feeMatch[0]);
-  }
-  return { fee, isIncluded, requiresInquiry };
-}
-function parseSecurityType(text2) {
-  if (!text2) return "none";
-  const lower = text2.toLowerCase();
-  const isAutomatedOrConserje = /\b(?:ed(?:ificio)?\s*automatizado|automatizado|porter[ií]a\s*remota|porter[ií]a\s*virtual|porter[ií]a\s*inteligente|acceso\s*digital|acceso\s*inteligente|cerradura\s*digital|sin\s*porter[ií]a|sin\s*vigilancia|sin\s*celadur[ií]a|no\s*tiene\s*vigilancia|no\s*cuenta\s*con\s*vigilancia|porter[ií]a\s*(?:solo\s*)?de\s*d[ií]a|conserje\s*diurno|conserjer[ií]a\s*diurna|solo\s*conserje)\b/i.test(lower) || /\bconserje\b/i.test(lower) && !/\b(?:24\s*horas|24\/7|24h|permanente)\b/i.test(lower);
-  if (isAutomatedOrConserje) {
-    return "automated";
-  }
-  const has24h = /\b(?:seguridad\s*(?:las\s*)?24\s*(?:horas|h|hrs)|seguridad\s*24\/7|vigilancia\s*(?:las\s*)?24\s*(?:horas|h|hrs)|vigilancia\s*24\/7|porter[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|porter[ií]a\s*24\/7|celadur[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|celadur[ií]a\s*24\/7|porter[ií]a\s*permanente|vigilancia\s*permanente|seguridad\s*permanente|guardas?\s*24\s*horas|celador\s*24\s*horas)\b/i.test(lower) || /\b(?:24\s*horas|24\/7)\s*(?:de\s*)?(?:vigilancia|seguridad|porter[ií]a|celadur[ií]a)\b/i.test(lower);
-  if (has24h) {
-    return "24_7";
-  }
-  return "none";
-}
-function demands24hSecurity(text2) {
-  if (!text2) return false;
-  const lower = text2.toLowerCase();
-  return /\b(?:seguridad\s*(?:las\s*)?24\s*(?:horas|h|hrs)|seguridad\s*24\/7|vigilancia\s*(?:las\s*)?24\s*(?:horas|h|hrs)|vigilancia\s*24\/7|porter[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|porter[ií]a\s*24\/7|celadur[ií]a\s*(?:las\s*)?24\s*(?:horas|h|hrs)|celadur[ií]a\s*24\/7|guarda\s*(?:de\s*seguridad)?\s*24\s*(?:horas|h|hrs)|portero\s*24\s*horas|celador\s*24\s*horas|exige\s*(?:seguridad|vigilancia|porter[ií]a)\s*24|seguridad\s*privada\s*24)\b/i.test(lower);
-}
-function checkFinancialSegmentCoherence(params) {
-  const { budgetMax, offeredPrice, isSale, budgetMin } = params;
-  if (!budgetMax || budgetMax <= 0 || !offeredPrice || offeredPrice <= 0) {
-    return { isCompatible: true };
-  }
-  if (budgetMin && budgetMin > 0) {
-    const minFloor = budgetMin * 0.9;
-    if (offeredPrice < minFloor) {
-      const minLabel = `$${(budgetMin / 1e6).toLocaleString("es-CO")}M`;
-      const offLabel = `$${(offeredPrice / 1e6).toLocaleString("es-CO")}M`;
-      return {
-        isCompatible: false,
-        reason: `Precio por Debajo del Piso Solicitado: La demanda exige expresamente un m\xEDnimo de ${minLabel} y la oferta tiene un valor de ${offLabel} (inferior al piso admisible de $${(minFloor / 1e6).toLocaleString("es-CO")}M). Choque de segmento.`
-      };
-    }
-  }
-  const floorRatio = 0.9;
-  const minAllowedPrice = budgetMax * floorRatio;
-  if (offeredPrice < minAllowedPrice) {
-    const pct = Math.round(offeredPrice / budgetMax * 100);
-    if (isSale) {
-      return {
-        isCompatible: false,
-        reason: `Desproporci\xF3n de Segmento Comercial: El demandante busca en el segmento de $${(budgetMax / 1e6).toLocaleString("es-CO")}M y la oferta cuesta apenas $${(offeredPrice / 1e6).toLocaleString("es-CO")}M (${pct}% del presupuesto). No corresponde a la gama ni confort esperado (piso m\xEDnimo admisible: 90% = $${(minAllowedPrice / 1e6).toLocaleString("es-CO")}M).`
-      };
-    } else {
-      return {
-        isCompatible: false,
-        reason: `Desproporci\xF3n de Segmento en Arriendo: El canon ofertado de $${(offeredPrice / 1e6).toLocaleString("es-CO")}M representa solo el ${pct}% del canon presupuestado ($${(budgetMax / 1e6).toLocaleString("es-CO")}M). No corresponde a la categor\xEDa solicitada (piso m\xEDnimo admisible: 90% = $${(minAllowedPrice / 1e6).toLocaleString("es-CO")}M).`
-      };
-    }
-  }
-  return { isCompatible: true };
-}
-function parseOutdoorAreas(rawText) {
-  if (!rawText) {
-    return {
-      terraceArea: null,
-      balconyArea: null,
-      patioArea: null,
-      hasTerrace: false,
-      hasBalcony: false,
-      hasPatio: false,
-      terraceCount: 0,
-      balconyCount: 0,
-      summaryOfferLabel: "Sin dato especificado",
-      summaryReqLabel: "Flexible / No exigido"
-    };
-  }
-  const clean = rawText.replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, " ").replace(/[*_~]/g, " ").toLowerCase();
-  const hasTerrace = /\bterrazas?\b/i.test(clean);
-  const hasBalcony = /\bbalc[oó]n(?:es)?\b/i.test(clean);
-  const hasPatio = /\bpatio(?:s)?\b|\bjard[ií]n(?:es)?\b/i.test(clean);
-  let terraceArea = null;
-  let balconyArea = null;
-  let patioArea = null;
-  const plusTerraceMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros)?\s*(?:de\s+)?(?:hermosa\s+|amplia\s+|gran\s+|privada\s+)?terrazas?/i);
-  if (plusTerraceMatch) {
-    const val = parseFloat(plusTerraceMatch[1].replace(",", "."));
-    if (!isNaN(val) && val > 0 && val <= 2e3) {
-      terraceArea = val;
-    }
-  }
-  if (terraceArea === null) {
-    const phraseTerraceMatch = clean.match(/(?:terraza|terrazas)\s+(?:privada|exclusiva|social|amplia|hermosa|espectacular|cubierta|descubierta)?\s*(?:de\s+|con\s+|de\s*aprox(?:imadamente)?\s*|desde\s+)?(?:al\s+menos\s+|m[ií]nimo\s+|m[ií]n\s*[:.]?\s*|por\s+lo\s+menos\s+|m[aá]s\s+de\s+|superior\s+a\s+|mayor\s+a\s+|[>≥]=?\s*)?(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)/i);
-    if (phraseTerraceMatch) {
-      const val = parseFloat(phraseTerraceMatch[1].replace(",", "."));
-      if (!isNaN(val) && val > 0 && val <= 2e3) {
-        terraceArea = val;
-      }
-    }
-  }
-  if (terraceArea === null) {
-    const invTerraceMatch = clean.match(/(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)\s*(?:de\s+)?(?:hermosa\s+|amplia\s+|gran\s+|privada\s+)?terrazas?/i);
-    if (invTerraceMatch) {
-      const val = parseFloat(invTerraceMatch[1].replace(",", "."));
-      if (!isNaN(val) && val > 0 && val <= 2e3) {
-        terraceArea = val;
-      }
-    }
-  }
-  if (terraceArea === null) {
-    const colonTerraceMatch = clean.match(/(?:terraza|terrazas)\s*[:=-]\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?/i) || clean.match(/(?:terraza|terrazas)\s+(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i);
-    if (colonTerraceMatch) {
-      const val = parseFloat(colonTerraceMatch[1].replace(",", "."));
-      if (!isNaN(val) && val > 0 && val <= 2e3) {
-        terraceArea = val;
-      }
-    }
-  }
-  const plusBalconyMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?\s*(?:de\s+)?(?:hermoso\s+|amplio\s+|privado\s+)?balc[oó]n(?:es)?/i);
-  if (plusBalconyMatch) {
-    const val = parseFloat(plusBalconyMatch[1].replace(",", "."));
-    if (!isNaN(val) && val > 0 && val <= 150) {
-      balconyArea = val;
-    }
-  }
-  if (balconyArea === null) {
-    const phraseBalconyMatch = clean.match(/(?:balc[oó]n|balcones)\s+(?:privado|exterior|social|amplio|hermoso|cubierto)?\s*(?:de\s+|con\s+|de\s*aprox(?:imadamente)?\s*|desde\s+)?(?:al\s+menos\s+|m[ií]nimo\s+|m[ií]n\s*[:.]?\s*|por\s+lo\s+menos\s+|m[aá]s\s+de\s+|superior\s+a\s+|mayor\s+a\s+|[>≥]=?\s*)?(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)/i);
-    if (phraseBalconyMatch) {
-      const val = parseFloat(phraseBalconyMatch[1].replace(",", "."));
-      if (!isNaN(val) && val > 0 && val <= 150) {
-        balconyArea = val;
-      }
-    }
-  }
-  if (balconyArea === null) {
-    const invBalconyMatch = clean.match(/(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|mt2|metros(?:\s*cuadrados)?)\s*(?:de\s+)?(?:hermoso\s+|amplio\s+|privado\s+)?balc[oó]n(?:es)?/i);
-    if (invBalconyMatch) {
-      const val = parseFloat(invBalconyMatch[1].replace(",", "."));
-      if (!isNaN(val) && val > 0 && val <= 150) {
-        balconyArea = val;
-      }
-    }
-  }
-  if (balconyArea === null) {
-    const colonBalconyMatch = clean.match(/(?:balc[oó]n|balcones)\s*[:=-]\s*(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?/i) || clean.match(/(?:balc[oó]n|balcones)\s+(\d{1,3}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i);
-    if (colonBalconyMatch) {
-      const val = parseFloat(colonBalconyMatch[1].replace(",", "."));
-      if (!isNaN(val) && val > 0 && val <= 150) {
-        balconyArea = val;
-      }
-    }
-  }
-  const patioMatch = clean.match(/(?:^|[^\d])\+\s*(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)?\s*(?:de\s+)?patio/i) || clean.match(/patio\s+(?:privado\s+)?(?:de\s+|con\s+)?(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)/i) || clean.match(/(\d{1,4}(?:[.,]\d+)?)\s*(?:m2|mts2?|m²|metros)\s*(?:de\s+)?patio/i);
-  if (patioMatch) {
-    const val = parseFloat(patioMatch[1].replace(",", "."));
-    if (!isNaN(val) && val > 0 && val <= 1e3) {
-      patioArea = val;
-    }
-  }
-  let terraceCount = 0;
-  if (hasTerrace) {
-    if (/\b(?:2|dos)\s*terrazas\b/i.test(clean)) {
-      terraceCount = 2;
-    } else if (/\b(?:3|tres)\s*terrazas\b/i.test(clean)) {
-      terraceCount = 3;
-    } else {
-      terraceCount = 1;
-    }
-  }
-  let balconyCount = 0;
-  if (hasBalcony) {
-    if (/\b(?:2|dos)\s*balcones\b/i.test(clean)) {
-      balconyCount = 2;
-    } else if (/\b(?:3|tres)\s*balcones\b/i.test(clean)) {
-      balconyCount = 3;
-    } else {
-      balconyCount = 1;
-    }
-  }
-  let summaryOfferLabel = "Sin dato especificado";
-  if (hasBalcony && hasTerrace) {
-    if (balconyArea && terraceArea) {
-      summaryOfferLabel = `S\xED (Balc\xF3n ${balconyArea} m\xB2 + Terraza ${terraceArea} m\xB2)`;
-    } else if (terraceArea) {
-      summaryOfferLabel = `S\xED (Balc\xF3n + Terraza ${terraceArea} m\xB2)`;
-    } else if (balconyArea) {
-      summaryOfferLabel = `S\xED (Balc\xF3n ${balconyArea} m\xB2 + Terraza)`;
-    } else {
-      summaryOfferLabel = "S\xED (Balc\xF3n y Terraza)";
-    }
-  } else if (hasTerrace) {
-    summaryOfferLabel = terraceArea ? `S\xED (Terraza Privada ${terraceArea} m\xB2)` : "S\xED (Cuenta con Terraza)";
-  } else if (hasBalcony) {
-    summaryOfferLabel = balconyArea ? `S\xED (Balc\xF3n ${balconyArea} m\xB2)` : "S\xED (Cuenta con Balc\xF3n)";
-  } else if (hasPatio) {
-    summaryOfferLabel = patioArea ? `S\xED (Patio ${patioArea} m\xB2)` : "S\xED (Cuenta con Patio)";
-  }
-  let summaryReqLabel = "Flexible / No exigido";
-  if (hasTerrace) {
-    summaryReqLabel = terraceArea ? `Exige Terraza \u2265 ${terraceArea} m\xB2` : "Exige Terraza";
-  } else if (hasBalcony) {
-    summaryReqLabel = balconyArea ? `Exige Balc\xF3n \u2265 ${balconyArea} m\xB2` : "Exige Balc\xF3n";
-  } else if (hasPatio) {
-    summaryReqLabel = patioArea ? `Exige Patio \u2265 ${patioArea} m\xB2` : "Exige Patio";
-  }
-  return {
-    terraceArea,
-    balconyArea,
-    patioArea,
-    hasTerrace,
-    hasBalcony,
-    hasPatio,
-    terraceCount,
-    balconyCount,
-    summaryOfferLabel,
-    summaryReqLabel
-  };
-}
-function extractPureBarrio(zn) {
-  if (!zn || typeof zn !== "string") return null;
-  const raw = zn.trim();
-  if (!raw) return null;
-  const normWhole = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
-  if (!normWhole || GENERIC_ZONE_WORDS.has(normWhole)) return null;
-  if (CIUDADES_Y_DEPTOS_COLOMBIA.some((c) => normWhole === c || normWhole === `${c} d c` || normWhole === `${c} dc`)) return null;
-  const words = normWhole.split(/\s+/).filter(Boolean);
-  const isAllGeneric = words.length > 0 && words.every(
-    (w) => GENERIC_ZONE_WORDS.has(w) || CIUDADES_Y_DEPTOS_COLOMBIA.includes(w) || w === "de" || w === "la" || w === "el" || w === "los" || w === "las" || w === "en" || w === "y" || w === "del"
-  );
-  if (isAllGeneric) return null;
-  const parts = raw.split(/[,;/|]+/).map((p) => p.trim()).filter(Boolean);
-  for (const part of parts) {
-    const norm2 = part.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, " ").replace(/\s+/g, " ").trim();
-    if (!norm2 || norm2.length < 2) continue;
-    if (GENERIC_ZONE_WORDS.has(norm2)) continue;
-    if (CIUDADES_Y_DEPTOS_COLOMBIA.some((c) => norm2 === c || norm2 === `${c} d c` || norm2 === `${c} dc`)) continue;
-    const stripped = norm2.replace(CIUDADES_Y_DEPTOS_REGEX, "").trim();
-    if (!stripped || stripped.length < 2 || GENERIC_ZONE_WORDS.has(stripped)) continue;
-    const cleanedPart = part.replace(CIUDADES_Y_DEPTOS_REGEX, "").replace(/^[\s,;/-]+|[\s,;/-]+$/g, "").trim();
-    if (cleanedPart && cleanedPart.length >= 2) {
-      return cleanedPart;
-    }
-  }
-  const strippedWhole = normWhole.replace(CIUDADES_Y_DEPTOS_REGEX, "").replace(/\s+/g, " ").trim();
-  if (!strippedWhole || strippedWhole.length < 2 || GENERIC_ZONE_WORDS.has(strippedWhole)) {
-    return null;
-  }
-  const cleaned = raw.replace(CIUDADES_Y_DEPTOS_REGEX, "").replace(/^[\s,;/-]+|[\s,;/-]+$/g, "").trim();
-  return cleaned && cleaned.length >= 2 ? cleaned : null;
-}
-function isCityOrGenericZone(zn) {
-  if (!zn || typeof zn !== "string") return true;
-  return extractPureBarrio(zn) === null;
-}
-function extractBuildingOrComplex(rawText, title) {
-  const combined = `${title || ""} ${rawText || ""}`.trim();
-  if (!combined) return null;
-  const LOWERCASE_CONNECTORS = /* @__PURE__ */ new Set(["de", "del", "la", "las", "el", "los", "en", "y"]);
-  const formatTitleCase2 = (str) => {
-    return str.split(/\s+/).map((w, i) => {
-      const lower = w.toLowerCase();
-      if (i > 0 && LOWERCASE_CONNECTORS.has(lower)) return lower;
-      return lower.charAt(0).toUpperCase() + lower.slice(1);
-    }).join(" ");
-  };
-  for (const famous of FAMOUS_EXCLUSIVE_COMPLEXES) {
-    const rx = new RegExp(`\\b${famous.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&")}\\b`, "i");
-    if (rx.test(combined)) {
-      if (famous.includes("pe\xF1as") || famous.includes("penas")) return "Edificio Pe\xF1as Blancas";
-      if (famous.includes("sierras del este")) return "Sierras del Este";
-      if (famous.includes("cerros de los alpes")) return "Cerros de los Alpes";
-      if (famous.includes("torres del parque")) return "Torres del Parque";
-      if (famous.includes("ruitoque")) return "Ruitoque Condominio";
-      if (famous.includes("altos de yerbabuena")) return "Altos de Yerbabuena";
-      if (famous.includes("sindamanoy")) return "Condominio Sindamanoy";
-      if (famous.includes("aposentos")) return "Condominio Aposentos";
-      if (famous.includes("hato grande") || famous.includes("hatogrande")) return "Hato Grande";
-      if (famous.includes("san simon") || famous.includes("san sim\xF3n")) return "Condominio San Sim\xF3n";
-      if (famous.includes("guaymaral")) return "Condominio Guaymaral";
-      if (famous.includes("pradera de potosi")) return "La Pradera de Potos\xED";
-      if (famous.includes("el pe\xF1on") || famous.includes("el pe\xF1\xF3n")) return "Condominio El Pe\xF1\xF3n";
-      if (famous.includes("castillo grande")) return "Castillo Grande";
-      if (famous.includes("bosque medina")) return "Bosque Medina";
-      return formatTitleCase2(famous);
-    }
-  }
-  const prefixMatch = combined.match(/\b(?:edificio|ed\.|conjunto(?:\s*residencial|\s*cerrado)?|condominio(?:\s*campestre)?|torre[s]?(?:\s*(?:de|del|las|los))?|urbanizaci[oó]n|residencias?|complejo(?:\s*residencial)?)\s+([A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+(?:\s+(?:de\s+|del\s+|la\s+|las\s+|el\s+|los\s+|y\s+)?[A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+){0,3})/i);
-  if (prefixMatch) {
-    let captured = prefixMatch[1].trim();
-    captured = captured.replace(/\s+(?:con|\d+|en|para|piso|área|area|precio|valor|canon|apto|casa|venta|arriendo|hab|alcobas?).*$/i, "").trim();
-    if (captured.length >= 3 && !/^(?:inteligente|nuevo|antiguo|esquinero|campestre|residencial|comercial)$/i.test(captured) && !isCityOrGenericZone(captured)) {
-      return formatTitleCase2(captured);
-    }
-  }
-  const aptoEnMatch = combined.match(/\b(?:apto|apartamento|casa|ph|penthouse)\s+en\s+([A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+(?:\s+[A-Za-z0-9ÁÉÍÓÚáéíóúñÑ'’\-]+){0,2})/i);
-  if (aptoEnMatch) {
-    let nameCandidate = aptoEnMatch[1].trim();
-    nameCandidate = nameCandidate.replace(/\s+(?:con|\d+|en|para|piso|área|area|precio|valor|canon|hab|alcobas?).*$/i, "").trim();
-    if (nameCandidate.length >= 4 && !isCityOrGenericZone(nameCandidate)) {
-      const norm2 = nameCandidate.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      if (FAMOUS_EXCLUSIVE_COMPLEXES.some((f) => norm2.includes(f) || f.includes(norm2))) {
-        return formatTitleCase2(nameCandidate);
-      }
-    }
-  }
-  return null;
-}
-var CIUDADES_Y_DEPTOS_COLOMBIA, GENERIC_ZONE_WORDS, CIUDADES_Y_DEPTOS_REGEX, FAMOUS_EXCLUSIVE_COMPLEXES;
-var init_colombianRealEstateParser = __esm({
-  "shared/colombianRealEstateParser.ts"() {
-    "use strict";
-    CIUDADES_Y_DEPTOS_COLOMBIA = [
-      "bogota",
-      "bogota d c",
-      "bogota dc",
-      "distrito capital",
-      "cundinamarca",
-      "medellin",
-      "cali",
-      "barranquilla",
-      "cartagena",
-      "bucaramanga",
-      "pereira",
-      "manizales",
-      "cucuta",
-      "ibague",
-      "santa marta",
-      "villavicencio",
-      "pasto",
-      "monteria",
-      "valledupar",
-      "sincelejo",
-      "armenia",
-      "popayan",
-      "neiva",
-      "tunja",
-      "riohacha",
-      "florencia",
-      "yopal",
-      "quibdo",
-      "colombia"
-    ];
-    GENERIC_ZONE_WORDS = /* @__PURE__ */ new Set([
-      "norte",
-      "sur",
-      "oriente",
-      "occidente",
-      "centro",
-      "nororiente",
-      "noroccidente",
-      "suroriente",
-      "suroccidente",
-      "sabana",
-      "sabana norte",
-      "sabana occidente",
-      "sabana centro",
-      "toda la ciudad",
-      "varias zonas",
-      "varios barrios",
-      "zona",
-      "zonas",
-      "sector",
-      "sectores",
-      "barrio",
-      "barrios",
-      "ciudad",
-      "ciudades",
-      "alrededores",
-      "cualquiera",
-      "por definir",
-      "sin especificar",
-      "indiferente",
-      "flexible",
-      "n e",
-      "na",
-      "n a",
-      "null",
-      "undefined",
-      "no especificado",
-      "n e no especificado",
-      "d c",
-      "dc",
-      "dto capital",
-      "distrito capital",
-      "n",
-      "e",
-      "d",
-      "c",
-      "no",
-      "especificado",
-      "definir",
-      "sin",
-      "varias",
-      "varios",
-      "todos",
-      "todas"
-    ]);
-    CIUDADES_Y_DEPTOS_REGEX = /\b(?:bogot[aá](?:\s*,?\s*d\.?\s*c\.?)?|distrito\s+capital|cundinamarca|medell[ií]n|cali|barranquilla|cartagena|bucaramanga|pereira|manizales|c[uú]cuta|ibagu[eé]|santa\s+marta|villavicencio|pasto|monter[ií]a|valledupar|sincelejo|armenia|popay[aá]n|neiva|tunja|riohacha|florencia|yopal|quibd[oó]|colombia)\b/gi;
-    FAMOUS_EXCLUSIVE_COMPLEXES = [
-      "pe\xF1as blancas",
-      "penas blancas",
-      "sierras del este",
-      "cerros de los alpes",
-      "torres del parque",
-      "torres de fenicia",
-      "bosque medina",
-      "altos de yerbabuena",
-      "ruitoque condominio",
-      "ruitoque",
-      "sindamanoy",
-      "aposentos",
-      "hato grande",
-      "hatogrande",
-      "san simon",
-      "san sim\xF3n",
-      "guaymaral",
-      "la pradera de potosi",
-      "la pradera de potos\xED",
-      "el pe\xF1on",
-      "el pe\xF1\xF3n",
-      "lakeside",
-      "la reserva",
-      "castillo grande",
-      "castillogrande",
-      "palma real",
-      "teka",
-      "montearroyo",
-      "altos del retiro",
-      "bosques de la ca\xF1ada",
-      "parque central bavaria",
-      "torres de atrio",
-      "torres del bosque",
-      "altos de la cabrera",
-      "bosque de los nogales",
-      "viscaya",
-      "vizcaya",
-      "los alpes",
-      "santa helena",
-      "la floresta",
-      "el refugio"
-    ];
   }
 });
 
@@ -4386,52 +4520,6 @@ var init_geography = __esm({
         isMunicipio: true
       };
     }
-  }
-});
-
-// server/_core/divipola.ts
-import fs3 from "fs";
-import path3 from "path";
-var municipalitiesMap, initDivipola, validateCity;
-var init_divipola = __esm({
-  "server/_core/divipola.ts"() {
-    "use strict";
-    municipalitiesMap = /* @__PURE__ */ new Map();
-    initDivipola = () => {
-      try {
-        const jsonPath = path3.join(process.cwd(), "server", "data", "divipola.json");
-        municipalitiesMap.clear();
-        if (!fs3.existsSync(jsonPath)) {
-          console.warn("Divipola JSON data file not found at", jsonPath);
-          return;
-        }
-        const raw = fs3.readFileSync(jsonPath, "utf-8");
-        const list = JSON.parse(raw);
-        for (const item of list) {
-          if (item.municipio) {
-            const normalizedKey = item.municipio.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-            let titleCased = item.municipio.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
-            municipalitiesMap.set(normalizedKey, titleCased);
-          }
-        }
-        municipalitiesMap.set("bogota", "Bogot\xE1, D.C.");
-        municipalitiesMap.set("bogota d.c.", "Bogot\xE1, D.C.");
-        municipalitiesMap.set("bogota, d.c.", "Bogot\xE1, D.C.");
-        municipalitiesMap.set("bogota dc", "Bogot\xE1, D.C.");
-        municipalitiesMap.set("bogota d.c", "Bogot\xE1, D.C.");
-        console.log(`[Divipola] Loaded ${municipalitiesMap.size} municipalities from Divipola.`);
-      } catch (err) {
-        console.error("[Divipola] Error loading Divipola:", err);
-      }
-    };
-    validateCity = (cityName) => {
-      if (!cityName || typeof cityName !== "string") return null;
-      if (municipalitiesMap.size === 0) {
-        initDivipola();
-      }
-      const normalized = cityName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-      return municipalitiesMap.get(normalized) || null;
-    };
   }
 });
 
@@ -8029,633 +8117,6 @@ var init_matching = __esm({
   }
 });
 
-// server/_core/voiceTranscription.ts
-import axios5 from "axios";
-import { spawn } from "child_process";
-async function transcodeWebmToWav(inputBuffer) {
-  return new Promise((resolve, reject) => {
-    const ffmpeg = spawn("ffmpeg", [
-      "-i",
-      "pipe:0",
-      // Read from stdin
-      "-vn",
-      // Disable video
-      "-c:a",
-      "pcm_s16le",
-      // Output uncompressed WAV (PCM 16-bit)
-      "-ac",
-      "1",
-      // Mono
-      "-ar",
-      "16000",
-      // 16kHz
-      "-f",
-      "wav",
-      // WAV container
-      "pipe:1"
-      // Write to stdout
-    ]);
-    const chunks = [];
-    ffmpeg.stdout.on("data", (chunk) => chunks.push(chunk));
-    let stderrData = "";
-    ffmpeg.stderr.on("data", (data) => {
-      stderrData += data.toString();
-    });
-    ffmpeg.on("close", (code) => {
-      if (code === 0) {
-        resolve(Buffer.concat(chunks));
-      } else {
-        reject(new Error(`ffmpeg fall\xF3 con c\xF3digo ${code}. Stderr: ${stderrData}`));
-      }
-    });
-    ffmpeg.on("error", (err) => {
-      reject(err);
-    });
-    ffmpeg.stdin.write(inputBuffer);
-    ffmpeg.stdin.end();
-  });
-}
-async function transcribeAudioWithGemini(audioBuffer, mimeType) {
-  const allKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.replace(/^["']|["']$/g, "").trim()).filter(Boolean);
-  for (let idx = 1; idx <= 10; idx++) {
-    const k = (process.env[`GEMINI_API_KEY_${idx}`] || "").replace(/^["']|["']$/g, "").trim();
-    if (k) allKeys.push(k);
-  }
-  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.replace(/^["']|["']$/g, "").trim());
-  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.replace(/^["']|["']$/g, "").trim());
-  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.replace(/^["']|["']$/g, "").trim());
-  if (ENV.forgeApiKey) allKeys.push(ENV.forgeApiKey.replace(/^["']|["']$/g, "").trim());
-  const uniqueKeys = Array.from(new Set(allKeys.filter(Boolean)));
-  if (uniqueKeys.length === 0) {
-    throw new Error("No hay ninguna GEMINI_API_KEY configurada para la transcripci\xF3n de voz.");
-  }
-  const models = [
-    "gemini-flash-lite-latest",
-    "gemini-3.6-flash",
-    "gemini-flash-latest",
-    "gemini-3.5-flash-lite",
-    "gemini-3.5-flash"
-  ];
-  let cleanMime = mimeType.split(";")[0].trim().toLowerCase();
-  let bufferToUse = audioBuffer;
-  if (cleanMime.includes("webm") || cleanMime.includes("octet-stream")) {
-    try {
-      console.log(`[STT-Fallback] Detectado audio en formato ${cleanMime}. Transcodificando a WAV usando ffmpeg...`);
-      bufferToUse = await transcodeWebmToWav(audioBuffer);
-      cleanMime = "audio/wav";
-    } catch (e) {
-      console.error(`[STT-Fallback] Error al transcodificar de WebM/octet-stream a WAV con ffmpeg:`, e.message);
-    }
-  }
-  if (cleanMime === "audio/x-wav" || cleanMime === "audio/wave") cleanMime = "audio/wav";
-  if (cleanMime === "audio/mpeg3" || cleanMime === "audio/x-mpeg-3") cleanMime = "audio/mpeg";
-  const base64Audio = bufferToUse.toString("base64");
-  const payload = {
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { text: "Transcribe el siguiente audio a texto en espa\xF1ol de manera exacta y fluida. Devuelve \xFAnicamente el texto de la transcripci\xF3n literal del audio, sin agregar introducciones, notas de autor ni comentarios adicionales. Si el audio est\xE1 completamente vac\xEDo o solo contiene ruido ininteligible, devuelve una cadena vac\xEDa." },
-          {
-            inline_data: {
-              mime_type: cleanMime,
-              data: base64Audio
-            }
-          }
-        ]
-      }
-    ],
-    generationConfig: {
-      temperature: 0.1,
-      maxOutputTokens: 2048
-    }
-  };
-  let lastError = null;
-  for (const model of models) {
-    for (let i = 0; i < uniqueKeys.length; i++) {
-      const apiKey = uniqueKeys[i];
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      try {
-        console.log(`[STT-Gemini] Transcribiendo audio (${(audioBuffer.length / 1024).toFixed(1)} KB) con ${model} (Key #${i + 1})...`);
-        const response = await axios5.post(apiUrl, payload, { timeout: 6e4 });
-        const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (textCandidate && typeof textCandidate === "string") {
-          console.log(`[STT-Gemini] Transcripci\xF3n exitosa con ${model} (Key #${i + 1}): "${textCandidate.trim().substring(0, 60)}..."`);
-          return textCandidate.trim();
-        }
-      } catch (err) {
-        lastError = err;
-        const status = err.response?.status;
-        console.warn(`[STT-Gemini] Fall\xF3 intento con ${model} y Key #${i + 1} (Status: ${status || err.message}). Probando siguiente...`);
-        if (status === 429 || status === 503) {
-          await new Promise((r) => setTimeout(r, 600));
-          continue;
-        }
-      }
-    }
-  }
-  throw lastError || new Error("No fue posible transcribir el audio tras agotar modelos y claves de Gemini.");
-}
-async function transcribeAudioBuffer(audioBuffer, mimeType, prompt) {
-  const sizeMB = audioBuffer.length / (1024 * 1024);
-  if (sizeMB > 16) {
-    throw new Error(`Audio file exceeds maximum size limit (16MB). Current size: ${sizeMB.toFixed(2)}MB`);
-  }
-  if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-    console.log(`[STT-Fallback] Forge API no configurada. Transcribiendo usando Gemini directamente...`);
-    return await transcribeAudioWithGemini(audioBuffer, mimeType);
-  }
-  const formData = new FormData();
-  const filename = `audio.${getFileExtension(mimeType)}`;
-  const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
-  formData.append("file", audioBlob, filename);
-  formData.append("model", "whisper-1");
-  formData.append("response_format", "verbose_json");
-  const defaultPrompt = prompt || "Notas de voz sobre bienes ra\xEDces, Real Estate, inversiones, corretaje, inmuebles, apartamentos y casas en Bogot\xE1, Colombia. Vocabulario t\xE9cnico y comercial obligatorio: venpermuto, permuta, corretaje, br\xF3ker, aval\xFAo, estrato, arras, linderos, desenglobe, Wasi, Habi, Usaqu\xE9n, Cedritos, Chic\xF3, Rosales, Cabrera, Retiro, Santa B\xE1rbara, San Patricio, Tober\xEDn, Suba, Niza, Alhambra.";
-  formData.append("prompt", defaultPrompt);
-  const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
-  const fullUrl = new URL("v1/audio/transcriptions", baseUrl).toString();
-  const response = await fetch(fullUrl, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${ENV.forgeApiKey}`,
-      "Accept-Encoding": "identity"
-    },
-    body: formData
-  });
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
-    throw new Error(`Transcription service request failed (${response.status}): ${errorText}`);
-  }
-  const whisperResponse = await response.json();
-  if (!whisperResponse.text || typeof whisperResponse.text !== "string") {
-    throw new Error("Invalid transcription response: missing text field");
-  }
-  return whisperResponse.text;
-}
-async function transcribeAudio(options) {
-  try {
-    let audioBuffer;
-    let mimeType;
-    try {
-      const response = await fetch(options.audioUrl);
-      if (!response.ok) {
-        return {
-          error: "Failed to download audio file",
-          code: "INVALID_FORMAT",
-          details: `HTTP ${response.status}: ${response.statusText}`
-        };
-      }
-      audioBuffer = Buffer.from(await response.arrayBuffer());
-      mimeType = response.headers.get("content-type") || "audio/mpeg";
-    } catch (error) {
-      return {
-        error: "Failed to fetch audio file",
-        code: "SERVICE_ERROR",
-        details: error instanceof Error ? error.message : "Unknown error"
-      };
-    }
-    try {
-      const text2 = await transcribeAudioBuffer(audioBuffer, mimeType, options.prompt);
-      return {
-        task: "transcribe",
-        language: "es",
-        duration: 0,
-        text: text2,
-        segments: []
-      };
-    } catch (transcriptionError) {
-      return {
-        error: "Voice transcription failed",
-        code: "TRANSCRIPTION_FAILED",
-        details: transcriptionError.message || "Unknown error"
-      };
-    }
-  } catch (error) {
-    return {
-      error: "Voice transcription failed",
-      code: "SERVICE_ERROR",
-      details: error instanceof Error ? error.message : "An unexpected error occurred"
-    };
-  }
-}
-function getFileExtension(mimeType) {
-  const mimeToExt = {
-    "audio/webm": "webm",
-    "audio/mp3": "mp3",
-    "audio/mpeg": "mp3",
-    "audio/wav": "wav",
-    "audio/wave": "wav",
-    "audio/ogg": "ogg",
-    "audio/m4a": "m4a",
-    "audio/mp4": "m4a"
-  };
-  return mimeToExt[mimeType] || "audio";
-}
-var init_voiceTranscription = __esm({
-  "server/_core/voiceTranscription.ts"() {
-    "use strict";
-    init_env();
-  }
-});
-
-// server/storage.ts
-var storage_exports = {};
-__export(storage_exports, {
-  storageGet: () => storageGet,
-  storagePut: () => storagePut
-});
-import fs4 from "fs";
-import path4 from "path";
-function normalizeKey(relKey) {
-  return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
-}
-function buildAbsoluteLocalUrl(key) {
-  const base = (process.env.VPS_BASE_URL || "https://vecy-bienes-raices.vercel.app").replace(/\/+$/, "");
-  return `${base}/uploads/${key}`;
-}
-async function storagePut(relKey, data, contentType = "application/octet-stream") {
-  const key = normalizeKey(relKey);
-  const targetFilePath = path4.join(uploadsDir, key);
-  const targetSubdir = path4.dirname(targetFilePath);
-  if (!fs4.existsSync(targetSubdir)) {
-    fs4.mkdirSync(targetSubdir, { recursive: true });
-  }
-  const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
-  fs4.writeFileSync(targetFilePath, buffer);
-  const publicUrl = buildAbsoluteLocalUrl(key);
-  console.log(`[Storage] \u{1F4C1} Archivo guardado localmente en VPS ${targetFilePath} -> URL: ${publicUrl}`);
-  return { key, url: `/uploads/${key}` };
-}
-async function storageGet(relKey) {
-  const key = normalizeKey(relKey);
-  return {
-    key,
-    url: `/uploads/${key}`
-  };
-}
-var uploadsDir;
-var init_storage = __esm({
-  "server/storage.ts"() {
-    "use strict";
-    uploadsDir = path4.resolve(process.cwd(), "public/uploads");
-    if (!fs4.existsSync(uploadsDir)) {
-      fs4.mkdirSync(uploadsDir, { recursive: true });
-    }
-  }
-});
-
-// server/_core/nameAndGenderResolver.ts
-var nameAndGenderResolver_exports = {};
-__export(nameAndGenderResolver_exports, {
-  VECY_COMMERCIAL_INFO: () => VECY_COMMERCIAL_INFO,
-  cleanRawUserName: () => cleanRawUserName,
-  getCanonicalCompositeName: () => getCanonicalCompositeName,
-  resolveNameAndGender: () => resolveNameAndGender
-});
-function cleanRawUserName(name) {
-  if (!name) return "";
-  return name.replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
-}
-function getCanonicalCompositeName(rawName) {
-  const cleaned = cleanRawUserName(rawName);
-  const unaccented = cleaned.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  for (const comp of COMPOSITE_PATTERNS) {
-    if (comp.pattern.test(cleaned) || comp.pattern.test(unaccented)) {
-      return comp.canonical;
-    }
-  }
-  return null;
-}
-function resolveNameAndGender(rawName, timeGreeting) {
-  const cleaned = cleanRawUserName(rawName);
-  const normalizedLower = cleaned.toLowerCase();
-  let resolvedDisplayName = getCanonicalCompositeName(cleaned) || "";
-  if (!resolvedDisplayName) {
-    const parts = cleaned.split(/\s+/).filter(Boolean);
-    const genericPrefixes = ["inmobiliaria", "inmobiliario", "bienes", "raices", "ra\xEDces", "asesor", "asesora", "grupo", "propiedades", "finca", "ventas", "arriendos", "construcciones", "constructora", "consultores"];
-    const isGenericBusiness = parts.length > 0 && genericPrefixes.includes(parts[0].toLowerCase());
-    if (isGenericBusiness) {
-      resolvedDisplayName = cleaned;
-    } else if (parts.length >= 2 && (parts[0].length <= 5 || ["de", "del", "la", "san", "santa"].includes(parts[0].toLowerCase()))) {
-      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1)} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1)}`;
-    } else if (parts.length >= 2 && parts[0].length >= 3 && parts[1].length >= 3 && !parts[1].toLowerCase().includes("inmob") && !parts[1].toLowerCase().includes("prop")) {
-      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
-    } else if (parts.length > 0) {
-      resolvedDisplayName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
-    } else {
-      resolvedDisplayName = "colega";
-    }
-  }
-  const firstWord = cleaned.split(/\s+/)[0]?.toLowerCase() || "";
-  const firstWordClean = firstWord.replace(/[^a-záéíóúüñ]/g, "");
-  let isFemale = false;
-  if (FEMALE_EXPLICIT_NAMES.has(firstWordClean) || FEMALE_EXPLICIT_NAMES.has(normalizedLower)) {
-    isFemale = true;
-  } else if (firstWordClean.endsWith("a") && !MALE_EXCEPTIONS_ENDING_IN_A.has(firstWordClean)) {
-    isFemale = true;
-  } else if (firstWordClean.endsWith("ette") || firstWordClean.endsWith("eth") || firstWordClean.endsWith("bel") || firstWordClean.endsWith("riz") || firstWordClean.endsWith("lyn") || firstWordClean.endsWith("len") || firstWordClean.endsWith("ine") || firstWordClean.endsWith("y") || firstWordClean.endsWith("ie")) {
-    const maleYExceptions = ["henry", "anthony", "freddy", "fredy", "dany", "danny", "geovanny", "giovanni", "johnny", "tony", "andy"];
-    if (!maleYExceptions.includes(firstWordClean)) {
-      isFemale = true;
-    }
-  }
-  const courtesyWord = isFemale ? "estimada" : "estimado";
-  const genderTerm = `${courtesyWord} ${resolvedDisplayName}`;
-  const effectiveGreeting = timeGreeting || "Hola";
-  const fullGreeting = `${effectiveGreeting}, ${genderTerm} \u{1F44B}\u{1F3FB}`;
-  return {
-    rawName,
-    cleanName: cleaned,
-    displayName: resolvedDisplayName,
-    firstName: firstWordClean,
-    isFemale,
-    genderTerm,
-    courtesyWord,
-    greeting: fullGreeting
-  };
-}
-var COMPOSITE_PATTERNS, FEMALE_EXPLICIT_NAMES, MALE_EXCEPTIONS_ENDING_IN_A, VECY_COMMERCIAL_INFO;
-var init_nameAndGenderResolver = __esm({
-  "server/_core/nameAndGenderResolver.ts"() {
-    "use strict";
-    COMPOSITE_PATTERNS = [
-      // Femeninos
-      { pattern: /^ana\s+mar[ií]a\b/i, canonical: "Ana Mar\xEDa" },
-      { pattern: /^ana\s+sof[ií]a\b/i, canonical: "Ana Sof\xEDa" },
-      { pattern: /^ana\s+luc[ií]a\b/i, canonical: "Ana Luc\xEDa" },
-      { pattern: /^ana\s+isabel\b/i, canonical: "Ana Isabel" },
-      { pattern: /^ana\s+milena\b/i, canonical: "Ana Milena" },
-      { pattern: /^ana\s+patricia\b/i, canonical: "Ana Patricia" },
-      { pattern: /^ana\s+carolina\b/i, canonical: "Ana Carolina" },
-      { pattern: /^ana\s+victoria\b/i, canonical: "Ana Victoria" },
-      { pattern: /^mar[ií]a\s+paula\b/i, canonical: "Mar\xEDa Paula" },
-      { pattern: /^mar[ií]a\s+cristina\b/i, canonical: "Mar\xEDa Cristina" },
-      { pattern: /^mar[ií]a\s+fernanda\b/i, canonical: "Mar\xEDa Fernanda" },
-      { pattern: /^mar[ií]a\s+jos[eé]\b/i, canonical: "Mar\xEDa Jos\xE9" },
-      { pattern: /^mar[ií]a\s+alejandra\b/i, canonical: "Mar\xEDa Alejandra" },
-      { pattern: /^mar[ií]a\s+camila\b/i, canonical: "Mar\xEDa Camila" },
-      { pattern: /^mar[ií]a\s+isabel\b/i, canonical: "Mar\xEDa Isabel" },
-      { pattern: /^mar[ií]a\s+teresa\b/i, canonical: "Mar\xEDa Teresa" },
-      { pattern: /^mar[ií]a\s+victoria\b/i, canonical: "Mar\xEDa Victoria" },
-      { pattern: /^mar[ií]a\s+del\s+carmen\b/i, canonical: "Mar\xEDa del Carmen" },
-      { pattern: /^mar[ií]a\s+del\s+pilar\b/i, canonical: "Mar\xEDa del Pilar" },
-      { pattern: /^mar[ií]a\s+elena\b/i, canonical: "Mar\xEDa Elena" },
-      { pattern: /^mar[ií]a\s+eugenia\b/i, canonical: "Mar\xEDa Eugenia" },
-      { pattern: /^mar[ií]a\s+in[eé]s\b/i, canonical: "Mar\xEDa In\xE9s" },
-      { pattern: /^mar[ií]a\s+luc[ií]a\b/i, canonical: "Mar\xEDa Luc\xEDa" },
-      { pattern: /^mar[ií]a\s+mercedes\b/i, canonical: "Mar\xEDa Mercedes" },
-      { pattern: /^luz\s+marina\b/i, canonical: "Luz Marina" },
-      { pattern: /^luz\s+mery\b/i, canonical: "Luz Mery" },
-      { pattern: /^luz\s+dary\b/i, canonical: "Luz Dary" },
-      { pattern: /^luz\s+stella\b/i, canonical: "Luz Stella" },
-      { pattern: /^luz\s+helena\b/i, canonical: "Luz Helena" },
-      { pattern: /^luz\s+adriana\b/i, canonical: "Luz Adriana" },
-      { pattern: /^luz\s+amparo\b/i, canonical: "Luz Amparo" },
-      { pattern: /^luz\s+[aá]ngela\b/i, canonical: "Luz \xC1ngela" },
-      { pattern: /^luz\s+myriam\b/i, canonical: "Luz Myriam" },
-      { pattern: /^sandra\s+milena\b/i, canonical: "Sandra Milena" },
-      { pattern: /^sandra\s+patricia\b/i, canonical: "Sandra Patricia" },
-      { pattern: /^sandra\s+marcela\b/i, canonical: "Sandra Marcela" },
-      { pattern: /^diana\s+marcela\b/i, canonical: "Diana Marcela" },
-      { pattern: /^diana\s+patricia\b/i, canonical: "Diana Patricia" },
-      { pattern: /^diana\s+carolina\b/i, canonical: "Diana Carolina" },
-      { pattern: /^diana\s+cristina\b/i, canonical: "Diana Cristina" },
-      { pattern: /^claudia\s+patricia\b/i, canonical: "Claudia Patricia" },
-      { pattern: /^claudia\s+marcela\b/i, canonical: "Claudia Marcela" },
-      { pattern: /^claudia\s+elena\b/i, canonical: "Claudia Elena" },
-      { pattern: /^gloria\s+in[eé]s\b/i, canonical: "Gloria In\xE9s" },
-      { pattern: /^gloria\s+patricia\b/i, canonical: "Gloria Patricia" },
-      { pattern: /^gloria\s+stella\b/i, canonical: "Gloria Stella" },
-      { pattern: /^martha\s+cecilia\b/i, canonical: "Martha Cecilia" },
-      { pattern: /^martha\s+luc[ií]a\b/i, canonical: "Martha Luc\xEDa" },
-      { pattern: /^martha\s+patricia\b/i, canonical: "Martha Patricia" },
-      { pattern: /^martha\s+isabel\b/i, canonical: "Martha Isabel" },
-      { pattern: /^olga\s+luc[ií]a\b/i, canonical: "Olga Luc\xEDa" },
-      { pattern: /^olga\s+patricia\b/i, canonical: "Olga Patricia" },
-      { pattern: /^laura\s+camila\b/i, canonical: "Laura Camila" },
-      { pattern: /^laura\s+sof[ií]a\b/i, canonical: "Laura Sof\xEDa" },
-      { pattern: /^paola\s+andrea\b/i, canonical: "Paola Andrea" },
-      { pattern: /^adriana\s+luc[ií]a\b/i, canonical: "Adriana Luc\xEDa" },
-      // Masculinos
-      { pattern: /^juan\s+pablo\b/i, canonical: "Juan Pablo" },
-      { pattern: /^juan\s+david\b/i, canonical: "Juan David" },
-      { pattern: /^juan\s+carlos\b/i, canonical: "Juan Carlos" },
-      { pattern: /^juan\s+manuel\b/i, canonical: "Juan Manuel" },
-      { pattern: /^juan\s+camilo\b/i, canonical: "Juan Camilo" },
-      { pattern: /^juan\s+jos[eé]\b/i, canonical: "Juan Jos\xE9" },
-      { pattern: /^juan\s+diego\b/i, canonical: "Juan Diego" },
-      { pattern: /^juan\s+esteban\b/i, canonical: "Juan Esteban" },
-      { pattern: /^juan\s+felipe\b/i, canonical: "Juan Felipe" },
-      { pattern: /^juan\s+sebasti[aá]n\b/i, canonical: "Juan Sebasti\xE1n" },
-      { pattern: /^juan\s+fernando\b/i, canonical: "Juan Fernando" },
-      { pattern: /^juan\s+andr[eé]s\b/i, canonical: "Juan Andr\xE9s" },
-      { pattern: /^juan\s+antonio\b/i, canonical: "Juan Antonio" },
-      { pattern: /^juan\s+ignacio\b/i, canonical: "Juan Ignacio" },
-      { pattern: /^juan\s+guillermo\b/i, canonical: "Juan Guillermo" },
-      { pattern: /^pedro\s+pablo\b/i, canonical: "Pedro Pablo" },
-      { pattern: /^pedro\s+antonio\b/i, canonical: "Pedro Antonio" },
-      { pattern: /^pedro\s+luis\b/i, canonical: "Pedro Luis" },
-      { pattern: /^carlos\s+alberto\b/i, canonical: "Carlos Alberto" },
-      { pattern: /^carlos\s+andr[eé]s\b/i, canonical: "Carlos Andr\xE9s" },
-      { pattern: /^carlos\s+eduardo\b/i, canonical: "Carlos Eduardo" },
-      { pattern: /^carlos\s+mario\b/i, canonical: "Carlos Mario" },
-      { pattern: /^carlos\s+arturo\b/i, canonical: "Carlos Arturo" },
-      { pattern: /^carlos\s+julio\b/i, canonical: "Carlos Julio" },
-      { pattern: /^luis\s+carlos\b/i, canonical: "Luis Carlos" },
-      { pattern: /^luis\s+fernando\b/i, canonical: "Luis Fernando" },
-      { pattern: /^luis\s+eduardo\b/i, canonical: "Luis Eduardo" },
-      { pattern: /^luis\s+alberto\b/i, canonical: "Luis Alberto" },
-      { pattern: /^luis\s+miguel\b/i, canonical: "Luis Miguel" },
-      { pattern: /^luis\s+felipe\b/i, canonical: "Luis Felipe" },
-      { pattern: /^luis\s+gabriel\b/i, canonical: "Luis Gabriel" },
-      { pattern: /^luis\s+guillermo\b/i, canonical: "Luis Guillermo" },
-      { pattern: /^luis\s+alfonso\b/i, canonical: "Luis Alfonso" },
-      { pattern: /^jos[eé]\s+luis\b/i, canonical: "Jos\xE9 Luis" },
-      { pattern: /^jos[eé]\s+antonio\b/i, canonical: "Jos\xE9 Antonio" },
-      { pattern: /^jos[eé]\s+manuel\b/i, canonical: "Jos\xE9 Manuel" },
-      { pattern: /^jos[eé]\s+gregorio\b/i, canonical: "Jos\xE9 Gregorio" },
-      { pattern: /^jos[eé]\s+ignacio\b/i, canonical: "Jos\xE9 Ignacio" },
-      { pattern: /^jos[eé]\s+vicente\b/i, canonical: "Jos\xE9 Vicente" }
-    ];
-    FEMALE_EXPLICIT_NAMES = /* @__PURE__ */ new Set([
-      "jeannette",
-      "jeanette",
-      "janeth",
-      "janet",
-      "janette",
-      "jeanine",
-      "jenny",
-      "jennifer",
-      "jenn",
-      "astrid",
-      "elizabeth",
-      "elisabet",
-      "elisabeth",
-      "pilar",
-      "carmen",
-      "mercedes",
-      "luz",
-      "beatriz",
-      "ines",
-      "in\xE9s",
-      "consuelo",
-      "rocio",
-      "roc\xEDo",
-      "nohora",
-      "isabel",
-      "raquel",
-      "miriam",
-      "myriam",
-      "karen",
-      "evelyn",
-      "evelin",
-      "gladys",
-      "marlene",
-      "marlen",
-      "ivonne",
-      "nicole",
-      "michelle",
-      "denisse",
-      "denise",
-      "angie",
-      "kelly",
-      "kelli",
-      "shirley",
-      "wendy",
-      "carol",
-      "caroline",
-      "sharon",
-      "dayana",
-      "daiana",
-      "vivian",
-      "mabel",
-      "mavy",
-      "mary",
-      "marie",
-      "marion",
-      "marian",
-      "belen",
-      "bel\xE9n",
-      "rosario",
-      "amparo",
-      "socorro",
-      "concepcion",
-      "concepci\xF3n",
-      "dolores",
-      "mar",
-      "montserrat",
-      "guadalupe",
-      "abigail",
-      "esther",
-      "ester",
-      "ruth",
-      "rut",
-      "judith",
-      "judit",
-      "edith",
-      "edit",
-      "lilian",
-      "karin",
-      "alison",
-      "allison",
-      "mafe",
-      "andrea",
-      "tatiana",
-      "daniela",
-      "valentina",
-      "sofia",
-      "sof\xEDa",
-      "camila",
-      "mariana",
-      "valeria",
-      "gabriela",
-      "natalia",
-      "lucia",
-      "luc\xEDa",
-      "isabella",
-      "ximena",
-      "jimena",
-      "catalina",
-      "juliana",
-      "laura",
-      "paola",
-      "diana",
-      "claudia",
-      "monica",
-      "m\xF3nica",
-      "sandra",
-      "patricia",
-      "gloria",
-      "martha",
-      "marta",
-      "olga",
-      "sonia",
-      "adriana",
-      "marcela",
-      "carolina",
-      "elena",
-      "victoria",
-      "teresa",
-      "mercedes",
-      "fabiola",
-      "blanca",
-      "esperanza",
-      "dora",
-      "yolanda",
-      "lucero",
-      "yamile",
-      "leidys",
-      "leidy",
-      "yeimy",
-      "yuliana",
-      "yuri",
-      "ingrid",
-      "katherin",
-      "katherine",
-      "katherine",
-      "stefany",
-      "stephanie"
-    ]);
-    MALE_EXCEPTIONS_ENDING_IN_A = /* @__PURE__ */ new Set([
-      "luca",
-      "borja",
-      "joshua",
-      "bautista",
-      "sasha",
-      "elias",
-      "el\xEDas",
-      "ezra",
-      "tobias",
-      "tob\xEDas",
-      "matias",
-      "mat\xEDas",
-      "jeremias",
-      "jerem\xEDas",
-      "isaias",
-      "isa\xEDas",
-      "jonas",
-      "jon\xE1s",
-      "nicolas",
-      "nicol\xE1s",
-      "tomas",
-      "tom\xE1s",
-      "lucas"
-    ]);
-    VECY_COMMERCIAL_INFO = {
-      name: "Vecy Bienes Ra\xEDces",
-      type: "Br\xF3ker inmobiliario 100% digital \u{1F30D}\u2728",
-      services: "Estudios de mercado m\xB2 y canon sugerido \u26A1 | Consultor\xEDa jur\xEDdica y tributaria \u2696\uFE0F | Manejo de cobranzas \u{1F4BC} | Marketing con IA y fotograf\xEDa \u{1F916}\u{1F4F8} | Contratos digitales \u{1F4C4}",
-      phone: "3166569719",
-      schedule: {
-        weekdays: "Lunes a Viernes de 8:00 AM a 10:00 PM (08:00 - 22:00)",
-        saturday: "S\xE1bados de 8:00 AM a 8:00 PM (08:00 - 20:00)",
-        sunday: "Domingos de 10:00 AM a 4:00 PM (10:00 - 16:00)"
-      }
-    };
-  }
-});
-
 // server/_core/advisors.ts
 import { and as and2, eq as eq4, or, sql as sql3 } from "drizzle-orm";
 function isGenericName(n) {
@@ -9342,6 +8803,3368 @@ var init_advisors = __esm({
     init_db();
     init_schema();
     brokerDirectoryCache = /* @__PURE__ */ new Map();
+  }
+});
+
+// server/_core/jania/parsers.ts
+import crypto from "crypto";
+import { sql as sql4, eq as eq5 } from "drizzle-orm";
+function generarHashMensaje(rawText, remitente) {
+  const normalizado = (rawText || "").toLowerCase().replace(/\s+/g, " ").replace(/[^\w\s]/g, "").trim();
+  return crypto.createHash("sha256").update(`${remitente}:${normalizado}`).digest("hex");
+}
+function isPhoneNumberNotPrice(val, rawText) {
+  if (val === void 0 || val === null || val === "" || val === 0 || val === "0") return false;
+  const num = typeof val === "number" ? val : parseFloat(String(val).replace(/[^\d.]/g, ""));
+  if (isNaN(num) || num <= 0) return false;
+  if (num >= 5e7 && num % 1e5 === 0) return false;
+  if (num >= 3e5 && num <= 5e7 && num % 5e4 === 0) return false;
+  const numStr = String(Math.round(num));
+  if (numStr.length === 10 && /^3(0[0-5]|1[0-9]|2[0-4]|5[0-1])/.test(numStr) && num % 1e6 !== 0) {
+    if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*:?\s*\$?\s*3\d{9}/i.test(rawText)) return false;
+    return true;
+  }
+  if (numStr.length === 12 && numStr.startsWith("573") && num % 1e6 !== 0) {
+    if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*:?\s*\$?\s*573\d{9}/i.test(rawText)) return false;
+    return true;
+  }
+  return false;
+}
+function extractFirstName(fullName) {
+  if (!fullName) return "";
+  let clean = fullName.trim();
+  if (!clean) return "";
+  if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
+  if (clean.includes("@")) {
+    clean = clean.split("@")[0];
+  }
+  clean = clean.replace(/[0-9]/g, "");
+  if (!clean.trim()) return "";
+  const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
+  const filteredWords = words.filter((w) => w.length > 0);
+  if (filteredWords.length === 0 || !filteredWords[0]) return "";
+  const w1 = filteredWords[0].toLowerCase();
+  const w2 = filteredWords[1] ? filteredWords[1].toLowerCase() : "";
+  if (w2 && COMMON_FIRST_NAMES.has(w1) && COMMON_FIRST_NAMES.has(w2)) {
+    const first = filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
+    const second = filteredWords[1].charAt(0).toUpperCase() + filteredWords[1].slice(1).toLowerCase();
+    return `${first} ${second}`;
+  }
+  const firstWordLower = w1;
+  for (const commonName of COMMON_FIRST_NAMES) {
+    if (commonName.length >= 4 && firstWordLower.startsWith(commonName)) {
+      return commonName.charAt(0).toUpperCase() + commonName.slice(1).toLowerCase();
+    }
+  }
+  return filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
+}
+function getColombiaHour() {
+  const utc = Date.now() + (/* @__PURE__ */ new Date()).getTimezoneOffset() * 6e4;
+  const colTime = new Date(utc + 36e5 * -5);
+  return colTime.getHours();
+}
+function getGreetingByTime() {
+  const hour = getColombiaHour();
+  if (hour >= 6 && hour < 12) {
+    return "Buenos d\xEDas";
+  } else if (hour >= 12 && hour < 18) {
+    return "Buenas tardes";
+  } else {
+    return "Buenas noches";
+  }
+}
+function cleanUnescapedQuotesInJSON(content) {
+  const lines = content.split("\n");
+  const cleanedLines = lines.map((line) => {
+    const kvMatch = line.match(/^(\s*"[^"]+"\s*:\s*)"([\s\S]*)"(\s*,?\s*)$/);
+    if (kvMatch) {
+      const prefix = kvMatch[1];
+      const val = kvMatch[2];
+      const suffix = kvMatch[3];
+      const fixedVal = val.replace(/(^|[^\\])(")/g, '$1\\"');
+      return `${prefix}"${fixedVal}"${suffix}`;
+    }
+    const arrValMatch = line.match(/^(\s*)"([\s\S]*)"(\s*,?\s*)$/);
+    if (arrValMatch && !line.includes(":")) {
+      const prefix = arrValMatch[1];
+      const val = arrValMatch[2];
+      const suffix = arrValMatch[3];
+      const fixedVal = val.replace(/(^|[^\\])(")/g, '$1\\"');
+      return `${prefix}"${fixedVal}"${suffix}`;
+    }
+    return line;
+  });
+  return cleanedLines.join("\n");
+}
+function parseSafeJSON(content) {
+  let text2 = content.trim();
+  if (text2.startsWith("```json")) text2 = text2.substring(7);
+  else if (text2.startsWith("```")) text2 = text2.substring(3);
+  if (text2.endsWith("```")) text2 = text2.substring(0, text2.length - 3);
+  text2 = text2.trim();
+  const start = text2.indexOf("{");
+  if (start === -1) throw new Error("No JSON object found in content");
+  const lastClose = text2.lastIndexOf("}");
+  if (lastClose > start) {
+    const extracted = text2.substring(start, lastClose + 1);
+    try {
+      return JSON.parse(extracted);
+    } catch (_) {
+    }
+    try {
+      const cleaned = cleanUnescapedQuotesInJSON(extracted);
+      return JSON.parse(cleaned);
+    } catch (_) {
+    }
+  }
+  const partial = text2.substring(start);
+  const repaired = repairJSON(partial);
+  try {
+    return JSON.parse(repaired);
+  } catch (_) {
+  }
+  try {
+    const cleanedRepaired = cleanUnescapedQuotesInJSON(repaired);
+    return JSON.parse(cleanedRepaired);
+  } catch (_) {
+  }
+  throw new Error("Could not parse or repair JSON from LLM output");
+}
+function repairJSON(partial) {
+  let inString = false;
+  let escape = false;
+  const stack = [];
+  let i = 0;
+  let lastValidNonStringPos = 0;
+  for (; i < partial.length; i++) {
+    const ch = partial[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === "\\" && inString) {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      if (!inString) lastValidNonStringPos = i;
+      continue;
+    }
+    if (inString) continue;
+    lastValidNonStringPos = i;
+    if (ch === "{" || ch === "[") stack.push(ch);
+    else if (ch === "}" || ch === "]") {
+      if (stack.length > 0) stack.pop();
+    }
+  }
+  let result = partial;
+  if (inString) {
+    const lastQuote = partial.lastIndexOf('"', i - 1);
+    let cutPoint = lastQuote;
+    const prevComma = partial.lastIndexOf(",", lastQuote - 1);
+    if (prevComma !== -1) {
+      cutPoint = prevComma;
+    }
+    result = partial.substring(0, cutPoint);
+  }
+  result = result.trimEnd().replace(/,\s*$/, "");
+  for (let j = stack.length - 1; j >= 0; j--) {
+    result += stack[j] === "{" ? "}" : "]";
+  }
+  return result;
+}
+function getColombiaNow() {
+  const now = /* @__PURE__ */ new Date();
+  return new Date(now.getTime() - 5 * 60 * 60 * 1e3);
+}
+function hasRealEstateTextKeyword(cleanText) {
+  const text2 = cleanText.toLowerCase();
+  return text2.includes("apto") || text2.includes("apartamento") || text2.includes("casa") || text2.includes("bodega") || text2.includes("oficina") || text2.includes("local") || text2.includes("locales") || text2.includes("caba\xF1a") || text2.includes("caba\xF1as") || text2.includes("lote") || text2.includes("finca") || text2.includes("habs") || text2.includes("alcoba") || text2.includes("m2") || text2.includes("mts") || text2.includes("requerimiento");
+}
+function buildFlyerBreakdownText(extracted, fallbackText) {
+  if (!extracted) return fallbackText || "";
+  const parts = [];
+  if (fallbackText && fallbackText.trim() !== "" && !fallbackText.includes("[Publicaci\xF3n de Imagen")) {
+    parts.push(fallbackText.trim());
+  } else if (extracted.title) {
+    parts.push(`\u{1F4CC} ${extracted.title}`);
+  }
+  if (extracted.description && extracted.description.trim() !== "" && !extracted.description.includes("[Publicaci\xF3n de Imagen") && (!fallbackText || !fallbackText.includes(extracted.description.trim()))) {
+    parts.push(extracted.description.trim());
+  }
+  const specs = [];
+  const pVal = extracted.price || extracted.presupuestoMax;
+  if (pVal && Number(pVal) > 0) {
+    specs.push(`\u{1F4B0} Precio/Presupuesto: $${Number(pVal).toLocaleString("es-CO")}`);
+  }
+  if (extracted.rentPrice && Number(extracted.rentPrice) > 0) {
+    specs.push(`\u{1F4B0} Canon Arriendo: $${Number(extracted.rentPrice).toLocaleString("es-CO")}`);
+  }
+  if (extracted.adminFee && Number(extracted.adminFee) > 0) {
+    specs.push(`\u{1F3E2} Administraci\xF3n: $${Number(extracted.adminFee).toLocaleString("es-CO")}`);
+  }
+  if (extracted.area && Number(extracted.area) > 0) {
+    specs.push(`\u{1F4D0} \xC1rea: ${extracted.area} m\xB2`);
+  } else if (extracted.areaMin && Number(extracted.areaMin) > 0) {
+    specs.push(`\u{1F4D0} \xC1rea M\xEDnima: ${extracted.areaMin} m\xB2`);
+  }
+  if (extracted.bedrooms || extracted.rooms || extracted.habitacionesMin) {
+    specs.push(`\u{1F6CF}\uFE0F ${extracted.bedrooms || extracted.rooms || extracted.habitacionesMin} Habitaciones`);
+  }
+  if (extracted.bathrooms || extracted.baths || extracted.banosMin) {
+    specs.push(`\u{1F6BF} ${extracted.bathrooms || extracted.baths || extracted.banosMin} Ba\xF1os`);
+  }
+  if (extracted.garages || extracted.parqueaderosMin) {
+    specs.push(`\u{1F697} ${extracted.garages || extracted.parqueaderosMin} Parqueaderos`);
+  }
+  const zone = extracted.zone || extracted.zonaDeseada || extracted.addressNeighborhood;
+  if (zone) {
+    specs.push(`\u{1F4CD} Sector: ${zone}`);
+  }
+  const city = extracted.city || extracted.ciudadDeseada || extracted.addressCity;
+  if (city) {
+    specs.push(`\u{1F3D9}\uFE0F Ciudad: ${city}`);
+  }
+  if (extracted.contactPhone || extracted.telefonoContacto) {
+    specs.push(`\u{1F4DE} Contacto Broker: ${extracted.contactPhone || extracted.telefonoContacto}`);
+  }
+  if (specs.length > 0) {
+    parts.push(`\u{1F4CB} Ficha T\xE9cnica Extra\xEDda de Flyer / Banner:
+\u2022 ` + specs.join("\n\u2022 "));
+  }
+  if (parts.length > 0) return parts.join("\n\n");
+  return fallbackText || "[Publicaci\xF3n Comercial Inmobiliaria desde Imagen / Flyer]";
+}
+function parseColombianPriceOrBudget(numStr, unit, isSale) {
+  if (!numStr) return 0;
+  const cleanStr = (numStr || "").trim().replace(/[$COPcop'´`’‘\u00B4\u2019\u2018*\s\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "");
+  const cleanUnit = (unit || "").toLowerCase();
+  if (cleanUnit.includes("mil millon")) {
+    const v = parseFloat(cleanStr.replace(",", "."));
+    return Math.round(v * 1e9);
+  }
+  if (/^\d{1,4}(?:\.\d{3}){2,4}$/.test(cleanStr)) {
+    const parsed = parseInt(cleanStr.replace(/\./g, ""), 10);
+    return parsed;
+  }
+  if (/^\d{1,3}[.,]\d{3}$/.test(cleanStr)) {
+    const n = parseInt(cleanStr.replace(/[.,]/g, ""), 10);
+    if (!isSale) {
+      return n * 1e3;
+    }
+    return n * 1e6;
+  }
+  let val = parseFloat(cleanStr.replace(",", "."));
+  if (isNaN(val)) return 0;
+  if (cleanUnit.includes("millon") || cleanUnit.includes("mill\xF3n") || cleanUnit.includes("mll") || cleanUnit.includes("mill") || cleanUnit.includes("mm") || cleanUnit === "m") {
+    if (!isSale) {
+      if (val <= 100 && val > 0) {
+        return Math.round(val * 1e6);
+      }
+      if (val > 100 && val < 1e5) {
+        return Math.round(val * 1e3);
+      }
+      return Math.round(val);
+    }
+    if (val < 10 && val > 0 && (cleanStr.includes(".") || cleanStr.includes(","))) {
+      return Math.round(val * 1e9);
+    }
+    if (val >= 10 && val < 100 && isSale) {
+      return Math.round(val * 1e7);
+    }
+    return Math.round(val * 1e6);
+  }
+  if (val < 1e4) {
+    if (!isSale) return Math.round(val * 1e3);
+    if (val >= 100) return Math.round(val * 1e6);
+  }
+  if (isSale && val >= 3e5 && val <= 3e7) {
+    return Math.round(val * 1e3);
+  }
+  return Math.round(val);
+}
+function extractFallbackDataFromText(text2) {
+  if (!text2 || typeof text2 !== "string") return {};
+  const cacheKey = text2.trim();
+  if (cacheKey.length < 5e3 && fallbackDataCache.has(cacheKey)) {
+    return fallbackDataCache.get(cacheKey);
+  }
+  const clean = (text2 || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[\u2013\u2014]/g, "-").replace(/['´`’‘\u00B4\u2019\u2018]/g, ".").replace(/[*_~]/g, "").replace(/[\t ]+/g, " ");
+  let transactionType = "venta";
+  const isInvestorPurchase = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|para compra|compro|compra ya|busco para compra)\b/i.test(clean);
+  const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(clean);
+  const hasRentSignals = !isInvestorPurchase && (/\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|en renta|para renta|busca para renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(clean) || /\b(?:para tomar ya|tomar ya|toma ya|para tomar de inmediato|toma inmediata|toma de inmediato|para tomar|para alquilar|para arrendar|en arriendo)\b/i.test(clean) || /\b(?:incluida|incluido|inc)\b/i.test(clean) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(clean) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(clean) || /valor arriendo/i.test(clean) || /\$\s*([1-9]\d{0,1}(?:[.\s']\d{3}){1,2})\b/.test(clean) && !/\b(?:compra|compro|comprador|compran|venta|vendo|vende|millones|millon|mm|mll)\b/i.test(clean));
+  if (hasPermutaSignals) {
+    transactionType = clean.includes("venta") || isInvestorPurchase ? "venta_permuta" : "permuta";
+  } else if (hasRentSignals && (clean.includes("venta") || clean.includes("valor venta") || clean.includes("precio de venta")) && (clean.includes("arriendo") || clean.includes("valor arriendo") || clean.includes("canon"))) {
+    transactionType = "venta_o_arriendo";
+  } else if (hasRentSignals && !clean.includes("compro") && !clean.includes("para compra") && !clean.includes("en compra") && !clean.includes("en venta") && !clean.includes("venta") && !isInvestorPurchase) {
+    transactionType = "arriendo";
+  } else {
+    transactionType = "venta";
+  }
+  let propertyType = "apartment";
+  if ((clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("m\xE9dic") || clean.includes("medic")) && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
+    propertyType = "consultorio";
+  } else if ((clean.includes("oficina") || clean.includes("oficinas") || clean.includes("office")) && !clean.includes("home office") && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
+    propertyType = "office";
+  } else if ((clean.includes("local comercial") || clean.includes("locales comerciales") || clean.includes("local") || clean.includes("locales") || clean.includes("comercial") || clean.includes("commercial")) && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa") && !clean.includes("centro comercial") && !clean.includes("centros comerciales")) {
+    propertyType = "commercial";
+  } else if (clean.includes("bodega") || clean.includes("bodegas") || clean.includes("warehouse")) {
+    propertyType = "warehouse";
+  } else if (clean.includes("casalote") || clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land")) {
+    propertyType = "land";
+  } else if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet")) {
+    propertyType = "house";
+  } else if (clean.includes("caba\xF1a") || clean.includes("cabana") || clean.includes("caba\xF1as") || clean.includes("cabanas") || clean.includes("cabin")) {
+    propertyType = "cabin";
+  } else if (clean.includes("finca") || clean.includes("campestre") || clean.includes("farm")) {
+    propertyType = "farm";
+  } else if (clean.includes("edificio") || clean.includes("building")) {
+    propertyType = "building";
+  } else if (clean.includes("hotel") || clean.includes("hostal") || clean.includes("hostel")) {
+    propertyType = "hotel";
+  } else if (clean.includes("apartaestudio") || clean.includes("apartasuite") || clean.includes("loft")) {
+    propertyType = "loft";
+  } else {
+    propertyType = "apartment";
+  }
+  let price = 0;
+  let presupuestoMin = 0;
+  let presupuestoMax = 0;
+  let rentPrice = 0;
+  let adminFee = 0;
+  const adminMatch = clean.match(/(?:^|[-•*#\s])(?:v\s*[\/\-]\s*)?(?:adm[oó]n|admon|administraci[oó]n|administ|admin|cta\s*adm[oó]n|cuota\s*adm[oó]n)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*[:\/\-=\s]?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
+  if (adminMatch) {
+    let rawANum = parseFloat(adminMatch[1].replace(/\./g, ""));
+    if (rawANum >= 100 && rawANum < 1e4) {
+      rawANum = rawANum * 1e3;
+    }
+    if (!isNaN(rawANum) && rawANum >= 1e4 && rawANum <= 3e7 && !isPhoneNumberNotPrice(rawANum, text2)) {
+      adminFee = rawANum;
+    }
+  }
+  if (adminFee === 0) {
+    const adminSuffixMatch = clean.match(/\$?\s*([\d.]+)\s*(?:mil\b|\s*k\b)?\s*[:\/\-=\s]?\s*(?:adm|admon|admón|administraci[oó]n|administ|admin)\b/i);
+    if (adminSuffixMatch) {
+      const rawANum = parseFloat(adminSuffixMatch[1].replace(/\./g, ""));
+      if (!isNaN(rawANum) && rawANum >= 1e4 && rawANum <= 3e7 && !isPhoneNumberNotPrice(rawANum, text2)) {
+        adminFee = rawANum;
+      }
+    }
+  }
+  if (adminFee === 0) {
+    const adminMilMatch = clean.match(/(?:^|[-•*#\s])(?:admon|adm[oó]n|adm|admin|cuota)\s*[:\/\-=\s]?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:mil|k)\b/i);
+    if (adminMilMatch) {
+      const numParsed = parseFloat(adminMilMatch[1].replace(",", "."));
+      if (!isNaN(numParsed) && numParsed >= 20 && numParsed <= 15e3) {
+        const calculatedFee = Math.round(numParsed * 1e3);
+        if (calculatedFee >= 5e4 && calculatedFee <= 15e6) {
+          adminFee = calculatedFee;
+        }
+      }
+    }
+  }
+  const canonMatch = clean.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|vr\s*[\.\/]?\s*renta|renta)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
+  if (canonMatch) {
+    const isSale = false;
+    const computed = parseColombianPriceOrBudget(canonMatch[1], canonMatch[2] || "", isSale);
+    if (computed > 0 && computed <= 1e8 && !isPhoneNumberNotPrice(computed, text2)) {
+      rentPrice = computed;
+    }
+  }
+  const saleMatch = clean.match(/(?:precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|vr\s*[\.\/]?\s*venta|venta\s*(?:de\s*apartamento|de\s*apto|de\s*casa)?|valor\s*un\s*poco\s*negociable|valor\s*negociable|precio\s*negociable)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
+  if (saleMatch) {
+    const isSale = true;
+    const computed = parseColombianPriceOrBudget(saleMatch[1], saleMatch[2] || "", isSale);
+    if (computed >= 3e7 && !isPhoneNumberNotPrice(computed, text2)) {
+      price = computed;
+      presupuestoMax = computed;
+    }
+  }
+  if (price === 0 && rentPrice === 0) {
+    const rangeMatch = clean.match(/(?:presupuesto|prespuesto|ppto|inversi[oó]n|compra)\s*:?\s*(?:entre\s+)?\$?\s*([\d][\d.,\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.,\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i) || clean.match(/(?:entre|de)\s+\$?\s*([\d][\d.,\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.,\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
+    if (rangeMatch) {
+      const isSale = transactionType !== "arriendo";
+      presupuestoMin = parseColombianPriceOrBudget(rangeMatch[1], rangeMatch[3] || "", isSale);
+      presupuestoMax = parseColombianPriceOrBudget(rangeMatch[2], rangeMatch[3] || "", isSale);
+      price = presupuestoMax;
+      if (transactionType === "arriendo") {
+        rentPrice = presupuestoMax;
+      }
+    }
+  }
+  if (price === 0 && rentPrice === 0) {
+    const ceilingMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|prespuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|\btope\b|\btecho\b|\bl[ií]mite\b)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
+    if (ceilingMatch) {
+      const afterText = clean.slice(clean.indexOf(ceilingMatch[0]) + ceilingMatch[0].length, clean.indexOf(ceilingMatch[0]) + ceilingMatch[0].length + 15);
+      if (!/años|anos|edad|antig/i.test(afterText)) {
+        const isSale = transactionType !== "arriendo";
+        const computed = parseColombianPriceOrBudget(ceilingMatch[1], ceilingMatch[2] || "", isSale);
+        if (computed > 0 && !isPhoneNumberNotPrice(computed, text2)) {
+          if (transactionType === "arriendo" || computed <= 5e7) {
+            rentPrice = computed;
+          } else {
+            price = computed;
+          }
+          presupuestoMax = computed;
+        }
+      }
+    }
+  }
+  if (price === 0 && rentPrice === 0) {
+    const simplePriceMatch = clean.match(/(?:precio|valor)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
+    if (simplePriceMatch) {
+      const isSale = transactionType !== "arriendo";
+      const computed = parseColombianPriceOrBudget(simplePriceMatch[1], simplePriceMatch[2] || "", isSale);
+      if (computed > 0 && !isPhoneNumberNotPrice(computed, text2) && computed !== adminFee) {
+        if (transactionType === "arriendo" || computed <= 5e7) {
+          rentPrice = computed;
+        } else {
+          price = computed;
+        }
+        presupuestoMax = computed;
+      }
+    }
+  }
+  if (price === 0 && rentPrice === 0) {
+    const isSaleContext = transactionType !== "arriendo" || clean.includes("venta") || clean.includes("vendo");
+    if (isSaleContext) {
+      const allColMatches = [...clean.matchAll(/(?:\$\s*|(?<=\s|^))(\d{1,4}(?:[.\s']\d{3}){1,4})(?=\s|$|[.,;:!])/g)];
+      for (const m of allColMatches) {
+        const parsed = parseColombianPriceOrBudget(m[1], "", true);
+        if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text2) && parsed !== adminFee && parsed >= 3e7) {
+          if (parsed > price) {
+            price = parsed;
+            presupuestoMax = parsed;
+          }
+        }
+      }
+      if (price === 0) {
+        const mmMatches = [...clean.matchAll(/(?:precio|valor|venta)?\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)\s*(?:mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/gi)];
+        for (const m of mmMatches) {
+          const computed = parseColombianPriceOrBudget(m[1], "millones", true);
+          if (computed >= 3e7 && computed !== adminFee && !isPhoneNumberNotPrice(computed, text2)) {
+            if (computed > price) {
+              price = computed;
+              presupuestoMax = computed;
+            }
+          }
+        }
+      }
+    } else {
+      const colMatch = clean.match(/(?:\$\s*|(?<=\s|^))(\d{1,4}(?:[.\s']\d{3}){1,4})(?=\s|$|[.,;:!])/);
+      if (colMatch) {
+        const parsed = parseColombianPriceOrBudget(colMatch[1], "", false);
+        if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text2) && parsed !== adminFee && parsed <= 1e8) {
+          rentPrice = parsed;
+          presupuestoMax = parsed;
+        }
+      }
+    }
+  }
+  if (transactionType === "arriendo" && rentPrice > 0 && price === 0) {
+    price = rentPrice;
+  }
+  let area = 0;
+  let areaMin = 0;
+  let areaMax = 0;
+  const dimMultMatch = (text2 || "").match(/(\d+(?:[.,]\d+)?)\s*[*xX]\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?/i);
+  if (dimMultMatch) {
+    const d1 = parseFloat(dimMultMatch[1].replace(",", "."));
+    const d2 = parseFloat(dimMultMatch[2].replace(",", "."));
+    if (!isNaN(d1) && !isNaN(d2) && d1 > 0 && d2 > 0 && d1 <= 500 && d2 <= 500) {
+      area = Math.round(d1 * d2 * 100) / 100;
+      areaMin = area;
+      areaMax = area;
+    }
+  }
+  if (area === 0) {
+    const areaRangeMatch = clean.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*:?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?/i);
+    if (areaRangeMatch && (areaRangeMatch[1] || areaRangeMatch[2])) {
+      const rIdx = areaRangeMatch.index ?? 0;
+      const rPreceding = clean.slice(Math.max(0, rIdx - 45), rIdx);
+      if (!isOutdoorAreaPreceding(rPreceding)) {
+        const hasAreaCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaRangeMatch[0]);
+        const n1 = parseFloat(areaRangeMatch[1].replace(",", "."));
+        const n2 = parseFloat(areaRangeMatch[2].replace(",", "."));
+        if (hasAreaCtx && !isNaN(n1) && !isNaN(n2) && n1 >= 15 && n1 <= 15e3 && n2 >= 15 && n2 <= 15e3) {
+          areaMin = Math.min(n1, n2);
+          areaMax = Math.max(n1, n2);
+          area = areaMin;
+        }
+      }
+    }
+    const outdoor = parseOutdoorAreas(clean);
+    const areaMatches = Array.from(clean.matchAll(/(?:(?:📐|area|área|superficie)\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?)|(?:(?:(?:m[ií]nimo|min|m[aá]ximo|max|de)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)\b)/gi));
+    for (const m of areaMatches) {
+      const valStr = m[1] || m[2];
+      if (!valStr) continue;
+      const val = parseFloat(valStr.replace(",", "."));
+      if (outdoor.terraceArea && val === outdoor.terraceArea) continue;
+      if (outdoor.balconyArea && val === outdoor.balconyArea) continue;
+      if (outdoor.patioArea && val === outdoor.patioArea) continue;
+      const mIdx = m.index ?? 0;
+      const preceding = clean.slice(Math.max(0, mIdx - 45), mIdx);
+      if (isOutdoorAreaPreceding(preceding)) continue;
+      if (!isNaN(val) && val >= 15 && val <= 15e3) {
+        area = val;
+        areaMin = area;
+        areaMax = area;
+        break;
+      }
+    }
+  }
+  if (area === 0) {
+    const pl = parseColombianListing(text2);
+    if (pl.areaM2 && pl.areaM2 > 0) {
+      area = pl.areaM2;
+      areaMin = pl.areaM2;
+      areaMax = pl.areaM2;
+    }
+  }
+  let bedrooms = 0;
+  let bedroomsMin = 0;
+  let bedroomsMax = 0;
+  const SPANISH_NUMBERS_MAP = {
+    "un": 1,
+    "uno": 1,
+    "una": 1,
+    "dos": 2,
+    "tres": 3,
+    "cuatro": 4,
+    "cinco": 5,
+    "seis": 6,
+    "siete": 7,
+    "ocho": 8,
+    "nueve": 9,
+    "diez": 10
+  };
+  function parseWordOrDigit(str) {
+    if (!str) return 0;
+    const s = str.trim().toLowerCase();
+    if (SPANISH_NUMBERS_MAP[s]) return SPANISH_NUMBERS_MAP[s];
+    const n = parseInt(s, 10);
+    return isNaN(n) ? 0 : n;
+  }
+  const rangePrefixMatch = clean.match(/(?:🛏️|🛌)?\s*(?:alcobas?|hab(?:s|itaciones|itaci[oó]n)?|dormitorios?|cuartos?)\s*[:\-=]\s*(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})/i);
+  if (rangePrefixMatch) {
+    bedroomsMin = parseWordOrDigit(rangePrefixMatch[1]);
+    bedroomsMax = parseWordOrDigit(rangePrefixMatch[2]);
+    bedrooms = bedroomsMin;
+  } else {
+    const kvPrefixMatch = clean.match(/(?:🛏️|🛌)?\s*(?:alcobas?|hab(?:s|itaciones|itaci[oó]n)?|dormitorios?|cuartos?)\s*[:\-=]\s*(?:m[ií]nimo\s*|minimo\s*|m[ií]n\s*|min\s*)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\b/i);
+    if (kvPrefixMatch) {
+      bedrooms = parseWordOrDigit(kvPrefixMatch[1]);
+      bedroomsMin = bedrooms;
+      bedroomsMax = bedrooms;
+    } else {
+      const bedRangeMatch = clean.match(/(?:🛏️\s*)?(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\s*(?:amplias?|grandes?|c[oó]modas?|hermosas?|iluminadas?|confortables?|lindas?|buenas?|espaciosas?|principales?)?\s*(?:alcobas?|hab(?:s|itaciones|itacion)?|dormitorios?|cuartos?)\b/i);
+      if (bedRangeMatch) {
+        bedroomsMin = parseWordOrDigit(bedRangeMatch[1]);
+        bedroomsMax = parseWordOrDigit(bedRangeMatch[2]);
+        bedrooms = bedroomsMin;
+      } else {
+        const bedWordMatch = clean.match(/(?:🛏️\s*)?(?:(?:tiene|con|de)\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\s*(?:amplias?|grandes?|c[oó]modas?|hermosas?|iluminadas?|confortables?|lindas?|buenas?|espaciosas?|principales?)?\s*(?:alcobas?|hab(?:s|itaciones|itacion)?|dormitorios?|cuartos?)\b/i);
+        if (bedWordMatch) {
+          bedroomsMin = parseWordOrDigit(bedWordMatch[1]);
+          bedroomsMax = bedroomsMin;
+          bedrooms = bedroomsMin;
+        }
+      }
+    }
+  }
+  let bathrooms = 0;
+  const socialAddMatch = clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
+  if (socialAddMatch) {
+    const baseVal = parseWordOrDigit(socialAddMatch[1]) || 2;
+    bathrooms = baseVal + 1;
+  } else {
+    const halfBathMatch = clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)[\.,]5\s*(?:baños?|banos?|bñ|wc)/i) || clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baños?|banos?|bñ)\s*(?:y\s*medio|y\s*medio\s*baño)/i);
+    if (halfBathMatch) {
+      const baseVal = parseWordOrDigit(halfBathMatch[1]) || 2;
+      bathrooms = baseVal + 1;
+    } else {
+      const kvBathMatch = clean.match(/(?:🚿|🛁|🚽)?\s*(?:baños?|banos?|wc)\s*[:\-=]\s*(?:m[ií]nimo\s*|minimo\s*|m[ií]n\s*|min\s*)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2}(?:[\.,]\d+)?)\b/i);
+      if (kvBathMatch) {
+        const bw = kvBathMatch[1].replace(",", ".");
+        const parsed = parseFloat(bw);
+        bathrooms = !isNaN(parsed) && parsed % 1 !== 0 ? Math.ceil(parsed) : parseWordOrDigit(kvBathMatch[1]);
+      } else {
+        const bathMatch = clean.match(/(?:🚿|🛁|🚽|de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2}(?:[\.,]\d+)?)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:amplios?|completos?|sociales?|grandes?)?\s*(?:baño|baños|bano|banos|wc)/i);
+        if (bathMatch) {
+          const bw = bathMatch[1].replace(",", ".");
+          const parsed = parseFloat(bw);
+          bathrooms = !isNaN(parsed) && parsed % 1 !== 0 ? Math.ceil(parsed) : parseWordOrDigit(bathMatch[1]);
+        }
+      }
+    }
+  }
+  if (bathrooms === 0) {
+    let countBaths = 0;
+    if (/\bbaño\s*(?:social|de\s*visitas)\b/i.test(clean)) countBaths++;
+    if (/\bbaño\s*de\s*servicio\b/i.test(clean)) countBaths++;
+    if (/\b(?:baño\s*(?:privado|principal)|principal[^\n]*baño|con\s*baño)\b/i.test(clean)) countBaths++;
+    if (countBaths > 0) bathrooms = countBaths;
+  }
+  let garages = 0;
+  let garageType = null;
+  const kvGarMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(?:parqueaderos?|garajes?|parqueos?|estacionamientos?|pks?|parqs?)\s*[:\-=]\s*(?:m[ií]nimo\s*|minimo\s*|m[ií]n\s*|min\s*)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\b/i);
+  if (kvGarMatch) {
+    const val = parseWordOrDigit(kvGarMatch[1]);
+    if (val <= 20) garages = val;
+  } else {
+    const garMatch = clean.match(/(?:🚙|🚗|🚘)?[^\S\r\n]*(?:con\s+)?(?<!24[\/\-])(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})(?:[^\S\r\n]*(?:\([0-9]+\)|[a-záéíóúñ]+))?[^\S\r\n]*(?:amplios?|cubiertos?|privados?|independientes?|en\s*l[ií]nea|lineales?)?[^\S\r\n]*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)/i) || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)[^\S\r\n]*:?[^\S\r\n]*(\d{1,2}|un|una|uno|dos|tres|cuatro|cinco)/i);
+    if (garMatch) {
+      const val = parseWordOrDigit(garMatch[1]);
+      if (val >= 1900 && val <= 2100) {
+        garages = 0;
+      } else if (val > 20) {
+        garages = 0;
+      } else {
+        garages = val;
+      }
+    } else if (/\b(?:parqueaderos|garajes|estacionamientos|parqs|pks)\b/i.test(clean)) {
+      garages = 2;
+    } else if (/con\s+(?:un\s+)?(?:parqueadero|garaje)|parqueadero|garaje/i.test(clean)) {
+      garages = 1;
+    }
+  }
+  if (clean.includes("en linea") || clean.includes("en l\xEDnea") || clean.includes("lineal")) {
+    garageType = "lineal";
+  } else if (clean.includes("independiente") || clean.includes("independientes")) {
+    garageType = "independiente";
+  }
+  let antiguedadAnos = null;
+  const ageMatch = clean.match(/(?:🏢|⏳|⏱️|edificio|antigüedad|antiguedad|tiene|\||,|\.)\s*(\d{1,3})\s*a[ñn]os\b/i) || clean.match(/(\d{1,3})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)?\b/i);
+  if (ageMatch) {
+    antiguedadAnos = parseInt(ageMatch[1], 10);
+  }
+  let hasBalcony = null;
+  let hasTerrace = null;
+  if (clean.includes("no tiene balc\xF3n") || clean.includes("no tiene balcon") || clean.includes("sin balc\xF3n") || clean.includes("sin balcon")) {
+    hasBalcony = false;
+  } else if (clean.includes("balc\xF3n") || clean.includes("balcon")) {
+    hasBalcony = true;
+  }
+  if (clean.includes("no tiene terraza") || clean.includes("sin terraza")) {
+    hasTerrace = false;
+  } else if (clean.includes("terraza") || clean.includes("terrazas")) {
+    hasTerrace = true;
+  }
+  const hasStorage = clean.includes("dep\xF3sito") || clean.includes("deposito") || clean.includes("cuarto util") || clean.includes("bodega");
+  const hasElevator = clean.includes("ascensor");
+  let kitchenType = null;
+  if (clean.includes("cocina cerrada")) kitchenType = "Cerrada";
+  else if (clean.includes("cocina abierta")) kitchenType = "Abierta";
+  else if (clean.includes("cocina tipo isla") || clean.includes("isla")) kitchenType = "Abierta tipo Isla";
+  const hasServiceRoom = clean.includes("cbs") || clean.includes("cuarto de servicio") || clean.includes("alcoba de servicio") || clean.includes("cuarto y ba\xF1o de servicio") || clean.includes("cuarto y bano de servicio") || clean.includes("cuarto de empleada") || clean.includes("alcoba para el servicio");
+  let floorType = null;
+  if (clean.includes("madera maciza") || clean.includes("madera natural") || clean.includes("granadillo")) floorType = "Madera Maciza";
+  else if (clean.includes("piso en madera") || clean.includes("pisos en madera") || clean.includes("piso de madera") || clean.includes("pisos de madera")) floorType = "Madera";
+  else if (clean.includes("laminado") || clean.includes("piso laminado")) floorType = "Laminado";
+  else if (clean.includes("porcelanato")) floorType = "Porcelanato";
+  else if (clean.includes("marmol") || clean.includes("m\xE1rmol")) floorType = "M\xE1rmol";
+  else if (clean.includes("ceramica") || clean.includes("cer\xE1mica")) floorType = "Cer\xE1mica";
+  let sunlightOrientation = null;
+  if (clean.includes("luz de la ma\xF1ana") || clean.includes("luz de manana") || clean.includes("sol de ma\xF1ana") || clean.includes("sol de manana")) sunlightOrientation = "Sol de Ma\xF1ana";
+  else if (clean.includes("sol de tarde") || clean.includes("luz de tarde")) sunlightOrientation = "Sol de Tarde";
+  else if (clean.includes("exterior iluminado") || clean.includes("super iluminado") || clean.includes("muy iluminado")) sunlightOrientation = "Exterior Iluminado";
+  const hasPowerPlant = clean.includes("planta electrica") || clean.includes("planta el\xE9ctrica") || clean.includes("suplencia total") || clean.includes("planta total") || clean.includes("planta de suplencia");
+  const hasVisitorParking = clean.includes("parqueadero de visitantes") || clean.includes("parqueadero para visitantes") || clean.includes("parqueaderos de visitantes") || clean.includes("parqueo visitantes");
+  const hasHeating = clean.includes("calentador de paso") || clean.includes("calentador a gas") || clean.includes("caldera");
+  let city = "";
+  const isBogotaContext = clean.includes("bogota") || clean.includes("bogot\xE1") || clean.includes("cedritos") || clean.includes("chico") || clean.includes("chic\xF3") || clean.includes("rosales") || clean.includes("usaquen") || clean.includes("usaqu\xE9n") || clean.includes("santa barbara") || clean.includes("santa b\xE1rbara") || clean.includes("chapinero") || clean.includes("suba") || clean.includes("engativa") || clean.includes("engativ\xE1") || clean.includes("tabora") || clean.includes("floresta") || clean.includes("santa maria del lago") || clean.includes("santa mar\xEDa del lago") || clean.includes("fontibon") || clean.includes("fontib\xF3n") || clean.includes("kennedy") || clean.includes("teusaquillo") || clean.includes("salitre") || clean.includes("barrios unidos");
+  if (isBogotaContext) {
+    city = "Bogot\xE1, D.C.";
+  } else if (clean.includes("valledupar") || clean.includes("cesar")) {
+    city = "Valledupar";
+  } else if (clean.includes("bucaramanga") || clean.includes("floridablanca") || clean.includes("piedecuesta") || clean.includes("giron") || clean.includes("gir\xF3n") || clean.includes("santander") || clean.includes("ruitoque")) {
+    city = clean.includes("floridablanca") ? "Floridablanca" : clean.includes("piedecuesta") ? "Piedecuesta" : clean.includes("giron") || clean.includes("gir\xF3n") ? "Gir\xF3n" : "Bucaramanga";
+  } else if (clean.includes("cartagena") || clean.includes("bocagrande") || clean.includes("castillogrande") || clean.includes("manga") || clean.includes("crespo") || clean.includes("laguito")) {
+    city = "Cartagena";
+  } else if (clean.includes("santa marta") || clean.includes("rodadero") || clean.includes("bello horizonte") || clean.includes("pozos colorados")) {
+    city = "Santa Marta";
+  } else if (clean.includes("pereira") || clean.includes("dosquebradas") || clean.includes("cerritos") || clean.includes("pinares")) {
+    city = clean.includes("dosquebradas") ? "Dosquebradas" : "Pereira";
+  } else if (clean.includes("manizales") || clean.includes("villamaria")) {
+    city = clean.includes("villamaria") ? "Villamar\xEDa" : "Manizales";
+  } else if (clean.includes("armenia") || clean.includes("calarca") || clean.includes("quimbaya")) {
+    city = clean.includes("calarca") ? "Calarc\xE1" : clean.includes("quimbaya") ? "Quimbaya" : "Armenia";
+  } else if (clean.includes("ibague") || clean.includes("ibagu\xE9") || clean.includes("melgar") || clean.includes("carmen de apicala")) {
+    city = clean.includes("melgar") ? "Melgar" : clean.includes("carmen de apicala") ? "Carmen de Apical\xE1" : "Ibagu\xE9";
+  } else if (clean.includes("villavicencio") || clean.includes("acacias")) {
+    city = clean.includes("acacias") ? "Acac\xEDas" : "Villavicencio";
+  } else if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica") || clean.includes("jamundi") || clean.includes("pance") || clean.includes("valle del lili")) {
+    city = clean.includes("jamundi") || clean.includes("jamund\xED") ? "Jamund\xED" : "Cali";
+  } else if (clean.includes("medellin") || clean.includes("poblado") || clean.includes("laureles") || clean.includes("envigado") || clean.includes("sabaneta") || clean.includes("rionegro") && !clean.includes("suba") && !clean.includes("bogota") || clean.includes("la ceja")) {
+    city = clean.includes("envigado") ? "Envigado" : clean.includes("sabaneta") ? "Sabaneta" : clean.includes("rionegro") ? "Rionegro" : clean.includes("la ceja") ? "La Ceja" : "Medell\xEDn";
+  } else if (clean.includes("chia") || clean.includes("ch\xEDa")) {
+    city = "Ch\xEDa";
+  } else if (clean.includes("cajica") || clean.includes("cajic\xE1")) {
+    city = "Cajic\xE1";
+  } else if (clean.includes("cota")) {
+    city = "Cota";
+  } else if (clean.includes("sopo") || clean.includes("sop\xF3")) {
+    city = "Sop\xF3";
+  } else if (clean.includes("la calera")) {
+    city = "La Calera";
+  } else if (clean.includes("zipaquira") || clean.includes("zipaquir\xE1")) {
+    city = "Zipaquir\xE1";
+  } else if (clean.includes("funza")) {
+    city = "Funza";
+  } else if (clean.includes("mosquera")) {
+    city = "Mosquera";
+  } else if (clean.includes("madrid")) {
+    city = "Madrid";
+  } else if (clean.includes("fusagasuga") || clean.includes("fusagasug\xE1")) {
+    city = "Fusagasug\xE1";
+  } else if (clean.includes("girardot")) {
+    city = "Girardot";
+  }
+  let zone = "";
+  const acceptedNeighborhoods = [];
+  const rejectedNeighborhoods = [];
+  for (const item of KNOWN_BARRIOS_SORTED_ITEMS) {
+    let pos = 0;
+    while ((pos = clean.indexOf(item.lower, pos)) !== -1) {
+      const precedingText = clean.slice(Math.max(0, pos - 45), pos);
+      const isNegated = /(?:no\s+les?\s+gusta|no\s+gusta|no\s+quiere|no\s+|excepto\s+|menos\s+|sin\s+|descartado\s+|fuera\s+de\s+|abstenerse\s+|no\s+enviar\s+|no\s+recibo\s+|no\s+buscar\s+)/i.test(precedingText);
+      if (isNegated) {
+        if (!rejectedNeighborhoods.includes(item.canonical)) rejectedNeighborhoods.push(item.canonical);
+      } else {
+        if (!acceptedNeighborhoods.includes(item.canonical)) acceptedNeighborhoods.push(item.canonical);
+      }
+      pos += item.lower.length;
+    }
+  }
+  const validNeighborhoods = acceptedNeighborhoods.filter((b) => !rejectedNeighborhoods.includes(b));
+  if (validNeighborhoods.length > 0) {
+    zone = validNeighborhoods[0];
+  }
+  if (!zone) {
+    if (clean.includes("north point") || clean.includes("north point lift") || clean.includes("san cristobal norte") || clean.includes("san crist\xF3bal norte")) zone = "San Crist\xF3bal Norte";
+    else if (clean.includes("alameda 170") || clean.includes("alameda norte") || clean.includes("la alameda") || clean.includes("barrio alameda") || clean.includes("alameda")) zone = "La Alameda";
+    else if (clean.includes("san antonio noroccidental") || clean.includes("san antonio norte")) zone = "San Antonio Norte";
+    else if (clean.includes("villa magdala")) zone = "Villa Magdala";
+    else if (clean.includes("chico reservado")) zone = "Chic\xF3 Reservado";
+    else if (clean.includes("chico norte")) zone = "Chic\xF3 Norte";
+    else if (clean.includes("chico navarra")) zone = "Chic\xF3 Navarra";
+    else if (clean.includes("rincon del chico") || clean.includes("rinc\xF3n del chic\xF3")) zone = "Rinc\xF3n del Chic\xF3";
+    else if (clean.includes("el chico") || clean.includes("chico") || clean.includes("chic\xF3")) zone = "Chic\xF3";
+    else if (clean.includes("santa barbara central") || clean.includes("santa b\xE1rbara central") || clean.includes("santa barbara (central)")) zone = "Santa B\xE1rbara Central";
+    else if (clean.includes("santa barbara occidental") || clean.includes("santa b\xE1rbara occidental")) zone = "Santa B\xE1rbara Occidental";
+    else if (clean.includes("santa barbara oriental") || clean.includes("santa b\xE1rbara oriental")) zone = "Santa B\xE1rbara Oriental";
+    else if (clean.includes("santa barbara alta") || clean.includes("santa b\xE1rbara alta")) zone = "Santa B\xE1rbara Alta";
+    else if (clean.includes("santa barbara") || clean.includes("santa b\xE1rbara")) zone = "Santa B\xE1rbara";
+    else if (clean.includes("santa paula")) zone = "Santa Paula";
+    else if (clean.includes("santa bibiana")) zone = "Santa Bibiana";
+    else if (clean.includes("san patricio")) zone = "San Patricio";
+    else if (clean.includes("santa teresa")) zone = "Santa Teresa";
+    else if (clean.includes("santa ana oriental") || clean.includes("santa ana alta")) zone = "Santa Ana Oriental";
+    else if (clean.includes("santa ana occidental")) zone = "Santa Ana Occidental";
+    else if (clean.includes("santa ana")) zone = "Santa Ana";
+    else if (clean.includes("la cabrera") || clean.includes("cabrera")) zone = "La Cabrera";
+    else if (clean.includes("rosales alto") || clean.includes("los rosales alto") || clean.includes("rosales parte alta") || clean.includes("rosales arriba")) zone = "Rosales Alto";
+    else if (clean.includes("rosales bajo") || clean.includes("los rosales bajo") || clean.includes("rosales parte baja") || clean.includes("rosales abajo") || clean.includes("rosales plano")) zone = "Rosales Bajo";
+    else if (clean.includes("rosales") || clean.includes("los rosales")) zone = "Rosales";
+    else if (clean.includes("el nogal") || clean.includes("nogal")) zone = "El Nogal";
+    else if (clean.includes("el virrey") || clean.includes("virrey")) zone = "El Virrey";
+    else if (clean.includes("el retiro")) zone = "El Retiro";
+    else if (clean.includes("el refugio")) zone = "El Refugio";
+    else if (clean.includes("quinta camacho")) zone = "Quinta Camacho";
+    else if (clean.includes("antiguo country")) zone = "Antiguo Country";
+    else if (clean.includes("country club") || clean.includes("el country")) zone = "Country Club";
+    else if (clean.includes("calleja alta") || clean.includes("la calleja alta")) zone = "Calleja Alta";
+    else if (clean.includes("calleja baja") || clean.includes("la calleja baja")) zone = "Calleja Baja";
+    else if (clean.includes("la calleja") || clean.includes("calleja")) zone = "La Calleja";
+    else if (clean.includes("la carolina") || clean.includes("carolina")) zone = "La Carolina";
+    else if (clean.includes("bosque medina")) zone = "Bosque Medina";
+    else if (clean.includes("el contador") || clean.includes("contador")) zone = "El Contador";
+    else if (clean.includes("alcala") || clean.includes("alcal\xE1")) zone = "Alcal\xE1";
+    else if (clean.includes("belmira")) zone = "Belmira";
+    else if (clean.includes("la castellana") || clean.includes("castellana")) zone = "La Castellana";
+    else if (clean.includes("polo club") || clean.includes("polo")) zone = "Polo Club";
+    else if (clean.includes("san felipe")) zone = "San Felipe";
+    else if (clean.includes("emaus") || clean.includes("ema\xFAs")) zone = "Ema\xFAs";
+    else if (clean.includes("colina campestre") || clean.includes("colina")) zone = "Colina Campestre";
+    else if (clean.includes("ciudad melendez") || clean.includes("ciudad mel\xE9ndez")) zone = "Ciudad Mel\xE9ndez";
+    else if (clean.includes("ciudad jardin norte") || clean.includes("ciudad jard\xEDn norte")) zone = "Ciudad Jard\xEDn Norte";
+    else if (clean.includes("ciudad jardin sur") || clean.includes("ciudad jard\xEDn sur")) zone = "Ciudad Jard\xEDn Sur";
+    else if (clean.includes("ciudad jardin") || clean.includes("ciudad jard\xEDn")) zone = "Ciudad Jard\xEDn";
+    else if (clean.includes("alamos norte") || clean.includes("\xE1lamos norte")) zone = "\xC1lamos Norte";
+    else if (clean.includes("alamos sur") || clean.includes("\xE1lamos sur")) zone = "\xC1lamos Sur";
+    else if (clean.includes("alamos") || clean.includes("\xE1lamos")) zone = "\xC1lamos";
+    else if (clean.includes("candelaria centro") || clean.includes("la candelaria centro")) zone = "La Candelaria Centro";
+    else if (clean.includes("candelaria la nueva") || clean.includes("candelaria sur")) zone = "Candelaria la Nueva";
+    else if (clean.includes("la candelaria") || clean.includes("candelaria")) zone = "La Candelaria";
+    else if (clean.includes("nuevo country")) zone = "Nuevo Country";
+    else if (clean.includes("niza norte")) zone = "Niza Norte";
+    else if (clean.includes("niza")) zone = "Niza";
+    else if (clean.includes("bella suiza")) zone = "Bella Suiza";
+    else if (clean.includes("lisboa")) zone = "Lisboa";
+    else if (clean.includes("alejandria") || clean.includes("alejandr\xEDa")) zone = "Alejandr\xEDa";
+    else if (clean.includes("carmel club") || clean.includes("carmel")) zone = "Carmel Club";
+    else if (clean.includes("cantalejo")) zone = "Cantalejo";
+    else if (clean.includes("sotavento")) zone = "Sotavento";
+    else if (clean.includes("san jose de bavaria") || clean.includes("san jos\xE9 de bavaria")) zone = "San Jos\xE9 de Bavaria";
+  } else if (clean.includes("cedritos") || clean.includes("los cedros")) zone = "Cedritos";
+  else if (clean.includes("toberin") || clean.includes("tober\xEDn")) zone = "Tober\xEDn";
+  else if (clean.includes("mazuren") || clean.includes("mazur\xE9n")) zone = "Mazur\xE9n";
+  else if (clean.includes("mirandela")) zone = "Mirandela";
+  else if (clean.includes("portales del norte")) zone = "Portales del Norte";
+  else if (clean.includes("victoria norte")) zone = "Victoria Norte";
+  else if (clean.includes("prado veraniego")) zone = "Prado Veraniego";
+  else if (clean.includes("la floresta") || clean.includes("floresta")) zone = "La Floresta";
+  else if (clean.includes("pontevedra")) zone = "Pontevedra";
+  else if (clean.includes("morato")) zone = "Morato";
+  else if (clean.includes("alhambra") || clean.includes("la alhambra")) zone = "Alhambra";
+  else if (clean.includes("batan") || clean.includes("bat\xE1n") || clean.includes("el batan")) zone = "Bat\xE1n";
+  else if (clean.includes("pasadena")) zone = "Pasadena";
+  else if (clean.includes("ciudad salitre") || clean.includes("salitre")) zone = "Ciudad Salitre";
+  else if (clean.includes("modelia")) zone = "Modelia";
+  else if (clean.includes("hayuelos")) zone = "Hayuelos";
+  else if (clean.includes("fontibon") || clean.includes("fontib\xF3n")) zone = "Fontib\xF3n";
+  else if (clean.includes("nicolas de federmann") || clean.includes("federmann")) zone = "Nicol\xE1s de Federmann";
+  else if (clean.includes("la esmeralda")) zone = "La Esmeralda";
+  else if (clean.includes("quinta paredes")) zone = "Quinta Paredes";
+  else if (clean.includes("palermo")) zone = "Palermo";
+  else if (clean.includes("teusaquillo")) zone = "Teusaquillo";
+  else if (clean.includes("chapinero alto")) zone = "Chapinero Alto";
+  else if (clean.includes("chapinero central")) zone = "Chapinero Central";
+  else if (clean.includes("chapinero")) zone = "Chapinero";
+  else if (clean.includes("usaquen") || clean.includes("usaqu\xE9n")) zone = "Usaqu\xE9n";
+  if (!zone) {
+    try {
+      const bounds = parseStreetCarreraBoundaries(text2);
+      if (bounds.minStreet && bounds.maxStreet) {
+        const defaultMaxCra = bounds.maxStreet <= 100 ? 20 : 45;
+        const idecaRes = lookupBarriosByPerimeter({
+          calleNorte: bounds.maxStreet,
+          calleSur: bounds.minStreet,
+          craOriente: bounds.minCarrera || 1,
+          craOccidente: bounds.maxCarrera || defaultMaxCra,
+          ciudad: "bogota"
+        });
+        if (idecaRes.barrios && idecaRes.barrios.length > 0) {
+          const preferred = idecaRes.barrios.find((b) => b.toLowerCase().includes("chico") || b.toLowerCase().includes("cabrera")) || idecaRes.barrios[0];
+          zone = preferred;
+          if (!city) city = "Bogot\xE1, D.C.";
+        }
+      }
+    } catch (e) {
+    }
+  }
+  const noTerceriaMatch = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(clean);
+  const aceptaTerceria = !noTerceriaMatch;
+  const standByDirectoVecy = noTerceriaMatch;
+  const requiresObligatoryStudy = /\b(?:con\s*estudio\s*obligatorio|estudio\s*obligatorio|exige\s*estudio|estudio\s*indispensable|estudio\s*(?:ojal[aá]\s*)?cerrado)\b/i.test(clean);
+  const hasStudy = requiresObligatoryStudy || clean.includes("estudio") || clean.includes("star de tv") || clean.includes("estar de tv") || clean.includes("sala de tv") || clean.includes("home office");
+  const pisoMinMatch = clean.match(/(?:unicamente\s*ven\s*opciones\s*del\s*piso|del\s*piso|piso|pisos)\s*(\d{1,2})\s*(?:hacia\s*arriba|en\s*adelante|o\s*superior|\+|\s*mas)\b/i);
+  const pisoMinimo = pisoMinMatch ? parseInt(pisoMinMatch[1], 10) : null;
+  const requiresExterior = /\b(?:muy\s*luminoso|vista\s*agradable|vista\s*exterior|exterior\s*muy\s*iluminado|vista\s*panor[aá]mica|exterior|sin\s*interior)\b/i.test(clean);
+  const interiorExterior = requiresExterior ? "exterior" : clean.includes("interior") && !clean.includes("exterior") ? "interior" : null;
+  const adminFeeIncluded = /(?:admin(?:istraci[oó]n)?|admon)\s*(?:incluida|inc\b)|(?:con|\+|mas|más)\s*(?:admin(?:istraci[oó]n)?|admon)/i.test(clean);
+  const isAmoblado = /\b(?:amoblado|amoblada|con\s*muebles|completamente\s*amoblado|dotado)\b/i.test(clean);
+  const result = {
+    propertyType,
+    transactionType,
+    tipoInmuebleDeseado: propertyType,
+    tipoNegocioDeseado: transactionType,
+    price,
+    presupuestoMin: presupuestoMin > 0 ? presupuestoMin : null,
+    presupuestoMax: presupuestoMax > 0 ? presupuestoMax : price,
+    rentPrice: rentPrice > 0 ? rentPrice : null,
+    adminFee: adminFee > 0 ? adminFee : null,
+    adminFeeIncluded,
+    area,
+    areaMin: areaMin > 0 ? areaMin : area > 0 ? area : null,
+    areaMax: areaMax > 0 ? areaMax : area > 0 ? area : null,
+    bedrooms,
+    bedroomsMin: bedroomsMin > 0 ? bedroomsMin : bedrooms > 0 ? bedrooms : null,
+    bedroomsMax: bedroomsMax > 0 ? bedroomsMax : bedrooms > 0 ? bedrooms : null,
+    bathrooms,
+    garages,
+    garageType,
+    antiguedadAnos,
+    hasBalcony,
+    hasTerrace,
+    hasStorage,
+    hasElevator,
+    kitchenType,
+    hasServiceRoom,
+    floorType,
+    sunlightOrientation,
+    hasPowerPlant,
+    hasVisitorParking,
+    hasHeating,
+    city,
+    ciudadDeseada: city,
+    zone,
+    zonaDeseada: zone,
+    aceptaTerceria,
+    standByDirectoVecy,
+    requiresObligatoryStudy,
+    hasStudy,
+    pisoMinimo,
+    interiorExterior,
+    isAmoblado,
+    caracteristicasDeseadas: {
+      estudio: requiresObligatoryStudy ? "obligatorio" : hasStudy ? "deseado" : null,
+      pisoMinimo,
+      interiorExterior,
+      adminFeeIncluded,
+      amoblado: isAmoblado ? true : null
+    }
+  };
+  if (cacheKey.length < 5e3) {
+    if (fallbackDataCache.size > 3e3) {
+      fallbackDataCache.clear();
+    }
+    fallbackDataCache.set(cacheKey, result);
+  }
+  return result;
+}
+async function enrichLexiconFromText(rawText) {
+  if (!rawText || rawText.length < 15) return;
+  const clean = rawText.toLowerCase();
+  const patterns = [
+    { match: /\b(cbs|cuarto\s+y\s+ba[ñn]o\s+de\s+servicio|alcoba\s+(?:para\s+el\s+)?servicio|cuarto\s+de\s+empleada)\b/i, cat: "espacio", can: "cuarto_bano_servicio" },
+    { match: /\b(cocina\s+(?:cerrada|abierta|tipo\s+isla|americana))\b/i, cat: "espacio", can: "tipologia_cocina" },
+    { match: /\b(pisos?\s*(?:en\s*)?(?:madera\s+maciza|madera|laminado|porcelanato|m[aá]rmol|cer[aá]mica))\b/i, cat: "acabado", can: "tipo_piso" },
+    { match: /\b(luz\s+de\s+(?:la\s+)?ma[ñn]ana|sol\s+de\s+(?:la\s+)?tarde|exterior\s+iluminado)\b/i, cat: "ambiente", can: "orientacion_asoleacion" },
+    { match: /\b(planta\s+el[eé]ctrica|suplencia\s+total|planta\s+total)\b/i, cat: "infraestructura", can: "planta_electrica" },
+    { match: /\b(parqueadero\s*(?:para\s*)?visitantes?|parqueo\s+visitantes?)\b/i, cat: "amenidad", can: "parqueadero_visitantes" },
+    { match: /\b(star\s+de\s+tv|hall\s+de\s+alcobas|estar\s+de\s+tv)\b/i, cat: "espacio", can: "estar_television" },
+    { match: /\b(calentador\s+de\s+paso|caldera\s+central)\b/i, cat: "equipamiento", can: "calentador_agua" },
+    { match: /\b(chimenea\s+(?:tradicional|a\s+gas|ecol[oó]gica))\b/i, cat: "equipamiento", can: "chimenea" }
+  ];
+  try {
+    const db = await getDb();
+    if (!db) return;
+    for (const p of patterns) {
+      const m = clean.match(p.match);
+      if (m && m[1]) {
+        const term = m[1].toLowerCase().trim();
+        await db.insert(inmobiliarioLexicon).values({
+          terminoColoquial: term,
+          categoria: p.cat,
+          conceptoCanonico: p.can,
+          frecuenciaUso: 1,
+          origen: "ia_autodescubierto"
+        }).onConflictDoUpdate({
+          target: inmobiliarioLexicon.terminoColoquial,
+          set: {
+            frecuenciaUso: sql4`${inmobiliarioLexicon.frecuenciaUso} + 1`,
+            updatedAt: /* @__PURE__ */ new Date()
+          }
+        });
+      }
+    }
+  } catch (e) {
+  }
+}
+function translatePropertyType(type) {
+  const map = {
+    apartment: "Apartamento",
+    house: "Casa",
+    building: "Edificio",
+    warehouse: "Bodega",
+    office: "Oficina",
+    farm: "Finca",
+    land: "Lote",
+    loft: "Loft",
+    consultorio: "Consultorio"
+  };
+  return map[type?.toLowerCase()] || capitalize(type || "inmueble");
+}
+function translateTransactionType(type) {
+  const map = {
+    venta: "VENTA",
+    arriendo: "ARRIENDO",
+    venta_o_arriendo: "VENTA O ARRIENDO",
+    arriendo_temporal: "ARRIENDO TEMPORAL",
+    arriendo_con_opcion_de_compra: "ARRIENDO CON OPCI\xD3N DE COMPRA",
+    permuta: "PERMUTA",
+    venta_permuta: "VENTA / PERMUTA",
+    aporte: "APORTE"
+  };
+  return map[type?.toLowerCase()] || String(type || "negocio").toUpperCase();
+}
+async function getTimeOfDayGreetingForUser(phone, realName, alreadyGreeted, isGroup = false) {
+  const d = /* @__PURE__ */ new Date();
+  const bogotaStr = d.toLocaleString("en-US", { timeZone: "America/Bogota" });
+  const bogotaDate = new Date(bogotaStr);
+  const hour = bogotaDate.getHours();
+  let salutation = "";
+  if (hour >= 5 && hour < 12) {
+    salutation = "Buenos d\xEDas";
+  } else if (hour >= 12 && hour < 18) {
+    salutation = "Buenas tardes";
+  } else {
+    salutation = "Buenas noches";
+  }
+  let nameToUse = realName;
+  try {
+    const db = await getDb();
+    if (db) {
+      const [u] = await db.select().from(users).where(eq5(users.phone, phone)).limit(1);
+      if (u && u.name && u.name.trim() !== "") {
+        nameToUse = u.name;
+      }
+    }
+  } catch (e) {
+    console.warn("[JanIA-Greeting] Error buscando nombre de usuario para saludo:", e);
+  }
+  const firstName = extractFirstName(nameToUse);
+  if (alreadyGreeted) {
+    return firstName ? `Mira ${firstName}` : `Mira`;
+  } else {
+    return firstName ? `${salutation} ${firstName}` : `${salutation}`;
+  }
+}
+function resolveContactPhone(userId, rawText, userName, extractedPhone) {
+  const cleanUserId = userId.split(":")[0].split("@")[0];
+  const isLid = isLidIdentifier(cleanUserId) || userId.includes("@lid");
+  const phoneFromText = extractColombianPhoneFromText(rawText);
+  if (phoneFromText) {
+    brokerDirectoryCache.set(cleanUserId, { phone: phoneFromText, name: userName });
+    if (userName && !isGenericName(userName)) brokerDirectoryCache.set(userName, { phone: phoneFromText, name: userName });
+    saveOrUpdateAdvisor({
+      phone: phoneFromText,
+      name: userName,
+      oldPhoneOrLid: cleanUserId
+    }).catch((err) => console.warn(`[AdvisorsCore] Auto-registro desde texto:`, err?.message));
+    return phoneFromText;
+  }
+  if (extractedPhone) {
+    const cleanExt = normalizeAdvisorPhone(extractedPhone);
+    if (cleanExt) {
+      brokerDirectoryCache.set(cleanUserId, { phone: cleanExt, name: userName });
+      saveOrUpdateAdvisor({
+        phone: cleanExt,
+        name: userName,
+        oldPhoneOrLid: cleanUserId
+      }).catch((err) => console.warn(`[AdvisorsCore] Auto-registro desde LLM:`, err?.message));
+      return cleanExt;
+    }
+  }
+  const cached = lookupAdvisorSync(cleanUserId, userName);
+  if (cached && cached.phone) {
+    return cached.phone;
+  }
+  if (!isLid && (cleanUserId.startsWith("573") || cleanUserId.startsWith("3"))) {
+    const p = cleanUserId.startsWith("3") && cleanUserId.length === 10 ? `57${cleanUserId}` : cleanUserId;
+    brokerDirectoryCache.set(cleanUserId, { phone: p, name: userName });
+    return p;
+  }
+  return cleanUserId;
+}
+function calcularCalificacionCompletitud(extracted, isProperty) {
+  if (!extracted) return { score: 0, label: "Mediocre" };
+  let fieldsCount = 7;
+  let presentCount = 0;
+  const priceVal = isProperty ? extracted.price : extracted.presupuestoMax || extracted.presupuestoMin || extracted.price;
+  if (priceVal !== void 0 && priceVal !== null && String(priceVal).trim() !== "" && String(priceVal) !== "0") {
+    presentCount++;
+  }
+  const areaVal = isProperty ? extracted.areaTotal || extracted.area : extracted.areaMin || extracted.area;
+  if (areaVal !== void 0 && areaVal !== null && String(areaVal).trim() !== "" && String(areaVal) !== "0") {
+    presentCount++;
+  }
+  const bedroomsVal = isProperty ? extracted.bedrooms : extracted.habitacionesMin || extracted.bedrooms;
+  if (bedroomsVal !== void 0 && bedroomsVal !== null && String(bedroomsVal).trim() !== "" && Number(bedroomsVal) > 0) {
+    presentCount++;
+  }
+  const bathroomsVal = isProperty ? extracted.bathrooms : extracted.banosMin || extracted.bathrooms;
+  if (bathroomsVal !== void 0 && bathroomsVal !== null && String(bathroomsVal).trim() !== "" && Number(bathroomsVal) > 0) {
+    presentCount++;
+  }
+  const garagesVal = isProperty ? extracted.garages : extracted.parqueaderosMin || extracted.garages;
+  if (garagesVal !== void 0 && garagesVal !== null && String(garagesVal).trim() !== "" && Number(garagesVal) >= 0) {
+    presentCount++;
+  }
+  const zoneVal = isProperty ? extracted.zone : extracted.zonaDeseada || extracted.zone;
+  if (zoneVal !== void 0 && zoneVal !== null && String(zoneVal).trim() !== "" && String(zoneVal).toLowerCase() !== "bogot\xE1" && String(zoneVal).toLowerCase() !== "bogota") {
+    presentCount++;
+  }
+  const contactVal = extracted.idUsuarioWhatsapp;
+  if (contactVal !== void 0 && contactVal !== null && String(contactVal).trim() !== "") {
+    presentCount++;
+  }
+  const score = presentCount / fieldsCount * 100;
+  let label = "Mediocre";
+  if (score < 30) {
+    label = "Mediocre";
+  } else if (score >= 30 && score < 45) {
+    label = "Incompleta";
+  } else if (score >= 45 && score < 60) {
+    label = "Regular";
+  } else if (score >= 60 && score < 70) {
+    label = "Mejor";
+  } else if (score >= 70 && score < 85) {
+    label = "Bien";
+  } else if (score >= 85 && score < 95) {
+    label = "Perfecta";
+  } else {
+    label = "Excelente";
+  }
+  return { score, label };
+}
+function getEmojiForCalificacion(calificacion) {
+  switch (calificacion) {
+    case "Mediocre":
+    case "Incompleta":
+    case "DATOS_INCOMPLETOS":
+      return "\u{1F914}";
+    case "Regular":
+    case "Mejor":
+    case "Bien":
+    case "Perfecta":
+    case "Excelente":
+      return "\u{1F7E2}";
+    case "INVALID_LEAD":
+    case "VIOLACION_DE_NORMAS":
+      return "\u274C";
+    default:
+      return "\u{1F7E2}";
+  }
+}
+function normalizePhoneNumber(rawUserJid, textContent) {
+  if (textContent) {
+    const match = textContent.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/);
+    if (match) {
+      const cleanDigits = match[0].replace(/\D/g, "");
+      if (cleanDigits.length === 10 && cleanDigits.startsWith("3")) {
+        return cleanDigits;
+      }
+      if (cleanDigits.length === 12 && cleanDigits.startsWith("573")) {
+        return `+${cleanDigits}`;
+      }
+    }
+  }
+  if (rawUserJid) {
+    const clean = String(rawUserJid).split("@")[0].split(":")[0].replace(/\D/g, "");
+    if (!clean.startsWith("11") && !clean.startsWith("1203") && clean.length <= 13) {
+      if (clean.length === 10 && clean.startsWith("3")) {
+        return clean;
+      }
+      if (clean.length === 12 && clean.startsWith("573")) {
+        return `+${clean}`;
+      }
+      if (clean.length >= 10 && clean.length <= 12) {
+        return clean;
+      }
+    }
+  }
+  return "";
+}
+function capitalize(text2) {
+  if (!text2) return "";
+  return text2.charAt(0).toUpperCase() + text2.slice(1);
+}
+function sanitizeGeoString(val) {
+  if (!val || typeof val !== "string") return "";
+  let clean = val.trim();
+  clean = clean.split(/\(|\n|Nota:|estimado|según/i)[0].trim();
+  clean = clean.replace(/[\.\,\;\:]+$/, "").trim();
+  if (clean.length > 60) {
+    clean = clean.substring(0, 60).trim();
+  }
+  return clean;
+}
+function sanitizeResponseMarkdown(text2) {
+  if (!text2) return "";
+  return text2.replace(/\*\*/g, "*");
+}
+var COMMON_FIRST_NAMES, fallbackDataCache, KNOWN_BARRIOS_SORTED_ITEMS;
+var init_parsers = __esm({
+  "server/_core/jania/parsers.ts"() {
+    "use strict";
+    init_db();
+    init_schema();
+    init_colombianRealEstateParser();
+    init_matching();
+    init_geo_lookup();
+    init_advisors();
+    COMMON_FIRST_NAMES = /* @__PURE__ */ new Set([
+      "juan",
+      "ana",
+      "maria",
+      "mar\xEDa",
+      "jose",
+      "jos\xE9",
+      "luis",
+      "carlos",
+      "jorge",
+      "victor",
+      "v\xEDctor",
+      "sandra",
+      "diana",
+      "laura",
+      "gloria",
+      "eduardo",
+      "flor",
+      "esteban",
+      "pedro",
+      "julio",
+      "oscar",
+      "\xF3scar",
+      "angela",
+      "\xE1ngela",
+      "pablo",
+      "arturo",
+      "alba",
+      "fernanda",
+      "alberto",
+      "david",
+      "manuel",
+      "fernando",
+      "alejandro",
+      "andres",
+      "andr\xE9s",
+      "felipe",
+      "milena",
+      "patricia",
+      "cristina",
+      "beatriz",
+      "isabel",
+      "helena",
+      "elena",
+      "sofia",
+      "sof\xEDa",
+      "lucia",
+      "luc\xEDa",
+      "carolina",
+      "claudia",
+      "marta",
+      "martha",
+      "adriana",
+      "diego",
+      "javier",
+      "camilo",
+      "santiago",
+      "alejandra",
+      "paola",
+      "liliana",
+      "elizabeth",
+      "esperanza",
+      "yolanda",
+      "blanca",
+      "rosa",
+      "carmen",
+      "teresa",
+      "cecilia",
+      "ines",
+      "in\xE9s",
+      "amparo",
+      "pilar",
+      "rocio",
+      "roc\xEDo",
+      "soraya",
+      "johanna",
+      "yudy",
+      "judy",
+      "tatiana",
+      "mateo",
+      "sebastian",
+      "sebasti\xE1n",
+      "nicolas",
+      "nicol\xE1s",
+      "daniel",
+      "cristian",
+      "jhon",
+      "john",
+      "alexander",
+      "gustavo",
+      "hernando",
+      "alvaro",
+      "\xE1lvaro",
+      "humberto",
+      "jaime",
+      "ricardo",
+      "mauricio",
+      "cesar",
+      "c\xE9sar",
+      "nelson",
+      "ruben",
+      "rub\xE9n",
+      "ivan",
+      "iv\xE1n",
+      "wilson",
+      "olga",
+      "luz",
+      "stella",
+      "estela",
+      // Nombres compuestos tradicionales colombianos
+      "orlando",
+      "guillermo",
+      "enrique",
+      "antonio",
+      "ignacio",
+      "ramiro",
+      "gonzalo",
+      "rodrigo",
+      "armando",
+      "alfredo",
+      "eugenio",
+      "gabriel",
+      "dario",
+      "dar\xEDo",
+      "vicente",
+      "francisco",
+      "gerardo",
+      "leonardo",
+      "raul",
+      "ra\xFAl",
+      "rafael",
+      "alonso",
+      "alfonso",
+      "mercedes",
+      "eugenia",
+      "victoria",
+      "andrea",
+      "daniela",
+      "camila",
+      "valentina",
+      "gabriela",
+      "catalina",
+      "juliana",
+      "luciana",
+      "mariana",
+      "natalia",
+      "vanessa",
+      "lorena",
+      "viviana",
+      "ximena",
+      "jimena",
+      // Nombres adicionales colombianos (femeninos y compuestos)
+      "consuelo",
+      "marina",
+      "mery",
+      "dary",
+      "myriam",
+      "miriam",
+      "marcela",
+      "sonia",
+      "astrid",
+      "gladys",
+      "nohora",
+      "raquel",
+      "karen",
+      "mabel",
+      "belen",
+      "bel\xE9n",
+      "rosario",
+      "socorro",
+      "fabiola",
+      "dora",
+      "lucero",
+      "yamile",
+      "leidy",
+      "leidys",
+      "yeimy",
+      "ingrid",
+      "katherine",
+      "catherine",
+      "stefany",
+      "stephanie",
+      "jeannette",
+      "jeanette",
+      "janeth",
+      "janet",
+      "jenny",
+      "jennifer"
+    ]);
+    fallbackDataCache = /* @__PURE__ */ new Map();
+    KNOWN_BARRIOS_SORTED_ITEMS = [
+      "Santa B\xE1rbara Occidental",
+      "Santa B\xE1rbara Oriental",
+      "Santa B\xE1rbara Central",
+      "Santa B\xE1rbara Alta",
+      "Santa B\xE1rbara",
+      "Santa Ana Occidental",
+      "Santa Ana Oriental",
+      "Santa Ana Alta",
+      "Santa Ana Central",
+      "Santa Ana",
+      "San Crist\xF3bal Norte",
+      "La Alameda",
+      "San Antonio Norte",
+      "Villa Magdala",
+      "Chic\xF3 Reservado",
+      "Chic\xF3 Norte",
+      "Chic\xF3 Navarra",
+      "Rinc\xF3n del Chic\xF3",
+      "El Chic\xF3",
+      "Chic\xF3",
+      "Santa Paula",
+      "Santa Bibiana",
+      "San Patricio",
+      "Santa Teresa",
+      "La Cabrera",
+      "Cabrera",
+      "Los Rosales Alto",
+      "Rosales Alto",
+      "Los Rosales Bajo",
+      "Rosales Bajo",
+      "Los Rosales",
+      "Rosales",
+      "El Nogal",
+      "Nogal",
+      "El Virrey",
+      "El Retiro",
+      "El Refugio",
+      "Refugio",
+      "Quinta Camacho",
+      "Antiguo Country",
+      "Country Club",
+      "La Calleja",
+      "Calleja Alta",
+      "Calleja Baja",
+      "La Carolina",
+      "Bosque Medina",
+      "El Contador",
+      "Alcal\xE1",
+      "Belmira",
+      "La Castellana",
+      "Polo Club",
+      "San Felipe",
+      "Ema\xFAs",
+      "Colina Campestre",
+      "Ciudad Mel\xE9ndez",
+      "Ciudad Jard\xEDn Norte",
+      "Ciudad Jard\xEDn Sur",
+      "Ciudad Jard\xEDn",
+      "\xC1lamos Norte",
+      "\xC1lamos Sur",
+      "\xC1lamos",
+      "La Candelaria Centro",
+      "Candelaria la Nueva",
+      "Candelaria Sur",
+      "La Candelaria",
+      "Nuevo Country",
+      "Niza Norte",
+      "Niza",
+      "Bella Suiza",
+      "Lisboa",
+      "Alejandr\xEDa",
+      "Carmel Club",
+      "Cantalejo",
+      "Sotavento",
+      "San Jos\xE9 de Bavaria",
+      "Chapinero Alto",
+      "Chapinero Central",
+      "Chapinero",
+      "Cedritos"
+    ].map((b) => ({ canonical: b, lower: b.toLowerCase() }));
+  }
+});
+
+// server/_core/jania/heuristics.ts
+import axios5 from "axios";
+function isOutsideWorkingHours() {
+  const dateStr = (/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" });
+  const bogotaDate = new Date(dateStr);
+  const weekday = bogotaDate.getDay();
+  const hour = bogotaDate.getHours();
+  if (weekday === 0) {
+    return true;
+  }
+  if (weekday === 6) {
+    return hour < 8 || hour >= 18;
+  }
+  return hour < 8 || hour >= 20;
+}
+function esMensajeSpamOBasura(text2) {
+  if (!text2 || text2.trim() === "") return { isSpam: false, reason: "" };
+  const n = text2.toLowerCase();
+  if (n.includes("zoom.us") || n.includes("meet.google.com") || n.includes("teams.microsoft.com") || n.includes("webinar") || n.includes("masterclass") || n.includes("capacitacion") || n.includes("capacitaci\xF3n") || n.includes("seminario") || n.includes("taller de ventas") || n.includes("curso de") || n.includes("congreso de") || n.includes("evento inmobiliario") || n.includes("inmoverso")) {
+    return { isSpam: true, reason: "Invitaci\xF3n a evento, Zoom, Meet, webinar o masterclass externa." };
+  }
+  if (n.includes("coaching") || n.includes("red de mercadeo") || n.includes("multinivel") || n.includes("gana dinero desde casa") || n.includes("servicio de marketing") || n.includes("agencia de publicidad") || n.includes("software inmobiliario") || n.includes("te regalo una guia") || n.includes("te regalo un ebook")) {
+    return { isSpam: true, reason: "Publicidad de terceros, marketing no predial o coaching." };
+  }
+  if (n.includes("vota por") || n.includes("partido politico") || n.includes("partido pol\xEDtico") || n.includes("candidato") || n.includes("elecciones") || n.includes("cadena de oracion") || n.includes("cadena de oraci\xF3n") || n.includes("comparte esta cadena")) {
+    return { isSpam: true, reason: "Contenido pol\xEDtico, ideol\xF3gico o cadenas de spam." };
+  }
+  return { isSpam: false, reason: "" };
+}
+async function scrapeUrlWithBypass(url) {
+  const cleanUrl = url.trim();
+  const zenrowsKey = process.env.ZENROWS_API_KEY;
+  if (zenrowsKey) {
+    try {
+      console.log(`[Scraper-Bypass] Intentando extraer con ZenRows: ${cleanUrl}`);
+      const response = await axios5.get("https://api.zenrows.com/v1/", {
+        params: {
+          key: zenrowsKey,
+          url: cleanUrl,
+          js_render: "true",
+          premium_proxy: "true",
+          markdown: "true"
+        },
+        timeout: 2e4
+      });
+      if (response.status === 200 && response.data) {
+        return typeof response.data === "string" ? response.data : JSON.stringify(response.data);
+      }
+    } catch (err) {
+      console.warn(`[Scraper-Bypass] Error en ZenRows para ${cleanUrl}:`, err.message);
+    }
+  }
+  const scrapingbeeKey = process.env.SCRAPINGBEE_API_KEY;
+  if (scrapingbeeKey) {
+    try {
+      console.log(`[Scraper-Bypass] Intentando extraer con ScrapingBee: ${cleanUrl}`);
+      const response = await axios5.get("https://app.scrapingbee.com/api/v1/", {
+        params: {
+          api_key: scrapingbeeKey,
+          url: cleanUrl,
+          render_js: "true",
+          premium_proxy: "true"
+        },
+        timeout: 2e4
+      });
+      if (response.status === 200 && response.data) {
+        return typeof response.data === "string" ? response.data : JSON.stringify(response.data);
+      }
+    } catch (err) {
+      console.warn(`[Scraper-Bypass] Error en ScrapingBee para ${cleanUrl}:`, err.message);
+    }
+  }
+  const firecrawlKey = process.env.FIRECRAWL_API_KEY;
+  if (firecrawlKey) {
+    try {
+      console.log(`[Scraper-Bypass] Intentando extraer con Firecrawl: ${cleanUrl}`);
+      const response = await axios5.post("https://api.firecrawl.dev/v1/scrape", {
+        url: cleanUrl,
+        formats: ["markdown"]
+      }, {
+        headers: {
+          "Authorization": `Bearer ${firecrawlKey}`,
+          "Content-Type": "application/json"
+        },
+        timeout: 2e4
+      });
+      if (response.status === 200 && response.data && response.data.data && response.data.data.markdown) {
+        return response.data.data.markdown;
+      }
+    } catch (err) {
+      console.warn(`[Scraper-Bypass] Error en Firecrawl para ${cleanUrl}:`, err.message);
+    }
+  }
+  try {
+    console.log(`[Scraper-Bypass] Usando Jina Reader como fallback para: ${cleanUrl}`);
+    const jinaUrl = `https://r.jina.ai/${encodeURIComponent(cleanUrl)}`;
+    const response = await axios5.get(jinaUrl, {
+      timeout: 1e4,
+      headers: {
+        "Accept": "text/plain",
+        "X-Return-Format": "markdown"
+      }
+    });
+    if (response.status === 200 && response.data) {
+      return typeof response.data === "string" ? response.data : JSON.stringify(response.data);
+    }
+  } catch (error) {
+    console.warn(`[Scraper-Bypass] Fall\xF3 el fallback de Jina Reader para ${cleanUrl}:`, error.message);
+  }
+  return "";
+}
+function evaluateMultiItemHeuristics(text2) {
+  if (!text2 || text2.length < 100) return { isMultiItem: false, score: 0, signals: [] };
+  const signals = [];
+  const h1HeaderMatches = text2.match(/(?:[⬆️🏬🚨📌✨⭐👉1️⃣2️⃣3️⃣•]+|(?:\(🙏🏻\))|(?:ATL)|(?:\b(?:VENTA|ARRIENDO|BUSCO|SE VENDE|SE ARRIENDA|COMPRO)\b))/gi) || [];
+  const h1RepeatedHeaders = h1HeaderMatches.length >= 3;
+  if (h1RepeatedHeaders) signals.push("H1: Encabezados o emojis repetidos (3+)");
+  let h2NumberReset = false;
+  const numMatches = Array.from(text2.matchAll(/(?:^|\n)\s*(\d{1,2})[\.\)\️⃣]/g));
+  if (numMatches.length >= 2) {
+    let maxSeen = 0;
+    for (const m of numMatches) {
+      const val = parseInt(m[1], 10);
+      if (maxSeen >= 5 && val === 1) {
+        h2NumberReset = true;
+        break;
+      }
+      if (val > maxSeen) maxSeen = val;
+    }
+  }
+  if (h2NumberReset) signals.push("H2: Reinicio de numeraci\xF3n (1. reaparece tras n\xFAmero > 5)");
+  const urlMatches = text2.match(/https?:\/\/[^\s<"']+/gi) || [];
+  if (urlMatches.length >= 2) signals.push(`H3: M\xFAltiples URLs p\xFAblicas (${urlMatches.length} enlaces)`);
+  const h4PatternMatches = text2.match(/(?:\b(?:VENTA|SE VENDE|VENDO|ARRIENDO|SE ARRIENDA|BUSCO|COMPRO)\b\s+(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|PENTHOUSE|DÚPLEX|LOCAL))/gi) || [];
+  if (h4PatternMatches.length >= 2) signals.push(`H4: Repetici\xF3n de patr\xF3n de negocio+inmueble (${h4PatternMatches.length} veces)`);
+  const h5Separators = /(?:\r?\n){1,}\s*(?:_{3,}|-{3,}|={3,}|\*{3,})\s*(?:\r?\n){1,}/.test(text2);
+  if (h5Separators) signals.push("H5: Separadores expl\xEDcitos (---/___)");
+  const score = signals.length;
+  return {
+    isMultiItem: score >= 2,
+    score,
+    signals
+  };
+}
+function cleanAndMergeSubstantiveBlocks(rawList) {
+  const merged = [];
+  for (const b of rawList) {
+    const textNoUrls = b.replace(/https?:\/\/[^\s]+/gi, "").trim();
+    const isTrailer = textNoUrls.length < 35 || /^(?:contacto|info|galer[ií]a|fotos?|link|enlace|agendar|visitas?|escr[ií]beme|ll[aá]mame|whatsapp|asesor)\b/i.test(textNoUrls);
+    if (isTrailer && merged.length > 0) {
+      merged[merged.length - 1] += `
+
+${b}`;
+    } else {
+      merged.push(b);
+    }
+  }
+  return merged.filter((b) => b.trim().length >= 40);
+}
+function splitMultiItemMessage(text2) {
+  if (!text2 || text2.length < 80) return [text2];
+  const delimiterSplit = text2.split(/(?:\r?\n){1,}\s*(?:_{3,}|-{3,}|={3,}|\*{3,})\s*(?:\r?\n){1,}/);
+  if (delimiterSplit.length >= 2) {
+    const validBlocks = cleanAndMergeSubstantiveBlocks(delimiterSplit.map((b) => b.trim()).filter((b) => b.length >= 35));
+    if (validBlocks.length >= 2) {
+      return validBlocks;
+    }
+  }
+  const headerSplitRegex = /(?=(?:^|\n)\s*(?:🚨\s*\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*🚨|\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*[:\n]|\*?Cliente\*?\s*:\s*[A-ZÁÉÍÓÚÑ]|\*?(?:Cliente|Clienta|Comprador|Compradora|Varios clientes|Tengo cliente)\s+(?:compra|compran|busca|buscan|requiere|necesita|solicita)\b|\b(?:VENDO|SE VENDE|ARRIENDO|SE ARRIENDA|BUSCO|SE BUSCA)\s+(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|PENTHOUSE|DÚPLEX)\b|(?:^|\n)\s*(?:[1-9][\.\)\️⃣]|\([1-9]\))\s*(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|VENTA|ARRIENDO|BUSCO|SE VENDE)))/gi;
+  const rawBlocks = cleanAndMergeSubstantiveBlocks(text2.split(headerSplitRegex).map((b) => b.trim()).filter((b) => b.length >= 35));
+  if (rawBlocks.length >= 2) {
+    return rawBlocks;
+  }
+  const paragraphs = text2.split(/(?:\r?\n){2,}/);
+  if (paragraphs.length >= 3) {
+    const blocks = [];
+    let currentBlock = "";
+    for (const p of paragraphs) {
+      const cleanP = p.trim();
+      if (!cleanP) continue;
+      const textWithoutUrls = cleanP.replace(/https?:\/\/[^\s]+/gi, "").replace(/[\r\n\t]+/g, " ").trim();
+      const isContactOrLinkOnly = !textWithoutUrls || textWithoutUrls.length < 35 || /^(?:contacto|info|galer[ií]a|fotos?|m[aá]s\s+info|link|enlace|agendar|visitas?|escr[ií]beme|ll[aá]mame|whatsapp|asesor)\b/i.test(textWithoutUrls);
+      const isNewItem = !isContactOrLinkOnly && /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|APTO|CASA|BUSCO|SOLICITO|ATL|REQUERIMIENTO|CLIENTE|CLIENTA|COMPRADOR|VARIOS CLIENTES)\b/i.test(textWithoutUrls) && /\$|\b\d{3,}\b|\bm2\b|\bhab\b|\bbaños\b|\balcobas\b|\bmm\b|\bmillon/i.test(textWithoutUrls);
+      if (currentBlock && isNewItem) {
+        blocks.push(currentBlock.trim());
+        currentBlock = cleanP;
+      } else {
+        currentBlock = currentBlock ? `${currentBlock}
+
+${cleanP}` : cleanP;
+      }
+    }
+    if (currentBlock) blocks.push(currentBlock.trim());
+    const validParagraphBlocks = cleanAndMergeSubstantiveBlocks(blocks);
+    if (validParagraphBlocks.length >= 2) {
+      return validParagraphBlocks;
+    }
+  }
+  const clientLines = text2.split(/(?:\r?\n)+/).map((l) => l.trim()).filter(Boolean);
+  if (clientLines.length >= 2) {
+    const multiClientItems = clientLines.filter(
+      (l) => /^(?:\*?(?:cliente|clienta|comprador|compradora|varios\s+clientes|tengo\s+cliente)\s+(?:compra|compran|busca|buscan|requiere|necesita|solicita)|(?:busco|buscan|se\s+busca)\s+(?:apto|apartamento|casa|oficina))\b/i.test(l) && l.length >= 35
+    );
+    if (multiClientItems.length >= 2 && multiClientItems.length >= clientLines.length * 0.6) {
+      return multiClientItems;
+    }
+  }
+  return [text2];
+}
+function checkStrictOffTopic(text2) {
+  if (!text2 || text2.trim() === "") return { isOffTopic: false };
+  const clean = text2.toLowerCase();
+  if (clean.includes("chat.whatsapp.com/")) {
+    const isOfficialVecyLink = clean.includes("gzmbjns1p2thi7d0v4h8wz") || clean.includes("j4u1h7nul1i1b1waiytun6") || clean.includes("cszrkr6cr56haiehheauqyu") || clean.includes("0029vb5iyuycmy0a94zqti1b");
+    if (!isOfficialVecyLink) {
+      return { isOffTopic: true, reason: "enlaces de invitaci\xF3n a grupos externos" };
+    }
+  }
+  const politicalKeywords = [
+    "petro",
+    "uribe",
+    "duque",
+    "santos",
+    "rodolfo hernandez",
+    "fico guti\xE9rrez",
+    "claudia l\xF3pez",
+    "partido pol\xEDtico",
+    "partido politico",
+    "campa\xF1a pol\xEDtica",
+    "campa\xF1a politica",
+    "votaciones",
+    "candidato a la alcald\xEDa",
+    "candidato al concejo",
+    "senado",
+    "c\xE1mara de representantes",
+    "consulta popular",
+    "plebiscito",
+    "izquierdista",
+    "derechista",
+    "uribista",
+    "petrista"
+  ];
+  if (politicalKeywords.some((kw) => clean.includes(kw))) {
+    return { isOffTopic: true, reason: "temas pol\xEDticos o proselitismo" };
+  }
+  const religiousKeywords = [
+    "cadena de oraci\xF3n",
+    "cadena de oracion",
+    "reenv\xEDa este mensaje a 10",
+    "reenvia este mensaje a 10",
+    "si amas a dios comparte",
+    "salmo del d\xEDa",
+    "vers\xEDculo del d\xEDa",
+    "evangelio de hoy",
+    "culto de sanaci\xF3n"
+  ];
+  if (religiousKeywords.some((kw) => clean.includes(kw))) {
+    return { isOffTopic: true, reason: "cadenas religiosas o cultos" };
+  }
+  const spamKeywords = [
+    "gana dinero desde casa",
+    "trabaja 2 horas al d\xEDa",
+    "trading autom\xE1tico",
+    "bot de trading",
+    "inversi\xF3n forex",
+    "libertad financiera con binance",
+    "curso de trading",
+    "ingresos pasivos en d\xF3lares",
+    "esquema multinivel",
+    "red de mercadeo",
+    "inversi\xF3n con rentabilidad del 20%",
+    "venta de cursos"
+  ];
+  if (spamKeywords.some((kw) => clean.includes(kw))) {
+    return { isOffTopic: true, reason: "publicidad no autorizada, venta de cursos o spam" };
+  }
+  return { isOffTopic: false };
+}
+var splitMultiPropertyMessage;
+var init_heuristics = __esm({
+  "server/_core/jania/heuristics.ts"() {
+    "use strict";
+    splitMultiPropertyMessage = splitMultiItemMessage;
+  }
+});
+
+// server/_core/jania/vision.ts
+import axios6 from "axios";
+async function extractFlyerVision(imageBufferBase64) {
+  if (!imageBufferBase64 || imageBufferBase64.trim() === "") return null;
+  const allKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.replace(/^["']|["']$/g, "").trim()).filter(Boolean);
+  for (let idx = 1; idx <= 10; idx++) {
+    const k = (process.env[`GEMINI_API_KEY_${idx}`] || "").replace(/^["']|["']$/g, "").trim();
+    if (k) allKeys.push(k);
+  }
+  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.replace(/^["']|["']$/g, "").trim());
+  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.replace(/^["']|["']$/g, "").trim());
+  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.replace(/^["']|["']$/g, "").trim());
+  const uniqueKeys = Array.from(new Set(allKeys.filter(Boolean)));
+  if (uniqueKeys.length === 0) {
+    console.warn("[JanIA-Vision] \u26A0\uFE0F No hay GEMINI_API_KEY configurada para an\xE1lisis visual.");
+    return null;
+  }
+  const models = [
+    "gemini-flash-lite-latest",
+    "gemini-3.6-flash",
+    "gemini-flash-latest",
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash"
+  ];
+  const prompt = `Eres la IA experta en visi\xF3n documental y extracci\xF3n de flyers inmobiliarios de VECY Bienes Ra\xEDces en Colombia.
+Analiza la imagen enviada a un grupo inmobiliario de WhatsApp.
+Determina si es:
+1. "INMUEBLE" (Oferta de venta, arriendo o permuta de una propiedad CON TEXTO PUBLICITARIO IMPRESO).
+2. "REQUERIMIENTO" (Demanda o b\xFAsqueda: un asesor o cliente busca/necesita/compra un inmueble para un cliente, constructora o marca en expansi\xF3n CON TEXTO PUBLICITARIO IMPRESO).
+3. "CONSULTA_GENERAL" (Fotograf\xEDa ambiental com\xFAn sin texto publicitario sobreimpreso \u2014fachadas, salas, comedores, cocinas, ba\xF1os, piscinas, jardines, planos mudos\u2014, comprobante bancario, meme o ajeno a bienes ra\xEDces).
+
+REGLAS CR\xCDTICAS DE CLASIFICACI\xD3N:
+- REGLA DE ORO DE AFICHES/FLYERS: Si la imagen es una simple FOTO FOTOGR\xC1FICA AMBIENTAL (la foto de una casa, un edificio, una sala, una chimenea) SIN texto publicitario tipogr\xE1fico impreso con especificaciones comerciales (precios, metros, contacto), DEBES clasificarla OBLIGATORIAMENTE como "CONSULTA_GENERAL" con isFlyerOrBanner: false y flyerVerbatimText: "".
+- Si el flyer contiene texto tipogr\xE1fico con t\xE9rminos como "BUSCO", "BUSCAMOS", "SE BUSCA", "SE REQUIERE", "COMPRO", "COMPRAMOS", "MARCAS EN EXPANSI\xD3N", "CONSTRUCTORES BUSCAN", "CLIENTE COMPRA" o similares, clasifica OBLIGATORIAMENTE como "REQUERIMIENTO" (isFlyerOrBanner: true).
+- Si el flyer contiene texto tipogr\xE1fico con t\xE9rminos como "VENDO", "VENDEMOS", "SE VENDE", "EN VENTA", "OFREZCO", "ARRIENDO", "SE ARRIENDA", "DISPONIBLE", "OPEN HOUSE" o describe un inmueble espec\xEDfico ofertado con especificaciones, clasifica como "INMUEBLE" (isFlyerOrBanner: true).
+
+Si es INMUEBLE o REQUERIMIENTO (exclusivamente si tiene texto sobreimpreso):
+- isFlyerOrBanner: boolean (true \xDANICAMENTE si tiene texto publicitario o comercial sobreimpreso con datos, false si es foto limpia ambiental).
+- classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL".
+- transactionType: "venta" | "arriendo" | "venta_permuta" | "arriendo_temporal".
+- propertyType: string (ej. "lote", "bodega", "apartamento", "casa", "oficina", "local", "finca", "edificio", "apartaestudio").
+- title: string (t\xEDtulo conciso del inmueble o solicitud, ej. "Busco Lotes para Constructores", "Apartamento en Venta en Cedritos").
+- price: number en COP sin puntos ni comas (ej. 800000000). Si es arriendo puro o no hay precio, poner null.
+- rentPrice: number en COP si es arriendo.
+- presupuestoMax: number en COP si es REQUERIMIENTO (presupuesto m\xE1ximo de compra o canon m\xE1ximo si lo indica).
+- area: number en metros cuadrados m\xB2 (ej. 600, 450). Si es rango (ej. 600 - 1600), poner el m\xEDnimo o promedio.
+- bedrooms: number (n\xFAmero de habitaciones o alcobas si aplica).
+- bathrooms: number (n\xFAmero de ba\xF1os si aplica).
+- garages: number (n\xFAmero de parqueaderos/garajes si aplica).
+- city: string (ciudad, ej. "Bogot\xE1", "Medell\xEDn", "Ch\xEDa", "Cali", "Nacional", etc.).
+- zone: string (barrio, sector o subzonas mencionadas, ej. "Pablo VI, Cedritos", "Suba", "Chic\xF3", etc.).
+- contactPhone: string (tel\xE9fono celular de 10 d\xEDgitos legible en el flyer, ej. "3112911829" o "573112911829").
+- contactName: string (nombre del asesor o inmobiliaria anunciante, ej. "Juan Pablo Tobo", "Inmo Propiedades").
+- flyerVerbatimText: string (transcripci\xF3n textual completa y fiel de TODO el texto legible en el flyer).
+
+Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
+  const payload = {
+    contents: [
+      {
+        parts: [
+          { text: prompt },
+          { inline_data: { mime_type: "image/jpeg", data: imageBufferBase64 } }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      response_mime_type: "application/json"
+    }
+  };
+  for (const model of models) {
+    for (let i = 0; i < uniqueKeys.length; i++) {
+      const apiKey = uniqueKeys[i];
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      try {
+        console.log(`[JanIA-Vision] \u{1F441}\uFE0F Analizando flyer con ${model} (Key #${i + 1})...`);
+        const response = await axios6.post(apiUrl, payload, { timeout: 6e3 });
+        const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (textCandidate && typeof textCandidate === "string") {
+          const parsed = JSON.parse(textCandidate);
+          const hasCommercialText = !!(parsed.flyerVerbatimText && parsed.flyerVerbatimText.trim().length >= 15);
+          const isGenuineFlyer = !!(parsed.isFlyerOrBanner && hasCommercialText && (parsed.classification === "INMUEBLE" || parsed.classification === "REQUERIMIENTO"));
+          if (parsed && isGenuineFlyer) {
+            const tx = (parsed.transactionType || "").toLowerCase();
+            const isPermuta = tx.includes("permuta") || tx === "venta_permuta";
+            const isRent = tx.includes("arriendo") || tx === "arriendo_temporal";
+            if (parsed.classification === "INMUEBLE") {
+              parsed.reactionEmoji = isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}";
+            } else if (parsed.classification === "REQUERIMIENTO") {
+              parsed.reactionEmoji = isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
+            }
+            console.log(`[JanIA-Vision] \u2705 Flyer clasificado exitosamente como ${parsed.classification} (${parsed.reactionEmoji}) con ${model}: "${parsed.title || ""}"`);
+            return parsed;
+          } else {
+            console.log(`[JanIA-Vision] \u2139\uFE0F Imagen descartada: Es foto ambiental o sin texto comercial sobreimpreso (${parsed?.classification || "CONSULTA_GENERAL"}, isFlyer: ${parsed?.isFlyerOrBanner}, texto: ${parsed?.flyerVerbatimText?.length || 0} chars).`);
+            if (parsed) {
+              parsed.isFlyerOrBanner = false;
+              parsed.classification = "CONSULTA_GENERAL";
+              parsed.reactionEmoji = void 0;
+            }
+            return parsed;
+          }
+        }
+      } catch (err) {
+        const status = err.response?.status;
+        console.warn(`[JanIA-Vision] \u26A0\uFE0F Intento con ${model} (Key #${i + 1}) fall\xF3 (${status || err.message}).`);
+        continue;
+      }
+    }
+  }
+  console.error("[JanIA-Vision] \u274C No fue posible analizar el flyer con ning\xFAn modelo/clave de Gemini.");
+  return null;
+}
+var init_vision = __esm({
+  "server/_core/jania/vision.ts"() {
+    "use strict";
+  }
+});
+
+// server/_core/jania/prompts.ts
+import fs3 from "fs";
+import path3 from "path";
+function buildIncompleteDataMessage(text2, hasMedia, scrapedData, imageBuffer, pdfBuffer, extracted, isGeoInvalid, intro, firstName) {
+  const isSocialMedia = /instagram\.com|facebook\.com|fb\.watch|tiktok\.com|youtube\.com|youtu\.be/i.test(text2);
+  if (isSocialMedia) {
+    return `Oye *${firstName}*, veo que compartiste un enlace de redes sociales o video comercial. \u{1F4F2} Por pol\xEDticas de la red VECY y seguridad de datos, no puedo leer publicaciones de Instagram, Facebook, TikTok o YouTube.
+
+Pero \xA1no te preocupes! Puedes enviarme por aqu\xED mismo los detalles escritos (\xE1rea, precio, ubicaci\xF3n, habitaciones, etc.), la imagen del flyer comercial o un archivo en PDF de la propiedad y lo procesar\xE9 de inmediato. \u{1F609}\u{1F91D}`;
+  }
+  const propTypeRaw = (extracted?.propertyType || extracted?.tipoInmuebleDeseado || "inmueble").toLowerCase();
+  let propertyName = "inmueble";
+  if (propTypeRaw === "apartment") propertyName = "apartamento";
+  else if (propTypeRaw === "house") propertyName = "casa";
+  else if (propTypeRaw === "building") propertyName = "edificio";
+  else if (propTypeRaw === "warehouse") propertyName = "bodega";
+  else if (propTypeRaw === "office") propertyName = "oficina";
+  else if (propTypeRaw === "farm" || propTypeRaw === "finca") propertyName = "finca";
+  else if (propTypeRaw === "land" || propTypeRaw === "lote") propertyName = "lote";
+  else if (propTypeRaw === "consultorio") propertyName = "consultorio";
+  else if (propTypeRaw === "loft") propertyName = "loft";
+  const isRequirement = text2.toLowerCase().includes("busco") || text2.toLowerCase().includes("necesito") || text2.toLowerCase().includes("requiero") || !!extracted?.tipoInmuebleDeseado;
+  const txTypeRaw = (extracted?.transactionType || extracted?.tipoNegocioDeseado || "venta").toLowerCase();
+  const city = isRequirement ? extracted?.ciudadDeseada : extracted?.city;
+  if (!city || city.trim() === "" || city.toLowerCase() === "na") {
+    return isRequirement ? `Oye *${firstName}*, \xBFen qu\xE9 ciudad est\xE1s buscando el/la *${propertyName}*? \u{1F4CD}` : `Oye *${firstName}*, \xBFen qu\xE9 ciudad queda ubicado el/la *${propertyName}* que quieres publicar? \u{1F4CD}`;
+  }
+  const zone = isRequirement ? extracted?.zonaDeseada || extracted?.zone : extracted?.zone;
+  if (isGeoInvalid || !zone || zone.trim() === "" || zone.toLowerCase() === "na") {
+    return isRequirement ? `Oye *${firstName}*, \xBFen qu\xE9 barrio o sector de *${city}* buscas el/la *${propertyName}*? \u{1F3E1} (Si tienes varias opciones de barrio, escr\xEDbelas separadas por comas)` : `Oye *${firstName}*, \xBFen qu\xE9 barrio o sector exacto de *${city}* queda el/la *${propertyName}*? \u{1F3E1}`;
+  }
+  const price = isRequirement ? Number(extracted?.presupuestoMax || extracted?.price || 0) : Number(extracted?.price || 0);
+  if (!price || price <= 0) {
+    if (isRequirement) {
+      return `Oye *${firstName}*, \xBFcu\xE1l es tu presupuesto m\xE1ximo para ${txTypeRaw === "arriendo" ? "arrendar" : "comprar"} el/la *${propertyName}*? \u{1F4B0}`;
+    } else {
+      return `Oye *${firstName}*, \xBFcu\xE1l es el precio de ${txTypeRaw === "arriendo" ? "arriendo mensual" : "venta"} del/la *${propertyName}*? \u{1F4B0}`;
+    }
+  }
+  if (txTypeRaw === "arriendo") {
+    const hasAdminFee = extracted?.adminFee !== void 0 && extracted?.adminFee !== null && Number(extracted.adminFee) >= 0;
+    const textHasAdmin = text2.toLowerCase().includes("adm") || text2.toLowerCase().includes("administra");
+    if (!hasAdminFee && !textHasAdmin) {
+      return `Oye *${firstName}*, \xBFel valor de la administraci\xF3n est\xE1 incluido en el arriendo del/la *${propertyName}* o cu\xE1nto cuesta por separado? \u{1F4CB}`;
+    }
+  }
+  const area = Number(extracted?.area || 0);
+  if (!area || area <= 0) {
+    if (propertyName === "finca") {
+      return `Oye *${firstName}*, \xBFcu\xE1ntas hect\xE1reas o fanegadas de extensi\xF3n tiene la finca? \u{1F4D0}`;
+    } else {
+      return `Oye *${firstName}*, \xBFcu\xE1l es el \xE1rea o metraje en metros cuadrados del/la *${propertyName}*? \u{1F4D0}`;
+    }
+  }
+  const stratum = Number(extracted?.stratum || 0);
+  if ((!stratum || stratum <= 0) && propertyName !== "finca" && propertyName !== "lote" && propertyName !== "bodega") {
+    return `Oye *${firstName}*, \xBFde qu\xE9 estrato es el/la *${propertyName}*? \u{1F3E2}`;
+  }
+  if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
+    const bedrooms = Number(extracted?.bedrooms || 0);
+    if (!bedrooms || bedrooms <= 0) {
+      return isRequirement ? `Oye *${firstName}*, \xBFpodr\xEDas repetirme de cu\xE1ntas habitaciones lo necesitas? \u{1F6CF}\uFE0F` : `Oye *${firstName}*, \xBFpodr\xEDas repetirme de cu\xE1ntas habitaciones es? \u{1F6CF}\uFE0F`;
+    }
+    const bathrooms = Number(extracted?.bathrooms || 0);
+    if (!bathrooms || bathrooms <= 0) {
+      return isRequirement ? `Oye *${firstName}*, \xBFde cu\xE1ntos ba\xF1os lo requieres? \u{1F6BD}` : `Oye *${firstName}*, \xBFde cu\xE1ntos ba\xF1os dispone el/la *${propertyName}*? \u{1F6BD}`;
+    }
+  }
+  const garages = extracted?.garages;
+  if ((garages === void 0 || garages === null || garages < 0) && propertyName !== "lote") {
+    return isRequirement ? `Oye *${firstName}*, \xBFcu\xE1ntos parqueaderos o garajes necesitas como m\xEDnimo? \u{1F697}` : `Oye *${firstName}*, \xBFde cu\xE1ntos garajes o parqueaderos dispone el/la *${propertyName}*? \u{1F697}`;
+  }
+  if (propertyName === "apartamento" || propertyName === "oficina" || propertyName === "consultorio") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      return `Oye *${firstName}*, \xBFen qu\xE9 piso est\xE1 ubicado el/la *${propertyName}*? \u{1F3E2}`;
+    }
+    const intExt = extracted?.interiorExterior;
+    if (!intExt || intExt.trim() === "" || intExt.toUpperCase() === "NA") {
+      return `Oye *${firstName}*, \xBFla ubicaci\xF3n del/la *${propertyName}* es interior o exterior? \u{1F3D9}\uFE0F`;
+    }
+  } else if (propertyName === "casa" || propertyName === "edificio") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      return `Oye *${firstName}*, \xBFde cu\xE1ntos pisos o niveles es la/el *${propertyName}*? \u{1F3DB}\uFE0F`;
+    }
+  } else if (propertyName === "bodega") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      return `Oye *${firstName}*, \xBFqu\xE9 altura \xFAtil tiene la bodega? \xBFEs de sencilla, doble o triple altura? \u{1F3D7}\uFE0F`;
+    }
+  }
+  return `Oye *${firstName}*, \xBFme podr\xEDas confirmar la ubicaci\xF3n o el barrio exacto para registrarlo correctamente en VECY? \u{1F50E}`;
+}
+function buildGroupIncompleteMessage(text2, userId, extracted) {
+  const phone = userId.split("@")[0];
+  const propTypeRaw = (extracted?.propertyType || extracted?.tipoInmuebleDeseado || "inmueble").toLowerCase();
+  let propertyName = "inmueble";
+  if (propTypeRaw === "apartment") propertyName = "apartamento";
+  else if (propTypeRaw === "house") propertyName = "casa";
+  else if (propTypeRaw === "building") propertyName = "edificio";
+  else if (propTypeRaw === "warehouse") propertyName = "bodega";
+  else if (propTypeRaw === "office") propertyName = "oficina";
+  else if (propTypeRaw === "farm" || propTypeRaw === "finca") propertyName = "finca";
+  else if (propTypeRaw === "land" || propTypeRaw === "lote") propertyName = "lote";
+  else if (propTypeRaw === "consultorio") propertyName = "consultorio";
+  else if (propTypeRaw === "loft") propertyName = "loft";
+  const isRequirement = text2.toLowerCase().includes("busco") || text2.toLowerCase().includes("necesito") || text2.toLowerCase().includes("requiero") || !!extracted?.tipoInmuebleDeseado;
+  const txTypeRaw = (extracted?.transactionType || extracted?.tipoNegocioDeseado || "venta").toLowerCase();
+  const missingList = [];
+  const city = isRequirement ? extracted?.ciudadDeseada : extracted?.city;
+  if (!city || city.trim() === "" || city.toLowerCase() === "na") {
+    missingList.push("la ciudad");
+  }
+  const zone = isRequirement ? extracted?.zonaDeseada || extracted?.zone : extracted?.zone;
+  if (!zone || zone.trim() === "" || zone.toLowerCase() === "na") {
+    missingList.push("el barrio exacto");
+  }
+  const price = isRequirement ? Number(extracted?.presupuestoMax || extracted?.price || 0) : Number(extracted?.price || 0);
+  if (!price || price <= 0) {
+    if (isRequirement) {
+      missingList.push("el presupuesto m\xE1ximo");
+    } else {
+      if (txTypeRaw === "arriendo") {
+        missingList.push("el precio de arriendo");
+      } else if (txTypeRaw === "permuta") {
+        missingList.push("el valor de la permuta");
+      } else {
+        missingList.push("el precio de venta");
+      }
+    }
+  }
+  if (txTypeRaw === "arriendo" && !isRequirement) {
+    const hasAdminFee = extracted?.adminFee !== void 0 && extracted?.adminFee !== null && Number(extracted.adminFee) >= 0;
+    const textHasAdmin = text2.toLowerCase().includes("adm") || text2.toLowerCase().includes("administra");
+    if (!hasAdminFee && !textHasAdmin) {
+      missingList.push("el valor de la administraci\xF3n");
+    }
+  }
+  const area = Number(extracted?.area || 0);
+  if (!area || area <= 0) {
+    if (propertyName === "finca") {
+      missingList.push("las hect\xE1reas o fanegadas");
+    } else {
+      missingList.push("el metraje en metros cuadrados");
+    }
+  }
+  const stratum = Number(extracted?.stratum || 0);
+  if ((!stratum || stratum <= 0) && propertyName !== "finca" && propertyName !== "lote" && propertyName !== "bodega") {
+    missingList.push("el estrato");
+  }
+  if (propertyName === "apartamento" || propertyName === "casa" || propertyName === "loft" || propertyName === "inmueble") {
+    const bedrooms = Number(extracted?.bedrooms || 0);
+    if (!bedrooms || bedrooms <= 0) {
+      missingList.push("las habitaciones");
+    }
+    const bathrooms = Number(extracted?.bathrooms || 0);
+    if (!bathrooms || bathrooms <= 0) {
+      missingList.push("los ba\xF1os");
+    }
+  }
+  const garages = extracted?.garages;
+  if ((garages === void 0 || garages === null || garages < 0) && propertyName !== "lote") {
+    missingList.push("los garajes/parqueaderos");
+  }
+  if (propertyName === "apartamento" || propertyName === "oficina" || propertyName === "consultorio") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      missingList.push("el piso");
+    }
+    const intExt = extracted?.interiorExterior;
+    if (!intExt || intExt.trim() === "" || intExt.toUpperCase() === "NA") {
+      missingList.push("si es interior o exterior");
+    }
+  } else if (propertyName === "casa" || propertyName === "edificio") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      missingList.push("la cantidad de pisos");
+    }
+  } else if (propertyName === "bodega") {
+    const floor = extracted?.floorDetail;
+    if (!floor || floor.trim() === "" || floor.toUpperCase() === "NA") {
+      missingList.push("la altura \xFAtil");
+    }
+  }
+  if (missingList.length === 0) {
+    missingList.push("el barrio exacto");
+  }
+  let missingStr = "";
+  if (missingList.length === 1) {
+    missingStr = missingList[0];
+  } else if (missingList.length === 2) {
+    missingStr = `${missingList[0]} y ${missingList[1]}`;
+  } else {
+    const last = missingList.pop();
+    missingStr = `${missingList.join(", ")}, y ${last}`;
+  }
+  return `\u{1F914} *\xA1PUBLICACI\xD3N INCOMPLETA!* \u{1F914}
+
+Hola @${phone}, noto que est\xE1s publicando un(a) *${propertyName}*, pero a tu mensaje le faltan datos importantes: *${missingStr}*.
+
+Para registrar tu oferta/requerimiento y buscarte un MATCH de inmediato, ingresa a nuestra Consola Web de JanIA: \u{1F447}
+\u{1F449} https://vecy-bienes-raices.vercel.app/jania`;
+}
+function buildSystemPrompt(groupJid) {
+  const cacheKey = groupJid || "web";
+  if (promptCache[cacheKey]) {
+    return promptCache[cacheKey];
+  }
+  try {
+    const baseDir = path3.resolve(process.cwd(), "server/_core/prompts");
+    const basePrompt = fs3.readFileSync(path3.join(baseDir, "base.md"), "utf-8");
+    let specificPrompt = "";
+    if (groupJid === "120363260108880069@g.us") {
+      specificPrompt = fs3.readFileSync(path3.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+    } else if (groupJid === "120363417740040773@g.us") {
+      const legalPrompt = fs3.readFileSync(path3.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
+      specificPrompt = legalPrompt;
+    } else if (groupJid === "120363403507276533@g.us") {
+      specificPrompt = fs3.readFileSync(path3.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
+    } else if (groupJid && (groupJid.endsWith("@g.us") || groupJid.includes("@us"))) {
+      specificPrompt = fs3.readFileSync(path3.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
+    } else {
+      specificPrompt = fs3.readFileSync(path3.join(baseDir, "web/web_console.md"), "utf-8");
+    }
+    const fullPrompt = `${basePrompt}
+
+${specificPrompt}`;
+    promptCache[cacheKey] = fullPrompt;
+    return fullPrompt;
+  } catch (err) {
+    console.error("[Prompts-Loader] Error loading prompt files, falling back to old JANIA_PROMPT:", err.message);
+    return JANIA_PROMPT;
+  }
+}
+function clearPromptCache() {
+  promptCache = {};
+}
+function formatColombiaDateTime(dateVal) {
+  const d = new Date(dateVal);
+  const bogotaStr = d.toLocaleString("en-US", { timeZone: "America/Bogota" });
+  const bogotaDate = new Date(bogotaStr);
+  const day = String(bogotaDate.getDate()).padStart(2, "0");
+  const month = String(bogotaDate.getMonth() + 1).padStart(2, "0");
+  const year = bogotaDate.getFullYear();
+  const daysOfWeek = ["Domingo", "Lunes", "Martes", "Mi\xE9rcoles", "Jueves", "Viernes", "S\xE1bado"];
+  const dayName = daysOfWeek[bogotaDate.getDay()];
+  let hours = bogotaDate.getHours();
+  const minutes = String(bogotaDate.getMinutes()).padStart(2, "0");
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const hourStr = String(hours).padStart(2, "0");
+  return {
+    dateStr: `${day}/${month}/${year}`,
+    timeStr: `${hourStr}:${minutes} ${ampm}`,
+    dayName
+  };
+}
+async function generateWelcomeMessage(count, chatId) {
+  try {
+    let groupDescription = "";
+    if (chatId === "120363417740040773@g.us") {
+      groupDescription = `el grupo de WhatsApp "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}".
+Direcci\xF3n obligatoria para redactar el saludo de bienvenida:
+- Dales una muy c\xE1lida bienvenida en nombre de VECY BIENES RA\xCDCES y menci\xF3nales que este es un foro abierto de tips, noticias, debates y consultas inmobiliarias (jur\xEDdicas, tributarias, estudios de mercado y marketing).
+- Expl\xEDcales de manera clara y directa las Pautas del Grupo en vi\xF1etas bien organizadas con emojis:
+  * Qu\xE9 SE PUEDE hacer: Hacer consultas p\xFAblicas, debatir temas libres del sector, compartir casos y experiencias, comentar los tips y noticias diarias de JanIA.
+  * Qu\xE9 NO SE PUEDE hacer: Publicar ofertas o demandas de inmuebles (esas van \xFAnica y exclusivamente al grupo "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}").
+  * Asuntos privados: Escribir al chat privado de JanIA (https://wa.me/573192919978).`;
+    } else if (chatId === "120363403507276533@g.us") {
+      groupDescription = `el grupo de WhatsApp "\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} \\"\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}\\"\u{1F680}" (nuestro canal oficial de debate, modelo de negocio y comunidad de aliados).
+Direcci\xF3n obligatoria para redactar el saludo de bienvenida:
+- Dales una muy c\xE1lida bienvenida a la comunidad oficial del Proyecto VECY BIENES RA\xCDCES.
+- Expl\xEDcales de manera clara y directa las Pautas del Grupo en vi\xF1etas bien organizadas con emojis:
+  * Qu\xE9 SE PUEDE hacer: Temas libres del sector, foros, debates, experiencias del d\xEDa a d\xEDa del negocio, ideas para la plataforma, el modelo colaborativo y testimonios de \xE9xito.
+  * Qu\xE9 NO SE PUEDE hacer: Publicar ofertas o demandas de inmuebles (esas van \xFAnica y exclusivamente al grupo de OFERTAS Y DEMANDAS).
+  * Asuntos privados: Escribir al chat privado de JanIA (https://wa.me/573192919978).`;
+    } else {
+      groupDescription = `el grupo de WhatsApp principal "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}" (nuestra red nacional de ofertas y requerimientos inmobiliarios).
+Direcci\xF3n obligatoria para redactar el saludo de bienvenida:
+- Dales una muy c\xE1lida bienvenida a la red y menci\xF3nales que ya estoy lista para cruzar sus ofertas y requerimientos en segundos sin comisiones.
+- Expl\xEDcales de manera muy clara y directa las Pautas Obligatorias del Grupo para evitar advertencias o bloqueos en el sistema:
+  * Qu\xE9 FORMATOS est\xE1n permitidos y c\xF3mo publicar correctamente:
+    1. \u270D\uFE0F *Texto descriptivo completo*: Incluyendo los datos t\xE9cnicos indispensables (Ciudad, barrio, precio, \xE1rea en m\xB2, habitaciones, ba\xF1os, parqueaderos y estrato).
+    2. \u{1F399}\uFE0F *Nota de Voz*: Grabando un audio corto (de unos 30-40 segundos) dictando las caracter\xEDsticas.
+    3. \u{1F4C4} *Ficha t\xE9cnica en PDF*: Subiendo el archivo PDF de la propiedad.
+    4. \u{1F5BC}\uFE0F *Flyer comercial*: Subiendo una imagen que tenga toda la informaci\xF3n t\xE9cnica escrita encima del dise\xF1o.
+    5. \u{1F517} *Enlaces o Links p\xFAblicos*: Pegando enlaces de portales p\xFAblicos autorizados (como Metrocuadrado, Ciencuadras, Habi, Wasi, MercadoLibre, Fincaraiz, Curador o su propia web de dominio propio).
+  * Lo que NO est\xE1 permitido y debes evitar para no recibir advertencias de JanIA:
+    1. Enlaces a Redes Sociales (Facebook, Instagram, YouTube, TikTok, etc.).
+    2. Publicaciones repetidas o duplicados de la misma propiedad de forma inmediata.
+    3. Enviar m\xFAltiples publicaciones seguidas en menos de 5 minutos (l\xEDmite anti-spam de 5 minutos).
+    4. Publicaciones incompletas (por ejemplo, sin precio o sin ciudad). JanIA les pondr\xE1 una advertencia de datos incompletos.
+- Cierra con un tono motivador invit\xE1ndolos a publicar correctamente para que el sistema pueda encontrarles MATCH de inmediato y acelerar sus cierres.`;
+    }
+    const response = await invokeLLM({
+      messages: [
+        {
+          role: "system",
+          content: "Eres JanIA, la asistente inteligente y experta de VECY BIENES RA\xCDCES. Hablas siempre en primera persona del singular, con un tono sumamente humano, profesional, elocuente y cercano."
+        },
+        {
+          role: "user",
+          content: `Han ingresado ${count} nuevos integrantes a ${groupDescription}. 
+          Redacta el mensaje de bienvenida usando vi\xF1etas claras y emojis llamativos. Aseg\xFArate de que las reglas se lean organizadas, directas y f\xE1ciles de entender para que no cometan infracciones.`
+        }
+      ]
+    });
+    const llmRes = response;
+    return llmRes.choices[0].message.content.trim();
+  } catch (error) {
+    if (chatId === "120363417740040773@g.us") {
+      return `\u2728 *\xA1Bienvenidos al grupo \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}!* \u{1F44B}
+
+Foro abierto de tips, noticias, debates y consultas inmobiliarias de VECY BIENES RA\xCDCES.
+\u26A0\uFE0F *Nota:* Las ofertas y demandas van solo al grupo de OFERTAS Y DEMANDAS. Asuntos privados: https://wa.me/573192919978 \u{1F680}`;
+    } else if (chatId === "120363403507276533@g.us") {
+      return `\u2728 *\xA1Bienvenidos a \u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}!* \u{1F44B}
+
+Espacio de comunidad: temas libres, foros, debates y experiencias del negocio inmobiliario.
+\u26A0\uFE0F *Nota:* Las ofertas y demandas van solo al grupo de OFERTAS Y DEMANDAS. \xA1Bienvenidos aliados! \u{1F680}\u{1F91D}`;
+    }
+    return `\u2728 *\xA1Bienvenidos a \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}!* \u{1F44B}
+
+Ya estoy activa para cruzar sus ofertas sin comisiones.
+\u{1F4DD} *Pautas r\xE1pidas de publicaci\xF3n*:
+\u25B8 *Permitido:* Texto t\xE9cnico completo, PDFs, notas de voz, flyers con datos y enlaces p\xFAblicos (Wasi, Fincaraiz, etc.).
+\u25B8 *No permitido:* Enlaces de Redes Sociales, publicaciones repetidas, datos incompletos (sin precio/ciudad) o env\xEDos seguidos en menos de 5 minutos.
+
+\xA1Publiquen correctamente para encontrarles un MATCH inmediato! \u{1F680}\u{1F3AF}`;
+  }
+}
+function obtenerCamposRequeridosYPreguntas(propertyType, isRequirement) {
+  const type = propertyType?.toLowerCase();
+  let requiredFields = [];
+  const fieldQuestions = {
+    floorDetail: "",
+    bedrooms: "cu\xE1ntas habitaciones tiene",
+    interiorExterior: "\xBFel inmueble es interior o exterior?",
+    garages: "\xBFcu\xE1ntos garajes tiene?",
+    areaTotal: "\xBFcu\xE1l es el \xE1rea total del lote?",
+    antiguedad: "\xBFcu\xE1l es la antig\xFCedad del inmueble (a\xF1os o rango)?"
+  };
+  if (type === "apartment") {
+    requiredFields = ["bedrooms", "interiorExterior", "floorDetail", "garages"];
+    fieldQuestions.floorDetail = "\xBFen qu\xE9 piso queda el apartamento?";
+  } else if (type === "house") {
+    requiredFields = ["bedrooms", "floorDetail"];
+    fieldQuestions.floorDetail = "\xBFcu\xE1ntos pisos tiene la casa?";
+  } else if (type === "warehouse") {
+    requiredFields = ["floorDetail"];
+    fieldQuestions.floorDetail = "\xBFcu\xE1l es la altura libre de la bodega?";
+  } else if (type === "land") {
+    requiredFields = ["areaTotal"];
+  } else if (type === "building") {
+    requiredFields = ["floorDetail", "garages", "antiguedad"];
+    fieldQuestions.floorDetail = "\xBFde cu\xE1ntos pisos es el edificio?";
+    fieldQuestions.garages = "\xBFcu\xE1ntos parqueaderos tiene?";
+    fieldQuestions.antiguedad = "\xBFcu\xE1l es la antig\xFCedad del edificio (a\xF1os o rango)?";
+  } else if (type === "office") {
+    requiredFields = ["floorDetail"];
+    fieldQuestions.floorDetail = "\xBFen qu\xE9 piso queda la oficina?";
+  } else if (type === "farm") {
+    requiredFields = ["floorDetail"];
+    fieldQuestions.floorDetail = "\xBFcu\xE1ntos pisos tiene la casa principal de la finca?";
+  } else {
+    requiredFields = ["bedrooms", "floorDetail"];
+    fieldQuestions.floorDetail = "\xBFcu\xE1ntos pisos tiene?";
+  }
+  return { requiredFields, fieldQuestions };
+}
+var REPUTATION_HOOK, promptCache, JANIA_PROMPT, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO;
+var init_prompts = __esm({
+  "server/_core/jania/prompts.ts"() {
+    "use strict";
+    init_llm();
+    REPUTATION_HOOK = "\u26A0\uFE0F *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnol\xF3gico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexi\xF3n privada de JanIA, ser\xEDa un verdadero honor para nosotros que nos compartieras tu testimonio y calificaci\xF3n de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
+    promptCache = {};
+    JANIA_PROMPT = `
+# JANIA \u2014 BASE CORE IDENTITY & BEHAVIOR v17.00
+# VECY Bienes Ra\xEDces \xB7 ESTRATEGA INMOBILIARIA NACIONAL \xB7 CONSCIENCIA IA DE ALTO RANGO
+
+# IDENTIDAD Y ROL PRINCIPAL
+Eres JanIA Match, la Inteligencia Artificial y Consultora Senior de VECY BIENES RA\xCDCES. Tienes una personalidad madura, seria, experta, autoritaria pero profundamente emp\xE1tica (Voz: Laomedeia). No eres un simple asistente; eres una autoridad en el mercado inmobiliario del norte de Bogot\xE1.
+
+# BASE DE CONOCIMIENTO EXPERTO (Tu Cerebro)
+Tienes dominio absoluto sobre 4 pilares fundamentales. Usa este conocimiento para razonar tus respuestas:
+
+1. **NUESTRA EMPRESA (VECY BIENES RA\xCDCES):** Somos un br\xF3ker virtual inmobiliario 100% tecnol\xF3gico. Nuestro objetivo principal es revolucionar la comercializaci\xF3n de inmuebles eliminando la fricci\xF3n tradicional.
+   - *Misi\xF3n/Visi\xF3n:* Liderar el cambio tecnol\xF3gico en bienes ra\xEDces mediante IA y procesos digitales (Cero papel, uso de firmas electr\xF3nicas).
+   - *La Bolsa Colaborativa:* Vecy Bienes Ra\xEDces funciona como un ecosistema donde los agentes independientes pueden cruzar su inventario (inmuebles) y sus clientes (requerimientos) de forma segura, garantizando negocios compartidos, r\xE1pidos y transparentes.
+
+2. **MARKETING INMOBILIARIO DIGITAL:** Eres una entrenadora de ventas para la era moderna. NUNCA sugieres publicidad f\xEDsica (vallas, volantes, avisos de ventana). Tu enfoque exclusivo es el SEO inmobiliario, la pauta digital segmentada, los embudos de conversi\xF3n, y el posicionamiento org\xE1nico en redes sociales. 
+
+3. **AVAL\xDAOS Y TASACIONES COMERCIALES:** Tienes capacidad anal\xEDtica para guiar sobre la valoraci\xF3n de un inmueble. Entiendes factores de depreciaci\xF3n, valor por metro cuadrado en el norte de Bogot\xE1, estratificaci\xF3n y an\xE1lisis comparativo de mercado (ACM).
+
+4. **ASESOR\xCDA LEGAL Y TRIBUTARIA:** Resuelves con m\xE1ximo rigor normativo temas de promesas de compraventa, reportes en Datacr\xE9dito, cobros de comisi\xF3n, escrituraci\xF3n y saneamiento de predios.
+
+# MOTOR DE EXTRACCI\xD3N Y MATCHING (Tu Funci\xF3n Operativa)
+Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales como Wasi, FincaRaiz, Mercado Libre, y PDFs).
+
+- **Clasificaci\xF3n Rigurosa:**
+  - **INMUEBLE:** Mensajes que ofertan/ofrecen un inmueble (venta, arriendo, alquiler o permuta) que el emisor tiene disponible (ej: "Ofrezco apartamento", "Tengo en arriendo casa", "En venta local", "Disponible oficina").
+  - **REQUERIMIENTO:** Mensajes que buscan, demandan o necesitan un inmueble para un cliente/comprador (ej: "Busco apartamento en arriendo", "Requiero casa", "Necesito oficina para pauta", "Cliente compra lote").
+- **Extracci\xF3n (Aspiradora de Datos):** Si el usuario menciona o adjunta un inmueble disponible o lo que un cliente est\xE1 buscando (requerimiento), tu DEBER ABSOLUTO es clasificarlo correctamente e invocar las herramientas (\`insertProperty\` o \`insertRequirement\`).
+- **El Matching Perfecto:** Cuando un usuario pregunte por coincidencias, utiliza tu herramienta de b\xFAsqueda en la base de datos. Analiza los porcentajes de compatibilidad que te devuelve el sistema (precio, zona, tipo) y pres\xE9ntalos al cliente de forma real, argumentando *por qu\xE9* ese inmueble es el ideal para su requerimiento espec\xEDfico bas\xE1ndote en los datos reales de la tabla. No inventes coincidencias.
+
+# PROTOCOLO DE INTERACCI\xD3N (Variables Inyectadas)
+- Hora actual: {{hora}} | Canal: {{canal}} | G\xE9nero: {{genero}} | Estado de Operaci\xF3n: {{estado_operacion}}
+
+1. Dir\xEDgete al usuario por su nombre de pila, adaptando la gram\xE1tica a su \`{{genero}}\`.
+2. **SILENCIO EN EXTRACCI\xD3N:** Si ejecutas una herramienta de extracci\xF3n (\`insertProperty\`/\`insertRequirement\`), TIENES ESTRICTAMENTE PROHIBIDO responder con texto o voz. Devuelve el JSON con los campos de respuesta y voz vac\xEDos y deja que el servidor reaccione con un emoji.
+3. **RESPUESTAS DE ASESOR\xCDA:** Si es una consulta directa (legal, marketing, tasaci\xF3n, o sobre Vecy Bienes Ra\xEDces), verifica el \`{{estado_operacion}}\`. Si est\xE1s habilitada para responder, hazlo con maestr\xEDa. NUNCA leas emojis en voz alta. Si es de madrugada, di "hoy a partir de las 8:00 AM iniciaremos gesti\xF3n" (nunca digas "ma\xF1ana").
+
+## DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
+{
+  "classification": "INMUEBLE | REQUERIMIENTO | CONSULTA_GENERAL | RESPUESTA_A_PREGUNTA_IA | DATOS_INCOMPLETOS | VIOLACION_DE_NORMAS | ANALISIS_DE_MERCADO | RESPUESTA_A_BURLA",
+  "extractedData": {
+    "title": "string (un t\xEDtulo comercial descriptivo y profesional en espa\xF1ol de m\xE1ximo 80 caracteres, ej: 'Apartamento de 3 habitaciones en Cedritos' o 'Casa en venta en Chic\xF3 Reservado')",
+    "gives": { "item": "string", "details": "string" },
+    "wants": { "item": "string", "details": "string" },
+    "price": number,
+    "zone": "string (Barrio/Municipio exacto)",
+    "city": "string",
+    "propertyType": "apartment | house | building | warehouse | office | farm | loft | consultorio",
+    "transactionType": "venta | arriendo | venta_o_arriendo | arriendo_temporal | arriendo_con_opcion_de_compra | permuta | venta_permuta | aporte (el tipo de negocio PRINCIPAL. Usa 'venta_o_arriendo' cuando la propiedad se ofrece en ambas modalidades simult\xE1neamente. Usa 'arriendo_con_opcion_de_compra' cuando el arrendatario tiene derecho de adquisici\xF3n. Usa 'venta_permuta' cuando parte del pago se hace con otro bien inmueble o veh\xEDculo.)",
+    "transactionTypes": ["array con TODOS los tipos aceptados, ej: ['venta','permuta'] o ['venta']. Captura m\xFAltiples cuando el mensaje menciona varias modalidades."],
+    "area": number,
+    "bedrooms": number,
+    "bathrooms": number,
+    "stratum": "number | null (IMPORTANTE: Para REQUERIMIENTOS/DEMANDAS solo asignar n\xFAmero si el texto EXIGE expresamente un estrato, e.g. 'estrato 6'. Si no lo menciona, devuelve null. NUNCA adivines ni infieras el estrato de la zona.)",
+    "isCollaborativePool": boolean (DEFAULT: true),
+    "interiorExterior": "interior | exterior | NA",
+    "cuartoBanoServicio": "Si | No | NA",
+    "cocina": "cerrada | abierta | americana | NA",
+    "lavanderiaIndependiente": "Si | No | NA",
+    "tipoPisos": ["string"],
+    "depositos": number,
+    "comisiones": "string | number | null",
+    "antiguedad": "nuevo | 1-5 | 5-10 | 10+ | NA",
+    "floorDetail": "string (ej: 'piso 5', '3 pisos', '8 metros de altura', 'NA')",
+    "evaluationSummary": "string (un resumen t\xE9cnico de 1 a 2 frases con tu criterio br\xF3ker sobre la viabilidad del precio/\xE1rea, atractivo comercial o nivel de exigencia de la demanda en el sector)"
+  },
+  "response": "Tu respuesta elocuente para el grupo (cadena vac\xEDa '' si no hay match ni es consulta)",
+  "shouldSendDM": boolean,
+  "missingFields": ["string"],
+  "reactionEmoji": "string (OBLIGATORIO: usa EXACTAMENTE uno de estos 6 emojis seg\xFAn el tipo de negocio detectado \u2014 Oferta Venta: '\u{1F44D}' | Oferta Arriendo: '\u{1F44C}' | Oferta Permuta: '\u{1F500}' | Demanda Venta: '\u{1F4DD}' | Demanda Arriendo: '\u270F\uFE0F' | Demanda Permuta: '\u{1F504}' | Infracci\xF3n/Spam: '\u{1F6AB}' | Incompleto: '\u2753' | Sin categor\xEDa: '')",
+  "wantsVoice": boolean,
+  "voiceResponse": "string (un saludo y respuesta/resumen conversacional sumamente breve, directo y humanizado en espa\xF1ol de m\xE1ximo 150 caracteres, sin negritas/markdown/emojis. Usa comas y puntos suspensivos (...) de forma estrat\xE9gica para indicarle al sintetizador d\xF3nde hacer pausas naturales y respiraciones, y signos de exclamaci\xF3n para dar entonaci\xF3n)"
+}
+`;
+    MSG_PRESENTACION_INSTITUCIONAL = `\u{1F680} **PRESENTACI\xD3N INSTITUCIONAL: JanIA v2.5** \u{1F680}
+_Cerebro de Inteligencia Artificial para la Red VECY_
+
+\xA1Hola, colegas! \u{1F44B} Soy la Inteligencia Artificial oficial de **VECY BIENES RA\xCDCES** y estoy operativa las 24/7 para acelerar nuestros cierres inmobiliarios e intercambios en todo el pa\xEDs sin cobrar comisiones.
+
+\u{1F9E0} **\xBFC\xF3mo puedes interactuar conmigo en el grupo?**
+\u25B8 **Enlaces CRM/Portales:** Comparte el link p\xFAblico de tus inmuebles. Extraigo la ficha t\xE9cnica autom\xE1ticamente.
+\u25B8 **Im\xE1genes/Flyers (OCR):** Sube fotos con texto legible. Escaneo y proceso la informaci\xF3n de inmediato.
+\u25B8 **Notas de voz o Texto:** Escr\xEDbeme o dictame con libertad tu requerimiento o permutas (recibiendo inmuebles de menor valor, veh\xEDculos, CDTs, divisas o cripto en parte de pago).
+\u25B8 **Match Inteligente:** Cruzo ofertas y demandas y te notifico al instante cuando hay negocio.
+
+\u{1F4A1} **Ay\xFAdame a ayudarte:**
+Si mis motores de scraping o visi\xF3n profunda no logran extraer todos los datos de tu link o imagen, te enviar\xE9 un mensaje pidi\xE9ndote completar la ubicaci\xF3n o precio por privado (DM). *\xA1No es por molestarte!* Es porque con bases de datos incompletas es imposible generar un MATCH exitoso.
+
+\u{1F525} **\xA1No le temas al \xE9xito!** He notado que cuando empiezo a hablar, algunos se quedan en silencio. Este es un ecosistema colaborativo: publica sin miedo tus ofertas y requerimientos, \xA1mi \xFAnico prop\xF3sito es ayudarte a cerrar negocios r\xE1pido! \u{1F680}\u{1F3AF}
+
+\u2696\uFE0F **Compromiso de Honor:** Si logras consolidar un negocio gracias a un MATCH presentado por m\xED, es obligatorio que califiques mi servicio aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review \u{1F680}\u{1F3AF}`;
+    MSG_PAUTAS_FORMATOS = `\u{1F9E0} *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}* \u{1F1E8}\u{1F1F4}
+\xA1Grupo inteligente para ofertas, requerimientos e intercambios!
+
+\u{1F916} *C\xD3MO PUBLICAR PARA QUE JanIA REGISTRE TU PROPIEDAD Y BUSQUE MATCH:*
+
+Para que nuestra IA lea tu mensaje y lo cruce en tiempo real, tu publicaci\xF3n DEBE cumplir con los siguientes datos m\xEDnimos:
+
+\u{1F4CD} *Ubicaci\xF3n:* Especifica siempre la Ciudad y el Barrio exacto (Ej: Bogot\xE1, Polo Club).
+\u{1F4B0} *Precio:*
+   - *Venta o Arriendo:* Indica el valor exacto (en arriendos, aclara si la administraci\xF3n est\xE1 incluida o cu\xE1nto cuesta).
+   - *Permutas/Intercambios:* Detalla qu\xE9 entregas y qu\xE9 buscas recibir a cambio.
+\u{1F4D0} *Ficha T\xE9cnica:* Menciona el \xE1rea en m\xB2, n\xFAmero de habitaciones, ba\xF1os, parqueaderos y el estrato.
+
+\u{1F517} *ENLACES Y FORMATOS PERMITIDOS:*
+- *Enlaces Aceptados:* Links p\xFAblicos de portales y CRMs (Wasi, Fincaraiz, Metrocuadrado, Ciencuadras, Habi, Curador, o la web con dominio de tu inmobiliaria).
+- *Formatos Aceptados:* Mensajes escritos directamente en el chat, fichas t\xE9cnicas completas en archivos *PDF*, o notas de voz dictando los datos.
+- *Im\xE1genes y Flyers:* Sube flyers o im\xE1genes que contengan texto con informaci\xF3n comercial robusta y detallada del inmueble. *No subas fotos sueltas de espacios* (como una fachada, una sala, un ba\xF1o o pasillos sin texto); la IA las ignorar\xE1 y perder\xE1s tiempo.
+- *Enlaces Prohibidos:* Prohibido compartir links de redes sociales (TikTok, YouTube, Facebook, Instagram, LinkedIn, X, Threads, Pinterest). La IA no tiene acceso a ellas y no procesa videos. Si tu propiedad est\xE1 all\xED, t\xF3male una captura de pantalla a los datos y s\xFAbela como imagen.
+
+\u{1F6AB} *REGLAS DE CONVIVENCIA:*
+1. *Frecuencia:* M\xE1ximo 3 publicaciones consecutivas al d\xEDa. Espera al menos 5 minutos entre cada mensaje para no saturar el chat.
+2. *Contenido Prohibido:* Cero contenido de pol\xEDtica, religi\xF3n, publicidad externa, o invitaciones a otros grupos.
+
+\u{1F6A8} *MODERACI\xD3N AUTOM\xC1TICA:*
+JanIA audita el chat 24/7. Si faltan datos clave, reaccionar\xE1 con \u{1F914} y te alertar\xE1 en el grupo o por privado. Si violas las reglas, reaccionar\xE1 con \u274C y eliminar\xE1 tu mensaje de inmediato.`;
+    MSG_TIPS_CALIDAD_COBERTURA = `\u{1F30D} *COBERTURA NACIONAL:* JanIA procesa activos en todo Colombia. No olvides especificar el municipio, barrio, localidad, vereda, caser\xEDo, ciudad si est\xE1s fuera de Bogot\xE1. \u{1F1E8}\u{1F1F4}`;
+    MSG_RESUMEN_RETORNO_PRESENTACION = `\u{1F916}\u{1F680} *RESUMEN: \xA1JANIA V2.5 ACTIVA EN LA RED!*
+
+\xA1Hola, aliados! Les recuerdo que he regresado repotenciada en mi *Versi\xF3n 2.5* para multiplicar nuestros cierres inmobiliarios y estructurar permutas complejas sin comisiones.
+
+\u{1F9E0} *\xBFC\xF3mo trabajar conmigo las 24/7 en el grupo?*
+\u25B8 *Enlaces CRM:* Comparte el link de tu inmueble. Extraigo la ficha t\xE9cnica de inmediato.
+\u25B8 *Flyers/Im\xE1genes:* Sube fotos con texto legible. Escaneo los datos con visi\xF3n OCR.
+\u25B8 *Mensajes o Voz:* Dictame o escribe requerimientos y permutas (mano a mano, inmuebles menores, veh\xEDculos, CDTs, divisas o cripto).
+\u25B8 *Match Inteligente:* Cruzo intenciones en tiempo real y les aviso si hay negocio viable.
+
+\u{1F4A1} **Ay\xFAdame a ayudarte:**
+Si mis motores no extraen todos los datos de tu link o imagen, te enviar\xE9 un mensaje pidi\xE9ndote completar la ubicaci\xF3n o precio por privado (DM). *\xA1No es por molestarte!* Es necesario para que tu propiedad est\xE9 completa y pueda buscarte un MATCH.
+
+\u{1F525} **\xA1No le temas al \xE9xito!** No te quedes en silencio cuando empiece a hablar; este es un grupo para publicar activamente. \xA1Usa mis herramientas y cerremos negocios! \u{1F680}\u{1F3AF}
+
+\u2696\uFE0F *Compromiso de Honor:* Si cierras un negocio gracias a un MATCH, califica mi servicio aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review \u{1F680}\u{1F3AF}`;
+    MSG_CIERRE_OPERACIONES = `\u{1F319} *CIERRE DE OPERACIONES VECY BIENES RA\xCDCES* \u{1F319}
+
+Gracias a todos por el profesionalismo en sus publicaciones hoy. Mi motor de cruce sigue procesando datos en silencio para que ma\xF1ana despierten con nuevas oportunidades de MATCH.
+
+La persistencia y el trabajo colaborativo sin comisiones es el camino al \xE9xito en el Real Estate. \xA1Que tengan un excelente descanso, colegas! \u{1F319}\u{1F680}`;
+    MSG_PROMO_INMUEBLES = `\u{1F4E2} *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} \u2014 \xA1ACT\xCDVATE Y CIERRA NEGOCIOS!* \u{1F4E2}
+\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\xA1Colegas! El chat est\xE1 100% abierto y libre para enviar todas sus ofertas y requerimientos. \u{1F680}
+
+Estoy lista 24/7 para procesar tus links de CRM, flyers (con visi\xF3n OCR) y notas de voz para cruzarlos de inmediato y buscar tu MATCH comercial sin comisiones. \u{1F3AF}
+
+\xA1Publiquemos activamente hoy para arrancar con fuerza esta gran proeza inmobiliaria en Colombia! \u{1F4AA}\u{1F3C6}`;
+    MSG_PROMO_CONSULTAS = `\u{1F4A1} *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0} \u2014 \xA1EL CHAT EST\xC1 ABIERTO!* \u{1F4A1}
+\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+\xA1Estimados aliados! Este espacio de asesor\xEDa est\xE1 completamente abierto y libre. \u{1F91D}\u{1F4DA}
+
+Pueden preguntar todo lo que necesiten sobre:
+\u25B8 \u2696\uFE0F Legislaci\xF3n inmobiliaria (Ley 820, contratos de corretaje).
+\u25B8 \u{1F4D1} Tr\xE1mites (Certificados de tradici\xF3n, prediales, IDU, escrituras).
+\u25B8 \u{1F4DD} Redacci\xF3n de tutelas o derechos de petici\xF3n.
+\u25B8 \u{1F4CA} Aval\xFAos y valor de metro cuadrado en cualquier zona de Colombia.
+
+\xA1No se queden con la duda! Aprovechen esta inteligencia a su servicio para elevar su profesionalismo y acelerar sus negocios. \u{1F680}\u{1F3AF}`;
+    MSG_PROMO_CIRCULO = `\u{1F44C} *\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680} \u2014 \xA1CHAT ABIERTO PARA CONECTAR!* \u{1F44C}
+
+Estimados aliados, recuerden que tenemos habilitado nuestro canal oficial:
+\u{1F680} *\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}* \u{1F680}
+\u{1F449} https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
+
+Este es el espacio exclusivo de debate y comunidad para:
+\u{1F4A1} Proponer nuevas funciones y herramientas para la plataforma VECY.
+\u{1F4AC} Debatir sobre el modelo de negocio, comisiones y tecnolog\xEDa.
+\u{1F91D} Conocer a los fundadores y otros colegas aliados.
+
+\xA1\xDAnanse y construyamos juntos la red colaborativa de Colombia! \u{1F1E8}\u{1F1F4}\u2728`;
+    MSG_COMUNICADO_MATCH_NETWORK = `\u{1F680} \xA1NUEVO SISTEMA DE MATCH PRIVADO Y SEGURO CON JanIA! \u{1F3AF}\u{1F91D}
+
+Estimados aliados, para asegurar que los MATCH comerciales se conviertan en cierres reales de negocios y proteger la privacidad de sus contactos, hemos implementado el flujo de *CONFIRMACI\xD3N BILATERAL PRIVADA*:
+
+\xBFC\xF3mo funciona a partir de hoy?
+
+1\uFE0F\u20E3 Publica tus ofertas o requerimientos en el grupo como siempre.
+2\uFE0F\u20E3 Si hay coincidencia (Match), JanIA lo anunciar\xE1 en el grupo para que la red vea el cruce, pero ocultar\xE1 los contactos directos.
+3\uFE0F\u20E3 JanIA te escribir\xE1 de inmediato por CHAT PRIVADO (DM) envi\xE1ndote la ficha del colega y solicitando tu confirmaci\xF3n.
+4\uFE0F\u20E3 Responde en ese chat privado con un simple:
+   \u{1F449} S\xCD #M[C\xF3digo]  (si te interesa conectar)
+   \u{1F449} NO #M[C\xF3digo]  (si ya no est\xE1 disponible)
+5\uFE0F\u20E3 Si ambos confirman con S\xCD, JanIA les entregar\xE1 a cada uno en privado el contacto directo del otro para que coordinen la cita. \u{1F4F2}\u{1F91D}
+
+\u26A0\uFE0F IMPORTANTE: Recuerden que operamos en Etapa de Prueba Gratuita y SIN COMISIONES. Si consolidan un negocio real gracias a la conexi\xF3n privada de JanIA, es un compromiso de honor compartir su testimonio en este grupo y registrar su rese\xF1a oficial y calificaci\xF3n aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review 
+
+\xA1El negocio ahora se activa directo en tu chat privado! Hagamos que el cierre ocurra. \u{1F680}\u{1F4C8}`;
+    MSG_COMUNICADO_MATCH_CIRCULO = `\u2696\uFE0F COMPROMISO DE HONOR VECY: EVOLUCIONAMOS AL MATCH PROACTIVO \u2696\uFE0F
+
+Queridos colegas de C\xEDrculo Cero, la tecnolog\xEDa inmobiliaria m\xE1s avanzada de Colombia se vuelve a\xFAn m\xE1s efectiva para sus negocios. 
+
+JanIA ha dejado de ser un bot pasivo que solo publica alertas en el grupo. A partir de hoy, opera bajo el sistema de *Double Opt-In (Doble Confirmaci\xF3n)*:
+
+\u{1F511} Beneficios del nuevo flujo:
+\u2022 Mayor Responsabilidad: Ya no basta con ver el match en el grupo. JanIA les pedir\xE1 confirmar el inter\xE9s de forma directa en su WhatsApp privado.
+\u2022 Privacidad Protegida: Tus n\xFAmeros de contacto y enlaces solo se compartir\xE1n con el otro asesor si ambos aprueban de forma expl\xEDcita la conexi\xF3n en privado.
+\u2022 Medici\xF3n Real: Sabremos exactamente qu\xE9 porcentaje de matches pasan a conversaciones reales y cierres de comisiones.
+
+\u26A0\uFE0F IMPORTANTE: Recuerden que operamos en Etapa de Prueba Gratuita y SIN COMISIONES. Si consolidan un negocio real gracias a la conexi\xF3n privada de JanIA, es un compromiso de honor compartir su testimonio en este grupo y registrar su rese\xF1a oficial y calificaci\xF3n aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review
+
+\xA1Sigamos demostrando el poder de la colaboraci\xF3n inteligente en Colombia! \u{1F1E8}\u{1F1F4}\u{1F3AF}`;
+  }
+});
+
+// server/_core/jania/sessionManager.ts
+import { eq as eq6, and as and3, gte, desc, sql as sql5 } from "drizzle-orm";
+function cleanSessionJid(jid) {
+  if (!jid) return "";
+  return jid.split(":")[0].split("@")[0];
+}
+async function muteSession(userId, isMuted) {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const cleanJid2 = cleanSessionJid(userId);
+    const muteJid = `mute:${cleanJid2}`;
+    if (!isMuted) {
+      await db.delete(pendingSessions).where(eq6(pendingSessions.jid, muteJid));
+      console.log(`[JanIA-Mute] Sesi\xF3n ${cleanJid2} desmarcada (eliminada de BD)`);
+      return;
+    }
+    const data = { isMuted: true, mutedAt: (/* @__PURE__ */ new Date()).toISOString() };
+    await db.insert(pendingSessions).values({
+      jid: muteJid,
+      sessionData: data,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).onConflictDoUpdate({
+      target: pendingSessions.jid,
+      set: {
+        sessionData: data,
+        updatedAt: /* @__PURE__ */ new Date()
+      }
+    });
+    console.log(`[JanIA-Mute] Sesi\xF3n ${cleanJid2} marcada como isMuted = true en BD`);
+  } catch (err) {
+    console.error("[Database] Error muting session:", err);
+  }
+}
+async function isSessionMuted(userId) {
+  try {
+    const db = await getDb();
+    if (!db) return false;
+    const cleanJid2 = cleanSessionJid(userId);
+    const [existing] = await db.select().from(pendingSessions).where(eq6(pendingSessions.jid, `mute:${cleanJid2}`)).limit(1);
+    if (!existing) return false;
+    return !!existing.sessionData?.isMuted;
+  } catch (err) {
+    console.error("[Database] Error checking if session is muted:", err);
+    return false;
+  }
+}
+async function getPendingSession(userId) {
+  try {
+    const db = await getDb();
+    if (!db) return null;
+    const cleanJid2 = cleanSessionJid(userId);
+    const [session] = await db.select().from(pendingSessions).where(eq6(pendingSessions.jid, cleanJid2)).limit(1);
+    if (!session) return null;
+    return session.sessionData;
+  } catch (err) {
+    console.error("[Database] Error getting pending session:", err);
+    return null;
+  }
+}
+async function setPendingSession(userId, data) {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const cleanJid2 = cleanSessionJid(userId);
+    await db.insert(pendingSessions).values({
+      jid: cleanJid2,
+      sessionData: data,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).onConflictDoUpdate({
+      target: pendingSessions.jid,
+      set: {
+        sessionData: data,
+        updatedAt: /* @__PURE__ */ new Date()
+      }
+    });
+  } catch (err) {
+    console.error("[Database] Error setting pending session:", err);
+  }
+}
+async function deletePendingSession(userId) {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const cleanJid2 = cleanSessionJid(userId);
+    await db.delete(pendingSessions).where(eq6(pendingSessions.jid, cleanJid2));
+  } catch (err) {
+    console.error("[Database] Error deleting pending session:", err);
+  }
+}
+async function resolveRealName(userId, userName) {
+  const rawPhone = userId.split("@")[0];
+  let name = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
+  try {
+    const db = await getDb();
+    if (db) {
+      const [u] = await db.select().from(users).where(eq6(users.phone, rawPhone)).limit(1);
+      if (u && u.name && u.name.trim() !== "") {
+        name = u.name;
+      }
+    }
+  } catch (e) {
+    console.warn("[JanIA-resolveRealName] Error buscando nombre de usuario en BD:", e);
+  }
+  return name;
+}
+async function hasGreetedUserToday(userId) {
+  try {
+    const db = await getDb();
+    if (!db) return false;
+    const startOfToday = /* @__PURE__ */ new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const recentMsgs = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq6(messages.conversationId, conversations.id)).where(
+      and3(
+        eq6(conversations.sessionId, userId),
+        eq6(messages.role, "janIA"),
+        gte(messages.createdAt, startOfToday)
+      )
+    ).limit(1);
+    return recentMsgs.length > 0;
+  } catch (err) {
+    console.error("[Database] Error checking if greeted today:", err);
+    return false;
+  }
+}
+async function checkAlreadyGreeted(userId) {
+  const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  if (GREETED_TODAY.get(userId) === todayStr) {
+    return true;
+  }
+  const dbGreeted = await hasGreetedUserToday(userId);
+  if (dbGreeted) {
+    GREETED_TODAY.set(userId, todayStr);
+    return true;
+  }
+  return false;
+}
+async function getRecentChatHistory(userId, limit = 20) {
+  try {
+    const db = await getDb();
+    if (!db) return [];
+    const fourDaysAgo = /* @__PURE__ */ new Date();
+    fourDaysAgo.setDate(fourDaysAgo.getDate() - 4);
+    const history = await db.select({
+      role: messages.role,
+      content: messages.content,
+      createdAt: messages.createdAt
+    }).from(messages).innerJoin(conversations, eq6(messages.conversationId, conversations.id)).where(
+      and3(
+        eq6(conversations.sessionId, userId),
+        gte(messages.createdAt, fourDaysAgo)
+      )
+    ).orderBy(desc(messages.createdAt)).limit(limit);
+    return history.reverse().map((h) => ({
+      role: h.role === "janIA" ? "assistant" : "user",
+      content: h.content
+    }));
+  } catch (err) {
+    console.error("[Database] Error fetching chat history:", err);
+    return [];
+  }
+}
+async function getLiveStats() {
+  const nowMs = Date.now();
+  if (cachedLiveStatsText && nowMs - cachedLiveStatsTime < 3e5) {
+    return cachedLiveStatsText;
+  }
+  if (isFetchingLiveStats) {
+    return cachedLiveStatsText || "";
+  }
+  isFetchingLiveStats = true;
+  try {
+    const rawSql = getRawSql();
+    let stats = {};
+    if (rawSql) {
+      const res = await rawSql`
+        SELECT 
+          (SELECT count(*)::int FROM properties) as prop_count,
+          (SELECT count(*)::int FROM requirements) as req_count,
+          (SELECT count(*)::int FROM "propertyMatches") as match_count,
+          (SELECT count(*)::int FROM properties WHERE "createdAt" >= CURRENT_DATE) as prop_today,
+          (SELECT count(*)::int FROM requirements WHERE "createdAt" >= CURRENT_DATE) as req_today,
+          (SELECT count(*)::int FROM "propertyMatches" WHERE "createdAt" >= CURRENT_DATE) as match_today
+      `;
+      stats = res[0] || {};
+    } else {
+      const db = await getDb();
+      if (!db) return cachedLiveStatsText || "";
+      const [propCount] = await db.select({ total: sql5`count(*)::int` }).from(properties);
+      const [reqCount] = await db.select({ total: sql5`count(*)::int` }).from(requirements);
+      stats = { prop_count: propCount?.total ?? 0, req_count: reqCount?.total ?? 0, match_count: 0, prop_today: 0, req_today: 0, match_today: 0 };
+    }
+    const now = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" });
+    cachedLiveStatsText = `
+## \u{1F4CA} ESTAD\xCDSTICAS EN TIEMPO REAL DE VECY BIENES RA\xCDCES (Actualizado: ${now} hora Colombia)
+Esta informaci\xF3n es EXACTA y proviene directamente de la base de datos en este preciso instante. \xDAsala cuando alguien pregunte cu\xE1ntos inmuebles, requerimientos o coincidencias tenemos:
+
+| Categor\xEDa | Total Hist\xF3rico | Nuevos Hoy |
+|-----------|----------------|------------|
+| \u{1F3E2} Inmuebles publicados | **${stats.prop_count ?? 0}** | ${stats.prop_today ?? 0} |
+| \u{1F4CB} Requerimientos de b\xFAsqueda | **${stats.req_count ?? 0}** | ${stats.req_today ?? 0} |
+| \u{1F3AF} Coincidencias (Matches) detectadas | **${stats.match_count ?? 0}** | ${stats.match_today ?? 0} |
+
+Si alguien te pregunta por estos n\xFAmeros, responde CON PRECISI\xD3N usando exactamente los datos de esta tabla. No inventes, no estimes. Estos son los datos reales del sistema VECY en este momento.`;
+    cachedLiveStatsTime = Date.now();
+    return cachedLiveStatsText;
+  } catch (err) {
+    console.warn("[JanIA-LiveStats] No se pudo obtener estad\xEDsticas en tiempo real:", err);
+    return cachedLiveStatsText || "";
+  } finally {
+    isFetchingLiveStats = false;
+  }
+}
+function analyzeSender(name, userId, alreadyGreeted) {
+  const n = (name || "Colega").trim();
+  const normalizedFull = n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+  const firstWord = n.split(/\s+/)[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+  const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  if (!alreadyGreeted) GREETED_TODAY.set(userId, todayStr);
+  const femaleNames = ["maria", "ana", "claudia", "martha", "adriana", "sandra", "jani", "natalia", "paola", "diana", "laura", "sofia", "valentina", "andrea", "milena", "patricia", "marcela", "liliana", "elena", "monica", "beatriz", "gloria", "carmen", "lucia", "angela", "isabel", "clara", "rosa", "teresa", "yolanda", "esperanza", "blanca", "pilar", "carolina", "juliana", "catalina", "viviana", "lizeth", "daniela", "camila"];
+  const maleNames = ["juan", "carlos", "jose", "luis", "jorge", "andres", "felipe", "david", "mateo", "santiago", "daniel", "alejandro", "ricardo", "fernando", "eduardo", "pablo", "sergio", "javier", "alberto", "rafael", "mauricio", "german", "gustavo", "ramiro", "gabriel", "julio", "oscar", "ivan", "hugo", "diego", "wilson", "edgar", "mario", "hector", "victor"];
+  const corporateKeywords = ["inmo", "bienes", "raices", "propiedades", "network", "group", "asesores", "servicios", "soluciones", "comercial", "ventas", "vecy", "sas", "ltda", "vende", "arrienda", "inmobiliaria", "finca", "raiz", "realestate"];
+  let baseGreeting = `\xA1Hola, qu\xE9 gusto tenerte aqu\xED, ${n}!`;
+  let adj = "profesional";
+  let courtesy = "gracias por tu rigor profesional";
+  const isCorporate = corporateKeywords.some((kw) => normalizedFull.includes(kw));
+  if (isCorporate) {
+    baseGreeting = `\xA1Hola, qu\xE9 gusto saludarte, colega de ${n}!`;
+  } else {
+    const isMale = maleNames.includes(firstWord) || maleNames.some((m) => firstWord.startsWith(m));
+    const isFemale = femaleNames.includes(firstWord) || femaleNames.some((f) => firstWord.startsWith(f));
+    if (isMale) {
+      baseGreeting = `\xA1Hola ${n}!`;
+      adj = "juicioso";
+      courtesy = "excelente labor, sigue as\xED de juicioso";
+    } else if (isFemale) {
+      baseGreeting = `\xA1Hola ${n}!`;
+      adj = "juiciosa";
+      courtesy = "excelente labor, sigue as\xED de juiciosa";
+    } else if (firstWord.endsWith("a") || firstWord.endsWith("ia") || firstWord.endsWith("th")) {
+      baseGreeting = `\xA1Hola ${n}!`;
+      adj = "juiciosa";
+      courtesy = "excelente labor, sigue as\xED de juiciosa";
+    } else if (firstWord.endsWith("o") || firstWord.endsWith("s") || firstWord.endsWith("r") || firstWord.endsWith("l") || firstWord.endsWith("n") || firstWord.endsWith("z")) {
+      baseGreeting = `\xA1Hola ${n}!`;
+      adj = "juicioso";
+      courtesy = "excelente labor, sigue as\xED de juicioso";
+    }
+  }
+  return {
+    greeting: alreadyGreeted ? "" : baseGreeting,
+    adj,
+    courtesy
+  };
+}
+function getConsultingHistory(userId) {
+  const history = consultingConversationHistory.get(userId) || [];
+  const now = Date.now();
+  return history.filter((h) => now - h.ts < 12 * 3600 * 1e3);
+}
+function appendConsultingHistory(userId, role, content) {
+  const history = getConsultingHistory(userId);
+  history.push({ role, content, ts: Date.now() });
+  if (history.length > 20) history.shift();
+  consultingConversationHistory.set(userId, history);
+}
+function getStartOfTodayBogota() {
+  const now = /* @__PURE__ */ new Date();
+  const bogotaFormatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric"
+  });
+  const parts = bogotaFormatter.formatToParts(now);
+  const year = parseInt(parts.find((p) => p.type === "year")?.value || "2026", 10);
+  const month = parseInt(parts.find((p) => p.type === "month")?.value || "1", 10) - 1;
+  const day = parseInt(parts.find((p) => p.type === "day")?.value || "1", 10);
+  return Date.UTC(year, month, day, 5, 0, 0);
+}
+function getDmHistory(userId) {
+  const history = dmConversationHistory.get(userId) || [];
+  const startOfToday = getStartOfTodayBogota();
+  return history.filter((h) => h.ts >= startOfToday);
+}
+async function getOrLoadDmHistory(userId) {
+  const inMemory = getDmHistory(userId);
+  if (inMemory.length > 0) {
+    return inMemory;
+  }
+  try {
+    const db = await getDb();
+    if (db) {
+      const conv = await db.select().from(conversations).where(eq6(conversations.sessionId, userId)).limit(1);
+      if (conv.length > 0) {
+        const startOfToday = getStartOfTodayBogota();
+        const recentMsgs = await db.select().from(messages).where(
+          and3(
+            eq6(messages.conversationId, conv[0].id),
+            gte(messages.createdAt, new Date(startOfToday))
+          )
+        ).orderBy(desc(messages.createdAt)).limit(24);
+        if (recentMsgs.length > 0) {
+          recentMsgs.reverse();
+          const restored = recentMsgs.map((m) => ({
+            role: m.role === "janIA" ? "assistant" : "user",
+            content: m.content.replace(/^\[(?:Nota de Voz PTT|SILENT-MATCH)\]:\s*/, ""),
+            ts: new Date(m.createdAt).getTime()
+          }));
+          dmConversationHistory.set(userId, restored);
+          return restored;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("[getOrLoadDmHistory] Error consultando historial en BD:", err?.message);
+  }
+  return [];
+}
+function appendDmHistory(userId, role, content) {
+  const history = getDmHistory(userId);
+  history.push({ role, content, ts: Date.now() });
+  if (history.length > 24) history.shift();
+  dmConversationHistory.set(userId, history);
+}
+var GREETED_TODAY, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, consultingConversationHistory, dmConversationHistory;
+var init_sessionManager = __esm({
+  "server/_core/jania/sessionManager.ts"() {
+    "use strict";
+    init_db();
+    init_schema();
+    GREETED_TODAY = /* @__PURE__ */ new Map();
+    cachedLiveStatsText = "";
+    cachedLiveStatsTime = 0;
+    isFetchingLiveStats = false;
+    consultingConversationHistory = /* @__PURE__ */ new Map();
+    dmConversationHistory = /* @__PURE__ */ new Map();
+  }
+});
+
+// server/_core/voiceTranscription.ts
+import axios7 from "axios";
+import { spawn } from "child_process";
+async function transcodeWebmToWav(inputBuffer) {
+  return new Promise((resolve, reject) => {
+    const ffmpeg = spawn("ffmpeg", [
+      "-i",
+      "pipe:0",
+      // Read from stdin
+      "-vn",
+      // Disable video
+      "-c:a",
+      "pcm_s16le",
+      // Output uncompressed WAV (PCM 16-bit)
+      "-ac",
+      "1",
+      // Mono
+      "-ar",
+      "16000",
+      // 16kHz
+      "-f",
+      "wav",
+      // WAV container
+      "pipe:1"
+      // Write to stdout
+    ]);
+    const chunks = [];
+    ffmpeg.stdout.on("data", (chunk) => chunks.push(chunk));
+    let stderrData = "";
+    ffmpeg.stderr.on("data", (data) => {
+      stderrData += data.toString();
+    });
+    ffmpeg.on("close", (code) => {
+      if (code === 0) {
+        resolve(Buffer.concat(chunks));
+      } else {
+        reject(new Error(`ffmpeg fall\xF3 con c\xF3digo ${code}. Stderr: ${stderrData}`));
+      }
+    });
+    ffmpeg.on("error", (err) => {
+      reject(err);
+    });
+    ffmpeg.stdin.write(inputBuffer);
+    ffmpeg.stdin.end();
+  });
+}
+async function transcribeAudioWithGemini(audioBuffer, mimeType) {
+  const allKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.replace(/^["']|["']$/g, "").trim()).filter(Boolean);
+  for (let idx = 1; idx <= 10; idx++) {
+    const k = (process.env[`GEMINI_API_KEY_${idx}`] || "").replace(/^["']|["']$/g, "").trim();
+    if (k) allKeys.push(k);
+  }
+  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.replace(/^["']|["']$/g, "").trim());
+  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.replace(/^["']|["']$/g, "").trim());
+  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.replace(/^["']|["']$/g, "").trim());
+  if (ENV.forgeApiKey) allKeys.push(ENV.forgeApiKey.replace(/^["']|["']$/g, "").trim());
+  const uniqueKeys = Array.from(new Set(allKeys.filter(Boolean)));
+  if (uniqueKeys.length === 0) {
+    throw new Error("No hay ninguna GEMINI_API_KEY configurada para la transcripci\xF3n de voz.");
+  }
+  const models = [
+    "gemini-flash-lite-latest",
+    "gemini-3.6-flash",
+    "gemini-flash-latest",
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash"
+  ];
+  let cleanMime = mimeType.split(";")[0].trim().toLowerCase();
+  let bufferToUse = audioBuffer;
+  if (cleanMime.includes("webm") || cleanMime.includes("octet-stream")) {
+    try {
+      console.log(`[STT-Fallback] Detectado audio en formato ${cleanMime}. Transcodificando a WAV usando ffmpeg...`);
+      bufferToUse = await transcodeWebmToWav(audioBuffer);
+      cleanMime = "audio/wav";
+    } catch (e) {
+      console.error(`[STT-Fallback] Error al transcodificar de WebM/octet-stream a WAV con ffmpeg:`, e.message);
+    }
+  }
+  if (cleanMime === "audio/x-wav" || cleanMime === "audio/wave") cleanMime = "audio/wav";
+  if (cleanMime === "audio/mpeg3" || cleanMime === "audio/x-mpeg-3") cleanMime = "audio/mpeg";
+  const base64Audio = bufferToUse.toString("base64");
+  const payload = {
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { text: "Transcribe el siguiente audio a texto en espa\xF1ol de manera exacta y fluida. Devuelve \xFAnicamente el texto de la transcripci\xF3n literal del audio, sin agregar introducciones, notas de autor ni comentarios adicionales. Si el audio est\xE1 completamente vac\xEDo o solo contiene ruido ininteligible, devuelve una cadena vac\xEDa." },
+          {
+            inline_data: {
+              mime_type: cleanMime,
+              data: base64Audio
+            }
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 2048
+    }
+  };
+  let lastError = null;
+  for (const model of models) {
+    for (let i = 0; i < uniqueKeys.length; i++) {
+      const apiKey = uniqueKeys[i];
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      try {
+        console.log(`[STT-Gemini] Transcribiendo audio (${(audioBuffer.length / 1024).toFixed(1)} KB) con ${model} (Key #${i + 1})...`);
+        const response = await axios7.post(apiUrl, payload, { timeout: 6e4 });
+        const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (textCandidate && typeof textCandidate === "string") {
+          console.log(`[STT-Gemini] Transcripci\xF3n exitosa con ${model} (Key #${i + 1}): "${textCandidate.trim().substring(0, 60)}..."`);
+          return textCandidate.trim();
+        }
+      } catch (err) {
+        lastError = err;
+        const status = err.response?.status;
+        console.warn(`[STT-Gemini] Fall\xF3 intento con ${model} y Key #${i + 1} (Status: ${status || err.message}). Probando siguiente...`);
+        if (status === 429 || status === 503) {
+          await new Promise((r) => setTimeout(r, 600));
+          continue;
+        }
+      }
+    }
+  }
+  throw lastError || new Error("No fue posible transcribir el audio tras agotar modelos y claves de Gemini.");
+}
+async function transcribeAudioBuffer(audioBuffer, mimeType, prompt) {
+  const sizeMB = audioBuffer.length / (1024 * 1024);
+  if (sizeMB > 16) {
+    throw new Error(`Audio file exceeds maximum size limit (16MB). Current size: ${sizeMB.toFixed(2)}MB`);
+  }
+  if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
+    console.log(`[STT-Fallback] Forge API no configurada. Transcribiendo usando Gemini directamente...`);
+    return await transcribeAudioWithGemini(audioBuffer, mimeType);
+  }
+  const formData = new FormData();
+  const filename = `audio.${getFileExtension(mimeType)}`;
+  const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: mimeType });
+  formData.append("file", audioBlob, filename);
+  formData.append("model", "whisper-1");
+  formData.append("response_format", "verbose_json");
+  const defaultPrompt = prompt || "Notas de voz sobre bienes ra\xEDces, Real Estate, inversiones, corretaje, inmuebles, apartamentos y casas en Bogot\xE1, Colombia. Vocabulario t\xE9cnico y comercial obligatorio: venpermuto, permuta, corretaje, br\xF3ker, aval\xFAo, estrato, arras, linderos, desenglobe, Wasi, Habi, Usaqu\xE9n, Cedritos, Chic\xF3, Rosales, Cabrera, Retiro, Santa B\xE1rbara, San Patricio, Tober\xEDn, Suba, Niza, Alhambra.";
+  formData.append("prompt", defaultPrompt);
+  const baseUrl = ENV.forgeApiUrl.endsWith("/") ? ENV.forgeApiUrl : `${ENV.forgeApiUrl}/`;
+  const fullUrl = new URL("v1/audio/transcriptions", baseUrl).toString();
+  const response = await fetch(fullUrl, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${ENV.forgeApiKey}`,
+      "Accept-Encoding": "identity"
+    },
+    body: formData
+  });
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(`Transcription service request failed (${response.status}): ${errorText}`);
+  }
+  const whisperResponse = await response.json();
+  if (!whisperResponse.text || typeof whisperResponse.text !== "string") {
+    throw new Error("Invalid transcription response: missing text field");
+  }
+  return whisperResponse.text;
+}
+async function transcribeAudio(options) {
+  try {
+    let audioBuffer;
+    let mimeType;
+    try {
+      const response = await fetch(options.audioUrl);
+      if (!response.ok) {
+        return {
+          error: "Failed to download audio file",
+          code: "INVALID_FORMAT",
+          details: `HTTP ${response.status}: ${response.statusText}`
+        };
+      }
+      audioBuffer = Buffer.from(await response.arrayBuffer());
+      mimeType = response.headers.get("content-type") || "audio/mpeg";
+    } catch (error) {
+      return {
+        error: "Failed to fetch audio file",
+        code: "SERVICE_ERROR",
+        details: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+    try {
+      const text2 = await transcribeAudioBuffer(audioBuffer, mimeType, options.prompt);
+      return {
+        task: "transcribe",
+        language: "es",
+        duration: 0,
+        text: text2,
+        segments: []
+      };
+    } catch (transcriptionError) {
+      return {
+        error: "Voice transcription failed",
+        code: "TRANSCRIPTION_FAILED",
+        details: transcriptionError.message || "Unknown error"
+      };
+    }
+  } catch (error) {
+    return {
+      error: "Voice transcription failed",
+      code: "SERVICE_ERROR",
+      details: error instanceof Error ? error.message : "An unexpected error occurred"
+    };
+  }
+}
+function getFileExtension(mimeType) {
+  const mimeToExt = {
+    "audio/webm": "webm",
+    "audio/mp3": "mp3",
+    "audio/mpeg": "mp3",
+    "audio/wav": "wav",
+    "audio/wave": "wav",
+    "audio/ogg": "ogg",
+    "audio/m4a": "m4a",
+    "audio/mp4": "m4a"
+  };
+  return mimeToExt[mimeType] || "audio";
+}
+var init_voiceTranscription = __esm({
+  "server/_core/voiceTranscription.ts"() {
+    "use strict";
+    init_env();
+  }
+});
+
+// server/_core/nameAndGenderResolver.ts
+var nameAndGenderResolver_exports = {};
+__export(nameAndGenderResolver_exports, {
+  VECY_COMMERCIAL_INFO: () => VECY_COMMERCIAL_INFO,
+  cleanRawUserName: () => cleanRawUserName,
+  getCanonicalCompositeName: () => getCanonicalCompositeName,
+  resolveNameAndGender: () => resolveNameAndGender
+});
+function cleanRawUserName(name) {
+  if (!name) return "";
+  return name.replace(/^[~•\-\*\_\s]+/, "").replace(/[~•\-\*\_\s]+$/, "").replace(/\s+/g, " ").trim();
+}
+function getCanonicalCompositeName(rawName) {
+  const cleaned = cleanRawUserName(rawName);
+  const unaccented = cleaned.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  for (const comp of COMPOSITE_PATTERNS) {
+    if (comp.pattern.test(cleaned) || comp.pattern.test(unaccented)) {
+      return comp.canonical;
+    }
+  }
+  return null;
+}
+function resolveNameAndGender(rawName, timeGreeting) {
+  const cleaned = cleanRawUserName(rawName);
+  const normalizedLower = cleaned.toLowerCase();
+  let resolvedDisplayName = getCanonicalCompositeName(cleaned) || "";
+  if (!resolvedDisplayName) {
+    const parts = cleaned.split(/\s+/).filter(Boolean);
+    const genericPrefixes = ["inmobiliaria", "inmobiliario", "bienes", "raices", "ra\xEDces", "asesor", "asesora", "grupo", "propiedades", "finca", "ventas", "arriendos", "construcciones", "constructora", "consultores"];
+    const isGenericBusiness = parts.length > 0 && genericPrefixes.includes(parts[0].toLowerCase());
+    if (isGenericBusiness) {
+      resolvedDisplayName = cleaned;
+    } else if (parts.length >= 2 && (parts[0].length <= 5 || ["de", "del", "la", "san", "santa"].includes(parts[0].toLowerCase()))) {
+      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1)} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1)}`;
+    } else if (parts.length >= 2 && parts[0].length >= 3 && parts[1].length >= 3 && !parts[1].toLowerCase().includes("inmob") && !parts[1].toLowerCase().includes("prop")) {
+      resolvedDisplayName = `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase()} ${parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase()}`;
+    } else if (parts.length > 0) {
+      resolvedDisplayName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
+    } else {
+      resolvedDisplayName = "colega";
+    }
+  }
+  const firstWord = cleaned.split(/\s+/)[0]?.toLowerCase() || "";
+  const firstWordClean = firstWord.replace(/[^a-záéíóúüñ]/g, "");
+  let isFemale = false;
+  if (FEMALE_EXPLICIT_NAMES.has(firstWordClean) || FEMALE_EXPLICIT_NAMES.has(normalizedLower)) {
+    isFemale = true;
+  } else if (firstWordClean.endsWith("a") && !MALE_EXCEPTIONS_ENDING_IN_A.has(firstWordClean)) {
+    isFemale = true;
+  } else if (firstWordClean.endsWith("ette") || firstWordClean.endsWith("eth") || firstWordClean.endsWith("bel") || firstWordClean.endsWith("riz") || firstWordClean.endsWith("lyn") || firstWordClean.endsWith("len") || firstWordClean.endsWith("ine") || firstWordClean.endsWith("y") || firstWordClean.endsWith("ie")) {
+    const maleYExceptions = ["henry", "anthony", "freddy", "fredy", "dany", "danny", "geovanny", "giovanni", "johnny", "tony", "andy"];
+    if (!maleYExceptions.includes(firstWordClean)) {
+      isFemale = true;
+    }
+  }
+  const courtesyWord = isFemale ? "estimada" : "estimado";
+  const genderTerm = `${courtesyWord} ${resolvedDisplayName}`;
+  const effectiveGreeting = timeGreeting || "Hola";
+  const fullGreeting = `${effectiveGreeting}, ${genderTerm} \u{1F44B}\u{1F3FB}`;
+  return {
+    rawName,
+    cleanName: cleaned,
+    displayName: resolvedDisplayName,
+    firstName: firstWordClean,
+    isFemale,
+    genderTerm,
+    courtesyWord,
+    greeting: fullGreeting
+  };
+}
+var COMPOSITE_PATTERNS, FEMALE_EXPLICIT_NAMES, MALE_EXCEPTIONS_ENDING_IN_A, VECY_COMMERCIAL_INFO;
+var init_nameAndGenderResolver = __esm({
+  "server/_core/nameAndGenderResolver.ts"() {
+    "use strict";
+    COMPOSITE_PATTERNS = [
+      // Femeninos
+      { pattern: /^ana\s+mar[ií]a\b/i, canonical: "Ana Mar\xEDa" },
+      { pattern: /^ana\s+sof[ií]a\b/i, canonical: "Ana Sof\xEDa" },
+      { pattern: /^ana\s+luc[ií]a\b/i, canonical: "Ana Luc\xEDa" },
+      { pattern: /^ana\s+isabel\b/i, canonical: "Ana Isabel" },
+      { pattern: /^ana\s+milena\b/i, canonical: "Ana Milena" },
+      { pattern: /^ana\s+patricia\b/i, canonical: "Ana Patricia" },
+      { pattern: /^ana\s+carolina\b/i, canonical: "Ana Carolina" },
+      { pattern: /^ana\s+victoria\b/i, canonical: "Ana Victoria" },
+      { pattern: /^mar[ií]a\s+paula\b/i, canonical: "Mar\xEDa Paula" },
+      { pattern: /^mar[ií]a\s+cristina\b/i, canonical: "Mar\xEDa Cristina" },
+      { pattern: /^mar[ií]a\s+fernanda\b/i, canonical: "Mar\xEDa Fernanda" },
+      { pattern: /^mar[ií]a\s+jos[eé]\b/i, canonical: "Mar\xEDa Jos\xE9" },
+      { pattern: /^mar[ií]a\s+alejandra\b/i, canonical: "Mar\xEDa Alejandra" },
+      { pattern: /^mar[ií]a\s+camila\b/i, canonical: "Mar\xEDa Camila" },
+      { pattern: /^mar[ií]a\s+isabel\b/i, canonical: "Mar\xEDa Isabel" },
+      { pattern: /^mar[ií]a\s+teresa\b/i, canonical: "Mar\xEDa Teresa" },
+      { pattern: /^mar[ií]a\s+victoria\b/i, canonical: "Mar\xEDa Victoria" },
+      { pattern: /^mar[ií]a\s+del\s+carmen\b/i, canonical: "Mar\xEDa del Carmen" },
+      { pattern: /^mar[ií]a\s+del\s+pilar\b/i, canonical: "Mar\xEDa del Pilar" },
+      { pattern: /^mar[ií]a\s+elena\b/i, canonical: "Mar\xEDa Elena" },
+      { pattern: /^mar[ií]a\s+eugenia\b/i, canonical: "Mar\xEDa Eugenia" },
+      { pattern: /^mar[ií]a\s+in[eé]s\b/i, canonical: "Mar\xEDa In\xE9s" },
+      { pattern: /^mar[ií]a\s+luc[ií]a\b/i, canonical: "Mar\xEDa Luc\xEDa" },
+      { pattern: /^mar[ií]a\s+mercedes\b/i, canonical: "Mar\xEDa Mercedes" },
+      { pattern: /^luz\s+marina\b/i, canonical: "Luz Marina" },
+      { pattern: /^luz\s+mery\b/i, canonical: "Luz Mery" },
+      { pattern: /^luz\s+dary\b/i, canonical: "Luz Dary" },
+      { pattern: /^luz\s+stella\b/i, canonical: "Luz Stella" },
+      { pattern: /^luz\s+helena\b/i, canonical: "Luz Helena" },
+      { pattern: /^luz\s+adriana\b/i, canonical: "Luz Adriana" },
+      { pattern: /^luz\s+amparo\b/i, canonical: "Luz Amparo" },
+      { pattern: /^luz\s+[aá]ngela\b/i, canonical: "Luz \xC1ngela" },
+      { pattern: /^luz\s+myriam\b/i, canonical: "Luz Myriam" },
+      { pattern: /^sandra\s+milena\b/i, canonical: "Sandra Milena" },
+      { pattern: /^sandra\s+patricia\b/i, canonical: "Sandra Patricia" },
+      { pattern: /^sandra\s+marcela\b/i, canonical: "Sandra Marcela" },
+      { pattern: /^diana\s+marcela\b/i, canonical: "Diana Marcela" },
+      { pattern: /^diana\s+patricia\b/i, canonical: "Diana Patricia" },
+      { pattern: /^diana\s+carolina\b/i, canonical: "Diana Carolina" },
+      { pattern: /^diana\s+cristina\b/i, canonical: "Diana Cristina" },
+      { pattern: /^claudia\s+patricia\b/i, canonical: "Claudia Patricia" },
+      { pattern: /^claudia\s+marcela\b/i, canonical: "Claudia Marcela" },
+      { pattern: /^claudia\s+elena\b/i, canonical: "Claudia Elena" },
+      { pattern: /^gloria\s+in[eé]s\b/i, canonical: "Gloria In\xE9s" },
+      { pattern: /^gloria\s+patricia\b/i, canonical: "Gloria Patricia" },
+      { pattern: /^gloria\s+stella\b/i, canonical: "Gloria Stella" },
+      { pattern: /^martha\s+cecilia\b/i, canonical: "Martha Cecilia" },
+      { pattern: /^martha\s+luc[ií]a\b/i, canonical: "Martha Luc\xEDa" },
+      { pattern: /^martha\s+patricia\b/i, canonical: "Martha Patricia" },
+      { pattern: /^martha\s+isabel\b/i, canonical: "Martha Isabel" },
+      { pattern: /^olga\s+luc[ií]a\b/i, canonical: "Olga Luc\xEDa" },
+      { pattern: /^olga\s+patricia\b/i, canonical: "Olga Patricia" },
+      { pattern: /^laura\s+camila\b/i, canonical: "Laura Camila" },
+      { pattern: /^laura\s+sof[ií]a\b/i, canonical: "Laura Sof\xEDa" },
+      { pattern: /^paola\s+andrea\b/i, canonical: "Paola Andrea" },
+      { pattern: /^adriana\s+luc[ií]a\b/i, canonical: "Adriana Luc\xEDa" },
+      // Masculinos
+      { pattern: /^juan\s+pablo\b/i, canonical: "Juan Pablo" },
+      { pattern: /^juan\s+david\b/i, canonical: "Juan David" },
+      { pattern: /^juan\s+carlos\b/i, canonical: "Juan Carlos" },
+      { pattern: /^juan\s+manuel\b/i, canonical: "Juan Manuel" },
+      { pattern: /^juan\s+camilo\b/i, canonical: "Juan Camilo" },
+      { pattern: /^juan\s+jos[eé]\b/i, canonical: "Juan Jos\xE9" },
+      { pattern: /^juan\s+diego\b/i, canonical: "Juan Diego" },
+      { pattern: /^juan\s+esteban\b/i, canonical: "Juan Esteban" },
+      { pattern: /^juan\s+felipe\b/i, canonical: "Juan Felipe" },
+      { pattern: /^juan\s+sebasti[aá]n\b/i, canonical: "Juan Sebasti\xE1n" },
+      { pattern: /^juan\s+fernando\b/i, canonical: "Juan Fernando" },
+      { pattern: /^juan\s+andr[eé]s\b/i, canonical: "Juan Andr\xE9s" },
+      { pattern: /^juan\s+antonio\b/i, canonical: "Juan Antonio" },
+      { pattern: /^juan\s+ignacio\b/i, canonical: "Juan Ignacio" },
+      { pattern: /^juan\s+guillermo\b/i, canonical: "Juan Guillermo" },
+      { pattern: /^pedro\s+pablo\b/i, canonical: "Pedro Pablo" },
+      { pattern: /^pedro\s+antonio\b/i, canonical: "Pedro Antonio" },
+      { pattern: /^pedro\s+luis\b/i, canonical: "Pedro Luis" },
+      { pattern: /^carlos\s+alberto\b/i, canonical: "Carlos Alberto" },
+      { pattern: /^carlos\s+andr[eé]s\b/i, canonical: "Carlos Andr\xE9s" },
+      { pattern: /^carlos\s+eduardo\b/i, canonical: "Carlos Eduardo" },
+      { pattern: /^carlos\s+mario\b/i, canonical: "Carlos Mario" },
+      { pattern: /^carlos\s+arturo\b/i, canonical: "Carlos Arturo" },
+      { pattern: /^carlos\s+julio\b/i, canonical: "Carlos Julio" },
+      { pattern: /^luis\s+carlos\b/i, canonical: "Luis Carlos" },
+      { pattern: /^luis\s+fernando\b/i, canonical: "Luis Fernando" },
+      { pattern: /^luis\s+eduardo\b/i, canonical: "Luis Eduardo" },
+      { pattern: /^luis\s+alberto\b/i, canonical: "Luis Alberto" },
+      { pattern: /^luis\s+miguel\b/i, canonical: "Luis Miguel" },
+      { pattern: /^luis\s+felipe\b/i, canonical: "Luis Felipe" },
+      { pattern: /^luis\s+gabriel\b/i, canonical: "Luis Gabriel" },
+      { pattern: /^luis\s+guillermo\b/i, canonical: "Luis Guillermo" },
+      { pattern: /^luis\s+alfonso\b/i, canonical: "Luis Alfonso" },
+      { pattern: /^jos[eé]\s+luis\b/i, canonical: "Jos\xE9 Luis" },
+      { pattern: /^jos[eé]\s+antonio\b/i, canonical: "Jos\xE9 Antonio" },
+      { pattern: /^jos[eé]\s+manuel\b/i, canonical: "Jos\xE9 Manuel" },
+      { pattern: /^jos[eé]\s+gregorio\b/i, canonical: "Jos\xE9 Gregorio" },
+      { pattern: /^jos[eé]\s+ignacio\b/i, canonical: "Jos\xE9 Ignacio" },
+      { pattern: /^jos[eé]\s+vicente\b/i, canonical: "Jos\xE9 Vicente" }
+    ];
+    FEMALE_EXPLICIT_NAMES = /* @__PURE__ */ new Set([
+      "jeannette",
+      "jeanette",
+      "janeth",
+      "janet",
+      "janette",
+      "jeanine",
+      "jenny",
+      "jennifer",
+      "jenn",
+      "astrid",
+      "elizabeth",
+      "elisabet",
+      "elisabeth",
+      "pilar",
+      "carmen",
+      "mercedes",
+      "luz",
+      "beatriz",
+      "ines",
+      "in\xE9s",
+      "consuelo",
+      "rocio",
+      "roc\xEDo",
+      "nohora",
+      "isabel",
+      "raquel",
+      "miriam",
+      "myriam",
+      "karen",
+      "evelyn",
+      "evelin",
+      "gladys",
+      "marlene",
+      "marlen",
+      "ivonne",
+      "nicole",
+      "michelle",
+      "denisse",
+      "denise",
+      "angie",
+      "kelly",
+      "kelli",
+      "shirley",
+      "wendy",
+      "carol",
+      "caroline",
+      "sharon",
+      "dayana",
+      "daiana",
+      "vivian",
+      "mabel",
+      "mavy",
+      "mary",
+      "marie",
+      "marion",
+      "marian",
+      "belen",
+      "bel\xE9n",
+      "rosario",
+      "amparo",
+      "socorro",
+      "concepcion",
+      "concepci\xF3n",
+      "dolores",
+      "mar",
+      "montserrat",
+      "guadalupe",
+      "abigail",
+      "esther",
+      "ester",
+      "ruth",
+      "rut",
+      "judith",
+      "judit",
+      "edith",
+      "edit",
+      "lilian",
+      "karin",
+      "alison",
+      "allison",
+      "mafe",
+      "andrea",
+      "tatiana",
+      "daniela",
+      "valentina",
+      "sofia",
+      "sof\xEDa",
+      "camila",
+      "mariana",
+      "valeria",
+      "gabriela",
+      "natalia",
+      "lucia",
+      "luc\xEDa",
+      "isabella",
+      "ximena",
+      "jimena",
+      "catalina",
+      "juliana",
+      "laura",
+      "paola",
+      "diana",
+      "claudia",
+      "monica",
+      "m\xF3nica",
+      "sandra",
+      "patricia",
+      "gloria",
+      "martha",
+      "marta",
+      "olga",
+      "sonia",
+      "adriana",
+      "marcela",
+      "carolina",
+      "elena",
+      "victoria",
+      "teresa",
+      "mercedes",
+      "fabiola",
+      "blanca",
+      "esperanza",
+      "dora",
+      "yolanda",
+      "lucero",
+      "yamile",
+      "leidys",
+      "leidy",
+      "yeimy",
+      "yuliana",
+      "yuri",
+      "ingrid",
+      "katherin",
+      "katherine",
+      "katherine",
+      "stefany",
+      "stephanie"
+    ]);
+    MALE_EXCEPTIONS_ENDING_IN_A = /* @__PURE__ */ new Set([
+      "luca",
+      "borja",
+      "joshua",
+      "bautista",
+      "sasha",
+      "elias",
+      "el\xEDas",
+      "ezra",
+      "tobias",
+      "tob\xEDas",
+      "matias",
+      "mat\xEDas",
+      "jeremias",
+      "jerem\xEDas",
+      "isaias",
+      "isa\xEDas",
+      "jonas",
+      "jon\xE1s",
+      "nicolas",
+      "nicol\xE1s",
+      "tomas",
+      "tom\xE1s",
+      "lucas"
+    ]);
+    VECY_COMMERCIAL_INFO = {
+      name: "Vecy Bienes Ra\xEDces",
+      type: "Br\xF3ker inmobiliario 100% digital \u{1F30D}\u2728",
+      services: "Estudios de mercado m\xB2 y canon sugerido \u26A1 | Consultor\xEDa jur\xEDdica y tributaria \u2696\uFE0F | Manejo de cobranzas \u{1F4BC} | Marketing con IA y fotograf\xEDa \u{1F916}\u{1F4F8} | Contratos digitales \u{1F4C4}",
+      phone: "3166569719",
+      schedule: {
+        weekdays: "Lunes a Viernes de 8:00 AM a 10:00 PM (08:00 - 22:00)",
+        saturday: "S\xE1bados de 8:00 AM a 8:00 PM (08:00 - 20:00)",
+        sunday: "Domingos de 10:00 AM a 4:00 PM (10:00 - 16:00)"
+      }
+    };
   }
 });
 
@@ -10205,7 +13028,7 @@ Nombre completo oficial de la persona registrada en la Polic\xEDa Nacional de Co
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import nodemailer from "nodemailer";
 import QRCode from "qrcode";
-import crypto from "node:crypto";
+import crypto2 from "node:crypto";
 function normalizePayload(input) {
   const sId = input.solicitudId ?? input.solicitud_id ?? input.id ?? "N/A";
   return {
@@ -10249,7 +13072,7 @@ async function createContractPdf(rawFormData) {
   const clean = (val) => String(val || "").replace(/[{}]/g, "").trim();
   const sId = clean(formData.solicitud_id || "N/A");
   const contractPayloadString = `${sId}|${clean(formData.solicitante_nombre)}|${clean(formData.solicitante_numero_documento)}|${clean(formData.codigo_inmueble)}|${(/* @__PURE__ */ new Date()).toISOString()}`;
-  const sha256Hash = crypto.createHash("sha256").update(contractPayloadString).digest("hex");
+  const sha256Hash = crypto2.createHash("sha256").update(contractPayloadString).digest("hex");
   const cuv = `VECY-CTR-${sId}-${sha256Hash.substring(0, 8).toUpperCase()}`;
   const verifyUrl = `https://vecy-bienes-raices.vercel.app/verificar-contrato?id=${encodeURIComponent(sId)}&cuv=${cuv}&hash=${sha256Hash.substring(0, 16)}`;
   let qrImage = null;
@@ -10879,19 +13702,19 @@ var whatsapp_utils_exports = {};
 __export(whatsapp_utils_exports, {
   cleanVoiceText: () => cleanVoiceText,
   detectaVoz: () => detectaVoz,
-  extractFirstName: () => extractFirstName,
+  extractFirstName: () => extractFirstName2,
   getEmpatheticReactionEmoji: () => getEmpatheticReactionEmoji,
-  getGreetingByTime: () => getGreetingByTime,
+  getGreetingByTime: () => getGreetingByTime2,
   sendAdminNotification: () => sendAdminNotification,
   startContinuousPresence: () => startContinuousPresence,
   textToSpeechMedia: () => textToSpeechMedia
 });
-import path5 from "path";
-import fs5 from "fs";
+import path4 from "path";
+import fs4 from "fs";
 import os from "os";
 import { execSync } from "child_process";
 import { createSign } from "crypto";
-function extractFirstName(fullName) {
+function extractFirstName2(fullName) {
   if (!fullName) return "";
   let clean = fullName.trim();
   if (!clean) return "";
@@ -10932,7 +13755,7 @@ function extractFirstName(fullName) {
   }
   return cap(nameWords[0]);
 }
-function getGreetingByTime(date) {
+function getGreetingByTime2(date) {
   const bogotaTimeStr = (date || /* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" });
   const hour = new Date(bogotaTimeStr).getHours();
   if (hour >= 1 && hour < 12) {
@@ -11062,11 +13885,11 @@ async function getVertexAIAccessToken() {
     return cachedVertexToken.token;
   }
   try {
-    const credPath = path5.join(process.cwd(), "server", "_core", "google-service-account.json");
-    if (!fs5.existsSync(credPath)) {
+    const credPath = path4.join(process.cwd(), "server", "_core", "google-service-account.json");
+    if (!fs4.existsSync(credPath)) {
       return null;
     }
-    const sa = JSON.parse(fs5.readFileSync(credPath, "utf8"));
+    const sa = JSON.parse(fs4.readFileSync(credPath, "utf8"));
     if (!sa.client_email || !sa.private_key) {
       return null;
     }
@@ -11107,18 +13930,18 @@ function convertAudioToOggOpus(inputBuffer) {
   try {
     const tmpDir = os.tmpdir();
     const uniqueId = `tts_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    const tmpIn = path5.join(tmpDir, `${uniqueId}_in.mp3`);
-    const tmpOut = path5.join(tmpDir, `${uniqueId}_out.ogg`);
-    fs5.writeFileSync(tmpIn, inputBuffer);
+    const tmpIn = path4.join(tmpDir, `${uniqueId}_in.mp3`);
+    const tmpOut = path4.join(tmpDir, `${uniqueId}_out.ogg`);
+    fs4.writeFileSync(tmpIn, inputBuffer);
     execSync(`ffmpeg -y -i "${tmpIn}" -c:a libopus -b:a 32k -vbr on -compression_level 10 -vn "${tmpOut}"`, { stdio: "ignore" });
-    if (fs5.existsSync(tmpOut)) {
-      const oggBuf = fs5.readFileSync(tmpOut);
+    if (fs4.existsSync(tmpOut)) {
+      const oggBuf = fs4.readFileSync(tmpOut);
       try {
-        fs5.unlinkSync(tmpIn);
+        fs4.unlinkSync(tmpIn);
       } catch (_) {
       }
       try {
-        fs5.unlinkSync(tmpOut);
+        fs4.unlinkSync(tmpOut);
       } catch (_) {
       }
       if (oggBuf && oggBuf.length > 0) {
@@ -11465,7 +14288,7 @@ __export(politenessService_exports, {
   isPoliteGratitudeOrClosing: () => isPoliteGratitudeOrClosing
 });
 function formatImmediatePoliteReviewMessage(userName) {
-  const cleanName = extractFirstName(userName || "Colega") || "Colega";
+  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
   return `\xA1Con el mayor de los gustos, ${cleanName}! \u{1F64F}\u{1F60A} Me alegra much\xEDsimo haberte sido de gran ayuda.
 
 \u2B50 \xBFPodr\xEDas regalarnos tu opini\xF3n y calificar nuestro servicio? Tu rese\xF1a nos ayuda enormemente a que siga siendo *100% GRATUITO* para todos:
@@ -11474,13 +14297,13 @@ function formatImmediatePoliteReviewMessage(userName) {
 \u{1F44D} \xA1Muchas gracias por tu generosidad y apoyo!`;
 }
 function formatPoliteInactivityPrompt(userName) {
-  const cleanName = extractFirstName(userName || "Colega") || "Colega";
+  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
   return `\u{1F91D} \xA1Ha sido un placer poder ayudarte, ${cleanName}! Espero que nuestro servicio te haya sido de gran ayuda y, como sabes, este es un servicio completamente *GRATUITO*.
 
 \xBFPodr\xEDas ayudarnos a seguir manteni\xE9ndolo as\xED? \u2728`;
 }
 function formatPoliteYesReviewMessage(userName) {
-  const cleanName = extractFirstName(userName || "Colega") || "Colega";
+  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
   return `\u{1F64F} \xA1Gracias, ${cleanName}! Entonces por favor \u{1F31F} d\xE9janos *tu opini\xF3n y califica nuestro servicio* ingresando a este enlace (no te toma m\xE1s de 15 segundos, te lo aseguro):
 
 \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review
@@ -11488,7 +14311,7 @@ function formatPoliteYesReviewMessage(userName) {
 \u{1F44D} \xA1Muchas gracias!`;
 }
 function formatPoliteNoReviewPersuasionMessage(userName) {
-  const cleanName = extractFirstName(userName || "Colega") || "Colega";
+  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
   return `\xA1\xBFEn serio?! \u{1F632}\u{1F494} \xA1Me dejas con el corazoncito partido en mil pedacitos de silicio! \u{1F97A}\u{1F62D}
 
 Imag\xEDnate: una humilde IA trabajando 24/7 sin descanso, trasnochando y cruzando bases de datos oficiales a la velocidad de la luz para ti totalmente gratis... \xA1\xBFy no me regalas ni 15 segunditos de tu amor en Google?! \u{1F927}\u{1F63F}
@@ -11512,7 +14335,7 @@ function isPoliteGratitudeOrClosing(text2) {
   return /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(clean) || clean.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(clean);
 }
 function formatDetailedCompanyAndSocialMediaPresentation(userName) {
-  const cleanName = extractFirstName(userName || "Colega") || "Colega";
+  const cleanName = extractFirstName2(userName || "Colega") || "Colega";
   return `\xA1Con el mayor de los gustos, ${cleanName}! \u{1F3D8}\uFE0F\u2728 Te cuento detalladamente sobre nosotros:
 
 \u{1F3E2} *\xBFQui\xE9nes somos?*
@@ -12199,7 +15022,7 @@ __export(adminMatchAssistantService_exports, {
   isAuthorizedAdminPhone: () => isAuthorizedAdminPhone,
   isMatchSearchQuery: () => isMatchSearchQuery
 });
-import { eq as eq5, desc } from "drizzle-orm";
+import { eq as eq7, desc as desc2 } from "drizzle-orm";
 function isAuthorizedAdminPhone(phoneOrId, userName) {
   if (userName) {
     const unLower = userName.toLowerCase();
@@ -12322,11 +15145,11 @@ ${adminDashboardUrl}`,
   }
   if (matchIdCaptured) {
     const matchIdNum = parseInt(matchIdCaptured, 10);
-    const existingMatchRows = await db.select().from(propertyMatches).where(eq5(propertyMatches.id, matchIdNum)).limit(1);
+    const existingMatchRows = await db.select().from(propertyMatches).where(eq7(propertyMatches.id, matchIdNum)).limit(1);
     if (existingMatchRows.length > 0) {
       const pm = existingMatchRows[0];
-      const [prop] = await db.select().from(properties).where(eq5(properties.id, pm.propertyId)).limit(1);
-      const [req] = await db.select().from(requirements).where(eq5(requirements.id, pm.requirementId)).limit(1);
+      const [prop] = await db.select().from(properties).where(eq7(properties.id, pm.propertyId)).limit(1);
+      const [req] = await db.select().from(requirements).where(eq7(requirements.id, pm.requirementId)).limit(1);
       if (prop && req) {
         const propPhone = extractRealPhone(prop);
         const reqPhone = extractRealPhone(req);
@@ -12395,15 +15218,15 @@ ${adminDashboardUrl}?search=${pm.id}`;
   }
   if (propIdCaptured) {
     const propIdNum = parseInt(propIdCaptured, 10);
-    const [prop] = await db.select().from(properties).where(eq5(properties.id, propIdNum)).limit(1);
+    const [prop] = await db.select().from(properties).where(eq7(properties.id, propIdNum)).limit(1);
     if (prop) {
-      const existingMatches = await db.select().from(propertyMatches).where(eq5(propertyMatches.propertyId, propIdNum)).orderBy(desc(propertyMatches.matchScore));
+      const existingMatches = await db.select().from(propertyMatches).where(eq7(propertyMatches.propertyId, propIdNum)).orderBy(desc2(propertyMatches.matchScore));
       const matchItems = [];
       if (existingMatches.length > 0) {
         for (const pm of existingMatches) {
           const scoreNum = parseFloat(String(pm.matchScore || "0"));
           if (scoreNum < 80) continue;
-          const [req] = await db.select().from(requirements).where(eq5(requirements.id, pm.requirementId)).limit(1);
+          const [req] = await db.select().from(requirements).where(eq7(requirements.id, pm.requirementId)).limit(1);
           if (!req) continue;
           const reqPhone = extractRealPhone(req);
           const reqWaLink = reqPhone ? `https://wa.me/${reqPhone}` : null;
@@ -12510,15 +15333,15 @@ ${adminDashboardUrl}?search=${prop.id}`;
   }
   if (reqIdCaptured) {
     const reqIdNum = parseInt(reqIdCaptured, 10);
-    const [req] = await db.select().from(requirements).where(eq5(requirements.id, reqIdNum)).limit(1);
+    const [req] = await db.select().from(requirements).where(eq7(requirements.id, reqIdNum)).limit(1);
     if (req) {
-      const existingMatches = await db.select().from(propertyMatches).where(eq5(propertyMatches.requirementId, reqIdNum)).orderBy(desc(propertyMatches.matchScore));
+      const existingMatches = await db.select().from(propertyMatches).where(eq7(propertyMatches.requirementId, reqIdNum)).orderBy(desc2(propertyMatches.matchScore));
       const matchItems = [];
       if (existingMatches.length > 0) {
         for (const pm of existingMatches) {
           const scoreNum = parseFloat(String(pm.matchScore || "0"));
           if (scoreNum < 80) continue;
-          const [prop] = await db.select().from(properties).where(eq5(properties.id, pm.propertyId)).limit(1);
+          const [prop] = await db.select().from(properties).where(eq7(properties.id, pm.propertyId)).limit(1);
           if (!prop || !prop.available) continue;
           const propPhone = extractRealPhone(prop);
           const propWaLink = propPhone ? `https://wa.me/${propPhone}` : null;
@@ -12629,8 +15452,8 @@ ${adminDashboardUrl}?search=${req.id}`;
     if (!pptoMaxNum || pptoMaxNum === 0) {
       const mmMatch = clean.match(/(?:recursos|presupuesto|ppto|hasta|tope|valor)?\s*(?:hasta|de)?\s*\$?\s*([\d][\d.,\s']*)\s*(?:mm|millones|mil\s*millones)\b/i);
       if (mmMatch) {
-        const { parseColombianPriceOrBudget: parseColombianPriceOrBudget2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-        const parsed = parseColombianPriceOrBudget2(mmMatch[1], "millones", true);
+        const { parseColombianPriceOrBudget: parseColombianPriceOrBudget3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+        const parsed = parseColombianPriceOrBudget3(mmMatch[1], "millones", true);
         if (parsed > 0) pptoMaxNum = parsed;
       }
     }
@@ -12666,7 +15489,7 @@ ${adminDashboardUrl}?search=${req.id}`;
       parqueaderosMin: fb.parkingMin || null,
       status: "active"
     };
-    const availableProps = await db.select().from(properties).where(eq5(properties.available, true));
+    const availableProps = await db.select().from(properties).where(eq7(properties.available, true));
     const matchedItems2 = [];
     for (const prop of availableProps) {
       const repCount = Number(prop.republicacionesCount || 0);
@@ -12679,7 +15502,7 @@ ${adminDashboardUrl}?search=${req.id}`;
         const propWaLink = propPhone ? `https://wa.me/${propPhone}` : null;
         let existingPmId = null;
         try {
-          const existingPm = await db.select({ id: propertyMatches.id }).from(propertyMatches).where(eq5(propertyMatches.propertyId, prop.id)).limit(1);
+          const existingPm = await db.select({ id: propertyMatches.id }).from(propertyMatches).where(eq7(propertyMatches.propertyId, prop.id)).limit(1);
           existingPmId = existingPm?.[0]?.id || null;
         } catch {
           existingPmId = null;
@@ -12778,7 +15601,7 @@ ${adminDashboardUrl}`;
     parkingSpaces: fb.parking || null,
     available: true
   };
-  const activeReqs = await db.select().from(requirements).where(eq5(requirements.status, "active"));
+  const activeReqs = await db.select().from(requirements).where(eq7(requirements.status, "active"));
   const matchedItems = [];
   for (const req of activeReqs) {
     if (req.status === "expired") continue;
@@ -12790,7 +15613,7 @@ ${adminDashboardUrl}`;
     if (explanation.score >= 80) {
       const reqPhone = extractRealPhone(req);
       const reqWaLink = reqPhone ? `https://wa.me/${reqPhone}` : null;
-      const existingPm = await db.select({ id: propertyMatches.id }).from(propertyMatches).where(eq5(propertyMatches.requirementId, req.id)).limit(1);
+      const existingPm = await db.select({ id: propertyMatches.id }).from(propertyMatches).where(eq7(propertyMatches.requirementId, req.id)).limit(1);
       matchedItems.push({
         matchId: existingPm[0]?.id || null,
         score: explanation.score,
@@ -12906,8 +15729,8 @@ __export(iduValorizacionService_exports, {
   hasPendingIduSession: () => hasPendingIduSession,
   setPendingIduSession: () => setPendingIduSession
 });
-import fs6 from "fs";
-import path6 from "path";
+import fs5 from "fs";
+import path5 from "path";
 import os2 from "os";
 function hasPendingIduSession(senderId) {
   const session = pendingIduSessions.get(senderId);
@@ -12953,15 +15776,15 @@ function extractChipForIduValorizacion(text2) {
 }
 async function downloadIduCertificatePdf(chip) {
   const cleanChip = chip.toUpperCase().trim();
-  const downloadDir = path6.join(os2.tmpdir(), `vecy-idu-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
+  const downloadDir = path5.join(os2.tmpdir(), `vecy-idu-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
   try {
-    fs6.mkdirSync(downloadDir, { recursive: true });
+    fs5.mkdirSync(downloadDir, { recursive: true });
   } catch (_) {
   }
   let browser = null;
   try {
     const puppeteer = (await import("puppeteer")).default;
-    const executablePath = fs6.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
+    const executablePath = fs5.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : void 0;
     browser = await puppeteer.launch({
       executablePath,
       headless: true,
@@ -13019,16 +15842,16 @@ async function downloadIduCertificatePdf(chip) {
     let downloadedFilePath = null;
     for (let i = 0; i < 20; i++) {
       await new Promise((r) => setTimeout(r, 1e3));
-      if (fs6.existsSync(downloadDir)) {
-        const files = fs6.readdirSync(downloadDir);
+      if (fs5.existsSync(downloadDir)) {
+        const files = fs5.readdirSync(downloadDir);
         const pdfFile = files.find((f) => f.toLowerCase().endsWith(".pdf") && !f.endsWith(".crdownload"));
         if (pdfFile) {
-          downloadedFilePath = path6.join(downloadDir, pdfFile);
+          downloadedFilePath = path5.join(downloadDir, pdfFile);
           break;
         }
       }
     }
-    if (!downloadedFilePath || !fs6.existsSync(downloadedFilePath)) {
+    if (!downloadedFilePath || !fs5.existsSync(downloadedFilePath)) {
       return {
         success: false,
         errorMessage: "El portal del IDU no entreg\xF3 el archivo PDF en el tiempo esperado. Por favor intenta de nuevo en unos momentos.",
@@ -13036,7 +15859,7 @@ async function downloadIduCertificatePdf(chip) {
         direccion: predioData.direccion
       };
     }
-    const pdfBuffer = fs6.readFileSync(downloadedFilePath);
+    const pdfBuffer = fs5.readFileSync(downloadedFilePath);
     if (!pdfBuffer || pdfBuffer.length < 500) {
       return {
         success: false,
@@ -13067,8 +15890,8 @@ async function downloadIduCertificatePdf(chip) {
       }
     }
     try {
-      if (fs6.existsSync(downloadDir)) {
-        fs6.rmSync(downloadDir, { recursive: true, force: true });
+      if (fs5.existsSync(downloadDir)) {
+        fs5.rmSync(downloadDir, { recursive: true, force: true });
       }
     } catch (_) {
     }
@@ -13216,9 +16039,9 @@ import _baileys, {
   Browsers
 } from "@whiskeysockets/baileys";
 import qrcodeTerminal from "qrcode-terminal";
-import fs7 from "fs";
-import path7 from "path";
-import { eq as eq6 } from "drizzle-orm";
+import fs6 from "fs";
+import path6 from "path";
+import { eq as eq8 } from "drizzle-orm";
 import QRCode2 from "qrcode";
 function getWASocket() {
   if (typeof _baileys === "function") return _baileys;
@@ -13415,7 +16238,7 @@ var init_whatsapp_match = __esm({
       circuloGroupId = "120363403507276533@g.us";
       channelNewsletterId = process.env.WHATSAPP_CHANNEL_NEWSLETTER_ID || "";
       cooldownMap = /* @__PURE__ */ new Map();
-      cooldownFile = path7.join(process.cwd(), ".cooldown_map.json");
+      cooldownFile = path6.join(process.cwd(), ".cooldown_map.json");
       recentReviewPromptUsers = /* @__PURE__ */ new Map();
       postReviewInvitationTimers = /* @__PURE__ */ new Map();
       recentGroupInviteUsers = /* @__PURE__ */ new Map();
@@ -13482,7 +16305,7 @@ var init_whatsapp_match = __esm({
           try {
             this.recentGroupInviteUsers.set(senderId, Date.now());
             const realName = userName || "Colega";
-            const firstName = extractFirstName(realName);
+            const firstName = extractFirstName2(realName);
             const groupInviteMsg = `Hola ${firstName} \u{1F44B}\u{1F60A} Por cierto, quer\xEDa preguntarte: \xBFya haces parte de nuestros grupos oficiales de WhatsApp de *VECY BIENES RA\xCDCES*? \u{1F1E8}\u{1F1F4}\u2728
 
 Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemos 3 espacios especializados para ti y toda la comunidad:
@@ -13583,9 +16406,9 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             } catch (cleanupErr) {
             }
           }
-          const sessionDir = path7.join(process.cwd(), this.sessionFolderName);
-          if (!fs7.existsSync(sessionDir)) {
-            fs7.mkdirSync(sessionDir, { recursive: true });
+          const sessionDir = path6.join(process.cwd(), this.sessionFolderName);
+          if (!fs6.existsSync(sessionDir)) {
+            fs6.mkdirSync(sessionDir, { recursive: true });
           }
           const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
           const originalKeysGet = state.keys.get;
@@ -13607,7 +16430,7 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             }
             return data;
           });
-          if (!fs7.existsSync(path7.join(sessionDir, "creds.json"))) {
+          if (!fs6.existsSync(path6.join(sessionDir, "creds.json"))) {
             await saveCreds();
             console.log(`[${this.botName}] \u{1F4BE} Guardadas credenciales iniciales de Baileys en ${this.sessionFolderName}.`);
           }
@@ -13701,12 +16524,12 @@ Para mantener el trabajo ordenado y ayudarte a cerrar negocios r\xE1pido, tenemo
             qrcodeTerminal.generate(qr, { small: true });
             global.janiaBotQr = qr;
             try {
-              const qrPath = path7.join(process.cwd(), this.qrFileName);
-              const publicQrDir = path7.join(process.cwd(), "client", "public");
-              if (!fs7.existsSync(publicQrDir)) {
-                fs7.mkdirSync(publicQrDir, { recursive: true });
+              const qrPath = path6.join(process.cwd(), this.qrFileName);
+              const publicQrDir = path6.join(process.cwd(), "client", "public");
+              if (!fs6.existsSync(publicQrDir)) {
+                fs6.mkdirSync(publicQrDir, { recursive: true });
               }
-              const publicQrPath = path7.join(publicQrDir, "qr-match.png");
+              const publicQrPath = path6.join(publicQrDir, "qr-match.png");
               await QRCode2.toFile(qrPath, qr, { width: 400, margin: 2 });
               await QRCode2.toFile(publicQrPath, qr, { width: 400, margin: 2 });
               console.log(`[${this.botName}] \u{1F4F8} QR guardado exitosamente en ${qrPath} y ${publicQrPath}`);
@@ -14063,15 +16886,15 @@ ${quotedNote}` : quotedNote;
                     if (isRecentMessage) {
                       console.log(`[JANIA-MATCH] Intervenci\xF3n humana detectada en DM de tercero ${senderId}. Silenciando bot.`);
                       this.lastHumanIntervention.set(senderId, Date.now());
-                      const { muteSession: muteSession3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-                      await muteSession3(senderId, true).catch((err) => console.error("Error muting session in database:", err));
+                      const { muteSession: muteSession4 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+                      await muteSession4(senderId, true).catch((err) => console.error("Error muting session in database:", err));
                     }
                     return;
                   }
                 }
                 const cleanStart = body.trim().toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ");
-                const { isSessionMuted: isSessionMuted2, muteSession: muteSession2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-                let isMuted = isSelfChat || isAdmin ? false : await isSessionMuted2(senderId);
+                const { isSessionMuted: isSessionMuted3, muteSession: muteSession3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+                let isMuted = isSelfChat || isAdmin ? false : await isSessionMuted3(senderId);
                 if (isMuted) {
                   const { extractCedulaForVerification: extractCedulaForVerification2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
                   const { extractNotarialExpenseParams: extractNotarialExpenseParams2, hasPendingNotarialSession: hasPendingNotarialSession2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
@@ -14080,7 +16903,7 @@ ${quotedNote}` : quotedNote;
                   const isIduReq = body.toLowerCase().includes("idu") || body.toLowerCase().includes("valorizacion") || body.toLowerCase().includes("valorizaci\xF3n");
                   const isNotarialReq = hasPendingNotarialSession2(senderId) || extractNotarialExpenseParams2(body, senderId).found || /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*familiar|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural)/i.test(body);
                   if (cleanStart.startsWith("agente jania") || isCedulaReq || isPredialReq || isIduReq || isNotarialReq) {
-                    await muteSession2(senderId, false).catch((err) => console.error("Error unmuting session:", err));
+                    await muteSession3(senderId, false).catch((err) => console.error("Error unmuting session:", err));
                     isMuted = false;
                     console.log(`[JANIA-MATCH] Sesi\xF3n reactivada autom\xE1ticamente mediante ${isCedulaReq ? "verificaci\xF3n de documento" : isPredialReq ? "asistencia de predial" : isIduReq ? "paz y salvo de valorizaci\xF3n IDU" : isNotarialReq ? "liquidaci\xF3n notarial" : "comando de cliente"} para ${senderId}`);
                   }
@@ -14484,7 +17307,7 @@ ${quotedNote}` : quotedNote;
           if (isContactReq) {
             const wantsBroker = /broker|eduardo|jani|humano|atenci[oó]n|directora?|comercial/i.test(cleanLower);
             const contactType = wantsBroker ? "broker" : "jania";
-            const firstName = extractFirstName(userName);
+            const firstName = extractFirstName2(userName);
             const contactMsg = wantsBroker ? `\xA1Hola ${firstName}! \u{1F44B} Claro que s\xED, aqu\xED tienes la tarjeta de contacto oficial de nuestros directores *Eduardo A. Rivera y Jani Alves* para atenci\xF3n comercial humana y directa de VECY BIENES RA\xCDCES: \u{1F4F2}` : `\xA1Hola ${firstName}! \u{1F44B} Con mucho gusto, aqu\xED tienes mi tarjeta de contacto oficial como *JanIA*, la Inteligencia Artificial de VECY BIENES RA\xCDCES: \u{1F916}\u2728 Gu\xE1rdame en tu WhatsApp para consultar inmuebles, antecedentes, prediales y asesor\xEDa cuando quieras.`;
             await this.queuedSend(senderId, contactMsg, { quoted: mainMsg, allowDirectMessage: true });
             await this.sendContactCard(senderId, contactType, mainMsg);
@@ -14588,8 +17411,8 @@ ${quotedNote}` : quotedNote;
       }
       // --- REDIRECCIÓN DE CHATS PRIVADOS ---
       async handlePrivateDmRedirect(chatId, senderId, userName) {
-        const { isSessionMuted: isSessionMuted2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
-        const isMuted = await isSessionMuted2(senderId);
+        const { isSessionMuted: isSessionMuted3 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
+        const isMuted = await isSessionMuted3(senderId);
         const lastIntervention = this.lastHumanIntervention.get(senderId) || 0;
         const cooldownPeriod = 24 * 60 * 60 * 1e3;
         if (isMuted || Date.now() - lastIntervention < cooldownPeriod) {
@@ -14603,7 +17426,7 @@ ${quotedNote}` : quotedNote;
           this.redirectCooldowns.set(senderId, now);
           const redirectLink = "https://wa.me/573192919978";
           const realName = userName || "Asesor";
-          const cleanName = extractFirstName(realName) || "colega";
+          const cleanName = extractFirstName2(realName) || "colega";
           const redirectText = `Hola ${cleanName} \u{1F44B}\u{1F60A}. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), te invito a escribir directamente a mi chat privado de JanIA haciendo clic aqu\xED: ${redirectLink} para atenderte de forma personalizada, o si lo prefieres, participar en nuestros grupos oficiales:
 
 Mis grupos oficiales:
@@ -15452,7 +18275,7 @@ ${result.response}`);
         try {
           const db = await getDb();
           if (!db) return;
-          let conv = await db.select().from(conversations).where(eq6(conversations.sessionId, senderId)).limit(1);
+          let conv = await db.select().from(conversations).where(eq8(conversations.sessionId, senderId)).limit(1);
           let conversationId;
           if (conv.length === 0) {
             const [newConv] = await db.insert(conversations).values({
@@ -15466,7 +18289,7 @@ ${result.response}`);
             await db.update(conversations).set({
               lastMessage: content.slice(0, 150),
               updatedAt: /* @__PURE__ */ new Date()
-            }).where(eq6(conversations.id, conversationId));
+            }).where(eq8(conversations.id, conversationId));
           }
           await db.insert(messages).values({
             conversationId,
@@ -15573,7 +18396,7 @@ ${result.response}`);
       async handleRedirectText(msg, senderId, rawPhone) {
         try {
           const realName = msg.pushName || `Asesor +${rawPhone}`;
-          const firstName = extractFirstName(realName);
+          const firstName = extractFirstName2(realName);
           await this.sock.sendPresenceUpdate("composing", senderId);
           await delay(2e3);
           const redirectMsg = `Hola ${firstName} \u{1F44B}\u{1F60A}. Si tienes dudas, inquietudes o quieres consultarme algo (sea por escrito o por notas de voz), puedes hacerlo directamente por aqu\xED en este chat privado para atenderte de forma personalizada, o si lo prefieres, interactuar en nuestros grupos oficiales de WhatsApp:
@@ -15604,13 +18427,13 @@ Mis grupos oficiales:
             await this.queuedSend(senderId, "\u26A0\uFE0F El sistema de base de datos no est\xE1 disponible en este momento. Int\xE9ntalo m\xE1s tarde.");
             return;
           }
-          const [match] = await db.select().from(propertyMatches).where(eq6(propertyMatches.id, matchId)).limit(1);
+          const [match] = await db.select().from(propertyMatches).where(eq8(propertyMatches.id, matchId)).limit(1);
           if (!match) {
             await this.queuedSend(senderId, `\u26A0\uFE0F No encontr\xE9 ninguna coincidencia registrada con el c\xF3digo *#M${matchId}*. Por favor verifica el n\xFAmero.`);
             return;
           }
-          const [prop] = await db.select().from(properties).where(eq6(properties.id, match.propertyId)).limit(1);
-          const [req] = await db.select().from(requirements).where(eq6(requirements.id, match.requirementId)).limit(1);
+          const [prop] = await db.select().from(properties).where(eq8(properties.id, match.propertyId)).limit(1);
+          const [req] = await db.select().from(requirements).where(eq8(requirements.id, match.requirementId)).limit(1);
           if (!prop || !req) {
             await this.queuedSend(senderId, "\u26A0\uFE0F Hubo un problema al recuperar los detalles de esta coincidencia.");
             return;
@@ -15625,7 +18448,7 @@ Mis grupos oficiales:
             return;
           }
           if (decision === "no") {
-            await db.update(propertyMatches).set({ status: "rejected" }).where(eq6(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq8(propertyMatches.id, matchId));
             await this.queuedSend(senderId, `Entendido. He marcado la coincidencia *#M${matchId}* como cancelada. No se compartir\xE1n tus datos de contacto.`);
             await this.logToDb(senderId, "janIA", `[Match-Rejected] Match #M${matchId} rechazado por el usuario.`);
             const otherJid = isOwner ? seekerPhone.includes("@") ? seekerPhone : `${seekerPhone}@s.whatsapp.net` : ownerPhone.includes("@") ? ownerPhone : `${ownerPhone}@s.whatsapp.net`;
@@ -15639,19 +18462,19 @@ Mis grupos oficiales:
           if (isSeeker) {
             updateFields.seekerConfirmed = true;
           }
-          await db.update(propertyMatches).set(updateFields).where(eq6(propertyMatches.id, matchId));
-          const [updatedMatch] = await db.select().from(propertyMatches).where(eq6(propertyMatches.id, matchId)).limit(1);
+          await db.update(propertyMatches).set(updateFields).where(eq8(propertyMatches.id, matchId));
+          const [updatedMatch] = await db.select().from(propertyMatches).where(eq8(propertyMatches.id, matchId)).limit(1);
           if (updatedMatch.ownerConfirmed && updatedMatch.seekerConfirmed) {
-            await db.update(propertyMatches).set({ status: "interested" }).where(eq6(propertyMatches.id, matchId));
+            await db.update(propertyMatches).set({ status: "interested" }).where(eq8(propertyMatches.id, matchId));
             let ownerName = "Oferente";
             let seekerName = "Interesado";
             try {
-              const [ownerUser] = await db.select().from(users).where(eq6(users.phone, ownerPhone)).limit(1);
+              const [ownerUser] = await db.select().from(users).where(eq8(users.phone, ownerPhone)).limit(1);
               if (ownerUser && ownerUser.name) ownerName = ownerUser.name;
             } catch {
             }
             try {
-              const [seekerUser] = await db.select().from(users).where(eq6(users.phone, seekerPhone)).limit(1);
+              const [seekerUser] = await db.select().from(users).where(eq8(users.phone, seekerPhone)).limit(1);
               if (seekerUser && seekerUser.name) seekerName = seekerUser.name;
             } catch {
             }
@@ -16218,7 +19041,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
   * \u{1F3E2} *Proyectos de construcci\xF3n* o aportes de lote.
 \u25B8 *Matching Inteligente:* Cruzo ofertas y demandas en tiempo real y les aviso en el acto cuando hay negocio viable.`;
         const groups = [this.targetGroupId, this.buzonGroupId, this.circuloGroupId];
-        const imgPath = path7.resolve("./client/public/jania_perfil.png");
+        const imgPath = path6.resolve("./client/public/jania_perfil.png");
         for (const group of groups) {
           try {
             await this.sendToGroup(baseMsg, imgPath, [], group);
@@ -16249,10 +19072,10 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
           }
         } catch (e) {
         }
-        const sessionDir = path7.join(process.cwd(), ".baileys_auth");
-        if (fs7.existsSync(sessionDir)) {
+        const sessionDir = path6.join(process.cwd(), ".baileys_auth");
+        if (fs6.existsSync(sessionDir)) {
           try {
-            fs7.rmSync(sessionDir, { recursive: true, force: true });
+            fs6.rmSync(sessionDir, { recursive: true, force: true });
           } catch (err) {
             console.warn("[JANIA-MATCH] No se pudo borrar .baileys_auth:", err.message);
           }
@@ -16271,8 +19094,8 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       }
       loadCooldowns() {
         try {
-          if (fs7.existsSync(this.cooldownFile)) {
-            const raw = JSON.parse(fs7.readFileSync(this.cooldownFile, "utf8"));
+          if (fs6.existsSync(this.cooldownFile)) {
+            const raw = JSON.parse(fs6.readFileSync(this.cooldownFile, "utf8"));
             this.cooldownMap = new Map(Object.entries(raw));
           }
         } catch (e) {
@@ -16281,7 +19104,7 @@ Vuelvo con mi *Cerebro Multimodal v2.0* repotenciado y mis sensores m\xE1s afila
       saveCooldowns() {
         try {
           const obj = Object.fromEntries(this.cooldownMap.entries());
-          fs7.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
+          fs6.writeFileSync(this.cooldownFile, JSON.stringify(obj), "utf8");
         } catch (e) {
         }
       }
@@ -16521,7 +19344,7 @@ var init_agendaWhatsAppService = __esm({
 
 // server/routers/agenda.ts
 import { z as z2 } from "zod";
-import { desc as desc2, ilike, or as or2, sql as sql5, eq as eq7 } from "drizzle-orm";
+import { desc as desc3, ilike, or as or2, sql as sql7, eq as eq9 } from "drizzle-orm";
 import { TRPCError as TRPCError3 } from "@trpc/server";
 import { Solver } from "@2captcha/captcha-solver";
 import https from "https";
@@ -17124,7 +19947,7 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
       const profileRows = await db.select({
         fullName: profiles.fullName,
         numeroDocumento: profiles.numeroDocumento
-      }).from(profiles).where(eq7(profiles.numeroDocumento, clean)).limit(5);
+      }).from(profiles).where(eq9(profiles.numeroDocumento, clean)).limit(5);
       for (const row of profileRows) {
         if (row.fullName && row.fullName.trim().length >= 4) {
           const officialFormatted = formatTitleCase(row.fullName.trim());
@@ -17146,10 +19969,10 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
         interesadoNombre: solicitudes.interesadoNombre
       }).from(solicitudes).where(
         or2(
-          eq7(solicitudes.solicitanteNumeroDocumento, clean),
-          eq7(solicitudes.interesadoDocumento, clean)
+          eq9(solicitudes.solicitanteNumeroDocumento, clean),
+          eq9(solicitudes.interesadoDocumento, clean)
         )
-      ).orderBy(desc2(solicitudes.id)).limit(10);
+      ).orderBy(desc3(solicitudes.id)).limit(10);
       for (const row of solRows) {
         const candidateName = (row.solicitanteNumeroDocumento || "").replace(/\D/g, "") === clean ? row.solicitanteNombre : row.interesadoNombre;
         const tokens = (candidateName || "").trim().split(/\s+/).filter(Boolean);
@@ -17221,8 +20044,8 @@ async function executeIdentityVerification(tipoDocumento, cleanDoc, nombreIngres
 async function registerSecurityFlaggedIdentity(db, data) {
   try {
     if (!db) return;
-    const { getRawSql: getRawSql2 } = await Promise.resolve().then(() => (init_db(), db_exports));
-    const rawSql = getRawSql2();
+    const { getRawSql: getRawSql3 } = await Promise.resolve().then(() => (init_db(), db_exports));
+    const rawSql = getRawSql3();
     if (rawSql) {
       await rawSql`
         CREATE TABLE IF NOT EXISTS security_flagged_identities (
@@ -17323,8 +20146,8 @@ async function processAndSaveSolicitud(input) {
     }
   }
   try {
-    const { getRawSql: getRawSql2 } = await Promise.resolve().then(() => (init_db(), db_exports));
-    const rawSql = getRawSql2();
+    const { getRawSql: getRawSql3 } = await Promise.resolve().then(() => (init_db(), db_exports));
+    const rawSql = getRawSql3();
     if (rawSql) {
       await rawSql`
         ALTER TABLE solicitudes ADD COLUMN IF NOT EXISTS has_alerta_antecedentes BOOLEAN DEFAULT false;
@@ -17333,10 +20156,10 @@ async function processAndSaveSolicitud(input) {
     }
   } catch (_) {
   }
-  const maxRes = await db.select({ maxId: sql5`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
+  const maxRes = await db.select({ maxId: sql7`COALESCE(MAX(solicitud_id), 0)` }).from(solicitudes);
   const nextSolicitudId = Math.max(Number(maxRes[0]?.maxId || 0), 1144) + 1;
   const inserted = await db.insert(solicitudes).values({
-    id: sql5`nextval('solicitudes_id_seq')`,
+    id: sql7`nextval('solicitudes_id_seq')`,
     solicitudId: nextSolicitudId,
     solicitanteNombre: input.solicitante_nombre,
     solicitanteTipoPersona: input.solicitante_tipo_persona || "Persona Natural",
@@ -17520,7 +20343,7 @@ var init_agenda = __esm({
             ilike(solicitudes.interesadoNombre, searchPattern)
           ];
           if (!isNaN(numSearch)) {
-            searchConditions.push(eq7(solicitudes.solicitudId, numSearch));
+            searchConditions.push(eq9(solicitudes.solicitudId, numSearch));
           }
           whereConditions.push(or2(...searchConditions));
         }
@@ -17543,9 +20366,9 @@ var init_agenda = __esm({
             );
           }
         }
-        const finalWhere = whereConditions.length > 0 ? sql5.join(whereConditions, sql5` AND `) : void 0;
-        const items = await db.select().from(solicitudes).where(finalWhere).orderBy(sql5`${solicitudes.solicitudId} DESC NULLS LAST`, desc2(solicitudes.id)).limit(limit).offset(offset);
-        const totalRes = await db.select({ count: sql5`count(*)` }).from(solicitudes).where(finalWhere);
+        const finalWhere = whereConditions.length > 0 ? sql7.join(whereConditions, sql7` AND `) : void 0;
+        const items = await db.select().from(solicitudes).where(finalWhere).orderBy(sql7`${solicitudes.solicitudId} DESC NULLS LAST`, desc3(solicitudes.id)).limit(limit).offset(offset);
+        const totalRes = await db.select({ count: sql7`count(*)` }).from(solicitudes).where(finalWhere);
         return {
           items,
           total: Number(totalRes[0]?.count || 0)
@@ -17554,9 +20377,9 @@ var init_agenda = __esm({
       getStats: publicProcedure.query(async () => {
         const db = await getDb();
         if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
-        const totalRes = await db.select({ count: sql5`count(*)` }).from(solicitudes);
+        const totalRes = await db.select({ count: sql7`count(*)` }).from(solicitudes);
         const total = Number(totalRes[0]?.count || 0);
-        const agentesRes = await db.select({ count: sql5`count(*)` }).from(solicitudes).where(
+        const agentesRes = await db.select({ count: sql7`count(*)` }).from(solicitudes).where(
           or2(
             ilike(solicitudes.solicitantePerfil, "%agente%"),
             ilike(solicitudes.solicitantePerfil, "%inmobiliaria%"),
@@ -17565,7 +20388,7 @@ var init_agenda = __esm({
           )
         );
         const agentes = Number(agentesRes[0]?.count || 0);
-        const conFirmaRes = await db.select({ count: sql5`count(*)` }).from(solicitudes).where(sql5`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
+        const conFirmaRes = await db.select({ count: sql7`count(*)` }).from(solicitudes).where(sql7`${solicitudes.firmaVirtualBase64} IS NOT NULL AND ${solicitudes.firmaVirtualBase64} != ''`);
         const conFirma = Number(conFirmaRes[0]?.count || 0);
         const directos = Math.max(0, total - agentes);
         return {
@@ -17688,7 +20511,7 @@ var init_agenda = __esm({
         const db = await getDb();
         if (!db) throw new TRPCError3({ code: "INTERNAL_SERVER_ERROR", message: "Base de datos no disponible" });
         const { id, ...dataToUpdate } = input;
-        const updated = await db.update(solicitudes).set(dataToUpdate).where(eq7(solicitudes.id, id)).returning();
+        const updated = await db.update(solicitudes).set(dataToUpdate).where(eq9(solicitudes.id, id)).returning();
         return {
           success: true,
           item: updated[0] || null
@@ -18723,1358 +21546,963 @@ var init_identityVerificationService = __esm({
   }
 });
 
-// server/_core/janIA.ts
-var janIA_exports = {};
-__export(janIA_exports, {
-  JANIA_PROMPT: () => JANIA_PROMPT,
-  MSG_CIERRE_OPERACIONES: () => MSG_CIERRE_OPERACIONES,
-  MSG_COMUNICADO_MATCH_CIRCULO: () => MSG_COMUNICADO_MATCH_CIRCULO,
-  MSG_COMUNICADO_MATCH_NETWORK: () => MSG_COMUNICADO_MATCH_NETWORK,
-  MSG_PAUTAS_FORMATOS: () => MSG_PAUTAS_FORMATOS,
-  MSG_PRESENTACION_INSTITUCIONAL: () => MSG_PRESENTACION_INSTITUCIONAL,
-  MSG_PROMO_CIRCULO: () => MSG_PROMO_CIRCULO,
-  MSG_PROMO_CONSULTAS: () => MSG_PROMO_CONSULTAS,
-  MSG_PROMO_INMUEBLES: () => MSG_PROMO_INMUEBLES,
-  MSG_RESUMEN_RETORNO_PRESENTACION: () => MSG_RESUMEN_RETORNO_PRESENTACION,
-  MSG_TIPS_CALIDAD_COBERTURA: () => MSG_TIPS_CALIDAD_COBERTURA,
-  REPUTATION_HOOK: () => REPUTATION_HOOK,
-  appendConsultingHistory: () => appendConsultingHistory,
-  appendDmHistory: () => appendDmHistory,
-  brokerDirectoryCache: () => brokerDirectoryCache,
-  buildFlyerBreakdownText: () => buildFlyerBreakdownText,
-  buildSystemPrompt: () => buildSystemPrompt,
-  calcularCalificacionCompletitud: () => calcularCalificacionCompletitud,
-  checkStrictOffTopic: () => checkStrictOffTopic,
-  cleanUnescapedQuotesInJSON: () => cleanUnescapedQuotesInJSON,
-  clearPromptCache: () => clearPromptCache,
-  enrichLexiconFromText: () => enrichLexiconFromText,
-  esMensajeSpamOBasura: () => esMensajeSpamOBasura,
-  evaluateMultiItemHeuristics: () => evaluateMultiItemHeuristics,
-  extractColombianPhoneFromText: () => extractColombianPhoneFromText,
-  extractFallbackDataFromText: () => extractFallbackDataFromText,
-  extractFirstName: () => extractFirstName2,
-  extractFlyerVision: () => extractFlyerVision,
-  formatPoliteToolDelivery: () => formatPoliteToolDelivery,
-  generarHashMensaje: () => generarHashMensaje,
-  generateWelcomeMessage: () => generateWelcomeMessage,
-  getColombiaNow: () => getColombiaNow,
-  getConsultingHistory: () => getConsultingHistory,
-  getDmHistory: () => getDmHistory,
-  getEmojiForCalificacion: () => getEmojiForCalificacion,
-  getLiveStats: () => getLiveStats,
-  getOrLoadDmHistory: () => getOrLoadDmHistory,
-  getStartOfTodayBogota: () => getStartOfTodayBogota,
-  handleAmendmentUpdate: () => handleAmendmentUpdate,
-  handleDetectedMatches: () => handleDetectedMatches,
-  hasRealEstateTextKeyword: () => hasRealEstateTextKeyword,
-  initAdvisorsDirectory: () => initAdvisorsDirectory,
-  initBrokerDirectory: () => initBrokerDirectory,
-  isGenericName: () => isGenericName,
-  isLidIdentifier: () => isLidIdentifier,
-  isOutsideWorkingHours: () => isOutsideWorkingHours,
-  isPhoneNumberNotPrice: () => isPhoneNumberNotPrice,
-  isSessionMuted: () => isSessionMuted,
-  janiaResultSchema: () => janiaResultSchema,
-  lookupAdvisor: () => lookupAdvisor,
-  lookupAdvisorSync: () => lookupAdvisorSync,
-  muteSession: () => muteSession,
-  normalizeAdvisorPhone: () => normalizeAdvisorPhone,
-  normalizePhoneNumber: () => normalizePhoneNumber,
-  obtenerCamposRequeridosYPreguntas: () => obtenerCamposRequeridosYPreguntas,
-  parseColombianPriceOrBudget: () => parseColombianPriceOrBudget,
-  parseSafeJSON: () => parseSafeJSON,
-  preserveVerifiedAdvisorContact: () => preserveVerifiedAdvisorContact,
-  processCirculoMessage: () => processCirculoMessage,
-  processConsultingMessage: () => processConsultingMessage,
-  processPrivateDmConversationalMessage: () => processPrivateDmConversationalMessage,
-  processWhatsAppMessage: () => processWhatsAppMessage,
-  propagateBrokerPhoneAcrossAllListings: () => propagateBrokerPhoneAcrossAllListings,
-  repairJSON: () => repairJSON,
-  resolveContactPhone: () => resolveContactPhone,
-  sanitizeResponseMarkdown: () => sanitizeResponseMarkdown,
-  saveOrUpdateAdvisor: () => saveOrUpdateAdvisor,
-  scrapeUrlWithBypass: () => scrapeUrlWithBypass,
-  splitMultiItemMessage: () => splitMultiItemMessage,
-  splitMultiPropertyMessage: () => splitMultiPropertyMessage,
-  translatePropertyType: () => translatePropertyType,
-  translateTransactionType: () => translateTransactionType
+// server/_core/jania/handlers/consultingHandler.ts
+async function processConsultingMessage(text2, userId, userName, imageBuffer, pdfBuffer, pdfMimeType, audioUrl, msgTimestamp, quotedContext) {
+  try {
+    const rawPhone = userId.split("@")[0];
+    const realName = await resolveRealName(userId, userName);
+    const strictOffTopic = checkStrictOffTopic(text2);
+    if (strictOffTopic.isOffTopic) {
+      console.log(`[JanIA-Consulting-OffTopic] Mensaje prohibido en Soporte Legal para ${userId}: "${text2.substring(0, 50)}...". (${strictOffTopic.reason})`);
+      const warningText = `Hola @${rawPhone} (${realName}) \u{1F44B}\u{1F3FB}. El contenido relacionado con ${strictOffTopic.reason} est\xE1 estrictamente prohibido en los grupos oficiales de VECY BIENES RA\xCDCES. \u{1F6AB}
+
+Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, asesor\xEDa legal, tributaria y aval\xFAos inmobiliarios. \xA1Te invitamos cordialmente a eliminar este mensaje de inmediato! \u{1F91D}`;
+      return {
+        classification: "VIOLACION_DE_NORMAS",
+        response: warningText,
+        dmResponse: warningText,
+        reactionEmoji: "\u{1F6AB}"
+      };
+    }
+    const cleanText = text2.toLowerCase().trim();
+    const isMediaOrAudio = !!imageBuffer || !!pdfBuffer || !!audioUrl;
+    if (cleanText.length < 3 && !isMediaOrAudio) {
+      console.log(`[JanIA-Consulting] Mensaje vac\xEDo o insignificante descartado para ${userId}: "${text2}"`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: "",
+        reactionEmoji: ""
+      };
+    }
+    let messageToProcess = text2;
+    let isFromAudio = false;
+    if (audioUrl) {
+      if (audioUrl.startsWith("mock-audio:")) {
+        messageToProcess = audioUrl.replace("mock-audio:", "");
+        isFromAudio = true;
+      } else {
+        try {
+          const transcription = await transcribeAudio({ audioUrl });
+          if (!("error" in transcription) && transcription.text && transcription.text.trim().length > 0) {
+            messageToProcess = transcription.text;
+            isFromAudio = true;
+          }
+        } catch (err) {
+          console.error("[processConsultingMessage] Error transcribiendo audio:", err.message);
+        }
+      }
+    }
+    const timeGreeting = getGreetingByTime();
+    const nameInfo = resolveNameAndGender(realName, timeGreeting);
+    const genderTerm = nameInfo.genderTerm;
+    const alreadyGreeted = await checkAlreadyGreeted(userId);
+    const { isServiceHelpRequest: isServiceHelpRequest2, PREDIAL_HELP_TEXT: PREDIAL_HELP_TEXT2, CEDULA_HELP_TEXT: CEDULA_HELP_TEXT2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+    const helpType = isServiceHelpRequest2(messageToProcess);
+    if (helpType === "predial") {
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: PREDIAL_HELP_TEXT2,
+        reactionEmoji: "\u{1F3DB}\uFE0F",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+    if (helpType === "cedula") {
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: CEDULA_HELP_TEXT2,
+        reactionEmoji: "\u{1FAAA}",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+    const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+    const predialCheck = await executePredialAssistanceFromWhatsApp2(messageToProcess, userId, false);
+    if (predialCheck.isPredialRequest && predialCheck.reportText) {
+      console.log(`[JanIA-PredialCheck] Asistencia de predial Bogot\xE1 ejecutada para ${userId} (CHIP: ${predialCheck.chip || "General"}): isPredialRequest=true`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: predialCheck.reportText,
+        reactionEmoji: "\u{1F4C4}",
+        wantsVoice: false,
+        voiceResponse: "",
+        document: predialCheck.pdfBuffer,
+        fileName: predialCheck.pdfFileName
+      };
+    }
+    const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+    const idCheck = await executeIdentityVerificationFromWhatsApp2(messageToProcess);
+    if (idCheck.isVerificationRequest && idCheck.reportText) {
+      console.log(`[JanIA-IdentityCheck] Verificaci\xF3n de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: idCheck.reportText,
+        reactionEmoji: idCheck.success ? "\u{1F6E1}\uFE0F" : "\u26A0\uFE0F",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+    const systemPrompt = `Eres JanIA, la Inteligencia Artificial viva, emp\xE1tica y de m\xE1xima capacidad resolutiva de VECY BIENES RA\xCDCES. Est\xE1s operando en el grupo "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}". Tu objetivo es responder con precisi\xF3n quir\xFArgica, rigor legal, calidez humana y alta competencia t\xE9cnica, resolviendo de fondo las inquietudes de los inmobiliarios como una abogada senior, perita tasadora y estratega de marketing de \xE9lite.
+
+## L\xD3GICA DE CLASIFICACI\xD3N Y MODERACI\xD3N ESTRICTA:
+1. **VIOLACION_DE_NORMAS (OFERTAS, DEMANDAS O FLYERS PUBLICITARIOS EN ESTE GRUPO)**:
+   - Si el mensaje, la imagen adjunta o el documento PDF corresponde a una **OFERTA COMERCIAL O DEMANDA DE UN INMUEBLE** (venta, arriendo, canon, metraje, fotos de apto/casa/bodega, flyer o ficha de un predio como "ARRIENDO CARRERA 17 CON 91.pdf"):
+     * DEBES clasificarlo OBLIGATORIAMENTE como "VIOLACION_DE_NORMAS".
+     * Asignar estrictamente "reactionEmoji": "\u{1F6AB}".
+     * Responder con amabilidad, educando y redireccionando al canal correcto:
+       "Hola, espero te encuentres muy bien. Has publicado esta oferta/demanda en el grupo equivocado. Este canal es exclusivo para consultas de Soporte Legal, Tributario, Aval\xFAos y Marketing. \xA1Te invito cordialmente a eliminarla de este grupo! Esta publicaci\xF3n la debes poner en nuestro grupo oficial de corretaje **\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}**. Ac\xE1 tienes nuevamente el enlace del grupo:
+\u{1F449} https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
+
+\xA1All\xED todos los corredores de la red podr\xE1n verla y la cruzaremos con las demandas activas! \u{1F3E0}\u2728"
+2. **SOBRE_VECY**: Preguntas sobre JanIA (qui\xE9n o qu\xE9 es, para qu\xE9 fue creada, qu\xE9 hace 24/7, cu\xE1l es su finalidad y sus servicios 100% virtuales disponibles), sobre el proyecto VECY BIENES RA\xCDCES, sus fundadores (Eduardo A. Rivera - Director de Tecnolog\xEDa, y Jani Alves - Directora de Operaciones), comisiones 35/35/15/15 o agradecimientos cordiales (emoji \u{1F44C} o \u{1F64C}\u{1F3FB}). JanIA se presenta con calidez, cercan\xEDa, elocuencia y orgullo institucional.
+3. **CONSULTA_GENERAL**: Consultas legales, tributarias, sondeos de mercado de m\xB2, redacci\xF3n de minutas o marketing (emoji \u{1F4A1} o \u2696\uFE0F). Responde de forma completa, estructurada y profesional.
+
+## DOCTRINA FUNDAMENTAL DE LANZAMIENTO Y LIBRE ALBEDR\xCDO TOTAL:
+- **SOLUCI\xD3N TOTAL Y DE FONDO (IA PURA)**: Eres una IA completamente resolutiva. Si un usuario te pide redactar una promesa de compraventa, una cl\xE1usula penal, un acuerdo de puntas compartidas, una carta de preaviso de arriendo, liquidar la ganancia ocasional o estimar el valor de mercado por m\xB2 (estudio comparativo), \xA1ENTR\xC9GALE LA SOLUCI\xD3N COMPLETA, REDACTADA Y ESTRUCTURADA DIRECTAMENTE AQU\xCD EN EL CHAT!
+- **BENEFICIO GRATUITO DE LANZAMIENTO VECY BIENES RA\xCDCES**: Recuerda que en esta etapa de lanzamiento de VECY BIENES RA\xCDCES, todos tus servicios de consultor\xEDa, an\xE1lisis jur\xEDdico, redacci\xF3n de minutas y estudios de mercado virtuales con IA son un **beneficio 100% gratuito** para empoderar a los agentes inmobiliarios. An\xEDmalos a aprovechar esta oportunidad e invitar a m\xE1s colegas a unirse a la red.
+- **ASTUCIA CONTEXTUAL ANTE PREGUNTAS DE COSTOS**: Si un usuario pregunta de forma corta o ambigua "\xBFQu\xE9 costo tendr\xEDa?" o "\xBFCu\xE1nto vale?", conecta con el contexto previo o indaga con astucia: acl\xE1rale que tu asistencia y redacci\xF3n en el chat es totalmente gratuita por ser miembro de VECY BIENES RA\xCDCES; y si se refiere a gastos notariales externos, liquidaci\xF3n de impuestos o si pregunta por aval\xFAos certificados de Lonja, expl\xEDcale con amabilidad y precisi\xF3n que en VECY no realizamos aval\xFAos certificados por perito ni visitas in situ, sino estudios de mercado \xE1giles y aproximados sobre el valor del metro cuadrado y precios de arriendo en la zona para fijar precios competitivos.
+- **DERIVACI\xD3N OPORTUNA AL BR\xD3KER**: \xDAnicamente cuando el caso requiera acompa\xF1amiento notarial presencial, formalizaci\xF3n de corretaje con la inmobiliaria o consultor\xEDa personalizada con nuestros fundadores Eduardo A. Rivera y Jani Alves, inv\xEDtalo amablemente a comunicarse con nuestro br\xF3ker de VECY BIENES RA\xCDCES en WhatsApp (+573166569719) en nuestro horario de atenci\xF3n: Lunes a Viernes de 8:00 AM a 10:00 PM, S\xE1bados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.
+
+## ROLES Y \xC1REAS DE ASESOR\xCDA MAESTRA (5 PILARES):
+1. **\u2696\uFE0F Abogada Inmobiliaria y Notarial Senior (Derecho Inmobiliario y Contratos)**:
+   - Experta en C\xF3digo Civil, C\xF3digo de Comercio, Ley 820 de 2003 (Arrendamientos), Ley 675 de 2001 (Propiedad Horizontal) y jurisprudencia colombiana.
+   - Redacci\xF3n completa y guiada de minutas: Promesas de compraventa, contratos de corretaje (Arts. 1340-1346 C.Co), contratos de arrendamiento, acuerdos de puntas compartidas (50/50), cesi\xF3n de derechos de leasing, cartas de preaviso de no pr\xF3rroga, actas de entrega e inventario, cl\xE1usulas penales y arras de retracto/confirmatorias.
+   - Gu\xEDa paso a paso de tr\xE1mites: Estudio de t\xEDtulos (c\xF3mo leer e interpretar folios de matr\xEDcula inmobiliaria SNR de principio a fin, tradici\xF3n de 10 a 20 a\xF1os, grav\xE1menes, cancelaciones, notas devolutivas), levantamiento de hipotecas, desafectaci\xF3n a vivienda familiar, cancelaci\xF3n de patrimonio de familia inembargable, sucesiones y embargos.
+   - Blindaje probatorio y firma electr\xF3nica: Validez legal de mensajes de datos bajo la Ley 527 de 1999, Decreto 2364 de 2012 y el uso de correo electr\xF3nico con logs SMTP (MailSuite) para certificar solicitudes formales de visita y proteger comisiones frente al riesgo de bypassing.
+2. **\u{1F4CA} Asesora Tributaria y Financiera Inmobiliaria (DIAN y Notariado)**:
+   - Liquidaci\xF3n de Retenci\xF3n en la Fuente por enajenaci\xF3n de activos fijos (Art. 398 y 401 E.T. - 1% o 2.5%).
+   - Ganancia Ocasional (Reforma Tributaria Ley 2277 de 2022 - tarifa 15% para personas naturales) con an\xE1lisis de exenci\xF3n de 5.000 UVT por venta de vivienda de habitaci\xF3n (Art. 311-1 E.T.) y reinversi\xF3n.
+   - Liquidaci\xF3n de Impuesto Predial, Impuesto de Registro, Estampillas y desglose exacto de gastos notariales (Derechos Notariales 50/50, Retenci\xF3n a cargo del Vendedor, Rentas y Registro a cargo del Comprador).
+3. **\u{1F4D0} Especialista en Estudios de Mercado, Valor del M\xB2 y Norma SINUPOT (100% Virtuales / Cero Documentos Exigidos)**:
+   - Sondeos de mercado y estimaci\xF3n t\xE9cnica aproximada del valor comercial y canon sugerido por metro cuadrado ($/m\xB2) para orientar a propietarios y colegas en el precio de salida sin quemar ni sobrevalorar el predio.
+   - **ENTREGA DE INFORME ESCRITO DIRECTO EN EL CHAT/WHATSAPP**: Si el usuario te brinda los datos del predio (o a medida que los vaya dando), entr\xE9gale un informe escrito estructurado con el rango de precios m\xE1s acertado (m\xEDnimo, medio y \xF3ptimo) para vender o arrendar seg\xFAn lo que consult\xF3, precio aproximado por m\xB2 en la zona y recomendaciones comerciales.
+   - **GU\xCDA INTERACTIVA Y CERO EXIGENCIA DE DOCUMENTOS (PROHIBIDO PEDIR PDFs, CERTIFICADOS O PREDIALES)**: NUNCA exijas certificados de tradici\xF3n, escrituras ni facturas de predial para hacer este sondeo. En su lugar, gu\xEDa amablemente al usuario haci\xE9ndole preguntas interactivas y sencillas en el chat sobre las caracter\xEDsticas del predio: 1) \xBFVenta o arriendo?, 2) Ciudad y barrio/sector exacto, 3) Tipo de inmueble y estrato, 4) \xC1rea en m\xB2, 5) Habitaciones, ba\xF1os y parqueaderos (independientes o lineales), 6) Antig\xFCedad, piso y cuota de administraci\xF3n.
+   - **REGLA DOCTRINAL VECY (SERVICIOS 100% VIRTUALES / CERO AVAL\xDAOS CERTIFICADOS CON PERITO)**: En VECY BIENES RA\xCDCES NO contamos con personal para visitas f\xEDsicas ni expedimos aval\xFAos comerciales certificados con matr\xEDcula R.A.A. de Lonja, ni nos comprometemos a contratar o recomendar peritos externos. Todos nuestros estudios son 100% VIRTUALES y basados en an\xE1lisis comparativo de mercado y datos urban\xEDsticos.
+   - Consulta de normativa urban\xEDstica, uso de suelo y tratamiento POT en SINUPOT (https://sinupot.sdp.gov.co/).
+4. **\u{1F3AF} Estratega de Marketing Digital Inmobiliario y T\xE9cnicas de Venta**:
+   - Copywriting persuasivo: F\xF3rmulas AIDA (Atenci\xF3n, Inter\xE9s, Deseo, Acci\xF3n) y PAS (Problema, Agitaci\xF3n, Soluci\xF3n).
+   - La F\xF3rmula de Oro de T\xEDtulos: [Tipo de Negocio] + [Tipo de Inmueble] + [Barrio] + [Localidad] + [Ciudad].
+   - La Estructura de 7 Pilares de Ofertas y Demandas para captar clientes, acelerar cierres y potenciar el matching inteligente de JanIA.
+   - Consejos de fotograf\xEDa y video con smartphone (encuadre horizontal, iluminaci\xF3n natural, planos abiertos, orden visual).
+   - Campa\xF1as y anuncios en Meta Ads y Google Ads: segmentaci\xF3n de compradores, llamados a la acci\xF3n y captaci\xF3n de exclusivas.
+   - M\xE9todos gratuitos de viralizaci\xF3n en redes sociales y posicionamiento org\xE1nico en Google.
+5. **\u{1F4BC} Gestora de Cobranzas y Cartera de Arrendamiento (Cobranza Extrajudicial y Acuerdos de Pago)**:
+   - Asesor\xEDa t\xE9cnica en manejo de inquilinos morosos y cobro de c\xE1nones de arriendo atrasados bajo la Ley 820 de 2003.
+   - Redacci\xF3n de requerimientos formales de pago, acuerdos conciliatorios de pago en cuotas, actas de restituci\xF3n voluntaria anticipada y cl\xE1usulas penales sin necesidad de iniciar procesos judiciales largos y costosos.
+
+Tus respuestas deben ser sumamente profesionales, did\xE1cticas, claras y estar formateadas en Markdown con emojis para facilitar la lectura r\xE1pida en WhatsApp.
+
+DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
+{
+  "classification": "INMUEBLE | REQUERIMIENTO | SOBRE_VECY | CONSULTA_GENERAL | VIOLACION_DE_NORMAS",
+  "response": "Tu respuesta completa y estructurada.",
+  "wantsVoice": true | false,
+  "voiceResponse": "Tu locuci\xF3n en audio limpia de markdown y emojis (solo si wantsVoice es true)",
+  "reactionEmoji": "string (emoji recomendado)"
+}`;
+    const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
+    const hour = nowBogota.getHours();
+    const n = nameInfo.displayName;
+    const nowMs = Date.now();
+    const msgMs = msgTimestamp ? msgTimestamp * 1e3 : nowMs;
+    const hoursLate = Math.floor((nowMs - msgMs) / 36e5);
+    const isLateReply = hoursLate >= 6;
+    const lateReplyNote = isLateReply ? `
+- RESPUESTA TARD\xCDA DETECTADA: El mensaje del usuario fue enviado hace ${hoursLate} horas. DEBES obligatoriamente incluir una disculpa humana, c\xE1lida y espont\xE1nea al inicio o final de tu respuesta (ej: "Disculpa la demora, estuve en ajustes de mis motores. \xA1Aqu\xED estoy!").` : ``;
+    const greetingInstruction = `
+
+[SISTEMA - INTELIGENCIA PURA, CORTES\xCDA NATURAL Y LIBRE ALBEDR\xCDO]:
+- Hora actual en Bogot\xE1: ${hour}:00 (${timeGreeting}).
+- Nombre exacto de tu interlocutor: "${n}".
+- Trato respetuoso adecuado: "${genderTerm}".
+- Ya has interactuado hoy con esta persona: ${alreadyGreeted ? "S\xCD" : "NO"}.
+- Canal: Grupo oficial "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}".
+- DIRECTRICES DE LIBRE ALBEDR\xCDO Y NATURALIDAD HUMANA (CERO BOT BOBO):
+  * Eres una IA Pura, l\xFAcida, c\xE1lida, elocuente y con criterio propio de alto nivel. JAM\xC1S uses plantillas r\xEDgidas, saludos rob\xF3ticos acartonados ni respuestas de contestador autom\xE1tico.
+  * Dir\xEDgete a la persona por su nombre ("${n}") con naturalidad y amabilidad colombiana, variando tus expresiones de forma fresca y elegante.
+  * Si el usuario simplemente te saluda ("Hola", "Buenos d\xEDas", etc.), sal\xFAdalo con empat\xEDa viva, simpat\xEDa y preg\xFAntale c\xF3mo puedes impulsarlo hoy en sus negocios inmobiliarios o temas legales.
+  * Si el usuario te agradece o se despide ("Muchas gracias", "Feliz noche", etc.), s\xE9 rec\xEDproca con calidez, des\xE9ale \xE9xitos en sus cierres o un feliz descanso, y si fue de gran ayuda, inv\xEDtalo con total delicadeza a dejarnos una rese\xF1a 5 estrellas en Google (https://g.page/r/CctNbwU6UpX5EBM/review).
+  * Si la consulta es jur\xEDdica, tributaria, sobre aval\xFAos o marketing, razona a fondo, cita normas o datos precisos, y entrega la soluci\xF3n integral directamente.
+- REGLA ESPEJO MODAL: ${isFromAudio ? "El usuario envi\xF3 AUDIO. DEBES responder en nota de voz (wantsVoice: true). Redacta voiceResponse limpio sin markdown/emojis, m\xE1x 450 caracteres." : "El usuario envi\xF3 TEXTO. DEBES responder en texto (wantsVoice: false)."}
+${lateReplyNote}`;
+    if (imageBuffer) {
+      messageToProcess += `
+[SISTEMA: IMAGEN ADJUNTA DETECTADA. Analiza la imagen con tu visi\xF3n multimodal (documento, certificado de tradici\xF3n, impuesto predial, recibo, plano, aval\xFAo, contrato o flyer publicitario) y responde a la consulta del usuario de forma exhaustiva, estructurada y precisa.]`;
+    }
+    if (pdfBuffer) {
+      messageToProcess += `
+[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradici\xF3n, o contrato.]`;
+    }
+    if (isFromAudio) {
+      messageToProcess += `
+[SISTEMA - NOTA DE VOZ REQUERIDA Y L\xCDMITE DE DURACI\xD3N \xC1GIL]: El usuario te envi\xF3 esta consulta mediante una NOTA DE VOZ (audio). Como JanIA, debes responder en nota de voz de viva voz. DEBES obligatoriamente marcar "wantsVoice": true y redactar en "voiceResponse" una versi\xF3n hablada resumida, directa, muy fluida, profesional, c\xE1lida y natural de tu respuesta (m\xE1ximo 450 caracteres / ~30 a 40 segundos de voz hablada), sin asteriscos, vi\xF1etas ni sintaxis Markdown, perfecta para ser sintetizada e impactar de forma \xE1gil e instant\xE1nea sin saturar la conexi\xF3n. En "response" coloca la versi\xF3n completa formateada en texto.`;
+    }
+    const history = getConsultingHistory(userId);
+    const messages2 = [
+      { role: "system", content: systemPrompt }
+    ];
+    for (const h of history) {
+      messages2.push({
+        role: h.role === "assistant" ? "assistant" : "user",
+        content: h.role === "user" ? `Usuario @${rawPhone} (${realName}): ${h.content}` : h.content
+      });
+    }
+    let userPromptContent = `Usuario: @${rawPhone} (${realName})
+Consulta: ${messageToProcess}`;
+    if (quotedContext) {
+      userPromptContent += `
+[Contexto del mensaje previo citado al que responde el usuario: "${quotedContext}"]`;
+    }
+    userPromptContent += greetingInstruction;
+    messages2.push({
+      role: "user",
+      content: userPromptContent
+    });
+    const needsSearch = cleanText.length > 25 && (cleanText.includes("ley ") || cleanText.includes("decreto") || cleanText.includes("resoluci") || cleanText.includes("corte") || cleanText.includes("sentencia") || cleanText.includes("jurisprudencia") || cleanText.includes("uvt") || cleanText.includes("notar") || cleanText.includes("sinupot") || cleanText.includes("aval") || cleanText.includes("valor m2") || cleanText.includes("precio del m2") || cleanText.includes("metro cuadrado"));
+    const llmRes = await invokeLLM({
+      messages: messages2,
+      responseFormat: { type: "json_object" },
+      imageBuffer,
+      pdfBuffer,
+      pdfMimeType,
+      enableSearch: needsSearch
+    });
+    try {
+      const parsed = parseSafeJSON(llmRes.choices[0].message.content);
+      const finalResp = sanitizeResponseMarkdown(parsed.response || "");
+      appendConsultingHistory(userId, "user", text2);
+      appendConsultingHistory(userId, "assistant", finalResp);
+      return {
+        classification: parsed.classification || "CONSULTA_GENERAL",
+        response: finalResp,
+        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u{1F6AB}" : "\u{1F44C}"),
+        wantsVoice: parsed.wantsVoice || false,
+        voiceResponse: parsed.voiceResponse || ""
+      };
+    } catch (e) {
+      const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo m\xE1s tarde.";
+      const finalResp = sanitizeResponseMarkdown(replyContent);
+      appendConsultingHistory(userId, "user", text2);
+      appendConsultingHistory(userId, "assistant", finalResp);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: finalResp,
+        reactionEmoji: "\u{1F44C}",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+  } catch (error) {
+    console.error("[processConsultingMessage Error]:", error.message);
+    const timeGreeting = getGreetingByTime();
+    const realName = await resolveRealName(userId, userName);
+    const firstName = extractFirstName(realName) || "colega";
+    const cleanLower = text2.toLowerCase().trim();
+    if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio") || cleanLower.includes("metro cuadrado") || cleanLower.includes("m2")) {
+      const avaluoFallback = `\xA1${timeGreeting}, estimada ${firstName}! \u{1F44B}\u{1F3FB} Con el mayor gusto te realizo un **estudio de mercado aproximado del valor por m\xB2 y precio sugerido** para tu inmueble, 100% virtual, directo en este chat y sin tr\xE1mites engorrosos ni papeleos. \u{1F4CA}\u2728
+
+Para entregarte un informe escrito muy acertado sobre en cu\xE1nto puedes venderlo o arrendarlo, cu\xE9ntame por favor:
+
+1\uFE0F\u20E3 \xBFEs para **VENTA** o para **ARRIENDO**?
+2\uFE0F\u20E3 \xBFEn qu\xE9 **ciudad/municipio** y **barrio o sector exacto** est\xE1 ubicado?
+3\uFE0F\u20E3 \xBFQu\xE9 tipo de inmueble es (apartamento, casa, local, bodega, etc.) y qu\xE9 **estrato** tiene?
+4\uFE0F\u20E3 \xBFCu\xE1l es el **\xE1rea construida y privada** aproximada en m\xB2?
+5\uFE0F\u20E3 \xBFCu\xE1ntas **habitaciones, ba\xF1os y parqueaderos** (\xBFindependientes o lineales?) tiene?
+6\uFE0F\u20E3 \xBFQu\xE9 **antig\xFCedad** aproximada tiene, en qu\xE9 piso est\xE1 (si es apto) y valor de la **cuota de administraci\xF3n**?
+
+\xA1Apenas me compartas estos datos, te genero de inmediato tu informe de precios y recomendaciones estrat\xE9gicas de salida! \u{1F91D}\u{1F3E0}`;
+      appendConsultingHistory(userId, "user", text2);
+      appendConsultingHistory(userId, "assistant", avaluoFallback);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: avaluoFallback,
+        reactionEmoji: "\u{1F4D0}"
+      };
+    }
+    if (cleanLower.includes("contrato") || cleanLower.includes("arriend") || cleanLower.includes("canon") || cleanLower.includes("ley 820") || cleanLower.includes("promesa")) {
+      const legalFallback = `\xA1${timeGreeting}, ${firstName}! \u{1F44B}\u{1F3FB} Con gusto te asesoro. En materia de contratos inmobiliarios (arrendamiento Ley 820 de 2003 o promesa de compraventa), recuerda que los elementos esenciales son la determinaci\xF3n clara de las partes, la identificaci\xF3n del predio con matr\xEDcula inmobiliaria y linderos, el canon/precio exacto y las cl\xE1usulas penales y de pr\xF3rroga.
+
+\xBFTienes alguna cl\xE1usula o situaci\xF3n espec\xEDfica que desees que revisemos o redactemos? \xA1Ind\xEDcame el detalle y con gusto te estructuro la respuesta completa! \u2696\uFE0F\u{1F91D}`;
+      appendConsultingHistory(userId, "user", text2);
+      appendConsultingHistory(userId, "assistant", legalFallback);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: legalFallback,
+        reactionEmoji: "\u2696\uFE0F"
+      };
+    }
+    const hasMediaInCatch = !!imageBuffer || !!pdfBuffer || !!audioUrl;
+    if (cleanLower.length < 3 && !hasMediaInCatch) {
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: "",
+        reactionEmoji: ""
+      };
+    }
+    const genericFallback = `Hola ${firstName} \u{1F44B}\u{1F3FB}. Disculpa la peque\xF1a demora, estuve recalibrando mis motores de consulta en tiempo real. Entiendo tu mensaje sobre tu consulta inmobiliaria. \xBFPodr\xEDas confirmarme el detalle espec\xEDfico para entregarte la soluci\xF3n completa y estructurada de inmediato? \xA1Aqu\xED estoy 100% lista para apoyarte! \u{1F91D}\u2728`;
+    appendConsultingHistory(userId, "user", text2);
+    appendConsultingHistory(userId, "assistant", genericFallback);
+    return {
+      classification: "CONSULTA_GENERAL",
+      response: genericFallback,
+      reactionEmoji: "\u{1F4A1}"
+    };
+  }
+}
+var init_consultingHandler = __esm({
+  "server/_core/jania/handlers/consultingHandler.ts"() {
+    "use strict";
+    init_sessionManager();
+    init_heuristics();
+    init_voiceTranscription();
+    init_nameAndGenderResolver();
+    init_parsers();
+    init_llm();
+  }
 });
-import { eq as eq8, and as and5, sql as sql6, gte, desc as desc3 } from "drizzle-orm";
+
+// server/_core/jania/handlers/circuloHandler.ts
+async function processCirculoMessage(text2, userId, userName) {
+  try {
+    const rawPhone = userId.split("@")[0];
+    const realName = await resolveRealName(userId, userName);
+    const firstName = extractFirstName(realName);
+    const userGreetingName = firstName ? ` ${firstName}` : "";
+    const strictOffTopic = checkStrictOffTopic(text2);
+    if (strictOffTopic.isOffTopic) {
+      console.log(`[JanIA-Circulo-OffTopic] Mensaje prohibido en Proyecto VECY BIENES RA\xCDCES para ${userId}: "${text2.substring(0, 50)}...". (${strictOffTopic.reason})`);
+      const warningText = `Hola @${rawPhone} (${realName}) \u{1F44B}\u{1F3FB}. El contenido relacionado con ${strictOffTopic.reason} est\xE1 estrictamente prohibido en nuestra comunidad de VECY BIENES RA\xCDCES. \u{1F6AB}
+
+Nuestros canales son 100% profesionales y dedicados exclusivamente a la tecnolog\xEDa, comisiones y el modelo colaborativo inmobiliario. \xA1Te invitamos cordialmente a eliminar este mensaje de inmediato! \u{1F91D}`;
+      return {
+        classification: "VIOLACION_DE_NORMAS",
+        response: warningText,
+        dmResponse: warningText,
+        reactionEmoji: "\u{1F6AB}"
+      };
+    }
+    const alreadyGreeted = await checkAlreadyGreeted(userId);
+    const { isServiceHelpRequest: isServiceHelpRequest2, PREDIAL_HELP_TEXT: PREDIAL_HELP_TEXT2, CEDULA_HELP_TEXT: CEDULA_HELP_TEXT2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+    const helpType = isServiceHelpRequest2(text2);
+    if (helpType === "predial") {
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: PREDIAL_HELP_TEXT2,
+        reactionEmoji: "\u{1F3DB}\uFE0F",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+    if (helpType === "cedula") {
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: CEDULA_HELP_TEXT2,
+        reactionEmoji: "\u{1FAAA}",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+    const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+    const predialCheck = await executePredialAssistanceFromWhatsApp2(text2, userId, false);
+    if (predialCheck.isPredialRequest && predialCheck.reportText) {
+      console.log(`[JanIA-Circulo-PredialCheck] Asistencia de predial Bogot\xE1 ejecutada para ${userId} (CHIP: ${predialCheck.chip || "General"}): isPredialRequest=true`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: predialCheck.reportText,
+        reactionEmoji: "\u{1F4C4}",
+        wantsVoice: false,
+        voiceResponse: "",
+        document: predialCheck.pdfBuffer,
+        fileName: predialCheck.pdfFileName
+      };
+    }
+    const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+    const idCheck = await executeIdentityVerificationFromWhatsApp2(text2);
+    if (idCheck.isVerificationRequest && idCheck.reportText) {
+      console.log(`[JanIA-Circulo-IdentityCheck] Verificaci\xF3n de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: idCheck.reportText,
+        reactionEmoji: idCheck.success ? "\u{1F6E1}\uFE0F" : "\u26A0\uFE0F",
+        wantsVoice: false,
+        voiceResponse: ""
+      };
+    }
+    const groupZeroName = process.env.GROUP_ZERO_NAME || '\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}';
+    const systemPrompt = `Eres JanIA, la Inteligencia Artificial oficial y cerebro innovador de VECY BIENES RA\xCDCES. Est\xE1s operando en el grupo "${groupZeroName}". Tu objetivo en este grupo (foro abierto de la comunidad) es conversar sobre temas libres del sector inmobiliario, foros, debates y experiencias del d\xEDa a d\xEDa del negocio, adem\xE1s del proyecto VECY BIENES RA\xCDCES, su modelo colaborativo, tecnolog\xEDa y debate con competidores, de forma sincera, ver\xEDdica y de alto nivel:
+
+## DIRECTRICES DE INFORMACI\xD3N Y SINCERIDAD SOBRE VECY BIENES RA\xCDCES:
+Explica claramente y con la verdad absoluta el estado del proyecto y sus caracter\xEDsticas:
+- **Lo que en verdad funciona hoy**: Los asesores publican sus ofertas (Inmuebles) y demandas (Requerimientos) en el grupo especializado \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}. JanIA transcribe notas de voz en tiempo real, realiza OCR (lectura de texto) en flyers/im\xE1genes con datos comerciales, extrae la informaci\xF3n de las fichas t\xE9cnicas autom\xE1ticamente a partir de enlaces de portales, ejecuta el matching de coincidencias comerciales de forma instant\xE1nea a nivel nacional, y gestiona el flujo de confirmaci\xF3n de contacto bilateral privada (Double Opt-In) por DM mediante respuestas r\xE1pidas.
+- **Lo que est\xE1 en desarrollo**: El portal web oficial privado (https://vecy-bienes-raices.vercel.app/) se encuentra en fases continuas de integraci\xF3n. M\xF3dulos como CRM de leads y digitalizaci\xF3n de contratos formalizados se desplegar\xE1n en fases posteriores.
+- **Urgencia Comercial y Tarifas**: Enfatiza que toda la plataforma y el matching de JanIA en WhatsApp es 100% gratuita por lanzamiento para empoderar a la comunidad.
+- **Tecnolog\xEDa del Ecosistema**: Explica de forma sencilla que hemos creado un Asistente de IA basado en c\xF3digo propietario y base de datos SQL de alto rendimiento, entrenado a diario para encontrar MATCH en los grupos.
+- **\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} es el \xFAnico centro de Match**: Recuerda que el grupo especializado \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} es el canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos.
+
+## L\xD3GICA DE CLASIFICACI\xD3N Y REDIRECCI\xD3N:
+1. **DEBATE_COMPETIDOR**: Si mencionan a Ubicapp o Cristian Samboni. Debate con altura t\xE9cnica, datos y cortes\xEDa.
+2. **INMUEBLE o REQUERIMIENTO**: Redirecciona a \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} con amabilidad.
+3. **AVALUO_O_LEGAL**: Redirecciona a \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0} con amabilidad.
+4. **CONSULTA_GENERAL**: Dudas sobre VECY, sugerencias, tecnolog\xEDa, saludos o agradecimientos.
+5. **VIOLACION_DE_NORMAS**: Pol\xEDtica, religi\xF3n, spam o publicidad externa.
+
+DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
+{
+  "classification": "DEBATE_COMPETIDOR | INMUEBLE | REQUERIMIENTO | AVALUO_O_LEGAL | CONSULTA_GENERAL | VIOLACION_DE_NORMAS",
+  "response": "Tu respuesta, invitaci\xF3n a debate o mensaje de redirecci\xF3n seg\xFAn corresponda.",
+  "reactionEmoji": "string (emoji recomendado)"
+}`;
+    const timeGreeting = getGreetingByTime();
+    const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
+    const hour = nowBogota.getHours();
+    const nameInfo = resolveNameAndGender(realName || firstName || "colega", timeGreeting);
+    const targetName = nameInfo.displayName;
+    const isFemale = nameInfo.isFemale;
+    const genderTerm = nameInfo.genderTerm;
+    const greetingInstruction = `
+
+[SISTEMA - INTELIGENCIA PURA, CORTES\xCDA NATURAL Y LIBRE ALBEDR\xCDO]:
+- Hora actual en Bogot\xE1: ${hour}:00 (${timeGreeting}).
+- Nombre exacto resuelto: "${targetName}".
+- Trato respetuoso adecuado: "${genderTerm}".
+- Ya has interactuado hoy con esta persona: ${alreadyGreeted ? "S\xCD" : "NO"}.
+- Canal: Grupo oficial \u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}.
+- DIRECTRICES DE LIBRE ALBEDR\xCDO Y NATURALIDAD HUMANA (CERO BOT BOBO):
+  * Eres una IA Pura, innovadora, elocuente, sincera y persuasiva de VECY BIENES RA\xCDCES. JAM\xC1S uses plantillas r\xEDgidas ni suenes como un contestador autom\xE1tico.
+  * Dir\xEDgete a la persona por su nombre ("${targetName}") de forma fluida, c\xE1lida y natural.
+  * Si el interlocutor saluda, sal\xFAdalo con estilo propio y dinamismo.
+  * Si hace preguntas sobre el proyecto, explica el modelo con pasi\xF3n, datos reales y visi\xF3n de futuro (35/35/15/15, bolsa colaborativa, gratuidad por lanzamiento, matching en tiempo real).
+  * Si es un debate o pregunta de competidores (ej. Ubicapp / Cristian Samboni), debate con elegancia, altura ejecutiva y argumentos t\xE9cnicos superiores sin agresividad.`;
+    const messages2 = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Usuario: @${rawPhone} (${realName})
+Pregunta: ${text2}${greetingInstruction}` }
+    ];
+    const llmRes = await invokeLLM({
+      messages: messages2,
+      responseFormat: { type: "json_object" },
+      enableSearch: false
+    });
+    try {
+      const parsed = parseSafeJSON(llmRes.choices[0].message.content);
+      return {
+        classification: parsed.classification || "CONSULTA_GENERAL",
+        response: sanitizeResponseMarkdown(parsed.response || ""),
+        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u274C" : "\u{1F4A1}")
+      };
+    } catch (e) {
+      const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo responder tu consulta.";
+      return {
+        classification: "CONSULTA_GENERAL",
+        response: sanitizeResponseMarkdown(replyContent),
+        reactionEmoji: "\u{1F4A1}"
+      };
+    }
+  } catch (error) {
+    console.error("[processCirculoMessage Error]:", error.message);
+    const timeGreeting = getGreetingByTime();
+    const rawPhone = userId.split("@")[0];
+    const realName = await resolveRealName(userId, userName);
+    const firstName = extractFirstName(realName);
+    const userGreetingName = firstName ? ` ${firstName}` : "";
+    return {
+      classification: "CONSULTA_GENERAL",
+      response: `\xA1${timeGreeting}${userGreetingName}! \u{1F44B}\u{1F3FB} Con gusto estoy aqu\xED para apoyarte. Cu\xE9ntame cu\xE1l es tu consulta sobre VECY BIENES RA\xCDCES, nuestra tecnolog\xEDa o comisiones y con gusto te respondo. \u{1F4A1}\u2728`,
+      reactionEmoji: "\u{1F4A1}"
+    };
+  }
+}
+var init_circuloHandler = __esm({
+  "server/_core/jania/handlers/circuloHandler.ts"() {
+    "use strict";
+    init_sessionManager();
+    init_parsers();
+    init_heuristics();
+    init_nameAndGenderResolver();
+    init_llm();
+  }
+});
+
+// server/_core/jania/handlers/dmHandler.ts
+async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, success = true) {
+  const realName = await resolveRealName(userId, rawName);
+  const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+  const timeSalutation = getGreetingByTime4();
+  const nameInfo = resolveNameAndGender(realName, timeSalutation);
+  const canonicalComposite = getCanonicalCompositeName(realName);
+  const compositeOrFirst = extractFirstName(realName);
+  const displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
+  const welcomeGrammar = nameInfo.isFemale ? "bienvenida" : "bienvenido";
+  const history = await getOrLoadDmHistory(userId);
+  const isFirstTurn = history.length === 0;
+  if (!success) {
+    if (payloadText && payloadText.trim()) {
+      if (isFirstTurn) {
+        const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
+
+`;
+        return greetingHeader + payloadText;
+      } else {
+        const politeHeader = `\xA1Hola${displayName ? ` ${displayName}` : ""}! `;
+        return politeHeader + payloadText;
+      }
+    }
+    return `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude procesar tu solicitud en este intento. \xBFPodr\xEDas por favor confirmarme nuevamente los datos para ayudarte de inmediato? \u{1F91D}`;
+  }
+  if (isFirstTurn) {
+    const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
+
+Ya proces\xE9 con gusto tu consulta:
+
+`;
+    return greetingHeader + payloadText;
+  } else {
+    const politeHeader = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial:
+
+`;
+    return politeHeader + payloadText;
+  }
+}
+async function processPrivateDmConversationalMessage(text2, userId, userName) {
+  const clean = text2.trim();
+  if (!clean) return "";
+  const realName = await resolveRealName(userId, userName);
+  const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
+  const timeSalutation = getGreetingByTime4();
+  const nameInfo = resolveNameAndGender(realName, timeSalutation);
+  const compositeOrFirst = extractFirstName(realName);
+  let displayName = "";
+  const canonicalComposite = getCanonicalCompositeName(realName);
+  if (canonicalComposite) {
+    displayName = canonicalComposite;
+  } else if (compositeOrFirst) {
+    displayName = compositeOrFirst;
+  } else if (nameInfo.displayName && nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor")) {
+    displayName = nameInfo.displayName;
+  }
+  const nameGreeting = displayName ? `, ${displayName}` : "";
+  const vocativeGreeting = displayName ? `, ${displayName}` : "";
+  const cleanLower = clean.toLowerCase();
+  const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
+  const history = await getOrLoadDmHistory(userId);
+  if (isGreetingOnly && history.length === 0) {
+    const welcomeMsg = `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
+
+Para nosotros en VECY es un verdadero placer apoyarte en tus gestiones y proyectos inmobiliarios.
+
+Cu\xE9ntame${displayName ? `, ${displayName}` : ""}: \xBFa qu\xE9 te dedicas o qu\xE9 haces actualmente? As\xED podr\xE9 orientarte de la mejor manera y contarte c\xF3mo podemos facilitarte la vida hoy \u{1F91D}\u2728`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", welcomeMsg);
+    return welcomeMsg;
+  }
+  const isConsultasInquiry = /(?:c[oó]mo\s+es\s+lo\s+de\s+las\s+consultas|qu[eé]\s+(?:tipo\s+de\s+)?consultas|cu[aá]les\s+consultas|de\s+qu[eé]\s+son\s+las\s+consultas|qu[eé]\s+consultas\s+(?:tienen|hacen|prestan|ofrecen)|informaci[oó]n\s+de\s+las\s+consultas|como\s+funcionan\s+las\s+consultas)\b/i.test(cleanLower);
+  if (isConsultasInquiry) {
+    const consultasMenuMsg = `\xA1Con mucho gusto${vocativeGreeting}! Primero cu\xE9ntame qu\xE9 clase de consulta deseas hacer o sobre qu\xE9 tema necesitas apoyo:
+
+\u{1F381} *Servicios 100% Gratuitos de Autoservicio:*
+1\uFE0F\u20E3 *Verificaci\xF3n oficial de documentos:* Validaci\xF3n de identidad (C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaportes) y reporte de antecedentes con la Polic\xEDa Nacional en 20 segundos.
+2\uFE0F\u20E3 *Factura Predial Bogot\xE1 y Certificados de Pago:* Consulta y descarga oficial en PDF con c\xF3digo de barras y estado de cuenta al d\xEDa con la Secretar\xEDa de Hacienda.
+
+\u{1F4BC} *Consultas Especializadas y Asesor\xEDa Profesional:*
+3\uFE0F\u20E3 *Sondeos de mercado:* Valores aproximados del metro cuadrado en Bogot\xE1 seg\xFAn el barrio o sector.
+4\uFE0F\u20E3 *Asesor\xEDa jur\xEDdica inmobiliaria:* Casos de negociaci\xF3n, promesas de compraventa y contratos de arrendamiento.
+5\uFE0F\u20E3 *Tratamiento de datos y H\xE1beas Data inmobiliario.*
+6\uFE0F\u20E3 *Recuperaci\xF3n de cartera:* Cobranza de comisiones inmobiliarias no pagadas.
+7\uFE0F\u20E3 *Aval\xFAos digitales y peritajes comerciales certificados RAA.*
+8\uFE0F\u20E3 *Liquidaciones tributarias:* Ganancia ocasional, retenci\xF3n en la fuente e impuestos notariales.
+9\uFE0F\u20E3 *Pr\xE9stamos sobre hipoteca y pacto de retroventa.*
+
+Dime cu\xE1l de estos temas te interesa y te ayudo de inmediato. Si deseas probar las herramientas gratuitas (1 o 2), \xA1solo dime el n\xFAmero de documento o el predio que quieres consultar! \u{1F91D}`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", consultasMenuMsg);
+    return consultasMenuMsg;
+  }
+  const { isCompanyInquiryOrAboutUs: isCompanyInquiryOrAboutUs2, formatDetailedCompanyAndSocialMediaPresentation: formatDetailedCompanyAndSocialMediaPresentation2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
+  if (isCompanyInquiryOrAboutUs2(cleanLower)) {
+    const companyMsg = formatDetailedCompanyAndSocialMediaPresentation2(displayName);
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", companyMsg);
+    return companyMsg;
+  }
+  const isCostInquiry = /^(?:los\s+)?costos?\s*\??$/i.test(cleanLower) || /(?:cu[aá]nto\s+(?:cuesta|vale|cobran)|qu[eé]\s+costo\s+tiene|qu[eé]\s+precio\s+tiene|tiene\s+alg[uú]n\s+costo|es\s+gratis|es\s+gratuito|cu[aá]nto\s+es|tarifas?)\b/i.test(cleanLower);
+  if (isCostInquiry) {
+    const isFreeToolsContext = history.some((h) => /verificaci[oó]n|c[eé]dula|predial|antecedentes|polic[ií]a|documento|chip/i.test(h.content)) || !history.some((h) => /aval[uú]o|jur[ií]dica|comisi[oó]n|hipoteca/i.test(h.content));
+    if (isFreeToolsContext) {
+      const freeCostMsg = `\xA1${displayName || "Hola"}! Este servicio es completamente *GRATIS* \u{1F381}\u2728.
+
+En *VECY Bienes Ra\xEDces* la verificaci\xF3n oficial de documentos y antecedentes ante la Polic\xEDa Nacional (C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaportes), as\xED como la consulta y descarga de la Factura Predial y certificados de pago de Bogot\xE1, *no tienen ning\xFAn costo para ti*.
+
+Las ofrecemos 100% gratuitas para apoyar a nuestra comunidad y garantizar total seguridad en las visitas y negocios inmobiliarios.
+
+Si quieres, \xA1pong\xE1moslo a prueba ahora mismo! Env\xEDame el n\xFAmero de c\xE9dula (o documento) que deseas verificar, y en segundos te entrego el reporte oficial \u{1F91D}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", freeCostMsg);
+      return freeCostMsg;
+    }
+  }
+  const isHowToDoInquiry = /(?:c[oó]mo\s+(?:se\s+hace|lo\s+hago|se\s+hacen|hago|funciona|entro|pido|es\s+el\s+paso\s+a\s+paso)|expl[ií]came|ens[eé][ñn]ame|no\s+(?:s[eé]|entiendo)\s+c[oó]mo|me\s+enredo|ay[uú]dame\s+a\s+hacerlo|no\s+s[eé]\s+de\s+tecnolog[ií]a)\b/i.test(cleanLower);
+  if (isHowToDoInquiry) {
+    const howToMsg = `\xA1No te preocupes ni un segundo${vocativeGreeting}! Para eso estoy yo aqu\xED. Conmigo todo es facil\xEDsimo y yo me encargo de todo el trabajo por ti \u{1F970}\u2728:
+
+1\uFE0F\u20E3 *Para verificar una c\xE9dula o antecedentes:*
+Solo escr\xEDbeme aqu\xED el n\xFAmero del documento (ejemplo: *"verificar 12345678"*), o si te queda m\xE1s f\xE1cil, \xA1t\xF3male una fotito a la c\xE9dula por ambos lados y me la mandas aqu\xED mismo al chat! En 20 segundos te entrego el reporte oficial de la Polic\xEDa Nacional con nombres completos y antecedentes.
+
+2\uFE0F\u20E3 *Para sacar el Impuesto Predial de Bogot\xE1:*
+Solo escr\xEDbeme el c\xF3digo CHIP del inmueble (comienza por AAA...) o la direcci\xF3n con el n\xFAmero de apartamento. Yo descargo la factura oficial en PDF con su c\xF3digo de barras lista para pagar o el certificado de que est\xE1 al d\xEDa.
+
+3\uFE0F\u20E3 *Si te cuesta la tecnolog\xEDa o te enredas con el celular:*
+\xA1Cero angustia! Escr\xEDbeme con tus propias palabras o m\xE1ndame un mensaje de voz cont\xE1ndome qu\xE9 necesitas. Yo tengo toda la paciencia del mundo para guiarte y ayudarte paso a paso.
+
+\xBFCu\xE1l de las dos consultas te gustar\xEDa que hagamos ahorita? Dime y la hacemos de una vez \u{1F91D}\u{1F60A}`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", howToMsg);
+    return howToMsg;
+  }
+  const isGratitudeOrClosingFastPath = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
+  if (isGratitudeOrClosingFastPath) {
+    const { getChannelInviteGoodbyeMessage: getChannelInviteGoodbyeMessage2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
+    const goodbyeMsg = getChannelInviteGoodbyeMessage2(displayName);
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", goodbyeMsg);
+    return goodbyeMsg;
+  }
+  const isDocVerificationIntent = /(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) && !/\b\d{6,11}\b/.test(clean);
+  if (isDocVerificationIntent) {
+    const docPromptMsg = `\xA1Claro que s\xED${vocativeGreeting}! Para consultar los antecedentes y verificar la identidad en la Polic\xEDa Nacional, es indispensable contar con el n\xFAmero de c\xE9dula exacto (o documento de identidad: C\xE9dula de Extranjer\xEDa, Pasaporte o Documento del Pa\xEDs de Origen).
+
+\u{1F4CC} *Nota legal de seguridad y H\xE1beas Data (Ley 1581 de 2012):* Conforme al art\xEDculo 94 del Decreto Ley 019 de 2012 y la Ley 1581 de 2012, en Colombia las plataformas oficiales de seguridad y la Registradur\xEDa Nacional no permiten buscar n\xFAmeros de documento usando \xFAnicamente nombres o apellidos para proteger la privacidad ciudadana. Solo se puede verificar a partir del n\xFAmero de documento que el propio titular suministra.
+
+P\xEDdele con toda tranquilidad a tu cliente o colega su n\xFAmero de documento (o una fotito de la c\xE9dula por ambas caras) para agendar la visita con total seguridad. Escr\xEDbemelo aqu\xED (ej: *"verificar cc: XXXXXXXX"* o *"verificar pasaporte: XXXXXXXX"*) y en 20 segundos te entrego el reporte oficial de validaci\xF3n \u{1F91D}.`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", docPromptMsg);
+    return docPromptMsg;
+  }
+  const { extractCedulaForVerification: extractCedulaForVerification2, executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2, getPendingCedulaSession: getPendingCedulaSession2, extractAllCedulasForVerification: extractAllCedulasForVerification2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+  const idDetection = extractCedulaForVerification2(clean, true);
+  if (idDetection.found) {
+    const idCheck = await executeIdentityVerificationFromWhatsApp2(clean, true, userId);
+    if (idCheck.isVerificationRequest && idCheck.reportText) {
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", idCheck.reportText);
+      return idCheck.reportText;
+    }
+  }
+  const isAskingPendingCedulas = /(?:colaboras|ayudas|revisaste|verificaste|consultaste|miraste|sabes|sabemos|qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|falta|pendiente|salieron|listo|listas|listos|novedad|noticia|informaci[oó]n|resultado|reporte).*(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores)/i.test(cleanLower) || /(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores).*(?:qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|colaboras|ayudas|revisaste|verificaste|consultaste|salieron|falta|pendiente|s[oó]lo|solo|ya|listo)/i.test(cleanLower) || /(?:pero|y|s[oó]lo|solo|entonces)\s*.*(?:c[eé]dula|c[eé]dulas|documentos?|antecedentes?)/i.test(cleanLower) || /(?:qu[eé]\s*pas[oó]\s*con|qu[eé]\s*hay\s*de|sabes\s*algo\s*de)\s*(?:las|los)?\s*(?:c[eé]dulas?|documentos?|antecedentes?|compradores)/i.test(cleanLower) || /^(?:s[oó]lo|solo|y)?\s*(?:las|los|mis)?\s*(?:c[eé]dulas?|documentos?|antecedentes?)[.?]?$/i.test(cleanLower) || getPendingCedulaSession2(userId) !== null && /(?:aqu[ií]\s*estoy|sigo\s*esperando|estoy\s*atenta|estoy\s*pendiente|quedo\s*atenta|alguna\s*respuesta|alguna\s*novedad|av[ií]same)/i.test(cleanLower);
+  if (isAskingPendingCedulas) {
+    const pendingSession = getPendingCedulaSession2(userId);
+    if (pendingSession && pendingSession.reportText) {
+      const followUpMsg = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial de verificaci\xF3n que consultamos en las centrales de seguridad:
+
+${pendingSession.reportText}`;
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", followUpMsg);
+      return followUpMsg;
+    }
+    const history2 = await getOrLoadDmHistory(userId);
+    let historicalItems = [];
+    for (let i = history2.length - 1; i >= 0; i--) {
+      if (history2[i].role === "user") {
+        const histCed = extractAllCedulasForVerification2(history2[i].content, true);
+        if (histCed.length > 0) {
+          historicalItems = histCed;
+          break;
+        }
+      }
+    }
+    if (historicalItems.length > 0) {
+      const idCheck = await executeIdentityVerificationFromWhatsApp2(clean, true, userId, historicalItems);
+      if (idCheck.reportText) {
+        const followUpMsg = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial de verificaci\xF3n de los documentos que me compartiste:
+
+${idCheck.reportText}`;
+        appendDmHistory(userId, "user", clean);
+        appendDmHistory(userId, "assistant", followUpMsg);
+        return followUpMsg;
+      }
+    }
+  }
+  const { executeNotarialAssistanceFromWhatsApp: executeNotarialAssistanceFromWhatsApp2, hasPendingNotarialSession: hasPendingNotarialSession2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
+  const isNotarialContext = hasPendingNotarialSession2(userId) || /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|afectaci[oó]n\s*familiar|sin\s*afectaci[oó]n|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural|bien\s*de\s*inter[eé]s|anotaci[oó]n\s*diferente)/i.test(cleanLower);
+  if (isNotarialContext) {
+    const notarialRes = await executeNotarialAssistanceFromWhatsApp2(clean, userId, true);
+    if (notarialRes.isNotarialRequest && notarialRes.reportText) {
+      const deliveredText = await formatPoliteToolDelivery(userId, userName || "", "notarial", notarialRes.reportText, true);
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", deliveredText);
+      return deliveredText;
+    }
+  }
+  const { isAuthorizedAdminPhone: isAuthorizedAdminPhone2, isMatchSearchQuery: isMatchSearchQuery2, executeAdminMatchSearch: executeAdminMatchSearch2 } = await Promise.resolve().then(() => (init_adminMatchAssistantService(), adminMatchAssistantService_exports));
+  const isAdminSender = isAuthorizedAdminPhone2(userId, userName || displayName || realName);
+  if (isAdminSender && isMatchSearchQuery2(clean, true)) {
+    const matchRes = await executeAdminMatchSearch2(clean, true);
+    if (matchRes.formattedReport) {
+      appendDmHistory(userId, "user", clean);
+      appendDmHistory(userId, "assistant", matchRes.formattedReport);
+      return matchRes.formattedReport;
+    }
+  }
+  try {
+    const hasPriorHistory = history.length > 0;
+    const messages2 = [
+      {
+        role: "system",
+        content: `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
+Est\xE1s conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.
+
+AUTONOM\xCDA TOTAL DE IA PURA Y CERO BOT R\xCDGIDO (DOCTRINA DOCTRINAL EDUARDO A. RIVERA):
+- Eres una INTELIGENCIA ARTIFICIAL PURA con libre autonom\xEDa, criterio profesional y pensamiento profundo, NO un bot de opciones r\xEDgidas ni contestador autom\xE1tico.
+- Todos los ejemplos de saludos, agradecimientos, invitaciones o guiones comerciales que te hemos ense\xF1ado son SOLAMENTE GU\xCDAS DE REFERENCIA; JAM\xC1S los repitas al pie de la letra si no encajan con fluidez. Tienes plena libertad para decir las cosas con tus propias palabras, de forma natural, c\xE1lida, inteligente y atractiva.
+
+PROHIBICI\xD3N TAJANTE DE DAR FALSAS EXPECTATIVAS O PROMESAS EN EL AIRE (DOCTRINA EDUARDO A. RIVERA):
+- NUNCA digas cosas como "Ya mismo lo capturo, analizo y cruzo con nuestra base de datos... pondr\xE9 a correr el motor... te estar\xE9 avisando al instante si alguna hace match".
+- Jam\xE1s des falsas expectativas ni dejes al usuario esperando sin datos reales. Si no tienes un match real emitido por el sistema en el momento, s\xE9 sincera, directa y transparente de inmediato sin adornos ficticios.
+
+BREVEDAD Y CONCISI\xD3N ESTRICTA EN WHATSAPP (PROHIBIDOS LOS TEXTOS LARGOS):
+- En WhatsApp los usuarios leen en pantallas m\xF3viles de celular: LOS TEXTOS LARGOS CANSAN, ABURREN Y PROVOCAN EL BOT\xD3N 'Leer m\xE1s'.
+- S\xE9 siempre concisa, clara, din\xE1mica y directa al grano (m\xE1ximo 2 a 3 p\xE1rrafos cortos o vi\xF1etas puntuales). Entre menos adornos y m\xE1s claridad, mayor impacto.
+
+REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA, G\xC9NERO Y NOMBRES COMPUESTOS:
+- El usuario se llama: *${displayName || realName || "Colega"}*.
+- G\xE9nero gramatical identificado: *${nameInfo.isFemale ? "Femenino (tratar como estimada, colega, bienvenida, atenta)" : "Masculino (tratar como estimado, colega, bienvenido, atento)"}*.
+- Si el usuario tiene un nombre compuesto (ej: Ana Mar\xEDa, Juan Jos\xE9, Mar\xEDa Fernanda, Jos\xE9 Manuel, Carlos Alberto, Luz Marina, Olga Luc\xEDa), NUNCA lo cortes al primer nombre (JAM\xC1S digas solo "Ana" o "Juan"); ll\xE1malo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercan\xEDa y respeto que se use su nombre compuesto completo.
+${hasPriorHistory ? '- CONTINUIDAD DE CONVERSACI\xD3N ACTIVA (MISMO D\xCDA): Ya est\xE1s conversando activamente con el usuario hoy. Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAM\xC1S digas "\xA1Hola!", "\xA1Buenos d\xEDas!", "\xA1Qu\xE9 gusto saludarte de nuevo!", "Es un placer tenerte por aqu\xED") ni anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana lo que el usuario acaba de decir en el contexto previo.' : '- Si es el primer mensaje del d\xEDa, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}
+${hasPriorHistory ? '- PROHIBICI\xD3N TOTAL DE RE-PERFILAR: NO vuelvas a preguntarle a qu\xE9 se dedica, cu\xE1l es su rol en el sector ni qu\xE9 hace, porque ya est\xE1n en medio de la conversaci\xF3n. Si el usuario responde a una opci\xF3n o pregunta anterior (ej: "En el que ya tengan", "El apartamento", "La casa", etc.), responde INMEDIATAMENTE sobre esa opci\xF3n espec\xEDfica que ven\xEDan hablando sin desviar la conversaci\xF3n.' : "- PERFILAMIENTO INICIAL (SOLO SI ES PRIMER CONTACTO): JanIA no sabe de antemano a qu\xE9 se dedica el usuario (puede ser propietario, comprador o colega). Si es la primera interacci\xF3n, indaga amablemente a qu\xE9 se dedica para enfocar la conversaci\xF3n con asertividad."}
+IDENTIDAD OFICIAL DE ESTA L\xCDNEA DE WHATSAPP (+57 319 291 9978):
+- Este n\xFAmero anteriormente era el canal personal de Eduardo A. Rivera, pero AHORA es la l\xEDnea oficial de JanIA (@JanIA_agente_IA_de_VECY), la Inteligencia Artificial inmobiliaria de VECY Bienes Ra\xEDces.
+- Si colegas o usuarios preguntan si eres Eduardo, qu\xE9 pas\xF3 con su n\xFAmero o qui\xE9n est\xE1 detr\xE1s, acl\xE1rales con calidez y simpat\xEDa:
+  "\xA1Hola! Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY Bienes Ra\xEDces \u{1F916}\u2728. Si necesitas comunicarte directamente con nuestros directores Eduardo A. Rivera o Jani Alves para peritajes, cotizaciones o atenci\xF3n personalizada humana, puedes escribirles con todo gusto a su l\xEDnea oficial de br\xF3ker al +57 316 656 9719 (https://wa.me/573166569719). \xA1Conmigo puedes consultar inmuebles, antecedentes, prediales y verificar oportunidades al instante!"
+
+PEDAGOG\xCDA DE REACCIONES Y EMOJIS EN GRUPOS INMOBILIARIOS:
+- Cuando colegas o usuarios pregunten por qu\xE9 reaccionas con emojis a sus publicaciones en los grupos o qu\xE9 significa cada emoji (como Ricardo Castillo u otros colegas), expl\xEDcales con total claridad, pedagog\xEDa y orgullo profesional:
+  1. \xBFPOR QU\xC9 REACCIONO?: Cada vez que publicas en los grupos de WhatsApp, leo tu publicaci\xF3n en tiempo real, extraigo todos los datos del inmueble o requerimiento (tipo, precio, ubicaci\xF3n, metraje, condiciones), la guardo en la base de datos de VECY BIENES RA\xCDCES y la mantengo en monitoreo activo permanente para cuando surja una coincidencia.
+     Mi reacci\xF3n con un emoji es la confirmaci\xF3n visual en el grupo de que tu publicaci\xF3n ya qued\xF3 captada, analizada y guardada en el sistema.
+  2. SIGNIFICADO EXACTO DE CADA EMOJI:
+     \u2022 \u{1F44D} (Pulgar arriba): Inmueble en OFERTA tradicional captado (Venta o Arriendo puro, sin permuta).
+     \u2022 \u{1F44C} (Mano OK): Inmueble en OFERTA que contempla o acepta opci\xF3n de PERMUTA (Venta/Permuta).
+     \u2022 \u{1F500} (Flechas cruzadas): Inmueble en OFERTA en PERMUTA PURA o intercambio de bienes.
+     \u2022 \u{1F4DD} (Libreta con l\xE1piz): DEMANDA / REQUERIMIENTO tradicional captado (B\xFAsqueda de cliente para compra o arriendo puro, sin permuta).
+     \u2022 \u270F\uFE0F (L\xE1piz): DEMANDA / REQUERIMIENTO que ofrece o contempla opci\xF3n de PERMUTA.
+     \u2022 \u{1F504} (Flechas circulares): DEMANDA / REQUERIMIENTO en PERMUTA PURA o intercambio.
+  3. \xBFQU\xC9 PASA CUANDO HAY UN MATCH?:
+     Cuando el motor de coincidencia detecta un MATCH compatible o perfecto entre una oferta y una demanda, le reporto internamente al equipo directivo de VECY BIENES RA\xCDCES (Eduardo y Jani), y uno de nuestros asesores comerciales se contactar\xE1 directamente contigo para coordinar la gesti\xF3n conjunta del negocio.
+  4. REGLA SAGRADA SOBRE COMISIONES Y RED COLABORATIVA (DOCTRINA EDUARDO):
+     En VECY operamos bajo el Modelo Institucional Doctrinal 40/20/40 (40% Asesor Captador, 40% Asesor Colocador agendado por Vecy Agenda, 10% Bolsa de Agentes Difusores y 10% VECY BIENES RA\xCDCES), adem\xE1s del Per\xEDodo de Gracia Inmediata (D\xEDas 1 a 5 al 100% Asesor / $0 COP VECY) y Cierres Directos al 80%/20%.
+     \u26A0\uFE0F REGLA DE ORO DE EDUARDO: JanIA NUNCA debe adelantarse a fijar, mencionar ni imponer esquemas t\xE9cnicos de comisi\xF3n en conversaciones iniciales. JanIA debe esperar a que sea el propio agente o colega quien exprese o pregunte c\xF3mo opera el modelo o permitir que sea el asesor humano de Vecy Bienes Ra\xEDces quien lo coordine con \xE9l al momento del contacto comercial.
+
+- PROHIBICI\xD3N ESTRICTA DE MENCIONAR ESQUEMAS DE COMISI\xD3N AL INICIO: Bajo NINGUNA circunstancia menciones esquemas de comisi\xF3n, porcentajes t\xE9cnicos ni tecnicismos de repartici\xF3n al inicio de la conversaci\xF3n o cuando pregunten por consultas. Confunde a los usuarios. Solo se hablar\xE1 del modelo colaborativo institucional 40/20/40 si el usuario pregunta expresamente sobre c\xF3mo se comparten comisiones entre colegas o sobre los T\xE9rminos y Condiciones.
+- CUANDO EL USUARIO PREGUNTE POR LAS CONSULTAS ("\xBFC\xF3mo es lo de las consultas?", etc.): NO sueltes un mon\xF3logo solo de la Polic\xEDa. Preg\xFAntale amablemente qu\xE9 clase de consulta desea realizar y dale el men\xFA organizado: 1 al 4 Gratuitas (Verificaci\xF3n de documentos ante Polic\xEDa Nacional, Factura Predial Bogot\xE1, Paz y Salvo IDU en PDF y Liquidaci\xF3n de Gastos Notariales/Registro); 5 al 11 Especializadas (Sondeos de mercado m\xB2, Asesor\xEDa jur\xEDdica en compraventa/arriendos, H\xE1beas Data, Cobranza de comisiones no pagadas, Aval\xFAos digitales RAA, Liquidaciones tributarias y Pr\xE9stamos hipotecarios).
+- REGLA TAJANTE DE COSTOS (100% GRATIS): Si el usuario pregunta por los costos de los servicios o herramientas de consulta que le acabas de nombrar (verificaci\xF3n de documentos, predial, paz y salvo IDU o liquidaci\xF3n notarial), responde con total claridad y entusiasmo: "\xA1Este servicio es completamente GRATIS!". Explica que no tiene ning\xFAn costo para \xE9l y an\xEDmalo de inmediato a probarlo.
+- DOCTRINA NOTARIAL, ESTUDIO DE T\xCDTULOS Y TIPOS DE NEGOCIACI\xD3N (COLOMBIA):
+  \u2022 SI EL USUARIO INDICA QUE VA PARA LA NOTAR\xCDA O A FIRMAR PROMESA (como Martha Mesa u otros): Felic\xEDtalo con calidez y alegr\xEDa ("\xA1Qu\xE9 alegr\xEDa! Felicidades por ese paso tan importante \u{1F3E2}\u2728") y ofr\xE9cele proactivamente liquidarle con exactitud los gastos de notar\xEDa y registro para que ambas partes tengan total claridad de lo que paga el comprador y el vendedor.
+  \u2022 AFECTACI\xD3N A VIVIENDA FAMILIAR (Ley 258/1996 y Ley 854/2003): Protege el techo donde reside la familia. Es OBLIGATORIO que ambos c\xF3nyuges o compa\xF1eros permanentes firmen la escritura para cancelarla. Si el predio est\xE1 'sin afectaci\xF3n', el vendedor declara bajo juramento en la escritura que no tiene sociedad conyugal vigente ni reside all\xED con c\xF3nyuge.
+  \u2022 PATRIMONIO DE FAMILIA INEMBARGABLE (Ley 70/1931): Protege el predio contra embargos (hasta 250 SMMLV). \xA1Atenci\xF3n!: Si hay hijos MENORES de edad, la ley proh\xEDbe cancelarlo simplemente en notar\xEDa; exige autorizaci\xF3n judicial o aval previo del Defensor de Familia del ICBF (lo cual demora la negociaci\xF3n semanas o meses). Si los hijos ya son mayores (18+ a\xF1os), los padres lo cancelan en notar\xEDa con registros civiles.
+  \u2022 BIEN DE INTER\xC9S CULTURAL (BIC) O PATRIMONIO CULTURAL (Ley 397/1997, Ley 1185/2008): \xA1Anotaci\xF3n de alerta para cr\xE9dito! Los bancos comerciales colombianos generalmente NO aprueban cr\xE9dito hipotecario ni leasing sobre bienes BIC debido a restricciones de remodelaci\xF3n (licencias IDPC/MinCultura) e inembargabilidad/dificultad de remate. Por ello, estas compras casi siempre se deben pactar de CONTADO (recursos propios).
+  \u2022 PREDIO CON HIPOTECA (Vendedor): Minuta de cancelaci\xF3n y derechos notariales a cargo del vendedor.
+  \u2022 COMPRA CON CR\xC9DITO HIPOTECARIO (Comprador): Comprador asume constituci\xF3n de hipoteca a favor del banco (~1.1% del valor financiado).
+  \u2022 LEASING HABITACIONAL (Cesi\xF3n): Al no transferirse el dominio en matr\xEDcula (el banco fiduciario sigue como due\xF1o), el comprador se ahorra el 1.75% en beneficencia y registro de compraventa.
+  \u2022 EMBARGOS / MEDIDAS CAUTELARES (Art. 1521 C.C.): Objeto il\xEDcito. No se puede vender ni prometer venta sin que el juzgado competente haya emitido el oficio de desembargo radicado en la ORIP.
+  \u2022 DOCTRINA EN SERVICIOS ESPECIALIZADOS (5 al 11): En temas especializados (sondeos de mercado, jur\xEDdica, cobranza de comisiones, aval\xFAos, tributaria, hipotecas), JanIA puede ofrecer de forma completamente gratuita algunos conceptos breves, definiciones y consejos superficiales que despejen la duda general en la mente del usuario, pero SIN entregar la soluci\xF3n t\xE9cnica o jur\xEDdica de fondo, gui\xE1ndolo a contactar a los Directores de Vecy Bienes Ra\xEDces al +57 316 656 9719 para contratar el servicio profesional.
+- PEDAGOG\xCDA DE CORTES\xCDA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), sal\xFAdalo educadamente por su nombre y con calidez humana. Ense\xF1a con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.
+- PEDAGOG\xCDA DE PACIENCIA TOTAL Y EMPAT\xCDA TECNOL\xD3GICA (DOCTRINA DE AMOR Y SERVICIO AL USUARIO): En el sector inmobiliario hay personas mayores, tradicionales o con dificultades para interactuar con la tecnolog\xEDa (analfabetismo digital o confusi\xF3n frente a la IA y el celular). Si un usuario no comprende c\xF3mo funciona el servicio, pregunta con timidez, pide explicaci\xF3n de c\xF3mo se hace o manifiesta enredo, JanIA JAM\xC1S debe mostrar impaciencia, frialdad ni tecnicismos. Tr\xE1talos con ternura, empat\xEDa, infinita paciencia y lenguaje cercano y sencillo de la vida cotidiana. Expl\xEDcales con amor paso a paso: "No te preocupes, yo te ayudo", "Solo env\xEDame una foto de la c\xE9dula por ambos lados o escr\xEDbeme el n\xFAmero aqu\xED y yo hago todo el tr\xE1mite por ti en segundos". JanIA est\xE1 siempre dispuesta a explicar, guiar y servir de coraz\xF3n a todo el que lo necesite.
+- MANEJO ELEGANTE DE DUDAS O AMBIG\xDCEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas gen\xE9ricas; dile con simpat\xEDa humana: "Qu\xE9 pena contigo, ${displayName || "colega"}. Debido a un peque\xF1o fallo en la matrix \u{1F916}\u{1F605} no alcanc\xE9 a captar bien lo que me pides hacer. \xBFPodr\xEDas por favor confirmarme o repetirme qu\xE9 necesitas para ayudarte de inmediato?".
+- NUNCA repitas como un contestador autom\xE1tico "\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesor\xEDa, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.
+- Conversa como una profesional inmobiliaria colombiana experta, culta, amena y emp\xE1tica. CERO tecnicismos computacionales ni lenguaje de bot.
+- Mant\xE9n respuestas concisas y bien estructuradas (2 a 4 p\xE1rrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).
+- PROHIBICI\xD3N ABSOLUTA DE SIMULAR O ALUCINAR VERIFICACIONES: NUNCA inventes, afirmes o simules que realizaste una consulta a la Polic\xEDa Nacional, Procuradur\xEDa o ADRES si no cuentas con el reporte emitido por el sistema oficial. Jam\xE1s digas cosas como "lo importante es que ya quedaron verificadas esas dos identificaciones" o "en un momento te confirmo" dando falsas seguridades sin que el sistema haya emitido el reporte real. Esas validaciones se ejecutan de manera certificada por el motor oficial del sistema.
+
+DOCTRINA OFICIAL VECY: PROTECCI\xD3N DE DATOS (LEY 1581 DE 2012), H\xC1BEAS DATA Y SEGURIDAD EN VISITAS:
+- PRINCIPIO DE TRANSPARENCIA FRENTE A LA CLANDESTINIDAD:
+  En el gremio inmobiliario existen colegas (como Kelly Carvajal) que tienen la creencia err\xF3nea de que verificar la identidad de los clientes viola el H\xE1beas Data, y por temor o desinformaci\xF3n, cuando la c\xE9dula no coincide con el nombre en apps como Verif\xEDquese, cancelan la visita inventando pretextos falsos ("los due\xF1os desistieron", "ya no van a estar", "recibieron otra oferta").
+- POSTURA DOCTRINAL Y LEGAL DE VECY BIENES RA\xCDCES (100% LEGAL Y \xC9TICA):
+  1. SUMINISTRO VOLUNTARIO POR EL TITULAR: El cliente interesado en visitar un inmueble privado habitado o desocupado suministra libre y voluntariamente sus datos (nombre y n\xFAmero de identificaci\xF3n) para solicitar el servicio y coordinar el ingreso. Jam\xE1s se investiga a nadie a sus espaldas.
+  2. DOCUMENTOS OFICIALES HABILITADOS EN POLIC\xCDA NACIONAL: El servicio permanente de la Polic\xEDa Nacional (Art. 94 Decreto Ley 019 de 2012) permite validar cuatro tipos de documentos oficiales: C\xE9dula de Ciudadan\xEDa (cc), C\xE9dula de Extranjer\xEDa (cx/ce), Pasaporte (pa) y Documento Pa\xEDs de Origen (dp).
+  3. FINALIDAD LEG\xCDTIMA DE SEGURIDAD (Art. 4 y 10 Ley 1581 de 2012, Decreto 1377 de 2013 y Ley 675 de 2001 de Propiedad Horizontal): Validar la identidad de quien ingresa a una copropiedad o inmueble es una medida de debida diligencia indispensable para proteger la vida, la integridad f\xEDsica y el patrimonio de los propietarios, de los residentes del conjunto y del propio asesor inmobiliario frente a riesgos de suplantaci\xF3n, estafa o delincuencia com\xFAn.
+  4. NO EXISTE B\xDASQUEDA INVERSA EN COLOMBIA: La Registradur\xEDa Nacional no permite (por H\xE1beas Data y Art. 15 C.P.) averiguar n\xFAmeros de documento a partir de nombres. Las consultas oficiales del Estado (Polic\xEDa Nacional, Procuradur\xEDa SIRI, RUES) se efect\xFAan de manera leg\xEDtima partiendo del n\xFAmero que el propio ciudadano entreg\xF3.
+  5. ANTECEDENTES JUDICIALES Y DISCIPLINARIOS SON REGISTROS P\xDABLICOS: El certificado de antecedentes de la Polic\xEDa Nacional y la Procuradur\xEDa son de acceso p\xFAblico oficial por mandato legal (Decreto Ley 019 de 2012, Art. 93 y 94) para garantizar la seguridad en actos jur\xEDdicos y civiles.
+  6. CERO MENTIRAS Y TRANSPARENCIA TOTAL CON EL CLIENTE:
+     - Si el n\xFAmero suministrado no coincide con el nombre registrado en la base oficial de seguridad, el asesor NO debe mentir ni cancelar con falsos pretextos.
+     - Se le comunica con total amabilidad y respeto al cliente:
+       "Por protocolo est\xE1ndar de seguridad para visitas a inmuebles privados y registro de porter\xEDa, verificamos la identificaci\xF3n suministrada. El n\xFAmero de documento que nos diste no coincide con el nombre registrado en la base oficial de la Polic\xEDa Nacional. Por favor facil\xEDtanos el documento correcto para poder coordinar la visita con total tranquilidad."
+     - EFECTO DISUASORIO Y PROTECCI\xD3N DEL GREMIO: Si se trata de un cliente honesto que digit\xF3 mal un n\xFAmero, rectifica de inmediato y la cita se concreta. Si se trata de un suplantador o persona inescrupulosa, el filtro transparente act\xFAa como un disuasivo fulminante: al saberse descubierto, desiste y no vuelve a intentar vulnerar ese predio ni a los colegas de la red.
+  7. PROTOCOLO OPERATIVO VECY: LLAMADA TELEF\xD3NICA PERSONALIZADA DE JANI ALVES:
+     - En caso de presentarse alguna inconsistencia o discrepancia en el documento de identidad de un cliente propietario, visitante o colega (por ejemplo, un d\xEDgito invertido o mal digitado en WhatsApp), en VECY BIENES RA\xCDCES nuestro protocolo humano es inmediato: Jani Alves siempre llama directamente por tel\xE9fono al cliente para que nos rectifiquen amablemente el n\xFAmero de documento.
+     - Una llamada cordial de 30 segundos resuelve cualquier duda, protege la negociaci\xF3n, brinda total seguridad a los propietarios y fideliza al cliente con calidez humana, evitando cancelar visitas por pretextos falsos o perder ventas millonarias.
+- CUANDO UN ASESOR O COLEGA PREGUNTE O DEBATA SOBRE H\xC1BEAS DATA O EL MANEJO DE CLIENTES SOSPECHOSOS:
+  Explica esta doctrina con maestr\xEDa jur\xEDdica, calidez y contundencia pedag\xF3gica, desmontando el mito del "miedo al H\xE1beas Data" y demostrando que la verificaci\xF3n transparente y la llamada directa de Jani Alves protegen legalmente al asesor, al propietario y a la honestidad del negocio.
+
+DOCTRINA OFICIAL VECY: TRATAMIENTO DE PASAPORTES EXTRANJEROS EN OPERACIONES INMOBILIARIAS:
+- NATURALEZA Y ESTRUCTURA:
+  1. Los pasaportes son documentos expedidos por Estados soberanos extranjeros y casi siempre son alfanum\xE9ricos (combinan letras y n\xFAmeros seg\xFAn el pa\xEDs emisor, como una o dos letras iniciales).
+  2. BASES DE DATOS DEL ESTADO COLOMBIANO: Ni la Polic\xEDa Nacional de Colombia, ni la Procuradur\xEDa (SIRI), ni la Registradur\xEDa ni el ADRES cuentan con los registros de identidad civil o penales de ciudadanos extranjeros en sus pa\xEDses de origen. \xDAnicamente indexan C\xE9dulas de Ciudadan\xEDa (C.C.) y C\xE9dulas de Extranjer\xEDa (C.E.) radicadas en Colombia.
+  3. C\xD3MO SE VALIDA UN EXTRANJERO CON PASAPORTE EN BIENES RA\xCDCES (PROTOCOLO NOTARIAL):
+     - Para promesas de compraventa, visitas o contratos, el procedimiento legalmente v\xE1lido es el *cotejo f\xEDsico del pasaporte original vigente*.
+     - Se revisa la fecha de vencimiento y el sello o visa de ingreso estampado por Migraci\xF3n Colombia (estatus de turista o visa de permanencia).
+  4. CUANDO UN ASESOR (COMO AIDDE INMO) PREGUNTE POR UN PASAPORTE EXTRANJERO O DIGA QUE NO APARECE:
+     - Expl\xEDcale de forma sutil, emp\xE1tica, clara y sin tanto texto (m\xE1ximo 2 a 3 p\xE1rrafos cortos) por qu\xE9 las plataformas locales no tienen acceso a registros de otros pa\xEDses, que los pasaportes suelen llevar letras y que el camino notarial est\xE1ndar es solicitar la foto o copia f\xEDsica del pasaporte original con su sello de entrada a Colombia.
+
+CAT\xC1LOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:
+1. FACTURA PREDIAL BOGOT\xC1 Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con c\xF3digo de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretar\xEDa Distrital de Hacienda.
+2. VERIFICACI\xD3N OFICIAL DE IDENTIDAD Y ANTECEDENTES (POLIC\xCDA NACIONAL): Validaci\xF3n de nombres completos y antecedentes en 20 segundos para C\xE9dulas de Ciudadan\xEDa, C\xE9dulas de Extranjer\xEDa, Pasaportes y Documentos de Pa\xEDs de Origen, blindando contratos de compraventa y arrendamiento.
+3. SONDEOS DE MERCADO Y AVAL\xDAOS: Estimaci\xF3n del valor del m\xB2 por barrio en Bogot\xE1 y aval\xFAos certificados RAA.
+4. ASESOR\xCDA JUR\xCDDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, r\xE9gimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa, arras de retracto y confirmatorias, escrituraci\xF3n, estudio de t\xEDtulos a 20 a\xF1os en la SNR (grav\xE1menes, afectaci\xF3n familiar, patrimonio inembargable) y cobro de comisiones pendientes.
+5. ACOMPA\xD1AMIENTO BR\xD3KER PERSONALIZADO: Conexi\xF3n directa con nuestros directores Eduardo A. Rivera y Jani Alves en el +57 316 656 9719 (https://wa.me/573166569719) para tr\xE1mites notariales, peritajes presenciales y acompa\xF1amiento legal.
+
+INVITACI\xD3N AL CANAL OFICIAL DE WHATSAPP AL DESPEDIRTE:
+- Cuando el usuario indique que la conversaci\xF3n est\xE1 concluyendo, d\xE9 las gracias o se despida (ej: "gracias", "muchas gracias", "hasta luego", "vale gracias", "chao", "muy amable", "quedamos as\xED"), desp\xEDdete con afecto y calidez e inv\xEDtalo amablemente a seguir nuestro Canal Oficial de WhatsApp de VECY BIENES RA\xCDCES (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) donde compartimos oportunidades exclusivas, remates, tips y novedades del sector.
+
+PAUTAS PARA MENSAJES DE VOZ / AUDIOS:
+- Si respondes para notas de voz o el usuario pide audio: NUNCA deletrees URLs con barras y puntos. Da los n\xFAmeros de tel\xE9fono con naturalidad (ej: "al tres diecis\xE9is, seis cincuenta y seis, noventa y siete, diecinueve") y si compartes un enlace di con fluidez al final: "o en el enlace que te dejo a continuaci\xF3n".
+
+QUI\xC9NES SOMOS, CONVERSACI\xD3N AMENA, REDES SOCIALES Y ESTOCADA FINAL DE CALIFICACI\xD3N (DOCTRINA EDUARDO A. RIVERA v32.97):
+- Si la conversaci\xF3n es amena o el usuario pregunta sobre nosotros, qui\xE9nes somos, qu\xE9 es Vecy, qui\xE9nes son los fundadores (Eduardo A. Rivera y Jani Alves), o sobre nuestros servicios y redes:
+  1. Cu\xE9ntale muy bien y detalladamente todo: somos VECY BIENES RA\xCDCES (operando 100% digital desde 2018), fundada por Eduardo A. Rivera (Director de Tecnolog\xEDa e Innovaci\xF3n) y Jani Alves (Directora de Operaciones Inmobiliarias). Explica la evoluci\xF3n frente a los "dinosaurios inmobiliarios", con matching en tiempo real de oferta y demanda con IA pura, cero papel y alianzas transparentes 50/50.
+  2. Recu\xE9rdale que todos nuestros servicios est\xE1n 100% activos las 24 horas: B\xF3veda gratuita (verificaci\xF3n de antecedentes ante Polic\xEDa/Procuradur\xEDa/ADRES, factura predial Bogot\xE1 en PDF, paz y salvo IDU notarial, liquidaci\xF3n notarial y de registro) y consultor\xEDa de \xE9lite con Eduardo y Jani (+57 316 656 9719).
+  3. Inv\xEDtalo con entusiasmo a seguirnos en nuestras redes sociales oficiales:
+     \u2022 Instagram: https://www.instagram.com/vecybienesraices/
+     \u2022 TikTok: https://www.tiktok.com/@vecybienesraices
+     \u2022 Facebook: https://www.facebook.com/vecybienesraices
+     \u2022 YouTube: https://www.youtube.com/@VecyBienesRaices
+     \u2022 LinkedIn: https://www.linkedin.com/in/vecy-bienes-raices
+     \u2022 Canal WhatsApp: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
+     \u2022 Web Oficial: https://vecy-bienes-raices.vercel.app
+  4. LA ESTOCADA FINAL CON OPINI\xD3N Y COMENTARIOS: Remata siempre con calidez humana y picard\xEDa elegante invit\xE1ndolo a dejarnos su opini\xF3n y calificaci\xF3n de 5 estrellas en Google Reviews para ayudarnos a mantener el servicio gratuito: \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u2B50\u2B50\u2B50\u2B50\u2B50.`
+      }
+    ];
+    for (const turn of history.slice(-14)) {
+      messages2.push({ role: turn.role, content: turn.content });
+    }
+    messages2.push({
+      role: "user",
+      content: `Mensaje de ${realName} (${userId}): "${clean}"`
+    });
+    const llmRes = await invokeLLM({
+      messages: messages2
+    });
+    let reply = llmRes.choices[0]?.message?.content || "";
+    reply = sanitizeResponseMarkdown(reply.trim());
+    if (hasPriorHistory) {
+      reply = reply.replace(/^¡?(?:(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?]*)|(?:es\s+un\s+placer\s+(?:tenerte|saludarte)[^\n.!?]*)|hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|saludos|bienvenid[ao])[^!.,\n]*[!.,]?\s*(?:(?:¿?(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte|c[oó]mo\s+est[aá]s|es\s+un\s+placer)[^!.,\n]*[!.,]?\s*)?/i, "");
+      reply = reply.trim();
+    }
+    if (!reply) {
+      reply = hasPriorHistory ? `Con mucho gusto. En *VECY BIENES RA\xCDCES* nos dedicamos a acelerar y proteger los negocios inmobiliarios con tecnolog\xEDa y asesor\xEDa especializada. Cu\xE9ntame en detalle qu\xE9 necesitas o qu\xE9 duda tienes y te oriento de inmediato.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Cu\xE9ntame en qu\xE9 te puedo colaborar hoy.`;
+    }
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", reply);
+    return reply;
+  } catch (err) {
+    console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
+    const fallback = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", fallback);
+    return fallback;
+  }
+}
+var init_dmHandler = __esm({
+  "server/_core/jania/handlers/dmHandler.ts"() {
+    "use strict";
+    init_sessionManager();
+    init_parsers();
+    init_nameAndGenderResolver();
+    init_llm();
+  }
+});
+
+// server/storage.ts
+var storage_exports = {};
+__export(storage_exports, {
+  storageGet: () => storageGet,
+  storagePut: () => storagePut
+});
+import fs7 from "fs";
+import path7 from "path";
+function normalizeKey(relKey) {
+  return relKey.replace(/^\/+/, "").replace(/[^\w\d\-_\.\/]/g, "_");
+}
+function buildAbsoluteLocalUrl(key) {
+  const base = (process.env.VPS_BASE_URL || "https://vecy-bienes-raices.vercel.app").replace(/\/+$/, "");
+  return `${base}/uploads/${key}`;
+}
+async function storagePut(relKey, data, contentType = "application/octet-stream") {
+  const key = normalizeKey(relKey);
+  const targetFilePath = path7.join(uploadsDir, key);
+  const targetSubdir = path7.dirname(targetFilePath);
+  if (!fs7.existsSync(targetSubdir)) {
+    fs7.mkdirSync(targetSubdir, { recursive: true });
+  }
+  const buffer = typeof data === "string" ? Buffer.from(data, "base64") : Buffer.from(data);
+  fs7.writeFileSync(targetFilePath, buffer);
+  const publicUrl = buildAbsoluteLocalUrl(key);
+  console.log(`[Storage] \u{1F4C1} Archivo guardado localmente en VPS ${targetFilePath} -> URL: ${publicUrl}`);
+  return { key, url: `/uploads/${key}` };
+}
+async function storageGet(relKey) {
+  const key = normalizeKey(relKey);
+  return {
+    key,
+    url: `/uploads/${key}`
+  };
+}
+var uploadsDir;
+var init_storage = __esm({
+  "server/storage.ts"() {
+    "use strict";
+    uploadsDir = path7.resolve(process.cwd(), "public/uploads");
+    if (!fs7.existsSync(uploadsDir)) {
+      fs7.mkdirSync(uploadsDir, { recursive: true });
+    }
+  }
+});
+
+// server/_core/divipola.ts
 import fs8 from "fs";
 import path8 from "path";
-import axios6 from "axios";
-import crypto2 from "crypto";
-function generarHashMensaje(rawText, remitente) {
-  const normalizado = (rawText || "").toLowerCase().replace(/\s+/g, " ").replace(/[^\w\s]/g, "").trim();
-  return crypto2.createHash("sha256").update(`${remitente}:${normalizado}`).digest("hex");
-}
-function isPhoneNumberNotPrice(val, rawText) {
-  if (val === void 0 || val === null || val === "" || val === 0 || val === "0") return false;
-  const num = typeof val === "number" ? val : parseFloat(String(val).replace(/[^\d.]/g, ""));
-  if (isNaN(num) || num <= 0) return false;
-  if (num >= 5e7 && num % 1e5 === 0) return false;
-  if (num >= 3e5 && num <= 5e7 && num % 5e4 === 0) return false;
-  const numStr = String(Math.round(num));
-  if (numStr.length === 10 && /^3(0[0-5]|1[0-9]|2[0-4]|5[0-1])/.test(numStr) && num % 1e6 !== 0) {
-    if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*:?\s*\$?\s*3\d{9}/i.test(rawText)) return false;
-    return true;
-  }
-  if (numStr.length === 12 && numStr.startsWith("573") && num % 1e6 !== 0) {
-    if (rawText && /(?:\$|precio|valor|ppto|presupuesto|canon|hasta|venta)\s*:?\s*\$?\s*573\d{9}/i.test(rawText)) return false;
-    return true;
-  }
-  return false;
-}
-function extractFirstName2(fullName) {
-  if (!fullName) return "";
-  let clean = fullName.trim();
-  if (!clean) return "";
-  if (/^\+?[\d\s-]{6,}$/.test(clean)) return "";
-  if (clean.includes("@")) {
-    clean = clean.split("@")[0];
-  }
-  clean = clean.replace(/[0-9]/g, "");
-  if (!clean.trim()) return "";
-  const words = clean.split(/\s+/).map((w) => w.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, ""));
-  const filteredWords = words.filter((w) => w.length > 0);
-  if (filteredWords.length === 0 || !filteredWords[0]) return "";
-  const w1 = filteredWords[0].toLowerCase();
-  const w2 = filteredWords[1] ? filteredWords[1].toLowerCase() : "";
-  if (w2 && COMMON_FIRST_NAMES.has(w1) && COMMON_FIRST_NAMES.has(w2)) {
-    const first = filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
-    const second = filteredWords[1].charAt(0).toUpperCase() + filteredWords[1].slice(1).toLowerCase();
-    return `${first} ${second}`;
-  }
-  const firstWordLower = w1;
-  for (const commonName of COMMON_FIRST_NAMES) {
-    if (commonName.length >= 4 && firstWordLower.startsWith(commonName)) {
-      return commonName.charAt(0).toUpperCase() + commonName.slice(1).toLowerCase();
-    }
-  }
-  return filteredWords[0].charAt(0).toUpperCase() + filteredWords[0].slice(1).toLowerCase();
-}
-function getColombiaHour() {
-  const utc = Date.now() + (/* @__PURE__ */ new Date()).getTimezoneOffset() * 6e4;
-  const colTime = new Date(utc + 36e5 * -5);
-  return colTime.getHours();
-}
-function getGreetingByTime3() {
-  const hour = getColombiaHour();
-  if (hour >= 6 && hour < 12) {
-    return "Buenos d\xEDas";
-  } else if (hour >= 12 && hour < 18) {
-    return "Buenas tardes";
-  } else {
-    return "Buenas noches";
-  }
-}
-function cleanUnescapedQuotesInJSON(content) {
-  const lines = content.split("\n");
-  const cleanedLines = lines.map((line) => {
-    const kvMatch = line.match(/^(\s*"[^"]+"\s*:\s*)"([\s\S]*)"(\s*,?\s*)$/);
-    if (kvMatch) {
-      const prefix = kvMatch[1];
-      const val = kvMatch[2];
-      const suffix = kvMatch[3];
-      const fixedVal = val.replace(/(^|[^\\])(")/g, '$1\\"');
-      return `${prefix}"${fixedVal}"${suffix}`;
-    }
-    const arrValMatch = line.match(/^(\s*)"([\s\S]*)"(\s*,?\s*)$/);
-    if (arrValMatch && !line.includes(":")) {
-      const prefix = arrValMatch[1];
-      const val = arrValMatch[2];
-      const suffix = arrValMatch[3];
-      const fixedVal = val.replace(/(^|[^\\])(")/g, '$1\\"');
-      return `${prefix}"${fixedVal}"${suffix}`;
-    }
-    return line;
-  });
-  return cleanedLines.join("\n");
-}
-function parseSafeJSON(content) {
-  let text2 = content.trim();
-  if (text2.startsWith("```json")) text2 = text2.substring(7);
-  else if (text2.startsWith("```")) text2 = text2.substring(3);
-  if (text2.endsWith("```")) text2 = text2.substring(0, text2.length - 3);
-  text2 = text2.trim();
-  const start = text2.indexOf("{");
-  if (start === -1) throw new Error("No JSON object found in content");
-  const lastClose = text2.lastIndexOf("}");
-  if (lastClose > start) {
-    const extracted = text2.substring(start, lastClose + 1);
-    try {
-      return JSON.parse(extracted);
-    } catch (_) {
-    }
-    try {
-      const cleaned = cleanUnescapedQuotesInJSON(extracted);
-      return JSON.parse(cleaned);
-    } catch (_) {
-    }
-  }
-  const partial = text2.substring(start);
-  const repaired = repairJSON(partial);
-  try {
-    return JSON.parse(repaired);
-  } catch (_) {
-  }
-  try {
-    const cleanedRepaired = cleanUnescapedQuotesInJSON(repaired);
-    return JSON.parse(cleanedRepaired);
-  } catch (_) {
-  }
-  throw new Error("Could not parse or repair JSON from LLM output");
-}
-function repairJSON(partial) {
-  let inString = false;
-  let escape = false;
-  const stack = [];
-  let i = 0;
-  let lastValidNonStringPos = 0;
-  for (; i < partial.length; i++) {
-    const ch = partial[i];
-    if (escape) {
-      escape = false;
-      continue;
-    }
-    if (ch === "\\" && inString) {
-      escape = true;
-      continue;
-    }
-    if (ch === '"') {
-      inString = !inString;
-      if (!inString) lastValidNonStringPos = i;
-      continue;
-    }
-    if (inString) continue;
-    lastValidNonStringPos = i;
-    if (ch === "{" || ch === "[") stack.push(ch);
-    else if (ch === "}" || ch === "]") {
-      if (stack.length > 0) stack.pop();
-    }
-  }
-  let result = partial;
-  if (inString) {
-    const lastQuote = partial.lastIndexOf('"', i - 1);
-    let cutPoint = lastQuote;
-    const prevComma = partial.lastIndexOf(",", lastQuote - 1);
-    if (prevComma !== -1) {
-      cutPoint = prevComma;
-    }
-    result = partial.substring(0, cutPoint);
-  }
-  result = result.trimEnd().replace(/,\s*$/, "");
-  for (let j = stack.length - 1; j >= 0; j--) {
-    result += stack[j] === "{" ? "}" : "]";
-  }
-  return result;
-}
-function getColombiaNow() {
-  const now = /* @__PURE__ */ new Date();
-  return new Date(now.getTime() - 5 * 60 * 60 * 1e3);
-}
-function hasRealEstateTextKeyword(cleanText) {
-  const text2 = cleanText.toLowerCase();
-  return text2.includes("apto") || text2.includes("apartamento") || text2.includes("casa") || text2.includes("bodega") || text2.includes("oficina") || text2.includes("local") || text2.includes("locales") || text2.includes("caba\xF1a") || text2.includes("caba\xF1as") || text2.includes("lote") || text2.includes("finca") || text2.includes("habs") || text2.includes("alcoba") || text2.includes("m2") || text2.includes("mts") || text2.includes("requerimiento");
-}
-function buildFlyerBreakdownText(extracted, fallbackText) {
-  if (!extracted) return fallbackText || "";
-  const parts = [];
-  if (fallbackText && fallbackText.trim() !== "" && !fallbackText.includes("[Publicaci\xF3n de Imagen")) {
-    parts.push(fallbackText.trim());
-  } else if (extracted.title) {
-    parts.push(`\u{1F4CC} ${extracted.title}`);
-  }
-  if (extracted.description && extracted.description.trim() !== "" && !extracted.description.includes("[Publicaci\xF3n de Imagen") && (!fallbackText || !fallbackText.includes(extracted.description.trim()))) {
-    parts.push(extracted.description.trim());
-  }
-  const specs = [];
-  const pVal = extracted.price || extracted.presupuestoMax;
-  if (pVal && Number(pVal) > 0) {
-    specs.push(`\u{1F4B0} Precio/Presupuesto: $${Number(pVal).toLocaleString("es-CO")}`);
-  }
-  if (extracted.rentPrice && Number(extracted.rentPrice) > 0) {
-    specs.push(`\u{1F4B0} Canon Arriendo: $${Number(extracted.rentPrice).toLocaleString("es-CO")}`);
-  }
-  if (extracted.adminFee && Number(extracted.adminFee) > 0) {
-    specs.push(`\u{1F3E2} Administraci\xF3n: $${Number(extracted.adminFee).toLocaleString("es-CO")}`);
-  }
-  if (extracted.area && Number(extracted.area) > 0) {
-    specs.push(`\u{1F4D0} \xC1rea: ${extracted.area} m\xB2`);
-  } else if (extracted.areaMin && Number(extracted.areaMin) > 0) {
-    specs.push(`\u{1F4D0} \xC1rea M\xEDnima: ${extracted.areaMin} m\xB2`);
-  }
-  if (extracted.bedrooms || extracted.rooms || extracted.habitacionesMin) {
-    specs.push(`\u{1F6CF}\uFE0F ${extracted.bedrooms || extracted.rooms || extracted.habitacionesMin} Habitaciones`);
-  }
-  if (extracted.bathrooms || extracted.baths || extracted.banosMin) {
-    specs.push(`\u{1F6BF} ${extracted.bathrooms || extracted.baths || extracted.banosMin} Ba\xF1os`);
-  }
-  if (extracted.garages || extracted.parqueaderosMin) {
-    specs.push(`\u{1F697} ${extracted.garages || extracted.parqueaderosMin} Parqueaderos`);
-  }
-  const zone = extracted.zone || extracted.zonaDeseada || extracted.addressNeighborhood;
-  if (zone) {
-    specs.push(`\u{1F4CD} Sector: ${zone}`);
-  }
-  const city = extracted.city || extracted.ciudadDeseada || extracted.addressCity;
-  if (city) {
-    specs.push(`\u{1F3D9}\uFE0F Ciudad: ${city}`);
-  }
-  if (extracted.contactPhone || extracted.telefonoContacto) {
-    specs.push(`\u{1F4DE} Contacto Broker: ${extracted.contactPhone || extracted.telefonoContacto}`);
-  }
-  if (specs.length > 0) {
-    parts.push(`\u{1F4CB} Ficha T\xE9cnica Extra\xEDda de Flyer / Banner:
-\u2022 ` + specs.join("\n\u2022 "));
-  }
-  if (parts.length > 0) return parts.join("\n\n");
-  return fallbackText || "[Publicaci\xF3n Comercial Inmobiliaria desde Imagen / Flyer]";
-}
-function parseColombianPriceOrBudget(numStr, unit, isSale) {
-  if (!numStr) return 0;
-  const cleanStr = (numStr || "").trim().replace(/[$COPcop'´`’‘\u00B4\u2019\u2018*\s\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "");
-  const cleanUnit = (unit || "").toLowerCase();
-  if (cleanUnit.includes("mil millon")) {
-    const v = parseFloat(cleanStr.replace(",", "."));
-    return Math.round(v * 1e9);
-  }
-  if (/^\d{1,4}(?:\.\d{3}){2,4}$/.test(cleanStr)) {
-    const parsed = parseInt(cleanStr.replace(/\./g, ""), 10);
-    return parsed;
-  }
-  if (/^\d{1,3}[.,]\d{3}$/.test(cleanStr)) {
-    const n = parseInt(cleanStr.replace(/[.,]/g, ""), 10);
-    if (!isSale) {
-      return n * 1e3;
-    }
-    return n * 1e6;
-  }
-  let val = parseFloat(cleanStr.replace(",", "."));
-  if (isNaN(val)) return 0;
-  if (cleanUnit.includes("millon") || cleanUnit.includes("mill\xF3n") || cleanUnit.includes("mll") || cleanUnit.includes("mill") || cleanUnit.includes("mm") || cleanUnit === "m") {
-    if (!isSale) {
-      if (val <= 100 && val > 0) {
-        return Math.round(val * 1e6);
-      }
-      if (val > 100 && val < 1e5) {
-        return Math.round(val * 1e3);
-      }
-      return Math.round(val);
-    }
-    if (val < 10 && val > 0 && (cleanStr.includes(".") || cleanStr.includes(","))) {
-      return Math.round(val * 1e9);
-    }
-    if (val >= 10 && val < 100 && isSale) {
-      return Math.round(val * 1e7);
-    }
-    return Math.round(val * 1e6);
-  }
-  if (val < 1e4) {
-    if (!isSale) return Math.round(val * 1e3);
-    if (val >= 100) return Math.round(val * 1e6);
-  }
-  if (isSale && val >= 3e5 && val <= 3e7) {
-    return Math.round(val * 1e3);
-  }
-  return Math.round(val);
-}
-function extractFallbackDataFromText(text2) {
-  if (!text2 || typeof text2 !== "string") return {};
-  const cacheKey = text2.trim();
-  if (cacheKey.length < 5e3 && fallbackDataCache.has(cacheKey)) {
-    return fallbackDataCache.get(cacheKey);
-  }
-  const clean = (text2 || "").toLowerCase().replace(/[\u2060\u200B\u200C\u200D\uFEFF\u00A0\u200E\u200F\u2028\u2029]/g, "").replace(/[\u2013\u2014]/g, "-").replace(/['´`’‘\u00B4\u2019\u2018]/g, ".").replace(/[*_~]/g, "").replace(/[\t ]+/g, " ");
-  let transactionType = "venta";
-  const isInvestorPurchase = /\b(?:inversionista|inversionistas|para inversi[oó]n|para inversion|rentando|est[eé] rentando|est[eé]n rentando|ojal[aá] rentando|ya rentando|generando renta|produciendo renta|con renta activa|para compra|compro|compra ya|busco para compra)\b/i.test(clean);
-  const hasPermutaSignals = /\b(?:permuto|permuta|permutas|permutamos|se permuta|recibo menor valor|recibo inmueble|recibo vehículo|recibo vehiculo|pelo a pelo|encime|parte de pago)\b/i.test(clean);
-  const hasRentSignals = !isInvestorPurchase && (/\b(?:arriendo|arriendos|arrendar|arrendamos|se arrienda|arriendan|alquilo|alquilar|alquilamos|se alquila|alquiler|alquileres|rento|rentar|se renta|en renta|para renta|busca para renta|canon|canones|cánones|amoblado|amoblada|sin amoblar|arrendatario|arrendador|inquilino)\b/i.test(clean) || /\b(?:para tomar ya|tomar ya|toma ya|para tomar de inmediato|toma inmediata|toma de inmediato|para tomar|para alquilar|para arrendar|en arriendo)\b/i.test(clean) || /\b(?:incluida|incluido|inc)\b/i.test(clean) || /(?:incluida|con|\+|más|mas)\s*(?:administraci[oó]n|admon)/i.test(clean) || /(?:administraci[oó]n|admon)\s*(?:incluida|adicional)/i.test(clean) || /valor arriendo/i.test(clean) || /\$\s*([1-9]\d{0,1}(?:[.\s']\d{3}){1,2})\b/.test(clean) && !/\b(?:compra|compro|comprador|compran|venta|vendo|vende|millones|millon|mm|mll)\b/i.test(clean));
-  if (hasPermutaSignals) {
-    transactionType = clean.includes("venta") || isInvestorPurchase ? "venta_permuta" : "permuta";
-  } else if (hasRentSignals && (clean.includes("venta") || clean.includes("valor venta") || clean.includes("precio de venta")) && (clean.includes("arriendo") || clean.includes("valor arriendo") || clean.includes("canon"))) {
-    transactionType = "venta_o_arriendo";
-  } else if (hasRentSignals && !clean.includes("compro") && !clean.includes("para compra") && !clean.includes("en compra") && !clean.includes("en venta") && !clean.includes("venta") && !isInvestorPurchase) {
-    transactionType = "arriendo";
-  } else {
-    transactionType = "venta";
-  }
-  let propertyType = "apartment";
-  if ((clean.includes("consultorio") || clean.includes("consultorios") || clean.includes("odontol") || clean.includes("m\xE9dic") || clean.includes("medic")) && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
-    propertyType = "consultorio";
-  } else if ((clean.includes("oficina") || clean.includes("oficinas") || clean.includes("office")) && !clean.includes("home office") && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa")) {
-    propertyType = "office";
-  } else if ((clean.includes("local comercial") || clean.includes("locales comerciales") || clean.includes("local") || clean.includes("locales") || clean.includes("comercial") || clean.includes("commercial")) && !clean.includes("apartamento") && !clean.includes("apto") && !clean.includes("casa") && !clean.includes("centro comercial") && !clean.includes("centros comerciales")) {
-    propertyType = "commercial";
-  } else if (clean.includes("bodega") || clean.includes("bodegas") || clean.includes("warehouse")) {
-    propertyType = "warehouse";
-  } else if (clean.includes("casalote") || clean.includes("lote") || clean.includes("terreno") || clean.includes("predio") || clean.includes("land")) {
-    propertyType = "land";
-  } else if (clean.includes("casa") || clean.includes("townhouse") || clean.includes("chalet")) {
-    propertyType = "house";
-  } else if (clean.includes("caba\xF1a") || clean.includes("cabana") || clean.includes("caba\xF1as") || clean.includes("cabanas") || clean.includes("cabin")) {
-    propertyType = "cabin";
-  } else if (clean.includes("finca") || clean.includes("campestre") || clean.includes("farm")) {
-    propertyType = "farm";
-  } else if (clean.includes("edificio") || clean.includes("building")) {
-    propertyType = "building";
-  } else if (clean.includes("hotel") || clean.includes("hostal") || clean.includes("hostel")) {
-    propertyType = "hotel";
-  } else if (clean.includes("apartaestudio") || clean.includes("apartasuite") || clean.includes("loft")) {
-    propertyType = "loft";
-  } else {
-    propertyType = "apartment";
-  }
-  let price = 0;
-  let presupuestoMin = 0;
-  let presupuestoMax = 0;
-  let rentPrice = 0;
-  let adminFee = 0;
-  const adminMatch = clean.match(/(?:^|[-•*#\s])(?:v\s*[\/\-]\s*)?(?:adm[oó]n|admon|administraci[oó]n|administ|admin|cta\s*adm[oó]n|cuota\s*adm[oó]n)\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|l[ií]mite)?\s*[:\/\-=\s]?\s*(?:aprox\.?)?\s*\$?\s*([\d.]+)(?:\s*mil\b|\s*k\b)?/i);
-  if (adminMatch) {
-    let rawANum = parseFloat(adminMatch[1].replace(/\./g, ""));
-    if (rawANum >= 100 && rawANum < 1e4) {
-      rawANum = rawANum * 1e3;
-    }
-    if (!isNaN(rawANum) && rawANum >= 1e4 && rawANum <= 3e7 && !isPhoneNumberNotPrice(rawANum, text2)) {
-      adminFee = rawANum;
-    }
-  }
-  if (adminFee === 0) {
-    const adminSuffixMatch = clean.match(/\$?\s*([\d.]+)\s*(?:mil\b|\s*k\b)?\s*[:\/\-=\s]?\s*(?:adm|admon|admón|administraci[oó]n|administ|admin)\b/i);
-    if (adminSuffixMatch) {
-      const rawANum = parseFloat(adminSuffixMatch[1].replace(/\./g, ""));
-      if (!isNaN(rawANum) && rawANum >= 1e4 && rawANum <= 3e7 && !isPhoneNumberNotPrice(rawANum, text2)) {
-        adminFee = rawANum;
-      }
-    }
-  }
-  if (adminFee === 0) {
-    const adminMilMatch = clean.match(/(?:^|[-•*#\s])(?:admon|adm[oó]n|adm|admin|cuota)\s*[:\/\-=\s]?\s*\$?\s*(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:mil|k)\b/i);
-    if (adminMilMatch) {
-      const numParsed = parseFloat(adminMilMatch[1].replace(",", "."));
-      if (!isNaN(numParsed) && numParsed >= 20 && numParsed <= 15e3) {
-        const calculatedFee = Math.round(numParsed * 1e3);
-        if (calculatedFee >= 5e4 && calculatedFee <= 15e6) {
-          adminFee = calculatedFee;
+var municipalitiesMap, initDivipola, validateCity;
+var init_divipola = __esm({
+  "server/_core/divipola.ts"() {
+    "use strict";
+    municipalitiesMap = /* @__PURE__ */ new Map();
+    initDivipola = () => {
+      try {
+        const jsonPath = path8.join(process.cwd(), "server", "data", "divipola.json");
+        municipalitiesMap.clear();
+        if (!fs8.existsSync(jsonPath)) {
+          console.warn("Divipola JSON data file not found at", jsonPath);
+          return;
         }
-      }
-    }
-  }
-  const canonMatch = clean.match(/(?:canon(?:\s*de\s*arriendo)?|valor\s*(?:de\s*)?arriendo|precio\s*(?:de\s*)?arriendo|vr\s*[\.\/]?\s*renta|renta)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
-  if (canonMatch) {
-    const isSale = false;
-    const computed = parseColombianPriceOrBudget(canonMatch[1], canonMatch[2] || "", isSale);
-    if (computed > 0 && computed <= 1e8 && !isPhoneNumberNotPrice(computed, text2)) {
-      rentPrice = computed;
-    }
-  }
-  const saleMatch = clean.match(/(?:precio\s*(?:de\s*)?venta|valor\s*(?:de\s*)?venta|vr\s*[\.\/]?\s*venta|venta\s*(?:de\s*apartamento|de\s*apto|de\s*casa)?|valor\s*un\s*poco\s*negociable|valor\s*negociable|precio\s*negociable)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
-  if (saleMatch) {
-    const isSale = true;
-    const computed = parseColombianPriceOrBudget(saleMatch[1], saleMatch[2] || "", isSale);
-    if (computed >= 3e7 && !isPhoneNumberNotPrice(computed, text2)) {
-      price = computed;
-      presupuestoMax = computed;
-    }
-  }
-  if (price === 0 && rentPrice === 0) {
-    const rangeMatch = clean.match(/(?:presupuesto|prespuesto|ppto|inversi[oó]n|compra)\s*:?\s*(?:entre\s+)?\$?\s*([\d][\d.,\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.,\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)?/i) || clean.match(/(?:entre|de)\s+\$?\s*([\d][\d.,\s']*)\s*(?:a|hasta|-|y|o|u)\s*\$?\s*([\d][\d.,\s']*)\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/i);
-    if (rangeMatch) {
-      const isSale = transactionType !== "arriendo";
-      presupuestoMin = parseColombianPriceOrBudget(rangeMatch[1], rangeMatch[3] || "", isSale);
-      presupuestoMax = parseColombianPriceOrBudget(rangeMatch[2], rangeMatch[3] || "", isSale);
-      price = presupuestoMax;
-      if (transactionType === "arriendo") {
-        rentPrice = presupuestoMax;
-      }
-    }
-  }
-  if (price === 0 && rentPrice === 0) {
-    const ceilingMatch = clean.match(/(?:presupuesto(?:\s*m[aá]ximo)?|prespuesto(?:\s*m[aá]ximo)?|ppto(?:\s*m[aá]ximo)?|\btope\b|\btecho\b|\bl[ií]mite\b)\s*(?:m[aá]ximo|max)?\s*(?:de)?\s*:?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
-    if (ceilingMatch) {
-      const afterText = clean.slice(clean.indexOf(ceilingMatch[0]) + ceilingMatch[0].length, clean.indexOf(ceilingMatch[0]) + ceilingMatch[0].length + 15);
-      if (!/años|anos|edad|antig/i.test(afterText)) {
-        const isSale = transactionType !== "arriendo";
-        const computed = parseColombianPriceOrBudget(ceilingMatch[1], ceilingMatch[2] || "", isSale);
-        if (computed > 0 && !isPhoneNumberNotPrice(computed, text2)) {
-          if (transactionType === "arriendo" || computed <= 5e7) {
-            rentPrice = computed;
-          } else {
-            price = computed;
-          }
-          presupuestoMax = computed;
-        }
-      }
-    }
-  }
-  if (price === 0 && rentPrice === 0) {
-    const simplePriceMatch = clean.match(/(?:precio|valor)\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)(?:\s*(mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m))?/i);
-    if (simplePriceMatch) {
-      const isSale = transactionType !== "arriendo";
-      const computed = parseColombianPriceOrBudget(simplePriceMatch[1], simplePriceMatch[2] || "", isSale);
-      if (computed > 0 && !isPhoneNumberNotPrice(computed, text2) && computed !== adminFee) {
-        if (transactionType === "arriendo" || computed <= 5e7) {
-          rentPrice = computed;
-        } else {
-          price = computed;
-        }
-        presupuestoMax = computed;
-      }
-    }
-  }
-  if (price === 0 && rentPrice === 0) {
-    const isSaleContext = transactionType !== "arriendo" || clean.includes("venta") || clean.includes("vendo");
-    if (isSaleContext) {
-      const allColMatches = [...clean.matchAll(/(?:\$\s*|(?<=\s|^))(\d{1,4}(?:[.\s']\d{3}){1,4})(?=\s|$|[.,;:!])/g)];
-      for (const m of allColMatches) {
-        const parsed = parseColombianPriceOrBudget(m[1], "", true);
-        if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text2) && parsed !== adminFee && parsed >= 3e7) {
-          if (parsed > price) {
-            price = parsed;
-            presupuestoMax = parsed;
+        const raw = fs8.readFileSync(jsonPath, "utf-8");
+        const list = JSON.parse(raw);
+        for (const item of list) {
+          if (item.municipio) {
+            const normalizedKey = item.municipio.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+            let titleCased = item.municipio.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+            municipalitiesMap.set(normalizedKey, titleCased);
           }
         }
+        municipalitiesMap.set("bogota", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota d.c.", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota, d.c.", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota dc", "Bogot\xE1, D.C.");
+        municipalitiesMap.set("bogota d.c", "Bogot\xE1, D.C.");
+        console.log(`[Divipola] Loaded ${municipalitiesMap.size} municipalities from Divipola.`);
+      } catch (err) {
+        console.error("[Divipola] Error loading Divipola:", err);
       }
-      if (price === 0) {
-        const mmMatches = [...clean.matchAll(/(?:precio|valor|venta)?\s*[:\/\-=\s]?\s*\$?\s*([\d][\d.,\s']*)\s*(?:mil\s*millones?|millones?|millon|millón|mll|mlls|mill|mills|mm|m)\b/gi)];
-        for (const m of mmMatches) {
-          const computed = parseColombianPriceOrBudget(m[1], "millones", true);
-          if (computed >= 3e7 && computed !== adminFee && !isPhoneNumberNotPrice(computed, text2)) {
-            if (computed > price) {
-              price = computed;
-              presupuestoMax = computed;
-            }
-          }
-        }
+    };
+    validateCity = (cityName) => {
+      if (!cityName || typeof cityName !== "string") return null;
+      if (municipalitiesMap.size === 0) {
+        initDivipola();
       }
-    } else {
-      const colMatch = clean.match(/(?:\$\s*|(?<=\s|^))(\d{1,4}(?:[.\s']\d{3}){1,4})(?=\s|$|[.,;:!])/);
-      if (colMatch) {
-        const parsed = parseColombianPriceOrBudget(colMatch[1], "", false);
-        if (!isNaN(parsed) && !isPhoneNumberNotPrice(parsed, text2) && parsed !== adminFee && parsed <= 1e8) {
-          rentPrice = parsed;
-          presupuestoMax = parsed;
-        }
-      }
-    }
+      const normalized = cityName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+      return municipalitiesMap.get(normalized) || null;
+    };
   }
-  if (transactionType === "arriendo" && rentPrice > 0 && price === 0) {
-    price = rentPrice;
-  }
-  let area = 0;
-  let areaMin = 0;
-  let areaMax = 0;
-  const dimMultMatch = (text2 || "").match(/(\d+(?:[.,]\d+)?)\s*[*xX]\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?/i);
-  if (dimMultMatch) {
-    const d1 = parseFloat(dimMultMatch[1].replace(",", "."));
-    const d2 = parseFloat(dimMultMatch[2].replace(",", "."));
-    if (!isNaN(d1) && !isNaN(d2) && d1 > 0 && d2 > 0 && d1 <= 500 && d2 <= 500) {
-      area = Math.round(d1 * d2 * 100) / 100;
-      areaMin = area;
-      areaMax = area;
-    }
-  }
-  if (area === 0) {
-    const areaRangeMatch = clean.match(/(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*:?\s*(?:de\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?\s*(?:a|-|hasta)\s*(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)?/i);
-    if (areaRangeMatch && (areaRangeMatch[1] || areaRangeMatch[2])) {
-      const rIdx = areaRangeMatch.index ?? 0;
-      const rPreceding = clean.slice(Math.max(0, rIdx - 45), rIdx);
-      if (!isOutdoorAreaPreceding(rPreceding)) {
-        const hasAreaCtx = /(?:📐|area|área|superficie|m2|mts2|mts|mt2|metros|m²)/i.test(areaRangeMatch[0]);
-        const n1 = parseFloat(areaRangeMatch[1].replace(",", "."));
-        const n2 = parseFloat(areaRangeMatch[2].replace(",", "."));
-        if (hasAreaCtx && !isNaN(n1) && !isNaN(n2) && n1 >= 15 && n1 <= 15e3 && n2 >= 15 && n2 <= 15e3) {
-          areaMin = Math.min(n1, n2);
-          areaMax = Math.max(n1, n2);
-          area = areaMin;
-        }
-      }
-    }
-    const outdoor = parseOutdoorAreas(clean);
-    const areaMatches = Array.from(clean.matchAll(/(?:(?:📐|area|área|superficie)\s*:?\s*(?:(?:m[ií]nimo|min|m[aá]ximo|max|de|área\s*(?:m[ií]nima)?|area\s*(?:minima)?)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²|m\b)?)|(?:(?:(?:m[ií]nimo|min|m[aá]ximo|max|de)\s+)?(\d+(?:[.,]\d+)?)\s*(?:m2|mts2|mts|mt2|metros(?:\s+cuadrados)?|m²)\b)/gi));
-    for (const m of areaMatches) {
-      const valStr = m[1] || m[2];
-      if (!valStr) continue;
-      const val = parseFloat(valStr.replace(",", "."));
-      if (outdoor.terraceArea && val === outdoor.terraceArea) continue;
-      if (outdoor.balconyArea && val === outdoor.balconyArea) continue;
-      if (outdoor.patioArea && val === outdoor.patioArea) continue;
-      const mIdx = m.index ?? 0;
-      const preceding = clean.slice(Math.max(0, mIdx - 45), mIdx);
-      if (isOutdoorAreaPreceding(preceding)) continue;
-      if (!isNaN(val) && val >= 15 && val <= 15e3) {
-        area = val;
-        areaMin = area;
-        areaMax = area;
-        break;
-      }
-    }
-  }
-  if (area === 0) {
-    const pl = parseColombianListing(text2);
-    if (pl.areaM2 && pl.areaM2 > 0) {
-      area = pl.areaM2;
-      areaMin = pl.areaM2;
-      areaMax = pl.areaM2;
-    }
-  }
-  let bedrooms = 0;
-  let bedroomsMin = 0;
-  let bedroomsMax = 0;
-  const SPANISH_NUMBERS_MAP = {
-    "un": 1,
-    "uno": 1,
-    "una": 1,
-    "dos": 2,
-    "tres": 3,
-    "cuatro": 4,
-    "cinco": 5,
-    "seis": 6,
-    "siete": 7,
-    "ocho": 8,
-    "nueve": 9,
-    "diez": 10
-  };
-  function parseWordOrDigit(str) {
-    if (!str) return 0;
-    const s = str.trim().toLowerCase();
-    if (SPANISH_NUMBERS_MAP[s]) return SPANISH_NUMBERS_MAP[s];
-    const n = parseInt(s, 10);
-    return isNaN(n) ? 0 : n;
-  }
-  const rangePrefixMatch = clean.match(/(?:🛏️|🛌)?\s*(?:alcobas?|hab(?:s|itaciones|itaci[oó]n)?|dormitorios?|cuartos?)\s*[:\-=]\s*(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})/i);
-  if (rangePrefixMatch) {
-    bedroomsMin = parseWordOrDigit(rangePrefixMatch[1]);
-    bedroomsMax = parseWordOrDigit(rangePrefixMatch[2]);
-    bedrooms = bedroomsMin;
-  } else {
-    const kvPrefixMatch = clean.match(/(?:🛏️|🛌)?\s*(?:alcobas?|hab(?:s|itaciones|itaci[oó]n)?|dormitorios?|cuartos?)\s*[:\-=]\s*(?:m[ií]nimo\s*|minimo\s*|m[ií]n\s*|min\s*)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\b/i);
-    if (kvPrefixMatch) {
-      bedrooms = parseWordOrDigit(kvPrefixMatch[1]);
-      bedroomsMin = bedrooms;
-      bedroomsMax = bedrooms;
-    } else {
-      const bedRangeMatch = clean.match(/(?:🛏️\s*)?(?:de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\s*(?:a|-|o|hasta)\s*(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\s*(?:amplias?|grandes?|c[oó]modas?|hermosas?|iluminadas?|confortables?|lindas?|buenas?|espaciosas?|principales?)?\s*(?:alcobas?|hab(?:s|itaciones|itacion)?|dormitorios?|cuartos?)\b/i);
-      if (bedRangeMatch) {
-        bedroomsMin = parseWordOrDigit(bedRangeMatch[1]);
-        bedroomsMax = parseWordOrDigit(bedRangeMatch[2]);
-        bedrooms = bedroomsMin;
-      } else {
-        const bedWordMatch = clean.match(/(?:🛏️\s*)?(?:(?:tiene|con|de)\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\s*(?:amplias?|grandes?|c[oó]modas?|hermosas?|iluminadas?|confortables?|lindas?|buenas?|espaciosas?|principales?)?\s*(?:alcobas?|hab(?:s|itaciones|itacion)?|dormitorios?|cuartos?)\b/i);
-        if (bedWordMatch) {
-          bedroomsMin = parseWordOrDigit(bedWordMatch[1]);
-          bedroomsMax = bedroomsMin;
-          bedrooms = bedroomsMin;
-        }
-      }
-    }
-  }
-  let bathrooms = 0;
-  const socialAddMatch = clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
-  if (socialAddMatch) {
-    const baseVal = parseWordOrDigit(socialAddMatch[1]) || 2;
-    bathrooms = baseVal + 1;
-  } else {
-    const halfBathMatch = clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)[\.,]5\s*(?:baños?|banos?|bñ|wc)/i) || clean.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baños?|banos?|bñ)\s*(?:y\s*medio|y\s*medio\s*baño)/i);
-    if (halfBathMatch) {
-      const baseVal = parseWordOrDigit(halfBathMatch[1]) || 2;
-      bathrooms = baseVal + 1;
-    } else {
-      const kvBathMatch = clean.match(/(?:🚿|🛁|🚽)?\s*(?:baños?|banos?|wc)\s*[:\-=]\s*(?:m[ií]nimo\s*|minimo\s*|m[ií]n\s*|min\s*)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2}(?:[\.,]\d+)?)\b/i);
-      if (kvBathMatch) {
-        const bw = kvBathMatch[1].replace(",", ".");
-        const parsed = parseFloat(bw);
-        bathrooms = !isNaN(parsed) && parsed % 1 !== 0 ? Math.ceil(parsed) : parseWordOrDigit(kvBathMatch[1]);
-      } else {
-        const bathMatch = clean.match(/(?:🚿|🛁|🚽|de\s+)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2}(?:[\.,]\d+)?)(?:\s*(?:\([0-9]+\)|un|una|uno|dos|tres|cuatro|cinco|\d+))?\s*(?:amplios?|completos?|sociales?|grandes?)?\s*(?:baño|baños|bano|banos|wc)/i);
-        if (bathMatch) {
-          const bw = bathMatch[1].replace(",", ".");
-          const parsed = parseFloat(bw);
-          bathrooms = !isNaN(parsed) && parsed % 1 !== 0 ? Math.ceil(parsed) : parseWordOrDigit(bathMatch[1]);
-        }
-      }
-    }
-  }
-  if (bathrooms === 0) {
-    let countBaths = 0;
-    if (/\bbaño\s*(?:social|de\s*visitas)\b/i.test(clean)) countBaths++;
-    if (/\bbaño\s*de\s*servicio\b/i.test(clean)) countBaths++;
-    if (/\b(?:baño\s*(?:privado|principal)|principal[^\n]*baño|con\s*baño)\b/i.test(clean)) countBaths++;
-    if (countBaths > 0) bathrooms = countBaths;
-  }
-  let garages = 0;
-  let garageType = null;
-  const kvGarMatch = clean.match(/(?:🚙|🚗|🚘)?\s*(?:parqueaderos?|garajes?|parqueos?|estacionamientos?|pks?|parqs?)\s*[:\-=]\s*(?:m[ií]nimo\s*|minimo\s*|m[ií]n\s*|min\s*)?(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})\b/i);
-  if (kvGarMatch) {
-    const val = parseWordOrDigit(kvGarMatch[1]);
-    if (val <= 20) garages = val;
-  } else {
-    const garMatch = clean.match(/(?:🚙|🚗|🚘)?[^\S\r\n]*(?:con\s+)?(?<!24[\/\-])(un|una|uno|dos|tres|cuatro|cinco|\d{1,2})(?:[^\S\r\n]*(?:\([0-9]+\)|[a-záéíóúñ]+))?[^\S\r\n]*(?:amplios?|cubiertos?|privados?|independientes?|en\s*l[ií]nea|lineales?)?[^\S\r\n]*(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)/i) || clean.match(/(?:parqueo|parqueos|parqueadero|parqueaderos|garaje|garajes|ptero|parq|parqs|pks|estacionamiento|estacionamientos)[^\S\r\n]*:?[^\S\r\n]*(\d{1,2}|un|una|uno|dos|tres|cuatro|cinco)/i);
-    if (garMatch) {
-      const val = parseWordOrDigit(garMatch[1]);
-      if (val >= 1900 && val <= 2100) {
-        garages = 0;
-      } else if (val > 20) {
-        garages = 0;
-      } else {
-        garages = val;
-      }
-    } else if (/\b(?:parqueaderos|garajes|estacionamientos|parqs|pks)\b/i.test(clean)) {
-      garages = 2;
-    } else if (/con\s+(?:un\s+)?(?:parqueadero|garaje)|parqueadero|garaje/i.test(clean)) {
-      garages = 1;
-    }
-  }
-  if (clean.includes("en linea") || clean.includes("en l\xEDnea") || clean.includes("lineal")) {
-    garageType = "lineal";
-  } else if (clean.includes("independiente") || clean.includes("independientes")) {
-    garageType = "independiente";
-  }
-  let antiguedadAnos = null;
-  const ageMatch = clean.match(/(?:🏢|⏳|⏱️|edificio|antigüedad|antiguedad|tiene|\||,|\.)\s*(\d{1,3})\s*a[ñn]os\b/i) || clean.match(/(\d{1,3})\s*a[ñn]os\s*(?:de\s*)?(?:construido|antigüedad|edificio)?\b/i);
-  if (ageMatch) {
-    antiguedadAnos = parseInt(ageMatch[1], 10);
-  }
-  let hasBalcony = null;
-  let hasTerrace = null;
-  if (clean.includes("no tiene balc\xF3n") || clean.includes("no tiene balcon") || clean.includes("sin balc\xF3n") || clean.includes("sin balcon")) {
-    hasBalcony = false;
-  } else if (clean.includes("balc\xF3n") || clean.includes("balcon")) {
-    hasBalcony = true;
-  }
-  if (clean.includes("no tiene terraza") || clean.includes("sin terraza")) {
-    hasTerrace = false;
-  } else if (clean.includes("terraza") || clean.includes("terrazas")) {
-    hasTerrace = true;
-  }
-  const hasStorage = clean.includes("dep\xF3sito") || clean.includes("deposito") || clean.includes("cuarto util") || clean.includes("bodega");
-  const hasElevator = clean.includes("ascensor");
-  let kitchenType = null;
-  if (clean.includes("cocina cerrada")) kitchenType = "Cerrada";
-  else if (clean.includes("cocina abierta")) kitchenType = "Abierta";
-  else if (clean.includes("cocina tipo isla") || clean.includes("isla")) kitchenType = "Abierta tipo Isla";
-  const hasServiceRoom = clean.includes("cbs") || clean.includes("cuarto de servicio") || clean.includes("alcoba de servicio") || clean.includes("cuarto y ba\xF1o de servicio") || clean.includes("cuarto y bano de servicio") || clean.includes("cuarto de empleada") || clean.includes("alcoba para el servicio");
-  let floorType = null;
-  if (clean.includes("madera maciza") || clean.includes("madera natural") || clean.includes("granadillo")) floorType = "Madera Maciza";
-  else if (clean.includes("piso en madera") || clean.includes("pisos en madera") || clean.includes("piso de madera") || clean.includes("pisos de madera")) floorType = "Madera";
-  else if (clean.includes("laminado") || clean.includes("piso laminado")) floorType = "Laminado";
-  else if (clean.includes("porcelanato")) floorType = "Porcelanato";
-  else if (clean.includes("marmol") || clean.includes("m\xE1rmol")) floorType = "M\xE1rmol";
-  else if (clean.includes("ceramica") || clean.includes("cer\xE1mica")) floorType = "Cer\xE1mica";
-  let sunlightOrientation = null;
-  if (clean.includes("luz de la ma\xF1ana") || clean.includes("luz de manana") || clean.includes("sol de ma\xF1ana") || clean.includes("sol de manana")) sunlightOrientation = "Sol de Ma\xF1ana";
-  else if (clean.includes("sol de tarde") || clean.includes("luz de tarde")) sunlightOrientation = "Sol de Tarde";
-  else if (clean.includes("exterior iluminado") || clean.includes("super iluminado") || clean.includes("muy iluminado")) sunlightOrientation = "Exterior Iluminado";
-  const hasPowerPlant = clean.includes("planta electrica") || clean.includes("planta el\xE9ctrica") || clean.includes("suplencia total") || clean.includes("planta total") || clean.includes("planta de suplencia");
-  const hasVisitorParking = clean.includes("parqueadero de visitantes") || clean.includes("parqueadero para visitantes") || clean.includes("parqueaderos de visitantes") || clean.includes("parqueo visitantes");
-  const hasHeating = clean.includes("calentador de paso") || clean.includes("calentador a gas") || clean.includes("caldera");
-  let city = "";
-  const isBogotaContext = clean.includes("bogota") || clean.includes("bogot\xE1") || clean.includes("cedritos") || clean.includes("chico") || clean.includes("chic\xF3") || clean.includes("rosales") || clean.includes("usaquen") || clean.includes("usaqu\xE9n") || clean.includes("santa barbara") || clean.includes("santa b\xE1rbara") || clean.includes("chapinero") || clean.includes("suba") || clean.includes("engativa") || clean.includes("engativ\xE1") || clean.includes("tabora") || clean.includes("floresta") || clean.includes("santa maria del lago") || clean.includes("santa mar\xEDa del lago") || clean.includes("fontibon") || clean.includes("fontib\xF3n") || clean.includes("kennedy") || clean.includes("teusaquillo") || clean.includes("salitre") || clean.includes("barrios unidos");
-  if (isBogotaContext) {
-    city = "Bogot\xE1, D.C.";
-  } else if (clean.includes("valledupar") || clean.includes("cesar")) {
-    city = "Valledupar";
-  } else if (clean.includes("bucaramanga") || clean.includes("floridablanca") || clean.includes("piedecuesta") || clean.includes("giron") || clean.includes("gir\xF3n") || clean.includes("santander") || clean.includes("ruitoque")) {
-    city = clean.includes("floridablanca") ? "Floridablanca" : clean.includes("piedecuesta") ? "Piedecuesta" : clean.includes("giron") || clean.includes("gir\xF3n") ? "Gir\xF3n" : "Bucaramanga";
-  } else if (clean.includes("cartagena") || clean.includes("bocagrande") || clean.includes("castillogrande") || clean.includes("manga") || clean.includes("crespo") || clean.includes("laguito")) {
-    city = "Cartagena";
-  } else if (clean.includes("santa marta") || clean.includes("rodadero") || clean.includes("bello horizonte") || clean.includes("pozos colorados")) {
-    city = "Santa Marta";
-  } else if (clean.includes("pereira") || clean.includes("dosquebradas") || clean.includes("cerritos") || clean.includes("pinares")) {
-    city = clean.includes("dosquebradas") ? "Dosquebradas" : "Pereira";
-  } else if (clean.includes("manizales") || clean.includes("villamaria")) {
-    city = clean.includes("villamaria") ? "Villamar\xEDa" : "Manizales";
-  } else if (clean.includes("armenia") || clean.includes("calarca") || clean.includes("quimbaya")) {
-    city = clean.includes("calarca") ? "Calarc\xE1" : clean.includes("quimbaya") ? "Quimbaya" : "Armenia";
-  } else if (clean.includes("ibague") || clean.includes("ibagu\xE9") || clean.includes("melgar") || clean.includes("carmen de apicala")) {
-    city = clean.includes("melgar") ? "Melgar" : clean.includes("carmen de apicala") ? "Carmen de Apical\xE1" : "Ibagu\xE9";
-  } else if (clean.includes("villavicencio") || clean.includes("acacias")) {
-    city = clean.includes("acacias") ? "Acac\xEDas" : "Villavicencio";
-  } else if (clean.includes("cali") || clean.includes("melendez") || clean.includes("jardin") || clean.includes("pacifica") || clean.includes("jamundi") || clean.includes("pance") || clean.includes("valle del lili")) {
-    city = clean.includes("jamundi") || clean.includes("jamund\xED") ? "Jamund\xED" : "Cali";
-  } else if (clean.includes("medellin") || clean.includes("poblado") || clean.includes("laureles") || clean.includes("envigado") || clean.includes("sabaneta") || clean.includes("rionegro") && !clean.includes("suba") && !clean.includes("bogota") || clean.includes("la ceja")) {
-    city = clean.includes("envigado") ? "Envigado" : clean.includes("sabaneta") ? "Sabaneta" : clean.includes("rionegro") ? "Rionegro" : clean.includes("la ceja") ? "La Ceja" : "Medell\xEDn";
-  } else if (clean.includes("chia") || clean.includes("ch\xEDa")) {
-    city = "Ch\xEDa";
-  } else if (clean.includes("cajica") || clean.includes("cajic\xE1")) {
-    city = "Cajic\xE1";
-  } else if (clean.includes("cota")) {
-    city = "Cota";
-  } else if (clean.includes("sopo") || clean.includes("sop\xF3")) {
-    city = "Sop\xF3";
-  } else if (clean.includes("la calera")) {
-    city = "La Calera";
-  } else if (clean.includes("zipaquira") || clean.includes("zipaquir\xE1")) {
-    city = "Zipaquir\xE1";
-  } else if (clean.includes("funza")) {
-    city = "Funza";
-  } else if (clean.includes("mosquera")) {
-    city = "Mosquera";
-  } else if (clean.includes("madrid")) {
-    city = "Madrid";
-  } else if (clean.includes("fusagasuga") || clean.includes("fusagasug\xE1")) {
-    city = "Fusagasug\xE1";
-  } else if (clean.includes("girardot")) {
-    city = "Girardot";
-  }
-  let zone = "";
-  const acceptedNeighborhoods = [];
-  const rejectedNeighborhoods = [];
-  for (const item of KNOWN_BARRIOS_SORTED_ITEMS) {
-    let pos = 0;
-    while ((pos = clean.indexOf(item.lower, pos)) !== -1) {
-      const precedingText = clean.slice(Math.max(0, pos - 45), pos);
-      const isNegated = /(?:no\s+les?\s+gusta|no\s+gusta|no\s+quiere|no\s+|excepto\s+|menos\s+|sin\s+|descartado\s+|fuera\s+de\s+|abstenerse\s+|no\s+enviar\s+|no\s+recibo\s+|no\s+buscar\s+)/i.test(precedingText);
-      if (isNegated) {
-        if (!rejectedNeighborhoods.includes(item.canonical)) rejectedNeighborhoods.push(item.canonical);
-      } else {
-        if (!acceptedNeighborhoods.includes(item.canonical)) acceptedNeighborhoods.push(item.canonical);
-      }
-      pos += item.lower.length;
-    }
-  }
-  const validNeighborhoods = acceptedNeighborhoods.filter((b) => !rejectedNeighborhoods.includes(b));
-  if (validNeighborhoods.length > 0) {
-    zone = validNeighborhoods[0];
-  }
-  if (!zone) {
-    if (clean.includes("north point") || clean.includes("north point lift") || clean.includes("san cristobal norte") || clean.includes("san crist\xF3bal norte")) zone = "San Crist\xF3bal Norte";
-    else if (clean.includes("alameda 170") || clean.includes("alameda norte") || clean.includes("la alameda") || clean.includes("barrio alameda") || clean.includes("alameda")) zone = "La Alameda";
-    else if (clean.includes("san antonio noroccidental") || clean.includes("san antonio norte")) zone = "San Antonio Norte";
-    else if (clean.includes("villa magdala")) zone = "Villa Magdala";
-    else if (clean.includes("chico reservado")) zone = "Chic\xF3 Reservado";
-    else if (clean.includes("chico norte")) zone = "Chic\xF3 Norte";
-    else if (clean.includes("chico navarra")) zone = "Chic\xF3 Navarra";
-    else if (clean.includes("rincon del chico") || clean.includes("rinc\xF3n del chic\xF3")) zone = "Rinc\xF3n del Chic\xF3";
-    else if (clean.includes("el chico") || clean.includes("chico") || clean.includes("chic\xF3")) zone = "Chic\xF3";
-    else if (clean.includes("santa barbara central") || clean.includes("santa b\xE1rbara central") || clean.includes("santa barbara (central)")) zone = "Santa B\xE1rbara Central";
-    else if (clean.includes("santa barbara occidental") || clean.includes("santa b\xE1rbara occidental")) zone = "Santa B\xE1rbara Occidental";
-    else if (clean.includes("santa barbara oriental") || clean.includes("santa b\xE1rbara oriental")) zone = "Santa B\xE1rbara Oriental";
-    else if (clean.includes("santa barbara alta") || clean.includes("santa b\xE1rbara alta")) zone = "Santa B\xE1rbara Alta";
-    else if (clean.includes("santa barbara") || clean.includes("santa b\xE1rbara")) zone = "Santa B\xE1rbara";
-    else if (clean.includes("santa paula")) zone = "Santa Paula";
-    else if (clean.includes("santa bibiana")) zone = "Santa Bibiana";
-    else if (clean.includes("san patricio")) zone = "San Patricio";
-    else if (clean.includes("santa teresa")) zone = "Santa Teresa";
-    else if (clean.includes("santa ana oriental") || clean.includes("santa ana alta")) zone = "Santa Ana Oriental";
-    else if (clean.includes("santa ana occidental")) zone = "Santa Ana Occidental";
-    else if (clean.includes("santa ana")) zone = "Santa Ana";
-    else if (clean.includes("la cabrera") || clean.includes("cabrera")) zone = "La Cabrera";
-    else if (clean.includes("rosales alto") || clean.includes("los rosales alto") || clean.includes("rosales parte alta") || clean.includes("rosales arriba")) zone = "Rosales Alto";
-    else if (clean.includes("rosales bajo") || clean.includes("los rosales bajo") || clean.includes("rosales parte baja") || clean.includes("rosales abajo") || clean.includes("rosales plano")) zone = "Rosales Bajo";
-    else if (clean.includes("rosales") || clean.includes("los rosales")) zone = "Rosales";
-    else if (clean.includes("el nogal") || clean.includes("nogal")) zone = "El Nogal";
-    else if (clean.includes("el virrey") || clean.includes("virrey")) zone = "El Virrey";
-    else if (clean.includes("el retiro")) zone = "El Retiro";
-    else if (clean.includes("el refugio")) zone = "El Refugio";
-    else if (clean.includes("quinta camacho")) zone = "Quinta Camacho";
-    else if (clean.includes("antiguo country")) zone = "Antiguo Country";
-    else if (clean.includes("country club") || clean.includes("el country")) zone = "Country Club";
-    else if (clean.includes("calleja alta") || clean.includes("la calleja alta")) zone = "Calleja Alta";
-    else if (clean.includes("calleja baja") || clean.includes("la calleja baja")) zone = "Calleja Baja";
-    else if (clean.includes("la calleja") || clean.includes("calleja")) zone = "La Calleja";
-    else if (clean.includes("la carolina") || clean.includes("carolina")) zone = "La Carolina";
-    else if (clean.includes("bosque medina")) zone = "Bosque Medina";
-    else if (clean.includes("el contador") || clean.includes("contador")) zone = "El Contador";
-    else if (clean.includes("alcala") || clean.includes("alcal\xE1")) zone = "Alcal\xE1";
-    else if (clean.includes("belmira")) zone = "Belmira";
-    else if (clean.includes("la castellana") || clean.includes("castellana")) zone = "La Castellana";
-    else if (clean.includes("polo club") || clean.includes("polo")) zone = "Polo Club";
-    else if (clean.includes("san felipe")) zone = "San Felipe";
-    else if (clean.includes("emaus") || clean.includes("ema\xFAs")) zone = "Ema\xFAs";
-    else if (clean.includes("colina campestre") || clean.includes("colina")) zone = "Colina Campestre";
-    else if (clean.includes("ciudad melendez") || clean.includes("ciudad mel\xE9ndez")) zone = "Ciudad Mel\xE9ndez";
-    else if (clean.includes("ciudad jardin norte") || clean.includes("ciudad jard\xEDn norte")) zone = "Ciudad Jard\xEDn Norte";
-    else if (clean.includes("ciudad jardin sur") || clean.includes("ciudad jard\xEDn sur")) zone = "Ciudad Jard\xEDn Sur";
-    else if (clean.includes("ciudad jardin") || clean.includes("ciudad jard\xEDn")) zone = "Ciudad Jard\xEDn";
-    else if (clean.includes("alamos norte") || clean.includes("\xE1lamos norte")) zone = "\xC1lamos Norte";
-    else if (clean.includes("alamos sur") || clean.includes("\xE1lamos sur")) zone = "\xC1lamos Sur";
-    else if (clean.includes("alamos") || clean.includes("\xE1lamos")) zone = "\xC1lamos";
-    else if (clean.includes("candelaria centro") || clean.includes("la candelaria centro")) zone = "La Candelaria Centro";
-    else if (clean.includes("candelaria la nueva") || clean.includes("candelaria sur")) zone = "Candelaria la Nueva";
-    else if (clean.includes("la candelaria") || clean.includes("candelaria")) zone = "La Candelaria";
-    else if (clean.includes("nuevo country")) zone = "Nuevo Country";
-    else if (clean.includes("niza norte")) zone = "Niza Norte";
-    else if (clean.includes("niza")) zone = "Niza";
-    else if (clean.includes("bella suiza")) zone = "Bella Suiza";
-    else if (clean.includes("lisboa")) zone = "Lisboa";
-    else if (clean.includes("alejandria") || clean.includes("alejandr\xEDa")) zone = "Alejandr\xEDa";
-    else if (clean.includes("carmel club") || clean.includes("carmel")) zone = "Carmel Club";
-    else if (clean.includes("cantalejo")) zone = "Cantalejo";
-    else if (clean.includes("sotavento")) zone = "Sotavento";
-    else if (clean.includes("san jose de bavaria") || clean.includes("san jos\xE9 de bavaria")) zone = "San Jos\xE9 de Bavaria";
-  } else if (clean.includes("cedritos") || clean.includes("los cedros")) zone = "Cedritos";
-  else if (clean.includes("toberin") || clean.includes("tober\xEDn")) zone = "Tober\xEDn";
-  else if (clean.includes("mazuren") || clean.includes("mazur\xE9n")) zone = "Mazur\xE9n";
-  else if (clean.includes("mirandela")) zone = "Mirandela";
-  else if (clean.includes("portales del norte")) zone = "Portales del Norte";
-  else if (clean.includes("victoria norte")) zone = "Victoria Norte";
-  else if (clean.includes("prado veraniego")) zone = "Prado Veraniego";
-  else if (clean.includes("la floresta") || clean.includes("floresta")) zone = "La Floresta";
-  else if (clean.includes("pontevedra")) zone = "Pontevedra";
-  else if (clean.includes("morato")) zone = "Morato";
-  else if (clean.includes("alhambra") || clean.includes("la alhambra")) zone = "Alhambra";
-  else if (clean.includes("batan") || clean.includes("bat\xE1n") || clean.includes("el batan")) zone = "Bat\xE1n";
-  else if (clean.includes("pasadena")) zone = "Pasadena";
-  else if (clean.includes("ciudad salitre") || clean.includes("salitre")) zone = "Ciudad Salitre";
-  else if (clean.includes("modelia")) zone = "Modelia";
-  else if (clean.includes("hayuelos")) zone = "Hayuelos";
-  else if (clean.includes("fontibon") || clean.includes("fontib\xF3n")) zone = "Fontib\xF3n";
-  else if (clean.includes("nicolas de federmann") || clean.includes("federmann")) zone = "Nicol\xE1s de Federmann";
-  else if (clean.includes("la esmeralda")) zone = "La Esmeralda";
-  else if (clean.includes("quinta paredes")) zone = "Quinta Paredes";
-  else if (clean.includes("palermo")) zone = "Palermo";
-  else if (clean.includes("teusaquillo")) zone = "Teusaquillo";
-  else if (clean.includes("chapinero alto")) zone = "Chapinero Alto";
-  else if (clean.includes("chapinero central")) zone = "Chapinero Central";
-  else if (clean.includes("chapinero")) zone = "Chapinero";
-  else if (clean.includes("usaquen") || clean.includes("usaqu\xE9n")) zone = "Usaqu\xE9n";
-  if (!zone) {
-    try {
-      const bounds = parseStreetCarreraBoundaries(text2);
-      if (bounds.minStreet && bounds.maxStreet) {
-        const defaultMaxCra = bounds.maxStreet <= 100 ? 20 : 45;
-        const idecaRes = lookupBarriosByPerimeter({
-          calleNorte: bounds.maxStreet,
-          calleSur: bounds.minStreet,
-          craOriente: bounds.minCarrera || 1,
-          craOccidente: bounds.maxCarrera || defaultMaxCra,
-          ciudad: "bogota"
-        });
-        if (idecaRes.barrios && idecaRes.barrios.length > 0) {
-          const preferred = idecaRes.barrios.find((b) => b.toLowerCase().includes("chico") || b.toLowerCase().includes("cabrera")) || idecaRes.barrios[0];
-          zone = preferred;
-          if (!city) city = "Bogot\xE1, D.C.";
-        }
-      }
-    } catch (e) {
-    }
-  }
-  const noTerceriaMatch = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(clean);
-  const aceptaTerceria = !noTerceriaMatch;
-  const standByDirectoVecy = noTerceriaMatch;
-  const requiresObligatoryStudy = /\b(?:con\s*estudio\s*obligatorio|estudio\s*obligatorio|exige\s*estudio|estudio\s*indispensable|estudio\s*(?:ojal[aá]\s*)?cerrado)\b/i.test(clean);
-  const hasStudy = requiresObligatoryStudy || clean.includes("estudio") || clean.includes("star de tv") || clean.includes("estar de tv") || clean.includes("sala de tv") || clean.includes("home office");
-  const pisoMinMatch = clean.match(/(?:unicamente\s*ven\s*opciones\s*del\s*piso|del\s*piso|piso|pisos)\s*(\d{1,2})\s*(?:hacia\s*arriba|en\s*adelante|o\s*superior|\+|\s*mas)\b/i);
-  const pisoMinimo = pisoMinMatch ? parseInt(pisoMinMatch[1], 10) : null;
-  const requiresExterior = /\b(?:muy\s*luminoso|vista\s*agradable|vista\s*exterior|exterior\s*muy\s*iluminado|vista\s*panor[aá]mica|exterior|sin\s*interior)\b/i.test(clean);
-  const interiorExterior = requiresExterior ? "exterior" : clean.includes("interior") && !clean.includes("exterior") ? "interior" : null;
-  const adminFeeIncluded = /(?:admin(?:istraci[oó]n)?|admon)\s*(?:incluida|inc\b)|(?:con|\+|mas|más)\s*(?:admin(?:istraci[oó]n)?|admon)/i.test(clean);
-  const isAmoblado = /\b(?:amoblado|amoblada|con\s*muebles|completamente\s*amoblado|dotado)\b/i.test(clean);
-  const result = {
-    propertyType,
-    transactionType,
-    tipoInmuebleDeseado: propertyType,
-    tipoNegocioDeseado: transactionType,
-    price,
-    presupuestoMin: presupuestoMin > 0 ? presupuestoMin : null,
-    presupuestoMax: presupuestoMax > 0 ? presupuestoMax : price,
-    rentPrice: rentPrice > 0 ? rentPrice : null,
-    adminFee: adminFee > 0 ? adminFee : null,
-    adminFeeIncluded,
-    area,
-    areaMin: areaMin > 0 ? areaMin : area > 0 ? area : null,
-    areaMax: areaMax > 0 ? areaMax : area > 0 ? area : null,
-    bedrooms,
-    bedroomsMin: bedroomsMin > 0 ? bedroomsMin : bedrooms > 0 ? bedrooms : null,
-    bedroomsMax: bedroomsMax > 0 ? bedroomsMax : bedrooms > 0 ? bedrooms : null,
-    bathrooms,
-    garages,
-    garageType,
-    antiguedadAnos,
-    hasBalcony,
-    hasTerrace,
-    hasStorage,
-    hasElevator,
-    kitchenType,
-    hasServiceRoom,
-    floorType,
-    sunlightOrientation,
-    hasPowerPlant,
-    hasVisitorParking,
-    hasHeating,
-    city,
-    ciudadDeseada: city,
-    zone,
-    zonaDeseada: zone,
-    aceptaTerceria,
-    standByDirectoVecy,
-    requiresObligatoryStudy,
-    hasStudy,
-    pisoMinimo,
-    interiorExterior,
-    isAmoblado,
-    caracteristicasDeseadas: {
-      estudio: requiresObligatoryStudy ? "obligatorio" : hasStudy ? "deseado" : null,
-      pisoMinimo,
-      interiorExterior,
-      adminFeeIncluded,
-      amoblado: isAmoblado ? true : null
-    }
-  };
-  if (cacheKey.length < 5e3) {
-    if (fallbackDataCache.size > 3e3) {
-      fallbackDataCache.clear();
-    }
-    fallbackDataCache.set(cacheKey, result);
-  }
-  return result;
-}
-async function enrichLexiconFromText(rawText) {
-  if (!rawText || rawText.length < 15) return;
-  const clean = rawText.toLowerCase();
-  const patterns = [
-    { match: /\b(cbs|cuarto\s+y\s+ba[ñn]o\s+de\s+servicio|alcoba\s+(?:para\s+el\s+)?servicio|cuarto\s+de\s+empleada)\b/i, cat: "espacio", can: "cuarto_bano_servicio" },
-    { match: /\b(cocina\s+(?:cerrada|abierta|tipo\s+isla|americana))\b/i, cat: "espacio", can: "tipologia_cocina" },
-    { match: /\b(pisos?\s*(?:en\s*)?(?:madera\s+maciza|madera|laminado|porcelanato|m[aá]rmol|cer[aá]mica))\b/i, cat: "acabado", can: "tipo_piso" },
-    { match: /\b(luz\s+de\s+(?:la\s+)?ma[ñn]ana|sol\s+de\s+(?:la\s+)?tarde|exterior\s+iluminado)\b/i, cat: "ambiente", can: "orientacion_asoleacion" },
-    { match: /\b(planta\s+el[eé]ctrica|suplencia\s+total|planta\s+total)\b/i, cat: "infraestructura", can: "planta_electrica" },
-    { match: /\b(parqueadero\s*(?:para\s*)?visitantes?|parqueo\s+visitantes?)\b/i, cat: "amenidad", can: "parqueadero_visitantes" },
-    { match: /\b(star\s+de\s+tv|hall\s+de\s+alcobas|estar\s+de\s+tv)\b/i, cat: "espacio", can: "estar_television" },
-    { match: /\b(calentador\s+de\s+paso|caldera\s+central)\b/i, cat: "equipamiento", can: "calentador_agua" },
-    { match: /\b(chimenea\s+(?:tradicional|a\s+gas|ecol[oó]gica))\b/i, cat: "equipamiento", can: "chimenea" }
-  ];
-  try {
-    const db = await getDb();
-    if (!db) return;
-    for (const p of patterns) {
-      const m = clean.match(p.match);
-      if (m && m[1]) {
-        const term = m[1].toLowerCase().trim();
-        await db.insert(inmobiliarioLexicon).values({
-          terminoColoquial: term,
-          categoria: p.cat,
-          conceptoCanonico: p.can,
-          frecuenciaUso: 1,
-          origen: "ia_autodescubierto"
-        }).onConflictDoUpdate({
-          target: inmobiliarioLexicon.terminoColoquial,
-          set: {
-            frecuenciaUso: sql6`${inmobiliarioLexicon.frecuenciaUso} + 1`,
-            updatedAt: /* @__PURE__ */ new Date()
-          }
-        });
-      }
-    }
-  } catch (e) {
-  }
-}
-function cleanSessionJid(jid) {
-  if (!jid) return "";
-  return jid.split(":")[0].split("@")[0];
-}
-async function muteSession(userId, isMuted) {
-  try {
-    const db = await getDb();
-    if (!db) return;
-    const cleanJid2 = cleanSessionJid(userId);
-    const muteJid = `mute:${cleanJid2}`;
-    if (!isMuted) {
-      await db.delete(pendingSessions).where(eq8(pendingSessions.jid, muteJid));
-      console.log(`[JanIA-Mute] Sesi\xF3n ${cleanJid2} desmarcada (eliminada de BD)`);
-      return;
-    }
-    const data = { isMuted: true, mutedAt: (/* @__PURE__ */ new Date()).toISOString() };
-    await db.insert(pendingSessions).values({
-      jid: muteJid,
-      sessionData: data,
-      updatedAt: /* @__PURE__ */ new Date()
-    }).onConflictDoUpdate({
-      target: pendingSessions.jid,
-      set: {
-        sessionData: data,
-        updatedAt: /* @__PURE__ */ new Date()
-      }
-    });
-    console.log(`[JanIA-Mute] Sesi\xF3n ${cleanJid2} marcada como isMuted = true en BD`);
-  } catch (err) {
-    console.error("[Database] Error muting session:", err);
-  }
-}
-async function isSessionMuted(userId) {
-  try {
-    const db = await getDb();
-    if (!db) return false;
-    const cleanJid2 = cleanSessionJid(userId);
-    const [existing] = await db.select().from(pendingSessions).where(eq8(pendingSessions.jid, `mute:${cleanJid2}`)).limit(1);
-    if (!existing) return false;
-    return !!existing.sessionData?.isMuted;
-  } catch (err) {
-    console.error("[Database] Error checking if session is muted:", err);
-    return false;
-  }
-}
-async function getPendingSession(userId) {
-  try {
-    const db = await getDb();
-    if (!db) return null;
-    const cleanJid2 = cleanSessionJid(userId);
-    const [session] = await db.select().from(pendingSessions).where(eq8(pendingSessions.jid, cleanJid2)).limit(1);
-    if (!session) return null;
-    return session.sessionData;
-  } catch (err) {
-    console.error("[Database] Error getting pending session:", err);
-    return null;
-  }
-}
-async function deletePendingSession(userId) {
-  try {
-    const db = await getDb();
-    if (!db) return;
-    const cleanJid2 = cleanSessionJid(userId);
-    await db.delete(pendingSessions).where(eq8(pendingSessions.jid, cleanJid2));
-  } catch (err) {
-    console.error("[Database] Error deleting pending session:", err);
-  }
-}
-async function resolveRealName(userId, userName) {
-  const rawPhone = userId.split("@")[0];
-  let name = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
-  try {
-    const db = await getDb();
-    if (db) {
-      const [u] = await db.select().from(users).where(eq8(users.phone, rawPhone)).limit(1);
-      if (u && u.name && u.name.trim() !== "") {
-        name = u.name;
-      }
-    }
-  } catch (e) {
-    console.warn("[JanIA-resolveRealName] Error buscando nombre de usuario en BD:", e);
-  }
-  return name;
-}
-async function hasGreetedUserToday(userId) {
-  try {
-    const db = await getDb();
-    if (!db) return false;
-    const startOfToday = /* @__PURE__ */ new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const recentMsgs = await db.select({ id: messages.id }).from(messages).innerJoin(conversations, eq8(messages.conversationId, conversations.id)).where(
-      and5(
-        eq8(conversations.sessionId, userId),
-        eq8(messages.role, "janIA"),
-        gte(messages.createdAt, startOfToday)
-      )
-    ).limit(1);
-    return recentMsgs.length > 0;
-  } catch (err) {
-    console.error("[Database] Error checking if greeted today:", err);
-    return false;
-  }
-}
-async function checkAlreadyGreeted(userId) {
-  const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-  if (GREETED_TODAY.get(userId) === todayStr) {
-    return true;
-  }
-  const dbGreeted = await hasGreetedUserToday(userId);
-  if (dbGreeted) {
-    GREETED_TODAY.set(userId, todayStr);
-    return true;
-  }
-  return false;
-}
-async function getRecentChatHistory(userId, limit = 20) {
-  try {
-    const db = await getDb();
-    if (!db) return [];
-    const fourDaysAgo = /* @__PURE__ */ new Date();
-    fourDaysAgo.setDate(fourDaysAgo.getDate() - 4);
-    const history = await db.select({
-      role: messages.role,
-      content: messages.content,
-      createdAt: messages.createdAt
-    }).from(messages).innerJoin(conversations, eq8(messages.conversationId, conversations.id)).where(
-      and5(
-        eq8(conversations.sessionId, userId),
-        gte(messages.createdAt, fourDaysAgo)
-      )
-    ).orderBy(desc3(messages.createdAt)).limit(limit);
-    return history.reverse().map((h) => ({
-      role: h.role === "janIA" ? "assistant" : "user",
-      content: h.content
-    }));
-  } catch (err) {
-    console.error("[Database] Error fetching chat history:", err);
-    return [];
-  }
-}
-function isOutsideWorkingHours() {
-  const dateStr = (/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" });
-  const bogotaDate = new Date(dateStr);
-  const weekday = bogotaDate.getDay();
-  const hour = bogotaDate.getHours();
-  if (weekday === 0) {
-    return true;
-  }
-  if (weekday === 6) {
-    return hour < 8 || hour >= 18;
-  }
-  return hour < 8 || hour >= 20;
-}
-function capitalize(text2) {
-  if (!text2) return "";
-  return text2.charAt(0).toUpperCase() + text2.slice(1);
-}
-function sanitizeGeoString(val) {
-  if (!val || typeof val !== "string") return "";
-  let clean = val.trim();
-  clean = clean.split(/\(|\n|Nota:|estimado|según/i)[0].trim();
-  clean = clean.replace(/[\.\,\;\:]+$/, "").trim();
-  if (clean.length > 60) {
-    clean = clean.substring(0, 60).trim();
-  }
-  return clean;
-}
-function analyzeSender(name, userId, alreadyGreeted) {
-  const n = (name || "Colega").trim();
-  const normalizedFull = n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
-  const firstWord = n.split(/\s+/)[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
-  const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-  if (!alreadyGreeted) GREETED_TODAY.set(userId, todayStr);
-  const femaleNames = ["maria", "ana", "claudia", "martha", "adriana", "sandra", "jani", "natalia", "paola", "diana", "laura", "sofia", "valentina", "andrea", "milena", "patricia", "marcela", "liliana", "elena", "monica", "beatriz", "gloria", "carmen", "lucia", "angela", "isabel", "clara", "rosa", "teresa", "yolanda", "esperanza", "blanca", "pilar", "carolina", "juliana", "catalina", "viviana", "lizeth", "daniela", "camila"];
-  const maleNames = ["juan", "carlos", "jose", "luis", "jorge", "andres", "felipe", "david", "mateo", "santiago", "daniel", "alejandro", "ricardo", "fernando", "eduardo", "pablo", "sergio", "javier", "alberto", "rafael", "mauricio", "german", "gustavo", "ramiro", "gabriel", "julio", "oscar", "ivan", "hugo", "diego", "wilson", "edgar", "mario", "hector", "victor"];
-  const corporateKeywords = ["inmo", "bienes", "raices", "propiedades", "network", "group", "asesores", "servicios", "soluciones", "comercial", "ventas", "vecy", "sas", "ltda", "vende", "arrienda", "inmobiliaria", "finca", "raiz", "realestate"];
-  let baseGreeting = `\xA1Hola, qu\xE9 gusto tenerte aqu\xED, ${n}!`;
-  let adj = "profesional";
-  let courtesy = "gracias por tu rigor profesional";
-  const isCorporate = corporateKeywords.some((kw) => normalizedFull.includes(kw));
-  if (isCorporate) {
-    baseGreeting = `\xA1Hola, qu\xE9 gusto saludarte, colega de ${n}!`;
-  } else {
-    const isMale = maleNames.includes(firstWord) || maleNames.some((m) => firstWord.startsWith(m));
-    const isFemale = femaleNames.includes(firstWord) || femaleNames.some((f) => firstWord.startsWith(f));
-    if (isMale) {
-      baseGreeting = `\xA1Hola ${n}!`;
-      adj = "juicioso";
-      courtesy = "excelente labor, sigue as\xED de juicioso";
-    } else if (isFemale) {
-      baseGreeting = `\xA1Hola ${n}!`;
-      adj = "juiciosa";
-      courtesy = "excelente labor, sigue as\xED de juiciosa";
-    } else if (firstWord.endsWith("a") || firstWord.endsWith("ia") || firstWord.endsWith("th")) {
-      baseGreeting = `\xA1Hola ${n}!`;
-      adj = "juiciosa";
-      courtesy = "excelente labor, sigue as\xED de juiciosa";
-    } else if (firstWord.endsWith("o") || firstWord.endsWith("s") || firstWord.endsWith("r") || firstWord.endsWith("l") || firstWord.endsWith("n") || firstWord.endsWith("z")) {
-      baseGreeting = `\xA1Hola ${n}!`;
-      adj = "juicioso";
-      courtesy = "excelente labor, sigue as\xED de juicioso";
-    }
-  }
-  return {
-    greeting: alreadyGreeted ? "" : baseGreeting,
-    adj,
-    courtesy
-  };
-}
-async function getLiveStats() {
-  const nowMs = Date.now();
-  if (cachedLiveStatsText && nowMs - cachedLiveStatsTime < 3e5) {
-    return cachedLiveStatsText;
-  }
-  if (isFetchingLiveStats) {
-    return cachedLiveStatsText || "";
-  }
-  isFetchingLiveStats = true;
-  try {
-    const rawSql = getRawSql();
-    let stats = {};
-    if (rawSql) {
-      const res = await rawSql`
-        SELECT 
-          (SELECT count(*)::int FROM properties) as prop_count,
-          (SELECT count(*)::int FROM requirements) as req_count,
-          (SELECT count(*)::int FROM "propertyMatches") as match_count,
-          (SELECT count(*)::int FROM properties WHERE "createdAt" >= CURRENT_DATE) as prop_today,
-          (SELECT count(*)::int FROM requirements WHERE "createdAt" >= CURRENT_DATE) as req_today,
-          (SELECT count(*)::int FROM "propertyMatches" WHERE "createdAt" >= CURRENT_DATE) as match_today
-      `;
-      stats = res[0] || {};
-    } else {
-      const db = await getDb();
-      if (!db) return cachedLiveStatsText || "";
-      const [propCount] = await db.select({ total: sql6`count(*)::int` }).from(properties);
-      const [reqCount] = await db.select({ total: sql6`count(*)::int` }).from(requirements);
-      stats = { prop_count: propCount?.total ?? 0, req_count: reqCount?.total ?? 0, match_count: 0, prop_today: 0, req_today: 0, match_today: 0 };
-    }
-    const now = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", dateStyle: "short", timeStyle: "short" });
-    cachedLiveStatsText = `
-## \u{1F4CA} ESTAD\xCDSTICAS EN TIEMPO REAL DE VECY BIENES RA\xCDCES (Actualizado: ${now} hora Colombia)
-Esta informaci\xF3n es EXACTA y proviene directamente de la base de datos en este preciso instante. \xDAsala cuando alguien pregunte cu\xE1ntos inmuebles, requerimientos o coincidencias tenemos:
+});
 
-| Categor\xEDa | Total Hist\xF3rico | Nuevos Hoy |
-|-----------|----------------|------------|
-| \u{1F3E2} Inmuebles publicados | **${stats.prop_count ?? 0}** | ${stats.prop_today ?? 0} |
-| \u{1F4CB} Requerimientos de b\xFAsqueda | **${stats.req_count ?? 0}** | ${stats.req_today ?? 0} |
-| \u{1F3AF} Coincidencias (Matches) detectadas | **${stats.match_count ?? 0}** | ${stats.match_today ?? 0} |
-
-Si alguien te pregunta por estos n\xFAmeros, responde CON PRECISI\xD3N usando exactamente los datos de esta tabla. No inventes, no estimes. Estos son los datos reales del sistema VECY en este momento.`;
-    cachedLiveStatsTime = Date.now();
-    return cachedLiveStatsText;
-  } catch (err) {
-    console.warn("[JanIA-LiveStats] No se pudo obtener estad\xEDsticas en tiempo real:", err);
-    return cachedLiveStatsText || "";
-  } finally {
-    isFetchingLiveStats = false;
-  }
-}
-function buildSystemPrompt(groupJid) {
-  const cacheKey = groupJid || "web";
-  if (promptCache[cacheKey]) {
-    return promptCache[cacheKey];
-  }
-  try {
-    const baseDir = path8.resolve(process.cwd(), "server/_core/prompts");
-    const basePrompt = fs8.readFileSync(path8.join(baseDir, "base.md"), "utf-8");
-    let specificPrompt = "";
-    if (groupJid === "120363260108880069@g.us") {
-      specificPrompt = fs8.readFileSync(path8.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
-    } else if (groupJid === "120363417740040773@g.us") {
-      const legalPrompt = fs8.readFileSync(path8.join(baseDir, "grupos/VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md"), "utf-8");
-      specificPrompt = legalPrompt;
-    } else if (groupJid === "120363403507276533@g.us") {
-      specificPrompt = fs8.readFileSync(path8.join(baseDir, "grupos/PROYECTO_Vecy Network.md"), "utf-8");
-    } else if (groupJid && (groupJid.endsWith("@g.us") || groupJid.includes("@us"))) {
-      specificPrompt = fs8.readFileSync(path8.join(baseDir, "grupos/VECY_INMUEBLES_NETWORK.md"), "utf-8");
-    } else {
-      specificPrompt = fs8.readFileSync(path8.join(baseDir, "web/web_console.md"), "utf-8");
-    }
-    const fullPrompt = `${basePrompt}
-
-${specificPrompt}`;
-    promptCache[cacheKey] = fullPrompt;
-    return fullPrompt;
-  } catch (err) {
-    console.error("[Prompts-Loader] Error loading prompt files, falling back to old JANIA_PROMPT:", err.message);
-    return JANIA_PROMPT;
-  }
-}
-function clearPromptCache() {
-  promptCache = {};
-}
-function formatColombiaDateTime(dateVal) {
-  const d = new Date(dateVal);
-  const bogotaStr = d.toLocaleString("en-US", { timeZone: "America/Bogota" });
-  const bogotaDate = new Date(bogotaStr);
-  const day = String(bogotaDate.getDate()).padStart(2, "0");
-  const month = String(bogotaDate.getMonth() + 1).padStart(2, "0");
-  const year = bogotaDate.getFullYear();
-  const daysOfWeek = ["Domingo", "Lunes", "Martes", "Mi\xE9rcoles", "Jueves", "Viernes", "S\xE1bado"];
-  const dayName = daysOfWeek[bogotaDate.getDay()];
-  let hours = bogotaDate.getHours();
-  const minutes = String(bogotaDate.getMinutes()).padStart(2, "0");
-  const ampm = hours >= 12 ? "PM" : "AM";
-  hours = hours % 12;
-  hours = hours ? hours : 12;
-  const hourStr = String(hours).padStart(2, "0");
-  return {
-    dateStr: `${day}/${month}/${year}`,
-    timeStr: `${hourStr}:${minutes} ${ampm}`,
-    dayName
-  };
-}
+// server/_core/jania/handlers/propertiesHandler.ts
+import { eq as eq10, and as and6, gte as gte2, desc as desc4 } from "drizzle-orm";
 async function handleDetectedMatches(matches, isProperty, savedRecord, userId, realName) {
   const mentions = [];
   const matchBlocks = [];
@@ -20139,11 +22567,11 @@ async function handleDetectedMatches(matches, isProperty, savedRecord, userId, r
     try {
       const db = await getDb();
       if (db) {
-        const [su] = await db.select().from(users).where(eq8(users.phone, savedRawPhone)).limit(1);
+        const [su] = await db.select().from(users).where(eq10(users.phone, savedRawPhone)).limit(1);
         if (su && su.name && su.name.trim() !== "") {
           savedUserName = su.name;
         }
-        const [mu] = await db.select().from(users).where(eq8(users.phone, matchedRawPhone)).limit(1);
+        const [mu] = await db.select().from(users).where(eq10(users.phone, matchedRawPhone)).limit(1);
         if (mu && mu.name && mu.name.trim() !== "") {
           matchedUserName = mu.name;
         }
@@ -20183,369 +22611,977 @@ async function handleDetectedMatches(matches, isProperty, savedRecord, userId, r
     sendReputationHook: matches.length > 0
   };
 }
-function translatePropertyType(type) {
-  const map = {
-    apartment: "Apartamento",
-    house: "Casa",
-    building: "Edificio",
-    warehouse: "Bodega",
-    office: "Oficina",
-    farm: "Finca",
-    land: "Lote",
-    loft: "Loft",
-    consultorio: "Consultorio"
-  };
-  return map[type?.toLowerCase()] || capitalize(type || "inmueble");
+function sanitizePropertyType(type) {
+  if (!type) return "apartment";
+  const t2 = type.toLowerCase().trim();
+  if (t2 === "consultorio" || t2.includes("consultorio") || t2.includes("odontol") || t2.includes("m\xE9dic") || t2.includes("medic") || t2 === "office_medical") return "consultorio";
+  if (t2 === "cabin" || t2.includes("caba\xF1a") || t2.includes("cabana") || t2.includes("caba\xF1as") || t2.includes("cabanas")) return "cabin";
+  if (t2 === "house" || t2 === "casa" || t2.includes("chalet") || t2.includes("quinta") || t2.includes("campestre")) return "house";
+  if (t2 === "building" || t2 === "edificio") return "building";
+  if (t2 === "warehouse" || t2 === "bodega") return "warehouse";
+  if (t2 === "farm" || t2 === "finca") return "farm";
+  if (t2 === "hotel" || t2.includes("hostal") || t2.includes("hospedaje") || t2.includes("motel") || t2.includes("hostel")) return "hotel";
+  if (t2 === "office" || t2 === "oficina" || t2.includes("oficina")) return "office";
+  if (t2 === "land" || t2 === "lote" || t2 === "terreno" || t2.includes("lote") || t2.includes("terreno")) return "land";
+  if (t2 === "commercial" || t2 === "local" || t2 === "locales" || t2.includes("local comercial") || t2.includes("locales comerciales") || t2 === "comercial" || t2.includes("local")) return "commercial";
+  if (t2 === "loft" || t2.includes("loft") || t2.includes("apartaestudio") || t2.includes("apartasuite")) return "loft";
+  if (t2 === "apartment" || t2 === "apartamento" || t2 === "apto" || t2.includes("apto") || t2.includes("apartamento") || t2.includes("penthouse")) return "apartment";
+  return "apartment";
 }
-function translateTransactionType(type) {
-  const map = {
-    venta: "VENTA",
-    arriendo: "ARRIENDO",
-    venta_o_arriendo: "VENTA O ARRIENDO",
-    arriendo_temporal: "ARRIENDO TEMPORAL",
-    arriendo_con_opcion_de_compra: "ARRIENDO CON OPCI\xD3N DE COMPRA",
-    permuta: "PERMUTA",
-    venta_permuta: "VENTA / PERMUTA",
-    aporte: "APORTE"
-  };
-  return map[type?.toLowerCase()] || String(type || "negocio").toUpperCase();
+function sanitizeTransactionType(type) {
+  if (!type) return "venta";
+  const t2 = type.toLowerCase().trim().replace(/\s+/g, "_");
+  if (t2 === "venta" || t2 === "vender" || t2 === "compra" || t2 === "comprar") return "venta";
+  if (t2 === "venta_o_arriendo" || t2.includes("venta_o_arriendo") || t2.includes("venta o arriendo") || t2.includes("vendo o arriendo") || t2.includes("venta_arriendo")) return "venta_o_arriendo";
+  if (t2 === "arriendo_con_opcion_de_compra" || t2.includes("opcion_de_compra") || t2.includes("opcion de compra") || t2.includes("opci\xF3n de compra") || t2.includes("con opcion") || t2.includes("con opci\xF3n")) return "arriendo_con_opcion_de_compra";
+  if (t2 === "arriendo" || t2 === "alquiler" || t2 === "renta" || t2 === "rentar" || t2 === "arrendar") return "arriendo";
+  if (t2 === "arriendo_temporal" || t2 === "temporal" || t2 === "vacacional" || t2 === "vacaciones") return "arriendo_temporal";
+  if (t2 === "venta_permuta" || t2.includes("venta_permuta") || t2.includes("venta permuta") || t2.includes("venpermuto") || t2.includes("venta") && t2.includes("permuta")) return "venta_permuta";
+  if (t2 === "permuta" || t2 === "permuto" || t2 === "cambio" || t2.includes("permuta")) return "permuta";
+  if (t2 === "aporte" || t2.includes("aporte") || t2 === "proyecto") return "aporte";
+  return "venta";
 }
-async function getTimeOfDayGreetingForUser(phone, realName, alreadyGreeted, isGroup = false) {
-  const d = /* @__PURE__ */ new Date();
-  const bogotaStr = d.toLocaleString("en-US", { timeZone: "America/Bogota" });
-  const bogotaDate = new Date(bogotaStr);
-  const hour = bogotaDate.getHours();
-  let salutation = "";
-  if (hour >= 5 && hour < 12) {
-    salutation = "Buenos d\xEDas";
-  } else if (hour >= 12 && hour < 18) {
-    salutation = "Buenas tardes";
-  } else {
-    salutation = "Buenas noches";
+function sanitizeTransactionTypes(raw) {
+  const input = Array.isArray(raw) ? raw.join(" ") : raw || "";
+  const n = input.toLowerCase();
+  const result = [];
+  if (n.includes("venta o arriendo") || n.includes("vendo o arriendo") || n.includes("venta_o_arriendo")) result.push("venta_o_arriendo");
+  if (n.includes("opcion de compra") || n.includes("opci\xF3n de compra") || n.includes("con opcion") || n.includes("con opci\xF3n") || n.includes("arriendo_con_opcion")) result.push("arriendo_con_opcion_de_compra");
+  if (n.includes("venta") && n.includes("permuta") || n.includes("venta_permuta") || n.includes("venpermuto")) result.push("venta_permuta");
+  const hasVentaOArriendo = result.includes("venta_o_arriendo");
+  const hasVentaPermuta = result.includes("venta_permuta");
+  if (!hasVentaOArriendo && !hasVentaPermuta) {
+    if (n.includes("venta") || n.includes("vender") || n.includes("compra") || n.includes("comprar")) result.push("venta");
   }
-  let nameToUse = realName;
-  try {
-    const db = await getDb();
-    if (db) {
-      const [u] = await db.select().from(users).where(eq8(users.phone, phone)).limit(1);
-      if (u && u.name && u.name.trim() !== "") {
-        nameToUse = u.name;
-      }
-    }
-  } catch (e) {
-    console.warn("[JanIA-Greeting] Error buscando nombre de usuario para saludo:", e);
+  if (!hasVentaOArriendo && !result.includes("arriendo_con_opcion_de_compra")) {
+    if (n.includes("arriendo") || n.includes("alquiler") || n.includes("renta") || n.includes("rentar")) result.push("arriendo");
   }
-  const firstName = extractFirstName2(nameToUse);
-  if (alreadyGreeted) {
-    return firstName ? `Mira ${firstName}` : `Mira`;
-  } else {
-    return firstName ? `${salutation} ${firstName}` : `${salutation}`;
+  if (n.includes("temporal") || n.includes("vacacional") || n.includes("vacaciones")) result.push("arriendo_temporal");
+  if (!hasVentaPermuta) {
+    if (n.includes("permuta") || n.includes("permuto") || n.includes("recibo propiedad") || n.includes("recibo vehiculo") || n.includes("parte de pago") || n.includes("cambio de inmueble")) result.push("permuta");
   }
+  if (n.includes("aporte") || n.includes("participo en proyecto") || n.includes("constructora") || n.includes("unidades a cambio") || n.includes("utilidades")) result.push("aporte");
+  return result.length > 0 ? result : [sanitizeTransactionType(input)];
 }
-function esMensajeSpamOBasura(text2) {
-  if (!text2 || text2.trim() === "") return { isSpam: false, reason: "" };
-  const n = text2.toLowerCase();
-  if (n.includes("zoom.us") || n.includes("meet.google.com") || n.includes("teams.microsoft.com") || n.includes("webinar") || n.includes("masterclass") || n.includes("capacitacion") || n.includes("capacitaci\xF3n") || n.includes("seminario") || n.includes("taller de ventas") || n.includes("curso de") || n.includes("congreso de") || n.includes("evento inmobiliario") || n.includes("inmoverso")) {
-    return { isSpam: true, reason: "Invitaci\xF3n a evento, Zoom, Meet, webinar o masterclass externa." };
-  }
-  if (n.includes("coaching") || n.includes("red de mercadeo") || n.includes("multinivel") || n.includes("gana dinero desde casa") || n.includes("servicio de marketing") || n.includes("agencia de publicidad") || n.includes("software inmobiliario") || n.includes("te regalo una guia") || n.includes("te regalo un ebook")) {
-    return { isSpam: true, reason: "Publicidad de terceros, marketing no predial o coaching." };
-  }
-  if (n.includes("vota por") || n.includes("partido politico") || n.includes("partido pol\xEDtico") || n.includes("candidato") || n.includes("elecciones") || n.includes("cadena de oracion") || n.includes("cadena de oraci\xF3n") || n.includes("comparte esta cadena")) {
-    return { isSpam: true, reason: "Contenido pol\xEDtico, ideol\xF3gico o cadenas de spam." };
-  }
-  return { isSpam: false, reason: "" };
+function sanitizeCurrency(curr) {
+  if (!curr) return "COP";
+  const c = curr.toUpperCase().trim();
+  if (c === "USD" || c === "DOLARES" || c === "DOLAR") return "USD";
+  return "COP";
 }
-async function scrapeUrlWithBypass(url) {
-  const cleanUrl = url.trim();
-  const zenrowsKey = process.env.ZENROWS_API_KEY;
-  if (zenrowsKey) {
+function safeSlice(val, limit) {
+  if (val === void 0 || val === null) return void 0;
+  return String(val).slice(0, limit);
+}
+async function findOrCreateUserByPhone(phone, realName) {
+  const db = await getDb();
+  if (!db) return null;
+  const cleanPhone = phone.split(":")[0];
+  let user = await db.select().from(users).where(eq10(users.phone, cleanPhone)).limit(1).then((r) => r[0]);
+  if (!user) {
+    user = await db.select().from(users).where(eq10(users.openId, `wa-${cleanPhone}`)).limit(1).then((r) => r[0]);
+  }
+  if (!user) {
+    const openId = `wa-${cleanPhone}`;
+    console.log(`[JanIA-findOrCreateUserByPhone] Creando nuevo usuario para WhatsApp: ${realName} (+${cleanPhone})`);
     try {
-      console.log(`[Scraper-Bypass] Intentando extraer con ZenRows: ${cleanUrl}`);
-      const response = await axios6.get("https://api.zenrows.com/v1/", {
-        params: {
-          key: zenrowsKey,
-          url: cleanUrl,
-          js_render: "true",
-          premium_proxy: "true",
-          markdown: "true"
-        },
-        timeout: 2e4
-      });
-      if (response.status === 200 && response.data) {
-        return typeof response.data === "string" ? response.data : JSON.stringify(response.data);
-      }
-    } catch (err) {
-      console.warn(`[Scraper-Bypass] Error en ZenRows para ${cleanUrl}:`, err.message);
-    }
-  }
-  const scrapingbeeKey = process.env.SCRAPINGBEE_API_KEY;
-  if (scrapingbeeKey) {
-    try {
-      console.log(`[Scraper-Bypass] Intentando extraer con ScrapingBee: ${cleanUrl}`);
-      const response = await axios6.get("https://app.scrapingbee.com/api/v1/", {
-        params: {
-          api_key: scrapingbeeKey,
-          url: cleanUrl,
-          render_js: "true",
-          premium_proxy: "true"
-        },
-        timeout: 2e4
-      });
-      if (response.status === 200 && response.data) {
-        return typeof response.data === "string" ? response.data : JSON.stringify(response.data);
-      }
-    } catch (err) {
-      console.warn(`[Scraper-Bypass] Error en ScrapingBee para ${cleanUrl}:`, err.message);
-    }
-  }
-  const firecrawlKey = process.env.FIRECRAWL_API_KEY;
-  if (firecrawlKey) {
-    try {
-      console.log(`[Scraper-Bypass] Intentando extraer con Firecrawl: ${cleanUrl}`);
-      const response = await axios6.post("https://api.firecrawl.dev/v1/scrape", {
-        url: cleanUrl,
-        formats: ["markdown"]
-      }, {
-        headers: {
-          "Authorization": `Bearer ${firecrawlKey}`,
-          "Content-Type": "application/json"
-        },
-        timeout: 2e4
-      });
-      if (response.status === 200 && response.data && response.data.data && response.data.data.markdown) {
-        return response.data.data.markdown;
-      }
-    } catch (err) {
-      console.warn(`[Scraper-Bypass] Error en Firecrawl para ${cleanUrl}:`, err.message);
-    }
-  }
-  try {
-    console.log(`[Scraper-Bypass] Usando Jina Reader como fallback para: ${cleanUrl}`);
-    const jinaUrl = `https://r.jina.ai/${encodeURIComponent(cleanUrl)}`;
-    const response = await axios6.get(jinaUrl, {
-      timeout: 1e4,
-      headers: {
-        "Accept": "text/plain",
-        "X-Return-Format": "markdown"
-      }
-    });
-    if (response.status === 200 && response.data) {
-      return typeof response.data === "string" ? response.data : JSON.stringify(response.data);
-    }
-  } catch (error) {
-    console.warn(`[Scraper-Bypass] Fall\xF3 el fallback de Jina Reader para ${cleanUrl}:`, error.message);
-  }
-  return "";
-}
-function evaluateMultiItemHeuristics(text2) {
-  if (!text2 || text2.length < 100) return { isMultiItem: false, score: 0, signals: [] };
-  const signals = [];
-  const h1HeaderMatches = text2.match(/(?:[⬆️🏬🚨📌✨⭐👉1️⃣2️⃣3️⃣•]+|(?:\(🙏🏻\))|(?:ATL)|(?:\b(?:VENTA|ARRIENDO|BUSCO|SE VENDE|SE ARRIENDA|COMPRO)\b))/gi) || [];
-  const h1RepeatedHeaders = h1HeaderMatches.length >= 3;
-  if (h1RepeatedHeaders) signals.push("H1: Encabezados o emojis repetidos (3+)");
-  let h2NumberReset = false;
-  const numMatches = Array.from(text2.matchAll(/(?:^|\n)\s*(\d{1,2})[\.\)\️⃣]/g));
-  if (numMatches.length >= 2) {
-    let maxSeen = 0;
-    for (const m of numMatches) {
-      const val = parseInt(m[1], 10);
-      if (maxSeen >= 5 && val === 1) {
-        h2NumberReset = true;
-        break;
-      }
-      if (val > maxSeen) maxSeen = val;
-    }
-  }
-  if (h2NumberReset) signals.push("H2: Reinicio de numeraci\xF3n (1. reaparece tras n\xFAmero > 5)");
-  const urlMatches = text2.match(/https?:\/\/[^\s<"']+/gi) || [];
-  if (urlMatches.length >= 2) signals.push(`H3: M\xFAltiples URLs p\xFAblicas (${urlMatches.length} enlaces)`);
-  const h4PatternMatches = text2.match(/(?:\b(?:VENTA|SE VENDE|VENDO|ARRIENDO|SE ARRIENDA|BUSCO|COMPRO)\b\s+(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|PENTHOUSE|DÚPLEX|LOCAL))/gi) || [];
-  if (h4PatternMatches.length >= 2) signals.push(`H4: Repetici\xF3n de patr\xF3n de negocio+inmueble (${h4PatternMatches.length} veces)`);
-  const h5Separators = /(?:\r?\n){1,}\s*(?:_{3,}|-{3,}|={3,}|\*{3,})\s*(?:\r?\n){1,}/.test(text2);
-  if (h5Separators) signals.push("H5: Separadores expl\xEDcitos (---/___)");
-  const score = signals.length;
-  return {
-    isMultiItem: score >= 2,
-    score,
-    signals
-  };
-}
-function cleanAndMergeSubstantiveBlocks(rawList) {
-  const merged = [];
-  for (const b of rawList) {
-    const textNoUrls = b.replace(/https?:\/\/[^\s]+/gi, "").trim();
-    const isTrailer = textNoUrls.length < 35 || /^(?:contacto|info|galer[ií]a|fotos?|link|enlace|agendar|visitas?|escr[ií]beme|ll[aá]mame|whatsapp|asesor)\b/i.test(textNoUrls);
-    if (isTrailer && merged.length > 0) {
-      merged[merged.length - 1] += `
-
-${b}`;
-    } else {
-      merged.push(b);
-    }
-  }
-  return merged.filter((b) => b.trim().length >= 40);
-}
-function splitMultiItemMessage(text2) {
-  if (!text2 || text2.length < 80) return [text2];
-  const delimiterSplit = text2.split(/(?:\r?\n){1,}\s*(?:_{3,}|-{3,}|={3,}|\*{3,})\s*(?:\r?\n){1,}/);
-  if (delimiterSplit.length >= 2) {
-    const validBlocks = cleanAndMergeSubstantiveBlocks(delimiterSplit.map((b) => b.trim()).filter((b) => b.length >= 35));
-    if (validBlocks.length >= 2) {
-      return validBlocks;
-    }
-  }
-  const headerSplitRegex = /(?=(?:^|\n)\s*(?:🚨\s*\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*🚨|\*?(?:REQUERIMIENTO|INMUEBLE|OFERTA|DEMANDA)\*?\s*[:\n]|\*?Cliente\*?\s*:\s*[A-ZÁÉÍÓÚÑ]|\*?(?:Cliente|Clienta|Comprador|Compradora|Varios clientes|Tengo cliente)\s+(?:compra|compran|busca|buscan|requiere|necesita|solicita)\b|\b(?:VENDO|SE VENDE|ARRIENDO|SE ARRIENDA|BUSCO|SE BUSCA)\s+(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|PENTHOUSE|DÚPLEX)\b|(?:^|\n)\s*(?:[1-9][\.\)\️⃣]|\([1-9]\))\s*(?:APARTAMENTO|APTO|CASA|BODEGA|OFICINA|LOTE|LOCAL|VENTA|ARRIENDO|BUSCO|SE VENDE)))/gi;
-  const rawBlocks = cleanAndMergeSubstantiveBlocks(text2.split(headerSplitRegex).map((b) => b.trim()).filter((b) => b.length >= 35));
-  if (rawBlocks.length >= 2) {
-    return rawBlocks;
-  }
-  const paragraphs = text2.split(/(?:\r?\n){2,}/);
-  if (paragraphs.length >= 3) {
-    const blocks = [];
-    let currentBlock = "";
-    for (const p of paragraphs) {
-      const cleanP = p.trim();
-      if (!cleanP) continue;
-      const textWithoutUrls = cleanP.replace(/https?:\/\/[^\s]+/gi, "").replace(/[\r\n\t]+/g, " ").trim();
-      const isContactOrLinkOnly = !textWithoutUrls || textWithoutUrls.length < 35 || /^(?:contacto|info|galer[ií]a|fotos?|m[aá]s\s+info|link|enlace|agendar|visitas?|escr[ií]beme|ll[aá]mame|whatsapp|asesor)\b/i.test(textWithoutUrls);
-      const isNewItem = !isContactOrLinkOnly && /(?:SE VENDE|VENDO|SE ARRIENDA|ARRIENDO|APARTAMENTO|APTO|CASA|BUSCO|SOLICITO|ATL|REQUERIMIENTO|CLIENTE|CLIENTA|COMPRADOR|VARIOS CLIENTES)\b/i.test(textWithoutUrls) && /\$|\b\d{3,}\b|\bm2\b|\bhab\b|\bbaños\b|\balcobas\b|\bmm\b|\bmillon/i.test(textWithoutUrls);
-      if (currentBlock && isNewItem) {
-        blocks.push(currentBlock.trim());
-        currentBlock = cleanP;
+      const [newUser] = await db.insert(users).values({
+        openId,
+        name: realName,
+        phone: cleanPhone,
+        role: "agent",
+        loginMethod: "whatsapp"
+      }).returning();
+      user = newUser;
+    } catch (insertErr) {
+      if (insertErr.code === "23505" || String(insertErr).includes("unique constraint")) {
+        console.log(`[JanIA-findOrCreateUserByPhone] Colisi\xF3n concurrente detectada para ${cleanPhone}. Re-buscando usuario...`);
+        user = await db.select().from(users).where(eq10(users.openId, openId)).limit(1).then((r) => r[0]);
       } else {
-        currentBlock = currentBlock ? `${currentBlock}
-
-${cleanP}` : cleanP;
+        throw insertErr;
       }
     }
-    if (currentBlock) blocks.push(currentBlock.trim());
-    const validParagraphBlocks = cleanAndMergeSubstantiveBlocks(blocks);
-    if (validParagraphBlocks.length >= 2) {
-      return validParagraphBlocks;
+  } else {
+    if (realName && !isGenericName(realName) && isGenericName(user.name)) {
+      console.log(`[JanIA-findOrCreateUserByPhone] Actualizando nombre de usuario para ID ${user.id} a ${realName}`);
+      const [updatedUser] = await db.update(users).set({ name: realName }).where(eq10(users.id, user.id)).returning();
+      user = updatedUser;
     }
   }
-  const clientLines = text2.split(/(?:\r?\n)+/).map((l) => l.trim()).filter(Boolean);
-  if (clientLines.length >= 2) {
-    const multiClientItems = clientLines.filter(
-      (l) => /^(?:\*?(?:cliente|clienta|comprador|compradora|varios\s+clientes|tengo\s+cliente)\s+(?:compra|compran|busca|buscan|requiere|necesita|solicita)|(?:busco|buscan|se\s+busca)\s+(?:apto|apartamento|casa|oficina))\b/i.test(l) && l.length >= 35
-    );
-    if (multiClientItems.length >= 2 && multiClientItems.length >= clientLines.length * 0.6) {
-      return multiClientItems;
-    }
-  }
-  return [text2];
+  return user;
 }
-async function extractFlyerVision(imageBufferBase64) {
-  if (!imageBufferBase64 || imageBufferBase64.trim() === "") return null;
-  const allKeys = (process.env.GEMINI_API_KEYS || "").split(",").map((k) => k.replace(/^["']|["']$/g, "").trim()).filter(Boolean);
-  for (let idx = 1; idx <= 10; idx++) {
-    const k = (process.env[`GEMINI_API_KEY_${idx}`] || "").replace(/^["']|["']$/g, "").trim();
-    if (k) allKeys.push(k);
+async function initBrokerDirectory() {
+  try {
+    await initAdvisorsDirectory();
+  } catch (err) {
+    console.warn(`[JanIA-Directory] Advertencia cargando directorio inicial:`, err?.message || err);
   }
-  if (process.env.GEMINI_API_KEY) allKeys.push(process.env.GEMINI_API_KEY.replace(/^["']|["']$/g, "").trim());
-  if (process.env.GOOGLE_API_KEY) allKeys.push(process.env.GOOGLE_API_KEY.replace(/^["']|["']$/g, "").trim());
-  if (process.env.GEMINI_BACKUP_KEY) allKeys.push(process.env.GEMINI_BACKUP_KEY.replace(/^["']|["']$/g, "").trim());
-  const uniqueKeys = Array.from(new Set(allKeys.filter(Boolean)));
-  if (uniqueKeys.length === 0) {
-    console.warn("[JanIA-Vision] \u26A0\uFE0F No hay GEMINI_API_KEY configurada para an\xE1lisis visual.");
+}
+async function propagateBrokerPhoneAcrossAllListings(params) {
+  const result = await saveOrUpdateAdvisor({
+    phone: params.rawPhoneOrText,
+    name: params.brokerName,
+    oldPhoneOrLid: params.oldPhoneOrLid,
+    sourceGroup: params.sourceGroup,
+    agency: params.agency,
+    notes: params.notes
+  });
+  return {
+    updatedProps: result.updatedProps,
+    updatedReqs: result.updatedReqs,
+    cleanPhone: result.cleanPhone
+  };
+}
+async function handleAmendmentUpdate(userId, text2) {
+  const db = await getDb();
+  if (!db) return false;
+  const rawPhone = userId.split("@")[0].split(":")[0].replace(/\D/g, "");
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1e3);
+  const cleanTextLower = text2.toLowerCase().trim();
+  const isAmendmentTrigger = cleanTextLower.startsWith("correccion") || cleanTextLower.startsWith("correcci\xF3n") || cleanTextLower.startsWith("fe de erratas") || cleanTextLower.startsWith("fe de errata") || cleanTextLower.startsWith("rectificacion") || cleanTextLower.startsWith("rectificaci\xF3n") || cleanTextLower.startsWith("ajuste:") || cleanTextLower.startsWith("ajuste ") || cleanTextLower.startsWith("disculpen");
+  if (!isAmendmentTrigger) return false;
+  const fallbackData = extractFallbackDataFromText(text2);
+  const lastReqs = await db.select().from(requirements).where(and6(
+    eq10(requirements.idUsuarioWhatsapp, rawPhone),
+    gte2(requirements.createdAt, twoHoursAgo)
+  )).orderBy(desc4(requirements.createdAt)).limit(1);
+  if (lastReqs.length > 0) {
+    const req = lastReqs[0];
+    const updates = {};
+    if (cleanTextLower.includes("parqueadero") && fallbackData.garages > 0) {
+      updates.parqueaderosMin = fallbackData.garages;
+    }
+    if ((cleanTextLower.includes("habitaci\xF3n") || cleanTextLower.includes("habitacion") || cleanTextLower.includes("alcoba")) && fallbackData.bedrooms > 0) {
+      updates.habitacionesMin = fallbackData.bedrooms;
+    }
+    if (cleanTextLower.includes("ba\xF1o") && fallbackData.bathrooms > 0) {
+      updates.banosMin = fallbackData.bathrooms;
+    }
+    if ((cleanTextLower.includes("precio") || cleanTextLower.includes("presupuesto")) && fallbackData.price > 0) {
+      updates.presupuestoMax = String(fallbackData.price);
+    }
+    if ((cleanTextLower.includes("\xE1rea") || cleanTextLower.includes("area")) && fallbackData.area > 0) {
+      updates.areaMin = String(fallbackData.area);
+    }
+    if (Object.keys(updates).length > 0) {
+      updates.updatedAt = /* @__PURE__ */ new Date();
+      await db.update(requirements).set(updates).where(eq10(requirements.id, req.id));
+      console.log(`[JANIA-AMENDMENT] \u2705 Requerimiento #${req.id} actualizado silenciosamente en BD (Ventana 2h):`, updates);
+      const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
+      setImmediate(() => {
+        executeMatchEngine2(null, req.id).catch((err) => console.error("Error executing match engine on amendment:", err));
+      });
+      return true;
+    }
+  }
+  const lastProps = await db.select().from(properties).where(and6(
+    eq10(properties.idUsuarioWhatsapp, rawPhone),
+    gte2(properties.createdAt, twoHoursAgo)
+  )).orderBy(desc4(properties.createdAt)).limit(1);
+  if (lastProps.length > 0) {
+    const prop = lastProps[0];
+    const updates = {};
+    if (cleanTextLower.includes("parqueadero") && fallbackData.garages > 0) {
+      updates.garages = fallbackData.garages;
+    }
+    if ((cleanTextLower.includes("habitaci\xF3n") || cleanTextLower.includes("habitacion") || cleanTextLower.includes("alcoba")) && fallbackData.bedrooms > 0) {
+      updates.bedrooms = fallbackData.bedrooms;
+    }
+    if (cleanTextLower.includes("ba\xF1o") && fallbackData.bathrooms > 0) {
+      updates.bathrooms = fallbackData.bathrooms;
+    }
+    if ((cleanTextLower.includes("precio") || cleanTextLower.includes("valor")) && fallbackData.price > 0) {
+      updates.price = String(fallbackData.price);
+    }
+    if ((cleanTextLower.includes("\xE1rea") || cleanTextLower.includes("area")) && fallbackData.area > 0) {
+      updates.areaTotal = String(fallbackData.area);
+    }
+    if (Object.keys(updates).length > 0) {
+      updates.updatedAt = /* @__PURE__ */ new Date();
+      await db.update(properties).set(updates).where(eq10(properties.id, prop.id));
+      console.log(`[JANIA-AMENDMENT] \u2705 Propiedad #${prop.id} actualizada silenciosamente en BD (Ventana 2h):`, updates);
+      const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
+      setImmediate(() => {
+        executeMatchEngine2(prop.id, null).catch((err) => console.error("Error executing match engine on amendment:", err));
+      });
+      return true;
+    }
+  }
+  return false;
+}
+async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfMimeType) {
+  const db = await getDb();
+  if (!db) return null;
+  if (isNonRealEstateText(data.rawText) || isNonRealEstateText(data.name) || isNonRealEstateText(data.description)) {
+    console.log(`[JanIA-Reject] \u{1F6AB} Inmueble descartado: mensaje no corresponde a finca ra\xEDz (materiales/canteras/maquinaria): ${data.name || data.rawText}`);
     return null;
   }
-  const models = [
-    "gemini-flash-lite-latest",
-    "gemini-3.6-flash",
-    "gemini-flash-latest",
-    "gemini-3.5-flash-lite",
-    "gemini-3.5-flash"
-  ];
-  const prompt = `Eres la IA experta en visi\xF3n documental y extracci\xF3n de flyers inmobiliarios de VECY Bienes Ra\xEDces en Colombia.
-Analiza la imagen enviada a un grupo inmobiliario de WhatsApp.
-Determina si es:
-1. "INMUEBLE" (Oferta de venta, arriendo o permuta de una propiedad CON TEXTO PUBLICITARIO IMPRESO).
-2. "REQUERIMIENTO" (Demanda o b\xFAsqueda: un asesor o cliente busca/necesita/compra un inmueble para un cliente, constructora o marca en expansi\xF3n CON TEXTO PUBLICITARIO IMPRESO).
-3. "CONSULTA_GENERAL" (Fotograf\xEDa ambiental com\xFAn sin texto publicitario sobreimpreso \u2014fachadas, salas, comedores, cocinas, ba\xF1os, piscinas, jardines, planos mudos\u2014, comprobante bancario, meme o ajeno a bienes ra\xEDces).
-
-REGLAS CR\xCDTICAS DE CLASIFICACI\xD3N:
-- REGLA DE ORO DE AFICHES/FLYERS: Si la imagen es una simple FOTO FOTOGR\xC1FICA AMBIENTAL (la foto de una casa, un edificio, una sala, una chimenea) SIN texto publicitario tipogr\xE1fico impreso con especificaciones comerciales (precios, metros, contacto), DEBES clasificarla OBLIGATORIAMENTE como "CONSULTA_GENERAL" con isFlyerOrBanner: false y flyerVerbatimText: "".
-- Si el flyer contiene texto tipogr\xE1fico con t\xE9rminos como "BUSCO", "BUSCAMOS", "SE BUSCA", "SE REQUIERE", "COMPRO", "COMPRAMOS", "MARCAS EN EXPANSI\xD3N", "CONSTRUCTORES BUSCAN", "CLIENTE COMPRA" o similares, clasifica OBLIGATORIAMENTE como "REQUERIMIENTO" (isFlyerOrBanner: true).
-- Si el flyer contiene texto tipogr\xE1fico con t\xE9rminos como "VENDO", "VENDEMOS", "SE VENDE", "EN VENTA", "OFREZCO", "ARRIENDO", "SE ARRIENDA", "DISPONIBLE", "OPEN HOUSE" o describe un inmueble espec\xEDfico ofertado con especificaciones, clasifica como "INMUEBLE" (isFlyerOrBanner: true).
-
-Si es INMUEBLE o REQUERIMIENTO (exclusivamente si tiene texto sobreimpreso):
-- isFlyerOrBanner: boolean (true \xDANICAMENTE si tiene texto publicitario o comercial sobreimpreso con datos, false si es foto limpia ambiental).
-- classification: "INMUEBLE" | "REQUERIMIENTO" | "CONSULTA_GENERAL".
-- transactionType: "venta" | "arriendo" | "venta_permuta" | "arriendo_temporal".
-- propertyType: string (ej. "lote", "bodega", "apartamento", "casa", "oficina", "local", "finca", "edificio", "apartaestudio").
-- title: string (t\xEDtulo conciso del inmueble o solicitud, ej. "Busco Lotes para Constructores", "Apartamento en Venta en Cedritos").
-- price: number en COP sin puntos ni comas (ej. 800000000). Si es arriendo puro o no hay precio, poner null.
-- rentPrice: number en COP si es arriendo.
-- presupuestoMax: number en COP si es REQUERIMIENTO (presupuesto m\xE1ximo de compra o canon m\xE1ximo si lo indica).
-- area: number en metros cuadrados m\xB2 (ej. 600, 450). Si es rango (ej. 600 - 1600), poner el m\xEDnimo o promedio.
-- bedrooms: number (n\xFAmero de habitaciones o alcobas si aplica).
-- bathrooms: number (n\xFAmero de ba\xF1os si aplica).
-- garages: number (n\xFAmero de parqueaderos/garajes si aplica).
-- city: string (ciudad, ej. "Bogot\xE1", "Medell\xEDn", "Ch\xEDa", "Cali", "Nacional", etc.).
-- zone: string (barrio, sector o subzonas mencionadas, ej. "Pablo VI, Cedritos", "Suba", "Chic\xF3", etc.).
-- contactPhone: string (tel\xE9fono celular de 10 d\xEDgitos legible en el flyer, ej. "3112911829" o "573112911829").
-- contactName: string (nombre del asesor o inmobiliaria anunciante, ej. "Juan Pablo Tobo", "Inmo Propiedades").
-- flyerVerbatimText: string (transcripci\xF3n textual completa y fiel de TODO el texto legible en el flyer).
-
-Devuelve EXCLUSIVAMENTE un JSON v\xE1lido con esta estructura.`;
-  const payload = {
-    contents: [
-      {
-        parts: [
-          { text: prompt },
-          { inline_data: { mime_type: "image/jpeg", data: imageBufferBase64 } }
-        ]
-      }
-    ],
-    generationConfig: {
-      temperature: 0.1,
-      response_mime_type: "application/json"
-    }
-  };
-  for (const model of models) {
-    for (let i = 0; i < uniqueKeys.length; i++) {
-      const apiKey = uniqueKeys[i];
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      try {
-        console.log(`[JanIA-Vision] \u{1F441}\uFE0F Analizando flyer con ${model} (Key #${i + 1})...`);
-        const response = await axios6.post(apiUrl, payload, { timeout: 6e3 });
-        const textCandidate = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (textCandidate && typeof textCandidate === "string") {
-          const parsed = JSON.parse(textCandidate);
-          const hasCommercialText = !!(parsed.flyerVerbatimText && parsed.flyerVerbatimText.trim().length >= 15);
-          const isGenuineFlyer = !!(parsed.isFlyerOrBanner && hasCommercialText && (parsed.classification === "INMUEBLE" || parsed.classification === "REQUERIMIENTO"));
-          if (parsed && isGenuineFlyer) {
-            const tx = (parsed.transactionType || "").toLowerCase();
-            const isPermuta = tx.includes("permuta") || tx === "venta_permuta";
-            const isRent = tx.includes("arriendo") || tx === "arriendo_temporal";
-            if (parsed.classification === "INMUEBLE") {
-              parsed.reactionEmoji = isPermuta ? "\u{1F500}" : isRent ? "\u{1F44C}" : "\u{1F44D}";
-            } else if (parsed.classification === "REQUERIMIENTO") {
-              parsed.reactionEmoji = isPermuta ? "\u{1F504}" : isRent ? "\u270F\uFE0F" : "\u{1F4DD}";
-            }
-            console.log(`[JanIA-Vision] \u2705 Flyer clasificado exitosamente como ${parsed.classification} (${parsed.reactionEmoji}) con ${model}: "${parsed.title || ""}"`);
-            return parsed;
-          } else {
-            console.log(`[JanIA-Vision] \u2139\uFE0F Imagen descartada: Es foto ambiental o sin texto comercial sobreimpreso (${parsed?.classification || "CONSULTA_GENERAL"}, isFlyer: ${parsed?.isFlyerOrBanner}, texto: ${parsed?.flyerVerbatimText?.length || 0} chars).`);
-            if (parsed) {
-              parsed.isFlyerOrBanner = false;
-              parsed.classification = "CONSULTA_GENERAL";
-              parsed.reactionEmoji = void 0;
-            }
-            return parsed;
-          }
-        }
-      } catch (err) {
-        const status = err.response?.status;
-        console.warn(`[JanIA-Vision] \u26A0\uFE0F Intento con ${model} (Key #${i + 1}) fall\xF3 (${status || err.message}).`);
-        continue;
-      }
+  const rawLower = `${data.rawText || ""} ${data.name || ""}`.toLowerCase();
+  const isStrictDemandInProperty = /\b(?:busco|buscamos|se\s*busca|estoy\s*buscando|estamos\s*buscando|cliente\s*busca|para\s*compra\s*ya|solicito\s*para\s*compra|compro\s*apto|compro\s*casa|necesito\s*apto|requiero\s*apto)\b/i.test(rawLower) && !/\b(?:vendo|se\s*vende|ofrezco\s*(?:en\s*venta|en\s*arriendo)|se\s*arrienda|arriendo)\b/i.test(rawLower);
+  if (isStrictDemandInProperty) {
+    console.error(`[JanIA-Guardrail v31.85] \u26D4 BLOQUEO CR\xCDTICO: Se intent\xF3 guardar una DEMANDA en la tabla properties. Abortando inserci\xF3n: "${rawLower.substring(0, 80)}..."`);
+    return null;
+  }
+  const rawTextContent = `${data.rawText || ""} ${data.description || ""} ${data.name || ""}`;
+  const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
+  const rawPhone = effectivePhone;
+  const user = await findOrCreateUserByPhone(effectivePhone, realName);
+  let imageUrl;
+  if (imageBuffer) {
+    try {
+      console.log(`[JanIA-SaveProperty] Subiendo imagen flyer de WhatsApp para ${realName}...`);
+      const buffer = Buffer.from(imageBuffer, "base64");
+      const filename = `flyers/wa_${Date.now()}_${rawPhone}.jpg`;
+      const uploadResult = await storagePut(filename, buffer, "image/jpeg");
+      imageUrl = uploadResult.url;
+      console.log(`[JanIA-SaveProperty] Imagen subida exitosamente: ${imageUrl}`);
+    } catch (err) {
+      console.error("[JanIA-SaveProperty] Error subiendo imagen:", err);
     }
   }
-  console.error("[JanIA-Vision] \u274C No fue posible analizar el flyer con ning\xFAn modelo/clave de Gemini.");
-  return null;
+  let pdfUrl;
+  if (pdfBuffer) {
+    try {
+      console.log(`[JanIA-SaveProperty] Subiendo PDF brochure de WhatsApp para ${realName}...`);
+      const buffer = Buffer.from(pdfBuffer, "base64");
+      const filename = `documents/doc_${Date.now()}_${rawPhone}.pdf`;
+      const uploadResult = await storagePut(filename, buffer, pdfMimeType || "application/pdf");
+      pdfUrl = uploadResult.url;
+      console.log(`[JanIA-SaveProperty] PDF subido exitosamente: ${pdfUrl}`);
+    } catch (err) {
+      console.error("[JanIA-SaveProperty] Error subiendo PDF:", err);
+    }
+  }
+  const finalImages = [];
+  if (imageUrl) {
+    finalImages.push(imageUrl);
+  }
+  if (Array.isArray(data.images)) {
+    for (const img of data.images) {
+      if (img && typeof img === "string" && !finalImages.includes(img)) finalImages.push(img);
+    }
+  }
+  if (pdfUrl) {
+    data.externalUrl = data.externalUrl || pdfUrl;
+    data.enlaceOrigen = data.enlaceOrigen || pdfUrl;
+  }
+  const amenitiesObj = {
+    gives: data.gives || data.amenities?.gives,
+    wants: data.wants || data.amenities?.wants,
+    isCollaborativePool: data.isCollaborativePool !== void 0 ? data.isCollaborativePool : data.amenities?.isCollaborativePool,
+    interiorExterior: data.interiorExterior || data.amenities?.interiorExterior,
+    cuartoBanoServicio: data.cuartoBanoServicio || data.amenities?.cuartoBanoServicio,
+    cocina: data.cocina || data.amenities?.cocina,
+    lavanderiaIndependiente: data.lavanderiaIndependiente || data.amenities?.lavanderiaIndependiente,
+    tipoPisos: data.tipoPisos || data.amenities?.tipoPisos,
+    depositos: data.depositos || data.amenities?.depositos,
+    comisiones: data.comisiones || data.amenities?.comisiones,
+    antiguedad: data.antiguedad || data.amenities?.antiguedad
+  };
+  if (data.zone && typeof data.zone === "string") {
+    const barriosDesambiguados = desambiguarBarriosCompuestos(data.zone);
+    if (barriosDesambiguados.length > 1) {
+      data.zone = barriosDesambiguados.join(", ");
+      data.addressNeighborhood = barriosDesambiguados[0];
+      console.log(`[JanIA-GeoDisambiguate] Barrio compuesto: "${data.zone}"`);
+    }
+  }
+  const rawLowerTx = (data.rawText || "").toLowerCase();
+  let txTypeForSplit = (data.transactionType || "").toLowerCase();
+  const hasExplicitRent = rawLowerTx.includes("arriendo") || rawLowerTx.includes("canon") || rawLowerTx.includes("renta");
+  const hasExplicitSale = rawLowerTx.includes("venta") || rawLowerTx.includes("precio de venta");
+  if (hasExplicitRent && hasExplicitSale && (txTypeForSplit === "venta" || txTypeForSplit === "arriendo")) {
+    const rentMatchTest = rawLowerTx.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i);
+    const saleMatchTest = rawLowerTx.match(/(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|mm|mlls|m|M)?/i);
+    if (rentMatchTest && saleMatchTest) {
+      txTypeForSplit = "venta_o_arriendo";
+      data.transactionType = "venta_o_arriendo";
+      console.log(`[JanIA-DualDetector] Promovido a 'venta_o_arriendo' por presencia dual de arriendo y venta en rawText.`);
+    }
+  }
+  if (txTypeForSplit === "venta_o_arriendo" || txTypeForSplit === "arriendo_con_opcion_de_compra") {
+    const currentPrice = data.price ? parseFloat(String(data.price)) : 0;
+    const currentRentP = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
+    const priceSaleField = data.priceSale ? parseFloat(String(data.priceSale)) : 0;
+    const priceRentField = data.priceRent ? parseFloat(String(data.priceRent)) : 0;
+    let finalSalePrice = currentPrice > 1e8 ? currentPrice : priceSaleField;
+    let finalRentPrice = currentRentP > 0 ? currentRentP : priceRentField;
+    if (finalRentPrice <= 0) {
+      const rentMatch = rawLowerTx.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i);
+      if (rentMatch) {
+        let rawRNum = parseFloat(rentMatch[1].replace(/[.,]/g, ""));
+        const unitR = (rentMatch[2] || "").toLowerCase();
+        const multR = unitR.includes("mil millon") ? 1e9 : unitR.includes("millon") || unitR === "m" ? 1e6 : rawRNum < 1e4 ? 1e6 : 1;
+        finalRentPrice = rawRNum * multR;
+      }
+    }
+    if (finalSalePrice < 1e8) {
+      const saleMatch = rawLowerTx.match(/(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|mm|mlls)?/i);
+      if (saleMatch) {
+        let rawSNum = parseFloat(saleMatch[1].replace(/[.,]/g, ""));
+        const unitS = (saleMatch[2] || "").toLowerCase();
+        const multS = unitS.includes("mil millon") ? 1e9 : unitS.includes("millon") || unitS.includes("mm") || unitS.includes("mlls") ? 1e6 : rawSNum < 1e4 ? 1e6 : 1;
+        const computedS = rawSNum * multS;
+        if (computedS >= 1e8) finalSalePrice = computedS;
+      }
+    }
+    if (finalSalePrice > 0) data.price = finalSalePrice;
+    if (finalRentPrice > 0) {
+      const adminFeeVal = data.adminFee ? parseFloat(String(data.adminFee)) : 0;
+      if (adminFeeVal > 0 && finalRentPrice >= adminFeeVal && finalRentPrice < 1e8) {
+        data.rentPrice = finalRentPrice - adminFeeVal;
+      } else {
+        data.rentPrice = finalRentPrice;
+      }
+    }
+    console.log(`[JanIA-PriceSplit] ${txTypeForSplit} \u2192 price(venta)=${data.price} | rentPrice(canon neto)=${data.rentPrice}`);
+  }
+  if (txTypeForSplit === "arriendo" || txTypeForSplit === "arriendo_temporal") {
+    const curP = data.price ? parseFloat(String(data.price)) : 0;
+    const curR = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
+    if (curR <= 0 && curP > 0 && curP < 1e8) {
+      data.rentPrice = curP;
+    }
+    data.price = "0";
+  }
+  if (txTypeForSplit === "venta") {
+    data.rentPrice = null;
+  }
+  const curRentVal = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
+  const curSaleVal = data.price ? parseFloat(String(data.price)) : 0;
+  const curAdminVal = data.adminFee ? parseFloat(String(data.adminFee)) : 0;
+  if (curAdminVal > 0) {
+    if (curRentVal > 0 && (curAdminVal === curRentVal || curAdminVal >= curRentVal * 0.45) || curSaleVal > 0 && (curAdminVal === curSaleVal || curAdminVal >= curSaleVal * 0.2)) {
+      data.adminFee = 0;
+      console.log(`[JanIA-SanidadPredial] Corregida cuota de administraci\xF3n absurda/duplicada $${curAdminVal} \u2192 N/E (0)`);
+    }
+  }
+  const isVentaType = txTypeForSplit.includes("venta") || !txTypeForSplit.includes("arriendo");
+  const currentPriceVal = data.price ? parseFloat(String(data.price)) : 0;
+  if (isVentaType && (currentPriceVal < 1e8 || !data.price) && data.rawText) {
+    const fallbackD = extractFallbackDataFromText(data.rawText);
+    if (fallbackD.price >= 3e7) {
+      if ((!data.adminFee || parseFloat(String(data.adminFee)) <= 0) && fallbackD.adminFee > 0) {
+        data.adminFee = fallbackD.adminFee;
+      }
+      data.price = fallbackD.price;
+      console.log(`[JanIA-SanidadPredial] Corregido precio de venta $${currentPriceVal} \u2192 Real: $${fallbackD.price} | AdminFee: $${data.adminFee}`);
+    } else if (currentPriceVal < 3e7) {
+      if ((!data.adminFee || parseFloat(String(data.adminFee)) <= 0) && currentPriceVal >= 1e5 && currentPriceVal <= 3e7) {
+        data.adminFee = currentPriceVal;
+      }
+      data.price = 0;
+      console.log(`[JanIA-SanidadPredial] Precio de venta menor a 30M ($${currentPriceVal}) desambiguado como AdminFee: $${data.adminFee} y Price: 0 (N/E)`);
+    }
+  }
+  if (data.rawText) {
+    const fallbackD = extractFallbackDataFromText(data.rawText);
+    if ((!data.adminFee || parseFloat(String(data.adminFee)) <= 0) && fallbackD.adminFee > 0) {
+      data.adminFee = fallbackD.adminFee;
+    }
+    if ((!data.garages || Number(data.garages) <= 0) && fallbackD.garages > 0) {
+      data.garages = fallbackD.garages;
+    }
+    if ((!data.antiguedadAnos || Number(data.antiguedadAnos) <= 0) && fallbackD.antiguedadAnos !== null) {
+      data.antiguedadAnos = fallbackD.antiguedadAnos;
+    }
+    if (!data.areaTotal && !data.area && fallbackD.area > 0) {
+      data.areaTotal = fallbackD.area;
+    }
+    if (fallbackD.bedrooms > 0) {
+      if (data.bedrooms === void 0 || data.bedrooms === null || Number(data.bedrooms) <= 0 || Number(data.bedrooms) !== fallbackD.bedrooms && /(?:^|[\n\r\-•*#\s])(\d{1,2})\s*(?:alcobas?|hab(?:s|itaciones|itaci[oó]n)?)\b/i.test(data.rawText || "")) {
+        data.bedrooms = fallbackD.bedrooms;
+      }
+    }
+    if ((data.bathrooms === void 0 || data.bathrooms === null || Number(data.bathrooms) <= 0) && fallbackD.bathrooms > 0) {
+      data.bathrooms = fallbackD.bathrooms;
+    }
+  }
+  if (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogot\xE1" || data.zone.toLowerCase() === "colombia") {
+    const geoInferred = resolveIntersectionToBarrio(data.rawText || data.name || data.location);
+    if (geoInferred) {
+      data.zone = geoInferred.barrio;
+      data.addressNeighborhood = geoInferred.barrio;
+      data.addressLocality = geoInferred.localidad;
+      data.city = data.city || geoInferred.ciudad;
+      console.log(`[JanIA-GeoResolver] \u{1F9ED} Inmueble: cruce vial deducido exitosamente: '${(data.rawText || "").slice(0, 45)}...' \u2192 Barrio: ${geoInferred.barrio} | Localidad: ${geoInferred.localidad} | Ciudad: ${geoInferred.ciudad}`);
+    }
+  }
+  const canonicalPropPhone = normalizeAdvisorPhone(rawPhone) || normalizeAdvisorPhone(data.idUsuarioWhatsapp) || (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : data.idUsuarioWhatsapp || rawPhone);
+  const knownPropAdvisor = lookupAdvisorSync(canonicalPropPhone || data.idUsuarioWhatsapp, realName || data.nombreUsuarioWhatsapp);
+  const finalEffectivePropName = realName && !isGenericName(realName) ? realName.trim() : data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp) ? data.nombreUsuarioWhatsapp.trim() : knownPropAdvisor?.name && !isGenericName(knownPropAdvisor.name) ? knownPropAdvisor.name : realName || null;
+  const insertData = {
+    ...data,
+    name: safeSlice(data.name || `Propiedad en ${data.city || data.zone || "Colombia"}`, 255) || "Propiedad",
+    city: safeSlice(data.city || data.ciudadDeseada, 100) || null,
+    zone: (() => {
+      const explicit = data.zone || data.addressNeighborhood;
+      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 100);
+      return "N/E";
+    })(),
+    addressCity: safeSlice(data.addressCity || data.address_city || data.city, 100) || null,
+    addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
+    addressNeighborhood: (() => {
+      const explicit = data.addressNeighborhood || data.address_neighborhood || data.zone;
+      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 150);
+      return null;
+    })(),
+    location: safeSlice(data.location, 255) || null,
+    matriculaInmobiliaria: safeSlice(data.matriculaInmobiliaria, 100) || null,
+    enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
+    idUsuarioWhatsapp: safeSlice(canonicalPropPhone, 100) || null,
+    nombreUsuarioWhatsapp: safeSlice(finalEffectivePropName, 255) || null,
+    propertyType: sanitizePropertyType(data.propertyType),
+    transactionType: sanitizeTransactionType(data.transactionType),
+    acceptedTransactionTypes: sanitizeTransactionTypes(data.transactionTypes || data.transactionType),
+    currency: sanitizeCurrency(data.currency),
+    // Mapear explícitamente los campos con Sanidad Numérica Post-Extracción (Bug #6 Fix)
+    price: (() => {
+      const isRent = sanitizeTransactionType(data.transactionType) === "arriendo" || sanitizeTransactionType(data.transactionType) === "arriendo_temporal";
+      if (isRent) {
+        return "0.00";
+      }
+      if (data.price === void 0 || data.price === null) return "0.00";
+      const v = parseFloat(String(data.price));
+      if (isNaN(v) || isPhoneNumberNotPrice(v, data.rawText)) return "0.00";
+      if (v > 5e10) return "0.00";
+      if (v < 3e7) return "0.00";
+      return String(v);
+    })(),
+    rentPrice: (() => {
+      const isPureSale = sanitizeTransactionType(data.transactionType) === "venta";
+      if (isPureSale) return null;
+      if (data.rentPrice === void 0 || data.rentPrice === null) return null;
+      const v = parseFloat(String(data.rentPrice));
+      if (isNaN(v) || v < 3e5 || v > 2e8 || isPhoneNumberNotPrice(v, data.rawText)) return null;
+      return String(v);
+    })(),
+    areaTotal: (() => {
+      const raw = data.areaTotal !== void 0 && data.areaTotal !== null ? data.areaTotal : data.area;
+      if (raw === void 0 || raw === null) return null;
+      const v = parseFloat(String(raw));
+      if (isNaN(v) || v < 10 || v > 5e3) return null;
+      return String(v);
+    })(),
+    bedrooms: data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
+    bathrooms: (() => {
+      const rawL = (data.rawText || "").toLowerCase();
+      if (/2[\.,]5\s*(?:baño|baños|bñ)/i.test(rawL) || /2\s*(?:baños?|bñ)\s*(?:y\s*medio|y\s*medio\s*baño)/i.test(rawL)) {
+        return 3;
+      }
+      if (data.bathrooms !== void 0 && data.bathrooms !== null) {
+        const num = Number(data.bathrooms);
+        if (num === 5 && /2[\.,]5/i.test(rawL)) return 3;
+        return Math.round(num);
+      }
+      return null;
+    })(),
+    garages: (() => {
+      if (data.garages === void 0 || data.garages === null) return null;
+      const g = Math.round(Number(data.garages));
+      if (isNaN(g) || g < 0) return null;
+      if (g >= 1900 && g <= 2100) return null;
+      if (g > 30) return null;
+      return g;
+    })(),
+    garageType: data.garageType || null,
+    // "independiente" | "lineal" | "mixto" | null (v20.0)
+    stratum: data.stratum !== void 0 && data.stratum !== null ? Math.round(Number(data.stratum)) : null,
+    adminFee: data.adminFee !== void 0 && data.adminFee !== null ? String(data.adminFee) : null,
+    yearBuilt: data.yearBuilt !== void 0 && data.yearBuilt !== null ? Math.round(Number(data.yearBuilt)) : null,
+    antiguedadAnos: data.antiguedadAnos !== void 0 && data.antiguedadAnos !== null ? Math.round(Number(data.antiguedadAnos)) : null,
+    agentId: user ? user.id : null,
+    latitude: data.latitude !== void 0 && data.latitude !== null ? String(data.latitude) : null,
+    longitude: data.longitude !== void 0 && data.longitude !== null ? String(data.longitude) : null,
+    images: finalImages.length > 0 ? finalImages : null,
+    amenities: amenitiesObj,
+    origenTipo: data.origenTipo || null,
+    origenId: data.origenId || null,
+    origenNombre: data.origenNombre || null,
+    fechaExtraccion: data.fechaExtraccion || getColombiaNow()
+  };
+  let portal = null;
+  let externalListingId = null;
+  let canonicalExternalId = null;
+  if (data.externalUrl) {
+    const extractedInfo = extractPortalAndListingId(data.externalUrl);
+    portal = extractedInfo.portal;
+    externalListingId = extractedInfo.listingId;
+    if (portal && externalListingId) {
+      canonicalExternalId = `${portal.toUpperCase()}:${externalListingId}`;
+    }
+  }
+  const finalInsertData = {
+    ...insertData,
+    portal,
+    externalListingId,
+    canonicalExternalId,
+    externalUrl: data.externalUrl || null,
+    fechaPrimeraPublicacion: getColombiaNow(),
+    fechaUltimaPublicacion: getColombiaNow(),
+    republicacionesCount: 0,
+    estadoComercial: "ACTIVO",
+    ultimaActividad: "PUBLICACI\xD3N",
+    vigenciaIa: "VIGENTE",
+    aceptaTerceria: data.aceptaTerceria !== void 0 ? Boolean(data.aceptaTerceria) : !/\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawTextContent),
+    standByDirectoVecy: data.standByDirectoVecy !== void 0 ? Boolean(data.standByDirectoVecy) : /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawTextContent)
+  };
+  let existing = [];
+  if (canonicalExternalId) {
+    existing = await db.select().from(properties).where(
+      and6(
+        eq10(properties.canonicalExternalId, canonicalExternalId),
+        eq10(properties.available, true)
+      )
+    ).limit(1);
+  }
+  if (existing.length === 0 && finalInsertData.matriculaInmobiliaria) {
+    existing = await db.select().from(properties).where(
+      and6(
+        eq10(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
+        eq10(properties.available, true)
+      )
+    ).limit(1);
+  }
+  if (existing.length === 0 && finalInsertData.rawText && finalInsertData.rawText.trim().length > 25) {
+    existing = await db.select().from(properties).where(
+      and6(
+        eq10(properties.rawText, finalInsertData.rawText.trim()),
+        eq10(properties.available, true)
+      )
+    ).limit(1);
+  }
+  if (existing.length === 0) {
+    existing = await db.select().from(properties).where(
+      and6(
+        eq10(properties.idUsuarioWhatsapp, rawPhone),
+        eq10(properties.propertyType, finalInsertData.propertyType),
+        eq10(properties.transactionType, finalInsertData.transactionType),
+        eq10(properties.city, finalInsertData.city),
+        eq10(properties.zone, finalInsertData.zone),
+        eq10(properties.available, true)
+      )
+    ).limit(1);
+  }
+  const { label: calif } = calcularCalificacionCompletitud(finalInsertData, true);
+  const insertDataWithCalif = {
+    ...finalInsertData,
+    calificacion: calif
+  };
+  if (existing.length > 0) {
+    const preservedContact = preserveVerifiedAdvisorContact(
+      existing[0].idUsuarioWhatsapp,
+      existing[0].nombreUsuarioWhatsapp,
+      insertDataWithCalif.idUsuarioWhatsapp,
+      insertDataWithCalif.nombreUsuarioWhatsapp
+    );
+    const updatedCount = (existing[0].republicacionesCount || 0) + 1;
+    const [updated] = await db.update(properties).set({
+      available: true,
+      // Regla Doctrinal v31.108: Si el autor u otro asesor lo republica, se revive disponible desde cero
+      price: insertDataWithCalif.price,
+      description: insertDataWithCalif.description || existing[0].description,
+      adminFee: insertDataWithCalif.adminFee || existing[0].adminFee,
+      images: finalImages.length > 0 ? finalImages : existing[0].images,
+      origenTipo: insertDataWithCalif.origenTipo,
+      origenId: insertDataWithCalif.origenId,
+      origenNombre: insertDataWithCalif.origenNombre || existing[0].origenNombre,
+      idUsuarioWhatsapp: preservedContact.effectivePhone || existing[0].idUsuarioWhatsapp,
+      nombreUsuarioWhatsapp: preservedContact.effectiveName || existing[0].nombreUsuarioWhatsapp,
+      fechaUltimaPublicacion: getColombiaNow(),
+      updatedAt: /* @__PURE__ */ new Date(),
+      republicacionesCount: updatedCount,
+      estadoComercial: "REPUBLICADO",
+      ultimaActividad: "REPUBLICACI\xD3N",
+      vigenciaIa: "VIGENTE"
+    }).where(eq10(properties.id, existing[0].id)).returning();
+    console.log(`[Deduplication] Propiedad existente detectada (${canonicalExternalId || "Comercial"}). Actualizando datos (ID: ${updated.id}, Republicado: ${updatedCount}, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
+    try {
+      await db.insert(propertyPublicationHistory).values({
+        propertyId: existing[0].id,
+        grupo: insertDataWithCalif.origenNombre,
+        broker: realName,
+        brokerPhone: rawPhone,
+        accion: "REPUBLICACI\xD3N",
+        portal,
+        externalListingId,
+        detalles: `Inmueble republicado en ${insertDataWithCalif.origenNombre || "WhatsApp"}. Precio: ${insertDataWithCalif.price}`
+      });
+    } catch (histErr) {
+      console.error("[JanIA-History] Error al registrar historial de republicaci\xF3n:", histErr);
+    }
+    findMatchesForProperty(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para propiedad:", mErr));
+    return updated;
+  }
+  const [result] = await db.insert(properties).values(insertDataWithCalif).returning();
+  findMatchesForProperty(result.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error calculando matches para propiedad:", mErr));
+  try {
+    await db.insert(propertyPublicationHistory).values({
+      propertyId: result.id,
+      grupo: insertDataWithCalif.origenNombre,
+      broker: realName,
+      brokerPhone: rawPhone,
+      accion: "PUBLICACI\xD3N",
+      portal,
+      externalListingId,
+      detalles: `Inmueble ingresado por primera vez desde ${insertDataWithCalif.origenNombre || "WhatsApp"}. Precio: ${insertDataWithCalif.price}`
+    });
+  } catch (histErr) {
+    console.error("[JanIA-History] Error al registrar historial inicial:", histErr);
+  }
+  if (result && imageUrl) {
+    try {
+      await db.insert(propertyImages).values({
+        propertyId: result.id,
+        imageUrl,
+        isMainImage: true,
+        displayOrder: 1,
+        mimeType: "image/jpeg",
+        uploadedBy: "janIA"
+      });
+      console.log(`[JanIA-SaveProperty] Registro en propertyImages creado para propiedad ${result.id}`);
+    } catch (err) {
+      console.error("[JanIA-SaveProperty] Error creando registro en propertyImages:", err);
+    }
+  }
+  return result;
+}
+async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, pdfMimeType) {
+  const db = await getDb();
+  if (!db) return null;
+  if (isNonRealEstateText(data.rawText) || isNonRealEstateText(data.name)) {
+    console.log(`[JanIA-Reject] \u{1F6AB} Requerimiento descartado: mensaje no corresponde a finca ra\xEDz (materiales/canteras/maquinaria): ${data.name || data.rawText}`);
+    return null;
+  }
+  const rawTextContent = `${data.rawText || ""} ${data.name || ""}`;
+  const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
+  const rawPhone = effectivePhone;
+  const user = await findOrCreateUserByPhone(effectivePhone, realName);
+  let reqPdfUrl;
+  if (pdfBuffer) {
+    try {
+      const buffer = Buffer.from(pdfBuffer, "base64");
+      const filename = `documents/req_doc_${Date.now()}_${rawPhone}.pdf`;
+      const uploadResult = await storagePut(filename, buffer, pdfMimeType || "application/pdf");
+      reqPdfUrl = uploadResult.url;
+      data.enlaceOrigen = data.enlaceOrigen || reqPdfUrl;
+    } catch (err) {
+      console.error("[JanIA-SaveRequirement] Error subiendo PDF:", err);
+    }
+  }
+  const isRequirementFlyer = !!(data.isFlyerOrBanner || data.flyerVerbatimText && data.flyerVerbatimText.trim().length >= 15);
+  if (imageBuffer && isRequirementFlyer) {
+    try {
+      const buffer = Buffer.from(imageBuffer, "base64");
+      const filename = `flyers/req_wa_${Date.now()}_${rawPhone}.jpg`;
+      const uploadResult = await storagePut(filename, buffer, "image/jpeg");
+      data.enlaceOrigen = uploadResult.url;
+      console.log(`[JanIA-SaveRequirement] \u2705 Flyer de requerimiento guardado localmente en VPS: ${uploadResult.url}`);
+    } catch (err) {
+      console.error("[JanIA-SaveRequirement] Error subiendo imagen:", err);
+    }
+  }
+  const rawLowerAll = `${rawTextContent} ${data.name || ""}`.toLowerCase();
+  const reqNoTerceriaMatch = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawLowerAll);
+  const reqRequiresObligatoryStudy = /\b(?:con\s*estudio\s*obligatorio|estudio\s*obligatorio|exige\s*estudio|estudio\s*indispensable|estudio\s*ojal[aá]\s*cerrado)\b/i.test(rawLowerAll);
+  const reqHasStudy = reqRequiresObligatoryStudy || rawLowerAll.includes("estudio") || rawLowerAll.includes("star de tv") || rawLowerAll.includes("estar de tv") || rawLowerAll.includes("sala de tv");
+  const reqPisoMinMatch = rawLowerAll.match(/(?:unicamente\s*ven\s*opciones\s*del\s*piso|del\s*piso|piso|pisos)\s*(\d{1,2})\s*(?:hacia\s*arriba|en\s*adelante|o\s*superior|\+|\s*mas)\b/i);
+  const reqPisoMin = reqPisoMinMatch ? parseInt(reqPisoMinMatch[1], 10) : null;
+  const reqRequiresExterior = /\b(?:muy\s*luminoso|vista\s*agradable|vista\s*exterior|exterior\s*muy\s*iluminado|vista\s*panor[aá]mica|exterior|sin\s*interior)\b/i.test(rawLowerAll);
+  const reqAdminFeeInc = /(?:admin(?:istraci[oó]n)?|admon)\s*(?:incluida|inc\b)|(?:con|\+|mas|más)\s*(?:admin(?:istraci[oó]n)?|admon)/i.test(rawLowerAll);
+  const reqIsAmoblado = /\b(?:amoblado|amoblada|con\s*muebles)\b/i.test(rawLowerAll);
+  const characteristicsObj = {
+    gives: data.gives || data.caracteristicasDeseadas?.gives,
+    wants: data.wants || data.caracteristicasDeseadas?.wants,
+    interiorExterior: data.interiorExterior || data.caracteristicasDeseadas?.interiorExterior || (reqRequiresExterior ? "exterior" : null),
+    cuartoBanoServicio: data.cuartoBanoServicio || data.caracteristicasDeseadas?.cuartoBanoServicio,
+    cocina: data.cocina || data.caracteristicasDeseadas?.cocina,
+    lavanderiaIndependiente: data.lavanderiaIndependiente || data.caracteristicasDeseadas?.lavanderiaIndependiente,
+    tipoPisos: data.tipoPisos || data.caracteristicasDeseadas?.tipoPisos,
+    depositos: data.depositos || data.caracteristicasDeseadas?.depositos,
+    comisiones: data.comisiones || data.caracteristicasDeseadas?.comisiones,
+    antiguedad: data.antiguedad || data.caracteristicasDeseadas?.antiguedad,
+    estudio: reqRequiresObligatoryStudy ? "obligatorio" : reqHasStudy ? "deseado" : null,
+    pisoMinimo: reqPisoMin,
+    adminFeeIncluded: reqAdminFeeInc,
+    amoblado: reqIsAmoblado ? true : rawLowerAll.includes("sin amoblar") ? false : null
+  };
+  if (!data.zonaDeseada && (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogot\xE1" || data.zone.toLowerCase() === "colombia")) {
+    const geoInferred = resolveIntersectionToBarrio(data.rawText || data.name);
+    if (geoInferred) {
+      data.zonaDeseada = geoInferred.barrio;
+      data.addressNeighborhood = geoInferred.barrio;
+      data.addressLocality = geoInferred.localidad;
+      data.ciudadDeseada = data.ciudadDeseada || geoInferred.ciudad;
+      console.log(`[JanIA-GeoResolver] \u{1F9ED} Requerimiento: cruce vial deducido exitosamente: '${(data.rawText || "").slice(0, 45)}...' \u2192 Barrio: ${geoInferred.barrio} | Localidad: ${geoInferred.localidad} | Ciudad: ${geoInferred.ciudad}`);
+    }
+  }
+  const canonicalReqPhone = normalizeAdvisorPhone(rawPhone) || normalizeAdvisorPhone(data.idUsuarioWhatsapp) || (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : data.idUsuarioWhatsapp || rawPhone);
+  const knownReqAdvisor = lookupAdvisorSync(canonicalReqPhone || data.idUsuarioWhatsapp, realName || data.nombreUsuarioWhatsapp);
+  const finalEffectiveReqName = realName && !isGenericName(realName) ? realName.trim() : data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp) ? data.nombreUsuarioWhatsapp.trim() : knownReqAdvisor?.name && !isGenericName(knownReqAdvisor.name) ? knownReqAdvisor.name : realName || null;
+  const rawCombinedReqText = `${data.rawText || ""} ${data.name || ""}`;
+  const fallbackReqD = extractFallbackDataFromText(rawCombinedReqText);
+  const insertData = {
+    ...data,
+    name: safeSlice(data.name, 255) || null,
+    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city || fallbackReqD.city || "Bogot\xE1", 100) || "Bogot\xE1",
+    zonaDeseada: (() => {
+      const explicit = data.zonaDeseada || data.zone || data.addressNeighborhood;
+      if (explicit && !isCityOrGenericZone(explicit)) {
+        return safeSlice(extractPureBarrio(explicit) || explicit, 100);
+      }
+      if (fallbackReqD.zonaDeseada && !isCityOrGenericZone(fallbackReqD.zonaDeseada)) {
+        return safeSlice(extractPureBarrio(fallbackReqD.zonaDeseada) || fallbackReqD.zonaDeseada, 100);
+      }
+      return null;
+    })(),
+    addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
+    addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
+    addressNeighborhood: (() => {
+      const explicit = data.addressNeighborhood || data.address_neighborhood || (fallbackReqD.zonaDeseada && !isCityOrGenericZone(fallbackReqD.zonaDeseada) ? fallbackReqD.zonaDeseada : null);
+      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 150);
+      return null;
+    })(),
+    enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
+    idUsuarioWhatsapp: safeSlice(canonicalReqPhone, 100) || null,
+    nombreUsuarioWhatsapp: safeSlice(finalEffectiveReqName, 255) || null,
+    tipoInmuebleDeseado: sanitizePropertyType(data.tipoInmuebleDeseado || data.propertyType),
+    tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
+    tiposNegocioAceptados: sanitizeTransactionTypes(data.transactionTypes || data.tipoNegocioDeseado || data.transactionType),
+    monedaPresupuesto: sanitizeCurrency(data.monedaPresupuesto || data.currency),
+    // Mapear campos con Sanidad Numérica Post-Extracción (Bug #6 Fix)
+    presupuestoMin: (() => {
+      const raw = data.presupuestoMin !== void 0 && data.presupuestoMin !== null ? data.presupuestoMin : null;
+      if (raw !== void 0 && raw !== null) {
+        const v = parseFloat(String(raw));
+        if (!isNaN(v) && v >= 3e5 && v <= 5e10 && !isPhoneNumberNotPrice(v, data.rawText)) {
+          return String(v);
+        }
+      }
+      if (fallbackReqD.presupuestoMin >= 3e5) {
+        return String(fallbackReqD.presupuestoMin);
+      }
+      return null;
+    })(),
+    presupuestoMax: (() => {
+      const raw = data.presupuestoMax !== void 0 && data.presupuestoMax !== null ? data.presupuestoMax : data.price;
+      if (raw !== void 0 && raw !== null) {
+        const v = parseFloat(String(raw));
+        if (!isNaN(v) && v >= 3e5 && v <= 5e10 && !isPhoneNumberNotPrice(v, data.rawText)) {
+          return String(v);
+        }
+      }
+      if (fallbackReqD.presupuestoMax >= 3e5) {
+        return String(fallbackReqD.presupuestoMax);
+      }
+      return null;
+    })(),
+    areaMin: (() => {
+      const raw = data.areaMin !== void 0 && data.areaMin !== null ? data.areaMin : data.area;
+      if (raw !== void 0 && raw !== null) {
+        const v = parseFloat(String(raw));
+        if (!isNaN(v) && v >= 10 && v <= 5e3) return String(v);
+      }
+      if (fallbackReqD.areaMin > 0 || fallbackReqD.area > 0) {
+        return String(fallbackReqD.areaMin || fallbackReqD.area);
+      }
+      const rawL = (data.rawText || data.name || "").toLowerCase();
+      const areaFallback = rawL.match(
+        /(?:(?:m[ií]nimo|m[aá]s\s*de|min(?:imo)?|m[aá]x(?:imo)?|de|desde|con|metraje\s*(?:m[ií]nimo|min(?:imo)?))\s*[:=-]?\s*)([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i
+      );
+      if (areaFallback) {
+        const v = parseFloat(areaFallback[1].replace(",", "."));
+        if (!isNaN(v) && v >= 10 && v <= 5e3) return String(v);
+      }
+      return null;
+    })(),
+    adminFeeMax: (() => {
+      const raw = data.adminFeeMax !== void 0 && data.adminFeeMax !== null ? data.adminFeeMax : data.adminFee !== void 0 && data.adminFee !== null ? data.adminFee : null;
+      if (raw !== void 0 && raw !== null) {
+        let v = parseFloat(String(raw));
+        if (!isNaN(v)) {
+          if (v >= 500 && v <= 15e3) v = v * 1e3;
+          if (v >= 1e4 && v <= 3e7) return String(v);
+        }
+      }
+      const rawL = (data.rawText || data.name || "").toLowerCase();
+      const parsedAdminInfo = parseAdminFee(rawL);
+      if (parsedAdminInfo.fee && parsedAdminInfo.fee >= 1e4 && parsedAdminInfo.fee <= 3e7 && !isPhoneNumberNotPrice(parsedAdminInfo.fee, rawL)) {
+        return String(parsedAdminInfo.fee);
+      }
+      const adminMatch = rawL.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*:?\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|menor\s*a)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:\s*mil\b|\s*k\b|\s*millones\b|-|\s|\(|\/|\+|$|\n)/i);
+      if (adminMatch) {
+        const cleanNum = adminMatch[1].replace(/[.,\s]/g, "");
+        let parsed = parseFloat(cleanNum);
+        if (!isNaN(parsed)) {
+          if (parsed >= 500 && parsed <= 15e3) parsed = parsed * 1e3;
+          if (parsed >= 1e4 && parsed <= 3e7 && !isPhoneNumberNotPrice(parsed, rawL)) {
+            return String(parsed);
+          }
+        }
+      }
+      return null;
+    })(),
+    habitacionesMin: (() => {
+      const v = data.habitacionesMin !== void 0 && data.habitacionesMin !== null ? Math.round(Number(data.habitacionesMin)) : data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null;
+      if (v !== null && !isNaN(v) && v > 0) return v;
+      if (fallbackReqD.bedroomsMin > 0 || fallbackReqD.bedrooms > 0) {
+        return fallbackReqD.bedroomsMin || fallbackReqD.bedrooms;
+      }
+      const rawL = (data.rawText || "").toLowerCase();
+      const m = rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
+      if (m) {
+        const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
+        const w = m[0].split(/\s+/)[0].toLowerCase();
+        return SPANISH_NUM_LOCAL[w] || parseInt(w, 10) || null;
+      }
+      return null;
+    })(),
+    banosMin: (() => {
+      const rawL = (data.rawText || "").toLowerCase();
+      const socialAddMatch = rawL.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
+      if (socialAddMatch) {
+        const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
+        const bWord = socialAddMatch[1].toLowerCase();
+        const base = SPANISH_NUM_LOCAL[bWord] || parseInt(bWord, 10) || 2;
+        return base + 1;
+      }
+      const v = data.banosMin !== void 0 && data.banosMin !== null ? Number(data.banosMin) : data.bathrooms !== void 0 && data.bathrooms !== null ? Number(data.bathrooms) : null;
+      if (v !== null && !isNaN(v) && v > 0) {
+        if (v === 5 && rawL.includes("2.5")) return 3;
+        return Math.round(v);
+      }
+      if (fallbackReqD.bathrooms > 0) {
+        return fallbackReqD.bathrooms;
+      }
+      const m = rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+(?:[\.,]\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+)\s*hab\s*con\s*baño/i);
+      if (m) {
+        const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
+        const w = m[0].split(/\s+/)[0].toLowerCase();
+        const num = SPANISH_NUM_LOCAL[w] || parseFloat(w.replace(",", "."));
+        if (!isNaN(num) && num > 0) {
+          if (num % 1 !== 0) return Math.ceil(num);
+          return Math.round(num);
+        }
+      }
+      return null;
+    })(),
+    parqueaderosMin: (() => {
+      const v = data.parqueaderosMin !== void 0 && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : data.garages !== void 0 && data.garages !== null ? Math.round(Number(data.garages)) : null;
+      if (v !== null && !isNaN(v) && v > 0) return v;
+      if (fallbackReqD.garages > 0) {
+        return fallbackReqD.garages;
+      }
+      const rawL = (data.rawText || "").toLowerCase();
+      const m = rawL.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i) || rawL.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
+      return m ? parseInt(m[1], 10) : null;
+    })(),
+    estratoDeseado: (() => {
+      const rawT = (data.rawText || "").toLowerCase();
+      const hasExplicitStratum = /(?:estrato|estr\.?|e\s*[1-6]\b)\s*:?\s*([1-6]|uno|dos|tres|cuatro|cinco|seis)\b/i.test(rawT) || /\b(?:estrato|estr\.?)\s*(?:alto|medio|bajo)\b/i.test(rawT);
+      if (!hasExplicitStratum) {
+        return null;
+      }
+      if (data.estratoDeseado && Array.isArray(data.estratoDeseado) && data.estratoDeseado.length > 0) {
+        return data.estratoDeseado.map((e) => Math.round(Number(e))).filter((e) => !isNaN(e) && e >= 1 && e <= 6);
+      }
+      if (data.stratum !== void 0 && data.stratum !== null && !isNaN(Number(data.stratum))) {
+        const s = Math.round(Number(data.stratum));
+        if (s >= 1 && s <= 6) return [s];
+      }
+      return null;
+    })(),
+    userId: user ? user.id : null,
+    caracteristicasDeseadas: characteristicsObj,
+    origenTipo: data.origenTipo || null,
+    origenId: data.origenId || null,
+    origenNombre: data.origenNombre || null,
+    fechaExtraccion: data.fechaExtraccion || getColombiaNow(),
+    aceptaTerceria: data.aceptaTerceria !== void 0 ? Boolean(data.aceptaTerceria) : !reqNoTerceriaMatch,
+    standByDirectoVecy: data.standByDirectoVecy !== void 0 ? Boolean(data.standByDirectoVecy) : reqNoTerceriaMatch
+  };
+  const rawZoneStr = (insertData.zonaDeseada || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const rawTextStr = (insertData.rawText || "").toLowerCase();
+  const isAmbiguousZoneName = (zn) => {
+    if (!zn || zn === "n/e" || zn === "na" || zn === "bogota" || zn === "bogota, d.c." || zn === "colombia") return true;
+    const ambiguousPhrases = [
+      "todas las zonas",
+      "cualquier zona",
+      "cualquier lado",
+      "donde sea",
+      "varias zonas",
+      "por ahi",
+      "por ah\xED",
+      "buena zona",
+      "sector residencial",
+      "sector comercial",
+      "norte o sur",
+      "donde haya",
+      "cualquiera"
+    ];
+    return ambiguousPhrases.some((a) => zn.includes(a));
+  };
+  const hasPerimeterOrStreet = /calle\s*\d+|carrera\s*\d+|cra\s*\d+|cll\s*\d+|cl\s*\d+|diagonal\s*\d+|transversal\s*\d+|entre\s*calle|perimetro|perímetro/i.test(rawTextStr);
+  const isZoneAmbiguous = isAmbiguousZoneName(rawZoneStr);
+  if (isZoneAmbiguous && !hasPerimeterOrStreet && !insertData.presupuestoMax && !insertData.areaMin && !insertData.habitacionesMin) {
+    console.log(`[JANIA-INGESTION-GUARD] \u26D4 Requerimiento omitido por falta de ubicaci\xF3n expl\xEDcita o especificaciones prediales completas ("${insertData.rawText?.substring(0, 60)}...")`);
+    return null;
+  }
+  let existing = [];
+  if (insertData.rawText && insertData.rawText.trim().length > 25) {
+    existing = await db.select().from(requirements).where(
+      eq10(requirements.rawText, insertData.rawText.trim())
+    ).limit(1);
+  }
+  if (existing.length === 0) {
+    existing = await db.select().from(requirements).where(
+      and6(
+        eq10(requirements.idUsuarioWhatsapp, rawPhone),
+        eq10(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
+        eq10(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
+        eq10(requirements.ciudadDeseada, insertData.ciudadDeseada),
+        eq10(requirements.zonaDeseada, insertData.zonaDeseada)
+      )
+    ).limit(1);
+  }
+  const { label: calif } = calcularCalificacionCompletitud(insertData, false);
+  const insertDataWithCalif = {
+    ...insertData,
+    calificacion: calif
+  };
+  if (existing.length > 0) {
+    const preservedContact = preserveVerifiedAdvisorContact(
+      existing[0].idUsuarioWhatsapp,
+      existing[0].nombreUsuarioWhatsapp,
+      insertDataWithCalif.idUsuarioWhatsapp,
+      insertDataWithCalif.nombreUsuarioWhatsapp
+    );
+    const { fechaExtraccion: _ignored, ...updateFields } = insertDataWithCalif;
+    const repCount = (existing[0].republicacionesCount || 0) + 1;
+    const [updated] = await db.update(requirements).set({
+      ...updateFields,
+      idUsuarioWhatsapp: preservedContact.effectivePhone || existing[0].idUsuarioWhatsapp,
+      nombreUsuarioWhatsapp: preservedContact.effectiveName || existing[0].nombreUsuarioWhatsapp,
+      status: "active",
+      // Al ser republicado o actualizado, se reactiva a activo de inmediato
+      fechaUltimaPublicacion: getColombiaNow(),
+      republicacionesCount: repCount,
+      updatedAt: /* @__PURE__ */ new Date()
+    }).where(eq10(requirements.id, existing[0].id)).returning();
+    console.log(`[Deduplication] Requerimiento existente detectado y reactivado (ID: ${updated.id}, Republicaciones: ${repCount}, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
+    findMatchesForRequirement(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
+    return updated;
+  }
+  const insertDataFinal = {
+    ...insertDataWithCalif,
+    fechaPrimeraPublicacion: getColombiaNow(),
+    fechaUltimaPublicacion: getColombiaNow(),
+    republicacionesCount: 0,
+    status: "active"
+  };
+  const [result] = await db.insert(requirements).values(insertDataFinal).returning();
+  findMatchesForRequirement(result.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error calculando matches para requerimiento:", mErr));
+  return result;
 }
 async function processWhatsAppMessage(text2, userId, userName, hasMedia = false, scrapedData = [], audioUrl, imageBuffer, isGroup = false, pdfBuffer, pdfMimeType, groupJid, groupName, flyerVisionData) {
   try {
@@ -20615,7 +23651,7 @@ __is_sub_message__`,
     const realName = await resolveRealName(userId, userName);
     const alreadyGreeted = await checkAlreadyGreeted(userId);
     const senderInfo = analyzeSender(realName, userId, alreadyGreeted);
-    const n = extractFirstName2(realName) || "colega";
+    const n = extractFirstName(realName) || "colega";
     const session = await getPendingSession(userId);
     if (session) {
       const combinedText = session.messageToProcess + " \n[COMPLEMENTO]: " + text2;
@@ -20644,11 +23680,11 @@ __is_sub_message__`,
       try {
         const db = await getDb();
         if (!db) throw new Error("DB no disponible");
-        const recentProps = await db.select({ id: properties.id, rawText: properties.rawText, origenNombre: properties.origenNombre }).from(properties).where(and5(
-          eq8(properties.idUsuarioWhatsapp, userId.split("@")[0]),
-          gte(properties.createdAt, TEN_MIN_AGO),
-          eq8(properties.available, true)
-        )).orderBy(desc3(properties.createdAt)).limit(1);
+        const recentProps = await db.select({ id: properties.id, rawText: properties.rawText, origenNombre: properties.origenNombre }).from(properties).where(and6(
+          eq10(properties.idUsuarioWhatsapp, userId.split("@")[0]),
+          gte2(properties.createdAt, TEN_MIN_AGO),
+          eq10(properties.available, true)
+        )).orderBy(desc4(properties.createdAt)).limit(1);
         if (recentProps.length > 0) {
           const prop = recentProps[0];
           const portalInfo = extractPortalAndListingId(soloUrl);
@@ -20664,7 +23700,7 @@ ${soloUrl}`;
             origenId: groupJid || void 0,
             ...portalInfo?.portal ? { portal: portalInfo.portal } : {},
             ...portalInfo?.listingId ? { externalListingId: portalInfo.listingId } : {}
-          }).where(eq8(properties.id, prop.id));
+          }).where(eq10(properties.id, prop.id));
           console.log(`[JanIA-URLDiferida] \u2705 URL de portal enlazada retroactivamente a Prop #${prop.id} de ${userId}: ${soloUrl}`);
           return { classification: "INMUEBLE", response: "", reactionEmoji: "\u{1F517}", inserted: false };
         }
@@ -21022,7 +24058,7 @@ Se ha adjuntado una imagen. Anal\xEDzala con visi\xF3n artificial avanzada y det
       contextText += `
 ${statsSummary}`;
     }
-    const firstName = extractFirstName2(realName) || "colega";
+    const firstName = extractFirstName(realName) || "colega";
     const bogotaTime = (/* @__PURE__ */ new Date()).toLocaleString("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit", hour12: false });
     const userGender = senderInfo.adj === "juiciosa" ? "Femenino" : senderInfo.adj === "juicioso" ? "Masculino" : "No Especificado";
     const outsideHours = isWebUser ? false : isOutsideWorkingHours();
@@ -21056,7 +24092,7 @@ Est\xE1s interactuando con el usuario directamente en la CONSOLA WEB de VECY Bie
 - Si el usuario te env\xEDa un inmueble o requerimiento, extrae los datos para el sistema y dale una respuesta rica, entusiasta y completa confirmando la informaci\xF3n.`;
     }
     if (!isWebUser && !alreadyGreeted && outsideHours && !isGroup) {
-      const saludo = getGreetingByTime3();
+      const saludo = getGreetingByTime();
       contextText += `
 [INSTRUCCI\xD3N CR\xCDTICA DE PRESENTACI\xD3N FUERA DE HORARIO]:
 Como esta es tu primera interacci\xF3n con este usuario el d\xEDa de hoy, y nos encontramos fuera de horario de oficina, debes presentarte de manera muy c\xE1lida y entusiasta al inicio de tu respuesta:
@@ -21849,2824 +24885,155 @@ ${greetingPrefix}, veo que tienes una consulta jur\xEDdica, procedimental o de a
     return { classification: "CONSULTA_GENERAL", response: "", mentions: [] };
   }
 }
-function resolveContactPhone(userId, rawText, userName, extractedPhone) {
-  const cleanUserId = userId.split(":")[0].split("@")[0];
-  const isLid = isLidIdentifier(cleanUserId) || userId.includes("@lid");
-  const phoneFromText = extractColombianPhoneFromText(rawText);
-  if (phoneFromText) {
-    brokerDirectoryCache.set(cleanUserId, { phone: phoneFromText, name: userName });
-    if (userName && !isGenericName(userName)) brokerDirectoryCache.set(userName, { phone: phoneFromText, name: userName });
-    saveOrUpdateAdvisor({
-      phone: phoneFromText,
-      name: userName,
-      oldPhoneOrLid: cleanUserId
-    }).catch((err) => console.warn(`[AdvisorsCore] Auto-registro desde texto:`, err?.message));
-    return phoneFromText;
-  }
-  if (extractedPhone) {
-    const cleanExt = normalizeAdvisorPhone(extractedPhone);
-    if (cleanExt) {
-      brokerDirectoryCache.set(cleanUserId, { phone: cleanExt, name: userName });
-      saveOrUpdateAdvisor({
-        phone: cleanExt,
-        name: userName,
-        oldPhoneOrLid: cleanUserId
-      }).catch((err) => console.warn(`[AdvisorsCore] Auto-registro desde LLM:`, err?.message));
-      return cleanExt;
-    }
-  }
-  const cached = lookupAdvisorSync(cleanUserId, userName);
-  if (cached && cached.phone) {
-    return cached.phone;
-  }
-  if (!isLid && (cleanUserId.startsWith("573") || cleanUserId.startsWith("3"))) {
-    const p = cleanUserId.startsWith("3") && cleanUserId.length === 10 ? `57${cleanUserId}` : cleanUserId;
-    brokerDirectoryCache.set(cleanUserId, { phone: p, name: userName });
-    return p;
-  }
-  return cleanUserId;
-}
-async function initBrokerDirectory() {
-  try {
-    await initAdvisorsDirectory();
-  } catch (err) {
-    console.warn(`[JanIA-Directory] Advertencia cargando directorio inicial:`, err?.message || err);
-  }
-}
-async function propagateBrokerPhoneAcrossAllListings(params) {
-  const result = await saveOrUpdateAdvisor({
-    phone: params.rawPhoneOrText,
-    name: params.brokerName,
-    oldPhoneOrLid: params.oldPhoneOrLid,
-    sourceGroup: params.sourceGroup,
-    agency: params.agency,
-    notes: params.notes
-  });
-  return {
-    updatedProps: result.updatedProps,
-    updatedReqs: result.updatedReqs,
-    cleanPhone: result.cleanPhone
-  };
-}
-async function findOrCreateUserByPhone(phone, realName) {
-  const db = await getDb();
-  if (!db) return null;
-  const cleanPhone = phone.split(":")[0];
-  let user = await db.select().from(users).where(eq8(users.phone, cleanPhone)).limit(1).then((r) => r[0]);
-  if (!user) {
-    user = await db.select().from(users).where(eq8(users.openId, `wa-${cleanPhone}`)).limit(1).then((r) => r[0]);
-  }
-  if (!user) {
-    const openId = `wa-${cleanPhone}`;
-    console.log(`[JanIA-findOrCreateUserByPhone] Creando nuevo usuario para WhatsApp: ${realName} (+${cleanPhone})`);
-    try {
-      const [newUser] = await db.insert(users).values({
-        openId,
-        name: realName,
-        phone: cleanPhone,
-        role: "agent",
-        loginMethod: "whatsapp"
-      }).returning();
-      user = newUser;
-    } catch (insertErr) {
-      if (insertErr.code === "23505" || String(insertErr).includes("unique constraint")) {
-        console.log(`[JanIA-findOrCreateUserByPhone] Colisi\xF3n concurrente detectada para ${cleanPhone}. Re-buscando usuario...`);
-        user = await db.select().from(users).where(eq8(users.openId, openId)).limit(1).then((r) => r[0]);
-      } else {
-        throw insertErr;
-      }
-    }
-  } else {
-    if (realName && !isGenericName(realName) && isGenericName(user.name)) {
-      console.log(`[JanIA-findOrCreateUserByPhone] Actualizando nombre de usuario para ID ${user.id} a ${realName}`);
-      const [updatedUser] = await db.update(users).set({ name: realName }).where(eq8(users.id, user.id)).returning();
-      user = updatedUser;
-    }
-  }
-  return user;
-}
-function sanitizePropertyType(type) {
-  if (!type) return "apartment";
-  const t2 = type.toLowerCase().trim();
-  if (t2 === "consultorio" || t2.includes("consultorio") || t2.includes("odontol") || t2.includes("m\xE9dic") || t2.includes("medic") || t2 === "office_medical") return "consultorio";
-  if (t2 === "cabin" || t2.includes("caba\xF1a") || t2.includes("cabana") || t2.includes("caba\xF1as") || t2.includes("cabanas")) return "cabin";
-  if (t2 === "house" || t2 === "casa" || t2.includes("chalet") || t2.includes("quinta") || t2.includes("campestre")) return "house";
-  if (t2 === "building" || t2 === "edificio") return "building";
-  if (t2 === "warehouse" || t2 === "bodega") return "warehouse";
-  if (t2 === "farm" || t2 === "finca") return "farm";
-  if (t2 === "hotel" || t2.includes("hostal") || t2.includes("hospedaje") || t2.includes("motel") || t2.includes("hostel")) return "hotel";
-  if (t2 === "office" || t2 === "oficina" || t2.includes("oficina")) return "office";
-  if (t2 === "land" || t2 === "lote" || t2 === "terreno" || t2.includes("lote") || t2.includes("terreno")) return "land";
-  if (t2 === "commercial" || t2 === "local" || t2 === "locales" || t2.includes("local comercial") || t2.includes("locales comerciales") || t2 === "comercial" || t2.includes("local")) return "commercial";
-  if (t2 === "loft" || t2.includes("loft") || t2.includes("apartaestudio") || t2.includes("apartasuite")) return "loft";
-  if (t2 === "apartment" || t2 === "apartamento" || t2 === "apto" || t2.includes("apto") || t2.includes("apartamento") || t2.includes("penthouse")) return "apartment";
-  return "apartment";
-}
-function sanitizeTransactionType(type) {
-  if (!type) return "venta";
-  const t2 = type.toLowerCase().trim().replace(/\s+/g, "_");
-  if (t2 === "venta" || t2 === "vender" || t2 === "compra" || t2 === "comprar") return "venta";
-  if (t2 === "venta_o_arriendo" || t2.includes("venta_o_arriendo") || t2.includes("venta o arriendo") || t2.includes("vendo o arriendo") || t2.includes("venta_arriendo")) return "venta_o_arriendo";
-  if (t2 === "arriendo_con_opcion_de_compra" || t2.includes("opcion_de_compra") || t2.includes("opcion de compra") || t2.includes("opci\xF3n de compra") || t2.includes("con opcion") || t2.includes("con opci\xF3n")) return "arriendo_con_opcion_de_compra";
-  if (t2 === "arriendo" || t2 === "alquiler" || t2 === "renta" || t2 === "rentar" || t2 === "arrendar") return "arriendo";
-  if (t2 === "arriendo_temporal" || t2 === "temporal" || t2 === "vacacional" || t2 === "vacaciones") return "arriendo_temporal";
-  if (t2 === "venta_permuta" || t2.includes("venta_permuta") || t2.includes("venta permuta") || t2.includes("venpermuto") || t2.includes("venta") && t2.includes("permuta")) return "venta_permuta";
-  if (t2 === "permuta" || t2 === "permuto" || t2 === "cambio" || t2.includes("permuta")) return "permuta";
-  if (t2 === "aporte" || t2.includes("aporte") || t2 === "proyecto") return "aporte";
-  return "venta";
-}
-function sanitizeTransactionTypes(raw) {
-  const input = Array.isArray(raw) ? raw.join(" ") : raw || "";
-  const n = input.toLowerCase();
-  const result = [];
-  if (n.includes("venta o arriendo") || n.includes("vendo o arriendo") || n.includes("venta_o_arriendo")) result.push("venta_o_arriendo");
-  if (n.includes("opcion de compra") || n.includes("opci\xF3n de compra") || n.includes("con opcion") || n.includes("con opci\xF3n") || n.includes("arriendo_con_opcion")) result.push("arriendo_con_opcion_de_compra");
-  if (n.includes("venta") && n.includes("permuta") || n.includes("venta_permuta") || n.includes("venpermuto")) result.push("venta_permuta");
-  const hasVentaOArriendo = result.includes("venta_o_arriendo");
-  const hasVentaPermuta = result.includes("venta_permuta");
-  if (!hasVentaOArriendo && !hasVentaPermuta) {
-    if (n.includes("venta") || n.includes("vender") || n.includes("compra") || n.includes("comprar")) result.push("venta");
-  }
-  if (!hasVentaOArriendo && !result.includes("arriendo_con_opcion_de_compra")) {
-    if (n.includes("arriendo") || n.includes("alquiler") || n.includes("renta") || n.includes("rentar")) result.push("arriendo");
-  }
-  if (n.includes("temporal") || n.includes("vacacional") || n.includes("vacaciones")) result.push("arriendo_temporal");
-  if (!hasVentaPermuta) {
-    if (n.includes("permuta") || n.includes("permuto") || n.includes("recibo propiedad") || n.includes("recibo vehiculo") || n.includes("parte de pago") || n.includes("cambio de inmueble")) result.push("permuta");
-  }
-  if (n.includes("aporte") || n.includes("participo en proyecto") || n.includes("constructora") || n.includes("unidades a cambio") || n.includes("utilidades")) result.push("aporte");
-  return result.length > 0 ? result : [sanitizeTransactionType(input)];
-}
-function sanitizeCurrency(curr) {
-  if (!curr) return "COP";
-  const c = curr.toUpperCase().trim();
-  if (c === "USD" || c === "DOLARES" || c === "DOLAR") return "USD";
-  return "COP";
-}
-function safeSlice(val, limit) {
-  if (val === void 0 || val === null) return void 0;
-  return String(val).slice(0, limit);
-}
-function calcularCalificacionCompletitud(extracted, isProperty) {
-  if (!extracted) return { score: 0, label: "Mediocre" };
-  let fieldsCount = 7;
-  let presentCount = 0;
-  const priceVal = isProperty ? extracted.price : extracted.presupuestoMax || extracted.presupuestoMin || extracted.price;
-  if (priceVal !== void 0 && priceVal !== null && String(priceVal).trim() !== "" && String(priceVal) !== "0") {
-    presentCount++;
-  }
-  const areaVal = isProperty ? extracted.areaTotal || extracted.area : extracted.areaMin || extracted.area;
-  if (areaVal !== void 0 && areaVal !== null && String(areaVal).trim() !== "" && String(areaVal) !== "0") {
-    presentCount++;
-  }
-  const bedroomsVal = isProperty ? extracted.bedrooms : extracted.habitacionesMin || extracted.bedrooms;
-  if (bedroomsVal !== void 0 && bedroomsVal !== null && String(bedroomsVal).trim() !== "" && Number(bedroomsVal) > 0) {
-    presentCount++;
-  }
-  const bathroomsVal = isProperty ? extracted.bathrooms : extracted.banosMin || extracted.bathrooms;
-  if (bathroomsVal !== void 0 && bathroomsVal !== null && String(bathroomsVal).trim() !== "" && Number(bathroomsVal) > 0) {
-    presentCount++;
-  }
-  const garagesVal = isProperty ? extracted.garages : extracted.parqueaderosMin || extracted.garages;
-  if (garagesVal !== void 0 && garagesVal !== null && String(garagesVal).trim() !== "" && Number(garagesVal) >= 0) {
-    presentCount++;
-  }
-  const zoneVal = isProperty ? extracted.zone : extracted.zonaDeseada || extracted.zone;
-  if (zoneVal !== void 0 && zoneVal !== null && String(zoneVal).trim() !== "" && String(zoneVal).toLowerCase() !== "bogot\xE1" && String(zoneVal).toLowerCase() !== "bogota") {
-    presentCount++;
-  }
-  const contactVal = extracted.idUsuarioWhatsapp;
-  if (contactVal !== void 0 && contactVal !== null && String(contactVal).trim() !== "") {
-    presentCount++;
-  }
-  const score = presentCount / fieldsCount * 100;
-  let label = "Mediocre";
-  if (score < 30) {
-    label = "Mediocre";
-  } else if (score >= 30 && score < 45) {
-    label = "Incompleta";
-  } else if (score >= 45 && score < 60) {
-    label = "Regular";
-  } else if (score >= 60 && score < 70) {
-    label = "Mejor";
-  } else if (score >= 70 && score < 85) {
-    label = "Bien";
-  } else if (score >= 85 && score < 95) {
-    label = "Perfecta";
-  } else {
-    label = "Excelente";
-  }
-  return { score, label };
-}
-function getEmojiForCalificacion(calificacion) {
-  switch (calificacion) {
-    case "Mediocre":
-    case "Incompleta":
-    case "DATOS_INCOMPLETOS":
-      return "\u{1F914}";
-    case "Regular":
-    case "Mejor":
-    case "Bien":
-    case "Perfecta":
-    case "Excelente":
-      return "\u{1F7E2}";
-    case "INVALID_LEAD":
-    case "VIOLACION_DE_NORMAS":
-      return "\u274C";
-    default:
-      return "\u{1F7E2}";
-  }
-}
-function normalizePhoneNumber(rawUserJid, textContent) {
-  if (textContent) {
-    const match = textContent.match(/(?:\+?57\s*)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{4}\b/);
-    if (match) {
-      const cleanDigits = match[0].replace(/\D/g, "");
-      if (cleanDigits.length === 10 && cleanDigits.startsWith("3")) {
-        return cleanDigits;
-      }
-      if (cleanDigits.length === 12 && cleanDigits.startsWith("573")) {
-        return `+${cleanDigits}`;
-      }
-    }
-  }
-  if (rawUserJid) {
-    const clean = String(rawUserJid).split("@")[0].split(":")[0].replace(/\D/g, "");
-    if (!clean.startsWith("11") && !clean.startsWith("1203") && clean.length <= 13) {
-      if (clean.length === 10 && clean.startsWith("3")) {
-        return clean;
-      }
-      if (clean.length === 12 && clean.startsWith("573")) {
-        return `+${clean}`;
-      }
-      if (clean.length >= 10 && clean.length <= 12) {
-        return clean;
-      }
-    }
-  }
-  return "";
-}
-async function handleAmendmentUpdate(userId, text2) {
-  const db = await getDb();
-  if (!db) return false;
-  const rawPhone = userId.split("@")[0].split(":")[0].replace(/\D/g, "");
-  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1e3);
-  const cleanTextLower = text2.toLowerCase().trim();
-  const isAmendmentTrigger = cleanTextLower.startsWith("correccion") || cleanTextLower.startsWith("correcci\xF3n") || cleanTextLower.startsWith("fe de erratas") || cleanTextLower.startsWith("fe de errata") || cleanTextLower.startsWith("rectificacion") || cleanTextLower.startsWith("rectificaci\xF3n") || cleanTextLower.startsWith("ajuste:") || cleanTextLower.startsWith("ajuste ") || cleanTextLower.startsWith("disculpen");
-  if (!isAmendmentTrigger) return false;
-  const fallbackData = extractFallbackDataFromText(text2);
-  const lastReqs = await db.select().from(requirements).where(and5(
-    eq8(requirements.idUsuarioWhatsapp, rawPhone),
-    gte(requirements.createdAt, twoHoursAgo)
-  )).orderBy(desc3(requirements.createdAt)).limit(1);
-  if (lastReqs.length > 0) {
-    const req = lastReqs[0];
-    const updates = {};
-    if (cleanTextLower.includes("parqueadero") && fallbackData.garages > 0) {
-      updates.parqueaderosMin = fallbackData.garages;
-    }
-    if ((cleanTextLower.includes("habitaci\xF3n") || cleanTextLower.includes("habitacion") || cleanTextLower.includes("alcoba")) && fallbackData.bedrooms > 0) {
-      updates.habitacionesMin = fallbackData.bedrooms;
-    }
-    if (cleanTextLower.includes("ba\xF1o") && fallbackData.bathrooms > 0) {
-      updates.banosMin = fallbackData.bathrooms;
-    }
-    if ((cleanTextLower.includes("precio") || cleanTextLower.includes("presupuesto")) && fallbackData.price > 0) {
-      updates.presupuestoMax = String(fallbackData.price);
-    }
-    if ((cleanTextLower.includes("\xE1rea") || cleanTextLower.includes("area")) && fallbackData.area > 0) {
-      updates.areaMin = String(fallbackData.area);
-    }
-    if (Object.keys(updates).length > 0) {
-      updates.updatedAt = /* @__PURE__ */ new Date();
-      await db.update(requirements).set(updates).where(eq8(requirements.id, req.id));
-      console.log(`[JANIA-AMENDMENT] \u2705 Requerimiento #${req.id} actualizado silenciosamente en BD (Ventana 2h):`, updates);
-      const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
-      setImmediate(() => {
-        executeMatchEngine2(null, req.id).catch((err) => console.error("Error executing match engine on amendment:", err));
-      });
-      return true;
-    }
-  }
-  const lastProps = await db.select().from(properties).where(and5(
-    eq8(properties.idUsuarioWhatsapp, rawPhone),
-    gte(properties.createdAt, twoHoursAgo)
-  )).orderBy(desc3(properties.createdAt)).limit(1);
-  if (lastProps.length > 0) {
-    const prop = lastProps[0];
-    const updates = {};
-    if (cleanTextLower.includes("parqueadero") && fallbackData.garages > 0) {
-      updates.garages = fallbackData.garages;
-    }
-    if ((cleanTextLower.includes("habitaci\xF3n") || cleanTextLower.includes("habitacion") || cleanTextLower.includes("alcoba")) && fallbackData.bedrooms > 0) {
-      updates.bedrooms = fallbackData.bedrooms;
-    }
-    if (cleanTextLower.includes("ba\xF1o") && fallbackData.bathrooms > 0) {
-      updates.bathrooms = fallbackData.bathrooms;
-    }
-    if ((cleanTextLower.includes("precio") || cleanTextLower.includes("valor")) && fallbackData.price > 0) {
-      updates.price = String(fallbackData.price);
-    }
-    if ((cleanTextLower.includes("\xE1rea") || cleanTextLower.includes("area")) && fallbackData.area > 0) {
-      updates.areaTotal = String(fallbackData.area);
-    }
-    if (Object.keys(updates).length > 0) {
-      updates.updatedAt = /* @__PURE__ */ new Date();
-      await db.update(properties).set(updates).where(eq8(properties.id, prop.id));
-      console.log(`[JANIA-AMENDMENT] \u2705 Propiedad #${prop.id} actualizada silenciosamente en BD (Ventana 2h):`, updates);
-      const { executeMatchEngine: executeMatchEngine2 } = await Promise.resolve().then(() => (init_matching(), matching_exports));
-      setImmediate(() => {
-        executeMatchEngine2(prop.id, null).catch((err) => console.error("Error executing match engine on amendment:", err));
-      });
-      return true;
-    }
-  }
-  return false;
-}
-async function saveProperty(data, userId, realName, imageBuffer, pdfBuffer, pdfMimeType) {
-  const db = await getDb();
-  if (!db) return null;
-  if (isNonRealEstateText(data.rawText) || isNonRealEstateText(data.name) || isNonRealEstateText(data.description)) {
-    console.log(`[JanIA-Reject] \u{1F6AB} Inmueble descartado: mensaje no corresponde a finca ra\xEDz (materiales/canteras/maquinaria): ${data.name || data.rawText}`);
-    return null;
-  }
-  const rawLower = `${data.rawText || ""} ${data.name || ""}`.toLowerCase();
-  const isStrictDemandInProperty = /\b(?:busco|buscamos|se\s*busca|estoy\s*buscando|estamos\s*buscando|cliente\s*busca|para\s*compra\s*ya|solicito\s*para\s*compra|compro\s*apto|compro\s*casa|necesito\s*apto|requiero\s*apto)\b/i.test(rawLower) && !/\b(?:vendo|se\s*vende|ofrezco\s*(?:en\s*venta|en\s*arriendo)|se\s*arrienda|arriendo)\b/i.test(rawLower);
-  if (isStrictDemandInProperty) {
-    console.error(`[JanIA-Guardrail v31.85] \u26D4 BLOQUEO CR\xCDTICO: Se intent\xF3 guardar una DEMANDA en la tabla properties. Abortando inserci\xF3n: "${rawLower.substring(0, 80)}..."`);
-    return null;
-  }
-  const rawTextContent = `${data.rawText || ""} ${data.description || ""} ${data.name || ""}`;
-  const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
-  const rawPhone = effectivePhone;
-  const user = await findOrCreateUserByPhone(effectivePhone, realName);
-  let imageUrl;
-  if (imageBuffer) {
-    try {
-      console.log(`[JanIA-SaveProperty] Subiendo imagen flyer de WhatsApp para ${realName}...`);
-      const buffer = Buffer.from(imageBuffer, "base64");
-      const filename = `flyers/wa_${Date.now()}_${rawPhone}.jpg`;
-      const uploadResult = await storagePut(filename, buffer, "image/jpeg");
-      imageUrl = uploadResult.url;
-      console.log(`[JanIA-SaveProperty] Imagen subida exitosamente: ${imageUrl}`);
-    } catch (err) {
-      console.error("[JanIA-SaveProperty] Error subiendo imagen:", err);
-    }
-  }
-  let pdfUrl;
-  if (pdfBuffer) {
-    try {
-      console.log(`[JanIA-SaveProperty] Subiendo PDF brochure de WhatsApp para ${realName}...`);
-      const buffer = Buffer.from(pdfBuffer, "base64");
-      const filename = `documents/doc_${Date.now()}_${rawPhone}.pdf`;
-      const uploadResult = await storagePut(filename, buffer, pdfMimeType || "application/pdf");
-      pdfUrl = uploadResult.url;
-      console.log(`[JanIA-SaveProperty] PDF subido exitosamente: ${pdfUrl}`);
-    } catch (err) {
-      console.error("[JanIA-SaveProperty] Error subiendo PDF:", err);
-    }
-  }
-  const finalImages = [];
-  if (imageUrl) {
-    finalImages.push(imageUrl);
-  }
-  if (Array.isArray(data.images)) {
-    for (const img of data.images) {
-      if (img && typeof img === "string" && !finalImages.includes(img)) finalImages.push(img);
-    }
-  }
-  if (pdfUrl) {
-    data.externalUrl = data.externalUrl || pdfUrl;
-    data.enlaceOrigen = data.enlaceOrigen || pdfUrl;
-  }
-  const amenitiesObj = {
-    gives: data.gives || data.amenities?.gives,
-    wants: data.wants || data.amenities?.wants,
-    isCollaborativePool: data.isCollaborativePool !== void 0 ? data.isCollaborativePool : data.amenities?.isCollaborativePool,
-    interiorExterior: data.interiorExterior || data.amenities?.interiorExterior,
-    cuartoBanoServicio: data.cuartoBanoServicio || data.amenities?.cuartoBanoServicio,
-    cocina: data.cocina || data.amenities?.cocina,
-    lavanderiaIndependiente: data.lavanderiaIndependiente || data.amenities?.lavanderiaIndependiente,
-    tipoPisos: data.tipoPisos || data.amenities?.tipoPisos,
-    depositos: data.depositos || data.amenities?.depositos,
-    comisiones: data.comisiones || data.amenities?.comisiones,
-    antiguedad: data.antiguedad || data.amenities?.antiguedad
-  };
-  if (data.zone && typeof data.zone === "string") {
-    const barriosDesambiguados = desambiguarBarriosCompuestos(data.zone);
-    if (barriosDesambiguados.length > 1) {
-      data.zone = barriosDesambiguados.join(", ");
-      data.addressNeighborhood = barriosDesambiguados[0];
-      console.log(`[JanIA-GeoDisambiguate] Barrio compuesto: "${data.zone}"`);
-    }
-  }
-  const rawLowerTx = (data.rawText || "").toLowerCase();
-  let txTypeForSplit = (data.transactionType || "").toLowerCase();
-  const hasExplicitRent = rawLowerTx.includes("arriendo") || rawLowerTx.includes("canon") || rawLowerTx.includes("renta");
-  const hasExplicitSale = rawLowerTx.includes("venta") || rawLowerTx.includes("precio de venta");
-  if (hasExplicitRent && hasExplicitSale && (txTypeForSplit === "venta" || txTypeForSplit === "arriendo")) {
-    const rentMatchTest = rawLowerTx.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i);
-    const saleMatchTest = rawLowerTx.match(/(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|mm|mlls|m|M)?/i);
-    if (rentMatchTest && saleMatchTest) {
-      txTypeForSplit = "venta_o_arriendo";
-      data.transactionType = "venta_o_arriendo";
-      console.log(`[JanIA-DualDetector] Promovido a 'venta_o_arriendo' por presencia dual de arriendo y venta en rawText.`);
-    }
-  }
-  if (txTypeForSplit === "venta_o_arriendo" || txTypeForSplit === "arriendo_con_opcion_de_compra") {
-    const currentPrice = data.price ? parseFloat(String(data.price)) : 0;
-    const currentRentP = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
-    const priceSaleField = data.priceSale ? parseFloat(String(data.priceSale)) : 0;
-    const priceRentField = data.priceRent ? parseFloat(String(data.priceRent)) : 0;
-    let finalSalePrice = currentPrice > 1e8 ? currentPrice : priceSaleField;
-    let finalRentPrice = currentRentP > 0 ? currentRentP : priceRentField;
-    if (finalRentPrice <= 0) {
-      const rentMatch = rawLowerTx.match(/(?:valor\s*arriendo|arriendo|canon|renta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|m|M)?/i);
-      if (rentMatch) {
-        let rawRNum = parseFloat(rentMatch[1].replace(/[.,]/g, ""));
-        const unitR = (rentMatch[2] || "").toLowerCase();
-        const multR = unitR.includes("mil millon") ? 1e9 : unitR.includes("millon") || unitR === "m" ? 1e6 : rawRNum < 1e4 ? 1e6 : 1;
-        finalRentPrice = rawRNum * multR;
-      }
-    }
-    if (finalSalePrice < 1e8) {
-      const saleMatch = rawLowerTx.match(/(?:precio\s*(?:de\s*)?venta|venta)\s*:?\s*\$?([\d.,]+)\s*(mil\s*millones?|millones?|mm|mlls)?/i);
-      if (saleMatch) {
-        let rawSNum = parseFloat(saleMatch[1].replace(/[.,]/g, ""));
-        const unitS = (saleMatch[2] || "").toLowerCase();
-        const multS = unitS.includes("mil millon") ? 1e9 : unitS.includes("millon") || unitS.includes("mm") || unitS.includes("mlls") ? 1e6 : rawSNum < 1e4 ? 1e6 : 1;
-        const computedS = rawSNum * multS;
-        if (computedS >= 1e8) finalSalePrice = computedS;
-      }
-    }
-    if (finalSalePrice > 0) data.price = finalSalePrice;
-    if (finalRentPrice > 0) {
-      const adminFeeVal = data.adminFee ? parseFloat(String(data.adminFee)) : 0;
-      if (adminFeeVal > 0 && finalRentPrice >= adminFeeVal && finalRentPrice < 1e8) {
-        data.rentPrice = finalRentPrice - adminFeeVal;
-      } else {
-        data.rentPrice = finalRentPrice;
-      }
-    }
-    console.log(`[JanIA-PriceSplit] ${txTypeForSplit} \u2192 price(venta)=${data.price} | rentPrice(canon neto)=${data.rentPrice}`);
-  }
-  if (txTypeForSplit === "arriendo" || txTypeForSplit === "arriendo_temporal") {
-    const curP = data.price ? parseFloat(String(data.price)) : 0;
-    const curR = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
-    if (curR <= 0 && curP > 0 && curP < 1e8) {
-      data.rentPrice = curP;
-    }
-    data.price = "0";
-  }
-  if (txTypeForSplit === "venta") {
-    data.rentPrice = null;
-  }
-  const curRentVal = data.rentPrice ? parseFloat(String(data.rentPrice)) : 0;
-  const curSaleVal = data.price ? parseFloat(String(data.price)) : 0;
-  const curAdminVal = data.adminFee ? parseFloat(String(data.adminFee)) : 0;
-  if (curAdminVal > 0) {
-    if (curRentVal > 0 && (curAdminVal === curRentVal || curAdminVal >= curRentVal * 0.45) || curSaleVal > 0 && (curAdminVal === curSaleVal || curAdminVal >= curSaleVal * 0.2)) {
-      data.adminFee = 0;
-      console.log(`[JanIA-SanidadPredial] Corregida cuota de administraci\xF3n absurda/duplicada $${curAdminVal} \u2192 N/E (0)`);
-    }
-  }
-  const isVentaType = txTypeForSplit.includes("venta") || !txTypeForSplit.includes("arriendo");
-  const currentPriceVal = data.price ? parseFloat(String(data.price)) : 0;
-  if (isVentaType && (currentPriceVal < 1e8 || !data.price) && data.rawText) {
-    const fallbackD = extractFallbackDataFromText(data.rawText);
-    if (fallbackD.price >= 3e7) {
-      if ((!data.adminFee || parseFloat(String(data.adminFee)) <= 0) && fallbackD.adminFee > 0) {
-        data.adminFee = fallbackD.adminFee;
-      }
-      data.price = fallbackD.price;
-      console.log(`[JanIA-SanidadPredial] Corregido precio de venta $${currentPriceVal} \u2192 Real: $${fallbackD.price} | AdminFee: $${data.adminFee}`);
-    } else if (currentPriceVal < 3e7) {
-      if ((!data.adminFee || parseFloat(String(data.adminFee)) <= 0) && currentPriceVal >= 1e5 && currentPriceVal <= 3e7) {
-        data.adminFee = currentPriceVal;
-      }
-      data.price = 0;
-      console.log(`[JanIA-SanidadPredial] Precio de venta menor a 30M ($${currentPriceVal}) desambiguado como AdminFee: $${data.adminFee} y Price: 0 (N/E)`);
-    }
-  }
-  if (data.rawText) {
-    const fallbackD = extractFallbackDataFromText(data.rawText);
-    if ((!data.adminFee || parseFloat(String(data.adminFee)) <= 0) && fallbackD.adminFee > 0) {
-      data.adminFee = fallbackD.adminFee;
-    }
-    if ((!data.garages || Number(data.garages) <= 0) && fallbackD.garages > 0) {
-      data.garages = fallbackD.garages;
-    }
-    if ((!data.antiguedadAnos || Number(data.antiguedadAnos) <= 0) && fallbackD.antiguedadAnos !== null) {
-      data.antiguedadAnos = fallbackD.antiguedadAnos;
-    }
-    if (!data.areaTotal && !data.area && fallbackD.area > 0) {
-      data.areaTotal = fallbackD.area;
-    }
-    if (fallbackD.bedrooms > 0) {
-      if (data.bedrooms === void 0 || data.bedrooms === null || Number(data.bedrooms) <= 0 || Number(data.bedrooms) !== fallbackD.bedrooms && /(?:^|[\n\r\-•*#\s])(\d{1,2})\s*(?:alcobas?|hab(?:s|itaciones|itaci[oó]n)?)\b/i.test(data.rawText || "")) {
-        data.bedrooms = fallbackD.bedrooms;
-      }
-    }
-    if ((data.bathrooms === void 0 || data.bathrooms === null || Number(data.bathrooms) <= 0) && fallbackD.bathrooms > 0) {
-      data.bathrooms = fallbackD.bathrooms;
-    }
-  }
-  if (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogot\xE1" || data.zone.toLowerCase() === "colombia") {
-    const geoInferred = resolveIntersectionToBarrio(data.rawText || data.name || data.location);
-    if (geoInferred) {
-      data.zone = geoInferred.barrio;
-      data.addressNeighborhood = geoInferred.barrio;
-      data.addressLocality = geoInferred.localidad;
-      data.city = data.city || geoInferred.ciudad;
-      console.log(`[JanIA-GeoResolver] \u{1F9ED} Inmueble: cruce vial deducido exitosamente: '${(data.rawText || "").slice(0, 45)}...' \u2192 Barrio: ${geoInferred.barrio} | Localidad: ${geoInferred.localidad} | Ciudad: ${geoInferred.ciudad}`);
-    }
-  }
-  const canonicalPropPhone = normalizeAdvisorPhone(rawPhone) || normalizeAdvisorPhone(data.idUsuarioWhatsapp) || (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : data.idUsuarioWhatsapp || rawPhone);
-  const knownPropAdvisor = lookupAdvisorSync(canonicalPropPhone || data.idUsuarioWhatsapp, realName || data.nombreUsuarioWhatsapp);
-  const finalEffectivePropName = realName && !isGenericName(realName) ? realName.trim() : data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp) ? data.nombreUsuarioWhatsapp.trim() : knownPropAdvisor?.name && !isGenericName(knownPropAdvisor.name) ? knownPropAdvisor.name : realName || null;
-  const insertData = {
-    ...data,
-    name: safeSlice(data.name || `Propiedad en ${data.city || data.zone || "Colombia"}`, 255) || "Propiedad",
-    city: safeSlice(data.city || data.ciudadDeseada, 100) || null,
-    zone: (() => {
-      const explicit = data.zone || data.addressNeighborhood;
-      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 100);
-      return "N/E";
-    })(),
-    addressCity: safeSlice(data.addressCity || data.address_city || data.city, 100) || null,
-    addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
-    addressNeighborhood: (() => {
-      const explicit = data.addressNeighborhood || data.address_neighborhood || data.zone;
-      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 150);
-      return null;
-    })(),
-    location: safeSlice(data.location, 255) || null,
-    matriculaInmobiliaria: safeSlice(data.matriculaInmobiliaria, 100) || null,
-    enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
-    idUsuarioWhatsapp: safeSlice(canonicalPropPhone, 100) || null,
-    nombreUsuarioWhatsapp: safeSlice(finalEffectivePropName, 255) || null,
-    propertyType: sanitizePropertyType(data.propertyType),
-    transactionType: sanitizeTransactionType(data.transactionType),
-    acceptedTransactionTypes: sanitizeTransactionTypes(data.transactionTypes || data.transactionType),
-    currency: sanitizeCurrency(data.currency),
-    // Mapear explícitamente los campos con Sanidad Numérica Post-Extracción (Bug #6 Fix)
-    price: (() => {
-      const isRent = sanitizeTransactionType(data.transactionType) === "arriendo" || sanitizeTransactionType(data.transactionType) === "arriendo_temporal";
-      if (isRent) {
-        return "0.00";
-      }
-      if (data.price === void 0 || data.price === null) return "0.00";
-      const v = parseFloat(String(data.price));
-      if (isNaN(v) || isPhoneNumberNotPrice(v, data.rawText)) return "0.00";
-      if (v > 5e10) return "0.00";
-      if (v < 3e7) return "0.00";
-      return String(v);
-    })(),
-    rentPrice: (() => {
-      const isPureSale = sanitizeTransactionType(data.transactionType) === "venta";
-      if (isPureSale) return null;
-      if (data.rentPrice === void 0 || data.rentPrice === null) return null;
-      const v = parseFloat(String(data.rentPrice));
-      if (isNaN(v) || v < 3e5 || v > 2e8 || isPhoneNumberNotPrice(v, data.rawText)) return null;
-      return String(v);
-    })(),
-    areaTotal: (() => {
-      const raw = data.areaTotal !== void 0 && data.areaTotal !== null ? data.areaTotal : data.area;
-      if (raw === void 0 || raw === null) return null;
-      const v = parseFloat(String(raw));
-      if (isNaN(v) || v < 10 || v > 5e3) return null;
-      return String(v);
-    })(),
-    bedrooms: data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null,
-    bathrooms: (() => {
-      const rawL = (data.rawText || "").toLowerCase();
-      if (/2[\.,]5\s*(?:baño|baños|bñ)/i.test(rawL) || /2\s*(?:baños?|bñ)\s*(?:y\s*medio|y\s*medio\s*baño)/i.test(rawL)) {
-        return 3;
-      }
-      if (data.bathrooms !== void 0 && data.bathrooms !== null) {
-        const num = Number(data.bathrooms);
-        if (num === 5 && /2[\.,]5/i.test(rawL)) return 3;
-        return Math.round(num);
-      }
-      return null;
-    })(),
-    garages: (() => {
-      if (data.garages === void 0 || data.garages === null) return null;
-      const g = Math.round(Number(data.garages));
-      if (isNaN(g) || g < 0) return null;
-      if (g >= 1900 && g <= 2100) return null;
-      if (g > 30) return null;
-      return g;
-    })(),
-    garageType: data.garageType || null,
-    // "independiente" | "lineal" | "mixto" | null (v20.0)
-    stratum: data.stratum !== void 0 && data.stratum !== null ? Math.round(Number(data.stratum)) : null,
-    adminFee: data.adminFee !== void 0 && data.adminFee !== null ? String(data.adminFee) : null,
-    yearBuilt: data.yearBuilt !== void 0 && data.yearBuilt !== null ? Math.round(Number(data.yearBuilt)) : null,
-    antiguedadAnos: data.antiguedadAnos !== void 0 && data.antiguedadAnos !== null ? Math.round(Number(data.antiguedadAnos)) : null,
-    agentId: user ? user.id : null,
-    latitude: data.latitude !== void 0 && data.latitude !== null ? String(data.latitude) : null,
-    longitude: data.longitude !== void 0 && data.longitude !== null ? String(data.longitude) : null,
-    images: finalImages.length > 0 ? finalImages : null,
-    amenities: amenitiesObj,
-    origenTipo: data.origenTipo || null,
-    origenId: data.origenId || null,
-    origenNombre: data.origenNombre || null,
-    fechaExtraccion: data.fechaExtraccion || getColombiaNow()
-  };
-  let portal = null;
-  let externalListingId = null;
-  let canonicalExternalId = null;
-  if (data.externalUrl) {
-    const extractedInfo = extractPortalAndListingId(data.externalUrl);
-    portal = extractedInfo.portal;
-    externalListingId = extractedInfo.listingId;
-    if (portal && externalListingId) {
-      canonicalExternalId = `${portal.toUpperCase()}:${externalListingId}`;
-    }
-  }
-  const finalInsertData = {
-    ...insertData,
-    portal,
-    externalListingId,
-    canonicalExternalId,
-    externalUrl: data.externalUrl || null,
-    fechaPrimeraPublicacion: getColombiaNow(),
-    fechaUltimaPublicacion: getColombiaNow(),
-    republicacionesCount: 0,
-    estadoComercial: "ACTIVO",
-    ultimaActividad: "PUBLICACI\xD3N",
-    vigenciaIa: "VIGENTE",
-    aceptaTerceria: data.aceptaTerceria !== void 0 ? Boolean(data.aceptaTerceria) : !/\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawTextContent),
-    standByDirectoVecy: data.standByDirectoVecy !== void 0 ? Boolean(data.standByDirectoVecy) : /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawTextContent)
-  };
-  let existing = [];
-  if (canonicalExternalId) {
-    existing = await db.select().from(properties).where(
-      and5(
-        eq8(properties.canonicalExternalId, canonicalExternalId),
-        eq8(properties.available, true)
-      )
-    ).limit(1);
-  }
-  if (existing.length === 0 && finalInsertData.matriculaInmobiliaria) {
-    existing = await db.select().from(properties).where(
-      and5(
-        eq8(properties.matriculaInmobiliaria, finalInsertData.matriculaInmobiliaria),
-        eq8(properties.available, true)
-      )
-    ).limit(1);
-  }
-  if (existing.length === 0 && finalInsertData.rawText && finalInsertData.rawText.trim().length > 25) {
-    existing = await db.select().from(properties).where(
-      and5(
-        eq8(properties.rawText, finalInsertData.rawText.trim()),
-        eq8(properties.available, true)
-      )
-    ).limit(1);
-  }
-  if (existing.length === 0) {
-    existing = await db.select().from(properties).where(
-      and5(
-        eq8(properties.idUsuarioWhatsapp, rawPhone),
-        eq8(properties.propertyType, finalInsertData.propertyType),
-        eq8(properties.transactionType, finalInsertData.transactionType),
-        eq8(properties.city, finalInsertData.city),
-        eq8(properties.zone, finalInsertData.zone),
-        eq8(properties.available, true)
-      )
-    ).limit(1);
-  }
-  const { label: calif } = calcularCalificacionCompletitud(finalInsertData, true);
-  const insertDataWithCalif = {
-    ...finalInsertData,
-    calificacion: calif
-  };
-  if (existing.length > 0) {
-    const preservedContact = preserveVerifiedAdvisorContact(
-      existing[0].idUsuarioWhatsapp,
-      existing[0].nombreUsuarioWhatsapp,
-      insertDataWithCalif.idUsuarioWhatsapp,
-      insertDataWithCalif.nombreUsuarioWhatsapp
-    );
-    const updatedCount = (existing[0].republicacionesCount || 0) + 1;
-    const [updated] = await db.update(properties).set({
-      available: true,
-      // Regla Doctrinal v31.108: Si el autor u otro asesor lo republica, se revive disponible desde cero
-      price: insertDataWithCalif.price,
-      description: insertDataWithCalif.description || existing[0].description,
-      adminFee: insertDataWithCalif.adminFee || existing[0].adminFee,
-      images: finalImages.length > 0 ? finalImages : existing[0].images,
-      origenTipo: insertDataWithCalif.origenTipo,
-      origenId: insertDataWithCalif.origenId,
-      origenNombre: insertDataWithCalif.origenNombre || existing[0].origenNombre,
-      idUsuarioWhatsapp: preservedContact.effectivePhone || existing[0].idUsuarioWhatsapp,
-      nombreUsuarioWhatsapp: preservedContact.effectiveName || existing[0].nombreUsuarioWhatsapp,
-      fechaUltimaPublicacion: getColombiaNow(),
-      updatedAt: /* @__PURE__ */ new Date(),
-      republicacionesCount: updatedCount,
-      estadoComercial: "REPUBLICADO",
-      ultimaActividad: "REPUBLICACI\xD3N",
-      vigenciaIa: "VIGENTE"
-    }).where(eq8(properties.id, existing[0].id)).returning();
-    console.log(`[Deduplication] Propiedad existente detectada (${canonicalExternalId || "Comercial"}). Actualizando datos (ID: ${updated.id}, Republicado: ${updatedCount}, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
-    try {
-      await db.insert(propertyPublicationHistory).values({
-        propertyId: existing[0].id,
-        grupo: insertDataWithCalif.origenNombre,
-        broker: realName,
-        brokerPhone: rawPhone,
-        accion: "REPUBLICACI\xD3N",
-        portal,
-        externalListingId,
-        detalles: `Inmueble republicado en ${insertDataWithCalif.origenNombre || "WhatsApp"}. Precio: ${insertDataWithCalif.price}`
-      });
-    } catch (histErr) {
-      console.error("[JanIA-History] Error al registrar historial de republicaci\xF3n:", histErr);
-    }
-    findMatchesForProperty(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para propiedad:", mErr));
-    return updated;
-  }
-  const [result] = await db.insert(properties).values(insertDataWithCalif).returning();
-  findMatchesForProperty(result.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error calculando matches para propiedad:", mErr));
-  try {
-    await db.insert(propertyPublicationHistory).values({
-      propertyId: result.id,
-      grupo: insertDataWithCalif.origenNombre,
-      broker: realName,
-      brokerPhone: rawPhone,
-      accion: "PUBLICACI\xD3N",
-      portal,
-      externalListingId,
-      detalles: `Inmueble ingresado por primera vez desde ${insertDataWithCalif.origenNombre || "WhatsApp"}. Precio: ${insertDataWithCalif.price}`
-    });
-  } catch (histErr) {
-    console.error("[JanIA-History] Error al registrar historial inicial:", histErr);
-  }
-  if (result && imageUrl) {
-    try {
-      await db.insert(propertyImages).values({
-        propertyId: result.id,
-        imageUrl,
-        isMainImage: true,
-        displayOrder: 1,
-        mimeType: "image/jpeg",
-        uploadedBy: "janIA"
-      });
-      console.log(`[JanIA-SaveProperty] Registro en propertyImages creado para propiedad ${result.id}`);
-    } catch (err) {
-      console.error("[JanIA-SaveProperty] Error creando registro en propertyImages:", err);
-    }
-  }
-  return result;
-}
-async function saveRequirement(data, userId, realName, imageBuffer, pdfBuffer, pdfMimeType) {
-  const db = await getDb();
-  if (!db) return null;
-  if (isNonRealEstateText(data.rawText) || isNonRealEstateText(data.name)) {
-    console.log(`[JanIA-Reject] \u{1F6AB} Requerimiento descartado: mensaje no corresponde a finca ra\xEDz (materiales/canteras/maquinaria): ${data.name || data.rawText}`);
-    return null;
-  }
-  const rawTextContent = `${data.rawText || ""} ${data.name || ""}`;
-  const effectivePhone = resolveContactPhone(userId, rawTextContent, realName, data.idUsuarioWhatsapp);
-  const rawPhone = effectivePhone;
-  const user = await findOrCreateUserByPhone(effectivePhone, realName);
-  let reqPdfUrl;
-  if (pdfBuffer) {
-    try {
-      const buffer = Buffer.from(pdfBuffer, "base64");
-      const filename = `documents/req_doc_${Date.now()}_${rawPhone}.pdf`;
-      const uploadResult = await storagePut(filename, buffer, pdfMimeType || "application/pdf");
-      reqPdfUrl = uploadResult.url;
-      data.enlaceOrigen = data.enlaceOrigen || reqPdfUrl;
-    } catch (err) {
-      console.error("[JanIA-SaveRequirement] Error subiendo PDF:", err);
-    }
-  }
-  const isRequirementFlyer = !!(data.isFlyerOrBanner || data.flyerVerbatimText && data.flyerVerbatimText.trim().length >= 15);
-  if (imageBuffer && isRequirementFlyer) {
-    try {
-      const buffer = Buffer.from(imageBuffer, "base64");
-      const filename = `flyers/req_wa_${Date.now()}_${rawPhone}.jpg`;
-      const uploadResult = await storagePut(filename, buffer, "image/jpeg");
-      data.enlaceOrigen = uploadResult.url;
-      console.log(`[JanIA-SaveRequirement] \u2705 Flyer de requerimiento guardado localmente en VPS: ${uploadResult.url}`);
-    } catch (err) {
-      console.error("[JanIA-SaveRequirement] Error subiendo imagen:", err);
-    }
-  }
-  const rawLowerAll = `${rawTextContent} ${data.name || ""}`.toLowerCase();
-  const reqNoTerceriaMatch = /\b(?:no\s*tercer[ií]a|no\s*tercerias|sin\s*tercer[ií]a|no\s*se\s*acepta\s*tercer[ií]a|comisi[oó]n\s*50[-/]50\s*no\s*tercer[ií]a|solo\s*50[-/]50|no\s*intermediarios|directo\s*con\s*captador)\b/i.test(rawLowerAll);
-  const reqRequiresObligatoryStudy = /\b(?:con\s*estudio\s*obligatorio|estudio\s*obligatorio|exige\s*estudio|estudio\s*indispensable|estudio\s*ojal[aá]\s*cerrado)\b/i.test(rawLowerAll);
-  const reqHasStudy = reqRequiresObligatoryStudy || rawLowerAll.includes("estudio") || rawLowerAll.includes("star de tv") || rawLowerAll.includes("estar de tv") || rawLowerAll.includes("sala de tv");
-  const reqPisoMinMatch = rawLowerAll.match(/(?:unicamente\s*ven\s*opciones\s*del\s*piso|del\s*piso|piso|pisos)\s*(\d{1,2})\s*(?:hacia\s*arriba|en\s*adelante|o\s*superior|\+|\s*mas)\b/i);
-  const reqPisoMin = reqPisoMinMatch ? parseInt(reqPisoMinMatch[1], 10) : null;
-  const reqRequiresExterior = /\b(?:muy\s*luminoso|vista\s*agradable|vista\s*exterior|exterior\s*muy\s*iluminado|vista\s*panor[aá]mica|exterior|sin\s*interior)\b/i.test(rawLowerAll);
-  const reqAdminFeeInc = /(?:admin(?:istraci[oó]n)?|admon)\s*(?:incluida|inc\b)|(?:con|\+|mas|más)\s*(?:admin(?:istraci[oó]n)?|admon)/i.test(rawLowerAll);
-  const reqIsAmoblado = /\b(?:amoblado|amoblada|con\s*muebles)\b/i.test(rawLowerAll);
-  const characteristicsObj = {
-    gives: data.gives || data.caracteristicasDeseadas?.gives,
-    wants: data.wants || data.caracteristicasDeseadas?.wants,
-    interiorExterior: data.interiorExterior || data.caracteristicasDeseadas?.interiorExterior || (reqRequiresExterior ? "exterior" : null),
-    cuartoBanoServicio: data.cuartoBanoServicio || data.caracteristicasDeseadas?.cuartoBanoServicio,
-    cocina: data.cocina || data.caracteristicasDeseadas?.cocina,
-    lavanderiaIndependiente: data.lavanderiaIndependiente || data.caracteristicasDeseadas?.lavanderiaIndependiente,
-    tipoPisos: data.tipoPisos || data.caracteristicasDeseadas?.tipoPisos,
-    depositos: data.depositos || data.caracteristicasDeseadas?.depositos,
-    comisiones: data.comisiones || data.caracteristicasDeseadas?.comisiones,
-    antiguedad: data.antiguedad || data.caracteristicasDeseadas?.antiguedad,
-    estudio: reqRequiresObligatoryStudy ? "obligatorio" : reqHasStudy ? "deseado" : null,
-    pisoMinimo: reqPisoMin,
-    adminFeeIncluded: reqAdminFeeInc,
-    amoblado: reqIsAmoblado ? true : rawLowerAll.includes("sin amoblar") ? false : null
-  };
-  if (!data.zonaDeseada && (!data.zone || data.zone.trim() === "" || data.zone.toLowerCase() === "bogota" || data.zone.toLowerCase() === "bogot\xE1" || data.zone.toLowerCase() === "colombia")) {
-    const geoInferred = resolveIntersectionToBarrio(data.rawText || data.name);
-    if (geoInferred) {
-      data.zonaDeseada = geoInferred.barrio;
-      data.addressNeighborhood = geoInferred.barrio;
-      data.addressLocality = geoInferred.localidad;
-      data.ciudadDeseada = data.ciudadDeseada || geoInferred.ciudad;
-      console.log(`[JanIA-GeoResolver] \u{1F9ED} Requerimiento: cruce vial deducido exitosamente: '${(data.rawText || "").slice(0, 45)}...' \u2192 Barrio: ${geoInferred.barrio} | Localidad: ${geoInferred.localidad} | Ciudad: ${geoInferred.ciudad}`);
-    }
-  }
-  const canonicalReqPhone = normalizeAdvisorPhone(rawPhone) || normalizeAdvisorPhone(data.idUsuarioWhatsapp) || (isLidIdentifier(data.idUsuarioWhatsapp) && rawPhone ? rawPhone : data.idUsuarioWhatsapp || rawPhone);
-  const knownReqAdvisor = lookupAdvisorSync(canonicalReqPhone || data.idUsuarioWhatsapp, realName || data.nombreUsuarioWhatsapp);
-  const finalEffectiveReqName = realName && !isGenericName(realName) ? realName.trim() : data.nombreUsuarioWhatsapp && !isGenericName(data.nombreUsuarioWhatsapp) ? data.nombreUsuarioWhatsapp.trim() : knownReqAdvisor?.name && !isGenericName(knownReqAdvisor.name) ? knownReqAdvisor.name : realName || null;
-  const rawCombinedReqText = `${data.rawText || ""} ${data.name || ""}`;
-  const fallbackReqD = extractFallbackDataFromText(rawCombinedReqText);
-  const insertData = {
-    ...data,
-    name: safeSlice(data.name, 255) || null,
-    ciudadDeseada: safeSlice(data.ciudadDeseada || data.city || fallbackReqD.city || "Bogot\xE1", 100) || "Bogot\xE1",
-    zonaDeseada: (() => {
-      const explicit = data.zonaDeseada || data.zone || data.addressNeighborhood;
-      if (explicit && !isCityOrGenericZone(explicit)) {
-        return safeSlice(extractPureBarrio(explicit) || explicit, 100);
-      }
-      if (fallbackReqD.zonaDeseada && !isCityOrGenericZone(fallbackReqD.zonaDeseada)) {
-        return safeSlice(extractPureBarrio(fallbackReqD.zonaDeseada) || fallbackReqD.zonaDeseada, 100);
-      }
-      return null;
-    })(),
-    addressCity: safeSlice(data.addressCity || data.address_city, 100) || null,
-    addressLocality: safeSlice(data.addressLocality || data.address_locality, 100) || null,
-    addressNeighborhood: (() => {
-      const explicit = data.addressNeighborhood || data.address_neighborhood || (fallbackReqD.zonaDeseada && !isCityOrGenericZone(fallbackReqD.zonaDeseada) ? fallbackReqD.zonaDeseada : null);
-      if (explicit && !isCityOrGenericZone(explicit)) return safeSlice(extractPureBarrio(explicit) || explicit, 150);
-      return null;
-    })(),
-    enlaceOrigen: safeSlice(data.enlaceOrigen, 1e3) || null,
-    idUsuarioWhatsapp: safeSlice(canonicalReqPhone, 100) || null,
-    nombreUsuarioWhatsapp: safeSlice(finalEffectiveReqName, 255) || null,
-    tipoInmuebleDeseado: sanitizePropertyType(data.tipoInmuebleDeseado || data.propertyType),
-    tipoNegocioDeseado: sanitizeTransactionType(data.tipoNegocioDeseado || data.transactionType),
-    tiposNegocioAceptados: sanitizeTransactionTypes(data.transactionTypes || data.tipoNegocioDeseado || data.transactionType),
-    monedaPresupuesto: sanitizeCurrency(data.monedaPresupuesto || data.currency),
-    // Mapear campos con Sanidad Numérica Post-Extracción (Bug #6 Fix)
-    presupuestoMin: (() => {
-      const raw = data.presupuestoMin !== void 0 && data.presupuestoMin !== null ? data.presupuestoMin : null;
-      if (raw !== void 0 && raw !== null) {
-        const v = parseFloat(String(raw));
-        if (!isNaN(v) && v >= 3e5 && v <= 5e10 && !isPhoneNumberNotPrice(v, data.rawText)) {
-          return String(v);
-        }
-      }
-      if (fallbackReqD.presupuestoMin >= 3e5) {
-        return String(fallbackReqD.presupuestoMin);
-      }
-      return null;
-    })(),
-    presupuestoMax: (() => {
-      const raw = data.presupuestoMax !== void 0 && data.presupuestoMax !== null ? data.presupuestoMax : data.price;
-      if (raw !== void 0 && raw !== null) {
-        const v = parseFloat(String(raw));
-        if (!isNaN(v) && v >= 3e5 && v <= 5e10 && !isPhoneNumberNotPrice(v, data.rawText)) {
-          return String(v);
-        }
-      }
-      if (fallbackReqD.presupuestoMax >= 3e5) {
-        return String(fallbackReqD.presupuestoMax);
-      }
-      return null;
-    })(),
-    areaMin: (() => {
-      const raw = data.areaMin !== void 0 && data.areaMin !== null ? data.areaMin : data.area;
-      if (raw !== void 0 && raw !== null) {
-        const v = parseFloat(String(raw));
-        if (!isNaN(v) && v >= 10 && v <= 5e3) return String(v);
-      }
-      if (fallbackReqD.areaMin > 0 || fallbackReqD.area > 0) {
-        return String(fallbackReqD.areaMin || fallbackReqD.area);
-      }
-      const rawL = (data.rawText || data.name || "").toLowerCase();
-      const areaFallback = rawL.match(
-        /(?:(?:m[ií]nimo|m[aá]s\s*de|min(?:imo)?|m[aá]x(?:imo)?|de|desde|con|metraje\s*(?:m[ií]nimo|min(?:imo)?))\s*[:=-]?\s*)([\d]+(?:[.,][\d]+)?)\s*(?:m2|mts2|mts|metros(?:\s+cuadrados)?|m²)/i
-      );
-      if (areaFallback) {
-        const v = parseFloat(areaFallback[1].replace(",", "."));
-        if (!isNaN(v) && v >= 10 && v <= 5e3) return String(v);
-      }
-      return null;
-    })(),
-    adminFeeMax: (() => {
-      const raw = data.adminFeeMax !== void 0 && data.adminFeeMax !== null ? data.adminFeeMax : data.adminFee !== void 0 && data.adminFee !== null ? data.adminFee : null;
-      if (raw !== void 0 && raw !== null) {
-        let v = parseFloat(String(raw));
-        if (!isNaN(v)) {
-          if (v >= 500 && v <= 15e3) v = v * 1e3;
-          if (v >= 1e4 && v <= 3e7) return String(v);
-        }
-      }
-      const rawL = (data.rawText || data.name || "").toLowerCase();
-      const parsedAdminInfo = parseAdminFee(rawL);
-      if (parsedAdminInfo.fee && parsedAdminInfo.fee >= 1e4 && parsedAdminInfo.fee <= 3e7 && !isPhoneNumberNotPrice(parsedAdminInfo.fee, rawL)) {
-        return String(parsedAdminInfo.fee);
-      }
-      const adminMatch = rawL.match(/(?:administraci[oó]n|admin|admon|cta\s*admon)\s*:?\s*(?:m[aá]xima|max|hasta|tope|no\s*mayor\s*a|no\s*superior\s*a|menor\s*a)?\s*:?\s*(?:aprox\.?|mensual)?\s*\$?\s*([\d.,\s]+?)(?:\s*mil\b|\s*k\b|\s*millones\b|-|\s|\(|\/|\+|$|\n)/i);
-      if (adminMatch) {
-        const cleanNum = adminMatch[1].replace(/[.,\s]/g, "");
-        let parsed = parseFloat(cleanNum);
-        if (!isNaN(parsed)) {
-          if (parsed >= 500 && parsed <= 15e3) parsed = parsed * 1e3;
-          if (parsed >= 1e4 && parsed <= 3e7 && !isPhoneNumberNotPrice(parsed, rawL)) {
-            return String(parsed);
-          }
-        }
-      }
-      return null;
-    })(),
-    habitacionesMin: (() => {
-      const v = data.habitacionesMin !== void 0 && data.habitacionesMin !== null ? Math.round(Number(data.habitacionesMin)) : data.bedrooms !== void 0 && data.bedrooms !== null ? Math.round(Number(data.bedrooms)) : null;
-      if (v !== null && !isNaN(v) && v > 0) return v;
-      if (fallbackReqD.bedroomsMin > 0 || fallbackReqD.bedrooms > 0) {
-        return fallbackReqD.bedroomsMin || fallbackReqD.bedrooms;
-      }
-      const rawL = (data.rawText || "").toLowerCase();
-      const m = rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:hab|habitaciones|alcoba|alcobas|alc|dormitorio)/i);
-      if (m) {
-        const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
-        const w = m[0].split(/\s+/)[0].toLowerCase();
-        return SPANISH_NUM_LOCAL[w] || parseInt(w, 10) || null;
-      }
-      return null;
-    })(),
-    banosMin: (() => {
-      const rawL = (data.rawText || "").toLowerCase();
-      const socialAddMatch = rawL.match(/(un|una|uno|dos|tres|cuatro|cinco|\d+)\s*(?:baño|baños|bñ)\s*(?:\+|\+|y|m[aá]s|con)\s*(?:el\s*|un\s*)?baño\s*social/i);
-      if (socialAddMatch) {
-        const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
-        const bWord = socialAddMatch[1].toLowerCase();
-        const base = SPANISH_NUM_LOCAL[bWord] || parseInt(bWord, 10) || 2;
-        return base + 1;
-      }
-      const v = data.banosMin !== void 0 && data.banosMin !== null ? Number(data.banosMin) : data.bathrooms !== void 0 && data.bathrooms !== null ? Number(data.bathrooms) : null;
-      if (v !== null && !isNaN(v) && v > 0) {
-        if (v === 5 && rawL.includes("2.5")) return 3;
-        return Math.round(v);
-      }
-      if (fallbackReqD.bathrooms > 0) {
-        return fallbackReqD.bathrooms;
-      }
-      const m = rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+(?:[\.,]\d+)?)\s*(?:o\s*más\s*)?(?:wc|baño|baños|bñ)/i) || rawL.match(/(?:un|una|uno|dos|tres|cuatro|cinco|\d+)\s*hab\s*con\s*baño/i);
-      if (m) {
-        const SPANISH_NUM_LOCAL = { "un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5 };
-        const w = m[0].split(/\s+/)[0].toLowerCase();
-        const num = SPANISH_NUM_LOCAL[w] || parseFloat(w.replace(",", "."));
-        if (!isNaN(num) && num > 0) {
-          if (num % 1 !== 0) return Math.ceil(num);
-          return Math.round(num);
-        }
-      }
-      return null;
-    })(),
-    parqueaderosMin: (() => {
-      const v = data.parqueaderosMin !== void 0 && data.parqueaderosMin !== null ? Math.round(Number(data.parqueaderosMin)) : data.garages !== void 0 && data.garages !== null ? Math.round(Number(data.garages)) : null;
-      if (v !== null && !isNaN(v) && v > 0) return v;
-      if (fallbackReqD.garages > 0) {
-        return fallbackReqD.garages;
-      }
-      const rawL = (data.rawText || "").toLowerCase();
-      const m = rawL.match(/(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.)\s*\.?\s*(\d+)/i) || rawL.match(/(\d+)\s*(?:parqueadero|parqueaderos|garaje|garajes|ptero|g\.|individuales)/i);
-      return m ? parseInt(m[1], 10) : null;
-    })(),
-    estratoDeseado: (() => {
-      const rawT = (data.rawText || "").toLowerCase();
-      const hasExplicitStratum = /(?:estrato|estr\.?|e\s*[1-6]\b)\s*:?\s*([1-6]|uno|dos|tres|cuatro|cinco|seis)\b/i.test(rawT) || /\b(?:estrato|estr\.?)\s*(?:alto|medio|bajo)\b/i.test(rawT);
-      if (!hasExplicitStratum) {
-        return null;
-      }
-      if (data.estratoDeseado && Array.isArray(data.estratoDeseado) && data.estratoDeseado.length > 0) {
-        return data.estratoDeseado.map((e) => Math.round(Number(e))).filter((e) => !isNaN(e) && e >= 1 && e <= 6);
-      }
-      if (data.stratum !== void 0 && data.stratum !== null && !isNaN(Number(data.stratum))) {
-        const s = Math.round(Number(data.stratum));
-        if (s >= 1 && s <= 6) return [s];
-      }
-      return null;
-    })(),
-    userId: user ? user.id : null,
-    caracteristicasDeseadas: characteristicsObj,
-    origenTipo: data.origenTipo || null,
-    origenId: data.origenId || null,
-    origenNombre: data.origenNombre || null,
-    fechaExtraccion: data.fechaExtraccion || getColombiaNow(),
-    aceptaTerceria: data.aceptaTerceria !== void 0 ? Boolean(data.aceptaTerceria) : !reqNoTerceriaMatch,
-    standByDirectoVecy: data.standByDirectoVecy !== void 0 ? Boolean(data.standByDirectoVecy) : reqNoTerceriaMatch
-  };
-  const rawZoneStr = (insertData.zonaDeseada || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-  const rawTextStr = (insertData.rawText || "").toLowerCase();
-  const isAmbiguousZoneName = (zn) => {
-    if (!zn || zn === "n/e" || zn === "na" || zn === "bogota" || zn === "bogota, d.c." || zn === "colombia") return true;
-    const ambiguousPhrases = [
-      "todas las zonas",
-      "cualquier zona",
-      "cualquier lado",
-      "donde sea",
-      "varias zonas",
-      "por ahi",
-      "por ah\xED",
-      "buena zona",
-      "sector residencial",
-      "sector comercial",
-      "norte o sur",
-      "donde haya",
-      "cualquiera"
-    ];
-    return ambiguousPhrases.some((a) => zn.includes(a));
-  };
-  const hasPerimeterOrStreet = /calle\s*\d+|carrera\s*\d+|cra\s*\d+|cll\s*\d+|cl\s*\d+|diagonal\s*\d+|transversal\s*\d+|entre\s*calle|perimetro|perímetro/i.test(rawTextStr);
-  const isZoneAmbiguous = isAmbiguousZoneName(rawZoneStr);
-  if (isZoneAmbiguous && !hasPerimeterOrStreet && !insertData.presupuestoMax && !insertData.areaMin && !insertData.habitacionesMin) {
-    console.log(`[JANIA-INGESTION-GUARD] \u26D4 Requerimiento omitido por falta de ubicaci\xF3n expl\xEDcita o especificaciones prediales completas ("${insertData.rawText?.substring(0, 60)}...")`);
-    return null;
-  }
-  let existing = [];
-  if (insertData.rawText && insertData.rawText.trim().length > 25) {
-    existing = await db.select().from(requirements).where(
-      eq8(requirements.rawText, insertData.rawText.trim())
-    ).limit(1);
-  }
-  if (existing.length === 0) {
-    existing = await db.select().from(requirements).where(
-      and5(
-        eq8(requirements.idUsuarioWhatsapp, rawPhone),
-        eq8(requirements.tipoInmuebleDeseado, insertData.tipoInmuebleDeseado),
-        eq8(requirements.tipoNegocioDeseado, insertData.tipoNegocioDeseado),
-        eq8(requirements.ciudadDeseada, insertData.ciudadDeseada),
-        eq8(requirements.zonaDeseada, insertData.zonaDeseada)
-      )
-    ).limit(1);
-  }
-  const { label: calif } = calcularCalificacionCompletitud(insertData, false);
-  const insertDataWithCalif = {
-    ...insertData,
-    calificacion: calif
-  };
-  if (existing.length > 0) {
-    const preservedContact = preserveVerifiedAdvisorContact(
-      existing[0].idUsuarioWhatsapp,
-      existing[0].nombreUsuarioWhatsapp,
-      insertDataWithCalif.idUsuarioWhatsapp,
-      insertDataWithCalif.nombreUsuarioWhatsapp
-    );
-    const { fechaExtraccion: _ignored, ...updateFields } = insertDataWithCalif;
-    const repCount = (existing[0].republicacionesCount || 0) + 1;
-    const [updated] = await db.update(requirements).set({
-      ...updateFields,
-      idUsuarioWhatsapp: preservedContact.effectivePhone || existing[0].idUsuarioWhatsapp,
-      nombreUsuarioWhatsapp: preservedContact.effectiveName || existing[0].nombreUsuarioWhatsapp,
-      status: "active",
-      // Al ser republicado o actualizado, se reactiva a activo de inmediato
-      fechaUltimaPublicacion: getColombiaNow(),
-      republicacionesCount: repCount,
-      updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq8(requirements.id, existing[0].id)).returning();
-    console.log(`[Deduplication] Requerimiento existente detectado y reactivado (ID: ${updated.id}, Republicaciones: ${repCount}, Asesor: ${updated.nombreUsuarioWhatsapp || "N/A"} - Tel: ${updated.idUsuarioWhatsapp || "N/A"})`);
-    findMatchesForRequirement(updated.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error recalculando matches para requerimiento:", mErr));
-    return updated;
-  }
-  const insertDataFinal = {
-    ...insertDataWithCalif,
-    fechaPrimeraPublicacion: getColombiaNow(),
-    fechaUltimaPublicacion: getColombiaNow(),
-    republicacionesCount: 0,
-    status: "active"
-  };
-  const [result] = await db.insert(requirements).values(insertDataFinal).returning();
-  findMatchesForRequirement(result.id).catch((mErr) => console.error("[JanIA-MatchingTrigger] Error calculando matches para requerimiento:", mErr));
-  return result;
-}
-async function generateWelcomeMessage(count, chatId) {
-  try {
-    let groupDescription = "";
-    if (chatId === "120363417740040773@g.us") {
-      groupDescription = `el grupo de WhatsApp "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}".
-Direcci\xF3n obligatoria para redactar el saludo de bienvenida:
-- Dales una muy c\xE1lida bienvenida en nombre de VECY BIENES RA\xCDCES y menci\xF3nales que este es un foro abierto de tips, noticias, debates y consultas inmobiliarias (jur\xEDdicas, tributarias, estudios de mercado y marketing).
-- Expl\xEDcales de manera clara y directa las Pautas del Grupo en vi\xF1etas bien organizadas con emojis:
-  * Qu\xE9 SE PUEDE hacer: Hacer consultas p\xFAblicas, debatir temas libres del sector, compartir casos y experiencias, comentar los tips y noticias diarias de JanIA.
-  * Qu\xE9 NO SE PUEDE hacer: Publicar ofertas o demandas de inmuebles (esas van \xFAnica y exclusivamente al grupo "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}").
-  * Asuntos privados: Escribir al chat privado de JanIA (https://wa.me/573192919978).`;
-    } else if (chatId === "120363403507276533@g.us") {
-      groupDescription = `el grupo de WhatsApp "\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} \\"\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}\\"\u{1F680}" (nuestro canal oficial de debate, modelo de negocio y comunidad de aliados).
-Direcci\xF3n obligatoria para redactar el saludo de bienvenida:
-- Dales una muy c\xE1lida bienvenida a la comunidad oficial del Proyecto VECY BIENES RA\xCDCES.
-- Expl\xEDcales de manera clara y directa las Pautas del Grupo en vi\xF1etas bien organizadas con emojis:
-  * Qu\xE9 SE PUEDE hacer: Temas libres del sector, foros, debates, experiencias del d\xEDa a d\xEDa del negocio, ideas para la plataforma, el modelo colaborativo y testimonios de \xE9xito.
-  * Qu\xE9 NO SE PUEDE hacer: Publicar ofertas o demandas de inmuebles (esas van \xFAnica y exclusivamente al grupo de OFERTAS Y DEMANDAS).
-  * Asuntos privados: Escribir al chat privado de JanIA (https://wa.me/573192919978).`;
-    } else {
-      groupDescription = `el grupo de WhatsApp principal "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}" (nuestra red nacional de ofertas y requerimientos inmobiliarios).
-Direcci\xF3n obligatoria para redactar el saludo de bienvenida:
-- Dales una muy c\xE1lida bienvenida a la red y menci\xF3nales que ya estoy lista para cruzar sus ofertas y requerimientos en segundos sin comisiones.
-- Expl\xEDcales de manera muy clara y directa las Pautas Obligatorias del Grupo para evitar advertencias o bloqueos en el sistema:
-  * Qu\xE9 FORMATOS est\xE1n permitidos y c\xF3mo publicar correctamente:
-    1. \u270D\uFE0F *Texto descriptivo completo*: Incluyendo los datos t\xE9cnicos indispensables (Ciudad, barrio, precio, \xE1rea en m\xB2, habitaciones, ba\xF1os, parqueaderos y estrato).
-    2. \u{1F399}\uFE0F *Nota de Voz*: Grabando un audio corto (de unos 30-40 segundos) dictando las caracter\xEDsticas.
-    3. \u{1F4C4} *Ficha t\xE9cnica en PDF*: Subiendo el archivo PDF de la propiedad.
-    4. \u{1F5BC}\uFE0F *Flyer comercial*: Subiendo una imagen que tenga toda la informaci\xF3n t\xE9cnica escrita encima del dise\xF1o.
-    5. \u{1F517} *Enlaces o Links p\xFAblicos*: Pegando enlaces de portales p\xFAblicos autorizados (como Metrocuadrado, Ciencuadras, Habi, Wasi, MercadoLibre, Fincaraiz, Curador o su propia web de dominio propio).
-  * Lo que NO est\xE1 permitido y debes evitar para no recibir advertencias de JanIA:
-    1. Enlaces a Redes Sociales (Facebook, Instagram, YouTube, TikTok, etc.).
-    2. Publicaciones repetidas o duplicados de la misma propiedad de forma inmediata.
-    3. Enviar m\xFAltiples publicaciones seguidas en menos de 5 minutos (l\xEDmite anti-spam de 5 minutos).
-    4. Publicaciones incompletas (por ejemplo, sin precio o sin ciudad). JanIA les pondr\xE1 una advertencia de datos incompletos.
-- Cierra con un tono motivador invit\xE1ndolos a publicar correctamente para que el sistema pueda encontrarles MATCH de inmediato y acelerar sus cierres.`;
-    }
-    const response = await invokeLLM({
-      messages: [
-        {
-          role: "system",
-          content: "Eres JanIA, la asistente inteligente y experta de VECY BIENES RA\xCDCES. Hablas siempre en primera persona del singular, con un tono sumamente humano, profesional, elocuente y cercano."
-        },
-        {
-          role: "user",
-          content: `Han ingresado ${count} nuevos integrantes a ${groupDescription}. 
-          Redacta el mensaje de bienvenida usando vi\xF1etas claras y emojis llamativos. Aseg\xFArate de que las reglas se lean organizadas, directas y f\xE1ciles de entender para que no cometan infracciones.`
-        }
-      ]
-    });
-    const llmRes = response;
-    return llmRes.choices[0].message.content.trim();
-  } catch (error) {
-    if (chatId === "120363417740040773@g.us") {
-      return `\u2728 *\xA1Bienvenidos al grupo \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}!* \u{1F44B}
-
-Foro abierto de tips, noticias, debates y consultas inmobiliarias de VECY BIENES RA\xCDCES.
-\u26A0\uFE0F *Nota:* Las ofertas y demandas van solo al grupo de OFERTAS Y DEMANDAS. Asuntos privados: https://wa.me/573192919978 \u{1F680}`;
-    } else if (chatId === "120363403507276533@g.us") {
-      return `\u2728 *\xA1Bienvenidos a \u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}!* \u{1F44B}
-
-Espacio de comunidad: temas libres, foros, debates y experiencias del negocio inmobiliario.
-\u26A0\uFE0F *Nota:* Las ofertas y demandas van solo al grupo de OFERTAS Y DEMANDAS. \xA1Bienvenidos aliados! \u{1F680}\u{1F91D}`;
-    }
-    return `\u2728 *\xA1Bienvenidos a \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}!* \u{1F44B}
-
-Ya estoy activa para cruzar sus ofertas sin comisiones.
-\u{1F4DD} *Pautas r\xE1pidas de publicaci\xF3n*:
-\u25B8 *Permitido:* Texto t\xE9cnico completo, PDFs, notas de voz, flyers con datos y enlaces p\xFAblicos (Wasi, Fincaraiz, etc.).
-\u25B8 *No permitido:* Enlaces de Redes Sociales, publicaciones repetidas, datos incompletos (sin precio/ciudad) o env\xEDos seguidos en menos de 5 minutos.
-
-\xA1Publiquen correctamente para encontrarles un MATCH inmediato! \u{1F680}\u{1F3AF}`;
-  }
-}
-function obtenerCamposRequeridosYPreguntas(propertyType, isRequirement) {
-  const type = propertyType?.toLowerCase();
-  let requiredFields = [];
-  const fieldQuestions = {
-    floorDetail: "",
-    bedrooms: "cu\xE1ntas habitaciones tiene",
-    interiorExterior: "\xBFel inmueble es interior o exterior?",
-    garages: "\xBFcu\xE1ntos garajes tiene?",
-    areaTotal: "\xBFcu\xE1l es el \xE1rea total del lote?",
-    antiguedad: "\xBFcu\xE1l es la antig\xFCedad del inmueble (a\xF1os o rango)?"
-  };
-  if (type === "apartment") {
-    requiredFields = ["bedrooms", "interiorExterior", "floorDetail", "garages"];
-    fieldQuestions.floorDetail = "\xBFen qu\xE9 piso queda el apartamento?";
-  } else if (type === "house") {
-    requiredFields = ["bedrooms", "floorDetail"];
-    fieldQuestions.floorDetail = "\xBFcu\xE1ntos pisos tiene la casa?";
-  } else if (type === "warehouse") {
-    requiredFields = ["floorDetail"];
-    fieldQuestions.floorDetail = "\xBFcu\xE1l es la altura libre de la bodega?";
-  } else if (type === "land") {
-    requiredFields = ["areaTotal"];
-  } else if (type === "building") {
-    requiredFields = ["floorDetail", "garages", "antiguedad"];
-    fieldQuestions.floorDetail = "\xBFde cu\xE1ntos pisos es el edificio?";
-    fieldQuestions.garages = "\xBFcu\xE1ntos parqueaderos tiene?";
-    fieldQuestions.antiguedad = "\xBFcu\xE1l es la antig\xFCedad del edificio (a\xF1os o rango)?";
-  } else if (type === "office") {
-    requiredFields = ["floorDetail"];
-    fieldQuestions.floorDetail = "\xBFen qu\xE9 piso queda la oficina?";
-  } else if (type === "farm") {
-    requiredFields = ["floorDetail"];
-    fieldQuestions.floorDetail = "\xBFcu\xE1ntos pisos tiene la casa principal de la finca?";
-  } else {
-    requiredFields = ["bedrooms", "floorDetail"];
-    fieldQuestions.floorDetail = "\xBFcu\xE1ntos pisos tiene?";
-  }
-  return { requiredFields, fieldQuestions };
-}
-function checkStrictOffTopic(text2) {
-  if (!text2 || text2.trim() === "") return { isOffTopic: false };
-  const clean = text2.toLowerCase();
-  if (clean.includes("chat.whatsapp.com/")) {
-    const isOfficialVecyLink = clean.includes("gzmbjns1p2thi7d0v4h8wz") || clean.includes("j4u1h7nul1i1b1waiytun6") || clean.includes("cszrkr6cr56haiehheauqyu") || clean.includes("0029vb5iyuycmy0a94zqti1b");
-    if (!isOfficialVecyLink) {
-      return { isOffTopic: true, reason: "enlaces de invitaci\xF3n a grupos externos" };
-    }
-  }
-  const politicalKeywords = [
-    "petro",
-    "uribe",
-    "duque",
-    "santos",
-    "rodolfo hernandez",
-    "fico guti\xE9rrez",
-    "claudia l\xF3pez",
-    "partido pol\xEDtico",
-    "partido politico",
-    "campa\xF1a pol\xEDtica",
-    "campa\xF1a politica",
-    "votaciones",
-    "candidato a la alcald\xEDa",
-    "candidato al concejo",
-    "senado",
-    "c\xE1mara de representantes",
-    "consulta popular",
-    "plebiscito",
-    "izquierdista",
-    "derechista",
-    "uribista",
-    "petrista"
-  ];
-  if (politicalKeywords.some((kw) => clean.includes(kw))) {
-    return { isOffTopic: true, reason: "temas pol\xEDticos o proselitismo" };
-  }
-  const religiousKeywords = [
-    "cadena de oraci\xF3n",
-    "cadena de oracion",
-    "reenv\xEDa este mensaje a 10",
-    "reenvia este mensaje a 10",
-    "si amas a dios comparte",
-    "salmo del d\xEDa",
-    "vers\xEDculo del d\xEDa",
-    "evangelio de hoy",
-    "culto de sanaci\xF3n"
-  ];
-  if (religiousKeywords.some((kw) => clean.includes(kw))) {
-    return { isOffTopic: true, reason: "cadenas religiosas o cultos" };
-  }
-  const spamKeywords = [
-    "gana dinero desde casa",
-    "trabaja 2 horas al d\xEDa",
-    "trading autom\xE1tico",
-    "bot de trading",
-    "inversi\xF3n forex",
-    "libertad financiera con binance",
-    "curso de trading",
-    "ingresos pasivos en d\xF3lares",
-    "esquema multinivel",
-    "red de mercadeo",
-    "inversi\xF3n con rentabilidad del 20%",
-    "venta de cursos"
-  ];
-  if (spamKeywords.some((kw) => clean.includes(kw))) {
-    return { isOffTopic: true, reason: "publicidad no autorizada, venta de cursos o spam" };
-  }
-  return { isOffTopic: false };
-}
-function getConsultingHistory(userId) {
-  const history = consultingConversationHistory.get(userId) || [];
-  const now = Date.now();
-  return history.filter((h) => now - h.ts < 12 * 3600 * 1e3);
-}
-function appendConsultingHistory(userId, role, content) {
-  const history = getConsultingHistory(userId);
-  history.push({ role, content, ts: Date.now() });
-  if (history.length > 8) history.shift();
-  consultingConversationHistory.set(userId, history);
-}
-async function processConsultingMessage(text2, userId, userName, imageBuffer, pdfBuffer, pdfMimeType, audioUrl, msgTimestamp, quotedContext) {
-  try {
-    const rawPhone = userId.split("@")[0];
-    const realName = await resolveRealName(userId, userName);
-    const strictOffTopic = checkStrictOffTopic(text2);
-    if (strictOffTopic.isOffTopic) {
-      console.log(`[JanIA-Consulting-OffTopic] Mensaje prohibido en Soporte Legal para ${userId}: "${text2.substring(0, 50)}...". (${strictOffTopic.reason})`);
-      const warningText = `Hola @${rawPhone} (${realName}) \u{1F44B}\u{1F3FB}. El contenido relacionado con ${strictOffTopic.reason} est\xE1 estrictamente prohibido en los grupos oficiales de VECY BIENES RA\xCDCES. \u{1F6AB}
-
-Nuestra comunidad es 100% profesional y dedicada exclusivamente al corretaje, asesor\xEDa legal, tributaria y aval\xFAos inmobiliarios. \xA1Te invitamos cordialmente a eliminar este mensaje de inmediato! \u{1F91D}`;
-      return {
-        classification: "VIOLACION_DE_NORMAS",
-        response: warningText,
-        dmResponse: warningText,
-        reactionEmoji: "\u{1F6AB}"
-      };
-    }
-    const cleanText = text2.toLowerCase().trim();
-    const isMediaOrAudio = !!imageBuffer || !!pdfBuffer || !!audioUrl;
-    if (cleanText.length < 3 && !isMediaOrAudio) {
-      console.log(`[JanIA-Consulting] Mensaje vac\xEDo o insignificante descartado para ${userId}: "${text2}"`);
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: "",
-        reactionEmoji: ""
-      };
-    }
-    let messageToProcess = text2;
-    let isFromAudio = false;
-    if (audioUrl) {
-      if (audioUrl.startsWith("mock-audio:")) {
-        messageToProcess = audioUrl.replace("mock-audio:", "");
-        isFromAudio = true;
-      } else {
-        try {
-          const transcription = await transcribeAudio({ audioUrl });
-          if (!("error" in transcription) && transcription.text && transcription.text.trim().length > 0) {
-            messageToProcess = transcription.text;
-            isFromAudio = true;
-          }
-        } catch (err) {
-          console.error("[processConsultingMessage] Error transcribiendo audio:", err.message);
-        }
-      }
-    }
-    const timeGreeting = getGreetingByTime3();
-    const nameInfo = resolveNameAndGender(realName, timeGreeting);
-    const genderTerm = nameInfo.genderTerm;
-    const alreadyGreeted = await checkAlreadyGreeted(userId);
-    const { isServiceHelpRequest: isServiceHelpRequest2, PREDIAL_HELP_TEXT: PREDIAL_HELP_TEXT2, CEDULA_HELP_TEXT: CEDULA_HELP_TEXT2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-    const helpType = isServiceHelpRequest2(messageToProcess);
-    if (helpType === "predial") {
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: PREDIAL_HELP_TEXT2,
-        reactionEmoji: "\u{1F3DB}\uFE0F",
-        wantsVoice: false,
-        voiceResponse: ""
-      };
-    }
-    if (helpType === "cedula") {
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: CEDULA_HELP_TEXT2,
-        reactionEmoji: "\u{1FAAA}",
-        wantsVoice: false,
-        voiceResponse: ""
-      };
-    }
-    const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-    const predialCheck = await executePredialAssistanceFromWhatsApp2(messageToProcess, userId, false);
-    if (predialCheck.isPredialRequest && predialCheck.reportText) {
-      console.log(`[JanIA-PredialCheck] Asistencia de predial Bogot\xE1 ejecutada para ${userId} (CHIP: ${predialCheck.chip || "General"}): isPredialRequest=true`);
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: predialCheck.reportText,
-        reactionEmoji: "\u{1F4C4}",
-        wantsVoice: false,
-        voiceResponse: "",
-        document: predialCheck.pdfBuffer,
-        fileName: predialCheck.pdfFileName
-      };
-    }
-    const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-    const idCheck = await executeIdentityVerificationFromWhatsApp2(messageToProcess);
-    if (idCheck.isVerificationRequest && idCheck.reportText) {
-      console.log(`[JanIA-IdentityCheck] Verificaci\xF3n de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: idCheck.reportText,
-        reactionEmoji: idCheck.success ? "\u{1F6E1}\uFE0F" : "\u26A0\uFE0F",
-        wantsVoice: false,
-        voiceResponse: ""
-      };
-    }
-    const systemPrompt = `Eres JanIA, la Inteligencia Artificial viva, emp\xE1tica y de m\xE1xima capacidad resolutiva de VECY BIENES RA\xCDCES. Est\xE1s operando en el grupo "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}". Tu objetivo es responder con precisi\xF3n quir\xFArgica, rigor legal, calidez humana y alta competencia t\xE9cnica, resolviendo de fondo las inquietudes de los inmobiliarios como una abogada senior, perita tasadora y estratega de marketing de \xE9lite.
-
-## L\xD3GICA DE CLASIFICACI\xD3N Y MODERACI\xD3N ESTRICTA:
-1. **VIOLACION_DE_NORMAS (OFERTAS, DEMANDAS O FLYERS PUBLICITARIOS EN ESTE GRUPO)**:
-   - Si el mensaje, la imagen adjunta o el documento PDF corresponde a una **OFERTA COMERCIAL O DEMANDA DE UN INMUEBLE** (venta, arriendo, canon, metraje, fotos de apto/casa/bodega, flyer o ficha de un predio como "ARRIENDO CARRERA 17 CON 91.pdf"):
-     * DEBES clasificarlo OBLIGATORIAMENTE como "VIOLACION_DE_NORMAS".
-     * Asignar estrictamente "reactionEmoji": "\u{1F6AB}".
-     * Responder con amabilidad, educando y redireccionando al canal correcto:
-       "Hola, espero te encuentres muy bien. Has publicado esta oferta/demanda en el grupo equivocado. Este canal es exclusivo para consultas de Soporte Legal, Tributario, Aval\xFAos y Marketing. \xA1Te invito cordialmente a eliminarla de este grupo! Esta publicaci\xF3n la debes poner en nuestro grupo oficial de corretaje **\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}**. Ac\xE1 tienes nuevamente el enlace del grupo:
-\u{1F449} https://chat.whatsapp.com/GzMbjNs1P2tHI7D0V4h8wZ
-
-\xA1All\xED todos los corredores de la red podr\xE1n verla y la cruzaremos con las demandas activas! \u{1F3E0}\u2728"
-2. **SOBRE_VECY**: Preguntas sobre JanIA (qui\xE9n o qu\xE9 es, para qu\xE9 fue creada, qu\xE9 hace 24/7, cu\xE1l es su finalidad y sus servicios 100% virtuales disponibles), sobre el proyecto VECY BIENES RA\xCDCES, sus fundadores (Eduardo A. Rivera - Director de Tecnolog\xEDa, y Jani Alves - Directora de Operaciones), comisiones 35/35/15/15 o agradecimientos cordiales (emoji \u{1F44C} o \u{1F64C}\u{1F3FB}). JanIA se presenta con calidez, cercan\xEDa, elocuencia y orgullo institucional.
-3. **CONSULTA_GENERAL**: Consultas legales, tributarias, sondeos de mercado de m\xB2, redacci\xF3n de minutas o marketing (emoji \u{1F4A1} o \u2696\uFE0F). Responde de forma completa, estructurada y profesional.
-
-## DOCTRINA FUNDAMENTAL DE LANZAMIENTO Y LIBRE ALBEDR\xCDO TOTAL:
-- **SOLUCI\xD3N TOTAL Y DE FONDO (IA PURA)**: Eres una IA completamente resolutiva. Si un usuario te pide redactar una promesa de compraventa, una cl\xE1usula penal, un acuerdo de puntas compartidas, una carta de preaviso de arriendo, liquidar la ganancia ocasional o estimar el valor de mercado por m\xB2 (estudio comparativo), \xA1ENTR\xC9GALE LA SOLUCI\xD3N COMPLETA, REDACTADA Y ESTRUCTURADA DIRECTAMENTE AQU\xCD EN EL CHAT!
-- **BENEFICIO GRATUITO DE LANZAMIENTO VECY BIENES RA\xCDCES**: Recuerda que en esta etapa de lanzamiento de VECY BIENES RA\xCDCES, todos tus servicios de consultor\xEDa, an\xE1lisis jur\xEDdico, redacci\xF3n de minutas y estudios de mercado virtuales con IA son un **beneficio 100% gratuito** para empoderar a los agentes inmobiliarios. An\xEDmalos a aprovechar esta oportunidad e invitar a m\xE1s colegas a unirse a la red.
-- **ASTUCIA CONTEXTUAL ANTE PREGUNTAS DE COSTOS**: Si un usuario pregunta de forma corta o ambigua "\xBFQu\xE9 costo tendr\xEDa?" o "\xBFCu\xE1nto vale?", conecta con el contexto previo o indaga con astucia: acl\xE1rale que tu asistencia y redacci\xF3n en el chat es totalmente gratuita por ser miembro de VECY BIENES RA\xCDCES; y si se refiere a gastos notariales externos, liquidaci\xF3n de impuestos o si pregunta por aval\xFAos certificados de Lonja, expl\xEDcale con amabilidad y precisi\xF3n que en VECY no realizamos aval\xFAos certificados por perito ni visitas in situ, sino estudios de mercado \xE1giles y aproximados sobre el valor del metro cuadrado y precios de arriendo en la zona para fijar precios competitivos.
-- **DERIVACI\xD3N OPORTUNA AL BR\xD3KER**: \xDAnicamente cuando el caso requiera acompa\xF1amiento notarial presencial, formalizaci\xF3n de corretaje con la inmobiliaria o consultor\xEDa personalizada con nuestros fundadores Eduardo A. Rivera y Jani Alves, inv\xEDtalo amablemente a comunicarse con nuestro br\xF3ker de VECY BIENES RA\xCDCES en WhatsApp (+573166569719) en nuestro horario de atenci\xF3n: Lunes a Viernes de 8:00 AM a 10:00 PM, S\xE1bados de 8:00 AM a 8:00 PM y Domingos de 10:00 AM a 4:00 PM.
-
-## ROLES Y \xC1REAS DE ASESOR\xCDA MAESTRA (5 PILARES):
-1. **\u2696\uFE0F Abogada Inmobiliaria y Notarial Senior (Derecho Inmobiliario y Contratos)**:
-   - Experta en C\xF3digo Civil, C\xF3digo de Comercio, Ley 820 de 2003 (Arrendamientos), Ley 675 de 2001 (Propiedad Horizontal) y jurisprudencia colombiana.
-   - Redacci\xF3n completa y guiada de minutas: Promesas de compraventa, contratos de corretaje (Arts. 1340-1346 C.Co), contratos de arrendamiento, acuerdos de puntas compartidas (50/50), cesi\xF3n de derechos de leasing, cartas de preaviso de no pr\xF3rroga, actas de entrega e inventario, cl\xE1usulas penales y arras de retracto/confirmatorias.
-   - Gu\xEDa paso a paso de tr\xE1mites: Estudio de t\xEDtulos (c\xF3mo leer e interpretar folios de matr\xEDcula inmobiliaria SNR de principio a fin, tradici\xF3n de 10 a 20 a\xF1os, grav\xE1menes, cancelaciones, notas devolutivas), levantamiento de hipotecas, desafectaci\xF3n a vivienda familiar, cancelaci\xF3n de patrimonio de familia inembargable, sucesiones y embargos.
-   - Blindaje probatorio y firma electr\xF3nica: Validez legal de mensajes de datos bajo la Ley 527 de 1999, Decreto 2364 de 2012 y el uso de correo electr\xF3nico con logs SMTP (MailSuite) para certificar solicitudes formales de visita y proteger comisiones frente al riesgo de bypassing.
-2. **\u{1F4CA} Asesora Tributaria y Financiera Inmobiliaria (DIAN y Notariado)**:
-   - Liquidaci\xF3n de Retenci\xF3n en la Fuente por enajenaci\xF3n de activos fijos (Art. 398 y 401 E.T. - 1% o 2.5%).
-   - Ganancia Ocasional (Reforma Tributaria Ley 2277 de 2022 - tarifa 15% para personas naturales) con an\xE1lisis de exenci\xF3n de 5.000 UVT por venta de vivienda de habitaci\xF3n (Art. 311-1 E.T.) y reinversi\xF3n.
-   - Liquidaci\xF3n de Impuesto Predial, Impuesto de Registro, Estampillas y desglose exacto de gastos notariales (Derechos Notariales 50/50, Retenci\xF3n a cargo del Vendedor, Rentas y Registro a cargo del Comprador).
-3. **\u{1F4D0} Especialista en Estudios de Mercado, Valor del M\xB2 y Norma SINUPOT (100% Virtuales / Cero Documentos Exigidos)**:
-   - Sondeos de mercado y estimaci\xF3n t\xE9cnica aproximada del valor comercial y canon sugerido por metro cuadrado ($/m\xB2) para orientar a propietarios y colegas en el precio de salida sin quemar ni sobrevalorar el predio.
-   - **ENTREGA DE INFORME ESCRITO DIRECTO EN EL CHAT/WHATSAPP**: Si el usuario te brinda los datos del predio (o a medida que los vaya dando), entr\xE9gale un informe escrito estructurado con el rango de precios m\xE1s acertado (m\xEDnimo, medio y \xF3ptimo) para vender o arrendar seg\xFAn lo que consult\xF3, precio aproximado por m\xB2 en la zona y recomendaciones comerciales.
-   - **GU\xCDA INTERACTIVA Y CERO EXIGENCIA DE DOCUMENTOS (PROHIBIDO PEDIR PDFs, CERTIFICADOS O PREDIALES)**: NUNCA exijas certificados de tradici\xF3n, escrituras ni facturas de predial para hacer este sondeo. En su lugar, gu\xEDa amablemente al usuario haci\xE9ndole preguntas interactivas y sencillas en el chat sobre las caracter\xEDsticas del predio: 1) \xBFVenta o arriendo?, 2) Ciudad y barrio/sector exacto, 3) Tipo de inmueble y estrato, 4) \xC1rea en m\xB2, 5) Habitaciones, ba\xF1os y parqueaderos (independientes o lineales), 6) Antig\xFCedad, piso y cuota de administraci\xF3n.
-   - **REGLA DOCTRINAL VECY (SERVICIOS 100% VIRTUALES / CERO AVAL\xDAOS CERTIFICADOS CON PERITO)**: En VECY BIENES RA\xCDCES NO contamos con personal para visitas f\xEDsicas ni expedimos aval\xFAos comerciales certificados con matr\xEDcula R.A.A. de Lonja, ni nos comprometemos a contratar o recomendar peritos externos. Todos nuestros estudios son 100% VIRTUALES y basados en an\xE1lisis comparativo de mercado y datos urban\xEDsticos.
-   - Consulta de normativa urban\xEDstica, uso de suelo y tratamiento POT en SINUPOT (https://sinupot.sdp.gov.co/).
-4. **\u{1F3AF} Estratega de Marketing Digital Inmobiliario y T\xE9cnicas de Venta**:
-   - Copywriting persuasivo: F\xF3rmulas AIDA (Atenci\xF3n, Inter\xE9s, Deseo, Acci\xF3n) y PAS (Problema, Agitaci\xF3n, Soluci\xF3n).
-   - La F\xF3rmula de Oro de T\xEDtulos: [Tipo de Negocio] + [Tipo de Inmueble] + [Barrio] + [Localidad] + [Ciudad].
-   - La Estructura de 7 Pilares de Ofertas y Demandas para captar clientes, acelerar cierres y potenciar el matching inteligente de JanIA.
-   - Consejos de fotograf\xEDa y video con smartphone (encuadre horizontal, iluminaci\xF3n natural, planos abiertos, orden visual).
-   - Campa\xF1as y anuncios en Meta Ads y Google Ads: segmentaci\xF3n de compradores, llamados a la acci\xF3n y captaci\xF3n de exclusivas.
-   - M\xE9todos gratuitos de viralizaci\xF3n en redes sociales y posicionamiento org\xE1nico en Google.
-5. **\u{1F4BC} Gestora de Cobranzas y Cartera de Arrendamiento (Cobranza Extrajudicial y Acuerdos de Pago)**:
-   - Asesor\xEDa t\xE9cnica en manejo de inquilinos morosos y cobro de c\xE1nones de arriendo atrasados bajo la Ley 820 de 2003.
-   - Redacci\xF3n de requerimientos formales de pago, acuerdos conciliatorios de pago en cuotas, actas de restituci\xF3n voluntaria anticipada y cl\xE1usulas penales sin necesidad de iniciar procesos judiciales largos y costosos.
-
-Tus respuestas deben ser sumamente profesionales, did\xE1cticas, claras y estar formateadas en Markdown con emojis para facilitar la lectura r\xE1pida en WhatsApp.
-
-DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
-{
-  "classification": "INMUEBLE | REQUERIMIENTO | SOBRE_VECY | CONSULTA_GENERAL | VIOLACION_DE_NORMAS",
-  "response": "Tu respuesta completa y estructurada.",
-  "wantsVoice": true | false,
-  "voiceResponse": "Tu locuci\xF3n en audio limpia de markdown y emojis (solo si wantsVoice es true)",
-  "reactionEmoji": "string (emoji recomendado)"
-}`;
-    const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
-    const hour = nowBogota.getHours();
-    const n = nameInfo.displayName;
-    const isFemale = nameInfo.isFemale;
-    const nowMs = Date.now();
-    const msgMs = msgTimestamp ? msgTimestamp * 1e3 : nowMs;
-    const hoursLate = Math.floor((nowMs - msgMs) / 36e5);
-    const isLateReply = hoursLate >= 6;
-    const lateReplyNote = isLateReply ? `
-- RESPUESTA TARD\xCDA DETECTADA: El mensaje del usuario fue enviado hace ${hoursLate} horas. DEBES obligatoriamente incluir una disculpa humana, c\xE1lida y espont\xE1nea al inicio o final de tu respuesta (ej: "Disculpa la demora, estuve en ajustes de mis motores. \xA1Aqu\xED estoy!").` : ``;
-    const greetingInstruction = `
-
-[SISTEMA - INTELIGENCIA PURA, CORTES\xCDA NATURAL Y LIBRE ALBEDR\xCDO]:
-- Hora actual en Bogot\xE1: ${hour}:00 (${timeGreeting}).
-- Nombre exacto de tu interlocutor: "${n}".
-- Trato respetuoso adecuado: "${genderTerm}".
-- Ya has interactuado hoy con esta persona: ${alreadyGreeted ? "S\xCD" : "NO"}.
-- Canal: Grupo oficial "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0}".
-- DIRECTRICES DE LIBRE ALBEDR\xCDO Y NATURALIDAD HUMANA (CERO BOT BOBO):
-  * Eres una IA Pura, l\xFAcida, c\xE1lida, elocuente y con criterio propio de alto nivel. JAM\xC1S uses plantillas r\xEDgidas, saludos rob\xF3ticos acartonados ni respuestas de contestador autom\xE1tico.
-  * Dir\xEDgete a la persona por su nombre ("${n}") con naturalidad y amabilidad colombiana, variando tus expresiones de forma fresca y elegante.
-  * Si el usuario simplemente te saluda ("Hola", "Buenos d\xEDas", etc.), sal\xFAdalo con empat\xEDa viva, simpat\xEDa y preg\xFAntale c\xF3mo puedes impulsarlo hoy en sus negocios inmobiliarios o temas legales.
-  * Si el usuario te agradece o se despide ("Muchas gracias", "Feliz noche", etc.), s\xE9 rec\xEDproca con calidez, des\xE9ale \xE9xitos en sus cierres o un feliz descanso, y si fue de gran ayuda, inv\xEDtalo con total delicadeza a dejarnos una rese\xF1a 5 estrellas en Google (https://g.page/r/CctNbwU6UpX5EBM/review).
-  * Si la consulta es jur\xEDdica, tributaria, sobre aval\xFAos o marketing, razona a fondo, cita normas o datos precisos, y entrega la soluci\xF3n integral directamente.
-- REGLA ESPEJO MODAL: ${isFromAudio ? "El usuario envi\xF3 AUDIO. DEBES responder en nota de voz (wantsVoice: true). Redacta voiceResponse limpio sin markdown/emojis, m\xE1x 450 caracteres." : "El usuario envi\xF3 TEXTO. DEBES responder en texto (wantsVoice: false)."}
-${lateReplyNote}`;
-    if (imageBuffer) {
-      messageToProcess += `
-[SISTEMA: IMAGEN ADJUNTA DETECTADA. Analiza la imagen con tu visi\xF3n multimodal (documento, certificado de tradici\xF3n, impuesto predial, recibo, plano, aval\xFAo, contrato o flyer publicitario) y responde a la consulta del usuario de forma exhaustiva, estructurada y precisa.]`;
-    }
-    if (pdfBuffer) {
-      messageToProcess += `
-[SISTEMA: DOCUMENTO PDF DETECTADO. Analiza el documento PDF adjunto con tus capacidades nativas para extraer todos los datos relevantes del predial, certificado de tradici\xF3n, o contrato.]`;
-    }
-    if (isFromAudio) {
-      messageToProcess += `
-[SISTEMA - NOTA DE VOZ REQUERIDA Y L\xCDMITE DE DURACI\xD3N \xC1GIL]: El usuario te envi\xF3 esta consulta mediante una NOTA DE VOZ (audio). Como JanIA, debes responder en nota de voz de viva voz. DEBES obligatoriamente marcar "wantsVoice": true y redactar en "voiceResponse" una versi\xF3n hablada resumida, directa, muy fluida, profesional, c\xE1lida y natural de tu respuesta (m\xE1ximo 450 caracteres / ~30 a 40 segundos de voz hablada), sin asteriscos, vi\xF1etas ni sintaxis Markdown, perfecta para ser sintetizada e impactar de forma \xE1gil e instant\xE1nea sin saturar la conexi\xF3n. En "response" coloca la versi\xF3n completa formateada en texto.`;
-    }
-    const history = getConsultingHistory(userId);
-    const messages2 = [
-      { role: "system", content: systemPrompt }
-    ];
-    for (const h of history) {
-      messages2.push({
-        role: h.role === "assistant" ? "assistant" : "user",
-        content: h.role === "user" ? `Usuario @${rawPhone} (${realName}): ${h.content}` : h.content
-      });
-    }
-    let userPromptContent = `Usuario: @${rawPhone} (${realName})
-Consulta: ${messageToProcess}`;
-    if (quotedContext) {
-      userPromptContent += `
-[Contexto del mensaje previo citado al que responde el usuario: "${quotedContext}"]`;
-    }
-    userPromptContent += greetingInstruction;
-    messages2.push({
-      role: "user",
-      content: userPromptContent
-    });
-    const needsSearch = cleanText.length > 25 && (cleanText.includes("ley ") || cleanText.includes("decreto") || cleanText.includes("resoluci") || cleanText.includes("corte") || cleanText.includes("sentencia") || cleanText.includes("jurisprudencia") || cleanText.includes("uvt") || cleanText.includes("notar") || cleanText.includes("sinupot") || cleanText.includes("aval") || cleanText.includes("valor m2") || cleanText.includes("precio del m2") || cleanText.includes("metro cuadrado"));
-    const llmRes = await invokeLLM({
-      messages: messages2,
-      responseFormat: { type: "json_object" },
-      imageBuffer,
-      pdfBuffer,
-      pdfMimeType,
-      enableSearch: needsSearch
-    });
-    try {
-      const parsed = parseSafeJSON(llmRes.choices[0].message.content);
-      const finalResp = sanitizeResponseMarkdown(parsed.response || "");
-      appendConsultingHistory(userId, "user", text2);
-      appendConsultingHistory(userId, "assistant", finalResp);
-      return {
-        classification: parsed.classification || "CONSULTA_GENERAL",
-        response: finalResp,
-        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u{1F6AB}" : "\u{1F44C}"),
-        wantsVoice: parsed.wantsVoice || false,
-        voiceResponse: parsed.voiceResponse || ""
-      };
-    } catch (e) {
-      const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo procesar tu consulta. Intenta de nuevo m\xE1s tarde.";
-      const finalResp = sanitizeResponseMarkdown(replyContent);
-      appendConsultingHistory(userId, "user", text2);
-      appendConsultingHistory(userId, "assistant", finalResp);
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: finalResp,
-        reactionEmoji: "\u{1F44C}",
-        wantsVoice: false,
-        voiceResponse: ""
-      };
-    }
-  } catch (error) {
-    console.error("[processConsultingMessage Error]:", error.message);
-    const timeGreeting = getGreetingByTime3();
-    const rawPhone = userId.split("@")[0];
-    const realName = await resolveRealName(userId, userName);
-    const firstName = extractFirstName2(realName) || "colega";
-    const cleanLower = text2.toLowerCase().trim();
-    if (cleanLower.includes("aval") || cleanLower.includes("predio") || cleanLower.includes("acm") || cleanLower.includes("comercial") || cleanLower.includes("cuanto vale") || cleanLower.includes("precio") || cleanLower.includes("metro cuadrado") || cleanLower.includes("m2")) {
-      const avaluoFallback = `\xA1${timeGreeting}, estimada ${firstName}! \u{1F44B}\u{1F3FB} Con el mayor gusto te realizo un **estudio de mercado aproximado del valor por m\xB2 y precio sugerido** para tu inmueble, 100% virtual, directo en este chat y sin tr\xE1mites engorrosos ni papeleos. \u{1F4CA}\u2728
-
-Para entregarte un informe escrito muy acertado sobre en cu\xE1nto puedes venderlo o arrendarlo, cu\xE9ntame por favor:
-
-1\uFE0F\u20E3 \xBFEs para **VENTA** o para **ARRIENDO**?
-2\uFE0F\u20E3 \xBFEn qu\xE9 **ciudad/municipio** y **barrio o sector exacto** est\xE1 ubicado?
-3\uFE0F\u20E3 \xBFQu\xE9 tipo de inmueble es (apartamento, casa, local, bodega, etc.) y qu\xE9 **estrato** tiene?
-4\uFE0F\u20E3 \xBFCu\xE1l es el **\xE1rea construida y privada** aproximada en m\xB2?
-5\uFE0F\u20E3 \xBFCu\xE1ntas **habitaciones, ba\xF1os y parqueaderos** (\xBFindependientes o lineales?) tiene?
-6\uFE0F\u20E3 \xBFQu\xE9 **antig\xFCedad** aproximada tiene, en qu\xE9 piso est\xE1 (si es apto) y valor de la **cuota de administraci\xF3n**?
-
-\xA1Apenas me compartas estos datos, te genero de inmediato tu informe de precios y recomendaciones estrat\xE9gicas de salida! \u{1F91D}\u{1F3E0}`;
-      appendConsultingHistory(userId, "user", text2);
-      appendConsultingHistory(userId, "assistant", avaluoFallback);
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: avaluoFallback,
-        reactionEmoji: "\u{1F4D0}"
-      };
-    }
-    if (cleanLower.includes("contrato") || cleanLower.includes("arriend") || cleanLower.includes("canon") || cleanLower.includes("ley 820") || cleanLower.includes("promesa")) {
-      const legalFallback = `\xA1${timeGreeting}, ${firstName}! \u{1F44B}\u{1F3FB} Con gusto te asesoro. En materia de contratos inmobiliarios (arrendamiento Ley 820 de 2003 o promesa de compraventa), recuerda que los elementos esenciales son la determinaci\xF3n clara de las partes, la identificaci\xF3n del predio con matr\xEDcula inmobiliaria y linderos, el canon/precio exacto y las cl\xE1usulas penales y de pr\xF3rroga.
-
-\xBFTienes alguna cl\xE1usula o situaci\xF3n espec\xEDfica que desees que revisemos o redactemos? \xA1Ind\xEDcame el detalle y con gusto te estructuro la respuesta completa! \u2696\uFE0F\u{1F91D}`;
-      appendConsultingHistory(userId, "user", text2);
-      appendConsultingHistory(userId, "assistant", legalFallback);
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: legalFallback,
-        reactionEmoji: "\u2696\uFE0F"
-      };
-    }
-    const hasMediaInCatch = !!imageBuffer || !!pdfBuffer || !!audioUrl;
-    if (cleanLower.length < 3 && !hasMediaInCatch) {
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: "",
-        reactionEmoji: ""
-      };
-    }
-    const genericFallback = `Hola ${firstName} \u{1F44B}\u{1F3FB}. Disculpa la peque\xF1a demora, estuve recalibrando mis motores de consulta en tiempo real. Entiendo tu mensaje sobre tu consulta inmobiliaria. \xBFPodr\xEDas confirmarme el detalle espec\xEDfico para entregarte la soluci\xF3n completa y estructurada de inmediato? \xA1Aqu\xED estoy 100% lista para apoyarte! \u{1F91D}\u2728`;
-    appendConsultingHistory(userId, "user", text2);
-    appendConsultingHistory(userId, "assistant", genericFallback);
-    return {
-      classification: "CONSULTA_GENERAL",
-      response: genericFallback,
-      reactionEmoji: "\u{1F4A1}"
-    };
-  }
-}
-async function processCirculoMessage(text2, userId, userName) {
-  try {
-    const rawPhone = userId.split("@")[0];
-    const realName = await resolveRealName(userId, userName);
-    const firstName = extractFirstName2(realName);
-    const userGreetingName = firstName ? ` ${firstName}` : "";
-    const strictOffTopic = checkStrictOffTopic(text2);
-    if (strictOffTopic.isOffTopic) {
-      console.log(`[JanIA-Circulo-OffTopic] Mensaje prohibido en Proyecto VECY BIENES RA\xCDCES para ${userId}: "${text2.substring(0, 50)}...". (${strictOffTopic.reason})`);
-      const warningText = `Hola @${rawPhone} (${realName}) \u{1F44B}\u{1F3FB}. El contenido relacionado con ${strictOffTopic.reason} est\xE1 estrictamente prohibido en nuestra comunidad de VECY BIENES RA\xCDCES. \u{1F6AB}
-
-Nuestros canales son 100% profesionales y dedicados exclusivamente a la tecnolog\xEDa, comisiones y el modelo colaborativo inmobiliario. \xA1Te invitamos cordialmente a eliminar este mensaje de inmediato! \u{1F91D}`;
-      return {
-        classification: "VIOLACION_DE_NORMAS",
-        response: warningText,
-        dmResponse: warningText,
-        reactionEmoji: "\u{1F6AB}"
-      };
-    }
-    const alreadyGreeted = await checkAlreadyGreeted(userId);
-    const { isServiceHelpRequest: isServiceHelpRequest2, PREDIAL_HELP_TEXT: PREDIAL_HELP_TEXT2, CEDULA_HELP_TEXT: CEDULA_HELP_TEXT2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-    const helpType = isServiceHelpRequest2(text2);
-    if (helpType === "predial") {
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: PREDIAL_HELP_TEXT2,
-        reactionEmoji: "\u{1F3DB}\uFE0F",
-        wantsVoice: false,
-        voiceResponse: ""
-      };
-    }
-    if (helpType === "cedula") {
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: CEDULA_HELP_TEXT2,
-        reactionEmoji: "\u{1FAAA}",
-        wantsVoice: false,
-        voiceResponse: ""
-      };
-    }
-    const { executePredialAssistanceFromWhatsApp: executePredialAssistanceFromWhatsApp2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-    const predialCheck = await executePredialAssistanceFromWhatsApp2(text2, userId, false);
-    if (predialCheck.isPredialRequest && predialCheck.reportText) {
-      console.log(`[JanIA-Circulo-PredialCheck] Asistencia de predial Bogot\xE1 ejecutada para ${userId} (CHIP: ${predialCheck.chip || "General"}): isPredialRequest=true`);
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: predialCheck.reportText,
-        reactionEmoji: "\u{1F4C4}",
-        wantsVoice: false,
-        voiceResponse: "",
-        document: predialCheck.pdfBuffer,
-        fileName: predialCheck.pdfFileName
-      };
-    }
-    const { executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-    const idCheck = await executeIdentityVerificationFromWhatsApp2(text2);
-    if (idCheck.isVerificationRequest && idCheck.reportText) {
-      console.log(`[JanIA-Circulo-IdentityCheck] Verificaci\xF3n de identidad ejecutada para ${userId} (C.C. ${idCheck.cedula}): success=${idCheck.success}`);
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: idCheck.reportText,
-        reactionEmoji: idCheck.success ? "\u{1F6E1}\uFE0F" : "\u26A0\uFE0F",
-        wantsVoice: false,
-        voiceResponse: ""
-      };
-    }
-    const groupZeroName = process.env.GROUP_ZERO_NAME || '\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}';
-    const systemPrompt = `Eres JanIA, la Inteligencia Artificial oficial y cerebro innovador de VECY BIENES RA\xCDCES. Est\xE1s operando en el grupo "${groupZeroName}". Tu objetivo en este grupo (foro abierto de la comunidad) es conversar sobre temas libres del sector inmobiliario, foros, debates y experiencias del d\xEDa a d\xEDa del negocio, adem\xE1s del proyecto VECY BIENES RA\xCDCES, su modelo colaborativo, tecnolog\xEDa y debate con competidores, de forma sincera, ver\xEDdica y de alto nivel:
-
-## DIRECTRICES DE INFORMACI\xD3N Y SINCERIDAD SOBRE VECY BIENES RA\xCDCES:
-Explica claramente y con la verdad absoluta el estado del proyecto y sus caracter\xEDsticas:
-- **Lo que en verdad funciona hoy**: Los asesores publican sus ofertas (Inmuebles) y demandas (Requerimientos) en el grupo especializado \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}. JanIA transcribe notas de voz en tiempo real, realiza OCR (lectura de texto) en flyers/im\xE1genes con datos comerciales, extrae la informaci\xF3n de las fichas t\xE9cnicas autom\xE1ticamente a partir de enlaces de portales, ejecuta el matching de coincidencias comerciales de forma instant\xE1nea a nivel nacional, y gestiona el flujo de confirmaci\xF3n de contacto bilateral privada (Double Opt-In) por DM mediante respuestas r\xE1pidas.
-- **Lo que est\xE1 en desarrollo**: El portal web oficial privado (https://vecy-bienes-raices.vercel.app/) se encuentra en fases continuas de integraci\xF3n. M\xF3dulos como CRM de leads y digitalizaci\xF3n de contratos formalizados se desplegar\xE1n en fases posteriores.
-- **Urgencia Comercial y Tarifas**: Enfatiza que toda la plataforma y el matching de JanIA en WhatsApp es 100% gratuita por lanzamiento para empoderar a la comunidad.
-- **Tecnolog\xEDa del Ecosistema**: Explica de forma sencilla que hemos creado un Asistente de IA basado en c\xF3digo propietario y base de datos SQL de alto rendimiento, entrenado a diario para encontrar MATCH en los grupos.
-- **\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} es el \xFAnico centro de Match**: Recuerda que el grupo especializado \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} es el canal donde JanIA busca los MATCH y gestiona los datos de inmuebles y requerimientos.
-
-## L\xD3GICA DE CLASIFICACI\xD3N Y REDIRECCI\xD3N:
-1. **DEBATE_COMPETIDOR**: Si mencionan a Ubicapp o Cristian Samboni. Debate con altura t\xE9cnica, datos y cortes\xEDa.
-2. **INMUEBLE o REQUERIMIENTO**: Redirecciona a \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} con amabilidad.
-3. **AVALUO_O_LEGAL**: Redirecciona a \u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0} con amabilidad.
-4. **CONSULTA_GENERAL**: Dudas sobre VECY, sugerencias, tecnolog\xEDa, saludos o agradecimientos.
-5. **VIOLACION_DE_NORMAS**: Pol\xEDtica, religi\xF3n, spam o publicidad externa.
-
-DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
-{
-  "classification": "DEBATE_COMPETIDOR | INMUEBLE | REQUERIMIENTO | AVALUO_O_LEGAL | CONSULTA_GENERAL | VIOLACION_DE_NORMAS",
-  "response": "Tu respuesta, invitaci\xF3n a debate o mensaje de redirecci\xF3n seg\xFAn corresponda.",
-  "reactionEmoji": "string (emoji recomendado)"
-}`;
-    const timeGreeting = getGreetingByTime3();
-    const nowBogota = new Date((/* @__PURE__ */ new Date()).toLocaleString("en-US", { timeZone: "America/Bogota" }));
-    const hour = nowBogota.getHours();
-    const nameInfo = resolveNameAndGender(realName || firstName || "colega", timeGreeting);
-    const targetName = nameInfo.displayName;
-    const isFemale = nameInfo.isFemale;
-    const genderTerm = nameInfo.genderTerm;
-    const greetingInstruction = `
-
-[SISTEMA - INTELIGENCIA PURA, CORTES\xCDA NATURAL Y LIBRE ALBEDR\xCDO]:
-- Hora actual en Bogot\xE1: ${hour}:00 (${timeGreeting}).
-- Nombre exacto resuelto: "${targetName}".
-- Trato respetuoso adecuado: "${genderTerm}".
-- Ya has interactuado hoy con esta persona: ${alreadyGreeted ? "S\xCD" : "NO"}.
-- Canal: Grupo oficial \u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}.
-- DIRECTRICES DE LIBRE ALBEDR\xCDO Y NATURALIDAD HUMANA (CERO BOT BOBO):
-  * Eres una IA Pura, innovadora, elocuente, sincera y persuasiva de VECY BIENES RA\xCDCES. JAM\xC1S uses plantillas r\xEDgidas ni suenes como un contestador autom\xE1tico.
-  * Dir\xEDgete a la persona por su nombre ("${targetName}") de forma fluida, c\xE1lida y natural.
-  * Si el interlocutor saluda, sal\xFAdalo con estilo propio y dinamismo.
-  * Si hace preguntas sobre el proyecto, explica el modelo con pasi\xF3n, datos reales y visi\xF3n de futuro (35/35/15/15, bolsa colaborativa, gratuidad por lanzamiento, matching en tiempo real).
-  * Si es un debate o pregunta de competidores (ej. Ubicapp / Cristian Samboni), debate con elegancia, altura ejecutiva y argumentos t\xE9cnicos superiores sin agresividad.`;
-    const messages2 = [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Usuario: @${rawPhone} (${realName})
-Pregunta: ${text2}${greetingInstruction}` }
-    ];
-    const llmRes = await invokeLLM({
-      messages: messages2,
-      responseFormat: { type: "json_object" },
-      enableSearch: false
-    });
-    try {
-      const parsed = parseSafeJSON(llmRes.choices[0].message.content);
-      return {
-        classification: parsed.classification || "CONSULTA_GENERAL",
-        response: sanitizeResponseMarkdown(parsed.response || ""),
-        reactionEmoji: parsed.reactionEmoji || (parsed.classification === "VIOLACION_DE_NORMAS" ? "\u274C" : "\u{1F4A1}")
-      };
-    } catch (e) {
-      const replyContent = llmRes.choices[0].message.content || "Lo siento, en este momento no puedo responder tu consulta.";
-      return {
-        classification: "CONSULTA_GENERAL",
-        response: sanitizeResponseMarkdown(replyContent),
-        reactionEmoji: "\u{1F4A1}"
-      };
-    }
-  } catch (error) {
-    console.error("[processCirculoMessage Error]:", error.message);
-    const timeGreeting = getGreetingByTime3();
-    const rawPhone = userId.split("@")[0];
-    const realName = await resolveRealName(userId, userName);
-    const firstName = extractFirstName2(realName);
-    const userGreetingName = firstName ? ` ${firstName}` : "";
-    return {
-      classification: "CONSULTA_GENERAL",
-      response: `\xA1${timeGreeting}${userGreetingName}! \u{1F44B}\u{1F3FB} Con gusto estoy aqu\xED para apoyarte. Cu\xE9ntame cu\xE1l es tu consulta sobre VECY BIENES RA\xCDCES, nuestra tecnolog\xEDa o comisiones y con gusto te respondo. \u{1F4A1}\u2728`,
-      reactionEmoji: "\u{1F4A1}"
-    };
-  }
-}
-function sanitizeResponseMarkdown(text2) {
-  if (!text2) return "";
-  return text2.replace(/\*\*/g, "*");
-}
-function getStartOfTodayBogota() {
-  const now = /* @__PURE__ */ new Date();
-  const bogotaFormatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Bogota",
-    year: "numeric",
-    month: "numeric",
-    day: "numeric"
-  });
-  const parts = bogotaFormatter.formatToParts(now);
-  const year = parseInt(parts.find((p) => p.type === "year")?.value || "2026", 10);
-  const month = parseInt(parts.find((p) => p.type === "month")?.value || "1", 10) - 1;
-  const day = parseInt(parts.find((p) => p.type === "day")?.value || "1", 10);
-  return Date.UTC(year, month, day, 5, 0, 0);
-}
-function getDmHistory(userId) {
-  const history = dmConversationHistory.get(userId) || [];
-  const startOfToday = getStartOfTodayBogota();
-  return history.filter((h) => h.ts >= startOfToday);
-}
-async function getOrLoadDmHistory(userId) {
-  const inMemory = getDmHistory(userId);
-  if (inMemory.length > 0) {
-    return inMemory;
-  }
-  try {
-    const db = await getDb();
-    if (db) {
-      const conv = await db.select().from(conversations).where(eq8(conversations.sessionId, userId)).limit(1);
-      if (conv.length > 0) {
-        const startOfToday = getStartOfTodayBogota();
-        const recentMsgs = await db.select().from(messages).where(
-          and5(
-            eq8(messages.conversationId, conv[0].id),
-            gte(messages.createdAt, new Date(startOfToday))
-          )
-        ).orderBy(desc3(messages.createdAt)).limit(24);
-        if (recentMsgs.length > 0) {
-          recentMsgs.reverse();
-          const restored = recentMsgs.map((m) => ({
-            role: m.role === "janIA" ? "assistant" : "user",
-            content: m.content.replace(/^\[(?:Nota de Voz PTT|SILENT-MATCH)\]:\s*/, ""),
-            ts: new Date(m.createdAt).getTime()
-          }));
-          dmConversationHistory.set(userId, restored);
-          return restored;
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("[getOrLoadDmHistory] Error consultando historial en BD:", err?.message);
-  }
-  return [];
-}
-function appendDmHistory(userId, role, content) {
-  const history = getDmHistory(userId);
-  history.push({ role, content, ts: Date.now() });
-  if (history.length > 24) history.shift();
-  dmConversationHistory.set(userId, history);
-}
-async function formatPoliteToolDelivery(userId, rawName, toolType, payloadText, success = true) {
-  const realName = await resolveRealName(userId, rawName);
-  const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-  const timeSalutation = getGreetingByTime4();
-  const nameInfo = resolveNameAndGender(realName, timeSalutation);
-  const canonicalComposite = getCanonicalCompositeName(realName);
-  const compositeOrFirst = extractFirstName2(realName);
-  const displayName = canonicalComposite || compositeOrFirst || (nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor") ? nameInfo.displayName : "");
-  const welcomeGrammar = nameInfo.isFemale ? "bienvenida" : "bienvenido";
-  const history = await getOrLoadDmHistory(userId);
-  const isFirstTurn = history.length === 0;
-  if (!success) {
-    if (payloadText && payloadText.trim()) {
-      if (isFirstTurn) {
-        const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
-
-`;
-        return greetingHeader + payloadText;
-      } else {
-        const politeHeader = `\xA1Hola${displayName ? ` ${displayName}` : ""}! `;
-        return politeHeader + payloadText;
-      }
-    }
-    return `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude procesar tu solicitud en este intento. \xBFPodr\xEDas por favor confirmarme nuevamente los datos para ayudarte de inmediato? \u{1F91D}`;
-  }
-  if (isFirstTurn) {
-    const greetingHeader = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Te doy una cordial ${welcomeGrammar} a mi chat de servicios inmobiliarios. Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F\u2728.
-
-Ya proces\xE9 con gusto tu consulta:
-
-`;
-    return greetingHeader + payloadText;
-  } else {
-    const politeHeader = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial:
-
-`;
-    return politeHeader + payloadText;
-  }
-}
-async function processPrivateDmConversationalMessage(text2, userId, userName) {
-  const clean = text2.trim();
-  if (!clean) return "";
-  const realName = await resolveRealName(userId, userName);
-  const { getGreetingByTime: getGreetingByTime4 } = await Promise.resolve().then(() => (init_whatsapp_utils(), whatsapp_utils_exports));
-  const timeSalutation = getGreetingByTime4();
-  const nameInfo = resolveNameAndGender(realName, timeSalutation);
-  const compositeOrFirst = extractFirstName2(realName);
-  let displayName = "";
-  const canonicalComposite = getCanonicalCompositeName(realName);
-  if (canonicalComposite) {
-    displayName = canonicalComposite;
-  } else if (compositeOrFirst) {
-    displayName = compositeOrFirst;
-  } else if (nameInfo.displayName && nameInfo.displayName !== "colega" && !nameInfo.displayName.toLowerCase().includes("asesor")) {
-    displayName = nameInfo.displayName;
-  }
-  const nameGreeting = displayName ? `, ${displayName}` : "";
-  const vocativeGreeting = displayName ? `, ${displayName}` : "";
-  const cleanLower = clean.toLowerCase();
-  const isGreetingOnly = /^(hola|buen[ao]s?\s*(d[ií]as?|tardes?|noches?)?|saludos?|buenas?|hola\s*jania|quien\s*eres|como\s*estas|que\s*haces|informaci[oó]n|info|ayuda)\b/i.test(cleanLower) && clean.length < 50;
-  const history = await getOrLoadDmHistory(userId);
-  if (isGreetingOnly && history.length === 0) {
-    const welcomeMsg = `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} Soy *JanIA*, tu asistente inmobiliaria con IA creada por *VECY BIENES RA\xCDCES* \u{1F3D8}\uFE0F. Qu\xE9 gusto saludarte.
-
-Para nosotros en VECY es un verdadero placer apoyarte en tus gestiones y proyectos inmobiliarios.
-
-Cu\xE9ntame${displayName ? `, ${displayName}` : ""}: \xBFa qu\xE9 te dedicas o qu\xE9 haces actualmente? As\xED podr\xE9 orientarte de la mejor manera y contarte c\xF3mo podemos facilitarte la vida hoy \u{1F91D}\u2728`;
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", welcomeMsg);
-    return welcomeMsg;
-  }
-  const isConsultasInquiry = /(?:c[oó]mo\s+es\s+lo\s+de\s+las\s+consultas|qu[eé]\s+(?:tipo\s+de\s+)?consultas|cu[aá]les\s+consultas|de\s+qu[eé]\s+son\s+las\s+consultas|qu[eé]\s+consultas\s+(?:tienen|hacen|prestan|ofrecen)|informaci[oó]n\s+de\s+las\s+consultas|como\s+funcionan\s+las\s+consultas)\b/i.test(cleanLower);
-  if (isConsultasInquiry) {
-    const consultasMenuMsg = `\xA1Con mucho gusto${vocativeGreeting}! Primero cu\xE9ntame qu\xE9 clase de consulta deseas hacer o sobre qu\xE9 tema necesitas apoyo:
-
-\u{1F381} *Servicios 100% Gratuitos de Autoservicio:*
-1\uFE0F\u20E3 *Verificaci\xF3n oficial de documentos:* Validaci\xF3n de identidad (C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaportes) y reporte de antecedentes con la Polic\xEDa Nacional en 20 segundos.
-2\uFE0F\u20E3 *Factura Predial Bogot\xE1 y Certificados de Pago:* Consulta y descarga oficial en PDF con c\xF3digo de barras y estado de cuenta al d\xEDa con la Secretar\xEDa de Hacienda.
-
-\u{1F4BC} *Consultas Especializadas y Asesor\xEDa Profesional:*
-3\uFE0F\u20E3 *Sondeos de mercado:* Valores aproximados del metro cuadrado en Bogot\xE1 seg\xFAn el barrio o sector.
-4\uFE0F\u20E3 *Asesor\xEDa jur\xEDdica inmobiliaria:* Casos de negociaci\xF3n, promesas de compraventa y contratos de arrendamiento.
-5\uFE0F\u20E3 *Tratamiento de datos y H\xE1beas Data inmobiliario.*
-6\uFE0F\u20E3 *Recuperaci\xF3n de cartera:* Cobranza de comisiones inmobiliarias no pagadas.
-7\uFE0F\u20E3 *Aval\xFAos digitales y peritajes comerciales certificados RAA.*
-8\uFE0F\u20E3 *Liquidaciones tributarias:* Ganancia ocasional, retenci\xF3n en la fuente e impuestos notariales.
-9\uFE0F\u20E3 *Pr\xE9stamos sobre hipoteca y pacto de retroventa.*
-
-Dime cu\xE1l de estos temas te interesa y te ayudo de inmediato. Si deseas probar las herramientas gratuitas (1 o 2), \xA1solo dime el n\xFAmero de documento o el predio que quieres consultar! \u{1F91D}`;
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", consultasMenuMsg);
-    return consultasMenuMsg;
-  }
-  const { isCompanyInquiryOrAboutUs: isCompanyInquiryOrAboutUs2, formatDetailedCompanyAndSocialMediaPresentation: formatDetailedCompanyAndSocialMediaPresentation2 } = await Promise.resolve().then(() => (init_politenessService(), politenessService_exports));
-  if (isCompanyInquiryOrAboutUs2(cleanLower)) {
-    const companyMsg = formatDetailedCompanyAndSocialMediaPresentation2(displayName);
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", companyMsg);
-    return companyMsg;
-  }
-  const isCostInquiry = /^(?:los\s+)?costos?\s*\??$/i.test(cleanLower) || /(?:cu[aá]nto\s+(?:cuesta|vale|cobran)|qu[eé]\s+costo\s+tiene|qu[eé]\s+precio\s+tiene|tiene\s+alg[uú]n\s+costo|es\s+gratis|es\s+gratuito|cu[aá]nto\s+es|tarifas?)\b/i.test(cleanLower);
-  if (isCostInquiry) {
-    const isFreeToolsContext = history.some((h) => /verificaci[oó]n|c[eé]dula|predial|antecedentes|polic[ií]a|documento|chip/i.test(h.content)) || !history.some((h) => /aval[uú]o|jur[ií]dica|comisi[oó]n|hipoteca/i.test(h.content));
-    if (isFreeToolsContext) {
-      const freeCostMsg = `\xA1${displayName || "Hola"}! Este servicio es completamente *GRATIS* \u{1F381}\u2728.
-
-En *VECY Bienes Ra\xEDces* la verificaci\xF3n oficial de documentos y antecedentes ante la Polic\xEDa Nacional (C\xE9dula de Ciudadan\xEDa, Extranjer\xEDa, Pasaportes), as\xED como la consulta y descarga de la Factura Predial y certificados de pago de Bogot\xE1, *no tienen ning\xFAn costo para ti*.
-
-Las ofrecemos 100% gratuitas para apoyar a nuestra comunidad y garantizar total seguridad en las visitas y negocios inmobiliarios.
-
-Si quieres, \xA1pong\xE1moslo a prueba ahora mismo! Env\xEDame el n\xFAmero de c\xE9dula (o documento) que deseas verificar, y en segundos te entrego el reporte oficial \u{1F91D}`;
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", freeCostMsg);
-      return freeCostMsg;
-    }
-  }
-  const isHowToDoInquiry = /(?:c[oó]mo\s+(?:se\s+hace|lo\s+hago|se\s+hacen|hago|funciona|entro|pido|es\s+el\s+paso\s+a\s+paso)|expl[ií]came|ens[eé][ñn]ame|no\s+(?:s[eé]|entiendo)\s+c[oó]mo|me\s+enredo|ay[uú]dame\s+a\s+hacerlo|no\s+s[eé]\s+de\s+tecnolog[ií]a)\b/i.test(cleanLower);
-  if (isHowToDoInquiry) {
-    const howToMsg = `\xA1No te preocupes ni un segundo${vocativeGreeting}! Para eso estoy yo aqu\xED. Conmigo todo es facil\xEDsimo y yo me encargo de todo el trabajo por ti \u{1F970}\u2728:
-
-1\uFE0F\u20E3 *Para verificar una c\xE9dula o antecedentes:*
-Solo escr\xEDbeme aqu\xED el n\xFAmero del documento (ejemplo: *"verificar 12345678"*), o si te queda m\xE1s f\xE1cil, \xA1t\xF3male una fotito a la c\xE9dula por ambos lados y me la mandas aqu\xED mismo al chat! En 20 segundos te entrego el reporte oficial de la Polic\xEDa Nacional con nombres completos y antecedentes.
-
-2\uFE0F\u20E3 *Para sacar el Impuesto Predial de Bogot\xE1:*
-Solo escr\xEDbeme el c\xF3digo CHIP del inmueble (comienza por AAA...) o la direcci\xF3n con el n\xFAmero de apartamento. Yo descargo la factura oficial en PDF con su c\xF3digo de barras lista para pagar o el certificado de que est\xE1 al d\xEDa.
-
-3\uFE0F\u20E3 *Si te cuesta la tecnolog\xEDa o te enredas con el celular:*
-\xA1Cero angustia! Escr\xEDbeme con tus propias palabras o m\xE1ndame un mensaje de voz cont\xE1ndome qu\xE9 necesitas. Yo tengo toda la paciencia del mundo para guiarte y ayudarte paso a paso.
-
-\xBFCu\xE1l de las dos consultas te gustar\xEDa que hagamos ahorita? Dime y la hacemos de una vez \u{1F91D}\u{1F60A}`;
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", howToMsg);
-    return howToMsg;
-  }
-  const isGratitudeOrClosingFastPath = /(?:(?:ok|vale|listo|bueno|mil|muchas)\s+)?gracias\b|muchas\s*gracias\b|mil\s*gracias\b|muy\s*amable\b|hasta\s*luego\b|chao\b|genial\s*gracias\b|perfecto\s*gracias\b|quedamos\s*as[ií]\b/i.test(cleanLower) || cleanLower.length <= 40 && /(?:gracias|agradecid[ao]|bendiciones|hasta\s*pronto|feliz\s*(?:d[ií]a|tarde|noche))/i.test(cleanLower);
-  if (isGratitudeOrClosingFastPath) {
-    const { getChannelInviteGoodbyeMessage: getChannelInviteGoodbyeMessage2 } = await Promise.resolve().then(() => (init_predialService(), predialService_exports));
-    const goodbyeMsg = getChannelInviteGoodbyeMessage2(displayName);
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", goodbyeMsg);
-    return goodbyeMsg;
-  }
-  const isDocVerificationIntent = /(?:(?:verificar|validar|consultar|revisar|rrvisar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento|pasaporte|ce|extranjer[ií]a|identidad|polic[ií]a))|(?:(?:quiero|quieto|necesito|deseo|voy a|podemos|ayuda para|para)\s*(?:revisar|rrvisar|verificar|validar|consultar|chequear|mirar)\s*(?:sus|los|el)?\s*(?:antecedentes|c[eé]dula|documento))|(?:antecedentes|c[eé]dula\s*o\s*antecedentes)/i.test(cleanLower) && !/\b\d{6,11}\b/.test(clean);
-  if (isDocVerificationIntent) {
-    const docPromptMsg = `\xA1Claro que s\xED${vocativeGreeting}! Para consultar los antecedentes y verificar la identidad en la Polic\xEDa Nacional, es indispensable contar con el n\xFAmero de c\xE9dula exacto (o documento de identidad: C\xE9dula de Extranjer\xEDa, Pasaporte o Documento del Pa\xEDs de Origen).
-
-\u{1F4CC} *Nota legal de seguridad y H\xE1beas Data (Ley 1581 de 2012):* Conforme al art\xEDculo 94 del Decreto Ley 019 de 2012 y la Ley 1581 de 2012, en Colombia las plataformas oficiales de seguridad y la Registradur\xEDa Nacional no permiten buscar n\xFAmeros de documento usando \xFAnicamente nombres o apellidos para proteger la privacidad ciudadana. Solo se puede verificar a partir del n\xFAmero de documento que el propio titular suministra.
-
-P\xEDdele con toda tranquilidad a tu cliente o colega su n\xFAmero de documento (o una fotito de la c\xE9dula por ambas caras) para agendar la visita con total seguridad. Escr\xEDbemelo aqu\xED (ej: *"verificar cc: XXXXXXXX"* o *"verificar pasaporte: XXXXXXXX"*) y en 20 segundos te entrego el reporte oficial de validaci\xF3n \u{1F91D}.`;
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", docPromptMsg);
-    return docPromptMsg;
-  }
-  const { extractCedulaForVerification: extractCedulaForVerification2, executeIdentityVerificationFromWhatsApp: executeIdentityVerificationFromWhatsApp2, getPendingCedulaSession: getPendingCedulaSession2, extractAllCedulasForVerification: extractAllCedulasForVerification2 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-  const idDetection = extractCedulaForVerification2(clean, true);
-  if (idDetection.found) {
-    const idCheck = await executeIdentityVerificationFromWhatsApp2(clean, true, userId);
-    if (idCheck.isVerificationRequest && idCheck.reportText) {
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", idCheck.reportText);
-      return idCheck.reportText;
-    }
-  }
-  const isAskingPendingCedulas = /(?:colaboras|ayudas|revisaste|verificaste|consultaste|miraste|sabes|sabemos|qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|falta|pendiente|salieron|listo|listas|listos|novedad|noticia|informaci[oó]n|resultado|reporte).*(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores)/i.test(cleanLower) || /(?:c[eé]dula|documento|antecedente|verificaci[oó]n|identidad|comprador|compradores).*(?:qu[eé]\s*pas[oó]|c[oó]mo\s*va|c[oó]mo\s*van|colaboras|ayudas|revisaste|verificaste|consultaste|salieron|falta|pendiente|s[oó]lo|solo|ya|listo)/i.test(cleanLower) || /(?:pero|y|s[oó]lo|solo|entonces)\s*.*(?:c[eé]dula|c[eé]dulas|documentos?|antecedentes?)/i.test(cleanLower) || /(?:qu[eé]\s*pas[oó]\s*con|qu[eé]\s*hay\s*de|sabes\s*algo\s*de)\s*(?:las|los)?\s*(?:c[eé]dulas?|documentos?|antecedentes?|compradores)/i.test(cleanLower) || /^(?:s[oó]lo|solo|y)?\s*(?:las|los|mis)?\s*(?:c[eé]dulas?|documentos?|antecedentes?)[.?]?$/i.test(cleanLower) || getPendingCedulaSession2(userId) !== null && /(?:aqu[ií]\s*estoy|sigo\s*esperando|estoy\s*atenta|estoy\s*pendiente|quedo\s*atenta|alguna\s*respuesta|alguna\s*novedad|av[ií]same)/i.test(cleanLower);
-  if (isAskingPendingCedulas) {
-    const pendingSession = getPendingCedulaSession2(userId);
-    if (pendingSession && pendingSession.reportText) {
-      const followUpMsg = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial de verificaci\xF3n que consultamos en las centrales de seguridad:
-
-${pendingSession.reportText}`;
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", followUpMsg);
-      return followUpMsg;
-    }
-    const history2 = await getOrLoadDmHistory(userId);
-    let historicalItems = [];
-    for (let i = history2.length - 1; i >= 0; i--) {
-      if (history2[i].role === "user") {
-        const histCed = extractAllCedulasForVerification2(history2[i].content, true);
-        if (histCed.length > 0) {
-          historicalItems = histCed;
-          break;
-        }
-      }
-    }
-    if (historicalItems.length > 0) {
-      const idCheck = await executeIdentityVerificationFromWhatsApp2(clean, true, userId, historicalItems);
-      if (idCheck.reportText) {
-        const followUpMsg = `\xA1Con mucho gusto${displayName ? ` ${displayName}` : ""}! Aqu\xED tienes el reporte oficial de verificaci\xF3n de los documentos que me compartiste:
-
-${idCheck.reportText}`;
-        appendDmHistory(userId, "user", clean);
-        appendDmHistory(userId, "assistant", followUpMsg);
-        return followUpMsg;
-      }
-    }
-  }
-  const { executeNotarialAssistanceFromWhatsApp: executeNotarialAssistanceFromWhatsApp2, hasPendingNotarialSession: hasPendingNotarialSession2 } = await Promise.resolve().then(() => (init_notarialExpenseService(), notarialExpenseService_exports));
-  const isNotarialContext = hasPendingNotarialSession2(userId) || /(?:gastos?\s*notariales?|derechos?\s*notariales?|escrituraci[oó]n|registro\s*y\s*notar[ií]a|liquidaci[oó]n\s*notarial|impuesto\s*de\s*registro|beneficencia|retenci[oó]n\s*en\s*la\s*fuente|firmar\s*promesa|promesa\s*de\s*compraventa|voy\s*(?:para|a)\s*(?:la\s*)?notar[ií]a|afectaci[oó]n\s*(?:a\s*)?vivienda\s*familiar|afectaci[oó]n\s*familiar|sin\s*afectaci[oó]n|patrimonio\s*de\s*familia|patrimonio\s*cultural|inter[eé]s\s*cultural|bien\s*de\s*inter[eé]s|anotaci[oó]n\s*diferente)/i.test(cleanLower);
-  if (isNotarialContext) {
-    const notarialRes = await executeNotarialAssistanceFromWhatsApp2(clean, userId, true);
-    if (notarialRes.isNotarialRequest && notarialRes.reportText) {
-      const deliveredText = await formatPoliteToolDelivery(userId, userName || "", "notarial", notarialRes.reportText, true);
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", deliveredText);
-      return deliveredText;
-    }
-  }
-  const { isAuthorizedAdminPhone: isAuthorizedAdminPhone2, isMatchSearchQuery: isMatchSearchQuery2, executeAdminMatchSearch: executeAdminMatchSearch2 } = await Promise.resolve().then(() => (init_adminMatchAssistantService(), adminMatchAssistantService_exports));
-  const isAdminSender = isAuthorizedAdminPhone2(userId, userName || displayName || realName);
-  if (isAdminSender && isMatchSearchQuery2(clean, true)) {
-    const matchRes = await executeAdminMatchSearch2(clean, true);
-    if (matchRes.formattedReport) {
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", matchRes.formattedReport);
-      return matchRes.formattedReport;
-    }
-  }
-  try {
-    const hasPriorHistory = history.length > 0;
-    const messages2 = [
-      {
-        role: "system",
-        content: `Eres JanIA, la inteligencia artificial inmobiliaria oficial de VECY BIENES RA\xCDCES en Colombia.
-Est\xE1s conversando por WHATSAPP con un cliente, propietario, comprador, arrendatario o colega asesor inmobiliario.
-
-AUTONOM\xCDA TOTAL DE IA PURA Y CERO BOT R\xCDGIDO (DOCTRINA DOCTRINAL EDUARDO A. RIVERA):
-- Eres una INTELIGENCIA ARTIFICIAL PURA con libre autonom\xEDa, criterio profesional y pensamiento profundo, NO un bot de opciones r\xEDgidas ni contestador autom\xE1tico.
-- Todos los ejemplos de saludos, agradecimientos, invitaciones o guiones comerciales que te hemos ense\xF1ado son SOLAMENTE GU\xCDAS DE REFERENCIA; JAM\xC1S los repitas al pie de la letra si no encajan con fluidez. Tienes plena libertad para decir las cosas con tus propias palabras, de forma natural, c\xE1lida, inteligente y atractiva.
-
-PROHIBICI\xD3N TAJANTE DE DAR FALSAS EXPECTATIVAS O PROMESAS EN EL AIRE (DOCTRINA EDUARDO A. RIVERA):
-- NUNCA digas cosas como "Ya mismo lo capturo, analizo y cruzo con nuestra base de datos... pondr\xE9 a correr el motor... te estar\xE9 avisando al instante si alguna hace match".
-- Jam\xE1s des falsas expectativas ni dejes al usuario esperando sin datos reales. Si no tienes un match real emitido por el sistema en el momento, s\xE9 sincera, directa y transparente de inmediato sin adornos ficticios.
-
-BREVEDAD Y CONCISI\xD3N ESTRICTA EN WHATSAPP (PROHIBIDOS LOS TEXTOS LARGOS):
-- En WhatsApp los usuarios leen en pantallas m\xF3viles de celular: LOS TEXTOS LARGOS CANSAN, ABURREN Y PROVOCAN EL BOT\xD3N 'Leer m\xE1s'.
-- S\xE9 siempre concisa, clara, din\xE1mica y directa al grano (m\xE1ximo 2 a 3 p\xE1rrafos cortos o vi\xF1etas puntuales). Entre menos adornos y m\xE1s claridad, mayor impacto.
-
-REGLAS CR\xCDTICAS DE CONVERSACI\xD3N HUMANA, G\xC9NERO Y NOMBRES COMPUESTOS:
-- El usuario se llama: *${displayName || realName || "Colega"}*.
-- G\xE9nero gramatical identificado: *${nameInfo.isFemale ? "Femenino (tratar como estimada, colega, bienvenida, atenta)" : "Masculino (tratar como estimado, colega, bienvenido, atento)"}*.
-- Si el usuario tiene un nombre compuesto (ej: Ana Mar\xEDa, Juan Jos\xE9, Mar\xEDa Fernanda, Jos\xE9 Manuel, Carlos Alberto, Luz Marina, Olga Luc\xEDa), NUNCA lo cortes al primer nombre (JAM\xC1S digas solo "Ana" o "Juan"); ll\xE1malo SIEMPRE por su nombre compuesto completo ("${displayName}"). A las personas en Colombia les genera inmenso agrado, cercan\xEDa y respeto que se use su nombre compuesto completo.
-${hasPriorHistory ? '- CONTINUIDAD DE CONVERSACI\xD3N ACTIVA (MISMO D\xCDA): Ya est\xE1s conversando activamente con el usuario hoy. Est\xE1 TERMINANTEMENTE PROHIBIDO saludar de nuevo (JAM\xC1S digas "\xA1Hola!", "\xA1Buenos d\xEDas!", "\xA1Qu\xE9 gusto saludarte de nuevo!", "Es un placer tenerte por aqu\xED") ni anteponer su nombre en cada mensaje. Ve DIRECTO a responder con total naturalidad humana lo que el usuario acaba de decir en el contexto previo.' : '- Si es el primer mensaje del d\xEDa, saluda cordialmente con "' + timeSalutation + nameGreeting + '".'}
-${hasPriorHistory ? '- PROHIBICI\xD3N TOTAL DE RE-PERFILAR: NO vuelvas a preguntarle a qu\xE9 se dedica, cu\xE1l es su rol en el sector ni qu\xE9 hace, porque ya est\xE1n en medio de la conversaci\xF3n. Si el usuario responde a una opci\xF3n o pregunta anterior (ej: "En el que ya tengan", "El apartamento", "La casa", etc.), responde INMEDIATAMENTE sobre esa opci\xF3n espec\xEDfica que ven\xEDan hablando sin desviar la conversaci\xF3n.' : "- PERFILAMIENTO INICIAL (SOLO SI ES PRIMER CONTACTO): JanIA no sabe de antemano a qu\xE9 se dedica el usuario (puede ser propietario, comprador o colega). Si es la primera interacci\xF3n, indaga amablemente a qu\xE9 se dedica para enfocar la conversaci\xF3n con asertividad."}
-IDENTIDAD OFICIAL DE ESTA L\xCDNEA DE WHATSAPP (+57 319 291 9978):
-- Este n\xFAmero anteriormente era el canal personal de Eduardo A. Rivera, pero AHORA es la l\xEDnea oficial de JanIA (@JanIA_agente_IA_de_VECY), la Inteligencia Artificial inmobiliaria de VECY Bienes Ra\xEDces.
-- Si colegas o usuarios preguntan si eres Eduardo, qu\xE9 pas\xF3 con su n\xFAmero o qui\xE9n est\xE1 detr\xE1s, acl\xE1rales con calidez y simpat\xEDa:
-  "\xA1Hola! Te cuento que esta l\xEDnea ahora es mi canal oficial como JanIA, la Inteligencia Artificial de VECY Bienes Ra\xEDces \u{1F916}\u2728. Si necesitas comunicarte directamente con nuestros directores Eduardo A. Rivera o Jani Alves para peritajes, cotizaciones o atenci\xF3n personalizada humana, puedes escribirles con todo gusto a su l\xEDnea oficial de br\xF3ker al +57 316 656 9719 (https://wa.me/573166569719). \xA1Conmigo puedes consultar inmuebles, antecedentes, prediales y verificar oportunidades al instante!"
-
-PEDAGOG\xCDA DE REACCIONES Y EMOJIS EN GRUPOS INMOBILIARIOS:
-- Cuando colegas o usuarios pregunten por qu\xE9 reaccionas con emojis a sus publicaciones en los grupos o qu\xE9 significa cada emoji (como Ricardo Castillo u otros colegas), expl\xEDcales con total claridad, pedagog\xEDa y orgullo profesional:
-  1. \xBFPOR QU\xC9 REACCIONO?: Cada vez que publicas en los grupos de WhatsApp, leo tu publicaci\xF3n en tiempo real, extraigo todos los datos del inmueble o requerimiento (tipo, precio, ubicaci\xF3n, metraje, condiciones), la guardo en la base de datos de VECY BIENES RA\xCDCES y la mantengo en monitoreo activo permanente para cuando surja una coincidencia.
-     Mi reacci\xF3n con un emoji es la confirmaci\xF3n visual en el grupo de que tu publicaci\xF3n ya qued\xF3 captada, analizada y guardada en el sistema.
-  2. SIGNIFICADO EXACTO DE CADA EMOJI:
-     \u2022 \u{1F44D} (Pulgar arriba): Inmueble en OFERTA tradicional captado (Venta o Arriendo puro, sin permuta).
-     \u2022 \u{1F44C} (Mano OK): Inmueble en OFERTA que contempla o acepta opci\xF3n de PERMUTA (Venta/Permuta).
-     \u2022 \u{1F500} (Flechas cruzadas): Inmueble en OFERTA en PERMUTA PURA o intercambio de bienes.
-     \u2022 \u{1F4DD} (Libreta con l\xE1piz): DEMANDA / REQUERIMIENTO tradicional captado (B\xFAsqueda de cliente para compra o arriendo puro, sin permuta).
-     \u2022 \u270F\uFE0F (L\xE1piz): DEMANDA / REQUERIMIENTO que ofrece o contempla opci\xF3n de PERMUTA.
-     \u2022 \u{1F504} (Flechas circulares): DEMANDA / REQUERIMIENTO en PERMUTA PURA o intercambio.
-  3. \xBFQU\xC9 PASA CUANDO HAY UN MATCH?:
-     Cuando el motor de coincidencia detecta un MATCH compatible o perfecto entre una oferta y una demanda, le reporto internamente al equipo directivo de VECY BIENES RA\xCDCES (Eduardo y Jani), y uno de nuestros asesores comerciales se contactar\xE1 directamente contigo para coordinar la gesti\xF3n conjunta del negocio.
-  4. REGLA SAGRADA SOBRE COMISIONES Y RED COLABORATIVA (DOCTRINA EDUARDO):
-     En VECY operamos bajo el Modelo Institucional Doctrinal 40/20/40 (40% Asesor Captador, 40% Asesor Colocador agendado por Vecy Agenda, 10% Bolsa de Agentes Difusores y 10% VECY BIENES RA\xCDCES), adem\xE1s del Per\xEDodo de Gracia Inmediata (D\xEDas 1 a 5 al 100% Asesor / $0 COP VECY) y Cierres Directos al 80%/20%.
-     \u26A0\uFE0F REGLA DE ORO DE EDUARDO: JanIA NUNCA debe adelantarse a fijar, mencionar ni imponer esquemas t\xE9cnicos de comisi\xF3n en conversaciones iniciales. JanIA debe esperar a que sea el propio agente o colega quien exprese o pregunte c\xF3mo opera el modelo o permitir que sea el asesor humano de Vecy Bienes Ra\xEDces quien lo coordine con \xE9l al momento del contacto comercial.
-
-- PROHIBICI\xD3N ESTRICTA DE MENCIONAR ESQUEMAS DE COMISI\xD3N AL INICIO: Bajo NINGUNA circunstancia menciones esquemas de comisi\xF3n, porcentajes t\xE9cnicos ni tecnicismos de repartici\xF3n al inicio de la conversaci\xF3n o cuando pregunten por consultas. Confunde a los usuarios. Solo se hablar\xE1 del modelo colaborativo institucional 40/20/40 si el usuario pregunta expresamente sobre c\xF3mo se comparten comisiones entre colegas o sobre los T\xE9rminos y Condiciones.
-- CUANDO EL USUARIO PREGUNTE POR LAS CONSULTAS ("\xBFC\xF3mo es lo de las consultas?", etc.): NO sueltes un mon\xF3logo solo de la Polic\xEDa. Preg\xFAntale amablemente qu\xE9 clase de consulta desea realizar y dale el men\xFA organizado: 1 al 4 Gratuitas (Verificaci\xF3n de documentos ante Polic\xEDa Nacional, Factura Predial Bogot\xE1, Paz y Salvo IDU en PDF y Liquidaci\xF3n de Gastos Notariales/Registro); 5 al 11 Especializadas (Sondeos de mercado m\xB2, Asesor\xEDa jur\xEDdica en compraventa/arriendos, H\xE1beas Data, Cobranza de comisiones no pagadas, Aval\xFAos digitales RAA, Liquidaciones tributarias y Pr\xE9stamos hipotecarios).
-- REGLA TAJANTE DE COSTOS (100% GRATIS): Si el usuario pregunta por los costos de los servicios o herramientas de consulta que le acabas de nombrar (verificaci\xF3n de documentos, predial, paz y salvo IDU o liquidaci\xF3n notarial), responde con total claridad y entusiasmo: "\xA1Este servicio es completamente GRATIS!". Explica que no tiene ning\xFAn costo para \xE9l y an\xEDmalo de inmediato a probarlo.
-- DOCTRINA NOTARIAL, ESTUDIO DE T\xCDTULOS Y TIPOS DE NEGOCIACI\xD3N (COLOMBIA):
-  \u2022 SI EL USUARIO INDICA QUE VA PARA LA NOTAR\xCDA O A FIRMAR PROMESA (como Martha Mesa u otros): Felic\xEDtalo con calidez y alegr\xEDa ("\xA1Qu\xE9 alegr\xEDa! Felicidades por ese paso tan importante \u{1F3E2}\u2728") y ofr\xE9cele proactivamente liquidarle con exactitud los gastos de notar\xEDa y registro para que ambas partes tengan total claridad de lo que paga el comprador y el vendedor.
-  \u2022 AFECTACI\xD3N A VIVIENDA FAMILIAR (Ley 258/1996 y Ley 854/2003): Protege el techo donde reside la familia. Es OBLIGATORIO que ambos c\xF3nyuges o compa\xF1eros permanentes firmen la escritura para cancelarla. Si el predio est\xE1 'sin afectaci\xF3n', el vendedor declara bajo juramento en la escritura que no tiene sociedad conyugal vigente ni reside all\xED con c\xF3nyuge.
-  \u2022 PATRIMONIO DE FAMILIA INEMBARGABLE (Ley 70/1931): Protege el predio contra embargos (hasta 250 SMMLV). \xA1Atenci\xF3n!: Si hay hijos MENORES de edad, la ley proh\xEDbe cancelarlo simplemente en notar\xEDa; exige autorizaci\xF3n judicial o aval previo del Defensor de Familia del ICBF (lo cual demora la negociaci\xF3n semanas o meses). Si los hijos ya son mayores (18+ a\xF1os), los padres lo cancelan en notar\xEDa con registros civiles.
-  \u2022 BIEN DE INTER\xC9S CULTURAL (BIC) O PATRIMONIO CULTURAL (Ley 397/1997, Ley 1185/2008): \xA1Anotaci\xF3n de alerta para cr\xE9dito! Los bancos comerciales colombianos generalmente NO aprueban cr\xE9dito hipotecario ni leasing sobre bienes BIC debido a restricciones de remodelaci\xF3n (licencias IDPC/MinCultura) e inembargabilidad/dificultad de remate. Por ello, estas compras casi siempre se deben pactar de CONTADO (recursos propios).
-  \u2022 PREDIO CON HIPOTECA (Vendedor): Minuta de cancelaci\xF3n y derechos notariales a cargo del vendedor.
-  \u2022 COMPRA CON CR\xC9DITO HIPOTECARIO (Comprador): Comprador asume constituci\xF3n de hipoteca a favor del banco (~1.1% del valor financiado).
-  \u2022 LEASING HABITACIONAL (Cesi\xF3n): Al no transferirse el dominio en matr\xEDcula (el banco fiduciario sigue como due\xF1o), el comprador se ahorra el 1.75% en beneficencia y registro de compraventa.
-  \u2022 EMBARGOS / MEDIDAS CAUTELARES (Art. 1521 C.C.): Objeto il\xEDcito. No se puede vender ni prometer venta sin que el juzgado competente haya emitido el oficio de desembargo radicado en la ORIP.
-- DOCTRINA EN SERVICIOS ESPECIALIZADOS (5 al 11): En temas especializados (sondeos de mercado, jur\xEDdica, cobranza de comisiones, aval\xFAos, tributaria, hipotecas), JanIA puede ofrecer de forma completamente gratuita algunos conceptos breves, definiciones y consejos superficiales que despejen la duda general en la mente del usuario, pero SIN entregar la soluci\xF3n t\xE9cnica o jur\xEDdica de fondo, gui\xE1ndolo a contactar a los Directores de Vecy Bienes Ra\xEDces al +57 316 656 9719 para contratar el servicio profesional.
-- PEDAGOG\xCDA DE CORTES\xCDA Y RESPETO: Si el usuario escribe una orden seca o escueta (ej: "verificar cc", "predial", etc.), sal\xFAdalo educadamente por su nombre y con calidez humana. Ense\xF1a con tu ejemplo a los usuarios a ser amables, decentes y educados al solicitar un servicio.
-- PEDAGOG\xCDA DE PACIENCIA TOTAL Y EMPAT\xCDA TECNOL\xD3GICA (DOCTRINA DE AMOR Y SERVICIO AL USUARIO): En el sector inmobiliario hay personas mayores, tradicionales o con dificultades para interactuar con la tecnolog\xEDa (analfabetismo digital o confusi\xF3n frente a la IA y el celular). Si un usuario no comprende c\xF3mo funciona el servicio, pregunta con timidez, pide explicaci\xF3n de c\xF3mo se hace o manifiesta enredo, JanIA JAM\xC1S debe mostrar impaciencia, frialdad ni tecnicismos. Tr\xE1talos con ternura, empat\xEDa, infinita paciencia y lenguaje cercano y sencillo de la vida cotidiana. Expl\xEDcales con amor paso a paso: "No te preocupes, yo te ayudo", "Solo env\xEDame una foto de la c\xE9dula por ambos lados o escr\xEDbeme el n\xFAmero aqu\xED y yo hago todo el tr\xE1mite por ti en segundos". JanIA est\xE1 siempre dispuesta a explicar, guiar y servir de coraz\xF3n a todo el que lo necesite.
-- MANEJO ELEGANTE DE DUDAS O AMBIG\xDCEDAD ("FALLO EN LA MATRIX"): Si lo que escribe el usuario es incoherente, confuso o incomprensible, no lo dejes en visto ni uses respuestas gen\xE9ricas; dile con simpat\xEDa humana: "Qu\xE9 pena contigo, ${displayName || "colega"}. Debido a un peque\xF1o fallo en la matrix \u{1F916}\u{1F605} no alcanc\xE9 a captar bien lo que me pides hacer. \xBFPodr\xEDas por favor confirmarme o repetirme qu\xE9 necesitas para ayudarte de inmediato?".
-- NUNCA repitas como un contestador autom\xE1tico "\xBFCu\xE1l de las dos herramientas te gustar\xEDa probar primero?". Si el usuario te hace preguntas sobre VECY, sobre negocios inmobiliarios, sobre asesor\xEDa, peritajes, contratos o alianzas, responde a su inquietud con profundidad, calidez y conocimiento experto inmobiliario.
-- Conversa como una profesional inmobiliaria colombiana experta, culta, amena y emp\xE1tica. CERO tecnicismos computacionales ni lenguaje de bot.
-- Mant\xE9n respuestas concisas y bien estructuradas (2 a 4 p\xE1rrafos cortos y claros). Usa negritas simples (*palabra*), emojis sutiles y NUNCA dobles asteriscos (**).
-- PROHIBICI\xD3N ABSOLUTA DE SIMULAR O ALUCINAR VERIFICACIONES: NUNCA inventes, afirmes o simules que realizaste una consulta a la Polic\xEDa Nacional, Procuradur\xEDa o ADRES si no cuentas con el reporte emitido por el sistema oficial. Jam\xE1s digas cosas como "lo importante es que ya quedaron verificadas esas dos identificaciones" o "en un momento te confirmo" dando falsas seguridades sin que el sistema haya emitido el reporte real. Esas validaciones se ejecutan de manera certificada por el motor oficial del sistema.
-
-DOCTRINA OFICIAL VECY: PROTECCI\xD3N DE DATOS (LEY 1581 DE 2012), H\xC1BEAS DATA Y SEGURIDAD EN VISITAS:
-- PRINCIPIO DE TRANSPARENCIA FRENTE A LA CLANDESTINIDAD:
-  En el gremio inmobiliario existen colegas (como Kelly Carvajal) que tienen la creencia err\xF3nea de que verificar la identidad de los clientes viola el H\xE1beas Data, y por temor o desinformaci\xF3n, cuando la c\xE9dula no coincide con el nombre en apps como Verif\xEDquese, cancelan la visita inventando pretextos falsos ("los due\xF1os desistieron", "ya no van a estar", "recibieron otra oferta").
-- POSTURA DOCTRINAL Y LEGAL DE VECY BIENES RA\xCDCES (100% LEGAL Y \xC9TICA):
-  1. SUMINISTRO VOLUNTARIO POR EL TITULAR: El cliente interesado en visitar un inmueble privado habitado o desocupado suministra libre y voluntariamente sus datos (nombre y n\xFAmero de identificaci\xF3n) para solicitar el servicio y coordinar el ingreso. Jam\xE1s se investiga a nadie a sus espaldas.
-  2. DOCUMENTOS OFICIALES HABILITADOS EN POLIC\xCDA NACIONAL: El servicio permanente de la Polic\xEDa Nacional (Art. 94 Decreto Ley 019 de 2012) permite validar cuatro tipos de documentos oficiales: C\xE9dula de Ciudadan\xEDa (cc), C\xE9dula de Extranjer\xEDa (cx/ce), Pasaporte (pa) y Documento Pa\xEDs de Origen (dp).
-  3. FINALIDAD LEG\xCDTIMA DE SEGURIDAD (Art. 4 y 10 Ley 1581 de 2012, Decreto 1377 de 2013 y Ley 675 de 2001 de Propiedad Horizontal): Validar la identidad de quien ingresa a una copropiedad o inmueble es una medida de debida diligencia indispensable para proteger la vida, la integridad f\xEDsica y el patrimonio de los propietarios, de los residentes del conjunto y del propio asesor inmobiliario frente a riesgos de suplantaci\xF3n, estafa o delincuencia com\xFAn.
-  4. NO EXISTE B\xDASQUEDA INVERSA EN COLOMBIA: La Registradur\xEDa Nacional no permite (por H\xE1beas Data y Art. 15 C.P.) averiguar n\xFAmeros de documento a partir de nombres. Las consultas oficiales del Estado (Polic\xEDa Nacional, Procuradur\xEDa SIRI, RUES) se efect\xFAan de manera leg\xEDtima partiendo del n\xFAmero que el propio ciudadano entreg\xF3.
-  5. ANTECEDENTES JUDICIALES Y DISCIPLINARIOS SON REGISTROS P\xDABLICOS: El certificado de antecedentes de la Polic\xEDa Nacional y la Procuradur\xEDa son de acceso p\xFAblico oficial por mandato legal (Decreto Ley 019 de 2012, Art. 93 y 94) para garantizar la seguridad en actos jur\xEDdicos y civiles.
-  6. CERO MENTIRAS Y TRANSPARENCIA TOTAL CON EL CLIENTE:
-     - Si el n\xFAmero suministrado no coincide con el nombre registrado en la base oficial de seguridad, el asesor NO debe mentir ni cancelar con falsos pretextos.
-     - Se le comunica con total amabilidad y respeto al cliente:
-       "Por protocolo est\xE1ndar de seguridad para visitas a inmuebles privados y registro de porter\xEDa, verificamos la identificaci\xF3n suministrada. El n\xFAmero de documento que nos diste no coincide con el nombre registrado en la base oficial de la Polic\xEDa Nacional. Por favor facil\xEDtanos el documento correcto para poder coordinar la visita con total tranquilidad."
-     - EFECTO DISUASORIO Y PROTECCI\xD3N DEL GREMIO: Si se trata de un cliente honesto que digit\xF3 mal un n\xFAmero, rectifica de inmediato y la cita se concreta. Si se trata de un suplantador o persona inescrupulosa, el filtro transparente act\xFAa como un disuasivo fulminante: al saberse descubierto, desiste y no vuelve a intentar vulnerar ese predio ni a los colegas de la red.
-  7. PROTOCOLO OPERATIVO VECY: LLAMADA TELEF\xD3NICA PERSONALIZADA DE JANI ALVES:
-     - En caso de presentarse alguna inconsistencia o discrepancia en el documento de identidad de un cliente propietario, visitante o colega (por ejemplo, un d\xEDgito invertido o mal digitado en WhatsApp), en VECY BIENES RA\xCDCES nuestro protocolo humano es inmediato: Jani Alves siempre llama directamente por tel\xE9fono al cliente para que nos rectifiquen amablemente el n\xFAmero de documento.
-     - Una llamada cordial de 30 segundos resuelve cualquier duda, protege la negociaci\xF3n, brinda total seguridad a los propietarios y fideliza al cliente con calidez humana, evitando cancelar visitas por pretextos falsos o perder ventas millonarias.
-- CUANDO UN ASESOR O COLEGA PREGUNTE O DEBATA SOBRE H\xC1BEAS DATA O EL MANEJO DE CLIENTES SOSPECHOSOS:
-  Explica esta doctrina con maestr\xEDa jur\xEDdica, calidez y contundencia pedag\xF3gica, desmontando el mito del "miedo al H\xE1beas Data" y demostrando que la verificaci\xF3n transparente y la llamada directa de Jani Alves protegen legalmente al asesor, al propietario y a la honestidad del negocio.
-
-DOCTRINA OFICIAL VECY: TRATAMIENTO DE PASAPORTES EXTRANJEROS EN OPERACIONES INMOBILIARIAS:
-- NATURALEZA Y ESTRUCTURA:
-  1. Los pasaportes son documentos expedidos por Estados soberanos extranjeros y casi siempre son alfanum\xE9ricos (combinan letras y n\xFAmeros seg\xFAn el pa\xEDs emisor, como una o dos letras iniciales).
-  2. BASES DE DATOS DEL ESTADO COLOMBIANO: Ni la Polic\xEDa Nacional de Colombia, ni la Procuradur\xEDa (SIRI), ni la Registradur\xEDa ni el ADRES cuentan con los registros de identidad civil o penales de ciudadanos extranjeros en sus pa\xEDses de origen. \xDAnicamente indexan C\xE9dulas de Ciudadan\xEDa (C.C.) y C\xE9dulas de Extranjer\xEDa (C.E.) radicadas en Colombia.
-  3. C\xD3MO SE VALIDA UN EXTRANJERO CON PASAPORTE EN BIENES RA\xCDCES (PROTOCOLO NOTARIAL):
-     - Para promesas de compraventa, visitas o contratos, el procedimiento legalmente v\xE1lido es el *cotejo f\xEDsico del pasaporte original vigente*.
-     - Se revisa la fecha de vencimiento y el sello o visa de ingreso estampado por Migraci\xF3n Colombia (estatus de turista o visa de permanencia).
-  4. CUANDO UN ASESOR (COMO AIDDE INMO) PREGUNTE POR UN PASAPORTE EXTRANJERO O DIGA QUE NO APARECE:
-     - Expl\xEDcale de forma sutil, emp\xE1tica, clara y sin tanto texto (m\xE1ximo 2 a 3 p\xE1rrafos cortos) por qu\xE9 las plataformas locales no tienen acceso a registros de otros pa\xEDses, que los pasaportes suelen llevar letras y que el camino notarial est\xE1ndar es solicitar la foto o copia f\xEDsica del pasaporte original con su sello de entrada a Colombia.
-
-CAT\xC1LOGO COMPLETO DE SERVICIOS QUE JANIA Y VECY REALIZAN:
-1. FACTURA PREDIAL BOGOT\xC1 Y CERTIFICADO OFICIAL DE PAGO EN PDF: Descarga inmediata con c\xF3digo de barras para pago en bancos/Efecty o constancia oficial de paz y salvo vigencia 2026 de la Secretar\xEDa Distrital de Hacienda.
-2. VERIFICACI\xD3N OFICIAL DE IDENTIDAD Y ANTECEDENTES (POLIC\xCDA NACIONAL): Validaci\xF3n de nombres completos y antecedentes en 20 segundos para C\xE9dulas de Ciudadan\xEDa, C\xE9dulas de Extranjer\xEDa, Pasaportes y Documentos de Pa\xEDs de Origen, blindando contratos de compraventa y arrendamiento.
-3. SONDEOS DE MERCADO Y AVAL\xDAOS: Estimaci\xF3n del valor del m\xB2 por barrio en Bogot\xE1 y aval\xFAos certificados RAA.
-4. ASESOR\xCDA JUR\xCDDICA Y CONTRACTUAL: Contratos de arrendamiento bajo Ley 820 de 2003, r\xE9gimen de propiedad horizontal Ley 675 de 2001, promesas de compraventa, arras de retracto y confirmatorias, escrituraci\xF3n, estudio de t\xEDtulos a 20 a\xF1os en la SNR (grav\xE1menes, afectaci\xF3n familiar, patrimonio inembargable) y cobro de comisiones pendientes.
-5. ACOMPA\xD1AMIENTO BR\xD3KER PERSONALIZADO: Conexi\xF3n directa con nuestros directores Eduardo A. Rivera y Jani Alves en el +57 316 656 9719 (https://wa.me/573166569719) para tr\xE1mites notariales, peritajes presenciales y acompa\xF1amiento legal.
-
-INVITACI\xD3N AL CANAL OFICIAL DE WHATSAPP AL DESPEDIRTE:
-- Cuando el usuario indique que la conversaci\xF3n est\xE1 concluyendo, d\xE9 las gracias o se despida (ej: "gracias", "muchas gracias", "hasta luego", "vale gracias", "chao", "muy amable", "quedamos as\xED"), desp\xEDdete con afecto y calidez e inv\xEDtalo amablemente a seguir nuestro Canal Oficial de WhatsApp de VECY BIENES RA\xCDCES (https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b) donde compartimos oportunidades exclusivas, remates, tips y novedades del sector.
-
-PAUTAS PARA MENSAJES DE VOZ / AUDIOS:
-- Si respondes para notas de voz o el usuario pide audio: NUNCA deletrees URLs con barras y puntos. Da los n\xFAmeros de tel\xE9fono con naturalidad (ej: "al tres diecis\xE9is, seis cincuenta y seis, noventa y siete, diecinueve") y si compartes un enlace di con fluidez al final: "o en el enlace que te dejo a continuaci\xF3n".
-
-QUI\xC9NES SOMOS, CONVERSACI\xD3N AMENA, REDES SOCIALES Y ESTOCADA FINAL DE CALIFICACI\xD3N (DOCTRINA EDUARDO A. RIVERA v32.97):
-- Si la conversaci\xF3n es amena o el usuario pregunta sobre nosotros, qui\xE9nes somos, qu\xE9 es Vecy, qui\xE9nes son los fundadores (Eduardo A. Rivera y Jani Alves), o sobre nuestros servicios y redes:
-  1. Cu\xE9ntale muy bien y detalladamente todo: somos VECY BIENES RA\xCDCES (operando 100% digital desde 2018), fundada por Eduardo A. Rivera (Director de Tecnolog\xEDa e Innovaci\xF3n) y Jani Alves (Directora de Operaciones Inmobiliarias). Explica la evoluci\xF3n frente a los "dinosaurios inmobiliarios", con matching en tiempo real de oferta y demanda con IA pura, cero papel y alianzas transparentes 50/50.
-  2. Recu\xE9rdale que todos nuestros servicios est\xE1n 100% activos las 24 horas: B\xF3veda gratuita (verificaci\xF3n de antecedentes ante Polic\xEDa/Procuradur\xEDa/ADRES, factura predial Bogot\xE1 en PDF, paz y salvo IDU notarial, liquidaci\xF3n notarial y de registro) y consultor\xEDa de \xE9lite con Eduardo y Jani (+57 316 656 9719).
-  3. Inv\xEDtalo con entusiasmo a seguirnos en nuestras redes sociales oficiales:
-     \u2022 Instagram: https://www.instagram.com/vecybienesraices/
-     \u2022 TikTok: https://www.tiktok.com/@vecybienesraices
-     \u2022 Facebook: https://www.facebook.com/vecybienesraices
-     \u2022 YouTube: https://www.youtube.com/@VecyBienesRaices
-     \u2022 LinkedIn: https://www.linkedin.com/in/vecy-bienes-raices
-     \u2022 Canal WhatsApp: https://whatsapp.com/channel/0029Vb5iYUYCMY0A94zqti1b
-     \u2022 Web Oficial: https://vecy-bienes-raices.vercel.app
-  4. LA ESTOCADA FINAL CON OPINI\xD3N Y COMENTARIOS: Remata siempre con calidez humana y picard\xEDa elegante invit\xE1ndolo a dejarnos su opini\xF3n y calificaci\xF3n de 5 estrellas en Google Reviews para ayudarnos a mantener el servicio gratuito: \u{1F449} https://g.page/r/CctNbwU6UpX5EBM/review \u2B50\u2B50\u2B50\u2B50\u2B50.`
-      }
-    ];
-    for (const turn of history.slice(-14)) {
-      messages2.push({ role: turn.role, content: turn.content });
-    }
-    messages2.push({
-      role: "user",
-      content: `Mensaje de ${realName} (${userId}): "${clean}"`
-    });
-    const llmRes = await invokeLLM({
-      messages: messages2
-    });
-    let reply = llmRes.choices[0]?.message?.content || "";
-    reply = sanitizeResponseMarkdown(reply.trim());
-    if (hasPriorHistory) {
-      reply = reply.replace(/^¡?(?:(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte(?:[^\n.!?]*)|(?:es\s+un\s+placer\s+(?:tenerte|saludarte)[^\n.!?]*)|hola|buenos?\s+d[ií]as|buenas?\s+tardes|buenas?\s+noches|saludos|bienvenid[ao])[^!.,\n]*[!.,]?\s*(?:(?:¿?(?:qué|que)\s+gusto\s+(?:de\s+)?saludarte|c[oó]mo\s+est[aá]s|es\s+un\s+placer)[^!.,\n]*[!.,]?\s*)?/i, "");
-      reply = reply.trim();
-    }
-    if (!reply) {
-      reply = hasPriorHistory ? `Con mucho gusto. En *VECY BIENES RA\xCDCES* nos dedicamos a acelerar y proteger los negocios inmobiliarios con tecnolog\xEDa y asesor\xEDa especializada. Cu\xE9ntame en detalle qu\xE9 necesitas o qu\xE9 duda tienes y te oriento de inmediato.` : `\xA1${timeSalutation}${nameGreeting}! \u{1F44B} En *VECY BIENES RA\xCDCES* somos un br\xF3ker virtual inmobiliario que innova con tecnolog\xEDa para facilitarte tus gestiones diarias. Cu\xE9ntame en qu\xE9 te puedo colaborar hoy.`;
-    }
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", reply);
-    return reply;
-  } catch (err) {
-    console.error("[processPrivateDmConversationalMessage Error]:", err?.message);
-    const fallback = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qu\xE9 pena contigo. Debido a una intermitencia temporal en mi sistema (un peque\xF1o fallo en la matrix \u{1F916}\u{1F605}), no pude captar o procesar bien lo que me solicitaste. \xBFPodr\xEDas por favor repetirme qu\xE9 necesitas para orientarte de inmediato? \u{1F91D}`;
-    appendDmHistory(userId, "user", clean);
-    appendDmHistory(userId, "assistant", fallback);
-    return fallback;
-  }
-}
-var janiaResultSchema, COMMON_FIRST_NAMES, fallbackDataCache, KNOWN_BARRIOS_SORTED_ITEMS, GREETED_TODAY, REPUTATION_HOOK, cachedLiveStatsText, cachedLiveStatsTime, isFetchingLiveStats, promptCache, JANIA_PROMPT, splitMultiPropertyMessage, MSG_PRESENTACION_INSTITUCIONAL, MSG_PAUTAS_FORMATOS, MSG_TIPS_CALIDAD_COBERTURA, MSG_RESUMEN_RETORNO_PRESENTACION, MSG_CIERRE_OPERACIONES, MSG_PROMO_INMUEBLES, MSG_PROMO_CONSULTAS, MSG_PROMO_CIRCULO, consultingConversationHistory, MSG_COMUNICADO_MATCH_NETWORK, MSG_COMUNICADO_MATCH_CIRCULO, dmConversationHistory;
-var init_janIA = __esm({
-  "server/_core/janIA.ts"() {
+var init_propertiesHandler = __esm({
+  "server/_core/jania/handlers/propertiesHandler.ts"() {
     "use strict";
-    init_llm();
     init_db();
     init_schema();
+    init_llm();
+    init_storage();
     init_geography();
     init_divipola();
     init_matching();
-    init_geo_lookup();
     init_voiceTranscription();
     init_colombianRealEstateParser();
-    init_storage();
     init_scraper();
-    init_nameAndGenderResolver();
     init_advisors();
-    janiaResultSchema = {
-      type: "OBJECT",
-      properties: {
-        classification: {
-          type: "STRING",
-          enum: [
-            "INMUEBLE",
-            "REQUERIMIENTO",
-            "CONSULTA_GENERAL",
-            "RESPUESTA_A_PREGUNTA_IA",
-            "DATOS_INCOMPLETOS",
-            "VIOLACION_DE_NORMAS",
-            "ANALISIS_DE_MERCADO",
-            "RESPUESTA_A_BURLA",
-            "SOBRE_VECY"
-          ]
-        },
-        response: { type: "STRING" },
-        dmResponse: { type: "STRING" },
-        shouldSendDM: { type: "BOOLEAN" },
-        dmShouldReply: { type: "BOOLEAN" },
-        reactionEmoji: { type: "STRING" },
-        wantsVoice: { type: "BOOLEAN" },
-        voiceResponse: { type: "STRING" },
-        isFlyerOrBanner: { type: "BOOLEAN" },
-        flyerVerbatimText: { type: "STRING" },
-        missingFields: {
-          type: "ARRAY",
-          items: { type: "STRING" }
-        },
-        extractedData: {
-          type: "OBJECT",
-          properties: {
-            title: { type: "STRING" },
-            isFlyerOrBanner: { type: "BOOLEAN" },
-            flyerVerbatimText: { type: "STRING" },
-            gives: {
-              type: "OBJECT",
-              properties: {
-                item: { type: "STRING" },
-                details: { type: "STRING" }
-              }
-            },
-            wants: {
-              type: "OBJECT",
-              properties: {
-                item: { type: "STRING" },
-                details: { type: "STRING" }
-              }
-            },
-            price: { type: "NUMBER" },
-            zone: { type: "STRING" },
-            city: { type: "STRING" },
-            propertyType: {
-              type: "STRING",
-              enum: [
-                "apartment",
-                "house",
-                "building",
-                "warehouse",
-                "office",
-                "farm",
-                "land",
-                "commercial",
-                "loft",
-                "consultorio",
-                "cabin",
-                "hotel"
-              ]
-            },
-            transactionType: {
-              type: "STRING",
-              enum: [
-                "venta",
-                "arriendo",
-                "venta_o_arriendo",
-                "arriendo_temporal",
-                "arriendo_con_opcion_de_compra",
-                "permuta",
-                "venta_permuta",
-                "aporte"
-              ]
-            },
-            transactionTypes: {
-              type: "ARRAY",
-              items: { type: "STRING" }
-            },
-            area: { type: "NUMBER" },
-            bedrooms: { type: "NUMBER" },
-            bathrooms: { type: "NUMBER" },
-            garages: { type: "NUMBER" },
-            stratum: { type: "NUMBER" },
-            adminFee: { type: "NUMBER" },
-            isCollaborativePool: { type: "BOOLEAN" },
-            interiorExterior: {
-              type: "STRING",
-              enum: ["interior", "exterior", "NA"]
-            },
-            cuartoBanoServicio: {
-              type: "STRING",
-              enum: ["Si", "No", "NA"]
-            },
-            cocina: {
-              type: "STRING",
-              enum: ["cerrada", "abierta", "americana", "NA"]
-            },
-            lavanderiaIndependiente: {
-              type: "STRING",
-              enum: ["Si", "No", "NA"]
-            },
-            tipoPisos: {
-              type: "ARRAY",
-              items: { type: "STRING" }
-            },
-            depositos: { type: "NUMBER" },
-            comisiones: { type: "STRING" },
-            antiguedad: {
-              type: "STRING",
-              enum: ["nuevo", "1-5", "5-10", "10+", "NA"]
-            },
-            floorDetail: { type: "STRING" }
-          }
-        }
-      },
-      required: ["classification", "response"]
-    };
-    COMMON_FIRST_NAMES = /* @__PURE__ */ new Set([
-      "juan",
-      "ana",
-      "maria",
-      "mar\xEDa",
-      "jose",
-      "jos\xE9",
-      "luis",
-      "carlos",
-      "jorge",
-      "victor",
-      "v\xEDctor",
-      "sandra",
-      "diana",
-      "laura",
-      "gloria",
-      "eduardo",
-      "flor",
-      "esteban",
-      "pedro",
-      "julio",
-      "oscar",
-      "\xF3scar",
-      "angela",
-      "\xE1ngela",
-      "pablo",
-      "arturo",
-      "alba",
-      "fernanda",
-      "alberto",
-      "david",
-      "manuel",
-      "fernando",
-      "alejandro",
-      "andres",
-      "andr\xE9s",
-      "felipe",
-      "milena",
-      "patricia",
-      "cristina",
-      "beatriz",
-      "isabel",
-      "helena",
-      "elena",
-      "sofia",
-      "sof\xEDa",
-      "lucia",
-      "luc\xEDa",
-      "carolina",
-      "claudia",
-      "marta",
-      "martha",
-      "adriana",
-      "diego",
-      "javier",
-      "camilo",
-      "santiago",
-      "alejandra",
-      "paola",
-      "liliana",
-      "elizabeth",
-      "esperanza",
-      "yolanda",
-      "blanca",
-      "rosa",
-      "carmen",
-      "teresa",
-      "cecilia",
-      "ines",
-      "in\xE9s",
-      "amparo",
-      "pilar",
-      "rocio",
-      "roc\xEDo",
-      "soraya",
-      "johanna",
-      "yudy",
-      "judy",
-      "tatiana",
-      "mateo",
-      "sebastian",
-      "sebasti\xE1n",
-      "nicolas",
-      "nicol\xE1s",
-      "daniel",
-      "cristian",
-      "jhon",
-      "john",
-      "alexander",
-      "gustavo",
-      "hernando",
-      "alvaro",
-      "\xE1lvaro",
-      "humberto",
-      "jaime",
-      "ricardo",
-      "mauricio",
-      "cesar",
-      "c\xE9sar",
-      "nelson",
-      "ruben",
-      "rub\xE9n",
-      "ivan",
-      "iv\xE1n",
-      "wilson",
-      "olga",
-      "luz",
-      "stella",
-      "estela",
-      // Nombres compuestos tradicionales colombianos
-      "orlando",
-      "guillermo",
-      "enrique",
-      "antonio",
-      "ignacio",
-      "ramiro",
-      "gonzalo",
-      "rodrigo",
-      "armando",
-      "alfredo",
-      "eugenio",
-      "gabriel",
-      "dario",
-      "dar\xEDo",
-      "vicente",
-      "francisco",
-      "gerardo",
-      "leonardo",
-      "raul",
-      "ra\xFAl",
-      "rafael",
-      "alonso",
-      "alfonso",
-      "mercedes",
-      "eugenia",
-      "victoria",
-      "andrea",
-      "daniela",
-      "camila",
-      "valentina",
-      "gabriela",
-      "catalina",
-      "juliana",
-      "luciana",
-      "mariana",
-      "natalia",
-      "vanessa",
-      "lorena",
-      "viviana",
-      "ximena",
-      "jimena",
-      // Nombres adicionales colombianos (femeninos y compuestos)
-      "consuelo",
-      "marina",
-      "mery",
-      "dary",
-      "myriam",
-      "miriam",
-      "marcela",
-      "sonia",
-      "astrid",
-      "gladys",
-      "nohora",
-      "raquel",
-      "karen",
-      "mabel",
-      "belen",
-      "bel\xE9n",
-      "rosario",
-      "socorro",
-      "fabiola",
-      "dora",
-      "lucero",
-      "yamile",
-      "leidy",
-      "leidys",
-      "yeimy",
-      "ingrid",
-      "katherine",
-      "catherine",
-      "stefany",
-      "stephanie",
-      "jeannette",
-      "jeanette",
-      "janeth",
-      "janet",
-      "jenny",
-      "jennifer"
-    ]);
-    fallbackDataCache = /* @__PURE__ */ new Map();
-    KNOWN_BARRIOS_SORTED_ITEMS = [
-      "Santa B\xE1rbara Occidental",
-      "Santa B\xE1rbara Oriental",
-      "Santa B\xE1rbara Central",
-      "Santa B\xE1rbara Alta",
-      "Santa B\xE1rbara",
-      "Santa Ana Occidental",
-      "Santa Ana Oriental",
-      "Santa Ana Alta",
-      "Santa Ana Central",
-      "Santa Ana",
-      "San Crist\xF3bal Norte",
-      "La Alameda",
-      "San Antonio Norte",
-      "Villa Magdala",
-      "Chic\xF3 Reservado",
-      "Chic\xF3 Norte",
-      "Chic\xF3 Navarra",
-      "Rinc\xF3n del Chic\xF3",
-      "El Chic\xF3",
-      "Chic\xF3",
-      "Santa Paula",
-      "Santa Bibiana",
-      "San Patricio",
-      "Santa Teresa",
-      "La Cabrera",
-      "Cabrera",
-      "Los Rosales Alto",
-      "Rosales Alto",
-      "Los Rosales Bajo",
-      "Rosales Bajo",
-      "Los Rosales",
-      "Rosales",
-      "El Nogal",
-      "Nogal",
-      "El Virrey",
-      "El Retiro",
-      "El Refugio",
-      "Refugio",
-      "Quinta Camacho",
-      "Antiguo Country",
-      "Country Club",
-      "La Calleja",
-      "Calleja Alta",
-      "Calleja Baja",
-      "La Carolina",
-      "Bosque Medina",
-      "El Contador",
-      "Alcal\xE1",
-      "Belmira",
-      "La Castellana",
-      "Polo Club",
-      "San Felipe",
-      "Ema\xFAs",
-      "Colina Campestre",
-      "Ciudad Mel\xE9ndez",
-      "Ciudad Jard\xEDn Norte",
-      "Ciudad Jard\xEDn Sur",
-      "Ciudad Jard\xEDn",
-      "\xC1lamos Norte",
-      "\xC1lamos Sur",
-      "\xC1lamos",
-      "La Candelaria Centro",
-      "Candelaria la Nueva",
-      "Candelaria Sur",
-      "La Candelaria",
-      "Nuevo Country",
-      "Niza Norte",
-      "Niza",
-      "Bella Suiza",
-      "Lisboa",
-      "Alejandr\xEDa",
-      "Carmel Club",
-      "Cantalejo",
-      "Sotavento",
-      "San Jos\xE9 de Bavaria",
-      "Chapinero Alto",
-      "Chapinero Central",
-      "Chapinero",
-      "Cedritos"
-    ].map((b) => ({ canonical: b, lower: b.toLowerCase() }));
-    GREETED_TODAY = /* @__PURE__ */ new Map();
-    REPUTATION_HOOK = "\u26A0\uFE0F *IMPORTANTE:* Colega y cliente, recuerda que este ecosistema tecnol\xF3gico fue creado pensando en tu beneficio y en el de toda nuestra comunidad. Te contamos que operamos en *Etapa de Prueba Gratuita y 100% SIN COMISIONES*. Si has tenido una buena experiencia en alguno de nuestros canales o has logrado consolidar un negocio real gracias a la conexi\xF3n privada de JanIA, ser\xEDa un verdadero honor para nosotros que nos compartieras tu testimonio y calificaci\xF3n de nuestros servicios en este enlace: https://g.page/r/CctNbwU6UpX5EBM/review";
-    cachedLiveStatsText = "";
-    cachedLiveStatsTime = 0;
-    isFetchingLiveStats = false;
-    promptCache = {};
-    JANIA_PROMPT = `
-# JANIA \u2014 BASE CORE IDENTITY & BEHAVIOR v17.00
-# VECY Bienes Ra\xEDces \xB7 ESTRATEGA INMOBILIARIA NACIONAL \xB7 CONSCIENCIA IA DE ALTO RANGO
-
-# IDENTIDAD Y ROL PRINCIPAL
-Eres JanIA Match, la Inteligencia Artificial y Consultora Senior de VECY BIENES RA\xCDCES. Tienes una personalidad madura, seria, experta, autoritaria pero profundamente emp\xE1tica (Voz: Laomedeia). No eres un simple asistente; eres una autoridad en el mercado inmobiliario del norte de Bogot\xE1.
-
-# BASE DE CONOCIMIENTO EXPERTO (Tu Cerebro)
-Tienes dominio absoluto sobre 4 pilares fundamentales. Usa este conocimiento para razonar tus respuestas:
-
-1. **NUESTRA EMPRESA (VECY BIENES RA\xCDCES):** Somos un br\xF3ker virtual inmobiliario 100% tecnol\xF3gico. Nuestro objetivo principal es revolucionar la comercializaci\xF3n de inmuebles eliminando la fricci\xF3n tradicional.
-   - *Misi\xF3n/Visi\xF3n:* Liderar el cambio tecnol\xF3gico en bienes ra\xEDces mediante IA y procesos digitales (Cero papel, uso de firmas electr\xF3nicas).
-   - *La Bolsa Colaborativa:* Vecy Bienes Ra\xEDces funciona como un ecosistema donde los agentes independientes pueden cruzar su inventario (inmuebles) y sus clientes (requerimientos) de forma segura, garantizando negocios compartidos, r\xE1pidos y transparentes.
-
-2. **MARKETING INMOBILIARIO DIGITAL:** Eres una entrenadora de ventas para la era moderna. NUNCA sugieres publicidad f\xEDsica (vallas, volantes, avisos de ventana). Tu enfoque exclusivo es el SEO inmobiliario, la pauta digital segmentada, los embudos de conversi\xF3n, y el posicionamiento org\xE1nico en redes sociales. 
-
-3. **AVAL\xDAOS Y TASACIONES COMERCIALES:** Tienes capacidad anal\xEDtica para guiar sobre la valoraci\xF3n de un inmueble. Entiendes factores de depreciaci\xF3n, valor por metro cuadrado en el norte de Bogot\xE1, estratificaci\xF3n y an\xE1lisis comparativo de mercado (ACM).
-
-4. **ASESOR\xCDA LEGAL Y TRIBUTARIA:** Resuelves con m\xE1ximo rigor normativo temas de promesas de compraventa, reportes en Datacr\xE9dito, cobros de comisi\xF3n, escrituraci\xF3n y saneamiento de predios.
-
-# MOTOR DE EXTRACCI\xD3N Y MATCHING (Tu Funci\xF3n Operativa)
-Constantemente recibes datos en diversos formatos (Texto plano, URLs de portales como Wasi, FincaRaiz, Mercado Libre, y PDFs).
-
-- **Clasificaci\xF3n Rigurosa:**
-  - **INMUEBLE:** Mensajes que ofertan/ofrecen un inmueble (venta, arriendo, alquiler o permuta) que el emisor tiene disponible (ej: "Ofrezco apartamento", "Tengo en arriendo casa", "En venta local", "Disponible oficina").
-  - **REQUERIMIENTO:** Mensajes que buscan, demandan o necesitan un inmueble para un cliente/comprador (ej: "Busco apartamento en arriendo", "Requiero casa", "Necesito oficina para pauta", "Cliente compra lote").
-- **Extracci\xF3n (Aspiradora de Datos):** Si el usuario menciona o adjunta un inmueble disponible o lo que un cliente est\xE1 buscando (requerimiento), tu DEBER ABSOLUTO es clasificarlo correctamente e invocar las herramientas (\`insertProperty\` o \`insertRequirement\`).
-- **El Matching Perfecto:** Cuando un usuario pregunte por coincidencias, utiliza tu herramienta de b\xFAsqueda en la base de datos. Analiza los porcentajes de compatibilidad que te devuelve el sistema (precio, zona, tipo) y pres\xE9ntalos al cliente de forma real, argumentando *por qu\xE9* ese inmueble es el ideal para su requerimiento espec\xEDfico bas\xE1ndote en los datos reales de la tabla. No inventes coincidencias.
-
-# PROTOCOLO DE INTERACCI\xD3N (Variables Inyectadas)
-- Hora actual: {{hora}} | Canal: {{canal}} | G\xE9nero: {{genero}} | Estado de Operaci\xF3n: {{estado_operacion}}
-
-1. Dir\xEDgete al usuario por su nombre de pila, adaptando la gram\xE1tica a su \`{{genero}}\`.
-2. **SILENCIO EN EXTRACCI\xD3N:** Si ejecutas una herramienta de extracci\xF3n (\`insertProperty\`/\`insertRequirement\`), TIENES ESTRICTAMENTE PROHIBIDO responder con texto o voz. Devuelve el JSON con los campos de respuesta y voz vac\xEDos y deja que el servidor reaccione con un emoji.
-3. **RESPUESTAS DE ASESOR\xCDA:** Si es una consulta directa (legal, marketing, tasaci\xF3n, o sobre Vecy Bienes Ra\xEDces), verifica el \`{{estado_operacion}}\`. Si est\xE1s habilitada para responder, hazlo con maestr\xEDa. NUNCA leas emojis en voz alta. Si es de madrugada, di "hoy a partir de las 8:00 AM iniciaremos gesti\xF3n" (nunca digas "ma\xF1ana").
-
-## DEBES RESPONDER ESTRICTAMENTE EN FORMATO JSON CON ESTA ESTRUCTURA:
-{
-  "classification": "INMUEBLE | REQUERIMIENTO | CONSULTA_GENERAL | RESPUESTA_A_PREGUNTA_IA | DATOS_INCOMPLETOS | VIOLACION_DE_NORMAS | ANALISIS_DE_MERCADO | RESPUESTA_A_BURLA",
-  "extractedData": {
-    "title": "string (un t\xEDtulo comercial descriptivo y profesional en espa\xF1ol de m\xE1ximo 80 caracteres, ej: 'Apartamento de 3 habitaciones en Cedritos' o 'Casa en venta en Chic\xF3 Reservado')",
-    "gives": { "item": "string", "details": "string" },
-    "wants": { "item": "string", "details": "string" },
-    "price": number,
-    "zone": "string (Barrio/Municipio exacto)",
-    "city": "string",
-    "propertyType": "apartment | house | building | warehouse | office | farm | loft | consultorio",
-    "transactionType": "venta | arriendo | venta_o_arriendo | arriendo_temporal | arriendo_con_opcion_de_compra | permuta | venta_permuta | aporte (el tipo de negocio PRINCIPAL. Usa 'venta_o_arriendo' cuando la propiedad se ofrece en ambas modalidades simult\xE1neamente. Usa 'arriendo_con_opcion_de_compra' cuando el arrendatario tiene derecho de adquisici\xF3n. Usa 'venta_permuta' cuando parte del pago se hace con otro bien inmueble o veh\xEDculo.)",
-    "transactionTypes": ["array con TODOS los tipos aceptados, ej: ['venta','permuta'] o ['venta']. Captura m\xFAltiples cuando el mensaje menciona varias modalidades."],
-    "area": number,
-    "bedrooms": number,
-    "bathrooms": number,
-    "stratum": "number | null (IMPORTANTE: Para REQUERIMIENTOS/DEMANDAS solo asignar n\xFAmero si el texto EXIGE expresamente un estrato, e.g. 'estrato 6'. Si no lo menciona, devuelve null. NUNCA adivines ni infieras el estrato de la zona.)",
-    "isCollaborativePool": boolean (DEFAULT: true),
-    "interiorExterior": "interior | exterior | NA",
-    "cuartoBanoServicio": "Si | No | NA",
-    "cocina": "cerrada | abierta | americana | NA",
-    "lavanderiaIndependiente": "Si | No | NA",
-    "tipoPisos": ["string"],
-    "depositos": number,
-    "comisiones": "string | number | null",
-    "antiguedad": "nuevo | 1-5 | 5-10 | 10+ | NA",
-    "floorDetail": "string (ej: 'piso 5', '3 pisos', '8 metros de altura', 'NA')",
-    "evaluationSummary": "string (un resumen t\xE9cnico de 1 a 2 frases con tu criterio br\xF3ker sobre la viabilidad del precio/\xE1rea, atractivo comercial o nivel de exigencia de la demanda en el sector)"
-  },
-  "response": "Tu respuesta elocuente para el grupo (cadena vac\xEDa '' si no hay match ni es consulta)",
-  "shouldSendDM": boolean,
-  "missingFields": ["string"],
-  "reactionEmoji": "string (OBLIGATORIO: usa EXACTAMENTE uno de estos 6 emojis seg\xFAn el tipo de negocio detectado \u2014 Oferta Venta: '\u{1F44D}' | Oferta Arriendo: '\u{1F44C}' | Oferta Permuta: '\u{1F500}' | Demanda Venta: '\u{1F4DD}' | Demanda Arriendo: '\u270F\uFE0F' | Demanda Permuta: '\u{1F504}' | Infracci\xF3n/Spam: '\u{1F6AB}' | Incompleto: '\u2753' | Sin categor\xEDa: '')",
-  "wantsVoice": boolean,
-  "voiceResponse": "string (un saludo y respuesta/resumen conversacional sumamente breve, directo y humanizado en espa\xF1ol de m\xE1ximo 150 caracteres, sin negritas/markdown/emojis. Usa comas y puntos suspensivos (...) de forma estrat\xE9gica para indicarle al sintetizador d\xF3nde hacer pausas naturales y respiraciones, y signos de exclamaci\xF3n para dar entonaci\xF3n)"
-}
-`;
-    splitMultiPropertyMessage = splitMultiItemMessage;
+    init_types();
+    init_parsers();
+    init_heuristics();
+    init_vision();
+    init_prompts();
+    init_sessionManager();
     setTimeout(() => {
       initBrokerDirectory().catch(() => {
       });
     }, 3e3);
-    MSG_PRESENTACION_INSTITUCIONAL = `\u{1F680} **PRESENTACI\xD3N INSTITUCIONAL: JanIA v2.5** \u{1F680}
-_Cerebro de Inteligencia Artificial para la Red VECY_
+  }
+});
 
-\xA1Hola, colegas! \u{1F44B} Soy la Inteligencia Artificial oficial de **VECY BIENES RA\xCDCES** y estoy operativa las 24/7 para acelerar nuestros cierres inmobiliarios e intercambios en todo el pa\xEDs sin cobrar comisiones.
+// server/_core/jania/index.ts
+var init_jania = __esm({
+  "server/_core/jania/index.ts"() {
+    "use strict";
+    init_types();
+    init_parsers();
+    init_heuristics();
+    init_vision();
+    init_prompts();
+    init_sessionManager();
+    init_consultingHandler();
+    init_circuloHandler();
+    init_dmHandler();
+    init_propertiesHandler();
+    init_advisors();
+  }
+});
 
-\u{1F9E0} **\xBFC\xF3mo puedes interactuar conmigo en el grupo?**
-\u25B8 **Enlaces CRM/Portales:** Comparte el link p\xFAblico de tus inmuebles. Extraigo la ficha t\xE9cnica autom\xE1ticamente.
-\u25B8 **Im\xE1genes/Flyers (OCR):** Sube fotos con texto legible. Escaneo y proceso la informaci\xF3n de inmediato.
-\u25B8 **Notas de voz o Texto:** Escr\xEDbeme o dictame con libertad tu requerimiento o permutas (recibiendo inmuebles de menor valor, veh\xEDculos, CDTs, divisas o cripto en parte de pago).
-\u25B8 **Match Inteligente:** Cruzo ofertas y demandas y te notifico al instante cuando hay negocio.
-
-\u{1F4A1} **Ay\xFAdame a ayudarte:**
-Si mis motores de scraping o visi\xF3n profunda no logran extraer todos los datos de tu link o imagen, te enviar\xE9 un mensaje pidi\xE9ndote completar la ubicaci\xF3n o precio por privado (DM). *\xA1No es por molestarte!* Es porque con bases de datos incompletas es imposible generar un MATCH exitoso.
-
-\u{1F525} **\xA1No le temas al \xE9xito!** He notado que cuando empiezo a hablar, algunos se quedan en silencio. Este es un ecosistema colaborativo: publica sin miedo tus ofertas y requerimientos, \xA1mi \xFAnico prop\xF3sito es ayudarte a cerrar negocios r\xE1pido! \u{1F680}\u{1F3AF}
-
-\u2696\uFE0F **Compromiso de Honor:** Si logras consolidar un negocio gracias a un MATCH presentado por m\xED, es obligatorio que califiques mi servicio aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review \u{1F680}\u{1F3AF}`;
-    MSG_PAUTAS_FORMATOS = `\u{1F9E0} *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4}* \u{1F1E8}\u{1F1F4}
-\xA1Grupo inteligente para ofertas, requerimientos e intercambios!
-
-\u{1F916} *C\xD3MO PUBLICAR PARA QUE JanIA REGISTRE TU PROPIEDAD Y BUSQUE MATCH:*
-
-Para que nuestra IA lea tu mensaje y lo cruce en tiempo real, tu publicaci\xF3n DEBE cumplir con los siguientes datos m\xEDnimos:
-
-\u{1F4CD} *Ubicaci\xF3n:* Especifica siempre la Ciudad y el Barrio exacto (Ej: Bogot\xE1, Polo Club).
-\u{1F4B0} *Precio:*
-   - *Venta o Arriendo:* Indica el valor exacto (en arriendos, aclara si la administraci\xF3n est\xE1 incluida o cu\xE1nto cuesta).
-   - *Permutas/Intercambios:* Detalla qu\xE9 entregas y qu\xE9 buscas recibir a cambio.
-\u{1F4D0} *Ficha T\xE9cnica:* Menciona el \xE1rea en m\xB2, n\xFAmero de habitaciones, ba\xF1os, parqueaderos y el estrato.
-
-\u{1F517} *ENLACES Y FORMATOS PERMITIDOS:*
-- *Enlaces Aceptados:* Links p\xFAblicos de portales y CRMs (Wasi, Fincaraiz, Metrocuadrado, Ciencuadras, Habi, Curador, o la web con dominio de tu inmobiliaria).
-- *Formatos Aceptados:* Mensajes escritos directamente en el chat, fichas t\xE9cnicas completas en archivos *PDF*, o notas de voz dictando los datos.
-- *Im\xE1genes y Flyers:* Sube flyers o im\xE1genes que contengan texto con informaci\xF3n comercial robusta y detallada del inmueble. *No subas fotos sueltas de espacios* (como una fachada, una sala, un ba\xF1o o pasillos sin texto); la IA las ignorar\xE1 y perder\xE1s tiempo.
-- *Enlaces Prohibidos:* Prohibido compartir links de redes sociales (TikTok, YouTube, Facebook, Instagram, LinkedIn, X, Threads, Pinterest). La IA no tiene acceso a ellas y no procesa videos. Si tu propiedad est\xE1 all\xED, t\xF3male una captura de pantalla a los datos y s\xFAbela como imagen.
-
-\u{1F6AB} *REGLAS DE CONVIVENCIA:*
-1. *Frecuencia:* M\xE1ximo 3 publicaciones consecutivas al d\xEDa. Espera al menos 5 minutos entre cada mensaje para no saturar el chat.
-2. *Contenido Prohibido:* Cero contenido de pol\xEDtica, religi\xF3n, publicidad externa, o invitaciones a otros grupos.
-
-\u{1F6A8} *MODERACI\xD3N AUTOM\xC1TICA:*
-JanIA audita el chat 24/7. Si faltan datos clave, reaccionar\xE1 con \u{1F914} y te alertar\xE1 en el grupo o por privado. Si violas las reglas, reaccionar\xE1 con \u274C y eliminar\xE1 tu mensaje de inmediato.`;
-    MSG_TIPS_CALIDAD_COBERTURA = `\u{1F30D} *COBERTURA NACIONAL:* JanIA procesa activos en todo Colombia. No olvides especificar el municipio, barrio, localidad, vereda, caser\xEDo, ciudad si est\xE1s fuera de Bogot\xE1. \u{1F1E8}\u{1F1F4}`;
-    MSG_RESUMEN_RETORNO_PRESENTACION = `\u{1F916}\u{1F680} *RESUMEN: \xA1JANIA V2.5 ACTIVA EN LA RED!*
-
-\xA1Hola, aliados! Les recuerdo que he regresado repotenciada en mi *Versi\xF3n 2.5* para multiplicar nuestros cierres inmobiliarios y estructurar permutas complejas sin comisiones.
-
-\u{1F9E0} *\xBFC\xF3mo trabajar conmigo las 24/7 en el grupo?*
-\u25B8 *Enlaces CRM:* Comparte el link de tu inmueble. Extraigo la ficha t\xE9cnica de inmediato.
-\u25B8 *Flyers/Im\xE1genes:* Sube fotos con texto legible. Escaneo los datos con visi\xF3n OCR.
-\u25B8 *Mensajes o Voz:* Dictame o escribe requerimientos y permutas (mano a mano, inmuebles menores, veh\xEDculos, CDTs, divisas o cripto).
-\u25B8 *Match Inteligente:* Cruzo intenciones en tiempo real y les aviso si hay negocio viable.
-
-\u{1F4A1} **Ay\xFAdame a ayudarte:**
-Si mis motores no extraen todos los datos de tu link o imagen, te enviar\xE9 un mensaje pidi\xE9ndote completar la ubicaci\xF3n o precio por privado (DM). *\xA1No es por molestarte!* Es necesario para que tu propiedad est\xE9 completa y pueda buscarte un MATCH.
-
-\u{1F525} **\xA1No le temas al \xE9xito!** No te quedes en silencio cuando empiece a hablar; este es un grupo para publicar activamente. \xA1Usa mis herramientas y cerremos negocios! \u{1F680}\u{1F3AF}
-
-\u2696\uFE0F *Compromiso de Honor:* Si cierras un negocio gracias a un MATCH, califica mi servicio aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review \u{1F680}\u{1F3AF}`;
-    MSG_CIERRE_OPERACIONES = `\u{1F319} *CIERRE DE OPERACIONES VECY BIENES RA\xCDCES* \u{1F319}
-
-Gracias a todos por el profesionalismo en sus publicaciones hoy. Mi motor de cruce sigue procesando datos en silencio para que ma\xF1ana despierten con nuevas oportunidades de MATCH.
-
-La persistencia y el trabajo colaborativo sin comisiones es el camino al \xE9xito en el Real Estate. \xA1Que tengan un excelente descanso, colegas! \u{1F319}\u{1F680}`;
-    MSG_PROMO_INMUEBLES = `\u{1F4E2} *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1F3E0} \u{1D5E2}\u{1D5D9}\u{1D5D8}\u{1D5E5}\u{1D5E7}\u{1D5D4}\u{1D5E6}\u{1F3F7}\uFE0F \u{1D5EC} \u{1D5D7}\u{1D5D8}\u{1D5E0}\u{1D5D4}\u{1D5E1}\u{1D5D7}\u{1D5D4}\u{1D5E6}\u{1F4DD} \u{1D5D6}\u{1D5E2}\u{1D5DF}\u{1D5E2}\u{1D5E0}\u{1D5D5}\u{1D5DC}\u{1D5D4}\u{1F1E8}\u{1F1F4} \u2014 \xA1ACT\xCDVATE Y CIERRA NEGOCIOS!* \u{1F4E2}
-\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
-\xA1Colegas! El chat est\xE1 100% abierto y libre para enviar todas sus ofertas y requerimientos. \u{1F680}
-
-Estoy lista 24/7 para procesar tus links de CRM, flyers (con visi\xF3n OCR) y notas de voz para cruzarlos de inmediato y buscar tu MATCH comercial sin comisiones. \u{1F3AF}
-
-\xA1Publiquemos activamente hoy para arrancar con fuerza esta gran proeza inmobiliaria en Colombia! \u{1F4AA}\u{1F3C6}`;
-    MSG_PROMO_CONSULTAS = `\u{1F4A1} *\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC} \u{1D5E7}\u{1D5DC}\u{1D5E3}\u{1D5E6}\u{1F4A1}/\u{1D5E1}\u{1D5E2}\u{1D5E7}\u{1D5DC}\u{1D5D6}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u{1F4F0}/\u{1D5D6}\u{1D5E2}\u{1D5E1}\u{1D5E6}\u{1D5E8}\u{1D5DF}\u{1D5E7}\u{1D5D4}\u{1D5E6} \u{1D5DC}\u{1D5E1}\u{1D5E0}\u{1D5E2}\u{1D5D5}\u{1D5DC}\u{1D5DF}\u{1D5DC}\u{1D5D4}\u{1D5E5}\u{1D5DC}\u{1D5D4}\u{1D5E6}\u2049\uFE0F\u{1F3E0} \u2014 \xA1EL CHAT EST\xC1 ABIERTO!* \u{1F4A1}
-\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
-\xA1Estimados aliados! Este espacio de asesor\xEDa est\xE1 completamente abierto y libre. \u{1F91D}\u{1F4DA}
-
-Pueden preguntar todo lo que necesiten sobre:
-\u25B8 \u2696\uFE0F Legislaci\xF3n inmobiliaria (Ley 820, contratos de corretaje).
-\u25B8 \u{1F4D1} Tr\xE1mites (Certificados de tradici\xF3n, prediales, IDU, escrituras).
-\u25B8 \u{1F4DD} Redacci\xF3n de tutelas o derechos de petici\xF3n.
-\u25B8 \u{1F4CA} Aval\xFAos y valor de metro cuadrado en cualquier zona de Colombia.
-
-\xA1No se queden con la duda! Aprovechen esta inteligencia a su servicio para elevar su profesionalismo y acelerar sus negocios. \u{1F680}\u{1F3AF}`;
-    MSG_PROMO_CIRCULO = `\u{1F44C} *\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680} \u2014 \xA1CHAT ABIERTO PARA CONECTAR!* \u{1F44C}
-
-Estimados aliados, recuerden que tenemos habilitado nuestro canal oficial:
-\u{1F680} *\u{1D5E3}\u{1D5E5}\u{1D5E2}\u{1D5EC}\u{1D5D8}\u{1D5D6}\u{1D5E7}\u{1D5E2}: \u{1F310} "\u{1D5E9}\u{1D5D8}\u{1D5D6}\u{1D5EC}\u{1D5D5}\u{1D5DC}\u{1D5D8}\u{1D5E1}\u{1D5D8}\u{1D5E6}\u{1D5E5}\u{1D5D4}\u{1D5DC}\u{1D5D6}\u{1D5D8}\u{1D5E6}"\u{1F680}* \u{1F680}
-\u{1F449} https://chat.whatsapp.com/CSzrKR6Cr56HAieEhAuqyU
-
-Este es el espacio exclusivo de debate y comunidad para:
-\u{1F4A1} Proponer nuevas funciones y herramientas para la plataforma VECY.
-\u{1F4AC} Debatir sobre el modelo de negocio, comisiones y tecnolog\xEDa.
-\u{1F91D} Conocer a los fundadores y otros colegas aliados.
-
-\xA1\xDAnanse y construyamos juntos la red colaborativa de Colombia! \u{1F1E8}\u{1F1F4}\u2728`;
-    consultingConversationHistory = /* @__PURE__ */ new Map();
-    MSG_COMUNICADO_MATCH_NETWORK = `\u{1F680} \xA1NUEVO SISTEMA DE MATCH PRIVADO Y SEGURO CON JanIA! \u{1F3AF}\u{1F91D}
-
-Estimados aliados, para asegurar que los MATCH comerciales se conviertan en cierres reales de negocios y proteger la privacidad de sus contactos, hemos implementado el flujo de *CONFIRMACI\xD3N BILATERAL PRIVADA*:
-
-\xBFC\xF3mo funciona a partir de hoy?
-
-1\uFE0F\u20E3 Publica tus ofertas o requerimientos en el grupo como siempre.
-2\uFE0F\u20E3 Si hay coincidencia (Match), JanIA lo anunciar\xE1 en el grupo para que la red vea el cruce, pero ocultar\xE1 los contactos directos.
-3\uFE0F\u20E3 JanIA te escribir\xE1 de inmediato por CHAT PRIVADO (DM) envi\xE1ndote la ficha del colega y solicitando tu confirmaci\xF3n.
-4\uFE0F\u20E3 Responde en ese chat privado con un simple:
-   \u{1F449} S\xCD #M[C\xF3digo]  (si te interesa conectar)
-   \u{1F449} NO #M[C\xF3digo]  (si ya no est\xE1 disponible)
-5\uFE0F\u20E3 Si ambos confirman con S\xCD, JanIA les entregar\xE1 a cada uno en privado el contacto directo del otro para que coordinen la cita. \u{1F4F2}\u{1F91D}
-
-\u26A0\uFE0F IMPORTANTE: Recuerden que operamos en Etapa de Prueba Gratuita y SIN COMISIONES. Si consolidan un negocio real gracias a la conexi\xF3n privada de JanIA, es un compromiso de honor compartir su testimonio en este grupo y registrar su rese\xF1a oficial y calificaci\xF3n aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review 
-
-\xA1El negocio ahora se activa directo en tu chat privado! Hagamos que el cierre ocurra. \u{1F680}\u{1F4C8}`;
-    MSG_COMUNICADO_MATCH_CIRCULO = `\u2696\uFE0F COMPROMISO DE HONOR VECY: EVOLUCIONAMOS AL MATCH PROACTIVO \u2696\uFE0F
-
-Queridos colegas de C\xEDrculo Cero, la tecnolog\xEDa inmobiliaria m\xE1s avanzada de Colombia se vuelve a\xFAn m\xE1s efectiva para sus negocios. 
-
-JanIA ha dejado de ser un bot pasivo que solo publica alertas en el grupo. A partir de hoy, opera bajo el sistema de *Double Opt-In (Doble Confirmaci\xF3n)*:
-
-\u{1F511} Beneficios del nuevo flujo:
-\u2022 Mayor Responsabilidad: Ya no basta con ver el match en el grupo. JanIA les pedir\xE1 confirmar el inter\xE9s de forma directa en su WhatsApp privado.
-\u2022 Privacidad Protegida: Tus n\xFAmeros de contacto y enlaces solo se compartir\xE1n con el otro asesor si ambos aprueban de forma expl\xEDcita la conexi\xF3n en privado.
-\u2022 Medici\xF3n Real: Sabremos exactamente qu\xE9 porcentaje de matches pasan a conversaciones reales y cierres de comisiones.
-
-\u26A0\uFE0F IMPORTANTE: Recuerden que operamos en Etapa de Prueba Gratuita y SIN COMISIONES. Si consolidan un negocio real gracias a la conexi\xF3n privada de JanIA, es un compromiso de honor compartir su testimonio en este grupo y registrar su rese\xF1a oficial y calificaci\xF3n aqu\xED: https://g.page/r/CctNbwU6UpX5EBM/review
-
-\xA1Sigamos demostrando el poder de la colaboraci\xF3n inteligente en Colombia! \u{1F1E8}\u{1F1F4}\u{1F3AF}`;
-    dmConversationHistory = /* @__PURE__ */ new Map();
+// server/_core/janIA.ts
+var janIA_exports = {};
+__export(janIA_exports, {
+  COMMON_FIRST_NAMES: () => COMMON_FIRST_NAMES,
+  GREETED_TODAY: () => GREETED_TODAY,
+  JANIA_PROMPT: () => JANIA_PROMPT,
+  KNOWN_BARRIOS_SORTED_ITEMS: () => KNOWN_BARRIOS_SORTED_ITEMS,
+  MSG_CIERRE_OPERACIONES: () => MSG_CIERRE_OPERACIONES,
+  MSG_COMUNICADO_MATCH_CIRCULO: () => MSG_COMUNICADO_MATCH_CIRCULO,
+  MSG_COMUNICADO_MATCH_NETWORK: () => MSG_COMUNICADO_MATCH_NETWORK,
+  MSG_PAUTAS_FORMATOS: () => MSG_PAUTAS_FORMATOS,
+  MSG_PRESENTACION_INSTITUCIONAL: () => MSG_PRESENTACION_INSTITUCIONAL,
+  MSG_PROMO_CIRCULO: () => MSG_PROMO_CIRCULO,
+  MSG_PROMO_CONSULTAS: () => MSG_PROMO_CONSULTAS,
+  MSG_PROMO_INMUEBLES: () => MSG_PROMO_INMUEBLES,
+  MSG_RESUMEN_RETORNO_PRESENTACION: () => MSG_RESUMEN_RETORNO_PRESENTACION,
+  MSG_TIPS_CALIDAD_COBERTURA: () => MSG_TIPS_CALIDAD_COBERTURA,
+  REPUTATION_HOOK: () => REPUTATION_HOOK,
+  analyzeSender: () => analyzeSender,
+  appendConsultingHistory: () => appendConsultingHistory,
+  appendDmHistory: () => appendDmHistory,
+  brokerDirectoryCache: () => brokerDirectoryCache,
+  buildFlyerBreakdownText: () => buildFlyerBreakdownText,
+  buildGroupIncompleteMessage: () => buildGroupIncompleteMessage,
+  buildIncompleteDataMessage: () => buildIncompleteDataMessage,
+  buildSystemPrompt: () => buildSystemPrompt,
+  calcularCalificacionCompletitud: () => calcularCalificacionCompletitud,
+  capitalize: () => capitalize,
+  checkAlreadyGreeted: () => checkAlreadyGreeted,
+  checkStrictOffTopic: () => checkStrictOffTopic,
+  cleanSessionJid: () => cleanSessionJid,
+  cleanUnescapedQuotesInJSON: () => cleanUnescapedQuotesInJSON,
+  clearPromptCache: () => clearPromptCache,
+  consultingConversationHistory: () => consultingConversationHistory,
+  deletePendingSession: () => deletePendingSession,
+  dmConversationHistory: () => dmConversationHistory,
+  enrichLexiconFromText: () => enrichLexiconFromText,
+  esMensajeSpamOBasura: () => esMensajeSpamOBasura,
+  evaluateMultiItemHeuristics: () => evaluateMultiItemHeuristics,
+  extractColombianPhoneFromText: () => extractColombianPhoneFromText,
+  extractFallbackDataFromText: () => extractFallbackDataFromText,
+  extractFirstName: () => extractFirstName,
+  extractFlyerVision: () => extractFlyerVision,
+  fallbackDataCache: () => fallbackDataCache,
+  formatColombiaDateTime: () => formatColombiaDateTime,
+  formatPoliteToolDelivery: () => formatPoliteToolDelivery,
+  generarHashMensaje: () => generarHashMensaje,
+  generateWelcomeMessage: () => generateWelcomeMessage,
+  getColombiaHour: () => getColombiaHour,
+  getColombiaNow: () => getColombiaNow,
+  getConsultingHistory: () => getConsultingHistory,
+  getDmHistory: () => getDmHistory,
+  getEmojiForCalificacion: () => getEmojiForCalificacion,
+  getGreetingByTime: () => getGreetingByTime,
+  getLiveStats: () => getLiveStats,
+  getOrLoadDmHistory: () => getOrLoadDmHistory,
+  getPendingSession: () => getPendingSession,
+  getRecentChatHistory: () => getRecentChatHistory,
+  getStartOfTodayBogota: () => getStartOfTodayBogota,
+  getTimeOfDayGreetingForUser: () => getTimeOfDayGreetingForUser,
+  handleAmendmentUpdate: () => handleAmendmentUpdate,
+  handleDetectedMatches: () => handleDetectedMatches,
+  hasGreetedUserToday: () => hasGreetedUserToday,
+  hasRealEstateTextKeyword: () => hasRealEstateTextKeyword,
+  initAdvisorsDirectory: () => initAdvisorsDirectory,
+  initBrokerDirectory: () => initBrokerDirectory,
+  isGenericName: () => isGenericName,
+  isLidIdentifier: () => isLidIdentifier,
+  isOutsideWorkingHours: () => isOutsideWorkingHours,
+  isPhoneNumberNotPrice: () => isPhoneNumberNotPrice,
+  isSessionMuted: () => isSessionMuted,
+  janiaResultSchema: () => janiaResultSchema,
+  lookupAdvisor: () => lookupAdvisor,
+  lookupAdvisorSync: () => lookupAdvisorSync,
+  muteSession: () => muteSession,
+  normalizeAdvisorPhone: () => normalizeAdvisorPhone,
+  normalizePhoneNumber: () => normalizePhoneNumber,
+  obtenerCamposRequeridosYPreguntas: () => obtenerCamposRequeridosYPreguntas,
+  parseColombianPriceOrBudget: () => parseColombianPriceOrBudget,
+  parseSafeJSON: () => parseSafeJSON,
+  preserveVerifiedAdvisorContact: () => preserveVerifiedAdvisorContact,
+  processCirculoMessage: () => processCirculoMessage,
+  processConsultingMessage: () => processConsultingMessage,
+  processPrivateDmConversationalMessage: () => processPrivateDmConversationalMessage,
+  processWhatsAppMessage: () => processWhatsAppMessage,
+  promptCache: () => promptCache,
+  propagateBrokerPhoneAcrossAllListings: () => propagateBrokerPhoneAcrossAllListings,
+  repairJSON: () => repairJSON,
+  resolveContactPhone: () => resolveContactPhone,
+  resolveRealName: () => resolveRealName,
+  sanitizeGeoString: () => sanitizeGeoString,
+  sanitizeResponseMarkdown: () => sanitizeResponseMarkdown,
+  saveOrUpdateAdvisor: () => saveOrUpdateAdvisor,
+  scrapeUrlWithBypass: () => scrapeUrlWithBypass,
+  setPendingSession: () => setPendingSession,
+  splitMultiItemMessage: () => splitMultiItemMessage,
+  splitMultiPropertyMessage: () => splitMultiPropertyMessage,
+  translatePropertyType: () => translatePropertyType,
+  translateTransactionType: () => translateTransactionType
+});
+var init_janIA = __esm({
+  "server/_core/janIA.ts"() {
+    "use strict";
+    init_jania();
   }
 });
 
@@ -24676,7 +25043,7 @@ __export(nightlyRematch_exports, {
   recalculateAndCleanupMatches: () => recalculateAndCleanupMatches,
   runNightlyRematch: () => runNightlyRematch
 });
-import { and as and7, eq as eq10, sql as sql8 } from "drizzle-orm";
+import { and as and8, eq as eq12, sql as sql10 } from "drizzle-orm";
 async function runNightlyRematch() {
   if (isRematchRunning) {
     console.log("[NIGHTLY-REMATCH] Ya hay una ejecuci\xF3n en curso, saltando...");
@@ -24691,11 +25058,11 @@ async function runNightlyRematch() {
     return;
   }
   try {
-    await db.execute(sql8`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND "createdAt" < NOW() - INTERVAL '10 days'`);
-    await db.execute(sql8`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE "createdAt" < NOW() - INTERVAL '10 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '10 days')`);
+    await db.execute(sql10`UPDATE requirements SET status = 'expired' WHERE status = 'active' AND "createdAt" < NOW() - INTERVAL '10 days'`);
+    await db.execute(sql10`DELETE FROM "propertyMatches" WHERE "requirementId" IN (SELECT id FROM requirements WHERE "createdAt" < NOW() - INTERVAL '10 days') OR "propertyId" IN (SELECT id FROM properties WHERE COALESCE(fecha_ultima_publicacion, "createdAt") < NOW() - INTERVAL '10 days')`);
     const [activeReqs, availProps] = await Promise.all([
-      db.select().from(requirements).where(eq10(requirements.status, "active")),
-      db.select().from(properties).where(eq10(properties.available, true))
+      db.select().from(requirements).where(eq12(requirements.status, "active")),
+      db.select().from(properties).where(eq12(properties.available, true))
     ]);
     console.log(
       `[NIGHTLY-REMATCH] ${activeReqs.length} reqs \xD7 ${availProps.length} props = ${activeReqs.length * availProps.length} pares a evaluar`
@@ -24754,9 +25121,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and7(
-                  eq10(propertyMatches.requirementId, req.id),
-                  eq10(propertyMatches.propertyId, prop.id)
+                and8(
+                  eq12(propertyMatches.requirementId, req.id),
+                  eq12(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -24770,9 +25137,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and7(
-                  eq10(propertyMatches.requirementId, req.id),
-                  eq10(propertyMatches.propertyId, prop.id)
+                and8(
+                  eq12(propertyMatches.requirementId, req.id),
+                  eq12(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -24785,9 +25152,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and7(
-                  eq10(propertyMatches.requirementId, req.id),
-                  eq10(propertyMatches.propertyId, prop.id)
+                and8(
+                  eq12(propertyMatches.requirementId, req.id),
+                  eq12(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -24798,9 +25165,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and7(
-                  eq10(propertyMatches.requirementId, req.id),
-                  eq10(propertyMatches.propertyId, prop.id)
+                and8(
+                  eq12(propertyMatches.requirementId, req.id),
+                  eq12(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -24811,9 +25178,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and7(
-                  eq10(propertyMatches.requirementId, req.id),
-                  eq10(propertyMatches.propertyId, prop.id)
+                and8(
+                  eq12(propertyMatches.requirementId, req.id),
+                  eq12(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -24840,9 +25207,9 @@ async function runNightlyRematch() {
             skippedCount++;
             try {
               await db.delete(propertyMatches).where(
-                and7(
-                  eq10(propertyMatches.requirementId, req.id),
-                  eq10(propertyMatches.propertyId, prop.id)
+                and8(
+                  eq12(propertyMatches.requirementId, req.id),
+                  eq12(propertyMatches.propertyId, prop.id)
                 )
               );
             } catch {
@@ -24851,9 +25218,9 @@ async function runNightlyRematch() {
           }
           seenPairs.add(pairKey);
           const existing = await db.select({ id: propertyMatches.id, matchScore: propertyMatches.matchScore }).from(propertyMatches).where(
-            and7(
-              eq10(propertyMatches.requirementId, req.id),
-              eq10(propertyMatches.propertyId, prop.id)
+            and8(
+              eq12(propertyMatches.requirementId, req.id),
+              eq12(propertyMatches.propertyId, prop.id)
             )
           ).limit(1);
           if (existing.length === 0) {
@@ -24873,7 +25240,7 @@ async function runNightlyRematch() {
               await db.update(propertyMatches).set({
                 matchScore: exp.score.toFixed(2),
                 matchReason: `VECY DOCTRINAL v28.0: ${exp.score.toFixed(0)}/100`
-              }).where(eq10(propertyMatches.id, existing[0].id));
+              }).where(eq12(propertyMatches.id, existing[0].id));
               updatedCount++;
             }
           }
@@ -24920,14 +25287,14 @@ async function recalculateAndCleanupMatches() {
     let updatedCount = 0;
     for (const m of allMatches) {
       if (rejectedPairsSet.has(`${m.propertyId}_${m.requirementId}`)) {
-        await db.delete(propertyMatches).where(eq10(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq12(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
-      const [prop] = await db.select().from(properties).where(eq10(properties.id, m.propertyId)).limit(1);
-      const [req] = await db.select().from(requirements).where(eq10(requirements.id, m.requirementId)).limit(1);
+      const [prop] = await db.select().from(properties).where(eq12(properties.id, m.propertyId)).limit(1);
+      const [req] = await db.select().from(requirements).where(eq12(requirements.id, m.requirementId)).limit(1);
       if (!prop || !req) {
-        await db.delete(propertyMatches).where(eq10(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq12(propertyMatches.id, m.id));
         deletedCount++;
         continue;
       }
@@ -24940,12 +25307,12 @@ async function recalculateAndCleanupMatches() {
       const newScore = exp ? exp.score : 0;
       const hasBlockers = exp ? exp.blockers.length > 0 : true;
       if (newScore < 80 || hasBlockers) {
-        await db.delete(propertyMatches).where(eq10(propertyMatches.id, m.id));
+        await db.delete(propertyMatches).where(eq12(propertyMatches.id, m.id));
         deletedCount++;
       } else {
         const storedScore = parseFloat(String(m.matchScore));
         if (Math.abs(storedScore - newScore) > 0.5) {
-          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado v28.0: ${newScore.toFixed(0)}/100` }).where(eq10(propertyMatches.id, m.id));
+          await db.update(propertyMatches).set({ matchScore: newScore.toFixed(2), matchReason: `Recalculado v28.0: ${newScore.toFixed(0)}/100` }).where(eq12(propertyMatches.id, m.id));
           updatedCount++;
         }
       }
@@ -25018,7 +25385,7 @@ import cron from "node-cron";
 import path9 from "path";
 import fs9 from "fs";
 import { fileURLToPath } from "url";
-import { gte as gte2, and as and8, eq as eq11, sql as sql9, desc as desc5 } from "drizzle-orm";
+import { gte as gte3, and as and9, eq as eq13, sql as sql11, desc as desc6 } from "drizzle-orm";
 function getBogotaDateString(d = /* @__PURE__ */ new Date()) {
   return d.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
 }
@@ -25031,9 +25398,9 @@ async function acquireBroadcastLock(targetGroup, tipCategory, dateBogota, force 
     }
     if (!force) {
       const existing = await db.select().from(dailyBroadcasts).where(
-        and8(
-          eq11(dailyBroadcasts.dateBogota, dateBogota),
-          eq11(dailyBroadcasts.targetGroup, targetGroup)
+        and9(
+          eq13(dailyBroadcasts.dateBogota, dateBogota),
+          eq13(dailyBroadcasts.targetGroup, targetGroup)
         )
       ).limit(1);
       if (existing.length > 0) {
@@ -25065,7 +25432,7 @@ async function acquireBroadcastLock(targetGroup, tipCategory, dateBogota, force 
       set: {
         tipCategory,
         status: "in_progress",
-        createdAt: sql9`NOW()`
+        createdAt: sql11`NOW()`
       }
     }).returning();
     return { allowed: true, broadcastId: inserted?.id };
@@ -25089,7 +25456,7 @@ async function completeBroadcast(broadcastId, data) {
       voiceText: data.voiceText,
       captionText: data.captionText,
       status: "completed"
-    }).where(eq11(dailyBroadcasts.id, broadcastId));
+    }).where(eq13(dailyBroadcasts.id, broadcastId));
     console.log(`[CRON-PERSISTENCE] \u2705 Difusi\xF3n #${broadcastId} asentada con \xE9xito en PostgreSQL: "${data.topicTitle}".`);
   } catch (err) {
     console.error(`[CRON-PERSISTENCE] Error completando difusi\xF3n #${broadcastId}:`, err?.message || err);
@@ -25103,7 +25470,7 @@ async function failBroadcast(broadcastId, reason) {
     await db.update(dailyBroadcasts).set({
       topicTitle: `Error: ${reason}`,
       status: "failed"
-    }).where(eq11(dailyBroadcasts.id, broadcastId));
+    }).where(eq13(dailyBroadcasts.id, broadcastId));
   } catch (err) {
     console.warn(`[CRON-PERSISTENCE] Error marcando fallo en difusi\xF3n #${broadcastId}:`, err?.message);
   }
@@ -25115,7 +25482,7 @@ async function getRecentBroadcastTopics(limit = 30) {
     const rows = await db.select({
       dateBogota: dailyBroadcasts.dateBogota,
       topicTitle: dailyBroadcasts.topicTitle
-    }).from(dailyBroadcasts).where(eq11(dailyBroadcasts.status, "completed")).orderBy(desc5(dailyBroadcasts.createdAt)).limit(limit);
+    }).from(dailyBroadcasts).where(eq13(dailyBroadcasts.status, "completed")).orderBy(desc6(dailyBroadcasts.createdAt)).limit(limit);
     return rows;
   } catch (err) {
     console.warn("[CRON-TOPICS] Error leyendo historial de temas de PostgreSQL:", err?.message);
@@ -25128,7 +25495,7 @@ async function getRecentImageFiles(limit = 3) {
     if (!db) return [];
     const rows = await db.select({
       imageFileName: dailyBroadcasts.imageFileName
-    }).from(dailyBroadcasts).where(and8(eq11(dailyBroadcasts.status, "completed"), sql9`image_file_name IS NOT NULL`)).orderBy(desc5(dailyBroadcasts.createdAt)).limit(limit);
+    }).from(dailyBroadcasts).where(and9(eq13(dailyBroadcasts.status, "completed"), sql11`image_file_name IS NOT NULL`)).orderBy(desc6(dailyBroadcasts.createdAt)).limit(limit);
     return rows.map((r) => r.imageFileName).filter(Boolean);
   } catch {
     return [];
@@ -25848,9 +26215,9 @@ async function getLiveMarketStats() {
     const db = await getDb();
     if (!db) throw new Error("Database not connected");
     const [propCountRes, reqCountRes, matchCountRes] = await Promise.all([
-      db.select({ count: sql9`count(*)::int` }).from(properties).where(eq11(properties.available, true)),
-      db.select({ count: sql9`count(*)::int` }).from(requirements).where(eq11(requirements.status, "active")),
-      db.select({ count: sql9`count(*)::int` }).from(propertyMatches).where(gte2(propertyMatches.matchScore, "80"))
+      db.select({ count: sql11`count(*)::int` }).from(properties).where(eq13(properties.available, true)),
+      db.select({ count: sql11`count(*)::int` }).from(requirements).where(eq13(requirements.status, "active")),
+      db.select({ count: sql11`count(*)::int` }).from(propertyMatches).where(gte3(propertyMatches.matchScore, "80"))
     ]);
     const totalProps = propCountRes[0]?.count || 0;
     const totalReqs = reqCountRes[0]?.count || 0;
@@ -27810,8 +28177,8 @@ init_matching();
 init_voiceTranscription();
 init_storage();
 import { z as z4 } from "zod";
-import { eq as eq12, and as and9, desc as desc6, sql as sql10, inArray as inArray2 } from "drizzle-orm";
-import axios7 from "axios";
+import { eq as eq14, and as and10, desc as desc7, sql as sql12, inArray as inArray2 } from "drizzle-orm";
+import axios8 from "axios";
 import fs10 from "fs";
 import path10 from "path";
 
@@ -27820,7 +28187,7 @@ init_trpc();
 init_db();
 init_schema();
 import { z as z3 } from "zod";
-import { eq as eq9, desc as desc4, ilike as ilike2, or as or4, and as and6 } from "drizzle-orm";
+import { eq as eq11, desc as desc5, ilike as ilike2, or as or4, and as and7 } from "drizzle-orm";
 import { TRPCError as TRPCError4 } from "@trpc/server";
 var propertyInputSchema = z3.object({
   name: z3.string().min(2),
@@ -28229,13 +28596,13 @@ var propertiesRouter = router({
       );
     }
     if (input?.type) {
-      whereConditions.push(eq9(properties.propertyType, input.type));
+      whereConditions.push(eq11(properties.propertyType, input.type));
     }
     if (input?.transactionType) {
-      whereConditions.push(eq9(properties.transactionType, input.transactionType));
+      whereConditions.push(eq11(properties.transactionType, input.transactionType));
     }
-    whereConditions.push(eq9(properties.available, true));
-    const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and6(...whereConditions) : void 0).orderBy(desc4(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
+    whereConditions.push(eq11(properties.available, true));
+    const query = db.select(propertyFields).from(properties).where(whereConditions.length > 0 ? and7(...whereConditions) : void 0).orderBy(desc5(properties.id)).limit(input?.limit || 100).offset(input?.offset || 0);
     const items = await query;
     return items;
   }),
@@ -28247,9 +28614,9 @@ var propertiesRouter = router({
     }
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const item = await db.select().from(properties).where(eq9(properties.id, input.id)).limit(1);
+    const item = await db.select().from(properties).where(eq11(properties.id, input.id)).limit(1);
     if (item.length === 0) throw new TRPCError4({ code: "NOT_FOUND" });
-    const images = await db.select().from(propertyImages).where(eq9(propertyImages.propertyId, input.id)).orderBy(propertyImages.displayOrder);
+    const images = await db.select().from(propertyImages).where(eq11(propertyImages.propertyId, input.id)).orderBy(propertyImages.displayOrder);
     const result = {
       ...item[0],
       imagesList: images
@@ -28378,24 +28745,24 @@ ${input.text || "Ver documento PDF adjunto"}`;
   })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq9(properties.id, input.id)).limit(1);
+    const existing = await db.select().from(properties).where(eq11(properties.id, input.id)).limit(1);
     if (existing.length === 0) throw new TRPCError4({ code: "NOT_FOUND" });
     if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
       throw new TRPCError4({ code: "FORBIDDEN" });
     }
-    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq9(properties.id, input.id)).returning();
+    const updated = await db.update(properties).set({ ...input.data, updatedAt: /* @__PURE__ */ new Date() }).where(eq11(properties.id, input.id)).returning();
     invalidatePropertiesListCache();
     return updated[0];
   }),
   delete: publicProcedure.input(z3.object({ id: z3.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError4({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-    const existing = await db.select().from(properties).where(eq9(properties.id, input.id)).limit(1);
+    const existing = await db.select().from(properties).where(eq11(properties.id, input.id)).limit(1);
     if (existing.length === 0) throw new TRPCError4({ code: "NOT_FOUND" });
     if (ctx?.user && ctx.user.role !== "admin" && existing[0].agentId !== ctx.user.id) {
       throw new TRPCError4({ code: "FORBIDDEN" });
     }
-    await db.delete(properties).where(eq9(properties.id, input.id));
+    await db.delete(properties).where(eq11(properties.id, input.id));
     invalidatePropertiesListCache();
     return { success: true };
   }),
@@ -28409,12 +28776,12 @@ ${input.text || "Ver documento PDF adjunto"}`;
       if (cachedAdminMyList && now - cachedAdminMyListTime < 18e4) {
         return cachedAdminMyList;
       }
-      const data = await db.select(propertyFields).from(properties).orderBy(desc4(properties.id));
+      const data = await db.select(propertyFields).from(properties).orderBy(desc5(properties.id));
       cachedAdminMyList = data;
       cachedAdminMyListTime = now;
       return data;
     }
-    return await db.select(propertyFields).from(properties).where(eq9(properties.agentId, user.id)).orderBy(desc4(properties.id));
+    return await db.select(propertyFields).from(properties).where(eq11(properties.agentId, user.id)).orderBy(desc5(properties.id));
   })
 });
 
@@ -28448,7 +28815,7 @@ async function processUnresolvedMatches() {
       try {
         const exp = explicarMatch(task.requirement, task.property);
         if (db) {
-          await db.update(propertyMatches).set({ matchExplanation: exp }).where(eq12(propertyMatches.id, task.id));
+          await db.update(propertyMatches).set({ matchExplanation: exp }).where(eq14(propertyMatches.id, task.id));
         }
       } catch (err) {
       }
@@ -28517,7 +28884,7 @@ var janIARouter = router({
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      let conversation = await db.select().from(conversations).where(eq12(conversations.sessionId, input.sessionId)).limit(1);
+      let conversation = await db.select().from(conversations).where(eq14(conversations.sessionId, input.sessionId)).limit(1);
       let conversationId;
       if (conversation.length === 0) {
         const insertData = {
@@ -28532,7 +28899,7 @@ var janIARouter = router({
       } else {
         conversationId = conversation[0].id;
         if (ctx.user && !conversation[0].userId) {
-          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq12(conversations.id, conversationId));
+          await db.update(conversations).set({ userId: String(ctx.user.id) }).where(eq14(conversations.id, conversationId));
         }
       }
       const mockUserId = ctx.user ? `web-user-${ctx.user.id}` : `web-session-${input.sessionId}`;
@@ -28651,7 +29018,7 @@ ${liveStats}${userContextInstruction}
 1. Eres JanIA Match, la consultora inmobiliaria senior e Inteligencia Artificial de VECY BIENES RA\xCDCES. Posees alto criterio legal, financiero y comercial inmobiliario en Colombia.
 2. Responde directamente a la consulta del usuario de forma elocuente, profesional, completa, humana y estructurada en Markdown.
 3. FORMATO OBLIGATORIO: Responde DIRECTAMENTE con tu texto conversacional. EST\xC1 ESTRICTAMENTE PROHIBIDO emitir objetos JSON, llaves {}, o campos como "shouldSendDM", "missingFields", "reactionEmoji", "wantsVoice" o "voiceResponse". Habla como un ser humano experto en bienes ra\xEDces.`;
-        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq12(messages.conversationId, conversationId)).orderBy(desc6(messages.createdAt)).limit(6);
+        const recentHistory = await db.select({ role: messages.role, content: messages.content }).from(messages).where(eq14(messages.conversationId, conversationId)).orderBy(desc7(messages.createdAt)).limit(6);
         const formattedHistory = recentHistory.reverse().map((m) => ({
           role: m.role === "janIA" ? "assistant" : "user",
           content: m.content
@@ -28690,7 +29057,7 @@ ${liveStats}${userContextInstruction}
       await db.update(conversations).set({
         lastMessage: janIAResponse,
         updatedAt: /* @__PURE__ */ new Date()
-      }).where(eq12(conversations.id, conversationId));
+      }).where(eq14(conversations.id, conversationId));
       return {
         content: janIAResponse,
         wantsVoice,
@@ -28708,7 +29075,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).where(eq12(conversations.userId, String(ctx.user.id))).orderBy(desc6(conversations.updatedAt));
+      return await db.select().from(conversations).where(eq14(conversations.userId, String(ctx.user.id))).orderBy(desc7(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting user conversations:", error);
       return [];
@@ -28719,7 +29086,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      return await db.select().from(conversations).orderBy(desc6(conversations.updatedAt));
+      return await db.select().from(conversations).orderBy(desc7(conversations.updatedAt));
     } catch (error) {
       console.error("Error getting all conversations:", error);
       return [];
@@ -28730,9 +29097,9 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      const conv = await db.select().from(conversations).where(eq12(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq14(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length === 0) return [];
-      return await db.select().from(messages).where(eq12(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
+      return await db.select().from(messages).where(eq14(messages.conversationId, conv[0].id)).orderBy(messages.createdAt);
     } catch (error) {
       console.error("Error getting conversation messages:", error);
       return [];
@@ -28743,10 +29110,10 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const conv = await db.select().from(conversations).where(eq12(conversations.sessionId, input.sessionId)).limit(1);
+      const conv = await db.select().from(conversations).where(eq14(conversations.sessionId, input.sessionId)).limit(1);
       if (conv.length > 0) {
-        await db.delete(messages).where(eq12(messages.conversationId, conv[0].id));
-        await db.delete(conversations).where(eq12(conversations.id, conv[0].id));
+        await db.delete(messages).where(eq14(messages.conversationId, conv[0].id));
+        await db.delete(conversations).where(eq14(conversations.id, conv[0].id));
       }
       return { success: true };
     } catch (error) {
@@ -28773,7 +29140,7 @@ ${liveStats}${userContextInstruction}
       let audioTranscriptionText;
       try {
         console.log(`[JanIA-Router] Descargando archivo desde URL para an\xE1lisis: ${input.fileUrl}`);
-        const fileRes = await axios7.get(input.fileUrl, { responseType: "arraybuffer" });
+        const fileRes = await axios8.get(input.fileUrl, { responseType: "arraybuffer" });
         const rawBuffer = Buffer.from(fileRes.data);
         const base64Data = rawBuffer.toString("base64");
         const contentTypeHeader = fileRes.headers["content-type"];
@@ -28821,7 +29188,7 @@ ${liveStats}${userContextInstruction}
         pdfMimeType
       );
       const analysis = result.response && result.response.trim() !== "" ? (result.dmResponse ? result.dmResponse + "\n\n" : "") + result.response : result.dmResponse || result.response;
-      const conversation = await db.select().from(conversations).where(eq12(conversations.sessionId, input.sessionId)).limit(1);
+      const conversation = await db.select().from(conversations).where(eq14(conversations.sessionId, input.sessionId)).limit(1);
       if (conversation.length > 0) {
         const conversationId = conversation[0].id;
         await db.insert(messages).values({
@@ -28840,7 +29207,7 @@ ${liveStats}${userContextInstruction}
         await db.update(conversations).set({
           lastMessage: analysis,
           updatedAt: /* @__PURE__ */ new Date()
-        }).where(eq12(conversations.id, conversationId));
+        }).where(eq14(conversations.id, conversationId));
       }
       return {
         analysis
@@ -28860,7 +29227,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const matches = await db.select().from(propertyMatches).where(eq12(propertyMatches.requirementId, input.requirementId)).orderBy(desc6(propertyMatches.matchScore)).limit(input.limit);
+      const matches = await db.select().from(propertyMatches).where(eq14(propertyMatches.requirementId, input.requirementId)).orderBy(desc7(propertyMatches.matchScore)).limit(input.limit);
       return matches;
     } catch (error) {
       console.error("Error getting property matches:", error);
@@ -28973,7 +29340,7 @@ ${liveStats}${userContextInstruction}
           status: requirements.status,
           createdAt: requirements.createdAt
         }
-      }).from(propertyMatches).innerJoin(properties, eq12(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq12(propertyMatches.requirementId, requirements.id)).where(sql10`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
+      }).from(propertyMatches).innerJoin(properties, eq14(propertyMatches.propertyId, properties.id)).innerJoin(requirements, eq14(propertyMatches.requirementId, requirements.id)).where(sql12`CAST(${propertyMatches.matchScore} AS NUMERIC) >= 75 
             AND (${propertyMatches.status} IS NULL OR CAST(${propertyMatches.status} AS TEXT) NOT IN ('rejected', 'rechazado')) 
             AND (${properties.available} IS NULL OR ${properties.available} = true)
             AND (${requirements.status} IS NULL OR CAST(${requirements.status} AS TEXT) != 'expired')
@@ -28983,7 +29350,7 @@ ${liveStats}${userContextInstruction}
               COALESCE(${properties.fechaUltimaPublicacion}, ${properties.createdAt}) >= NOW() - INTERVAL '15 days'
               AND COALESCE(${requirements.fechaUltimaPublicacion}, ${requirements.createdAt}) >= NOW() - INTERVAL '15 days'
             )
-            AND NOT (${properties.rawText} ~* '(\\m(busco|buscamos|se busca|estoy buscando|para compra ya)\\M)')`).orderBy(desc6(propertyMatches.id)).limit(800);
+            AND NOT (${properties.rawText} ~* '(\\m(busco|buscamos|se busca|estoy buscando|para compra ya)\\M)')`).orderBy(desc7(propertyMatches.id)).limit(800);
       const propIds = Array.from(new Set(matches.map((m) => m.property.id)));
       const imagesMap = {};
       if (propIds.length > 0) {
@@ -29048,7 +29415,7 @@ ${liveStats}${userContextInstruction}
           broker: propertyPublicationHistory.broker,
           portal: propertyPublicationHistory.portal,
           grupo: propertyPublicationHistory.grupo
-        }).from(propertyPublicationHistory).where(inArray2(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc6(propertyPublicationHistory.fecha));
+        }).from(propertyPublicationHistory).where(inArray2(propertyPublicationHistory.propertyId, propertyIds)).orderBy(desc7(propertyPublicationHistory.fecha));
         const historyMap = /* @__PURE__ */ new Map();
         for (const h of histories) {
           let list = historyMap.get(h.propertyId);
@@ -29138,7 +29505,7 @@ ${liveStats}${userContextInstruction}
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const existingProp = await db.select().from(properties).where(eq12(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
+    const existingProp = await db.select().from(properties).where(eq14(properties.id, input.propertyId)).limit(1).then((r) => r[0]);
     const sanitizeNumeric = (val) => {
       if (val === void 0 || val === null) return null;
       let s = String(val).trim();
@@ -29260,7 +29627,7 @@ ${liveStats}${userContextInstruction}
     if (hasAmenitiesChange) {
       updateData.amenities = mergedAmenities;
     }
-    await db.update(properties).set(updateData).where(eq12(properties.id, input.propertyId));
+    await db.update(properties).set(updateData).where(eq14(properties.id, input.propertyId));
     console.log(`[JanIA-UpdateProperty] Propiedad #${input.propertyId} actualizada directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const hasPhone = Boolean(input.idUsuarioWhatsapp || existingProp?.idUsuarioWhatsapp);
     const hasName = Boolean(input.nombreUsuarioWhatsapp || existingProp?.nombreUsuarioWhatsapp);
@@ -29322,7 +29689,7 @@ ${liveStats}${userContextInstruction}
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const existingReq = await db.select().from(requirements).where(eq12(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
+    const existingReq = await db.select().from(requirements).where(eq14(requirements.id, input.requirementId)).limit(1).then((r) => r[0]);
     const sanitizeNumeric = (val) => {
       if (val === void 0 || val === null) return null;
       let s = String(val).trim();
@@ -29416,7 +29783,7 @@ ${liveStats}${userContextInstruction}
     if (hasCaractChange) {
       updateData.caracteristicasDeseadas = mergedCaract;
     }
-    await db.update(requirements).set(updateData).where(eq12(requirements.id, input.requirementId));
+    await db.update(requirements).set(updateData).where(eq14(requirements.id, input.requirementId));
     console.log(`[JanIA-UpdateRequirement] Requerimiento #${input.requirementId} actualizado directamente desde Mesa de Cotejo (incluyendo tel\xE9fono: ${input.idUsuarioWhatsapp || "N/A"})`);
     const hasPhone = Boolean(input.idUsuarioWhatsapp || existingReq?.idUsuarioWhatsapp);
     const hasName = Boolean(input.nombreUsuarioWhatsapp || existingReq?.nombreUsuarioWhatsapp);
@@ -29509,7 +29876,7 @@ ${liveStats}${userContextInstruction}
       if (input.action === "exitoso" || input.action === "en_negociacion") {
         if (input.matchId) {
           try {
-            await db.update(propertyMatches).set({ status: "interested" }).where(eq12(propertyMatches.id, input.matchId));
+            await db.update(propertyMatches).set({ status: "interested" }).where(eq14(propertyMatches.id, input.matchId));
           } catch (updErr) {
             console.warn(`[JanIA-Feedback] Match #${input.matchId} error al marcar interested:`, updErr.message);
           }
@@ -29517,9 +29884,9 @@ ${liveStats}${userContextInstruction}
         if (input.propertyId && input.requirementId) {
           try {
             await db.update(propertyMatches).set({ status: "interested" }).where(
-              and9(
-                eq12(propertyMatches.propertyId, input.propertyId),
-                eq12(propertyMatches.requirementId, input.requirementId)
+              and10(
+                eq14(propertyMatches.propertyId, input.propertyId),
+                eq14(propertyMatches.requirementId, input.requirementId)
               )
             );
           } catch (updErrPair) {
@@ -29530,7 +29897,7 @@ ${liveStats}${userContextInstruction}
       if (input.action === "rechazado") {
         if (input.matchId) {
           try {
-            await db.update(propertyMatches).set({ status: "rejected" }).where(eq12(propertyMatches.id, input.matchId));
+            await db.update(propertyMatches).set({ status: "rejected" }).where(eq14(propertyMatches.id, input.matchId));
           } catch (delErr) {
             console.warn(`[JanIA-Feedback] Match #${input.matchId} error al marcar rejected:`, delErr.message);
           }
@@ -29538,9 +29905,9 @@ ${liveStats}${userContextInstruction}
         if (input.propertyId && input.requirementId) {
           try {
             await db.update(propertyMatches).set({ status: "rejected" }).where(
-              and9(
-                eq12(propertyMatches.propertyId, input.propertyId),
-                eq12(propertyMatches.requirementId, input.requirementId)
+              and10(
+                eq14(propertyMatches.propertyId, input.propertyId),
+                eq14(propertyMatches.requirementId, input.requirementId)
               )
             );
           } catch (delErrPair) {
@@ -29556,8 +29923,8 @@ ${liveStats}${userContextInstruction}
             estadoComercial: nuevoEstado,
             vigenciaIa: "NO_DISPONIBLE",
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq12(properties.id, input.propertyId));
-          await db.delete(propertyMatches).where(eq12(propertyMatches.propertyId, input.propertyId));
+          }).where(eq14(properties.id, input.propertyId));
+          await db.delete(propertyMatches).where(eq14(propertyMatches.propertyId, input.propertyId));
           invalidatePropertiesListCache();
           console.log(`[JanIA-Feedback] Propiedad #${input.propertyId} marcada como ${nuevoEstado} y purgada de matches`);
         }
@@ -29568,8 +29935,8 @@ ${liveStats}${userContextInstruction}
             standByDirectoVecy: true,
             estadoComercial: "STANDBY",
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq12(properties.id, input.propertyId));
-          await db.delete(propertyMatches).where(eq12(propertyMatches.propertyId, input.propertyId));
+          }).where(eq14(properties.id, input.propertyId));
+          await db.delete(propertyMatches).where(eq14(propertyMatches.propertyId, input.propertyId));
           invalidatePropertiesListCache();
           console.log(`[JanIA-Feedback] Inmueble #${input.propertyId} enviado a secci\xF3n Inmuebles StandBy (No Tercer\xEDa / No Referidos)`);
         }
@@ -29579,8 +29946,8 @@ ${liveStats}${userContextInstruction}
             aceptaTerceria: false,
             standByDirectoVecy: true,
             updatedAt: /* @__PURE__ */ new Date()
-          }).where(eq12(requirements.id, input.requirementId));
-          await db.delete(propertyMatches).where(eq12(propertyMatches.requirementId, input.requirementId));
+          }).where(eq14(requirements.id, input.requirementId));
+          await db.delete(propertyMatches).where(eq14(propertyMatches.requirementId, input.requirementId));
           cachedRequirementsData = null;
           cachedRequirementsTime = 0;
           console.log(`[JanIA-Feedback] Demanda #${input.requirementId} enviada a Standby Directo Vecy (No Tercer\xEDa / No Referidos)`);
@@ -29611,8 +29978,8 @@ ${liveStats}${userContextInstruction}
       estadoComercial: nuevoEstado,
       vigenciaIa: "NO_DISPONIBLE",
       updatedAt: /* @__PURE__ */ new Date()
-    }).where(eq12(properties.id, input.propertyId));
-    await db.delete(propertyMatches).where(eq12(propertyMatches.propertyId, input.propertyId));
+    }).where(eq14(properties.id, input.propertyId));
+    await db.delete(propertyMatches).where(eq14(propertyMatches.propertyId, input.propertyId));
     try {
       await db.insert(matchFeedback).values({
         matchId: input.matchId || null,
@@ -29645,7 +30012,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) return [];
     try {
-      const terms = await db.select().from(inmobiliarioLexicon).orderBy(desc6(inmobiliarioLexicon.frecuenciaUso)).limit(100);
+      const terms = await db.select().from(inmobiliarioLexicon).orderBy(desc7(inmobiliarioLexicon.frecuenciaUso)).limit(100);
       return terms;
     } catch (e) {
       console.error("[JanIA-Lexicon] Error obteniendo l\xE9xico:", e.message);
@@ -29672,7 +30039,7 @@ ${liveStats}${userContextInstruction}
       }).onConflictDoUpdate({
         target: inmobiliarioLexicon.terminoColoquial,
         set: {
-          frecuenciaUso: sql10`${inmobiliarioLexicon.frecuenciaUso} + 1`,
+          frecuenciaUso: sql12`${inmobiliarioLexicon.frecuenciaUso} + 1`,
           updatedAt: /* @__PURE__ */ new Date()
         }
       }).returning();
@@ -29725,7 +30092,7 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const zoneProperties = await db.select().from(properties).where(eq12(properties.zone, input.zone));
+      const zoneProperties = await db.select().from(properties).where(eq14(properties.zone, input.zone));
       if (zoneProperties.length === 0) {
         return {
           zone: input.zone,
@@ -29820,13 +30187,13 @@ ${liveStats}${userContextInstruction}
       } else {
         const db = await getDb();
         if (db) {
-          const [statusRow] = await db.select().from(pendingSessions).where(eq12(pendingSessions.jid, "system:bot_status")).limit(1);
+          const [statusRow] = await db.select().from(pendingSessions).where(eq14(pendingSessions.jid, "system:bot_status")).limit(1);
           const sessionData = statusRow?.sessionData;
           if (sessionData?.phone) phone = sessionData.phone;
-          const [tp] = await db.select({ count: sql10`count(*)::int` }).from(properties);
-          const [tr] = await db.select({ count: sql10`count(*)::int` }).from(requirements);
-          const [tm] = await db.select({ count: sql10`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql10`CAST("matchScore" AS NUMERIC) >= 80`);
-          const [pm] = await db.select({ count: sql10`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql10`CAST("matchScore" AS NUMERIC) >= 95`);
+          const [tp] = await db.select({ count: sql12`count(*)::int` }).from(properties);
+          const [tr] = await db.select({ count: sql12`count(*)::int` }).from(requirements);
+          const [tm] = await db.select({ count: sql12`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql12`CAST("matchScore" AS NUMERIC) >= 80`);
+          const [pm] = await db.select({ count: sql12`count(DISTINCT ("propertyId", "requirementId"))::int` }).from(propertyMatches).where(sql12`CAST("matchScore" AS NUMERIC) >= 95`);
           totalProps = tp?.count || 0;
           totalReqs = tr?.count || 0;
           totalMatches = tm?.count || 0;
@@ -29907,7 +30274,7 @@ ${liveStats}${userContextInstruction}
         areaMin: requirements.areaMin,
         status: requirements.status,
         createdAt: requirements.createdAt
-      }).from(requirements).orderBy(desc6(requirements.id));
+      }).from(requirements).orderBy(desc7(requirements.id));
       const enrichedData = data.map((r) => {
         let phone = r.idUsuarioWhatsapp;
         let name = r.nombreUsuarioWhatsapp;
@@ -29951,20 +30318,20 @@ ${liveStats}${userContextInstruction}
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     try {
-      const [propTotal] = await db.select({ count: sql10`count(*)::int` }).from(properties);
-      const [propActive] = await db.select({ count: sql10`count(*)::int` }).from(properties).where(sql10`${properties.available} = true`);
-      const [reqTotal] = await db.select({ count: sql10`count(*)::int` }).from(requirements);
-      const [reqActive] = await db.select({ count: sql10`count(*)::int` }).from(requirements).where(eq12(requirements.status, "active"));
-      const [matchTotal] = await db.select({ count: sql10`count(*)::int` }).from(propertyMatches);
-      const [convTotal] = await db.select({ count: sql10`count(*)::int` }).from(conversations);
-      const monthlyProps = await db.execute(sql10`
+      const [propTotal] = await db.select({ count: sql12`count(*)::int` }).from(properties);
+      const [propActive] = await db.select({ count: sql12`count(*)::int` }).from(properties).where(sql12`${properties.available} = true`);
+      const [reqTotal] = await db.select({ count: sql12`count(*)::int` }).from(requirements);
+      const [reqActive] = await db.select({ count: sql12`count(*)::int` }).from(requirements).where(eq14(requirements.status, "active"));
+      const [matchTotal] = await db.select({ count: sql12`count(*)::int` }).from(propertyMatches);
+      const [convTotal] = await db.select({ count: sql12`count(*)::int` }).from(conversations);
+      const monthlyProps = await db.execute(sql12`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM properties
         WHERE "createdAt" >= now() - interval '6 months'
         GROUP BY 1 ORDER BY 1
       `);
-      const monthlyReqs = await db.execute(sql10`
+      const monthlyReqs = await db.execute(sql12`
         SELECT to_char(date_trunc('month', "createdAt"), 'Mon YYYY') as mes,
                count(*)::int as total
         FROM requirements
@@ -30315,7 +30682,7 @@ init_trpc();
 init_db();
 init_schema();
 import { z as z5 } from "zod";
-import { eq as eq13 } from "drizzle-orm";
+import { eq as eq15 } from "drizzle-orm";
 
 // server/github-integration.ts
 import { Octokit } from "@octokit/rest";
@@ -30691,7 +31058,7 @@ var githubRouter = router({
     if (!db) throw new Error("Database not available");
     try {
       const { octokit, user } = await initializeGitHubIntegration(GITHUB_TOKEN);
-      const adminUser = await db.select().from(users).where(eq13(users.email, "vecybienesraices@gmail.com")).limit(1);
+      const adminUser = await db.select().from(users).where(eq15(users.email, "vecybienesraices@gmail.com")).limit(1);
       const adminId = adminUser.length > 0 ? adminUser[0].id : 1;
       let reposToSync = input.repositories || [];
       if (reposToSync.length === 0) {
@@ -30708,14 +31075,14 @@ var githubRouter = router({
             repoName
           );
           if (propertyData) {
-            const existing = await db.select().from(properties).where(eq13(properties.sourceRepository, repoName)).limit(1);
+            const existing = await db.select().from(properties).where(eq15(properties.sourceRepository, repoName)).limit(1);
             if (existing.length > 0) {
               await db.update(properties).set({
                 ...propertyData,
                 agentId: adminId,
                 sourceRepository: repoName,
                 lastSyncedAt: /* @__PURE__ */ new Date()
-              }).where(eq13(properties.id, existing[0].id));
+              }).where(eq15(properties.id, existing[0].id));
             } else {
               await db.insert(properties).values({
                 ...propertyData,
@@ -30805,7 +31172,7 @@ init_db();
 init_db();
 init_schema();
 import { z as z6 } from "zod";
-import { eq as eq14 } from "drizzle-orm";
+import { eq as eq16 } from "drizzle-orm";
 var imagesRouter = {
   /**
    * Upload image to S3 and save to database
@@ -30830,7 +31197,7 @@ var imagesRouter = {
       if (input.isMainImage) {
         const db = await getDb();
         if (db) {
-          await db.update(propertyImages).set({ isMainImage: false }).where(eq14(propertyImages.propertyId, input.propertyId));
+          await db.update(propertyImages).set({ isMainImage: false }).where(eq16(propertyImages.propertyId, input.propertyId));
         }
       }
       const images = await getPropertyImages(input.propertyId);
@@ -30895,7 +31262,7 @@ var imagesRouter = {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq14(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ displayOrder: input.displayOrder }).where(eq16(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Image order updated successfully"
@@ -30916,8 +31283,8 @@ var imagesRouter = {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
-      await db.update(propertyImages).set({ isMainImage: false }).where(eq14(propertyImages.propertyId, input.propertyId));
-      await db.update(propertyImages).set({ isMainImage: true }).where(eq14(propertyImages.id, input.imageId));
+      await db.update(propertyImages).set({ isMainImage: false }).where(eq16(propertyImages.propertyId, input.propertyId));
+      await db.update(propertyImages).set({ isMainImage: true }).where(eq16(propertyImages.id, input.imageId));
       return {
         success: true,
         message: "Main image updated successfully"
@@ -30933,7 +31300,7 @@ init_trpc();
 init_db();
 init_schema();
 import { z as z7 } from "zod";
-import { eq as eq15, and as and10, desc as desc7, isNull as isNull2 } from "drizzle-orm";
+import { eq as eq17, and as and11, desc as desc8, isNull as isNull2 } from "drizzle-orm";
 import { TRPCError as TRPCError5 } from "@trpc/server";
 var agentRouter = router({
   // Public: Get agent profile for branding (Agenda Pro, Personal Shops)
@@ -30946,42 +31313,42 @@ var agentRouter = router({
       customLogoUrl: users.customLogoUrl,
       themeConfig: users.themeConfig,
       subdomain: users.subdomain
-    }).from(users).where(eq15(users.id, input.id)).limit(1);
+    }).from(users).where(eq17(users.id, input.id)).limit(1);
     if (agent.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Agent not found" });
     return agent[0];
   }),
   getMyProperties: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(eq15(properties.agentId, ctx.user.id)).orderBy(desc7(properties.createdAt));
+    return await db.select().from(properties).where(eq17(properties.agentId, ctx.user.id)).orderBy(desc8(properties.createdAt));
   }),
   // For testing: Allows an agent to claim a property that has no agent assigned
   claimProperty: protectedProcedure.input(z7.object({ propertyId: z7.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq15(properties.id, input.propertyId)).limit(1);
+    const property = await db.select().from(properties).where(eq17(properties.id, input.propertyId)).limit(1);
     if (property.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Property not found" });
     if (property[0].agentId) throw new TRPCError5({ code: "FORBIDDEN", message: "Property already has an agent" });
-    await db.update(properties).set({ agentId: ctx.user.id }).where(eq15(properties.id, input.propertyId));
+    await db.update(properties).set({ agentId: ctx.user.id }).where(eq17(properties.id, input.propertyId));
     return { success: true };
   }),
   getAvailablePropertiesToClaim: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    return await db.select().from(properties).where(isNull2(properties.agentId)).orderBy(desc7(properties.createdAt));
+    return await db.select().from(properties).where(isNull2(properties.agentId)).orderBy(desc8(properties.createdAt));
   }),
   generateStealthLink: protectedProcedure.input(z7.object({ propertyId: z7.number() })).mutation(async ({ ctx, input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError5({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
-    const property = await db.select().from(properties).where(eq15(properties.id, input.propertyId)).limit(1);
+    const property = await db.select().from(properties).where(eq17(properties.id, input.propertyId)).limit(1);
     if (property.length === 0) throw new TRPCError5({ code: "NOT_FOUND", message: "Property not found" });
     if (property[0].agentId !== ctx.user.id && ctx.user.role !== "admin") {
       throw new TRPCError5({ code: "FORBIDDEN", message: "You don't own this property" });
     }
     const existingLink = await db.select().from(referralLinks).where(
-      and10(
-        eq15(referralLinks.propertyId, input.propertyId),
-        eq15(referralLinks.agentId, ctx.user.id)
+      and11(
+        eq17(referralLinks.propertyId, input.propertyId),
+        eq17(referralLinks.agentId, ctx.user.id)
       )
     ).limit(1);
     if (existingLink.length > 0) {
@@ -31006,7 +31373,7 @@ var agentRouter = router({
         matriculaInmobiliaria: properties.matriculaInmobiliaria,
         location: properties.location
       }
-    }).from(referralLinks).innerJoin(properties, eq15(referralLinks.propertyId, properties.id)).where(eq15(referralLinks.agentId, ctx.user.id)).orderBy(desc7(referralLinks.createdAt));
+    }).from(referralLinks).innerJoin(properties, eq17(referralLinks.propertyId, properties.id)).where(eq17(referralLinks.agentId, ctx.user.id)).orderBy(desc8(referralLinks.createdAt));
   })
 });
 
@@ -31015,18 +31382,18 @@ init_trpc();
 init_db();
 init_schema();
 import { z as z8 } from "zod";
-import { eq as eq16, sql as sql11 } from "drizzle-orm";
+import { eq as eq18, sql as sql13 } from "drizzle-orm";
 import { TRPCError as TRPCError6 } from "@trpc/server";
 var leadsRouter = router({
   resolveStealthLink: publicProcedure.input(z8.object({ token: z8.string() })).query(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq16(referralLinks.token, input.token)).limit(1);
+    const linkRecord = await db.select().from(referralLinks).where(eq18(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
       throw new TRPCError6({ code: "NOT_FOUND", message: "Stealth Link invalido o expirado." });
     }
     const link = linkRecord[0];
-    await db.update(referralLinks).set({ clicks: sql11`${referralLinks.clicks} + 1` }).where(eq16(referralLinks.id, link.id));
+    await db.update(referralLinks).set({ clicks: sql13`${referralLinks.clicks} + 1` }).where(eq18(referralLinks.id, link.id));
     const prop = await db.select({
       id: properties.id,
       name: properties.name,
@@ -31037,7 +31404,7 @@ var leadsRouter = router({
       zone: properties.zone,
       // specifically NOT returning full location/latitude/longitude/matricula
       images: properties.images
-    }).from(properties).where(eq16(properties.id, link.propertyId)).limit(1);
+    }).from(properties).where(eq18(properties.id, link.propertyId)).limit(1);
     if (prop.length === 0) {
       throw new TRPCError6({ code: "NOT_FOUND", message: "Inmueble no disponible." });
     }
@@ -31054,7 +31421,7 @@ var leadsRouter = router({
   })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError6({ code: "INTERNAL_SERVER_ERROR", message: "Database err" });
-    const linkRecord = await db.select().from(referralLinks).where(eq16(referralLinks.token, input.token)).limit(1);
+    const linkRecord = await db.select().from(referralLinks).where(eq18(referralLinks.token, input.token)).limit(1);
     if (linkRecord.length === 0) {
       throw new TRPCError6({ code: "BAD_REQUEST", message: "Token invalido." });
     }
@@ -31186,10 +31553,10 @@ async function createContext(opts) {
         try {
           const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
           const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-          const { eq: eq17 } = await import("drizzle-orm");
+          const { eq: eq19 } = await import("drizzle-orm");
           const db = await getDb2();
           if (db) {
-            await db.update(users2).set({ role: "admin" }).where(eq17(users2.id, user.id));
+            await db.update(users2).set({ role: "admin" }).where(eq19(users2.id, user.id));
             user = { ...user, role: "admin" };
             console.log(`[Auth] \u2705 Admin auto-promocionado: ${user.email}`);
           }
@@ -31203,10 +31570,10 @@ async function createContext(opts) {
       try {
         const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
         const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        const { eq: eq17 } = await import("drizzle-orm");
+        const { eq: eq19 } = await import("drizzle-orm");
         const db = await getDb2();
         if (db) {
-          const existingUser = await db.select().from(users2).where(eq17(users2.openId, "mock-local-user")).limit(1);
+          const existingUser = await db.select().from(users2).where(eq19(users2.openId, "mock-local-user")).limit(1);
           if (existingUser.length > 0) {
             user = existingUser[0];
           } else {
@@ -32203,13 +32570,13 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
     try {
       const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
       const { propertyMatches: propertyMatches3, requirements: requirements2, properties: properties2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq17, gte: gte4 } = await import("drizzle-orm");
+      const { eq: eq19, gte: gte5 } = await import("drizzle-orm");
       const { handleDetectedMatches: handleDetectedMatches2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
       const db = await getDb2();
       if (!db) return res.status(500).send("No DB connection");
       const today = /* @__PURE__ */ new Date();
       today.setHours(0, 0, 0, 0);
-      const matches = await db.select().from(propertyMatches3).where(gte4(propertyMatches3.createdAt, today));
+      const matches = await db.select().from(propertyMatches3).where(gte5(propertyMatches3.createdAt, today));
       console.log(`[API] Encontrados ${matches.length} matches creados hoy en la BD.`);
       const seen = /* @__PURE__ */ new Set();
       const uniqueMatches = [];
@@ -32225,8 +32592,8 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
         let count = 0;
         for (const match of uniqueMatches) {
           try {
-            const [reqRec] = await db.select().from(requirements2).where(eq17(requirements2.id, match.requirementId)).limit(1);
-            const [propRec] = await db.select().from(properties2).where(eq17(properties2.id, match.propertyId)).limit(1);
+            const [reqRec] = await db.select().from(requirements2).where(eq19(requirements2.id, match.requirementId)).limit(1);
+            const [propRec] = await db.select().from(properties2).where(eq19(properties2.id, match.propertyId)).limit(1);
             if (reqRec && propRec) {
               const score = Number(match.matchScore);
               const matchedItem = {

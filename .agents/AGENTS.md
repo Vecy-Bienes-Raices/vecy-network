@@ -172,7 +172,32 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v32.97 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v32.98 — Octubre 2026
+
+### Novedades v32.98 (Refactorización Modular Quirúrgica de JanIA — Cero Regresiones y Arquitectura Limpia):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. Refactorizar el archivo monolítico `janIA.ts` (7,144 líneas) en una estructura modular y organizada bajo `server/_core/jania/`.
+  2. Cumplimiento estricto de las 3 reglas de ejecución:
+     - Evitar a toda costa dependencias circulares: los submódulos importan directamente de sus pares (`../types`, `../parsers`, etc.), nunca desde `index.ts` ni `janIA.ts`.
+     - Singletons estrictos en memoria para mapas y cachés (`fallbackDataCache`, `promptCache`, `dmConversationHistory`, `GREETED_TODAY`, etc.).
+     - Verificación rigurosa de tipado (`npm run check`) paso a paso certificando cero errores.
+- **Arquitectura Modular Creada (`server/_core/jania/`)**:
+  - `types.ts`: Tipos, interfaces y esquemas de validación Zod (`JanIAResult`, `janiaResultSchema`, `FlyerVisionResult`, `DmTurn`, `ConsultingTurn`).
+  - `parsers.ts`: Parsers especializados de precios/moneda COP (`parseColombianPriceOrBudget`), extracción de fallback determinista (`fallbackDataCache`), resolución de teléfonos y nombres, completitud de datos y emojis, traductores de negocio/tipo.
+  - `heuristics.ts`: Detección de spam/basura (`esMensajeSpamOBasura`), horario laboral (`isOutsideWorkingHours`), división de publicaciones multi-item (`splitMultiItemMessage`), scraper con bypass.
+  - `vision.ts`: Extracción multimodal de flyers mediante cascada Gemini (`extractFlyerVision`).
+  - `prompts.ts`: Generadores de system prompts (`buildSystemPrompt`), `promptCache` singleton, copys institucionales, hooks de reputación y mensajes de bienvenida.
+  - `sessionManager.ts`: Gestión de sesiones (`pendingSessions`), estado de silenciado, control de saludos diarios (`GREETED_TODAY`), historiales conversacionales de DMs y consultoría con persistencia en PostgreSQL nativo, estadísticas en vivo con caché de 5 minutos.
+  - `handlers/consultingHandler.ts`: Manejador de Grupo 2 (Soporte legal, tributario y avalúos inmobiliarios).
+  - `handlers/circuloHandler.ts`: Manejador de Grupo 3 (Proyecto VECY / Comunidad y debate técnico).
+  - `handlers/dmHandler.ts`: Manejador de DMs privados con IA Pura (cortesía, verificación de documentos, prediales, gastos notariales, consultas y estocada de calificación).
+  - `handlers/propertiesHandler.ts`: Manejador de Grupo 1 (Ofertas y demandas de inmuebles, guardado en BD, deduplicación, motor de matching instantáneo y directorio de asesores).
+  - `index.ts`: Punto de exportación centralizado limpio.
+  - `server/_core/janIA.ts`: Fachada retrocompatible de 24 líneas que re-exporta `./jania/index`, preservando el 100% de los consumidores y scripts existentes sin romper una sola línea de código en todo el ecosistema.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 182/182 tests passing ✅ | `npm run build` limpio (frontend Vite + backend esbuild 66ms) ✅
+- `shared/const.ts` (`v32.98`) y `package.json` (`32.98.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v32.97 — Octubre 2026
 
 ### Novedades v32.97 (Auditoría Integral de Servicios Activos 24/7, Presentación Institucional y Estocada de Reseñas en Conversaciones Amenas):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

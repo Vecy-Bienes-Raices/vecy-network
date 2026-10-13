@@ -1,0 +1,420 @@
+/**
+ * JanIA Session Manager - VECY BIENES RAÍCES
+ * Gestión de sesiones temporales, control de mutes, historial conversacional (DMs y Consultoría),
+ * métricas en vivo y análisis morfológico de saludos.
+ */
+import { getDb, getRawSql } from "../../db";
+import {
+  pendingSessions,
+  users,
+  conversations as dbConversations,
+  messages as dbMessages,
+  properties,
+  requirements
+} from "../../../drizzle/schema";
+import { eq, and, gte, desc, sql } from "drizzle-orm";
+import { ConsultingTurn, DmTurn } from "./types";
+
+export function cleanSessionJid(jid: string): string {
+  if (!jid) return "";
+  return jid.split(':')[0].split('@')[0];
+}
+
+export async function muteSession(userId: string, isMuted: boolean): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const cleanJid = cleanSessionJid(userId);
+    const muteJid = `mute:${cleanJid}`;
+
+    if (!isMuted) {
+      await db.delete(pendingSessions).where(eq(pendingSessions.jid, muteJid));
+      console.log(`[JanIA-Mute] Sesión ${cleanJid} desmarcada (eliminada de BD)`);
+      return;
+    }
+
+    const data = { isMuted: true, mutedAt: new Date().toISOString() };
+
+    await db.insert(pendingSessions).values({
+      jid: muteJid,
+      sessionData: data,
+      updatedAt: new Date()
+    }).onConflictDoUpdate({
+      target: pendingSessions.jid,
+      set: {
+        sessionData: data,
+        updatedAt: new Date()
+      }
+    });
+    console.log(`[JanIA-Mute] Sesión ${cleanJid} marcada como isMuted = true en BD`);
+  } catch (err) {
+    console.error("[Database] Error muting session:", err);
+  }
+}
+
+export async function isSessionMuted(userId: string): Promise<boolean> {
+  try {
+    const db = await getDb();
+    if (!db) return false;
+    const cleanJid = cleanSessionJid(userId);
+    const [existing] = await db.select().from(pendingSessions).where(eq(pendingSessions.jid, `mute:${cleanJid}`)).limit(1);
+    if (!existing) return false;
+    return !!(existing.sessionData as any)?.isMuted;
+  } catch (err) {
+    console.error("[Database] Error checking if session is muted:", err);
+    return false;
+  }
+}
+
+export async function getPendingSession(userId: string): Promise<{ type: "PROPERTY" | "REQUIREMENT"; extractedData: any; senderInfo: any; messageToProcess: string; imageBuffer?: string; isMuted?: boolean } | null> {
+  try {
+    const db = await getDb();
+    if (!db) return null;
+    const cleanJid = cleanSessionJid(userId);
+    const [session] = await db.select().from(pendingSessions).where(eq(pendingSessions.jid, cleanJid)).limit(1);
+    if (!session) return null;
+    return session.sessionData as any;
+  } catch (err) {
+    console.error("[Database] Error getting pending session:", err);
+    return null;
+  }
+}
+
+export async function setPendingSession(userId: string, data: any): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const cleanJid = cleanSessionJid(userId);
+    await db.insert(pendingSessions).values({
+      jid: cleanJid,
+      sessionData: data,
+      updatedAt: new Date()
+    }).onConflictDoUpdate({
+      target: pendingSessions.jid,
+      set: {
+        sessionData: data,
+        updatedAt: new Date()
+      }
+    });
+  } catch (err) {
+    console.error("[Database] Error setting pending session:", err);
+  }
+}
+
+export async function deletePendingSession(userId: string): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const cleanJid = cleanSessionJid(userId);
+    await db.delete(pendingSessions).where(eq(pendingSessions.jid, cleanJid));
+  } catch (err) {
+    console.error("[Database] Error deleting pending session:", err);
+  }
+}
+
+export async function resolveRealName(userId: string, userName?: string): Promise<string> {
+  const rawPhone = userId.split('@')[0];
+  let name = userName && userName.trim() !== "" ? userName : `Asesor +${rawPhone}`;
+  try {
+    const db = await getDb();
+    if (db) {
+      const [u] = await db.select().from(users).where(eq(users.phone, rawPhone)).limit(1);
+      if (u && u.name && u.name.trim() !== "") {
+        name = u.name;
+      }
+    }
+  } catch (e) {
+    console.warn("[JanIA-resolveRealName] Error buscando nombre de usuario en BD:", e);
+  }
+  return name;
+}
+
+// ─── Control Diario de Saludos (Singleton) ──────────────────────────────────
+export const GREETED_TODAY = new Map<string, string>(); // Mapea userId -> fecha "YYYY-MM-DD"
+
+export async function hasGreetedUserToday(userId: string): Promise<boolean> {
+  try {
+    const db = await getDb();
+    if (!db) return false;
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const recentMsgs = await db
+      .select({ id: dbMessages.id })
+      .from(dbMessages)
+      .innerJoin(dbConversations, eq(dbMessages.conversationId, dbConversations.id))
+      .where(
+        and(
+          eq(dbConversations.sessionId, userId),
+          eq(dbMessages.role, "janIA"),
+          gte(dbMessages.createdAt, startOfToday)
+        )
+      )
+      .limit(1);
+
+    return recentMsgs.length > 0;
+  } catch (err) {
+    console.error("[Database] Error checking if greeted today:", err);
+    return false;
+  }
+}
+
+export async function checkAlreadyGreeted(userId: string): Promise<boolean> {
+  const todayStr = new Date().toISOString().split("T")[0];
+  if (GREETED_TODAY.get(userId) === todayStr) {
+    return true;
+  }
+  const dbGreeted = await hasGreetedUserToday(userId);
+  if (dbGreeted) {
+    GREETED_TODAY.set(userId, todayStr);
+    return true;
+  }
+  return false;
+}
+
+export async function getRecentChatHistory(userId: string, limit = 20): Promise<{ role: "user" | "assistant", content: string }[]> {
+  try {
+    const db = await getDb();
+    if (!db) return [];
+
+    const fourDaysAgo = new Date();
+    fourDaysAgo.setDate(fourDaysAgo.getDate() - 4);
+
+    const history = await db
+      .select({
+        role: dbMessages.role,
+        content: dbMessages.content,
+        createdAt: dbMessages.createdAt
+      })
+      .from(dbMessages)
+      .innerJoin(dbConversations, eq(dbMessages.conversationId, dbConversations.id))
+      .where(
+        and(
+          eq(dbConversations.sessionId, userId),
+          gte(dbMessages.createdAt, fourDaysAgo)
+        )
+      )
+      .orderBy(desc(dbMessages.createdAt))
+      .limit(limit);
+
+    return history
+      .reverse()
+      .map(h => ({
+        role: h.role === "janIA" ? "assistant" : "user",
+        content: h.content
+      }));
+  } catch (err) {
+    console.error("[Database] Error fetching chat history:", err);
+    return [];
+  }
+}
+
+// ─── Estadísticas en tiempo real (Singleton con caché de 5 min) ─────────────
+let cachedLiveStatsText = "";
+let cachedLiveStatsTime = 0;
+let isFetchingLiveStats = false;
+
+export async function getLiveStats(): Promise<string> {
+  const nowMs = Date.now();
+  // 1. Si está en caché fresca (menos de 5 min), retornar de inmediato
+  if (cachedLiveStatsText && nowMs - cachedLiveStatsTime < 300000) {
+    return cachedLiveStatsText;
+  }
+
+  // 2. Si ya hay una consulta en vuelo, retornar la caché previa para evitar saturar el pool de conexiones
+  if (isFetchingLiveStats) {
+    return cachedLiveStatsText || "";
+  }
+
+  isFetchingLiveStats = true;
+  try {
+    const rawSql = getRawSql();
+    let stats: any = {};
+    if (rawSql) {
+      const res = await rawSql`
+        SELECT 
+          (SELECT count(*)::int FROM properties) as prop_count,
+          (SELECT count(*)::int FROM requirements) as req_count,
+          (SELECT count(*)::int FROM "propertyMatches") as match_count,
+          (SELECT count(*)::int FROM properties WHERE "createdAt" >= CURRENT_DATE) as prop_today,
+          (SELECT count(*)::int FROM requirements WHERE "createdAt" >= CURRENT_DATE) as req_today,
+          (SELECT count(*)::int FROM "propertyMatches" WHERE "createdAt" >= CURRENT_DATE) as match_today
+      `;
+      stats = res[0] || {};
+    } else {
+      const db = await getDb();
+      if (!db) return cachedLiveStatsText || "";
+      const [propCount] = await db.select({ total: sql<number>`count(*)::int` }).from(properties);
+      const [reqCount] = await db.select({ total: sql<number>`count(*)::int` }).from(requirements);
+      stats = { prop_count: propCount?.total ?? 0, req_count: reqCount?.total ?? 0, match_count: 0, prop_today: 0, req_today: 0, match_today: 0 };
+    }
+
+    const now = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota', dateStyle: 'short', timeStyle: 'short' });
+    cachedLiveStatsText = `
+## 📊 ESTADÍSTICAS EN TIEMPO REAL DE VECY BIENES RAÍCES (Actualizado: ${now} hora Colombia)
+Esta información es EXACTA y proviene directamente de la base de datos en este preciso instante. Úsala cuando alguien pregunte cuántos inmuebles, requerimientos o coincidencias tenemos:
+
+| Categoría | Total Histórico | Nuevos Hoy |
+|-----------|----------------|------------|
+| 🏢 Inmuebles publicados | **${stats.prop_count ?? 0}** | ${stats.prop_today ?? 0} |
+| 📋 Requerimientos de búsqueda | **${stats.req_count ?? 0}** | ${stats.req_today ?? 0} |
+| 🎯 Coincidencias (Matches) detectadas | **${stats.match_count ?? 0}** | ${stats.match_today ?? 0} |
+
+Si alguien te pregunta por estos números, responde CON PRECISIÓN usando exactamente los datos de esta tabla. No inventes, no estimes. Estos son los datos reales del sistema VECY en este momento.`;
+    cachedLiveStatsTime = Date.now();
+    return cachedLiveStatsText;
+  } catch (err) {
+    console.warn("[JanIA-LiveStats] No se pudo obtener estadísticas en tiempo real:", err);
+    return cachedLiveStatsText || "";
+  } finally {
+    isFetchingLiveStats = false;
+  }
+}
+
+// ─── Analizador Morfológico de Género y Cortesía (v11.70) ────────────────────
+export function analyzeSender(name: string, userId: string, alreadyGreeted: boolean): { greeting: string; adj: string; courtesy: string } {
+  const n = (name || "Colega").trim();
+  const normalizedFull = n.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+  const firstWord = n.split(/\s+/)[0].toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  if (!alreadyGreeted) GREETED_TODAY.set(userId, todayStr);
+
+  const femaleNames = ["maria", "ana", "claudia", "martha", "adriana", "sandra", "jani", "natalia", "paola", "diana", "laura", "sofia", "valentina", "andrea", "milena", "patricia", "marcela", "liliana", "elena", "monica", "beatriz", "gloria", "carmen", "lucia", "angela", "isabel", "clara", "rosa", "teresa", "yolanda", "esperanza", "blanca", "pilar", "carolina", "juliana", "catalina", "viviana", "lizeth", "daniela", "camila"];
+  const maleNames = ["juan", "carlos", "jose", "luis", "jorge", "andres", "felipe", "david", "mateo", "santiago", "daniel", "alejandro", "ricardo", "fernando", "eduardo", "pablo", "sergio", "javier", "alberto", "rafael", "mauricio", "german", "gustavo", "ramiro", "gabriel", "julio", "oscar", "ivan", "hugo", "diego", "wilson", "edgar", "mario", "hector", "victor"];
+
+  const corporateKeywords = ["inmo", "bienes", "raices", "propiedades", "network", "group", "asesores", "servicios", "soluciones", "comercial", "ventas", "vecy", "sas", "ltda", "vende", "arrienda", "inmobiliaria", "finca", "raiz", "realestate"];
+
+  let baseGreeting = `¡Hola, qué gusto tenerte aquí, ${n}!`;
+  let adj = "profesional";
+  let courtesy = "gracias por tu rigor profesional";
+
+  const isCorporate = corporateKeywords.some(kw => normalizedFull.includes(kw));
+  if (isCorporate) {
+    baseGreeting = `¡Hola, qué gusto saludarte, colega de ${n}!`;
+  } else {
+    const isMale = maleNames.includes(firstWord) || maleNames.some(m => firstWord.startsWith(m));
+    const isFemale = femaleNames.includes(firstWord) || femaleNames.some(f => firstWord.startsWith(f));
+
+    if (isMale) {
+      baseGreeting = `¡Hola ${n}!`;
+      adj = "juicioso";
+      courtesy = "excelente labor, sigue así de juicioso";
+    } else if (isFemale) {
+      baseGreeting = `¡Hola ${n}!`;
+      adj = "juiciosa";
+      courtesy = "excelente labor, sigue así de juiciosa";
+    } else if (firstWord.endsWith('a') || firstWord.endsWith('ia') || firstWord.endsWith('th')) {
+      baseGreeting = `¡Hola ${n}!`;
+      adj = "juiciosa";
+      courtesy = "excelente labor, sigue así de juiciosa";
+    } else if (firstWord.endsWith('o') || firstWord.endsWith('s') || firstWord.endsWith('r') || firstWord.endsWith('l') || firstWord.endsWith('n') || firstWord.endsWith('z')) {
+      baseGreeting = `¡Hola ${n}!`;
+      adj = "juicioso";
+      courtesy = "excelente labor, sigue así de juicioso";
+    }
+  }
+
+  return {
+    greeting: alreadyGreeted ? "" : baseGreeting,
+    adj,
+    courtesy
+  };
+}
+
+// ─── Memoria Conversacional Grupo 2: Consultoría Legal/Avalúos (Singleton) ───
+export const consultingConversationHistory = new Map<string, ConsultingTurn[]>();
+
+export function getConsultingHistory(userId: string): ConsultingTurn[] {
+  const history = consultingConversationHistory.get(userId) || [];
+  const now = Date.now();
+  // Conservar mensajes de las últimas 12 horas
+  return history.filter(h => now - h.ts < 12 * 3600 * 1000);
+}
+
+export function appendConsultingHistory(userId: string, role: "user" | "assistant", content: string) {
+  const history = getConsultingHistory(userId);
+  history.push({ role, content, ts: Date.now() });
+  if (history.length > 20) history.shift();
+  consultingConversationHistory.set(userId, history);
+}
+
+// ─── Memoria Conversacional DMs Privados (Singleton) ─────────────────────────
+export const dmConversationHistory = new Map<string, DmTurn[]>();
+
+export function getStartOfTodayBogota(): number {
+  const now = new Date();
+  const bogotaFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric'
+  });
+  const parts = bogotaFormatter.formatToParts(now);
+  const year = parseInt(parts.find(p => p.type === 'year')?.value || '2026', 10);
+  const month = parseInt(parts.find(p => p.type === 'month')?.value || '1', 10) - 1;
+  const day = parseInt(parts.find(p => p.type === 'day')?.value || '1', 10);
+
+  // 00:00:00 hora Bogotá (UTC-5) = 05:00:00 UTC
+  return Date.UTC(year, month, day, 5, 0, 0);
+}
+
+export function getDmHistory(userId: string): DmTurn[] {
+  const history = dmConversationHistory.get(userId) || [];
+  const startOfToday = getStartOfTodayBogota();
+  // Conservar mensajes del mismo día en curso hasta las 23:59:59 hora Bogotá (Doctrina v32.53)
+  return history.filter(h => h.ts >= startOfToday);
+}
+
+export async function getOrLoadDmHistory(userId: string): Promise<DmTurn[]> {
+  const inMemory = getDmHistory(userId);
+  if (inMemory.length > 0) {
+    return inMemory;
+  }
+
+  // Si la memoria RAM está vacía tras reinicio del proceso, recuperar de BD del día en curso
+  try {
+    const db = await getDb();
+    if (db) {
+      const conv = await db.select().from(dbConversations).where(eq(dbConversations.sessionId, userId)).limit(1);
+      if (conv.length > 0) {
+        const startOfToday = getStartOfTodayBogota();
+        const recentMsgs = await db
+          .select()
+          .from(dbMessages)
+          .where(
+            and(
+              eq(dbMessages.conversationId, conv[0].id),
+              gte(dbMessages.createdAt, new Date(startOfToday))
+            )
+          )
+          .orderBy(desc(dbMessages.createdAt))
+          .limit(24);
+
+        if (recentMsgs.length > 0) {
+          recentMsgs.reverse();
+          const restored: DmTurn[] = recentMsgs.map(m => ({
+            role: m.role === 'janIA' ? 'assistant' : 'user',
+            content: m.content.replace(/^\[(?:Nota de Voz PTT|SILENT-MATCH)\]:\s*/, ''),
+            ts: new Date(m.createdAt).getTime()
+          }));
+          dmConversationHistory.set(userId, restored);
+          return restored;
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn("[getOrLoadDmHistory] Error consultando historial en BD:", err?.message);
+  }
+
+  return [];
+}
+
+export function appendDmHistory(userId: string, role: "user" | "assistant", content: string) {
+  const history = getDmHistory(userId);
+  history.push({ role, content, ts: Date.now() });
+  // Conservar hasta 24 turnos completos del día
+  if (history.length > 24) history.shift();
+  dmConversationHistory.set(userId, history);
+}

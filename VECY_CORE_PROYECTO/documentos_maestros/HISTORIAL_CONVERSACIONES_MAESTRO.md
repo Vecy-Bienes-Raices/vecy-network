@@ -7,6 +7,44 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v32.98 — 12 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+- **Refactorización Modular Quirúrgica de `janIA.ts` (Cero Regresiones y Arquitectura Limpia)**:
+  1. *"Actúa como un arquitecto de software senior especializado en TypeScript y Node.js. Necesito refactorizar el archivo actual `janIA.ts` para mejorar su mantenibilidad y legibilidad, dividiéndolo en módulos organizados dentro de una estructura limpia."*
+  2. *"REGLAS ESTRICTAS DE SEGURIDAD (CERO REGRESIONES):*
+     - *NO MODIFIQUES, NO OMITAS Y NO REESCRIBAS ninguna regla de negocio, expresión regular (regex), cálculo financiero, lógica de deduplicación, validación geográfica ni esquemas de datos.*
+     - *NO alteres las llamadas a la base de datos (Drizzle ORM) ni la estructura de las tablas existentes.*
+     - *Evita a toda costa dependencias circulares: los submódulos deben importar directamente de sus pares (ej: '../types'), nunca desde 'index.ts' ni desde 'janIA.ts'.*
+     - *Las cachés y mapas en memoria (fallbackDataCache, promptCache, dmConversationHistory, etc.) deben ser singletons estrictos en sus respectivos archivos.*
+     - *Ejecuta la verificación de tipado (npm run check) inmediatamente después de crear cada archivo para certificar cero errores antes de avanzar al siguiente."*
+
+### Diagnóstico Técnico Profundo
+- **Estado Previo**: El archivo `server/_core/janIA.ts` contenía 7,144 líneas de código acumuladas a lo largo de 32 versiones, combinando tipos, heurísticas, OCR/Visión, prompts, persistencia, parsers de moneda, deduplicación de BD y manejadores de 3 grupos de WhatsApp y DMs privados.
+- **Riesgos de Refactorización**: Al ser el cerebro neurálgico del proyecto, cualquier alteración en una regex o import circular provocaría caídas en cadena en `whatsapp-match.ts`, `routers/janIA.ts`, o el motor de matching. Se implementó una estrategia aditiva estricta en la rama de seguridad `refactor-jania`.
+
+### Acciones Técnicas Ejecutadas
+1. **Creación de Submódulos Atómicos en `server/_core/jania/`**:
+   - `types.ts`: `JanIAResult`, `janiaResultSchema`, `FlyerVisionResult`, `DmTurn`, `ConsultingTurn`.
+   - `parsers.ts`: Parsers financieros COP (`parseColombianPriceOrBudget`), extractor de fallback determinista (`fallbackDataCache` singleton), `extractFirstName`, sanitizadores y calificaciones.
+   - `heuristics.ts`: Detección de spam/basura (`esMensajeSpamOBasura`), control de horario laboral (`isOutsideWorkingHours`), particionamiento multi-item (`splitMultiItemMessage`), scraper seguro.
+   - `vision.ts`: Motor OCR multimodal Gemini (`extractFlyerVision`).
+   - `prompts.ts`: `buildSystemPrompt`, `promptCache` singleton, hooks de reputación y plantillas institucionales.
+   - `sessionManager.ts`: Gestión de sesiones, saludos diarios (`GREETED_TODAY`), historiales conversacionales en memoria y fallback en PostgreSQL nativo, estadísticas en vivo con caché de 5 minutos.
+   - `handlers/consultingHandler.ts`: Manejador de consultas del Grupo 2 (Legal, tributario y avalúos).
+   - `handlers/circuloHandler.ts`: Manejador de mensajes de debate y comunidad del Grupo 3 (Círculo Cero / Proyecto Vecy).
+   - `handlers/dmHandler.ts`: Manejador de mensajes privados (DMs) con IA Pura, verificación de documentos, prediales, gastos notariales y estocada de Google Reviews.
+   - `handlers/propertiesHandler.ts`: Manejador de Grupo 1 (Ofertas y demandas, deduplicación, guardado en BD, matching instantáneo y directorio de asesores).
+   - `index.ts`: Barrel de exportación limpio de la suite `jania`.
+2. **Fachada Retrocompatible de `server/_core/janIA.ts`**:
+   - El archivo `janIA.ts` se redujo a una fachada de 24 líneas que re-exporta `./jania/index` con especificación explícita de ruta para evitar colisiones de case-sensitivity en Linux con esbuild. Todos los consumidores externos e internos importan transparentemente sin requerir ninguna modificación en sus rutas.
+
+### Verificación y Validación Empírica
+- `npm run check`: 0 errores TypeScript en todo el proyecto ✅.
+- `npm test`: 5 archivos de prueba pasando, 182/182 tests vitest aprobados al 100% ✅.
+- `npm run build`: Compilación limpia de cliente (Vite en 19.11s) y servidor (esbuild en 66ms) sin advertencias ✅.
+- Versión oficial incrementada a **v32.98** (`32.98.0`).
+
 ## 📋 SESIÓN v32.97 — 11 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera
