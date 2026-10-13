@@ -1,0 +1,48 @@
+name: Deploy to Contabo VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Continuous Deployment to Contabo VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script_stop: true
+          script: |
+            echo "🚀 [CI/CD] Iniciando despliegue de Vecy Network en Contabo VPS..."
+            cd ${{ secrets.VPS_TARGET_DIR || '/var/www/vecy-network' }}
+
+            echo "📥 [CI/CD] Sincronizando código desde origin/main..."
+            git pull origin main
+
+            echo "📦 [CI/CD] Verificando dependencias (pnpm / npm)..."
+            if command -v pnpm &> /dev/null; then
+              pnpm install
+            else
+              npm install --omit=dev || npm install
+            fi
+
+            echo "🔨 [CI/CD] Compilando producción..."
+            npm run build
+
+            echo "🔄 [CI/CD] Recargando procesos con PM2..."
+            pm2 reload jania-server --update-env || pm2 reload all
+
+            echo "📊 [CI/CD] Estado actual de procesos:"
+            pm2 status
+
+            echo "✅ [CI/CD] Despliegue completado exitosamente."
