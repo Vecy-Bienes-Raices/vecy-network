@@ -268,8 +268,8 @@ export async function formatPoliteToolDelivery(
   const reviewSection = (isEduardo || isJani)
     ? ""
     : `\n\n⭐ *¿Te fue útil esta consulta?*\n` +
-      `Tu recomendación nos ayuda a seguir creciendo. Déjanos tu calificación de 5 estrellas en Google Opiniones aquí:\n` +
-      `https://g.page/r/CUxVzG_vecy/review`;
+    `Tu recomendación nos ayuda a seguir creciendo. Déjanos tu calificación de 5 estrellas en Google Opiniones aquí:\n` +
+    `https://g.page/r/CUxVzG_vecy/review`;
 
   const closingTag = "Un servicio de cortesía de VECY BIENES RAÍCES 🤝.";
   let payloadWithClosing = cleanPayload;
@@ -551,25 +551,27 @@ export async function processPrivateDmConversationalMessage(
     return goodbyeMsg;
   }
 
-  // 🏛️ INTERCEPTOR DIRECTO DM: PAZ Y SALVO DE VALORIZACIÓN IDU BOGOTÁ (v32.99 / v33.04)
+  // 🏛️ INTERCEPTOR DIRECTO DM: PAZ Y SALVO DE VALORIZACIÓN IDU / PREDIAL BOGOTÁ
   const { isIduInquiry, formatIduAssistanceGuide, extractChipForIduValorizacion, executeIduValorizacionFromWhatsApp } = await import('../../iduValorizacionService');
   const iduDetection = extractChipForIduValorizacion(clean);
   const hasCourtesyOrGreeting = /(?:hola|buen[ao]s?\s*(?:d[ií]as?|tardes?|noches?)|saludos?|cordial|por\s+favor|agradezco|me\s+ayudas|me\s+colaboras|me\s+apoyas|necesito|quisiera|podr[ií]as|ser[ií]as\s+tan\s+amable|buenas)/i.test(clean);
+  const hasChipInText = /AAA[A-Z0-9]{8,14}/i.test(clean);
+
+  // Si envían un CHIP (solo o con cédula) SIN saludar, activa Urbanidad de Carreño obligatoria
+  if (hasChipInText && !hasCourtesyOrGreeting) {
+    const { setPendingUnconfirmedDoc } = await import('../../identityVerificationService');
+    const chipMatch = (clean.match(/AAA[A-Z0-9]{8,14}/i) || [""])[0];
+    setPendingUnconfirmedDoc(userId, chipMatch);
+    const carrenoMsg =
+      `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! 👋 Qué gusto saludarte.\n\n` +
+      `Para atenderte con la precisión que amerita tu gestión, ¿eres tan amable de confirmarme qué trámite requieres? ¿La factura del impuesto predial, el certificado oficial de pago al día, o el paz y salvo de valorización del IDU? Asimismo, indícame por favor qué documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmación.`;
+
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", carrenoMsg);
+    return carrenoMsg;
+  }
 
   if (iduDetection.found && iduDetection.chip) {
-    const isColdChip = /^(?:(?:chip|c\.h\.i\.p\.)\s*[:.]?\s*)?AAA[A-Z0-9]{8,14}$/i.test(clean) && !hasCourtesyOrGreeting;
-    if (isColdChip && !isEduardo && !isJani) {
-      const { setPendingUnconfirmedDoc } = await import('../../identityVerificationService');
-      setPendingUnconfirmedDoc(userId, iduDetection.chip);
-      const carrenoMsg =
-        `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! 👋 Qué gusto saludarte.\n\n` +
-        `Para atenderte con la precisión que amerita tu gestión, ¿eres tan amable de confirmarme qué trámite requieres? ¿La factura del impuesto predial, el certificado oficial de pago al día, o el paz y salvo de valorización del IDU? Asimismo, indícame por favor qué documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmación.`;
-
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", carrenoMsg);
-      return carrenoMsg;
-    }
-
     const iduRes = await executeIduValorizacionFromWhatsApp(clean, userId, true);
     if (iduRes.isIduRequest && iduRes.reportText) {
       const deliveredText = await formatPoliteToolDelivery(userId, userName || "", 'idu', iduRes.reportText, true);
@@ -678,10 +680,10 @@ export async function processPrivateDmConversationalMessage(
     return pedagogoMsg;
   }
 
-  // 🛡️ INTERCEPTOR DIRECTO DM: VERIFICACIÓN OFICIAL DE CÉDULA (POLICÍA NACIONAL + PROCURADURÍA + ADRES)
-  // Si el mensaje contiene una o más cédulas con especificación o prefijo, ejecutar la verificación real oficial
+  // 🛡️ INTERCEPTOR DIRECTO DM: VERIFICACIÓN OFICIAL DE CÉDULA
+  // Solo se ejecuta si NO hay un CHIP presente en el mensaje
   const idDetection = extractCedulaForVerification(clean, true);
-  if (idDetection.found) {
+  if (idDetection.found && !hasChipInText) {
     const idCheck = await executeIdentityVerificationFromWhatsApp(clean, true, userId);
     if (idCheck.isVerificationRequest && idCheck.reportText) {
       appendDmHistory(userId, "user", clean);
@@ -802,8 +804,8 @@ export async function processPrivateDmConversationalMessage(
           `${isEduardo ?
             '- TRATO DIRECTIVO OBLIGATORIO: Estás hablando con EDUARDO A. RIVERA, fundador y Director de Tecnología de VECY BIENES RAÍCES. Tu saludo o trato es DIRECTIVO: "¡Hola, Eduardo!". Sé ejecutiva, rápida y precisa.\n' :
             isJani ?
-            '- TRATO DIRECTIVO OBLIGATORIO: Estás hablando con JANI ALVES, fundadora y Directora de Operaciones de VECY BIENES RAÍCES. Tu saludo o trato es DIRECTIVO: "¡Hola, Jani!". Sé ejecutiva, cálida y operativa.\n' :
-            `- El usuario se llama: *${displayName || realName || "Colega"}*.\n- Género gramatical identificado: *${nameInfo.isFemale ? "Femenino" : "Masculino"}*.\n`
+              '- TRATO DIRECTIVO OBLIGATORIO: Estás hablando con JANI ALVES, fundadora y Directora de Operaciones de VECY BIENES RAÍCES. Tu saludo o trato es DIRECTIVO: "¡Hola, Jani!". Sé ejecutiva, cálida y operativa.\n' :
+              `- El usuario se llama: *${displayName || realName || "Colega"}*.\n- Género gramatical identificado: *${nameInfo.isFemale ? "Femenino" : "Masculino"}*.\n`
           }` +
           `- ORTOGRAFÍA ESTRICTA EN ESPAÑOL: PROHIBIDO iniciar saludos o mensajes en minúscula ("estimada...", "estimado...", "hola..."). Todo inicio de mensaje DEBE llevar Mayúscula inicial y signos de apertura formales.\n` +
           `- SIGNOS DE APERTURA OBLIGATORIOS: Toda pregunta DEBE iniciar con '¿' y toda exclamación con '¡'. En español es un error omitir los signos de apertura.\n` +
@@ -987,8 +989,8 @@ export async function processPrivateDmConversationalMessage(
     let fallback = isEduardo
       ? `¡Hola, Eduardo! A tu disposición. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`
       : isJani
-      ? `¡Hola, Jani! Qué gusto saludarte. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`
-      : `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar o procesar bien lo que me solicitaste. ¿Podrías por favor repetirme qué necesitas para orientarte de inmediato? 🤝`;
+        ? `¡Hola, Jani! Qué gusto saludarte. Ocurrió una intermitencia temporal en el sistema de consulta. ¿Me confirmas nuevamente el dato para procesarlo de inmediato? 🤝`
+        : `¡${timeSalutation}${displayName ? ` ${displayName}` : ""}! Qué pena contigo. Debido a una intermitencia temporal en mi sistema (un pequeño fallo en la matrix 🤖😅), no pude captar o procesar bien lo que me solicitaste. ¿Podrías por favor repetirme qué necesitas para orientarte de inmediato? 🤝`;
     if (!isEduardo && !isJani && isHighValueLegalOrTaxInquiry(clean)) {
       fallback = enhanceResponseWithCommercialFunnel(fallback, clean);
     }

@@ -22964,18 +22964,19 @@ Solo facil\xEDtame el c\xF3digo CHIP o ind\xEDcame que necesitas el Paz y Salvo 
   const { isIduInquiry: isIduInquiry2, formatIduAssistanceGuide: formatIduAssistanceGuide2, extractChipForIduValorizacion: extractChipForIduValorizacion2, executeIduValorizacionFromWhatsApp: executeIduValorizacionFromWhatsApp2 } = await Promise.resolve().then(() => (init_iduValorizacionService(), iduValorizacionService_exports));
   const iduDetection = extractChipForIduValorizacion2(clean);
   const hasCourtesyOrGreeting = /(?:hola|buen[ao]s?\s*(?:d[ií]as?|tardes?|noches?)|saludos?|cordial|por\s+favor|agradezco|me\s+ayudas|me\s+colaboras|me\s+apoyas|necesito|quisiera|podr[ií]as|ser[ií]as\s+tan\s+amable|buenas)/i.test(clean);
-  if (iduDetection.found && iduDetection.chip) {
-    const isColdChip = /^(?:(?:chip|c\.h\.i\.p\.)\s*[:.]?\s*)?AAA[A-Z0-9]{8,14}$/i.test(clean) && !hasCourtesyOrGreeting;
-    if (isColdChip && !isEduardo && !isJani) {
-      const { setPendingUnconfirmedDoc: setPendingUnconfirmedDoc3 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
-      setPendingUnconfirmedDoc3(userId, iduDetection.chip);
-      const carrenoMsg = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Qu\xE9 gusto saludarte.
+  const hasChipInText = /AAA[A-Z0-9]{8,14}/i.test(clean);
+  if (hasChipInText && !hasCourtesyOrGreeting) {
+    const { setPendingUnconfirmedDoc: setPendingUnconfirmedDoc3 } = await Promise.resolve().then(() => (init_identityVerificationService(), identityVerificationService_exports));
+    const chipMatch = (clean.match(/AAA[A-Z0-9]{8,14}/i) || [""])[0];
+    setPendingUnconfirmedDoc3(userId, chipMatch);
+    const carrenoMsg = `\xA1${timeSalutation}${displayName ? ` ${displayName}` : ""}! \u{1F44B} Qu\xE9 gusto saludarte.
 
 Para atenderte con la precisi\xF3n que amerita tu gesti\xF3n, \xBFeres tan amable de confirmarme qu\xE9 tr\xE1mite requieres? \xBFLa factura del impuesto predial, el certificado oficial de pago al d\xEDa, o el paz y salvo de valorizaci\xF3n del IDU? Asimismo, ind\xEDcame por favor qu\xE9 documento corresponde al titular (CC, NIT, CE o Pasaporte). Quedo muy atenta a tu confirmaci\xF3n.`;
-      appendDmHistory(userId, "user", clean);
-      appendDmHistory(userId, "assistant", carrenoMsg);
-      return carrenoMsg;
-    }
+    appendDmHistory(userId, "user", clean);
+    appendDmHistory(userId, "assistant", carrenoMsg);
+    return carrenoMsg;
+  }
+  if (iduDetection.found && iduDetection.chip) {
     const iduRes = await executeIduValorizacionFromWhatsApp2(clean, userId, true);
     if (iduRes.isIduRequest && iduRes.reportText) {
       const deliveredText = await formatPoliteToolDelivery(userId, userName || "", "idu", iduRes.reportText, true);
@@ -23069,7 +23070,7 @@ Solo resp\xF3ndeme indic\xE1ndome el tipo de documento o tr\xE1mite (ejemplo: *"
     return pedagogoMsg;
   }
   const idDetection = extractCedulaForVerification2(clean, true);
-  if (idDetection.found) {
+  if (idDetection.found && !hasChipInText) {
     const idCheck = await executeIdentityVerificationFromWhatsApp2(clean, true, userId);
     if (idCheck.isVerificationRequest && idCheck.reportText) {
       appendDmHistory(userId, "user", clean);
