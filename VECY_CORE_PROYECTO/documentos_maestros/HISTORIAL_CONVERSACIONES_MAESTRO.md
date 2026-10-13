@@ -11767,3 +11767,8 @@ ANDRES NIETO: +57 320 8626787 -> Grupos: (Imagen 3)"*
 4. **Rol de Co-Piloto Guardián**: La IA debe evaluar las consecuencias secundarias de cualquier instrucción y frenar a tiempo si un cambio propuesto arriesga la integridad de la base de datos o rompe reglas del negocio.
 
 
+
+### [2026-10-13 14:01] Commit f01b6e4 - v33.04 Hotfix dmHandler
+- **Ajuste:** Corrección de Urbanidad de Carreño ante consultas combinadas de CHIP y Cédula (hasChipInText).
+- **Seguridad:** Blindaje contra falsos positivos en verificación policial y balanceo de llaves de control.
+- **Estado:** Desplegado a producción en VPS Contabo (online).
