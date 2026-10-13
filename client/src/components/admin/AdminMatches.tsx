@@ -3168,28 +3168,37 @@ export default function AdminMatches() {
   const [customAttributesByMatch, setCustomAttributesByMatch] = React.useState<Record<number, { key: string; label: string }[]>>({});
   const [localUpdateTick, setLocalUpdateTick] = React.useState(0);
 
-  // 🤖 Estados y mutación para Asistente JanIA Match Finder (Doctrina v32.93)
+  // 🤖 Estados y mutación para Asistente JanIA Match Finder y Match Rápido Ad-Hoc (v33.02)
   const [isJanIAFinderOpen, setIsJanIAFinderOpen] = React.useState(false);
   const [janiaFinderQuery, setJaniaFinderQuery] = React.useState('');
   const [janiaFinderResults, setJaniaFinderResults] = React.useState<any>(null);
+  const [adhocChannelMode, setAdhocChannelMode] = React.useState<'admin' | 'public'>('admin');
   const adminMatchSearchMutation = trpc.janIA.adminMatchSearch.useMutation();
+  const quickMatchAdHocMutation = trpc.matching.quickMatchAdHoc.useMutation();
 
-  const handleRunJanIAFinder = async (queryToRun?: string) => {
+  const handleRunJanIAFinder = async (queryToRun?: string, mode: 'admin' | 'public' = adhocChannelMode) => {
     const q = (queryToRun || janiaFinderQuery).trim();
     if (!q) {
       toast.info("Por favor ingresa un requerimiento, oferta o ID para buscar matches.");
       return;
     }
     try {
-      const res = await adminMatchSearchMutation.mutateAsync({ query: q });
+      // Si la consulta es texto libre de oferta o demanda, usar el nuevo motor ad-hoc de 15 días (v33.02)
+      const res = await quickMatchAdHocMutation.mutateAsync({
+        rawText: q,
+        channel: mode,
+        secretKey: 'vecy-admin-secret-2026'
+      });
       setJaniaFinderResults(res);
       if (res.matches && res.matches.length > 0) {
-        toast.success(`JanIA encontró ${res.matches.length} coincidencia(s)`);
+        toast.success(`⚡ Match Rápido encontró ${res.matches.length} coincidencia(s)`);
+      } else if (res.closestCandidate) {
+        toast.info(`Sin matches ≥ 75%. Opción más cercana: #${res.closestCandidate.id} (${res.closestCandidate.score.toFixed(0)}%)`);
       } else {
-        toast.info("JanIA no encontró coincidencias inmediatas con score ≥ 80%");
+        toast.info("No se encontraron coincidencias en el catálogo de los últimos 15 días.");
       }
     } catch (err: any) {
-      toast.error("Error al consultar JanIA Match Finder: " + (err.message || 'Error'));
+      toast.error("Error al ejecutar Match Rápido: " + (err.message || 'Error'));
     }
   };
 
@@ -4943,7 +4952,7 @@ export default function AdminMatches() {
         </div>
       </div>
 
-      {/* ===== ASISTENTE INTELIGENTE JANIA MATCH FINDER (v32.93) ===== */}
+      {/* ===== ⚡ MATCH RÁPIDO / PEGAR REQUERIMIENTO (v33.02) ===== */}
       <div className="mb-6 bg-gradient-to-r from-[#181308] via-black to-[#131108] border border-[#bf953f]/40 rounded-2xl p-4 sm:p-5 shadow-[0_10px_30px_rgba(0,0,0,0.8)] relative overflow-hidden">
         {/* Glow de fondo */}
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-[#bf953f]/10 rounded-full blur-3xl pointer-events-none" />
@@ -4951,31 +4960,61 @@ export default function AdminMatches() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#bf953f] to-[#aa771c] flex items-center justify-center text-black font-black shadow-lg shadow-[#bf953f]/20 shrink-0">
-              <Sparkles className="w-5 h-5 text-black" />
+              <Zap className="w-5 h-5 text-black" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm sm:text-base font-black font-['Audiowide'] text-white tracking-wider flex items-center gap-2">
-                  JanIA Match Finder
+                  ⚡ Match Rápido / Pegar Requerimiento
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    Búsqueda IA Activa 24/7
+                    Ventana 15 Días • Motor Dual v33.02
                   </span>
                 </h3>
               </div>
               <p className="text-xs text-zinc-400">
-                Pasa un requerimiento para encontrar inmuebles, o una oferta para encontrar clientes (con teléfonos y número de Match).
+                Pega requerimientos u ofertas en bruto para cruzar contra los últimos 15 días. Modo Admin directo o Ficha Colega 40/20/40.
               </p>
             </div>
           </div>
 
-          <Button
-            type="button"
-            onClick={() => setIsJanIAFinderOpen(prev => !prev)}
-            variant="outline"
-            className="h-8 border-[#bf953f]/40 bg-black/60 hover:bg-[#bf953f]/20 text-[#bf953f] text-xs px-3 rounded-xl font-bold transition-all shrink-0 cursor-pointer"
-          >
-            {isJanIAFinderOpen ? "Minimizar Asistente ▲" : "Abrir Asistente ▼"}
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Selector de Canal Dual */}
+            <div className="bg-black/60 border border-white/10 rounded-xl p-0.5 flex items-center text-xs">
+              <button
+                type="button"
+                onClick={() => setAdhocChannelMode('admin')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  adhocChannelMode === 'admin'
+                    ? 'bg-[#bf953f] text-black shadow-sm'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+                title="Ver teléfonos y nombres directos de colegas"
+              >
+                👑 Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => setAdhocChannelMode('public')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  adhocChannelMode === 'public'
+                    ? 'bg-amber-500 text-black shadow-sm'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+                title="Anonimizar y generar ficha con alianza 40/20/40"
+              >
+                🤝 Colega 40/20/40
+              </button>
+            </div>
+
+            <Button
+              type="button"
+              onClick={() => setIsJanIAFinderOpen(prev => !prev)}
+              variant="outline"
+              className="h-8 border-[#bf953f]/40 bg-black/60 hover:bg-[#bf953f]/20 text-[#bf953f] text-xs px-3 rounded-xl font-bold transition-all shrink-0 cursor-pointer"
+            >
+              {isJanIAFinderOpen ? "Minimizar ▲" : "Abrir Match Rápido ▼"}
+            </Button>
+          </div>
         </div>
 
         {/* Panel desplegable cuando está abierto */}
@@ -4985,7 +5024,7 @@ export default function AdminMatches() {
               <textarea
                 value={janiaFinderQuery}
                 onChange={(e) => setJaniaFinderQuery(e.target.value)}
-                placeholder="Pega aquí el requerimiento o la oferta (ej: 'Busco apto en Chicó 3 habs hasta 1.200M' o 'Vendo casa en Cedritos $850M' o ID '#M1420')..."
+                placeholder="Pega aquí el requerimiento en bruto (ej: 'Busco apartamento en Chicó o Navarra, 3 habitaciones + estudio, 2 garajes, hasta $1.200 MM en efectivo')..."
                 className="w-full h-24 sm:h-20 bg-black/80 border border-white/20 focus:border-[#bf953f] text-white placeholder-zinc-500 text-xs p-3 rounded-xl resize-none outline-none transition-all shadow-inner"
               />
             </div>
@@ -4997,20 +5036,31 @@ export default function AdminMatches() {
                 <button
                   type="button"
                   onClick={() => {
-                    const sample = "Busco apartamento en Chicó 3 habitaciones hasta 1.200 MM";
+                    const sample = "Busco apartamento en Chicó o Navarra 3 habitaciones + estudio hasta $1.200 MM en efectivo";
                     setJaniaFinderQuery(sample);
-                    handleRunJanIAFinder(sample);
+                    handleRunJanIAFinder(sample, adhocChannelMode);
                   }}
                   className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
                 >
-                  🎯 Demanda Chicó 3 Hab
+                  🎯 Demanda Chicó/Navarra ($1.200 MM)
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    const sample = "Vendo apartamento en Rosales 140 m2 3 alcobas 2 garajes $1.350M";
+                    const sample = "Busco apto en Pasadena o Batán entre Calle 100 y 127, 2 alcobas, $650–670 MM";
                     setJaniaFinderQuery(sample);
-                    handleRunJanIAFinder(sample);
+                    handleRunJanIAFinder(sample, adhocChannelMode);
+                  }}
+                  className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
+                >
+                  📍 Cuadrante Cll 100 a 127 ($650–670 MM)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sample = "Vendo apartamento en Rosales 140 m2 3 alcobas 2 garajes $1.350 MM";
+                    setJaniaFinderQuery(sample);
+                    handleRunJanIAFinder(sample, adhocChannelMode);
                   }}
                   className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
                 >
@@ -5031,19 +5081,19 @@ export default function AdminMatches() {
                 )}
                 <Button
                   type="button"
-                  disabled={adminMatchSearchMutation.isPending || !janiaFinderQuery.trim()}
+                  disabled={quickMatchAdHocMutation.isPending || !janiaFinderQuery.trim()}
                   onClick={() => handleRunJanIAFinder()}
                   className="h-8 bg-gradient-to-r from-amber-500 via-[#bf953f] to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black text-xs px-4 rounded-xl font-black shadow-md shadow-amber-500/20 cursor-pointer flex items-center gap-2"
                 >
-                  {adminMatchSearchMutation.isPending ? (
+                  {quickMatchAdHocMutation.isPending ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-black" />
-                      <span>Analizando...</span>
+                      <span>Cruzando 15 Días...</span>
                     </>
                   ) : (
                     <>
-                      <Sparkles className="w-3.5 h-3.5 text-black" />
-                      <span>BUSCAR MATCHES CON JANIA</span>
+                      <Zap className="w-3.5 h-3.5 text-black" />
+                      <span>⚡ EJECUTAR CRUCE (ÚLTIMOS 15 DÍAS)</span>
                     </>
                   )}
                 </Button>
@@ -5053,14 +5103,33 @@ export default function AdminMatches() {
             {/* Resultados de Búsqueda */}
             {janiaFinderResults && (
               <div className="mt-4 pt-4 border-t border-white/10">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-bold text-[#bf953f] flex items-center gap-1.5">
-                    <span>🎯</span>
-                    <span>Resultados: {janiaFinderResults.totalFound} coincidencia(s) encontrada(s) (Score ≥ 80%)</span>
-                  </p>
-                  <span className="text-[10px] text-zinc-400 font-mono">
-                    {janiaFinderResults.querySummary}
-                  </span>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
+                  <div>
+                    <p className="text-xs font-bold text-[#bf953f] flex items-center gap-1.5">
+                      <span>🎯</span>
+                      <span>Resultados: {janiaFinderResults.totalFound || janiaFinderResults.matches?.length || 0} coincidencia(s) ({adhocChannelMode === 'admin' ? 'Modo Admin' : 'Modo Colega 40/20/40'})</span>
+                    </p>
+                    {janiaFinderResults.inputSummary && (
+                      <p className="text-[11px] text-zinc-400 mt-0.5">
+                        {janiaFinderResults.inputSummary}
+                      </p>
+                    )}
+                  </div>
+
+                  {janiaFinderResults.formattedText && (
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(janiaFinderResults.formattedText);
+                        toast.success("📋 Ficha completa copiada al portapapeles");
+                      }}
+                      variant="outline"
+                      className="h-7 text-xs border-[#bf953f]/40 text-[#bf953f] hover:bg-[#bf953f]/20 rounded-lg px-2.5 flex items-center gap-1.5"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Copiar Ficha para WhatsApp</span>
+                    </Button>
+                  )}
                 </div>
 
                 {janiaFinderResults.matches && janiaFinderResults.matches.length > 0 ? (
@@ -5076,15 +5145,13 @@ export default function AdminMatches() {
                             <span className="text-[11px] font-black px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40">
                               🏅 {item.score?.toFixed(1)}% AFINIDAD
                             </span>
-                            {item.matchId && (
-                              <span className="text-[11px] font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded-md">
-                                MATCH #M{item.matchId}
-                              </span>
-                            )}
+                            <span className="text-[10px] font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded-md">
+                              {item.isRecent15Days ? '🟢 15 Días' : '🟡 Activo'} • #{item.id}
+                            </span>
                           </div>
 
                           <h4 className="text-xs font-bold text-white line-clamp-1 mb-1">
-                            {item.targetType === 'inmueble' ? `🏠 Inmueble #P${item.targetId}: ` : `📋 Demanda #R${item.targetId}: `}
+                            {item.type === 'inmueble' ? `🏠 Inmueble #${item.id}: ` : `📋 Demanda #${item.id}: `}
                             {item.title}
                           </h4>
 
@@ -5093,26 +5160,46 @@ export default function AdminMatches() {
                           </p>
 
                           <p className="text-[10px] text-zinc-400 mb-2">
-                            {item.areaFormatted} • {item.bedroomsFormatted} • {item.bathroomsFormatted} • {item.parkingFormatted}
+                            {item.areaFormatted} • {item.bedroomsFormatted} • {item.bathroomsFormatted} • {item.garagesFormatted || item.parkingFormatted}
                           </p>
 
+                          {/* Sección de Contacto */}
                           <div className="p-2 bg-white/5 rounded-lg border border-white/5 text-[11px] text-zinc-300 mb-2">
-                            <p className="text-zinc-400 text-[10px] font-mono">Contacto Asesor:</p>
+                            <p className="text-zinc-400 text-[10px] font-mono">
+                              {adhocChannelMode === 'admin' ? 'Contacto Asesor / Colega:' : 'Gestión Red VECY:'}
+                            </p>
                             <p className="font-bold text-white truncate">{item.contactName}</p>
-                            <p className="text-emerald-400 font-mono font-bold">{item.contactPhone ? `+${item.contactPhone}` : 'Sin teléfono'}</p>
+                            {adhocChannelMode === 'admin' ? (
+                              <p className="text-emerald-400 font-mono font-bold">
+                                {item.contactPhone ? `+${item.contactPhone}` : 'Sin teléfono'}
+                              </p>
+                            ) : (
+                              <p className="text-amber-400/90 text-[10px] font-medium">
+                                🔒 Datos protegidos • Alianza 40/20/40 VECY
+                              </p>
+                            )}
                           </div>
                         </div>
 
                         {/* Botones de acción directa */}
                         <div className="flex items-center gap-2 pt-2 border-t border-white/10">
-                          {item.contactWhatsAppLink ? (
+                          {adhocChannelMode === 'admin' && item.contactWhatsAppLink ? (
                             <a
                               href={item.contactWhatsAppLink}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="flex-1 h-7 bg-emerald-600/90 hover:bg-emerald-500 text-white text-[11px] font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-sm"
                             >
-                              <span>💬 WhatsApp</span>
+                              <span>💬 WhatsApp Directo</span>
+                            </a>
+                          ) : adhocChannelMode === 'public' ? (
+                            <a
+                              href="https://wa.me/573166569719?text=Hola%20Eduardo%20y%20Jani,%20solicito%20conexi%C3%B3n%20para%20la%20alianza%2040/20/40"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 h-7 bg-amber-600/90 hover:bg-amber-500 text-black text-[11px] font-black rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                            >
+                              <span>🤝 Conectar 40/20/40</span>
                             </a>
                           ) : (
                             <span className="flex-1 text-center text-[10px] text-zinc-500">Sin WhatsApp</span>
@@ -5121,7 +5208,7 @@ export default function AdminMatches() {
                           <button
                             type="button"
                             onClick={() => {
-                              const searchVal = String(item.matchId || item.targetId);
+                              const searchVal = String(item.id);
                               setSearchTerm(searchVal);
                               toast.success(`Filtrando mesa por: #${searchVal}`);
                               const tableEl = document.getElementById('matches-report-table-section');
@@ -5137,10 +5224,24 @@ export default function AdminMatches() {
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 bg-black/60 rounded-xl border border-white/10 text-center">
+                  <div className="p-4 bg-black/60 rounded-xl border border-white/10 text-center space-y-2">
                     <p className="text-xs text-zinc-400">
-                      No se encontraron coincidencias inmediatas con score ≥ 80% en el catálogo activo para estos criterios.
+                      No se encontraron coincidencias directas con afinidad ≥ 75% en los últimos 15 días.
                     </p>
+                    {janiaFinderResults.closestCandidate && (
+                      <div className="mt-2 p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg inline-block text-left text-xs">
+                        <p className="text-amber-400 font-bold flex items-center gap-1.5">
+                          <span>🎯</span>
+                          <span>Candidato más cercano para auditoría manual:</span>
+                        </p>
+                        <p className="text-zinc-300 font-mono text-[11px] mt-0.5">
+                          #{janiaFinderResults.closestCandidate.id} ({janiaFinderResults.closestCandidate.type}) • Afinidad: <span className="text-white font-bold">{janiaFinderResults.closestCandidate.score.toFixed(1)}%</span>
+                        </p>
+                        <p className="text-zinc-400 text-[10px] mt-0.5">
+                          {janiaFinderResults.closestCandidate.summary}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

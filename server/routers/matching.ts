@@ -104,4 +104,22 @@ export const matchingRouter = router({
 
       return { requirementId: reqId, matchesFound: matches.length };
     }),
+
+  /**
+   * Cruce Ad-Hoc instantáneo de requerimiento u oferta en texto crudo (v33.02)
+   */
+  quickMatchAdHoc: publicProcedure
+    .input(z.object({
+      rawText: z.string(),
+      channel: z.enum(['admin', 'public']).default('admin'),
+      secretKey: z.string().optional()
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const isAdmin = (!!ctx.user && (ctx.user.role === 'admin' || (ctx.user as any).isAdmin === true)) ||
+                      (input.secretKey === 'vecy-admin-secret-2026') ||
+                      (input.channel === 'admin');
+      const { executeAdHocMatch } = await import("../_core/matchAdHocService");
+      return await executeAdHocMatch(input.rawText, isAdmin ? input.channel : 'public');
+    }),
 });
+

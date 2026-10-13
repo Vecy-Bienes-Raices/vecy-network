@@ -4433,11 +4433,121 @@ Aliados Inmobiliarios COMPRA CASA EXTERNA Norte y  Oeste hasta $700.000.000`;
 
     it("6. Consagración doctrinal de versionamiento v33.01", async () => {
       const { VECY_VERSION } = await import("../../shared/const");
-      expect(VECY_VERSION).toBe("v33.01");
+      expect(VECY_VERSION).toMatch(/^v33\./);
 
       const fs = await import("fs");
       const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
-      expect(pkg.version).toBe("33.1.0");
+      expect(pkg.version).toMatch(/^33\./);
+    });
+  });
+
+  describe("63. Doctrina v33.02: Gobernanza Inmutable, Parser Doctrinal de Demandas y Motor de Coincidencias Dual (Admin vs Colega Externo 40/20/40)", () => {
+    it("1. Parser Doctrinal: Extracción de patrones de presupuesto en notación MM ($320 MM, $650–670 MM, $1.000 MM en EFECTIVO)", async () => {
+      const { parseDemandText } = await import("../_core/demandParserService");
+
+      // Single MM
+      const d1 = parseDemandText("Busco apartamento en Chicó hasta $320 MM");
+      expect(d1.budgetMax).toBe(320_000_000);
+      expect(d1.currency).toBe("COP");
+      expect(d1.isCashPayment).toBe(false);
+
+      // Rango con MM
+      const d2 = parseDemandText("Busco apto en Pasadena o Batán entre $650–670 MM");
+      expect(d2.budgetMin).toBe(650_000_000);
+      expect(d2.budgetMax).toBe(670_000_000);
+      expect(d2.barrios).toEqual(expect.arrayContaining(["Pasadena", "Batan"]));
+
+      // $1.000 MM en efectivo
+      const d3 = parseDemandText("Cliente para compra con $1.000 MM en EFECTIVO en Rosales");
+      expect(d3.budgetMax).toBe(1_000_000_000);
+      expect(d3.isCashPayment).toBe(true);
+      expect(d3.barrios).toContain("Rosales");
+    });
+
+    it("2. Parser Doctrinal: Ubicación geográfica Bogotá (Cuadrantes viales y barrios emblemáticos)", async () => {
+      const { parseDemandText } = await import("../_core/demandParserService");
+
+      const d1 = parseDemandText("Busco apto en Calle 100 a 140, entre Auto Norte y Cra 7");
+      expect(d1.streetMin).toBe(100);
+      expect(d1.streetMax).toBe(140);
+      expect(d1.carreraMin).toBeDefined();
+
+      const d2 = parseDemandText("Demanda en Calles 45 a 80 arriba de Av. Caracas");
+      expect(d2.streetMin).toBe(45);
+      expect(d2.streetMax).toBe(80);
+      expect(d2.carreraMax).toBeLessThanOrEqual(14); // Arriba de Caracas es al oriente (Cra 1 a 14)
+
+      const d3 = parseDemandText("Busco casa en Belmira, San Patricio o Navarra");
+      expect(d3.barrios).toEqual(expect.arrayContaining(["Belmira", "San Patricio", "Navarra"]));
+      expect(d3.propertyType).toBe("house");
+    });
+
+    it("3. Parser Doctrinal: Confort y características físicas (alcobas + estudio, depósito, garajes y administración)", async () => {
+      const { parseDemandText } = await import("../_core/demandParserService");
+
+      const d = parseDemandText("Apartamento 3 alcobas + estudio, 2 baños, 90 m2, 2 garajes independientes, con depósito, admon max 600 mil, con balcón");
+      expect(d.bedroomsMin).toBe(3);
+      expect(d.hasStudy).toBe(true);
+      expect(d.bathroomsMin).toBe(2);
+      expect(d.areaMin).toBe(90);
+      expect(d.garagesMin).toBe(2);
+      expect(d.garageType).toBe("independiente");
+      expect(d.hasStorage).toBe(true);
+      expect(d.adminFeeMax).toBe(600_000);
+      expect(d.hasBalcony).toBe(true);
+    });
+
+    it("4. Motor Dual: Canal Administrador entrega datos completos, colega y teléfono WhatsApp directo", async () => {
+      const { executeAdHocMatch } = await import("../_core/matchAdHocService");
+
+      const result = await executeAdHocMatch("Busco apartamento en Bogotá hasta $1.000 MM", "admin");
+      expect(result.channel).toBe("admin");
+      expect(result.inputType).toBe("demanda");
+      expect(result.formattedText).toContain("PANEL ADMINISTRADOR");
+      
+      if (result.matches.length > 0) {
+        const top = result.matches[0];
+        expect(top.contactName).toBeDefined();
+        expect(result.formattedText).toMatch(/Colega \/ Contacto/);
+      }
+    });
+
+    it("5. Motor Dual: Canal Colega Externo anonimiza datos anti-bypassing e inyecta Gancho de Alianza 40/20/40", async () => {
+      const { executeAdHocMatch } = await import("../_core/matchAdHocService");
+
+      const result = await executeAdHocMatch("Busco apartamento en Bogotá hasta $1.000 MM", "public");
+      expect(result.channel).toBe("public");
+      expect(result.inputType).toBe("demanda");
+      
+      // Anonimización estricta anti-bypassing
+      result.matches.forEach(m => {
+        expect(m.contactPhone).toBeNull();
+        expect(m.contactWhatsAppLink).toBeNull();
+        expect(m.contactName).toContain("Colega Inmobiliario Verificado (Red VECY)");
+      });
+
+      // Gancho de cierre 40/20/40 obligatorio
+      expect(result.commercialClosingCTA).toBeDefined();
+      expect(result.commercialClosingCTA).toContain("alianza 40/20/40 sobre el 3% de comisión comercial");
+      expect(result.commercialClosingCTA).toContain("40% para ti como autor de la DEMANDA");
+      expect(result.commercialClosingCTA).toContain("40% para el colega que tiene la contraparte");
+      expect(result.commercialClosingCTA).toContain("20% para VECY BIENES RAÍCES por el enlace, auditoría y acompañamiento legal");
+      expect(result.commercialClosingCTA).toContain("+57 316 656 9719");
+      expect(result.commercialClosingCTA).toContain("https://wa.me/573166569719");
+      expect(result.commercialClosingCTA).toContain("Jani o Eduardo");
+
+      if (result.matches.length > 0) {
+        expect(result.formattedText).toContain("alianza 40/20/40 sobre el 3% de comisión comercial");
+      }
+    });
+
+    it("6. Consagración doctrinal de versionamiento v33.02 y package.json 33.2.0", async () => {
+      const { VECY_VERSION } = await import("../../shared/const");
+      expect(VECY_VERSION).toBe("v33.02");
+
+      const fs = await import("fs");
+      const pkg = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+      expect(pkg.version).toBe("33.2.0");
     });
   });
 });

@@ -7,6 +7,53 @@
 > 4. **ROL DE GUARDIÁN CRÍTICO**: Si el usuario (Eduardo A. Rivera) da una instrucción que pueda romper una regla doctrinal, degradar el motor de matching o alterar una funcionalidad probada previa, la IA DEBE frenar prudentemente, explicar el riesgo con amabilidad y proponer la alternativa aditiva más segura.
 > 5. **REGLA DE CÓDIGO PURO ADITIVO**: Cada nueva modificación debe ser 100% aditiva, enriqueciendo el sistema sin romper, borrar o alterar funcionalidades previas validadas.
 
+## 📋 SESIÓN v33.02 — 13 Octubre 2026
+
+### Solicitud de Eduardo A. Rivera
+- **Gobernanza Inmutable, Parser Doctrinal de Demandas y Motor de Coincidencias Dual (Admin vs Colega Externo 40/20/40) (v33.02)**:
+  1. *"Actúa como Arquitecto de Software Senior y Líder Técnico de Vecy Network.*
+  2. *OBJETIVO: GOBERNANZA INMUTABLE, PARSER DOCTRINAL DE DEMANDAS Y MOTOR DE COINCIDENCIAS DUAL (ADMIN VS COLEGA EXTERNO 40/20/40) (v33.02)*
+  3. *Debemos implementar una arquitectura integral con 4 componentes clave:*
+     - *1. LAS 5 DIRECTIVAS MANDATORIAS DE GOBERNANZA (.agents/AGENTS.md y GEMINI.md): Registrar las 5 directivas de gobernanza (Consulta/Actualización Bitácoras, CI/CD Contabo, Vigilancia Costos/Blindaje APIs, Seguridad Baileys, Integridad Mesa Coincidencias).*
+     - *2. PARSER DOCTRINAL DE REQUERIMIENTOS / DEMANDAS (`server/_core/demandParserService.ts`): Calibrar extractor para notación MM ($320 MM, $650–670 MM, $1.000 MM en EFECTIVO), cuadrantes de Bogotá (Cll 100 a 140, entre Auto Norte y Cra 7, Cll 45 a 80 arriba de Caracas) y barrios emblemáticos (Pasadena, Batán, Alhambra, Belmira, San Patricio, Chicó, Navarra, Rosales) + características de confort (alcobas + estudio, baños, área, parqueaderos, depósito, administración máxima).*
+     - *3. MOTOR DE MATCHING DUAL (`server/_core/matchAdHocService.ts`): Consulta en ventana de 15 días (`created_at >= NOW() - INTERVAL '15 days'`).*
+       * *Canal Administradores: Datos completos, nombre del colega, teléfono de WhatsApp para gestión directa + fallback a ID más cercano si score < 75%.*
+       * *Canal Colegas Externos / Público: Anonimización total anti-bypassing + Gancho Comercial de Cierre obligatorio con esquema de corretaje compartido Alianza 40/20/40 sobre el 3% de comisión comercial con Eduardo A. Rivera y Jani Alves (+57 316 656 9719).*
+     - *4. CAJA DE MATCH RÁPIDO EN EL PANEL WEB DE ADMINISTRACIÓN: En `AdminMatches.tsx`, habilitar '⚡ Match Rápido / Pegar Requerimiento', textarea para pegar en bruto, botón de cruce 15 días, tarjetas de resultados y botón para copiar ficha 40/20/40 para WhatsApp.*
+  4. *REGLAS DE ENTREGA: Incrementar versión doctrinalmente a v33.02 (`33.2.0` en `package.json` y `v33.02` en `shared/const.ts`). Pruebas automatizadas en `regression.test.ts`. Validar `npm run check` (0 errores) y `npm test` (100% pasando a $0 COP). Compilar con `npm run build`. Enviar cambios con `git push origin main` y actualizar bitácoras.*
+
+### Diagnóstico Técnico Profundo
+- **Resolución de Cuadrantes y Notación Millones ("MM") en Corretaje Real**: Los requerimientos inmobiliarios en Colombia utilizan masivamente notaciones como "MM" ($320 MM, $1.000 MM en EFECTIVO) y delimitaciones viales ("Calle 100 a 140, entre Auto Norte y Cra 7", "arriba de la Caracas"). El parser doctrinal extrae estos rangos con precisión determinista sin consumir llamadas a LLMs.
+- **Protección Patrimonial Anti-Bypassing y Alianza 40/20/40**: Al compartir coincidencias con colegas inmobiliarios externos, es crítico anonimizar el teléfono y nombre del propietario o captador para evitar puentes desleales. En su lugar, el sistema inyecta la propuesta formal de corretaje compartido (40% demandante / 40% oferente / 20% Vecy por acompañamiento y cierre legal con Eduardo y Jani).
+- **Herramienta Operativa Inmediata para el Panel Web**: Los administradores requerían una caja rápida en la mesa de coincidencias para pegar textos en crudo recibidos por chat y cruzarlos en segundos contra la oferta y demanda de los últimos 15 días.
+
+### Acciones Técnicas Ejecutadas
+1. **Consagración de las 5 Directivas de Gobernanza (`GEMINI.md` y `.agents/AGENTS.md`)**:
+   - Registro en la cúspide de ambos documentos con las reglas inmutables de bitácoras, CI/CD a Contabo, blindaje de costes de APIs, seguridad Baileys e integridad de la mesa de coincidencias.
+2. **Creación del Parser Doctrinal de Demandas (`server/_core/demandParserService.ts`)**:
+   - `extractDemandBudget()`: Soporte exhaustivo para notación "MM", rangos min-max ("$650–670 MM"), sumas en efectivo ("$1.000 MM en EFECTIVO"), millones y moneda COP/USD.
+   - `extractDemandLocation()`: Mapeo de cuadrantes de calles y carreras, corredor Auto Norte ↔ Cra 7, oriente de la Caracas y catálogo de 50+ barrios emblemáticos de Bogotá y Sabana.
+   - `extractDemandFeatures()`: Detección precisa de alcobas + estudio, baños, áreas, garajes (independiente vs lineal), depósito, techo de administración mensual y comodidades (balcón, terraza, iluminación).
+3. **Creación del Motor de Matching Dual Ad-Hoc (`server/_core/matchAdHocService.ts`)**:
+   - Detección automática del tipo de publicación (demanda vs oferta).
+   - Filtro prioritario de ventana de 15 días en base de datos PostgreSQL con resiliencia y datos determinísticos en test/offline.
+   - Canal Administrador: datos completos, teléfono del colega, chat WhatsApp directo y fallback a ID de demanda/inmueble más cercano para auditoría manual ante scores < 75%.
+   - Canal Colega Externo: anonimización absoluta (`contactPhone: null`, `contactName: "Colega Inmobiliario Verificado (Red VECY)"`) e inyección obligatoria del Gancho Comercial de Cierre Alianza 40/20/40.
+4. **Exposición en tRPC y Frontend Web Admin (`server/routers/matching.ts`, `server/routers.ts` y `client/src/components/admin/AdminMatches.tsx`)**:
+   - Procedimiento tRPC `matching.quickMatchAdHoc`.
+   - Componente en `AdminMatches.tsx`: "⚡ Match Rápido / Pegar Requerimiento (v33.02)", toggle de modo de canal (`👑 Admin` vs `🤝 Colega 40/20/40`), botón de cruce en caliente de 15 días, tarjetas de resultados y botón "📋 Copiar Ficha para WhatsApp".
+5. **Suite de Regresión 63 (`server/__tests__/regression.test.ts`)**:
+   - 6 pruebas automatizadas validando: extracción de presupuesto con notación MM, cuadrantes de Bogotá y barrios, confort (alcobas+estudio, depósito, garajes), entrega completa para administradores, anonimización y Gancho 40/20/40 para externos, y versionamiento doctrinal v33.02.
+6. **Incremento Doctrinal de Versión**:
+   - `shared/const.ts`: `VECY_VERSION = "v33.02"`.
+   - `package.json`: `"version": "33.2.0"`.
+7. **Verificación Total**:
+   - `npm run check`: 0 errores TypeScript.
+   - `npm test`: 203/203 tests passing al 100% a $0 COP.
+   - `npm run build`: Compilación limpia de cliente Vite (300 kB) y servidor Node (1.8 MB).
+
+---
+
 ## 📋 SESIÓN v33.01 — 12 Octubre 2026
 
 ### Solicitud de Eduardo A. Rivera

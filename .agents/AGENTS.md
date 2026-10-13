@@ -10,6 +10,15 @@
 
 ---
 
+## 🛡️ LAS 5 DIRECTIVAS MANDATORIAS DE GOBERNANZA (VECY DOCTRINE v33.02)
+1. **CONSULTA Y ACTUALIZACIÓN DE BITÁCORAS (.md):** Obligatorio registrar cada sesión en `HISTORIAL_CONVERSACIONES_MAESTRO.md`, `AGENTS.md`, `GEMINI.md` y `vecy_network_technical_dossier.md`.
+2. **CI/CD Y AUTO-DESPLIEGUE A CONTABO:** Tras verificar `npm test`, `npm run check` y `npm run build`, realizar `git push origin main`. El workflow de GitHub Actions (`.github/workflows/deploy.yml`) se encarga del despliegue en el VPS (`13.140.149.144`).
+3. **VIGILANCIA DE COSTOS Y BLINDAJE DE APIS:** Prohibido usar claves de pago en tests (`NODE_ENV=test`). En producción, prioridad absoluta a las 4 claves gratuitas; la de pago solo actúa como failover temporal ante 429 masivo y regresa a costo $0 COP tras el cooldown.
+4. **SEGURIDAD Y ANTI-BANEO EN BAILEYS:** Mantener emulación humana de presencia (typing delay entre 1.5s y 3.5s con jitter aleatorio), control de frecuencia y reconexión limpia del socket de WhatsApp.
+5. **INTEGRIDAD DE LA MESA DE COINCIDENCIAS:** Proteger las heurísticas de cruce sin alterar las reglas de negocio existentes.
+
+---
+
 ## 🏢 IDENTIDAD DEL PROYECTO
 
 **VECY Network** — Red colaborativa de corretaje inmobiliario para Colombia.
@@ -173,32 +182,38 @@ Campo `rent_price` de Supabase accedido correctamente como `property.rentPrice`.
 - **Prohibición Absoluta de Duplicar o Forzar Saludos**: JAMÁS volver a reenviar manualmente o forzar un segundo saludo si ya se emitió uno en una conversación. Lo que quedó, quedó.
 - **Preservación de la Identidad de IA Pura**: Forzar correcciones o dobles saludos hace que JanIA se perciba como un bot rígido o manipulado externamente. JanIA debe operar con autonomía orgánica total, esperando siempre la respuesta del usuario para continuar la conversación con fluidez y naturalidad.
 
-## 🔖 VERSIÓN ACTUAL: v33.01 — Octubre 2026
+## 🔖 VERSIÓN ACTUAL: v33.02 — Octubre 2026
+
+### Novedades v33.02 (Gobernanza Inmutable, Parser Doctrinal de Demandas y Motor de Coincidencias Dual: Admin vs Colega Externo 40/20/40):
+- **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
+  1. *"Actúa como Arquitecto de Software Senior y Líder Técnico de Vecy Network.*
+  2. *OBJETIVO: GOBERNANZA INMUTABLE, PARSER DOCTRINAL DE DEMANDAS Y MOTOR DE COINCIDENCIAS DUAL (ADMIN VS COLEGA EXTERNO 40/20/40) (v33.02)*
+  3. Las 5 Directivas Mandatorias de Gobernanza consagradas en `GEMINI.md` y `AGENTS.md`.
+  4. Parser doctrinal de demandas en `demandParserService.ts` interpretando notación MM ($320 MM, $650–670 MM, $1.000 MM en EFECTIVO), cuadrantes de Bogotá (Cll 100 a 140, entre Auto Norte y Cra 7, Cll 45 a 80 arriba de Caracas), barrios emblemáticos y confort.
+  5. Motor de matching dual ad-hoc en `matchAdHocService.ts` (ventana 15 días):
+     - Canal Admin: datos completos, teléfono de WhatsApp para gestión directa + fallback a ID más cercano si score < 75%.
+     - Canal Colegas Externos / Público: anonimización total anti-bypassing + Gancho Comercial de Cierre Alianza 40/20/40 sobre el 3% de comisión con Eduardo A. Rivera y Jani Alves (+57 316 656 9719).
+  6. Caja de Match Rápido en `AdminMatches.tsx` con textarea en bruto, botón de cruce 15 días, toggle admin/público y botón de copiado de ficha para WhatsApp.
+- **Acciones Técnicas Ejecutadas**:
+  - `GEMINI.md` y `.agents/AGENTS.md`: Registro en la cúspide de las 5 Directivas Mandatorias de Gobernanza.
+  - `server/_core/demandParserService.ts`: Módulo de extracción determinista con soporte de notación MM, cuadrantes Bogotá y características físicas.
+  - `server/_core/matchAdHocService.ts`: Motor de cruce ad-hoc dual con ventana de 15 días y plantilla 40/20/40 anti-bypassing.
+  - `server/routers/matching.ts` y `server/routers.ts`: Procedimiento tRPC `matching.quickMatchAdHoc`.
+  - `client/src/components/admin/AdminMatches.tsx`: Componente "⚡ Match Rápido / Pegar Requerimiento (v33.02)" con selector de canal, tarjetas enriquecidas y copiado de ficha WhatsApp.
+  - `server/__tests__/regression.test.ts`: Suite 63 con 6 pruebas automatizadas aprobadas.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 203/203 tests passing (100% verde a $0 COP) ✅ | `npm run build` limpio ✅
+- `shared/const.ts` (`v33.02`) y `package.json` (`33.2.0`).
+
+## 🔖 VERSIÓN ANTERIOR: v33.01 — Octubre 2026
 
 ### Novedades v33.01 (Inyección del Embudo Comercial y Persuasión Ejecutiva en JanIA: Autoridad Legal, Alerta Patrimonial y Cierre Hacia la Línea Oficial de Bróker):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:
-  1. *"Actúa como estratega legal inmobiliario y arquitecto de software en TypeScript."*
-  2. Inyección del embudo comercial y persuasión ejecutiva en `consultingHandler.ts`, `dmHandler.ts` y `prompts.ts` para que JanIA actúe con máxima autoridad jurídica y comercial, funcionando como una máquina de cierre y captación de clientes de alto nivel.
-  3. Matriz de Servicios y Enrutamiento:
-     - Autoservicio Gratuito (Gancho de Confianza): Validación de identidad (ADRES, PGN, CGR, PONAL) y prediales/IDU entregados con cortesía como beneficio de cortesía de Vecy Bienes Raíces.
-     - Consultas de Alto Valor: a) Comisiones adeudadas o by-passing (Arts. 1340-1346 C.Co, Ley 527/1999), b) Contratos: corretaje, promesas (Art. 1611 C.C., arras y penalidades), hipotecas abiertas (Art. 2432 C.C.), retroventa (Art. 1939 C.C.), c) Impuestos: ganancia ocasional (Ley 2277/2022 - 15%), exención 5.000 UVT (Art. 311-1 E.T.), retención 1% notarial, derechos notariales 50/50 y registro, d) Estudios de títulos, sucesiones, embargos y saneamiento.
-  4. Estructura Persuasiva Obligatoria (3 Pasos):
-     - 1° Solvencia y Diagnóstico Normativo: Citar la ley, decreto o código colombiano aplicable.
-     - 2° Alerta de Riesgo Patrimonial: Recordar que los contratos y liquidaciones no son formatos genéricos de internet; un vacío en arras o retenciones acarrea glosas de la DIAN o litigios costosos.
-     - 3° Llamado a la Acción y Cierre Comercial con la firma oficial: *"Para estructurar esta minuta a la medida de tu negocio, liquidar tus impuestos o gestionar la recuperación de tu comisión con nuestro acompañamiento directo, comunícate con nuestra Dirección de Operaciones y Estrategia Legal: Eduardo A. Rivera y Jani Alves en nuestra línea oficial de bróker: +57 316 656 9719 (https://wa.me/573166569719)."*
-- **Acciones Técnicas Ejecutadas**:
-  - `server/_core/commercialFunnelService.ts`: Creación del módulo central con detección precisa de consultas de alto valor, marco normativo por categoría, alerta patrimonial y garantizador de los 3 pasos persuasivos.
-  - `server/_core/jania/handlers/consultingHandler.ts`: System prompt calibrado, integración en outputs y fallbacks con `enhanceResponseWithCommercialFunnel()`.
-  - `server/_core/jania/handlers/dmHandler.ts`: Posicionamiento explícito de cortesía en herramientas gratuitas, prompt enriquecido y cierre comercial hacia Eduardo A. Rivera y Jani Alves (+57 316 656 9719).
-  - Prompts maestros (`VECY_SOPORTE_LEGAL_TRIBUTARIO_Y_AVALUOS.md` y `prompts.ts`): Calibrados con el embudo comercial y canal oficial.
-  - `server/__tests__/regression.test.ts`: Suite 62 con 6 pruebas automatizadas aprobadas.
-  - `.github/workflows/deploy.yml`: Auto-despliegue continuo hacia el VPS Contabo vía SSH con PM2 ante cada push a `main`.
-  - `scripts/deploy-vps.sh` & script `"deploy:vps"` en `package.json`: Despliegue asistido directo de 1 solo comando.
-  - **Despliegue en Vivo a Contabo VPS**: `jania-server` activo y corriendo v33.01 (33.1.0) en vivo en PM2 sin caídas.
-- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 197/197 tests passing ✅ | `npm run build` limpio ✅ | `npm run deploy:vps` validado en vivo ✅
+  1. Inyección del embudo comercial y persuasión ejecutiva en `consultingHandler.ts`, `dmHandler.ts` y `prompts.ts` para que JanIA actúe con máxima autoridad jurídica y comercial.
+  2. Matriz de Servicios: Autoservicio Gratuito de cortesía y Consultas de Alto Valor (comisiones adeudadas, contratos, impuestos, estudios de títulos).
+  3. Estructura persuasiva de 3 pasos (Diagnóstico normativo, Alerta de riesgo patrimonial y Cierre hacia Eduardo A. Rivera y Jani Alves en línea oficial +57 316 656 9719).
+- **Acciones Técnicas Ejecutadas**: `server/_core/commercialFunnelService.ts`, calibración de handlers de consultoría y DMs, Suite 62 y pipelines de despliegue.
+- **Verificación**: `npm run check` 0 errores ✅ | `npm test` 197/197 tests passing ✅ | `npm run build` limpio ✅
 - `shared/const.ts` (`v33.01`) y `package.json` (`33.1.0`).
-
-## 🔖 VERSIÓN ANTERIOR: v33.00 — Octubre 2026
 
 ### Novedades v33.00 (Configuración de Seguridad y Blindaje de Claves Gemini: Producción vs Tests, Nivel 1 Gratis, Nivel 2 Pago Emergencia, Retorno Automático y Regla Doctrinal de Versionamiento .99 -> .00):
 - **Diagnóstico y Solicitud Exacta de Eduardo A. Rivera**:

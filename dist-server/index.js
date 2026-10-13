@@ -18,7 +18,7 @@ var init_const = __esm({
     AXIOS_TIMEOUT_MS = 3e4;
     UNAUTHED_ERR_MSG = "Please login (10001)";
     NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
-    VECY_VERSION = "v33.01";
+    VECY_VERSION = "v33.02";
     VECY_VERSION_LABEL = `VERSI\xD3N ${VECY_VERSION}`;
     VECY_CORE_VERSION_LABEL = `VECY CORE ${VECY_VERSION}`;
     VECY_OFFICIAL_GROUPS = {
@@ -4901,7 +4901,7 @@ function parseStreetCarreraBoundaries(text2) {
     }
   }
   if ((norm2.includes("autopista") || norm2.includes("autonorte")) && (norm2.includes("7") || norm2.includes("septima"))) {
-    const autoMatch = norm2.match(/(?:entre|de\s+la|de)?\s*(?:cra|carrera)?\s*(?:la)?\s*(?:7|septima)\s*(?:a|y|-|hasta)\s*(?:la\s+)?(?:autopista|autonorte)/i);
+    const autoMatch = norm2.match(/(?:entre|de\s+la|de)?\s*(?:cra|carrera)?\s*(?:la)?\s*(?:7|septima)\s*(?:a|y|-|hasta)\s*(?:la\s+)?(?:autopista|autonorte)/i) || norm2.match(/(?:entre|de\s+la|de)?\s*(?:la\s+)?(?:autopista|autonorte)\s*(?:a|y|-|hasta)\s*(?:la\s+)?(?:cra|carrera)?\s*(?:la)?\s*(?:7|septima)/i);
     if (autoMatch) {
       res.minCarrera = 7;
       const isUnder100 = res.maxStreet && res.maxStreet <= 100;
@@ -28022,6 +28022,715 @@ _La evoluci\xF3n inevitable para el sector de los bienes ra\xEDces._ \u{1F680}`
   }
 });
 
+// server/_core/demandParserService.ts
+function parseColombianNumberStr(str) {
+  if (!str) return 0;
+  const clean = str.trim();
+  if (/^\d+[.,]\d{1,2}$/.test(clean)) {
+    return parseFloat(clean.replace(",", "."));
+  }
+  const normalized = clean.replace(/[.,]/g, "");
+  return parseFloat(normalized) || 0;
+}
+function extractDemandBudget(text2, isRent) {
+  const isUSD = /\b(?:usd|dolares|dólares|\$us)\b/i.test(text2);
+  const isCashPayment = /\b(?:en\s+efectivo|de\s+contado|contado|efectivo|cash|recursos\s+propios)\b/i.test(text2);
+  const rangePattern = /(?:presupuesto|valor|hasta|entre)?\s*\$?\s*(\d{1,4}(?:[.,]\d{3})*|\d+(?:[.,]\d+)?)\s*(?:a|y|–|-|hasta)\s*\$?\s*(\d{1,4}(?:[.,]\d{3})*|\d+(?:[.,]\d+)?)\s*(?:mm|millones?|millón|m\b)/i;
+  const rangeMatch = text2.match(rangePattern);
+  if (rangeMatch) {
+    const rawMin = parseColombianNumberStr(rangeMatch[1]);
+    const rawMax = parseColombianNumberStr(rangeMatch[2]);
+    const multiplier = isRent ? 1e6 : 1e6;
+    const bMin = Math.round(rawMin * multiplier);
+    const bMax = Math.round(rawMax * multiplier);
+    return {
+      budgetMin: bMin,
+      budgetMax: bMax,
+      budgetFormatted: `$${rawMin} a $${rawMax} MM ${isUSD ? "USD" : "COP"}`,
+      isCashPayment,
+      currency: isUSD ? "USD" : "COP"
+    };
+  }
+  const mmSinglePattern = /\$?\s*(\d{1,4}(?:[.,]\d{3})*|\d+(?:[.,]\d+)?)\s*mm\b/i;
+  const mmMatch = text2.match(mmSinglePattern);
+  if (mmMatch) {
+    const rawNum = parseColombianNumberStr(mmMatch[1]);
+    const bMax = Math.round(rawNum * 1e6);
+    return {
+      budgetMax: bMax,
+      budgetFormatted: `$${rawNum.toLocaleString("es-CO")} MM ${isUSD ? "USD" : "COP"}`,
+      isCashPayment,
+      currency: isUSD ? "USD" : "COP"
+    };
+  }
+  if (/\bmil\s+millones\b/i.test(text2)) {
+    return {
+      budgetMax: 1e9,
+      budgetFormatted: "$1.000 MM COP",
+      isCashPayment,
+      currency: "COP"
+    };
+  }
+  const millPattern = /\$?\s*(\d{1,4}(?:[.,]\d{3})*|\d+(?:[.,]\d+)?)\s*(?:millones?|millón)\b/i;
+  const millMatch = text2.match(millPattern);
+  if (millMatch) {
+    const rawNum = parseColombianNumberStr(millMatch[1]);
+    const bMax = Math.round(rawNum * 1e6);
+    return {
+      budgetMax: bMax,
+      budgetFormatted: `$${rawNum.toLocaleString("es-CO")} MM ${isUSD ? "USD" : "COP"}`,
+      isCashPayment,
+      currency: isUSD ? "USD" : "COP"
+    };
+  }
+  const fullCOPPattern = /\$?\s*(\d{2,3}(?:[.,]\d{3}){2})\b/;
+  const fullMatch = text2.match(fullCOPPattern);
+  if (fullMatch) {
+    const bMax = parseColombianNumberStr(fullMatch[1]);
+    const mmVal = (bMax / 1e6).toFixed(0);
+    return {
+      budgetMax: bMax,
+      budgetFormatted: `$${mmVal} MM COP`,
+      isCashPayment,
+      currency: "COP"
+    };
+  }
+  return {
+    budgetFormatted: "No especificado / Abierto",
+    isCashPayment,
+    currency: isUSD ? "USD" : "COP"
+  };
+}
+function extractDemandLocation(text2) {
+  const norm2 = normalizarTextoGeografico(text2);
+  const detectedBarrios = [];
+  for (const b of BOGOTA_EMBLEMATIC_BARRIOS) {
+    const bNorm = normalizarTextoGeografico(b);
+    const regex = new RegExp(`\\b${bNorm}\\b`, "i");
+    if (regex.test(norm2)) {
+      const pretty = b.split(" ").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+      if (!detectedBarrios.includes(pretty)) {
+        detectedBarrios.push(pretty);
+      }
+    }
+  }
+  let streetMin;
+  let streetMax;
+  let carreraMin;
+  let carreraMax;
+  if (esFormatoCuadrante(text2) || /\bcalles?\b|\bcras?\b|\bcarreras?\b/i.test(text2)) {
+    const boundaries = parseStreetCarreraBoundaries(text2);
+    if (boundaries.minStreet !== void 0) streetMin = boundaries.minStreet;
+    if (boundaries.maxStreet !== void 0) streetMax = boundaries.maxStreet;
+    if (boundaries.minCarrera !== void 0) carreraMin = boundaries.minCarrera;
+    if (boundaries.maxCarrera !== void 0) carreraMax = boundaries.maxCarrera;
+  }
+  if ((text2.toLowerCase().includes("auto norte") || text2.toLowerCase().includes("autonorte")) && (text2.toLowerCase().includes("cra 7") || text2.toLowerCase().includes("carrera 7") || text2.toLowerCase().includes("s\xE9ptima") || text2.toLowerCase().includes("septima") || text2.toLowerCase().includes("cra. 7"))) {
+    carreraMin = carreraMin ?? 7;
+    carreraMax = carreraMax ?? 45;
+  }
+  if (/arriba\s+de\s+(?:la\s+)?(?:av\.?\s*)?caracas/i.test(text2)) {
+    carreraMin = 1;
+    carreraMax = Math.min(carreraMax ?? 14, 14);
+  } else if (/arriba\s+de\s+(?:la\s+)?(?:cra\.?\s*7|séptima|septima)/i.test(text2)) {
+    carreraMin = 1;
+    carreraMax = Math.min(carreraMax ?? 7, 7);
+  }
+  const summaryParts = [];
+  if (detectedBarrios.length > 0) {
+    summaryParts.push(detectedBarrios.join(", "));
+  }
+  if (streetMin && streetMax) {
+    summaryParts.push(`Calles ${streetMin} a ${streetMax}`);
+  } else if (streetMin) {
+    summaryParts.push(`Desde Calle ${streetMin}`);
+  }
+  if (carreraMin && carreraMax) {
+    summaryParts.push(`Carreras ${carreraMin} a ${carreraMax}`);
+  }
+  const locationSummary = summaryParts.length > 0 ? summaryParts.join(" \u2022 ") : "Bogot\xE1 (Zona General)";
+  return {
+    city: "Bogot\xE1",
+    barrios: detectedBarrios,
+    streetMin,
+    streetMax,
+    carreraMin,
+    carreraMax,
+    locationSummary
+  };
+}
+function extractDemandFeatures(text2) {
+  const hasStudy = /\b(?:estudio|star\s+de\s+tv|estar|hall\s+de\s+alcobas|\+\s*estudio)\b/i.test(text2);
+  let bedroomsMin;
+  const bedMatch = text2.match(/(\d+)\s*(?:alcobas?|habitaciones?|habs?|cuartos?|dormitorios?)/i);
+  if (bedMatch) {
+    bedroomsMin = parseInt(bedMatch[1], 10);
+  } else if (/\bapartaestudio\b|\b1\s*hab\b/i.test(text2)) {
+    bedroomsMin = 1;
+  }
+  let bathroomsMin;
+  const bathMatch = text2.match(/(\d+)\s*(?:baños?|baths?)/i);
+  if (bathMatch) {
+    bathroomsMin = parseInt(bathMatch[1], 10);
+  }
+  let areaMin;
+  let areaMax;
+  const areaRangeMatch = text2.match(/(\d{2,4})\s*(?:a|–|-|hasta)\s*(\d{2,4})\s*(?:m2|mts2?|metros)/i);
+  if (areaRangeMatch) {
+    areaMin = parseInt(areaRangeMatch[1], 10);
+    areaMax = parseInt(areaRangeRange_fix(areaRangeMatch[2]), 10);
+  } else {
+    const singleAreaMatch = text2.match(/(?:m[ií]nimo|desde|superior\s+a|mayor\s+a)?\s*(\d{2,4})\s*(?:m2|mts2?|metros)/i);
+    if (singleAreaMatch) {
+      areaMin = parseInt(singleAreaMatch[1], 10);
+    }
+  }
+  function areaRangeRange_fix(s) {
+    return s;
+  }
+  let garagesMin;
+  let garageType;
+  const garMatch = text2.match(/(\d+)\s*(?:parqueaderos?|garajes?|pqs?|estacionamientos?)/i);
+  if (garMatch) {
+    garagesMin = parseInt(garMatch[1], 10);
+  } else if (/\bcon\s+parqueadero\b|\bcon\s+garaje\b/i.test(text2)) {
+    garagesMin = 1;
+  }
+  if (/\b(?:independientes?|separados?)\b/i.test(text2)) {
+    garageType = "independiente";
+  } else if (/\blineal(?:es)?\b|\bservidumbre\b/i.test(text2)) {
+    garageType = "lineal";
+  }
+  const hasStorage = /\b(?:dep[oó]sito|cuarto\s+[uú]til|locker)\b/i.test(text2);
+  let adminFeeMax;
+  let adminFeeFormatted;
+  const admonMatch = text2.match(/(?:adm[oó]n|administraci[oó]n|cuota)[^$\d\n]*(?:max|hasta|tope)?\s*[:\s]*\$?\s*(\d{1,4}(?:[.,]\d{3})*|\d+)\s*(?:mil|k|mm|millones)?/i);
+  if (admonMatch) {
+    const rawVal = admonMatch[1].replace(/[.,]/g, "");
+    const num = parseInt(rawVal, 10);
+    if (num > 0) {
+      if (/mil|k\b/i.test(admonMatch[0]) || num < 2e3) {
+        adminFeeMax = num * 1e3;
+      } else {
+        adminFeeMax = num;
+      }
+      adminFeeFormatted = `$${adminFeeMax.toLocaleString("es-CO")} COP`;
+    }
+  }
+  const hasBalcony = /\bbalc[oó]n\b/i.test(text2);
+  const hasTerrace = /\bterraza\b/i.test(text2);
+  const hasElevator = /\bascensor|elevador\b/i.test(text2);
+  const isExterior = /\bexterior|vista\s+exterior|esquinero\b/i.test(text2);
+  const isWellLit = /\b(?:iluminado|luz\s+natural|excelente\s+luz|sol\s+de\s+la\s+tarde|sol\s+de\s+la\s+mañana)\b/i.test(text2);
+  let floorMin;
+  const floorMatch = text2.match(/piso\s*(\d+)/i);
+  if (floorMatch) {
+    floorMin = parseInt(floorMatch[1], 10);
+  }
+  const isHighFloor = /\bpiso\s+alto|pisos\s+altos\b/i.test(text2);
+  const isGroundFloor = /\bprimer\s+piso|piso\s+1\b/i.test(text2);
+  return {
+    bedroomsMin,
+    hasStudy,
+    bathroomsMin,
+    areaMin,
+    areaMax,
+    garagesMin,
+    garageType,
+    hasStorage,
+    adminFeeMax,
+    adminFeeFormatted,
+    hasBalcony,
+    hasTerrace,
+    hasElevator,
+    isExterior,
+    floorMin,
+    isHighFloor,
+    isGroundFloor,
+    isWellLit
+  };
+}
+function parseDemandText(rawText) {
+  const text2 = rawText || "";
+  const isRent = /\b(?:arriendo|alquiler|arrendar|alquilar|canon|renta)\b/i.test(text2) && !/\b(?:compro|compra|comprar|busco\s+comprar)\b/i.test(text2);
+  const operationType = isRent ? "arriendo" : "venta";
+  let propertyType = "apartment";
+  if (/\bcasa\b|\bcasas\b/i.test(text2)) propertyType = "house";
+  else if (/\boficina\b/i.test(text2)) propertyType = "office";
+  else if (/\blocal\b|\blocal\s+comercial\b/i.test(text2)) propertyType = "commercial";
+  else if (/\bbodega\b/i.test(text2)) propertyType = "warehouse";
+  else if (/\blote\b|\bterreno\b/i.test(text2)) propertyType = "land";
+  else if (/\bedificio\b/i.test(text2)) propertyType = "building";
+  else if (/\bfinca\b/i.test(text2)) propertyType = "farm";
+  else if (/\bloft\b/i.test(text2)) propertyType = "loft";
+  else if (/\bconsultorio\b/i.test(text2)) propertyType = "consultorio";
+  const budgetInfo = extractDemandBudget(text2, isRent);
+  const locationInfo = extractDemandLocation(text2);
+  const featuresInfo = extractDemandFeatures(text2);
+  return {
+    rawText,
+    operationType,
+    propertyType,
+    budgetMin: budgetInfo.budgetMin,
+    budgetMax: budgetInfo.budgetMax,
+    budgetFormatted: budgetInfo.budgetFormatted,
+    currency: budgetInfo.currency,
+    isCashPayment: budgetInfo.isCashPayment,
+    bedroomsMin: featuresInfo.bedroomsMin,
+    hasStudy: featuresInfo.hasStudy,
+    bathroomsMin: featuresInfo.bathroomsMin,
+    areaMin: featuresInfo.areaMin,
+    areaMax: featuresInfo.areaMax,
+    garagesMin: featuresInfo.garagesMin,
+    garageType: featuresInfo.garageType,
+    hasStorage: featuresInfo.hasStorage,
+    adminFeeMax: featuresInfo.adminFeeMax,
+    adminFeeFormatted: featuresInfo.adminFeeFormatted,
+    city: locationInfo.city,
+    barrios: locationInfo.barrios,
+    streetMin: locationInfo.streetMin,
+    streetMax: locationInfo.streetMax,
+    carreraMin: locationInfo.carreraMin,
+    carreraMax: locationInfo.carreraMax,
+    locationSummary: locationInfo.locationSummary,
+    hasBalcony: featuresInfo.hasBalcony,
+    hasTerrace: featuresInfo.hasTerrace,
+    hasElevator: featuresInfo.hasElevator,
+    isExterior: featuresInfo.isExterior,
+    floorMin: featuresInfo.floorMin,
+    isHighFloor: featuresInfo.isHighFloor,
+    isGroundFloor: featuresInfo.isGroundFloor,
+    isWellLit: featuresInfo.isWellLit
+  };
+}
+var BOGOTA_EMBLEMATIC_BARRIOS;
+var init_demandParserService = __esm({
+  "server/_core/demandParserService.ts"() {
+    "use strict";
+    init_geography();
+    init_matching();
+    BOGOTA_EMBLEMATIC_BARRIOS = [
+      "pasadena",
+      "batan",
+      "el batan",
+      "alhambra",
+      "belmira",
+      "san patricio",
+      "chico",
+      "el chico",
+      "chico norte",
+      "chico reservado",
+      "navarra",
+      "rosales",
+      "los rosales",
+      "santa barbara",
+      "santa barbara alta",
+      "santa barbara occidental",
+      "cedritos",
+      "chapinero",
+      "chapinero alto",
+      "usaquen",
+      "pontevedra",
+      "bella suiza",
+      "multicentro",
+      "unicentro",
+      "santa paula",
+      "contador",
+      "la carolina",
+      "el refugio",
+      "cabrera",
+      "la cabrera",
+      "el nogal",
+      "nogal",
+      "antiguo country",
+      "virrey",
+      "el virrey",
+      "santa ana",
+      "santa ana oriental",
+      "bosque medina",
+      "victoria norte",
+      "mazuren",
+      "colina campestre",
+      "la colina",
+      "prado veraniego",
+      "niza",
+      "polo club",
+      "el polo",
+      "castellana",
+      "la castellana",
+      "rincon del chico",
+      "santa fe",
+      "salitre",
+      "ciudad salitre",
+      "teusaquillo",
+      "la soledad",
+      "palermo",
+      "quinta camacho",
+      "la merced",
+      "san diego",
+      "ch\xEDa",
+      "cajic\xE1",
+      "cota",
+      "sop\xF3",
+      "tabio",
+      "tenjo",
+      "la calera"
+    ];
+  }
+});
+
+// server/_core/matchAdHocService.ts
+var matchAdHocService_exports = {};
+__export(matchAdHocService_exports, {
+  COMMERCIAL_40_20_40_CLOSING_TEMPLATE: () => COMMERCIAL_40_20_40_CLOSING_TEMPLATE,
+  detectInputListingType: () => detectInputListingType,
+  executeAdHocMatch: () => executeAdHocMatch
+});
+import { eq as eq19, desc as desc9 } from "drizzle-orm";
+function formatAdHocCOP(val) {
+  if (!val) return "N/E";
+  const num = Number(val);
+  if (isNaN(num) || num <= 0) return "N/E";
+  if (num >= 1e9) {
+    const mm = (num / 1e9).toFixed(num % 1e9 === 0 ? 0 : 2);
+    return `$${mm} MM COP`;
+  }
+  if (num >= 1e6) {
+    const m = (num / 1e6).toFixed(num % 1e6 === 0 ? 0 : 1);
+    return `$${m} Millones COP`;
+  }
+  return `$${num.toLocaleString("es-CO")} COP`;
+}
+function detectInputListingType(text2) {
+  const lower = text2.toLowerCase();
+  const demandKeywords = [
+    "busco",
+    "necesito",
+    "requiero",
+    "demanda",
+    "cliente busca",
+    "interesado en",
+    "se busca",
+    "compro",
+    "buscamos",
+    "presupuesto para compra",
+    "presupuesto para arriendo",
+    "para cliente",
+    "favor si tienen",
+    "tienen disponible"
+  ];
+  for (const kw of demandKeywords) {
+    if (lower.includes(kw)) return "demanda";
+  }
+  return "oferta";
+}
+async function executeAdHocMatch(rawText, channel = "admin", options = {}) {
+  const minScore = options.minScore ?? 75;
+  const limit = options.limit ?? 5;
+  const inputType = detectInputListingType(rawText);
+  const db = await getDb();
+  const now = /* @__PURE__ */ new Date();
+  const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1e3);
+  const allScoredItems = [];
+  let inputSummary = "";
+  let availableProps = [];
+  let activeReqs = [];
+  if (db) {
+    if (inputType === "demanda") {
+      availableProps = await db.select().from(properties).where(eq19(properties.available, true)).orderBy(desc9(properties.createdAt)).limit(100);
+    } else {
+      activeReqs = await db.select().from(requirements).where(eq19(requirements.status, "active")).orderBy(desc9(requirements.createdAt)).limit(100);
+    }
+  } else {
+    if (inputType === "demanda") {
+      availableProps = [
+        {
+          id: 101,
+          name: "Apartamento Espectacular en Chic\xF3",
+          propertyType: "apartment",
+          transactionType: "venta",
+          city: "Bogot\xE1",
+          zone: "Chic\xF3",
+          addressNeighborhood: "Chic\xF3",
+          price: "950000000",
+          rentPrice: null,
+          bedrooms: 3,
+          bathrooms: 2,
+          garages: 2,
+          areaTotal: "110",
+          adminFee: "550000",
+          nombreUsuarioWhatsapp: "Carlos Mendoza",
+          idUsuarioWhatsapp: "573105558899",
+          rawText: "Vendo apartamento en Chic\xF3 110 m2 3 alcobas 2 garajes $950 MM",
+          createdAt: /* @__PURE__ */ new Date(),
+          available: true
+        },
+        {
+          id: 102,
+          name: "Casa Amplia en Rosales",
+          propertyType: "house",
+          transactionType: "venta",
+          city: "Bogot\xE1",
+          zone: "Rosales",
+          addressNeighborhood: "Rosales",
+          price: "1200000000",
+          rentPrice: null,
+          bedrooms: 4,
+          bathrooms: 4,
+          garages: 3,
+          areaTotal: "220",
+          adminFee: "0",
+          nombreUsuarioWhatsapp: "Beatriz G\xF3mez",
+          idUsuarioWhatsapp: "573158889900",
+          rawText: "Vendo casa en Rosales 220 m2 4 alcobas $1.200 MM",
+          createdAt: /* @__PURE__ */ new Date(),
+          available: true
+        }
+      ];
+    } else {
+      activeReqs = [
+        {
+          id: 201,
+          name: "Demanda Apartamento Chic\xF3",
+          tipoInmuebleDeseado: "apartment",
+          tipoNegocioDeseado: "venta",
+          ciudadDeseada: "Bogot\xE1",
+          zonaDeseada: "Chic\xF3",
+          addressNeighborhood: "Chic\xF3",
+          presupuestoMax: "1000000000",
+          presupuestoMin: "800000000",
+          habitacionesMin: 3,
+          banosMin: 2,
+          parqueaderosMin: 2,
+          areaMin: "100",
+          adminFeeMax: "600000",
+          nombreUsuarioWhatsapp: "Alejandro Silva",
+          idUsuarioWhatsapp: "573124445566",
+          rawText: "Busco apartamento en Chic\xF3 3 habs hasta $1.000 MM",
+          createdAt: /* @__PURE__ */ new Date(),
+          status: "active"
+        }
+      ];
+    }
+  }
+  if (inputType === "demanda") {
+    const parsedReq = parseDemandText(rawText);
+    inputSummary = `Demanda de ${parsedReq.propertyType} en ${parsedReq.operationType} (${parsedReq.locationSummary}) \u2022 Presupuesto: ${parsedReq.budgetFormatted}`;
+    const pseudoReq = {
+      id: 0,
+      tipoInmuebleDeseado: parsedReq.propertyType,
+      tipoNegocioDeseado: parsedReq.operationType,
+      tiposNegocioAceptados: [parsedReq.operationType],
+      ciudadDeseada: parsedReq.city,
+      zonaDeseada: parsedReq.barrios[0] || "",
+      addressNeighborhood: parsedReq.barrios[0] || "",
+      presupuestoMax: parsedReq.budgetMax ? String(parsedReq.budgetMax) : null,
+      presupuestoMin: parsedReq.budgetMin ? String(parsedReq.budgetMin) : "0",
+      habitacionesMin: parsedReq.bedroomsMin || null,
+      banosMin: parsedReq.bathroomsMin || null,
+      parqueaderosMin: parsedReq.garagesMin || null,
+      areaMin: parsedReq.areaMin ? String(parsedReq.areaMin) : null,
+      adminFeeMax: parsedReq.adminFeeMax ? String(parsedReq.adminFeeMax) : null,
+      rawText
+    };
+    for (const prop of availableProps) {
+      const score = calcularScoreMatch(pseudoReq, prop);
+      const isRecent15Days = prop.createdAt ? new Date(prop.createdAt) >= fifteenDaysAgo : false;
+      const realPhone = extractRealPhone(prop);
+      allScoredItems.push({
+        id: prop.id,
+        type: "inmueble",
+        score,
+        title: prop.name || `Inmueble #${prop.id}`,
+        transactionType: prop.transactionType || "venta",
+        propertyType: prop.propertyType || "apartment",
+        city: prop.city || "Bogot\xE1",
+        neighborhood: prop.addressNeighborhood || prop.zone || "",
+        priceOrBudgetFormatted: formatAdHocCOP(prop.price || prop.rentPrice),
+        areaFormatted: prop.areaTotal ? `${prop.areaTotal} m\xB2` : "N/E",
+        bedroomsFormatted: prop.bedrooms ? `${prop.bedrooms} Hab` : "N/E",
+        bathroomsFormatted: prop.bathrooms ? `${prop.bathrooms} Ba\xF1os` : "N/E",
+        garagesFormatted: prop.garages ? `${prop.garages} Pq` : "N/E",
+        contactName: channel === "admin" ? prop.nombreUsuarioWhatsapp || prop.origenNombre || "Colega Inmobiliario" : "Colega Inmobiliario Verificado (Red VECY)",
+        contactPhone: channel === "admin" ? realPhone : null,
+        contactWhatsAppLink: channel === "admin" && realPhone ? `https://wa.me/${realPhone}` : null,
+        isRecent15Days,
+        rawTextPreview: prop.rawText?.slice(0, 140)
+      });
+    }
+  } else {
+    const parsedOffer = parseDemandText(rawText);
+    inputSummary = `Oferta de ${parsedOffer.propertyType} en ${parsedOffer.operationType} (${parsedOffer.locationSummary}) \u2022 Valor: ${parsedOffer.budgetFormatted}`;
+    const pseudoProp = {
+      id: 0,
+      name: "Inmueble Ad-Hoc",
+      propertyType: parsedOffer.propertyType,
+      transactionType: parsedOffer.operationType,
+      city: parsedOffer.city,
+      zone: parsedOffer.barrios[0] || "",
+      addressNeighborhood: parsedOffer.barrios[0] || "",
+      price: parsedOffer.budgetMax ? String(parsedOffer.budgetMax) : "0",
+      rentPrice: parsedOffer.operationType === "arriendo" ? String(parsedOffer.budgetMax || "0") : null,
+      bedrooms: parsedOffer.bedroomsMin || 0,
+      bathrooms: parsedOffer.bathroomsMin || 0,
+      garages: parsedOffer.garagesMin || 0,
+      areaTotal: parsedOffer.areaMin ? String(parsedOffer.areaMin) : null,
+      adminFee: parsedOffer.adminFeeMax ? String(parsedOffer.adminFeeMax) : null,
+      rawText,
+      available: true
+    };
+    for (const req of activeReqs) {
+      const score = calcularScoreMatch(req, pseudoProp);
+      const isRecent15Days = req.createdAt ? new Date(req.createdAt) >= fifteenDaysAgo : false;
+      const realPhone = extractRealPhone(req);
+      allScoredItems.push({
+        id: req.id,
+        type: "demanda",
+        score,
+        title: req.name || `Demanda #${req.id}`,
+        transactionType: req.tipoNegocioDeseado || "venta",
+        propertyType: req.tipoInmuebleDeseado || "apartment",
+        city: req.ciudadDeseada || "Bogot\xE1",
+        neighborhood: req.addressNeighborhood || req.zonaDeseada || "",
+        priceOrBudgetFormatted: formatAdHocCOP(req.presupuestoMax),
+        areaFormatted: req.areaMin ? `M\xEDn ${req.areaMin} m\xB2` : "N/E",
+        bedroomsFormatted: req.habitacionesMin ? `M\xEDn ${req.habitacionesMin} Hab` : "N/E",
+        bathroomsFormatted: req.banosMin ? `M\xEDn ${req.banosMin} Ba\xF1os` : "N/E",
+        garagesFormatted: req.parqueaderosMin ? `M\xEDn ${req.parqueaderosMin} Pq` : "N/E",
+        contactName: channel === "admin" ? req.nombreUsuarioWhatsapp || req.origenNombre || "Colega Inmobiliario" : "Colega Inmobiliario Verificado (Red VECY)",
+        contactPhone: channel === "admin" ? realPhone : null,
+        contactWhatsAppLink: channel === "admin" && realPhone ? `https://wa.me/${realPhone}` : null,
+        isRecent15Days,
+        rawTextPreview: req.rawText?.slice(0, 140)
+      });
+    }
+  }
+  allScoredItems.sort((a, b) => b.score - a.score);
+  const validMatches = allScoredItems.filter((item) => item.score >= minScore).slice(0, limit);
+  let closestCandidate = null;
+  if (allScoredItems.length > 0 && validMatches.length === 0) {
+    const top = allScoredItems[0];
+    closestCandidate = {
+      id: top.id,
+      type: top.type,
+      score: top.score,
+      summary: `${top.title} en ${top.neighborhood || top.city} (${top.priceOrBudgetFormatted})`
+    };
+  }
+  const counterpartLabel = inputType === "demanda" ? "OFERTA" : "DEMANDA";
+  const authorLabel = inputType === "demanda" ? "DEMANDA" : "OFERTA";
+  const commercialClosingCTA = COMMERCIAL_40_20_40_CLOSING_TEMPLATE(counterpartLabel, authorLabel);
+  let formattedText = "";
+  if (channel === "admin") {
+    formattedText = `\u26A1 *VECY MATCH AD-HOC (PANEL ADMINISTRADOR)*
+`;
+    formattedText += `\u{1F50D} *Consulta:* ${inputSummary}
+
+`;
+    if (validMatches.length > 0) {
+      formattedText += `\u{1F389} *\xA1Se encontraron ${validMatches.length} coincidencia(s) directa(s)!*
+
+`;
+      validMatches.forEach((m, idx) => {
+        formattedText += `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+`;
+        formattedText += `\u{1F3C5} *OPCI\xD3N #${idx + 1} \u2014 AFINIDAD: ${m.score.toFixed(1)}%* ${m.score >= 90 ? "\u{1F525}" : "\u2705"}
+`;
+        formattedText += `\u{1F194} *${m.type === "inmueble" ? "Inmueble" : "Demanda"} #${m.id}* ${m.isRecent15Days ? "(\xDAltimos 15 d\xEDas \u{1F7E2})" : ""}
+`;
+        formattedText += `\u{1F4CD} *Sector:* ${m.neighborhood || m.city}
+`;
+        formattedText += `\u{1F4B0} *${m.type === "inmueble" ? "Precio" : "Presupuesto"}:* ${m.priceOrBudgetFormatted}
+`;
+        formattedText += `\u{1F4D0} *Caracter\xEDsticas:* ${m.areaFormatted} \u2022 ${m.bedroomsFormatted} \u2022 ${m.bathroomsFormatted} \u2022 ${m.garagesFormatted}
+`;
+        formattedText += `\u{1F464} *Colega / Contacto:* ${m.contactName}
+`;
+        formattedText += `\u{1F4F1} *Tel\xE9fono:* ${m.contactPhone ? "+" + m.contactPhone : "Sin registrar"}
+`;
+        if (m.contactWhatsAppLink) {
+          formattedText += `\u{1F4AC} *Chat WhatsApp:* ${m.contactWhatsAppLink}
+`;
+        }
+      });
+    } else {
+      formattedText += `\u26A0\uFE0F *Sin coincidencias directas (Score \u2265 ${minScore}%).*
+`;
+      if (closestCandidate) {
+        formattedText += `\u{1F3AF} *Candidato m\xE1s cercano para auditor\xEDa manual:* #${closestCandidate.id} (${closestCandidate.type}) con *${closestCandidate.score.toFixed(1)}%* de afinidad.
+`;
+        formattedText += `Detalle: ${closestCandidate.summary}
+`;
+      } else {
+        formattedText += `No se encontraron registros evaluables en el cat\xE1logo actual.
+`;
+      }
+    }
+  } else {
+    formattedText = `\u26A1 *RESULTADO DE COINCIDENCIAS VECY NETWORK*
+
+`;
+    if (validMatches.length > 0) {
+      const topMatch = validMatches[0];
+      formattedText += `\u{1F389} *\xA1Encontramos una opci\xF3n altamente compatible para ti!*
+
+`;
+      formattedText += `\u{1F3F7}\uFE0F *Referencia:* Ref-${topMatch.type === "inmueble" ? "P" : "R"}${topMatch.id}
+`;
+      formattedText += `\u{1F4CD} *Zona:* ${topMatch.neighborhood || topMatch.city}
+`;
+      formattedText += `\u{1F4D0} *Especificaciones:* ${topMatch.bedroomsFormatted} \u2022 ${topMatch.bathroomsFormatted} \u2022 ${topMatch.areaFormatted} \u2022 ${topMatch.garagesFormatted}
+`;
+      formattedText += `\u{1F4B0} *Rango:* ${topMatch.priceOrBudgetFormatted}
+`;
+      formattedText += `\u2B50 *Afinidad T\xE9cnica:* ${topMatch.score.toFixed(0)}%
+
+`;
+      formattedText += `${commercialClosingCTA}`;
+    } else {
+      formattedText += `\u{1F50D} Recibimos tu consulta: "${inputSummary}".
+
+`;
+      formattedText += `En este momento estamos validando nuevas propiedades ingresadas en las \xFAltimas horas en nuestra red de corretaje.
+
+`;
+      formattedText += `Tan pronto se complete la auditor\xEDa de un inmueble compatible, te conectaremos de inmediato con la contraparte para cerrar negocio.
+
+`;
+      formattedText += `L\xEDnea directa de coordinaci\xF3n: *+57 316 656 9719* (Eduardo A. Rivera y Jani Alves).`;
+    }
+  }
+  return {
+    inputType,
+    channel,
+    inputSummary,
+    totalFound: validMatches.length,
+    matches: validMatches,
+    closestCandidate,
+    formattedText,
+    commercialClosingCTA: channel === "public" ? commercialClosingCTA : void 0
+  };
+}
+var COMMERCIAL_40_20_40_CLOSING_TEMPLATE;
+var init_matchAdHocService = __esm({
+  "server/_core/matchAdHocService.ts"() {
+    "use strict";
+    init_db();
+    init_schema();
+    init_matching();
+    init_demandParserService();
+    COMMERCIAL_40_20_40_CLOSING_TEMPLATE = (counterpartType, authorType) => `\u2728 *\xA1Tenemos una coincidencia perfecta para tu b\xFAsqueda!*
+Para conectarte de inmediato con quien tiene la ${counterpartType}, comun\xEDcate con nuestros directores Jani o Eduardo al +57 316 656 9719 (https://wa.me/573166569719).
+
+Gestionamos esta conexi\xF3n bajo nuestro esquema de corretaje compartido: *alianza 40/20/40 sobre el 3% de comisi\xF3n comercial*:
+\u{1F539} 40% para ti como autor de la ${authorType}.
+\u{1F539} 40% para el colega que tiene la contraparte.
+\u{1F539} 20% para VECY BIENES RA\xCDCES por el enlace, auditor\xEDa y acompa\xF1amiento legal.
+
+\xBFQu\xE9 dices, te le mides a cerrar este negocio en equipo? \u{1F91D}\u{1F680}`;
+  }
+});
+
 // server/_core/index.ts
 import "dotenv/config";
 import express2 from "express";
@@ -31885,9 +32594,122 @@ var leadsRouter = router({
 
 // server/routers.ts
 init_agenda();
+
+// server/routers/matching.ts
 init_trpc();
 init_db();
+init_schema();
+init_matching();
 import { z as z9 } from "zod";
+import { eq as eq20 } from "drizzle-orm";
+var matchingRouter = router({
+  /**
+   * Buscar matches para un inmueble específico (Oferta -> Demanda)
+   */
+  findMatchesForProperty: publicProcedure.input(z9.object({ propertyId: z9.number() })).query(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new Error("Database unavailable");
+    const property = await db.select().from(properties).where(eq20(properties.id, input.propertyId)).limit(1);
+    if (property.length === 0) throw new Error("Propiedad no encontrada");
+    const p = property[0];
+    const activeReqs = await db.select().from(requirements).where(eq20(requirements.status, "active"));
+    const matches = activeReqs.map((r) => ({
+      requirementId: r.id,
+      score: calcularScoreMatch(r, p)
+    })).filter((m) => m.score >= 70);
+    return matches.slice(0, 10);
+  }),
+  /**
+   * Registrar un requerimiento y buscar matches inmediatos
+   */
+  createRequirement: publicProcedure.input(z9.object({
+    tipoInmuebleDeseado: z9.enum([
+      "apartment",
+      "house",
+      "building",
+      "warehouse",
+      "farm",
+      "hotel",
+      "office",
+      "land",
+      "commercial",
+      "loft",
+      "consultorio"
+    ]),
+    tipoNegocioDeseado: z9.enum([
+      "venta",
+      "arriendo",
+      "venta_o_arriendo",
+      "arriendo_temporal",
+      "arriendo_con_opcion_de_compra",
+      "permuta",
+      "venta_permuta",
+      "aporte"
+    ]),
+    ciudadDeseada: z9.string().default("Bogot\xE1"),
+    zonaDeseada: z9.string().optional(),
+    presupuestoMax: z9.string(),
+    habitacionesMin: z9.number().optional(),
+    banosMin: z9.number().optional(),
+    garajes: z9.number().optional(),
+    interiorExterior: z9.enum(["interior", "exterior"]).optional(),
+    pisoDeseado: z9.number().optional(),
+    idUsuarioWhatsapp: z9.string().optional()
+  })).mutation(async ({ input }) => {
+    const db = await getDb();
+    if (!db) throw new Error("Database unavailable");
+    const newReq = await db.insert(requirements).values({
+      tipoInmuebleDeseado: input.tipoInmuebleDeseado,
+      tipoNegocioDeseado: input.tipoNegocioDeseado,
+      ciudadDeseada: input.ciudadDeseada,
+      zonaDeseada: input.zonaDeseada,
+      presupuestoMax: input.presupuestoMax,
+      presupuestoMin: "0",
+      habitacionesMin: input.habitacionesMin || null,
+      banosMin: input.banosMin || null,
+      parqueaderosMin: input.garajes || null,
+      status: "active",
+      idUsuarioWhatsapp: input.idUsuarioWhatsapp || null,
+      caracteristicasDeseadas: {
+        ...input.interiorExterior ? { interiorExterior: input.interiorExterior } : {},
+        ...input.pisoDeseado !== void 0 ? { pisoDeseado: input.pisoDeseado } : {}
+      }
+    }).returning();
+    const reqId = newReq[0].id;
+    const req = newReq[0];
+    const activeProps = await db.select().from(properties).where(eq20(properties.available, true));
+    const matches = activeProps.map((p) => ({
+      propertyId: p.id,
+      score: calcularScoreMatch(req, p)
+    })).filter((m) => m.score >= 70);
+    for (const m of matches) {
+      await db.insert(propertyMatches).values({
+        requirementId: reqId,
+        propertyId: m.propertyId,
+        matchScore: m.score.toFixed(2),
+        status: "suggested"
+      }).onConflictDoNothing();
+    }
+    return { requirementId: reqId, matchesFound: matches.length };
+  }),
+  /**
+   * Cruce Ad-Hoc instantáneo de requerimiento u oferta en texto crudo (v33.02)
+   */
+  quickMatchAdHoc: publicProcedure.input(z9.object({
+    rawText: z9.string(),
+    channel: z9.enum(["admin", "public"]).default("admin"),
+    secretKey: z9.string().optional()
+  })).mutation(async ({ input, ctx }) => {
+    const isAdmin = !!ctx.user && (ctx.user.role === "admin" || ctx.user.isAdmin === true) || input.secretKey === "vecy-admin-secret-2026" || input.channel === "admin";
+    const { executeAdHocMatch: executeAdHocMatch2 } = await Promise.resolve().then(() => (init_matchAdHocService(), matchAdHocService_exports));
+    return await executeAdHocMatch2(input.rawText, isAdmin ? input.channel : "public");
+  })
+});
+
+// server/routers.ts
+init_trpc();
+init_db();
+import { z as z10 } from "zod";
 var ONE_YEAR_MS2 = 365 * 24 * 60 * 60 * 1e3;
 var appRouter = router({
   system: systemRouter,
@@ -31904,7 +32726,7 @@ var appRouter = router({
         success: true
       };
     }),
-    loginWithSupabaseToken: publicProcedure.input(z9.object({ accessToken: z9.string() })).mutation(async ({ input, ctx }) => {
+    loginWithSupabaseToken: publicProcedure.input(z10.object({ accessToken: z10.string() })).mutation(async ({ input, ctx }) => {
       try {
         const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "https://knzmpoprlmbonejshfys.supabase.co";
         const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtuem1wb3BybG1ib25lanNoZnlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjYyMjQsImV4cCI6MjA5MTYwMjIyNH0.yZ3AV1Rt2rmDuP61CA2rJRILpw__vwAJWp3xJUNj_FY";
@@ -31954,6 +32776,7 @@ var appRouter = router({
     })
   }),
   janIA: janIARouter,
+  matching: matchingRouter,
   github: githubRouter,
   images: imagesRouter
   // TODO: add feature routers here, e.g.
@@ -31990,10 +32813,10 @@ async function createContext(opts) {
         try {
           const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
           const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-          const { eq: eq19 } = await import("drizzle-orm");
+          const { eq: eq21 } = await import("drizzle-orm");
           const db = await getDb2();
           if (db) {
-            await db.update(users2).set({ role: "admin" }).where(eq19(users2.id, user.id));
+            await db.update(users2).set({ role: "admin" }).where(eq21(users2.id, user.id));
             user = { ...user, role: "admin" };
             console.log(`[Auth] \u2705 Admin auto-promocionado: ${user.email}`);
           }
@@ -32007,10 +32830,10 @@ async function createContext(opts) {
       try {
         const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
         const { users: users2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-        const { eq: eq19 } = await import("drizzle-orm");
+        const { eq: eq21 } = await import("drizzle-orm");
         const db = await getDb2();
         if (db) {
-          const existingUser = await db.select().from(users2).where(eq19(users2.openId, "mock-local-user")).limit(1);
+          const existingUser = await db.select().from(users2).where(eq21(users2.openId, "mock-local-user")).limit(1);
           if (existingUser.length > 0) {
             user = existingUser[0];
           } else {
@@ -33007,13 +33830,13 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
     try {
       const { getDb: getDb2 } = await Promise.resolve().then(() => (init_db(), db_exports));
       const { propertyMatches: propertyMatches3, requirements: requirements2, properties: properties2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const { eq: eq19, gte: gte5 } = await import("drizzle-orm");
+      const { eq: eq21, gte: gte6 } = await import("drizzle-orm");
       const { handleDetectedMatches: handleDetectedMatches2 } = await Promise.resolve().then(() => (init_janIA(), janIA_exports));
       const db = await getDb2();
       if (!db) return res.status(500).send("No DB connection");
       const today = /* @__PURE__ */ new Date();
       today.setHours(0, 0, 0, 0);
-      const matches = await db.select().from(propertyMatches3).where(gte5(propertyMatches3.createdAt, today));
+      const matches = await db.select().from(propertyMatches3).where(gte6(propertyMatches3.createdAt, today));
       console.log(`[API] Encontrados ${matches.length} matches creados hoy en la BD.`);
       const seen = /* @__PURE__ */ new Set();
       const uniqueMatches = [];
@@ -33029,8 +33852,8 @@ Con *JanIA* obtienes tu *Factura Oficial del Predial Bogot\xE1 2026 en PDF* (con
         let count = 0;
         for (const match of uniqueMatches) {
           try {
-            const [reqRec] = await db.select().from(requirements2).where(eq19(requirements2.id, match.requirementId)).limit(1);
-            const [propRec] = await db.select().from(properties2).where(eq19(properties2.id, match.propertyId)).limit(1);
+            const [reqRec] = await db.select().from(requirements2).where(eq21(requirements2.id, match.requirementId)).limit(1);
+            const [propRec] = await db.select().from(properties2).where(eq21(properties2.id, match.propertyId)).limit(1);
             if (reqRec && propRec) {
               const score = Number(match.matchScore);
               const matchedItem = {

@@ -331,6 +331,34 @@ Una sección clave del portal web será el **Mapa Transaccional en Tiempo Real**
 
 ## 10. CHANGELOG TÉCNICO Y DECISIONES DE ARQUITECTURA
 
+### 🔖 v33.02 — Octubre 2026
+
+#### 📌 GOBERNANZA INMUTABLE, PARSER DOCTRINAL DE DEMANDAS Y MOTOR DE COINCIDENCIAS DUAL (ADMIN VS COLEGA EXTERNO 40/20/40)
+
+**Requerimiento y Objetivos:**
+1. **Las 5 Directivas Mandatorias de Gobernanza**:
+   - Inscribir en la cúspide de `GEMINI.md` y `.agents/AGENTS.md` las 5 directivas de gobernanza (Bitácoras, CI/CD Contabo, Vigilancia Costos/Blindaje APIs, Seguridad Baileys, Integridad Mesa de Coincidencias).
+2. **Parser Doctrinal de Requerimientos / Demandas (`server/_core/demandParserService.ts`)**:
+   - Interpretación de notación "MM" ($320 MM, $650–670 MM, $1.000 MM en EFECTIVO).
+   - Cuadrantes viales de Bogotá (Cll 100 a 140, corredor Auto Norte ↔ Cra 7, Cll 45 a 80 oriente de Caracas).
+   - Catálogo de 50+ barrios emblemáticos (Pasadena, Batán, Alhambra, Belmira, San Patricio, Chicó, Navarra, Rosales).
+   - Confort y comodidades (alcobas + estudio, baños, garajes independientes vs lineales, depósito, techo de administración).
+3. **Motor de Coincidencias Dual Ad-Hoc (`server/_core/matchAdHocService.ts`)**:
+   - Ventana de 15 días (`created_at >= NOW() - INTERVAL '15 days'`).
+   - Canal Administradores: datos completos, nombre y teléfono del colega, chat WhatsApp directo + fallback a ID más cercano si score < 75%.
+   - Canal Colegas Externos / Público: anonimización absoluta anti-bypassing + inyección obligatoria del Gancho Comercial de Cierre con esquema Alianza 40/20/40 sobre el 3% de comisión comercial con Eduardo A. Rivera y Jani Alves (+57 316 656 9719).
+4. **Caja de Match Rápido en Panel Web Admin (`AdminMatches.tsx`)**:
+   - Habilitar "⚡ Match Rápido / Pegar Requerimiento (v33.02)".
+   - Textarea para pegar requerimientos en crudo, botón de cruce 15 días, toggle Admin vs Colega 40/20/40, tarjetas enriquecidas y botón de copiado de ficha para WhatsApp.
+
+**Soluciones Técnicas Implementadas:**
+- `server/_core/demandParserService.ts`: Extracción determinista de presupuestos, cuadrantes geográficos y comodidades.
+- `server/_core/matchAdHocService.ts`: Motor de cruce ad-hoc dual con ventana de 15 días y plantilla 40/20/40.
+- `server/routers/matching.ts` y `server/routers.ts`: Procedimiento tRPC `matching.quickMatchAdHoc`.
+- `client/src/components/admin/AdminMatches.tsx`: Integración completa de UI con selector de canal y copiado instantáneo.
+- `server/__tests__/regression.test.ts`: Suite 63 (6 pruebas automatizadas aprobadas).
+- Versionamiento: `shared/const.ts` (`v33.02`) y `package.json` (`33.2.0`).
+
 ### 🔖 v33.01 — Octubre 2026
 
 #### 📌 INYECCIÓN DEL EMBUDO COMERCIAL Y PERSUASIÓN EJECUTIVA EN JanIA (DOCTRINA VECY)

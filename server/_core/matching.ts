@@ -401,7 +401,8 @@ export function parseStreetCarreraBoundaries(text: string): StreetCarreraBoundar
   // 2. Rango de Carreras:
   // Caso 2A: 'entre 7 y autopista' / 'séptima y autopista' / 'entre la 7 y la autopista'
   if ((norm.includes("autopista") || norm.includes("autonorte")) && (norm.includes("7") || norm.includes("septima"))) {
-    const autoMatch = norm.match(/(?:entre|de\s+la|de)?\s*(?:cra|carrera)?\s*(?:la)?\s*(?:7|septima)\s*(?:a|y|-|hasta)\s*(?:la\s+)?(?:autopista|autonorte)/i);
+    const autoMatch = norm.match(/(?:entre|de\s+la|de)?\s*(?:cra|carrera)?\s*(?:la)?\s*(?:7|septima)\s*(?:a|y|-|hasta)\s*(?:la\s+)?(?:autopista|autonorte)/i) ||
+                      norm.match(/(?:entre|de\s+la|de)?\s*(?:la\s+)?(?:autopista|autonorte)\s*(?:a|y|-|hasta)\s*(?:la\s+)?(?:cra|carrera)?\s*(?:la)?\s*(?:7|septima)/i);
     if (autoMatch) {
       res.minCarrera = 7;
       // Si la calle es < 100, la autopista en Chapinero es Carrera 20. Si es >= 100 en Usaquén, es Cra 45.
